@@ -11,25 +11,25 @@ branch. (Same contract as the private v1 repository's `briefs/` directory.)
 ## Contents
 
 - [next-sequence.md](next-sequence.md) — **the next-sequence slate (2026-08-21, rolling):** one
-  ordered queue and the reasoning for the order. Live queue (2026-08-25): **V3E-5** (#1, Lane A
-  nightly v3 oracle) then **DL-5** (#2, compact live STATUS remainder and the contributor
-  contract). A merged unit leaves this file whole; its record is the archived ledger. V3-3
-  remains owner-sequenced.
+  ordered queue and the reasoning for the order. Live queue (2026-08-28): guarded **RP-2**
+  salvage, then fork-independent **FNP-15/16** while fork F-17 runs. RP-3 preempts the side lane
+  after F-17. A merged unit leaves this file whole; its record is the archived ledger.
   Carries the PYC unit definitions, the two hazards a pure-refactor campaign
   has to name in advance, and the 2026-08-22 arming-measurements record (docstring-presence
   subset owner-ruled and armed as PYC-6; `PL`/`A`/`print()` measured and declined with
   reasons). Unlike the campaign slates below, it is rolling: a unit leaves when it merges.
 
 - [spark-function-parity.md](spark-function-parity.md) — the **Spark function parity** slate
-  (2026-08-20, awaiting its approval gate): fourteen units on one branch closing the
-  `pyspark.sql.functions` gap and moving the semantics behind every name out of Python into Rust.
+  (2026-08-20, delivery amended 2026-08-28): one coherent PR per remaining unit or coupled pair
+  closes the `pyspark.sql.functions` gap while moving the semantics behind every name out of
+  Python into Rust.
   Carries the orchestration rules, the restated testing contract, the sequencing, the per-unit
   execution contract, and the unit notes that are easy to get wrong (do not alias Spark
   `transform`/`filter` onto the arity-deficient DataFusion kernels; do not set the dialect
   session-wide; DataFusion's `to_char` is a false friend). Executes the design in
   [../docs/design/spark-function-parity.md](../docs/design/spark-function-parity.md); gated by
-  [../task/fnp-0-charter-ledger.md](../task/ledgers/staging/fnp-0-charter-ledger.md), which does **not** pass yet
-  — clause C-007 is `OPEN` pending one owner ruling.
+  [../task/fnp-0-charter-ledger.md](../task/ledgers/staging/fnp-0-charter-ledger.md), which passed
+  12/12 at kickoff.
 - [v2-engine-hardening.md](v2-engine-hardening.md) — the **V2 Engine Hardening** slate
   (2026-08-10, running): the campaign's per-unit definitions and acceptance gates — H-1's four
   correctness units (the divergence registry, session timezone, the time-travel view leak, the

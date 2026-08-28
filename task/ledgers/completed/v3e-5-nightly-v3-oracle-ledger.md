@@ -1,7 +1,7 @@
 # V3E-5 — nightly v3 live-oracle leg
 
 **Date:** 2026-08-27 · **Branch:** `feat/v3e-5-nightly-v3-oracle` · **Base:** `06a3e42` (`main`, #250) ·
-**Intake:** [task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md](../../../task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md) §3 ·
+**Intake:** [task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md](../../roadmap/epic-term/v1-0-iceberg-v3-northstar.md) §3 ·
 **Sequence:** [briefs/next-sequence.md](../../../briefs/next-sequence.md) ·
 **SEPMO path:** STANDARD (`critic_engine: ccc`, review-only) · **claims_critic:** true ·
 **max_cycles:** 2 · **severity_floor:** S1 · **risk_tier:** high (nightly parity + Iceberg v3 delete-file reads)

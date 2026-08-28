@@ -64,7 +64,7 @@ Every row means **both SQL doors plus the facade** unless the cell says otherwis
 | Write: create v3 | ✅ opt-in CREATE/CTAS (`repark.sql.allowCreateFormatVersion3`, default false; V3-2) | stays opt-in until V3-3; default remains v2 | V3-2 |
 | Upgrade: v2 → v3 in place (`ALTER … SET TBLPROPERTIES`, both doors) | 🚫 refuses, pinned (V3-2 kept ALTER refused; C-008) | **owner ruling 2026-08-25: build it, behind `repark.sql.allowCreateFormatVersion3`, after V3-3** | V3-3+ |
 | Write: append incl. row lineage | ✅ Spark-verified (format-v3-track §2) | stays green + live leg | evidence (intake) |
-| Write: MOR DML via deletion vectors | 🚫 refuses (the R113 guard) | full DML, DV-writing, round-tripped | V3-3 ← fork F-13 |
+| Write: MOR DML via deletion vectors | 🚫 currently refuses (R113). RP-2 may lift only the first DELETE on a DV-free table; every live-DV input stays guarded | full DML, DV merge and supersession, round-tripped | RP-2 → fork F-17 → RP-3 → V3-3 |
 | Write: COW DML on an adopted v3 table | 🚫 refuses (V3R-1 — **owner ruling 2026-08-25: guard**; registry `V3-COW-1`). V3E-1 measured `next_row_id` reassigning on DELETE / UPDATE / MERGE; with MOR refused too, a v3 table is append-only here | lineage carried per spec | V3-4 ← fork F-7 |
 | Write/maintain: partitioned v3 | ❌ unmeasured (format-v3-track §7 — every fixture unpartitioned) | DV writes + compaction proven on partitioned and spec-evolved tables | V3-3 / V3-5 |
 | Maintain: `rewrite_data_files` | 🚫 V3-LINEAGE-1 guard | lineage through rewrite; strands no DVs (V3-DANGLE-1); true `removed_delete_files_count` | V3-5 ← fork F-7 |
@@ -84,19 +84,20 @@ gate (what hardens at v1.0 is the owner's call at that review).
 
 ## 4. The path, as two lanes
 
-**Engine lane.** The unit slate already exists and is not restated here:
-[docs/design/format-v3-track.md](../../../docs/design/format-v3-track.md) §5, plus the
-cross-cutting evidence obligations in §3's matrix (unitized by the v3 intake). The design's
-sequencing constraint — V3-2+ waits for MW to close — was met on 2026-08-23 (MW-5, #224):
-**the lane is unblocked.** V3-3 (deletion-vector writes) is the largest engine unit; VARIANT
-(H6, design ratified) is the largest single type item.
+The delivery sequence lives in [docs/design/format-v3-track.md](../../../docs/design/format-v3-track.md)
+§5. The critical path is: land the narrowed, guarded RP-2 increment → repair shared-Puffin DV
+sibling closure in fork F-17 → take one fresh immutable RP-3 repin → V3-3 → V3-4 and V3-5 →
+the production gate. V3-6 may run beside V3-3 or V3-4 once its fork type support is pinned.
 
-**Fork lane.** The hardest prerequisites are fork work, queued in the handoff:
-[../mid-term/iceberg-rust-handoff-2026-08-23.md](../mid-term/iceberg-rust-handoff-2026-08-23.md)
-F-7 (lineage through every row-rewrite — compaction and the COW DML path — plus DV-aware
-maintenance and dangling-DV removal) and — added with this charter — F-13 (Puffin DV write
-path), F-14 (`MetadataLocation` Hadoop pointer math), F-15 (v3 type system + default values).
-The engine consumes each by rev-pin repin unit (handoff §5); the lanes run in parallel.
+**Engine lane.** RP-2 keeps only what its committed pins prove. In particular, a DV-free v3
+table may take one MOR DELETE, while any live-DV table refuses until F-17 lands. RP-3 owns the
+full DV input-state matrix and re-measures the row-lineage rewrite at its selected fork SHA.
+
+**Fork lane.** The immediate blocker is F-17 in the
+[fork handoff](../mid-term/iceberg-rust-handoff-2026-08-23.md): path-keyed removal of one blob
+from a shared Puffin must carry every still-live sibling blob. F-14 provides Hadoop pointer
+writes; F-15 provides the V3-6 type/default substrate. The engine consumes the landed batch by
+one rev-pin unit and never targets moving fork `main`.
 
 ## 5. Owner actions and open dependencies
 
@@ -107,8 +108,9 @@ The engine consumes each by rev-pin repin unit (handoff §5); the lanes run in p
   the first S3 Tables `expire_snapshots` measurement decides, and a denial is a stop, not a
   design.
 - **Sequencing vs the other campaigns.** This ruling makes v3 the spine to v1.0; FNP, perf,
-  dbt, and the correctness backlog interleave as owner-chartered units, they do not gate the
-  tag unless ruled into §3.
+  dbt, and the correctness backlog may use fork-wait windows as separately chartered units.
+  They do not consume F-17 and do not gate the tag unless ruled into §3. A ready v3 unit takes
+  priority over side-lane work.
 - **AWS v3 support, as AWS documents it (checked 2026-08-23).** Glue (catalog, REST,
   maintenance) and S3 Tables (REST, maintenance) state v3 support, EMR ≥ 7.12 (AWS
   announcement 2025-11-26; the "Apache Iceberg on AWS" prescriptive-guidance table-spec-v3

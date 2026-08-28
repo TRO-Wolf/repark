@@ -379,9 +379,15 @@ def test_v3_live_oracle_pins_cover_all_clauses() -> None:
     """
     import subprocess
 
-    ledger = _REPO_ROOT / "task/ledgers/staging/v3e-5-nightly-v3-oracle-ledger.md"
-    assert ledger.is_file()
-    text = ledger.read_text(encoding="utf-8")
+    ledger_name = "v3e-5-nightly-v3-oracle-ledger.md"
+    live_ledgers = (
+        _REPO_ROOT / "task/ledgers/staging" / ledger_name,
+        _REPO_ROOT / "task/ledgers/completed" / ledger_name,
+    )
+    archived_ledgers = sorted((_REPO_ROOT / "task/ledgers/archive").glob(f"*/*-{ledger_name}"))
+    ledgers = [path for path in (*live_ledgers, *archived_ledgers) if path.is_file()]
+    assert len(ledgers) == 1, ledgers
+    text = ledgers[0].read_text(encoding="utf-8")
     assert "VERDICT: PASS" in text
     assert "Nightly oracle: v3 leg" in (
         _REPO_ROOT / "task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md"
@@ -399,28 +405,27 @@ def test_v3_live_oracle_pins_cover_all_clauses() -> None:
         cwd=str(_REPO_ROOT),
     )
     assert dual.returncode == 0, dual.stderr
-    diff = subprocess.run(
-        ["git", "diff", "--name-only", "origin/main...HEAD"],
+    landed_diff = subprocess.run(
+        [
+            "git",
+            "show",
+            "--format=",
+            "--name-only",
+            "ecbd6a4162a365f96e216a856becda6f1876956b",
+        ],
         capture_output=True,
         text=True,
         cwd=str(_REPO_ROOT),
     )
-    if diff.returncode != 0:
-        diff = subprocess.run(
-            ["git", "diff", "--name-only", "HEAD"],
-            capture_output=True,
-            text=True,
-            cwd=str(_REPO_ROOT),
-        )
-        if diff.returncode != 0 or not diff.stdout.strip():
-            pytest.skip("git diff with origin/main not available in wheel test env")
+    if landed_diff.returncode != 0:
+        pytest.skip("V3E-5 landing commit not available in wheel test environment")
     allowed_prefixes = (
         ".github/workflows/",
         "python/repark/tests/",
         "task/ledgers/",
         "task/roadmap/",
     )
-    for line in diff.stdout.splitlines():
+    for line in landed_diff.stdout.splitlines():
         if not line.strip():
             continue
         assert line.startswith(allowed_prefixes) or line in (

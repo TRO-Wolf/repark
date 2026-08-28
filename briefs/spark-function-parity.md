@@ -1,10 +1,11 @@
 # BRIEF — the Spark function parity campaign (execution slate)
 
 **Charter:** [docs/design/spark-function-parity.md](../docs/design/spark-function-parity.md).
-**Ledger gate:** `task/fnp-0-charter-ledger.md` — no unit opens before that ledger is fully
+**Ledger gate:** `task/ledgers/staging/fnp-0-charter-ledger.md` — no unit opens before that ledger is fully
 `PROVEN` and the owner confirms.
-**Delivery shape (owner decision, 2026-08-20):** ONE pull request. Every unit lands as its own
-commit on one branch, with its own `task/` ledger, so review runs commit by commit.
+**Delivery shape (amended by owner decision, 2026-08-28):** one coherent pull request per unit
+or tightly coupled pair. The first tranche already landed as PRs #190–#193; the campaign no
+longer accumulates every remaining unit on one branch.
 
 ## Orchestration (standing rules)
 
@@ -18,13 +19,15 @@ These narrow [AGENTS.md](../AGENTS.md) "Delegated-agent standing rules"; they ne
 - **The orchestrator never merges.** Units go ready-for-review; the owner merges.
 - **Green is an exit condition.** Unit gate `make verify`; pre-merge `make preflight`. Real exit
   codes, never a pipe's.
-- **One ledger per unit**, `task/fnp-<n>-<slug>-ledger.md`, linked from `task/map.md` in the same
+- **One ledger per unit**, `task/ledgers/staging/fnp-<n>-<slug>-ledger.md`, linked from that
+  directory's `map.md` in the same
   commit. Ledger presence is a gate item.
 - **Disk** — [AGENTS.md "Resource discipline"](../AGENTS.md#resource-discipline--disk-and-artifacts)
   binds every unit: check before the build, re-check at phase boundaries, scoped cleanup, and the
   handoff report.
 - **Closed paths for every unit unless the unit names them writable:** `Cargo.toml [patch]`,
-  lockfiles, `.github/`, STATUS.md, the divergence registry. The close-out unit owns those.
+  lockfiles, `.github/`, and STATUS.md. FNP-15/16 explicitly owns its required divergence-registry
+  sections; FNP-Z owns the final STATUS and census close-out.
 
 ## The testing contract is binding — every unit, no exceptions
 
@@ -44,38 +47,32 @@ These narrow [AGENTS.md](../AGENTS.md) "Delegated-agent standing rules"; they ne
 
 ## Sequencing
 
-Twenty units, one branch, one PR. Each unit is one commit with its own
-`task/fnp-<n>-<slug>-ledger.md`. The full roster, scope and rationale is
+The delivered tranche stays in its four merged PRs. Each remaining unit or tightly coupled pair
+gets one reviewable PR and its own `task/ledgers/staging/fnp-<n>-<slug>-ledger.md`. The full roster, scope and rationale is
 [docs/design/spark-function-parity.md §7](../docs/design/spark-function-parity.md); this slate
 adds the per-unit execution contract.
 
-Correctness first, then free names, then the family the users notice, then the batches:
+The remaining order is:
 
 ```
-FNP-1  two-door asymmetry        →  FNP-2  free names   →  FNP-3  de-stub what ships
-FNP-4a seam + exists  →  FNP-4b Spark-door dialect  →  FNP-4c the eight kernels
-FNP-5  wire-only aggregates      →  FNP-6  reuse our kernels  →  FNP-7a try_* (raising paths)  →  FNP-7b BLOCKED on F-Y10-1
-FNP-8  repatriation (55)
-FNP-9  collections/generators    →  FNP-10 JSON  →  FNP-11 timestamp/TIME
-FNP-12 aggregates + formatting   →  FNP-13 collation (G15 retirement)  →  FNP-14 crypto + mask
-FNP-15 unreachable: register     →  FNP-16 declared families: register
-FNP-Z  close-out (owns the closed paths)
+FNP-15/16 honesty  →  F-Y10-1 integer overflow  →  FNP-4c higher-order kernels
+FNP-7a/7b try_*    →  FNP-9/10 collections + JSON  →  FNP-8 repatriation
+FNP-11/12 time + numeric/aggregate families       →  FNP-Z close-out
 ```
 
-Two units need a design pass before they open. **FNP-11** is entangled with the open TZ-4 residues
-and TZ-6/TZ-7/TZ-8. **FNP-13** retires registry row G15, which armed refusal sites well beyond the
-two function names — enumerate every one of them before writing code. FNP-8 may run in parallel
-with FNP-9/10 if the branch stays clean; nothing else may.
+FNP-4b, FNP-6d, FNP-13, and FNP-14 stay deferred for the reasons in the design. **FNP-11** needs
+a design pass because it is entangled with the open TZ residues. FNP work may use fork-wait time,
+but a ready north-star unit preempts it; this campaign does not gate v1.0.
 
 ## Per-unit contract
 
 Every unit, without exception:
 
-1. **Charter** — the clause IDs from `task/fnp-0-charter-ledger.md` this unit discharges. A unit
+1. **Charter** — the clause IDs from `task/ledgers/staging/fnp-0-charter-ledger.md` this unit discharges. A unit
    that touches a name outside its clause set is scope creep and trips Invariant V.
 2. **Writable paths** — named explicitly. Everything else is closed. `Cargo.toml [patch]`,
-   lockfiles, `.github/`, STATUS.md and the divergence registry are closed to every unit except
-   FNP-Z.
+   lockfiles and `.github/` stay closed. A unit that changes a divergence must own the matching
+   registry section; STATUS.md remains FNP-Z's close-out surface.
 3. **Rubric result** — LIGHT or STANDARD, recorded. FNP-2 is the only plausible LIGHT unit;
    anything adding a kernel fails criterion 4 (new architectural pattern) or 1 (public interface).
 4. **Pins per enumerated element** — see the testing contract above. A unit that adds names to the
@@ -84,7 +81,8 @@ Every unit, without exception:
    any value claim. Output recorded verbatim. Hand-computed expectations are not an oracle.
 6. **Gates** — `make verify` to exit the Actor phase; `make preflight` before the unit is called
    ready. Real exit codes.
-7. **Ledger** — `task/fnp-<n>-<slug>-ledger.md`, linked from `task/map.md` in the same commit,
+7. **Ledger** — `task/ledgers/staging/fnp-<n>-<slug>-ledger.md`, linked from that directory's
+   `map.md` in the same commit,
    carrying the GO/deferred table, the findings ledger with dispositions, the coverage attestation,
    and the disk report.
 
@@ -138,7 +136,7 @@ Every unit, without exception:
 
 ## What "done" means for the campaign
 
-Every clause in `task/fnp-0-charter-ledger.md` `PROVEN` at campaign scope, `make preflight` green,
+Every clause in `task/ledgers/staging/fnp-0-charter-ledger.md` `PROVEN` at campaign scope, `make preflight` green,
 the census re-run and its numbers in STATUS.md, and
 `set(pyspark.sql.functions.__all__) - set(repark.spark.functions.__all__) == set()` asserted in the
 facade suite.

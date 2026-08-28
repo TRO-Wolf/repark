@@ -413,6 +413,32 @@ increments.
   and never gets selected. Landing F-3 alone does not close RDF-1, and the oracle shows why —
   Spark reaches zero with that option off.
 
+### F-17 (north-star blocker, added 2026-08-28) — shared-Puffin DV sibling closure
+
+- **Engine observation.** One Spark-written Puffin contains two deletion-vector blobs. The
+  `part=0` blob deletes id 2, and the `part=1` blob deletes id 5. An engine DELETE of id 1
+  touches only `part=0`. The expected live set is `{3,4,6}`; the measured set is `{3,4,5,6}`.
+- **Mechanism.** The DML path loads only the deletion vector for the touched data file. Commit
+  removes the old delete manifest entry by Puffin path, which also removes the untouched
+  sibling blob at that path. The replacement Puffin contains only the touched data file's
+  merged positions. The sibling delete is therefore lost even though the transaction commits.
+- **Existing fork primitive.** Fork PR #232 already solved sibling closure for maintenance in
+  `crates/iceberg/src/maintenance/rewrite_data_files_dv.rs`. Reuse or generalize that closure;
+  do not create a second Puffin-copy implementation for DML.
+- **Ask.** When DELETE or UPDATE supersedes one blob in a shared Puffin, copy every still-live
+  sibling blob into the replacement and remove all superseded entries atomically. Preserve each
+  sibling's referenced data file, partition, spec id, sequence metadata, blob type, properties,
+  and payload. Recompute and publish correct offsets, lengths, and file size for the replacement
+  Puffin; those physical values need not match the old container.
+- **Acceptance.** Build two data files in different partitions and one Puffin holding a DV for
+  each. Java or Spark writes the input, fork DML touches one data file, and Java reads the exact
+  survivor rows. A sabotage variant that omits sibling carry must fail. Pre-write failure must
+  leave no new Puffin, manifest, or orphan object.
+- **Engine pin that flips.** RP-2 keeps its broad live-DV refusal, including a second-DELETE pin
+  and the shared-Puffin fixture. RP-3 retargets those pins only after one immutable fork SHA
+  includes F-17, then runs the complete engine-written, Spark-written, shared-Puffin, multi-file,
+  and equality-delete-plus-DV matrix.
+
 ## 4. Not fork work — do not pick these up
 
 Listed so they are not re-proposed fork-side:

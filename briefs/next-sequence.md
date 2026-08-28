@@ -37,33 +37,24 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 
 | # | Unit | Track | Blocked by | Size |
 |---|---|---|---|---|
-| 1 | **V3E-5** — the nightly-oracle v3 leg | v3 evidence | the scoped `.github/` grant (below) | S <!-- unit id=v3e-5 --> |
+| 1 | **RP-2** — salvage the guarded fork repin at `ce92a7bf` | North Star | branch hygiene and the narrowed charter | STANDARD <!-- unit id=rp-2 --> |
+| 2 | **FNP-15/16** — register every unreachable and declared-deferred family | Function parity | RP-2 departure | STANDARD <!-- unit id=fnp-15-16 --> |
 
-<!-- unit id=v3e-5 ledger=v3e-5- -->
-**Lane A — the v3 evidence intake (owner-chartered 2026-08-24).** Five measure-first units
-against the north-star matrix
-([../task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md](../task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md)
-§3); none depends on fork work. The owner's three rulings, all dated 2026-08-24:
-
-1. **Lane A is the next sequence.** V3E-1 + V3E-2 merged as
-   [#235](https://github.com/TRO-Wolf/repark/pull/235): COW DML on an adopted v3
-   table committed and **reassigned** lineage (registry `V3-COW-1`); Spark preserves
-   `_row_id` on DELETE. **Ruled 2026-08-25: guarded** — the row now refuses on both doors. The v3
-   maintenance oracle is PySpark 4.1.2 + Iceberg 1.11.0. **V3E-5 is Lane A's next unit** and
-   #1 on the queue.
-2. **Table encryption keys are a dated DECLARED exclusion from the v1.0 gate.** Registry
-   `ENC-1` ([#235](https://github.com/TRO-Wolf/repark/pull/235)).
-3. **A one-time scoped `.github/` grant** for V3E-5 only: add the v3 fixture leg to the nightly
-   parity workflow, in its own reviewable PR. No other workflow edit rides it.
-
-The **fork lane runs in parallel and is owner-run** via
-[../task/roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md](../task/roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md)
-— suggested order F-16 (small; repark's C-011 pin flipping red is the acceptance signal) →
-F-13 (the DV write path, gates V3-3) → F-14. Each fork landing returns here as a repin unit
-(RP-2, …). V3-3 and later engine units stay owner-sequenced and are **not** in this queue.
+<!-- unit id=rp-2 ledger=rp-2- -->
+**Why RP-2 is first.** Its branch already proves a useful first MOR DELETE on a DV-free v3
+table. The unit keeps that increment, adds the second-DELETE refusal pin, and leaves every
+live-DV table guarded. It does not claim shared-Puffin merge or lineage-preserving maintenance.
+Fork F-17 runs in parallel; after F-17 lands, RP-3 takes one fresh immutable fork batch and
+preempts side-lane work.
 <!-- /unit -->
 
-**Not in this queue (owner-sequenced or owner-gated):** V3-3 (deletion-vector writes; gated on
-fork F-13) and the engine units after it; S3 Tables MOR (intake "MW-4b", gated on OD-3b); DML-A/B/C
-and Track A W-0. A merged unit leaves this file with no record here — its ledger is in
+<!-- unit id=fnp-15-16 ledger=fnp-15-16- -->
+**Why FNP-15/16 follows.** This is the highest-value fork-independent honesty unit: it turns 62
+missing or ambiguous names into explicit refusing surfaces with exact registry reasons. It may
+use the fork wait after RP-2. It does not gate v1.0 and yields when F-17 makes RP-3 ready.
+<!-- /unit -->
+
+**Not in this queue (owner-sequenced or owner-gated):** fork F-17 runs in its separate repository;
+RP-3 opens after RP-2 and F-17; V3-3 and the engine units after it wait for RP-3; S3 Tables MOR (intake
+"MW-4b", gated on OD-3b); DML-A/B/C and Track A W-0. A merged unit leaves this file with no record here — its ledger is in
 [../task/ledgers/archive/](../task/ledgers/archive/map.md) and its PR on `main`.

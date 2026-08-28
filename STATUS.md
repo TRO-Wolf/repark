@@ -7,7 +7,7 @@
 > [.agents/](.agents/map.md) as thin tool adapters that carry no authoritative facts). When a current-state
 > fact changes, it changes **here** — other files point at this file, they do not restate it.
 
-_Last updated: 2026-08-25._
+_Last updated: 2026-08-28._
 
 ## Release state
 
@@ -159,10 +159,12 @@ published history — an exposure **accepted by explicit decision**; provenance:
     and the v2→v3 in-place upgrade is built behind the create opt-in after V3-3. Ledgers in
     [task/ledgers/archive/2026-08/](task/ledgers/archive/2026-08/map.md).
     V3E-4 measured refs, `VERSION AS OF` over DVs, expire dual-probe, and the
-    orphan 24h floor on adopted v3.
-  - **Next:** V3E-5 (nightly v3 live-oracle leg), on
-    [briefs/next-sequence.md](briefs/next-sequence.md). V3-3 (DV writes) is owner-sequenced,
-    gated on fork F-13.
+    orphan 24h floor on adopted v3. V3E-5 added the nightly v3 live-oracle leg
+    ([#253](https://github.com/TRO-Wolf/repark/pull/253)).
+  - **Next:** salvage RP-2 with one safe MOR DELETE on a DV-free table and a broad live-DV
+    refusal. Fork F-17 repairs shared-Puffin sibling closure in parallel; RP-3 takes the repair
+    and the full DV matrix before V3-3. The ordered contract is
+    [docs/design/format-v3-track.md §5](docs/design/format-v3-track.md).
 <!-- /ws -->
 
 <!-- ws id=perf ledgers=perf- state=open -->
@@ -178,7 +180,10 @@ published history — an exposure **accepted by explicit decision**; provenance:
 
 <!-- ws id=fnp ledgers=fnp- state=open -->
 - **Spark function parity campaign** (active, chartered 2026-08-20; first tranche merged as
-  [#190](https://github.com/TRO-Wolf/repark/pull/190)). Close the `pyspark.sql.functions` gap and
+  [#190](https://github.com/TRO-Wolf/repark/pull/190),
+  [#191](https://github.com/TRO-Wolf/repark/pull/191),
+  [#192](https://github.com/TRO-Wolf/repark/pull/192), and
+  [#193](https://github.com/TRO-Wolf/repark/pull/193)). Close the `pyspark.sql.functions` gap and
   move the semantics behind every name out of Python into Rust. Design:
   [docs/design/spark-function-parity.md](docs/design/spark-function-parity.md) (§7 carries the
   unit table and the recommended order); slate:
@@ -186,12 +191,11 @@ published history — an exposure **accepted by explicit decision**; provenance:
   [task/ledgers/staging/fnp-0-charter-ledger.md](task/ledgers/staging/fnp-0-charter-ledger.md);
   evidence: [task/fnp-0-census/](task/fnp-0-census/map.md).
   **Delivered:** `__all__` 333 → 360, 41 names from refusing-or-absent to working (FNP-1..6c);
-  thirty-six needed no new kernel — that seam is exhausted. **Next, in order (revised
-  2026-08-20 on measured evidence):** FNP-15 + FNP-16 (refusing stubs + registry sections for
-  the 62 names that will not be built — closes charter C-009), FNP-4c (the higher-order
-  kernels), then F-Y10-1 integer wrap (measured: `CAST(2147483647 AS INT) + 1` returns
-  `2147483648` where Spark raises; blocks FNP-7b), FNP-7a / 9 / 10, FNP-8 (repatriation), FNP-11
-  / 12, FNP-Z close-out. Deferred with reasons in the design: FNP-6d, FNP-13, FNP-14, FNP-4b.
+  thirty-six needed no new kernel — that seam is exhausted. Remaining work ships as one coherent
+  PR per unit or tightly coupled pair. **Next, in order (revised 2026-08-28):** FNP-15/16 →
+  F-Y10-1 integer overflow → FNP-4c → FNP-7a/7b → FNP-9/10 → FNP-8 → FNP-11/12 → FNP-Z.
+  Deferred with reasons in the design: FNP-4b, FNP-6d, FNP-13, FNP-14. This campaign and TA
+  performance consume no F-17 surface and may use fork-wait windows; neither gates v1.0.
 <!-- /ws -->
 
 <!-- ws id=h2 ledgers=h-,h2- state=open -->
