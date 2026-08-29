@@ -13,8 +13,8 @@ branch. (Same contract as the private v1 repository's `briefs/` directory.)
 - [next-sequence.md](next-sequence.md) — **the next-sequence slate (2026-08-21, rolling):** one
   ordered queue and the reasoning for the order. Live queue (2026-08-28): **RP-3** — the frozen
   post-F-17 fork repin, the engine wiring of the DV container closure and the DV input-state
-  matrix — then fork-independent **FNP-15/16**. A merged unit leaves this file whole; its
-  record is the archived ledger.
+  matrix — then fork-independent **FNP-15/16**, then **MW-10** (the S3 Tables MOR leg, now that
+  OD-3b's IAM is applied). A merged unit leaves this file whole; its record is the archived ledger.
   Carries the PYC unit definitions, the two hazards a pure-refactor campaign
   has to name in advance, and the 2026-08-22 arming-measurements record (docstring-presence
   subset owner-ruled and armed as PYC-6; `PL`/`A`/`print()` measured and declined with

@@ -70,7 +70,8 @@ the OD-3 exception on the warehouse scratch prefix only (MW-4 compact + expire):
   statement, so widening the read scope never widens the write scope: creates and updates stay
   scratch-scoped. (The eager enumeration is filed separately as an engine observation; this
   runbook records what the current engine requires and promises no engine change.)
-- S3 Tables (the v3 live legs — **OD-3b, owner ruling 2026-08-25: in v1.0**): one statement on
+- S3 Tables (the v3 live legs — **OD-3b, owner ruling 2026-08-25: in v1.0; applied by the owner
+  2026-08-28**; the first measurement is unit MW-10): one statement on
   the **table** ARN, scratch-scoped by the namespace condition key —
   `s3tables:GetTable`, `s3tables:GetTableMetadataLocation`,
   `s3tables:UpdateTableMetadataLocation`, `s3tables:GetTableData`, `s3tables:PutTableData` on
