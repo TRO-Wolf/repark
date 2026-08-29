@@ -1,4 +1,4 @@
-"""SparkContext, RuntimeConfig (r26 T1 MOVE-ONLY)."""
+"""SparkContext, RuntimeConfig."""
 
 from __future__ import annotations
 
@@ -18,21 +18,14 @@ del _name, _session_funcs
 
 
 class SparkContext:
-    """Minimal ``spark.sparkContext`` surface for near-drop-in jobs (Group F / dogfood).
+    """Minimal ``spark.sparkContext`` surface for near-drop-in jobs.
 
-    Production scripts touch this for logging and identity (``setLogLevel``, ``applicationId``,
-    ``master``). repark is single-node with ``tracing``-based engine logging, so:
-
-    * :meth:`setLogLevel` is a **silent accepted no-op** (OTH-010) — same rationale as
-      ``catalog.clearCache``: migration jobs call it once per run and a warn would only spam.
-    * :attr:`applicationId` is a stable per-session id assigned at session build.
-    * :attr:`master` echoes the builder's recorded ``spark.master`` (default ``local[repark]``).
-
-    After :meth:`ReparkSession.stop`, every method/property on this handle raises
-    :class:`RuntimeError` (octo r2 C1-L-001 — a held reference must not outlive the session).
-
-    Any other attribute raises :class:`AttributeError` naming the gap (full SparkContext is out
-    of scope).
+    Production scripts touch this for logging and identity: :meth:`setLogLevel` is a
+    silent accepted no-op (OTH-010; engine logging is ``tracing``), :attr:`applicationId`
+    is a stable per-session id, :attr:`master` echoes the builder's ``spark.master``
+    (default ``local[repark]``). After :meth:`ReparkSession.stop`, every member raises
+    :class:`RuntimeError`; any other attribute raises :class:`AttributeError` naming
+    the gap (full SparkContext is out of scope).
     """
 
     __slots__ = ("_alive", "_application_id", "_master")
@@ -53,10 +46,9 @@ class SparkContext:
         self._alive = False
 
     def setLogLevel(self, level: str) -> None:  # noqa: N802 — PySpark camelCase
-        """Accept ``setLogLevel`` for source compatibility (engine logging is ``tracing``).
+        """Accept ``setLogLevel`` for source compatibility; silent no-op (OTH-010).
 
-        Silent no-op: repark does not wire JVM log4j levels. Documented OTH-010 disclosure —
-        see ``docs/spark-sql-iceberg-parity.md`` §8.
+        repark does not wire JVM log4j levels; see ``docs/spark-sql-iceberg-parity.md`` §8.
         """
         self._ensure_alive()
         _ = level  # accepted, ignored
@@ -74,12 +66,12 @@ class SparkContext:
         return self._master
 
     def __getattr__(self, name: str) -> Any:
-        """Fail loud on any SparkContext surface beyond the three dogfood-required members."""
+        """Fail loud on any SparkContext surface beyond the three implemented members."""
         # Prefer stopped-session errors over gap AttributeError when the handle is dead.
         self._ensure_alive()
-        # Deliberately a BARE AttributeError (Group X exclusion): PySpark's SparkContext HAS these
-        # attributes, so there is no PySpark raise to mirror — this is a repark scope gap, not the
-        # `[ATTRIBUTE_NOT_SUPPORTED]` user-misuse class PySparkAttributeError models.
+        # Deliberately a bare AttributeError: PySpark's SparkContext HAS these attributes, so
+        # there is no PySpark raise to mirror — a repark scope gap, not the user-misuse class
+        # PySparkAttributeError models.
         raise AttributeError(
             f"repark SparkContext has no attribute {name!r} "
             f"(only setLogLevel / applicationId / master are implemented; "
@@ -90,48 +82,24 @@ class SparkContext:
 class RuntimeConfig:
     """Facade runtime configuration (PySpark ``SparkSession.conf`` / ``RuntimeConfig``).
 
-    Stores string values on the session's alive-token conf map. Used by Apache
-    ``sql_conf`` context managers and a few product gates (cross-join enablement). Not a
-    full SQLConf implementation — most keys stay facade-local.
+    Stores string values on the session's alive-token conf map; not a full SQLConf.
 
-    **r21 T2 — ``datafusion.*`` allow-list:** keys under the ``datafusion.`` prefix are
-    forwarded to the live DataFusion session via ``SET <key> = <value>`` (refuse-loud when
-    DataFusion rejects the key or value). Keys must be **canonical lowercase** identifier
-    paths (no surrounding whitespace); mixed-case / padded lookalikes refuse-loud so the
-    facade never keeps a silent store-only twin. This is the sanctioned surface for
-    ``datafusion.runtime.memory_limit``, ``datafusion.execution.sort_spill_reservation_bytes``,
-    and the rest of the DF config tree (SHOW ALL).
+    ``datafusion.*`` keys are forwarded to the live DataFusion session via ``SET``
+    (refuse-loud on rejection). Keys must be canonical lowercase paths; mixed-case /
+    padded lookalikes refuse-loud so the facade never keeps a silent store-only twin.
 
-    **One truth for the memory pool (not two lying knobs):**
+    The memory pool has one truth: build-time ``repark.memory.limit.gb`` (or
+    ``builder.config``) installs the FairSpillPool, fixed at ``getOrCreate`` — a runtime
+    set refuses loud (the live pool would not move). Runtime
+    ``datafusion.runtime.memory_limit`` swaps in a new FairSpillPool of that size.
+    Setting both on the same builder refuses loud (ambiguous initial size).
+    ``datafusion.runtime.temp_directory`` is build-time only; a runtime set refuses
+    loud and names ``TMPDIR`` (the DiskManager is fixed after ``build()``).
 
-    * Build-time: ``repark.memory.limit.gb`` / ``SparkSession.builder.config(...)`` installs
-      the FairSpillPool (RAM-relative default ``clamp(0.6 * cgroup-or-MemTotal, 1 MiB,
-      8 GiB)``; ``0`` opts out / unbounded). ``sort_spill_reservation_bytes *
-      target_partitions`` is a non-spillable floor. Fixed at ``getOrCreate`` — reuse does
-      not re-size the pool from the builder. ``spark.conf.set("repark.memory.limit.gb", …)``
-      at runtime **refuses loud** (would only mutate the facade while the live pool stayed put).
-    * Runtime: ``spark.conf.set("datafusion.runtime.memory_limit", "16G")`` (or SQL
-      ``SET datafusion.runtime.memory_limit = '16G'``) swaps a **new FairSpillPool**
-      of that size (DataFusion 54.1 has no in-place resize; in-flight reservations
-      stay on the old pool). Same pool type as the builder — one truth, not two knobs.
-    * Setting **both** ``repark.memory.limit.gb`` and ``datafusion.runtime.memory_limit`` on
-      the same builder refuses loud (same pool, ambiguous initial size).
-    * Spill disk: ``datafusion.runtime.temp_directory`` is a **build-time** pseudo-key
-      (``RuntimeEnvBuilder.with_temp_file_path``). Runtime ``conf.set`` / SQL ``SET`` of it
-      **refuses loud** and names ``TMPDIR`` (the DiskManager is fixed after ``build()``).
-
-    **The session timezone is build-time too (H-1a), with a different disclosure shape.**
-    ``spark.sql.session.timeZone`` is set on the builder and validated by the engine once at
-    ``getOrCreate``. A runtime ``set`` / ``unset`` of it is **accepted for source compatibility,
-    warned once, and not applied** (the ``.master(...)`` shape, OTH-010) — PySpark's own
-    ``sql_conf`` context manager sets this key, so a raise would break a drop-in script. The value
-    is deliberately NOT stored, so ``spark.conf.get`` keeps reporting the zone the live engine
-    session really has (default ``UTC``). See :mod:`repark.session.session_time_zone` for the
-    evidence behind that choice and the declared divergences.
-
-    C3 additive surface: :attr:`getAll`, ``set`` refuses ``None`` / non-scalar Python
-    objects, and :meth:`get` without a default raises when the key is unset (Apache
-    ``test_conf`` / ``test_get_all``).
+    The session timezone is build-time too: a runtime set/unset is accepted, warned
+    once, and not applied (PySpark's ``sql_conf`` context manager sets this key, so a
+    raise would break a drop-in script). The value is deliberately NOT stored, so
+    ``conf.get`` reports the zone the live engine session really has (default ``UTC``).
     """
 
     __slots__ = ("_session",)
@@ -160,16 +128,12 @@ class RuntimeConfig:
         """Set a configuration property (coerced to ``str``).
 
         Bool → ``"true"`` / ``"false"`` (Spark parity). ``None`` raises
-        :class:`~repark.errors.IllegalArgumentException`. Other non-str/int/bool
-        types raise :class:`Exception` (Apache ``test_conf_with_python_objects``).
-
-        Keys under ``datafusion.`` are forwarded to the engine (r21 T2). Unknown DF keys
-        and non-canonical lookalikes raise :class:`~repark.errors.IllegalArgumentException`.
-        Build-time ``repark.memory.limit.gb`` refuses at runtime (use
-        ``datafusion.runtime.memory_limit`` to re-size the live pool).
-        # === r21 T3: ux-polish ===
-        ``repark.display.style`` is applied to the live session's
-        :attr:`~ReparkSession.display_style` (not conf-only absorption).
+        :class:`~repark.errors.IllegalArgumentException`; other non-str/int/bool types
+        raise :class:`Exception` (Apache ``test_conf_with_python_objects``).
+        ``datafusion.`` keys are forwarded to the engine; unknown DF keys and
+        non-canonical lookalikes raise. Runtime ``repark.memory.limit.gb`` refuses
+        (use ``datafusion.runtime.memory_limit`` to re-size the pool). Setting
+        ``repark.display.style`` drives the live session's display style.
         """
         self._session._ensure_alive()
         if not isinstance(key, str):
@@ -180,9 +144,8 @@ class RuntimeConfig:
         if value is None:
             raise IllegalArgumentException(f"value cannot be None for config key {key!r}")
         if key in _SQLCONF_STATIC_KEYS:
-            # Spark static conf: isModifiable→False and set refuses (octo C3 C1 cheap).
             raise Exception(f"Cannot modify the value of static config: {key}")
-        # G15: a collation SQLConf key would otherwise be stored and ignored.
+        # A collation SQLConf key would otherwise be stored and ignored.
         from repark.spark.types import refuse_collation_session_key
 
         refuse_collation_session_key(key)
@@ -203,21 +166,15 @@ class RuntimeConfig:
             raise Exception(
                 f"value type {type(value).__name__} is not supported for config key {key!r}"
             )
-        # === r21 T2: sort-memory ===
         # Build-time FairSpillPool size is not runtime-mutable via conf (one truth).
         _refuse_runtime_memory_limit_gb(key)
-        # === H-1a: session timezone ===
-        # The zone is resolved once at session build. A migrated PySpark script (and Apache's own
-        # `sql_conf` context manager) sets this key at runtime, so the call is ACCEPTED — but the
-        # value is deliberately NOT stored, so `conf.get` keeps reporting the zone the live engine
-        # session actually has instead of the one the caller asked for. Disclosure warns once.
+        # The zone is resolved once at session build. PySpark scripts (and Apache's `sql_conf`
+        # context manager) set this key at runtime, so the call is accepted but NOT stored —
+        # `conf.get` keeps reporting the zone the live engine session actually has. Warns once.
         if warn_runtime_session_time_zone_not_applied(key, stacklevel=3):
             return
-        # datafusion.* namespace: lookalike keys (mixed case / padding) refuse-loud;
-        # only the canonical lowercase path is forwarded + stored.
         if _looks_like_datafusion_conf_key(key):
             _forward_datafusion_conf(self._session, key, text)
-        # === r21 T3: ux-polish ===
         # conf.set("repark.display.style", …) must drive show() — not only the conf map.
         if key.lower() == _DISPLAY_STYLE_KEY:
             style = normalize_display_style(text)
@@ -244,10 +201,7 @@ class RuntimeConfig:
         the builder snapshot, raises :class:`Exception` naming the key (Apache
         ``test_conf``). Explicit ``default=None`` returns ``None`` for an unset key.
         Keys previously :meth:`unset` stay unset even if the builder snapshot still
-        carries them (octo C3 C3-Q-001).
-
-        # === r21 T3: ux-polish ===
-        ``repark.display.style`` reads the live session display style.
+        carries them. ``repark.display.style`` reads the live session display style.
         """
         self._session._ensure_alive()
         if not isinstance(key, str):
@@ -255,11 +209,7 @@ class RuntimeConfig:
                 errorClass="NOT_STR",
                 messageParameters={"arg_name": "key", "arg_type": type(key).__name__},
             )
-        # === r21 T3: ux-polish ===
-        # Honor unset tomb for display style (F-T3-001): prior conf-only special-case
-        # returned alive_token before the tomb check, so get stayed on the pre-unset
-        # style while getAll omitted the key. After unset, default spark is the
-        # session style (property + show stay lockstep via unset reset).
+        # Honor the unset tomb for display style before any store read, so get and getAll agree.
         if key.lower() == _DISPLAY_STYLE_KEY:
             if self._display_style_is_unset():
                 if default is not _CONF_GET_UNSET:
@@ -294,16 +244,13 @@ class RuntimeConfig:
     def unset(self, key: str) -> None:
         """Remove a configuration property (runtime store + builder-fallback tombstone).
 
-        # === r21 T3: ux-polish ===
         ``repark.display.style`` also resets the live session style to the default
-        ``spark`` so ``conf.get`` / ``session.display_style`` / ``show()`` stay
-        lockstep (F-T3-001 — no conf-only split-brain after unset).
+        ``spark`` so ``conf.get`` / ``session.display_style`` / ``show()`` stay lockstep.
         """
         self._session._ensure_alive()
-        # === H-1a: session timezone ===
-        # The zone always HAS a value (the engine resolved one at build), so there is nothing to
-        # unset; tombstoning would make conf.get fall back to the default and report a zone the
-        # live session does not have. Accepted, warned once, no state change — same as `set`.
+        # The zone always has a value (resolved at build), so there is nothing to unset;
+        # tombstoning would make conf.get report a zone the live session does not have.
+        # Accepted, warned once, no state change — same as `set`.
         if warn_runtime_session_time_zone_not_applied(key, stacklevel=3):
             return
         if key.lower() == _DISPLAY_STYLE_KEY:
@@ -326,7 +273,7 @@ class RuntimeConfig:
             return
         self._store().pop(key, None)
         # Tombstone so get/getAll do not resurrect the builder snapshot value
-        # (Spark SQLConf unset removes the entry entirely — octo C3 C3-Q-001).
+        # (Spark SQLConf unset removes the entry entirely).
         self._unset_keys().add(key)
 
     @property
@@ -335,12 +282,9 @@ class RuntimeConfig:
 
         Runtime values win on key collision. Explicitly :meth:`unset` keys are omitted
         even when still present on the builder snapshot. Always non-empty via
-        ``_SQLCONF_DEFAULTS``.
-
-        Secret-shaped keys (mirrored from Rust ``prop_key_is_secret`` — r24 SEC-04) have
-        their **values** replaced with ``***``. Keys remain visible. Explicit
-        :meth:`get` of a named secret key is **unchanged** (returns the real value) so
-        intentional lookups still work; see the A3 ledger both-ways recommendation.
+        ``_SQLCONF_DEFAULTS``. Secret-shaped keys have their **values** replaced with
+        ``***`` (keys remain visible); explicit :meth:`get` of a named secret key
+        returns the real value so intentional lookups still work.
         """
         self._session._ensure_alive()
         tomb = self._unset_keys()

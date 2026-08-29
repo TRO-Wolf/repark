@@ -1,4 +1,4 @@
-"""ReparkSession (r26 T1 MOVE-ONLY)."""
+"""ReparkSession."""
 
 from __future__ import annotations
 
@@ -38,8 +38,7 @@ def _temp_view_home_ref(inner: Any, name: str) -> list[str] | None:
 class ReparkSession:
     """The repark session — near-drop-in for ``pyspark.sql.SparkSession``.
 
-    Construct via :attr:`ReparkSession.builder`. The session owns the native engine handle and is
-    cheap to keep around for the lifetime of a job. :meth:`Builder.getOrCreate` returns the
+    Construct via :attr:`ReparkSession.builder`. :meth:`Builder.getOrCreate` returns the
     process-wide active session when one is already live (PySpark semantics).
     """
 
@@ -54,13 +53,11 @@ class ReparkSession:
     ) -> None:
         """Wrap a native ``PyReparkSession``. Prefer :attr:`ReparkSession.builder`."""
         self._inner: _native.PyReparkSession | None = inner
-        # Snapshot of the builder config that created this session (for getOrCreate warn-on-diff).
-        # Values may be ``None`` after Spark-shaped ``_to_str`` (kv/map with an explicit None).
+        # Builder-config snapshot for getOrCreate warn-on-diff; values may be None (Spark _to_str).
         self._builder_config: dict[str, str | None] = dict(builder_config or {})
-        # Shared with every DataFrame this session mints; stop() flips alive→False (octo r3).
-        # ``display_style`` rides the same shared box so show() sees runtime updates (R-DISPLAY).
-        # R-CURCAT-FACADE: current catalog/database + known catalog names are facade-only state
-        # (dies with stop(); never engine router / USE state).
+        # Shared with every DataFrame this session mints; stop() flips alive→False (octo r3);
+        # display_style rides the same box so show() sees runtime updates (R-DISPLAY).
+        # R-CURCAT-FACADE: catalog state is facade-only; dies with stop(), never engine USE state.
         known_catalogs = _catalog_names_from_builder_config(self._builder_config)
         default_catalog = _default_catalog_from_builder_config(self._builder_config)
         if default_catalog is None and len(known_catalogs) == 1:
@@ -68,7 +65,7 @@ class ReparkSession:
             default_catalog = next(iter(known_catalogs))
         if default_catalog is None:
             default_catalog = DEFAULT_CATALOG_NAME
-        # E2: ``spark.sql.defaultNamespace`` seeds currentDatabase (else Spark's ``default``).
+        # spark.sql.defaultNamespace seeds currentDatabase (else Spark's ``default``).
         default_namespace = _default_namespace_from_builder_config(self._builder_config)
         if default_namespace is None:
             default_namespace = DEFAULT_DATABASE_NAME
@@ -83,7 +80,7 @@ class ReparkSession:
                 "known_catalogs": known_catalogs,
                 "information_schema_enabled": False,
             },
-            # U8: classic scalar Python UDF registry (name → entry); dies with stop().
+            # Classic scalar Python UDF registry (name → entry); dies with stop().
             "udf_registry": {},
         }
         master = self._builder_config_get_master()
@@ -91,7 +88,6 @@ class ReparkSession:
         application_id = f"local-repark-{uuid.uuid4().hex[:12]}"
         self._spark_context = SparkContext(application_id=application_id, master=master)
 
-    # === r21 T3: ux-polish ===
     @property
     def display_style(self) -> str:
         """Opt-in ``DataFrame.show()`` render style: ``spark`` (default), ``polars``, or ``duckdb``.
@@ -109,7 +105,6 @@ class ReparkSession:
     def display_style(self, value: str) -> None:
         """Set the session display style (see :attr:`display_style`).
 
-        # === r21 T3: ux-polish ===
         Keeps ``spark.conf`` / builder snapshot in sync so conf.get and show() agree.
         """
         self._ensure_alive()
@@ -169,33 +164,30 @@ class ReparkSession:
 
         Bare / two-part table names in load-bearing free-SQL forms (``DROP TABLE``,
         ``INSERT``, ``CREATE TABLE``, ``MERGE INTO``, ``UPDATE``, ``DELETE FROM``,
-        ``SELECT``/``WITH`` FROM/JOIN) expand under the session default catalog + namespace
-        at this entry point via :meth:`resolve_table_name` (E2/F1/G1 name-resolution layer)
-        — not by call-site string surgery. Auto-memory-catalog sticky alias semantics apply
-        unchanged.
+        ``SELECT``/``WITH`` FROM/JOIN) expand under the session default catalog +
+        namespace at this entry point via :meth:`resolve_table_name` — not by call-site
+        string surgery. Auto-memory-catalog sticky alias semantics apply unchanged.
 
-        **U8/U9/U10 registered Python UDFs:** only names present in the session UDF
-        registry (via :meth:`spark.udf.register`) are considered — never a generic
-        ``ident(`` scan. SELECT-list forms (simple, expression-wrapped, DISTINCT,
-        WITH/CTE bodies) and scalar UDF use in WHERE / GROUP BY / HAVING rewrite through
-        the DataFrame ``udf`` bridge (U10); JOIN ON / nested ``(SELECT`` subqueries /
-        ORDER BY *expressions* still refuse loud. ``ORDER BY`` on SELECT aliases is
-        applied post-materialization (no internal-name leak). See
+        Only registered Python UDFs (via :meth:`spark.udf.register`) are considered —
+        never a generic ``ident(`` scan. SELECT-list forms (simple, expression-wrapped,
+        DISTINCT, WITH/CTE bodies) and scalar UDF use in WHERE / GROUP BY / HAVING
+        rewrite through the DataFrame ``udf`` bridge; JOIN ON / nested ``(SELECT``
+        subqueries / ORDER BY *expressions* still refuse loud. ``ORDER BY`` on SELECT
+        aliases is applied post-materialization (no internal-name leak). See
         :meth:`_sql_with_registered_udfs`.
 
-        **U12 registered Python UDTFs:** ``SELECT * FROM name(lit_args)`` rewrites via
-        the session UDTF registry (:meth:`spark.udtf.register`); LATERAL stays blocked.
+        Registered Python UDTFs (via :meth:`spark.udtf.register`) rewrite
+        ``SELECT * FROM name(lit_args)``; LATERAL stays blocked.
         """
         inner = self._ensure_alive()
         self._promote_active()
-        # === r23 C6: udtf-phase2-core ===
         # UDTF FROM-name(lit_args) before scalar UDF rewrite (distinct registries).
         from repark.spark.udtf import try_sql_registered_udtf
 
         udtf_frame = try_sql_registered_udtf(self, query)
         if udtf_frame is not None:
             return udtf_frame
-        # U8: registry-name scan before bare-table expand (rewrite may re-enter sql).
+        # Registry-name scan before bare-table expand (rewrite may re-enter sql).
         udf_frame = self._sql_with_registered_udfs(query)
         if udf_frame is not None:
             return udf_frame
@@ -208,13 +200,13 @@ class ReparkSession:
         *,
         prefer_temp_view: bool = False,
     ) -> str:
-        """Qualify ``table_name`` under current catalog/database (E2 shared resolution).
+        """Qualify ``table_name`` under current catalog/database (shared resolution).
 
         Returns an unquoted multipart identifier. Use :func:`_sql_table_ref` for SQL embeds.
-        When ``prefer_temp_view`` is true, a one-part name that exists as a temp view resolves to
-        that view's session-local HOME, **not** the bare name (R7-1) — a bare reference follows
-        the LIVE ``datafusion.catalog.default_catalog``, so under a raw ``SET`` the product read
-        paths missed a view ``tableExists`` reported present (``repark.spark._temp_views``).
+        With ``prefer_temp_view=True``, a one-part name that exists as a temp view resolves
+        to that view's session-local HOME, **not** the bare name (R7-1): a bare reference
+        follows the LIVE ``datafusion.catalog.default_catalog``, so under a raw ``SET`` the
+        product read paths missed a view ``tableExists`` reported present.
         """
         state = self._catalog_state()
         known: set[str] = state.get("known_catalogs") or set()
@@ -238,24 +230,24 @@ class ReparkSession:
         *,
         prefer_temp_view: bool = False,
     ) -> str:
-        """Resolve then quote a table identifier for SQL (E2 API + writer paths)."""
+        """Resolve then quote a table identifier for SQL (writer paths)."""
         return _sql_table_ref(
             self.resolve_table_name(table_name, prefer_temp_view=prefer_temp_view)
         )
 
     def _expand_bare_table_names_in_sql(self, query: str) -> str:
-        """Expand bare / two-part names in load-bearing free SQL at the SQL entry point (E2/F1).
+        """Expand bare / two-part names in load-bearing free SQL at the SQL entry point.
 
         Statement-prefix / parsed-bounded shapes only (no freestyle body regex). Shared SSOT:
         :meth:`resolve_table_name`. Forms:
 
-        * ``DROP TABLE [IF EXISTS] name [, …]`` (E2 — sqlutils cleanup)
-        * ``INSERT [OVERWRITE [TABLE] | INTO [TABLE]] name …`` (F1 — target; not DIRECTORY)
-        * ``CREATE [OR REPLACE] TABLE [IF NOT EXISTS] name …`` (F1 — durable target; not TEMP)
-        * ``MERGE INTO target [AS a] USING source [AS b] ON …`` (F1 — target + source)
-        * ``UPDATE name [alias] SET … [WHERE …]`` (G1 — target; SET body never regexed)
-        * ``DELETE FROM name [alias] [WHERE …]`` (G1 — target; WHERE-subquery FROM via walker)
-        * ``SELECT`` / ``WITH`` … (F1 — FROM/JOIN/comma refs; a one-part temp view = its HOME)
+        * ``DROP TABLE [IF EXISTS] name [, …]`` (sqlutils cleanup)
+        * ``INSERT [OVERWRITE [TABLE] | INTO [TABLE]] name …`` (target; not DIRECTORY)
+        * ``CREATE [OR REPLACE] TABLE [IF NOT EXISTS] name …`` (durable target; not TEMP)
+        * ``MERGE INTO target [AS a] USING source [AS b] ON …`` (target + source)
+        * ``UPDATE name [alias] SET … [WHERE …]`` (target; SET body never regexed)
+        * ``DELETE FROM name [alias] [WHERE …]`` (target; WHERE-subquery FROM via walker)
+        * ``SELECT`` / ``WITH`` … (FROM/JOIN/comma refs; a one-part temp view = its HOME)
 
         Does **not** rewrite multi-statement scripts. Leading SQL comments / whitespace are
         stripped for classification then re-prefixed (octo C1-Q-006).
@@ -267,8 +259,8 @@ class ReparkSession:
         return trivia + expanded if expanded is not None else query
 
     def _expand_bare_table_names_in_sql_body(self, query: str) -> str:
-        """Statement-form dispatch after leading trivia has been stripped (F1)."""
-        # DROP TABLE [IF EXISTS] name [, name …]  — sqlutils.table() context manager path.
+        """Statement-form dispatch after leading trivia has been stripped."""
+        # DROP TABLE [IF EXISTS] — sqlutils.table() context manager path.
         drop_match = _DROP_TABLE_SQL_RE.match(query)
         if drop_match is not None:
             if_exists = drop_match.group(1) or ""
@@ -283,7 +275,7 @@ class ReparkSession:
                 qualified.append(_sql_table_ref(resolved))
             return f"DROP TABLE {if_exists}{', '.join(qualified)}"
 
-        # MERGE INTO target [alias] USING source [alias] ON …
+        # MERGE INTO — target + source.
         merge_match = _MERGE_INTO_SQL_RE.match(query)
         if merge_match is not None:
             return self._expand_merge_into_sql(query, merge_match)
@@ -294,18 +286,17 @@ class ReparkSession:
         if view_expanded is not None:
             return view_expanded
 
-        # CREATE [OR REPLACE] TABLE [IF NOT EXISTS] name … (not VIEW / TEMP TABLE)
+        # Durable CREATE TABLE (not VIEW / TEMP TABLE).
         if _CREATE_TEMP_TABLE_SQL_RE.match(query) is None:
             create_expanded = self._try_expand_create_table_sql(query)
             if create_expanded is not None:
                 return create_expanded
 
-        # INSERT OVERWRITE / INSERT INTO name …
+        # INSERT OVERWRITE / INSERT INTO — target.
         insert_expanded = self._try_expand_insert_sql(query)
         if insert_expanded is not None:
             return insert_expanded
 
-        # UPDATE name SET … / DELETE FROM name … (G1 — F1 residual bare DML targets).
         update_expanded = self._try_expand_update_sql(query)
         if update_expanded is not None:
             return update_expanded
@@ -333,7 +324,6 @@ class ReparkSession:
             return query
         prefix = query[: match.end()]
         body = query[match.end() :]
-        # Body may have leading whitespace; expand SELECT/WITH free SQL in the body.
         body_trivia, body_sql = _split_leading_sql_trivia(body)
         if _SELECT_OR_WITH_HEAD_RE.match(body_sql) is None:
             return query
@@ -341,18 +331,17 @@ class ReparkSession:
         return f"{prefix}{body_trivia}{expanded_body}"
 
     def _qualify_sql_table_ref(self, raw_name: str, *, prefer_temp_view: bool) -> str:
-        """Resolve + quote a single table identifier for free-SQL expansion (F1)."""
+        """Resolve + quote a single table identifier for free-SQL expansion."""
         resolved = self.resolve_table_name(raw_name.strip(), prefer_temp_view=prefer_temp_view)
         return _sql_table_ref(resolved)
 
     def _try_expand_insert_sql(self, query: str) -> str | None:
-        """Rewrite ``INSERT … name …`` so the target is fully qualified (F1).
+        """Rewrite ``INSERT … name …`` so the target is fully qualified.
 
-        Returns ``None`` when not an INSERT shape. Also expands FROM/JOIN table refs in the
-        trailing body (``INSERT … SELECT … FROM t``).
-
-        ``INSERT OVERWRITE [LOCAL] DIRECTORY`` is not a catalog table target (octo C1-Q-003):
-        leave the target path intact and only expand FROM/JOIN in the statement body.
+        Returns ``None`` when not an INSERT shape; also expands FROM/JOIN table refs in
+        the trailing body (``INSERT … SELECT … FROM t``). ``INSERT OVERWRITE [LOCAL]
+        DIRECTORY`` is not a catalog table target (octo C1-Q-003): leave the target path
+        intact and only expand the statement body.
         """
         prefix_match = _INSERT_PREFIX_RE.match(query)
         if prefix_match is None:
@@ -378,7 +367,7 @@ class ReparkSession:
         return f"{prefix}{qualified}{rest_expanded}"
 
     def _try_expand_create_table_sql(self, query: str) -> str | None:
-        """Rewrite durable ``CREATE TABLE name …`` target to three-part form (F1).
+        """Rewrite durable ``CREATE TABLE name …`` target to three-part form.
 
         Returns ``None`` when the statement is not a CREATE TABLE shape (caller falls through).
         Table name is scanned as a multipart identifier (not regex-to-AS — avoids eating
@@ -389,7 +378,6 @@ class ReparkSession:
             return None
         prefix = prefix_match.group(1)
         name_start = prefix_match.end()
-        # Skip whitespace between TABLE keyword and the identifier.
         while name_start < len(query) and query[name_start].isspace():
             name_start += 1
         name_end = _scan_sql_table_identifier_end(query, name_start)
@@ -405,12 +393,12 @@ class ReparkSession:
         return f"{prefix}{qualified}{rest_expanded}"
 
     def _try_expand_update_sql(self, query: str) -> str | None:
-        """Rewrite ``UPDATE name [alias] SET … [WHERE …]`` target to three-part form (G1).
+        """Rewrite ``UPDATE name [alias] SET … [WHERE …]`` target to three-part form.
 
         Returns ``None`` when not an UPDATE shape. Target is identifier-scanned (never
-        regex-to-SET — table names may end in ``set``). Optional alias + SET/WHERE body stay
-        in the rest; WHERE-subquery FROM/JOIN refs expand via the existing region walker.
-        Does **not** freestyle-regex assignment expressions in the SET list.
+        regex-to-SET — table names may end in ``set``); the SET list is never regexed.
+        Optional alias + SET/WHERE body stay in the rest; WHERE-subquery FROM/JOIN refs
+        expand via the existing region walker.
         """
         prefix_match = _UPDATE_PREFIX_RE.match(query)
         if prefix_match is None:
@@ -437,7 +425,7 @@ class ReparkSession:
         return f"{prefix}{qualified}{rest_expanded}"
 
     def _try_expand_delete_sql(self, query: str) -> str | None:
-        """Rewrite ``DELETE FROM name [alias] [WHERE …]`` target to three-part form (G1).
+        """Rewrite ``DELETE FROM name [alias] [WHERE …]`` target to three-part form.
 
         Returns ``None`` when not a ``DELETE FROM`` shape. Target is identifier-scanned;
         optional alias + WHERE body stay in the rest. WHERE-subquery FROM/JOIN refs expand
@@ -463,7 +451,7 @@ class ReparkSession:
         return f"{prefix}{qualified}{rest_expanded}"
 
     def _expand_merge_into_sql(self, query: str, match: re.Match[str]) -> str:
-        """Rewrite ``MERGE INTO target … USING source … ON …`` table refs (F1).
+        """Rewrite ``MERGE INTO target … USING source … ON …`` table refs.
 
         Target/source blobs may carry trailing aliases (``t AS target`` / ``s source``).
         Only the leading multipart identifier is expanded; alias text is preserved.
@@ -500,7 +488,7 @@ class ReparkSession:
         return f"MERGE INTO {target_qualified}{target_suffix} USING {source_qualified} ON{on_rest}"
 
     def _expand_from_join_table_refs_in_sql(self, query: str) -> str:
-        """Expand bare / two-part table refs after FROM / JOIN / comma lists (F1 Path A).
+        """Expand bare / two-part table refs after FROM / JOIN / comma lists.
 
         Structural scan (quote-aware, paren-aware, comment-aware), not freestyle body regex.
         Skips:
@@ -555,7 +543,6 @@ class ReparkSession:
         prior: set[str] = set(outer_ctes or ())
 
         while index < length:
-            # CTE name
             name_end = _scan_sql_table_identifier_end(query, index)
             if name_end is None or name_end == index:
                 break
@@ -566,7 +553,6 @@ class ReparkSession:
             while index < length and query[index].isspace():
                 pieces.append(query[index])
                 index += 1
-            # Optional column list
             if index < length and query[index] == "(":
                 close = _find_matching_paren(query, index)
                 if close is None:
@@ -664,7 +650,6 @@ class ReparkSession:
                 inner_stripped = inner.lstrip()
                 if _SELECT_OR_WITH_HEAD_RE.match(inner_stripped) is not None:
                     result.append("(")
-                    # Preserve leading whitespace inside the paren.
                     lead_len = len(inner) - len(inner.lstrip())
                     lead = inner[:lead_len]
                     body = inner[lead_len:]
@@ -927,7 +912,6 @@ class ReparkSession:
         inner = self._ensure_alive()
         return DataFrame(inner.read_parquet(str(path)), inner, self._alive_token)
 
-    # === r20 R1: read-formats ===
     def read_csv(
         self,
         path: str | Path,
@@ -982,7 +966,6 @@ class ReparkSession:
         )
         return DataFrame(frame, inner, self._alive_token)
 
-    # === r25 T5: excel ===
     def read_excel(
         self,
         path: str | Path,
@@ -1007,7 +990,7 @@ class ReparkSession:
 
         Implemented as ``SELECT * FROM <quoted multipart identifier>`` through the SQL path so
         Iceberg catalog tables and temporary views both resolve. Bare and two-part names expand
-        under the session default catalog + namespace (E2); a one-part temp view resolves to its
+        under the session default catalog + namespace; a one-part temp view resolves to its
         HOME, never bare (R7-1). Only identifier segments are accepted (``catalog.db.table``);
         SQL fragments (``UNION``, ``JOIN``, subqueries) raise
         :class:`~repark.errors.AnalysisException` — this is an identifier API, not free SQL.
@@ -1061,18 +1044,14 @@ class ReparkSession:
     ) -> DataFrame:
         """Create a single-column ``id`` DataFrame over ``[start, end)`` (PySpark ``range``).
 
-        Forms:
-
-        * ``range(end)`` — ids ``0 .. end-1``
-        * ``range(start, end, step=1, numPartitions=None)`` — arithmetic sequence exclusive of
-          ``end``
-
-        Engine path: DataFusion ``generate_series`` (inclusive stop rewritten to Spark's
-        exclusive end); values are BIGINT / Arrow ``int64`` (Spark ``LongType``). Facade
-        ``schema``/``dtypes`` currently collapse Arrow Int64 → ``IntegerType`` / ``"int"`` for
-        *all* bigint columns (shared mapping; remapping is X2 types work) — the physical type
-        remains int64 on ``to_arrow()``. ``numPartitions`` is accepted for API parity and ignored
-        on the single-node backend. Bounds/step are coerced with ``int(...)`` (bool rejected).
+        ``range(end)`` → ids ``0 .. end-1``; ``range(start, end, step, numPartitions)`` →
+        arithmetic sequence exclusive of ``end``. Engine path: DataFusion
+        ``generate_series`` (inclusive stop rewritten to Spark's exclusive end); values are
+        BIGINT / Arrow ``int64`` (Spark ``LongType``). Facade ``schema``/``dtypes`` currently
+        collapse Arrow Int64 → ``IntegerType`` / ``"int"`` for *all* bigint columns (shared
+        mapping; remapping is deferred types work) — the physical type remains int64 on
+        ``to_arrow()``. ``numPartitions`` is accepted for API parity and ignored on the
+        single-node backend. Bounds/step are coerced with ``int(...)`` (bool rejected).
         Plan construction is lazy; a full ``count()``/``collect()`` of a huge range still scans
         (no Spark Range stats shortcut on the single-node backend).
         """
@@ -1096,7 +1075,6 @@ class ReparkSession:
 
         # Spark end is exclusive; generate_series stop is inclusive → back up one step unit.
         inclusive_stop = range_end - (1 if range_step > 0 else -1)
-        # Empty when the first term is already past the exclusive end.
         empty = (range_step > 0 and range_start >= range_end) or (
             range_step < 0 and range_start <= range_end
         )
@@ -1116,81 +1094,72 @@ class ReparkSession:
     ) -> DataFrame:
         """Build a :class:`DataFrame` from rows (PySpark ``createDataFrame``).
 
-        Promotes this session to process-active (Spark parity — Apache
-        ``test_get_active_session_after_create_dataframe``).
-
-        Accepts:
+        Promotes this session to process-active (Spark parity). Accepts:
 
         * a list of tuples/lists (optional ``schema`` column-name list; positional bind)
-        * a list of dicts — **Spark key-union** across rows (r21 T1): column order is sorted
-          first-row keys then newly seen keys; missing fields null-fill; later-row extra
-          keys become columns. :class:`~repark.row.Row` lists stay fail-loud on key mismatch
-          (Spark ``STRUCT_ARRAY_LENGTH_MISMATCH`` class). Row-as-dict ingestion is **not**
-          governed by ``spark.sql.pyspark.inferNestedDictAsStruct.enabled`` (r23b N1 /
-          SPARK-35929) — that conf only affects **dict-valued cells** (column values at any
-          nesting depth). When the conf is ``true`` (**the repark default** — a declared
-          divergence from PySpark's ``false``; owner decision 2026-08-16, registry row in
-          the divergence registry), a dict *cell* infers as StructType with field union +
-          null-fill; when ``false``, dict cells stay MapType, byte-identical to PySpark's
-          default behavior. Explicit ``schema=`` wins either way.
-        * a list of :class:`~repark.row.Row` (fail-loud name bind — no key-union)
+        * a list of dicts — **Spark key-union** across rows: column order is first-row keys
+          then newly seen keys; missing fields null-fill; later-row extra keys become columns
+        * a list of :class:`~repark.row.Row` — fail-loud name bind, no key-union (Spark
+          ``STRUCT_ARRAY_LENGTH_MISMATCH`` class on key mismatch)
         * a pandas ``DataFrame`` (optional; empty frames fail with CANNOT_INFER_EMPTY_SCHEMA;
           nested list/struct Arrow columns accepted via the native Arrow path)
         * a polars ``DataFrame`` (optional; same empty rules; nested ``List``/``Struct``
           accepted via ``.to_arrow()``; Binary/Time/Duration still refuse)
 
+        Row-as-dict ingestion is **not** governed by
+        ``spark.sql.pyspark.inferNestedDictAsStruct.enabled`` (SPARK-35929) — that conf only
+        affects **dict-valued cells** (column values at any nesting depth). When the conf is
+        ``true`` (**the repark default** — a declared divergence from PySpark's ``false``), a
+        dict cell infers as StructType with field union + null-fill; when ``false``, dict
+        cells stay MapType, byte-identical to PySpark's default. Explicit ``schema=`` wins
+        either way.
+
         **Wrapped JSON objects** (``{"Orders":[...]}``): ``spark.read.json`` is NDJSON /
-        top-level-array shaped (R1). Load a single object wrapper with
-        ``json.load`` → ``spark.createDataFrame(payload["Orders"])`` (dict key-union path).
+        top-level-array shaped. Load a single object wrapper with ``json.load`` →
+        ``spark.createDataFrame(payload["Orders"])`` (dict key-union path).
 
-        ``schema=`` forms (R-PARITY3):
+        ``schema=`` forms:
 
-        * ``None`` — infer names (and Python-int → BIGINT widening, disclosed)
+        * ``None`` — infer names (Python-int → BIGINT widening, disclosed)
         * ``list``/``tuple`` of ``str`` names — name bind only (types still inferred)
-        * :class:`~repark.types.StructType` — names **and** types (``IntegerType`` → INT/int32,
-          preserves the int32 path that bare VALUES widens — G-INT follow-up closed)
+        * :class:`~repark.types.StructType` — names **and** types (``IntegerType`` →
+          INT/int32, preserving the int32 path that bare VALUES widens)
         * DDL string ``"a INT, b STRING"`` — parsed to StructType-equivalent (live Spark form)
 
         ``schema=[names]`` bind (named sources — dict / Row / namedtuple / ``NamedTuple`` /
-        pandas / polars):
+        pandas / polars): a **pure reorder** (same names, different order) binds **by name**
+        so values follow names; a **pure rename** (same length, no shared names) binds
+        **positionally**; partial overlap or length mismatch fails loud (no silent
+        project/drop/swap). Plain tuple/list rows bind positionally;
+        ``collections.namedtuple`` / ``typing.NamedTuple`` use ``_fields`` as source names
+        (``schema=[names]`` reorders by name like dict/Row — C6-L-001).
 
-        * **pure reorder** (same names as the source columns, different order) → bind **by name**
-          so values follow names (no cross-entry-point swap vs dict/Row)
-        * **pure rename** (same length, no shared names) → bind **positionally**
-        * **partial overlap** or length mismatch → fail loud (no silent project/drop/swap)
-
-        Plain tuple/list rows bind positionally; ``collections.namedtuple`` /
-        ``typing.NamedTuple`` use ``_fields`` as source names (``schema=None`` keeps them;
-        ``schema=[names]`` reorders by name like dict/Row — C6-L-001).
-
-        Materializes into a MemTable once (R-PERF-VALUES / R-PERF-ARROW-CDF) so later actions
-        do not re-plan an ingest body: non-empty inputs build a ``pyarrow.Table`` then register
-        via Arrow **C Stream** (P1a / scout #4 — no IPC encode/``to_vec`` intermediate; IPC
-        remains version-skew fallback only). Empty frames may still use typed Arrow or a
-        ``WHERE 1=0`` VALUES seed. Cell types: ``None``, ``bool``, ``int``, ``float``,
-        ``str``, ``datetime.date``, ``datetime.datetime`` (tz-aware → UTC then naive; pandas
-        ``Timestamp`` / ``datetime64`` / ``numpy.datetime64`` included — ns units do not
-        collapse to epoch int; calendar units ``D``/``W``/``M``/``Y`` stay DATE including
-        all-null NaT witnesses — C3-Q-001), and ``decimal.Decimal`` (fixed-point into
+        Materializes into a MemTable once via a ``pyarrow.Table`` registered with an Arrow
+        **C Stream** (no IPC encode intermediate; IPC remains the version-skew fallback).
+        Cell types: ``None``, ``bool``, ``int``, ``float``, ``str``, ``datetime.date``,
+        ``datetime.datetime`` (tz-aware → UTC then naive; pandas ``Timestamp`` /
+        ``datetime64`` / ``numpy.datetime64`` included — ns units do not collapse to epoch
+        int; calendar units ``D``/``W``/``M``/``Y`` stay DATE including all-null NaT
+        witnesses — C3-Q-001), and ``decimal.Decimal`` (fixed-point into
         ``DECIMAL(38,18)``; values outside that envelope fail loud — no silent zero/round).
-        Empty list + name schema emit ``CAST(NULL AS VARCHAR)``; pure-``None`` all-null columns
-        without a typed witness do the same. All-null **pandas/polars typed** columns keep a
-        dtype-matched ``CAST(NULL AS …)`` (integers always ``BIGINT`` so null occupancy cannot
-        flip int32↔int64). All-null list/dict/Row/tuple columns that only contain typed missing
-        markers (``float('nan')``, ``NaT``, ``numpy.datetime64('NaT')``, …) keep
-        DOUBLE/TIMESTAMP/DATE/… from those witnesses rather than collapsing to VARCHAR. Timedelta /
-        duration / ``numpy.timedelta64`` refuse even when all-null (no silent duration→int —
-        C3-L-001); pandas Interval / Period and polars Binary/Time/Duration refuse rather than
-        fail-open as BIGINT/DOUBLE/VARCHAR (C3-L-002 / C3-L-003 / C4-Q-002); nested List/Struct
-        (polars + pandas ArrowDtype list/struct) land via the Arrow path (r21 T1); pandas
-        categorical all-null follows ``categories.dtype`` (C4-Q-003); pandas ArrowDtype
+
+        All-null columns: empty list + name schema emit ``CAST(NULL AS VARCHAR)``;
+        pure-``None`` columns without a typed witness do the same. All-null pandas/polars
+        typed columns keep a dtype-matched ``CAST(NULL AS …)`` (integers always ``BIGINT`` so
+        null occupancy cannot flip int32↔int64); columns of typed missing markers
+        (``float('nan')``, ``NaT``, ``numpy.datetime64('NaT')``, …) keep
+        DOUBLE/TIMESTAMP/DATE from those witnesses rather than collapsing to VARCHAR.
+        Timedelta / duration / ``numpy.timedelta64`` refuse even when all-null (no silent
+        duration→int — C3-L-001); pandas Interval / Period and polars Binary/Time/Duration
+        refuse rather than fail-open as BIGINT/DOUBLE/VARCHAR (C3-L-002 / C3-L-003 /
+        C4-Q-002); nested List/Struct (polars + pandas ArrowDtype) land via the Arrow path;
+        pandas categorical all-null follows ``categories.dtype`` (C4-Q-003); pandas ArrowDtype
         time/binary still refuse (C4-Q-004).
         """
         self._ensure_alive()
         self._promote_active()
         return _create_dataframe_from_rows(self, data, schema)
 
-    # PySpark camelCase.
     createDataFrame = create_dataframe  # noqa: N815 — deliberate PySpark-compatible camelCase alias
 
     @property
@@ -1207,23 +1176,19 @@ class ReparkSession:
         Backs Apache ``sql_conf`` context managers and a few SQL-flag gates (e.g.
         ``spark.sql.crossJoin.enabled``). Most values live on the session alive token
         (facade-local). Keys under ``datafusion.`` are **forwarded** to the live DataFusion
-        session (r21 T2) — see :class:`RuntimeConfig` for the memory-pool one-truth contract
+        session — see :class:`RuntimeConfig` for the memory-pool one-truth contract
         (``repark.memory.limit.gb`` build-time vs ``datafusion.runtime.memory_limit`` runtime).
         """
         self._ensure_alive()
         return RuntimeConfig(self)
 
-    # =========================================================================
-    # C3 session surface: active session + context manager + newSession
-    # (additive; does not touch the E2/F1 bare-name SQL expander region)
-    # =========================================================================
-
+    # Active session + context manager + newSession
     @classmethod
     def getActiveSession(cls) -> ReparkSession | None:  # noqa: N802 — PySpark camelCase
         """Return the process-wide active session, or ``None`` when none is live.
 
         PySpark ``SparkSession.getActiveSession`` parity for the single-node facade
-        (no thread-local JVM session map — one active session per process).
+        (one active session per process).
         """
         if _sf._active_session is not None and _sf._active_session._inner is not None:
             return _sf._active_session
@@ -1234,8 +1199,7 @@ class ReparkSession:
         """Return the active session, or raise when none exists.
 
         Raises :class:`~repark.errors.PySparkRuntimeError` with
-        ``NO_ACTIVE_OR_DEFAULT_SESSION`` when no session is live (Apache
-        ``test_active_session``).
+        ``NO_ACTIVE_OR_DEFAULT_SESSION`` when no session is live.
         """
         session = cls.getActiveSession()
         if session is None:
@@ -1248,10 +1212,9 @@ class ReparkSession:
     def newSession(self) -> ReparkSession:  # noqa: N802 — PySpark camelCase
         """Create a distinct session with the same builder config snapshot.
 
-        Unlike :meth:`Builder.getOrCreate`, this always builds a **new** engine handle
-        (Apache ``test_new_session``). Does **not** steal the process active session —
-        the caller stays active until an action on the new session promotes it (Spark
-        parity; Apache ``test_get_active_session_after_create_dataframe``).
+        Always builds a **new** engine handle (unlike :meth:`Builder.getOrCreate`) and does
+        **not** steal the process active session — the caller stays active until an action
+        on the new session promotes it (Spark parity).
 
         Active-session restore uses ``try``/``finally`` so ``BaseException``
         (``KeyboardInterrupt`` / ``SystemExit``) cannot leave the process pointer on the
@@ -1313,10 +1276,9 @@ class ReparkSession:
         state = self._catalog_state()
         known: set[str] = state["known_catalogs"]
         known.add(name)
-        # If current catalog was still the oracle default string and spark_catalog is either
-        # unregistered or only the AUTO-registered fallback (R-AUTO-MEMCAT — not a user
-        # choice), flip to the first user-registered catalog so listDatabases works without a
-        # mandatory setCurrentCatalog (historical dogfood ergonomics, preserved).
+        # If current catalog is still the default and spark_catalog is unregistered or only
+        # the AUTO-registered fallback (R-AUTO-MEMCAT — not a user choice), flip to the first
+        # user-registered catalog so listDatabases works without setCurrentCatalog.
         current = str(state["current_catalog"])
         default_is_auto_only = bool(state.get("auto_default_catalog"))
         if (
@@ -1336,17 +1298,16 @@ class ReparkSession:
         """Register the AWS-free in-memory Iceberg catalog under ``name`` (a RePark extension).
 
         Table metadata lives in process memory; data files are written under ``warehouse`` on
-        the local filesystem — the local-development/test analogue of a Glue catalog. Production
-        Glue / S3 Tables catalogs register via ``spark.sql.catalog.<name>.*`` /
+        the local filesystem — the local-development/test analogue of a Glue catalog.
+        Production Glue / S3 Tables catalogs register via ``spark.sql.catalog.<name>.*`` /
         ``repark.sql.catalog.<name>.*`` builder config (or the Rust ``register_iceberg_catalog``
         path). Create namespaces before use::
 
             spark.register_memory_catalog("glue_catalog", "/tmp/warehouse")
             spark.sql("CREATE NAMESPACE glue_catalog.example_silver")
 
-        Callers create namespaces before use (or the Apache compat harness seeds
-        ``spark_catalog.default``). Bare-name resolution still qualifies to
-        ``name.currentDatabase.t``; the namespace must exist for writes.
+        Bare-name resolution still qualifies to ``name.currentDatabase.t``; the namespace must
+        exist for writes.
         """
         self._ensure_alive().register_memory_catalog(name, str(warehouse))
         self._note_registered_catalog(name)
@@ -1356,12 +1317,10 @@ class ReparkSession:
 
         The ``duckdb.connect(":memory:")`` analogue: a bare ``builder.getOrCreate()`` gets a
         working default catalog + ``default`` namespace so first-session bare-name flows
-        (``saveAsTable("t")`` / ``table("t")`` / ``DROP TABLE t``) work with zero config.
-        Data files live in a session-scoped temp warehouse removed on :meth:`stop` — the
-        catalog's table *metadata* is process-memory already, so the whole thing vanishes
-        with the session, matching the ``:memory:`` mental model. Registration failure is
-        non-fatal (warn + continue): a session without a default catalog is the pre-existing
-        behavior, not a broken session.
+        work with zero config. Data files live in a session-scoped temp warehouse removed on
+        :meth:`stop`; the catalog's table *metadata* is process-memory already. Registration
+        failure is non-fatal (warn + continue): a session without a default catalog is the
+        pre-existing behavior, not a broken session.
         """
         import tempfile
 
@@ -1371,7 +1330,7 @@ class ReparkSession:
             # Tie warehouse lifetime to the session; stop() cleans it (R-AUTO-MEMCAT).
             self._alive_token["auto_catalog_warehouse"] = tmpdir
             # Auto ≠ user choice: the first USER-registered catalog may still take
-            # currentCatalog (the historical register flip — see _note_registered_catalog).
+            # currentCatalog (see _note_registered_catalog).
             self._catalog_state()["auto_default_catalog"] = True
             # Spark's `default` database always exists — seed it so first writes work.
             self.create_namespace(DEFAULT_CATALOG_NAME, DEFAULT_DATABASE_NAME)
@@ -1392,11 +1351,11 @@ class ReparkSession:
         branch: str | None = None,
         tag: str | None = None,
     ) -> DataFrame:
-        """Read an Iceberg catalog table, optionally time-travel pinned (I1 / R-TIME-TRAVEL).
+        """Read an Iceberg catalog table, optionally time-travel pinned (R-TIME-TRAVEL).
 
-        At most one of ``snapshot_id`` / ``as_of_timestamp_ms`` / ``branch`` / ``tag`` may be set.
-        Engine path: fork ``IcebergStaticTableProvider::try_new_from_table_snapshot`` — never a
-        post-hoc filter. Used by :class:`DataFrameReader` when time-travel options are present.
+        At most one of ``snapshot_id`` / ``as_of_timestamp_ms`` / ``branch`` / ``tag`` may be
+        set. Engine path: fork ``IcebergStaticTableProvider::try_new_from_table_snapshot`` —
+        never a post-hoc filter.
         """
         from repark.errors import AnalysisException
 
@@ -1411,8 +1370,8 @@ class ReparkSession:
             raise AnalysisException(
                 f"as_of_timestamp_ms must fit a signed 64-bit integer, got {as_of_timestamp_ms!r}"
             )
-        # Qualify bare / two-part / spark_catalog names the same way as table() / writers
-        # (E2 API FULL; octo C2-Q-001). TT targets Iceberg catalog tables, not temp views.
+        # Qualify bare / two-part / spark_catalog names like table() / writers
+        # (octo C2-Q-001); TT targets Iceberg catalog tables, not temp views.
         resolved = self.resolve_table_name(table_name, prefer_temp_view=False)
         inner = self._ensure_alive()
         frame = inner.read_iceberg_table(
@@ -1433,18 +1392,14 @@ class ReparkSession:
     ) -> None:
         """Test-support only: create a branch/tag via fork ManageSnapshots.
 
-        Product SQL ``ALTER TABLE … CREATE BRANCH|TAG`` exists (I5); this seam stays for fixtures.
-
-        Documented in map.md as test-support-only. Public ``CREATE BRANCH|TAG`` remains
-        loud-unsupported (P6).
+        Public SQL ``ALTER TABLE … CREATE BRANCH|TAG`` remains loud-unsupported (P6); this
+        seam stays for fixtures only (see map.md).
         """
         self._ensure_alive().testing_create_ref(table_name, kind, name, snapshot_id)
 
     def _testing_list_snapshots(self, table_name: str) -> list[tuple[int, int]]:
         """Test-support only: ``(snapshot_id, timestamp_ms)`` pairs in history order."""
         return list(self._ensure_alive().testing_list_snapshots(table_name))
-
-    # === r21 T6: catalog-staleness ============================================================
 
     def list_iceberg_table_names(self, catalog: str, namespace: str) -> list[str]:
         """Live Iceberg table names in ``namespace`` (list-on-access; no DF provider snapshot).
@@ -1519,10 +1474,7 @@ class ReparkSession:
         """
         self._ensure_alive().create_namespace(catalog, namespace, location)
 
-    # =========================================================================
-    # U8 — spark.udf namespace (NEW bounded block; sole-writer region)
-    # =========================================================================
-
+    # spark.udf namespace (sole-writer region)
     def _udf_registry(self) -> dict[str, dict[str, Any]]:
         """Session-scoped Python UDF registry (name → entry). Dies with :meth:`stop`."""
         self._ensure_alive()
@@ -1534,7 +1486,6 @@ class ReparkSession:
 
     def _udtf_registry(self) -> dict[str, Any]:
         """Session-scoped Python UDTF registry (name → UserDefinedTableFunction). Dies with stop."""
-        # === r23 C6: udtf-phase2-core ===
         self._ensure_alive()
         registry = self._alive_token.get("udtf_registry")
         if registry is None:
@@ -1552,15 +1503,14 @@ class ReparkSession:
         self._ensure_alive()
         return UDFRegistration(self)
 
-    # === r23 C6: udtf-phase2-core ===
     @property
     def udtf(self) -> Any:
-        """UDTF registration namespace (PySpark ``spark.udtf``) — U12 scalar-arg core.
+        """UDTF registration namespace (PySpark ``spark.udtf``).
 
         Construction validates handlers (Spark ``INVALID_UDTF_*``).
         :meth:`~repark.udtf.UDTFRegistration.register` stores the UDTF for SQL
         ``SELECT * FROM name(lit_args)``. Call with foldable lit args builds a
-        DataFrame via mapInArrow. LATERAL / table-arg stay blocked (U11 seed).
+        DataFrame via mapInArrow. LATERAL / table-arg stay blocked.
         """
         from repark.spark.udtf import UDTFRegistration
 
@@ -1571,24 +1521,20 @@ class ReparkSession:
         """Structural scan for **registered** UDF names; rewrite SELECT-list or refuse.
 
         Returns ``None`` when no registered UDF name appears as ``name(`` (not preceded
-        by ``.``). Never scans generic identifiers — only the session registry.
-
-        Bounds (U8 + U9 + U10):
+        by ``.``). Never scans generic identifiers — only the session registry. Bounds:
 
         * UDF in ORDER BY *expression* / JOIN ON / nested ``(SELECT`` / ``(WITH`` →
           :class:`~repark.errors.UnsupportedOperationException`.
         * SELECT-list: simple ``udf(col|lit)`` **and** expression-wrapped forms
           (``udf(x)+1``, ``CAST(udf(x) AS …)``, nested ``f(g(x))``) — UDF calls materialize
-          via the DataFrame bridge; residual expression is engine-side (U9).
-        * WHERE / GROUP BY / HAVING scalar UDF forms rewrite similarly (U10) — residual
+          via the DataFrame bridge; residual expression is engine-side.
+        * WHERE / GROUP BY / HAVING scalar UDF forms rewrite similarly — residual
           predicates / keys applied post-materialization; never leak
           ``__repark_sql_udf_*`` internal names.
-        * WITH/CTE bodies and ``SELECT DISTINCT`` projections (U9).
+        * WITH/CTE bodies and ``SELECT DISTINCT`` projections.
         * ``ORDER BY`` on SELECT aliases of rewritten UDF outputs — post-materialization
-          ``orderBy`` (never leak ``__repark_sql_udf_*`` internal names — U9 Q13).
+          ``orderBy`` (never leak ``__repark_sql_udf_*`` internal names).
         """
-        # === r20 U9: sql-udf-rewrite ===
-        # === r21 T7: census-r6 ===
         from repark.errors import UnsupportedOperationException
 
         if not isinstance(query, str):
@@ -1622,8 +1568,7 @@ class ReparkSession:
         body: str,
         registry: dict[str, dict[str, Any]],
     ) -> DataFrame:
-        """Rewrite registered UDFs inside WITH/CTE bodies (U9 — F1-style regions)."""
-        # === r20 U9: sql-udf-rewrite ===
+        """Rewrite registered UDFs inside WITH/CTE bodies (F1-style regions)."""
         from repark.errors import UnsupportedOperationException
 
         match = re.match(r"(?is)^WITH\b", body)
@@ -1641,8 +1586,8 @@ class ReparkSession:
                 "flatten the CTE or use the DataFrame udf path"
             )
             # unreachable — keep branch explicit for future RECURSIVE support
-        # (name, prior_frame_or_None) — restore session catalog after outer is planned
-        # (U9-C1-002: WITH must not permanently overwrite/leave user temp views).
+        # (name, prior_frame_or_None) — restore the session catalog after the outer SELECT
+        # is planned; WITH must not permanently overwrite/leave user temp views (U9-C1-002).
         view_snapshots: list[tuple[str, Any | None]] = []
         pieces_prefix = body[: match.end()]
         _ = pieces_prefix  # WITH keyword retained only for diagnostics
@@ -1696,7 +1641,6 @@ class ReparkSession:
                     break
                 cte_body = body[index + 1 : close].strip()
                 index = close + 1
-                # Rewrite CTE body if it hits the registry; else register via plain sql.
                 body_hits = _sql_collect_registry_udf_hits(cte_body, registry)
                 if body_hits:
                     cte_frame = self._sql_rewrite_select_with_udfs(
@@ -1769,9 +1713,7 @@ class ReparkSession:
         registry: dict[str, dict[str, Any]],
         hits: list[tuple[str, str, int]],
     ) -> DataFrame:
-        """Rewrite one SELECT (not WITH) that contains registered UDF hits (U9/U10)."""
-        # === r20 U9: sql-udf-rewrite ===
-        # === r21 T7: census-r6 ===
+        """Rewrite one SELECT (not WITH) that contains registered UDF hits."""
         from repark.errors import AnalysisException, UnsupportedOperationException
         from repark.spark.functions import UserDefinedFunction
 
@@ -1782,7 +1724,7 @@ class ReparkSession:
         if from_index is not None:
             select_end = from_index
 
-        # Top-level clause starts (paren depth 0) for hit classification (U10).
+        # Top-level clause starts (paren depth 0) for hit classification.
         where_index = _sql_top_level_keyword_index(body_for_scan, "WHERE")
         group_index = _sql_top_level_keyword_index(body_for_scan, "GROUP BY")
         having_index = _sql_top_level_keyword_index(body_for_scan, "HAVING")
@@ -1827,8 +1769,8 @@ class ReparkSession:
                     f"udf path. Matched as {matched_text!r}."
                 )
             if index < select_end:
-                continue  # SELECT-list — U9
-            # U10: WHERE / GROUP BY / HAVING spans (top-level keywords only).
+                continue  # SELECT-list hit
+            # WHERE / GROUP BY / HAVING spans (top-level keywords only).
             if where_index is not None and where_index <= index < clause_end(where_index):
                 continue
             if group_index is not None and group_index <= index < clause_end(group_index):
@@ -1907,7 +1849,7 @@ class ReparkSession:
             except Exception as error:
                 raise _sql_udf_clean_exception(error) from error
 
-        # U10: WHERE residual filter before user projection (may reference base + UDF temps).
+        # WHERE residual filter before user projection (may reference base + UDF temps).
         where_sql = materialize_plan.get("where_sql")
         if where_sql:
             try:
@@ -1923,7 +1865,7 @@ class ReparkSession:
         except Exception as error:
             raise _sql_udf_clean_exception(error) from error
 
-        # U10: GROUP BY on SELECT-list aliases / planned keys (post user projection).
+        # GROUP BY on SELECT-list aliases / planned keys (post user projection).
         group_by_keys = materialize_plan.get("group_by_keys")
         if group_by_keys:
             try:
@@ -1935,7 +1877,7 @@ class ReparkSession:
             except Exception as error:
                 raise _sql_udf_clean_exception(error) from error
 
-        # U10: HAVING residual (post-group filter on user-visible names).
+        # HAVING residual (post-group filter on user-visible names).
         having_sql = materialize_plan.get("having_sql")
         if having_sql:
             try:
@@ -2021,11 +1963,11 @@ class ReparkSession:
             * ``.config(conf=…)`` — duck-typed object with ``.getAll() → Iterable[(k, v)]``
               (live ``SparkConf``). repark has no ``SparkConf`` type of its own.
 
-            Precedence when several forms are combined (live-recorded 2026-07-28, zulu-17):
-            ``conf is not None`` wins and ignores ``map``/key/value; else ``map is not None``
-            wins and ignores key/value (no error — Spark does **not** refuse the combination);
-            else the key/value pair is stored. A non-mapping ``map`` raises ``AttributeError``
-            on ``.items()`` exactly as live Spark does.
+            Precedence when several forms are combined: ``conf is not None`` wins and ignores
+            ``map``/key/value; else ``map is not None`` wins and ignores key/value (no error —
+            Spark does **not** refuse the combination); else the key/value pair is stored. A
+            non-mapping ``map`` raises ``AttributeError`` on ``.items()`` exactly as live Spark
+            does.
 
             Engine knobs (memory / batch / partitions) and ``spark.sql.catalog.<name>.*`` catalog
             blocks are load-bearing; a catalog block registers its catalog at ``getOrCreate`` (a
@@ -2038,7 +1980,7 @@ class ReparkSession:
             * ``spark.sql.execution.arrow.maxRecordsPerBatch`` (and ``repark.batch.size``) — ``0``
               or negative is Spark's documented "no limit" sentinel and is **accepted**. repark
               cannot emit unbounded Arrow batches, so the engine default batch size is used and a
-              one-time :class:`UserWarning` discloses that (values are unaffected).
+              one-time :class:`UserWarning` discloses that.
             * ``spark.sql.shuffle.partitions`` (and ``repark.target.partitions``) — Spark requires a
               positive value, so ``0`` or negative raises
               :class:`~repark.errors.IllegalArgumentException`. The exception **class** and message
@@ -2049,8 +1991,7 @@ class ReparkSession:
             **Disclosed TIMING divergence — the class matches PySpark, the moment does not.** On a
             FRESH process PySpark validates lazily: ``.config(...)`` and ``getOrCreate()`` both
             succeed and the ``IllegalArgumentException`` only surfaces at the first
-            ``sessionState`` touch (``spark.sql(...)`` / ``spark.conf.get(...)``) — verified live
-            on pyspark 4.1.2. repark validates eagerly, inside ``getOrCreate()``, so a
+            ``sessionState`` touch. repark validates eagerly, inside ``getOrCreate()``, so a
             misconfigured session is never handed out and the traceback points at the offending
             ``.config(...)`` chain. **Code that wraps its ``try``/``except`` around the first query
             rather than around ``getOrCreate()`` must move it.** (On the *reuse* path the two
@@ -2058,17 +1999,15 @@ class ReparkSession:
             so does repark.)
 
             ``repark.display.style`` (any casing) is stored under the canonical key and collapses
-            prior case-variant aliases so dual-cased chains are last-write-wins (C7-Q-001 /
-            C7-L-001) — matching the reuse snapshot collapse in
+            prior case-variant aliases so dual-cased chains are last-write-wins
+            (C7-Q-001 / C7-L-001) — matching the reuse snapshot collapse in
             :func:`_sync_display_style_into_builder_config`.
             """
-            # Live PySpark 4.1.2 (classic Builder.config): conf branch first, then map, else kv.
-            # Map/kv values use Spark ``to_str`` (bool lowercase, None stays None). Conf values
-            # from live ``SparkConf.getAll()`` are already strings; ``_to_str`` is a no-op on
-            # str and keeps duck-typed confs consistent if they hand back bool/None. EVERY write
-            # routes through ``_set_config_entry`` so the R-DISPLAY key canonicalization
-            # (case-insensitive last-wins for ``repark.display.style``) applies uniformly to
-            # conf/map/kv forms — the R-TAIL x R-DISPLAY combine share point.
+            # Classic Builder.config order: conf branch first, then map, else kv. Map/kv
+            # values use Spark ``to_str``; conf values from live ``SparkConf.getAll()`` are
+            # already strings. Every write routes through ``_set_config_entry`` so the
+            # R-DISPLAY key canonicalization (case-insensitive last-wins for
+            # ``repark.display.style``) applies uniformly to conf/map/kv forms.
             if conf is not None:
                 for conf_key, conf_value in conf.getAll():
                     self._set_config_entry(str(conf_key), _to_str(conf_value))
@@ -2096,9 +2035,8 @@ class ReparkSession:
         def app_name(self, name: str) -> Self:
             """Set the application name (PySpark ``.appName``).
 
-            # === r21 T3: ux-polish ===
             Surfaced via ``session.conf.get("spark.app.name")``. When omitted, the default is
-            ``"repark"`` (we control this default; Spark has no fixed default appName).
+            ``"repark"``.
             """
             self._config["spark.app.name"] = name
             return self
@@ -2125,9 +2063,8 @@ class ReparkSession:
             If a live session already exists in this process, it is returned. Engine-knob values
             whose validation is FACADE-side are still **validated** first, so an out-of-range knob
             raises on the reuse path exactly as it does on the build path — live PySpark 4.1.2
-            applies builder options to the existing session (``setConfString``) and raises there,
-            and repark must not be the laxer of the two on the ubiquitous notebook /
-            long-lived-process path (audit G3).
+            applies builder options to the existing session and raises there, and repark must not
+            be the laxer of the two on the ubiquitous notebook / long-lived-process path (audit G3).
 
             **One knob is carved out of that promise, deliberately (H-1a, D-A1):**
             ``spark.sql.session.timeZone``. Its validity is not a range check — it needs the
@@ -2157,9 +2094,8 @@ class ReparkSession:
             # raises `IllegalArgumentException` for `spark.sql.shuffle.partitions=0` against an
             # ALREADY-ACTIVE session, so short-circuiting first would silently accept a value Spark
             # refuses — and would swallow the SAF-006 batch-sentinel disclosure too.
-            # === r21 T2: sort-memory === one-truth gate before either reuse or build.
+            # One-truth gate before either reuse or build.
             _refuse_dual_memory_pool_knobs(self._config)
-            # === H-1a: session timezone ===
             # Whitespace-normalize the zone BEFORE it is stored or forwarded, because the engine
             # trims before parsing and would otherwise build a session holding a zone string the
             # facade's own `conf.get` does not report. Normalization only — the engine stays the
@@ -2175,12 +2111,11 @@ class ReparkSession:
             display_style = self._resolve_display_style()
 
             if _sf._active_session is not None and _sf._active_session._inner is not None:
-                # PySpark parity on the notebook path (dogfood R-GETORCREATE): Spark instantiates
-                # catalogs lazily per name, so a catalog configured by a LATER builder works
-                # against the already-active session. Register NEW `spark.sql.catalog.*` names
-                # onto the live session; already-registered names keep their registration (the
-                # live-Spark analogue is an instantiated catalog ignoring changed conf). A
-                # malformed block or a failing catalog raises here exactly as it would at build.
+                # PySpark parity on the notebook path: Spark instantiates catalogs lazily per
+                # name, so a catalog configured by a LATER builder works against the
+                # already-active session. Register NEW `spark.sql.catalog.*` names onto the live
+                # session; already-registered names keep their registration. A malformed block
+                # or a failing catalog raises here exactly as it would at build.
                 config = dict(self._config)
                 added, skipped = _sf._active_session._inner.register_late_catalogs(config)
                 added_set = set(added)
@@ -2194,18 +2129,17 @@ class ReparkSession:
                             # Fold the newly-applied catalog block into the recorded builder
                             # config so a repeat getOrCreate with this builder does not re-warn.
                             _sf._active_session._builder_config[key] = value
-                # C3: fold facade-only config keys into the live session's RuntimeConfig +
+                # Fold facade-only config keys into the live session's RuntimeConfig +
                 # builder snapshot (PySpark setConfString on reuse). Engine knobs stay fixed
-                # at build and still warn when they differ. Does not touch SQL bare-name
-                # expansion (F1 ownership).
+                # at build and still warn when they differ.
                 engine_key_set = {
                     key.lower()
                     for key in (
                         *_MEMORY_LIMIT_KEYS,
                         *_BATCH_SIZE_KEYS,
                         *_TARGET_PARTITIONS_KEYS,
-                        # H-1a: the session zone is fixed at build like the other engine knobs,
-                        # so reuse must NOT fold a new value into the facade conf — it would
+                        # The session zone is fixed at build like the other engine knobs, so
+                        # reuse must NOT fold a new value into the facade conf — it would
                         # report a zone the live engine session does not have. It falls into
                         # `unapplied` below and rides the existing engine-knob warning.
                         *SESSION_TIME_ZONE_KEYS,
@@ -2223,18 +2157,16 @@ class ReparkSession:
                         # Catalog blocks handled above via register_late_catalogs.
                         continue
                     if key in _SQLCONF_STATIC_KEYS:
-                        # Static conf is not runtime-modifiable (parity with
-                        # RuntimeConfig.set / isModifiable — octo C3 C2-Q-001).
+                        # Static conf is not runtime-modifiable (octo C3 C2-Q-001).
                         continue
                     if value is None:
                         continue
                     text = value if isinstance(value, str) else str(value)
-                    # G15: reuse fold writes the store without RuntimeConfig.set —
+                    # Reuse fold writes the store without RuntimeConfig.set —
                     # refuse a planted collation key here (SEC-003).
                     from repark.spark.types import refuse_collation_session_key
 
                     refuse_collation_session_key(key)
-                    # === r21 T2: sort-memory ===
                     # datafusion.* is runtime-mutable on the live engine — fold via
                     # RuntimeConfig.set so SQL SET forwards (not store-only). Lookalike
                     # mixed-case / padded keys refuse-loud inside set (octo T2 C2).
@@ -2305,7 +2237,6 @@ class ReparkSession:
                 builder_config=dict(self._config),
                 display_style=display_style,
             )
-            # === r21 T2: sort-memory ===
             # Forward builder ``datafusion.*`` (incl. runtime.memory_limit) onto the live
             # DataFusion session after the native handle exists. Builder repark.memory.limit.gb
             # already sized the FairSpillPool; datafusion.runtime.memory_limit alone (no
@@ -2329,8 +2260,8 @@ class ReparkSession:
             (C7-Q-001 / C7-L-001). ``Builder.config`` normally collapses aliases to the canonical
             key on write; this scan still prefers the last insertion-order match so a dual-cased
             map (e.g. after direct mutation or an older snapshot) cannot silently keep an earlier
-            exact-key value over a later mixed-case override. Every resolved value is validated via
-            :func:`normalize_display_style` (invalid last alias refuses loud).
+            exact-key value over a later mixed-case override. Every resolved value is validated
+            via :func:`normalize_display_style` (invalid last alias refuses loud).
             """
             raw: str | None = None
             for key, value in self._config.items():
@@ -2344,10 +2275,11 @@ class ReparkSession:
         def _resolve_memory_limit_gb(self) -> int | None:
             """Resolve ``repark.memory.limit.gb`` (repark-only knob; no Spark counterpart).
 
-            ``0`` is meaningful — it opts the session out of the bounded memory pool entirely — so
-            only a NEGATIVE budget is a config error. Raising here (rather than letting a negative
-            reach the native ``Option<usize>`` argument) keeps the class the facade contracts:
-            :class:`~repark.errors.IllegalArgumentException`, not PyO3's ``OverflowError``.
+            ``0`` is meaningful — it opts the session out of the bounded memory pool entirely —
+            so only a NEGATIVE budget is a config error. Raising here (rather than letting a
+            negative reach the native ``Option<usize>`` argument) keeps the class the facade
+            contracts: :class:`~repark.errors.IllegalArgumentException`, not PyO3's
+            ``OverflowError``.
             """
             from repark.errors import IllegalArgumentException
 
@@ -2396,12 +2328,12 @@ class ReparkSession:
             """Resolve the partition-count knob with Spark's positive-only rule (SAF-006).
 
             ``spark.sql.shuffle.partitions`` is declared in Spark's ``SQLConf`` with
-            ``checkValue(_ > 0, "The value of spark.sql.shuffle.partitions must be positive")``, so
-            ``0`` / negative raise ``IllegalArgumentException`` in real PySpark. repark mirrors the
-            class AND Spark 4.1.2's ``[INVALID_CONF_VALUE.REQUIREMENT]`` message verbatim — see
-            :func:`_config_value_error` for the live capture and the two recorded deltas
-            (no ``SQLSTATE`` suffix; the repark-native spelling has no Spark counterpart).
-            Contrast :meth:`_resolve_batch_size`, whose key is documented to accept ``0``.
+            ``checkValue(_ > 0, …)``, so ``0`` / negative raise ``IllegalArgumentException`` in
+            real PySpark. repark mirrors the class AND Spark 4.1.2's
+            ``[INVALID_CONF_VALUE.REQUIREMENT]`` message verbatim — see :func:`_config_value_error`
+            for the live capture and the two recorded deltas (no ``SQLSTATE`` suffix; the
+            repark-native spelling has no Spark counterpart). Contrast
+            :meth:`_resolve_batch_size`, whose key is documented to accept ``0``.
             """
             from repark.errors import IllegalArgumentException
 
@@ -2426,13 +2358,10 @@ class ReparkSession:
             :class:`~repark.errors.IllegalArgumentException` naming both keys. Non-integer values
             raise naming the key (never warn-and-default).
 
-            Group X: this is the FACADE twin of the engine's ``repark_core::Error::Config`` (an
-            unmappable ``spark.sql.catalog.<name>.*`` block), so both raise the SAME class — what
-            live pyspark 4.0.0 raises for an invalid ``SQLConf`` value (``IllegalArgumentException:
-            '-1' in spark.sql.shuffle.partitions is invalid``). This is a deliberate BREAK from
-            repark's former ``ValueError`` here: ``IllegalArgumentException`` is a
-            :class:`RuntimeError`, not a :class:`ValueError`, matching PySpark — where
-            ``except ValueError`` never caught a bad config value either.
+            This is the FACADE twin of the engine's ``repark_core::Error::Config``: both raise the
+            SAME class live PySpark raises for an invalid ``SQLConf`` value
+            (``IllegalArgumentException``) — a deliberate break from repark's former
+            ``ValueError``, which ``except ValueError`` never caught either.
 
             **TIMING divergence (deliberate, Critic F2):** the CLASS matches PySpark but the
             MOMENT does not — repark validates eagerly inside ``getOrCreate()`` where a fresh
@@ -2465,10 +2394,10 @@ class ReparkSession:
             return first_key, first_value
 
     class _BuilderAccessor:
-        """Descriptor yielding a *fresh* :class:`ReparkSession.Builder` on each ``.builder`` access.
+        """Descriptor yielding a *fresh* :class:`ReparkSession.Builder` per ``.builder`` access.
 
-        PySpark exposes ``SparkSession.builder`` as a chain start; returning a new builder per
-        access keeps independent ``.config(...)`` chains from leaking config into one another.
+        Returning a new builder per access keeps independent ``.config(...)`` chains from
+        leaking config into one another (PySpark exposes ``.builder`` as a chain start).
         """
 
         def __get__(

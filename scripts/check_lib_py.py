@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
 """Enforce Python source size and facade module thinness.
 
-SSOT for Python facade file size (r27 T1). Sibling of check_lib_rs. Prose
-(AGENTS.md / CLAUDE.md) points here and never restates the ceilings.
+SSOT for Python facade file size. Sibling of check_lib_rs. Prose points here and never
+restates the ceilings.
 
 Rules:
-1. Every *.py under python/ and scripts/ has the DEFAULT_CEILING. Blank lines
-   count. EXCEPTIONS records exact baselines, debt reasons, and split seams.
-2. An excepted file must equal its baseline. Growth fails. Shrinkage also fails
-   until the baseline ratchets down or the row retires at the default.
-3. Sources under tests/goldens/ and tests/fixtures/ are generated-test inputs
-   and are outside the scan.
+1. Every *.py under python/ and scripts/ has the DEFAULT_CEILING. Blank lines count.
+   EXCEPTIONS records exact baselines, debt reasons, and split seams.
+2. An excepted file must equal its baseline. Growth fails. Shrinkage also fails until the
+   baseline ratchets down or the row retires at the default.
+3. Sources under tests/goldens/ and tests/fixtures/ are generated-test inputs and are outside
+   the scan.
 4. The facade-only no-stub rule: a module whose body is only a module docstring + import /
-   re-export / __all__ / pass statements must start its docstring with the
-   exact substring ``re-export binding`` (case-sensitive, first line). Package
-   ``__init__.py`` files are EXEMPT from the no-stub rule (still under ceiling).
+   re-export / __all__ / pass statements must start its docstring with the exact substring
+   ``re-export binding`` (case-sensitive, first line). Package ``__init__.py`` files are
+   EXEMPT from the no-stub rule (still under ceiling).
 
 Exit 0 on clean; non-zero with path, measured count, ceiling, and outs.
 """
@@ -30,9 +30,9 @@ SCAN_ROOTS: tuple[str, ...] = ("python", "scripts")
 FACADE_ROOT = "python/repark/src/repark"
 EXEMPT_PATHS: tuple[tuple[str, ...], ...] = (("tests", "goldens"), ("tests", "fixtures"))
 
-# repo-relative posix path -> (exact baseline, debt reason, cohesive split seam).
-# Every row retires when its file reaches DEFAULT_CEILING. A baseline increase
-# requires explicit owner approval; ordinary edits only ratchet rows down.
+# repo-relative posix path -> (exact baseline, debt reason, cohesive split seam). Every row
+# retires when its file reaches DEFAULT_CEILING. A baseline increase requires explicit owner
+# approval; ordinary edits only ratchet rows down.
 EXCEPTIONS: dict[str, tuple[int, str, str]] = {
     "python/repark-parity/bench/tpcds/runner.py": (
         1263,
@@ -95,17 +95,17 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split scalar UDF declarations from pandas UDF batch contracts.",
     ),
     "python/repark/src/repark/spark/ml/feature/_transformers.py": (
-        2762,
+        2717,
         "ML feature transformer facades share one module.",
         "Split transformers by feature family with stable public re-exports.",
     ),
     "python/repark/src/repark/spark/session/reader.py": (
-        1042,
+        1026,
         "DataFrameReader formats and option handling narrowly exceed the default.",
         "Split format-specific readers from shared option validation.",
     ),
     "python/repark/src/repark/spark/session/session_core.py": (
-        2482,
+        2411,
         "SparkSession lifecycle and query entry points share one facade module.",
         "Split construction and configuration from query and catalog methods.",
     ),

@@ -7,44 +7,39 @@ A lookalike is an unknown ``.config(...)`` key and is tolerated the way PySpark 
 unknown key: it configures nothing.
 
 **One truth, not two knobs.** The zone is resolved and validated ONCE, by the engine, at session
-construction — the same shape as the build-time memory-pool knob. It follows that:
+construction. It follows that:
 
-* ``ReparkSession.builder.config(SESSION_TIME_ZONE_KEY, "America/New_York")`` is the way to set it,
-  and an unknown zone fails loud (``IllegalArgumentException``) at ``getOrCreate``;
-* ``spark.conf.get(SESSION_TIME_ZONE_KEY)`` reads it back, defaulting to
-  :data:`DEFAULT_SESSION_TIME_ZONE`, and reports the zone the live engine session actually has —
-  a runtime ``set`` never moves it, and the builder value is whitespace-normalized on the way in
-  (:func:`normalize_session_time_zone_config`) so a padded ``.config(...)`` value cannot make the
-  facade report a string the engine trimmed away;
-* ``spark.conf.set(SESSION_TIME_ZONE_KEY, …)`` at runtime is **accepted for source compatibility,
-  warned once, and NEITHER VALIDATED NOR APPLIED**
-  (:func:`warn_runtime_session_time_zone_not_applied`) — the ``.master(...)`` /
-  arrow-batch-sentinel shape (OTH-010), not the memory-pool refusal shape. Validation happens
-  exactly once, at session build, so a garbage zone handed to the runtime setter is not refused
-  either; it simply configures nothing, and the warning says so.
+* ``ReparkSession.builder.config(SESSION_TIME_ZONE_KEY, "America/New_York")`` is the way to set
+  it; an unknown zone fails loud (``IllegalArgumentException``) at ``getOrCreate``.
+* ``spark.conf.get(SESSION_TIME_ZONE_KEY)`` reports the zone the live engine session actually
+  has, defaulting to :data:`DEFAULT_SESSION_TIME_ZONE`; a runtime ``set`` never moves it, and
+  the builder value is whitespace-normalized (:func:`normalize_session_time_zone_config`) so a
+  padded ``.config(...)`` value cannot make the facade report a string the engine trimmed away.
+* ``spark.conf.set(SESSION_TIME_ZONE_KEY, …)`` at runtime is **accepted for source
+  compatibility, warned once, and NEITHER VALIDATED NOR APPLIED**
+  (:func:`warn_runtime_session_time_zone_not_applied`) — the ``.master(...)`` shape (OTH-010),
+  not the memory-pool refusal shape. Validation happens exactly once, at session build.
 
-  *Why accepted rather than refused (evidence, not taste).* Refusing was tried first and is the
-  stricter, more obviously honest option — but the Apache pinned test
-  ``pyspark.sql.tests.test_creation.DataFrameCreationTests.test_create_dataframe_from_pandas_with_dst``
-  sets this key through PySpark's own ``sql_conf`` context manager, so a raise turns a passing
-  drop-in test red. The drop-in promise is "change the import line"; a migrated script must not
-  explode on a conf call PySpark accepts. What the repo refuses is a *lying* conf, so the value is
-  deliberately **not stored**: ``conf.get`` keeps reporting the engine's real zone rather than the
-  one the caller asked for, and the divergence is a visible warning instead of a silent
-  split-brain.
+  *Why accepted rather than refused.* The pinned Apache test
+  ``DataFrameCreationTests.test_create_dataframe_from_pandas_with_dst`` in
+  ``pyspark.sql.tests.test_creation`` sets this key through PySpark's own ``sql_conf``
+  context manager, so a raise turns a passing drop-in script red. What the repo refuses is a
+  *lying* conf, so the value is deliberately
+  **not stored**: ``conf.get`` keeps reporting the engine's real zone, and the divergence is a
+  visible warning instead of a silent split-brain.
 
-**Declared divergence on the default.** PySpark defaults this key to the JVM's local zone, so a job
-produces different wall clocks on two hosts. repark defaults to ``UTC`` for reproducibility (and
-because reading the host zone would be an environment read the server-prep discipline forbids).
+**Declared divergence on the default.** PySpark defaults this key to the JVM's local zone, so a
+job produces different wall clocks on two hosts. repark defaults to ``UTC`` for reproducibility
+(and because reading the host zone would be an environment read the server-prep discipline
+forbids).
 
-**What the zone reaches, as of 2026-08-14 (TZ-8).** Timestamp **extraction** honors it over
-an INSTANT-typed (tz-aware) TIMESTAMP. Zoneless LTZ inputs — ``TIMESTAMP '…'``, zoneless
-``to_timestamp``, ``CAST(str AS TIMESTAMP)``, a naive-``datetime`` column declared as default
-``TIMESTAMP`` / ``TimestampType`` — localize in this zone then store µs+UTC. ``TIMESTAMP_NTZ``
-stays naive and is **not** shifted. ``CAST(ts AS DATE)`` / ``to_date(ts)`` take the date in
-this zone for LTZ (NTZ stays the stored wall). ``datediff`` of a TIMESTAMP rides that
-CAST. ``last_day`` / ``date_add`` over a TIMESTAMP stay residual. ``CAST(TIMESTAMP AS
-STRING)`` rendering is B-TZ-4.
+**What the zone reaches.** Timestamp **extraction** honors it over an INSTANT-typed (tz-aware)
+TIMESTAMP. Zoneless LTZ inputs — ``TIMESTAMP '…'``, zoneless ``to_timestamp``,
+``CAST(str AS TIMESTAMP)``, a naive-``datetime`` column declared as default ``TIMESTAMP`` /
+``TimestampType`` — localize in this zone then store µs+UTC. ``TIMESTAMP_NTZ`` stays naive and
+is **not** shifted. ``CAST(ts AS DATE)`` / ``to_date(ts)`` take the date in this zone for LTZ
+(NTZ stays the stored wall). ``datediff`` of a TIMESTAMP rides that CAST. ``last_day`` /
+``date_add`` over a TIMESTAMP stay residual. ``CAST(TIMESTAMP AS STRING)`` rendering is B-TZ-4.
 """
 
 from __future__ import annotations
@@ -63,9 +58,8 @@ SESSION_TIME_ZONE_KEY = "spark.sql.session.timeZone"
 # The session zone when the key is unset. Mirrors ``repark_core::DEFAULT_SESSION_TIME_ZONE``.
 DEFAULT_SESSION_TIME_ZONE = "UTC"
 
-# The key family, in the shape the builder's engine-knob machinery consumes. Exactly one member
-# by construction — the tuple exists so the session-timezone key joins the engine-knob set the
-# ``getOrCreate`` reuse path excludes from its runtime-conf fold, not to invite a second spelling.
+# Exactly one member by construction — the tuple joins the engine-knob set the ``getOrCreate``
+# reuse path excludes from its runtime-conf fold, not to invite a second spelling.
 SESSION_TIME_ZONE_KEYS: tuple[str, ...] = (SESSION_TIME_ZONE_KEY,)
 
 
@@ -73,13 +67,13 @@ def normalize_session_time_zone_config(config: MutableMapping[str, str | None]) 
     """Strip surrounding whitespace from the builder's session-zone value, in place.
 
     **Whitespace normalization only — the ENGINE remains the sole validator.** Nothing here
-    decides whether a value names a real zone; ``repark_core::SessionTimeZone::parse`` does, once,
-    at session build. What this does is match the engine's own ``raw.trim()`` before the value is
-    stored on the facade, because the engine builds the session with the TRIMMED zone: without it
-    ``.config(KEY, "  Asia/Tokyo  ")`` would leave ``spark.conf.get`` reporting the padded string
-    while the live session holds ``Asia/Tokyo`` — the facade/engine split-brain this whole surface
-    exists to prevent. A value that trims to empty is left empty and the engine refuses it, so
-    normalizing never turns a refusal into a silent default.
+    decides whether a value names a real zone; ``repark_core::SessionTimeZone::parse`` does,
+    once, at session build. This matches the engine's own ``raw.trim()`` before the value is
+    stored on the facade, because the engine builds the session with the TRIMMED zone: without
+    it ``.config(KEY, "  Asia/Tokyo  ")`` would leave ``spark.conf.get`` reporting the padded
+    string while the live session holds ``Asia/Tokyo`` — the facade/engine split-brain this
+    surface exists to prevent. A value that trims to empty is left empty and the engine refuses
+    it, so normalizing never turns a refusal into a silent default.
     """
     raw = config.get(SESSION_TIME_ZONE_KEY)
     if isinstance(raw, str):
@@ -104,11 +98,11 @@ def warn_runtime_session_time_zone_not_applied(key: str, *, stacklevel: int = 2)
     drives this whole shape. The warning says so in as many words, so a caller who typo'd a zone
     reads it in the message rather than inferring it from a silent no-op.
 
-    Emits that disclosure at most once **per process** — not per session — the same shape as the
-    ``.master(...)`` and arrow-batch-sentinel disclosures (OTH-010): a migrated PySpark script
-    calls this setter and must not explode, but it must also not be told the zone changed. The
-    once-per-process scope means a second session in the same interpreter gets a silent no-op;
-    that is the deliberate cost of the OTH-010 idiom, recorded in the divergence registry (TZ-3).
+    Emits that disclosure at most once **per process** — not per session — the same shape as
+    the ``.master(...)`` and arrow-batch-sentinel disclosures (OTH-010): a migrated PySpark
+    script calls this setter and must not explode, but it must also not be told the zone
+    changed. The once-per-process scope means a second session in the same interpreter gets a
+    silent no-op; that is the deliberate cost of the OTH-010 idiom (registry row TZ-3).
     """
     if key != SESSION_TIME_ZONE_KEY:
         return False
@@ -157,7 +151,7 @@ def collect_timestamp_as_session_wall(value: datetime.datetime) -> datetime.date
 def localize_naive_datetime_to_utc(value: datetime.datetime) -> datetime.datetime:
     """Naive wall → instant in the session zone (UTC-aware). Aware values convert to UTC.
 
-    Q12: session zone, never the host TZ. Gap/fold uses ``fold=0`` (earlier offset), matching
+    Session zone, never the host TZ. Gap/fold uses ``fold=0`` (earlier offset), matching
     Spark's ``ofLocal`` earlier-preferred arm when no source offset is supplied.
     """
     if value.tzinfo is not None:

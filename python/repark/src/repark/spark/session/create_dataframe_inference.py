@@ -92,18 +92,12 @@ def _infer_arrow_type_from_python_sample(sample: Any) -> Any:
     if isinstance(sample, list):
         non_null = [item for item in sample if item is not None]
 
-        # === r23b N1: list element merge under inferNestedDictAsStruct ===
-
         # Live Spark merges ALL element types (ArrayType _merge_type) unless legacy
-
         # first-element conf is on. List-of-dict → struct field union; nested
-
         # list<list<dict>> must also merge sibling element schemas (octo C2-L-001).
 
         # Empty list under conf true → list<null> so multi-row / multi-sample merge
-
         # can still adopt a concrete element type (octo C3-L-001; empty→string was
-
         # swallowing later struct elements via string-wins-all).
 
         if _INFER_NESTED_DICT_AS_STRUCT.get() and not non_null:
@@ -158,20 +152,17 @@ def _infer_arrow_type_from_python_sample(sample: Any) -> Any:
         )
 
     if isinstance(sample, dict):
-        # === r23b N1: conf true → StructType for dict-valued cells (SPARK-35929) ===
-
-        # Row-dicts never reach this helper (they go through key-union / mapping bind).
+        # Conf true → StructType for dict-valued cells (SPARK-35929); row-dicts never
+        # reach this helper (they go through key-union / mapping bind).
 
         if _INFER_NESTED_DICT_AS_STRUCT.get():
             return _infer_struct_arrow_from_dict_samples([sample])
 
         # Spark schema inference: Python dict → map (key type from samples). Non-str keys
-
         # must not force map<string,…> then fail at array build (octo X2 C2).
 
         # Mixed value types (e.g. Legs [{"LegId":1,"Side":"Buy"}]) → map value string
-
-        # (Spark 4.1.2 stringifies map values under key-union / mixed inference — r21 T1).
+        # (Spark 4.1.2 stringifies map values under key-union / mixed inference).
 
         if not sample:
             return pa.map_(pa.string(), pa.string())
@@ -271,16 +262,10 @@ def _arrow_type_is_nested(arrow_type: Any) -> bool:
 def _merge_inferred_arrow_types(left: Any, right: Any) -> Any:
     """Merge two inferred Arrow types (Spark ``_merge_type`` subset for dict-as-struct).
 
-
-
     NullType is soft (merges as the other side). String wins over **atomic** only
-
     (live Spark long+string → string) — never over nested list/struct/map (that
-
     stringified dict cells — octo C3-L-001). Long+Double / other incompatible scalar
-
     pairs refuse ``CANNOT_MERGE_TYPE``. Nested list/struct/map recurse.
-
     """
 
     import pyarrow as pa
@@ -348,10 +333,7 @@ def _merge_inferred_arrow_types(left: Any, right: Any) -> Any:
 def _merge_struct_arrow_types(left: Any, right: Any) -> Any:
     """Union two struct types: keep left field order, append new fields from right.
 
-
-
     Live Spark ``_merge_type`` for StructType (field-union order pin).
-
     """
 
     import pyarrow as pa
@@ -383,16 +365,10 @@ def _merge_struct_arrow_types(left: Any, right: Any) -> Any:
 def _infer_struct_arrow_from_dict_samples(samples: list[dict[str, Any]]) -> Any:
     """Build a struct Arrow type by unioning keys across dict *cell* samples.
 
-
-
     Field order: insertion order of the first sample that contributes each key
-
     (Spark dict-as-struct uses ``dict.items()`` order, not sorted row-key-union order).
-
     Null values do not contribute a field type (live: ``{"a": None, "b": 1}`` → only ``b``).
-
     Non-string keys refuse (Spark ``field name … should be a string``).
-
     """
 
     import pyarrow as pa
@@ -437,12 +413,8 @@ def _infer_struct_arrow_from_dict_samples(samples: list[dict[str, Any]]) -> Any:
 def _prepare_nested_cell(cell: Any, arrow_type: Any) -> Any:
     """Convert Row / dict / list cells into shapes ``pa.array`` accepts for ``arrow_type``.
 
-
-
     Also coerces Python values toward the declared Arrow type (Spark createDataFrame
-
     stringifies non-strings into StringType columns — Apache ``test_convert_list_to_str``).
-
     """
 
     import pyarrow as pa
@@ -650,14 +622,9 @@ def _prepare_nested_cell(cell: Any, arrow_type: Any) -> Any:
 def _normalize_nested_sql_type_aliases(sql_type: str) -> str:
     """Rewrite SQL aliases inside nested type markers so :meth:`DataType.fromDDL` accepts them.
 
-
-
-    ``_data_type_to_sql_type`` historically emitted ``VARCHAR`` for strings; bare VARCHAR is
-
-    not an atomic fromDDL token (only ``string`` / ``str`` / ``varchar(n)``). Nested markers
-
-    must use STRING (or be rewritten here) or the whole column silently became string.
-
+    Bare ``VARCHAR`` is not an atomic fromDDL token (only ``string`` / ``str`` /
+    ``varchar(n)``); nested markers must use STRING (or be rewritten here) or the whole
+    column silently became string.
     """
 
     import re as _re

@@ -578,6 +578,21 @@ REMAND_RECORD:
 ```
 
 ```yaml
+REMAND_CLOSING_DECISION:
+  finding: F-CC2-TA-UDF-004 / BF-CC2-TA-001 (S0, BASE_ONLY)
+  decision: ACCEPT_WITH_RECORD
+  decided_by: Owner
+  decided_on: 2026-08-29
+  channel: Interactive orchestrator session on codex/comment-condensation
+  record_home: crates/repark-ta/map.md Known limitations (entry dated 2026-08-29)
+  terms:
+    - The comment-only unit ships with the defect unfixed; C-005 forbids an executable change here.
+    - The executable fix (cache complete array identity or bypass caching) is its own future unit with shared-buffer regression pins.
+    - The PR description names this decision as an explicit merge gate per R13.
+  item_disposition: CLOSED_BY_USER_DECISION
+```
+
+```yaml
 BASE_ONLY_FINDING:
   id: BF-CC2-TA-001
   source_finding: F-CC2-TA-UDF-004

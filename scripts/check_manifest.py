@@ -103,8 +103,8 @@ def display(path: Path) -> str:
 def load_dependency_policy() -> tuple[ModuleType | None, list[str]]:
     """Import `scripts/check_crate_dag.py` — the SSOT for tiers, roles and allowed edges.
 
-    Imported by path (scripts/ is not a package) so the layer names in the manifest are checked
-    against the guard that enforces them, never against a copy of the map kept here.
+    Imported by path (scripts/ is not a package) so the manifest is checked against the
+    enforcing guard, never a copy of the map kept here.
     """
     specification = importlib.util.spec_from_file_location("check_crate_dag", DAG_SCRIPT)
     if specification is None or specification.loader is None:
@@ -201,8 +201,8 @@ def check_project(manifest: dict, targets: set[str], status_doc: Path) -> list[s
         errors.append(f"ERROR: [project] carries unknown key `{key}` — remove it or fix the typo.")
     for key in sorted(PROJECT_KEYS - set(project)):
         errors.append(f"ERROR: [project] is missing the required `{key}` field.")
-    # Type-check the string fields (present-but-not-a-string would otherwise silently skip the
-    # STATUS.md agreement rule below while the success line still claims agreement).
+    # Type-check: a present-but-not-a-string field would silently skip the STATUS.md
+    # agreement rule while the success line still claims agreement.
     for key in ("name", "phase", "phase_state", "release_status"):
         if key in project:
             require_string(project, key, "[project]", errors)
@@ -451,8 +451,8 @@ def main() -> int:
     if not errors and policy is not None:
         members, member_errors = workspace_members()
         targets, target_errors = make_targets()
-        # The status document is whichever one the manifest's own doc index declares, so a
-        # rename moves the phase check with it rather than silently unhooking it.
+        # The status doc is whatever the manifest's own doc index declares, so a rename moves
+        # the phase check with it rather than silently unhooking it.
         declared_status = manifest.get("documentation", {}).get("status")
         if not isinstance(declared_status, str):
             declared_status = "STATUS.md"

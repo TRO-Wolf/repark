@@ -22,19 +22,14 @@ if TYPE_CHECKING:
 def _parse_schema_ddl(ddl: str) -> tuple[list[str], list[str]] | None:
     """Parse ``'a INT, b STRING'`` / nested ``'a ARRAY<INT>'`` → names + SQL types.
 
-
-
     Returns None if not a field-list DDL (bare type tokens / character-iteration trap).
-
-    Nested array/map/struct field types use :meth:`DataType.fromDDL` so Apache-style
-
-    nested DDL schemas work the same as StructType (octo X2 C1).
-
+    Nested field types use :meth:`DataType.fromDDL` so Apache-style nested DDL works the
+    same as StructType.
     """
 
     stripped = ddl.strip()
 
-    # Single token without a type is not DDL (would be the old character-iteration trap).
+    # Single token without a type is not DDL (character-iteration trap).
 
     if not stripped or (" " not in stripped and ":" not in stripped and "<" not in stripped):
         return None
@@ -58,16 +53,12 @@ def _parse_schema_ddl(ddl: str) -> tuple[list[str], list[str]] | None:
 
 
 def _datetime64_unit_from_dtype(dtype: Any) -> str | None:
-    """Extract a numpy/pandas ``datetime64[unit]`` unit with case preserved (C5-Q-001 / C5-L-001).
+    """Extract a numpy/pandas ``datetime64[unit]`` unit with case preserved.
 
-
-
-    Numpy units are case-sensitive: ``M`` = month (calendar → DATE), ``m`` = minute (TIMESTAMP).
-
-    Callers must not lowercase the dtype text before extracting the unit. Returns ``None`` when
-
-    the spelling is not ``datetime64[…]`` (ArrowDtype ``timestamp[…]`` / bare timestamp).
-
+    Numpy units are case-sensitive: ``M`` = month (calendar → DATE), ``m`` = minute
+    (TIMESTAMP). Callers must not lowercase the dtype text before extracting the unit.
+    Returns ``None`` when the spelling is not ``datetime64[…]`` (ArrowDtype
+    ``timestamp[…]`` / bare timestamp).
     """
 
     raw = str(dtype)
@@ -97,44 +88,24 @@ def _datetime64_unit_from_dtype(dtype: Any) -> str | None:
 
 
 def _null_sql_for_pandas_dtype(dtype: Any) -> str:
-    """Map a pandas dtype to ``CAST(NULL AS …)`` for all-null columns (C3-Q-001 / C4-* / C5-*).
-
-
+    """Map a pandas dtype to ``CAST(NULL AS …)`` for all-null columns.
 
     Integer dtypes always map to ``BIGINT`` so all-null vs non-null occupancy cannot change
-
-    Arrow width (VALUES emits bare Python ``int`` → int64 for every non-null integer cell —
-
-    C4-Q-001). ``ArrowDtype`` spellings (``timestamp[ns][pyarrow]``, ``date32[day][pyarrow]``,
-
-    ``double[pyarrow]``, …) are recognized (C4-L-002). Timedelta / duration refuse loud so
-
-    all-null cannot soft-succeed as VARCHAR while non-null Timedelta raises (C4-Q-002).
-
-    ``IntervalDtype`` refuses before the ``startswith("int")`` arm (``"interval…".startswith(
-
-    "int")`` is true — silent BIGINT fail-open — C3-L-002). ``PeriodDtype`` refuses before the
-
-    date arm (``period[D]`` ends with ``[d]`` → silent DATE; ``period[M]`` was VARCHAR while
-
-    non-null Period raised — C4-Q-002 / C4-L-002). Categorical maps via ``categories.dtype`` so
-
-    int categories cannot flip VARCHAR↔int64 by null occupancy (C4-Q-003). Unsupported
-
-    ArrowDtype time/binary/nested refuse rather than VARCHAR (parity with polars — C4-Q-004 /
-
-    C4-L-003). Calendar ``datetime64[D|W|M|Y]`` → DATE so all-null occupancy matches non-null
-
-    unit-D cells (C3-Q-001); unit match is **case-sensitive** so minute ``m`` is never month
-
-    ``M`` (C5-Q-001 / C5-L-001). ``complex*`` refuses (C5-Q-002). ``SparseDtype`` unwraps to
-
-    ``subtype`` so Sparse[int64]/Sparse[bool] cannot flip VARCHAR↔payload (C5-Q-003 /
-
-    C5-SAF-002). Sparse[object] all-null is re-typed from cell witnesses in
-
-    ``_rows_from_pandas`` (NaN→DOUBLE, NaT→TIMESTAMP — C6-Q-001), not via this map alone.
-
+    Arrow width (VALUES emits bare Python ``int`` → int64 for every non-null integer cell).
+    ``ArrowDtype`` spellings (``timestamp[ns][pyarrow]``, ``date32[day][pyarrow]``,
+    ``double[pyarrow]``, …) are recognized. Timedelta / duration refuse loud so all-null
+    cannot soft-succeed as VARCHAR while non-null Timedelta raises. ``IntervalDtype``
+    refuses before the ``startswith("int")`` arm (``"interval…".startswith("int")`` is
+    true — silent BIGINT fail-open). ``PeriodDtype`` refuses before the date arm
+    (``period[D]`` ends with ``[d]`` → silent DATE while non-null Period raises).
+    Categorical maps via ``categories.dtype`` so int categories cannot flip
+    VARCHAR↔int64 by null occupancy. Unsupported ArrowDtype time/binary/nested refuse
+    rather than VARCHAR (parity with polars). Calendar ``datetime64[D|W|M|Y]`` → DATE so
+    all-null occupancy matches non-null unit-D cells; unit match is **case-sensitive** so
+    minute ``m`` is never month ``M``. ``complex*`` refuses. ``SparseDtype`` unwraps to
+    ``subtype`` so Sparse[int64]/Sparse[bool] cannot flip VARCHAR↔payload. Sparse[object]
+    all-null is re-typed from cell witnesses in ``_rows_from_pandas`` (NaN→DOUBLE,
+    NaT→TIMESTAMP), not via this map alone.
     """
 
     raw_text = str(dtype)
@@ -150,14 +121,15 @@ def _null_sql_for_pandas_dtype(dtype: Any) -> str:
             f"createDataFrame does not support pandas Period dtypes yet (got dtype {dtype!s})"
         )
 
-    # Interval before int/float: "interval…".startswith("int") and "float" in "interval[float64,…]".
+    # Interval before int/float: "interval…".startswith("int") and
+    # "float" in "interval[float64,…]".
 
     if "interval" in text:
         raise PySparkTypeError(
             f"createDataFrame does not support pandas Interval dtypes yet (got dtype {dtype!s})"
         )
 
-    # complex before float/VARCHAR: all-null must not soft-succeed as VARCHAR (C5-Q-002).
+    # complex before float/VARCHAR: all-null must not soft-succeed as VARCHAR.
 
     if "complex" in text or type_name.startswith("Complex"):
         raise PySparkTypeError(
@@ -165,12 +137,9 @@ def _null_sql_for_pandas_dtype(dtype: Any) -> str:
         )
 
     # SparseDtype before int/bool/float arms: ``Sparse[int64, nan]`` does not startswith("int")
-
-    # and would fall through to VARCHAR while non-null cells type as int64 (C5-Q-003 / C5-SAF-002).
-
-    # Sparse[object]: subtype unwrap alone → VARCHAR; cell witnesses run in ``_rows_from_pandas``
-
-    # (C6-Q-001). Keep unwrap for typed subtypes (int/bool/float/…).
+    # and would fall through to VARCHAR while non-null cells type as int64. Sparse[object]:
+    # subtype unwrap alone → VARCHAR; cell witnesses run in ``_rows_from_pandas``.
+    # Keep unwrap for typed subtypes (int/bool/float/…).
 
     if "sparse" in text or type_name == "SparseDtype":
         subtype = getattr(dtype, "subtype", None)
@@ -183,15 +152,9 @@ def _null_sql_for_pandas_dtype(dtype: Any) -> str:
     # Timestamp / datetime before bare "date" / "time" substrings (incl. ArrowDtype).
 
     if "datetime64" in text or text.startswith("datetime") or "timestamp" in text:
-        # Calendar units → DATE (null-occupancy stable with non-null numpy/pandas unit-D → date).
-
-        # Unit is extracted case-sensitively from the raw dtype string: numpy ``M`` = month
-
-        # (DATE), ``m`` = minute (TIMESTAMP). Lowercasing the whole text would map both to
-
-        # ``datetime64[m]`` and flip all-null DATE vs non-null TIMESTAMP (C5-Q-001 / C5-L-001).
-
-        # Closed-bracket form still keeps ``datetime64[ms]`` off the calendar arm (C4-Q-001).
+        # Calendar units → DATE (null-occupancy stable with non-null unit-D → date mapping).
+        # Unit is extracted case-sensitively from the raw dtype string; lowercasing the text
+        # would map minute ``m`` to month ``M`` and flip all-null DATE vs non-null TIMESTAMP.
 
         unit = _datetime64_unit_from_dtype(dtype)
 
@@ -207,8 +170,7 @@ def _null_sql_for_pandas_dtype(dtype: Any) -> str:
         )
 
     # Categorical: non-null cells are the underlying category values (int → int64, …). Map
-
-    # all-null via categories.dtype so occupancy cannot flip VARCHAR↔payload type (C4-Q-003).
+    # all-null via categories.dtype so occupancy cannot flip VARCHAR↔payload type.
 
     if "category" in text or type_name == "CategoricalDtype":
         categories = getattr(dtype, "categories", None)
@@ -220,11 +182,8 @@ def _null_sql_for_pandas_dtype(dtype: Any) -> str:
 
         return _TYPED_NULL_SQL
 
-    # Unsupported ArrowDtype shapes — refuse before VARCHAR (C4-Q-004 / C4-L-003).
-
-    # time32/time64 + binary/large_binary still refuse. Nested list/struct/map land via
-
-    # pa.Table.from_pandas (r21 T1). dictionary stays refuse (category unwrap is separate).
+    # Unsupported ArrowDtype shapes — refuse before VARCHAR. Nested list/struct/map land
+    # via pa.Table.from_pandas. Dictionary stays refuse (category unwrap is separate).
 
     if (text.endswith("[pyarrow]") or "[pyarrow]" in text or type_name == "ArrowDtype") and (
         text.startswith("time")
@@ -242,7 +201,7 @@ def _null_sql_for_pandas_dtype(dtype: Any) -> str:
     if text in {"bool", "boolean"} or text.startswith("bool"):
         return "CAST(NULL AS BOOLEAN)"
 
-    # float* + ArrowDtype double[pyarrow] / float[pyarrow] (C4-L-002 sibling).
+    # float* + ArrowDtype double[pyarrow] / float[pyarrow].
 
     if (
         "float" in text
@@ -270,7 +229,7 @@ def _null_sql_for_pandas_dtype(dtype: Any) -> str:
             "uint64",
         }
     ):
-        # VALUES path always widens non-null Python int → int64; keep all-null stable (C4-Q-001).
+        # VALUES path always widens non-null Python int → int64; keep all-null stable.
 
         return "CAST(NULL AS BIGINT)"
 
@@ -291,32 +250,20 @@ def _null_sql_for_pandas_dtype(dtype: Any) -> str:
     if "decimal" in text:
         return f"CAST(NULL AS DECIMAL({_DECIMAL_PRECISION}, {_DECIMAL_SCALE}))"
 
-    # string / object / unknown — stable VARCHAR (C2-L-003 fallback).
-
-    # Object-dtype all-null columns are re-typed from cell witnesses in ``_rows_from_pandas``
-
-    # (NaN→DOUBLE, NaT→TIMESTAMP — C5-SAF-001); pure None stays VARCHAR here.
+    # string / object / unknown — stable VARCHAR fallback. Object-dtype all-null columns
+    # are re-typed from cell witnesses in ``_rows_from_pandas``; pure None stays VARCHAR here.
 
     return _TYPED_NULL_SQL
 
 
 def _null_sql_for_polars_dtype(dtype: Any) -> str:
-    """Map a polars dtype to ``CAST(NULL AS …)`` for all-null columns (C3-Q-001 / C4-*).
+    """Map a polars dtype to ``CAST(NULL AS …)`` for all-null columns.
 
-
-
-    All integer widths → ``BIGINT`` (null-occupancy-stable with VALUES int literals — C4-Q-001).
-
-    ``Duration`` refuses (parity with non-null Timedelta / duration refuse — C4-Q-002).
-
-    Binary / Time / Object refuse so all-null cannot soft-succeed as VARCHAR while non-null
-
-    cells raise at the SQL literal boundary (C3-L-003). Nested ``List`` / ``Struct`` /
-
-    ``Array`` are **accepted** via the polars ``.to_arrow()`` path (r21 T1) — they never
-
-    hit VALUES literals.
-
+    All integer widths → ``BIGINT`` (null-occupancy-stable with VALUES int literals).
+    ``Duration`` refuses (parity with non-null Timedelta / duration refuse). Binary / Time /
+    Object refuse so all-null cannot soft-succeed as VARCHAR while non-null cells raise at
+    the SQL literal boundary. Nested ``List`` / ``Struct`` / ``Array`` are **accepted** via
+    the polars ``.to_arrow()`` path — they never hit VALUES literals.
     """
 
     text = str(dtype)
@@ -332,8 +279,7 @@ def _null_sql_for_polars_dtype(dtype: Any) -> str:
         )
 
     # Binary / Time / Object still refuse (engine cannot represent / no VALUES path).
-
-    # Nested List/Struct/Array pass through (r21 T1 — Arrow C-stream path).
+    # Nested List/Struct/Array pass through (Arrow C-stream path).
 
     if text in {"Binary", "Time", "Object"} or text_lower in {"binary", "time", "object"}:
         raise PySparkTypeError(
@@ -355,7 +301,7 @@ def _null_sql_for_polars_dtype(dtype: Any) -> str:
         or text_lower.startswith("int")
         or text_lower.startswith("uint")
     ):
-        # Match VALUES bare-int → int64; no data-dependent int32/int64 flip (C4-Q-001).
+        # Match VALUES bare-int → int64; no data-dependent int32/int64 flip.
 
         return "CAST(NULL AS BIGINT)"
 
@@ -366,16 +312,11 @@ def _null_sql_for_polars_dtype(dtype: Any) -> str:
 
 
 def _pandas_dtype_needs_object_null_witness(dtype: Any) -> bool:
-    """True when all-null typing must scan cells (object / Sparse[object] — C5-SAF-001 / C6-Q-001).
+    """True when all-null typing must scan cells (object / Sparse[object]).
 
-
-
-    Top-level object is untyped. Sparse[object] unwraps to object in the dtype map and would
-
-    soft-map VARCHAR while non-null Sparse[object] cells type as DOUBLE/TIMESTAMP from values —
-
-    a null-occupancy flip unless the object NaN/NaT witness runs (C6-Q-001).
-
+    Top-level object is untyped. Sparse[object] unwraps to object in the dtype map and
+    would soft-map VARCHAR while non-null Sparse[object] cells type as DOUBLE/TIMESTAMP
+    from values — a null-occupancy flip unless the NaN/NaT witness runs.
     """
 
     text = str(dtype).lower()
@@ -401,18 +342,12 @@ def _pandas_dtype_needs_object_null_witness(dtype: Any) -> bool:
 
 
 def _infer_null_sql_from_raw_cells(cells: list[Any]) -> str:
-    """Infer ``CAST(NULL AS …)`` for an all-null column from pre-normalize witnesses (C4-L-001).
+    """Infer ``CAST(NULL AS …)`` for an all-null column from pre-normalize witnesses.
 
-
-
-    Normalize erases ``float('nan')`` / ``NaT`` / ``numpy.datetime64('NaT')`` to ``None``. On
-
-    list/dict/Row/tuple paths there is no frame dtype, so without this witness scan the VALUES
-
-    emitter would emit VARCHAR for all-NaN (Spark double) and all-NaT (Spark timestamp).
-
-    Pure ``None`` columns stay VARCHAR (C2-L-003).
-
+    Normalize erases ``float('nan')`` / ``NaT`` / ``numpy.datetime64('NaT')`` to ``None``.
+    On list/dict/Row/tuple paths there is no frame dtype, so without this witness scan the
+    VALUES emitter would emit VARCHAR for all-NaN (Spark double) and all-NaT (Spark
+    timestamp). Pure ``None`` columns stay VARCHAR.
     """
 
     import datetime as dt
@@ -462,11 +397,9 @@ def _infer_null_sql_from_raw_cells(cells: list[Any]) -> str:
 
         if module_name.startswith("numpy"):
             if type_name == "datetime64":
-                # Calendar units D/W/M/Y → DATE; finer (and ns) → TIMESTAMP (C3-Q-001).
-
-                # Must not force TIMESTAMP for every datetime64: non-null unit-D becomes DATE,
-
-                # so all-null NaT[D] would otherwise flip Arrow type by null occupancy.
+                # Calendar units D/W/M/Y → DATE; finer (and ns) → TIMESTAMP. Must not force
+                # TIMESTAMP for every datetime64: non-null unit-D becomes DATE, so all-null
+                # NaT[D] would otherwise flip Arrow type by null occupancy.
 
                 unit = _numpy_datetime64_unit(value)
 
@@ -601,14 +534,10 @@ def _column_null_sql_from_raw_tuples(
     width: int,
     names: list[str] | None = None,
 ) -> list[str]:
-    """Per-column all-null CAST for non-frame paths from raw (pre-normalize) cells (C4-L-001).
-
-
+    """Per-column all-null CAST for non-frame paths from raw (pre-normalize) cells.
 
     When ``names`` is provided, unsupported ``array.array`` typecodes raise
-
-    ``CANNOT_INFER_TYPE_FOR_FIELD`` with the column name (F1 / test_array_types).
-
+    ``CANNOT_INFER_TYPE_FOR_FIELD`` with the column name.
     """
 
     column_null_sql: list[str] = []
@@ -640,24 +569,15 @@ def _schema_names_and_permutation(
     *,
     kind: str,
 ) -> tuple[list[str], list[int]]:
-    """Resolve ``schema=[names]`` against ordered source column names (C2-L-001).
-
-
+    """Resolve ``schema=[names]`` against ordered source column names.
 
     Returns ``(output_names, permutation)`` where ``permutation[i]`` is the source index that
-
     feeds output column ``i``.
 
-
-
     * ``schema is None`` → identity (keep source names and order).
-
     * same name multiset as ``source_names`` → **by-name reorder** (values follow names).
-
     * same length, no shared names → **positional rename**.
-
     * length mismatch or partial name overlap → fail loud (no silent swap / project / drop).
-
     """
 
     if schema is None:

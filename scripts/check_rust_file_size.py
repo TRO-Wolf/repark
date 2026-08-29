@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Enforce exact per-file line baselines over every crates/**/*.rs source file.
 
-SSOT for general Rust file size (G-8 companion to check_lib_rs). Prose
-(AGENTS.md / CLAUDE.md / scripts/map.md) points here and never restates the
-ceilings. Mirrors the check_lib_rs dual-wire shape (py = logic + SSOT,
+SSOT for general Rust file size (companion to check_lib_rs). Prose points here and never
+restates the ceilings. Mirrors the check_lib_rs dual-wire shape (py = logic + SSOT,
 sh = wrapper).
 
 Rules over every *.rs under crates/ (recursive):
@@ -275,7 +274,7 @@ def check_file(path: Path, repo: Path) -> list[str]:
         errors.append(f"ERROR: {rel}: unreadable ({exc})")
         return errors
 
-    # wc-style: number of lines as splitlines length (docs count toward ceiling).
+    # Docs count toward the ceiling.
     line_count = len(text.splitlines())
     exception = EXCEPTIONS.get(rel)
     if exception is None:

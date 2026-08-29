@@ -1,4 +1,4 @@
-"""DataFrameReader (r26 T1 MOVE-ONLY)."""
+"""DataFrameReader."""
 
 from __future__ import annotations
 
@@ -19,16 +19,12 @@ del _name, _session_funcs
 class DataFrameReader:
     """PySpark ``DataFrameReader``: parquet, csv, json, excel, table, format/load, option(s).
 
-    # === r20 R1: read-formats ===
     CSV/JSON route through DataFusion native readers (``read_csv`` / ``read_json``).
     :meth:`schema` stores a user StructType/DDL for those formats. Unknown formats raise
     :class:`~repark.errors.AnalysisException` (Spark's ``DATA_SOURCE_NOT_FOUND`` class shape).
     Unknown options are accepted and stored (Spark silently tolerates them) except the semantic
-    denylist which fails loud.
-
-    # === r25 T5: excel ===
-    :meth:`excel` is a disclosed RePark extension (PySpark has no excel reader). Single-sheet v1;
-    use :meth:`sheet_names` to discover sheets.
+    denylist which fails loud. :meth:`excel` is a disclosed RePark extension (PySpark has no
+    excel reader); single-sheet v1 — use :meth:`sheet_names` to discover sheets.
     """
 
     __slots__ = ("_format", "_options", "_schema", "_session")
@@ -38,7 +34,6 @@ class DataFrameReader:
         self._session = session
         self._format: str | None = None
         self._options: dict[str, str] = {}
-        # === r20 R1: read-formats ===
         self._schema: Any | None = None
 
     def parquet(self, path: str | Path) -> DataFrame:
@@ -56,7 +51,6 @@ class DataFrameReader:
             )
         return self._session.read_parquet(path)
 
-    # === r20 R1: read-formats ===
     def csv(
         self,
         path: str | Path | list[str] | None = None,
@@ -77,11 +71,10 @@ class DataFrameReader:
         """Read CSV (PySpark ``spark.read.csv``).
 
         Everyday options are wired; see ``task/r1-read-formats-ledger.md`` for the full matrix
-        (engine-default-differs for ``inferSchema`` when no user schema is supplied).
-
-        Default semantics are **frozen** (r20-R1 pins). For preamble junk, delimiter auto-detect,
+        (engine-default-differs for ``inferSchema`` when no user schema is supplied). Default
+        semantics are **frozen** (r20-R1 pins). For preamble junk, delimiter auto-detect,
         protocol type inference, and surfaceable diagnostics use :meth:`smartCsv` (repark
-        extension — greylit Q5).
+        extension).
         """
         if schema is not None:
             self.schema(schema)
@@ -113,7 +106,6 @@ class DataFrameReader:
         self._format = "csv"
         return self._load_csv(path)
 
-    # === r25 T4: csv-smart ===
     def smartCsv(  # noqa: N802 — repark extension camelCase (Q5 contract)
         self,
         path: str | Path | None = None,
@@ -136,7 +128,7 @@ class DataFrameReader:
           (bool→int32→int64→decimal128→float64→date→timestamp→string)
         * Opt-in header case normalization via ``normalizeHeaderCase``
           (``lower`` / ``upper`` / ``snake``) — never silent by default
-        * Inference sampling (r26): full scan when ≤ 10_000 data rows, else first
+        * Inference sampling: full scan when ≤ 10_000 data rows, else first
           10_000 only (override with ``samplingRows``). Cap is **inference-only** —
           the full file is always read for data. A value class appearing only past
           the cap can under-widen the schema; the subsequent cast fails loud
@@ -296,7 +288,6 @@ class DataFrameReader:
         self._format = "json"
         return self._load_json(path)
 
-    # === r25 T5: excel ===
     def excel(
         self,
         path: str | Path | None = None,
@@ -357,7 +348,7 @@ class DataFrameReader:
 
         Same semantics as :meth:`ReparkSession.table` / ``SELECT * FROM <name>``.
         Iceberg time-travel options (``snapshot-id`` / ``as-of-timestamp`` / ``branch`` / ``tag``)
-        pin a snapshot-static scan (I1). Other semantic reader options fail loud.
+        pin a snapshot-static scan. Other semantic reader options fail loud.
         """
         self._reject_unsupported_semantic_options()
         travel = self._iceberg_time_travel_opts()
@@ -391,18 +382,17 @@ class DataFrameReader:
            (Spark does no overlap checking; duplicates are contractual)
 
         Only PostgreSQL URLs are supported in v1 (``jdbc:postgresql://`` or ``postgresql://``).
-        ``driver`` is accepted and ignored (disclosed). TLS (SEC-001 / r22 A2): default
-        ``sslmode=prefer`` when omitted (was disable in r21); prefer attempts verified TLS and
-        may fall back to plaintext **with a downgrade warning** (never silent). Explicit
-        ``disable`` is silent plaintext. ``require`` / ``verify-full`` encrypt + verify and never
-        fall back; ``verify-ca`` is refused loud.
+        ``driver`` is accepted and ignored (disclosed). TLS (SEC-001): default
+        ``sslmode=prefer`` when omitted; prefer attempts verified TLS and may fall back to
+        plaintext **with a downgrade warning** (never silent). Explicit ``disable`` is silent
+        plaintext. ``require`` / ``verify-full`` encrypt + verify and never fall back;
+        ``verify-ca`` is refused loud.
         """
         from repark.errors import IllegalArgumentException
 
         props = dict(properties or connection_properties or {})
-        # Spark often passes properties as the third positional for shape (1); callers may also
-        # put user/password only in props. Never log props (may contain password).
-        # Resolve dbtable from the positional table arg OR properties["dbtable"] (case-insensitive).
+        # Never log props (may contain password). Resolve dbtable from the positional table
+        # arg OR properties["dbtable"] (case-insensitive).
         dbtable = table
         if dbtable is None:
             for key, value in props.items():
@@ -473,7 +463,7 @@ class DataFrameReader:
         """Load data for the configured format (PySpark ``DataFrameReader.load``).
 
         * ``format("parquet").load(path)`` ≡ ``.parquet(path)``
-        * ``format("csv"|"json").load(path)`` ≡ ``.csv`` / ``.json`` (R1)
+        * ``format("csv"|"json").load(path)`` ≡ ``.csv`` / ``.json``
         * ``format("parquet").option("path", p).load()`` uses the option when ``path`` is omitted
         * ``format("iceberg").load(table_identifier)`` reads the **catalog** Iceberg table
           (PySpark Iceberg convention: ``load`` takes the table name, not a filesystem path).
@@ -506,7 +496,6 @@ class DataFrameReader:
             if effective_path is None:
                 raise AnalysisException("Parquet load requires a path argument")
             return self.parquet(effective_path)
-        # === r20 R1: read-formats ===
         if fmt == "csv":
             if effective_path is None:
                 raise AnalysisException("CSV load requires a path argument")
@@ -518,7 +507,6 @@ class DataFrameReader:
         if fmt == "iceberg":
             if effective_path is None:
                 raise AnalysisException("Iceberg load requires a table identifier argument")
-            # Catalog Iceberg table only (prefer_temp_view=False via read_iceberg_table).
             # spark.table() / read.table() still prefer temp views; format("iceberg").load
             # must not silent-shadow a catalog table with a same-name temp view (C4-L-001).
             # Time-travel options + residual denylist already applied above.
@@ -536,7 +524,6 @@ class DataFrameReader:
             "and compatible with your Spark version."
         )
 
-    # === r20 R1: read-formats ===
     def _load_csv(self, path: str | Path | list[str]) -> DataFrame:
         """Materialize CSV via the session native reader + Spark-semantics post-steps."""
         # Semantic I/O options (pathGlobFilter / ignoreCorruptFiles / mergeSchema / …) must fail
@@ -581,7 +568,6 @@ class DataFrameReader:
         # JSON always has field names; inferSchema is not a Spark JSON option in the same way.
         return self._apply_reader_schema_semantics(frame, infer_schema=True, header=True)
 
-    # === r25 T5: excel ===
     def _load_excel(self, path: str | Path) -> DataFrame:
         """Materialize one Excel sheet via the pure-Rust calamine reader."""
         # Semantic I/O / Iceberg TT options do not apply to local Excel files.
@@ -815,8 +801,8 @@ class DataFrameReader:
                     )
             return frame.select(*selects)
 
-        # Align generic DF names with Spark `_cN` when no header and no user schema — regardless
-        # of inferSchema (octo R1-C1-002: rename used to run only on the infer=true path).
+        # Align generic DF names with Spark `_cN` when no header and no user schema —
+        # regardless of inferSchema (octo R1-C1-002).
         if not header and columns:
             renames = []
             needs_rename = False
@@ -947,7 +933,6 @@ class DataFrameReader:
             lowered = key.lower()
             if lowered == "path":
                 continue
-            # === r20 R1: read-formats ===
             # compression is wired for csv/json; still loud on parquet/iceberg/empty.
             if lowered == "compression":
                 if fmt in {"csv", "json"}:
@@ -1033,7 +1018,6 @@ class DataFrameReader:
     def schema(self, schema: Any) -> DataFrameReader:
         """Set a user schema for the next load (PySpark ``DataFrameReader.schema``).
 
-        # === r20 R1: read-formats ===
         Applied on CSV/JSON reads (cast + rename). Parquet still rejects a set schema at load.
         Accepts :class:`~repark.types.StructType`, a DDL field-list string, or a list of
         :class:`~repark.types.StructField`.

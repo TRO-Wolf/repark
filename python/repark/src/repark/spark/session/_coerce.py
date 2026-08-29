@@ -1,9 +1,4 @@
-"""Session helpers lifted out of nested ``def``s (PYC-2).
-
-``session_core.py`` carries an exact ``check_lib_py`` exception baseline. These
-two functions would not fit there as module-level helpers. Behaviour is the
-pre-lift bodies, with closed-over locals passed as arguments.
-"""
+"""Session helpers parked here because ``session_core.py`` sits at its exact file-size baseline."""
 
 from __future__ import annotations
 

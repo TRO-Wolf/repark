@@ -46,14 +46,8 @@ _SPARK_SCALAR_MERGE_KIND_ORDER: tuple[str, ...] = (
 def _python_scalar_merge_kind(cell: Any) -> str | None:
     """Spark-merge kind for a scalar cell, or ``None`` if not in the merge-checked set.
 
-
-
-    ``bool`` is checked before ``int`` (``isinstance(True, int)`` is true in Python).
-
-    ``datetime`` is checked before ``date`` (datetime is a date subclass).
-
-    Infinite floats refuse immediately (createDataFrame does not support them).
-
+    ``bool`` is checked before ``int`` (``isinstance(True, int)`` is true in Python), and
+    ``datetime`` before ``date`` (datetime is a date subclass). Infinite floats refuse.
     """
 
     import datetime as _dt
@@ -109,36 +103,15 @@ def _refuse_long_double_merge(
     column_index: int,
     column_name: str,
 ) -> None:
-    """Refuse Spark ``CANNOT_MERGE_TYPE`` on inferred scalar columns (r21 T1 / extra octo).
-
-
+    """Refuse Spark ``CANNOT_MERGE_TYPE`` on inferred scalar columns.
 
     Live Spark 4.1.2 rejects mixed Boolean/Long/Double/Decimal/Date/Timestamp on the same
-
-    inferred field rather than truncating or silently promoting. Covers:
-
-
-
-    * Long + Double (``int(2.5)`` silent truncate — critic-octo C1-L1)
-
-    * Long + Decimal (``Decimal("2.5")`` → 2 via ``pa.array`` — EXTRA XC1-L1)
-
-    * Decimal + Long / Decimal + Double / Double + Decimal (EXTRA XC1-L2)
-
-    * Double + Boolean (``True`` → 1.0 via Arrow — EXTRA XC1-L3)
-
-    * Long + Boolean / Boolean + Long (EXTRA XC1-L4)
-
-    * Timestamp/Date + Long/Double (epoch coercion via ``pa.array`` — EXTRA XC2-L1/L2)
-
-    * Date + Timestamp (EXTRA XC2-L3)
-
-
-
-    Nested list/map element conflicts are enforced in :func:`_prepare_nested_cell` and, for
-
-    list-of-scalar columns, :func:`_refuse_list_element_type_merge`.
-
+    inferred field rather than truncating or silently promoting — Long + Double
+    (``int(2.5)`` would silently truncate), Long + Decimal (``Decimal("2.5")`` → 2 via
+    ``pa.array``), Double + Boolean (``True`` → 1.0), Long + Boolean, Timestamp/Date +
+    Long/Double (epoch coercion), and Date + Timestamp. Nested list/map element conflicts
+    are enforced in :func:`_prepare_nested_cell` and, for list-of-scalar columns,
+    :func:`_refuse_list_element_type_merge`.
     """
 
     kinds: set[str] = set()
@@ -198,9 +171,7 @@ def _arrow_table_from_tuples(
 
     else:
         # Infer from first non-null cell per column (Python types → Arrow). All-null
-
         # columns fall back to column_null_sql CAST type when provided, else string
-
         # (matches VALUES-path default VARCHAR for untyped nulls).
 
         arrow_types = []
@@ -232,18 +203,15 @@ def _arrow_table_from_tuples(
                     arrow_types.append(pa.string())
 
             elif isinstance(sample, bool):
-                # Boolean + Long/Double/Decimal → CANNOT_MERGE_TYPE (extra octo XC1-L3/L4).
+                # Boolean + Long/Double/Decimal → CANNOT_MERGE_TYPE.
 
                 _refuse_long_double_merge(tuples, column_index, names[column_index])
 
                 arrow_types.append(pa.bool_())
 
             elif isinstance(sample, int) and not isinstance(sample, bool):
-                # Spark 4.1.2: LongType + Double/Decimal/Boolean cannot merge (CANNOT_MERGE_TYPE).
-
-                # First-int-then-float used to infer int64 then int(2.5) → silent 2 (octo C1-L1);
-
-                # first-int-then-Decimal truncated via pa.array (extra XC1-L1).
+                # Spark 4.1.2: LongType + Double/Decimal/Boolean cannot merge (CANNOT_MERGE_TYPE);
+                # int(2.5) / Decimal("2.5") would otherwise truncate silently via pa.array.
 
                 _refuse_long_double_merge(tuples, column_index, names[column_index])
 
@@ -260,11 +228,9 @@ def _arrow_table_from_tuples(
                 arrow_types.append(pa.float64())
 
             elif isinstance(sample, list):
-                # Dense ML vector: non-empty float-only list → FixedSizeList[n] (v1).
-
-                # General arrays (int lists, empty-first, nested) → variable list_ (X2 census).
-
-                # List-of-scalar Long+Double/Decimal/Boolean refuse before element infer (XC1).
+                # Dense ML vector: non-empty float-only list → FixedSizeList[n].
+                # General arrays (int lists, empty-first, nested) → variable list_.
+                # List-of-scalar Long+Double/Decimal/Boolean refuse before element infer.
 
                 _refuse_list_element_type_merge(tuples, column_index, names[column_index])
 
@@ -272,11 +238,8 @@ def _arrow_table_from_tuples(
                     arrow_types.append(pa.list_(pa.float64(), len(sample)))
 
                 else:
-                    # === r23b N1: multi-row list element merge under conf true ===
-
-                    # Pure list-of-dict → struct field union; nested list elements
-
-                    # (list<list<dict>>) merge via _merge_inferred_arrow_types (C2-L-001).
+                    # Under the nested-dict-as-struct conf: pure list-of-dict → struct field
+                    # union; nested list elements merge via _merge_inferred_arrow_types.
 
                     if _INFER_NESTED_DICT_AS_STRUCT.get():
                         dict_elements: list[dict[str, Any]] = []
@@ -375,9 +338,8 @@ def _arrow_table_from_tuples(
                 arrow_types.append(_infer_arrow_type_from_python_sample(sample))
 
             elif isinstance(sample, tuple):
-                # Nested bare tuple → struct<_1,_2,…> (Spark createDataFrame; F2 /
-
-                # Apache test_print_schema). Must not fall through to str(tuple).
+                # Nested bare tuple → struct<_1,_2,…> (Spark createDataFrame; Apache
+                # test_print_schema). Must not fall through to str(tuple).
 
                 arrow_types.append(_infer_arrow_type_from_python_sample(sample))
 
@@ -389,11 +351,8 @@ def _arrow_table_from_tuples(
                 and isinstance(sample.get("indices"), (list, tuple))
                 and isinstance(sample.get("values"), (list, tuple))
             ):
-                # Sparse ML vector struct (design decision 1). Exact key set + value shapes
-
-                # only — a plain map that happens to contain a "size" key must stay map
-
-                # (octo X2 C5; prior `keys() >= {…}` over-matched).
+                # Sparse ML vector struct. Exact key set + value shapes only — a plain map
+                # that happens to contain a "size" key must stay map.
 
                 arrow_types.append(
                     pa.struct(
@@ -406,9 +365,8 @@ def _arrow_table_from_tuples(
                 )
 
             elif isinstance(sample, dict):
-                # === r23b N1: conf true → multi-row struct field union (null-fill missing) ===
-
-                # Sparse-vector exact-key branch above is conf-invariant (Q8).
+                # Conf true → multi-row struct field union (null-fill missing); the
+                # sparse-vector exact-key branch above is conf-invariant.
 
                 if _INFER_NESTED_DICT_AS_STRUCT.get():
                     dict_samples: list[dict[str, Any]] = [
@@ -422,14 +380,9 @@ def _arrow_table_from_tuples(
                     continue
 
                 # Plain dict → map<key, value>. Empty / null-only first sample: scan later
-
                 # rows for a witness with a concrete non-null value so
-
                 # ``[{}, {"a": None}, {"a": 1}]`` becomes map<string,bigint> not
-
-                # map<string,string> with ``"1"`` (Apache test_infer_map_pair_type_empty
-
-                # order — F2 / octo C1-Q-001).
+                # map<string,string> with ``"1"`` (Apache test_infer_map_pair_type_empty order).
 
                 map_sample = sample
 
@@ -451,7 +404,6 @@ def _arrow_table_from_tuples(
                             break
 
                     # No concrete value in any row: fall back to first non-empty (null-only
-
                     # values) so empty→null still builds map<string,string>.
 
                     if not map_sample:
@@ -471,8 +423,8 @@ def _arrow_table_from_tuples(
                 from decimal import Decimal as _Decimal
 
                 if isinstance(sample, _dt.datetime):
-                    # Timestamp + Long/Double/Date refuse — no epoch coercion (extra XC2-L1).
-                    # Default TIMESTAMP follows spark.sql.timestampType (Q10).
+                    # Timestamp + Long/Double/Date refuse — no epoch coercion.
+                    # Default TIMESTAMP follows spark.sql.timestampType.
 
                     from repark.spark.session.timestamp_type import default_timestamp_arrow_type
 
@@ -481,7 +433,7 @@ def _arrow_table_from_tuples(
                     arrow_types.append(default_timestamp_arrow_type())
 
                 elif isinstance(sample, _dt.date):
-                    # Date + Long/Timestamp refuse — no day-epoch coercion (extra XC2-L2).
+                    # Date + Long/Timestamp refuse — no day-epoch coercion.
 
                     _refuse_long_double_merge(tuples, column_index, names[column_index])
 
@@ -493,7 +445,7 @@ def _arrow_table_from_tuples(
                     arrow_types.append(pa.string())
 
                 elif isinstance(sample, _Decimal):
-                    # Decimal + Long/Double/Boolean refuse (extra XC1-L2); not silent promote.
+                    # Decimal + Long/Double/Boolean refuse; not silent promote.
 
                     _refuse_long_double_merge(tuples, column_index, names[column_index])
 
@@ -514,7 +466,7 @@ def _arrow_table_from_tuples(
             "unique expression names required; createDataFrame schema has duplicate column names"
         )
 
-    # Decimal envelope (was enforced only on VALUES SQL literals) — validate before Arrow build.
+    # Validate the decimal envelope before Arrow build (the VALUES path enforces it too).
 
     from decimal import Decimal as _Decimal
 
@@ -530,7 +482,7 @@ def _arrow_table_from_tuples(
 
         arrow_type = arrow_types[column_index]
 
-        # v1 dense vector: refuse mixed FixedSizeList widths (greylight Q3).
+        # Dense vector: refuse mixed FixedSizeList widths.
 
         if pa.types.is_fixed_size_list(arrow_type):
             expected_width = arrow_type.list_size
@@ -558,13 +510,8 @@ def _arrow_table_from_tuples(
 
                 values[row_index] = [float(item) for item in cell]
 
-        # Sparse ML vector reshape (design decision 1): only exact three-field sparse
-
-        # layout ``{size,indices,values}`` — never any struct that merely contains an
-
-        # ``indices`` field (r23b N1 conf-true dict→struct + explicit StructType schemas
-
-        # used to silent-drop extra fields / KeyError on missing size — octo C1-L-001).
+        # Sparse ML vector reshape: only exact three-field sparse layout
+        # ``{size,indices,values}`` — never any struct that merely contains an ``indices`` field.
 
         if pa.types.is_struct(arrow_type) and {field.name for field in arrow_type} == {
             "size",

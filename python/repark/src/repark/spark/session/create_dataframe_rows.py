@@ -43,16 +43,10 @@ if TYPE_CHECKING:
 def _spark_dict_key_union_order(mappings: list[dict[str, Any]]) -> list[str]:
     """Spark createDataFrame dict key-union column order (live 4.1.2 oracle).
 
-
-
     PySpark ``_infer_schema`` sorts each dict's items alphabetically; ``_merge_type`` keeps
-
     the first schema's field order and **appends** newly seen keys from later rows (still in
-
     that later row's sorted-key order). Result for
-
     ``[{"c":1,"a":2},{"b":3,"a":4},{"d":5,"c":6}]`` → ``["a","c","b","d"]``.
-
     """
 
     if not mappings:
@@ -82,22 +76,13 @@ def _bind_named_row(
 ) -> tuple[Any, ...]:
     """Bind a name→value mapping to ``names``.
 
-
-
     * Default (Row path / strict name lists): missing keys and extra keys fail loud
-
       (BUG-007 / C1-L-001 / C2-L-004 — a typo must not become an all-null column).
-
-    * Dict key-union / StructType null-fill (r21 T1): ``allow_missing=True`` yields
-
-      ``None`` for absent keys (Spark null fill); ``allow_extra=True`` ignores keys not in
-
-      ``names`` (Spark drops extras under an explicit StructType schema).
-
-
+    * Dict key-union / StructType null-fill: ``allow_missing=True`` yields ``None`` for
+      absent keys (Spark null fill); ``allow_extra=True`` ignores keys not in ``names``
+      (Spark drops extras under an explicit StructType schema).
 
     Explicit ``None`` values are always kept (SQL NULL).
-
     """
 
     if not allow_missing:
@@ -137,24 +122,14 @@ def _rows_from_mapping_list(
 ) -> tuple[list[str], list[tuple[Any, ...]]]:
     """Convert homogeneous dict/Row lists to (names, row tuples) with unified schema bind.
 
-
-
     Cells are left un-normalized so the caller can infer all-null CAST types from NaN/NaT
-
     witnesses before erasure (C4-L-001).
 
-
-
     * ``kind="dict"`` + ``key_union=True`` (schema=None): Spark key-union across rows with
-
-      null fill for missing fields (r21 T1 / live 4.1.2 oracle).
-
+      null fill for missing fields (live 4.1.2 oracle).
     * ``kind="dict"`` + ``null_fill=True`` (StructType/DDL schema): bind to schema field
-
       names; missing → None; extras dropped.
-
     * ``kind="Row"`` / strict name lists: exact key-set match — refuse missing and extra.
-
     """
 
     mappings: list[dict[str, Any]] = []
@@ -227,14 +202,9 @@ def _rows_from_mapping_list(
 def _refuse_duplicate_pandas_columns(data: Any) -> None:
     """Fail loud on duplicate pandas column names (critic-octo C2).
 
-
-
     ``data[name].dtype`` returns a DataFrame when names collide (AttributeError on ``.dtype``),
-
     and ``pa.Table.from_pandas`` raises a bare ValueError. Surface a stable PySparkValueError
-
     before either path.
-
     """
 
     source_columns = [str(column) for column in data.columns]
@@ -250,20 +220,12 @@ def _rows_from_pandas(
 ) -> tuple[list[str], list[tuple[Any, ...]], list[str]]:
     """Convert a pandas DataFrame to (column names, row tuples, per-col null SQL) for VALUES.
 
-
-
     Empty frames raise :class:`PySparkValueError` (Spark ``CANNOT_INFER_EMPTY_SCHEMA``) — the
-
     VALUES path has no StructType schema, so types cannot be inferred from zero rows.
 
-
-
     Schema bind: pure reorder by name, pure rename positionally (C2-L-001); length and partial
-
     overlap fail loud. Per-column null SQL preserves source dtypes for all-null columns
-
     (C3-Q-001) so Arrow types are not silently forced to string.
-
     """
 
     _refuse_duplicate_pandas_columns(data)
@@ -327,14 +289,9 @@ def _rows_from_polars(
 ) -> tuple[list[str], list[tuple[Any, ...]], list[str]]:
     """Convert a polars DataFrame to (column names, row tuples, per-col null SQL) for VALUES.
 
-
-
     Empty frames raise (same CANNOT_INFER_EMPTY_SCHEMA class as pandas). Schema bind matches
-
     pandas (name reorder / positional rename / fail-loud partial). All-null typed columns keep
-
     dtype-matched CAST nulls (C3-Q-001).
-
     """
 
     source_columns = list(data.columns)
@@ -401,12 +358,8 @@ def _values_sql_with_typed_nulls(
 ) -> str:
     """Emit VALUES SQL; all-null columns use a typed CAST (default VARCHAR — C2-L-003 / C3-Q-001).
 
-
-
-    When ``column_null_sql`` is provided (pandas/polars source dtypes), all-null columns use that
-
-    CAST so Arrow types match the source dtype rather than silent string.
-
+    When ``column_null_sql`` is provided (pandas/polars source dtypes), all-null columns use
+    that CAST so Arrow types match the source dtype rather than silent string.
     """
 
     width = len(names)
@@ -457,26 +410,18 @@ def _create_dataframe_from_rows(
 ) -> DataFrame:
     """Materialize row data as a DataFrame via Arrow MemTable (C-stream; IPC skew fallback).
 
-
-
     Non-empty inputs and typed empty frames build a ``pyarrow.Table`` then register via
-
     :func:`_materialize_arrow_as_memtable_frame`. Untyped empty frames still use a
-
     ``WHERE 1 = 0`` VALUES seed via :func:`_materialize_values_as_memtable_frame`.
-
     """
 
-    # === r21 T1 (combine rider): legacy first-element coerce follows the session conf.
-
+    # Legacy first-element coerce follows the session conf.
     legacy_first = str(
         session.conf.get("spark.sql.pyspark.legacy.inferArrayTypeFromFirstElement.enabled", "false")
     ).lower() in {"true", "1"}
 
-    # === r23b N1: nested dict-cell → StructType (Spark SPARK-35929) ===
-
-    # strip() matches other bool conf parsers in this module (octo C2-Q-001).
-
+    # Nested dict-cell → StructType (Spark SPARK-35929); strip() matches other bool conf
+    # parsers in this module (octo C2-Q-001).
     infer_dict_as_struct = str(
         session.conf.get("spark.sql.pyspark.inferNestedDictAsStruct.enabled", "true")
     ).strip().lower() in {"true", "1"}
@@ -510,13 +455,9 @@ def _create_dataframe_from_rows_inner(
     column_null_sql: list[str] | None = None
 
     # Frame-shaped inputs first — never `if not data` on a DataFrame (pandas raises
+    # "truth value is ambiguous"; G-INT).
 
-    # "truth value is ambiguous"; that was the G-INT bug that forced this expansion).
-
-    # === r20 P2a: cdf-extractor ===
-
-    # P2a: pandas/polars → native Arrow (from_pandas / .to_arrow) + cast/null/refuse rules,
-
+    # pandas/polars → native Arrow (from_pandas / .to_arrow) + cast/null/refuse rules,
     # then P1a C-stream materialize. No per-row Python tuple explode on the hot path.
 
     if _is_pandas_dataframe(data):
@@ -552,8 +493,7 @@ def _create_dataframe_from_rows_inner(
         first = data[0]
 
         if isinstance(first, dict):
-            # r21 T1: schema=None → Spark key-union; StructType/DDL → null-fill field names.
-
+            # schema=None → Spark key-union; StructType/DDL → null-fill field names.
             names, tuples = _rows_from_mapping_list(
                 data,
                 schema,
@@ -731,12 +671,8 @@ def _drop_cdf_temp_view(session_ref: ReparkSession, name: str) -> None:
 def _register_cdf_view_cleanup(session: ReparkSession, frame: DataFrame, view_name: str) -> None:
     """Drop ``__repark_cdf_*`` when the owning DataFrame is GC'd (R-FACADE-HYGIENE W7).
 
-
-
     Uses :func:`weakref.finalize` — no new public close API. Pin is bounded-growth after
-
-    ``gc.collect()`` x2, not exact-zero (greylight B7).
-
+    ``gc.collect()`` x2, not exact-zero.
     """
 
     import weakref
@@ -747,14 +683,8 @@ def _register_cdf_view_cleanup(session: ReparkSession, frame: DataFrame, view_na
 def _materialize_values_as_memtable_frame(session: ReparkSession, values_sql: str) -> DataFrame:
     """Plan VALUES once, collect into a MemTable temp view, return a scan of that view.
 
-
-
     Retained for untyped empty-frame SQL paths (`WHERE 1 = 0`). Non-empty createDataFrame
-
-    and typed empty frames use :func:`_materialize_arrow_as_memtable_frame` (R-PERF-ARROW-CDF /
-
-    P1a C-stream).
-
+    and typed empty frames use :func:`_materialize_arrow_as_memtable_frame`.
     """
 
     ephemeral = session.sql(values_sql)
@@ -785,13 +715,10 @@ def _materialize_values_as_memtable_frame(session: ReparkSession, values_sql: st
 
     _register_cdf_view_cleanup(session, frame, view_name)
 
-    # === SE-1: declared-sorted door ===
-
-    # Tag the handed-back frame as the *source* frame over this MemTable view, so
-
-    # ``DataFrame.declareSorted`` knows which registered view to verify and declare.
-
-    # Transformed frames get a fresh handle from ``_spawn`` and never inherit the tag.
+    # SE-1 declared-sorted door: tag the handed-back frame as the *source* frame over this
+    # MemTable view, so ``DataFrame.declareSorted`` knows which registered view to verify
+    # and declare. Transformed frames get a fresh handle from ``_spawn`` and never inherit
+    # the tag.
 
     frame._source_view_name = view_name
 
@@ -801,26 +728,15 @@ def _materialize_values_as_memtable_frame(session: ReparkSession, values_sql: st
 def _materialize_arrow_as_memtable_frame(session: ReparkSession, table: Any) -> DataFrame:
     """Register a ``pyarrow.Table`` as a MemTable temp view; return a scan of that view.
 
-
-
     Prefers the Arrow **C Stream** seam (``register_arrow_stream_as_temp_view``) so the
-
     table rides ``__arrow_c_stream__`` into the engine with **no** IPC encode /
-
     ``ipc_bytes.to_vec()`` intermediate (P1a / scout #4). When the native C-stream symbol
-
     is absent (version-skew), falls back to the R-PERF-ARROW-CDF IPC path.
 
-
-
     If registration succeeds and the follow-up ``SELECT * FROM`` view scan fails (or a
-
     ``BaseException`` such as ``KeyboardInterrupt`` is raised after register), the MemTable
-
     is dropped immediately so the session does not retain an untracked ``__repark_cdf_*``
-
     view (octo P1a C1 SAF-001 / C3; same discipline as mapInArrow C3-SAF-001).
-
     """
 
     import pyarrow as pa
@@ -838,8 +754,7 @@ def _materialize_arrow_as_memtable_frame(session: ReparkSession, table: Any) -> 
 
     try:
         if callable(register_stream):
-            # pa.Table is an Arrow C Stream exporter — same path mapInArrow uses post-I4.
-
+            # pa.Table is an Arrow C Stream exporter — same path mapInArrow uses.
             register_stream(view_name, table)
 
         else:
@@ -872,13 +787,10 @@ def _materialize_arrow_as_memtable_frame(session: ReparkSession, table: Any) -> 
 
     _register_cdf_view_cleanup(session, frame, view_name)
 
-    # === SE-1: declared-sorted door ===
-
-    # Tag the handed-back frame as the *source* frame over this MemTable view, so
-
-    # ``DataFrame.declareSorted`` knows which registered view to verify and declare.
-
-    # Transformed frames get a fresh handle from ``_spawn`` and never inherit the tag.
+    # SE-1 declared-sorted door: tag the handed-back frame as the *source* frame over this
+    # MemTable view, so ``DataFrame.declareSorted`` knows which registered view to verify
+    # and declare. Transformed frames get a fresh handle from ``_spawn`` and never inherit
+    # the tag.
 
     frame._source_view_name = view_name
 

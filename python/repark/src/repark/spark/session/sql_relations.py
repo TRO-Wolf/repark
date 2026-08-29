@@ -107,24 +107,14 @@ _RELATION_FOLLOW_KEYWORDS = frozenset(
 def _sql_table_ref(table_name: str) -> str:
     """Validate a multipart table identifier and return a quoted SQL table reference.
 
-
-
     Accepts ``ident`` or ``ident.ident…`` with unquoted segments matching
-
     ``[A-Za-z_][A-Za-z0-9_]*``, double-quoted segments (``""`` escapes a quote; dots allowed
-
     inside quotes), or Spark-style backtick-quoted segments. Rejects SQL fragments so
-
     ``spark.table`` cannot be used as a FROM-clause injection surface.
 
-
-
     Does **not** apply default-catalog / default-namespace qualification — callers that need
-
     bare-name expansion must resolve first via :meth:`ReparkSession.resolve_table_name` /
-
-    :meth:`ReparkSession._sql_table_ref_resolved` (E2).
-
+    :meth:`ReparkSession._sql_table_ref_resolved`.
     """
 
     from repark.errors import AnalysisException
@@ -149,18 +139,11 @@ def _sql_table_ref(table_name: str) -> str:
 def _sql_mask_strings_and_comments(query: str) -> str:
     """Return ``query`` with string literals and comments replaced by spaces.
 
-
-
     **Length and indices are preserved** so hit positions from a masked scan remain
-
-    valid against the original body (U8 registry-name scan — octo C1-L-001). Handles
-
+    valid against the original body (registry-name scan — octo C1-L-001). Handles
     single quotes (``''`` escape), double quotes (``""`` escape), backticks, ``--``
-
     line comments, and ``/* … */`` block comments. Does not interpret nested block
-
     comments (SQL standard single-level).
-
     """
 
     if not query:
@@ -174,8 +157,6 @@ def _sql_mask_strings_and_comments(query: str) -> str:
 
     while index < length:
         char = query[index]
-
-        # Line comment
 
         if char == "-" and index + 1 < length and query[index + 1] == "-":
             end = query.find("\n", index)
@@ -193,8 +174,6 @@ def _sql_mask_strings_and_comments(query: str) -> str:
 
             continue
 
-        # Block comment
-
         if char == "/" and index + 1 < length and query[index + 1] == "*":
             end = query.find("*/", index + 2)
 
@@ -210,8 +189,6 @@ def _sql_mask_strings_and_comments(query: str) -> str:
             index = end + 2
 
             continue
-
-        # Quoted string / identifier
 
         if char in {"'", '"', "`"}:
             quote = char
@@ -249,12 +226,8 @@ def _sql_mask_strings_and_comments(query: str) -> str:
 def _split_leading_sql_trivia(query: str) -> tuple[str, str]:
     """Split leading whitespace + SQL comments from ``query`` (octo C1-Q-006).
 
-
-
     Returns ``(trivia, body)`` so statement-form classifiers see a clean head while the
-
     original leading trivia is re-prefixed onto the expanded body.
-
     """
 
     index = _skip_sql_ws_and_comments(query, 0)
@@ -352,10 +325,7 @@ def _find_matching_paren(query: str, open_index: int) -> int | None:
 def _collect_cte_names(query: str) -> set[str]:
     """Collect CTE names from a leading ``WITH name AS (…), …`` list (lowercase).
 
-
-
-    Used so ``FROM cte`` is not rewritten to ``catalog.db.cte`` (F1 / time-travel CTE pin).
-
+    Used so ``FROM cte`` is not rewritten to ``catalog.db.cte`` (time-travel CTE pin).
     """
 
     match = re.match(r"(?is)^\s*WITH\b", query)
@@ -448,12 +418,8 @@ def _collect_cte_names(query: str) -> set[str]:
 def _split_leading_table_ident(blob: str) -> tuple[str | None, str]:
     """Split ``blob`` into a leading table identifier and the remaining suffix (aliases).
 
-
-
     Returns ``(None, blob)`` when no identifier can be scanned (e.g. subquery ``(SELECT …)``
-
     — callers treat the whole blob as opaque). Used by MERGE INTO target/source expansion.
-
     """
 
     stripped = blob.strip()
@@ -475,14 +441,9 @@ def _split_leading_table_ident(blob: str) -> tuple[str | None, str]:
 def _match_from_or_join_keyword(query: str, index: int) -> str | None:
     """If ``query[index:]`` starts with FROM/JOIN as a whole word, return that keyword.
 
-
-
     Word-boundary only: the char before ``index`` (if any) must be non-identifier, and the
-
     char after the keyword must be non-identifier (space, end, or punctuation). Case
-
-    insensitive. Used by the F1 free-SQL FROM/JOIN expander.
-
+    insensitive. Used by the free-SQL FROM/JOIN expander.
     """
 
     if index > 0:
@@ -511,14 +472,10 @@ def _match_from_or_join_keyword(query: str, index: int) -> str | None:
 
 
 def _update_rest_has_set_clause(rest: str) -> bool:
-    """True when ``rest`` after an UPDATE target still contains a SET keyword (G1 / octo C1).
-
-
+    """True when ``rest`` after an UPDATE target still contains a SET keyword (octo C1).
 
     Accepts optional alias forms (``AS a`` / bare ``a``) before SET. Used to refuse expanding
-
     ``UPDATE SET x = 1`` where the identifier scan ate the SET keyword as a table name.
-
     """
 
     stripped = rest.lstrip()
@@ -539,12 +496,8 @@ def _update_rest_has_set_clause(rest: str) -> bool:
 def _scan_sql_table_identifier_end(query: str, start: int) -> int | None:
     """Return the end index of a multipart table identifier starting at ``start``.
 
-
-
     Accepts unquoted ``[A-Za-z_][A-Za-z0-9_]*`` segments and double/backtick-quoted
-
     segments, joined by ``.``. Returns ``None`` when no identifier is present.
-
     """
 
     length = len(query)
@@ -684,16 +637,10 @@ def _split_sql_table_name_list(names_blob: str) -> list[str]:
 def _parse_table_identifier_segments(name: str) -> list[str]:
     """Split a multipart table name with quote-awareness (``"…"`` / ```…```).
 
-
-
     Raises :class:`~repark.errors.PySparkValueError` on empty segments, trailing dots,
-
     unterminated quotes,
-
     unquoted non-identifier text (spaces, operators, etc.), or path-escape segments
-
     (``..`` / ``/`` / ``\\`` — O3-C4-SEC-001).
-
     """
 
     segments: list[str] = []

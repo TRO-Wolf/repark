@@ -8,6 +8,9 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
 CC-2 audits the tracked Python helper scripts after all crate and package slices finish.
 pins: comment-condensation-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011.
 
+CC-2 scripts slice: every tracked `scripts/*.py` audited; gate-rule statements and constant
+tables kept, narration and dated history removed.
+
 ## Contents
 
 - `bump_fork_pin.sh` — bumps the iceberg-rust fork `[patch.crates-io]` pin: rewrites all five

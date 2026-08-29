@@ -1,6 +1,6 @@
-"""Plan-built feature transformers (M2).
+"""Plan-built feature transformers.
 
-Each ``fit`` runs session aggregate/distinct queries; each ``transform`` returns a
+Each ``fit`` runs aggregate/distinct queries; each ``transform`` returns a
 plan-built DataFrame. Python never iterates training rows for learning.
 """
 
@@ -30,9 +30,7 @@ from repark.spark.ml.param import (
     TypeConverters,
 )
 
-# ---------------------------------------------------------------------------
-# Status seeds (greylight Q2 / Q1 R-ML-QUANTILE)
-# ---------------------------------------------------------------------------
+# Status seeds (R-ML-QUANTILE)
 
 QUANTILE_FAMILY_STATUS = (
     "SHIPPED (Q1): fit quantiles via engine approx_percentile_cont / percentile_approx "
@@ -89,10 +87,7 @@ def _sql_impute_expr(quoted_col: str, missing_value: float, replacement: float) 
 
 
 def _register_temp(dataset: Any, prefix: str = "ml") -> tuple[Any, str]:
-    """Register dataset as a unique temp view; return (frame, view_name).
-
-    The frame's native session powers SQL; results are re-wrapped via ``frame._spawn``.
-    """
+    """Register dataset as a unique temp view; return (frame, view_name)."""
 
     frame = _require_repark_dataframe(dataset, verb="ml feature")
     view = scratch_view_name(frame._session, f"__repark_{prefix}_")
@@ -113,9 +108,8 @@ def _collect_sql(frame: Any, sql: str) -> list[Any]:
 def _materialize_rid_view(frame: Any, source_view: str, prefix: str) -> tuple[Any, str, str]:
     """Assign ``row_number`` once, cache, re-register — stable rid for multi-scan joins.
 
-    DataFusion re-evaluates CTEs per reference; bare ``row_number() OVER ()`` inside a
-    WITH clause therefore yields *different* rid→row maps when the same CTE is joined
-    to itself (octo F-Q1-009). Caching the rid-bearing plan materializes one assignment.
+    DataFusion re-evaluates CTEs per reference, so a CTE joined to itself yields
+    *different* rid→row maps (octo F-Q1-009); caching materializes one assignment.
     Returns ``(host_frame, rid_view_name, rid_column_name)``.
     """
 
@@ -126,7 +120,6 @@ def _materialize_rid_view(frame: Any, source_view: str, prefix: str) -> tuple[An
         f"SELECT row_number() OVER () AS {_quote_ident(rid_col)}, {source_view}.* "
         f"FROM {source_view}",
     )
-    # Materialize rid assignment (plan-built; no Python row loop).
     if hasattr(indexed, "cache"):
         indexed.cache()
     if hasattr(indexed, "count"):
@@ -158,25 +151,19 @@ def _refuse_output_collision(frame: Any, output_col: str, *, stage: str) -> None
         )
 
 
-# ===========================================================================
 # VectorAssembler
-# ===========================================================================
-
-# === r20 M7: VectorAssembler sparse output ===
 
 
 def _vector_assembler_sparse_expr(cols: list[str], size: int) -> str:
     """Plan-built sparse ``named_struct`` from scalar input columns (zeros omitted).
 
-    Null scalars are omitted like zeros under ``handleInvalid='keep'`` (disclosed;
-    dense keep retains null elements). Indices / values via ``array_compact`` over
-    per-column CASE (no Python row loop).
+    ``handleInvalid='keep'`` omits null scalars like zeros (disclosed; dense keep
+    retains null elements). Indices/values via ``array_compact`` over per-column CASE.
     """
     index_parts: list[str] = []
     value_parts: list[str] = []
     for position, col_name in enumerate(cols):
         quoted = _quote_ident(col_name)
-        # Non-null and non-zero → keep index/value; else NULL so array_compact drops it.
         index_parts.append(
             f"CASE WHEN {quoted} IS NOT NULL AND CAST({quoted} AS DOUBLE) <> 0.0 "
             f"THEN CAST({position} AS INT) END"
@@ -193,10 +180,10 @@ def _vector_assembler_sparse_expr(cols: list[str], size: int) -> str:
 class VectorAssembler(HasInputCols, HasOutputCol, HasHandleInvalid, Transformer):
     """Merge input columns into a dense or sparse vector column.
 
-    Null handling: ``handleInvalid`` = ``error`` (default) | ``keep`` | ``skip``.
-    Default output is a fixed-width dense list via ``make_array`` (plan-built).
-    M7 ``sparseOutput=True`` emits sparse struct ``{size, indices, values}`` with
-    zeros omitted. Native estimators still densify / require dense width (disclosed).
+    ``handleInvalid`` = ``error`` (default) | ``keep`` | ``skip``. Default output is
+    a dense ``make_array`` list; ``sparseOutput=True`` emits sparse struct
+    ``{size, indices, values}`` with zeros omitted. Native estimators still
+    densify / require dense width (disclosed).
     """
 
     def __init__(
@@ -207,7 +194,7 @@ class VectorAssembler(HasInputCols, HasOutputCol, HasHandleInvalid, Transformer)
         handleInvalid: str | None = None,  # noqa: N803
         sparseOutput: bool = False,  # noqa: N803 — M7 repark extension (not Spark param)
     ) -> None:
-        """Optional kwargs mirror Spark constructor (+ M7 ``sparseOutput``)."""
+        """Optional kwargs mirror Spark constructor (+ ``sparseOutput``)."""
         super().__init__()
         self.sparseOutput: Param[bool] = Param(
             self,
@@ -226,7 +213,7 @@ class VectorAssembler(HasInputCols, HasOutputCol, HasHandleInvalid, Transformer)
             self._set(sparseOutput=True)
 
     def setSparseOutput(self, value: bool) -> VectorAssembler:
-        """Set sparse-struct output (M7)."""
+        """Set sparse-struct output."""
         return self._set(sparseOutput=bool(value))
 
     def getSparseOutput(self) -> bool:
@@ -248,7 +235,6 @@ class VectorAssembler(HasInputCols, HasOutputCol, HasHandleInvalid, Transformer)
         _refuse_output_collision(frame, out, stage="VectorAssembler")
         host, view = _register_temp(frame, "va")
         array_args = ", ".join(_quote_ident(col) for col in cols)
-        # Null-any → error path uses CASE that raises via filter, else keep/skip.
         null_any = " OR ".join(f"{_quote_ident(col)} IS NULL" for col in cols)
         sparse = self.getSparseOutput()
         if sparse:
@@ -262,7 +248,6 @@ class VectorAssembler(HasInputCols, HasOutputCol, HasHandleInvalid, Transformer)
                 f"FROM {view} WHERE NOT ({null_any})"
             )
         elif handle == "error":
-            # Fail if any null: plan a check via WHERE false when nulls present.
             # Loud analysis: collect null count aggregate (fit-style query, not row loop).
             check = _collect_sql(host, f"SELECT COUNT(*) AS n FROM {view} WHERE {null_any}")
             if check and int(check[0].asDict().get("n", 0)) > 0:
@@ -300,9 +285,7 @@ class VectorAssembler(HasInputCols, HasOutputCol, HasHandleInvalid, Transformer)
         )
 
 
-# ===========================================================================
 # StringIndexer / IndexToString
-# ===========================================================================
 
 
 class StringIndexer(HasInputCol, HasOutputCol, HasHandleInvalid, Estimator["StringIndexerModel"]):
@@ -345,8 +328,7 @@ class StringIndexer(HasInputCol, HasOutputCol, HasHandleInvalid, Estimator["Stri
     def _fit(self, dataset: Any) -> StringIndexerModel:
         """Fit labels via GROUP BY + COUNT ordered per stringOrderType."""
         frame = _require_repark_dataframe(dataset, verb="StringIndexer.fit")
-        # Membership check at fit (not only transform) so illegal handleInvalid refuses
-        # before vocabulary materialize (octo M7 C5 handleInvalid matrix).
+        # Refuse illegal handleInvalid before vocabulary materialize (octo M7 C5).
         handle = self.getHandleInvalid()
         if handle not in {"error", "keep", "skip"}:
             raise IllegalArgumentException(
@@ -416,7 +398,6 @@ class StringIndexerModel(HasInputCol, HasOutputCol, HasHandleInvalid, Model):
         input_col = self.getInputCol()
         out = self.getOutputCol()
         handle = self.getHandleInvalid()
-        # === r20 M7: StringIndexer handleInvalid membership (keep path was else-fallthrough) ===
         if handle not in {"error", "keep", "skip"}:
             raise IllegalArgumentException(
                 f"StringIndexer.handleInvalid must be error|keep|skip, got {handle!r}"
@@ -572,9 +553,7 @@ class IndexToString(HasInputCol, HasOutputCol, Transformer):
         )
 
 
-# ===========================================================================
-# OneHotEncoder (always sparse struct — greylight Q3)
-# ===========================================================================
+# OneHotEncoder (always sparse struct)
 
 
 def _ohe_sparse_expr(
@@ -586,16 +565,12 @@ def _ohe_sparse_expr(
 ) -> str:
     """SQL named_struct sparse one-hot for a single index column.
 
-    Spark ``handleInvalid='keep'`` reserves an extra invalid bucket at index
-    ``category_size`` *before* ``dropLast`` shrinks the emitted vector (octo
-    C4-L-001). Without that ordering, ``keep`` + ``dropLast=False`` wrongly
-    uses ``size=category_size`` and maps invalid/null to empty instead of
-    ``size=category_size+1`` with invalid at the last index.
+    ``handleInvalid='keep'`` reserves the invalid bucket at ``category_size``
+    *before* ``dropLast`` shrinks the vector (octo C4-L-001); the wrong order
+    maps invalid/null to empty instead of the last index of ``category_size+1``.
     """
     idx_expr = f"CAST({quoted_in} AS BIGINT)"
     if handle == "keep":
-        # Null / out-of-range → keep bucket at category_size; dropLast may then
-        # drop that bucket (empty vector) when size <= category_size.
         mapped = (
             f"CASE WHEN {idx_expr} IS NULL OR {idx_expr} < 0 "
             f"OR {idx_expr} >= {int(category_size)} THEN {int(category_size)} "
@@ -638,8 +613,8 @@ class OneHotEncoder(
 ):
     """One-hot encode index columns to **sparse** vectors (Spark OHE).
 
-    Supports singular ``inputCol``/``outputCol`` and plural ``inputCols``/``outputCols``
-    (M4 merge-bar). Plural wins when ``inputCols`` is set.
+    Supports singular ``inputCol``/``outputCol`` and plural
+    ``inputCols``/``outputCols``; plural wins when ``inputCols`` is set.
     """
 
     def __init__(
@@ -688,7 +663,6 @@ class OneHotEncoder(
             if not inputs:
                 raise IllegalArgumentException("OneHotEncoder.inputCols must be non-empty")
             return inputs, outputs
-        # Singular path
         return [self.getInputCol()], [self.getOutputCol()]
 
     def _fit(self, dataset: Any) -> OneHotEncoderModel:
@@ -886,9 +860,7 @@ class OneHotEncoderModel(
         )
 
 
-# ===========================================================================
 # Scalers (on dense vector / array columns) + scalar helpers
-# ===========================================================================
 
 
 def _array_length_sql(col_sql: str) -> str:
@@ -929,7 +901,6 @@ class StandardScaler(HasInputCol, HasOutputCol, Estimator["StandardScalerModel"]
         host, view = _register_temp(frame, "ss")
         try:
             quoted = _quote_ident(input_col)
-            # Infer width from first non-null array length.
             width_row = _collect_sql(
                 host,
                 f"SELECT array_length({quoted}) AS w FROM {view} "
@@ -1307,9 +1278,7 @@ class MaxAbsScalerModel(HasInputCol, HasOutputCol, Model):
         )
 
 
-# ===========================================================================
 # Bucketizer / Binarizer / Imputer / text / SQL / Polynomial
-# ===========================================================================
 
 
 class Bucketizer(HasInputCol, HasOutputCol, HasHandleInvalid, Transformer):
@@ -1583,8 +1552,8 @@ class ImputerModel(HasInputCols, HasOutputCols, Model):
         host, view = _register_temp(frame, "impm")
         inputs = self.getInputCols()
         outputs = self.getOutputCols()
-        # Same input/output name → REPLACE column (Spark allows in-place impute).
-        # Avoid `view.*, expr AS same_name` which DF rejects as ambiguous (F-Q1-010).
+        # In-place impute replaces the column; view.* + same alias is
+        # ambiguous in DataFusion (F-Q1-010).
         overwrite = set(inputs) & set(outputs)
         if overwrite:
             kept = [
@@ -1684,9 +1653,9 @@ class Tokenizer(HasInputCol, HasOutputCol, Transformer):
 class RegexTokenizer(HasInputCol, HasOutputCol, Transformer):
     """Regex tokenizer (Spark ``RegexTokenizer``) — gaps=True path plan-built.
 
-    ``gaps=True`` (default): treat ``pattern`` as delimiter; replace matches with a unit
-    separator then ``string_to_array``, filter empty / short tokens via unnest plan.
-    ``gaps=False`` (extract matches) needs ``regexp_extract_all`` — loud STOP seed.
+    ``gaps=True``: ``pattern`` is the delimiter; matches become a unit separator,
+    then ``string_to_array`` with unnest-plan filtering. ``gaps=False`` needs
+    ``regexp_extract_all`` — loud STOP seed.
     """
 
     def __init__(
@@ -1746,8 +1715,6 @@ class RegexTokenizer(HasInputCol, HasOutputCol, Transformer):
         split_expr = (
             f"string_to_array(regexp_replace({text_expr}, {pattern_sql}, chr(31), 'g'), chr(31))"
         )
-        # Filter empty tokens and min length via unnest + array_agg (no array_filter SQL).
-        # rid view is cache-materialized so multi-scan joins keep association (F-Q1-009).
         sql = f"""
 WITH tokens AS (
   SELECT {rid} AS __rid, unnest({split_expr}) AS tok FROM {rid_view}
@@ -2026,7 +1993,6 @@ class PolynomialExpansion(HasInputCol, HasOutputCol, Transformer):
                 f"PolynomialExpansion v1 supports width<=8 and degree<=3 "
                 f"(got width={width}, degree={degree}); seed for larger"
             )
-        # Generate monomials in Spark's poly expand order via nested loops.
         terms: list[str] = []
         # Spark includes degree 1..degree interactions (not degree 0).
         for deg in range(1, degree + 1):
@@ -2039,8 +2005,7 @@ class PolynomialExpansion(HasInputCol, HasOutputCol, Transformer):
                     quoted_input=quoted,
                 )
             )
-        # Spark order is more subtle; for degree=2 width=2: x, x^2, y, x*y, y^2
-        # Rebuild explicitly for small cases to match Spark better.
+        # Rebuild explicitly for small cases to match Spark order better.
         if degree == 2:
             terms = []
             for index in range(width):
@@ -2051,7 +2016,6 @@ class PolynomialExpansion(HasInputCol, HasOutputCol, Transformer):
                     y = f"array_element({quoted}, {j + 1})"
                     # insertion for interactions — approximate; pin vs Spark in oracle
                     terms.insert(-1, f"({y}) * ({x})")
-            # Simpler fixed order for width=2 degree=2:
             if width == 2:
                 x = f"array_element({quoted}, 0)"
                 y = f"array_element({quoted}, 1)"
@@ -2087,16 +2051,13 @@ class PolynomialExpansion(HasInputCol, HasOutputCol, Transformer):
         )
 
 
-# ===========================================================================
-# Quantile family (Q1) — RobustScaler / QuantileDiscretizer
-# ===========================================================================
+# Quantile family — RobustScaler / QuantileDiscretizer
 
 
 class RobustScaler(HasInputCol, HasOutputCol, Estimator["RobustScalerModel"]):
     """Scale features using median and quantile range (Spark ``RobustScaler``).
 
-    Fit uses engine ``approx_percentile_cont`` (t-digest). Defaults match Spark:
-    ``lower=0.25``, ``upper=0.75``, ``withCentering=True``, ``withScaling=True``.
+    Fit uses engine ``approx_percentile_cont`` (t-digest); defaults match Spark.
     """
 
     def __init__(
@@ -2379,9 +2340,7 @@ class QuantileDiscretizer(HasInputCol, HasOutputCol, HasHandleInvalid, Estimator
         )
 
 
-# ===========================================================================
-# CountVectorizer / IDF (Q1 attempt)
-# ===========================================================================
+# CountVectorizer / IDF
 
 
 class CountVectorizer(HasInputCol, HasOutputCol, Estimator["CountVectorizerModel"]):
@@ -2436,11 +2395,9 @@ class CountVectorizer(HasInputCol, HasOutputCol, Estimator["CountVectorizerModel
         host, view = _register_temp(frame, "cv")
         try:
             quoted = _quote_ident(input_col)
-            # Document count for relative minDF.
             n_docs_row = _collect_sql(host, f"SELECT COUNT(*) AS n FROM {view}")
             n_docs = int(n_docs_row[0].asDict()["n"]) if n_docs_row else 0
             min_df_abs = min_df if min_df >= 1.0 else min_df * max(n_docs, 1)
-            # Per-token document frequency via unnest + distinct doc ids.
             sql = f"""
 WITH base AS (
   SELECT row_number() OVER () AS __doc, {quoted} AS tokens FROM {view}
@@ -2499,9 +2456,8 @@ class CountVectorizerModel(HasInputCol, HasOutputCol, Model):
     def _transform(self, dataset: Any) -> Any:
         """Count occurrences of each vocab term in the token array (plan-built).
 
-        Uses unnest + conditional SUM grouped by row id (no correlated scalar subquery —
-        physical plan does not support ScalarSubquery over unnest). Rid is
-        cache-materialized so multi-scan joins keep row association (F-Q1-009).
+        Unnest + conditional SUM grouped by row id — the physical plan does not
+        support ScalarSubquery over unnest. Rid cache keeps row association (F-Q1-009).
         """
         frame = _require_repark_dataframe(dataset, verb="CountVectorizerModel.transform")
         host, view = _register_temp(frame, "cvm")
@@ -2652,7 +2608,6 @@ class IDF(HasInputCol, HasOutputCol, Estimator["IDFModel"]):
                 if doc_freq < min_df:
                     idf_values.append(0.0)
                 else:
-                    # Spark: log((m+1)/(df+1)) + 1
                     idf_values.append(math.log((m + 1.0) / (doc_freq + 1.0)) + 1.0)
             model = IDFModel(
                 idf=idf_values,

@@ -16,8 +16,6 @@ AttributeError naming the gap), never stubs.
   `functions` / `types` / `window`. `__getattr__` names unimplemented pyspark.sql
   surfaces (`SQLContext`, `UDFRegistration`, writers, …).
 - `functions.py` — re-export of `repark.spark.functions.__all__` (`is` identity).
-  Includes `explode` / `explode_outer` / `posexplode` / `posexplode_outer` once those
-  names are on the canonical `__all__` (octo C4-Q-001; sed-swap `repark.spark.sql.functions`).
 - `types.py` — re-export of `repark.spark.types.__all__` (`is` identity).
 - `window.py` — re-export of `Window` / `WindowSpec` (`is` identity).
 - `map.md` — this file.
@@ -32,7 +30,6 @@ AttributeError naming the gap), never stubs.
 
 ## Pointers
 
-- Unit charter: overnight slate N2 R-SQLALIAS
 - Pins: `python/repark/tests/test_sql_alias.py`
 
 ## Debug

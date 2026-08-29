@@ -19,69 +19,36 @@ def _sql_where_residual_base_projections(
     base_select_parts: list[str],
     temp_counter: int,
 ) -> tuple[str, list[str], int]:
-    """Identity-project residual base columns needed by compound WHERE (U10 C1).
-
-
+    """Identity-project residual base columns needed by compound WHERE.
 
     After UDF call spans are replaced with ``__repark_sql_udf_out_*`` temps, residual
-
     predicates may still reference table columns (``AND a < 10``, ``AND s = 'z'``).
-
     Those names are not on the materialization frame unless projected. Returns
-
-    ``(residual, new_base_parts, temp_counter)`` — bare idents project as
-
-    ``col AS col``; qualified ``t.col`` projects under a stable temp and the
-
-    residual span is rewritten so the filter resolves (alias ``t.col`` is not a
-
-    valid multi-part field name on the post-scan frame).
-
-
+    ``(residual, new_base_parts, temp_counter)`` — bare idents project as ``col AS col``;
+    qualified ``t.col`` projects under a stable temp and the residual span is rewritten so
+    the filter resolves (alias ``t.col`` is not a valid multi-part field name on the
+    post-scan frame).
 
     Syntax keywords (``FROM`` / ``BOTH`` / ``FOR`` / …) are never identity-projected so
-
     engine forms like ``IS [NOT] DISTINCT FROM``, ``trim(BOTH … FROM …)``,
+    ``substring(… FROM … FOR …)``, ``extract(YEAR FROM …)`` stay intact. SQL type tokens
+    are only skipped after ``AS`` (CAST) so legitimate columns named ``date`` / ``double``
+    / ``string`` still project. ``END`` is a CASE terminator only when nested under an
+    unmatched ``CASE`` (column ``end`` still projects). Ambiguous names are quoted on both
+    the base projection and residual.
 
-    ``substring(… FROM … FOR …)``, ``extract(YEAR FROM …)`` stay intact (F-E1-1).
-
-    SQL type tokens are only skipped after ``AS`` (CAST) so legitimate columns named
-
-    ``date`` / ``double`` / ``string`` still project (F-E1-2); U10 C6 AS-skip retained.
-
-    ``END`` is CASE-terminator only when nested under unmatched ``CASE`` (column ``end``
-
-    still projects). Ambiguous names are quoted on both the base projection and residual.
-
-
-
-    **r22 U11 residual poles (F-E1 class):**
-
-
+    Residual poles:
 
     * ``INTERVAL '1' DAY`` — unit tokens after an INTERVAL literal must not be
-
       identity-projected / quote-rewritten (would break unit syntax). Multi-unit
-
-      ``DAY TO SECOND`` trailing units after ``TO`` are also syntax (octo C1).
-
+      ``DAY TO SECOND`` trailing units after ``TO`` are also syntax.
     * Typed literals ``DATE '…'`` / ``TIMESTAMP '…'`` / ``TIME '…'`` — constructor
-
-      keywords are syntax when followed by a string literal (octo C2).
-
+      keywords are syntax when followed by a string literal.
     * Columns named ``and`` / ``or`` / ``not`` — ``DataFrame.filter``'s SQL-string
-
       identifier rewriter case-steals boolean keywords when those columns sit on the
-
       materialization frame; project them under ``__repark_sql_udf_wcol_*`` temps and
-
       rewrite residual spans (never leak temps to the user projection).
-
     """
-
-    # === r21 T7: census-r6 ===
-
-    # === r22 U11: residual-keyword-poles ===
 
     # Pure syntax / boolean / clause keywords — never bare column projections.
 
@@ -107,7 +74,7 @@ def _sql_where_residual_base_projections(
         "when",
         "then",
         "else",
-        # "end" — CASE nesting heuristic below (legal column name — F-E1-2).
+        # "end" — CASE nesting heuristic below (legal column name).
         "as",
         "distinct",
         "cast",
@@ -133,7 +100,7 @@ def _sql_where_residual_base_projections(
         "current_time",
         "localtimestamp",
         "localtime",
-        # Multi-word SQL syntax (F-E1-1 under-reserve class).
+        # Multi-word SQL syntax.
         "from",
         "both",
         "for",
@@ -216,7 +183,7 @@ def _sql_where_residual_base_projections(
         "time",
     }
 
-    # INTERVAL <lit|n> <unit> — unit is syntax, not a column (U11 residual pole).
+    # INTERVAL <lit|n> <unit> — unit is syntax, not a column.
 
     interval_units = {
         "year",
@@ -242,10 +209,8 @@ def _sql_where_residual_base_projections(
     }
 
     # DataFrame.filter SQL-string rewriter case-steals these boolean keywords when a
-
     # same-named column is on the frame (``a > 0 AND "and" = 5`` → ParseException).
-
-    # Always project under a temp and rewrite residual (U11 residual pole).
+    # Always project under a temp and rewrite residual.
 
     filter_boolean_steal_names = {"and", "or", "not"}
 
@@ -373,8 +338,7 @@ def _sql_where_residual_base_projections(
     masked = _sql_mask_strings_and_comments(residual_after_qual)
 
     # Bare identifiers (not function names, not internal temps, not syntax keywords).
-
-    # Type tokens after AS and extract fields before FROM are context-skipped (C6 / F-E1-1).
+    # Type tokens after AS and extract fields before FROM are context-skipped.
 
     seen_bare: set[str] = set()
 
@@ -406,7 +370,7 @@ def _sql_where_residual_base_projections(
         if re.search(r"(?is)\bAS\s+$", prefix):
             continue
 
-        # extract(YEAR FROM x) / date_part — field then FROM is syntax, not a column (F-E1-1).
+        # extract(YEAR FROM x) / date_part — field then FROM is syntax, not a column.
 
         key = ident.lower()
 
@@ -416,17 +380,11 @@ def _sql_where_residual_base_projections(
         if re.search(r"(?is)\b(EXTRACT|DATE_PART|DATEPART)\s*\(\s*$", prefix):
             continue
 
-        # INTERVAL '1' DAY / INTERVAL 1 DAY — unit token is syntax (U11 residual pole).
-
+        # INTERVAL '1' DAY / INTERVAL 1 DAY — unit token is syntax.
         # String literals are length-masked to spaces by ``_sql_mask_strings_and_comments``,
-
         # so ``INTERVAL '1'`` becomes ``INTERVAL     `` (no quotes remain on the masked prefix).
-
         # Multi-unit qualifiers ``DAY TO SECOND`` / ``YEAR TO MONTH``: the trailing unit sits
-
-        # after ``TO``, not immediately after INTERVAL — still syntax, never a column
-
-        # (octo U11 C1 — was identity-projected / quote-rewritten → Schema error).
+        # after ``TO``, not immediately after INTERVAL — still syntax, never a column.
 
         if key in interval_units and (
             re.search(r"(?is)\bINTERVAL\s+(?:\d+\s+)?$", prefix)
@@ -435,10 +393,8 @@ def _sql_where_residual_base_projections(
             continue
 
         # Typed SQL literals ``DATE '…'`` / ``TIMESTAMP '…'`` / ``TIME '…'`` — constructor
-
-        # keyword is syntax, not a column (octo U11 C2). Mask turns the string into spaces,
-
-        # so detect the quote on the unmasked residual (length-preserving mask).
+        # keyword is syntax, not a column. Mask turns the string into spaces, so detect the
+        # quote on the unmasked residual (length-preserving mask).
 
         if key in {"date", "timestamp", "timestamp_ntz", "time"} and re.match(
             r"\s*'",
@@ -446,7 +402,7 @@ def _sql_where_residual_base_projections(
         ):
             continue
 
-        # CASE … END terminator only when nested under unmatched CASE (F-E1-2 column end).
+        # CASE … END terminator only when nested under unmatched CASE (column end).
 
         if key == "end":
             cases = len(re.findall(r"(?is)\bCASE\b", prefix))
@@ -474,7 +430,6 @@ def _sql_where_residual_base_projections(
 
                 if temp_alias is None:
                     # Frame already has the column under its real name (e.g. SELECT list
-
                     # pass-through) — still need a steal-safe temp for residual filter.
 
                     temp_alias = f"__repark_sql_udf_wcol_{counter}"
@@ -528,9 +483,7 @@ def _sql_where_residual_base_projections(
     residual_after_qual = "".join(residual_chars)
 
     # Quoted residual identifiers (``"from"`` / `` `date` ``) — project when not already on frame.
-
     # Strings use single quotes and are already excluded by the quote-style scan.
-
     # filter-boolean-steal names always get a temp even when already quoted in residual.
 
     quoted_rewrite_spans: list[tuple[int, int, str]] = []
