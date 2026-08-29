@@ -174,7 +174,7 @@ guarded (V3-LINEAGE-1).
 - **Acceptance.** A one-line answer is enough to start MW-6; the engine pins the two counts
   against the jar's `OUTPUT_TYPE`.
 
-### F-5 (P2) — `ReplacePartitions` remainder (R104 🟡)
+### F-5 (P2) — `ReplacePartitions` remainder (R104 🟡) — answered fork #217 (2026-08-23)
 
 - **Engine observation.** Registry **DML-1**: every `INSERT OVERWRITE … PARTITION (…)` form and
   `writeTo().overwritePartitions()` / `overwrite(condition)` refuse, because the only alternative
@@ -185,7 +185,13 @@ guarded (V3-LINEAGE-1).
 - **Java reference.** `BaseReplacePartitions`; Spark's `DynamicOverwrite` and
   `OverwriteByFilter` write paths; `OverwriteFiles.overwriteByRowFilter`.
 - **Ask.** Close the static path (explicit partition tuple and row-filter forms) and the
-  multi-spec conflict interop so the row goes ✅. The engine's **DML-B** unit is blocked on this.
+  multi-spec conflict interop so the row goes ✅.
+- **Answered (2026-08-29 correction).** Fork PR #217 (`798a0c8ce`) landed 2026-08-23 and is an
+  ancestor of the engine pin `ce92a7bf`. The static half of the ask was void: Java routes static
+  `PARTITION (k=v)` through `OverwriteFiles.overwriteByRowFilter`, not `ReplacePartitions`, and
+  the fork already exposes `overwrite_by_row_filter`. **DML-B is not blocked**; the multi-spec
+  interop leg is optional. Build recipe:
+  [../epic-term/release-roadmap-2026-08-29.md](../epic-term/release-roadmap-2026-08-29.md) v0.6.
 - **Acceptance.** Engine pins `insert_overwrite.rs::empty_insert_overwrite_partition_refuses_full_wipe`
   and `…_nonempty_refuses_whole_table_replace` flip from refuse-loud to partition-scoped
   behaviour with an oracle row; `overwritePartitions()` leaves the guide's refuse list.
@@ -492,7 +498,7 @@ Listed so they are not re-proposed fork-side:
 - Wiring `rewrite_manifests`, `remove_dangling_delete_files`, `convert_equality_delete_files`
   as `CALL` procedures — engine-side (MW-6 and "watch" items).
 - `WHEN NOT MATCHED BY SOURCE`, `TRUNCATE`, partition-scoped overwrite *statements* — engine
-  (`MERGE` is engine-owned by contract §6; DML-B needs only F-5 from the fork).
+  (`MERGE` is engine-owned by contract §6; DML-B's fork need, F-5, was answered in #217 — nothing outstanding).
 - DataFusion window-operator work (Track A W-0/W-1/W-3) — engine or upstream DataFusion, never
   the fork.
 

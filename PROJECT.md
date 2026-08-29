@@ -33,6 +33,8 @@ the dialect layers are thin translators.
   deletion vectors, row lineage, the v3 types — defined, with the acceptance gate that decides
   the v1.0 tag, in
   [task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md](task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md).
+  The release-by-release path from v0.6 through 3.0 (owner-set 2026-08-29) lives in
+  [task/roadmap/epic-term/release-roadmap-2026-08-29.md](task/roadmap/epic-term/release-roadmap-2026-08-29.md).
 - Single binary / single `pip install` — no JVM, no cluster, no daemon; cold start under a second.
 - Predictable memory via spill-to-disk by default. (*The "never OOM on data larger than RAM" claim
   is pending a spill-coverage spike — DataFusion's operator spill coverage is partial; the honest
@@ -56,7 +58,7 @@ The reasons someone picks this over DuckDB or Polars; everything else is table s
 - A native TA (technical-analysis) function library, bit-exact and fast, built in Rust.
 - Aggressive, intelligent schema inference and a CSV reader that handles real-world mess.
 - First-class Excel read/write.
-- ML that trains directly off Iceberg tables out-of-core, no extraction step.
+- ML that trains directly off Iceberg tables out-of-core, no extraction step (2.x on the release roadmap).
 - The PySpark facade: migrate existing pipelines without rewrites.
 
 ## Non-negotiable invariants (do not undo)
