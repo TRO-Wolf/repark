@@ -124,3 +124,23 @@ status = "planned"
 [components.repark-connect]
 path = "crates/repark-connect"
 status = "planned"
+
+[components.repark-server]
+path = "crates/repark-server"
+status = "planned"
+
+[components.repark-server-spark-connect]
+path = "crates/repark-server-spark-connect"
+status = "planned"
+
+[components.repark-server-flight-sql]
+path = "crates/repark-server-flight-sql"
+status = "planned"
+
+[components.repark-server-substrait]
+path = "crates/repark-server-substrait"
+status = "planned"
+
+[components.repark-cli]
+path = "crates/repark-cli"
+status = "planned"

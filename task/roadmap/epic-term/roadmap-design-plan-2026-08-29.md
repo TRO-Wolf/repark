@@ -3,9 +3,12 @@
 Companion to [release-roadmap-2026-08-29.md](release-roadmap-2026-08-29.md) (the *what* and *when*). This file is the *where* and
 *how*: for every roadmap item, which crate is **NEW** or **UPDATED**, which files it touches,
 which reference implementation to read, and the steps in order — written so a delegated
-sub-agent (Sonnet executes; Haiku does the mechanical steps) can start without re-deriving the
-architecture. Drafted 2026-08-29; the six placement decisions in §6 were ruled the same day
-(D-1–D-4, D-6 confirmed; D-5 overruled), so this file is the plan of record.
+sub-agent (the delegated implementation tier executes a card; the narrow mechanical tier does
+the checklist steps) can start without re-deriving the architecture. The tiers are roles, not
+vendors: which model fills each one is a tool-adapter mechanic (AGENTS.md "Delegated work"),
+never named in this plan. Drafted 2026-08-29; the six placement decisions in §6 were ruled the
+same day (D-1, D-2, D-4, D-6 confirmed; D-5 overruled; D-3 amended once the DAG guard's
+bindings rule was checked against the server edges), so this file is the plan of record.
 
 ---
 
@@ -40,20 +43,27 @@ tier 2 engine         repark-core          (ReparkSession, seams, spill, catalog
 tier 3 capability     repark-functions  repark-ta  repark-ml
 tier 3 door           repark-spark  repark-sql
 tier 4 bindings       repark-python        (nothing depends on it)
-planned (manifest)    repark-exec  repark-io  repark-connect   (paths must stay empty until chartered)
+tier 4 server         repark-server  repark-server-{spark-connect,flight-sql,substrait}  repark-cli
+                                           (planned; only other tier-4 server crates depend on them)
+planned (manifest)    repark-exec  repark-io  repark-connect  + the five server-family crates above
+                                           (paths must stay empty until chartered)
 python                python/repark        (facade: repark/spark/*; native door today = repark.sql())
 ```
 
 Rule of thumb for placing new code: a product edge may never point at a *strictly higher* tier.
 Anything `repark-core` must call sits at tier ≤ 2. Anything that needs a door sits at tier ≥ 3.
-A server that needs a door and the session is a tier-4 adapter, like `repark-python`.
+A server that needs a door and the session is a tier-4 adapter like `repark-python`, but under
+its own role `server` (D-3): the `bindings` rule forbids every inbound edge, and the protocol
+crates and the CLI must depend on `repark-server`.
 
-### Checklist — adding a NEW crate (Haiku-grade, mechanical)
+### Checklist — adding a NEW crate (mechanical-tier grade)
 
 1. `Cargo.toml` (root): add to `[workspace] members`; add `[workspace.dependencies]` entry
    `repark-x = { path = "crates/repark-x", version = "0.0.0", default-features = false }`.
 2. `scripts/check_crate_dag.py`: add to `TIERS`, `ROLES`, and every edge to `ALLOWED_EDGES`
-   with kind + reason. `make check-crate-dag` must pass.
+   with kind + reason. A crate that introduces a role (the first `server` crate) also extends
+   `ROLE_NAMES`, the role gloss, and `forbidden_reason` in the same change. `make check-crate-dag`
+   must pass.
 3. `repo-manifest.toml`: flip `status = "planned"` → `"delivered"` and add `layer = …`
    (or add a new `[components.repark-x]` block). `make check-manifest` must pass.
 4. `crates/repark-x/src/lib.rs` thin (declarations + re-exports; `make check-lib-rs`), every
@@ -120,7 +130,7 @@ A server that needs a door and the session is a tier-4 adapter, like `repark-pyt
 - **Steps:** parse → `TruncateSpec { table }` → whole-table `overwrite_files` with an empty
   input → new snapshot with zero data files; metadata/history preserved.
 - **Pins:** snapshot count +1, `table$files` empty, time travel to the prior snapshot works.
-- **Hand back when:** never — this card is Haiku-grade once DML-B lands.
+- **Hand back when:** never — this card is mechanical-tier grade once DML-B lands.
 
 #### Card MAINT — `rewrite_data_files` `where` / `sort_order` / strategy
 
@@ -267,7 +277,7 @@ units are chartered there (RP-3 next, then V3-3+). No card here — do not fork 
 
 - **Home:** NEW `crates/repark-io` — **tier 1, role "table service"** (recommendation: it hands
   `TableProvider`s / batches to `repark-core`, so it must sit below tier 2; confirm with the
-  orchestrator before the DAG edit). Modules: `csv/` (smart inference), `excel/` (read + write),
+  orchestrating agent before the DAG edit). Modules: `csv/` (smart inference), `excel/` (read + write),
   `json/`, `ipc/`, `avro/`, `hive.rs` (partitioned-directory discovery over DF's listing
   table). Python native door: NEW `python/repark/src/repark/io/` (`scan_csv`, `scan_parquet`,
   `scan_ndjson`, `scan_ipc`, `read_excel`, `write_excel`, `sink_*`).
@@ -376,17 +386,20 @@ units are chartered there (RP-3 next, then V3-3+). No card here — do not fork 
     `object_store_registry.rs`, `temp_view_manager.rs`, `query_service.rs` (cancel, memory
     budget, admission), `semantic_profile.rs`. Behavior-preserving; public `ReparkSession`
     unchanged; discharge note appended to the ADR.
-  - NEW `crates/repark-server` — **tier 4, role "bindings"** (recommendation: it is a protocol
-    adapter over the doors exactly as `repark-python` is; nothing may depend on it). Modules:
+  - NEW `crates/repark-server` — **tier 4, role `server`** (D-3 as amended: a protocol adapter
+    over the doors like `repark-python`, but one its protocol crates and the CLI must depend on,
+    so it cannot carry the `bindings` role — that role's rule forbids every inbound edge). Modules:
     `session_manager.rs` (id → session, TTL, eviction), `cancel.rs`, `resource_policy.rs`,
     `protocol.rs` (the trait one protocol crate implements), `serve.rs` (tonic/tokio bootstrap).
-  - NEW `crates/repark-server-spark-connect` — tier 4: `proto/` (Spark Connect protobuf, vendored
+  - NEW `crates/repark-server-spark-connect` — tier 4, role `server`: `proto/` (Spark Connect protobuf, vendored
     at a pinned Spark version), `service/{plan_analyzer,plan_executor,config,artifacts}.rs`,
     `plan_to_df.rs` (Connect relation → the Spark door's planner via `repark-spark`).
-  - NEW binary `crates/repark-cli` (`repark serve`, `repark sql`): tier 4.
+  - NEW binary `crates/repark-cli` (`repark serve`, `repark sql`): tier 4, role `server`.
 - **Edges:** `repark-server → {repark-core}`; `repark-server-spark-connect → {repark-server,
   repark-spark, repark-functions}`; `repark-cli → {repark-server, repark-server-spark-connect}`.
-  All normal, all "tier-4 adapter reaching down". No crate depends on any of them.
+  All normal. The `server` structural rule these edges need: nothing outside tier 4 may depend
+  on a `server` crate; a `server` crate may depend on another `server` crate (`repark-cli →
+  repark-server`) and on anything at tier ≤ 3; a `server` crate never depends on `repark-python`.
 - **Reference:** `LE/sail/crates/sail-spark-connect/src/{server,session_manager,session,
   executor,streaming}.rs` and `service/{plan_analyzer,plan_executor,config_manager,
   artifact_manager}.rs` — the complete shape of a Rust Spark Connect server;
@@ -425,7 +438,7 @@ units are chartered there (RP-3 next, then V3-3+). No card here — do not fork 
 
 ### Card 2.0-A — Arrow Flight SQL → `repark-server-flight-sql` NEW
 
-- **Home:** NEW `crates/repark-server-flight-sql` — tier 4: `service.rs` (`FlightSqlService`
+- **Home:** NEW `crates/repark-server-flight-sql` — tier 4, role `server`: `service.rs` (`FlightSqlService`
   impl from `arrow-flight`), `handles.rs` (prepared statements, tickets), `catalog_meta.rs`
   (`GetTables` / `GetSchemas` over the federated registry), `auth_stub.rs` (accept-all until
   3.0, marked). `repark-cli serve --flight-sql`.
@@ -569,7 +582,7 @@ units are chartered there (RP-3 next, then V3-3+). No card here — do not fork 
 
 ### Card 2.9 — Substrait ingress + Ibis backend
 
-- **Home:** NEW `crates/repark-server-substrait` — tier 4: `datafusion-substrait` consumer →
+- **Home:** NEW `crates/repark-server-substrait` — tier 4, role `server`: `datafusion-substrait` consumer →
   DF plan → `QueryService`; protocol #3 on `repark-server`. NEW sibling package `ibis-repark`
   (an Ibis backend emitting Substrait or SQL to the Flight SQL endpoint — the owner picks the
   transport).
@@ -630,7 +643,7 @@ units are chartered there (RP-3 next, then V3-3+). No card here — do not fork 
 |---|---|---|
 | D-1 | `repark.toml` loader is a **module family in `repark-core`**, not a new crate. | `repark-config` at tier 0 — heavier DAG/manifest churn for no consumer that `repark-core` does not already serve. |
 | D-2 | `repark-io` and `repark-connect` are **tier 1, role "table service"** peers of `repark-iceberg`. | A tier-3 capability — impossible, `repark-core` (tier 2) must call them. |
-| D-3 | The server family (`repark-server`, `-spark-connect`, `-flight-sql`, `-substrait`, `repark-cli`) is **tier 4, role "bindings"**. | A new tier 5 / role "server" — needs `ROLE_NAMES` + structural-rule edits in the DAG script; do it only if the bindings rules prove wrong for a server. |
+| D-3 | **Amended 2026-08-29:** the server family (`repark-server`, `-spark-connect`, `-flight-sql`, `-substrait`, `repark-cli`) is **tier 4, role `server`** — a new `ROLE_NAMES` entry whose `forbidden_reason` rule is "nothing outside tier 4 may depend on a `server` crate; a `server` crate never depends on `repark-python`". The five crates are reserved as `planned` in `repo-manifest.toml`. | Role `bindings` (the first draft) — checked against `forbidden_reason`, which refuses *every* inbound edge to a `bindings` target, so `repark-server-spark-connect → repark-server` and `repark-cli → repark-server` could never be declared. A tier 5 was not needed: the layering rule already lets same-tier edges through. |
 | D-4 | v0.9 does **not** create `repark-exec`; extraction waits for real operator code (ADR-0005 §4). | Creating it for the matrix — forbidden by the "not ahead of its driver" rule. |
 | D-5 | **Overruled by the owner (2026-08-29):** 2.2 is a **RePark-side snapshot diff** over upstream-compatible `iceberg` primitives; the fork's `IncrementalChangelogScan` is read for its taxonomy, never called. | Building on the fork's scan — cheaper today, but a later roadmap item migrates off the fork and the changelog must survive that. |
 | D-6 | 3.0 authorization is a **planner rule**, not per-door checks. | Door-level checks — would miss the federated sources and the DataFrame door. |
