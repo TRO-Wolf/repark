@@ -119,7 +119,7 @@ def test_engine_knob_non_integer_raises() -> None:
 
 
 def test_get_active_session_none_then_session() -> None:
-    """C3: getActiveSession tracks process-wide active; None when stopped."""
+    """getActiveSession tracks process-wide active; None when stopped."""
     _reset_active_session_for_tests()
     assert ReparkSession.getActiveSession() is None
     spark = ReparkSession.builder.appName("c3-active").getOrCreate()
@@ -129,7 +129,7 @@ def test_get_active_session_none_then_session() -> None:
 
 
 def test_active_raises_when_no_session() -> None:
-    """C3: active() → PySparkRuntimeError NO_ACTIVE_OR_DEFAULT_SESSION."""
+    """active() → PySparkRuntimeError NO_ACTIVE_OR_DEFAULT_SESSION."""
     _reset_active_session_for_tests()
     with pytest.raises(PySparkRuntimeError) as raised:
         ReparkSession.active()
@@ -138,7 +138,7 @@ def test_active_raises_when_no_session() -> None:
 
 
 def test_spark_session_alias_active_surface() -> None:
-    """C3 octo C6: SparkSession alias exposes getActiveSession/active (drop-in)."""
+    """SparkSession alias exposes getActiveSession/active (drop-in)."""
     from repark import SparkSession
 
     _reset_active_session_for_tests()
@@ -157,7 +157,7 @@ def test_spark_session_alias_active_surface() -> None:
 
 
 def test_session_context_manager_stops() -> None:
-    """C3: with session: … always stops (Apache test_create_new_session_with_statement)."""
+    """with session: … always stops (Apache test_create_new_session_with_statement)."""
     _reset_active_session_for_tests()
     with ReparkSession.builder.appName("c3-cm").getOrCreate() as spark:
         assert spark.sql("SELECT 1 AS n").count() == 1
@@ -167,7 +167,7 @@ def test_session_context_manager_stops() -> None:
 
 
 def test_context_manager_enter_does_not_promote_active() -> None:
-    """C3 octo C7: __enter__ is not an active-session promotion point."""
+    """__enter__ is not an active-session promotion point."""
     _reset_active_session_for_tests()
     first = ReparkSession.builder.appName("c3-cm-enter-a").getOrCreate()
     second = first.newSession()
@@ -185,7 +185,7 @@ def test_context_manager_enter_does_not_promote_active() -> None:
 
 
 def test_new_session_distinct_handle() -> None:
-    """C3: newSession() returns a different live session (Apache test_new_session)."""
+    """newSession() returns a different live session (Apache test_new_session)."""
     _reset_active_session_for_tests()
     first = ReparkSession.builder.appName("c3-new").getOrCreate()
     second = first.newSession()
@@ -201,7 +201,7 @@ def test_new_session_distinct_handle() -> None:
 
 
 def test_new_session_restores_active_on_base_exception() -> None:
-    """C3 octo C1-Q-001: BaseException mid-newSession must not steal process active.
+    """BaseException mid-newSession must not steal process active.
 
     The decoy registers as active then raises ``KeyboardInterrupt``; the prior active must
     restore even on ``BaseException`` (not only ``Exception``).
@@ -236,7 +236,7 @@ def test_new_session_restores_active_on_base_exception() -> None:
 
 
 def test_create_dataframe_promotes_active_session() -> None:
-    """C3: createDataFrame on a newSession promotes active (Apache after_create_dataframe)."""
+    """createDataFrame on a newSession promotes active (Apache after_create_dataframe)."""
     _reset_active_session_for_tests()
     first = ReparkSession.builder.appName("c3-promote").getOrCreate()
     second = first.newSession()
@@ -252,7 +252,7 @@ def test_create_dataframe_promotes_active_session() -> None:
 
 
 def test_new_session_preserves_foreign_active() -> None:
-    """C3 octo C2-Q-002: newSession restores *current* active, not necessarily self."""
+    """newSession restores *current* active, not necessarily self."""
     _reset_active_session_for_tests()
     first = ReparkSession.builder.appName("c3-foreign-a").getOrCreate()
     second = first.newSession()
@@ -271,7 +271,7 @@ def test_new_session_preserves_foreign_active() -> None:
 
 
 def test_get_or_create_reuse_skips_static_conf() -> None:
-    """C3 octo C2-Q-001: soft-conf fold must not mutate static keys."""
+    """soft-conf fold must not mutate static keys."""
     import warnings
 
     _reset_active_session_for_tests()
@@ -286,7 +286,7 @@ def test_get_or_create_reuse_skips_static_conf() -> None:
         assert second is first
         assert first.conf.getAll.get("spark.sql.warehouse.dir") == before
         assert not first.conf.isModifiable("spark.sql.warehouse.dir")
-        # Static skip must not false-warn as unapplied (octo C3 C4-Q-002).
+        # Static skip must not false-warn as unapplied.
         static_warns = [
             w
             for w in caught
@@ -298,7 +298,7 @@ def test_get_or_create_reuse_skips_static_conf() -> None:
 
 
 def test_create_dataframe_type_error_still_promotes() -> None:
-    """C3 octo C2 cheap: promote runs before validation (Spark method-entry parity)."""
+    """Cheap: promote runs before validation (Spark method-entry parity)."""
     _reset_active_session_for_tests()
     first = ReparkSession.builder.appName("c3-promote-fail").getOrCreate()
     second = first.newSession()
@@ -313,7 +313,7 @@ def test_create_dataframe_type_error_still_promotes() -> None:
 
 
 def test_runtime_config_get_all_and_unset_raise() -> None:
-    """C3: getAll / get-without-default / set(None) — Apache test_conf + test_get_all."""
+    """getAll / get-without-default / set(None) — Apache test_conf + test_get_all."""
     _reset_active_session_for_tests()
     spark = ReparkSession.builder.appName("c3-conf").getOrCreate()
     try:
@@ -347,7 +347,7 @@ def test_runtime_config_get_all_and_unset_raise() -> None:
 
 
 def test_get_or_create_applies_facade_conf_on_reuse() -> None:
-    """C3: soft conf keys fold into live session conf (Apache config_option_propagated)."""
+    """soft conf keys fold into live session conf (Apache config_option_propagated)."""
     _reset_active_session_for_tests()
     first = ReparkSession.builder.config("spark-config1", "a").getOrCreate()
     try:
@@ -360,7 +360,7 @@ def test_get_or_create_applies_facade_conf_on_reuse() -> None:
 
 
 def test_conf_unset_clears_builder_fallback() -> None:
-    """C3 octo C3-Q-001: unset must not resurrect Builder.config snapshot values."""
+    """unset must not resurrect Builder.config snapshot values."""
     _reset_active_session_for_tests()
     spark = ReparkSession.builder.config("soft", "1").appName("c3-unset").getOrCreate()
     try:
@@ -378,7 +378,7 @@ def test_conf_unset_clears_builder_fallback() -> None:
 
 
 def test_get_or_create_soft_fold_after_unset() -> None:
-    """C3 octo C4: soft-fold after conf.unset re-applies and clears the tombstone."""
+    """soft-fold after conf.unset re-applies and clears the tombstone."""
     _reset_active_session_for_tests()
     first = ReparkSession.builder.config("k", "1").appName("c3-refold").getOrCreate()
     try:

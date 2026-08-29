@@ -6,7 +6,7 @@ Pins:
 * path-escape needles lockstep with Rust ``repark_write::idents::probes``
 * re-exports from session / dataframe / catalog / column remain the same objects
 
-No live Spark oracle (Q6): current behavior is pinned, not divergence-fixed.
+No live Spark oracle: current behavior is pinned, not divergence-fixed.
 """
 
 from __future__ import annotations
@@ -66,7 +66,7 @@ def test_quote_multipart_catalog_vs_always() -> None:
 @pytest.mark.parametrize("probe", INJECTION_PROBES)
 def test_injection_probe_is_single_token_via_ssot(probe: str) -> None:
     quoted = assert_spark_injection_probe_is_single_token(probe)
-    # Independent oracle — undouble-only false-passes under-escape (octo C1-Q-002).
+    # Independent oracle — undouble-only false-passes under-escape.
     expected = '"' + probe.replace('"', '""') + '"'
     assert quoted == expected
     assert '"' not in quoted[1:-1].replace('""', "")
@@ -82,7 +82,7 @@ def test_injection_under_escape_oracle_would_reject() -> None:
 
 
 def test_probe_tables_lockstep_frozen_with_rust_ssot() -> None:
-    """Cross-lang lockstep (C1-Q-003): frozen literals match repark_write::idents::probes."""
+    """Cross-lang lockstep: frozen literals match repark_write::idents::probes."""
     assert INJECTION_PROBES == (
         r'"; DROP TABLE x; --',
         r'id"; DROP TABLE x; --',
@@ -176,7 +176,7 @@ def test_is_plain_ident() -> None:
 
 
 def test_polars_join_quote_uses_ssot_for_bare() -> None:
-    """Q5: polars nested quote_ident builds SQL identifiers — bare-only + always-quote SSOT."""
+    """Polars nested quote_ident builds SQL identifiers — bare-only + always-quote SSOT."""
     from repark.spark._idents import is_plain_ident
     from repark.spark._idents import quote_ident as ssot
 

@@ -45,7 +45,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split query execution from result collection and reporting.",
     ),
     "python/repark-parity/compat/runner.py": (
-        1280,
+        1279,
         "Compatibility discovery, subprocess execution, and report assembly share one module.",
         "Extract worker execution from census result classification.",
     ),

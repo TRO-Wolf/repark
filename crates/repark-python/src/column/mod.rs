@@ -1,5 +1,5 @@
 //! Python-facing immutable columns backed by DataFusion logical expressions.
-//! Constructors resolve literals and standalone SQL expressions; DataFrame methods resolve
+//! Constructors resolve literals and standalone SQL expressions; `DataFrame` methods resolve
 //! expressions against their input schema.
 
 use datafusion::arrow::datatypes::DataType;
@@ -122,7 +122,7 @@ impl PyColumn {
         })
     }
 
-    /// A lambda parameter reference resolved when the parent DataFrame is planned.
+    /// A lambda parameter reference resolved when the parent `DataFrame` is planned.
     #[staticmethod]
     pub fn lambda_variable(name: &str) -> PyResult<Self> {
         fenced!("Column.lambda_variable", {
@@ -164,7 +164,7 @@ impl PyColumn {
 
     /// Pack fields into a struct expression.
     ///
-    /// Uses already-built child expressions so the result binds in a parent DataFrame projection.
+    /// Uses already-built child expressions so the result binds in a parent `DataFrame` projection.
     ///
     /// # Errors
     /// Returns `ValueError` when `fields` is empty.

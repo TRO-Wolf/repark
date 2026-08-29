@@ -390,7 +390,7 @@ def _sorted_list_field(rows: list[dict[str, object]], group_key: str, list_key: 
 
 
 def test_collect_list_set_exist_and_name(spark: ReparkSession) -> None:
-    """J1 surface: snake_case only (no camelCase aliases — live PySpark 4.1.2 inspect)."""
+    """Surface: snake_case only (no camelCase aliases — live PySpark 4.1.2 inspect)."""
     from repark import Column
 
     assert callable(F.collect_list) and callable(F.collect_set)
@@ -404,7 +404,7 @@ def test_collect_list_set_exist_and_name(spark: ReparkSession) -> None:
 
 
 def test_parity_collect_list_excludes_nulls_and_keeps_dupes(spark: ReparkSession) -> None:
-    """J1: ``collect_list`` drops NULLs and keeps duplicates (Spark 4.1.2)."""
+    """``collect_list`` drops NULLs and keeps duplicates (Spark 4.1.2)."""
     source = spark.createDataFrame(
         [(1, 10), (1, 10), (1, 20), (1, None), (2, 30), (2, None)],
         ["g", "x"],
@@ -421,7 +421,7 @@ def test_parity_collect_list_excludes_nulls_and_keeps_dupes(spark: ReparkSession
 
 
 def test_parity_collect_set_dedups_and_excludes_nulls(spark: ReparkSession) -> None:
-    """J1: ``collect_set`` is distinct + NULL-excluding (Spark 4.1.2)."""
+    """``collect_set`` is distinct + NULL-excluding (Spark 4.1.2)."""
     source = spark.createDataFrame(
         [(1, 10), (1, 10), (1, 20), (1, None), (2, 30), (2, 30)],
         ["g", "x"],
@@ -435,7 +435,7 @@ def test_parity_collect_set_dedups_and_excludes_nulls(spark: ReparkSession) -> N
 
 
 def test_collect_empty_group_is_empty_array_not_null(spark: ReparkSession) -> None:
-    """J1: empty group / only-NULL group → ``[]``, not NULL (Spark 4.1.2).
+    """Empty group / only-NULL group → ``[]``, not NULL (Spark 4.1.2).
 
     The SQL-typed NULL column keeps the list value type ``int64`` (not the all-None
     inference trap).
@@ -458,7 +458,7 @@ def test_collect_empty_group_is_empty_array_not_null(spark: ReparkSession) -> No
 
 
 def test_parity_count_distinct_multi_column_two_and_three(spark: ReparkSession) -> None:
-    """J2: multi-col ``countDistinct`` — 2-col and 3-col names, LongType, values.
+    """Multi-col ``countDistinct`` — 2-col and 3-col names, LongType, values.
 
     Oracle (Spark 4.1.2): ``count(DISTINCT x, y)`` naming (space after commas), Arrow
     ``int64 not null``. The 3-col arm uses a within-group-varying third column: packing
@@ -515,7 +515,7 @@ def test_parity_count_distinct_multi_column_two_and_three(spark: ReparkSession) 
 
 
 def test_parity_count_distinct_multi_excludes_any_null_row(spark: ReparkSession) -> None:
-    """J2: a row is excluded from multi-col countDistinct when **any** column is NULL."""
+    """A row is excluded from multi-col countDistinct when **any** column is NULL."""
     source = spark.createDataFrame(
         [(1, None), (1, 1), (1, 1), (None, 2), (2, 2)],
         ["a", "b"],
@@ -529,7 +529,7 @@ def test_parity_count_distinct_multi_excludes_any_null_row(spark: ReparkSession)
 
 
 def test_collect_and_count_distinct_work_in_agg_and_global(spark: ReparkSession) -> None:
-    """J3: expr form + dict form inside ``groupBy().agg`` and global ``df.agg``."""
+    """Expr form + dict form inside ``groupBy().agg`` and global ``df.agg``."""
     source = spark.createDataFrame(
         [(1, 10), (1, 10), (1, 20), (1, None), (2, 30)],
         ["g", "x"],
@@ -556,7 +556,7 @@ def test_collect_and_count_distinct_work_in_agg_and_global(spark: ReparkSession)
         2: [30],
     }
 
-    # Multi-key dict form (octo r2): both reducers must bind — name + sorted values.
+    # Multi-key dict form: both reducers must bind — name + sorted values.
     multi_source = spark.createDataFrame(
         [(1, 10, 100), (1, 10, 200), (1, 20, 100)],
         ["g", "x", "y"],
@@ -578,7 +578,7 @@ def test_collect_and_count_distinct_work_in_agg_and_global(spark: ReparkSession)
 
 
 def test_parity_collect_list_set_string_empty_vs_null(spark: ReparkSession) -> None:
-    """J1 (octo r1): string collect keeps empty string, drops NULL (Spark 4.1.2)."""
+    """String collect keeps empty string, drops NULL (Spark 4.1.2)."""
     source = spark.createDataFrame(
         [(1, ""), (1, None), (1, ""), (1, "x")],
         ["g", "s"],
@@ -597,7 +597,7 @@ def test_parity_collect_list_set_string_empty_vs_null(spark: ReparkSession) -> N
 
 
 def test_parity_count_distinct_multi_empty_frame_is_zero(spark: ReparkSession) -> None:
-    """J2 (octo r1): empty frame multi-col countDistinct → 0 (Spark 4.1.2), not NULL."""
+    """Empty frame multi-col countDistinct → 0 (Spark 4.1.2), not NULL."""
     empty = spark.sql(
         "SELECT a, b FROM (VALUES (CAST(1 AS BIGINT), CAST(1 AS BIGINT))) AS t(a, b) WHERE 1 = 0"
     )
@@ -734,7 +734,7 @@ def test_mutation_multi_count_distinct_null_if_any_pack(spark: ReparkSession) ->
 
 
 def test_mutation_multi_count_distinct_third_col_matters(spark: ReparkSession) -> None:
-    """Mutation proof 4: 3-col pack must see the third column (octo r1 / C1-Q-001)."""
+    """Mutation proof 4: 3-col pack must see the third column."""
     source = spark.createDataFrame(
         [(1, "a", 1), (1, "a", 2), (1, "a", 1)],
         ["x", "y", "z"],
@@ -747,7 +747,7 @@ def test_mutation_multi_count_distinct_third_col_matters(spark: ReparkSession) -
 
 
 def test_collect_set_signed_zero_preserves_distinct_bits(spark: ReparkSession) -> None:
-    """J1 float edge (octo r2 + r4): DF DISTINCT keeps IEEE ``-0.0`` distinct from ``+0.0``.
+    """Float edge: DF DISTINCT keeps IEEE ``-0.0`` distinct from ``+0.0``.
 
     Live PySpark 4.1.2 normalizes ``-0.0`` to ``+0`` (set cardinality 1, multi-col count 1);
     repark preserves the sign bit. Standing pin documents the accepted divergence, not a
@@ -755,7 +755,7 @@ def test_collect_set_signed_zero_preserves_distinct_bits(spark: ReparkSession) -
     """
     import math
 
-    # U2: SQL `-0.0` parses as DECIMAL 0 (no sign bit). IEEE signed-zero must enter
+    # SQL `-0.0` parses as DECIMAL 0 (no sign bit). IEEE signed-zero must enter
     # as a Python float via createDataFrame.
     source = spark.createDataFrame(
         [(1, -0.0), (1, 0.0), (1, 0.0)],
@@ -772,7 +772,7 @@ def test_collect_set_signed_zero_preserves_distinct_bits(spark: ReparkSession) -
     signs = sorted(math.copysign(1.0, value) for value in set_vals)
     assert signs == [-1.0, 1.0]
 
-    # Octo r4: multi-col pack inherits the same IEEE divergence vs Spark (oracle count = 1).
+    # Multi-col pack inherits the same IEEE divergence vs Spark (oracle count = 1).
     multi = spark.createDataFrame(
         [(-0.0, 0.0), (0.0, 0.0), (-0.0, -0.0)],
         ["a", "b"],
@@ -782,7 +782,7 @@ def test_collect_set_signed_zero_preserves_distinct_bits(spark: ReparkSession) -
 
 
 def test_dict_agg_collect_function_names_are_case_insensitive(spark: ReparkSession) -> None:
-    """J3 (octo r4): dict reducer names match Spark case-insensitively (snake_case out)."""
+    """Dict reducer names match Spark case-insensitively (snake_case out)."""
     source = spark.createDataFrame(
         [(1, 10), (1, 10), (1, 20), (1, None)],
         ["g", "x"],
@@ -803,7 +803,7 @@ def test_dict_agg_collect_function_names_are_case_insensitive(spark: ReparkSessi
 
 
 def test_parity_count_distinct_multi_empty_string_vs_null(spark: ReparkSession) -> None:
-    """J2 (octo r4): empty string is a real multi-cd key; NULL still excludes the row."""
+    """Empty string is a real multi-cd key; NULL still excludes the row."""
     source = spark.createDataFrame(
         [("", "a"), ("", "a"), (None, "a"), ("x", ""), ("x", None), ("x", "")],
         ["a", "b"],

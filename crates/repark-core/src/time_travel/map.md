@@ -1,5 +1,8 @@
 # map — repark-core/src/time_travel
 
+CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
+accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
+
 ## Purpose
 
 File-backed tests for the hoisted time-travel pins (`../time_travel.rs`): `TimeTravelSpec`

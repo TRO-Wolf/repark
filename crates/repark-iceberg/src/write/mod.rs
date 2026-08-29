@@ -9,7 +9,7 @@ pub mod alter;
 pub mod append;
 pub mod concurrency;
 pub mod file_scoped_rewrite;
-/// Shared Spark/DF `quote_ident` + path-escape needles (r23 QI1 / CQ-006/007).
+/// Shared Spark/DF `quote_ident` + path-escape needles (CQ-006/007).
 pub mod idents;
 /// WI-2: the plain-INSERT store-assignment gate, as an `AnalyzerRule` over
 /// `LogicalPlan::Dml(WriteOp::Insert)` — the one stage where the pre-cast source type is still
@@ -25,7 +25,7 @@ pub mod predicate_dml;
 pub(crate) mod row_lineage_guard;
 pub mod scan_concurrency;
 pub mod scan_prune;
-/// Product snapshot-ref helpers (I5 CREATE/DROP BRANCH|TAG) + test-support seam.
+/// Product snapshot-ref helpers (CREATE/DROP BRANCH|TAG) + test-support seam.
 pub mod snapshot_refs;
 /// The ANSI store-assignment matrix (`Cast.canANSIStoreAssign`) — ONE home for MERGE and the
 /// non-MERGE insert/append lowerings (WI-1 hoist out of `merge/insert.rs`).

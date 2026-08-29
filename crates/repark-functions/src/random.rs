@@ -1,6 +1,6 @@
-//! Spark-compatible seeded `rand` / `randn` using XORShiftRandom and MurmurHash3.
+//! Spark-compatible seeded `rand` / `randn` using `XORShiftRandom` and `MurmurHash3`.
 //!
-//! RePark fixes the single-node partition index at zero and restarts each invoke batch. This is
+//! `RePark` fixes the single-node partition index at zero and restarts each invoke batch. This is
 //! deterministic for one batch and a documented residual for multi-batch execution.
 
 // Intentional Java/Scala bit-width casts for XORShift + MurmurHash3 bit-exact parity.
@@ -55,7 +55,7 @@ impl XorShiftRandom {
         (next_seed & mask) as i32
     }
 
-    /// Generate a `java.util.Random.nextDouble()` value from XORShift output.
+    /// Generate a `java.util.Random.nextDouble()` value from `XORShift` output.
     fn next_double(&mut self) -> f64 {
         let high = i64::from(self.next_bits(26));
         let low = i64::from(self.next_bits(27));

@@ -2,7 +2,7 @@
 //!
 //! Bounds are pushed only for bare equality keys with matching `Int32`/`Int64` types. A residual
 //! filter never reaches an unscoped COW rewrite, because it can hide unmatched survivors in an
-//! affected file. MoR and file-scoped COW use the bounds for discovery and insert anti-joins;
+//! affected file. `MoR` and file-scoped COW use the bounds for discovery and insert anti-joins;
 //! file-scoped-off COW keeps the scan unfiltered. Unsupported shapes and probe failures skip
 //! pruning, preserving the correct unfiltered path. Pins:
 //! `cow_equi_key_residual_keeps_colocated_survivors`, `mor_equi_key_residual_upsert_correct`.

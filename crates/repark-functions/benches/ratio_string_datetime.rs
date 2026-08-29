@@ -1,6 +1,6 @@
 //! PERF-10 ratio micro-benches for Spark date-format and substring shims.
 //!
-//! Gates compare related work-unit ratios, not absolute wall time; ceilings are fixed by the r24 tip.
+//! Gates compare related work-unit ratios, not absolute wall time; ceilings are fixed by the tip.
 
 use std::hint::black_box;
 use std::sync::Arc;
@@ -13,7 +13,7 @@ use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::prelude::SessionContext;
 
 // ===========================================================================================
-// Final ratio ceilings from the r24 tip.
+// Final ratio ceilings from the tip.
 // ===========================================================================================
 const DATE_FORMAT_VS_TO_CHAR_CEILING: f64 = 2.0;
 const SUBSTRING_VS_UPPER_CEILING: f64 = 3.0;

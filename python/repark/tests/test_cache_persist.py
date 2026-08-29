@@ -52,7 +52,7 @@ def test_persist_records_level(spark: ReparkSession) -> None:
 
 
 def test_take_materializes_cache(spark: ReparkSession) -> None:
-    """take/isEmpty are actions — they must fill the MemTable (octo C1-Q-004)."""
+    """take/isEmpty are actions — they must fill the MemTable."""
     frame = spark.sql("SELECT 1 AS id UNION ALL SELECT 2").cache()
     assert frame.is_cached is True
     assert frame._cache_view is None
@@ -106,7 +106,7 @@ def test_local_checkpoint_eager_not_is_cached(spark: ReparkSession) -> None:
 
 
 def test_local_checkpoint_after_cache_truncates_lineage(spark: ReparkSession) -> None:
-    """localCheckpoint after a materialized cache must truncate lineage (C4-L-001).
+    """localCheckpoint after a materialized cache must truncate lineage.
 
     Mutation: early-return on any `_cache_view` → sticky `_checkpoint_lazy`, lineage kept,
     view stays under ``__repark_cache_*`` (clearCache would drop a "checkpoint").
@@ -150,7 +150,7 @@ def test_object_identity_only_no_shared_cache(spark: ReparkSession) -> None:
 
 
 def test_cache_transform_child_does_not_inherit_mark(spark: ReparkSession) -> None:
-    """Object-identity: filter child is not cached (octo C2-L-002)."""
+    """Object-identity: filter child is not cached."""
     frame = spark.sql("SELECT 1 AS id UNION ALL SELECT 2").cache()
     child = frame.filter("id > 0")
     assert frame.is_cached is True
@@ -164,7 +164,7 @@ def test_cache_transform_child_does_not_inherit_mark(spark: ReparkSession) -> No
 
 
 def test_clear_cache_drops_session_cache_views(spark: ReparkSession) -> None:
-    """clearCache really drops __repark_cache_* MemTables and resets live handles (Q11)."""
+    """clearCache really drops __repark_cache_* MemTables and resets live handles."""
     frame = spark.sql("SELECT 1 AS id UNION ALL SELECT 2").cache()
     assert frame.count() == 2
     assert frame._cache_view is not None
@@ -189,7 +189,7 @@ def test_clear_cache_clears_lazy_mark_before_materialize(spark: ReparkSession) -
 
 
 def test_clear_cache_drops_orphan_cache_views(spark: ReparkSession) -> None:
-    """clearCache drops __repark_cache_* even when the handle was GC'd (Q11 orphan path).
+    """clearCache drops __repark_cache_* even when the handle was GC'd (orphan path).
 
     Mutation: remove the orphan prefix loop in Catalog.clear_cache → this REDS while
     live-handle clearCache pins stay green.
@@ -281,7 +281,7 @@ def test_cache_max_bytes_invalid_conf_refuses(spark: ReparkSession) -> None:
     frame2 = spark.sql("SELECT 2 AS id").cache()
     with pytest.raises(IllegalArgumentException, match=r"repark\.cache\.max_bytes"):
         frame2.count()
-    # Must not leak as raw PyO3 OverflowError (C2-Q-001).
+    # Must not leak as raw PyO3 OverflowError.
     spark.conf.set("repark.cache.max_bytes", str(2**64))
     frame3 = spark.sql("SELECT 3 AS id").cache()
     with pytest.raises(IllegalArgumentException, match=r"repark\.cache\.max_bytes"):

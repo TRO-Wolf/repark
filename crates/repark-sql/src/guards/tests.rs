@@ -233,7 +233,7 @@ async fn ordinary_writes_pass_branch_guard() {
 
 // === Guard 4 — BUG-001 MoR valve (resolution wrapper) =======================================
 
-/// The wrapper passes statements outside the MoR valve's target scope.
+/// The wrapper passes statements outside the `MoR` valve's target scope.
 #[tokio::test]
 async fn mor_valve_wrapper_passes_what_it_cannot_or_must_not_gate() {
     let ctx = SessionContext::new();

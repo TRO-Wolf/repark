@@ -42,7 +42,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split structural cases from list and refusal cases with an identity check.",
     ),
     "crates/repark-core/src/session.rs": (
-        1261,
+        1260,
         "The session root still combines construction, planning, and execution entry points.",
         "Extract one existing responsibility when a charter already changes that region.",
     ),
@@ -147,12 +147,12 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split syntax normalization from Iceberg operation dispatch.",
     ),
     "crates/repark-spark/src/metadata_tables.rs": (
-        1132,
+        1125,
         "Metadata-table parsing and plan construction share one module.",
         "Extract identifier resolution from metadata plan assembly.",
     ),
     "crates/repark-spark/src/ref_ddl.rs": (
-        1078,
+        1077,
         "Reference DDL parsing and execution routing share one module.",
         "Split branch and tag statement families.",
     ),

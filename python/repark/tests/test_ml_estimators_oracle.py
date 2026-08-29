@@ -342,7 +342,7 @@ def test_binary_area_under_pr_average_precision() -> None:
 
 
 def test_binary_area_under_pr_ties_order_independent() -> None:
-    """M6 octo C3: areaUnderPR must not depend on physical row order among tied scores.
+    """M6: areaUnderPR must not depend on physical row order among tied scores.
 
     MUTATION: per-row ``ROW_NUMBER() OVER (ORDER BY score DESC)`` without score-group
     aggregation → same multiset of (label, score) yields AP ∈ {≈0.42, 0.5, ≈0.83, 1.0}
@@ -517,7 +517,7 @@ def test_binary_area_under_roc_sparse_vector_raw_prediction() -> None:
 
 
 def test_binary_area_under_roc_non_vector_score_refuses_loud() -> None:
-    """M7 octo C3: map/non-vector nested score refuses with AUC_VECTOR_RAW_GAP (not CAST)."""
+    """M7: map/non-vector nested score refuses with AUC_VECTOR_RAW_GAP (not CAST)."""
     spark = _session()
     try:
         # MapType score column (createDataFrame dict without sparse keys).
@@ -536,7 +536,7 @@ def test_binary_area_under_roc_non_vector_score_refuses_loud() -> None:
 
 
 def test_native_estimator_sparse_features_densify_disclosure() -> None:
-    """M7 octo C2: native fit on sparse VectorUDT names densify/sparseOutput boundary."""
+    """M7: native fit on sparse VectorUDT names densify/sparseOutput boundary."""
     from repark.spark.ml.linalg import Vectors
 
     spark = _session()
@@ -587,7 +587,7 @@ def test_binary_area_under_roc_short_sparse_vector_refuses_loud() -> None:
 
 
 def test_binary_area_under_roc_short_vector_refuses_loud() -> None:
-    """M6 octo C4: length-1 dense rawPrediction must not look like 'degenerate labels'.
+    """M6: length-1 dense rawPrediction must not look like 'degenerate labels'.
 
     MUTATION: array_element(col, 1) → NULL for len-1 arrays; all scores filtered →
     generic degenerate-label message (misleads; labels were fine).
@@ -615,7 +615,7 @@ def test_binary_area_under_roc_short_vector_refuses_loud() -> None:
 
 
 def test_binary_area_under_roc_refuses_non_binary_labels() -> None:
-    """Non-0/1 labels must refuse loud — not return AUC outside [0,1] (octo M5 C1).
+    """Non-0/1 labels must refuse loud — not return AUC outside [0,1] (M5).
 
     MUTATION: drop ``n_other`` check → labels (0, 2, 1) with scores ascending yield
     Mann-Whitney midranks contaminated by the non-binary row; n_pos/n_neg omit it and
@@ -653,7 +653,7 @@ def test_binary_area_under_roc_refuses_non_binary_labels() -> None:
 
 
 def test_binary_area_under_roc_ties_midrank() -> None:
-    """Tied scores use midranks → AUC 0.875 on classic 2x2 tie fixture (octo M5)."""
+    """Tied scores use midranks → AUC 0.875 on classic 2x2 tie fixture (M5)."""
     spark = _session()
     try:
         df = spark.createDataFrame(
@@ -687,7 +687,7 @@ def test_binary_area_under_roc_ties_midrank() -> None:
 
 
 def test_binary_area_under_roc_prefers_raw_prediction_col() -> None:
-    """When both rawPrediction and prediction exist, rank raw (octo M5 C3).
+    """When both rawPrediction and prediction exist, rank raw (M5).
 
     MUTATION: prefer predictionCol when both present → inverted raw ignored; AUC=1.
     """

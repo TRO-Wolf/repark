@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 
 def _validate_decimal_envelope(value: Any) -> None:
-    """Refuse Decimal values outside Spark's inferred DECIMAL(38, 18) envelope (C2-L-002)."""
+    """Refuse Decimal values outside Spark's inferred DECIMAL(38, 18) envelope."""
 
     from decimal import ROUND_DOWN, Decimal
 
@@ -94,10 +94,10 @@ def _infer_arrow_type_from_python_sample(sample: Any) -> Any:
 
         # Live Spark merges ALL element types (ArrayType _merge_type) unless legacy
         # first-element conf is on. List-of-dict → struct field union; nested
-        # list<list<dict>> must also merge sibling element schemas (octo C2-L-001).
+        # list<list<dict>> must also merge sibling element schemas.
 
         # Empty list under conf true → list<null> so multi-row / multi-sample merge
-        # can still adopt a concrete element type (octo C3-L-001; empty→string was
+        # can still adopt a concrete element type (empty→string was
         # swallowing later struct elements via string-wins-all).
 
         if _INFER_NESTED_DICT_AS_STRUCT.get() and not non_null:
@@ -159,7 +159,7 @@ def _infer_arrow_type_from_python_sample(sample: Any) -> Any:
             return _infer_struct_arrow_from_dict_samples([sample])
 
         # Spark schema inference: Python dict → map (key type from samples). Non-str keys
-        # must not force map<string,…> then fail at array build (octo X2 C2).
+        # must not force map<string,…> then fail at array build.
 
         # Mixed value types (e.g. Legs [{"LegId":1,"Side":"Buy"}]) → map value string
         # (Spark 4.1.2 stringifies map values under key-union / mixed inference).
@@ -246,7 +246,7 @@ def _arrow_type_merge_label(arrow_type: Any) -> str:
 
 
 def _arrow_type_is_nested(arrow_type: Any) -> bool:
-    """True for list/struct/map (string must not silently win over these — octo C3)."""
+    """True for list/struct/map (string must not silently win over these)."""
 
     import pyarrow as pa
 
@@ -264,7 +264,7 @@ def _merge_inferred_arrow_types(left: Any, right: Any) -> Any:
 
     NullType is soft (merges as the other side). String wins over **atomic** only
     (live Spark long+string → string) — never over nested list/struct/map (that
-    stringified dict cells — octo C3-L-001). Long+Double / other incompatible scalar
+    stringified dict cells). Long+Double / other incompatible scalar
     pairs refuse ``CANNOT_MERGE_TYPE``. Nested list/struct/map recurse.
     """
 
@@ -384,7 +384,7 @@ def _infer_struct_arrow_from_dict_samples(samples: list[dict[str, Any]]) -> Any:
         for key, value in sample.items():
             # Null *values* do not contribute a field type (live Spark). Null *keys*
 
-            # are not valid struct field names — refuse (octo C1-L-002); do not
+            # are not valid struct field names — refuse; do not
 
             # silently skip and drop the cell's association.
 
@@ -431,9 +431,8 @@ def _prepare_nested_cell(cell: Any, arrow_type: Any) -> Any:
         return str(cell)
 
     if pa.types.is_integer(arrow_type):
-        # Never ``int(float)`` / Arrow Decimal→int truncate on list/scalar/map cells
-
-        # (octo C2-L1; EXTRA XC1-L1). Spark refuses Long+Double/Decimal/Boolean.
+        # Never ``int(float)`` / Arrow Decimal→int truncate on list/scalar/map cells.
+        # Spark refuses Long+Double/Decimal/Boolean.
 
         if isinstance(cell, bool):
             raise PySparkTypeError(
@@ -464,7 +463,7 @@ def _prepare_nested_cell(cell: Any, arrow_type: Any) -> Any:
             return int(cell)
 
     if pa.types.is_floating(arrow_type):
-        # Double + Boolean → 1.0 via pa.array was silent wrong (EXTRA XC1-L3).
+        # Double + Boolean → 1.0 via pa.array was silent wrong.
 
         if isinstance(cell, bool):
             raise PySparkTypeError(
@@ -499,7 +498,7 @@ def _prepare_nested_cell(cell: Any, arrow_type: Any) -> Any:
             )
 
     if pa.types.is_timestamp(arrow_type):
-        # Never accept int/float as epoch under timestamp (extra XC2-L1 silent 1970-01-01).
+        # Never accept int/float as epoch under timestamp (silent 1970-01-01).
 
         import datetime as _dt
 
@@ -525,7 +524,7 @@ def _prepare_nested_cell(cell: Any, arrow_type: Any) -> Any:
             )
 
     if pa.types.is_date(arrow_type):
-        # Never accept int as day-epoch under date32 (extra XC2-L2 silent 1970-01-02).
+        # Never accept int as day-epoch under date32 (silent 1970-01-02).
 
         import datetime as _dt
 
@@ -647,7 +646,7 @@ def _sql_type_to_arrow(sql_type: str) -> Any:
 
     # Fail loud on parse errors (never silent pa.string() — that stringified nested cells
 
-    # and looked like a successful createDataFrame with wrong schema; octo X2 C1 S0).
+    # and looked like a successful createDataFrame with wrong schema).
 
     if upper.startswith(("ARRAY<", "MAP<", "STRUCT<")):
         normalized = _normalize_nested_sql_type_aliases(stripped)

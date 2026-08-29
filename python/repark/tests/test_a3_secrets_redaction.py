@@ -8,7 +8,7 @@ from repark.spark._secrets import prop_key_is_secret
 from repark.spark.session import ReparkSession
 
 # Needle inventory mirrored from catalog_config.rs:126 prop_key_is_secret (do not edit Rust).
-# Conformance pin (Q9 / octo C1-SEC-001): every Rust arm has ≥1 positive key; `bucket`/`arn`
+# Conformance pin: every Rust arm has ≥1 positive key; `bucket`/`arn`
 # inside `_key` stay non-secret.
 _SECRET_KEYS: tuple[str, ...] = (
     "aws_secret_access_key",
@@ -33,7 +33,7 @@ _SECRET_KEYS: tuple[str, ...] = (
     "foo.key",  # becomes foo_key → _key arm
     "my_service_key",
     "spark.sql.catalog.mem.s3.secret-access-key",
-    # Audit SEC-04 / octo C4-Q-002: Hadoop-prefixed S3A spellings.
+    # Audit SEC-04: Hadoop-prefixed S3A spellings.
     "spark.hadoop.fs.s3a.secret.key",
     "spark.hadoop.fs.s3a.access.key",
 )
@@ -88,7 +88,7 @@ def test_get_all_redacts_secret_values(spark: ReparkSession) -> None:
 
 
 def test_get_explicit_secret_key_unchanged(spark: ReparkSession) -> None:
-    """get(explicit secret key) returns the real value — SEC-04 Q8 both-ways rec.
+    """get(explicit secret key) returns the real value — SEC-04 both-ways rec.
 
     getAll redacts; get of a named key is intentional lookup and stays plaintext.
     """
@@ -99,7 +99,7 @@ def test_get_explicit_secret_key_unchanged(spark: ReparkSession) -> None:
 
 
 def test_get_all_returned_dict_is_isolated(spark: ReparkSession) -> None:
-    """Mutating the getAll mapping must not poison the conf store (octo C2-Q-002)."""
+    """Mutating the getAll mapping must not poison the conf store."""
     secret = "ISOLATION_SECRET_VALUE_XYZ"
     spark.conf.set("password", secret)
     dump = spark.conf.getAll

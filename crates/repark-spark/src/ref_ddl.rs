@@ -221,8 +221,7 @@ fn finish_drop(
     })
 }
 
-/// Unquote + refuse empty / path-escape ref names before catalog I/O
-/// (I5 octo C2-F1 / C3-F4).
+/// Unquote + refuse empty / path-escape ref names before catalog I/O.
 fn require_ref_name(significant: &[Sig], name_index: usize, form: &str) -> Result<String> {
     let name = word_at(significant, name_index)
         .map(unquote_ident)
@@ -546,7 +545,7 @@ fn parse_as_of_version(significant: &[Sig], index: usize) -> Result<(Option<i64>
 fn unquote_ident(raw: &str) -> String {
     let trimmed = raw.trim();
     if trimmed.len() >= 2 && trimmed.starts_with('"') && trimmed.ends_with('"') {
-        // Double-quote dialect: undouble embedded `""` (octo C3-Q-001 / C3-L-001).
+        // Double-quote dialect: undouble embedded `""`.
         return trimmed[1..trimmed.len() - 1].replace("\"\"", "\"");
     }
     if trimmed.len() >= 2 && trimmed.starts_with('`') && trimmed.ends_with('`') {

@@ -95,7 +95,7 @@ def test_numeric_to_binary_refuses(spark: ReparkSession) -> None:
         spark.sql("SELECT CAST(1 AS BINARY) AS b").to_arrow()
 
 
-# SQP-1 cycle-2 (C-013). The facade embeds every data value as a Spark-canonical literal through
+# SQP-1 (C-013). The facade embeds every data value as a Spark-canonical literal through
 # one helper (`repark.spark._idents.sql_string_literal`). Each pin below carries a backslash — or a
 # leading apostrophe — in a Python value that must survive the front door's Spark-unescape.
 #
@@ -134,7 +134,7 @@ def test_unpivot_backslash_column_value(spark: ReparkSession) -> None:
 
 
 def test_stop_words_remover_backslash_and_apostrophe(spark: ReparkSession) -> None:
-    """C-013 (+ C1-F2): ``StopWordsRemover`` embeds each stop word as a literal. A backslash stop
+    """C-013: ``StopWordsRemover`` embeds each stop word as a literal. A backslash stop
     word matches and is removed (else ``\\b`` folds to a backspace); a stop word with a leading
     apostrophe does not crash (else ``'''tis'`` lexes as an unterminated triple quote)."""
     from repark.spark.ml.feature import StopWordsRemover

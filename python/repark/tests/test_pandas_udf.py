@@ -1,4 +1,4 @@
-"""U7 scalar pandas_udf: facade projection-rewrite over the mapInArrow bridge."""
+"""Scalar pandas_udf: facade projection-rewrite over the mapInArrow bridge."""
 
 from __future__ import annotations
 
@@ -204,7 +204,7 @@ def test_pandas_udf_string_values(spark: SparkSession) -> None:
 
 
 def test_pandas_udf_lazy_until_action(spark: SparkSession, monkeypatch: pytest.MonkeyPatch) -> None:
-    """select/withColumn is plan-only — no UDF body and no intermediate to_arrow (octo C6-Q-001).
+    """select/withColumn is plan-only — no UDF body and no intermediate to_arrow.
 
     MUTATION: restore ``intermediate.limit(0).to_arrow()`` for pass-through schema → this pin
     sees a ``to_arrow`` call during select and fails red. UDF-call-only was hollow for the
@@ -243,7 +243,7 @@ def test_pandas_udf_lazy_until_action(spark: SparkSession, monkeypatch: pytest.M
 
 
 def test_pandas_udf_bridge_defers_pandas_import() -> None:
-    """pandas import lives inside the mapInArrow callback, not at select entry (octo C6-Q-001).
+    """pandas import lives inside the mapInArrow callback, not at select entry.
 
     MUTATION: move ``import pandas as pd`` into ``_select_with_pandas_udfs`` (plan time)
     → this pin fails red.
@@ -335,16 +335,16 @@ def test_pandas_udf_wrong_length_loud(spark: SparkSession) -> None:
 def test_pandas_udf_composition_refused(spark: SparkSession) -> None:
     """Composition limit: every Column-parity dunder/method refuses UOE (not TypeError).
 
-    octo C5-Q-001: pin beyond +/>/cast so deleting ``__mul__`` / ``.over`` / reflected ops
-    cannot stay green. octo C5-Q-002: power/unary/reflected dunders must raise UOE, not
-    TypeError from a missing dunder. octo C7-Q-002: Column methods (``isNull`` /
+    Pin beyond +/>/cast so deleting ``__mul__`` / ``.over`` / reflected ops
+    cannot stay green. Power/unary/reflected dunders must raise UOE, not
+    TypeError from a missing dunder. Column methods (``isNull`` /
     ``between`` / ``when`` / string preds / bitwise) must raise UOE, not AttributeError.
     """
     marker = double_long(col("x"))
     match = r"mid-expression|projection-rewrite"
 
     # Binary arithmetic (+ reflected via scalar left so PandasUDFColumn.__r* runs;
-    # lit(1)+marker hits Column.__add__ first). C5-Q-001 mutates on __mul__ deletion.
+    # lit(1)+marker hits Column.__add__ first). __mul__ deletion mutates this pin.
     with pytest.raises(UnsupportedOperationException, match=match):
         _ = marker + lit(1)
     with pytest.raises(UnsupportedOperationException, match=match):
@@ -366,7 +366,7 @@ def test_pandas_udf_composition_refused(spark: SparkSession) -> None:
     with pytest.raises(UnsupportedOperationException, match=match):
         _ = 2 % marker
 
-    # Power + unary (C5-Q-002: must be UOE, not TypeError).
+    # Power + unary (must be UOE, not TypeError).
     with pytest.raises(UnsupportedOperationException, match=match):
         _ = marker**2
     with pytest.raises(UnsupportedOperationException, match=match):
@@ -388,7 +388,7 @@ def test_pandas_udf_composition_refused(spark: SparkSession) -> None:
     with pytest.raises(UnsupportedOperationException, match=match):
         _ = marker != 0
 
-    # Logical (+ reflected; reflected must be UOE, not TypeError — C5-Q-002).
+    # Logical (+ reflected; reflected must be UOE, not TypeError).
     with pytest.raises(UnsupportedOperationException, match=match):
         _ = marker & True
     with pytest.raises(UnsupportedOperationException, match=match):
@@ -400,7 +400,7 @@ def test_pandas_udf_composition_refused(spark: SparkSession) -> None:
     with pytest.raises(UnsupportedOperationException, match=match):
         _ = ~marker
 
-    # Methods (deleting .cast must stay red — C5-Q-001).
+    # Methods (deleting .cast must stay red).
     with pytest.raises(UnsupportedOperationException, match=match):
         marker.cast("double")
     # M6: .over is a real surface for GROUPED_AGG (see window pins). SCALAR marker +
@@ -412,7 +412,7 @@ def test_pandas_udf_composition_refused(spark: SparkSession) -> None:
     with pytest.raises(AnalysisException, match=r"GROUPED_AGG|functionType"):
         marker.over(Window.partitionBy("x"))
 
-    # Column-parity methods (must be UOE, not AttributeError — C7-Q-002).
+    # Column-parity methods (must be UOE, not AttributeError).
     with pytest.raises(UnsupportedOperationException, match=match):
         marker.isNull()
     with pytest.raises(UnsupportedOperationException, match=match):
@@ -458,7 +458,7 @@ def test_pandas_udf_composition_refused(spark: SparkSession) -> None:
 def test_pandas_udf_grouped_map_window_loud() -> None:
     """GROUPED_MAP / window remain loud M6 seeds; SCALAR_ITER + GROUPED_AGG build (M5).
 
-    octo C7-L-001 / C8-Q-001: functionType-first routes must not fall through to SCALAR.
+    FunctionType-first routes must not fall through to SCALAR.
     """
     with pytest.raises(UnsupportedOperationException, match="M6-class"):
 
@@ -522,7 +522,7 @@ def test_pandas_udf_grouped_map_window_loud() -> None:
 
     assert callable(iter_string_first)
 
-    # SCALAR-first + returnType still builds (valid reverse form after C7-L-001 route).
+    # SCALAR-first + returnType still builds (valid reverse form).
     @pandas_udf(PandasUDFType.SCALAR, "long")
     def scalar_ft_first(series: pd.Series) -> pd.Series:
         return series * 2
@@ -607,7 +607,7 @@ def test_pandas_udf_return_type_datatype_object(spark: SparkSession) -> None:
 
 
 def test_pandas_udf_column_bool_refused() -> None:
-    """PandasUDFColumn has no truth value (octo C1-Q-001).
+    """PandasUDFColumn has no truth value.
 
     MUTATION: drop ``__bool__`` → ``if marker`` / ``marker and col`` fail-open True.
     """
@@ -624,7 +624,7 @@ def test_pandas_udf_column_bool_refused() -> None:
 
 
 def test_pandas_udf_dual_return_type_positionals_loud() -> None:
-    """``@pandas_udf(\"long\", \"double\")`` must not silently drop the first type (C1-Q-002).
+    """``@pandas_udf(\"long\", \"double\")`` must not silently drop the first type.
 
     MUTATION: restore keyword fall-through that uses only the second positional as
     returnType → this pin goes red (decorator succeeds and return type is double).
@@ -637,7 +637,7 @@ def test_pandas_udf_dual_return_type_positionals_loud() -> None:
 
 
 def test_pandas_udf_unsupported_return_type_no_string_fallback() -> None:
-    """variant/interval/time and garbage DDL refuse — never fail-open to string (C1-SEC-001)."""
+    """variant/interval/time and garbage DDL refuse — never fail-open to string."""
     for bad in ("variant", "interval", "time", "time(6)", "calendarinterval", "not_a_type"):
         with pytest.raises((PySparkTypeError, UnsupportedOperationException)):
 
@@ -647,7 +647,7 @@ def test_pandas_udf_unsupported_return_type_no_string_fallback() -> None:
 
 
 def test_pandas_udf_struct_field_list_return_type_refused() -> None:
-    """Field-list DDL is StructType and must refuse like ``struct<…>`` (octo C1-SEC-002).
+    """Field-list DDL is StructType and must refuse like ``struct<…>``.
 
     MUTATION: only ``startswith('struct')`` → ``@pandas_udf('a int, b string')`` succeeds
     and yields a StructType return shape via fromDDL.
@@ -661,7 +661,7 @@ def test_pandas_udf_struct_field_list_return_type_refused() -> None:
 
 
 def test_pandas_udf_passthrough_preserves_narrow_arrow_types(spark: SparkSession) -> None:
-    """withColumn/select pass-through keeps FLOAT/SMALLINT/BINARY widths (octo C1-L-001).
+    """withColumn/select pass-through keeps FLOAT/SMALLINT/BINARY widths.
 
     MUTATION: rebuild pass-through schema from collapsed ``logical_schema`` type_keys
     (float32→double, i16→int, binary→string) → mapInArrow type-check fails or widens.
@@ -680,7 +680,7 @@ def test_pandas_udf_passthrough_preserves_narrow_arrow_types(spark: SparkSession
 
 
 def test_pandas_udf_generator_input_refused(spark: SparkSession) -> None:
-    """UDF inputs must not be explode/posexplode (octo C1-L-002).
+    """UDF inputs must not be explode/posexplode.
 
     MUTATION: skip generator check on UDF inputs → projects array placeholder without
     unnest and returns wrong cardinality/values.
@@ -691,7 +691,7 @@ def test_pandas_udf_generator_input_refused(spark: SparkSession) -> None:
 
 
 def test_pandas_udf_partition_transform_input_refused(spark: SparkSession) -> None:
-    """UDF inputs must not be years/months/days/hours/bucket (octo C2-Q-001 / C2-L-001).
+    """UDF inputs must not be years/months/days/hours/bucket.
 
     MUTATION: skip ``_reject_partition_transform`` on UDF inputs → intermediate projects
     ``literal(None)`` and the UDF silently receives an all-null Series (wrong results).
@@ -706,7 +706,7 @@ def test_pandas_udf_partition_transform_input_refused(spark: SparkSession) -> No
 
 
 def test_pandas_udf_aggregate_input_refused(spark: SparkSession) -> None:
-    """UDF inputs must not be sticky aggregates (octo C2-Q-002 / C1-L-002 half).
+    """UDF inputs must not be sticky aggregates.
 
     MUTATION: delete the ``_is_aggregate`` UDF-input refuse branch → suite stays green
     without this pin; with it, the refuse is mutation-proof.
@@ -717,7 +717,7 @@ def test_pandas_udf_aggregate_input_refused(spark: SparkSession) -> None:
 
 
 def test_pandas_udf_mix_with_aggregate_refused(spark: SparkSession) -> None:
-    """Cannot mix pandas_udf with aggregate siblings in one select (octo C2-Q-002).
+    """Cannot mix pandas_udf with aggregate siblings in one select.
 
     MUTATION: delete the aggregate sibling refuse → suite stays green without this pin.
     """
@@ -727,7 +727,7 @@ def test_pandas_udf_mix_with_aggregate_refused(spark: SparkSession) -> None:
 
 
 def test_pandas_udf_mix_with_explode_refused(spark: SparkSession) -> None:
-    """Cannot mix pandas_udf with explode/posexplode siblings (octo C2-Q-002).
+    """Cannot mix pandas_udf with explode/posexplode siblings.
 
     MUTATION: delete the generator sibling refuse → suite stays green without this pin.
     """
@@ -737,7 +737,7 @@ def test_pandas_udf_mix_with_explode_refused(spark: SparkSession) -> None:
 
 
 def test_pandas_udf_nested_unsupported_return_type_no_string_fallback() -> None:
-    """Nested variant/interval/time leaves refuse — not only top-level (octo C2-SEC-001).
+    """Nested variant/interval/time leaves refuse — not only top-level.
 
     MUTATION: only top-level ``pa.string()`` check → ``array<variant>`` /
     ``map<string,time>`` / ``array<struct<a:variant>>`` succeed and fail-open to
@@ -763,7 +763,7 @@ def test_pandas_udf_nested_unsupported_return_type_no_string_fallback() -> None:
 def test_pandas_udf_passthrough_preserves_timestamp_timezone(
     spark: SparkSession,
 ) -> None:
-    """Pass-through ``current_timestamp()`` keeps ``timestamp[us, tz=UTC]`` (octo C2-L-002).
+    """Pass-through ``current_timestamp()`` keeps ``timestamp[us, tz=UTC]``.
 
     MUTATION: rebuild pass-through expected Arrow via ``_arrow_type_to_repark`` +
     ``_coerce_map_in_arrow_schema`` → timezone dropped; mapInArrow validation fails
@@ -779,7 +779,7 @@ def test_pandas_udf_passthrough_preserves_timestamp_timezone(
 
 
 def test_pandas_udf_null_bool_series_without_object_demotion(spark: SparkSession) -> None:
-    """Null BOOLEAN inputs use pandas BooleanDtype — not object demotion (octo C3-Q-001).
+    """Null BOOLEAN inputs use pandas BooleanDtype — not object demotion.
 
     MUTATION: delete ``BooleanDtype`` branch in ``_arrow_array_to_pandas_series`` → bare
     ``Array.to_pandas()`` yields object dtype; ``~series`` fails or loses null semantics
@@ -799,7 +799,7 @@ def test_pandas_udf_null_bool_series_without_object_demotion(spark: SparkSession
 
 
 def test_pandas_udf_null_float_series_nullable_dtype(spark: SparkSession) -> None:
-    """Null FLOAT/DOUBLE inputs use pandas Float*Dtype (octo C3-Q-001).
+    """Null FLOAT/DOUBLE inputs use pandas Float*Dtype.
 
     MUTATION: delete ``Float32Dtype`` / ``Float64Dtype`` branches → suite stays green
     without this pin (bare float null→NaN often still arithmetic-works); with it, the
@@ -836,7 +836,7 @@ def test_pandas_udf_null_float_series_nullable_dtype(spark: SparkSession) -> Non
 
 
 def test_pandas_udf_return_none_loud(spark: SparkSession) -> None:
-    """User func returning ``None`` must raise (got None) — not coerce (octo C3-Q-002).
+    """User func returning ``None`` must raise (got None) — not coerce.
 
     MUTATION: delete ``if result is None`` refuse → ``pd.Series(None)`` is length-0;
     the subsequent length check raises ``returned 0 values; expected 1`` (different
@@ -855,7 +855,7 @@ def test_pandas_udf_return_none_loud(spark: SparkSession) -> None:
 
 
 def test_pandas_udf_return_non_series_loud(spark: SparkSession) -> None:
-    """Non-Series returns refuse ``must return a pandas.Series`` (octo C7-Q-001).
+    """Non-Series returns refuse ``must return a pandas.Series``.
 
     MUTATION: restore ``pd.Series(result)`` coerce for non-Series → ``return "abc"`` on a
     3-row batch yields length-3 character-split Series (``a``/``b``/``c``) that passes
@@ -889,7 +889,7 @@ def test_pandas_udf_return_non_series_loud(spark: SparkSession) -> None:
 
 
 def test_pandas_udf_hostile_return_type_sql_refused(spark: SparkSession) -> None:
-    """Hostile PandasUDFColumn / post-build ``_return_type_sql`` mutation refuse (C3-SEC-001).
+    """Hostile PandasUDFColumn / post-build ``_return_type_sql`` mutation refuse.
 
     MUTATION: bridge uses bare ``_sql_type_to_arrow`` without
     ``_normalize_pandas_udf_return_type_sql`` / ``_pandas_udf_arrow_type_for_return`` →
@@ -922,7 +922,7 @@ def test_pandas_udf_hostile_return_type_sql_refused(spark: SparkSession) -> None
 def test_pandas_udf_return_type_schema_preserves_logical_identity(
     spark: SparkSession,
 ) -> None:
-    """Declared returnType identity survives into DataFrame.schema (octo C4-Q-001).
+    """Declared returnType identity survives into DataFrame.schema.
 
     MUTATION: ``_normalize_pandas_udf_return_type_sql`` stores ``_data_type_to_sql_type``
     (engine tokens) → ``timestamp_ntz`` collapses to ``TIMESTAMP`` (TimestampType) and
@@ -1043,7 +1043,7 @@ def test_pandas_udf_scalar_iter_wrong_batch_count_loud(spark: SparkSession) -> N
 
 
 def test_pandas_udf_scalar_iter_dual_udf_independent_streams(spark: SparkSession) -> None:
-    """Two SCALAR_ITER markers share batch buffer; each gets a full iterator (octo M5 C5)."""
+    """Two SCALAR_ITER markers share batch buffer; each gets a full iterator (M5)."""
 
     @pandas_udf("long", PandasUDFType.SCALAR_ITER)
     def plus_one(batches: Iterator[pd.Series]) -> Iterator[pd.Series]:
@@ -1097,7 +1097,7 @@ def test_pandas_udf_grouped_agg_global(spark: SparkSession) -> None:
 
 
 def test_pandas_udf_grouped_agg_large_group_stitch(spark: SparkSession) -> None:
-    """Multi-batch single group stitches via applyInPandas (octo M5 C7).
+    """Multi-batch single group stitches via applyInPandas (M5).
 
     MUTATION: per-batch regroup without stitch → count under-reports (<25000).
     """
@@ -1113,7 +1113,7 @@ def test_pandas_udf_grouped_agg_large_group_stitch(spark: SparkSession) -> None:
 
 
 def test_pandas_udf_grouped_agg_cube_rollup_refuse(spark: SparkSession) -> None:
-    """GROUPED_AGG after cube/rollup is loud (no applyInPandas path) (octo M5 C6)."""
+    """GROUPED_AGG after cube/rollup is loud (no applyInPandas path) (M5)."""
 
     @pandas_udf("long", PandasUDFType.GROUPED_AGG)
     def sum_udf(series: pd.Series) -> int:
@@ -1129,7 +1129,7 @@ def test_pandas_udf_grouped_agg_cube_rollup_refuse(spark: SparkSession) -> None:
 def test_pandas_udf_grouped_agg_mixed_builtin(spark: SparkSession) -> None:
     """M6: mixed UDF + builtin agg via two-pass plan-built join on group keys.
 
-    Order-independent: UDF-first and builtin-first both compose (octo M5 C3 → M6 ship).
+    Order-independent: UDF-first and builtin-first both compose (M5 → M6 ship).
     MUTATION: Python-merge of collected groups → would still pass value pins but violates
     the plan-built join contract (engine join, not multiset merge in the facade).
     """
@@ -1171,7 +1171,7 @@ def test_pandas_udf_grouped_agg_mixed_global(spark: SparkSession) -> None:
 
 
 def test_pandas_udf_grouped_agg_mixed_null_group_keys(spark: SparkSession) -> None:
-    """M6 octo C1: NULL group keys must survive mixed UDF+builtin join (null-safe equi-join).
+    """M6: NULL group keys must survive mixed UDF+builtin join (null-safe equi-join).
 
     MUTATION: name-list ``join(on=keys, how='inner')`` uses SQL ``=`` so ``NULL = NULL`` is
     unknown → the null group is silently dropped while pure UDF / pure builtin both keep it.
@@ -1354,7 +1354,7 @@ def test_pandas_udf_window_rows_between_duck_typed(spark: SparkSession) -> None:
 
 
 def test_pandas_udf_window_select_alias_overwrites_source_column(spark: SparkSession) -> None:
-    """M6 octo C2: ``select("v", mean.over(...).alias("v"))`` must keep the window value.
+    """M6: ``select("v", mean.over(...).alias("v"))`` must keep the window value.
 
     MUTATION: first-wins ``seen`` set drops the UDF out name → source ``v`` values leak
     through; or null-safe join prefers left for non-keys so even last-wins final_names
@@ -1386,7 +1386,7 @@ def test_pandas_udf_window_select_alias_overwrites_source_column(spark: SparkSes
 
 
 def test_pandas_udf_window_null_partition_keys(spark: SparkSession) -> None:
-    """M6 octo C1: NULL partition keys keep source rows and share the null-group mean.
+    """M6: NULL partition keys keep source rows and share the null-group mean.
 
     MUTATION: name-list equi-join drops ``NULL = NULL`` partitions → only non-null keys
     survive (silently wrong multiset / missing rows).
@@ -1434,7 +1434,7 @@ def test_pandas_udf_window_null_partition_keys(spark: SparkSession) -> None:
 
 
 def test_pandas_udf_grouped_agg_hostile_return_type_sql_refused(spark: SparkSession) -> None:
-    """Post-build ``_return_type_sql`` mutation must not fail-open (octo M5 C1).
+    """Post-build ``_return_type_sql`` mutation must not fail-open (M5).
 
     MUTATION: GROUPED_AGG builds schema via bare ``DataType.fromDDL`` without
     ``_normalize_pandas_udf_return_type_sql`` / ``_pandas_udf_arrow_type_for_return`` →

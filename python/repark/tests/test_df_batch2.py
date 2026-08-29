@@ -17,7 +17,7 @@ def spark() -> ReparkSession:
 
 
 def test_cube_rollup_count(spark: ReparkSession) -> None:
-    """CUBE/ROLLUP agg AS-aliases Spark / user names (combine C5-L-002).
+    """CUBE/ROLLUP agg AS-aliases Spark / user names.
 
     Pin column ``c``, not just row count.
     """
@@ -34,10 +34,10 @@ def test_cube_rollup_count(spark: ReparkSession) -> None:
     assert "c" in rollup_table.column_names
     rollup_rows = rollup_table.to_pylist()
     assert len(rollup_rows) >= 2
-    # Default Spark name when no alias (C5-L-002 projection / agg_name path).
+    # Default Spark name when no alias (projection / agg_name path).
     default_table = frame.cube("g").agg(functions_api.count("*")).to_arrow()
     assert any(name in default_table.column_names for name in ("count(1)", "count", "count(*)"))
-    # GroupedData.count shortcut also structural (combine C6-SAF-001 — no Int64 rewrite).
+    # GroupedData.count shortcut also structural (no Int64 rewrite).
     shortcut = frame.cube("g").count().to_arrow()
     assert "count" in shortcut.column_names
     by_count = {row["g"]: row["count"] for row in shortcut.to_pylist()}
@@ -47,9 +47,9 @@ def test_cube_rollup_count(spark: ReparkSession) -> None:
 
 
 def test_cube_first_hostile_count_lit_uncorrupted(spark: ReparkSession) -> None:
-    """CUBE free-SQL must not substring-rewrite count(Int64(1)) inside AF args (C6-SAF-001).
+    """CUBE free-SQL must not substring-rewrite count(Int64(1)) inside AF args.
 
-    Select-global-agg is already structural count(*) (C2-SAF-001); cube/rollup must match.
+    Select-global-agg is already structural count(*); cube/rollup must match.
     """
     frame = spark.sql("SELECT * FROM (VALUES (1,'a'),(1,'b'),(2,'a')) t(g,v)")
     hostile = "count(Int64(1))"
@@ -80,7 +80,7 @@ def test_unpivot(spark: ReparkSession) -> None:
 
 
 def test_unpivot_quotes_hostile_names_and_labels(spark: ReparkSession) -> None:
-    """unpivot quotes idents + string-literal labels (combine octo C5-SEC-001).
+    """unpivot quotes idents + string-literal labels.
 
     Hostile labels / output names must not retarget FROM or break string literals; reserved id
     column ``order`` still works when quoted.

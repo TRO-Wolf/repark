@@ -201,8 +201,8 @@ pub fn dx(high: &[f64], low: &[f64], close: &[f64], period: usize) -> Result<Vec
 /// ===========================================================================================
 /// `ADXR` — average directional movement rating (`ta_ADXR.c`).
 ///
-/// Average today's [`adx`] with the value `period − 1` bars earlier.
-/// Lookback is `3·period − 2`; the literal divide preserves C rounding.
+/// Average today's [`adx`] with the value `period − 1` bars earlier; lookback is
+/// `3·period − 2`; the literal divide preserves C rounding.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -390,8 +390,8 @@ fn directional_dm(high: &[f64], low: &[f64], period: usize, plus: bool) -> Resul
 /// `ADX` — average directional movement index (`ta_ADX.c`, unstable period 0, `round_pos`
 /// disabled — the C default build).
 ///
-/// Seed raw state, average `period` Wilder-decayed DX values, then smooth ADX.
-/// A zero guard re-emits the previous ADX; lookback is `2 * period − 1`.
+/// Seed raw state, average `period` Wilder-decayed DX values, then smooth ADX; a zero guard
+/// re-emits the previous ADX; lookback is `2 * period − 1`.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -401,6 +401,8 @@ pub fn adx(high: &[f64], low: &[f64], close: &[f64], period: usize) -> Result<Ve
     check_period("optInTimePeriod", period, 2)?;
     check_lengths(high.len(), &[low.len(), close.len()])?;
     let len = high.len();
+    // Keeps `nan_vec`: the `ema` single-write extend form measured +42% at n=1e6 (the
+    // `DirectionalState` closure defeats it; same shape for `dx`). Do not "modernize".
     let mut out = nan_vec(len);
     let lookback = 2 * period - 1;
     if len < lookback + 1 {
@@ -489,7 +491,6 @@ fn roc_family(input: &[f64], period: usize, f: impl Fn(f64, f64) -> f64) -> Resu
 /// ===========================================================================================
 /// `ROC` — rate of change, `((price / prevPrice) − 1) · 100` (`ta_ROC.c`).
 /// ===========================================================================================
-///
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if `period < 1`.
 pub fn roc(input: &[f64], period: usize) -> Result<Vec<f64>> {
@@ -499,7 +500,6 @@ pub fn roc(input: &[f64], period: usize) -> Result<Vec<f64>> {
 /// ===========================================================================================
 /// `ROCP` — rate of change percentage, `(price − prevPrice) / prevPrice` (`ta_ROCP.c`).
 /// ===========================================================================================
-///
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if `period < 1`.
 pub fn rocp(input: &[f64], period: usize) -> Result<Vec<f64>> {

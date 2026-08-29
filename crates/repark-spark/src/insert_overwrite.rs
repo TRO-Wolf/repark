@@ -58,11 +58,10 @@ pub(crate) async fn execute_insert_overwrite(
         return Err(DataFusionError::Plan(message));
     }
 
-    // Hive/Spark `INSERT OVERWRITE … PARTITION (…)` is partition-scoped. We do not implement
-    // static or dynamic partition overwrite yet (C2-Q-001 / C4-Q-001):
-    // - empty source must not become a full-table wipe (sibling partitions);
-    // - non-empty source must not silently degrade to whole-table replace either.
-    // Refuse **all** PARTITION forms loud until a partition-scoped path exists.
+    // Hive/Spark `INSERT OVERWRITE … PARTITION (…)` is partition-scoped; we implement neither
+    // static nor dynamic partition overwrite. An empty source must not full-table wipe sibling
+    // partitions, and a non-empty source must not silently whole-table replace — so all PARTITION
+    // forms refuse loud until a partition-scoped path exists.
     if insert.partitioned.is_some() {
         return Err(DataFusionError::NotImplemented(
             "INSERT OVERWRITE … PARTITION (…) is not supported yet (static and dynamic \
@@ -81,12 +80,11 @@ pub(crate) async fn execute_insert_overwrite(
         let empty = batches.iter().all(|batch| batch.num_rows() == 0);
         if empty {
             // Validate the original INSERT OVERWRITE plan (column count / schema) **before**
-            // wiping. An empty incompatible source must fail loud and leave prior rows — Spark
-            // rejects schema mismatch at analysis (C5-Q-001). Plan-only via `ctx.sql` (no collect)
-            // so we do not commit the wipe before assignment checks.
+            // wiping: an empty incompatible source must fail loud and leave prior rows. Plan-only
+            // via `ctx.sql` (no collect) so the wipe is not committed before assignment checks.
+            // Plan-only validation does not run cast kernels — an empty Utf8→Int32 plans OK while
+            // the non-empty INSERT fails at cast — so the assignment check below refuses the wipe.
             let _validated = ctx.sql(sql).await?;
-            // O4-C2-Q-001: plan-only validation does not run cast kernels. Empty Utf8→Int32
-            // plans OK while the same non-empty INSERT fails at cast — refuse wipe instead.
             assert_empty_overwrite_types_assignment_compatible(
                 ctx,
                 catalogs,
@@ -95,21 +93,19 @@ pub(crate) async fn execute_insert_overwrite(
                 &insert.columns,
             )
             .await?;
-            // Re-probe immediately before wipe (P4C1-SAF-001 / L-001): the first probe only
-            // classified emptiness; validation work widens the TOCTOU window where a concurrent
-            // or non-deterministic source can grow rows. If the source is non-empty now, fall
-            // through to the guarded non-empty path — never provider-insert unguarded.
+            // Re-probe immediately before the wipe: validation work widens the TOCTOU window
+            // where a concurrent or non-deterministic source can grow rows. If the source is
+            // non-empty now, fall through to the guarded non-empty path — never provider-insert
+            // unguarded.
             let reprobe = spark_ast::execute_passthrough(ctx, catalogs, &probe_sql).await?;
             let reprobe_batches = reprobe.collect().await?;
             let still_empty = reprobe_batches.iter().all(|batch| batch.num_rows() == 0);
             if still_empty {
-                // Wipe via a **self-scan empty** statement, not re-exec of the original source
-                // (P4C2-SAF-001): re-running the caller's SQL after emptiness classification can
-                // still yield rows (TOCTOU / non-deterministic sources) and would hit the provider
-                // without the partition guard. `SELECT * FROM <target> WHERE false` is always
-                // empty, schema-identical, and a positional-identity base-table passthrough — so
-                // it is guard-safe if a residual race ever made it non-empty (it cannot).
-                // Original source emptiness + assignment types were already validated above.
+                // Wipe via a **self-scan empty** statement, not a re-exec of the caller's source:
+                // re-running it after emptiness classification can still yield rows and would
+                // hit the provider without the partition guard. `SELECT * FROM <target> WHERE
+                // false` is always empty, schema-identical, and a positional-identity passthrough
+                // — so it is guard-safe even if a residual race ever made it non-empty.
                 let wipe_sql =
                     format!("INSERT OVERWRITE {table_sql} SELECT * FROM {table_sql} WHERE false");
                 return spark_ast::execute_passthrough(ctx, catalogs, &wipe_sql).await;
@@ -206,7 +202,7 @@ pub(crate) async fn try_resolve_iceberg_overwrite_target(
 /// Stream → repark-write positional stage → row-count refuse → `commit_overwrite_replace_all`.
 ///
 /// Stream map/write lives in `repark_iceberg::write::write_overwrite_staged_files_from_stream` so this
-/// crate stays free of a production `futures` dep (Cargo.toml FROZEN / octo C1-Q-001).
+/// crate stays free of a production `futures` dep (Cargo.toml FROZEN).
 #[allow(clippy::too_many_arguments)] // catalogs threaded for SEC-02 passthrough gate only
 pub(crate) async fn insert_overwrite_iceberg_stage_then_swap(
     ctx: &SessionContext,
@@ -220,7 +216,7 @@ pub(crate) async fn insert_overwrite_iceberg_stage_then_swap(
 ) -> Result<DataFrame> {
     use iceberg::spec::DataFile;
 
-    // Fail isolation parse before staging (octo C3-Q-001) — invalid property must not pay a full
+    // Fail isolation parse before staging — invalid property must not pay a full
     // stream write + orphan objects. Same parse as commit_overwrite_replace_all (D10).
     let _isolation = repark_iceberg::write::parse_overwrite_isolation(table)?;
     let column_names: Vec<String> = columns.iter().map(object_name_last).collect();
@@ -357,7 +353,7 @@ pub(crate) fn tighten_batch_nullability(batches: Vec<RecordBatch>) -> Result<Vec
 
 /// ===========================================================================================
 /// Empty `INSERT OVERWRITE` wipe must not run when source column types are not assignment-
-/// compatible with the target (O4-C2-Q-001).
+/// compatible with the target.
 ///
 /// `ctx.sql(INSERT…)` plan-only accepts many casts that only fail when values are evaluated.
 /// Zero-row sources never evaluate casts, so a type-mismatch empty OW would provider-wipe while
@@ -385,7 +381,7 @@ pub(crate) async fn assert_empty_overwrite_types_assignment_compatible(
         &format!("SELECT * FROM ({source}) AS _repark_ow_types LIMIT 0"),
     )
     .await?;
-    // P5C1-Q-001: plan-time CAST rewrites Utf8→Int32 (etc.) so the projected schema *looks*
+    // Plan-time CAST rewrites Utf8→Int32 (etc.) so the projected schema *looks*
     // assignment-compatible while zero rows never run the cast kernel. Non-empty of the same
     // statement fails at cast and keeps rows — empty would wipe. Refuse when ANY expression of
     // the source plan (projection, aggregate, predicate, join key, …) carries a cast that can
@@ -415,7 +411,7 @@ pub(crate) async fn assert_empty_overwrite_types_assignment_compatible(
             .map(|field| field.data_type().clone())
             .collect()
     } else {
-        // Case-insensitive name resolve (Spark `caseSensitive=false`; P4C1-Q-004 / L-004) —
+        // Case-insensitive name resolve (Spark `caseSensitive=false`; L-004) —
         // MERGE SET already resolves this way; exact-case here made empty OW refuse
         // `INSERT OVERWRITE t (ID) … WHERE false` while non-empty could succeed.
         let mut types = Vec::with_capacity(columns.len());
@@ -640,7 +636,7 @@ mod assignment_type_unit_tests {
     use super::{assignment_types_compatible, utf8_family};
     use datafusion::arrow::datatypes::DataType;
 
-    /// O4-C3-Q-001: pure unit pins for the empty-OW assignment matrix (mutation-proof without
+    /// Pure unit pins for the empty-OW assignment matrix (mutation-proof without
     /// spinning a catalog). Shipping path covered by `empty_insert_overwrite_type_mismatch_*`.
     #[test]
     fn assignment_types_compatible_matrix() {

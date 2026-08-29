@@ -21,7 +21,7 @@ pub fn validate_init_mode(init_mode: &str) -> Result<()> {
 }
 
 /// ===========================================================================================
-/// Fitted KMeans parameters.
+/// Fitted `KMeans` parameters.
 /// ===========================================================================================
 #[derive(Debug, Clone, PartialEq)]
 pub struct KMeansSolution {

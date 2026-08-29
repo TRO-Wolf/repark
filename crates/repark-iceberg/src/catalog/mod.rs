@@ -13,7 +13,7 @@ use datafusion::error::Result;
 use datafusion::prelude::SessionContext;
 use iceberg::{Catalog, NamespaceIdent};
 
-// === r24 P7: incremental catalog provider =====================================================
+// === incremental catalog provider =====================================================
 // PERF-07 hook API (invalidate / rebuild). OBS1 may instrument later — additive only.
 mod builders;
 mod catalog_ops;
@@ -29,7 +29,7 @@ pub use provider::{
 // Hoisted from v1 repark-sql/catalog_ops.rs (phase-1 PR-B, move-only): the session
 // `refresh_catalog_provider` escape hatch's engine-side adapter.
 pub use catalog_ops::reregister_catalog_provider;
-// r25 T2 item 0: projection wrap for fork metadata-table providers (registered via provider).
+// Projection wrap for fork metadata-table providers (registered via provider).
 pub use builders::{glue_catalog, iceberg_to_datafusion, memory_catalog, s3tables_catalog};
 pub use location::{
     NAMESPACE_LOCATION_PROPERTY, NAMESPACE_LOCATION_URI_PROPERTY, file_io_for_location,

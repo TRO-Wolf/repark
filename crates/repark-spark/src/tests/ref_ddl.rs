@@ -408,7 +408,7 @@ async fn two_part_branch_named_table_write_disambiguates_by_resolution() {
     );
 }
 
-/// I5: CREATE/DROP BRANCH|TAG via DDL, then time-travel read through the DDL-created ref.
+/// CREATE/DROP BRANCH|TAG via DDL, then time-travel read through the DDL-created ref.
 /// Fork: `manage_snapshots.rs:90-145` (`create_branch` / `create_tag` / `remove_*`).
 #[tokio::test]
 async fn branch_tag_ddl_create_drop_round_trip() {
@@ -505,7 +505,7 @@ async fn branch_tag_ddl_create_drop_round_trip() {
     assert_eq!(rows(&ctx, &catalogs, "SELECT * FROM ice.sales.t").await, 4);
 }
 
-/// I5 octo C1-F4: ref DDL edge matrix — default AS OF = current, empty needs AS OF,
+/// Ref DDL edge matrix — default AS OF = current, empty needs AS OF,
 /// unknown snapshot / DROP main / kind mismatch refuse loud (wrong-target / wrong-snapshot).
 #[tokio::test]
 #[allow(clippy::too_many_lines)] // one flat edge matrix of AS OF / DROP-target pins
@@ -632,7 +632,7 @@ async fn branch_tag_ddl_edge_matrix_as_of_and_drop_targets() {
         kind_mismatch.to_string().contains("tag") || kind_mismatch.to_string().contains("branch"),
         "got: {kind_mismatch}"
     );
-    // Inverse kind mismatch: DROP TAG on a BRANCH (I5 octo C5-F3).
+    // Inverse kind mismatch: DROP TAG on a BRANCH.
     run(
         &ctx,
         &catalogs,
@@ -659,7 +659,7 @@ async fn branch_tag_ddl_edge_matrix_as_of_and_drop_targets() {
     .await;
     assert_eq!(still, vec![1, 2, 3], "failed DROP must not remove the tag");
 
-    // Duplicate CREATE BRANCH + DROP missing refuse (C2-F5).
+    // Duplicate CREATE BRANCH + DROP missing refuse.
     let dup = execute(
         &ctx,
         &catalogs,
@@ -684,7 +684,7 @@ async fn branch_tag_ddl_edge_matrix_as_of_and_drop_targets() {
         "got: {missing}"
     );
 
-    // CREATE BRANCH at older snapshot must not move main/current (C2-F4).
+    // CREATE BRANCH at older snapshot must not move main/current.
     let before_main = catalogs["ice"]
         .load_table(&TableIdent::new(
             NamespaceIdent::new("sales".to_string()),
@@ -724,7 +724,7 @@ async fn branch_tag_ddl_edge_matrix_as_of_and_drop_targets() {
     );
 }
 
-/// O4-C1-L-001: BRANCH sniff must not treat multipart table-name segments as DDL verbs.
+/// BRANCH sniff must not treat multipart table-name segments as DDL verbs.
 ///
 /// Skip multipart table-name segments while matching true branch or tag DDL verbs.
 #[test]

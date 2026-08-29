@@ -292,7 +292,7 @@ pub(super) async fn count_planned_data_files(catalog: &dyn Catalog, ident: &Tabl
     tasks.len()
 }
 
-/// Recursively count `*.parquet` files under `dir` (I5 octo C1-F3 no-data-write proof).
+/// Recursively count `*.parquet` files under `dir` (no-data-write proof).
 pub(super) fn walk_parquet(dir: &std::path::Path, count: &mut usize) {
     if let Ok(entries) = std::fs::read_dir(dir) {
         for entry in entries.flatten() {
@@ -343,7 +343,7 @@ pub(super) fn register_source(ctx: &SessionContext, name: &str, rows: &[(i32, &s
 
 /// Register an `(a string, b string)` source whose `a` values are **not** parseable as
 /// integers, so `CAST(a AS INT)` succeeds at plan time and fails at value time. This is the
-/// oracle the empty-`INSERT OVERWRITE` cast guard is built against (P5C1-Q-001): the empty
+/// oracle the empty-`INSERT OVERWRITE` cast guard is built against: the empty
 /// form must refuse the wipe, the non-empty form must fail at cast and keep prior rows.
 pub(super) fn register_unparsable_utf8_source(
     ctx: &SessionContext,

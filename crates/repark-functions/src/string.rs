@@ -396,7 +396,11 @@ fn spark_substring(value: &str, position: i64, length: Option<i64>) -> String {
         }
         char_index += 1;
     }
-    if char_index < upper {}
+    // When `upper == total`, the loop ends without setting `end_byte` from an index — keep len().
+    if char_index < upper {
+        // `lower` past the end should have returned already (lower >= upper after clamp).
+        // If lower was never hit, start_byte stays value.len() → empty.
+    }
     let mut output = String::with_capacity(end_byte.saturating_sub(start_byte));
     output.push_str(&value[start_byte..end_byte]);
     output

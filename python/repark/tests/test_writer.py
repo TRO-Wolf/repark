@@ -258,7 +258,7 @@ def test_mode_rejects_invalid(spark: ReparkSession) -> None:
     assert not isinstance(raised.value, ValueError)
 
 
-# C1-SEC-001 — writer table-name identifier injection (quote + reject SQL fragments)
+# Writer table-name identifier injection (quote + reject SQL fragments)
 
 
 def test_save_as_table_rejects_sql_fragment_name(spark: ReparkSession) -> None:
@@ -305,7 +305,7 @@ def test_by_name_casefold_map_rejects_ambiguous_source_columns() -> None:
 
 
 def test_by_name_casefold_map_rejects_exact_duplicate_columns() -> None:
-    """P4C1-Q-006: exact duplicate names (['id','id']) refuse, not last-write-win."""
+    """Exact duplicate names (['id','id']) refuse, not last-write-win."""
     from repark.errors import AnalysisException
     from repark.spark.dataframe import _by_name_casefold_map
 

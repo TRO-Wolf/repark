@@ -26,8 +26,10 @@ pub(crate) struct DescribeNamespace {
     pub(crate) extended: bool,
 }
 
-/// Keys rendered as dedicated rows instead of inside `Properties`.
-/// `location_uri` mirrors `location` for RePark catalogs and is filtered to avoid duplicate output.
+/// Keys rendered as dedicated rows instead of inside `Properties`. The reserved-key match is
+/// case-sensitive (live-oracle provenance: `pyspark` 4.0.0 `DataSourceV2` run).
+/// `location_uri` is a disclosed `RePark` divergence: not a Spark reserved key — it is `RePark`'s
+/// own U2 dual-write mirror of `location`, filtered so the internal bookkeeping key never renders.
 pub(crate) const RESERVED_NAMESPACE_PROPERTIES: [&str; 4] =
     ["comment", "location", "owner", "location_uri"];
 
@@ -82,7 +84,7 @@ pub(crate) fn try_parse_describe_namespace(sql: &str) -> Option<Result<DescribeN
 ///
 /// The v2 Spark shape is two columns with rows for catalog, quoted namespace, present comment,
 /// resolved location, present owner, and optional extended properties. Missing namespaces use the
-/// analysis error class; namespace resolution remains the two-part RePark contract.
+/// analysis error class; namespace resolution remains the two-part `RePark` contract.
 ///
 /// ===========================================================================================
 ///

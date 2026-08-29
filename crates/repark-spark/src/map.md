@@ -1,5 +1,8 @@
 # map — repark-spark/src
 
+CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
+accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
+
 ## Purpose
 
 Source for the Spark SQL door. `lib.rs` is a manifest (check_lib_rs); the router body lives in

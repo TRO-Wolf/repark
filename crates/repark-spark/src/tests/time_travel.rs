@@ -96,7 +96,7 @@ async fn time_travel_version_timestamp_branch_tag_and_errors() {
         .await,
         vec![1, 2, 3]
     );
-    // Latest-match pin (octo C1-Q-001 / C1-L-001): as-of s2_ts must be s2 multiset,
+    // Latest-match pin: as-of s2_ts must be s2 multiset,
     // not s1 — distinguishes first-history-match from last-matching `<=` walk.
     let table = catalogs["ice"].load_table(&ident).await.unwrap();
     let s2_ts = table.metadata().snapshot_by_id(s2).unwrap().timestamp_ms();
@@ -120,7 +120,7 @@ async fn time_travel_version_timestamp_branch_tag_and_errors() {
         .await,
         vec![9]
     );
-    // Mid-interval (s1_ts, s2_ts) → still s1 (C1-L-002).
+    // Mid-interval (s1_ts, s2_ts) → still s1.
     let mid = s1_ts + ((s2_ts - s1_ts) / 2).max(1);
     if mid < s2_ts {
         assert_eq!(

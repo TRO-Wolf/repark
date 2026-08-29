@@ -1,5 +1,8 @@
 # map — repark-core/src/dynamic_flatten/tests
 
+CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
+accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
+
 ## Purpose
 
 Submodules of `../tests.rs`. Split out so the parent stays under the

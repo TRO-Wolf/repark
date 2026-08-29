@@ -1,8 +1,8 @@
-"""F2 / R-CENSUS-R3-VALUE — FAIL-VALUE harvest pins (Arrow path value + type).
+"""R-CENSUS-R3-VALUE — FAIL-VALUE harvest pins (Arrow path value + type).
 
 Families: nested createDataFrame infer residuals (tuple→struct, name padding, map collect
 dict), lit display forms (overlay default -1; mixed-type lit list string coercion),
-csc/sec(0) Inf (not NULL) with U5 global float /0 raising under default ANSI, dtypes /
+csc/sec(0) Inf (not NULL) with global float /0 raising under default ANSI, dtypes /
 schema display shapes, scalar DataType createDataFrame (``DoubleType()`` → ``value``).
 Self-join / Group H duplicate names remain engine-divergence seed (not faked).
 """
@@ -78,7 +78,7 @@ def test_empty_map_collects_as_dict(spark: ReparkSession) -> None:
 def test_empty_map_null_before_int_apache_order(spark: ReparkSession) -> None:
     """Apache test_infer_map_pair_type_empty order: empty → null value → int value.
 
-    Null-only witness must not pin map value type to string (octo C1-Q-001).
+    Null-only witness must not pin map value type to string.
     """
     spark.conf.set("spark.sql.pyspark.inferNestedDictAsStruct.enabled", "false")
     frame = spark.createDataFrame([({},), ({"a": None},), ({"a": 1},)], ["f1"])
@@ -95,7 +95,7 @@ def test_empty_map_null_before_int_apache_order(spark: ReparkSession) -> None:
 
 
 def test_nested_array_of_maps_collects_dicts(spark: ReparkSession) -> None:
-    """array<map> collect → list[dict], empty map → {} (octo C1-Q-003)."""
+    """array<map> collect → list[dict], empty map → {}."""
     spark.conf.set("spark.sql.pyspark.inferNestedDictAsStruct.enabled", "false")
     frame = spark.createDataFrame([([{"a": 1}, {}],)], ["x"])
     rows = frame.collect()
@@ -116,7 +116,7 @@ def test_scalar_double_type_create_dataframe(spark: ReparkSession) -> None:
 
 
 def test_empty_scalar_double_type_keeps_double(spark: ReparkSession) -> None:
-    """Empty createDataFrame([], DoubleType()) keeps double, not string (octo C2-Q-001)."""
+    """Empty createDataFrame([], DoubleType()) keeps double, not string."""
     frame = spark.createDataFrame([], DoubleType())
     assert frame.columns == ["value"]
     assert frame.count() == 0
@@ -142,7 +142,7 @@ def test_csc_zero_is_inf_not_null(spark: ReparkSession) -> None:
     values = csc_table.column("c").to_pylist()
     assert values[0] == float("inf")
     assert values[1] == pytest.approx(2.0)
-    # U5 default ANSI ON: bare float / 0 raises (Spark 4), not Inf and not NULL.
+    # Default ANSI ON: bare float / 0 raises (Spark 4), not Inf and not NULL.
     with pytest.raises(Exception, match="DIVIDE_BY_ZERO"):
         spark.sql("SELECT CAST(1.0 AS DOUBLE) / CAST(0.0 AS DOUBLE) AS d").to_arrow()
 
@@ -194,7 +194,7 @@ def test_overlay_value_and_arrow_type(spark: ReparkSession) -> None:
 
 
 def test_overlay_len_minus_one_matches_omit(spark: ReparkSession) -> None:
-    """Spark default len=-1 == omit (replace-length), not DF remainder (octo C1-Q-002)."""
+    """Spark default len=-1 == omit (replace-length), not DF remainder."""
     frame = spark.createDataFrame([("abcdef", "XY", 2)], ["s", "r", "p"])
     omit = frame.select(F.overlay("s", "r", "p").alias("o")).to_arrow().column("o").to_pylist()
     explicit_int = (
@@ -217,7 +217,7 @@ def test_overlay_len_minus_one_matches_omit(spark: ReparkSession) -> None:
 
 
 def test_overlay_float_pos_raises_type_error(spark: ReparkSession) -> None:
-    """float pos/len → PySparkTypeError NOT_COLUMN_OR_INT_OR_STR (octo C2-Q-002)."""
+    """float pos/len → PySparkTypeError NOT_COLUMN_OR_INT_OR_STR."""
     frame = spark.createDataFrame([("SPARK_SQL", "CORE")], ("x", "y"))
     with pytest.raises(PySparkTypeError) as pos_error:
         frame.select(F.overlay(frame.x, frame.y, 7.5, 0).alias("ol")).collect()
@@ -253,20 +253,20 @@ def test_lit_mixed_list_coerces_to_string(spark: ReparkSession) -> None:
     # Homogeneous int list stays int
     ints = spark.range(1).select(F.lit([1, 2, 3]).alias("z")).to_arrow()
     assert ints.column("z").to_pylist() == [[1, 2, 3]]
-    # int+float promotes to float (not faked string — octo C1-Q-004)
+    # int+float promotes to float (not faked string)
     numeric = spark.range(1).select(F.lit([1, 1.0, None]).alias("n")).to_arrow()
     assert numeric.column("n").to_pylist() == [[1.0, 1.0, None]]
     assert pa.types.is_floating(numeric.schema.field("n").type.value_type) or pa.types.is_float64(
         numeric.schema.field("n").type.value_type
     )
-    # numpy integer + Python int stays numeric (octo C4-Q-001 — no faked string).
+    # numpy integer + Python int stays numeric (no faked string).
     import numpy as np
 
     numpy_mix = (
         spark.range(1).select(F.lit([np.int64(1), 2, np.float64(3.0)]).alias("n")).to_arrow()
     )
     assert numpy_mix.column("n").to_pylist() == [[1.0, 2.0, 3.0]]
-    # Homogeneous numpy integers normalize to Python int for lit() (octo C5).
+    # Homogeneous numpy integers normalize to Python int for lit().
     numpy_ints = spark.range(1).select(F.lit([np.int64(1), np.int64(2)]).alias("n")).to_arrow()
     assert numpy_ints.column("n").to_pylist() == [[1, 2]]
 
@@ -305,7 +305,7 @@ def test_print_schema_level_truncates_nested(spark: ReparkSession) -> None:
 
 
 def test_mutation_proof_combo_map_overlay_empty_scalar(spark: ReparkSession) -> None:
-    """Combined C1+C2 surfaces stay correct after interleaved actions (octo C3)."""
+    """Combined surfaces stay correct after interleaved actions."""
     spark.conf.set("spark.sql.pyspark.inferNestedDictAsStruct.enabled", "false")
     maps = spark.createDataFrame([({},), ({"a": None},), ({"a": 1},)], ["f1"])
     _ = maps.collect()
@@ -320,7 +320,7 @@ def test_mutation_proof_combo_map_overlay_empty_scalar(spark: ReparkSession) -> 
     assert frame.select(F.overlay("s", "r", "p", -1).alias("o")).to_arrow().column(
         "o"
     ).to_pylist() == ["aXYdef"]
-    # F1 free-SQL expander still resolves nested WITH CTE bare names.
+    # Free-SQL expander still resolves nested WITH CTE bare names.
     rows = spark.sql(
         "SELECT * FROM (WITH q AS (SELECT CAST(1 AS BIGINT) AS id) SELECT * FROM q) t"
     ).to_arrow()

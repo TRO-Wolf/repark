@@ -1,5 +1,8 @@
 # map — python/repark/src/repark/spark/ml/feature
 
+CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
+accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
+
 ## Purpose
 
 Plan-built `pyspark.ml.feature` transformers under `repark.spark.ml.feature`.

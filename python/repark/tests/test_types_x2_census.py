@@ -129,14 +129,14 @@ def test_from_ddl_array_struct() -> None:
             StructField("b", ArrayType(LongType())),
         ]
     )
-    # Bare VARCHAR is string (nested engine markers; octo X2 C1).
+    # Bare VARCHAR is string (nested engine markers).
     assert DataType.fromDDL("varchar") == StringType()
     assert DataType.fromDDL("array<varchar>") == ArrayType(StringType())
     _ = DoubleType  # silence if unused in future edits
 
 
 def test_create_dataframe_explicit_nested_struct_with_string() -> None:
-    """StructType nested fields with StringType must stay struct — not stringify (octo X2 C1)."""
+    """StructType nested fields with StringType must stay struct — not stringify."""
     from repark.spark.types import ArrayType
 
     spark = ReparkSession.builder.master("local[1]").appName("x2-nested-schema").getOrCreate()
@@ -175,7 +175,7 @@ def test_create_dataframe_explicit_nested_struct_with_string() -> None:
 
 
 def test_create_dataframe_explicit_map_and_array_string() -> None:
-    """MapType / ArrayType(StringType) explicit schema must not collapse to string (octo X2 C1)."""
+    """MapType / ArrayType(StringType) explicit schema must not collapse to string."""
     from repark.spark.types import ArrayType, MapType
 
     spark = ReparkSession.builder.master("local[1]").appName("x2-map-arr").getOrCreate()
@@ -196,7 +196,7 @@ def test_create_dataframe_explicit_map_and_array_string() -> None:
 
 
 def test_create_dataframe_ddl_nested_array() -> None:
-    """DDL schema field list accepts nested array/map/struct types (octo X2 C1)."""
+    """DDL schema field list accepts nested array/map/struct types."""
     spark = ReparkSession.builder.master("local[1]").appName("x2-ddl-nested").getOrCreate()
     try:
         frame = spark.createDataFrame([([1, 2],)], "a ARRAY<INT>")
@@ -208,7 +208,7 @@ def test_create_dataframe_ddl_nested_array() -> None:
 
 
 def test_create_dataframe_map_int_keys_inferred() -> None:
-    """Inferred map keys follow sample key type (not always string) — octo X2 C2."""
+    """Inferred map keys follow sample key type (not always string)."""
     spark = (
         ReparkSession.builder.master("local[1]")
         .appName("x2-map-keys")
@@ -227,7 +227,7 @@ def test_create_dataframe_map_int_keys_inferred() -> None:
 
 
 def test_create_dataframe_tuple_as_struct_positional() -> None:
-    """Tuple cells bind to StructType fields positionally (octo X2 C2)."""
+    """Tuple cells bind to StructType fields positionally."""
     spark = ReparkSession.builder.master("local[1]").appName("x2-tuple-struct").getOrCreate()
     try:
         schema = StructType(
@@ -256,11 +256,11 @@ def test_create_dataframe_tuple_as_struct_positional() -> None:
 
 
 def test_create_dataframe_sparse_vector_dict_exact_keys() -> None:
-    """Sparse ML dict needs exact key set; extra keys stay map (octo X2 C5)."""
+    """Sparse ML dict needs exact key set; extra keys stay map."""
     spark = (
         ReparkSession.builder.master("local[1]")
         .appName("x2-sparse")
-        # FA-4: repark defaults inferNestedDictAsStruct to true; the C5 boundary (extra
+        # FA-4: repark defaults inferNestedDictAsStruct to true; the boundary (extra
         # key falls back to MAP, not sparse struct) is a PySpark-default-path pin.
         .config("spark.sql.pyspark.inferNestedDictAsStruct.enabled", "false")
         .getOrCreate()

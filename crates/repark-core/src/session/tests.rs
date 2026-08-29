@@ -209,7 +209,7 @@ async fn builder_zero_memory_limit_opts_out_of_pool() {
     }
 }
 
-/// O3-C3-Q-001: `memory_limit_gb(0)` must opt out the same way as `memory_limit_bytes(0)`
+/// `memory_limit_gb(0)` must opt out the same way as `memory_limit_bytes(0)`
 /// (`saturating_mul` → 0 → Some(0) → no `FairSpillPool`).
 #[tokio::test]
 async fn builder_zero_memory_limit_gb_opts_out_of_pool() {
@@ -243,7 +243,7 @@ fn parse_table_identifier_segments_quote_aware() {
         parse_table_identifier_segments("cat.db.`my-table`").expect("backtick"),
         vec!["cat", "db", "my-table"]
     );
-    // O3-C4-SEC-001: path-escape segments rejected at identity parse (not only CTAS compose).
+    // Path-escape segments rejected at identity parse (not only CTAS compose).
     let traversal = parse_table_identifier_segments(r#"cat."..".t"#).unwrap_err();
     assert!(
         traversal.contains("path traversal") || traversal.contains(".."),
@@ -260,7 +260,7 @@ fn parse_table_identifier_segments_quote_aware() {
     );
     assert!(parse_table_identifier_segments("catalog.db.").is_err());
 
-    // === r23 QI1: idents === shared probe table (lockstep with repark_iceberg::write::idents::probes)
+    // === idents === shared probe table (lockstep with repark_iceberg::write::idents::probes)
     for &(segment, kind_tag) in repark_iceberg::write::idents::probes::PATH_ESCAPE_PROBES {
         let err = reject_path_escape_segment(segment).unwrap_err();
         match kind_tag {
@@ -359,7 +359,7 @@ async fn materialize_dataframe_as_temp_view_is_scan_not_replan() {
     }
 }
 
-// === r23 CACHE1: cache-honesty ===
+// === cache-honesty ===
 /// Cache entry point: size guard fails loud when collected bytes exceed `max_bytes`.
 #[tokio::test]
 async fn materialize_dataframe_as_cache_view_respects_max_bytes() {
@@ -799,7 +799,7 @@ fn engine_err_preserves_the_inner_message() {
     assert!(converted.to_string().contains("No field named zzz"));
 }
 
-// ---- U4 error taxonomy: NotImplemented + iceberg-kind classification ------------------------
+// ---- error taxonomy: NotImplemented + iceberg-kind classification ------------------------
 
 /// A fabricated live iceberg error of the given kind, for classification pins.
 fn iceberg_error_of(kind: ErrorKind, message: &str) -> iceberg::Error {
@@ -812,7 +812,7 @@ fn external_iceberg(kind: ErrorKind, message: &str) -> DataFusionError {
     DataFusionError::External(Box::new(iceberg_error_of(kind, message)))
 }
 
-/// U4 pin (CQ-002): `NotImplemented` maps to `Unsupported` while preserving its rendered message.
+/// Pin (CQ-002): `NotImplemented` maps to `Unsupported` while preserving its rendered message.
 #[test]
 fn classify_not_implemented_is_unsupported_with_message_preserved() {
     let gate = DataFusionError::NotImplemented(
@@ -833,7 +833,7 @@ fn classify_not_implemented_is_unsupported_with_message_preserved() {
     );
 }
 
-/// U4 pin (CQ-015): an external Iceberg commit error keeps its `ErrorKind` and avoids stringifying.
+/// Pin (CQ-015): an external Iceberg commit error keeps its `ErrorKind` and avoids stringifying.
 #[test]
 fn engine_err_iceberg_commit_conflict_classifies_kind_not_stringified() {
     let converted = engine_err(external_iceberg(
@@ -856,7 +856,7 @@ fn engine_err_iceberg_commit_conflict_classifies_kind_not_stringified() {
     );
 }
 
-/// U4 pin (CQ-004/CQ-015, the direct session fold): the same commit error through
+/// Pin (CQ-004/CQ-015, the direct session fold): the same commit error through
 /// `iceberg_err` (`create_namespace` / `table_exists` paths) classifies identically — one
 /// kind→class mapping for both routes, kind visible, no "datafusion engine error:" prefix.
 #[test]
@@ -880,7 +880,7 @@ fn iceberg_err_commit_conflict_keeps_kind_visible() {
     );
 }
 
-/// U4 pin: `FeatureUnsupported` (the fork's "iceberg feature is not supported" kind — e.g.
+/// Pin: `FeatureUnsupported` (the fork's "iceberg feature is not supported" kind — e.g.
 /// the A2-4 "Conversion from Timestamptz is not supported" class) routes to the Unsupported
 /// class through BOTH routes, exactly like a DataFusion scope gate. The risk: half the
 /// unsupported surface raising a different exception type than the other half.
@@ -905,7 +905,7 @@ fn iceberg_feature_unsupported_classifies_unsupported() {
     assert!(via_direct.to_string().contains("FeatureUnsupported"));
 }
 
-/// U4 pin: the full 12-kind partition routes per the D-U4-2 oracle mapping (1 Unsupported /
+/// Pin: the full 12-kind partition routes per the D-U4-2 oracle mapping (1 Unsupported /
 /// 6 Analysis / 5 iceberg-base). The risk: a not-found kind silently landing in the base
 /// bucket (PySpark raises `AnalysisException` — `NoSuchTableException` et al. extend it), or
 /// a commit kind landing in Analysis. Each kind's name must also survive in the message.
@@ -950,7 +950,7 @@ fn iceberg_kind_partition_routes_per_oracle() {
     ));
 }
 
-/// U4 pin: the `External` downcast NARROWS to iceberg errors — a non-iceberg external error
+/// Pin: the `External` downcast NARROWS to iceberg errors — a non-iceberg external error
 /// (an IO fault from an object store, say) keeps today's base classification AND today's full
 /// DataFusion rendering. The risk: the new arm hijacking every external error into the
 /// iceberg bucket.
@@ -974,7 +974,7 @@ fn external_non_iceberg_error_stays_base() {
     );
 }
 
-/// U4 pin: wrapper peeling and the iceberg downcast COMPOSE — a `Context`-wrapped
+/// Pin: wrapper peeling and the iceberg downcast COMPOSE — a `Context`-wrapped
 /// `External(TableNotFound)` still classifies Analysis. The risk: DataFusion adding a context
 /// wrapper during plan/execute and the kind classification silently degrading to base.
 #[test]

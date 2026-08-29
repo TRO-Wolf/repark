@@ -1424,7 +1424,7 @@ async fn alter_rename_table_then_add_column_same_statement() {
     );
 }
 
-/// O2-C4-L-002: ALTER TABLE SET TBLPROPERTIES must not be false-positived as BRANCH/TAG sniff.
+/// ALTER TABLE SET TBLPROPERTIES must not be false-positived as BRANCH/TAG sniff.
 #[tokio::test]
 async fn alter_set_tblproperties_not_misclassified_as_branch_ddl() {
     let wh = TempDir::new().unwrap();

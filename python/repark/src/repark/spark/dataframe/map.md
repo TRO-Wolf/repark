@@ -1,5 +1,8 @@
 # `repark.spark.dataframe`
 
+CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
+accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
+
 ## Purpose
 
 The Spark DataFrame facade. It builds lazy native plans and exposes Spark-compatible actions,

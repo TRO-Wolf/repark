@@ -1,5 +1,8 @@
 # map — repark-ml/src
 
+CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
+accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
+
 ## Purpose
 
 Pure math and streaming accumulators for native estimators.

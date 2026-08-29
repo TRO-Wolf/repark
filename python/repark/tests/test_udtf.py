@@ -1,6 +1,6 @@
-"""C6 / U12 — UDTF scalar-arg core (mapInArrow + FROM name(lit_args)).
+"""UDTF scalar-arg core (mapInArrow + FROM name(lit_args)).
 
-Validation error classes held (U11); the scalar-arg relation constructor executes; LATERAL and
+Validation error classes held; the scalar-arg relation constructor executes; LATERAL and
 table-arg stay blocked.
 """
 
@@ -29,7 +29,7 @@ def spark() -> Iterator[SparkSession]:
 
 
 def test_udtf_decorator_scalar_call_expands_rows(spark: SparkSession) -> None:
-    """@udtf constructs UserDefinedTableFunction; lit call yields expanded rows (U12)."""
+    """@udtf constructs UserDefinedTableFunction; lit call yields expanded rows."""
     _ = spark
 
     @udtf(returnType="c1: int, c2: int")
@@ -60,7 +60,7 @@ def test_udtf_multi_row_expand(spark: SparkSession) -> None:
 
 
 def test_udtf_register_and_sql_from(spark: SparkSession) -> None:
-    """spark.udtf.register + SELECT * FROM name(lit_args) rewrite (U12)."""
+    """spark.udtf.register + SELECT * FROM name(lit_args) rewrite."""
 
     @udtf(returnType="word: string")
     class WordSplitter:
@@ -92,7 +92,7 @@ def test_udtf_sql_select_column_subset(spark: SparkSession) -> None:
 
 
 def test_udtf_lateral_sql_refuses_loud(spark: SparkSession) -> None:
-    """LATERAL UDTF stays blocked (U11 seed / U12 bound)."""
+    """LATERAL UDTF stays blocked."""
 
     @udtf(returnType="a: int, b: int, c: int")
     class Triple:
@@ -142,7 +142,7 @@ def test_udtf_table_arg_refuses(spark: SparkSession) -> None:
 
 
 def test_udtf_direct_form_and_as_deterministic(spark: SparkSession) -> None:
-    """udtf(Handler, returnType=…) and asDeterministic execute (U12)."""
+    """udtf(Handler, returnType=…) and asDeterministic execute."""
     _ = spark
 
     class Echo:
@@ -256,7 +256,7 @@ def test_functions_udtf_export() -> None:
 
 
 def test_scalar_udf_paths_refuse_udtf_wrapper(spark: SparkSession) -> None:
-    """F.udf / spark.udf.register must not half-wire a table UDTF as scalar (octo U11 C1)."""
+    """F.udf / spark.udf.register must not half-wire a table UDTF as scalar."""
     from repark.spark.functions import udf as scalar_udf
 
     @udtf(returnType="c1: int, c2: int")
@@ -300,7 +300,7 @@ def test_udtf_empty_eval_yields_empty_frame(spark: SparkSession) -> None:
 
 
 def test_udtf_sql_name_in_string_does_not_hijack(spark: SparkSession) -> None:
-    """Registered UDTF name inside a string/comment must not refuse unrelated SQL (C1-SEC-001)."""
+    """Registered UDTF name inside a string/comment must not refuse unrelated SQL."""
 
     @udtf(returnType="w: string")
     class Echo:
@@ -346,7 +346,7 @@ def test_udtf_sql_join_table_factor_refuses(spark: SparkSession) -> None:
 
 
 def test_udtf_register_does_not_hijack_select_list_calls(spark: SparkSession) -> None:
-    """UDTF name colliding with SQL fn must not break SELECT-list calls (octo C5-SEC-001)."""
+    """UDTF name colliding with SQL fn must not break SELECT-list calls."""
 
     @udtf(returnType="a: int")
     class One:
@@ -365,7 +365,7 @@ def test_udtf_register_does_not_hijack_select_list_calls(spark: SparkSession) ->
 
 
 def test_udtf_sql_unclosed_string_refuses(spark: SparkSession) -> None:
-    """Unclosed SQL string in FROM-udtf args refuses (no silent value; C1-SEC-002)."""
+    """Unclosed SQL string in FROM-udtf args refuses (no silent value)."""
 
     @udtf(returnType="w: string")
     class Echo:
@@ -381,7 +381,7 @@ def test_udtf_sql_unclosed_string_refuses(spark: SparkSession) -> None:
 
 
 def test_udtf_sql_null_true_false_and_case(spark: SparkSession) -> None:
-    """SQL NULL/TRUE/FALSE literals + case-insensitive UDTF name (C1-Q-001 pins)."""
+    """SQL NULL/TRUE/FALSE literals + case-insensitive UDTF name."""
 
     @udtf(returnType="label: string")
     class Show:
@@ -411,7 +411,7 @@ def test_udtf_sql_multi_arg_and_escaped_quote(spark: SparkSession) -> None:
 
 
 def test_udtf_eval_arity_mismatch_refuses(spark: SparkSession) -> None:
-    """Yield width must match returnType field count (C1-L-003; no silent pad/truncate)."""
+    """Yield width must match returnType field count (no silent pad/truncate)."""
     _ = spark
 
     @udtf(returnType="a: int, b: int")
@@ -448,7 +448,7 @@ def test_udtf_zero_arg_and_register_bad_name(spark: SparkSession) -> None:
 
 
 def test_udtf_sql_scientific_int_and_trailing_comma(spark: SparkSession) -> None:
-    """SQL 1e2 accepted as float; trailing comma refuses (octo C2-L-001 / C2-SEC-001)."""
+    """SQL 1e2 accepted as float; trailing comma refuses."""
 
     @udtf(returnType="v: double")
     class EchoNum:
@@ -466,7 +466,7 @@ def test_udtf_sql_scientific_int_and_trailing_comma(spark: SparkSession) -> None
 
 
 def test_udtf_start_failure_still_calls_terminate(spark: SparkSession) -> None:
-    """terminate() runs even when start() raises (octo C2-Q-001)."""
+    """terminate() runs even when start() raises."""
     _ = spark
     log: list[str] = []
 
@@ -489,7 +489,7 @@ def test_udtf_start_failure_still_calls_terminate(spark: SparkSession) -> None:
 
 
 def test_udtf_eval_yield_none_refuses(spark: SparkSession) -> None:
-    """Bare yield None refuses (use None cells inside a tuple; octo C2-Q-002)."""
+    """Bare yield None refuses (use None cells inside a tuple)."""
     _ = spark
 
     @udtf(returnType="a: int")

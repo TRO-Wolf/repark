@@ -139,7 +139,7 @@ pub fn parse_timestamp_to_ms(raw: &str) -> Result<i64> {
     }
     // RFC 3339 / ISO-8601 with offset or `Z` (Spark jobs and JSON often emit these).
     // Without this arm, `…T00:00:00Z` failed loud while epoch-ms and naive UTC worked —
-    // a shipping-path compatibility hole (octo C3-Q-001).
+    // a shipping-path compatibility hole.
     if let Ok(offset_dt) = chrono::DateTime::parse_from_rfc3339(trimmed) {
         return Ok(offset_dt.timestamp_millis());
     }

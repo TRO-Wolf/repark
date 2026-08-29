@@ -1,4 +1,4 @@
-"""F1 true-EC residual pins — class + parameter-key equality only.
+"""True-EC residual pins — class + parameter-key equality only.
 
 Covers array.array unsupported typecodes, calendar-interval collect refuse,
 ``_merge_type`` / ``_make_type_verifier`` (Apache test_types private helpers).
@@ -136,7 +136,7 @@ def test_make_type_verifier_nested_unacceptable_with_name() -> None:
 
 
 def test_make_type_verifier_integer_rejects_bool_and_float() -> None:
-    """octo C3-Q-002: IntegerType must not soft-accept bool/float."""
+    """IntegerType must not soft-accept bool/float."""
     verifier = _make_type_verifier(IntegerType(), name="n")
     for bad in (True, False, 1.5, "1"):
         with pytest.raises(PySparkTypeError) as caught:

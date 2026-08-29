@@ -214,8 +214,8 @@ class GroupedData:
         resolve. Partition transforms and nested generators raise before plan construction.
 
         A pure GROUPED_AGG pandas UDF uses :meth:`applyInPandas`. A mixed UDF and builtin aggregate
-        uses two native aggregate plans joined on group keys. Cube, rollup, grouping sets, and pivot
-        use their dedicated lowering paths.
+        lowers the UDF side via :meth:`applyInPandas` and joins the native aggregate plan — never a
+        Python-side merge; cube, rollup, grouping sets, and pivot use dedicated lowering paths.
         """
         from repark.spark.functions import PandasUDFColumn
 

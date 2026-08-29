@@ -7,12 +7,12 @@
 //! recovery after an ambiguous commit; failed commits best-effort-delete files written by the
 //! operation.
 //!
-//! MoR leaves data files untouched, writes position deletes plus updated/inserted rows, and commits
+//! `MoR` leaves data files untouched, writes position deletes plus updated/inserted rows, and commits
 //! them together in one `RowDelta` with the same conflict guards. Both arms use computed partition
 //! fanout, including transformed fields. Target streaming bounds memory to the scan batch/file and
 //! join working sets rather than a full-target `MemTable`.
 //!
-//! Unsupported formats, modes, V3 MoR, `WHEN NOT MATCHED BY SOURCE`, and `INSERT ROW` fail loud.
+//! Unsupported formats, modes, V3 `MoR`, `WHEN NOT MATCHED BY SOURCE`, and `INSERT ROW` fail loud.
 
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
@@ -171,7 +171,6 @@ pub enum InsertAction {
 /// `validate_no_conflicting_data` (a pure append removes nothing) — plus the §8
 /// `engine.operation-id` summary stamp. A MERGE that changes nothing commits nothing.
 /// ===========================================================================================
-///
 /// # Errors
 /// `NotImplemented` for the documented v1 limits; `MERGE_CARDINALITY_VIOLATION` when a target
 /// row matches more than one source row (except a lone unconditional DELETE); otherwise any
@@ -184,7 +183,7 @@ pub async fn execute_merge(
     // Serialize merge execution under `cfg(test)` so concurrent MERGEs do not interleave
     // on shared catalog/scratch fixtures. Instrument counters (PERF-19/01/04) are **task-local**
     // — see `MERGE_TEST_INSTRUMENTS` — so parallel cargo tests never clobber each other's Arc
-    // slots (critic-octo C1: process-global `Mutex<Option<Arc>>` install raced install→execute).
+    // slots (process-global `Mutex<Option<Arc>>` install raced install→execute).
     #[cfg(test)]
     let _merge_serialize = {
         static LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
@@ -250,7 +249,7 @@ pub async fn execute_merge(
 /// - source min/max non-null (empty source → None); any probe failure → skip conjunct (M6)
 /// - `MoR` always OK; COW only when `file_scoped_rewrite` (rewrite is a separate unfiltered scan)
 ///
-/// General multi-clause / non-equi ON pushdown is OUT (r25 seed). Wrong push = S0 lost rows;
+/// General multi-clause / non-equi ON pushdown is OUT. Wrong push = S0 lost rows;
 /// over-scan residual is OK.
 /// ===========================================================================================
 async fn residual_join_key_filter(
@@ -369,7 +368,7 @@ pub enum MergeMode {
 /// Resolve the merge mode and reject unsupported formats before any IO.
 ///
 /// Both modes use computed partition fanout. Unknown modes and non-Parquet tables fail loud.
-/// MoR requires V2 because V3 deletion vectors are not supported; this guard prevents orphan files.
+/// `MoR` requires V2 because V3 deletion vectors are not supported; this guard prevents orphan files.
 /// ===========================================================================================
 fn resolve_merge_mode(table: &Table) -> Result<MergeMode> {
     let table_props = table.metadata().table_properties().map_err(iceberg_err)?;
@@ -886,7 +885,7 @@ async fn plan_and_commit_cow(
         let mut streams: Vec<std::pin::Pin<Box<dyn Stream<Item = Result<RecordBatch>> + Send>>> =
             Vec::new();
         // Scratches to drop on every exit of this block (file-scoped target and/or path table).
-        // Critic-octo C1-Q3: `stream_sql` / insert plan failures must not leave scratches registered.
+        // `stream_sql` / insert plan failures must not leave scratches registered.
         let mut rewrite_scratches = MergeScratchGuard::new(ctx);
         if !affected.is_empty() {
             // R-MERGE-FILE-SCAN: rewrite against a file-scoped target scan when enabled.
@@ -1244,7 +1243,7 @@ fn fold_discovery_batch_into_affected(
                 "match-discovery row has a NULL `_file`/`_pos` row identity".to_string(),
             ));
         }
-        // Critic-octo C3-Q1: same fail-loud null flags as Stage B (C1-S1).
+        // Same fail-loud null flags as Stage B.
         let match_count = require_non_null_i64(match_counts, row, "match_count")?;
         let is_mutated_flag = require_non_null_i64(is_mutated, row, "is_mutated")?;
         if match_count > 1 && !skip_cardinality {
@@ -1300,7 +1299,7 @@ async fn matched_work_mor(
     Vec<crate::write::position_delete::PositionDeletePair>,
     Vec<RecordBatch>,
 )> {
-    // === r20 P2a: merge ===
+    // === merge ===
     let mut stream =
         update_stream_checked(ctx, sql, &sql.matched_work_sql(write_schema), write_schema).await?;
     let mut path_intern: HashMap<String, usize> = HashMap::new();
@@ -1389,7 +1388,7 @@ fn consume_matched_work_batch(
                 "matched_work row has a NULL `_file`/`_pos` row identity".to_string(),
             ));
         }
-        // Critic-octo C1-S1 / C3-Q1: flag columns are CASE/window outputs and must be non-null.
+        // Flag columns are CASE/window outputs and must be non-null.
         let match_count = require_non_null_i64(match_counts, row, "match_count")?;
         let is_mutated_flag = require_non_null_i64(is_mutated, row, "is_mutated")?;
         let is_update_flag = require_non_null_i64(is_update, row, "is_update")?;
@@ -1448,7 +1447,7 @@ fn consume_matched_work_batch(
 
 /// ===========================================================================================
 /// Fail loud when a Stage A/B Int64 flag column is null (Arrow `.value` would silently yield 0).
-/// Shared by match discovery and `matched_work` consume (critic-octo C1-S1 / C3-Q1).
+/// Shared by match discovery and `matched_work` consume.
 /// ===========================================================================================
 fn require_non_null_i64(array: &Int64Array, row: usize, label: &str) -> Result<i64> {
     if array.is_null(row) {
@@ -1465,7 +1464,7 @@ const AFFECTED_PATHS_COL: &str = "path";
 /// ===========================================================================================
 /// RAII guard for MERGE scratch tables registered during COW rewrite (file-scoped target and/or
 /// path `MemTable`). Drops every name via [`deregister_merge_scratch`] on success **and** on early
-/// `?` exits (critic-octo C1-Q3).
+/// `?` exits.
 /// ===========================================================================================
 struct MergeScratchGuard<'a> {
     ctx: &'a SessionContext,
@@ -1531,7 +1530,7 @@ struct MergeSql<'a> {
 impl MergeSql<'_> {
     /// `FROM` fragment for the scratch target, aliased as the statement's target alias.
     fn target_from(&self) -> String {
-        // Engine UUID names today; still route through quote_ident (octo C2-SEC-002).
+        // Engine UUID names today; still route through quote_ident.
         format!(
             "{} AS {}",
             quote_ident(self.target_name),
@@ -1928,7 +1927,6 @@ fn cast_one_batch_to_write_schema(
 /// in-memory stream so the single writer-construction + drive loop lives in ONE place. Uses
 /// [`WriteConcurrency::default`] (session default 4 concurrent file writers). Prefer
 /// [`write_data_files_with_concurrency`] when the caller has a resolved session knob.
-///
 /// # Errors
 /// Returns a DataFusion error if the table is not Parquet-default, writer setup fails, or a
 /// batch cannot be written/closed.
@@ -2405,10 +2403,12 @@ pub(super) async fn commit_overwrite(
 }
 
 /// ===========================================================================================
-/// Commit MoR position deletes and new rows in one `RowDelta`.
+/// Commit `MoR` position deletes and new rows in one `RowDelta`.
 ///
 /// The commit validates referenced data files, concurrent delete files, and serializable matching
-/// adds as applicable. It stamps the operation ID and removes newly written files on commit error.
+/// adds as applicable, stamps the operation ID, and removes newly written files on commit error.
+/// Delete files are written HERE, not by the caller, so write and commit stay adjacent: no code
+/// path can produce delete files and then take a branch that fails to commit them.
 /// ===========================================================================================
 async fn commit_row_delta(
     catalog: &Arc<dyn Catalog>,
@@ -2540,7 +2540,7 @@ fn sql_literal(value: &str) -> String {
 /// interpolated into generated SQL goes through here: Iceberg/Arrow place no restriction on
 /// column names, so a name containing `"` must not break out of the identifier.
 ///
-/// Delegates to [`crate::write::idents::quote_ident_spark`] (r23 QI1 single-source Spark/DF dialect).
+/// Delegates to [`crate::write::idents::quote_ident_spark`] (single-source Spark/DF dialect).
 pub(super) fn quote_ident(name: &str) -> String {
     crate::write::idents::quote_ident_spark(name)
 }

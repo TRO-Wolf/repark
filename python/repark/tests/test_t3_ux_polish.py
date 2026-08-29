@@ -1,4 +1,4 @@
-"""r21 T3 UX polish: display_style, Column.round, default app name, H1 export naming.
+"""T3 UX polish: display_style, Column.round, default app name, H1 export naming.
 
 Pins the four must-ship surfaces from charter-t3. Synthetic fixtures only — no brokerage
 values.

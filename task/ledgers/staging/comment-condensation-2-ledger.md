@@ -162,9 +162,9 @@ PRE_EXECUTION_REVIEW:
 - [x] Freeze C-001 from the owner's population ruling and run PRE_EXECUTION_REVIEW.
 - [x] Record the base census and equivalence tools in durable evidence.
 - [x] Complete and review each Rust crate in the measured order.
-- [ ] Complete and review `python/repark` one directory at a time.
-- [ ] Complete and review `python/repark-parity` one directory at a time.
-- [ ] Update maps, retained-block records, census, and language-aware equivalence evidence.
+- [x] Complete and review `python/repark` one directory at a time.
+- [x] Complete and review `python/repark-parity` one directory at a time.
+- [x] Update maps, retained-block records, census, and language-aware equivalence evidence.
 - [ ] Run broad gates, closing Critic, readiness audit, and departure lifecycle move.
 - [ ] Commit, push, open the single PR, and watch its checks to a terminal result.
 
@@ -185,6 +185,10 @@ PRE_EXECUTION_REVIEW:
 | `python/repark/src/repark/spark` direct files | `cc2_repark_ml_actor` + remediation | 4,623 → 4,185 | 1,598 → 1,512 | 413 → 377 | All 27 Python executable token streams, canonical ASTs, and protected inventories are identical; current source-set SHA-256 `66c9cbfb721e9b6223d6a205d24f975f1dbdbb2c4134333c81a2197df7b8ad0f`. | `make py-lint`; `make py-format-check`; `make check-python-conventions`; `make check-docstring-presence`; `make check-lib-py`; `make check-map-sync`; `git diff --check` | Logic/safety and aggressive-compaction Critics CONVERGED after two remediation cycles. |
 | `python/repark/src/repark/spark/dataframe` | `cc2_repark_ml_actor`, `cc2_df_grouped_actor`, `cc2_df_writer_actor` + remediation | 3,276 → 2,014 | 935 → 814 | 326 → 199 | All seven Python executable token streams, canonical ASTs, and protected inventories are identical; current source-set SHA-256 `f87b715e69dd46f9e0222b9a11c4e9becb3a5dc5242a5f67640131bbcb58798f`. | `make py-lint`; `make py-format-check`; `make check-python-conventions`; `make check-docstring-presence`; `make check-lib-py`; `make check-map-sync`; `git diff --check` | Logic/safety and aggressive-compaction Critics CONVERGED after remediation; no open finding. |
 | `python/repark/src/repark/spark/ml` direct files | `cc2_py_ml_actor` + remediation | 637 → 496 | 418 → 356 | 37 → 37 | All 11 Python executable token streams, canonical ASTs, and protected inventories are identical; current source-set SHA-256 `d785f686f4d844559b51d5f1de948a2fea088f5aceda98a9e3ae93bd4a504152`. | `make py-lint`; `make py-format-check`; `make check-python-conventions`; `make check-docstring-presence`; `make check-lib-py`; `make check-map-sync`; `git diff --check` | Logic and aggressive-compaction Critics CONVERGED after two remediation cycles; no open finding. |
+| `python/repark` spark/session + spark/sql + ml/feature | continuation actor pair + remediation | 4,190 → 3,347 (with scripts) | — | 284 → 282 (with scripts) | All 49 token streams, canonical ASTs, and protected inventories are identical. | `make py-lint`; `make py-format-check`; `make check-python-conventions`; `make check-docstring-presence`; `make check-lib-py`; `make check-map-sync`; 3 exact baselines ratcheted (`_transformers.py` 2717, `reader.py` 1026, `session_core.py` 2411) | Continuation-session remediation: navigation maps trued to current ownership; no open finding. |
+| `scripts` | continuation actor | (in row above) | — | (in row above) | All 16 token streams and protected inventories are identical; the two size-gate baseline tables keep their sanctioned ratchets. | the Python gates above | Continuation-session remediation; no open finding. |
+| `python/repark/tests` | continuation actor fleet + remediation | 14,401 → 11,562 | — | 1,457 → 999 | All 215 token streams, canonical ASTs, and protected inventories are identical; one restored executable drift (two asserts re-hoisted out of a loop in `test_errors.py` was caught by the harness and reverted to the base shape). | the Python gates above; 17 exact baselines ratcheted, 2 rows retired below the default | Continuation-session remediation; `MUTATION:` payloads restored byte-exact in 13 files after the first pass; no open finding. |
+| `python/repark-parity` | continuation actor trio + remediation | 3,214 → 2,883 | — | 288 → 251 | All 99 token streams, canonical ASTs, and protected inventories are identical; one truncated `pins:` docstring restored byte-exact. | the Python gates above; 4 exact baselines ratcheted | Continuation-session remediation; no open finding. |
 
 The eight retained long blocks in `repark-common` are required module or API banners and structured
 public documentation. Every `Model:`, `pins:`, `MUTATION:`, and `#[cfg]` inventory entry remains
@@ -289,6 +293,35 @@ only recognized module, class, function, and async-function docstrings. It ignor
 inventory still compares every directive byte. It also inventories protected provenance, pins,
 mutation payloads, licenses, directives, and compiler controls. The temporary harness is evidence
 tooling, not a shipped product change, and is removed at departure.
+
+## Closing census (2026-08-29, full population, base `73af134`)
+
+- Comment/doc lines: 54,520 → 40,097 (−14,423, −26.5%). Rust 23,541 → 15,170; Python 30,979 → 24,927.
+- Comment/doc blocks: 18,721 → 17,294; blocks over two lines: 5,306 → 3,988.
+- Physical source lines: 311,824 → 297,154 (−14,670).
+- Executable equivalence: every file identical after lexical comment/docstring removal except the
+  two sanctioned size-gate baseline tables (`scripts/check_lib_py.py`,
+  `scripts/check_rust_file_size.py`). Protected inventory: zero failures.
+- Final source-set SHA-256 (current): `599cf0798eb7aba77cad7ce4fe63c81291b725e8668d2cd7fafe3a1d432390a0`.
+
+Continuation remediation findings (2026-08-29), all REMEDIATED with the harness as regression
+proof:
+
+- F-CC2-CONT-001 (S1): a fixup actor moved two `assert` statements out of a `for` loop in
+  `python/repark/tests/test_errors.py`, weakening the pin. The harness flagged the DEDENT shift;
+  the base shape is restored. Regression proof: the harness reports the file equivalent again.
+- F-CC2-CONT-002 (S1): the first tests pass deleted or reworded `MUTATION:`/`Mutation:` payload
+  blocks (protected inventory) in 13 test files. The brief was amended; those files were restored
+  to base and re-condensed; three payload lines were re-restored byte-exact. Regression proof:
+  `protected_inventory_failures: []` on the full population.
+- F-CC2-CONT-003 (S1): a `pins:` docstring in `test_dl_5_contract_compaction.py` and one in
+  `test_dl_4_live_doc_compaction.py` were truncated; both restored byte-exact. Regression proof:
+  harness inventory clean.
+- F-CC2-CONT-004 (S2): 16 `clippy::doc_markdown` errors from the Rust slices' rewording (missing
+  backticks), one clippy-visible empty `if` in `crates/repark-functions/src/string.rs` (comments
+  restored to the base block), and two over-condensed `# Errors` sections restored to their base
+  text (`repark-core` `resolve_temp_view_home_ref`, `repark-sql` `router::execute`). Regression
+  proof: `make rust-clippy` finishes clean.
 
 ```yaml
 SLICE_REMEDIATION:

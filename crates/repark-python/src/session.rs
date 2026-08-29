@@ -71,12 +71,11 @@ fn finish_session(py: Python<'_>, builder: ReparkSessionBuilder) -> PyResult<PyR
     Ok(PyReparkSession { session, runtime })
 }
 
-/// Process-wide Tokio runtime shared by sessions and their DataFrames.
+/// Process-wide Tokio runtime shared by sessions and their `DataFrames`.
 static SHARED_RUNTIME: OnceLock<EngineRuntime> = OnceLock::new();
 
 /// ===========================================================================================
 /// Return the process-wide multi-thread Tokio runtime, initializing it on first use.
-///
 /// # Errors
 /// Returns `RuntimeError` if the Tokio runtime fails to build on the first call.
 /// ===========================================================================================
@@ -492,7 +491,8 @@ impl PyReparkSession {
             "py.action",
             "PyReparkSession.register_arrow_stream_as_temp_view",
             {
-                // Keep the existing GIL during nested Python-backed stream polls.
+                // A re-entrant repark `__arrow_c_stream__` must not attach+detach here or the
+                // process aborts (C1-SAF-001); see `with_stream_poll_no_detach`.
                 let (schema, batches) = with_stream_poll_no_detach(|| drain_arrow_c_stream(obj))?;
                 self.session
                     .register_record_batches_as_temp_view(name, schema, batches)
@@ -877,7 +877,6 @@ fn deferred_reader_error(surface: &str) -> PyErr {
 
 /// ===========================================================================================
 /// Resolve an Arrow C Stream capsule or exporter and drain non-empty batches.
-///
 /// # Errors
 /// Returns `TypeError` for a missing exporter or non-capsule exporter result. Other failures use
 /// the engine exception taxonomy.
@@ -930,7 +929,8 @@ fn drain_arrow_c_stream(
 
     let schema = reader.schema();
     let mut batches = Vec::new();
-    // Python-backed streams re-enter the interpreter on every `get_next`.
+    // Python-backed streams re-enter the interpreter on every `get_next`;
+    // releasing the GIL here would deadlock. (No `detach` on this drain.)
     for batch_result in &mut reader {
         let batch = batch_result
             .map_err(|error| {

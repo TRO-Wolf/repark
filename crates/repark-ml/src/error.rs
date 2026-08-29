@@ -75,7 +75,7 @@ pub enum MlError {
     )]
     StandardizationUnsupported,
 
-    /// KMeans default `initMode` (`k-means||`) is unsupported; use `random`.
+    /// `KMeans` default `initMode` (`k-means||`) is unsupported; use `random`.
     #[error(
         "repark.ml: KMeans initMode default (k-means||) is not implemented. Set \
          initMode=\"random\" explicitly (no fake k-means||). Seeded random + assignment parity \
@@ -83,7 +83,7 @@ pub enum MlError {
     )]
     KMeansInitModeDefault,
 
-    /// A KMeans `initMode` string is unsupported.
+    /// A `KMeans` `initMode` string is unsupported.
     #[error(
         "repark.ml: KMeans initMode={got:?} is unsupported (only initMode=\"random\" is \
          implemented in M3)"

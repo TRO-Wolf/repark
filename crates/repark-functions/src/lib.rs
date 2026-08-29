@@ -111,7 +111,7 @@ pub fn analyzer_rules() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
 }
 
 /// ===========================================================================================
-/// Analyze a plan through the Spark rules; repeat until schema changes reach the TypeCoercion fixpoint.
+/// Analyze a plan through the Spark rules; repeat until schema changes reach the `TypeCoercion` fixpoint.
 /// ===========================================================================================
 ///
 /// # Errors

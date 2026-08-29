@@ -251,7 +251,7 @@ def test_write_empty_csv_overwrite_preserves_path(spark: ReparkSession, tmp_path
     assert loaded.count() == 0
 
 
-# Critic-octo pins (R1-C1 … C5)
+# Pins (R1-C1 … C5)
 
 
 def test_read_csv_null_value_numeric_column(spark: ReparkSession, tmp_path: Path) -> None:

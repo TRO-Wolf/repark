@@ -7,9 +7,9 @@
 /// `""` inside double quotes escapes a quote. Mirrors the Python `_parse_table_identifier_segments`
 /// used by `spark.table` so `table_exists` and writer SQL share one identity model (C2-L-006).
 /// ===========================================================================================
-/// Reject identifier segments that could escape a warehouse root (O3-C4-SEC-001).
+/// Reject identifier segments that could escape a warehouse root.
 ///
-/// Needles from [`repark_iceberg::write::idents::path_escape_kind`] (r23 QI1 single-source) so
+/// Needles from [`repark_iceberg::write::idents::path_escape_kind`] (single-source) so
 /// `table_exists` / Python `_sql_table_ref` fail at the identity boundary, not only at CTAS
 /// path composition. Mirrors `repark-sql::reject_path_escape_ident` (C2-SEC-003 / C1-SEC-001).
 pub(crate) fn reject_path_escape_segment(segment: &str) -> std::result::Result<(), String> {

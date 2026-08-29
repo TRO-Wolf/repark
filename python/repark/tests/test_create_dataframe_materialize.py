@@ -90,7 +90,7 @@ def test_create_dataframe_100k_construction_under_five_seconds(spark: ReparkSess
 class _NativeRegisterProxy:
     """Count C-stream / IPC / VALUES MemTable registers on the native session handle.
 
-    Shared by P1a structural pins so probes stay consistent (octo C1 Q-003).
+    Shared by structural pins so probes stay consistent.
 
     ``register_arrow_stream_as_temp_view`` is **not** a real attribute when
     ``hide_c_stream`` is true so production ``getattr(..., None)`` version-skew
@@ -147,7 +147,7 @@ class _NativeRegisterProxy:
 
 
 def test_create_dataframe_prefers_arrow_c_stream_not_ipc(spark: ReparkSession) -> None:
-    """P1a: createDataFrame registers via C Stream, not IPC encode/to_vec.
+    """createDataFrame registers via C Stream, not IPC encode/to_vec.
 
     Mutation: restore ``register_ipc_stream_as_temp_view`` as the only path → this pin fails.
     """
@@ -230,7 +230,7 @@ def test_create_dataframe_ipc_fallback_when_c_stream_absent(spark: ReparkSession
 
 
 def test_create_dataframe_drops_view_when_sql_after_register_fails(spark: ReparkSession) -> None:
-    """P1a SAF-001: sql() failure after C-stream register must drop the orphan MemTable.
+    """SAF-001: sql() failure after C-stream register must drop the orphan MemTable.
 
     Mutation: remove the try/except drop in ``_materialize_arrow_as_memtable_frame`` →
     ``dropped_views`` stays empty while ``stream_views`` is non-empty.
@@ -253,7 +253,7 @@ def test_create_dataframe_drops_view_when_sql_after_register_fails(spark: Repark
 def test_create_dataframe_drops_view_when_sql_after_ipc_register_fails(
     spark: ReparkSession,
 ) -> None:
-    """P1a SAF-001 on IPC version-skew branch (octo C2 Q-004)."""
+    """SAF-001 on IPC version-skew branch."""
     real = spark._ensure_alive()
     proxy = _NativeRegisterProxy(real, hide_c_stream=True, fail_after_register_on_sql=True)
     spark._inner = proxy  # type: ignore[assignment]
@@ -272,7 +272,7 @@ def test_create_dataframe_drops_view_when_sql_after_ipc_register_fails(
 def test_create_dataframe_drops_view_when_sql_after_values_materialize_fails(
     spark: ReparkSession,
 ) -> None:
-    """P1a SAF-001 on untyped empty VALUES materialize path (octo C2 Q-005)."""
+    """SAF-001 on untyped empty VALUES materialize path."""
     real = spark._ensure_alive()
     proxy = _NativeRegisterProxy(real, fail_after_register_on_sql=True)
     spark._inner = proxy  # type: ignore[assignment]
@@ -291,7 +291,7 @@ def test_create_dataframe_drops_view_when_sql_after_values_materialize_fails(
 
 
 def test_create_dataframe_c_stream_error_does_not_fall_back_to_ipc(spark: ReparkSession) -> None:
-    """Charter: C-stream runtime failure fails loud — IPC is version-skew only (octo C3).
+    """Charter: C-stream runtime failure fails loud — IPC is version-skew only.
 
     Mutation: wrap C-stream call in try/except and fall back to IPC → this pin fails.
     """
@@ -319,11 +319,11 @@ def test_create_dataframe_c_stream_error_does_not_fall_back_to_ipc(spark: Repark
 def test_create_dataframe_pandas_uses_native_arrow_not_row_loop(
     spark: ReparkSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """P2a: pandas path uses ``_arrow_table_from_pandas`` (native), not the row extractor.
+    """Pandas path uses ``_arrow_table_from_pandas`` (native), not the row extractor.
 
     Mutation: restore ``_rows_from_pandas`` as the only path → this pin fails on the spy.
     (``pa.Table.from_pandas`` is a C-extension slot and cannot be monkeypatched; the
-    builder vs rows split is the mutation seam — critic-octo C5.)
+    builder vs rows split is the mutation seam.)
     """
     import repark.spark.session as session_mod
 
@@ -353,7 +353,7 @@ def test_create_dataframe_pandas_uses_native_arrow_not_row_loop(
 def test_create_dataframe_polars_uses_native_arrow_not_row_loop(
     spark: ReparkSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """P2a: polars path uses native ``.to_arrow()`` builder, not the row extractor."""
+    """Polars path uses native ``.to_arrow()`` builder, not the row extractor."""
     import repark.spark.session as session_mod
 
     pl = pytest.importorskip("polars")
@@ -378,7 +378,7 @@ def test_create_dataframe_polars_uses_native_arrow_not_row_loop(
 
 
 def test_create_dataframe_native_typed_schema_refuses_inf(spark: ReparkSession) -> None:
-    """P2a critic-octo C1: StructType Double/Float must refuse ±inf on native pandas/polars.
+    """StructType Double/Float must refuse ±inf on native pandas/polars.
 
     Mutation: early-return on ``engine_type`` before ``is_inf`` → this pin goes red while
     untyped ``createDataFrame(pd.DataFrame({...inf}))`` still refuses.
@@ -399,7 +399,7 @@ def test_create_dataframe_native_typed_schema_refuses_inf(spark: ReparkSession) 
 
 
 def test_create_dataframe_native_decimal_envelope_matches_list(spark: ReparkSession) -> None:
-    """P2a critic-octo C1: pandas/polars Decimal refuse is PySparkValueError (not ArrowInvalid).
+    """Pandas/polars Decimal refuse is PySparkValueError (not ArrowInvalid).
 
     List path already pins envelope; native from_pandas/to_arrow must not leak rescale errors.
     """
@@ -422,7 +422,7 @@ def test_create_dataframe_native_decimal_envelope_matches_list(spark: ReparkSess
 
 
 def test_create_dataframe_pandas_duplicate_columns_fail_loud(spark: ReparkSession) -> None:
-    """P2a critic-octo C2: duplicate pandas labels → PySparkValueError (not AttributeError)."""
+    """Duplicate pandas labels → PySparkValueError (not AttributeError)."""
     from repark.errors import PySparkValueError
 
     pd = pytest.importorskip("pandas")
@@ -434,7 +434,7 @@ def test_create_dataframe_pandas_duplicate_columns_fail_loud(spark: ReparkSessio
 def test_create_dataframe_object_null_schema_cast_is_pyspark_type_error(
     spark: ReparkSession,
 ) -> None:
-    """P2a critic-octo C2: object all-NaT + DoubleType schema fails as PySparkTypeError."""
+    """Object all-NaT + DoubleType schema fails as PySparkTypeError."""
     import pandas as pd
 
     from repark.errors import PySparkTypeError
@@ -449,7 +449,7 @@ def test_create_dataframe_object_null_schema_cast_is_pyspark_type_error(
 def test_create_dataframe_empty_pandas_polars_structtype_keeps_types(
     spark: ReparkSession,
 ) -> None:
-    """P2a critic-octo C4: empty pandas/polars + StructType → 0-row frame with declared types.
+    """Empty pandas/polars + StructType → 0-row frame with declared types.
 
     Name-only schema still refuses (interchange pin). List empty+StructType already worked;
     native frame builders must match.

@@ -74,7 +74,7 @@ fn build_schema_create(
         ));
     }
     // TEMPORARY / EXTERNAL / TRANSIENT / VOLATILE must not silently create durable Iceberg
-    // tables (I5 octo C3-F1).
+    // tables.
     if create.temporary {
         return Err(DataFusionError::NotImplemented(
             "CREATE TEMPORARY TABLE is not supported for Iceberg tables yet — omit TEMPORARY \
@@ -93,10 +93,10 @@ fn build_schema_create(
                 .into(),
         ));
     }
-    // LOCATION / Hive ROW FORMAT etc. must not be silently dropped (I5 octo C4-F1 / C5-F2).
+    // LOCATION / Hive ROW FORMAT etc. must not be silently dropped.
     crate::refuse_unsupported_create_table_clauses(create, "column-def CREATE")?;
     // LIKE / CLONE before empty-column check so the honest NotImplemented surfaces
-    // (I5 octo C2-F2 — empty-column message must not mask LIKE/CLONE).
+    // (empty-column message must not mask LIKE/CLONE).
     if create.like.is_some() || create.clone.is_some() {
         return Err(DataFusionError::NotImplemented(
             "CREATE TABLE … LIKE / CLONE is not supported yet".into(),

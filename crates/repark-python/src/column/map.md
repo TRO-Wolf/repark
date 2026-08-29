@@ -1,5 +1,8 @@
 # map — repark-python/src/column
 
+CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
+accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
+
 ## Purpose
 
 `PyColumn` is an immutable DataFusion expression wrapper. Its constructors and operators provide

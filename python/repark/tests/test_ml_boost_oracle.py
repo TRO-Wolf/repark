@@ -108,7 +108,7 @@ def _looks_like_training_row_batch(
 
 
 def _assert_no_training_row_rehold(model: Any, *, expected_num_rows: int) -> None:
-    """Pin: fitted ext model shell must not re-hold training rows (octo C5-Q-002).
+    """Pin: fitted ext model shell must not re-hold training rows.
 
     Name denylist alone is insufficient; list/Arrow holds, including fit_params,
     must fail too.
@@ -192,7 +192,7 @@ def test_ext_package_import_succeeds_bare() -> None:
 def test_ext_require_names_extra_when_missing(
     monkeypatch: pytest.MonkeyPatch, module_root: str, require_name: str
 ) -> None:
-    """Every require_* must rewrite ImportError to name repark[ml-ext] (octo C5-Q-001).
+    """Every require_* must rewrite ImportError to name repark[ml-ext].
 
     Mutation-proof (C3-Q-001 + C5): only pinning require_xgboost left the other
     rewrites untested; force missing-dep via import monkeypatch.
@@ -224,7 +224,7 @@ def test_ext_class_touch_names_extra_when_missing(
 ) -> None:
     """Class-touch for XGB/LGBM/RF (regressor + classifier) must name repark[ml-ext].
 
-    Octo C7-Q-003: a regressor-only enum left classifier ``__init__`` free to drop
+    A regressor-only enum left classifier ``__init__`` free to drop
     ``_ensure_*_loaded`` while the suite stayed green.
     """
     _block_module_import(monkeypatch, module_root)
@@ -336,7 +336,7 @@ def test_cross_validator_parallelism_determinism() -> None:
 
 
 def test_cross_validator_parallelism_ctor_refuses_non_positive() -> None:
-    """M6 octo C1: constructor parallelism must not silently clamp via getParallelism max(1,…).
+    """M6: constructor parallelism must not silently clamp via getParallelism max(1,…).
 
     MUTATION: ctor ``_set(parallelism=value)`` without setParallelism validation → raw -3
     stored; getParallelism returns 1 and fit proceeds without a loud refuse.
@@ -416,7 +416,7 @@ def test_one_hot_encoder_singular_still_works() -> None:
 
 
 def test_one_hot_encoder_handle_invalid_rejects_illegal_mode() -> None:
-    """Illegal handleInvalid must fail loud — not silently act as keep (octo C3-L-001).
+    """Illegal handleInvalid must fail loud — not silently act as keep.
 
     Mutation-proof: deleting the {error,keep,skip} membership check lets illegal
     modes emit empty sparse vectors without exception.
@@ -443,7 +443,7 @@ def test_one_hot_encoder_handle_invalid_rejects_illegal_mode() -> None:
 
 
 def test_one_hot_encoder_refuses_existing_output_col() -> None:
-    """OHE transform must refuse pre-existing outputCols (octo C3-L-002).
+    """OHE transform must refuse pre-existing outputCols.
 
     Mutation-proof: without _refuse_output_collision, SELECT view.*, expr AS oh
     silently overwrites an existing column name.
@@ -497,7 +497,7 @@ def test_xgboost_regressor_e2e_and_lib_parity() -> None:
         assert model.num_rows == 40
         assert model.num_features == 1
         assert model.booster is not None
-        # C5-Q-002: shell is booster + scalars only; scan fit_params + list/Arrow.
+        # Shell is booster + scalars only; scan fit_params + list/Arrow.
         _assert_no_training_row_rehold(model, expected_num_rows=40)
         # Mutation-proof the pin itself: fit_params list hold and Arrow-like
         # non-denylist attr must go red.
@@ -548,7 +548,7 @@ def test_xgboost_regressor_e2e_and_lib_parity() -> None:
 
 
 def test_xgboost_regressor_load_requires_params_parquet() -> None:
-    """Missing/empty params.parquet must refuse — not zero num_features (octo M5 C2).
+    """Missing/empty params.parquet must refuse — not zero num_features (M5).
 
     MUTATION: optional params.parquet + ``if table.num_rows > 0`` → missing/0-row file
     loads with num_features=0 / empty fit_params, skipping transform width checks while
@@ -596,7 +596,7 @@ def test_xgboost_regressor_load_requires_params_parquet() -> None:
 
 
 def test_xgboost_regressor_load_refuses_booster_blob_path_escape() -> None:
-    """Hostile metadata ``booster_blob`` must not escape the model root (octo M5 C1).
+    """Hostile metadata ``booster_blob`` must not escape the model root (M5).
 
     MUTATION: load joins ``target / blob_rel`` without ``..`` / absolute confinement →
     ``../evil/booster.raw`` and absolute paths load a real booster outside the model tree.
@@ -718,7 +718,7 @@ def test_xgboost_regressor_booster_bytes_save_load_predict_parity() -> None:
 
 
 def test_pipeline_model_save_with_xgb_stage_stop_loud() -> None:
-    """PipelineModel must not hollow-publish ext stages as empty fitted parquet (octo C1-Q-001)."""
+    """PipelineModel must not hollow-publish ext stages as empty fitted parquet."""
     pytest.importorskip("xgboost")
     from repark.spark.ml.ext import XGBoostRegressor
 
@@ -749,7 +749,7 @@ def test_pipeline_model_save_with_xgb_stage_stop_loud() -> None:
 
 
 def test_ext_transform_temp_view_owned_and_dropped() -> None:
-    """Success-path re-entry must own and GC-drop __repark_ml_ext_* views (octo C1-SAF-001)."""
+    """Success-path re-entry must own and GC-drop __repark_ml_ext_* views."""
     pytest.importorskip("xgboost")
     from repark.spark.ml.ext import XGBoostRegressor
 
@@ -804,7 +804,7 @@ def test_ext_transform_temp_view_owned_and_dropped() -> None:
 
 
 def test_sparse_feature_size_capped() -> None:
-    """Sparse densify must refuse size > MAX_EXT_FEATURES (octo C1-SAF-002)."""
+    """Sparse densify must refuse size > MAX_EXT_FEATURES."""
     pytest.importorskip("numpy")
     import pyarrow as pa
 
@@ -819,7 +819,7 @@ def test_sparse_feature_size_capped() -> None:
 
 
 def test_sparse_feature_nnz_capped() -> None:
-    """Sparse densify must refuse nnz > MAX_EXT_FEATURES even when size is small (C3-SAF-001).
+    """Sparse densify must refuse nnz > MAX_EXT_FEATURES even when size is small.
 
     Mutation-proof: size/width oracles stay green if only list(indices)/list(values)
     materialize is unbounded. Hostile shape size=1 + huge nnz must refuse before densify.
@@ -845,7 +845,7 @@ def test_sparse_feature_nnz_capped() -> None:
 
 
 def test_dense_feature_width_capped() -> None:
-    """Dense list width > MAX_EXT_FEATURES must refuse (octo C2-Q-002 / C1-SAF-002 dense path).
+    """Dense list width > MAX_EXT_FEATURES must refuse (dense path).
 
     Mutation-proof: deleting the dense ``len(values) > MAX_EXT_FEATURES`` check leaves
     sparse-only tests green — this pin goes red on that deletion.
@@ -864,7 +864,7 @@ def test_dense_feature_width_capped() -> None:
 
 
 def test_xgboost_regressor_transform_wrong_width_refuses() -> None:
-    """Fitted XGBoostRegressorModel must refuse wrong feature width (octo C3-Q-002).
+    """Fitted XGBoostRegressorModel must refuse wrong feature width.
 
     Mutation-proof: deleting the num_features check in ``_transform`` leaves the
     suite green — this oracle goes red on that deletion.
@@ -901,7 +901,7 @@ def test_xgboost_regressor_transform_wrong_width_refuses() -> None:
 
 
 def test_multiclass_f1_is_loud_not_accuracy() -> None:
-    """Default/f1 metric must not silently return accuracy (octo C1-L-002)."""
+    """Default/f1 metric must not silently return accuracy."""
     spark = _session()
     try:
         df = spark.createDataFrame(
@@ -923,9 +923,9 @@ def test_multiclass_f1_is_loud_not_accuracy() -> None:
 def test_xgboost_classifier_stretch() -> None:
     """Stretch: XGBoostClassifier binary labels + lib-direct prediction parity.
 
-    Octo C6-Q-001: row-count / column-presence alone stays green under
+    Row-count / column-presence alone stays green under
     predict→zeros mutation; pin must equal library on the same matrix.
-    Octo C7-Q-001: re-hold pin on classifier model (not XGBRegressor-only).
+    Re-hold pin on classifier model (not XGBRegressor-only).
     """
     pytest.importorskip("xgboost")
     pytest.importorskip("numpy")
@@ -972,7 +972,7 @@ def test_xgboost_classifier_stretch() -> None:
 
 
 def test_lightgbm_regressor_stretch() -> None:
-    """Stretch: LightGBMRegressor E2E + lib-direct prediction parity (C6-Q-001)."""
+    """Stretch: LightGBMRegressor E2E + lib-direct prediction parity."""
     pytest.importorskip("lightgbm")
     pytest.importorskip("numpy")
     import lightgbm as lgb
@@ -993,7 +993,7 @@ def test_lightgbm_regressor_stretch() -> None:
             maxDepth=3,
             seed=3,
         ).fit(assembled)
-        # C7-Q-001: re-hold not only on XGBoostRegressorModel.
+        # Re-hold not only on XGBoostRegressorModel.
         _assert_no_training_row_rehold(model, expected_num_rows=20)
         out = model.transform(assembled).collect()
         repark_preds = [float(row.asDict()["prediction"]) for row in out]
@@ -1018,7 +1018,7 @@ def test_lightgbm_regressor_stretch() -> None:
 
 
 def test_sklearn_random_forest_regressor_stretch() -> None:
-    """Stretch: sklearn RandomForestRegressor + lib-direct prediction parity (C6-Q-001)."""
+    """Stretch: sklearn RandomForestRegressor + lib-direct prediction parity."""
     pytest.importorskip("sklearn")
     pytest.importorskip("numpy")
     import numpy as np
@@ -1038,7 +1038,7 @@ def test_sklearn_random_forest_regressor_stretch() -> None:
             maxDepth=3,
             seed=5,
         ).fit(assembled)
-        # C7-Q-001: re-hold not only on XGBoostRegressorModel.
+        # Re-hold not only on XGBoostRegressorModel.
         _assert_no_training_row_rehold(model, expected_num_rows=20)
         out = model.transform(assembled).collect()
         repark_preds = [float(row.asDict()["prediction"]) for row in out]
@@ -1061,7 +1061,7 @@ def test_sklearn_random_forest_regressor_stretch() -> None:
 
 
 def test_lightgbm_classifier_stretch() -> None:
-    """Stretch: LightGBMClassifier transform + lib-direct parity (octo C7-Q-002).
+    """Stretch: LightGBMClassifier transform + lib-direct parity.
 
     Mutation-proof: save/write-only classifier pins stay green if ``_transform``
     returns zeros; pin equals library on the same matrix + hyperparams.
@@ -1110,7 +1110,7 @@ def test_lightgbm_classifier_stretch() -> None:
 
 
 def test_sklearn_random_forest_classifier_stretch() -> None:
-    """Stretch: sklearn RandomForestClassifier lib-direct parity (octo C7-Q-002).
+    """Stretch: sklearn RandomForestClassifier lib-direct parity.
 
     Mutation-proof: save/write-only pins stay green under zeros-predict transform.
     """
@@ -1228,11 +1228,11 @@ def test_cv_over_small_xgb_grid() -> None:
         spark.stop()
 
 
-# Octo cycle-2 mutation-proof pins (S1)
+# mutation-proof pins (S1)
 
 
 def test_cross_validator_materializes_fold_labels() -> None:
-    """CV must materialize fold labels *and use* the mat_view (octo C2-Q-001 / C4-Q-001).
+    """CV must materialize fold labels *and use* the mat_view.
 
     Mutation-proof: call-only oracles stay green when materialize is called then
     ignored; SQL after materialize must read ``__repark_cv_mat_*``.
@@ -1294,7 +1294,7 @@ def test_cross_validator_materializes_fold_labels() -> None:
 
 
 def test_regression_evaluator_r2_is_larger_better_case_insensitive() -> None:
-    """metricName='R2' must be larger-better (octo C2-L-001).
+    """metricName='R2' must be larger-better.
 
     evaluate() lowercases; isLargerBetter must too — else CV takes min of R2 (worst model).
     """
@@ -1344,7 +1344,7 @@ def test_regression_evaluator_r2_is_larger_better_case_insensitive() -> None:
 
 
 def test_cross_validator_refuses_nan_fold_metrics() -> None:
-    """NaN fold scores must not poison bestModel to param_maps[0] (octo C2-L-002)."""
+    """NaN fold scores must not poison bestModel to param_maps[0]."""
     spark = _session()
     try:
         # Constant labels → R2 SS_tot=0 → nullif → NaN on every fold.
@@ -1370,7 +1370,7 @@ def test_cross_validator_refuses_nan_fold_metrics() -> None:
 
 
 def test_pipeline_load_refuses_path_traversal() -> None:
-    """relative_path with .. must not escape model root (octo C2-SEC-001)."""
+    """relative_path with .. must not escape model root."""
     import json
     import shutil
 
@@ -1435,7 +1435,7 @@ def test_pipeline_load_refuses_path_traversal() -> None:
 
 
 def test_pipeline_instantiate_stage_allowlists_repark_ml() -> None:
-    """importlib class_path must be under repark.ml (octo C2-SEC-002)."""
+    """importlib class_path must be under repark.ml."""
     from repark.spark.ml.pipeline import _assert_allowed_stage_class_path, _instantiate_stage
 
     with pytest.raises(UnsupportedOperationException, match=r"allowlist|repark\.ml"):
@@ -1461,7 +1461,7 @@ def test_pipeline_instantiate_stage_allowlists_repark_ml() -> None:
 def test_stretch_ext_write_stop_loud() -> None:
     """M8: LightGBM regressor save/load works; sklearn still pin-refuses (pickle).
 
-    sklearn refuses with the exact pickle-forbidden reason (octo C2-L-003 residual).
+    sklearn refuses with the exact pickle-forbidden reason (residual).
     """
     import importlib.util
 
@@ -1526,7 +1526,7 @@ def test_stretch_ext_write_stop_loud() -> None:
         spark.stop()
 
 
-# Octo cycle-4 mutation-proof pins (S1) — M8 update for classifier save matrix
+# mutation-proof pins (S1) — M8 update for classifier save matrix
 
 
 def test_classifier_models_save_write_stop_loud() -> None:
@@ -1626,7 +1626,7 @@ def test_classifier_models_save_write_stop_loud() -> None:
 
 
 def test_features_matrix_caps_before_as_py() -> None:
-    """Null probe + dense width must refuse without as_py materialize (octo C4-SAF-001).
+    """Null probe + dense width must refuse without as_py materialize.
 
     Mutation-proof: an as_py-first implementation reintroduces hostile materialize
     before MAX_EXT_FEATURES; this pin raises if as_py runs first.
@@ -1676,7 +1676,7 @@ def test_features_matrix_caps_before_as_py() -> None:
 
 
 def test_one_hot_encoder_keep_drop_last_false_extra_invalid_bucket() -> None:
-    """handleInvalid=keep + dropLast=False → size=category_size+1 (octo C4-L-001).
+    """handleInvalid=keep + dropLast=False → size=category_size+1.
 
     Spark reserves an invalid category *before* dropLast. Mutation: size=category_size
     and empty-for-invalid leaves plural/singular dropLast=True oracles green.
@@ -1723,7 +1723,7 @@ def test_one_hot_encoder_keep_drop_last_false_extra_invalid_bucket() -> None:
 
 
 def test_model_copy_extra_applies_prediction_col_override() -> None:
-    """Model.copy(extra) must apply Param overrides (octo C4-L-002).
+    """Model.copy(extra) must apply Param overrides.
 
     Mutation-proof: discarding extra leaves transform(df, {predictionCol: pred_out})
     still writing ``prediction``; pin LR, Logit, XGB regressor, and CV model.
@@ -2001,7 +2001,7 @@ def test_m8_sklearn_random_forest_pickle_forbidden_pin() -> None:
                 ):
                     model.write()
                 assert not Path(target).exists()
-            # Load/read also pin-refuse (octo M8 C1 — no AttributeError third state).
+            # Load/read also pin-refuse (M8 — no AttributeError third state).
             for load_cls in (RandomForestRegressorModel, RandomForestClassifierModel):
                 with pytest.raises(
                     UnsupportedOperationException,
@@ -2185,7 +2185,7 @@ def test_m8_no_pickle_import_in_ext_persist_sources() -> None:
 
 
 def test_m8_load_refuses_classifier_flag_mismatch_and_nonpositive_num_features() -> None:
-    """Octo M8 C1: hostile task-type relabel + num_features<=0 soft-load must refuse.
+    """M8: hostile task-type relabel + num_features<=0 soft-load must refuse.
 
     MUTATION: rewrite metadata.kind + fitted.classifier to the opposite task → silent
     cross-load with wrong predict semantics. MUTATION: num_features=0 → width guard skip.

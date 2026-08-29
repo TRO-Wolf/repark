@@ -1,5 +1,8 @@
 # map — repark-core/src
 
+CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
+accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
+
 ## Purpose
 
 Source for `repark-core` — `ReparkSession` over a DataFusion `SessionContext` + the

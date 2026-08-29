@@ -336,7 +336,7 @@ fn parse_as_of_value(
     // Unary minus + number: Iceberg snapshot ids are signed i64 and are often negative
     // (Java `ThreadLocalRandom.nextLong()`). sqlparser emits `Minus` + `Number` rather than a
     // single signed number token — without this arm, `VERSION AS OF -N` is not rewritten and
-    // time travel silently fails open to a parse error (octo C2-L-001 / C2-Q-001).
+    // time travel silently fails open to a parse error.
     if matches!(token, Token::Minus) {
         let next = significant.get(value_sig + 1).map(|(_, t)| *t)?;
         let Token::Number(text, _) = next else {

@@ -656,7 +656,7 @@ fn render_pattern_field(letter: char, count: usize, datetime: NaiveDateTime) -> 
     }
 }
 
-/// One token of a pre-compiled Java-style `date_format` pattern (r24 PERF-02).
+/// One token of a pre-compiled Java-style `date_format` pattern (PERF-02).
 ///
 /// Compiling once per invocation (the pattern is a scalar literal in every realistic call)
 /// avoids re-parsing `pattern.chars().collect()` on every row.
@@ -1498,7 +1498,7 @@ mod tests {
         );
     }
 
-    /// LargeUtf8 format arguments return safely after coercion.
+    /// `LargeUtf8` format arguments return safely after coercion.
     #[tokio::test]
     async fn trunc_accepts_large_utf8_format_without_panic() {
         use arrow::array::LargeStringArray;

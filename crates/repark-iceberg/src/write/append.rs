@@ -1,10 +1,12 @@
 //! Public bulk append through the fork's `fast_append` transaction path.
 //!
 //! Appends are blind writes, so the fork's refresh-and-retry commit semantics apply without row
-//! validation. Each commit receives the MERGE operation-id snapshot property. Partitioned writes
-//! use the fork's computed partition fanout for identity and transformed fields; non-Parquet
-//! formats remain a loud `NotImplemented` scope gate. Empty appends commit with the operation-id
-//! stamp, matching Java's empty-snapshot behavior.
+//! validation; each commit receives the MERGE operation-id snapshot property. Partitioned writes
+//! use the fork's computed partition fanout; non-Parquet formats remain a loud `NotImplemented`
+//! scope gate. Empty appends commit with the stamp, matching Java's empty-snapshot behavior.
+//! Known divergence: Java URL-encodes every partition path segment (`PartitionSpec.escape`),
+//! the fork emits the raw human string — a string key needing escaping gets a divergent layout;
+//! manifest partition values, pruning, and read-back stay correct (filed fork parity follow-up).
 
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -47,7 +49,6 @@ use crate::write::writer_props::writer_properties_for;
 /// OCC retry loop. Returns the refreshed [`Table`] at the committed snapshot. Empty input
 /// commits an empty stamped `append` snapshot (Java `AppendFiles`/`BatchAppend` parity).
 /// ===========================================================================================
-///
 /// # Errors
 /// A missing table surfaces the catalog's load error; a non-Parquet `write.format.default` is
 /// `NotImplemented`; a batch with a missing, extra, ambiguous (case-colliding), or DUPLICATE
@@ -197,7 +198,6 @@ fn conform_batch(write_schema: &SchemaRef, batch: &RecordBatch) -> Result<Record
 /// The table must carry a partition spec; on an unpartitioned table the fork's splitter
 /// construction fails loudly (use [`write_data_files`] there).
 /// ===========================================================================================
-///
 /// # Errors
 /// A batch with a missing, extra, or duplicate column, an uncastable/overflowing value, or a
 /// NULL in a required column errors loudly before anything is written (the same conform
@@ -750,7 +750,7 @@ mod tests {
     /// `do_commit` refresh and before its catalog CAS — so the victim's first attempt is
     /// rejected with the retryable `CatalogCommitConflicts` a real mid-flight race produces.
     /// Deterministic: the injection is keyed on the attempt counter, no timing involved
-    /// (lessons rule 12). Cycle-2 F-A1-5 — occupies the in-flight window cycle-1 disclosure #3
+    /// (lessons rule 12). F-A1-5 — occupies the in-flight window disclosure #3
     /// called untestable.
     #[derive(Debug)]
     struct ConflictInjector {
@@ -1816,7 +1816,7 @@ mod tests {
         assert_eq!(snapshot_count(&catalog, &ident).await, 0, "nothing lands");
     }
 
-    /// PIN P14 (cycle-2 F-A1-1; WG-4 rewording) — a batch carrying DUPLICATE column names is a
+    /// PIN P14 (F-A1-1; WG-4 rewording) — a batch carrying DUPLICATE column names is a
     /// loud error naming BOTH copies, and nothing commits. An exact duplicate is the degenerate
     /// case of the case-insensitive ambiguity Spark rejects (`matched.length > 1` in
     /// `TableOutputResolver.reorderColumnsByName`): the by-name rebuild would otherwise take the
@@ -1873,7 +1873,7 @@ mod tests {
         );
     }
 
-    /// PIN P15 (cycle-2 F-A1-2) — an OVERFLOWING cast is a loud error naming the offending
+    /// PIN P15 (F-A1-2) — an OVERFLOWING cast is a loud error naming the offending
     /// value, and nothing commits. The key is NULLABLE here on purpose: under a `safe: true`
     /// cast the overflow becomes a silent NULL that would COMMIT into the null partition (the
     /// silent-misroute class) — a required key would mask that mutation behind the nullability
@@ -1908,7 +1908,7 @@ mod tests {
         assert!(read_back_sorted(&catalog, &ident).await.is_empty());
     }
 
-    /// PIN P16 (cycle-2 F-A1-2) — a batch with its columns REORDERED versus the write schema
+    /// PIN P16 (F-A1-2) — a batch with its columns REORDERED versus the write schema
     /// and an in-range WIDENING-cast key (Int64 → Int32) conforms BY NAME: values land under
     /// the right columns, the manifest partition values match the cast keys, and the full
     /// round-trip is value- AND type-exact. Risk: a positional rebuild would cast `payload`
@@ -2094,9 +2094,9 @@ mod tests {
         assert!(read_back_sorted(&catalog, &ident).await.is_empty());
     }
 
-    /// PIN P17 (cycle-2 F-A1-5) — a TRUE mid-flight CAS rejection is resolved by the fork's
+    /// PIN P17 (F-A1-5) — a TRUE mid-flight CAS rejection is resolved by the fork's
     /// commit retry: a competing public append lands INSIDE the victim's first `update_table`
-    /// call (after `do_commit`'s refresh, before the catalog CAS — the window the cycle-1
+    /// call (after `do_commit`'s refresh, before the catalog CAS — the window the
     /// disclosure called untestable), the first attempt is rejected with the retryable
     /// `CatalogCommitConflicts`, and the retry refreshes + re-applies so BOTH appends land in
     /// exactly two `update_table` attempts. Risk: the append path stops committing through the

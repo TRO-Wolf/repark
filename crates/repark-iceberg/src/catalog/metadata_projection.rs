@@ -1,4 +1,4 @@
-//! RePark policies for fork metadata tables: projection honor and enumeration hiding.
+//! `RePark` policies for fork metadata tables: projection honor and enumeration hiding.
 //!
 //! The fork scan ignores `projection`, so registered metadata providers apply
 //! [`ProjectionExec`] while preserving the full logical schema. The fork also synthesizes
@@ -22,7 +22,7 @@ use datafusion::physical_plan::ExecutionPlan;
 use datafusion::physical_plan::projection::{ProjectionExec, ProjectionExpr};
 use iceberg::inspect::MetadataTableType;
 
-// === r25 T2 item 0: metadata-table projection wrap =========================================
+// === metadata-table projection wrap =========================================
 //
 // Sole-writer: T2 ICE-REF. Applied at SchemaProvider registration (ReparkCatalogProvider
 // snapshot / namespace refresh) so every free-SQL path through `table$meta` is covered.
@@ -485,7 +485,7 @@ mod tests {
         assert!(err.to_string().contains("out of range"), "got: {err}");
     }
 
-    /// r25 morning critic pin: an EMPTY projection over real batches preserves `num_rows` on
+    /// An EMPTY projection over real batches preserves `num_rows` on
     /// the zero-column output — the exact mechanism `count(*)` relies on. `EmptyExec` cannot pin
     /// this (it emits no batches), so this drives rows through a memory source.
     #[tokio::test]
@@ -522,7 +522,7 @@ mod tests {
         );
     }
 
-    /// r25 morning critic pin: projection indices are logical-schema-relative but bind by NAME
+    /// Projection indices are logical-schema-relative but bind by NAME
     /// into the scan's physical schema — a reordered scan output still yields the right DATA.
     #[tokio::test]
     async fn reordered_scan_schema_still_binds_projected_columns_by_name() {

@@ -15,7 +15,7 @@ pub enum SnapshotRefKind {
     Tag,
 }
 
-/// Optional retention fields mapped onto fork `SnapshotRetention` setters (r25 T2).
+/// Optional retention fields mapped onto fork `SnapshotRetention` setters.
 ///
 /// Spark grammar (Iceberg Spark Procedures / branch-tag docs):
 /// - `RETAIN n DAYS|HOURS|MINUTES` → `max_ref_age_ms`

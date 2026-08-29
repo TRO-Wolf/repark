@@ -88,13 +88,13 @@ def test_two_generators_rejected(frame: object) -> None:
 def test_posexplode_stops_loud(frame: object) -> None:
     with pytest.raises(UnsupportedOperationException, match="posexplode") as raised:
         F.posexplode(frame.a)
-    # r24 A3 octo C1-Q-001: message must not embed a rotting DataFusion major.
+    # Message must not embed a rotting DataFusion major.
     assert "DataFusion 52" not in str(raised.value)
     assert "52.x" not in str(raised.value)
 
 
 def test_posexplode_outer_stops_loud(frame: object) -> None:
-    """posexplode_outer must STOP loud (not a silent stub) — octo C1-Q-006."""
+    """posexplode_outer must STOP loud (not a silent stub)."""
     with pytest.raises(UnsupportedOperationException, match="posexplode_outer"):
         F.posexplode_outer(frame.a)
 
@@ -106,7 +106,7 @@ def test_explode_alone_select(frame: object) -> None:
 
 
 def test_explode_str_column_name_not_literal(frame: object) -> None:
-    """F.explode(\"a\") is ColumnOrName → col, never lit (octo C1-Q-001)."""
+    """F.explode(\"a\") is ColumnOrName → col, never lit."""
     out = frame.select(frame.id, F.explode("a").alias("e")).orderBy("id", "e")
     table = out.to_arrow()
     rows = [(r["id"], r["e"]) for r in table.to_pylist()]
@@ -115,7 +115,7 @@ def test_explode_str_column_name_not_literal(frame: object) -> None:
 
 
 def test_explode_outer_str_column_name_not_literal(frame: object) -> None:
-    """F.explode_outer(\"a\") binds the column, not a string literal (octo C1-Q-001)."""
+    """F.explode_outer(\"a\") binds the column, not a string literal."""
     out = frame.select(frame.id, F.explode_outer("a").alias("e")).orderBy("id", "e")
     by_id: dict[int, list] = {}
     for row in out.to_arrow().to_pylist():
@@ -126,7 +126,7 @@ def test_explode_outer_str_column_name_not_literal(frame: object) -> None:
 
 
 def test_explode_cast_stays_generator(frame: object) -> None:
-    """explode(...).cast(...) must still unnest (sticky _generator) — octo C1-Q-003."""
+    """explode(...).cast(...) must still unnest (sticky _generator)."""
     out = frame.select(frame.id, F.explode(frame.a).cast("string").alias("e")).orderBy("id", "e")
     table = out.to_arrow()
     rows = [(r["id"], r["e"]) for r in table.to_pylist()]
@@ -136,7 +136,7 @@ def test_explode_cast_stays_generator(frame: object) -> None:
 
 
 def test_with_column_explode_multiplies_rows(frame: object) -> None:
-    """withColumn(generator) must unnest, not project the array (octo C1-Q-004 / C1-L-001)."""
+    """withColumn(generator) must unnest, not project the array."""
     out = frame.withColumn("e", F.explode(frame.a)).orderBy("id", "e")
     table = out.to_arrow()
     rows = [(r["id"], r["e"]) for r in table.to_pylist()]
@@ -147,14 +147,14 @@ def test_with_column_explode_multiplies_rows(frame: object) -> None:
 
 
 def test_explode_prealiased_array_strips_as(frame: object) -> None:
-    """F.explode(col.alias(...)) must not embed AS into unnest SQL (octo C1-Q-005)."""
+    """F.explode(col.alias(...)) must not embed AS into unnest SQL."""
     out = frame.select(frame.id, F.explode(frame.a.alias("renamed")).alias("e")).orderBy("id", "e")
     rows = [(r["id"], r["e"]) for r in out.to_arrow().to_pylist()]
     assert rows == [(1, 10), (1, 20), (4, None), (4, 5)]
 
 
 def test_explode_outer_multi_array_exact_type_bind(spark: ReparkSession) -> None:
-    """Sibling list cols must not steal CASE element type via substring match (C1-Q-002).
+    """Sibling list cols must not steal CASE element type via substring match.
 
     ``a`` is a substring of ``data``; a display-substring bind would break the string
     guards. Exact field bind only.
@@ -180,7 +180,7 @@ def test_explode_outer_multi_array_exact_type_bind(spark: ReparkSession) -> None
 
 
 def test_explode_outer_field_named_explode_exact_bind(spark: ReparkSession) -> None:
-    """A list column literally named ``explode`` must not hijack type resolution (C1-L-002)."""
+    """A list column literally named ``explode`` must not hijack type resolution."""
     frame = spark.sql(
         """
         SELECT 1 AS id,
@@ -197,7 +197,7 @@ def test_explode_outer_field_named_explode_exact_bind(spark: ReparkSession) -> N
 
 
 def test_explode_prealiased_sibling_no_double_as(frame: object) -> None:
-    """select(id.alias(...), explode(...)) must not emit double AS (octo C2-Q-001)."""
+    """select(id.alias(...), explode(...)) must not emit double AS."""
     out = frame.select(frame.id.alias("x"), F.explode(frame.a).alias("e")).orderBy("x", "e")
     table = out.to_arrow()
     rows = [(r["x"], r["e"]) for r in table.to_pylist()]
@@ -207,7 +207,7 @@ def test_explode_prealiased_sibling_no_double_as(frame: object) -> None:
 
 
 def test_explode_outer_timestamp_element_type(spark: ReparkSession) -> None:
-    """explode_outer NULL/empty guard must use TIMESTAMP not BIGINT fail-open (C2-Q-003/L-001)."""
+    """explode_outer NULL/empty guard must use TIMESTAMP not BIGINT fail-open."""
     frame = spark.sql(
         """
         SELECT 1 AS id, CAST(NULL AS TIMESTAMP[]) AS a
@@ -227,7 +227,7 @@ def test_explode_outer_timestamp_element_type(spark: ReparkSession) -> None:
 
 
 def test_explode_reserved_and_mixed_case_array_ident(spark: ReparkSession) -> None:
-    """Array/sibling idents must be quoted (reserved + mixed-case) — C2-Q-002 / C2-L-002."""
+    """Array/sibling idents must be quoted (reserved + mixed-case)."""
     frame = spark.sql(
         """
         SELECT 1 AS id,
@@ -246,7 +246,7 @@ def test_explode_reserved_and_mixed_case_array_ident(spark: ReparkSession) -> No
 
 
 def test_explode_hostile_column_name_is_identifier_not_injection(frame: object) -> None:
-    """Hostile ColumnOrName must not reshape FROM/SELECT (octo C2-SEC-001).
+    """Hostile ColumnOrName must not reshape FROM/SELECT.
 
     Quoting turns the token into one identifier; analysis fails on missing field —
     not a successful alternate FROM clause.
@@ -260,7 +260,7 @@ def test_explode_hostile_column_name_is_identifier_not_injection(frame: object) 
 
 
 def test_explode_sibling_hostile_alias_quoted(frame: object) -> None:
-    """Sibling alias names with SQL metacharacters stay one identifier (C2-SEC-002)."""
+    """Sibling alias names with SQL metacharacters stay one identifier."""
     evil = 'x", 1 AS pwn --'
     out = frame.select(frame.id.alias(evil), F.explode(frame.a).alias("e")).to_arrow()
     # Projection name is the evil string (quoted in SQL); one extra column only.
@@ -272,7 +272,7 @@ def test_explode_sibling_hostile_alias_quoted(frame: object) -> None:
 
 
 def test_explode_asc_desc_keeps_generator(frame: object) -> None:
-    """asc/desc must not drop _generator (octo C2-Q-005)."""
+    """asc/desc must not drop _generator."""
     gen_asc = F.explode(frame.a).asc()
     assert gen_asc._generator == "explode"
     gen_desc = F.explode_outer(frame.a).desc()
@@ -284,7 +284,7 @@ def test_explode_asc_desc_keeps_generator(frame: object) -> None:
 
 
 def test_explode_outer_alone_select_null_empty_typed(frame: object) -> None:
-    """Alone-select explode_outer keeps null/empty rows (value pin; C2-L-004 cheap)."""
+    """Alone-select explode_outer keeps null/empty rows (value pin)."""
     out = frame.select(F.explode_outer(frame.a).alias("e")).to_arrow()
     values = out.column("e").to_pylist()
     # Non-empty elements + one null from id=2 + one null from id=3 + null element from id=4.
@@ -294,7 +294,7 @@ def test_explode_outer_alone_select_null_empty_typed(frame: object) -> None:
 
 
 def test_explode_compound_mixed_case_sibling(spark: ReparkSession) -> None:
-    """Compound siblings with mixed-case idents must not re-embed unquoted SQL (C3-Q-001).
+    """Compound siblings with mixed-case idents must not re-embed unquoted SQL.
 
     Two-phase rewrite: native project ``MyId + 0`` first, then unnest by quoted names.
     """
@@ -313,7 +313,7 @@ def test_explode_compound_mixed_case_sibling(spark: ReparkSession) -> None:
 
 
 def test_explode_outer_nested_list_element_type(spark: ReparkSession) -> None:
-    """Nested list element type must be ``BIGINT[]`` not BIGINT fail-open (C3-Q-002 / C2 nested).
+    """Nested list element type must be ``BIGINT[]`` not BIGINT fail-open.
 
     Mutation-proof: removing the List( branch in ``_arrow_debug_type_to_sql`` raises or
     yields a scalar null type instead of list<item: int64>.
@@ -365,7 +365,7 @@ def test_nested_array_cast_spelling_round_trips_in_engine(spark: ReparkSession) 
 
 
 def test_explode_hostile_fn_call_column_name_not_sql(frame: object) -> None:
-    """ColumnOrName shaped like a fn-call must not execute as free SQL (C3-SEC-001).
+    """ColumnOrName shaped like a fn-call must not execute as free SQL.
 
     Two-phase rewrite binds a field name only.
     """
@@ -377,14 +377,14 @@ def test_explode_hostile_fn_call_column_name_not_sql(frame: object) -> None:
 
 
 def test_explode_hostile_subquery_column_name_not_sql(frame: object) -> None:
-    """Leading-paren ColumnOrName must not run as a subquery (C3-SEC-001)."""
+    """Leading-paren ColumnOrName must not run as a subquery."""
     hostile = "(SELECT make_array(9))"
     with pytest.raises(AnalysisException, match=r"(?i)field|schema|column"):
         frame.select(F.explode(hostile).alias("e")).collect()
 
 
 def test_explode_array_of_struct_allowed(spark: ReparkSession) -> None:
-    """Plain explode must not require outer element-type resolution (C3-L-001)."""
+    """Plain explode must not require outer element-type resolution."""
     frame = spark.sql("SELECT 1 AS id, [{x: 10}, {x: 20}] AS a")
     out = frame.select(F.explode(frame.a).alias("e")).to_arrow()
     rows = out.to_pylist()
@@ -394,7 +394,7 @@ def test_explode_array_of_struct_allowed(spark: ReparkSession) -> None:
 
 
 def test_explode_outer_coalesce_preserves_element_type(spark: ReparkSession) -> None:
-    """explode_outer on compound array expr must not fail-open CASE to BIGINT (C3-L-002)."""
+    """explode_outer on compound array expr must not fail-open CASE to BIGINT."""
     frame = spark.sql(
         """
         SELECT 1 AS id, CAST(NULL AS VARCHAR[]) AS a
@@ -416,7 +416,7 @@ def test_explode_outer_coalesce_preserves_element_type(spark: ReparkSession) -> 
 
 
 def test_explode_size_sibling_uses_engine_cardinality(frame: object) -> None:
-    """Scalar siblings (size) must use native plan, not Spark pretty name in SQL (C3-L-003)."""
+    """Scalar siblings (size) must use native plan, not Spark pretty name in SQL."""
     out = frame.select(F.size(frame.a).alias("s"), F.explode(frame.a).alias("e"))
     table = out.to_arrow()
     rows = {(r["s"], r["e"]) for r in table.to_pylist()}
@@ -429,7 +429,7 @@ def test_explode_size_sibling_uses_engine_cardinality(frame: object) -> None:
 
 
 def test_explode_on_sql_functions_export_and_posexplode_stop() -> None:
-    """``repark.sql.functions`` must re-export explode* (sed-swap) — octo C4-Q-001."""
+    """``repark.sql.functions`` must re-export explode* (sed-swap)."""
     import repark.spark.functions as canonical
     from repark.spark.sql import functions as sql_functions
 
@@ -446,7 +446,7 @@ def test_explode_on_sql_functions_export_and_posexplode_stop() -> None:
 
 
 def test_explode_nested_ops_refuse_loud(frame: object) -> None:
-    """Nested ops on generators must not silently drop unnest (octo C4-L-001)."""
+    """Nested ops on generators must not silently drop unnest."""
     with pytest.raises(AnalysisException, match=r"UNSUPPORTED_GENERATOR|nested"):
         _ = F.explode(frame.a).isNotNull()
     with pytest.raises(AnalysisException, match=r"UNSUPPORTED_GENERATOR|nested"):
@@ -461,7 +461,7 @@ def test_explode_nested_ops_refuse_loud(frame: object) -> None:
 
 
 def test_explode_hostile_cast_rejected(frame: object) -> None:
-    """Hostile ``.cast`` type text must not reshape generator unnest SQL (C4-SEC-001 / C4-L-002).
+    """Hostile ``.cast`` type text must not reshape generator unnest SQL.
 
     The allowlist, not the ``ParseException`` class, is the injection control; the class
     only matches live PySpark on unparsable cast text.
@@ -487,7 +487,7 @@ def test_explode_hostile_cast_rejected(frame: object) -> None:
 
 
 def test_explode_function_wrappers_refuse_generator(frame: object) -> None:
-    """F.size/coalesce/when must not strip ``_generator`` (octo C5-Q-001 / C5-L-001)."""
+    """F.size/coalesce/when must not strip ``_generator``."""
     with pytest.raises(AnalysisException, match=r"UNSUPPORTED_GENERATOR|nested"):
         _ = F.size(F.explode(frame.a))
     with pytest.raises(AnalysisException, match=r"UNSUPPORTED_GENERATOR|nested"):
@@ -501,13 +501,13 @@ def test_explode_function_wrappers_refuse_generator(frame: object) -> None:
     # End-to-end select must refuse, never return non-unnested cardinalities.
     with pytest.raises(AnalysisException, match=r"UNSUPPORTED_GENERATOR|nested"):
         frame.select(F.size(F.explode(frame.a)).alias("s")).collect()
-    # Polars-style .str path lowers via _scalar — same refuse (C5-Q-001 pin).
+    # Polars-style .str path lowers via _scalar — same refuse.
     with pytest.raises(AnalysisException, match=r"UNSUPPORTED_GENERATOR|nested"):
         _ = F.explode(frame.a).cast("string").str.to_uppercase()
 
 
 def test_nested_explode_refuses_kind_overwrite(frame: object) -> None:
-    """``explode(explode_outer(...))`` must refuse, not rewrite kind (octo C5-L-002)."""
+    """``explode(explode_outer(...))`` must refuse, not rewrite kind."""
     with pytest.raises(AnalysisException, match=r"UNSUPPORTED_GENERATOR|nested"):
         _ = F.explode(F.explode_outer(frame.a))
     with pytest.raises(AnalysisException, match=r"UNSUPPORTED_GENERATOR|nested"):
@@ -519,7 +519,7 @@ def test_nested_explode_refuses_kind_overwrite(frame: object) -> None:
 
 
 def test_explode_chained_cast_composes(frame: object) -> None:
-    """``.cast().cast()`` must apply *every* cast, not only the last (octo C5-L-003)."""
+    """``.cast().cast()`` must apply *every* cast, not only the last."""
     # 10, 20, null, 5 as doubles → cast int → cast string
     out = frame.select(
         frame.id,
@@ -536,13 +536,13 @@ def test_explode_chained_cast_composes(frame: object) -> None:
 
 
 def test_explode_generator_select_duplicate_name_preflight(frame: object) -> None:
-    """Generator select must share duplicate-name preflight (octo C5 residual S2)."""
+    """Generator select must share duplicate-name preflight."""
     with pytest.raises(AnalysisException, match=r"(?i)duplicate"):
         frame.select(F.explode(frame.a).alias("e"), frame.id.alias("e")).collect()
 
 
 def test_explode_aggregate_wrappers_refuse_generator(frame: object) -> None:
-    """F.count/sum/avg/… must not strip ``_generator`` (octo C6-Q-001)."""
+    """F.count/sum/avg/… must not strip ``_generator``."""
     with pytest.raises(AnalysisException, match=r"UNSUPPORTED_GENERATOR|nested"):
         _ = F.count(F.explode(frame.a))
     with pytest.raises(AnalysisException, match=r"UNSUPPORTED_GENERATOR|nested"):
@@ -563,7 +563,7 @@ def test_explode_aggregate_wrappers_refuse_generator(frame: object) -> None:
 
 
 def test_explode_filter_orderby_groupby_refuse_generator(frame: object) -> None:
-    """filter/orderBy/groupBy/agg must refuse generators (octo C6-Q-002).
+    """filter/orderBy/groupBy/agg must refuse generators.
 
     Select-path unnest is the only supported generator surface.
     """
@@ -582,7 +582,7 @@ def test_explode_filter_orderby_groupby_refuse_generator(frame: object) -> None:
 
 
 def test_explode_nested_array_top_level_length_not_cardinality(spark: ReparkSession) -> None:
-    """Empty guards use array_length, not multi-dim cardinality (octo C6-L-001).
+    """Empty guards use array_length, not multi-dim cardinality.
 
     DataFusion ``cardinality`` is a nested product (empty → NULL), so ``[[]]`` read as
     empty and was silently dropped; top-level length keeps the outer elements.
@@ -630,7 +630,7 @@ def test_explode_nested_array_top_level_length_not_cardinality(spark: ReparkSess
 
 
 def test_explode_date_wrappers_refuse_generator(frame: object) -> None:
-    """F.year/date_* and Column.dt must not strip ``_generator`` (octo C7-Q-001)."""
+    """F.year/date_* and Column.dt must not strip ``_generator``."""
     with pytest.raises(AnalysisException, match=r"UNSUPPORTED_GENERATOR|nested"):
         _ = F.year(F.explode(frame.a))
     with pytest.raises(AnalysisException, match=r"UNSUPPORTED_GENERATOR|nested"):
@@ -662,7 +662,7 @@ def test_explode_date_wrappers_refuse_generator(frame: object) -> None:
 
 
 def test_explode_window_partition_order_refuse_generator(frame: object) -> None:
-    """Window.partitionBy/orderBy must refuse generators (octo C7-Q-002)."""
+    """Window.partitionBy/orderBy must refuse generators."""
     from repark import Window
 
     with pytest.raises(AnalysisException, match=r"UNSUPPORTED_GENERATOR|nested"):
@@ -681,7 +681,7 @@ def test_explode_window_partition_order_refuse_generator(frame: object) -> None:
 
 
 def test_explode_cube_rollup_grouping_sets_refuse_generator(frame: object) -> None:
-    """cube/rollup/groupingSets + SQL agg path refuse generators (octo C7-Q-003 / C7-L-001/002)."""
+    """cube/rollup/groupingSets + SQL agg path refuse generators."""
     with pytest.raises(AnalysisException, match=r"UNSUPPORTED_GENERATOR|nested"):
         frame.cube(F.explode(frame.a)).count().collect()
     with pytest.raises(AnalysisException, match=r"UNSUPPORTED_GENERATOR|nested"):
@@ -703,7 +703,7 @@ def test_explode_cube_rollup_grouping_sets_refuse_generator(frame: object) -> No
 
 
 def test_explode_plus_sticky_aggregate_missing_group_by(frame: object) -> None:
-    """select(explode, sum/count) must raise ``[MISSING_GROUP_BY]`` (combine octo C1-Q-002)."""
+    """select(explode, sum/count) must raise ``[MISSING_GROUP_BY]``."""
     assert F.sum(frame.id)._is_aggregate is True
     assert F.count("*")._is_aggregate is True
     with pytest.raises(AnalysisException, match=r"MISSING_GROUP_BY") as caught_sum:
@@ -728,7 +728,7 @@ def test_explode_plus_sticky_aggregate_missing_group_by(frame: object) -> None:
 
 
 def test_explode_nested_aggregate_argument_missing_group_by(frame: object) -> None:
-    """explode(collect_list/array_repeat(sum)) refuses sticky AF args (combine C4-Q-001)."""
+    """explode(collect_list/array_repeat(sum)) refuses sticky AF args."""
     collect = F.collect_list(frame.id)
     assert collect._is_aggregate is True
     with pytest.raises(AnalysisException, match=r"MISSING_GROUP_BY") as caught_list:
@@ -765,7 +765,7 @@ def test_explode_nested_aggregate_argument_missing_group_by(frame: object) -> No
 
 
 def test_generator_alias_cast_keeps_sticky_aggregate(frame: object) -> None:
-    """Generator ``.alias`` / ``.cast`` keep sticky aggregate bits (combine C5-Q-002)."""
+    """Generator ``.alias`` / ``.cast`` keep sticky aggregate bits."""
     from repark.spark.column import Column
 
     collect = F.collect_list(frame.id)
@@ -976,7 +976,7 @@ def test_explode_outer_nested_struct_element_device_web_info(spark: ReparkSessio
 
 
 def test_explode_outer_void_array_keeps_null_and_empty(spark: ReparkSession) -> None:
-    """explode_outer on array<void> uses untyped make_array(NULL) (SQM #176 V-2).
+    """explode_outer on array<void> uses untyped make_array(NULL).
 
     Empty and NULL void lists each yield one null element. The exploded column's engine
     type key is the Arrow Debug spelling ``'Null'``, so the schema mapper needs that arm
@@ -1007,7 +1007,7 @@ def test_explode_outer_void_array_keeps_null_and_empty(spark: ReparkSession) -> 
 def test_explode_outer_map_element_still_refuses_loud(spark: ReparkSession) -> None:
     """Map element types stay refused (no CAST spelling; same message class).
 
-    Non-discriminating guard (B4 L2 / SQM #176 V-1): already refused on BASE. Kills a
+    Non-discriminating guard: already refused on BASE. Kills a
     later map CAST that would silently accept.
     """
     frame = spark.sql("SELECT 1 AS id, [map('a', 1)] AS m")

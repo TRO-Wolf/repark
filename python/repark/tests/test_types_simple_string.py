@@ -147,7 +147,7 @@ def test_from_ddl_and_to_ddl() -> None:
     assert schema.toDDL() == "a INT,b STRING"
     schema_null = StructType().add("a", FloatType()).add("b", LongType(), False)
     assert schema_null.toDDL() == "a FLOAT,b BIGINT NOT NULL"
-    # Nested DDL + bare varchar alias (octo X2 C1).
+    # Nested DDL + bare varchar alias.
     nested = DataType.fromDDL("a array<int>, b map<string,string>")
     assert nested == StructType(
         [

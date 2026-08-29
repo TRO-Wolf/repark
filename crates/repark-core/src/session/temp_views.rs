@@ -67,7 +67,7 @@ impl ReparkSession {
         self.register_collected_memtable(name, frame, None).await
     }
 
-    // === r23 CACHE1: cache-honesty ===
+    // === cache-honesty ===
     /// ===========================================================================================
     /// Collect once into a [`MemTable`] with an optional post-collect `max_bytes` guard. Oversized
     /// results fail as [`Error::Config`].
@@ -255,6 +255,11 @@ impl ReparkSession {
     /// Check the build-time home provider, then resolve its qualified spelling. Product reads use
     /// it; raw SQL retains DataFusion's live-default resolution (pinned by
     /// `set_to_a_plain_catalog_keeps_the_write_home_and_moves_only_the_read`).
+    ///
+    /// # Errors
+    /// [`Error::Analysis`] when this session has no session-local temp-view home left (a catalog
+    /// was registered over it — see [`crate::temp_view::assert_home_intact`]);
+    /// [`Error::DataFusion`] when the engine lookup fails.
     pub fn resolve_temp_view_home_ref(&self, name: &str) -> Result<Option<Vec<String>>> {
         let Ok(parts) = crate::parse_table_identifier_segments(name) else {
             return Ok(None);

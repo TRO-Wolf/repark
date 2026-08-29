@@ -132,7 +132,7 @@ def test_cast_unknown_type_raises_parse_exception_at_facade_allowlist(
 ) -> None:
     """Hostile / unknown tokens refuse at the Python allowlist as ``ParseException``.
 
-    The allowlist is the security control (generator unnest gate C4-SEC-001); the exception
+    The allowlist is the security control (generator unnest gate); the exception
     *class* is Spark parity. Live PySpark 4.1.2 oracle::
 
         col.cast("notatype")  -> ParseException  AnalysisException=True ValueError=False
@@ -186,7 +186,7 @@ def test_float_byte_short_binary_roundtrip_values(spark: ReparkSession) -> None:
 
 
 def test_try_cast_width_overflow_yields_null(spark: ReparkSession) -> None:
-    """try_cast to narrow integers nulls on overflow; cast stays fail-loud (octo C4-Q-001)."""
+    """try_cast to narrow integers nulls on overflow; cast stays fail-loud."""
     frame = spark.createDataFrame([(200, 40_000)], ["b_src", "s_src"])
     tried = frame.select(
         F.col("b_src").try_cast("byte").alias("b"),

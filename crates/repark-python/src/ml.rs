@@ -546,7 +546,7 @@ fn kmeans_stream_pass(
     })
 }
 
-/// Fit KMeans with Lloyd iterations. Only random initialization is supported.
+/// Fit `KMeans` with Lloyd iterations. Only random initialization is supported.
 ///
 /// # Errors
 /// Returns `IllegalArgumentException` for invalid dimensions, schema, values, or stream errors.

@@ -1,5 +1,8 @@
 # map — crates/repark-functions/benches
 
+CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
+accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
+
 ## Purpose
 
 PERF-10 (r24 G10) criterion ratio micro-benches for Spark function shims. Each bench asserts a

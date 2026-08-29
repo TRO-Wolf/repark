@@ -8,7 +8,7 @@ use datafusion::error::{DataFusionError, Result};
 use iceberg::io::{FileIO, FileIOBuilder, LocalFsStorageFactory, StorageFactory};
 use iceberg_storage_opendal::OpenDalStorageFactory;
 
-/// Namespace warehouse key documented by RePark and Java's Glue catalog.
+/// Namespace warehouse key documented by `RePark` and Java's Glue catalog.
 pub const NAMESPACE_LOCATION_PROPERTY: &str = "location";
 
 /// Namespace key currently mapped to Glue `locationUri` by the fork. Reads use it as a fallback and

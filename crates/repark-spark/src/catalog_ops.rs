@@ -15,9 +15,9 @@ use crate::spark_ast;
 
 /// Reject identifier segments that could escape a warehouse root via `..` or path separators
 /// when composed into `LocalFs` / object-store paths
-/// (C2-SEC-003 / CALL table identity C1-SEC-001 / O3-C4-SEC-001 path-escape mirror).
+/// (CALL table identity path-escape mirror).
 ///
-/// Needles live in [`repark_iceberg::write::idents::path_escape_kind`] (r23 QI1 single-source); empty
+/// Needles live in [`repark_iceberg::write::idents::path_escape_kind`] (single-source); empty
 /// segments are refused here at compose-time only.
 pub(crate) fn reject_path_escape_ident(segment: &str, kind: &str) -> Result<()> {
     if segment.is_empty() {

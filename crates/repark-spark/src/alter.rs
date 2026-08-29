@@ -71,7 +71,7 @@ pub(crate) async fn execute_alter_table(
                 table_name: RenameTableNameKind::To(dest_name),
             } => {
                 flush_schema_batch(handle.as_ref(), &ident, &mut schema_batch).await?;
-                // octo C2: subsequent ops must target the new ident after RENAME TO.
+                // Subsequent ops must target the new ident after RENAME TO.
                 ident = execute_rename_table(ctx, handle.clone(), &catalog_name, &ident, dest_name)
                     .await?;
             }
@@ -1704,7 +1704,7 @@ mod tests {
         );
     }
 
-    /// Octo C7 — bare `DROP COLUMNS a, b` (no parens) rewrites to multi DROP COLUMN.
+    /// Bare `DROP COLUMNS a, b` (no parens) rewrites to multi DROP COLUMN.
     #[test]
     fn rewrite_drop_columns_plural_bare_form() {
         let rendered = rewrite_and_parse("ALTER TABLE ice.sales.t DROP COLUMNS c, d");
@@ -1843,7 +1843,7 @@ mod tests {
             .collect()
     }
 
-    /// Octo C1 — table named `unset` must not trigger the UNSET→SET rewrite (sqlparser tags bare
+    /// Table named `unset` must not trigger the UNSET→SET rewrite (sqlparser tags bare
     /// `unset` as `Keyword::UNSET`). Mutation: first-UNSET-anywhere locator → table name becomes SET.
     #[test]
     fn rewrite_unset_leaves_set_on_table_named_unset() {
@@ -1867,7 +1867,7 @@ mod tests {
         );
     }
 
-    /// Octo C1 twin — real `UNSET TBLPROPERTIES` still rewrites to sentinel SET.
+    /// Twin — real `UNSET TBLPROPERTIES` still rewrites to sentinel SET.
     #[test]
     fn rewrite_unset_still_rewrites_real_unset_tblproperties() {
         let sql = "ALTER TABLE ice.ns.t UNSET TBLPROPERTIES('owner')";

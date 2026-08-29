@@ -1,4 +1,4 @@
-//! Plan-time cardinality ceilings for planner-visible expansion functions (r24 SB1 / SEC-01).
+//! Plan-time cardinality ceilings for planner-visible expansion functions (SEC-01).
 //!
 //! Arrow expression buffers bypass the `FairSpillPool`; planner-visible literal expansions therefore
 //! fail early with a catchable error naming [`MAX_ARRAY_ELEMENTS_KEY`]. Non-literal counts remain residuals.

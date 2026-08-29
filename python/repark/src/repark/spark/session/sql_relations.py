@@ -140,7 +140,7 @@ def _sql_mask_strings_and_comments(query: str) -> str:
     """Return ``query`` with string literals and comments replaced by spaces.
 
     **Length and indices are preserved** so hit positions from a masked scan remain
-    valid against the original body (registry-name scan — octo C1-L-001). Handles
+    valid against the original body (registry-name scan). Handles
     single quotes (``''`` escape), double quotes (``""`` escape), backticks, ``--``
     line comments, and ``/* … */`` block comments. Does not interpret nested block
     comments (SQL standard single-level).
@@ -224,7 +224,7 @@ def _sql_mask_strings_and_comments(query: str) -> str:
 
 
 def _split_leading_sql_trivia(query: str) -> tuple[str, str]:
-    """Split leading whitespace + SQL comments from ``query`` (octo C1-Q-006).
+    """Split leading whitespace + SQL comments from ``query``.
 
     Returns ``(trivia, body)`` so statement-form classifiers see a clean head while the
     original leading trivia is re-prefixed onto the expanded body.
@@ -236,7 +236,7 @@ def _split_leading_sql_trivia(query: str) -> tuple[str, str]:
 
 
 def _skip_sql_ws_and_comments(query: str, index: int) -> int:
-    """Advance ``index`` past whitespace and ``--`` / ``/* */`` comments (octo C5-Q-001)."""
+    """Advance ``index`` past whitespace and ``--`` / ``/* */`` comments."""
 
     length = len(query)
 
@@ -472,7 +472,7 @@ def _match_from_or_join_keyword(query: str, index: int) -> str | None:
 
 
 def _update_rest_has_set_clause(rest: str) -> bool:
-    """True when ``rest`` after an UPDATE target still contains a SET keyword (octo C1).
+    """True when ``rest`` after an UPDATE target still contains a SET keyword.
 
     Accepts optional alias forms (``AS a`` / bare ``a``) before SET. Used to refuse expanding
     ``UPDATE SET x = 1`` where the identifier scan ate the SET keyword as a table name.
@@ -640,7 +640,7 @@ def _parse_table_identifier_segments(name: str) -> list[str]:
     Raises :class:`~repark.errors.PySparkValueError` on empty segments, trailing dots,
     unterminated quotes,
     unquoted non-identifier text (spaces, operators, etc.), or path-escape segments
-    (``..`` / ``/`` / ``\\`` — O3-C4-SEC-001).
+    (``..`` / ``/`` / ``\\``).
     """
 
     segments: list[str] = []

@@ -18,6 +18,10 @@ pub(crate) const PARSER_DIALECT: datafusion::config::Dialect = datafusion::confi
 /// ===========================================================================================
 /// Execute one ANSI SQL statement against an [`EngineContext`].
 /// ===========================================================================================
+///
+/// # Errors
+/// A guard refusal, a parse/plan failure (upgraded by the wrong-door sniff when it recognizes a
+/// Spark-ism), or any iceberg / execution error from an intercepted handler.
 pub async fn execute(cx: EngineContext<'_>, sql: &str) -> Result<DataFrame> {
     guards::run_text_guards(&cx, sql)?;
 

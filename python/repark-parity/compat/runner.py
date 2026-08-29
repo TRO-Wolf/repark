@@ -293,7 +293,7 @@ def run_module_inprocess(
     if test_filter:
         suite = _filter_suite(suite, test_filter)
         # Dual-denom honesty under --filter: only keep fatal NEEDS-JVM rows matching
-        # the same filter (octo C4 C2-S1-002), or a debug filter would inject every
+        # the same filter, or a debug filter would inject every
         # known-fatal into the census.
         fatal_rows = [
             row for row in fatal_rows if _filter_matches_test_id(row.test_id, test_filter)
@@ -490,7 +490,7 @@ def _deselect_known_fatal(
     """Remove deliberate-crash tests; return (filtered suite, their NEEDS-JVM rows).
 
     Match on the **exact method name** (last id segment), not ``endswith(.name)``, so a
-    short fatal name cannot deselect a longer sibling (octo C4 C1-S2-005).
+    short fatal name cannot deselect a longer sibling.
     """
     fatal_methods = _KNOWN_FATAL_TESTS.get(module_short, ())
     if not fatal_methods:
@@ -606,7 +606,7 @@ def run_module_subprocess(
     """Run one module in an isolated subprocess with a hard wall timeout.
 
     ``series_short`` (``C2`` / ``C3`` / ``C4``) is passed via env so worker findings
-    use the same dual-denom series label as the parent (octo C4 C4-S1-001: bare
+    use the same dual-denom series label as the parent (bare
     ``--modules X`` must not brand C4 runs as C2 zero-fix).
     """
     worker = Path(__file__).resolve()
@@ -728,8 +728,7 @@ def _series_from_args_and_env(
 
     CLI ``--c4-expand`` / ``--c3-expand`` always win. ``REPARK_COMPAT_SERIES`` is
     honored **only when** ``worker`` is true (parent stamps the child env) so a
-    leaked shell export cannot rebrand a classic parent run as C4
-    (octo C4 C5-S1-001).
+    leaked shell export cannot rebrand a classic parent run as C4.
     """
     env_series = ""
     if worker:
@@ -800,7 +799,7 @@ def resolve_census_modules(
     if stretch:
         for name in STRETCH_MODULES:
             if name not in module_names:
-                # Validate constants too (defense-in-depth — octo C3 C5).
+                # Validate constants too (defense-in-depth).
                 module_names.append(validate_module_short(name))
     return module_names
 
@@ -834,7 +833,7 @@ def render_markdown_report(report: CompatReport, *, series: str = _SERIES_C2) ->
     """Human-readable census report (default body under ``target/census-reports/``).
 
     ``series`` labels the scoreboard unit so dual denominators are never misread as
-    the same /345 series (octo C3 C1-L-001).
+    the same /345 series.
     """
     rows = report.all_rows()
     denoms = denominators(rows)
@@ -999,7 +998,7 @@ def build_report(
     """Assemble the top-level report object + auto findings.
 
     ``series`` selects the finding-line unit label so C3 expand reports never claim
-    ``C2 zero-fix`` (dual-denom series honesty — octo C3 C1-L-001).
+    ``C2 zero-fix`` (dual-denom series honesty).
     """
     report = CompatReport(
         generated_at=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -1204,7 +1203,7 @@ def main(argv: list[str] | None = None) -> int:
         return EXIT_OK
 
     # Parent: one subprocess per module. C3/C4 expand use distinct default scratch so
-    # worker JSON never clobbers classic C2 artifacts (octo C3 C1-SAF-001; C4 Q11).
+    # worker JSON never clobbers classic C2 artifacts.
     if args.c4_expand:
         default_scratch = _DEFAULT_SCRATCH_C4
     elif args.c3_expand:

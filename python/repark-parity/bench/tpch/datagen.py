@@ -16,7 +16,7 @@ from repark_parity.sql import escape_sql_single_quotes
 
 LOGGER = logging.getLogger(__name__)
 
-# Shared with CLI — library API enforces the same bound (octo C2-SEC-003).
+# Shared with CLI — library API enforces the same bound.
 MAX_SCALE_FACTOR: Final[float] = 100.0
 
 TABLES: Final[tuple[str, ...]] = (

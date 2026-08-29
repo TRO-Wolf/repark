@@ -54,7 +54,7 @@ def test_from_mapping_preserves_order() -> None:
 def test_positional_and_list_construction() -> None:
     """Positional values get synthetic ``_N`` names (repark); values still indexable.
 
-    Live 4.1.2: a single list/tuple *argument* is ONE value (octo C1-L-002); Spark omits
+    Live 4.1.2: a single list/tuple *argument* is ONE value; Spark omits
     ``__fields__`` for that form; repark still assigns synthetic ``_0`` (near-drop-in).
     """
     row = Row(10, 20)
@@ -78,7 +78,7 @@ def test_positional_and_list_construction() -> None:
 
 
 def test_user_fields_named_fields_and_values_do_not_shadow() -> None:
-    """Live 4.1.2: ``Row(_fields=1)._fields`` is the *value* 1 (octo C1-L-001).
+    """Live 4.1.2: ``Row(_fields=1)._fields`` is the *value* 1.
 
     Mutation: rename slots back to ``_fields``/``_values`` → RED.
     """
@@ -255,7 +255,7 @@ def test_equality_is_values_only_including_tuple() -> None:
 def test_hash_matches_equality() -> None:
     """Hash is values-only and interoperates with plain tuples (live PySpark 4.1.2).
 
-    Python's set/dict contract: equal objects share a hash. octo C2-Q-001: a mutation
+    Python's set/dict contract: equal objects share a hash. A mutation
     ``return hash(("repark.Row", values))`` keeps Row↔Row asserts green while breaking
     ``{(1, 2), row}`` / dict keys shared with tuples.
     """

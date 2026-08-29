@@ -1,4 +1,4 @@
-"""I4 R-STREAM-IPC-INGEST: Arrow C Stream register + mapInArrow bridge switch pins.
+"""R-STREAM-IPC-INGEST: Arrow C Stream register + mapInArrow bridge switch pins.
 
 Named oracle for unit I4. Companion: untouched-green ``test_mapinarrow.py`` battery.
 """
@@ -31,7 +31,7 @@ def _double_batches(batches: Iterator[pa.RecordBatch]) -> Iterator[pa.RecordBatc
 
 
 def test_register_arrow_stream_as_temp_view_native_symbol_present(spark: ReparkSession) -> None:
-    """Native session exposes the I4 C-stream register seam."""
+    """Native session exposes the C-stream register seam."""
     native = spark._ensure_alive()
     assert callable(getattr(native, "register_arrow_stream_as_temp_view", None))
 
@@ -106,7 +106,7 @@ def test_register_arrow_stream_bare_capsule_round_trip(spark: ReparkSession) -> 
 def test_register_arrow_stream_exporter_raises_preserves_exception(
     spark: ReparkSession,
 ) -> None:
-    """``__arrow_c_stream__`` raising propagates original exception type (octo C1-Q-001)."""
+    """``__arrow_c_stream__`` raising propagates original exception type."""
     native = spark._ensure_alive()
 
     class _BoomExporter:
@@ -122,7 +122,7 @@ def test_register_arrow_stream_exporter_raises_preserves_exception(
 def test_register_arrow_stream_mid_stream_error_no_partial_view(
     spark: ReparkSession,
 ) -> None:
-    """Mid-stream C-stream pull failure does not leave a partial temp view (octo C1-L-001)."""
+    """Mid-stream C-stream pull failure does not leave a partial temp view."""
     native = spark._ensure_alive()
     schema = pa.schema([("x", pa.int32())])
     first = pa.record_batch([pa.array([1], type=pa.int32())], schema=schema)
@@ -147,7 +147,7 @@ def test_register_arrow_stream_mid_stream_error_no_partial_view(
 def test_register_arrow_stream_nested_repark_stream_no_abort(
     spark: ReparkSession,
 ) -> None:
-    """Generator that re-enters a repark C-stream must not process-abort (octo C1-SAF-001).
+    """Generator that re-enters a repark C-stream must not process-abort.
 
     Draining ``from_batches(gen)`` where ``gen`` iterates ``from_stream(repark_df)`` is the
     re-entrancy shape that aborts with ``PyEval_SaveThread`` / thread-state-NULL when unguarded.

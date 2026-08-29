@@ -235,7 +235,7 @@ def test_frame_bound_finite_float_refused() -> None:
 
 
 def test_frame_start_greater_than_end_refused() -> None:
-    """Facade refuses inverted frames (octo C3)."""
+    """Facade refuses inverted frames."""
     from repark.errors import AnalysisException
 
     with pytest.raises(AnalysisException, match="start bound cannot be larger than end"):

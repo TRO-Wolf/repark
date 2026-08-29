@@ -1,5 +1,8 @@
 # map — repark-sql/src/guards
 
+CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
+accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
+
 ## Purpose
 
 File-backed tests for `../guards.rs`. Every guard and refusal is a behavior, so each refusal

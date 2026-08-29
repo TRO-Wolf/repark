@@ -91,7 +91,7 @@ struct MetadataPathSpan {
     suffix: &'static str,
     /// Whether this identifier sits in a relation position (FROM/JOIN/INTO/UPDATE/TABLE…).
     /// Column references (`SELECT cat.ns.tbl.files`) are **not** relation positions and must not
-    /// rewrite (octo C1-L-001).
+    /// rewrite.
     is_table_reference: bool,
     /// Whether this identifier is a DML/DDL write target (INSERT/UPDATE/DELETE/MERGE/CTAS…).
     is_write_target: bool,
@@ -99,10 +99,10 @@ struct MetadataPathSpan {
     has_as_of: bool,
 }
 
-/// Max chars of a metadata path embedded in plan errors (octo C1-SEC-002).
+/// Max chars of a metadata path embedded in plan errors.
 const DISPLAY_PATH_MAX: usize = 200;
 
-/// Truncate a display path for plan errors (octo C1-SEC-002).
+/// Truncate a display path for plan errors.
 fn display_path(parts: &[String], suffix: &str) -> String {
     let parent = parts[..parts.len().saturating_sub(1)].join(".");
     let full = format!("{parent}.{suffix}");
@@ -136,7 +136,7 @@ pub async fn prepare_metadata_table_sql(
 
     let mut rewrites: Vec<(MetadataPathSpan, DollarRewrite)> = Vec::new();
     for candidate in candidates {
-        // Column / expression positions must not rewrite (C1-L-001).
+        // Column / expression positions must not rewrite.
         if !candidate.is_table_reference {
             continue;
         }
@@ -187,7 +187,7 @@ pub async fn prepare_metadata_table_sql(
                         break;
                     }
                 }
-                // Preserve quoting from the original table token (C1-SEC-001).
+                // Preserve quoting from the original table token.
                 let original_quote = match &tokens[name_index] {
                     Token::Word(word) => word.quote_style,
                     Token::DoubleQuotedString(_) => Some('"'),
@@ -215,7 +215,7 @@ struct DollarRewrite {
 fn safe_ident_quote(prefer_quote: Option<char>) -> Option<char> {
     match prefer_quote {
         Some('"' | '`' | '[') => prefer_quote,
-        // Single-quoted / unknown styles must not reach Word Display (octo C4-SAF-001).
+        // Single-quoted / unknown styles must not reach Word Display.
         // sqlparser only accepts ", `, [ — normalize everything else to ANSI double quotes.
         Some(_) => Some('"'),
         None => None,
@@ -268,7 +268,7 @@ async fn resolve_candidate(
     let Some(table_name) = parent.last().cloned() else {
         return Ok(ResolveDecision::Skip);
     };
-    // Fork `split_once('$')` cannot round-trip a base name that already contains `$` (C1-SEC-001).
+    // Fork `split_once('$')` cannot round-trip a base name that already contains `$`.
     if table_name.contains('$') {
         return Err(DataFusionError::Plan(format!(
             "cannot resolve Iceberg metadata table `{}`: base table name contains '$', which \
@@ -420,7 +420,7 @@ fn find_candidate_spans(tokens: &[Token]) -> Vec<MetadataPathSpan> {
 /// Whether the identifier at `name_sig_start` is a relation (table) position, not a column ref.
 ///
 /// Relation positions: FROM / JOIN / USING / INTO / UPDATE / OVERWRITE / CREATE|TRUNCATE TABLE /
-/// comma-separated FROM-list entries. SELECT/WHERE/ON/GROUP BY column paths are excluded (C1-L-001).
+/// comma-separated FROM-list entries. SELECT/WHERE/ON/GROUP BY column paths are excluded.
 fn is_table_reference_context(significant: &[(usize, &Token)], name_sig_start: usize) -> bool {
     if is_write_target_context(significant, name_sig_start) {
         return true;
@@ -439,7 +439,7 @@ fn is_table_reference_context(significant: &[(usize, &Token)], name_sig_start: u
     if cursor > 0 && word(cursor - 1).as_deref() == Some("TABLE") {
         cursor -= 1;
     }
-    // Peel opening parens: `FROM (cat.ns.tbl.meta)` / `FROM ((…))` (C1-L-002 composition).
+    // Peel opening parens: `FROM (cat.ns.tbl.meta)` / `FROM ((…))` (composition).
     while cursor > 0
         && matches!(
             significant.get(cursor - 1).map(|(_, token)| *token),
@@ -465,7 +465,7 @@ fn is_table_reference_context(significant: &[(usize, &Token)], name_sig_start: u
                     | "CREATE"
                     | "TRUNCATE"
                     | "REPLACE"
-                    // DESCRIBE [TABLE] meta — read path must rewrite (octo C7-Q-001).
+                    // DESCRIBE [TABLE] meta — read path must rewrite.
                     | "DESCRIBE"
                     | "DESC"
             )
@@ -525,13 +525,13 @@ fn is_write_target_context(significant: &[(usize, &Token)], name_sig_start: usiz
     };
 
     // CREATE [OR REPLACE] TABLE t | TRUNCATE TABLE t | INSERT OVERWRITE TABLE t
-    // Must inspect left of TABLE *before* peeling it (octo C1: peel-first made CREATE dead).
+    // Must inspect left of TABLE *before* peeling it (peel-first made CREATE dead).
     if cursor > 0 && word(cursor - 1).as_deref() == Some("TABLE") {
         let mut index = cursor - 1;
         while index > 0 {
             index -= 1;
             match word(index).as_deref() {
-                // DROP/ALTER — metadata is read-only (octo C6-Q-001).
+                // DROP/ALTER — metadata is read-only.
                 Some("CREATE" | "TRUNCATE" | "REPLACE" | "INSERT" | "DROP" | "ALTER") => {
                     return true;
                 }
@@ -543,7 +543,7 @@ fn is_write_target_context(significant: &[(usize, &Token)], name_sig_start: usiz
         // e.g. rare `INSERT INTO TABLE t` forms.
         cursor -= 1;
     }
-    // CREATE [OR REPLACE] VIEW t — metadata is read-only (octo C5-Q-001).
+    // CREATE [OR REPLACE] VIEW t — metadata is read-only.
     if cursor > 0 && word(cursor - 1).as_deref() == Some("VIEW") {
         let mut index = cursor - 1;
         while index > 0 {
@@ -606,7 +606,7 @@ fn has_trailing_as_of(significant: &[(usize, &Token)], name_end_sig: usize) -> b
         }
     };
     let mut i = name_end_sig;
-    // Skip closing parens so `(cat.ns.tbl.snapshots) VERSION AS OF` still refuses (C1-L-002).
+    // Skip closing parens so `(cat.ns.tbl.snapshots) VERSION AS OF` still refuses.
     while matches!(
         significant.get(i).map(|(_, token)| *token),
         Some(Token::RParen)
@@ -714,7 +714,7 @@ mod tests {
             assert!(is_metadata_table_name(&name.to_ascii_uppercase()), "{name}");
             assert_eq!(canonical_metadata_table_name(name), Some(*name));
         }
-        // Drift pin: every fork MetadataTableType::as_str is in our static set (C1-Q-004).
+        // Drift pin: every fork MetadataTableType::as_str is in our static set.
         for metadata_type in MetadataTableType::all_types() {
             let spelling = metadata_type.as_str();
             assert_eq!(
@@ -806,7 +806,7 @@ mod tests {
 
     #[test]
     fn column_ref_is_not_table_reference() {
-        // C1-L-001: FQ column path must not be treated as a metadata relation.
+        // FQ column path must not be treated as a metadata relation.
         let dialect = DatabricksDialect {};
         let tokens = Tokenizer::new(&dialect, "SELECT mem.ns.events.files FROM mem.ns.events")
             .tokenize()
@@ -827,7 +827,6 @@ mod tests {
 
     #[test]
     fn as_of_detected_after_closing_paren() {
-        // C1-L-002
         let dialect = DatabricksDialect {};
         let tokens = Tokenizer::new(
             &dialect,
@@ -860,7 +859,6 @@ mod tests {
 
     #[test]
     fn join_and_using_are_table_references() {
-        // C2-Q-001
         let dialect = DatabricksDialect {};
         let tokens = Tokenizer::new(
             &dialect,
@@ -891,7 +889,6 @@ mod tests {
 
     #[test]
     fn describe_is_table_reference_not_write() {
-        // C7-Q-001
         let dialect = DatabricksDialect {};
         for sql in [
             "DESCRIBE mem.ns.events.files",
@@ -916,7 +913,6 @@ mod tests {
 
     #[test]
     fn truncate_and_create_or_replace_are_write_targets() {
-        // C2-Q-002
         let dialect = DatabricksDialect {};
         let tokens = Tokenizer::new(&dialect, "TRUNCATE TABLE mem.ns.events.files")
             .tokenize()
@@ -969,7 +965,7 @@ mod tests {
 
     #[test]
     fn multi_span_candidates_ordered() {
-        // C2-L-001 — two metadata paths in one statement
+        // Two metadata paths in one statement
         let dialect = DatabricksDialect {};
         let tokens = Tokenizer::new(
             &dialect,
@@ -986,7 +982,6 @@ mod tests {
 
     #[test]
     fn as_of_timestamp_and_system_forms() {
-        // C3-Q-001
         let dialect = DatabricksDialect {};
         for sql in [
             "SELECT * FROM mem.ns.events.snapshots TIMESTAMP AS OF '2020-01-01'",
@@ -1005,7 +1000,6 @@ mod tests {
 
     #[test]
     fn double_quoted_multipart_is_candidate() {
-        // C3-Q-002
         let dialect = DatabricksDialect {};
         let tokens = Tokenizer::new(&dialect, r#"SELECT * FROM "mem"."ns"."events"."snapshots""#)
             .tokenize()
@@ -1019,7 +1013,7 @@ mod tests {
 
     #[test]
     fn dollar_in_base_name_message_shape() {
-        // C3-Q-003 — pure guard shape (catalog-independent string contract).
+        // Pure guard shape (catalog-independent string contract).
         let path = display_path(
             &[
                 "ice".into(),
@@ -1039,7 +1033,6 @@ mod tests {
 
     #[test]
     fn dollar_ident_token_quotes_hostile_names() {
-        // C1-SEC-001
         let token = dollar_ident_token("foo bar", "snapshots", Some('"'));
         match token {
             Token::Word(word) => {
@@ -1056,7 +1049,7 @@ mod tests {
             }
             other => panic!("expected Word, got {other:?}"),
         }
-        // C4-SAF-001: single-quote preference must not reach Word Display (panic).
+        // Single-quote preference must not reach Word Display (panic).
         let normalized = dollar_ident_token("events", "snapshots", Some('\''));
         match normalized {
             Token::Word(word) => {

@@ -109,7 +109,7 @@ def _materialize_rid_view(frame: Any, source_view: str, prefix: str) -> tuple[An
     """Assign ``row_number`` once, cache, re-register — stable rid for multi-scan joins.
 
     DataFusion re-evaluates CTEs per reference, so a CTE joined to itself yields
-    *different* rid→row maps (octo F-Q1-009); caching materializes one assignment.
+    *different* rid→row maps; caching materializes one assignment.
     Returns ``(host_frame, rid_view_name, rid_column_name)``.
     """
 
@@ -137,7 +137,7 @@ def _drop_temp_view(frame: Any, view: str) -> None:
 
 
 def _refuse_output_collision(frame: Any, output_col: str, *, stage: str) -> None:
-    """Refuse if output column already exists (octo C3 — no silent overwrite)."""
+    """Refuse if output column already exists (no silent overwrite)."""
     names = list(frame.columns) if hasattr(frame, "columns") else []
     if not names:
         try:
@@ -328,7 +328,7 @@ class StringIndexer(HasInputCol, HasOutputCol, HasHandleInvalid, Estimator["Stri
     def _fit(self, dataset: Any) -> StringIndexerModel:
         """Fit labels via GROUP BY + COUNT ordered per stringOrderType."""
         frame = _require_repark_dataframe(dataset, verb="StringIndexer.fit")
-        # Refuse illegal handleInvalid before vocabulary materialize (octo M7 C5).
+        # Refuse illegal handleInvalid before vocabulary materialize.
         handle = self.getHandleInvalid()
         if handle not in {"error", "keep", "skip"}:
             raise IllegalArgumentException(
@@ -566,7 +566,7 @@ def _ohe_sparse_expr(
     """SQL named_struct sparse one-hot for a single index column.
 
     ``handleInvalid='keep'`` reserves the invalid bucket at ``category_size``
-    *before* ``dropLast`` shrinks the vector (octo C4-L-001); the wrong order
+    *before* ``dropLast`` shrinks the vector; the wrong order
     maps invalid/null to empty instead of the last index of ``category_size+1``.
     """
     idx_expr = f"CAST({quoted_in} AS BIGINT)"
@@ -762,12 +762,12 @@ class OneHotEncoderModel(
         frame = _require_repark_dataframe(dataset, verb="OneHotEncoderModel.transform")
         inputs, outputs = self._resolved_io()
         handle = self.getHandleInvalid()
-        # Fail loud on illegal modes — do not silently treat typos as keep (octo C3-L-001).
+        # Fail loud on illegal modes — do not silently treat typos as keep.
         if handle not in {"error", "keep", "skip"}:
             raise IllegalArgumentException(
                 f"OneHotEncoder.handleInvalid must be error|keep|skip, got {handle!r}"
             )
-        # Refuse pre-existing output columns (parity with VectorAssembler / ext) (octo C3-L-002).
+        # Refuse pre-existing output columns (parity with VectorAssembler / ext).
         for output_col in outputs:
             _refuse_output_collision(frame, output_col, stage="OneHotEncoderModel.transform")
         sizes_src = self.category_sizes
@@ -798,7 +798,7 @@ class OneHotEncoderModel(
             ):
                 quoted_in = _quote_ident(input_col)
                 quoted_out = _quote_ident(output_col)
-                # Spark: expand for keep *then* apply dropLast (octo C4-L-001).
+                # Spark: expand for keep *then* apply dropLast.
                 expanded = int(category_size) + (1 if handle == "keep" else 0)
                 size = expanded - (1 if self.drop_last else 0)
                 if size < 0:
@@ -977,7 +977,7 @@ class StandardScalerModel(HasInputCol, HasOutputCol, Model):
             if self.with_mean:
                 expr = f"(({expr}) - {_sql_float(mu)})"
             if self.with_std:
-                # Non-finite / zero sigma → unit scale (keeps plan valid; F-Q1-011).
+                # Non-finite / zero sigma → unit scale (keeps plan valid).
                 scale = sigma if sigma == sigma and sigma != 0.0 else 1.0
                 expr = f"(({expr}) / {_sql_float(scale)})"
             parts.append(expr)
@@ -1553,7 +1553,7 @@ class ImputerModel(HasInputCols, HasOutputCols, Model):
         inputs = self.getInputCols()
         outputs = self.getOutputCols()
         # In-place impute replaces the column; view.* + same alias is
-        # ambiguous in DataFusion (F-Q1-010).
+        # ambiguous in DataFusion.
         overwrite = set(inputs) & set(outputs)
         if overwrite:
             kept = [
@@ -1813,7 +1813,7 @@ class StopWordsRemover(HasInputCol, HasOutputCol, Transformer):
         rid = _quote_ident(rid_col)
         stop_list = ", ".join(sql_string_literal(word) for word in stops)
         where = f"x NOT IN ({stop_list})" if stop_list else "TRUE"
-        # DataFusion has no array_filter — unnest + array_agg join; rid cache (F-Q1-009).
+        # DataFusion has no array_filter — unnest + array_agg join; rid cache.
         sql = f"""
 WITH filtered AS (
   SELECT __rid, array_agg(x) AS __repark_swr_out FROM (
@@ -1877,7 +1877,7 @@ class SQLTransformer(Transformer):
         return self.getOrDefault(self.statement)
 
     def _transform(self, dataset: Any) -> Any:
-        """Substitute __THIS__ and run (single SELECT only — octo C1-SEC-001)."""
+        """Substitute __THIS__ and run (single SELECT only)."""
         frame = _require_repark_dataframe(dataset, verb="SQLTransformer.transform")
         statement = self.getStatement()
         if "__THIS__" not in statement:
@@ -2457,7 +2457,7 @@ class CountVectorizerModel(HasInputCol, HasOutputCol, Model):
         """Count occurrences of each vocab term in the token array (plan-built).
 
         Unnest + conditional SUM grouped by row id — the physical plan does not
-        support ScalarSubquery over unnest. Rid cache keeps row association (F-Q1-009).
+        support ScalarSubquery over unnest. Rid cache keeps row association.
         """
         frame = _require_repark_dataframe(dataset, verb="CountVectorizerModel.transform")
         host, view = _register_temp(frame, "cvm")

@@ -56,7 +56,7 @@ pub(crate) fn build_ctas(
         DataFusionError::Plan("build_ctas requires a CTAS (query must be Some)".into())
     })?;
     // TEMPORARY / EXTERNAL / TRANSIENT / VOLATILE must not silently create durable Iceberg
-    // tables via CTAS (I5 octo C4-F2 — column-def path refused in C3-F1).
+    // tables via CTAS (column-def path refused).
     if create.temporary {
         return Err(DataFusionError::NotImplemented(
             "CREATE TEMPORARY TABLE … AS SELECT is not supported for Iceberg tables yet — omit \
@@ -75,7 +75,7 @@ pub(crate) fn build_ctas(
                 .into(),
         ));
     }
-    // LOCATION / Hive ROW FORMAT etc. must not be silently dropped (I5 octo C5-F1).
+    // LOCATION / Hive ROW FORMAT etc. must not be silently dropped.
     refuse_unsupported_create_table_clauses(create, "CTAS")?;
     // Explicit CTAS column lists fail before partition validation, matching Spark's parse contract.
     if !create.columns.is_empty() {
@@ -339,7 +339,7 @@ pub(crate) async fn resolve_create_plan(
     .await
 }
 
-/// Shared staged-create location + `FileIO` resolution for CTAS and column-def CREATE (I5).
+/// Shared staged-create location + `FileIO` resolution for CTAS and column-def CREATE.
 ///
 /// # Errors
 /// Location-policy / `FileIO` failures as [`DataFusionError`].
@@ -383,7 +383,7 @@ pub(crate) async fn resolve_table_create_location(
         .get_namespace(namespace_ident)
         .await
         .map_err(iceberg_err)?;
-    // Reject path-escape segments in identifiers before composing a warehouse path (C2-SEC-003).
+    // Reject path-escape segments in identifiers before composing a warehouse path.
     reject_path_escape_ident(catalog_name, "catalog")?;
     for part in namespace_ident.as_ref() {
         reject_path_escape_ident(part.as_str(), "namespace")?;
@@ -531,7 +531,7 @@ pub(crate) async fn execute_ctas_service_managed(
 
 /// Refuse LOCATION / Hive ROW FORMAT / SERDE / STORED AS clauses that sqlparser accepts but
 /// `RePark` does not apply — silent drop would mis-place tables or imply Hive storage semantics
-/// (I5 octo C4-F1 / C5-F1 / C5-F2). Used by column-def CREATE and CTAS.
+/// Used by column-def CREATE and CTAS.
 pub(crate) fn refuse_unsupported_create_table_clauses(
     create: &CreateTable,
     form: &str,
@@ -570,7 +570,7 @@ pub(crate) fn refuse_unsupported_create_table_clauses(
         )));
     }
     // Table COMMENT is not mapped to Iceberg properties yet — refuse rather than silent drop
-    // (I5 octo C6-F1). sqlparser parks `COMMENT '…'` in `table_options: Plain([Comment(…)])`
+    // sqlparser parks `COMMENT '…'` in `table_options: Plain([Comment(…)])`
     // (and sometimes `create.comment`).
     if create.comment.is_some() {
         return Err(DataFusionError::NotImplemented(format!(

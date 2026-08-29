@@ -31,7 +31,8 @@ fn describe_panic(operation: &str, payload: &(dyn Any + Send)) -> String {
 /// Run a `#[pymethods]` body under the panic fence.
 ///
 /// Successful results pass through. A panic becomes [`crate::PySparkException`] with its text.
-/// [`AssertUnwindSafe`] covers engine handles that are not statically `UnwindSafe`.
+/// [`AssertUnwindSafe`] covers engine handles that are not statically `UnwindSafe`: a caught
+/// panic returns an error and a fresh exception, so no partially-mutated state is observed.
 /// ===========================================================================================
 pub(crate) fn fence<T>(
     operation: &str,

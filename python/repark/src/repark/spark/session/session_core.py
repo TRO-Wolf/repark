@@ -55,7 +55,7 @@ class ReparkSession:
         self._inner: _native.PyReparkSession | None = inner
         # Builder-config snapshot for getOrCreate warn-on-diff; values may be None (Spark _to_str).
         self._builder_config: dict[str, str | None] = dict(builder_config or {})
-        # Shared with every DataFrame this session mints; stop() flips alive→False (octo r3);
+        # Shared with every DataFrame this session mints; stop() flips alive→False;
         # display_style rides the same box so show() sees runtime updates (R-DISPLAY).
         # R-CURCAT-FACADE: catalog state is facade-only; dies with stop(), never engine USE state.
         known_catalogs = _catalog_names_from_builder_config(self._builder_config)
@@ -250,7 +250,7 @@ class ReparkSession:
         * ``SELECT`` / ``WITH`` … (FROM/JOIN/comma refs; a one-part temp view = its HOME)
 
         Does **not** rewrite multi-statement scripts. Leading SQL comments / whitespace are
-        stripped for classification then re-prefixed (octo C1-Q-006).
+        stripped for classification then re-prefixed.
         """
         trivia, body = _split_leading_sql_trivia(query)
         if not body:
@@ -280,8 +280,8 @@ class ReparkSession:
         if merge_match is not None:
             return self._expand_merge_into_sql(query, merge_match)
 
-        # CREATE VIEW / TEMP VIEW — leave the view name alone; expand the AS body only
-        # (octo C5-Q-002). Durable CREATE TABLE handled below.
+        # CREATE VIEW / TEMP VIEW — leave the view name alone; expand the AS body only.
+        # Durable CREATE TABLE handled below.
         view_expanded = self._try_expand_create_view_body_sql(query)
         if view_expanded is not None:
             return view_expanded
@@ -311,7 +311,7 @@ class ReparkSession:
         return query
 
     def _try_expand_create_view_body_sql(self, query: str) -> str | None:
-        """Expand FROM/JOIN inside ``CREATE [TEMP] VIEW … AS <query>`` bodies (octo C5-Q-002).
+        """Expand FROM/JOIN inside ``CREATE [TEMP] VIEW … AS <query>`` bodies.
 
         View *names* stay as written (temp views are session-local; durable view catalog
         qualification is residual). Returns ``None`` when not a CREATE VIEW shape.
@@ -340,7 +340,7 @@ class ReparkSession:
 
         Returns ``None`` when not an INSERT shape; also expands FROM/JOIN table refs in
         the trailing body (``INSERT … SELECT … FROM t``). ``INSERT OVERWRITE [LOCAL]
-        DIRECTORY`` is not a catalog table target (octo C1-Q-003): leave the target path
+        DIRECTORY`` is not a catalog table target: leave the target path
         intact and only expand the statement body.
         """
         prefix_match = _INSERT_PREFIX_RE.match(query)
@@ -412,7 +412,7 @@ class ReparkSession:
             return None
         raw_table = query[name_start:name_end]
         rest = query[name_end:]
-        # octo C1-Q-005: identifier scan can eat the SET keyword when the table name is
+        # Identifier scan can eat the SET keyword when the table name is
         # missing (``UPDATE SET x = 1`` → table ``SET``). Require a SET clause after the
         # optional alias; otherwise leave the statement unchanged for the engine parser.
         if not _update_rest_has_set_clause(rest):
@@ -468,7 +468,7 @@ class ReparkSession:
             if source_name is None:
                 source_qualified = source_blob
             elif source_name.startswith("("):
-                # Expand FROM/JOIN inside parenthesized USING source (octo C2-Q-002).
+                # Expand FROM/JOIN inside parenthesized USING source.
                 # ``source_name`` may include a trailing alias (``(SELECT …) s``) because
                 # ``_split_leading_table_ident`` returns the whole blob for ``(`` heads.
                 close = _find_matching_paren(source_name, 0)
@@ -496,17 +496,17 @@ class ReparkSession:
         * non-subquery paren groups (``EXTRACT(YEAR FROM col)``, function args) — FROM
           inside those must not be treated as a table clause (TPC-H Q7 regression)
         * subqueries ``FROM (SELECT …)`` — content is still walked for nested FROM/JOIN
-        * nested ``WITH`` CTE names recollected per region (octo C1-Q-001)
+        * nested ``WITH`` CTE names recollected per region
         * table functions ``FROM range(…)`` (ident immediately followed by ``(``)
         * CTE names from ``WITH`` lists (``WITH q AS (…) SELECT … FROM q``)
         * keywords in :data:`_FROM_JOIN_NON_TABLE`
-        * SQL comments ``--`` / ``/* … */`` (octo C1-Q-005)
+        * SQL comments ``--`` / ``/* … */``
 
-        Comma-separated FROM lists (``FROM a, b``) expand each relation (octo C1-Q-002).
+        Comma-separated FROM lists (``FROM a, b``) expand each relation.
         One-part temp views expand to their session-local HOME, never bare (R7-1, MEASURED).
 
         Non-recursive ``WITH`` bodies only see *prior* CTE names so
-        ``WITH t AS (SELECT * FROM t)`` expands the body table (octo C4-Q-001).
+        ``WITH t AS (SELECT * FROM t)`` expands the body table.
         ``WITH RECURSIVE`` keeps self-reference bare.
         """
         if re.match(r"(?is)^\s*WITH\b", query) is not None:
@@ -514,7 +514,7 @@ class ReparkSession:
         return self._expand_from_join_region(query, cte_names=set())
 
     def _expand_with_statement(self, query: str, *, outer_ctes: set[str] | None = None) -> str:
-        """Expand a ``WITH …`` statement with correct CTE scope (octo C4-Q-001).
+        """Expand a ``WITH …`` statement with correct CTE scope.
 
         Non-recursive bodies see ``outer_ctes`` plus *prior* CTEs in this list only.
         ``WITH RECURSIVE`` bodies see outer + all names from this WITH list.
@@ -676,7 +676,7 @@ class ReparkSession:
             if index >= length:
                 break
             # Relation list: table or (subquery), optional alias / TABLESAMPLE, comma siblings
-            # (octo C2-Q-001 — ``FROM (subq) a, bare_t`` must expand bare_t).
+            # (``FROM (subq) a, bare_t`` must expand bare_t).
             index = self._append_from_relation_list(query, index, result, cte_names=cte_names)
         return "".join(result)
 
@@ -693,7 +693,7 @@ class ReparkSession:
         first = True
         while index < length:
             if not first:
-                # Skip whitespace *and* comments so ``t/*c*/, u`` still expands u (C5-Q-001).
+                # Skip whitespace *and* comments so ``t/*c*/, u`` still expands u.
                 cursor = _skip_sql_ws_and_comments(query, index)
                 if cursor >= length or query[cursor] != ",":
                     break
@@ -749,7 +749,7 @@ class ReparkSession:
         return self._append_optional_relation_alias(query, close + 1, result)
 
     def _append_optional_tablesample(self, query: str, index: int, result: list[str]) -> int:
-        """Copy optional ``TABLESAMPLE (…)`` after a relation (octo C2-Q-003)."""
+        """Copy optional ``TABLESAMPLE (…)`` after a relation."""
         length = len(query)
         cursor = index
         while cursor < length and query[cursor].isspace():
@@ -770,7 +770,7 @@ class ReparkSession:
         while index < length and query[index].isspace():
             result.append(query[index])
             index += 1
-        # Optional sampling method: BERNOULLI / SYSTEM (octo C6-Q-001).
+        # Optional sampling method: BERNOULLI / SYSTEM.
         for method in ("BERNOULLI", "SYSTEM"):
             if (
                 index + len(method) <= length
@@ -806,7 +806,7 @@ class ReparkSession:
         """Expand or copy one relation starting at ``index``; return the new index.
 
         Also copies an optional trailing relation alias (``AS a`` / bare ``a``) so the
-        comma-list scanner can find the next ``,`` (octo C1-Q-002).
+        comma-list scanner can find the next ``,``.
         """
         length = len(query)
         if index >= length:
@@ -825,7 +825,7 @@ class ReparkSession:
             result.append(raw_table)
             return table_end
         first_segment = raw_table.split(".", 1)[0].strip().strip('"').strip("`")
-        # ONLY is a relation prefix (``FROM ONLY t``), not a full relation (octo C3-Q-001).
+        # ONLY is a relation prefix (``FROM ONLY t``), not a full relation.
         if first_segment.upper() == "ONLY":
             result.append(raw_table)
             cursor = table_end
@@ -1132,7 +1132,7 @@ class ReparkSession:
         **positionally**; partial overlap or length mismatch fails loud (no silent
         project/drop/swap). Plain tuple/list rows bind positionally;
         ``collections.namedtuple`` / ``typing.NamedTuple`` use ``_fields`` as source names
-        (``schema=[names]`` reorders by name like dict/Row — C6-L-001).
+        (``schema=[names]`` reorders by name like dict/Row).
 
         Materializes into a MemTable once via a ``pyarrow.Table`` registered with an Arrow
         **C Stream** (no IPC encode intermediate; IPC remains the version-skew fallback).
@@ -1140,7 +1140,7 @@ class ReparkSession:
         ``datetime.datetime`` (tz-aware → UTC then naive; pandas ``Timestamp`` /
         ``datetime64`` / ``numpy.datetime64`` included — ns units do not collapse to epoch
         int; calendar units ``D``/``W``/``M``/``Y`` stay DATE including all-null NaT
-        witnesses — C3-Q-001), and ``decimal.Decimal`` (fixed-point into
+        witnesses), and ``decimal.Decimal`` (fixed-point into
         ``DECIMAL(38,18)``; values outside that envelope fail loud — no silent zero/round).
 
         All-null columns: empty list + name schema emit ``CAST(NULL AS VARCHAR)``;
@@ -1150,11 +1150,11 @@ class ReparkSession:
         (``float('nan')``, ``NaT``, ``numpy.datetime64('NaT')``, …) keep
         DOUBLE/TIMESTAMP/DATE from those witnesses rather than collapsing to VARCHAR.
         Timedelta / duration / ``numpy.timedelta64`` refuse even when all-null (no silent
-        duration→int — C3-L-001); pandas Interval / Period and polars Binary/Time/Duration
-        refuse rather than fail-open as BIGINT/DOUBLE/VARCHAR (C3-L-002 / C3-L-003 /
-        C4-Q-002); nested List/Struct (polars + pandas ArrowDtype) land via the Arrow path;
-        pandas categorical all-null follows ``categories.dtype`` (C4-Q-003); pandas ArrowDtype
-        time/binary still refuse (C4-Q-004).
+        duration→int); pandas Interval / Period and polars Binary/Time/Duration
+        refuse rather than fail-open as BIGINT/DOUBLE/VARCHAR); nested List/Struct
+        (polars + pandas ArrowDtype) land via the Arrow path;
+        pandas categorical all-null follows ``categories.dtype``; pandas ArrowDtype
+        time/binary still refuse.
         """
         self._ensure_alive()
         self._promote_active()
@@ -1218,7 +1218,7 @@ class ReparkSession:
 
         Active-session restore uses ``try``/``finally`` so ``BaseException``
         (``KeyboardInterrupt`` / ``SystemExit``) cannot leave the process pointer on the
-        half-built session after ``getOrCreate`` cleared it (octo C3 C1-Q-001).
+        half-built session after ``getOrCreate`` cleared it.
         """
         self._ensure_alive()
         # Force a fresh build: clear active so getOrCreate does not reuse self.
@@ -1359,7 +1359,7 @@ class ReparkSession:
         """
         from repark.errors import AnalysisException
 
-        # Gate i64 domain before PyO3 (octo C7-Q-001) — Python ints are unbounded.
+        # Gate i64 domain before PyO3 — Python ints are unbounded.
         if snapshot_id is not None and (snapshot_id < _I64_MIN or snapshot_id > _I64_MAX):
             raise AnalysisException(
                 f"snapshot_id must fit a signed 64-bit integer, got {snapshot_id!r}"
@@ -1370,8 +1370,8 @@ class ReparkSession:
             raise AnalysisException(
                 f"as_of_timestamp_ms must fit a signed 64-bit integer, got {as_of_timestamp_ms!r}"
             )
-        # Qualify bare / two-part / spark_catalog names like table() / writers
-        # (octo C2-Q-001); TT targets Iceberg catalog tables, not temp views.
+        # Qualify bare / two-part / spark_catalog names like table() / writers;
+        # TT targets Iceberg catalog tables, not temp views.
         resolved = self.resolve_table_name(table_name, prefer_temp_view=False)
         inner = self._ensure_alive()
         frame = inner.read_iceberg_table(
@@ -1587,7 +1587,7 @@ class ReparkSession:
             )
             # unreachable — keep branch explicit for future RECURSIVE support
         # (name, prior_frame_or_None) — restore the session catalog after the outer SELECT
-        # is planned; WITH must not permanently overwrite/leave user temp views (U9-C1-002).
+        # is planned; WITH must not permanently overwrite/leave user temp views.
         view_snapshots: list[tuple[str, Any | None]] = []
         pieces_prefix = body[: match.end()]
         _ = pieces_prefix  # WITH keyword retained only for diagnostics
@@ -1602,7 +1602,7 @@ class ReparkSession:
                 index = name_end
                 while index < length and body[index].isspace():
                     index += 1
-                # Optional column list: ``WITH c(z, y) AS (…)`` (U9-C6-001).
+                # Optional column list: ``WITH c(z, y) AS (…)``.
                 cte_column_names: list[str] | None = None
                 if index < length and body[index] == "(":
                     close = _find_matching_paren(body, index)
@@ -1737,7 +1737,7 @@ class ReparkSession:
         )
 
         # Set operations cannot be rewritten as a single SELECT-list materialization
-        # (U9-C2-002 — refuse with an accurate shape message, not "outside SELECT list").
+        # (refuse with an accurate shape message, not "outside SELECT list").
         body_upper_for_set = _sql_mask_strings_and_comments(body_for_scan).upper()
         padded_upper = f" {body_upper_for_set} "
         for set_keyword in (" UNION ", " INTERSECT ", " EXCEPT "):
@@ -1747,7 +1747,7 @@ class ReparkSession:
                     "supported in repark v1 (SELECT-list rewrite is single-SELECT only). "
                     "Materialize each branch via DataFrame.select / withColumn, then set-op."
                 )
-        # Hive-style / Spark post-SELECT clauses not peeled by the UDF planner (U9-C6/C7).
+        # Hive-style / Spark post-SELECT clauses not peeled by the UDF planner.
         for hive_keyword in (
             " CLUSTER BY ",
             " DISTRIBUTE BY ",
@@ -1917,8 +1917,8 @@ class ReparkSession:
         """Release the engine handle and clear the active-session registry (PySpark ``stop``).
 
         Subsequent operations on this instance raise :class:`RuntimeError` naming the stopped
-        state. Held :class:`SparkContext` and :class:`DataFrame` references are invalidated too
-        (octo r2 SC / r3 DF). Idempotent: a second :meth:`stop` is a no-op.
+        state. Held :class:`SparkContext` and :class:`DataFrame` references are invalidated too.
+        Idempotent: a second :meth:`stop` is a no-op.
         A later :meth:`Builder.getOrCreate` builds a fresh session.
         """
         if _sf._active_session is self:
@@ -2000,7 +2000,7 @@ class ReparkSession:
 
             ``repark.display.style`` (any casing) is stored under the canonical key and collapses
             prior case-variant aliases so dual-cased chains are last-write-wins
-            (C7-Q-001 / C7-L-001) — matching the reuse snapshot collapse in
+            — matching the reuse snapshot collapse in
             :func:`_sync_display_style_into_builder_config`.
             """
             # Classic Builder.config order: conf branch first, then map, else kv. Map/kv
@@ -2020,7 +2020,7 @@ class ReparkSession:
 
         def _set_config_entry(self, key: str, value: str | None) -> None:
             """Store one config entry; ``repark.display.style`` aliases canonicalize last-wins
-            under the canonical key, case-insensitively (R-DISPLAY C6 harden)."""
+            under the canonical key, case-insensitively (R-DISPLAY harden)."""
             from repark.spark.types import refuse_collation_session_key
 
             refuse_collation_session_key(key)
@@ -2051,7 +2051,7 @@ class ReparkSession:
             seam), so the master URL is recorded but has no effect. The value is warned about ONCE
             per process (OTH-010) so a script pointed at a real cluster URL learns it will run
             single-node instead of silently doing so. The same warn fires if ``spark.master`` is
-            set only via :meth:`config` (octo r2 C1-SEC-002).
+            set only via :meth:`config`.
             """
             _warn_master_once(stacklevel=2)
             self._config["spark.master"] = master
@@ -2085,8 +2085,8 @@ class ReparkSession:
             the OTH-010 single-node warning is emitted once per process if not already warned.
             """
             # OTH-010: any builder that carries spark.master (create OR reuse) warns once
-            # (octo r2 C2-SEC-001 — reuse path must not skip disclosure). Key match is
-            # case-insensitive (octo r3 C1-SEC-001).
+            # (reuse path must not skip disclosure). Key match is
+            # case-insensitive.
             if any(key.lower() == "spark.master" for key in self._config):
                 _warn_master_once(stacklevel=2)
 
@@ -2157,7 +2157,7 @@ class ReparkSession:
                         # Catalog blocks handled above via register_late_catalogs.
                         continue
                     if key in _SQLCONF_STATIC_KEYS:
-                        # Static conf is not runtime-modifiable (octo C3 C2-Q-001).
+                        # Static conf is not runtime-modifiable.
                         continue
                     if value is None:
                         continue
@@ -2169,7 +2169,7 @@ class ReparkSession:
                     refuse_collation_session_key(key)
                     # datafusion.* is runtime-mutable on the live engine — fold via
                     # RuntimeConfig.set so SQL SET forwards (not store-only). Lookalike
-                    # mixed-case / padded keys refuse-loud inside set (octo T2 C2).
+                    # mixed-case / padded keys refuse-loud inside set.
                     if _looks_like_datafusion_conf_key(key):
                         RuntimeConfig(_sf._active_session).set(key, text)
                         _sf._active_session._builder_config[key] = text
@@ -2184,9 +2184,9 @@ class ReparkSession:
                     if _sf._active_session._builder_config.get(key) != value
                     # repark.display.style is always applied on the reuse path below
                     # (facade-only, runtime-mutable) — excluded so a pure style delta does
-                    # not false-warn (R-DISPLAY C6-Q-001); engine knobs still warn as before.
+                    # not false-warn (R-DISPLAY); engine knobs still warn as before.
                     and key.lower() != _DISPLAY_STYLE_KEY
-                    # Static conf is deliberately not folded (octo C3 C2/C4) — exclude so
+                    # Static conf is deliberately not folded — exclude so
                     # the warn does not claim a failed apply for an intentional refuse.
                     and key not in _SQLCONF_STATIC_KEYS
                 }
@@ -2205,7 +2205,7 @@ class ReparkSession:
                         stacklevel=2,
                     )
                 # Always honor an explicit display-style on the reuse path (facade-only).
-                # Key match is case-insensitive (C6-Q-002 — Repark.Display.Style etc.).
+                # Key match is case-insensitive (Repark.Display.Style etc.).
                 if any(key.lower() == _DISPLAY_STYLE_KEY for key in self._config):
                     _sf._active_session.display_style = display_style
                     # Keep the session snapshot in sync so pure-style reuse stays silent on
@@ -2257,7 +2257,7 @@ class ReparkSession:
             """Resolve ``repark.display.style`` (facade-only; default ``spark``).
 
             Case-insensitive **last-write-wins** among all key aliases present in the builder map
-            (C7-Q-001 / C7-L-001). ``Builder.config`` normally collapses aliases to the canonical
+            (deliberate). ``Builder.config`` normally collapses aliases to the canonical
             key on write; this scan still prefers the last insertion-order match so a dual-cased
             map (e.g. after direct mutation or an older snapshot) cannot silently keep an earlier
             exact-key value over a later mixed-case override. Every resolved value is validated
@@ -2363,7 +2363,7 @@ class ReparkSession:
             (``IllegalArgumentException``) — a deliberate break from repark's former
             ``ValueError``, which ``except ValueError`` never caught either.
 
-            **TIMING divergence (deliberate, Critic F2):** the CLASS matches PySpark but the
+            **TIMING divergence (deliberate):** the CLASS matches PySpark but the
             MOMENT does not — repark validates eagerly inside ``getOrCreate()`` where a fresh
             PySpark process validates at the first ``sessionState`` touch. The user-readable copy
             of this disclosure lives on :meth:`Builder.config` (the ``help()`` surface); keep the

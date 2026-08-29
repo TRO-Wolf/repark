@@ -31,7 +31,7 @@ use crate::{datafusion_to_py_err, to_py_err};
 /// The Arrow C stream interface mandates this exact capsule name (a NUL-terminated C string).
 const ARROW_STREAM_CAPSULE_NAME: &CStr = c"arrow_array_stream";
 
-/// Arrow C Data Interface schema capsule name used by the PyCapsule protocol.
+/// Arrow C Data Interface schema capsule name used by the `PyCapsule` protocol.
 const ARROW_SCHEMA_CAPSULE_NAME: &CStr = c"arrow_schema";
 
 // See `with_stream_poll_no_detach`; this flag covers nested Python-backed stream polls.
@@ -39,8 +39,9 @@ thread_local! {
     static STREAM_POLL_NO_DETACH: Cell<bool> = const { Cell::new(false) };
 }
 
-/// Run `body` with nested polls skipping PyO3 attach/detach.
-/// The outer ingest drain owns GIL state; a drop guard restores the prior flag after panic.
+/// Run `body` with nested polls skipping PyO3 attach/detach. Attach while the real GIL is
+/// released makes `detach` abort; abi3 builds cannot use `PyGILState_Check`, so a thread-local
+/// flag is the portable contract (C1-SAF-001). A drop guard restores the prior flag after panic.
 pub(crate) fn with_stream_poll_no_detach<T>(body: impl FnOnce() -> T) -> T {
     struct RestoreNoDetach {
         previous: bool,
@@ -93,7 +94,7 @@ fn spark_join_projection(joined: &DataFrame, keys: &[String]) -> Vec<Expr> {
     projection
 }
 
-/// The Python-facing immutable DataFrame plan and its shared runtime.
+/// The Python-facing immutable `DataFrame` plan and its shared runtime.
 #[pyclass(name = "PyDataFrame", module = "repark._native")]
 pub struct PyDataFrame {
     df: DataFrame,
@@ -154,9 +155,8 @@ impl PyDataFrame {
     }
 }
 
-/// Max nesting depth for Arrow list/map type-key formatting.
-///
-/// `arrow_type_key` and [`spark_array_element_simple_string_at_depth`] recurse on nested
+/// Max nesting depth for Arrow list/map type-key formatting. `arrow_type_key` and
+/// [`spark_array_element_simple_string_at_depth`] recurse on nested
 /// `List` / `LargeList` / `FixedSizeList` (and `Map` entry types). Without a bound, an
 /// adversarial deep `List` schema can stack-overflow via `logical_schema_fields` / facade
 /// `dtypes`. Past this depth the walk terminates with the fallback key
@@ -239,9 +239,8 @@ fn arrow_type_key_at_depth(data_type: &ArrowDataType, depth: usize) -> String {
     }
 }
 
-/// Spark `simpleString` element token for nested array and map keys.
-///
-/// Depth-bounded nested array type formatting.
+/// Spark `simpleString` element token for nested array and map keys;
+/// depth-bounded.
 fn spark_array_element_simple_string_at_depth(data_type: &ArrowDataType, depth: usize) -> String {
     if depth >= ARROW_TYPE_KEY_MAX_DEPTH {
         return ARROW_TYPE_KEY_DEPTH_FALLBACK.to_string();
@@ -286,7 +285,8 @@ fn spark_array_element_simple_string_at_depth(data_type: &ArrowDataType, depth: 
 /// ===========================================================================================
 /// A synchronous reader that polls one DataFusion batch per Arrow C Stream callback.
 /// The consumer controls materialization, so peak export memory is O(one batch).
-/// Normal export polls run on the consumer thread and release the GIL. Nested ingest polls skip
+/// Normal export polls run on the consumer thread and release the GIL, never nested inside
+/// another `block_on` (SAF-008: no `OnceLock` runtime re-entry). Nested ingest polls skip
 /// attach/detach. `KeyboardInterrupt` is deferred until a poll returns.
 /// ===========================================================================================
 struct StreamingBatchReader {
@@ -476,8 +476,8 @@ impl PyDataFrame {
     /// Returns an `arrow_array_stream` capsule wrapping a [`StreamingBatchReader`]. Consumers pull
     /// batches through the stream's C `get_next` callback — each pull runs one
     /// [`DataFrame::execute_stream`] poll on demand, so peak memory is O(one batch), not O(whole
-    /// result) — a peak-**memory** bound, not a batch/error ordering guarantee. The engine plan
-    /// Engine parallelism can affect batch ordering; see [`StreamingBatchReader`]). PyO3 owns the
+    /// result) — a peak-**memory** bound, not a batch/error ordering guarantee. Engine
+    /// parallelism can affect batch ordering; see [`StreamingBatchReader`]. PyO3 owns the
     /// [`FFI_ArrowArrayStream`] value inside the capsule; its destructor drops
     /// it — a no-op once the consumer has moved the stream out, since [`FFI_ArrowArrayStream`]'s
     /// `Drop` only fires the still-set `release` callback.

@@ -1,5 +1,5 @@
 //! The ANSI door's guard set runs before rewrites and on parsed DML arms.
-//! G3-E8 runs before the async MoR and V3 valves. SEC-02 runs after planning.
+//! G3-E8 runs before the async `MoR` and V3 valves. SEC-02 runs after planning.
 
 use std::ops::ControlFlow;
 

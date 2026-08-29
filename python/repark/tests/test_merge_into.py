@@ -223,7 +223,7 @@ def test_merge_into_type_errors(spark: ReparkSession) -> None:
 
 
 def test_merge_into_with_schema_evolution_fails_loud(spark: ReparkSession) -> None:
-    """Schema evolution is unsupported — refuse rather than silent no-op (octo C1-L-010)."""
+    """Schema evolution is unsupported — refuse rather than silent no-op."""
     from repark.errors import UnsupportedOperationException
 
     df = spark.sql("SELECT 1 AS id, 'a' AS name")
@@ -243,7 +243,7 @@ def test_merge_into_render_sql_shape() -> None:
     assert _on_sql("  name  ") == 'target."name" = source."name"'
     assert _quote_assign_target("name") == "name"
     assert _quote_assign_target("weird-name") == '"weird-name"'
-    # != / CASE / coalesce must quote string literals for MERGE embed (octo C3-Q-001 / C3-SEC-001).
+    # != / CASE / coalesce must quote string literals for MERGE embed.
     assert "'bee'" in _column_sql(col("source.name") != lit("bee"))
     assert "'x'" in _column_sql(when(col("id") > 0, lit("x")).otherwise(lit("y")))
     assert "'2020-01-01'" in _column_sql(lit("2020-01-01").cast("date"))
@@ -251,4 +251,4 @@ def test_merge_into_render_sql_shape() -> None:
 
     concat_sql = _column_sql(concat(lit("a"), lit("b")))
     assert "'a'" in concat_sql
-    assert "IS NULL" in concat_sql  # null-propagation guard for MERGE (octo C5-Q-001)
+    assert "IS NULL" in concat_sql  # null-propagation guard for MERGE

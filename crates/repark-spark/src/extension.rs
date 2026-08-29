@@ -1,7 +1,7 @@
 //! `SparkExtension` installs Spark configuration, functions, analyzer rules, and TA window UDFs.
 //!
 //! `configure` carries the resolved session timezone, ANSI mode, timestamp type, decimal parsing,
-//! and RePark settings. `register` installs the write gate before cast analysis, then composes
+//! and `RePark` settings. `register` installs the write gate before cast analysis, then composes
 //! [`repark_ta::TaExtension`]. Core owns engine defaults; this door owns Spark semantics.
 
 use std::sync::Arc;

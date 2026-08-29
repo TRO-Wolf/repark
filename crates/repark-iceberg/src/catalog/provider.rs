@@ -178,7 +178,7 @@ pub async fn rebuild_catalog_provider(
 ) -> Result<()> {
     // Prefer in-place full refresh when our provider is already registered **and** still bound to
     // the same Iceberg handle (keeps the DF Arc stable). A different `catalog` Arc means rebind —
-    // replace the provider so we never silently refresh from a stale handle (octo C1-Q-003).
+    // replace the provider so we never silently refresh from a stale handle.
     if let Some(existing) = ctx.catalog(name)
         && let Some(repark) = existing.as_ref().downcast_ref::<ReparkCatalogProvider>()
         && Arc::ptr_eq(&repark.catalog_handle(), &catalog)
@@ -196,7 +196,7 @@ pub async fn rebuild_catalog_provider(
 ///
 /// Empty `namespaces` is a **no-op** (not a full rebuild): callers that want every namespace
 /// refreshed must call [`rebuild_catalog_provider`] explicitly so free-SQL OOB residual is not
-/// silently healed by an empty invalidate (octo C1-Q-002).
+/// silently healed by an empty invalidate.
 ///
 /// Falls back to a full rebuild when the session still holds a non-[`ReparkCatalogProvider`]
 /// (should not happen after register via this crate).
@@ -215,14 +215,14 @@ pub async fn invalidate_catalog_namespaces(
     }
 
     let Some(existing) = ctx.catalog(catalog_name) else {
-        // Do not silently `register_catalog` under a typo name (octo C4-Q-001).
+        // Do not silently `register_catalog` under a typo name.
         return Err(DataFusionError::Plan(format!(
             "catalog `{catalog_name}` is not registered; cannot invalidate namespaces"
         )));
     };
     if let Some(repark) = existing.as_ref().downcast_ref::<ReparkCatalogProvider>() {
         // Prepare every namespace off the map lock first; apply under one write so a mid-loop
-        // failure cannot leave a cross-ns RENAME half-updated (octo C2-L-001).
+        // failure cannot leave a cross-ns RENAME half-updated.
         let mut prepared: Vec<(String, Option<Arc<dyn SchemaProvider>>)> =
             Vec::with_capacity(namespaces.len());
         for namespace in namespaces {
@@ -278,7 +278,7 @@ async fn snapshot_all_schemas(
     let mut schemas = HashMap::new();
     for name in iceberg.schema_names() {
         if let Some(schema) = iceberg.schema(&name) {
-            // r25 T2 item 0: honor projection on fork metadata-table providers (`table$meta`).
+            // Honor projection on fork metadata-table providers (`table$meta`).
             let wrapped = MetadataProjectionSchemaProvider::wrap(schema);
             freeze_fork_name_directory(wrapped.as_ref()).await?;
             schemas.insert(name, wrapped);
@@ -288,7 +288,7 @@ async fn snapshot_all_schemas(
 }
 
 /// Prepare one namespace schema (or `None` if the live namespace is gone) — shared by
-/// [`ReparkCatalogProvider::refresh_namespace`] and multi-ns invalidate (octo C5-Q-002).
+/// [`ReparkCatalogProvider::refresh_namespace`] and multi-ns invalidate.
 async fn prepare_namespace_schema(
     catalog: Arc<dyn Catalog>,
     namespace: &str,
@@ -349,7 +349,7 @@ async fn build_namespace_schema(
              provider after scoped rebuild"
         ))
     })?;
-    // r25 T2 item 0: same projection wrap as full snapshot (namespace refresh path).
+    // Same projection wrap as full snapshot (namespace refresh path).
     let wrapped = MetadataProjectionSchemaProvider::wrap(schema);
     freeze_fork_name_directory(wrapped.as_ref()).await?;
     Ok(wrapped)

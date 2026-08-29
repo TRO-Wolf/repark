@@ -55,7 +55,7 @@ pub(crate) fn csv_read_options_from_map(
         })?;
         opts = opts.file_compression_type(compression_type);
         // DataFusion matches listing files by `file_extension` only. Compressed COPY TO emits
-        // `*.csv.gz` (etc.); the default extension `.csv` finds zero files (octo R1-C1-004).
+        // `*.csv.gz` (etc.); the default extension `.csv` finds zero files.
         opts = opts.file_extension(csv_extension_for_compression(compression_type));
     }
     Ok(opts)

@@ -182,7 +182,7 @@ async fn empty_insert_overwrite_still_wipes_after_bug001_materialize() {
     );
 }
 
-/// Octo A1-C1-001: nullability tighten must only flip nullability — field + schema metadata
+/// Nullability tighten must only flip nullability — field + schema metadata
 /// (e.g. parquet field ids / iceberg schema keys) must survive the `MemTable` rebuild.
 #[test]
 fn tighten_batch_nullability_preserves_field_and_schema_metadata() {
@@ -248,7 +248,7 @@ async fn insert_overwrite_table_keyword_form() {
     assert_eq!(rows(&ctx, &catalogs, "SELECT * FROM ice.sales.t").await, 1);
 }
 
-/// C1-Q-001 / C1-L-001: empty `INSERT OVERWRITE … SELECT … WHERE false` must replace the table.
+/// Empty `INSERT OVERWRITE … SELECT … WHERE false` must replace the table.
 /// A provider must not short-circuit empty staged files and leave prior rows behind.
 #[tokio::test]
 async fn empty_insert_overwrite_select_where_false_wipes_table() {
@@ -318,12 +318,12 @@ async fn empty_insert_overwrite_mor_table_uses_overwrite_not_delete_shape() {
         0,
         "provider overwrite wipe must not commit position-delete files (DELETE MoR would)"
     );
-    // Note (P4C1-L-005): Iceberg may still stamp summary.operation = Delete for a full-file
+    // Note: Iceberg may still stamp summary.operation = Delete for a full-file
     // remove with zero adds. The discriminating oracle vs a MoR `DELETE FROM` rewrite is
     // delete_file_count == 0 (above) + empty live data files — not the Operation enum alone.
 }
 
-/// P5C1-Q-001: empty OW must not wipe when the source launders types via CAST (zero rows
+/// Empty OW must not wipe when the source launders types via CAST (zero rows
 /// never run the cast kernel; non-empty fails at cast and keeps prior rows).
 #[tokio::test]
 async fn empty_insert_overwrite_cast_launder_does_not_wipe() {
@@ -800,7 +800,7 @@ async fn empty_insert_overwrite_try_cast_still_wipes() {
     );
 }
 
-/// P4C1-Q-004 ambiguity branch: an `INSERT OVERWRITE` column list that matches two target
+/// Ambiguity branch: an `INSERT OVERWRITE` column list that matches two target
 /// fields case-insensitively must fail loud, not silently pick one and wipe.
 ///
 /// Iceberg targets cannot reach this (`iceberg::spec::Schema` refuses to build a lower-case
@@ -842,7 +842,7 @@ async fn empty_insert_overwrite_case_ambiguous_column_refuses() {
     );
 }
 
-/// P4C1-Q-004: empty OW column list resolves case-insensitively (Spark caseSensitive=false).
+/// Empty OW column list resolves case-insensitively (Spark caseSensitive=false).
 #[tokio::test]
 async fn empty_insert_overwrite_column_list_case_insensitive_wipes() {
     let wh = TempDir::new().unwrap();
@@ -866,7 +866,7 @@ async fn empty_insert_overwrite_column_list_case_insensitive_wipes() {
     );
 }
 
-/// P4C1-Q-001 / hollow-pin close: empty computed source into a partitioned target still wipes
+/// Hollow-pin close: empty computed source into a partitioned target still wipes
 /// (guard must not sit on the empty path; re-probe must still classify as empty).
 #[tokio::test]
 async fn empty_computed_insert_overwrite_into_partitioned_still_wipes() {
@@ -894,7 +894,7 @@ async fn empty_computed_insert_overwrite_into_partitioned_still_wipes() {
     );
 }
 
-/// C1-Q-001: the `INSERT OVERWRITE TABLE` keyword form with an empty source also wipes.
+/// The `INSERT OVERWRITE TABLE` keyword form with an empty source also wipes.
 #[tokio::test]
 async fn empty_insert_overwrite_table_keyword_wipes() {
     let wh = TempDir::new().unwrap();
@@ -916,7 +916,7 @@ async fn empty_insert_overwrite_table_keyword_wipes() {
     assert_eq!(rows(&ctx, &catalogs, "SELECT * FROM ice.sales.t").await, 0);
 }
 
-/// C1-L-002: empty `INSERT INTO` must not wipe — zero rows appended, prior rows remain.
+/// Empty `INSERT INTO` must not wipe — zero rows appended, prior rows remain.
 /// (Documented engine behaviour for this cycle; wipe is overwrite-only.)
 #[tokio::test]
 async fn empty_insert_into_does_not_wipe() {
@@ -943,7 +943,7 @@ async fn empty_insert_into_does_not_wipe() {
     );
 }
 
-/// C2-Q-001 / C2-L-001: empty `INSERT OVERWRITE … PARTITION (…)` must NOT full-table DELETE.
+/// Empty `INSERT OVERWRITE … PARTITION (…)` must NOT full-table DELETE.
 /// Loud refuse until partition-scoped wipe exists.
 #[tokio::test]
 async fn empty_insert_overwrite_partition_refuses_full_wipe() {
@@ -975,7 +975,7 @@ async fn empty_insert_overwrite_partition_refuses_full_wipe() {
     );
 }
 
-/// C4-Q-002: empty `INSERT OVERWRITE … LIMIT 0` must wipe (not only `WHERE false` forms).
+/// Empty `INSERT OVERWRITE … LIMIT 0` must wipe (not only `WHERE false` forms).
 #[tokio::test]
 async fn empty_insert_overwrite_limit_zero_wipes_table() {
     let wh = TempDir::new().unwrap();
@@ -1002,7 +1002,7 @@ async fn empty_insert_overwrite_limit_zero_wipes_table() {
     );
 }
 
-/// C4-Q-001: non-empty `INSERT OVERWRITE … PARTITION` also refuses (not only empty).
+/// Non-empty `INSERT OVERWRITE … PARTITION` also refuses (not only empty).
 #[tokio::test]
 async fn insert_overwrite_partition_nonempty_refuses_whole_table_replace() {
     let wh = TempDir::new().unwrap();
@@ -1037,7 +1037,7 @@ async fn insert_overwrite_partition_nonempty_refuses_whole_table_replace() {
     );
 }
 
-/// C5-Q-001: empty INSERT OVERWRITE with incompatible source schema must fail loud and
+/// Empty INSERT OVERWRITE with incompatible source schema must fail loud and
 /// leave prior rows — never wipe on a plan that would have been rejected.
 #[tokio::test]
 async fn empty_insert_overwrite_incompatible_schema_does_not_wipe() {
@@ -1073,7 +1073,7 @@ async fn empty_insert_overwrite_incompatible_schema_does_not_wipe() {
     );
 }
 
-/// O4-C2-Q-001: same-arity type mismatch empty OW must not wipe.
+/// Same-arity type mismatch empty OW must not wipe.
 ///
 /// Cast evaluation errors must preserve existing rows during empty `INSERT OVERWRITE`.
 /// A provider must not short-circuit the empty form into a silent full-table wipe.
@@ -1131,7 +1131,7 @@ async fn empty_insert_overwrite_type_mismatch_same_arity_does_not_wipe() {
     );
 }
 
-/// O2-C1-L-003: WITH-CTE empty INSERT OVERWRITE still wipes (probe wraps arbitrary Query Display).
+/// WITH-CTE empty INSERT OVERWRITE still wipes (probe wraps arbitrary Query Display).
 #[tokio::test]
 async fn empty_insert_overwrite_with_cte_wipes_table() {
     let wh = TempDir::new().unwrap();
@@ -1155,7 +1155,7 @@ async fn empty_insert_overwrite_with_cte_wipes_table() {
     );
 }
 
-/// O2-C4-L-001: `INSERT OVERWRITE INTO` (explicit INTO) empty source must wipe — same class
+/// `INSERT OVERWRITE INTO` (explicit INTO) empty source must wipe — same class
 /// as bare `INSERT OVERWRITE` (Spark often emits the INTO keyword).
 #[tokio::test]
 async fn empty_insert_overwrite_into_keyword_wipes_table() {
@@ -1180,7 +1180,7 @@ async fn empty_insert_overwrite_into_keyword_wipes_table() {
     );
 }
 
-/// O3-C1-Q-001: column-list empty INSERT OVERWRITE must wipe (same class as bare SELECT *).
+/// Column-list empty INSERT OVERWRITE must wipe (same class as bare SELECT *).
 #[tokio::test]
 async fn empty_insert_overwrite_column_list_wipes_table() {
     let wh = TempDir::new().unwrap();
@@ -1205,7 +1205,7 @@ async fn empty_insert_overwrite_column_list_wipes_table() {
     );
 }
 
-/// O3-C1-Q-002: self-scan empty INSERT OVERWRITE must wipe (probe wraps source; DELETE target).
+/// Self-scan empty INSERT OVERWRITE must wipe (probe wraps source; DELETE target).
 #[tokio::test]
 async fn empty_insert_overwrite_self_scan_wipes_table() {
     let wh = TempDir::new().unwrap();
@@ -1230,7 +1230,7 @@ async fn empty_insert_overwrite_self_scan_wipes_table() {
     );
 }
 
-/// O3-C2-Q-001: ORDER BY … LIMIT 0 empty INSERT OVERWRITE must wipe (not only bare LIMIT 0).
+/// ORDER BY … LIMIT 0 empty INSERT OVERWRITE must wipe (not only bare LIMIT 0).
 #[tokio::test]
 async fn empty_insert_overwrite_order_by_limit_zero_wipes_table() {
     let wh = TempDir::new().unwrap();
@@ -1254,7 +1254,7 @@ async fn empty_insert_overwrite_order_by_limit_zero_wipes_table() {
     );
 }
 
-/// O3-C2-Q-002: column-list empty OW with wrong SELECT arity must not wipe (C5-Q-001 class).
+/// Column-list empty OW with wrong SELECT arity must not wipe.
 #[tokio::test]
 async fn empty_insert_overwrite_column_list_incompatible_does_not_wipe() {
     let wh = TempDir::new().unwrap();

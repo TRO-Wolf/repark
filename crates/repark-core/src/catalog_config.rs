@@ -92,10 +92,10 @@ impl std::fmt::Debug for CatalogSpec {
 /// only the associated values are replaced with `***`.
 fn prop_key_is_secret(key: &str) -> bool {
     // Hyphens and dots → underscore so `basic.auth.user.info` / `s3.access-key-id` share needles
-    // with snake_case (C2-SEC-002 / O4-C3-SEC-001).
+    // with snake_case (C2-SEC-002).
     let lower = key.to_ascii_lowercase().replace(['-', '.'], "_");
     // Underscores stripped so camelCase `accessKey` / `privateKey` / one-word `apikey` share
-    // needles with snake_case (O2-C2-SEC-001 / O4-C1-SEC-001 residual of C1-SEC-002 / C2-SEC-002).
+    // needles with snake_case (residual of C1-SEC-002 / C2-SEC-002).
     let compact = lower.replace('_', "");
     // Substring match covers `aws_secret_access_key`, `s3.access-key-id`, `session_token`, etc.
     // Hyphens normalized to underscores so OpenDAL / Spark spellings share one needle set (C2-SEC-002).
@@ -112,7 +112,7 @@ fn prop_key_is_secret(key: &str) -> bool {
         || compact.contains("privatekey")
         || compact == "bearer"
         || compact.ends_with("bearer")
-        // Kafka / Spark JDBC often embed `user:password` under this key (O4-C3-SEC-001).
+        // Kafka / Spark JDBC often embed `user:password` under this key.
         || lower.contains("user_info")
         || compact.contains("userinfo")
         || lower == "key"
@@ -873,13 +873,13 @@ mod tests {
                 ("s3.access-key-id".to_string(), secret.to_string()),
                 ("s3.secret-access-key".to_string(), secret.to_string()),
                 ("credential".to_string(), secret.to_string()),
-                // O2-C2-SEC-001: camelCase / one-word spellings must redact too.
+                // camelCase / one-word spellings must redact too.
                 ("accessKey".to_string(), secret.to_string()),
                 ("apikey".to_string(), secret.to_string()),
-                // O4-C1-SEC-001: camelCase privateKey + bearer (OAuth) must redact too.
+                // camelCase privateKey + bearer (OAuth) must redact too.
                 ("privateKey".to_string(), secret.to_string()),
                 ("bearer".to_string(), secret.to_string()),
-                // O4-C3-SEC-001: Kafka/JDBC user:password blob key.
+                // Kafka/JDBC user:password blob key.
                 ("basic.auth.user.info".to_string(), secret.to_string()),
             ]),
         };
@@ -946,7 +946,7 @@ mod tests {
         assert!(err.to_string().contains("url"), "{err}");
     }
 
-    /// I5 acceptance matrix for memory, Glue, and S3 Tables kind mappings; no live AWS.
+    /// Acceptance matrix for memory, Glue, and S3 Tables kind mappings; no live AWS.
     #[test]
     fn i5_catalog_config_acceptance_matrix_ok() {
         let bare_memory = HashMap::from([
@@ -960,7 +960,7 @@ mod tests {
             parse_catalog_specs(&bare_memory).unwrap()[0].kind,
             CatalogKind::Memory
         );
-        // repark-prefix synonym of bare `=memory` (I5 octo C4-F4).
+        // repark-prefix synonym of bare `=memory`.
         let repark_bare_memory = HashMap::from([
             ("repark.sql.catalog.m".to_string(), "memory".to_string()),
             (
@@ -1042,7 +1042,7 @@ mod tests {
         );
     }
 
-    /// I5 acceptance matrix for missing, conflicting, and unknown catalog kinds; config only.
+    /// Acceptance matrix for missing, conflicting, and unknown catalog kinds; config only.
     #[test]
     fn i5_catalog_config_acceptance_matrix_loud() {
         let bare_class = HashMap::from([(

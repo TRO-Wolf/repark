@@ -77,7 +77,7 @@ def _bind_named_row(
     """Bind a name→value mapping to ``names``.
 
     * Default (Row path / strict name lists): missing keys and extra keys fail loud
-      (BUG-007 / C1-L-001 / C2-L-004 — a typo must not become an all-null column).
+      (BUG-007 — a typo must not become an all-null column).
     * Dict key-union / StructType null-fill: ``allow_missing=True`` yields ``None`` for
       absent keys (Spark null fill); ``allow_extra=True`` ignores keys not in ``names``
       (Spark drops extras under an explicit StructType schema).
@@ -103,7 +103,7 @@ def _bind_named_row(
                 f"(expected keys {list(names)!r}; silent drop is not supported)"
             )
 
-    # Raw cells — normalize later so all-null NaN/NaT can still witness DOUBLE/TIMESTAMP (C4-L-001).
+    # Raw cells — normalize later so all-null NaN/NaT can still witness DOUBLE/TIMESTAMP.
 
     if allow_missing:
         return tuple(mapping.get(name) for name in names)
@@ -123,7 +123,7 @@ def _rows_from_mapping_list(
     """Convert homogeneous dict/Row lists to (names, row tuples) with unified schema bind.
 
     Cells are left un-normalized so the caller can infer all-null CAST types from NaN/NaT
-    witnesses before erasure (C4-L-001).
+    witnesses before erasure.
 
     * ``kind="dict"`` + ``key_union=True`` (schema=None): Spark key-union across rows with
       null fill for missing fields (live 4.1.2 oracle).
@@ -200,7 +200,7 @@ def _rows_from_mapping_list(
 
 
 def _refuse_duplicate_pandas_columns(data: Any) -> None:
-    """Fail loud on duplicate pandas column names (critic-octo C2).
+    """Fail loud on duplicate pandas column names.
 
     ``data[name].dtype`` returns a DataFrame when names collide (AttributeError on ``.dtype``),
     and ``pa.Table.from_pandas`` raises a bare ValueError. Surface a stable PySparkValueError
@@ -223,9 +223,9 @@ def _rows_from_pandas(
     Empty frames raise :class:`PySparkValueError` (Spark ``CANNOT_INFER_EMPTY_SCHEMA``) — the
     VALUES path has no StructType schema, so types cannot be inferred from zero rows.
 
-    Schema bind: pure reorder by name, pure rename positionally (C2-L-001); length and partial
+    Schema bind: pure reorder by name, pure rename positionally; length and partial
     overlap fail loud. Per-column null SQL preserves source dtypes for all-null columns
-    (C3-Q-001) so Arrow types are not silently forced to string.
+    so Arrow types are not silently forced to string.
     """
 
     _refuse_duplicate_pandas_columns(data)
@@ -241,7 +241,7 @@ def _rows_from_pandas(
             "(repark createDataFrame is VALUES-only and has no StructType path yet)"
         )
 
-    # Positional series (iloc) — name lookup is wrong under duplicate labels (octo C2).
+    # Positional series (iloc) — name lookup is wrong under duplicate labels.
 
     column_series = [data.iloc[:, source_index] for source_index in range(data.shape[1])]
 
@@ -249,7 +249,7 @@ def _rows_from_pandas(
 
     # all-null columns witness raw cells (NaN→DOUBLE, NaT→TIMESTAMP) like the list path
 
-    # (C5-SAF-001 / C6-Q-001). Sparse[int64]/Sparse[bool] stay on the dtype-map unwrap path.
+    # Sparse[int64]/Sparse[bool] stay on the dtype-map unwrap path.
 
     source_null_sql: list[str] = []
 
@@ -291,7 +291,7 @@ def _rows_from_polars(
 
     Empty frames raise (same CANNOT_INFER_EMPTY_SCHEMA class as pandas). Schema bind matches
     pandas (name reorder / positional rename / fail-loud partial). All-null typed columns keep
-    dtype-matched CAST nulls (C3-Q-001).
+    dtype-matched CAST nulls.
     """
 
     source_columns = list(data.columns)
@@ -334,7 +334,7 @@ def _empty_typed_arrow_frame(
     names: list[str],
     engine_types: list[str],
 ) -> DataFrame:
-    """Zero-row createDataFrame keeping StructType/DDL/scalar DataType types (octo C2-Q-001)."""
+    """Zero-row createDataFrame keeping StructType/DDL/scalar DataType types."""
 
     if len(engine_types) != len(names):
         raise PySparkValueError(
@@ -356,7 +356,7 @@ def _values_sql_with_typed_nulls(
     *,
     column_null_sql: list[str] | None = None,
 ) -> str:
-    """Emit VALUES SQL; all-null columns use a typed CAST (default VARCHAR — C2-L-003 / C3-Q-001).
+    """Emit VALUES SQL; all-null columns use a typed CAST (default VARCHAR).
 
     When ``column_null_sql`` is provided (pandas/polars source dtypes), all-null columns use
     that CAST so Arrow types match the source dtype rather than silent string.
@@ -421,7 +421,7 @@ def _create_dataframe_from_rows(
     ).lower() in {"true", "1"}
 
     # Nested dict-cell → StructType (Spark SPARK-35929); strip() matches other bool conf
-    # parsers in this module (octo C2-Q-001).
+    # parsers in this module.
     infer_dict_as_struct = str(
         session.conf.get("spark.sql.pyspark.inferNestedDictAsStruct.enabled", "true")
     ).strip().lower() in {"true", "1"}
@@ -483,7 +483,7 @@ def _create_dataframe_from_rows_inner(
 
             # Typed schema (StructType / DDL / bare DataType wrap) must keep declared
 
-            # types on a 0-row frame — string default was silent wrong (octo C2-Q-001).
+            # types on a 0-row frame — string default was silent wrong.
 
             if engine_types is not None:
                 return _empty_typed_arrow_frame(session, list(schema), engine_types)
@@ -516,11 +516,10 @@ def _create_dataframe_from_rows_inner(
             fields = getattr(first, "_fields", None)
 
             if fields is not None:
-                # collections.namedtuple / typing.NamedTuple — source names are _fields
+                # collections.namedtuple / typing.NamedTuple — source names are _fields.
+                # schema= uses the same by-name reorder / positional rename /
 
-                # (C3-Q-002). schema= uses the same by-name reorder / positional rename /
-
-                # fail-loud partial as dict/Row (C6-L-001); never positional-only when names
+                # fail-loud partial as dict/Row; never positional-only when names
 
                 # are known (that swapped values vs dict/Row/pandas/polars under reorder).
 
@@ -555,9 +554,8 @@ def _create_dataframe_from_rows_inner(
             tuples = []
 
             for row_index, row in enumerate(data):
-                # Refuse str / other iterables — character-iterating a string yields wrong rows
-
-                # (C1-Q-002). Only list/tuple are row shapes on this path.
+                # Refuse str / other iterables — character-iterating a string yields wrong rows.
+                # Only list/tuple are row shapes on this path.
 
                 if not isinstance(row, (list, tuple)):
                     raise PySparkTypeError(
@@ -571,7 +569,7 @@ def _create_dataframe_from_rows_inner(
                         f"(row 0 width {width}, row {row_index} width {len(row)})"
                     )
 
-                # Raw cells — normalize after all-null type inference (C4-L-001).
+                # Raw cells — normalize after all-null type inference.
 
                 tuples.append(_apply_permutation(tuple(row), permutation))
 
@@ -703,9 +701,9 @@ def _materialize_values_as_memtable_frame(session: ReparkSession, values_sql: st
         frame = session.sql(f"SELECT * FROM {view_name}")
 
     except BaseException:
-        # Drop orphan MemTable if sql() fails after register (parity mapInArrow C3-SAF-001).
+        # Drop orphan MemTable if sql() fails after register (mapInArrow parity).
 
-        # BaseException so KeyboardInterrupt/SystemExit also release the view (octo C3).
+        # BaseException so KeyboardInterrupt/SystemExit also release the view.
 
         if registered:
             with contextlib.suppress(Exception):
@@ -736,7 +734,7 @@ def _materialize_arrow_as_memtable_frame(session: ReparkSession, table: Any) -> 
     If registration succeeds and the follow-up ``SELECT * FROM`` view scan fails (or a
     ``BaseException`` such as ``KeyboardInterrupt`` is raised after register), the MemTable
     is dropped immediately so the session does not retain an untracked ``__repark_cdf_*``
-    view (octo P1a C1 SAF-001 / C3; same discipline as mapInArrow C3-SAF-001).
+    view (same discipline as mapInArrow).
     """
 
     import pyarrow as pa
@@ -777,7 +775,7 @@ def _materialize_arrow_as_memtable_frame(session: ReparkSession, table: Any) -> 
         frame = session.sql(f"SELECT * FROM {view_name}")
 
     except BaseException:
-        # BaseException: also drop on KeyboardInterrupt/SystemExit after register (octo C3).
+        # BaseException: also drop on KeyboardInterrupt/SystemExit after register.
 
         if registered:
             with contextlib.suppress(Exception):

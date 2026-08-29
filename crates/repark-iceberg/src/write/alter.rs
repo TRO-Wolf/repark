@@ -996,7 +996,7 @@ mod tests {
         assert!(!id_field.required);
     }
 
-    /// Build a one-column optional table for type-promotion twins (octo C3).
+    /// Build a one-column optional table for type-promotion twins.
     async fn setup_typed(
         warehouse: &TempDir,
         name: &str,
@@ -1054,7 +1054,7 @@ mod tests {
         }
     }
 
-    /// Octo C3 — float→double widen lands; double→float narrow refuses (ledger twin claim).
+    /// Float→double widen lands; double→float narrow refuses (ledger twin claim).
     #[tokio::test]
     async fn schema_type_widen_float_to_double_and_narrow_refuses() {
         let warehouse = TempDir::new().unwrap();
@@ -1094,7 +1094,7 @@ mod tests {
         );
     }
 
-    /// Octo C3 — decimal same-scale precision widen lands; narrow precision refuses.
+    /// Decimal same-scale precision widen lands; narrow precision refuses.
     #[tokio::test]
     async fn schema_type_widen_decimal_precision_and_narrow_refuses() {
         let warehouse = TempDir::new().unwrap();
@@ -1151,7 +1151,7 @@ mod tests {
         );
     }
 
-    /// Octo C4 — multi schema-op batch commits as exactly ONE catalog `update_table` CAS.
+    /// Multi schema-op batch commits as exactly ONE catalog `update_table` CAS.
     /// (Rename targets a *pre-existing* column — same-batch add-then-rename of the new
     /// column is refused by the fork as "missing column"; residual F-I6-C4-R1.)
     #[tokio::test]
@@ -1196,7 +1196,7 @@ mod tests {
         );
     }
 
-    /// Octo C4 twin — injected commit failure leaves schema unchanged (no partial batch).
+    /// Twin — injected commit failure leaves schema unchanged (no partial batch).
     #[tokio::test]
     async fn schema_injected_commit_failure_leaves_no_partial_state() {
         let warehouse = TempDir::new().unwrap();
@@ -1230,7 +1230,7 @@ mod tests {
         );
     }
 
-    /// Octo residual F-I6-C4-R1 — same-batch add-then-rename of the *new* column is refused
+    /// Residual F-I6-C4-R1 — same-batch add-then-rename of the *new* column is refused
     /// loud by the fork (not a silent partial). Documented so a future silent absorption is RED.
     #[tokio::test]
     async fn schema_same_batch_add_then_rename_new_column_refuses_loud() {
@@ -1268,7 +1268,7 @@ mod tests {
         );
     }
 
-    /// Octo C5 — case-insensitive column resolution (Spark default) for rename + drop.
+    /// Case-insensitive column resolution (Spark default) for rename + drop.
     #[tokio::test]
     async fn schema_case_insensitive_rename_and_drop() {
         let warehouse = TempDir::new().unwrap();
@@ -1518,7 +1518,7 @@ mod tests {
         );
     }
 
-    /// Octo C4 — multi [`PartitionSpecChange`] batch commits as exactly ONE catalog CAS.
+    /// Multi [`PartitionSpecChange`] batch commits as exactly ONE catalog CAS.
     #[tokio::test]
     async fn partition_spec_multi_change_commits_exactly_once() {
         let warehouse = TempDir::new().unwrap();
@@ -1564,7 +1564,7 @@ mod tests {
         assert!(names.contains(&"cat".to_string()) && names.contains(&"id_b8".to_string()));
     }
 
-    /// Octo C4 twin — injected partition commit failure leaves default spec unchanged.
+    /// Twin — injected partition commit failure leaves default spec unchanged.
     #[tokio::test]
     async fn partition_spec_injected_commit_failure_leaves_no_partial_state() {
         let warehouse = TempDir::new().unwrap();
@@ -1592,7 +1592,7 @@ mod tests {
         );
     }
 
-    /// Octo C6 — double ADD of the same identity field refuses loud (no silent no-op).
+    /// Double ADD of the same identity field refuses loud (no silent no-op).
     #[tokio::test]
     async fn partition_spec_double_add_same_field_refuses() {
         let wh = TempDir::new().unwrap();
@@ -1643,7 +1643,7 @@ mod tests {
         );
     }
 
-    /// Octo C1 — DROP/REPLACE partition field names are case-insensitive (Spark default).
+    /// DROP/REPLACE partition field names are case-insensitive (Spark default).
     /// Mutation: pass-through `remove_field("CATEGORY")` against stored `category` → `DataInvalid`.
     #[tokio::test]
     async fn partition_spec_drop_replace_field_name_case_insensitive() {

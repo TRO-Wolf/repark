@@ -10,8 +10,8 @@
 //! - Timestamp-to-string casts use session-zone, space-separated `Utf8`.
 //! - Timestamp-to-date casts use the session zone for LTZ and the stored wall for NTZ.
 //!
-//! The session installs this rule after built-in coercion; rewrites match timestamp source types
-//! and inject dedicated UDFs, so their output no longer matches the rewrite inputs.
+//! The session installs this rule after built-in coercion; rewrites must emit exactly-typed
+//! expressions — no re-coercion runs afterwards.
 //!
 //! A type-resolution miss leaves the expression unchanged. Set-operation schemas may require a
 //! second analysis after a rewrite changes a child type.

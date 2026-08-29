@@ -9,8 +9,8 @@ Arrow export path (``to_arrow`` — value AND type), never ``show``:
   ``ID`` is legal; Spark under ``spark.sql.caseSensitive=false`` raises ``AMBIGUOUS_REFERENCE`` only
   when the predicate names the colliding column. Filtering an unrelated column of that frame still
   runs. Both failure modes this sits between are pinned: whole-frame refusal (the over-refusal) and
-  last-write-wins (P4C5-Q-001 — silently binding the ident to the wrong column).
-* **a token followed by ``(`` is a function call, not a column** (P5C5-Q-001): ``year(ts)`` stays a
+  last-write-wins (silently binding the ident to the wrong column).
+* **a token followed by ``(`` is a function call, not a column**: ``year(ts)`` stays a
   function even when a column named ``year`` exists — while bare ``year`` on the SAME frame is still
   rewritten.
 * **SQL literal keywords are never bound to a same-named column**: ``true`` / ``false`` / ``null``
@@ -89,7 +89,7 @@ def test_ambiguous_reference_raises_analysis_exception(
     spark: ReparkSession, entry_point: str, spelling: str
 ) -> None:
     """Referencing the colliding name — in ANY spelling — is a loud refusal, never last-write-wins
-    (P4C5-Q-001: the ident used to silently bind to whichever column was seen last).
+    (the ident used to silently bind to whichever column was seen last).
     """
     df = _collides(spark)
     with pytest.raises(AnalysisException, match="ambiguous"):
@@ -189,7 +189,7 @@ def test_backtick_quoted_identifier_is_not_a_protected_span(
     assert 'No field named """x"""' in str(excinfo.value)
 
 
-# a token followed by `(` is a function call, not a column (P5C5-Q-001)
+# a token followed by `(` is a function call, not a column
 
 
 @pytest.mark.parametrize("entry_point", ["filter", "where"])
@@ -215,7 +215,7 @@ def test_function_call_survives_a_case_differing_same_named_column(
 ) -> None:
     """The discriminating shape for the call-site skip: the column is ``YEAR`` and the predicate
     calls ``year(ts)``. Rewriting the token would emit ``"YEAR"(ts)`` — DataFusion resolves
-    function names case-SENSITIVELY, so that is ``Invalid function 'YEAR'`` (P5C5-Q-001). The
+    function names case-SENSITIVELY, so that is ``Invalid function 'YEAR'``. The
     lowercase-column case above cannot catch this: ``"year"(ts)`` still resolves.
     """
     df = spark.sql(

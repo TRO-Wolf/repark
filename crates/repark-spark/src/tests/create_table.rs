@@ -1,4 +1,4 @@
-/// I5: column-def CREATE TABLE (schema-only) schema-equals a CTAS twin; empty row count;
+/// Column-def CREATE TABLE (schema-only) schema-equals a CTAS twin; empty row count;
 /// **no data write** (zero `*.parquet` under table location; no current snapshot).
 use super::super::*;
 use super::common::*;
@@ -46,7 +46,7 @@ async fn column_def_create_schema_equals_ctas_twin() {
         .await
         .unwrap();
 
-    // Attack focus: accidental data write on schema-only CREATE (I5 octo C1-F3).
+    // Attack focus: accidental data write on schema-only CREATE.
     assert!(
         col_def.metadata().current_snapshot_id().is_none(),
         "schema-only CREATE must not stamp a current snapshot"
@@ -58,7 +58,7 @@ async fn column_def_create_schema_equals_ctas_twin() {
         parquet_count, 0,
         "schema-only CREATE must write zero parquet data files under {location}"
     );
-    // NOT NULL → required (I5 octo C1-F2 companion).
+    // NOT NULL → required.
     assert!(
         col_def.metadata().current_schema().as_struct().fields()[0].required,
         "NOT NULL must map to Iceberg required"
@@ -101,7 +101,7 @@ async fn column_def_create_schema_equals_ctas_twin() {
         0
     );
 
-    // DEFAULT column option must refuse loud (not silent ignore — C1-F2).
+    // DEFAULT column option must refuse loud (not silent ignore).
     let default_err = execute(
         &ctx,
         &catalogs,
@@ -115,7 +115,7 @@ async fn column_def_create_schema_equals_ctas_twin() {
     );
 }
 
-/// I5: column-def CREATE with PARTITIONED BY identity + TBLPROPERTIES.
+/// Column-def CREATE with PARTITIONED BY identity + TBLPROPERTIES.
 #[tokio::test]
 async fn column_def_create_partitioned_by_identity() {
     let wh = TempDir::new().unwrap();
@@ -148,7 +148,7 @@ async fn column_def_create_partitioned_by_identity() {
     );
 }
 
-/// I5 octo C4-F1/F2 / C5-F1/F2: LOCATION + Hive ROW FORMAT refuse; CTAS TEMPORARY refuse.
+/// LOCATION + Hive ROW FORMAT refuse; CTAS TEMPORARY refuse.
 #[tokio::test]
 #[allow(clippy::too_many_lines)] // one flat refuse-clause pin battery
 async fn column_def_location_and_ctas_temporary_refuse() {
@@ -190,7 +190,7 @@ async fn column_def_location_and_ctas_temporary_refuse() {
                 || row_format_err.to_string().contains("Hive")),
         "got: {row_format_err}"
     );
-    // STORED AS lands in hive_formats.storage (I5 octo C7-F1).
+    // STORED AS lands in hive_formats.storage.
     let stored_as = execute(
         &ctx,
         &catalogs,
@@ -248,7 +248,7 @@ async fn column_def_location_and_ctas_temporary_refuse() {
             .unwrap()
     );
 
-    // Table COMMENT must refuse (C6-F1).
+    // Table COMMENT must refuse.
     let comment_err = execute(
         &ctx,
         &catalogs,
@@ -262,7 +262,7 @@ async fn column_def_location_and_ctas_temporary_refuse() {
         "got: {comment_err}"
     );
 
-    // format-version=1 refuse on column-def (C6-F2).
+    // format-version=1 refuse on column-def.
     // pins: v3-2-create-v3-opt-in/C-007
     let fv1 = execute(
         &ctx,
@@ -302,7 +302,7 @@ async fn column_def_location_and_ctas_temporary_refuse() {
             .unwrap()
     );
 
-    // Schema-only → INSERT → CREATE BRANCH default (C6-F3).
+    // Schema-only → INSERT → CREATE BRANCH default.
     run(
         &ctx,
         &catalogs,
@@ -332,7 +332,7 @@ async fn column_def_location_and_ctas_temporary_refuse() {
     );
 }
 
-/// I5 octo C3-F1/F2/F3: TEMPORARY refuse; `testing_create_ref` seam still works; typed cols.
+/// TEMPORARY refuse; `testing_create_ref` seam still works; typed cols.
 #[tokio::test]
 #[allow(clippy::too_many_lines)] // one flat refuse + seam + typed-cols pin battery
 async fn column_def_temporary_refuse_testing_create_ref_and_types() {
@@ -410,7 +410,7 @@ async fn column_def_temporary_refuse_testing_create_ref_and_types() {
     ));
     assert!(typed.metadata().current_snapshot_id().is_none());
 
-    // testing_create_ref seam must remain (I5 charter / C3-F2).
+    // testing_create_ref seam must remain (I5 charter).
     run(
         &ctx,
         &catalogs,
@@ -456,8 +456,8 @@ async fn column_def_temporary_refuse_testing_create_ref_and_types() {
     );
 }
 
-/// I5 octo C2-F3: OR REPLACE column-def wipes prior rows; IF NOT EXISTS preserves schema;
-/// LIKE surfaces `NotImplemented` (not empty-column message — C2-F2).
+/// OR REPLACE column-def wipes prior rows; IF NOT EXISTS preserves schema;
+/// LIKE surfaces `NotImplemented` (not empty-column message).
 #[tokio::test]
 async fn column_def_or_replace_wipe_if_not_exists_and_like() {
     let wh = TempDir::new().unwrap();

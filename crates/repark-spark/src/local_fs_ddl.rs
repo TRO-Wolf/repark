@@ -67,7 +67,7 @@ fn strip_ascii_prefix_ci<'a>(value: &'a str, prefix: &str) -> Option<&'a str> {
 /// Map a location string to a local [`PathBuf`] when it is bare or `file://`; `None` for remote.
 ///
 /// Scheme matching is **case-insensitive** for both the remote allowlist and `file:` / `file://`
-/// (octo C1-SEC-001: `FILE:///etc/passwd` must not classify as remote and skip the gate).
+/// (`FILE:///etc/passwd` must not classify as remote and skip the gate).
 #[must_use]
 pub fn local_filesystem_path(location: &str) -> Option<PathBuf> {
     let trimmed = location.trim();
@@ -180,7 +180,7 @@ mod tests {
     fn classifies_local_and_remote() {
         assert!(local_filesystem_path("/etc/passwd").is_some());
         assert!(local_filesystem_path("file:///etc/passwd").is_some());
-        // C1-SEC-001: case variants of file:// must classify local (not unknown remote).
+        // Case variants of file:// must classify local (not unknown remote).
         assert_eq!(
             local_filesystem_path("FILE:///etc/passwd").expect("FILE:// is local"),
             PathBuf::from("/etc/passwd")
@@ -250,7 +250,7 @@ mod tests {
         assert!(err.contains("COPY TO"), "must name surface: {err}");
     }
 
-    /// C1-SEC-001 / C1-Q-002: classic sensitive path + case-variant FILE:// must refuse.
+    /// Classic sensitive path + case-variant FILE:// must refuse.
     #[tokio::test]
     async fn refuses_copy_to_etc_passwd_and_file_scheme_case() {
         let warehouse = TempDir::new().expect("warehouse tempdir");
@@ -280,7 +280,7 @@ mod tests {
         }
     }
 
-    /// C1-Q-001: CREATE EXTERNAL TABLE LOCATION is gated (not only COPY TO).
+    /// CREATE EXTERNAL TABLE LOCATION is gated (not only COPY TO).
     #[tokio::test]
     async fn refuses_create_external_local_outside_warehouse() {
         let warehouse = TempDir::new().expect("warehouse tempdir");
@@ -318,7 +318,7 @@ mod tests {
         );
     }
 
-    /// C1-Q-001: CREATE EXTERNAL under warehouse root is grandfathered.
+    /// CREATE EXTERNAL under warehouse root is grandfathered.
     #[tokio::test]
     async fn grandfathers_create_external_under_warehouse_root() {
         let warehouse = TempDir::new().expect("warehouse tempdir");

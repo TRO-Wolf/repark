@@ -72,7 +72,7 @@ class DataFrameReader:
 
         Everyday options are wired; see ``task/r1-read-formats-ledger.md`` for the full matrix
         (engine-default-differs for ``inferSchema`` when no user schema is supplied). Default
-        semantics are **frozen** (r20-R1 pins). For preamble junk, delimiter auto-detect,
+        semantics are **frozen**. For preamble junk, delimiter auto-detect,
         protocol type inference, and surfaceable diagnostics use :meth:`smartCsv` (repark
         extension).
         """
@@ -118,7 +118,7 @@ class DataFrameReader:
     ) -> DataFrame:
         """Smart CSV reader (repark extension) — protocol inference + messy-file heuristics.
 
-        **Not** a Spark API. Default :meth:`csv` is unchanged (byte-identical r20-R1 pins).
+        **Not** a Spark API. Default :meth:`csv` is unchanged (byte-identical pins).
 
         * Delimiter auto-detect (unless ``sep`` given; ``sep`` must be one character)
         * Leading junk/preamble skip (delimiter-consistency scan)
@@ -353,7 +353,7 @@ class DataFrameReader:
         self._reject_unsupported_semantic_options()
         travel = self._iceberg_time_travel_opts()
         if travel is not None:
-            # read_iceberg_table resolves bare/two-part/spark_catalog (C2-Q-001); do not
+            # read_iceberg_table resolves bare/two-part/spark_catalog; do not
             # bypass the shared layer by forwarding the raw user string only.
             return self._session.read_iceberg_table(table_name, **travel)
         return self._session.table(table_name)
@@ -468,7 +468,7 @@ class DataFrameReader:
         * ``format("iceberg").load(table_identifier)`` reads the **catalog** Iceberg table
           (PySpark Iceberg convention: ``load`` takes the table name, not a filesystem path).
           Bare names resolve under current catalog/NS with **no** temp-view prefer
-          (unlike :meth:`table` / ``spark.table`` — C4-L-001)
+          (unlike :meth:`table` / ``spark.table``)
         * missing/unknown format → :class:`~repark.errors.AnalysisException`
         * empty format is **not** Spark's default-parquet: call ``format(...)`` first
           (disclosed divergence — Spark uses ``spark.sql.sources.default``)
@@ -508,7 +508,7 @@ class DataFrameReader:
             if effective_path is None:
                 raise AnalysisException("Iceberg load requires a table identifier argument")
             # spark.table() / read.table() still prefer temp views; format("iceberg").load
-            # must not silent-shadow a catalog table with a same-name temp view (C4-L-001).
+            # must not silent-shadow a catalog table with a same-name temp view.
             # Time-travel options + residual denylist already applied above.
             travel = self._iceberg_time_travel_opts()
             if travel is not None:
@@ -516,7 +516,7 @@ class DataFrameReader:
             return self._session.read_iceberg_table(str(effective_path))
         if fmt in {"postgres", "postgresql", "jdbc"}:
             return self._load_postgres()
-        # Truncate hostile/long format strings in the error (octo C1-SEC-003).
+        # Truncate hostile/long format strings in the error.
         shown = (self._format or "")[:64]
         raise AnalysisException(
             f"DATA_SOURCE_NOT_FOUND: Failed to find the data source: {shown!r}. "
@@ -527,7 +527,7 @@ class DataFrameReader:
     def _load_csv(self, path: str | Path | list[str]) -> DataFrame:
         """Materialize CSV via the session native reader + Spark-semantics post-steps."""
         # Semantic I/O options (pathGlobFilter / ignoreCorruptFiles / mergeSchema / …) must fail
-        # loud on the `.csv()` shorthand too — not only format().load (octo R1-C3-001).
+        # loud on the `.csv()` shorthand too — not only format().load.
         self._reject_unsupported_semantic_options()
         self._reject_csv_json_parse_options(is_csv=True)
         path_str = _reader_path_to_str(path)
@@ -550,7 +550,7 @@ class DataFrameReader:
         frame = self._session.read_json(path_str, native_options)
         # multiLine=true maps to DF newline_delimited=false, which accepts a **JSON array** only.
         # A pretty single object or NDJSON under multiLine yields an empty schema — silent wrong
-        # vs Spark (octo R1-C1-005). Empty `[]` is allowed (R1-C5-001).
+        # vs Spark. Empty `[]` is allowed (R1-C5-001).
         if (
             self._option_bool("multiline", default=False)
             and not list(frame.columns)
@@ -672,7 +672,7 @@ class DataFrameReader:
     def _option_bool(self, key_lower: str, *, default: bool) -> bool:
         """Read a boolean reader option (case-insensitive key); default when unset.
 
-        Invalid spellings fail loud (octo R1-C1-006) — never silent-false on ``maybe``.
+        Invalid spellings fail loud — never silent-false on ``maybe``.
         """
         for key, value in self._options.items():
             if key.lower() == key_lower:
@@ -770,7 +770,7 @@ class DataFrameReader:
                     selects.append(F.col(source_name).cast(field["dataType"]).alias(field["name"]))
             else:
                 # Partial name match (JSON / header CSV with user schema listing extra fields):
-                # null-fill missing names — Spark shape (octo R1-C2-002). Skip when source names
+                # null-fill missing names — Spark shape. Skip when source names
                 # look like DF generic no-header columns so positional CSV still works.
                 generic_source = bool(columns) and all(
                     name.lower().startswith("column") or name.startswith("_c") for name in columns
@@ -802,7 +802,7 @@ class DataFrameReader:
             return frame.select(*selects)
 
         # Align generic DF names with Spark `_cN` when no header and no user schema —
-        # regardless of inferSchema (octo R1-C1-002).
+        # regardless of inferSchema.
         if not header and columns:
             renames = []
             needs_rename = False
@@ -991,7 +991,7 @@ class DataFrameReader:
                     f"snapshot-id must be an integer snapshot id, got {raw!r}"
                 ) from error
             # Python int is unbounded; PyO3 i64 conversion would raise OverflowError
-            # (octo C7-Q-001). Gate here so callers see AnalysisException consistently.
+            # Gate here so callers see AnalysisException consistently.
             if parsed < _I64_MIN or parsed > _I64_MAX:
                 raise AnalysisException(
                     f"snapshot-id must fit a signed 64-bit integer, got {raw!r}"

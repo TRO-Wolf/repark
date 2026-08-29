@@ -1,4 +1,4 @@
-"""H2 — Group H long tail + naming polish.
+"""Group H long tail + naming polish.
 
 Covers:
 1. Non-origin duplicate projection names (select multi-name map).
@@ -50,7 +50,7 @@ def test_h2_select_year_year_duplicate_function_names(spark: ReparkSession) -> N
 
 
 def test_h2_select_origin_dups_still_work(spark: ReparkSession) -> None:
-    """H1 origin path regression: ``select(x, x)`` both origin-bound."""
+    """Origin path regression: ``select(x, x)`` both origin-bound."""
     frame = spark.createDataFrame([(7,)], ["x"])
     bound = frame["x"]
     out = frame.select(bound, bound)
@@ -60,7 +60,7 @@ def test_h2_select_origin_dups_still_work(spark: ReparkSession) -> None:
 
 
 def test_h2_select_sum_sum_multi_name_display(spark: ReparkSession) -> None:
-    """``select(sum(v), sum(v))`` keeps Spark-legal display names (critic-octo C1-002)."""
+    """``select(sum(v), sum(v))`` keeps Spark-legal display names."""
     frame = spark.createDataFrame([(1, 10), (1, 20), (2, 5)], ["k", "v"])
     out = frame.select(F.sum("v"), F.sum("v"))
     assert out.columns == ["sum(v)", "sum(v)"]
@@ -107,14 +107,14 @@ def test_h2_alias_self_join_still_works(spark: ReparkSession) -> None:
 
 
 def test_h2_name_equi_same_object_unchanged(spark: ReparkSession) -> None:
-    """Name equi-join ``df.join(df, on="a")`` already correct (G1/H1)."""
+    """Name equi-join ``df.join(df, on="a")`` already correct (G1)."""
     frame = spark.createDataFrame([(1, 2), (3, 4)], ["a", "b"])
     joined = frame.join(frame, on="a")
     assert joined.count() == 2
 
 
 def test_h2_same_object_compound_self_join_refuses_loud(spark: ReparkSession) -> None:
-    """Multi-token arms refuse — alternation would silent-wrong (critic-octo C1-001).
+    """Multi-token arms refuse — alternation would silent-wrong.
 
     ``(df.x + df.y) == (df.x + df.y)`` must not rewrite to ``L.x + R.y = L.x + R.y``
     (cartesian). Alias both sides for full compound self-join support.
@@ -186,7 +186,7 @@ def test_h2_spark_app_name_default_repark_after_bare_get_or_create() -> None:
     session = ReparkSession.builder.getOrCreate()
     try:
         assert session.conf.get("spark.app.name") == "repark"
-        # getAll includes the default key (T3 / H2 verify).
+        # getAll includes the default key.
         assert session.conf.getAll.get("spark.app.name") == "repark"
     finally:
         session.stop()

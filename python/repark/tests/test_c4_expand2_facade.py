@@ -1,4 +1,4 @@
-"""C4 expand2 — facade pins for repartition* validation + fillna errorClass + AssertionError.
+"""expand2 — facade pins for repartition* validation + fillna errorClass + AssertionError.
 
 Apache cohort: ``test_repartition`` / ``test_stat`` fillna EC tails; ``PySparkAssertionError``
 identity for ``check_error`` after the errors overlay. Single-node no-op bodies stay
@@ -85,7 +85,7 @@ def test_repartition_list_num_partitions_error_class(spark: ReparkSession) -> No
 
 
 def test_repartition_list_sole_arg_error_class(spark: ReparkSession) -> None:
-    """Sole-arg list must raise (octo C4 C1-S1-002) — not a silent single-node no-op."""
+    """Sole-arg list must raise — not a silent single-node no-op."""
     frame = spark.createDataFrame([(14, "Tom")], ["age", "name"])
     with pytest.raises(PySparkTypeError) as raised:
         frame.repartition([10])
@@ -112,7 +112,7 @@ def test_repartition_by_range_list_error_class(spark: ReparkSession) -> None:
         "arg_name": "numPartitions",
         "arg_type": "list",
     }
-    # Sole-arg list (symmetric to repartition sole-arg pin — octo C4 C6).
+    # Sole-arg list (symmetric to repartition sole-arg pin).
     with pytest.raises(PySparkTypeError) as raised_sole:
         frame.repartitionByRange([10])
     assert raised_sole.value.getErrorClass() == "NOT_COLUMN_OR_INT_OR_STR"
@@ -195,7 +195,7 @@ def test_fillna_subset_int_error_class(spark: ReparkSession) -> None:
 
 
 def test_fillna_none_and_tuple_value_error_class(spark: ReparkSession) -> None:
-    """None / tuple values use the same Spark list EC class (octo C4 C6 pin)."""
+    """None / tuple values use the same Spark list EC class."""
     frame = spark.createDataFrame([(None,), (True,)], ["a"])
     with pytest.raises(PySparkTypeError) as raised_none:
         frame.fillna(None)  # type: ignore[arg-type]

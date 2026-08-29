@@ -215,7 +215,7 @@ def test_pipeline_model_save_load_round_trip() -> None:
 
 
 def test_pipeline_model_save_atomic_overwrite() -> None:
-    """M7: overwrite is write-new + rename — never rmtree-then-write (M4 C2-SAF-001).
+    """M7: overwrite is write-new + rename — never rmtree-then-write (M4).
 
     After a successful overwrite the path is a complete repark-ml tree; a failed
     mid-write must not leave the destination deleted (staging aborted, original kept
@@ -248,7 +248,7 @@ def test_pipeline_model_save_atomic_overwrite() -> None:
         assert (path / "metadata.json").is_file()
         still = PipelineModel.load(str(path))
         assert sorted(row.asDict()["c"] for row in still.transform(df).collect()) == [9.0, 9.0]
-        # File target overwrite: replace file with directory tree (TOCTOU residual M7 C5).
+        # File target overwrite: replace file with directory tree (TOCTOU residual M7).
         file_path = Path(tmp) / "as_file"
         file_path.write_text("not-a-dir", encoding="utf-8")
         model_a.write().overwrite().save(str(file_path))
@@ -260,7 +260,7 @@ def test_pipeline_model_save_atomic_overwrite() -> None:
 
 
 def test_pipeline_model_save_race_aside_cleanup() -> None:
-    """M7 octo C1: failed publish after move-aside must not leak aside when target reoccupied.
+    """M7: failed publish after move-aside must not leak aside when target reoccupied.
 
     Simulates concurrent-overwrite race via rename hook: after target→aside, peer recreates
     target so staging→target fails → commit cleans aside (no `.repark-ml-aside-*` sibling).

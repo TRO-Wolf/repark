@@ -122,7 +122,7 @@ def test_getattr_dunder_resolved_on_type(spark: ReparkSession) -> None:
 
 
 def test_getattr_getitem_repr_str(spark: ReparkSession) -> None:
-    """C1-Q-007: ``repr``/``str`` on getattr/getitem entry points (not only ``-col``)."""
+    """``repr``/``str`` on getattr/getitem entry points (not only ``-col``)."""
     df = _source(spark)
     assert repr(df.x) == "Column<'x'>"
     assert str(df["y"]) == "Column<'y'>"
@@ -143,11 +143,11 @@ def test_getitem_str_returns_column(spark: ReparkSession) -> None:
 
 
 def test_getitem_str_case_insensitive_resolves_canonical(spark: ReparkSession) -> None:
-    """C2-L-001 / C2-L-002: ``df["X"]`` succeeds when the column is ``x`` (Spark CI default).
+    """``df["X"]`` succeeds when the column is ``x`` (Spark CI default).
 
     Live 4.1.2 (caseSensitive=false): the analyzer resolver accepts the differently-cased key
     and the REQUESTED spelling becomes the output name; display matches ``F.col("X")`` so
-    compounds stay clean (octo C3-L-005). ``df.X`` stays case-sensitive AttributeError (G1a).
+    compounds stay clean. ``df.X`` stays case-sensitive AttributeError (G1a).
     """
     df = _source(spark)
     column = df["X"]
@@ -161,7 +161,7 @@ def test_getitem_str_case_insensitive_resolves_canonical(spark: ReparkSession) -
     assert df.select(df["X"] + 1).columns == ["(X + 1)"]
     with pytest.raises(AttributeError, match=r"ATTRIBUTE_NOT_SUPPORTED"):
         _ = df.X
-    # Engine select path keeps the requested spelling too (octo C3-L-001); values still come
+    # Engine select path keeps the requested spelling too; values still come
     # from schema column ``x``.
     via_select = df.select("X").to_arrow()
     assert via_select.column_names == ["X"]
@@ -212,7 +212,7 @@ def test_getitem_column_filters(spark: ReparkSession) -> None:
     )
     assert filtered.column_names == expected.column_names
     assert filtered.to_pydict() == expected.to_pydict()
-    # C1-Q-006: live schema equality (type/nullability pinned).
+    # Live schema equality (type/nullability pinned).
     assert filtered.schema.equals(expected.schema)
     # Same as explicit filter.
     via_filter = df.filter(df.x > 1).orderBy("x").to_arrow().to_pydict()
@@ -237,7 +237,7 @@ def test_getitem_list_and_tuple_select(spark: ReparkSession) -> None:
     assert from_tuple.column_names == ["x", "y"]
     assert from_list.to_pydict() == expected.to_pydict()
     assert from_tuple.to_pydict() == from_list.to_pydict()
-    # C2-Q-002: schema equality on list/tuple getitem→select (sibling of filter pin).
+    # Schema equality on list/tuple getitem→select (sibling of filter pin).
     assert from_list.schema.equals(expected.schema)
     assert from_tuple.schema.equals(expected.schema)
     # Single-name list is still select (one column).
@@ -247,7 +247,7 @@ def test_getitem_list_and_tuple_select(spark: ReparkSession) -> None:
 def test_getitem_missing_str_raises_analysis_exception(spark: ReparkSession) -> None:
     """``df["missing"]`` → AnalysisException naming the column (eager, Spark-like).
 
-    C1-Q-008: type identity ``repark.errors.AnalysisException`` + ``RuntimeError`` hierarchy.
+    Type identity ``repark.errors.AnalysisException`` + ``RuntimeError`` hierarchy.
     """
     df = _source(spark)
     with pytest.raises(AnalysisException, match=r"missing") as caught:
@@ -267,7 +267,7 @@ def test_getitem_rejects_unsupported_key_type(spark: ReparkSession) -> None:
 
 
 def test_held_dataframe_column_access_raises_after_stop() -> None:
-    """C1-SEC-001 / C1-L-001: G1 entry points gate after ``session.stop()``.
+    """G1 entry points gate after ``session.stop()``.
 
     Prefer-stop over TypeError for unsupported keys — first-line ``_ensure_alive`` preserves
     that ordering.
@@ -305,14 +305,14 @@ def test_neg_select_column_name_and_values(spark: ReparkSession) -> None:
     out = df.select(-df.x).to_arrow()
     assert out.column_names == ["negative(x)"]
     assert out.to_pydict() == {"negative(x)": [-1, 3, 0]}
-    # C1-Q-001: exact width + nullability (not family-only is_integer).
+    # Exact width + nullability (not family-only is_integer).
     field = out.schema.field(0)
     assert field.type == pa.int64()
     assert field.nullable is True
 
 
 def test_neg_null_rows_preserve_null(spark: ReparkSession) -> None:
-    """C1-Q-002: ``__neg__`` keeps NULL rows under ``negative(x)`` (not positives-only)."""
+    """``__neg__`` keeps NULL rows under ``negative(x)`` (not positives-only)."""
     df = spark.createDataFrame([(1,), (None,), (0,), (-2,)], ["x"])
     out = df.select(-df.x).to_arrow()
     assert out.column_names == ["negative(x)"]
@@ -323,7 +323,7 @@ def test_neg_null_rows_preserve_null(spark: ReparkSession) -> None:
 
 
 def test_neg_float_values_and_type(spark: ReparkSession) -> None:
-    """C1-Q-003 / C2-Q-003: float ``-df.x`` pins values, float64, nullability, null rows."""
+    """Float ``-df.x`` pins values, float64, nullability, null rows."""
     df = spark.createDataFrame([(1.5,), (None,), (-2.0,)], ["x"])
     out = df.select(-df.x).to_arrow()
     assert out.column_names == ["negative(x)"]
@@ -364,7 +364,7 @@ def test_neg_double_negation_display_and_values(spark: ReparkSession) -> None:
 
 
 def test_neg_composes_with_binary_ops_in_agg_name(spark: ReparkSession) -> None:
-    """Nested ``sum(negative((x + 1)))`` via ``-(df.x + 1)`` — display + values (C1-Q-004)."""
+    """Nested ``sum(negative((x + 1)))`` via ``-(df.x + 1)`` — display + values."""
     df = _source(spark)
     aggregated = df.agg(F.sum(-(df.x + 1)))
     assert aggregated.columns == ["sum(negative((x + 1)))"]

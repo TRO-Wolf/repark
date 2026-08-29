@@ -65,7 +65,7 @@ def _load_sf1_ledger() -> dict[str, dict[str, str]]:
     payload = json.loads(_LEDGER_PATH.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
         pytest.fail(f"SF1 ledger must be a JSON object; got {payload!r}")
-    # Nested schema (octo C3-L-008): {scale_factor, queries: {...}}
+    # Nested schema: {scale_factor, queries: {...}}
     if "queries" in payload and isinstance(payload["queries"], dict):
         queries = payload["queries"]
         if payload.get("scale_factor") not in (1, 1.0, "1", "1.0"):
@@ -184,8 +184,8 @@ def test_tpch_sf001_matches_sf1_ledger(
         return
 
     if expected_status == "TIMEOUT":
-        # TIMEOUT is scale/machine-dependent — do not require SF0.01 to raise (C3-L-007).
-        # Still run SF0.01 DuckDB-diff so TIMEOUT cannot escape-hatch wrong results (C3-L-001).
+        # TIMEOUT is scale/machine-dependent — do not require SF0.01 to raise.
+        # Still run SF0.01 DuckDB-diff so TIMEOUT cannot escape-hatch wrong results.
         error_class = entry.get("error_class") or ""
         assert error_class.lower().startswith("timeout"), (
             f"Q{query_nr} ledger=TIMEOUT requires error_class Timeout*; got {error_class!r}"

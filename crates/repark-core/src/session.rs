@@ -79,8 +79,7 @@ impl TimeTravelOpts {
             set.push(("as-of-timestamp", TimeTravelSpec::TimestampMs(ms)));
         }
         // Trim branch/tag (SQL VERSION AS OF already trims via parse_version_value). Whitespace
-        // padding would otherwise fail as unknown ref `" b "` while the bare name exists —
-        // octo C5-Q-001.
+        // padding would otherwise fail as unknown ref `" b "` while the bare name exists.
         if let Some(branch) = self.branch {
             let trimmed = branch.trim();
             if trimmed.is_empty() {
@@ -350,7 +349,7 @@ impl ReparkSessionBuilder {
         // DataFusion caches directory listings by path on the RuntimeEnv object-list cache.
         // Path parquet overwrite stage-swaps into the *same* destination path; a warm listing
         // then makes same-session `read_parquet` return pre-overwrite rows while on-disk data
-        // is already new (octo r4 Group I C1-Q-002). Limit 0 disables the cache so listings
+        // is already new. Limit 0 disables the cache so listings
         // always refresh after stage-swap / rmtree+rename.
         runtime = runtime.with_object_list_cache_limit(0);
         let runtime = runtime.build_arc().map_err(engine_err)?;
@@ -754,7 +753,7 @@ impl ReparkSession {
             .ok_or_else(|| Error::DataFusion(format!("unknown catalog '{catalog}'")))
     }
 
-    // === r21 T6: catalog-staleness ============================================================
+    // === catalog-staleness ============================================================
 
     /// ===========================================================================================
     /// Return live table names from an Iceberg catalog handle, without consulting its DataFusion
@@ -1016,7 +1015,7 @@ impl ReparkSession {
         }
         let mut csv_options = csv_read_options_from_map(options)?;
         // nullValue: force all-Utf8 schema so the scan path never type-parses null tokens
-        // (DF null_regex is inference-only — octo R1-C1-001). Owned schema must outlive options.
+        // (DF null_regex is inference-only). Owned schema must outlive options.
         let utf8_schema = if options.contains_key("nullvalue") {
             csv_utf8_schema_from_path(path, csv_options.has_header, csv_options.delimiter)?
         } else {

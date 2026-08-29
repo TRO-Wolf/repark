@@ -410,7 +410,7 @@ impl MorDmlKind {
 }
 
 /// ===========================================================================================
-/// BUG-001 P0 valve (r22 A2): SQL `DELETE`/`UPDATE` via iceberg-datafusion merge-on-read stamps
+/// BUG-001 P0 valve: SQL `DELETE`/`UPDATE` via iceberg-datafusion merge-on-read stamps
 /// every position delete with `partition_key = None` when the **current default** partition
 /// spec is unpartitioned — after partition-spec evolution that leaves older data files under
 /// prior specs, deletes can commit while rows remain visible (fork
@@ -441,7 +441,7 @@ pub async fn refuse_mor_unpartitioned_multi_spec_dml(
     };
     let metadata = table.metadata();
     // Case/trim tolerant: under-refuse on `Merge-on-Read` / padded values would re-open the
-    // silent under-delete path (critic-octo C3). Over-refuse of odd spellings is OK.
+    // silent under-delete path. Over-refuse of odd spellings is OK.
     let is_merge_on_read = metadata
         .properties()
         .get(kind.mode_property())

@@ -98,7 +98,7 @@ def test_mapinarrow_schema_mismatch_types(spark: ReparkSession) -> None:
     with pytest.raises(PySparkException, match=r"schema mismatch on field 'x'") as caught:
         out.collect()
     message = str(caught.value)
-    # Loud name + type detail (octo C1-Q-006) — not a bare "schema mismatch" substring.
+    # Loud name + type detail — not a bare "schema mismatch" substring.
     assert "int32" in message
     assert "string" in message
 
@@ -115,7 +115,7 @@ def test_mapinarrow_user_func_exception_surfaces(spark: ReparkSession) -> None:
         out.collect()
     message = str(caught.value)
     assert "RuntimeError" in message
-    # Both traceback text AND the original message (octo C2-Q-004 — not a hollow or-clause).
+    # Both traceback text AND the original message — not a hollow or-clause.
     assert "Traceback" in message
     assert "user boom" in message
 
@@ -167,7 +167,7 @@ def test_mapinarrow_cache_pins_single_run(spark: ReparkSession) -> None:
 
 
 def test_mapinarrow_cache_unpersist_reruns_func(spark: ReparkSession) -> None:
-    """After unpersist, mapInArrow must re-run func (octo C1-Q-003 / C1-L-003)."""
+    """After unpersist, mapInArrow must re-run func."""
     calls = {"n": 0}
 
     def counted(batches: Iterator[pa.RecordBatch]) -> Iterator[pa.RecordBatch]:
@@ -213,7 +213,7 @@ def test_mapinarrow_filter_after_materializes(spark: ReparkSession) -> None:
 
 
 def test_mapinarrow_smallint_tinyint_float_arrow_widths(spark: ReparkSession) -> None:
-    """DDL widths match session createDataFrame (octo C1-Q-001 / C1-L-001 / C1-L-002)."""
+    """DDL widths match session createDataFrame."""
 
     def identity(batches: Iterator[pa.RecordBatch]) -> Iterator[pa.RecordBatch]:
         yield from batches
@@ -237,10 +237,10 @@ def test_mapinarrow_smallint_tinyint_float_arrow_widths(spark: ReparkSession) ->
 def test_mapinarrow_incremental_not_collect_all_then_udf(
     spark: ReparkSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Output IPC is written as each batch yields — not after exhausting func (C1-Q-004).
+    """Output IPC is written as each batch yields — not after exhausting func.
 
-    Exercises the **IPC fallback** path (I4 primary uses C-stream register, native
-    symbol hidden) so C1-Q-004 stays load-bearing for version-skew.
+    Exercises the **IPC fallback** path (primary uses C-stream register, native
+    symbol hidden) so this pin stays load-bearing for version-skew.
     """
     import pyarrow.ipc as pa_ipc
 
@@ -301,7 +301,7 @@ def test_mapinarrow_incremental_not_collect_all_then_udf(
 def test_mapinarrow_upstream_closed_on_func_raise(
     spark: ReparkSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Upstream RecordBatchReader.close runs when func raises early (C1-Q-002 / C1-SAF-002)."""
+    """Upstream RecordBatchReader.close runs when func raises early."""
     closed = {"n": 0}
     real_from_stream = pa.RecordBatchReader.from_stream
 
@@ -348,7 +348,7 @@ def test_mapinarrow_upstream_closed_on_func_raise(
 
 
 def test_mapinarrow_mia_views_hidden_and_gc_bounded(spark: ReparkSession) -> None:
-    """``__repark_mia_*`` hidden from listTables; GC drops views (C1-SAF-001)."""
+    """``__repark_mia_*`` hidden from listTables; GC drops views."""
     spark._ensure_information_schema()
 
     def _raw_mia_count() -> int:
@@ -387,7 +387,7 @@ def test_mapinarrow_mia_views_hidden_and_gc_bounded(spark: ReparkSession) -> Non
 def test_mapinarrow_register_tracks_before_sql_fail(
     spark: ReparkSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Failed sql after register must not leave an untracked MIA view (C3-SAF-001).
+    """Failed sql after register must not leave an untracked MIA view.
 
     Native PyO3 methods are read-only; wrap ``DataFrame._session`` to inject sql failure
     after register_ipc and assert track/drop ordering.
@@ -417,7 +417,7 @@ def test_mapinarrow_register_tracks_before_sql_fail(
             real.register_ipc_stream_as_temp_view(view_name, ipc_bytes)
 
         def register_arrow_stream_as_temp_view(self, view_name: str, stream_obj: object) -> None:
-            # I4 primary path — action re-ingest uses C-stream register (IPC is fallback).
+            # Primary path — action re-ingest uses C-stream register (IPC is fallback).
             events.append(f"register:{view_name}")
             real.register_arrow_stream_as_temp_view(view_name, stream_obj)
 
@@ -460,7 +460,7 @@ def test_mapinarrow_register_tracks_before_sql_fail(
 
 
 def test_mapinarrow_isempty_take_peek_bounded(spark: ReparkSession) -> None:
-    """isEmpty/take do not require full output materialize (C1-SAF-003)."""
+    """isEmpty/take do not require full output materialize."""
     yields = {"n": 0}
 
     def many_batches(batches: Iterator[pa.RecordBatch]) -> Iterator[pa.RecordBatch]:
@@ -483,7 +483,7 @@ def test_mapinarrow_isempty_take_peek_bounded(spark: ReparkSession) -> None:
 
 
 def test_mapinarrow_show_peek_bounded(spark: ReparkSession) -> None:
-    """show() MIA path bounds output yields via max_output_rows (octo C4-Q-002)."""
+    """show() MIA path bounds output yields via max_output_rows."""
     import contextlib
     import io
 
@@ -512,7 +512,7 @@ def test_mapinarrow_show_peek_bounded(spark: ReparkSession) -> None:
 
 
 def test_mapinarrow_parent_rerun_after_plan_child(spark: ReparkSession) -> None:
-    """filter/select must not clear parent re-run (octo C4-Q-001 / C4-L-001)."""
+    """filter/select must not clear parent re-run."""
     calls = {"n": 0}
 
     def counted(batches: Iterator[pa.RecordBatch]) -> Iterator[pa.RecordBatch]:
@@ -539,7 +539,7 @@ def test_mapinarrow_parent_rerun_after_plan_child(spark: ReparkSession) -> None:
 
 
 def test_mapinarrow_set_op_right_fail_drops_left_staging(spark: ReparkSession) -> None:
-    """crossJoin/set-ops must drop left staging if right materialize fails (C4-SAF-001)."""
+    """crossJoin/set-ops must drop left staging if right materialize fails."""
 
     def identity(batches: Iterator[pa.RecordBatch]) -> Iterator[pa.RecordBatch]:
         yield from batches
@@ -580,7 +580,7 @@ def test_mapinarrow_set_op_right_fail_drops_left_staging(spark: ReparkSession) -
     reason="pandas optional extra not installed",
 )
 def test_mapinarrow_mapinpandas_values(spark: ReparkSession) -> None:
-    """mapInPandas thin wrapper (octo C1-Q-005)."""
+    """mapInPandas thin wrapper."""
 
     def double_pdfs(pdfs: Iterator[object]) -> Iterator[object]:
         for pdf in pdfs:
@@ -599,7 +599,7 @@ def test_mapinarrow_mapinpandas_values(spark: ReparkSession) -> None:
     reason="pandas optional extra not installed",
 )
 def test_mapinarrow_mapinpandas_none_is_loud(spark: ReparkSession) -> None:
-    """mapInPandas must not treat None as empty iterator (octo C3-L-002)."""
+    """mapInPandas must not treat None as empty iterator."""
 
     def return_none(pdfs: Iterator[object]) -> None:
         for _ in pdfs:
@@ -617,7 +617,7 @@ def test_mapinarrow_mapinpandas_none_is_loud(spark: ReparkSession) -> None:
     reason="pandas optional extra not installed",
 )
 def test_mapinarrow_mapinpandas_empty_wrong_name_is_loud(spark: ReparkSession) -> None:
-    """Empty wrong-name pandas yield must not silent-empty under declared schema (C6-L-001).
+    """Empty wrong-name pandas yield must not silent-empty under declared schema.
 
     ``pa.Table.from_pandas(...).to_batches()`` returns ``[]`` for zero-row frames, which used
     to skip ``_validate_map_in_arrow_batch``. Mutation: drop the 0-row RecordBatch emit in
@@ -641,7 +641,7 @@ def test_mapinarrow_mapinpandas_empty_wrong_name_is_loud(spark: ReparkSession) -
     reason="pandas optional extra not installed",
 )
 def test_mapinarrow_mapinpandas_empty_wrong_type_is_loud(spark: ReparkSession) -> None:
-    """Empty wrong-type pandas yield must be loud like mapInArrow empty batches (C6-L-001)."""
+    """Empty wrong-type pandas yield must be loud like mapInArrow empty batches."""
     import pandas as pd
 
     def wrong_empty_type(pdfs: Iterator[object]) -> Iterator[object]:
@@ -663,7 +663,7 @@ def test_mapinarrow_mapinpandas_empty_wrong_type_is_loud(spark: ReparkSession) -
     reason="pandas optional extra not installed",
 )
 def test_mapinarrow_mapinpandas_empty_correct_schema_ok(spark: ReparkSession) -> None:
-    """Empty pandas with matching schema remains a valid empty multiset (C6-L-001)."""
+    """Empty pandas with matching schema remains a valid empty multiset."""
     import pandas as pd
 
     def empty_ok(pdfs: Iterator[object]) -> Iterator[object]:
@@ -684,7 +684,7 @@ def test_mapinarrow_mapinpandas_empty_correct_schema_ok(spark: ReparkSession) ->
 def test_mapinarrow_mapinpandas_yield_before_consume_preserves_input(
     spark: ReparkSession,
 ) -> None:
-    """Yield-before-consume must still iterate the real input pdfs (octo C8-L-001).
+    """Yield-before-consume must still iterate the real input pdfs.
 
     ``_arrow_func`` closes ``_pdf_iter`` over the input stream; rebinding that name to the
     yield's own ``to_batches()`` output makes a prefix-yielding UDF read its output as
@@ -711,7 +711,7 @@ def test_mapinarrow_mapinpandas_yield_before_consume_preserves_input(
 def test_mapinarrow_mapinpandas_empty_prefix_then_consume_preserves_input(
     spark: ReparkSession,
 ) -> None:
-    """Empty yield-before-consume must not drop the input multiset (octo C8-L-001)."""
+    """Empty yield-before-consume must not drop the input multiset."""
     import pandas as pd
 
     def empty_prefix_then_consume(pdfs: Iterator[object]) -> Iterator[object]:
@@ -724,7 +724,7 @@ def test_mapinarrow_mapinpandas_empty_prefix_then_consume_preserves_input(
 
 
 def test_mapinarrow_identity_noops_preserve_bridge(spark: ReparkSession) -> None:
-    """repartition/coalesce/hint/offset(0)/toDF() must not drop MIA rows (C2-Q-002 / C2-L-002)."""
+    """repartition/coalesce/hint/offset(0)/toDF() must not drop MIA rows."""
     frame = spark.createDataFrame([(1,), (2,), (3,)], "x INT")
     base = frame.mapInArrow(_double_batches, "x INT")
     for child in (
@@ -739,7 +739,7 @@ def test_mapinarrow_identity_noops_preserve_bridge(spark: ReparkSession) -> None
 
 
 def test_mapinarrow_selectexpr_alias_sample_union_not_empty(spark: ReparkSession) -> None:
-    """SQL-lowering paths must materialize bridge before binding _inner (C2-Q-003 / C2-L-003)."""
+    """SQL-lowering paths must materialize bridge before binding _inner."""
     frame = spark.createDataFrame([(1,), (2,), (3,)], "x INT")
     mapped = frame.mapInArrow(_double_batches, "x INT")
     assert sorted(row.x for row in mapped.selectExpr("x").collect()) == [2, 4, 6]
@@ -758,10 +758,10 @@ def test_mapinarrow_selectexpr_alias_sample_union_not_empty(spark: ReparkSession
 
 
 def test_mapinarrow_parquet_write_runs_udf(spark: ReparkSession, tmp_path) -> None:  # type: ignore[no-untyped-def]
-    """Writer registers real MIA rows — not empty placeholder wipe (C2-Q-001 / C2-SAF-001).
+    """Writer registers real MIA rows — not empty placeholder wipe.
 
     Also pins re-run after write: uncached write must not clear ``_map_bridge`` so later
-    collect / write invoke ``func`` again (octo C3-Q-001 / C3-Q-002 / C3-L-001).
+    collect / write invoke ``func`` again.
     """
     calls = {"n": 0}
 
@@ -788,7 +788,7 @@ def test_mapinarrow_parquet_write_runs_udf(spark: ReparkSession, tmp_path) -> No
 
 
 def test_mapinarrow_cache_filter_unpersist_reruns(spark: ReparkSession) -> None:
-    """cache + plan child must not clear bridge; unpersist re-runs (C2-Q-005)."""
+    """cache + plan child must not clear bridge; unpersist re-runs."""
     calls = {"n": 0}
 
     def counted(batches: Iterator[pa.RecordBatch]) -> Iterator[pa.RecordBatch]:
@@ -811,7 +811,7 @@ def test_mapinarrow_cache_filter_unpersist_reruns(spark: ReparkSession) -> None:
 
 
 def test_mapinarrow_unpersist_resets_plan_ready_for_children(spark: ReparkSession) -> None:
-    """After plan-stable + cache + unpersist, plan children re-run bridge (C7-L-001).
+    """After plan-stable + cache + unpersist, plan children re-run bridge.
 
     Sticky ``_mia_plan_ready`` would keep cache-era ``_inner`` for filter/select while
     parent actions re-run — non-idempotent funcs diverge (child stale vs parent fresh).
@@ -851,7 +851,7 @@ def test_mapinarrow_unpersist_resets_plan_ready_for_children(spark: ReparkSessio
 
 
 def test_mapinarrow_unpersist_action_then_plan_child(spark: ReparkSession) -> None:
-    """Plan-stable + cache + unpersist + parent action must not leave dangling _inner (C7-Q-001).
+    """Plan-stable + cache + unpersist + parent action must not leave dangling _inner.
 
     Action replace_ephemeral drops the restored lineage view; without rebind + plan-ready
     reset, later filter/select/groupBy short-circuit onto a dead MemTable.
@@ -891,7 +891,7 @@ def test_mapinarrow_unpersist_action_then_plan_child(spark: ReparkSession) -> No
 
 
 def test_mapinarrow_temp_view_registration_keeps_bridge(spark: ReparkSession) -> None:
-    """createOrReplaceTempView must not one-shot-clear uncached MIA (C3-Q-001 / C3-L-001)."""
+    """createOrReplaceTempView must not one-shot-clear uncached MIA."""
     calls = {"n": 0}
 
     def counted(batches: Iterator[pa.RecordBatch]) -> Iterator[pa.RecordBatch]:
@@ -912,7 +912,7 @@ def test_mapinarrow_temp_view_registration_keeps_bridge(spark: ReparkSession) ->
 def test_mapinarrow_upstream_input_streamed_not_collect_all(
     spark: ReparkSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Upstream batches are pulled lazily into func — not list()/collect-all first (C5-Q-001).
+    """Upstream batches are pulled lazily into func — not list()/collect-all first.
 
     A ``list(input_reader)``-before-func mutation stays green under the multi-batch
     multiset pin alone; this pin fails that class.
@@ -968,7 +968,7 @@ def test_mapinarrow_upstream_input_streamed_not_collect_all(
 
 
 def test_mapinarrow_groupby_agg_values(spark: ReparkSession) -> None:
-    """groupBy/agg must use prepared MIA rows, not empty placeholder (octo C5-Q-002)."""
+    """groupBy/agg must use prepared MIA rows, not empty placeholder."""
     frame = spark.createDataFrame([(1,), (1,), (2,)], "x INT")
     # After double: keys 2, 2, 4 → counts {2: 2, 4: 1}
     mapped = frame.mapInArrow(_double_batches, "x INT")
@@ -984,7 +984,7 @@ def test_mapinarrow_groupby_agg_values(spark: ReparkSession) -> None:
 def test_mapinarrow_plan_children_do_not_accumulate_stable_views(
     spark: ReparkSession,
 ) -> None:
-    """Repeated plan children on one parent reuse one plan-stable MIA (octo C5-SAF-001)."""
+    """Repeated plan children on one parent reuse one plan-stable MIA."""
     spark._ensure_information_schema()
 
     def _raw_mia_count() -> int:
@@ -1017,7 +1017,7 @@ def test_mapinarrow_plan_children_do_not_accumulate_stable_views(
 
 
 def test_mapinarrow_select_explode_materializes_bridge(spark: ReparkSession) -> None:
-    """mapInArrow → select(explode) unnests UDF rows + single plan-stable prepare (C6-Q-001).
+    """mapInArrow → select(explode) unnests UDF rows + single plan-stable prepare.
 
     Explode must project via ``_plan()``, not raw ``_inner`` (empty MemTable silently
     zeroes rows). Non-idempotent ``calls["n"] == 1`` + tag-stamped values (tag=1 →
@@ -1068,7 +1068,7 @@ def test_mapinarrow_select_explode_materializes_bridge(spark: ReparkSession) -> 
 
 
 def test_mapinarrow_with_column_explode_materializes_bridge(spark: ReparkSession) -> None:
-    """mapInArrow → withColumn(explode) multiplies UDF rows + single prepare (C6-Q-001)."""
+    """mapInArrow → withColumn(explode) multiplies UDF rows + single prepare."""
     from repark import functions as F  # noqa: N812 — PySpark idiom
 
     calls = {"n": 0}
@@ -1096,7 +1096,7 @@ def test_mapinarrow_with_column_explode_materializes_bridge(spark: ReparkSession
 def test_mapinarrow_select_global_agg_sql_values_and_single_prepare(
     spark: ReparkSession,
 ) -> None:
-    """mapInArrow → select(sum, lit) / cast(sum) / sum+1 share pure-AF snapshot (C2-Q/L-001).
+    """mapInArrow → select(sum, lit) / cast(sum) / sum+1 share pure-AF snapshot.
 
     SQL global-agg must register ``_plan()``, not action+second-prepare or an empty
     placeholder; reverting fails the call-count and/or sum value pins here.
@@ -1165,7 +1165,7 @@ def test_mapinarrow_select_global_agg_sql_values_and_single_prepare(
 def test_mapinarrow_group_by_pivot_sum_values_and_single_prepare(
     spark: ReparkSession,
 ) -> None:
-    """mapInArrow → groupBy.pivot.sum Arrow values + single prepare (combine C3-Q-002).
+    """mapInArrow → groupBy.pivot.sum Arrow values + single prepare.
 
     A residual-green ``groupBy.agg`` pin alone does not cover pivot's prepare / CASE-agg
     path on a mapInArrow parent; non-idempotent UDF + double prepare fails call-count
@@ -1226,7 +1226,7 @@ def test_mapinarrow_group_by_pivot_sum_values_and_single_prepare(
 
 
 def test_mapinarrow_selectexpr_plan_stable_after_prepare(spark: ReparkSession) -> None:
-    """selectExpr registers ``_plan()`` snapshot, not action re-run (combine C4-L-001).
+    """selectExpr registers ``_plan()`` snapshot, not action re-run.
 
     After ``select(F.sum)`` / ``filter`` prepare, non-idempotent mapInArrow must not
     re-run on ``selectExpr("sum(x)")`` / ``selectExpr("x")``. Reverting to
@@ -1293,7 +1293,7 @@ def test_mapinarrow_selectexpr_plan_stable_after_prepare(spark: ReparkSession) -
 
 
 def test_mapinarrow_sql_lowering_plan_stable_after_prepare(spark: ReparkSession) -> None:
-    """alias/sample/summary/set-ops/crossJoin/unpivot register ``_plan()`` (combine C5-Q-001).
+    """alias/sample/summary/set-ops/crossJoin/unpivot register ``_plan()``.
 
     After prepare, an action re-run via ``_native_for_registration`` would bump the
     non-idempotent UDF and disagree with ``select`` / ``selectExpr`` peers. Mutation
@@ -1414,7 +1414,7 @@ def test_mapinarrow_sql_lowering_plan_stable_after_prepare(spark: ReparkSession)
 
 
 def test_mapinarrow_cube_agg_plan_stable_and_alias(spark: ReparkSession) -> None:
-    """cube/rollup SQL agg uses ``_plan()`` + AS alias names (combine C5-L-001 / C5-L-002).
+    """cube/rollup SQL agg uses ``_plan()`` + AS alias names.
 
     ``_agg_via_sql_group`` must register plan-stable and keep ``AS``: reverting the
     registration fails call-count/value; dropping ``AS`` fails the ``c`` column.
@@ -1454,7 +1454,7 @@ def test_mapinarrow_cube_agg_plan_stable_and_alias(spark: ReparkSession) -> None
     assert by_g["b"] == 7
     assert by_g[None] == 15
 
-    # rollup + count alias column name (C5-L-002) on a fresh prepare
+    # rollup + count alias column name on a fresh prepare
     calls["n"] = 0
     mapped2 = frame.mapInArrow(tag_double, "g STRING, x INT")
     _ = mapped2.select(F.sum("x")).collect()
@@ -1471,7 +1471,7 @@ def test_mapinarrow_cube_agg_plan_stable_and_alias(spark: ReparkSession) -> None
 def test_mapinarrow_identity_child_reuses_plan_ready_after_prepare(
     spark: ReparkSession,
 ) -> None:
-    """Identity no-ops copy ``_mia_plan_ready`` so post-prepare peers do not re-run (C7-Q-001).
+    """Identity no-ops copy ``_mia_plan_ready`` so post-prepare peers do not re-run.
 
     After ``select(F.sum)`` prepare, identity children must share the parent's plan-stable
     snapshot — select/filter/explode/agg on the child must not bump a non-idempotent UDF.
@@ -1531,7 +1531,7 @@ def test_mapinarrow_identity_child_reuses_plan_ready_after_prepare(
 
 
 def test_mapinarrow_polars_join_plan_stable_after_prepare(spark: ReparkSession) -> None:
-    """``pl.join`` registers ``_plan()`` snapshots, not action re-run (combine C7-Q-002).
+    """``pl.join`` registers ``_plan()`` snapshots, not action re-run.
 
     pl.join must match DataFrame.join's plan-stable registration; action registration
     re-runs a non-idempotent left side and breaks call-count and/or tag=1 join values.
@@ -1562,7 +1562,7 @@ def test_mapinarrow_polars_join_plan_stable_after_prepare(spark: ReparkSession) 
     assert calls["n"] == 1
     assert mapped._mia_plan_ready is True
 
-    # DataFrame.join control — plan-stable (existing C5 peer class).
+    # DataFrame.join control — plan-stable (existing peer class).
     df_joined = mapped.join(right, on="x", how="inner")
     df_xs = sorted(row.x for row in df_joined.collect())
     assert df_xs == expected_rows
