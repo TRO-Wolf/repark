@@ -1,15 +1,9 @@
 """Bank minimized divergence repros under ``repros/<seed>-<n>.sql``.
 
-Each banked file is a self-contained artifact:
-
-- header comments: seed, query index, compare message, row snippets
-- CREATE-style comments describing the fixture tables (``-- TABLE`` + ``--   ROW`` JSON)
-- the minimized SQL
-
-Empty corpus is a valid outcome — do not pad.
-
-Replay pins **must** restore the minimized TABLE rows via
-``load_minimized_database`` (C1-Q-002) — not the full seed fixture alone.
+Each banked file is self-contained: header comments, ``-- TABLE``/``--   ROW``
+fixture comments, and the minimized SQL. Empty corpus is valid — do not pad.
+Replay must restore minimized TABLE rows via ``load_minimized_database``
+(C1-Q-002), not the full seed fixture alone.
 """
 
 from __future__ import annotations
@@ -193,7 +187,7 @@ _TABLE_HEADER = re.compile(
     r"^-- TABLE (?P<name>\w+) \((?P<cols>.+)\)\s*$",
 )
 _TABLE_ROW_JSON = re.compile(r"^--   ROW (?P<row>\[.*\])\s*$")
-# Legacy Python-repr rows (pre-octo C1) — best-effort via literal_eval for ints/str/None only.
+# Legacy Python-repr rows — best-effort via literal_eval for ints/str/None only.
 _TABLE_ROW_LEGACY = re.compile(r"^--   (?P<row>\(.*\))\s*$")
 
 

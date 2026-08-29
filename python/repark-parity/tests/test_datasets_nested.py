@@ -1,4 +1,4 @@
-"""Generator-shape and determinism pins for the nested torture family (DS-1).
+"""Generator-shape and determinism pins for the nested torture family.
 
 Pure pyarrow — no repark, no Spark, no JVM. Data lands only under tmp_path / the
 cache helper, never in the repository tree.

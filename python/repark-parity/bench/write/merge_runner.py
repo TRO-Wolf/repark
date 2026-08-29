@@ -1,7 +1,7 @@
 """MERGE wall-clock matrix: 1M/10M x narrow/wide x K (local-fs Iceberg).
 
-Measurement-only extension of R-WRITE-BENCH (r22 W1). Pins resource knobs
-(rule 10): ``spark.sql.shuffle.partitions`` + ``repark.write.max-concurrent-files``.
+Measurement-only extension of the write bench. Pins resource knobs (rule 10):
+``spark.sql.shuffle.partitions`` + ``repark.write.max-concurrent-files``.
 Never AWS. MoR MERGE is the load-bearing path (RePark-owned); COW is recorded
 per cell for ratio disclosure.
 """
@@ -41,7 +41,7 @@ NAMESPACE: Final[str] = "bench"
 DEFAULT_MERGE_K: Final[tuple[int, ...]] = (1, 2, 4, 8)
 DEFAULT_ROW_COUNTS: Final[tuple[int, ...]] = (1_000_000, 10_000_000)
 DEFAULT_WIDTHS: Final[tuple[Width, ...]] = ("narrow", "wide")
-# Rule 10: pin shuffle partitions - never inherit host/test defaults (T2 uses 128).
+# Rule 10: pin shuffle partitions — never inherit host/test defaults.
 PINNED_SHUFFLE_PARTITIONS: Final[int] = 8
 # Fixed file-size so K is the sole write-concurrency axis for MERGE.
 PINNED_TARGET_FILE_SIZE: Final[int] = 256 * 1024 * 1024
@@ -237,8 +237,8 @@ def run_merge_cell(
 
     wall_total = sum(stage.seconds for stage in stages)
     warehouse_bytes, data_file_count = _warehouse_stats(warehouse)
-    # Seed parquet is under warehouse/_seed - exclude from Iceberg data_file_count already
-    # (we count *.parquet under warehouse including seed). Recompute data files under ns only.
+    # Seed parquet lives under warehouse/_seed, which _warehouse_stats counts;
+    # recompute bytes and data files over the namespace directory only.
     ns_path = warehouse / NAMESPACE
     if ns_path.is_dir():
         warehouse_bytes, data_file_count = _warehouse_stats(ns_path)
@@ -410,7 +410,6 @@ def render_merge_markdown(board: MergeBoard) -> str:
             f"{cell.expected_rows} | {err} |"
         )
 
-    # Pivot: merge_mor seconds by K for each (rows, width)
     lines.extend(["", "## MoR MERGE wall (seconds) - pivot K", ""])
     lines.append("| rows | width | " + " | ".join(f"K={k}" for k in board.k_values) + " |")
     lines.append("|---:|---|" + "|".join(["---:" for _ in board.k_values]) + "|")

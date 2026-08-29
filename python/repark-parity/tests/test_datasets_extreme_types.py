@@ -1,7 +1,6 @@
-"""Generator-shape and determinism pins for the extreme-types family (DS-2).
+"""Generator-shape and determinism pins for the extreme-types family.
 
-Pure pyarrow — no repark. The smartCsv p>38 demotion is documented here as
-POLICY for a later facade pin; this increment does not read through the engine.
+Pure pyarrow — no repark.
 """
 
 from __future__ import annotations

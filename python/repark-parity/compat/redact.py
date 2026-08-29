@@ -1,4 +1,4 @@
-"""Path redaction for census artifacts — the recorded, executable transform (§3, EC-9).
+"""Path redaction for census artifacts — the recorded, executable transform.
 
 Census artifacts are committed as evidence into a public repository, so the absolute scratch
 paths they carry (pip-freeze editable URLs, report metadata, traceback frames, JUnit skip
@@ -6,14 +6,11 @@ messages) must be replaced by stable tokens before commit. Both sides must apply
 **identical** transform, or the manifests and the traceback-bearing rows differ for a reason
 that has nothing to do with the port.
 
-**Why this is code and not a `sed` line.** A census artifact is JSON or XML, and a path
-appears inside a *structured string*: inside a JSON string it is escape-encoded, inside XML
-character data it is entity-encoded. A blind textual substitution over those bytes destroys
-the encoding — a `\\"`-terminated JSON string loses its backslash, an angle-bracketed token
-becomes an element start tag — and the artifact stops parsing. This module therefore
-redacts **through the parser**: it loads the document, rewrites the string *values*, and
-re-serializes, so the output is valid by construction. Validity is re-asserted before the
-file is written.
+**Why code, not a `sed` line:** a path appears inside a structured string — escape-encoded
+in JSON, entity-encoded in XML — and blind textual substitution destroys the encoding, so
+the artifact stops parsing. This module redacts through the parser (load, rewrite string
+values, re-serialize), so the output is valid by construction; validity is re-asserted
+before the file is written.
 
 CLI::
 
@@ -56,8 +53,7 @@ def parse_mapping(entries: Sequence[str]) -> list[tuple[str, str]]:
     """Parse ``--map PREFIX=TOKEN`` pairs, longest prefix first.
 
     Ordering is load-bearing: ``/home/x/scratch`` must be tried before ``/home/x``, or the
-    nested path redacts to ``<home>/scratch`` and the two sides disagree about which token a
-    directory got.
+    nested path redacts under the wrong token and the two sides disagree.
     """
     mapping: list[tuple[str, str]] = []
     for entry in entries:
@@ -116,9 +112,8 @@ def _redact_element(element: ElementTree.Element, mapping: Sequence[tuple[str, s
 def redact_xml_text(text: str, mapping: Sequence[tuple[str, str]]) -> str:
     """Redact an XML document through the parser.
 
-    Tokens are written into character data by the serializer, so an angle-bracketed token is
-    entity-escaped rather than becoming an element start tag. A parser reading the artifact
-    back sees the token exactly as written.
+    The serializer entity-escapes tokens written into character data, so an angle-bracketed
+    token does not become an element start tag.
     """
     try:
         root = ElementTree.fromstring(text)

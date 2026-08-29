@@ -1,5 +1,7 @@
 # map — python/repark-parity/tests
 
+CC-2 slice complete: comments and docstrings condensed; oracle discriminators, pins, mutation payloads, and safety contracts kept byte-exact; history narration deleted.
+
 ## Purpose
 
 Unit tests for the parity comparison core **and the dataset generators** (no Spark, no

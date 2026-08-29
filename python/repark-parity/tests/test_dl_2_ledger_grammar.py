@@ -1,4 +1,4 @@
-"""DL-2: the ledger grammar gate — every rule red on a plant, green on the clean shape."""
+"""The ledger grammar gate — every rule red on a plant, green on the clean shape."""
 
 from __future__ import annotations
 

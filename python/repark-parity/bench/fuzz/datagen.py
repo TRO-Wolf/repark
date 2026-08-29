@@ -1,8 +1,8 @@
 """Seeded in-memory table generation for the SQL fuzzer.
 
-Type pool (v1): int32 / int64 / float64 / decimal(12,2) / utf8 / date / timestamp /
-bool, with NULL density ≥ 10%. No NaN / Inf float values (see ``EXCLUSIONS`` in
-map.md — NaN ordering is a known divergence class).
+Type pool: int32 / int64 / float64 / decimal(12,2) / utf8 / date / timestamp /
+bool, NULL density ≥ 10%. No NaN / Inf floats (``EXCLUSIONS`` in map.md — NaN
+ordering is a known divergence class).
 """
 
 from __future__ import annotations

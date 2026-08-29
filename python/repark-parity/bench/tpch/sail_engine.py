@@ -1,4 +1,4 @@
-"""Sail (LakeSail) Spark Connect engine adapter for the TPC-H scoreboard (B1).
+"""Sail (LakeSail) Spark Connect engine adapter for the TPC-H scoreboard.
 
 Sail is **measurement prior-art only** — not a RePark product dependency. This module
 is imported only when ``--engine sail`` / ``both`` is selected. CI never requires

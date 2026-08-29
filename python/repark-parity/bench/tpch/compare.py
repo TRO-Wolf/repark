@@ -1,17 +1,16 @@
 """Sorted-row TPC-H result comparison.
 
-Correctness oracle = DuckDB result set. WRONG-RESULT is first-class and must never
-be massaged away.
+Correctness oracle = DuckDB result set. WRONG-RESULT is first-class and must never be
+massaged away.
 
-**Equality rules (disclosed):**
+Equality rules (disclosed):
 
-- Pure integers: **exact** equality.
-- Integral-valued floats and Decimals (including after Decimal→normalize): **exact**
-  integer equality — relative ``1e-6`` must not mask off-by-one at large magnitude
-  (octo C1-Q-001 / C2-L-001).
+- Pure integers: exact.
+- Integral-valued floats and Decimals (after Decimal normalize): exact integer equality —
+  relative ``1e-6`` must not mask off-by-one at large magnitude (octo C1-Q-001 / C2-L-001).
 - Non-integral floats: relative tolerance ``1e-6`` with floor scale ``1e-12``.
-- Mixed int/float: promote int → float rules when the float is non-integral; exact
-  when the float is integral-valued.
+- Mixed int/float: promote int → float rules when the float is non-integral; exact when
+  integral-valued.
 - NULL/None must match. Dates/timestamps normalize via ``isoformat()``.
 """
 

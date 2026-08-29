@@ -35,22 +35,22 @@ EXEMPT_PATHS: tuple[tuple[str, ...], ...] = (("tests", "goldens"), ("tests", "fi
 # approval; ordinary edits only ratchet rows down.
 EXCEPTIONS: dict[str, tuple[int, str, str]] = {
     "python/repark-parity/bench/tpcds/runner.py": (
-        1263,
+        1252,
         "TPC-DS orchestration, execution, and reporting share one runner.",
         "Split query execution from result collection and reporting.",
     ),
     "python/repark-parity/bench/tpch/runner.py": (
-        1780,
+        1773,
         "TPC-H orchestration, execution, and reporting share one runner.",
         "Split query execution from result collection and reporting.",
     ),
     "python/repark-parity/compat/runner.py": (
-        1289,
+        1280,
         "Compatibility discovery, subprocess execution, and report assembly share one module.",
         "Extract worker execution from census result classification.",
     ),
     "python/repark-parity/tests/test_compat_harness.py": (
-        1026,
+        1021,
         "Compatibility harness scenarios narrowly exceed the default.",
         "Split worker isolation from classification and report cases.",
     ),

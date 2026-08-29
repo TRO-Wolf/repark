@@ -1,5 +1,7 @@
 - **octo C2:** ruff E501/SIM105 clean on V3 harness.
 
+CC-2 slice complete: comments and docstrings condensed; oracle discriminators, pins, mutation payloads, and safety contracts kept byte-exact; history narration deleted.
+
 # map — python/repark-parity/bench/tpch
 
 ## Purpose

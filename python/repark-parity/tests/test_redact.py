@@ -40,9 +40,7 @@ from compat.redact import (  # noqa: E402
 _MAP = [("/home/dev/scratch/census", "<scratch>"), ("/home/dev", "<home>")]
 
 
-# ---------------------------------------------------------------------------
 # JSON — the census report
-# ---------------------------------------------------------------------------
 
 
 def test_a_traceback_bearing_report_is_still_valid_json() -> None:
@@ -100,9 +98,7 @@ def test_malformed_json_is_a_loud_failure() -> None:
         redact_json_text("{not json", _MAP)
 
 
-# ---------------------------------------------------------------------------
 # XML — the facade JUnit report
-# ---------------------------------------------------------------------------
 
 
 _JUNIT = (
@@ -147,9 +143,7 @@ def test_malformed_xml_is_a_loud_failure() -> None:
         redact_xml_text("<a><b></a>", _MAP)
 
 
-# ---------------------------------------------------------------------------
 # Mapping semantics + the file/CLI surface
-# ---------------------------------------------------------------------------
 
 
 def test_longest_prefix_is_applied_first() -> None:

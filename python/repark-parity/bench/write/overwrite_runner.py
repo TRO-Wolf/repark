@@ -354,7 +354,6 @@ def render_overwrite_markdown(board: OverwriteBoard) -> str:
             "",
         ]
     )
-    # Compare 1M vs 10M per width when both present.
     for width in board.widths:
         cells = [cell for cell in board.cells if cell.width == width and cell.error is None]
         if len(cells) < 2:

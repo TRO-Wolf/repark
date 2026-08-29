@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare a TPC-H scoreboard JSON against committed ratio ceilings (r24 G10 / Q15).
+"""Compare a TPC-H scoreboard JSON against committed ratio ceilings.
 
 Exit codes:
   0 — all OK queries are within ceiling (or baseline missing a query → skip that query)

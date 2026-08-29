@@ -138,9 +138,8 @@ def test_denominators_both_formulas() -> None:
     denoms = denominators(rows)
     assert denoms["pass"] == 2
     assert denoms["all_collected"] == 7
-    # engine-relevant = all - SKIP - NEEDS-JVM - HARNESS
-    # excludes: skip, needs-jvm (parallelize msg), harness (bootstrap)
-    # keeps: 2 pass + module-timeout + fail-value = 4
+    # engine-relevant = all - SKIP - NEEDS-JVM - HARNESS: excludes skip, needs-jvm
+    # (parallelize msg), harness (bootstrap); keeps 2 pass + module-timeout + fail-value.
     assert denoms["excluded_skip_upstream"] == 1
     assert denoms["excluded_needs_jvm"] == 1
     assert denoms["excluded_harness"] == 1
@@ -422,7 +421,6 @@ def test_recording_result_timeout_error_becomes_module_timeout() -> None:
     result = _RecordingResult(module_short="m")
     suite.run(result)
     assert result.module_timed_out is True
-    # Simulate run_module_inprocess post-suite handling:
     rows = [*result.to_census_rows(), classify_module_timeout(module="m", budget_s=12.0)]
     assert any(row.status == "MODULE-TIMEOUT" for row in rows)
     assert not any(
@@ -498,7 +496,7 @@ def test_stretch_modules_include_c3_expand_order() -> None:
         "test_conf",
         "test_catalog",
         "test_sql",
-        "test_udf",  # U8 DF half shipped — own expanded-census module
+        "test_udf",  # test_udf: own expanded-census module
     )
     assert STRETCH_MODULES[2:] == C3_EXPAND_MODULES
     assert "test_udf" in STRETCH_MODULES
@@ -539,7 +537,7 @@ def test_resolve_census_modules_c3_expand_ignores_night1_and_stretch() -> None:
 def test_default_markdown_report_path_is_under_target_census_reports() -> None:
     """C-2 / G-6: markdown defaults to gitignored ``target/census-reports/``, never ``task/``.
 
-    Pins the resolved path only (no full census run). Aligns with ``scripts/run_census.sh``'s
+    Pins the resolved path only; aligns with ``scripts/run_census.sh``'s
     ``CENSUS_REPORT_DIR`` default; ``task/`` is opt-in via ``--markdown``.
     """
     from pathlib import Path
@@ -563,9 +561,9 @@ def test_default_markdown_report_path_is_under_target_census_reports() -> None:
 
 
 def test_runner_main_wires_default_markdown_through_helper() -> None:
-    """Mutation pin: ``main``'s ``args.markdown is None`` branch calls the helper (not a raw path).
+    """Mutation pin: ``main``'s ``args.markdown is None`` branch calls the helper, not a raw path.
 
-    Reverting the CLI default back to a hard-coded ``task/`` path while leaving the helper
+    Reverting the CLI default to a hard-coded ``task/`` path while leaving the helper
     green would fail this pin.
     """
     from pathlib import Path
@@ -903,10 +901,7 @@ def test_filter_suite_method_name_not_prefix() -> None:
     assert not any(item.endswith(".test_dayofweek") for item in ids)
 
 
-# ---------------------------------------------------------------------------
-# Phase-3 EC-8 (design §5 F1): the ADDITIVE classic cohort, and the pin that
-# documents the --stretch blending trap it exists to avoid.
-# ---------------------------------------------------------------------------
+# The ADDITIVE classic cohort and the --stretch blending trap (EC-8, design §5 F1)
 
 
 def test_classic_modules_charter_order() -> None:
@@ -918,8 +913,8 @@ def test_classic_modules_charter_order() -> None:
         "test_column",
         "test_readwriter",
     )
-    # The classic cohort is night-1 plus exactly the two classic stretch modules — and
-    # nothing from the expand cohorts (dual-denom isolation).
+    # Classic cohort = night-1 plus the two classic stretch modules; nothing from
+    # the expand cohorts (dual-denom isolation).
     assert CLASSIC_MODULES[:3] == NIGHT1_MODULES
     assert CLASSIC_MODULES[3:] == STRETCH_MODULES[:2]
     assert not set(CLASSIC_MODULES) & set(C3_EXPAND_MODULES)
@@ -976,12 +971,11 @@ def test_resolve_census_modules_classic_defaults_off_preserves_ported_behavior()
 def test_stretch_blends_c3_into_the_classic_denominator() -> None:
     """EC-8 trap pin: --stretch is NOT the classic cohort — it appends the C3 modules.
 
-    The ported `--stretch` flag is byte-identical to the pin on purpose. This test pins
-    its blending behavior in executable form so the trap (design §5 F1: the census script
-    ran the classic cohort with `--stretch` and produced an eleven-module run against a
-    five-module denominator) is documented, not merely dodged. If someone "fixes"
-    `STRETCH_MODULES` instead of using `--classic`, this test goes red and points at the
-    ruling.
+    The ported `--stretch` flag is byte-identical to the pin on purpose; this pins its
+    blending behavior so the trap (design §5 F1: the census script ran the classic cohort
+    with `--stretch` and produced an eleven-module run against a five-module denominator)
+    is documented, not merely dodged. "Fixing" `STRETCH_MODULES` instead of using
+    `--classic` goes red and points at the ruling.
     """
     stretched = resolve_census_modules(
         c3_expand=False,
@@ -1005,8 +999,9 @@ def test_stretch_blends_c3_into_the_classic_denominator() -> None:
 def test_cli_classic_flag_reaches_the_resolver() -> None:
     """CLI wiring pin: `--classic` must arrive at resolve_census_modules(classic=True).
 
-    Constant equality is not enough (octo C3 C1-Q-002 precedent): the composition site is
-    what runs. The resolver is stubbed to abort before any provenance fetch or census work.
+    Constant equality is not enough (octo C3 C1-Q-002 precedent): the composition site
+    is what runs. The resolver is stubbed to abort before any provenance fetch or
+    census work.
     """
     captured: dict[str, object] = {}
 

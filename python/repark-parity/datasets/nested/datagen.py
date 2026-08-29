@@ -32,7 +32,8 @@ BATCH_SIZE: Final[int] = 4_096
 DATA_PARQUET: Final[str] = "data.parquet"
 DATA_JSONL: Final[str] = "data.jsonl"
 
-# Schema nesting of ``Legs`` is 7 (list → struct → list → struct → struct → struct → struct).
+# Schema nesting of ``Legs`` is 7:
+# list → struct → list → struct → struct → struct → struct.
 _DEEP = pa.struct(
     [
         pa.field("level", pa.int32(), nullable=True),

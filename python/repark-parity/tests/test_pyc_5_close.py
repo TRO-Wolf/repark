@@ -74,9 +74,8 @@ def test_pyc_5_conventions_guard_not_on_pre_commit_hook() -> None:
 def test_pyc_5_prose_homes_name_the_hook_drop() -> None:
     """C-008: STATUS / sequence / maps / AGENTS / DEVELOPMENT name the drop.
 
-    Retargeted by DL-4 (2026-08-25): PYC's STATUS bullet moved, verbatim, to its history
-    record when the campaign was filed as closed; the live homes of the fact are AGENTS.md,
-    DEVELOPMENT.md and the skill map, which this test still reads.
+    Live homes of the fact: AGENTS.md, DEVELOPMENT.md, the history record, and the
+    skill map.
     """
     not_on_hook = "**Not** on the pre-commit hook as of PYC-5"
     for relative in (
@@ -90,8 +89,6 @@ def test_pyc_5_prose_homes_name_the_hook_drop() -> None:
     assert "not** on pre-commit" in development
     scripts_map = (_REPO / "scripts" / "map.md").read_text(encoding="utf-8")
     assert "not on pre-commit" in scripts_map
-    # The slate's copy of the sentence left with DL-4 (a merged unit leaves the slate whole);
-    # the fact stays pinned in the four homes above.
 
 
 def test_pyc_5_conventions_stays_in_make_ci_and_workflow() -> None:

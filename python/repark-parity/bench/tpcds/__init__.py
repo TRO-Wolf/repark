@@ -1,8 +1,8 @@
-"""TPC-DS scoreboard harness (R-TPCDS-HARNESS / D1).
+"""TPC-DS scoreboard harness.
 
 Datagen via DuckDB ``dsdgen`` → parquet under ``$XDG_CACHE_HOME/repark-tpcds/sf{N}/``;
 queries from ``tpcds_queries()``; repark vs DuckDB wall + correctness matrix. No AWS.
-D1: parquet temp views only — no Iceberg leg.
+Parquet temp views only — no Iceberg leg.
 """
 
 from __future__ import annotations

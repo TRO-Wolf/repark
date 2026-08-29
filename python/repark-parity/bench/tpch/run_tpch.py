@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CLI entry for the TPC-H scoreboard (R-TPCH-HARNESS + R-TPCH-V3 + B1 Sail).
+"""CLI entry for the TPC-H scoreboard.
 
 Usage::
 
@@ -239,10 +239,9 @@ def main(argv: list[str] | None = None) -> int:
         prior = ""
         if args.report_append.is_file():
             prior = args.report_append.read_text(encoding="utf-8").rstrip() + "\n\n"
-        # Append uses ## section under existing V1 H1 when title starts with TPC-H V3.
         section = report_md
         if section.startswith("# "):
-            # Demote H1 → H2 so it nests under the V1 report file.
+            # Demote H1 → H2 so it nests under the existing report file.
             first_nl = section.find("\n")
             head = section[2:first_nl] if first_nl > 0 else section[2:]
             body = section[first_nl + 1 :] if first_nl > 0 else ""

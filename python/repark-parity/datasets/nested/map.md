@@ -1,5 +1,7 @@
 # map — python/repark-parity/datasets/nested
 
+CC-2 slice complete: comments and docstrings condensed; oracle discriminators, pins, mutation payloads, and safety contracts kept byte-exact; history narration deleted.
+
 ## Purpose
 
 Nested-reading + `dynamicFlatten` torture family (U-DF-1 capitalized-`Legs` corpus).

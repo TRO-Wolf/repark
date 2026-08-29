@@ -3,7 +3,7 @@
 Correctness oracle = DuckDB result set. WRONG-RESULT is first-class and must never
 be massaged away.
 
-**Equality rules (disclosed, V1 bar / same as TPC-H):**
+**Equality rules (disclosed, same as TPC-H):**
 
 - Pure integers: **exact** equality.
 - Integral-valued floats and Decimals (including after Decimal→normalize): **exact**
@@ -47,9 +47,8 @@ def compare_result_sets(
 ) -> CompareResult:
     """Compare two result sets.
 
-    When ``ordered`` is False (default), rows are sorted before pairwise compare
-    (multiset / order-insensitive). When ``ordered`` is True (ORDER BY queries),
-    rows are compared in the engine's return order.
+    Multiset compare unless ``ordered=True`` (ORDER BY queries — engine return
+    order).
     """
     left = [_normalize_row(row) for row in repark_rows]
     right = [_normalize_row(row) for row in duckdb_rows]

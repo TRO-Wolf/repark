@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
-"""§8.7 — ``with_indicators(last_row=True)`` vs full-table collect.
+"""``with_indicators(last_row=True)`` vs full-table collect.
 
-Times Arrow (``to_arrow``) and Spark-Row (``collect``) sinks for:
-  * last bar per symbol
-  * the full TA window
-
-Serving usually wants ``N_symbols`` rows, not the whole history.
+Times Arrow (``to_arrow``) and Spark-Row (``collect``) sinks for the last bar per symbol
+and the full TA window; serving usually wants ``N_symbols`` rows, not the whole history.
 
 Usage::
 
@@ -37,7 +34,7 @@ def _indicators(seed: object, *, last_row: bool) -> object:
 
 
 def main() -> None:
-    """Run the §8.7 last-row vs full-table matrix and print ``TA_PIPELINE`` lines."""
+    """Run the last-row vs full-table matrix and print ``TA_PIPELINE`` lines."""
     parser = argparse.ArgumentParser(description=__doc__)
     harness.add_timing_args(parser)
     parser.add_argument("--n-symbols", type=int, default=None)

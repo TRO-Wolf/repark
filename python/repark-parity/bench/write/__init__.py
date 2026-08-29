@@ -1,4 +1,4 @@
-"""R-WRITE-BENCH harness (local-fs CTAS + append + MERGE + OVERWRITE).
+"""Write-bench harness (local-fs CTAS + append + MERGE + OVERWRITE).
 
 Measurement only - no product-engine changes. See ``map.md``.
 """

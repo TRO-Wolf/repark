@@ -1,5 +1,7 @@
 # map — python/repark-parity/bench/ta
 
+CC-2 slice complete: comments and docstrings condensed; oracle discriminators, pins, mutation payloads, and safety contracts kept byte-exact; history narration deleted.
+
 ## Purpose
 
 **P-2 (perf-wave-14)** measurement-only Python TA pipeline benches. Charter
