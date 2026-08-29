@@ -12,15 +12,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   [../docs/design/spark-function-parity.md](../../../docs/design/spark-function-parity.md); CAP-1
   appends a compatibility note that points its dated file-size premise at the live guards; slate:
   [../briefs/spark-function-parity.md](../../../briefs/spark-function-parity.md).
-- [rp-2-fork-repin-ledger.md](rp-2-fork-repin-ledger.md) — **RP-2 (2026-08-27), drafted for the
-  owner's charter:** the second fork repin, `5e7b2e4` → fork `main` `26088bb` (amended same day for
-  fork #227/#232/#233), which takes everything the fork landed: F-13 (deletion-vector write
-  path), F-7 in full (lineage, v3 delete rewrite, DV removal accounting), F-3, F-16, F-9, F-15.
-  Twelve clauses, all OPEN: the pin move, the two standing repin duties, five measure-first
-  clauses that decide whether the `R113` v3 arm, `V3-LINEAGE-1`, `V3-COW-1` and `B-MOR-3`
-  guards lift and whether MW-7's residual deletes are gone, the takes, the documents trued up,
-  the gates. Not in it: V3-3's new surfaces, V3-6, F-14 (the fork's next unit), any DataFusion
-  family move.
+- [rp-2-fork-repin-ledger.md](rp-2-fork-repin-ledger.md) — **RP-2 (2026-08-27; narrowed by the
+  2026-08-28 owner ruling):** salvage the `ce92a7b` repin and one first MOR DELETE on a DV-free
+  v3 table. Every live-DV input refuses, including second DELETE and shared Puffin;
+  `rewrite_data_files`, COW UPDATE, and MERGE stay guarded. F-17 plus RP-3 own DV merge,
+  supersession, and the full matrix. F-3 and a Spark-equal COW DELETE may land here. The
+  same-day full-batch amendment (#254, merged first) is superseded; its four clauses (F-16,
+  F-9, F-7 U3, F-15) transfer to RP-3.
 - [sem-0-charter-ledger.md](sem-0-charter-ledger.md) — **SEM-0 (2026-08-21), queued and HELD at
   its approval gate:** the scope audit for closing the two silently wrong answers the low-risk
   sweep registered rather than fixed — `RE-1` (`regexp_extract_all` defaults to capture group 0,
@@ -40,7 +38,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   good: v3 reads and v3 appends are already correct, round-tripped through Spark, including the
   row lineage the format mandates. §4 answers A12's stated first question — adoption, through
   `register_table`, whose Spark signature is measured there.
-- [v3e-5-nightly-v3-oracle-ledger.md](v3e-5-nightly-v3-oracle-ledger.md) — **V3E-5 (2026-08-27):** the nightly v3 live-oracle leg — `REPARK_PARITY_LIVE=1` repark == Spark on the V3E-3 fixtures (`v3-spark-part-dv` / `v3-spark-eq-dv`), dual-wired `parity-live` leg green, northstar nightly row dated. Scoped `.github/` grant only.
 
 ## Pointers
 - Up: [../map.md](../map.md)

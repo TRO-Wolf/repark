@@ -1,6 +1,8 @@
 # Unit ledger — FNP-0 charter · the Spark function parity campaign
 
-**Retires (line added 2026-08-23 by DL-1's backfill):** this charter moves to `../completed/` when the Spark function parity campaign closes (FNP-12 merges, or the owner closes the slate).
+**Retires (corrected 2026-08-28):** this charter moves to `../completed/` when the Spark
+function parity campaign closes (FNP-Z merges, or the owner closes the slate). The earlier FNP-12
+event predated the explicit close-out unit.
 
 **Unit:** FNP-0 (scope audit + approval gate) · **Date:** 2026-08-20 ·
 **Executor:** Claude (Opus 5), orchestrator-side · **Base:** `454382f` (`main`, v0.5.0).
@@ -12,6 +14,11 @@ No code unit opens until this ledger is fully `PROVEN` and the owner confirms (s
 Owner decisions taken at kickoff (2026-08-20): one PR · lambda seam and SQL dialect in one unit ·
 "Rust-owned" means owning the semantics · coverage target is everything reachable without a JVM ·
 the four sub-project families declared absent-and-loud, collation and crypto built (D-7).
+
+**Delivery amendment (owner-approved 2026-08-28):** the first tranche landed as PRs #190–#193.
+The remaining campaign ships one coherent PR per unit or tightly coupled pair. This changes the
+review boundary, not the frozen proposition gate or the per-unit proof obligations. Change
+control: [PLAN-1](../completed/plan-1-northstar-fnp-sequence-ledger.md) C-004.
 
 ## Evidence attached to this gate
 

@@ -371,10 +371,10 @@ retires a DECLARED divergence rather than adding one.
 
 ## 6. Risks
 
-**R-1 — One PR, very large diff.** The owner chose a single PR. Mitigation: units land as
-separate commits on one branch, each with its own `task/` ledger and its own Actor–Critic cycle,
-so review can proceed commit by commit and a defect in one unit is attributable. This does not
-remove the risk that a late red gate blocks everything; it makes the blockage locatable.
+**R-1 — Large accumulated diff (retired 2026-08-28).** The kickoff plan chose one campaign PR.
+The first tranche landed as four independent PRs, and the owner amended the remaining delivery
+shape to one coherent PR per unit or tightly coupled pair. Each PR keeps its own ledger and
+Actor–Critic cycle. A red gate now blocks one unit instead of the whole campaign.
 
 **R-2 — The dialect change is still a parser change for the Spark door.** Even scoped to one
 door, Databricks differs from Generic on backtick identifiers, struct literals, `!` as NOT, and
@@ -401,7 +401,11 @@ module tree. This campaign adds eight kernels to the same crate, so the conversi
 rather than accruing. (The two remaining `#[path]` sites, in `repark-iceberg`'s
 `predicate_dml.rs`, are test-file inclusions and are the documented exception.)
 
-## 7. The plan — twenty units, one branch, one PR
+The first tranche instead landed cleanly as PRs #190–#193. **Delivery amendment, owner-approved
+2026-08-28:** the remaining campaign ships one coherent PR per unit or tightly coupled pair. The
+unit roster and proposition gate do not change; only the review and merge boundary changes.
+
+## 7. The plan — one coherent PR per unit
 
 Ordering weighs three things: is the kernel already compiled into the shipping wheel, how many
 census rows flip out of the gap bucket, and does the work reuse a seam RePark already owns.
@@ -429,7 +433,7 @@ census rows flip out of the gap bucket, and does the work reuse a seam RePark al
 | **FNP-16** | **Declared families — register (D-7).** The 56 names of §8: sketches (32), CSV/XML/XPath (11), VARIANT (8), geospatial (5). Refusing stub plus a registry section per family. | 56 | Same mechanism as FNP-15, different reason — these are reachable and deferred by cost, not unreachable. The registry language must say so; conflating the two would misreport the engine's limits. |
 | **FNP-Z** | **Close-out.** `__all__` completion so C-009 holds, census re-run, STATUS truth-up, the `#[path]` conversion (R-5), the dispatch-table module split (D-6). | — | The unit that owns the closed paths. |
 
-### 7.1 Recommended sequence (revised 2026-08-20, on measured evidence)
+### 7.1 Recommended sequence (revised 2026-08-28)
 
 The table above is the unit roster. This is the ORDER, which changed once nine units had been
 delivered and the cheap seam turned out to be exhausted. The live copy is
@@ -450,6 +454,14 @@ cannot be built honestly until it closes (§7's FNP-7b row).
 **Repatriation moved later.** FNP-8 is the campaign's strategic goal, and no user sees a
 difference the day it lands: it prevents future defects rather than fixing current ones. It earns
 its place after the visible gaps close, not before.
+
+The remaining order is:
+
+`FNP-15/16 → F-Y10-1 → FNP-4c → FNP-7a/7b → FNP-9/10 → FNP-8 → FNP-11/12 → FNP-Z`.
+
+Each slash joins work that may share one tightly coupled PR. FNP-7b still cannot land before
+F-Y10-1. The campaign may use a fork-wait window because none of these units consumes F-17, but
+it does not gate v1.0 and yields when the format-v3 critical path becomes ready.
 
 Four units are deferred **with reasons rather than dropped** — FNP-6d (bitmap aggregates: UDAFs
 needing Spark's exact 4096-bit layout, unverifiable without a live Spark, least-used names in the

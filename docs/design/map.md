@@ -51,7 +51,7 @@ changing a decision here means a new dated design pass, not an in-place edit.
   truth — surface, classification, kernel ownership, and the two-door asymmetry that became clause
   C-012 (§2) — the higher-order/lambda seam with its per-function cost table (§3), the
   repatriation model and the 55 non-compliant names (§4), decisions D-1…D-6 (§5), risks R-1…R-5
-  (§6), the fourteen-unit plan (§7), the one open owner ruling on the four sub-project families
+  (§6), the unit roster and 2026-08-28 per-unit delivery order (§7), the owner ruling on the four sub-project families
   (§8), and non-goals (§9). CAP-1 points its live file-size premise at the source guards while
   preserving the dated kickoff measurement. Evidence:
   [task/fnp-0-census/](../../task/fnp-0-census/map.md).

@@ -1,4 +1,4 @@
-# Charter ledger — RP-2 · fork repin (F-13, F-7, F-3, F-16, F-9, F-15)
+# Charter ledger — RP-2 · fork repin (F-13, F-7 U1+U2, F-3)
 
 **Date:** 2026-08-27 · **Branch:** `feat/rp-2-fork-repin` (opens when the owner charters) ·
 **Base:** `06a3e42` (`main`, post-#250) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md)
@@ -8,50 +8,56 @@
 
 **Retires:** moved to `completed/` in this unit's departure commit.
 
-**Why now.** The engine pin `5e7b2e4` is 20 fork commits behind fork `main`
-`26088bb46e655c0825c408dd305cab2228a033fd`, and that range closes work every engine document
+**Why now.** The engine pin `5e7b2e4` is 15 fork commits behind fork `main`
+`ce92a7bfe2c1be569ed0de1178ed410e8ec3a117`, and that range closes work every engine document
 still lists as blocking: **F-13** (Puffin deletion-vector write path — fork #219, #221, #222;
-row R114 ✅ 2026-08-24), **F-7 in full** (lineage through rewrites and Java `first_row_id`
-suppression, #225/#226; `RewritePositionDeleteFiles` on v3, #227; DV removal accounting on
-compaction, #232), **F-3** (`remove-dangling-deletes`, row R135), **F-16** (the delete-ratio
-candidate clause, #232), **F-9** (dated S3 Tables `register_table` service-gap ruling on row
-R126, #233) and **F-15** (`write_default` filled at `DataFileWriter::write`, #233). *Amended
-2026-08-27, same day: the first draft targeted `ce92a7b` and three items; the fork landed
-#227/#232/#233 before the unit opened, and one repin takes the whole landed batch.* The north
-star §3, STATUS and the slate all say "V3-3 ← fork F-13"; that gate is open. This unit takes
-the pin, measures what the new rev makes true on the engine's own surfaces, and flips exactly
-the pins the evidence supports. Not in this unit: DV writes behind a new engine surface (that
-is V3-3, chartered from this unit's C-003 measurement), V3-6 (the engine's consumption of the
-v3 types), F-14 (the fork's next unit), and any DataFusion family move.
+row R114 ✅ 2026-08-24), **F-7 U1+U2** (row lineage through `RewriteFiles`, Java
+`first_row_id` suppression, manifest-list ordering — fork #225, #226; row R166 ✅ 2026-08-25),
+and **F-3** (`remove-dangling-deletes` composed into `RewriteDataFiles` — row R135,
+2026-08-23). At the original 2026-08-27 draft, the north star, STATUS, and slate all treated
+F-13 as V3-3's only fork gate. The 2026-08-28 ruling below corrects that premise. This unit takes
+the pin, measures what the new rev makes true on the engine's own
+surfaces, and flips exactly the pins the evidence supports. Not in this unit: DV writes
+behind a new engine surface (that is V3-3, chartered from this unit's §2 measurement), F-14,
+F-15, F-16, and any DataFusion family move.
+
+**Owner ruling, 2026-08-28 — salvage the guarded increment.** RP-2 keeps the `ce92a7bf` repin
+and only the capabilities its pins prove. A first MOR DELETE on a DV-free v3 table may commit a
+Puffin DV. Any table carrying a live DV refuses DELETE before a write, including a second engine
+DELETE and the Spark shared-Puffin fixture. COW DELETE may lift if its lineage pin is Spark-equal;
+COW UPDATE and MERGE stay guarded. `rewrite_data_files` stays guarded after its measured lineage
+reassignment. F-3 may land independently. Fork F-17 and a later RP-3 own shared-Puffin closure,
+DV merge and supersession, and the complete DV input-state matrix. The same-day full-batch
+amendment (#254, merged 2026-08-28 as `6d75b78`; target `26088bb`, twelve clauses) is superseded
+by this ruling: its four added clauses — C-009 F-16 measured, C-010 F-9 taken, C-011 F-7 U3
+measured, C-012 F-15 carried — leave this ledger and transfer unchanged to RP-3's charter, which
+takes the whole post-`ce92a7bf` batch (F-14 and F-17 included) at one frozen fork SHA. Their
+text stays readable at `6d75b78`.
 
 ## PROPOSITION LEDGER — RP-2 — 2026-08-27
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | Every `iceberg*` `[patch.crates-io]` rev is `26088bb46e655c0825c408dd305cab2228a033fd` and `Cargo.lock` resolves to it; `datafusion`, `datafusion-spark`, `arrow*`, `parquet` and `rust-toolchain.toml` are byte-identical to `main` at `06a3e42` (the fork's family is still arrow/parquet 58.4). | `rg` on the workspace `Cargo.toml` + lock source entries; `git diff main -- Cargo.toml rust-toolchain.toml` empty outside the five revs. | OPEN | Closes on the repin commit. |
+| C-001 | Every `iceberg*` `[patch.crates-io]` rev is `ce92a7bfe2c1be569ed0de1178ed410e8ec3a117` and `Cargo.lock` resolves to it; `datafusion`, `datafusion-spark`, `arrow*`, `parquet` and `rust-toolchain.toml` are byte-identical to `main` at `06a3e42` (the fork's family is still arrow/parquet 58.4). | `rg` on the workspace `Cargo.toml` + lock source entries; `git diff main -- Cargo.toml rust-toolchain.toml` empty outside the five revs. | OPEN | Closes on the repin commit. |
 | C-002 | The two standing repin duties hold on the new rev: `NamespaceScopedCatalog` forwards every required `Catalog` method (defaulted ones forwarded or an omission stated), and the metadata-projection shim is kept iff the fork's metadata-table `scan` still ignores `projection`; the two metadata-table emptiness pins pass. | Trait diff at the new rev; read fork `metadata_table.rs`; `cargo test` the two named pins (`repark-sql/tests/introspection.rs`, `repark-spark/src/tests/metadata_tables.rs`). | OPEN | Which defaulted methods did the 15-commit range add? |
-| C-003 | **F-13 measured, engine side.** With the v3 arm of the R113 guard lifted in a scratch build, a merge-on-read `DELETE` on the adopted partitioned-DV v3 fixture commits a Puffin deletion vector (content 2, `referenced_data_file` set, no new position-delete file), and the PySpark 4.1.2 + Iceberg 1.11.0 oracle reads the engine's commit back to the same live set — on both SQL doors and the facade. | The fixture from V3E-3; `.delete_files` content after the commit; Spark read-back rows + `sum(id)` versus the engine's; one pin per door. | OPEN | If green on all three doors the guard lifts here and `V3-3` shrinks to UPDATE/MERGE + partitioned/spec-evolved coverage; if red on any door the guard stays and the red case is V3-3's first clause. The measurement decides which — recorded either way. |
-| C-004 | **F-7 U1 measured.** `CALL system.rewrite_data_files` on the v3 fixture carries `_row_id` and `_last_updated_sequence_number` through compaction unchanged — Spark-equal on the read-back — so the `V3-LINEAGE-1` guard lifts and the registry row moves to FIXED with the date; or it does not, and the row's evidence gains the measured divergence with the fork row it waits on. | Before/after lineage projection through the fork's R166 read path; Spark read-back of the compacted table; the guard pin retargeted from "refuses" to "carries". | OPEN | Does U1's `RewriteFiles` carry reach `RewriteDataFiles` (row R135) or only the transaction (row R107)? Measured, not read. |
-| C-005 | **F-7 U2 measured on the COW path.** After the repin a COW `DELETE` on an adopted v3 table assigns lineage as Spark does (a deleted row's survivors keep their `_row_id`; added rows take `first_row_id` from the manifest-list order Java uses) — or the `V3-COW-1` guard stays with the measured `next_row_id` delta recorded against fork row R166's residue. | V3E-1's driver re-run at the new rev; Spark read-back; the registry row updated with the date either way. | OPEN | The fork's `FirstRowIdPolicy` is `pub(crate)` — no engine call site changes; the question is only what the engine's `OverwriteFiles` path now writes. |
-| C-006 | **F-3 + #232 taken.** `CALL system.rewrite_data_files(..., 'remove-dangling-deletes' => true)` on both doors passes the option to the fork and reports a true `removed_delete_files_count` instead of the hard-coded `0`; default stays `false` (Java's); on the v3 fixture the count includes the DVs the rewrite stranded, so `V3-DANGLE-1` is dispositioned by measurement. | The option through `call.rs`; a 2-file position-delete fixture where the count is non-zero; the v3 fixture's count against Spark's `removed_delete_files_count = 6`; the pin that asserted `0` retargeted. | OPEN | Closes on the v3 run. |
-| C-007 | The documents say what the pins prove: north star §3 rows for MOR DML, `rewrite_data_files`, COW DML and DV maintenance carry the measured state and date; STATUS's v3 workstream and the slate stop saying "gated on fork F-13"; the handoff marks F-13 / F-7 U1+U2 / F-3 with the fork PR and landing date and records the take/skip decision per AGENTS.md "Version-pin contract"; crate maps and the divergence registry in lockstep. | `rg 'gated on fork F-13|← fork F-13'` returns nothing live; `make check-map-sync`, `check-docs-compaction`, `check-ledger-grammar` green. | OPEN | Closes on the departure commit. |
-| C-008 | Green on the whole surface: `make preflight`, the parity suite (`python/repark-parity/tests`), and the v3 fixture legs (V3E-3/V3E-4 pins) pass at the new rev; the one-page "what changed under us" note lists every fork BEHAVIOR/BREAKING change in the range (#221, #222, #226) with the engine site that absorbs it. | Gate output attached; the note in this ledger's §3. | OPEN | Closes at readiness. |
+| C-003 | **F-13 measured under the narrowed guard.** A first MOR `DELETE` on a DV-free v3 table commits a Puffin deletion vector and reads back Spark-equal on both SQL doors and the facade. A second engine DELETE and the Spark-written shared-Puffin fixture refuse before a write. No document or pin claims DV merge or supersession. | First-delete `.delete_files` content and Spark read-back; one success pin per door; committed second-delete and shared-Puffin refusal pins with unchanged metadata and object sets. | OPEN | F-17 and RP-3 own the refused input states. |
+| C-004 | **F-7 U1 measured and guarded.** `CALL system.rewrite_data_files` on the v3 fixture is measured at the new rev. The measured lineage reassignment is recorded and `V3-LINEAGE-1` stays armed. | Before/after lineage projection through the fork's R166 read path; Spark read-back; the existing refusal pin remains green. | OPEN | RP-3 re-measures at its selected post-F-17 SHA before V3-5 charters. |
+| C-005 | **F-7 U2 measured on the COW path.** COW DELETE may lift only if the adopted-v3 lineage projection is Spark-equal. COW UPDATE and MERGE remain guarded in this unit. | V3E-1 driver re-run at the new rev; Spark read-back; one COW DELETE disposition and committed pre-write refusals for UPDATE and MERGE. | OPEN | The result decides only the COW DELETE seat. |
+| C-006 | **F-3 taken.** `CALL system.rewrite_data_files(..., 'remove-dangling-deletes' => true)` on both doors passes the option to the fork and reports a true `removed_delete_files_count` instead of the hard-coded `0`; default stays `false` (Java's); the `V3-DANGLE-1` queue row is measured on the v3 fixture and dispositioned. | The option through `call.rs`; a 2-file position-delete fixture where the count is non-zero; the pin that asserted `0` retargeted. | OPEN | Does R137's removal also drop DVs (the handoff's open question to the fork)? The v3 run answers it. |
+| C-007 | The documents say only what the narrowed pins prove: first-delete support, every live-DV state guarded, `rewrite_data_files` guarded, and COW UPDATE/MERGE guarded. The north-star plan points shared-Puffin closure to F-17 and full DV support to RP-3. | `rg 'merge.*superseded|gated on fork F-13'` reviewed; `make check-map-sync`, `check-docs-compaction`, and `check-ledger-grammar` green. | OPEN | Closes on the departure commit. |
+| C-008 | Green on the whole surface: branch placeholders and duplicate headings are removed, provenance is accurate, `make preflight`, the parity suite, and the V3E-3/V3E-4 fixture pins pass at the new rev; the one-page note lists every fork BEHAVIOR/BREAKING change in the range. | Branch diff review, gate output, and the note in this ledger's §3. | OPEN | Closes at readiness. |
 
-| C-009 | **F-16 measured.** MW-7's 1e7×50 MERGE-then-maintain sequence on a merge-on-read table ends at zero delete files and zero delete records, as Spark's does, with the default `delete-ratio-threshold` (0.3); the MW-7 pin that recorded 8 surviving delete files flips from "documents the gap" to "asserts zero", and the maintenance runbook drops its residual-delete caveat. | Re-run the MW-7 driver at the new rev (its 2,500-row reproduction first, the 1e7 run once); the pin; `docs/` runbook diff. | OPEN | Closes on the re-measurement. |
-| C-010 | **F-9 taken.** `CALL system.register_table` against S3 Tables refuses with a message that names the dated service gap, and the guide / divergence registry cite fork row R126's ruling (#233) instead of "refuses in the fork". | Grep the guide and registry for the citation; the existing refusal pin retargeted to the message. | OPEN | Closes on the truth-up commit. |
-| C-011 | **F-7 U3 measured.** `CALL system.rewrite_position_delete_files` on the adopted v3 fixture no longer refuses (`B-MOR-3`): it runs the fork's v3 DV arm and the Spark read-back is unchanged before and after — or it stays refused with the measured reason recorded against fork row R136's ENGINE-FIRST note. | Both doors + facade on the V3E-3 fixture; read-back rows + `sum(id)`; `.delete_files` before/after. | OPEN | R136's v3 arm has no Java oracle (ENGINE-FIRST); the engine's evidence is Spark read identity, which is the measurement. |
-| C-012 | **F-15 carried, not consumed.** The repin compiles and every gate passes with the fork's `write_default` fill in `DataFileWriter::write`; no engine surface sets a `write_default` yet, so the append fixtures are byte-flat before/after, and V3-6's charter gains the note that the fork surface exists. | Fixture byte comparison; the V3-6 note. | OPEN | Closes at readiness. |
-
-VERDICT: OPEN — 12 clauses, 0 PROVEN, 0 REJECTED. The gate passes when every row is PROVEN
+VERDICT: OPEN — 8 clauses, 0 PROVEN, 0 REJECTED. The gate passes when every row is PROVEN
 with its pin (`pins: rp-2-fork-repin/C-NNN`) and the owner confirms.
 
 ## 2. Sequence
 
 1. Pickup ritual (`make ledger-archive`, drift checks), then the repin commit (C-001) alone —
    the compile is the first measurement.
-2. Standing duties (C-002), then the measurements (C-003, C-004, C-005, C-009, C-011) in a
-   scratch build before any guard moves; each writes its Spark read-back into this ledger.
-3. Flip only the pins the measurements support; take F-3 / #232 (C-006), F-9 (C-010), F-15 (C-012).
+2. Standing duties (C-002), then the narrowed measurements (C-003, C-004, C-005) before any
+   guard moves; each writes its Spark read-back into this ledger.
+3. Add the second-DELETE and shared-Puffin refusal pins; flip only the COW DELETE seat if its
+   measurement is Spark-equal; take F-3 (C-006).
 4. Truth-up (C-007), gates (C-008), Critic pass with a novel input through each door whose
    guard lifted, departure commit.
 
@@ -62,6 +68,6 @@ with its pin (`pins: rp-2-fork-repin/C-NNN`) and the owner confirms.
 | #221 | V3 MOR writes deletion vectors — BREAKING API + BEHAVIOR | filled at readiness |
 | #222 | F-13 U3b + row-lineage read path + variant Arrow type — 3 BREAKING | filled at readiness |
 | #226 | `first_row_id` suppression + manifest-list ordering — 2 BEHAVIOR | filled at readiness |
-| #227 | `RewritePositionDeleteFiles` extends to v3 (ENGINE-FIRST) | filled at readiness |
-| #232 | delete-ratio clause + v3 DV removal accounting | filled at readiness |
-| #233 | S3 Tables `register_table` service gap; `write_default` fill | filled at readiness |
+| #227 | `RewritePositionDeleteFiles` extends to v3 (ENGINE-FIRST) | beyond `ce92a7bf` — RP-3's range |
+| #232 | delete-ratio clause + v3 DV removal accounting | beyond `ce92a7bf` — RP-3's range |
+| #233 | S3 Tables `register_table` service gap; `write_default` fill | beyond `ce92a7bf` — RP-3's range |

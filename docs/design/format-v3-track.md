@@ -160,36 +160,103 @@ version-uuid pointers, Glue among them, are unaffected. **Admitted as registry r
 `V3-ADOPT-1` by V3-1 (2026-08-21):** the CALL write now names the Hadoop convention and the
 version-uuid shape; the fork still cannot compute the next pointer from `vN.metadata.json`.
 
-## 5. The unit slate, as revised
+## 5. The delivery sequence, revised 2026-08-28
 
-A12's six units still hold in outline. Three change.
+The owner approved this sequence after RP-2 measured the first v3 write paths. The sequence
+keeps useful guarded work, fixes the fork invariant before lifting the guard, and consumes the
+repair through a fresh immutable repin.
 
-| Unit | Scope | Change from A12 |
+### Step 1 — land the narrowed RP-2 increment
+
+Salvage `feat/rp-2-fork-repin` at fork rev `ce92a7bf`. Its honest product contract is narrower
+than its first ledger narrative:
+
+- a first merge-on-read DELETE on a DV-free v3 table commits a Puffin DV;
+- any table with a live DV refuses DELETE before a write, including a second engine DELETE and
+  the Spark-written shared-Puffin fixture;
+- COW DELETE may lift when the committed lineage pins stay Spark-equal;
+- COW UPDATE and MERGE remain guarded;
+- `rewrite_data_files` remains guarded because the measured rewrite reassigned row lineage;
+- the F-3 dangling-delete option and true count may land independently.
+
+The unit must add a committed second-DELETE refusal pin and remove every claim that re-delete
+already merges and supersedes. The guard is a temporary safety boundary, not the final V3-3
+capability. PR #254 (merged 2026-08-28) had widened the charter to the full fork batch at
+`26088bb`; this ruling supersedes it, and its four added clauses transfer to RP-3.
+
+### Step 2 — repair shared-Puffin DV closure in the fork
+
+Fork item F-17 owns the table-format invariant. The measured fixture has two DV blobs in one
+Puffin file: the `part=0` blob deletes id 2 and the `part=1` blob deletes id 5. An engine DELETE
+of id 1 touched only `part=0`; the result was `{3,4,5,6}` instead of `{3,4,6}`. The untouched
+sibling blob vanished when path-keyed removal superseded the shared Puffin.
+
+The fork repair must carry every live sibling blob when one blob is superseded. It must cover
+different partitions, DELETE and UPDATE, and Java reading the fork-written result. The sabotage
+case removes sibling carry and must make the regression red. The detailed request and the engine
+pin are in the [fork handoff](../../task/roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md#f-17-north-star-blocker-added-2026-08-28--shared-puffin-dv-sibling-closure).
+
+### Step 3 — charter RP-3 against one post-fix fork SHA
+
+RP-3 takes the complete landed fork batch after F-17. It includes F-7 U3, F-16, F-9, F-15,
+F-14, and F-17 when they are present at the selected SHA. A later fork landing does not widen
+the unit. The repin re-runs every standing duty in `AGENTS.md` and measures these cells:
+
+| Input state | Operation | Required result |
 |---|---|---|
-| **V3-0** | This audit, and the `rewrite_data_files` row-lineage guard | New — A12 had no charter unit |
-| **V3-1** | Wire `CALL system.register_table`; land the cross-engine v3 fixture and promote `B-MOR-3` and `V3-ADOPT-1` to rows | **Landed 2026-08-21** (`feat/v3-1-register-table`). Was "read a v3 table and build the fixture, blocked on an addressing decision". |
-| **V3-2** | Create v3 tables behind an explicit opt-in | **Landed 2026-08-24** (`feat/v3-2-create-v3-opt-in`). ALTER upgrade stays refused. |
-| **V3-3** | Merge-on-read writes on v3 via the fork's `DVFileWriter` | Unchanged, still the big one |
-| **V3-4** | Row lineage as a read surface and a write obligation | Grows a read half: `_row_id` and `_last_updated_sequence_number` are not plannable columns today (`V3-ROWID-1`), where Spark serves both |
-| **V3-5** | v3 maintenance: lift V3-LINEAGE-1 once the fork carries lineage through a rewrite; `remove_dangling_delete_files` for `V3-DANGLE-1` | Grows a second obligation. A12 already warned not to scope this as "make the MW-2 refusal go away"; it now also owns `removed_delete_files_count` (§3b) |
-| **V3-6** | v3 types, reconciled with H6 VARIANT and the ANSI nanosecond work | Unchanged |
+| DV-free | first MOR DELETE | Puffin DV committed; Spark reads identical rows |
+| engine-written DV | second MOR DELETE | positions merged; old DV superseded; one live DV |
+| Spark-written DV | MOR DELETE on the same data file | same result as engine-written input |
+| shared Puffin | touch one of several blobs | untouched sibling deletes stay effective |
+| multiple files and partitions | one DELETE touches several files | one correct DV per data file; spec and partition correct |
+| equality delete plus DV | DELETE touches the table | neither delete class is lost |
+| DV-free COW | sequential DELETE operations | survivor rows and lineage stay Spark-equal |
+| unsafe state | guarded operation | loud pre-write refusal; bytes and rows unchanged |
 
-**Sequencing against MW.** V3-1 ran before MW closed. V3-2 ran after MW closed. V3-3 and later
-are owner-sequenced; MW-9 is urgent on MW-7's numbers and is a separate owner call.
+Every reachable cell runs through both SQL doors and the facade. Values and Arrow types are
+asserted through `collect` or `to_arrow`. RP-3 also re-measures `rewrite_data_files` lineage at
+the selected SHA. A red result becomes a fork or engine-owned finding before V3-5 charters; it
+is never treated as closed because fork row R166 is green.
+
+### Step 4 — deliver V3-3 and the guarded upgrade
+
+V3-3 completes MOR DELETE, UPDATE, and MERGE across partitioned and spec-evolved tables. It
+merges existing DVs, preserves Puffin siblings, pins concurrency and pre-write failures, and
+round-trips each supported action through Spark. The opt-in v2-to-v3 upgrade lands only after
+V3-3 proves the engine can safely mutate an upgraded table.
+
+### Step 5 — run the remaining product units on their real dependencies
+
+- **V3-4:** serve `_row_id` and `_last_updated_sequence_number`; preserve lineage across COW
+  DELETE, UPDATE, and MERGE.
+- **V3-5:** make maintenance production-grade: lineage-preserving compaction, DV removal and
+  sibling closure, v3 position-delete conversion, true result counts, and the existing
+  maintenance suite.
+- **V3-6:** finish binary variant, nanosecond timestamps, unknown, and column defaults. V3-6 may
+  run in parallel with V3-3 or V3-4 after its fork type support is pinned; it does not wait for
+  V3-5 merely because its unit number is higher.
+
+### Step 6 — close the v1.0 gate
+
+Run full v3 statement coverage, the merged-code-only Glue and S3 Tables acceptance legs where
+the service permits them, the v3 `10^7 x 50` scale workload, the nightly v3 oracle, and the v1.0
+API review. The tag waits until every north-star matrix row is green or has a dated, pinned
+DECLARED disposition.
+
+FNP, TA performance, dbt, and the general correctness backlog may run while the fork lane is
+blocked. They do not replace or delay a ready v3 unit.
 
 ## 6. Fork work this track needs
 
-Both items are fork-side and neither is in the CALL router.
+1. **Shared-Puffin DV sibling closure (F-17)** blocks lifting the broad live-DV guard and is the
+   immediate fork dependency for full V3-3.
+2. **Row lineage through `RewriteDataFiles`** remains an executed question. RP-2 measured a full
+   reassignment at `ce92a7bf`; RP-3 re-runs it before assigning the fix to the fork or engine.
+3. **`MetadataLocation` Hadoop pointer math (F-14)** must write the next `vN.metadata.json`
+   pointer, or keep the dated engine refusal.
+4. **V3 schema and IO support (F-15)** gates each V3-6 type independently.
 
-1. **Row lineage through `RewriteDataFiles`** — carry `first_row_id` and the row-level sequence
-   number across a data-file rewrite instead of letting the new file take fresh values. Gates
-   V3-LINEAGE-1's removal. The spec layer already models the fields.
-2. **`MetadataLocation` and foreign pointer names** — either accept the Hadoop `vN.metadata.json`
-   convention or fail with an error naming the convention rather than the filename. Gates the
-   error-quality half of `V3-ADOPT-1`; the functional half is avoidable by using a catalog that
-   writes version-uuid pointers.
-
-Neither blocks V3-1.
+The FNP and TA performance campaigns consume none of these fork surfaces.
 
 ## 7. What was measured and is not claimed
 
