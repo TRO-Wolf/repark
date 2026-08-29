@@ -2,6 +2,7 @@
 
 CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
 accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
+CC-2 close: S3 Tables location-guard phrase kept contiguous in `test_aws_acceptance.py`.
 
 ## Purpose
 

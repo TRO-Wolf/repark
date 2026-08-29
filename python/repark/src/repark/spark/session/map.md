@@ -2,6 +2,7 @@
 
 CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
 accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
+CC-2 close: restored base function docstrings hashed by `test_moved_symbol_bodies_match_the_integrated_baseline`.
 
 ## Purpose
 

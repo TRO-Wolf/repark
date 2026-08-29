@@ -176,9 +176,14 @@ def _sql_udf_arg_is_simple(arg: str) -> bool:
 def _sql_peel_select_trailing_clauses(rest: str) -> tuple[str, dict[str, str | None]]:
     """Split ``FROM … [WHERE …] [GROUP BY …] [HAVING …] [ORDER BY …] [LIMIT …]``.
 
-    Returns ``(core_rest, peeled)`` where ``core_rest`` keeps FROM + the JOIN chain (WHERE
-    is peeled too so UDF residuals can be applied post-materialization) and ``peeled`` holds
-    optional trailing clause SQL fragments.
+
+
+    Returns ``(core_rest, peeled)`` where ``core_rest`` keeps FROM + JOIN chain (U10
+
+    peels WHERE too so UDF residuals can be applied post-materialization) and
+
+    ``peeled`` holds optional trailing clause SQL fragments.
+
     """
 
     peeled: dict[str, str | None] = {
@@ -229,13 +234,12 @@ def _sql_peel_select_trailing_clauses(rest: str) -> tuple[str, dict[str, str | N
 
 
 def _sql_udf_call_match_key(call_text: str) -> str:
-    """Case- and whitespace-normalized key for SELECT↔GROUP BY/HAVING UDF match."""
-
+    """Case- and whitespace-normalized key for SELECT↔GROUP BY/HAVING UDF match (U10 C2)."""
     return re.sub(r"\s+", "", call_text.strip()).lower()
 
 
 def _sql_residual_has_subquery(residual: str) -> bool:
-    """True when a WHERE/HAVING residual still embeds a SELECT/EXISTS subquery."""
+    """True when a WHERE/HAVING residual still embeds a SELECT/EXISTS subquery (U10 C3)."""
 
     masked = _sql_mask_strings_and_comments(residual)
 

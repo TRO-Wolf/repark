@@ -185,9 +185,9 @@ def test_process_silver_acceptance_against_s3tables() -> None:
     spark = builder.getOrCreate()
 
     # Scratch namespace only — no `location`: the table bucket is the storage. Idempotent
-    # across runs — "already exists" from a prior run is expected. S3 Tables namespaces carry
-    # no location by design — nothing to compare — so the Glue-leg location-mismatch guard is
-    # intentionally not called here.
+    # across runs — "already exists" from a prior run is expected.
+    # S3 Tables namespaces carry no location by design — nothing to compare — so the Glue-leg
+    # location-mismatch guard is intentionally not called here.
     try:
         spark.create_namespace(S3TABLES_CATALOG, ACCEPTANCE_NAMESPACE)
     except RuntimeError as error:

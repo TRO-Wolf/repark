@@ -52,13 +52,20 @@ _AUTO_MEMORY_CATALOG_KEY = "repark.sql.automemorycatalog"
 
 
 def _auto_memory_catalog_wanted(builder_config: dict[str, str | None]) -> bool:
-    """Whether a bare session should auto-register ``spark_catalog``.
+    """Whether a bare session should auto-register ``spark_catalog`` (R-AUTO-MEMCAT).
+
+
 
     True only when ALL hold: the knob (``repark.sql.autoMemoryCatalog``) is not ``false``;
+
     no ``spark.sql.catalog.*`` / ``repark.sql.catalog.*`` blocks are configured (a user who
+
     configured catalogs gets exactly those); and ``spark.sql.defaultCatalog`` is unset or
-    already ``spark_catalog`` (auto-seeding a catalog the user did not name would mask a
-    misconfiguration).
+
+    already ``spark_catalog`` (an explicit different default names a catalog the user must
+
+    provide — auto-seeding a catalog they did not name would mask their misconfiguration).
+
     """
 
     for key, value in builder_config.items():
@@ -78,7 +85,17 @@ def _auto_memory_catalog_wanted(builder_config: dict[str, str | None]) -> bool:
 
 
 def _default_namespace_from_builder_config(builder_config: dict[str, str | None]) -> str | None:
-    """``spark.sql.defaultNamespace`` from the builder map (case-insensitive), if set."""
+    """``spark.sql.defaultNamespace`` from the builder map (case-insensitive), if set.
+
+
+
+    Spark's key is the session default database/namespace. Accepted and seeded into
+
+    facade ``currentDatabase`` at build (E2 bare-name resolution). Hardcoded
+
+    :data:`~repark.catalog.DEFAULT_DATABASE_NAME` when unset (v1).
+
+    """
 
     for key, value in builder_config.items():
         if key.lower() == "spark.sql.defaultnamespace" and value is not None and value != "":
@@ -94,14 +111,26 @@ def _alias_catalog_name(
     known_catalogs: set[str],
     default_catalog_is_auto: bool = False,
 ) -> str:
-    """Resolve ``spark_catalog`` as an alias of the session's registered catalog.
+    """Resolve ``spark_catalog`` as an alias of the session's registered catalog (E2).
 
-    When ``spark_catalog`` is not itself registered — or is only the auto-registered
-    fallback, which never blocks user-intent resolution — map it to ``current_catalog``
-    if that name is known, else the sole known catalog when exactly one is registered.
-    Fully-qualified three-part names and real catalog names pass through unchanged.
-    After a user registration flips current, tables written to the auto catalog before
-    the flip are reachable only by bare-name resolution (documented edge).
+
+
+    When ``spark_catalog`` is not itself registered — or is only the AUTO-registered
+
+    fallback (R-AUTO-MEMCAT), which never blocks user-intent resolution — map it to
+
+    ``current_catalog`` if that name is known, else the sole known catalog when exactly one
+
+    is registered. Fully-qualified three-part names and real catalog names pass through
+
+    unchanged. (In a bare session the auto case is identity anyway: current IS
+
+    ``spark_catalog``. After a user registration flips current, ``spark_catalog.…`` refs
+
+    alias to the user catalog — tables written to the auto catalog before such a flip are
+
+    then reachable only by bare name resolution against it, a documented edge.)
+
     """
 
     if catalog != DEFAULT_CATALOG_NAME:
@@ -120,12 +149,18 @@ def _alias_catalog_name(
 
 
 def _join_table_identifier_segments(segments: list[str]) -> str:
-    """Rejoin identifier segments so dotted / special segments stay one part.
+    """Rejoin identifier segments so dotted / special segments stay one part (E2 / C2-SEC-001).
 
-    Plain ``[A-Za-z_][A-Za-z0-9_]*`` segments stay unquoted; any other segment is
-    double-quoted so a later :func:`_sql_table_ref` /
-    :func:`_parse_table_identifier_segments` pass cannot re-split embedded dots into
-    extra identity pieces (silent wrong-object).
+
+
+    Plain ``[A-Za-z_][A-Za-z0-9_]*`` segments stay unquoted (stable string form for tests and
+
+    native three-part probes). Any other segment is double-quoted so a later
+
+    :func:`_sql_table_ref` / :func:`_parse_table_identifier_segments` pass cannot re-split
+
+    embedded dots into extra multipart identity pieces (silent wrong-object).
+
     """
 
     # Quote-if-needed SSOT: plain bare unquoted; else always-quote.
@@ -143,17 +178,30 @@ def resolve_table_name(
     temp_view_home_ref: Any | None = None,
     default_catalog_is_auto: bool = False,
 ) -> str:
-    """Qualify a bare / two-part table identifier under the session default catalog + NS.
+    """Qualify a bare / two-part table identifier under the session default catalog + NS (E2).
+
+
 
     Shared name-resolution layer for free-SQL entry points and the DataFrame API
-    (``table`` / ``saveAsTable`` / ``writeTo`` / ``insertInto`` / MERGE). Returns a
-    multipart identifier string that preserves segment boundaries (quote-aware rejoin);
-    callers pass it through :func:`_sql_table_ref` for full quoting when embedding in SQL.
 
-    * one-part ``t`` → the temp view's HOME-qualified name (when ``prefer_temp_view`` and
+    (``table`` / ``saveAsTable`` / ``writeTo`` / ``insertInto`` / MERGE /
+
+    :meth:`ReparkSession.read_iceberg_table`). Returns a multipart identifier string that
+
+    preserves segment boundaries (quote-aware rejoin — C2-SEC-001); callers pass it through
+
+    :func:`_sql_table_ref` for full quoting when embedding in SQL.
+
+
+
+    * **one-part** ``t`` → the temp view's HOME-qualified name (when ``prefer_temp_view`` and
+
       ``temp_view_home_ref`` answers segments), else ``currentCatalog.currentDatabase.t``
-    * two-part ``ns.t`` → ``currentCatalog.ns.t``
-    * three-part ``cat.ns.t`` → as-is, with ``spark_catalog`` alias expansion
+
+    * **two-part** ``ns.t`` → ``currentCatalog.ns.t``
+
+    * **three-part** ``cat.ns.t`` → as-is, with ``spark_catalog`` alias expansion
+
     """
 
     known = known_catalogs if known_catalogs is not None else set()
@@ -231,8 +279,12 @@ def resolve_table_name(
 def _sync_display_style_into_builder_config(builder_config: dict[str, str], style: str) -> None:
     """Record the applied display style on the session builder snapshot (canonical key).
 
+
+
     Drops any prior case-variant of the key so the snapshot stays a single entry and
-    repeated pure-style reuse stays silent after the style is applied.
+
+    repeated pure-style reuse stays silent after the style is applied (C6-Q-001).
+
     """
 
     for key in list(builder_config):

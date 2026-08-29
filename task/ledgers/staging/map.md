@@ -5,11 +5,6 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
-- [comment-condensation-2-ledger.md](comment-condensation-2-ledger.md) — **CC-2 (2026-08-28),
-  owner-approved and in execution:** a sentence-level condensation of every comment and docstring
-  in 698 Rust and Python source files under `crates/`, `python/`, and `scripts/`, executed by
-  sequential Luna High Actors. Workflows, shell, configuration, fixtures, goldens, archives,
-  history, and task evidence remain outside this PR.
 - [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's
   scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike
   evidence behind it; C-007 (the four sub-project families) was closed by ruling D-7 on

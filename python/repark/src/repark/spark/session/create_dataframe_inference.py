@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 
 def _validate_decimal_envelope(value: Any) -> None:
-    """Refuse Decimal values outside Spark's inferred DECIMAL(38, 18) envelope."""
+    """Refuse Decimal values outside Spark's inferred DECIMAL(38, 18) envelope (C2-L-002)."""
 
     from decimal import ROUND_DOWN, Decimal
 
@@ -246,7 +246,7 @@ def _arrow_type_merge_label(arrow_type: Any) -> str:
 
 
 def _arrow_type_is_nested(arrow_type: Any) -> bool:
-    """True for list/struct/map (string must not silently win over these)."""
+    """True for list/struct/map (string must not silently win over these — octo C3)."""
 
     import pyarrow as pa
 
@@ -262,10 +262,16 @@ def _arrow_type_is_nested(arrow_type: Any) -> bool:
 def _merge_inferred_arrow_types(left: Any, right: Any) -> Any:
     """Merge two inferred Arrow types (Spark ``_merge_type`` subset for dict-as-struct).
 
+
+
     NullType is soft (merges as the other side). String wins over **atomic** only
+
     (live Spark long+string → string) — never over nested list/struct/map (that
-    stringified dict cells). Long+Double / other incompatible scalar
+
+    stringified dict cells — octo C3-L-001). Long+Double / other incompatible scalar
+
     pairs refuse ``CANNOT_MERGE_TYPE``. Nested list/struct/map recurse.
+
     """
 
     import pyarrow as pa
@@ -333,7 +339,10 @@ def _merge_inferred_arrow_types(left: Any, right: Any) -> Any:
 def _merge_struct_arrow_types(left: Any, right: Any) -> Any:
     """Union two struct types: keep left field order, append new fields from right.
 
+
+
     Live Spark ``_merge_type`` for StructType (field-union order pin).
+
     """
 
     import pyarrow as pa
@@ -365,10 +374,16 @@ def _merge_struct_arrow_types(left: Any, right: Any) -> Any:
 def _infer_struct_arrow_from_dict_samples(samples: list[dict[str, Any]]) -> Any:
     """Build a struct Arrow type by unioning keys across dict *cell* samples.
 
+
+
     Field order: insertion order of the first sample that contributes each key
+
     (Spark dict-as-struct uses ``dict.items()`` order, not sorted row-key-union order).
+
     Null values do not contribute a field type (live: ``{"a": None, "b": 1}`` → only ``b``).
+
     Non-string keys refuse (Spark ``field name … should be a string``).
+
     """
 
     import pyarrow as pa
@@ -413,8 +428,12 @@ def _infer_struct_arrow_from_dict_samples(samples: list[dict[str, Any]]) -> Any:
 def _prepare_nested_cell(cell: Any, arrow_type: Any) -> Any:
     """Convert Row / dict / list cells into shapes ``pa.array`` accepts for ``arrow_type``.
 
+
+
     Also coerces Python values toward the declared Arrow type (Spark createDataFrame
+
     stringifies non-strings into StringType columns — Apache ``test_convert_list_to_str``).
+
     """
 
     import pyarrow as pa
@@ -621,9 +640,14 @@ def _prepare_nested_cell(cell: Any, arrow_type: Any) -> Any:
 def _normalize_nested_sql_type_aliases(sql_type: str) -> str:
     """Rewrite SQL aliases inside nested type markers so :meth:`DataType.fromDDL` accepts them.
 
-    Bare ``VARCHAR`` is not an atomic fromDDL token (only ``string`` / ``str`` /
-    ``varchar(n)``); nested markers must use STRING (or be rewritten here) or the whole
-    column silently became string.
+
+
+    ``_data_type_to_sql_type`` historically emitted ``VARCHAR`` for strings; bare VARCHAR is
+
+    not an atomic fromDDL token (only ``string`` / ``str`` / ``varchar(n)``). Nested markers
+
+    must use STRING (or be rewritten here) or the whole column silently became string.
+
     """
 
     import re as _re

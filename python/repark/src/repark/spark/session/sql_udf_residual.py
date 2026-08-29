@@ -19,35 +19,64 @@ def _sql_where_residual_base_projections(
     base_select_parts: list[str],
     temp_counter: int,
 ) -> tuple[str, list[str], int]:
-    """Identity-project residual base columns needed by compound WHERE.
+    """Identity-project residual base columns needed by compound WHERE (U10 C1).
+
+
 
     After UDF call spans are replaced with ``__repark_sql_udf_out_*`` temps, residual
+
     predicates may still reference table columns (``AND a < 10``, ``AND s = 'z'``).
+
     Those names are not on the materialization frame unless projected. Returns
-    ``(residual, new_base_parts, temp_counter)`` — bare idents project as ``col AS col``;
-    qualified ``t.col`` projects under a stable temp and the residual span is rewritten so
-    the filter resolves (alias ``t.col`` is not a valid multi-part field name on the
-    post-scan frame).
+
+    ``(residual, new_base_parts, temp_counter)`` — bare idents project as
+
+    ``col AS col``; qualified ``t.col`` projects under a stable temp and the
+
+    residual span is rewritten so the filter resolves (alias ``t.col`` is not a
+
+    valid multi-part field name on the post-scan frame).
+
+
 
     Syntax keywords (``FROM`` / ``BOTH`` / ``FOR`` / …) are never identity-projected so
-    engine forms like ``IS [NOT] DISTINCT FROM``, ``trim(BOTH … FROM …)``,
-    ``substring(… FROM … FOR …)``, ``extract(YEAR FROM …)`` stay intact. SQL type tokens
-    are only skipped after ``AS`` (CAST) so legitimate columns named ``date`` / ``double``
-    / ``string`` still project. ``END`` is a CASE terminator only when nested under an
-    unmatched ``CASE`` (column ``end`` still projects). Ambiguous names are quoted on both
-    the base projection and residual.
 
-    Residual poles:
+    engine forms like ``IS [NOT] DISTINCT FROM``, ``trim(BOTH … FROM …)``,
+
+    ``substring(… FROM … FOR …)``, ``extract(YEAR FROM …)`` stay intact (F-E1-1).
+
+    SQL type tokens are only skipped after ``AS`` (CAST) so legitimate columns named
+
+    ``date`` / ``double`` / ``string`` still project (F-E1-2); U10 C6 AS-skip retained.
+
+    ``END`` is CASE-terminator only when nested under unmatched ``CASE`` (column ``end``
+
+    still projects). Ambiguous names are quoted on both the base projection and residual.
+
+
+
+    **r22 U11 residual poles (F-E1 class):**
+
+
 
     * ``INTERVAL '1' DAY`` — unit tokens after an INTERVAL literal must not be
+
       identity-projected / quote-rewritten (would break unit syntax). Multi-unit
-      ``DAY TO SECOND`` trailing units after ``TO`` are also syntax.
+
+      ``DAY TO SECOND`` trailing units after ``TO`` are also syntax (octo C1).
+
     * Typed literals ``DATE '…'`` / ``TIMESTAMP '…'`` / ``TIME '…'`` — constructor
-      keywords are syntax when followed by a string literal.
+
+      keywords are syntax when followed by a string literal (octo C2).
+
     * Columns named ``and`` / ``or`` / ``not`` — ``DataFrame.filter``'s SQL-string
+
       identifier rewriter case-steals boolean keywords when those columns sit on the
+
       materialization frame; project them under ``__repark_sql_udf_wcol_*`` temps and
+
       rewrite residual spans (never leak temps to the user projection).
+
     """
 
     # Pure syntax / boolean / clause keywords — never bare column projections.

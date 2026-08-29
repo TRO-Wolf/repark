@@ -54,16 +54,30 @@ def _arrow_null_sql_to_type(null_sql: str) -> Any:
 
 
 def _normalize_frame_arrow_column(column: Any, *, engine_type: str | None) -> Any:
-    """Spark-parity Arrow column normalize after native pandas/polars export.
+    """Spark-parity Arrow column normalize after native pandas/polars export (P2a).
+
+
 
     * dictionary (category) → decoded values (ChunkedArray-safe)
-    * refuse non-finite floats (inf) before typed cast — for BOTH untyped and engine_type paths
-    * decimal envelope validated before rescale cast — must raise the same
-      ``PySparkValueError`` as the list path, not a bare ArrowInvalid on rescale
-    * integer widths → int64 when no declared engine type (VALUES parity)
+
+    * refuse non-finite floats (inf) **before** typed cast — critic-octo C1: an early
+
+      return on ``engine_type`` previously skipped the is_inf gate so StructType/DDL
+
+      DoubleType/FloatType frames silently accepted ±inf while the untyped path refused
+
+    * decimal envelope validate **before** rescale cast — native path must raise the same
+
+      ``PySparkValueError`` as the list path (C2-L-002), not bare ArrowInvalid on rescale
+
+    * integer widths → int64 when no declared engine type (VALUES parity — C4-Q-001)
+
     * float32 → float64 when no declared engine type
+
     * decimal* → decimal128(38, 18) when no declared engine type
-    * large_string / string_view → utf8 string
+
+    * large_string / string_view → utf8 string (tuple-path / interchange pins)
+
     """
 
     import pyarrow as pa
@@ -168,7 +182,7 @@ def _localize_naive_timestamp_column(column: Any) -> Any:
 
 
 def _validate_decimal_column_envelope(column: Any) -> None:
-    """Refuse Decimal values outside DECIMAL(38,18) on a native Arrow column."""
+    """Refuse Decimal values outside DECIMAL(38,18) on a native Arrow column (C2-L-002)."""
 
     import pyarrow as pa
 
@@ -188,10 +202,18 @@ def _arrow_table_from_pandas(
 ) -> Any:
     """Native pandas → Arrow (no full-frame row loop). Schema bind + refuse + cast rules.
 
-    Uses ``pa.Table.from_pandas`` for bulk conversion; refuse classes fire via the same dtype
-    map as the legacy extractor (Period/Interval/timedelta/complex/nested). Object /
-    Sparse[object] all-null columns still run the NaN→DOUBLE / NaT→TIMESTAMP witness;
-    integer widths widen to int64.
+
+
+    # === r20 P2a: cdf-extractor ===
+
+    Uses ``pa.Table.from_pandas`` for the bulk conversion. Refuse classes fire via the same
+
+    dtype map as the legacy extractor (Period/Interval/timedelta/complex/nested). Object /
+
+    Sparse[object] all-null columns still run the NaN→DOUBLE / NaT→TIMESTAMP witness
+
+    (C5-SAF-001 / C6-Q-001). Integer widths widen to int64 (C4-Q-001).
+
     """
 
     import pyarrow as pa
@@ -322,8 +344,18 @@ def _arrow_table_from_polars(
 ) -> Any:
     """Native polars → Arrow (no per-row ``.row()`` loop). Schema bind + refuse + cast.
 
+
+
+    # === r20 P2a: cdf-extractor ===
+
+    # === r21 T1: cdf-ingest ===
+
     Uses polars ``.to_arrow()``. Duration / binary / time refuse via the dtype map; nested
-    ``List``/``Struct``/``Array`` pass through Arrow. Integer widths widen to int64.
+
+    ``List``/``Struct``/``Array`` pass through Arrow (r21 T1). Integer widths widen to
+
+    int64 (C4-Q-001).
+
     """
 
     import pyarrow as pa

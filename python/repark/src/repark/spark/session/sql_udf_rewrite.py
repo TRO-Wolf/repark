@@ -35,11 +35,16 @@ def _try_rewrite_select_list_python_udfs(
     registry: dict[str, dict[str, Any]],
     hits: list[tuple[str, str, int]],
 ) -> tuple[str, dict[str, Any]] | None:
-    """Rewrite SELECT-list (+ WHERE/GROUP BY/HAVING) UDF calls.
+    """Rewrite SELECT-list (+ WHERE/GROUP BY/HAVING) UDF calls (U9/U10).
+
+
 
     Returns ``(base_sql, materialize_plan)`` or ``None`` when the shape is out of bounds.
+
     ``materialize_plan`` keys: ``stages``, ``final_exprs``, ``distinct``, ``order_by``,
+
     ``limit``, ``where_sql``, ``group_by_keys``, ``having_sql``, ``user_out_names``.
+
     """
 
     _ = hits

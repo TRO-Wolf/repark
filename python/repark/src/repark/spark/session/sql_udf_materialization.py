@@ -23,10 +23,14 @@ def _sql_materialize_expr_udfs(
     registry: dict[str, dict[str, Any]],
     temp_counter: int,
 ) -> tuple[str | None, list[dict[str, Any]], list[str], int]:
-    """Materialize registry UDF calls inside a WHERE/HAVING expression.
+    """Materialize registry UDF calls inside a WHERE/HAVING expression (U10).
+
+
 
     Returns ``(residual_expr, udf_nodes, base_select_parts, new_temp_counter)``.
+
     ``residual_expr`` is ``None`` when the shape is out of bounds (caller refuses loud).
+
     """
 
     calls = _sql_find_registry_udf_calls(expr_text, registry)
@@ -146,10 +150,18 @@ def _sql_plan_order_by_aliases(
 ) -> list[tuple[str, bool]] | None:
     """Parse ``ORDER BY`` into ``(out_name, ascending)`` when only aliases/ordinals.
 
+
+
     Explicit ``NULLS FIRST`` / ``NULLS LAST`` is refused (returns ``None`` → loud UOE):
-    DataFrame.orderBy does not yet wire Column nulls markers end-to-end. Bare ASC/DESC use
-    Column.asc/desc defaults. Returns ``None`` when the ORDER BY shape is out of bounds
-    (caller refuses loud).
+
+    DataFrame.orderBy does not yet wire Column nulls markers end-to-end (U9-C4-001;
+
+    H1 owns dataframe sort). Bare ASC/DESC use Column.asc/desc defaults.
+
+
+
+    Returns ``None`` when the ORDER BY shape is out of bounds (caller refuses loud).
+
     """
 
     text = order_by_sql.strip()
@@ -238,7 +250,7 @@ def _sql_plan_order_by_aliases(
 
 
 def _sql_udf_public_error_text(error: BaseException) -> str:
-    """Strip internal ``__repark_sql_udf_*`` names from error text."""
+    """Strip internal ``__repark_sql_udf_*`` names from error text (U9 Q13)."""
 
     text = str(error)
 
@@ -256,9 +268,14 @@ def _sql_udf_public_error_text(error: BaseException) -> str:
 def _sql_udf_clean_exception(error: BaseException) -> BaseException:
     """Map engine errors that leak internal UDF temp names to a loud clean UOE.
 
+
+
     Preserves :class:`~repark.errors.PySparkException` taxonomy (user UDF raises,
-    Analysis/Parse, …) so runtime failures are not re-framed as rewrite-shape UOEs.
-    Only internal-name leaks and unexpected non-PySpark errors are wrapped.
+
+    Analysis/Parse, …) so runtime failures are not re-framed as rewrite-shape UOEs
+
+    (U9-C3-001). Only internal-name leaks and unexpected non-PySpark errors are wrapped.
+
     """
 
     from repark.errors import PySparkException, UnsupportedOperationException

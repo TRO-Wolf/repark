@@ -51,9 +51,15 @@ def _install_state_proxy(module: types.ModuleType) -> None:
 def _config_value_error(key: str, value: int, requirement: str) -> str:
     """Render an out-of-range config refusal in live Spark 4.1.2's message shape (SAF-006).
 
+
+
     Spark 4.1.2 raises ``IllegalArgumentException`` for a rejected ``SQLConf`` value using the
+
     ``INVALID_CONF_VALUE.REQUIREMENT`` error class. Captured live (zulu-17, pyspark 4.1.2) for
+
     ``spark.conf.set("spark.sql.shuffle.partitions", "0")``::
+
+
 
         [INVALID_CONF_VALUE.REQUIREMENT] The value '0' in the config
 
@@ -61,17 +67,30 @@ def _config_value_error(key: str, value: int, requirement: str) -> str:
 
         must be positive SQLSTATE: 22022
 
+
+
     repark emits that verbatim with **two recorded deltas**:
 
+
+
     1. the trailing ``SQLSTATE: 22022`` is omitted — no repark error carries SQLSTATE
+
        (cf. ``[INVALID_SAVE_MODE]`` / ``[AMBIGUOUS_REFERENCE]``);
+
     2. the repark-native key spellings (``repark.target.partitions`` /
+
        ``repark.memory.limit.gb``) have no Spark counterpart at all, so for those the same
+
        shape is emitted with the repark key substituted — Spark would silently ignore them.
 
+
+
     ``requirement`` is the ``<confRequirement>`` sub-class payload and is quoted verbatim from
+
     Spark where one exists (``The value of spark.sql.shuffle.partitions must be positive`` —
+
     byte-checked in ``SQLConf$.class``; note Spark has **no** trailing period there).
+
     """
 
     return (
@@ -83,10 +102,16 @@ def _config_value_error(key: str, value: int, requirement: str) -> str:
 def _to_str(value: Any) -> str | None:
     """Spark ``pyspark.sql.utils.to_str`` (4.1.2): bool → lowercase, ``None`` stays ``None``.
 
+
+
     Live Spark does **not** use bare ``str(...)`` for ``Builder.config`` map/kv values: bools
+
     become ``"true"`` / ``"false"`` (not ``"True"`` / ``"False"``), and ``None`` is stored
+
     as ``None`` rather than the string ``"None"`` (so an engine-knob lookup treats it as unset
+
     instead of failing ``int("None")``). Integers and other types still go through ``str(...)``.
+
     """
 
     if isinstance(value, bool):

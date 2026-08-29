@@ -5438,7 +5438,6 @@ class DataFrame:
             )
         return result
 
-    # Native recursive struct/list flattening.
     def dynamicFlatten(  # noqa: N802 — repark-extra camelCase surface
         self,
         *,
@@ -5450,6 +5449,7 @@ class DataFrame:
     ) -> DataFrame:
         """Recursively flatten structs and optionally explode lists.
 
+        Native kernel: ``repark_core::dynamic_flatten`` and DataFusion ``Unnest``.
         ``separator`` joins parent and child names. ``explode_lists`` controls list expansion.
         ``drop_null_lists`` drops null-element lists. ``empty_as_null`` preserves parent rows for
         empty lists when true. ``max_depth`` bounds rewrite passes and raises if nesting remains.

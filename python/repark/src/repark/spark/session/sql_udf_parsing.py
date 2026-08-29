@@ -101,8 +101,12 @@ def _sql_top_level_keyword_index(query: str, keyword: str) -> int | None:
 def _sql_udf_in_nested_subquery(query: str, udf_index: int) -> bool:
     """True when ``udf_index`` sits inside a parenthesized ``(SELECT|WITH …)`` subquery.
 
-    Expression parens (``CAST(…)``, ``abs(…)``, ``f(g(x))``) are **not** subqueries — only
-    regions whose open-paren is followed by SELECT/WITH (after whitespace).
+
+
+    U9: expression parens (``CAST(…)``, ``abs(…)``, ``f(g(x))``) are **not** subqueries —
+
+    only regions whose open-paren is followed by SELECT/WITH (after whitespace).
+
     """
 
     stack: list[bool] = []
@@ -277,10 +281,14 @@ def _split_sql_select_list(select_list: str) -> list[str]:
 
 
 def _sql_strip_comments_preserve_strings(query: str) -> str:
-    """Remove ``--`` / ``/* */`` comments; keep string/ident quotes intact.
+    """Remove ``--`` / ``/* */`` comments; keep string/ident quotes intact (octo C4-L-001).
+
+
 
     Unlike :func:`_sql_mask_strings_and_comments`, strings are preserved so UDF arg
+
     literals remain parseable. Used only for SELECT-list item structure matching.
+
     """
 
     if not query:
@@ -358,8 +366,12 @@ def _parse_simple_sql_udf_call(
 ) -> tuple[str, list[str], str | None] | None:
     """Parse ``name(arg[, …]) [AS alias]`` with simple args, or return ``None``.
 
+
+
     Args must be bare identifiers, double-quoted idents, or simple numeric/string/NULL
+
     literals. Nested calls / expressions refuse by returning ``None``.
+
     """
 
     # Strip comments so ``udf /*c*/ (a)`` still parses (hit scan already masks them).

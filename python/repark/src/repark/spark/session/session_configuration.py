@@ -90,19 +90,30 @@ def _looks_like_datafusion_conf_key(key: str) -> bool:
 def _format_datafusion_set_sql(key: str, value: str) -> str:
     """Build a DataFusion ``SET key = 'value'`` statement (value always single-quoted).
 
-    Always quoting accepts both pure integers and unit suffixes. Single quotes inside
-    ``value`` are doubled (SQL escape). ``key`` must already be a canonical identifier
-    path (caller validates) — never interpolate an unvalidated key (injection surface).
+
+
+    Always quoting accepts both pure integers (``batch_size``) and unit suffixes
+
+    (``memory_limit = '2G'``). Single quotes inside ``value`` are doubled (SQL escape).
+
+    ``key`` must already be a canonical identifier path (caller validates) — never interpolate
+
+    an unvalidated key (injection surface).
+
     """
 
     return f"SET {key} = {sql_string_literal(value)}"
 
 
 def _forward_datafusion_conf(session: ReparkSession, key: str, value: str) -> None:
-    """Forward one ``datafusion.*`` key to the live engine via SQL ``SET``.
+    """Forward one ``datafusion.*`` key to the live engine via SQL ``SET`` (r21 T2).
+
+
 
     Raises :class:`~repark.errors.IllegalArgumentException` for a malformed / non-canonical
+
     key or when DataFusion rejects the key/value (unknown option, bad capacity string, …).
+
     """
 
     if not _is_datafusion_conf_key(key):
@@ -157,11 +168,16 @@ def _refuse_dual_memory_pool_knobs(config: dict[str, str | None]) -> None:
 
 
 def _refuse_runtime_memory_limit_gb(key: str) -> None:
-    """Refuse runtime ``conf.set`` of build-time FairSpillPool size keys (one truth).
+    """Refuse runtime ``conf.set`` of build-time FairSpillPool size keys (one truth, octo T2 C3).
+
+
 
     ``repark.memory.limit.gb`` / ``spark.repark.memory.limit.gb`` size the pool at
+
     ``getOrCreate`` only. Live resize is ``datafusion.runtime.memory_limit`` — a facade-only
+
     write would leave the pool unchanged while ``conf.get`` lies.
+
     """
 
     if key.lower() not in _MEMORY_LIMIT_KEY_LOWER:
@@ -179,11 +195,16 @@ def _refuse_runtime_memory_limit_gb(key: str) -> None:
 def _apply_builder_datafusion_conf(session: ReparkSession, config: dict[str, str | None]) -> None:
     """Apply ``datafusion.*`` keys from the builder map onto a freshly built session.
 
+
+
     Runs after the native session exists so SQL ``SET`` can reach the live DataFusion
+
     context. Insertion order is preserved (last alias wins for duplicate keys).
+
     Non-canonical / mixed-case keys refuse-loud via :meth:`RuntimeConfig.set`.
     ``datafusion.runtime.temp_directory`` is skipped (already applied at Rust build;
     a runtime SET of it refuses loud and names TMPDIR).
+
     """
 
     runtime = RuntimeConfig(session)
@@ -214,8 +235,12 @@ _DEFAULT_DISPLAY_STYLE = "spark"
 def normalize_display_style(value: str | object) -> str:
     """Normalize and validate a ``repark.display.style`` value (``spark``/``polars``/``duckdb``).
 
-    Case-insensitive. Raises :class:`~repark.errors.IllegalArgumentException` for anything
-    else so a typo fails loud at the builder/setter rather than silently falling back to spark.
+
+
+    Case-insensitive. Raises :class:`~repark.errors.IllegalArgumentException` for anything else
+
+    so a typo fails loud at the builder/setter rather than silently falling back to spark.
+
     """
 
     if not isinstance(value, str):

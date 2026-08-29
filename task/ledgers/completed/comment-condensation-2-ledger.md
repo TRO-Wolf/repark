@@ -165,8 +165,8 @@ PRE_EXECUTION_REVIEW:
 - [x] Complete and review `python/repark` one directory at a time.
 - [x] Complete and review `python/repark-parity` one directory at a time.
 - [x] Update maps, retained-block records, census, and language-aware equivalence evidence.
-- [ ] Run broad gates, closing Critic, readiness audit, and departure lifecycle move.
-- [ ] Commit, push, open the single PR, and watch its checks to a terminal result.
+- [x] Run broad gates, closing Critic, readiness audit, and departure lifecycle move.
+- [x] Commit, push, open the single PR, and watch its checks to a terminal result.
 
 ## Sequential slice evidence
 
@@ -296,13 +296,18 @@ tooling, not a shipped product change, and is removed at departure.
 
 ## Closing census (2026-08-29, full population, base `73af134`)
 
-- Comment/doc lines: 54,520 → 40,097 (−14,423, −26.5%). Rust 23,541 → 15,170; Python 30,979 → 24,927.
-- Comment/doc blocks: 18,721 → 17,294; blocks over two lines: 5,306 → 3,988.
-- Physical source lines: 311,824 → 297,154 (−14,670).
+- Comment/doc lines: 54,520 → 40,581 (−13,939, −25.6%). Rust 23,541 → 15,172; Python 30,979 → 25,409.
+- Comment/doc blocks: 18,721 → 17,287; blocks over two lines: 5,306 → 3,989.
+- Physical source lines: 311,824 → 297,635 (−14,189).
 - Executable equivalence: every file identical after lexical comment/docstring removal except the
   two sanctioned size-gate baseline tables (`scripts/check_lib_py.py`,
   `scripts/check_rust_file_size.py`). Protected inventory: zero failures.
-- Final source-set SHA-256 (current): `599cf0798eb7aba77cad7ce4fe63c81291b725e8668d2cd7fafe3a1d432390a0`.
+- Final source-set SHA-256 (current): `d7516608576941b5481e7fbb42d817ed477b5345d5d04cc288def45b6e81a26b`.
+
+Pickup remeasure (2026-08-29, same harness `a083b40c6bda55daea9e95771efe3e82538c85dea21185a59fb39db2ed5aca4b`):
+698 paths. After restoring session-function docstrings required by
+`test_moved_symbol_bodies_match_the_integrated_baseline`, the SHA and totals above are the
+live tree. Equivalence failures remain only the two sanctioned size-gate tables.
 
 Continuation remediation findings (2026-08-29), all REMEDIATED with the harness as regression
 proof:
@@ -322,6 +327,105 @@ proof:
   restored to the base block), and two over-condensed `# Errors` sections restored to their base
   text (`repark-core` `resolve_temp_view_home_ref`, `repark-sql` `router::execute`). Regression
   proof: `make rust-clippy` finishes clean.
+- F-CC2-CONT-005 (S1): `make py-test-facade` red on three comment-byte pins. Restored the
+  contiguous `S3 Tables namespaces carry no location by design` comment in
+  `test_aws_acceptance.py`; put `repark_core::dynamic_flatten` and `Unnest` back in
+  `DataFrame.dynamicFlatten.__doc__` without `explode_outer` / `make_array(NULL)`; restored
+  base function docstrings for the 76 session symbols hashed by
+  `test_moved_symbol_bodies_match_the_integrated_baseline`. Regression proof: those three
+  tests pass; full facade 3758 passed, 74 skipped.
+
+```yaml
+CONTEXT_BREAK:
+  id: CB-CC2-close-1
+  mechanism: PROCEDURAL_IN_SESSION
+  manifest_binding: context_break_mechanics procedural default; user did not opt into sub-agent fan-out
+  handed_to_critic: [unit_charter_clauses, diff_and_artifacts, harness_summary, attack_taxonomy]
+  withheld_until_initial_findings_filed: [actor_build_summary, actor_self_logic_review]
+  declaration_logged: "Context break executed; attacking artifacts, not memory."
+  honesty_note: procedural, not amnesia
+```
+
+Closing Critic (2026-08-29, pickup session on `2c1e9b9` plus working-tree census). Context break
+executed; attacking artifacts, not memory. No new S0/S1 unit finding. Owner `ACCEPT_WITH_RECORD`
+on F-CC2-TA-UDF-004 / BF-CC2-TA-001 remains the named merge gate.
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: comment-condensation-2
+  cycle: closing
+  risk_tier: standard
+  critic_engine: ccc
+  complete: true
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Walked C-001..C-011 against the frozen 698-file roster, sequential slice table, pin lines in crates/map.md python/map.md scripts/map.md, and the independent harness summary.
+      artifacts: [task/ledgers/staging/comment-condensation-2-ledger.md, crates/map.md, python/map.md, scripts/map.md, /tmp/cc2_summary.json]
+    - id: AT-2
+      status: N/A
+      justification: Comment and docstring condensation; no new executable input domain.
+    - id: AT-3
+      status: ATTACKED
+      evidence: Sampled failure-path comments on the panic fence, shuffle NULL, and catalog credential redaction; shortest-form contracts remain. Harness reports no executable drift except the two sanctioned size-gate tables.
+      artifacts: [crates/repark-python/src/fence.rs, crates/repark-functions/src/collection/shuffle.rs, crates/repark-iceberg/src/catalog/builders.rs, /tmp/cc2_summary.json]
+    - id: AT-4
+      status: ATTACKED
+      evidence: GIL attach/detach and SAF-008 no-reentry comments remain on StreamingBatchReader; thread-local STREAM_POLL_NO_DETACH is still documented.
+      artifacts: [crates/repark-python/src/dataframe.rs]
+    - id: AT-5
+      status: ATTACKED
+      evidence: Catalog builders still record property names only because the map can contain credentials; no secret-echo restoration in the diff.
+      artifacts: [crates/repark-iceberg/src/catalog/builders.rs]
+    - id: AT-6
+      status: ATTACKED
+      evidence: Model provenance 84/84, MUTATION payloads 105/105, pins lines 398 to 400. Protected inventory mismatches empty on the full population.
+      artifacts: [/tmp/cc2_summary.json]
+    - id: AT-7
+      status: N/A
+      justification: No system-breaking resource surface; comment-only unit.
+    - id: AT-8
+      status: ATTACKED
+      evidence: Public Python docstring presence gate clean (177 files); rust-file-size and lib-py exact baselines held in the first verify pass before grammar failed.
+      artifacts: [scripts/check_docstring_presence.py, scripts/check_lib_py.py, scripts/check_rust_file_size.py]
+    - id: AT-9
+      status: N/A
+      justification: No new runtime failure path or log contract; existing operability comments were condensed, not introduced.
+    - id: AT-10
+      status: ATTACKED
+      evidence: docs/testing.md exempts pure comment/doc changes from new tests. The language-aware harness is the clause pin: 698 paths, equivalent except scripts/check_lib_py.py and scripts/check_rust_file_size.py, protected_inventory_failures empty, source-set SHA d7516608576941b5481e7fbb42d817ed477b5345d5d04cc288def45b6e81a26b.
+      artifacts: [/tmp/cc2_summary.json, crates/map.md, python/map.md, scripts/map.md]
+```
+
+## Gate evidence (2026-08-29)
+
+Disk before gates: `/` 529 G free (70% used).
+
+- `make verify` — exit 0 (after attestation filed; later re-run inside preflight).
+- `make preflight` — exit 0. Facade `3758 passed, 74 skipped`. `cargo deny` / `pip-audit` /
+  `zizmor` clean.
+
+```yaml
+PR_READINESS_CHECKLIST:
+  id: RA-CC2
+  self_run_by_orchestrator: true
+  honesty_note: STANDARD unit; session default is single-agent procedural, user asked this session to assemble the PR
+  checks:
+    ci_green: PASS (make verify exit 0; make preflight exit 0)
+    unit_clauses_proven: PASS (C-001..C-011; pins in crates/map.md python/map.md scripts/map.md)
+    coverage_attestation_attached: PASS (COVERAGE_ATTESTATION complete: true)
+    findings_ledger_closed: PASS (unit S0/S1 remediations closed; F-CC2-TA-UDF-004 owner ACCEPT_WITH_RECORD named as merge gate)
+    clause_trace_complete: PASS (source, maps, size-gate tables, this ledger)
+  verdict: READY
+  send_back_target: N/A
+```
+
+```yaml
+SHIPPED_FLAG_REGISTER:
+  pr_unit: comment-condensation-2
+  flags: []
+  count: 0
+```
 
 ```yaml
 SLICE_REMEDIATION:

@@ -46,8 +46,14 @@ _SPARK_SCALAR_MERGE_KIND_ORDER: tuple[str, ...] = (
 def _python_scalar_merge_kind(cell: Any) -> str | None:
     """Spark-merge kind for a scalar cell, or ``None`` if not in the merge-checked set.
 
-    ``bool`` is checked before ``int`` (``isinstance(True, int)`` is true in Python), and
-    ``datetime`` before ``date`` (datetime is a date subclass). Infinite floats refuse.
+
+
+    ``bool`` is checked before ``int`` (``isinstance(True, int)`` is true in Python).
+
+    ``datetime`` is checked before ``date`` (datetime is a date subclass).
+
+    Infinite floats refuse immediately (createDataFrame does not support them).
+
     """
 
     import datetime as _dt
@@ -103,15 +109,36 @@ def _refuse_long_double_merge(
     column_index: int,
     column_name: str,
 ) -> None:
-    """Refuse Spark ``CANNOT_MERGE_TYPE`` on inferred scalar columns.
+    """Refuse Spark ``CANNOT_MERGE_TYPE`` on inferred scalar columns (r21 T1 / extra octo).
+
+
 
     Live Spark 4.1.2 rejects mixed Boolean/Long/Double/Decimal/Date/Timestamp on the same
-    inferred field rather than truncating or silently promoting — Long + Double
-    (``int(2.5)`` would silently truncate), Long + Decimal (``Decimal("2.5")`` → 2 via
-    ``pa.array``), Double + Boolean (``True`` → 1.0), Long + Boolean, Timestamp/Date +
-    Long/Double (epoch coercion), and Date + Timestamp. Nested list/map element conflicts
-    are enforced in :func:`_prepare_nested_cell` and, for list-of-scalar columns,
-    :func:`_refuse_list_element_type_merge`.
+
+    inferred field rather than truncating or silently promoting. Covers:
+
+
+
+    * Long + Double (``int(2.5)`` silent truncate — critic-octo C1-L1)
+
+    * Long + Decimal (``Decimal("2.5")`` → 2 via ``pa.array`` — EXTRA XC1-L1)
+
+    * Decimal + Long / Decimal + Double / Double + Decimal (EXTRA XC1-L2)
+
+    * Double + Boolean (``True`` → 1.0 via Arrow — EXTRA XC1-L3)
+
+    * Long + Boolean / Boolean + Long (EXTRA XC1-L4)
+
+    * Timestamp/Date + Long/Double (epoch coercion via ``pa.array`` — EXTRA XC2-L1/L2)
+
+    * Date + Timestamp (EXTRA XC2-L3)
+
+
+
+    Nested list/map element conflicts are enforced in :func:`_prepare_nested_cell` and, for
+
+    list-of-scalar columns, :func:`_refuse_list_element_type_merge`.
+
     """
 
     kinds: set[str] = set()

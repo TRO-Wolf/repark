@@ -157,8 +157,12 @@ def _parse_jdbc_int_option(name: str, raw: str | None) -> int | None:
 def _reader_path_to_str(path: str | Path | list[str]) -> str:
     """Normalize a reader path argument to a single filesystem path string.
 
-    Multi-path lists: Spark unions them; repark accepts a single path or a one-element list
+
+
+    Multi-path lists: Spark unions them; repark v1 accepts a single path or a one-element list
+
     and fails loud on multi-path (no silent partial read).
+
     """
 
     if isinstance(path, list):
@@ -208,8 +212,12 @@ def _json_input_nonempty(path_str: str) -> bool:
 def _json_multiline_empty_schema_is_mismatch(path_str: str) -> bool:
     """True when multiLine empty schema likely means wrong shape (not empty ``[]``).
 
-    Empty array files are valid zero-row inputs. Pretty single objects and NDJSON under
-    multiLine still fail loud.
+
+
+    Empty array files are valid zero-row inputs (octo R1-C5-001). Pretty single objects and
+
+    NDJSON under multiLine still fail loud (R1-C1-005).
+
     """
 
     if not _json_input_nonempty(path_str):
@@ -248,8 +256,12 @@ def _json_multiline_empty_schema_is_mismatch(path_str: str) -> bool:
 def _promote_csv_string_types(frame: DataFrame) -> DataFrame:
     """Spark-like type promotion on an all-string CSV frame after nullValue application.
 
+
+
     Tries bigint → double → boolean per column via engine CAST; keeps string on failure.
+
     Validates each trial by materializing so a late bad value rejects the type.
+
     """
 
     from repark.spark import functions as F  # noqa: N812

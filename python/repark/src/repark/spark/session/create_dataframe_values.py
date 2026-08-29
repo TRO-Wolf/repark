@@ -90,8 +90,12 @@ def _sql_literal(value: Any) -> str:
 def _numpy_datetime64_unit(value: Any) -> str | None:
     """Return the numpy ``datetime64`` unit (``'D'``, ``'ns'``, …) or ``None`` if unknown.
 
+
+
     Used so all-null ``NaT`` witnesses pick DATE vs TIMESTAMP the same way non-null cells do
-    after ``.item()`` (calendar units ``D``/``W``/``M``/``Y`` → ``datetime.date``).
+
+    after ``.item()`` (calendar units ``D``/``W``/``M``/``Y`` → ``datetime.date`` — C3-Q-001).
+
     """
 
     dtype = getattr(value, "dtype", None)
@@ -111,7 +115,7 @@ _NUMPY_DATETIME64_DATE_UNITS = frozenset({"D", "W", "M", "Y"})
 
 
 def _supported_array_typecodes() -> frozenset[str]:
-    """Spark-supported ``array.array`` typecodes on this platform."""
+    """Spark-supported ``array.array`` typecodes on this platform (F1 / test_array_types)."""
 
     import ctypes
 
@@ -162,20 +166,38 @@ def _array_typecodes_supported() -> frozenset[str]:
 def _normalize_create_dataframe_cell(value: Any, *, field_name: str | None = None) -> Any:
     """Coerce pandas / numpy / Row-adjacent scalars to plain Python for SQL literals.
 
+
+
     Missing markers (``None``, ``NaN``, pandas ``NA`` / ``NaT``) become ``None``. Numpy scalar
+
     wrappers unwrap via ``.item()`` — except ``numpy.datetime64[ns]`` (and finer), where
+
     ``.item()`` returns an epoch int; those cast to ``datetime64[us]`` first so VALUES emits
-    TIMESTAMP, not a silent integer. ``numpy.timedelta64`` refuses (``.item()`` can return
-    a bare int for unit ``ns`` — silent duration→count). pandas ``Timestamp`` becomes
-    ``datetime.datetime`` (tz-aware kept; UTC conversion happens in :func:`_sql_literal`).
 
-    ML vectors: :class:`~repark.ml.linalg.DenseVector` → dense float list;
+    TIMESTAMP, not a silent integer (prior C3-L-002). ``numpy.timedelta64`` refuses (``.item()``
+
+    can return a bare int for unit ``ns`` — silent duration→count — C3-L-001). pandas
+
+    ``Timestamp`` becomes ``datetime.datetime`` (tz-aware kept; UTC conversion happens in
+
+    :func:`_sql_literal`).
+
+
+
+    **ML vectors (R-ML-SKELETON):** :class:`~repark.ml.linalg.DenseVector` → dense float list;
+
     :class:`~repark.ml.linalg.SparseVector` → sparse struct dict. Mixed dense widths are
-    rejected later in :func:`_arrow_table_from_tuples` (fixed-width only).
 
-    ``array.array``: supported typecodes → ``list``; unsupported raise
-    :class:`~repark.errors.PySparkTypeError` with ``CANNOT_INFER_TYPE_FOR_FIELD`` when
+    rejected later in :func:`_arrow_table_from_tuples` (v1 fixed-width only).
+
+
+
+    **array.array (F1 / test_array_types):** supported typecodes → ``list``; unsupported
+
+    raise :class:`~repark.errors.PySparkTypeError` with ``CANNOT_INFER_TYPE_FOR_FIELD`` when
+
     ``field_name`` is known (Apache check_error keys).
+
     """
 
     if value is None:
@@ -341,7 +363,10 @@ def _is_polars_dataframe(data: Any) -> bool:
 def _coerce_schema_names(schema: Any) -> list[str] | None:
     """Validate name-only ``schema=`` (list/tuple of str).
 
+
+
     See :func:`_parse_create_dataframe_schema`.
+
     """
 
     names, _engine_types = _parse_create_dataframe_schema(schema)
@@ -354,15 +379,26 @@ def _parse_create_dataframe_schema(
 ) -> tuple[list[str] | None, list[str] | None]:
     """Parse ``createDataFrame(..., schema=)`` into ``(names, engine_type_strings|None)``.
 
-    Forms (live PySpark 4.1.2):
+
+
+    Forms (R-PARITY3, live PySpark 4.1.2):
+
+
 
     * ``None`` → ``(None, None)``
+
     * ``list``/``tuple`` of ``str`` → names only (types inferred)
+
     * :class:`~repark.types.StructType` → names + engine type strings per field
+
     * DDL string ``"a INT, b STRING"`` → same as StructType
 
+
+
     A bare ``str`` that is **not** a DDL schema would character-iterate into per-character
+
     column names — we only accept DDL when it parses as ``name TYPE`` pairs.
+
     """
 
     if schema is None:
