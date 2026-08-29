@@ -308,7 +308,14 @@ PR_READINESS_CHECKLIST:
 
 ## 8. Gates at departure (2026-08-28)
 
-Filled on the departure commit: `make ci`, `make verify`, `make preflight` and
-`uv run --package repark-parity pytest python/repark-parity/tests -q` exit codes and counts.
+- `make preflight` (= `ci` + workspace `cargo test` + `py-test-facade` + `audit` + `workflows-lint`)
+  — exit 0 on `feat/rp-2-salvage` at `f32d969`: Rust 46 test targets, 2,151 passed, 0 failed;
+  facade suite 3,758 passed, 74 skipped (one more than #255's run — the MOR first-delete /
+  second-refusal pin); `cargo audit`, `cargo deny`, `pip-audit` clean; zizmor no findings.
+- `make py-test` (parity harness) — 459 passed after the CAP-1 mirror-table fix (F-rp2-3's
+  sibling: the branch ratcheted `call.rs` to 1,111 lines without updating the mirror).
+- Doc gates — `check-ledgers` (frozen rule clean), `check-ledger-grammar` (7 live ledgers,
+  59 clauses), `check-map-sync` (153 maps), `check-docs-compaction` (STATUS 24,696 B under
+  25,000), `typos` clean; plan-pin and rulings meta-pins 11/11.
 
 Disposition: CONVERGED (Critic, cycle 2). CCC-CONVERGED is not Delivery.
