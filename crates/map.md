@@ -5,6 +5,10 @@
 The Cargo workspace: the repark engine, decomposed into single-responsibility crates layered on
 Apache DataFusion + iceberg-rust + Arrow. One-directional dependency DAG.
 
+CC-2 audits every tracked Rust source comment in the nine delivered crates, one crate at a time.
+It preserves only the shortest required contract, invariant, directive, citation, or provenance.
+pins: comment-condensation-2/C-002, C-003, C-004, C-005, C-007, C-008, C-009, C-010, C-011.
+
 ## Contents
 
 | Crate | Responsibility |
