@@ -20,6 +20,14 @@ is now the epic list from v0.6 through 3.0 — PROJECT.md points here rather tha
   governing federated-SQL rule); 1.x is parity, connectors, dbt and the Spark Connect server;
   2.x is Flight SQL + the API freeze, then maintenance policy, change-data reads, CDC ingestion,
   MVs, observability, Substrait; 3.0 is the trust promise. Q&A log of every ruling at the end.
+- [roadmap-design-plan-2026-08-29.md](roadmap-design-plan-2026-08-29.md) — **the design plan
+  by crate (ruled 2026-08-29):** the release roadmap's *where* and *how* — one work card per
+  roadmap item naming the crate (NEW or UPDATE, tier, `ALLOWED_EDGES` rows), the reference
+  implementation to read first, ordered steps, pins, the done condition and the hand-back
+  points, written for delegated sub-agents. §0 carries the tier map and the mechanical
+  new-crate checklist; §6 records the six placement rulings (D-5: 2.2's changelog is a
+  RePark-side snapshot diff over upstream-compatible primitives, so it survives a later
+  migration off the fork).
 
 ## Pointers
 - Up: [../map.md](../map.md)
