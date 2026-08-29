@@ -24,7 +24,8 @@ JVM, no repark required). See [../map.md](../map.md).
 - `test_pr_245_revalidation_record.py` — PR #245 source-size ratchets, frozen SQP-1 artifacts,
   bounded parser guards, exact literal-helper inventory, and lifecycle-aware navigation.
 - `test_cap_1_source_file_line_cap.py` — **CAP-1 (2026-08-26):** exact Rust and Python source-size
-  exception sets and baselines mirrored from the live guard tables; blank-line boundaries;
+  exception sets and baselines mirrored from the live guard tables (`call.rs` 1404 → 1111 after
+  RP-2's `call_args.rs` split); blank-line boundaries;
   growth, shrink, retirement,
   missing-path, unreadable-path, and empty-scan provocations; fixture exclusions; unchanged
   facade no-stub scope; existing Makefile/CI wiring and contract/navigation carriers. The
