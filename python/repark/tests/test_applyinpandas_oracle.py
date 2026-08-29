@@ -1,8 +1,6 @@
 """Live PySpark 4.1.2 oracle for GroupedData.applyInPandas (U6 named deliverable).
 
-Records values, empty input, empty groups (no key present → no func call), null keys,
-multi-key, and schema-mismatch class. Skips cleanly when pyspark/JVM is unavailable so
-JVM-free ``make py-test-facade`` stays green.
+Skips cleanly when pyspark/JVM is unavailable so JVM-free ``make py-test-facade`` stays green.
 """
 
 from __future__ import annotations

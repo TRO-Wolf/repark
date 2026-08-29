@@ -1,8 +1,7 @@
 //! Spark `str_to_map` — both delimiters are regular expressions.
 //!
-//! `datafusion-spark` 54.1 splits with `str.split(delim)` (literal). Spark SQL treats
-//! `pairDelim` and `keyValueDelim` as Java regex. This shim overwrites the name so
-//! `str_to_map('a:1,b:2c:3', '[,c]', ':')` matches Spark (`a→1`, `b→2`, `''→3`).
+//! Spark treats `pairDelim` and `keyValueDelim` as Java regex, unlike the upstream literal split.
+//! This shim binds delimiter classes to Spark's ASCII regex semantics.
 
 use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
@@ -75,21 +74,9 @@ fn map_utf8_type() -> DataType {
 }
 
 /// ===========================================================================================
-/// Bind Java's Perl-class semantics onto a `regex`-crate pattern (X6).
+/// Bind Java's ASCII `\s`, `\d`, and `\w` classes to equivalent POSIX classes.
 ///
-/// `java.util.regex` without `UNICODE_CHARACTER_CLASS` (Spark never sets it) defines `\s` as
-/// `[ \t\n\x0B\f\r]`, `\d` as `[0-9]` and `\w` as `[a-zA-Z_0-9]` — **ASCII only**. The `regex`
-/// crate defines the same escapes over Unicode, so `\s` there also matches NBSP (U+00A0),
-/// U+2028, the U+2000 block … A `str_to_map(text, '\\s', ':')` over data containing a
-/// non-breaking space would therefore split where Spark does not — a silent row-shape
-/// divergence, not an error.
-///
-/// The rewrite is to the POSIX classes, which the `regex` crate defines ASCII-only and which
-/// are set-identical to Java's: `[:space:]` == `[ \t\n\v\f\r]` == Java `\s`, `[:digit:]` ==
-/// `\d`, `[:word:]` == `\w`. Inside a character class the bare form is spliced (`[\s,]` →
-/// `[[:space:],]`); outside it is bracketed. Negations use the negated POSIX spelling
-/// (`[[:^space:]]`), which is why this cannot be done with a blanket `unicode(false)` — that
-/// switch also makes `.` a byte matcher and rejects patterns that could match invalid UTF-8.
+/// Splicing preserves class context and negation without disabling Unicode matching for other regex constructs.
 /// ===========================================================================================
 pub(crate) fn bind_ascii_perl_classes(pattern: &str) -> String {
     let mut out = String::with_capacity(pattern.len());
@@ -263,8 +250,6 @@ fn str_to_map_regex(args: &[ArrayRef]) -> Result<ArrayRef> {
         let pair_regex = compile_delim(pair_delim)?;
         let kv_regex = compile_delim(kv_delim)?;
         seen_keys.clear();
-        // Spark StringToMap uses splitSQL(limit=-1): empty pair fragments
-        // become an empty key with a NULL value (not skipped).
         for pair in pair_regex.split(text) {
             let mut kv_iter = kv_regex.splitn(pair, 2);
             let key = kv_iter.next().unwrap_or("");
@@ -353,7 +338,6 @@ mod tests {
 
     #[tokio::test]
     async fn regex_character_class_pair_delim_matches_spark() {
-        // Literal '[,c]' is not in the text; a regex class splits on ',' or 'c'.
         let entries = map_row("SELECT str_to_map('a:1,b:2c:3', '[,c]', ':')").await;
         assert_eq!(
             entries,
@@ -378,8 +362,7 @@ mod tests {
         );
     }
 
-    /// X6: Java `\s` is ASCII-only. A non-breaking space must NOT split — the `regex` crate's
-    /// Unicode `\s` does, so dropping `bind_ascii_perl_classes` reds this with three entries.
+    /// Java `\s` is ASCII-only, so a non-breaking space does not split.
     #[tokio::test]
     async fn backslash_s_is_ascii_only_so_nbsp_does_not_split() {
         let entries = map_row("SELECT str_to_map('a:1 b:2\u{a0}c:3', '\\s', ':')").await;
@@ -392,7 +375,7 @@ mod tests {
         );
     }
 
-    /// The ASCII binding must still split on the characters Java's `\s` covers.
+    /// The binding still splits on Java's ASCII whitespace.
     #[tokio::test]
     async fn backslash_s_still_splits_on_ascii_whitespace() {
         let entries = map_row("SELECT str_to_map('a:1\tb:2', '\\s', ':')").await;
@@ -405,7 +388,7 @@ mod tests {
         );
     }
 
-    /// The splice must work inside a character class too (`[\s,]`, not `[[[:space:]],]`).
+    /// The splice also works inside a character class.
     #[tokio::test]
     async fn perl_class_inside_a_character_class_is_spliced() {
         let entries = map_row("SELECT str_to_map('a:1,b:2 c:3', '[\\s,]', ':')").await;
@@ -426,7 +409,6 @@ mod tests {
         assert_eq!(bind(r"\S"), "[[:^space:]]");
         assert_eq!(bind(r"[\d,]"), "[[:digit:],]");
         assert_eq!(bind(r"\w+"), "[[:word:]]+");
-        // An escaped backslash is not a class introducer.
         assert_eq!(bind(r"\\s"), r"\\s");
         assert_eq!(bind(r"[,c]"), "[,c]");
         assert_eq!(bind("."), ".");

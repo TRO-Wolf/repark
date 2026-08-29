@@ -1,9 +1,9 @@
-"""MERGE INTO differential rows (H-2 gap G3, record-side) — post-MERGE table vs live Spark.
+"""MERGE INTO differential rows (gap G3, record-side) — post-MERGE table vs live Spark.
 
 **Oracle.** Every ``spark`` table / error needle below was RECORDED in record mode against live
 PySpark 4.1.2 + Apache Iceberg (zulu-17, ``master("local[2]")``, ANSI on,
-``spark.sql.shuffle.partitions=2``) on 2026-08-10. The record driver provisions Spark with the
-pinned Iceberg runtime GAV (see :data:`ICEBERG_SPARK_RUNTIME_GAV`) and a local Hadoop warehouse
+``spark.sql.shuffle.partitions=2``). The record driver provisions Spark with the pinned Iceberg
+runtime GAV (see :data:`ICEBERG_SPARK_RUNTIME_GAV`) and a local Hadoop warehouse
 catalog — vanilla Spark cannot run ``MERGE INTO`` against temp views. One multi-step recipe per
 row runs on BOTH engines (create → seed → MERGE → read back), so the recipe under test and the
 recipe the oracle ran are the same code path.
@@ -36,13 +36,6 @@ pytest; Iceberg jar is a **record-time** dependency only via ``spark.jars.packag
 It imports ``ROWS`` from THIS module and runs each row's own lifecycle recipe, so the recorded
 golden and the asserted recipe cannot drift apart. CI stays JVM-free.
 
-**N-2b status.** The 4 Rust MERGE pins (duplicate-source-key detection, arm ordering + siblings)
-landed in ``crates/repark-spark/src/tests/merge.rs``. The 2 live-tier MERGE scenarios +
-``_live_parity`` lifecycle abstraction (item 2) and the G1 timezone live conversion (item 3)
-land in the second N-2b PR (``task/n2b-merge-followup-ledger.md``). GAV + pyspark-version helpers
-live in :mod:`_oracle_pins` (one importable home; this module re-exports them for the GAV pin
-test and for any in-module callers).
-
 **Entry point.** Every content row goes through the facade ``sql()`` door over a real Iceberg
 table (memory catalog). The builder ``mergeInto`` path is already covered by
 ``test_merge_into.py``; this corpus is the SQL-MERGE result-set differential.
@@ -72,8 +65,8 @@ from repark_parity import FrameMismatchError, assert_frames_equal
 if TYPE_CHECKING:
     from repark.spark.session import ReparkSession
 
-# Re-export oracle pins so in-module callers keep the historical names; the SSOT is
-# :mod:`_oracle_pins`. Record driver imports GAV from ``_oracle_pins`` directly (never here).
+# Re-export oracle pins for in-module callers; the SSOT is :mod:`_oracle_pins`. The record
+# driver imports GAV from ``_oracle_pins`` directly (never here).
 _ICEBERG_SPARK_SCALA_BINARY = ICEBERG_SPARK_SCALA_BINARY
 _ICEBERG_RUNTIME_VERSION = ICEBERG_RUNTIME_VERSION
 
@@ -93,9 +86,7 @@ COW_TBLPROPERTIES = (
 )
 
 
-# ==================================================================================================
 # Arrow helpers
-# ==================================================================================================
 
 
 def _table(
@@ -110,9 +101,7 @@ _I64 = pa.int64()
 _STR = pa.string()
 
 
-# ==================================================================================================
 # Row shape
-# ==================================================================================================
 
 
 @dataclass(frozen=True)
@@ -151,17 +140,13 @@ class MergeDiffRow:
     repark: pa.Table | None = None
     spark_error_needle: str | None = None
     repark_error_needle: str | None = None
-    # N-2b: the former ``spark_needs_cow_props`` row knob is gone (always False, never wired).
-    # Lifecycle helpers still take ``with_cow_props``: repark callers pass True (COW pin for
+    # Lifecycle helpers take ``with_cow_props``: repark callers pass True (COW pin for
     # determinism); Spark record-mode callers pass False (Iceberg 1.11 accepts MERGE without).
 
 
-# ==================================================================================================
 # Lifecycle helper — create → seed → MERGE → read back (BOTH engines)
-# ==================================================================================================
-#
-# Lives beside the record driver by design (this module is the recipe SSOT the driver imports).
-# NOT in _live_parity.py (banned for this unit; live-tier lifecycle is a daytime follow-up).
+
+# Lives beside the record driver by design: this module is the recipe SSOT the driver imports.
 
 
 SOURCE_VIEW = "merge_src"
@@ -297,9 +282,7 @@ def run_merge_expect_error(
     raise AssertionError(f"{row.name}: expected MERGE to raise, but it committed")
 
 
-# ==================================================================================================
 # The corpus (gap G3: 11 rows, budget 8-11)
-# ==================================================================================================
 
 ROWS: list[MergeDiffRow] = [
     # ----- 1. control: basic upsert (matched UPDATE * + not-matched INSERT *) --------------------
@@ -624,9 +607,7 @@ ROWS: list[MergeDiffRow] = [
 ]
 
 
-# ==================================================================================================
 # Session builders
-# ==================================================================================================
 
 
 def _repark_session(warehouse: Path) -> ReparkSession:
@@ -648,9 +629,7 @@ def _frames_differ(actual: pa.Table, expected: pa.Table) -> bool:
     return False
 
 
-# ==================================================================================================
 # The rows
-# ==================================================================================================
 
 
 @pytest.fixture
@@ -676,17 +655,12 @@ def repark(repark_warehouse: Path) -> Iterator[ReparkSession]:
 def test_merge_differential_row(row: MergeDiffRow, repark: ReparkSession) -> None:
     """Every recorded row on the Arrow path (value AND type AND nullability) or error class.
 
-    Content equality rows assert ``repark == Spark``.
-
-    Content disclosure rows assert repark's pinned actual output — and when that assertion fails,
-    the failure is CLASSIFIED (CONVERGED vs regression) the same way the timezone corpus does.
-
-    Error rows assert both engines' needles appear in the raised message (honest class compare).
-
-    Split rows assert repark still refuses with its needle AND (when ``row.spark`` is set) that
-    the recorded Spark success half is well-formed. If repark starts *succeeding* the MERGE, the
-    failure is CLASSIFIED the same way content disclosures are: CONVERGED (matches Spark golden
-    → flip to content equality) vs partial/regression (committed but not the recorded Spark half).
+    Content equality rows assert ``repark == Spark``. Content disclosure rows assert repark's
+    pinned actual output, with failures CLASSIFIED (CONVERGED vs regression). Error rows assert
+    both engines' needles appear in the raised message (honest class compare). Split rows assert
+    repark still refuses with its needle AND (when ``row.spark`` is set) that the recorded Spark
+    success half is well-formed; if repark starts succeeding, classify CONVERGED (matches the
+    Spark golden → flip to content equality) vs regression (committed but not the recorded half).
     """
     if row.kind == "error":
         assert row.repark_error_needle is not None
@@ -779,8 +753,8 @@ def test_merge_differential_row(row: MergeDiffRow, repark: ReparkSession) -> Non
 
 def test_merge_differential_row_set_covers_g3_budget() -> None:
     """The pin budget is part of the unit — corpus size and class coverage are pinned."""
-    # Ceiling bumped 10 → 11 (audit M11): the dup-key + single unconditional MATCHED DELETE
-    # disclosure row. One row, one bump — the budget stays a real gate, not an open drawer.
+    # Ceiling 11: the dup-key + single unconditional MATCHED DELETE disclosure row. The
+    # budget stays a real gate, not an open drawer.
     assert 8 <= len(ROWS) <= 11, f"G3 budget 8-11 differential rows (got {len(ROWS)})"
     assert len({row.name for row in ROWS}) == len(ROWS), "row names are unique"
 
@@ -819,8 +793,8 @@ def test_lifecycle_cleanup_after_failed_merge(
     """A failed MERGE leaves no stray tables in the warehouse (lifecycle helper cleanup).
 
     The cardinality-error row creates a target, MERGEs, fails, and the helper drops the target
-    in ``finally``. After the call, ``listTables`` for the namespace must not contain that table
-    name — and a second successful row must not see residue.
+    in ``finally``; ``listTables`` must not contain that table name, and a second successful
+    row must not see residue.
     """
     error_row = next(row for row in ROWS if row.kind == "error")
     message = run_merge_expect_error(
@@ -863,7 +837,7 @@ def test_lifecycle_cleanup_after_failed_merge(
 
 
 def test_iceberg_gav_pin_is_exact_spark_minor() -> None:
-    """Record-time GAV Spark-minor is derived from the pinned pyspark version (CP-8 / N-2b).
+    """Record-time GAV Spark-minor is derived from the pinned pyspark version.
 
     The expected ``{major}.{minor}_{scala}`` token is computed from
     ``python/repark-parity/pyproject.toml``'s ``pyspark==X.Y.Z`` record-extra pin — never a

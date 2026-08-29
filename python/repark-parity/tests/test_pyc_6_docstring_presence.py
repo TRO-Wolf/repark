@@ -1,4 +1,4 @@
-"""PYC-6: arm D-presence ratchet; tests ignored; style D declined."""
+"""Docstring-presence ratchet pins; tests ignored; style D declined."""
 
 from __future__ import annotations
 
@@ -14,8 +14,8 @@ _REPO = Path(__file__).resolve().parents[3]
 _GATE = _REPO / "scripts" / "check_docstring_presence.py"
 _PRESENCE_RULES: tuple[str, ...] = ("D101", "D102", "D103", "D105", "D107")
 _STYLE_DECLINED: tuple[str, ...] = ("D401", "D202", "D205", "D413")
-# Arming seed (2026-08-22). Independent of EXCEPTIONS AST so a redistribution
-# at constant sum goes red (C1-Q-003).
+# Seed is independent of the EXCEPTIONS AST so a redistribution at constant sum
+# goes red (C1-Q-003).
 _SEEDED_CEILINGS: tuple[tuple[str, int], ...] = (
     ("python/repark-parity/bench/bench_coalesce_chain.py", 1),
     ("python/repark-parity/bench/bench_mor_merge.py", 1),
@@ -136,7 +136,7 @@ def test_pyc_6_tests_keep_d_per_file_ignore() -> None:
 
 
 def test_pyc_6_exceptions_seed_is_the_measured_table() -> None:
-    """Ceilings equal the 2026-08-22 measurement; no slack; no tests paths."""
+    """Ceilings equal the seeded measurement; no slack; no tests paths."""
     table = _exceptions_table(_module())
     assert table == dict(_SEEDED_CEILINGS)
     assert list(table) == sorted(table)
@@ -169,12 +169,7 @@ def test_pyc_6_dual_wired_make_ci_and_workflow() -> None:
 
 
 def test_pyc_6_prose_homes_name_the_gate() -> None:
-    """C-010: STATUS / sequence / maps / AGENTS / DEVELOPMENT name the arming.
-
-    Retargeted by DL-4 (2026-08-25): the STATUS bullet and the slate's PYC appendix moved,
-    verbatim, to PYC's history record when the campaign was filed as closed; the live homes
-    of the fact are AGENTS.md, DEVELOPMENT.md and scripts/map.md, which this test still reads.
-    """
+    """C-010: STATUS / sequence / maps / AGENTS / DEVELOPMENT name the gate."""
     for relative in (
         "AGENTS.md",
         "docs/history/pyc/status-record.md",
@@ -186,7 +181,7 @@ def test_pyc_6_prose_homes_name_the_gate() -> None:
 
 
 def test_pyc_6_on_pre_commit_hook() -> None:
-    """Sub-second at arming, so it joins the hook the way map-sync did."""
+    """Sub-second runtime keeps it on the pre-commit hook."""
     pre_commit = (_REPO / ".pre-commit-config.yaml").read_text(encoding="utf-8")
     assert "id: docstring-presence-guard" in pre_commit
     assert "check_docstring_presence.sh" in pre_commit

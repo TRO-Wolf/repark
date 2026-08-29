@@ -1,26 +1,8 @@
-"""The :class:`Catalog` facade — ``spark.catalog``, PySpark's metadata surface.
+"""Expose the PySpark catalog metadata surface.
 
-**R-CURCAT-FACADE (2026-07-29):** current-catalog concept is **facade-only** — state lives on the
-Python session (dies with ``stop()``), built over existing primitives:
-
-* ``SHOW NAMESPACES IN <catalog>`` → :meth:`listDatabases` / :meth:`databaseExists` /
-  :meth:`setCurrentDatabase` validation
-* ``DESCRIBE NAMESPACE <catalog>.<db>`` → :meth:`getDatabase` (real ``locationUri`` /
-  ``description``; :meth:`listDatabases` still leaves those ``None`` — FA-2)
-* Live Iceberg ``list_iceberg_table_names`` + session ``list_temp_view_names`` (default-schema
-  directory) → :meth:`listTables` — **not** global ``information_schema.tables`` (that walk
-  loads every provider table and hard-fails after OOB drop of a DF-known Iceberg name;
-  T6 F-T6-PHANTOM-A). ``SHOW TABLES IN`` refuses — registry row ST-1
-  (``docs/spark-sql-iceberg-parity.md`` §2.4)
-* :meth:`tableExists` three-part / bare temp-view (native) plus **two-part** and **one-part**
-  resolution under the facade current catalog / database
-
-Engine-side ``USE`` / bare ``SHOW NAMESPACES`` remain out of scope (router state is a later unit —
-do not sniff/rewrite free SQL strings here); bare / nested forms are registry NS-1 / NS-2.
-
-Return objects match live PySpark 4.1.2 field shapes (namedtuple-oid ``Database`` / ``Table`` /
-``CatalogMetadata``). PySpark spells methods camelCase; each is defined snake_case with a
-byte-identical camelCase alias so the one-line import swap just works.
+Catalog state belongs to the session. Namespace reads use engine metadata, while table listings
+include live Iceberg names and session temporary views. Methods keep snake_case implementations
+and PySpark-compatible camelCase aliases; metadata records preserve live field shapes.
 """
 
 from __future__ import annotations
@@ -31,8 +13,6 @@ from collections import namedtuple
 from typing import TYPE_CHECKING, Any
 
 from repark.errors import AnalysisException, PySparkTypeError
-
-# === r23 QI1: idents ===
 from repark.spark._idents import quote_ident_if_needed as _quote_ident
 from repark.spark._idents import quote_multipart as _quote_multipart_ssot
 from repark.spark._idents import sql_string_literal
@@ -52,7 +32,7 @@ def _require_str(value: Any, arg_name: str) -> str:
     return value
 
 
-# Live PySpark 4.1.2 field shapes (oracle 2026-07-29) — pin names AND order.
+# Preserve live PySpark field names and order.
 # namedtuple (not typing.NamedTuple) matches live pyspark.sql.catalog shapes byte-for-byte.
 Database = namedtuple(
     "Database",
@@ -81,7 +61,7 @@ def _is_hidden_list_tables_name(table_name: str) -> bool:
     """Whether ``table_name`` must never appear in :meth:`Catalog.list_tables`.
 
     Hides Iceberg metadata-table suffixes (``$snapshots`` …) and engine-private registrations
-    (CDF / mapInArrow / I1 time-travel static pins — octo C1-Q-002).
+    (CDF / mapInArrow / time-travel static pins).
     """
     if _METADATA_TABLE_DOLLAR in table_name:
         return True
@@ -179,16 +159,12 @@ class Catalog:
         """Wrap the live :class:`~repark.session.ReparkSession` (facade state + native handle)."""
         self._session = session
 
-    # ===========================================================================================
-    # tableExists / dropTempView / clearCache (pre-existing + current-catalog resolution)
-    # ===========================================================================================
-
     def table_exists(self, table_name: str) -> bool:
         """Whether a table exists (PySpark ``spark.catalog.tableExists``).
 
         * three-part ``catalog.namespace.table`` → Iceberg catalog probe (native), with
           ``spark_catalog`` alias expansion matching :func:`~repark.session.resolve_table_name`
-        * two-part ``namespace.table`` → resolved under :meth:`currentCatalog` (R-CURCAT)
+        * two-part ``namespace.table`` → resolved under :meth:`currentCatalog`
         * one-part name → temp view first, else ``currentCatalog.currentDatabase.name``
         """
         from repark.spark.session import _alias_catalog_name
@@ -251,15 +227,14 @@ class Catalog:
     def clear_cache(self) -> None:
         """Drop all session DataFrame cache MemTables (PySpark ``clearCache``).
 
-        # === r23 CACHE1: cache-honesty ===
         repark has no cluster-side block manager. Cache/persist pins are object-identity
-        ``__repark_cache_*`` MemTables (OTH-005/014). This method **really drops** every
+        ``__repark_cache_*`` MemTables. This method **really drops** every
         registered cache view and resets each live cached :class:`~repark.dataframe.DataFrame`
         handle (``unpersist``) so the next action re-executes — Spark ``clearCache`` semantics
-        for the single-node facade (Q11). Orphan ``__repark_cache_*`` views (GC'd handles) are
+        for the single-node facade. Orphan ``__repark_cache_*`` views (GC'd handles) are
         dropped by name. Checkpoint / createDataFrame / mapInArrow temp views are left alone.
 
-        Fail-loud: drop / unpersist errors propagate (no silent partial clear — Q11).
+        Drop and unpersist errors propagate; the operation never hides a partial clear.
         """
         self._session._ensure_alive()
         import weakref
@@ -276,7 +251,6 @@ class Catalog:
             registry.clear()
         # Orphan cache views (handle GC'd without unpersist) — drop by prefix only.
         # Use Catalog.drop_temp_view (native handle via _ensure_alive); ReparkSession has no
-        # drop_temp_view facade method (C1-Q-001: suppress previously hid AttributeError).
         for view_name in self._session.list_temp_view_names():
             if view_name.startswith(_CACHE_VIEW_PREFIX):
                 self.drop_temp_view(view_name)
@@ -391,7 +365,7 @@ class Catalog:
 
         Never raises for mere absence (live Spark parity). ``spark_catalog`` in a two-part
         ``catalog.db`` form aliases the same way as :func:`~repark.session.resolve_table_name`
-        (E2 / octo C1-L-001).
+        (the facade contract).
         """
         from repark.spark.session import _alias_catalog_name
 
@@ -426,7 +400,7 @@ class Catalog:
         """Get the database with the specified name (PySpark ``spark.catalog.getDatabase``).
 
         Returns a :data:`Database` namedtuple. ``locationUri`` is the namespace warehouse
-        location when the catalog stores one (``location``, else the U2 ``location_uri``
+        location when the catalog stores one (``location``, else the ``location_uri``
         mirror) — unlike :meth:`listDatabases`, which leaves it ``None`` (registry FA-2).
         Existence and location both come from ``DESCRIBE NAMESPACE`` (the engine already
         checks ``namespace_exists`` and preserves catalog/IO errors). Missing schema →
@@ -459,7 +433,6 @@ class Catalog:
         )
         # Existence and location both come from DESCRIBE NAMESPACE (engine
         # namespace_exists + get_namespace + location resolver). Do not SHOW-list
-        # first: that walk swallows catalog/IO errors as absence (Q-001 / SEC-001).
         # listDatabases stays on SHOW (FA-2).
         sql = f"DESCRIBE NAMESPACE {_multipart([catalog, name])}"
         table = self._session.sql(sql).to_arrow()
@@ -492,20 +465,19 @@ class Catalog:
         """List tables in a database (PySpark ``listTables``).
 
         Permanent **Iceberg** tables are listed **live** from the catalog handle
-        (``Catalog::list_tables`` — list-on-access, T6 / CQ-008 / BUG-007), not from the
+        (``Catalog::list_tables`` — list-on-access), not from the
         DataFusion provider name snapshot. Non-Iceberg catalogs use the DF provider name
         directory for that catalog/schema only (no full-catalog walk). Temporary views come
         from the session default schema via
         :meth:`~repark.session.ReparkSession.list_temp_view_names` — **not**
         ``information_schema.tables``, which materializes every provider table and hard-fails
-        after an out-of-band drop of a DF-known Iceberg name (F-T6-PHANTOM-A).
+        after an out-of-band drop of a DF-known Iceberg name.
         Missing schema raises :class:`~repark.errors.AnalysisException` ``SCHEMA_NOT_FOUND``.
         Two-part ``catalog.db`` forms expand ``spark_catalog`` the same way as
-        :meth:`table_exists` / :meth:`database_exists` (E2 / octo C2-Q-002).
+        :meth:`table_exists` / :meth:`database_exists`.
         """
         from repark.spark.session import _alias_catalog_name
 
-        # === r21 T6: catalog-staleness ========================================================
         self._session._ensure_alive()
         catalog = self.current_catalog()
         database = self.current_database() if db_name is None else _require_str(db_name, "dbName")
@@ -516,7 +488,6 @@ class Catalog:
             catalog, database = db_parts[0], db_parts[1]
         elif len(db_parts) != 1:
             raise AnalysisException(f"[SCHEMA_NOT_FOUND] The schema `{database}` cannot be found.")
-        # spark_catalog two-part alias parity with tableExists/databaseExists (E2 / C2-Q-002).
         state = self._session._catalog_state()
         known_raw = state.get("known_catalogs") or set()
         known: set[str] = known_raw if isinstance(known_raw, set) else set(known_raw)
@@ -531,7 +502,6 @@ class Catalog:
         # listTables() must list temp views, never raise — even when the engine has no
         # `default` schema (fresh session, no catalogs). Fall through: zero base tables for a
         # missing schema and still appends temps. Explicitly-named schemas that do not exist
-        # keep raising (W7 oracle pin).
         if db_name is not None and not self._namespace_exists(catalog, database):
             raise AnalysisException(
                 f"[SCHEMA_NOT_FOUND] The schema `{catalog}`.`{database}` cannot be found. Verify "
@@ -539,7 +509,6 @@ class Catalog:
             )
         out: list[Any] = []
         seen_permanent: set[str] = set()
-        # Iceberg list-on-access (T6): live Catalog::list_tables, not DF snapshot.
         # Empty list is still a successful live list (must not fall back to a stale snapshot).
         try:
             live_names = self._session.list_iceberg_table_names(catalog, database)
@@ -613,13 +582,8 @@ class Catalog:
 
     listTables = list_tables  # noqa: N815
 
-    # ===========================================================================================
-    # Functions (scalar UDF registry surface — r23 C6 census cluster)
-    # ===========================================================================================
-    # === r23 C6: census-catalog-udf ===
-    # Outside CACHE1 clear_cache band. registerFunction is the PySpark-deprecated alias
-    # of spark.udf.register; functionExists probes the session UDF registry only
-    # (CREATE FUNCTION / permanent catalog functions stay out of scope — no JVM).
+    # Function registration uses the session UDF registry; permanent catalog functions are out
+    # of scope.
 
     def register_function(
         self,

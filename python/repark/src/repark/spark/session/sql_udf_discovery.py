@@ -25,8 +25,6 @@ def _sql_collect_registry_udf_hits(
 ) -> list[tuple[str, str, int]]:
     """Collect ``(canonical_name, matched_text, index)`` for registry UDF calls in ``body``."""
 
-    # === r20 U9: sql-udf-rewrite ===
-
     body_code = _sql_mask_strings_and_comments(body)
 
     hits: list[tuple[str, str, int]] = []
@@ -46,8 +44,7 @@ def _sql_collect_registry_udf_hits(
                 continue
 
             # Star-only call ``name(*)`` is an engine aggregate form, not a Python UDF
-
-            # invocation (U9-C2-001 — registering ``count`` must not break ``count(*)``).
+            # invocation (registering ``count`` must not break ``count(*)``).
 
             paren_open = match.end() - 1
 
@@ -84,8 +81,6 @@ def _sql_find_registry_udf_calls(
 ) -> list[dict[str, Any]]:
     """Find registry UDF calls in a SELECT-list expression (paren-matched args)."""
 
-    # === r20 U9: sql-udf-rewrite ===
-
     masked = _sql_mask_strings_and_comments(expr_text)
 
     calls: list[dict[str, Any]] = []
@@ -117,7 +112,7 @@ def _sql_find_registry_udf_calls(
 
             args_blob = expr_text[paren_open + 1 : close]
 
-            # Engine aggregate ``name(*)`` is not a Python UDF call (U9-C2-001).
+            # Engine aggregate ``name(*)`` is not a Python UDF call.
 
             if args_blob.strip() == "*":
                 continue
@@ -126,11 +121,7 @@ def _sql_find_registry_udf_calls(
 
             args = _split_sql_select_list(args_blob) if args_blob.strip() else []
 
-            # Resolve canonical registry name.
-
             raw_name = expr_text[name_start:paren_open].strip()
-
-            # Strip trailing comments between name and paren.
 
             raw_name = _sql_strip_comments_preserve_strings(raw_name).strip()
 
@@ -156,8 +147,6 @@ def _sql_find_registry_udf_calls(
 
 def _sql_udf_arg_is_simple(arg: str) -> bool:
     """True when ``arg`` is a simple col/lit suitable as a UDF input projection."""
-
-    # === r20 U9: sql-udf-rewrite ===
 
     if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", arg):
         return True
@@ -196,10 +185,6 @@ def _sql_peel_select_trailing_clauses(rest: str) -> tuple[str, dict[str, str | N
     ``peeled`` holds optional trailing clause SQL fragments.
 
     """
-
-    # === r20 U9: sql-udf-rewrite ===
-
-    # === r21 T7: census-r6 ===
 
     peeled: dict[str, str | None] = {
         "where": None,
@@ -250,16 +235,11 @@ def _sql_peel_select_trailing_clauses(rest: str) -> tuple[str, dict[str, str | N
 
 def _sql_udf_call_match_key(call_text: str) -> str:
     """Case- and whitespace-normalized key for SELECT↔GROUP BY/HAVING UDF match (U10 C2)."""
-
-    # === r21 T7: census-r6 ===
-
     return re.sub(r"\s+", "", call_text.strip()).lower()
 
 
 def _sql_residual_has_subquery(residual: str) -> bool:
     """True when a WHERE/HAVING residual still embeds a SELECT/EXISTS subquery (U10 C3)."""
-
-    # === r21 T7: census-r6 ===
 
     masked = _sql_mask_strings_and_comments(residual)
 

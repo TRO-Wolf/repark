@@ -1,9 +1,8 @@
 """Q10 — ``spark.sql.timestampType`` LTZ default + NTZ opt-in.
 
-Default mode is pinned by the existing tz / cast suites (zero edits there).
-This file pins: conf get/set round-trip, invalid-value refusal naming both
-legal tokens, and NTZ opt-in per entry point (Spark SQL, DataFrame
-``selectExpr``, createDataFrame inference) on the Arrow path — value AND type.
+Pins: conf get/set round-trip, invalid-value refusal naming both legal tokens, and NTZ opt-in per
+entry point (Spark SQL, DataFrame ``selectExpr``, createDataFrame inference) on the Arrow path —
+value AND type.
 """
 
 from __future__ import annotations
@@ -88,9 +87,8 @@ def test_ntz_opt_in_sql_literal_and_cast() -> None:
 
 
 def test_ntz_opt_in_dataframe_select_expr() -> None:
-    # ``F.expr`` analyzes on a bare SessionContext (no carrier) — that is the
-    # binding-owned path, out of this fence. ``selectExpr`` is the DataFrame
-    # entry that routes through ``session.sql`` and therefore the session knob.
+    # ``F.expr`` analyzes on a bare SessionContext (no carrier), out of this fence; ``selectExpr``
+    # routes through ``session.sql`` and therefore the session knob.
     spark = _session((TIMESTAMP_TYPE_KEY, TIMESTAMP_NTZ_VALUE))
     table = spark.range(1).selectExpr("TIMESTAMP '2024-06-15 12:00:00' AS ts").to_arrow()
     assert table.schema.field("ts").type == pa.timestamp("us")

@@ -1,11 +1,10 @@
 """C2 compat smoke — subprocess wrapper.
 
-The real suite lives in ``python/repark-parity/compat/smoke_suite.py`` and MUST run in a
-pristine interpreter: the redirect permanently patches the ``pyspark`` namespace, and the
-live-pyspark ML oracles in this battery legitimately boot a JVM when Java is present —
-in-process coexistence is order-dependent in both directions (union-run finding,
-2026-08-01). A subprocess gives the redirect a clean ``sys.modules`` and gives this suite
-immunity from (and to) any live JVM in the outer process.
+The real suite (``python/repark-parity/compat/smoke_suite.py``) must run in a pristine
+interpreter: the redirect permanently patches the ``pyspark`` namespace, and the ML oracles
+boot a JVM when Java is present — in-process coexistence is order-dependent in both directions.
+The subprocess gives the redirect a clean ``sys.modules`` and shields this suite from any live
+JVM in the outer process.
 """
 
 from __future__ import annotations
@@ -17,9 +16,8 @@ from pathlib import Path
 
 import pytest
 
-# The inner suite importorskips pyspark; without it the subprocess collects nothing and
-# pytest exits 5, which the rc==0 assert would misread as a failure (wheel-smoke CI has
-# no pyspark). Mirror the skip at wrapper level so both layers agree.
+# The inner suite importorskips pyspark; without it pytest exits 5, which the rc==0 assert
+# would misread as a failure (wheel-smoke CI has no pyspark). Skip at wrapper level too.
 pytest.importorskip("pyspark")
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]

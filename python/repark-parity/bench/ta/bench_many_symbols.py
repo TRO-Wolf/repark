@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
-"""§8.2 — many symbols x M bars: partitionBy vs Polars ``.over("symbol")``.
+"""Many symbols x M bars: partitionBy vs Polars ``.over("symbol")``.
 
-Rows:
-  * RePark ``partitionBy("symbol").orderBy("ts")`` at default conf (tp unset)
-    as the PRIMARY cell, plus an explicit ``target_partitions=1`` isolation cell
-  * the **no-partitionBy** cliff (``Window.orderBy("ts")`` only) at default conf
-  * Polars ``plta.ema(...).over("symbol")`` vs the same expr with no ``.over``
+Cells: RePark ``partitionBy("symbol").orderBy("ts")`` at default conf (primary) plus an
+explicit ``target_partitions=1`` isolation cell; the no-partitionBy cliff
+(``Window.orderBy("ts")`` only); Polars ``.over("symbol")`` vs the same expr without it.
 
 Usage::
 
@@ -48,7 +46,7 @@ def _polars_work(frame: Any, plta: Any, *, over_symbol: bool) -> object:
 
 
 def main() -> None:
-    """Run the §8.2 partition matrix and print ``TA_PIPELINE`` lines."""
+    """Run the partition matrix and print ``TA_PIPELINE`` lines."""
     parser = argparse.ArgumentParser(description=__doc__)
     harness.add_timing_args(parser)
     parser.add_argument("--n-symbols", type=int, default=None)

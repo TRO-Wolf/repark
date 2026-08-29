@@ -1,24 +1,15 @@
-//! Math Operators — `MIN`, `MAX`, `SUM` (TA-Lib C 0.4.0 ports; see the crate docs for the
-//! numerics contract).
+//! TA-Lib C 0.4.0 ports for `MIN`, `MAX`, and `SUM`.
 //!
-//! `MIN`/`MAX` are the rolling extrema over the trailing `period` window. They are ported
-//! op-for-op from TA-Lib's trailing-index rescan algorithm (`ta_MIN.c` / `ta_MAX.c`): the running
-//! extreme is kept together with the index it sits at, and the full window is rescanned only when
-//! that index falls out of the trailing edge — otherwise a single comparison against the new bar
-//! extends it. The tie-break (`<=` for `MIN`, `>=` for `MAX`) prefers the *most recent* equal
-//! value, exactly as C does. `SUM` is the incremental running total (`ta_SUM.c`), the same
-//! add-one/subtract-one accumulator as [`crate::sma`] without the final divide.
+//! `MIN` and `MAX` retain the extreme's index and rescan only when it leaves the window.
+//! Equal extrema prefer the most recent value, matching C. `SUM` uses the SMA accumulator.
 
 use crate::{Result, check_period, nan_vec};
 
 /// ===========================================================================================
 /// `MIN` — lowest value over the trailing `period` window (`ta_MIN.c`, `TA_MIN`).
 ///
-/// TA-Lib's trailing-index rescan: `lowest`/`lowest_idx` track the current window minimum and
-/// its position. When that position drops below the trailing edge it is stale, so the window
-/// `(trailing..=today)` is rescanned to find the new minimum; otherwise the incoming bar is
-/// compared once (`tmp <= lowest`, `<=` so an equal value adopts the more recent index — this
-/// is what makes the rescans fire at C's exact cadence, hence bit-identical output).
+/// Retain the minimum index and rescan the window when that index expires.
+/// Equal values adopt the current index to match C's rescan cadence.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -44,8 +35,7 @@ pub fn min(input: &[f64], period: usize) -> Result<Vec<f64>> {
         if need_rescan {
             lowest_idx = Some(trailing_idx);
             lowest = input[trailing_idx];
-            // Index-based rescan, op-for-op with C's `while(++i<=today)` — the index is the
-            // running argmin, so an iterator would only obscure the port.
+            // The index tracks C's running argmin and its rescan cadence.
             #[allow(clippy::needless_range_loop)]
             for i in (trailing_idx + 1)..=today {
                 if input[i] < lowest {
@@ -67,8 +57,8 @@ pub fn min(input: &[f64], period: usize) -> Result<Vec<f64>> {
 /// ===========================================================================================
 /// `MAX` — highest value over the trailing `period` window (`ta_MAX.c`, `TA_MAX`).
 ///
-/// The mirror of [`min`]: same trailing-index rescan, with `>` inside the rescan and `>=` for
-/// the single-bar extension (an equal value adopts the more recent index).
+/// Retain the maximum index and rescan the window when that index expires.
+/// Equal values adopt the current index, matching C.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -94,7 +84,7 @@ pub fn max(input: &[f64], period: usize) -> Result<Vec<f64>> {
         if need_rescan {
             highest_idx = Some(trailing_idx);
             highest = input[trailing_idx];
-            // Index-based rescan, op-for-op with C's `while(++i<=today)` (see [`min`]).
+            // The index tracks C's running argmax and its rescan cadence.
             #[allow(clippy::needless_range_loop)]
             for i in (trailing_idx + 1)..=today {
                 if input[i] > highest {
@@ -116,9 +106,7 @@ pub fn max(input: &[f64], period: usize) -> Result<Vec<f64>> {
 /// ===========================================================================================
 /// `SUM` — rolling sum over the trailing `period` window (`ta_SUM.c`, `TA_SUM`).
 ///
-/// Incremental running total: add the incoming value, snapshot the total, subtract the trailing
-/// value. The subtract-BEFORE-snapshot-consume order is C's and is load-bearing for
-/// bit-exactness — this is [`crate::sma`]'s accumulator without the divide.
+/// Add, snapshot, then subtract the trailing value, matching C's bit-exact order.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -135,8 +123,7 @@ pub fn sum(input: &[f64], period: usize) -> Result<Vec<f64>> {
     for value in &input[..lookback] {
         period_total += *value;
     }
-    // `enumerate` gives (trailing_idx, today): (0, lookback), (1, lookback+1), … exactly the two
-    // C indices (`trailingIdx` starts at `startIdx − lookbackTotal = 0`, `i` at `startIdx`).
+    // `enumerate` reproduces C's trailing and current indices.
     for (trailing_idx, today) in (lookback..len).enumerate() {
         period_total += input[today];
         let temp = period_total;
@@ -151,8 +138,7 @@ mod tests {
     use super::*;
     use crate::TaError;
 
-    /// A short series with a clear rolling extremum / sum, hand-checked against the C algorithm
-    /// (and cross-checked against `polars_talib` when the goldens were recorded).
+    /// Short series with distinct rolling extrema and sums.
     const SERIES: [f64; 10] = [5.0, 3.0, 8.0, 1.0, 9.0, 2.0, 7.0, 4.0, 6.0, 10.0];
 
     #[test]
@@ -210,8 +196,6 @@ mod tests {
 
     #[test]
     fn max_prefers_the_more_recent_equal_value() {
-        // Two equal maxima; `>=` keeps the later index, so the window slides without a rescan
-        // producing a different value — the branch that makes MIN/MAX bit-exact.
         let out = max(&[1.0, 5.0, 5.0, 1.0], 2).expect("valid");
         assert!((out[1] - 5.0).abs() < 1e-12);
         assert!((out[2] - 5.0).abs() < 1e-12);

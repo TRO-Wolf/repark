@@ -187,7 +187,7 @@ def _reset_active_session_for_tests() -> None:
     global _active_session
 
     if _active_session is not None:
-        # Mirror production stop so held SC/DF tokens die (octo r3 C1-Q-005).
+        # Mirror production stop so held SC/DF tokens die.
 
         _active_session._spark_context._mark_stopped()  # type: ignore[attr-defined]
 

@@ -9,7 +9,7 @@ golden fails, the kernel drifted (or the oracle moved), never "close enough".
 ## Contents
 
 - `goldens.rs` — **strict `f64::to_bits` equality** per element (NaN ↔ NaN allowed) for every
-  kernel × param-set: 40 test fns over 158 recorded series across two fixtures — the 5000-row
+  kernel × param-set: 41 tests (39 golden checks plus two fixture/manifest checks) over 158 recorded series across two fixtures — the 5000-row
   lognormal walk (happy path, all 5 BBANDS band branches, the WG1 overlap-MA family incl. TRIMA
   odd/even + T3 two vfactors, the WG2 simple-momentum batch incl. the ROC family, WILLR/CCI/CMO,
   BOP, APO/PPO at matype 0 **and matype 7 (MAMA)**, split AROON + AROONOSC, TRIX, ULTOSC, the WG3
@@ -52,7 +52,7 @@ golden fails, the kernel drifted (or the oracle moved), never "close enough".
   periods-series length mismatch) and short/empty behavior (`InvalidRealParam` is the new
   non-period error variant).
 - [goldens/](goldens/map.md) — the recorded fixtures + `manifest.json` (checked in; ~1.5 MB).
-- `p1c_microbench.rs` — P1c hour-0 / after wall microbench (BBANDS 1e6-row, one kernel vs
+- `p1c_microbench.rs` — wall microbench (BBANDS 1e6-row, one kernel vs
   three independent sibling runs vs ideal-cached clone cost). Not a correctness gate —
   `cargo test -p repark-ta --release --test p1c_microbench -- --nocapture`.
 

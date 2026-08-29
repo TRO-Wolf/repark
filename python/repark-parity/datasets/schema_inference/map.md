@@ -1,5 +1,7 @@
 # map — python/repark-parity/datasets/schema_inference
 
+CC-2 slice complete: comments and docstrings condensed; oracle discriminators, pins, mutation payloads, and safety contracts kept byte-exact; history narration deleted.
+
 ## Purpose
 
 Schema-inference-conflict family. CSV is the inference battleground; parquet is

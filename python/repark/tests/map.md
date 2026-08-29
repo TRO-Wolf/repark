@@ -1,5 +1,9 @@
 # map — python/repark/tests
 
+CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
+accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
+CC-2 close: S3 Tables location-guard phrase kept contiguous in `test_aws_acceptance.py`.
+
 ## Purpose
 
 Facade tests for the `repark` wheel — they require the compiled native module and exercise the
@@ -21,6 +25,9 @@ node ids: the whole `test_excel_reader.py` file plus one node each in `test_pg_c
 NOT in that file is a defect, not a decision.
 
 ## Contents
+
+CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
+mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 
 - `test_pr_245_revalidation.py` — PR #245 public-door revalidation for Spark string literals,
   binary casts, parser limits, and facade controls.
@@ -2323,6 +2330,9 @@ NOT in that file is a defect, not a decision.
 
 ## Debug
 
+- `test_sqp_1_string_literals.py` is byte-frozen (sha256) by
+  `python/repark-parity/tests/test_pr_245_revalidation_record.py`, and `test_functions_gt1.py`'s
+  residual docstring phrases are pinned by `test_sqp_1_record.py` — a rewrap can red either.
 - ruff format lockstep (octo C8).
 
 

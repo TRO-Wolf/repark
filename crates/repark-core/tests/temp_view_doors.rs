@@ -1,9 +1,4 @@
-//! SQM round 6 — the temp-view API as a catalog-write door (R6-1), the documented `context()`
-//! escape hatch (R6-2), and the PREPARE class (R6-5). BASE-of-round = `68e98f4`.
-//!
-//! Split from `declared_sorted.rs` (which had reached its file-size ceiling) rather than grown
-//! into it; the fixture below is this file's own, deliberately identical in shape to that file's
-//! `native_ddl_sink_session` so the two read side by side.
+//! Temp-view API, raw-context escape hatch, and PREPARE behavior pins.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -66,8 +61,7 @@ async fn native_ddl_sink_session() -> (tempfile::TempDir, ReparkSession) {
 }
 
 // ===========================================================================================
-// SQM round 6 — the temp-view API as a catalog-write door (R6-1), the documented `context()`
-// hatch (R6-2), and PREPARE (R6-5). BASE-of-round = `68e98f4`.
+// Temp-view API, raw-context escape hatch, and PREPARE behavior pins.
 // ===========================================================================================
 
 #[tokio::test]
@@ -135,15 +129,7 @@ async fn qualified_temp_view_name_refuses_and_persists_nothing() {
 
 #[tokio::test]
 async fn set_default_catalog_cannot_move_a_temp_view_into_a_catalog() {
-    // R6-1 (S1), the SET half. Kills: resolving a ONE-part temp-view name against the LIVE
-    // `datafusion.catalog.default_catalog` (which is what `register_table(&str)` did).
-    //
-    // MEASURED on BASE (`68e98f4`): after `SET datafusion.catalog.default_catalog = 'ice'` +
-    // `default_schema = 'sales'`, `create_or_replace_temp_view("vbare", <non-empty>)` returned
-    // **Err(Iceberg "register_table does not support tables with data")** — the registration had
-    // LEFT the session and hit the Iceberg schema provider; with an empty/lazy body it would have
-    // persisted, exactly like the qualified spellings above. Either way the caller could no
-    // longer create a temp view at all.
+    // R6-1. Kills resolving a one-part temp-view name against the live default catalog.
     let (_dir, session) = native_ddl_sink_session().await;
     session
         .sql("SET datafusion.catalog.default_catalog = 'ice'")
@@ -172,11 +158,7 @@ async fn set_default_catalog_cannot_move_a_temp_view_into_a_catalog() {
             .contains(&"vbare".to_string()),
         "the listing reads the pinned home too, not the live default catalog"
     );
-    // MEASURED and recorded rather than asserted-as-good: DataFusion resolves the name in a SQL
-    // body against the LIVE default too, so `SELECT * FROM vbare` does NOT see the temp view
-    // while the SET is in force (Spark would; DataFusion has no temp-view namespace to search
-    // first). Naming the home explicitly finds it. Scoped out of R6-1, which is about the temp
-    // view API never WRITING a catalog.
+    // Raw SQL retains DataFusion's live-default resolution; the home-qualified spelling reads it.
     assert!(session.sql("SELECT * FROM vbare").await.is_err());
     session
         .sql("SELECT * FROM datafusion.public.vbare")
@@ -189,13 +171,7 @@ async fn set_default_catalog_cannot_move_a_temp_view_into_a_catalog() {
 
 #[tokio::test]
 async fn context_sql_is_a_known_unguarded_hatch() {
-    // R6-2 (RULED: documentation, not a guard). `ReparkSession::context()` hands back the raw
-    // DataFusion `SessionContext`; `context().sql` bypasses the pre-execute belt, so DDL through
-    // it still persists a tightened schema. That is the DOCUMENTED behaviour (see the rustdoc on
-    // `ReparkSession::context`) — closing it would mean wrapping DataFusion.
-    //
-    // This pin exists so the hatch cannot change silently: if a future round DOES guard it, this
-    // test goes red and the ledger's claim has to move with it.
+    // R6-2. `context().sql` is the documented unguarded hatch and may persist tightened DDL.
     let (_dir, session) = native_ddl_sink_session().await;
     session
         .context()
@@ -399,11 +375,7 @@ async fn set_to_a_plain_catalog_keeps_the_write_home_and_moves_only_the_read() {
         .await
         .expect("naming the home reads it back");
 
-    // R7-1: the raw-SQL half above is the PINNED CURRENT BEHAVIOUR and is deliberately still
-    // DataFusion's. What round 7 changed is the PRODUCT read paths: the facade no longer emits a
-    // bare reference for a view that lives in the home, because the session can now hand it the
-    // home spelling. Both halves of that seam are pinned here so the SQL half and the product
-    // half cannot drift into each other unnoticed.
+    // R7-1. Raw SQL follows the live default; product reads use the build-time home spelling.
     assert_eq!(
         session.temp_view_home().unwrap(),
         vec!["datafusion".to_string(), "public".to_string()],
@@ -439,11 +411,7 @@ async fn set_to_a_plain_catalog_keeps_the_write_home_and_moves_only_the_read() {
 
 #[tokio::test]
 async fn a_catalog_over_the_home_refuses_the_read_spelling_too() {
-    // R7-1 + R6-1 S1: the read-side seam must not become a way around `assert_home_intact`.
-    // A session built with `default_catalog = ice` and a catalog later registered under that
-    // same name has NO session-local home — asking for the spelling to read must refuse loud,
-    // exactly like the write side does, not hand back `ice.sales.<view>` (which would be a
-    // catalog read dressed as a temp view).
+    // R7-1 + R6-1. The read-side seam must refuse when a catalog takes the session-local home.
     let warehouse_dir = tempfile::TempDir::new().unwrap();
     let warehouse = warehouse_dir.path().to_str().unwrap().to_string();
     let session = ReparkSession::builder()

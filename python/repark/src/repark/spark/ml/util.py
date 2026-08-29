@@ -1,8 +1,4 @@
-"""ML utilities — :class:`Identifiable`, uid generation, ML read/write base.
-
-Spark uid shape is ``{ClassName}_{8hex}`` (e.g. ``StringIndexer_3b09b1f53f96``). Uids leak into
-``explainParams`` output, so format parity is load-bearing (greylight Q9).
-"""
+"""ML identity and persistence interfaces."""
 
 from __future__ import annotations
 
@@ -17,42 +13,42 @@ T = TypeVar("T")
 
 
 def _random_uid(prefix: str) -> str:
-    """Return ``{prefix}_{8hex}`` matching Spark's uid layout."""
+    """Return a Spark-shaped ``{prefix}_{8hex}`` identifier."""
     return f"{prefix}_{secrets.token_hex(4)}"
 
 
 class Identifiable:
-    """Object with a stable ``uid`` (PySpark ``ml.util.Identifiable``)."""
+    """Object with a stable Spark-shaped ``uid``."""
 
     def __init__(self) -> None:
-        """Assign a uid from the concrete class name."""
+        """Assign a random uid using the concrete class name."""
         self.uid: str = _random_uid(type(self).__name__)
 
     def __repr__(self) -> str:
-        """Render as ``ClassName_uid`` (Spark-shaped)."""
+        """Return the uid."""
         return self.uid
 
 
 class MLWriter(ABC):
-    """Base writer for ML persistence (repark-ml v1 format)."""
+    """Base writer for ML persistence."""
 
     def __init__(self, instance: Any) -> None:
-        """Hold the instance being saved."""
+        """Initialize a writer for ``instance``."""
         self.instance = instance
         self.should_overwrite = False
 
     def overwrite(self) -> Self:
-        """Allow overwriting an existing path (Spark ``write().overwrite()``)."""
+        """Allow replacing an existing path."""
         self.should_overwrite = True
         return self
 
     def save(self, path: str) -> None:
-        """Save to ``path`` (directory layout)."""
+        """Save the instance under ``path``."""
         self.saveImpl(path)
 
     @abstractmethod
     def saveImpl(self, path: str) -> None:
-        """Subclass implement: write files under ``path``."""
+        """Write persistence files under ``path``."""
 
 
 class MLReader(ABC):
@@ -64,19 +60,19 @@ class MLReader(ABC):
 
 
 class MLWritable(ABC):
-    """Mixin for objects that support ``write().save(path)`` / ``save(path)``."""
+    """Mixin exposing ``write`` and ``save``."""
 
     @abstractmethod
     def write(self) -> MLWriter:
         """Return a writer for this instance."""
 
     def save(self, path: str) -> None:
-        """Shortcut: ``self.write().save(path)``."""
+        """Save this instance to ``path``."""
         self.write().save(path)
 
 
 class MLReadable(ABC):
-    """Mixin for class-level ``load(path)`` / ``read().load(path)``."""
+    """Mixin exposing class-level ``read`` and ``load``."""
 
     @classmethod
     @abstractmethod
@@ -85,7 +81,7 @@ class MLReadable(ABC):
 
     @classmethod
     def load(cls, path: str) -> Any:
-        """Shortcut: ``cls.read().load(path)``."""
+        """Load an instance from ``path``."""
         return cls.read().load(path)
 
 

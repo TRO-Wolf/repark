@@ -1,10 +1,7 @@
 //! Spark `split_part` — STRING `partNum` implicitly casts to INT (F-6c).
 //!
-//! DataFusion's kernel is `split_part(Utf8, Utf8, Int64)` with integer-only
-//! coercion on the third argument, so `split_part('a.b.c', '.', '2')` is a
-//! planning error. Spark 4.1.2 casts the STRING and returns `'b'`. This
-//! overwrite keeps DF's kernel and widens coerce so Utf8 `partNum` becomes
-//! Int64 (the planner inserts the CAST).
+//! DataFusion accepts an integer third argument, while Spark also casts STRING `partNum` to INT.
+//! This overwrite widens coercion and keeps the upstream kernel.
 
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;

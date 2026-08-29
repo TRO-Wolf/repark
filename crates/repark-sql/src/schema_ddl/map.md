@@ -2,15 +2,14 @@
 
 ## Purpose
 
-File-backed tests for `../schema_ddl.rs`. Catalog-DDL helpers: the schema `WITH ( … )` vocabulary, name qualification, and the
+File-backed tests for `../schema_ddl.rs`. They pin schema `WITH ( … )` vocabulary, name qualification, and
 identifier hygiene that runs BEFORE anything reaches the catalog. The end-to-end effects live
 in `../tests.rs` against a real catalog.
 
 ## Contents
 
 - `tests.rs` — the `#[cfg(test)] mod tests;` declared in `../schema_ddl.rs`.
-- `location_guard_tests.rs` — **R-6 / G-6 Q1 (2026-08-14):** ANSI
-  `CREATE SCHEMA IF NOT EXISTS` four-shape twins (create-new / same /
+- `location_guard_tests.rs` — ANSI `CREATE SCHEMA IF NOT EXISTS` four-shape twins (create-new / same /
   conflicting / no-location) against a memory catalog.
 
 ## Pointers

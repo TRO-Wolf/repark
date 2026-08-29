@@ -1,15 +1,13 @@
-"""Decimal128 differential corpus (gap G2) + expression overflow (gap G13) - G-7 Python half.
+"""Decimal128 differential corpus (gap G2) + expression overflow (gap G13).
 
 **Oracle.** Every ``spark`` table below was RECORDED in record mode against live PySpark 4.1.2
 (zulu-17, ``master("local[2]")``, ``spark.sql.ansi.enabled=true``,
-``spark.sql.shuffle.partitions=2``) on 2026-08-10. One SQL string per row runs on BOTH engines, so
+``spark.sql.shuffle.partitions=2``). One SQL string per row runs on BOTH engines, so
 the recipe under test and the recipe the oracle ran are the same string - nothing here is
 hand-computed.
 
-**Why some rows are DISCLOSURES, not equalities.** Money and quantity columns are unpinned: Spark's
-DECIMAL result precision/scale rules, the 38-digit clamp, decimal literal inference, and
-``avg``/overflow semantics have never been differentially compared. Where repark and Spark already
-agree (``+ - *`` result ``(p,s)`` on many operand pairs, ``sum`` of money, null propagation) the
+**Why some rows are DISCLOSURES, not equalities.** Where repark and Spark already agree
+(``+ - *`` result ``(p,s)`` on many operand pairs, ``sum`` of money, null propagation) the
 row is a plain equality. Where they diverge the row pins BOTH halves:
 
 * ``repark`` - repark's actual output today (value AND exact Arrow ``decimal128(p,s)`` or
@@ -17,22 +15,21 @@ row is a plain equality. Where they diverge the row pins BOTH halves:
 * ``spark`` - the recorded live-Spark output it differs from,
 
 and the row asserts that the two still differ. A row that silently CONVERGES goes RED and forces
-the disclosure to be revisited rather than laundered into "parity" - the same discipline
-``docs/testing.md`` puts on the live tier's disclosures. When a G2 fix lands, each divergent row
-flips to ``repark=None`` (equality) and that flip is the fix's revert-red evidence.
+the disclosure to be revisited rather than laundered into "parity". When a G2 fix lands, each
+divergent row flips to ``repark=None`` (equality) and that flip is the fix's revert-red evidence.
 
 **Raise-class rows (G13 overflow / ANSI divide-by-zero).** Some recipes RAISE on ANSI Spark and
 return a value (or a plan error) on repark. Those rows set ``spark_raises`` / ``repark_raises`` to
-the exception *class name substring* the record driver and the suite re-check; the table half on
+the exception class-name substring the record driver and the suite re-check; the table half on
 the raising side is ``None``.
 
 **Rows assert on the Arrow path** (``to_arrow``) through the parity comparator, so schema name,
-Arrow type (including exact ``decimal128(p,s)``) and nullability are part of every assertion  -
+Arrow type (including exact ``decimal128(p,s)``) and nullability are part of every assertion -
 never ``show``.
 
-**CTAS write-back (Q1 ruling).** Three rows prove decimal type preservation through repark's own
+**CTAS write-back.** Three rows prove decimal type preservation through repark's own
 write path (CTAS -> memory-catalog Iceberg -> read back). Spark is the arithmetic/type oracle on the
-SELECT half only - exactly ``test_ctas_division_writeback.py``'s shape. No Iceberg-on-Spark.
+SELECT half only. No Iceberg-on-Spark.
 
 **Re-deriving the goldens (record mode).** The driver that recorded every ``spark`` half is
 committed beside this module::
@@ -45,9 +42,7 @@ It imports ``ROWS`` from THIS module and runs each row's own recipe, so the reco
 asserted recipe cannot drift apart. Needs a JVM + ``pyspark`` (``uv sync --extra record``); never
 collected by pytest.
 
-**Entry points.** Every differential row goes through the facade ``sql()`` door. The Rust bit-exact
-``Decimal128`` fixture pins and the 2 cross-door rows are **G-7b** (deferred - collide with G-4's
-``repark-spark/src/tests.rs`` ban / the ANSI door); declared in the unit ledger, not silent.
+**Entry points.** Every differential row goes through the facade ``sql()`` door.
 
 **In-flight fix named by every disclosure** so a red row points at what flips it.
 """
@@ -81,7 +76,7 @@ FIX_G13 = (
 G2_BUDGET_MIN = 20
 G2_BUDGET_MAX = 26
 G13_BUDGET_MIN = 6
-G13_BUDGET_MAX = 12  # U5: knob-state twins for /0 (and optional overflow OFF)
+G13_BUDGET_MAX = 12  # knob-state twins for /0 (and optional overflow OFF)
 CTAS_BUDGET = 3
 # Corpus cannot degenerate to all-disclosures: at least this many plain equalities, and at most
 # this many disclosures among the differential ROWS (CTAS counted separately).
@@ -114,7 +109,7 @@ def _dec_raw_i128(precision: int, scale: int, value: int, *, nullable: bool = Fa
     """One-column ``v`` table whose physical i128 may exceed the declared precision.
 
     PyArrow's Python constructor rejects ``10**38`` at ``decimal128(38, 0)``. The engine
-    still emits that wrap as a raw 16-byte little-endian i128 (U2 overflow pin).
+    still emits that wrap as a raw 16-byte little-endian i128.
     """
     raw = value.to_bytes(16, "little", signed=True)
     array = pa.Decimal128Array.from_buffers(
@@ -131,15 +126,14 @@ class DecimalRow:
     ``repark is None`` and ``spark is not None`` and no raise flags -> plain EQUALITY
     (``repark == Spark``).
 
-    ``repark is not None`` and ``spark is not None`` -> DISCLOSURE: repark's actual output is pinned
-    and a convergence onto the recorded Spark output is detected and reported as one.
+    ``repark is not None`` and ``spark is not None`` -> DISCLOSURE: repark's actual output is
+    pinned and a convergence onto the recorded Spark output is detected and reported as one.
 
-    ``spark_raises`` / ``repark_raises`` mark ANSI raise-class rows (G13 overflow / divide-by-zero).
-    The raising side's table is ``None``; the non-raising side pins its Arrow half.
-
-    Shared-raise equality (U5): ``spark_raises`` set, both tables ``None``,
-    ``repark_raises is None`` — both engines raise the Spark needle. ``session_conf``
-    is applied on the repark builder and, in record mode, via live ``spark.conf.set``.
+    ``spark_raises`` / ``repark_raises`` mark ANSI raise-class rows (G13 overflow /
+    divide-by-zero): the raising side's table is ``None``; the non-raising side pins its Arrow
+    half. Shared-raise equality: ``spark_raises`` set, both tables ``None``,
+    ``repark_raises is None`` — both engines raise the Spark needle. ``session_conf`` is applied
+    on the repark builder and, in record mode, via live ``spark.conf.set``.
     """
 
     name: str
@@ -190,9 +184,7 @@ class CtasRow:
     spark_select: pa.Table | None = None
 
 
-# ==================================================================================================
 # Gap G2 - decimal128 arithmetic bit-exactness (value AND exact decimal128(p,s))
-# ==================================================================================================
 
 G2_ROWS: list[DecimalRow] = [
     # ----- control equalities: + - * result (p,s) repark already matches Spark --------------------
@@ -412,9 +404,7 @@ G2_ROWS: list[DecimalRow] = [
 ]
 
 
-# ==================================================================================================
 # Gap G13 - expression-level arithmetic overflow (folded into this corpus)
-# ==================================================================================================
 
 G13_ROWS: list[DecimalRow] = [
     DecimalRow(
@@ -454,7 +444,7 @@ G13_ROWS: list[DecimalRow] = [
         "div_by_zero_decimal38_null_when_ansi_false",
         "G13",
         "SELECT CAST(1 AS DECIMAL(38,0)) / CAST(0 AS DECIMAL(38,0)) AS v",
-        # Spark ANSI OFF: NULL at Spark's division type (38,6). Recorded live (U5 lock).
+        # Spark ANSI OFF: NULL at Spark's division type (38,6). Recorded live.
         _dec(38, 6, None, nullable=True),
         None,
         f"U4b + U5: ansi=false both NULL at Spark (38,6). {FIX_G13}.",
@@ -473,7 +463,7 @@ G13_ROWS: list[DecimalRow] = [
         "div_by_zero_small_decimal_null_when_ansi_false",
         "G13",
         "SELECT CAST(10 AS DECIMAL(2,0)) / CAST(0 AS DECIMAL(2,0)) AS v",
-        # Spark ANSI OFF half is filled from the live record (U5 lock) — do not hand-edit.
+        # Spark ANSI OFF half is filled from the live record — do not hand-edit.
         _dec(8, 6, None, nullable=True),
         None,
         f"U4b + U5: ansi=false both NULL at Spark (8,6). {FIX_G13}.",
@@ -521,9 +511,7 @@ G13_ROWS: list[DecimalRow] = [
 ROWS: list[DecimalRow] = [*G2_ROWS, *G13_ROWS]
 
 
-# ==================================================================================================
-# CTAS write-back (Q1: repark-only write path; Spark is SELECT oracle when equality holds)
-# ==================================================================================================
+# CTAS write-back (repark-only write path; Spark is SELECT oracle when equality holds)
 
 CTAS_NAMESPACE = "glue_catalog.decimal_ns"
 
@@ -558,9 +546,7 @@ CTAS_ROWS: list[CtasRow] = [
 ]
 
 
-# ==================================================================================================
 # Helpers
-# ==================================================================================================
 
 
 def _session() -> ReparkSession:
@@ -571,7 +557,7 @@ def _session() -> ReparkSession:
 
 
 def _session_for_row(row: DecimalRow) -> ReparkSession:
-    """Builder-time session honoring ``row.session_conf`` (U5 knob-state twins)."""
+    """Builder-time session honoring ``row.session_conf``."""
     import repark
 
     builder = repark.ReparkSession.builder.appName("decimal128-parity")
@@ -608,33 +594,29 @@ def run_row(row: DecimalRow, session: object) -> pa.Table:
     """Run one row's recipe on a session (either engine) and return its Arrow output.
 
     Shared with the record driver so the recipe the oracle ran and the recipe asserted here are
-    the same code, not two copies of one string. Callers that expect a raise must catch around
-    this helper (raise-class rows do not return a table).
+    the same code. Callers that expect a raise must catch around this helper (raise-class rows
+    do not return a table).
     """
     frame = session.sql(row.sql)  # type: ignore[attr-defined]
     to_arrow = getattr(frame, "to_arrow", None) or frame.toArrow
     return to_arrow()  # type: ignore[no-any-return]
 
 
-# ==================================================================================================
 # The differential rows
-# ==================================================================================================
 
 
 @pytest.mark.parametrize("row", ROWS, ids=[row.name for row in ROWS])
 def test_decimal128_row_matches_spark_or_still_diverges(row: DecimalRow) -> None:
     """Every recorded row, on the Arrow path (value AND exact Arrow type AND nullability).
 
-    Equality rows assert ``repark == Spark``.
-
-    Disclosure rows assert repark's pinned actual output - and when that assertion fails, the
-    failure is CLASSIFIED before it is raised: CONVERGED (flip-don't-delete) vs regression
-    (re-derive both halves). Raise-class rows assert the raising side still raises the recorded
-    exception class and the non-raising side still matches its pinned table.
+    Equality rows assert ``repark == Spark``. Disclosure rows pin repark's actual output and
+    classify failures before raising: CONVERGED (flip-don't-delete) vs regression (re-derive
+    both halves). Raise-class rows assert the raising side still raises the recorded exception
+    class and the non-raising side still matches its pinned table.
     """
     session = _session_for_row(row)
 
-    # ----- shared-raise equality (U5: both engines raise the Spark needle) -----------------------
+    # ----- shared-raise equality: both engines raise the Spark needle ----------------------------
     if row.is_shared_raise():
         assert row.spark_raises is not None
         with pytest.raises(Exception) as excinfo:
@@ -662,9 +644,7 @@ def test_decimal128_row_matches_spark_or_still_diverges(row: DecimalRow) -> None
         return
 
     if row.spark_raises is not None:
-        # Spark raises; repark must still match its pinned table (and NOT silently start raising
-        # the same way without the pin being flipped - a new raise is a convergence of kind, so
-        # classify it).
+        # repark must still match its pinned table; a new raise is a convergence of kind.
         try:
             actual = run_row(row, session)
         except Exception as exc:
@@ -723,12 +703,11 @@ def test_decimal128_row_matches_spark_or_still_diverges(row: DecimalRow) -> None
 
 
 def test_decimal128_row_set_covers_gap_budgets() -> None:
-    """The pin budget is part of the unit, so the corpus size and shape are pinned, not incidental.
+    """The pin budget is part of the unit: corpus size and shape are pinned, not incidental.
 
-    G2's budget is 20-26 differential rows; G13's is 6-8. At least :data:`MIN_EQUALITY_ROWS`
-    plain equalities keep the corpus from degenerating into all-disclosures, and at most
-    :data:`MAX_DISCLOSURE_ROWS` disclosures keep a future edit from turning every control red into
-    a silent disclosure. CTAS is a separate budget of exactly 3.
+    At least :data:`MIN_EQUALITY_ROWS` plain equalities keep the corpus from degenerating into
+    all-disclosures, and at most :data:`MAX_DISCLOSURE_ROWS` disclosures keep a future edit from
+    turning every control red into a silent disclosure. CTAS is a separate budget of exactly 3.
     """
     g2 = [row for row in ROWS if row.gap == "G2"]
     g13 = [row for row in ROWS if row.gap == "G13"]
@@ -751,7 +730,7 @@ def test_decimal128_row_set_covers_gap_budgets() -> None:
         f"at most {MAX_DISCLOSURE_ROWS} disclosures so the corpus cannot silently absorb every "
         f"regression as a new disclosure; got {len(disclosures)}"
     )
-    # Class coverage pins - the brief names these surfaces explicitly.
+    # Class coverage pins.
     assert any(
         row.sql.strip().startswith("SELECT 1.23") or "SELECT 0.1" in row.sql for row in g2
     ), "G2 must pin bare decimal literal inference"
@@ -772,8 +751,6 @@ def test_decimal128_row_set_covers_gap_budgets() -> None:
     assert any(row.spark_select is not None for row in CTAS_ROWS), (
         "at least one CTAS row must carry a Spark SELECT oracle (equality-path write-back)"
     )
-    # U4b closed the last disclosure-path CTAS (`ctas_div`); all three now have a Spark
-    # SELECT oracle. The previous "at least one spark_select is None" pin died with that flip.
     # Row-shape well-formedness: raise flags and table halves cannot contradict each other.
     for row in ROWS:
         assert not (row.spark_raises and row.repark_raises), (
@@ -792,9 +769,7 @@ def test_decimal128_row_set_covers_gap_budgets() -> None:
             assert row.spark is not None and row.repark is None
 
 
-# ==================================================================================================
 # CTAS write-back
-# ==================================================================================================
 
 
 @pytest.fixture
@@ -819,11 +794,10 @@ def test_ctas_decimal_type_preserved(row: CtasRow, ctas_session: ReparkSession) 
     """CTAS -> memory Iceberg -> read back: decimal128(p,s) intact on the Arrow path.
 
     When ``spark_select`` is set, it is the recorded Spark SELECT oracle and MUST equal
-    ``expected`` (well-formedness: the write-back pin and the Spark oracle cannot drift apart
-    in the module constants). The live repark SELECT is then asserted equal to that shared
-    table before and after the Iceberg round-trip. When ``spark_select`` is None, the SELECT
-    half is a disclosure-class expression and only repark's own write-path preservation is
-    asserted (Q1 ruling: no Iceberg-on-Spark).
+    ``expected`` (the write-back pin and the Spark oracle cannot drift apart), and the live
+    repark SELECT is asserted equal to it before and after the round-trip. When
+    ``spark_select`` is None, only repark's own write-path preservation is asserted
+    (no Iceberg-on-Spark).
     """
     if row.spark_select is not None:
         # Well-formedness: the CTAS expected table and the Spark SELECT oracle are one pin.

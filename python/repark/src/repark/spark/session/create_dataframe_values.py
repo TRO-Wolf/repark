@@ -73,15 +73,10 @@ def _sql_literal(value: Any) -> str:
         return f"DATE '{value.isoformat()}'"
 
     if isinstance(value, Decimal):
-        # Spark's inferred DecimalType for Python Decimal is DECIMAL(38, 18); pin that width so
-
-        # createDataFrame → to_arrow type matches the live oracle (INT-002). Emit fixed-point
-
-        # text via format(..., 'f') — str(Decimal) can be scientific (1E-10) which SQL parsers
-
-        # mis-handle inside CAST. Refuse values outside the envelope rather than silent zero
-
-        # (1E-19 → 0) or round (C2-L-002).
+        # Spark infers DECIMAL(38, 18) for Python Decimal; pin that width so createDataFrame →
+        # to_arrow matches the live oracle (INT-002). Emit fixed-point text via format(..., 'f')
+        # (str(Decimal) can be scientific, which SQL parsers mis-handle). Refuse
+        # out-of-envelope values rather than silent zero or round.
 
         _validate_decimal_envelope(value)
 
@@ -213,9 +208,7 @@ def _normalize_create_dataframe_cell(value: Any, *, field_name: str | None = Non
     module_name = type(value).__module__
 
     # Nested Row kept as Row for struct vs map inference (dict → map, Row → struct).
-
     # Children still need recursive normalize when building Arrow (see _prepare_nested_cell).
-
     # array.array → list for Spark-supported typecodes (Apache test_array_types).
 
     if module_name == "array" and type_name == "array":
@@ -259,7 +252,7 @@ def _normalize_create_dataframe_cell(value: Any, *, field_name: str | None = Non
 
             return {"size": size, "indices": indices, "values": values}
 
-    # Infinite floats refuse on every path (Arrow CDF + VALUES) — C2-Q-002.
+    # Infinite floats refuse on every path (Arrow CDF + VALUES).
 
     if isinstance(value, float) and (value == float("inf") or value == float("-inf")):
         raise PySparkTypeError("createDataFrame does not support infinite float values")
@@ -290,8 +283,7 @@ def _normalize_create_dataframe_cell(value: Any, *, field_name: str | None = Non
 
         if type_name == "Period":
             # Period is not a SQL scalar; refuse so all-null PeriodDtype cannot soft-succeed
-
-            # as VARCHAR while non-null Period fails (C4-Q-002 / C4-L-002).
+            # as VARCHAR while non-null Period fails.
 
             raise PySparkTypeError("createDataFrame does not support values of type Period yet")
 
@@ -307,16 +299,16 @@ def _normalize_create_dataframe_cell(value: Any, *, field_name: str | None = Non
             return as_float
 
         if type_name in {"complex64", "complex128", "complexfloating"}:
-            # Refuse before .item() → Python complex soft-path (C5-Q-002).
+            # Refuse before .item() → Python complex soft-path.
 
             raise PySparkTypeError(
                 f"createDataFrame does not support values of type {type_name} yet"
             )
 
         if type_name == "datetime64":
-            # NaT → None. Unit 'ns' (and finer) .item() returns int epoch ns — recover wall-clock
-
-            # via us cast so we never emit a bare integer SQL literal for a timestamp cell.
+            # NaT → None. Unit 'ns' (and finer) .item() returns int epoch ns — recover
+            # wall-clock via us cast so we never emit a bare integer SQL literal for a
+            # timestamp cell.
 
             # Calendar units D/W/M/Y .item() → datetime.date (DATE SQL); finer → datetime.
 
@@ -336,7 +328,7 @@ def _normalize_create_dataframe_cell(value: Any, *, field_name: str | None = Non
             return item  # datetime.datetime or datetime.date
 
         if type_name == "timedelta64":
-            # Unit ns .item() returns int — silent duration→count if unwrapped (C3-L-001).
+            # Unit ns .item() returns int — silent duration→count if unwrapped.
 
             raise PySparkTypeError(
                 "createDataFrame does not support values of type numpy.timedelta64 yet"
@@ -346,7 +338,7 @@ def _normalize_create_dataframe_cell(value: Any, *, field_name: str | None = Non
             return _normalize_create_dataframe_cell(value.item())
 
     if isinstance(value, complex):
-        # Python complex (incl. unwrapped numpy complex) — not a SQL scalar (C5-Q-002).
+        # Python complex (incl. unwrapped numpy complex) — not a SQL scalar.
 
         raise PySparkTypeError("createDataFrame does not support values of type complex yet")
 
@@ -451,11 +443,8 @@ def _parse_create_dataframe_schema(
         return names, None
 
     if isinstance(schema, DataType):
-        # Spark wraps a bare atomic/complex type as a single-column StructType named
-
-        # ``value`` (Apache ``test_reciprocal_trig_functions`` / ``createDataFrame(lst,
-
-        # DoubleType())`` — F2).
+        # Spark wraps a bare atomic/complex type as a single-column StructType named ``value``
+        # (Apache ``test_reciprocal_trig_functions`` / ``createDataFrame(lst, DoubleType())``).
 
         from repark.spark.types import StructField
 
@@ -520,13 +509,9 @@ def _data_type_to_sql_type(data_type: Any) -> str:
         return "BOOLEAN"
 
     if isinstance(data_type, (StringType, CharType, VarcharType)):
-        # STRING (not VARCHAR): nested ARRAY/MAP/STRUCT engine markers are re-parsed by
-
-        # DataType.fromDDL in _sql_type_to_arrow; fromDDL does not treat bare VARCHAR as
-
-        # string (only string / str / varchar(n)). Using VARCHAR made every nested type
-
-        # that contained a string field silently fall back to pa.string() (octo X2 C1).
+        # STRING (not VARCHAR): fromDDL re-parses nested engine markers and does not treat
+        # bare VARCHAR as string (only string / str / varchar(n)) — VARCHAR here silently
+        # degrades nested string fields to pa.string().
 
         # G15: a non-binary StringType collation would be silently stripped here
         # (engine token is always STRING) — that is the silently-wrong-count path.
@@ -553,10 +538,8 @@ def _data_type_to_sql_type(data_type: Any) -> str:
         return f"DECIMAL({data_type.precision},{data_type.scale})"
 
     if isinstance(data_type, NullType):
-        # G3b D-5: HONOR the requested void instead of silently substituting VARCHAR.
-        # An explicit ``NullType()`` / ``ArrayType(NullType())`` used to come back as
-        # ``string`` / ``array<string>`` with no warning — the schema the caller asked for
-        # was not the schema they got, and nothing said so. VOID round-trips end to end:
+        # HONOR the requested void instead of silently substituting VARCHAR — the schema the
+        # caller asked for must be the schema they get. VOID round-trips end to end:
         # ``_sql_type_to_arrow`` maps it to ``pa.null()``, the engine accepts
         # ``CAST(NULL AS VOID)`` on the empty-frame seed, and the DF-2 void machinery
         # (drop_null_lists / make_array(NULL)) already handles ``array<void>``.

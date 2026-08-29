@@ -86,7 +86,6 @@ def test_repark_log_emits_merge_phase_spans_with_close_timings() -> None:
     stderr = result.stderr
     for name in _PHASE_SPANS:
         assert name in stderr, f"expected span {name!r} in stderr; got:\n{stderr}"
-    # FmtSpan::CLOSE emits close records with busy/idle timing fields.
     close_signal = (
         "close" in stderr.lower()
         or "time.busy" in stderr

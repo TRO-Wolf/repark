@@ -1,48 +1,34 @@
-//! Streaming ordinary least squares via normal equations + Cholesky.
-//!
-//! Accumulates `XᵀX` and `Xᵀy` over Arrow-extracted rows without retaining training rows.
-//! Design matrix columns = features (+ optional intercept column of ones as column 0 when
-//! `fit_intercept` is true). Solves `(XᵀX) β = Xᵀy` with hand-rolled Cholesky; singular /
-//! ill-conditioned designs fail loud (no pinv / ridge).
+//! Streaming ordinary least squares via normal equations and Cholesky.
+//! Accumulates `XᵀX` and `Xᵀy` without retaining rows. An optional intercept is column zero.
+//! Singular or ill-conditioned designs fail without pseudoinversion or ridge regularization.
 
 use crate::MAX_FEATURES;
 use crate::cholesky::cholesky_factor_and_solve;
 use crate::error::{MlError, Result};
 
 /// ===========================================================================================
-/// Fitted OLS parameters (params only — never training rows).
+/// Fitted OLS parameters; training rows are not retained.
 /// ===========================================================================================
 #[derive(Debug, Clone, PartialEq)]
 pub struct LinearRegressionSolution {
-    /// Coefficients for the original feature columns (length = feature dimension `p`).
+    /// Coefficients for the original feature columns.
     pub coefficients: Vec<f64>,
-    /// Intercept term; `0.0` when `fit_intercept` was false.
+    /// Intercept, or `0.0` when disabled.
     pub intercept: f64,
-    /// Whether an intercept column was included during fit.
     pub fit_intercept: bool,
-    /// Feature dimension `p` (not counting the intercept column).
     pub num_features: usize,
-    /// Number of training rows observed.
     pub num_rows: u64,
 }
 
 /// ===========================================================================================
-/// Streaming accumulator for OLS normal equations.
-///
-/// Call [`observe_row`](Self::observe_row) (or [`observe_dense`](Self::observe_dense)) once per
-/// training row while a DataFusion batch stream is open, then [`finish`](Self::finish). Peak
-/// state is `O(p²)` — never the full training matrix.
+/// Streaming OLS normal-equation accumulator with `O(p²)` state.
 /// ===========================================================================================
 #[derive(Debug, Clone)]
 pub struct LinearRegressionAccumulator {
-    /// Feature dimension (without intercept).
     num_features: usize,
     fit_intercept: bool,
-    /// Design width = `num_features` + (1 if intercept).
     design_width: usize,
-    /// Row-major `XᵀX` of shape `design_width` × `design_width`.
     xtx: Vec<f64>,
-    /// `Xᵀy` of length `design_width`.
     xty: Vec<f64>,
     num_rows: u64,
     row_offset: u64,
@@ -50,7 +36,7 @@ pub struct LinearRegressionAccumulator {
 
 impl LinearRegressionAccumulator {
     /// =======================================================================================
-    /// Start an accumulator for `num_features` raw feature columns.
+    /// Start an accumulator for raw feature columns.
     ///
     /// # Errors
     /// [`MlError::FeatureDimTooLarge`] when `num_features > MAX_FEATURES`.
@@ -93,7 +79,7 @@ impl LinearRegressionAccumulator {
     }
 
     /// =======================================================================================
-    /// Observe one training row: dense `features` of length `num_features` and scalar `label`.
+    /// Observe one dense training row and label.
     ///
     /// # Errors
     /// Width mismatch, non-finite values.
@@ -120,8 +106,6 @@ impl LinearRegressionAccumulator {
             }
         }
 
-        // Design row x: [1, f0, f1, …] or [f0, f1, …]
-        // Update XᵀX += x xᵀ and Xᵀy += y x without allocating the design row.
         let width = self.design_width;
         let intercept_offset = usize::from(self.fit_intercept);
 
@@ -144,7 +128,7 @@ impl LinearRegressionAccumulator {
     }
 
     /// =======================================================================================
-    /// Observe a batch of dense rows (row-major `features_flat` length `rows * num_features`).
+    /// Observe row-major dense rows and their labels.
     ///
     /// # Errors
     /// Same as [`Self::observe_row`], plus length mismatch on the flat buffer.
@@ -170,7 +154,7 @@ impl LinearRegressionAccumulator {
     }
 
     /// =======================================================================================
-    /// Consume the accumulator and solve the normal equations.
+    /// Consume the accumulator and solve its normal equations.
     ///
     /// # Errors
     /// Empty design (zero rows), singular / ill-conditioned `XᵀX`.
@@ -182,7 +166,7 @@ impl LinearRegressionAccumulator {
             ));
         }
         if self.num_rows < self.design_width as u64 {
-            // Still attempt; may be rank-deficient and fail Cholesky loud.
+            // Let Cholesky report rank deficiency instead of rejecting by row count.
         }
 
         let mut xtx = self.xtx;
@@ -206,7 +190,7 @@ impl LinearRegressionAccumulator {
     }
 }
 
-/// Design-matrix entry at column `index` for a row with raw `features`.
+/// Return a design-matrix entry, including the optional intercept.
 #[inline]
 fn design_entry(
     features: &[f64],
@@ -222,7 +206,7 @@ fn design_entry(
 }
 
 /// ===========================================================================================
-/// Validate estimator hyper-parameters before streaming (shared with the PyO3 boundary).
+/// Validate estimator parameters before streaming.
 ///
 /// # Errors
 /// [`MlError::StandardizationUnsupported`] or [`MlError::ElasticNetUnsupported`].
@@ -234,7 +218,7 @@ pub fn validate_linear_regression_params(
     if standardization {
         return Err(MlError::StandardizationUnsupported);
     }
-    // Allow tiny float noise around 0; anything meaningfully non-zero is M4.
+    // Tolerate representation noise around the supported zero value.
     if elastic_net_param.abs() > 1e-15 {
         return Err(MlError::ElasticNetUnsupported {
             value: elastic_net_param,
@@ -249,7 +233,6 @@ mod tests {
 
     #[test]
     fn perfect_line_with_intercept() {
-        // y = 2 + 3 x
         let mut acc = LinearRegressionAccumulator::new(1, true).unwrap();
         for x in [0.0, 1.0, 2.0, 3.0, 4.0] {
             acc.observe_row(&[x], 2.0 + 3.0 * x).unwrap();
@@ -262,7 +245,6 @@ mod tests {
 
     #[test]
     fn multi_feature_well_conditioned() {
-        // y = 1 + 2 x0 - 0.5 x1
         let mut acc = LinearRegressionAccumulator::new(2, true).unwrap();
         let rows = [
             ([1.0, 0.0], 3.0),
@@ -295,7 +277,6 @@ mod tests {
 
     #[test]
     fn no_intercept() {
-        // y = 2 x through origin
         let mut acc = LinearRegressionAccumulator::new(1, false).unwrap();
         for x in [1.0, 2.0, 3.0] {
             acc.observe_row(&[x], 2.0 * x).unwrap();
@@ -308,7 +289,6 @@ mod tests {
     #[test]
     fn singular_duplicate_features_loud() {
         let mut acc = LinearRegressionAccumulator::new(2, true).unwrap();
-        // x1 always equals x0 → rank deficient
         for x in [1.0, 2.0, 3.0, 4.0] {
             acc.observe_row(&[x, x], x).unwrap();
         }
@@ -350,7 +330,6 @@ mod tests {
 
     #[test]
     fn observe_dense_batch_matches_row_wise() {
-        // Well-conditioned 2-feature design (not collinear).
         let data = [
             [1.0_f64, 0.0],
             [0.0, 1.0],
@@ -401,7 +380,6 @@ mod tests {
 
     #[test]
     fn intercept_only_recovers_mean() {
-        // p=0, fit_intercept=true → intercept = mean(y)
         let mut acc = LinearRegressionAccumulator::new(0, true).unwrap();
         for label in [1.0, 2.0, 3.0] {
             acc.observe_row(&[], label).unwrap();

@@ -1,4 +1,4 @@
-"""LRS-3 — the pins for the divergences this campaign registered, plus the door alias it added.
+"""LRS-3 — pins for registered divergences, plus the door alias it added.
 
 The registry's rule is that a row lands with its pin or it does not land
 (``docs/spark-sql-iceberg-parity.md`` §6). These are those pins: ``RAND-1`` (repark caps a
@@ -38,11 +38,9 @@ def test_randstr_refuses_a_length_spark_accepts() -> None:
 
 
 def test_randstr_refuses_a_batch_that_would_overflow_string_offsets() -> None:
-    """The per-row cap is not sufficient on its own: a LEGAL length times a large batch overflows
-    the i32 offsets of an Arrow ``StringArray`` and panics inside arrow-rs.
-
-    The panic was caught at the PyO3 boundary rather than aborting, but a caught panic is not a
-    contract. Now it is a stated refusal naming both numbers.
+    """A LEGAL length times a large batch overflows the i32 offsets of an Arrow ``StringArray``;
+    without the gate this panics inside arrow-rs (or aborts). The refusal is a stated contract
+    naming both numbers.
     """
     with pytest.raises(PySparkException, match="past the 2147483647 byte limit"):
         _session().range(2_500).select(F.randstr(1_000_000, F.lit(1))).toArrow()
@@ -59,8 +57,7 @@ def test_a_randstr_within_both_bounds_is_untouched() -> None:
 
 def test_the_sql_door_knows_sparks_approx_count_distinct_spelling() -> None:
     """Spark SQL has ``approx_count_distinct``; DataFusion has ``approx_distinct``. The facade
-    resolved both from its own dispatch table, so the door's ``Invalid function`` was invisible to
-    every test — the facade never went through the door for it.
+    resolved both from its own dispatch table, so the door needs the Spark spelling registered too.
     """
     session = _session()
     frame = session.createDataFrame([(1,), (2,), (1,)], "g int")
@@ -79,7 +76,7 @@ def test_the_datafusion_spelling_still_resolves_too() -> None:
     assert session.sql("SELECT approx_distinct(g) AS r FROM lrs3_alias2").collect()[0]["r"] == 2
 
 
-# ---- BL-8 — reached through the door's own spelling ---------------------------------------------
+# ---- BL-8 — reached through the door's own spelling ------------------------------
 
 
 def test_bl8_the_door_still_returns_unsigned_where_the_facade_returns_bigint() -> None:

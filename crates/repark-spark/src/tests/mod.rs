@@ -1,6 +1,4 @@
-//! Unit battery for the Spark SQL door (split from the former `src/tests.rs` monolith).
-//!
-//! Mapping rule: production-module alignment — see `task/g4-tests-split-ledger.md`.
+//! Unit battery for the Spark SQL door.
 
 mod common;
 

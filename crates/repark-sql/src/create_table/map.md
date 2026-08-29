@@ -2,7 +2,7 @@
 
 ## Purpose
 
-File-backed tests for `../create_table.rs`. `CREATE TABLE` clause refusals: the clauses that must never be SILENTLY DROPPED. Each one,
+File-backed tests for `../create_table.rs`. Clause refusals prevent silent loss of requested semantics. Each one,
 if ignored, produces a table that exists but does not match what was asked for.
 **V3-2:** `format_version = 3` is stored at parse and resolved at execute against the session
 opt-in; end-to-end pins live in [`../v3_create.rs`](../v3_create.rs).
@@ -12,7 +12,7 @@ opt-in; end-to-end pins live in [`../v3_create.rs`](../v3_create.rs).
 - `tests.rs` — the `#[cfg(test)] mod tests;` declared in `../create_table.rs`. Clause
   refusals plus A11: `nanosecond_timestamp_columns_refuse_with_column_and_precision`,
   `nanosecond_timestamptz_columns_refuse`, `microsecond_timestamp_columns_pass_the_ns_gate`.
-  The SE-1 PR-D1 tightened-CTAS refuse is pinned in
+  The tightened-CTAS refusal is pinned in
   [`../../tests/declared_sorted_tighten.rs`](../../tests/declared_sorted_tighten.rs).
 
 ## Pointers

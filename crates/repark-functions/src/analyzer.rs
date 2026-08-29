@@ -1,77 +1,20 @@
 //! Spark expression-semantics analyzer rule.
 //!
-//! DataFusion's native SQL semantics diverge from Spark's on a small set of core operators, and
-//! the raw-SQL passthrough (`spark.sql(...)` → `ctx.sql`) inherited every divergence silently
-//! (audit AR-1: findings #1, #4-adjacent, #5, #16 — `task/audit-2026-07-10.md`). This rule
-//! rewrites every analyzed logical plan — passthrough SQL, `DataFrame` ops, and CTAS/DML inner
-//! queries alike — to Spark's semantics:
+//! Rewrite analyzed logical plans to Spark's operator and cast semantics.
 //!
-//! - **Integer `/` is always-double division** (Spark's `/` maps to `Divide` → `DoubleType`;
-//!   DataFusion truncates on integer operands: `5/2 = 2`): both operands are cast to `Float64`
-//!   when both are integers.
-//! - **Division / modulo by zero follows `spark.sql.ansi.enabled`** (Spark-door default
-//!   **TRUE**, owner Q10=A / Spark 4). ANSI ON: the divisor is wrapped in
-//!   [`crate::ansi::guard_nonzero_divisor`] and a zero raises `[DIVIDE_BY_ZERO]` /
-//!   `ArithmeticException`. ANSI OFF: the legacy `nullif(divisor, 0)` wrap yields NULL.
-//!   The CAST / array / overlay arms are **not** gated (U5 file grant).
-//! - **The `[]` array subscript is 0-based** with invalid-index → NULL (Spark `GetArrayItem`;
-//!   DataFusion's is 1-based with negative-from-end). The SQL planner lowers `arr[i]` to
-//!   `array_element(arr, i)`, which this rule rewrites onto the embedded
-//!   `__repark_array_get__` UDF ([`crate::collection`]) carrying Spark's semantics. Map
-//!   subscripts lower to `get_field` and are untouched. A *directly spelled*
-//!   `array_element(arr, i)` call is rewritten identically — Spark has no function of that
-//!   name, so the DataFusion-native 1-based spelling is knowingly sacrificed for `[]` parity
-//!   (Spark code wanting 1-based access spells `element_at`, which [`crate::collection`]
-//!   provides).
-//! - **`overlay(str, replace, pos, -1)`** drops the literal `-1` 4th arg so free-SQL matches
-//!   Spark's default (replace-length / 3-arg). DataFusion's 4-arg `-1` replaces the remainder
-//!   of the string (F2 octo C1-Q-002).
-//! - **`CAST(TIMESTAMP AS <numeric>)` is epoch SECONDS** (divergence registry row TZ-5). Spark
-//!   scales the instant to seconds; DataFusion reinterprets the raw tick value, so a
-//!   nanosecond-backed timestamp came back 10⁹ times too large — silently, and correctly signed,
-//!   which is what made it survive. The rewrite pushes the scaling under the user's cast through
-//!   [`crate::timestamp_cast`]'s two embedded UDFs (integer targets floor exactly; float and
-//!   decimal targets keep the fraction), leaving the outer `CAST` to apply the requested width.
-//! - **`CAST(TIMESTAMP AS STRING)` is Spark's session-zone space-separated `Utf8`** (registry
-//!   row B-TZ-4). DataFusion emits `Utf8View` with an ISO-`T` stored-zone instant. The rewrite
-//!   replaces the cast with [`crate::timestamp_cast`]'s `__repark_timestamp_to_string__` UDF.
-//! - **`CAST(TIMESTAMP AS DATE)` is Spark's session-zone date** (registry row TZ-8). Arrow's
-//!   own cast reads the array's UTC annotation. The rewrite replaces the cast with
-//!   [`crate::timestamp_cast`]'s `__repark_timestamp_to_date__` UDF (LTZ → session zone; NTZ
-//!   → stored wall). `CAST(ts AS TIMESTAMP)` stays untouched (identity). `datediff`
-//!   rides this CAST (`SparkDateDiff::simplify`). `last_day` / `date_add` over TIMESTAMP
-//!   stay residual.
+//! - Integer `/` promotes integer operands to `Float64`.
+//! - Division and modulo by zero raise under ANSI mode and return NULL otherwise.
+//! - `[]` uses 0-based array access with NULL for invalid indices; map subscripts are unchanged.
+//! - `overlay(..., -1)` uses Spark's three-argument replacement-length behavior.
+//! - Timestamp-to-numeric casts use epoch seconds, with exact floor for integer targets.
+//! - Timestamp-to-string casts use session-zone, space-separated `Utf8`.
+//! - Timestamp-to-date casts use the session zone for LTZ and the stored wall for NTZ.
 //!
-//! Registered by the session *after* the built-in analyzer rules (via the Spark door's
-//! `SessionExtension`), so it sees type-coerced plans and must emit exactly-typed expressions —
-//! no re-coercion runs afterwards. Every rewrite is **idempotent**: the passthrough analyzes
-//! eagerly (so schema consumers — the PyO3 Arrow export, CTAS schema derivation — see the
-//! post-rewrite types) and physical planning analyzes again.
+//! The session installs this rule after built-in coercion; rewrites must emit exactly-typed
+//! expressions — no re-coercion runs afterwards.
 //!
-//! A `get_type` failure on an operand leaves that expression untouched (the `Transformed::no`
-//! bail in [`rewrite_division`] / [`rewrite_modulo`]) rather than failing the plan. That bail is
-//! **defensive only** — it is not reached by any valid analyzed plan today: correlated / outer-
-//! query references arrive as `Expr::OuterReferenceColumn`, which carries its type (DataFusion's
-//! SQL planner wraps them before any analyzer rule runs), so a correlated `int / int` resolves
-//! and IS rewritten — to `CAST(_ AS Float64) / nullif(CAST(_ AS Float64), 0)`, exactly like the
-//! non-correlated case (verified against live Spark 4.1.2, Group L 2026-07-23); and DataFusion
-//! 52.5's SQL surface has no higher-order / lambda form that would introduce a variable outside
-//! the node's input schema. (Correcting the earlier note that claimed correlated refs keep
-//! DataFusion's integer truncation — they do not.)
-//!
-//! Fixpoint note (Group L-write 2026-07-23): a single analyze is NOT always a fixpoint. This rule
-//! runs AFTER `TypeCoercion` within one analyzer invocation, so when it rewrites an `int / int`
-//! branch to `Float64`, a parent set operation (`UNION`) that `TypeCoercion` already coerced
-//! against the pre-rewrite `Int64` branches keeps its `Int64` output — only a SECOND analyze
-//! (whose `TypeCoercion` re-runs over the now-`Float64` branches) propagates `Float64` up through
-//! the `UNION`. Execution reaches that fixpoint for free (physical planning re-analyzes), so facade
-//! SELECT paths — which double-analyze via the `PyDataFrame` constructor — were always correct.
-//! The single-analyze **WRITE path** (CTAS schema derivation) was not: it derived the table schema
-//! from the once-analyzed `UNION` (`Int64`) while the executed data was `Float64`, so
-//! `CREATE TABLE t AS SELECT 5/2 AS q UNION ALL SELECT 7/2` failed loud at the parquet writer
-//! (`Field q has type Int64, array has type Float64`). Fixed by analyzing the write-schema plan to
-//! the fixpoint in `repark_sql::execute_ctas` (never a silent wrong answer — it always failed
-//! loud).
+//! A type-resolution miss leaves the expression unchanged. Set-operation schemas may require a
+//! second analysis after a rewrite changes a child type.
 
 use datafusion::arrow::datatypes::DataType;
 use datafusion::common::config::ConfigOptions;
@@ -83,15 +26,11 @@ use datafusion::logical_expr::expr_rewriter::NamePreserver;
 use datafusion::logical_expr::{BinaryExpr, Cast, Expr, ExprSchemable, LogicalPlan, Operator, lit};
 use datafusion::optimizer::AnalyzerRule;
 
-/// G6-3 / G6-5: Spark's CAST / TRY_CAST **type-legality** deny matrix and its refusal. A
-/// file-backed submodule so this rule's own file keeps its ceiling headroom (the crate root is
-/// at its `check_lib_rs` ceiling, so a top-level `mod` decl is not available).
+/// G6-3 / G6-5 cast-legality deny matrix and refusal.
 mod cast_legality;
 
 /// ===========================================================================================
-/// The analyzer rule: Spark operator semantics over type-coerced logical plans.
-///
-/// See the module docs for the exact rewrites. Stateless — one instance serves every session.
+/// Spark operator semantics over type-coerced logical plans; the rule is stateless.
 /// ===========================================================================================
 #[derive(Debug, Default)]
 pub struct SparkExprSemantics;
@@ -109,9 +48,7 @@ impl AnalyzerRule for SparkExprSemantics {
     }
 }
 
-/// Rewrite one plan node's expressions against its merged input schema, preserving the output
-/// field names the un-rewritten expressions produced (the same `NamePreserver` discipline the
-/// built-in `TypeCoercion` rule uses — a rewrite must never rename `SELECT a / b`'s column).
+/// Rewrite one plan node while preserving output field names.
 fn rewrite_plan(plan: LogicalPlan, ansi_enabled: bool) -> Result<Transformed<LogicalPlan>> {
     let mut schema = DFSchema::empty();
     for input in plan.inputs() {
@@ -123,16 +60,10 @@ fn rewrite_plan(plan: LogicalPlan, ansi_enabled: bool) -> Result<Transformed<Log
         let rewritten = expr.transform_up(|node| rewrite_expr(node, &schema, ansi_enabled))?;
         Ok(rewritten.update_data(|node| saved_name.restore(node)))
     })?;
-    // A rewrite can change expression types (int / int → Float64), so every node's cached
-    // output schema must be recomputed — unconditionally, because a parent whose own
-    // expressions were untouched (a Sort over a rewritten Projection) still caches its child's
-    // pre-rewrite schema, and the optimizer asserts schema stability after every rule.
     transformed.map_data(LogicalPlan::recompute_schema)
 }
 
-/// The per-expression rewrite. Bottom-up: operands are already rewritten when their parent is
-/// visited, and replacement subtrees are not revisited (no self-recursion on the injected
-/// `array_element` / `nullif` nodes).
+/// Rewrite one expression bottom-up without revisiting injected subtrees.
 fn rewrite_expr(expr: Expr, schema: &DFSchema, ansi_enabled: bool) -> Result<Transformed<Expr>> {
     match expr {
         Expr::BinaryExpr(ref binary) if binary.op == Operator::Divide => {
@@ -146,18 +77,11 @@ fn rewrite_expr(expr: Expr, schema: &DFSchema, ansi_enabled: bool) -> Result<Tra
         {
             Ok(rewrite_array_subscript(expr, schema))
         }
-        // The SQL planner lowers `substr(...)` / `SUBSTRING(x FROM y FOR z)` through an
-        // `ExprPlanner` that embeds DataFusion's *built-in* UDF directly, bypassing the
-        // registry where `crate::string` shadows it — swap the node onto the Spark shim.
-        // (The shim's own instance is named "substring", so this never self-matches.)
         Expr::ScalarFunction(function) if function.func.name() == "substr" => {
             Ok(Transformed::yes(Expr::ScalarFunction(
                 ScalarFunction::new_udf(crate::string::substring_udf(), function.args),
             )))
         }
-        // Spark `overlay(str, replace, pos, -1)` — default len means replace-length (same as
-        // the 3-arg form). DataFusion's 4-arg `-1` replaces the remainder of the string; drop
-        // a literal -1 4th arg so free-SQL matches Spark (F2 octo C1-Q-002).
         Expr::ScalarFunction(function)
             if function.func.name() == "overlay" && function.args.len() == 4 =>
         {
@@ -171,20 +95,7 @@ fn rewrite_expr(expr: Expr, schema: &DFSchema, ansi_enabled: bool) -> Result<Tra
                 Ok(Transformed::no(Expr::ScalarFunction(function)))
             }
         }
-        // TZ-5: `CAST(ts AS BIGINT/INT/DOUBLE/DECIMAL)` is epoch SECONDS in Spark and a raw tick
-        // reinterpretation in DataFusion. B-TZ-4: `CAST(ts AS STRING)` is Spark's session-zone
-        // space-separated Utf8. TZ-8: `CAST(ts AS DATE)` is Spark's session-zone Date32. All
-        // three match on the SOURCE type so the rewrite is idempotent. G6-3 / G6-5: the
-        // DATE ↔ INT legality refusal heads the same function.
         Expr::Cast(_) => rewrite_timestamp_casts(expr, schema),
-        // G6-3 / G6-5, the second door. `TryCast` was matched NOWHERE in this rule before —
-        // it fell to the catch-all below — but Spark's refusal is a check on the TYPE PAIR
-        // (`Cast.checkInputDataTypes`), and Spark 4's `TryCast` is `Cast(evalMode = TRY)`: the
-        // eval mode changes what happens to a value a legal cast cannot represent, never which
-        // pairs are castable. So `try_cast(DATE '…' AS INT)` refuses in Spark exactly like
-        // `CAST`, with `TRY_CAST(…)` echoed in the message (recorded oracle, design §1.2 row 3).
-        // No timestamp rewrite rides this arm: TZ-5 / B-TZ-4 / TZ-8 are `Expr::Cast` only, and
-        // widening them to `TryCast` would be a behaviour change this unit did not measure.
         Expr::TryCast(ref try_cast) => {
             if let Ok(source_type) = try_cast.expr.get_type(schema) {
                 cast_legality::refuse_spark_illegal_cast(
@@ -200,19 +111,10 @@ fn rewrite_expr(expr: Expr, schema: &DFSchema, ansi_enabled: bool) -> Result<Tra
     }
 }
 
-/// Dispatch a `CAST`: **legality first** (G6-3 / G6-5), then numeric → TZ-5; string → B-TZ-4;
-/// date → TZ-8.
-///
-/// The legality gate at the head is keyed on the SOURCE being `Date32`/`Date64` (or an integer
-/// with a date target), so it can never reach a `Timestamp` source and the three timestamp
-/// rewrites below are untouched by construction. The numeric arm stays byte-stable
-/// (`rewrite_timestamp_to_numeric_cast`); later arms only run when the previous rewrite
-/// declines the target.
+/// Dispatch a `CAST` through legality, numeric, string, and date rewrites.
 ///
 /// # Errors
-/// [`DataFusionError::Plan`] from [`cast_legality::refuse_spark_illegal_cast`] for a
-/// `DATE ↔ INT` pair. A `get_type` failure on the child leaves the cast untouched (the same
-/// defensive bail the timestamp arms take) rather than failing the plan.
+/// Returns a plan error for Spark-illegal DATE↔integer pairs.
 fn rewrite_timestamp_casts(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
     if let Expr::Cast(cast) = &expr
         && let Ok(source_type) = cast.expr.get_type(schema)
@@ -237,10 +139,7 @@ fn rewrite_timestamp_casts(expr: Expr, schema: &DFSchema) -> Result<Transformed<
 
 /// `CAST(<timestamp> AS STRING)` → Spark's session-zone space-separated `Utf8` (B-TZ-4).
 ///
-/// The user's STRING target is DataFusion `Utf8View`; Spark exports `Utf8`. The rewrite
-/// **replaces** the cast with the embedded UDF rather than wrapping it, so the Arrow type
-/// is Spark's `string` and a second analyze cannot re-fire (the child is no longer a
-/// timestamp). DATE / TIMESTAMP targets are declined here (DATE is [`rewrite_timestamp_to_date_cast`]).
+/// Replace the cast with an embedded UDF so the output is `Utf8` and analysis is idempotent.
 fn rewrite_timestamp_to_string_cast(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
     let Expr::Cast(cast) = expr else {
         return Transformed::no(expr);
@@ -265,10 +164,7 @@ fn rewrite_timestamp_to_string_cast(expr: Expr, schema: &DFSchema) -> Transforme
 
 /// `CAST(<timestamp> AS DATE)` → Spark's session-zone `Date32` (TZ-8).
 ///
-/// The user's DATE target is DataFusion `Date32`. Arrow's own cast reads the array
-/// annotation (UTC). The rewrite **replaces** the cast with the embedded UDF so a
-/// second analyze cannot re-fire (the child is no longer a timestamp). TIMESTAMP
-/// targets are declined here (identity).
+/// Replace the cast with an embedded UDF so the output is session-zone `Date32`.
 fn rewrite_timestamp_to_date_cast(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
     let Expr::Cast(cast) = expr else {
         return Transformed::no(expr);
@@ -290,31 +186,13 @@ fn rewrite_timestamp_to_date_cast(expr: Expr, schema: &DFSchema) -> Transformed<
 
 /// `CAST(<timestamp> AS <numeric>)` → Spark's epoch SECONDS (registry row TZ-5).
 ///
-/// Spark's `Cast(TimestampType, LongType)` floors the instant to seconds; DataFusion hands back
-/// the raw tick value, so a `Timestamp(Nanosecond, _)` column was 10⁹ times too large. The
-/// scaling is pushed UNDER the user's cast — `CAST(__repark_epoch_seconds_floor__(ts) AS INT)` —
-/// so the outer cast still applies the requested width and whatever DataFusion does when the
-/// seconds value does not fit it: this rewrite owns the *scale*, not the cast-failure surface.
-///
-/// The split between the two embedded UDFs is a correctness requirement, not a convenience:
-/// integer targets need exact `i64` floor division (f64 cannot floor a sub-microsecond instant
-/// reliably at present-day epochs) and real targets need the fraction Spark keeps. See
-/// [`crate::timestamp_cast`].
-///
-/// Deliberately untouched here: `CAST(ts AS TIMESTAMP)` (identity) and unsigned integer
-/// targets (Spark SQL cannot spell one, so a rewrite would invent semantics), and the
-/// reverse direction `CAST(<integer> AS TIMESTAMP)` — probed against live Spark 4.1.2 and already
-/// correct in repark, because DataFusion's integer→timestamp cast reads SECONDS exactly as Spark
-/// does (ledger §3). Its remaining gap is the Arrow export TYPE, which is registry row TZ-4.
-/// `CAST(ts AS STRING)` is [`rewrite_timestamp_to_string_cast`]; `CAST(ts AS DATE)` is
-/// [`rewrite_timestamp_to_date_cast`].
+/// Push exact epoch-second scaling below the user's cast. Integer targets floor; real targets keep
+/// fractions. TIMESTAMP identity and integer-to-timestamp casts remain unchanged.
 fn rewrite_timestamp_to_numeric_cast(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
     let Expr::Cast(cast) = expr else {
         return Transformed::no(expr);
     };
     let Ok(source_type) = cast.expr.get_type(schema) else {
-        // Defensive bail, the same shape as `rewrite_division`'s: an unresolvable operand keeps
-        // DataFusion's cast rather than failing the plan.
         return Transformed::no(Expr::Cast(cast));
     };
     if !matches!(source_type, DataType::Timestamp(..)) {
@@ -327,15 +205,12 @@ fn rewrite_timestamp_to_numeric_cast(expr: Expr, schema: &DFSchema) -> Transform
     Transformed::yes(Expr::Cast(Cast::new(Box::new(scaled), target)))
 }
 
-/// The epoch-seconds expression a numeric cast target needs, or `None` when the target is not one
-/// this class covers (the cast is then left exactly as DataFusion planned it).
+/// Return the epoch-seconds expression for a supported numeric target.
 fn epoch_seconds_for_target(target: &DataType, timestamp: Expr) -> Option<Expr> {
     let udf = match target {
-        // Signed integers: Spark floors. The outer cast narrows.
         DataType::Int64 | DataType::Int32 | DataType::Int16 | DataType::Int8 => {
             crate::timestamp_cast::spark_epoch_seconds_floor_udf()
         }
-        // Floats and decimals: Spark keeps the fraction.
         DataType::Float64
         | DataType::Float32
         | DataType::Decimal128(..)
@@ -362,9 +237,7 @@ fn is_negative_one_literal(expr: &Expr) -> bool {
     )
 }
 
-/// `a / b` → Spark division: integer ÷ integer promotes both sides to `Float64` (Spark's `/` is
-/// always-double), and the divisor is ANSI-guarded (`x / 0` raises) or null-guarded (`x / 0` →
-/// NULL) per [`crate::ansi`].
+/// Rewrite division with Spark's integer promotion and zero-divisor policy.
 fn rewrite_division(
     expr: Expr,
     schema: &DFSchema,
@@ -376,15 +249,8 @@ fn rewrite_division(
     let (Ok(left_type), Ok(right_type)) =
         (binary.left.get_type(schema), binary.right.get_type(schema))
     else {
-        // Genuinely unresolvable operand: leave untouched. Defensive only — correlated / outer
-        // refs are typed `OuterReferenceColumn` and DO resolve here (see the module docs), so
-        // this bail is not reached by a valid analyzed plan today.
         return Ok(Transformed::no(Expr::BinaryExpr(binary)));
     };
-    // Spark keeps decimal `/` in decimal (its own result-type rule) and promotes every other
-    // numeric `/` to double; so we cast to Float64 **only** when BOTH operands are integers —
-    // never when either is decimal (else `int / decimal`, which Spark keeps decimal, would widen
-    // to double). This is why the rewrite reads both operand types rather than casting blindly.
     let integer_division = left_type.is_integer() && right_type.is_integer();
     let mut left = *binary.left;
     let mut right = *binary.right;
@@ -403,16 +269,12 @@ fn rewrite_division(
     ))))
 }
 
-/// `a % b` → Spark modulo: the divisor is ANSI-guarded or null-guarded (`x % 0` → raise /
-/// NULL). Operand types are untouched — Spark's `%` keeps the coerced operand type.
+/// Rewrite modulo with Spark's zero-divisor policy without changing operand types.
 fn rewrite_modulo(expr: Expr, schema: &DFSchema, ansi_enabled: bool) -> Result<Transformed<Expr>> {
     let Expr::BinaryExpr(binary) = expr else {
         return Ok(Transformed::no(expr));
     };
     let Ok(divisor_type) = binary.right.get_type(schema) else {
-        // Defensive bail (see the module docs / `rewrite_division`); not reached today. Even if it
-        // were, Spark `%` keeps the operand type, so leaving DataFusion's `Modulo` in place is the
-        // benign choice — only the `nullif` zero-guard (a nullability nicety) would be skipped.
         return Ok(Transformed::no(Expr::BinaryExpr(binary)));
     };
     let right = guard_zero_divisor(*binary.right, &divisor_type, ansi_enabled)?;
@@ -424,14 +286,7 @@ fn rewrite_modulo(expr: Expr, schema: &DFSchema, ansi_enabled: bool) -> Result<T
 }
 
 /// Guard a numeric divisor for `/` and `%` (shared DEC-7 / A2 path).
-///
-/// * ANSI ON — wrap in [`crate::ansi::guard_nonzero_divisor`]; zero raises `DIVIDE_BY_ZERO`.
-/// * ANSI OFF — wrap in `nullif(divisor, 0)` so zero yields NULL (legacy Spark non-ANSI).
-///
-/// Applied even to provably nonzero literals under ANSI OFF: Spark's `Divide`/`Remainder` are
-/// *always nullable*, so the `nullif` also reproduces Spark's result-schema nullability
-/// (constant folding erases the runtime cost). Non-numeric divisors (intervals) pass through.
-/// Each wrap is idempotent on its own output (second analyze is a fixpoint).
+/// Apply the ANSI raise or non-ANSI NULL guard to a numeric divisor.
 fn guard_zero_divisor(divisor: Expr, divisor_type: &DataType, ansi_enabled: bool) -> Result<Expr> {
     if !divisor_type.is_numeric() {
         return Ok(divisor);
@@ -449,8 +304,7 @@ fn guard_zero_divisor(divisor: Expr, divisor_type: &DataType, ansi_enabled: bool
     Ok(nullif(divisor, lit(zero)))
 }
 
-/// True when `expr` is already `__repark_ansi_nonzero_divisor__(_)` — this rule's ANSI wrap
-/// from an earlier analyzer run.
+/// Return whether `expr` is this rule's ANSI zero guard.
 fn is_ansi_zero_guard(expr: &Expr) -> bool {
     matches!(
         expr,
@@ -460,8 +314,7 @@ fn is_ansi_zero_guard(expr: &Expr) -> bool {
     )
 }
 
-/// True when `expr` is already `nullif(_, <zero literal>)` — either this rule's own guard from
-/// an earlier analyzer run, or the user's hand-written equivalent (identical semantics).
+/// Return whether `expr` is a zero `nullif` guard.
 fn is_zero_guard(expr: &Expr) -> bool {
     if let Expr::ScalarFunction(function) = expr
         && function.func.name() == "nullif"
@@ -474,10 +327,7 @@ fn is_zero_guard(expr: &Expr) -> bool {
     false
 }
 
-/// `array_element(arr, i)` (the planner's lowering of `arr[i]`) → Spark's 0-based `[]` via the
-/// embedded `__repark_array_get__` UDF (negative and out-of-range indices yield NULL, Spark
-/// non-ANSI; DataFusion's own negative-from-end behaviour is deliberately unreachable through
-/// this spelling). The replacement UDF has a different name, so re-analysis never re-shifts.
+/// Rewrite planner-lowered `array_element` to Spark's 0-based `[]` UDF.
 fn rewrite_array_subscript(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
     let Expr::ScalarFunction(function) = expr else {
         return Transformed::no(expr);
@@ -498,8 +348,7 @@ fn rewrite_array_subscript(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
     )))
 }
 
-/// The element type of a list-shaped `DataType`, or `None` when it isn't one (a map subscript
-/// lowers to `get_field`, never here — but stay total).
+/// Return the element type of a list-shaped `DataType`.
 fn list_element_type(data_type: &DataType) -> Option<DataType> {
     match data_type {
         DataType::List(field) | DataType::LargeList(field) | DataType::FixedSizeList(field, _) => {
@@ -519,12 +368,12 @@ mod tests {
     use datafusion::arrow::record_batch::RecordBatch;
     use datafusion::prelude::{SessionConfig, SessionContext};
 
-    /// A context with the rule installed — the same wiring the Spark door performs (ANSI ON).
+    /// Build a context with the analyzer installed.
     fn ctx() -> SessionContext {
         ctx_with_ansi(true)
     }
 
-    /// Legacy Spark non-ANSI (`spark.sql.ansi.enabled=false`): `/0` and `% 0` yield NULL.
+    /// Non-ANSI mode returns NULL for `/0` and `% 0`.
     fn ctx_legacy() -> SessionContext {
         ctx_with_ansi(false)
     }
@@ -566,7 +415,7 @@ mod tests {
             .collect()
     }
 
-    /// Spark `/` on integers is always-double true division — the audit's S0 (`5/2` was `2`).
+    /// Integer division is Spark true division.
     #[tokio::test]
     async fn integer_division_is_double() {
         let ctx = ctx();
@@ -575,7 +424,7 @@ mod tests {
         assert_eq!(f64_column(&ctx, "SELECT -7/2").await, vec![Some(-3.5)]);
     }
 
-    /// Default ANSI ON: `/ 0` raises `DIVIDE_BY_ZERO` for every numeric type — never Inf.
+    /// ANSI mode raises `DIVIDE_BY_ZERO` for numeric `/ 0`.
     #[tokio::test]
     async fn division_by_zero_raises_under_default_ansi() {
         let ctx = ctx();
@@ -596,7 +445,7 @@ mod tests {
         }
     }
 
-    /// `spark.sql.ansi.enabled=false` restores the legacy NULL wrap.
+    /// Non-ANSI division by zero returns NULL.
     #[tokio::test]
     async fn division_by_zero_is_null_when_ansi_false() {
         let ctx = ctx_legacy();
@@ -616,7 +465,7 @@ mod tests {
         );
     }
 
-    /// Default ANSI ON: `% 0` raises; nonzero modulo keeps the integer type.
+    /// ANSI modulo by zero raises while nonzero modulo keeps its type.
     #[tokio::test]
     async fn modulo_by_zero_raises_under_default_ansi() {
         let ctx = ctx();
@@ -631,7 +480,7 @@ mod tests {
         assert_eq!(i64_column(&ctx, "SELECT 7 % 3").await, vec![Some(1)]);
     }
 
-    /// ANSI OFF: modulo by zero yields NULL; nonzero modulo keeps the integer type.
+    /// Non-ANSI modulo by zero returns NULL.
     #[tokio::test]
     async fn modulo_by_zero_is_null_when_ansi_false() {
         let ctx = ctx_legacy();
@@ -640,8 +489,7 @@ mod tests {
         assert_eq!(f64_column(&ctx, "SELECT 5.0 % 0.0").await, vec![None]);
     }
 
-    /// Decimal ÷ decimal stays decimal — the integer promotion must not touch it (Spark keeps
-    /// decimal division in decimal; its precision rules are tracked separately).
+    /// Decimal division remains decimal.
     #[tokio::test]
     async fn decimal_division_stays_decimal() {
         let ctx = ctx();
@@ -660,18 +508,12 @@ mod tests {
         );
     }
 
-    /// The first output column's data type — used to pin the result-type *class* of `/`.
+    /// Return the first output column type.
     async fn result_type(ctx: &SessionContext, sql: &str) -> DataType {
         batch(ctx, sql).await.schema().field(0).data_type().clone()
     }
 
-    /// BUG-004 closure (Group L 2026-07-23). A correlated / outer-reference `int / int` is NOT
-    /// left as DataFusion integer truncation: the outer column arrives as a typed
-    /// `OuterReferenceColumn`, so `get_type` resolves and the division is rewritten to Spark
-    /// true-division — the outer-ref divisor is promoted to `Float64` and null-guarded, exactly
-    /// like the non-correlated case. Asserted on the analyzed plan because DataFusion cannot
-    /// physically execute a correlated scalar subquery. (Reverting the integer-promotion branch
-    /// drops the `Float64` cast, reddening this pin — the divergence the audit feared.)
+    /// Correlated integer division is promoted to Spark true division.
     #[tokio::test]
     async fn correlated_outer_ref_division_is_promoted_to_double() {
         let ctx = ctx();
@@ -692,9 +534,6 @@ mod tests {
         let plan = state.create_logical_plan(sql).await.unwrap();
         let analyzed = crate::analyze_eagerly(&state, plan).unwrap();
         let rendered = analyzed.display_indent_schema().to_string();
-        // The outer-ref divisor resolved (no `get_type` bail) AND was promoted to Float64 true
-        // division with the ANSI zero-divisor guard — the same rewrite as a non-correlated
-        // `int / int`.
         assert!(
             rendered.contains("__repark_ansi_nonzero_divisor__(CAST(outer_ref(o.a) AS Float64))")
                 || rendered.contains("__repark_ansi_nonzero_divisor__"),
@@ -703,8 +542,7 @@ mod tests {
         );
     }
 
-    /// A `/` combining a scalar-subquery result with an outer integer column is double
-    /// true-division. The zero-divisor row is a separate ANSI raise (not in this VALUES list).
+    /// Scalar-subquery division with an outer integer column is double true division.
     #[tokio::test]
     async fn division_over_subquery_and_column_is_double_matching_spark() {
         let ctx = ctx();
@@ -731,7 +569,7 @@ mod tests {
         );
     }
 
-    /// ANSI OFF keeps the photographed NULL row for a zero column divisor over a subquery.
+    /// Non-ANSI scalar-subquery division returns NULL for a zero divisor.
     #[tokio::test]
     async fn division_over_subquery_zero_divisor_is_null_when_ansi_false() {
         let ctx = ctx_legacy();
@@ -758,8 +596,7 @@ mod tests {
         );
     }
 
-    /// Every non-decimal numeric `/` is double (Spark), whatever the integer width or whether an
-    /// operand is already floating: bigint, smallint, and `DOUBLE` operands all yield `2.5`.
+    /// Non-decimal numeric division yields `Float64`.
     #[tokio::test]
     async fn all_nondecimal_division_is_double() {
         let ctx = ctx();
@@ -773,18 +610,10 @@ mod tests {
         }
     }
 
-    /// Spark's `/` result type is decimal iff ≥1 operand is decimal AND none is float, else double
-    /// (oracle 2026-07-23). We pin the result-type *class* on every mix. The exact decimal
-    /// precision is a documented divergence — repark uses DataFusion's decimal-division rule
-    /// (`decimal(10,2) / decimal(10,2)` → `Decimal128(16,6)` vs Spark `decimal(23,13)`;
-    /// `int / decimal(10,2)` → `Decimal128(26,4)` vs Spark `decimal(14,11)`) — so it is
-    /// deliberately NOT asserted here, keeping this a real cross-engine class pin rather than a
-    /// repark-vs-repark tautology. (An unconditional Float64 cast — the rejected design-gate
-    /// alternative — reddens the decimal arms by widening them to double.)
+    /// Decimal division remains decimal unless a float operand requires `Float64`.
     #[tokio::test]
     async fn division_result_type_class_matches_spark_decimal_rule() {
         let ctx = ctx();
-        // decimal present, no float → decimal (decimal absorbs integers).
         for sql in [
             "SELECT CAST(1 AS DECIMAL(10,2)) / CAST(3 AS DECIMAL(10,2))",
             "SELECT 7 / CAST(2 AS DECIMAL(10,2))",
@@ -796,7 +625,6 @@ mod tests {
                 result_type(&ctx, sql).await
             );
         }
-        // any float present → double (float dominates decimal); all-integer → double.
         for sql in [
             "SELECT CAST(7 AS DOUBLE) / CAST(2 AS DECIMAL(10,2))",
             "SELECT CAST(7 AS DECIMAL(10,2)) / CAST(2 AS DOUBLE)",
@@ -810,8 +638,7 @@ mod tests {
         }
     }
 
-    /// A narrower integer index reaches the embedded UDF un-coerced (the rewrite runs after
-    /// `TypeCoercion`), so the invoke must cast it — `arr[CAST(0 AS INT)]` is an Int32 index.
+    /// Narrow integer indices are cast by the embedded UDF.
     #[tokio::test]
     async fn array_subscript_accepts_narrow_integer_indices() {
         let ctx = ctx();
@@ -821,8 +648,7 @@ mod tests {
         );
     }
 
-    /// The `[]` subscript is Spark 0-based: `[0]` is the first element, out-of-range and
-    /// negative indices are NULL (never DataFusion's negative-from-end).
+    /// The `[]` subscript is 0-based and NULLs invalid indices.
     #[tokio::test]
     async fn array_subscript_is_zero_based() {
         let ctx = ctx();
@@ -837,7 +663,6 @@ mod tests {
         let values: Vec<Option<i64>> = (0..column.len())
             .map(|row| column.is_valid(row).then(|| column.value(row)))
             .collect();
-        // ORDER BY idx ascending: -1, 0, 1, 2, 3.
         assert_eq!(
             values,
             vec![None, Some(10), Some(20), Some(30), None],
@@ -845,8 +670,7 @@ mod tests {
         );
     }
 
-    /// A map subscript lowers to `get_field`, not `array_element` — the rewrite must not
-    /// touch it.
+    /// Map subscripts lower to `get_field` and remain unchanged.
     #[tokio::test]
     async fn map_subscript_is_untouched() {
         let ctx = ctx();
@@ -854,8 +678,7 @@ mod tests {
         assert_eq!(values, vec![Some(7)]);
     }
 
-    /// The rewrite preserves the un-rewritten output column name (`NamePreserver`): a bare
-    /// `SELECT a / b` keeps its `a / b`-derived name instead of leaking the injected casts.
+    /// Rewrites preserve the original output column name.
     #[tokio::test]
     async fn division_rewrite_preserves_field_names() {
         let plain = SessionContext::new();
@@ -880,7 +703,7 @@ mod tests {
         assert_eq!(spark_name, plain_name);
     }
 
-    /// Spark `overlay(..., -1)` uses replace-length (same as 3-arg); DF remainder is wrong.
+    /// Spark `overlay(..., -1)` matches the three-argument form.
     #[tokio::test]
     async fn overlay_len_minus_one_matches_three_arg() {
         use datafusion::arrow::array::StringArray;
@@ -902,7 +725,6 @@ mod tests {
             .value(0);
         assert_eq!(three_val, "aXYdef");
         assert_eq!(four_val, three_val);
-        // Explicit positive len still replaces that many chars.
         let two = batch(&ctx, "SELECT overlay('abcdef', 'XY', 2, 2) AS o").await;
         assert_eq!(
             two.column(0)
@@ -914,14 +736,7 @@ mod tests {
         );
     }
 
-    // ---- TZ-5: `CAST(TIMESTAMP AS <numeric>)` is epoch SECONDS -------------------------------
-    //
-    // Oracle for every expectation below: live Spark 4.1.2 on the recorded basis
-    // (`task/tz5-cast-seconds-ledger.md` §2). Reverting the `Expr::Cast` arm in `rewrite_expr`
-    // reddens all of them — DataFusion's own cast answers the raw nanosecond tick.
-
-    /// The charged class: a whole-second instant before AND after 1970 casts to epoch seconds,
-    /// not to nanoseconds. Spark: `-1800` and `1718452800`; DataFusion alone: `×10⁹`.
+    /// Timestamp casts use epoch seconds before and after 1970.
     #[tokio::test]
     async fn timestamp_cast_to_bigint_is_epoch_seconds() {
         let ctx = ctx();
@@ -951,11 +766,7 @@ mod tests {
         );
     }
 
-    /// The floor edge, end to end. Spark uses `Math.floorDiv`, so a sub-second instant BEFORE the
-    /// epoch rounds toward −∞: `-0.5 s → -1`, `-1.25 s → -2`. Truncation toward zero (what an
-    /// arrow `Timestamp(Second)` hop would give) answers `0` and `-1` — the whole reason the
-    /// scaling lives in a UDF. Positive fractions floor and truncate alike, and are here so the
-    /// fix cannot be "always subtract one".
+    /// Negative fractional timestamps floor toward negative infinity.
     #[tokio::test]
     async fn timestamp_cast_to_bigint_floors_on_both_sides_of_the_epoch() {
         let ctx = ctx();
@@ -974,8 +785,7 @@ mod tests {
         }
     }
 
-    /// A NULL timestamp casts to NULL, and the Arrow type is still `Int64` — the embedded UDF
-    /// must not turn a null row into a zero or widen the column.
+    /// NULL timestamps remain NULL with `Int64` output.
     #[tokio::test]
     async fn timestamp_cast_of_null_is_null_int64() {
         let ctx = ctx();
@@ -984,8 +794,7 @@ mod tests {
         assert_eq!(result_type(&ctx, sql).await, DataType::Int64);
     }
 
-    /// Narrower signed integer targets share the class: the scaling happens first and the outer
-    /// cast applies the width, so `INT` and `SMALLINT` answer Spark's `-1800` in `Int32`/`Int16`.
+    /// Narrow integer targets scale first, then apply the outer cast.
     #[tokio::test]
     async fn narrower_integer_targets_get_the_same_scaling() {
         let ctx = ctx();
@@ -1002,8 +811,7 @@ mod tests {
         }
     }
 
-    /// Float and decimal targets keep the FRACTION Spark keeps (`-0.5 s → -0.5`), which is why
-    /// they cannot share the integer path's floor.
+    /// Float and decimal targets retain fractional seconds.
     #[tokio::test]
     async fn real_targets_keep_the_fractional_second() {
         let ctx = ctx();
@@ -1041,10 +849,7 @@ mod tests {
         );
     }
 
-    /// The rewrite is idempotent: the analyzer runs once eagerly on the passthrough plan and
-    /// again at physical planning, and a rule that re-fired on its own output would wrap the
-    /// scaling twice (and answer nanoseconds-per-second-squared). Matching on the SOURCE type is
-    /// what prevents it, and this pin is what proves the prevention rather than asserting it.
+    /// Matching the source timestamp type keeps the rewrite idempotent.
     #[tokio::test]
     async fn the_timestamp_cast_rewrite_is_idempotent() {
         let ctx = ctx();
@@ -1066,12 +871,10 @@ mod tests {
             1,
             "exactly one scaling UDF, however many times the analyzer runs"
         );
-        // And the twice-analyzed plan still executes to Spark's value.
         assert_eq!(i64_column(&ctx, sql).await, vec![Some(-1800)]);
     }
 
-    /// `CAST(ts AS TIMESTAMP)` is identity and must stay unrewritten (no epoch / string / date
-    /// UDF). DATE is TZ-8 ([`timestamp_cast_to_date_is_spark_date32`]); STRING is B-TZ-4.
+    /// Timestamp-to-timestamp casts remain identity.
     #[tokio::test]
     async fn timestamp_to_timestamp_cast_is_untouched() {
         let ctx = ctx();
@@ -1094,9 +897,7 @@ mod tests {
         );
     }
 
-    /// TZ-8: `CAST(ts AS DATE)` is Spark `Date32` via one embedded UDF. The analyzer context
-    /// has no session-zone carrier, so a zoneless TIMESTAMP literal is NTZ-shaped and the
-    /// date is the spelled wall (2024-06-15). Session-zone values are pinned on the Spark door.
+    /// Timestamp-to-date casts emit Spark `Date32`.
     #[tokio::test]
     async fn timestamp_cast_to_date_is_spark_date32() {
         let ctx = ctx();
@@ -1135,9 +936,7 @@ mod tests {
         );
     }
 
-    /// B-TZ-4: `CAST(ts AS STRING)` is Spark `Utf8` (not DataFusion `Utf8View`) and the
-    /// rewrite is a single embedded UDF. The analyzer context has no session-zone carrier,
-    /// so the TIMESTAMP literal is NTZ-shaped and the wall is the spelled digits.
+    /// Timestamp-to-string casts emit Spark `Utf8` through one embedded UDF.
     #[tokio::test]
     async fn timestamp_cast_to_string_is_spark_utf8() {
         use datafusion::arrow::array::StringArray;
@@ -1173,9 +972,7 @@ mod tests {
         assert_eq!(column.value(0), "2024-06-15 12:00:00");
     }
 
-    /// The REVERSE direction is already Spark-correct and must stay untouched: DataFusion reads
-    /// `CAST(<integer> AS TIMESTAMP)` as SECONDS, exactly as Spark does (probed 2026-08-11, ledger
-    /// §3). A symmetric "fix" here would have introduced the very divergence this unit removes.
+    /// Integer-to-timestamp casts already read seconds as Spark does.
     #[tokio::test]
     async fn integer_to_timestamp_cast_is_untouched_and_reads_seconds() {
         let ctx = ctx();
@@ -1200,9 +997,7 @@ mod tests {
         );
     }
 
-    /// The round trip closes: seconds out, the same instant back. This is the shape a migrated
-    /// job writes (store an epoch, rebuild the timestamp) and the one that stayed broken while
-    /// only one of the two directions was checked.
+    /// Epoch-second round trips preserve the instant.
     #[tokio::test]
     async fn epoch_seconds_round_trip_returns_the_instant() {
         let ctx = ctx();
@@ -1217,9 +1012,7 @@ mod tests {
         );
     }
 
-    /// A timestamp COLUMN (not a folded literal) takes the same path — the constant folder is not
-    /// what makes the fix work, and a per-row kernel with a null mask is the shape production
-    /// data has.
+    /// Timestamp columns use the same per-row path as literals.
     #[tokio::test]
     async fn a_timestamp_column_casts_row_by_row() {
         let ctx = ctx();
@@ -1236,11 +1029,7 @@ mod tests {
         );
     }
 
-    // ---------------------------------------------------------------------------------------
-    // G6-3 / G6-5 — DATE ↔ INT cast legality. `sql_error` runs the whole door: plan, analyze,
-    // execute — so a rewrite that only refuses at plan time and a refusal that arrives at
-    // execution are both distinguishable from the analysis-time refusal Spark raises.
-    // ---------------------------------------------------------------------------------------
+    // The helper preserves planning errors and execution errors as distinct outcomes.
 
     async fn sql_error(ctx: &SessionContext, sql: &str) -> String {
         match ctx.sql(sql).await {
@@ -1287,8 +1076,7 @@ mod tests {
         }
     }
 
-    /// The `try_cast` door — the arm that did not exist before this unit. `try_cast` is total
-    /// over VALUES, never over TYPES.
+    /// The `try_cast` arm is total over VALUES, never over TYPES.
     #[tokio::test]
     async fn try_cast_date_to_int_refuses_and_spells_try_cast() {
         let ctx = ctx();
@@ -1375,8 +1163,7 @@ mod tests {
         );
     }
 
-    /// Non-integer targets keep today's behaviour byte-for-byte: still refused, still by the
-    /// arrow/DataFusion kernel, NOT by this gate (design §3.3 excludes them on purpose).
+    /// Non-integer targets remain refused by the Arrow/DataFusion kernel, not this gate.
     #[tokio::test]
     async fn date_to_non_integer_targets_keep_the_datafusion_needle() {
         let ctx = ctx();

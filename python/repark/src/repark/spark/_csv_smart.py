@@ -1,19 +1,8 @@
-"""r25 T4 — smart CSV ingest + type-inference PROTOCOL (Python facade).
+"""Smart CSV preparation and deterministic type inference for the Spark facade.
 
-# === r25 T4: csv-smart ===
-
-Implements the greylit Q1 ladder as a **documented protocol**, not shared Rust:
-
-    bool → int32 → int64 → decimal128 → float64 → date → timestamp → string
-
-Every failure falls back one rung; terminal is string; resolution never errors; deterministic.
-See ``task/t4-csv-smart-ledger.md`` and claim-board ``inference-protocol.md``.
-
-``session.read.smartCsv`` is a disclosed RePark extension.
-Inference sampling: default full scan up to 10_000 data rows, else first
-10_000 (override with ``samplingRows``); data materialisation always uses
-the full file. Default ``spark.read.csv`` is untouched (r20-R1 Spark-parity
-pins stand).
+Inference tries bool, int32, int64, decimal128, float64, date, timestamp, then string.
+Failures widen to the next rung. Preparation handles headers, delimiters, BOMs, preambles,
+ragged rows, and bounded inference sampling; materialization reads the full file.
 """
 
 from __future__ import annotations
@@ -56,7 +45,6 @@ _INT64_MAX = 2**63 - 1
 
 _DECIMAL_MAX_PRECISION = 38
 
-# Greylit r26 Q4: inference-only row budget (full file still read for data).
 DEFAULT_INFERENCE_SAMPLING_ROWS = 10_000
 
 # ISO date / timestamp (protocol-stable subset).
@@ -131,7 +119,6 @@ class IngestReport(BaseModel):
     columns: list[ColumnIngestReport] = Field(default_factory=list)
     synthesized_headers: bool = False
     data_row_count: int = 0
-    # r26 Q4 sampling diagnostics (inference-only; data read is always full file).
     inference_rows_scanned: int = 0
     inference_capped: bool = False
     sampling_rows_limit: int = DEFAULT_INFERENCE_SAMPLING_ROWS
@@ -389,7 +376,6 @@ def resolve_column_type(
         # Track fixed-point envelope for EVERY cell that parses as decimal128
         # (integers parse as scale 0). Must not gate on current rung — integer cells
         # that appear *before* the first fractional cell still widen precision
-        # (octo C3-Q-001 order-dependence bug).
         parsed = try_decimal128(cell_text)
         if parsed is not None:
             _value, precision, scale = parsed
@@ -409,7 +395,6 @@ def resolve_column_type(
         )
 
     # Integer-looking values stored under decimal rung: if current is int32/int64, keep it.
-    # Decimal union (greylit r26 Q5): scale = max_scale; precision = int_digits + scale;
     # floor precision >= max(1, scale); p > 38 → promote to float64.
     decimal_precision: int | None = None
     decimal_scale: int | None = None
@@ -523,7 +508,7 @@ def _score_delimiter(lines: list[str], delimiter: str) -> tuple[int, int]:
     """Score delimiter consistency: (mode_field_count_or_0, agreement_rows).
 
     Higher agreement with field_count >= 2 wins. Returns (0, 0) when unusable.
-    Per-line ``csv.reader`` — origin/main detect semantics (B4 round 4).
+    Per-line ``csv.reader`` detects delimiter consistency.
     """
     counts: list[int] = []
     for line in lines:
@@ -550,7 +535,7 @@ def _score_delimiter(lines: list[str], delimiter: str) -> tuple[int, int]:
 def detect_delimiter(lines: list[str], *, preferred: str | None = None) -> str:
     """Pick the delimiter with the strongest field-count consistency.
 
-    Ranking is origin/main ``(agreement, mode_fields)`` over ``, ; \\t |``,
+    Ranking uses ``(agreement, mode_fields)`` over ``, ; \\t |``,
     counted with per-line ``csv.reader``. Auto-detect is a known-limit on
     files whose values embed a rival delimiter (DS-4); declare ``sep``.
     A declared ``preferred`` must be a single character other than newline,
@@ -828,7 +813,7 @@ def load_smart_csv(
     Mixed-case headers use quoted identifiers (``F.col``+cast lowercases unquoted
     names on the createDataFrame path — use ``quote_ident``).
 
-    **Sampling (r26 Q4):** inference scans at most ``sampling_rows`` data rows
+    **Sampling:** inference scans at most ``sampling_rows`` data rows
     (default :data:`DEFAULT_INFERENCE_SAMPLING_ROWS` = 10_000 when the file is
     larger). The full file is always materialised for the data frame. A type
     class that appears only past the cap can under-widen the schema; the

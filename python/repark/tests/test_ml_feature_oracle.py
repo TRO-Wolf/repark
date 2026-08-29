@@ -1,4 +1,4 @@
-"""M2 R-ML-FEATURE oracles — plan-built transformers + pipeline e2e.
+"""R-ML-FEATURE oracles — plan-built transformers + pipeline e2e.
 
 Live-pyspark differentials importorskip when JVM unavailable. EXPECTED-ERROR never skip.
 Float bar: 1e-12 relative where noted; exact otherwise.
@@ -75,7 +75,7 @@ def test_vector_assembler_null_error() -> None:
 
 
 def test_vector_assembler_sparse_output() -> None:
-    """M7: sparseOutput=True emits {size,indices,values} omitting zeros."""
+    """sparseOutput=True emits {size,indices,values} omitting zeros."""
     spark = _session()
     try:
         df = spark.createDataFrame([(0.0, 1.5, 0.0, 2.0)], ["a", "b", "c", "d"])
@@ -105,10 +105,10 @@ def test_vector_assembler_sparse_output() -> None:
 
 
 def test_string_indexer_keep_one_hot_encoder_drop_last_matrix() -> None:
-    """M7: StringIndexer handleInvalid=keep x OHE dropLast interaction matrix.
+    """StringIndexer handleInvalid=keep x OHE dropLast interaction matrix.
 
-    SI keep maps unseen/null → numLabels; OHE keep reserves invalid bucket *before*
-    dropLast (M4 C4-L-001). Pins both dropLast True/False with SI-invalid indices.
+    SI keep maps unseen/null → numLabels; OHE keep reserves the invalid bucket *before*
+    dropLast. Pins both dropLast True/False with SI-invalid indices.
     """
     spark = _session()
     try:
@@ -279,7 +279,7 @@ def test_max_abs_scaler() -> None:
 
 
 def test_minmax_maxabs_nan_tolerant() -> None:
-    """octo F-Q1-012: MinMax/MaxAbs exclude NaNs in fit; transform stays plan-valid."""
+    """MinMax/MaxAbs exclude NaNs in fit; transform stays plan-valid."""
     spark = _session()
     try:
         base = spark.sql(
@@ -330,7 +330,7 @@ def test_imputer_mean() -> None:
 
 
 def test_imputer_median() -> None:
-    """Q1: Imputer(strategy=median) fills nulls with approx p50 (bounds-window)."""
+    """Imputer(strategy=median) fills nulls with approx p50 (bounds-window)."""
     spark = _session()
     try:
         df = spark.createDataFrame([(1.0,), (None,), (3.0,), (5.0,)], ["x"])
@@ -347,7 +347,7 @@ def test_imputer_median() -> None:
 
 
 def test_imputer_median_nan_missing() -> None:
-    """Q1/octo F-Q1-002: default missingValue=NaN treats NaN as missing (not crash)."""
+    """Default missingValue=NaN treats NaN as missing (not crash)."""
     spark = _session()
     try:
         df = spark.sql(
@@ -360,7 +360,6 @@ def test_imputer_median_nan_missing() -> None:
         assert rep == rep  # not NaN
         assert 1.0 <= rep <= 5.0
         vals = [row.asDict()["x_out"] for row in model.transform(df).collect()]
-        # NaN row replaced with fitted median.
         assert vals[0] == 1.0
         assert vals[1] == rep
         assert vals[2] == 3.0
@@ -370,7 +369,7 @@ def test_imputer_median_nan_missing() -> None:
 
 
 def test_imputer_missing_value_sentinel() -> None:
-    """Q1/octo F-Q1-002: non-NaN missingValue is excluded from fit and replaced."""
+    """Non-NaN missingValue is excluded from fit and replaced."""
     spark = _session()
     try:
         df = spark.sql("SELECT * FROM (VALUES (1.0), (0.0), (3.0)) t(x)")
@@ -386,7 +385,7 @@ def test_imputer_missing_value_sentinel() -> None:
 
 
 def test_imputer_fit_temp_view_cleaned_on_error() -> None:
-    """Q1/octo F-Q1-005: fit exception must not leak TEMPORARY views."""
+    """Fit exception must not leak TEMPORARY views."""
     spark = _session()
     try:
         before = {table.name for table in spark.catalog.listTables()}
@@ -402,7 +401,7 @@ def test_imputer_fit_temp_view_cleaned_on_error() -> None:
 
 
 def test_string_indexer_fit_temp_view_cleaned_on_error() -> None:
-    """octo F-Q1-014: StringIndexer fit error path drops temp views."""
+    """StringIndexer fit error path drops temp views."""
     spark = _session()
     try:
         before = {table.name for table in spark.catalog.listTables()}
@@ -416,7 +415,7 @@ def test_string_indexer_fit_temp_view_cleaned_on_error() -> None:
 
 
 def test_robust_scaler_basic() -> None:
-    """Q1: RobustScaler centers on median / scales by IQR (plan-built)."""
+    """RobustScaler centers on median / scales by IQR (plan-built)."""
     spark = _session()
     try:
         base = spark.createDataFrame([(1.0,), (2.0,), (3.0,), (4.0,), (100.0,)], ["a"])
@@ -438,7 +437,7 @@ def test_robust_scaler_basic() -> None:
 
 
 def test_quantile_discretizer_basic() -> None:
-    """Q1: QuantileDiscretizer fit → Bucketizer with quantile splits."""
+    """QuantileDiscretizer fit → Bucketizer with quantile splits."""
     spark = _session()
     try:
         df = spark.createDataFrame([(float(i),) for i in range(10)], ["x"])
@@ -458,7 +457,7 @@ def test_quantile_discretizer_basic() -> None:
 
 
 def test_regex_tokenizer_gaps_true() -> None:
-    """Q1: RegexTokenizer gaps=True splits on pattern; minTokenLength filters."""
+    """RegexTokenizer gaps=True splits on pattern; minTokenLength filters."""
     spark = _session()
     try:
         df = spark.createDataFrame([("Hello   World a BB",)], ["text"])
@@ -481,7 +480,7 @@ def test_regex_tokenizer_gaps_true() -> None:
 
 
 def test_regex_tokenizer_preserves_row_order() -> None:
-    """Q1/octo F-Q1-004/009: rid materialized — tokens stay associated with row ids."""
+    """rid materialized — tokens stay associated with row ids."""
     spark = _session()
     try:
         # UNION ALL stresses non-deterministic scan order (VALUES alone can hide CTE bugs).
@@ -500,7 +499,7 @@ def test_regex_tokenizer_preserves_row_order() -> None:
 
 
 def test_imputer_same_input_output_col() -> None:
-    """Q1/octo F-Q1-010: in-place impute to the same column name (Spark-compatible)."""
+    """In-place impute to the same column name (Spark-compatible)."""
     spark = _session()
     try:
         df = spark.sql("SELECT * FROM (VALUES (1.0), (CAST(NULL AS DOUBLE)), (3.0)) t(x)")
@@ -526,7 +525,7 @@ def test_regex_tokenizer_gaps_false_stop() -> None:
 
 
 def test_count_vectorizer_and_idf() -> None:
-    """Q1: CountVectorizer vocab + counts; IDF smooth scaling."""
+    """CountVectorizer vocab + counts; IDF smooth scaling."""
     spark = _session()
     try:
         # Build token arrays via Tokenizer (createDataFrame list-cols not yet Arrow-bound).
@@ -540,7 +539,7 @@ def test_count_vectorizer_and_idf() -> None:
         tf = cv_model.transform(df)
         rows = [list(row.asDict()["tf"]) for row in tf.collect()]
         # Vocabulary order is frequency-desc then token; check bag sums.
-        # U2: CountVectorizer SQL uses `1.0`/`0.0` literals → DECIMAL vectors after
+        # CountVectorizer SQL uses `1.0`/`0.0` literals → DECIMAL vectors after
         # parse_float_as_decimal. Values still sum to the token counts.
         assert all(
             abs(float(sum(vec)) - expected) < 1e-9
@@ -560,7 +559,7 @@ def test_count_vectorizer_and_idf() -> None:
 
 
 def test_count_vectorizer_fractional_min_tf() -> None:
-    """Q1/octo F-Q1-006: minTF in [0,1) is a fraction of document tokens."""
+    """minTF in [0,1) is a fraction of document tokens."""
     spark = _session()
     try:
         # Doc0: a a a b → 4 tokens; minTF=0.5 → threshold 2 → keep a(3), drop b(1)
@@ -702,7 +701,6 @@ def test_live_string_indexer_labels_oracle() -> None:
         data = [("a",), ("b",), ("a",), ("c",), ("a",), ("b",)]
         pdf = spark.createDataFrame(data, ["cat"])
         spark_labels = SparkStringIndexer(inputCol="cat", outputCol="idx").fit(pdf).labels
-        # repark
         rs = _session()
         try:
             rdf = rs.createDataFrame(data, ["cat"])
@@ -715,7 +713,7 @@ def test_live_string_indexer_labels_oracle() -> None:
 
 
 def test_sql_transformer_refuses_non_select() -> None:
-    """SQLTransformer refuses multi-statement / non-SELECT (octo C1-SEC-001)."""
+    """SQLTransformer refuses multi-statement / non-SELECT."""
     spark = _session()
     try:
         df = spark.createDataFrame([(1,)], ["id"])
@@ -728,7 +726,7 @@ def test_sql_transformer_refuses_non_select() -> None:
 
 
 def test_standard_scaler_single_row_std_fallback() -> None:
-    """n=1 stddev_samp is NULL -> scale factor 1.0 (octo C1-L-002)."""
+    """n=1 stddev_samp is NULL -> scale factor 1.0."""
     spark = _session()
     try:
         base = spark.createDataFrame([(3.0, 4.0)], ["a", "b"])
@@ -743,7 +741,7 @@ def test_standard_scaler_single_row_std_fallback() -> None:
 
 
 def test_stop_words_remover_after_tokenizer() -> None:
-    """StopWordsRemover filters via unnest plan (octo c2)."""
+    """StopWordsRemover filters via unnest plan."""
     spark = _session()
     try:
         df = spark.createDataFrame([("the cat and dog",)], ["text"])
@@ -755,7 +753,7 @@ def test_stop_words_remover_after_tokenizer() -> None:
 
 
 def test_pipeline_string_indexer_save_load() -> None:
-    """Fitted StringIndexer survives PipelineModel save/load (octo c2)."""
+    """Fitted StringIndexer survives PipelineModel save/load."""
     import shutil
     import tempfile
     from pathlib import Path
@@ -779,7 +777,7 @@ def test_pipeline_string_indexer_save_load() -> None:
 
 
 def test_vector_assembler_output_collision() -> None:
-    """outputCol already present -> AnalysisException (octo c3)."""
+    """outputCol already present -> AnalysisException."""
     spark = _session()
     try:
         df = spark.createDataFrame([(1.0, 2.0)], ["a", "features"])
@@ -790,13 +788,13 @@ def test_vector_assembler_output_collision() -> None:
 
 
 def test_feature_fit_refuses_list() -> None:
-    """Feature estimators refuse non-repark frames (octo c4)."""
+    """Feature estimators refuse non-repark frames."""
     with pytest.raises(Exception, match=r"repark\.dataframe\.DataFrame"):
         StringIndexer(inputCol="c", outputCol="i").fit([("a",)])
 
 
 def test_one_hot_encoder_all_null_fit() -> None:
-    """All-null index col fit -> category_size 0; keep maps nulls to empty sparse (octo c5)."""
+    """All-null index col fit -> category_size 0; keep maps nulls to empty sparse."""
     spark = _session()
     try:
         df = spark.createDataFrame([(None,), (None,)], ["idx"])

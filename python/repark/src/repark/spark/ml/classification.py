@@ -1,8 +1,4 @@
-"""Classification estimators — IRLS logistic (M3).
-
-``LogisticRegression.fit`` multi-pass streams Arrow batches inside Rust (IRLS + Cholesky).
-Python never trains; the model holds coefficients / intercept only.
-"""
+"""Binary logistic regression backed by the native IRLS implementation."""
 
 from __future__ import annotations
 
@@ -11,8 +7,6 @@ from typing import Any
 
 from repark import _native
 from repark.errors import IllegalArgumentException, UnsupportedOperationException
-
-# === r23 QI1: idents ===
 from repark.spark._idents import quote_ident as _quote_ident
 from repark.spark._temp_views import scratch_view_name
 from repark.spark.ml.base import (
@@ -32,7 +26,7 @@ from repark.spark.ml.param import (
 
 
 def _sql_float(value: float) -> str:
-    """Render a float for SQL."""
+    """Render a finite or special float as a SQL literal."""
     if value != value:
         return "CAST('NaN' AS DOUBLE)"
     if value == float("inf"):
@@ -48,7 +42,7 @@ class LogisticRegression(
     HasPredictionCol,
     Estimator["LogisticRegressionModel"],
 ):
-    """Binary logistic regression via native IRLS (multi-pass Rust stream)."""
+    """Fit binary logistic regression with native multi-pass IRLS."""
 
     def __init__(
         self,
@@ -61,7 +55,7 @@ class LogisticRegression(
         tol: float | None = None,
         family: str | None = None,
     ) -> None:
-        """Optional kwargs mirror Spark constructor names."""
+        """Initialize Spark-shaped parameters and defaults."""
         super().__init__()
         self.fitIntercept: Param[bool] = Param(
             self,
@@ -104,7 +98,7 @@ class LogisticRegression(
             self._set(family=family)
 
     def _fit(self, dataset: Any) -> LogisticRegressionModel:
-        """Native multi-pass IRLS; Python never iterates training rows."""
+        """Fit with native IRLS and return coefficients and fit metadata."""
         frame = _require_repark_dataframe(dataset, verb="LogisticRegression.fit")
         family = str(self.getOrDefault(self.family))
         if family not in {"binomial", "auto"}:
@@ -136,7 +130,7 @@ class LogisticRegression(
 
 
 class LogisticRegressionModel(HasFeaturesCol, HasPredictionCol, Model):
-    """Fitted logistic model — params only; plan-built hard 0/1 prediction."""
+    """Fitted logistic model that adds a plan-built binary prediction."""
 
     def __init__(
         self,
@@ -151,7 +145,7 @@ class LogisticRegressionModel(HasFeaturesCol, HasPredictionCol, Model):
         iterations: int = 0,
         converged: bool = False,
     ) -> None:
-        """Store coefficients / intercept."""
+        """Initialize fitted coefficients, intercept, and metadata."""
         super().__init__()
         self.coefficients = [float(value) for value in (coefficients or [])]
         self.intercept = float(intercept)
@@ -166,7 +160,11 @@ class LogisticRegressionModel(HasFeaturesCol, HasPredictionCol, Model):
             self.setPredictionCol(predictionCol)
 
     def _transform(self, dataset: Any) -> Any:
-        """Plan: prediction = CASE WHEN sigmoid(η) >= 0.5 THEN 1.0 ELSE 0.0 END."""
+        """Add a hard 0/1 prediction after validating feature width.
+
+        Compare logits to zero. A sigmoid score of at least 0.5 has ``eta >= 0``. This avoids
+        exponential overflow.
+        """
         frame = _require_repark_dataframe(dataset, verb="LogisticRegressionModel.transform")
         _refuse_output_collision(
             frame, self.getPredictionCol(), stage="LogisticRegressionModel.transform"
@@ -189,7 +187,6 @@ class LogisticRegressionModel(HasFeaturesCol, HasPredictionCol, Model):
         for index, coef in enumerate(self.coefficients):
             terms.append(f"({_sql_float(coef)} * array_element({features}, {index}))")
         eta = " + ".join(terms)
-        # Stable-ish sigmoid via 1/(1+exp(-eta)); threshold at 0.5 ≡ eta >= 0.
         expr = f"CASE WHEN ({eta}) >= 0.0 THEN 1.0 ELSE 0.0 END"
         view = scratch_view_name(frame._session, "__repark_logit_")
         frame.createOrReplaceTempView(view)
@@ -201,7 +198,7 @@ class LogisticRegressionModel(HasFeaturesCol, HasPredictionCol, Model):
                 frame._session.drop_temp_view(view)
 
     def _ml_fitted_state(self) -> dict[str, Any]:
-        """Params only."""
+        """Return fitted parameters without training rows."""
         return {
             "coefficients": list(self.coefficients),
             "intercept": self.intercept,
@@ -222,7 +219,7 @@ class LogisticRegressionModel(HasFeaturesCol, HasPredictionCol, Model):
         fitted: bool,
         fitted_state: dict[str, Any],
     ) -> LogisticRegressionModel:
-        """Rebuild from save."""
+        """Rebuild a model from persisted parameters and fitted state."""
         payload = {**params, **(fitted_state or {})}
         return cls(
             coefficients=list(payload.get("coefficients") or []),
@@ -237,7 +234,7 @@ class LogisticRegressionModel(HasFeaturesCol, HasPredictionCol, Model):
         )
 
     def copy(self, extra: dict[Any, Any] | None = None) -> LogisticRegressionModel:
-        """Copy model params; apply ``extra`` so ``transform(df, params)`` works (C4-L-002)."""
+        """Deep-copy model parameters and apply optional overrides."""
         that = LogisticRegressionModel(
             coefficients=list(self.coefficients),
             intercept=self.intercept,

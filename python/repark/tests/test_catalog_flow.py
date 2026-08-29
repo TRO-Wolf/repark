@@ -38,7 +38,7 @@ def _rows(spark: ReparkSession) -> list[dict[str, object]]:
 
 
 def test_silver_publish_flow(spark: ReparkSession) -> None:
-    # --- ensure_silver_table_exists: temp view + tableExists gate + CTAS -----------------------
+    # ensure_silver_table_exists: temp view + tableExists gate + CTAS
     df = spark.sql("SELECT 1 AS id, 'a' AS name UNION ALL SELECT 2, 'b'")
     df.createOrReplaceTempView("staging_view")
     assert not spark.catalog.tableExists(FQ_TABLE)
@@ -50,7 +50,7 @@ def test_silver_publish_flow(spark: ReparkSession) -> None:
     assert spark.catalog.tableExists(FQ_TABLE)
     assert spark.catalog.dropTempView("staging_view")
 
-    # --- upsert_silver_df: the literal MERGE text the script generates -------------------------
+    # upsert_silver_df: the literal MERGE text the script generates
     updates = spark.sql("SELECT 2 AS id, 'bee' AS name UNION ALL SELECT 3, 'c'")
     updates.createOrReplaceTempView("staging_view")
     spark.sql(
@@ -71,10 +71,9 @@ def test_silver_publish_flow(spark: ReparkSession) -> None:
 
 
 def test_ctas_partitioned_by_end_to_end(spark: ReparkSession) -> None:
-    # U1 (audit P0-1 / BUG-008+OTH-001): `PARTITIONED BY` on CTAS must land a PARTITIONED table
-    # instead of being silently dropped — pinned on the Arrow export path (value AND Arrow type
-    # via to_arrow, never a display path), with a partition-filtered read and a
-    # read-back-after-reregister.
+    # U1 (audit P0-1 / BUG-008+OTH-001): CTAS `PARTITIONED BY` must land a PARTITIONED table,
+    # never a silently dropped one. Arrow export path (value AND type), a partition-filtered
+    # read, and a read-back-after-reregister.
     table_name = "glue_catalog.example_silver.events"
     spark.sql(
         "SELECT 1 AS id, 'a' AS category UNION ALL SELECT 2, 'b' UNION ALL SELECT 3, 'a'"
@@ -97,19 +96,17 @@ def test_ctas_partitioned_by_end_to_end(spark: ReparkSession) -> None:
     filtered = spark.sql(f"SELECT id FROM {table_name} WHERE category = 'a' ORDER BY id").to_arrow()
     assert filtered.to_pylist() == [{"id": 1}, {"id": 3}]
 
-    # Read-back after re-register: clear the cache and re-query — the partitioned table is
-    # still resolvable and returns identical rows.
+    # Read-back after re-register: cache cleared, identical rows.
     spark.catalog.clearCache()
     again = spark.sql(f"SELECT id, category FROM {table_name} ORDER BY id").to_arrow()
     assert again.to_pylist() == table.to_pylist()
 
 
 def test_merge_partitioned_by_end_to_end(spark: ReparkSession) -> None:
-    # WG-1 (A4): `MERGE INTO` an identity-partitioned table through the public `spark.sql` facade —
-    # the v1 scope gate is retired. Pinned on the Arrow export path (value AND Arrow type via
-    # to_arrow, never a display path): a matched UPDATE and a not-matched INSERT (the star forms,
-    # the publish-job shape) commit through the fanout, with a partition-predicate read proving
-    # the inserted row is correctly partitioned.
+    # WG-1 (A4): MERGE INTO an identity-partitioned table through the public `spark.sql`
+    # facade. Arrow export path (value AND type): a matched UPDATE and a not-matched INSERT
+    # (the star forms, the publish-job shape) commit through the fanout; a partition-predicate
+    # read proves the inserted row is correctly partitioned.
     table_name = "glue_catalog.example_silver.part_entity"
     spark.sql(
         "SELECT 1 AS id, 'a' AS name UNION ALL SELECT 2, 'b' UNION ALL SELECT 3, 'c'"
@@ -180,10 +177,10 @@ def test_config_driven_catalog_publish_flow(tmp_path: Path) -> None:
     """The source publish job's config block drives the catalog via `.config(...)` alone.
 
     Mirrors the measured block shape (bare `SparkCatalog` class key, `catalog-impl`/warehouse/
-    `io-impl`) but swaps `type = memory` for the real Glue `catalog-impl` so the whole path runs
-    AWS-free. No `register_memory_catalog` call — the config map alone registers the catalog at
-    `getOrCreate`, proving the `spark.sql.catalog.<name>.*` mapping drives a real catalog end to
-    end (namespace → CTAS → MERGE round-trip).
+    `io-impl`) but swaps `type = memory` for the real Glue `catalog-impl`, so the config map
+    alone registers the catalog at `getOrCreate` — no `register_memory_catalog` call — proving
+    the `spark.sql.catalog.<name>.*` mapping drives a real catalog end to end (namespace →
+    CTAS → MERGE round-trip).
     """
     spark = (
         ReparkSession.builder.appName("process-silver")
@@ -229,8 +226,8 @@ def test_config_driven_catalog_publish_flow(tmp_path: Path) -> None:
 
 
 def test_repark_prefixed_catalog_config_registers_identically(tmp_path: Path) -> None:
-    # The repark-native `repark.sql.catalog.<name>.*` spelling (2026-07-12 naming decision)
-    # drives the same registration path as the Spark spelling — CTAS round-trip proves it.
+    # The repark-native `repark.sql.catalog.<name>.*` spelling drives the same registration
+    # path as the Spark spelling — CTAS round-trip proves it.
     spark = (
         ReparkSession.builder.appName("repark-native-config")
         .config("repark.sql.catalog.native_cat.type", "memory")
@@ -245,10 +242,10 @@ def test_repark_prefixed_catalog_config_registers_identically(tmp_path: Path) ->
 
 
 def test_create_namespace_with_location_places_ctas_data_there(tmp_path: Path) -> None:
-    # ADV-1: the programmatic create_namespace threads a `location` property (SQL CREATE NAMESPACE
+    # ADV-1: programmatic create_namespace threads a `location` property (SQL CREATE NAMESPACE
     # cannot), so a CTAS into the namespace writes under that path — proving the full
-    # facade -> PyO3 -> session -> catalog path threads the location the acceptance harness relies
-    # on. If the location were dropped, the CTAS would fall back to $TMPDIR and this rglob is empty.
+    # facade -> PyO3 -> session -> catalog path threads the location the acceptance harness
+    # relies on. A dropped location would fall back to $TMPDIR and this rglob would be empty.
     spark = ReparkSession.builder.appName("pytest-create-namespace").getOrCreate()
     spark.register_memory_catalog("glue_catalog", tmp_path)
     namespace_location = tmp_path / "custom_ns_location"
@@ -262,13 +259,13 @@ def test_create_namespace_with_location_places_ctas_data_there(tmp_path: Path) -
 
 
 def test_ctas_into_location_uri_only_namespace_places_data_there(tmp_path: Path) -> None:
-    # U2 (audit BUG-001, the failing case through the facade): a PRE-EXISTING real Glue database
-    # surfaces through the fork's catalog with ONLY the `location_uri` property (fork glue/utils.rs
-    # maps Glue's canonical locationUri to it) — no RePark-written `location`. The CTAS location
-    # resolution must fall back to `location_uri`. The single-key shape is constructed via
-    # `WITH DBPROPERTIES` (the mirror is unidirectional, so no `location` twin is synthesized);
-    # without the fallback the memory catalog would silently place the data under $TMPDIR and the
-    # rglob below would be empty. Value AND Arrow type checked on the `to_arrow` export.
+    # U2 (audit BUG-001): a PRE-EXISTING real Glue database surfaces through the fork's catalog
+    # with ONLY the `location_uri` property (fork glue/utils.rs maps Glue's canonical
+    # locationUri to it) — no RePark-written `location` — so CTAS location resolution must
+    # fall back to `location_uri`. The single-key shape is constructed via `WITH DBPROPERTIES`
+    # (the mirror is unidirectional, so no `location` twin is synthesized). Without the
+    # fallback the memory catalog would silently place the data under $TMPDIR and the rglob
+    # below would be empty. Value AND Arrow type checked on the `to_arrow` export.
     spark = ReparkSession.builder.appName("pytest-location-uri-only").getOrCreate()
     spark.register_memory_catalog("glue_catalog", tmp_path)
     glue_db_location = tmp_path / "pre_existing_glue_db"
@@ -287,11 +284,10 @@ def test_ctas_into_location_uri_only_namespace_places_data_there(tmp_path: Path)
 
 
 def test_sql_create_namespace_location_places_ctas_data_there(tmp_path: Path) -> None:
-    # WG-5 (ADV-2 residual): SQL `CREATE NAMESPACE … LOCATION` sets the namespace warehouse path
-    # through the public `spark.sql` facade — previously ONLY the programmatic
-    # `create_namespace(..., location=…)` could. A CTAS into the namespace lands its data under that
-    # path (value AND Arrow type checked on the `to_arrow` export); an empty rglob would mean the
-    # SQL LOCATION was dropped and the data fell back to $TMPDIR.
+    # WG-5 (ADV-2 residual): SQL `CREATE NAMESPACE … LOCATION` sets the namespace warehouse
+    # path through the public `spark.sql` facade. A CTAS into the namespace lands its data
+    # under that path (value AND Arrow type checked on the `to_arrow` export); an empty rglob
+    # would mean the SQL LOCATION was dropped and the data fell back to $TMPDIR.
     spark = ReparkSession.builder.appName("pytest-sql-create-namespace").getOrCreate()
     spark.register_memory_catalog("glue_catalog", tmp_path)
     namespace_location = tmp_path / "sql_ns_location"

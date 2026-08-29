@@ -39,9 +39,7 @@ def _na_frame(spark: ReparkSession) -> object:
     )
 
 
-# ==================================================================================================
 # E5 — withColumnRenamed
-# ==================================================================================================
 
 
 def test_with_column_renamed_present_and_camelcase_alias(spark: ReparkSession) -> None:
@@ -61,9 +59,7 @@ def test_with_column_renamed_missing_is_silent_noop(spark: ReparkSession) -> Non
     assert result.columns == ["id", "name"], "absent old name → unchanged"
 
 
-# ==================================================================================================
 # E5/E7 — fillna
-# ==================================================================================================
 
 
 def test_parity_fillna_dict_fills_named_columns(spark: ReparkSession) -> None:
@@ -161,9 +157,7 @@ def test_fillna_is_df_na_fill_alias(spark: ReparkSession) -> None:
     assert df.fillna({"i": -1}).to_arrow().equals(df.na.fill({"i": -1}).to_arrow())
 
 
-# ==================================================================================================
 # R2 (S1) — fillna(float) into an integer column keeps INTEGER dtype and fills the TRUNCATED value
-# ==================================================================================================
 
 
 def test_parity_fillna_float_into_int_truncates_and_keeps_int(spark: ReparkSession) -> None:
@@ -228,9 +222,7 @@ def test_parity_fillna_mixed_truncates_int_keeps_double(spark: ReparkSession) ->
     ]
 
 
-# ==================================================================================================
 # R6 (S3) — fillna / dropna subset accept a str (wrapped, not char-iterated), tuple, or list
-# ==================================================================================================
 
 
 def test_fillna_subset_accepts_str_and_tuple(spark: ReparkSession) -> None:
@@ -268,9 +260,7 @@ def test_fillna_subset_wrong_type_raises_pyspark_shaped_typeerror(spark: ReparkS
         _na_frame(spark).dropna(subset=5)
 
 
-# ==================================================================================================
 # E5/E7 — dropna
-# ==================================================================================================
 
 
 def test_parity_dropna_any_drops_rows_with_any_null(spark: ReparkSession) -> None:

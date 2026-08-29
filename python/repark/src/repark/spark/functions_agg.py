@@ -1,10 +1,4 @@
-"""Aggregate aliases and shims (FN-C).
-
-New defs live here (A7 themed sibling). Public names are re-exported from
-``functions.py``. Helpers ``first`` / ``last`` / ``count`` / ``min`` / ``max``
-stay imported from ``functions``; ``stddev`` / ``when`` stay imported from
-``functions_expr``.
-"""
+"""Aggregate function aliases for the Spark facade."""
 
 from __future__ import annotations
 

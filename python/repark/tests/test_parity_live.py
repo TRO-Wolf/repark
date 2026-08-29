@@ -3,20 +3,18 @@
 Two layers over the shared scenario registry in :mod:`_live_parity`:
 
 * **routine (JVM-free, every PR)** — ``test_scenario_recipe_matches_golden_on_repark`` runs each
-  engine-agnostic recipe on repark and asserts ``repark == pinned golden``. This gives the shared
-  recipes no-JVM coverage and never touches Spark, so it runs in routine CI. Lifecycle siblings
+  engine-agnostic recipe on repark and asserts ``repark == pinned golden``; lifecycle siblings
   (``test_lifecycle_scenario_matches_golden_on_repark``) cover the multi-statement MERGE rows the
   same way (memory Iceberg catalog, no JVM).
 * **live (``REPARK_PARITY_LIVE=1``, nightly / dispatch / parity-live.yml)** — the ``*_live_*`` tests
-  spin up ONE shared session-scoped local SparkSession (and a separate Iceberg-provisioned engine
-  for lifecycle rows) and assert the full triple **repark == pinned golden == live Spark** for
-  every scenario, plus that every recorded divergence (disclosure) STILL diverges. With the flag
-  unset every live test SKIPs with a visible reason — it never silently passes.
+  spin up ONE shared session-scoped local SparkSession (plus an Iceberg-provisioned engine for
+  lifecycle rows) and assert the full triple **repark == pinned golden == live Spark** for every
+  scenario, plus that every recorded divergence STILL diverges. Flag unset → every live test SKIPs
+  with a visible reason — it never silently passes.
 
 A third, always-on layer sits beside them: ``test_disclosures_mirror_the_registry`` checks the
 ``DISCLOSURES`` list against the divergence registry (``docs/spark-sql-iceberg-parity.md`` §6),
-which is the SSOT for divergence *semantics*. The list is the machine-checked mirror of the
-registry rows that claim one — never the other way round.
+which is the SSOT for divergence *semantics*; the list is its machine-checked mirror.
 
 Pyspark is imported lazily (inside the session fixture), so this file collects on a runner with no
 pyspark and no JVM (the routine-CI contract, L3).
@@ -34,9 +32,7 @@ import pytest
 
 from repark_parity import assert_frames_equal
 
-# ==================================================================================================
 # Shared live SparkSession — built ONCE per session, only when the flag is armed
-# ==================================================================================================
 
 
 @pytest.fixture(scope="session")
@@ -74,9 +70,7 @@ def spark_iceberg_engine() -> Iterator[lp.Engine]:
         shutil.rmtree(warehouse, ignore_errors=True)
 
 
-# ==================================================================================================
 # Routine (JVM-free) — the shared recipes reproduce the goldens on repark
-# ==================================================================================================
 
 
 @pytest.mark.parametrize("scenario", lp.SCENARIOS, ids=[s.name for s in lp.SCENARIOS])
@@ -110,9 +104,7 @@ def test_lifecycle_scenario_matches_golden_on_repark(
     assert_frames_equal(actual, scenario.golden, order_sensitive=scenario.order_sensitive)
 
 
-# ==================================================================================================
 # Live — repark == pinned golden == live Spark (value AND Arrow-path type/nullability)
-# ==================================================================================================
 
 
 @pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
@@ -188,10 +180,8 @@ def test_live_lifecycle_scenario_matches_repark_golden_and_spark(
     assert_frames_equal(spark_out, spark_scenario.golden, order_sensitive=order)
 
 
-# ==================================================================================================
-# L6(a) detector — the flag gate. Deterministic, always runs (no JVM): proves the tier is OFF for
-# any value other than exactly "1", so an unarmed run SKIPs rather than silently passing.
-# ==================================================================================================
+# L6(a) detector — the flag gate. Deterministic, always runs (no JVM): proves the tier is OFF
+# for any value other than exactly "1", so an unarmed run SKIPs rather than silently passing.
 
 
 def test_live_flag_predicate_gates_on_exact_env_value() -> None:
@@ -203,15 +193,11 @@ def test_live_flag_predicate_gates_on_exact_env_value() -> None:
 
 
 def test_registry_covers_the_mandated_golden_family() -> None:
-    """Guard against accidental registry shrinkage: the mandated coverage floor is the 23-golden
-    family (Group E group-agg/na/union + columns + dates + compound-agg display name) plus the two
-    Group L-write division goldens (union + bare) plus the two audit-G2 filter-rewriter goldens
-    plus the two H-1a non-UTC-oracle goldens, plus the 13 G1/G16 extraction-class timezone live
-    rows (N-2b item 3). DISCLOSURES are a separate exact-set pin (L-1 landing-truth grew it;
-    SCENARIOS stays 42).
-
-    The size moved 29 -> 42 DELIBERATELY in the same diff as the 13 timezone scenarios it counts
-    (item 3). Prior move 27 -> 29 was the two H-1a non-UTC date controls.
+    """Guard against accidental registry shrinkage: the coverage floor is the 23-golden family
+    (group-agg/na/union + columns + dates + compound-agg display name) plus the two write-division
+    goldens (union + bare), the two audit-G2 filter-rewriter goldens, the two H-1a non-UTC-oracle
+    goldens, and the 13 G1/G16 extraction-class timezone live rows. DISCLOSURES are a separate
+    exact-set pin.
     """
     assert len(lp.SCENARIOS) == 42, (
         "the 23-golden family + 2 Group L-write division goldens + 2 audit-G2 filter goldens "
@@ -233,10 +219,8 @@ def test_registry_covers_the_mandated_golden_family() -> None:
         "nested_array_of_struct_list_field_name",
         "conditionless_semi_anti_refuses",
     }, "every load-bearing disclosure is present"
-    # 14 -> 13 on 2026-08-15: `cast_date_to_int_spark_refuses` retired when the G6-3 gate made
-    # both engines refuse DATE -> INT. A disclosure is a DIVERGENCE detector; a converged pair
-    # belongs in the corpus as a shared-raise equality, and moving it there is what keeps
-    # `test_disclosures_mirror_the_registry` green in both directions.
+    # A disclosure is a DIVERGENCE detector; a converged pair belongs in the corpus as a
+    # shared-raise equality — that keeps `test_disclosures_mirror_the_registry` green both ways.
     assert len(lp.DISCLOSURES) == 13, "disclosure roster is an exact-set pin, not a floor"
 
 
@@ -285,15 +269,11 @@ def test_registry_runs_at_least_two_scenarios_under_a_non_utc_oracle() -> None:
 def test_build_repark_engine_override_stops_the_active_session_and_rebuilds() -> None:
     """The `active.stop()` branch inside `build_repark_engine`, exercised directly (JVM-free).
 
-    Every scenario runs behind conftest's `_isolate_active_session`, which clears the process-wide
-    registry before each test — so under the suite the branch never fires and the override looks
-    load-bearing without being covered. It IS load-bearing: repark resolves the session zone once
-    at construction, so with a session already active `getOrCreate` would hand that one back and
-    the scenario would silently run under the PREVIOUS zone with only the soft
-    "some configuration may not..." warning. This test creates that state on purpose.
-
-    Reds if the stop is removed (the returned engine reports `UTC`) or if the override stops
-    reaching the builder.
+    Under the suite, conftest's `_isolate_active_session` clears the process-wide registry before
+    each test, so the branch never fires there. It IS load-bearing: repark resolves the session
+    zone once at construction, so with a session already active `getOrCreate` would hand that one
+    back and the scenario would silently run under the PREVIOUS zone. Reds if the stop is removed
+    or the override stops reaching the builder.
     """
     import repark
 
@@ -308,53 +288,41 @@ def test_build_repark_engine_override_stops_the_active_session_and_rebuilds() ->
     )
     assert repark.ReparkSession.getActiveSession() is second.session
 
-    # The documented cost (ledger residual 5): the previous handle is STOPPED, not left alive.
+    # The documented cost: the previous handle is STOPPED, not left alive.
     with pytest.raises(Exception, match=r"stopped|SparkSession|alive"):
         first.session.sql("SELECT 1").to_arrow()
     second.session.stop()
 
 
-# ==================================================================================================
 # The divergence registry mirror — `DISCLOSURES` is the machine-checked mirror of the registry rows
 # that declare a live mirror (docs/spark-sql-iceberg-parity.md §6). JVM-free: always runs.
-# ==================================================================================================
 
 #: The divergence registry — the SSOT for divergence *semantics* (this list mirrors it, never
 #: the other way round). Resolved from this file so the check is cwd-independent.
 _REGISTRY = Path(__file__).resolve().parents[3] / "docs" / "spark-sql-iceberg-parity.md"
 
 #: A registry row opts into the live tier with a `live-mirror: <name>` bullet on its own line.
-#: The backticks and the line anchor are load-bearing: prose that merely *mentions* the field
-#: (the §1 and §6 explanations write `` `live-mirror: <name>` `` with a placeholder) must not
-#: register as a row. This exact spelling is documented for row authors in the registry's §6
-#: ("The exact spelling this gate parses") — the two must move together.
+#: Prose that merely *mentions* the field must not register as a row; the exact spelling is
+#: documented in the registry's §6 — the two must move together.
 _LIVE_MIRROR_RE = re.compile(r"(?m)^- `live-mirror: ([a-z0-9_]+)`$")
 
-#: The fail-closed half of the strict pattern above. A strict-only match is silently satisfied by
-#: ZERO matches, so a row whose bullet is *nearly* right (bolded, indented, hyphenated name,
-#: trailing comment) would claim a mirror that is never checked — and if the named ``Disclosure``
-#: does not exist, nothing reds. Every ``-`` bullet that mentions the field is therefore probed
-#: first and must satisfy the strict form. Restricted to ``-`` bullets on purpose: §1's
-#: ``**`live-mirror:`**`` heading starts with ``*`` and §6's prose lines start with words, so
-#: neither is a candidate.
+#: Fail-closed half of the strict pattern: a strict-only match is satisfied by ZERO matches, so a
+#: nearly-right bullet (bolded, indented, hyphenated name, trailing comment) would claim a mirror
+#: that is never checked. Every ``-`` bullet mentioning the field is probed first and must satisfy
+#: the strict form. Restricted to ``-`` bullets on purpose (§1's heading starts with ``*``).
 _LIVE_MIRROR_PROBE = re.compile(r"(?m)^[ \t]*-.*live-mirror.*$")
 
 
 def test_disclosures_mirror_the_registry() -> None:
     """Every registry row that claims a live mirror has a ``Disclosure`` of that name, and every
     ``Disclosure`` is claimed by a row. Both directions, because both failures are real: a row
-    whose mirror was deleted quietly loses its drift detector (the divergence could converge and
-    nothing would red), and a disclosure with no row is a divergence the registry does not
-    describe — the exact "no discoverable list" state this registry exists to end.
+    whose mirror was deleted quietly loses its drift detector, and a disclosure with no row is a
+    divergence the registry does not describe.
 
-    The registry is the SSOT for the *semantics*; this list is the checked mirror
-    (``docs/spark-sql-iceberg-parity.md`` §6). Fix a RED by editing whichever side is wrong — never
-    by relaxing this assertion.
-
-    The check is **fail-closed on a near-miss**: a bullet that mentions ``live-mirror`` but does
-    not match the exact spelling is a loud failure naming the line, not a silent zero-match. A
-    near-miss is otherwise invisible in exactly the case that matters — the row advertises a drift
-    detector it does not have.
+    The registry is the SSOT for the *semantics* (``docs/spark-sql-iceberg-parity.md`` §6); this
+    list is the checked mirror. Fix a RED by editing whichever side is wrong — never by relaxing
+    this assertion. Fail-closed on a near-miss: a bullet mentioning ``live-mirror`` that does not
+    match the exact spelling is a loud failure naming the line.
     """
     assert _REGISTRY.is_file(), (
         f"the divergence registry is missing at {_REGISTRY} — every citation in this repository "

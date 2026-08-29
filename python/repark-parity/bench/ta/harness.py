@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Shared fixtures for the P-2 TA pipeline benches.
+"""Shared fixtures for the TA pipeline benches.
 
 Measurement only — no engine edits. Deterministic generators (never wall clock
 in the seed path). Warm-up + N-iteration median. Machine-readable one-liners.
@@ -108,7 +108,7 @@ def native_build_flavor() -> str:
 
 
 def walk_close(n_rows: int, *, start: float = 100.0) -> np.ndarray:
-    """P-1 / p1c deterministic walk: null-free ``float64``, no wall clock."""
+    """Deterministic walk (p1c constants): null-free ``float64``, no wall clock."""
     close = np.empty(n_rows, dtype=np.float64)
     price = start
     for index in range(n_rows):
@@ -186,9 +186,9 @@ def try_polars_talib() -> Any | None:
 
 
 def raw_repark_ta_status() -> tuple[bool, str]:
-    """Raw ``repark_ta`` kernels are a Rust crate — not a Python import.
+    """Raw ``repark_ta`` kernels are a Rust crate timed via criterion, not here.
 
-    P-1 (#132) already times them via criterion. This path stays SKIP here.
+    This path stays SKIP.
     """
     try:
         import repark_ta  # noqa: F401
@@ -287,7 +287,7 @@ def seed_repark_frame(spark: Any, frame: pl.DataFrame) -> Any:
 
 
 def physical_plan_text(frame: Any) -> str:
-    """Capture ``DataFrame.explain()`` physical-plan body (N2 / TA-1 mechanic)."""
+    """Capture ``DataFrame.explain()`` physical-plan body."""
     import contextlib
     import io
 

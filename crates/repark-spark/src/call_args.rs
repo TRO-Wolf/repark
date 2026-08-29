@@ -1,7 +1,4 @@
-//! CALL argument parsing — the argument bag and its scalar-coercion helpers.
-//!
-//! Split from `call.rs` (RP-2, 2026-08-27) along the file-size gate's stated seam:
-//! argument parsing lives here, procedure-specific lowering stays there.
+//! CALL argument parsing and scalar coercion helpers.
 
 use std::collections::HashMap;
 

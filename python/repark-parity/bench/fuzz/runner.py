@@ -278,8 +278,8 @@ def _run_one(
         if duck_err:
             parts.append(f"duckdb: {duck_err}")
         message = " | ".join(parts)
-        # Dual success is required for OK; any engine error is ERROR (engine-fix
-        # out of scope — census only). If only one side errors, still ERROR.
+        # Dual success is required for OK; any engine error is ERROR
+        # (census only — engine-fix out of scope).
         return QueryOutcome(
             index=query.index,
             sql=query.sql,
@@ -380,9 +380,7 @@ def _try_minimize(
         return None
 
 
-# ---------------------------------------------------------------------------
 # Engine adapters
-# ---------------------------------------------------------------------------
 
 
 def _open_repark(database: FuzzDatabase) -> Any:

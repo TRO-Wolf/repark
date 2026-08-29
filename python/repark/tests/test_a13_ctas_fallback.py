@@ -1,7 +1,7 @@
-"""A13: location-less CTAS under ``register_memory_catalog`` uses the warehouse.
+"""Location-less CTAS under ``register_memory_catalog`` writes under the catalog warehouse.
 
-Two independent sessions that pass different warehouses must not share a directory
-keyed by catalog/namespace/table name.
+Two sessions passing different warehouses must not share a directory keyed by
+catalog/namespace/table name.
 """
 
 from __future__ import annotations

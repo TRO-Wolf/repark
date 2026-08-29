@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
 """Enforce Python source size and facade module thinness.
 
-SSOT for Python facade file size (r27 T1). Sibling of check_lib_rs. Prose
-(AGENTS.md / CLAUDE.md) points here and never restates the ceilings.
+SSOT for Python facade file size. Sibling of check_lib_rs. Prose points here and never
+restates the ceilings.
 
 Rules:
-1. Every *.py under python/ and scripts/ has the DEFAULT_CEILING. Blank lines
-   count. EXCEPTIONS records exact baselines, debt reasons, and split seams.
-2. An excepted file must equal its baseline. Growth fails. Shrinkage also fails
-   until the baseline ratchets down or the row retires at the default.
-3. Sources under tests/goldens/ and tests/fixtures/ are generated-test inputs
-   and are outside the scan.
+1. Every *.py under python/ and scripts/ has the DEFAULT_CEILING. Blank lines count.
+   EXCEPTIONS records exact baselines, debt reasons, and split seams.
+2. An excepted file must equal its baseline. Growth fails. Shrinkage also fails until the
+   baseline ratchets down or the row retires at the default.
+3. Sources under tests/goldens/ and tests/fixtures/ are generated-test inputs and are outside
+   the scan.
 4. The facade-only no-stub rule: a module whose body is only a module docstring + import /
-   re-export / __all__ / pass statements must start its docstring with the
-   exact substring ``re-export binding`` (case-sensitive, first line). Package
-   ``__init__.py`` files are EXEMPT from the no-stub rule (still under ceiling).
+   re-export / __all__ / pass statements must start its docstring with the exact substring
+   ``re-export binding`` (case-sensitive, first line). Package ``__init__.py`` files are
+   EXEMPT from the no-stub rule (still under ceiling).
 
 Exit 0 on clean; non-zero with path, measured count, ceiling, and outs.
 """
@@ -30,177 +30,167 @@ SCAN_ROOTS: tuple[str, ...] = ("python", "scripts")
 FACADE_ROOT = "python/repark/src/repark"
 EXEMPT_PATHS: tuple[tuple[str, ...], ...] = (("tests", "goldens"), ("tests", "fixtures"))
 
-# repo-relative posix path -> (exact baseline, debt reason, cohesive split seam).
-# Every row retires when its file reaches DEFAULT_CEILING. A baseline increase
-# requires explicit owner approval; ordinary edits only ratchet rows down.
+# repo-relative posix path -> (exact baseline, debt reason, cohesive split seam). Every row
+# retires when its file reaches DEFAULT_CEILING. A baseline increase requires explicit owner
+# approval; ordinary edits only ratchet rows down.
 EXCEPTIONS: dict[str, tuple[int, str, str]] = {
     "python/repark-parity/bench/tpcds/runner.py": (
-        1263,
+        1252,
         "TPC-DS orchestration, execution, and reporting share one runner.",
         "Split query execution from result collection and reporting.",
     ),
     "python/repark-parity/bench/tpch/runner.py": (
-        1780,
+        1773,
         "TPC-H orchestration, execution, and reporting share one runner.",
         "Split query execution from result collection and reporting.",
     ),
     "python/repark-parity/compat/runner.py": (
-        1289,
+        1279,
         "Compatibility discovery, subprocess execution, and report assembly share one module.",
         "Extract worker execution from census result classification.",
     ),
     "python/repark-parity/tests/test_compat_harness.py": (
-        1026,
+        1021,
         "Compatibility harness scenarios narrowly exceed the default.",
         "Split worker isolation from classification and report cases.",
     ),
     "python/repark/src/repark/spark/column.py": (
-        1648,
+        1589,
         "Column expression methods remain on one facade class.",
         "Extract a cohesive method family behind re-export bindings.",
     ),
     "python/repark/src/repark/spark/dataframe/core.py": (
-        6866,
+        6371,
         "The DataFrame facade still combines many plan-building method families.",
         "Extract one existing method region when a charter changes that responsibility.",
     ),
     "python/repark/src/repark/spark/dataframe/joins_columns.py": (
-        1423,
+        1239,
         "Join and column-selection helpers share one facade region.",
         "Split join planning from column projection helpers.",
     ),
     "python/repark/src/repark/spark/dataframe/plan_collapse.py": (
-        1418,
+        1168,
         "Plan-collapse transforms share one planner support module.",
         "Split transform families along their existing plan-node boundaries.",
     ),
     "python/repark/src/repark/spark/dataframe/writer_readwriter.py": (
-        1406,
+        1117,
         "DataFrameWriter and DataFrameReader facade methods share one region.",
         "Split writer and reader bindings into separate cohesive modules.",
     ),
     "python/repark/src/repark/spark/functions.py": (
-        2030,
+        1985,
         "Facade function exports and wrappers remain consolidated.",
         "Split by function family while preserving the public re-export surface.",
     ),
     "python/repark/src/repark/spark/functions_expr.py": (
-        2299,
+        2265,
         "Expression-building function families share one module.",
         "Split string, collection, or predicate expression families.",
     ),
     "python/repark/src/repark/spark/functions_udf.py": (
-        1340,
+        1300,
         "Python UDF and pandas UDF facade paths share one module.",
         "Split scalar UDF declarations from pandas UDF batch contracts.",
     ),
     "python/repark/src/repark/spark/ml/feature/_transformers.py": (
-        2762,
+        2717,
         "ML feature transformer facades share one module.",
         "Split transformers by feature family with stable public re-exports.",
     ),
     "python/repark/src/repark/spark/session/reader.py": (
-        1042,
+        1026,
         "DataFrameReader formats and option handling narrowly exceed the default.",
         "Split format-specific readers from shared option validation.",
     ),
     "python/repark/src/repark/spark/session/session_core.py": (
-        2482,
+        2411,
         "SparkSession lifecycle and query entry points share one facade module.",
         "Split construction and configuration from query and catalog methods.",
     ),
     "python/repark/src/repark/spark/ta.py": (
-        1862,
+        1818,
         "Technical-analysis facade wrappers share one generated-like public surface.",
         "Split wrappers by indicator family while preserving exports.",
     ),
     "python/repark/src/repark/spark/types.py": (
-        1843,
+        1834,
         "Spark SQL type definitions and conversion helpers share one module.",
         "Split type declarations from parsing and conversion helpers.",
     ),
     "python/repark/tests/_live_parity.py": (
-        1951,
+        1877,
         "Live-mirror declarations and oracle helpers share one test support module.",
         "Split registry declarations from execution and comparison helpers.",
     ),
-    "python/repark/tests/test_boundary_shapes_parity.py": (
-        1019,
-        "Boundary-shape parity cases narrowly exceed the default.",
-        "Split scalar boundaries from nested and collection boundaries.",
-    ),
     "python/repark/tests/test_display_styles.py": (
-        1233,
+        1175,
         "Display-format scenarios share one test module.",
         "Split text, HTML, and truncation style families.",
     ),
     "python/repark/tests/test_dynamic_flatten.py": (
-        1704,
+        1618,
         "Dynamic-flatten parity and refusal cases share one module.",
         "Split structural flattening from list and refusal scenarios.",
     ),
     "python/repark/tests/test_explode_rewrite.py": (
-        1231,
+        1135,
         "Explode rewrite shapes share one test battery.",
         "Split scalar, nested, and multiple-generator scenarios.",
     ),
-    "python/repark/tests/test_functions_gt2.py": (
-        1050,
-        "Greater-than-two-argument function cases narrowly exceed the default.",
-        "Split by function family while preserving entry-point coverage.",
-    ),
     "python/repark/tests/test_interchange_parity.py": (
-        1558,
+        1533,
         "Dataframe-interchange parity scenarios share one module.",
         "Split protocol export from import and type-conversion cases.",
     ),
     "python/repark/tests/test_join_parity.py": (
-        1274,
+        1232,
         "Join parity modes share one test module.",
         "Split equi-join, non-equi, and null-semantics scenarios.",
     ),
     "python/repark/tests/test_mapinarrow.py": (
-        1616,
+        1578,
         "Arrow map-type behavior cases share one battery.",
         "Split construction, conversion, and nested-operation families.",
     ),
     "python/repark/tests/test_ml_boost_oracle.py": (
-        2306,
+        2244,
         "Boosted-model oracle cases and fixtures share one module.",
         "Split estimator families while retaining the independent oracle boundary.",
     ),
     "python/repark/tests/test_pandas_udf.py": (
-        1487,
+        1478,
         "Pandas UDF modes and failure cases share one module.",
         "Split scalar, grouped, and iterator UDF scenario families.",
     ),
     "python/repark/tests/test_partition_value_audit.py": (
-        1684,
+        1665,
         "Partition-value audit cases share one broad parity matrix.",
         "Split partition transforms from temporal and type-conversion cases.",
     ),
     "python/repark/tests/test_session_timezone_parity.py": (
-        1398,
+        1328,
         "Session-timezone parity cases share one module.",
         "Split casts from date functions and window behavior.",
     ),
     "python/repark/tests/test_ta.py": (
-        1029,
+        1020,
         "Technical-analysis facade cases narrowly exceed the default.",
         "Split indicator families while keeping oracle comparisons.",
     ),
     "python/repark/tests/test_tpch_compare_unit.py": (
-        1561,
+        1551,
         "TPC-H comparison-unit scenarios share one module.",
         "Split schema, row, and reporting comparison families.",
     ),
     "python/repark/tests/test_udf.py": (
-        1178,
+        1170,
         "General UDF behavior and error cases share one module.",
         "Split scalar UDF execution from registration and refusal cases.",
     ),
     "python/repark/tests/test_window_parity.py": (
-        1512,
+        1481,
         "Window parity frames and functions share one module.",
         "Split frame semantics from ranking and analytic function families.",
     ),

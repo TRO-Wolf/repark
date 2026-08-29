@@ -1,8 +1,6 @@
-"""Group F — production-job gaps from the 2026-07-21 dogfood run.
+"""Group F — production-job gaps from the dogfood run.
 
-Closes the six shims that the source publish job needed on RePark (recorded in the dogfood
-report for that run). Every behavioral pin is
-recorded from live PySpark 4.1.2 (`JAVA_HOME=/usr/lib/jvm/zulu-17-amd64`,
+Every behavioral pin is recorded from live PySpark 4.1.2 (`JAVA_HOME=/usr/lib/jvm/zulu-17-amd64`,
 `SPARK_LOCAL_IP=127.0.0.1`); oracle values live in the test docstrings.
 """
 
@@ -31,9 +29,7 @@ def spark(tmp_path: Path) -> ReparkSession:
     session.stop()
 
 
-# ==================================================================================================
 # F1 — current_timestamp() microsecond UTC (engine bug that broke Iceberg v2 CTAS)
-# ==================================================================================================
 
 
 def test_current_timestamp_arrow_type_is_microsecond_utc(spark: ReparkSession) -> None:
@@ -56,7 +52,7 @@ def test_current_timestamp_arrow_type_is_microsecond_utc(spark: ReparkSession) -
 
 
 def test_sql_current_timestamp_is_microsecond_utc(spark: ReparkSession) -> None:
-    """TZ-4 PR-1: SQL ``current_timestamp()`` matches Spark's ``timestamp[us, tz=UTC]``."""
+    """SQL ``current_timestamp()`` matches Spark's ``timestamp[us, tz=UTC]`` (TZ-4)."""
     table = spark.sql("SELECT current_timestamp() AS ts").to_arrow()
     field_type = table.schema.field("ts").type
     assert pa.types.is_timestamp(field_type)
@@ -66,13 +62,12 @@ def test_sql_current_timestamp_is_microsecond_utc(spark: ReparkSession) -> None:
 
 
 def test_current_timestamp_ctas_into_iceberg_v2_succeeds(spark: ReparkSession) -> None:
-    """Dogfood GAP-6 regression: CTAS of a raw ``F.current_timestamp()`` column into Iceberg.
+    """CTAS of a raw ``F.current_timestamp()`` column into Iceberg (dogfood GAP-6).
 
-    The production job uses the DataFrame/functions path
+    The production job uses the DataFrame path
     (``.withColumn("ingestion_timestamp", current_timestamp())``), not SQL
     ``current_timestamp()``. Before the µs cast this failed with
-    ``timestamp_ns is not supported until v3``. Mutation proof: reverting the
-    binding cast re-breaks this test.
+    ``timestamp_ns is not supported until v3``; reverting the binding cast re-breaks this test.
     """
     source = spark.sql("SELECT 1 AS id").withColumn("ingestion_timestamp", F.current_timestamp())
     source.createOrReplaceTempView("src_ts")
@@ -88,7 +83,7 @@ def test_current_timestamp_ctas_into_iceberg_v2_succeeds(spark: ReparkSession) -
     assert str(ts_type.tz).upper() in {"UTC", "+00:00"}, (
         f"expected UTC/+00:00 tz after CTAS, got {ts_type}"
     )
-    # C4-Q-001: written value near-now (type-only pin was hollow).
+    # Written value near-now (a type-only pin is hollow).
     import datetime
 
     value = written.column("ingestion_timestamp")[0].as_py()
@@ -104,9 +99,7 @@ def test_current_timestamp_ctas_into_iceberg_v2_succeeds(spark: ReparkSession) -
     assert delta < 120, f"CTAS current_timestamp value not near now: {value!r} delta={delta}s"
 
 
-# ==================================================================================================
 # F2 / F3 — sparkContext + version
-# ==================================================================================================
 
 
 def test_spark_context_set_log_level_is_silent_noop(spark: ReparkSession) -> None:
@@ -142,7 +135,7 @@ def test_spark_context_master_defaults_and_records_builder(tmp_path: Path) -> No
 
 
 def test_spark_context_master_default_local_repark(tmp_path: Path) -> None:
-    """Octo C1-L-002: default master is local[repark] when builder omits .master()."""
+    """Default master is ``local[repark]`` when the builder omits ``.master()``."""
     from repark import session as session_module
 
     session_module._reset_dropin_warnings_for_tests()
@@ -161,7 +154,7 @@ def test_spark_context_unknown_attr_raises(spark: ReparkSession) -> None:
 
 
 def test_stopped_session_blocks_spark_context_and_version(tmp_path: Path) -> None:
-    """Octo C5: stop() makes sparkContext/version raise RuntimeError."""
+    """stop() makes sparkContext/version raise RuntimeError."""
     from repark import session as session_module
 
     session_module._reset_active_session_for_tests()
@@ -183,9 +176,7 @@ def test_spark_version_is_repark_prefixed(spark: ReparkSession) -> None:
     assert spark.version != "4.1.2"
 
 
-# ==================================================================================================
 # F4 — withColumns / withColumnsRenamed (oracle-driven atomicity)
-# ==================================================================================================
 
 
 def test_with_columns_atomic_cross_dependency(spark: ReparkSession) -> None:
@@ -237,12 +228,11 @@ def test_with_columns_renamed_simple_and_missing_noop(spark: ReparkSession) -> N
 def test_with_columns_renamed_chain_without_collision(spark: ReparkSession) -> None:
     """Sequential rename chain that stays unique: a→x, x→y on [a,b] → [y,b].
 
-    Octo C1-L-001: intermediate name from a prior map entry is visible to later entries
-    (running name-list), not a simultaneous original-only map.
+    The intermediate name from a prior map entry is visible to later entries (running
+    name-list), not a simultaneous original-only map.
     """
     frame = spark.createDataFrame([(1, 2)], ["a", "b"])
     out = frame.withColumnsRenamed({"a": "x", "x": "y"})
-    # After a→x names are [x,b]; x→y rewrites the first only → [y,b]
     assert out.columns == ["y", "b"]
     assert out.to_arrow().column("y").to_pylist() == [1]
 
@@ -257,13 +247,11 @@ def test_with_columns_renamed_duplicate_final_names_fail_loud(spark: ReparkSessi
         frame.withColumnsRenamed({"a": "b", "b": "c"})
 
 
-# ==================================================================================================
 # F5 — DataFrame.transform
-# ==================================================================================================
 
 
 def test_with_columns_empty_map_is_identity(spark: ReparkSession) -> None:
-    """Octo C3: empty colsMap projects the original frame unchanged."""
+    """Empty colsMap projects the original frame unchanged."""
     frame = spark.createDataFrame([(1, 2)], ["a", "b"])
     out = frame.withColumns({})
     assert out.columns == ["a", "b"]
@@ -271,7 +259,7 @@ def test_with_columns_empty_map_is_identity(spark: ReparkSession) -> None:
 
 
 def test_transform_positional_args(spark: ReparkSession) -> None:
-    """Octo C3-Q: transform forwards *args (not only kwargs)."""
+    """transform forwards *args (not only kwargs)."""
     frame = spark.createDataFrame([(1,)], ["a"])
 
     def add_n(data_frame: DataFrame, n: int) -> DataFrame:
@@ -314,9 +302,7 @@ def test_transform_non_dataframe_return_raises_assertion(spark: ReparkSession) -
         frame.transform(bad)  # type: ignore[arg-type]
 
 
-# ==================================================================================================
 # F6 — DIVERGENCE-1 timestamp-LTZ collect (disclose only)
-# ==================================================================================================
 
 
 def test_divergence_timestamp_ltz_collect_passthrough(spark: ReparkSession, tmp_path: Path) -> None:
@@ -325,32 +311,24 @@ def test_divergence_timestamp_ltz_collect_passthrough(spark: ReparkSession, tmp_
     Naive parquet timestamps cast via ``TimestampType()``:
 
     * **repark** passes the value through — Arrow int64 ticks after cast equal the source
-      parquet column (host-TZ independent; ACC Q-001).
+      parquet column (host-TZ independent).
     * **PySpark** ``TimestampType`` is LTZ: on ``collect()`` it converts through the process
       local timezone. Recorded dogfood (EDT host): naive parquet ``09:00`` → collect ``05:00``.
       That Spark wall-clock half is recorded below as a constant so a future *EDT-shaped*
       conversion would still fail the tick-identity pin first.
 
-    **Revisited 2026-08-10 (H-1a split B).** This docstring used to read "disclose, do not build
-    session-tz machinery", an instruction campaign decision D7 superseded: the machinery exists
-    now, and `spark.sql.session.timeZone` moves timestamp EXTRACTION at all four entry points
-    (``test_session_timezone_parity.py``). This pin is deliberately unchanged, because a ``CAST``
-    is not an extractor and the fix did not touch the cast path — which is exactly what the
-    assertions below still hold. The classes that keep this row divergent are named in the
-    divergence registry (``docs/spark-sql-iceberg-parity.md`` §7): TZ-4, repark's tz-naive
-    TIMESTAMP Arrow export, and TZ-6, that repark has no ``TIMESTAMP_NTZ`` distinct from
-    ``TIMESTAMP``. The "if these differ, session-tz LTZ may have been introduced" message below is
-    therefore still the right alarm: it guards the CAST path specifically, and a change that made
-    a *cast* shift ticks would be a new decision, not a consequence of this one.
+    The divergent classes are named in the divergence registry
+    (``docs/spark-sql-iceberg-parity.md`` §7): TZ-4, repark's tz-naive TIMESTAMP Arrow export,
+    and TZ-6, that repark has no ``TIMESTAMP_NTZ`` distinct from ``TIMESTAMP``. A ``CAST`` is
+    not an extractor; the alarm below guards the CAST path specifically — a change that made a
+    *cast* shift ticks would be a new decision.
 
-    **What this pin can and cannot detect, stated so the alarm is honest.** It runs on the default
-    ``spark`` fixture, i.e. a ``UTC`` session, so it is **UTC-only by construction**: no
-    session-zone effect can ever appear in it, and it can therefore never fire *because of* TZ-4 or
-    TZ-6. It detects one thing — that a ``CAST`` starts moving ticks — and that is enough, because
-    the classes it names are pinned on value AND type under two non-UTC sessions next door
-    (``test_session_timezone_parity.py``, and ``crates/repark-spark/tests/session_timezone.rs``).
-    A non-UTC leg was considered and deliberately not added: it would duplicate that corpus while
-    weakening this row's single, sharp claim about the cast path.
+    This pin runs on the default ``UTC`` session, so it is UTC-only by construction: no
+    session-zone effect can appear in it, and it can never fire because of TZ-4 or TZ-6. It
+    detects one thing — that a ``CAST`` starts moving ticks. Those classes are pinned on value
+    AND type under two non-UTC sessions next door (``test_session_timezone_parity.py``,
+    ``crates/repark-spark/tests/session_timezone.rs``); a non-UTC leg here would duplicate that
+    corpus while weakening this row's single, sharp claim about the cast path.
 
     JVM-free: no live Spark in this test.
     """
@@ -359,7 +337,7 @@ def test_divergence_timestamp_ltz_collect_passthrough(spark: ReparkSession, tmp_
     import pyarrow.parquet as pq
 
     naive = datetime.datetime(2026, 7, 20, 9, 0, 0)
-    # Recorded Spark LTZ collect wall clock on EDT host (dogfood report 2026-07-21).
+    # Recorded Spark LTZ collect wall clock on EDT host.
     spark_edt_collect_wall = datetime.datetime(2026, 7, 20, 5, 0, 0)
 
     path = tmp_path / "naive_ts.parquet"
@@ -381,7 +359,7 @@ def test_divergence_timestamp_ltz_collect_passthrough(spark: ReparkSession, tmp_
     arrow = casted.to_arrow()
     cast_ticks = arrow.column("ts2")[0].as_py()
 
-    # TZ-4 PR-2: cast(TimestampType()) is LTZ. Under the default UTC session the instant
+    # cast(TimestampType()) is LTZ. Under the default UTC session the instant
     # is unchanged (wall 09:00 stays 09:00Z); the Python cell becomes tz-aware.
     source_wall = (
         source_ticks.replace(tzinfo=None) if getattr(source_ticks, "tzinfo", None) else source_ticks
@@ -405,7 +383,7 @@ def test_divergence_timestamp_ltz_collect_passthrough(spark: ReparkSession, tmp_
 
 
 def test_with_columns_non_column_value_raises_type_error(spark: ReparkSession) -> None:
-    """ACC Q-002: non-Column map values raise TypeError for replace *and* append keys."""
+    """Non-Column map values raise TypeError for replace *and* append keys."""
     frame = spark.createDataFrame([(1, 10)], ["a", "b"])
     with pytest.raises(TypeError, match="must be Column"):
         frame.withColumns({"a": 99})  # type: ignore[dict-item]
@@ -413,13 +391,8 @@ def test_with_columns_non_column_value_raises_type_error(spark: ReparkSession) -
         frame.withColumns({"new_col": "x"})  # type: ignore[dict-item]
 
 
-# ==================================================================================================
-# Octo r2 cycle 1 cheap S2 remediations
-# ==================================================================================================
-
-
 def test_config_spark_master_warns_once(tmp_path: Path) -> None:
-    """C1-SEC-002: config spark.master must OTH-010-warn once (not only .master())."""
+    """config spark.master must OTH-010-warn once (not only ``.master()``)."""
     from repark import session as session_module
 
     session_module._reset_dropin_warnings_for_tests()
@@ -448,7 +421,7 @@ def test_config_spark_master_warns_once(tmp_path: Path) -> None:
 
 
 def test_held_spark_context_raises_after_stop(tmp_path: Path) -> None:
-    """C1-L-001: a held SparkContext must not outlive session.stop()."""
+    """A held SparkContext must not outlive session.stop()."""
     from repark import session as session_module
 
     session_module._reset_active_session_for_tests()
@@ -465,7 +438,7 @@ def test_held_spark_context_raises_after_stop(tmp_path: Path) -> None:
 
 
 def test_current_timestamp_value_is_near_now(spark: ReparkSession) -> None:
-    """C1-Q-001: pin a live ``now()`` value, not only the Arrow type (mutation-proof)."""
+    """Pin a live ``now()`` value, not only the Arrow type."""
     import datetime
 
     table = spark.sql("SELECT 1 AS a").withColumn("ts", F.current_timestamp()).to_arrow()
@@ -484,7 +457,7 @@ def test_current_timestamp_value_is_near_now(spark: ReparkSession) -> None:
 
 
 def test_expr_current_timestamp_is_microsecond_utc(spark: ReparkSession) -> None:
-    """TZ-4 PR-1: ``F.expr("current_timestamp()")`` is the same SQL producer as ``now()``."""
+    """``F.expr("current_timestamp()")`` is the same SQL producer as ``now()`` (TZ-4)."""
     table = spark.sql("SELECT 1 AS a").withColumn("ts", F.expr("current_timestamp()")).to_arrow()
     field_type = table.schema.field("ts").type
     assert pa.types.is_timestamp(field_type)
@@ -493,14 +466,14 @@ def test_expr_current_timestamp_is_microsecond_utc(spark: ReparkSession) -> None
 
 
 def test_with_columns_non_str_key_raises_type_error(spark: ReparkSession) -> None:
-    """C1-L-002: non-str map keys raise TypeError (not a late engine error)."""
+    """Non-str map keys raise TypeError (not a late engine error)."""
     frame = spark.createDataFrame([(1,)], ["a"])
     with pytest.raises(TypeError, match="keys must be str"):
         frame.withColumns({1: F.lit(1)})  # type: ignore[dict-item]
 
 
 def test_get_or_create_reuse_with_master_config_warns_once(tmp_path: Path) -> None:
-    """C2-SEC-001: reuse getOrCreate with spark.master still OTH-010-warns once."""
+    """Reuse getOrCreate with spark.master still OTH-010-warns once."""
     from repark import session as session_module
 
     session_module._reset_dropin_warnings_for_tests()
@@ -523,7 +496,7 @@ def test_get_or_create_reuse_with_master_config_warns_once(tmp_path: Path) -> No
 
 
 def test_with_columns_renamed_empty_map_is_identity(spark: ReparkSession) -> None:
-    """C3-L-001: empty rename map is a no-op identity."""
+    """Empty rename map is a no-op identity."""
     frame = spark.createDataFrame([(1, 2)], ["a", "b"])
     out = frame.withColumnsRenamed({})
     assert out.columns == ["a", "b"]
@@ -531,7 +504,7 @@ def test_with_columns_renamed_empty_map_is_identity(spark: ReparkSession) -> Non
 
 
 def test_sql_current_timestamp_ctas_into_iceberg_v2_succeeds(spark: ReparkSession) -> None:
-    """TZ-4 PR-1: SQL ``current_timestamp()`` CTAS is Iceberg-v2 legal (µs+UTC → timestamptz)."""
+    """SQL ``current_timestamp()`` CTAS is Iceberg-v2 legal, µs+UTC → timestamptz (TZ-4)."""
     spark.sql(
         "CREATE TABLE cat.ns.sql_ts_ctas AS "
         "SELECT 1 AS id, current_timestamp() AS ingestion_timestamp"
@@ -544,7 +517,7 @@ def test_sql_current_timestamp_ctas_into_iceberg_v2_succeeds(spark: ReparkSessio
 
 
 def test_with_columns_snake_and_camel_are_identical(spark: ReparkSession) -> None:
-    """C7-Q-001 / C8-Q-001: dual spellings are the same binding (identity + behavior)."""
+    """Dual spellings are the same binding (identity + behavior)."""
     assert DataFrame.withColumns is DataFrame.with_columns
     assert DataFrame.withColumnsRenamed is DataFrame.with_columns_renamed
     frame = spark.createDataFrame([(1, 10)], ["a", "b"])
@@ -553,13 +526,8 @@ def test_with_columns_snake_and_camel_are_identical(spark: ReparkSession) -> Non
     assert via_camel.to_arrow().to_pydict() == via_snake.to_arrow().to_pydict()
 
 
-# ==================================================================================================
-# Octo r3 cycle 1 thorough remediations
-# ==================================================================================================
-
-
 def test_held_dataframe_raises_after_stop(tmp_path: Path) -> None:
-    """C1-L-001: mint DF → stop session → count/collect/to_arrow must raise."""
+    """Mint DF → stop session → count/collect/to_arrow must raise."""
     from repark import session as session_module
 
     session_module._reset_active_session_for_tests()
@@ -578,7 +546,7 @@ def test_held_dataframe_raises_after_stop(tmp_path: Path) -> None:
 
 
 def test_double_stop_is_idempotent(tmp_path: Path) -> None:
-    """C1-L-002: second stop() is a no-op."""
+    """Second stop() is a no-op."""
     from repark import session as session_module
 
     session_module._reset_active_session_for_tests()
@@ -589,7 +557,7 @@ def test_double_stop_is_idempotent(tmp_path: Path) -> None:
 
 
 def test_empty_string_column_names_rejected(spark: ReparkSession) -> None:
-    """C1-Q-002: empty-string column names fail loud (not materialize)."""
+    """Empty-string column names fail loud (not materialize)."""
     frame = spark.createDataFrame([(1, 2)], ["a", "b"])
     with pytest.raises(AnalysisException, match="non-empty"):
         frame.withColumnsRenamed({"a": ""})
@@ -598,7 +566,7 @@ def test_empty_string_column_names_rejected(spark: ReparkSession) -> None:
 
 
 def test_current_timestamp_cast_timestamptype_keeps_utc(spark: ReparkSession) -> None:
-    """TZ-4 PR-2: cast(TimestampType()) is LTZ µs+UTC — no longer strips the F1 annotation."""
+    """cast(TimestampType()) is LTZ µs+UTC — it must not strip the F1 annotation (TZ-4)."""
     from repark.spark.types import TimestampType
 
     table = (
@@ -615,7 +583,7 @@ def test_current_timestamp_cast_timestamptype_keeps_utc(spark: ReparkSession) ->
 
 
 def test_expr_current_timestamp_ctas_into_iceberg_v2_succeeds(spark: ReparkSession) -> None:
-    """TZ-4 PR-1: ``F.expr("current_timestamp()")`` CTAS is Iceberg-v2 legal."""
+    """``F.expr("current_timestamp()")`` CTAS is Iceberg-v2 legal (TZ-4)."""
     source = spark.sql("SELECT 1 AS id").withColumn("ts", F.expr("current_timestamp()"))
     source.createOrReplaceTempView("src_expr_ts")
     spark.sql("CREATE TABLE cat.ns.expr_ts_ctas AS SELECT * FROM src_expr_ts")
@@ -627,7 +595,7 @@ def test_expr_current_timestamp_ctas_into_iceberg_v2_succeeds(spark: ReparkSessi
 
 
 def test_config_spark_master_case_insensitive_warns(tmp_path: Path) -> None:
-    """C1-SEC-001: Spark.Master (mixed case) still triggers OTH-010 warn."""
+    """``Spark.Master`` (mixed case) still triggers OTH-010 warn."""
     from repark import session as session_module
 
     session_module._reset_dropin_warnings_for_tests()
@@ -646,7 +614,7 @@ def test_config_spark_master_case_insensitive_warns(tmp_path: Path) -> None:
 
 
 def test_singular_empty_column_names_rejected(spark: ReparkSession) -> None:
-    """C3-L-001: singular withColumn / withColumnRenamed reject empty/whitespace names."""
+    """Singular withColumn / withColumnRenamed reject empty/whitespace names."""
     frame = spark.createDataFrame([(1, 2)], ["a", "b"])
     with pytest.raises(AnalysisException, match="non-empty"):
         frame.withColumn("", F.lit(1))
@@ -659,7 +627,7 @@ def test_singular_empty_column_names_rejected(spark: ReparkSession) -> None:
 
 
 def test_held_writer_insert_into_raises_after_stop(spark: ReparkSession, tmp_path: Path) -> None:
-    """C2-L-001: held DataFrameWriter.insertInto after session.stop must not commit."""
+    """Held DataFrameWriter.insertInto after session.stop must not commit."""
     from repark import session as session_module
 
     # Use fixture spark then stop it carefully — rebuild clean session for isolation.
@@ -678,7 +646,7 @@ def test_held_writer_insert_into_raises_after_stop(spark: ReparkSession, tmp_pat
 
 
 def test_columns_schema_transform_raise_after_stop(tmp_path: Path) -> None:
-    """C2-L-002/003: columns, schema, transform gate after stop."""
+    """columns, schema, transform gate after stop."""
     from repark import session as session_module
 
     session_module._reset_active_session_for_tests()
@@ -695,7 +663,7 @@ def test_columns_schema_transform_raise_after_stop(tmp_path: Path) -> None:
 
 
 def test_held_writer_save_as_table_raises_after_stop(tmp_path: Path) -> None:
-    """C6-S2: held saveAsTable after stop must raise (parity with insertInto)."""
+    """Held saveAsTable after stop must raise (parity with insertInto)."""
     from repark import session as session_module
 
     session_module._reset_active_session_for_tests()

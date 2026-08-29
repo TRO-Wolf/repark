@@ -1,29 +1,16 @@
-//! Price transforms — `AVGPRICE`, `MEDPRICE`, `TYPPRICE`, `WCLPRICE` (TA-Lib C 0.4.0 ports; see
-//! the crate docs for the numerics contract).
+//! Price transforms from TA-Lib C 0.4.0. Each has lookback 0 and emits one value per bar.
+//! Addition order and divisors are bit-exactness contracts.
 //!
-//! Each is a per-bar O/H/L/C combination with **no period parameter and lookback 0** — every input
-//! bar produces one output (the [`crate::volatility::trange`]-shaped no-lookback family). The only
-//! bit-exactness concern is the addition order and the divisor.
-//!
-//! **Oracle note.** The association for all four transforms follows the **recorded
-//! `polars_talib` 0.1.5 bits**, not a reading of either implementation: the recorded `TYPPRICE`
-//! series matches `high + (low + close)` (fold `low + close` first), which rounds differently
-//! from a `(high + low) + close` left fold on some inputs. An earlier revision of this note
-//! claimed the wrapper computes these in its own native Rust plugin — that is FALSE on upstream
-//! `master` (its `talib/src/transform.rs` calls `TA_TYPPRICE`/`TA_AVGPRICE`/… over FFI like every
-//! other function; 2026-08-15 research pass), so where the fold originates (wrapper build, C
-//! codegen, or the C source itself) is unverified. It does not matter for correctness here:
-//! the pipeline's models were trained on the recorded values, the oracle wins, and the goldens
-//! pin all four bit-exactly. Anyone re-recording must keep wrapper 0.1.5 (recorder asserts it)
-//! or re-verify these four series against both C 0.4.0 and the new wrapper first.
+//! **Oracle note.** The recorded `polars_talib` 0.1.5 bits define the association. `TYPPRICE`
+//! uses `high + (low + close)`, and all four transforms are golden-pinned bit-exactly. Keep that
+//! wrapper when re-recording, or re-verify all four series against C 0.4.0 first.
 
 use crate::{Result, check_lengths};
 
 /// ===========================================================================================
 /// `AVGPRICE` — average price, `(open + high + low + close) / 4` (`ta_AVGPRICE.c`).
 ///
-/// C sums in the order `high + low + close + open` then divides by `4`; the addition order is
-/// preserved for bit-exactness. Lookback 0 — every bar produces a value.
+/// Sums in C order `high + low + close + open`, then divides by `4`.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -43,8 +30,7 @@ pub fn avgprice(open: &[f64], high: &[f64], low: &[f64], close: &[f64]) -> Resul
 /// [`crate::TaError::LengthMismatch`] if the series differ in length.
 pub fn medprice(high: &[f64], low: &[f64]) -> Result<Vec<f64>> {
     check_lengths(high.len(), &[low.len()])?;
-    // NOT `f64::midpoint`: it rounds differently (overflow-avoiding), which would break the
-    // bit-exact match against the oracle's plain `(high + low) / 2` (the golden pins the latter).
+    // `f64::midpoint` rounds differently from the oracle's plain `(high + low) / 2`.
     #[allow(clippy::manual_midpoint)]
     Ok((0..high.len()).map(|i| (high[i] + low[i]) / 2.0).collect())
 }
@@ -52,9 +38,7 @@ pub fn medprice(high: &[f64], low: &[f64]) -> Result<Vec<f64>> {
 /// ===========================================================================================
 /// `TYPPRICE` — typical price, `(high + low + close) / 3` (`ta_TYPPRICE.c`). Lookback 0.
 ///
-/// The recorded oracle bits fold `low + close` first, so the summation is `high + (low + close)`
-/// — a bit-different rounding from a `(high + low) + close` left fold. Where the fold originates
-/// is unverified (see the module note); the golden pins this association exactly.
+/// The oracle folds `low + close` first. Preserve `high + (low + close)` for its rounding.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -86,7 +70,6 @@ mod tests {
     #[test]
     fn avgprice_averages_the_four_series() {
         let out = avgprice(&[10.0], &[12.0], &[8.0], &[11.0]).expect("valid");
-        // (high 12 + low 8 + close 11 + open 10) / 4 = 41 / 4 = 10.25
         assert!((out[0] - 10.25).abs() < 1e-12);
     }
 
@@ -100,14 +83,12 @@ mod tests {
     #[test]
     fn typprice_averages_high_low_close() {
         let out = typprice(&[12.0], &[9.0], &[15.0]).expect("valid");
-        // (12 + 9 + 15) / 3 = 12
         assert!((out[0] - 12.0).abs() < 1e-12);
     }
 
     #[test]
     fn wclprice_double_weights_the_close() {
         let out = wclprice(&[12.0], &[8.0], &[11.0]).expect("valid");
-        // (12 + 8 + 11*2) / 4 = 42 / 4 = 10.5
         assert!((out[0] - 10.5).abs() < 1e-12);
     }
 

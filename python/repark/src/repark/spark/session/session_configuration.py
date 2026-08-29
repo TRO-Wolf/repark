@@ -19,22 +19,18 @@ _CONF_GET_UNSET: object = object()
 
 _SQLCONF_DEFAULTS: dict[str, str] = {
     "spark.sql.sources.partitionOverwriteMode": "STATIC",
-    # === r21 T3: ux-polish ===
     # Default app name where we control the default (Spark has no default appName).
     "spark.app.name": "repark",
-    # === r23b N1: nested dict-cell → StructType (Spark SPARK-35929) ===
     # Conf true infers StructType for dict-valued *cells* (any nesting depth); false keeps
-    # MapType inference (byte-identical to PySpark's default); row-dicts (r22 key-union)
-    # are unaffected either way. repark defaults TRUE — a DECLARED divergence from
-    # PySpark's false (owner decision, 2026-08-16; registry row in
-    # docs/spark-sql-iceberg-parity.md): nested dict rows should flatten without an
-    # explicit schema. Set "false" to restore byte-identical PySpark behavior.
+    # MapType inference (byte-identical to PySpark's default); row-dicts are unaffected.
+    # repark defaults TRUE — a DECLARED divergence from PySpark's false (registry row in
+    # docs/spark-sql-iceberg-parity.md): nested dict rows flatten without an explicit
+    # schema. Set "false" to restore byte-identical PySpark behavior.
     "spark.sql.pyspark.inferNestedDictAsStruct.enabled": "true",
-    # === H-1a: session timezone (gap G1) ===
     # Readable back before anything sets it. UTC, not the host zone — a DECLARED divergence
     # from Spark's JVM-local default (reproducibility; no host-environment read).
     SESSION_TIME_ZONE_KEY: DEFAULT_SESSION_TIME_ZONE,
-    # === Q10: spark.sql.timestampType (default TIMESTAMP_LTZ, current LTZ behavior) ===
+    # Default TIMESTAMP_LTZ (current LTZ behavior).
     TIMESTAMP_TYPE_KEY: DEFAULT_TIMESTAMP_TYPE,
 }
 
@@ -135,7 +131,6 @@ def _forward_datafusion_conf(session: ReparkSession, key: str, value: str) -> No
 
     except Exception as engine_error:
         # Engine already classifies most SET failures as PySparkException; re-surface as
-
         # IllegalArgumentException so conf typos match the rest of the facade conf surface.
 
         message = str(engine_error).strip() or repr(engine_error)

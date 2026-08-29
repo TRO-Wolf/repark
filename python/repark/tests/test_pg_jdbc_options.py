@@ -82,7 +82,7 @@ def test_format_postgresql_alias_recognized(spark: SparkSession) -> None:
 
 
 def test_format_postgres_bad_partition_int_is_illegal_argument(spark: SparkSession) -> None:
-    """Bare int() must not leak ValueError: typed IllegalArgumentException (octo extra C1-Q-001)."""
+    """Bare int() must not leak ValueError: typed IllegalArgumentException."""
     with pytest.raises(IllegalArgumentException, match="lowerBound"):
         (
             spark.read.format("postgres")

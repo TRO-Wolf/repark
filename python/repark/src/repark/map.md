@@ -2,10 +2,8 @@
 
 ## Purpose
 
-The importable `repark` package after the Q1 re-home (2026-08-14). Top level is the
-ANSI-door callable `repark.sql()` plus a deprecation shim that re-exports facade
-names (`from repark import ReparkSession`). The facade implementation lives under
-`repark.spark`. `import repark.sql` is not a module.
+The importable `repark` package exposes the ANSI-door callable `repark.sql()` and
+compatibility exports from `repark.spark`. `import repark.sql` is not a module.
 
 Carve-outs that stay here: `repark._native` (maturin module-name), `repark.errors`
 (taxonomy identity), `__version__`.
@@ -15,8 +13,7 @@ Carve-outs that stay here: `repark._native` (maturin module-name), `repark.error
 - `__init__.py` — `sql()` ANSI callable; shim re-exports of facade names; `__version__`;
   display-style assignment guard.
 - `errors.py` — PySpark-shaped exception taxonomy (does not move).
-- `functions.py` — re-export binding of `repark.spark.functions` (deprecation shim so
-  S-1's unrewritten `import repark.functions` still collects until SQM union).
+- `functions.py` — re-export binding of `repark.spark.functions`.
 - `spark/` — the facade package. See [spark/map.md](spark/map.md).
 - `py.typed` — PEP 561 marker.
 
@@ -32,7 +29,7 @@ Carve-outs that stay here: `repark._native` (maturin module-name), `repark.error
 ## Pointers
 
 - Up: [../../map.md](../../map.md)
-- Design: [../../../../docs/design/python-facade.md](../../../../docs/design/python-facade.md) §4 Q1
+- Design: [../../../../docs/design/python-facade.md](../../../../docs/design/python-facade.md)
 
 ## Debug
 

@@ -107,7 +107,7 @@ engine's own MOR path must make, so RP-3 wires it before it measures.
   [docs/tier2-aws.md](../../../docs/tier2-aws.md) §2 (owner-executed IAM). Whether
   `DeleteObject` on table storage is authorized by `s3tables:PutTableData` is unverified —
   the first S3 Tables `expire_snapshots` measurement decides, and a denial is a stop, not a
-  design.
+  design. **The IAM was applied on 2026-08-28**; that measurement is unit MW-10's first clause.
 - **Sequencing vs the other campaigns.** This ruling makes v3 the spine to v1.0; FNP, perf,
   dbt, and the correctness backlog may use fork-wait windows as separately chartered units.
   They do not consume F-17 and do not gate the tag unless ruled into §3. A ready v3 unit takes

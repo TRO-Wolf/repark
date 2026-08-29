@@ -1,8 +1,6 @@
-/// CT-1 (F-BR-2 residual, COPY TO): a bare `COPY … TO …` whose returned `DataFrame` is never
-/// collected still writes the files. `LogicalPlan::Copy` is DataFusion-lazy (the file sink
+/// A bare `COPY … TO …` writes files before its returned `DataFrame` is collected. `LogicalPlan::Copy` is DataFusion-lazy (the file sink
 /// commits only on collect) exactly like DML — PySpark applies commands eagerly. Mutation: drop
 /// `Copy` from the eager-command predicate → the write never happens → no files → RED.
-/// r24 SB1: conf `repark.sql.allowLocalFilesystemDDL=true` (destination is outside warehouse).
 use super::super::*;
 use super::common::*;
 
@@ -27,11 +25,9 @@ async fn bare_copy_to_applies_without_collect() {
     );
 }
 
-/// CT-2 (F-BR-2 residual, COPY TO): the COPY is applied eagerly AND collecting the returned
-/// `DataFrame` does NOT re-run it — the no-double-apply trap the naive return-the-live-plan fix
+/// COPY applies eagerly, and collecting the returned `DataFrame` does not apply it again. The no-double-apply trap the naive return-the-live-plan fix
 /// creates. Files are deleted after the eager write; a `.collect()` that re-ran the sink would
 /// recreate them. Mutation: return the live `Copy` plan → the deleted files reappear → RED.
-/// r24 SB1: conf `repark.sql.allowLocalFilesystemDDL=true` (destination is outside warehouse).
 #[tokio::test]
 async fn copy_to_applies_exactly_once_across_a_later_collect() {
     let wh = TempDir::new().unwrap();
@@ -63,7 +59,7 @@ async fn copy_to_applies_exactly_once_across_a_later_collect() {
     );
 }
 
-/// r24 SB1 / SEC-02: default conf refuses COPY TO outside the warehouse and names the conf.
+/// The default conf refuses COPY TO outside the warehouse and names the conf.
 #[tokio::test]
 async fn copy_to_local_outside_warehouse_refuses_by_default() {
     let wh = TempDir::new().unwrap();
@@ -86,7 +82,7 @@ async fn copy_to_local_outside_warehouse_refuses_by_default() {
     assert!(!dest.exists(), "blocked COPY must not write files");
 }
 
-/// r24 SB1 / SEC-02: warehouse-root grandfather still allows COPY under the registered root.
+/// COPY under the registered warehouse root remains allowed.
 #[tokio::test]
 async fn copy_to_under_warehouse_root_grandfathers() {
     let wh = TempDir::new().unwrap();
@@ -106,7 +102,7 @@ async fn copy_to_under_warehouse_root_grandfathers() {
     );
 }
 
-/// r24 SB1 / SEC-01 free-SQL path: `array_repeat` over the ceiling refuses naming conf.
+/// `array_repeat` above the free-SQL ceiling refuses and names the conf.
 #[tokio::test]
 async fn free_sql_array_repeat_over_ceiling_refuses() {
     let wh = TempDir::new().unwrap();

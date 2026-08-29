@@ -4,6 +4,7 @@
 
 Source for `repark-iceberg` — two independent module trees ported from v1 crates. See
 [../map.md](../map.md).
+Source comments are condensed to API and safety contracts; executable behavior is unchanged.
 
 ## Contents
 

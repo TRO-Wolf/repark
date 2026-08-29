@@ -1,21 +1,11 @@
-"""Cross-check: every manifest-declared type matches the family's real Arrow schema (DS-3).
+"""Cross-check: every manifest-declared type matches the family's real Arrow schema.
 
-Each torture family carries a checked-in ``manifest.json`` whose class rows name a
-column and the type that column is supposed to have. Nothing bound those strings to
-the actual ``SCHEMA`` until now, so a one-sided edit — retype the field and forget the
-manifest, or relabel the manifest and forget the field — passed every gate silently.
-
-This module is the DS-2-review rider: it walks all four labeled families and asserts
-manifest type string == Arrow field type, after normalizing the two cosmetic
-differences between how a human writes a type and how pyarrow renders one:
-
-* **spacing** — pyarrow renders ``decimal128(24, 21)``; manifests write
-  ``decimal128(24,21)``.
-* **spelling** — pyarrow renders ``float64`` as ``double`` and ``date32`` as
-  ``date32[day]``; the manifests use the constructor names.
-
-Both directions are pinned: no manifest row may name a column the schema lacks, and
-no schema field may go unlabeled except the ones this file names explicitly.
+Each family carries a checked-in ``manifest.json`` naming a column and its declared type;
+a one-sided edit would otherwise pass every gate silently. Normalization folds spacing
+(``decimal128(24, 21)`` vs ``decimal128(24,21)``) and spelling (pyarrow renders
+``float64`` as ``double``, ``date32`` as ``date32[day]``). Both directions are pinned:
+no manifest row may name a column the schema lacks, and no schema field may go unlabeled
+except the ones this file names explicitly.
 """
 
 from __future__ import annotations
@@ -33,8 +23,7 @@ _DATASETS_DIR = Path(__file__).resolve().parents[1] / "datasets"
 #: Families that carry a manifest.json. ``nested`` labels row classes, not columns.
 LABELED_FAMILIES: tuple[str, ...] = ("schema_inference", "extreme_types", "secrets", "smartcsv")
 
-#: Schema fields deliberately not labeled as a torture class. DS-2's two families use
-#: ``id`` purely as a join key; DS-3's two label every column.
+#: Schema fields deliberately not labeled as a torture class; ``id`` is a join key only.
 EXPECTED_UNLABELED: dict[str, set[str]] = {
     "schema_inference": {"id"},
     "extreme_types": {"id"},

@@ -1,27 +1,5 @@
 //! The ANSI door's **surface matrix** — every `repark_common::surfaces` ID, disposed.
-//!
-//! Design SSOT: `docs/design/sql-doors.md` §2 Q13 (graft G2). The registry in
-//! `repark_common::surfaces` is the dialect-neutral universe; this file says what THIS door does
-//! with each ID, and [`matrix_maps_every_surface`] fails the build if any ID has no row.
-//!
-//! This door is NEW code, so the matrix does double duty: it is the audit, and it is the
-//! milestone boundary. PR-5 (M1) shipped the delegation core (reads, metadata tables, and the
-//! `INSERT`/`DELETE`/`UPDATE` the fork's `TableProvider` services — with the BUG-001 merge-on-read
-//! valve wired over them), the guard set, the wrong-door sniff, the CTAS/`WITH (…)` vocabulary and
-//! the schema DDL. **PR-6 (M2) closes the door**: ALTER (schema evolution, `SET PROPERTIES`,
-//! `RENAME TO`), MERGE, `FOR … AS OF` time travel, branch/tag DDL, the full refuse set, the Q11 TA
-//! toll, Q8 introspection (unblocked by the repark-core R2 config fix) and the two-session
-//! cross-door rows.
-//!
-//! What remains `DeliberatelyAbsent` after M2 is absent **by ruling, not by sequencing** — four
-//! statement-surface rows, each a standing design decision with its callable-op equivalent and
-//! its trigger named (design §6 R5). The three G8 value-semantics pin-absences (window
-//! frames, JOIN NULL keys, float determinism) flipped to Tested at R-3. There are no
-//! `M2`-deferral rows left.
-//!
 //! The whole module is `#[cfg(test)]` — audit evidence, not product code.
-//!
-//! **Test names are `cargo test -p repark-sql -- --list` names**, verbatim.
 
 use repark_common::surfaces::{self, Row, SessionProfile, SurfaceId};
 
@@ -38,13 +16,7 @@ const fn absent(reason: &'static str, adr: &'static str) -> Row {
 }
 
 /// ===========================================================================================
-/// The ANSI door's disposition of every surface ID, as of PR-6 (M2 — the door is closed).
-///
-/// Note the profile column. It is not a formality: extensions are session-scoped, so evidence
-/// gathered on a Spark-extended session would say nothing about this door's semantics (design §2
-/// Q13, graft G5). `Native` = a session with NO extension; `Unit` = no session at all;
-/// `TwoSession` = the cross-door protocol, whose ANSI half runs on a native session and whose
-/// Spark half is the control. `SparkExtended` may never appear here, and a test forbids it.
+/// The ANSI door's disposition of every surface ID.
 /// ===========================================================================================
 const ROWS: &[(SurfaceId, Row)] = &[
     // --- Statement forms ---
@@ -103,8 +75,7 @@ const ROWS: &[(SurfaceId, Row)] = &[
             Native,
         ),
     ),
-    // --- The ALTER family (M2). Stock-parsed, executed through the SAME tier-1 fork
-    // `UpdateSchema` / `rename_table` calls the Spark door uses — no door→door edge. ---
+    // --- The ALTER family. Stock-parsed, executed through the same tier-1 fork.
     (
         surfaces::ALTER_TABLE_RENAME,
         t(
@@ -136,8 +107,7 @@ const ROWS: &[(SurfaceId, Row)] = &[
             "docs/design/sql-doors.md §2 Q3",
         ),
     ),
-    // --- Delegated DML: shipped by M1 because delegation ships it (ADR-0003). These are WRITE
-    // surfaces, so each carries a round-trip row and the MoR valve below is wired over them.
+    // --- Delegated DML. These are write surfaces backed by the fork.
     (
         surfaces::INSERT_INTO,
         t("tests::insert_into_iceberg_table_round_trips", Native),
@@ -279,7 +249,7 @@ const ROWS: &[(SurfaceId, Row)] = &[
             Native,
         ),
     ),
-    // --- Guard rails: the M1 set (design §2 Q12) ---
+    // --- Guard rails (design §2 Q12) ---
     (
         surfaces::GUARD_MULTI_STATEMENT,
         t(
@@ -339,7 +309,7 @@ const ROWS: &[(SurfaceId, Row)] = &[
             TwoSession,
         ),
     ),
-    // --- Value semantics (H-2 G8). Test names are `cargo test -- --list` names. ---
+    // --- Value semantics. Test names are `cargo test -- --list` names. ---
     (
         surfaces::SEMANTICS_NULL_ORDERING,
         t("ansi_door_order_by_asc_defaults_to_nulls_last", Native),
@@ -381,10 +351,6 @@ const ROWS: &[(SurfaceId, Row)] = &[
 
 /// ===========================================================================================
 /// The compile-run audit (design §2 Q13): this door maps EXACTLY the registry, once each.
-///
-/// For a NEW door this is the test that keeps M1 honest about M2 — a surface cannot sit in the
-/// registry unmentioned while the door quietly does not implement it. `audit` reports unmapped
-/// IDs, stale IDs, duplicates and untraceable rows together.
 /// MUTATION: delete the `CTAS` row → this REDs naming `CTAS`.
 /// ===========================================================================================
 #[test]
@@ -396,16 +362,7 @@ fn matrix_maps_every_surface() {
     }
 }
 
-/// No `Tested` row claims `SparkExtended`. This is graft G5 as a test: the ANSI door's evidence
-/// must come from a session with NO extension installed, because a Spark-extended session has
-/// Spark expression semantics through EVERY door — including this one. A row that gathered its
-/// evidence on an extended session would be describing the Spark analyzer, not the ANSI door.
-///
-/// `TwoSession` IS allowed from PR-6 on, and only because of what the profile means: a two-session
-/// row runs the ANSI side on a NATIVE session and the Spark side on an extended one, comparing
-/// results. The native half is the ANSI evidence; the extended half is the control. That is the
-/// opposite of laundering — it is the protocol design §2 Q13 mandates. What stays banned is the
-/// thing that would launder: a single Spark-extended session claimed as this door's evidence.
+/// No `Tested` row claims `SparkExtended`; the ANSI door's evidence uses native profiles.
 /// MUTATION: set any row's profile to `SparkExtended` → this REDs.
 #[test]
 fn ansi_rows_never_claim_a_spark_extended_session() {
@@ -420,9 +377,7 @@ fn ansi_rows_never_claim_a_spark_extended_session() {
     }
 }
 
-/// Every `TwoSession` row must be one the two-session protocol can actually produce — i.e. a
-/// surface BOTH doors have. A `TwoSession` claim on a surface the Spark door marks
-/// `DeliberatelyAbsent` would be describing a comparison that cannot exist.
+/// Every `TwoSession` row must be supported by both doors.
 /// MUTATION: mark any of these rows `TwoSession` on an ANSI-only surface → this REDs.
 #[test]
 fn two_session_rows_name_surfaces_both_doors_have() {
@@ -446,12 +401,8 @@ fn two_session_rows_name_surfaces_both_doors_have() {
     }
 }
 
-/// M2 closed the statement door: four absences BY RULING (Q3 partition-spec evolution, Q9
-/// `INSERT OVERWRITE`, the permanent `TRUNCATE` refuse, Q7 maintenance-as-callable-ops).
-/// The three G8 value-semantics pin-absences flipped to Tested at R-3. The risk this pins
-/// is scope creep in either direction: a surface quietly shipped without its design ruling
-/// being applied, or a shipped surface quietly downgraded to an absence row to make a
-/// gate green.
+/// Four statement surfaces remain absent by ruling: Q3 partition-spec evolution, Q9 INSERT OVERWRITE,
+/// TRUNCATE, and Q7 maintenance calls.
 /// MUTATION: flip any `Tested` row to `absent(...)` → this REDs.
 #[test]
 fn m2_closes_the_ansi_door() {

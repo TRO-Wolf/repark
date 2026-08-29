@@ -1,40 +1,4 @@
 //! `CREATE TABLE` — CTAS and the column-def form — with the Q15 routing ruling.
-//!
-//! ## Q15 (graft G1): resolve the target, or refuse. Never a silent `MemTable`.
-//!
-//! The target's leading name segment is resolved against the session's registered Iceberg
-//! catalogs. A registered catalog means a staged Iceberg create/replace. **Anything else — an
-//! unqualified name, a two-part name, an unregistered catalog — refuses loud and asks for
-//! qualification.**
-//!
-//! It is worth being explicit about what the refusal prevents, because "just fall through to
-//! DataFusion" is the tempting alternative. DataFusion's own CTAS creates an in-memory table that
-//! disappears when the session ends. Compose that with the error-path wrong-door sniff and a
-//! dbt-style two-part name (`analytics.orders`), and a user's model "succeeds", reads back
-//! correctly all session, and is simply gone tomorrow — with no error anywhere. That is silent
-//! data loss produced by a helpful-looking fallthrough, so there is no fallthrough.
-//!
-//! Temp views never shadow a create target: resolution consults the catalog registry only.
-//! Default-catalog resolution (making a two-part name mean `<default>.ns.t`) is a deliberate
-//! future relaxation — it is non-breaking to add later, and impossible to take back.
-//!
-//! ## Location: the three-way `LocationPolicy`, same as the Spark door
-//!
-//! An explicit `WITH (location = …)` wins. Otherwise the namespace's `location` property is used.
-//! Otherwise the catalog's [`LocationPolicy`] decides: `TempFallbackAllowed { root }` falls back
-//! to the registration-time root (the memory catalog's warehouse; A13), `RequireExplicitLocation`
-//! fails LOUD (a real warehouse must never have data placed under `$TMPDIR`), and `ServiceManagedLocation`
-//! (S3 Tables) cannot stage at all — the service assigns the location at create — so it routes to
-//! create-first + append + drop-on-abort.
-//!
-//! ## Nanosecond timestamps (A11)
-//!
-//! DataFusion types bare `TIMESTAMP` / `TIMESTAMP(9)` as Arrow `timestamp[ns]`. Iceberg v2
-//! cannot store that (`timestamp_ns` / `timestamptz_ns`); this engine writes microseconds.
-//! Column-def `CREATE TABLE` therefore refuses nanosecond-precision timestamp columns at DDL
-//! time — naming the column, the precision (9), and the supported precision (`TIMESTAMP(6)`).
-//! CTAS is out of scope (the SELECT's type is the table's type). The Spark door maps
-//! `TIMESTAMP` to Iceberg `timestamptz` in its own type table and is not this path.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -56,18 +20,7 @@ use crate::partitioning::build_partition_spec;
 use crate::properties::{TableProperties, parse_with_options};
 use crate::schema_ddl::{iceberg_err, name_parts, reject_path_escape_ident};
 
-/// Plan the CTAS body **without executing it**, run the pre-execute guard and the tighten
-/// source-walk refuse on that plan, and only then execute it (SQM round 5, Z-3).
-///
-/// The previous shape was `cx.ctx.sql(&query.to_string())`, which plans AND executes: an inner
-/// DDL sink — `CREATE TABLE t AS (SELECT * INTO ice.ns.x FROM tight)` — published `x` before
-/// the refuse on the next line ever saw a plan. MEASURED on BASE (675a413): that statement
-/// returned **Ok**, with `x` persisted carrying required columns and the outer table created,
-/// because the eagerly-executed DDL hands back its own empty result whose plan carries no
-/// tightened source at all.
-///
-/// # Errors
-/// The plan error, the belt's refusal, the tighten source-walk refusal, or the execution error.
+/// Plan and guard the CTAS body before target creation or publication, then return its lazy frame.
 async fn derive_ctas_query(
     cx: &EngineContext<'_>,
     query: &datafusion::sql::sqlparser::ast::Query,
@@ -107,10 +60,6 @@ impl CreateTarget {
 /// ===========================================================================================
 /// Route and execute a `CREATE TABLE` (with or without `AS SELECT`).
 /// ===========================================================================================
-///
-/// # Errors
-/// The Q15 routing refusal, any unsupported-clause refusal, a `WITH (…)` validation failure, or
-/// any planning / iceberg / execution error from the staged create.
 pub(crate) async fn execute_create_table(
     cx: &EngineContext<'_>,
     create: &CreateTable,
@@ -143,8 +92,7 @@ pub(crate) async fn execute_create_table(
         }
     }
 
-    // Derive the table's Arrow schema. CTAS derives it from the SELECT's logical plan (no
-    // execution needed); the column-def form derives it from the declared columns.
+    // Derive the table's Arrow schema. CTAS uses the SELECT's logical plan without publishing it.
     let (arrow_schema, query) = if let Some(query) = create.query.as_ref() {
         let frame = derive_ctas_query(cx, query).await?;
         let schema = Arc::new(frame.schema().as_arrow().clone());
@@ -162,8 +110,7 @@ pub(crate) async fn execute_create_table(
     let format_version =
         iceberg_create_format_version(cx.ctx, properties.format_version.as_deref())?;
 
-    // Resolve WHERE the table goes BEFORE running the SELECT: a misconfigured target must fail
-    // loud without burning the source query.
+    // Resolve the placement before running the SELECT so target errors fail before writes.
     let placement = resolve_placement(&target, &properties, cx.catalogs, existed).await?;
 
     match placement {
@@ -221,9 +168,7 @@ async fn execute_staged_create(
             .await
             .map_err(iceberg_err)?
     } else {
-        // Replace stages against the existing table: it keeps its own location and
-        // FileIO, and the NEW definition is authoritative (Spark/Java
-        // `buildReplacement` semantics — no clause resets the table to unpartitioned).
+        // Replace stages keep the existing table location and metadata contract.
         let existing = target
             .catalog
             .load_table(&target.ident())
@@ -243,9 +188,8 @@ async fn execute_staged_create(
             .map_err(iceberg_err)?
     };
 
-    // STREAM the SELECT into the staged table: peak memory is O(batch × open writers),
-    // not O(result), and a mid-stream failure drops the staged transaction unpublished —
-    // the catalog pointer is never touched. One `commit` publishes.
+    // Streaming bounds memory by batch size and open writers. A failure leaves the staged
+    // transaction unpublished; one commit publishes it.
     let data_files = match query {
         Some(frame) => {
             let stream = frame.execute_stream().await?;
@@ -274,8 +218,7 @@ enum Placement {
     ServiceManaged,
 }
 
-/// Resolve the create placement. A REPLACE reuses the existing table's own location, so it needs
-/// no resolution at all (the staged replace reads it from the loaded table).
+/// Resolve create placement. REPLACE reuses the existing table's location.
 async fn resolve_placement(
     target: &CreateTarget,
     properties: &TableProperties,
@@ -299,8 +242,7 @@ async fn resolve_placement(
                 target.catalog_name, target.full_name
             )));
         }
-        // The cheap half of fail-early still applies: the namespace must exist and identifiers
-        // must be clean before anything is sent to the service.
+        // Fail early: the namespace must exist and identifiers must be safe.
         target
             .catalog
             .get_namespace(&target.namespace)
@@ -388,11 +330,7 @@ pub(crate) const ALLOW_CREATE_FORMAT_VERSION_3_KEY: &str = "repark.sql.allowCrea
 const ALLOW_CREATE_FORMAT_VERSION_3_OPTION: &str = "repark.sql.allow_create_format_version_3";
 
 /// Resolve CREATE/CTAS `WITH (format_version)` against the session opt-in.
-///
-/// Reads the knob through `ConfigOptions::entries()` so this door does not take a
-/// product `repark-functions` edge (same pattern as SEC-02). Absent extension → closed.
 /// pins: v3-2-create-v3-opt-in/C-006, C-013
-///
 /// Model: Grok 4.6 xHigh
 #[allow(clippy::too_many_arguments)] // schema + location + requested format-version travel together
 fn iceberg_table_creation(
@@ -464,12 +402,8 @@ fn iceberg_create_format_version(
     }
 }
 
-/// Create-first on a service-managed-location catalog (S3 Tables): the service generates the
-/// table's storage at create, and rejects a caller-supplied location, so a staged
-/// "pick location → write → register" is structurally impossible. Create, stream into the created
-/// table, commit ONE append, and on ANY post-create failure drop the table (Spark's non-staging
-/// `BasicStagedTable.abortStagedChanges`). An empty SELECT commits no snapshot — the created empty
-/// table IS the correct result.
+/// Create first because the service assigns storage during create. Drop after any query, file-write,
+/// or append-commit failure. A later catalog-refresh failure leaves the created table intact.
 #[allow(clippy::too_many_arguments)] // placement + schema + the V3-2 format version travel together
 async fn create_first_service_managed(
     cx: &EngineContext<'_>,
@@ -549,8 +483,7 @@ async fn write_stream(
     }
 }
 
-/// Refresh the DataFusion name directory for the touched schema, then return an empty frame
-/// (DDL has no rows — the same shape the Spark door returns).
+/// Refresh the touched schema's name directory, then return an empty frame; refresh errors do not roll back.
 async fn finish(ctx: &SessionContext, target: &CreateTarget) -> Result<DataFrame> {
     repark_iceberg::catalog::invalidate_catalog_namespaces(
         ctx,
@@ -567,10 +500,6 @@ async fn finish(ctx: &SessionContext, target: &CreateTarget) -> Result<DataFrame
 /// ===========================================================================================
 /// Resolve a create target's leading segment against the registered Iceberg catalogs (Q15/G1).
 /// ===========================================================================================
-///
-/// # Errors
-/// A loud refusal requiring qualification for anything that is not a three-part name whose
-/// leading segment is a registered Iceberg catalog.
 pub(crate) fn resolve_target(
     cx: &EngineContext<'_>,
     name: &ObjectName,
@@ -608,8 +537,7 @@ pub(crate) fn resolve_target(
     })
 }
 
-/// The Q15 refusal. It lists the registered catalogs because the overwhelmingly common cause is
-/// a name that is one segment short, and the fix is mechanical once the user can see the names.
+/// The Q15 refusal lists registered catalogs because the common cause is an unqualified target.
 fn refuse_unqualified(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -641,8 +569,7 @@ fn refuse_unqualified(
 
 // === Clause refusals ========================================================================
 
-/// The `WITH (…)` option list, or an empty list. Any OTHER option syntax (Hive `OPTIONS`, plain
-/// options, Spark `TBLPROPERTIES`) refuses rather than being dropped.
+/// Return the `WITH (…)` option list. Reject other option syntaxes.
 fn with_options(create: &CreateTable, form: &str) -> Result<Vec<SqlOption>> {
     match &create.table_options {
         CreateTableOptions::None => Ok(Vec::new()),
@@ -659,9 +586,7 @@ fn with_options(create: &CreateTable, form: &str) -> Result<Vec<SqlOption>> {
     }
 }
 
-/// Refuse the clauses sqlparser accepts but this door does not apply. Every one of these would
-/// otherwise be SILENTLY DROPPED, which is the failure mode worth the most refusals: a table that
-/// exists but does not match what was asked for is far worse than a statement that failed.
+/// Refuse clauses that this door cannot apply, because each would otherwise be silently dropped.
 fn refuse_unsupported_clauses(create: &CreateTable, form: &str) -> Result<()> {
     if create.temporary {
         return Err(DataFusionError::NotImplemented(format!(
@@ -706,9 +631,7 @@ fn refuse_unsupported_clauses(create: &CreateTable, form: &str) -> Result<()> {
             "{form}: the file-format clause is not supported — use WITH (format = 'PARQUET')"
         )));
     }
-    // sqlparser parks `COMMENT '…'` on `create.comment` for some shapes and inside
-    // `table_options` for others, so both are checked — a comment that reached the table
-    // silently would be a lie about what the table declares.
+    // sqlparser stores `COMMENT '…'` on `create.comment` or inside an option.
     let commented_option = match &create.table_options {
         CreateTableOptions::None | CreateTableOptions::TableProperties(_) => false,
         CreateTableOptions::Plain(options)
@@ -738,13 +661,7 @@ fn refuse_unsupported_clauses(create: &CreateTable, form: &str) -> Result<()> {
 
 // === Column-def schema derivation ===========================================================
 
-/// Derive the Arrow schema of a column-def `CREATE TABLE` by planning a zero-row projection of
-/// `CAST(NULL AS <declared type>)`.
-///
-/// Deliberately NOT a hand-written sqlparser-type → Arrow-type table: DataFusion already owns
-/// that mapping, and a second copy of it in this door would drift from the one the rest of the
-/// engine plans with. Nullability comes from the column's own `NOT NULL` option, since the cast
-/// expression is always nullable.
+/// Derive a column-def `CREATE TABLE` Arrow schema by planning a zero-row projection.
 async fn column_def_schema(
     ctx: &SessionContext,
     create: &CreateTable,
@@ -797,18 +714,6 @@ const NANOSECOND_TIMESTAMP_PRECISION: u8 = 9;
 /// ===========================================================================================
 /// Refuse column-def timestamps the write path cannot honor (Arrow nanoseconds).
 /// ===========================================================================================
-///
-/// DataFusion maps bare `TIMESTAMP` and `TIMESTAMP(9)` to `TimeUnit::Nanosecond`. Iceberg v2
-/// stores microseconds only; `timestamp_ns` is v3. Fail here — before
-/// `arrow_schema_to_schema_auto_assign_ids` — so the user sees the column, the precision, and
-/// the supported spelling instead of the fork's v2 schema check.
-///
-/// Top-level columns only (column-def CREATE has no nested timestamp surface). CTAS does not
-/// call this: the SELECT type is the table type, and remapping it would be a write-path change.
-///
-/// # Errors
-/// A [`DataFusionError::Plan`] naming the first rejected column, its precision, and
-/// `TIMESTAMP(6)`.
 fn refuse_nanosecond_timestamp_columns(schema: &ArrowSchema, form: &str) -> Result<()> {
     for field in schema.fields() {
         if matches!(
@@ -829,17 +734,8 @@ fn refuse_nanosecond_timestamp_columns(schema: &ArrowSchema, form: &str) -> Resu
 }
 
 /// ===========================================================================================
-/// Resolve ONE declared SQL type to its Iceberg type, through the same route
-/// [`column_def_schema`] uses for a whole column list.
-///
-/// Shared with [`crate::alter`], whose `ADD COLUMN` / `SET DATA TYPE` need exactly this mapping.
-/// Routing it through DataFusion's planner rather than a hand-written match is the same decision
-/// for the same reason: a second sqlparser-type → Iceberg-type table in this door would drift
-/// from the one the engine actually plans with.
+/// Resolve one declared SQL type to its Iceberg type through the shared planner.
 /// ===========================================================================================
-///
-/// # Errors
-/// A type DataFusion cannot resolve, or one Arrow→Iceberg conversion rejects.
 pub(crate) async fn sql_type_to_iceberg(
     ctx: &SessionContext,
     data_type: &datafusion::sql::sqlparser::ast::DataType,

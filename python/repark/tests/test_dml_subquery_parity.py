@@ -1,51 +1,36 @@
-"""DELETE/UPDATE subquery-predicate differential rows (defect G3-E8) — the fix's goldens, now.
+"""DELETE/UPDATE subquery-predicate differential rows (defect G3-E8).
 
-**Why this corpus exists before the fix.** `DELETE FROM t WHERE id IN (SELECT …)` used to empty the
-whole table, and `UPDATE … WHERE id IN (SELECT …)` used to rewrite every row — silently, with a
-successful Iceberg commit. The predicate is lost at DataFusion's DML planning boundary
-(``extract_dml_filters`` recovers nothing from the semi/anti join the optimizer decorrelated the
-subquery into) and an empty filter list is the provider's spelling of *no WHERE clause*. The
-engine now **refuses** the whole class (the G3-E8 valve, both SQL doors); the capability itself
-returns in a later unit. These rows record what live Spark does for each spelling **now**, so the
-fix unit inherits its oracle instead of re-deriving one under time pressure.
+``DELETE FROM t WHERE id IN (SELECT …)`` used to empty the whole table and
+``UPDATE … WHERE id IN (SELECT …)`` used to rewrite every row — the predicate is lost at
+DataFusion's DML planning boundary, and an empty filter list means "no WHERE clause".
+The engine now refuses the whole class (the G3-E8 valve, both SQL doors); these rows
+record what live Spark does per spelling, so the fix unit inherits its oracle.
 
-**Row kinds.** Residual subquery rows are **split**: repark refuses (its needle is pinned) and the
-Spark half is the recorded post-DML table. **content** rows include two non-subquery equality
-controls plus the executed holes (`DELETE … IN` / `NOT IN` + NULL trap, `[NOT] EXISTS`
-± correlation, correlated IN, and identity `UPDATE … IN`, recorded against live Spark 4.1.2).
-Without the non-subquery controls a comparator that always "passed" would go unnoticed.
+Row kinds: residual subquery rows are **split** (repark refuses, needle pinned; the Spark
+half is the recorded post-DML table). **content** rows are the executed holes plus
+non-subquery equality controls — without the controls a broken comparator would go
+unnoticed. The NULL trap is recorded, not reasoned: ``*_with_null_key`` rows pin what
+live Spark actually did for ``NOT IN`` over a NULL-bearing subquery (three-valued logic
+matches nothing), not the intuitive answer.
 
-**The NULL trap is recorded, not reasoned.** ``NOT IN`` over a subquery whose result contains NULL
-is SQL's three-valued-logic trap: every row's test evaluates to UNKNOWN, so Spark matches
-*nothing*. The rows named ``*_with_null_key`` pin what Spark ACTUALLY did on the recorded run —
-the fix unit must reproduce that, not the intuitive answer.
+Every ``spark`` table was recorded in record mode against live PySpark 4.1.2 + Apache
+Iceberg (zulu-17, ``master("local[2]")``, ANSI on, ``spark.sql.shuffle.partitions=2``).
+The record driver provisions the pinned Iceberg runtime (:data:`ICEBERG_SPARK_RUNTIME_GAV`)
+and a local Hadoop warehouse catalog — vanilla Spark cannot run Iceberg DML. One
+multi-step recipe per row runs on BOTH engines. Rows assert on the Arrow path — schema
+name, Arrow type and nullability, never ``show``; the refuse half pins the guard's own
+message tokens, never a stack trace.
 
-**Oracle.** Every ``spark`` table below was RECORDED in record mode against live PySpark 4.1.2 +
-Apache Iceberg (zulu-17, ``master("local[2]")``, ANSI on, ``spark.sql.shuffle.partitions=2``) on
-2026-08-11. The record driver provisions the pinned Iceberg runtime GAV (see
-:data:`ICEBERG_SPARK_RUNTIME_GAV`) and a local Hadoop warehouse catalog — vanilla Spark cannot run
-Iceberg DML. One multi-step recipe per row runs on BOTH engines (create → seed → create key table →
-seed → DML → read back), so the recipe under test and the recipe the oracle ran are the same code.
-
-**Rows assert on the Arrow path** (``to_arrow`` / Spark ``toArrow``) through the parity comparator,
-so schema name, Arrow type and nullability are part of every content assertion — never ``show``.
-The refuse half pins the guard's OWN message tokens, never a stack trace.
-
-**Re-deriving the goldens (record mode).** The driver that recorded every Spark half is committed
-beside this module::
+Re-deriving the goldens (record mode)::
 
     JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \\
         PYTHONPATH=python/repark-parity/src \\
         .venv/bin/python python/repark/tests/_record_dml_subquery_goldens.py
 
-It imports ``ROWS`` from THIS module and runs each row's own lifecycle recipe, so the recorded
-golden and the asserted recipe cannot drift apart. It needs a JVM + ``pyspark``
-(``uv sync --extra record``) and is never collected by pytest; CI stays JVM-free.
-
-**When the fix lands.** Each split row flips to ``kind="content"`` with ``repark=None`` and the
-needle cleared. The classifier below prints exactly that instruction when repark stops refusing
-and its result matches the recorded Spark golden (CONVERGED); a non-matching result is reported as
-a regression instead, so a partial fix cannot be laundered into parity.
+Needs a JVM + ``pyspark`` (``uv sync --extra record``); never collected by pytest; CI
+stays JVM-free. When the fix lands, each split flips to ``kind="content"`` with
+``repark=None`` and the needle cleared — the classifier prints exactly that instruction
+(CONVERGED vs regression).
 """
 
 from __future__ import annotations
@@ -65,9 +50,7 @@ from repark_parity import FrameMismatchError, assert_frames_equal
 if TYPE_CHECKING:
     from repark.spark.session import ReparkSession
 
-# ==================================================================================================
 # Oracle environment pin (record-time only; never a CI dependency)
-# ==================================================================================================
 
 # Same ruling as the MERGE corpus (docs/history/hardening-h1/n2-merge-ledger.md §1.3): an
 # iceberg-spark-runtime whose Spark minor matches 4.1 exactly, under zulu-17 + PySpark 4.1.2.
@@ -78,9 +61,8 @@ ICEBERG_SPARK_RUNTIME_GAV = "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1
 REPARK_CATALOG = "mem"
 REPARK_NAMESPACE = "ns"
 
-# Copy-on-write everywhere so the row-level write mode is explicit rather than default-dependent.
-# `format-version` is deliberately absent: repark refuses it as a reserved property, and pinning
-# it is not this corpus's subject — the write MODE is.
+# Copy-on-write everywhere so the write mode is explicit, not default-dependent. `format-version`
+# is deliberately absent: repark refuses it as reserved, and the write MODE is the subject.
 COW_TBLPROPERTIES = "'write.delete.mode' = 'copy-on-write', 'write.update.mode' = 'copy-on-write'"
 
 # The token every G3-E8 refusal carries, in BOTH doors. A split row asserts THIS, not a generic
@@ -88,9 +70,7 @@ COW_TBLPROPERTIES = "'write.delete.mode' = 'copy-on-write', 'write.update.mode' 
 G3E8_NEEDLE = "subquery predicates are silently mis-executed"
 
 
-# ==================================================================================================
 # Arrow helpers
-# ==================================================================================================
 
 
 def _table(
@@ -104,8 +84,7 @@ def _table(
 _I64 = pa.int64()
 _STR = pa.string()
 
-# Every row shares one target shape and one seed, so the only variable across rows is the
-# predicate — which is the thing under test.
+# One shared target shape and seed: the only variable across rows is the predicate under test.
 TARGET_COLUMNS = "id BIGINT, name STRING"
 TARGET_SEED = (
     "SELECT CAST(1 AS BIGINT) AS id, 'a' AS name "
@@ -151,22 +130,19 @@ EXISTS_UNCORRELATED = "DELETE FROM {target} WHERE EXISTS (SELECT 1 FROM {keys})"
 NOT_EXISTS_UNCORRELATED = "DELETE FROM {target} WHERE NOT EXISTS (SELECT 1 FROM {keys})"
 
 
-# ==================================================================================================
 # Row shape
-# ==================================================================================================
 
 
 @dataclass(frozen=True)
 class DmlSubqueryRow:
     """One differential row: a DELETE/UPDATE recipe + the recorded Spark half + repark's half.
 
-    ``kind="split"`` — repark REFUSES (G3-E8 valve) and Spark succeeds. ``spark`` is the recorded
-    post-DML table; ``repark_error_needle`` is the substring repark's refusal must contain. If
-    repark ever stops refusing, the failure is CLASSIFIED: matching the Spark golden is a
-    CONVERGENCE (flip the row to ``content``), anything else is a regression.
-
-    ``kind="content"`` — a plain equality control: both engines run the statement and must agree
-    on value AND Arrow type AND nullability.
+    ``kind="split"``: repark refuses (G3-E8 valve); ``spark`` is the recorded post-DML table
+    and ``repark_error_needle`` the substring the refusal must contain. repark stopping to
+    refuse is classified: matching the Spark golden is CONVERGED (flip to ``content``),
+    anything else a regression.
+    ``kind="content"``: equality control — both engines must agree on value AND Arrow type
+    AND nullability.
     """
 
     name: str
@@ -182,12 +158,9 @@ class DmlSubqueryRow:
     repark_error_needle: str | None = None
 
 
-# ==================================================================================================
 # Lifecycle helper — create → seed → create keys → seed → DML → read back (BOTH engines)
-# ==================================================================================================
 #
-# Lives in this module by design: it is the recipe SSOT the record driver imports, so there is one
-# recipe and not two copies (the same rule the MERGE corpus follows).
+# Lives in this module as the recipe SSOT the record driver imports: one recipe, not two copies.
 
 
 def target_fqn(catalog: str, namespace: str, table: str) -> str:
@@ -209,10 +182,10 @@ def drop_table_if_exists(session: Any, fq_table: str) -> None:
 
 
 def create_seeded_table(session: Any, *, fq_table: str, columns: str, seed_sql: str) -> None:
-    """CREATE TABLE (Iceberg, COW) + INSERT seed rows. Drops any prior table of that name first.
+    """CREATE TABLE (Iceberg, COW) + INSERT seed rows, dropping any prior table first.
 
-    Explicit DDL + INSERT rather than CTAS: CTAS infers different column types and nullability on
-    the two engines (the N-2 lesson), and this corpus's subject is the predicate, not inference.
+    Never CTAS: its type/nullability inference differs between the engines, and the subject
+    here is the predicate, not inference.
     """
     drop_table_if_exists(session, fq_table)
     session.sql(
@@ -233,8 +206,8 @@ def run_dml_lifecycle(
 ) -> pa.Table:
     """Create → seed → create keys → seed → run the DML → read back the target.
 
-    Both per-row tables are dropped in ``finally``, so a refused or failed statement leaves no
-    stray tables behind (pinned by :func:`test_lifecycle_cleanup_after_refused_dml`).
+    Tables drop in ``finally`` so a refused or failed statement leaves no stray tables
+    (pinned by :func:`test_lifecycle_cleanup_after_refused_dml`).
     """
     fq_target = target_fqn(catalog, namespace, row.name)
     fq_keys = target_fqn(catalog, namespace, f"{row.name}_keys")
@@ -273,12 +246,10 @@ def run_dml_expect_error(session: Any, row: DmlSubqueryRow, *, catalog: str, nam
 READ_BACK = "SELECT id, name FROM {target} ORDER BY id"
 
 
-# ==================================================================================================
-# The corpus (defect G3-E8: executed IN/NOT IN/EXISTS + residual UPDATE/correlated-IN splits)
-# ==================================================================================================
+# The corpus (defect G3-E8)
 
 ROWS: list[DmlSubqueryRow] = [
-    # ----- 1. control: DELETE with a non-subquery predicate (both engines agree) ----------------
+    # control: DELETE with a non-subquery predicate (both engines agree)
     DmlSubqueryRow(
         name="control_delete_without_subquery",
         kind="content",
@@ -293,7 +264,7 @@ ROWS: list[DmlSubqueryRow] = [
             "this row an all-split corpus could not tell a working comparator from a broken one."
         ),
     ),
-    # ----- 2. control: UPDATE with a non-subquery predicate --------------------------------------
+    # control: UPDATE with a non-subquery predicate
     DmlSubqueryRow(
         name="control_update_without_subquery",
         kind="content",
@@ -305,7 +276,7 @@ ROWS: list[DmlSubqueryRow] = [
         ),
         note="equality control for the UPDATE arm — the valve must not widen into this shape.",
     ),
-    # ----- 3. DELETE … IN (subquery) — the confirmed repro ---------------------------------------
+    # DELETE … IN (subquery) — the intake repro
     DmlSubqueryRow(
         name="delete_in_subquery",
         kind="content",
@@ -321,7 +292,7 @@ ROWS: list[DmlSubqueryRow] = [
             "recorded Spark golden."
         ),
     ),
-    # ----- 4. DELETE … NOT IN (subquery) ---------------------------------------------------------
+    # DELETE … NOT IN (subquery)
     DmlSubqueryRow(
         name="delete_not_in_subquery",
         kind="content",
@@ -336,7 +307,7 @@ ROWS: list[DmlSubqueryRow] = [
             "split → content when PR-2 proved DataFusion 3VL matches the recorded golden."
         ),
     ),
-    # ----- 5. DELETE … NOT IN (subquery WITH A NULL) — the three-valued-logic trap ---------------
+    # DELETE … NOT IN (subquery WITH a NULL) — the three-valued-logic trap
     DmlSubqueryRow(
         name="delete_not_in_subquery_with_null_key",
         kind="content",
@@ -354,7 +325,7 @@ ROWS: list[DmlSubqueryRow] = [
             "rows'."
         ),
     ),
-    # ----- 6. DELETE … EXISTS (correlated, matching some) ----------------------------------------
+    # DELETE … EXISTS (correlated)
     DmlSubqueryRow(
         name="delete_exists_correlated",
         kind="content",
@@ -369,7 +340,7 @@ ROWS: list[DmlSubqueryRow] = [
             "when PR-3 proved the executed SELECT matches live Spark `{1,3}`."
         ),
     ),
-    # ----- 7. DELETE … NOT EXISTS (correlated, matching some) ------------------------------------
+    # DELETE … NOT EXISTS (correlated)
     DmlSubqueryRow(
         name="delete_not_exists_correlated",
         kind="content",
@@ -384,7 +355,7 @@ ROWS: list[DmlSubqueryRow] = [
             "`delete_not_in_subquery_with_null_key`, which deletes nothing under the same data."
         ),
     ),
-    # ----- 8. DELETE … IN (correlated subquery) --------------------------------------------------
+    # DELETE … IN (correlated subquery)
     DmlSubqueryRow(
         name="delete_correlated_in_subquery",
         kind="content",
@@ -401,7 +372,7 @@ ROWS: list[DmlSubqueryRow] = [
             "(same remaining `{1,3}`). Flipped split → content in PR-4."
         ),
     ),
-    # ----- EXISTS family extras (recorded 2026-08-13 vs Spark 4.1.2) ------------------------------
+    # EXISTS family extras
     DmlSubqueryRow(
         name="delete_exists_uncorrelated",
         kind="content",
@@ -630,7 +601,7 @@ ROWS: list[DmlSubqueryRow] = [
         ),
         note="empty subquery ⇒ IN is FALSE; Spark rewrites nothing.",
     ),
-    # ----- 10. UPDATE … WHERE NOT IN (subquery WITH A NULL) --------------------------------------
+    # UPDATE … WHERE NOT IN (subquery WITH a NULL)
     DmlSubqueryRow(
         name="update_not_in_subquery_with_null_key",
         kind="split",
@@ -650,9 +621,7 @@ ROWS: list[DmlSubqueryRow] = [
 ]
 
 
-# ==================================================================================================
 # Session builders + fixtures
-# ==================================================================================================
 
 
 def _repark_session(warehouse: Path) -> ReparkSession:
@@ -684,7 +653,7 @@ def repark_warehouse(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def repark(repark_warehouse: Path) -> Iterator[ReparkSession]:
-    """Repark session with a fresh memory catalog (facade door). Yields then stops."""
+    """Repark session with a fresh memory catalog (facade door)."""
     session = _repark_session(repark_warehouse)
     try:
         yield session
@@ -693,21 +662,15 @@ def repark(repark_warehouse: Path) -> Iterator[ReparkSession]:
             session.stop()
 
 
-# ==================================================================================================
 # The rows
-# ==================================================================================================
 
 
 @pytest.mark.parametrize("row", ROWS, ids=[row.name for row in ROWS])
 def test_dml_subquery_row(row: DmlSubqueryRow, repark: ReparkSession) -> None:
     """Every recorded row, on the Arrow path (value AND type AND nullability) or refuse class.
 
-    Content rows assert ``repark == Spark``.
-
-    Split rows drive the REAL lifecycle — create, seed, run the statement — so a future engine
-    that starts accepting the surface is CLASSIFIED rather than silently green: a result matching
-    the recorded Spark golden is a CONVERGENCE (flip the row to content equality), anything else
-    is a regression that must be re-derived in record mode before any pin moves.
+    Split rows drive the real lifecycle so an engine that starts accepting the surface is
+    classified: CONVERGED (flip to content) vs regression.
     """
     if row.kind == "content":
         assert row.spark is not None
@@ -715,7 +678,6 @@ def test_dml_subquery_row(row: DmlSubqueryRow, repark: ReparkSession) -> None:
         assert_frames_equal(actual, row.spark)
         return
 
-    # kind == "split": repark refuses; the Spark half is the recorded golden.
     assert row.repark_error_needle is not None
     assert row.spark is not None
     try:
@@ -746,11 +708,11 @@ def test_dml_subquery_row(row: DmlSubqueryRow, repark: ReparkSession) -> None:
 
 
 def test_refusal_leaves_every_row_untouched(repark: ReparkSession) -> None:
-    """The point of the guard: a refused statement must not have written anything.
+    """A refused statement must not have written anything.
 
-    The parametrized split rows drop their tables in ``finally``, so they cannot observe the
-    post-refusal contents. This row keeps the target alive and reads it back — the assertion that
-    would have caught the original defect (the table came back EMPTY).
+    The parametrized split rows drop their tables in ``finally`` and cannot observe the
+    post-refusal contents; this row keeps the target alive and reads it back — the assertion
+    that would have caught the original defect (the table came back empty).
     """
     row = next(item for item in ROWS if item.name == "update_not_in_subquery_with_null_key")
     fq_target = target_fqn(REPARK_CATALOG, REPARK_NAMESPACE, "guard_residue")
@@ -788,11 +750,7 @@ def test_lifecycle_cleanup_after_refused_dml(repark: ReparkSession) -> None:
 
 
 def test_dml_subquery_row_set_covers_the_g3e8_budget() -> None:
-    """The pin budget is part of the unit — corpus size and class coverage are pinned.
-
-    Coverage assertions are NAME-gated so a control row cannot satisfy them (the tautological-pin
-    lesson: a family pin that any row can green is not a pin).
-    """
+    """Corpus size and class coverage are pinned; coverage assertions are name-gated."""
     assert 20 <= len(ROWS) <= 32, (
         f"G3-E8 budget 20-32 rows after PR-4 family close (got {len(ROWS)})"
     )
@@ -807,9 +765,8 @@ def test_dml_subquery_row_set_covers_the_g3e8_budget() -> None:
         "cannot tell agreement from a broken comparator"
     )
     for control in controls:
-        # Whitespace-tolerant: `( SELECT`, `(\n  SELECT` and `(SELECT` are all subqueries.
-        # PR-1 flips `delete_in_subquery` to content — that one spelling is allowed to
-        # carry a subquery. Every other content row must stay subquery-free (panel L1 N-3).
+        # Whitespace-tolerant: `( SELECT` matches like `(SELECT`. Listed content rows are the
+        # executed holes (must keep a subquery); any other content row must stay subquery-free.
         has_subquery = re.search(r"\(\s*SELECT", control.dml_sql, re.IGNORECASE) is not None
         if control.name in {
             "delete_in_subquery",
@@ -861,7 +818,7 @@ def test_dml_subquery_row_set_covers_the_g3e8_budget() -> None:
     assert "update_in_subquery_multi_set" in contents, "multi-column UPDATE IN is content"
     assert "update_in_subquery_expr" in contents, "SET-expression UPDATE IN is content"
 
-    # The NULL trap needs BOTH verbs — DELETE now executes; UPDATE stays refused.
+    # The NULL trap must be pinned for BOTH verbs — DELETE and UPDATE.
     null_rows = [row for row in ROWS if row.name.endswith("_with_null_key")]
     assert len(null_rows) >= 2, "NOT IN with a NULL key must be pinned for DELETE *and* UPDATE"
     for row in null_rows:
@@ -885,18 +842,11 @@ def test_dml_subquery_row_set_covers_the_g3e8_budget() -> None:
 
 
 def test_iceberg_gav_pin_is_exact_spark_minor() -> None:
-    """The declared GAV constant is shaped as an exact Spark-4.1 Iceberg runtime coordinate.
+    """The GAV constant is an exact Spark-4.1 Iceberg runtime coordinate (panel L2 N3).
 
-    Scope, stated honestly (panel L2 N3): this asserts the CONSTANT in this module, and nothing
-    else. It cannot detect an oracle mismatch — the record driver reads the same constant, so the
-    two agree by construction, and no assertion here observes the jar Spark actually loaded. What
-    it does buy is that a hand-edit to a different Spark minor (or a snapshot/RC coordinate) reds
-    instead of silently re-recording the corpus against a different runtime.
-
-    The mechanical fix — one GAV helper that both the constant and the live session read, so the
-    claim becomes checkable — is W-2b's single-home GAV work, in flight in another lane. This
-    docstring is deliberately narrowed rather than the test rewritten, so the two lanes do not
-    collide (see ``task/g3e8-guard-ledger.md`` §10.7, CP-8).
+    Asserts the constant only — the record driver reads the same value, so no assertion here
+    observes the jar Spark loaded. What it buys: a hand-edit to a different Spark minor or an
+    RC coordinate reds instead of silently re-recording the corpus.
     """
     assert "4.1_2.13" in ICEBERG_SPARK_RUNTIME_GAV
     assert ICEBERG_SPARK_RUNTIME_GAV.endswith(":1.11.0")

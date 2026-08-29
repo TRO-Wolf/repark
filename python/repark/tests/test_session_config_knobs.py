@@ -7,7 +7,7 @@ family and **both spellings in each family** are pinned here, on the ``to_arrow`
 Arrow type) for the accepting cases and on the exception CLASS + verbatim message for the refusing
 ones — on the fresh-build path AND on the ``getOrCreate`` REUSE path.
 
-Oracle: **live PySpark 4.1.2 under zulu-17, re-run during the audit-G3 remediation pass — not
+Oracle: **live PySpark 4.1.2 under zulu-17 — not
 memory, and not inferred from the jar's raw ``checkValue`` argument.** Captures:
 
 * ``spark.sql.execution.arrow.maxRecordsPerBatch = 0`` → ``getOrCreate`` OK, ``conf.get`` returns
@@ -34,9 +34,9 @@ RECORDED DELTAS vs that live message (repark emits the shape verbatim otherwise)
 
 1. the trailing ``SQLSTATE: 22022`` is dropped — no repark error carries SQLSTATE, exactly as
    recorded for ``[AMBIGUOUS_REFERENCE]`` / ``[INVALID_SAVE_MODE]``;
-2. the repark-native spellings (``repark.target.partitions`` / ``repark.memory.limit.gb``) have no
-   Spark counterpart — Spark would ignore them entirely — so repark emits the same shape with the
-   repark key substituted;
+2. the repark-native spellings (``repark.target.partitions`` / ``repark.memory.limit.gb``) have
+   no Spark counterpart — Spark would ignore them entirely — so repark emits the same shape
+   with the repark key substituted;
 3. on reuse repark **validates but does not apply** the knob (engine knobs are fixed at build); it
    warns "some configuration may not apply" and returns the active session unchanged.
 
@@ -87,17 +87,14 @@ def _live_session() -> ReparkSession:
     return spark
 
 
-# ---------------------------------------------------------------------------------------------
 # Batch size — Spark's documented "no limit" sentinel (0 / negative) is LEGAL and must not raise.
-# ---------------------------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("key", _BATCH_SIZE_KEYS)
 @pytest.mark.parametrize("value", ["0", "-1"])
 def test_batch_size_no_limit_sentinel_builds_and_warns(key: str, value: str) -> None:
     # SAF-006 DEFECT 1: a hard refusal here would break a legal PySpark program (live-verified
-    # above). The knob is accepted, the session builds and runs; the one-time UserWarning discloses
-    # that repark cannot emit unbounded Arrow batches, so the engine default batching applies.
+    # above); the one-time UserWarning discloses that repark cannot emit unbounded Arrow batches.
     _reset_dropin_warnings_for_tests()
     with pytest.warns(UserWarning, match=r"no limit"):
         spark = ReparkSession.builder.config(key, value).getOrCreate()
@@ -137,9 +134,8 @@ def test_batch_size_positive_applies_without_disclosure(key: str) -> None:
 
 @pytest.mark.parametrize("key", _BATCH_SIZE_KEYS)
 def test_batch_size_sentinel_disclosure_fires_on_the_getorcreate_reuse_path(key: str) -> None:
-    # G3-C2: the reuse short-circuit used to swallow this — a user setting the sentinel against a
-    # live session was never told repark cannot honour it. Knob resolution now runs BEFORE the
-    # short-circuit, so the disclosure fires on both paths.
+    # G3-C2: knob resolution runs BEFORE the `_active_session` short-circuit, so the disclosure
+    # fires on both paths.
     # MUTATION: move `_resolve_batch_size()` back below the `_active_session` short-circuit → RED.
     _reset_dropin_warnings_for_tests()
     existing = _live_session()
@@ -170,9 +166,7 @@ def test_native_constructor_still_refuses_zero_target_partitions() -> None:
         _native.PyReparkSession(target_partitions=0)
 
 
-# ---------------------------------------------------------------------------------------------
 # Shuffle partitions — Spark's `checkValue(_ > 0)` key: 0 / negative are config errors.
-# ---------------------------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("key", _TARGET_PARTITIONS_KEYS)
@@ -196,8 +190,8 @@ def test_target_partitions_non_positive_raises_illegal_argument(key: str, value:
 def test_shuffle_partitions_zero_message_is_live_spark_412_verbatim() -> None:
     # G3-C1: the Spark-spelled key reproduces live pyspark 4.1.2's raise BYTE FOR BYTE, minus the
     # recorded SQLSTATE delta. The old string (`'0' in <key> is invalid. … must be positive.`)
-    # was the Spark 3.x `ConfigBuilder.checkValue` shape and drifted from the mandated 4.1.2
-    # oracle. MUTATION: restore that shape → RED (error class prefix, quoted key, and the absent
+    # was the Spark 3.x `ConfigBuilder.checkValue` shape.
+    # MUTATION: restore that shape → RED (error class prefix, quoted key, and the absent
     # trailing period are each load-bearing here).
     with pytest.raises(IllegalArgumentException) as raised:
         ReparkSession.builder.config("spark.sql.shuffle.partitions", "0").getOrCreate()
@@ -212,11 +206,9 @@ def test_shuffle_partitions_zero_message_is_live_spark_412_verbatim() -> None:
 def test_target_partitions_non_positive_raises_on_the_getorcreate_reuse_path(
     key: str, value: str
 ) -> None:
-    # G3-C2, the defect this unit came back for: live pyspark 4.1.2 raises for
-    # `spark.sql.shuffle.partitions=0` against an ALREADY-ACTIVE session (captured verbatim in the
-    # module docstring), because `getOrCreate` applies builder options via `setConfString`. repark
-    # previously short-circuited on `_active_session` first and silently accepted it — strictly
-    # LESS strict than Spark on the ubiquitous notebook / long-lived-process path.
+    # G3-C2: live pyspark 4.1.2 raises for `spark.sql.shuffle.partitions=0` against an
+    # ALREADY-ACTIVE session (captured verbatim in the module docstring), because `getOrCreate`
+    # applies builder options via `setConfString`.
     # MUTATION: move knob resolution back below the `_active_session` short-circuit → RED.
     existing = _live_session()
     with pytest.raises(IllegalArgumentException) as raised:
@@ -250,15 +242,13 @@ def test_target_partitions_positive_builds(key: str) -> None:
     spark.stop()
 
 
-# ---------------------------------------------------------------------------------------------
 # Memory limit — repark-only knob: 0 opts out of the bounded pool, negative is a config error.
-# ---------------------------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("key", _MEMORY_LIMIT_KEYS)
 def test_memory_limit_gb_zero_opts_out_and_still_builds(key: str) -> None:
-    # SAF-007 must not have made `0` unreachable: it is the documented opt-out of the bounded
-    # FairSpillPool (the Rust twin pins the pool itself is Infinite), and the session still runs.
+    # SAF-007 reachability: `0` is the documented opt-out of the bounded FairSpillPool (the Rust
+    # twin pins the pool itself is Infinite), and the session still runs.
     spark = ReparkSession.builder.config(key, "0").getOrCreate()
     _assert_session_runs(spark)
     spark.stop()
@@ -281,7 +271,7 @@ def test_memory_limit_gb_negative_raises_illegal_argument(key: str) -> None:
 @pytest.mark.parametrize("key", _MEMORY_LIMIT_KEYS)
 def test_memory_limit_gb_negative_raises_on_the_getorcreate_reuse_path(key: str) -> None:
     # The third key family gets the same reuse-path pin: validation runs before the short-circuit
-    # for every family, not just the one the defect was reported against.
+    # for every family.
     existing = _live_session()
     with pytest.raises(IllegalArgumentException, match=r"must not be negative"):
         ReparkSession.builder.config(key, "-1").getOrCreate()

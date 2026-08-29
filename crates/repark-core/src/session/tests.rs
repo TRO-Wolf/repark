@@ -25,9 +25,7 @@ fn sample_batch() -> RecordBatch {
     .unwrap()
 }
 
-/// 2026-08 perf baseline: an unset builder lands the repark default (65536), and a
-/// `datafusion.execution.batch_size` conf key still beats it (precedence: typed setter > conf >
-/// default — the typed-setter arm is `builder_applies_config_without_error` below).
+/// The typed batch-size setter yields to an explicit `datafusion.execution.batch_size` key.
 #[tokio::test]
 async fn builder_default_batch_size_is_65536_and_conf_key_wins() {
     let default_session = ReparkSession::builder().build().unwrap();
@@ -211,7 +209,7 @@ async fn builder_zero_memory_limit_opts_out_of_pool() {
     }
 }
 
-/// O3-C3-Q-001: `memory_limit_gb(0)` must opt out the same way as `memory_limit_bytes(0)`
+/// `memory_limit_gb(0)` must opt out the same way as `memory_limit_bytes(0)`
 /// (`saturating_mul` → 0 → Some(0) → no `FairSpillPool`).
 #[tokio::test]
 async fn builder_zero_memory_limit_gb_opts_out_of_pool() {
@@ -245,7 +243,7 @@ fn parse_table_identifier_segments_quote_aware() {
         parse_table_identifier_segments("cat.db.`my-table`").expect("backtick"),
         vec!["cat", "db", "my-table"]
     );
-    // O3-C4-SEC-001: path-escape segments rejected at identity parse (not only CTAS compose).
+    // Path-escape segments rejected at identity parse (not only CTAS compose).
     let traversal = parse_table_identifier_segments(r#"cat."..".t"#).unwrap_err();
     assert!(
         traversal.contains("path traversal") || traversal.contains(".."),
@@ -262,7 +260,7 @@ fn parse_table_identifier_segments_quote_aware() {
     );
     assert!(parse_table_identifier_segments("catalog.db.").is_err());
 
-    // === r23 QI1: idents === shared probe table (lockstep with repark_iceberg::write::idents::probes)
+    // === idents === shared probe table (lockstep with repark_iceberg::write::idents::probes)
     for &(segment, kind_tag) in repark_iceberg::write::idents::probes::PATH_ESCAPE_PROBES {
         let err = reject_path_escape_segment(segment).unwrap_err();
         match kind_tag {
@@ -361,7 +359,7 @@ async fn materialize_dataframe_as_temp_view_is_scan_not_replan() {
     }
 }
 
-// === r23 CACHE1: cache-honesty ===
+// === cache-honesty ===
 /// Cache entry point: size guard fails loud when collected bytes exceed `max_bytes`.
 #[tokio::test]
 async fn materialize_dataframe_as_cache_view_respects_max_bytes() {
@@ -552,14 +550,7 @@ fn sample_batch_as_parquet_bytes() -> Vec<u8> {
     buffer
 }
 
-/// AWS-FREE proof that `read_parquet` routes an `s3://` AND an `s3a://` path to the SAME
-/// registered object store: register an `object_store::memory::InMemory` under both scheme
-/// forms of one bucket, write a Parquet object into it via the object-store API, then read it
-/// back through BOTH schemes and assert identical rows. This exercises the URL→store resolution
-/// (`parse_s3_bucket` + `register_bucket_store` + DataFusion's registry) end-to-end without any
-/// AWS call — the bucket is pre-seeded in the registered set, so `read_parquet` never builds a
-/// real S3 store. The risk pinned: an s3a path failing to resolve to the s3 store (scheme alias
-/// regression), and a store registered under only one scheme.
+/// AWS-free pin that `s3://` and `s3a://` resolve to the same registered object store.
 #[tokio::test]
 async fn read_parquet_routes_both_s3_schemes_to_the_registered_store() {
     use object_store::memory::InMemory;
@@ -599,11 +590,7 @@ async fn read_parquet_routes_both_s3_schemes_to_the_registered_store() {
     }
 }
 
-/// `.config(...)` collects into the builder and drives catalog registration: a
-/// source-publish-job-shaped block with `type = memory` (the AWS-free `RePark` form) builds the
-/// session, and `register_configured_catalogs` wires the catalog so a CTAS round-trips —
-/// proving the config path (not just an explicit `register_memory_catalog` call) drives a real
-/// catalog. AWS-free by construction (`memory` kind only).
+/// AWS-free pin that builder catalog configuration registers a usable memory catalog.
 #[tokio::test]
 async fn late_catalog_registration_adds_new_names_and_skips_existing() {
     use tempfile::TempDir;
@@ -812,7 +799,7 @@ fn engine_err_preserves_the_inner_message() {
     assert!(converted.to_string().contains("No field named zzz"));
 }
 
-// ---- U4 error taxonomy: NotImplemented + iceberg-kind classification ------------------------
+// ---- error taxonomy: NotImplemented + iceberg-kind classification ------------------------
 
 /// A fabricated live iceberg error of the given kind, for classification pins.
 fn iceberg_error_of(kind: ErrorKind, message: &str) -> iceberg::Error {
@@ -825,11 +812,7 @@ fn external_iceberg(kind: ErrorKind, message: &str) -> DataFusionError {
     DataFusionError::External(Box::new(iceberg_error_of(kind, message)))
 }
 
-/// U4 pin (CQ-002): the risk is a deterministic scope gate (`DataFusionError::NotImplemented`
-/// — partitioned MERGE, `MoR` mode, CTAS transforms, …) collapsing into the base bucket, so the
-/// facade raises a bare `PySparkException` where PySpark raises
-/// `UnsupportedOperationException`. The gate's message must survive verbatim (DataFusion's
-/// "This feature is not implemented: " rendering included — message preserved, type changed).
+/// Pin (CQ-002): `NotImplemented` maps to `Unsupported` while preserving its rendered message.
 #[test]
 fn classify_not_implemented_is_unsupported_with_message_preserved() {
     let gate = DataFusionError::NotImplemented(
@@ -850,11 +833,7 @@ fn classify_not_implemented_is_unsupported_with_message_preserved() {
     );
 }
 
-/// U4 pin (CQ-015, the External route): an iceberg-origin COMMIT error must be classified
-/// from its live `ErrorKind` — `Error::Iceberg`, kind name leading the message — not
-/// pre-stringified into the base `Error::DataFusion` with a misattributing
-/// "External error:" wrapper. The risk: the facade shows "datafusion engine error: …" for a
-/// catalog commit conflict and downstream code cannot tell an OCC conflict from a cast error.
+/// Pin (CQ-015): an external Iceberg commit error keeps its `ErrorKind` and avoids stringifying.
 #[test]
 fn engine_err_iceberg_commit_conflict_classifies_kind_not_stringified() {
     let converted = engine_err(external_iceberg(
@@ -877,7 +856,7 @@ fn engine_err_iceberg_commit_conflict_classifies_kind_not_stringified() {
     );
 }
 
-/// U4 pin (CQ-004/CQ-015, the direct session fold): the same commit error through
+/// Pin (CQ-004/CQ-015, the direct session fold): the same commit error through
 /// `iceberg_err` (`create_namespace` / `table_exists` paths) classifies identically — one
 /// kind→class mapping for both routes, kind visible, no "datafusion engine error:" prefix.
 #[test]
@@ -901,7 +880,7 @@ fn iceberg_err_commit_conflict_keeps_kind_visible() {
     );
 }
 
-/// U4 pin: `FeatureUnsupported` (the fork's "iceberg feature is not supported" kind — e.g.
+/// Pin: `FeatureUnsupported` (the fork's "iceberg feature is not supported" kind — e.g.
 /// the A2-4 "Conversion from Timestamptz is not supported" class) routes to the Unsupported
 /// class through BOTH routes, exactly like a DataFusion scope gate. The risk: half the
 /// unsupported surface raising a different exception type than the other half.
@@ -926,7 +905,7 @@ fn iceberg_feature_unsupported_classifies_unsupported() {
     assert!(via_direct.to_string().contains("FeatureUnsupported"));
 }
 
-/// U4 pin: the full 12-kind partition routes per the D-U4-2 oracle mapping (1 Unsupported /
+/// Pin: the full 12-kind partition routes per the D-U4-2 oracle mapping (1 Unsupported /
 /// 6 Analysis / 5 iceberg-base). The risk: a not-found kind silently landing in the base
 /// bucket (PySpark raises `AnalysisException` — `NoSuchTableException` et al. extend it), or
 /// a commit kind landing in Analysis. Each kind's name must also survive in the message.
@@ -971,7 +950,7 @@ fn iceberg_kind_partition_routes_per_oracle() {
     ));
 }
 
-/// U4 pin: the `External` downcast NARROWS to iceberg errors — a non-iceberg external error
+/// Pin: the `External` downcast NARROWS to iceberg errors — a non-iceberg external error
 /// (an IO fault from an object store, say) keeps today's base classification AND today's full
 /// DataFusion rendering. The risk: the new arm hijacking every external error into the
 /// iceberg bucket.
@@ -995,7 +974,7 @@ fn external_non_iceberg_error_stays_base() {
     );
 }
 
-/// U4 pin: wrapper peeling and the iceberg downcast COMPOSE — a `Context`-wrapped
+/// Pin: wrapper peeling and the iceberg downcast COMPOSE — a `Context`-wrapped
 /// `External(TableNotFound)` still classifies Analysis. The risk: DataFusion adding a context
 /// wrapper during plan/execute and the kind classification silently degrading to base.
 #[test]
@@ -1046,12 +1025,9 @@ async fn session_sql_unknown_table_is_analysis() {
     );
 }
 
-// === P2G R2: builder `datafusion.*` config reaches SessionConfig (design §2 Q8) ==============
+// === Builder `datafusion.*` config reaches SessionConfig ================================
 
-/// The R2 core gap, pinned at its narrowest: a builder-set `datafusion.*` key LANDS in the
-/// session's `SessionConfig`. Before the fix the builder map was repark/spark-shaped only and
-/// this key was silently inert (P2F ledger, R2 spike). Bare session — no dialect, no extension —
-/// so this is core plumbing, not door behavior.
+/// A builder-set `datafusion.*` key reaches the bare session's `SessionConfig`.
 #[tokio::test]
 async fn builder_datafusion_config_key_reaches_session_config() {
     let session = ReparkSession::builder()
@@ -1133,11 +1109,7 @@ async fn explicit_datafusion_config_overrides_a_core_default() {
     );
 }
 
-/// Q8 delivery, core half: with `information_schema` enabled through the BUILDER, a registered
-/// Iceberg catalog enumerates through stock DataFusion — `SHOW TABLES` and `DESCRIBE` plan and
-/// execute, and `information_schema.tables` lists the created table. This is the enumeration
-/// verification design §2 Q8 asks for, run on the PRODUCT path (`ReparkSession`), not a raw
-/// `SessionContext`. AWS-free (memory catalog over a temp warehouse).
+/// Q8 pin: builder-enabled `information_schema` enumerates a registered memory-backed catalog.
 #[tokio::test]
 async fn information_schema_enumerates_a_registered_iceberg_catalog_through_the_session() {
     use tempfile::TempDir;
@@ -1221,17 +1193,7 @@ async fn information_schema_enumerates_a_registered_iceberg_catalog_through_the_
     );
 }
 
-/// **Pin flipped on purpose (2026-08-10, ADR-0006 / campaign decision D2, unit H-1c).** This row
-/// used to assert the opposite — that the fork's `$`-suffixed metadata tables enumerate alongside
-/// the real table — and it was named `information_schema_still_exposes_the_dollar_metadata_tables`.
-/// The P2F R2 spike's "product question" is closed: `repark_iceberg::catalog`'s
-/// `MetadataProjectionSchemaProvider::table_names` drops the names the fork SYNTHESIZES, so the
-/// listing is the catalog's tables. Rationale + rejected alternative:
-/// `docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md`.
-///
-/// This is the **bare core session** half of the claim — no door, no facade — which is what makes
-/// the decision attributable to the catalog layer rather than to a SQL front end. The companion
-/// half (hidden, not removed) is asserted below.
+/// The bare-session half of the metadata-table enumeration contract.
 ///
 /// Mutation: drop the `.filter(…)` in `MetadataProjectionSchemaProvider::table_names` → this reds.
 #[tokio::test]
@@ -1371,10 +1333,7 @@ async fn show_tables_still_refuses_without_the_information_schema_conf() {
     );
 }
 
-/// B-1 (p3e ledger): the repark-owned pseudo-key `datafusion.runtime.memory_limit` shares the
-/// `datafusion.` prefix but is NOT a DataFusion `ConfigOptions` key — at the port pin it is the
-/// facade's LIVE resize knob, applied after build. The build-time sweep must skip it (a builder
-/// carrying it must construct), and it must stay in the kept config map for downstream readers.
+/// The repark-owned `datafusion.runtime.memory_limit` pseudo-key remains accepted for post-build resizing.
 #[tokio::test]
 async fn builder_pseudo_key_datafusion_runtime_memory_limit_builds() {
     ReparkSession::builder()
@@ -1383,12 +1342,7 @@ async fn builder_pseudo_key_datafusion_runtime_memory_limit_builds() {
         .expect("the repark-owned pseudo-key must not be swept into ConfigOptions at build");
 }
 
-/// The exclusion is EXACT-KEY: a typo of the pseudo-key is an unknown DataFusion key and must
-/// still fail loud — prefix-scoped exclusion would silently re-create the inert-conf defect
-/// this sweep exists to fix. Two fixtures discriminate the two wrong implementations: the
-/// truncated form catches a namespace-prefix exclusion, and the EXTENDED form (the pseudo-key
-/// plus a suffix) catches a `starts_with(pseudo_key)` exclusion — either wrong shape lets one
-/// of these build silently.
+/// The pseudo-key exclusion is exact; truncated and suffixed typos must fail loud.
 #[tokio::test]
 async fn builder_pseudo_key_typo_still_fails_loud() {
     for typo in [

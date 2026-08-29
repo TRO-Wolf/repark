@@ -34,8 +34,8 @@ def _matrix_row(text: str, label: str) -> str:
 def test_v3_cow_1_is_a_refusal_row_dated_by_the_ruling() -> None:
     """C-007: the row keeps the ruling's refusals, BACKLOG, dated and pinned.
 
-    RP-2 (2026-08-28 salvage ruling) lifted exactly one form — the plain-`WHERE` DELETE on a
-    table with no live deletion vector — and pinned the refusal of everything else.
+    RP-2 lifted exactly one form — the plain-`WHERE` DELETE on a table with no live
+    deletion vector — and pinned the refusal of everything else.
     """
     registry = _registry()
     heading = "### V3-COW-1 — v3 row-DML: one measured DELETE lifts; every other form refuses"

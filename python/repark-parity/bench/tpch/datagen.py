@@ -16,7 +16,7 @@ from repark_parity.sql import escape_sql_single_quotes
 
 LOGGER = logging.getLogger(__name__)
 
-# Shared with CLI — library API enforces the same bound (octo C2-SEC-003).
+# Shared with CLI — library API enforces the same bound.
 MAX_SCALE_FACTOR: Final[float] = 100.0
 
 TABLES: Final[tuple[str, ...]] = (
@@ -55,7 +55,6 @@ def ensure_parquet_sf(
         msg = f"scale_factor must be finite and in (0, {MAX_SCALE_FACTOR}]; got {scale_factor!r}"
         raise ValueError(msg)
     root = (data_root if data_root is not None else default_data_root()).expanduser()
-    # Format SF path: 0.01 → sf0.01, 1 → sf1, 10 → sf10
     sf_label = _sf_label(scale_factor)
     out_dir = root / sf_label
     _assert_safe_cache_path(root, out_dir)
@@ -131,7 +130,6 @@ def _sf_label(scale_factor: float) -> str:
     """Canonical cache directory name for a scale factor."""
     if scale_factor == int(scale_factor):
         return f"sf{int(scale_factor)}"
-    # trim trailing zeros: 0.010 → 0.01
     text = f"{scale_factor:g}"
     return f"sf{text}"
 

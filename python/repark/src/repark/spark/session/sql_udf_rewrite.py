@@ -47,10 +47,6 @@ def _try_rewrite_select_list_python_udfs(
 
     """
 
-    # === r20 U9: sql-udf-rewrite ===
-
-    # === r21 T7: census-r6 ===
-
     _ = hits
 
     stripped = body.strip()
@@ -71,14 +67,10 @@ def _try_rewrite_select_list_python_udfs(
 
     if from_index is None:
         # No FROM — Spark allows ``SELECT expr`` (U9-C7-001). Select list runs to
-
         # trailing ORDER BY / LIMIT / GROUP / HAVING (peeled below).
-
         select_list = stripped[select_list_start:].strip()
 
         rest = ""
-
-        # If trailing clauses appear without FROM, peel them from the select-list blob.
 
         for keyword in ("WHERE", "GROUP BY", "HAVING", "ORDER BY", "LIMIT"):
             kw_index = _sql_top_level_keyword_index(select_list, keyword)
@@ -93,7 +85,7 @@ def _try_rewrite_select_list_python_udfs(
     else:
         select_list = stripped[select_list_start:from_index].strip()
 
-        rest = stripped[from_index:]  # FROM …
+        rest = stripped[from_index:]
 
     items = _split_sql_select_list(select_list)
 
@@ -104,7 +96,7 @@ def _try_rewrite_select_list_python_udfs(
 
     # references user aliases that only exist after UDF materialization (U9 Q13;
 
-    # U10 peels WHERE when it holds UDF residuals).
+    # WHERE peels when it holds UDF residuals).
 
     if rest:
         core_rest, peeled = _sql_peel_select_trailing_clauses(rest)
@@ -121,7 +113,7 @@ def _try_rewrite_select_list_python_udfs(
             },
         )
 
-    # U10: aggregates + GROUP BY are out of bounds for the keys-only path.
+    # Aggregates + GROUP BY are out of bounds for the keys-only path.
 
     if peeled.get("group_by") or peeled.get("having"):
         agg_pattern = re.compile(
@@ -153,8 +145,6 @@ def _try_rewrite_select_list_python_udfs(
     final_exprs: list[str] = []
 
     user_out_names: list[str] = []
-
-    # Map from original call span (start,end) within an item → hidden out name (per item).
 
     for item in items:
         item_clean = _sql_strip_comments_preserve_strings(item).strip()
@@ -350,8 +340,6 @@ def _try_rewrite_select_list_python_udfs(
                     if arg_stripped == nested_call_text.strip():
                         nested_out = out_temp
 
-                        # depth of that node
-
                         for record in call_records:
                             if record["out_name"] == out_temp:
                                 max_dep_depth = max(max_dep_depth, record["depth"])
@@ -468,7 +456,7 @@ def _try_rewrite_select_list_python_udfs(
 
         user_out_names.append(out_name)
 
-    # U10: materialize UDF calls in WHERE / GROUP BY / HAVING residuals.
+    # Materialize UDF calls in WHERE / GROUP BY / HAVING residuals.
 
     where_sql: str | None = None
 
@@ -729,7 +717,7 @@ def _try_rewrite_select_list_python_udfs(
 
         # Keys-only path: refuse aggregate HAVING (count/sum/…) before engine plan
 
-        # garbage (U10 C1 — was "Physical plan does not support logical expression").
+        # garbage (U10 C1).
 
         having_agg_pattern = re.compile(
             r"(?is)\b(count|sum|avg|mean|min|max|first|last|collect_list|"
@@ -752,7 +740,7 @@ def _try_rewrite_select_list_python_udfs(
             having_sql = having_body
 
         else:
-            # Map each HAVING UDF call span to a SELECT-list output alias (U10).
+            # Map each HAVING UDF call span to a SELECT-list output alias.
 
             residual_chars = list(having_body)
 

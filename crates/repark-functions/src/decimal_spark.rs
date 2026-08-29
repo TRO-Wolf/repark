@@ -1,27 +1,7 @@
-//! Spark decimal `/` (U4b) + DEC-8 `ExprPlanner` + DEC-6 execution overflow check.
+//! Spark decimal division, DEC-8 planning, and DEC-6 overflow checks.
 //!
-//! **Why this file and not [`crate::decimal_precision`].** CAST-after greens the `/` type and
-//! wrongs the repeating-money value (V-2 §0.2). `(38,20)*(38,20)` dies in
-//! `BinaryExpr::get_type` before any `AnalyzerRule` (V-2 §0.3). Overflow of
-//! `(38,0)+(38,0)` is Arrow `decimal_op` wrap at execution (S-1 §0.3). One new analyzer
-//! slot (A5) plus an `ExprPlanner` registered from [`crate::register_all`] close those
-//! three altitudes. `analyzer.rs` / `extension.rs` / `ansi.rs` plumbing stay closed.
-//!
-//! **A5 insertion.** [`SparkDecimalRewrite`] sits after [`crate::decimal_precision`] and
-//! before [`crate::analyzer::SparkExprSemantics`] so it sees a clean `decimal / decimal`
-//! `BinaryExpr`. The UDF owns `/0` (A6): raise when the landed ANSI knob is true, NULL
-//! when false. Integer `/` is still [`crate::analyzer::SparkExprSemantics`]
-//! (float64 + the same knob).
-//!
-//! **DEC-8 hook.** [`SparkDecimalExprPlanner::plan_binary_op`] intercepts `*` whose
-//! Arrow `s1+s2` would exceed 38 and emits [`spark_decimal_mul_udf`] returning Spark's
-//! clamped `(38, 6)` under `allowPrecisionLoss=true`. Spark 4.1.2 default-true plans
-//! and succeeds; we compute-with-clamp, we do not refuse-with-Spark-class.
-//!
-//! **DEC-6 hook.** When Spark and Arrow already agree on `(38, ·)` (no CAST-after), the
-//! rewrite replaces `+ − *` with a checked UDF that uses `i256`, then raises
-//! `NUMERIC_VALUE_OUT_OF_RANGE` (ANSI ON) or yields NULL (ANSI OFF). CAST-after clamp
-//! nodes stay on the U4a path so their non-null literal pins are not smashed (DEC-9).
+//! Embedded UDFs handle decimal division and overflow. The expression planner handles products
+//! rejected by Arrow before analysis; analyzer ordering keeps decimal division type-correct.
 
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
@@ -292,9 +272,6 @@ macro_rules! decimal_arith_udf {
                     .map(|field| field.data_type().clone())
                     .collect();
                 let data_type = self.return_type(&arg_types)?;
-                // `/` is always nullable (Spark Divide). Checked `+`/`−` can NULL
-                // on ANSI OFF overflow, so they are nullable. Mul (DEC-8) keeps
-                // input nullability so `(38,20)*(38,20)` of literals stays non-null.
                 let nullable = matches!(
                     $name_literal,
                     DECIMAL_DIV_NAME | DECIMAL_ADD_NAME | DECIMAL_SUB_NAME

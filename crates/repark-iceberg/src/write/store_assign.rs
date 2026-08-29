@@ -1,27 +1,8 @@
-//! The ANSI store-assignment matrix — ONE home for every write path in this crate.
+//! Shared Spark ANSI store-assignment matrix for every write path.
 //!
-//! Spark's DML store-assignment policy (`Cast.canANSIStoreAssign`, default
-//! `spark.sql.storeAssignmentPolicy=ANSI`) is far narrower than a CAST: `boolean→int`,
-//! `timestamp→bigint`, `string→numeric` and `date→int` are rejected at ANALYSIS time
-//! (`INCOMPATIBLE_DATA_FOR_TABLE`), never written. Every repark write path conforms with the full
-//! arrow cast kernel, which happily reinterprets a `Date32` as days-since-epoch — so without a
-//! gate those pairs commit a silently-wrong value into a durable Iceberg data file.
-//!
-//! **History (why this module exists).** The matrix shipped inside
-//! [`crate::write::merge::insert`] with the M9 MERGE INSERT gate (#111) and grew the MERGE UPDATE
-//! twin (#135). A 2026-08-15 audit measured that `ansi_store_assignable` had exactly **two** call
-//! sites in the tree, both under `write/merge/` — `INSERT OVERWRITE`, the public [`crate::write::append`]
-//! entry point and the fork-provider `INSERT INTO` lane never reached it. Hoisting the matrix here
-//! (WI-1) leaves the MERGE behaviour and its error text **byte-identical** (`merge/insert.rs`
-//! re-imports and keeps its own `MERGE `-prefixed path labels) while giving the non-MERGE write
-//! lowerings the same predicate instead of a second, forked one.
-//!
-//! **What is NOT here.** Spark's *cast* matrix is a different question and deliberately laxer in
-//! places this one is strict (and stricter in places this one is lax): it permits
-//! `TIMESTAMP → BIGINT` where store assignment refuses, and refuses `DATE → INT` where a cast
-//! reinterprets. Do not wire a `CAST` legality gate to these predicates — see
-//! `planning/hardening/G63-DATE-INT-DESIGN.md` §3.3. Two matrices, two homes, one shared error
-//! idiom.
+//! The matrix rejects pairs such as boolean→integer, timestamp→bigint, string→numeric, and
+//! date→integer before Arrow casts can reinterpret values. It is distinct from CAST legality:
+//! callers must not use this predicate to validate explicit casts.
 
 use datafusion::arrow::datatypes::DataType;
 use datafusion::error::{DataFusionError, Result};

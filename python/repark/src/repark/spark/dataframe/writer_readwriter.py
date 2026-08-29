@@ -1,4 +1,4 @@
-"""Writer region — DataFrameWriter, WriterV2, Stat + write helpers (r27 T0; technique A)."""
+"""Writer region — DataFrameWriter, WriterV2, Stat + write helpers."""
 
 from __future__ import annotations
 
@@ -38,11 +38,7 @@ logger = logging.getLogger("repark.spark.dataframe")
 
 
 def _resolve_writer_table(dataframe: DataFrame, name: str) -> tuple[str, str]:
-    """Qualify then quote a writer target table under session catalog state (E2).
-
-    Returns ``(qualified_unquoted, quoted_sql_ref)``. Shared by V1/V2 writers so bare
-    ``saveAsTable("t")`` / ``writeTo("t")`` land in ``currentCatalog.currentDatabase.t``.
-    """
+    """Return the action-time qualified name and quoted SQL reference for a writer target."""
     from repark.spark.catalog import DEFAULT_CATALOG_NAME, DEFAULT_DATABASE_NAME
     from repark.spark.session import _sql_table_ref, resolve_table_name
 
@@ -69,25 +65,17 @@ def _resolve_writer_table(dataframe: DataFrame, name: str) -> tuple[str, str]:
 
 
 class DataFrameWriter:
-    """The write surface (PySpark ``DataFrame.write``).
+    """Build Iceberg table writes and Parquet, CSV, or JSON path writes through SQL.
 
-    A small builder that routes writes through the engine's **existing sanctioned SQL paths** — CTAS
-    (``CREATE TABLE … USING iceberg AS SELECT``), ``INSERT INTO``, ``INSERT OVERWRITE``, and path
-    ``COPY … TO … STORED AS PARQUET|CSV|JSON`` — via a throwaway temp view. It adds **no** commit or
-    transaction machinery of its own. Table writes support only Iceberg; path writes support
-    Parquet / CSV / JSON (R1 + R2 option/mode/partitionBy honesty).
+    Table writes use CTAS or INSERT paths, and creation rejects tightened frames. Path overwrite
+    stages and swaps output safely.
     """
 
-    # === r20 R1: read-formats ===
-    # === r22 R2: writer option matrix / path modes / partitionBy ===
     __slots__ = ("_dataframe", "_format", "_mode", "_options", "_partition_columns")
 
     _VALID_MODES = ("append", "overwrite", "error", "errorifexists", "ignore")
-    # Path modes: overwrite/error/errorifexists (R1) + append/ignore (R2 pure-Python).
     _PATH_MODES = ("append", "overwrite", "error", "errorifexists", "ignore")
     _PATH_FORMATS = frozenset({"parquet", "csv", "json"})
-    # Writer options that would silently mis-format if ignored or passed raw to DataFusion
-    # (strftime tokens) — refuse-loud. Full matrix in task/r2-read-formats2-ledger.md.
     _CSV_WRITE_UNSUPPORTED_OPTIONS: frozenset[str] = frozenset(
         {
             "dateformat",
@@ -119,22 +107,15 @@ class DataFrameWriter:
         self._format = "iceberg"
         self._mode = "error"
         self._partition_columns: list[str] = []
-        # === r20 R1: read-formats ===
         self._options: dict[str, str] = {}
 
     def format(self, source: str) -> DataFrameWriter:
-        """Set the write format (PySpark ``DataFrameWriter.format``).
-
-        ``iceberg`` is accepted for :meth:`saveAsTable` / :meth:`insertInto`; ``parquet`` /
-        ``csv`` / ``json`` for path :meth:`save` / shorthand methods. Other formats are rejected
-        at the action that needs them (not silently mis-written).
-        """
+        """Set the format for table or path writes; unsupported formats fail at the action."""
         if not isinstance(source, str):
             raise PySparkTypeError(f"format expects a str, got {type(source).__name__}")
         self._format = source.lower()
         return self
 
-    # === r20 R1: read-formats ===
     def option(self, key: str, value: Any) -> DataFrameWriter:
         """Set a single writer option (PySpark ``DataFrameWriter.option``); chains."""
         key_str = str(key)
@@ -151,15 +132,7 @@ class DataFrameWriter:
         return self
 
     def mode(self, save_mode: str) -> DataFrameWriter:
-        """Set the save mode (PySpark ``DataFrameWriter.mode``):
-        ``append`` / ``overwrite`` / ``error`` / ``errorifexists`` / ``ignore``.
-
-        An unrecognized mode raises :class:`~repark.errors.AnalysisException` — Group X live
-        oracle: Spark 4.0 rejects this JVM-side with ``[INVALID_SAVE_MODE]``, an
-        ``AnalysisException`` (it is NOT Python-side argument validation, so it is deliberately
-        not one of the ``PySpark*Error`` wrappers). Matches the sibling path-write mode check
-        below, which already raises ``AnalysisException``.
-        """
+        """Set append, overwrite, error, errorifexists, or ignore mode."""
         if save_mode not in self._VALID_MODES:
             raise AnalysisException(
                 f"[INVALID_SAVE_MODE] The specified save mode {save_mode!r} is invalid; "
@@ -169,12 +142,7 @@ class DataFrameWriter:
         return self
 
     def partitionBy(self, *cols: str | list[str]) -> DataFrameWriter:  # noqa: N802 — PySpark method name
-        """Set identity partition columns for CTAS (PySpark ``DataFrameWriter.partitionBy``).
-
-        Only identity partitioning is supported (the existing CTAS partition surface). Accepts
-        varargs or a single list. Duplicate column names are refused (nested ``col=v/col=v/``
-        would be silently surprising — R2 octo C3-002).
-        """
+        """Set identity partition columns for CTAS or path writes; duplicates are rejected."""
         columns: list[str] = []
         for item in cols:
             if isinstance(item, (list, tuple)):
@@ -194,24 +162,13 @@ class DataFrameWriter:
         self._partition_columns = columns
         return self
 
-    # PySpark spells these camelCase; keep snake_case too for repark-convention consistency.
     partition_by = partitionBy
 
     def saveAsTable(self, name: str) -> None:  # noqa: N802 — PySpark method name
-        """Persist the DataFrame as an Iceberg table (PySpark ``DataFrameWriter.saveAsTable``).
+        """Persist an Iceberg table using CTAS or by-name insert/overwrite semantics.
 
-        Creates the table (CTAS) when it does not exist; when it does, the mode decides: ``error`` /
-        ``errorifexists`` raises, ``ignore`` is a no-op, ``append`` runs ``INSERT INTO``, and
-        ``overwrite`` runs ``INSERT OVERWRITE``. Into an **existing** table, columns resolve **by
-        NAME** — unlike positional :meth:`insertInto` — per the PySpark ``saveAsTable`` contract:
-        the source is projected in the target table's column order, so a reordered same-named frame
-        lands correctly instead of silently transposing. An extra or missing source column (the
-        column *sets* differ) raises an :class:`~repark.errors.AnalysisException` (Spark parity —
-        never a silent drop).
-
-        Bare / two-part names expand under the session default catalog + namespace (E2 shared
-        resolution). Table names are validated and quoted so SQL fragments cannot be injected
-        through the identifier (C1-SEC-001).
+        Bare names resolve and quote at action time. Existing-table source columns follow target
+        order. Empty overwrite validates schema through ``INSERT OVERWRITE`` before wiping.
         """
         self._dataframe._ensure_alive()
         if self._format != "iceberg":
@@ -234,10 +191,6 @@ class DataFrameWriter:
         if normalized_mode == "ignore":
             return
         projection = self._by_name_projection(session, table_ref, display_name=name)
-        # Empty overwrite uses the INSERT OVERWRITE SQL path (engine probes + schema-validates
-        # then provider-wipes — C1-Q-001 / C5-Q-001 / audit BUG-003). Do not short-circuit to bare
-        # DELETE: that skipped plan-time column checks and mismatched MoR isolation/shape.
-        # by_name_projection already rejected set mismatches; the engine pin covers residual.
         verb = "INSERT OVERWRITE" if normalized_mode == "overwrite" else "INSERT INTO"
         self._run_through_temp_view(
             lambda view: f"{verb} {table_ref} SELECT {projection} FROM {view}"
@@ -246,16 +199,9 @@ class DataFrameWriter:
     save_as_table = saveAsTable
 
     def insertInto(self, name: str, overwrite: bool | None = None) -> None:  # noqa: N802 — PySpark method name
-        """Insert into an existing table by **position** (PySpark ``DataFrameWriter.insertInto``).
+        """Insert into an existing Iceberg table by position.
 
-        Column names and ``partitionBy`` are ignored (position-based, like Spark). ``overwrite``
-        (or ``mode('overwrite')``) selects ``INSERT OVERWRITE`` over ``INSERT INTO``. The target
-        table must already exist (the engine raises otherwise).
-
-        Bare / two-part names expand under the session default catalog + namespace (E2). Table
-        names are validated and quoted so SQL fragments cannot be injected (C1-SEC-001).
-
-        Fails if the owning session was stopped (octo r3 C2-L-001).
+        ``overwrite`` selects whole-table overwrite.
         """
         self._dataframe._ensure_alive()
         if self._format != "iceberg":
@@ -265,9 +211,6 @@ class DataFrameWriter:
         _qualified, table_ref = _resolve_writer_table(self._dataframe, name)
         if overwrite is None:
             overwrite = self._mode == "overwrite"
-        # Empty overwrite routes through INSERT OVERWRITE SQL (not a bare DELETE) so the
-        # repark-sql empty-OW intercept can schema-validate before wipe (C5-Q-001 — an empty
-        # frame with the wrong column count must not wipe). Non-empty uses the same verb path.
         verb = "INSERT OVERWRITE" if overwrite else "INSERT INTO"
         self._run_through_temp_view(lambda view: f"{verb} {table_ref} SELECT * FROM {view}")
 
@@ -280,15 +223,7 @@ class DataFrameWriter:
         partitionBy: str | list[str] | None = None,  # noqa: N803 — PySpark param name
         compression: str | None = None,
     ) -> None:
-        """Write Parquet to a path (PySpark ``DataFrameWriter.parquet``).
-
-        Routes through :meth:`_apply_path_write` → ``COPY … STORED AS PARQUET``. ``mode`` defaults
-        to the writer's mode. **Shape disclosure:** Spark writes ``part-*.parquet`` + ``_SUCCESS``;
-        repark's COPY TO writes a directory of engine-named ``*.parquet`` files (no ``_SUCCESS``).
-        Values round-trip via ``spark.read.parquet``. ``partitionBy`` is wired via DataFusion
-        ``COPY … PARTITIONED BY`` (hive-style dirs; R2). ``compression`` maps to
-        ``format.compression`` (snappy / gzip / zstd / lz4 / none).
-        """
+        """Write Parquet through ``COPY`` with optional partitioning, compression, and path mode."""
         if partitionBy is not None:
             self.partitionBy(partitionBy)
         if compression is not None:
@@ -298,8 +233,6 @@ class DataFrameWriter:
         self._format = "parquet"
         self.save(path)
 
-    # === r20 R1: read-formats ===
-    # === r22 R2: writer option matrix / path modes / partitionBy ===
     def csv(
         self,
         path: str,
@@ -317,12 +250,9 @@ class DataFrameWriter:
         partitionBy: str | list[str] | None = None,  # noqa: N803 — PySpark param name
         **extra: Any,
     ) -> None:
-        """Write CSV to a path (PySpark ``DataFrameWriter.csv``).
+        """Write CSV through ``COPY``.
 
-        Routes through :meth:`_apply_path_write` → ``COPY … STORED AS CSV`` with Spark-ish
-        options (``header`` default true on this shorthand). R2 wires ``quoteAll`` /
-        ``escapeQuotes``; ``dateFormat`` / ``timestampFormat`` refuse-loud (strftime vs
-        SimpleDateFormat mismatch — see ledger).
+        The shorthand defaults ``header`` to true and refuses unsupported options.
         """
         if mode is not None:
             self.mode(mode)
@@ -339,7 +269,6 @@ class DataFrameWriter:
         if header is not None:
             self.option("header", header)
         elif not any(key.lower() == "header" for key in self._options):
-            # Spark write.csv default header=true
             self.option("header", "true")
         if nullValue is not None:
             self.option("nullValue", nullValue)
@@ -367,10 +296,7 @@ class DataFrameWriter:
         partitionBy: str | list[str] | None = None,  # noqa: N803 — PySpark param name
         **extra: Any,
     ) -> None:
-        """Write JSON (NDJSON) to a path (PySpark ``DataFrameWriter.json``).
-
-        Routes through :meth:`_apply_path_write` → ``COPY … STORED AS JSON``.
-        """
+        """Write newline-delimited JSON through ``COPY`` with configured path mode."""
         if mode is not None:
             self.mode(mode)
         if partitionBy is not None:
@@ -395,13 +321,7 @@ class DataFrameWriter:
         partitionBy: str | list[str] | None = None,  # noqa: N803 — PySpark param name
         **options: Any,
     ) -> None:
-        """Write to a path (PySpark ``DataFrameWriter.save``).
-
-        Supported path formats: ``parquet`` / ``csv`` / ``json`` (R1) via :meth:`_apply_path_write`
-        and ``COPY TO … STORED AS …``. ``path`` is required. ``partitionBy`` wires hive-style
-        dirs via DataFusion ``PARTITIONED BY`` (R2). Path modes: overwrite / append / error /
-        errorifexists / ignore.
-        """
+        """Write to a Parquet, CSV, or JSON path using the configured save mode."""
         self._dataframe._ensure_alive()
         if format is not None:
             self.format(format)
@@ -413,7 +333,6 @@ class DataFrameWriter:
             if value is not None:
                 self.option(key, value)
         if path is None:
-            # Spark also accepts path via option("path"); honor it for builder parity.
             for key, value in self._options.items():
                 if key.lower() == "path" and value:
                     path = value
@@ -426,7 +345,6 @@ class DataFrameWriter:
                     "DataFrameWriter.save(path) requires format('parquet'|'csv'|'json'); "
                     "use saveAsTable for Iceberg tables"
                 )
-            # Loud unsupported with DATA_SOURCE_NOT_FOUND shape (E1 machinery / E2 format forms).
             shown = (self._format or "")[:64]
             raise AnalysisException(
                 f"DATA_SOURCE_NOT_FOUND: Failed to find the data source: {shown!r}. "
@@ -436,25 +354,9 @@ class DataFrameWriter:
         self._apply_path_write(path, stored_as=self._format.upper())
 
     def _apply_path_write(self, path: str, *, stored_as: str) -> None:
-        """Apply ``COPY TO … STORED AS <format>`` with Spark-ish path mode semantics.
+        """Apply a staged ``COPY`` write with path modes and schema checks.
 
-        # === r20 R1: read-formats ===
-        # === r22 R2: append/ignore + PARTITIONED BY ===
-        Shared staging machinery for parquet / csv / json (do not fork per format). Overwrite is
-        **stage-then-swap**: COPY lands in a sibling staging path first; only after staging is
-        known to exist is the prior destination removed and the staging path renamed into place.
-        A failed COPY therefore never destroys an existing path (Critic C1-Q-003 / C2-S-002).
-        Empty frames: DataFusion may succeed without materializing the path — we create an empty
-        staging directory and a schema-carrying part file so empty overwrite cannot wipe prior
-        data then fail the rename (octo r1 C1-Q-001 / DF54 empty-write lesson).
-
-        Path modes (R2 oracle): ``error``/``errorifexists`` raise if path exists; ``ignore`` is a
-        no-op when it exists; ``append`` merges staged part files into an existing tree (unique
-        names on collision) after **schema column-set + type checks** (refuse-loud; R2 octo);
-        ``overwrite`` replaces. ``partitionBy`` becomes ``COPY … PARTITIONED BY (cols)``
-        (hive-style dirs; partition cols omitted from data files — Spark shape). Hive partition
-        *discovery on read* is residual (not R2). OS path failures (file-vs-dir append, symlink
-        overwrite) surface as :class:`~repark.errors.AnalysisException`, not raw OSError.
+        Failed COPY leaves the destination unchanged; append requires compatible columns and types.
         """
         import shutil
 
@@ -473,29 +375,18 @@ class DataFrameWriter:
             return
         if normalized_mode == "append" and destination.exists():
             if destination.is_file() or (destination.is_symlink() and not destination.is_dir()):
-                # Plain file (or non-dir symlink): mkdir/merge would raise FileExistsError.
                 raise AnalysisException(
                     f"[PATH_ALREADY_EXISTS] Path {path} is a file (or non-directory symlink); "
                     "path mode('append') requires a directory of part files. "
                     'Use mode("overwrite") to replace the path, or write to a directory path.'
                 )
-            # Schema honesty before COPY (C2-001 / C7-002): refuse col-set or type mismatch.
             self._validate_path_append_schema(destination, stored_as=stored_as)
         partition_clause = self._partitioned_by_sql_clause()
-        # Stage beside the destination so braces/`{view}` in the user path cannot collide with a
-        # template placeholder, and so a failed COPY cannot wipe existing data.
-        # Do **not** prefix with '.' — DataFusion COPY TO treats dot-prefixed targets as a single
-        # file rather than a Spark-style directory of part files.
         staging = destination.parent / (
             f"repark-staging-{uuid.uuid4().hex}-{destination.name or 'out'}"
         )
         escaped_staging = escape_sql_single_quotes(str(staging))
         options_clause = self._copy_options_sql(stored_as)
-        # SEC-02: the generated COPY TO runs through the ordinary SQL path, which carries the
-        # local-filesystem DDL gate. That gate is scoped to *free* SQL (SECURITY.md "Input
-        # surfaces"); a typed `df.write.<fmt>(path)` is the caller naming their own destination.
-        # Trust only the UUID staging target; trusting its parent opens sibling paths to free SQL.
-        # Plain filesystem operations reach the destination below.
         self._dataframe._session.note_local_write_root(escaped_staging)
         try:
             self._run_through_temp_view(
@@ -504,8 +395,6 @@ class DataFrameWriter:
                     f"STORED AS {stored_as}{partition_clause}{options_clause}"
                 )
             )
-            # Never mutate the destination until staging is present. Empty COPY can report success
-            # without creating a path — materialize an empty directory so the swap is still safe.
             if not staging.exists():
                 staging.mkdir(parents=True, exist_ok=True)
             self._materialize_empty_path_write(staging, stored_as=stored_as)
@@ -523,8 +412,6 @@ class DataFrameWriter:
                         staging.unlink()
                 return
             if destination.exists():
-                # Symlink dest: rmtree raises OSError ("Cannot call rmtree on a symbolic link").
-                # Refuse loud as AnalysisException (R2 octo C2-003).
                 if destination.is_symlink():
                     raise AnalysisException(
                         f"cannot overwrite path {path!r}: destination is a symbolic link "
@@ -539,7 +426,6 @@ class DataFrameWriter:
                     raise AnalysisException(f"cannot overwrite path {path!r}: {exc}") from exc
             staging.rename(destination)
         except AnalysisException:
-            # If the destination was already removed but rename failed, leave staging for recovery.
             if staging.exists() and destination.exists():
                 if staging.is_dir() and not staging.is_symlink():
                     shutil.rmtree(staging)
@@ -555,13 +441,7 @@ class DataFrameWriter:
             raise
 
     def _partitioned_by_sql_clause(self) -> str:
-        """Build `` PARTITIONED BY (c1, c2)`` for path COPY when ``partitionBy`` was set (R2).
-
-        Columns must be simple frame column names (identity partitions). Unknown columns fail
-        loud. Duplicate partition columns are refused (already gated in :meth:`partitionBy`;
-        re-checked here for save-time kwarg paths). DataFusion emits hive-style ``col=value/``
-        dirs and omits partition cols from data files (Spark shape).
-        """
+        """Build the path ``PARTITIONED BY`` clause for configured identity columns."""
         if not self._partition_columns:
             return ""
         frame_columns = list(self._dataframe.columns)
@@ -577,8 +457,6 @@ class DataFrameWriter:
                     f"{frame_columns}; path partitionBy requires identity columns present "
                     "on the frame (Spark-shaped)"
                 )
-            # DataFusion PARTITIONED BY expects bare identifiers; reject anything that would
-            # need quoting (spaces / punctuation) rather than invent SQL-escape rules.
             if not matched.isidentifier():
                 raise AnalysisException(
                     f"partitionBy column {matched!r} is not a simple SQL identifier; "
@@ -595,20 +473,12 @@ class DataFrameWriter:
         return " PARTITIONED BY (" + ", ".join(resolved) + ")"
 
     def _validate_path_append_schema(self, destination: Any, *, stored_as: str) -> None:
-        """Refuse path ``append`` when source columns/types cannot honest-merge with dest (R2).
-
-        Spark path/table append rejects schema drift; repark previously only merged filesystem
-        trees (null-fill / Arrow merge fail on read — octo C2-001 / C7-002). Parquet: compare
-        on-disk part-file schemas (partition columns omitted from data files when
-        ``partitionBy`` was used). CSV: header row column-set when present. JSON: first-object
-        keys when a non-empty part exists.
-        """
+        """Reject path append when source and destination schemas cannot be merged safely."""
 
         destination_path = Path(destination)
         source_table = self._dataframe.limit(0).to_arrow()
         source_names = list(source_table.schema.names)
         partition_casefold = {str(column).casefold() for column in self._partition_columns}
-        # On-disk data schema omits partition columns under PARTITIONED BY (Spark shape).
         expected_names = [
             name for name in source_names if name.casefold() not in partition_casefold
         ]
@@ -636,7 +506,6 @@ class DataFrameWriter:
                 schema = pa_pq.read_schema(part_file)
                 for field in schema:
                     key = field.name.casefold()
-                    # Prefer non-null-only / first-seen type; conflict among dest parts is rare.
                     if key not in dest_type_by_case:
                         dest_type_by_case[key] = field.type
                         dest_name_by_case[key] = field.name
@@ -680,7 +549,6 @@ class DataFrameWriter:
                 if key.lower() == "header":
                     header_on = str(value).strip().lower() in {"true", "1", "yes", "t", "y"}
             if not header_on:
-                # Without headers we cannot honest-compare column sets; skip (type/name residual).
                 return
             header_line = candidates[0].read_text(encoding="utf-8").splitlines()
             if not header_line:
@@ -701,7 +569,6 @@ class DataFrameWriter:
             return
 
         if stored_as == "JSON":
-            # Best-effort: first non-empty NDJSON object keys (when present).
             import json as json_module
 
             if destination_path.is_file():
@@ -731,7 +598,7 @@ class DataFrameWriter:
             return
 
     def _copy_options_sql(self, stored_as: str) -> str:
-        """Build ``OPTIONS (…)`` for COPY TO from writer options (format-specific keys)."""
+        """Build format-specific ``COPY`` options or reject unsupported options."""
         if not self._options:
             return ""
         pairs: list[str] = []
@@ -758,7 +625,6 @@ class DataFrameWriter:
                 elif lowered == "nullvalue":
                     pairs.append(f"'format.null_value' '{_sql_option_escape(value)}'")
                 elif lowered == "quoteall":
-                    # Spark quoteAll=true → quote every field; DF quote_style Always/Necessary.
                     quote_all_on = str(value).strip().lower() in {
                         "true",
                         "1",
@@ -769,7 +635,6 @@ class DataFrameWriter:
                     style = "Always" if quote_all_on else "Necessary"
                     pairs.append(f"'format.quote_style' '{style}'")
                 elif lowered == "escapequotes":
-                    # Best-effort: true → Arrow double_quote (RFC "" escaping); false → escape char.
                     escape_quotes_on = str(value).strip().lower() in {
                         "true",
                         "1",
@@ -782,8 +647,6 @@ class DataFrameWriter:
                     compression = _sql_option_escape(_normalize_write_compression(value))
                     pairs.append(f"'format.compression' '{compression}'")
                 else:
-                    # Unknown option: Spark tolerates many; repark fails loud for path writes so
-                    # we do not silently drop compression/sep under an alias.
                     raise AnalysisException(
                         f"DataFrameWriter.csv option {key!r} is not supported yet "
                         "(would silently change write semantics if ignored)"
@@ -817,27 +680,14 @@ class DataFrameWriter:
         return " OPTIONS (" + ", ".join(pairs) + ")"
 
     def _materialize_empty_path_write(self, staging: Any, *, stored_as: str) -> None:
-        """Ensure empty COPY leaves a schema-carrying part file (DF54 empty-write lesson).
-
-        # === r22 R2: writer option matrix / path modes / partitionBy ===
-        **Parquet + partitionBy (octo F-R2-C3-001):** DataFusion ``COPY … PARTITIONED BY``
-        places data only under hive ``col=value/`` children. A **non-recursive** root
-        ``glob("*.parquet")`` missed those children and injected an empty root
-        ``part-00000.parquet`` with the **full** frame schema (partition cols included).
-        ``spark.read.parquet(root)`` then merged schemas and null-filled every data row's
-        partition keys — silent wrong. Fix: treat any nested ``*.parquet`` (``rglob``) or
-        existing hive-style children as non-empty and skip the root empty materialize.
-        """
+        """Create a schema-carrying part file when empty ``COPY`` creates no output."""
 
         staging_path = Path(staging)
         if not staging_path.is_dir():
             return
         if stored_as == "PARQUET":
-            # Nested hive part files count as non-empty (partitionBy COPY layout).
             if any(staging_path.rglob("*.parquet")):
                 return
-            # Hive-style dirs present (col=value) without files yet — still do not invent a
-            # full-schema root part that would poison schema merge on read.
             if self._partition_columns and any(staging_path.iterdir()):
                 return
             import pyarrow.parquet as pa_pq
@@ -848,8 +698,6 @@ class DataFrameWriter:
         if stored_as == "CSV":
             if any(staging_path.rglob("*.csv")) or any(staging_path.iterdir()):
                 return
-            # Schema-only header row when header=true; empty file otherwise (zero data rows).
-            # Honor sep/delimiter (octo R1-C1-003) — non-empty COPY already does via OPTIONS.
             header_on = True
             separator = ","
             for key, value in self._options.items():
@@ -865,29 +713,15 @@ class DataFrameWriter:
         if stored_as == "JSON":
             if any(staging_path.rglob("*.json")) or any(staging_path.iterdir()):
                 return
-            # Empty NDJSON file — zero rows, schema recovered on read only with user schema.
             (staging_path / "part-00000.json").write_text("", encoding="utf-8")
             return
 
     def _by_name_projection(self, session: Any, table_ref: str, *, display_name: str) -> str:
-        """Project the source columns onto the existing table's columns **by name**.
-
-        Returns the quoted column list, in the target table's column order, for the
-        ``INSERT INTO … SELECT <projection> FROM {view}`` — the Spark ``saveAsTable``
-        append/overwrite contract (unlike positional ``insertInto``). Reads the target columns from
-        the engine's analyzed schema (``SELECT * … LIMIT 0`` — metadata only). Raises
-        :class:`~repark.errors.AnalysisException` when the two frames' column *sets* differ (an
-        extra or missing source column), rather than silently dropping data or transposing.
-
-        ``table_ref`` must already be a validated, quoted SQL identifier
-        (:func:`repark.session._sql_table_ref`); ``display_name`` is the user-facing name in errors.
-        """
+        """Return a quoted source projection in target-table order, rejecting schema drift."""
         from repark.spark._idents import quote_ident as _quote_ident
 
         target_columns = list(session.sql(f"SELECT * FROM {table_ref} LIMIT 0").column_names())
         source_columns = self._dataframe.columns
-        # Spark default caseSensitive=false: match by casefold, project source names in target
-        # order so INSERT … SELECT is positional under the target schema (audit BUG-007).
         source_by_case = _by_name_casefold_map(source_columns, surface="DataFrame")
         target_by_case = _by_name_casefold_map(target_columns, surface="table")
         missing = [column for column in target_columns if column.casefold() not in source_by_case]
@@ -907,11 +741,7 @@ class DataFrameWriter:
         )
 
     def _ctas_sql(self, table_ref: str, *, view: str) -> str:
-        """Build the ``CREATE TABLE … USING iceberg [PARTITIONED BY …] AS SELECT`` statement.
-
-        ``table_ref`` must already be a validated, quoted SQL identifier. Partition column names
-        are quoted via :func:`repark._idents.quote_ident` (C1-SEC-001).
-        """
+        """Build a quoted Iceberg CTAS statement."""
         from repark.spark._idents import quote_ident as _quote_ident
 
         partition_clause = ""
@@ -921,22 +751,12 @@ class DataFrameWriter:
         return f"CREATE TABLE {table_ref} USING iceberg{partition_clause} AS SELECT * FROM {view}"
 
     def _run_through_temp_view(self, build_sql: Callable[[str], str]) -> None:
-        """Register the DataFrame as a unique temp view, run SQL built from the view name, drop it.
-
-        ``build_sql(view_name)`` must embed the view identifier by ordinary string formatting of the
-        bound argument — **never** ``str.format`` over a template that already contains
-        user-controlled path / property text (braces in those strings must not be interpreted).
-        Routes the write through the engine's eager SQL path — no new commit machinery.
-        """
+        """Register a temporary view, execute the generated write SQL, and drop the view."""
         self._dataframe._ensure_alive()
-        # Materialize pending mapInArrow / cache so uncached MIA is not an empty wipe
-        # (octo C2-Q-001 / C2-SAF-001 / C2-L-001).
         session = self._dataframe._session
         view_name = scratch_view_name(session, "_repark_writer_")
         session.create_or_replace_temp_view(view_name, self._dataframe._native_for_registration())
         try:
-            # CTAS / INSERT / COPY execute eagerly at `sql()` (the engine's eager-command
-            # contract), so the write commits here; the returned handle is intentionally discarded.
             session.sql(build_sql(view_name))
         finally:
             session.drop_temp_view(view_name)
@@ -948,7 +768,7 @@ def _sql_option_escape(value: str) -> str:
 
 
 def _normalize_write_compression(raw: str) -> str:
-    """Map Spark compression names to DataFusion COPY format.compression tokens (CSV/JSON)."""
+    """Map Spark compression names to DataFusion CSV or JSON compression tokens."""
     lowered = str(raw).strip().lower()
     if lowered in {"", "none", "uncompressed"}:
         return "uncompressed"
@@ -967,13 +787,7 @@ def _normalize_write_compression(raw: str) -> str:
 
 
 def _normalize_parquet_write_compression(raw: str) -> str:
-    """Map Spark parquet compression names to DataFusion ``format.compression`` tokens.
-
-    # === r22 R2: writer option matrix ===
-    DataFusion requires an explicit level for gzip/zstd (e.g. ``gzip(6)``, ``zstd(3)``);
-    bare ``gzip`` / ``zstd`` are rejected by the engine. Spark names (snappy/gzip/lz4/…)
-    map to those forms.
-    """
+    """Map Spark Parquet compression names to DataFusion tokens."""
     lowered = str(raw).strip().lower()
     if lowered in {"", "none", "uncompressed"}:
         return "uncompressed"
@@ -985,7 +799,6 @@ def _normalize_parquet_write_compression(raw: str) -> str:
         return "zstd(3)"
     if lowered == "lz4":
         return "lz4"
-    # Pass through already-leveled forms (gzip(4), zstd(3), …).
     if lowered.startswith("gzip(") or lowered.startswith("zstd(") or lowered.startswith("brotli("):
         return lowered
     raise AnalysisException(
@@ -995,20 +808,13 @@ def _normalize_parquet_write_compression(raw: str) -> str:
 
 
 def _merge_path_write_tree(staging: Any, destination: Any) -> None:
-    """Merge a staged COPY tree into an existing destination (path-write ``mode('append')``).
-
-    # === r22 R2: path append ===
-    Recurses hive-style partition dirs; on file-name collision, renames the incoming file
-    with a unique ``part-append-<hex>`` prefix so prior part files are preserved. Pure
-    filesystem — no new plan machinery.
-    """
+    """Merge a staged COPY tree into a destination without replacing existing parts."""
     import shutil
 
     staging_path = Path(staging)
     destination_path = Path(destination)
     destination_path.mkdir(parents=True, exist_ok=True)
     if not staging_path.is_dir():
-        # Single-file staging (unusual for COPY dir mode) — drop beside destination.
         target = destination_path / staging_path.name
         if target.exists():
             target = destination_path / f"part-append-{uuid.uuid4().hex[:12]}{staging_path.suffix}"
@@ -1025,27 +831,9 @@ def _merge_path_write_tree(staging: Any, destination: Any) -> None:
 
 
 class DataFrameWriterV2:
-    """V2 table writer (PySpark ``DataFrame.writeTo`` → ``DataFrameWriterV2``).
+    """Build V2 Iceberg CTAS, append, and partition-transform writes.
 
-    Routes **only** over the engine's existing sanctioned paths:
-
-    * :meth:`create` / :meth:`createOrReplace` / :meth:`replace` →
-      ``CREATE [OR REPLACE] TABLE … USING iceberg [PARTITIONED BY …] [TBLPROPERTIES …] AS SELECT``
-    * :meth:`append` → ``INSERT INTO … SELECT <by-name projection>`` (columns resolve **by NAME**,
-      unlike V1 :meth:`DataFrameWriter.insertInto` which is positional — recorded vs live
-      PySpark 4.1.2 / Iceberg)
-    * :meth:`overwritePartitions` → loud :class:`~repark.errors.UnsupportedOperationException`
-      (Spark Iceberg semantics are DYNAMIC partition overwrite; the engine's static whole-table
-      overwrite would silently replace all rows — refused until fork ``ReplacePartitions`` is
-      wired; 2026-07-22 review)
-    * :meth:`overwrite` (condition) → loud :class:`~repark.errors.UnsupportedOperationException`
-      (no engine conditional-overwrite path)
-
-    Identity ``partitionedBy`` AND non-identity transforms
-    (``F.bucket``/``F.years``/``F.months``/``F.days``/``F.hours``, plus SQL ``truncate``) work
-    end-to-end: they render into CTAS ``PARTITIONED BY`` and the engine builds the real Iceberg
-    transform, computing each partition value from the source column via the iceberg-rust fork
-    (Group P). A non-positive bucket/truncate width is rejected loudly at parse time.
+    V2 append is by name. Dynamic and conditional overwrite are loud unsupported errors.
     """
 
     __slots__ = (
@@ -1057,17 +845,9 @@ class DataFrameWriterV2:
     )
 
     def __init__(self, dataframe: DataFrame, table: str) -> None:
-        """Bind the source DataFrame and the user-facing target table name.
-
-        Bare / two-part names expand under the session **current** catalog + namespace at each
-        action (``create`` / ``append`` / …), matching V1 ``saveAsTable`` — not frozen at
-        ``writeTo`` construction (E2 / octo C1-L-002). Validates the identifier immediately so
-        a malicious fragment fails at ``writeTo`` rather than at a later SQL action (C1-SEC-001).
-        """
+        """Bind a source DataFrame and validate its target name; resolution occurs per action."""
         self._dataframe = dataframe
-        # Keep the user-facing name; qualify at action time under live catalog state.
         self._table = table
-        # Early injection / identifier gate (discard resolved form — action re-resolves).
         _resolve_writer_table(dataframe, table)
         self._provider = "iceberg"
         self._properties: dict[str, str] = {}
@@ -1078,10 +858,7 @@ class DataFrameWriterV2:
         return _resolve_writer_table(self._dataframe, self._table)
 
     def using(self, provider: str) -> DataFrameWriterV2:
-        """Set the table provider (PySpark ``DataFrameWriterV2.using``).
-
-        Only ``"iceberg"`` is accepted (default). Other providers fail loud.
-        """
+        """Set the table provider; only ``iceberg`` is supported."""
         if not isinstance(provider, str):
             raise PySparkTypeError(f"using provider must be str, got {type(provider).__name__}")
         if provider.lower() != "iceberg":
@@ -1096,11 +873,7 @@ class DataFrameWriterV2:
         property: str,
         value: str,
     ) -> DataFrameWriterV2:
-        """Set a table property (PySpark ``DataFrameWriterV2.tableProperty``); chains.
-
-        Properties land as CTAS ``TBLPROPERTIES ('k'='v', …)`` on :meth:`create` /
-        :meth:`createOrReplace` / :meth:`replace`.
-        """
+        """Set a table property used by V2 create and replace operations."""
         if not isinstance(property, str) or not isinstance(value, str):
             raise PySparkTypeError("tableProperty expects (str, str) key and value")
         self._properties[property] = value
@@ -1113,14 +886,7 @@ class DataFrameWriterV2:
         col: Column | str,
         *cols: Column | str,
     ) -> DataFrameWriterV2:
-        """Set partition expressions (PySpark ``DataFrameWriterV2.partitionedBy``).
-
-        Accepts identity columns (``"cat"`` / ``F.col("cat")``) and partition transforms
-        (``F.bucket(4, "id")``, ``F.years(F.col("event_date"))``, …). Both work end-to-end on
-        CTAS: transform partitions route into SQL ``PARTITIONED BY (bucket(4, "id"), …)`` and the
-        engine builds the real Iceberg transform, computing each partition value from the source
-        column via the iceberg-rust fork (Group P).
-        """
+        """Set identity columns or supported partition transforms for CTAS."""
         for item in (col, *cols):
             self._partition_exprs.append(self._partition_sql_fragment(item))
         return self
@@ -1128,11 +894,7 @@ class DataFrameWriterV2:
     partitioned_by = partitionedBy
 
     def create(self) -> None:
-        """Create the table (PySpark ``DataFrameWriterV2.create``).
-
-        Fails with :class:`~repark.errors.AnalysisException` if the table already exists
-        (Spark ``TABLE_OR_VIEW_ALREADY_EXISTS`` class).
-        """
+        """Create the table, failing if it already exists and rejecting tightened frames."""
         self._dataframe._ensure_alive()
         session = self._dataframe._session
         qualified, _table_ref = self._resolved_table()
@@ -1146,10 +908,7 @@ class DataFrameWriterV2:
         self._run_ctas(or_replace=False)
 
     def createOrReplace(self) -> None:  # noqa: N802 — PySpark method name
-        """Create or replace the table (PySpark ``DataFrameWriterV2.createOrReplace``).
-
-        Routes to ``CREATE OR REPLACE TABLE … AS SELECT`` (engine path already supported).
-        """
+        """Create or replace the table, rejecting tightened frames."""
         self._dataframe._ensure_alive()
         self._dataframe._refuse_tightened_iceberg_create()
         self._run_ctas(or_replace=True)
@@ -1157,11 +916,7 @@ class DataFrameWriterV2:
     create_or_replace = createOrReplace
 
     def replace(self) -> None:
-        """Replace an **existing** table (PySpark ``DataFrameWriterV2.replace``).
-
-        Raises :class:`~repark.errors.AnalysisException` if the table does not exist (Spark
-        rejects replace on a missing table). When present, routes to ``CREATE OR REPLACE TABLE``.
-        """
+        """Replace an existing table, failing if it does not exist or the frame is tightened."""
         self._dataframe._ensure_alive()
         session = self._dataframe._session
         qualified, _table_ref = self._resolved_table()
@@ -1174,11 +929,7 @@ class DataFrameWriterV2:
         self._run_ctas(or_replace=True)
 
     def append(self) -> None:
-        """Append rows into an existing table **by name** (PySpark ``DataFrameWriterV2.append``).
-
-        Columns resolve by NAME (Spark V2 / Iceberg contract) — a reordered same-named frame
-        lands correctly, unlike positional V1 :meth:`DataFrameWriter.insertInto`.
-        """
+        """Append rows to an existing table by column name."""
         self._dataframe._ensure_alive()
         session = self._dataframe._session
         qualified, table_ref = self._resolved_table()
@@ -1193,19 +944,7 @@ class DataFrameWriterV2:
         )
 
     def overwritePartitions(self) -> None:  # noqa: N802 — PySpark method name
-        """Refuse loud (2026-07-22 review): dynamic partition overwrite is unavailable.
-
-        Spark Iceberg implements this as *dynamic* partition overwrite — only the partitions
-        present in the source are replaced, and an empty source replaces nothing. repark's
-        engine exposes only **static** whole-table ``INSERT OVERWRITE``, so honoring the call
-        would silently replace ALL rows (and the empty-source case would wipe the table) —
-        the silent-data-loss class for any caller relying on Spark's partition-scoped
-        semantics (e.g. per-key audit-table refresh). The facade cannot even detect a
-        partitioned target to carve out the unpartitioned-equivalence case. Until the fork's
-        ``ReplacePartitions`` action is wired, this raises
-        :class:`~repark.errors.UnsupportedOperationException`; use ``createOrReplace()`` for
-        an intentional full rebuild or ``append()`` for additive writes.
-        """
+        """Reject dynamic partition overwrite because static overwrite could lose unrelated rows."""
 
         raise UnsupportedOperationException(
             "overwritePartitions: Spark's dynamic partition overwrite (partition-scoped "
@@ -1218,12 +957,7 @@ class DataFrameWriterV2:
     overwrite_partitions = overwritePartitions
 
     def overwrite(self, condition: Column | str) -> None:
-        """Conditional overwrite (PySpark ``DataFrameWriterV2.overwrite``).
-
-        **Loud reject:** repark has no engine path for condition-scoped overwrite. Use
-        :meth:`createOrReplace` for a deliberate full rebuild or a ``DELETE`` + ``append``
-        pattern until a conditional path lands.
-        """
+        """Reject conditional overwrite because no engine path supports it."""
         _ = condition  # signature parity
 
         raise UnsupportedOperationException(
@@ -1233,12 +967,7 @@ class DataFrameWriterV2:
         )
 
     def option(self, key: str, value: Any) -> DataFrameWriterV2:
-        """Writer option (PySpark ``DataFrameWriterV2.option``).
-
-        Write path is **current-snapshot only** (I1): ``branch`` / ``tag`` fail loud. Other
-        storage options are accepted then ignored with a process-once :class:`UserWarning`
-        (C1-Q-005 / Group I disclosure).
-        """
+        """Set an option; branch and tag writes are rejected, others warn once."""
         _ = value
         key_lower = str(key).lower()
         if key_lower in {"branch", "tag"}:
@@ -1250,26 +979,14 @@ class DataFrameWriterV2:
         return self
 
     def options(self, **options: Any) -> DataFrameWriterV2:
-        """Writer options (PySpark ``DataFrameWriterV2.options``).
-
-        Same rules as :meth:`option` — ``branch`` / ``tag`` fail loud; others warn-once.
-        """
+        """Set multiple options using the same rules as :meth:`option`."""
         for key, value in options.items():
             self.option(key, value)
         return self
 
-    # ---- internals --------------------------------------------------------------------------
-
     @staticmethod
     def _partition_sql_fragment(item: Column | str) -> str:
-        """Render one ``partitionedBy`` argument as a SQL ``PARTITIONED BY`` element.
-
-        Bare identity column names (``str``) and identity :class:`Column` display names are
-        double-quoted via :func:`repark._idents.quote_ident` so reserved words / hostile text
-        cannot break out of the identifier (C1-SEC-001). Transform call forms
-        (``years("col")`` / …) already embed a quoted identity arg from
-        :func:`repark.functions._partition_transform` (C3-SEC-001) and are returned as-is.
-        """
+        """Render one partition expression, quoting identity names."""
         from repark.spark._idents import quote_ident as _quote_ident
 
         if isinstance(item, str):
@@ -1277,16 +994,14 @@ class DataFrameWriterV2:
         if isinstance(item, Column):
             transform = getattr(item, "_partition_transform", None)
             if transform is not None:
-                # Fragment already carries years("ident") / months("ident") / … (quoted).
                 return transform
-            # Identity column: F.col("x") / bare Column — quote the display name.
             return _quote_ident(item.spark_display_part())
         raise PySparkTypeError(
             f"partitionedBy expects column names (str) or Column, got {type(item).__name__}"
         )
 
     def _by_name_projection(self, session: Any, *, table_ref: str | None = None) -> str:
-        """Quoted source-column list in table order (by-name conform; extra/missing → error)."""
+        """Return a quoted source projection in table order, rejecting schema drift."""
         from repark.spark._idents import quote_ident as _quote_ident
 
         name = self._table
@@ -1343,8 +1058,8 @@ class DataFrameWriterV2:
         """Register the DataFrame as a temp view, run ``build_sql(view_name)``, drop the view.
 
         Builds SQL from the bound view name after registration so user-controlled path /
-        ``tableProperty`` text cannot be reinterpreted by ``str.format`` (Critic C2-S-001).
-        Materializes pending mapInArrow / cache first (octo C2-Q-001 / C2-SAF-001 / C2-L-001).
+        ``tableProperty`` text cannot be reinterpreted by ``str.format``.
+        Materializes pending mapInArrow / cache first.
         """
         self._dataframe._ensure_alive()
         session = self._dataframe._session
@@ -1357,11 +1072,7 @@ class DataFrameWriterV2:
 
 
 class DataFrameStatFunctions:
-    """PySpark ``DataFrame.stat`` surface — aliases of :class:`DataFrame` stat methods (G1).
-
-    ``corr`` / ``cov`` / ``crosstab`` / ``sampleBy`` / ``approxQuantile`` delegate to the
-    same implementations on :class:`DataFrame`. ``freqItems`` stays loud-unsupported.
-    """
+    """Expose PySpark ``DataFrame.stat`` methods through the owning DataFrame."""
 
     __slots__ = ("_dataframe",)
 
@@ -1374,23 +1085,23 @@ class DataFrameStatFunctions:
         probabilities: list[float] | tuple[float, ...],
         relativeError: float,  # noqa: N803
     ) -> list[float] | list[list[float]]:
-        """Approximate quantiles of numeric columns — see :meth:`DataFrame.approxQuantile`."""
+        """Return approximate quantiles by delegating to the DataFrame."""
         return self._dataframe.approxQuantile(col, probabilities, relativeError)
 
     def corr(self, col1: str, col2: str, method: str | None = None) -> float:
-        """Pearson correlation of two columns — see :meth:`DataFrame.corr`."""
+        """Return Pearson correlation by delegating to the DataFrame."""
         return self._dataframe.corr(col1, col2, method)
 
     def cov(self, col1: str, col2: str) -> float:
-        """Sample covariance of two columns — see :meth:`DataFrame.cov`."""
+        """Return sample covariance by delegating to the DataFrame."""
         return self._dataframe.cov(col1, col2)
 
     def crosstab(self, col1: str, col2: str) -> DataFrame:
-        """Pair-wise frequency table of two columns — see :meth:`DataFrame.crosstab`."""
+        """Return a pair-wise frequency table by delegating to the DataFrame."""
         return self._dataframe.crosstab(col1, col2)
 
     def freqItems(self, cols: list[str], support: float | None = None) -> DataFrame:  # noqa: N802
-        """Refuse — frequent-item discovery is not implemented; raises loudly today."""
+        """Reject frequent-item discovery because it is not implemented."""
         del cols, support
         raise UnsupportedOperationException(
             "DataFrame.stat.freqItems is not supported yet (disclosed R-DF-BATCH2)"
@@ -1402,5 +1113,5 @@ class DataFrameStatFunctions:
         fractions: dict[Any, float],
         seed: int | None = None,
     ) -> DataFrame:
-        """Stratified sample without replacement — see :meth:`DataFrame.sampleBy`."""
+        """Return a stratified sample by delegating to the DataFrame."""
         return self._dataframe.sampleBy(col, fractions, seed)

@@ -3,16 +3,16 @@
 ## Purpose
 
 File-backed tests for `SparkExtension` (`../extension.rs`): the `configure` hook's
-`repark.sql.*` `ConfigExtension` install (r24 SB1 re-home, incl. the fail-loud unparsable-value
+`repark.sql.*` `ConfigExtension` install (including the fail-loud unparsable-value
 contract and **V3-2** `allowCreateFormatVersion3`), **the Spark-door `spark.sql.ansi.enabled` carrier** (U5 / Q10=A — default TRUE;
 `notabool` fail-louds; ANSI door never calls this hook), **the Spark-door
 `parse_float_as_decimal=true` default** (DEC-1 / U2 — bare
 floating-point SQL literals infer DECIMAL, matching Spark; ANSI door never calls this hook),
-**and its session-timezone carrier install** (H-1a split B — this hook is the ONE place
+**and its session-timezone carrier install** (this hook is the ONE place
 `repark-core`'s resolved zone reaches `repark-functions`' extractors, because it is the only crate
 that depends on both and the reverse edge is forbidden), and the `register` hook's
 function-registry + analyzer-rule installation + the composed
-`repark_ta::TaExtension` (the PR-2 TA-omission rider's discharge, pinned bit-exact against the
+`repark_ta::TaExtension` (pinned bit-exact against the
 `repark_ta` kernel).
 
 ## Contents

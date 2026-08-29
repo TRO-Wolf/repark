@@ -1,28 +1,6 @@
-//! PyO3 bindings exposing the repark engine to Python as the `repark._native` module.
-//!
-//! The pure-Python `repark` package (under `python/repark`) imports from here and presents
-//! the near-drop-in PySpark surface (`from repark import ReparkSession`). All compute happens in
-//! Rust; data crosses the boundary as Apache Arrow via the C Data Interface — zero-copy, no
-//! serialization. This is the only crate permitted to use `unsafe` (the PyO3 FFI boundary).
-//!
-//! ## Layout
-//!
-//! - [`session`] — [`session::PyReparkSession`], the synchronous Python wrapper over the async
-//!   [`repark_core::ReparkSession`]. Every session `block_on`s through a process-wide shared
-//!   Tokio runtime handle ([`repark_core::EngineRuntime`] in a `OnceLock`), not a per-constructor
-//!   runtime.
-//! - [`dataframe`] — [`dataframe::PyDataFrame`], wrapping a DataFusion `DataFrame`, with
-//!   `collect`/`count`/`show`, the zero-copy Arrow handoff (`__arrow_c_stream__`), and the
-//!   transform surface (`with_column`/`filter`/`select`/`drop`/`sort`/`join_*`).
-//! - [`column`] — [`column::PyColumn`], wrapping a DataFusion `Expr`: the `col`/`lit`/`expr`
-//!   constructors, the operator set, `alias`, and `cast`.
-//!
-//! ## Arrow handoff
-//!
-//! The boundary uses the **Arrow `PyCapsule` interface** (`__arrow_c_stream__`) built on
-//! [`arrow::ffi_stream::FFI_ArrowArrayStream`]. It is independent of the `pyo3` version (no
-//! `arrow-pyarrow` pin to reconcile) and is exactly what `pyarrow.table(df)` /
-//! `polars.from_arrow(df)` consume.
+//! PyO3 bindings expose the repark engine as `repark._native`.
+//! The Python facade imports this module; computation stays in Rust and data crosses as
+//! zero-copy Arrow C streams. This is the only crate permitted to use `unsafe` for PyO3 FFI.
 
 #[cfg(feature = "allocator-mimalloc")]
 mod allocator;
@@ -40,10 +18,8 @@ pub use column::PyColumn;
 pub use dataframe::PyDataFrame;
 pub use session::PyReparkSession;
 
-// Native and facade exceptions share class identity. Add a native leaf only for a reachable engine
-// class; Python validation leaves need multiple inheritance and stay in `repark.errors`.
 /// The exception taxonomy lives in [`exceptions`] (file-backed; see its module doc for the
-/// module-scoped `disallowed_methods` expectation and the P-4/P-5 provocation record).
+/// module-scoped `disallowed_methods` expectation).
 mod exceptions;
 pub use exceptions::{
     AnalysisException, IllegalArgumentException, ParseException, PySparkException,
@@ -51,14 +27,9 @@ pub use exceptions::{
 };
 
 /// ===========================================================================================
-/// Convert a crate-wide [`repark_core::Error`] into the matching PySpark-shaped Python exception.
-///
-/// The taxonomy boundary: [`repark_core::Error::exception_class`] enumerates every variant into a
-/// [`ErrorClass`] (an exhaustive, no-`_` match in `repark-core` — a new variant fails to compile
-/// until routed), and this function maps that class to a concrete exception. The `ErrorClass` match
-/// is itself exhaustive (no `_`), so both hops are compile-time-checked: no silent default arm can
-/// swallow a new class into the wrong Python type. The underlying engine message is preserved
-/// verbatim in `str(exc)` (the cause chain). Takes the error by value so it slots into `.map_err`.
+/// Convert a crate error to its PySpark-shaped Python exception.
+/// The exhaustive class mapping preserves the engine message and rejects unhandled variants at
+/// compile time.
 /// ===========================================================================================
 #[allow(clippy::needless_pass_by_value)]
 fn to_py_err(err: repark_core::Error) -> PyErr {
@@ -73,12 +44,7 @@ fn to_py_err(err: repark_core::Error) -> PyErr {
 }
 
 /// ===========================================================================================
-/// Convert a raw [`DataFusionError`] into a classified Python exception.
-///
-/// The DataFrame-op and `F.expr` surfaces produce `DataFusionError`s directly (rather than a
-/// `repark_core::Error`), so they route through the shared `repark_core::engine_err` classifier
-/// and then [`to_py_err`] — a parse error becomes `ParseException`, an analysis error
-/// `AnalysisException`, everything else the base `PySparkException`. One boundary, one taxonomy.
+/// Convert a [`DataFusionError`] through the shared engine classifier.
 /// ===========================================================================================
 #[allow(clippy::needless_pass_by_value)]
 pub(crate) fn datafusion_to_py_err(err: DataFusionError) -> PyErr {
@@ -86,19 +52,8 @@ pub(crate) fn datafusion_to_py_err(err: DataFusionError) -> PyErr {
 }
 
 /// ===========================================================================================
-/// Env-gated `tracing` subscriber for live phase profiles through the wheel (R-TRACE-SUBSCRIBER).
-///
-/// Prefer `REPARK_LOG` (repark-native; does not fight host `RUST_LOG` tooling). Fall back to
-/// `RUST_LOG` when `REPARK_LOG` is unset/empty so existing docs that say
-/// `RUST_LOG=repark_core=info` keep working once the wheel loads.
-///
-/// - Absent both env vars → **no** subscriber (zero overhead; `tracing` macros stay no-ops).
-/// - Set → `tracing_subscriber::fmt` on stderr with `EnvFilter` + [`FmtSpan::CLOSE`] so each
-///   span logs measured duration (the live MERGE phase profile depends on close timings).
-/// - [`try_init`](tracing_subscriber::util::SubscriberInitExt::try_init) — never panics if a
-///   subscriber already exists (tests, embedding hosts).
-///
-/// Runs once from the pymodule entry (import of `repark._native`); not per-session.
+/// Install the optional environment-gated tracing subscriber once at module import.
+/// `REPARK_LOG` takes precedence over `RUST_LOG`; an existing subscriber is not an error.
 /// ===========================================================================================
 fn try_init_repark_tracing() {
     use std::sync::Once;
@@ -117,8 +72,6 @@ fn try_init_repark_tracing() {
         };
         let filter =
             EnvFilter::try_new(filter_directive.trim()).unwrap_or_else(|_| EnvFilter::new("info"));
-        // try_init: Ok if we won the global slot; Err if another subscriber is already installed.
-        // Either way we never panic — a second import / host-installed subscriber is fine.
         let _ = tracing_subscriber::fmt()
             .with_env_filter(filter)
             .with_span_events(FmtSpan::CLOSE)
@@ -130,19 +83,15 @@ fn try_init_repark_tracing() {
 /// ===========================================================================================
 /// The native module entry point.
 ///
-/// The function name must match the `[lib] name` (`_native`) and maturin's `module-name`
-/// (`repark._native`). The pure-Python facade imports [`PyReparkSession`] / [`PyDataFrame`]
-/// from here and presents them as `ReparkSession` / `DataFrame`.
+/// Register the native classes and exception taxonomy for `repark._native`.
 /// ===========================================================================================
 #[pymodule]
 fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
-    // R-TRACE-SUBSCRIBER: install before any engine work can emit spans (import-time, once).
     try_init_repark_tracing();
     module.add("__doc__", "repark native engine (PyO3 bindings).")?;
     module.add_class::<PyReparkSession>()?;
     module.add_class::<PyDataFrame>()?;
     module.add_class::<PyColumn>()?;
-    // The error taxonomy (WG-3). `repark.errors` re-exports these by identity.
     module.add(
         "PySparkException",
         module.py().get_type::<PySparkException>(),
@@ -160,7 +109,6 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
         "IllegalArgumentException",
         module.py().get_type::<IllegalArgumentException>(),
     )?;
-    // M3 native estimators: streaming fit entry points (params-only results).
     ml::register(module)?;
     Ok(())
 }

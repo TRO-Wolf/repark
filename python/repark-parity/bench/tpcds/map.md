@@ -1,5 +1,7 @@
 # map — python/repark-parity/bench/tpcds
 
+CC-2 slice complete: comments and docstrings condensed; oracle discriminators, pins, mutation payloads, and safety contracts kept byte-exact; history narration deleted.
+
 ## Purpose
 
 TPC-DS scoreboard harness (**R-TPCDS-HARNESS** / D1). DuckDB `dsdgen` → parquet cache →

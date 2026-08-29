@@ -1,4 +1,4 @@
-"""UDFRegistration (r26 T1 MOVE-ONLY)."""
+"""UDFRegistration."""
 
 from __future__ import annotations
 
@@ -48,16 +48,16 @@ class UDFRegistration:
         self._session._ensure_alive()
         if not isinstance(name, str) or name.strip() == "":
             raise PySparkTypeError("udf register name must be a non-empty str")
-        # Simple SQL identifier only — SQL rewrite + registry scan require bare idents
-        # (octo C1-Q-002). DF use of the returned callable does not need the name.
+        # Simple SQL identifier only — SQL rewrite + registry scan require bare idents.
+        # DF use of the returned callable does not need the name.
         if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name) is None:
             raise PySparkTypeError(
                 "udf register name must be a simple SQL identifier "
                 f"([A-Za-z_][A-Za-z0-9_]*); got {name!r}"
             )
-        # Reserved internal SQL-UDF materialization namespace (U9/U10 anti-leak — U10 C5).
-        # User-chosen names containing this prefix would surface as schema columns and
-        # defeat the never-leak ``__repark_sql_udf_*`` bar.
+        # Reserved internal SQL-UDF materialization namespace. User-chosen names containing
+        # this prefix would surface as schema columns and defeat the never-leak
+        # ``__repark_sql_udf_*`` bar.
         if "__repark_sql_udf" in name.lower():
             raise PySparkTypeError(
                 "udf register name must not use the reserved repark SQL UDF "
@@ -65,15 +65,15 @@ class UDFRegistration:
             )
         if not callable(f):
             raise PySparkTypeError(f"udf register f must be callable, got {type(f).__name__}")
-        # Reject pandas_udf wrappers — SQL registry is classic scalar only (M6 owns pandas).
+        # Reject pandas_udf wrappers — SQL registry is classic scalar only.
         if type(f).__name__ == "PandasUDFFunction":
             raise UnsupportedOperationException(
                 "spark.udf.register does not accept pandas_udf callables in repark v1; "
                 "register a classic scalar Python function (or use F.udf). "
                 "pandas_udf stays on the DataFrame path (M6)."
             )
-        # Reject table UDTF wrappers — callable but not a scalar UDF (U11 half-wired guard).
-        # Without this, register appears to succeed and only fails at invocation.
+        # Reject table UDTF wrappers — callable but not a scalar UDF. Without this, register
+        # appears to succeed and only fails at invocation.
         from repark.spark.udtf import UserDefinedTableFunction
 
         if isinstance(f, UserDefinedTableFunction):
@@ -91,7 +91,7 @@ class UDFRegistration:
                     returnType,
                     name=name,
                 )
-                # Preserve nondeterministic mark across returnType rebuild (r23 C6).
+                # Preserve the nondeterministic mark across the returnType rebuild.
                 if not f.deterministic:
                     user_defined.asNondeterministic()
             else:
@@ -107,7 +107,7 @@ class UDFRegistration:
 
         registry = self._session._udf_registry()
         # Case-insensitive overwrite: SQL resolution is case-insensitive, so two keys
-        # differing only by case would silently pick dict-iteration order (octo C3-L-001).
+        # differing only by case would silently pick dict-iteration order.
         name_lower = name.lower()
         for existing in list(registry.keys()):
             if existing.lower() == name_lower and existing != name:

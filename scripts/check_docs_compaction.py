@@ -1,26 +1,23 @@
 #!/usr/bin/env python3
-"""The live documents carry only live state — the gate (DL-4, 2026-08-25;
-ceilings extended DL-5).
+"""The live documents carry only live state.
 
 Over `STATUS.md` and `briefs/next-sequence.md`, three block checks:
 
-(a) no `state=closed` ws block is still in STATUS — a closed campaign has left
-    for `docs/history/` (the lifecycle script's `compact` moves it);
-(b) no `unit` marker in the slate names a ledger that sits in
-    `task/ledgers/completed/` or the archive — a merged unit has left, whole;
-(c) every top-level bullet under STATUS "Active workstreams" is inside a ws
-    block, so a new campaign cannot arrive unmarked;
+(a) no `state=closed` ws block is still in STATUS — a closed campaign has left for
+    `docs/history/` (the lifecycle script's `compact` moves it);
+(b) no `unit` marker in the slate names a ledger in `task/ledgers/completed/` or the
+    archive — a merged unit has left, whole;
+(c) every top-level bullet under STATUS "Active workstreams" is inside a ws block, so a
+    new campaign cannot arrive unmarked;
 
 And over **every** CEILINGS key:
 
-(d) the file exists, is tracked, and does not exceed its byte ceiling.
-    CEILINGS is seeded from the post-trim measurement and is raised only by
-    an explicit edit in the PR that needs it — the PYC-6 ratchet pattern.
-    Markers make compaction mechanical; this ceiling is what makes regrowth
+(d) the file exists, is tracked, and does not exceed its byte ceiling. CEILINGS is seeded
+    from the post-trim measurement and is raised only by an explicit edit in the PR that
+    needs it. Markers make compaction mechanical; this ceiling is what makes regrowth
     visible.
 
-Grammar and meanings: `scripts/doc_blocks.py`. Exit 0 clean, 1 findings, 2
-environment.
+Grammar and meanings: `scripts/doc_blocks.py`. Exit 0 clean, 1 findings, 2 environment.
 """
 
 from __future__ import annotations
@@ -35,14 +32,11 @@ from types import ModuleType
 COMPLETED = "task/ledgers/completed"
 ARCHIVE = "task/ledgers/archive"
 LEDGER_SUFFIX = "-ledger.md"
-# Bytes. Seeded 2026-08-25 at the end of DL-4 — STATUS.md 30,055 B (from 65,890),
-# briefs/next-sequence.md 5,594 B (from 26,731) — then ratcheted DL-5 (2026-08-25):
-# STATUS.md 24,307 B → 25,000; AGENTS.md 30,341 B → 31,000; engineering-method
-# 34,100 B → 35,000. Raised only in the PR that needs it, with the reason in that
-# PR: a departure edit that adds more than the headroom removes something or
+# Bytes. Seeded from the post-trim measurement; raised only in the PR that needs it, with the
+# reason in that PR: a departure edit that adds more than the headroom removes something or
 # says why the ceiling moves.
-# The SEPMO unit-runbook is a pointer-only checklist (PROC-1, 2026-08-25): seeded at 5,000 B so
-# it cannot regrow into a second spine — every rule it names lives elsewhere and it only links.
+# The SEPMO unit-runbook is a pointer-only checklist: seeded at 5,000 B so it cannot regrow
+# into a second spine — every rule it names lives elsewhere and it only links.
 CEILINGS: dict[str, int] = {
     "STATUS.md": 25_000,
     "briefs/next-sequence.md": 6_000,

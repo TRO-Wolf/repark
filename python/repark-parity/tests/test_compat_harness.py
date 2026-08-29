@@ -138,9 +138,8 @@ def test_denominators_both_formulas() -> None:
     denoms = denominators(rows)
     assert denoms["pass"] == 2
     assert denoms["all_collected"] == 7
-    # engine-relevant = all - SKIP - NEEDS-JVM - HARNESS
-    # excludes: skip, needs-jvm (parallelize msg), harness (bootstrap)
-    # keeps: 2 pass + module-timeout + fail-value = 4
+    # engine-relevant = all - SKIP - NEEDS-JVM - HARNESS: excludes skip, needs-jvm
+    # (parallelize msg), harness (bootstrap); keeps 2 pass + module-timeout + fail-value.
     assert denoms["excluded_skip_upstream"] == 1
     assert denoms["excluded_needs_jvm"] == 1
     assert denoms["excluded_harness"] == 1
@@ -158,7 +157,7 @@ def test_denominators_both_formulas() -> None:
 
 
 def test_classify_fail_missing_not_stolen_by_source_line_parallelize() -> None:
-    """C1-L1: source line mentioning parallelize must not force NEEDS-JVM."""
+    """source line mentioning parallelize must not force NEEDS-JVM."""
     tb = (
         'File "test_types.py", line 94, in test_apply_schema_to_row\n'
         '    df = self.spark.read.json(self.sc.parallelize(["""{"a":2}"""]))\n'
@@ -207,7 +206,7 @@ def test_classify_needs_jvm_on_active_spark_context_assert() -> None:
 
 
 def test_classify_harness_not_on_bare_setupclass() -> None:
-    """C1-L2: Apache setUpClass frames are not HARNESS by themselves."""
+    """Apache setUpClass frames are not HARNESS by themselves."""
     tb = (
         'File "test_functions.py", line 10, in setUpClass\n'
         "    raise AttributeError('x')\n"
@@ -328,7 +327,7 @@ def test_classify_pandas_import_with_cache_path_stays_harness() -> None:
 
 
 def test_classify_pandas_import_with_repark_install_frame_stays_harness() -> None:
-    """Octo C1: site-packages/repark frames must not steal pandas ImportError → FAIL-MISSING."""
+    """site-packages/repark frames must not steal pandas ImportError → FAIL-MISSING."""
     row = classify_failure(
         test_id="pyspark.sql.tests.test_functions.FunctionsTests.test_between_function",
         module="test_functions",
@@ -351,7 +350,7 @@ def test_classify_pandas_import_with_repark_install_frame_stays_harness() -> Non
 
 
 def test_classify_product_repark_import_with_cache_path_is_fail_missing() -> None:
-    """Octo C1 inverse: real repark ModuleNotFoundError stays FAIL-MISSING despite cache path."""
+    """Inverse: real repark ModuleNotFoundError stays FAIL-MISSING despite cache path."""
     row = classify_failure(
         test_id="pyspark.sql.tests.test_functions.FunctionsTests.test_x",
         module="test_functions",
@@ -408,7 +407,7 @@ def test_timeout_budget_from_error() -> None:
 
 
 def test_recording_result_timeout_error_becomes_module_timeout() -> None:
-    """C3-L1: unittest-absorbed TimeoutError must not stay FAIL-VALUE."""
+    """unittest-absorbed TimeoutError must not stay FAIL-VALUE."""
     import unittest
 
     from compat.classify import classify_module_timeout
@@ -422,7 +421,6 @@ def test_recording_result_timeout_error_becomes_module_timeout() -> None:
     result = _RecordingResult(module_short="m")
     suite.run(result)
     assert result.module_timed_out is True
-    # Simulate run_module_inprocess post-suite handling:
     rows = [*result.to_census_rows(), classify_module_timeout(module="m", budget_s=12.0)]
     assert any(row.status == "MODULE-TIMEOUT" for row in rows)
     assert not any(
@@ -498,7 +496,7 @@ def test_stretch_modules_include_c3_expand_order() -> None:
         "test_conf",
         "test_catalog",
         "test_sql",
-        "test_udf",  # U8 DF half shipped — own expanded-census module
+        "test_udf",  # test_udf: own expanded-census module
     )
     assert STRETCH_MODULES[2:] == C3_EXPAND_MODULES
     assert "test_udf" in STRETCH_MODULES
@@ -510,7 +508,7 @@ def test_stretch_modules_include_c3_expand_order() -> None:
 def test_resolve_census_modules_c3_expand_ignores_night1_and_stretch() -> None:
     """C3 dual-denom: --c3-expand is only C3_EXPAND_MODULES (never blend /345).
 
-    Pins the CLI composition site (octo C3 C1-Q-002) — constant equality alone is not
+    Pins the CLI composition site — constant equality alone is not
     enough; a regression that appends night-1 under --c3-expand must fail this pin.
     """
     night1_csv = ",".join(NIGHT1_MODULES)
@@ -529,7 +527,7 @@ def test_resolve_census_modules_c3_expand_ignores_night1_and_stretch() -> None:
     assert stretched[:3] == list(NIGHT1_MODULES)
     assert stretched[3:5] == ["test_column", "test_readwriter"]
     assert stretched[5:] == list(C3_EXPAND_MODULES)
-    # Series / scratch labels stay distinct (octo C3 C1-L-001 / C1-SAF-001).
+    # Series / scratch labels stay distinct.
     assert _SERIES_C2 != _SERIES_C3
     assert "C3" in _SERIES_C3 and "C2" in _SERIES_C2
     assert _DEFAULT_SCRATCH_C2 != _DEFAULT_SCRATCH_C3
@@ -539,7 +537,7 @@ def test_resolve_census_modules_c3_expand_ignores_night1_and_stretch() -> None:
 def test_default_markdown_report_path_is_under_target_census_reports() -> None:
     """C-2 / G-6: markdown defaults to gitignored ``target/census-reports/``, never ``task/``.
 
-    Pins the resolved path only (no full census run). Aligns with ``scripts/run_census.sh``'s
+    Pins the resolved path only; aligns with ``scripts/run_census.sh``'s
     ``CENSUS_REPORT_DIR`` default; ``task/`` is opt-in via ``--markdown``.
     """
     from pathlib import Path
@@ -563,9 +561,9 @@ def test_default_markdown_report_path_is_under_target_census_reports() -> None:
 
 
 def test_runner_main_wires_default_markdown_through_helper() -> None:
-    """Mutation pin: ``main``'s ``args.markdown is None`` branch calls the helper (not a raw path).
+    """Mutation pin: ``main``'s ``args.markdown is None`` branch calls the helper, not a raw path.
 
-    Reverting the CLI default back to a hard-coded ``task/`` path while leaving the helper
+    Reverting the CLI default to a hard-coded ``task/`` path while leaving the helper
     green would fail this pin.
     """
     from pathlib import Path
@@ -634,7 +632,7 @@ def test_resolve_census_modules_c4_expand_ignores_night1_c3_and_stretch() -> Non
 
 
 def test_render_markdown_report_c3_series_never_c2_branding() -> None:
-    """C3 octo C3: markdown series label must not claim classic C2 zero-fix /345."""
+    """markdown series label must not claim classic C2 zero-fix /345."""
     from compat.runner import build_report, render_markdown_report
 
     class _Prov:
@@ -656,7 +654,7 @@ def test_render_markdown_report_c3_series_never_c2_branding() -> None:
 
 
 def test_render_markdown_report_c4_series_never_c2_or_c3_branding() -> None:
-    """C4 Q11: expand2 markdown must not claim classic C2 /345 or C3 expand branding."""
+    """expand2 markdown must not claim classic C2 /345 or C3 expand branding."""
     from compat.runner import build_report, render_markdown_report
 
     class _Prov:
@@ -677,7 +675,7 @@ def test_render_markdown_report_c4_series_never_c2_or_c3_branding() -> None:
 def test_known_fatal_tests_exclude_c4_expand_modules() -> None:
     """C4 sole-writer: fatal deselect map must not swallow expand2 modules."""
     assert set(_KNOWN_FATAL_TESTS).isdisjoint(set(C4_EXPAND_MODULES))
-    # Frozen sole entry: deliberate UDF segfault (C3/U8 surface, not C4) — octo C6.
+    # Frozen sole entry: deliberate UDF segfault (C3/U8 surface, not C4).
     assert _KNOWN_FATAL_TESTS == {
         "test_udf": ("test_python_udf_segfault",),
     }
@@ -771,7 +769,7 @@ def test_filter_matches_test_id_and_fatal_rows_under_filter() -> None:
     assert _filter_matches_test_id(fatal_id, "test_python_udf_segfault")
     assert not _filter_matches_test_id(other_id, "test_python_udf_segfault")
     assert _filter_matches_test_id(other_id, "*callable*")
-    # Simulated post-deselect filter (octo C4 C2-S1-002).
+    # Simulated post-deselect filter.
     fatal_rows = [
         CensusRow(test_id=fatal_id, module="test_udf", status="NEEDS-JVM", cause="fatal"),
         CensusRow(test_id=other_id, module="test_udf", status="NEEDS-JVM", cause="x"),
@@ -848,7 +846,7 @@ def test_install_redirect_patches_errors_before_test_factories() -> None:
 
 
 def test_worker_env_propagates_c4_series_for_findings_branding() -> None:
-    """Worker artifacts must not brand C4 expand as C2 zero-fix (octo C4-S1-001)."""
+    """Worker artifacts must not brand C4 expand as C2 zero-fix."""
     root = Path("/tmp")
     env = _worker_env(worktree_root=root, series_short="C4")
     assert env["REPARK_COMPAT_SERIES"] == "C4"
@@ -903,10 +901,7 @@ def test_filter_suite_method_name_not_prefix() -> None:
     assert not any(item.endswith(".test_dayofweek") for item in ids)
 
 
-# ---------------------------------------------------------------------------
-# Phase-3 EC-8 (design §5 F1): the ADDITIVE classic cohort, and the pin that
-# documents the --stretch blending trap it exists to avoid.
-# ---------------------------------------------------------------------------
+# The ADDITIVE classic cohort and the --stretch blending trap (EC-8, design §5 F1)
 
 
 def test_classic_modules_charter_order() -> None:
@@ -918,8 +913,8 @@ def test_classic_modules_charter_order() -> None:
         "test_column",
         "test_readwriter",
     )
-    # The classic cohort is night-1 plus exactly the two classic stretch modules — and
-    # nothing from the expand cohorts (dual-denom isolation).
+    # Classic cohort = night-1 plus the two classic stretch modules; nothing from
+    # the expand cohorts (dual-denom isolation).
     assert CLASSIC_MODULES[:3] == NIGHT1_MODULES
     assert CLASSIC_MODULES[3:] == STRETCH_MODULES[:2]
     assert not set(CLASSIC_MODULES) & set(C3_EXPAND_MODULES)
@@ -976,12 +971,11 @@ def test_resolve_census_modules_classic_defaults_off_preserves_ported_behavior()
 def test_stretch_blends_c3_into_the_classic_denominator() -> None:
     """EC-8 trap pin: --stretch is NOT the classic cohort — it appends the C3 modules.
 
-    The ported `--stretch` flag is byte-identical to the pin on purpose. This test pins
-    its blending behavior in executable form so the trap (design §5 F1: the census script
-    ran the classic cohort with `--stretch` and produced an eleven-module run against a
-    five-module denominator) is documented, not merely dodged. If someone "fixes"
-    `STRETCH_MODULES` instead of using `--classic`, this test goes red and points at the
-    ruling.
+    The ported `--stretch` flag is byte-identical to the pin on purpose; this pins its
+    blending behavior so the trap (design §5 F1: the census script ran the classic cohort
+    with `--stretch` and produced an eleven-module run against a five-module denominator)
+    is documented, not merely dodged. "Fixing" `STRETCH_MODULES` instead of using
+    `--classic` goes red and points at the ruling.
     """
     stretched = resolve_census_modules(
         c3_expand=False,
@@ -1005,8 +999,9 @@ def test_stretch_blends_c3_into_the_classic_denominator() -> None:
 def test_cli_classic_flag_reaches_the_resolver() -> None:
     """CLI wiring pin: `--classic` must arrive at resolve_census_modules(classic=True).
 
-    Constant equality is not enough (octo C3 C1-Q-002 precedent): the composition site is
-    what runs. The resolver is stubbed to abort before any provenance fetch or census work.
+    Constant equality is not enough: the composition site
+    is what runs. The resolver is stubbed to abort before any provenance fetch or
+    census work.
     """
     captured: dict[str, object] = {}
 

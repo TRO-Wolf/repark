@@ -1,19 +1,7 @@
-//! G-7b — bit-exact `Decimal128` fixture pins for the Spark SQL door (Rust half of the
-//! decimal corpus).
+//! Pins Spark-door decimal inference, precision/scale, nullability, overflow, and division.
 //!
-//! Each pin asserts on the **Arrow path** (`collect`): exact `DataType::Decimal128(p, s)` (or
-//! the disclosed non-decimal type), nullability, and the raw `i128` scaled integer. Goldens
-//! are derived from the merged
-//! Python corpus at `python/repark/tests/test_decimal128_parity.py` — every test names the
-//! corpus row it mirrors. This module does **not** re-derive or edit the Python corpus.
-//!
-//! Coverage classes (charter G-7b / archived `docs/history/hardening-h1/g7-decimal-ledger.md` §9):
-//! literal inference · division `(p,s)` · 38-clamp family (U4a matches Spark) · avg/promotion ·
-//! INT×DECIMAL width (U3 fromLiteral) · ANSI overflow + div-zero · nullability marking.
-//! Equality-class money arithmetic is also pinned so the bit-exact idiom has green controls,
-//! not only disclosures.
-//!
-//! Out of scope: fixing any divergence a pin documents; the registry file; Python corpus edits.
+//! Assertions use the Arrow path and raw `Decimal128` `i128` values. The Python corpus is the
+//! oracle source; this file does not edit it.
 
 use super::super::*;
 use super::common::*;

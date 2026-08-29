@@ -163,7 +163,7 @@ def _join_table_identifier_segments(segments: list[str]) -> str:
 
     """
 
-    # Quote-if-needed SSOT (octo C1-Q-001) — plain bare unquoted; else always-quote.
+    # Quote-if-needed SSOT: plain bare unquoted; else always-quote.
 
     return ".".join(_quote_ident_if_needed(segment) for segment in segments)
 
@@ -213,8 +213,7 @@ def resolve_table_name(
 
     except ValueError as error:
         # Match `_sql_table_ref` surface: invalid / SQL-fragment identifiers raise
-
-        # AnalysisException (writer / table injection gate — C1-SEC-001).
+        # AnalysisException (writer / table injection gate).
 
         from repark.errors import AnalysisException
 
@@ -236,15 +235,10 @@ def resolve_table_name(
                 home = None
 
             if home:
-                # R7-1: emit the HOME-qualified spelling, never the bare name. A bare
-
-                # reference is re-resolved by the engine against the LIVE
-
+                # Emit the HOME-qualified spelling, never the bare name: a bare reference is
+                # re-resolved by the engine against the LIVE
                 # `datafusion.catalog.default_catalog`, so under a `SET` to another catalog
-
-                # every product read path (spark.table, cache/persist re-scan, the internal
-
-                # scratch views) missed a view `tableExists` reported present (MEASURED).
+                # every product read path missed a view `tableExists` reported present.
 
                 return _join_table_identifier_segments(list(home))
 

@@ -93,7 +93,7 @@ def test_batch3_loud_unsupported(spark: ReparkSession) -> None:
         format_number("x", 2)
     with pytest.raises(UnsupportedOperationException, match="try_to_timestamp"):
         try_to_timestamp("x")
-    # FNP-3: to_utc_timestamp / from_utc_timestamp flipped to shipped (datafusion-spark
-    # kernels). Behaviour + the zone round trip: test_fnp3_destubbed.py.
+    # FNP-3: to_utc_timestamp / from_utc_timestamp ship (datafusion-spark kernels).
+    # Behavior + the zone round trip: test_fnp3_destubbed.py.
     with pytest.raises(UnsupportedOperationException, match="make_timestamp"):
         make_timestamp(2020, 1, 2, 3, 4, 5)

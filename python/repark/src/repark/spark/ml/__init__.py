@@ -1,17 +1,4 @@
-"""``repark.ml`` — near-drop-in PySpark ML surface (pipeline + feature + estimators).
-
-Import paths mirror ``pyspark.ml`` under the ``repark.ml`` namespace only — there is
-**no** ``pyspark.ml`` alias shim tonight (C1 patch-map informs that decision later)::
-
-    from repark.spark.ml import Pipeline, PipelineModel, Estimator, Transformer, Model
-    from repark.spark.ml.linalg import Vectors, DenseVector, SparseVector, VectorUDT
-    from repark.spark.ml.feature import VectorAssembler  # M2
-    from repark.spark.ml.regression import LinearRegression  # M3
-
-Design decisions live in the package modules themselves: vector Arrow layout in
-:mod:`repark.ml.linalg`, the fit/transform Rust rule in :mod:`repark.ml.base`, and
-estimator divergences next to their pins (e.g. :mod:`repark.ml.regression`).
-"""
+"""PySpark-shaped ML pipelines, vectors, estimators, and evaluators."""
 
 from __future__ import annotations
 

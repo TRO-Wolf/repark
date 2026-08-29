@@ -1,24 +1,7 @@
-//! Spark string-function shims.
+//! Spark string shims for `substring`/`substr` and `concat`.
 //!
-//! `datafusion-spark` (52.x) ships no `substr`/`substring`, so DataFusion's built-ins served the
-//! passthrough — and they diverge from Spark on the position edge cases (audit AR-1 finding #6:
-//! `substr('hello', 0, 3)` returned `'he'` where Spark gives `'hel'`, and a negative position
-//! returned `''` where Spark counts from the end). This module registers a Spark-exact
-//! `substring` (alias `substr`), character-based like Spark's `UTF8String.substringSQL`:
-//!
-//! - `pos > 0` — 1-based from the start (`pos - 1` in 0-based chars);
-//! - `pos = 0` — treated as position 1;
-//! - `pos < 0` — counts back from the end (`length + pos`);
-//! - the window `[start, start + len)` is intersected with the string — a window reaching
-//!   before the start is clipped, not emptied (`substring('hello', -7, 3)` → `'h'`);
-//! - `len < 0` or an empty intersection → `''` (never NULL); any NULL argument → NULL.
-//!
-//! Also **`concat`**: `datafusion-spark`'s `SparkConcat` promises `Utf8` at plan time but
-//! delegates to DataFusion's kernel, which returns `Utf8View` when any argument is a view type
-//! (common after `coalesce(NULL, '')` constant-folds to `Utf8View("")`). Physical evaluation
-//! then asserts `result_data_type == promised` and fails loud — TPC-DS Q5 / Q80 / Q84 (and any
-//! SQL `concat` over nullable string columns). This module's `SparkConcat` overwrites the
-//! name: coerce args to `Utf8`, any-NULL → NULL (Spark), always emit `Utf8`.
+//! `substring` follows Spark's character-based positions, clipping, and NULL rules. `concat`
+//! stringifies arguments, returns NULL for any NULL, and always emits `Utf8`.
 
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
@@ -51,10 +34,7 @@ pub fn functions() -> Vec<Arc<ScalarUDF>> {
     ]
 }
 
-/// The Spark `substring` UDF instance. Also consumed by [`crate::analyzer`]: DataFusion's SQL
-/// planner lowers the `substr(...)` / `SUBSTRING(x FROM y FOR z)` special form through an
-/// `ExprPlanner` that embeds the *built-in* UDF directly — bypassing the registry this crate
-/// shadows — so the analyzer swaps those embedded nodes over to this instance.
+/// Return the Spark `substring` UDF; the analyzer also replaces planner-embedded built-ins with it.
 #[must_use]
 pub fn substring_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkSubstring::new()))
@@ -69,12 +49,7 @@ pub fn concat_udf() -> Arc<ScalarUDF> {
 }
 
 /// ===========================================================================================
-/// `SparkConcat` — Spark `concat(*strs) -> STRING`.
-///
-/// Zero arguments → `''` (Spark; DataFusion's built-in rejects arity 0). Any NULL argument →
-/// NULL (Spark; DataFusion's built-in treats NULL as `''`). Return type is always `Utf8`
-/// (Spark `StringType`), never `Utf8View` — closes the plan-vs-kernel mismatch in
-/// `datafusion-spark` 52.x that reds SQL `concat` on the Arrow path (TPC-DS Q5/Q80/Q84).
+/// `SparkConcat` — zero arguments return `''`, NULL propagates, and output is always `Utf8`.
 /// ===========================================================================================
 #[derive(Debug)]
 struct SparkConcat {
@@ -110,22 +85,15 @@ impl ScalarUDFImpl for SparkConcat {
     crate::shim_udf_boilerplate!("concat");
 
     fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
-        // Prefer `return_field_from_args` (nullability depends on args); keep a safe fallback.
         Ok(DataType::Utf8)
     }
 
     fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
-        // Spark: result is NULL when any input is NULL → nullable if any arg is nullable.
-        // Zero-arg `concat()` returns non-null `''`.
         let nullable = args.arg_fields.iter().any(|field| field.is_nullable());
         Ok(Arc::new(Field::new("concat", DataType::Utf8, nullable)))
     }
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
-        // Force every argument to Utf8 so the delegated DataFusion concat kernel never sees
-        // Utf8View (which would make it emit Utf8View while we promised Utf8). Spark SQL also
-        // stringifies non-string args (`concat(1, 2)` → `'12'`); the planner casts via this
-        // coerced target. Nested/unsupported casts fail at plan/execution (fail-loud).
         Ok(vec![DataType::Utf8; arg_types.len()])
     }
 
@@ -153,7 +121,6 @@ fn spark_concat_utf8(args: ScalarFunctionArgs) -> Result<ColumnarValue> {
         config_options,
     } = args;
 
-    // Zero-arg: Spark `concat()` → ''.
     if arg_values.is_empty() {
         return Ok(ColumnarValue::Scalar(ScalarValue::Utf8(
             Some(String::new()),
@@ -165,7 +132,6 @@ fn spark_concat_utf8(args: ScalarFunctionArgs) -> Result<ColumnarValue> {
         return Ok(ColumnarValue::Scalar(ScalarValue::Utf8(None)));
     }
 
-    // Coerce every argument array/scalar to Utf8 so ConcatFunc cannot widen to Utf8View.
     let utf8_args: Result<Vec<ColumnarValue>> =
         arg_values.iter().map(cast_columnar_value_to_utf8).collect();
     let utf8_args = utf8_args?;
@@ -179,7 +145,6 @@ fn spark_concat_utf8(args: ScalarFunctionArgs) -> Result<ColumnarValue> {
             ))
         })
         .collect();
-    // Promised return type for the kernel call matches what we will emit.
     let utf8_return = Arc::new(Field::new(
         return_field.name(),
         DataType::Utf8,
@@ -195,8 +160,6 @@ fn spark_concat_utf8(args: ScalarFunctionArgs) -> Result<ColumnarValue> {
         config_options,
     };
     let result = concat_func.invoke_with_args(kernel_args)?;
-    // Defensive: if the kernel ever still returns a view type, cast before the framework
-    // asserts result_data_type == promised Utf8.
     let result = cast_columnar_value_to_utf8(&result)?;
     apply_null_mask(result, null_mask)
 }
@@ -281,7 +244,6 @@ fn apply_null_mask(result: ColumnarValue, null_mask: NullMaskResolution) -> Resu
         }
         (array @ ColumnarValue::Array(_), NullMaskResolution::NoMask) => Ok(array),
         (scalar, NullMaskResolution::Apply(_)) => {
-            // Scalar + Apply should not occur (array args produce arrays); fail loud if it does.
             internal_err!("spark concat: scalar result with array null mask: {scalar:?}")
         }
     }
@@ -363,11 +325,6 @@ impl ScalarUDFImpl for SparkSubstring {
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
         let arrays = ColumnarValue::values_to_arrays(&args.args)?;
-        // Defensive casts: when the analyzer swaps a planner-embedded built-in `substr` node
-        // over to this UDF, the arguments arrive coerced for the built-in (Utf8View), not
-        // through this impl's `coerce_types`.
-        // SAF-002: `as_string`/`as_primitive` sit *after* successful `cast` kernels — a cast
-        // success guarantees the physical type, so the downcast is proven-unreachable-as-fail.
         let strings = cast(arrays[0].as_ref(), &DataType::Utf8)?;
         let strings = strings.as_string::<i32>();
         let positions = cast(arrays[1].as_ref(), &DataType::Int64)?;
@@ -381,7 +338,6 @@ impl ScalarUDFImpl for SparkSubstring {
             None => None,
         };
         let lengths = lengths.as_ref();
-        // PERF-03: size the builder from input byte lengths (upper bound on UTF-8 output).
         let mut byte_capacity = 0usize;
         for row in 0..strings.len() {
             if !strings.is_null(row) {
@@ -410,8 +366,6 @@ impl ScalarUDFImpl for SparkSubstring {
 /// as 1, negatives count from the end), form the window `[start, start + len)` (to the end when
 /// `len` is absent), and intersect it with `[0, chars)` — clipping, never erroring.
 ///
-/// PERF-03: uses `char_indices()` byte-offset slicing instead of materializing `Vec<char>`
-/// (UTF-32) per cell. Negative/OOB index semantics stay bit-identical to the prior path.
 fn spark_substring(value: &str, position: i64, length: Option<i64>) -> String {
     let total = i64::try_from(value.chars().count()).unwrap_or(i64::MAX);
     let start = match position.cmp(&0) {
@@ -429,7 +383,6 @@ fn spark_substring(value: &str, position: i64, length: Option<i64>) -> String {
     if lower >= upper {
         return String::new();
     }
-    // Map character indices → UTF-8 byte offsets without allocating a `Vec<char>`.
     let mut start_byte = value.len();
     let mut end_byte = value.len();
     let mut char_index = 0usize;
@@ -465,9 +418,6 @@ mod tests {
         for udf in functions() {
             ctx.register_udf(udf.as_ref().clone());
         }
-        // The analyzer rule is part of the shim's delivery path: the SQL planner embeds the
-        // built-in `substr` for the special form, and the rule swaps it over (same wiring as
-        // the session).
         for rule in crate::analyzer_rules() {
             ctx.add_analyzer_rule(rule);
         }
@@ -500,10 +450,7 @@ mod tests {
         strings.is_valid(0).then(|| strings.value(0).to_string())
     }
 
-    /// r24 A3 PERF-03 measurement (release); not a correctness pin. Records `char_indices` path
-    /// vs `Vec<char>` baseline ns/row for the ledger (≥1M rows).
-    ///
-    /// Gated: set `REPARK_PERF_MEASURE=1` (octo C1-Q-004) — default suite must not pay 1M iters.
+    /// Optional release measurement, enabled with `REPARK_PERF_MEASURE=1`.
     #[test]
     #[allow(clippy::cast_precision_loss)] // ns/row report only
     fn perf_measure_substring_char_indices() {
@@ -525,7 +472,6 @@ mod tests {
             "PERF-03 substring_char_indices rows={rows} total_ms={:.3} ns_per_row={ns_new:.3} sink={sink}",
             elapsed.as_secs_f64() * 1000.0
         );
-        // Pre-fix cost model: Vec<char> materialize + slice collect (hour-0 shape).
         let start_baseline = std::time::Instant::now();
         let mut sink_baseline = 0usize;
         for index in 0..rows {
@@ -548,12 +494,9 @@ mod tests {
             "PERF-03 substring_vec_char_baseline rows={rows} total_ms={:.3} ns_per_row={ns_old:.3} sink={sink_baseline}",
             elapsed_baseline.as_secs_f64() * 1000.0
         );
-        // sink may be zero depending on len XOR pattern; keep the timed paths live.
         let _ = (sink, sink_baseline, ns_new, ns_old);
     }
 
-    /// The audit's exact divergences (finding #6): pos 0 acts as 1; a negative pos counts from
-    /// the end — both were silently wrong through the DataFusion built-in.
     #[tokio::test]
     async fn substring_spark_edge_positions() {
         let ctx = ctx();
@@ -579,7 +522,6 @@ mod tests {
         }
     }
 
-    /// Any NULL argument → NULL (Spark), and the result is character-based, not byte-based.
     #[tokio::test]
     async fn substring_nulls_and_multibyte() {
         let ctx = ctx();
@@ -596,9 +538,6 @@ mod tests {
         );
     }
 
-    /// TPC-DS Q84-shaped: `concat(coalesce(NULL, ''), …)` constant-folds a `Utf8View`
-    /// empty string into the kernel. `datafusion-spark`'s concat promises Utf8 and panics
-    /// when the kernel returns `Utf8View`; our shim must emit Utf8 and succeed.
     #[tokio::test]
     async fn concat_coalesce_null_empty_returns_utf8() {
         let ctx = ctx();
@@ -622,7 +561,6 @@ mod tests {
         );
     }
 
-    /// Spark any-NULL → NULL (not empty-string skip).
     #[tokio::test]
     async fn concat_any_null_propagates() {
         let ctx = ctx();
@@ -632,7 +570,6 @@ mod tests {
         );
     }
 
-    /// Basic multi-arg + zero-arg Spark surface.
     #[tokio::test]
     async fn concat_basic_and_zero_arg() {
         let ctx = ctx();
@@ -643,7 +580,6 @@ mod tests {
         assert_eq!(one(&ctx, "SELECT concat()").await.as_deref(), Some(""));
     }
 
-    /// Result physical type is Utf8 (not `Utf8View`) — the plan/kernel contract pin.
     #[tokio::test]
     async fn concat_result_physical_type_is_utf8() {
         let ctx = ctx();
@@ -657,9 +593,6 @@ mod tests {
         assert_eq!(batches[0].column(0).data_type(), &DataType::Utf8);
     }
 
-    /// Multi-row any-NULL → NULL (Apply mask path). Scalar-only NULL pins leave
-    /// `apply_null_mask` Array+Apply untested; DF's kernel ignores nulls so a dropped mask
-    /// would yield `'a'` for `concat('a', NULL)` on array columns.
     #[tokio::test]
     async fn concat_array_any_null_propagates_per_row() {
         let ctx = ctx_register_all();
@@ -688,9 +621,6 @@ mod tests {
         assert!(!strings.is_valid(2), "row2 any-NULL must be NULL");
     }
 
-    /// Mutation-proof: `register_all` installs datafusion-spark first, then our `SparkConcat`
-    /// must win the name clash — otherwise `Utf8View` plan/kernel mismatch returns under the
-    /// shipping session path (TPC-DS Q5/Q80/Q84).
     #[tokio::test]
     async fn concat_register_all_overwrites_datafusion_spark() {
         assert!(
@@ -717,7 +647,6 @@ mod tests {
             .as_deref(),
             Some("x")
         );
-        // Spark non-string stringify surface (must not Plan-reject after coerce always-Utf8).
         assert_eq!(
             one(&ctx, "SELECT concat(1, 2)").await.as_deref(),
             Some("12")

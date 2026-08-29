@@ -1,10 +1,10 @@
-"""I5 / R-ICEBERG-HYGIENE oracles — column-def CREATE + ref DDL time-travel pins.
+"""R-ICEBERG-HYGIENE oracles — column-def CREATE + ref DDL time-travel pins.
 
 Oracle min: schema equality (name + Arrow type) vs CTAS twin; branch/tag created via
 SQL DDL (not only ``_testing_create_ref``). Local memory catalog only — no AWS, no JVM.
 
 Fork cite (pin ``b009ac15``): ``manage_snapshots.rs:90-145`` create/remove branch|tag.
-CTAS+explicit column list rejection remains pinned in Rust (Group Q) and below.
+CTAS+explicit column list rejection remains pinned in Rust and below.
 """
 
 from __future__ import annotations
@@ -65,7 +65,7 @@ def test_column_def_create_schema_equals_ctas_twin(spark: ReparkSession) -> None
         ("name", "string"),
         ("active", "bool"),
     ]
-    # DEFAULT must refuse loud (not silent ignore — I5 octo C1-F2).
+    # DEFAULT must refuse loud (not silent ignore).
     with pytest.raises((UnsupportedOperationException, AnalysisException)) as caught:
         spark.sql("CREATE TABLE mem.ns.with_def (id BIGINT DEFAULT 0) USING iceberg")
     assert "not supported" in str(caught.value).lower() or "DEFAULT" in str(caught.value)
@@ -90,7 +90,7 @@ def test_ctas_explicit_column_list_still_rejected(spark: ReparkSession) -> None:
         )
     message = str(caught.value)
     assert "Schema may not be specified" in message
-    # No orphan table (I5 octo C1-F5).
+    # No orphan table.
     with pytest.raises((AnalysisException, Exception)):
         spark.sql("SELECT * FROM mem.ns.cl").to_arrow()
 
@@ -109,10 +109,10 @@ def test_ref_ddl_create_branch_tag_time_travel(spark: ReparkSession) -> None:
     s2 = snaps[-1][0]
     assert s2 != s1
 
-    # Product SQL surface (I5) — not only _testing_create_ref.
+    # Product SQL surface — not only _testing_create_ref.
     spark.sql(f"ALTER TABLE {TABLE} CREATE TAG tag_s1 AS OF VERSION {s1}")
     spark.sql(f"CREATE BRANCH branch_s2 IN {TABLE} AS OF VERSION {s2}")
-    # Default AS OF = current (I5 octo C1-F4).
+    # Default AS OF = current.
     spark.sql(f"ALTER TABLE {TABLE} CREATE BRANCH cur_default")
 
     tag_arrow = spark.sql(f"SELECT id FROM {TABLE} VERSION AS OF 'tag_s1' ORDER BY id").to_arrow()
@@ -141,13 +141,12 @@ def test_ref_ddl_create_branch_tag_time_travel(spark: ReparkSession) -> None:
         spark.sql(f"SELECT id FROM {TABLE} VERSION AS OF 'tag_s1'").to_arrow()
 
     spark.sql(f"DROP BRANCH branch_s2 IN {TABLE}")
-    # Current multiset unaffected.
     current = spark.sql(f"SELECT id FROM {TABLE} ORDER BY id").to_arrow()
     assert _arrow_ids(current) == [1, 2, 3, 4]
 
 
 def test_ref_ddl_replace_and_retain(spark: ReparkSession) -> None:
-    """r25 T2: CREATE OR REPLACE lands; misspelled RETENTION (not RETAIN) still refuses loud."""
+    """CREATE OR REPLACE lands; misspelled RETENTION (not RETAIN) still refuses loud."""
     spark.sql(
         f"CREATE TABLE {TABLE} USING iceberg TBLPROPERTIES ({COW}) AS SELECT 1 AS id, 'a' AS name"
     )
@@ -159,7 +158,7 @@ def test_ref_ddl_replace_and_retain(spark: ReparkSession) -> None:
         .to_pylist()
     )
     assert ids == [1]
-    # Misspelled RETENTION (Spark uses RETAIN) must refuse (C1-F1), not silently create.
+    # Misspelled RETENTION (Spark uses RETAIN) must refuse, not silently create.
     with pytest.raises((UnsupportedOperationException, AnalysisException)) as trail:
         spark.sql(f"ALTER TABLE {TABLE} CREATE BRANCH other AS OF VERSION 1 RETENTION 7 DAYS")
     assert "not supported" in str(trail.value).lower() or "trailing" in str(trail.value).lower()

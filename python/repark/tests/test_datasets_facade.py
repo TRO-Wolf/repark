@@ -1,26 +1,19 @@
-"""DS-4 — facade pins for the five torture-dataset families (conductor-18).
+"""DS-4 — facade pins for the five torture-dataset families.
 
 Each family is generated at its seeded ``small()`` scale (64 rows, seed 42 — never the
 1_000_000 CLI default, so CI stays fast), written under ``tmp_path``, and read back
-**through the repark facade**. Assertions run on the Arrow path (``to_arrow``), value
-AND type — never ``show``.
+through the repark facade. Assertions run on the Arrow path (``to_arrow``), value AND
+type — never ``show``. The generators under ``python/repark-parity/datasets/<family>/``
+are frozen surfaces: this module imports and reads them, it never edits them; expected
+values derive from ``small()``, not hand-typed.
 
-The generators under ``python/repark-parity/datasets/<family>/`` are frozen surfaces:
-this module imports and reads them, it never edits them. The generator table is the
-oracle — expected values are derived from ``small()``, not hand-typed.
+Marker vocabulary (``task/c18-datasets-ledger.md``), both meaning "this lane pins
+current behavior and reports; it does not change the engine":
 
-Two marker vocabularies appear in the pins below, both meaning "this lane pins current
-behavior and reports; it does not change the engine" (``task/c18-datasets-ledger.md``):
-
-* ``POLICY`` — documented, intended behavior that surprises (inference sampling misses,
-  the >38-digit decimal demotion, leading zeros lost to int inference).
+* ``POLICY`` — documented, intended behavior that surprises.
 * ``BUG-CANDIDATE`` — behavior that looks wrong and is reported, not fixed here. If one
-  of these reds because the behavior was fixed, that is the fix landing: re-point the
-  pin at the corrected behavior and move the ledger row.
-
-The nested family carries the U-DF-1 regression corpus: the capitalized-``Legs``
-string-form ``explode`` and ``dynamicFlatten`` pins here are the DS-1 held pins, landed
-now that the mixed-case generator bind (#154) is on main.
+  reds because the behavior was fixed, re-point the pin at the corrected behavior and
+  move the ledger row.
 """
 
 from __future__ import annotations
@@ -40,14 +33,12 @@ from repark import ReparkSession
 from repark import functions as F  # noqa: N812
 from repark.spark.session import _reset_active_session_for_tests
 
-# --------------------------------------------------------------------------------------------
 # Generator loading (bench sys.modules loader — the datasets tree is not a hatch package)
-# --------------------------------------------------------------------------------------------
 
 # This file lives at python/repark/tests/ → the datasets tree is a peer under repark-parity.
 _DATASETS_DIR = Path(__file__).resolve().parents[2] / "repark-parity" / "datasets"
 
-#: A9 scale: the CI door is 64 rows at seed 42. The 1M CLI default is for local runs.
+#: CI door is 64 rows at seed 42; the 1M CLI default is for local runs.
 ROWS = 64
 SEED = 42
 #: schema_inference at test scale: the int32→int64 / string→float shift sits inside the budget.
@@ -103,9 +94,7 @@ def spark() -> Iterator[ReparkSession]:
         _reset_active_session_for_tests()
 
 
-# ==================================================================================================
-# nested — capitalized explode + dynamicFlatten (the DS-1 held pins; U-DF-1 corpus)
-# ==================================================================================================
+# nested — capitalized explode + dynamicFlatten
 
 
 def _nested_truth() -> list[dict[str, Any]]:
@@ -121,11 +110,10 @@ def _nested_leg_rows(rows: list[dict[str, Any]]) -> list[tuple[int, int, str]]:
 
 
 def _list_explode_width(items: list[Any] | None, *, empty_as_null: bool) -> int:
-    """How many rows one list contributes under ``empty_as_null`` explode semantics.
+    """Rows one list contributes under ``empty_as_null`` explode semantics.
 
-    NULL always contributes 1 (a null-element row). EMPTY contributes 1 when
-    ``empty_as_null`` is True and 0 when False. A populated list contributes
-    ``len(items)``.
+    NULL always contributes 1; EMPTY contributes 1 when ``empty_as_null`` else 0; a
+    populated list contributes ``len(items)``.
     """
     if items is None:
         return 1
@@ -135,19 +123,17 @@ def _list_explode_width(items: list[Any] | None, *, empty_as_null: bool) -> int:
 
 
 def _nested_full_flatten_rows(rows: list[dict[str, Any]], *, empty_as_null: bool = True) -> int:
-    """Oracle row count for a full ``dynamicFlatten``.
+    """Oracle row count for a full ``dynamicFlatten`` (default ``empty_as_null=True``).
 
-    Default ``empty_as_null=True``: every list on the path is exploded with
-    outer semantics — NULL and EMPTY each contribute width 1 (one null-element
-    row), then the nested cartesian product is taken. ``user_properties`` is
-    ``array<void>`` and is dropped (``drop_null_lists`` default), so it is not
-    in the product.
+    Every list on the path is exploded with outer semantics: NULL and EMPTY each
+    contribute width 1 (one null-element row), a populated list its length;
+    ``user_properties`` (``array<void>``) is dropped (``drop_null_lists`` default), so it
+    is not in the product.
 
-    Derivation per input row:
-      legs_width = sum over legs of (sum over fills of (meta.Tags width * Extra.Flags width));
-      a missing/empty Legs (or Fills) list is itself width 1 under True, which then
-      null-unnests to Tags width 1 * Flags width 1.
-      row_rows = legs_width * top-level Tags width * top-level Scores width.
+    Per input row: ``legs_width`` sums, over legs and fills, each fill's ``Meta.Tags``
+    width * ``Extra.Flags`` width; a missing/empty Legs (or Fills) list is itself width 1,
+    which then null-unnests to Tags width 1 * Flags width 1. ``row_rows = legs_width *
+    top-level Tags width * top-level Scores width``.
     """
     total = 0
     for row in rows:
@@ -213,7 +199,7 @@ def test_nested_parquet_read_keeps_capitalized_nested_schema(
 
 
 def test_nested_explode_string_form_capitalized_legs(spark: ReparkSession, tmp_path: Path) -> None:
-    """U-DF-1 (held DS-1 pin): ``F.explode('Legs')`` string form binds the mixed-case field."""
+    """``F.explode('Legs')`` string form binds the mixed-case field."""
     written = _write_family("nested", tmp_path / "nested")
     frame = spark.read.parquet(str(written / "data.parquet"))
 
@@ -284,10 +270,8 @@ def test_nested_explode_outer_on_array_of_struct_refuses_loud(
 ) -> None:
     """``explode_outer`` on ``array<struct>`` keeps null-list and empty-list rows.
 
-    Same value pin as ``test_nested_explode_outer_keeps_null_and_empty_list_rows``,
-    on the struct-element ``Legs`` column. Pre-fix this test was a BUG-CANDIDATE
-    refuse pin (no SQL spelling for the struct element); the guard now spells
-    ``struct<…>`` via CAST(NULL AS struct<…>). Name kept (flip-don't-delete).
+    Same value pin as ``test_nested_explode_outer_keeps_null_and_empty_list_rows``, on the
+    struct-element ``Legs`` column.
     """
     written = _write_family("nested", tmp_path / "nested")
     frame = spark.read.parquet(str(written / "data.parquet"))
@@ -365,10 +349,6 @@ def test_nested_dynamic_flatten_full_depth_column_order(
 
     table = flat.to_arrow()
     truth = _nested_truth()
-    # Derivation (empty_as_null=True default): each list on the path contributes
-    # max(len, 1) when null/empty (one null-element row) and len otherwise; the
-    # row count is the nested cartesian of Legs->Fills->Meta.Tags * Extra.Flags
-    # times top-level Tags * Scores. See _nested_full_flatten_rows.
     expected = _nested_full_flatten_rows(truth)
     assert table.num_rows == expected
     assert table.schema.field("Legs_Fills_px").type == pa.float64()
@@ -380,20 +360,10 @@ def test_nested_dynamic_flatten_full_depth_column_order(
 
 
 def test_nested_dynamic_flatten_count_action_is_green(spark: ReparkSession, tmp_path: Path) -> None:
-    """DEFECT-2 FIXED — ``count()`` on the full-depth flatten plan equals the export row count.
+    """``count()`` on the full-depth flatten plan equals the export row count.
 
-    This pin was the BUG-CANDIDATE ``…_count_action_refuses_loud``: the same plan exported fine
-    through ``to_arrow`` while ``count()`` reded inside DataFusion 54.1's
-    ``push_down_leaf_projections``, so the row count was reachable and correct on the export path
-    while the cheapest way to ask for it failed. That docstring said "if this reds because the
-    optimizer stopped tripping, that is the fix — swap it for the ``count() ==
-    to_arrow().num_rows`` equality"; the fix landed (the core session wraps
-    ``push_down_leaf_projections`` so it declines on the ``Unnest`` plans it miscompiles —
-    ``crates/repark-core/src/session/df_guards.rs``, task/c25-bugfix-ledger.md 2026-08-18) and
-    this is that swap.
-
-    The narrow one-pass companions stay: they are what made the old finding specific rather than
-    "counts do not work", and they still pin the shallow path.
+    Guards the optimizer path where ``count()`` can fail while ``to_arrow`` succeeds on the
+    same plan. The narrow one-pass companions below stay: they still pin the shallow path.
     """
     written = _write_family("nested", tmp_path / "nested")
     frame = spark.read.parquet(str(written / "data.parquet"))
@@ -403,7 +373,7 @@ def test_nested_dynamic_flatten_count_action_is_green(spark: ReparkSession, tmp_
     assert deep.to_arrow().num_rows == expected  # the export path
     assert deep.count() == expected  # …and the cheap door now agrees
     assert deep.agg(F.count(F.lit(1))).to_arrow().to_pylist() == [{"count(1)": expected}]
-    # A narrowing projection over the same plan — the other half of the defect.
+    # A narrowing projection over the same plan.
     assert deep.select("id").to_arrow().num_rows == expected
 
     # Narrow, not general: one explode pass counts fine on the same corpus.
@@ -414,9 +384,7 @@ def test_nested_dynamic_flatten_count_action_is_green(spark: ReparkSession, tmp_
     )
 
 
-# ==================================================================================================
 # schema_inference — the sampling-miss POLICY pins
-# ==================================================================================================
 
 
 def _schema_inference_truth() -> list[dict[str, Any]]:
@@ -434,11 +402,9 @@ def _columns_by_name(report: dict[str, Any]) -> dict[str, dict[str, Any]]:
 def test_schema_inference_sampling_miss_is_policy(spark: ReparkSession, tmp_path: Path) -> None:
     """POLICY — an under-sampled read misses the int32→int64 widening past the cap.
 
-    smartCsv infers from at most ``samplingRows`` data rows and always materialises the
-    whole file. The generator puts the widening at ``conflict_at``; a cap below it means
-    inference never sees an int64 value, and the column resolves ``int32``. That is the
-    documented contract (raise ``samplingRows`` to scan more), pinned here at test scale
-    — this lane never "fixes" inference.
+    smartCsv infers from at most ``samplingRows`` data rows; the generator puts the widening
+    at ``conflict_at``, so a cap below it resolves ``int32``. Documented contract (raise
+    ``samplingRows`` to scan more) — this lane never "fixes" inference.
     """
     written = _write_family("schema_inference", tmp_path / "inference", conflict_at=CONFLICT_AT)
     csv_path = str(written / "data.csv")
@@ -476,10 +442,9 @@ def test_schema_inference_labeled_classes_resolve_as_documented(
 ) -> None:
     """POLICY — per-class inference outcomes for the labeled conflict corpus (full scan).
 
-    Two of these are the honest torture points, not defects to fix here:
-    ``leading_zero_id`` is a zero-padded identifier and inference reads it as ``int32``
-    (the leading zeros are gone), and ``empty_or_null`` counts every recognized null
-    spelling as null so only the one real token survives the sample.
+    ``leading_zero_id`` is a zero-padded identifier read as ``int32`` (leading zeros gone);
+    ``empty_or_null`` counts every recognized null spelling as null, so only the one real
+    token survives the sample. Honest torture points, not defects to fix here.
     """
     written = _write_family("schema_inference", tmp_path / "inference", conflict_at=CONFLICT_AT)
     csv_path = written / "data.csv"
@@ -507,10 +472,9 @@ def test_schema_inference_undersampled_cast_refuses_loud(
 ) -> None:
     """POLICY — the under-widened column fails LOUD on materialisation, never silently.
 
-    This is the other half of the sampling contract: inference under-widens (the pin
-    above), and the cast that follows refuses rather than truncating or nulling the
-    values it cannot hold. The fix is the documented one — raise ``samplingRows`` — so
-    the pin also proves the widened read materialises the same column cleanly.
+    The cast refuses rather than truncating or nulling values it cannot hold. The fix is the
+    documented one — raise ``samplingRows`` — so the pin also proves the widened read
+    materialises the same column cleanly.
     """
     from repark.errors import PySparkException
 
@@ -528,9 +492,7 @@ def test_schema_inference_undersampled_cast_refuses_loud(
     assert [row["int_widens"] for row in table.to_pylist()] == [row["int_widens"] for row in truth]
 
 
-# ==================================================================================================
 # extreme_types — decimal round trip + the >38-digit demotion POLICY
-# ==================================================================================================
 
 
 def _extreme_truth() -> list[dict[str, Any]]:
@@ -566,9 +528,8 @@ def test_extreme_types_beyond_38_digits_demote_to_float64(
 ) -> None:
     """POLICY — the smartCsv ladder demotes p>38 to float64 (documented, not a defect).
 
-    ``beyond_38`` carries 40 integer digits plus one fractional digit: precision 41,
-    above the decimal128 cap of 38. The ladder therefore falls to the next rung
-    (float64) and the exact digits are gone — the pin records the loss instead of
+    ``beyond_38`` carries precision 41, above the decimal128 cap of 38; the ladder falls to
+    the float64 rung and the exact digits are gone — the pin records the loss instead of
     hiding it. ``decimal_hi`` in the same file stays exact at decimal128(24,21).
     """
     written = _write_family("extreme_types", tmp_path / "extreme")
@@ -598,9 +559,7 @@ def test_extreme_types_beyond_38_digits_demote_to_float64(
     assert rows[0]["html_fragment"] == truth[0]["html_fragment"]
 
 
-# ==================================================================================================
 # secrets — reads behave NORMALLY (no redaction of data columns today)
-# ==================================================================================================
 
 
 def _secrets_truth() -> list[dict[str, Any]]:
@@ -610,11 +569,9 @@ def _secrets_truth() -> list[dict[str, Any]]:
 def test_secrets_parquet_read_is_unredacted(spark: ReparkSession, tmp_path: Path) -> None:
     """Credential-named columns read back as ordinary data — values pass through verbatim.
 
-    Opt-in flagging of secret-shaped DATA columns is a roadmap feature this fixture
-    predates; ``prop_key_is_secret`` today governs CONFIGURATION keys
-    (``test_a3_secrets_redaction.py``), not table columns. This pin is the standing
-    detector for that: if a redaction feature ever lands silently, the values here stop
-    matching the generator truth and this reds.
+    ``prop_key_is_secret`` today governs CONFIGURATION keys (``test_a3_secrets_redaction.py``),
+    not table columns. If a redaction feature ever lands silently, values here stop matching
+    the generator truth and this pin reds — it is the standing detector.
     """
     written = _write_family("secrets", tmp_path / "secrets")
     frame = spark.read.parquet(str(written / "data.parquet"))
@@ -660,9 +617,7 @@ def test_secrets_smart_csv_keeps_camel_case_headers(spark: ReparkSession, tmp_pa
     assert rows[0][datagen.CARVE_OUT_COLUMN] == truth[0][datagen.CARVE_OUT_COLUMN]
 
 
-# ==================================================================================================
 # smartcsv — the delimiter zoo, null tokens, bool spellings, ragged rows
-# ==================================================================================================
 
 
 def _smartcsv_truth() -> list[dict[str, Any]]:
@@ -724,9 +679,8 @@ def test_smartcsv_ragged_rows_pad_and_overflow_column(spark: ReparkSession, tmp_
 def test_smartcsv_null_tokens_and_bool_spellings(spark: ReparkSession, tmp_path: Path) -> None:
     """Null-token vocabulary and bool spellings match the generator's typed truth.
 
-    The projection leaves out ``euro_decimal`` on purpose: that column's cast refuses
-    loud (pinned in ``test_smartcsv_euro_comma_decimal_cast_refuses_loud``), and this
-    pin is about the token vocabularies, not that refusal.
+    The projection leaves out ``euro_decimal`` on purpose: that column's cast refuses loud
+    (pinned in ``test_smartcsv_euro_comma_decimal_cast_refuses_loud``).
     """
     written = _write_family("smartcsv", tmp_path / "smartcsv")
     datagen = _datagen("smartcsv")
@@ -796,16 +750,13 @@ def test_smartcsv_euro_comma_decimal_cast_refuses_loud(
 ) -> None:
     """BUG-CANDIDATE — a comma-decimal column infers ``decimal128`` and then refuses the cast.
 
-    The inference ladder normalizes ``760,35`` to a fixed-point value and resolves the
-    column to ``decimal128(5,2)``. The cast that materialises it is handed the **raw**
-    cell text, and the engine cannot parse a comma decimal — so a whole-frame read of
-    either corpus that carries this class refuses loud. Reported, not fixed: the refusal
-    is honest (no silent corruption), but the resolved type promises a value the read
-    cannot deliver.
-
-    Both corpora that carry the class are exercised, so the pin is about the class and
-    not one file. If this reds because the cast learned the comma form, that is the fix —
-    replace it with a value pin against the generator truth.
+    Inference normalizes ``760,35`` to a fixed-point value and resolves the column to
+    ``decimal128(5,2)``, but the materialising cast is handed the raw cell text and the engine
+    cannot parse a comma decimal — so a whole-frame read that carries this class refuses loud.
+    Reported, not fixed: the refusal is honest (no silent corruption), but the resolved type
+    promises a value the read cannot deliver. Both corpora that carry the class are exercised;
+    if this reds because the cast learned the comma form, replace it with a value pin against
+    the generator truth.
     """
     from repark.errors import PySparkException
 
@@ -832,22 +783,17 @@ def test_smartcsv_euro_comma_decimal_cast_refuses_loud(
 def test_smartcsv_delimiter_autodetect_picks_a_rival_delimiter(tmp_path: Path) -> None:
     """BUG-CANDIDATE / known-limit — auto-detect picks the wrong delimiter.
 
-    ``detect_delimiter`` scores candidates by how many lines agree on a field
-    count, and ``csv.reader`` only honors a quote that starts a field. In the
-    comma-scheme file the ``embedded_delims`` value is quoted for the comma, so
-    a rival candidate (``;``) sees that quote mid-field, treats it as literal,
-    and splits every data line into exactly two fields — perfect agreement, and
-    it beats the correct 12-field split. The header line then fails the
-    field-count vote too, so one data row is eaten as the header.
+    ``detect_delimiter`` scores candidates by how many lines agree on a field count, and
+    ``csv.reader`` only honors a quote that starts a field. In the comma-scheme file the
+    ``embedded_delims`` value is quoted for the comma, so a rival candidate (``;``) sees that
+    quote mid-field, treats it as literal, and splits every data line into exactly two fields
+    — perfect agreement, and it beats the correct 12-field split. The header line then fails
+    the field-count vote too, so one data row is eaten as the header. The miss is documented:
+    declare ``sep`` (European-locale files: ``sep=';'``). The pin asserts the documented
+    behavior, plus the correct read with ``sep``.
 
-    B4 rounds 1-3 tried to close this class and each regressed a named
-    counterexample (field-count-first inverted 2-col files; one-splitter
-    corrupted declared-sep values). Round 4 descopes: document the miss,
-    declare ``sep`` (European-locale files: ``sep=';'``). The pin asserts
-    the documented origin/main behavior, plus the correct read with ``sep``.
-
-    Pinned at the preprocessing surface (no engine) because the mis-split
-    header names are not usable identifiers.
+    Pinned at the preprocessing surface (no engine) because the mis-split header names are
+    not usable identifiers.
     """
     from repark.spark._csv_smart import prepare_messy_csv
 

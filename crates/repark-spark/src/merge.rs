@@ -1,11 +1,7 @@
-//! `MERGE INTO` lowering — sqlparser AST → [`repark_iceberg::write::merge::MergeSpec`].
+//! `MERGE INTO` lowering from sqlparser AST to [`repark_iceberg::write::merge::MergeSpec`].
 //!
-//! This side owns dialect/AST concerns only: rewrite the star forms stock sqlparser cannot parse
-//! (`UPDATE SET *` / `INSERT *`) into a sentinel shape it can, resolve the three-part target,
-//! pick the aliases Spark scoping rules imply (an unaliased table is referenced by its bare
-//! name), re-render every expression back to SQL verbatim, and keep clause declaration order.
-//! Execution semantics — first-match-wins, star expansion against the schemas, the cardinality
-//! check, the copy-on-write rewrite, the commit — live in `repark_iceberg::write::merge`.
+//! This module owns Spark dialect concerns: star sentinels, target and alias resolution, verbatim
+//! expression rendering, and clause order. Execution semantics live in `repark-iceberg`.
 
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
@@ -691,7 +687,7 @@ mod tests {
         );
     }
 
-    /// A two-part target name is rejected (default-catalog resolution is a follow-up).
+    /// A two-part target name is rejected; this door requires a three-part target.
     #[test]
     fn two_part_target_rejected() {
         let (table, source, on, clauses) = parse_merge(

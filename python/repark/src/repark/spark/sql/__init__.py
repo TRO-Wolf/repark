@@ -3,10 +3,9 @@
 Re-exports the subset of ``pyspark.sql`` that repark actually implements. Every name here is
 the **same object** as its canonical ``repark.spark.*`` binding (``is`` identity). Names that
 live on live PySpark's ``pyspark.sql`` but are **not** yet on repark raise :class:`ImportError`
-/ :class:`AttributeError` naming the gap — never a silent stub.
-
-Canonical home stays ``repark.spark`` / ``repark.spark.functions`` / ``repark.spark.types`` /
-``repark.spark.window``; this package is aliases only (R-SQLALIAS).
+/ :class:`AttributeError` naming the gap — never a silent stub. Canonical home stays
+``repark.spark`` / ``repark.spark.functions`` / ``repark.spark.types`` /
+``repark.spark.window``; this package is aliases only.
 """
 
 from __future__ import annotations

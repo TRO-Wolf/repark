@@ -2,18 +2,16 @@
 
 ## Purpose
 
-File-backed tests for the statement router (`../router.rs`): the v1 TRUNCATE targeted-refuse
+File-backed tests for the statement router (`../router.rs`): the TRUNCATE targeted-refuse
 pin, passthrough sanity, the BUG-010 ordering pin, and the P11 read-only threading pin.
-PR-245 also pins that location translation follows byte equality across owned and borrowed buffers.
-PR-2-native (outside the ported census). All TEMPORARY refuse arms are restored as of PR-3b; their
-refuse tests were deleted with the arms. The ported v1 lib-root battery lives in `../tests/`
+Location translation follows byte equality across owned and borrowed buffers.
+The lib-root battery lives in `../tests/`
 (`crate::tests`; see [../tests/map.md](../tests/map.md)).
 
 ## Contents
 
 - `tests.rs` — `#[cfg(test)] mod tests;` in `../router.rs`.
-  **MW-6:** the CALL dispatch comment names seven procedures (including `register_table`); the
-  leftover "three v1 / remove_orphan_files refuse" sentence went at V3-1.
+  **MW-6:** the CALL dispatch covers all supported procedures, including `register_table`.
 
 ## Pointers
 

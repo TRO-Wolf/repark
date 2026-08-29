@@ -1,28 +1,8 @@
-//! MERGE `WHEN NOT MATCHED` INSERT machinery: clause→projection lowering, the source-only
-//! execution seam, and the ANSI store-assignment gate.
+//! MERGE `WHEN NOT MATCHED` lowering and write validation.
 //!
-//! Split out of `mod.rs` (declared move, 2026-08-15 M4/M9 unit — `mod.rs` sits at its
-//! `check_rust_file_size` ceiling). Two Spark-parity rules live here:
-//!
-//! * **Source-only resolution (audit M4).** Spark resolves NOT MATCHED conditions and `VALUES`
-//!   expressions against the SOURCE plan only (`ResolveMergeIntoTable` resolves `InsertAction`
-//!   under `Project(Nil, sourceTable)`); a target-column reference is an analysis error. The
-//!   generated insert SQL therefore scopes the outer query to the source columns plus a
-//!   sentinel copy of the target `_pos` — a target reference fails to resolve loudly instead
-//!   of silently reading the LEFT-JOIN NULL (see [`super::MergeSql::insert_sql`]).
-//! * **ANSI store assignment (audit M9).** Spark's DML store-assignment policy
-//!   (`Cast.canANSIStoreAssign`, default `spark.sql.storeAssignmentPolicy=ANSI`) is far
-//!   narrower than a CAST: boolean→int, timestamp→bigint, string→numeric are rejected at
-//!   ANALYSIS time (`INCOMPATIBLE_DATA_FOR_TABLE`), never written. The engine's write path
-//!   casts with the full arrow kernel (`cast_one_batch_to_write_schema`, strict), so without a
-//!   gate those pairs would silently commit reinterpreted values. [`insert_stream_checked`]
-//!   validates the PLANNED schema against the write schema before a single batch streams.
-//!   [`update_stream_checked`] is the UPDATE twin: it plans each `SET` expression in isolation
-//!   (no `CASE` unification) and runs the **same**
-//!   [`ansi_store_assignable`](crate::write::store_assign::ansi_store_assignable) matrix before the
-//!   copy-on-write / merge-on-read rewrite SQL is required to type-check. DataFusion `CASE`
-//!   arms would otherwise refuse bool→int at plan time with an incidental coercion error, so
-//!   illegal pairs would never reach a post-plan gate (audit M9 residual BL-4).
+//! Insert expressions resolve against the source plan only, so target references fail loudly.
+//! Synthesized casts use the shared Spark ANSI store-assignment matrix before any batch streams;
+//! explicit casts remain the user's intent.
 
 use std::collections::{HashMap, HashSet};
 

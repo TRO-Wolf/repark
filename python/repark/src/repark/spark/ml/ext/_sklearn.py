@@ -1,8 +1,7 @@
-"""scikit-learn delegated estimators — RandomForest stretch (M4/M8).
+"""Delegated scikit-learn RandomForest estimators.
 
-**M8:** sklearn offers only pickle/joblib for fitted estimators. repark.ml.ext
-**never pickles** — RandomForest* models pin-refuse save/load with the exact
-reason ``pickle forbidden (arbitrary code execution on load)``. No silent third state.
+scikit-learn offers no supported non-pickle restore path here. RandomForest
+models refuse save and load with the exact pickle-safety reason.
 """
 
 from __future__ import annotations
@@ -31,7 +30,6 @@ from repark.spark.ml.param import (
     TypeConverters,
 )
 
-# Re-export for callers that imported SKLEARN_SAVE_UNSUPPORTED from this module.
 _ = PICKLE_FORBIDDEN_REASON
 
 
@@ -88,7 +86,7 @@ class RandomForestRegressor(
         sklearn = require_sklearn()
         from sklearn.ensemble import RandomForestRegressor as SKRandomForestRegressor
 
-        _ = sklearn  # touch package for importorskip side-effects
+        _ = sklearn
         table = frame.to_arrow()
         features_col = self.getFeaturesCol()
         label_col = self.getLabelCol()
@@ -156,16 +154,16 @@ class RandomForestRegressorModel(HasFeaturesCol, HasPredictionCol, Model):
         return reenter_with_prediction(frame, table, predictions, self.getPredictionCol())
 
     def save(self, path: str) -> None:
-        """Persistence v1 STOP-loud."""
+        """Refuse persistence because pickle loading is unsafe."""
         raise UnsupportedOperationException(SKLEARN_SAVE_UNSUPPORTED)
 
     def write(self) -> Any:
-        """Persistence v1 STOP-loud (parity with XGB; octo C2-L-003)."""
+        """Refuse persistence because pickle loading is unsafe."""
         raise UnsupportedOperationException(SKLEARN_SAVE_UNSUPPORTED)
 
     @classmethod
     def load(cls, path: str) -> RandomForestRegressorModel:
-        """Pin-refuse load (pickle forbidden — no third state; octo M8 C1)."""
+        """Refuse loading because pickle loading is unsafe."""
         raise UnsupportedOperationException(SKLEARN_SAVE_UNSUPPORTED)
 
     @classmethod
@@ -180,7 +178,7 @@ class RandomForestClassifier(
     HasPredictionCol,
     Estimator["RandomForestClassifierModel"],
 ):
-    """Delegated sklearn RandomForestClassifier (stretch)."""
+    """Delegated sklearn RandomForestClassifier."""
 
     def __init__(
         self,
@@ -192,7 +190,7 @@ class RandomForestClassifier(
         maxDepth: int | None = None,  # noqa: N803
         seed: int | None = None,
     ) -> None:
-        """Optional kwargs."""
+        """Configure optional parameters."""
         _ensure_sklearn_loaded()
         super().__init__()
         self.numTrees: Param[int] = Param(self, "numTrees", "num trees", TypeConverters.toInt)
@@ -284,16 +282,16 @@ class RandomForestClassifierModel(HasFeaturesCol, HasPredictionCol, Model):
         return reenter_with_prediction(frame, table, predictions, self.getPredictionCol())
 
     def save(self, path: str) -> None:
-        """Persistence v1 STOP-loud."""
+        """Refuse persistence because pickle loading is unsafe."""
         raise UnsupportedOperationException(SKLEARN_SAVE_UNSUPPORTED)
 
     def write(self) -> Any:
-        """Persistence v1 STOP-loud (parity with XGB; octo C2-L-003)."""
+        """Refuse persistence because pickle loading is unsafe."""
         raise UnsupportedOperationException(SKLEARN_SAVE_UNSUPPORTED)
 
     @classmethod
     def load(cls, path: str) -> RandomForestClassifierModel:
-        """Pin-refuse load (pickle forbidden — no third state; octo M8 C1)."""
+        """Refuse loading because pickle loading is unsafe."""
         raise UnsupportedOperationException(SKLEARN_SAVE_UNSUPPORTED)
 
     @classmethod

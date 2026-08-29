@@ -11,24 +11,6 @@ Live precedence (verbatim):
 * else store ``key → to_str(value)`` (Spark ``pyspark.sql.utils.to_str``: bool → lowercase,
   ``None`` stays ``None``, else ``str(...)``).
 
-``map`` + ``key`` together does **not** raise — map wins. A non-mapping ``map`` raises
-``AttributeError`` on ``.items()`` (live: ``'str' object has no attribute 'items'``).
-``conf`` + key/value together: conf wins (same branch order; must be pinned separately from
-conf≻map).
-
-``**dict`` unpacking is **not** the PySpark API and is not supported (TypeError on unexpected
-kwargs from the Python call machinery).
-
-Pins use the real builder → ``getOrCreate`` path where a key is load-bearing, and inspect
-``builder._config`` for multi-key map application.
-
-Across sequential ``.config(...)`` calls, map and conf arms **update-merge** into the
-existing ``builder._config`` (per-key assign). Same-key overwrite alone is a hollow pin —
-disjoint-key keep+add and empty map/conf-after-prior must be pinned so a wholesale
-``self._config = {...}`` replace mutation cannot stay green (C4-Q-001). Conf-arm
-**same-key** sequential overwrite (kv→conf / map→conf) is pinned separately (C7-Q-001) so
-``setdefault`` / insert-if-missing on the conf arm cannot keep prior values while C4
-disjoint merge stays green.
 """
 
 from __future__ import annotations
@@ -82,7 +64,6 @@ def test_config_to_str_bool_and_none() -> None:
     assert builder._config["spark.some.flag"] == "true"
     assert builder._config["spark.other.flag"] == "false"
     assert builder._config["spark.sql.shuffle.partitions"] is None
-    # kv path uses the same to_str.
     builder_kv = ReparkSession.builder.config("spark.some.flag", True)
     assert builder_kv._config["spark.some.flag"] == "true"
     # getOrCreate with None on a load-bearing key: unset (default), not IllegalArgumentException.
@@ -102,13 +83,10 @@ def test_config_map_empty_is_noop() -> None:
 def test_config_map_and_conf_merge_into_existing_builder_config() -> None:
     """Sequential map/conf update-merge into builder._config (C4-Q-001).
 
-    Production applies map/conf by per-key assignment into ``self._config``. A wholesale
-    replace mutation (``self._config = {k: _to_str(v) for …}``) on the map or conf arm wipes
-    prior keys and still passes same-key overwrite pins and empty-map-on-fresh-builder. These
-    disjoint-key chain pins fail that mutation: keep prior entries, add new ones; empty
-    ``map={}`` / empty conf ``getAll()`` must not clear prior keys.
+    A wholesale replace mutation (``self._config = {k: _to_str(v) for …}``) on the map or
+    conf arm passes same-key overwrite pins; these disjoint-key keep+add and empty
+    map/conf-after-prior pins fail it: prior entries stay, new ones are added.
     """
-    # kv → map (disjoint): keep + add
     builder_kv_map = ReparkSession.builder.config("spark.app.name", "keep").config(
         map={"foo.bar": "baz"}
     )
@@ -117,15 +95,12 @@ def test_config_map_and_conf_merge_into_existing_builder_config() -> None:
         "foo.bar": "baz",
     }
 
-    # map → map (disjoint): accumulate across sequential map= calls
     builder_map_map = ReparkSession.builder.config(map={"a": "1"}).config(map={"b": "2"})
     assert builder_map_map._config == {"a": "1", "b": "2"}
 
-    # empty map must not clear prior keys (fresh empty is a hollow pin alone)
     builder_empty_map = ReparkSession.builder.config("spark.app.name", "keep").config(map={})
     assert builder_empty_map._config == {"spark.app.name": "keep"}
 
-    # kv → conf (disjoint): conf arm also merges, not replaces
     class _FakeConf:
         def getAll(self) -> list[tuple[str, str]]:  # noqa: N802 — SparkConf surface
             return [("from-conf", "1")]
@@ -138,7 +113,6 @@ def test_config_map_and_conf_merge_into_existing_builder_config() -> None:
         "from-conf": "1",
     }
 
-    # empty conf getAll must not clear prior keys
     class _EmptyConf:
         def getAll(self) -> list[tuple[str, str]]:  # noqa: N802
             return []
@@ -166,33 +140,27 @@ def test_config_kv_then_map_overwrite() -> None:
 def test_config_kv_and_map_then_conf_same_key_overwrite() -> None:
     """Sequential conf arm same-key overwrite (C7-Q-001).
 
-    Production assigns per conf key into ``self._config``. C4-Q-001 only pins **disjoint**
-    kv→conf keep+add and empty-conf-after-prior; map↔kv same-key overwrite pins leave the
-    conf arm free. A residual ``setdefault`` / ``if key not in self._config`` mutation on
-    conf keeps prior kv/map values for the shared key while C4 disjoint merge, same-call
-    conf≻map/kv, empty exclusive arms, and map overwrite pins all stay green. These pins
-    fail that mutation: conf value must replace the prior for the same key.
+    A residual ``setdefault`` / ``if key not in self._config`` mutation on conf stays green
+    under the C4-Q-001 disjoint-merge and map/kv overwrite pins. These pins fail it: conf
+    must replace the prior value for the same key; prior disjoint conf keys stay.
     """
 
     class _FakeConf:
         def getAll(self) -> list[tuple[str, str]]:  # noqa: N802 — SparkConf surface
             return [("spark.app.name", "via-conf")]
 
-    # kv → conf (same key): conf must replace, not setdefault-keep
     builder_kv_conf = ReparkSession.builder.config("spark.app.name", "from-kv").config(
         conf=_FakeConf()
     )
     assert builder_kv_conf._config == {"spark.app.name": "via-conf"}
     assert "from-kv" not in builder_kv_conf._config.values()
 
-    # map → conf (same key): conf must replace, not setdefault-keep
     builder_map_conf = ReparkSession.builder.config(map={"spark.app.name": "from-map"}).config(
         conf=_FakeConf()
     )
     assert builder_map_conf._config == {"spark.app.name": "via-conf"}
     assert "from-map" not in builder_map_conf._config.values()
 
-    # conf → conf (same key) sequential: later conf wins; prior disjoint key kept (merge+overwrite)
     class _FirstConf:
         def getAll(self) -> list[tuple[str, str]]:  # noqa: N802
             return [("spark.app.name", "first-conf"), ("keep.key", "stay")]
@@ -212,9 +180,8 @@ def test_config_kv_and_map_then_conf_same_key_overwrite() -> None:
 def test_config_map_plus_key_value_map_wins_no_error() -> None:
     """map ≻ key/value is exclusive apply (C2-Q-001), not merge-then-overwrite.
 
-    Oracle: key+value+map together succeeds; only map is applied. Overlapping keys alone are a
-    hollow pin — if production applied kv then map, ``k1`` would still end as ``from-map``.
-    Non-overlapping keys fail that merge mutation: kv's ``k1`` must not leak into ``_config``.
+    Oracle: key+value+map together succeeds; only map is applied. Non-overlapping keys fail a
+    merge-then-overwrite mutation: kv's ``k1`` must not leak into ``_config``.
     """
     builder = ReparkSession.builder.config(
         key="k1",
@@ -224,7 +191,6 @@ def test_config_map_plus_key_value_map_wins_no_error() -> None:
     assert builder._config == {"k2": "v2"}
     assert "k1" not in builder._config
     assert "v1" not in builder._config.values()
-    # Overlap case still: map value wins for shared keys; no error.
     builder_overlap = ReparkSession.builder.config(
         key="k1",
         value="v1",
@@ -244,15 +210,12 @@ def test_config_map_not_dict_raises_attribute_error() -> None:
 def test_config_conf_missing_get_all_raises_attribute_error() -> None:
     """conf without getAll → AttributeError matching getAll (C8-Q-003).
 
-    Production: ``if conf is not None: conf.getAll()``. map's non-mapping ``.items()`` raise is
-    already pinned; without this pin a residual soft-skip (``hasattr(conf, 'getAll')`` /
-    try/except → empty apply) keeps FakeConf happy-path pins green while swallowing
-    ``conf=object()`` instead of failing loud like live SparkConf duck-typing.
+    A residual soft-skip mutation (``hasattr(conf, 'getAll')`` / try/except → empty apply)
+    stays green under the FakeConf happy-path pins; this pin fails it: fail loud, even when
+    map is also present — conf must not soft-empty and fall through to map.
     """
     with pytest.raises(AttributeError, match=r"getAll"):
         ReparkSession.builder.config(conf=object())
-    # Same-call map + conf without getAll must still raise — conf is exclusive and must not
-    # soft-empty then fall through to map (or soft-skip conf and apply map).
     with pytest.raises(AttributeError, match=r"getAll"):
         ReparkSession.builder.config(map={"from-map": "1"}, conf=object())
 
@@ -331,10 +294,9 @@ def test_config_conf_takes_precedence_over_map() -> None:
 def test_config_empty_conf_still_wins_over_map_same_call() -> None:
     """Empty getAll() conf still excludes map in the same call (C5-Q-002).
 
-    Production: ``if conf is not None`` is exclusive — empty getAll is a no-op on keys, not a
-    fall-through to map. Non-empty conf≻map pins and sequential empty-conf merge (C4-Q-001)
-    stay green under a residual mutation that only applies conf when getAll() is non-empty and
-    otherwise runs map. Same-call empty conf + map must leave map keys out of ``_config``.
+    ``if conf is not None`` is exclusive: empty getAll is a no-op on keys, not a fall-through
+    to map. A residual non-empty-only mutation stays green under the non-empty conf≻map and
+    C4-Q-001 pins; these pins fail it.
     """
 
     class _EmptyConf:
@@ -349,7 +311,6 @@ def test_config_empty_conf_still_wins_over_map_same_call() -> None:
     assert "from-map" not in builder._config
     assert "via-map" not in builder._config.values()
 
-    # Prior keys from an earlier call must remain; map in this call must not apply.
     builder_prior = ReparkSession.builder.config("prior.key", "keep").config(
         map={"from-map": "2"},
         conf=_EmptyConf(),
@@ -361,13 +322,10 @@ def test_config_empty_conf_still_wins_over_map_same_call() -> None:
 def test_config_empty_map_and_empty_conf_still_exclude_kv_same_call() -> None:
     """Empty map={} / empty conf still exclude key/value in the same call (C6-Q-001).
 
-    Production: ``conf is not None`` and ``map is not None`` are exclusive even when the
-    container is empty — empty is a no-op on keys, not a fall-through to kv. Non-empty
-    map≻kv (C2-Q-001), non-empty conf≻kv (C1-Q-002), empty conf≻map (C5-Q-002), and
-    sequential empty map/conf merge (C4-Q-001) all stay green under a residual mutation that
-    only takes the exclusive arm when the container is non-empty (``if map:`` / ``if
-    conf.getAll():``) and otherwise applies key/value. Same-call empty container + kv must
-    leave the kv pair out of ``_config``.
+    ``conf is not None`` and ``map is not None`` are exclusive even when empty: empty is a
+    no-op on keys, not a fall-through to kv. A residual ``if map:`` / ``if conf.getAll():``
+    mutation stays green under the C2-Q-001, C1-Q-002, C5-Q-002, and C4-Q-001 pins; these
+    pins fail it.
     """
 
     class _EmptyConf:
@@ -392,7 +350,6 @@ def test_config_empty_map_and_empty_conf_still_exclude_kv_same_call() -> None:
     assert "k1" not in builder_empty_conf._config
     assert "v1" not in builder_empty_conf._config.values()
 
-    # Prior keys from an earlier call must remain; same-call kv must not apply.
     builder_prior_map = ReparkSession.builder.config("prior.key", "keep").config(
         key="k1",
         value="v1",
@@ -413,8 +370,7 @@ def test_config_empty_map_and_empty_conf_still_exclude_kv_same_call() -> None:
 def test_config_conf_takes_precedence_over_kv() -> None:
     """conf ≻ key/value in the same call (C1-Q-002).
 
-    conf≻map and map≻kv are pinned elsewhere; without this pin, conf≻kv can be dropped while
-    the suite stays green (map branch still short-circuits when conf is None).
+    Without this pin conf≻kv can be dropped while conf≻map and map≻kv pins stay green.
     """
 
     class _FakeConf:

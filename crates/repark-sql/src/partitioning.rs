@@ -1,28 +1,9 @@
 //! Partition-transform parsing and Iceberg spec building (design §2 Q2).
-//!
-//! `WITH (partitioning = ARRAY['month(ts)', 'bucket(16, id)'])` is the ONLY spelling this door
-//! accepts. The transform strings are parsed by a **small pure function** here rather than by
-//! sharing the Spark door's `PARTITIONED BY` validator: the design ruled explicitly against a
-//! half-file move, and the reason holds up — the two doors read different grammars
-//! (`PARTITIONED BY (bucket(16, id))` vs a string inside an ARRAY), so fusing their parsers would
-//! couple two things that must stay free to differ. The anti-drift mechanism is the cross-door
-//! differential row in PR-6, which pins identical ACCEPT/REJECT behavior without coupling the
-//! code.
-//!
-//! Field NAMES follow Java/Spark (`col`, `col_bucket`, `col_trunc`, `col_year`, …). Matching
-//! Java here is what lets a RePark-created table's partition spec read back identically to a
-//! Spark-created one — a schema-equality pin, not cosmetics.
 
 use datafusion::error::{DataFusionError, Result};
 use iceberg::spec::{Transform, UnboundPartitionSpec};
 
 /// One partition transform, parsed from its Trino string spelling.
-///
-/// Deliberately a re-implementation rather than a shared type with the Spark door (design §2 Q2:
-/// "validation re-implemented ANSI-side as a small pure function, no half-file move"). The
-/// anti-drift mechanism is the cross-door differential row in PR-6, not a shared parser: the two
-/// doors read DIFFERENT syntax (`PARTITIONED BY (bucket(16, id))` vs `ARRAY['bucket(16, id)']`)
-/// and coupling their parsers would fuse two grammars that must be free to differ.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum PartitionTransform {
     /// `c` or `identity(c)`.
@@ -74,10 +55,7 @@ impl PartitionTransform {
         }
     }
 
-    /// The partition-field NAME Java/Spark generate — identity keeps the column name, every other
-    /// transform appends the Java suffix (`_bucket`, `_trunc`, `_year`, `_month`, `_day`,
-    /// `_hour`; apache-iceberg `PartitionSpec.Builder`). Matching Java here is what lets a
-    /// RePark-created table's spec read back identically to a Spark-created one.
+    /// Return the Java/Spark partition-field name; identity keeps the source column name.
     pub(crate) fn field_name(&self) -> String {
         match self {
             PartitionTransform::Identity(column) => column.clone(),
@@ -97,13 +75,8 @@ impl PartitionTransform {
 }
 
 /// ===========================================================================================
-/// Parse one transform spelling (`'ts'`, `'month(ts)'`, `'bucket(16, id)'`) — the small pure
-/// function design §2 Q2 asks for.
+/// Parse one transform spelling (`'ts'`, `'month(ts)'`, or `'bucket(16, id)'`).
 /// ===========================================================================================
-///
-/// # Errors
-/// An unknown transform name, the wrong argument count, a non-integer or non-positive width, or
-/// a width that overflows `u32`.
 pub(crate) fn parse_transform(spelling: &str, form: &str) -> Result<PartitionTransform> {
     let trimmed = spelling.trim();
     if trimmed.is_empty() {
@@ -207,13 +180,8 @@ pub(crate) fn parse_transform(spelling: &str, form: &str) -> Result<PartitionTra
 }
 
 /// ===========================================================================================
-/// Resolve declared transforms against the table's derived Iceberg schema into an
-/// `UnboundPartitionSpec`. `None` when the table is unpartitioned.
+/// Resolve declared transforms against the table's derived Iceberg schema into an Iceberg spec.
 /// ===========================================================================================
-///
-/// # Errors
-/// A transform naming a column the table does not have (the message lists the available columns —
-/// this is the error users actually hit, and a bare "not found" wastes a round trip).
 pub(crate) fn build_partition_spec(
     schema: &iceberg::spec::Schema,
     transforms: &[PartitionTransform],

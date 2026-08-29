@@ -1,4 +1,4 @@
-"""Generator-shape and determinism pins for the smartCsv torture family (DS-3).
+"""Generator-shape and determinism pins for the smartCsv torture family.
 
 Pure pyarrow — no repark, no Spark, no JVM. The family grows the three-row inline
 messy-CSV example in the facade suite into a generator-scale corpus: BOM, preamble

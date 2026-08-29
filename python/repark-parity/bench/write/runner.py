@@ -1,12 +1,9 @@
 """Write-path bench matrix: CTAS + append over local-fs Iceberg (R-WRITE-BENCH).
 
-Axes
-----
-1. ``repark.write.max-concurrent-files`` K in {1, 2, 4, 8, 16}
-2. ``write.target-file-size-bytes`` (2-3 values; default 64 / 256 / 512 MiB)
-
-Metrics per cell: wall total + per-stage timings, peak RSS (Linux ``ru_maxrss`` KiB),
-warehouse bytes, data-file count under the local warehouse.
+Axes: ``repark.write.max-concurrent-files`` K in {1, 2, 4, 8, 16} x
+``write.target-file-size-bytes`` (2-3 values; default 64 / 256 / 512 MiB).
+Metrics per cell: wall total + per-stage timings, peak RSS (Linux ``ru_maxrss``
+KiB), warehouse bytes, data-file count under the local warehouse.
 
 **No MERGE.** **No AWS.** Local FS stands in for S3 - upload-latency conclusions are
 bounded and must be disclosed in every report.
@@ -130,9 +127,9 @@ def probe_release_build(*, assert_release: bool = False) -> tuple[bool, str]:
     """Whether the operator asserted a release wheel for timed runs.
 
     The extension module cannot be reliably classified debug vs release from Python
-    alone (symbols often remain). Honesty rule: report ``True`` only when the
-    operator asserts via ``--assert-release`` or env ``REPARK_WRITE_BENCH_RELEASE=1``
-    after ``maturin develop --release``.
+    alone (symbols often remain). Report ``True`` only when the operator asserts via
+    ``--assert-release`` or env ``REPARK_WRITE_BENCH_RELEASE=1`` after
+    ``maturin develop --release``.
 
     Returns:
         ``(disclosed_true, reason)`` - ``disclosed_true`` is only True on assertion.
@@ -221,7 +218,7 @@ def format_bytes(n_bytes: int) -> str:
 def _warehouse_stats(warehouse: Path) -> tuple[int, int]:
     """Return (total_bytes, data_file_count) under a local Iceberg warehouse.
 
-    Data files are counted as ``*.parquet`` under the warehouse (metadata JSON excluded).
+    Data files are ``*.parquet`` under the warehouse (metadata JSON excluded).
     """
     total = 0
     data_files = 0
@@ -257,12 +254,11 @@ def run_one_cell(
 ) -> CellResult:
     """Run seed -> CTAS -> INSERT append for one (K, file-size) cell.
 
-    Uses a fresh local memory-catalog warehouse. Never sets AWS envs.
-
-    Stage timings cover seed/CTAS/append/count only - session build + catalog
-    register are excluded from ``wall_total_s`` (constant overhead; K compare uses
-    CTAS stage). When ``expected_row_count`` is set, a count mismatch becomes a
-    cell error (silent partial write must not look like a successful cell).
+    Fresh local memory-catalog warehouse; never sets AWS envs. Stage timings cover
+    seed/CTAS/append/count only - session build + catalog register are excluded
+    from ``wall_total_s`` (K compare uses the CTAS stage). When
+    ``expected_row_count`` is set, a count mismatch becomes a cell error (a silent
+    partial write must not look like a successful cell).
     """
     from repark import ReparkSession
 
@@ -304,9 +300,9 @@ def run_one_cell(
         stages.append(StageTiming("ctas", time.perf_counter() - t0))
 
         t0 = time.perf_counter()
-        # INSERT INTO is DataFusion/fork TableProvider passthrough - session K is
-        # load-bearing on the CTAS path (repark-sql write_ctas_stream); append wall
-        # is still timed but K effect on INSERT is not guaranteed (see findings).
+        # INSERT INTO is a DataFusion/fork TableProvider passthrough; session K is
+        # load-bearing only on the CTAS path (repark-sql write_ctas_stream). Append
+        # wall is timed, but K has no guaranteed effect on INSERT.
         spark.sql(f"INSERT INTO {table_fq} SELECT * FROM {SOURCE_VIEW}")
         stages.append(StageTiming("append", time.perf_counter() - t0))
 
@@ -505,14 +501,10 @@ def _environment_snapshot() -> dict[str, str]:
 def compute_verdict(board: MatrixBoard) -> str:
     """Stall-or-not verdict per R-WRITE-BENCH seed decision tree (local-fs only).
 
-    Decision tree (seed / todo.md R-WRITE-BENCH)::
-
-        (1) Measure K sweep wall + stages + RSS (this report).
-        (2) If stalls / no scaling on the write path -> tune knobs
-            (AsyncArrowWriter buffer / row-group size + raise K default) first.
-        (3) ONLY if numbers still demand it -> fork-side encode↔upload pipeline.
-
-    Local FS cannot prove S3 upload stalls; verdict classifies encode-side
+    Tree: (1) measure K sweep wall + stages + RSS; (2) on stalls / no scaling, tune
+    knobs (AsyncArrowWriter buffer / row-group size + raise K default) first;
+    (3) only if numbers still demand it, the fork-side encode↔upload pipeline.
+    Local FS cannot prove S3 upload stalls; the verdict classifies encode-side
     scaling only and routes the seed tree for the orchestrator.
     """
     ok_cells = [cell for cell in board.cells if cell.error is None and cell.ctas_s is not None]
@@ -523,7 +515,6 @@ def compute_verdict(board: MatrixBoard) -> str:
         )
 
     lines: list[str] = []
-    # Per file-size: CTAS wall vs K
     by_size: dict[int, list[CellResult]] = {}
     for cell in ok_cells:
         by_size.setdefault(cell.target_file_size_bytes, []).append(cell)
@@ -567,7 +558,6 @@ def compute_verdict(board: MatrixBoard) -> str:
     all_clear_scaling = bool(clear_scaling_flags) and all(clear_scaling_flags)
     any_plateau_at_high_k = any(plateau_flags)
 
-    # Append vs CTAS ratio (serial commit overhead vs write)
     append_ratios: list[float] = []
     for cell in ok_cells:
         if cell.ctas_s and cell.append_s and cell.ctas_s > 0:
@@ -579,15 +569,14 @@ def compute_verdict(board: MatrixBoard) -> str:
             f"(append reuses open table; ratio ~1 expected if both are write-bound)."
         )
 
-    # RSS note
     rss_values = [cell.rss_peak_kb for cell in ok_cells]
     lines.append(
         f"Peak RSS across cells: min={min(rss_values)} KiB max={max(rss_values)} KiB "
         f"(process cumulative ru_maxrss; non-decreasing across sequential cells; no auto-abort)."
     )
 
-    # Decision tree routing - NO_STALL requires clear scaling on EVERY file-size group
-    # (mixed size-axis results route to PARTIAL to avoid whole-matrix overclaim).
+    # NO_STALL requires clear scaling on EVERY file-size group; mixed results route
+    # to PARTIAL to avoid whole-matrix overclaim.
     lines.append("")
     lines.append("Seed decision-tree routing (local-fs encode path only):")
     if all_clear_scaling and not any_plateau_at_high_k:
@@ -599,7 +588,6 @@ def compute_verdict(board: MatrixBoard) -> str:
             "S3 upload-overlap stall remains UNMEASURED (follow-up)."
         )
     elif any_clear_scaling:
-        # Includes: all-clear+plateau, or mixed clear/no-clear across file sizes.
         detail = (
             "high-K plateau/regression on at least one file-size group"
             if any_plateau_at_high_k
@@ -693,7 +681,6 @@ def render_markdown_report(board: MatrixBoard, *, title: str | None = None) -> s
         lines.append(f"- {finding}")
     lines.extend(["", f"## Matrix - SF{sf_label} wall + stages + RSS", ""])
 
-    # Wide table: one row per cell
     lines.append(
         "| SF | K | target_file_size | seed_s | ctas_s | append_s | count_s | "
         "wall_total_s | rss_peak_KiB | warehouse_bytes | data_files | rows | error |"
@@ -711,7 +698,6 @@ def render_markdown_report(board: MatrixBoard, *, title: str | None = None) -> s
             f"{err} |"
         )
 
-    # Pivot: CTAS seconds by K x file size
     lines.extend(["", f"## CTAS wall (seconds) - SF{sf_label} pivot K x file-size", ""])
     sizes = board.file_size_bytes
     lines.append("| SF | K \\ file-size | " + " | ".join(format_bytes(s) for s in sizes) + " |")

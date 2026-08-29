@@ -1,4 +1,4 @@
-"""TPC-H scoreboard harness (R-TPCH-HARNESS).
+"""TPC-H scoreboard harness.
 
 Datagen via DuckDB ``dbgen`` → parquet under ``/tmp/tpch-data/sf{N}/``; queries from
 ``tpch_queries()``; repark vs DuckDB wall + correctness matrix. No AWS.

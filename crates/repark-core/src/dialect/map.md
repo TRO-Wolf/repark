@@ -3,8 +3,7 @@
 ## Purpose
 
 File-backed tests for the SQL dialect seam (`../dialect.rs`): `DataFusionDialect` passthrough
-and the `EngineContext` construction contract (new-seam tests, additive — not part of the ported
-v1 census).
+and the `EngineContext` construction contract.
 
 ## Contents
 

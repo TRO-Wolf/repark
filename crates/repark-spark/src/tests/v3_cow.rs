@@ -1,11 +1,11 @@
-//! V3R-1 (2026-08-25): copy-on-write UPDATE / MERGE and the resolver seat refuse a v3 table
+//! Pins format-v3 copy-on-write DML refusal and the resolver safety seat.
 //! before any write (`V3-COW-1`). RP-2 (2026-08-27, fork `ce92a7bf`) measured the plain-`WHERE`
 //! DELETE on v3 Spark-clean in both modes and lifted it: MOR commits Puffin DVs, COW preserves
 //! survivor lineage. No native `DataFrame` DML (C-012).
 //!
 //! Model: Claude Fable 5
 //!
-//! V3E-2: [`V3_MAINTENANCE_ORACLE`] is the dated maintenance-oracle pair (charter §5).
+//! [`V3_MAINTENANCE_ORACLE`] identifies the maintenance-oracle pair.
 //! pins: v3r-1-rulings/C-001, C-002, C-003, C-004, C-005, C-012
 //! pins: v3e-1-2-cow-oracle/C-009, C-010
 //! pins: rp-2-fork-repin/C-002, C-003, C-005

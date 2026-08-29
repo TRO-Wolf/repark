@@ -97,7 +97,7 @@ def test_math_functions(spark: ReparkSession) -> None:
     assert row["sg"] == -1.0
     assert row["ex"] == 1.0
     assert row["pw"] == 8.0
-    # Spark F.log is natural log; F.log10 is base-10 (octo C1-Q-001 / C1-L-001).
+    # Spark F.log is natural log; F.log10 is base-10.
     assert abs(row["lg"] - 2.302585092994046) < 1e-9
     assert abs(row["l10"] - 1.0) < 1e-9
     assert pa.types.is_floating(table.schema.field("lg").type)
@@ -133,7 +133,7 @@ def test_greatest_least_dates(spark: ReparkSession) -> None:
     assert data["g"] == 2
     assert data["l"] == 1
     assert data["td"].isoformat() == "2020-01-02"
-    # ColumnOrName: bare str is column name, not a literal (octo C1-Q-003).
+    # ColumnOrName: bare str is column name, not a literal.
     col_date = (
         spark.sql("SELECT '2020-01-02' AS d")
         .select(to_date("d").alias("td"))
@@ -141,7 +141,7 @@ def test_greatest_least_dates(spark: ReparkSession) -> None:
         .to_pylist()[0]["td"]
     )
     assert col_date.isoformat() == "2020-01-02"
-    # Spark from_unixtime → string (octo C1-Q-002).
+    # Spark from_unixtime → string.
     ts_table = frame.select(from_unixtime(lit(0)).alias("t")).to_arrow()
     assert pa.types.is_string(ts_table.schema.field("t").type) or pa.types.is_large_string(
         ts_table.schema.field("t").type
@@ -152,8 +152,8 @@ def test_greatest_least_dates(spark: ReparkSession) -> None:
 def test_unsupported_loud(spark: ReparkSession) -> None:
     with pytest.raises(UnsupportedOperationException, match="split"):
         split("s", ",")
-    # FNP-3: datediff flipped to shipped — it is Spark's older spelling of date_diff and shares
-    # its engine arm. Behaviour: test_fnp3_destubbed.py.
+    # FNP-3: datediff ships — Spark's older spelling of date_diff, same engine arm.
+    # Behavior: test_fnp3_destubbed.py.
 
 
 def test_null_arg_propagation_lower(spark: ReparkSession) -> None:

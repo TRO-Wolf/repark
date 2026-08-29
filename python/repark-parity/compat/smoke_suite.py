@@ -1,11 +1,11 @@
-"""C2 / R-PYSPARK-COMPAT — always-green smoke pins for the Apache-suite harness.
+"""Always-green smoke pins for the Apache-suite harness.
 
 Pins:
 1. **Meta** — redirect seam installs repark into the pyspark namespace; no JVM gateway.
 2. **Meta** — known-FAIL Apache cases stay classified (exact status + cause fragment),
-   not a crash. ``test_field_accessor`` plus the FA-4 / G15 demotions below.
-3. **Census subset** — every Apache test that PASSed at the X1 tip (functions+column
-   growth) plus the still-green pins from other modules (types / dataframe / stretch).
+   not a crash (``test_field_accessor`` plus the FA-4 / G15 demotions below).
+3. **Census subset** — Apache tests verified PASS under the harness
+   (functions/column growth plus still-green pins from other modules).
 
 Requires: installed ``pyspark`` (record extra / dev env) and the runtime-fetched
 Apache test cache at ``~/.cache/repark-pyspark-tests/<tag>/`` (populated on first
@@ -39,10 +39,7 @@ from compat.classify import CENSUS_CLASSES  # noqa: E402
 from compat.fetch import ensure_spark_tests  # noqa: E402
 from compat.runner import run_module_inprocess  # noqa: E402
 
-# r20 morning mega (2026-08-03): pin every Apache test verified PASS at the mega
-# tip across all three census cohorts (classic five + C3 expand + C4 expand2).
-# Regenerated from the census PASS union each morning mega (sole-owner).
-# min(25, N) is dead (G9).
+# Pinned from the census PASS union; sole-owner regeneration. min(25, N) is dead (G9).
 _PINNED_PASSING_APACHE_TESTS: tuple[str, ...] = (
     "pyspark.sql.tests.test_catalog.CatalogTests.test_assert_classic_mode",
     "pyspark.sql.tests.test_collection.DataFrameCollectionTests.test_assert_classic_mode",
@@ -262,15 +259,13 @@ _PINNED_PASSING_APACHE_TESTS: tuple[str, ...] = (
 )
 
 # Known-FAIL meta pin: nested dotted field resolve residual (df["r.a"] / df["r.b"]).
-# F2 landed mixed-type lit(list) + global regexp_replace (test_lit_list → PASS); wall moved
-# off lit cast. r16 lesson: pin BOTH status AND cause-string when the wall moves.
+# Pin BOTH status AND cause-string so a moved wall cannot pass silently.
 _KNOWN_FAIL_TEST_ID = "pyspark.sql.tests.test_column.ColumnTests.test_field_accessor"
 _KNOWN_FAIL_STATUS = "FAIL-VALUE"
 
-# FA-4 #164 / G15 Y-7 #71: disposed divergences that used to sit in the always-PASS
-# list. Demoted 2026-08-22 so the nightly is a live signal again. A row returning
-# to the PASS tuple without deleting its meta pin is a silent double-count; the
-# disjointness assert below is the fence.
+# FA-4 #164 / G15 Y-7 #71: demoted known-FAIL ids. A row returning to the PASS
+# tuple without deleting its meta pin is a silent double-count; the disjointness
+# assert below is the fence.
 _KNOWN_FAIL_MAP_EMPTY_ID = "pyspark.sql.tests.test_types.TypesTests.test_infer_map_pair_type_empty"
 _KNOWN_FAIL_MAP_NESTED_ID = (
     "pyspark.sql.tests.test_types.TypesTests.test_infer_map_pair_type_with_nested_maps"
@@ -284,15 +279,10 @@ _KNOWN_FAIL_DEMOTED_IDS: tuple[str, ...] = (
     _KNOWN_FAIL_COLLATED_UDF_ID,
 )
 
-# Exact pin count = the r22 morning-mega census PASS union (classic five 142 +
-# C3 expand 40 + C4 expand2 87 = 269; sole-owner regeneration, 2026-08-03) MINUS
-# 55 pandas-version-sensitive rows: Apache's pyspark.testing helpers import
-# pandas.core.common._builtin_table, removed in pandas 3 — those rows PASS under
-# the census venv (pandas 2.x, the record env the harness requires) but classify
-# HARNESS under the uv.lock env (pandas 3.0.3) that parity-live runs, MINUS the
-# three FA-4 / G15 demotions above (218 → 215). Pins must be always-green in the
-# locked env; census reports record the pandas-2 PASS honestly.
-# Dropping a pin silently re-opens charter G9.
+# 215 = census PASS union MINUS 55 pandas-version-sensitive rows (Apache's
+# pyspark.testing helpers import pandas.core.common._builtin_table, removed in
+# pandas 3) MINUS the three FA-4 / G15 demotions above. Pins must be always-green
+# in the locked env; dropping a pin silently re-opens charter G9.
 assert len(_PINNED_PASSING_APACHE_TESTS) == 215, (
     f"smoke pin count must stay 215 always-green Apache PASSes "
     f"(got {len(_PINNED_PASSING_APACHE_TESTS)})"
@@ -371,8 +361,8 @@ def test_meta_known_fail_stays_classified(_compat_provenance: object) -> None:
     assert row is not None, f"missing {_KNOWN_FAIL_TEST_ID} in {[r.test_id for r in census.rows]}"
     assert row.status in CENSUS_CLASSES
     assert row.status == _KNOWN_FAIL_STATUS
-    # F2: lit_list mixed cast landed; wall is dotted nested-name resolve on DataFrame
-    # (still FAIL-VALUE — Column.__getitem__ map path is green; df["r.a"] is not).
+    # Wall is dotted nested-name resolve on DataFrame (Column.__getitem__ map path
+    # is green; df["r.a"] is not).
     cause_lower = row.cause.lower()
     assert "r.a" in cause_lower or "cannot be resolved" in cause_lower, (
         f"known-fail cause must still mention nested field resolve (got {row.cause!r})"

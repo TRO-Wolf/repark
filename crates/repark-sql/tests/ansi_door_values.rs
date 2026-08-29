@@ -1,15 +1,5 @@
 //! **ANSI-door value pins** — G11, correctness not parity.
-//!
-//! Spark is **not** this door's oracle (owner ruling 2026-08-12, Option A). Expectations are
-//! standard SQL (Trino-style), derived values allowed. The native profile is load-bearing: no
-//! `SessionExtension`, `AnsiDialect` as the session default — the same assembly
-//! `cross_door.rs` uses for Session A.
-//!
-//! Cross-door (both doors' actual outputs side by side) lives in `cross_door.rs`. This file
-//! pins the ANSI door alone. Identifier case folding is already registry row ID-1 — cited in
-//! the Y-10 ledger, not duplicated here.
-//!
-//! AWS-free by construction.
+//! Spark is **not** this door's oracle. Expectations are standard SQL behavior.
 
 use std::sync::Arc;
 
@@ -184,16 +174,7 @@ async fn ordered_int32(session: &ReparkSession, sql: &str) -> (DataType, bool, V
     (data_type, nullable, values)
 }
 
-// =================================================================================================
-// G11 — ANSI-door value pins (standard SQL)
-// =================================================================================================
-
-/// CAST overflow raises. `CAST(200 AS TINYINT)` is outside `Int8`; standard SQL requires an
-/// exception, not a wrap or a NULL.
-///
-/// Arithmetic integer overflow currently **wraps** on this door (two's complement) — that is
-/// FINDING F-Y10-1 in `task/y10-ansi-door-ledger.md`, not this pin. Do not relax this CAST
-/// raise into a wrap to paper over that finding.
+/// CAST overflow raises. `CAST(200 AS TINYINT)` is outside `Int8`; standard SQL requires an error.
 #[tokio::test]
 async fn ansi_door_cast_overflow_int_to_tinyint_raises() {
     let ansi = native_ansi_door().await;

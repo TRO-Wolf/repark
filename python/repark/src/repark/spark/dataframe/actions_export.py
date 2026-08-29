@@ -1,4 +1,4 @@
-"""Actions/export region — DataFrameNaFunctions (r27 T0; technique A)."""
+"""Actions and exports for the DataFrame missing-data API."""
 
 from __future__ import annotations
 
@@ -32,25 +32,29 @@ class DataFrameNaFunctions:
         value: Any,
         subset: str | list[str] | tuple[str, ...] | None = None,
     ) -> DataFrame:
-        """Replace NULLs (PySpark ``DataFrame.na.fill``).
+        """Replace NULL values using Spark's scalar or mapping rules.
 
-        ``value`` is a scalar (fills every column whose type matches the value's family — numeric,
-        boolean, or string — restricted to ``subset`` if given) or a ``{column: value}`` dict (fills
-        each named column; ``subset`` is ignored, and an unknown column raises an
-        :class:`~repark.errors.AnalysisException`, Spark parity). A numeric value filled into an
-        integer column keeps that column's exact type and fills the **truncated** value
-        (``fillna(2.5)`` into a bigint → ``2``, still bigint — Spark parity), never widening the
-        column to double. ``subset`` accepts a ``str`` (wrapped, not char-iterated), list, or tuple.
+        Args:
+            value: A scalar or a mapping from column names to replacement values.
+            subset: Optional column name, list, or tuple for scalar replacement.
 
-        C4: refuse non-scalar / non-dict ``value`` with Spark's
-        ``NOT_BOOL_OR_DICT_OR_FLOAT_OR_INT_OR_STR`` (Apache ``test_fillna`` list pin).
+        Returns:
+            A lazy DataFrame with matching NULL values replaced.
+
+        Raises:
+            PySparkTypeError: If ``value`` has an unsupported type.
+            AnalysisException: If a mapping names an unknown column.
+
+        Notes:
+            Numeric replacement preserves integer width and truncates toward zero.
+            Mapping form ignores ``subset`` and follows Spark error behavior.
         """
-        # === r20 C4: fillna value/subset errorClass parity ===
+        # Spark rejects unsupported values with a stable error class.
         if isinstance(value, dict):
-            # subset ignored for dict form (Spark parity); still validate type if provided.
+            # Mapping form ignores subset, but still validates its type.
             _ = _normalize_subset(subset, accept_str=True, allowed_phrase="a list or tuple")
             return self._fill_dict(value)
-        # bool is an int subclass — accepted; list/tuple/None/object → Spark error class.
+        # bool is an int subclass, but Spark accepts it as its own scalar family.
         if not isinstance(value, (bool, int, float, str)):
             raise PySparkTypeError(
                 errorClass="NOT_BOOL_OR_DICT_OR_FLOAT_OR_INT_OR_STR",
@@ -63,22 +67,13 @@ class DataFrameNaFunctions:
         return self._fill_scalar(value, names)
 
     def _type_keys(self) -> dict[str, str]:
-        """Map each source column to its native logical type key (``int`` / ``long`` / ``double`` /
-        ``decimal(p,s)`` / …) — the exact width the fill literal casts to.
-
-        H1: keys are **engine** field names (unique). Pair with display names via
-        ``_engine_names`` when multi-name identity is present.
-        """
+        """Return native type keys by engine field name for width-preserving casts."""
         return {
             name: type_key for name, type_key, _ in self._dataframe._inner.logical_schema_fields()
         }
 
     def _fill_expr_for_bound(self, bound: Column, value: Any, type_key: str) -> Column:
-        """``coalesce(bound, lit)`` for one already-bound column (H1 multi-name safe).
-
-        Preserves origin on the result so ``select`` multi-name identity still treats
-        colliding display names as origin-qualified (octo H1-C2-003).
-        """
+        """Build a fill expression while preserving origin identity across projections."""
         from repark.spark import functions as F  # noqa: N812 — PySpark idiom
 
         literal = F.lit(value)
@@ -105,22 +100,17 @@ class DataFrameNaFunctions:
         )
 
     def _fill_expr(self, column_name: str, value: Any, type_key: str) -> Column:
-        """The ``coalesce(col, lit)`` fill for one column, preserving an integer column's width.
+        """Build a fill expression that preserves integer width and mixed-case field binding.
 
-        Spark's ``na.fill`` casts the fill value to the column's type: filling a numeric value into
-        an ``int`` / ``long`` column keeps that width and **truncates** a float toward zero
-        (``2.5`` → ``2``). We cast the literal to the column's exact integer type (``"int"`` /
-        ``"long"``) so ``coalesce`` stays that type, instead of DataFusion widening the whole column
-        to double. Non-integer targets (double / decimal / string / boolean) keep the plain literal.
-        The column ref is a quoted schema bind so mixed-case fields after a requested-spelling
-        projection still resolve (octo r4 C3-L-008).
+        Spark truncates numeric replacements for integer columns. A quoted schema bind keeps
+        requested-spelling projections resolvable.
         """
         return self._fill_expr_for_bound(
             self._dataframe._bind_schema_column(column_name), value, type_key
         )
 
     def _fill_dict(self, replacements: dict[str, Any]) -> DataFrame:
-        """Fill each ``{column: value}`` entry, width-preserving per the column's type."""
+        """Fill mapping entries in one projection."""
         known = set(self._dataframe.columns)
         for column_name in replacements:
             if column_name not in known:
@@ -129,18 +119,16 @@ class DataFrameNaFunctions:
                     f"available columns: {sorted(known)}"
                 )
         type_keys = self._type_keys()
-        # R-FACADE-HYGIENE (W7): multi-col fill = ONE projection (not N withColumn).
-        # H1: bind by engine/display pairs so multi-name frames do not AMBIGUOUS (C2-003).
+        # One projection preserves the frame's display and engine-name pairing.
         projections: list[Column | str] = []
         for bound in self._dataframe._iter_bound_columns():
             display = bound._projection_name or bound.spark_display_part()
             engine = None
-            # Match bound to engine field via quoted sql_expr (H1 multi-name).
+            # Match the bound display name to its engine field.
             if bound._sql_expr is not None and bound._sql_expr.startswith('"'):
                 engine = bound._sql_expr.strip('"').replace('""', '"')
             type_key = type_keys.get(engine or display, type_keys.get(display, ""))
             if display in replacements:
-                # _fill_expr_for_bound already names the projection.
                 projections.append(
                     self._fill_expr_for_bound(bound, replacements[display], type_key)
                 )
@@ -149,10 +137,9 @@ class DataFrameNaFunctions:
         return self._dataframe.select(*projections)
 
     def _fill_scalar(self, value: Any, subset: list[str] | None) -> DataFrame:
-        """Fill each type-matching column (within ``subset`` if set) with the scalar ``value``."""
+        """Fill scalar-compatible columns in one projection."""
         target_columns = set(self._columns_for_fill_value(value, subset))
         type_keys = self._type_keys()
-        # H1: one projection over engine-bound columns (avoids withColumn + display/engine skew).
         projections: list[Column] = []
         for bound in self._dataframe._iter_bound_columns():
             display = bound._projection_name or bound.spark_display_part()
@@ -167,11 +154,10 @@ class DataFrameNaFunctions:
         return self._dataframe.select(*projections)
 
     def _columns_for_fill_value(self, value: Any, subset: list[str] | None) -> list[str]:
-        """Return the columns a scalar fill applies to: those whose type-family matches ``value``.
+        """Return columns whose type family accepts ``value``.
 
-        Spark fills a numeric value into numeric columns only, a boolean into boolean columns, and a
-        string into string columns — never across families. ``bool`` is checked before ``int``
-        because Python's ``bool`` is an ``int`` subclass.
+        Numeric, boolean, and string values do not cross families. Check ``bool`` before ``int``
+        because Python treats ``bool`` as an integer subclass.
         """
         from repark.spark.types import (
             BooleanType,
@@ -188,9 +174,7 @@ class DataFrameNaFunctions:
         if isinstance(value, bool):
             allowed: tuple[type[DataType], ...] = (BooleanType,)
         elif isinstance(value, (int, float)):
-            # The full numeric family: X2 split Arrow Int64→LongType (and Int8/16/Float32
-            # to their own classes), so matching IntegerType alone silently skipped
-            # bigint columns (r16 combine S1).
+            # Include every numeric width so long columns are not skipped.
             allowed = (
                 ByteType,
                 ShortType,
@@ -206,12 +190,10 @@ class DataFrameNaFunctions:
             raise PySparkTypeError(
                 f"fillna value must be int, float, bool, str, or dict; got {type(value).__name__}"
             )
-        # H1: schema.fields use engine names on multi-name frames; pair with display names
-        # so fillna target list matches user-facing ``columns`` (octo H1-C2-003).
+        # Multi-name frames need display names for target matching and engine names for types.
         frame = self._dataframe
         if frame._display_names is not None and frame._engine_names is not None:
-            # Pair by position with logical engine schema (display overlay on .schema
-            # must not key type lookup — octo H1-C6).
+            # The display overlay must not drive type lookup.
             engine_types = {
                 name: type_key for name, type_key, _ in frame._inner.logical_schema_fields()
             }
@@ -270,8 +252,7 @@ class DataFrameNaFunctions:
         )
         if names is not None and not names:
             return self._dataframe
-        # H1: multi-name frames bind by engine/display pairs (octo H1-C2-002). Subset by
-        # display name still works; ambiguous subset names include every matching side.
+        # Match subset names against the display overlay, including ambiguous sides.
         if names is None:
             bound_cols = self._dataframe._iter_bound_columns()
         elif (
@@ -291,20 +272,18 @@ class DataFrameNaFunctions:
             bound_cols = [self._dataframe._bind_schema_column(name) for name in names]
         if not bound_cols:
             return self._dataframe
-        # Quoted schema bind (not bare ``F.col``) for mixed-case fields (octo r4 C3-L-008).
+        # Quoted binds preserve mixed-case field resolution.
         not_null_flags = [column.isNotNull() for column in bound_cols]
         if thresh is not None:
-            # Keep rows with at least `thresh` non-NULL values: sum the boolean flags cast to int.
             non_null_count = not_null_flags[0].cast("int")
             for flag in not_null_flags[1:]:
                 non_null_count = non_null_count + flag.cast("int")
             predicate = non_null_count >= thresh
         elif how == "all":
-            # Drop only all-NULL rows → keep a row with at least one non-NULL (OR of the flags).
             predicate = not_null_flags[0]
             for flag in not_null_flags[1:]:
                 predicate = predicate | flag
-        else:  # how == "any": keep only fully-non-NULL rows (AND of the flags).
+        else:
             predicate = not_null_flags[0]
             for flag in not_null_flags[1:]:
                 predicate = predicate & flag

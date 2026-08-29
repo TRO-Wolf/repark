@@ -10,11 +10,9 @@ Usage::
         [--codec zstd|uncompressed]
 
 ``--seed parquet``: polars → parquet → ``read_parquet`` (fast seed; avoids VALUES re-plan).
-``--concurrency N``: sets ``repark.write.max-concurrent-files`` at builder time (default engine 4).
-``--codec``: sets Iceberg ``write.parquet.compression-codec`` on CTAS tables (default ``zstd`` —
-engine default when the property is absent; ``uncompressed`` is the old-behavior escape hatch).
-Local FS will NOT show the S3 wall-clock win — the latency-injection Rust pin is the evidence;
-live S3 before/after is orchestrator-owned. Record local bytes + wall in the unit ledger.
+``--concurrency``: sets ``repark.write.max-concurrent-files`` at builder time (default engine 4).
+``--codec``: sets Iceberg ``write.parquet.compression-codec`` on CTAS tables;
+``uncompressed`` disables compression.
 """
 
 from __future__ import annotations
@@ -151,7 +149,6 @@ def main() -> None:
         phases.append(("merge_cow_upsert", time.perf_counter() - t0))
 
         concurrency_note = str(args.concurrency) if args.concurrency is not None else "default(4)"
-        # Local warehouse bytes (all files under the warehouse root).
         warehouse_bytes = sum(
             path.stat().st_size for path in warehouse.rglob("*") if path.is_file()
         )

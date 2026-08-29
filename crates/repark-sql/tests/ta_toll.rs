@@ -1,24 +1,4 @@
-//! Q11 — the ANSI door's **TA toll** (design §2 Q11: "ANSI toll: one smoke row (`f64::to_bits` vs
-//! golden) + the non-literal-period refuse row").
-//!
-//! The TA function set is owned by NEITHER door. `repark-ta` ships a thin register-only
-//! `TaExtension`; the Spark door composes it, and a **native** session opts in by installing it
-//! itself. That is the claim this file pins, and it is a claim about the SEAM, not about TA: an
-//! extension installed on a session is visible through EVERY door, because extensions are
-//! session-scoped, not dialect-scoped (design §2 Q13 / graft G5 — the line PR-6 freezes into
-//! `docs/design/session-api.md`).
-//!
-//! Session profile: **Native + `TaExtension`**. Deliberately NOT `SparkExtension` — a
-//! Spark-extended session would bring Spark expression semantics along and the row would stop
-//! describing this door.
-//!
-//! `repark-ta` is a DEV-dependency of this crate (feature `datafusion`); the crate-DAG guard
-//! scopes layering to normal edges, so no product edge is created (see `Cargo.toml`).
-//!
-//! The oracle is the crate's recorded C TA-Lib 0.4.0 golden (`ema_21.bin` over
-//! `fixture_close.bin`), read straight off disk — no golden is re-recorded here, and the
-//! comparison is strict `f64::to_bits` equality, the only comparison the goldens' own gate
-//! accepts.
+//! Q11 — the ANSI door's **TA toll**. The oracle is the recorded C TA-Lib 0.4.0 golden.
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -46,8 +26,7 @@ fn fixture(name: &str) -> Vec<f64> {
         .collect()
 }
 
-/// A NATIVE session (no Spark anything) with the ANSI door as its dialect and `TaExtension`
-/// installed at the build hook, holding the 5000-row close series as temp view `bars`.
+/// A native session uses the ANSI door and the `TaExtension`.
 fn ansi_session_with_ta() -> (ReparkSession, Vec<f64>) {
     let close = fixture("fixture_close");
     let ts: Vec<i64> = (0..close.len())
@@ -78,12 +57,7 @@ fn ansi_session_with_ta() -> (ReparkSession, Vec<f64>) {
     (session, close)
 }
 
-/// The smoke row: one TA kernel driven through **ANSI-door SQL** as a window function, compared
-/// `f64::to_bits`-exactly against the recorded C TA-Lib golden.
-///
-/// What it proves is the Q11 ruling, not the kernel (the kernel is gated in its own crate): a
-/// native session that opts into `TaExtension` gets the TA surface through THIS door, unchanged.
-///
+/// The smoke row drives one TA kernel through ANSI-door SQL and compares it with the C golden.
 /// Mutation: drop `.with_extension(Arc::new(TaExtension))` → `ta_ema` is unknown and the plan
 /// fails, which is also the assertion in `ta_is_absent_without_the_extension` below.
 #[tokio::test]
@@ -132,18 +106,13 @@ async fn ta_ema_through_the_ansi_door_is_bit_exact_against_the_golden() {
 /// The `ta_ema` call whose scalar period argument is a COLUMN rather than a literal.
 const NON_LITERAL_PERIOD_SQL: &str = "SELECT ta_ema(close, ts) OVER (ORDER BY ts) AS v FROM bars";
 
-/// The refuse row: a NON-LITERAL scalar parameter is a plan error, and the message names the
-/// function and the literal requirement. Scalar params are read off the plan's literal arguments,
-/// so a column reference cannot be honoured — and quietly producing something would be worse than
-/// refusing (design §2 Q11 names this row explicitly).
-///
+/// The refuse row requires a literal scalar parameter and names that requirement.
 /// Mutation: making the period argument accept a column silently turns this red.
 #[tokio::test]
 async fn ta_non_literal_period_refuses_loud_through_the_ansi_door() {
     let (session, _close) = ansi_session_with_ta();
 
-    // A lazy plan may refuse at plan time or at collect; either boundary is a legitimate refuse,
-    // so accept whichever fires — but require that ONE of them does.
+    // Lazy planning may refuse at plan time or during collection.
     let message = match session.sql(NON_LITERAL_PERIOD_SQL).await {
         Err(error) => error.to_string(),
         Ok(frame) => frame
@@ -159,9 +128,6 @@ async fn ta_non_literal_period_refuses_loud_through_the_ansi_door() {
 }
 
 /// The other side of "opt in": a native ANSI session WITHOUT the extension does not know `ta_*`.
-/// Without this, the smoke row above could be green for the wrong reason (TA leaking in through
-/// some always-on path), and the Q11 ruling — TA is owned by neither door, sessions opt in —
-/// would be untested.
 #[tokio::test]
 async fn ta_is_absent_from_a_native_ansi_session_without_the_extension() {
     let dialect: Arc<dyn SqlDialect> = Arc::new(AnsiDialect);
@@ -174,10 +140,6 @@ async fn ta_is_absent_from_a_native_ansi_session_without_the_extension() {
         .await
         .expect_err("ta_ema must be unknown until TaExtension is installed");
 }
-
-// =================================================================================================
-// TA-1 — SQL same-OVER WindowAggExec fusion (ANSI door + TaExtension). Plan-shape only.
-// =================================================================================================
 
 /// Four independent TA windows sharing one named `WINDOW w` (same PARTITION BY / ORDER BY).
 const SAME_NAMED_OVER_SQL: &str = "\
@@ -198,8 +160,7 @@ SELECT \
   ta_mom(close, 10) OVER (PARTITION BY sym ORDER BY ts) AS mom10 \
 FROM (SELECT ts, close, CAST(1 AS BIGINT) AS sym FROM bars) bars_part";
 
-/// Window → filter on an input column → window. Both outputs stay live so dead-code
-/// elimination cannot drop the first `WindowAggExec` and fake a fused count of 1.
+/// An input filter between live windows requires two execution nodes.
 const INTERVENING_INPUT_FILTER_SQL: &str = "\
 SELECT ema5, \
        ta_sma(close, 10) OVER (PARTITION BY sym ORDER BY ts) AS sma10 \
@@ -311,8 +272,7 @@ async fn assert_window_agg_exec_count(
 
 #[tokio::test]
 async fn sql_same_named_over_window_fuses_to_one_window_agg_exec() {
-    // Perf-note idea 11: many `ta_*(…) OVER w` sharing PARTITION BY / ORDER BY must plan
-    // one WindowAggExec. Native session + TaExtension — not SparkExtension (Q11 profile).
+    // Shared window specifications should fuse these functions into one execution node.
     let (session, _close) = ansi_session_with_ta();
     assert_window_agg_exec_count(
         &session,
@@ -338,10 +298,7 @@ async fn sql_same_inline_over_spec_fuses_to_one_window_agg_exec() {
 
 #[tokio::test]
 async fn sql_intervening_filter_between_windows_stacks_window_agg_exec() {
-    // Measured truth (2026-08-15, freeze cd0db4f): an intervening filter between two *live*
-    // windows stacks (2 WindowAggExec). Predicate pushdown of `close > 0` does not re-fuse
-    // the two logical WindowAggr nodes. A filter that does not keep `ema5` live is not this
-    // pin — unused first-window output is eliminated and the count collapses to 1 by DCE.
+    // A filter between live window outputs requires two execution nodes.
     let (session, _close) = ansi_session_with_ta();
     assert_window_agg_exec_count(
         &session,

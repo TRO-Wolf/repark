@@ -1,12 +1,10 @@
-"""Generator-shape, hygiene and determinism pins for the secrets family (DS-3).
+"""Generator-shape, hygiene and determinism pins for the secrets family.
 
 ACCEPTANCE PIN — read this before adding an expectation to any of these tests.
-Reads of this fixture behave **NORMALLY** today: nothing redacts, masks, warns
-about, or refuses a credential-named data column. The opt-in secrets-flagging
-mechanism is a roadmap feature that this fixture deliberately PREDATES, so the
-fixture's job is to exist and stay honest until that feature arrives, not to
-assert behavior that does not exist. Facade-level read pins land in DS-4, not
-here.
+Reads of this fixture behave **NORMALLY**: nothing redacts, masks, warns about,
+or refuses a credential-named data column. Opt-in secrets-flagging is a later
+feature this fixture deliberately PREDATES; facade-level read pins land in DS-4,
+not here.
 
 The needle inventory this family stands in for is the facade's
 ``prop_key_is_secret`` mirror — but this lane is pure pyarrow and does NOT import

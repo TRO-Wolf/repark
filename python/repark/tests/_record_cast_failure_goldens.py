@@ -1,34 +1,20 @@
 """Record mode for the cast-failure corpus — re-derive every Spark half from live PySpark.
 
-NOT a ``test_`` module: pytest never collects it. It is the driver that produced the recorded
-Spark halves / error needles in ``test_cast_failure_parity.py``, committed so the "recorded
-against live PySpark 4.1.2" claim is falsifiable from inside the repo rather than only from the
-session that made it (the golden-drift blind spot ``docs/testing.md`` names).
-
-It imports ``ROWS`` from the COMMITTED test module and runs each row's OWN recipe — the same
-helpers the suite uses — on a live PySpark session. The recorded golden and the asserted recipe
-therefore cannot drift apart: there is one recipe, not two copies.
-
-Raise-class / error rows re-check that live Spark still raises with the recorded needle rather
-than returning a table. Split rows whose Spark half is a success re-derive the table; split rows
-whose Spark half is a raise re-check the needle.
-
-Run it (needs a JVM and ``pyspark``, i.e. ``uv sync --extra record``)::
+NOT a ``test_`` module: pytest never collects it. It imports ``ROWS`` from the committed test
+module and runs each row's own recipe on live PySpark, so the recorded golden and the asserted
+recipe cannot drift apart. Run it (needs a JVM and ``pyspark``, i.e. ``uv sync --extra record``)::
 
     JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \\
         PYTHONPATH=python/repark-parity/src \\
         .venv/bin/python python/repark/tests/_record_cast_failure_goldens.py
 
 Hold ``/tmp/grok-jvm-record.lock`` around the process (conductor B4). Exit code 0 means every
-recorded half still reproduces bit-for-bit (schema name/type/nullability then values) and every
-error-class still raises with its needle. Non-zero prints each mismatch with the live schema and
-rows (or the live exception), which are the values to paste back into the module after deciding
-the move is deliberate. It never edits the corpus — re-recording is a human decision, and a
-driver that rewrote its own oracle would launder drift.
+recorded half reproduces bit-for-bit and every error class still raises with its needle; non-zero
+prints the live values to paste back after a deliberate move. It never edits the corpus —
+re-recording is a human decision; a driver that rewrote its own oracle would launder drift.
 
-The Spark session basis is pinned here, not guessed: ``local[2]``, ANSI on,
-``spark.sql.shuffle.partitions=2``, UI off, ``spark.sql.session.timeZone=UTC`` — UTC is load-
-bearing for the TIMESTAMP→INT split (unix seconds).
+Spark basis pinned here, not guessed: ``local[2]``, ANSI on, shuffle partitions 2, UI off,
+``spark.sql.session.timeZone=UTC`` — UTC is load-bearing for the TIMESTAMP→INT split.
 """
 
 from __future__ import annotations
@@ -37,8 +23,8 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-# Run as a script from anywhere: the corpus is a sibling module, imported by name so the driver
-# reads the SAME rows the suite asserts (never a copy).
+# Run as a script from anywhere: import the sibling corpus by name — the driver must read the
+# SAME rows the suite asserts, never a copy.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 if TYPE_CHECKING:
@@ -123,7 +109,6 @@ def _record_split(spark: Any, row: CastRow) -> str | None:
     from repark_parity import FrameMismatchError, assert_frames_equal
 
     if row.which_raises == "repark":
-        # Spark succeeds — re-derive the table half.
         assert row.spark is not None
         try:
             live = run_cast_content(spark, row)
@@ -146,7 +131,6 @@ def _record_split(spark: Any, row: CastRow) -> str | None:
         print(f"[G6] {row.name} [split/spark-success] PASS")
         return None
 
-    # which_raises == "spark": Spark refuses — re-check the needle.
     assert row.spark_error_needle is not None
     try:
         message = run_cast_expect_error(spark, row)

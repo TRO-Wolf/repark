@@ -1,6 +1,4 @@
-//! Namespace describe and show handlers.
-//!
-//! Extracted MOVE-ONLY from `lib.rs` (r25 T0 DataFusion-style reorg). Zero behavior change.
+//! Spark namespace `DESCRIBE` and `SHOW` handlers.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -28,47 +26,21 @@ pub(crate) struct DescribeNamespace {
     pub(crate) extended: bool,
 }
 
-/// The namespace property keys Spark's `SupportsNamespaces.RESERVED_PROPERTIES` excludes from the
-/// `EXTENDED` `Properties` rendering because they already have their own row.
-///
-/// Live-oracle-derived (pyspark 4.0.0, a custom `DataSourceV2` catalog whose namespace metadata was
-/// `{comment, location, owner, k1, k2, Amid}`): `DESCRIBE NAMESPACE EXTENDED` rendered
-/// `Properties = ((Amid,vm), (k1,v1), (k2,v2))` — exactly the three reserved keys filtered, matched
-/// case-sensitively.
-///
-/// `location_uri` is a **`RePark` divergence** (Group Z, disclosed): it is not a Spark reserved key,
-/// it is `RePark`'s own U2 dual-write MIRROR of `location`
-/// ([`repark_iceberg::catalog::mirror_namespace_location_keys`]). Rendering it would surface an internal
-/// bookkeeping key that Spark-on-Iceberg has no equivalent of, and would duplicate the `Location`
-/// row's value, so it is filtered alongside the three Spark keys.
+/// Keys rendered as dedicated rows instead of inside `Properties`. The reserved-key match is
+/// case-sensitive (live-oracle provenance: `pyspark` 4.0.0 `DataSourceV2` run).
+/// `location_uri` is a disclosed `RePark` divergence: not a Spark reserved key — it is `RePark`'s
+/// own U2 dual-write mirror of `location`, filtered so the internal bookkeeping key never renders.
 pub(crate) const RESERVED_NAMESPACE_PROPERTIES: [&str; 4] =
     ["comment", "location", "owner", "location_uri"];
 
-/// Spark's `REDACTION_REPLACEMENT_TEXT` default — the literal string a redacted property value is
-/// replaced with (live oracle: `Properties = ((password,*********(redacted)))`).
+/// Spark's default replacement for redacted namespace properties.
 pub(crate) const REDACTION_REPLACEMENT_TEXT: &str = "*********(redacted)";
 
 /// ===========================================================================================
 /// Recognise and parse `DESCRIBE|DESC {NAMESPACE|DATABASE|SCHEMA} [EXTENDED] catalog.namespace`.
 ///
-/// sqlparser 0.59 has no namespace-describe statement at all, so — like
-/// [`try_parse_create_namespace`] — we drive sqlparser's public `Parser` ourselves ahead of the
-/// normal routing. `NAMESPACE` is not a sqlparser keyword (it tokenizes as a plain word) so it is
-/// matched by value; `DATABASE` / `SCHEMA` / `EXTENDED` / `DESCRIBE` / `DESC` are keywords.
-///
-/// **The Z6 disambiguation rule.** `DESCRIBE` is overloaded in Spark: `namespace`, `database`, and
-/// `schema` are all legal TABLE names, and Spark's grammar picks the namespace alternative only
-/// when a full identifier follows the keyword. The live oracle (pyspark 4.0.0) confirms:
-/// `DESCRIBE namespace` (nothing after) describes the TABLE `namespace`; `DESCRIBE namespace.tbl`
-/// describes table `tbl` in database `namespace`; `DESCRIBE db1.namespace` describes the table
-/// `namespace`. So this recogniser returns `None` — falling through to the normal routing and the
-/// DataFusion relation-describe — whenever the keyword is NOT followed by a complete object name
-/// that ends the statement. It commits (`Some`) only on the unambiguous namespace form.
-///
-/// `Some(Err(..))` means it IS a namespace describe but one `RePark` cannot resolve (a name that is
-/// not two-part `catalog.namespace` — the same [`resolve_namespace`] contract `CREATE`/`DROP
-/// NAMESPACE` enforce; Spark's single-part default-catalog and nested `a.b` forms are a disclosed
-/// Group Z divergence).
+/// Parse the namespace form while letting table describes fall through. A complete object name
+/// commits to this handler; malformed or ambiguous tails remain on normal routing.
 /// ===========================================================================================
 pub(crate) fn try_parse_describe_namespace(sql: &str) -> Option<Result<DescribeNamespace>> {
     let dialect = DatabricksDialect {};
@@ -110,50 +82,9 @@ pub(crate) fn try_parse_describe_namespace(sql: &str) -> Option<Result<DescribeN
 /// `DESCRIBE {NAMESPACE|DATABASE|SCHEMA} [EXTENDED] catalog.namespace` → Spark's two-column
 /// `info_name` / `info_value` metadata frame, read from the catalog's namespace properties.
 ///
-/// The output shape is pinned to a LIVE pyspark 4.0.0 oracle run against a **`DataSourceV2`**
-/// catalog (the class `RePark`'s Iceberg catalogs are), not the v1 session catalog, because the two
-/// differ: the v1 `DescribeDatabaseCommand` always emits `Comment` / `Location` / `Owner` (empty
-/// string when unset) while the v2 `DescribeNamespaceExec` emits each of those rows **only when the
-/// namespace metadata carries the key**. `RePark` follows v2:
-///
-/// | row | emitted when |
-/// |---|---|
-/// | `Catalog Name` | always — the registered catalog name, emitted RAW (Spark uses `catalog.name()`) |
-/// | `Namespace Name` | always — via [`quote_namespace_name_if_needed`], Spark's `NamespaceHelper.quoted` |
-/// | `Comment` | the `comment` property is present |
-/// | `Location` | [`repark_iceberg::catalog::resolve_namespace_location`] resolves (`location`, else the U2 `location_uri` mirror) |
-/// | `Owner` | the `owner` property is present |
-/// | `Properties` | `EXTENDED` only — always emitted then, `""` when there is nothing to show |
-///
-/// **Missing namespace** raises the oracle's class: the existence check fails with a
-/// [`DataFusionError::Plan`], which `repark_core::engine_err` classifies `Analysis` →
-/// `repark.errors.AnalysisException`, matching live pyspark's `AnalysisException` /
-/// `SCHEMA_NOT_FOUND` (SQLSTATE 42704). The check is explicit rather than relying on the catalog
-/// returning `ErrorKind::NamespaceNotFound`, so the class holds for every catalog implementation.
-///
-/// **Disclosed divergences (Group Z)** — the whole list, none silently dropped:
-/// 1. **`Owner` is emitted only when the catalog stores an `owner` property.** `RePark` never
-///    writes one, so in practice the row is absent. This is not an invented value: it is exactly
-///    what the v2 oracle does for a namespace whose metadata lacks `owner`.
-/// 2. **Single-part (`DESCRIBE NAMESPACE ns`) and nested (`cat.a.b`) names fail loud.** Spark
-///    resolves the first against the current catalog and supports the second; `RePark`'s namespace
-///    surface is two-part `catalog.namespace` throughout (`CREATE`/`DROP NAMESPACE` alike).
-/// 3. **`location_uri` is filtered from `Properties`** — see [`RESERVED_NAMESPACE_PROPERTIES`].
-/// 4. **The `SCHEMA_NOT_FOUND` text is carried inside DataFusion's "Error during planning: "
-///    prefix**, so `str(exc)` is prefixed where Spark's is not. The exception CLASS matches.
-/// 5. **Redaction is hard-wired to the DEFAULTS of both patterns** (`spark.redaction.regex` and
-///    `spark.sql.redaction.options.regex`) — `RePark` has no config surface for either, so a caller
-///    who re-tuned them in Spark sees a different redaction set here. The underscore/dash
-///    `access_key` spellings are shown by BOTH engines — see [`property_is_redacted`].
-/// 6. **`Location` falls back to the U2 `location_uri` mirror**
-///    ([`repark_iceberg::catalog::resolve_namespace_location`]); Spark emits `Location` only from a
-///    `location` metadata key. Latent today — `RePark`'s own `CREATE NAMESPACE … LOCATION` always
-///    writes `location`, so the fallback is reachable only for a namespace created outside `RePark`
-///    (a pre-existing Glue database), where surfacing the real path beats an absent row.
-/// 7. **A lone trailing `EXTENDED`** (`DESCRIBE NAMESPACE EXTENDED`) binds as the namespace NAME in
-///    both engines, but the messages differ: Spark raises `SCHEMA_NOT_FOUND` for a namespace called
-///    `EXTENDED`, `RePark` raises its two-part-name error (divergence 2). Both are
-///    `AnalysisException`.
+/// The v2 Spark shape is two columns with rows for catalog, quoted namespace, present comment,
+/// resolved location, present owner, and optional extended properties. Missing namespaces use the
+/// analysis error class; namespace resolution remains the two-part `RePark` contract.
 ///
 /// ===========================================================================================
 ///
@@ -230,12 +161,7 @@ pub(crate) fn describe_namespace_batch(
 
 /// Render the `EXTENDED` `Properties` value in Spark's exact format.
 ///
-/// Live oracle (pyspark 4.0.0, v2 catalog): the non-reserved keys, **sorted by key** (plain
-/// byte/lexicographic order — `Amid` sorts before `k1`), each rendered `(key,value)` with no
-/// escaping or quoting whatsoever, joined by `", "`, wrapped in one more pair of parentheses:
-/// `((Amid,vm), (k1,v1), (k2,v2))`. Values containing commas, spaces, or parentheses pass through
-/// raw (`{"a b": "c,d", "z": "(paren)", "empty": ""}` → `((a b,c,d), (empty,), (z,(paren)))`), and
-/// an empty set renders as the EMPTY STRING, not `()`.
+/// Non-reserved keys are sorted and rendered as raw `(key,value)` pairs; an empty set is empty.
 pub(crate) fn render_namespace_properties(properties: &HashMap<String, String>) -> String {
     let mut pairs: Vec<(&String, &String)> = properties
         .iter()
@@ -261,32 +187,8 @@ pub(crate) fn render_namespace_properties(properties: &HashMap<String, String>) 
 
 /// Whether a namespace property's VALUE must be redacted in `DESCRIBE … EXTENDED` output.
 ///
-/// The path in Spark is `DescribeNamespaceExec` → `SQLConf.redactOptions` → `Utils.redact`, and it
-/// matters that it is **key OR value**: `Utils.redact` tests
-/// `regex.findFirstIn(key).orElse(regex.findFirstIn(value))` and replaces the VALUE on either hit.
-/// `redactOptions` folds **TWO** patterns over the pairs, so both apply here:
-/// - `spark.redaction.regex`, default `(?i)secret|password|token|access[.]?key` — note `[.]?`, an
-///   optional literal DOT only, NOT an underscore or a dash;
-/// - `spark.sql.redaction.options.regex`, default `(?i)url`.
-///
-/// Each alternative is an unanchored substring match, case-insensitive over ASCII (Java's `(?i)`
-/// without `UNICODE_CASE`), which is what `to_ascii_lowercase` + `contains` reproduces without a
-/// regex dependency.
-///
-/// Live truth table (pyspark 4.0.0, v2 catalog, 2026-07-25) — every row reproduced by
-/// `describe_namespace_extended_redaction_truth_table`:
-/// `password`/`SeCrEt`/`my_token_2`/`accesskey`/`access.key` redact on the key;
-/// `jdbc_url`/`urlish`/`valueurl` redact on the `url` key pattern; `innocent` =
-/// `"my password is hunter2"` and `bare` = `"http://x/URL"` redact on the VALUE; while
-/// `plain`, `access_key`, `ACCESS-KEY` and `dashaccess-key` are all SHOWN.
-///
-/// That last group is a **named, inherited Spark gap, not a `RePark` choice**: Spark's own default
-/// pattern spells the separator `[.]?`, so the underscore and dash spellings — including
-/// `AWS_ACCESS_KEY_ID` — are NOT redacted by Spark either. `RePark` matches the oracle exactly rather
-/// than over-redacting, so the parity claim stays true; a caller who wants those covered must widen
-/// the pattern in Spark too. (This predicate is therefore deliberately NARROWER than
-/// `repark_core::catalog_config`'s redaction set, which guards a different surface — logged
-/// catalog config — and answers to no oracle.)
+/// Redact when either the key or value matches Spark's default secret or URL patterns. The key
+/// check matters because Spark replaces the value on a key match.
 pub(crate) fn property_is_redacted(key: &str, value: &str) -> bool {
     redaction_pattern_matches(key) || redaction_pattern_matches(value)
 }
@@ -332,7 +234,7 @@ pub(crate) fn quote_namespace_name_if_needed(part: &str) -> String {
 /// A parsed Spark `SHOW {NAMESPACES|SCHEMAS|DATABASES} [{IN|FROM} catalog] [LIKE] ['pattern']`.
 pub(crate) struct ShowNamespaces {
     /// The catalog named by `IN`/`FROM`. `RePark` has no current-catalog concept, so the clause is
-    /// mandatory here (a disclosed Group AB divergence) — resolution happens in the parser.
+    /// mandatory here; resolution happens in the parser.
     catalog: String,
     /// The `LIKE` pattern, unevaluated (Spark's `filterPattern` grammar — see
     /// [`filter_pattern_matches`]). `None` = show every namespace.
@@ -342,27 +244,9 @@ pub(crate) struct ShowNamespaces {
 /// ===========================================================================================
 /// Recognise and parse `SHOW {NAMESPACES|SCHEMAS|DATABASES} [{IN|FROM} catalog] [LIKE] ['pattern']`.
 ///
-/// sqlparser 0.59 parses `SHOW NAMESPACES …` as an opaque `Statement::ShowVariable` (DataFusion
-/// then refuses it with "SHOW [VARIABLE] is not supported unless `information_schema` is
-/// enabled")
-/// and `SHOW SCHEMAS` / `SHOW DATABASES` as `Statement::ShowSchemas` / `ShowDatabases`, which
-/// DataFusion refuses with "Unsupported SQL statement". None of the three works today, so this
-/// intercept shadows no working behaviour — measured, not assumed (AB6).
-///
-/// **Disambiguation (the Z6 question, answered differently).** `DESCRIBE` needed a fall-through
-/// because `namespace`/`database`/`schema` are legal TABLE names and Spark routes
-/// `DESCRIBE namespace` to the table describe. `SHOW` has no such overload: Spark's grammar has no
-/// `SHOW <relation>` form at all, so `SHOW NAMESPACES|SCHEMAS|DATABASES` can only ever be this
-/// statement, and a table named `namespaces` is reached through `SELECT`/`DESCRIBE`, never `SHOW`.
-/// The head is therefore unambiguous and this recogniser COMMITS on it: a malformed tail becomes
-/// `Some(Err(..))` naming the supported form, matching Spark (which raises `ParseException` /
-/// `PARSE_SYNTAX_ERROR` for `SHOW NAMESPACES IN cat GARBAGE`) rather than falling through to
-/// DataFusion's opaque `ShowVariable` refusal.
-///
-/// `NAMESPACES` is not a sqlparser keyword (it tokenizes as a plain word) so it is matched by
-/// value; `SCHEMAS` / `DATABASES` / `IN` / `FROM` / `LIKE` are keywords. `FROM` is Spark's
-/// documented synonym for `IN` (oracle-confirmed identical), and the `LIKE` keyword itself is
-/// optional — the live oracle accepts a bare pattern literal (`SHOW NAMESPACES IN cat 'al*'`).
+/// The head is unambiguous because `SHOW <relation>` is not a supported Spark form. Once matched,
+/// malformed tails return a targeted error instead of falling through to another handler. `FROM`
+/// is a synonym for `IN`, and the `LIKE` keyword is optional before a pattern literal.
 /// ===========================================================================================
 pub(crate) fn try_parse_show_namespaces(sql: &str) -> Option<Result<ShowNamespaces>> {
     let dialect = DatabricksDialect {};
@@ -444,57 +328,11 @@ pub(crate) fn show_namespaces_err(err: ParserError) -> DataFusionError {
 }
 
 /// ===========================================================================================
-/// `SHOW {NAMESPACES|SCHEMAS|DATABASES} {IN|FROM} catalog [LIKE 'pattern']` → Spark's one-column
-/// `namespace` frame, read from the catalog's real `Catalog::list_namespaces`.
+/// `SHOW NAMESPACES`, `SHOW SCHEMAS`, and `SHOW DATABASES` return a one-column namespace frame.
 ///
-/// Pinned to a LIVE pyspark 4.0.0 oracle run against a **`DataSourceV2`** catalog (the class
-/// `RePark`'s Iceberg catalogs are — the Group Z rule), reproducing `ShowNamespacesExec`:
-///
-/// - **Schema:** one field, `namespace`, `Utf8`, **non-nullable**, with NO field metadata
-///   (verbatim `{"name":"namespace","nullable":false,"type":"string","metadata":{}}`).
-/// - **Row value:** Spark maps each namespace through `.quoted` — every PART rendered by
-///   `quoteIfNeeded` ([`quote_namespace_name_if_needed`]) and joined with `.`. So a namespace
-///   `my ns` shows as `` `my ns` `` and `123` as `` `123` ``.
-/// - **Row order:** the catalog's own order, **unsorted** — Spark applies none (oracle: a catalog
-///   returning `zeta, alpha, beta` shows exactly `zeta, alpha, beta`). `RePark` likewise passes
-///   `Catalog::list_namespaces` order through untouched rather than inventing a sort.
-/// - **`LIKE`:** Spark's `StringUtils.filterPattern`, applied to the RENDERED (quoted) row string,
-///   not the raw name — see [`filter_pattern_matches`].
-/// - **Synonyms:** `SHOW SCHEMAS` / `SHOW DATABASES` are byte-identical to `SHOW NAMESPACES`, and
-///   `FROM` is identical to `IN` (all oracle-confirmed).
-///
-/// **Disclosed divergences from the live oracle (Group AB)** — the whole list, none dropped:
-/// 1. **`IN`/`FROM` is MANDATORY.** Spark resolves a bare `SHOW NAMESPACES` against the current
-///    catalog (`spark_catalog` by default, or whatever `USE cat` last set) and — oracle-confirmed —
-///    ignores the current *namespace* entirely, always listing from the catalog ROOT. `RePark` has
-///    no current-catalog concept anywhere, so the clause is required and its absence fails loud
-///    naming the requirement rather than guessing. Same class as Group Z's divergence 2.
-/// 2. **Only a ONE-part `IN <catalog>` is accepted; nested `IN cat.ns` fails loud.** Spark lists
-///    the CHILDREN of `cat.ns` (oracle: `IN abcat.alpha` → `alpha.child1`, `alpha.child2`).
-///    `RePark`'s namespace surface is single-level `catalog.namespace` throughout, so a nested
-///    listing would always be empty; failing loud beats a silently-empty result that reads as
-///    "no children exist". Closing it needs nested `NamespaceIdent` support across the whole
-///    namespace surface — backlog, the same one Group Z named.
-/// 3. **Unknown catalog:** Spark falls back to reading the name as a NAMESPACE of the current
-///    catalog and raises `AnalysisException` / `SCHEMA_NOT_FOUND` (42704) for
-///    `` `spark_catalog`.`nosuchcatalog` ``. `RePark` has no fallback catalog, so it raises the
-///    registry's own "unknown catalog" error. The exception CLASS matches (`AnalysisException`,
-///    via [`catalog_handle`]'s `DataFusionError::Plan` → WG-3 classification); the message and the
-///    condition name do not.
-/// 4. **The `LIKE` regex engine is Rust's `regex`, not Java's `java.util.regex`.** Every pattern in
-///    the live truth table behaves identically, but the engines are not the same language: a
-///    pattern using backreferences or lookaround compiles in Java and fails to compile in `regex`,
-///    where `RePark` (like Spark on a `PatternSyntaxException`) silently drops that alternative;
-///    case-insensitivity is Unicode-aware here versus Java's ASCII-only `(?i)`; and the
-///    whole-pattern trim is `str::trim` (Unicode whitespace) versus Java `String.trim()`
-///    (`<= U+0020` only). Named, not hidden — see [`filter_pattern_matches`].
-/// 5. **A malformed tail is `AnalysisException`, not `ParseException`.** Spark raises
-///    `ParseException` / `PARSE_SYNTAX_ERROR` (42601) for `SHOW NAMESPACES IN cat GARBAGE`.
-///    `RePark`'s router reports it as a plan error; `repark.errors.ParseException` subclasses
-///    `AnalysisException` (Group S), so `except AnalysisException` catches both — but the exact
-///    leaf class differs. Same shape as the pre-existing create-namespace parse errors.
-/// 6. **The condition name / SQLSTATE are not structured.** `RePark` has no `getCondition()` /
-///    `getSqlState()` surface (the same backlog gap Groups S / X / Z disclosed).
+/// The `namespace` field is non-nullable. Names use quoted parts and catalog order. `LIKE` matches
+/// the rendered name. `IN` or `FROM` is required for the single-level catalog contract, and a
+/// malformed tail commits to a targeted analysis error.
 ///
 /// ===========================================================================================
 ///
@@ -515,14 +353,7 @@ pub(crate) async fn execute_show_namespaces(
 /// pattern matches. Split out from [`execute_show_namespaces`] so the two oracle claims it carries
 /// are testable without a catalog.
 ///
-/// Two things are load-bearing and both are live-oracle-derived:
-/// 1. **Render, THEN filter.** Spark maps `.quoted` before `filterPattern`, so the pattern sees the
-///    QUOTED string — `LIKE 'dash-name'` matches nothing while `` LIKE '`dash-name`' `` matches.
-/// 2. **No sorting.** Spark iterates the catalog's own order and emits matches in it (oracle: a
-///    catalog returning `zeta, alpha, beta` shows `zeta, alpha, beta`, and `LIKE 'alpha|zeta'`
-///    shows `zeta, alpha` — alternation order does NOT reorder the output). One namespace can match
-///    several alternatives yet is emitted once, because the decision is per-namespace, not
-///    per-alternative.
+/// Render before filtering and preserve catalog order; each namespace is emitted once.
 pub(crate) fn show_namespace_rows(
     namespaces: &[NamespaceIdent],
     pattern: Option<&str>,
@@ -564,47 +395,12 @@ pub(crate) fn quoted_namespace(namespace: &NamespaceIdent) -> String {
         .join(".")
 }
 
-/// Spark's `StringUtils.filterPattern`, the `SHOW … LIKE` matcher — NOT SQL `LIKE`.
-///
-/// Scala source (Spark 4.0.0, `o.a.s.sql.catalyst.util.StringUtils`), which the live oracle
-/// confirms row for row:
-/// ```text
-/// pattern.trim().split("\\|").foreach { subPattern =>
-///   try {
-///     val regex = ("(?i)" + subPattern.replaceAll("\\*", ".*")).r
-///     funcNames ++= names.filter { name => regex.matches(name) }
-///   } catch { case _: PatternSyntaxException => }   // a bad alternative is SILENTLY DROPPED
-/// }
-/// ```
-/// So, precisely: the WHOLE pattern is trimmed once (not each alternative — oracle:
-/// `'alpha| beta'` matches only `alpha`, because ` beta` keeps its leading space), split on a
-/// literal `|`, each alternative has every `*` replaced by `.*` and is then compiled as a
-/// **case-insensitive Java regex** and **FULL-matched** (`Regex.matches`, not `find`) against the
-/// name. It is a regex, not a glob: `?` is a quantifier, `.` matches any character, `%` and `_`
-/// are literals, and a syntactically invalid alternative matches nothing instead of raising.
-///
-/// Live truth table (pyspark 4.0.0, v2 catalog, 2026-07-25) — every row reproduced by
-/// `show_namespaces_like_truth_table`, matched against the RENDERED rows
-/// `[zeta, alpha, beta, Mixed_Case9, `my ns`, `123`, `dash-name`, `weird.name`]`:
-/// `alpha`/`ALPHA`/`AlPhA` → `alpha` (case-insensitive); `lph` → NOTHING (full match, not
-/// substring); `*lph*` → `alpha`; `al*` → `alpha`; `*ta` → `zeta, beta`; `*et*` → `zeta, beta`;
-/// `a?pha` → NOTHING (`?` is a quantifier); `al%` and `bet_` → NOTHING (no SQL-`LIKE` wildcards);
-/// `dash-name` → NOTHING but `` `dash-name` `` and `*dash-name*` → the row (the pattern sees the
-/// QUOTED string); `weird.name` → NOTHING (the row has backticks); `.*` → EVERYTHING (`.` is a
-/// metachar); `[` → NOTHING (swallowed `PatternSyntaxException`) and `alpha|[` → `alpha` (only the
-/// bad alternative is dropped); `  alpha  ` → `alpha` (trim); `alpha|zeta` → `zeta, alpha` in
-/// CATALOG order; `al*|alpha` → `alpha` ONCE (no duplicate); `''` → NOTHING; `*` → EVERYTHING.
-///
-/// Reproduced with Rust's `regex` rather than transliterated by hand — the 2026-07-25 Group Z
-/// DO-NOT. `\A`/`\z` (not `^`/`$`) give Java's `matches()` whole-input semantics exactly.
-/// Divergence 4 of [`execute_show_namespaces`] names the two engines' remaining differences.
+/// Spark's `StringUtils.filterPattern` is a case-insensitive Java-regex matcher, not SQL `LIKE`.
+/// Trim once, split on `|`, replace `*` with `.*`, and full-match each alternative. Invalid
+/// alternatives are silently dropped. `\A` and `\z` preserve Java's full-match behavior.
 pub(crate) fn filter_pattern_matches(name: &str, pattern: &str) -> bool {
     pattern.trim().split('|').any(|alternative| {
-        // NO wrapping group around the alternative: `\A(?:{alt})\z` would REBALANCE
-        // shifted-but-balanced parens Java rejects — `alpha)(` becomes the valid
-        // `\A(?:alpha)()\z` and MATCHES, where Spark's `Pattern.compile("alpha)(")` throws
-        // `PatternSyntaxException` and the alternative is silently dropped (C-AB-S2; the
-        // 64-pattern oracle diff is clean with the bare form, wrapper-artifact-free).
+        // Keep each alternative unwrapped so invalid syntax stays invalid.
         RegexBuilder::new(&format!(r"\A{}\z", alternative.replace('*', ".*")))
             .case_insensitive(true)
             .build()

@@ -2,44 +2,27 @@
 
 **Oracle.** Every ``spark`` table below was RECORDED in record mode against live PySpark 4.1.2
 (zulu-17, ``master("local[2]")``, ``spark.sql.ansi.enabled=true``,
-``spark.sql.shuffle.partitions=2``) on 2026-08-10, with ``spark.sql.session.timeZone`` set to the
-row's own zone. One SQL string per row runs on BOTH engines, so the recipe under test and the
-recipe the oracle ran are the same string — nothing here is hand-computed.
+``spark.sql.shuffle.partitions=2``), with ``spark.sql.session.timeZone`` set to the row's own
+zone. One SQL string per row runs on BOTH engines, so the recipe under test and the recipe the
+oracle ran are the same string — nothing here is hand-computed.
 
-**Most rows are now EQUALITY rows, and the flip is the evidence.** Split A shipped the
-session-timezone *configuration surface* and recorded this corpus as DISCLOSURES, because repark
-then extracted timestamp fields in the STORED zone: asserting ``repark == Spark`` would have been
-red on arrival, and deleting the rows until the fix landed would have hidden the class the census
-measured as a four-hour silent offset. Split B landed the extraction fix, so **thirteen** of those
-disclosures are now plain equality rows (``repark=None``) — and that flip is precisely the
-revert-red evidence the testing contract asks for: undo the fix and each one goes red.
-
-**The rows that are still disclosures are a different class, named on each row.** TZ-4 PR-2
-flipped the five zoneless-input / NTZ / CAST-str-round-trip rows to equality. Remaining
-disclosures (if any) are named in
-``test_the_extraction_class_converged_and_the_residue_is_named``. B-TZ-4
-(``CAST(ts AS STRING)`` render) is pinned in ``test_timestamp_cast_parity.py``.
-TZ-8 ``CAST(ts AS DATE)`` / ``to_date`` / ``datediff`` (rides CAST) rows in this
-corpus are equality (R-4); ``last_day`` / ``date_add`` over TIMESTAMP stay residual.
-
-The twelfth **was** ``CAST(TIMESTAMP AS BIGINT)`` returning nanoseconds (registry row TZ-5). It
-CONVERGED when :data:`TZ5_FIX` landed and is now an equality row, which is the same revert-red
-evidence the extraction flip is. The class's own per-entry-point corpus — SQL door and DataFrame
-door, both signs of the floor edge, NULL, and the reverse direction — is
-``test_timestamp_cast_parity.py``; this row stays here because it is where the class was first
-measured.
+**Equality rows are revert-red evidence.** Most rows were recorded as disclosures before the
+session-timezone extraction fix landed and are now plain equalities (``repark=None``); undo the
+fix and each one goes red. Remaining disclosures are named in
+``test_the_extraction_class_converged_and_the_residue_is_named``. The ``CAST(ts AS STRING)``
+render (B-TZ-4) is pinned in ``test_timestamp_cast_parity.py``, which also owns the TZ-5 and
+TZ-8 class corpora; ``last_day`` / ``date_add`` over TIMESTAMP stay residual.
 
 A disclosure row pins BOTH halves — repark's actual output (value AND Arrow type) and the
 recorded live-Spark output it differs from — and asserts that the two still differ. A row that
 silently CONVERGES goes RED and forces the disclosure to be revisited rather than laundered into
-"parity", the same discipline ``docs/testing.md`` puts on the live tier's disclosures.
+"parity".
 
 **Rows assert on the Arrow path** (``to_arrow``) through the parity comparator, so schema name,
 Arrow type and nullability are part of every assertion — never ``show``.
 
 **Re-deriving the goldens (record mode).** The driver that recorded every ``spark`` half is
-committed beside this module, so the "recorded against live PySpark 4.1.2" claim is falsifiable
-from inside the repo rather than only from the session that made it::
+committed beside this module::
 
     JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \\
         PYTHONPATH=python/repark-parity/src \\
@@ -49,18 +32,12 @@ It imports ``ROWS`` from THIS module and runs each row's own recipe under the ro
 the recorded golden and the asserted recipe cannot drift apart. It needs a JVM + ``pyspark``
 (``uv sync --extra record``) and is never collected by pytest.
 
-**Entry points.** Most rows go through the facade ``sql()`` door — over scalar literals, and over
-a real tz-aware timestamp COLUMN for the ``column_extract_*`` family. The
-``dataframe_api_extract_*`` rows go through the OTHER facade spelling,
-``df.select(F.year(...), ...)``, which crosses PyO3 as a standalone expression with no session
-attached and is a distinct user entry point rather than a synonym for the SQL door. Together they
-are the **facade** cell of the four-entry-point matrix the brief mandates. The other three cells
-are pinned in Rust, against the same instants and the same expectations:
-
-* native DataFrame API and Spark door — ``crates/repark-spark/tests/session_timezone.rs``
-* ANSI door — ``crates/repark-sql/tests/session_timezone_ansi_door.rs`` (it lives in that crate
-  because the crate-DAG policy allows ``repark-sql -> repark-spark`` as a dev edge and nothing
-  the other way).
+**Entry points.** Most rows go through the facade ``sql()`` door (scalar literals and the
+tz-aware ``column_extract_*`` COLUMN family). The ``dataframe_api_extract_*`` rows go through
+``df.select(F.year(...), ...)``, a distinct user entry point whose standalone expression crosses
+PyO3 with no session attached. The other matrix cells are pinned in Rust against the same
+instants: native DataFrame API + Spark door in ``crates/repark-spark/tests/session_timezone.rs``,
+ANSI door in ``crates/repark-sql/tests/session_timezone_ansi_door.rs``.
 """
 
 from __future__ import annotations
@@ -84,18 +61,16 @@ ZONE_TOKYO = "Asia/Tokyo"
 
 SESSION_TIME_ZONE_KEY = "spark.sql.session.timeZone"
 
-# The fix that closed the extraction class, named by every row it moved so a reader of a red row
-# knows what to look at.
+# Named by every row it moved, so a reader of a red row knows what to look at.
 FIX = "the session-timezone extraction fix (briefs/v2-engine-hardening.md, H-1a split B)"
-# What an equality row is EVIDENCE for: it was a recorded disclosure until the fix landed, so
-# reverting the fix reds it. That is the revert-red half of the testing contract, stated on the
-# row rather than promised in a ledger.
+# An equality row is EVIDENCE: it was a recorded disclosure until the fix landed, so reverting
+# the fix reds it.
 REVERT = f"reverting {FIX} reds this row."
-# The class the rows that did NOT fully converge still belong to. It is a different mechanism —
-# repark's TIMESTAMP Arrow export carries no timezone — and the registry row says why it splits.
+# The class the rows that did NOT fully converge still belong to: repark's TIMESTAMP Arrow
+# export carries no timezone.
 TZ4 = "registry row TZ-4 (repark's tz-naive TIMESTAMP Arrow export)"
-# The INPUT half of the same representation gap: repark cannot tell a zoneless timestamp literal
-# from a zone-suffixed one, because both land as `timestamp[ns]` holding the same ticks.
+# INPUT half of the same gap: repark cannot tell a zoneless timestamp literal from a
+# zone-suffixed one — both land as `timestamp[ns]` holding the same ticks.
 TZ7 = (
     "registry row TZ-7 (a zoneless TIMESTAMP input is read as UTC, not as a session-zone "
     "wall clock)"
@@ -160,14 +135,11 @@ class TimeZoneRow:
     entry_point: str = "sql"
 
 
-# ==================================================================================================
 # The tz-aware timestamp COLUMN (the column-path rows read from it, on both engines)
-# ==================================================================================================
 
-# The brief's recipe is written over a tz-aware timestamp COLUMN, not a scalar literal, because a
-# migrated job extracts from a column. These two instants straddle a calendar-year boundary in
-# New York (2024-01-01T04:30Z is 2023-12-31 23:30 EST) and a plain hour shift in Tokyo, so one
-# small in-memory frame exercises the year/month/day AND hour fields under both zones.
+# A migrated job extracts from a tz-aware COLUMN, not a scalar literal. The instants straddle a
+# calendar-year boundary in New York (2024-01-01T04:30Z is 2023-12-31 23:30 EST) and a plain hour
+# shift in Tokyo, so one small frame exercises year/month/day AND hour under both zones.
 COLUMN_VIEW = "tz_aware_instants"
 
 
@@ -187,11 +159,9 @@ COLUMN_SQL = (
 def register_column_view(session: object) -> None:
     """Register :data:`COLUMN_VIEW` — a two-row tz-aware TIMESTAMP column — on either engine.
 
-    ``createDataFrame`` + ``createOrReplaceTempView`` are spelled identically in PySpark and in
-    the repark facade, so the SAME function prepares the oracle and the engine under test. Schema
-    is INFERRED deliberately: both engines then infer an instant-typed TIMESTAMP and export
-    ``timestamp[us, tz=UTC]``, which is what makes the column genuinely tz-aware (a DDL
-    ``ts timestamp`` string makes repark's column tz-naive and would weaken the row).
+    ``createDataFrame`` + ``createOrReplaceTempView`` spell identically on both engines, so the
+    SAME function prepares the oracle and the engine under test. Schema is INFERRED deliberately:
+    a DDL ``ts timestamp`` string makes repark's column tz-naive and would weaken the row.
     """
     frame = session.createDataFrame(  # type: ignore[attr-defined]
         [(instant,) for instant in COLUMN_INSTANTS], ["ts"]
@@ -201,10 +171,8 @@ def register_column_view(session: object) -> None:
 
 # ----- the NAIVE (zoneless) wall-clock column: the TZ-7 shape a migrated job hits by accident ----
 #
-# `createDataFrame` over naive `datetime` objects is the ordinary way a Python job builds a
-# timestamp column, and BOTH engines type it as a plain default TIMESTAMP — no `TimestampNTZType`
-# anywhere. Spark localizes each wall clock in `spark.sql.session.timeZone` (so `hour` reads back
-# the digits it was given); repark stores the digits as UTC ticks, so `hour` comes back shifted.
+# `createDataFrame` over naive `datetime` objects types a plain default TIMESTAMP on both
+# engines; the session zone must localize each wall clock or `hour` shifts.
 NAIVE_COLUMN_VIEW = "naive_wall_clocks"
 NAIVE_WALL_CLOCKS: tuple[dt.datetime, ...] = (
     dt.datetime(2024, 6, 15, 12, 0),
@@ -269,11 +237,10 @@ DATAFRAME_API_SPELLING = (
 def dataframe_api_extraction(session: object) -> pa.Table:
     """The four extractors through ``df.select(F...)`` — spelled ONCE, run on either engine.
 
-    ``F.year(col)`` is a distinct user entry point from ``sql("SELECT year(ts)")``: on repark it
-    builds a standalone expression that crosses PyO3 with no ``SessionContext`` attached, which is
-    exactly the shape a registration-time session zone would miss. The Rust cell
-    (``native_dataframe_api_extracts_in_the_session_zone``) pins the engine-side equivalent; this
-    pins the spelling a user actually writes.
+    ``F.year(col)`` is a distinct user entry point from ``sql("SELECT year(ts)")``: a standalone
+    expression crosses PyO3 with no ``SessionContext`` attached — the shape a registration-time
+    session zone would miss. The Rust cell pins the engine-side equivalent; this pins the
+    spelling a user actually writes.
     """
     functions = _functions_module(session)
     frame = session.createDataFrame(  # type: ignore[attr-defined]
@@ -304,9 +271,7 @@ def _functions_module(session: object) -> object:
     return repark_functions
 
 
-# ==================================================================================================
 # Gap G1 — session timezone / tz-aware timestamps
-# ==================================================================================================
 
 _INT32 = pa.int32()
 
@@ -450,11 +415,8 @@ G1_ROWS: list[TimeZoneRow] = [
         "return annotation and this row reds.",
     ),
     # ----- the COLUMN family: the same class over a real tz-aware timestamp column ---------------
-    # Every row above extracts from a scalar literal. A migrated job extracts from a COLUMN, which
-    # is the recipe the brief actually writes ("year/month/day/hour over a tz-aware timestamp
-    # column under two non-UTC session zones"). These two rows run that recipe over an in-memory
-    # two-row frame registered as a temp view, so the divergence is pinned on data rather than on
-    # constant folding — and both engines carry the column as timestamp[us, tz=UTC].
+    # Every row above extracts from a scalar literal. These two rows run the migrated-job recipe
+    # over a registered temp view, so the divergence is pinned on data, not constant folding.
     TimeZoneRow(
         "column_extract_under_new_york_session",
         "G1",
@@ -507,11 +469,10 @@ G1_ROWS: list[TimeZoneRow] = [
         f"offset-sign bug rather than a session-zone one. {REVERT}",
         needs_column_view=True,
     ),
-    # ----- the ZONELESS-INPUT family: what this unit does NOT fix, measured ----------------------
-    # Every row above hands the engine a `…Z`-suffixed string, i.e. the case where "read every
-    # TIMESTAMP as a UTC instant" is RIGHT. These rows are the same rule applied where it is
-    # WRONG. A corpus that only carried the first kind could not tell the two apart, and that is
-    # precisely how the class was over-claimed on its first pass.
+    # ----- the ZONELESS-INPUT family: the shapes the instant-rule does NOT cover -----------------
+    # Every row above hands the engine a `…Z`-suffixed string, where "read every TIMESTAMP as a
+    # UTC instant" is RIGHT. These rows apply the same rule where it is WRONG, so the corpus can
+    # tell the two apart.
     TimeZoneRow(
         "zoneless_timestamp_literal_under_new_york_session",
         "G1",
@@ -741,9 +702,7 @@ G1_ROWS: list[TimeZoneRow] = [
 ]
 
 
-# ==================================================================================================
 # Gap G16 — epoch / DST / temporal edges (pre-1970, year boundary, leap day)
-# ==================================================================================================
 
 G16_ROWS: list[TimeZoneRow] = [
     TimeZoneRow(
@@ -877,12 +836,10 @@ G16_ROWS: list[TimeZoneRow] = [
         "pushed the session zone into the DATE path.",
     ),
     # ----- COMPOSITION: a DATE or string through `date_trunc` and back into an extractor ---------
-    # `date_trunc`'s output is tz-naive, and the extractor coercion reads a tz-naive timestamp as
-    # a UTC instant. So `date_trunc` must emit an INSTANT on every path, including the DATE/string
-    # path — which is also what Spark does, because its DATE -> TIMESTAMP promotion is a
-    # session-zone localization. A first draft of this unit emitted LOCAL wall-clock ticks there
-    # instead, and every one of these rows was a whole calendar day wrong. The single-hop DATE
-    # control row above cannot see it: it never chains two shims.
+    # `date_trunc` output is tz-naive and the extractor coercion reads a tz-naive timestamp as a
+    # UTC instant, so `date_trunc` must emit an INSTANT on every path, DATE/string included (as
+    # Spark does — its DATE -> TIMESTAMP promotion is a session-zone localization). The single-hop
+    # DATE control row above cannot see a two-shim composition error.
     TimeZoneRow(
         "date_trunc_of_a_date_composed_under_new_york_session",
         "G16",
@@ -984,9 +941,7 @@ G16_ROWS: list[TimeZoneRow] = [
 ROWS: list[TimeZoneRow] = [*G1_ROWS, *G16_ROWS]
 
 
-# ==================================================================================================
 # Helpers
-# ==================================================================================================
 
 
 def _session_at(zone: str) -> ReparkSession:
@@ -1009,9 +964,7 @@ def _frames_differ(actual: pa.Table, expected: pa.Table) -> bool:
     return False
 
 
-# ==================================================================================================
 # The rows
-# ==================================================================================================
 
 
 def run_row(row: TimeZoneRow, session: object) -> pa.Table:
@@ -1037,17 +990,11 @@ def run_row(row: TimeZoneRow, session: object) -> pa.Table:
 def test_session_timezone_row_matches_spark_or_still_diverges(row: TimeZoneRow) -> None:
     """Every recorded row, on the Arrow path (value AND Arrow type AND nullability).
 
-    Equality rows assert ``repark == Spark``.
-
-    Disclosure rows assert repark's pinned actual output — and when that assertion fails, the
-    failure is CLASSIFIED before it is raised, because the two ways it can fail need opposite
-    responses. If repark's live output now equals the recorded Spark golden, the engines have
-    CONVERGED and the row must be flipped, not deleted; if it matches neither half, that is a
-    regression and both halves must be re-derived in record mode. The classification is done on
-    ``actual`` — the engine's real output — so an engine change genuinely reaches it. (The
-    trailing ``_frames_differ(row.repark, row.spark)`` assertion compares two module constants and
-    can therefore only catch a bad EDIT: it is the row-well-formedness guard, not the convergence
-    detector, and it is kept for exactly that.)
+    Equality rows assert ``repark == Spark``. Disclosure rows assert repark's pinned output, and
+    a failed assertion is CLASSIFIED (matches Spark golden -> CONVERGED, flip the row; matches
+    neither -> regression, re-derive both halves). The classification runs on ``actual`` so an
+    engine change reaches it; the trailing ``_frames_differ(row.repark, row.spark)`` only
+    compares module constants — it is the row-well-formedness guard, not the detector.
     """
     session = _session_at(row.session_time_zone)
     actual = run_row(row, session)
@@ -1080,14 +1027,10 @@ def test_session_timezone_row_matches_spark_or_still_diverges(row: TimeZoneRow) 
 
 
 def test_session_timezone_row_set_covers_both_gap_budgets() -> None:
-    """The pin budget is part of the unit, so the corpus size is pinned, not incidental.
+    """Corpus size is pinned, not incidental; growth must be a decision.
 
-    The brief's opening budgets were G1 10-14 and G16 6-8, and the rule is that a size pin moves
-    only when the fix FORCES it. It did. An adversarial panel measured three wrong-answer families
-    against live Spark 4.1.2 that this corpus was structurally blind to — every original row hands
-    the engine a ``…Z``-suffixed string, i.e. only the shapes where reading a TIMESTAMP as a UTC
-    instant is right — so the budget is now G1 19 + ``current_timestamp`` and G16 10. What each
-    added row buys is named on the row; the counts are pinned here so growth stays a decision.
+    The zoneless-input rows exist because every scalar-literal row exercises only the shapes
+    where reading a TIMESTAMP as a UTC instant is right.
     """
     g1 = [row for row in ROWS if row.gap == "G1"]
     g16 = [row for row in ROWS if row.gap == "G16"]
@@ -1132,15 +1075,12 @@ def test_session_timezone_row_set_covers_both_gap_budgets() -> None:
 
 
 def test_the_extraction_class_converged_and_the_residue_is_named() -> None:
-    """The SHAPE of the corpus after the fix, pinned so a later edit cannot quietly reopen it.
+    """The corpus SHAPE after the fix, pinned so a later edit cannot quietly reopen it.
 
-    Two failure modes this catches, neither of which the per-row assertions can:
-
-    * an equality row silently reverting to a disclosure (someone "fixes a red row" by pinning
-      repark's new wrong answer instead of the engine) — the equality count drops;
-    * a disclosure being added back into the EXTRACTION class rather than into the class that
-      actually owns it. Every remaining disclosure is named here, one by one, with the registry
-      row that keeps it open, so admitting a new one is an edit a reviewer sees.
+    Catches two failure modes the per-row assertions cannot: an equality row silently reverting
+    to a disclosure (the equality count drops), and a disclosure added to the extraction class
+    instead of the class that owns it — every remaining disclosure is named here, so admitting a
+    new one is a visible edit.
     """
     equality = {row.name for row in ROWS if row.repark is None}
     disclosures = {row.name for row in ROWS if row.repark is not None}
@@ -1160,8 +1100,7 @@ def test_current_timestamp_type_and_zone_disclosure() -> None:
     """``current_timestamp`` — the G1 row whose VALUE cannot be pinned, so its TYPE is.
 
     Recorded live Spark 4.1.2 under ``spark.sql.session.timeZone=America/New_York``:
-    ``timestamp[us, tz=UTC]``, ``nullable=False``. TZ-4 PR-1 aligned SQL ``current_timestamp``
-    to that wire type (copy of the ``F.current_timestamp`` µs+UTC cast).
+    ``timestamp[us, tz=UTC]``, ``nullable=False``.
     """
     session = _session_at(ZONE_NEW_YORK)
     field = session.sql("SELECT current_timestamp() AS now_ts").to_arrow().schema.field("now_ts")
@@ -1219,16 +1158,12 @@ def test_session_timezone_conf_is_readable_back_and_defaults_to_utc() -> None:
 def test_runtime_conf_set_of_the_session_zone_is_accepted_but_not_applied() -> None:
     """A runtime `conf.set` / `conf.unset` of the zone: accepted (drop-in), never a lying read.
 
-    PySpark applies this key at runtime; repark resolves the zone once at session build. Refusing
-    the call was tried first and reds a pinned Apache drop-in test
-    (`test_create_dataframe_from_pandas_with_dst` sets it through PySpark's own `sql_conf`
-    helper), so the call is accepted with a one-time disclosure — and the value is NOT stored, so
-    `conf.get` keeps reporting the zone the live engine session actually has.
-
-    The value is also NOT VALIDATED, because validation is the engine's and happens once at build.
-    That is a knowing laxness (live Spark raises `[INVALID_CONF_VALUE.TIME_ZONE]` for a garbage
-    zone here), so the garbage leg is pinned too — and the warning text is asserted to SAY that
-    the value is unvalidated, rather than leaving a caller to infer it from a silent no-op.
+    repark resolves the zone once at session build, but refusing the runtime call would break
+    pinned Apache drop-in tests (PySpark's `sql_conf` helper sets it), so the call is accepted
+    with a one-time disclosure — the value is NOT stored, so `conf.get` keeps reporting the zone
+    the live engine session actually has. The value is also NOT VALIDATED (validation is the
+    engine's, at build) — a knowing laxness, so the warning text must SAY the value is
+    unvalidated and the garbage leg is pinned.
     """
     import warnings
 
@@ -1265,11 +1200,10 @@ def test_runtime_conf_set_of_the_session_zone_is_accepted_but_not_applied() -> N
 
 
 def test_apache_sql_conf_context_manager_round_trips_the_session_zone() -> None:
-    """The drop-in shape that drove the decision, exercised directly.
+    """PySpark's `sql_conf` helper shape: read the old value, set a new one, restore it.
 
-    PySpark's `sql_conf` helper reads the old value, sets a new one, and restores it. Every step
-    must work on repark (accepted, warned, not applied) and the zone must be unchanged at the end
-    — that is what keeps the pinned Apache test green.
+    Every step must work on repark (accepted, warned, not applied) and the zone must be
+    unchanged at the end — that is what keeps the pinned Apache test green.
     """
     import warnings
 
@@ -1318,12 +1252,10 @@ def test_getorcreate_reuse_with_a_different_zone_warns_and_leaves_the_conf_alone
 def test_getorcreate_reuse_with_an_invalid_zone_warns_and_does_not_raise() -> None:
     """The DELIBERATE laxness on the reuse path (D-A1), pinned rather than described.
 
-    Zone validity needs the engine's zone database, and this repo keeps exactly ONE validator —
-    in the engine, at session build. On the reuse path no session is built, so a zone that would
-    fail the build is neither validated nor applied: the engine-knob warning fires and `conf.get`
-    still reports the live engine session's real zone. Live PySpark 4.1.2 raises here
-    (`[INVALID_CONF_VALUE.TIME_ZONE]`), so repark is knowingly laxer on this one path — which is
-    why it is a pin. If a future change starts raising (or starts swallowing more), this reds.
+    Zone validity has exactly ONE validator — the engine, at session build. On the reuse path no
+    session is built, so the zone is neither validated nor applied: the engine-knob warning fires
+    and `conf.get` reports the live engine session's zone. Live PySpark raises here, so repark is
+    knowingly laxer; a future change that starts raising (or swallows more) reds.
 
     Contrast `test_unknown_session_timezone_fails_loud_at_session_build`: the same garbage value
     on the BUILD path is refused loud.
@@ -1348,11 +1280,9 @@ def test_getorcreate_reuse_with_an_invalid_zone_warns_and_does_not_raise() -> No
 def test_padded_zone_is_normalized_so_conf_get_reports_the_engine_zone() -> None:
     """A padded builder value must not make `conf.get` report a string the engine trimmed away.
 
-    `repark_core::SessionTimeZone::parse` trims before parsing, so the live session holds
-    `Asia/Tokyo`. The facade normalizes the same way BEFORE storing (whitespace only — the engine
-    stays the sole validator), so the two agree. Without the normalization `conf.get` returns
-    `'  Asia/Tokyo \\t'` while the engine holds `Asia/Tokyo`: a facade/engine split-brain on the
-    exact surface this unit claims to own.
+    The engine trims before parsing; the facade normalizes the same way BEFORE storing (whitespace
+    only — the engine stays the sole validator). Without it `conf.get` and the engine would
+    disagree on the exact surface this unit owns.
     """
     import repark
 

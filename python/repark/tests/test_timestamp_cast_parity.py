@@ -8,18 +8,16 @@ shaped, and wrong. The engine fix is ``repark_functions::timestamp_cast`` plus t
 
 **Oracle.** Every ``spark`` table below was RECORDED in record mode against live PySpark 4.1.2
 (zulu-17, ``master("local[2]")``, ``spark.sql.ansi.enabled=true``,
-``spark.sql.shuffle.partitions=2``) on 2026-08-11, with ``spark.sql.session.timeZone`` set to the
+``spark.sql.shuffle.partitions=2``), with ``spark.sql.session.timeZone`` set to the
 row's own zone — the same basis ``test_session_timezone_parity.py`` was recorded on. One recipe
 per row runs on BOTH engines, so the recipe under test and the recipe the oracle ran are the same
 code; nothing here is hand-computed.
 
-**Why a corpus of its own, beside the timezone one.** The class was first measured as a single
-disclosure row inside ``test_session_timezone_parity.py``
-(``pre_1970_timestamp_cast_to_bigint``), which is where it stays as the flip evidence. But the
-class is **zone-independent** — probed under ``America/New_York``, ``Asia/Tokyo`` and ``UTC``, a
-cast reads the instant and never a wall clock — so its own rows do not belong in a corpus whose
-budget documents timezone semantics. They live here, and the timezone corpus keeps exactly the one
-row that recorded the divergence.
+**Why a corpus of its own, beside the timezone one.** The class is **zone-independent** — probed
+under ``America/New_York``, ``Asia/Tokyo`` and ``UTC``, a cast reads the instant and never a wall
+clock — so its rows do not belong in a corpus whose budget documents timezone semantics. They
+live here, and the timezone corpus keeps exactly the one row that recorded the divergence
+(``pre_1970_timestamp_cast_to_bigint``).
 
 **The floor edge is why half these rows are negative.** Spark uses ``Math.floorDiv``. Truncation
 toward zero — what an arrow ``Timestamp(Second)`` cast hop gives, and the plausible way to write
@@ -30,8 +28,8 @@ the other half of that fence, so the fix cannot be "always subtract one".
 
 **B-TZ-4.** ``CAST(TIMESTAMP AS STRING)`` is Spark's session-zone space-separated ``string``
 (trailing-zero fraction trimmed; NTZ is the stored wall). Every ``spark`` half below was
-RECORDED against live PySpark 4.1.2 on 2026-08-13 (``task/v3-btz4-ledger.md`` §2). The recorded
-strings ARE the spec.
+RECORDED against live PySpark 4.1.2 (``task/v3-btz4-ledger.md`` §2). The recorded strings ARE
+the spec.
 
 **Entry points.** Three facade spellings, because a claim tested through one says nothing about
 the others (``docs/testing.md`` "Divergence-class claims"):
@@ -506,7 +504,7 @@ ROWS: list[TimestampCastRow] = [
         f"{REVERT}",
         entry_point="expr",
     ),
-    # ----- B-TZ-4: CAST(TIMESTAMP AS STRING) — recorded Spark 4.1.2 2026-08-13 -----------------
+    # ----- B-TZ-4: CAST(TIMESTAMP AS STRING) ------------------------------------------------------
     TimestampCastRow(
         "timestamp_to_string_ltz_under_new_york",
         ZONE_NEW_YORK,
@@ -759,7 +757,7 @@ def test_the_class_is_covered_per_entry_point_and_per_edge() -> None:
         "the answer"
     )
 
-    # Instant-producer type residue closed in TZ-4 PR-1; B-TZ-4 lands as equality too.
+    # All rows land as equality; a new disclosure here is an edit a reviewer must see.
     disclosures = {row.name for row in ROWS if row.repark is not None}
     assert disclosures == set(), (
         "TZ-4 PR-1 flipped the reverse-direction type disclosure to equality; B-TZ-4 lands as "

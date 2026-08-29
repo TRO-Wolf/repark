@@ -1,5 +1,7 @@
 # map — python/repark-parity/datasets/secrets
 
+CC-2 slice complete: comments and docstrings condensed; oracle discriminators, pins, mutation payloads, and safety contracts kept byte-exact; history narration deleted.
+
 ## Purpose
 
 Credential-named-column fixture. Ten secret-shaped column names (`apiKey`,

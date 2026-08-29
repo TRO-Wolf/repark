@@ -1,13 +1,9 @@
 """R-SQL-FUZZER — always-on smoke battery (200 queries, fixed seed 42).
 
-Named oracle deliverable for D3. DuckDB is the differential oracle (same as TPC-H).
-Determinism: seed is the fixed literal ``42`` (never time-based). Budget: <60s.
-
-WRONG-RESULT on an unbanked query fails the smoke (signal). Banked repros are pinned
-xfail-style by ``pin_id`` so the corpus stays red until a fix-forward slate flips them.
-Engine product fixes are out of scope for this unit — bank + pin only.
-
-Never touches AWS.
+DuckDB is the differential oracle (same as TPC-H). Determinism: seed is the fixed literal
+``42`` (never time-based). Budget: <60s. WRONG-RESULT on an unbanked query fails the smoke;
+banked repros are pinned xfail-style by ``pin_id`` so the corpus stays red until a
+fix-forward slate flips them. Never touches AWS.
 """
 
 from __future__ import annotations
@@ -69,9 +65,7 @@ def _minimizer_mod() -> Any:
     return importlib.import_module("repark_fuzz_bench.minimizer")
 
 
-# ---------------------------------------------------------------------------
 # Unit pins — determinism + compare kernel + data invariants
-# ---------------------------------------------------------------------------
 
 
 def test_fuzz_seed_42_is_byte_identical_across_calls() -> None:
@@ -112,7 +106,7 @@ def test_fuzz_no_nan_in_fixture() -> None:
 
 
 def test_fuzz_compare_ltz_utc_matches_naive_wall() -> None:
-    """TZ-4 PR-2: aware UTC instants compare equal to DuckDB's naive same wall."""
+    """Aware UTC instants compare equal to DuckDB's naive same wall (TZ-4)."""
     import datetime as dt
 
     compare = _compare_mod()
@@ -131,7 +125,7 @@ def test_fuzz_compare_integer_exact_and_float_tol() -> None:
 
 
 def test_fuzz_compare_decimal_not_collapsed_via_float() -> None:
-    """C1-L-003: distinct Decimals that share a float() image must not soft-equal."""
+    """Distinct Decimals that share a float() image must not soft-equal."""
     from decimal import Decimal
 
     compare = _compare_mod()
@@ -162,7 +156,7 @@ def test_fuzz_compare_order_sensitive() -> None:
 
 
 def test_fuzz_aggregate_order_includes_ord_tie() -> None:
-    """C1-L-001: aggregate LIMIT/ORDER BY must end with MIN(row_id) ord_tie."""
+    """Aggregate LIMIT/ORDER BY must end with MIN(row_id) ord_tie."""
     generator = _generator_mod()
     found_with_limit = 0
     for query in generator.generate_queries(SMOKE_SEED, SMOKE_N):
@@ -178,11 +172,10 @@ def test_fuzz_aggregate_order_includes_ord_tie() -> None:
 
 
 def test_fuzz_minimizer_drops_order_leftmost_first() -> None:
-    """C1-L-002 / C2-Q-001: first ORDER BY shrink removes the **leftmost** key.
+    """First ORDER BY shrink removes the **leftmost** key.
 
-    Mutation-proof: uses ``max_steps`` budget so only one ORDER BY item can be
-    dropped after the LIMIT step; asserts the remaining keys equal ``original[1:]``.
-    A rightmost-first policy would leave ``original[:-1]`` instead and fail this pin.
+    Mutation-proof: uses ``max_steps`` budget so only one ORDER BY item can be dropped after
+    the LIMIT step; a rightmost-first policy would leave ``original[:-1]`` and fail this pin.
     """
     import copy
 
@@ -230,7 +223,7 @@ def test_fuzz_minimizer_drops_order_leftmost_first() -> None:
 
 
 def test_fuzz_minimizer_join_drop_clears_where_on_dropped_table() -> None:
-    """C6-L-001: dropping a join arm clears WHERE that referenced that table."""
+    """Dropping a join arm clears WHERE that referenced that table."""
     minimizer = _minimizer_mod()
     datagen = _datagen_mod()
     # Generator rarely puts right-table cols in WHERE (usually left). Synthesize.
@@ -269,7 +262,7 @@ def test_fuzz_minimizer_join_drop_clears_where_on_dropped_table() -> None:
 
 
 def test_fuzz_minimizer_rejects_when_divergence_heals() -> None:
-    """C1-Q-001: minimizer returns None when base pair no longer diverges."""
+    """Minimizer returns None when the base pair no longer diverges."""
     minimizer = _minimizer_mod()
     generator = _generator_mod()
     datagen = _datagen_mod()
@@ -296,7 +289,7 @@ def test_fuzz_minimizer_rejects_when_divergence_heals() -> None:
 
 
 def test_fuzz_bank_roundtrip_minimized_fixture() -> None:
-    """C1-Q-002: banked TABLE comments restore the minimized database."""
+    """Banked TABLE comments restore the minimized database."""
     import tempfile
 
     bank = _bank_mod()
@@ -339,7 +332,7 @@ def test_fuzz_bank_roundtrip_minimized_fixture() -> None:
 
 
 def test_fuzz_long_pass_generator_deterministic_5000() -> None:
-    """C1-Q-004: long-pass SQL stream is byte-identical (generator half of census)."""
+    """Long-pass SQL stream is byte-identical (generator half of census)."""
     generator = _generator_mod()
     first = [q.sql for q in generator.generate_queries(SMOKE_SEED, 5000)]
     second = [q.sql for q in generator.generate_queries(SMOKE_SEED, 5000)]
@@ -347,9 +340,7 @@ def test_fuzz_long_pass_generator_deterministic_5000() -> None:
     assert len(first) == 5000
 
 
-# ---------------------------------------------------------------------------
 # Smoke run — 200 queries, seed 42, <60s
-# ---------------------------------------------------------------------------
 
 
 @pytest.fixture(scope="module")
@@ -383,9 +374,8 @@ def test_fuzz_smoke_seed_recorded(fuzz_smoke_result: Any) -> None:
 def test_fuzz_smoke_no_unbanked_wrong_results(fuzz_smoke_result: Any) -> None:
     """Any WRONG-RESULT must be in the banked corpus (xfail pins); else fail loud.
 
-    During D3 infrastructure landing, minimize=False in smoke so the gate stays
-    fast; banked corpus is produced by the long pass / CLI. Unbanked WRONG-RESULT
-    fails so silent correctness regressions cannot hide.
+    Smoke runs minimize=False so the gate stays fast; the banked corpus is produced by the
+    long pass / CLI. Unbanked WRONG-RESULT fails so silent correctness regressions cannot hide.
     """
     bank = _bank_mod()
     banked = bank.list_banked_repros(_REPROS_DIR)
@@ -428,9 +418,7 @@ def test_fuzz_smoke_has_some_ok(fuzz_smoke_result: Any) -> None:
     )
 
 
-# ---------------------------------------------------------------------------
 # Banked repro xfail pins (empty corpus → no parametrize cases)
-# ---------------------------------------------------------------------------
 
 
 def _banked_repro_cases() -> list[Any]:
@@ -464,8 +452,8 @@ def test_fuzz_banked_repro_still_diverges_or_xfail(repro_path: Path) -> None:
     assert sql, f"banked repro {repro_path} has no SQL body"
 
     bank = _bank_mod()
-    # Prefer the minimized TABLE fixture banked with the repro (C1-Q-002). Fall back
-    # to the full seed fixture only for legacy files without a TABLE section.
+    # Prefer the minimized TABLE fixture banked with the repro. Fall back to the full seed
+    # fixture only for legacy files without a TABLE section.
     minimized = bank.load_minimized_database(text, seed=seed)
     database = minimized if minimized is not None else datagen.generate_database(seed)
     repark_session = runner._open_repark(database)
@@ -495,7 +483,7 @@ def test_fuzz_banked_repro_still_diverges_or_xfail(repro_path: Path) -> None:
         )
 
     assert repark_rows is not None and duck_rows is not None
-    # Prefer bank header (C7-L-001); fall back to SQL text heuristic for legacy files.
+    # Prefer bank header; fall back to SQL text heuristic for legacy files.
     has_order_header = bank._comment_int(text, "has_order_by")
     if has_order_header is not None:
         order_sensitive = bool(has_order_header)
@@ -515,9 +503,7 @@ def test_fuzz_banked_repro_still_diverges_or_xfail(repro_path: Path) -> None:
     assert not result.equal
 
 
-# ---------------------------------------------------------------------------
 # Session hygiene smoke (createDataFrame path used by the fuzzer)
-# ---------------------------------------------------------------------------
 
 
 def test_fuzz_repark_registers_temp_views() -> None:
@@ -544,7 +530,7 @@ def test_default_seed_constant_is_42() -> None:
 
 
 def test_fuzz_bank_sequence_continues_and_refuses_overwrite() -> None:
-    """C4-L-001: next sequence scans disk; bank_repro refuses clobber."""
+    """Next sequence scans disk; bank_repro refuses clobber."""
     import tempfile
 
     bank = _bank_mod()
@@ -580,7 +566,7 @@ def test_fuzz_bank_sequence_continues_and_refuses_overwrite() -> None:
 
 
 def test_fuzz_corpus_index_lists_preexisting_repros() -> None:
-    """C4-L-002: corpus_index.json includes on-disk repros from prior runs."""
+    """corpus_index.json includes on-disk repros from prior runs."""
     import json
     import tempfile
 
@@ -613,7 +599,7 @@ def test_fuzz_corpus_index_lists_preexisting_repros() -> None:
 
 
 def test_fuzz_json_artifact_records_seed() -> None:
-    """C7-Q-001: census / to_json_obj always carry the resolved seed."""
+    """Census / to_json_obj always carry the resolved seed."""
     runner = _load_fuzz_package()
     result = runner.run_fuzzer(seed=SMOKE_SEED, count=3, bank=False, minimize=False)
     payload = result.to_json_obj()
@@ -623,7 +609,7 @@ def test_fuzz_json_artifact_records_seed() -> None:
 
 
 def test_fuzz_bank_header_records_has_order_by() -> None:
-    """C7-L-001: bank header carries has_order_by for pin replay."""
+    """Bank header carries has_order_by for pin replay."""
     import tempfile
 
     bank = _bank_mod()
@@ -655,7 +641,7 @@ def test_fuzz_bank_header_records_has_order_by() -> None:
 
 
 def test_fuzz_resolve_seed_rejects_negative() -> None:
-    """C3-L-001 / C3-Q-002: negative seeds break bank filenames — reject early."""
+    """Negative seeds break bank filenames — reject early."""
     runner = _load_fuzz_package()
     try:
         runner.resolve_seed(-1)
@@ -665,7 +651,7 @@ def test_fuzz_resolve_seed_rejects_negative() -> None:
 
 
 def test_fuzz_bank_compare_message_single_line() -> None:
-    """C3-Q-001: multiline compare messages must not split bank headers."""
+    """Multiline compare messages must not split bank headers."""
     import tempfile
 
     bank = _bank_mod()

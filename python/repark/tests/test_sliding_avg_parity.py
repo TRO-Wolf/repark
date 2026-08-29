@@ -1,10 +1,8 @@
-"""Live-Spark-oracle parity pins for the Float64 sliding-avg shim (R-RETRACT-SHIM rider).
+"""Live-Spark-oracle parity pins for the Float64 sliding-avg shim.
 
-X2 shipped with mathematically-derived Rust pins only; this rider adds the entry-point pins
-docs/testing.md requires for the parity claim: oracle-recorded values (live PySpark 4.1.2,
-zulu-17, 2026-07-29 — verbatim block in the X2 ledger) on the Arrow path, value AND type,
-including the NULL-in-frame cases where a hand-rolled ``retract_batch`` typically breaks
-(NULL retraction must not decrement the count; an all-NULL frame yields NULL avg / 0 count).
+Oracle-recorded values (live PySpark 4.1.2, zulu-17, 2026-07-29) on the Arrow path, value AND
+type, including the NULL-in-frame cases: NULL retraction must not decrement the count, and an
+all-NULL frame yields NULL avg / 0 count.
 """
 
 from __future__ import annotations
@@ -14,7 +12,7 @@ import pytest
 
 from repark import ReparkSession
 
-# One column with NULLs so frames cover: partial-NULL, all-NULL, and NULL-retract transitions.
+# One column with NULLs covers partial-NULL, all-NULL, and NULL-retract transitions.
 _SQL = (
     "SELECT id, "
     "avg(v) OVER (ORDER BY id ROWS BETWEEN 1 PRECEDING AND CURRENT ROW) AS a, "

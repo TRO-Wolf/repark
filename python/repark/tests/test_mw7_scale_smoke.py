@@ -1,16 +1,16 @@
 """MW-7: prove the scale-measurement driver's metric collection tells the truth.
 
-The MW-7 numbers were measured at 1e7 rows x 50 MERGEs, which no gate can run. This
-module runs the SAME driver at a scale CI can afford and pins the machinery: that the
-census counts what the metadata tables actually hold, that delete files grow one per
-partition per MERGE and compaction reclaims them, that the manifest count drops when
-`rewrite_manifests` runs, that the copy-on-write leg really is a zero-delete control, and
-that a timing is never recorded for a scan that answered differently.
+The MW-7 numbers were measured at 1e7 rows x 50 MERGEs, which no gate can run. This module
+runs the SAME driver at a scale CI can afford and pins the machinery: the census counts what
+the metadata tables actually hold, delete files grow one per partition per MERGE and
+compaction reclaims them, the manifest count drops when `rewrite_manifests` runs, the
+copy-on-write leg is a zero-delete control, and a timing is never recorded for a scan that
+answered differently.
 
-The 1e7 wall-clock figures are recorded in
-`task/ledgers/completed/mw-7-scale-measurement-ledger.md` as dated MEASUREMENTS. They are
-one machine's numbers and are deliberately NOT asserted here — a timing pin on CI hardware
-is not the MW-7 claim (the MW-5 precedent, `test_mw5_baseline_delta.py`).
+The 1e7 wall-clock figures live in
+`task/ledgers/completed/mw-7-scale-measurement-ledger.md` as dated MEASUREMENTS — one
+machine's numbers, deliberately NOT asserted here: a timing pin on CI hardware is not the
+MW-7 claim (`test_mw5_baseline_delta.py` precedent).
 """
 
 from __future__ import annotations

@@ -7,6 +7,7 @@ DELETE / UPDATE with a subquery `WHERE`). They are `#[cfg(test)]` children of th
 into files because the parent sits near its size ceiling.
 
 Created by **LRS-5 (2026-08-20)**: both had been included from `write/` with `#[path = "…"]`.
+Source comments retain predicate and cleanup contracts; implementation narration is omitted.
 AGENTS.md allows a test-fixture exception only where the canonical layout cannot work — here it
 works, so the attribute is gone rather than documented.
 

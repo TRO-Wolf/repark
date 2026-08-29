@@ -1,4 +1,4 @@
-"""Generator-shape and determinism pins for the schema-inference family (DS-2).
+"""Generator-shape and determinism pins for the schema-inference family.
 
 Pure pyarrow — no repark, no Spark, no JVM. CSV is the inference battleground;
 parquet is typed truth. Facade/smartCsv pins wait for DS-4.
@@ -94,7 +94,7 @@ def test_string_vs_float_halves_at_conflict_at() -> None:
 
 
 def test_leading_zero_width_is_derived_from_the_requested_rows() -> None:
-    """DS-3 rider: a fixed 06d retires the class once row_index reaches 1_000_000."""
+    """A fixed 06d retires the class once row_index reaches 1_000_000."""
     datagen = _datagen()
     assert datagen.LEADING_ZERO_MIN_WIDTH == 6
     # Small runs keep the historical six.

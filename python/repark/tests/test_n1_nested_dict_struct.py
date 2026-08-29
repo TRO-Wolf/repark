@@ -1,12 +1,10 @@
-"""r23b N1 — ``spark.sql.pyspark.inferNestedDictAsStruct.enabled`` (SPARK-35929).
+"""``spark.sql.pyspark.inferNestedDictAsStruct.enabled`` (SPARK-35929).
 
-Live Spark 4.1.2 oracle matrix recorded in ``task/n1-nested-dict-struct-ledger.md``
-before product code. Pins: value **and** Arrow type on ``collect`` / ``to_arrow`` for
-both conf states. Synthetic Orders-shaped fixtures only (Q10 field lists; invented values).
-
-Q8 regression pins:
-  (a) conf-false byte-identity with r22 T1 map behavior
-  (b) sparse-vector ``{size,indices,values}`` path conf-invariant
+Live Spark 4.1.2 oracle matrix in ``task/n1-nested-dict-struct-ledger.md``. Pins: value
+**and** Arrow type on ``collect`` / ``to_arrow`` for both conf states. Synthetic
+Orders-shaped fixtures only (field lists only; invented values). Regression pins:
+conf-false byte-identity with map behavior, and the sparse-vector
+``{size,indices,values}`` path conf-invariant.
 """
 
 from __future__ import annotations
@@ -22,7 +20,7 @@ from repark.spark.types import LongType, MapType, StringType, StructField, Struc
 
 CONF = "spark.sql.pyspark.inferNestedDictAsStruct.enabled"
 
-# Q10 Orders shape — field names only; values invented (no brokerage literals).
+# Orders shape — field names only; values invented (no brokerage literals).
 _LEG_FIELDS = (
     "OpenOrClose",
     "QuantityOrdered",
@@ -62,14 +60,12 @@ def _synthetic_cond() -> dict[str, object]:
     return {"Relationship": "OCO", "OrderID": 99}
 
 
-# ==================================================================================================
 # Conf registration / entry points
-# ==================================================================================================
 
 
 def test_conf_default_true_in_sqlconf_defaults(spark: ReparkSession) -> None:
     """Default is TRUE via ``_SQLCONF_DEFAULTS`` — a declared divergence from PySpark's
-    false (owner decision 2026-08-16; registry FA-4). ``"false"`` restores PySpark."""
+    false (registry FA-4). ``"false"`` restores PySpark."""
     assert spark.conf.get(CONF) == "true"
     # getAll is a property (PySpark camelCase), not a method.
     assert spark.conf.getAll[CONF] == "true"
@@ -104,14 +100,12 @@ def test_conf_set_and_builder_config() -> None:
         _reset_active_session_for_tests()
 
 
-# ==================================================================================================
-# Q8 (a): conf-false byte-identity with r22 T1 map behavior
-# ==================================================================================================
+# conf-false byte-identity with map behavior
 
 
 def test_q8a_conf_false_list_of_dict_is_map(spark: ReparkSession) -> None:
     """conf false (explicit — the repark default is now true): list-of-dict cell →
-    list<map>; mixed values stringify (r22 T1). Byte-identical to PySpark's default."""
+    list<map>; mixed values stringify. Byte-identical to PySpark's default."""
     for conf_val in ("false",):
         spark.conf.set(CONF, conf_val)
         data = [
@@ -123,7 +117,7 @@ def test_q8a_conf_false_list_of_dict_is_map(spark: ReparkSession) -> None:
         f1_type = table.schema.field("f1").type
         assert pa.types.is_list(f1_type) or pa.types.is_large_list(f1_type)
         assert pa.types.is_map(f1_type.value_type), f"conf={conf_val!r}: {f1_type}"
-        # Mixed double+string map values → string (Spark 4.1.2 / r22 T1).
+        # Mixed double+string map values → string (Spark 4.1.2).
         assert pa.types.is_string(f1_type.value_type.item_type) or pa.types.is_large_string(
             f1_type.value_type.item_type
         )
@@ -170,14 +164,12 @@ def _map_pylist_as_dicts(table: pa.Table) -> list[dict[str, object]]:
     return out
 
 
-# ==================================================================================================
-# Q8 (b): sparse-vector path conf-invariant
-# ==================================================================================================
+# sparse-vector path conf-invariant
 
 
 @pytest.mark.parametrize("conf_val", ["false", "true"])
 def test_q8b_sparse_vector_exact_keys_conf_invariant(spark: ReparkSession, conf_val: str) -> None:
-    """Exact ``{size,indices,values}`` sparse struct is conf-invariant (Q8)."""
+    """Exact ``{size,indices,values}`` sparse struct is conf-invariant."""
     spark.conf.set(CONF, conf_val)
     frame = spark.createDataFrame([Row(v={"size": 3, "indices": [0, 2], "values": [1.0, 2.0]})])
     table = frame.to_arrow()
@@ -199,9 +191,7 @@ def test_q8b_sparse_vector_exact_keys_conf_invariant(spark: ReparkSession, conf_
     assert collected["size"] == 3
 
 
-# ==================================================================================================
 # conf true: nested dict cells → StructType
-# ==================================================================================================
 
 
 def test_conf_true_list_of_dict_is_struct(spark: ReparkSession) -> None:
@@ -329,9 +319,7 @@ def test_conf_false_non_string_keys_map(spark: ReparkSession) -> None:
     assert pa.types.is_integer(m_type.key_type)
 
 
-# ==================================================================================================
-# Row-dict surface conf-invariant (Q6)
-# ==================================================================================================
+# Row-dict surface conf-invariant
 
 
 @pytest.mark.parametrize("conf_val", ["false", "true"])
@@ -372,9 +360,7 @@ def test_row_dict_nested_legs_follow_conf(spark: ReparkSession) -> None:
     assert t_true.column_names == t_false.column_names == ["Legs", "OrderId"]
 
 
-# ==================================================================================================
-# Explicit schema wins (Q11)
-# ==================================================================================================
+# Explicit schema wins
 
 
 @pytest.mark.parametrize("conf_val", ["false", "true"])
@@ -409,9 +395,7 @@ def test_explicit_struct_schema_wins(spark: ReparkSession, conf_val: str) -> Non
     assert frame.to_arrow().to_pylist()[0]["m"] == {"a": 1, "b": 2}
 
 
-# ==================================================================================================
-# Orders shape (Q10)
-# ==================================================================================================
+# Orders shape
 
 
 def test_orders_shape_conf_false_map(spark: ReparkSession) -> None:
@@ -483,16 +467,14 @@ def test_orders_row_dict_legs_under_conf_true(spark: ReparkSession) -> None:
     assert frame.collect()[0]["StopPrice"] == 9.5
 
 
-# ==================================================================================================
-# Octo C1 — reshape exact-key sparse only; oracle residual pins
-# ==================================================================================================
+# Reshape exact-key sparse only; oracle residual pins
 
 
 def test_c1_struct_with_indices_field_not_sparse_reshape(spark: ReparkSession) -> None:
-    """C1-L-001: conf-true struct with an ``indices`` field is NOT sparse reshape.
+    """conf-true struct with an ``indices`` field is NOT sparse reshape.
 
-    Prior bug: any struct containing field name ``indices`` was rebuilt as
-    ``{size,indices,values}`` only → KeyError or silent field drop.
+    Guards the over-eager reshape: any struct containing an ``indices`` field must not be
+    rebuilt as ``{size,indices,values}`` only (KeyError or silent field drop).
     """
     spark.conf.set(CONF, "true")
     frame = spark.createDataFrame([Row(v={"name": "x", "indices": [1, 2], "qty": 3})])
@@ -508,7 +490,7 @@ def test_c1_struct_with_indices_field_not_sparse_reshape(spark: ReparkSession) -
 
 
 def test_c1_sparse_superset_keeps_extra_under_conf_true(spark: ReparkSession) -> None:
-    """C1-L-001: super-set of sparse keys under conf true is plain struct (keeps extra)."""
+    """Super-set of sparse keys under conf true is plain struct (keeps extra)."""
     spark.conf.set(CONF, "true")
     cell = {"size": 3, "indices": [0], "values": [1.0], "extra": 9}
     frame = spark.createDataFrame([Row(v=cell)])
@@ -524,7 +506,7 @@ def test_c1_sparse_superset_keeps_extra_under_conf_true(spark: ReparkSession) ->
 
 
 def test_c1_explicit_struct_schema_with_indices_not_sparse(spark: ReparkSession) -> None:
-    """C1-L-001 / SAF-001: explicit StructType with ``indices`` field is not sparse reshape."""
+    """Explicit StructType with an ``indices`` field is not sparse reshape."""
     spark.conf.set(CONF, "false")
     schema = StructType(
         [
@@ -605,19 +587,17 @@ def test_c1_nested_list_of_dict_multi_row_union(spark: ReparkSession) -> None:
 
 
 def test_c1_none_key_refuses_under_conf_true(spark: ReparkSession) -> None:
-    """C1-L-002: None field name refuses (not silent skip)."""
+    """None field name refuses (not silent skip)."""
     spark.conf.set(CONF, "true")
     with pytest.raises(PySparkTypeError, match="should be a string"):
         spark.createDataFrame([Row(m={None: 1, "b": 2})])
 
 
-# ==================================================================================================
-# Octo C2 — nested list element merge + conf strip
-# ==================================================================================================
+# Nested list element merge + conf strip
 
 
 def test_c2_nested_list_of_list_of_dict_field_union(spark: ReparkSession) -> None:
-    """C2-L-001: list<list<dict>> merges sibling element struct keys under conf true."""
+    """list<list<dict>> merges sibling element struct keys under conf true."""
     spark.conf.set(CONF, "true")
     frame = spark.createDataFrame([Row(f1=[[{"a": 1}], [{"b": 2}]])])
     table = frame.to_arrow()
@@ -636,7 +616,7 @@ def test_c2_nested_list_of_list_of_dict_field_union(spark: ReparkSession) -> Non
 
 
 def test_c2_nested_list_of_list_multi_row_union(spark: ReparkSession) -> None:
-    """C2-L-001: multi-row list<list<dict>> merges element structs across rows."""
+    """Multi-row list<list<dict>> merges element structs across rows."""
     spark.conf.set(CONF, "true")
     frame = spark.createDataFrame(
         [
@@ -654,7 +634,7 @@ def test_c2_nested_list_of_list_multi_row_union(spark: ReparkSession) -> None:
 
 
 def test_c2_conf_truthy_strips_whitespace(spark: ReparkSession) -> None:
-    """C2-Q-001: conf values strip before truthiness (`` true`` / ``true\\n``)."""
+    """Conf values strip before truthiness (`` true`` / ``true\\n``)."""
     for raw in (" true", "true\n", "TRUE", "1"):
         spark.conf.set(CONF, raw)
         frame = spark.createDataFrame([Row(m={"a": 1})])
@@ -668,13 +648,11 @@ def test_c2_bool_long_field_refuses(spark: ReparkSession) -> None:
         spark.createDataFrame([Row(m={"a": True}), Row(m={"a": 1})])
 
 
-# ==================================================================================================
-# Octo C3 — empty-list field then list-of-dict must not stringify
-# ==================================================================================================
+# Empty-list field then list-of-dict must not stringify
 
 
 def test_c3_empty_list_field_then_list_of_dict(spark: ReparkSession) -> None:
-    """C3-L-001: struct field empty list then list-of-dict → array<struct>, not stringified."""
+    """Struct field empty list then list-of-dict → array<struct>, not stringified."""
     spark.conf.set(CONF, "true")
     frame = spark.createDataFrame(
         [
@@ -696,7 +674,7 @@ def test_c3_empty_list_field_then_list_of_dict(spark: ReparkSession) -> None:
 
 
 def test_c3_string_does_not_win_over_struct_field(spark: ReparkSession) -> None:
-    """C3-L-001: string field type must not absorb a later struct (CANNOT_MERGE)."""
+    """String field type must not absorb a later struct (CANNOT_MERGE)."""
     spark.conf.set(CONF, "true")
     with pytest.raises(PySparkTypeError, match="CANNOT_MERGE_TYPE"):
         spark.createDataFrame(

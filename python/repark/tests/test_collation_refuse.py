@@ -1,4 +1,4 @@
-"""G15 — collation refuses loudly (owner ruling 2026-08-12).
+"""G15 — collation refuses loudly.
 
 Every compare/order-changing path in the Y-7 inventory (plus Spark JSON
 ``__COLLATIONS``) either refuses with an actionable message (requested
@@ -41,7 +41,7 @@ def assert_g15(exc: BaseException, requested: str) -> None:
     assert "binary/default" in text, text
 
 
-# --- createDataFrame (the silently-wrong-count path) -----------------------------------------
+# createDataFrame (the silently-wrong-count path)
 
 
 def test_create_dataframe_unicode_ci_refuses(spark: ReparkSession) -> None:
@@ -111,7 +111,7 @@ def test_create_dataframe_default_string_type_untouched(spark: ReparkSession) ->
     assert table.column(0).to_pylist() == ["Alice", "alice"]
 
 
-# --- Column.cast / try_cast (A4) --------------------------------------------------------------
+# Column.cast / try_cast (A4)
 
 
 def test_cast_collated_string_type_refuses(spark: ReparkSession) -> None:
@@ -135,7 +135,7 @@ def test_cast_string_collate_type_token_refuses(spark: ReparkSession) -> None:
     assert_g15(caught.value, "UTF8_LCASE")
 
 
-# --- Spark SQL door (parse altitude) ----------------------------------------------------------
+# Spark SQL door (parse altitude)
 
 
 def test_sql_collate_expression_refuses(spark: ReparkSession) -> None:
@@ -174,7 +174,7 @@ def test_sql_collate_inside_literal_untouched(spark: ReparkSession) -> None:
     assert rows[0][0] == "COLLATE UTF8_LCASE"
 
 
-# --- F.expr / filter SQL-string (binding; not core.py) ----------------------------------------
+# F.expr / filter SQL-string (binding; not core.py)
 
 
 def test_expr_collate_refuses(spark: ReparkSession) -> None:
@@ -192,7 +192,7 @@ def test_filter_sql_collate_refuses(spark: ReparkSession) -> None:
     assert_g15(caught.value, "UTF8_LCASE")
 
 
-# --- Session / builder conf (silent-ignore path) ----------------------------------------------
+# Session / builder conf (silent-ignore path)
 
 
 def test_conf_set_collation_key_refuses(spark: ReparkSession) -> None:
@@ -220,7 +220,7 @@ def test_get_or_create_reuse_refuses_planted_collation_key() -> None:
         session.stop()
 
 
-# --- Construction + absence (A5) --------------------------------------------------------------
+# Construction + absence (A5)
 
 
 def test_string_type_construction_and_simple_string_untouched() -> None:

@@ -58,7 +58,7 @@ def _rows(spark: ReparkSession, projection: str) -> list[dict[str, object]]:
     return spark.sql(f"SELECT {projection} FROM {FQ}").to_arrow().to_pylist()
 
 
-# === Refusals — the measured silently-wrong pairs =========================================
+# Refusals — the measured silently-wrong pairs
 
 
 def test_date_to_int_overwrite_refuses(spark: ReparkSession) -> None:
@@ -124,7 +124,7 @@ def test_insert_into_overwrite_mode_refuses(spark: ReparkSession) -> None:
     assert _rows(spark, "k, v") == []
 
 
-# === The needle =============================================================================
+# The needle
 
 
 def test_refusal_names_the_column_both_types_and_the_spark_class(spark: ReparkSession) -> None:
@@ -151,7 +151,7 @@ def test_refusal_leaves_the_prior_snapshot_intact(spark: ReparkSession) -> None:
     assert _rows(spark, "k, v") == [{"k": 7, "v": 700}]
 
 
-# === Positive controls — the gate must not narrow a legal write ============================
+# Positive controls — the gate must not narrow a legal write
 
 
 def test_numeric_widening_still_overwrites(spark: ReparkSession) -> None:
@@ -202,10 +202,8 @@ def test_identity_roundtrip_still_overwrites(spark: ReparkSession) -> None:
     assert _rows(spark, "k") == [{"k": 1}]
 
 
-# === WI-2 — the four plain-INSERT doors ====================================================
-#
-# Each of these was measured writing 18262 (or a silent 1) before WI-2 and is a refusal now. The
-# refusal is an ANALYSIS refusal, so nothing is staged and no snapshot moves.
+# WI-2 — the four plain-INSERT doors
+# The refusal is an ANALYSIS refusal: nothing is staged and no snapshot moves.
 
 
 def _plain_insert_tables(spark: ReparkSession) -> None:

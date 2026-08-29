@@ -1,13 +1,11 @@
 """Record mode for the nested-container corpus — re-derive every Spark half from live PySpark.
 
-NOT a ``test_`` module: pytest never collects it. It is the driver that produced the recorded
-Spark halves in ``test_nested_container_parity.py``, committed so the "recorded against live
-PySpark 4.1.2" claim is falsifiable from inside the repo rather than only from the session that
-made it.
-
-It imports ``ROWS`` from the COMMITTED test module and runs each row's OWN recipe — the same
-``run_row`` the suite uses — on a live PySpark session. The recorded golden and the asserted
-recipe therefore cannot drift apart: there is one recipe, not two copies.
+Not collected by pytest: this driver produced the recorded Spark halves in
+``test_nested_container_parity.py`` and re-runs each row's own ``run_row`` on a live
+PySpark session, so the golden and the recipe cannot drift apart. Exit code 0 means
+every recorded half still reproduces bit-for-bit (schema name/type/nullability then
+values); a mismatch prints the live schema and rows. It never edits the corpus —
+re-recording is a human decision.
 
 Run it (needs a JVM and ``pyspark``, i.e. ``uv sync --extra record``)::
 
@@ -15,20 +13,10 @@ Run it (needs a JVM and ``pyspark``, i.e. ``uv sync --extra record``)::
         PYTHONPATH=python/repark-parity/src \\
         .venv/bin/python python/repark/tests/_record_nested_container_goldens.py
 
-With ``--emit`` the driver prints paste-ready ``_table(...)`` snippets for every row (Spark and,
-when the engines diverge, a repark half from a live repark session). Without the flag it only
-reports PASS / MISMATCH / MISSING and never rewrites the corpus.
-
-Exit code 0 means every recorded half still reproduces bit-for-bit (schema name/type/nullability
-then values). Non-zero prints each mismatch with the live schema and rows. It never edits the
-corpus — re-recording is a human decision.
-
-The Spark session basis is pinned here: ``local[2]``, ANSI on, ``spark.sql.shuffle.partitions=2``,
-UI off — the same basis the other corpus record drivers use.
-
-**JVM serialization.** Coordinate via ``/tmp/grok-jvm-record.lock`` (exclusive create / flock)
-when other lanes are recording. This driver itself does not take the lock — the operator /
-orchestrator holds it around the process.
+With ``--emit`` it prints paste-ready ``_table(...)`` snippets (Spark, plus a divergent
+repark half) instead of only reporting PASS / MISMATCH / MISSING. When other lanes
+record, the operator holds ``/tmp/grok-jvm-record.lock`` (exclusive create / flock)
+around this process; the driver itself does not take the lock.
 """
 
 from __future__ import annotations
@@ -38,8 +26,8 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-# Run as a script from anywhere: the corpus is a sibling module, imported by name so the driver
-# reads the SAME rows the suite asserts (never a copy).
+# Run as a script from anywhere: import the corpus sibling by name (same rows the
+# suite asserts, never a copy).
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 if TYPE_CHECKING:

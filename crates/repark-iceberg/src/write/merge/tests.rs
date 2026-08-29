@@ -361,7 +361,7 @@ fn skip_cardinality_only_lone_unconditional_delete() {
     )));
 }
 
-/// Critic-octo C2-Q1 / R5 for C1-S1: null Stage-B flag columns fail loud (mutation pin).
+/// R5: null Stage-B flag columns fail loud (mutation pin).
 #[test]
 fn consume_matched_work_batch_rejects_null_flag_columns() {
     let write_schema = Arc::new(arrow_schema());
@@ -410,7 +410,7 @@ fn consume_matched_work_batch_rejects_null_flag_columns() {
     );
 }
 
-/// P2a critic-octo C3: Stage B intern shares one `Arc<str>` across pairs for the same path.
+/// P2a: Stage B intern shares one `Arc<str>` across pairs for the same path.
 ///
 /// Mutation: push `Arc::from(path_str)` per row without intern lookup → `ptr_eq` fails
 /// and strong count no longer equals 1 + `pair_count` for that path.
@@ -479,7 +479,7 @@ fn stage_b_path_intern_shares_arc_across_pairs() {
     assert_eq!(Arc::strong_count(&unique_paths[1]), 2);
 }
 
-/// Critic-octo C3-Q1: shared null-flag helper fails loud (Stage A + Stage B).
+/// Shared null-flag helper fails loud (Stage A + Stage B).
 #[test]
 fn require_non_null_i64_rejects_null() {
     let array = Int64Array::from(vec![Some(1), None]);
@@ -488,7 +488,7 @@ fn require_non_null_i64_rejects_null() {
     assert!(err.to_string().contains("NULL match_count"), "got: {err}");
 }
 
-/// Critic-octo C2-Q2: [`MergeSql::insert_sql`] encodes NOT MATCHED first-match via `clause_id`,
+/// [`MergeSql::insert_sql`] encodes NOT MATCHED first-match via `clause_id`,
 /// not O(C²) `NOT applies` chains.
 #[test]
 fn insert_sql_uses_clause_id_not_oc2_prior_chain() {
@@ -1122,7 +1122,7 @@ fn generated_sql_quotes_identifiers() {
     );
 }
 
-// === r23 QI1: idents ===
+// === idents ===
 /// ===========================================================================================
 /// MERGE `quote_ident` joins the shared Spark/DF injection-probe battery (`idents::probes`).
 /// ===========================================================================================
@@ -1132,7 +1132,7 @@ fn qi1_merge_quote_ident_joins_spark_injection_battery() {
         let via_merge = quote_ident(probe);
         let via_ssot = crate::write::idents::quote_ident_spark(probe);
         assert_eq!(via_merge, via_ssot, "merge must delegate to idents SSOT");
-        // Independent oracle — not undouble-only (octo C1-Q-002).
+        // Independent oracle — not undouble-only.
         let expected = format!("\"{}\"", probe.replace('"', "\"\""));
         assert_eq!(via_merge, expected, "under-quote residual for {probe:?}");
     }

@@ -1,18 +1,15 @@
-//! Volume Indicators — `AD`, `ADOSC`, `OBV`, `MFI` (TA-Lib C 0.4.0 ports; see the crate docs
-//! for the numerics contract).
+//! Volume indicators from TA-Lib C 0.4.0. See the crate docs for numeric contracts.
 //!
-//! These are incremental accumulators. Recomputing a window from scratch (or calling the
-//! standalone [`crate::ema`] kernel from `ADOSC`) is mathematically close but bit-different.
-//! No FMA; `TA_IS_ZERO` is **not** used here — C uses a strict `tmp > 0.0` (AD/ADOSC) and a
-//! hard `pos+neg < 1.0` (MFI).
+//! Incremental accumulators preserve C order. AD/ADOSC use strict `tmp > 0.0`; MFI uses the
+//! hard `pos+neg < 1.0` guard. None use FMA.
 
 use crate::{Result, as_f64, check_lengths, check_period, nan_vec};
 
 /// ===========================================================================================
 /// C's `CALCULATE_AD` increment (`ta_AD.c` / `ta_ADOSC.c`).
 ///
-/// `tmp = high − low`; add only when `tmp > 0.0` (strict `>`, not `TA_IS_ZERO`). CLV order is
-/// load-bearing: `(((close−low)−(high−close))/tmp)*volume` — do not rewrite as `(2c−h−l)/tmp`.
+/// Add only when `tmp = high − low > 0.0`. Preserve the CLV order
+/// `(((close−low)−(high−close))/tmp)*volume`; algebraic rewrites round differently.
 /// ===========================================================================================
 fn calculate_ad(ad: &mut f64, high: f64, low: f64, close: f64, volume: f64) {
     let tmp = high - low;
@@ -24,8 +21,7 @@ fn calculate_ad(ad: &mut f64, high: f64, low: f64, close: f64, volume: f64) {
 /// ===========================================================================================
 /// `AD` — Chaikin A/D Line (`ta_AD.c`). Lookback 0.
 ///
-/// Incremental cumulative CLV·volume. Every bar emits the running total. A flat bar
-/// (`high == low`) re-emits the previous `ad` unchanged.
+/// Emits the incremental cumulative CLV·volume. Flat bars re-emit the previous total.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -44,11 +40,9 @@ pub fn ad(high: &[f64], low: &[f64], close: &[f64], volume: &[f64]) -> Result<Ve
 /// ===========================================================================================
 /// `ADOSC` — Chaikin A/D Oscillator (`ta_ADOSC.c`, unstable period 0).
 ///
-/// Lookback = `EMA(slowest) = slowest − 1` (defaults `(3, 10)` → 9). Inlines the same
-/// `CALCULATE_AD` increment as [`ad`]. **Does not call standalone [`crate::ema`]:** C seeds
-/// **both** EMAs with the first AD value, then `ema = (k*ad)+(one_minus_k*ema)` —
-/// `PER_TO_K(p) = 2.0/(p+1)`. `fast`/`slow` are slots, not “which is faster”:
-/// `ADOSC(10, 3)` inverts the sign.
+/// Lookback is `slowest − 1`. C seeds both EMAs with the first AD value and updates them as
+/// `(k*ad)+(one_minus_k*ema)` with `k = 2/(period+1)`; do not call standalone [`crate::ema`].
+/// `fast` and `slow` are slots, so reversing them negates the result.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -73,7 +67,6 @@ pub fn adosc(
         return Ok(out);
     }
 
-    // PER_TO_K(p) = 2.0 / (p + 1). Two multiplies then an add — never mul_add / FMA.
     let fastk = 2.0 / as_f64(fast + 1);
     let one_minus_fastk = 1.0 - fastk;
     let slowk = 2.0 / as_f64(slow + 1);
@@ -124,8 +117,8 @@ pub fn adosc(
 /// ===========================================================================================
 /// `OBV` — On Balance Volume (`ta_OBV.c`). Lookback 0.
 ///
-/// Seed `prevOBV = volume[0]`; the first output **is the first volume**, not 0. Then
-/// `close > prev` adds volume, `close < prev` subtracts, equal close holds.
+/// Seeds `prevOBV = volume[0]`, so the first output is the first volume. Later bars add, subtract,
+/// or hold volume according to the close comparison.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -152,8 +145,8 @@ pub fn obv(close: &[f64], volume: &[f64]) -> Result<Vec<f64>> {
     Ok(out)
 }
 
-/// C's MFI money-flow classification (#1727704): `delta < 0` → negative only; `> 0` →
-/// positive only; else both 0. Statement order matches `ta_MFI.c`.
+/// Classify money flow in C's statement order: negative delta updates only the negative sum,
+/// positive delta only the positive sum, and zero updates neither.
 fn classify_money_flow(
     delta: f64,
     money_flow: f64,
@@ -179,12 +172,9 @@ fn classify_money_flow(
 /// ===========================================================================================
 /// `MFI` — Money Flow Index (`ta_MFI.c`, unstable period 0). Lookback = `period`.
 ///
-/// **Not Wilder smoothing.** Rolling pos/neg money-flow circular buffer of size `period`.
-/// Typical `(H+L+C)/3.0` then `*= volume`. Classification is neg-first (#1727704). Subtract
-/// the trailing slot **before** writing the new typical. Output:
-/// `if pos+neg < 1.0 { 0.0 } else { 100.0 * (pos / (pos+neg)) }` — hard `< 1.0`, **not**
-/// `TA_IS_ZERO`. Do not clamp to `[0, 100]`; incremental drift can leave `posSumMF` slightly
-/// negative.
+/// Uses a rolling positive/negative money-flow buffer, not Wilder smoothing. Subtract the
+/// trailing slot before writing the new typical price. The output uses the hard `pos+neg < 1.0`
+/// guard and is not clamped; incremental drift can make `pos_sum_mf` slightly negative.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -201,7 +191,6 @@ pub fn mfi(
     check_lengths(high.len(), &[low.len(), close.len(), volume.len()])?;
     let len = high.len();
     let mut out = nan_vec(len);
-    // C: lookback = period + unstable(0). Short input → success with zero output elements.
     if len <= period {
         return Ok(out);
     }
@@ -236,7 +225,6 @@ pub fn mfi(
         }
     }
 
-    // Unstable period is 0, so `today == period + 1 > startIdx == period`: emit immediately.
     let temp_value1 = pos_sum_mf + neg_sum_mf;
     out[period] = if temp_value1 < 1.0 {
         0.0
@@ -284,7 +272,6 @@ mod tests {
 
     #[test]
     fn ad_clv_order_and_flat_bar_hold() {
-        // tmp=4, (((11-8)-(12-11))/4)*100 = 50. Then a flat bar must not increment.
         let out = ad(&[12.0, 10.0], &[8.0, 10.0], &[11.0, 10.0], &[100.0, 50.0]).expect("ad");
         assert_eq!(out[0].to_bits(), 50.0_f64.to_bits());
         assert_eq!(out[1].to_bits(), 50.0_f64.to_bits());
@@ -292,8 +279,6 @@ mod tests {
 
     #[test]
     fn ad_does_not_rewrite_as_two_c_minus_h_minus_l() {
-        // Algebraic rewrite (2c-h-l)/tmp rounds differently; pin the C order on a
-        // triple where the two associations disagree.
         let high = [1.000_000_03e-8];
         let low = [1.0e-8];
         let close = [0.250_000_01];
@@ -331,10 +316,8 @@ mod tests {
         let low = [8.0, 9.0, 10.0, 11.0];
         let close = [11.0, 12.0, 13.0, 14.0];
         let volume = [100.0, 110.0, 120.0, 130.0];
-        // (3,10) on 4 bars: lookback 9 → all-NaN (short).
         let short = adosc(&high, &low, &close, &volume, 3, 10).expect("short");
         assert!(short.iter().all(|v| v.is_nan()));
-        // Both periods 2 → lookback 1; first live output at index 1.
         let out = adosc(&high, &low, &close, &volume, 2, 2).expect("adosc 2/2");
         assert!(out[0].is_nan());
         assert!(out[1].is_finite());
@@ -357,7 +340,6 @@ mod tests {
 
     #[test]
     fn mfi_lookback_is_period_and_classifies_neg_first() {
-        // period 2: seed typical[0]=10; bar1 up mf=24; bar2 down mf=24 → 50 at index 2.
         let high = [10.0, 13.0, 10.0];
         let low = [10.0, 10.0, 7.0];
         let close = [10.0, 13.0, 7.0];
@@ -370,7 +352,6 @@ mod tests {
 
     #[test]
     fn mfi_hard_lt_one_yields_zero_not_nan() {
-        // Tiny money-flow window: pos+neg < 1.0 → 0.0 (hard < 1.0, not TA_IS_ZERO).
         let high = [1.0, 1.0 + 1e-12, 1.0];
         let low = [1.0, 1.0, 1.0];
         let close = [1.0, 1.0 + 1e-12, 1.0];

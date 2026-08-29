@@ -1,19 +1,11 @@
-//! MW-3 — `CALL system.remove_orphan_files`, the one maintenance procedure that destroys data.
+//! Pins the destructive `CALL system.remove_orphan_files` surface and its safety defaults.
 //!
-//! Split out of `call.rs` when that module crossed the 1500-line ceiling. These tests share a
-//! subject rather than a mechanism: every one of them is about the blast radius of a deletion,
-//! which is why the fixture helpers below live here and not in `common.rs`.
-//!
-//! Ledger: `task/mw-3-remove-orphan-files-ledger.md`. Registry rows `ORPHAN-1` / `ORPHAN-2`.
+//! Registry rows: `ORPHAN-1` and `ORPHAN-2`.
 
 use super::super::*;
 use super::common::*;
 
-/// **Retired by MW-3.** This pinned `remove_orphan_files` refusing as a fork-queue residual. The
-/// fork surface it was waiting on is now wired, so the refusal it asserted is gone and the
-/// procedure's real behaviour is pinned by the `call_remove_orphan_files_*` and `call_orphan*`
-/// tests below. What survives here is the part still true and still worth guarding: the procedure
-/// no longer refuses as unsupported.
+/// The procedure executes with an explicit cutoff and returns its result schema.
 #[tokio::test]
 async fn call_remove_orphan_files_is_no_longer_an_unsupported_procedure() {
     let wh = TempDir::new().unwrap();

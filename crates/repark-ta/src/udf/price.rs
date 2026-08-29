@@ -1,14 +1,11 @@
-//! Price-transform-family window-UDF dispatch (`avgprice`/`medprice`/`typprice`/`wclprice`).
-//!
-//! Called only from [`TaFn::compute`](super::TaFn::compute). Kernel math stays in
-//! `crate::price_transform`.
+//! Price-transform-family window-UDF dispatch. Kernel math stays in `crate::price_transform`.
 
 use crate::{avgprice, medprice, typprice, wclprice};
 
 use super::{TaFn, family_dispatch_miss};
 
 /// ===========================================================================================
-/// Price-transform-family single-output dispatch (no-period O/H/L/C combinations).
+/// Dispatch the no-period O/H/L/C price transforms.
 /// ===========================================================================================
 pub(super) fn compute(func: TaFn, series: &[&[f64]], _params: &[f64]) -> crate::Result<Vec<f64>> {
     match func {

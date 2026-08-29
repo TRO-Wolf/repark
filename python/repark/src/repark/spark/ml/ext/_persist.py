@@ -1,17 +1,16 @@
-"""Shared repark.ml.ext persistence helpers (M8).
+"""Shared persistence helpers for delegated ML models.
 
-Envelope layout (repark-ml v1 + booster blob)::
+Envelope layout (repark-ml format plus a booster blob)::
 
     <path>/metadata.json
         format, version, kind, class, uid, library, library_version, booster_blob, …
     <path>/fitted/params.parquet   (exactly 1 row; fit metadata, never training rows)
     <path>/fitted/<blob>           (library OWN non-pickle bytes / text)
 
-Atomic write uses the M7 staging helpers from :mod:`repark.ml.pipeline`
+Atomic write uses the staging helpers from :mod:`repark.ml.pipeline`
 (``_begin_atomic_save`` / ``_commit_atomic_save`` / ``_abort_atomic_save``).
 
-**Pickle is forbidden** for every ext backend — even when it is the library's only
-format. Refuse with the exact reason string so oracles can pin it.
+Pickle is forbidden for every delegated backend. Refusals use one exact reason.
 """
 
 from __future__ import annotations
@@ -22,18 +21,14 @@ from typing import Any
 
 from repark.errors import IllegalArgumentException
 
-# Exact refuse reason (charter M8 / greylight Q15). Oracles match this substring.
 PICKLE_FORBIDDEN_REASON = "pickle forbidden (arbitrary code execution on load)"
 
-# sklearn RandomForest* — only-pickle library → pin-refuse (no silent third state).
 SKLEARN_SAVE_UNSUPPORTED = (
     f"save not supported for sklearn ext estimators: {PICKLE_FORBIDDEN_REASON}; "
     "repark.ml.ext never pickles fitted models. "
     "XGBoost* and LightGBM* models support library-native booster-bytes save/load."
 )
 
-# Residual STOP-loud for surfaces without a landed booster-bytes path (Pipeline stage
-# composition still refuses ext stages via pipeline._fitted_state).
 EXT_SAVE_UNSUPPORTED = (
     "save not supported for ext estimators "
     "(repark.ml.ext persistence: XGBoost* + LightGBM* support booster-bytes; "
@@ -57,7 +52,6 @@ def library_major_version(version_string: str) -> int:
     if not text:
         raise IllegalArgumentException("library version string is empty")
     head = text.split(".", maxsplit=1)[0]
-    # Drop PEP-440 local/pre segments that still start with digits (e.g. ``3rc1`` → fail).
     digits = ""
     for char in head:
         if char.isdigit():
@@ -75,10 +69,10 @@ def check_library_version_major(
     current: str,
     library_name: str,
 ) -> None:
-    """Refuse load when recorded library **major** differs from the installed major.
+    """Refuse load when recorded library major differs from the installed major.
 
-    Missing ``library_version`` in older envelopes is tolerated (no guard) so M5
-    trees remain loadable; when present, major mismatch is loud.
+    Missing ``library_version`` in older envelopes is tolerated. When present,
+    a major mismatch is loud.
     """
     if recorded is None or str(recorded).strip() == "":
         return
@@ -185,7 +179,7 @@ def write_ext_model_tree(
     library_version: str,
     extra_metadata: dict[str, Any] | None = None,
 ) -> None:
-    """Atomically write repark-ml v1 envelope + booster blob (M7 staging pattern).
+    """Atomically write a repark-ml envelope and booster blob.
 
     Never writes training rows. On failure the staging directory is aborted and
     the previous target (if any) is left intact.
@@ -255,7 +249,7 @@ def load_ext_model_envelope(
 
     Guards: format/version/kind, library major version, confined blob path,
     non-empty blob, required positive ``num_features`` in params.parquet, and
-    (when present) fitted ``classifier`` flag vs the reader task type (octo M8 C1).
+    (when present) fitted ``classifier`` flag versus the reader task type.
     """
     from repark.spark.ml.pipeline import REPARK_ML_FORMAT, REPARK_ML_VERSION
 
@@ -279,7 +273,6 @@ def load_ext_model_envelope(
         )
 
     recorded_lib = metadata.get("library_version")
-    # Prefer metadata; fitted payload may also carry it (defensive).
     check_library_version_major(
         recorded=str(recorded_lib) if recorded_lib is not None else None,
         current=current_library_version,
@@ -299,15 +292,12 @@ def load_ext_model_envelope(
             f"(got {fitted.get('num_features')!r})"
         ) from error
     if num_features <= 0:
-        # Hostile/zero width disables transform width checks (`if self.num_features and …`).
         raise IllegalArgumentException(
             f"{expected_kind} load: num_features must be > 0 (got {num_features})"
         )
     fitted["num_features"] = num_features
 
-    # Task-type integrity: refuse regressor↔classifier relabel via hostile metadata/params
-    # (kind can be rewritten to match the wrong reader). Missing flag tolerated for
-    # pre-M8 XGBRegressor trees that predate the classifier field.
+    # A rewritten kind must not change the classifier task. Older envelopes may omit the flag.
     if expected_classifier is not None and "classifier" in fitted:
         recorded_classifier = fitted.get("classifier")
         if recorded_classifier is not None and bool(recorded_classifier) != expected_classifier:

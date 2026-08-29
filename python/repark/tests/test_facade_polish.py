@@ -1,9 +1,8 @@
-"""Facade polish unit — aggregate display naming + ``spark.read`` expansion.
+"""Facade polish — aggregate display naming + ``spark.read`` expansion.
 
-Goldens for **column names** and **values** were recorded from live PySpark 4.1.2
-(``JAVA_HOME=/usr/lib/jvm/zulu-17-amd64``, ANSI on, ``SPARK_LOCAL_IP=127.0.0.1``) via the
-session matrix in ``{SCRATCH}/b-oracle-naming-matrix.txt`` / the Actor report. Routine tests
-are JVM-free and pin those recorded names; they do not re-invoke Spark.
+Goldens for column names and values were recorded from live PySpark 4.1.2
+(``JAVA_HOME=/usr/lib/jvm/zulu-17-amd64``, ANSI on, ``SPARK_LOCAL_IP=127.0.0.1``). Routine
+tests are JVM-free and pin those recorded names; they do not re-invoke Spark.
 """
 
 from __future__ import annotations
@@ -31,7 +30,7 @@ def _source(spark: ReparkSession) -> object:
     return spark.createDataFrame([(1, 10), (1, 20), (2, 30)], ["g", "x"])
 
 
-# ---- Scope A: aggregate display naming (live-recorded PySpark 4.1.2 matrix) ---------------------
+# Scope A: aggregate display naming (live-recorded PySpark 4.1.2 matrix)
 
 
 def test_agg_naming_matrix_matches_live_pyspark(spark: ReparkSession) -> None:
@@ -63,8 +62,8 @@ def test_agg_naming_matrix_matches_live_pyspark(spark: ReparkSession) -> None:
     assert df.groupBy("g").sum("x").columns == ["g", "sum(x)"]
     assert df.groupBy("g").agg(F.count("*")).columns == ["g", "count(1)"]
     assert df.groupBy("g").agg(F.min("x"), F.max("x")).columns == ["g", "min(x)", "max(x)"]
-    # Reflected operators (2026-07-21 review recording, live 4.1.2): PySpark commutes
-    # reflected + and * — but NOT reflected - and / — and keeps the double point on literals.
+    # Reflected operators (live 4.1.2): PySpark commutes reflected + and * — but NOT reflected
+    # - and / — and keeps the double point on literals.
     assert df.groupBy("g").agg(F.sum(2 + F.col("x"))).columns == ["g", "sum((x + 2))"]
     assert df.groupBy("g").agg(F.sum(2 * F.col("x"))).columns == ["g", "sum((x * 2))"]
     assert df.groupBy("g").agg(F.sum(100 - F.col("x"))).columns == ["g", "sum((100 - x))"]
@@ -93,9 +92,9 @@ def test_agg_compound_and_nested_values_match_oracle(spark: ReparkSession) -> No
 
 
 def test_abs_values_include_negatives_null_and_zero(spark: ReparkSession) -> None:
-    """Octo C1-Q-001 / C1-L-003: abs true-branch must run.
+    """Abs true-branch must run.
 
-    Positives-only fixtures stay green if abs is the identity — so pin negatives too.
+    Positives-only fixtures stay green if abs is the identity — pin negatives too.
     """
     df = spark.createDataFrame(
         [(1, -10), (1, 5), (1, None), (2, 0), (2, -3)],
@@ -117,17 +116,7 @@ def test_user_alias_always_wins_over_default_agg_name(spark: ReparkSession) -> N
 def test_agg_comparison_and_logical_display_names_match_live_pyspark(
     spark: ReparkSession,
 ) -> None:
-    """CCC Q-001 fix: comparison/logical ops track ``_spark_display`` (live PySpark 4.1.2).
-
-    Recorded names::
-
-        sum(CAST((x > 0) AS INT))
-        sum(CAST((x = 10) AS INT))
-        sum(CAST((NOT (x = 10)) AS INT))
-        sum(CAST(((x > 0) AND (x < 20)) AS INT))
-        sum(CAST((NOT (x > 0)) AS INT))
-        sum(CAST((x IS NULL) AS INT))
-    """
+    """Comparison/logical ops track ``_spark_display`` (live PySpark 4.1.2)."""
     df = _source(spark)
     assert df.groupBy("g").agg(F.sum((F.col("x") > 0).cast("int"))).columns == [
         "g",
@@ -152,7 +141,7 @@ def test_agg_comparison_and_logical_display_names_match_live_pyspark(
         "g",
         "sum(CAST((x IS NULL) AS INT))",
     ]
-    # Octo C1-Q-003: OR and IS NOT NULL display tracking.
+    # OR and IS NOT NULL display tracking.
     assert df.groupBy("g").agg(
         F.sum(((F.col("x") > 0) | (F.col("x") < 0)).cast("int"))
     ).columns == ["g", "sum(CAST(((x > 0) OR (x < 0)) AS INT))"]
@@ -160,7 +149,7 @@ def test_agg_comparison_and_logical_display_names_match_live_pyspark(
         "g",
         "sum(CAST((x IS NOT NULL) AS INT))",
     ]
-    # Octo C1-L-004: coalesce / when track spark_display (no native Int64 leak).
+    # Coalesce / when track spark_display (no native Int64 leak).
     assert df.groupBy("g").agg(F.sum(F.coalesce(F.col("x"), F.lit(1)))).columns == [
         "g",
         "sum(coalesce(x, 1))",
@@ -169,7 +158,7 @@ def test_agg_comparison_and_logical_display_names_match_live_pyspark(
         "g",
         "sum(CASE WHEN (x > 0) THEN x ELSE 0 END)",
     ]
-    # Multi-arm CASE display (octo C2-Q-004).
+    # Multi-arm CASE display.
     assert df.groupBy("g").agg(
         F.sum(F.when(F.col("x") > 20, 1).when(F.col("x") > 0, 2).otherwise(0))
     ).columns == [
@@ -187,7 +176,7 @@ def test_agg_comparison_and_logical_display_names_match_live_pyspark(
     assert vals == {"g": [1, 2], "s": [2, 1]}
 
 
-# ---- Scope B: spark.read expansion -------------------------------------------------------------
+# Scope B: spark.read expansion
 
 
 def test_read_returns_fresh_dataframe_reader(spark: ReparkSession) -> None:
@@ -249,7 +238,7 @@ def test_read_option_unknown_keys_tolerated(spark: ReparkSession, tmp_path: Path
 def test_read_option_path_applied_when_load_path_omitted(
     spark: ReparkSession, tmp_path: Path
 ) -> None:
-    """Octo C1-SAF-001: option('path') is honored when load() has no path arg."""
+    """Option('path') is honored when load() has no path arg."""
     import pyarrow.parquet as pq
 
     path = tmp_path / "via_opt.parquet"
@@ -259,7 +248,7 @@ def test_read_option_path_applied_when_load_path_omitted(
 
 
 def test_read_semantic_option_unsupported_fails_loud(spark: ReparkSession, tmp_path: Path) -> None:
-    """Octo C1-SAF-001 / C1-L-002: pathGlobFilter must not silently widen the read set."""
+    """PathGlobFilter must not silently widen the read set."""
     import pyarrow.parquet as pq
 
     path = tmp_path / "sem.parquet"
@@ -269,7 +258,7 @@ def test_read_semantic_option_unsupported_fails_loud(spark: ReparkSession, tmp_p
 
 
 def test_read_table_rejects_sql_fragments(spark: ReparkSession) -> None:
-    """Octo C1-SEC-001 / C1-L-001: table() is identifier-only, not a FROM-clause sink."""
+    """Table() is identifier-only, not a FROM-clause sink."""
     hostile = "t UNION ALL SELECT 1"
     with pytest.raises(AnalysisException, match=r"invalid table identifier|SQL fragments"):
         spark.table(hostile)
@@ -280,7 +269,7 @@ def test_read_table_rejects_sql_fragments(spark: ReparkSession) -> None:
 
 
 def test_sql_table_ref_accepts_quoted_segments_with_dots() -> None:
-    """Octo C2-L-001 / C2-Q-002: quote-aware multipart parsing (dots inside quotes)."""
+    """Quote-aware multipart parsing (dots inside quotes)."""
     from repark.spark.session import _sql_table_ref
 
     assert _sql_table_ref('catalog."db.with.dot".t') == '"catalog"."db.with.dot"."t"'
@@ -292,10 +281,10 @@ def test_sql_table_ref_accepts_quoted_segments_with_dots() -> None:
 def test_read_semantic_option_rejected_on_parquet_and_iceberg_snapshot(
     spark: ReparkSession, tmp_path: Path
 ) -> None:
-    """Octo C2-SAF-001/002: semantic gate on parquet(); I1 time-travel options no longer denylisted.
+    """Semantic gate on parquet(); time-travel options no longer denylisted.
 
-    ``snapshot-id`` on format('iceberg') is supported (I1) — unknown table/snapshot still fails
-    analysis (not the old denylist message). Incremental ``start-snapshot-id`` stays loud.
+    ``snapshot-id`` on format('iceberg') is supported; unknown table/snapshot still fails
+    analysis. Incremental ``start-snapshot-id`` stays loud.
     """
     import pyarrow.parquet as pq
 
@@ -303,7 +292,6 @@ def test_read_semantic_option_rejected_on_parquet_and_iceberg_snapshot(
     pq.write_table(pa.table({"id": [1]}), path)
     with pytest.raises(AnalysisException, match=r"pathGlobFilter|not supported"):
         spark.read.option("pathGlobFilter", "*.ok.parquet").parquet(str(path))
-    # snapshot-id is no longer denylisted; missing catalog/table fails analysis (not denylist).
     with pytest.raises(AnalysisException, match=r"catalog|not registered|table|snapshot"):
         spark.read.format("iceberg").option("snapshot-id", "1").load("glue_catalog.db.t")
     with pytest.raises(AnalysisException, match=r"start-snapshot-id|incremental"):
@@ -311,7 +299,7 @@ def test_read_semantic_option_rejected_on_parquet_and_iceberg_snapshot(
 
 
 def test_read_option_path_case_insensitive_last_wins(spark: ReparkSession, tmp_path: Path) -> None:
-    """Octo C2-L-002: path/PATH last-write-wins (Spark case-insensitive map)."""
+    """Path/PATH last-write-wins (Spark case-insensitive map)."""
     import pyarrow.parquet as pq
 
     path_a = tmp_path / "a.parquet"
@@ -330,26 +318,26 @@ def test_read_option_path_case_insensitive_last_wins(spark: ReparkSession, tmp_p
 
 
 def test_when_after_otherwise_raises(spark: ReparkSession) -> None:
-    """Octo C2-L-003: cannot re-chain .when after .otherwise (would drop ELSE)."""
+    """Cannot re-chain .when after .otherwise (would drop ELSE)."""
     closed = F.when(F.col("x") > 0, 1).otherwise(0)
     with pytest.raises(TypeError, match="otherwise"):
         closed.when(F.col("x") == 0, 2)
 
 
 def test_coalesce_requires_at_least_one_argument() -> None:
-    """Octo C2-L-005: empty coalesce matches Spark fail-loud."""
+    """Empty coalesce matches Spark fail-loud."""
     with pytest.raises(AnalysisException, match="coalesce"):
         F.coalesce()
 
 
 def test_concat_requires_at_least_one_argument() -> None:
-    """Octo C3-L-002: empty concat matches coalesce fail-loud."""
+    """Empty concat matches coalesce fail-loud."""
     with pytest.raises(AnalysisException, match="concat"):
         F.concat()
 
 
 def test_multi_arm_case_values(spark: ReparkSession) -> None:
-    """Octo C3-L-001: multi-arm when values (not only display)."""
+    """Multi-arm when values (not only display)."""
     df = spark.createDataFrame([(1, -1), (1, 0), (1, 5), (1, 25)], ["g", "x"])
     got = (
         df.groupBy("g")
@@ -357,7 +345,6 @@ def test_multi_arm_case_values(spark: ReparkSession) -> None:
         .to_arrow()
         .to_pydict()
     )
-    # arms: 25→1, 5→2, 0→0, -1→0 → sum = 3
     assert got == {"g": [1], "s": [3]}
 
 
@@ -371,20 +358,20 @@ def test_multi_arm_case_values(spark: ReparkSession) -> None:
     ],
 )
 def test_denylist_semantic_keys_fail_loud(spark: ReparkSession, key: str) -> None:
-    """Octo C3-Q-001: residual denylist pinned (I1 removed the four time-travel options)."""
+    """Residual denylist pinned (removed the four time-travel options)."""
     with pytest.raises(AnalysisException, match=r"not supported|incremental"):
         spark.read.format("parquet").option(key, "x").load("/tmp/does_not_matter.parquet")
 
 
 @pytest.mark.parametrize("key", ["branch", "tag", "as-of-timestamp", "snapshot-id"])
 def test_time_travel_options_rejected_on_parquet(spark: ReparkSession, key: str) -> None:
-    """I1: time-travel options are Iceberg-only — parquet path fails loud naming Iceberg."""
+    """Time-travel options are Iceberg-only — parquet path fails loud naming Iceberg."""
     with pytest.raises(AnalysisException, match=r"iceberg|time travel"):
         spark.read.format("parquet").option(key, "1").load("/tmp/does_not_matter.parquet")
 
 
 def test_read_load_missing_format_and_path_fail(spark: ReparkSession) -> None:
-    """Octo C1-Q-007: empty format / missing parquet path fail with AnalysisException."""
+    """Empty format / missing parquet path fail with AnalysisException."""
     with pytest.raises(AnalysisException, match=r"DATA_SOURCE_NOT_FOUND|empty"):
         spark.read.load("/tmp/x.parquet")
     with pytest.raises(AnalysisException, match="path"):
@@ -394,7 +381,7 @@ def test_read_load_missing_format_and_path_fail(spark: ReparkSession) -> None:
 def test_read_format_case_insensitive_and_load_arg_beats_option_path(
     spark: ReparkSession, tmp_path: Path
 ) -> None:
-    """Octo C7/C5: format case fold; option(path)+load(arg) uses the load argument."""
+    """Format case fold; option(path)+load(arg) uses the load argument."""
     import pyarrow.parquet as pq
 
     path_a = tmp_path / "case_a.parquet"
@@ -415,7 +402,7 @@ def test_read_format_case_insensitive_and_load_arg_beats_option_path(
 
 
 def test_read_iceberg_option_path_load(spark: ReparkSession, tmp_path: Path) -> None:
-    """Octo C5-B-001: format(iceberg).option(path, id).load() without load arg."""
+    """format(iceberg).option(path, id).load() without load arg."""
     spark.register_memory_catalog("glue_catalog", tmp_path)
     spark.sql("CREATE NAMESPACE glue_catalog.db")
     spark.sql("CREATE TABLE glue_catalog.db.topt USING iceberg AS SELECT 9 AS id")
@@ -430,7 +417,7 @@ def test_read_iceberg_option_path_load(spark: ReparkSession, tmp_path: Path) -> 
 
 
 def test_read_schema_stores_for_csv_json(spark: ReparkSession, tmp_path: Path) -> None:
-    """R1: DataFrameReader.schema chains and applies on csv/json (was C1-Q-007 unsupported)."""
+    """R1: DataFrameReader.schema chains and applies on csv/json."""
     from repark.spark.types import IntegerType, StructField, StructType
 
     path = tmp_path / "schema.csv"

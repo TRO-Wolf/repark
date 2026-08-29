@@ -1,11 +1,7 @@
-"""Datetime facade wrappers (FN-D + FN-GT2).
+"""Date and time facade wrappers.
 
-Public names are re-exported from ``functions.py``. FN-GT2 wires leftover
-``make_date`` / interval constructors / ``unix_micros`` / ``date_diff``.
-FNP-3 (2026-08-20) shipped ``datediff`` as the same engine arm: PySpark 4.1.2
-declares both spellings with the same ``(end, start)`` order over one Catalyst
-expression. The former "do not alias" note was FN-D's scope fence, not a
-semantic ruling — see ``task/fnp-3-destub-ledger.md``.
+Public names are re-exported from ``functions.py``. ``datediff`` and ``date_diff`` share the
+same ``(end, start)`` semantics and engine expression.
 """
 
 from __future__ import annotations
@@ -61,7 +57,7 @@ def to_unix_timestamp(
 ) -> Column:
     """Alias of :func:`unix_timestamp` (PySpark ``functions.to_unix_timestamp``).
 
-    The existing ``unix_timestamp`` surface is the R-FN-BATCH1 loud gap; this name
+    The existing ``unix_timestamp`` surface is an engine gap; this name
     must not grow a second meaning.
     """
     return unix_timestamp(timestamp, format)
@@ -70,7 +66,7 @@ def to_unix_timestamp(
 def _truncate_toward_zero(column: Column) -> Column:
     """Integer part of ``column`` toward zero (Spark ``unix_*`` fractional truncate).
 
-    ``CAST(ts AS BIGINT)`` floors (TZ-5: ``-1.5 → -2``). Spark ``unix_seconds`` /
+    ``CAST(ts AS BIGINT)`` floors (``-1.5 → -2``). Spark ``unix_seconds`` /
     ``unix_millis`` truncate toward zero (``-1.5 → -1``).
     """
     return (floor(abs_column(column)) * sign(column)).cast("long")
@@ -81,7 +77,7 @@ def unix_date(col: Column | str) -> Column:
 
     Builds the engine's ``unix_date`` (datafusion-spark ``SparkUnixDate``) rather than the
     ``CAST(date AS INT)`` chain it lowers to. Spark refuses ``CAST(DATE AS INT)`` at analysis
-    (registry row G6-3, ``DATATYPE_MISMATCH.CAST_WITH_FUNC_SUGGESTION``) and so does repark, and
+    (``DATATYPE_MISMATCH.CAST_WITH_FUNC_SUGGESTION``) and so does repark, and
     the error message names ``UNIX_DATE`` as the remedy — so the remedy must not itself be spelled
     as the refused cast. ``SparkUnixDate::simplify`` re-creates the cast in the OPTIMIZER, one
     stage after the gate, which is exactly where it is legal.
@@ -95,7 +91,7 @@ def unix_date(col: Column | str) -> Column:
 def unix_seconds(col: Column | str) -> Column:
     """Seconds since 1970-01-01 UTC, truncating sub-seconds (PySpark ``unix_seconds``).
 
-    Hazard: ``CAST(ts AS BIGINT)`` floors (TZ-5). Spark ``unix_seconds`` truncates
+    Hazard: ``CAST(ts AS BIGINT)`` floors. Spark ``unix_seconds`` truncates
     toward zero, so negatives use ``floor(abs(seconds)) * sign(seconds)``.
     """
     seconds = _as_column_arg(col, as_lit=False).cast("double")
@@ -105,7 +101,7 @@ def unix_seconds(col: Column | str) -> Column:
 def unix_millis(col: Column | str) -> Column:
     """Milliseconds since 1970-01-01 UTC, truncating micros (PySpark ``unix_millis``).
 
-    Same toward-zero rule as :func:`unix_seconds` (not TZ-5 floor).
+    Same toward-zero rule as :func:`unix_seconds`.
     """
     millis = _as_column_arg(col, as_lit=False).cast("double") * lit(1000)
     return _truncate_toward_zero(millis)
@@ -144,7 +140,7 @@ def make_date(
     defaults to ``true``, but the documented scope of that flag is ``/`` and
     ``%`` by zero — see ``docs/guide/session-and-conf.md``: "Do not read 'ANSI
     on' as 'every arithmetic fault raises'". Invalid-date NULL is a recorded
-    divergence (FN-GT2 X9), not silent parity.
+    divergence, not silent parity.
 
     Parameters
     ----------
@@ -269,7 +265,7 @@ def unix_micros(col: Column | str) -> Column:
 def date_diff(end: Column | str, start: Column | str) -> Column:
     """Days from ``start`` to ``end`` (PySpark ``functions.date_diff``).
 
-    Spark's ``datediff`` is the same function under its older spelling (FNP-3).
+    Spark's ``datediff`` uses the same function under its older spelling.
     Date columns match Spark.
 
     Parameters

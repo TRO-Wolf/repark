@@ -1,4 +1,4 @@
-"""BH-1 default-conf contract (no engine, no numpy, no native module)."""
+"""Default-conf contract (no engine, no numpy, no native module)."""
 
 from __future__ import annotations
 

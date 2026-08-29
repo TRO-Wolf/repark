@@ -2,7 +2,7 @@
 
 ## Purpose
 
-File-backed tests for `../properties.rs`. The curated `WITH ( … )` vocabulary: every accepted key, and every refusal class. The
+File-backed tests for `../properties.rs`. They cover the curated `WITH ( … )` vocabulary and each refusal class. The
 refusals especially — a refusal that stops firing is a silent behavior change.
 
 ## Contents

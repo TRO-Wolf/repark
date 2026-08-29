@@ -1,13 +1,4 @@
-//! G8 / R-3 — ANSI-door `f64::to_bits` float-aggregation twins of G7.
-//!
-//! Mold: `crates/repark-spark/src/tests/float_agg.rs`. Same catastrophic-cancellation
-//! fixture, same `target_partitions` ∈ {1, 2, 8}, same bit goldens. This file is the
-//! **Native-profile** half: `AnsiDialect`, no `SessionExtension`,
-//! `ReparkSessionBuilder::target_partitions`. Do not rewrite the Spark-door tests.
-//!
-//! Input `MemTable` partitions match the engine count so partial aggregation fans
-//! out. Cross-count equality does **not** hold (p=1/2 → 3.75; p=8 → 2.25).
-//! Calibration: `docs/testing.md` "calibration-sensitive" (`f64::to_bits`).
+//! Native ANSI `f64::to_bits` pins for float aggregation.
 
 use std::sync::Arc;
 
@@ -18,38 +9,20 @@ use datafusion::datasource::MemTable;
 use repark_core::{ReparkSession, SqlDialect};
 use repark_sql::AnsiDialect;
 
-// =================================================================================================
-// Catastrophic-cancellation fixture (exact bit patterns fixed in the G7 / X-3 ledger)
-// =================================================================================================
-
-/// Large ± magnitudes that cancel, interleaved with small values lost under some
-/// accumulation orders. Exact `f64::to_bits` of each element is re-asserted by
-/// [`ansi_door_pin_fixture_element_bit_patterns`].
+/// Large magnitudes cancel while interleaved small values expose summation-order effects.
 const FIXTURE: [f64; 8] = [
-    1.0e16,  // bits 0x4341c37937e08000
-    1.0,     // bits 0x3ff0000000000000
-    -1.0e16, // bits 0xc341c37937e08000
-    2.0,     // bits 0x4000000000000000
-    1.0e16,  // bits 0x4341c37937e08000
-    0.5,     // bits 0x3fe0000000000000
-    -1.0e16, // bits 0xc341c37937e08000
-    0.25,    // bits 0x3fd0000000000000
+    1.0e16, 1.0, -1.0e16, 2.0, 1.0e16, 0.5, -1.0e16,
+    // Position controls round-robin partition assignment.
+    0.25,
 ];
 
-/// Measured goldens (native ANSI Arrow path, 2026-08-14). Same bits as the G7
-/// Spark-door pins on this fixture — stock DataFusion aggregation, no Spark
-/// analyzer. p=1 and p=2 land the accurate compensated sum; p=8 loses small
-/// addends under final merge.
-const SUM_BITS_P1: u64 = 0x400e_0000_0000_0000; // 3.75
-const SUM_BITS_P2: u64 = 0x400e_0000_0000_0000; // 3.75
-const SUM_BITS_P8: u64 = 0x4002_0000_0000_0000; // 2.25
-const AVG_BITS_P1: u64 = 0x3fde_0000_0000_0000; // 0.46875 = 3.75/8
-const AVG_BITS_P2: u64 = 0x3fde_0000_0000_0000; // 0.46875
-const AVG_BITS_P8: u64 = 0x3fd2_0000_0000_0000; // 0.28125 = 2.25/8
-
-// =================================================================================================
-// Setup — input partitions + engine target_partitions locked together
-// =================================================================================================
+/// Native ANSI Arrow-path goldens for each partition count.
+const SUM_BITS_P1: u64 = 0x400e_0000_0000_0000;
+const SUM_BITS_P2: u64 = 0x400e_0000_0000_0000;
+const SUM_BITS_P8: u64 = 0x4002_0000_0000_0000;
+const AVG_BITS_P1: u64 = 0x3fde_0000_0000_0000;
+const AVG_BITS_P2: u64 = 0x3fde_0000_0000_0000;
+const AVG_BITS_P8: u64 = 0x3fd2_0000_0000_0000;
 
 fn native_ansi_with_float_fixture(target_partitions: usize) -> ReparkSession {
     let dialect: Arc<dyn SqlDialect> = Arc::new(AnsiDialect);
@@ -63,7 +36,6 @@ fn native_ansi_with_float_fixture(target_partitions: usize) -> ReparkSession {
 }
 
 /// Register `values` as a one-column `v DOUBLE` [`MemTable`] with `input_partitions`
-/// outer partitions (round-robin row assignment).
 fn register_float_fixture(
     session: &ReparkSession,
     name: &str,
@@ -136,22 +108,18 @@ async fn avg_bits_at(target_partitions: usize) -> (bool, u64) {
     collect_float64_bits(&session, "SELECT avg(v) AS a FROM float_src").await
 }
 
-// =================================================================================================
-// Fixture SSOT — a silent edit of FIXTURE reds immediately
-// =================================================================================================
-
-/// Element bit patterns the G7 ledger cites. Not a sum/avg pin; guards the fixture itself.
+/// Element bit patterns keep the float fixture stable. They are not sum or average results.
 #[test]
 fn ansi_door_pin_fixture_element_bit_patterns() {
     let expected: [u64; 8] = [
-        0x4341_c379_37e0_8000, // 1e16
-        0x3ff0_0000_0000_0000, // 1.0
-        0xc341_c379_37e0_8000, // -1e16
-        0x4000_0000_0000_0000, // 2.0
-        0x4341_c379_37e0_8000, // 1e16
-        0x3fe0_0000_0000_0000, // 0.5
-        0xc341_c379_37e0_8000, // -1e16
-        0x3fd0_0000_0000_0000, // 0.25
+        0x4341_c379_37e0_8000,
+        0x3ff0_0000_0000_0000,
+        0xc341_c379_37e0_8000,
+        0x4000_0000_0000_0000,
+        0x4341_c379_37e0_8000,
+        0x3fe0_0000_0000_0000,
+        0xc341_c379_37e0_8000,
+        0x3fd0_0000_0000_0000,
     ];
     for (index, (value, bits)) in FIXTURE.iter().zip(expected.iter()).enumerate() {
         assert_eq!(
@@ -162,12 +130,7 @@ fn ansi_door_pin_fixture_element_bit_patterns() {
     }
 }
 
-// =================================================================================================
-// sum(f64) absolute pins — one per partition count
-// =================================================================================================
-
-/// `sum(v)` at `target_partitions=1` — bits of 3.75. Matrix cite for
-/// `SEMANTICS_FLOAT_DETERMINISM` on the ANSI door.
+/// `sum(v)` at `target_partitions=1` returns bits of 3.75. Matrix cite for the native contract.
 #[tokio::test]
 async fn ansi_door_sum_f64_bits_at_target_partitions_1() {
     let (nullable, bits) = sum_bits_at(1).await;
@@ -190,10 +153,6 @@ async fn ansi_door_sum_f64_bits_at_target_partitions_8() {
     assert!(nullable, "sum is nullable");
     assert_eq!(bits, SUM_BITS_P8, "sum p=8 f64::to_bits (2.25)");
 }
-
-// =================================================================================================
-// avg(f64) absolute pins
-// =================================================================================================
 
 /// `avg(v)` at `target_partitions=1` — bits of 0.46875.
 #[tokio::test]
@@ -218,10 +177,6 @@ async fn ansi_door_avg_f64_bits_at_target_partitions_8() {
     assert!(nullable, "avg is nullable");
     assert_eq!(bits, AVG_BITS_P8, "avg p=8 f64::to_bits (0.28125)");
 }
-
-// =================================================================================================
-// Run-to-run stability (determinism claim) + explicit cross-count spread disclosure
-// =================================================================================================
 
 /// Same input + same config → same bits, twice, at each of the three partition counts.
 #[tokio::test]

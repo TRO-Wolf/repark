@@ -1,11 +1,7 @@
 """Shared helpers for the real-AWS acceptance harness.
 
-Kept in a non-``test_`` module (pytest does not collect it) so both the gated harness
-(``test_aws_acceptance.py``) and its always-run unit tests (``test_acceptance_helpers.py``) share
-one definition.
-
-The publish-job constants, SQL builders, and ``deduplicate`` transform do not construct a
-session. MW-4 ``run_mor_merge_compact_expire`` / ``assert_mor_maintenance_outcome`` drive an
+Non-``test_`` module so pytest does not collect it. The publish-job constants, SQL builders, and
+``deduplicate`` transform do not construct a session; the maintenance flow drives an
 already-built session (memory analog or Glue live) through CTAS / MERGE / CALL.
 """
 
@@ -22,28 +18,20 @@ from repark import functions as F  # noqa: N812 — PySpark idiom: `import ...fu
 from repark.errors import AnalysisException
 from repark.spark.dataframe import DataFrame
 
-# ==============================================================================================
 # Constants — mirrored from the real source publish job's config block
-# ==============================================================================================
-# Bronze reads use the s3a scheme; the Glue warehouse uses s3. Both must resolve (WG3).
-#
-# The bucket + warehouse are RUNTIME-OVERRIDABLE, defaulting to synthetic placeholders. This is
-# load-bearing security, not convenience: the committed defaults are `example-*` placeholders the
-# maintainer does not own, so a real-AWS run MUST supply the operator's own buckets via
-# `REPARK_ACCEPT_BRONZE_BUCKET` / `REPARK_ACCEPT_WAREHOUSE` (repository VARIABLES in
-# `aws-acceptance.yml`; docs/tier2-aws.md §4). Without them the credentialed job would issue
-# SigV4-signed requests against globally-squattable placeholder names — so the harness fails loud
-# (below) when `REPARK_AWS_ACCEPTANCE=1` is set but the buckets are still the placeholders.
+# Bronze reads use s3a; the Glue warehouse uses s3.
+# Bucket + warehouse must be overridden for a real-AWS run (REPARK_ACCEPT_BRONZE_BUCKET /
+# REPARK_ACCEPT_WAREHOUSE): the committed defaults are `example-*` placeholders the maintainer
+# does not own, and signed requests against squattable names disclose the assumed-role identity —
+# hence the fail-loud check below.
 BRONZE_BUCKET = os.environ.get("REPARK_ACCEPT_BRONZE_BUCKET", "example-bronze-bucket-v1")
 BRONZE_PREFIX = "bronze"
 
-# The real script's config block names the catalog ``glue_alt`` but publishes via ``glue_catalog``
-# (the cluster spark-defaults supply that name on Glue/EMR). The harness configures the name it
-# actually uses for the publish path.
+# The real script's config block names the catalog ``glue_alt`` but publishes via ``glue_catalog``;
+# the harness configures the name it actually uses for the publish path.
 SILVER_CATALOG = "glue_catalog"
 GLUE_WAREHOUSE = os.environ.get("REPARK_ACCEPT_WAREHOUSE", "s3://example-warehouse/")
 
-# The placeholder values the committed defaults carry — a real-AWS run must not use these.
 _PLACEHOLDER_BRONZE_BUCKET = "example-bronze-bucket-v1"
 _PLACEHOLDER_WAREHOUSE = "s3://example-warehouse/"
 
@@ -51,10 +39,8 @@ _PLACEHOLDER_WAREHOUSE = "s3://example-warehouse/"
 def assert_real_buckets_configured() -> None:
     """Fail loud if a real-AWS run still targets the synthetic placeholder buckets.
 
-    Called by the gated harness once ``REPARK_AWS_ACCEPTANCE=1``. A signed request to a
-    placeholder bucket discloses the assumed-role ARN + account id to whoever owns that global
-    name (and could feed attacker-controlled Parquet into the reader), so this is a hard refusal,
-    never a skip.
+    Called by the gated harness once ``REPARK_AWS_ACCEPTANCE=1``. A signed request to a squattable
+    placeholder name discloses the assumed-role ARN + account id; hard refusal, never a skip.
     """
     unset = []
     if BRONZE_BUCKET == _PLACEHOLDER_BRONZE_BUCKET:
@@ -70,21 +56,20 @@ def assert_real_buckets_configured() -> None:
         )
 
 
-# S3 Tables (A2 second bullet). A NON-secret catalog name only; the table-bucket ARN is an
-# account-specific value passed at RUNTIME from the `TABLE_BUCKET_ARN` env var — NEVER hardcoded
-# here or committed (both repos are public-bound).
+# NON-secret catalog name. The table-bucket ARN is account-specific, passed at RUNTIME from the
+# `TABLE_BUCKET_ARN` env var — never hardcoded or committed (both repos are public-bound).
 S3TABLES_CATALOG = "s3tables_catalog"
 
-# Scratch namespace ONLY. Never the production silver namespace. Both the namespace and every
-# table the harness creates carry a `testing_` prefix so they read as disposable at a glance.
+# Scratch namespace ONLY, never production; the `testing_` prefix marks every created name as
+# disposable at a glance.
 ACCEPTANCE_NAMESPACE = "testing_repark_acceptance"
 ACCEPTANCE_TABLE_PREFIX = "testing_"
 PRODUCTION_NAMESPACE = "example_silver"  # named here solely to assert we never touch it
 
 TEMP_VIEW = "staging_view"
 
-# The real TBLPROPERTIES block: format-version 2, copy-on-write for every write mode, target file
-# size. (The script carries a trailing ``-- 256 MiB`` inline comment; dropped here as cosmetic.)
+# The real TBLPROPERTIES block: format-version 2, copy-on-write for every write mode, target
+# file size.
 TARGET_FILE_SIZE_BYTES = "268435456"
 ICEBERG_TABLE_PROPERTIES = (
     "'format-version' = 2, "
@@ -94,9 +79,8 @@ ICEBERG_TABLE_PROPERTIES = (
     f"'write.target-file-size-bytes' = '{TARGET_FILE_SIZE_BYTES}'"
 )
 
-# MW-4: merge-on-read sibling of ICEBERG_TABLE_PROPERTIES. The COW block above is the
-# publish-job mirror and must not change (LRS). This block is a new table, never a rewrite
-# of the existing silver entity.
+# Merge-on-read sibling of ICEBERG_TABLE_PROPERTIES: a new scratch table, never a rewrite of the
+# existing silver entity.
 MOR_ICEBERG_TABLE_PROPERTIES = (
     "'format-version' = 2, "
     "'write.delete.mode' = 'merge-on-read', "
@@ -108,22 +92,18 @@ MOR_ICEBERG_TABLE_PROPERTIES = (
 # Iceberg FileContent::PositionDeletes. Used to count live delete files via ``table.files``.
 POSITION_DELETE_CONTENT = 1
 MOR_SEED_ROW_COUNT = 20
-# Five distinct MERGE commits (plus the idempotent replay of the last) so the
-# live position-delete group meets MOR_MIN_POSITION_DELETE_FILES after F-1.
+# Five distinct MERGE commits (plus the idempotent replay of the last) so the live position-delete
+# group meets MOR_MIN_POSITION_DELETE_FILES.
 MOR_UPDATED_ID_COUNT = 5
 MW4_TEMP_VIEW = "mw4_staging_view"
-# Compact is a no-op below Spark's min-input-files floor of 5 (RP-1 / F-1). The sequence
-# writes this many MERGEs so rewrite_position_delete_files has something to fold.
+# Compact is a no-op below Spark's min-input-files floor of 5; the MERGEs above must exceed it.
 # pins: rp-1-fork-repin/C-008
 MOR_MIN_POSITION_DELETE_FILES = 5
-# Far-future older_than so expire is driven by retain_last, not file age (same pattern as
-# test_maintenance_call.py).
+# Far-future older_than: expire is driven by retain_last, not file age.
 EXPIRE_OLDER_THAN_FUTURE_MS = 86_400_000
 
 
-# ==============================================================================================
 # Pure builders
-# ==============================================================================================
 def bronze_path(entity: str, ds: str) -> str:
     """The s3a bronze Parquet path for ``entity``/``ds`` (mirrors ``utils.get_bronze_path``)."""
     return f"s3a://{BRONZE_BUCKET}/{BRONZE_PREFIX}/{entity}/{ds}.parquet"
@@ -137,9 +117,8 @@ def fq_table(catalog: str, namespace: str, entity: str) -> str:
 def acceptance_namespace_location(warehouse: str) -> str:
     """The scratch namespace's warehouse ``location`` (``<warehouse>/<namespace>``).
 
-    A namespace on a Glue (RequireExplicitLocation) catalog must carry a ``location``, or a CTAS
-    into it fails loud (no path to write to). SQL ``CREATE NAMESPACE … LOCATION`` (WG-5) or the
-    harness creates the namespace programmatically with this path (ADV-1).
+    A Glue (RequireExplicitLocation) namespace must carry a ``location``, or a CTAS into it fails
+    loud (no path to write to).
     """
     return f"{warehouse.rstrip('/')}/{ACCEPTANCE_NAMESPACE}"
 
@@ -157,8 +136,8 @@ def location_from_describe_rows(
 ) -> str | None:
     """Extract the ``Location`` value from ``DESCRIBE NAMESPACE`` ``(info_name, info_value)`` rows.
 
-    Returns ``None`` when the row is absent (a property-less / bare namespace). An empty string
-    is treated as present-but-empty and returned as-is so the comparison guard can fail loud.
+    Returns ``None`` when absent. An empty string is returned as-is so the comparison guard fails
+    loud.
     """
     for name, value in rows:
         if name == "Location":
@@ -169,12 +148,9 @@ def location_from_describe_rows(
 def assert_namespace_location_matches(*, actual: str | None, expected: str) -> None:
     """Fail loud when an adopted namespace's location does not match the intended path.
 
-    Comparison is exact equality after :func:`normalize_location_uri` (trailing-slash only).
-    A missing location (``None``) is the catalog-has-no-location edge and also fails loud —
-    never silently steers table writes to a different warehouse (docs/tier2-aws.md §5).
-
-    The error names both values and the operator fix (delete the stale namespace, or change
-    the target warehouse). IAM remains defence in depth, not the design.
+    Exact equality after :func:`normalize_location_uri`; a missing location also fails loud.
+    Adoption must never silently steer table writes to a different warehouse. The error names both
+    values and the operator fix.
     """
     expected_norm = normalize_location_uri(expected)
     if actual is None:
@@ -201,11 +177,8 @@ def probe_namespace_location_via_describe(
 ) -> str | None:
     """Read namespace Location via SQL ``DESCRIBE NAMESPACE`` (unit-test helper).
 
-    Retired as the sanctioned live-read path: :meth:`spark.catalog.getDatabase` now returns
-    a real ``locationUri`` (Y-3). Kept so DESCRIBE-row extraction stays unit-testable without
-    a session. ``listDatabases`` still returns ``locationUri=None`` (FA-2).
-
-    ``spark`` is duck-typed (``spark.sql(...).to_arrow()``).
+    Kept so DESCRIBE-row extraction stays unit-testable without a session. ``spark`` is
+    duck-typed (``spark.sql(...).to_arrow()``).
     """
     sql = f"DESCRIBE NAMESPACE {catalog}.{namespace}"
     table = spark.sql(sql).to_arrow()  # type: ignore[attr-defined]
@@ -218,9 +191,8 @@ def probe_namespace_location_via_describe(
 def assert_glue_scratch_namespace_location(spark: object, warehouse: str) -> None:
     """After ensure-namespace on the Glue leg: verify Location matches the intended path.
 
-    Glue-only. S3 Tables namespaces carry no location by design — nothing to compare; that leg
-    must not call this guard. Reads ``locationUri`` from the public
-    ``spark.catalog.getDatabase`` API (Y-3; this was the helper's retirement condition).
+    Glue-only: S3 Tables namespaces carry no location by design, so that leg must not call this
+    guard.
     """
     expected = acceptance_namespace_location(warehouse)
     db = spark.catalog.getDatabase(f"{SILVER_CATALOG}.{ACCEPTANCE_NAMESPACE}")  # type: ignore[attr-defined]
@@ -231,8 +203,8 @@ def assert_glue_scratch_namespace_location(spark: object, warehouse: str) -> Non
 def glue_catalog_config(catalog_name: str, warehouse: str) -> dict[str, str]:
     """The ``spark.sql.catalog.<name>.*`` block for a Glue catalog (source publish job shape).
 
-    Includes ``io-impl`` verbatim from the real script — the WG2 mapping recognises and **drops**
-    it (iceberg-rust FileIO is not pluggable by classname), so it is carried for fidelity.
+    ``io-impl`` is carried verbatim for fidelity; the mapping recognises and **drops** it
+    (iceberg-rust FileIO is not pluggable by classname).
     """
     prefix = f"spark.sql.catalog.{catalog_name}"
     return {
@@ -246,14 +218,10 @@ def glue_catalog_config(catalog_name: str, warehouse: str) -> dict[str, str]:
 def s3tables_catalog_config(catalog_name: str, table_bucket_arn: str) -> dict[str, str]:
     """The ``spark.sql.catalog.<name>.*`` block for an **S3 Tables** catalog (publish job shape).
 
-    S3 Tables addresses its virtual bucket by **ARN**, passed as the ``warehouse`` — RePark's
-    ``catalog_config`` carries an S3 Tables block's ``warehouse`` into the ``table_bucket_arn`` the
-    ``repark-catalog`` builder requires (an explicit ``table_bucket_arn`` would win). ``io-impl`` is
-    carried verbatim for fidelity (recognised and dropped, exactly like the Glue block).
-
-    ``table_bucket_arn`` is a RUNTIME argument (from ``TABLE_BUCKET_ARN``) — never a committed
-    literal. Region is taken from the caller's AWS environment (the ARN is region-qualified;
-    the runbook sets ``AWS_REGION=us-east-2``).
+    S3 Tables addresses its virtual bucket by **ARN**, passed as the ``warehouse``;
+    ``catalog_config`` maps it into the ``table_bucket_arn`` the ``repark-catalog`` builder
+    requires. ``io-impl`` is carried verbatim for fidelity (recognised and dropped).
+    ``table_bucket_arn`` comes from ``TABLE_BUCKET_ARN`` at RUNTIME — never a committed literal.
     """
     prefix = f"spark.sql.catalog.{catalog_name}"
     return {
@@ -287,11 +255,7 @@ def deduplicate(
     id_col: str,
     timestamp_col: str = "ingestion_timestamp",
 ) -> DataFrame:
-    """Keep the newest row per ``id_col`` (mirrors the source publish job's dedup step).
-
-    ``row_number()`` over ``partitionBy(id_col).orderBy(timestamp_col DESC)`` → keep ``rn == 1`` →
-    drop the helper column.
-    """
+    """Keep the newest row per ``id_col`` (mirrors the source publish job's dedup step)."""
     window = Window.partitionBy(id_col).orderBy(F.col(timestamp_col).desc())
     return (
         df.withColumn("row_num", F.row_number().over(window))
@@ -300,9 +264,7 @@ def deduplicate(
     )
 
 
-# ==============================================================================================
-# MW-4 — merge-on-read compact + expire (Glue live + memory analog share this path)
-# ==============================================================================================
+# Merge-on-read compact + expire (shared by the Glue live leg and the memory analog)
 class MorMaintenanceOutcome(NamedTuple):
     """Arrow row set and delete-file counts from :func:`run_mor_merge_compact_expire`."""
 
@@ -412,7 +374,7 @@ def run_mor_merge_compact_expire(
 
     snapshots_after_ctas = snapshot_ids_oldest_first(spark, table)
     first_snapshot_id = snapshots_after_ctas[0]
-    # Dual probe (MW-1 C1-Q-001): the CTAS snapshot must be readable *before* expire.
+    # Dual probe: the CTAS snapshot must be readable before expire.
     require_snapshot_readable(spark, table, first_snapshot_id, id_col)
 
     updates: list[tuple[int, str]] = [
@@ -495,9 +457,7 @@ def require_snapshot_readable(
 ) -> None:
     """Fail if ``VERSION AS OF snapshot_id`` does not return ``expected_rows``.
 
-    Dual probe with :func:`require_snapshot_expired`: the snapshot must be
-    readable *before* expire. MW-4's CTAS is ``MOR_SEED_ROW_COUNT`` rows; MW-5's
-    demo is 1,000.
+    Dual probe with :func:`require_snapshot_expired`: the snapshot must be readable before expire.
     """
     arrow = spark.sql(  # type: ignore[attr-defined]
         f"SELECT {id_col} FROM {table} VERSION AS OF {snapshot_id}"
@@ -512,10 +472,8 @@ def require_snapshot_readable(
 def require_snapshot_expired(spark: object, table: str, snapshot_id: int) -> None:
     """Fail unless ``VERSION AS OF`` is the unknown-snapshot analysis error.
 
-    Needle is the engine string in ``time_travel.rs`` (also ``test_time_travel.py``):
-    ``unknown Iceberg snapshot id {id}: not found in table metadata``. A generic
-    ``AnalysisException`` that only mentions ``snapshot``, or echoes the SQL id,
-    is not expire proof (octo C2-Q-001).
+    Needle is the engine string in ``time_travel.rs`` (``unknown Iceberg snapshot id {id}: not
+    found in table metadata``); a generic ``AnalysisException`` is not expire proof.
     """
     try:
         spark.sql(  # type: ignore[attr-defined]

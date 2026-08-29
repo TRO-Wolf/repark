@@ -1,4 +1,4 @@
-/// P5C1-Q-001 (audit G1) — the node-kind matrix for the empty-OW cast walk.
+/// Node-kind matrix for the empty-OW cast walk.
 ///
 /// The end-to-end pins above cover `Aggregate`, `Window`, `Join.on`, `Filter` and
 /// scalar-subquery hosts. The remaining hosts (`Values`, `DISTINCT ON`, `EXISTS`/`IN`
@@ -128,7 +128,7 @@ fn reject_path_escape_ident_blocks_dotdot_and_separators() {
     assert!(reject_path_escape_ident("foo..bar", "catalog").is_err());
 }
 
-// === r23 QI1: idents ===
+// === Shared identifier probes ==========================================================
 /// Shared probe table (`repark_iceberg::write::idents::probes`) drives CTAS path-escape refuse.
 #[test]
 fn qi1_path_escape_shared_probes_refuse() {
@@ -202,7 +202,7 @@ fn g3e8_subquery_detector_fires_on_every_spelling_and_no_other() {
         // UPDATE IN stays refused at the statement valve (verb is Update). The expression-level
         // helper is verb-aware and would allow the same selection on DELETE; pin it with EXISTS.
         "UPDATE t SET name = 'z' WHERE id IN (SELECT id FROM k)",
-        // The three spellings the panel found missing from the matrix (L1 M-4): none of them is
+        // These spellings cover the parser-bypass family (L1 M-4): none of them is
         // safe-because-uncorrelated — the safe/unsafe boundary is per-shape.
         "DELETE FROM t WHERE NOT EXISTS (SELECT 1 FROM k)",
         "DELETE FROM t WHERE EXISTS (SELECT 1 FROM k WHERE 1 = 0)",
@@ -270,7 +270,7 @@ fn g3e8_statement_valve_covers_both_verbs_and_renders_the_parsed_target() {
     };
 
     // Fires, and names the parsed target — including the FROM-less spelling the router's own
-    // parse rejects (the panel's bypass family) and the quoted one the text scan cannot read.
+    // parse rejects and the quoted form the text scan cannot read.
     for (sql, expected_target, verb) in [
         (
             "DELETE FROM ice.sales.t WHERE id = (SELECT max(id) FROM k)",

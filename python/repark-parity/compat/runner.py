@@ -83,8 +83,8 @@ NIGHT1_MODULES: tuple[str, ...] = (
     "test_dataframe",
     "test_types",
 )
-# Classic stretch (column/readwriter) then C3 expansion modules in charter order.
-# U8: test_udf joins the expanded census as its own module (DF half shipped).
+# Classic stretch (column/readwriter) then C3 expansion modules in charter order;
+# test_udf joins the expanded census as its own module.
 STRETCH_MODULES: tuple[str, ...] = (
     "test_column",
     "test_readwriter",
@@ -96,10 +96,10 @@ STRETCH_MODULES: tuple[str, ...] = (
     "test_udf",
 )
 # Classic C2 cohort — the /345 denominator, in charter order (phase-3 EC-8, design §5 F1).
-# ADDITIVE: this constant and the `--classic` flag are new in the V2 port. `STRETCH_MODULES`
-# above is left byte-identical on purpose — it *appends* C3 modules to night-1, which blends
-# the C3 cohort into the classic denominator. `--stretch` therefore must never be used to run
-# the classic cohort; `--classic` is the isolated spelling.
+# ADDITIVE: this constant and the `--classic` flag are new in the V2 port.
+# `STRETCH_MODULES` appends C3 modules to night-1, blending C3 into the classic
+# denominator — `--stretch` must never run the classic cohort; `--classic` is the
+# isolated spelling.
 CLASSIC_MODULES: tuple[str, ...] = (
     "test_functions",
     "test_dataframe",
@@ -107,8 +107,8 @@ CLASSIC_MODULES: tuple[str, ...] = (
     "test_column",
     "test_readwriter",
 )
-# C3 census expansion cohort only (own denominators; NEVER blend with classic /345).
-# U8: test_udf is an expanded module with its own denominator when DF half ships.
+# C3 census expansion cohort only (own denominators; NEVER blend with classic /345);
+# test_udf carries its own denominator.
 C3_EXPAND_MODULES: tuple[str, ...] = (
     "test_group",
     "test_session",
@@ -117,10 +117,8 @@ C3_EXPAND_MODULES: tuple[str, ...] = (
     "test_sql",
     "test_udf",
 )
-# === r20 C4: census expansion round 2 module lists + _KNOWN_FATAL_TESTS ===
-# C4 expand2 cohort only (own denominators; NEVER blend with classic /345 or C3 expand).
-# Charter order: subquery/collection/repartition/utils/errors/stat/creation/conversion/serde.
-# test_tvf waits; streaming/connect/artifact/resources permanently OUT.
+# C4 expand2 cohort only (own denominators; never blend with classic /345 or C3
+# expand). test_tvf waits; streaming/connect/artifact/resources permanently OUT.
 C4_EXPAND_MODULES: tuple[str, ...] = (
     "test_subquery",
     "test_collection",
@@ -283,21 +281,20 @@ def run_module_inprocess(
 
     loader = unittest.defaultTestLoader
     suite = loader.loadTestsFromModule(module)
-    # loadTestsFromModule also picks up *imported* TestCase subclasses (e.g.
-    # ReusedSQLTestCase sitting in the module globals after `from … import`).
-    # Keep only cases whose defining module is the Apache test module itself.
+    # loadTestsFromModule also picks up imported TestCase subclasses (e.g.
+    # ReusedSQLTestCase after `from … import`); keep only cases defined in the
+    # Apache test module itself.
     suite = _filter_suite_defined_in(suite, import_name)
-    # Deliberate-crash tests (Apache proves its process-ISOLATED Python workers survive a
-    # worker segfault). repark executes UDFs in-process — the crash would kill this worker
-    # and take the whole module's census with it (r19 U8 finding: test_python_udf_segfault
-    # ctypes.string_at(0) core-dumped the census). Deselect + classify NEEDS-JVM (needs
-    # Spark's isolated-worker architecture); documented divergence in the U8 ledger.
+    # Deliberate-crash tests (Apache proves its process-isolated Python workers
+    # survive a segfault); repark executes UDFs in-process, so the crash would kill
+    # this worker and take the module census with it. Deselect + classify NEEDS-JVM;
+    # documented divergence in the U8 ledger.
     suite, fatal_rows = _deselect_known_fatal(suite, module_short)
     if test_filter:
         suite = _filter_suite(suite, test_filter)
-        # Dual-denom honesty under --filter: only keep fatal NEEDS-JVM rows whose
-        # test id matches the same filter (octo C4 C2-S1-002). Otherwise a debug
-        # filter on one method would still inject every known-fatal into the census.
+        # Dual-denom honesty under --filter: only keep fatal NEEDS-JVM rows matching
+        # the same filter, or a debug filter would inject every
+        # known-fatal into the census.
         fatal_rows = [
             row for row in fatal_rows if _filter_matches_test_id(row.test_id, test_filter)
         ]
@@ -472,12 +469,11 @@ class _RecordingResult(unittest.TestResult):
         return list(self._rows)
 
 
-# Apache tests that DELIBERATELY crash the executing process (proving Spark's isolated
-# Python workers survive). In-process execution cannot run them; deselected + classified
-# NEEDS-JVM (requires the isolated-worker architecture). Keyed by module short name.
-# C4 owns this map (region banner above) — C4 expand2 modules must not appear as keys
-# (no deliberate crash tests in that cohort; whole-module HARNESS on crash is only for
-# unknown worker death, never a stand-in for missing deselect entries).
+# Apache tests that DELIBERATELY crash the executing process (proving Spark's
+# isolated Python workers survive). In-process execution cannot run them; deselected
+# + classified NEEDS-JVM. Keyed by module short name; C4 expand2 modules must not
+# appear as keys (whole-module HARNESS on crash is only for unknown worker death,
+# never a stand-in for missing deselect entries).
 _KNOWN_FATAL_TESTS: dict[str, tuple[str, ...]] = {
     "test_udf": ("test_python_udf_segfault",),
 }
@@ -494,7 +490,7 @@ def _deselect_known_fatal(
     """Remove deliberate-crash tests; return (filtered suite, their NEEDS-JVM rows).
 
     Match on the **exact method name** (last id segment), not ``endswith(.name)``, so a
-    short fatal name cannot deselect a longer sibling (octo C4 C1-S2-005).
+    short fatal name cannot deselect a longer sibling.
     """
     fatal_methods = _KNOWN_FATAL_TESTS.get(module_short, ())
     if not fatal_methods:
@@ -609,9 +605,9 @@ def run_module_subprocess(
 ) -> ModuleCensus:
     """Run one module in an isolated subprocess with a hard wall timeout.
 
-    ``series_short`` (``C2`` / ``C3`` / ``C4``) is passed via env so the worker's
-    ``build_report`` findings use the same dual-denom series label as the parent
-    (octo C4 C4-S1-001: bare ``--modules X`` must not brand C4 runs as C2 zero-fix).
+    ``series_short`` (``C2`` / ``C3`` / ``C4``) is passed via env so worker findings
+    use the same dual-denom series label as the parent (bare
+    ``--modules X`` must not brand C4 runs as C2 zero-fix).
     """
     worker = Path(__file__).resolve()
     env = _worker_env(worktree_root=worktree_root, series_short=series_short)
@@ -730,9 +726,9 @@ def _series_from_args_and_env(
 ) -> tuple[str, str]:
     """Return ``(series_label, series_short)`` for report branding.
 
-    CLI ``--c4-expand`` / ``--c3-expand`` always win. ``REPARK_COMPAT_SERIES`` is honored
-    **only when** ``worker`` is true (parent deliberately stamps the child env) so a
-    leaked shell export cannot rebrand a classic parent run as C4 (octo C4 C5-S1-001).
+    CLI ``--c4-expand`` / ``--c3-expand`` always win. ``REPARK_COMPAT_SERIES`` is
+    honored **only when** ``worker`` is true (parent stamps the child env) so a
+    leaked shell export cannot rebrand a classic parent run as C4.
     """
     env_series = ""
     if worker:
@@ -783,18 +779,13 @@ def resolve_census_modules(
 ) -> list[str]:
     """Resolve the module short-name list for a census run (dual-denom isolation).
 
-    When ``c4_expand`` is true, returns **only** :data:`C4_EXPAND_MODULES` (charter order)
-    and ignores ``modules_csv`` / ``stretch`` / ``c3_expand`` so classic /345 and the C3
-    expand cohort are never blended into the C4 expand2 denominator. When ``c3_expand`` is
-    true (and not c4), returns **only** :data:`C3_EXPAND_MODULES`. When ``classic`` is true
-    (and neither expand flag is), returns **only** :data:`CLASSIC_MODULES` — the /345 cohort
-    with no C3 blending. Otherwise starts from ``modules_csv`` and optionally appends
-    :data:`STRETCH_MODULES`.
-
-    Precedence (fixed): ``c4_expand`` > ``c3_expand`` > ``classic`` > ``modules_csv``
-    (+ ``stretch``). ``classic`` is ADDITIVE in the V2 port (phase-3 EC-8); the
-    ``stretch`` branch below is unchanged and still appends, which is exactly the blending
-    trap ``--classic`` exists to avoid.
+    ``c4_expand`` → **only** :data:`C4_EXPAND_MODULES` (charter order), ignoring
+    ``modules_csv`` / ``stretch`` / ``c3_expand``; ``c3_expand`` → **only**
+    :data:`C3_EXPAND_MODULES`; ``classic`` → **only** :data:`CLASSIC_MODULES` (the
+    /345 cohort, no C3 blending). Otherwise ``modules_csv`` plus optionally
+    :data:`STRETCH_MODULES`. Precedence: ``c4_expand`` > ``c3_expand`` > ``classic``
+    > ``modules_csv`` (+ ``stretch``). The ``stretch`` branch appends — exactly the
+    blending trap ``--classic`` exists to avoid.
     """
     if c4_expand:
         return [validate_module_short(name) for name in C4_EXPAND_MODULES]
@@ -808,7 +799,7 @@ def resolve_census_modules(
     if stretch:
         for name in STRETCH_MODULES:
             if name not in module_names:
-                # Validate constants too (defense-in-depth — octo C3 C5).
+                # Validate constants too (defense-in-depth).
                 module_names.append(validate_module_short(name))
     return module_names
 
@@ -820,12 +811,12 @@ def default_markdown_report_path(
     c3_expand: bool = False,
     date_stamp: str | None = None,
 ) -> Path:
-    """Default markdown report path — C-2 policy: gitignored ``target/census-reports/``.
+    """Default markdown report path — gitignored ``target/census-reports/``.
 
-    Aligns with ``scripts/run_census.sh``'s ``CENSUS_REPORT_DIR`` default. Reports land under
-    the gitignored tree so an uncommitted local run cannot look like committed evidence under
-    ``task/census/<run>/``. Promote to evidence with an explicit copy into ``task/``; pass
-    ``--markdown`` to opt into any other path (including ``task/``).
+    Aligns with ``scripts/run_census.sh``'s ``CENSUS_REPORT_DIR`` default: an
+    uncommitted local run cannot look like committed evidence under
+    ``task/census/<run>/``. Promote to evidence with an explicit copy into ``task/``;
+    pass ``--markdown`` for any other path.
     """
     stamp = date_stamp if date_stamp is not None else datetime.now(UTC).strftime("%Y-%m-%d")
     report_dir = worktree / "target" / "census-reports"
@@ -841,8 +832,8 @@ def default_markdown_report_path(
 def render_markdown_report(report: CompatReport, *, series: str = _SERIES_C2) -> str:
     """Human-readable census report (default body under ``target/census-reports/``).
 
-    ``series`` labels the scoreboard unit (C2 classic vs C3 expand) so dual denominators
-    are never misread as the same /345 series (octo C3 C1-L-001).
+    ``series`` labels the scoreboard unit so dual denominators are never misread as
+    the same /345 series.
     """
     rows = report.all_rows()
     denoms = denominators(rows)
@@ -1007,7 +998,7 @@ def build_report(
     """Assemble the top-level report object + auto findings.
 
     ``series`` selects the finding-line unit label so C3 expand reports never claim
-    ``C2 zero-fix`` (dual-denom series honesty — octo C3 C1-L-001).
+    ``C2 zero-fix`` (dual-denom series honesty).
     """
     report = CompatReport(
         generated_at=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -1211,9 +1202,8 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(report.to_dict()["denominators"], indent=2))
         return EXIT_OK
 
-    # Parent: one subprocess per module.
-    # C3/C4 expand use distinct default scratch so worker JSON never clobbers classic C2
-    # artifacts (dual-denom isolation — octo C3 C1-SAF-001; C4 Q11 own scratch).
+    # Parent: one subprocess per module. C3/C4 expand use distinct default scratch so
+    # worker JSON never clobbers classic C2 artifacts.
     if args.c4_expand:
         default_scratch = _DEFAULT_SCRATCH_C4
     elif args.c3_expand:

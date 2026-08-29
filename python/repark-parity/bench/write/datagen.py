@@ -1,4 +1,4 @@
-"""TPC-H parquet source for the write-path bench (R-WRITE-BENCH).
+"""TPC-H parquet source for the write-path bench.
 
 Reuses ``bench/tpch/datagen.py`` so SF caches stay shared. Default fact table is
 ``lineitem`` (largest SF1 file). Never commits data; never touches AWS.

@@ -1,4 +1,4 @@
-"""E1 error-class harvest pins — true-EC mechanisms (check_error class + parameter keys).
+"""Error-class harvest pins — true-EC mechanisms (check_error class + parameter keys).
 
 Apache rows gated here: PySparkRuntimeError hierarchy, interval constructors, facade
 pre-checks (bucket/greatest/from_*/schema_of_*/json_tuple), alias(metadata=), Column
@@ -38,9 +38,7 @@ def spark() -> ReparkSession:
     session.stop()
 
 
-# ==================================================================================================
 # Family A — PySparkRuntimeError under repark tree + interval constructors
-# ==================================================================================================
 
 
 def test_pyspark_runtime_error_under_repark_tree() -> None:
@@ -113,8 +111,8 @@ def test_yearmonth_interval_type_constructor_invalid_raises() -> None:
     }
     assert isinstance(caught.value, PySparkException)
 
-    # Mutation-proof both field memberships (octo C7-Q-001): endField=3 alone stays
-    # green if only start_field is checked (start is None). Mirror DayTime pins.
+    # Mutation-proof both field memberships: endField=3 alone stays green if
+    # only start_field is checked. Mirror DayTime pins.
     with pytest.raises(PySparkRuntimeError) as caught_bad:
         YearMonthIntervalType(123)
     assert caught_bad.value.getCondition() == "INVALID_INTERVAL_CASTING"
@@ -143,9 +141,7 @@ def test_tree_string_includes_ansi_intervals() -> None:
     assert " |-- dt_interval_1: interval day to second (nullable = true)" in lines
 
 
-# ==================================================================================================
 # Family E — native exception surface shim (check_error degrades cleanly)
-# ==================================================================================================
 
 
 def test_native_exception_surface_shim_methods() -> None:
@@ -175,9 +171,7 @@ def test_engine_analysis_error_has_surface_methods(spark: ReparkSession) -> None
     assert caught.value.getQueryContext() == []
 
 
-# ==================================================================================================
 # Family B — facade pre-checks
-# ==================================================================================================
 
 
 def test_bucket_bad_num_buckets_raises_not_column_or_int() -> None:
@@ -279,9 +273,7 @@ def test_raise_error_none_raises_not_column_or_str() -> None:
     }
 
 
-# ==================================================================================================
 # Family C / D — Column.alias metadata + __getitem__
-# ==================================================================================================
 
 
 def test_alias_metadata_multi_name_raises_only_allowed_for_single_column(
@@ -314,12 +306,11 @@ def test_column_getitem_returns_column_and_rejects_step() -> None:
 
 
 def test_column_getitem_open_bound_slice_no_invented_defaults() -> None:
-    """octo C3-L-001: open-bound slices must not invent start=1 / length=start.
+    """Open-bound slices must not invent start=1 / length=start.
 
-    Apache classic passes ``slice.start`` / ``slice.stop`` straight to ``substr``;
-    ``None`` bounds type-error (NOT_SAME_TYPE / NOT_COLUMN_OR_INT). RePark must not
-    silently lower ``col[:n]`` → ``substr(1,n)``, ``col[i:]`` → ``substr(i,i)``, or
-    ``col[:]`` → ``substr(1,1)``.
+    Apache classic passes ``slice.start`` / ``slice.stop`` straight to ``substr``; ``None``
+    bounds type-error. RePark must not silently lower ``col[:n]`` → ``substr(1,n)``,
+    ``col[i:]`` → ``substr(i,i)``, or ``col[:]`` → ``substr(1,1)``.
     """
     from repark.spark.functions import col
 
@@ -362,12 +353,11 @@ def test_column_getitem_open_bound_slice_no_invented_defaults() -> None:
 
 
 def test_column_getitem_slice_substr_spark_semantics(spark: ReparkSession) -> None:
-    """octo C7-L-001: closed getitem slice must use Spark substr, not DF built-in.
+    """Closed getitem slice must use Spark substr, not DF built-in.
 
-    Classic ``Column.__getitem__(slice)`` → ``substr(start, stop)`` with Spark
-    position rules (0 acts as 1; negatives from end). call_scalar used to embed
-    DF ``substring`` for the 3-arg arm, so ``'hello'[0:3]`` returned ``'he'``
-    while Apache/SQL path returned ``'hel'``. Pin value + type on the Arrow path.
+    Classic ``Column.__getitem__(slice)`` → ``substr(start, stop)`` with Spark position rules
+    (0 acts as 1; negatives from end); the DF ``substring`` 3-arg arm would return ``'he'``
+    for ``'hello'[0:3]`` where Apache/SQL returns ``'hel'``. Pin value + type on the Arrow path.
     """
     frame = spark.createDataFrame([("hello",)], ["s"])
     # pos 0 ≡ 1, length 3 → 'hel' (DF built-in → 'he')
@@ -384,7 +374,7 @@ def test_column_getitem_slice_substr_spark_semantics(spark: ReparkSession) -> No
 
 
 def test_column_getitem_int_extracts_element_not_slice(spark: ReparkSession) -> None:
-    """octo C1-L-001 / C1-Q-002: int getitem is element extract (not array_slice / fail-open)."""
+    """Int getitem is element extract (not array_slice / fail-open)."""
     frame = spark.createDataFrame([([10, 20, 30],)], ["arr"])
     rows = frame.select(frame.arr[0].alias("v"), frame.arr[2].alias("w")).collect()
     assert rows[0][0] == 10
@@ -393,18 +383,17 @@ def test_column_getitem_int_extracts_element_not_slice(spark: ReparkSession) -> 
 
 
 def test_column_getitem_str_field_native_not_parent(spark: ReparkSession) -> None:
-    """octo C1-L-002: string getitem evaluates field, not the parent struct/map value."""
+    """String getitem evaluates field, not the parent struct/map value."""
     frame = spark.createDataFrame([(1,)], ["id"]).selectExpr("named_struct('a', id) as s")
     rows = frame.select(frame.s["a"].alias("v")).collect()
     assert rows[0][0] == 1
 
 
 def test_column_getitem_map_str_key_extracts_value(spark: ReparkSession) -> None:
-    """octo C4-Q-001: map string getitem extracts value (not parent map / unpinned claim).
+    """Map string getitem extracts value (not parent map / unpinned claim).
 
-    Apache ``test_field_accessor`` asserts ``df.select(df.d[\"k\"]).first()[0] == \"v\"`` on
-    ``createDataFrame([Row(..., d={\"k\": \"v\"})])``. Prior pins only covered struct
-    ``named_struct`` str keys; residual prose claimed ``d[\"k\"]`` green without a pin.
+    Apache ``test_field_accessor`` asserts ``df.select(df.d["k"]).first()[0] == "v"`` on
+    ``createDataFrame([Row(..., d={"k": "v"})])``.
     """
     from repark import Row
 
@@ -418,7 +407,7 @@ def test_column_getitem_map_str_key_extracts_value(spark: ReparkSession) -> None
 
 
 def test_column_getitem_column_key_not_parent(spark: ReparkSession) -> None:
-    """octo C2-L-001: Column-key getitem extracts, never returns the parent container."""
+    """Column-key getitem extracts, never returns the parent container."""
     frame = spark.sql("SELECT array(10, 20, 30) AS arr, map(0, 100, 1, 200) AS m, 0 AS id")
     array_rows = frame.select(frame.arr[F.lit(0)].alias("v")).collect()
     assert array_rows[0][0] == 10
@@ -430,7 +419,7 @@ def test_column_getitem_column_key_not_parent(spark: ReparkSession) -> None:
 
 
 def test_column_getitem_non_int_non_str_not_parent(spark: ReparkSession) -> None:
-    """octo C2-L-001: bool/float/None keys must not fail-open to the parent array values."""
+    """Bool/float/None keys must not fail-open to the parent array values."""
     frame = spark.sql("SELECT array(10, 20, 30) AS arr")
     parent = frame.select(frame.arr).collect()[0][0]
     assert parent == [10, 20, 30]
@@ -445,7 +434,7 @@ def test_column_getitem_non_int_non_str_not_parent(spark: ReparkSession) -> None
 
 
 def test_column_getitem_str_sql_expr_quotes_hostile_ident() -> None:
-    """octo C1-SEC-001: string keys are double-quoted in free-SQL; injection cannot widen."""
+    """String keys are double-quoted in free-SQL; injection cannot widen."""
     from repark.spark.functions import col
 
     hostile = col("id")["id OR true"]
@@ -468,7 +457,7 @@ def test_column_iter_raises_not_iterable() -> None:
 
 
 def test_parse_exception_still_analysis(spark: ReparkSession) -> None:
-    # Taxonomy regression: parse errors remain AnalysisException after E1.
+    # Taxonomy regression: parse errors remain AnalysisException.
     with pytest.raises(ParseException):
         spark.sql("SELECT * FROM")
     with pytest.raises(AnalysisException):

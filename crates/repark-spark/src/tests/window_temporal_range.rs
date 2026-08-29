@@ -1,32 +1,5 @@
-//! G5b — temporal `RANGE` window-frame pins for the Spark SQL door.
-//!
-//! The §0 recon (`task/g5b-temporal-range-ledger.md`) established that an **interval-bounded**
-//! `RANGE` frame over a datetime order key already matches Spark 4.1.2 bit-for-bit, and that a
-//! **unit-less** bound over the same key does not: DataFusion coerces it to
-//! `Interval(MonthDayNano)`, where Arrow reads a bare `"1"` as one *month*. Spark refuses that
-//! spelling on a `TIMESTAMP` key and reads it as *days* on a `DATE` key. [`crate::window_range`]
-//! closes both arms; these pins hold them.
-//!
-//! Every golden below is the live PySpark 4.1.2 answer recorded in the §0 recon on the corpus
-//! basis (`local[2]`, `spark.sql.ansi.enabled=true`, `spark.sql.shuffle.partitions=2`), on the
-//! same seed rows the Python differential corpus uses for its temporal rows — the Rust and
-//! Python halves therefore pin one oracle, not two. Assertions are on the Arrow path
-//! (`collect`), value AND type.
-//!
-//! Revert-red (`docs/testing.md` "Divergence-class claims" rule 3): dropping the
-//! `conform_temporal_range_frames` call from [`crate::spark_ast`] turns
-//! [`temporal_range_bare_offset_over_timestamp_key_refuses_like_spark`] green-to-red (no refusal)
-//! and [`temporal_range_bare_offset_over_date_key_means_days`] red on value (a one-month window
-//! sums 60 where Spark sums 30).
-//!
-//! G5b-R (Y-1): [`temporal_range_negative_offset_is_spark_empty_frame`] and
-//! [`temporal_range_day_to_second_literal_matches_spark`] pin the two closed residuals.
-//! G5b-R Half-B: [`temporal_range_value_inverted_frames_do_not_wrap`] pins same-kind
-//! magnitude invert (the kind-only hole — Spark refuses `WRONG_COMPARISON`, never wraps)
-//! and [`temporal_range_mixed_negative_timestamp_and_numeric_bare_refuses`] pins the mixed
-//! refuse. W-4 (2026-08-13): R1 (unquoted interval) and R5 (interval-over-int) close
-//! via `spark_ast` pre-plan quote + type-aware numeric restatement. R4 stays recorded
-//! (FOLLOWING-to-FOLLOWING; DF 54.1.0 range-search; sqlparser 0.62 `EXCLUDE` TBD).
+//! Pins Spark temporal `RANGE` frame behavior for unit-less, interval, inverted, and numeric-key
+//! bounds. Assertions use live Spark 4.1.2 expectations on the Arrow path, including types.
 
 use super::super::*;
 use super::common::*;
@@ -212,9 +185,8 @@ fn present(values: &[i64]) -> Vec<Option<i64>> {
 // =================================================================================================
 
 /// Spark 4.1.2 refuses `RANGE BETWEEN <n> PRECEDING` over a `TIMESTAMP` order key with
-/// `DATATYPE_MISMATCH.RANGE_FRAME_INVALID_TYPE` (§0 recon, live oracle). Before the fix repark
-/// answered instead — DataFusion read the bare `1` as one **month** — so a migrated query got a
-/// silently different window and no warning. The door must refuse, carrying Spark's class.
+/// `DATATYPE_MISMATCH.RANGE_FRAME_INVALID_TYPE` (§0 recon, live oracle). Bare datetime bounds must
+/// refuse instead of being interpreted as months.
 #[tokio::test]
 async fn temporal_range_bare_offset_over_timestamp_key_refuses_like_spark() {
     let warehouse = TempDir::new().unwrap();
@@ -322,7 +294,7 @@ async fn temporal_range_bare_offset_over_date_key_means_days() {
 // Pin 3 — the already-correct interval path is undisturbed (asc, desc, ties, NULL keys)
 // =================================================================================================
 
-/// Interval-bounded temporal `RANGE` matched Spark before the fix and must still match after it.
+/// Interval-bounded temporal `RANGE` matches Spark.
 ///
 /// Four classes in one pin because they share the seed and the claim is "the fix touched no
 /// interval-bounded frame": ascending, descending, a tie on the order key, and NULL order keys.
@@ -498,10 +470,10 @@ async fn temporal_range_numeric_order_keys_are_untouched() {
 }
 
 // =================================================================================================
-// G5b-R residual pins — Y-1 (R3/R2 fixed); W-4 closes R1/R5; R4 remains recorded
+// Temporal RANGE refusal and residual behavior pins.
 // =================================================================================================
 
-/// Plan/execute error text for a statement that must stay loud (deferred residual).
+/// Plan or execute error text for a statement that must stay loud.
 async fn execute_error(ctx: &SessionContext, catalogs: &CatalogRegistry, sql: &str) -> String {
     match execute(ctx, catalogs, sql).await {
         Err(error) => error.to_string(),
@@ -575,12 +547,8 @@ async fn temporal_range_negative_offset_is_spark_empty_frame() {
     );
 }
 
-/// Q-001 / Q-002: invert is kind **or** same-kind magnitude after sign-normalize. The
-/// previous kind-only check missed `-2 PRECEDING AND -1 PRECEDING` (flips to
-/// `2 FOLLOWING AND 1 FOLLOWING`) and DataFusion wrapped `count(*)` to -1. Direct
-/// `2 FOLLOWING AND 1 FOLLOWING` never entered classify. Spark 4.1.2 refuses those
-/// same-kind magnitude inverts (`SPECIFIED_WINDOW_FRAME_WRONG_COMPARISON`); kind
-/// invert vs CURRENT ROW stays Spark-empty (pinned above). No `10000 YEAR` pair.
+/// Spark refuses same-kind magnitude inversions with
+/// `SPECIFIED_WINDOW_FRAME_WRONG_COMPARISON`; kind inversions remain Spark-empty.
 #[tokio::test]
 async fn temporal_range_value_inverted_frames_do_not_wrap() {
     let warehouse = TempDir::new().unwrap();
@@ -700,10 +668,8 @@ async fn temporal_range_unquoted_interval_literal_matches_quoted() {
     );
 }
 
-/// R4 deferred (W-4 re-verify on DF 54.1.0 / sqlparser 0.62): both-bounds-FOLLOWING
-/// still includes the current row (120 vs Spark 90). Planned frame is correctly typed;
-/// `WindowFrame` has `// TBD: EXCLUDE`. No Cargo.lock bump. Seam restatement cannot
-/// exclude the current row without inventing row-level compensation.
+/// Both-bounds-FOLLOWING includes the current row (120 vs Spark 90). The planned frame is typed,
+/// but this seam cannot exclude the current row without inventing row-level compensation.
 #[tokio::test]
 async fn temporal_range_following_to_following_still_includes_current_row() {
     let warehouse = TempDir::new().unwrap();

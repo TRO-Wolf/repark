@@ -1,4 +1,4 @@
-"""r24 A3 SEC-04 — RuntimeConfig.getAll redacts secret-shaped values; get() does not."""
+"""SEC-04 — RuntimeConfig.getAll redacts secret-shaped values; get() does not."""
 
 from __future__ import annotations
 
@@ -8,8 +8,8 @@ from repark.spark._secrets import prop_key_is_secret
 from repark.spark.session import ReparkSession
 
 # Needle inventory mirrored from catalog_config.rs:126 prop_key_is_secret (do not edit Rust).
-# Conformance pin (Q9 / octo C1-SEC-001): every Rust arm has ≥1 positive key; exclusion arms
-# (`bucket`/`arn` inside `_key`) stay non-secret.
+# Conformance pin: every Rust arm has ≥1 positive key; `bucket`/`arn`
+# inside `_key` stay non-secret.
 _SECRET_KEYS: tuple[str, ...] = (
     "aws_secret_access_key",
     "s3.secret-access-key",
@@ -33,7 +33,7 @@ _SECRET_KEYS: tuple[str, ...] = (
     "foo.key",  # becomes foo_key → _key arm
     "my_service_key",
     "spark.sql.catalog.mem.s3.secret-access-key",
-    # Audit SEC-04 / octo C4-Q-002: Hadoop-prefixed S3A spellings.
+    # Audit SEC-04: Hadoop-prefixed S3A spellings.
     "spark.hadoop.fs.s3a.secret.key",
     "spark.hadoop.fs.s3a.access.key",
 )
@@ -83,31 +83,27 @@ def test_get_all_redacts_secret_values(spark: ReparkSession) -> None:
     assert all_conf["fs.s3a.secret.key"] == "***"
     assert secret not in all_conf.values()
     assert all_conf["spark.sql.shuffle.partitions"] == "8"
-    # Keys still present for diagnostics.
     assert "s3.secret-access-key" in all_conf
     assert "fs.s3a.secret.key" in all_conf
 
 
 def test_get_explicit_secret_key_unchanged(spark: ReparkSession) -> None:
-    """get(explicit secret key) returns the real value — SEC-04 Q8 both-ways rec.
+    """get(explicit secret key) returns the real value — SEC-04 both-ways rec.
 
     getAll redacts; get of a named key is intentional lookup and stays plaintext.
-    Ledger records the recommendation; this pin freezes the chosen behavior.
     """
     secret = "EXPLICIT_GET_SECRET_XYZ"
     spark.conf.set("s3.secret-access-key", secret)
     assert spark.conf.get("s3.secret-access-key") == secret
-    # getAll still redacts the same key.
     assert spark.conf.getAll["s3.secret-access-key"] == "***"
 
 
 def test_get_all_returned_dict_is_isolated(spark: ReparkSession) -> None:
-    """Mutating the getAll mapping must not poison the conf store (octo C2-Q-002)."""
+    """Mutating the getAll mapping must not poison the conf store."""
     secret = "ISOLATION_SECRET_VALUE_XYZ"
     spark.conf.set("password", secret)
     dump = spark.conf.getAll
     assert dump["password"] == "***"
     dump["password"] = "LEAKED_VIA_MUTATION"
-    # Fresh getAll still redacts; explicit get still returns the real secret.
     assert spark.conf.getAll["password"] == "***"
     assert spark.conf.get("password") == secret

@@ -1,19 +1,7 @@
-//! The registration seam: what a door installs into the session at build time.
+//! Build-time registration seam for SQL-door extensions.
 //!
-//! Phase-cut inversion (design §3 / forced-edit ledger #3): v1's `build()` inlined the phase-2
-//! registrations — the Spark function registry, the expression-semantics analyzer rules, the TA
-//! window UDFs, and the cardinality/`repark.sql.*` `ConfigExtension`. The phase-1 engine core
-//! cannot depend on those crates, so `build()` exposes the two positions as [`SessionExtension`]
-//! hooks at the SAME points in v1's construction order: [`configure`](SessionExtension::configure)
-//! after the write knobs are installed on the `SessionConfig` and BEFORE the `RuntimeEnv` is
-//! assembled; [`register`](SessionExtension::register) immediately AFTER the `SessionContext`
-//! is created. Phase-2 repark-spark ships one extension holding exactly what v1 inlined.
-//!
-//! Both hooks are defaulted (the trait-wrapping both-sides audit applies): a session built
-//! without an extension gets pure DataFusion semantics.
-//!
-//! **UNSTABLE until phase 2:** the hook contract is documented provisional until the phase-2
-//! doors land and exercise it.
+//! `configure` runs before runtime construction and `register` runs after context creation. The
+//! default hooks preserve a pure-DataFusion session.
 
 use std::collections::HashMap;
 
@@ -22,14 +10,7 @@ use datafusion::prelude::{SessionConfig, SessionContext};
 use crate::session_time_zone::SessionTimeZone;
 
 /// ===========================================================================================
-/// What `build()` hands the [`configure`](SessionExtension::configure) hook: the raw builder
-/// conf map, plus the session values the engine has ALREADY resolved from it.
-///
-/// The map alone was enough while every extension parsed its own keys. The session timezone is
-/// different in kind: `repark-core` owns its one spelling and resolves it ONCE, at build, and a
-/// door that re-parsed the map would be a second resolution of a value the engine has already
-/// settled. Passing the resolved value keeps "resolved once" literally true and makes the
-/// dependency visible at the seam instead of implicit in a shared key string.
+/// Values already resolved by `build()` and passed to the configure hook.
 /// ===========================================================================================
 #[derive(Debug, Clone, Copy)]
 pub struct SessionBuildConf<'a> {
@@ -40,10 +21,7 @@ pub struct SessionBuildConf<'a> {
 }
 
 /// ===========================================================================================
-/// Build-time session extension — two hooks at v1's inline registration positions.
-///
-/// Install with [`ReparkSessionBuilder::with_extension`](crate::ReparkSessionBuilder); `build()`
-/// invokes [`configure`](Self::configure) then [`register`](Self::register) exactly once each.
+/// Build-time extension with configure-then-register hooks.
 /// ===========================================================================================
 pub trait SessionExtension: Send + Sync {
     /// Amend the [`SessionConfig`] before the runtime and context are assembled (v1 position:

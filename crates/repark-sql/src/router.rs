@@ -1,43 +1,4 @@
 //! The ANSI statement router.
-//!
-//! The order below is the design's, and each step earns its position:
-//!
-//! 1. **Text guards, multi-statement FIRST** ([`crate::guards`]). Refusing a script before
-//!    anything else runs is what stops a second statement from being rewritten or sniffed — the
-//!    ordering-defect class the design's judges called out explicitly.
-//! 2. **The pre-parse stage** — the productions stock sqlparser cannot reach at all (the R1
-//!    spike named them): the `ALTER TABLE … EXECUTE` refusal, the branch/tag recognizer
-//!    ([`crate::ref_ddl`]), the `SET PROPERTIES` rewrite ([`crate::alter`]), and the
-//!    `FOR … AS OF` rewrite ([`crate::time_travel`]). Its position is the BUG-010 ordering rule
-//!    in action: every one of these runs AFTER the multi-statement refuse, so no recognizer can
-//!    ever see — or rewrite — the second statement of a script.
-//! 3. **Parse, with stock DataFusion parser machinery on the Generic dialect** (design §2 Q14 —
-//!    no bespoke `Dialect` impl in phase 2).
-//! 4. **Statement match.** The Iceberg catalog DDL DataFusion cannot express (`CREATE TABLE`
-//!    both forms, `DROP TABLE`, `CREATE SCHEMA`, `DROP SCHEMA`, `ALTER TABLE`), the `MERGE INTO`
-//!    lowering, and the refuse set ([`crate::refusals`]: `INSERT OVERWRITE`, `CALL`, `TRUNCATE`).
-//! 5. **The two DML data-loss valves**, in the shared `DELETE`/`UPDATE` arm, both needing the
-//!    parsed statement or its target: the G3-E8 subquery-predicate valve
-//!    ([`guards::refuse_dml_subquery_predicate`], sync) and then the BUG-001 merge-on-read valve
-//!    ([`guards::refuse_mor_multi_spec_dml`], async — it loads the target's Iceberg metadata).
-//!    Cheap before expensive, which is also the Spark door's order (`execute_delete`), and the
-//!    only DML the BUG-001 valve ever gated is the DML this arm carries.
-//! 6. **Delegate.** Everything else is planned and executed by DataFusion, with the SEC-02
-//!    local-filesystem guard between planning and execution. That includes reads of the fork's
-//!    metadata tables (`t$snapshots`, `t$files`, …), which the fork's schema provider registers
-//!    as real tables, and `INSERT`/`DELETE`/`UPDATE`, which the fork's `TableProvider` services
-//!    (ADR-0003).
-//!
-//! There is deliberately **no pre-parse `$` passthrough**. An earlier revision short-circuited to
-//! delegation whenever the scrubbed text contained a `$`, which routed `CREATE TABLE t AS SELECT
-//! … FROM x$snapshots` past the Q15 target check and into DataFusion's own CTAS — a session-local
-//! `MemTable` that reads back all session and is gone tomorrow, the exact failure graft G1
-//! exists to forbid. The stock parser handles `$` in an identifier, so a metadata reference
-//! reaches delegation through the ordinary `_ =>` arm and a metadata reference inside a CTAS
-//! reaches its handler like any other query.
-//!
-//! On a parse OR plan failure — and only then — the error goes through the wrong-door sniff
-//! ([`crate::sniff`]).
 
 use std::borrow::Cow;
 
@@ -51,14 +12,7 @@ use crate::{
     alter, create_table, guards, merge, ref_ddl, refusals, schema_ddl, sniff, time_travel,
 };
 
-/// The dialect handed to DataFusion's parser. Stock `Generic`, deliberately — NOT DataFusion's
-/// `Ansi` dialect, which is untested against the phase-1 baseline and would be a silent
-/// regression surface (design §2 Q14).
-///
-/// It must also equal the SESSION's `sql_parser.dialect`, because [`delegate`] re-parses through
-/// `create_logical_plan`: a router that routes with one parser and executes with another is
-/// fail-open for every statement the two disagree about (the panel's L1 M-1 class, found on the
-/// Spark door). Pinned by `guards::tests::router_parse_dialect_matches_the_session_default`.
+/// The dialect handed to DataFusion's parser. It must match the session parser used during planning.
 pub(crate) const PARSER_DIALECT: datafusion::config::Dialect = datafusion::config::Dialect::Generic;
 
 /// ===========================================================================================
@@ -71,9 +25,7 @@ pub(crate) const PARSER_DIALECT: datafusion::config::Dialect = datafusion::confi
 pub async fn execute(cx: EngineContext<'_>, sql: &str) -> Result<DataFrame> {
     guards::run_text_guards(&cx, sql)?;
 
-    // --- Pre-parse stage: the three productions stock sqlparser cannot reach (R1 spike). ---
-    // Every one of them runs AFTER the multi-statement refuse, which is the BUG-010 ordering
-    // rule: a recognizer must never see (or rewrite) the second statement of a script.
+    // --- Pre-parse stage: productions stock sqlparser cannot reach. ---
     if let Some(refusal) = refusals::recognize_alter_table_execute(sql) {
         return Err(refusal);
     }
@@ -84,23 +36,14 @@ pub async fn execute(cx: EngineContext<'_>, sql: &str) -> Result<DataFrame> {
         Some(rewritten) => Cow::Owned(rewritten),
         None => Cow::Borrowed(sql),
     };
-    // The `FOR … AS OF` rewrite registers ephemeral pinned relations on the session; they are
-    // released again as soon as the statement has been planned, so a long-lived session neither
-    // accumulates them nor shows them in `SHOW TABLES` / `information_schema.tables` (the
-    // introspection surface this same PR enabled). The plan owns its provider, so the returned
-    // `DataFrame` still collects after the name is gone. The release runs on every `?` / `return`
-    // path of the split below — but NOT on unwind or future-drop: `PinnedViews` carries no `Drop`
-    // impl by design (it would have to own a `SessionContext` clone), and neither source exists
-    // today (panics banned in prod, PyO3 drives this via `block_on`).
+    // Release every relation registered by the rewrite after planning.
     let mut pinned = time_travel::PinnedViews::default();
     let result = execute_time_travelled(&cx, &sql, &mut pinned).await;
     pinned.release(cx.ctx);
     result
 }
 
-/// The rest of the pipeline, from the `FOR … AS OF` rewrite onward. Split out purely so
-/// [`execute`] can release `pinned` on every `?` / `return` path of the rewrite — the ones an
-/// inline `?` would have skipped. (Unwind / future-drop bypass it; see the call site.)
+/// Run the pipeline after the `FOR … AS OF` rewrite.
 async fn execute_time_travelled(
     cx: &EngineContext<'_>,
     sql: &str,
@@ -115,8 +58,7 @@ async fn execute_time_travelled(
     let statement = match cx.ctx.state().sql_to_statement(sql, &PARSER_DIALECT) {
         Ok(statement) => statement,
         Err(err) => {
-            // G15: `CAST(x AS STRING COLLATE name)` is unparsable; refuse before
-            // the generic parse error so the Spark-live spelling is actionable.
+            // G15: refuse type-position COLLATE before returning the generic parse error.
             guards::refuse_type_position_collation_in_sql(sql)?;
             return Err(sniff::upgrade_error(sql, err));
         }
@@ -127,14 +69,11 @@ async fn execute_time_travelled(
         return delegate(cx, sql).await;
     }
     let DFStatement::Statement(statement) = statement else {
-        // DataFusion's own parser extensions (COPY, CREATE EXTERNAL TABLE, …) — delegate, where
-        // the SEC-02 guard sees the resulting plan.
+        // DataFusion's parser extensions use the delegated plan path.
         return delegate(cx, sql).await;
     };
 
-    // G15 — collation at the parse every route agrees on (G3-E8 altitude), before
-    // CREATE / SELECT / SET match. Type-position CAST COLLATE is the parse-fail
-    // arm above; RESET of a collation key is refused before delegate.
+    // G15 runs at parse altitude before statement-specific handling.
     guards::refuse_collation_in_statement(statement.as_ref())?;
 
     match statement.as_ref() {
@@ -179,12 +118,7 @@ async fn execute_time_travelled(
                 .first()
                 .map_or_else(|| "<table>".to_string(), |target| target.name.to_string()),
         )),
-        // --- Delegated DML, behind the two data-loss valves, cheap one first. ---
-        // These arms would otherwise fall through `_ =>` to `delegate` unchanged; they exist so
-        // the guards see the PARSED statement. G3-E8 (sync AST walk — a `WHERE` subquery is lost
-        // at DataFusion's DML planning boundary and degenerates into match-all) runs before
-        // BUG-001 (async: loads the target's Iceberg metadata), which is the Spark door's order
-        // and rationale exactly. Everything after them is the delegation path verbatim.
+        // --- Delegated DML: allow-list first, then G3-E8 and async MoR/V3 valves. ---
         Statement::Delete(_) | Statement::Update(_) => {
             if let Some(allowed) =
                 repark_iceberg::write::predicate_dml::try_allowed_delete_in(statement.as_ref())?
@@ -223,13 +157,8 @@ async fn execute_time_travelled(
 }
 
 /// Plan with DataFusion, run the SEC-02 guard on the resulting plan, then execute.
-///
-/// The guard sits BETWEEN planning and execution because that is the only place the target of a
-/// `COPY TO` / `CREATE EXTERNAL TABLE` is known as data rather than as text.
 async fn delegate(cx: &EngineContext<'_>, sql: &str) -> Result<DataFrame> {
-    // SE-1 D1 round 5 (Z-2): plan / guard / execute all come from the shared belt
-    // (`repark_core::PreExecute`) — this door no longer owns a private copy of the sequence,
-    // and the tighten DDL-sink refuse it used to call directly now lives inside `belt.guard`.
+    // Plan, apply SEC-02, then execute through the shared pre-execute belt.
     let belt = repark_core::PreExecute::from_engine_context(cx);
     let plan = match belt.plan(sql).await {
         Ok(plan) => plan,
@@ -241,8 +170,7 @@ async fn delegate(cx: &EngineContext<'_>, sql: &str) -> Result<DataFrame> {
     belt.execute(plan).await
 }
 
-/// A `CREATE SCHEMA`'s name, which sqlparser models as either a plain name or a `<name>
-/// AUTHORIZATION <user>` pair.
+/// Return the schema name, rejecting authorization forms that this engine cannot model.
 fn schema_object_name(
     schema_name: &datafusion::sql::sqlparser::ast::SchemaName,
 ) -> Result<&datafusion::sql::sqlparser::ast::ObjectName> {

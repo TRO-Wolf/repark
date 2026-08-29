@@ -1,4 +1,4 @@
-"""Unit pins for the TPC-H compare kernel (octo C3-L-003 / C1-Q-001 / C1-Q-005).
+"""Unit pins for the TPC-H compare kernel.
 
 These are mutation-proof: off-by-one large integers must fail; near-equal floats pass.
 """
@@ -24,21 +24,21 @@ def _compare_mod() -> object:
 
 
 def test_integer_off_by_one_at_million_is_wrong_result() -> None:
-    """C1-Q-001: relative 1e-6 must NOT mask int off-by-one at |k| >= 1e6."""
+    """Relative 1e-6 must NOT mask int off-by-one at |k| >= 1e6."""
     compare = _compare_mod()
     result = compare.compare_result_sets([(6_000_000,)], [(6_000_001,)])
     assert not result.equal, result.message
 
 
 def test_float_integral_off_by_one_at_million_is_wrong_result() -> None:
-    """C2-L-001: integral-valued floats must also be exact at large magnitude."""
+    """Integral-valued floats must also be exact at large magnitude."""
     compare = _compare_mod()
     result = compare.compare_result_sets([(6_000_000.0,)], [(6_000_001.0,)])
     assert not result.equal, result.message
 
 
 def test_decimal_off_by_one_at_million_is_wrong_result() -> None:
-    """C2-L-001: integral Decimal must not float-tol into false OK."""
+    """Integral Decimal must not float-tol into false OK."""
     from decimal import Decimal
 
     compare = _compare_mod()
@@ -56,7 +56,7 @@ def test_integer_exact_match_ok() -> None:
 
 
 def test_mixed_int_float_near_equal_uses_tolerance() -> None:
-    """C2-L-002: int vs non-integral float promotes to float rules."""
+    """Int vs non-integral float promotes to float rules."""
     compare = _compare_mod()
     result = compare.compare_result_sets([(5,)], [(5.0000001,)])
     assert result.equal, result.message
@@ -101,7 +101,7 @@ def test_unordered_rows_match() -> None:
 
 
 def test_sf_cli_refuses_over_100() -> None:
-    """C1-SEC-002 / C2-SEC-003: CLI hard-caps SF at 100 and refuses NaN."""
+    """CLI hard-caps SF at 100 and refuses NaN."""
     import importlib.util
 
     previous = list(sys.path)
@@ -118,7 +118,7 @@ def test_sf_cli_refuses_over_100() -> None:
 
 
 def test_timed_call_raises_on_sleep_over_budget() -> None:
-    """C2-Q-002: SIGALRM path must raise FuturesTimeout for a slow worker."""
+    """SIGALRM path must raise FuturesTimeout for a slow worker."""
     import time
     from concurrent.futures import TimeoutError as FuturesTimeout
 
@@ -153,7 +153,7 @@ def test_datagen_refuses_nan_scale_factor() -> None:
 
 
 def test_mid_repeat_exception_still_compares_prior_repark_rows() -> None:
-    """C4-L-001: later Exception must not discard successful repark rows."""
+    """Later Exception must not discard successful repark rows."""
     _compare_mod()
     runner = importlib.import_module("repark_tpch_bench.runner")
     queries = importlib.import_module("repark_tpch_bench.queries")
@@ -199,7 +199,7 @@ def test_mid_repeat_exception_still_compares_prior_repark_rows() -> None:
 
 
 def test_mid_repeat_duck_timeout_keeps_oracle_and_compares() -> None:
-    """C4-L-002: DuckDB timeout after success still compares repark."""
+    """DuckDB timeout after success still compares repark."""
     from concurrent.futures import TimeoutError as FuturesTimeout
 
     _compare_mod()
@@ -245,7 +245,7 @@ def test_mid_repeat_duck_timeout_keeps_oracle_and_compares() -> None:
 
 
 def test_mid_repeat_repark_timeout_still_compares_prior_rows() -> None:
-    """C5-L-001: repark FuturesTimeout after success must compare, not TIMEOUT."""
+    """repark FuturesTimeout after success must compare, not TIMEOUT."""
     from concurrent.futures import TimeoutError as FuturesTimeout
 
     _compare_mod()
@@ -518,13 +518,11 @@ def test_refuses_symlink_cache_root(tmp_path: object) -> None:
         datagen.ensure_parquet_sf(0.01, data_root=link)
 
 
-# ---------------------------------------------------------------------------
-# R-TPCH-V3 (W1) — disk gate, DIED exit, isolation defaults, report labels
-# ---------------------------------------------------------------------------
+# R-TPCH-V3 — disk gate, DIED exit, isolation defaults, report labels
 
 
 def test_sf10_disk_gate_below_threshold_skips(tmp_path: object, monkeypatch: object) -> None:
-    """B3: free disk < 30 GiB → not ok_to_run."""
+    """Free disk < 30 GiB → not ok_to_run."""
     from pathlib import Path
 
     _compare_mod()
@@ -551,7 +549,7 @@ def test_sf10_disk_gate_above_threshold_ok(tmp_path: object, monkeypatch: object
 
 
 def test_run_scoreboard_sf10_skips_when_disk_low(tmp_path: object, monkeypatch: object) -> None:
-    """B3: SF10 scoreboard short-circuits with FINDING, no queries."""
+    """SF10 scoreboard short-circuits with FINDING, no queries."""
     from pathlib import Path
 
     _compare_mod()
@@ -565,7 +563,7 @@ def test_run_scoreboard_sf10_skips_when_disk_low(tmp_path: object, monkeypatch: 
 
 
 def test_exit_code_died_is_six() -> None:
-    """V3: DIED maps to exit 6; outranks TIMEOUT; WRONG still beats DIED (C1-Q-001)."""
+    """DIED maps to exit 6; outranks TIMEOUT; WRONG still beats DIED (C1-Q-001)."""
     _compare_mod()
     runner = importlib.import_module("repark_tpch_bench.runner")
 
@@ -587,10 +585,8 @@ def test_exit_code_died_is_six() -> None:
         queries=[_q("DIED")],
     )
     assert runner.exit_code_for_board(board) == 6
-    # DIED outranks TIMEOUT (process death is worse than soft wall)
     board.queries = [_q("DIED"), _q("TIMEOUT")]
     assert runner.exit_code_for_board(board) == 6
-    # WRONG still beats DIED
     board.queries = [_q("DIED"), _q("WRONG-RESULT")]
     assert runner.exit_code_for_board(board) == 3
 
@@ -616,7 +612,7 @@ def test_query_result_roundtrip_dict() -> None:
 
 
 def test_iceberg_report_uses_iceberg_wall_column() -> None:
-    """V3: Iceberg leg MD matrix labels the wall column iceberg_wall."""
+    """Iceberg leg MD matrix labels the wall column iceberg_wall."""
     _compare_mod()
     runner = importlib.import_module("repark_tpch_bench.runner")
     board = runner.Scoreboard(
@@ -646,7 +642,7 @@ def test_iceberg_report_uses_iceberg_wall_column() -> None:
 
 
 def test_parquet_report_not_iceberg_wall_despite_not_iceberg_label() -> None:
-    """V3: 'parquet-not-Iceberg' must not flip the wall column to iceberg_wall."""
+    """'parquet-not-Iceberg' must not flip the wall column to iceberg_wall."""
     _compare_mod()
     runner = importlib.import_module("repark_tpch_bench.runner")
     board = runner.Scoreboard(
@@ -675,7 +671,7 @@ def test_parquet_report_not_iceberg_wall_despite_not_iceberg_label() -> None:
 
 
 def test_subprocess_signal_maps_to_died(monkeypatch: object) -> None:
-    """B3: negative worker returncode → DIED status."""
+    """Negative worker returncode → DIED status."""
     from pathlib import Path
 
     _compare_mod()
@@ -706,7 +702,7 @@ def test_subprocess_signal_maps_to_died(monkeypatch: object) -> None:
 
 
 def test_cli_still_refuses_sf_over_100() -> None:
-    """CLI still refuses SF>100 after V3 flag additions (usage exit 2)."""
+    """CLI refuses SF>100 (usage exit 2)."""
     import importlib.util
 
     previous = list(sys.path)
@@ -722,13 +718,11 @@ def test_cli_still_refuses_sf_over_100() -> None:
         sys.path[:] = previous
 
 
-# ---------------------------------------------------------------------------
-# B1 R-SAIL-BENCH: timeout retry + three-way merge (no pysail required)
-# ---------------------------------------------------------------------------
+# R-SAIL-BENCH: timeout retry + three-way merge (no pysail required)
 
 
 def test_timeout_retry_slow_class_when_retry_succeeds() -> None:
-    """B1: first-pass TIMEOUT then 300s success → status TIMEOUT error_class Slow."""
+    """First-pass TIMEOUT then 300s success → status TIMEOUT error_class Slow."""
     from concurrent.futures import TimeoutError as FuturesTimeout
 
     _compare_mod()
@@ -775,7 +769,7 @@ def test_timeout_retry_slow_class_when_retry_succeeds() -> None:
 
 
 def test_timeout_retry_hung_when_retry_also_times_out() -> None:
-    """B1: first-pass + 300s retry both TIMEOUT → hung Timeout (not Slow)."""
+    """First-pass + 300s retry both TIMEOUT → hung Timeout (not Slow)."""
     from concurrent.futures import TimeoutError as FuturesTimeout
 
     _compare_mod()
@@ -819,7 +813,7 @@ def test_timeout_retry_hung_when_retry_also_times_out() -> None:
 
 
 def test_merge_three_way_fills_sail_columns() -> None:
-    """B1: merge_three_way combines repark + sail boards into three wall columns."""
+    """merge_three_way combines repark + sail boards into three wall columns."""
     _compare_mod()
     runner = importlib.import_module("repark_tpch_bench.runner")
 
@@ -903,7 +897,7 @@ def test_merge_three_way_fills_sail_columns() -> None:
 
 
 def test_worse_status_ranking() -> None:
-    """B1: overall three-way status ranks WRONG-RESULT worst."""
+    """Overall three-way status ranks WRONG-RESULT worst."""
     _compare_mod()
     runner = importlib.import_module("repark_tpch_bench.runner")
     assert runner.worse_status("OK", "TIMEOUT") == "TIMEOUT"
@@ -911,13 +905,13 @@ def test_worse_status_ranking() -> None:
     assert runner.worse_status("ERROR", "DIED") == "DIED"
     assert runner.worse_status("DIED", "WRONG-RESULT") == "WRONG-RESULT"
     assert runner.worse_status("OK", "OK") == "OK"
-    # C4-Q-002: unknown ranks as ERROR-equivalent, never OK.
+    # Unknown ranks as ERROR-equivalent, never OK.
     assert runner.worse_status("OK", "BANANA") == "ERROR"  # type: ignore[arg-type]
     assert runner.worse_status("BANANA", "TIMEOUT") == "ERROR"  # type: ignore[arg-type]
 
 
 def test_query_result_from_dict_coerces_invalid_status() -> None:
-    """C4-Q-001: hostile Sail JSON status must not green-exit the scoreboard."""
+    """Hostile Sail JSON status must not green-exit the scoreboard."""
     _compare_mod()
     runner = importlib.import_module("repark_tpch_bench.runner")
     result = runner.query_result_from_dict(
@@ -943,7 +937,7 @@ def test_query_result_from_dict_coerces_invalid_status() -> None:
 
 
 def test_cli_engine_and_timeout_retry_flags() -> None:
-    """B1: CLI accepts --engine / --timeout-retry; rejects bad timeout-retry."""
+    """CLI accepts --engine / --timeout-retry; rejects bad timeout-retry."""
     import importlib.util
 
     previous = list(sys.path)
@@ -955,11 +949,10 @@ def test_cli_engine_and_timeout_retry_flags() -> None:
         spec.loader.exec_module(module)
         assert module.main(["--timeout-retry", "0"]) == 2
         assert module.main(["--timeout-retry", "99999"]) == 2
-        # --engine sail is accepted by argparse (may fail later if no sail; usage OK)
-        # Refuse SF usage still works with engine flag present.
+        # --engine sail is accepted by argparse; SF usage refusal still applies with the flag.
         assert module.main(["--engine", "sail", "--sf", "101"]) == 2
         assert module.main(["--engine", "both", "--sf", "0"]) == 2
-        # C3-Q-001: bad --queries must be usage exit 2, not traceback.
+        # Bad --queries must be usage exit 2, not traceback.
         assert module.main(["--queries", "abc", "--sf", "0.01"]) == 2
         assert module.main(["--queries", ",,,", "--sf", "0.01"]) == 2
     finally:
@@ -967,7 +960,7 @@ def test_cli_engine_and_timeout_retry_flags() -> None:
 
 
 def test_sail_engine_module_importable_without_pysail() -> None:
-    """B1: sail_engine loads; require_sail_imports fails loudly without pysail."""
+    """sail_engine loads; require_sail_imports fails loudly without pysail."""
     _compare_mod()
     sail_engine = importlib.import_module("repark_tpch_bench.sail_engine")
     try:
@@ -983,7 +976,7 @@ def test_sail_engine_module_importable_without_pysail() -> None:
 
 
 def test_compare_subject_label_sail_not_repark() -> None:
-    """C1-H-001: Sail WRONG-RESULT messages must not mislabel the subject as repark."""
+    """Sail WRONG-RESULT messages must not mislabel the subject as repark."""
     compare = _compare_mod()
     result = compare.compare_result_sets(
         [(1.0,)],
@@ -996,7 +989,7 @@ def test_compare_subject_label_sail_not_repark() -> None:
 
 
 def test_sail_unavailable_board_is_skipped_exit_zero() -> None:
-    """C1-Q-001: empty sail-unavailable board is skipped FINDING (exit 0), not success green."""
+    """Empty sail-unavailable board is skipped FINDING (exit 0), not success green."""
     _compare_mod()
     runner = importlib.import_module("repark_tpch_bench.runner")
     board = runner.Scoreboard(
@@ -1013,7 +1006,7 @@ def test_sail_unavailable_board_is_skipped_exit_zero() -> None:
 
 
 def test_run_sail_scoreboard_only_fallthrough_on_unavailable(monkeypatch: object) -> None:
-    """C1-Q-002: scoreboard exceptions must not be re-run via sail_python subprocess."""
+    """Scoreboard exceptions must not be re-run via sail_python subprocess."""
     _compare_mod()
     runner = importlib.import_module("repark_tpch_bench.runner")
     sail_engine = importlib.import_module("repark_tpch_bench.sail_engine")
@@ -1051,7 +1044,7 @@ def test_run_sail_scoreboard_only_fallthrough_on_unavailable(monkeypatch: object
 
 
 def test_merge_three_way_missing_sail_keeps_repark_overall() -> None:
-    """C1-T-001 / C2-H-002: skipped empty Sail board must not invent per-query ERROR."""
+    """Skipped empty Sail board must not invent per-query ERROR."""
     _compare_mod()
     runner = importlib.import_module("repark_tpch_bench.runner")
     repark_board = runner.Scoreboard(
@@ -1083,7 +1076,7 @@ def test_merge_three_way_missing_sail_keeps_repark_overall() -> None:
     assert merged.queries[0].status == "OK"
     assert merged.queries[0].sail_status is None
     assert merged.queries[0].sail_error_class == "SailBoardSkipped"
-    # Non-skipped empty-missing row still ERROR:
+    # Non-skipped empty sail board still ERROR.
     partial = runner.Scoreboard(
         scale_factor=1.0,
         data_dir="/cache",
@@ -1097,7 +1090,7 @@ def test_merge_three_way_missing_sail_keeps_repark_overall() -> None:
 
 
 def test_merge_three_way_falls_back_to_sail_timeout_metadata() -> None:
-    """C1-H-002: three-way keeps Sail Slow/hung timeout fields when repark has none."""
+    """Three-way keeps Sail Slow/hung timeout fields when repark has none."""
     _compare_mod()
     runner = importlib.import_module("repark_tpch_bench.runner")
     repark_board = runner.Scoreboard(
@@ -1144,7 +1137,7 @@ def test_merge_three_way_falls_back_to_sail_timeout_metadata() -> None:
 
 
 def test_sail_subprocess_hard_wall_uses_sf10_default_timeout() -> None:
-    """C1-Q-004 / C5: sail board hard wall uses SF10 300s default and query-filter size."""
+    """Sail board hard wall uses SF10 300s default and query-filter size."""
     import subprocess
 
     _compare_mod()
@@ -1180,7 +1173,7 @@ def test_sail_subprocess_hard_wall_uses_sf10_default_timeout() -> None:
 
 
 def test_classify_error_sail_grpc() -> None:
-    """C5: Spark Connect transport errors map to SailGrpc / SailConnect."""
+    """Spark Connect transport errors map to SailGrpc / SailConnect."""
     _compare_mod()
     runner = importlib.import_module("repark_tpch_bench.runner")
     error_class, hint = runner.classify_error("io.grpc.StatusRuntimeException: UNAVAILABLE")
@@ -1191,7 +1184,7 @@ def test_classify_error_sail_grpc() -> None:
 
 
 def test_three_way_skipped_sail_no_grpc_cost_claim() -> None:
-    """C6-H-001: skipped Sail board must not claim gRPC transport cost in disclosure."""
+    """Skipped Sail board must not claim gRPC transport cost in disclosure."""
     _compare_mod()
     runner = importlib.import_module("repark_tpch_bench.runner")
     repark_board = runner.Scoreboard(
@@ -1250,7 +1243,7 @@ def test_three_way_skipped_sail_no_grpc_cost_claim() -> None:
 
 
 def test_subprocess_run_kill_group_exists_and_uses_new_session(monkeypatch: object) -> None:
-    """C1-L-001: helper starts a new session so grandchildren can be killpg'd."""
+    """Helper starts a new session so grandchildren can be killpg'd."""
     _compare_mod()
     runner = importlib.import_module("repark_tpch_bench.runner")
     import subprocess
@@ -1280,7 +1273,7 @@ def test_subprocess_run_kill_group_exists_and_uses_new_session(monkeypatch: obje
 
 
 def test_three_way_per_engine_census_includes_died() -> None:
-    """C2-H-001: per-engine census must count DIED (not only TIMEOUT/ERROR)."""
+    """Per-engine census must count DIED (not only TIMEOUT/ERROR)."""
     _compare_mod()
     runner = importlib.import_module("repark_tpch_bench.runner")
     board = runner.Scoreboard(
@@ -1310,7 +1303,7 @@ def test_three_way_per_engine_census_includes_died() -> None:
 def test_sail_board_malformed_json_is_skipped_finding(
     tmp_path: object, monkeypatch: object
 ) -> None:
-    """C3-Q-002: invalid Sail board JSON must not crash engine=both merge path."""
+    """Invalid Sail board JSON must not crash engine=both merge path."""
     from pathlib import Path
 
     _compare_mod()
@@ -1318,7 +1311,6 @@ def test_sail_board_malformed_json_is_skipped_finding(
 
     def _fake_run(command: object, *, timeout_s: float) -> object:  # type: ignore[no-untyped-def]
         del timeout_s
-        # command is list; --out path is after --out flag
         command_list = list(command)  # type: ignore[arg-type]
         out_index = command_list.index("--out") + 1
         out_path = Path(command_list[out_index])
@@ -1349,7 +1341,7 @@ def test_sail_board_malformed_json_is_skipped_finding(
 
 
 def test_sail_uses_original_sql_not_repark_rewrite() -> None:
-    """C2-Q-001: Sail subject path must not consume repark dialect rewrites."""
+    """Sail subject path must not consume repark dialect rewrites."""
     _compare_mod()
     runner = importlib.import_module("repark_tpch_bench.runner")
     queries = importlib.import_module("repark_tpch_bench.queries")
@@ -1398,7 +1390,7 @@ def test_sail_uses_original_sql_not_repark_rewrite() -> None:
 
 
 def test_default_engine_is_repark_and_does_not_import_sail() -> None:
-    """C7: default scoreboard engine remains repark; sail_engine stays optional."""
+    """Default scoreboard engine remains repark; sail_engine stays optional."""
     import inspect
 
     _compare_mod()
@@ -1415,9 +1407,7 @@ def test_default_engine_is_repark_and_does_not_import_sail() -> None:
     assert f"{package_name}.sail_engine" not in sys.modules
 
 
-# ---------------------------------------------------------------------------
-# r24 G10 — baseline-ratios gate (schedule job helper)
-# ---------------------------------------------------------------------------
+# G10 — baseline-ratios gate (schedule job helper)
 
 
 def _check_baseline_mod() -> object:
@@ -1479,7 +1469,7 @@ def test_committed_baseline_ratios_file_has_22_ceilings() -> None:
 
 
 def test_baseline_empty_scoreboard_fails() -> None:
-    """G10 critic-octo C1-L-001: empty scoreboard must not green-exit."""
+    """G10: empty scoreboard must not green-exit."""
     check = _check_baseline_mod()
     baseline = {"queries": {"1": {"ceiling": 10.0}}}
     assert check.compare({"queries": []}, baseline) == 1
@@ -1487,7 +1477,7 @@ def test_baseline_empty_scoreboard_fails() -> None:
 
 
 def test_baseline_missing_query_from_scoreboard_fails() -> None:
-    """G10 critic-octo C1-L-001: partial scoreboard missing a baseline Q fails."""
+    """G10: partial scoreboard missing a baseline Q fails."""
     check = _check_baseline_mod()
     scoreboard = {"queries": [{"query_nr": 1, "status": "OK", "ratio": 1.0}]}
     baseline = {
@@ -1500,7 +1490,7 @@ def test_baseline_missing_query_from_scoreboard_fails() -> None:
 
 
 def test_baseline_zero_ok_checked_fails() -> None:
-    """G10 critic-octo C1-L-001: OK rows with no matching ceilings → fail (not 0-check OK)."""
+    """G10: OK rows with no matching ceilings → fail (not 0-check OK)."""
     check = _check_baseline_mod()
     scoreboard = {"queries": [{"query_nr": 99, "status": "OK", "ratio": 1.0}]}
     baseline = {"queries": {"1": {"ceiling": 10.0}}}
@@ -1509,7 +1499,7 @@ def test_baseline_zero_ok_checked_fails() -> None:
 
 
 def test_committed_baseline_full_22_under_ceiling_ok() -> None:
-    """G10 critic-octo C2-Q-002: committed baseline accepts full 22-OK under ceilings."""
+    """G10: committed baseline accepts full 22-OK under ceilings."""
     check = _check_baseline_mod()
     path = _TPCH_DIR / "baseline-ratios.json"
     baseline = json.loads(path.read_text(encoding="utf-8"))
@@ -1527,7 +1517,7 @@ def test_committed_baseline_full_22_under_ceiling_ok() -> None:
 
 
 def test_committed_baseline_full_22_one_over_fails() -> None:
-    """G10 critic-octo C2-Q-002: one over-ceiling among full 22 fails the gate."""
+    """G10: one over-ceiling among full 22 fails the gate."""
     check = _check_baseline_mod()
     path = _TPCH_DIR / "baseline-ratios.json"
     baseline = json.loads(path.read_text(encoding="utf-8"))
@@ -1546,7 +1536,7 @@ def test_committed_baseline_full_22_one_over_fails() -> None:
 
 
 def test_baseline_nan_ratio_fails() -> None:
-    """G10 critic-octo C3-L-001: NaN must not green-exit (IEEE NaN is never > ceiling)."""
+    """G10: NaN must not green-exit (IEEE NaN is never > ceiling)."""
     check = _check_baseline_mod()
     scoreboard = {"queries": [{"query_nr": 1, "status": "OK", "ratio": float("nan")}]}
     baseline = {"queries": {"1": {"ceiling": 10.0}}}
@@ -1554,7 +1544,7 @@ def test_baseline_nan_ratio_fails() -> None:
 
 
 def test_baseline_inf_ratio_fails() -> None:
-    """G10 critic-octo C3-L-001: +inf ratio fails closed."""
+    """G10: +inf ratio fails closed."""
     check = _check_baseline_mod()
     scoreboard = {"queries": [{"query_nr": 1, "status": "OK", "ratio": float("inf")}]}
     baseline = {"queries": {"1": {"ceiling": 10.0}}}

@@ -1,6 +1,6 @@
 """G-ROW — :class:`~repark.row.Row` API + E8 error-class pins vs live PySpark 4.1.2.
 
-Oracle (mandatory first, 2026-07-27): live PySpark 4.1.2 under
+Oracle (2026-07-27): live PySpark 4.1.2 under
 ``JAVA_HOME=/usr/lib/jvm/zulu-17-amd64``, ``SPARK_LOCAL_IP=127.0.0.1``, ANSI on,
 ``/tmp/oracle-venv``. Measured:
 
@@ -18,10 +18,6 @@ Oracle (mandatory first, 2026-07-27): live PySpark 4.1.2 under
 
 ``PySparkKeyError`` (malformed Row: ``__fields__`` longer than values) has no reachable
 raise in repark — fields and values stay lock-step; deferred (Group X enumeration).
-
-Pickling / ``Row("name","age")`` factory form: out of charter (not required).
-
-Routine tests are JVM-free and pin the recorded behaviours.
 """
 
 from __future__ import annotations
@@ -36,7 +32,6 @@ from repark.errors import (
 )
 from repark.spark.row import Row
 
-# ==================================================================================================
 # Construction + surface shape
 
 
@@ -59,9 +54,8 @@ def test_from_mapping_preserves_order() -> None:
 def test_positional_and_list_construction() -> None:
     """Positional values get synthetic ``_N`` names (repark); values still indexable.
 
-    Live 4.1.2: a single list/tuple *argument* is ONE value (not unpacked into fields) —
-    ``Row([7, 8])`` has ``len == 1`` and ``list(row) == [[7, 8]]`` (octo C1-L-002). Spark
-    omits ``__fields__`` for that form; repark still assigns synthetic ``_0`` (near-drop-in).
+    Live 4.1.2: a single list/tuple *argument* is ONE value; Spark omits
+    ``__fields__`` for that form; repark still assigns synthetic ``_0`` (near-drop-in).
     """
     row = Row(10, 20)
     assert row[0] == 10
@@ -80,16 +74,13 @@ def test_positional_and_list_construction() -> None:
     assert len(from_tuple) == 1
     assert list(from_tuple) == [(7, 8)]
     assert from_tuple[0] == (7, 8)
-    # Multi-arg positional stays multi-field (contrast with single sequence arg).
     assert list(Row(7, 8)) == [7, 8]
 
 
 def test_user_fields_named_fields_and_values_do_not_shadow() -> None:
-    """Live 4.1.2: ``Row(_fields=1)._fields`` is the *value* 1 (octo C1-L-001).
+    """Live 4.1.2: ``Row(_fields=1)._fields`` is the *value* 1.
 
-    Pre-fix repark stored names/values on slots literally named ``_fields``/``_values``, so
-    attribute access returned the internal names tuple instead of the column value (``[]`` /
-    ``asDict`` were fine). Mutation: rename slots back to ``_fields``/``_values`` → RED.
+    Mutation: rename slots back to ``_fields``/``_values`` → RED.
     """
     row = Row(_fields=1)
     assert row._fields == 1
@@ -121,7 +112,6 @@ def test_mixed_args_kwargs_raises_pyspark_value_error() -> None:
     assert isinstance(caught.value, PySparkException)
 
 
-# ==================================================================================================
 # __getitem__ — int / str / slice / negative / E8 classes
 
 
@@ -174,8 +164,7 @@ def test_getitem_missing_str_raises_pyspark_value_error() -> None:
 def test_getitem_wrong_type_raises_pyspark_value_error() -> None:
     """E8: live 4.1.2 funnels non-int/slice keys through ``__fields__.index`` → ValueError.
 
-    repark used to raise ``PySparkTypeError`` here; aligned to the live class
-    (``PySparkValueError``). Both are ``PySparkException`` leaves — no new leaf.
+    Aligned to the live class (``PySparkValueError``); no new ``PySparkException`` leaf.
     """
     row = Row(a=1, b=2)
     for bad in (object(), 1.5, ["a"], None):
@@ -187,7 +176,6 @@ def test_getitem_wrong_type_raises_pyspark_value_error() -> None:
         assert not isinstance(caught.value, PySparkTypeError)
 
 
-# ==================================================================================================
 # __contains__ / iteration / __fields__
 
 
@@ -218,7 +206,6 @@ def test_fields_property_is_list_copy() -> None:
     assert "hack" not in row
 
 
-# ==================================================================================================
 # asDict (+ recursive)
 
 
@@ -247,7 +234,6 @@ def test_as_dict_recursive_nested_row_list_dict() -> None:
     }
 
 
-# ==================================================================================================
 # equality / hash / attr
 
 
@@ -269,11 +255,9 @@ def test_equality_is_values_only_including_tuple() -> None:
 def test_hash_matches_equality() -> None:
     """Hash is values-only and interoperates with plain tuples (live PySpark 4.1.2).
 
-    Python's set/dict contract requires equal objects to share a hash. Because
-    ``Row(a=1, b=2) == (1, 2)``, we must have ``hash(row) == hash((1, 2))`` —
-    not a type-tagged hash that only collides Row↔Row. octo C2-Q-001: a mutation
-    ``return hash(("repark.Row", values))`` keeps Row↔Row asserts green while
-    breaking ``{(1, 2), row}`` / dict keys shared with tuples.
+    Python's set/dict contract: equal objects share a hash. A mutation
+    ``return hash(("repark.Row", values))`` keeps Row↔Row asserts green while breaking
+    ``{(1, 2), row}`` / dict keys shared with tuples.
     """
     left = Row(a=1, b=2)
     right = Row(x=1, y=2)
@@ -282,7 +266,6 @@ def test_hash_matches_equality() -> None:
     assert hash(left) == hash(right)
     assert hash(left) == hash(plain)
     assert {left, right} == {left}
-    # Set/dict interop with the equal plain tuple (mutation-proof for type-tagged __hash__).
     assert {(1, 2), left} == {(1, 2)}
     assert {left: "v"}[(1, 2)] == "v"
 
@@ -299,7 +282,6 @@ def test_missing_attr_raises_pyspark_attribute_error() -> None:
     assert not hasattr(row, "zz")
 
 
-# ==================================================================================================
 # collect path (needs native module) — field access on a real collected row
 
 
@@ -329,9 +311,7 @@ def test_collect_row_surface() -> None:
         spark.stop()
 
 
-# ==================================================================================================
 # R-PARITY3 — Row factory form + pickling
-# ==================================================================================================
 
 
 def test_row_factory_form_callable_and_repr() -> None:

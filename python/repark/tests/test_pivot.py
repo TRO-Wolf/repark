@@ -45,7 +45,7 @@ def test_pivot_values_list_single_agg(frame: object) -> None:
 
 
 def test_pivot_values_list_column_order(frame: object) -> None:
-    """Values-list form preserves caller order (octo C3-Q-005) — not set-membership only."""
+    """Values-list form preserves caller order — not set-membership only."""
     single_cols = frame.groupBy("g").pivot("p", [2, 1]).sum("x").columns
     assert single_cols == ["g", "2", "1"]
     multi_cols = frame.groupBy("g").pivot("p", [2, 1]).agg(F.sum("x"), F.count("x")).columns
@@ -68,7 +68,7 @@ def test_pivot_inferred_matches_values_list(frame: object) -> None:
 def test_pivot_multi_agg_column_names(frame: object) -> None:
     cols = frame.groupBy("g").pivot("p", [1, 2]).agg(F.sum("x"), F.count("x")).columns
     assert cols[0] == "g"
-    # Order pin (C3-Q-005): value-major then aggregate list
+    # Order pin: value-major then aggregate list
     assert cols == ["g", "1_sum(x)", "1_count(x)", "2_sum(x)", "2_count(x)"]
 
 
@@ -101,7 +101,7 @@ def test_pivot_null_value_column_name(frame: object) -> None:
 
 
 def test_pivot_null_value_aggregates(spark: ReparkSession) -> None:
-    """Null pivot *condition* (IS NULL), not only the output column name (octo C1-Q-002)."""
+    """Null pivot *condition* (IS NULL), not only the output column name."""
     frame = spark.createDataFrame(
         [
             ("a", None, 10),
@@ -119,7 +119,7 @@ def test_pivot_null_value_aggregates(spark: ReparkSession) -> None:
 
 
 def test_pivot_count_shortcut_values(frame: object) -> None:
-    """GroupedData.count() uses bare agg_name ``count`` — must rebuild under pivot (C1-Q-001)."""
+    """GroupedData.count() uses bare agg_name ``count`` — must rebuild under pivot."""
     out = frame.groupBy("g").pivot("p", [1, 2]).count().orderBy("g").to_arrow().to_pylist()
     a_row = next(row for row in out if row["g"] == "a")
     assert a_row["1"] == 1 and a_row["2"] == 1
@@ -130,7 +130,7 @@ def test_pivot_count_shortcut_values(frame: object) -> None:
 
 
 def test_pivot_agg_with_explicit_alias(frame: object) -> None:
-    """Explicit .alias() clears _agg_name; recover kind + use alias as multi suffix (C1-L-003)."""
+    """Explicit .alias() clears _agg_name; recover kind + use alias as multi suffix."""
     single = (
         frame.groupBy("g")
         .pivot("p", [1, 2])
@@ -176,7 +176,7 @@ def test_pivot_max_values_overflow(spark: ReparkSession) -> None:
 
 
 def test_pivot_values_list_ignores_pivot_max_values(spark: ReparkSession) -> None:
-    """Values-list form is not subject to ``pivotMaxValues`` (octo C8-Q-001).
+    """Values-list form is not subject to ``pivotMaxValues``.
 
     Cap overflow tests only exercise inferred form. A mutation that raises when
     ``len(explicit_values) > max`` on the ``_pivot_values_explicit`` branch stays
@@ -210,7 +210,7 @@ def test_pivot_values_list_ignores_pivot_max_values(spark: ReparkSession) -> Non
 
 
 def test_pivot_max_values_equality_boundary(spark: ReparkSession) -> None:
-    """Inferred form succeeds at exactly ``pivotMaxValues`` distincts (octo C5-Q-002).
+    """Inferred form succeeds at exactly ``pivotMaxValues`` distincts.
 
     Overflow is ``len > max`` (Spark), not ``len >= max``. A mutation to ``>=`` stays green
     without this success pin — overflow-only tests never exercise the equality edge.
@@ -239,7 +239,7 @@ def test_pivot_max_values_equality_boundary(spark: ReparkSession) -> None:
 
 
 def test_pivot_inferred_distinct_before_limit(spark: ReparkSession) -> None:
-    """``distinct()`` before ``limit(max+1)`` is load-bearing (octo C3-Q-002).
+    """``distinct()`` before ``limit(max+1)`` is load-bearing.
 
     Without distinct, ``limit(max+1)`` on a long run of one pivot value yields
     ``len(rows) > max`` and false-positive overflow even when distinct cardinality is 1.
@@ -275,7 +275,7 @@ def test_pivot_inferred_under_cap_count(spark: ReparkSession) -> None:
 
 
 def test_pivot_cube_rollup_refused(frame: object) -> None:
-    """CUBE/ROLLUP + pivot is not a safe SQL surface (octo C1-SEC-001)."""
+    """CUBE/ROLLUP + pivot is not a safe SQL surface."""
     with pytest.raises(AnalysisException, match="cube/rollup"):
         frame.cube("g").pivot("p", [1, 2])
     with pytest.raises(AnalysisException, match="cube/rollup"):
@@ -283,7 +283,7 @@ def test_pivot_cube_rollup_refused(frame: object) -> None:
 
 
 def test_pivot_count_distinct_refused(frame: object) -> None:
-    """countDistinct must not silently rebuild as non-distinct count (octo C1-L-005)."""
+    """countDistinct must not silently rebuild as non-distinct count."""
     with pytest.raises(AnalysisException, match="countDistinct"):
         frame.groupBy("g").pivot("p", [1, 2]).agg(F.countDistinct("x")).collect()
     # Aliased form still refuses (recovery keeps ``count(DISTINCT x)``).
@@ -292,7 +292,7 @@ def test_pivot_count_distinct_refused(frame: object) -> None:
 
 
 def test_pivot_count_measure_named_distinct_id(spark: ReparkSession) -> None:
-    """``F.count(\"distinct_id\")`` is non-null count, not false countDistinct (octo C7-L-001).
+    """``F.count(\"distinct_id\")`` is non-null count, not false countDistinct.
 
     ``startswith(\"count(distinct\")`` matches ``count(distinct_id)`` / ``count(distinct)``
     and raised AnalysisException. True countDistinct is ``count(DISTINCT x)`` (space after
@@ -337,14 +337,14 @@ def test_pivot_count_measure_named_distinct_id(spark: ReparkSession) -> None:
 
 
 def test_w5_disclosure_removed(frame: object) -> None:
-    # Former loud UnsupportedOperationException is gone — success is the done-signal.
+    # Success is the done-signal; the loud refuse must not return.
     out = frame.groupBy("g").pivot("p", [1]).sum("x")
     assert out is not None
     assert "1" in out.columns
 
 
 def test_pivot_avg_min_max_values(spark: ReparkSession, frame: object) -> None:
-    """Arrow-path value pins for avg/min/max — mutation-proof vs sum swap (octo C2-Q-003)."""
+    """Arrow-path value pins for avg/min/max — mutation-proof vs sum swap."""
     avg_out = frame.groupBy("g").pivot("p", [1, 2]).avg("x").orderBy("g").to_arrow().to_pylist()
     a_avg = next(row for row in avg_out if row["g"] == "a")
     assert a_avg["1"] == 10.0 and a_avg["2"] == 20.0
@@ -372,14 +372,14 @@ def test_pivot_avg_min_max_values(spark: ReparkSession, frame: object) -> None:
 
 
 def test_pivot_non_simple_agg_input_refused(frame: object) -> None:
-    """Compound / lit / CAST pivot aggregates fail loud — no F.col fail-open (octo C2-Q-001)."""
+    """Compound / lit / CAST pivot aggregates fail loud — no F.col fail-open."""
     with pytest.raises(AnalysisException, match="simple column-name"):
         frame.groupBy("g").pivot("p", [1]).agg(F.sum(F.col("x") + 1)).collect()
     with pytest.raises(AnalysisException, match="simple column-name"):
         frame.groupBy("g").pivot("p", [1]).agg(F.sum(F.lit(1))).collect()
     with pytest.raises(AnalysisException, match="simple column-name"):
         frame.groupBy("g").pivot("p", [1]).agg(F.sum(F.col("x").cast("double"))).collect()
-    # count(cast)/count(abs) must refuse too — not silent row-count (octo C6-Q-001).
+    # count(cast)/count(abs) must refuse too — not silent row-count.
     with pytest.raises(AnalysisException, match="simple column-name"):
         frame.groupBy("g").pivot("p", [1]).agg(F.count(F.col("x").cast("double"))).collect()
     with pytest.raises(AnalysisException, match="simple column-name"):
@@ -387,10 +387,10 @@ def test_pivot_non_simple_agg_input_refused(frame: object) -> None:
 
 
 def test_pivot_first_last_ignorenulls(spark: ReparkSession) -> None:
-    """CASE injects NULLs; pivot rebuild forces ignorenulls=True like Spark (C2-L-001/C2-Q-002).
+    """CASE injects NULLs; pivot rebuild forces ignorenulls=True like Spark.
 
-    Order-sensitive first/last pins require a single target partition (octo C3-Q-003) —
-    multi-partition shuffles do not preserve input row order.
+    Order-sensitive first/last pins require a single target partition — multi-partition
+    shuffles do not preserve input row order.
     """
     spark.stop()
     session = (
@@ -431,7 +431,7 @@ def test_pivot_first_last_ignorenulls(spark: ReparkSession) -> None:
         assert last_out["1"] == 10
         assert last_out["2"] == 88
 
-        # Explicit .alias clears _agg_name; recovery sees first_value/last_value (octo C7-Q-001).
+        # Explicit .alias clears _agg_name; recovery sees first_value/last_value.
         # partitions=1 still required for order-sensitive first/last values.
         first_alias = (
             frame.groupBy("g")
@@ -463,7 +463,7 @@ def test_pivot_first_last_ignorenulls(spark: ReparkSession) -> None:
 
 
 def test_pivot_repeated_refused(frame: object) -> None:
-    """Second .pivot() is REPEATED_CLAUSE — not silent overwrite (octo C3-Q-001)."""
+    """Second .pivot() is REPEATED_CLAUSE — not silent overwrite."""
     from repark.errors import UnsupportedOperationException
 
     grouped = frame.groupBy("g").pivot("p", [1])
@@ -472,7 +472,7 @@ def test_pivot_repeated_refused(frame: object) -> None:
 
 
 def test_pivot_bool_column_names(spark: ReparkSession) -> None:
-    """Boolean pivot values name columns ``true``/``false`` (Spark Cast-to-string; C3-Q-004)."""
+    """Boolean pivot values name columns ``true``/``false`` (Spark Cast-to-string)."""
     frame = spark.createDataFrame([(True, 1), (False, 2), (True, 3)], ["p", "x"])
     cols = frame.groupBy().pivot("p", [True, False]).sum("x").columns
     assert cols == ["true", "false"]
@@ -483,7 +483,7 @@ def test_pivot_bool_column_names(spark: ReparkSession) -> None:
 
 
 def test_pivot_values_cast_to_pivot_type(spark: ReparkSession) -> None:
-    """Values-list literals Cast to pivot column type before equality (octo C3-L-001)."""
+    """Values-list literals Cast to pivot column type before equality."""
     # String pivot column, integer values list — Spark matches via Cast.
     frame = spark.createDataFrame([("1", 10), ("2", 20), ("1", 5)], ["p", "x"])
     out = frame.groupBy().pivot("p", [1, 2]).sum("x").to_arrow().to_pylist()[0]
@@ -491,7 +491,7 @@ def test_pivot_values_cast_to_pivot_type(spark: ReparkSession) -> None:
 
 
 def test_pivot_nan_value_matches(spark: ReparkSession) -> None:
-    """NaN pivot keys match via isnan (not IEEE == alone) — octo C3-L-003.
+    """NaN pivot keys match via isnan (not IEEE == alone).
 
     SQL-sourced NaN (createDataFrame normalizes float NaN → null on some paths).
     """
@@ -506,7 +506,7 @@ def test_pivot_nan_value_matches(spark: ReparkSession) -> None:
 
 
 def test_pivot_bigint_values_list_outside_int32(spark: ReparkSession) -> None:
-    """BIGINT pivot keys outside int32 cast to ``long`` not ``int`` (octo C4-Q-001 / C4-L-002).
+    """BIGINT pivot keys outside int32 cast to ``long`` not ``int``.
 
     ``frame.schema`` collapses logical long → IntegerType → cast(\"int\")/Int32, which drops
     keys like ``3_000_000_000``. Must use ``logical_schema_fields`` type_key (same as fillna).
@@ -525,7 +525,7 @@ def test_pivot_bigint_values_list_outside_int32(spark: ReparkSession) -> None:
     type_keys = {name: key for name, key, _ in frame._inner.logical_schema_fields()}
     assert type_keys.get("p") == "long", type_keys
     schema_p = next(field for field in frame.schema.fields if field.name == "p")
-    assert schema_p.dataType.simpleString() == "bigint"  # X2: Int64 → LongType
+    assert schema_p.dataType.simpleString() == "bigint"  # Int64 maps to LongType
 
     out = frame.groupBy("g").pivot("p", [big, 1]).sum("x").orderBy("g").to_arrow().to_pylist()
     a_row = next(row for row in out if row["g"] == "a")
@@ -534,15 +534,14 @@ def test_pivot_bigint_values_list_outside_int32(spark: ReparkSession) -> None:
     assert a_row[col] == 10 and a_row["1"] == 20
     assert b_row[col] == 30 and b_row["1"] is None
 
-    # Inferred form must also match (same cast path for discovered values when re-compared
-    # is not needed; pin values-list is the regression surface for lit cast width).
+    # Inferred form must also match (same discovered-value cast path).
     inferred = frame.groupBy("g").pivot("p").sum("x").orderBy("g").to_arrow().to_pylist()
     listed = frame.groupBy("g").pivot("p", [1, big]).sum("x").orderBy("g").to_arrow().to_pylist()
     assert inferred == listed
 
 
 def test_pivot_count_digit_named_measure(spark: ReparkSession) -> None:
-    """``F.count(\"10\")`` counts non-null measure values — not row-count (octo C4-L-001).
+    """``F.count(\"10\")`` counts non-null measure values — not row-count.
 
     ``startswith(\"count(1\")`` wrongly treated ``count(10)`` as ``count(1)`` → lit(1) and
     counted every pivot-matching row, masking nulls on the digit-named column.
@@ -565,7 +564,7 @@ def test_pivot_count_digit_named_measure(spark: ReparkSession) -> None:
 
 
 def test_pivot_count_column_named_one(spark: ReparkSession) -> None:
-    """``F.count(\"1\")`` non-null-counts column ``\"1\"`` (octo C5-L-001 / C5-Q-001).
+    """``F.count(\"1\")`` non-null-counts column ``\"1\"``.
 
     Spark default name for ``count(\"*\")`` is also ``count(1)`` — name-only rebuild must not
     collapse measure column ``\"1\"`` into ``lit(1)``. Null measure under a pivot key must not
@@ -614,12 +613,10 @@ def test_pivot_count_column_named_one(spark: ReparkSession) -> None:
 
 
 def test_pivot_count_cast_abs_refused_not_row_count(spark: ReparkSession) -> None:
-    """``count(cast/abs)`` must not silently row-count null measures (octo C6-Q-001).
+    """``count(cast/abs)`` must not silently row-count null measures.
 
-    The former ``Ident(...)`` allowlist treated CAST/abs/coalesce as ``lit(1)`` under the
-    pivot condition, so a null measure row was counted. ``F.sum(cast)`` already refused —
-    count must match. Mutation-proof: restoring the broad regex would either over-count
-    (if the raise is removed) or this raise pin fails if the path is deleted.
+    CAST/abs/coalesce under the pivot condition must refuse like ``F.sum(cast)`` — a broad
+    allowlist would over-count null measures. Mutation-proof: restoring it reds this pin.
     """
     frame = spark.createDataFrame(
         [
@@ -645,7 +642,7 @@ def test_pivot_count_cast_abs_refused_not_row_count(spark: ReparkSession) -> Non
 
 
 def test_pivot_sum_lit_digit_named_measure_refused(spark: ReparkSession) -> None:
-    """``F.sum(F.lit(1))`` must not bind measure column ``\"1\"`` (octo C6-L-001).
+    """``F.sum(F.lit(1))`` must not bind measure column ``\"1\"``.
 
     Recovered name ``sum(1)`` matches ``F.sum(\"1\")``; only native ``sum(Int64(1))``
     marks the lit. Without disambiguation, pivot yields measure sums (100/200) instead of

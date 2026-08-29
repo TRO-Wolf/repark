@@ -8,10 +8,8 @@ like a live key is a fixture that eventually gets reported as a leak.
 ``manifest.json`` labels each column with the needle class it stands for (the needle
 inventory lives in the facade's ``prop_key_is_secret`` mirror). Two columns are
 deliberate NEGATIVE controls: ``id`` matches nothing, and ``bucket_key`` ends with
-``_key`` yet is excluded by the documented ``bucket`` carve-out.
-
-Reads of this family behave NORMALLY today. Opt-in secret flagging on data columns is
-a roadmap feature this fixture predates; facade-level pins land in DS-4.
+``_key`` yet is excluded by the documented ``bucket`` carve-out. Reads behave
+normally here — opt-in secret flagging on data columns lands later (DS-4 pins).
 """
 
 from __future__ import annotations

@@ -1,5 +1,8 @@
 # map — repark-core/src
 
+CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
+accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
+
 ## Purpose
 
 Source for `repark-core` — `ReparkSession` over a DataFusion `SessionContext` + the
@@ -103,8 +106,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   latter is absent). Fail-loud `Error::Config` naming the exact key. Registration policy: Glue
   `RequireExplicitLocation`; S3 Tables `ServiceManagedLocation`; memory keeps the temp
   fallback. `CatalogSpec` hand-written `Debug` redacts secret-like prop values.
-- `read_options.rs` — CSV/JSON Spark option-map helpers (header/sep/quote/escape/comment/
-  nullvalue/multiline/compression; `nullValue` forces all-Utf8 schema).
+- `read_options.rs` — CSV/JSON Spark option-map helpers and the local-CSV all-Utf8 inference
+  workaround for `nullValue`.
 - `idents.rs` — table-identifier segment parse + path-escape refuse
   (`reject_path_escape_segment` delegates to `repark_iceberg::write::idents::path_escape_kind`
   — shared needles).
@@ -167,9 +170,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 - `time_travel.rs` (+ `time_travel/tests.rs`) — `TimeTravelSpec` + parsers
   (`parse_version_value`, `parse_timestamp_to_ms`), snapshot resolution, `read_table_at`
   (snapshot-pinned static provider via `iceberg-datafusion`), and **`next_temp_view_name` — the
-  ONE minter of the `__repark_tt_` ephemeral-view namespace, `pub` for that reason** (H-1b fix
-  pass, 2026-08-11). Hoisted MOVE-ONLY from the v1 SQL crate; the SQL-text rewrite half stays
-  deferred with the phase-2 router.
+  ONE minter of the `__repark_tt_` namespace** (H-1b fix pass, 2026-08-11). SQL-text rewriting
+  remains deferred with the phase-2 router.
   **Documented residual (H-1b, 2026-08-11):** `read_table_at` registers a `__repark_tt_<n>` temp
   view and never deregisters it. For its own caller — the reader-options path in `session.rs`
   (`spark.read.option("snapshot-id" | "as-of-timestamp" | "branch" | "tag", …)`) — that is

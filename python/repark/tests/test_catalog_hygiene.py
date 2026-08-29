@@ -1,12 +1,12 @@
-"""Catalog hygiene fast-follows (#100): bare-session listTables regression pin."""
+"""Catalog hygiene pins (#100): bare-session listTables regression."""
 
 from __future__ import annotations
 
 
 def test_bare_session_list_tables_lists_temps_never_raises() -> None:
-    """Fast-follow for #100: a fresh session (no catalogs, no `default` schema) must list
-    temp views on no-arg listTables() — PySpark's `default` db always exists, so bare
-    listTables() never raises SCHEMA_NOT_FOUND. Explicit missing names still raise."""
+    """Fresh session (no catalogs, no `default` schema) must list temp views on no-arg
+    listTables() and never raise SCHEMA_NOT_FOUND — PySpark's `default` db always exists.
+    Explicit missing names still raise."""
     import pytest
 
     from repark import ReparkSession

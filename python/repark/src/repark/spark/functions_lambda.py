@@ -1,33 +1,7 @@
-"""Spark higher-order (lambda) functions.
+"""Spark higher-order function wrappers.
 
-Public names are re-exported from ``functions.py``.
-
-**How a Python lambda becomes an engine expression.** A ``Column`` is standalone — it has no frame
-and no schema — so the facade cannot evaluate the user's callable against data. It does not need
-to. It mints one placeholder ``Column`` per lambda parameter, calls the callable with them, and
-takes whatever ``Column`` comes back as the lambda *body*; the binding then assembles
-``HigherOrderFunction(func, [values…, Lambda(params, body)])``. The placeholders carry no type
-until ``DataFrame`` resolves them against its schema at plan-build time.
-
-Python therefore decides nothing semantic here. It binds names to positions — which is the
-callable's own signature — and hands the tree to Rust.
-
-**Parameter names are ours, not the user's.** PySpark names lambda parameters ``x``/``y``/``z``
-regardless of what the caller wrote, because the names travel into the plan and a user-chosen name
-could collide with a column. This module does the same *for display*.
-
-**The plan name must additionally differ from every enclosing lambda's.** Two lambdas that both
-mint ``x`` are indistinguishable to ``resolve_lambda_variables``, so a lambda nested inside
-another binds its body to the OUTER variable and the result is silently wrong — measured as an
-exactly inverted answer for ``exists(a, x -> exists(b, y -> ...))`` (F-CSP-1). The plan name
-therefore carries the lambda's nesting depth, which is what the collision is actually about;
-``x``/``y``/``z`` stay as the rendered display so projection names stay PySpark-shaped.
-
-Depth rather than a running counter because the plan name reaches the output schema on any
-higher-order column the facade does not name — ``groupBy(F.exists(...))`` is one — and a counter
-makes the same query produce a different schema on each build (F-R3-1). Sibling lambdas share a
-depth and so share a name, which is sound: they occupy disjoint scopes, and only an enclosing
-binding can capture.
+The facade builds lambda expression trees from placeholder Columns. Parameter display names
+match Spark; plan names include nesting depth so nested scopes cannot capture each other.
 """
 
 from __future__ import annotations
@@ -61,7 +35,7 @@ def _parameter_names(arity: int, depth: int) -> tuple[list[str], list[str]]:
 
 # The parameter kinds a higher-order lambda may use. Spark's own check reads "should use only
 # POSITIONAL or POSITIONAL OR KEYWORD arguments", and `lambda x, /: x > 2` does work there
-# (measured, LRS-2) — so positional-only is allowed and only the other three kinds are refused.
+# Positional-only is allowed; the other parameter kinds are refused.
 _LAMBDA_PARAMETER_KINDS = (
     inspect.Parameter.POSITIONAL_ONLY,
     inspect.Parameter.POSITIONAL_OR_KEYWORD,

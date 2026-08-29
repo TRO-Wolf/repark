@@ -1,27 +1,7 @@
-//! Spark-door `spark.sql.timestampType` carrier — default `TIMESTAMP` resolution.
+//! Spark-door `spark.sql.timestampType` carrier for bare `TIMESTAMP` resolution.
 //!
-//! **What this knob is.** Spark 3.4+ `SQLConf` `spark.sql.timestampType` picks the type
-//! *bare* `TIMESTAMP` means: SQL literals, `CAST(… AS TIMESTAMP)`, and DDL column types
-//! with `TimezoneInfo::None`. The two legal values are `TIMESTAMP_LTZ` (default — today's
-//! instant / µs+UTC / Iceberg `timestamptz`) and `TIMESTAMP_NTZ` (opt-in wall clock /
-//! naive µs / Iceberg `timestamp`). Explicit `TIMESTAMP_NTZ` / `TIMESTAMP WITHOUT TIME
-//! ZONE` / `TIMESTAMP WITH TIME ZONE` spellings are not this knob.
-//!
-//! **Why a sibling `ConfigExtension`, not [`crate::session_time_zone`].** The zone is
-//! owned and validated in `repark-core`. This key is Spark `SQLConf` parsed from the
-//! builder map in `SparkExtension::configure`, the same shape as
-//! [`crate::ansi::SparkAnsiConfig`]. Mixing it into `repark.sql.*` or into the zone
-//! carrier would be a second spelling. `PREFIX = "repark.timestamp"` is the two-segment
-//! `SET`-proof shape (`PREFIX = "spark"` would swallow every `spark.*` `SET`).
-//!
-//! **Default `TIMESTAMP_LTZ`.** A missing carrier (a bare `SessionContext` that still
-//! installed [`crate::instant_ts::ltz_timestamp_cast_rule`]) is also LTZ — that *is*
-//! today's type-resolution. The NTZ opt-in is visible only when the Spark door installs
-//! this carrier with `TIMESTAMP_NTZ`.
-//!
-//! **Resolved once, at session build.** `ExtensionOptions::set` refuses so `SET` cannot
-//! grow a second spelling. Runtime `spark.conf.set` on the facade is store-only (the
-//! ansi.enabled precedent); the engine reads the value `configure()` installed.
+//! `TIMESTAMP_LTZ` is the default instant type; `TIMESTAMP_NTZ` opts into wall-clock values.
+//! The carrier is parsed and installed at session build and is not settable through SQL.
 
 use std::any::Any;
 use std::collections::HashMap;
@@ -48,7 +28,7 @@ pub const TIMESTAMP_NTZ_VALUE: &str = "TIMESTAMP_NTZ";
 /// ===========================================================================================
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SparkTimestampType {
-    /// Instant — Arrow `timestamp[us, tz=UTC]`, Iceberg `timestamptz`. Today's default.
+    /// Instant — Arrow `timestamp[us, tz=UTC]`, Iceberg `timestamptz`. The default.
     Ltz,
     /// Wall clock — Arrow `timestamp[us]` naive, Iceberg `timestamp`.
     Ntz,
@@ -96,7 +76,7 @@ impl Default for SparkTimestampTypeConfig {
 }
 
 impl ConfigExtension for SparkTimestampTypeConfig {
-    /// Two segments so `SET spark.sql.timestampType` cannot address this carrier.
+    /// Two segments keep the carrier unreachable through `SET`.
     const PREFIX: &'static str = "repark.timestamp";
 }
 
@@ -113,7 +93,7 @@ impl ExtensionOptions for SparkTimestampTypeConfig {
         Box::new(self.clone())
     }
 
-    /// Always refuses — the knob is `spark.sql.timestampType` on the session builder.
+    /// Refuse because the knob is set on the session builder.
     fn set(&mut self, key: &str, _value: &str) -> Result<()> {
         Err(DataFusionError::Configuration(format!(
             "`{}.{key}` is not a settable option: the default timestamp type is set with \
@@ -122,7 +102,7 @@ impl ExtensionOptions for SparkTimestampTypeConfig {
         )))
     }
 
-    /// Empty so the carrier is not advertised as a `SET`-able option.
+    /// Keep the carrier out of `SET` listings.
     fn entries(&self) -> Vec<ConfigEntry> {
         Vec::new()
     }
@@ -176,7 +156,7 @@ pub fn with_spark_timestamp_type(
 }
 
 /// ===========================================================================================
-/// Analyzer / DDL accessor. Missing carrier → default LTZ (today's type-resolution).
+/// Analyzer / DDL accessor. Missing carrier defaults to LTZ.
 /// ===========================================================================================
 #[must_use]
 pub fn spark_timestamp_type_from_options(options: &ConfigOptions) -> SparkTimestampType {

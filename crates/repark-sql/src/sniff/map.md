@@ -2,9 +2,8 @@
 
 ## Purpose
 
-File-backed tests for `../sniff.rs`. The error-path wrong-door sniff. Each recognized Spark-ism has a row (the MESSAGE is the
-product here), plus the three properties the error-path placement is chosen for: the original
-error survives, non-Spark SQL is untouched, and literals/comments cannot trigger it.
+File-backed tests for `../sniff.rs`. Each recognized Spark-ism has a row. The tests pin the
+message, original-error preservation, non-Spark immunity, and literal/comment immunity.
 
 ## Contents
 

@@ -1,48 +1,28 @@
-"""Shared scenario registry for the **live PySpark oracle tier** (L1).
+"""Shared scenario registry for the **live PySpark oracle tier**.
 
-The parity discipline is *record-then-pin*: goldens are derived from live PySpark 4.1.2 at
-authoring time and pinned inline in the facade tests; routine CI is JVM-free and never re-checks
-them. Two failure classes are then invisible until a human re-runs the oracle by hand:
+Record-then-pin: goldens come from live PySpark 4.1.2 and are pinned inline in the facade
+tests; routine CI is JVM-free and never re-checks them. This module is the drift detector's
+engine and holds two recipe kinds:
 
-* **golden drift** — a stale or hand-edited pin no longer matches what Spark actually produces;
-* **oracle drift** — a Spark bump silently changes semantics under a still-green pin.
-
-This module is the drift detector's engine. It holds two recipe kinds:
-
-1. **Single-shot** (``Scenario`` / ``SCENARIOS``) — an engine-agnostic
-   ``recipe: Engine → DataFrame`` plus its pinned ``golden``. Group E / columns / dates /
-   filter-rewriter / non-UTC date controls / the G1 extraction-class timezone live rows. Because
-   repark is a **near-drop-in for PySpark** — the same ``createDataFrame`` / DataFrame-API /
-   ``functions`` surface, only the import line differs — one recipe runs unchanged on BOTH engines.
-2. **Lifecycle** (``LifecycleScenario`` / ``LIFECYCLE_SCENARIOS``) — multi-statement table lifecycle
-   ``create → seed → [register source view] → act → read``, with always-cleanup. Used by the live
-   MERGE drift detector (Iceberg table + optional ``merge_src`` view). repark path uses a memory
-   catalog + COW TBLPROPERTIES; Spark path uses ``build_spark_iceberg_engine`` (Hadoop catalog +
+1. ``Scenario`` / ``SCENARIOS`` — a single-shot ``recipe: Engine → DataFrame`` plus its pinned
+   ``golden``; repark mirrors the PySpark surface, so one recipe runs unchanged on both engines.
+2. ``LifecycleScenario`` / ``LIFECYCLE_SCENARIOS`` — multi-statement table lifecycle
+   create → seed → [register source view] → act → read, with always-cleanup (the live MERGE
+   drift detector; repark uses a memory catalog + COW TBLPROPERTIES, Spark a Hadoop catalog +
    the pinned Iceberg GAV from :mod:`_oracle_pins`).
 
-The live tier (``test_parity_live.py``) asserts the full triple **repark == pinned golden == live
-Spark** (value AND Arrow-path type/nullability) for every scenario of both kinds; routine CI runs
-only the JVM-free ``repark == golden`` half of the same recipes, so the recipes themselves carry
-no-JVM coverage.
+The live tier asserts the full triple **repark == pinned golden == live Spark** (value AND
+Arrow-path type/nullability) for every scenario of both kinds; routine CI runs only the
+JVM-free ``repark == golden`` half, so the recipes themselves carry no-JVM coverage.
 
-Nothing here imports pyspark at module load — the pyspark import is deferred into
-``build_spark_engine`` / ``build_spark_iceberg_engine``, so this module (and the tests that import
-it) collect cleanly on a runner with neither pyspark nor a JVM installed (the routine-CI
-contract, L3).
+Nothing here imports pyspark at module load — the import is deferred into the
+``build_*_engine`` functions, so this module (and the tests that import it) collect cleanly
+on a runner with neither pyspark nor a JVM.
 
-Session config (VERIFIED against live PySpark 4.1.2, not guessed): the Group E / columns / date
-goldens were recorded under Spark 4.1.2 defaults — **ANSI mode ON** (Spark 4 default; the
-int-UNION-string disclosure literally depends on it) — so ``build_spark_engine`` pins
-``spark.sql.ansi.enabled=true`` explicitly. The registry's **default** session zone is ``UTC`` for
-determinism across runners. ``master("local[2]")`` per the plan.
-
-**Per-scenario session-conf override (H-1a).** A registry pinned to one session zone is
-structurally incapable of catching a session-timezone divergence — the whole class is invisible to
-it. ``Scenario.session_conf`` (and ``LifecycleScenario.session_conf``) therefore carry conf pairs
-applied to BOTH engines for that scenario only: the oracle takes them through
-``spark_session_conf`` (set, run, restore), and repark takes them by BUILDING a session with them,
-because repark resolves the session zone once at session construction. Scenarios that declare no
-override behave exactly as before.
+``build_spark_engine`` pins the config the goldens were recorded under (ANSI on, UTC,
+``local[2]``). A scenario may carry ``session_conf`` pairs applied to BOTH engines for that
+scenario only; repark takes them by BUILDING the session with them, because repark resolves
+the session zone once at session construction.
 """
 
 from __future__ import annotations
@@ -58,9 +38,7 @@ from typing import Any
 
 import pyarrow as pa
 
-# ==================================================================================================
 # Live-mode gate
-# ==================================================================================================
 
 LIVE_ENV_VAR = "REPARK_PARITY_LIVE"
 LIVE_SKIP_REASON = (
@@ -72,10 +50,9 @@ LIVE_SKIP_REASON = (
 def live_enabled(environ: Mapping[str, str] | None = None) -> bool:
     """Return whether the live oracle tier is armed.
 
-    The gate is the exact string ``"1"`` in ``REPARK_PARITY_LIVE`` — an unset var, empty string,
-    ``"0"``, or any other value leaves the tier OFF (tests SKIP, never silently pass). Takes an
-    explicit ``environ`` so the L6(a) detector can pin the predicate without mutating the process
-    environment.
+    Armed only on the exact string ``"1"`` in ``REPARK_PARITY_LIVE``; any other value leaves
+    the tier OFF (tests SKIP, never silently pass). Takes ``environ`` so the predicate is
+    pinnable without mutating the process environment.
     """
     env = os.environ if environ is None else environ
     return env.get(LIVE_ENV_VAR) == "1"
@@ -85,14 +62,12 @@ LIVE = live_enabled()
 
 
 def _arm_iceberg_packages_on_first_spark() -> None:
-    """Put the Iceberg runtime on the *first* SparkContext in this process.
+    """Arm the Iceberg runtime on the first SparkContext via ``PYSPARK_SUBMIT_ARGS``.
 
-    ``spark.jars.packages`` cannot be added after a SparkContext exists. The full
-    facade suite starts Spark from other modules before the live lifecycle tests;
-    ``PYSPARK_SUBMIT_ARGS`` is the hook that reaches that first context. Armed
-    only when the live tier is on (so ``make preflight`` / JVM-free runs stay
-    Iceberg-free). L-1: without this, full-suite lifecycle tests raise
-    ``ClassNotFoundException: SparkCatalog``.
+    ``spark.jars.packages`` cannot be set after a SparkContext exists, and the full facade
+    suite starts Spark from other modules before the live lifecycle tests. Armed only when
+    the live tier is on, so JVM-free runs stay Iceberg-free; without it the lifecycle tests
+    raise ``ClassNotFoundException: SparkCatalog``.
     """
     from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
 
@@ -118,37 +93,31 @@ if LIVE:
     _arm_iceberg_packages_on_first_spark()
 
 
-# ==================================================================================================
-# Per-scenario session-conf override (H-1a)
-# ==================================================================================================
+# Per-scenario session-conf override
 
-# Conf pairs as a TUPLE of pairs, not a dict: `Scenario` is a frozen dataclass and the override is
-# part of a scenario's identity, so it must be hashable and immutable like the rest of it.
+# Conf pairs as a TUPLE of pairs, not a dict: `Scenario` is a frozen dataclass, so the override
+# must stay hashable and immutable like the rest of it.
 SessionConf = tuple[tuple[str, str], ...]
 
-# The ONE session-timezone conf key (mirrors `repark.session.session_time_zone`; PySpark's own
-# spelling, so the identical pair configures both engines).
+# PySpark's own spelling, so the identical pair configures both engines.
 SESSION_TIME_ZONE_KEY = "spark.sql.session.timeZone"
 
-# The registry's default oracle zone, and the two non-UTC zones scenarios override it with.
+# Default oracle zone, plus the two non-UTC zones scenarios override it with.
 DEFAULT_SESSION_TIME_ZONE = "UTC"
 ZONE_NEW_YORK = "America/New_York"
 ZONE_TOKYO = "Asia/Tokyo"
 
 
-# ==================================================================================================
 # Engine abstraction — one recipe, two engines
-# ==================================================================================================
 
 
 @dataclass(frozen=True)
 class Engine:
     """A uniform handle over either engine's PySpark-shaped API surface.
 
-    `session` exposes `createDataFrame` / `sql`; `functions` is the ``F`` module, `types` the ``T``
-    module, `window` the ``Window`` class; `arrow_of` extracts a `pyarrow.Table` (repark's
-    ``to_arrow`` vs PySpark 4's ``toArrow``). Recipes touch only this surface, so the identical
-    recipe body runs on both engines.
+    `functions`/`types` are the ``F``/``T`` modules; `arrow_of` extracts a `pyarrow.Table`
+    (repark's ``to_arrow`` vs PySpark 4's ``toArrow``). Recipes touch only this surface, so
+    the identical recipe body runs on both engines.
     """
 
     name: str
@@ -162,11 +131,9 @@ class Engine:
 def build_repark_engine(session_conf: SessionConf = ()) -> Engine:
     """A fresh repark engine (cheap — no JVM).
 
-    `session_conf` is applied at BUILD time, because repark resolves build-time knobs (the session
-    timezone among them) once at `getOrCreate` — a runtime `conf.set` of one would move the facade
-    and leave the live engine session where it was. When an override is requested, an already-active
-    session is stopped first so `getOrCreate` cannot hand back a session carrying the previous
-    scenario's conf. With no override the call is byte-for-byte the pre-H-1a behavior.
+    ``session_conf`` is applied at BUILD time: repark resolves build-time knobs (the session
+    timezone among them) once at ``getOrCreate``. An already-active session is stopped first so
+    ``getOrCreate`` cannot hand back a session carrying the previous scenario's conf.
     """
     import repark
     from repark import Window
@@ -192,8 +159,8 @@ def build_repark_engine(session_conf: SessionConf = ()) -> Engine:
 
 
 def build_spark_engine() -> Engine:
-    """The live PySpark oracle engine. Imports pyspark lazily (never at module load) and pins the
-    session config the goldens were recorded under (ANSI on, UTC, ``local[2]``)."""
+    """The live PySpark oracle engine. Imports pyspark lazily (never at module load) and pins
+    the config the goldens were recorded under (ANSI on, UTC, ``local[2]``)."""
     from pyspark.sql import SparkSession, Window
     from pyspark.sql import functions as sfunctions
     from pyspark.sql import types as stypes
@@ -222,14 +189,12 @@ def build_spark_engine() -> Engine:
 def build_spark_iceberg_engine(warehouse: Path, session_conf: SessionConf = ()) -> Engine:
     """Live PySpark + Iceberg engine for multi-statement table lifecycle scenarios.
 
-    Sibling of :func:`build_spark_engine` (option A): the default live session has no Iceberg
-    *catalog*; under ``REPARK_PARITY_LIVE=1`` the module arms ``PYSPARK_SUBMIT_ARGS`` with the
-    GAV so the first SparkContext in the process can resolve ``SparkCatalog``. Only lifecycle
-    tests request this provisioned engine. Pins the same
-    GAV the MERGE differential record driver uses (from :mod:`_oracle_pins`), a local Hadoop
-    catalog named ``local`` rooted at ``warehouse``, Iceberg session extensions, ANSI on, UTC by
-    default, ``local[2]``. Optional ``session_conf`` is applied at BUILD time (the session is not
-    shared with the plain spark engine, so build-time application is safe).
+    The default live session has no Iceberg catalog; under ``REPARK_PARITY_LIVE=1`` the module
+    arms ``PYSPARK_SUBMIT_ARGS`` with the pinned GAV (from :mod:`_oracle_pins`) so the first
+    SparkContext can resolve ``SparkCatalog``. Only lifecycle tests request this engine. Pins a
+    local Hadoop catalog rooted at ``warehouse``, Iceberg session extensions, ANSI on, UTC,
+    ``local[2]``. ``session_conf`` is applied at BUILD time (the session is not shared with the
+    plain spark engine, so build-time application is safe).
     """
     from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
     from pyspark.sql import SparkSession, Window
@@ -273,12 +238,10 @@ def build_spark_iceberg_engine(warehouse: Path, session_conf: SessionConf = ()) 
 
 @contextlib.contextmanager
 def spark_session_conf(engine: Engine, session_conf: SessionConf) -> Iterator[None]:
-    """Apply `session_conf` to the SHARED live oracle session, then restore it.
+    """Apply ``session_conf`` to the shared live oracle session, then restore it.
 
-    The oracle session is session-scoped (one JVM per pytest run), so a scenario override must be
-    reversible or it would leak into every later scenario. PySpark's `conf.set` is live for the
-    session-timezone key, which is exactly why the two engines need different application
-    mechanisms for the same override.
+    The oracle session spans the whole pytest run (one JVM), so an override must be reversible
+    or it leaks into every later scenario.
     """
     if not session_conf:
         yield
@@ -298,22 +261,18 @@ def run_scenario(scenario: Scenario, engine: Engine) -> pa.Table:
     return engine.arrow_of(scenario.recipe(engine))
 
 
-# ==================================================================================================
 # Lifecycle scenarios — multi-statement table lifecycle (create → seed → act → read)
-# ==================================================================================================
 
-# Catalog names used by lifecycle scenarios. repark registers a memory catalog under
-# LIFECYCLE_REPARK_CATALOG; Spark Hadoop catalog is LIFECYCLE_SPARK_CATALOG (configured in
-# build_spark_iceberg_engine). Each LifecycleScenario carries the catalog name that matches the
-# engine under test — tests build engines and pick the matching scenario list, OR the scenario
-# catalog is rewritten per engine via the per-engine lists below.
+# Catalog names for lifecycle scenarios; each LifecycleScenario carries the name matching the
+# engine under test (repark memory catalog vs the Spark Hadoop catalog in
+# build_spark_iceberg_engine).
 LIFECYCLE_REPARK_CATALOG = "mem"
 LIFECYCLE_SPARK_CATALOG = "local"
 LIFECYCLE_NAMESPACE = "ns"
 
-# Shared COW table properties so repark's merge mode is explicit (matches test_merge_into.py /
-# the MERGE differential corpus). Spark Iceberg 1.11 defaults accept MERGE without these; repark
-# pins COW for determinism. Injected via {cow_props} in create_sql when with_cow_props=True.
+# Shared COW table properties so repark's merge mode is explicit; Spark Iceberg 1.11 defaults
+# accept MERGE without them, repark pins COW for determinism. Injected via {cow_props} in
+# create_sql when with_cow_props=True.
 COW_TBLPROPERTIES = (
     "'format-version' = '2', "
     "'write.delete.mode' = 'copy-on-write', "
@@ -321,7 +280,7 @@ COW_TBLPROPERTIES = (
     "'write.merge.mode' = 'copy-on-write'"
 )
 
-# Temp view name for optional MERGE source registration (matches the differential corpus).
+# Temp view name for the optional MERGE source registration.
 LIFECYCLE_SOURCE_VIEW = "merge_src"
 
 
@@ -329,10 +288,8 @@ LIFECYCLE_SOURCE_VIEW = "merge_src"
 class LifecycleScenario:
     """Multi-statement live scenario: setup → act → read, with always-cleanup.
 
-    Engine-agnostic SQL steps over a resolved FQN (``{target}``). Optional ``source_sql``
+    Engine-agnostic SQL steps over a resolved FQN (``{target}``); optional ``source_sql``
     registers a temp view named ``merge_src`` before ``act_sql`` (MERGE needs a source relation).
-    ``error_needle`` is intentionally absent on first landing — error-class twins ship later
-    with ``run_lifecycle_expect_error`` when a consumer exists.
     """
 
     name: str
@@ -377,8 +334,8 @@ def run_lifecycle_scenario(
 ) -> pa.Table:
     """create → seed → [register source] → act → read; drop target (+ source view) in finally.
 
-    ``with_cow_props`` is a *caller* choice: repark always wants COW TBLPROPERTIES on CREATE;
-    Spark Iceberg 1.11 does not need them. Encoded here rather than as a per-row dead knob.
+    ``with_cow_props`` is a caller choice: repark always wants COW TBLPROPERTIES on CREATE;
+    Spark Iceberg 1.11 does not need them.
     """
     session = engine.session
     fq_table = _lifecycle_target(scenario)
@@ -415,13 +372,10 @@ _STR = pa.string()
 def _merge_lifecycle_rows(*, catalog: str) -> list[LifecycleScenario]:
     """The 2 live-tier MERGE scenarios, bound to ``catalog`` for the engine under test.
 
-    Chosen pair (see ledger § chosen rows):
-    * ``live_merge_basic_upsert`` — control equality (publish-job upsert shape).
-    * ``live_merge_matched_arm_order`` — first-match-wins UPDATE-then-DELETE (not the builder
-      upsert twin; detects arm-order drift that ``test_merge_into.py`` does not cover).
-
-    Goldens are the recorded Spark halves from the MERGE differential corpus (short tables;
-    duplicated here so ``_live_parity`` never imports the ``test_`` module).
+    ``live_merge_basic_upsert`` is the control equality; ``live_merge_matched_arm_order`` pins
+    first-match-wins UPDATE-then-DELETE (arm-order drift ``test_merge_into.py`` does not cover).
+    Goldens are the recorded Spark halves, duplicated here so ``_live_parity`` never imports a
+    ``test_`` module.
     """
     return [
         LifecycleScenario(
@@ -483,8 +437,7 @@ def _merge_lifecycle_rows(*, catalog: str) -> list[LifecycleScenario]:
     ]
 
 
-# repark-facing list (memory catalog name). Spark-facing list is built with LIFECYCLE_SPARK_CATALOG
-# so FQNs resolve against the Hadoop catalog configured in build_spark_iceberg_engine.
+# Spark-facing list uses LIFECYCLE_SPARK_CATALOG so FQNs resolve against the Hadoop catalog.
 LIFECYCLE_SCENARIOS: list[LifecycleScenario] = _merge_lifecycle_rows(
     catalog=LIFECYCLE_REPARK_CATALOG
 )
@@ -493,22 +446,24 @@ LIFECYCLE_SCENARIOS_SPARK: list[LifecycleScenario] = _merge_lifecycle_rows(
 )
 
 
-# ==================================================================================================
 # Shared fixtures (engine-agnostic)
-# ==================================================================================================
 
 
 def _na_frame(engine: Engine) -> Any:
-    """The shared na fixture: (i, s, d) with an all-null middle row and a trailing-null d — built
-    via ``createDataFrame`` so both engines infer nullable ``string`` (not ``string_view``)."""
+    """The shared na fixture: (i, s, d) with an all-null middle row and a trailing-null d.
+
+    Built via ``createDataFrame`` so both engines infer nullable ``string`` (not ``string_view``).
+    """
     return engine.session.createDataFrame(
         [(1, "a", 1.0), (None, None, None), (3, "c", None)], ["i", "s", "d"]
     )
 
 
 def _date_spine(engine: Engine, dates: list[str]) -> Any:
-    """A one-column nullable ``calendar_date`` DataFrame from ISO date strings, built via
-    ``createDataFrame`` + ``cast(DateType())`` (both engines: ``date32``/nullable)."""
+    """A one-column nullable ``calendar_date`` DataFrame from ISO date strings.
+
+    Built via ``createDataFrame`` + ``cast(DateType())`` on both engines (``date32``/nullable).
+    """
     f, t = engine.functions, engine.types
     rows = [(value,) for value in dates]
     return engine.session.createDataFrame(rows, ["calendar_date_str"]).select(
@@ -516,17 +471,14 @@ def _date_spine(engine: Engine, dates: list[str]) -> Any:
     )
 
 
-# ==================================================================================================
 # Scenario registry — the 23-golden family (Group E + compound-agg display name + columns + dates)
-# ==================================================================================================
 
 
 @dataclass(frozen=True)
 class Scenario:
-    """A named golden: an engine-agnostic `recipe` and the pinned `golden` it must reproduce on
-    BOTH engines. `order_sensitive` mirrors the source pin (True where an ``ORDER BY`` is under
-    test). `session_conf` is the per-scenario override (H-1a): conf pairs applied to both engines
-    for this scenario only — empty for every scenario recorded under the registry default."""
+    """A named golden: an engine-agnostic `recipe` and the pinned `golden` it must reproduce
+    on BOTH engines. `order_sensitive` mirrors the source pin (True where an ``ORDER BY`` is
+    under test); `session_conf` is the per-scenario override applied to both engines."""
 
     name: str
     recipe: Callable[[Engine], Any]
@@ -650,14 +602,13 @@ def _sc_integer_division(engine: Engine) -> Any:
 
 
 def _sc_division_union(engine: Engine) -> Any:
-    """A union of two integer divisions — the Group L-write write-schema regression's expression
-    class, exercised on the SELECT path so the live tier re-derives its double {2.5, 3.5} oracle
-    (both engines: integer `/` is always-double, and the set-op parent reconciles to double)."""
+    """Union of two integer divisions: integer ``/`` is always-double on both engines and the
+    set-op parent reconciles to double (the write-schema expression class, on the SELECT path)."""
     return engine.session.sql("SELECT 5/2 AS q UNION ALL SELECT 7/2")
 
 
 def _sc_division_bare(engine: Engine) -> Any:
-    """A bare integer division — the simple-expression control for the union case above (double)."""
+    """A bare integer division — the simple-expression control for the union case (double)."""
     return engine.session.sql("SELECT 7/2 AS q")
 
 
@@ -671,8 +622,8 @@ def _sc_concat_null(engine: Engine) -> Any:
 
 def _sc_end_to_end_chain(engine: Engine) -> Any:
     # Unique per-call view names so the shared live SparkSession never leaks state between
-    # scenarios (Critic session-leakage guard). Two createDataFrame frames can't be name-joined
-    # directly on repark (shared subquery alias) — temp views give distinct qualifiers on both.
+    # scenarios, and two createDataFrame frames cannot be name-joined directly on repark
+    # (shared subquery alias); temp views give distinct qualifiers on both.
     f, t = engine.functions, engine.types
     token = uuid.uuid4().hex[:8]
     facts_view, dims_view = f"e2e_facts_{token}", f"e2e_dims_{token}"
@@ -744,10 +695,9 @@ def _sc_row_number_ordered(engine: Engine) -> Any:
 
 
 def _sc_filter_unambiguous_on_case_colliding_frame(engine: Engine) -> Any:
-    """A frame whose `id`/`ID` collide only by case is legal on BOTH engines; a SQL-string predicate
-    naming the UNAMBIGUOUS `other` column still filters. (Naming `id` raises AMBIGUOUS_REFERENCE on
-    both — the raise is pinned JVM-free in test_filter_predicate_rewrite.py; this leg is the
-    value-returning half, the one the over-refusal regression broke.)"""
+    """A frame whose `id`/`ID` collide only by case is legal on BOTH engines; a SQL-string
+    predicate naming the unambiguous `other` column still filters. (Naming `id` raises
+    AMBIGUOUS_REFERENCE on both — pinned JVM-free in test_filter_predicate_rewrite.py.)"""
     src = engine.session.createDataFrame([(1, 2, 3)], ["id", "ID", "other"])
     return src.filter("other > 0")
 
@@ -759,21 +709,16 @@ def _sc_filter_keyword_literal_false_column(engine: Engine) -> Any:
     return src.filter("false")
 
 
-# ----- Non-UTC oracle session (2, H-1a) ----------------------------------------------------------
+# ----- Non-UTC oracle session --------------------------------------------------------------------
 #
-# The first scenarios in this registry that run the ORACLE under a non-UTC session zone — the
-# reason `Scenario.session_conf` exists. Both assert a real invariant: a DATE carries no instant,
-# so DATE extraction and DATE arithmetic must NOT move with the session zone. That is what makes
-# them safe to assert as EQUALITY today (the session-timezone extraction gap is a TIMESTAMP gap)
-# and load-bearing tomorrow: a fix that pushed the session zone into the DATE path reds here.
-# The TIMESTAMP rows of the same class live in test_session_timezone_parity.py; since H-1a split
-# B (2026-08-10) most are EQUALITY rows — the extraction fix landed and they converged. The ones
-# still recorded as disclosures are a different class each (TZ-4 export type, TZ-5 cast unit, TZ-6
-# no NTZ, TZ-7 zoneless input), and each row names its own.
+# The first scenarios running the ORACLE under a non-UTC session zone. A DATE carries no instant,
+# so DATE extraction and DATE arithmetic must NOT move with the session zone — that is what makes
+# them safe to assert as EQUALITY, and a fix that pushed the session zone into the DATE path reds
+# here. The TIMESTAMP rows of the same class live in test_session_timezone_parity.py.
 
 
 def _sc_date_extractor_under_new_york_session(engine: Engine) -> Any:
-    """DATE extraction under an `America/New_York` oracle session — zone-independent by contract."""
+    """DATE extraction under an `America/New_York` oracle session — zone-independent."""
     return engine.session.sql(
         "SELECT year(to_date('2024-02-29')) AS year_part, "
         "month(to_date('2024-02-29')) AS month_part, "
@@ -781,15 +726,12 @@ def _sc_date_extractor_under_new_york_session(engine: Engine) -> Any:
     )
 
 
-# ==================================================================================================
-# G1 / G16 extraction-class timezone live rows (N-2b item 3)
-# ==================================================================================================
+# Extraction-class timezone live rows
 #
-# The 13 equality rows that converged with the H-1a-b extraction fix (see
-# test_session_timezone_parity.test_the_extraction_class_converged_and_the_residue_is_named).
-# NOT the 2 composition date_trunc value-converged-but-type-disclosure rows, NOT the 2
-# zone-independent DATE controls, NOT any disclosure (TZ-4 type, TZ-5 cast, TZ-6 NTZ, TZ-7
-# zoneless). Goldens are the recorded Spark halves (equality rows: repark is None).
+# The 13 TIMESTAMP equality rows (class defined in
+# test_session_timezone_parity.test_the_extraction_class_converged_and_the_residue_is_named);
+# excludes the date_trunc composition rows, the zone-independent DATE controls, and the
+# TZ-4..TZ-7 disclosures. Goldens are the recorded Spark halves.
 
 
 def _utc(*args: int) -> dt.datetime:
@@ -812,8 +754,8 @@ _TZ_COLUMN_SQL = (
 def register_tz_column_view(engine: Engine) -> None:
     """Register the tz-aware TIMESTAMP column view used by column-path timezone scenarios.
 
-    ``createDataFrame`` + ``createOrReplaceTempView`` are spelled identically on both engines.
-    Schema is INFERRED deliberately so both engines carry an instant-typed TIMESTAMP.
+    ``createDataFrame`` + ``createOrReplaceTempView`` are spelled identically on both engines;
+    the schema is inferred so both carry an instant-typed TIMESTAMP.
     """
     frame = engine.session.createDataFrame([(instant,) for instant in _TZ_COLUMN_INSTANTS], ["ts"])
     frame.createOrReplaceTempView(_TZ_COLUMN_VIEW)
@@ -1271,8 +1213,6 @@ SCENARIOS: list[Scenario] = [
         session_conf=((SESSION_TIME_ZONE_KEY, ZONE_TOKYO),),
     ),
     # ----- G1 / G16 extraction-class timezone live rows (N-2b item 3) -----
-    # 13 equality rows that converged with the extraction fix. Size pin 29 -> 42
-    # moved DELIBERATELY in the same diff as these 13 scenarios.
     Scenario(
         "tz_live_year_of_instant_under_new_york_session",
         _sc_sql("SELECT year(to_timestamp('2024-01-01T04:30:00Z')) AS year_part"),
@@ -1480,19 +1420,12 @@ SCENARIOS: list[Scenario] = [
 ]
 
 
-# ==================================================================================================
 # Disclosure registry — recorded DIVERGENCES (repark != Spark). Live mode re-asserts that the
-# recorded Spark behavior STILL differs from repark, so a silent convergence goes RED and forces
-# the disclosure to be revisited (docs/testing.md divergence-class discipline).
-# ==================================================================================================
+# recorded Spark behavior STILL differs, so a silent convergence goes RED.
 
 
 def _expect_raises(fn: Callable[[], Any], needle: str | None = None) -> None:
-    """Assert ``fn()`` raises — the recorded 'Spark errors here' half of a disclosure.
-
-    Optional ``needle`` (L-1) is a substring that must appear in the exception text. Existing
-    callers omit it and still accept any raise.
-    """
+    """Assert ``fn()`` raises; optional ``needle`` must appear in the exception text."""
     try:
         fn()
     except Exception as exc:
@@ -1504,9 +1437,9 @@ def _expect_raises(fn: Callable[[], Any], needle: str | None = None) -> None:
 
 @dataclass(frozen=True)
 class Disclosure:
-    """A recorded divergence pinned on BOTH engines: `repark_check` asserts repark's actual
-    (divergent) behavior; `spark_check` asserts the recorded live-Spark behavior it differs from.
-    If either engine converges toward the other, its check flips RED."""
+    """A recorded divergence pinned on BOTH engines: `repark_check` asserts repark's divergent
+    behavior, `spark_check` the recorded live-Spark behavior it differs from. If either engine
+    converges toward the other, its check flips RED."""
 
     name: str
     repark_check: Callable[[Engine], None]
@@ -1572,8 +1505,8 @@ def _disc_filter_case_collision_bypasses_spark(engine: Engine) -> None:
 
 
 def _disc_filter_backtick_identifier_repark(engine: Engine) -> None:
-    # PRE-EXISTING hole (main had no backtick handling either): backticks are not a protected span,
-    # so the token inside them is rewritten and DataFusion re-quotes it -> No field named """x""".
+    # Backticks are not a protected span: the token inside them is rewritten and DataFusion
+    # re-quotes it, so it resolves to nothing (No field named """x""").
     src = engine.session.createDataFrame([(1, 2)], ["x", "b"])
     _expect_raises(lambda: engine.arrow_of(src.filter("`x` > 0")))
 
@@ -1584,18 +1517,11 @@ def _disc_filter_backtick_identifier_spark(engine: Engine) -> None:
     assert engine.arrow_of(src.filter("`x` > 0")).num_rows == 1, "Spark honours backtick idents"
 
 
-# -------------------------------------------------------------------------------------------------
-# L-1 landing-truth disclosures — recipes re-verified against merged main 2026-08-12 (baf6617).
-# Names must match the registry `- `live-mirror: <name>`` bullets exactly.
-# -------------------------------------------------------------------------------------------------
+# Disclosure names must match the registry `- `live-mirror: <name>`` bullets exactly.
 
 
-# `cast_date_to_int_spark_refuses` was a disclosure here until 2026-08-15. The G6-3 gate made
-# both engines refuse `CAST(DATE '2020-01-01' AS INT)` with the same Spark class, so it is no
-# longer a divergence and no longer has a registry §6 row to mirror. The convergence is pinned as
-# a shared-raise equality on BOTH engines by
-# `test_cast_failure_parity.py::test_cast_failure_row[date_to_int_spark_refuses_repark_days]`,
-# which is a stronger detector than a disclosure was.
+# `cast_date_to_int_spark_refuses` converged on both engines; the shared raise is now pinned by
+# test_cast_failure_parity.py::test_cast_failure_row[date_to_int_spark_refuses_repark_days].
 
 
 def _disc_cast_timestamp_to_int_repark(engine: Engine) -> None:

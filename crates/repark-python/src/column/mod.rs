@@ -1,19 +1,6 @@
-//! [`PyColumn`] — the Python-facing wrapper over a DataFusion [`Expr`].
-//!
-//! A [`PyColumn`] holds a single fully-formed logical [`Expr`]. The pure-Python `Column` facade
-//! (under `python/repark`) builds these through the constructors here (`column` / `literal` /
-//! `sql`) and composes them with the operator methods, then hands the inner [`Expr`] to the
-//! [`crate::dataframe::PyDataFrame`] transform methods (`with_column`, `filter`, `select`, `sort`,
-//! `join`).
-//!
-//! Construction covers the three PySpark `Column` origins: a column reference (`col("x")`), a
-//! literal (`lit(1)` / `lit(None)`), and a SQL-string expression (`expr("make_date(2020, 1, 1)")`).
-//! The SQL path parses eagerly in a throwaway [`SessionContext`] against an empty schema, so
-//! `DataFusion`'s built-in functions and literals resolve; an `expr` string that references a
-//! *column* fails loudly here (the empty schema has no columns). Resolving a column-referencing
-//! `expr` against the `DataFrame` it is applied to is the DataFrame-bound `expr` path a later
-//! increment adds — the acceptance kernel that needs it (the date-dimension transform) lands with
-//! the date-function group, not here.
+//! Python-facing immutable columns backed by DataFusion logical expressions.
+//! Constructors resolve literals and standalone SQL expressions; `DataFrame` methods resolve
+//! expressions against their input schema.
 
 use datafusion::arrow::datatypes::DataType;
 use datafusion::functions_aggregate::approx_percentile_cont::approx_percentile_cont_udaf;
@@ -52,16 +39,7 @@ use function_dispatch::{
 };
 use window::{spark_window_frame, unordered_window_frame};
 
-/// ===========================================================================================
-/// The Python-facing `Column` (`repark._native.PyColumn`).
-///
-/// Wraps one DataFusion logical [`Expr`]. Cheap to [`Clone`] (an `Expr` is an `Arc`-heavy tree);
-/// every operator method returns a *new* [`PyColumn`] rather than mutating in place, matching
-/// PySpark's immutable `Column` semantics.
-/// ===========================================================================================
-// `from_py_object`: opt in to the `FromPyObject` derive so `PyColumn` (and `Vec<PyColumn>`) can be
-// extracted by value as a `PyDataFrame` method argument (pyo3 0.29 made this Clone-based derive
-// opt-in). The extraction clones the held `Expr`, which is cheap.
+/// A Python-facing immutable DataFusion expression.
 #[pyclass(name = "PyColumn", module = "repark._native", from_py_object)]
 #[derive(Clone)]
 pub struct PyColumn {
@@ -81,16 +59,7 @@ impl PyColumn {
     }
 }
 
-// These are Python-facing constructors/operators: every return value is consumed by the caller in
-// Python, so `must_use` / `return_self_not_must_use` don't apply, and pyclass args arrive by value.
-//
-// Every method returns `PyResult<Self>` because every method routes its body through the shared
-// SAF-007 fence (`fenced!`): a Rust panic anywhere in the body is caught and returned as the base
-// `PySparkException` (a `RuntimeError`) rather than escaping to PyO3's trampoline as an uncatchable
-// `PanicException`. That is the ONLY error the pure `Expr`-builder methods can return; the parsing /
-// planning methods (`literal`, `sql`, `cast`, `ta_window`, `over`) additionally document their own
-// analysis/value errors in a `# Errors` section. `missing_errors_doc` is allowed at the block level
-// so the uniform fence-error contract is stated once here instead of on every method.
+// The fence converts Rust panics into catchable PySpark exceptions at the Python boundary.
 #[allow(
     clippy::must_use_candidate,
     clippy::return_self_not_must_use,
@@ -119,8 +88,7 @@ impl PyColumn {
             if value.is_none() {
                 return Ok(Self::from_expr(lit(ScalarValue::Null)));
             }
-            // `bool` before `int`: Python `bool` is an `int` subclass, so an unguarded `int` extract
-            // would swallow `True`/`False` as `1`/`0`.
+            // Python bool is an int subclass, so test it before extracting integers.
             if value.is_instance_of::<PyBool>() {
                 let boolean: bool = value.extract()?;
                 return Ok(Self::from_expr(lit(boolean)));
@@ -144,34 +112,17 @@ impl PyColumn {
         })
     }
 
-    /// Pack fields into a struct expression (PySpark `functions.struct`).
-    ///
-    /// Uses DataFusion `struct(args…)` over already-built child [`Expr`]s so the result
-    /// binds in a parent `DataFrame` projection (unlike free-SQL `named_struct`, which has
-    /// no FROM schema at `Column.sql` construction time — X3 census).
+    /// Whether this expression contains a higher-order function.
     ///
     /// # Errors
-    /// Returns `ValueError` when `fields` is empty.
-    /// Whether this column carries a higher-order function anywhere in its expression.
-    ///
-    /// The facade asks the expression rather than reading its own rendered SQL text, because the
-    /// paths that need this — `Window.orderBy`, `cube` / `rollup` — refuse BEFORE any text is
-    /// built, and a string check would be answering a different question.
-    ///
-    /// # Errors
-    /// Propagates a tree-walk failure as `ValueError`.
+    /// Propagates tree-walk failures through the engine exception classifier.
     pub fn contains_higher_order(&self) -> PyResult<bool> {
         fenced!("Column.contains_higher_order", {
             expr_build::contains_higher_order(&self.expr)
         })
     }
 
-    /// A reference to a lambda parameter (`x` inside `transform(a, x -> x + 1)`).
-    ///
-    /// The facade mints one of these per parameter, hands it to the user's Python callable, and
-    /// passes whatever the callable returns back as the lambda body. Variables built through the
-    /// expression API carry no field yet — the frame resolves them at plan-build time, which is
-    /// why every `PyDataFrame` method that consumes a column runs `resolve_lambda_variables`.
+    /// A lambda parameter reference resolved when the parent `DataFrame` is planned.
     #[staticmethod]
     pub fn lambda_variable(name: &str) -> PyResult<Self> {
         fenced!("Column.lambda_variable", {
@@ -179,16 +130,11 @@ impl PyColumn {
         })
     }
 
-    /// Invoke a higher-order function: value arguments first, then one lambda per `(params, body)`.
-    ///
-    /// Every Spark higher-order function has that shape — `transform(arr, f)`,
-    /// `aggregate(arr, init, merge, finish)`, `map_zip_with(m1, m2, f)` — so the split is the
-    /// signature, not a convention this layer invents.
+    /// Invoke a registered higher-order function with value arguments and lambda bodies.
     ///
     /// # Errors
-    /// `ValueError` if `name` is not a higher-order function the session registers. Resolution
-    /// goes through `repark_functions::higher_order::by_name`, the same table
-    /// `register_all` installs, so the facade and the SQL door cannot resolve different kernels.
+    /// Returns `ValueError` for an unknown function and `UnsupportedOperationException` for a
+    /// nested higher-order function.
     #[staticmethod]
     pub fn call_higher_order(
         name: &str,
@@ -216,6 +162,12 @@ impl PyColumn {
         })
     }
 
+    /// Pack fields into a struct expression.
+    ///
+    /// Uses already-built child expressions so the result binds in a parent `DataFrame` projection.
+    ///
+    /// # Errors
+    /// Returns `ValueError` when `fields` is empty.
     #[staticmethod]
     pub fn make_struct(fields: Vec<PyColumn>) -> PyResult<Self> {
         fenced!("Column.make_struct", {
@@ -224,11 +176,7 @@ impl PyColumn {
                     "struct() requires at least one field column",
                 ));
             }
-            // DataFusion's bare `struct(args)` always names fields c0/c1/… — aliases on
-            // children are ignored by `StructFunc::return_type`. Spark `functions.struct`
-            // keeps argument names, which DF expresses as `named_struct('name', expr, …)`
-            // (the SQL planner rewrites `struct(a as a, …)` the same way). Extract outer
-            // Alias names the Python facade attaches (octo X3 C4).
+            // Preserve aliases because DataFusion's struct return type otherwise uses c0, c1, ….
             let mut args: Vec<Expr> = Vec::with_capacity(fields.len() * 2);
             for (index, column) in fields.into_iter().enumerate() {
                 let expr = column.expr();
@@ -266,12 +214,11 @@ impl PyColumn {
     /// subtree. Column-referencing expressions still fail (empty schema / no FROM).
     ///
     /// # Errors
-    /// Returns `ValueError` if `sql` does not parse/plan, or references a column (no schema).
+    /// Returns `ParseException` for invalid SQL and `AnalysisException` for unresolved columns.
     #[staticmethod]
     pub fn sql(sql: &str) -> PyResult<Self> {
         fenced!("Column.sql", {
-            // G15: F.expr / Column.sql bypass the Spark-door router. Refuse COLLATE
-            // here so the fragment sees the same actionable message as spark.sql().
+            // This path bypasses the Spark SQL router, so apply its COLLATE refusal here.
             repark_spark::refuse_collation_in_sql(sql).map_err(crate::datafusion_to_py_err)?;
             let context = SessionContext::new();
             repark_functions::register_all(&context);
@@ -288,20 +235,11 @@ impl PyColumn {
             let plan = runtime
                 .block_on(async {
                     let df = context.sql(&select_sql).await?;
-                    // `ctx.sql` returns a PRE-analysis plan (its schema can disagree with executed
-                    // types — the AR-WG-SQL boundary lesson); analyze before anything reads it.
                     repark_functions::analyze_eagerly(&context.state(), df.logical_plan().clone())
                 })
-                // Classify the DataFusion error into the taxonomy (WG-3): a syntax error becomes
-                // `ParseException`, a column-referencing / otherwise-unresolvable expression becomes
-                // `AnalysisException` (both subclass `RuntimeError`). The raw engine diagnostic is
-                // preserved in `str(exc)`.
                 .map_err(crate::datafusion_to_py_err)?;
             let expr = strip_outer_alias(extract_projection_expr(&plan)?);
-            // One handoff cast survives analysis: the Arrow FFI export mishandles `Utf8View`
-            // (empty string cells), and DataFusion string built-ins can still type `Utf8View`
-            // post-analysis. Numeric types need no pinning — the analyzed expression already
-            // carries its true (e.g. Float64) type.
+            // Cast Utf8View for Arrow FFI compatibility; analyzed numeric types remain unchanged.
             let expr = match plan
                 .schema()
                 .fields()
@@ -373,25 +311,18 @@ impl PyColumn {
     pub fn concat(columns: Vec<PyColumn>) -> PyResult<Self> {
         fenced!("Column.concat", {
             let exprs: Vec<Expr> = columns.iter().map(PyColumn::expr).collect();
-            // Cast the `concat` result to `Utf8`: DataFusion's `concat` returns `Utf8View`, but the
-            // NULL guard arm below must declare the *same* type or the planner promises `Utf8` and
-            // the kernel returns `Utf8View` (a type-mismatch that panics in the array path). Spark's
-            // `concat` yields `StringType` (→ `Utf8`, not `Utf8View`) anyway, so this also pins the
-            // parity output type.
+            // Match Spark's Utf8 result and keep both CASE arms at one Arrow type.
             let concatenated = Expr::Cast(Cast::new(
                 Box::new(datafusion::functions::expr_fn::concat(exprs.clone())),
                 DataType::Utf8,
             ));
-            // Disjunction of `IS NULL` over every argument; `None` only when `concat()` was called
-            // with no arguments. KNOWN DIVERGENCE: DataFusion rejects zero-arg `concat` at plan
-            // time, where Spark's `concat()` returns '' — fail-loud on a no-real-caller path
-            // (tracked in task/todo.md).
+            // Guard every argument because Spark propagates NULL.
             let any_null = exprs.into_iter().map(Expr::is_null).reduce(Expr::or);
             Ok(match any_null {
                 None => Self::from_expr(concatenated),
                 Some(any_null) => Self::from_expr(Expr::Case(Case::new(
                     None,
-                    // A typed `Utf8` NULL keeps both CASE arms the same type as the cast above.
+                    // Keep the NULL arm at the same Utf8 type as the concatenated value.
                     vec![(Box::new(any_null), Box::new(lit(ScalarValue::Utf8(None))))],
                     Some(Box::new(concatenated)),
                 ))),
@@ -399,18 +330,15 @@ impl PyColumn {
         })
     }
 
-    /// The statement's current timestamp (PySpark `current_timestamp()`).
+    /// The statement's current timestamp with Spark's microsecond UTC type.
     ///
-    /// DataFusion's `now()` is `timestamp[ns, tz=UTC]`. Spark's `current_timestamp()` is
-    /// microsecond precision with UTC (`timestamp[us, tz=UTC]` on the Arrow path). Iceberg v2
-    /// also rejects nanosecond timestamps (`timestamp_ns is not supported until v3`), so the
-    /// binding casts to microsecond UTC here — recorded from live PySpark 4.1.2
-    /// (`spark.range(1).select(F.current_timestamp()).toArrow().schema`).
+    /// Spark's `current_timestamp()` maps DataFusion's `now()` to a UTC microsecond timestamp.
+    /// DataFusion produces nanoseconds, so the binding casts them for Arrow and Iceberg.
     #[staticmethod]
     pub fn current_timestamp() -> PyResult<Self> {
         fenced!("Column.current_timestamp", {
             let now = datafusion::functions::expr_fn::now();
-            // Spark Arrow: timestamp[us, tz=UTC]. Match precision AND timezone.
+            // Match Spark's Arrow precision and timezone.
             let spark_timestamp =
                 DataType::Timestamp(TIMESTAMP_UNIT, Some(std::sync::Arc::<str>::from("UTC")));
             Ok(Self::from_expr(Expr::Cast(Cast::new(
@@ -420,10 +348,9 @@ impl PyColumn {
         })
     }
 
-    /// Call a DataFusion scalar function by name (R-FN-BATCH1 facade wrappers).
+    /// Call a DataFusion scalar function by name.
     ///
-    /// Arguments are already-built [`PyColumn`]s (column refs or literals). Unknown names fail loud.
-    /// The name → [`Expr`] table lives in [`function_dispatch::call_scalar_expr`].
+    /// Arguments are already-built [`PyColumn`]s. Unknown names fail loudly.
     #[staticmethod]
     pub fn call_scalar(name: &str, args: Vec<PyColumn>) -> PyResult<Self> {
         fenced!("Column.call_scalar", {
@@ -432,7 +359,7 @@ impl PyColumn {
         })
     }
 
-    // ---- Spark date functions (wired to `repark_functions::expr_fn`) -----------------------------
+    // ---- Spark date functions ---------------------------------------------------------------
 
     /// Spark `year(date)` — the calendar year.
     pub fn year(&self) -> PyResult<Self> {
@@ -571,9 +498,9 @@ impl PyColumn {
     /// The `row_number()` window function with an empty `OVER` clause (PySpark
     /// `functions.row_number()`). [`PyColumn::over`] fills in the partition/order to complete it.
     ///
-    /// PySpark's `row_number()` is `IntegerType`, but DataFusion's is `UInt64`; the window is wrapped
-    /// in a `CAST(… AS INT)` so the output type matches Spark. [`PyColumn::over`] unwraps that cast to
-    /// re-window the inner function, then re-applies it.
+    /// PySpark's `row_number()` is `IntegerType`, but DataFusion's is `UInt64`; wrap the window
+    /// in `CAST(… AS INT)` so the output type matches Spark. [`PyColumn::over`] unwraps and
+    /// reapplies the cast when it re-windows the function.
     #[staticmethod]
     pub fn row_number() -> PyResult<Self> {
         fenced!("Column.row_number", {
@@ -647,8 +574,9 @@ impl PyColumn {
     }
 
     /// A TA window function (`ta_ema`, `ta_adx`, `ta_bbands_upper`, …) as an un-`OVER`ed window
-    /// expression: the series column(s) then the scalar literal params, in `args` order. The
-    /// `repark.ta` facade builds these; [`PyColumn::over`] then attaches the `ORDER BY` / partition.
+    /// expression: the series column(s) then the scalar literal params, in `args` order.
+    /// The `repark.ta` facade builds these; [`PyColumn::over`] attaches the `ORDER BY` and
+    /// partition.
     ///
     /// The wrapped [`WindowUDF`](datafusion::logical_expr::WindowUDF) is the *same* instance the
     /// session registers for the SQL path (`repark_ta::udf`), so the two surfaces are one kernel.
@@ -669,19 +597,17 @@ impl PyColumn {
         })
     }
 
-    /// Apply an `OVER (PARTITION BY … ORDER BY … [frame])` window (PySpark `Column.over`).
+    /// Apply an `OVER (PARTITION BY … ORDER BY … [frame])` window.
     ///
     /// Accepts pure window functions (`row_number`/`rank`/…, optionally CAST-wrapped for Spark
-    /// `IntegerType`) **and** aggregate expressions (`sum`/`max`/…), which become window aggregates.
+    /// `IntegerType`) and aggregate expressions (`sum`/`max`/…), which become window aggregates.
     ///
-    /// Frame (r20 G2): when `frame_units` is `"rows"` or `"range"`, `frame_start`/`frame_end` are
-    /// Spark-relative offsets (`i64::MIN`/`i64::MAX` = unbounded; `0` = current row; negative =
-    /// preceding; positive = following). `None` frame keeps DataFusion's default frame for the
-    /// order-by presence.
+    /// `frame_start` and `frame_end` use Spark offsets; `i64::MIN/MAX` mean unbounded.
     ///
     /// # Errors
-    /// Returns `ValueError` if this column is not a window/aggregate function, if the order vectors
-    /// differ in length, or if the windowed expression cannot be built.
+    /// Returns `ValueError` for mismatched order vectors or a non-window, non-aggregate column.
+    /// Unordered window UDFs return `AnalysisException`; other build failures use the engine
+    /// exception classifier.
     #[allow(clippy::too_many_arguments)] // PyO3 frame-optional surface mirrors Spark WindowSpec.
     #[pyo3(signature = (
         partition_by,
@@ -893,7 +819,6 @@ impl PyColumn {
     ///
     /// # Errors
     /// Returns [`AnalysisException`] if `type_spec` is not a recognized cast type string
-    /// (r24 QUAL-03 — was a bare `ValueError`).
     pub fn cast(&self, type_spec: &str) -> PyResult<Self> {
         fenced!("Column.cast", {
             let data_type = parse_data_type(type_spec).map_err(AnalysisException::new_err)?;
@@ -919,18 +844,16 @@ impl PyColumn {
         })
     }
 
-    // ---- aggregate functions (Group E: `GroupedData.agg` + the `F.sum`-family) -------------------
+    // ---- aggregate functions --------------------------------------------------------------------
 
-    /// The column's schema display name (`col("x")` → `"x"`) — the facade reads this to compute a
-    /// PySpark aggregate output name (`sum(x)`) when the argument is a `Column` rather than a plain
-    /// column-name string.
+    /// The column schema name supplies facade aggregate aliases such as `sum(x)`.
     pub fn display_name(&self) -> PyResult<String> {
         fenced!("Column.display_name", {
             Ok(self.expr.schema_name().to_string())
         })
     }
 
-    /// Collapse nested ``Alias`` chains on the held [`Expr`] to one outer rename (r25 T3 / N2).
+    /// Collapse nested alias chains to one outer rename.
     ///
     /// ``col("x").alias("x").alias("x")`` and ``col("x").alias("a").alias("b")`` both become a
     /// single ``Alias`` (outermost name) so logical plans no longer show ``… AS x AS x`` or
@@ -943,21 +866,9 @@ impl PyColumn {
         })
     }
 
-    /// Build a Spark aggregate over this column for `GroupedData.agg` and the `F.sum`-family
-    /// functions.
-    ///
-    /// `kind` selects the reducer (`"sum"`/`"avg"`/`"min"`/`"max"`/`"first"`/`"last"`/
-    /// `"collect_list"`/`"collect_set"`); `ignore_nulls` sets `IGNORE NULLS` for `first`/`last`
-    /// (PySpark's `ignorenulls=True`). All of these skip NULLs in the reduction (Spark parity);
-    /// `count` is built by [`PyColumn::count_aggregate`] instead (it carries the `*` / `DISTINCT` /
-    /// multi-argument forms). The output column name is applied facade-side via `alias`, so the
-    /// returned expression is deliberately un-aliased.
-    ///
-    /// `collect_list` / `collect_set` route through DataFusion `array_agg` (with `DISTINCT` for the
-    /// set form). Both force `IGNORE NULLS` — Spark excludes NULL elements — and `coalesce` the
-    /// result with `make_array()` so an empty group is an empty array (not NULL), matching live
-    /// PySpark 4.1.2. Element order is nondeterministic (Spark parity); callers must compare sorted
-    /// contents or use single-element groups.
+    /// Build a Spark aggregate for the requested `kind`.
+    /// `first` and `last` honor `ignore_nulls`; collection forms always ignore NULL elements.
+    /// Other reducers follow their DataFusion kernels. Collection order is nondeterministic.
     ///
     /// # Errors
     /// Returns `ValueError` for an unknown `kind`, or if the aggregate builder fails.
@@ -989,7 +900,7 @@ impl PyColumn {
         })
     }
 
-    /// Binary aggregate: `corr` / `covar_pop` / `covar_samp` (R-FN-BATCH4).
+    /// Binary aggregate: `corr`, `covar_pop`, or `covar_samp`.
     pub fn aggregate_binary(&self, kind: &str, other: PyColumn) -> PyResult<Self> {
         fenced!("Column.aggregate_binary", {
             let udaf = binary_aggregate_udaf(kind)?;
@@ -1000,7 +911,7 @@ impl PyColumn {
         })
     }
 
-    /// Approximate continuous percentile (Q1 / R-ML-QUANTILE).
+    /// Approximate continuous percentile.
     ///
     /// Lowers to DataFusion's t-digest `approx_percentile_cont(col, percentile)`. Facade names
     /// `percentile_approx` / `approx_percentile` (Spark) alias the same UDAF after
@@ -1023,7 +934,7 @@ impl PyColumn {
     /// Build a Spark `count` aggregate over `columns` (PySpark `F.count` / `F.countDistinct`).
     ///
     /// One column is `count(col)` (skips NULLs); a literal-`1` column is `count(*)` (counts every
-    /// row); several columns with `distinct = true` is `count(DISTINCT a, b, …)` (distinct tuples).
+    /// Several columns with `distinct = true` count distinct tuples.
     /// DataFusion rejects multi-argument `COUNT DISTINCT` natively, so the multi-column form packs
     /// the arguments into a `struct` and nulls out any row where *any* field is NULL (Spark
     /// excludes a row when any of the distinct columns is NULL — verified against live PySpark
@@ -1089,11 +1000,10 @@ mod expr_tests {
         );
     }
 
-    /// `call_scalar` 2/3-arg `substr` must embed the Spark UDF (octo C7-L-001).
+    /// Two- and three-argument `substr` calls use the Spark-compatible UDF.
     ///
-    /// Pre-fix, the 3-arg arm used DF `expr_fn::substring` (name ≠ `"substr"`), so the
-    /// analyzer never rewrote it and `Column.__getitem__` slices / `F.substr` diverged
-    /// from SQL (`'hello'` pos0 len3 → `'he'`).
+    /// The analyzer must rewrite the three-argument form as that UDF, so zero-based slicing
+    /// matches SQL (`'hello'` pos0 len3 → `'he'`).
     #[test]
     fn call_scalar_substr_zero_matches_spark() {
         use datafusion::arrow::array::StringArray;
@@ -1151,10 +1061,8 @@ mod expr_tests {
         assert_eq!(array_neg.value(0), "ll");
     }
 
-    /// The boundary invariant behind the 2026-07-13 F.expr regression: the handoff expression
-    /// must carry its POST-analysis type, so the consumer `DataFrame`'s logical schema (what the
-    /// PyO3 Arrow export reads) agrees with the executed buffers. Pre-fix, `5/2` handed off as
-    /// Int64, executed as Float64, and `collect()` returned 2.5's bit pattern as an int.
+    /// The handoff expression must carry its post-analysis type so the logical schema matches
+    /// executed buffers. Integer division `5/2` must remain `Float64` through the handoff.
     #[test]
     fn expr_sql_integer_division_hands_off_float64() {
         use datafusion::arrow::array::Float64Array;

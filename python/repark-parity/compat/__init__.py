@@ -1,8 +1,8 @@
-"""PySpark-suite compatibility harness (C2 / R-PYSPARK-COMPAT).
+"""PySpark-suite compatibility harness.
 
 Runs Apache's own ``pyspark.sql.tests`` modules against the repark facade via a
-session/bootstrap redirect. Measurement-only: failing Apache tests are FINDINGS,
-never mid-unit product fixes.
+session/bootstrap redirect. Measurement-only: failing Apache tests are findings, not
+product fixes.
 
 Public entry points:
 - :func:`bootstrap.install_redirect` — patch map + test-package injection

@@ -1,8 +1,11 @@
 # map — repark-sql/src/guards
 
+CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
+accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
+
 ## Purpose
 
-File-backed tests for `../guards.rs`. The guard set. Every guard is a behavior and every REFUSAL is a behavior, so each refusal
+File-backed tests for `../guards.rs`. Every guard and refusal is a behavior, so each refusal
 message class has its own test alongside an acceptance case proving the guard is not simply
 refusing everything.
 
@@ -15,8 +18,8 @@ refusing everything.
   memory-catalog Iceberg table — the end-to-end row is the one that asserts the table is
   untouched after a refusal, which is the whole point of a data-loss valve. It lives here rather
   than in `../tests.rs` because that file is at its `scripts/check_rust_file_size.py` ceiling,
-  and because this IS the guard's home. Six pins in all: detector, verb/target message, the
-  parsed-target rendering (quoted / FROM-less / comment-bearing spellings, restated over
+  and because this IS the guard's home. The pins cover the detector, verb/target message, the
+  parsed-target rendering (quoted / FROM-less / comment-bearing spellings, also covering
   still-refused scalar / UPDATE IN), the end-to-end refuse, the IN-DELETE execute pin
   (`dml_subquery_in_delete_executes_and_deletes_exactly_the_match`), the NOT IN + 3VL
   execute pin (`dml_subquery_not_in_delete_executes_and_honors_three_valued_logic`), the
@@ -24,18 +27,17 @@ refusing everything.
   (`dml_subquery_exists_delete_executes_uncorrelated_and_correlated`), the
   correlated-IN + identity-UPDATE execute pin
   (`dml_subquery_correlated_in_and_update_in_execute`), the
-  **valve-ORDER** pin against BUG-001 (`mor_valve_runs_after_the_g3e8_valve`, restated over
+  **valve-ORDER** pin against BUG-001 (`mor_valve_runs_after_the_g3e8_valve`, also covering
   aggregate IN), and
   `router_parse_dialect_matches_the_session_default` —
   the attachment-class net: this door's router parse and the parse `delegate` plans must stay
   the same dialect, because a guard wired to a parse the executor does not use is fail-open
   (the class that produced the Spark door's bypass). The `AnsiDoor` harness is shared by the two
   end-to-end pins.
-  **G15 (2026-08-12):** collation pins — expression `COLLATE`, `ORDER BY COLLATE`,
+  **G15:** collation pins — expression `COLLATE`, `ORDER BY COLLATE`,
   `CREATE TABLE` column `COLLATE`, `CAST AS STRING COLLATE`, SET / parenthesized SET,
   a string-literal negative, and an end-to-end refuse + default `SELECT 1` untouched
-  (e2e also covers CAST + SET). Ledger:
-  [`../../../../task/y7-collation-refuse-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-13-y7-collation-refuse-ledger.md). V3R-1: the MoR-valve wrapper test hands the valve a parsed `Statement`.
+  (e2e also covers CAST + SET). The MoR-valve wrapper test passes a parsed `Statement`.
 
 ## Pointers
 
@@ -46,8 +48,8 @@ refusing everything.
 | Symptom | First check |
 |---|---|
 | A guard fires on a string literal | it cannot — the guards read scrubbed text; check `../scan.rs`'s tests |
-| A delegated DELETE/UPDATE with a subquery `WHERE` was refused | By design (G3-E8 residual). Uncorrelated `DELETE … col IN` / `NOT IN (SELECT …)`, `[NOT] EXISTS` ± correlation, correlated IN, and identity `UPDATE … IN` execute. Other spellings stay refused. `task/r1-g3e8-pr4-ledger.md` |
-| A delegated DELETE/UPDATE was not gated by the BUG-001 valve | the wrapper only resolves 3+-part names against a REGISTERED catalog; `mor_valve_wrapper_passes_what_it_cannot_or_must_not_gate` lists every pass-through branch. Note it now runs INSIDE the router's `DELETE`/`UPDATE` arm, after G3-E8 — a statement that does not parse to `Delete`/`Update` no longer reaches it (it gets the parse error instead, which is the more informative one) |
+| A delegated DELETE/UPDATE with a subquery `WHERE` was refused | By design (G3-E8 residual). Uncorrelated `DELETE … col IN` / `NOT IN (SELECT …)`, `[NOT] EXISTS` ± correlation, correlated IN, and identity `UPDATE … IN` execute. Other spellings stay refused. |
+| A delegated DELETE/UPDATE was not gated by the BUG-001 valve | the wrapper completes short names from session defaults and gates the resulting REGISTERED catalog; `mor_valve_wrapper_passes_what_it_cannot_or_must_not_gate` lists every pass-through branch. Note it now runs INSIDE the router's `DELETE`/`UPDATE` arm, after G3-E8 — a statement that does not parse to `Delete`/`Update` no longer reaches it (it gets the parse error instead, which is the more informative one) |
 | A DML guard did not run at all | Check WHICH parse the statement took. `router.rs` parses with `PARSER_DIALECT`; `delegate` re-parses through `create_logical_plan` with the session's `sql_parser.dialect`. They are the same today and `router_parse_dialect_matches_the_session_default` keeps them so — if that pin ever reds, every guard in the arm is fail-open for the forms the two parsers disagree about (the Spark door's L1 M-1 bypass class) |
 
 First checks: `cargo test -p repark-sql guards::`. Escalate to: [../map.md#debug](../map.md).

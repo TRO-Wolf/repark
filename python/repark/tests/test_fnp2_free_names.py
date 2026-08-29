@@ -1,15 +1,8 @@
 """FNP-2 — the names that needed no engine work, and the null-ordering corners they closed.
 
-**The asymmetry.** RePark exported ``asc_nulls_first`` and ``desc_nulls_last`` but not
-``asc_nulls_last`` or ``desc_nulls_first`` — two corners of a 2x2, and precisely the two that are
-not the default. A user reaching for the non-default null placement got ``AttributeError``, which
-reads as "repark cannot order nulls that way" rather than "this spelling is missing".
-
 Both spellings existed only as aliases of ``asc`` / ``desc``, so nothing pinned that the *nulls*
 half of the name meant anything. These rows pin all four corners by observed row order, not by
-which method was called.
-
-Ledger: ``task/fnp-2-free-names-ledger.md``.
+which method was called. Ledger: ``task/fnp-2-free-names-ledger.md``.
 """
 
 from __future__ import annotations
@@ -84,11 +77,7 @@ def test_aliases_evaluate_on_the_arrow_path() -> None:
 
 
 def test_window_order_honours_explicit_null_placement() -> None:
-    """``Window.orderBy`` resolved null placement from the DIRECTION, discarding the marker.
-
-    Latent while only the two default spellings existed — ``asc`` always meant nulls-first anyway —
-    and reachable the moment ``asc_nulls_last`` exists.
-    """
+    """``Window.orderBy`` resolved null placement from the DIRECTION, discarding the marker."""
     from repark.spark import Window
 
     spark = _session()
@@ -112,10 +101,9 @@ def test_window_order_honours_explicit_null_placement() -> None:
 
 
 def test_window_specs_differing_only_in_null_placement_do_not_merge() -> None:
-    """The plan-collapse structural key omitted null placement, so two windows compared equal.
+    """Two specs differing only in where NULLs sort are DIFFERENT windows.
 
-    Two ``withColumn`` calls whose specs differ only in where NULLs sort are DIFFERENT windows;
-    merging them silently reorders one of the two results.
+    Merging them silently reorders one of the two results.
     """
     from repark.spark import Window
 
@@ -136,21 +124,16 @@ def test_window_specs_differing_only_in_null_placement_do_not_merge() -> None:
 def test_ascending_keyword_remarks_only_on_a_falsy_flag() -> None:
     """``orderBy(..., ascending=…)`` follows PySpark: only a FALSY flag re-marks a column.
 
-    This test previously asserted the opposite — that the override supersedes an explicit marker
-    on both direction and null placement. That premise was invented, not read: PySpark's
-    ``DataFrame._sort_cols`` does ``if not ascending: jcols = [jc.desc() ...]`` and, for a list,
-    ``jc if asc else jc.desc()``, so a truthy flag is a no-op that PRESERVES the marker. Two
-    independent Critic passes caught it (F-CSP-2 / F-CFS-4); the full matrix now lives in
+    PySpark's ``DataFrame._sort_cols`` re-marks only when ``not ascending``; a truthy flag is a
+    no-op that PRESERVES the marker (F-CSP-2 / F-CFS-4). Full matrix:
     ``test_fnp_critic_remediation.py``.
     """
     spark = _session()
     frame = spark.createDataFrame([(2,), (None,), (1,)], "v int")
 
-    # Truthy override: the asc_nulls_last marker survives.
     assert frame.orderBy(F.asc_nulls_last("v"), ascending=True).toArrow().column(
         "v"
     ).to_pylist() == [1, 2, None]
-    # Falsy override: the column is re-marked, so nulls follow the new direction.
     assert frame.orderBy(F.col("v").asc(), ascending=False).toArrow().column("v").to_pylist() == [
         2,
         1,

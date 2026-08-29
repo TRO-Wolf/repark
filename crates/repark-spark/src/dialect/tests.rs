@@ -1,8 +1,6 @@
 //! [`SparkDialect`] seam-adaptation tests: installed on a [`ReparkSession`] via
-//! `with_sql_dialect`, the dialect routes every `sql()` call through the ported v1 router —
-//! the Spark ORDER BY defaults and the router's targeted refusals are observable end to end. The P11
-//! `read_only` field adaptation is pinned router-side (`router/tests.rs` pins the message; the
-//! session threads its postgres snapshot into `EngineContext::read_only` — core session tests).
+//! `with_sql_dialect`, the dialect routes every `sql()` call through the Spark router. The Spark
+//! ORDER BY defaults, targeted refusals, and P11 read-only adaptation are observable end to end.
 
 use std::sync::Arc;
 
@@ -19,8 +17,8 @@ fn spark_session() -> ReparkSession {
         .expect("session build")
 }
 
-/// The dialect routes through the ported router: Spark's ASC → NULLS FIRST default applies,
-/// which the phase-1 `DataFusionDialect` (plain `SessionContext::sql`) would invert.
+/// The dialect routes through the Spark router: ASC → NULLS FIRST applies,
+/// which a plain `SessionContext::sql` path would invert.
 #[tokio::test]
 async fn dialect_execute_runs_the_spark_router() {
     let session = spark_session();
@@ -49,10 +47,8 @@ async fn dialect_execute_runs_the_spark_router() {
     assert!(column.is_null(0), "Spark ASC default is NULLS FIRST");
 }
 
-/// The router's targeted refusals are reachable through the seam (the dialect passes the SQL
-/// through unmodified — no shadow routing) and survive the session's error fold.
-/// (PR-3a: the CTAS probe this test used became a live handler; PR-3b: the MERGE refuse arm
-/// became the live handler; repointed to the permanent TRUNCATE targeted refuse — C4-L-001.)
+/// The dialect passes targeted router refusals through the seam and preserves the session error
+/// fold.
 #[tokio::test]
 async fn dialect_surfaces_router_refusals() {
     let session = spark_session();

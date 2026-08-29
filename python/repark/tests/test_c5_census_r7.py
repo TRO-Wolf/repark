@@ -1,7 +1,6 @@
 """C5 census-r7 — Column access surface + sameSemantics + when type-gate pins.
 
-Hour-0 classic FAIL-VALUE/FAIL-MISSING clusters shipped outside P5/H2/R2/M8/U11
-regions. Pins exercise Arrow collect value+type (docs/testing.md), not show-only.
+Pins exercise Arrow collect value+type (docs/testing.md), not show-only.
 """
 
 from __future__ import annotations
@@ -25,9 +24,7 @@ def spark() -> Iterator[ReparkSession]:
     session.stop()
 
 
-# ==================================================================================================
 # Column.getItem / getField / __getattr__ (Apache test_access_nested_types family)
-# ==================================================================================================
 
 
 def test_column_getitem_getitem_array_and_map(spark: ReparkSession) -> None:
@@ -65,9 +62,7 @@ def test_column_getfield_and_getattr_struct(spark: ReparkSession) -> None:
     )
 
 
-# ==================================================================================================
 # Column.try_cast (Apache test_cast_str_representation + null-on-fail)
-# ==================================================================================================
 
 
 def test_try_cast_display_and_null_on_fail(spark: ReparkSession) -> None:
@@ -106,9 +101,7 @@ def test_cast_and_try_cast_reject_non_datatype_or_str() -> None:
         assert params.get("arg_type") == "int"
 
 
-# ==================================================================================================
 # Column.transform (Apache test_transform)
-# ==================================================================================================
 
 
 def test_column_transform_chain(spark: ReparkSession) -> None:
@@ -150,9 +143,7 @@ def test_column_transform_type_gates() -> None:
     assert result_params.get("arg_type") == "int"
 
 
-# ==================================================================================================
 # F.when type gate (Apache test_when)
-# ==================================================================================================
 
 
 def test_when_str_condition_raises_not_column() -> None:
@@ -182,9 +173,7 @@ def test_when_column_condition_still_works(spark: ReparkSession) -> None:
     assert values == ["lo", "lo", "hi"]
 
 
-# ==================================================================================================
 # DataFrame.sameSemantics (Apache test_same_semantics_error)
-# ==================================================================================================
 
 
 def test_same_semantics_non_dataframe_raises(spark: ReparkSession) -> None:

@@ -1,44 +1,37 @@
-"""Three-valued logic differential corpus (H-2 gap G12) — value AND Arrow type AND nullability.
+"""Three-valued logic differential corpus — value AND Arrow type AND nullability.
 
 **Oracle.** Every ``spark`` table below was RECORDED in record mode against live PySpark 4.1.2
-(zulu-17, ``master("local[2]")``, ``spark.sql.ansi.enabled=true``,
-``spark.sql.shuffle.partitions=2``) on 2026-08-11. One recipe per row runs on BOTH engines, so the
-recipe under test and the recipe the oracle ran are the same code — nothing here is hand-computed.
+(``master("local[2]")``, ``spark.sql.ansi.enabled=true``, ``spark.sql.shuffle.partitions=2``).
+One recipe per row runs on BOTH engines, so the recipe under test and the recipe the oracle ran
+are the same code — nothing here is hand-computed.
 
-**Why some rows may be DISCLOSURES.** When the engines agree on value AND Arrow type AND
-nullability the row is a plain equality (``repark is None``). When they honestly disagree the row
-pins BOTH halves and asserts the divergence still holds. A silent CONVERGENCE goes red and forces
-the disclosure to be revisited rather than laundered into "parity". When a G12 fix lands, each
-divergent row flips to ``repark=None`` (equality) and that flip is the fix's revert-red evidence.
+**Disclosures.** When the engines agree on value AND Arrow type AND nullability the row is a
+plain equality (``repark is None``). When they honestly disagree the row pins BOTH halves and
+asserts the divergence still holds. A silent CONVERGENCE goes red and forces the disclosure to be
+revisited rather than laundered into "parity"; a G12 fix flips divergent rows to equality, and
+that flip is the fix's revert-red evidence.
 
-**Rows assert on the Arrow path** (``to_arrow`` / Spark ``toArrow``) through the parity
-comparator, so schema name, Arrow type and nullability are part of every content assertion —
-never ``show``. Nullability is load-bearing here (boolean columns produced by 3VL expressions).
+**Rows assert on the Arrow path** (``to_arrow`` / ``toArrow``) through the parity comparator, so
+schema name, Arrow type and nullability are part of every content assertion — never ``show``.
+Nullability is load-bearing here (boolean columns produced by 3VL expressions).
 
-**Re-deriving the goldens (record mode).** The driver that recorded every ``spark`` half is
-committed beside this module::
+**Re-deriving the goldens (record mode).** The committed driver
+``python/repark/tests/_record_tvl_goldens.py`` (needs a JVM + ``pyspark``; never collected by
+pytest; ``--emit`` prints paste-ready table constructors; serialize with other JVM recorders via
+``/tmp/grok-jvm-record.lock``) imports ``ROWS`` from this module and runs each row's own recipe.
 
-    JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \\
-        PYTHONPATH=python/repark-parity/src \\
-        .venv/bin/python python/repark/tests/_record_tvl_goldens.py
-
-It imports ``ROWS`` from THIS module and runs each row's own recipe, so the recorded golden and the
-asserted recipe cannot drift apart. Needs a JVM + ``pyspark`` (``uv sync --extra record``); never
-collected by pytest. ``--emit`` prints paste-ready table constructors. Serialize with other JVM
-recorders via ``/tmp/grok-jvm-record.lock``.
-
-**Entry points (CP-11).** Facade ``sql()`` is primary (``entry="sql"``). At least two DataFrame-API
-rows (``entry="df"``) pin ``filter`` / ``select`` column expressions — name-gated so a SQL control
-cannot satisfy either family. A class claim is scoped to the entry it names.
+**Entry points.** Facade ``sql()`` is primary. At least two DataFrame-API rows pin
+``filter`` / ``select`` column expressions — name-gated so a SQL control cannot satisfy either
+family. A class claim is scoped to the entry it names.
 
 **Six load-bearing AND/OR/NOT combos (not all 9x2).** The traps that distinguish UNKNOWN from
 FALSE: ``TRUE AND NULL→NULL``, ``FALSE AND NULL→FALSE``, ``TRUE OR NULL→TRUE``,
-``FALSE OR NULL→NULL``, ``NOT NULL→NULL``, ``NULL AND NULL→NULL``. Boolean-core pairs
-(``TRUE AND TRUE``, …) are not 3VL-load-bearing and are omitted by design (named in the ledger).
+``FALSE OR NULL→NULL``, ``NOT NULL→NULL``, ``NULL AND NULL→NULL``. Boolean-core pairs are not
+3VL-load-bearing and are omitted by design.
 
 **Out of scope (named, not silent):** fixing any divergence found; the registry file; DML-level
-``NOT IN`` with NULL (that family is the G3-E8 corpus — **PR #54 in flight** at kickoff; do not
-duplicate). One SELECT-level ``IN (…, NULL)`` row is enough for the SELECT surface.
+``NOT IN`` with NULL (that family is the G3-E8 corpus — do not duplicate). One SELECT-level
+``IN (…, NULL)`` row is enough for the SELECT surface.
 """
 
 from __future__ import annotations
@@ -68,7 +61,7 @@ G12_BUDGET_MAX = 12
 MIN_EQUALITY_ROWS = 6
 MAX_DISCLOSURE_ROWS = 6
 MIN_DF_API_ROWS = 2
-# Name-gated family floors so a control cannot green the pin (CP-2).
+# Name-gated family floors so a control cannot green the pin.
 MIN_TRUTH_TABLE_ROWS = 6  # and_* / or_* / not_* load-bearing combos
 MIN_NULL_COMPARE_ROWS = 1  # *null_eq* / *null_safe*
 MIN_IS_NULL_ROWS = 1  # *is_null*
@@ -76,11 +69,7 @@ MIN_CASE_WHEN_ROWS = 1  # *case_when*
 MIN_IN_LIST_ROWS = 1  # *in_list*
 
 
-# ==================================================================================================
 # Arrow helpers
-# ==================================================================================================
-
-
 def _table(
     fields: list[tuple[str, pa.DataType, bool]], values: dict[str, list[object]]
 ) -> pa.Table:
@@ -98,11 +87,7 @@ _BOOL = pa.bool_()
 _I32 = pa.int32()
 
 
-# ==================================================================================================
 # Row shape
-# ==================================================================================================
-
-
 @dataclass(frozen=True)
 class TvlRow:
     """One differential 3VL row: a recipe + recorded Spark half + optional repark half.
@@ -136,11 +121,7 @@ class TvlRow:
         return self.kind == "content" and self.repark is not None
 
 
-# ==================================================================================================
 # Lifecycle helpers — one recipe SSOT the record driver imports
-# ==================================================================================================
-
-
 def _run_df_recipe(session: Any, recipe: str) -> pa.Table:
     """Execute a named DataFrame-API recipe on repark or Spark; return Arrow."""
     if recipe == "eq_null_safe_select":
@@ -189,13 +170,9 @@ def _frames_differ(actual: pa.Table, expected: pa.Table) -> bool:
     return False
 
 
-# ==================================================================================================
-# The corpus (gap G12: budget 10-12)
-# ==================================================================================================
-
+# The corpus
 ROWS: list[TvlRow] = [
-    # ----- 1-6. Truth-table floor: six load-bearing AND/OR/NOT combos ---------------------------
-    # Spark halves recorded 2026-08-11 against PySpark 4.1.2 (see module docstring / record driver).
+    # Truth-table floor: six load-bearing AND/OR/NOT combos
     TvlRow(
         name="and_true_null_is_null",
         kind="content",
@@ -262,7 +239,7 @@ ROWS: list[TvlRow] = [
             "Boolean-core pairs (TRUE AND TRUE, …) are deliberately omitted."
         ),
     ),
-    # ----- 7. NULL = NULL vs NULL <=> NULL -------------------------------------------------------
+    # NULL = NULL vs NULL <=> NULL
     TvlRow(
         name="null_eq_vs_null_safe_eq",
         kind="content",
@@ -277,8 +254,8 @@ ROWS: list[TvlRow] = [
             [("eq", _BOOL, True), ("nse", _BOOL, False)],
             {"eq": None, "nse": True},
         ),
-        # VALUE agrees (eq=NULL, nse=TRUE); nullability of nse diverges — Spark marks
-        # null-safe equal non-nullable, repark's Arrow bool is nullable. Flipped by FIX_G12.
+        # VALUE agrees; nullability of nse diverges — Spark marks null-safe equal non-nullable,
+        # repark's Arrow bool is nullable.
         repark=_one_row(
             [("eq", _BOOL, True), ("nse", _BOOL, True)],
             {"eq": None, "nse": True},
@@ -289,7 +266,7 @@ ROWS: list[TvlRow] = [
             f"(Spark non-null bool vs repark nullable bool). Flipped by {FIX_G12}."
         ),
     ),
-    # ----- 8. IS [NOT] NULL vs = NULL ------------------------------------------------------------
+    # IS [NOT] NULL vs = NULL
     TvlRow(
         name="is_null_vs_eq_null",
         kind="content",
@@ -327,7 +304,7 @@ ROWS: list[TvlRow] = [
             "boolean columns over a non-null and a null payload row."
         ),
     ),
-    # ----- 9. CASE WHEN <null-predicate> ---------------------------------------------------------
+    # CASE WHEN <null-predicate>
     TvlRow(
         name="case_when_null_predicate",
         kind="content",
@@ -347,7 +324,7 @@ ROWS: list[TvlRow] = [
             "next WHEN TRUE branch → 2 (not the ELSE). Classic 3VL CASE trap."
         ),
     ),
-    # ----- 10. SELECT-level IN (…, NULL) — do not duplicate DML NOT-IN (PR #54 in flight) --------
+    # SELECT-level IN (…, NULL) — not the DML NOT-IN family
     TvlRow(
         name="in_list_with_null_select",
         kind="content",
@@ -370,7 +347,7 @@ ROWS: list[TvlRow] = [
             "corpus (**PR #54 in flight** at kickoff) — not duplicated here."
         ),
     ),
-    # ----- 11-12. DataFrame-API door (CP-11) >=2 rows -------------------------------------------
+    # DataFrame-API door, >=2 rows
     TvlRow(
         name="df_eq_null_safe_select",
         kind="content",
@@ -417,11 +394,7 @@ ROWS: list[TvlRow] = [
 ]
 
 
-# ==================================================================================================
 # Session builders
-# ==================================================================================================
-
-
 def _repark_session() -> ReparkSession:
     """A repark facade session (no catalog required — pure SQL / createDataFrame)."""
     from repark import ReparkSession
@@ -440,19 +413,13 @@ def repark() -> Iterator[ReparkSession]:
             session.stop()
 
 
-# ==================================================================================================
 # The rows
-# ==================================================================================================
-
-
 @pytest.mark.parametrize("row", ROWS, ids=[row.name for row in ROWS])
 def test_tvl_parity_row(row: TvlRow, repark: ReparkSession) -> None:
     """Every recorded row on the Arrow path (value AND type AND nullability).
 
-    Content equality rows assert ``repark == Spark``.
-
-    Content disclosure rows assert repark's pinned actual output — and when that assertion fails,
-    the failure is CLASSIFIED (CONVERGED vs regression).
+    Equality rows assert ``repark == Spark``; disclosure rows pin repark's recorded output, with
+    failures CLASSIFIED (CONVERGED vs regression).
     """
     assert row.spark is not None, (
         f"{row.name}: spark golden is missing — run "
@@ -490,9 +457,8 @@ def test_tvl_parity_row(row: TvlRow, repark: ReparkSession) -> None:
 def test_tvl_row_set_covers_g12_budget() -> None:
     """The pin budget is part of the unit — corpus size and class coverage are pinned.
 
-    Family coverage pins are **name-gated** so a control row cannot satisfy them (CP-2).
-    Entry-point coverage pins the DF door (CP-11) by ``entry="df"``, not by SQL that happens
-    to mention AND.
+    Family coverage pins are name-gated so a control row cannot satisfy them; entry-point
+    coverage pins the DF door by ``entry="df"``, not by SQL that happens to mention AND.
     """
     assert G12_BUDGET_MIN <= len(ROWS) <= G12_BUDGET_MAX, (
         f"G12 budget {G12_BUDGET_MIN}-{G12_BUDGET_MAX} differential rows (got {len(ROWS)})"
@@ -552,7 +518,7 @@ def test_tvl_row_set_covers_g12_budget() -> None:
         f"need ≥{MIN_CASE_WHEN_ROWS} *case_when* rows; got {case_rows}"
     )
 
-    # 5. SELECT-level IN (…, NULL) — name-gated; DML NOT-IN is PR #54, not here.
+    # 5. SELECT-level IN (…, NULL) — name-gated; the DML NOT-IN family is out of scope.
     in_rows = [name for name in names if "in_list" in name]
     assert len(in_rows) >= MIN_IN_LIST_ROWS, (
         f"need ≥{MIN_IN_LIST_ROWS} *in_list* SELECT-level rows; got {in_rows}"
@@ -561,7 +527,7 @@ def test_tvl_row_set_covers_g12_budget() -> None:
         "do not duplicate the DML NOT-IN family (G3-E8 / PR #54 in flight); cite it in the ledger"
     )
 
-    # 6. Entry points — CP-11 DF door (entry field, not name substring alone).
+    # 6. Entry points — DF door via the entry field, not a name substring alone.
     df_rows = [row for row in ROWS if row.entry == "df"]
     assert len(df_rows) >= MIN_DF_API_ROWS, (
         f"need ≥{MIN_DF_API_ROWS} DataFrame-API rows (CP-11); got {len(df_rows)}"
@@ -582,15 +548,11 @@ def test_tvl_row_set_covers_g12_budget() -> None:
         assert row.kind == "content"
 
 
-# ==================================================================================================
-# Classifier reachability (CP-1) — both arms proven by monkeypatch
-# ==================================================================================================
-
-
+# Classifier reachability — both arms proven by monkeypatch
 def test_disclosure_classifier_converged_arm(
     repark: ReparkSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """CP-1: disclosure actual matching the Spark golden → CONVERGED flip guidance."""
+    """Disclosure actual matching the Spark golden → CONVERGED flip guidance."""
     import test_three_valued_logic_parity as tvl_mod
 
     # Build a synthetic disclosure row so the arm is reachable even when the corpus is all-equality.
@@ -623,7 +585,7 @@ def test_disclosure_classifier_converged_arm(
 def test_disclosure_classifier_regression_arm(
     repark: ReparkSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """CP-1: disclosure actual matching neither half → regression guidance."""
+    """Disclosure actual matching neither half → regression guidance."""
     import test_three_valued_logic_parity as tvl_mod
 
     base = next(row for row in ROWS if row.name == "and_true_null_is_null")

@@ -1,12 +1,11 @@
 """Facade tests for ``SHOW NAMESPACES`` and its ``SCHEMAS``/``DATABASES`` synonyms.
 
-Group AB. The engine-side row rendering, ``LIKE``-pattern truth table and row order are pinned in
-``crates/repark-sql/src/lib.rs``; these tests drive the *public* facade end to end through the
+The engine-side row rendering, ``LIKE``-pattern truth table and row order are pinned in
+``crates/repark-sql/src/lib.rs``; these tests drive the public facade end to end through the
 built native module, pinning what a migrated PySpark caller actually sees:
 
-- ``spark.sql(...).to_arrow()`` — the column name, its Arrow **type** and nullability, and the row
+- ``spark.sql(...).to_arrow()`` — the column name, its Arrow type and nullability, and the row
   VALUES (AB5: value AND type, on the Arrow path, never only ``show``);
-- ``.show()`` renders the frame;
 - the ``SCHEMAS`` / ``DATABASES`` / ``FROM`` synonyms are identical (AB2);
 - ``LIKE`` filters, and is Spark's ``filterPattern`` rather than SQL ``LIKE`` (AB3);
 - an unknown catalog raises :class:`repark.errors.AnalysisException` **by class identity** (AB4) —
@@ -17,8 +16,8 @@ built native module, pinning what a migrated PySpark caller actually sees:
   [NS-2](../../../docs/spark-sql-iceberg-parity.md#ns-2--nested-show-namespaces-in-catalognamespace-is-refused))
   fail LOUD, and no other ``SHOW`` form is shadowed (AB6).
 
-The output shape is pinned to a live pyspark 4.0.0 **DataSourceV2** oracle (2026-07-25) — the
-catalog class repark ships, per the Group Z rule.
+The output shape is pinned to a live pyspark 4.0.0 **DataSourceV2** oracle — the catalog class
+repark ships.
 """
 
 from __future__ import annotations

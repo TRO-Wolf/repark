@@ -1,43 +1,34 @@
 #!/usr/bin/env python3
 """Check the shape of live ledgers so the Scope Auditor and the Critic do not have to.
 
-Scope: every tracked `*-ledger.md` under `task/ledgers/staging/` and
-`completed/` — the live bins; a ledger retires into `completed/` in its own
-departure commit, so CI meets it there (the archive is immutable by the DL-1
-rule and is read for citations only). Three rules,
-chartered by DL-2 (2026-08-23) on top of the SEPMO skill's meanings:
+Scope: every tracked `*-ledger.md` under `task/ledgers/staging/` and `completed/`; the archive
+is immutable and is read for citations only. Three rules, on top of the SEPMO skill's meanings:
 
-A. **Clause rows.** A clause table is any markdown table whose data rows begin
-   with `| C-NNN |`. Each row: the id is unique in the ledger; exactly one cell
-   is a verdict — `PROVEN`, `OPEN` or `REJECTED`, bold allowed, optionally
-   followed by a parenthetical note; at least one further cell is non-empty
-   (the evidence or proof obligation). Whether an `OPEN` row really carries the
-   question that would close it, and whether a quantified clause is enumerated,
-   are the Scope Auditor's readings — measured on the live charters and left to
-   the skill, not faked by a regex.
+A. **Clause rows.** A clause table is any markdown table whose data rows begin with
+   `| C-NNN |`. Each row: the id is unique in the ledger; exactly one cell is a verdict —
+   `PROVEN`, `OPEN` or `REJECTED`, bold allowed, optionally followed by a parenthetical note;
+   at least one further cell is non-empty (the evidence or proof obligation). Whether an `OPEN`
+   row really carries the closing question, and whether a quantified clause is enumerated, are
+   the Scope Auditor's readings, not faked by a regex.
 
-B. **Pin binding.** A test cites a clause with `pins: <unit>/C-NNN[, C-MMM...]`
-   where `<unit>` is the ledger's filename without `-ledger.md` (and, in the
-   archive, without its `yyyy-mm-dd-` prefix). Every `PROVEN` clause in a
-   staging ledger must be cited at least once — the measured floor is seeded
-   per ledger in EXCEPTIONS and only ratchets down — and every citation must
-   resolve to a clause that exists in any bin (`staging/`, `completed/`, the
-   archive).
+B. **Pin binding.** A test cites a clause with `pins: <unit>/C-NNN[, C-MMM...]` where `<unit>`
+   is the ledger's filename without `-ledger.md` (and, in the archive, without its
+   `yyyy-mm-dd-` prefix). Every `PROVEN` clause in a staging ledger must be cited at least
+   once — the measured floor is seeded per ledger in EXCEPTIONS and only ratchets down — and
+   every citation must resolve to a clause that exists in any bin (`staging/`, `completed/`,
+   the archive).
 
-C. **Attestation form.** A `COVERAGE_ATTESTATION:` block (ref 05's shape, in a
-   fenced block) lists `AT-1`..`AT-10` exactly once each; `ATTACKED` needs a
-   non-empty `artifacts:` list, `N/A` a `justification:`; `complete:` is `true`
-   iff every category satisfies that. A staging ledger not listed in EXCEPTIONS
-   must carry a clause table (the SEPMO gate rule: scope is a ledger of
-   propositions before any work) and, once none of its clauses is `OPEN`, the
-   attestation — it is the Critic's artifact, filed after the Actor's work. A
-   `FINDING:` record, where present, carries
-   `id`, a severity in S0..S3, a category in AT-1..AT-10, a clause list and a
-   disposition from ref 05's enumeration.
+C. **Attestation form.** A `COVERAGE_ATTESTATION:` block (ref 05's shape, in a fenced block)
+   lists `AT-1`..`AT-10` exactly once each; `ATTACKED` needs a non-empty `artifacts:` list,
+   `N/A` a `justification:`; `complete:` is `true` iff every category satisfies that. A
+   staging ledger not listed in EXCEPTIONS must carry a clause table and, once no clause is
+   `OPEN`, the attestation. A `FINDING:` record, where present, carries `id`, a severity in
+   S0..S3, a category in AT-1..AT-10, a clause list and a disposition from ref 05's
+   enumeration.
 
-The meanings stay in `.agents/skills/sepmo/` (SKILL.md "The gate is a ledger, not a
-score"; references/05-critic.md); this script owns only the shape. Exit 0 clean,
-1 findings, 2 usage or environment error.
+The meanings stay in `.agents/skills/sepmo/` (SKILL.md "The gate is a ledger, not a score";
+references/05-critic.md); this script owns only the shape. Exit 0 clean, 1 findings, 2 usage
+or environment error.
 """
 
 from __future__ import annotations
@@ -55,11 +46,10 @@ LEDGER_SUFFIX = "-ledger.md"
 # Where tests live; `pins:` citations are read from every tracked file here.
 CITATION_ROOTS: tuple[str, ...] = ("crates/", "python/", "scripts/")
 
-# Ledger -> (unpinned PROVEN clauses allowed, attestation block required).
-# Seeded 2026-08-23 from the measured floor (DL-2 ledger §1): the three live
-# charters predate the pin convention and the checked attestation. Ceilings
-# ratchet DOWN only; a row is deleted when it reaches zero and the block is
-# filed. A ledger not listed allows zero and must file its attestation.
+# Ledger -> (unpinned PROVEN clauses allowed, attestation block required). The listed charters
+# predate the pin convention and the checked attestation. Ceilings ratchet DOWN only; a row is
+# deleted when it reaches zero and the block is filed. A ledger not listed allows zero and
+# must file its attestation.
 EXCEPTIONS: dict[str, tuple[int, bool]] = {
     "fnp-0-charter-ledger.md": (12, False),
     "sem-0-charter-ledger.md": (9, False),

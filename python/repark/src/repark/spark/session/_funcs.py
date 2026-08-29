@@ -1,31 +1,7 @@
 """The :class:`ReparkSession` facade — the near-drop-in entry point.
 
-
-
-Migrating a PySpark script is a one-line import change::
-
-
-
-    from repark.spark import ReparkSession   # was: from pyspark.sql import SparkSession
-
-
-
-    spark = ReparkSession.builder.appName("etl").getOrCreate()
-
-    df = spark.sql("SELECT 1 AS a")
-
-    df.show()
-
-
-
-For source-compatible drop-in, ``SparkSession`` is kept as an alias of :class:`ReparkSession`, so
-
-``from repark import SparkSession`` also works and the rest of an existing PySpark script stays
-
-byte-identical. The builder mirrors PySpark's ``SparkSession.builder…getOrCreate()`` chain. Compute
-
-runs in Rust behind the native ``repark._native.PyReparkSession`` — a thin, typed Python shell.
-
+``SparkSession`` aliases :class:`ReparkSession`, so a PySpark script migrates with a
+one-line import change; compute runs in Rust behind ``repark._native.PyReparkSession``.
 """
 
 from __future__ import annotations

@@ -1,9 +1,21 @@
 # map — scripts/
 
+CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
+accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
+
 ## Purpose
 
 Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
 `check_lib_py.py` EXCEPTIONS paths moved under `python/repark/src/repark/spark/`.
+
+CC-2 audits the tracked Python helper scripts after all crate and package slices finish.
+pins: comment-condensation-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011.
+
+CC-2 scripts slice: every tracked `scripts/*.py` audited; gate-rule statements and constant
+tables kept, narration and dated history removed. The same unit ratcheted 17
+`check_lib_py.py` test-module baselines down to their condensed lengths and retired 2 rows
+that fell below the default ceiling; 4 more parity-harness baselines ratcheted in the
+repark-parity slice.
 
 ## Contents
 

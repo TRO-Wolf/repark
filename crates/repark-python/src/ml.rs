@@ -1,6 +1,5 @@
-//! M3 native ML fit binder — streams DataFusion batches into `repark-ml` accumulators.
-//!
-//! Python never trains. Peak memory is O(batch + p²). Models return params only.
+//! Native ML fit bindings stream DataFusion batches into `repark-ml` accumulators.
+//! Python does not train. Fits retain parameters and use O(batch + p² + k·p) memory.
 
 use std::sync::Arc;
 
@@ -24,9 +23,7 @@ use crate::dataframe::PyDataFrame;
 use crate::fence::fenced;
 use crate::{IllegalArgumentException, UnsupportedOperationException};
 
-/// ===========================================================================================
-/// Map a `repark_ml::MlError` to a PySpark-shaped Python exception.
-/// ===========================================================================================
+/// Map an ML error to a PySpark-shaped Python exception.
 #[allow(clippy::needless_pass_by_value)]
 fn ml_to_py_err(err: MlError) -> PyErr {
     let message = err.to_string();
@@ -42,16 +39,14 @@ fn ml_to_py_err(err: MlError) -> PyErr {
     }
 }
 
-/// ===========================================================================================
-/// Open `execute_stream` on a clone of the held plan (never full collect).
-/// ===========================================================================================
+/// Open `execute_stream` on a clone of the held plan without collecting it.
 fn open_stream(plan: &DataFrame, runtime: &Runtime) -> Result<SendableRecordBatchStream, MlError> {
     runtime
         .block_on(plan.clone().execute_stream())
         .map_err(|err| MlError::IllegalArgument(format!("execute_stream: {err}")))
 }
 
-/// Drain a stream, invoking `on_batch` for each batch.
+/// Drain a stream and invoke `on_batch` for each batch.
 fn for_each_batch<F>(
     runtime: &Runtime,
     mut stream: SendableRecordBatchStream,
@@ -97,7 +92,7 @@ fn scalar_f64(
         return Ok(value);
     }
     if let Some(values) = array.as_any().downcast_ref::<Int64Array>() {
-        // Label / scalar feature i64 → f64: ML design widths ≪ 2^53.
+        // Estimators consume f64; Int64 values beyond its exact range can round.
         #[allow(clippy::cast_precision_loss)]
         return Ok(values.value(index) as f64);
     }
@@ -130,8 +125,7 @@ fn read_f64_values(
             limit: MAX_FEATURES,
         });
     }
-    // Empty list (incl. `make_array()` → Null value type) is a valid width-0 dense row
-    // for intercept-only designs (p=0, fit_intercept=true).
+    // An empty list is valid for an intercept-only design.
     if len == 0 {
         return Ok(Vec::new());
     }
@@ -233,10 +227,7 @@ fn dense_features_at(
             Ok(vec![value])
         }
         other => {
-            // M7 densify disclosure: sparse VectorUDT structs are a first-class feature
-            // layout from VectorAssembler(sparseOutput=True) / Vectors.sparse, but native
-            // estimators require dense List/FixedSizeList. Name the boundary loud so the
-            // failure is not "unknown Struct" (octo M7 C2 densify honesty).
+            // Native estimators require dense List or FixedSizeList input.
             let sparse_hint = match other {
                 DataType::Struct(fields)
                     if fields.iter().any(|field| field.name() == "size")
@@ -271,9 +262,7 @@ fn discover_feature_width(
     Ok(discover_feature_width_and_count(plan, runtime, features_col)?.0)
 }
 
-/// ===========================================================================================
-/// Infer feature width from the first non-null row and count all non-null feature rows.
-/// ===========================================================================================
+/// Infer feature width from the first non-null row and count valid rows.
 fn discover_feature_width_and_count(
     plan: &DataFrame,
     runtime: &Runtime,
@@ -288,7 +277,7 @@ fn discover_feature_width_and_count(
             if features.is_null(index) {
                 continue;
             }
-            // Validate parseability; width locked after first successful row.
+            // The first valid row fixes the feature width.
             let row = dense_features_at(features.as_ref(), index, width, num_valid)?;
             if width.is_none() {
                 width = Some(row.len());
@@ -326,9 +315,11 @@ fn stream_xy_into_ols(
     })
 }
 
-/// ===========================================================================================
-/// Fit `LinearRegression`: multi-pass stream → OLS → coefficients / intercept (params only).
-/// ===========================================================================================
+/// Fit linear regression from streamed batches and return model parameters.
+///
+/// # Errors
+/// Returns `IllegalArgumentException` for invalid parameters, schema, values, or stream errors.
+/// Returns `UnsupportedOperationException` when elastic net or standardization is requested.
 #[pyfunction]
 #[pyo3(signature = (
     frame,
@@ -351,7 +342,7 @@ pub fn fit_linear_regression(
     fenced!("ml.fit_linear_regression", {
         validate_linear_regression_params(elastic_net_param, standardization)
             .map_err(ml_to_py_err)?;
-        // Clone plan + runtime *before* detach (PyRef is !Send).
+        // Clone Rust-owned state before releasing the GIL; PyRef is not Send.
         let plan = frame.inner().clone();
         let runtime: Arc<Runtime> = frame.runtime_handle();
         let solution = py.detach(|| {
@@ -381,9 +372,10 @@ pub fn fit_linear_regression(
     })
 }
 
-/// ===========================================================================================
-/// Fit `LogisticRegression` via multi-pass IRLS (re-streams the plan each iteration).
-/// ===========================================================================================
+/// Fit logistic regression with multi-pass IRLS over the streamed plan.
+///
+/// # Errors
+/// Returns `IllegalArgumentException` for invalid tolerance, schema, values, or stream errors.
 #[pyfunction]
 #[pyo3(signature = (
     frame,
@@ -432,7 +424,8 @@ pub fn fit_logistic_regression(
                     })
                 })
                 .map_err(ml_to_py_err)?;
-            // max_iter == 0 never streams IRLS; still report training cardinality.
+            // Zero iterations infer and count valid feature rows without inspecting labels or
+            // running IRLS.
             if solution.iterations == 0 && solution.num_rows == 0 {
                 solution.num_rows = num_valid;
             }
@@ -451,9 +444,7 @@ pub fn fit_logistic_regression(
     })
 }
 
-/// ===========================================================================================
-/// Count non-null feature rows + infer width (null rows excluded from the init index space).
-/// ===========================================================================================
+/// Count valid feature rows and infer their width.
 fn kmeans_count_valid(
     plan: &DataFrame,
     runtime: &Runtime,
@@ -481,9 +472,7 @@ fn kmeans_count_valid(
     Ok((num_features, num_valid))
 }
 
-/// ===========================================================================================
-/// Materialize k initial centers by valid-row indices (null feature rows skipped).
-/// ===========================================================================================
+/// Materialize initial centers from valid feature rows.
 fn kmeans_materialize_centers(
     plan: &DataFrame,
     runtime: &Runtime,
@@ -532,9 +521,7 @@ fn kmeans_materialize_centers(
         .collect()
 }
 
-/// ===========================================================================================
-/// Stream non-null feature rows into one Lloyd pass.
-/// ===========================================================================================
+/// Run one Lloyd pass over streamed feature rows.
 fn kmeans_stream_pass(
     plan: &DataFrame,
     runtime: &Runtime,
@@ -559,9 +546,11 @@ fn kmeans_stream_pass(
     })
 }
 
-/// ===========================================================================================
-/// Fit `KMeans` (Lloyd). `init_mode` must be `"random"` (default Spark k-means|| errors loud).
-/// ===========================================================================================
+/// Fit `KMeans` with Lloyd iterations. Only random initialization is supported.
+///
+/// # Errors
+/// Returns `IllegalArgumentException` for invalid dimensions, schema, values, or stream errors.
+/// Returns `UnsupportedOperationException` for unsupported initialization modes.
 #[pyfunction]
 #[pyo3(signature = (
     frame,
@@ -604,7 +593,7 @@ pub fn fit_kmeans(
                 kmeans_stream_pass(&plan, runtime.as_ref(), &features_col, num_features, pass)
             })
             .map_err(ml_to_py_err)?;
-            // max_iter == 0 never runs Lloyd; still report training cardinality.
+            // Zero iterations return validated centers without running Lloyd.
             if max_iter == 0 && solution.num_rows == 0 {
                 solution.num_rows = num_valid;
             }

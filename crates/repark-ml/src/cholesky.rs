@@ -1,23 +1,18 @@
-//! Hand-rolled Cholesky factorization and triangular solves (no ndarray / nalgebra).
-//!
-//! Factor `A = L Lᵀ` for symmetric positive-definite `A` stored in **row-major** dense layout.
-//! Used by OLS (normal equations) and IRLS logistic steps. Ill-conditioned / singular matrices
-//! fail loud at the first non-positive pivot — we never form a pseudoinverse.
+//! Hand-rolled Cholesky factorization and triangular solves for row-major dense matrices.
+//! OLS and IRLS use it; non-positive or near-singular pivots fail without pseudoinversion.
 
 use crate::error::{MlError, Result};
 
-/// Relative pivot threshold vs the running scale of the matrix (refuse near-singular).
 const PIVOT_REL_EPS: f64 = 1e-12;
 
-/// Absolute floor for a pivot (also refuse exact / tiny zeros).
 const PIVOT_ABS_EPS: f64 = 1e-14;
 
 /// ===========================================================================================
-/// In-place Cholesky factorization: overwrite the lower triangle of `matrix` (n×n row-major)
-/// with `L` such that `A = L Lᵀ`. The strict upper triangle is left unspecified / untouched.
+/// Factor row-major `matrix` in place as `A = L Lᵀ`; only the lower triangle is defined.
 ///
 /// # Errors
-/// [`MlError::Singular`] when a pivot is non-positive or below the relative threshold.
+/// [`MlError::EmptyDesign`] for zero dimension; [`MlError::IllegalArgument`] for overflow or a
+/// buffer mismatch; [`MlError::Singular`] for a non-positive or near-singular pivot.
 /// ===========================================================================================
 pub fn cholesky_decompose_inplace(matrix: &mut [f64], dimension: usize) -> Result<()> {
     if dimension == 0 {
@@ -25,7 +20,7 @@ pub fn cholesky_decompose_inplace(matrix: &mut [f64], dimension: usize) -> Resul
             "Cholesky dimension is 0 (empty design matrix)".into(),
         ));
     }
-    // SAF-006: refuse wrapping `dimension * dimension` (would pass a too-short buffer).
+    // Reject dimension-square overflow before sizing the buffer.
     let expected_len = dimension.checked_mul(dimension).ok_or_else(|| {
         MlError::IllegalArgument(format!(
             "Cholesky dimension {dimension} overflows dimension² (checked_mul)"
@@ -38,7 +33,7 @@ pub fn cholesky_decompose_inplace(matrix: &mut [f64], dimension: usize) -> Resul
         )));
     }
 
-    // Scale for relative pivot check: max |A_ii| on entry.
+    // Scale the relative pivot threshold from the input diagonal.
     let mut scale = 0.0_f64;
     for index in 0..dimension {
         scale = scale.max(matrix[index * dimension + index].abs());
@@ -49,7 +44,6 @@ pub fn cholesky_decompose_inplace(matrix: &mut [f64], dimension: usize) -> Resul
     let pivot_floor = (PIVOT_REL_EPS * scale).max(PIVOT_ABS_EPS);
 
     for column in 0..dimension {
-        // Diagonal: L_cc = sqrt(A_cc - sum_{k<c} L_ck²)
         let mut sum = matrix[column * dimension + column];
         for k in 0..column {
             let l_ck = matrix[column * dimension + k];
@@ -65,7 +59,6 @@ pub fn cholesky_decompose_inplace(matrix: &mut [f64], dimension: usize) -> Resul
         matrix[column * dimension + column] = diag;
         let inv_diag = 1.0 / diag;
 
-        // Below diagonal in this column: L_ic = (A_ic - sum_k L_ik L_ck) / L_cc
         for row in (column + 1)..dimension {
             let mut sum_off = matrix[row * dimension + column];
             for k in 0..column {
@@ -78,7 +71,7 @@ pub fn cholesky_decompose_inplace(matrix: &mut [f64], dimension: usize) -> Resul
 }
 
 /// ===========================================================================================
-/// Validate buffer lengths for triangular solves (no panics in production).
+/// Validate triangular-solve buffers without panics.
 /// ===========================================================================================
 fn validate_solve_buffers(
     lower: &[f64],
@@ -90,7 +83,7 @@ fn validate_solve_buffers(
     if dimension == 0 {
         return Err(MlError::EmptyDesign("Cholesky solve dimension is 0".into()));
     }
-    // SAF-006: checked dimension² (same overflow class as decompose).
+    // Apply the same checked dimension-square guard as factorization.
     let expected_len = dimension.checked_mul(dimension).ok_or_else(|| {
         MlError::IllegalArgument(format!(
             "Cholesky dimension {dimension} overflows dimension² (checked_mul)"
@@ -118,11 +111,11 @@ fn validate_solve_buffers(
 }
 
 /// ===========================================================================================
-/// Solve `L y = b` (forward substitution). `lower` is the lower-triangular factor from
-/// [`cholesky_decompose_inplace`] (row-major, diagonal = `L_ii`).
+/// Solve `L y = b` using the row-major factor from [`cholesky_decompose_inplace`].
 ///
 /// # Errors
-/// [`MlError::IllegalArgument`] / [`MlError::EmptyDesign`] on length mismatch.
+/// [`MlError::EmptyDesign`] for zero dimension; [`MlError::IllegalArgument`] for overflow or a
+/// buffer mismatch.
 /// ===========================================================================================
 pub fn forward_solve(
     lower: &[f64],
@@ -142,17 +135,17 @@ pub fn forward_solve(
 }
 
 /// ===========================================================================================
-/// Solve `Lᵀ x = y` (back substitution).
+/// Solve `Lᵀ x = y` using the row-major factor.
 ///
 /// # Errors
-/// [`MlError::IllegalArgument`] / [`MlError::EmptyDesign`] on length mismatch.
+/// [`MlError::EmptyDesign`] for zero dimension; [`MlError::IllegalArgument`] for overflow or a
+/// buffer mismatch.
 /// ===========================================================================================
 pub fn backward_solve(lower: &[f64], dimension: usize, y: &[f64], x: &mut [f64]) -> Result<()> {
     validate_solve_buffers(lower, dimension, y, x, "x")?;
     for row in (0..dimension).rev() {
         let mut sum = y[row];
         for column in (row + 1)..dimension {
-            // Lᵀ[row, column] = L[column, row]
             sum -= lower[column * dimension + row] * x[column];
         }
         x[row] = sum / lower[row * dimension + row];
@@ -161,11 +154,11 @@ pub fn backward_solve(lower: &[f64], dimension: usize, y: &[f64], x: &mut [f64])
 }
 
 /// ===========================================================================================
-/// Solve `A x = b` given the Cholesky factor of `A` already in `lower` (from
-/// [`cholesky_decompose_inplace`]).
+/// Solve `A x = b` from a factor produced by [`cholesky_decompose_inplace`].
 ///
 /// # Errors
-/// Length mismatch on `lower` / `right_hand_side`.
+/// [`MlError::EmptyDesign`] for zero dimension; [`MlError::IllegalArgument`] for overflow or a
+/// buffer mismatch.
 /// ===========================================================================================
 pub fn cholesky_solve(
     lower: &[f64],
@@ -180,11 +173,10 @@ pub fn cholesky_solve(
 }
 
 /// ===========================================================================================
-/// Factor and solve `A x = b` in one shot. `matrix` is destroyed (overwritten by `L`).
+/// Factor and solve `A x = b`; overwrite `matrix` with `L`.
 ///
 /// # Errors
-/// [`MlError::Singular`] / [`MlError::EmptyDesign`] / [`MlError::IllegalArgument`] from
-/// factorization or solve buffer checks.
+/// Propagates [`MlError::EmptyDesign`], [`MlError::IllegalArgument`], or [`MlError::Singular`].
 /// ===========================================================================================
 pub fn cholesky_factor_and_solve(
     matrix: &mut [f64],
@@ -207,11 +199,9 @@ mod tests {
 
     #[test]
     fn cholesky_solves_well_conditioned_2x2() {
-        // A = [[4, 2], [2, 3]] = L Lᵀ with L = [[2, 0], [1, sqrt(2)]]
         let mut a = vec![4.0, 2.0, 2.0, 3.0];
         let b = vec![1.0, 0.0];
         let x = cholesky_factor_and_solve(&mut a, 2, &b).expect("spd");
-        // A^{-1} b: det=8, adj → x = [3/8, -1/4] = [0.375, -0.25]
         assert!((x[0] - 0.375).abs() < 1e-12);
         assert!((x[1] + 0.25).abs() < 1e-12);
     }
@@ -249,11 +239,9 @@ mod tests {
         assert!(matches!(err, MlError::IllegalArgument(_)));
     }
 
-    /// SAF-006: a dimension whose square overflows `usize` must fail loud (not wrap and
-    /// accept a short buffer). On 64-bit hosts `usize::MAX/2+1` overflows when squared.
+    /// A dimension whose square overflows `usize` must fail before buffer access.
     #[test]
     fn cholesky_refuses_dimension_square_overflow() {
-        // Pick a dimension that overflows on multiply for any practical pointer width.
         let dimension = (usize::MAX / 2).saturating_add(1);
         let mut empty: Vec<f64> = vec![];
         let err = cholesky_decompose_inplace(&mut empty, dimension).expect_err("overflow");

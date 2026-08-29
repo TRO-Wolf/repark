@@ -1,4 +1,4 @@
-"""G2 census r5 — window frames, seeded rand/randn, sampleBy XORShift, eagerEval.
+"""G2 — window frames, seeded rand/randn, sampleBy XORShift, eagerEval.
 
 Pins Apache FAIL-MISSING / FAIL-VALUE families owned by TRACK 2. Row-order pins on the
 Arrow path (value AND type) per docs/testing.md.
@@ -20,7 +20,7 @@ def spark() -> ReparkSession:
     session.stop()
 
 
-# ---- window frames ------------------------------------------------------------------------------
+# window frames
 
 
 def test_rows_between_max_min_count_rank_family(spark: ReparkSession) -> None:
@@ -107,19 +107,11 @@ def test_cumulative_sum_unbounded_preceding(spark: ReparkSession) -> None:
 def test_range_between_moving_average(spark: ReparkSession) -> None:
     """Apache ``test_window_functions_moving_average`` shape on a numeric order key.
 
-    Live Spark: ``date.cast(\"timestamp\").cast(\"long\")`` is **epoch seconds**, and since the
-    TZ-5 cast fix (2026-08-12, ``task/tz5-cast-seconds-ledger.md``) so is repark's — so this test
-    now spells Spark's own expression with **no scale workaround**. It used to divide by 1e6,
-    because DataFusion handed back the raw tick value (µs for this ``createDataFrame`` column,
-    ns for a ``to_timestamp`` literal) and the ±3-day RANGE offsets are in seconds; that
-    docstring called itself a "seed for the cast-unit track", and this is that track landing.
-
-    Dropping the ``/ 1e6`` is therefore part of the fix's revert-red evidence: restore it and
-    this test goes red, exactly as re-introducing the raw-tick cast would.
-
-    The column is a NAIVE datetime, which repark reads as UTC and Spark as a session wall clock
-    (registry row TZ-7) — immaterial here, because a RANGE frame only reads DIFFERENCES between
-    order-key values and a constant offset cancels out of every one of them.
+    Live Spark: ``date.cast(\"timestamp\").cast(\"long\")`` is **epoch seconds**, and so is
+    repark's, so this test spells Spark's own expression with no scale workaround. The column is
+    a NAIVE datetime, which repark reads as UTC and Spark as a session wall clock (registry row
+    TZ-7) — immaterial, because a RANGE frame only reads DIFFERENCES between order-key values
+    and a constant offset cancels out.
     """
     import datetime
 
@@ -179,13 +171,10 @@ def test_range_value_offset_refuses_non_numeric_order(spark: ReparkSession) -> N
 def test_range_value_offset_accepts_a_cast_numeric_order_key(spark: ReparkSession) -> None:
     """A CAST-to-numeric ORDER BY is a legal value-offset RANGE key — the guard's other side.
 
-    The refusal above resolves the order key by NAME, and a cast chain keeps its base column's
-    projection name (``col("s").cast("long")`` still projects as ``s``). Naming it made the guard
-    read the SOURCE column's dtype and refuse a numeric key that Spark accepts. That over-reach
-    was unreachable until the TZ-5 cast fix (``task/tz5-cast-seconds-ledger.md``) let the
-    moving-average pin drop the arithmetic wrapper that had been hiding it, so the fix is pinned
-    from both sides here: a bare non-numeric key is still refused (above), and a cast TO a numeric
-    type is accepted (below).
+    A cast chain keeps its base column's projection name (``col("s").cast("long")`` still
+    projects as ``s``); the guard must read the cast RESULT type, not the source column's dtype,
+    or it refuses a numeric key Spark accepts. Pinned from both sides: a bare non-numeric key is
+    still refused, a cast TO a numeric type is accepted.
     """
     frame = spark.createDataFrame([("1", 10), ("2", 20), ("5", 30), ("6", 40)], ["s", "v"])
     window = Window.orderBy(F.col("s").cast("long")).rangeBetween(-1, 0)
@@ -246,7 +235,7 @@ def test_frame_bound_finite_float_refused() -> None:
 
 
 def test_frame_start_greater_than_end_refused() -> None:
-    """Facade refuses inverted frames (octo C3; was DF planning-only)."""
+    """Facade refuses inverted frames."""
     from repark.errors import AnalysisException
 
     with pytest.raises(AnalysisException, match="start bound cannot be larger than end"):
@@ -255,7 +244,7 @@ def test_frame_start_greater_than_end_refused() -> None:
         Window.orderBy("k").rangeBetween(2, -2)
 
 
-# ---- rand / randn -------------------------------------------------------------------------------
+# rand / randn
 
 
 def test_rand_seed_zero_first_value_matches_spark(spark: ReparkSession) -> None:
@@ -303,13 +292,13 @@ def test_randn_seeded_range_and_determinism(spark: ReparkSession) -> None:
     assert a == b
 
 
-# ---- sampleBy -----------------------------------------------------------------------------------
+# sampleBy
 
 
 def test_sampleby_seed_zero_xorshift_keys_match_spark(spark: ReparkSession) -> None:
     """Apache ``test_sampleby`` XORShift: seed=0 → exact key set (live Spark 4.1.2 count 36).
 
-    Mutation-proof: pins full sorted key list against pure Spark XORShift reimpl — not a
+    Mutation-proof: pins the full sorted key list against a pure Spark XORShift reimpl, not a
     count band any ~half sampler could pass.
     """
     frame = spark.createDataFrame([(i, i % 3) for i in range(100)], ["a", "b"])
@@ -403,14 +392,14 @@ def _xorshift_sampleby_keys() -> list[int]:
     return keep
 
 
-# ---- eagerEval ----------------------------------------------------------------------------------
+# eagerEval
 
 
 def test_eager_eval_repr_and_html(spark: ReparkSession) -> None:
     """Apache ``test_repr_behaviors`` shape (Spark showString packing + HTML table).
 
-    Apache's expected strings carry indentation ``||`` artifacts and strip via
-    ``re.sub(r'^ *\\|', …)``; we pin the **post-strip** showString form directly.
+    Apache's expected strings carry indentation ``||`` artifacts and strip via regex; we pin the
+    **post-strip** showString form directly.
     """
     frame = spark.createDataFrame([(1, "1"), (22222, "22222")], ("key", "value"))
 
