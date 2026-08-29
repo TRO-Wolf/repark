@@ -1,48 +1,40 @@
-//! Binary logistic regression via IRLS (iteratively reweighted least squares) + Cholesky.
-//!
-//! Multi-pass: each IRLS iteration re-streams design rows (caller supplies rows again, or the
-//! binder re-executes the plan). State held between iterations is `O(p)` coefficients only —
-//! never the full training matrix. M3 ships a fixed `max_iter` / `tol` loop.
+//! Binary logistic regression via multi-pass IRLS and Cholesky.
+//! Each pass accumulates `O(p²)` weighted normal equations; only `O(p)` coefficients persist.
+//! The fit loop is bounded by `max_iter` and `tol`.
 
 use crate::MAX_FEATURES;
 use crate::cholesky::cholesky_factor_and_solve;
 use crate::error::{MlError, Result};
 
-/// Default max IRLS iterations (Spark-like).
+/// Default maximum IRLS iterations.
 pub const DEFAULT_MAX_ITER: usize = 100;
 
-/// Default convergence tolerance on coefficient max-abs delta.
+/// Default maximum coefficient delta for convergence.
 pub const DEFAULT_TOL: f64 = 1e-6;
 
 /// ===========================================================================================
-/// Fitted logistic parameters (params only).
+/// Fitted logistic parameters.
 /// ===========================================================================================
 #[derive(Debug, Clone, PartialEq)]
 pub struct LogisticRegressionSolution {
-    /// Coefficients for the original feature columns.
     pub coefficients: Vec<f64>,
-    /// Intercept; `0.0` when `fit_intercept` was false.
+    /// Intercept, or `0.0` when disabled.
     pub intercept: f64,
     pub fit_intercept: bool,
     pub num_features: usize,
     pub num_rows: u64,
-    /// IRLS iterations actually run.
     pub iterations: usize,
-    /// Whether the coefficient delta fell below `tol` before `max_iter`.
     pub converged: bool,
 }
 
 /// ===========================================================================================
-/// One IRLS weighted least-squares step: accumulate `Xᵀ W X` and `Xᵀ W z` then Cholesky-solve.
-///
-/// `weights[i] = p_i (1 - p_i)`, `z_i = x·β + (y - p) / w` with `p = σ(x·β)`.
+/// One IRLS weighted least-squares step using `w = p(1-p)` and `z = η + (y-p)/w`.
 /// ===========================================================================================
 #[derive(Debug, Clone)]
 pub struct LogisticIrlsAccumulator {
     num_features: usize,
     fit_intercept: bool,
     design_width: usize,
-    /// Current coefficients in design order ([intercept,] features…).
     beta: Vec<f64>,
     xtwx: Vec<f64>,
     xtwz: Vec<f64>,
@@ -52,7 +44,7 @@ pub struct LogisticIrlsAccumulator {
 
 impl LogisticIrlsAccumulator {
     /// =======================================================================================
-    /// Start an IRLS pass from the current `beta` (design-ordered).
+    /// Start an IRLS pass from design-ordered coefficients.
     ///
     /// # Errors
     /// [`MlError::FeatureDimTooLarge`] or beta / design-width mismatch.
@@ -84,7 +76,7 @@ impl LogisticIrlsAccumulator {
         })
     }
 
-    /// Zero coefficients of the right design width (cold start).
+    /// Return zero coefficients for the requested design width.
     ///
     /// # Errors
     /// [`MlError::FeatureDimTooLarge`] or empty design.
@@ -123,7 +115,7 @@ impl LogisticIrlsAccumulator {
                 row_offset: self.row_offset,
             });
         }
-        // Labels in {0, 1} preferred; still allow soft targets in (0,1).
+        // Accept binary labels and soft targets in the closed unit interval.
         if !(0.0..=1.0).contains(&label) {
             return Err(MlError::IllegalArgument(format!(
                 "logistic label must be in [0, 1], got {label} at row {}",
@@ -149,7 +141,7 @@ impl LogisticIrlsAccumulator {
             sum
         };
         let probability = sigmoid(eta);
-        // Weight floor avoids exact 0/1 probabilities killing the weight matrix.
+        // The floor prevents saturated probabilities from zeroing the normal matrix.
         let mut weight = probability * (1.0 - probability);
         if weight < 1e-12 {
             weight = 1e-12;
@@ -176,7 +168,7 @@ impl LogisticIrlsAccumulator {
     }
 
     /// =======================================================================================
-    /// Finish this IRLS pass → new beta (design-ordered).
+    /// Finish this IRLS pass and return design-ordered coefficients.
     ///
     /// # Errors
     /// Empty pass or singular weighted normal equations.
@@ -193,13 +185,12 @@ impl LogisticIrlsAccumulator {
 }
 
 /// ===========================================================================================
-/// Run IRLS with a caller-provided `stream_pass` that feeds one [`LogisticIrlsAccumulator`].
+/// Run IRLS with a closure that re-streams all rows into each accumulator.
 ///
-/// The closure is invoked once per iteration; it must re-stream all training rows into `acc`.
-/// This is the multi-pass Rust fit seam (docs/design/python-facade.md §4 Q3).
+/// `max_iter=0` returns cold-start zeros without invoking the closure.
 ///
 /// # Errors
-/// Propagates stream / Cholesky failures from each IRLS pass.
+/// Invalid tolerance or design, stream failures, or Cholesky failures.
 /// ===========================================================================================
 pub fn fit_logistic_irls<F>(
     num_features: usize,
@@ -222,7 +213,6 @@ where
     let mut converged = false;
     let mut num_rows = 0_u64;
 
-    // max_iter == 0 → cold-start zeros only (Spark: no optimization steps). No silent clamp.
     for _ in 0..max_iter {
         let mut acc = LogisticIrlsAccumulator::new_pass(num_features, fit_intercept, beta.clone())?;
         stream_pass(&mut acc)?;
@@ -241,7 +231,6 @@ where
         }
     }
 
-    // max_iter == 0 never streamed; still report 0 rows (params are zeros).
     let (intercept, coefficients) = if fit_intercept {
         (beta[0], beta[1..].to_vec())
     } else {
@@ -275,7 +264,7 @@ fn design_entry(
 
 #[inline]
 fn sigmoid(eta: f64) -> f64 {
-    // Stable sigmoid.
+    // Branch-specific exponentials avoid overflow for large absolute eta.
     if eta >= 0.0 {
         let z = (-eta).exp();
         1.0 / (1.0 + z)
@@ -285,7 +274,7 @@ fn sigmoid(eta: f64) -> f64 {
     }
 }
 
-/// Probability prediction from fitted params (for tests / plan builders).
+/// Predict probability from fitted parameters; callers must provide one feature per coefficient.
 #[must_use]
 pub fn predict_probability(coefficients: &[f64], intercept: f64, features: &[f64]) -> f64 {
     let mut eta = intercept;
@@ -301,7 +290,6 @@ mod tests {
 
     #[test]
     fn separable_1d_learns_positive_slope() {
-        // labels: 0 for x<0-ish, 1 for x>0-ish
         let rows: Vec<(f64, f64)> = (-5..=5)
             .map(|x| {
                 let xf = f64::from(x);
@@ -319,7 +307,6 @@ mod tests {
         .expect("irls");
 
         assert!(sol.coefficients[0] > 0.0, "coef {}", sol.coefficients[0]);
-        // At large +x probability high; at large -x low.
         let p_pos = predict_probability(&sol.coefficients, sol.intercept, &[5.0]);
         let p_neg = predict_probability(&sol.coefficients, sol.intercept, &[-5.0]);
         assert!(p_pos > 0.8, "p_pos={p_pos}");

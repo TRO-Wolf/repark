@@ -33,7 +33,7 @@ async fn create_and_drop_namespace() {
 
 /// WG-5 C-1: SQL `CREATE NAMESPACE … LOCATION '/x'` on a **strict** `RequireExplicitLocation`
 /// catalog lets a subsequent CTAS succeed with its data landing under `/x` — the ADV-2 residual
-/// closed (previously only the programmatic `create_namespace(..., location=…)` could set it).
+/// available through SQL as well as the programmatic `create_namespace(..., location=…)` path.
 /// Value-checked on both the read-back rows and the physical `.parquet` placement.
 #[tokio::test]
 async fn sql_create_namespace_location_lets_ctas_land_under_it() {
@@ -66,11 +66,8 @@ async fn sql_create_namespace_location_lets_ctas_land_under_it() {
     );
 }
 
-/// U2-P6 (the SQL writer's dual-write): SQL `CREATE NAMESPACE … LOCATION '/x'` stores BOTH
-/// `location` AND `location_uri` = `/x` in the namespace metadata — so the canonical Glue
-/// `locationUri` field is set whichever key the catalog implementation maps (fork:
-/// `location_uri`; Java: `location`), closing the audit's "`RePark` namespaces never set the
-/// canonical field other engines read" hole. The CTAS then proves the dual-keyed map resolves.
+/// SQL `CREATE NAMESPACE … LOCATION '/x'` stores equal `location` and `location_uri` keys. The
+/// CTAS proves the dual-keyed namespace resolves through the catalog.
 #[tokio::test]
 async fn sql_create_namespace_location_stores_both_location_keys() {
     let wh = TempDir::new().unwrap();
@@ -425,9 +422,7 @@ async fn sql_create_namespace_if_not_exists_without_location_is_idempotent() {
     );
 }
 
-/// WG-5 C-7: `CREATE DATABASE` is a synonym for `CREATE NAMESPACE` — it now routes through the
-/// same handler (previously `Statement::CreateDatabase` fell to passthrough and never created an
-/// Iceberg namespace).
+/// `CREATE DATABASE` is a synonym for `CREATE NAMESPACE` and creates an Iceberg namespace.
 #[tokio::test]
 async fn sql_create_database_synonym_creates_namespace() {
     let wh = TempDir::new().unwrap();

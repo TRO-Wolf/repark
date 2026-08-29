@@ -1,9 +1,4 @@
 //! Q10 — ANSI-door cell of `spark.sql.timestampType`.
-//!
-//! Extensions are session-scoped. The claim is: on ONE Spark-extended session
-//! with `spark.sql.timestampType=TIMESTAMP_NTZ`, the ANSI door
-//! (`sql_with(AnsiDialect)`) resolves bare `TIMESTAMP` literals / casts to NTZ
-//! exactly as the Spark door does — value AND Arrow type.
 
 use std::sync::Arc;
 

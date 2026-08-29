@@ -1,8 +1,7 @@
-//! Token normalisers, statement sniffers, multi-statement refuse, merge-on-read multi-spec DML gate,
-//! the G3-E8 subquery-predicate DML gate, and `PARTITIONED BY` / transform classification shared
-//! with CTAS + column-def CREATE.
+//! Spark token normalizers, statement sniffers, DML valves, and partition classification.
 //!
-//! Extracted MOVE-ONLY from `lib.rs` (r25 T0 DataFusion-style reorg). Zero behavior change.
+//! The valves refuse unsafe multi-spec merge-on-read DML and subquery predicates before DataFusion
+//! can lose the predicate at its planning boundary.
 
 use std::ops::ControlFlow;
 
@@ -35,21 +34,8 @@ pub(crate) fn starts_with_merge(sql: &str) -> bool {
     is_merge(&tokens)
 }
 
-/// True when the statement is Iceberg snapshot-ref DDL (I5 / residual C6-L-001 forms).
-///
-/// Stock sqlparser rejects these forms before they reach a `Statement` arm. The primary path is
-/// [`ref_ddl::try_parse_ref_ddl`]; this sniff remains for residual unparsed shapes so migrated
-/// Spark jobs get a targeted `NotImplemented` instead of an opaque `ParserError`. Covered shapes
-/// (significant tokens; whitespace/comments skipped; string literals never match as words):
-/// - `CREATE|DROP BRANCH|TAG …`
-/// - `CREATE OR REPLACE BRANCH|TAG …` (Spark Iceberg replace-ref form — not just bare CREATE)
-/// - `ALTER TABLE <name> CREATE|DROP BRANCH|TAG …`
-/// - `ALTER TABLE <name> CREATE OR REPLACE BRANCH|TAG …` (primary Spark Iceberg docs form)
-/// - `ALTER TABLE <name> REPLACE BRANCH|TAG …` (update ref / retention — Spark Iceberg)
-///
-/// After `ALTER TABLE`, the multipart table identifier is **skipped as a dotted object name**
-/// before clause matching (O4-C1-L-001). A pure word-window scan false-positived table names
-/// whose segments form `create.branch` / `drop.tag` / `replace.tag`, and `RENAME TO create.branch`.
+/// Detect Iceberg snapshot-ref DDL that stock sqlparser cannot model, while skipping the
+/// multipart table identifier before matching the clause.
 pub(crate) fn starts_with_branch_or_tag_ddl(sql: &str) -> bool {
     let Ok(tokens) = Tokenizer::new(&DatabricksDialect {}, sql).tokenize() else {
         return false;
@@ -141,10 +127,8 @@ pub(crate) fn is_merge(tokens: &[Token]) -> bool {
         .unwrap_or(false)
 }
 
-/// Parse `sql` to a single statement with Spark-isms normalised (the `USING <provider>` strip and
-/// the `PARTITIONED BY` extraction — the extracted clause elements ride alongside the statement).
-/// Returns `Ok(None)` if it doesn't tokenize/parse to exactly one statement — the caller then lets
-/// DataFusion parse + execute it, preserving passthrough for everything we don't intercept.
+/// Parse one statement with Spark-isms normalized. Unsupported or unrecognized forms fall through
+/// to DataFusion passthrough.
 ///
 /// # Errors
 /// A `CREATE TABLE` whose `PARTITIONED BY` clause is malformed (unbalanced parens, empty list,
@@ -153,14 +137,7 @@ pub(crate) fn is_merge(tokens: &[Token]) -> bool {
 pub(crate) fn parse_single_normalized(
     sql: &str,
 ) -> Result<Option<(Statement, Vec<PartitionedByElement>)>> {
-    // The Databricks dialect is the closest stock dialect to Spark SQL (lambdas, struct literals, …).
-    // Stock sqlparser cannot parse Spark's `CREATE TABLE … USING <provider>` data-source clause, so
-    // we strip it at the token level first (we always create Iceberg tables; the provider is
-    // advisory). It also cannot parse Spark's CTAS `PARTITIONED BY (col[, …])` — the bare-reference
-    // and transform-call forms fail `parse_column_def`'s mandatory data type (design record D1) —
-    // so the clause is EXTRACTED at the token level into typed elements `build_ctas` validates.
-    // A bespoke `ReParkDialect` + Iceberg-extension recognizer arrives with the
-    // MERGE/CALL/branch increments (see docs/spark-sql-iceberg-parity.md).
+    // Strip Spark's USING clause and extract CTAS partitioning before the stock parser runs.
     let dialect = DatabricksDialect {};
     let Ok(mut tokens) = Tokenizer::new(&dialect, sql).tokenize() else {
         return Ok(None);
@@ -204,16 +181,16 @@ pub(crate) fn parse_single_normalized(
     }
 }
 
-// === r22 A2: multi-statement + MoR multi-spec DML gate ===
+// === Multi-statement and merge-on-read DML safety gates ================================
 
-/// Spark-oracle multi-statement refuse (BUG-010). Live pyspark 4.x raises
+/// Refuse multiple statements. Spark raises
 /// `ParseException` / `[PARSE_SYNTAX_ERROR]` for `SELECT 1; SELECT 2` while allowing a single
 /// statement with trailing `;`, whitespace, or line/block comments.
 ///
 /// # Errors
 /// [`DataFusionError::SQL`] (→ session `Error::Parse` → Python `ParseException`) when more than
 /// one non-empty statement is present, or when a semicolon is followed by non-trailing content
-/// even if the second statement fails to parse (fail-closed; critic F-A2-C1-002).
+/// even if the second statement fails to parse (fail-closed).
 pub(crate) fn refuse_multi_statement_sql(sql: &str) -> Result<()> {
     let dialect = DatabricksDialect {};
     let Ok(tokens) = Tokenizer::new(&dialect, sql).tokenize() else {
@@ -269,9 +246,8 @@ pub(crate) fn multi_statement_parse_error() -> DataFusionError {
     )
 }
 
-// BUG-001 valve verb enum — hoisted to repark-iceberg beside the position-delete path it
-// gates (phase-2 PR-3b declared rename); re-exported so sibling `crate::normalize::MorDmlKind`
-// paths stay stable (MOVE-ONLY surface).
+// The valve verb enum is owned by repark-iceberg beside the position-delete path it gates.
+// Re-export it so sibling callers keep one local type name.
 pub(crate) use repark_iceberg::write::MorDmlKind;
 
 /// [`ObjectName`] from a `TableWithJoins` primary relation (strips aliases — BUG-001 under-refuse fix).
@@ -298,14 +274,10 @@ pub(crate) fn delete_target_object_name(
 }
 
 /// ===========================================================================================
-/// BUG-001 P0 valve (r22 A2) — the SQL-door resolution wrapper. Resolves the DML target's
-/// [`ObjectName`] to a registered catalog handle + [`TableIdent`] and delegates the hazard
-/// predicate to the hoisted valve beside the fork position-delete path it gates
-/// ([`repark_iceberg::write::position_delete::refuse_mor_unpartitioned_multi_spec_dml`],
-/// phase-2 PR-3b declared rename — refuse conditions and message live there).
+/// Resolve the DML target and delegate the merge-on-read hazard predicate to the fork safety valve.
 ///
-/// Uses [`ObjectName`] parts (not Display) so table aliases cannot soft-pass the hazard gate.
-/// Nested namespaces (`catalog.ns1.ns2.table`) resolve via [`NamespaceIdent::from_vec`].
+/// Use [`ObjectName`] parts so aliases cannot bypass the hazard gate. Nested namespaces resolve via
+/// [`NamespaceIdent::from_vec`].
 ///
 /// # Errors
 /// [`DataFusionError::Plan`] naming the fork hazard and copy-on-write / `MERGE` workarounds.
@@ -409,43 +381,11 @@ impl DmlSubqueryVerb {
 }
 
 /// ===========================================================================================
-/// G3-E8 valve — refuse a `DELETE` / `UPDATE` whose `WHERE` clause contains a **subquery**.
+/// G3-E8 valve — refuse `DELETE` or `UPDATE` predicates containing subqueries.
 ///
-/// **The defect this closes (silent data loss).** `DELETE`/`UPDATE` are passthrough: they ride
-/// DataFusion onto the fork provider's DML (ADR-0003). DataFusion recovers the `WHERE` clause for
-/// `TableProvider::delete_from` / `::update` by walking the **optimized** plan for `Filter` /
-/// `TableScan.filters` nodes (`datafusion::physical_planner::extract_dml_filters`). By then the
-/// optimizer has decorrelated every `IN` / `NOT IN` / `EXISTS` / `ANY` / `ALL` / correlated
-/// predicate into a semi/anti/mark **join**, from which that walk recovers **nothing** — and it
-/// has no channel to say "there was a predicate I could not represent". An empty filter list is
-/// the provider's spelling of "no `WHERE` clause", so the statement matches **every row**. The
-/// fork is not at fault: its `delete_from` evaluates the exact filter it is handed and documents
-/// that empty means all (it deliberately refuses inexact Iceberg-predicate pushdown here).
-///
-/// **Why the guard is syntactic and slightly wide.** An *uncorrelated* scalar subquery survives
-/// as a `Filter` and executes correctly today; a *correlated aggregate* scalar subquery is
-/// decorrelated into an inner join and destroys the table. The two are the same parse tree —
-/// telling them apart needs full name resolution against the target's schema and every enclosing
-/// scope. For a silent-data-loss defect the fail-safe choice is to refuse the whole class: a
-/// user pays one `MERGE INTO` rewrite, instead of a table. The over-refused (correct-today)
-/// spellings are recorded in `task/g3e8-guard-ledger.md`.
-///
-/// Detection is "**any `Query` node under the `WHERE` expression**" rather than an enumeration of
-/// `Expr` subquery variants, so a sqlparser upgrade that adds a new subquery-bearing variant is
-/// caught by construction instead of silently slipping through.
-///
-/// `INSERT … SELECT` and `MERGE INTO` are NOT gated: neither crosses this seam (`insert_into`
-/// takes a whole `ExecutionPlan`, and MERGE is RePark-owned), and both are pinned as working.
-/// `UPDATE … SET col = (SELECT …)` is NOT gated either — an assignment subquery is either correct
-/// or a loud plan error, never silently wrong.
-///
-/// **Where this runs (the F-A attachment rule).** The AUTHORITATIVE call site is
-/// [`crate::spark_ast::execute_passthrough`], on the statement parsed by the **executing** parse.
-/// The router's own `DatabricksDialect` parse is a DIFFERENT parse: forms it rejects (Spark's
-/// FROM-less `DELETE <table> WHERE …`) fall through `execute_unparsable_fallthrough` into the
-/// passthrough, which re-parses them under the session dialect and runs them — so a valve wired
-/// only to the router arms is fail-OPEN for every form the two parsers disagree about. The router
-/// arms keep an EARLY call purely for ordering (see [`crate::router::execute_delete`]).
+/// DataFusion can decorrelate such predicates before the provider receives them, leaving an empty
+/// filter that means match-all. The fail-safe guard is syntactic and slightly wide; the executing
+/// parse in [`crate::spark_ast::execute_passthrough`] is authoritative.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -468,18 +408,8 @@ pub(crate) fn refuse_dml_subquery_predicate(
 }
 
 /// ===========================================================================================
-/// The G3-E8 valve at the **executing** parse — the statement-shaped entry point.
-///
-/// [`crate::spark_ast::execute_passthrough`] calls this on the statement it is about to plan,
-/// which is the ONLY parse the router and the executor are guaranteed to agree on. Everything
-/// else is a router-side pre-parse: the Databricks-dialect parse in
-/// [`parse_single_normalized`] rejects Spark's FROM-less `DELETE <table> WHERE …`, and that
-/// rejection routes the raw text to the passthrough, which parses it under the session dialect
-/// and executes it. The panel's live bypass (L1 M-1) was exactly that hole; this is where it is
-/// closed, for every DML form either parser may disagree about.
-///
-/// The target is read from the PARSED statement (`ObjectName` Display), never from the raw text,
-/// so a quoted target renders as the user spelled it rather than as a scrubbed blank.
+/// Apply the G3-E8 valve to the statement parsed for execution. The target comes from the parsed
+/// object name, and the allow-list must match the complete statement shape.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -594,12 +524,9 @@ pub(crate) fn strip_create_table_using(tokens: &[Token]) -> Vec<Token> {
     out
 }
 
-/// One element of a Spark `CREATE TABLE … PARTITIONED BY (…)` clause, classified by token shape
-/// by [`extract_partitioned_by`]. Spark parses a bare (possibly qualified) name as an identity
-/// transform and a call form as a named transform (v3.5.1 `AstBuilder.scala` L3372-3417 — design
-/// record D2); the typed column-def form is Hive-style DDL Spark REJECTS in a CTAS. Classifying
-/// (rather than dropping) every shape is what turns the audit's silent fail-open into loud,
-/// Spark-faithful handling in [`build_ctas`].
+/// One element of a Spark `CREATE TABLE … PARTITIONED BY (…)` clause, classified by token shape.
+/// Bare names are identity transforms, call forms are named transforms, and typed definitions are
+/// rejected by CTAS. Classification keeps unsupported shapes fail-closed in [`build_ctas`].
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum PartitionedByElement {
     /// A bare top-level column reference — an identity partition field.
@@ -754,9 +681,8 @@ pub(crate) fn build_transform_field(name: &str, args: &[String]) -> Result<Parti
 
 /// Extract the Spark `PARTITIONED BY ( … )` clause from a `CREATE TABLE` token stream — stock
 /// sqlparser cannot parse the Spark CTAS forms at all (bare references and transform calls fail
-/// `parse_column_def`'s mandatory data type), and the one form it CAN parse (Hive-style typed
-/// columns) landed in `hive_distribution`, which the CTAS lowering ignored — the audit's
-/// BUG-008/OTH-001 silent fail-open. The clause is located BEFORE the CTAS `AS` boundary (the
+/// `parse_column_def`'s mandatory data type), and typed columns land in `hive_distribution`, which
+/// CTAS does not consume. The clause is located before the CTAS `AS` boundary (the
 /// same rule `strip_create_table_using` uses), removed from the stream, and its elements
 /// classified by token shape for [`build_ctas`] to validate.
 ///
@@ -997,17 +923,8 @@ pub(crate) fn property_value(value: &Expr) -> String {
     }
 }
 
-/// Build the `UnboundPartitionSpec` for a CTAS `PARTITIONED BY` clause, or `None` when the clause
-/// is absent (unpartitioned CTAS — the `TableCreation` then carries no spec at all, keeping that
-/// path byte-identical). Each field's source column is resolved EXACT-CASE against the derived
-/// iceberg schema's TOP-LEVEL fields, in clause order, and carries its real `Transform`
-/// (identity/bucket/truncate/temporal) plus the Java-parity field name
-/// ([`PartitionFieldSpec::field_name`]) — Java `PartitionSpec.Builder.{identity,bucket,truncate,
-/// year,month,day,hour}` (apache-iceberg-1.10.0 `PartitionSpec.java`, design record D3), which
-/// `Spark3Util.toPartitionSpec` routes Spark's transform expressions through (L423-468). The fork
-/// then computes each partition value from the raw source column via `PartitionValueCalculator`
-/// (computed-mode splitter in `repark-write`), so `bucket(4, id)` routes by the fork's Iceberg
-/// bucket hash, not a pre-materialised key.
+/// Build the partition spec from top-level output fields in clause order. Resolution is exact-case;
+/// transform values are computed by the fork from the source column.
 ///
 /// # Errors
 /// A source column not in the SELECT output errors loudly naming it AND the available columns

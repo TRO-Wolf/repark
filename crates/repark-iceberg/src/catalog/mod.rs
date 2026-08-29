@@ -1,24 +1,10 @@
 //! Iceberg catalog wiring for DataFusion.
 //!
-//! Registers an iceberg-rust [`Catalog`] as a DataFusion `CatalogProvider`, so a three-part name
-//! like `glue_catalog.namespace.table` resolves with zero translation. Three catalog *builders*
-//! ship: [`memory_catalog`] (the AWS-free in-memory catalog over a local-filesystem warehouse —
-//! local development + tests, the analogue of running Spark in `local` mode), [`glue_catalog`] (the
-//! primary AWS surface), and [`s3tables_catalog`] (the secondary AWS surface). The two AWS builders
-//! are thin wrappers over the owned iceberg-rust fork's `GlueCatalogBuilder` /
-//! `S3TablesCatalogBuilder`: they validate the required property (`warehouse` / `table_bucket_arn`)
-//! fail-loud *before* construction, then pass every other property straight through to Iceberg
-//! `FileIO`. Credentials flow through the AWS SDK default chain inside the fork (env → shared-config
-//! file → instance/task role); `RePark` never handles them directly.
+//! Catalog builders validate required properties before calling the owned fork and pass remaining
+//! properties to Iceberg `FileIO`. Credentials remain inside the fork's AWS SDK chain.
 //!
-//! ## CTAS reality (validated against iceberg-datafusion 0.9.1)
-//!
-//! The approved plan assumed `CREATE TABLE … AS SELECT` "just works" via the schema provider's
-//! `register_table`. It does **not**: `IcebergSchemaProvider::register_table` calls
-//! `ensure_table_is_empty` and rejects any table that carries data, but DataFusion's CTAS hands it a
-//! `MemTable` *with* the query results. So CTAS-from-SELECT must be **decomposed** into a schema-only
-//! `CREATE` followed by `INSERT INTO` (the `repark-sql` interception layer's job). `INSERT INTO`
-//! into a pre-created Iceberg table is fully supported. The module's file-backed `tests` module locks both facts down.
+//! CTAS must be decomposed into schema-only `CREATE` followed by `INSERT INTO`: the fork rejects
+//! the data-bearing `MemTable` that DataFusion supplies to `register_table`.
 
 use std::sync::Arc;
 
@@ -64,31 +50,10 @@ pub(crate) use iceberg_catalog_s3tables::S3TABLES_CATALOG_PROP_TABLE_BUCKET_ARN;
 #[cfg(test)]
 pub(crate) use std::collections::HashMap;
 
-// === r21 T6: catalog-staleness ================================================================
-//
-// CQ-008 / BUG-007: the fork's `IcebergCatalogProvider` walks namespaces at `try_new`.
-// At pin `5e7b2e4` table *names* are listed lazily on first access, then frozen —
-// [`ReparkCatalogProvider`] eager-lists at snapshot / namespace-refresh so that
-// residual still starts at refresh time (ADR-0004 T6). RePark-owned SQL mutators
-// invalidate after DDL; out-of-band creates/drops stay invisible to DataFusion's
-// name directory until a refresh. The Spark Catalog facade (`listTables`) must
-// not inherit that snapshot: it lists live via [`list_table_names`]. Full DF
-// provider freshness for free SQL still needs [`build_iceberg_catalog_provider`]
-// / re-register.
-//
-// r24 PERF-07: product DDL invalidates via [`invalidate_catalog_namespaces`] (O(1) per
-// namespace) on [`ReparkCatalogProvider`] rather than a full O(databases) `try_new` rebuild.
-// =============================================================================================
+// Free SQL uses a frozen provider snapshot; facade listings read live catalog names. Product DDL
+// invalidates only touched namespaces, while explicit refresh rebuilds the full provider.
 
-/// Documented listing strategy for the Spark Catalog facade (measure-first, T6).
-///
-/// **list-on-access** (not TTL): `Catalog::list_tables` / `list_namespaces` on the live handle
-/// is the cheap path and matches Spark's live-catalog behavior for `listTables` /
-/// `listDatabases`. A full `IcebergCatalogProvider::try_new` rebuild walks every namespace and
-/// is reserved for DF registration / explicit refresh — measured slower by ≥1× full catalog
-/// walk (see `listing_cost_list_tables_cheaper_than_provider_rebuild`). TTL would only pay off
-/// for a sync DF-provider wrapper that re-lists on every `schema_names` call; that still needs
-/// a fork (or private `IcebergTableProvider::try_new`) for write-capable live resolution.
+/// Spark Catalog listings read live names; full provider rebuilds are reserved for explicit refresh.
 pub const CATALOG_LISTING_STRATEGY: &str = "list-on-access";
 
 /// ===========================================================================================

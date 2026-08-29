@@ -1,22 +1,7 @@
 /// ===========================================================================================
-/// GROUP O pins — `INSERT OVERWRITE` into a **transform-partitioned** table (bucket/truncate/
-/// temporal/mixed). Repro-first finding (2026-07-24): the non-empty path ALREADY works — the
-/// fork provider's `insert_into` projects partition values through `PartitionValueCalculator`,
-/// which is transform-generic, so bucket/day slots are computed correctly and the commit is a
-/// whole-table replace.
-///
-/// **The oracle is Spark's STATIC `partitionOverwriteMode`** (Spark's default):
-/// `INSERT OVERWRITE` with no `PARTITION (…)` clause is a WHOLE-TABLE replace, not a
-/// per-partition one. Java `SparkWrite.OverwriteByFilter.commit` commits
-/// `overwriteByRowFilter(alwaysTrue)` unconditionally; `DynamicOverwrite.commit`
-/// (`partitionOverwriteMode=dynamic`) is the per-partition variant and is OUT of scope here.
-/// The fork's `IcebergCommitExec` `InsertOp::Overwrite` arm implements exactly the static
-/// recipe, so a transform table's partitions that the NEW data does not land in must be GONE
-/// after the overwrite — every pin below makes that discriminating (the fixtures deliberately
-/// leave an old-only partition, which dynamic mode would have preserved).
-///
-/// Calibrated the Group P/R way: committed `DataFile.partition` slots vs the FORK's own
-/// transform function as self-oracle, plus an Arrow-path round-trip (value AND type).
+/// GROUP O pins static Spark `INSERT OVERWRITE` on transform-partitioned tables. The commit is a
+/// whole-table replace; manifest partition slots, fork transform values, and Arrow values/types
+/// are checked. Dynamic per-partition overwrite is out of scope.
 /// ===========================================================================================
 use std::collections::{HashMap as StdHashMap, HashSet};
 
@@ -506,12 +491,7 @@ async fn overwrite_truncate_str_table_static_replace_and_prefix_routing() {
     );
 }
 
-/// PIN O7 (Group O) — **FORK FIXED at Unit 1 (`PartitionExpr` honest children).**
-///
-/// A NULL partition-source value that reaches the overwrite through a computed EXPRESSION
-/// must land in the NULL partition slot. Pre-fix (fork pin `a4d3b92e`) the provider
-/// mis-slotted it under a non-null bucket and `WHERE name IS NULL` returned 0 rows.
-/// Post-repin (`a08a0957`, Units 1+2): correct slots and `IS NULL` finds the row.
+/// A NULL computed partition value must land in the NULL partition slot, where `IS NULL` finds it.
 ///
 /// Mutation: re-pinning the workspace to pre-Unit-1 makes this RED (no `None` slot /
 /// `IS NULL` = 0). The CTAS control remains as a same-engine oracle that the splitter
@@ -575,7 +555,7 @@ async fn overwrite_null_partition_source_lands_in_null_slot() {
         "`IS NULL` must find the expression-derived NULL row"
     );
 
-    // CONTROL: CTAS path (always correct) matches the provider path post-fix.
+    // The CTAS control must match the provider path.
     execute(
         &ctx,
         &catalogs,
@@ -591,17 +571,8 @@ async fn overwrite_null_partition_source_lands_in_null_slot() {
     );
 }
 
-/// PIN O8 (Group O) — **FORK FIXED at Unit 1 + G0 nullability widening (Unit 2).**
-///
-/// Outcome matrix for a FROM-less literal `SELECT` source. Pre-fix the
-/// `partitioned/fromless-literal` cell panicked inside the projector (zero-column batch);
-/// Group AA upgraded the user-visible cell to a typed `Err`. At repin `a08a0957` every
-/// cell is `Ok` — including required-column partitioned tables (this fixture's
-/// `PARTITIONED BY (id)` identity on a non-null source column) and, per the fork's G0
-/// rider, optional-column tables as well (covered by the dedicated optional pin below).
-///
-/// Each successful cell also asserts **payload + partition correctness** (CCC Q-002 /
-/// L-001): not merely non-panic. Silent wrong rows with `Ok` would RED.
+/// FROM-less literal sources must succeed for partitioned tables and preserve payload and
+/// partition correctness.
 #[test]
 fn overwrite_fromless_literal_source_succeeds_on_partitioned_table() {
     #[derive(Debug, PartialEq, Eq)]
@@ -985,11 +956,7 @@ async fn overwrite_identity_and_unpartitioned_regression() {
 }
 
 /// ===================================================================================
-/// Post-repin (`a08a0957`) — provider partition correctness (was Group AA divergence pins).
-///
-/// The interim `partition_guard` and its refusal battery are gone. These pins assert the
-/// CORRECT post-Unit-1 behaviour on the public router path. They RED if the workspace is
-/// re-pinned to a pre-Unit-1 fork tip.
+/// Provider partition correctness on the public router path.
 /// ===================================================================================
 mod provider_partition_correctness {
     use super::*;
@@ -1076,7 +1043,7 @@ mod provider_partition_correctness {
         rows
     }
 
-    /// Computed partition-source column commits the POST-expression tuple (Unit 1 fix).
+    /// Computed partition-source column commits the post-expression tuple.
     #[tokio::test]
     async fn computed_partition_source_commits_post_expression_tuple() {
         let wh = TempDir::new().unwrap();
@@ -1120,12 +1087,7 @@ mod provider_partition_correctness {
         );
     }
 
-    /// Identity partition: served rows match the computed expression (read-path mask no
-    /// longer follows a wrong recorded tuple). Mechanism note: identity transforms still
-    /// substitute the recorded tuple over the file column (Java-identical constants map);
-    /// after Unit 1 the *recorded* tuple is correct, so the served values are correct.
-    /// Not "data-loss" — values were always in Parquet; the pre-fix defect was a wrong
-    /// manifest tuple driving the mask.
+    /// Identity-partitioned reads use the recorded tuple and return the computed expression.
     #[tokio::test]
     async fn identity_partitioned_computed_source_read_back_matches_expression() {
         let wh = TempDir::new().unwrap();
@@ -1161,7 +1123,7 @@ mod provider_partition_correctness {
         );
     }
 
-    /// Column reorder through the provider writes the permuted values (Unit 1 fix).
+    /// Column reorder through the provider writes the permuted values.
     #[tokio::test]
     async fn reordered_same_typed_columns_write_the_permuted_values() {
         let wh = TempDir::new().unwrap();
@@ -1235,9 +1197,7 @@ mod provider_partition_correctness {
         assert_eq!(slots, vec![11], "identity partition slot must be id=11");
     }
 
-    /// INSERT INTO (append half) with a computed partition-source column — the path Group
-    /// AA previously refused (AA1). Post-Unit-1 both halves must succeed with correct
-    /// post-expression slots (C1-Q-001).
+    /// INSERT INTO with a computed partition-source column preserves post-expression slots.
     #[tokio::test]
     async fn computed_partition_source_insert_into_commits_post_expression_tuple() {
         let wh = TempDir::new().unwrap();

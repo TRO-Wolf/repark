@@ -1,13 +1,8 @@
-//! OV1 exclusive full-table overwrite stage + commit (Q9 — CACHE1 must not call this round).
+//! OV1 full-table overwrite using stage-then-swap.
 //!
-//! Stage-then-swap:
-//! 1. [`write_overwrite_staged_files_from_stream`] — SQL **positional** map (D9) + stream write
-//!    of data files **without** catalog mutation (lives here so `repark-sql` needs no `futures`
-//!    dep — Cargo.toml freeze).
-//! 2. [`commit_overwrite_replace_all`] — `overwrite_by_row_filter(AlwaysTrue)` + `add_files`
-//!    in one transaction, mirroring frozen-pin `iceberg-datafusion` `IcebergCommitExec`
-//!    `InsertOp::Overwrite` (`integrations/datafusion/.../commit.rs` L338–357 on pin
-//!    `b009ac15`). Isolation parse matches that provider bit-for-bit (BUG-004 / design D10).
+//! Staging writes data files without catalog mutation. The commit atomically replaces all rows
+//! with those files using `AlwaysTrue`, matching the fork provider's overwrite semantics and
+//! isolation parsing.
 
 use std::collections::HashMap;
 use std::sync::Arc;

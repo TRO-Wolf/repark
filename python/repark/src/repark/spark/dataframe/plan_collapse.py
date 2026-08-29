@@ -1,15 +1,6 @@
-"""Plan-collapse / show-format / qcol-rewrite region — module-level helpers (r27 T0b).
+"""Plan simplification, display formatting, SQL type mapping, and join rewrites.
 
-Extracted from ``core.py`` (SE-1 PR-B headroom): the r23b N2 plan-collapse
-helpers plus the show/eager-eval formatters, Arrow type labels, generator SQL-type
-mapping and the H1 join-qcol rewriters that trailed them. ``core.py`` re-exports
-every name from its tail bind block, so ``repark.spark.dataframe.core`` /
-``repark.spark.dataframe`` import paths are unchanged (Q7 import freeze).
-**SE-1 R-3:** also owns ``_strip_internal_tighten_metadata`` (export-boundary
-strip of ``repark.tighten_nulls``).
-
-Nothing here imports ``core`` at module scope (the region modules' circular-import rule);
-the one ``core``-side type it needs is a ``TYPE_CHECKING`` annotation only.
+The module exports helpers bound by ``core`` and strips internal tighten metadata at export.
 """
 
 from __future__ import annotations
@@ -31,14 +22,14 @@ logger = logging.getLogger("repark.spark.dataframe")
 
 
 def _output_field_would_persist_required(field: Any) -> bool:
-    """True when this field or a nested child would persist Iceberg-required."""
+    """Return whether this field or a nested child remains Iceberg-required."""
     if not field.nullable:
         return True
     return _data_type_has_required_child(field.dataType)
 
 
 def _data_type_has_required_child(data_type: Any) -> bool:
-    """Walk Struct / Array / Map the way the engine ``field_or_child`` helper does."""
+    """Return whether a nested Struct, Array, or Map child is required."""
     children = getattr(data_type, "fields", None)
     if children is not None:
         return any(_output_field_would_persist_required(child) for child in children)
@@ -61,7 +52,7 @@ def _strip_tighten_nulls_field(
     key: bytes,
     depth: int = 0,
 ) -> tuple[Any, bool]:
-    """Walk one Arrow field, dropping ``repark.tighten_nulls`` metadata (depth-bounded)."""
+    """Remove tighten-null metadata from one Arrow field up to the depth limit."""
     if depth > 32:
         return field, False
     changed = False
@@ -77,7 +68,7 @@ def _strip_tighten_nulls_field(
 
 
 def _strip_tighten_nulls_type(data_type: Any, *, key: bytes, depth: int) -> tuple[Any, bool]:
-    """Walk one Arrow type, stripping tighten-nulls metadata from nested fields."""
+    """Remove tighten-null metadata from nested Arrow fields."""
     import pyarrow as pa
 
     if pa.types.is_struct(data_type):
@@ -110,7 +101,7 @@ def _strip_tighten_nulls_type(data_type: Any, *, key: bytes, depth: int) -> tupl
 
 
 def _strip_internal_tighten_metadata(table: Any) -> Any:
-    """Drop ``repark.tighten_nulls`` from user-visible Arrow export (not a data column)."""
+    """Remove internal tighten-null metadata from user-visible Arrow output."""
     import pyarrow as pa
 
     key = b"repark.tighten_nulls"
@@ -130,33 +121,10 @@ def _strip_internal_tighten_metadata(table: Any) -> Any:
     return type(table).from_arrays(list(table.columns), schema=new_schema)
 
 
-# ==================================================================================================
-# r23b N2: plan-collapse helpers (alias-chain squash + adjacent same-spec window merge)
-# ==================================================================================================
-
-
 def _collapse_identity_projection_alias(column: Column) -> Column:
-    """Stage (a) + r25 T3: peel nested identity Alias, then skip redundant for_select.
-
-    ``withColumns`` passthrough binds via ``native.alias(name)`` then ``select`` used to call
-    ``for_select`` which re-aliased again → logical ``x AS x AS x`` chains. N2 skipped
-    ``for_select`` when ``display_name`` already matched the projection name.
-
-    Residual (r25 T3 / greylit Q7): re-aliasing still re-entered as *nested native Alias*
-    nodes when a path (or user ``.alias(...).alias(...)``) stacked aliases before select —
-    ``display_name()`` only surfaces the outer name, so the N2 gate returned the column
-    unchanged while the plan still showed ``… AS x AS x`` or ``… AS a AS b``. Extend **this**
-    helper only (no second collapse path): peel nested Alias chains on the native expr via
-    ``PyColumn.collapse_identity_aliases`` (outermost name, single Alias), then apply the
-    original for_select gate.
-
-    Case renames (engine ``x``, projection ``X``) still hold a single alias from bind and are
-    not re-aliased here. Compounds / casts whose native display differs still take
-    ``for_select``. H1 multi-name synthetic engines are already uniquely named before this.
-    """
+    """Collapse nested identity aliases before applying the projection alias gate."""
     if column._projection_name is None:
         return column
-    # Peel same-name nested Alias on the native expr (single collapse path — Q7).
     try:
         peeled_inner = column._inner.collapse_identity_aliases()
         column = Column(
@@ -184,12 +152,8 @@ def _collapse_identity_projection_alias(column: Column) -> Column:
             window_spec=column._window_spec,
         )
     except AttributeError:
-        # Native peel unavailable (older native module) — keep N2 for_select gate only.
         pass
     except Exception:
-        # A fenced! engine failure is a real error, not "unavailable" — surface it in logs
-        # instead of silently keeping the stacked aliases the peel exists to remove
-        # (r25 morning critic).
         logger.debug("native identity-alias peel failed; keeping unpeeled expr", exc_info=True)
     if not column._stable_name:
         return column.for_select()
@@ -203,7 +167,7 @@ def _collapse_identity_projection_alias(column: Column) -> Column:
 
 
 def _window_spec_structural_key(spec: Any) -> tuple[Any, ...] | None:
-    """Structural equality key for a facade ``WindowSpec`` (partition / order / frame)."""
+    """Return a structural key including partition, order, null placement, and frame."""
     try:
         partitions = tuple(
             column._projection_name or column.spark_display_part()
@@ -213,8 +177,6 @@ def _window_spec_structural_key(spec: Any) -> tuple[Any, ...] | None:
             (
                 column._projection_name or column.spark_display_part(),
                 True if column._sort_ascending is None else bool(column._sort_ascending),
-                # Null placement is part of the spec's identity: two window specs that differ
-                # only in it are different windows, and merging them silently reorders rows.
                 column._sort_nulls_first,
             )
             for column in spec._order_columns
@@ -226,17 +188,12 @@ def _window_spec_structural_key(spec: Any) -> tuple[Any, ...] | None:
 
 
 def _column_window_spec(column: Column) -> Any | None:
-    """Facade WindowSpec retained after ``Column.over`` (and alias/round wraps)."""
+    """Return the window specification retained by a column, if any."""
     return getattr(column, "_window_spec", None)
 
 
 def _uniform_window_key_from_map(cols_map: dict[str, Any]) -> tuple[Any, ...] | None:
-    """Structural window key when every value is a same-spec window (or alias/round wrap).
-
-    Returns ``None`` when the map is empty, contains non-Column values (UDF markers), has
-    any non-window Column, has mixed window specs, or a spec cannot be keyed. When in doubt
-    the caller must not merge (Q16).
-    """
+    """Return a shared structural key when all mapped columns use one window spec."""
     if not cols_map:
         return None
     keys: list[tuple[Any, ...]] = []
@@ -257,11 +214,7 @@ def _uniform_window_key_from_map(cols_map: dict[str, Any]) -> tuple[Any, ...] | 
 
 
 def _column_may_reference_names(column: Column, names: frozenset[str]) -> bool:
-    """True when ``column`` may read any name in ``names`` (exact-enough dep gate for N2).
-
-    Prefer over-merge refusal: if the expression text cannot be inspected, return True so
-    the caller blocks the merge (Q16). Word-boundary matching avoids ``tr`` ⊆ ``trange``.
-    """
+    """Return whether a column may reference any name in ``names``."""
     if not names:
         return False
     if (
@@ -291,7 +244,6 @@ def _column_may_reference_names(column: Column, names: frozenset[str]) -> bool:
     return False
 
 
-# Spark dtypes that satisfy RANGE value-offset ORDER BY (NUMERIC / INTERVAL family).
 _G2_RANGE_NUMERIC_DTYPES = frozenset(
     {
         "tinyint",
@@ -310,7 +262,7 @@ _G2_RANGE_NUMERIC_DTYPES = frozenset(
 
 
 def _g2_dtype_is_range_numeric(type_name: str) -> bool:
-    """True when a Spark-style dtype string is legal for RANGE value-offset ORDER BY."""
+    """Return whether a Spark dtype is legal for value-offset RANGE ordering."""
     normalized = type_name.strip().lower()
     if normalized in _G2_RANGE_NUMERIC_DTYPES:
         return True
@@ -320,12 +272,7 @@ def _g2_dtype_is_range_numeric(type_name: str) -> bool:
 
 
 def _reject_non_numeric_range_order(frame: DataFrame, column: Column) -> None:
-    """Refuse value-offset RANGE windows whose ORDER BY is non-numeric (r20 G2 octo C1-Q-002).
-
-    Spark ``DATATYPE_MISMATCH.SPECIFIED_WINDOW_FRAME_UNACCEPTED_TYPE``. Peer-only RANGE
-    frames do not set ``_g2_range_order_names`` and skip this check.
-    """
-    # === r20 G2: window/rand/sampleBy ===
+    """Reject non-numeric value-offset RANGE windows with Spark's analysis error class."""
     names = getattr(column, "_g2_range_order_names", None)
     if not names:
         return
@@ -333,7 +280,6 @@ def _reject_non_numeric_range_order(frame: DataFrame, column: Column) -> None:
     for order_name in names:
         type_name = dtype_by_name.get(order_name)
         if type_name is None:
-            # Expression ORDER BY without a bare schema name — engine residual.
             continue
         if not _g2_dtype_is_range_numeric(type_name):
             raise AnalysisException(
@@ -372,15 +318,8 @@ def _format_show_table(table: Any, *, truncate_at: int | None) -> str:
 
 
 def _format_eager_eval_table(table: Any, *, truncate_at: int | None) -> str:
-    """Spark ``Dataset.showString`` packing for ``spark.sql.repl.eagerEval`` (r20 G2).
-
-    Matches Apache ``test_repr_behaviors``: ``|`` abut cells (no spaces), cells right-aligned
-    to the column max width, separator ``+---+`` without the spaced ``+- -+`` form used by
-    :func:`_format_show_table` (kept for ``DataFrame.show`` stability). Truncation is a hard
-    left-slice (Spark ``StringUtils.left``-style), not the ``…`` ellipsis used by ``show``.
-    """
+    """Render the compact grid used by ``spark.sql.repl.eagerEval``."""
     names = list(table.column_names)
-    # Hard-slice truncate for REPL parity (ellipsis would widen cells past Spark's pin).
     raw_rows = _table_to_cell_rows(table, truncate_at=None, style="spark")
     if truncate_at is not None and truncate_at > 0:
         raw_rows = [[cell[:truncate_at] for cell in row] for row in raw_rows]
@@ -404,22 +343,10 @@ def _format_show_vertical(
     n: int,
     total_rows: int | None,
 ) -> str:
-    """Render Arrow rows as live PySpark ``show(vertical=True)`` layout (R-PARITY3).
-
-    Shape (oracle 4.1.2)::
-
-        -RECORD 0---------------
-         a   | 1
-         b   | hello_world_long
-        -RECORD 1---------------
-         a   | 2
-         b   | y
-        only showing top 1 row   # when total_rows > n
-    """
+    """Render Arrow rows in the PySpark ``show(vertical=True)`` layout."""
     names = list(table.column_names)
     raw_rows = _table_to_cell_rows(table, truncate_at=truncate_at, style="spark")
     name_width = max((len(name) for name in names), default=0)
-    # Body line: " name | value" with name left-justified to name_width.
     body_widths: list[int] = []
     for row in raw_rows:
         for name, cell in zip(names, row, strict=True):
@@ -436,26 +363,19 @@ def _format_show_vertical(
     if total_rows is not None and n >= 0 and total_rows > n and n > 0:
         unit = "row" if n == 1 else "rows"
         lines.append(f"only showing top {n} {unit}")
-    # Spark ends with a trailing newline when printing; print() adds one, so no extra here.
     return "\n".join(lines)
 
 
 def _cell_text(value: Any, *, style: str, truncate_at: int | None) -> str:
-    """Format one cell for a show style (null/NaN/bool spellings differ by style).
-
-    Booleans use lowercase ``true``/``false`` (Spark / polars / duckdb oracles) — never Python
-    ``True``/``False``. ``bool`` is checked before other numeric branches because ``bool`` is an
-    ``int`` subclass.
-    """
+    """Format one cell with the null, NaN, boolean, and truncation spellings for ``style``."""
     if value is None:
         text = "null" if style == "polars" else "NULL"
     elif isinstance(value, bool):
         text = "true" if value else "false"
-    elif isinstance(value, float) and value != value:  # NaN
+    elif isinstance(value, float) and value != value:
         text = "NaN" if style == "polars" else "nan"
     else:
         text = str(value)
-    # Only positive caps truncate (Spark: truncate>0). Zero/negative would blank or chop (C6-L-001).
     if truncate_at is not None and truncate_at > 0 and len(text) > truncate_at:
         text = text[: max(0, truncate_at - 3)] + "..." if truncate_at >= 3 else text[:truncate_at]
     return text
@@ -478,12 +398,7 @@ def _table_to_cell_rows(
 
 
 def _display_type_labels_from_arrow(table: Any, *, style: str) -> list[str]:
-    """Short dtype/type-row labels from a collected Arrow table's precise field types.
-
-    Prefer this over ``logical_schema_fields`` for styled show: the native ``arrow_type_key``
-    collapses Int8/Int16→``int`` and Float32→``double`` for the coarse Spark ``StructType``
-    surface, which would mislabel TINYINT/SMALLINT/FLOAT as i32/f64 (int32/double).
-    """
+    """Return display labels from precise Arrow fields, preserving narrow numeric types."""
     return [_arrow_pa_type_label(field.type, style=style) for field in table.schema]
 
 
@@ -527,7 +442,6 @@ def _arrow_pa_type_label(arrow_type: Any, *, style: str) -> str:
         precision = arrow_type.precision
         scale = arrow_type.scale
         return f"decimal({precision},{scale})"
-    # Fallback: reuse the coarse logical-key mapper on a stringified type.
     return _style_type_label(str(arrow_type), style=style)
 
 
@@ -552,13 +466,12 @@ def _style_type_label(type_key: str, *, style: str) -> str:
         if key in {"boolean", "bool"}:
             return "bool"
         if key.startswith("decimal"):
-            return key  # decimal(p,s)
+            return key
         if key in {"date"}:
             return "date"
         if key.startswith("timestamp"):
             return "datetime[μs]"
         return key
-    # duckdb-ish
     if key in {"int8", "byte", "tinyint"}:
         return "int8"
     if key in {"int16", "short", "smallint"}:
@@ -660,15 +573,10 @@ def _format_polars_show(
     total_rows: int,
     show_ellipsis: bool,
 ) -> str:
-    """Render a polars-style preview (shape header, dtype row, optional … separator).
-
-    Exact rendering is pinned by ``test_display_styles.py`` goldens — approximation of polars
-    1.x box-drawing with ``┆`` column separators.
-    """
+    """Render the Polars-style preview with shape, dtypes, and optional ellipsis."""
     if not names:
         return f"shape: ({total_rows}, 0)\n┌┐\n└┘"
     widths = _column_widths(names, type_labels, head_rows, tail_rows)
-    # polars pads cells with one space each side inside the box.
     inner_widths = [width + 2 for width in widths]
 
     lines = [
@@ -699,21 +607,13 @@ def _format_duckdb_show(
     shown_rows: int,
     show_ellipsis: bool,
 ) -> str:
-    """Render a duckdb-style box-drawing table with a type row and row-count footer.
-
-    Exact rendering is pinned by ``test_display_styles.py`` goldens — approximation of DuckDB
-    1.x ``Relation.show()`` (``│`` / ``├`` / centered headers, right-aligned integers).
-    """
+    """Render the DuckDB-style table with dtypes and a row-count footer."""
     if not names:
         return f"┌┐\n│ {total_rows} rows │\n└┘"
     widths = _column_widths(names, type_labels, head_rows, tail_rows)
-    # Ensure footer text fits: " N rows " / " (N shown) "
     footer_main = f" {total_rows} rows "
-    # Emit ``(K shown)`` whenever the keep-set is smaller than the frame — including
-    # show(0) (empty body, no middle dots) where ``show_ellipsis`` is False (C4-L-001).
     footer_shown = f" ({shown_rows} shown) " if shown_rows != total_rows else ""
-    # Widen first column if needed so the footer can sit under the table.
-    table_inner = sum(widths) + 3 * (len(widths) - 1)  # cells + " │ " between
+    table_inner = sum(widths) + 3 * (len(widths) - 1)
     footer_need = max(len(footer_main), len(footer_shown))
     if footer_need > table_inner and widths:
         widths[0] += footer_need - table_inner
@@ -736,10 +636,8 @@ def _format_duckdb_show(
             lines.append(_duckdb_row_line(["·"] * len(names), widths, center=True))
             for row in tail_rows:
                 lines.append(_duckdb_row_line(row, widths))
-        # Footer: collapse column dividers into a single spanning cell.
         lines.append("├" + "┴".join("─" * (width + 2) for width in widths) + "┤")
     else:
-        # Empty body: one separator under the type row, then the footer (duckdb-style).
         lines.append(_box_rule(padded_widths, "├", "┼", "┤"))
     span = table_inner
     lines.append(f"│{footer_main.center(span + 2)}│")
@@ -750,17 +648,8 @@ def _format_duckdb_show(
 
 
 def _parse_list_element_sql_type(type_key: str) -> str | None:
-    """Map engine list type_key text to a SQL cast target for NULL elements.
-
-    Accepts:
-    * Spark simpleString ``array<element>`` (E2 ``arrow_type_key`` List path)
-    * legacy Arrow debug ``List(Field { data_type: …, nullable: … })``
-
-    Parses the **outer** list element only (not a substring hunt across nested content)
-    so nested arrays do not steal the wrong element type (octo C2-L-001 / C2-Q-003).
-    """
+    """Map an engine list type key to a SQL cast target for null elements."""
     text = type_key.strip()
-    # E2: logical_schema_fields emits array<…> for List types.
     if text.startswith("array<") and text.endswith(">"):
         return _spark_array_element_to_sql(text[len("array<") : -1].strip())
     element = _list_field_element_debug(text)
@@ -770,11 +659,7 @@ def _parse_list_element_sql_type(type_key: str) -> str | None:
 
 
 def _split_angle_csv(text: str) -> list[str]:
-    """Split a comma-separated Spark type-arg list.
-
-    Honors nested ``<>`` / ``()`` and backticks so ``decimal(10,2)`` commas
-    do not split fields.
-    """
+    """Split Spark type arguments while honoring nested brackets and backticks."""
     parts: list[str] = []
     start = 0
     depth = 0
@@ -820,38 +705,16 @@ def _split_struct_field(field: str) -> tuple[str, str] | None:
 _SIMPLE_IDENT_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 _DECIMAL_SQL_RE = re.compile(r"decimal\(\d+,\s*\d+\)", re.IGNORECASE)
 
-# Sentinel: void / Null elements have no CAST spelling. explode_outer emits
-# make_array(NULL) and must never interpolate this token into CAST(... AS ...).
 _UNTYPED_NULL_ELEMENT = "__repark_untyped_null__"
 
 
 def _sql_array_of(inner: str) -> str:
-    """Spell "array of ``inner``" as ``array<inner>``, never postfix ``inner[]``.
-
-    G3b (GA4 ``items[].item_params[]``): the postfix form binds to the *innermost*
-    field when ``inner`` ends in ``>``. Measured against the engine parser via
-    ``SELECT make_array(CAST(NULL AS <spelling>))``::
-
-        struct<item_id:VARCHAR,item_params:struct<key:VARCHAR,value:struct<sv:VARCHAR>>[]>
-          parses as  item_params: struct<key, value: array<struct<sv>>>   <- [] migrated
-        struct<item_id:VARCHAR,item_params:array<struct<key:VARCHAR,value:struct<sv:VARCHAR>>>>
-          parses as  item_params: array<struct<key, value: struct<sv>>>   <- exact
-
-    The mis-parse made the ``CASE WHEN`` arms of the explode_outer rewrite disagree, so
-    dynamic_flatten / explode_outer refused an array-of-struct nested inside an
-    array-element struct. The angle form round-trips exactly for scalar inners too
-    (``array<BIGINT>`` == ``BIGINT[]``), so it is used uniformly — one honest spelling
-    rather than a shape-dependent pair.
-    """
+    """Return the unambiguous angle-bracket spelling for an array type."""
     return f"array<{inner}>"
 
 
 def _struct_field_name_for_cast(name: str) -> str | None:
-    """Allowlist a struct field name before embedding it in CAST SQL.
-
-    Hostile names (``:``, spaces, comments) are not quoted into the CAST
-    target — explode_outer refuses loud, same class as an unmapped type.
-    """
+    """Return a safe struct field name for CAST SQL, or ``None`` for hostile text."""
     text = name.strip()
     if text.startswith("`") and text.endswith("`") and len(text) >= 3:
         text = text[1:-1]
@@ -861,13 +724,7 @@ def _struct_field_name_for_cast(name: str) -> str | None:
 
 
 def _spark_struct_element_to_sql(raw: str) -> str | None:
-    """Map Spark ``struct<field:type,…>`` to a CAST-accepted struct spelling.
-
-    Engine SQL accepts Spark-style ``struct<name:TYPE>`` (including nested
-    ``array<…>`` / ``struct<…>``). Field names keep their original case. ``map<…>``
-    fields have no CAST spelling — refuse (same message class as other unmapped
-    element types). ``timestamp_ntz`` rewrites to ``TIMESTAMP``.
-    """
+    """Map a Spark struct type to a CAST-compatible struct spelling."""
     inner = raw.strip()[len("struct<") : -1]
     fields = _split_angle_csv(inner)
     if not fields:
@@ -887,12 +744,11 @@ def _spark_struct_element_to_sql(raw: str) -> str | None:
 
 
 def _spark_array_element_to_sql(element: str) -> str | None:
-    """Map Spark simpleString array element token → DataFusion SQL cast target."""
+    """Map a Spark array element token to a DataFusion SQL cast target."""
     raw = element.strip()
     token = raw.lower()
     if token.startswith("array<") and token.endswith(">"):
         inner = _spark_array_element_to_sql(raw[len("array<") : -1].strip())
-        # Nested array<void> has no CAST spelling (leaf void uses make_array(NULL)).
         if inner is None or inner == _UNTYPED_NULL_ELEMENT:
             return None
         return _sql_array_of(inner)
@@ -949,7 +805,6 @@ def _arrow_debug_type_to_sql(element: str) -> str | None:
     text = element.strip()
     if text.startswith("List("):
         inner = _parse_list_element_sql_type(text)
-        # Nested void has no CAST spelling (same refuse as simpleString array<null>).
         if inner is None or inner == _UNTYPED_NULL_ELEMENT:
             return None
         return _sql_array_of(inner)
@@ -974,15 +829,12 @@ def _arrow_debug_type_to_sql(element: str) -> str | None:
     if text.startswith("Boolean"):
         return "BOOLEAN"
     if text.startswith("Decimal"):
-        # Arrow debug: Decimal128(p, s) / Decimal256(p, s) — preserve precision/scale
-        # for explode_outer NULL guard (octo C5 residual S2; was hard-coded DECIMAL(38,18)).
         decimal_match = re.fullmatch(r"Decimal(?:128|256)?\((\d+),\s*(\d+)\)", text)
         if decimal_match is not None:
             return f"DECIMAL({decimal_match.group(1)}, {decimal_match.group(2)})"
         return "DECIMAL(38, 18)"
     if text.startswith("Null"):
         return _UNTYPED_NULL_ELEMENT
-    # Struct / Map / Union / Dictionary — unsupported for make_array(NULL) guard.
     return None
 
 
@@ -996,18 +848,9 @@ def _null_safe_equi_join_sql(
     right_column_names: list[str],
     prefer_right_names: set[str] | None = None,
 ) -> str:
-    """``INNER JOIN`` SQL with ``IS NOT DISTINCT FROM`` on every key (null-safe equi-join).
-
-    Spark ``groupBy`` / ``Window.partitionBy`` treat ``NULL`` as a real group key. Name-list
-    equi-joins use ``=``, so ``NULL = NULL`` is unknown and those groups/rows silently
-    disappear (octo M6 C1). Keys are projected from the left view. Non-key columns resolve
-    from left then right unless listed in ``prefer_right_names`` (window UDF outs that may
-    share a name with a source column — last-wins / withColumn overwrite, octo M6 C2).
-    """
+    """Build a null-safe equi-join that preserves null keys and selected output names."""
     if not key_names:
         raise ValueError("_null_safe_equi_join_sql requires at least one key")
-    # Parenthesize each IS NOT DISTINCT FROM — unparenthesized multi-key AND binds the
-    # second key into the first comparison (DataFusion: Utf8 AND Boolean) (octo M6 C1).
     on_clause = " AND ".join(
         f"({left_view}.{_quote_ident_sql(key)} IS NOT DISTINCT FROM "
         f"{right_view}.{_quote_ident_sql(key)})"
@@ -1023,7 +866,6 @@ def _null_safe_equi_join_sql(
         if name in key_set:
             select_parts.append(f"{left_view}.{quoted} AS {quoted}")
         elif name in prefer_right and name in right_set:
-            # Window/UDF out that overwrites a same-named source column (octo M6 C2).
             select_parts.append(f"{right_view}.{quoted} AS {quoted}")
         elif name in left_set:
             select_parts.append(f"{left_view}.{quoted} AS {quoted}")
@@ -1039,24 +881,15 @@ def _null_safe_equi_join_sql(
     )
 
 
-# === r20 H1: join/identity helpers ============================================================
-
-# Join-ON tokens from Column.join_sql_part: __REPARK_QCOL_{plan_id}__{field_enc}__
 _QCOL_TOKEN_RE = re.compile(r"__REPARK_QCOL_([0-9a-f]+)__(.+?)__")
 
-# Separators that mark a side boundary between consecutive QCOL tokens for same-object
-# self-join alternation (comparison ops + boolean connectors). Arithmetic/func glue alone
-# means multi-token arm → refuse (critic-octo H2 C1-001).
 _QCOL_SIDE_BOUNDARY_RE = re.compile(r"(?i)(<=>|<=|>=|<>|!=|=|<|>|\bAND\b|\bOR\b)")
 
 
 def _same_object_qcol_alternation_safe(join_sql: str) -> bool:
-    """True when even/odd QCOL alternation preserves per-side binding for ``df.join(df, …)``.
+    """Return whether QCOL alternation can preserve sides in a same-object self-join.
 
-    Safe for simple leaf comparisons and AND/OR chains of them (``df.x == df.x``,
-    ``(df.a == df.b) & (df.b == df.a)``). Unsafe when two QCOL tokens are separated only by
-    arithmetic/function glue — e.g. ``(x + y) = (x + y)`` — because alternation would bind
-    ``L.x + R.y`` instead of ``L.x + L.y`` (silent wrong cardinality / predicate).
+    Reject compound arms because alternation could bind a field to the wrong side.
     """
     matches = list(_QCOL_TOKEN_RE.finditer(join_sql))
     if len(matches) < 2:
@@ -1090,12 +923,7 @@ def _replace_local_qcol_token(
 
 
 def _rewrite_qcol_tokens_local(join_sql: str, frame: DataFrame) -> str:
-    """Rewrite ``__REPARK_QCOL_*`` tokens to quoted engine fields on *one* post-join frame.
-
-    Used by :meth:`DataFrame.filter` for comparison / null-check compounds built from
-    parent-origin Columns (``left.b > 1``, ``left.b.isNotNull()``) where origin bits were
-    cleared by the op but ``join_sql_expr`` still carries side tokens.
-    """
+    """Rewrite QCOL tokens to quoted engine fields on one post-join frame."""
     origin_map = frame._origin_map
     if origin_map is None:
         return join_sql
@@ -1113,23 +941,10 @@ def _rewrite_join_qcol_sql(
     left_alias: str,
     right_alias: str,
 ) -> str:
-    """Rewrite ``__REPARK_QCOL_*`` tokens in a join ON clause to ``"alias"."engine"``.
+    """Rewrite join QCOL tokens to quoted fields on the matching side.
 
-    Tokens are produced by :meth:`Column.join_sql_part` for origin-bound Columns. Plan ids
-    that match neither side (or unknown fields) are left unchanged so DataFusion reports a
-    clear analysis error rather than a silent wrong-side bind.
-
-    H2 same-object self-join (``df.join(df, df.x == df.x)``): both sides share one
-    ``_plan_id``, so plan-id matching alone would bind every token to the left alias and
-    turn the ON into a tautology (cartesian). When ``left is right``, alternate token
-    occurrences left/right for **simple** leaf comparisons so equi self-joins get correct
-    cardinality. Multi-token comparison arms (arithmetic compounds) refuse loud — even/odd
-    alternation would silently mis-bind (``L.x + R.y`` instead of ``L.x + L.y``; critic-octo
-    C1-001). Prefer ``df.alias("l").join(df.alias("r"), …)`` for compounds and when
-    post-join parent-Column origin identity is required (same-object origin map cannot
-    split one plan_id across two sides).
+    Unknown tokens remain unchanged so the engine reports an analysis error.
     """
-    # H2: same Python object → same plan_id on both sides; alternate token sides when safe.
     same_object = left is right
     if same_object and not _same_object_qcol_alternation_safe(join_sql):
         raise AnalysisException(
@@ -1150,12 +965,10 @@ def _rewrite_join_qcol_sql(
 
 def _join_side_engine(frame: DataFrame, field: str) -> str:
     """Resolve a join-ON field name to the engine column on ``frame``."""
-    # Prefer origin map (nested), else display→engine, else bare field.
     if frame._origin_map is not None:
         for (plan_id, origin_field), engine in frame._origin_map.items():
             if origin_field == field and plan_id == frame._plan_id:
                 return engine
-        # Any origin entry for this field on the frame (chained).
         for (_plan_id, origin_field), engine in frame._origin_map.items():
             if origin_field == field:
                 return engine
@@ -1171,7 +984,7 @@ def _join_side_engine(frame: DataFrame, field: str) -> str:
 
 
 class _JoinQcolRewriter:
-    """Rewrite ``__REPARK_QCOL_*`` tokens in a join ON clause; holds the occurrence counter."""
+    """Rewrite join QCOL tokens while tracking their occurrence order."""
 
     def __init__(
         self,
@@ -1196,7 +1009,6 @@ class _JoinQcolRewriter:
         left = self.left
         right = self.right
         if self.same_object and plan_id == left._plan_id:
-            # Occurrence 0,2,… → left alias; 1,3,… → right (equi self-join sugar).
             side_alias = self.left_alias if (self.token_index % 2 == 0) else self.right_alias
             self.token_index += 1
             engine = _join_side_engine(left, field)
@@ -1204,7 +1016,6 @@ class _JoinQcolRewriter:
         if plan_id == left._plan_id or (
             left._origin_map is not None and any(pid == plan_id for pid, _field in left._origin_map)
         ):
-            # Prefer direct left plan_id; also accept nested origins that live on left.
             if plan_id == left._plan_id:
                 engine = _join_side_engine(left, field)
                 return f"{self.left_alias}.{_quote_ident_sql(engine)}"
@@ -1221,20 +1032,15 @@ class _JoinQcolRewriter:
             if right._origin_map is not None and (plan_id, field) in right._origin_map:
                 engine = right._origin_map[(plan_id, field)]
                 return f"{self.right_alias}.{_quote_ident_sql(engine)}"
-        # Unknown plan_id — leave token (should not happen for well-formed conditions).
         return match.group(0)
 
 
 def _sql_ident_bare_name(fragment: str) -> str | None:
-    """Return the bare identifier if ``fragment`` is one double-quoted or bare name.
-
-    Complex SQL expressions (casts, binary ops, function calls) return ``None``.
-    """
+    """Return one quoted or bare identifier; complex SQL expressions return ``None``."""
     text = fragment.strip()
     if not text:
         return None
     if text.startswith('"'):
-        # Single double-quoted identifier (``""`` escapes a quote).
         if not text.endswith('"') or len(text) < 2:
             return None
         inner = text[1:-1]
@@ -1243,10 +1049,8 @@ def _sql_ident_bare_name(fragment: str) -> str | None:
         return inner.replace('""', '"')
     if text.startswith("`") and text.endswith("`") and len(text) >= 2:
         return text[1:-1].replace("``", "`")
-    # Facade-built expressions always use parentheses / CAST / CASE / fn( — leave them.
     if _is_compound_sql_expr(text):
         return None
-    # Bare name or hostile ColumnOrName token (quote later) — treat as identifier text.
     return text
 
 
@@ -1255,7 +1059,6 @@ def _is_compound_sql_expr(text: str) -> bool:
     stripped = text.strip()
     if stripped.startswith("(") or stripped.startswith("CAST(") or stripped.startswith("CASE "):
         return True
-    # function-call style: name(...)
     if len(stripped) > 1 and "(" in stripped:
         head = stripped.split("(", 1)[0].strip()
         if head.isidentifier() or head.lower() in {
@@ -1270,36 +1073,15 @@ def _is_compound_sql_expr(text: str) -> bool:
 
 
 def _sql_embed_expr_fragment(fragment: str) -> str:
-    """Embed a column SQL fragment into generator rewrite SQL.
-
-    Identifier-like fragments (schema fields, ``F.col`` / ColumnOrName, reserved words,
-    mixed-case, hostile names) are always double-quoted so they cannot change SELECT/FROM
-    shape (octo C2-SEC-001/002, C2-Q-002, C2-L-002). Compound expressions pass through.
-    """
+    """Quote identifier-like fragments before embedding them in generator SQL."""
     bare = _sql_ident_bare_name(fragment)
     if bare is not None:
         return _quote_ident_sql(bare)
     return fragment.strip()
 
 
-# ==================================================================================================
-# CEIL-1 (D1 #173): global-agg / partition-transform / pandas-UDF-frame gate helpers
-# moved VERBATIM from ``core.py``'s tail block (move-only; T0b precedent). ``core.py``
-# re-exports all six from its tail bind block, so every import path is unchanged (Q7 freeze).
-# ==================================================================================================
-
-
 def _is_native_pure_global_aggregate(column: Column) -> bool:
-    """True when ``DataFrame.aggregate`` can accept this column as an aggregate arg.
-
-    Bare ``F.sum``/… builders set ``_is_aggregate_function``; ``.alias`` / ``for_select``
-    preserve it. Cast / binary / unary / scalar wrappers clear it and need the SQL
-    global-agg path (metadata only — no display-string sniff; octo C2-Q-002 fallout).
-
-    Compound AF arguments (``sum((X + 1))``) keep nested parentheses in structural
-    ``sql_expr``; the native pure path cannot rebind those case-preserved leaves, so they
-    take the free-SQL global-agg path instead (octo C6-L-002).
-    """
+    """Return whether a column can use the native pure global-aggregate path."""
     if not (column._is_aggregate and column._is_aggregate_function):
         return False
     sql_text = column._sql_expr
@@ -1308,23 +1090,15 @@ def _is_native_pure_global_aggregate(column: Column) -> bool:
     open_paren = sql_text.find("(")
     if open_paren < 0:
         return True
-    # Nested ``(`` after the outer AF call → compound arg; free-SQL path keeps quotes.
     return "(" not in sql_text[open_paren + 1 :]
 
 
 def _parse_count_distinct_simple_names(text: str) -> list[str] | None:
-    """Extract simple leaf names from a ``count(DISTINCT …)`` display/sql fragment.
-
-    Supports bare/quoted simple names (``count(DISTINCT a, b)``, ``count(DISTINCT "A")``)
-    and the multi-col null-if-any pack form
-    ``count(DISTINCT CASE WHEN … THEN struct("a", "b") END)`` (octo C5-L-001). Compounds
-    (``count(DISTINCT (x + 1))``) return ``None`` so rebind leaves them alone.
-    """
+    """Extract simple leaf names from a count-distinct SQL fragment, if possible."""
     stripped = text.strip()
     if not stripped.startswith("count(DISTINCT ") or not stripped.endswith(")"):
         return None
     body = stripped[len("count(DISTINCT ") : -1].strip()
-    # Multi-col SQL pack: only the struct field list carries recoverable simple names.
     case_match = re.fullmatch(
         r"CASE WHEN .+ THEN struct\((.+)\) END",
         body,
@@ -1332,7 +1106,6 @@ def _parse_count_distinct_simple_names(text: str) -> list[str] | None:
     )
     if case_match is not None:
         body = case_match.group(1).strip()
-    # Comma-separated simple identifiers, each optionally double-quoted.
     token = r'"?([A-Za-z_][A-Za-z0-9_]*)"?'
     if re.fullmatch(token, body) is not None:
         match = re.fullmatch(token, body)
@@ -1347,12 +1120,7 @@ def _parse_count_distinct_simple_names(text: str) -> list[str] | None:
 
 
 def _global_agg_sql_parts(column: Column) -> tuple[str, str]:
-    """``(expression_sql, output_name)`` for the SQL global-agg select path.
-
-    Expression SQL comes from structural ``Column._sql_expr`` chains (aggregate builders
-    quote identifiers; ``alias`` does not embed ``AS name`` — octo C3-SEC-001 / C3-002).
-    Output names are always quoted by the caller via ``_quote_ident``.
-    """
+    """Return expression SQL and output name for the global-aggregate select path."""
     if column._projection_name is not None:
         output_name = column._projection_name
     elif column._agg_name is not None:
@@ -1363,13 +1131,7 @@ def _global_agg_sql_parts(column: Column) -> tuple[str, str]:
 
 
 def _pandas_udf_window_frame_bounds(spec: Any) -> tuple[int | None, int | None]:
-    """Resolve rows-frame offsets for windowed GROUPED_AGG (M7).
-
-    Returns ``(start, end)`` relative to the current row: ``None`` = unbounded on that
-    side; ``0`` = current row. When G2 has not set ``_frame_start`` / ``_frame_end`` on
-    the :class:`~repark.window.WindowSpec`, ordered windows default to Spark's
-    ``ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`` → ``(None, 0)``.
-    """
+    """Return rows-frame offsets, using Spark's ordered-window default when unset."""
     from repark.spark.window import _JVM_LONG_MAX, _JVM_LONG_MIN
 
     order_columns = list(getattr(spec, "_order_columns", []) or [])
@@ -1378,10 +1140,7 @@ def _pandas_udf_window_frame_bounds(spec: Any) -> tuple[int | None, int | None]:
     start = getattr(spec, "_frame_start", None)
     end = getattr(spec, "_frame_end", None)
     if start is None and end is None:
-        # G2's WindowSpec always declares the attrs (None until rowsBetween sets ints);
-        # ordered window with no explicit frame keeps the Spark default.
         return (None, 0)
-    # G2 normalizes ±unbounded to JVM long sentinels — map back to None (unbounded side).
     if start is not None:
         start = None if int(start) <= _JVM_LONG_MIN else int(start)
     if end is not None:
@@ -1390,11 +1149,7 @@ def _pandas_udf_window_frame_bounds(spec: Any) -> tuple[int | None, int | None]:
 
 
 def _reject_partition_transform(column: Column) -> None:
-    """Raise if ``column`` is an ``F.years``/``months``/``days``/``hours`` partition transform.
-
-    Those expressions are valid only inside :meth:`DataFrameWriterV2.partitionedBy` (live PySpark
-    4.1.2: ``PARTITION_TRANSFORM_EXPRESSION_NOT_IN_PARTITIONED_BY``).
-    """
+    """Reject partition transforms outside ``DataFrameWriterV2.partitionedBy``."""
     transform = getattr(column, "_partition_transform", None)
     if transform is not None:
         raise AnalysisException(
@@ -1404,12 +1159,7 @@ def _reject_partition_transform(column: Column) -> None:
 
 
 def _reject_aggregate_in_with_column(column: Column, *, surface: str) -> None:
-    """Refuse sticky aggregates on ``withColumn`` / ``withColumns`` (combine octo C3-001).
-
-    Spark rejects aggregate expressions outside ``select`` / ``agg`` / ``groupBy``. Without
-    this gate, ``withColumns`` projects via :meth:`DataFrame.select` and F1 pure-global
-    routing silently collapses every row to one global-agg row.
-    """
+    """Reject aggregate expressions on ``withColumn`` and ``withColumns``."""
     if bool(getattr(column, "_is_aggregate", False)):
         raise AnalysisException(
             f"[INVALID_USAGE_OF_AGGREGATE] Aggregate expressions are not allowed in "

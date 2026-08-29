@@ -1,16 +1,7 @@
-//! G7 — float aggregation determinism pins (`f64::to_bits`) for the Spark SQL door.
+//! Pins Spark-door float aggregation bits at target partition counts 1, 2, and 8.
 //!
-//! Fixture: a catastrophic-cancellation vector whose sum accuracy depends on accumulation
-//! order. Pins `sum(f64)` / `avg(f64)` at three `target_partitions` counts (1, 2, 8).
-//! Claim under test: same input + same config → same bits (run-to-run). Cross-count equality
-//! does **not** hold for this fixture (p=1/2 → 3.75; p=8 → 2.25) — each count is pinned
-//! independently and the ledger discloses the spread. Never fudge a bit pattern.
-//!
-//! Engine knob: DataFusion `target_partitions` via `SessionConfig::with_target_partitions`
-//! (builder `target_partitions` / conf `datafusion.execution.target_partitions`). Input
-//! `MemTable` partitions match the count so partial aggregation genuinely fans out.
-//!
-//! Out of scope: fixing aggregation order; the registry file; Python corpus (separate file).
+//! The cancellation fixture exposes accumulation-order drift. Each configured count is pinned
+//! independently with `f64::to_bits`.
 
 use super::super::*;
 use super::common::*;

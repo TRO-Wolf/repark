@@ -1,9 +1,5 @@
 //! Model: Grok 4.6 xHigh
-//!
-//! ANSI-door twins for V3E-4: branch/tag DDL and `FOR VERSION AS OF` over a
-//! Spark-written partitioned v3 DV fixture after an engine append. This door
-//! refuses `CALL` (expire / rollback / orphan stay Spark + facade).
-//!
+//! ANSI-door twins for V3E-4: branch/tag DDL and `FOR VERSION AS OF` over a v3 fixture.
 //! pins: v3e-4-refs-time-travel/C-002, C-005, C-006, C-007, C-013, C-014
 
 use std::collections::HashSet;

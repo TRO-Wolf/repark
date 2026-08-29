@@ -1,34 +1,8 @@
-//! The `ReparkSession` equivalent.
+//! A session-centered DataFusion context with catalog, reader, temp-view, and SQL-door APIs.
 //!
-//! Constructs the DataFusion [`SessionContext`] (memory pool, batch size, partitions, the write
-//! knobs as `ConfigExtension`s), runs the [`SessionExtension`] hooks at v1's inline registration
-//! positions, holds the iceberg `Catalog` handles
-//! ([`CatalogRegistry`]), and exposes the near-drop-in PySpark entrypoints: `sql`,
-//! `register_iceberg_catalog` (+ the `register_memory_catalog` convenience), `create_namespace`,
-//! `create_or_replace_temp_view` (batches) / `create_or_replace_temp_view_from` (a plan),
-//! `drop_temp_view`, `table_exists`, `read_parquet`, `read_csv`, `read_json`.
-//! All execution routes through the [`ExecutionBackend`] seam — today a local execution-context
-//! holder over in-process DataFusion. The trait boundary is the commitment (it is what would let a
-//! future distributed coordinator be introduced without reworking the write path); its surface is
-//! deliberately minimal and would itself have to widen first, so the seam is not proof that
-//! distribution needs no wider change. Distribution is deferred by decision
-//! (`docs/adr/0004-server-prep-disciplines.md`); the honest framing is in `ARCHITECTURE.md`,
-//! "`ExecutionBackend` — what the seam is, honestly".
-//!
-//! This type deliberately accretes session policy (runtime construction, catalog registration,
-//! object-store wiring, temp views, query routing). A principled internal decomposition into named
-//! services is **deferred and driver-gated**, not scheduled —
-//! `docs/adr/0005-defer-session-decomposition.md`.
-//!
-//! `sql` routes through the session-default [`SqlDialect`] (phase-cut inversion, design §3 —
-//! plain DataFusion in phase 1; the Spark door's statement router returns as a phase-2 dialect
-//! impl on the same seam). Catalogs configure
-//! two ways: directly (`register_iceberg_catalog` with a `repark_iceberg::catalog` builder —
-//! memory, Glue, S3 Tables) or through Spark-style `spark.sql.catalog.<name>.*` config on the
-//! builder ([`crate::parse_catalog_specs`] parses;
-//! [`ReparkSession::register_configured_catalogs`] registers).
-//! `read_parquet` routes `s3://`/`s3a://` paths through the [`crate::object_store_s3`]
-//! registration, against the FINALIZE-resolved AWS SDK config (E-2).
+//! `build()` performs synchronous validation and configuration; catalog registration finalizes
+//! asynchronously. Execution uses the local [`ExecutionBackend`] seam, while SQL uses the
+//! configured [`SqlDialect`]. AWS resolution occurs only during explicit finalization.
 
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex, OnceLock, PoisonError, RwLock};
@@ -48,9 +22,7 @@ use crate::extension::{NoopSessionExtension, SessionBuildConf, SessionExtension}
 use crate::session_time_zone::{SessionTimeZone, resolve_session_time_zone};
 use crate::temp_view::TempViewHome;
 use crate::time_travel::{self, TimeTravelSpec};
-// v1's two test-only re-exports, re-homed with the test module (they rode the v1 crate root,
-// which the module split made this file's parent — `use super::*;` in `session/tests.rs`
-// resolves through here).
+// Test-only re-exports follow the production imports.
 #[cfg(test)]
 pub(crate) use crate::error_map::{EngineErrorKind, classify_datafusion_error};
 #[cfg(test)]
@@ -144,35 +116,21 @@ impl TimeTravelOpts {
 /// The builder-config prefix that reaches DataFusion's own [`SessionConfig`] options
 /// (`datafusion.catalog.information_schema`, `datafusion.execution.batch_size`, …).
 ///
-/// Phase-2 P2G R2 fix: before this, the builder's `.config(k, v)` map was repark/spark-shaped only
-/// (consumed by [`crate::parse_catalog_specs`], the concurrency/scan readers, the S3-region
-/// resolver and the extension `configure` hook) and NOTHING in it ever reached DataFusion — so
-/// `datafusion.catalog.information_schema = true` was silently inert and `SHOW TABLES` /
-/// `DESCRIBE` / `information_schema.*` were dead in BOTH SQL doors (design §2 Q8; the P2F ledger's
-/// filed core gap). This is config plumbing only: the [`SqlDialect`] / [`SessionExtension`] seams
-/// are unchanged (design §3 seam freeze).
+/// Builder `datafusion.*` keys reach DataFusion after typed setters and core defaults, so explicit
+/// values win. Unknown or invalid keys fail as [`Error::Config`] instead of becoming inert.
 pub const DATAFUSION_CONFIG_PREFIX: &str = "datafusion.";
 
 /// Session default for DataFusion `batch_size` (rows per Arrow batch).
 ///
-/// 65536, not DataFusion's 8192: the 2026-08-16 release-build baseline measured windowed-TA
-/// single-thread cost dropping 229 → 65 ns/row across 8192 → 65536 on a persisted 2 M-row
-/// table — the whole gap to C-extension parity on one core. An explicit
-/// [`ReparkSessionBuilder::batch_size`], a `datafusion.execution.batch_size` builder conf,
-/// or a runtime `SET` all still win over this default.
+/// 65536 rows, rather than DataFusion's 8192. Explicit builder, DataFusion, and runtime settings
+/// override this default.
 pub const DEFAULT_BATCH_SIZE: usize = 65536;
 
 /// ===========================================================================================
 /// Apply every `datafusion.*` key from the builder config map onto `config`.
 ///
-/// Keys without the [`DATAFUSION_CONFIG_PREFIX`] are left alone (they belong to the catalog
-/// parser, the write-knob readers or the extension hook). Applied in sorted key order so a build
-/// is deterministic, and AFTER the typed setters + core defaults so an explicit conf wins over
-/// both — including the two DF-54.1 guards (scalar-subquery physical path, leaf-expression
-/// pushdown), which a user can knowingly re-enable.
-///
-/// An unknown or unparsable `datafusion.*` key fails loud ([`Error::Config`]) rather than being
-/// dropped: a silently-inert conf key is exactly the defect this function exists to fix.
+/// Keys are applied in sorted order after typed setters and core defaults. Unknown or unparsable
+/// keys fail as [`Error::Config`]; non-DataFusion keys remain for catalog and extension handling.
 /// ===========================================================================================
 fn apply_datafusion_config_keys(
     config: &mut SessionConfig,
@@ -204,34 +162,18 @@ fn apply_datafusion_config_keys(
 /// chain (no IMDS probe for offline sessions).
 pub const AWS_ENABLE_CONFIG_KEY: &str = "repark.aws.enable";
 
-/// ===========================================================================================
-/// Builder for a [`ReparkSession`] — the PySpark `SparkSession.builder` analogue.
-///
-/// Every knob is optional. When `memory_limit_*` is **unset**, [`build`](Self::build) installs a
-/// RAM-relative [`datafusion::execution::memory_pool::FairSpillPool`]
-/// (`clamp(0.6 × cgroup-or-MemTotal, 1 MiB, 8 GiB)`) that bounds **spillable operators only**
-/// (sort / hash-aggregate / join reservations that ask the pool — C1-Q-002).
-/// `sort_spill_reservation_bytes × target_partitions` is a non-spillable floor. Expression
-/// evaluation allocates Arrow buffers outside the pool, so RSS can still exceed the budget (or
-/// the process can abort on allocation failure) for large `array_repeat` / `repeat` / `sequence`
-/// / `collect_list` results. Plan-time cardinality ceilings (`repark.sql.maxArrayElements`,
-/// default `10_000_000`) convert planner-visible expansion bombs into catchable analysis errors;
-/// they do **not** make the pool bound expression allocs. Runtime
-/// `SET datafusion.runtime.memory_limit` (or the same builder key) swaps a **new**
-/// `FairSpillPool` of the requested size — DataFusion 54.1 has no in-place resize, so
-/// in-flight reservations stay on the old pool. Both knobs are the same pool type (one
-/// truth, not two knobs). Dual-set at build refuses. `n = 0` opts out (unbounded pool).
-/// Other unset knobs use DataFusion's defaults. See `session/spill.rs`.
-/// ===========================================================================================
+/// Builder for a [`ReparkSession`] with optional memory, batch, partition, dialect, extension,
+/// and key-value configuration. An unset memory limit installs a RAM-relative
+/// [`datafusion::execution::memory_pool::FairSpillPool`]; runtime limits swap a new pool because
+/// DataFusion 54.1 cannot resize one in place. Zero opts out, and dual memory settings refuse.
 #[derive(Clone, Default)]
 pub struct ReparkSessionBuilder {
     memory_limit_bytes: Option<usize>,
     batch_size: Option<usize>,
     target_partitions: Option<usize>,
-    /// The session-default [`SqlDialect`] (phase-cut seam slot). `None` → [`DataFusionDialect`].
+    /// The session-default [`SqlDialect`]. `None` → [`DataFusionDialect`].
     sql_dialect: Option<Arc<dyn SqlDialect>>,
-    /// The build-time [`SessionExtension`] (phase-cut seam slot). `None` → no-op hooks (the
-    /// pure-DataFusion baseline).
+    /// The build-time [`SessionExtension`]. `None` → no-op hooks.
     extension: Option<Arc<dyn SessionExtension>>,
     /// The full Spark-style `.config(key, value)` map. Engine knobs above are set through the typed
     /// setters; this map additionally drives `spark.sql.catalog.<name>.*` catalog registration at
@@ -255,104 +197,67 @@ impl std::fmt::Debug for ReparkSessionBuilder {
 }
 
 impl ReparkSessionBuilder {
-    /// Install the session-default [`SqlDialect`] (phase-cut seam, design §3): every
-    /// [`ReparkSession::sql`] call routes through it. Unset → [`DataFusionDialect`] (plain
-    /// `SessionContext::sql`). A door with its own statement router installs its dialect here;
-    /// [`ReparkSession::sql_with`] runs a one-off dialect without changing the session default.
+    /// Install the session-default [`SqlDialect`]. Every [`ReparkSession::sql`] call routes
+    /// through it; [`ReparkSession::sql_with`] runs a one-off dialect.
     #[must_use]
     pub fn with_sql_dialect(mut self, dialect: Arc<dyn SqlDialect>) -> Self {
         self.sql_dialect = Some(dialect);
         self
     }
 
-    /// Install the build-time [`SessionExtension`] (phase-cut seam, design §3): `build()` runs
-    /// its two hooks at v1's inline registration positions — `configure` on the `SessionConfig`
-    /// before the runtime/context are assembled, `register` on the freshly built
-    /// `SessionContext`. Unset → the defaulted no-op hooks. Phase-2 repark-spark ships one
-    /// extension holding exactly what v1 inlined (function registry + analyzer rules + TA UDFs
-    /// + cardinality config).
+    /// Install the build-time [`SessionExtension`]. `build()` calls `configure` before context
+    /// construction and `register` after it; unset uses no-op hooks.
     #[must_use]
     pub fn with_extension(mut self, extension: Arc<dyn SessionExtension>) -> Self {
         self.extension = Some(extension);
         self
     }
 
-    /// Record a single Spark-style `.config(key, value)` pair (PySpark `.config`). Catalog keys
-    /// (`spark.sql.catalog.<name>.*`) are consumed at [`build`](Self::build); keys prefixed
-    /// [`DATAFUSION_CONFIG_PREFIX`] are applied to the DataFusion [`SessionConfig`] (an unknown
-    /// one fails loud — see `apply_datafusion_config_keys`); other keys are kept for the
-    /// extension hook and otherwise ignored, matching PySpark's tolerance of unknown keys.
+    /// Record one Spark-style configuration pair. Catalog keys are consumed at build; DataFusion
+    /// keys apply to [`SessionConfig`]; other keys remain for the extension hook.
     #[must_use]
     pub fn config(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
         self.config.insert(key.into(), value.into());
         self
     }
 
-    /// Record a whole config map at once (the facade collects `.config(...)` calls into one dict).
+    /// Record a whole configuration map at once.
     #[must_use]
     pub fn configs(mut self, config: HashMap<String, String>) -> Self {
         self.config.extend(config);
         self
     }
 
-    /// Cap engine memory at `gb` gigabytes via a `FairSpillPool` (spills instead of running out).
-    ///
-    /// Overrides the RAM-relative default (cap 8 GiB) applied when memory is left unset. Pass `0` (via
-    /// [`Self::memory_limit_bytes`]) to opt out of a bounded pool entirely.
-    ///
-    /// Whole-GB budgets can never trip the `MIN_MEMORY_LIMIT_BYTES` floor: the smallest non-zero
-    /// `gb` is `1` → 1 GiB, and the conversion `saturating_mul`s (it cannot wrap a huge `gb` back
-    /// down into the refused `(0, 1 MiB)` gap). Pinned by
-    /// `memory_limit_gb_never_lands_below_the_floor`; the gap is reachable only through
-    /// [`Self::memory_limit_bytes`] (audit SAF-007).
+    /// Cap engine memory at `gb` gigabytes with a `FairSpillPool`. Zero opts out of a bounded pool.
     #[must_use]
     pub fn memory_limit_gb(mut self, gb: usize) -> Self {
         self.memory_limit_bytes = Some(gb.saturating_mul(BYTES_PER_GB));
         self
     }
 
-    /// Cap engine memory at an explicit byte budget.
-    ///
-    /// Overrides the RAM-relative default (cap 8 GiB). Pass `0` to opt out and keep DataFusion's unbounded
-    /// memory pool (no `FairSpillPool`).
+    /// Cap engine memory at an explicit byte budget. Zero keeps DataFusion's unbounded pool.
     #[must_use]
     pub fn memory_limit_bytes(mut self, bytes: usize) -> Self {
         self.memory_limit_bytes = Some(bytes);
         self
     }
 
-    /// Rows per Arrow batch (DataFusion `batch_size`). Larger = fewer, bigger batches.
-    ///
-    /// Unset defaults to [`DEFAULT_BATCH_SIZE`] (65536), not DataFusion's 8192.
-    ///
-    /// Must be `>= 1` at [`Self::build`] — `0` is a config error (audit SAF-006). This is the
-    /// ENGINE knob, not the Spark key: Spark documents
-    /// `spark.sql.execution.arrow.maxRecordsPerBatch <= 0` as "no limit", and the Python facade
-    /// translates that sentinel to "unset" (with a disclosure warning) before it reaches here —
-    /// DataFusion has no unbounded-batch mode, so `0` stays a config error at this layer.
+    /// Set rows per Arrow batch. Zero is rejected at [`Self::build`].
     #[must_use]
     pub fn batch_size(mut self, rows: usize) -> Self {
         self.batch_size = Some(rows);
         self
     }
 
-    /// Degree of intra-query parallelism (DataFusion `target_partitions`).
-    ///
-    /// Must be `>= 1` at [`Self::build`] — `0` is a config error (audit SAF-006).
+    /// Set the degree of intra-query parallelism. Zero is rejected at [`Self::build`].
     #[must_use]
     pub fn target_partitions(mut self, partitions: usize) -> Self {
         self.target_partitions = Some(partitions);
         self
     }
 
-    /// Build the session: configure the runtime + memory pool and register the Spark functions.
-    ///
-    /// The `spark.sql.catalog.<name>.*` config is parsed into [`CatalogSpec`]s here (fail-loud on a
-    /// misconfiguration — synchronously, so a bad catalog block surfaces at build time) and stored
-    /// on the session; the catalogs themselves are registered by the async
-    /// [`ReparkSession::register_configured_catalogs`] (catalog registration is async — the PyO3
-    /// constructor `block_on`s it). Existing sync callers that pass no catalog config get an empty
-    /// spec list and never need the async step, so the sync `build()` contract is preserved.
+    /// Build the session synchronously. Catalog specifications are parsed and stored; actual
+    /// catalog registration occurs in [`ReparkSession::register_configured_catalogs`].
     ///
     /// # Errors
     /// Returns [`Error::DataFusion`] if the DataFusion runtime fails to build, or [`Error::Config`]
@@ -406,8 +311,7 @@ impl ReparkSessionBuilder {
         let scan_concurrency =
             repark_iceberg::write::scan_concurrency_from_config_map(&self.config)
                 .map_err(|error| Error::Config(error.to_string()))?;
-        // The build-time extension (phase-cut inversion, design §3): its two hooks replace v1's
-        // inline phase-2 registrations at the SAME positions in this construction order.
+        // The extension hooks run at fixed positions in this construction order.
         let ext: Arc<dyn SessionExtension> = self
             .extension
             .clone()
@@ -420,23 +324,15 @@ impl ReparkSessionBuilder {
             file_scoped_rewrite,
         );
         config = repark_iceberg::write::with_scan_concurrency(config, scan_concurrency);
-        // Unset falls to the repark default (65536, perf-funded), not DataFusion's 8192; the
-        // conf-key pass below still overrides it, so precedence stays typed setter > conf > default.
+        // Typed settings use defaults unless an explicit configuration key overrides them below.
         config = config.with_batch_size(self.batch_size.unwrap_or(DEFAULT_BATCH_SIZE));
         if let Some(partitions) = self.target_partitions {
             config = config.with_target_partitions(partitions);
         }
         config = repark_iceberg::write::with_write_concurrency(config, write_concurrency);
-        // P2G R2: the builder's `datafusion.*` keys reach `SessionConfig` here — after the typed
-        // setters and the core defaults (so an explicit conf wins), before the extension hook (so
-        // an extension still sees the final DataFusion options it is configuring against). This
-        // is what makes `datafusion.catalog.information_schema = true` real, and with it Q8's
-        // delegated `SHOW TABLES` / `DESCRIBE` / `information_schema.*` in BOTH doors.
+        // Explicit DataFusion keys override typed setters and defaults before extension configure.
         apply_datafusion_config_keys(&mut config, &self.config)?;
-        // Extension hook 1 of 2 — CONFIGURE, at v1's inline position (after the engine knobs are
-        // installed as ConfigExtensions, before the RuntimeEnv is assembled). v1 inlined the
-        // cardinality/`repark.sql.*` `ConfigExtension` here (r24 SB1); the phase-2 Spark
-        // extension re-homes it onto this hook, parsing the same builder config map.
+        // Configure runs after engine options and before runtime assembly.
         config = ext
             .configure(
                 SessionBuildConf {
@@ -462,13 +358,7 @@ impl ReparkSessionBuilder {
         // NOT `SessionContext::new_with_config_rt`: DF-54.1 regression guard 2 replaces ONE
         // optimizer rule in the otherwise-stock state (`df_guards.rs`).
         let context = context_with_df_54_1_rule_guards(config, runtime);
-        // R6-1: the temp-view home is captured ONCE, here, from the FINAL build-time config —
-        // never re-read at registration time. `SET datafusion.catalog.default_catalog = <iceberg>`
-        // must not be able to move where `createOrReplaceTempView` writes.
-        // The name alone is NOT enough: `default_catalog` is also a build-time key, so the home
-        // name can be the name a catalog is registered under later — snapshot the session-local
-        // schema PROVIDER too and re-check its identity at every temp-view call
-        // (`temp_view::assert_home_intact`; round-6 critic S1, MEASURED).
+        // Capture the final build-time home and its provider identity once; calls re-check it.
         let temp_view_home = {
             let options = context.copied_config();
             let catalog_options = &options.options().catalog;
@@ -483,10 +373,7 @@ impl ReparkSessionBuilder {
                 provider,
             }
         };
-        // Extension hook 2 of 2 — REGISTER, at v1's inline position (immediately after context
-        // creation). v1 inlined the Spark function registry, the expression-semantics analyzer
-        // rules (appended after DataFusion's built-ins so they see type-coerced plans), and the
-        // TA window UDFs here; the phase-2 Spark extension re-homes all three onto this hook.
+        // Register runs immediately after context creation.
         ext.register(&context).map_err(engine_err)?;
 
         Ok(ReparkSession {
@@ -517,7 +404,7 @@ impl ReparkSessionBuilder {
 pub struct ReparkSession {
     backend: Arc<dyn ExecutionBackend>,
     /// The session-default [`SqlDialect`] every [`sql`](Self::sql) call routes through
-    /// (phase-cut inversion, design §3). [`DataFusionDialect`] unless the builder installed one.
+    /// [`DataFusionDialect`] unless the builder installed another dialect.
     dialect: Arc<dyn SqlDialect>,
     /// iceberg `Catalog` handles by registered name. Shared (the session is cheaply cloned) and
     /// interior-mutable so catalogs can be registered after construction. Read as a cheap clone per
@@ -525,7 +412,7 @@ pub struct ReparkSession {
     catalogs: Arc<RwLock<CatalogRegistry>>,
     /// Names of registered postgres read catalogs (`SessionContext` only — not in `CatalogRegistry`).
     /// Threaded into the [`SqlDialect`] seam's `EngineContext::read_only` for P11 DML
-    /// direction-notes (v1: the positional `execute_with_read_only` argument).
+    /// direction-notes for DML routing.
     postgres_catalog_names: Arc<RwLock<HashSet<String>>>,
     /// The catalogs configured via `spark.sql.catalog.<name>.*`, parsed at build time and registered
     /// (async) by [`register_configured_catalogs`](Self::register_configured_catalogs). Shared
@@ -577,44 +464,22 @@ impl ReparkSession {
         Self::builder().build()
     }
 
-    /// The DataFusion context this session executes against — a **raw, UNGUARDED escape hatch**.
-    ///
-    /// **A KNOWN HATCH, not an oversight (R6-2).** Everything reached through the returned
-    /// [`SessionContext`] — above all `context().sql(..)` — bypasses **every** product guard,
-    /// because the guards live in repark's layer above DataFusion, not inside it: the
-    /// pre-execute belt ([`crate::pre_execute::PreExecute`]) and with it the SE-1 `tightenNulls`
-    /// DDL-sink refuse, the door dialects and their routers (Spark AST rewrites, ANSI CTAS
-    /// derivation, `refuse_local_filesystem_plan`, the eager-command fold), and the temp-view
-    /// choke point ([`crate::temp_view`]). Measured consequence:
-    /// `context().sql("CREATE VIEW <iceberg>.ns.v AS SELECT * FROM <tightened> LIMIT 0")`
-    /// **persists a `required: true` Iceberg table** — pinned by
-    /// `context_sql_is_a_known_unguarded_hatch` in `tests/temp_view_doors.rs`.
-    ///
-    /// Closing it would mean wrapping DataFusion's `SessionContext`; that is not a guard we
-    /// have. **Embedders that call this own that risk** — route anything that should be guarded
-    /// through [`ReparkSession::sql`] / [`ReparkSession::sql_with`] instead.
+    /// Return the raw DataFusion context. This escape hatch bypasses product guards, including
+    /// pre-execute and temp-view checks; callers needing those checks must use [`Self::sql`].
     #[must_use]
     pub fn context(&self) -> &SessionContext {
         self.backend.session_context()
     }
 
     /// ===========================================================================================
-    /// The session timezone this session was built with (`spark.sql.session.timeZone`).
-    ///
-    /// Resolved and validated at [`ReparkSessionBuilder::build`], immutable for the session's
-    /// life. Read it wherever a Spark-semantics zone is needed; do **not** re-read the host
-    /// environment. Timestamp extraction does not consume it yet (H-1a split B).
+    /// Return the validated session timezone resolved during [`ReparkSessionBuilder::build`].
     /// ===========================================================================================
     #[must_use]
     pub fn session_time_zone(&self) -> &SessionTimeZone {
         &self.session_time_zone
     }
 
-    /// Run a SQL string and return the resulting [`DataFrame`] (PySpark `spark.sql`).
-    ///
-    /// Routes through the session-default [`SqlDialect`] (the phase-cut inversion, design §3):
-    /// [`DataFusionDialect`] unless the builder installed one. The phase-2 Spark door's dialect
-    /// restores v1's statement interception (CTAS, MERGE INTO, ALTER, …) on this same seam.
+    /// Run a SQL string through the session-default [`SqlDialect`].
     ///
     /// # Errors
     /// Returns the classified [`Error`]: [`Error::Parse`] on a syntax error, [`Error::Analysis`]
@@ -626,9 +491,7 @@ impl ReparkSession {
         self.sql_with(&dialect, query).await
     }
 
-    /// Run a SQL string under an EXPLICIT dialect, leaving the session default untouched — two
-    /// doors sharing one session (ADR-0002 "one test row per door"). The dialect receives the
-    /// same per-call [`EngineContext`] snapshot `sql` builds.
+    /// Run a SQL string under an explicit dialect without changing the session default.
     ///
     /// # Errors
     /// Identical classification to [`Self::sql`] — the [`engine_err`] fold is session-side, so
@@ -656,12 +519,8 @@ impl ReparkSession {
             .map_err(engine_err)
     }
 
-    /// Register an iceberg [`Catalog`] under `name`: both as a DataFusion `CatalogProvider` (so
-    /// `name.namespace.table` resolves in queries) and in the session's registry (so the write path
-    /// can reach the iceberg handle). Create the catalog's namespaces before querying them.
-    ///
-    /// Re-registering the same `name` is rejected (same rule as [`Self::register_memory_catalog`])
-    /// so an earlier handle is never silently orphaned.
+    /// Register an Iceberg [`Catalog`] as both a DataFusion provider and session write handle.
+    /// Duplicate names are rejected so existing handles are never orphaned.
     ///
     /// # Errors
     /// Returns [`Error::DataFusion`] if the name is already registered or the catalog's
@@ -711,11 +570,8 @@ impl ReparkSession {
         Ok(())
     }
 
-    /// Register every catalog configured through `spark.sql.catalog.<name>.*` (parsed at build
-    /// time). This is the async completion of `build()` — the PyO3 constructor `block_on`s it, and
-    /// Rust callers that supply catalog config call it once after `build()`. Each spec is dispatched
-    /// to the matching `repark-catalog` builder: `memory` → the AWS-free local catalog, `glue` /
-    /// `s3tables` → the AWS product surfaces. It is a no-op when no catalog config was supplied.
+    /// Register catalog specifications parsed during `build()`. This is the asynchronous completion
+    /// step and is a no-op when no catalog configuration was supplied.
     ///
     /// # Errors
     /// Returns [`Error::DataFusion`] if a configured catalog cannot be built or registered (e.g. a
@@ -731,10 +587,8 @@ impl ReparkSession {
         Ok(())
     }
 
-    /// E-2: resolve + store the session-held AWS SDK config when `signaled` (idempotent — the
-    /// `OnceLock` keeps the first resolution). Catalog credentials are NOT this config: the
-    /// fork's Glue / S3 Tables builders resolve their own chain at registration, per-session
-    /// (v1 behavior, unchanged). This config serves the `s3://`/`s3a://` PATH-read stores.
+    /// Resolve and store the session AWS SDK config when signaled. The first `OnceLock` value wins;
+    /// catalog builders retain their own credential resolution.
     async fn resolve_aws_sdk_config_if(&self, signaled: bool) {
         if signaled && self.aws_sdk_config.get().is_none() {
             let sdk_config = aws_config::defaults(BehaviorVersion::latest()).load().await;
@@ -751,13 +605,8 @@ impl ReparkSession {
     }
 
     /// ===========================================================================================
-    /// Register catalogs from a LATE `spark.sql.catalog.*` config map onto the LIVE session —
-    /// the facade's `getOrCreate` reuse path (dogfood finding R-GETORCREATE). PySpark parity:
-    /// Spark instantiates catalogs lazily per name, so a catalog configured by a LATER builder
-    /// works against the already-active session; an already-registered name keeps its existing
-    /// registration (reported to the caller in `skipped`, never silently re-registered — the
-    /// live-Spark analogue is an already-instantiated catalog ignoring changed conf).
-    /// Returns `(added, skipped_existing)` catalog-name lists, each sorted for determinism.
+    /// Register catalogs from a late configuration map onto the live session.
+    /// Existing names are skipped; returned added and skipped lists are sorted.
     /// ===========================================================================================
     ///
     /// # Errors
@@ -769,10 +618,7 @@ impl ReparkSession {
         config: &HashMap<String, String>,
     ) -> Result<(Vec<String>, Vec<String>)> {
         let specs = catalog_config::parse_catalog_specs(config)?;
-        // E-2: the late config map can introduce the session's FIRST AWS signal (a late Glue /
-        // S3 Tables catalog on a previously offline session) — the same three-class signal set
-        // as `build()` (AWS-backed catalog spec, S3-region conf in either spelling, explicit
-        // opt-in), resolved conditionally here and still never at path-read time.
+        // Late configuration can introduce the first AWS signal for an offline session.
         let late_aws_signaled = specs
             .iter()
             .any(|spec| matches!(spec.kind, CatalogKind::Glue | CatalogKind::S3Tables))
@@ -792,7 +638,7 @@ impl ReparkSession {
                 .unwrap_or_else(std::sync::PoisonError::into_inner)
                 .contains(&spec.name);
             if already_iceberg || already_postgres {
-                // Keep existing registration (ice or postgres); never silent re-register.
+                // Keep existing registrations; never replace them silently.
                 skipped.push(spec.name.clone());
             } else {
                 self.register_catalog_spec(spec).await?;
@@ -835,9 +681,6 @@ impl ReparkSession {
                 )
                 .await
             }
-            // Phase cut (design §2): the spec still PARSES (config fidelity — a v1 config map
-            // builds unchanged), but registration fails loud until the postgres connector crate
-            // (repark-connect) lands. The v1 registration body re-homes with that crate.
             CatalogKind::Postgres => Err(Error::NotImplemented(format!(
                 "postgres catalog '{}' registration is not available in the phase-1 engine core \
                  — it returns with the postgres connector crate (the spec parsed; nothing was \
@@ -854,20 +697,9 @@ impl ReparkSession {
             .clone()
     }
 
-    /// Create a namespace in a registered catalog (PySpark `CREATE NAMESPACE` / `CREATE DATABASE`),
-    /// then re-register the provider so the new namespace is visible to queries.
-    ///
-    /// A `location` property is mirrored onto `location_uri` before the create
-    /// (`repark_iceberg::catalog::mirror_namespace_location_keys` — unidirectional, never
-    /// overwriting an explicitly-set key), so the canonical Glue `locationUri` field is set
-    /// whichever property
-    /// key the catalog implementation maps (the fork maps `location_uri`; Java's `GlueCatalog`
-    /// maps `location` — audit BUG-001 / U2). This is the chokepoint for the PyO3
-    /// `create_namespace` and the facade `spark.create_namespace(..., location=…)` paths.
-    ///
-    /// Re-creating an existing namespace is idempotent when the request carries no location
-    /// or the resolved location matches. A contradictory explicit location fails loud
-    /// ([`crate::refuse_contradictory_namespace_location`]) — G-6 Q1.
+    /// Create a namespace and refresh its DataFusion provider. Location keys are mirrored before
+    /// creation; matching or absent locations on existing namespaces are idempotent, while a
+    /// contradiction fails loudly.
     ///
     /// # Errors
     /// Returns [`Error::DataFusion`] if `catalog` is unknown; [`Error::Analysis`] if the
@@ -925,12 +757,8 @@ impl ReparkSession {
     // === r21 T6: catalog-staleness ============================================================
 
     /// ===========================================================================================
-    /// Live table names in `namespace` from the Iceberg catalog handle (list-on-access).
-    ///
-    /// Does **not** consult the DataFusion `IcebergCatalogProvider` name snapshot. Used by the
-    /// Spark Catalog facade `listTables` so out-of-band creates/drops are visible without a
-    /// provider rebuild (T6 / CQ-008 / BUG-007). Non-Iceberg catalogs (postgres) are not in the
-    /// registry and fail with unknown-catalog.
+    /// Return live table names from an Iceberg catalog handle, without consulting its DataFusion
+    /// provider snapshot.
     /// ===========================================================================================
     ///
     /// # Errors
@@ -947,11 +775,7 @@ impl ReparkSession {
     }
 
     /// ===========================================================================================
-    /// Rebuild the DataFusion catalog provider for `catalog` from the live Iceberg handle.
-    ///
-    /// Product SQL already re-registers after owned DDL. Call this after out-of-band mutations
-    /// when free SQL / `information_schema` must see the new name directory. The facade
-    /// `listTables` path does **not** require this (it lists live).
+    /// Rebuild the DataFusion provider for a live Iceberg handle after an out-of-band mutation.
     /// ===========================================================================================
     ///
     /// # Errors
@@ -1028,24 +852,13 @@ impl ReparkSession {
     }
 
     /// ===========================================================================================
-    /// Session temp-view names from the default catalog/schema (no `information_schema` scan).
-    ///
-    /// DataFusion's `information_schema.tables` walks **every** catalog and calls
-    /// `SchemaProvider::table_type` → `table()` load for each name. After an out-of-band drop of a
-    /// DF-known Iceberg table, that load fails (`TableNotFound`) and aborts the whole query — so
-    /// facade `listTables` must **not** use `information_schema` for temps (T6 F-T6-PHANTOM-A).
-    /// `SchemaProvider::table_names` is a sync directory walk and never loads table metadata.
+    /// Return session temp-view names from the pinned home without loading table metadata.
     /// ===========================================================================================
     ///
     /// # Errors
-    /// [`Error::Analysis`] when this session has no session-local temp-view home left (a catalog
-    /// was registered over the build-time default catalog — round-6 critic S1); otherwise
-    /// infallible.
+    /// [`Error::Analysis`] when the build-time home provider was replaced; otherwise infallible.
     pub fn list_temp_view_names(&self) -> Result<Vec<String>> {
-        // R6-1: list the pinned temp-view home, not the live default catalog — after
-        // `SET datafusion.catalog.default_catalog = ice` the old read listed the Iceberg
-        // catalog's tables as "temp views". S1: and refuse rather than list a CATALOG's tables
-        // as temp views when a catalog took the home name over.
+        // List the build-time home and refuse if its provider identity changed.
         crate::temp_view::assert_home_intact(self.context(), &self.temp_view_home)?;
         let Some(schema) = self.temp_view_home.provider.as_ref() else {
             return Ok(Vec::new());
@@ -1054,11 +867,7 @@ impl ReparkSession {
     }
 
     /// ===========================================================================================
-    /// DataFusion provider name directory for `catalog.schema` (no table load / no `info_schema`).
-    ///
-    /// Used by facade `listTables` for **non-Iceberg** permanent names so listing never materializes
-    /// phantom Iceberg tables in other catalogs (same F-T6-PHANTOM-A root cause). For Iceberg,
-    /// prefer [`Self::list_iceberg_table_names`] (live Catalog API); this path is snapshot-stale.
+    /// Return DataFusion provider names for a catalog schema without loading tables.
     /// ===========================================================================================
     ///
     /// # Errors
@@ -1091,12 +900,7 @@ impl ReparkSession {
             Error::DataFusion(format!("tableExists: invalid table identifier: {message}"))
         })?;
         match parts.as_slice() {
-            // R6-1: the one-part arm asks the pinned temp-view home, not the live default
-            // catalog — so `tableExists("v")` answers about the same registration
-            // `createOrReplaceTempView("v")` wrote, and stays FALSE for a name that was refused.
-            // The segment is ALREADY parsed (quotes stripped, case unfolded), so it goes through
-            // the segment overload rather than being re-parsed — re-parsing turned the allowed
-            // quoted spelling `"a.b"` into a "qualified" refusal (round-6 critic S3).
+            // The one-part arm uses the pinned home and the already-parsed segment overload.
             [view] => {
                 let quoted = name.trim().starts_with(['"', '`']);
                 self.context()
@@ -1171,16 +975,8 @@ impl ReparkSession {
     /// Mark a local path as a trusted write root for the SEC-02 local-filesystem DDL gate.
     /// ===========================================================================================
     ///
-    /// The SEC-02 gate exists to keep **untrusted free SQL** from reaching arbitrary local paths
-    /// (`SECURITY.md` "Input surfaces": the gated rows are *Free SQL* `CREATE EXTERNAL TABLE` and
-    /// *Free SQL* `COPY … TO`). The typed writer API is a different surface: `df.write.csv(path)`
-    /// is the caller naming a destination in their own code, exactly like `spark.read.parquet`,
-    /// which that same table lists as un-gated.
-    ///
-    /// The facade implements writes by generating `COPY … TO` and running it through the ordinary
-    /// SQL path, so without this the gate would refuse every local `DataFrameWriter` call. The
-    /// writer calls this with the destination the caller passed, which registers *that path only*
-    /// — free SQL to any other local path still refuses.
+    /// The typed writer path registers only the caller's destination, while free SQL to other local
+    /// paths remains gated.
     pub fn note_local_write_root(&self, path: &str) {
         self.catalogs
             .write()
@@ -1188,12 +984,8 @@ impl ReparkSession {
             .note_local_warehouse_root(path.to_string());
     }
 
-    /// Read a Parquet file or directory into a [`DataFrame`] (PySpark `spark.read.parquet`).
-    ///
-    /// An `s3://` (Iceberg warehouse) or `s3a://` (Spark bronze) path triggers a lazy, once-per-
-    /// bucket registration of an authenticated S3 object store on the `RuntimeEnv` before planning
-    /// (see `object_store_s3`); the scheme is preserved (both are registered), so no path rewrite
-    /// is needed. Non-S3 paths (local, relative) are passed to DataFusion unchanged.
+    /// Read a Parquet file or directory into a [`DataFrame`]. S3 paths register one store per bucket
+    /// under both schemes; other paths pass through unchanged.
     ///
     /// # Errors
     /// Returns [`Error::DataFusion`] if the S3 store cannot be built (region/credentials), or if the
@@ -1209,11 +1001,7 @@ impl ReparkSession {
     }
 
     /// ===========================================================================================
-    /// Read a CSV file or directory into a DataFusion [`DataFrame`] (PySpark `spark.read.csv`).
-    ///
-    /// Options are a case-insensitive string map (Spark reader option keys). The facade applies
-    /// Spark defaults (`header=false`, etc.) before calling; unknown keys are ignored here (the
-    /// facade fails loud on semantic keys repark does not honor).
+    /// Read a CSV file or directory using a case-insensitive Spark option map.
     ///
     /// # Errors
     /// Returns [`Error::Analysis`] for malformed option values; [`Error::DataFusion`] on I/O/plan.
@@ -1244,10 +1032,7 @@ impl ReparkSession {
     }
 
     /// ===========================================================================================
-    /// Read a JSON file or directory into a DataFusion [`DataFrame`] (PySpark `spark.read.json`).
-    ///
-    /// Default is newline-delimited JSON (Spark `multiLine=false`). `multiLine=true` maps to
-    /// DataFusion `newline_delimited=false` (JSON array / multi-line object file).
+    /// Read a JSON file or directory using Spark multiline semantics.
     ///
     /// # Errors
     /// Returns [`Error::Analysis`] for malformed option values; [`Error::DataFusion`] on I/O/plan.
@@ -1270,10 +1055,7 @@ impl ReparkSession {
     /// ===========================================================================================
     /// Read an Iceberg catalog table, optionally pinned to a snapshot / ref / timestamp.
     ///
-    /// With no pin (`opts` empty) this is `SELECT * FROM <ident>` against the current snapshot
-    /// (same as [`Self::sql`] / the catalog provider). With a pin, builds a fork
-    /// `IcebergStaticTableProvider` for that snapshot and returns a [`DataFrame`] over it — never a
-    /// post-hoc filter (I1 / R-TIME-TRAVEL).
+    /// With no pin, read the current snapshot. With a pin, use a static provider for that snapshot.
     ///
     /// # Errors
     /// Mutual-exclusion / parse / unknown-snapshot / catalog errors as classified [`Error`].

@@ -1,6 +1,4 @@
-//! Partition-transform parsing + spec-building tests. Every transform name, every arity branch,
-//! every bound, and the schema-resolution failure all get a row — a partition spec that is wrong
-//! is not recoverable after the table exists.
+//! Partition-transform parsing and spec-building tests cover every transform name and arity branch.
 
 use super::*;
 
@@ -100,10 +98,7 @@ fn transform_parsing_is_case_and_whitespace_tolerant() {
     );
 }
 
-/// Argument COUNTS and numeric BOUNDS are validated together — the pin the surface matrix
-/// names for `PARTITION_TRANSFORM_VALIDATION`. Both classes live in one test because they are
-/// one contract: a transform call is accepted only when it has the right number of arguments
-/// AND its width is a positive, in-range integer.
+/// Argument counts and numeric bounds share one contract: each transform needs valid arguments.
 #[test]
 fn transform_arg_counts_and_bounds_validated() {
     for (spelling, want) in [

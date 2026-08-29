@@ -1,22 +1,7 @@
-//! Case-insensitive by-name column resolution — Spark's default write/merge conform semantics.
+//! Case-insensitive by-name column resolution shared by append and MERGE.
 //!
-//! Spark resolves column names case-insensitively unless the user opts into strict matching
-//! (`spark.sql.caseSensitive`, default **false** — `SqlApiConf.caseSensitiveAnalysis = false`).
-//! The resolver itself is `caseInsensitiveResolution = (a, b) => a.equalsIgnoreCase(b)`
-//! (`analysis/package.scala`), and by-name write conform runs it per target column in
-//! `TableOutputResolver.reorderColumnsByName`:
-//!
-//! ```text
-//! val matched = inputCols.filter(col => conf.resolver(col.name, expectedCol.name))
-//! if (matched.isEmpty)      => missing-column error
-//! else if (matched.length > 1) => incompatibleDataToTableAmbiguousColumnNameError(...)  // LOUD
-//! else                      => matched.head                                             // use it
-//! ```
-//!
-//! This module ports exactly that decision. It is shared by both by-name conform surfaces —
-//! `append::conform_batch` (bulk append / partitioned CTAS) and `merge::expand_star_clauses`
-//! (`MERGE … UPDATE SET * / INSERT *`) — so the two cannot drift. It is error-type agnostic: it
-//! reports [`SourceMatch`] and each caller renders the surface-appropriate `DataFusionError`.
+//! Spark's default is case-insensitive: zero matches fail, multiple matches fail loudly, and one
+//! match is selected. Callers render [`SourceMatch`] as a surface-specific `DataFusionError`.
 
 use std::collections::HashMap;
 
@@ -36,13 +21,8 @@ pub(crate) enum SourceMatch {
 }
 
 /// ===============================================================================================
-/// A source column-name set indexed for case-insensitive lookup. Built once per conform (O(source
-/// columns), each name lowercased into the index); every target then resolves with a single
-/// lowercased lookup (no O(cols²) scan). An exact-case name lands in its own lowercased bucket and
-/// resolves uniquely — the common all-exact schema is behaviourally unchanged from the prior
-/// exact-only path, though the implementation always lowercases (no exact-match short circuit).
-/// Only a genuine case COLLISION (`id` and `ID`, or an exact duplicate `id`,`id`) produces a
-/// multi-entry bucket, i.e. the ambiguity Spark rejects.
+/// Index source names case-insensitively. Zero matches are missing, one is unique, and multiple
+/// matches are ambiguous, matching Spark's collision behavior.
 /// ===============================================================================================
 pub(crate) struct CaseInsensitiveColumnIndex<'a> {
     source_names: Vec<&'a str>,

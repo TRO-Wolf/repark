@@ -1,65 +1,15 @@
-//! WI-2 — the ANSI store-assignment gate on the **plain-INSERT** doors, as an `AnalyzerRule`.
+//! WI-2 ANSI store-assignment gate for plain `INSERT` plans.
 //!
-//! **What WI-1 could not reach.** #142 gave `INSERT OVERWRITE` and the public `append` entry
-//! point the shared matrix in [`super::store_assign`], but the four plain-INSERT doors
-//! (`INSERT INTO … SELECT`, `INSERT INTO … VALUES`, `writeTo().append()`,
-//! `write.insertInto()`) all lower to the same statement, and DataFusion's `insert_to_plan`
-//! (`datafusion-sql-54.1.0/src/statement.rs:2470-2480`) injects the conforming `CAST` itself at
-//! **SQL-planning** time:
+//! DataFusion inserts synthesized casts in the DML projection. This rule reads the projection's
+//! input schema and applies the shared Spark ANSI matrix before the fork writer runs. All plain
+//! `INSERT` spellings converge on this node.
 //!
-//! ```text
-//! Expr::Column(Column::from(source.schema().qualified_field(v)))
-//!     .cast_to(target_field.data_type(), source.schema())?
-//! ```
+//! # Cast boundary
 //!
-//! By the time the fork's `IcebergTableProvider::insert_into` is called the input plan's schema is
-//! already the TABLE schema — the `Date32` is gone and `18262` is baked in. No seam under
-//! `crates/repark-iceberg/src/write/` is on that path (`write/map.md` has said so since v1), and
-//! a `TableProvider` decorator is therefore the wrong seam however natural it looks
-//! (`task/wi1-insert-store-gate-ledger.md` §4).
-//!
-//! **The seam.** One stage earlier: a `LogicalPlan::Dml(WriteOp::Insert(_))` node still carries
-//! the synthesized `Projection`, and that projection's INPUT schema still carries the pre-cast
-//! source types. This rule reads exactly that and runs the SAME matrix — imported, never
-//! duplicated. It is door-agnostic within the Spark facade: every `INSERT` spelling converges on
-//! this one node, so `VALUES`, `SELECT`, `writeTo().append()` and `write.insertInto()` are one
-//! call site, not four.
-//!
-//! # Synthesized vs. explicit casts — the correctness constraint
-//!
-//! Spark's rule is that an **explicit** `CAST` written by the user is the user's stated intent and
-//! is legal even where store assignment would refuse (`INSERT INTO t SELECT CAST(b AS INT)` with
-//! `b BOOLEAN` is accepted; the bare `INSERT INTO t SELECT b` is not). So this rule must judge
-//! ONLY the casts DataFusion synthesized.
-//!
-//! What makes that decidable: `insert_to_plan` builds the DML projection with
-//! `project(source, exprs)` — a **new** `Projection` stacked on top of the fully planned source.
-//! Its expressions are therefore always `Alias(Column | Cast(Column, target) | Cast(Literal, …))`
-//! and never anything the user wrote; a user's `CAST` lives inside the source plan and reaches
-//! this projection already conformed, at which point `cast_to` is a no-op and the expression is a
-//! bare `Expr::Column`. Judging exactly `Alias(Cast(Column(c), target))` — where the pre-cast type
-//! is READABLE off the projection's input schema — is therefore the provable subset:
-//!
-//! * a synthesized conform of a source column → gated;
-//! * a user-written explicit `CAST` → arrives as a plain column, invisible to this rule.
-//!
-//! # The named residual: `INSERT INTO … VALUES` literal rows
-//!
-//! `insert_to_plan` hands the target schema to the VALUES planner
-//! (`PlannerContext::set_table_schema`), and `LogicalPlanBuilder::infer_inner` then rewrites each
-//! literal as `row[j].cast_to(field_type, schema)` **inside the `Values` node**. A user-written
-//! `INSERT INTO t VALUES (CAST(x AS INT))` produces the byte-identical node, because the outer
-//! `cast_to` is a no-op once the inner cast already yielded the target type. The two are
-//! indistinguishable in the plan, so this rule does **not** judge `Cast(Literal, …)`: gating it
-//! would refuse a legal explicit cast, which is the one failure mode worse than the gap.
-//!
-//! That residual is narrower than it looks. The `DATE ↔ INT` half of it — the pairs that carried a
-//! silently-wrong VALUE rather than merely a laxer policy — is closed anyway by the CAST-legality
-//! gate (`repark_functions::analyzer`'s G6-3 / G6-5 rows), which refuses the type pair wherever the
-//! cast appears, `Values` node included. What stays open is a literal `VALUES` row whose pair is
-//! cast-legal but not store-assignable (`VALUES (true)` into an `INT` column,
-//! `VALUES (TIMESTAMP '…')` into a `BIGINT` column). Those write a defined, non-reinterpreted
-//! value; they are a policy gap, not a corruption.
+//! DataFusion's DML projection identifies synthesized casts as `Alias(Cast(Column, target))`;
+//! this rule judges them against Spark's ANSI matrix. Explicit user casts are already conformed
+//! inside the source plan and remain legal. Literal `VALUES` casts are indistinguishable from
+//! explicit casts, so `Cast(Literal, …)` remains the documented policy residual.
 
 use datafusion::common::ExprSchema;
 use datafusion::common::config::ConfigOptions;

@@ -468,7 +468,7 @@ async fn alter_unsupported_forms_refuse_loud() {
         "got: {write_order_err}"
     );
 
-    // Octo C2 — WRITE DISTRIBUTED BY twin (same residual path as ORDERED).
+    // WRITE DISTRIBUTED BY uses the same residual refusal path as ORDERED.
     let write_dist_err = execute(
         &ctx,
         &catalogs,
@@ -488,7 +488,7 @@ async fn alter_unsupported_forms_refuse_loud() {
         "got: {write_dist_err}"
     );
 
-    // Octo C2 — REPLACE PARTITION FIELD transform(…) LHS residual refuse.
+    // REPLACE PARTITION FIELD rejects a transform expression on the left side.
     let lhs_err = execute(
         &ctx,
         &catalogs,
@@ -503,7 +503,7 @@ async fn alter_unsupported_forms_refuse_loud() {
         "got: {lhs_err}"
     );
 
-    // Octo C2 — bucket(0) / truncate(0) refuse on ALTER path (same build_transform_field).
+    // Invalid bucket and truncate widths refuse on the ALTER path.
     let bucket_zero = execute(
         &ctx,
         &catalogs,
@@ -776,8 +776,8 @@ async fn alter_replace_columns_promote_and_identity_trap() {
     );
 }
 
-/// Octo C1 — truncate + temporal ADD PARTITION FIELD (READY surface span); DROP by
-/// transform; REPLACE COLUMNS required-new refuse twin; case-insensitive DROP name.
+/// Cover truncate and temporal partition fields, transform drops, required-column refusal, and
+/// case-insensitive column drops.
 #[tokio::test]
 #[allow(clippy::too_many_lines)] // flat pin battery: truncate/year/drop-by-transform/required
 async fn alter_partition_transforms_drop_by_transform_and_replace_required_refuse() {
@@ -911,7 +911,7 @@ async fn alter_partition_transforms_drop_by_transform_and_replace_required_refus
         "got: {required_err}"
     );
 
-    // Octo C2 — identity(col) transform form + optional→required refuse twin.
+    // Identity transform form and optional-to-required refusal.
     execute(
         &ctx,
         &catalogs,
@@ -959,8 +959,7 @@ async fn alter_partition_transforms_drop_by_transform_and_replace_required_refus
     );
 }
 
-/// Octo C3 — REPLACE COLUMNS float→double + decimal widen + identity-trap twins
-/// (ledger stretch claims REPLACE COLUMNS promote path, not only ALTER COLUMN TYPE).
+/// REPLACE COLUMNS widens float and decimal types and rejects unsafe identity changes.
 #[tokio::test]
 async fn alter_replace_columns_float_decimal_promote_and_traps() {
     let wh = TempDir::new().unwrap();
@@ -1052,7 +1051,7 @@ async fn alter_replace_columns_float_decimal_promote_and_traps() {
     );
 }
 
-/// Octo C3 — float→double + decimal widen with narrow-refuse twins (ledger SHIPPED span).
+/// ALTER COLUMN TYPE widens float and decimal types and refuses narrowing.
 #[tokio::test]
 async fn alter_column_type_float_double_and_decimal_widen_twins() {
     let wh = TempDir::new().unwrap();
@@ -1152,7 +1151,7 @@ async fn alter_column_type_float_double_and_decimal_widen_twins() {
     );
 }
 
-/// Octo C5 — case-insensitive column rename/drop via SQL (Spark default).
+/// Column rename and drop resolve names case-insensitively.
 #[tokio::test]
 async fn alter_column_case_insensitive_rename_and_drop() {
     let wh = TempDir::new().unwrap();
@@ -1206,7 +1205,7 @@ async fn alter_column_case_insensitive_rename_and_drop() {
     );
 }
 
-/// Octo C6 — extend refuse matrix: COMMENT, MOVE FIRST/AFTER, AFTER missing sibling.
+/// COMMENT, MOVE FIRST/AFTER, and missing AFTER siblings refuse loudly.
 #[tokio::test]
 async fn alter_unsupported_comment_move_and_after_missing_refuse() {
     let wh = TempDir::new().unwrap();
@@ -1262,7 +1261,7 @@ async fn alter_unsupported_comment_move_and_after_missing_refuse() {
     );
 }
 
-/// Octo C7 — DROP COLUMNS bare (non-paren) plural form + read-after schema.
+/// Bare plural DROP COLUMNS updates the schema and remains readable.
 #[tokio::test]
 async fn alter_drop_columns_bare_plural_form() {
     let wh = TempDir::new().unwrap();
@@ -1301,7 +1300,7 @@ async fn alter_drop_columns_bare_plural_form() {
     assert!(names.iter().any(|name| name == "id"));
 }
 
-/// Octo C8 — ADD COLUMN IF NOT EXISTS soft-skips when present; AFTER sibling is
+/// ADD COLUMN IF NOT EXISTS skips existing columns; AFTER sibling is
 /// case-insensitive; multi-op SET TBLPROPERTIES after RENAME TO targets new ident.
 #[tokio::test]
 async fn alter_if_not_exists_after_case_and_rename_then_set_props() {
@@ -1381,9 +1380,7 @@ async fn alter_if_not_exists_after_case_and_rename_then_set_props() {
     assert!(!catalogs["ice"].table_exists(&old).await.unwrap());
 }
 
-/// Octo C2 — multi-op `RENAME TO …, ADD COLUMN …` must apply the ADD against the *new*
-/// ident. Without updating `ident` after rename, the ADD loads the old name (gone) and
-/// fails after a partial rename commit.
+/// A multi-operation rename then add applies the ADD against the new identifier atomically.
 #[tokio::test]
 async fn alter_rename_table_then_add_column_same_statement() {
     let wh = TempDir::new().unwrap();

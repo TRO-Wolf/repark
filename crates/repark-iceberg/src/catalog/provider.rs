@@ -1,16 +1,8 @@
-//! Incremental DataFusion catalog provider for Iceberg (PERF-07 / r24 P7).
+//! Incremental DataFusion catalog provider for Iceberg.
 //!
-//! The fork's [`IcebergCatalogProvider::try_new`] walks every namespace. At pin
-//! `5e7b2e4` it does **not** `list_tables` at construction — `IcebergSchemaProvider`
-//! lists on first access and then freezes. This module keeps a mutable
-//! name-directory map, **eager-lists at snapshot / namespace-refresh** so
-//! ADR-0004 T6 residual stays (an out-of-band create stays invisible to free SQL
-//! until invalidate), and rebuilds only the touched namespace so a
-//! CREATE/DROP/ALTER pays O(1) listing cost.
-//!
-//! Facade list-on-access ([`super::list_table_names`]) is unchanged: it still
-//! hits the live [`Catalog`] handle. Free-SQL residual after out-of-band
-//! mutations (ADR-0004) remains until an explicit full rebuild / refresh.
+//! The provider eagerly freezes each namespace's fork name directory at snapshot and refresh,
+//! preserving out-of-band staleness until explicit invalidation. Product DDL refreshes only the
+//! touched namespace; facade listing remains live against the catalog handle.
 
 use std::collections::HashMap;
 use std::fmt::Debug;
@@ -29,12 +21,6 @@ use iceberg::{
 use iceberg_datafusion::IcebergCatalogProvider;
 
 use crate::catalog::metadata_projection::MetadataProjectionSchemaProvider;
-
-// === r24 P7: catalog-provider incremental invalidation =========================
-//
-// PERF-07: product DDL must not re-walk every Glue database. Sole-writer band.
-// OBS1 may attach spans later — do not invent OBS1 APIs here.
-// ==============================================================================
 
 /// Boxed future returned by desugared [`Catalog`] methods (no `async-trait` dep).
 type BoxedCatalogFuture<'a, T> = Pin<Box<dyn Future<Output = iceberg::Result<T>> + Send + 'a>>;
@@ -144,9 +130,7 @@ impl CatalogProvider for ReparkCatalogProvider {
             .schemas
             .write()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
-        // r25 morning critic: schemas arriving through this path must get the same
-        // metadata-table projection honor as the snapshot/namespace-refresh paths —
-        // otherwise `table$meta` lookups here bypass the item-0 fix.
+        // Apply the metadata projection policy to schemas registered through this path too.
         Ok(guard.insert(
             name.to_string(),
             crate::catalog::metadata_projection::MetadataProjectionSchemaProvider::wrap(schema),

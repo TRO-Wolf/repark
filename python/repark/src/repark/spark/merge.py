@@ -4,8 +4,8 @@ Oracle: live PySpark 4.1.2 ``pyspark.sql.merge.MergeIntoWriter`` (surface shapes
 delegates to the existing ``spark.sql("MERGE INTO …")`` path (zero engine code in this unit).
 
 ``whenNotMatchedBySource`` is accepted on the builder and rendered into SQL; the engine rejects
-``WHEN NOT MATCHED BY SOURCE`` today (``not_matched_by_source_rejected`` pin) — the loud engine
-error is intentional and disclosed in the unit ledger.
+``WHEN NOT MATCHED BY SOURCE`` today (``not_matched_by_source_rejected`` pin); the engine
+returns a loud refusal.
 """
 
 from __future__ import annotations
@@ -20,8 +20,6 @@ from repark.errors import (
     PySparkValueError,
     UnsupportedOperationException,
 )
-
-# === r23 QI1: idents ===
 from repark.spark._idents import is_plain_ident
 from repark.spark._idents import quote_ident as _quote_ident
 from repark.spark._idents import quote_ident_if_needed as _quote_assign_target
@@ -38,7 +36,7 @@ def _column_sql(column: Column | str) -> str:
     """Render a merge condition / assignment expression as SQL text.
 
     :class:`Column` prefers :meth:`Column.sql_expr_part` (SQL-quoted string literals). Free
-    ``str`` fragments are refused for assignments/predicates (octo C2-SEC-001) — use Column.
+    ``str`` fragments are refused for assignments and predicates; use ``Column``.
     """
     if isinstance(column, Column):
         return column.sql_expr_part()
@@ -53,13 +51,12 @@ def _on_sql(condition: Column | str) -> str:
     * ``Column`` → ``sql_expr_part()`` (callers should qualify source/target when needed).
     * bare identifier str (``\"id\"``) → equi-join sugar ``target.id = source.id`` (PySpark
       doctest shape; aliases match the SQL we emit).
-    * other str → SQL fragment as-is.
+    * other str → rejected; free SQL fragments are not accepted.
     """
     if isinstance(condition, Column):
         return condition.sql_expr_part()
     if isinstance(condition, str):
         stripped = condition.strip()
-        # Only bare-ident equi sugar — free SQL ON fragments refused (octo C2-SEC-001).
         if is_plain_ident(stripped):
             quoted = _quote_ident(stripped)
             return f"target.{quoted} = source.{quoted}"
@@ -99,9 +96,7 @@ class MergeIntoWriter:
                 f"mergeInto condition must be Column or str, got {type(condition).__name__}"
             )
         self._dataframe = dataframe
-        # Same identifier validation as writeTo / spark.table (E2). Store the raw name and
         # re-resolve under the session's *current* catalog/NS at merge() — not freeze at
-        # construction (octo C1-L-002; matches V1 saveAsTable action-time resolve).
         from repark.spark.dataframe import _resolve_writer_table
 
         self._table_name = table.strip()
@@ -136,7 +131,7 @@ class MergeIntoWriter:
         return MergeIntoWriter.WhenNotMatchedBySource(self, condition)
 
     def withSchemaEvolution(self) -> MergeIntoWriter:  # noqa: N802 — PySpark method name
-        """Schema evolution is not supported on repark's MERGE path — fail loud (octo C1-L-010)."""
+        """Schema evolution is not supported on repark's MERGE path."""
         raise UnsupportedOperationException(
             "MergeIntoWriter.withSchemaEvolution() is not supported yet "
             "(repark MERGE SQL path has no schema-evolution flag; refuse rather than silent no-op)"
@@ -154,7 +149,6 @@ class MergeIntoWriter:
             )
         session = self._dataframe._session
         # Fill pending mapInArrow + cache so MERGE source is real rows, not the empty
-        # schema-only MIA placeholder (octo C2-Q-001 / C2-SAF-001 / C2-L-001 / C2-L-005).
         view_name = scratch_view_name(session, "__repark_merge_src_")
         session.create_or_replace_temp_view(view_name, self._dataframe._native_for_registration())
         try:

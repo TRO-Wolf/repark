@@ -1,6 +1,4 @@
-//! Wrong-door sniff tests. Every recognized token gets a row (the message contract is the
-//! product here), plus the three properties the error-path placement is chosen FOR: the original
-//! error survives, non-Spark SQL is untouched, and literals/comments cannot trigger it.
+//! Wrong-door sniff tests pin recognized tokens, messages, and error-path behavior.
 
 use super::*;
 
@@ -25,8 +23,7 @@ fn assert_steer(message: &str, token: &str, equivalent_fragment: &str) {
     );
 }
 
-/// The ORIGINAL parser error is preserved — the upgrade adds context, never replaces the
-/// diagnostic (a user who knows what they are doing must still see the real error).
+/// The original parser error is preserved. The upgrade adds context, never replaces the headline.
 #[test]
 fn original_error_is_preserved() {
     let message = upgraded("CREATE TABLE t USING iceberg AS SELECT 1");
@@ -54,8 +51,7 @@ fn non_spark_errors_are_untouched() {
     }
 }
 
-/// A Spark-ism inside a string literal or a comment must NOT trigger the sniff — this is the
-/// property that makes an error-path scan safe to ship.
+/// A Spark-ism inside a string literal or comment must not trigger the error-path sniff.
 #[test]
 fn literals_and_comments_do_not_trigger_the_sniff() {
     for sql in [
@@ -80,9 +76,7 @@ fn backticks_are_recognized() {
     assert_steer(&message, "backtick", "double quotes");
 }
 
-/// The headline behavior: a failed parse carrying a Spark-ism comes back naming the token, the
-/// native equivalent, and the Spark door. Several isms in one test because the CONTRACT is
-/// per-message, and it must hold for every recognized token, not one lucky one.
+/// A failed parse carrying a Spark-ism names the token, its native equivalent, and the Spark door.
 #[test]
 fn spark_isms_upgrade_the_parse_error() {
     let cases: &[(&str, &str, &str)] = &[
@@ -158,8 +152,7 @@ fn bare_as_of_without_for_is_recognized() {
     assert_steer(&message, "without FOR", "FOR VERSION AS OF 12345");
 }
 
-/// …but the correct `FOR VERSION AS OF` spelling is NOT flagged as a Spark-ism (that would be an
-/// insulting error for someone who wrote the right thing and hit an unrelated failure).
+/// The correct `FOR VERSION AS OF` spelling is not flagged as a Spark-ism.
 #[test]
 fn correct_for_spelling_is_not_flagged_as_spark() {
     let message = upgrade_error(
@@ -214,12 +207,7 @@ fn call_system_procedure_is_recognized() {
     assert_steer(&message, "CALL", "callable operation");
 }
 
-/// The scoping property, stated as its counterexamples: ANSI-LEGAL SQL that merely failed for an
-/// unrelated reason (a missing table) is never answered with "this looks like Spark SQL".
-///
-/// Each row here is a real false positive the unscoped token table produced: `USING` is the ANSI
-/// join clause, and `tag` / `branch` / `namespace` / `database` / `call` are ordinary column
-/// names. The doc-comment claim ("bounded false positives") is only worth what these pin.
+/// ANSI-legal SQL that failed for an unrelated reason must not receive a Spark steer.
 #[test]
 fn ansi_legal_statements_are_never_steered_to_the_spark_door() {
     for sql in [
@@ -240,8 +228,7 @@ fn ansi_legal_statements_are_never_steered_to_the_spark_door() {
     }
 }
 
-/// …and the scoping does not disarm the rules: the same tokens, in the statement shapes that
-/// really ARE Spark-isms, still steer.
+/// Scoping does not disarm a rule: each token is checked in its supported statement shape.
 #[test]
 fn scoped_rules_still_fire_in_their_own_statement_shapes() {
     assert_steer(

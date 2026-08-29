@@ -1,36 +1,8 @@
-//! `ALTER TABLE` statement handling: routing + token normalisers for forms sqlparser cannot model.
+//! `ALTER TABLE` routing and token rewrites for Spark forms sqlparser cannot model.
 //!
-//! The router's `Statement::AlterTable` arm calls [`execute_alter_table`], which resolves the
-//! three-part `catalog.namespace.table` target, dispatches each `AlterTableOperation` to the matching
-//! [`repark_iceberg::write::alter`] transaction primitive, and re-registers the DataFusion provider after a
-//! mutation (so a `RENAME`'s new name — and schema evolution — become queryable).
-//!
-//! ## Token rewrites
-//!
-//! - **`UNSET TBLPROPERTIES`** — sqlparser has no `UNSET` AST node; [`rewrite_unset_tblproperties`]
-//!   normalises it into a sentinel-valued `SET` (BUG-012 / existing).
-//! - **`ADD COLUMNS (…)`** — Spark's plural parenthesised form is not modelled; rewritten to a
-//!   comma-separated list of `ADD COLUMN` ops ([`rewrite_add_columns_plural`]).
-//! - **`DROP COLUMNS (…)` / `DROP COLUMNS a, b`** — same gap; rewritten to `DROP COLUMN` ops
-//!   ([`rewrite_drop_columns_plural`]).
-//!
-//! ## FIRST / AFTER
-//!
-//! `MySQLColumnPosition` is only filled by MySQL/Generic dialects. ALTER TABLE is therefore parsed
-//! with [`GenericDialect`] (see [`crate::parse_single_normalized`]) so Spark `ADD COLUMN … FIRST|
-//! AFTER x` lands in the AST.
-//!
-//! ## Schema evolution (I6)
-//!
-//! READY: ADD COLUMN[S], DROP COLUMN, RENAME COLUMN, SET/UNSET TBLPROPERTIES, RENAME TO.
-//! Stretch: ALTER COLUMN TYPE (widen with narrow-refuse twin), DROP NOT NULL, COMMENT.
-//! Loud refuse: SET NOT NULL, unsupported options.
-//!
-//! ## Partition-spec evolution (I7)
-//!
-//! READY: `ADD PARTITION FIELD` / `DROP PARTITION FIELD` → fork `UpdatePartitionSpec`.
-//! Stretch: `REPLACE PARTITION FIELD … WITH …`; `REPLACE COLUMNS` with identity-trap refuse.
-//! Loud refuse: WRITE ORDERED/DISTRIBUTED BY; unsupported transforms.
+//! Schema and partition changes use one Iceberg transaction per contiguous operation group. The
+//! provider is re-registered after mutations so renamed and evolved tables remain queryable.
+//! `GenericDialect` parsing preserves Spark `ADD COLUMN … FIRST|AFTER` positions.
 
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
@@ -60,14 +32,8 @@ const UNSET_SENTINEL: &str = "__repark_unset_tblproperty_sentinel__";
 /// ===========================================================================================
 /// Execute an `ALTER TABLE catalog.namespace.table <op>…` against the iceberg catalog.
 ///
-/// Resolves the three-part target, then dispatches each operation:
-/// - `SET TBLPROPERTIES (…)` → [`repark_iceberg::write::alter::alter_table_properties`] as ONE transaction
-///   (real sets AND sentinel-flagged removals, from a rewritten `UNSET`, commit together — BUG-012).
-/// - `RENAME TO catalog.namespace.table2` → [`repark_iceberg::write::alter::rename_table`] + re-register.
-/// - Schema evolution (ADD/DROP/RENAME COLUMN, stretch ALTER COLUMN) → batched into ONE
-///   [`repark_iceberg::write::alter::apply_schema_changes`] transaction per contiguous run, then re-register.
-///
-/// Unsupported operations error rather than silently no-op.
+/// Resolves the target, groups contiguous schema changes into one transaction, refreshes the
+/// provider after mutations, and refuses unsupported operations.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -433,15 +399,8 @@ fn resolve_table(name: &ObjectName) -> Result<(String, TableIdent)> {
 /// unchanged, so this is safe to run on every statement (mirroring the other token normalisers).
 /// ===========================================================================================
 pub(crate) fn rewrite_unset_tblproperties(tokens: &[Token]) -> Vec<Token> {
-    // Find the keyword spine, ignoring whitespace, to confirm this is `ALTER TABLE … UNSET
-    // TBLPROPERTIES` and to locate the `UNSET` token index.
-    //
-    // UNSET must be the token *immediately preceding* TBLPROPERTIES (next significant
-    // token). sqlparser tags a bare identifier `unset` as `Keyword::UNSET`, so a table
-    // named `unset` would otherwise match "first UNSET anywhere" and get rewritten into
-    // `SET`, corrupting `ALTER TABLE …unset SET TBLPROPERTIES …` (audit-2026-07-10 /
-    // octo C1). Matching only `UNSET` + next-significant `TBLPROPERTIES` leaves SET-form
-    // statements (and any table/column named unset) untouched.
+    // Match only UNSET immediately before TBLPROPERTIES. A table named `unset` must remain a
+    // table name, not become a SET operation.
     let keyword_at = |kw: Keyword| {
         tokens
             .iter()
@@ -451,7 +410,7 @@ pub(crate) fn rewrite_unset_tblproperties(tokens: &[Token]) -> Vec<Token> {
     else {
         return tokens.to_vec();
     };
-    // Prefer positional UNSET-immediately-before-TBLPROPERTIES over "first UNSET token".
+    // Prefer UNSET immediately before TBLPROPERTIES over any earlier token.
     let mut unset_index = None;
     let mut tblprops_index = None;
     for (index, token) in tokens.iter().enumerate() {
@@ -886,9 +845,7 @@ enum Sig {
 /// ===========================================================================================
 /// Try to parse Spark Iceberg `ADD|DROP|REPLACE PARTITION FIELD` or `REPLACE COLUMNS`.
 ///
-/// Returns `None` when the statement is not one of those forms. `Some(Err)` for recognised
-/// forms that fail validation (bad transform, arity, identity trap pre-check at plan time is
-/// deferred to execute for REPLACE COLUMNS).
+/// Returns `None` for other statements and `Some(Err)` for recognized forms that fail validation.
 /// ===========================================================================================
 pub(crate) fn try_parse_iceberg_alter_ddl(sql: &str) -> Option<Result<IcebergAlterDdl>> {
     let significant = tokenize_significant(sql)?;
@@ -1785,7 +1742,7 @@ mod tests {
 
     #[test]
     fn parse_replace_columns_is_recognized() {
-        // I7: REPLACE COLUMNS is no longer a blanket refuse — the dedicated parser owns it.
+        // I7: REPLACE COLUMNS uses the dedicated parser instead of the residual refusal path.
         assert!(
             refuse_unsupported_alter_sql(
                 "ALTER TABLE ice.sales.t REPLACE COLUMNS (a INT, b STRING)",

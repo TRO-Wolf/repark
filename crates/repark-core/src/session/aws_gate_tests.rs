@@ -1,11 +1,4 @@
-//! E-2 gate tests: conditional finalize-time AWS resolution (design §2).
-//!
-//! Both sides of the conditional guard, AWS-free by construction:
-//! - an OFFLINE session (memory catalog only, no AWS signal) must NEVER resolve the AWS SDK
-//!   chain at finalize — no IMDS probe for offline work;
-//! - an S3-path read on a session that never resolved must fail LOUD, naming the finalize step
-//!   and the opt-in conf — never a silent lazy chain resolution at query time (the v1 env-read
-//!   this edit removes).
+//! E-2 pins: offline sessions do not resolve AWS, and unfinalized S3 reads fail loud.
 
 use std::sync::Arc;
 
@@ -116,8 +109,7 @@ async fn opt_in_session_still_requires_finalize_before_s3_reads() {
         .expect_err("opt-in without finalize must still refuse (no lazy query-time resolution)");
     assert!(error.to_string().contains("register_configured_catalogs"));
     assert!(!session.testing_aws_sdk_config_resolved());
-    // The in-memory test-store seam bypasses the gate exactly as v1's scheme-routing e2e does:
-    // a pre-registered bucket store needs no SDK config.
+    // A pre-registered in-memory bucket store needs no SDK config.
     let store: Arc<dyn object_store::ObjectStore> = Arc::new(object_store::memory::InMemory::new());
     session
         .register_s3_bucket_store_for_test("example-bucket", &store)

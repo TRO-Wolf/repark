@@ -1,7 +1,4 @@
-"""Param system — :class:`Param`, :class:`Params`, type converters (PySpark ``ml.param``).
-
-Oracle surface: ``getOrDefault`` / ``explainParams`` / ``copy(extra)`` / param doc strings.
-"""
+"""Spark-shaped parameter objects, converters, and shared parameter mixins."""
 
 from __future__ import annotations
 
@@ -17,7 +14,7 @@ P = TypeVar("P", bound="Params")
 
 
 class Param(Generic[T]):
-    """A documented hyperparameter on a :class:`Params` parent."""
+    """A documented hyperparameter owned by a ``Params`` instance."""
 
     def __init__(
         self,
@@ -26,7 +23,7 @@ class Param(Generic[T]):
         doc: str,
         typeConverter: Callable[[Any], T] | None = None,  # noqa: N803 — Spark name
     ) -> None:
-        """Bind ``name`` / ``doc`` to ``parent.uid``; optional converter validates sets."""
+        """Bind a name and converter to ``parent.uid``."""
         if not isinstance(parent, Identifiable):
             raise PySparkTypeError(
                 f"Param parent must be Identifiable, got {type(parent).__name__}"
@@ -45,35 +42,35 @@ class Param(Generic[T]):
         )
 
     def __str__(self) -> str:
-        """Spark form ``parent__name``."""
+        """Return the Spark parameter name."""
         return f"{self.parent}__{self.name}"
 
     def __repr__(self) -> str:
-        """Debug form with doc."""
+        """Return a diagnostic representation."""
         return f"Param(parent={self.parent!r}, name={self.name!r}, doc={self.doc!r})"
 
     def __hash__(self) -> int:
-        """Hash on parent uid + name."""
+        """Hash by parent uid and name."""
         return hash((self.parent, self.name))
 
     def __eq__(self, other: object) -> bool:
-        """Equality on parent uid + name."""
+        """Compare parent uid and name."""
         if not isinstance(other, Param):
             return NotImplemented
         return self.parent == other.parent and self.name == other.name
 
 
 class TypeConverters:
-    """Static converters used by shared Param mixins (Spark ``TypeConverters``)."""
+    """Converters used by Spark-shaped parameter mixins."""
 
     @staticmethod
     def identity(value: Any) -> Any:
-        """Pass-through converter."""
+        """Return ``value`` unchanged."""
         return value
 
     @staticmethod
     def toList(value: Any) -> list[Any]:
-        """Convert a sequence to ``list``."""
+        """Convert a list or tuple to a new list."""
         if isinstance(value, list):
             return list(value)
         if isinstance(value, tuple):
@@ -82,83 +79,82 @@ class TypeConverters:
 
     @staticmethod
     def toListFloat(value: Any) -> list[float]:
-        """Convert a sequence to ``list[float]``."""
+        """Convert a list or tuple to float values."""
         return [float(item) for item in TypeConverters.toList(value)]
 
     @staticmethod
     def toListInt(value: Any) -> list[int]:
-        """Convert a sequence to ``list[int]``."""
+        """Convert a list or tuple to integer values."""
         return [int(item) for item in TypeConverters.toList(value)]
 
     @staticmethod
     def toListString(value: Any) -> list[str]:
-        """Convert a sequence to ``list[str]``."""
+        """Convert a list or tuple to string values."""
         return [str(item) for item in TypeConverters.toList(value)]
 
     @staticmethod
     def toFloat(value: Any) -> float:
-        """Convert to ``float``."""
+        """Convert a non-boolean value to ``float``."""
         if isinstance(value, bool):
             raise TypeError(f"Could not convert {value!r} to float")
         return float(value)
 
     @staticmethod
     def toInt(value: Any) -> int:
-        """Convert to ``int``."""
+        """Convert a non-boolean value to ``int``."""
         if isinstance(value, bool):
             raise TypeError(f"Could not convert {value!r} to int")
         return int(value)
 
     @staticmethod
     def toString(value: Any) -> str:
-        """Convert to ``str``."""
+        """Require a string value."""
         if isinstance(value, str):
             return value
         raise TypeError(f"Could not convert {value!r} to string")
 
     @staticmethod
     def toBoolean(value: Any) -> bool:
-        """Convert to ``bool``."""
+        """Require a boolean value."""
         if isinstance(value, bool):
             return value
         raise TypeError(f"Could not convert {value!r} to boolean")
 
 
 class Params(Identifiable):
-    """Base for objects that own a :class:`Param` map (Spark ``Params``)."""
+    """Base class for objects that own parameter maps."""
 
     def __init__(self) -> None:
-        """Initialize empty param maps; subclasses register params as attributes."""
+        """Initialize uid, user values, and default values."""
         super().__init__()
         self._paramMap: dict[Param[Any], Any] = {}
         self._defaultParamMap: dict[Param[Any], Any] = {}
 
     @property
     def params(self) -> list[Param[Any]]:
-        """All :class:`Param` attributes on this instance (Spark ``params``)."""
+        """Return all declared parameters in name order."""
         found: dict[str, Param[Any]] = {}
         for cls in type(self).mro():
             for name, value in vars(cls).items():
                 if isinstance(value, Param) and name not in found:
                     found[name] = value
-        # Instance-level Params (created in ``__init__``) win.
         for name, value in vars(self).items():
             if isinstance(value, Param):
                 found[name] = value
         return sorted(found.values(), key=lambda param: param.name)
 
     def explainParam(self, param: str | Param[Any]) -> str:
-        """One-line explanation for a single param (Spark ``explainParam``)."""
+        """Explain one parameter and its current value state."""
         resolved = self._resolve_param(param)
         value_note = self._value_note(resolved)
         return f"{resolved.name}: {resolved.doc} ({value_note})"
 
     def explainParams(self) -> str:
-        """Multi-line explanation of all params (Spark ``explainParams``)."""
+        """Explain all parameters, one per line."""
         return "\n".join(self.explainParam(param) for param in self.params)
 
     def _value_note(self, param: Param[Any]) -> str:
-        """Render default/current/undefined note for explainParams."""
+        """Return the default and current value note for ``param``."""
         has_user = param in self._paramMap
         has_default = param in self._defaultParamMap
         if has_user and has_default:
@@ -170,20 +166,20 @@ class Params(Identifiable):
         return "undefined"
 
     def isSet(self, param: str | Param[Any]) -> bool:
-        """Whether the user has set this param."""
+        """Return whether the user set ``param``."""
         return self._resolve_param(param) in self._paramMap
 
     def hasDefault(self, param: str | Param[Any]) -> bool:
-        """Whether a default exists."""
+        """Return whether ``param`` has a default."""
         return self._resolve_param(param) in self._defaultParamMap
 
     def isDefined(self, param: str | Param[Any]) -> bool:
-        """Whether a value (user or default) exists."""
+        """Return whether ``param`` has a user or default value."""
         resolved = self._resolve_param(param)
         return resolved in self._paramMap or resolved in self._defaultParamMap
 
     def getOrDefault(self, param: str | Param[Any]) -> Any:
-        """Return user value or default; raise if undefined."""
+        """Return the user or default value, or raise when undefined."""
         resolved = self._resolve_param(param)
         if resolved in self._paramMap:
             return self._paramMap[resolved]
@@ -194,19 +190,18 @@ class Params(Identifiable):
         )
 
     def getParam(self, param_name: str) -> Param[Any]:
-        """Look up a Param by name."""
+        """Return the parameter named ``param_name``."""
         for param in self.params:
             if param.name == param_name:
                 return param
         raise IllegalArgumentException(f"Param {param_name} does not exist")
 
     def _resolve_param(self, param: str | Param[Any]) -> Param[Any]:
-        """Resolve a name or Param to the instance's Param object."""
+        """Resolve a name or copied parameter by name across parent UIDs."""
         if isinstance(param, str):
             return self.getParam(param)
         if not isinstance(param, Param):
             raise PySparkTypeError(f"expected Param or str, got {type(param).__name__}")
-        # Match by name against our params (parent uids may differ after copy).
         for candidate in self.params:
             if candidate.name == param.name:
                 return candidate
@@ -215,7 +210,7 @@ class Params(Identifiable):
         )
 
     def _set(self: P, **kwargs: Any) -> P:
-        """Set params by keyword (internal)."""
+        """Set parameters by name after conversion."""
         for name, value in kwargs.items():
             param = self.getParam(name)
             try:
@@ -228,7 +223,7 @@ class Params(Identifiable):
         return self
 
     def _setDefault(self: P, **kwargs: Any) -> P:
-        """Set default param values."""
+        """Set default values after conversion."""
         for name, value in kwargs.items():
             param = self.getParam(name)
             try:
@@ -241,19 +236,15 @@ class Params(Identifiable):
         return self
 
     def clear(self, param: Param[Any]) -> None:
-        """Clear a user-set param (defaults remain)."""
+        """Clear the user value for ``param`` while keeping its default."""
         resolved = self._resolve_param(param)
         self._paramMap.pop(resolved, None)
 
     def copy(self: P, extra: dict[Param[Any], Any] | None = None) -> P:
-        """Deep-ish copy with optional extra Param map (Spark ``copy``)."""
-        # Create a fresh instance without calling subclass __init__ side effects twice
-        # when possible; fall back to copy_module for simple stages.
+        """Copy parameters, preserve the UID, and apply optional name-based overrides."""
         that = copy_module.copy(self)
         that._paramMap = dict(self._paramMap)
         that._defaultParamMap = dict(self._defaultParamMap)
-        # Fresh uid like Spark's copy? Spark keeps same class; uid is typically new on
-        # new instances. Spark Params.copy keeps the same uid. Match Spark: keep uid.
         if extra:
             for param, value in extra.items():
                 name = param.name if isinstance(param, Param) else str(param)
@@ -261,7 +252,7 @@ class Params(Identifiable):
         return that
 
     def extractParamMap(self, extra: dict[Param[Any], Any] | None = None) -> dict[Param[Any], Any]:
-        """Defaults + user + extra (Spark ``extractParamMap``)."""
+        """Return defaults merged with user values and optional overrides."""
         result = dict(self._defaultParamMap)
         result.update(self._paramMap)
         if extra:
@@ -273,16 +264,14 @@ class Params(Identifiable):
         return result
 
 
-# Shared mixins (subset used by M1/M2 feature transformers).
-# Pure mixins: cooperative ``super().__init__()``; must be combined with :class:`Params`
-# (do not inherit Params here — avoids diamond double-init of Identifiable.uid).
-
-
 class HasInputCol:
-    """Mixin: ``inputCol`` param (requires :class:`Params` in the MRO)."""
+    """Mixin providing ``inputCol``.
+
+    Requires ``Params`` in the MRO so ``super()`` reaches ``_setDefault``.
+    """
 
     def __init__(self) -> None:
-        """Register ``inputCol``."""
+        """Register the input column parameter."""
         super().__init__()
         self.inputCol: Param[str] = Param(
             self,  # type: ignore[arg-type]
@@ -293,19 +282,22 @@ class HasInputCol:
         self._setDefault(inputCol=self.uid + "__input")  # type: ignore[attr-defined]
 
     def setInputCol(self: P, value: str) -> P:
-        """Set input column name."""
+        """Set the input column name."""
         return self._set(inputCol=value)  # type: ignore[attr-defined,return-value]
 
     def getInputCol(self) -> str:
-        """Get input column name."""
+        """Return the input column name."""
         return self.getOrDefault(self.inputCol)  # type: ignore[attr-defined,no-any-return]
 
 
 class HasOutputCol:
-    """Mixin: ``outputCol`` param (requires :class:`Params` in the MRO)."""
+    """Mixin providing ``outputCol``.
+
+    Requires ``Params`` in the MRO so ``super()`` reaches ``_setDefault``.
+    """
 
     def __init__(self) -> None:
-        """Register ``outputCol``."""
+        """Register the output column parameter."""
         super().__init__()
         self.outputCol: Param[str] = Param(
             self,  # type: ignore[arg-type]
@@ -316,19 +308,22 @@ class HasOutputCol:
         self._setDefault(outputCol=self.uid + "__output")  # type: ignore[attr-defined]
 
     def setOutputCol(self: P, value: str) -> P:
-        """Set output column name."""
+        """Set the output column name."""
         return self._set(outputCol=value)  # type: ignore[attr-defined,return-value]
 
     def getOutputCol(self) -> str:
-        """Get output column name."""
+        """Return the output column name."""
         return self.getOrDefault(self.outputCol)  # type: ignore[attr-defined,no-any-return]
 
 
 class HasInputCols:
-    """Mixin: ``inputCols`` param (requires :class:`Params` in the MRO)."""
+    """Mixin providing ``inputCols``.
+
+    Requires ``Params`` in the MRO for inherited ``uid``, ``_set``, and ``getOrDefault``.
+    """
 
     def __init__(self) -> None:
-        """Register ``inputCols``."""
+        """Register the input columns parameter."""
         super().__init__()
         self.inputCols: Param[list[str]] = Param(
             self,  # type: ignore[arg-type]
@@ -338,19 +333,22 @@ class HasInputCols:
         )
 
     def setInputCols(self: P, value: list[str]) -> P:
-        """Set input column names."""
+        """Set the input column names."""
         return self._set(inputCols=value)  # type: ignore[attr-defined,return-value]
 
     def getInputCols(self) -> list[str]:
-        """Get input column names."""
+        """Return the input column names."""
         return self.getOrDefault(self.inputCols)  # type: ignore[attr-defined,no-any-return]
 
 
 class HasOutputCols:
-    """Mixin: ``outputCols`` param (requires :class:`Params` in the MRO)."""
+    """Mixin providing ``outputCols``.
+
+    Requires ``Params`` in the MRO for inherited ``uid``, ``_set``, and ``getOrDefault``.
+    """
 
     def __init__(self) -> None:
-        """Register ``outputCols``."""
+        """Register the output columns parameter."""
         super().__init__()
         self.outputCols: Param[list[str]] = Param(
             self,  # type: ignore[arg-type]
@@ -360,19 +358,22 @@ class HasOutputCols:
         )
 
     def setOutputCols(self: P, value: list[str]) -> P:
-        """Set output column names."""
+        """Set the output column names."""
         return self._set(outputCols=value)  # type: ignore[attr-defined,return-value]
 
     def getOutputCols(self) -> list[str]:
-        """Get output column names."""
+        """Return the output column names."""
         return self.getOrDefault(self.outputCols)  # type: ignore[attr-defined,no-any-return]
 
 
 class HasHandleInvalid:
-    """Mixin: ``handleInvalid`` param (requires :class:`Params` in the MRO)."""
+    """Mixin providing ``handleInvalid``.
+
+    Requires ``Params`` in the MRO so ``super()`` reaches ``_setDefault``.
+    """
 
     def __init__(self) -> None:
-        """Register ``handleInvalid`` (default ``error``)."""
+        """Register ``handleInvalid`` with default ``error``."""
         super().__init__()
         self.handleInvalid: Param[str] = Param(
             self,  # type: ignore[arg-type]
@@ -383,19 +384,22 @@ class HasHandleInvalid:
         self._setDefault(handleInvalid="error")  # type: ignore[attr-defined]
 
     def setHandleInvalid(self: P, value: str) -> P:
-        """Set invalid-handling strategy."""
+        """Set the invalid-data strategy."""
         return self._set(handleInvalid=value)  # type: ignore[attr-defined,return-value]
 
     def getHandleInvalid(self) -> str:
-        """Get invalid-handling strategy."""
+        """Return the invalid-data strategy."""
         return self.getOrDefault(self.handleInvalid)  # type: ignore[attr-defined,no-any-return]
 
 
 class HasFeaturesCol:
-    """Mixin: ``featuresCol`` param (Spark ML estimators)."""
+    """Mixin providing ``featuresCol``.
+
+    Requires ``Params`` in the MRO so ``super()`` reaches ``_setDefault``.
+    """
 
     def __init__(self) -> None:
-        """Register ``featuresCol`` (default ``features``)."""
+        """Register ``featuresCol`` with default ``features``."""
         super().__init__()
         self.featuresCol: Param[str] = Param(
             self,  # type: ignore[arg-type]
@@ -406,19 +410,22 @@ class HasFeaturesCol:
         self._setDefault(featuresCol="features")  # type: ignore[attr-defined]
 
     def setFeaturesCol(self: P, value: str) -> P:
-        """Set features column name."""
+        """Set the features column name."""
         return self._set(featuresCol=value)  # type: ignore[attr-defined,return-value]
 
     def getFeaturesCol(self) -> str:
-        """Get features column name."""
+        """Return the features column name."""
         return self.getOrDefault(self.featuresCol)  # type: ignore[attr-defined,no-any-return]
 
 
 class HasLabelCol:
-    """Mixin: ``labelCol`` param (Spark ML estimators)."""
+    """Mixin providing ``labelCol``.
+
+    Requires ``Params`` in the MRO so ``super()`` reaches ``_setDefault``.
+    """
 
     def __init__(self) -> None:
-        """Register ``labelCol`` (default ``label``)."""
+        """Register ``labelCol`` with default ``label``."""
         super().__init__()
         self.labelCol: Param[str] = Param(
             self,  # type: ignore[arg-type]
@@ -429,19 +436,22 @@ class HasLabelCol:
         self._setDefault(labelCol="label")  # type: ignore[attr-defined]
 
     def setLabelCol(self: P, value: str) -> P:
-        """Set label column name."""
+        """Set the label column name."""
         return self._set(labelCol=value)  # type: ignore[attr-defined,return-value]
 
     def getLabelCol(self) -> str:
-        """Get label column name."""
+        """Return the label column name."""
         return self.getOrDefault(self.labelCol)  # type: ignore[attr-defined,no-any-return]
 
 
 class HasPredictionCol:
-    """Mixin: ``predictionCol`` param (Spark ML models)."""
+    """Mixin providing ``predictionCol``.
+
+    Requires ``Params`` in the MRO so ``super()`` reaches ``_setDefault``.
+    """
 
     def __init__(self) -> None:
-        """Register ``predictionCol`` (default ``prediction``)."""
+        """Register ``predictionCol`` with default ``prediction``."""
         super().__init__()
         self.predictionCol: Param[str] = Param(
             self,  # type: ignore[arg-type]
@@ -452,11 +462,11 @@ class HasPredictionCol:
         self._setDefault(predictionCol="prediction")  # type: ignore[attr-defined]
 
     def setPredictionCol(self: P, value: str) -> P:
-        """Set prediction column name."""
+        """Set the prediction column name."""
         return self._set(predictionCol=value)  # type: ignore[attr-defined,return-value]
 
     def getPredictionCol(self) -> str:
-        """Get prediction column name."""
+        """Return the prediction column name."""
         return self.getOrDefault(self.predictionCol)  # type: ignore[attr-defined,no-any-return]
 
 

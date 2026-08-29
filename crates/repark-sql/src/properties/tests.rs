@@ -1,6 +1,4 @@
-//! `WITH ( … )` vocabulary tests. Every accepted key, every refusal class, and every transform
-//! validation branch has a row here — the refusals especially, since a refusal that stops firing
-//! is a silent behavior change.
+//! `WITH ( … )` vocabulary tests cover every accepted key, refusal class, and transform.
 
 use datafusion::sql::sqlparser::ast::{CreateTableOptions, Statement};
 use datafusion::sql::sqlparser::dialect::GenericDialect;
@@ -46,9 +44,7 @@ fn format_parquet_is_accepted() {
     }
 }
 
-/// `format_version = 2` is accepted as a number AND as a string (both spellings occur in the
-/// wild), and is CONSUMED — it never leaks into the table's plain properties, because Iceberg
-/// rejects it there.
+/// `format_version = 2` is accepted as a number and as a string (both spellings occur in the wild).
 /// pins: v3-2-create-v3-opt-in/C-003
 #[test]
 fn format_version_two_is_accepted_and_consumed() {
@@ -88,8 +84,7 @@ fn location_is_captured() {
     );
 }
 
-/// `extra_properties` carries RAW dotted Iceberg keys through untouched — the G4 hatch, and the
-/// concrete reason it exists: merge-on-read table creation.
+/// `extra_properties` carries raw dotted Iceberg keys through untouched. It is the G4 hatch.
 #[test]
 fn extra_properties_carries_raw_iceberg_keys() {
     let properties = parse(

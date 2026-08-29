@@ -21,9 +21,8 @@ authoritative key spelling, and the resolved value reaching engine session state
     `ReparkSession::session_time_zone`; an invalid zone fails the BUILD (not a later query); a
     session clone shares the resolved zone.
 
-Deliberately NOT here: extraction semantics. This unit does not change what `year`/`hour`/
-`date_trunc` return, so there is nothing about them to pin at this layer (H-1a split B owns them,
-with its own extractor pins).
+Deliberately NOT here: extraction implementation. H-1a split B owns extractor pins; this map covers
+parsing, one spelling, and resolved session state.
 
 ## Pointers
 
@@ -38,7 +37,7 @@ with its own extractor pins).
 | A new zone string is refused | Validation is Arrow's zone database (`arrow::array::timezone::Tz`), which accepts IANA ids and fixed offsets — not Windows zone names or abbreviations like `EST5EDT` aliases that the database lacks. The refusal quotes the value. |
 | EVERY IANA id is refused but `+05:00` still works | The `chrono-tz` feature on `repark-core`'s `arrow` dependency is gone. It is declared in `crates/repark-core/Cargo.toml` precisely so this validator does not ride `datafusion`'s feature graph; re-declare it there. |
 | A conf key that "looks right" configures nothing | It is probably a lookalike, not the key: exactly one spelling exists (`spark.sql.session.timeZone`, case-sensitive). `lookalike_spellings_are_not_a_second_way_to_set_the_zone` enumerates the near-misses. |
-| The zone is set but query results did not move | Expected in this unit: the value is carried, not yet consumed by extraction. See `../map.md` "Debug" and the recorded disclosure rows. |
+| The zone is set but query results did not move | Check extractor parity pins; the resolved zone is consumed by extraction. |
 
 First checks: `cargo test -p repark-core session_time_zone`. Escalate to:
 [../map.md#debug](../map.md).

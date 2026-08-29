@@ -4,7 +4,7 @@
 //! / `begin_replace` → commit with **no data files**). No SELECT is planned or executed.
 //!
 //! CTAS with an explicit column list stays OUT — that reject lives in [`crate::build_ctas`]
-//! (Group Q pins). This module handles non-CTAS `Statement::CreateTable` only.
+//! This module handles non-CTAS `Statement::CreateTable` only.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -192,8 +192,7 @@ fn schema_from_column_defs(
         })?;
         let iceberg_type =
             sql_type_to_iceberg_with_timestamp_type(&column.data_type, timestamp_type)?;
-        // Only NULL / NOT NULL are handled. DEFAULT / UNIQUE / CHECK / COMMENT / … must not be
-        // silently dropped (I5 octo C1-F2 — same fail-open class as historical CTAS column lists).
+        // Only NULL and NOT NULL are supported. Reject other options instead of dropping them.
         let mut required = false;
         for option in &column.options {
             match &option.option {

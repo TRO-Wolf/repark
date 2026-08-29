@@ -1,6 +1,4 @@
 //! Table-identifier segment parsing and path-escape refuse (identity boundary).
-//!
-//! Extracted MOVE-ONLY from `lib.rs` (r25 T0). Zero behavior change.
 
 /// ===========================================================================================
 /// Split a multipart table identifier with quote awareness (double-quote / backtick).

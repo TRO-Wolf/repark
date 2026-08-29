@@ -1,46 +1,7 @@
-//! The Spark-SQL statement router: `execute` / `execute_with_read_only` / `execute_inner`.
+//! The Spark SQL statement router.
 //!
-//! Ported from the v1 SQL crate's `lib.rs` (declared-rename unit; the crate root here is a
-//! manifest per `scripts/check_lib_rs.py`, so the router body lives in this module). `execute`
-//! parses the statement with DataFusion's `sqlparser`, intercepts the forms DataFusion cannot
-//! execute against an Iceberg catalog, and passes everything else straight through.
-//!
-//! **PR-3b completes the router** — the full v1 execute family is live (MERGE INTO, INSERT
-//! OVERWRITE, CALL, branch/tag ref DDL, and the r25 T2 write-to-branch sniff restored).
-//!
-//! Intercepted (live in this build):
-//! - **CTAS** (`CREATE TABLE … AS SELECT`) — lowered onto the fork's `StagedTableTransaction`
-//!   (create or replace): one catalog publish, no drop-then-insert hole (`ENGINE_CONTRACT`
-//!   §8a).
-//! - **Column-def `CREATE TABLE … (cols) USING iceberg`** — I5 schema-only staged create.
-//! - **`DROP TABLE`** and **`CREATE` / `DROP NAMESPACE | DATABASE`** — catalog ops on the
-//!   iceberg handle, with `IF [NOT] EXISTS` idempotency.
-//! - **`ALTER TABLE`** — `SET` / `UNSET TBLPROPERTIES`, `RENAME TO`, schema evolution, and the
-//!   I7 partition-field DDL via the fork's `UpdateSchema` (see [`crate::alter`]; I6/I7).
-//! - **`DESCRIBE {NAMESPACE|DATABASE|SCHEMA} [EXTENDED]`** — read back a namespace's properties
-//!   as Spark's `info_name`/`info_value` frame (Group Z; pinned to a live pyspark 4.0.0
-//!   `DataSourceV2` oracle).
-//! - **`SHOW {NAMESPACES|SCHEMAS|DATABASES}`** — list a catalog's namespaces as Spark's
-//!   one-column `namespace` frame (Group AB; same oracle, incl. `LIKE`-pattern semantics).
-//! - **`MERGE INTO`** — lowered in [`crate::merge`] and executed by
-//!   `repark_iceberg::write::merge` (COW **and** merge-on-read; fork `ENGINE_CONTRACT` §6).
-//! - **`INSERT OVERWRITE`** — empty: probe → plan/type-validate → provider self-scan wipe
-//!   (C1-Q-001); non-empty (r23 OV1): stream → staged files →
-//!   `commit_overwrite_replace_all` (stage-then-swap; see [`crate::insert_overwrite`]).
-//! - **`CALL`** — Iceberg maintenance procedures via [`crate::call`] (I3; LOCAL catalogs only).
-//! - **Snapshot-ref DDL** (I5) — `CREATE|DROP|REPLACE BRANCH|TAG` via [`crate::ref_ddl`], plus
-//!   the r25 T2 write-to-branch STOP (`ref_ddl::sniff_write_to_branch`).
-//! - **Metadata tables** (I2) — Spark `cat.ns.tbl.snapshots` → fork `cat.ns.tbl$snapshots`.
-//! - **Time travel** (I1) — `VERSION AS OF` / `TIMESTAMP AS OF` / `FOR SYSTEM_*` rewritten to
-//!   snapshot-pinned static providers before normal routing.
-//! - **`TRUNCATE TABLE`** — targeted loud refuse (C4-L-001), verbatim from v1.
-//!
-//! Passthrough: `DELETE` / `UPDATE` / non-overwrite `INSERT INTO` ride DataFusion onto the fork
-//! provider's DML (ADR-0003) behind the P11 read-only-catalog refuse, the **G3-E8
-//! subquery-predicate valve** (a `WHERE` subquery is lost at DataFusion's DML planning boundary
-//! and degenerates into match-all — see [`crate::normalize::refuse_dml_subquery_predicate`]), and
-//! the r22 A2 BUG-001 merge-on-read multi-spec valve. Multi-statement SQL refuses first
-//! (BUG-010); the SEC-02 local-filesystem DDL gate runs inside the passthrough.
+//! It intercepts Iceberg DDL, maintenance, metadata, time-travel, and write forms that DataFusion
+//! cannot execute directly. Other statements use the passthrough with Spark defaults and guards.
 //!
 //! **This module's parse is NOT the executing parse.** [`parse_single_normalized`] uses
 //! `DatabricksDialect`; [`spark_ast::execute_passthrough`] re-parses under the session dialect
@@ -71,18 +32,8 @@ use crate::{
 /// Execute one Spark-SQL statement against `ctx`, routing the Iceberg DDL/write forms to their
 /// handlers and passing everything else (reads, `INSERT INTO`, …) to DataFusion.
 ///
-/// Intercepted today: CTAS (`CREATE TABLE … AS SELECT`, decomposed), **column-def**
-/// `CREATE TABLE … (cols) USING iceberg` (I5 schema-only staged create), `DROP TABLE`,
-/// `CREATE` / `DROP NAMESPACE | DATABASE`, `ALTER TABLE` (SET/UNSET TBLPROPERTIES, RENAME TO,
-/// ADD/DROP/RENAME COLUMN + stretch ALTER COLUMN — I6, + the I7 partition-field DDL),
-/// **`CREATE|DROP BRANCH|TAG`** (I5 → fork `ManageSnapshots`; REPLACE still loud),
-/// `MERGE INTO` (COW + merge-on-read), **empty** `INSERT OVERWRITE` (probe + plan/type-validate +
-/// provider wipe — C1-Q-001; fork empty-overwrite short-circuit is fixed on the pin),
-/// `CALL` (I3: three maintenance procs; unknown/deferred refuse listing supported),
-/// `TRUNCATE TABLE` (loud `NotImplemented` — C4-L-001),
-/// `DESCRIBE {NAMESPACE|DATABASE|SCHEMA}` (Group Z) and
-/// `SHOW {NAMESPACES|SCHEMAS|DATABASES}` (Group AB).
-/// Non-empty `INSERT [OVERWRITE]` / `DELETE` / `UPDATE` pass through to the fork provider's DML.
+/// The router owns Iceberg DDL, MERGE, overwrite, CALL, reference, namespace, and introspection
+/// forms. It passes supported reads and provider DML through the Spark execution path.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -110,13 +61,11 @@ pub async fn execute_with_read_only<S: std::hash::BuildHasher>(
     // Translate downstream parser locations back to the caller's SQL before returning an error.
     let canonical = crate::spark_literals::canonicalize(sql)?;
     let canonical_sql = canonical.as_ref();
-    // Clone + attach on the registry snapshot so P11 survives `.await` thread hops
-    // (thread_local would race under multi-thread Tokio — C1-Q-001).
+    // Clone the registry snapshot so P11 survives `.await` thread hops.
     let mut catalogs = catalogs.clone();
     catalogs.set_read_only_catalogs(read_only_catalogs.iter().cloned().collect());
-    // r25 T2: write-to-branch STOP — refuse before metadata rewrite / main-branch fallthrough.
-    // Fork FastAppend always SetSnapshotRef MAIN_BRANCH (no to_branch commit target).
-    // Two-part `a.branch_x` is ambiguous with a REAL `schema.branch_x` table (morning critic):
+    // Refuse write-to-branch forms before metadata rewrite because the fork commits only MAIN_BRANCH.
+    // Two-part `a.branch_x` is ambiguous with a real `schema.branch_x` table.
     // refuse only when the full name does not resolve but the prefix does (Spark's
     // `t.branch_<name>` spelling); neither resolving falls through to planning's own
     // "table not found", which is the more informative error.
@@ -146,14 +95,8 @@ pub async fn execute_with_read_only<S: std::hash::BuildHasher>(
         } else {
             std::borrow::Cow::Borrowed(canonical_sql)
         };
-    // The time-travel rewrite registers ephemeral pinned relations on the session; they are
-    // released again as soon as the statement has been PLANNED, so a long-lived session neither
-    // accumulates them nor shows them in the introspection surface (`SHOW TABLES` /
-    // `information_schema.tables`). The plan owns its provider, so the returned `DataFrame` still
-    // collects after the name is gone. The release runs on every `?` / `return` path of the split
-    // below — but NOT on unwind or future-drop: `PinnedViews` carries no `Drop` impl by design (it
-    // would have to own a `SessionContext` clone), and neither source exists today (panics banned
-    // in prod, PyO3 drives this via `block_on`).
+    // Release pinned relations after planning so long-lived sessions do not accumulate temporary
+    // names. The plan owns its provider after release; future-drop remains unsupported.
     let mut pinned = time_travel::PinnedViews::default();
     let original_for_locations =
         original_sql_for_locations(sql, canonical_sql, sql_after_meta.as_ref());
@@ -169,9 +112,7 @@ pub async fn execute_with_read_only<S: std::hash::BuildHasher>(
     result
 }
 
-/// The rest of the router, from the time-travel rewrite onward. Split out purely so
-/// [`execute_with_read_only`] can release `pinned` on every `?` / `return` path of the rewrite —
-/// the ones an inline `?` would have skipped. (Unwind / future-drop bypass it; see the call site.)
+/// Continue routing after the time-travel rewrite while preserving pinned-view cleanup.
 async fn execute_time_travelled(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -182,8 +123,6 @@ async fn execute_time_travelled(
     // Iceberg time travel (`VERSION AS OF` / `TIMESTAMP AS OF` / `FOR SYSTEM_* AS OF`) is not
     // modelled by Databricks-dialect sqlparser. Rewrite to snapshot-pinned static providers
     // (fork `IcebergStaticTableProvider::try_new_from_table_snapshot`) before normal routing.
-    // I1 / R-TIME-TRAVEL — kept out of `execute_inner` so the router stays under clippy
-    // `too_many_lines`.
     let sql_storage: std::borrow::Cow<'_, str> = if time_travel::sql_has_time_travel(sql) {
         match time_travel::prepare_time_travel_sql(ctx, catalogs, sql, pinned).await? {
             Some(rewritten) => std::borrow::Cow::Owned(rewritten),
@@ -213,7 +152,7 @@ async fn execute_inner(
     catalogs: &CatalogRegistry,
     sql: &str,
 ) -> Result<DataFrame> {
-    // r22 A2 / BUG-010: refuse genuine multi-statement scripts before any intercept/passthrough.
+    // Refuse genuine multi-statement scripts before any intercept or passthrough.
     // Trailing `;` / whitespace / comments after a single statement remain allowed (Spark oracle).
     refuse_multi_statement_sql(sql)?;
     // Pre-parse recognizers for forms stock sqlparser cannot model (or would drop clauses from).
@@ -275,8 +214,8 @@ async fn execute_inner(
             )
             .await
         }
-        // INSERT OVERWRITE: empty → probe/validate/self-scan provider wipe (C1-Q-001; not DELETE
-        // — BUG-003). Non-empty → OV1 stage-then-swap (stream + commit_overwrite_replace_all).
+        // INSERT OVERWRITE: probe and validate before an empty-source wipe; stage non-empty rows
+        // before the replace-all commit.
         Statement::Insert(insert) if insert.overwrite => {
             execute_insert_overwrite(ctx, catalogs, sql, insert).await
         }
@@ -312,26 +251,10 @@ async fn execute_inner(
 }
 
 /// ===========================================================================================
-/// `DELETE FROM …` — the three valves, then the passthrough. Order is load-bearing:
-///
-/// 1. **P11** read-only-catalog refuse (C2-L-001): the most fundamental "you cannot write here at
-///    all"; a DELETE/UPDATE passthrough would otherwise miss it for postgres targets.
-/// 2. **G3-E8** subquery-predicate refuse: a subquery in the `WHERE` clause is lost at
-///    DataFusion's DML planning boundary and degenerates into match-all — silent whole-table
-///    deletion (see [`crate::normalize::refuse_dml_subquery_predicate`]).
-/// 3. **BUG-001** (r22 A2) merge-on-read + multi-spec history + currently-unpartitioned refuse
-///    (fork DF position-delete unpartitioned fast path silently under-deletes). MERGE untouched.
-///
-/// (2) precedes (3) because both are data-loss valves and (2) is a pure sync AST walk while (3)
-/// loads the target's Iceberg metadata (a network round-trip on Glue / S3 Tables) — cheap before
-/// expensive. Pinned by `tests::dml::g3e8_subquery_valve_precedes_the_mor_multi_spec_valve`, and
-/// mirrored on the ANSI door by `repark_sql`'s `mor_valve_runs_after_the_g3e8_valve`.
-///
-/// **(2) here is the EARLY call, not the load-bearing one.** The valve's authoritative attachment
-/// is inside [`spark_ast::execute_passthrough`], on the executing parse — the only parse that
-/// sees every DML route into DataFusion (F-A / panel L1 M-1). This call is kept solely so the
-/// cheap sync refusal wins the ORDER above; deleting it would not open the hole, it would only
-/// spend an Iceberg metadata load before refusing.
+/// `DELETE FROM …` applies the write-safety valves before provider execution. Read-only targets,
+/// subquery predicates, and unsafe merge-on-read layouts fail before a destructive write. The
+/// syntactic subquery valve runs before metadata-dependent checks; the executing parse remains
+/// authoritative in [`spark_ast::execute_passthrough`].
 /// ===========================================================================================
 async fn execute_delete(
     ctx: &SessionContext,

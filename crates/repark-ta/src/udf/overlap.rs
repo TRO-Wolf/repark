@@ -1,7 +1,4 @@
-//! Overlap-family window-UDF dispatch (`sma`/`ema`/`bbands`/…/`mavp`).
-//!
-//! Called only from [`TaFn::compute`](super::TaFn::compute) /
-//! [`TaFn::compute_all`](super::TaFn::compute_all). Kernel math stays in `crate::overlap`.
+//! Overlap-family window-UDF dispatch. Kernel math stays in `crate::overlap`.
 
 use crate::{
     bbands, dema, ema, kama, ma, mama, mavp, midpoint, midprice, sar, sarext, sma, t3, tema, trima,
@@ -34,13 +31,8 @@ pub(super) fn compute(func: TaFn, series: &[&[f64]], params: &[f64]) -> crate::R
         TaFn::BbandsLower => {
             bbands(series[0], period(params[0])?, params[1], params[2]).map(|(_, _, l)| l)
         }
-        // MA selector: params [period, matype].
         TaFn::Ma => ma(series[0], period(params[0])?, period(params[1])?),
-        // T3 — the parked four. MAMA/SAR/SAREXT carry REAL-valued scalars (limits /
-        // accelerations / offset / start), passed through verbatim — NOT via `period`
-        // (which rejects non-integral values). MAVP's three scalars (min, max, matype)
-        // ARE integral, so they go through `period`; its second series (`series[1]`) is
-        // the per-row periods column.
+        // MAMA/SAR/SAREXT parameters are real-valued; MAVP parameters are integral periods.
         TaFn::Mama => mama(series[0], params[0], params[1]).map(|(mama_out, _)| mama_out),
         TaFn::Fama => mama(series[0], params[0], params[1]).map(|(_, fama_out)| fama_out),
         TaFn::Sar => sar(series[0], series[1], params[0], params[1]),
@@ -60,7 +52,7 @@ pub(super) fn compute(func: TaFn, series: &[&[f64]], params: &[f64]) -> crate::R
 }
 
 /// ===========================================================================================
-/// Overlap multi-output families (`BBANDS`, `MAMA`) — one kernel run, every band.
+/// Compute all bands for an overlap multi-output family in one kernel run.
 /// ===========================================================================================
 pub(super) fn compute_all(
     family: MultiFamily,

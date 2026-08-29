@@ -1,7 +1,4 @@
-//! Momentum Indicators — `RSI`, `ADX`, the price rate-of-change family (`MOM`/`ROC`/`ROCP`/
-//! `ROCR`/`ROCR100`), `WILLR`, `CCI`, `CMO`, `BOP`, `APO`/`PPO`, `AROON`/`AROONOSC`, `TRIX`,
-//! `ULTOSC`, and the stochastics (`STOCH`/`STOCHF`/`STOCHRSI`, each split into two outputs)
-//! (TA-Lib C 0.4.0 ports; see the crate docs for the numerics contract).
+//! TA-Lib C 0.4.0 ports for momentum indicators and stochastics.
 
 use crate::{
     Result, TaError, as_f64, check_lengths, check_period, dema, ema, is_zero, is_zero_or_neg, kama,
@@ -11,10 +8,8 @@ use crate::{
 /// ===========================================================================================
 /// `RSI` — relative strength index (`ta_RSI.c`, Classic compatibility, unstable period 0).
 ///
-/// Seed: simple averages of gains/losses over the first `period` deltas. Wilder smoothing in
-/// C's statement order (`prev *= period − 1` / add delta / `prev /= period`). Output is
-/// `100 * gain / (gain + loss)` with the `TA_IS_ZERO` guard yielding `0.0`. Lookback =
-/// `period` (the first delta consumes one extra bar).
+/// Seed with average gains and losses, then apply Wilder smoothing in C's statement order.
+/// The zero guard returns `0.0`; lookback is `period`.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -73,9 +68,7 @@ pub fn rsi(input: &[f64], period: usize) -> Result<Vec<f64>> {
     Ok(out)
 }
 
-/// The per-bar ±DM / true-range bookkeeping C repeats verbatim in all three ADX phases.
-/// Extracting it changes NOTHING numerically — same statements, same order — and the goldens
-/// pin that.
+/// Shared per-bar ±DM and true-range bookkeeping for all ADX phases.
 #[allow(clippy::struct_field_names)] // the `prev` prefix mirrors C's prevMinusDM/prevTR/… names.
 struct DirectionalState {
     prev_minus_dm: f64,
@@ -98,8 +91,7 @@ impl DirectionalState {
         }
     }
 
-    /// Advance one bar. `decay` selects raw accumulation (phase 1) vs Wilder decay (phases
-    /// 2/3) for both the DM pair and the TR total, exactly as the C blocks differ.
+    /// Advance one bar using raw or Wilder-decayed accumulation.
     fn step(&mut self, high: f64, low: f64, close: f64, period: f64, decay: bool) {
         let diff_p = high - self.prev_high;
         self.prev_high = high;
@@ -123,8 +115,7 @@ impl DirectionalState {
         self.prev_close = close;
     }
 
-    /// The DX for the current state; `None` when either C `TA_IS_ZERO` guard fires (the
-    /// caller then leaves its running ADX unchanged, as C does).
+    /// Return DX, or `None` when a C zero guard fires.
     fn dx(&self) -> Option<f64> {
         if is_zero(self.prev_tr) {
             return None;
@@ -138,8 +129,7 @@ impl DirectionalState {
         Some(100.0 * ((minus_di - plus_di).abs() / temp_real))
     }
 
-    /// `+DI` for the current smoothed state (`100 · prevPlusDM / prevTR`), with the
-    /// `TA_IS_ZERO(prevTR)` guard yielding `0.0` — exactly `ta_PLUS_DI.c`'s output step.
+    /// Return smoothed `+DI`, applying C's zero guard.
     fn plus_di(&self) -> f64 {
         if is_zero(self.prev_tr) {
             0.0
@@ -148,8 +138,7 @@ impl DirectionalState {
         }
     }
 
-    /// `−DI` for the current smoothed state (`100 · prevMinusDM / prevTR`), same `TA_IS_ZERO`
-    /// guard — `ta_MINUS_DI.c`'s output step.
+    /// Return smoothed `−DI`, applying C's zero guard.
     fn minus_di(&self) -> f64 {
         if is_zero(self.prev_tr) {
             0.0
@@ -159,10 +148,7 @@ impl DirectionalState {
     }
 }
 
-/// Seed a [`DirectionalState`] from bar 0 and run the first `period − 1` bars of **raw** ±DM/TR
-/// accumulation (phase 1, no Wilder decay), the shared prologue every directional function starts
-/// with. Returns the primed state and `today` (the last consumed bar index, `= period − 1`). The
-/// ±DM/TR recurrence itself lives ONLY in [`DirectionalState::step`] — this never forks it.
+/// Seed directional state and consume the first `period − 1` raw bars.
 fn directional_prime(
     high: &[f64],
     low: &[f64],
@@ -182,11 +168,8 @@ fn directional_prime(
 /// ===========================================================================================
 /// `DX` — directional movement index (`ta_DX.c`, unstable period 0, `round_pos` disabled).
 ///
-/// One period of Wilder-smoothed ±DM/TR, emitted as `DX = 100 · |−DI − +DI| / (−DI + +DI)`.
-/// Phases exactly as C: (1) `period − 1` bars of raw ±DM/TR accumulation, (2) ONE Wilder-decayed
-/// bar, then the first DX, (3) the output loop — but unlike [`adx`] there is no running average;
-/// each bar emits its own DX. When either `TA_IS_ZERO` guard fires the previous DX is re-emitted
-/// (the very first is `0.0`). Lookback = `period`.
+/// Emit one DX per bar after raw seeding and one Wilder-decayed bar.
+/// A zero guard re-emits the previous DX; lookback is `period`.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -197,17 +180,15 @@ pub fn dx(high: &[f64], low: &[f64], close: &[f64], period: usize) -> Result<Vec
     check_lengths(high.len(), &[low.len(), close.len()])?;
     let len = high.len();
     let mut out = nan_vec(len);
-    let lookback = period; // period > 1 → lookbackTotal = period (unstable period 0)
+    let lookback = period;
     if len <= lookback {
         return Ok(out);
     }
     let period_f = as_f64(period);
     let (mut state, mut today) = directional_prime(high, low, close, period);
-    // Phase 2 — one Wilder-decayed bar, then the first DX (guard → 0.0).
     today += 1;
     state.step(high[today], low[today], close[today], period_f, true);
     out[today] = state.dx().unwrap_or(0.0);
-    // Phase 3 — one DX per bar; a fired guard re-emits the previous output.
     while today < len - 1 {
         today += 1;
         state.step(high[today], low[today], close[today], period_f, true);
@@ -220,18 +201,14 @@ pub fn dx(high: &[f64], low: &[f64], close: &[f64], period: usize) -> Result<Vec
 /// ===========================================================================================
 /// `ADXR` — average directional movement rating (`ta_ADXR.c`).
 ///
-/// The mean of today's [`adx`] and the ADX `period − 1` bars ago:
-/// `ADXR = (ADX[t] + ADX[t − (period − 1)]) / 2`. C computes ADX over a range shifted back by
-/// `period − 1` and averages the two ends; because [`adx`] seeds from input bar 0 identically at
-/// every index, reusing it here is bit-exact. Lookback = `3·period − 2` (ADX's `2·period − 1`
-/// plus the extra `period − 1` shift).
+/// Average today's [`adx`] with the value `period − 1` bars earlier.
+/// Lookback is `3·period − 2`; the literal divide preserves C rounding.
 /// ===========================================================================================
 ///
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if `period < 2`; [`crate::TaError::LengthMismatch`] if the
 /// series differ in length.
-// C computes `(adx[i] + adx[j]) / 2.0` literally; `f64::midpoint` rounds differently, so the
-// manual form is load-bearing for bit-exactness (same reasoning as `overlap::midpoint`).
+// Preserve C's literal addition and division; `f64::midpoint` rounds differently.
 #[allow(clippy::manual_midpoint)]
 pub fn adxr(high: &[f64], low: &[f64], close: &[f64], period: usize) -> Result<Vec<f64>> {
     check_period("optInTimePeriod", period, 2)?;
@@ -250,11 +227,7 @@ pub fn adxr(high: &[f64], low: &[f64], close: &[f64], period: usize) -> Result<V
     Ok(out)
 }
 
-/// The `period == 1` fast path shared by [`plus_di`]/[`minus_di`]/[`plus_dm`]/[`minus_dm`]: no
-/// Wilder smoothing, just the one-bar `+DM1`/`−DM1` (optionally over `TR1`) per price bar,
-/// lookback 1. `plus` selects the ±DM case and its `diffP`/`diffM` output; `di` divides by the
-/// true range with the `TA_IS_ZERO(TR)` guard. Mirrors the `optInTimePeriod <= 1` blocks in
-/// `ta_PLUS_DM.c` / `ta_PLUS_DI.c` (and the minus twins).
+/// Compute the period-one ±DM or DI fast path without Wilder smoothing.
 #[allow(clippy::if_not_else)] // ordered to mirror C's `if(case) … else 0.0`.
 fn directional_period_one(
     high: &[f64],
@@ -298,10 +271,7 @@ fn directional_period_one(
 /// ===========================================================================================
 /// `PLUS_DI` — plus directional indicator (`ta_PLUS_DI.c`, `round_pos` disabled).
 ///
-/// Wilder-smoothed `+DM` over the smoothed true range: `+DI = 100 · prevPlusDM / prevTR`
-/// (`TA_IS_ZERO(prevTR)` → `0.0`). Phases match [`dx`] (raw accumulation → one decayed bar → the
-/// output loop) but emit `+DI` rather than DX. `period == 1` is the un-smoothed `+DM1 / TR1` per
-/// bar. Lookback = `period` (`1` when `period == 1`).
+/// Emit Wilder-smoothed `+DI`, or the period-one `+DM1 / TR1` fast path.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -314,8 +284,7 @@ pub fn plus_di(high: &[f64], low: &[f64], close: &[f64], period: usize) -> Resul
 /// ===========================================================================================
 /// `MINUS_DI` — minus directional indicator (`ta_MINUS_DI.c`).
 ///
-/// The `−DM` twin of [`plus_di`]: `−DI = 100 · prevMinusDM / prevTR` with the same guard and
-/// phase structure. Lookback = `period` (`1` when `period == 1`).
+/// Emit the `−DM` twin of [`plus_di`].
 /// ===========================================================================================
 ///
 /// # Errors
@@ -325,7 +294,7 @@ pub fn minus_di(high: &[f64], low: &[f64], close: &[f64], period: usize) -> Resu
     directional_di(high, low, close, period, false)
 }
 
-/// Shared body for [`plus_di`]/[`minus_di`]: `plus` selects which smoothed DM the output reads.
+/// Compute either directional indicator from shared state.
 fn directional_di(
     high: &[f64],
     low: &[f64],
@@ -361,10 +330,8 @@ fn directional_di(
 /// ===========================================================================================
 /// `PLUS_DM` — plus directional movement (`ta_PLUS_DM.c`).
 ///
-/// The Wilder-smoothed `+DM` total itself (no division by TR): seed = sum of `+DM1` over the
-/// first `period − 1` deltas, then `prevPlusDM = prevPlusDM − prevPlusDM/period + todayPlusDM1`.
-/// Two-series (H, L). `period == 1` is the raw `+DM1` per bar. Lookback = `period − 1`
-/// (`1` when `period == 1`).
+/// Emit Wilder-smoothed `+DM` without dividing by true range.
+/// Period one returns raw `+DM1`; lookback is `period − 1` (or one for period one).
 /// ===========================================================================================
 ///
 /// # Errors
@@ -377,8 +344,7 @@ pub fn plus_dm(high: &[f64], low: &[f64], period: usize) -> Result<Vec<f64>> {
 /// ===========================================================================================
 /// `MINUS_DM` — minus directional movement (`ta_MINUS_DM.c`).
 ///
-/// The `−DM` twin of [`plus_dm`]. Two-series (H, L). Lookback = `period − 1` (`1` when
-/// `period == 1`).
+/// Emit the `−DM` twin of [`plus_dm`].
 /// ===========================================================================================
 ///
 /// # Errors
@@ -388,9 +354,7 @@ pub fn minus_dm(high: &[f64], low: &[f64], period: usize) -> Result<Vec<f64>> {
     directional_dm(high, low, period, false)
 }
 
-/// Shared body for [`plus_dm`]/[`minus_dm`]. The TR half of [`DirectionalState::step`] runs but is
-/// never read — the DM smoothing is identical to C's standalone `prevDM − prevDM/period + DM1`
-/// (same three roundings, same order), so no second copy of the recurrence exists.
+/// Compute either smoothed DM from shared directional state.
 fn directional_dm(high: &[f64], low: &[f64], period: usize, plus: bool) -> Result<Vec<f64>> {
     check_period("optInTimePeriod", period, 1)?;
     check_lengths(high.len(), &[low.len()])?;
@@ -399,7 +363,6 @@ fn directional_dm(high: &[f64], low: &[f64], period: usize, plus: bool) -> Resul
     if len <= lookback {
         return Ok(nan_vec(len));
     }
-    // The DM-only path never inspects close; a zero co-series keeps `step`'s TR arithmetic finite.
     let close = vec![0.0_f64; len];
     if period == 1 {
         return Ok(directional_period_one(high, low, &close, plus, false));
@@ -427,11 +390,8 @@ fn directional_dm(high: &[f64], low: &[f64], period: usize, plus: bool) -> Resul
 /// `ADX` — average directional movement index (`ta_ADX.c`, unstable period 0, `round_pos`
 /// disabled — the C default build).
 ///
-/// Three phases, exactly as C: (1) `period − 1` bars of raw ±DM/TR accumulation, (2) `period`
-/// bars of Wilder-decayed accumulation summing DX into the first ADX (`sumDX / period`),
-/// (3) the output loop smoothing `ADX = (prevADX * (period − 1) + DX) / period`. When the
-/// `TA_IS_ZERO` guards fire, the previous ADX is re-emitted unchanged. Lookback =
-/// `2 * period − 1`.
+/// Seed raw state, average `period` Wilder-decayed DX values, then smooth ADX.
+/// A zero guard re-emits the previous ADX; lookback is `2 * period − 1`.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -441,9 +401,6 @@ pub fn adx(high: &[f64], low: &[f64], close: &[f64], period: usize) -> Result<Ve
     check_period("optInTimePeriod", period, 2)?;
     check_lengths(high.len(), &[low.len(), close.len()])?;
     let len = high.len();
-    // Keeps `nan_vec`: the `ema` single-write extend form was MEASURED at +42% on `adx_n1e6`
-    // (n=1e6) — the `DirectionalState` carried through the closure defeats the optimization.
-    // The same shape applies to `dx` / the `directional_*` helpers. Do not "modernize" these.
     let mut out = nan_vec(len);
     let lookback = 2 * period - 1;
     if len < lookback + 1 {
@@ -453,13 +410,11 @@ pub fn adx(high: &[f64], low: &[f64], close: &[f64], period: usize) -> Result<Ve
     let mut state = DirectionalState::new(high[0], low[0], close[0]);
     let mut today = 0;
 
-    // Phase 1 — raw ±DM / TR accumulation over the first period − 1 deltas.
     for _ in 0..(period - 1) {
         today += 1;
         state.step(high[today], low[today], close[today], period_f, false);
     }
 
-    // Phase 2 — Wilder-decayed accumulation; DX values sum into the first ADX.
     let mut sum_dx = 0.0_f64;
     for _ in 0..period {
         today += 1;
@@ -471,7 +426,6 @@ pub fn adx(high: &[f64], low: &[f64], close: &[f64], period: usize) -> Result<Ve
     let mut prev_adx = sum_dx / period_f;
     out[today] = prev_adx;
 
-    // Phase 3 — the smoothed output loop.
     while today < len - 1 {
         today += 1;
         state.step(high[today], low[today], close[today], period_f, true);
@@ -486,8 +440,7 @@ pub fn adx(high: &[f64], low: &[f64], close: &[f64], period: usize) -> Result<Ve
 /// ===========================================================================================
 /// `MOM` — momentum, `price − prevPrice` (`ta_MOM.c`).
 ///
-/// The un-normalized rate-of-change: today minus the value `period` bars back. Lookback =
-/// `period` (the trailing value needs `period` prior bars). No zero guard — a plain subtraction.
+/// Return today's value minus the value `period` bars earlier.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -509,10 +462,7 @@ pub fn mom(input: &[f64], period: usize) -> Result<Vec<f64>> {
     Ok(out)
 }
 
-/// The shared trailing-ratio loop for the `ROC`/`ROCP`/`ROCR`/`ROCR100` family (`ta_ROC*.c`).
-/// All four share C's exact structure — lookback `period`, `trailingIdx = today − period`, and
-/// the `prevPrice != 0.0` guard yielding `0.0` — differing ONLY in the per-bar formula `f(price,
-/// prevPrice)`. The `!= 0.0` comparison is C's exact (non-epsilon) test.
+/// Run the shared C-compatible trailing-ratio loop for the ROC family.
 #[allow(clippy::float_cmp, clippy::if_not_else)] // C guards with exact `prevPrice != 0.0`.
 fn roc_family(input: &[f64], period: usize, f: impl Fn(f64, f64) -> f64) -> Result<Vec<f64>> {
     check_period("optInTimePeriod", period, 1)?;
@@ -579,11 +529,8 @@ pub fn rocr100(input: &[f64], period: usize) -> Result<Vec<f64>> {
 /// ===========================================================================================
 /// `WILLR` — Williams %R (`ta_WILLR.c`).
 ///
-/// `(highestHigh − close) / diff` where `diff = (highestHigh − lowestLow) / −100`, so the output
-/// sits in `[−100, 0]`. The rolling high/low use TA-Lib's trailing-index rescan (running
-/// extremum + its index, rescanned only when that index falls off the trailing edge; `<=`/`>=`
-/// single-bar extension). `diff` persists across bars, recomputed only when an extreme changes —
-/// exactly as C. The `diff != 0.0` guard yields `0.0`. Lookback = `period − 1`.
+/// Return Williams %R using C's trailing extrema and exact-zero flat-window guard.
+/// Lookback is `period − 1` and output lies in `[−100, 0]`.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -655,11 +602,8 @@ pub fn willr(high: &[f64], low: &[f64], close: &[f64], period: usize) -> Result<
 /// ===========================================================================================
 /// `CCI` — commodity channel index (`ta_CCI.c`).
 ///
-/// Over each trailing window of typical prices `(H+L+C)/3`: the mean-absolute deviation is a
-/// FULL per-window recompute (C keeps the window in a circular buffer and re-sums it every bar —
-/// this is deliberately NOT an incremental accumulator, so the summation order rotates with the
-/// buffer and must be replicated for bit-exactness). `CCI = (typ − mean) / (0.015 · MAD/period)`,
-/// with the `(typ−mean) != 0 && MAD != 0` guard yielding `0.0`. Lookback = `period − 1`.
+/// Compute CCI from a circular-buffer window and full MAD re-sum.
+/// The exact-zero guards return `0.0`; lookback is `period − 1`.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -676,11 +620,9 @@ pub fn cci(high: &[f64], low: &[f64], close: &[f64], period: usize) -> Result<Ve
         return Ok(out);
     }
     let period_f = as_f64(period);
-    // The circular buffer of typical prices, exactly `period` slots (C's CIRCBUF: write at
-    // `circ_idx`, advance with wrap at `period − 1`).
     let mut circ = vec![0.0_f64; period];
     let mut circ_idx = 0_usize;
-    let mut today = 0_usize; // i = startIdx − lookback = 0
+    let mut today = 0_usize;
     while today < lookback {
         circ[circ_idx] = (high[today] + low[today] + close[today]) / 3.0;
         today += 1;
@@ -692,7 +634,7 @@ pub fn cci(high: &[f64], low: &[f64], close: &[f64], period: usize) -> Result<Ve
     while today < len {
         let last_value = (high[today] + low[today] + close[today]) / 3.0;
         circ[circ_idx] = last_value;
-        // Full re-sum over the physical buffer order (rotates as the window slides).
+        // Physical buffer order is load-bearing for bit parity.
         let mut the_average = 0.0_f64;
         for value in &circ {
             the_average += *value;
@@ -720,10 +662,8 @@ pub fn cci(high: &[f64], low: &[f64], close: &[f64], period: usize) -> Result<Ve
 /// ===========================================================================================
 /// `CMO` — Chande momentum oscillator (`ta_CMO.c`, Classic compatibility, unstable period 0).
 ///
-/// Shares [`rsi`]'s gain/loss decomposition and Wilder smoothing verbatim — only the final step
-/// differs: `100 · (gain − loss) / (gain + loss)` (RSI uses `gain / (gain+loss)`). The
-/// `TA_IS_ZERO(gain+loss)` guard yields `0.0`. Lookback = `period`. (The Metastock-only extra
-/// seed bar is not taken under Classic compatibility.)
+/// Apply RSI's gain/loss recurrence with `100 · (gain − loss) / (gain + loss)`.
+/// The zero guard returns `0.0`; lookback is `period`.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -780,8 +720,7 @@ pub fn cmo(input: &[f64], period: usize) -> Result<Vec<f64>> {
 /// ===========================================================================================
 /// `BOP` — balance of power, `(close − open) / (high − low)` (`ta_BOP.c`).
 ///
-/// Four-series (O/H/L/C), no period, no lookback — every bar produces a value. The
-/// `TA_IS_ZERO_OR_NEG(high − low)` guard yields `0.0` (a zero/negative bar range).
+/// Return `(close − open) / (high − low)` for every bar with C's range guard.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -801,13 +740,9 @@ pub fn bop(open: &[f64], high: &[f64], low: &[f64], close: &[f64]) -> Result<Vec
     Ok(out)
 }
 
-/// TA-Lib's `MA` moving-average selector (`ta_MA.c`). `matype` follows the `TA_MAType` enum
-/// (0 SMA / 1 EMA / 2 WMA / 3 DEMA / 4 TEMA / 5 TRIMA / 6 KAMA / 7 MAMA / 8 T3); T3 uses TA-Lib's
-/// `MA`-default `vfactor` 0.7. MAMA (`ta_MA.c:313-329`) ignores `optInTimePeriod` and returns
-/// `MAMA(0.5, 0.05)`'s MAMA leg (FAMA discarded); period `<= 1` is the identity
-/// (`ta_MA.c:266-274`) for every in-range type. Out-of-range codes error before arithmetic.
+/// Select TA-Lib's moving-average type `0..=8`; period one is identity.
+/// Type 7 returns MAMA's MAMA leg with fixed limits and ignores period.
 pub(crate) fn ma_dispatch(input: &[f64], period: usize, matype: usize) -> Result<Vec<f64>> {
-    // C's period==1 identity branch runs before the matype switch (ta_MA.c:266-274).
     if period <= 1 {
         if matype > 8 {
             return Err(TaError::UnsupportedMaType {
@@ -825,7 +760,6 @@ pub(crate) fn ma_dispatch(input: &[f64], period: usize, matype: usize) -> Result
         4 => tema(input, period),
         5 => trima(input, period),
         6 => kama(input, period),
-        // ta_MA.c:313-329 — MAMA(0.5, 0.05); optInTimePeriod ignored, FAMA discarded.
         7 => Ok(mama(input, 0.5, 0.05)?.0),
         8 => t3(input, period, 0.7),
         _ => Err(TaError::UnsupportedMaType {
@@ -835,13 +769,9 @@ pub(crate) fn ma_dispatch(input: &[f64], period: usize, matype: usize) -> Result
     }
 }
 
-/// The lookback (index of the first non-NaN output) for a [`ma_dispatch`] kernel — the TA-Lib
-/// `LOOKBACK_CALL(MA)(period, matype)` (`ta_MA.c:120-172`). Period `<= 1` returns 0 for every
-/// in-range type before the matype switch; MAMA (7) is the fixed 32-bar Hilbert warm-up
-/// (`ta_MA.c:152-154` → `LOOKBACK_CALL(MAMA)(0.5, 0.05)`). Used by [`macdext`] to align the
-/// fast/slow/signal MAs.
+/// Return the first non-NaN index for a selected moving average.
+/// Period one has lookback zero; MAMA has fixed lookback 32 otherwise.
 pub(crate) fn ma_lookback(period: usize, matype: usize) -> Result<usize> {
-    // C ta_MA.c:120-121 — period <= 1 → lookback 0 for any valid matype (incl. MAMA).
     if period <= 1 {
         if matype > 8 {
             return Err(TaError::UnsupportedMaType {
@@ -852,13 +782,12 @@ pub(crate) fn ma_lookback(period: usize, matype: usize) -> Result<usize> {
         return Ok(0);
     }
     let lookback = match matype {
-        0 | 1 | 2 | 5 => period - 1, // SMA / EMA / WMA / TRIMA
-        3 => 2 * (period - 1),       // DEMA
-        4 => 3 * (period - 1),       // TEMA
-        6 => period,                 // KAMA
-        // ta_MA.c:152-154 — LOOKBACK_CALL(MAMA)(0.5, 0.05) = 32.
+        0 | 1 | 2 | 5 => period - 1,
+        3 => 2 * (period - 1),
+        4 => 3 * (period - 1),
+        6 => period,
         7 => 32,
-        8 => 6 * (period - 1), // T3
+        8 => 6 * (period - 1),
         _ => {
             return Err(TaError::UnsupportedMaType {
                 matype,
@@ -869,18 +798,9 @@ pub(crate) fn ma_lookback(period: usize, matype: usize) -> Result<usize> {
     Ok(lookback)
 }
 
-/// C's `MA(startIdx, endIdx, …)` over a shifted range: the dense MA values at input indices
-/// `max(start_idx, lookback) ..= end_idx`, buffer index 0 ↔ input `max(start_idx, lookback)`.
-///
-/// For windowed / re-seeded MAs (SMA/WMA/TRIMA/EMA/DEMA/TEMA/KAMA/T3), calling full-array
-/// [`ma_dispatch`] on the slice `input[effStart − lookback ..= end_idx]` (then dropping the
-/// `lookback`-long NaN prefix) reproduces C's shifted computation bit-for-bit.
-///
-/// **MAMA (matype 7) is different:** Hilbert state walks the full prefix with absolute bar
-/// parity (`today.is_multiple_of(2)`). C seeds at global index 0, not at a re-based
-/// `effStart − 32`. When `eff_start > 32` (e.g. MACDEXT with a longer other-leg lookback), a
-/// slice-reseed would diverge — so matype 7 runs full-array [`mama`] and index-slices the
-/// window (same rule as [`crate::mavp`]).
+/// Compute a shifted MA range with C's buffer indexing. Windowed MAs can run on a lookback-prefixed
+/// slice. MAMA must run on the full prefix because Hilbert state uses absolute bar parity; slicing
+/// and reseeding after its fixed lookback would diverge.
 pub(crate) fn ma_range(
     input: &[f64],
     period: usize,
@@ -893,7 +813,6 @@ pub(crate) fn ma_range(
     if end_idx < eff_start {
         return Ok(Vec::new());
     }
-    // Octo C4-Q-001 / C4-L-001 — MAMA is full-prefix, not a window reseed.
     if matype == 7 && period > 1 {
         let dense = mama(input, 0.5, 0.05)?.0;
         return Ok(dense[eff_start..=end_idx].to_vec());
@@ -902,16 +821,13 @@ pub(crate) fn ma_range(
     Ok(dense[lookback..].to_vec())
 }
 
-/// C's `PER_TO_K(period)`: the EMA smoothing constant `2 / (period + 1)`.
+/// Return C's EMA smoothing constant.
 fn per_to_k(period: usize) -> f64 {
     2.0 / (as_f64(period) + 1.0)
 }
 
-/// C's `TA_INT_EMA` over a shifted range: the dense EMA values at input indices
-/// `max(start_idx, period − 1) ..= end_idx`, buffer index 0 ↔ input `max(start_idx, period − 1)`.
-/// Seed = SMA over the `period` inputs ending at that first output bar; recursion
-/// `prev = (x − prev)·k + prev` (two roundings — never `mul_add`). `k` is explicit because
-/// `MACDFIX` seeds the slow/fast EMAs with the fixed `0.075`/`0.15` constants, not `PER_TO_K`.
+/// Compute C's shifted EMA with an explicit smoothing constant.
+/// Separate multiply and add operations preserve bit parity.
 fn int_ema_dense(
     input: &[f64],
     period: usize,
@@ -928,9 +844,6 @@ fn int_ema_dense(
         today += 1;
     }
     let mut prev = temp / as_f64(period);
-    // Single-write construction (the `overlap::ema` pattern): seed pushed once, then the
-    // recursion streamed through a TrustedLen extend instead of a push-per-element loop.
-    // `(x − prev)·k + prev` and its two roundings are unchanged — construction only.
     let mut out = Vec::with_capacity(end_idx - eff_start + 1);
     out.push(prev);
     out.extend(input[today..=end_idx].iter().map(|value| {
@@ -940,12 +853,8 @@ fn int_ema_dense(
     out
 }
 
-/// C's `TA_INT_MACD` (`ta_MACD.c`), shared by [`macd`] and [`macdfix`]. Returns full-length
-/// NaN-prefixed `(macd, signal, hist)`. `fix` selects `MACDFIX`'s fixed EMA constants
-/// (`0.075` for slow-26, `0.15` for fast-12) over `PER_TO_K`; the signal EMA always uses
-/// `PER_TO_K(signal)`. The slow EMA is seeded `lookbackSignal` bars earlier than the output start
-/// so the signal EMA, once seeded off the MACD line, lines up on the requested first bar — C's
-/// exact seed/trim ordering. Lookback = `(slow − 1) + (signal − 1)`.
+/// Compute MACD, signal, and histogram with C's seed and trim ordering.
+/// `fix` selects MACDFIX's fixed fast and slow constants.
 fn int_macd(
     input: &[f64],
     fast_period: usize,
@@ -954,7 +863,6 @@ fn int_macd(
     fix: bool,
 ) -> (Vec<f64>, Vec<f64>, Vec<f64>) {
     let len = input.len();
-    // Make slow really the slower period (swap if needed), as C does.
     let (fast_period, slow_period) = if slow_period < fast_period {
         (slow_period, fast_period)
     } else {
@@ -975,7 +883,7 @@ fn int_macd(
     }
     let start_idx = lookback_total;
     let end_idx = len - 1;
-    let temp_start = start_idx - lookback_signal; // = slow_period − 1
+    let temp_start = start_idx - lookback_signal;
     let slow_ema = int_ema_dense(input, slow_period, k_slow, temp_start, end_idx);
     let fast_ema = int_ema_dense(input, fast_period, k_fast, temp_start, end_idx);
     let macd_buf: Vec<f64> = fast_ema
@@ -1048,13 +956,8 @@ pub fn macdfix(input: &[f64], signal_period: usize) -> Result<(Vec<f64>, Vec<f64
 /// ===========================================================================================
 /// `MACDEXT` — MACD with configurable MA types (`ta_MACDEXT.c`, split into three outputs).
 ///
-/// `macd = MA(fast, fastType) − MA(slow, slowType)`; `signal = MA(macd, signal, signalType)`;
-/// `hist = macd − signal`, each MA routed through [`ma_dispatch`] (0..=8 incl. MAMA(7) via
-/// `ta_MA.c:313-329`). C swaps so the slow period/type is the longer, aligns both MAs on the
-/// larger of the two lookbacks (via [`ma_range`]'s shifted computation), and seeds the signal MA
-/// off the MACD line — all bit-exact. The seven parameters are in `polars_talib`'s declared order
-/// (fast period/type, slow period/type, signal period/type). Lookback =
-/// `max(fastLB, slowLB) + signalLB`.
+/// Compute MACD with configurable moving-average types.
+/// C aligns the two legs by their larger lookback and then smooths the MACD line.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -1073,7 +976,6 @@ pub fn macdext(
     check_period("optInSlowPeriod", slow_period, 2)?;
     check_period("optInSignalPeriod", signal_period, 1)?;
     let len = input.len();
-    // Swap period AND type so the slow leg is really the slower, as C does.
     let (fast_period, fast_matype, slow_period, slow_matype) = if slow_period < fast_period {
         (slow_period, slow_matype, fast_period, fast_matype)
     } else {
@@ -1119,10 +1021,7 @@ pub fn macdext(
 /// ===========================================================================================
 /// `APO` — absolute price oscillator, `MA(fast) − MA(slow)` (`ta_APO.c` / `TA_INT_PO`).
 ///
-/// Both MAs use the same `matype` (see [`ma_dispatch`]); C swaps so the slow period is the
-/// longer, then subtracts fast−slow over the slow MA's dense range (the longer lookback governs
-/// the output start — element-aligned by input index here, so `out = fast − slow` wherever the
-/// slow MA is defined). Lookback = the slow MA's lookback.
+/// Subtract the selected slow moving average from the selected fast moving average.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -1156,8 +1055,7 @@ pub fn apo(
 /// `PPO` — percentage price oscillator, `(MA(fast) − MA(slow)) / MA(slow) · 100`
 /// (`ta_PPO.c` / `TA_INT_PO` with the percentage flag).
 ///
-/// The [`apo`] composition with a percentage normalization; the `TA_IS_ZERO(slow MA)` guard
-/// yields `0.0`.
+/// Return [`apo`] as a percentage, using C's zero guard on the slow average.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -1194,18 +1092,14 @@ pub fn ppo(
 /// ===========================================================================================
 /// `AROON` — Aroon up / down (`ta_AROON.c`).
 ///
-/// `AroonUp = 100/period · (period − barsSinceHigh)`, `AroonDown` likewise for the low, over the
-/// trailing `period + 1` window. C's trailing-index rescan tracks the extreme's INDEX (the
-/// output is a function of it); note the rescan and the single-bar extension BOTH use `<=`/`>=`
-/// (AROON prefers the most recent extreme, unlike `WILLR`/`MIN`/`MAX`). Lookback = `period`.
-/// Returns `(down, up)` — TA-Lib's output order.
+/// Return Aroon down and up values over a trailing `period + 1` window.
+/// C prefers the most recent equal extreme; output order is `(down, up)`.
 /// ===========================================================================================
 ///
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if `period < 2`; [`crate::TaError::LengthMismatch`] if the
 /// two series differ in length.
-// C indexes with signed `int` and a −1 "no extreme yet" sentinel; ported with checked `i64`
-// conversions (SAF-005) so adversarial lengths cannot wrap into OOB `as usize` indices.
+// Checked signed-index conversions prevent wraparound in C-style sentinel bookkeeping.
 #[allow(clippy::cast_precision_loss)]
 pub fn aroon(high: &[f64], low: &[f64], period: usize) -> Result<(Vec<f64>, Vec<f64>)> {
     check_period("optInTimePeriod", period, 2)?;
@@ -1264,7 +1158,6 @@ pub fn aroon(high: &[f64], low: &[f64], period: usize) -> Result<(Vec<f64>, Vec<
             highest_idx = today;
             highest = tmp;
         }
-        // Bars-since arithmetic stays non-negative under the C invariants (extreme in window).
         let up_bars = period_i - (today - highest_idx);
         let down_bars = period_i - (today - lowest_idx);
         up[today_u] = factor * (up_bars as f64);
@@ -1275,7 +1168,7 @@ pub fn aroon(high: &[f64], low: &[f64], period: usize) -> Result<(Vec<f64>, Vec<
     Ok((down, up))
 }
 
-/// SAF-005: `len - 1` as `i64` without wrap (refuse lengths outside `i64` range).
+/// Convert the final series index to checked `i64`.
 fn aroon_end_idx(len: usize) -> Result<i64> {
     let len_i = i64::try_from(len).map_err(|_| TaError::InputTooLong { name: "AROON", len })?;
     len_i
@@ -1283,7 +1176,7 @@ fn aroon_end_idx(len: usize) -> Result<i64> {
         .ok_or(TaError::InputTooLong { name: "AROON", len })
 }
 
-/// SAF-005: checked `i64 → usize` index into a series of length `len`.
+/// Convert a checked `i64` index and reject out-of-range values.
 fn aroon_usize(index: i64, len: usize, name: &'static str) -> Result<usize> {
     let index = usize::try_from(index).map_err(|_| TaError::InputTooLong { name, len })?;
     if index >= len {
@@ -1295,8 +1188,7 @@ fn aroon_usize(index: i64, len: usize, name: &'static str) -> Result<usize> {
 /// ===========================================================================================
 /// `AROONOSC` — Aroon oscillator, `AroonUp − AroonDown` (`ta_AROONOSC.c`).
 ///
-/// Identical bookkeeping to [`aroon`], collapsed by C's arithmetic simplification to
-/// `100/period · (highestIdx − lowestIdx)`. Lookback = `period`.
+/// Return Aroon up minus down using C's simplified index expression.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -1369,9 +1261,8 @@ pub fn aroonosc(high: &[f64], low: &[f64], period: usize) -> Result<Vec<f64>> {
 /// ===========================================================================================
 /// `TRIX` — 1-day rate of change of a triple-smoothed EMA (`ta_TRIX.c`).
 ///
-/// `EMA3 = EMA(EMA(EMA(input)))` (each an [`ema`] over the previous stage's dense tail, exactly
-/// as [`crate::tema`] composes), then a period-1 `ROC` (`((v/prev) − 1) · 100`, the same `!= 0.0`
-/// guard as [`roc`]). Lookback = `3·(period − 1) + 1`.
+/// Return the one-day rate of change of a triple-smoothed EMA.
+/// Lookback is `3·(period − 1) + 1`.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -1404,9 +1295,7 @@ pub fn trix(input: &[f64], period: usize) -> Result<Vec<f64>> {
     Ok(out)
 }
 
-/// C's `CALC_TERMS` macro for [`ultosc`]: `(closeMinusTrueLow, trueRange)` at `day` (needs the
-/// prior close, so `day >= 1`). `trueLow = min(low, prevClose)` uses C's `min` macro (ternary,
-/// not `f64::min`) so a `NaN` propagates exactly as C's would.
+/// Compute C's per-bar buying-pressure and true-range terms.
 #[allow(clippy::similar_names)] // temp_lt/temp_ht/temp_cy mirror C's tempLT/tempHT/tempCY.
 fn ultosc_terms(high: &[f64], low: &[f64], close: &[f64], day: usize) -> (f64, f64) {
     let temp_lt = low[day];
@@ -1429,12 +1318,8 @@ fn ultosc_terms(high: &[f64], low: &[f64], close: &[f64], day: usize) -> (f64, f
 /// ===========================================================================================
 /// `ULTOSC` — ultimate oscillator (`ta_ULTOSC.c`).
 ///
-/// A weighted blend of buying-pressure/true-range ratios over three periods (defaults 7/14/28),
-/// weighted 4/2/1 by period from longest to shortest: `100 · (4·bp1/tr1 + 2·bp2/tr2 + bp3/tr3)
-/// / 7`. Each running total adds today's term and drops its own trailing term (a per-period
-/// incremental accumulator); each `TA_IS_ZERO(trTotal)` guard drops that term. Periods are
-/// sorted longest→shortest first (C's selection sort; distinct-value bit-equivalent). Lookback =
-/// `max(period1, period2, period3)`.
+/// Return the weighted three-period buying-pressure oscillator.
+/// Running totals and zero guards follow C; lookback is the largest period.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -1454,9 +1339,6 @@ pub fn ultosc(
     check_lengths(high.len(), &[low.len(), close.len()])?;
     let len = high.len();
     let mut out = nan_vec(len);
-    // Sort shortest → longest. C reorders so `optInTimePeriod1` is the SHORTEST (weight 4) and
-    // `optInTimePeriod3` the longest (weight 1); distinct values match its selection sort
-    // bit-for-bit (equal values give equal windows, so the slot assignment is irrelevant).
     let mut sorted = [period1, period2, period3];
     sorted.sort_unstable();
     let [p1, p2, p3] = sorted; // p1 shortest (weight 4) … p3 longest (weight 1)
@@ -1464,7 +1346,6 @@ pub fn ultosc(
     if len <= lookback {
         return Ok(out);
     }
-    // Prime the running totals over the initial window of each period (excluding startIdx).
     let prime = |period: usize| -> (f64, f64) {
         let mut a_total = 0.0_f64;
         let mut b_total = 0.0_f64;
@@ -1522,16 +1403,8 @@ pub fn ultosc(
     Ok(out)
 }
 
-/// C's `MA_Lookback(period, matype)` for the stochastic smoothing passes, which route through the
-/// [`crate::ma`] selector. `period == 1` is identity for **any** in-range matype (lookback 0) —
-/// including MAMA (7) — matching [`ma_lookback`] / `ta_MA.c:120-121` (period `<= 1` before the
-/// matype switch). The early return makes that stoch-path identity contract explicit at the call
-/// site so a "MAMA always 32" reorder cannot silently over-trim; for `period > 1` this defers to
-/// [`ma_lookback`] (matype 7 = MAMA → fixed lookback 32, `ta_MA.c:152-154`).
-///
-/// Smoothing itself is `crate::ma(&dense_raw_k, period, matype)` over C's temp buffer — full-array
-/// MA on that dense buffer matches C's `TA_MA` (the `ma_range` full-prefix MAMA subtlety is for
-/// shifted windows on original input, not STOCH's temp buffer).
+/// Return the moving-average lookback for stochastic smoothing.
+/// Period one is identity for every valid type, including MAMA; other MAMA windows look back 32.
 fn ma_selector_lookback(period: usize, matype: usize) -> Result<usize> {
     if period == 1 {
         if matype > 8 {
@@ -1545,14 +1418,7 @@ fn ma_selector_lookback(period: usize, matype: usize) -> Result<usize> {
     ma_lookback(period, matype)
 }
 
-/// C's `TA_INT_STOCHF` raw %K (`ta_STOCHF.c` / `ta_STOCH.c`, identical loops):
-/// `100 · (close − lowestLow) / (highestHigh − lowestLow)` over the trailing `fastk_period`
-/// window, computed **densely** from index `fastk_period − 1` onward. The extremes are tracked by
-/// the trailing-index rescan (running extremum + its index, rescanned only when the index falls
-/// off the trailing edge; the single-bar extension uses `<=`/`>=`, preferring the most recent
-/// equal, matching C). The `diff` guard (`diff != 0.0`, a flat window) yields `0.0`. Returns the
-/// dense buffer C stores in `tempBuffer` — length `len − (fastk_period − 1)`, empty when the
-/// series is too short — which STOCH/STOCHF then MA-smooth.
+/// Compute C's dense raw stochastic %K buffer with trailing extrema and a flat-window guard.
 // C guards the divisor with an exact `diff != 0.0` (float_cmp) in that branch order (if_not_else).
 #[allow(clippy::float_cmp, clippy::if_not_else)]
 fn raw_stoch_k(high: &[f64], low: &[f64], close: &[f64], fastk_period: usize) -> Vec<f64> {
@@ -1618,12 +1484,8 @@ fn raw_stoch_k(high: &[f64], low: &[f64], close: &[f64], fastk_period: usize) ->
 /// ===========================================================================================
 /// `STOCHF` — fast stochastic (`ta_STOCHF.c`, split into fast-%K / fast-%D).
 ///
-/// `fastK` = the raw stochastic ([`raw_stoch_k`]); `fastD` = `MA(fastK, fastD_period, matype)`.
-/// C computes the dense raw %K from bar `fastK_period − 1`, MA-smooths it into `fastD`, then trims
-/// the raw %K by the fast-%D lookback so both lines start together. The MA routes through the
-/// [`crate::ma`] selector (matype default 0 = SMA; period 1 = identity). Lookback =
-/// `(fastK_period − 1) + MA_Lookback(fastD_period, matype)`. Returns `(fastk, fastd)` — TA-Lib's
-/// output order; [`crate::udf`] exposes `ta_stochf_fastk` / `ta_stochf_fastd`.
+/// Return fast %K and fast %D from raw %K and selected smoothing.
+/// Lookback is `(fastK_period − 1) + MA_Lookback(fastD_period, matype)`.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -1652,8 +1514,6 @@ pub fn stochf(
         return Ok((fastk, fastd));
     }
     let raw_k = raw_stoch_k(high, low, close, fastk_period);
-    // MA over the dense raw %K: NaN-prefixed by `lookback_fastd`, dense values follow. Both output
-    // lines start at `lookback_total` — `fastK` is the raw %K trimmed by the fast-%D lookback.
     let fastd_full = crate::ma(&raw_k, fastd_period, fastd_matype)?;
     let n = len - lookback_total;
     fastk[lookback_total..lookback_total + n]
@@ -1666,21 +1526,14 @@ pub fn stochf(
 /// ===========================================================================================
 /// `STOCH` — slow stochastic (`ta_STOCH.c`, split into slow-%K / slow-%D).
 ///
-/// The raw %K ([`raw_stoch_k`]) is smoothed TWICE: `slowK = MA(rawK, slowK_period, slowKType)`,
-/// then `slowD = MA(slowK, slowD_period, slowDType)`. C composes the two MA passes over the dense
-/// buffers and trims `slowK` by the slow-%D lookback so both lines align on the first output bar
-/// (`SLOWK` and `STOCHF`'s `FASTD` coincide when the periods match). Both MAs route through the
-/// [`crate::ma`] selector (matypes default 0 = SMA). Lookback =
-/// `(fastK_period − 1) + MA_Lookback(slowK) + MA_Lookback(slowD)`. Returns `(slowk, slowd)` —
-/// TA-Lib's output order; [`crate::udf`] exposes `ta_stoch_slowk` / `ta_stoch_slowd`.
+/// Return slow %K and slow %D by applying two selected moving averages to raw %K.
+/// Lookback is the raw %K lookback plus both smoothing lookbacks.
 /// ===========================================================================================
 ///
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if any period `< 1`; [`crate::TaError::LengthMismatch`] if
 /// the series differ in length; [`crate::TaError::UnsupportedMaType`] for a `matype` outside
 /// 0..=8.
-// slowk/slowd and the two smoothing legs share prefixes (TA-Lib's own names); the eight params
-// are TA-Lib's `TA_STOCH` signature.
 #[allow(clippy::similar_names, clippy::too_many_arguments)]
 pub fn stoch(
     high: &[f64],
@@ -1707,10 +1560,8 @@ pub fn stoch(
         return Ok((slowk, slowd));
     }
     let raw_k = raw_stoch_k(high, low, close, fastk_period);
-    // First smoothing (%K-slow): dense values start at `lookback_kslow` in the MA over `raw_k`.
     let slowk_full = crate::ma(&raw_k, slowk_period, slowk_matype)?;
     let slowk_dense = &slowk_full[lookback_kslow..];
-    // Second smoothing (%D-slow) over the dense slow-%K; `slowK` is trimmed by the %D lookback.
     let slowd_full = crate::ma(slowk_dense, slowd_period, slowd_matype)?;
     let n = len - lookback_total;
     slowk[lookback_total..lookback_total + n]
@@ -1723,11 +1574,8 @@ pub fn stoch(
 /// ===========================================================================================
 /// `STOCHRSI` — stochastic RSI (`ta_STOCHRSI.c`, split into fast-%K / fast-%D).
 ///
-/// [`rsi`] over `optInTimePeriod`, then [`stochf`] over the dense RSI series (C passes the RSI
-/// buffer as high == low == close). The two lookbacks compound: C seeds the RSI
-/// `lookbackSTOCHF` bars early so the STOCHF result lines up on the first output bar. Lookback =
-/// `RSI_Lookback(timeperiod) + (fastK_period − 1) + MA_Lookback(fastD_period, matype)`. Returns
-/// `(fastk, fastd)`; [`crate::udf`] exposes `ta_stochrsi_fastk` / `ta_stochrsi_fastd`.
+/// Apply [`rsi`] and then fast stochastic smoothing to the dense RSI values.
+/// Lookback is the RSI lookback plus both stochastic stages.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -1748,12 +1596,10 @@ pub fn stochrsi(
     let mut fastk = nan_vec(len);
     let mut fastd = nan_vec(len);
     let lookback_stochf = (fastk_period - 1) + ma_selector_lookback(fastd_period, fastd_matype)?;
-    // RSI's lookback is exactly `timeperiod` (Classic compatibility, unstable period 0).
     let lookback_total = timeperiod + lookback_stochf;
     if len <= lookback_total {
         return Ok((fastk, fastd));
     }
-    // The dense RSI (its NaN prefix of `timeperiod` dropped) is STOCHF's high == low == close.
     let rsi_full = rsi(input, timeperiod)?;
     let rsi_dense = &rsi_full[timeperiod..];
     let (fk, fd) = stochf(
@@ -1764,7 +1610,6 @@ pub fn stochrsi(
         fastd_period,
         fastd_matype,
     )?;
-    // STOCHF's outputs are dense from `lookback_stochf`; shift them onto the STOCHRSI output start.
     let n = len - lookback_total;
     fastk[lookback_total..lookback_total + n]
         .copy_from_slice(&fk[lookback_stochf..lookback_stochf + n]);
@@ -1806,9 +1651,6 @@ mod tests {
 
     #[test]
     fn adx_flat_market_holds_previous_value() {
-        // A dead-flat tape (high == low == close, unchanged) makes every true range 0.0, so
-        // the TA_IS_ZERO(prev_tr) guard fires on every bar: DX never updates and the ADX seed
-        // (0.0 here) is re-emitted unchanged — never NaN, never Inf.
         let flat = [10.0; 20];
         let out = adx(&flat, &flat, &flat, 4).expect("valid");
         assert!(out[6].is_nan());
@@ -1825,7 +1667,6 @@ mod tests {
 
     #[test]
     fn mom_is_the_period_difference() {
-        // period 2: out[i] = in[i] − in[i−2].
         let out = mom(&[1.0, 3.0, 6.0, 10.0, 15.0], 2).expect("valid");
         assert!(out[0].is_nan());
         assert!(out[1].is_nan());
@@ -1837,12 +1678,10 @@ mod tests {
     #[test]
     fn roc_family_ratios_and_zero_guard() {
         let data = [10.0, 20.0, 40.0];
-        // period 1: each vs the immediately prior bar.
         assert!((roc(&data, 1).expect("roc")[1] - 100.0).abs() < 1e-12);
         assert!((rocp(&data, 1).expect("rocp")[2] - 1.0).abs() < 1e-12);
         assert!((rocr(&data, 1).expect("rocr")[1] - 2.0).abs() < 1e-12);
         assert!((rocr100(&data, 1).expect("rocr100")[2] - 200.0).abs() < 1e-12);
-        // A zero prevPrice short-circuits to 0.0 (not NaN/Inf).
         assert!(roc(&[0.0, 5.0], 1).expect("guard")[1].abs() < f64::EPSILON);
         assert!(rocr(&[0.0, 5.0], 1).expect("guard")[1].abs() < f64::EPSILON);
     }
@@ -1854,27 +1693,22 @@ mod tests {
         let close = [9.0, 11.0, 8.0, 12.0];
         let out = willr(&high, &low, &close, 3).expect("valid");
         assert!(out[1].is_nan());
-        // today=2: HH=12, LL=7 → −100·(12−8)/(12−7) = −80.
         assert!((out[2] - (-80.0)).abs() < 1e-12);
-        // today=3: HH=13, LL=7 → −100·(13−12)/(13−7) = −100/6.
         assert!((out[3] - (-100.0 / 6.0)).abs() < 1e-12);
         assert!(out[2..].iter().all(|v| (-100.0..=0.0).contains(v)));
     }
 
     #[test]
     fn cci_typical_price_window() {
-        // H=L=C so typical price == value; period 2, each window MAD == 1, dev == 1.
         let series = [2.0, 4.0, 6.0];
         let out = cci(&series, &series, &series, 2).expect("valid");
         assert!(out[0].is_nan());
-        // dev/(0.015·MAD/2) = 1/(0.015·1) = 1/0.015.
         assert!((out[1] - 1.0 / 0.015).abs() < 1e-9);
         assert!((out[2] - 1.0 / 0.015).abs() < 1e-9);
     }
 
     #[test]
     fn cmo_spans_plus_minus_hundred() {
-        // All gains → +100, all losses → −100 (CMO's (gain−loss)/(gain+loss) numerator).
         let up: Vec<f64> = (1..=6).map(f64::from).collect();
         let out = cmo(&up, 3).expect("valid");
         assert!(out[2].is_nan());
@@ -1897,28 +1731,24 @@ mod tests {
         let out = bop(&open, &high, &low, &close).expect("valid");
         assert!((out[0] - 0.5).abs() < 1e-12);
         assert!((out[1] - 0.5).abs() < 1e-12);
-        // A zero (or negative) high−low range short-circuits to 0.0.
         let flat = bop(&[1.0], &[5.0], &[5.0], &[3.0]).expect("valid");
         assert!(flat[0].abs() < f64::EPSILON);
     }
 
     #[test]
     fn apo_and_ppo_are_fast_minus_slow_sma() {
-        // matype 0 (SMA): fast=SMA2, slow=SMA3 over [1..5]; APO = fast−slow at each dense bar.
         let data = [1.0, 2.0, 3.0, 4.0, 5.0];
         let apo_out = apo(&data, 2, 3, 0).expect("apo");
         assert!(apo_out[1].is_nan()); // slow SMA3 lookback = 2
         assert!((apo_out[2] - 0.5).abs() < 1e-12);
         assert!((apo_out[4] - 0.5).abs() < 1e-12);
         let ppo_out = ppo(&data, 2, 3, 0).expect("ppo");
-        // ((2.5−2)/2)·100 = 25.
         assert!((ppo_out[2] - 25.0).abs() < 1e-12);
         assert!((ppo_out[4] - 12.5).abs() < 1e-12);
     }
 
     #[test]
     fn apo_swaps_fast_and_slow_periods() {
-        // Passing fast > slow swaps internally, so the result is identical either way.
         let data = [1.0, 2.0, 3.0, 4.0, 5.0];
         let straight = apo(&data, 2, 3, 0).expect("valid");
         let swapped = apo(&data, 3, 2, 0).expect("valid");
@@ -1929,8 +1759,6 @@ mod tests {
 
     #[test]
     fn apo_mama_matype_dispatches_and_rejects_unknown() {
-        // Matype 7 → MAMA(0.5, 0.05) on each leg (ta_MA.c:313-329); lookback is the fixed 32,
-        // so a short series is all-NaN success (not an error). Unknown matype still loud-fails.
         let data = [1.0, 2.0, 3.0, 4.0, 5.0];
         let apo_out = apo(&data, 2, 3, 7).expect("apo mama short");
         assert_eq!(apo_out.len(), data.len());
@@ -1945,8 +1773,6 @@ mod tests {
 
     #[test]
     fn apo_mama_equals_mama_minus_mama_on_long_series() {
-        // APO(matype=7) = MAMA(0.5,0.05).0 − MAMA(0.5,0.05).0 after period swap: both legs
-        // ignore period, so APO is identically zero wherever MAMA is defined (lookback 32).
         let close: Vec<f64> = (0..80).map(|i| 50.0 + (f64::from(i) * 0.1).sin()).collect();
         let out = apo(&close, 12, 26, 7).expect("apo mama");
         let (mama_line, _) = mama(&close, 0.5, 0.05).expect("mama");
@@ -1965,10 +1791,8 @@ mod tests {
         let low = [5.0, 6.0, 7.0, 4.0, 3.0];
         let (down, up) = aroon(&high, &low, 3).expect("valid");
         assert!(down[2].is_nan());
-        // today=3: highest at idx2 (1 bar ago), lowest at idx3 (0 bars ago).
         assert!((up[3] - 100.0 / 3.0 * 2.0).abs() < 1e-12);
         assert!((down[3] - 100.0).abs() < 1e-12);
-        // today=4: highest still idx2 (2 bars ago), lowest at idx4 (0 bars ago).
         assert!((up[4] - 100.0 / 3.0).abs() < 1e-12);
         assert!((down[4] - 100.0).abs() < 1e-12);
     }
@@ -1984,10 +1808,8 @@ mod tests {
         }
     }
 
-    /// SAF-005: checked casts refuse lengths outside the signed-index range (no wrap → OOB).
     #[test]
     fn aroon_checked_casts_refuse_adversarial_length() {
-        // Direct helper pin — constructing a multi-EiB series is not practical.
         let err = aroon_end_idx(usize::MAX).expect_err("usize::MAX must not cast to i64");
         assert!(matches!(err, TaError::InputTooLong { .. }), "got {err:?}");
         let err = aroon_usize(-1, 10, "probe").expect_err("negative index");
@@ -1996,7 +1818,6 @@ mod tests {
         assert!(matches!(err, TaError::InputTooLong { .. }));
         assert_eq!(aroon_usize(0, 10, "probe").unwrap(), 0);
         assert_eq!(aroon_usize(9, 10, "probe").unwrap(), 9);
-        // Normal lengths still work end-to-end.
         let high = [1.0, 2.0, 3.0, 4.0, 5.0];
         let low = [0.5, 1.5, 2.5, 3.5, 4.5];
         assert!(aroon(&high, &low, 2).is_ok());
@@ -2005,7 +1826,6 @@ mod tests {
 
     #[test]
     fn trix_nan_prefix_then_finite() {
-        // TRIX lookback = 3·(period−1) + 1.
         let input: Vec<f64> = (1..=40).map(f64::from).collect();
         let out = trix(&input, 4).expect("valid");
         for value in &out[..10] {
@@ -2016,8 +1836,6 @@ mod tests {
 
     #[test]
     fn ultosc_flat_market_is_zero_after_lookback() {
-        // A dead-flat tape makes every true range 0, so all three TA_IS_ZERO guards fire and the
-        // oscillator collapses to 0 (never NaN/Inf).
         let flat = [50.0; 40];
         let out = ultosc(&flat, &flat, &flat, 7, 14, 28).expect("valid");
         assert!(out[27].is_nan());
@@ -2034,7 +1852,6 @@ mod tests {
     }
 
     fn ohlc(n: i32) -> (Vec<f64>, Vec<f64>, Vec<f64>) {
-        // A gently trending fixture with real intrabar range so ±DM/TR are non-degenerate.
         let close: Vec<f64> = (0..n)
             .map(|i| 50.0 + 3.0 * (f64::from(i) * 0.4).sin() + 0.2 * f64::from(i))
             .collect();
@@ -2054,7 +1871,6 @@ mod tests {
 
     #[test]
     fn dx_flat_market_holds_previous_value() {
-        // Dead-flat → prevTR decays to zero, the guard re-emits the previous DX (first is 0.0).
         let flat = [10.0; 20];
         let out = dx(&flat, &flat, &flat, 4).expect("valid");
         assert!(out[3].is_nan());
@@ -2098,7 +1914,6 @@ mod tests {
 
     #[test]
     fn dm_period_one_is_the_raw_one_bar_move() {
-        // +DM1 = diffP when diffP>0 && diffP>diffM else 0; −DM1 symmetric on diffM.
         let high = [1.0, 3.0, 2.0];
         let low = [0.0, 1.0, 0.0];
         let plus = plus_dm(&high, &low, 1).expect("plus_dm p1");
@@ -2115,7 +1930,6 @@ mod tests {
         let high = [1.0, 3.0, 2.0];
         let low = [0.0, 1.0, 0.0];
         let close = [0.5, 2.0, 1.0];
-        // i=1: diffP=2>diffM(−1) → +DM=2; TR=max(3−1, |0.5−3|, |0.5−1|)=2.5 → +DI=2/2.5=0.8.
         let plus = plus_di(&high, &low, &close, 1).expect("plus_di p1");
         assert!(plus[0].is_nan());
         assert!((plus[1] - 0.8).abs() < 1e-12);
@@ -2137,7 +1951,6 @@ mod tests {
 
     #[test]
     fn macdfix_differs_from_macd_12_26() {
-        // MACDFIX uses fixed 0.15/0.075 constants, so it must NOT equal macd(_,12,26,_).
         let close: Vec<f64> = (0..80_i32)
             .map(|i| 50.0 + 5.0 * (f64::from(i) * 0.3).sin())
             .collect();
@@ -2154,7 +1967,6 @@ mod tests {
         let close: Vec<f64> = (0..80_i32)
             .map(|i| 50.0 + 5.0 * (f64::from(i) * 0.3).sin())
             .collect();
-        // All SMA (matype 0): lookback = max(11, 25) + 8 = 33.
         let (macd_line, signal, hist) = macdext(&close, 12, 0, 26, 0, 9, 0).expect("macdext");
         let lookback = 25 + 8;
         assert!(macd_line[lookback - 1].is_nan());
@@ -2166,12 +1978,9 @@ mod tests {
 
     #[test]
     fn macdext_signal_period_one_is_identity_ma() {
-        // C ta_MA.c:120-121,266-274 — period ≤ 1 → lookback 0 + identity for any in-range matype.
-        // signal_period=1 adds no lookback beyond max(fast,slow); signal == macd where defined.
         let close: Vec<f64> = (0..80_i32)
             .map(|i| 50.0 + 5.0 * (f64::from(i) * 0.3).sin())
             .collect();
-        // Pin SMA (0) and non-SMA types that pre-change had different lookbacks (KAMA=6, MAMA=7, T3=8).
         for signal_matype in [0_usize, 6, 7, 8] {
             let (macd_line, signal, hist) =
                 macdext(&close, 12, 0, 26, 0, 1, signal_matype).expect("macdext signal=1");
@@ -2201,8 +2010,6 @@ mod tests {
 
     #[test]
     fn macdext_mama_with_longer_other_leg_matches_full_array_mama() {
-        // Octo C4-Q-001: when lookback_largest > 32, ma_range must not re-base MAMA mid-series.
-        // fast=MAMA (lb 32), slow=SMA(40) (lb 39) → temp_start=39 > 32.
         let close: Vec<f64> = (0..120_i32)
             .map(|i| 50.0 + 5.0 * (f64::from(i) * 0.3).sin())
             .collect();
@@ -2222,12 +2029,9 @@ mod tests {
             );
             assert_eq!(hist[i].to_bits(), (macd_line[i] - signal[i]).to_bits());
         }
-        // Prove the bug class: slice-reseed MAMA would differ when start > 32.
         let reseeded = mama(&close[(39 - 32)..=119], 0.5, 0.05)
             .expect("reseed mama")
             .0;
-        // reseeded[32] corresponds to global index 39; full mama[39] must differ on this series
-        // (parity + history). If they were equal, the pin would not catch a regression.
         assert_ne!(
             mama_full[39].to_bits(),
             reseeded[32].to_bits(),
@@ -2237,7 +2041,6 @@ mod tests {
 
     #[test]
     fn macdext_mama_matype_lookback_and_unknown_still_rejects() {
-        // All-MAMA: lookback = 32 + 32 = 64 (ta_MA.c:152-154). Short series → all-NaN success.
         let short = [1.0, 2.0, 3.0, 4.0, 5.0];
         let (macd_line, signal, hist) =
             macdext(&short, 12, 7, 26, 7, 9, 7).expect("macdext mama short");
@@ -2248,7 +2051,6 @@ mod tests {
                 .chain(&hist)
                 .all(|v| v.is_nan())
         );
-        // Long enough for one output: lookback_total = 64.
         let close: Vec<f64> = (0..100)
             .map(|i| 50.0 + 5.0 * (f64::from(i) * 0.3).sin())
             .collect();
@@ -2259,7 +2061,6 @@ mod tests {
         for i in lookback_total..close.len() {
             assert_eq!(hist[i].to_bits(), (macd_line[i] - signal[i]).to_bits());
         }
-        // Out-of-range matype still loud-fails.
         assert!(matches!(
             macdext(&close, 12, 9, 26, 0, 9, 0),
             Err(TaError::UnsupportedMaType { matype: 9, .. })
@@ -2268,12 +2069,9 @@ mod tests {
 
     #[test]
     fn raw_stoch_k_is_hand_checkable() {
-        // fastk_period 3, so the raw %K runs from index 2. HH/LL over the trailing 3-bar window.
         let high = [10.0, 12.0, 11.0, 13.0];
         let low = [8.0, 9.0, 7.0, 10.0];
         let close = [9.0, 11.0, 8.0, 12.0];
-        // today=2: window [0..2] HH=12, LL=7, diff=(12-7)/100=0.05 → (8-7)/0.05 = 20.
-        // today=3: window [1..3] HH=13, LL=7, diff=(13-7)/100=0.06 → (12-7)/0.06 = 83.3333…
         let raw = raw_stoch_k(&high, &low, &close, 3);
         assert_eq!(raw.len(), 2);
         assert!((raw[0] - 20.0).abs() < 1e-12);
@@ -2284,7 +2082,6 @@ mod tests {
     #[test]
     #[allow(clippy::similar_names)] // fastk/fastd mirror TA-Lib's output names.
     fn stochf_lookback_and_identity_smoothing() {
-        // fastk 3, fastd 1 (identity MA) → lookback = (3-1) + 0 = 2, and fastK == fastD == raw %K.
         let high = [10.0, 12.0, 11.0, 13.0];
         let low = [8.0, 9.0, 7.0, 10.0];
         let close = [9.0, 11.0, 8.0, 12.0];
@@ -2299,13 +2096,6 @@ mod tests {
     #[test]
     #[allow(clippy::similar_names)] // slowk/slowd/fastk/fastd mirror TA-Lib's output names.
     fn stoch_path_period1_matype7_is_identity_via_ma_selector_lookback() {
-        // C2-Q-001: `period == 1` + matype 7 on STOCH* must go through `ma_selector_lookback`
-        // (lookback 0, identity MA) — not "MAMA always 32". Existing matype-7 goldens use period 3;
-        // `ma(..., 1, 7)` / macdext period-1 pins never call `ma_selector_lookback`.
-        //
-        // stochf(fastk=5, fastd=1, fastd_matype=7) → lookback = (5−1)+0 = 4; fastd == fastk
-        // (identity). Equal to fastd_matype=0 (both identity). A "matype 7 → 32 first" reorder of
-        // `ma_selector_lookback` would set lookback_total=36 and all-NaN this 20-bar series.
         let close: Vec<f64> = (0..20_i32)
             .map(|i| 50.0 + 5.0 * (f64::from(i) * 0.3).sin())
             .collect();
@@ -2333,7 +2123,6 @@ mod tests {
             assert_eq!(fd7[i].to_bits(), fd0[i].to_bits());
         }
 
-        // stoch: both smoothing legs period 1 + matype 7 → lookback = (5−1)+0+0 = 4; slowk == slowd.
         let (sk7, sd7) = stoch(&high, &low, &close, 5, 1, 7, 1, 7).expect("stoch period1 mama");
         let stoch_lb = 4;
         assert!(sk7[stoch_lb - 1].is_nan());
@@ -2346,11 +2135,9 @@ mod tests {
                 sd7[i].to_bits(),
                 "both period-1 MAMA legs are identity: slowk == slowd at {i}"
             );
-            // Double identity MA leaves the raw %K; equals stochf's period-1 identity fastk.
             assert_eq!(sk7[i].to_bits(), fk7[i].to_bits());
         }
 
-        // stochrsi: fastd_period=1, fastd_matype=7 → lookback = 14 + (5−1) + 0 = 18.
         let longer: Vec<f64> = (0..40_i32)
             .map(|i| 50.0 + 5.0 * (f64::from(i) * 0.2).sin())
             .collect();
@@ -2372,13 +2159,11 @@ mod tests {
     #[test]
     #[allow(clippy::similar_names, clippy::manual_midpoint)] // fastk/fastd names; /2.0 is the check.
     fn stochf_fastd_is_the_sma_of_raw_k() {
-        // fastd 2 (SMA) → fastD[t] = mean(rawK[t], rawK[t-1]); the raw %K is trimmed to align.
         let high = [10.0, 12.0, 11.0, 13.0];
         let low = [8.0, 9.0, 7.0, 10.0];
         let close = [9.0, 11.0, 8.0, 12.0];
         let raw = raw_stoch_k(&high, &low, &close, 3); // len 2
         let (fastk, fastd) = stochf(&high, &low, &close, 3, 2, 0).expect("stochf");
-        // lookback = 2 + 1 = 3, one output bar at index 3.
         assert!(fastk[2].is_nan());
         assert!((fastk[3] - raw[1]).abs() < 1e-12);
         assert!((fastd[3] - (raw[0] + raw[1]) / 2.0).abs() < 1e-12);
@@ -2387,17 +2172,14 @@ mod tests {
     #[test]
     #[allow(clippy::similar_names)] // slowk/slowd/fastk/fastd mirror TA-Lib's output names.
     fn stoch_default_lookback_and_slowk_equals_stochf_fastd() {
-        // SLOWK(period p) and STOCHF's FASTD(period p) are identical (both = MA of raw %K over p).
         let close: Vec<f64> = (0..40_i32)
             .map(|i| 50.0 + 5.0 * (f64::from(i) * 0.3).sin())
             .collect();
         let high: Vec<f64> = close.iter().map(|c| c + 1.0).collect();
         let low: Vec<f64> = close.iter().map(|c| c - 1.0).collect();
-        // stoch defaults: fastk 5, slowk 3, slowd 3 → lookback = 4 + 2 + 2 = 8.
         let (slowk, _slowd) = stoch(&high, &low, &close, 5, 3, 0, 3, 0).expect("stoch");
         assert!(slowk[7].is_nan());
         assert!(!slowk[8].is_nan());
-        // STOCHF fastk 5, fastd 3 → its FASTD is the same smoothing as STOCH's SLOWK.
         let (_fastk, fastd) = stochf(&high, &low, &close, 5, 3, 0).expect("stochf");
         for i in 8..close.len() {
             assert_eq!(slowk[i].to_bits(), fastd[i].to_bits());
@@ -2410,12 +2192,9 @@ mod tests {
         let close: Vec<f64> = (0..60_i32)
             .map(|i| 50.0 + 5.0 * (f64::from(i) * 0.2).sin())
             .collect();
-        // defaults: timeperiod 14, fastk 5, fastd 3 → lookback = 14 + (4 + 2) = 20.
         let (fastk, fastd) = stochrsi(&close, 14, 5, 3, 0).expect("stochrsi");
         assert!(fastk[19].is_nan());
         assert!(!fastk[20].is_nan());
-        // The stochastic band is [0, 100]; allow a float-rounding epsilon at the rails (TA-Lib's
-        // own values land on 99.999…9 / 100.000…1 — the golden gate pins the exact bits).
         assert!(
             fastk[20..]
                 .iter()
@@ -2431,7 +2210,6 @@ mod tests {
     #[test]
     #[allow(clippy::similar_names)] // fastk/fastd mirror TA-Lib's output names.
     fn stochf_flat_window_yields_zero() {
-        // A dead-flat window makes highest == lowest, so the `diff != 0.0` guard fires → 0.0.
         let flat = [7.0; 10];
         let (fastk, fastd) = stochf(&flat, &flat, &flat, 3, 3, 0).expect("stochf flat");
         assert!(fastk[4..].iter().all(|v| v.abs() < f64::EPSILON));
@@ -2440,8 +2218,6 @@ mod tests {
 
     #[test]
     fn stochastics_accept_mama_matype_and_reject_out_of_range() {
-        // Matype 7 (MAMA) is in-range for stochastic smoothing; a short series is all-NaN
-        // success (MAMA lookback 32 composes into the total lookback). Out-of-range still fails.
         let close = [1.0, 2.0, 3.0, 4.0, 5.0];
         let (fk, fd) = stochf(&close, &close, &close, 5, 3, 7).expect("stochf matype 7 short");
         assert_eq!(fk.len(), close.len());
@@ -2467,13 +2243,6 @@ mod tests {
     #[test]
     #[allow(clippy::similar_names)] // slowk/fastk/fastd mirror TA-Lib's output names.
     fn stochastics_matype7_first_non_nan_lookback_pins() {
-        // RED-on-lookback-arithmetic pins for MAMA-composed STOCH* totals (matype 0 already pins
-        // first-non-NaN in stoch*_lookback_* above). Goldens bit-gate the full series; these assert
-        // the composed lookback indices explicitly:
-        //   stochf type7  (fastk=5, fastd=3, matype=7) → (5−1)+32 = 36
-        //   stoch mixed 7/0 (slowk MAMA, slowd SMA3)   → 4+32+2 = 38
-        //   stoch all-MAMA                             → 4+32+32 = 68
-        //   stochrsi type7 (rsi14 + stochf type7)      → 14+4+32 = 50
         let close: Vec<f64> = (0..120_i32)
             .map(|i| 50.0 + 5.0 * (f64::from(i) * 0.3).sin())
             .collect();
@@ -2501,7 +2270,6 @@ mod tests {
         assert!(!type7_k[all_mama_lb].is_nan());
         assert!(type7_d[all_mama_lb - 1].is_nan());
         assert!(!type7_d[all_mama_lb].is_nan());
-        // Mixed first-non-NaN is earlier than all-MAMA (second-pass lookback 2 vs 32).
         assert!(mixed_lb < all_mama_lb);
         assert!(!mixed_k[mixed_lb].is_nan());
         assert!(type7_k[mixed_lb].is_nan());

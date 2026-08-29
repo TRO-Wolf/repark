@@ -530,7 +530,7 @@ async fn column_def_or_replace_wipe_if_not_exists_and_like() {
     );
 }
 
-/// TZ-4 PR-1: one-row CTAS type smoke — `current_timestamp` / zone-suffixed `to_timestamp`
+/// One-row CTAS type smoke — `current_timestamp` / zone-suffixed `to_timestamp`
 /// store Iceberg `timestamptz`, including an identity-partitioned table (Q5 rider).
 #[tokio::test]
 async fn ctas_of_instant_producers_stores_timestamptz() {

@@ -1,4 +1,4 @@
-//! V3E-3 — partitioned + equality-delete Spark-written format-v3 fixtures.
+//! Pins partitioned and equality-delete Spark-written format-v3 fixtures.
 //!
 //! Model: Grok 4.6 xHigh
 //!

@@ -1,5 +1,4 @@
-/// r25 T2: CREATE OR REPLACE / bare REPLACE BRANCH|TAG re-pin with snapshot-id asserts.
-/// (Supersedes I5 loud-refuse pin `branch_tag_replace_ddl_refuses_loud`.)
+/// CREATE OR REPLACE and bare REPLACE BRANCH|TAG preserve snapshot identities.
 use super::super::*;
 use super::common::*;
 
@@ -130,8 +129,7 @@ async fn branch_tag_replace_and_or_replace_round_trip() {
     assert_eq!(tag_id, s2, "t1 tag snapshot_id after REPLACE");
 }
 
-/// r25 T2: RETAIN + WITH SNAPSHOT RETENTION land on fork `SnapshotRetention` fields
-/// (observed via the `refs` metadata table — retention map is crate-private on `TableMetadata`).
+/// RETAIN and WITH SNAPSHOT RETENTION populate the fork's `SnapshotRetention` fields.
 #[tokio::test]
 async fn branch_retention_clauses_round_trip() {
     use datafusion::arrow::array::{Array, AsArray};
@@ -191,7 +189,7 @@ async fn branch_retention_clauses_round_trip() {
     assert!(min_snaps.is_null(1), "tag has no min_snapshots_to_keep");
 }
 
-/// r25 T2: write-to-branch STOP names the fork MAIN_BRANCH-only commit gap.
+/// Write-to-branch targets refuse because commits are MAIN_BRANCH-only.
 #[tokio::test]
 async fn write_to_branch_refuses_loud_naming_fork_gap() {
     let wh = TempDir::new().unwrap();
@@ -342,7 +340,7 @@ async fn ref_ddl_if_exists_spellings_and_trailing_clauses_refuse_loud() {
     assert_eq!(refs, 0, "a refused ref DDL must not create or drop a ref");
 }
 
-/// r25 morning critic: a REAL two-part table literally named `branch_*` must not
+/// A real two-part table literally named `branch_*` must not
 /// false-refuse as write-to-branch; the `t.branch_x` form with a resolvable bare prefix
 /// still STOPs loud (disambiguation by resolution, not raw-SQL shape).
 #[tokio::test]
@@ -728,8 +726,7 @@ async fn branch_tag_ddl_edge_matrix_as_of_and_drop_targets() {
 
 /// O4-C1-L-001: BRANCH sniff must not treat multipart table-name segments as DDL verbs.
 ///
-/// Pre-fix a pure word-window scan matched `ice.create.branch` / `ice.drop.tag` and
-/// `RENAME TO create.branch` as BRANCH DDL. True positives after a real table name still match.
+/// Skip multipart table-name segments while matching true branch or tag DDL verbs.
 #[test]
 fn branch_sniff_skips_table_name_segments() {
     assert!(

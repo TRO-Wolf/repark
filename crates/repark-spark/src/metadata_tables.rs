@@ -1,27 +1,10 @@
 //! Spark Iceberg metadata-table name resolution.
 //!
-//! Fork inspect already ships the full Java table set and exposes them SQL-queryable via
-//! iceberg-datafusion as `table$snapshots`, `table$files`, … (R142;
-//! `integrations/datafusion/src/schema.rs:151-171`, pin `4723104b`). Spark's surface is a trailing
-//! segment — `cat.ns.tbl.snapshots` / `spark.table("tbl.files")` — so this crate's job is name
-//! resolution only: rewrite the Spark form onto the fork's `$` form when the parent identifier
-//! resolves as an Iceberg base table and the full path is not a real table.
-//!
-//! Resolution order (hard pin):
-//! 1. A **real table** occupying the full multipart path wins (e.g. a table literally named
-//!    `files` in `cat.ns`).
-//! 2. Else if the last segment is a known [`MetadataTableType`] **and** the parent loads as an
-//!    Iceberg base table → rewrite `… .suffix` → `…$suffix`.
-//! 3. Else leave the SQL alone (normal missing-table / column resolution).
-//!
-//! Out of scope v1 (loud refuse):
-//! - Time-travel composition (`… .snapshots VERSION AS OF …`).
-//! - DML / DDL targeting a resolved metadata table (INSERT/UPDATE/DELETE/MERGE/CTAS/TRUNCATE).
-//!
-//! Known fork residues — pin-as-documented, not fix (R142 / inspect module docs):
-//! - Unpartitioned tables keep an empty-struct `partition` column (Java drops it on
-//!   `partitions` / files-family).
-//! - `readable_metrics` interior field-id order: compare by name.
+//! Spark uses `cat.ns.tbl.snapshots`; the fork uses `cat.ns.tbl$snapshots`. Rewrite only when the
+//! full path is not a real table and the parent is an Iceberg base table. Real tables win; unknown
+//! suffixes remain ordinary resolution. Time-travel composition and metadata-table DML/DDL refuse.
+//! Fork residues remain documented in the metadata-table oracle: unpartitioned `partition` and
+//! `readable_metrics` field-id order differ from Java.
 
 use datafusion::error::{DataFusionError, Result};
 use datafusion::sql::sqlparser::dialect::DatabricksDialect;
@@ -137,7 +120,7 @@ fn display_path(parts: &[String], suffix: &str) -> String {
 ///
 /// # Errors
 /// - DML/DDL targeting a resolved metadata table → plan error naming the table.
-/// - AS OF composition with a metadata table → plan error (out of scope v1).
+/// - AS OF composition with a metadata table → plan error.
 pub async fn prepare_metadata_table_sql(
     catalogs: &CatalogRegistry,
     sql: &str,
@@ -336,7 +319,7 @@ async fn table_exists_parts(catalogs: &CatalogRegistry, parts: &[String]) -> Res
         }
         return Ok(false);
     }
-    // No registered catalog prefix — cannot resolve (default-catalog is a tracked follow-up).
+    // No registered catalog prefix can resolve this table.
     Ok(false)
 }
 
@@ -631,7 +614,7 @@ fn has_trailing_as_of(significant: &[(usize, &Token)], name_end_sig: usize) -> b
         i += 1;
     }
     // Optional alias: AS alias / bare alias — skip one optional AS+ident or bare ident that is
-    // not a time-travel keyword, then look for AS OF. Simpler v1: look for AS OF within the next
+    // not a time-travel keyword, then look for AS OF within the next
     // few tokens without consuming a FROM/WHERE/JOIN boundary.
     // Forms: [FOR] VERSION|TIMESTAMP|SYSTEM_VERSION|SYSTEM_TIME AS OF
     // Optional FOR

@@ -1,6 +1,4 @@
-//! Guard-set tests. Every guard is a behavior and every REFUSAL is a behavior, so each refusal
-//! message class gets its own test alongside the acceptance case that proves the guard is not
-//! simply refusing everything.
+//! Guard-set tests cover each refusal and an acceptance path.
 
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -115,8 +113,7 @@ fn read_only_catalog_dml_refuses_generically() {
     }
 }
 
-/// The message is GENERIC — it must not name a specific external system (this door is not
-/// postgres-flavoured; that wording belongs to the Spark door's ported P11 text).
+/// The message is generic and must not name an external system.
 #[test]
 fn read_only_message_is_generic() {
     let message = read_only_catalog_message("pg", "INSERT");
@@ -236,11 +233,7 @@ async fn ordinary_writes_pass_branch_guard() {
 
 // === Guard 4 — BUG-001 MoR valve (resolution wrapper) =======================================
 
-/// The wrapper's non-firing branches, each of which would otherwise be a place the valve could
-/// silently stop gating: a non-DML statement, a verb the valve does not cover (`INSERT` writes no
-/// position deletes; `MERGE` uses the RePark-owned writer), a name too short to resolve, and an
-/// unregistered catalog. The FIRING branch is pinned end to end on a real evolved table by
-/// `tests::mor_unpartitioned_multi_spec_dml_refuses`.
+/// The wrapper passes statements outside the MoR valve's target scope.
 #[tokio::test]
 async fn mor_valve_wrapper_passes_what_it_cannot_or_must_not_gate() {
     let ctx = SessionContext::new();
@@ -402,8 +395,8 @@ async fn remote_locations_are_not_gated() {
     refuse_local_filesystem_plan(&ctx, &catalogs, &plan).expect("s3:// is out of scope");
 }
 
-/// Setting the conf opens the gate — read through `ConfigOptions::entries()`, with no
-/// `repark-functions` dependency (the reachability finding recorded in the ledger).
+/// Setting the conf opens the gate. Read it through `ConfigOptions::entries()` without
+/// installing the functions extension.
 #[tokio::test]
 async fn conf_true_opens_the_gate() {
     let outside = TempDir::new().unwrap();
@@ -424,9 +417,7 @@ async fn conf_true_opens_the_gate() {
     refuse_local_filesystem_plan(&ctx, &catalogs, &plan).expect("conf true must open the gate");
 }
 
-/// A stand-in for the session's `repark.sql` config extension, carrying the SAME prefix + field
-/// name the Spark door's `ReparkSqlConfig` registers. If either side renames the knob, this test
-/// stops opening the gate and the divergence is caught here rather than in production.
+/// A stand-in for the session's `repark.sql` config extension with the same prefix and field.
 #[derive(Debug, Clone, Default)]
 struct TestAllowConfig {
     allow: bool,
@@ -488,8 +479,7 @@ async fn ordinary_select_is_untouched() {
 
 // === The guard-set entry point ==============================================================
 
-/// The composed guard set runs in the mandated order: multi-statement first, so a script whose
-/// SECOND statement targets a read-only catalog reports the multi-statement class, not P11.
+/// The composed guard set runs in order, with multi-statement refusal first.
 #[tokio::test]
 async fn multi_statement_refuses_first_and_quote_aware() {
     let warehouse = TempDir::new().unwrap();
@@ -518,8 +508,7 @@ async fn multi_statement_refuses_first_and_quote_aware() {
         "multi-statement must win the ordering: {err}"
     );
 
-    // Quote-aware: a `;` inside a literal is not a second statement, so the SAME text with the
-    // script quoted passes the guard set entirely.
+    // Quote-aware: a `;` inside a literal is not a second statement; comments are also ignored.
     run_text_guards(
         &cx,
         "SELECT 'SELECT 1; INSERT INTO pg.public.t SELECT 1' AS x",
@@ -529,8 +518,7 @@ async fn multi_statement_refuses_first_and_quote_aware() {
 
 // === Guard 6 — G3-E8 subquery-predicate DML valve ===========================================
 
-/// The parsed statement, exactly as the router hands it to the valve — same `Generic` dialect,
-/// same `Statement`. The valve reads BOTH the `WHERE` expression and the target off this tree.
+/// Parse a statement with the same `Generic` dialect the router hands to the valve.
 fn parsed(sql: &str) -> Statement {
     use datafusion::sql::sqlparser::dialect::GenericDialect;
     use datafusion::sql::sqlparser::parser::Parser;
@@ -541,10 +529,6 @@ fn parsed(sql: &str) -> Statement {
 }
 
 /// The valve fires on **every** subquery spelling, at any depth — and on nothing else.
-///
-/// Detection is "a `Query` node under the predicate", not an enumeration of subquery-bearing
-/// `Expr` variants; this pin is what proves the rule reaches the shapes an enumeration would have
-/// to list one by one (and would silently miss after a sqlparser bump).
 #[test]
 fn dml_subquery_valve_fires_on_every_spelling_and_no_other() {
     for sql in [
@@ -562,8 +546,7 @@ fn dml_subquery_valve_fires_on_every_spelling_and_no_other() {
         "DELETE FROM t WHERE CASE WHEN id IN (SELECT id FROM k) THEN true ELSE false END",
         "DELETE FROM t WHERE id IN (SELECT id FROM (SELECT id FROM k) AS x)",
         "UPDATE t SET name = 'z' WHERE id IN (SELECT id FROM k)",
-        // Uncorrelated NOT EXISTS, EXISTS over an always-empty subquery, and the aggregate
-        // scalar `IN` — the three spellings the panel found missing from the matrix (F-D).
+        // Uncorrelated NOT EXISTS, EXISTS over an always-empty subquery, and aggregate predicates.
         "DELETE FROM t WHERE NOT EXISTS (SELECT 1 FROM k)",
         "DELETE FROM t WHERE EXISTS (SELECT 1 FROM k WHERE 1 = 0)",
         "DELETE FROM t WHERE id IN (SELECT max(id) FROM k)",
@@ -590,17 +573,14 @@ fn dml_subquery_valve_fires_on_every_spelling_and_no_other() {
         "DELETE FROM t WHERE name LIKE 'b%' OR id = 3",
         "DELETE FROM t WHERE abs(id) > 1 AND name IS NOT NULL",
         "UPDATE t SET name = 'z' WHERE id = 2",
-        // An assignment subquery is deliberately NOT the valve's business: only `selection` is
-        // passed in, and this statement's WHERE is subquery-free.
+        // An assignment subquery is outside this valve: only `selection` is inspected.
         "UPDATE t SET name = (SELECT max(name) FROM k) WHERE id = 2",
         // No WHERE at all is the provider's genuine match-all — never refused.
         "DELETE FROM t",
-        // Not DML at all: the valve is statement-shaped now, so it must pass everything else
-        // through untouched (this arm is what the router's `_ =>` fallthrough relies on).
+        // Non-DML statements pass because the valve is statement-shaped.
         "SELECT id FROM t WHERE id IN (SELECT id FROM k)",
         "INSERT INTO t SELECT id FROM k WHERE id IN (SELECT id FROM k2)",
         // Three-part IN / NOT IN / [NOT] EXISTS skip the valve (product hole).
-        // 1-part names stay refused above.
         "DELETE FROM ice.sales.tgt WHERE id IN (SELECT id FROM ice.sales.keys)",
         "DELETE FROM ice.sales.tgt WHERE id NOT IN (SELECT id FROM ice.sales.keys)",
         "DELETE FROM ice.sales.tgt WHERE EXISTS (SELECT 1 FROM ice.sales.keys)",
@@ -644,11 +624,6 @@ fn dml_subquery_refusal_names_its_verb_and_target() {
 }
 
 /// The rendered target comes from the PARSED statement, not from the scrubbed text (F-C).
-///
-/// This door's text scrubber blanks quoted regions, so the previous text-derived target rendered
-/// a quoted table as blanks — and the `MERGE INTO <target>` rewrite the message hands the user
-/// named a table that does not exist. The message has to stay copy-pasteable for every spelling
-/// of the target that reaches the valve, including the FROM-less `DELETE <table>` form.
 #[test]
 fn dml_subquery_refusal_renders_a_usable_target_for_every_spelling() {
     for (sql, expected) in [
@@ -686,8 +661,7 @@ fn dml_subquery_refusal_renders_a_usable_target_for_every_spelling() {
     }
 }
 
-/// A live ANSI door over a memory Iceberg catalog — the harness both end-to-end G3-E8 pins use,
-/// shared so the second one cannot drift from the first one's wiring.
+/// A live ANSI door over a memory Iceberg catalog supports the end-to-end G3-E8 pins.
 struct AnsiDoor {
     ctx: SessionContext,
     catalogs: CatalogRegistry,
@@ -781,14 +755,6 @@ impl AnsiDoor {
 }
 
 /// End to end through THIS door: the statement refuses and the table is left EXACTLY as seeded.
-///
-/// This door delegates DML to the same DataFusion path the Spark door does, so before the valve
-/// this `DELETE` emptied `ice.sales.sqtgt`. The read-back is the assertion that would have caught
-/// the original defect; the adjacent `DELETE` proves the valve did not widen into working SQL.
-///
-/// The FROM-less `DELETE <table> WHERE …` row is here because it is the spelling that bypassed
-/// the SPARK door's router-parse valve (panel L1 M-1): this door parses it fine, so it is pinned
-/// on both doors rather than assumed equivalent.
 #[tokio::test]
 async fn dml_subquery_valve_refuses_end_to_end_and_writes_nothing() {
     let door = AnsiDoor::new().await;
@@ -823,7 +789,7 @@ async fn dml_subquery_valve_refuses_end_to_end_and_writes_nothing() {
     assert_eq!(door.target_ids().await, vec![1, 3]);
 }
 
-/// PR-1 product hole: uncorrelated `DELETE … IN (SELECT …)` executes on both FROM and FROM-less.
+/// Uncorrelated `DELETE … IN (SELECT …)` executes on both FROM and FROM-less forms.
 #[tokio::test]
 async fn dml_subquery_in_delete_executes_and_deletes_exactly_the_match() {
     let door = AnsiDoor::new().await;
@@ -849,7 +815,7 @@ async fn dml_subquery_in_delete_executes_and_deletes_exactly_the_match() {
     assert_eq!(fromless.target_ids().await, vec![1, 3]);
 }
 
-/// PR-2 product hole: uncorrelated `DELETE … NOT IN (SELECT …)` including the NULL 3VL trap.
+/// Uncorrelated `DELETE … NOT IN (SELECT …)` honors the NULL three-valued-logic trap.
 #[tokio::test]
 async fn dml_subquery_not_in_delete_executes_and_honors_three_valued_logic() {
     let door = AnsiDoor::new().await;
@@ -901,7 +867,7 @@ async fn dml_subquery_not_in_delete_executes_and_honors_three_valued_logic() {
     assert_eq!(fromless.target_ids().await, vec![2]);
 }
 
-/// PR-3 product hole: `DELETE … [NOT] EXISTS` uncorrelated (all-or-nothing) and correlated.
+/// `DELETE … [NOT] EXISTS` handles uncorrelated and correlated predicates.
 #[tokio::test]
 async fn dml_subquery_exists_delete_executes_uncorrelated_and_correlated() {
     let uncorrelated = AnsiDoor::new().await;
@@ -1007,7 +973,7 @@ async fn dml_subquery_exists_delete_executes_uncorrelated_and_correlated() {
     assert_eq!(fromless.target_ids().await, Vec::<i64>::new());
 }
 
-/// PR-4 product hole: correlated `DELETE … IN` and identity `UPDATE … IN`.
+/// Correlated `DELETE … IN` and identity `UPDATE … IN` execute correctly.
 #[tokio::test]
 async fn dml_subquery_correlated_in_and_update_in_execute() {
     let correlated = AnsiDoor::new().await;
@@ -1036,14 +1002,7 @@ async fn dml_subquery_correlated_in_and_update_in_execute() {
     assert_eq!(update.target_ids().await, vec![1, 3, 9]);
 }
 
-/// Guard ORDER on this door (F-B): a table that trips BOTH data-loss valves reports **G3-E8**,
-/// because the cheap sync AST walk runs before the async Iceberg metadata load. Mirrors the Spark
-/// door's `tests::dml::g3e8_subquery_valve_precedes_the_mor_multi_spec_valve`, including its
-/// control — the non-subquery spelling on the same table must still hit the BUG-001 valve, so the
-/// pin cannot pass by the hazard not existing.
-///
-/// Before this unit the BUG-001 valve ran at the router head, i.e. BEFORE the parse the G3-E8
-/// valve needs, so the doors disagreed about which refusal a doubly-hazardous statement gets.
+/// Guard order is observable: a statement hitting both data-loss valves reports **G3-E8** first.
 #[tokio::test]
 async fn mor_valve_runs_after_the_g3e8_valve() {
     use iceberg::spec::Transform;
@@ -1059,8 +1018,7 @@ async fn mor_valve_runs_after_the_g3e8_valve() {
     door.ok("CREATE TABLE ice.sales.sqkeys AS SELECT 2 AS id")
         .await;
 
-    // Evolve the spec away: the current spec becomes unpartitioned, the history keeps the bucket
-    // spec — the BUG-001 hazard shape.
+    // Evolve the spec away: the current spec becomes unpartitioned, while history keeps the bucket spec.
     apply_partition_spec_changes(
         door.catalog.as_ref(),
         &iceberg::TableIdent::new(
@@ -1108,12 +1066,7 @@ async fn mor_valve_runs_after_the_g3e8_valve() {
     );
 }
 
-/// The attachment-class regression net for THIS door (F-A's sibling risk). The router parses with
-/// [`PARSER_DIALECT`] and `delegate` re-parses through `create_logical_plan`, which uses the
-/// session's `sql_parser.dialect`. Those are the same parser today — and this pin is what makes
-/// "the same" a checked fact rather than a coincidence: the moment a DataFusion bump changes the
-/// session default, the two parses could disagree and a DML guard wired to the router's parse
-/// would be fail-open exactly the way the Spark door's was.
+/// This regression net ensures the router parses with the same dialect as execution.
 #[test]
 fn router_parse_dialect_matches_the_session_default() {
     let session_default = SessionConfig::new().options().sql_parser.dialect;
@@ -1201,8 +1154,7 @@ fn collation_valve_fires_on_set_session_key() {
     assert_g15_refusal(&error, "spark.sql.collation.objectLevel.enabled");
 }
 
-/// Parenthesized SET is not discarded (SEC-003). Built as AST — dotted names
-/// inside `SET (…)` are not a Generic production.
+/// Parenthesized SET is not discarded (SEC-003). Build it as an AST with dotted names.
 #[test]
 fn collation_valve_fires_on_parenthesized_set() {
     use datafusion::sql::sqlparser::ast::{Ident, ObjectName, Set};

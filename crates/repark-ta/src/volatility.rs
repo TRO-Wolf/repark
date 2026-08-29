@@ -6,8 +6,7 @@ use crate::{Result, as_f64, check_lengths, check_period, is_zero, true_range};
 /// ===========================================================================================
 /// `TRANGE` — true range (`ta_TRANGE.c`).
 ///
-/// Greatest of `high − low`, `|prevClose − high|`, `|prevClose − low|`; the first bar has no
-/// previous close, so lookback = 1.
+/// Return the greatest high-low or previous-close range; the first bar is NaN.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -15,9 +14,7 @@ use crate::{Result, as_f64, check_lengths, check_period, is_zero, true_range};
 pub fn trange(high: &[f64], low: &[f64], close: &[f64]) -> Result<Vec<f64>> {
     check_lengths(high.len(), &[low.len(), close.len()])?;
     let len = high.len();
-    // Single-write construction (the `overlap::ema` pattern): one NaN via resize, then the
-    // per-bar TRUE_RANGE streamed through a TrustedLen extend — one write per slot, never a
-    // push loop. Arithmetic and bar order are unchanged.
+    // Preserve the measured single-write construction without changing arithmetic order.
     let mut out = Vec::with_capacity(len);
     if len == 0 {
         return Ok(out);
@@ -34,9 +31,8 @@ pub fn trange(high: &[f64], low: &[f64], close: &[f64]) -> Result<Vec<f64>> {
 /// ===========================================================================================
 /// `ATR` — average true range (`ta_ATR.c`, unstable period 0).
 ///
-/// Seed = SMA of the first `period` true ranges; then Wilder smoothing in C's statement order
-/// (`prev *= period − 1`, `prev += tr`, `prev /= period`). `period == 1` delegates to
-/// [`trange`], exactly as C does. Lookback = `period`.
+/// Seed with a true-range SMA, then apply Wilder's three-statement recurrence.
+/// Period one delegates to [`trange`].
 /// ===========================================================================================
 ///
 /// # Errors
@@ -49,9 +45,7 @@ pub fn atr(high: &[f64], low: &[f64], close: &[f64], period: usize) -> Result<Ve
     }
     let tr = trange(high, low, close)?;
     let len = tr.len();
-    // Single-write construction (the `overlap::ema` pattern): NaN lookback prefix via resize,
-    // then the Wilder recursion streamed through a TrustedLen extend. The three-statement
-    // Wilder order (`*=`, `+=`, `/=`) is unchanged — construction only.
+    // Keep Wilder's statement order; only output construction uses the measured form.
     let mut out = Vec::with_capacity(len);
     if len < period + 1 {
         out.resize(len, f64::NAN);
@@ -77,16 +71,11 @@ pub fn atr(high: &[f64], low: &[f64], close: &[f64], period: usize) -> Result<Ve
 /// ===========================================================================================
 /// `NATR` — normalized average true range (`ta_NATR.c`, unstable period 0).
 ///
-/// C computes the ATR internally exactly as [`atr`] does (TRANGE → SMA seed → Wilder in statement
-/// order), then normalizes each value: `NATR[i] = (ATR[i] / close[i]) · 100`, with a
-/// `TA_IS_ZERO(close)` guard that yields `0.0` instead of dividing. So this reuses [`atr`] and
-/// applies the normalization to its non-NaN tail. `period == 1` returns the raw [`trange`] (C's
-/// "no smoothing needed" trap), *unnormalized* — matching C. Lookback = `period`.
+/// Normalize [`atr`] values by close with C's zero guard.
+/// Period one returns raw [`trange`] values, as C does.
 ///
-/// C's zero-close `else` branch has a known upstream quirk (it writes `outReal[0]` rather than the
-/// current index); it is unreachable for any realistic positive-price close series (`|close| < 1e-8`
-/// never holds around real prices), so this port writes `0.0` at the current index and the goldens
-/// never exercise the branch.
+/// For a zero close, this port writes `0.0` at the current index; upstream C writes index zero.
+/// Current goldens do not exercise this divergence.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -96,7 +85,7 @@ pub fn natr(high: &[f64], low: &[f64], close: &[f64], period: usize) -> Result<V
     check_period("optInTimePeriod", period, 1)?;
     let mut out = atr(high, low, close, period)?;
     if period == 1 {
-        // C's `optInTimePeriod <= 1` trap returns raw TRANGE, not normalized.
+        // C's period-one branch returns raw TRANGE.
         return Ok(out);
     }
     for (i, slot) in out.iter_mut().enumerate() {
@@ -121,9 +110,7 @@ mod tests {
         let out =
             trange(&[10.0, 12.0, 11.0], &[9.0, 10.5, 9.5], &[9.5, 11.0, 10.0]).expect("valid");
         assert!(out[0].is_nan());
-        // Bar 1: max(12−10.5, |9.5−12|, |9.5−10.5|) = 2.5
         assert!((out[1] - 2.5).abs() < 1e-12);
-        // Bar 2: max(11−9.5, |11−11|, |11−9.5|) = 1.5
         assert!((out[2] - 1.5).abs() < 1e-12);
     }
 
@@ -147,7 +134,6 @@ mod tests {
         let close = [9.5, 10.5, 11.5, 12.5];
         let out = atr(&high, &low, &close, 2).expect("valid");
         assert!(out[1].is_nan());
-        // TR[1] = 1.5, TR[2] = 1.5 → seed 1.5; then Wilder: (1.5*1 + 1.5)/2 = 1.5.
         assert!((out[2] - 1.5).abs() < 1e-12);
         assert!((out[3] - 1.5).abs() < 1e-12);
     }

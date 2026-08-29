@@ -1,17 +1,7 @@
-//! e2e — the TA window UDFs through `spark.sql`.
+//! End-to-end TA window UDF tests through `spark.sql`.
 //!
-//! Proves the SQL route (`ta_ema(close, 21) OVER (ORDER BY ts)`) registered at session build
-//! produces output that is `f64::to_bits`-**identical** to calling the [`repark_ta`] kernel
-//! directly on the ordered column. The input is the same 5000-row OHLC fixture the crate's golden
-//! gate uses (`crates/repark-ta/tests/goldens/*.bin`), so the kernel outputs here are the very
-//! series proven bit-exact against C TA-Lib — no goldens are re-recorded, and the assertion is
-//! engine-vs-kernel on shared data. Every one of the 77 registered UDFs is exercised.
-//!
-//! Ported at phase-2 PR-4 from v1 `crates/repark-session/tests/ta_window.rs` — deferred rows
-//! #8-#14 in `task/port/deferred-tests.md`. The session is now door-installed
-//! (`SparkExtension` + `SparkDialect`); the UDFs arrive via the composed
-//! [`repark_ta::TaExtension`]. The goldens path is unchanged — `repark-ta` sits at the same
-//! sibling position in this workspace as it did in v1.
+//! Each SQL result is bit-identical to the direct [`repark_ta`] kernel on the shared 5000-row
+//! fixture. The fixture remains the crate's golden path; no values are re-recorded here.
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -45,9 +35,8 @@ fn fixture(name: &str) -> Vec<f64> {
         .collect()
 }
 
-/// Build the Spark-doored session the way a v1 session was assembled: extension at the two build
-/// hooks, dialect as the session default (v1's `ReparkSession::new()`). `SparkExtension` composes
-/// `repark_ta::TaExtension`, which is what registers the `ta_*` window UDFs this file exercises.
+/// Build a Spark-doored session with the extension and dialect installed as defaults. The extension
+/// composes `repark_ta::TaExtension`, which registers the `ta_*` window UDFs.
 fn spark_session() -> ReparkSession {
     let dialect: Arc<dyn SqlDialect> = Arc::new(SparkDialect);
     ReparkSession::builder()
@@ -176,7 +165,6 @@ async fn sql_route_single_series_kernels_match_the_kernel() {
         ("ta_trima(close, 5)", trima(&close, 5).unwrap()),
         ("ta_kama(close, 10)", kama(&close, 10).unwrap()),
         ("ta_midpoint(close, 10)", midpoint(&close, 10).unwrap()),
-        // WG2 single-series simple-momentum kernels (one period param).
         ("ta_mom(close, 10)", mom(&close, 10).unwrap()),
         ("ta_roc(close, 10)", roc(&close, 10).unwrap()),
         ("ta_rocp(close, 10)", rocp(&close, 10).unwrap()),
@@ -184,7 +172,6 @@ async fn sql_route_single_series_kernels_match_the_kernel() {
         ("ta_rocr100(close, 10)", rocr100(&close, 10).unwrap()),
         ("ta_cmo(close, 14)", cmo(&close, 14).unwrap()),
         ("ta_trix(close, 30)", trix(&close, 30).unwrap()),
-        // WG3 MACDFIX split (single series + a lone signal-period scalar; 12/26 pinned).
         ("ta_macdfix(close, 9)", macdfix(&close, 9).unwrap().0),
         ("ta_macdfix_signal(close, 9)", macdfix(&close, 9).unwrap().1),
         ("ta_macdfix_hist(close, 9)", macdfix(&close, 9).unwrap().2),
@@ -216,17 +203,13 @@ async fn sql_route_scalar_param_kernels_match_the_kernel() {
             "ta_bbands_lower(close, 20, 2.0, 2.0)",
             bbands(&close, 20, 2.0, 2.0).unwrap().2,
         ),
-        // APO/PPO thread three scalars (fast, slow, matype) through the literal-arg path.
         ("ta_apo(close, 12, 26, 0)", apo(&close, 12, 26, 0).unwrap()),
         ("ta_ppo(close, 12, 26, 0)", ppo(&close, 12, 26, 0).unwrap()),
-        // Octo C5/C6: matype 7 (MAMA) through the SQL UDF literal-arg path.
         ("ta_apo(close, 12, 26, 7)", apo(&close, 12, 26, 7).unwrap()),
         ("ta_ppo(close, 12, 26, 7)", ppo(&close, 12, 26, 7).unwrap()),
-        // WG3 MA selector (period + matype literals).
         ("ta_ma(close, 30, 0)", ma(&close, 30, 0).unwrap()),
         ("ta_ma(close, 20, 1)", ma(&close, 20, 1).unwrap()),
         ("ta_ma(close, 30, 7)", ma(&close, 30, 7).unwrap()),
-        // WG3 MACD splits thread three scalars (fast, slow, signal).
         (
             "ta_macd(close, 12, 26, 9)",
             macd(&close, 12, 26, 9).unwrap().0,
@@ -239,7 +222,6 @@ async fn sql_route_scalar_param_kernels_match_the_kernel() {
             "ta_macd_hist(close, 12, 26, 9)",
             macd(&close, 12, 26, 9).unwrap().2,
         ),
-        // WG3 MACDEXT splits thread six scalars (fast p/type, slow p/type, signal p/type).
         (
             "ta_macdext(close, 12, 0, 26, 0, 9, 0)",
             macdext(&close, 12, 0, 26, 0, 9, 0).unwrap().0,
@@ -252,7 +234,6 @@ async fn sql_route_scalar_param_kernels_match_the_kernel() {
             "ta_macdext_hist(close, 12, 0, 26, 0, 9, 0)",
             macdext(&close, 12, 0, 26, 0, 9, 0).unwrap().2,
         ),
-        // WG4 STOCHRSI splits (single close series + four scalars: timeperiod, fastk, fastd, type).
         (
             "ta_stochrsi_fastk(close, 14, 5, 3, 0)",
             stochrsi(&close, 14, 5, 3, 0).unwrap().0,
@@ -261,8 +242,6 @@ async fn sql_route_scalar_param_kernels_match_the_kernel() {
             "ta_stochrsi_fastd(close, 14, 5, 3, 0)",
             stochrsi(&close, 14, 5, 3, 0).unwrap().1,
         ),
-        // Group G2: matype 7 (MAMA) on STOCHRSI — both split UDF entry points with fastd_matype=7
-        // (lookback_total depends on fastd matype even for the %K line).
         (
             "ta_stochrsi_fastk(close, 14, 5, 3, 7)",
             stochrsi(&close, 14, 5, 3, 7).unwrap().0,
@@ -356,7 +335,6 @@ async fn sql_route_multi_series_kernels_match_the_kernel() {
             "ta_minus_dm(high, low, 14)",
             minus_dm(&high, &low, 14).unwrap(),
         ),
-        // WG4 stochastics: STOCH (H/L/C + 5 scalars) and STOCHF (H/L/C + 3 scalars), split ×2.
         (
             "ta_stoch_slowk(high, low, close, 5, 3, 0, 3, 0)",
             stoch(&high, &low, &close, 5, 3, 0, 3, 0).unwrap().0,
@@ -373,8 +351,6 @@ async fn sql_route_multi_series_kernels_match_the_kernel() {
             "ta_stochf_fastd(high, low, close, 5, 3, 0)",
             stochf(&high, &low, &close, 5, 3, 0).unwrap().1,
         ),
-        // Group G2: matype 7 (MAMA) on STOCH/STOCHF — all-MAMA both legs, mixed 7/0, and
-        // STOCHF type7 both split entry points (fastd matype trims the %K dense slice too).
         (
             "ta_stoch_slowk(high, low, close, 5, 3, 7, 3, 7)",
             stoch(&high, &low, &close, 5, 3, 7, 3, 7).unwrap().0,
@@ -428,10 +404,6 @@ async fn sql_route_multi_series_kernels_match_the_kernel() {
 
 #[tokio::test]
 async fn sql_route_parked_four_match_the_kernel() {
-    // T3 — the parked four through the SQL OVER route, `to_bits`-identical to the kernels. MAMA is
-    // split (ta_mama / ta_fama) and carries real-valued limits; SAR / SAREXT are two-series
-    // (high, low) with real-valued scalars; MAVP's second column is the `periods` series (not a
-    // scalar), and matype 0 (SMA) + 1 (EMA) exercise both the windowed and the shifted-seed paths.
     let (session, _open, high, low, close) = session_with_bars();
     let periods = fixture("fixture_periods");
     let (mama_out, fama_out) = mama(&close, 0.5, 0.05).unwrap();

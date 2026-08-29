@@ -1,8 +1,6 @@
 use super::super::*;
 
-// Shared external / std types (monolith preamble + lib.rs test-only uses).
-// Not every leaf uses every name — keep the full preamble so `use super::common::*`
-// reconstructs the monolith's import scope. Allow unused on the re-export block only.
+// Shared imports keep leaf test modules concise; unused names are intentional re-exports.
 #[allow(unused_imports)]
 pub(super) use std::collections::HashMap;
 #[allow(unused_imports)]
@@ -656,10 +654,8 @@ pub(super) async fn source_has_unsafe_cast(ctx: &SessionContext, source: &str) -
     logical_plan_has_unsafe_cast(df.logical_plan())
 }
 
-/// Execute a statement and DROP the returned `DataFrame` without collecting it — the exact shape
-/// of a bare `spark.sql("<DML>")` a migrated PySpark caller never collects. Post-fix the DML
-/// has already been applied by the time `execute` returns; pre-fix (lazy routing) the write is
-/// silently lost. (Contrast `run`, which collects.)
+/// Execute a statement and drop its returned `DataFrame` without collecting it. This models a
+/// bare `spark.sql("<DML>")`; eager DML is applied before `execute` returns.
 pub(super) async fn execute_without_collecting(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,

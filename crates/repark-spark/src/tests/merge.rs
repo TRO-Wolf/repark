@@ -432,13 +432,8 @@ async fn merge_stamps_operation_id_in_snapshot_summary() {
     );
 }
 
-/// PIN Y1-SQL (gate-retirement, second generation) — the lineage here is three deep:
-/// `merge_non_identity_partition_transform_rejected` (retired by Group R when transform
-/// copy-on-write MERGE landed) → `merge_bucket_partitioned_mor_mode_still_rejected` (R5/Group T:
-/// merge-on-read RAN, but not on a transform table) → THIS, because Group Y proved and enabled
-/// the composition. A `bucket(4, id)` + `write.merge.mode = 'merge-on-read'` table now RUNS a
-/// three-clause MERGE end-to-end through the real user surface (CTAS `TBLPROPERTIES` → the SQL
-/// MERGE router → the merge-on-read arm), producing Spark's answer on the Arrow path.
+/// A bucket-partitioned table with `write.merge.mode = 'merge-on-read'` runs a three-clause MERGE
+/// through the SQL door and produces Spark's answer on the Arrow path.
 ///
 /// The physical assertions are the load-bearing half — routing this table to the copy-on-write
 /// arm produces the SAME three rows: position-delete files MUST be committed, and EVERY
@@ -496,15 +491,8 @@ async fn merge_bucket_partitioned_mor_mode_runs_end_to_end() {
     );
 }
 
-/// PIN T (SQL entry point) — `write.merge.mode = 'merge-on-read'` now RUNS end-to-end through
-/// the real user surface: CTAS `TBLPROPERTIES` → the SQL MERGE router → the merge-on-read arm.
-/// A three-clause MERGE (DELETE / UPDATE / INSERT) reads back exactly Spark's answer on the
-/// Arrow path, position-delete files are committed, and EVERY pre-merge data file is still live
-/// (merge-on-read never rewrites). This test REPLACES the retired `merge_mor_mode_rejected`
-/// v1-limit pin — the limit it guarded is what Group T removed.
-///
-/// The `_file`-survival and delete-file assertions are the load-bearing half: routing this
-/// table to the copy-on-write arm yields the SAME three rows and would pass a rows-only pin.
+/// Runs merge-on-read end to end and requires position deletes without rewriting data files.
+/// Row equality alone cannot distinguish a copy-on-write fallback.
 #[tokio::test]
 async fn merge_merge_on_read_mode_runs_end_to_end() {
     let wh = TempDir::new().unwrap();
@@ -604,7 +592,7 @@ async fn merge_output_clause_rejected() {
     );
 }
 
-/// A typo'd `UPDATE SET` column is an ERROR, never a silent no-op (audit BUG-006:
+/// A typo'd `UPDATE SET` column is an error, never a silent no-op:
 /// case-insensitive resolution still refuses names that match no schema field).
 #[tokio::test]
 async fn merge_update_set_unknown_column_errors() {
@@ -631,7 +619,7 @@ async fn merge_update_set_unknown_column_errors() {
         "expected the unknown-SET-column error, got: {err}"
     );
     // Case-differing spelling of a real column must APPLY (Spark caseSensitive=false), not
-    // refuse as unknown — the prior exact-case pin used `NAME` and is now wrong.
+    // refuse as unknown; column resolution is case-insensitive.
     run(
         &ctx,
         &catalogs,
@@ -646,7 +634,7 @@ async fn merge_update_set_unknown_column_errors() {
     );
 }
 
-/// Critic-octo P3C1-Q-001: casefold-duplicate SET keys on the wire path must fail loud
+/// Casefold-duplicate SET keys on the wire path must fail loud
 /// (not first-win). Deleting `validate_update_columns` in `execute_merge` must RED this pin.
 #[tokio::test]
 async fn merge_update_set_casefold_duplicate_errors_without_write() {
@@ -944,8 +932,7 @@ async fn merge_matched_and_threshold_update_or_delete() {
 }
 
 // ================================================================================================
-// MG-2 lowering-strictness pins (M2 / M3 / M8 / M10) — Spark-door execute path.
-// Lowering twins live in `src/merge.rs`. Repro shapes r5 / r6 / r7 / r12 converted, not imported.
+// Spark-door MERGE lowering strictness pins.
 // ================================================================================================
 
 /// M2 / r5 — Oracle-style `UPDATE SET … WHERE` refuses at the door (not silently dropped).

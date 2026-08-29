@@ -1,6 +1,4 @@
-//! Catalog lookup, P11 read-only DML refuse, re-register helpers, and error mapping.
-//!
-//! Extracted MOVE-ONLY from `lib.rs` (r25 T0 DataFusion-style reorg). Zero behavior change.
+//! Catalog lookup, read-only DML refusal, provider re-registration, and error mapping.
 
 use std::sync::Arc;
 
@@ -45,7 +43,7 @@ pub(crate) fn reject_path_escape_ident(segment: &str, kind: &str) -> Result<()> 
 /// Fold a sqlparser error into a plan-class [`DataFusionError`] (create-namespace parse errors join
 /// the existing create-namespace / N5 errors as `Plan`, classified `AnalysisException` by WG-3).
 // By-value to stay a clean `.map_err(sqlparser_err)` adapter (the `engine_err` pattern,
-// lessons 2026-06-05: prefer `allow` over reshaping for a clippy-only lint).
+// Keep the local lint exception because the helper shape is part of the public adapter contract.
 #[allow(clippy::needless_pass_by_value)]
 pub(crate) fn sqlparser_err(err: ParserError) -> DataFusionError {
     DataFusionError::Plan(format!("could not parse CREATE NAMESPACE: {err}"))
@@ -145,9 +143,8 @@ pub(crate) fn name_parts(name: &ObjectName) -> Vec<String> {
         .collect()
 }
 
-// === r24 P7: catalog-provider rebuild path ====================================================
-// PERF-07: product DDL invalidates the touched namespace only (O(1)); full rebuild is the
-// explicit refresh / OOB escape hatch. Do not expand into SB1 DDL-gate or free-SQL cardinality.
+// === Catalog-provider refresh path ============================================================
+// Product DDL invalidates the touched namespace in O(1); full rebuild remains an explicit escape hatch.
 // ==============================================================================================
 
 /// Invalidate the DF catalog-provider name directory for `namespace` after a product DDL mutation.

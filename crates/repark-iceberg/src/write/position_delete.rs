@@ -1,39 +1,10 @@
-//! Position-delete file writing — the merge-on-read WRITE primitive.
+//! Position-delete file writing for merge-on-read operations.
 //!
-//! A merge-on-read row-level operation does not rewrite the data file a mutated row lives in. It
-//! records the row's `(data file path, ordinal)` identity in a **position-delete file** and commits
-//! that file alongside any new data files in ONE `RowDelta` snapshot; the next scan applies the
-//! deletes (fork `GAP_MATRIX` row R117, `arrow/delete_filter.rs`). This module owns the "turn
-//! `(_file, _pos)` pairs into committable position-delete [`DataFile`]s" half of that recipe — the
-//! commit half lives with the operation that produced the pairs ([`crate::write::merge`]).
-//!
-//! The writer itself is the fork's production `PositionDeleteFileWriter` (row R113) — `RePark` never
-//! hand-rolls a delete-file encoder. What `RePark` owns is the two things the fork's writer
-//! deliberately leaves to its caller:
-//!
-//!   * **Sort order.** The Iceberg spec requires every position-delete file's rows to be ascending
-//!     by `(file_path, pos)`; the fork's writer is write-as-given (R113: "sorting is the caller's
-//!     job, matching Java"). A concurrent Iceberg scan interleaves data files in arbitrary order, so
-//!     the pairs a MERGE collects are NOT sorted at collection time — [`sort_position_delete_pairs`]
-//!     restores spec order before anything is written.
-//!   * **Partition stamping and grouping.** A position-delete file is associated with the
-//!     `(spec_id, partition)` of the DATA file it deletes from — the commit validates the delete
-//!     file's partition against the registered spec. Grouping follows `write.delete.granularity`
-//!     (absent → `file`, matching Spark): `file` writes one delete file per referenced data file;
-//!     `partition` writes one per `(spec_id, partition)` group. Either way the stamp is the data
-//!     file's own partition, read off the live manifests, never the table's current default spec.
-//!     A partitioned group is stamped with that group's [`PartitionKey`]. An unpartitioned group
-//!     still passes `partition_key = None` (empty-tuple semantics); when the resolved spec's id is
-//!     not 0 the writer is also chained `.with_partition_spec(spec)` so the file claims that spec
-//!     instead of the fork's `DEFAULT_PARTITION_SPEC_ID` (0) fallback. This mirrors Java
-//!     `PositionDeleteWriter` (always carries a per-data-file `PartitionSpec`) and the fork's own
-//!     merge-on-read DELETE/UPDATE arm in `iceberg-datafusion`'s `physical_plan/delete.rs`, which
-//!     `RePark`'s MERGE arm is built to match file-for-file.
-//!
-//! Reading the partition off the DATA FILE (not off the table's current default spec) is what makes
-//! the stamp correct: the row being deleted physically lives in that file, under the spec that file
-//! was written with. The unpartitioned `None` key is a *result* of that lookup; the spec id is
-//! threaded separately because a `None` key alone makes the fork stamp 0.
+//! The module converts streamed `(_file, _pos)` pairs into fork
+//! `PositionDeleteFileWriter` data files. It sorts pairs by `(file_path, pos)` and groups them by
+//! the configured granularity. Every group uses the owning data file's `(spec_id, partition)`;
+//! unpartitioned non-zero specs pass the resolved spec to avoid the fork's spec-0 default.
+//! Commit coordination remains in [`crate::write::merge`].
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -62,13 +33,10 @@ use crate::write::concurrency::WriteConcurrency;
 use crate::write::merge::iceberg_err;
 use crate::write::writer_props::writer_properties_for;
 
-/// Iceberg default partition-spec id (fork `DEFAULT_PARTITION_SPEC_ID`). The position-delete
-/// writer stamps this when built with `partition_key = None` and no `.with_partition_spec`.
+/// Iceberg default partition-spec id used by the fork when no spec is supplied.
 const DEFAULT_PARTITION_SPEC_ID: i32 = 0;
 
-/// Iceberg table property for position-delete grouping. Spark's `SparkWriteConf` default is
-/// `file`; Iceberg-core's `TableProperties.DELETE_GRANULARITY_DEFAULT` is `partition`. This
-/// engine matches Spark (registry `MOR-2`).
+/// Iceberg table property for position-delete grouping. The Spark default is `file`.
 pub const DELETE_GRANULARITY_PROP: &str = "write.delete.granularity";
 
 /// How position-delete pairs are grouped into files. The fork writer has no knob — grouping
@@ -87,13 +55,10 @@ enum PositionDeleteGroupKey {
     File(Arc<str>),
 }
 
-// === r20 P2a: merge ===
 /// One deleted row's identity: the data file it lives in, and its 0-based ordinal within that file.
 /// Exactly the `(_file, _pos)` pair the pinned core scan surfaces (fork `metadata_columns.rs`).
 ///
-/// Path is `Arc<str>` so MERGE Stage B path interning (P1b scout #2) can share one allocation
-/// across the seen-pair set, the pos-delete list, and this writer without re-cloning `String`
-/// per mutated row (P2a residual).
+/// `Arc<str>` lets the path be shared across the seen-pair set, delete list, and writer.
 pub(crate) type PositionDeletePair = (Arc<str>, i64);
 
 /// ===========================================================================================

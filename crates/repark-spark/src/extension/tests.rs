@@ -26,8 +26,7 @@ fn build_conf<'a>(
     }
 }
 
-/// `configure` re-homes v1's inline r24 SB1 install: the builder conf map's `repark.sql.*`
-/// keys land on the `SessionConfig` as the `ReparkSqlConfig` `ConfigExtension`.
+/// `configure` installs `repark.sql.*` values as the `ReparkSqlConfig` extension.
 #[test]
 fn configure_installs_repark_sql_config_from_conf_map() {
     let mut conf = HashMap::new();
@@ -45,15 +44,12 @@ fn configure_installs_repark_sql_config_from_conf_map() {
     assert!(!installed.allow_local_filesystem_ddl);
 }
 
-/// H-1a split B: `configure` is the ONE crossing point where `repark-core`'s resolved session
-/// zone reaches `repark-functions`' extractor layer. The hook must install the carrier with the
-/// zone it was HANDED — not a re-parse of the conf map, and not the default.
+/// `configure` carries the resolved session zone to the extractor layer instead of re-parsing
+/// the raw configuration.
 #[test]
 fn configure_installs_the_resolved_session_time_zone_carrier() {
     let mut conf = HashMap::new();
-    // A conf map whose raw string DISAGREES with the resolved value: if the hook ever re-parsed
-    // the map instead of carrying what `build()` resolved, the assertion below would see the
-    // padded string (or, with a stricter parse, the default) instead of `Asia/Tokyo`.
+    // The raw value differs from the resolved zone, proving the hook uses the builder result.
     conf.insert(
         "spark.sql.session.timeZone".to_string(),
         "  Asia/Tokyo ".to_string(),
@@ -93,8 +89,7 @@ fn configure_installs_the_carrier_even_for_the_default_zone() {
     );
 }
 
-/// v1's fail-loud contract: a present-but-unparsable `repark.sql.*` value errors at build
-/// time, never silently falls back to the default.
+/// A present-but-unparsable `repark.sql.*` value errors at build time instead of using a default.
 #[test]
 fn configure_refuses_unparsable_conf_value() {
     let mut conf = HashMap::new();
@@ -331,9 +326,8 @@ async fn register_installs_spark_integer_division_semantics() {
     assert!((quotients.value(0) - 2.5).abs() < f64::EPSILON);
 }
 
-/// PR-4 rider restoration (p2b rider #1): `register` composes [`repark_ta::TaExtension`] at v1's
-/// position, so a Spark-extended session has the TA window UDFs — the v1 `build()` behaviour this
-/// door owes. Bit-exact against the kernel the repark-ta goldens gate, not an approximate compare.
+/// `register` composes [`repark_ta::TaExtension`] so a Spark session has the TA window UDFs.
+/// Results are bit-exact against the repark-ta kernel.
 #[tokio::test]
 async fn register_composes_the_ta_extension_window_udfs() {
     let close: Vec<f64> = vec![

@@ -1,27 +1,5 @@
-//! The shared PyO3 panic fence (SAF-007).
-//!
-//! A Rust panic must never unwind across the Python / FFI boundary. Two boundary shapes exist in
-//! this crate, and both route through the ONE catch-and-frame core here:
-//!
-//! 1. **`#[pymethods]` entry points** — [`fence`] wraps a method body returning [`PyResult<T>`].
-//!    PyO3's own trampoline already `catch_unwind`s a pymethod panic, but it raises
-//!    [`pyo3::panic::PanicException`], which derives from `BaseException`
-//!    (`pyo3-0.29.0/src/panic.rs`) — so `except Exception` / `except RuntimeError` (repark's
-//!    near-drop-in contract) do NOT catch it and a migrated program dies. [`fence`] catches the
-//!    panic FIRST and re-raises it as the base [`crate::PySparkException`] (a `RuntimeError`), with
-//!    the panic message preserved and an "internal error" framing.
-//! 2. **The Arrow C-stream `get_next` callback** — [`fence_stream_poll`] wraps
-//!    `StreamingBatchReader::next` (in [`crate::dataframe`]). That poll is invoked by
-//!    `arrow`'s `unsafe extern "C" fn get_next` (`arrow-array-57.3.1/src/ffi_stream.rs`), which does
-//!    NOT `catch_unwind`; an escaping panic unwinds across `extern "C"` → **process abort**. This is
-//!    the genuine SAF-007 abort, and PyO3's trampoline does not cover it (the pulls happen after the
-//!    `__arrow_c_stream__` pymethod returned the capsule). [`fence_stream_poll`] turns the panic into
-//!    a terminal [`ArrowError`] on the stream's error channel, so the consumer sees a clean error and
-//!    the process survives. The facade `DataFrame.to_arrow` maps that `ArrowException` back to the
-//!    base [`crate::PySparkException`], so the two shapes converge on one Python-visible taxonomy.
-//!
-//! Message extraction mirrors PyO3's own `PanicException::from_panic_payload`: a panic payload is
-//! almost always `&'static str` or `String`; anything else degrades to a stable label.
+//! Shared PyO3 and Arrow C-stream panic fences.
+//! Panics become Python or Arrow errors instead of unwinding across FFI or aborting the process.
 
 use std::any::Any;
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -33,12 +11,7 @@ use pyo3::prelude::PyErr;
 use crate::PySparkException;
 
 /// ===========================================================================================
-/// Extract a human-readable detail string from a caught panic payload, then wrap it in the shared
-/// "internal error" framing that names the boundary operation.
-///
-/// Mirrors [`pyo3::panic::PanicException::from_panic_payload`]'s downcast order (`&str`, then
-/// `String`) so the recovered text matches what a raw panic would have printed; a non-string payload
-/// (rare — a `panic_any` with a custom type) degrades to a stable label rather than being lost.
+/// Extract panic text and add the boundary operation to the internal-error message.
 /// ===========================================================================================
 fn describe_panic(operation: &str, payload: &(dyn Any + Send)) -> String {
     let detail = if let Some(text) = payload.downcast_ref::<&'static str>() {
@@ -57,15 +30,8 @@ fn describe_panic(operation: &str, payload: &(dyn Any + Send)) -> String {
 /// ===========================================================================================
 /// Run a `#[pymethods]` body under the panic fence.
 ///
-/// On success the body's [`PyResult`] passes through unchanged. On a Rust panic the unwind is caught
-/// here (never reaching PyO3's trampoline, so it is never a `BaseException`/`PanicException`) and
-/// converted into a base [`crate::PySparkException`] (a `RuntimeError`) whose message preserves the
-/// panic text under the shared "internal error" framing ([`describe_panic`]).
-///
-/// [`AssertUnwindSafe`] is required because the boundary closures capture non-[`UnwindSafe`] engine
-/// handles (`DataFrame`, `ReparkSession`, `Bound<'_, PyAny>`); the assertion is sound because a
-/// caught panic here does not observe any partially-mutated state — the fence returns an error and
-/// the caller (Python) receives a fresh exception, never a torn value.
+/// Successful results pass through. A panic becomes [`crate::PySparkException`] with its text.
+/// [`AssertUnwindSafe`] covers engine handles that are not statically `UnwindSafe`.
 /// ===========================================================================================
 pub(crate) fn fence<T>(
     operation: &str,
@@ -81,11 +47,7 @@ pub(crate) fn fence<T>(
 }
 
 /// ===========================================================================================
-/// QUAL-05 / OBS1: panic-fence a `#[pymethods]` body under a named **entry-point family** span.
-///
-/// Span name is the family (`py.session`, `py.sql`, `py.read`, `py.action`, `py.catalog`, …);
-/// `operation` is recorded as a field so a hang can be localized to Python-side vs engine without
-/// a debugger. Additive only — same control flow as [`fence`]. Zero overhead when no subscriber.
+/// Fence a method body and record its static entry-point family and operation.
 /// ===========================================================================================
 pub(crate) fn fence_with_span<T>(
     family: &'static str,
@@ -100,9 +62,7 @@ pub(crate) fn fence_with_span<T>(
 /// ===========================================================================================
 /// A caught-panic error carried on the Arrow C-stream error channel.
 ///
-/// [`ArrowError::ExternalError`] needs a `Box<dyn Error>`; this newtype carries the framed panic
-/// message so a fenced stream-poll panic surfaces to the consumer exactly like any other engine
-/// stream error (whose text the facade preserves), never as an abort.
+/// Carry a framed panic through [`ArrowError::ExternalError`].
 /// ===========================================================================================
 #[derive(Debug)]
 struct FencedStreamPanic(String);
@@ -118,10 +78,7 @@ impl std::error::Error for FencedStreamPanic {}
 /// ===========================================================================================
 /// Run one Arrow-C-stream batch poll under the panic fence.
 ///
-/// The poll is invoked by `arrow`'s `extern "C"` `get_next` (see module docs / SAF-007): an
-/// escaping panic would abort the process. On a panic this returns a single terminal
-/// `Some(Err(ArrowError))` carrying the framed panic message, so the stream ends cleanly and the
-/// interpreter survives; `None`/`Some(Ok(..))`/`Some(Err(..))` from the body pass through unchanged.
+/// Convert a poll panic into `Some(Err(ArrowError))` for that poll; other results pass through.
 /// ===========================================================================================
 pub(crate) fn fence_stream_poll(
     operation: &str,
@@ -135,15 +92,14 @@ pub(crate) fn fence_stream_poll(
     }
 }
 
-/// Wrap a `#[pymethods]` body in the shared [`fence`]. Keeps every call site to a single named
-/// operation string + its existing body — the guard logic lives once, in [`fence`].
+/// Wrap a `#[pymethods]` body in the shared [`fence`].
 macro_rules! fenced {
     ($operation:literal, $body:block) => {
         $crate::fence::fence($operation, move || $body)
     };
 }
 
-/// QUAL-05 / OBS1: [`fenced!`] plus a family span (`py.entry` with `family` + `operation` fields).
+/// Wrap a body in [`fence`] and a static `py.entry` span.
 macro_rules! fenced_span {
     ($family:literal, $operation:literal, $body:block) => {
         $crate::fence::fence_with_span($family, $operation, move || $body)
@@ -159,9 +115,7 @@ mod tests {
     use pyo3::Python;
     use pyo3::exceptions::PyRuntimeError;
 
-    /// PL-1: a panicking closure with a `&str` payload becomes `Err(PySparkException)` — a
-    /// `RuntimeError` (near-drop-in: `except RuntimeError` still catches), NOT a `BaseException` —
-    /// and the panic text is preserved verbatim inside the framed message.
+    /// A string panic becomes a catchable exception with preserved text.
     #[test]
     fn fence_converts_str_panic_to_pyspark_exception_with_message_preserved() {
         Python::attach(|py| {
@@ -187,7 +141,6 @@ mod tests {
         });
     }
 
-    /// PL-1: a `String` payload (the `format!`-style panic) is preserved too.
     #[test]
     fn fence_converts_string_panic_payload() {
         Python::attach(|_py| {
@@ -202,7 +155,6 @@ mod tests {
         });
     }
 
-    /// PL-1: the happy path is a pure pass-through — no double-wrapping, value intact.
     #[test]
     fn fence_passes_through_a_non_panicking_body() {
         Python::attach(|_py| {
@@ -211,8 +163,7 @@ mod tests {
         });
     }
 
-    /// PL-1: a non-string payload (`panic_any` with a custom type) degrades to a stable label
-    /// instead of being lost, and is still a `PySparkException`.
+    /// A non-string payload receives a stable label.
     #[test]
     fn fence_degrades_non_string_panic_payload_to_stable_label() {
         Python::attach(|py| {
@@ -227,9 +178,7 @@ mod tests {
         });
     }
 
-    /// PL-4 (unit half): `fence_stream_poll` turns a panicking poll into a terminal
-    /// `Some(Err(ArrowError))` carrying the framed panic text — never an unwind. (The
-    /// subprocess-isolated end-to-end abort pin lives in `dataframe.rs`.)
+    /// A stream-poll panic yields one Arrow error item.
     #[test]
     fn fence_stream_poll_converts_panic_to_terminal_arrow_error() {
         let item = fence_stream_poll("Stream.poll", || panic!("stream-poll-boom"));
@@ -246,7 +195,6 @@ mod tests {
         );
     }
 
-    /// PL-4 (unit half): a non-panicking poll passes through unchanged (`None` = end of stream).
     #[test]
     fn fence_stream_poll_passes_through_end_of_stream() {
         let item = fence_stream_poll("Stream.poll", || None);
@@ -256,7 +204,6 @@ mod tests {
         );
     }
 
-    /// Collects `family` / `operation` string fields from a `py.entry` span.
     struct FamilyOperationVisitor<'a> {
         family: &'a mut String,
         operation: &'a mut String,
@@ -265,7 +212,6 @@ mod tests {
     impl tracing::field::Visit for FamilyOperationVisitor<'_> {
         fn record_debug(&mut self, field: &tracing::field::Field, value: &dyn std::fmt::Debug) {
             let text = format!("{value:?}");
-            // Debug of &str is quoted; strip outer quotes for stable asserts.
             let unquoted = text
                 .strip_prefix('"')
                 .and_then(|s| s.strip_suffix('"'))
@@ -322,8 +268,7 @@ mod tests {
         }
     }
 
-    /// QUAL-05 / OBS1: `fence_with_span` opens a `py.entry` span with family + operation fields,
-    /// and still pass-throughs the body value (additive — no control-flow change).
+    /// The span records family and operation while the body value passes through.
     #[test]
     fn fence_with_span_emits_py_entry_family_and_passes_through() {
         use tracing_subscriber::layer::SubscriberExt;
@@ -349,10 +294,7 @@ mod tests {
         );
     }
 
-    /// QUAL-05: family span fields are static labels only — never user secrets.
-    ///
-    /// Compile-time: `fenced_span!` requires literal family/operation. Runtime: capture the
-    /// recorded field strings and assert a secret probe never appears in any field value.
+    /// Span fields remain static labels and never carry user secrets.
     #[test]
     fn fence_with_span_fields_are_static_labels_only() {
         use tracing_subscriber::layer::SubscriberExt;
@@ -367,8 +309,6 @@ mod tests {
                 capture: std::sync::Arc::clone(&capture),
             }));
 
-        // SECRET is only a probe needle for field values — never passed into fence_with_span
-        // (the API has no user-data field channel; family/operation are `'static` labels).
         let result: Result<(), PyErr> = fence_with_span("py.sql", "PyReparkSession.sql", || Ok(()));
         assert!(result.is_ok());
 

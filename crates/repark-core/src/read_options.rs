@@ -1,6 +1,4 @@
 //! CSV/JSON read-option helpers for Spark-style option maps.
-//!
-//! Extracted MOVE-ONLY from `lib.rs` (r25 T0). Zero behavior change.
 
 use std::collections::HashMap;
 
@@ -8,10 +6,8 @@ use datafusion::prelude::{CsvReadOptions, JsonReadOptions};
 use repark_common::{Error, Result};
 
 /// ===========================================================================================
-/// Build [`CsvReadOptions`] from a Spark-style option map (keys lowercased by caller).
-///
-/// Recognized: `header`, `sep`/`delimiter`, `quote`, `escape`, `comment`, `nullvalue`,
-/// `multiline`, `compression`. Other keys are ignored (facade owns the loud denylist).
+/// Build [`CsvReadOptions`] from a lowercased Spark option map. Recognized keys are header,
+/// delimiter, quote, escape, comment, nullvalue, multiline, and compression.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -66,9 +62,8 @@ pub(crate) fn csv_read_options_from_map(
 }
 
 /// ===========================================================================================
-/// Build [`JsonReadOptions`] from a Spark-style option map.
-///
-/// Recognized: `multiline` (→ invert `newline_delimited`), `compression`.
+/// Build [`JsonReadOptions`] from a Spark option map. `multiline` inverts `newline_delimited`;
+/// `compression` is also recognized.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -167,15 +162,8 @@ pub(crate) fn name_looks_compressed(name: &str) -> bool {
 }
 
 /// ===========================================================================================
-/// Build an all-Utf8 schema from the first CSV record (header or data line).
-///
-/// Used when `nullValue` is set: DataFusion applies `null_regex` during schema *inference* only,
-/// not on the scan decoder, so a typed Int64 column that "lost" NA tokens at infer time then fails
-/// to parse the literal token on scan (octo R1-C1-001). An explicit Utf8 schema skips typed
-/// inference; the facade maps null tokens and re-promotes types when `inferSchema=true`.
-///
-/// Local filesystem only (file or directory of `*.csv` / compressed parts). Object-store paths
-/// fall through without a forced schema (typed + nullValue residual).
+/// Build an all-Utf8 schema from the first local CSV record when `nullValue` is set. Object-store
+/// paths retain DataFusion's typed inference.
 /// ===========================================================================================
 pub(crate) fn csv_utf8_schema_from_path(
     path: &str,

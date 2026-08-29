@@ -1,31 +1,9 @@
-//! Spark-semantics write adapter — the thin `RePark` surface over the owned iceberg-rust fork.
+//! Spark-semantics write adapter over the owned iceberg-rust fork.
 //!
-//! Per ADR-0002 (owned-fork pivot, 2026-06-06) the heavy table-format machinery —
-//! `OverwriteFiles` / `RowDelta` / `RewriteFiles` / `DeleteFiles` actions, position-delete / DV
-//! writers, `UpdateSchema`, snapshot & maintenance — lives in the **owned fork**, not here (the
-//! `position_delete` module DRIVES the fork's `PositionDeleteFileWriter`; it does not reimplement
-//! one). This
-//! module only translates Spark write semantics (`MERGE INTO` / `DELETE` / `UPDATE` /
-//! `INSERT OVERWRITE` / `ALTER ... COLUMN`) onto the fork's native actions plus an OCC retry loop.
-//! No hand-rolled `SnapshotProducer` / `TableCommit` here.
-//!
-//! Primitives landed: [`alter`] (`ALTER TABLE` SET/UNSET TBLPROPERTIES + RENAME TO + schema
-//! evolution via fork `UpdateSchema` — I6 — on the public `Transaction` / `Catalog` API),
-//! [`merge`] (`MERGE INTO`, copy-on-write AND
-//! merge-on-read — the fork's `ENGINE_CONTRACT` §6 makes MERGE engine-owned; the merge-on-read arm
-//! writes position-delete files via [`position_delete`] and commits them with the new data files in
-//! ONE `RowDelta`), [`predicate_dml`] (G3-E8 identity DELETE/UPDATE over `(_file, _pos)`),
-//! and [`append`] (the public bulk
-//! append — downstream ask A1 — committing add-only through the stamped `fast_append` path with
-//! identity-partition fanout). Ordinary (non-subquery) `DELETE` / `UPDATE` still ride DataFusion
-//! onto the fork's `TableProvider` (ADR-0003). Non-empty `INSERT OVERWRITE` stage-then-swap commits via
-//! [`overwrite::commit_overwrite_replace_all`] (OV1 exclusive — Q9); empty wipe stays at the SQL
-//! router (C1-Q-001).
-//!
-//! **Error boundary (C1-CRATE-001 honesty):** this module re-exports `repark_common::{Error, Result}`
-//! for MERGE / append, but the `alter` primitives still return `iceberg::Result` and the SQL
-//! layer folds those errors. A full retype of every public surface onto `repark_common::Error` is
-//! deferred — the session/PyO3 classifier remains the real FFI boundary.
+//! This crate translates MERGE, DML, append, overwrite, and ALTER operations onto fork actions.
+//! The fork owns table-format writers and commit machinery; this crate owns Spark policy and OCC
+//! coordination. The error boundary remains mixed: MERGE and append re-export `repark_common`,
+//! while ALTER returns `iceberg::Result` for the SQL layer to fold.
 
 pub mod alter;
 pub mod append;

@@ -146,7 +146,7 @@ async fn update_merge_on_read_mode() {
     );
 }
 
-/// BUG-001: merge-on-read DELETE on a table that evolved to unpartitioned (multi-spec history) refuses.
+/// Merge-on-read DELETE refuses after a table evolves to unpartitioned (multiple specs remain).
 #[tokio::test]
 async fn bug001_mor_delete_refuses_unpartitioned_after_partition_evolution() {
     let wh = TempDir::new().unwrap();
@@ -213,7 +213,7 @@ async fn bug001_mor_delete_refuses_unpartitioned_after_partition_evolution() {
     );
 }
 
-/// BUG-001: non-evolved unpartitioned merge-on-read DELETE still passes (single-spec history).
+/// A non-evolved unpartitioned merge-on-read DELETE still passes with one spec.
 #[tokio::test]
 async fn bug001_mor_delete_allows_never_evolved_unpartitioned() {
     let wh = TempDir::new().unwrap();
@@ -242,7 +242,7 @@ async fn bug001_mor_delete_allows_never_evolved_unpartitioned() {
     );
 }
 
-/// BUG-001: currently-partitioned merge-on-read DELETE passes even with multi-spec history.
+/// A currently-partitioned merge-on-read DELETE passes even with multiple specs.
 #[tokio::test]
 async fn bug001_mor_delete_allows_partitioned_after_evolution() {
     let wh = TempDir::new().unwrap();
@@ -277,7 +277,7 @@ async fn bug001_mor_delete_allows_partitioned_after_evolution() {
     );
 }
 
-/// BUG-001 critic F-A2-C3-001: mixed-case / padded `write.delete.mode` must still refuse.
+/// BUG-001: mixed-case and padded `write.delete.mode` must still refuse.
 #[tokio::test]
 async fn bug001_mor_delete_refuses_mixed_case_mode_property() {
     let wh = TempDir::new().unwrap();
@@ -321,7 +321,7 @@ async fn bug001_mor_delete_refuses_mixed_case_mode_property() {
     );
 }
 
-/// BUG-001 critic F-A2-C1-001: aliases must not under-refuse the merge-on-read multi-spec valve.
+/// BUG-001: aliases must not under-refuse the merge-on-read multi-spec valve.
 #[tokio::test]
 async fn bug001_mor_delete_refuses_when_table_aliased() {
     let wh = TempDir::new().unwrap();
@@ -373,7 +373,7 @@ async fn bug001_mor_delete_refuses_when_table_aliased() {
     );
 }
 
-/// BUG-001 critic F-A2-C1-003: UPDATE hazard refuse (write.update.mode) + alias path.
+/// BUG-001: UPDATE hazard refusal covers `write.update.mode` and its alias path.
 #[tokio::test]
 async fn bug001_mor_update_refuses_unpartitioned_after_partition_evolution() {
     let wh = TempDir::new().unwrap();
@@ -642,7 +642,7 @@ async fn g3e8_delete_not_in_quoted_and_fromless_execute() {
     );
 }
 
-/// PR-3: `[NOT] EXISTS` uncorrelated (all-or-nothing) and correlated (semi/anti-join).
+/// `[NOT] EXISTS` uncorrelated (all-or-nothing) and correlated (semi/anti-join).
 #[tokio::test]
 async fn g3e8_delete_exists_uncorrelated_and_correlated_execute() {
     let wh = TempDir::new().unwrap();
@@ -735,7 +735,7 @@ async fn g3e8_delete_exists_uncorrelated_and_correlated_execute() {
     );
 }
 
-/// PR-4: correlated `DELETE … IN` — recorded equivalent to correlated EXISTS.
+/// Correlated `DELETE … IN` matches correlated `EXISTS`.
 #[tokio::test]
 async fn g3e8_delete_correlated_in_deletes_exactly_the_matching_row() {
     let wh = TempDir::new().unwrap();
@@ -769,7 +769,7 @@ async fn g3e8_delete_correlated_in_deletes_exactly_the_matching_row() {
     );
 }
 
-/// PR-4: identity `UPDATE … SET <scalar> WHERE col IN (SELECT …)`.
+/// Identity `UPDATE … SET <scalar> WHERE col IN (SELECT …)`.
 #[tokio::test]
 async fn g3e8_update_in_subquery_rewrites_only_the_matching_row() {
     let wh = TempDir::new().unwrap();
@@ -843,13 +843,13 @@ async fn g3e8_delete_subquery_family_all_refuse() {
         "DELETE FROM ice.sales.tgt WHERE id = (SELECT max(id) FROM ice.sales.keys)",
         "DELETE FROM ice.sales.tgt WHERE (SELECT count(*) FROM ice.sales.keys) > 0",
         // the remaining ⚠️ (correct-today, over-refused) scalar comparisons — pinned so the
-        // "over-refused" list in the ledger is a list of PINS, not of prose (panel L2 N8)
+        // The "over-refused" list is a list of pins, not prose (L2 N8).
         "DELETE FROM ice.sales.tgt WHERE id > (SELECT max(id) FROM ice.sales.keys)",
         "DELETE FROM ice.sales.tgt WHERE id <> (SELECT max(id) FROM ice.sales.keys)",
         "DELETE FROM ice.sales.tgt WHERE (SELECT count(*) FROM ice.sales.keys) > 99",
         // subquery over a TEMP VIEW — still uncorrelated IN, now executed
         // (g3e8_delete_in_subquery_from_temp_view_source_executes). Residual refuse:
-        // === the three spellings the panel found MISSING from the matrix (L1 M-4 / F-D) ======
+        // === parser spellings covered by the matrix (L1 M-4 / F-D) =============================
         // They are NOT safe-because-uncorrelated: the boundary is per-shape, not
         // correlated-vs-uncorrelated. Pre-guard behaviour, executed under the neutered valve and
         // recorded in task/g3e8-guard-ledger.md §2: all three EMPTIED the table.
@@ -1000,7 +1000,7 @@ async fn g3e8_insert_and_merge_with_subqueries_still_execute() {
 /// is deliberately NOT gated: an assignment subquery is either correct (this pin) or a loud plan
 /// error, never silently wrong. If a future change starts gating assignments, this pin reds and
 /// the decision gets re-made. Both spellings are pinned, because the matrix carries both and an
-/// unpinned matrix row is a claim, not a fact (panel L2 N8).
+/// An unpinned matrix row is a claim, not a fact (L2 N8).
 #[tokio::test]
 async fn g3e8_update_set_subquery_without_where_subquery_still_executes() {
     let wh = TempDir::new().unwrap();
@@ -1043,7 +1043,7 @@ async fn g3e8_update_set_subquery_without_where_subquery_still_executes() {
 
 /// ===========================================================================================
 /// CTE-prefixed DML (`WITH … DELETE/UPDATE`) — a KNOWN un-valved attachment that is LOUD today
-/// (panel L1 N-1 / F-E).
+/// (L1 N-1 / F-E).
 ///
 /// sqlparser parses `WITH c AS (…) DELETE …` as a `Query` whose body is `SetExpr::Delete`, so it
 /// never reaches the router's `Statement::Delete` arm NOR the passthrough's — the valve does not
@@ -1153,20 +1153,10 @@ async fn g3e8_subquery_valve_precedes_the_mor_multi_spec_valve() {
 }
 
 /// ===========================================================================================
-/// The FROM-less `DELETE <table> WHERE …` family — the panel's live valve BYPASS (L1 M-1).
+/// The FROM-less `DELETE <table> WHERE …` family exercises the executing-parse valve (L1 M-1).
 ///
-/// Spark itself does not accept this spelling, but DataFusion's session (generic) dialect does,
-/// and the router's `DatabricksDialect` parse REJECTS it — so `parse_single_normalized` returns
-/// `None`, the statement never reaches the `Statement::Delete` arm, and
-/// `execute_unparsable_fallthrough` hands the raw text to `spark_ast::execute_passthrough`,
-/// which re-parses it under the session dialect and executed it. A router-only valve is
-/// therefore fail-OPEN for every DML form the two parsers disagree about. The fix attaches the
-/// valve at the EXECUTING parse (`spark_ast::execute_passthrough`), the only parse the router
-/// and the executor agree on.
-///
-/// The rows assertion comes FIRST on purpose: pre-fix this pin failed with
-/// `left: []` / `right: [(1, "a"), (2, "b"), (3, "c")]` and `outcome=Ok(())` — the bypass
-/// reproduced as a transcript, not as "it did not raise".
+/// The session parser accepts FROM-less DELETE while the router parser rejects it. The G3-E8
+/// valve therefore runs on the executing parse so the subquery predicate cannot fail open.
 /// ===========================================================================================
 #[tokio::test]
 async fn g3e8_fromless_delete_in_subquery_deletes_exactly_the_matching_row() {

@@ -1,10 +1,7 @@
-//! Local-filesystem DDL gate (r24 SB1 / SEC-02).
+//! Local-filesystem DDL gate.
 //!
-//! DataFusion passthrough admits `CREATE EXTERNAL TABLE … LOCATION` and `COPY … TO` against
-//! the process OS identity. Near-drop-in Spark migrations must not silently inherit that
-//! surface. Default conf `repark.sql.allowLocalFilesystemDDL = false` refuses local / `file://`
-//! targets **except** paths under a registered session warehouse root (grandfather for memory-
-//! catalog offline workflows). Remote schemes (`s3://`, `s3a://`, …) are out of this gate.
+//! The default `repark.sql.allowLocalFilesystemDDL = false` refuses local and `file://` targets
+//! outside a registered session warehouse root. Remote schemes are outside this gate.
 
 use std::path::{Component, Path, PathBuf};
 

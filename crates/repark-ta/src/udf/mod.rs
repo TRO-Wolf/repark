@@ -1,27 +1,9 @@
-//! DataFusion window-UDF wrappers for the TA kernels (feature `datafusion`).
+//! DataFusion window-UDF wrappers for the stateful TA kernels.
 //!
-//! Each kernel in this crate is a *stateful, full-series* function: its value at row `i` depends
-//! on every earlier row of the ordered partition (Wilder smoothing, running accumulators, …). A
-//! per-`RecordBatch` scalar UDF would see only a slice and compute the wrong thing, so the kernels
-//! are wrapped as DataFusion **window** UDFs: [`PartitionEvaluator::evaluate_all`] receives the
-//! whole ordered partition as one array, which is exactly the kernels' `&[f64]`-in/`Vec<f64>`-out
-//! shape. Ordering is the caller's responsibility (`OVER (ORDER BY ts)` / a `PARTITION BY`); with
-//! no frame declared, `evaluate_all` still covers the entire partition.
-//!
-//! Call shape — the series column(s) come first, the scalar parameters (period, `nbdev`) follow as
-//! **literal** arguments:
-//!
-//! ```sql
-//! SELECT ta_ema(close, 21)              OVER (ORDER BY ts) FROM t;
-//! SELECT ta_adx(high, low, close, 14)   OVER (ORDER BY ts) FROM t;
-//! SELECT ta_bbands_upper(close, 20, 2.0, 2.0) OVER (ORDER BY ts) FROM t;
-//! ```
-//!
-//! Every wrapper returns `Float64`; the lookback prefix is emitted as `NaN` (kernel-identical, not
-//! SQL `NULL`) so the engine output is `f64::to_bits`-identical to calling the kernel directly on
-//! the ordered column. Scalar parameters must be constant literals — a non-literal errors at plan
-//! time. The multi-output `BBANDS` is split into three UDFs (`_upper` / `_middle` / `_lower`), one
-//! per output band, matching the frozen call-site ergonomics.
+//! `evaluate_all` receives the entire ordered partition, which matches each kernel's
+//! `&[f64]`-in/`Vec<f64>`-out shape. Ordering is the caller's responsibility; scalar parameters
+//! must be literal arguments. Wrappers return `Float64` with kernel-identical `NaN` lookbacks,
+//! and split multi-output families into one UDF per band.
 
 use std::cell::RefCell;
 use std::sync::Arc;
@@ -49,25 +31,10 @@ mod volatility;
 mod volume;
 
 // ===========================================================================================
-// Scout #8 — partition-local multi-output cache.
-//
-// Multi-output kernels (BBANDS / MACD* / STOCH* / AROON / MAMA) are exposed as one WindowUDF
-// per band. Without a cache, selecting three BBANDS columns re-runs the full kernel three
-// times. Sibling UDFs share a single-slot thread-local entry keyed by (family, params bits,
-// series buffer identity). DataFusion evaluates window expressions for one partition
-// sequentially on one thread, so siblings of the same partition hit; a different partition /
-// params / series identity misses and replaces the slot.
-//
-// Invalidation story (documented, no TTL):
-// - Single-slot: any key mismatch drops the previous entry (no cross-partition retention).
-// - Key uses the Arrow values-buffer pointer + len + null_count of each series argument (the
-//   arrays DataFusion hands `evaluate_all`). Casts that allocate a new buffer change the key
-//   (correctness-preserving miss).
-// - The entry also **pins** the series `ArrayRef`s: while the slot holds a hit, those buffers
-//   cannot be freed and recycled under a later partition's arrays (ABA false-hit guard).
-// - Params are `f64::to_bits` equality (NaN bits matter; periods are integral literals).
-// - Not process-global: thread_local only — no cross-thread sharing, no locks on the hot path.
-// - Correctness on miss: recompute full kernel (same as the pre-cache path).
+// Multi-output families use one thread-local single-slot cache keyed by family, parameter bits,
+// and series-buffer identity. The slot pins input arrays to prevent ABA false hits. Any key
+// mismatch replaces the entry; misses recompute the full kernel. `to_bits` preserves NaN identity,
+// and thread-local storage avoids locks and cross-thread sharing.
 // ===========================================================================================
 
 /// Multi-output kernel family. Sibling band UDFs share one cached kernel run.
@@ -87,7 +54,7 @@ enum MultiFamily {
 /// Identity of one series argument for the multi-output cache key.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct SeriesId {
-    /// Data buffer pointer (`values().as_ptr()` for Float64; cast-buffer ptr otherwise).
+    /// Data-buffer pointer, length, and null count used for cache identity.
     values_ptr: usize,
     len: usize,
     null_count: usize,
@@ -102,11 +69,9 @@ struct MultiOutEntry {
     /// `f64::to_bits` of each scalar param (length `n_params`).
     param_bits: [u64; 8],
     n_params: usize,
-    /// Pins the series `ArrayRef`s so values-buffer pointer identity cannot ABA: while this
-    /// entry lives, the allocator cannot recycle those buffers for a later partition's arrays.
-    /// Dropped when the single-slot entry is replaced.
+    /// Pins input arrays so the allocator cannot recycle their buffers for a later partition.
     series_pin: Vec<ArrayRef>,
-    /// Owned band outputs, index = band (0=upper/macd/slowk/…, 1=middle/signal/…, …).
+    /// Owned outputs indexed by band.
     bands: Vec<Vec<f64>>,
 }
 
@@ -115,7 +80,7 @@ thread_local! {
 }
 
 /// ===========================================================================================
-/// Build a [`SeriesId`] for multi-output cache keying (pointer identity of the values buffer).
+/// Build a [`SeriesId`] from the values-buffer identity and shape.
 /// ===========================================================================================
 fn series_id(array: &ArrayRef) -> SeriesId {
     if let Some(floats) = array.as_any().downcast_ref::<Float64Array>() {
@@ -125,9 +90,7 @@ fn series_id(array: &ArrayRef) -> SeriesId {
             null_count: floats.null_count(),
         };
     }
-    // Non-Float64: use the array length + null_count + the type-id discriminant and the
-    // data-buffer address when present. Siblings that share the same pre-cast column still
-    // collide correctly; a per-call cast that allocates will miss (safe fallback).
+    // Non-Float64 arrays use the first data-buffer address and shape. Casts that allocate miss.
     let data = array.to_data();
     let values_ptr = data
         .buffers()
@@ -158,7 +121,7 @@ fn multi_out_lookup(
         if entry.n_series != series_ids.len() || entry.n_params != params.len() {
             return None;
         }
-        // series_pin length tracks n_series (kept alive for ABA safety; assert keeps field live).
+        // The pin must cover every identity used by this entry.
         if entry.series_pin.len() != entry.n_series {
             return None;
         }
@@ -177,8 +140,7 @@ fn multi_out_lookup(
 /// ===========================================================================================
 /// Store a full multi-output result (replaces any previous single-slot entry).
 ///
-/// `series_pin` must be the live series columns whose identities are in `series_ids` — clones
-/// of those `ArrayRef`s keep the buffers alive for the lifetime of the cache entry.
+/// `series_pin` must contain the live arrays whose identities are in `series_ids`.
 /// ===========================================================================================
 fn multi_out_store(
     family: MultiFamily,
@@ -215,7 +177,7 @@ fn multi_out_store(
 }
 
 /// ===========================================================================================
-/// Test / bench helper: drop the thread-local multi-output cache entry.
+/// Drop the thread-local multi-output cache entry.
 /// ===========================================================================================
 #[cfg(test)]
 fn multi_out_clear() {
@@ -224,22 +186,8 @@ fn multi_out_clear() {
     });
 }
 
-/// The 81 window-UDF names, in registration order: the 17 single-output T1 kernels (incl. the
-/// `MIN`/`MAX`/`SUM` math operators), the 8 WG1 overlap-MA kernels (`WMA`, `DEMA`, `TEMA`,
-/// `TRIMA`, `KAMA`, `T3`, `MIDPOINT`, `MIDPRICE`), the three split `BBANDS` outputs, the 16
-/// WG2 simple-momentum entry points (`MOM`, `ROC`/`ROCP`/`ROCR`/`ROCR100`, `WILLR`, `CCI`, `CMO`,
-/// `BOP`, `APO`/`PPO` — each carrying a `matype` literal — the split `AROON` outputs
-/// `ta_aroon_down`/`_up`, `AROONOSC`, `TRIX`, `ULTOSC`), the 16 WG3 directional + MACD entry
-/// points (`DX`, `ADXR`, `PLUS_DI`/`MINUS_DI`, `PLUS_DM`/`MINUS_DM`, the split `MACD`/`MACDFIX`/
-/// `MACDEXT` outputs `ta_macd`/`_signal`/`_hist` etc., and the `MA` selector carrying a `matype`),
-/// the 6 WG4 stochastic entry points (the split `STOCH`/`STOCHF`/`STOCHRSI` outputs
-/// `ta_stoch_slowk`/`_slowd`, `ta_stochf_fastk`/`_fastd`, `ta_stochrsi_fastk`/`_fastd`), plus the 6
-/// WG5 sweep-up entry points (`NATR`, `BETA`, and the no-period O/H/L/C price transforms
-/// `ta_avgprice`/`ta_medprice`/`ta_typprice`/`ta_wclprice`), plus the 5 T3 parked-four entry points
-/// (`MAMA` split into `ta_mama`/`ta_fama`, `ta_sar`, the 8-scalar `ta_sarext`, and the two-series
-/// `ta_mavp`), plus the 4 TA-4 volume entry points (`ta_ad`/`ta_adosc`/`ta_obv`/`ta_mfi`). This
-/// is the single source of truth for name → kernel; both [`register_all`] and [`window_udf`]
-/// read it, so adding a kernel is one row.
+/// The 81 window-UDF names in registration order. This table is the single source of truth for
+/// name-to-kernel routing; [`register_all`] and [`window_udf`] both read it.
 const SPECS: &[(&str, TaFn)] = &[
     ("ta_sma", TaFn::Sma),
     ("ta_ema", TaFn::Ema),
@@ -313,25 +261,17 @@ const SPECS: &[(&str, TaFn)] = &[
     ("ta_medprice", TaFn::Medprice),
     ("ta_typprice", TaFn::Typprice),
     ("ta_wclprice", TaFn::Wclprice),
-    // T3 — the parked four: MAMA split into its two outputs, SAR, the 8-param SAREXT, and
-    // MAVP (whose second series is the per-row periods column, not a scalar).
     ("ta_mama", TaFn::Mama),
     ("ta_fama", TaFn::Fama),
     ("ta_sar", TaFn::Sar),
     ("ta_sarext", TaFn::Sarext),
     ("ta_mavp", TaFn::Mavp),
-    // TA-4 volume family (81/81): all single-output. AD/ADOSC/MFI are four-series H/L/C/V;
-    // OBV is close+volume.
     ("ta_ad", TaFn::Ad),
     ("ta_adosc", TaFn::Adosc),
     ("ta_obv", TaFn::Obv),
     ("ta_mfi", TaFn::Mfi),
 ];
 
-/// ===========================================================================================
-/// Which kernel a wrapper dispatches to. `Copy` so the wrapper and its per-partition evaluator
-/// carry it by value without lifetimes.
-/// ===========================================================================================
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum TaFn {
     Sma,
@@ -418,7 +358,7 @@ enum TaFn {
 }
 
 impl TaFn {
-    /// How many leading arguments are *series* columns (the rest are scalar literal params).
+    /// Return the number of leading series arguments.
     fn n_series(self) -> usize {
         match self {
             TaFn::Bop | TaFn::Avgprice | TaFn::Ad | TaFn::Adosc | TaFn::Mfi => 4,
@@ -448,7 +388,6 @@ impl TaFn {
             | TaFn::MinusDm
             | TaFn::Beta
             | TaFn::Medprice
-            // SAR/SAREXT are two-series (high, low); MAVP's second series is the periods column.
             | TaFn::Sar
             | TaFn::Sarext
             | TaFn::Mavp
@@ -457,8 +396,7 @@ impl TaFn {
         }
     }
 
-    /// How many trailing arguments are scalar parameters (period(s), `nbdev`s, `vfactor`,
-    /// `matype`).
+    /// Return the number of trailing scalar parameters.
     fn n_scalars(self) -> usize {
         match self {
             TaFn::Trange
@@ -469,8 +407,6 @@ impl TaFn {
             | TaFn::Wclprice
             | TaFn::Ad
             | TaFn::Obv => 0,
-            // T3: period + vfactor; MA: period + matype; MACDFIX: signal only (1, the default arm).
-            // MAMA: fastlimit + slowlimit; SAR: acceleration + maximum (all real-valued scalars).
             TaFn::Var
             | TaFn::Stddev
             | TaFn::T3
@@ -479,9 +415,6 @@ impl TaFn {
             | TaFn::Fama
             | TaFn::Sar
             | TaFn::Adosc => 2,
-            // BBANDS: period + 2 nbdev; APO/PPO: fast + slow + matype; ULTOSC: three periods;
-            // MACD: fast + slow + signal; STOCHF: fastk + fastd + fastd matype; MAVP: min + max +
-            // matype (the periods series is a column, not a scalar).
             TaFn::BbandsUpper
             | TaFn::BbandsMiddle
             | TaFn::BbandsLower
@@ -494,24 +427,20 @@ impl TaFn {
             | TaFn::StochfFastk
             | TaFn::StochfFastd
             | TaFn::Mavp => 3,
-            // STOCHRSI: timeperiod + fastk + fastd + fastd matype.
             TaFn::StochrsiFastk | TaFn::StochrsiFastd => 4,
-            // STOCH: fastk + slowk period/type + slowd period/type.
             TaFn::StochSlowk | TaFn::StochSlowd => 5,
-            // MACDEXT: fast period/type, slow period/type, signal period/type.
             TaFn::Macdext | TaFn::MacdextSignal | TaFn::MacdextHist => 6,
-            // SAREXT: start value, offset-on-reverse, and the six long/short acceleration factors.
             TaFn::Sarext => 8,
             _ => 1,
         }
     }
 
-    /// Total argument count = series columns + scalar params (drives the [`Signature`]).
+    /// Return the total argument count used by the [`Signature`].
     fn arity(self) -> usize {
         self.n_series() + self.n_scalars()
     }
 
-    /// Multi-output family this UDF belongs to, if any (scout #8 cache).
+    /// Return the multi-output family, if any.
     fn multi_family(self) -> Option<MultiFamily> {
         match self {
             TaFn::BbandsUpper | TaFn::BbandsMiddle | TaFn::BbandsLower => Some(MultiFamily::Bbands),
@@ -553,10 +482,7 @@ impl TaFn {
         }
     }
 
-    /// Run the full multi-output kernel once; returns every band (scout #8).
-    ///
-    /// Callers only invoke this for multi-output UDFs (`multi_family().is_some()`). A
-    /// single-output `TaFn` falls through to a one-element wrap of [`Self::compute`].
+    /// Run the full multi-output kernel once and return every band.
     fn compute_all(self, series: &[&[f64]], params: &[f64]) -> crate::Result<Vec<Vec<f64>>> {
         match self.multi_family() {
             Some(family @ (MultiFamily::Bbands | MultiFamily::Mama)) => {
@@ -575,9 +501,7 @@ impl TaFn {
         }
     }
 
-    /// Dispatch to the kernel. `series` holds the [`Self::n_series`] input columns (already
-    /// `f64`); `params` holds the scalar arguments as `f64` (period fields are cast to `usize`
-    /// via [`period`] — the kernel then range-validates them).
+    /// Dispatch to the kernel using dense `f64` series and scalar parameters.
     fn compute(self, series: &[&[f64]], params: &[f64]) -> crate::Result<Vec<f64>> {
         match self {
             TaFn::Sma
@@ -682,11 +606,10 @@ fn family_dispatch_miss_multi(family: MultiFamily) -> crate::TaError {
     }
 }
 
-/// Coerce a scalar `f64` parameter to the kernel's `usize` period.
+/// Coerce a scalar parameter to a kernel period without silent truncation.
 ///
-/// Non-integral finite values (e.g. `21.9`) fail loud — never silent truncation. Non-finite
-/// values (`NaN` / ±∞) and negatives still map to a rejectable `usize` so the kernel's
-/// `check_period` surfaces `InvalidPeriod` as before.
+/// Non-integral finite values fail. Other invalid values saturate to a value rejected by
+/// `check_period`.
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 fn period(value: f64) -> crate::Result<usize> {
     if value.is_finite() && value.fract() != 0.0 {
@@ -695,14 +618,11 @@ fn period(value: f64) -> crate::Result<usize> {
             value: value.to_string(),
         });
     }
-    // Saturating cast: NaN/negatives → 0; huge positives → usize::MAX; check_period rejects.
     Ok(value as usize)
 }
 
 /// ===========================================================================================
-/// The window-UDF wrapper for one TA kernel. `PartitionEvaluator` construction extracts the
-/// scalar literal params; `evaluate_all` reads the series columns and runs the kernel over the
-/// full ordered partition.
+/// Window-UDF wrapper that extracts literal parameters and evaluates one full partition.
 /// ===========================================================================================
 #[derive(Debug, PartialEq, Eq, Hash)]
 struct TaWindowUdf {
@@ -750,20 +670,17 @@ impl WindowUDFImpl for TaWindowUdf {
 }
 
 /// ===========================================================================================
-/// The per-partition evaluator. `evaluate_all` is handed the entire ordered partition, so the
-/// stateful kernel sees the full series exactly once.
+/// Per-partition evaluator for the full ordered series.
 ///
-/// Scout #8: multi-output siblings share a thread-local cache (see module-level docs).
-/// Scout #9: null-free `Float64` inputs borrow `values()` (zero densify copy); nullable inputs
-/// densify NULL→NaN into reusable scratch buffers; kernel output is written via a
-/// [`Float64Builder`].
+/// Null-free `Float64` inputs borrow their values. Nullable or other types densify NULL to `NaN`
+/// in reusable scratch buffers. Kernel output is always dense `Float64`.
 /// ===========================================================================================
 #[derive(Debug)]
 struct TaEvaluator {
     func: TaFn,
-    /// The scalar parameters (period, `nbdev`s) as `f64`, extracted from the literal arguments.
+    /// Scalar parameters extracted from literal arguments.
     params: Vec<f64>,
-    /// Per-series densify scratch, reused across partitions on this evaluator (scout #9).
+    /// Per-series densify scratch reused across partitions.
     densify_scratch: Vec<Vec<f64>>,
 }
 
@@ -787,15 +704,12 @@ impl PartitionEvaluator for TaEvaluator {
         }
         let series_arrays = &values[..n_series];
 
-        // Scout #8: multi-output cache hit — no densify, no kernel re-run.
         if let (Some(family), Some(band)) = (self.func.multi_family(), self.func.multi_band_index())
         {
             let series_ids: Vec<SeriesId> = series_arrays.iter().map(series_id).collect();
             if let Some(cached) = multi_out_lookup(family, &series_ids, &self.params, band) {
                 return Ok(float64_array_from_values(&cached));
             }
-            // Miss: compute all bands once (borrow null-free single Float64 when possible),
-            // store, return this band.
             let bands = if n_series == 1
                 && let Some(borrowed) = try_borrow_null_free_f64(&series_arrays[0])
             {
@@ -821,8 +735,6 @@ impl PartitionEvaluator for TaEvaluator {
             return Ok(float64_array_from_values(&out));
         }
 
-        // Single-output path — scout #9 densify / borrow.
-        // Null-free single Float64 series: zero-copy borrow of values() into the kernel.
         if n_series == 1
             && let Some(borrowed) = try_borrow_null_free_f64(&series_arrays[0])
         {
@@ -847,7 +759,7 @@ impl PartitionEvaluator for TaEvaluator {
 }
 
 /// ===========================================================================================
-/// Null-free Float64 → borrow the Arrow values buffer (scout #9). `None` if cast/densify needed.
+/// Borrow a null-free `Float64` values buffer. Return `None` when densification is required.
 /// ===========================================================================================
 fn try_borrow_null_free_f64(array: &ArrayRef) -> Option<&[f64]> {
     let floats = array.as_any().downcast_ref::<Float64Array>()?;
@@ -859,10 +771,7 @@ fn try_borrow_null_free_f64(array: &ArrayRef) -> Option<&[f64]> {
 }
 
 /// ===========================================================================================
-/// Densify every series column into the corresponding scratch buffer (reused across windows).
-///
-/// Fast path (null-free Float64): `copy_from_slice` of `values()` — no per-row null checks.
-/// Slow path: cast to Float64 then NULL→NaN densify.
+/// Densify every series column into its reusable scratch buffer.
 /// ===========================================================================================
 fn densify_series_into(arrays: &[ArrayRef], scratches: &mut [Vec<f64>]) -> Result<()> {
     debug_assert_eq!(arrays.len(), scratches.len());
@@ -873,7 +782,7 @@ fn densify_series_into(arrays: &[ArrayRef], scratches: &mut [Vec<f64>]) -> Resul
 }
 
 /// ===========================================================================================
-/// Densify one column into `scratch` (cleared/reused).
+/// Densify one column into a reusable scratch buffer.
 /// ===========================================================================================
 fn densify_one_into(array: &ArrayRef, scratch: &mut Vec<f64>) -> Result<()> {
     if let Some(floats) = array.as_any().downcast_ref::<Float64Array>() {
@@ -892,14 +801,13 @@ fn densify_one_into(array: &ArrayRef, scratch: &mut Vec<f64>) -> Result<()> {
 }
 
 /// ===========================================================================================
-/// NULL-free → memcpy of `values()`; with nulls → NULL→NaN densify into `scratch`.
+/// Copy null-free values; convert nulls to `NaN`.
 /// ===========================================================================================
 fn densify_float64_into(floats: &Float64Array, scratch: &mut Vec<f64>) {
     let len = floats.len();
     scratch.clear();
     scratch.reserve(len);
     if floats.null_count() == 0 {
-        // Scout #9 fast path: bulk copy, no per-index is_null.
         scratch.extend_from_slice(floats.values().as_ref());
         return;
     }
@@ -914,9 +822,7 @@ fn densify_float64_into(floats: &Float64Array, scratch: &mut Vec<f64>) {
 }
 
 /// ===========================================================================================
-/// Build a `Float64Array` from a dense `f64` slice via [`Float64Builder`] (scout #9).
-///
-/// Kernel outputs are dense (NaN lookback, never SQL NULL), so the builder appends values only.
+/// Build a dense `Float64Array` from kernel output.
 /// ===========================================================================================
 fn float64_array_from_values(values: &[f64]) -> ArrayRef {
     let mut builder = Float64Builder::with_capacity(values.len());
@@ -924,8 +830,7 @@ fn float64_array_from_values(values: &[f64]) -> ArrayRef {
     Arc::new(builder.finish())
 }
 
-/// Read a scalar literal parameter as `f64` (period and `nbdev` alike; periods are `<= 100_000`,
-/// so `f64` is lossless). A non-numeric or `NULL` literal is a plan error.
+/// Read a numeric, non-null scalar literal as `f64`.
 fn scalar_f64(value: &ScalarValue) -> Result<f64> {
     match value.cast_to(&DataType::Float64)? {
         ScalarValue::Float64(Some(number)) => Ok(number),
@@ -945,9 +850,7 @@ fn make_udf(name: &'static str, func: TaFn) -> WindowUDF {
 }
 
 /// ===========================================================================================
-/// Every TA window UDF, ready to register on a `SessionContext`.
-///
-/// Exposed separately from [`register_all`] so callers/tests can inspect the set.
+/// Return every TA window UDF for registration or inspection.
 /// ===========================================================================================
 #[must_use]
 pub fn window_udfs() -> Vec<WindowUDF> {
@@ -958,10 +861,7 @@ pub fn window_udfs() -> Vec<WindowUDF> {
 }
 
 /// ===========================================================================================
-/// The TA window UDF for `name` (e.g. `"ta_ema"`), or `None` if unknown.
-///
-/// Returned as an `Arc<WindowUDF>` so it drops straight into a DataFusion
-/// `WindowFunctionDefinition::WindowUDF` — the DataFrame-API builder in `repark-python` uses this.
+/// Return the TA window UDF for `name`, or `None` when unknown.
 /// ===========================================================================================
 #[must_use]
 pub fn window_udf(name: &str) -> Option<Arc<WindowUDF>> {
@@ -972,9 +872,7 @@ pub fn window_udf(name: &str) -> Option<Arc<WindowUDF>> {
 }
 
 /// ===========================================================================================
-/// Register every TA window UDF on `ctx` (`ta_sma`, `ta_ema`, …, `ta_bbands_lower`).
-///
-/// Called at `ReparkSession` build so the whole set is SQL- and DataFrame-callable.
+/// Register every TA window UDF on `ctx`.
 /// ===========================================================================================
 pub fn register_all(ctx: &SessionContext) {
     for udf in window_udfs() {
@@ -1027,8 +925,6 @@ mod tests {
 
     #[test]
     fn period_saturates_out_of_range_to_a_rejectable_value() {
-        // Negative / NaN saturate to 0 (< every kernel min); the kernel then errors, never
-        // reaching the arithmetic with a bogus period.
         assert_eq!(period(-1.0).unwrap(), 0);
         assert_eq!(period(f64::NAN).unwrap(), 0);
         assert_eq!(period(21.0).unwrap(), 21);
@@ -1047,8 +943,6 @@ mod tests {
 
     #[test]
     fn compute_ema_matches_the_kernel() {
-        // The dispatch table calls the same kernel the goldens gate; a spot check on a short
-        // series keeps the wrapper honest independent of the engine e2e tests.
         let close: Vec<f64> = (1..=10).map(f64::from).collect();
         let via_udf = TaFn::Ema
             .compute(&[close.as_slice()], &[3.0])
@@ -1062,7 +956,6 @@ mod tests {
 
     #[test]
     fn compute_volume_kernels_match_the_kernel() {
-        // TA-4 wiring: SPECS dispatch is bit-exact with the public kernels (arity + series order).
         let high: Vec<f64> = (0..20).map(|i| 12.0 + f64::from(i)).collect();
         let low: Vec<f64> = (0..20).map(|i| 8.0 + f64::from(i)).collect();
         let close: Vec<f64> = (0..20).map(|i| 11.0 + f64::from(i)).collect();
@@ -1093,7 +986,6 @@ mod tests {
 
     #[test]
     fn multi_family_covers_every_split_entry_point() {
-        // Every multi-output UDF maps to a family + band; singles do not.
         assert_eq!(TaFn::BbandsUpper.multi_family(), Some(MultiFamily::Bbands));
         assert_eq!(TaFn::BbandsUpper.multi_band_index(), Some(0));
         assert_eq!(TaFn::BbandsMiddle.multi_band_index(), Some(1));
@@ -1113,8 +1005,6 @@ mod tests {
 
     #[test]
     fn every_spec_multi_family_has_band_and_compute_all_width() {
-        // C5-Q-001: SPECS loop — multi_family ⇔ multi_band_index; compute_all band count
-        // covers the band index for a short synthetic series.
         let close: Vec<f64> = (1..=64).map(|i| 50.0 + f64::from(i)).collect();
         let high: Vec<f64> = close.iter().map(|v| v + 1.0).collect();
         let low: Vec<f64> = close.iter().map(|v| v - 1.0).collect();
@@ -1129,7 +1019,6 @@ mod tests {
                         3 => vec![high.as_slice(), low.as_slice(), close.as_slice()],
                         _ => panic!("{name}: unexpected n_series {n_series} for multi family"),
                     };
-                    // Legal default-ish params per family (integral periods / real MAMA limits).
                     let params: Vec<f64> = match func.multi_family() {
                         Some(MultiFamily::Bbands) => vec![5.0, 2.0, 2.0],
                         Some(MultiFamily::Macd) => vec![12.0, 26.0, 9.0],
@@ -1187,9 +1076,7 @@ mod tests {
         for (a, b) in hit_l.iter().zip(&lower) {
             assert_eq!(a.to_bits(), b.to_bits());
         }
-        // Param mismatch must miss.
         assert!(multi_out_lookup(MultiFamily::Bbands, &ids, &[20.0, 2.0, 2.1], 0).is_none());
-        // Family mismatch must miss.
         assert!(multi_out_lookup(MultiFamily::Macd, &ids, &params, 0).is_none());
         multi_out_clear();
     }
@@ -1215,8 +1102,6 @@ mod tests {
 
     #[test]
     fn evaluate_all_multi_output_siblings_bit_exact_via_cache() {
-        // C1-Q-001: drive PartitionEvaluator::evaluate_all for three BBANDS siblings — first
-        // miss stores all bands; subsequent siblings must hit and stay bit-exact to the kernel.
         multi_out_clear();
         let close: Vec<f64> = (1..=80).map(|i| 50.0 + f64::from(i) * 0.5).collect();
         let array: ArrayRef = Arc::new(Float64Array::from(close.clone()));
@@ -1255,8 +1140,6 @@ mod tests {
 
     #[test]
     fn evaluate_all_multi_output_two_partitions_no_cross_talk() {
-        // C1-Q-002 / C1-L-001: sequential partitions with same len + params must each match
-        // their own kernel (series_pin prevents pointer-reuse false hits).
         multi_out_clear();
         let params = vec![5.0_f64, 2.0, 2.0];
         let close_a: Vec<f64> = (1..=64).map(|i| 100.0 + f64::from(i)).collect();
@@ -1300,8 +1183,6 @@ mod tests {
 
     #[test]
     fn multi_out_entry_pin_keeps_series_buffer_alive() {
-        // C1-L-001: while the cache holds a pin, the stored SeriesId pointer remains valid
-        // identity for the pinned array (strong count ≥ 2: test local + pin).
         multi_out_clear();
         let close: Vec<f64> = (1..=32).map(f64::from).collect();
         let array: ArrayRef = Arc::new(Float64Array::from(close.clone()));
@@ -1320,7 +1201,6 @@ mod tests {
             strong >= 2,
             "cache series_pin must hold an ArrayRef clone (strong_count={strong})"
         );
-        // Drop the test-local ref; pin alone must keep the buffer identity hit-able.
         let ptr_before = ids[0].values_ptr;
         drop(array);
         let hit = multi_out_lookup(MultiFamily::Bbands, &ids, &params, 0);
@@ -1334,7 +1214,6 @@ mod tests {
 
     #[test]
     fn densify_casts_int64_null_free_and_nullable() {
-        // C1-Q-003: non-Float64 cast path through densify_one_into.
         use datafusion::arrow::array::Int64Array;
         let ints = Int64Array::from(vec![1_i64, 2, 3]);
         let array: ArrayRef = Arc::new(ints);
@@ -1353,7 +1232,6 @@ mod tests {
 
     #[test]
     fn compute_all_macd_and_aroon_match_split_compute() {
-        // C1-Q-004: multi-output families beyond BBANDS.
         let close: Vec<f64> = (1..=80).map(|i| 40.0 + f64::from(i) * 0.3).collect();
         let high: Vec<f64> = close.iter().map(|v| v + 1.0).collect();
         let low: Vec<f64> = close.iter().map(|v| v - 1.0).collect();
@@ -1393,7 +1271,6 @@ mod tests {
 
     #[test]
     fn evaluate_all_nullable_float64_densify_matches_kernel_nan() {
-        // Nullable single-series path through evaluate_all (densify NULL→NaN).
         multi_out_clear();
         let data = vec![
             Some(1.0_f64),
@@ -1454,7 +1331,6 @@ mod tests {
         let mut scratch = Vec::new();
         densify_float64_into(&array, &mut scratch);
         assert_eq!(scratch, data);
-        // Borrow path agrees.
         let array_ref: ArrayRef = Arc::new(Float64Array::from(data.clone()));
         let borrowed = try_borrow_null_free_f64(&array_ref).expect("borrow");
         assert_eq!(borrowed, data.as_slice());
@@ -1469,7 +1345,6 @@ mod tests {
         assert_eq!(scratch[0].to_bits(), 1.0_f64.to_bits());
         assert!(scratch[1].is_nan());
         assert_eq!(scratch[2].to_bits(), 3.0_f64.to_bits());
-        // Nullable arrays do not take the borrow fast path.
         let array_ref: ArrayRef = Arc::new(array);
         assert!(try_borrow_null_free_f64(&array_ref).is_none());
     }
@@ -1484,7 +1359,6 @@ mod tests {
         let capacity_after_first = scratch.capacity();
         densify_float64_into(&b, &mut scratch);
         assert_eq!(scratch, vec![9.0, 8.0, 7.0, 6.0]);
-        // Reuse should not shrink capacity below the previous high-water mark.
         assert!(scratch.capacity() >= capacity_after_first);
     }
 
@@ -1510,7 +1384,6 @@ mod tests {
 
     #[test]
     fn evaluate_all_stoch_multi_series_siblings_bit_exact() {
-        // C2-Q-001: multi-series multi-output path (always densifies; cache shares bands).
         multi_out_clear();
         let n = 64_usize;
         let high: Vec<f64> = (0..n)
@@ -1525,7 +1398,6 @@ mod tests {
         let high_a: ArrayRef = Arc::new(Float64Array::from(high.clone()));
         let low_a: ArrayRef = Arc::new(Float64Array::from(low.clone()));
         let close_a: ArrayRef = Arc::new(Float64Array::from(close.clone()));
-        // fastk=5, slowk=3, slowk_matype=0, slowd=3, slowd_matype=0
         let params = vec![5.0_f64, 3.0, 0.0, 3.0, 0.0];
         let values = [high_a, low_a, close_a];
         let mut k_eval = TaEvaluator {
@@ -1548,7 +1420,6 @@ mod tests {
 
     #[test]
     fn evaluate_all_aroon_multi_series_siblings_bit_exact() {
-        // C2-Q-001: AROON H/L multi-series densify + cache.
         multi_out_clear();
         let n = 48_usize;
         let high: Vec<f64> = (0..n)
@@ -1581,7 +1452,6 @@ mod tests {
 
     #[test]
     fn evaluate_all_mama_siblings_real_scalars_bit_exact() {
-        // C2-Q-003: MAMA/FAMA real limits (not period()) through evaluate_all + cache.
         multi_out_clear();
         let close: Vec<f64> = (1..=80)
             .map(|i| 100.0 + (f64::from(i) * 0.37).sin() * 5.0)
@@ -1609,7 +1479,6 @@ mod tests {
 
     #[test]
     fn evaluate_all_empty_and_short_series_match_kernel() {
-        // C2-Q-002: empty partition + short series (len < period) via evaluate_all.
         multi_out_clear();
         for close in [Vec::<f64>::new(), vec![1.0_f64, 2.0, 3.0]] {
             let array: ArrayRef = Arc::new(Float64Array::from(close.clone()));
@@ -1624,7 +1493,6 @@ mod tests {
             let kernel = ema(&close, 5).expect("ema");
             assert_f64_series_bit_exact(&array_values(&out), &kernel);
         }
-        // Multi-output empty: band aligned with kernel.
         let empty: ArrayRef = Arc::new(Float64Array::from(Vec::<f64>::new()));
         let params = vec![5.0_f64, 2.0, 2.0];
         let mut upper_eval = TaEvaluator {
@@ -1642,8 +1510,6 @@ mod tests {
 
     #[test]
     fn evaluate_all_bbands_int64_series_siblings_bit_exact() {
-        // C2-L-002: non-Float64 cast path through multi-output evaluate_all (series_id on
-        // pre-cast buffer; densify casts; siblings share the same Int64 ArrayRefs).
         use datafusion::arrow::array::Int64Array;
         multi_out_clear();
         let close_i: Vec<i64> = (1..=40).map(i64::from).collect();
@@ -1676,7 +1542,6 @@ mod tests {
 
     #[test]
     fn evaluate_all_macdfix_and_stochf_siblings_bit_exact() {
-        // C3-Q-001: remaining multi-output families through evaluate_all + cache.
         multi_out_clear();
         let close: Vec<f64> = (1..=90).map(|i| 80.0 + f64::from(i) * 0.4).collect();
         let array: ArrayRef = Arc::new(Float64Array::from(close.clone()));
@@ -1745,7 +1610,6 @@ mod tests {
 
     #[test]
     fn evaluate_all_nullable_bbands_siblings_match_nan_densify() {
-        // C3-Q-002: multi-output + nullable Float64 densify + cache.
         multi_out_clear();
         let data = vec![
             Some(10.0_f64),
@@ -1788,7 +1652,6 @@ mod tests {
 
     #[test]
     fn evaluate_all_float32_cast_matches_kernel() {
-        // C3-Q-003: Float32 → Float64 cast densify on single-output path.
         use datafusion::arrow::array::Float32Array;
         multi_out_clear();
         let close_f32: Vec<f32> = (1_i16..=20).map(f32::from).collect();
@@ -1809,11 +1672,9 @@ mod tests {
 
     #[test]
     fn evaluate_all_stochrsi_and_macdext_siblings_bit_exact() {
-        // C4-Q-001: last multi-output families through evaluate_all + cache.
         multi_out_clear();
         let close: Vec<f64> = (1..=100).map(|i| 70.0 + f64::from(i) * 0.25).collect();
         let array: ArrayRef = Arc::new(Float64Array::from(close.clone()));
-        // STOCHRSI: timeperiod=14, fastk=5, fastd=3, fastd_matype=0
         let stochrsi_params = vec![14.0_f64, 5.0, 3.0, 0.0];
         let values = [array.clone()];
         let mut rsi_k = TaEvaluator {
@@ -1836,7 +1697,6 @@ mod tests {
         assert_f64_series_bit_exact(&array_values(&got_k), &expect_k);
         assert_f64_series_bit_exact(&array_values(&got_d), &expect_d);
 
-        // MACDEXT: fast=12 type0, slow=26 type0, signal=9 type0
         let macdext_params = vec![12.0_f64, 0.0, 26.0, 0.0, 9.0, 0.0];
         let mut line = TaEvaluator {
             func: TaFn::Macdext,
@@ -1870,7 +1730,6 @@ mod tests {
 
     #[test]
     fn multi_out_kernel_error_does_not_pollute_cache() {
-        // C4-Q-002: invalid period on miss must not store; a later valid call must miss-then-compute.
         multi_out_clear();
         let close: Vec<f64> = (1..=30).map(f64::from).collect();
         let array: ArrayRef = Arc::new(Float64Array::from(close.clone()));
@@ -1882,7 +1741,6 @@ mod tests {
         };
         let err = bad.evaluate_all(&values, close.len());
         assert!(err.is_err(), "period 0 must fail");
-        // Cache must be empty — a valid sibling pair must still compute correctly.
         let params = vec![5.0_f64, 2.0, 2.0];
         let ids = [series_id(&array)];
         assert!(
@@ -1902,7 +1760,6 @@ mod tests {
 
     #[test]
     fn evaluate_all_too_few_series_errors_loud() {
-        // C5-Q-002: arity guard on evaluate_all (e.g. ATR needs 3 series).
         multi_out_clear();
         let close: ArrayRef = Arc::new(Float64Array::from(vec![1.0_f64, 2.0, 3.0]));
         let mut eval = TaEvaluator {
@@ -1923,7 +1780,6 @@ mod tests {
 
     #[test]
     fn evaluate_all_sliced_float64_borrow_matches_kernel() {
-        // C4-Q-003: sliced array (offset values buffer) via null-free borrow path.
         multi_out_clear();
         let full: Vec<f64> = (0..40).map(|i| f64::from(i) + 1.0).collect();
         let full_array = Float64Array::from(full.clone());
@@ -1941,7 +1797,6 @@ mod tests {
             .expect("sliced ema");
         let kernel = ema(&expected_close, 3).expect("ema");
         assert_f64_series_bit_exact(&array_values(&out), &kernel);
-        // Multi-output on the same slice.
         let params = vec![5.0_f64, 2.0, 2.0];
         let mut upper = TaEvaluator {
             func: TaFn::BbandsUpper,
@@ -1968,8 +1823,6 @@ mod tests {
 
     #[test]
     fn compute_routes_every_spec_to_a_family_or_shared_arm() {
-        // Split pin: every SPECS entry must hit a family/shared compute arm, never
-        // `family_dispatch_miss` (which would mean a router/table drift).
         let close: Vec<f64> = (1..=64).map(|i| 50.0 + f64::from(i)).collect();
         let high: Vec<f64> = close.iter().map(|value| value + 1.0).collect();
         let low: Vec<f64> = close.iter().map(|value| value - 1.0).collect();

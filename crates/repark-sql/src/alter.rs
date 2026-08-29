@@ -1,34 +1,4 @@
 //! `ALTER TABLE` — ANSI schema evolution + Trino `SET PROPERTIES` (design §2 Q3-adjacent).
-//!
-//! Four stock-parsed operations reach the fork's `UpdateSchema` through the SAME tier-1 calls the
-//! Spark door uses ([`repark_iceberg::write::alter`]): `ADD COLUMN`, `DROP COLUMN`,
-//! `RENAME COLUMN`, and `ALTER COLUMN … SET DATA TYPE`. `RENAME TO` rides
-//! [`repark_iceberg::write::alter::rename_table`]. There is no door→door edge — the shared code is
-//! the tier-1 crate below both doors, not the other door's parser.
-//!
-//! A contiguous run of schema ops commits as ONE `UpdateSchema` transaction (one catalog CAS), so
-//! `ALTER TABLE t ADD COLUMN a INT, ADD COLUMN b INT` can never half-apply.
-//!
-//! ## `SET PROPERTIES` — the one pre-parse recognizer (design §6 R1)
-//!
-//! The R1 spike found that stock sqlparser rejects Trino's `SET PROPERTIES (…)` spelling
-//! (`Expected: (, found: PROPERTIES`) while accepting the bare `SET (…)` form as
-//! `AlterTableOperation::SetOptionsParens`. The fallback the design pre-authorised is therefore as
-//! small as a recognizer gets: [`rewrite_set_properties`] blanks the single word `PROPERTIES` out
-//! of `ALTER TABLE <name> SET PROPERTIES (…)` and lets the stock parser do everything else —
-//! including parsing the VALUES as real expressions, which is what keeps the G4
-//! `extra_properties = MAP(ARRAY[…], ARRAY[…])` hatch working here exactly as it does at CREATE.
-//!
-//! The vocabulary is CURATED, per the ruling:
-//! * `extra_properties = MAP(…)` — raw Iceberg keys (this is the one that carries real weight:
-//!   flipping an existing table to `write.merge.mode = 'merge-on-read'` lives here).
-//! * `format` — validated against the create-time vocabulary; ORC/AVRO keep their G9 refusal.
-//! * `"<dotted.key>" = DEFAULT` — the unset spelling for a raw key (the round trip of the hatch).
-//! * `<key> = DEFAULT` — Trino's reset spelling on a curated key.
-//! * `partitioning` — **deliberately absent** (design §2 Q3). This is the pre-designated FUTURE
-//!   spelling for replace-spec, so the refusal says exactly that and names the callable op that
-//!   does the job today.
-//! * `sorted_by`, `format_version`, `location` — reserved refusals naming their triggers.
 
 use std::collections::HashMap;
 
@@ -56,14 +26,7 @@ const FORMAT_PROPERTY: &str = "write.format.default";
 
 /// ===========================================================================================
 /// Execute a stock-parsed `ALTER TABLE catalog.schema.table <op>…`.
-///
-/// Schema ops are batched into one `UpdateSchema` transaction per contiguous run; a `RENAME TO`
-/// or `SET PROPERTIES` flushes the batch first so ordering is what the user wrote.
 /// ===========================================================================================
-///
-/// # Errors
-/// The Q15 target refusal, an unsupported operation or column option, a `SET PROPERTIES`
-/// vocabulary refusal, or any iceberg error from the transaction.
 pub(crate) async fn execute_alter_table(
     cx: &EngineContext<'_>,
     alter: &AlterTable,
@@ -172,10 +135,6 @@ async fn invalidate(cx: &EngineContext<'_>, target: &CreateTarget) -> Result<()>
 // === Schema evolution =======================================================================
 
 /// `ADD COLUMN name <type> [NULL] [COMMENT '…']`, as an optional (nullable) Iceberg column.
-///
-/// `NOT NULL` refuses: Iceberg treats a required add without a default as an INCOMPATIBLE change,
-/// and enabling incompatible evolution silently is exactly the class of surprise this door exists
-/// to avoid.
 async fn add_column_change(cx: &EngineContext<'_>, column: &ColumnDef) -> Result<SchemaChange> {
     let mut doc = None;
     for option in &column.options {
@@ -209,10 +168,6 @@ async fn add_column_change(cx: &EngineContext<'_>, column: &ColumnDef) -> Result
 }
 
 /// `ALTER COLUMN c SET DATA TYPE <primitive>` — an Iceberg type PROMOTION, which is metadata-only.
-///
-/// Every other `ALTER COLUMN` op refuses: `SET NOT NULL` and `SET DEFAULT` are incompatible or
-/// unimplemented changes, and a silent no-op on a type request would leave the table not matching
-/// what was asked for.
 async fn alter_column_change(
     cx: &EngineContext<'_>,
     column_name: &Ident,
@@ -257,9 +212,7 @@ async fn alter_column_change(
     })
 }
 
-/// Types that may appear as the TARGET of an Iceberg promotion. The fork still validates the
-/// source column's current type at commit; this is the door-side half of the pair, refusing the
-/// obviously-narrowing targets with a stable message before the transaction opens.
+/// Types accepted as Iceberg promotion targets. The fork still validates the final operation.
 fn is_promotion_target(new_type: &PrimitiveType) -> bool {
     matches!(
         new_type,
@@ -267,8 +220,7 @@ fn is_promotion_target(new_type: &PrimitiveType) -> bool {
     )
 }
 
-/// True when the table already has a top-level column with this name (case-insensitive, matching
-/// the case-insensitive `UpdateSchema` the tier-1 helper opens).
+/// True when the table has a top-level column with this name under case-insensitive matching.
 async fn column_exists(catalog: &dyn Catalog, ident: &TableIdent, column: &Ident) -> Result<bool> {
     let table = catalog.load_table(ident).await.map_err(iceberg_err)?;
     Ok(table
@@ -316,14 +268,8 @@ fn unsupported_operation(operation: &AlterTableOperation) -> DataFusionError {
 // === SET PROPERTIES =========================================================================
 
 /// ===========================================================================================
-/// The R1 pre-parse recognizer: blank the word `PROPERTIES` out of
-/// `ALTER TABLE <name> SET PROPERTIES (…)` so the stock parser reads the rest as
-/// `AlterTableOperation::SetOptionsParens`. Returns `None` when the statement is not that shape.
+/// Rewrite `SET PROPERTIES` into the stock `SET` options form before parsing.
 /// ===========================================================================================
-///
-/// Byte offsets come from the SCRUBBED text, whose length is byte-identical to the input, so a
-/// `PROPERTIES` inside a string literal, a quoted identifier, or a comment is structurally
-/// invisible and can never be edited out of the user's SQL.
 pub(crate) fn rewrite_set_properties(sql: &str) -> Option<String> {
     let scrubbed = blank_out_quoted_and_comments(sql);
     if leading_keyword(&scrubbed).as_deref() != Some("ALTER") {
@@ -345,8 +291,7 @@ pub(crate) fn rewrite_set_properties(sql: &str) -> Option<String> {
     Some(rewritten)
 }
 
-/// Apply a validated `SET PROPERTIES (…)` list as ONE property transaction (sets and unsets
-/// together, so a partial failure cannot leave half-applied property state).
+/// Apply a validated `SET PROPERTIES (…)` list as one property transaction.
 async fn apply_set_properties(target: &CreateTarget, options: &[SqlOption]) -> Result<()> {
     let (sets, unsets) = parse_set_properties(options)?;
     repark_iceberg::write::alter::alter_table_properties(
@@ -379,9 +324,7 @@ fn parse_set_properties(options: &[SqlOption]) -> Result<(HashMap<String, String
         let name = key.value.to_ascii_lowercase();
         let reset = is_default_keyword(value);
 
-        // A DOTTED key is a raw Iceberg property. It is settable only through the
-        // `extra_properties` hatch (design §2 Q1: dotted keys never become bare API), but UNSET
-        // has no other spelling, so `"write.merge.mode" = DEFAULT` is the round trip.
+        // A dotted key is a raw Iceberg property. It is settable only through the hatch.
         if name.contains('.') {
             if reset {
                 unsets.push(key.value.clone());
@@ -449,8 +392,7 @@ fn parse_set_properties(options: &[SqlOption]) -> Result<(HashMap<String, String
     Ok((sets, unsets))
 }
 
-/// Q3: partition-spec evolution is deliberately absent from SQL, and THIS is the spelling the
-/// design pre-designated for it — so the refusal says so and names what does the job today.
+/// Q3 reserves `partitioning` for future partition-spec evolution.
 fn refuse_partitioning() -> DataFusionError {
     DataFusionError::NotImplemented(
         "ALTER TABLE … SET PROPERTIES: `partitioning` (partition-spec replacement) is \

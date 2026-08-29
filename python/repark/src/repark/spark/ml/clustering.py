@@ -1,8 +1,4 @@
-"""Clustering estimators — Lloyd k-means (M3).
-
-Default Spark ``initMode`` is k-means|| — we **refuse** it loud and require
-``initMode="random"`` (no fake k-means||).
-"""
+"""K-means clustering backed by the native Lloyd implementation."""
 
 from __future__ import annotations
 
@@ -11,8 +7,6 @@ from typing import Any
 
 from repark import _native
 from repark.errors import IllegalArgumentException, UnsupportedOperationException
-
-# === r23 QI1: idents ===
 from repark.spark._idents import quote_ident as _quote_ident
 from repark.spark._temp_views import scratch_view_name
 from repark.spark.ml.base import (
@@ -26,7 +20,7 @@ from repark.spark.ml.param import HasFeaturesCol, HasPredictionCol, Param, TypeC
 
 
 def _sql_float(value: float) -> str:
-    """Render a float for SQL."""
+    """Render a finite or special float as a SQL literal."""
     if value != value:
         return "CAST('NaN' AS DOUBLE)"
     if value == float("inf"):
@@ -37,7 +31,10 @@ def _sql_float(value: float) -> str:
 
 
 class KMeans(HasFeaturesCol, HasPredictionCol, Estimator["KMeansModel"]):
-    """Lloyd k-means over streamed batches (initMode=random only)."""
+    """Fit k-means with native Lloyd iterations.
+
+    Only ``initMode="random"`` is supported. The Spark default ``k-means||`` is refused.
+    """
 
     def __init__(
         self,
@@ -49,7 +46,7 @@ class KMeans(HasFeaturesCol, HasPredictionCol, Estimator["KMeansModel"]):
         seed: int | None = None,
         initMode: str | None = None,  # noqa: N803
     ) -> None:
-        """Optional kwargs. Default initMode matches Spark (k-means||) and **errors on fit**."""
+        """Initialize parameters. Fit requires ``initMode="random"``."""
         super().__init__()
         self.k: Param[int] = Param(self, "k", "number of clusters.", TypeConverters.toInt)
         self.maxIter: Param[int] = Param(
@@ -62,7 +59,6 @@ class KMeans(HasFeaturesCol, HasPredictionCol, Estimator["KMeansModel"]):
             'initialization mode: set "random" explicitly (default k-means|| is refused).',
             TypeConverters.toString,
         )
-        # Match Spark default initMode so accidental use fails loud with guidance.
         self._setDefault(k=2, maxIter=20, seed=42, initMode="k-means||")
         if featuresCol is not None:
             self.setFeaturesCol(featuresCol)
@@ -78,23 +74,23 @@ class KMeans(HasFeaturesCol, HasPredictionCol, Estimator["KMeansModel"]):
             self._set(initMode=initMode)
 
     def setInitMode(self, value: str) -> KMeans:
-        """Set initMode (must be ``random`` for M3)."""
+        """Set the initialization mode. Only ``random`` is supported by fit."""
         return self._set(initMode=value)
 
     def getInitMode(self) -> str:
-        """Get initMode."""
+        """Return the initialization mode."""
         return str(self.getOrDefault(self.initMode))
 
     def setK(self, value: int) -> KMeans:
-        """Set k."""
+        """Set the number of clusters."""
         return self._set(k=value)
 
     def getK(self) -> int:
-        """Get k."""
+        """Return the number of clusters."""
         return int(self.getOrDefault(self.k))
 
     def _fit(self, dataset: Any) -> KMeansModel:
-        """Native Lloyd; requires initMode=random."""
+        """Fit with native Lloyd iterations. Require ``initMode="random"``."""
         frame = _require_repark_dataframe(dataset, verb="KMeans.fit")
         init_mode = str(self.getOrDefault(self.initMode))
         result = _native.fit_kmeans(
@@ -119,7 +115,7 @@ class KMeans(HasFeaturesCol, HasPredictionCol, Estimator["KMeansModel"]):
 
 
 class KMeansModel(HasFeaturesCol, HasPredictionCol, Model):
-    """Fitted k-means — centers only; nearest-center plan transform."""
+    """Fitted k-means model that assigns each row to its nearest center."""
 
     def __init__(
         self,
@@ -132,7 +128,7 @@ class KMeansModel(HasFeaturesCol, HasPredictionCol, Model):
         num_rows: int = 0,
         iterations: int = 0,
     ) -> None:
-        """Store centers (params only)."""
+        """Initialize centers and fitted metadata."""
         super().__init__()
         self.centers = [[float(v) for v in center] for center in (centers or [])]
         self.k = int(k or len(self.centers))
@@ -145,11 +141,14 @@ class KMeansModel(HasFeaturesCol, HasPredictionCol, Model):
             self.setPredictionCol(predictionCol)
 
     def clusterCenters(self) -> list[list[float]]:
-        """Spark-shaped accessor for centers."""
+        """Return a copy of the cluster centers."""
         return [list(center) for center in self.centers]
 
     def _transform(self, dataset: Any) -> Any:
-        """Plan: argmin_k sum_i (array_element(features,i) - center_k[i])^2."""
+        """Add a nearest-center prediction after width validation.
+
+        Strict ``<`` comparisons resolve equal distances to the lowest cluster index.
+        """
         frame = _require_repark_dataframe(dataset, verb="KMeansModel.transform")
         if not self.centers:
             raise UnsupportedOperationException("KMeansModel has no centers")
@@ -172,14 +171,12 @@ class KMeansModel(HasFeaturesCol, HasPredictionCol, Model):
         )
         features = _quote_ident(self.getFeaturesCol())
         prediction = _quote_ident(self.getPredictionCol())
-        # Build CASE over pairwise distance comparisons (lowest index wins ties).
         dist_exprs: list[str] = []
         for center in self.centers:
             parts = []
             for index, value in enumerate(center):
                 parts.append(f"power(array_element({features}, {index}) - {_sql_float(value)}, 2)")
             dist_exprs.append("(" + " + ".join(parts) + ")" if parts else "0.0")
-        # Nested CASE: for each cluster index, check if it has the min distance.
         case_arms: list[str] = []
         for index, dist in enumerate(dist_exprs):
             others_ge = " AND ".join(
@@ -187,7 +184,6 @@ class KMeansModel(HasFeaturesCol, HasPredictionCol, Model):
             )
             if not others_ge:
                 others_ge = "TRUE"
-            # Prefer lower index on ties: also require strictly < previous clusters.
             stricter = " AND ".join(
                 f"({dist}) < ({other})" for j, other in enumerate(dist_exprs) if j < index
             )
@@ -204,7 +200,7 @@ class KMeansModel(HasFeaturesCol, HasPredictionCol, Model):
                 frame._session.drop_temp_view(view)
 
     def _ml_fitted_state(self) -> dict[str, Any]:
-        """Centers only — never training rows."""
+        """Return centers and fitted metadata without training rows."""
         return {
             "centers": [list(center) for center in self.centers],
             "k": self.k,
@@ -223,7 +219,7 @@ class KMeansModel(HasFeaturesCol, HasPredictionCol, Model):
         fitted: bool,
         fitted_state: dict[str, Any],
     ) -> KMeansModel:
-        """Rebuild from save."""
+        """Rebuild a model from persisted parameters and fitted state."""
         payload = {**params, **(fitted_state or {})}
         return cls(
             centers=list(payload.get("centers") or []),
@@ -236,7 +232,7 @@ class KMeansModel(HasFeaturesCol, HasPredictionCol, Model):
         )
 
     def copy(self, extra: dict[Any, Any] | None = None) -> KMeansModel:
-        """Copy model params (deep-copy centers — no aliasing)."""
+        """Deep-copy model parameters and centers."""
         that = KMeansModel(
             centers=[list(center) for center in self.centers],
             featuresCol=self.getFeaturesCol(),

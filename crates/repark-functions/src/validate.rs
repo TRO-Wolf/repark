@@ -1,19 +1,8 @@
 //! Spark `validate_utf8` / `try_validate_utf8` / `assert_true` — the refuse-or-pass-through trio.
 //!
-//! All three share one shape: inspect a value, hand it back unchanged when it is acceptable, and
-//! **fail loudly** or yield NULL when it is not. None of them computes anything.
-//!
-//! **Why the UTF-8 pair needs a kernel at all.** An Arrow `Utf8` array cannot hold invalid UTF-8
-//! — Rust's `&str` forbids it — so on a string column these functions are tautologies. The case
-//! that matters is `Binary`, where the bytes have not been judged yet, and that is how
-//! `datafusion-spark`'s `is_valid_utf8` already behaves (`X'61FF62'` → `false`). These follow it:
-//! they accept binary, judge the bytes, and return the decoded string.
-//!
-//! Spark's own strings are `UTF8String` byte arrays that *can* carry invalid sequences, so a
-//! Spark program can hit these on a STRING column where repark cannot. That is a structural
-//! difference in the value representation, not a behaviour choice, and it is recorded here rather
-//! than papered over: on binary input the three agree with Spark; on string input repark's answer
-//! is trivially "valid" because an invalid string cannot exist to be passed in.
+//! Accept valid UTF-8, raise on invalid bytes, or return NULL according to the function variant.
+//! Arrow `Utf8` values are valid by construction, so binary input is the meaningful validation path;
+//! Spark can represent invalid string bytes, which remains a representation residual.
 
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
@@ -120,8 +109,6 @@ impl ScalarUDFImpl for SparkValidateUtf8 {
     }
 
     fn return_field_from_args(&self, _args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
-        // Always nullable: `try_validate_utf8` yields NULL on invalid input even when the
-        // argument itself is non-nullable.
         Ok(Arc::new(Field::new(self.name(), DataType::Utf8, true)))
     }
 
@@ -130,7 +117,6 @@ impl ScalarUDFImpl for SparkValidateUtf8 {
             return exec_err!("'{}' expects one argument", self.name());
         };
         match first {
-            // Binary is the case that can actually fail; keep it as-is so the bytes reach us.
             DataType::Binary | DataType::LargeBinary | DataType::BinaryView => {
                 Ok(vec![DataType::Binary])
             }
@@ -150,7 +136,6 @@ impl ScalarUDFImpl for SparkValidateUtf8 {
             return exec_err!("'{}' expects one argument", self.name());
         };
 
-        // A Utf8 input is valid by construction — Arrow could not have built it otherwise.
         if matches!(input.data_type(), DataType::Utf8) {
             return Ok(ColumnarValue::Array(Arc::clone(input)));
         }
@@ -235,7 +220,6 @@ impl ScalarUDFImpl for SparkAssertTrue {
         let messages = arrays.get(1).map(AsArray::as_string::<i32>);
 
         for row in 0..flags.len() {
-            // Spark raises on NULL as well as on false: only `true` passes.
             if flags.is_null(row) || !flags.value(row) {
                 let message = messages
                     .and_then(|array| (!array.is_null(row)).then(|| array.value(row).to_owned()))

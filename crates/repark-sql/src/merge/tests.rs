@@ -1,6 +1,5 @@
-//! Lowering pins for `MERGE INTO`. The executor is tier-1 and has its own battery; what is
-//! pinned here is the ANSI→[`MergeSpec`] mapping, which is the half that could drift from the
-//! Spark door's mapping of the same target type (design §6 R3).
+//! Lowering pins for `MERGE INTO`. The tier-1 executor has its own battery; this module tests
+//! the AST-to-spec mapping.
 
 use datafusion::sql::sqlparser::ast::Statement;
 use datafusion::sql::sqlparser::dialect::GenericDialect;
@@ -28,8 +27,7 @@ fn lower_error(sql: &str) -> String {
         .to_string()
 }
 
-/// The classic upsert round-trips: catalog split off the target, aliases kept, ON text preserved,
-/// clauses in declaration order, expressions re-rendered verbatim.
+/// The classic upsert preserves the catalog, aliases, and ON expression while lowering.
 #[test]
 fn lowers_the_classic_upsert() {
     let (catalog, spec) = lower_sql(
@@ -70,8 +68,7 @@ fn lowers_the_classic_upsert() {
     );
 }
 
-/// An UNALIASED relation is referenced by its bare name — the alias the executor uses must match
-/// the one the user's own ON/SET text refers to, or every expression fails to resolve.
+/// An unaliased relation uses its bare name as the executor alias.
 #[test]
 fn unaliased_relations_take_their_bare_name_as_the_alias() {
     let (_, spec) = lower_sql(
@@ -104,8 +101,7 @@ fn clause_predicates_and_order_survive() {
     );
 }
 
-/// A subquery source is legal WITH an alias and refuses without one — an unaliased derived table
-/// has no name the user's expressions could be resolving against.
+/// A subquery source requires an alias; an unaliased derived table is refused.
 #[test]
 fn subquery_source_requires_an_alias() {
     let (_, spec) = lower_sql(
@@ -122,8 +118,7 @@ fn subquery_source_requires_an_alias() {
     assert!(err.contains("requires an alias"), "{err}");
 }
 
-/// A target that is not three-part refuses, naming the reason: this door resolves no default
-/// catalog, so a short name has no meaning here.
+/// A target that is not three-part refuses because this door resolves no default catalog.
 #[test]
 fn non_three_part_target_refuses() {
     let err = lower_error("MERGE INTO orders AS t USING s ON t.id = s.id WHEN MATCHED THEN DELETE");
@@ -132,11 +127,6 @@ fn non_three_part_target_refuses() {
 }
 
 /// Clause/action pairings.
-///
-/// sqlparser enforces the two obvious ones itself (`INSERT` under `WHEN MATCHED`, `UPDATE` under
-/// `WHEN NOT MATCHED`), so the lowering's arms for those are defensive rather than reachable from
-/// SQL — pinned here as the parser property they actually are. The one that DOES parse and this
-/// door does not implement is `WHEN NOT MATCHED BY SOURCE`, which refuses with its workaround.
 #[test]
 fn invalid_clause_action_pairings_refuse() {
     for sql in [
@@ -162,8 +152,7 @@ fn invalid_clause_action_pairings_refuse() {
     );
 }
 
-/// An UPDATE with no assignments and an INSERT with no column list are both statements that would
-/// otherwise reach the executor as a silent no-op or an ambiguous positional insert.
+/// An UPDATE with no assignments and an INSERT with no column list are refused.
 #[test]
 fn degenerate_update_and_insert_shapes_refuse() {
     let no_columns = lower_error(
@@ -173,7 +162,7 @@ fn degenerate_update_and_insert_shapes_refuse() {
     assert!(no_columns.contains("explicit column list"), "{no_columns}");
 }
 
-/// M2 / r5 — Oracle-style `UPDATE SET … WHERE` is destructured and refused, not dropped.
+/// Oracle-style `UPDATE SET … WHERE` is refused rather than silently dropped.
 #[test]
 fn oracle_style_update_where_predicate_refuses() {
     let err = lower_error(
@@ -194,7 +183,7 @@ fn oracle_style_update_where_predicate_refuses() {
     );
 }
 
-/// M2 — Oracle-style `UPDATE SET … DELETE WHERE` is destructured and refused.
+/// Oracle-style `UPDATE SET … DELETE WHERE` is refused rather than silently dropped.
 #[test]
 fn oracle_style_delete_where_predicate_refuses() {
     let err = lower_error(
@@ -211,7 +200,7 @@ fn oracle_style_delete_where_predicate_refuses() {
     );
 }
 
-/// M2 — Oracle-style `INSERT … WHERE` is destructured and refused.
+/// Oracle-style `INSERT … WHERE` is refused rather than silently dropped.
 #[test]
 fn oracle_style_insert_where_predicate_refuses() {
     let err = lower_error(
@@ -228,7 +217,7 @@ fn oracle_style_insert_where_predicate_refuses() {
     );
 }
 
-/// M3 / r7 — a source-qualified SET target is refused, naming the qualifier and target alias.
+/// A source-qualified SET target is refused, naming the qualifier and target alias.
 #[test]
 fn source_qualified_set_target_refuses() {
     let err = lower_error(
@@ -245,7 +234,7 @@ fn source_qualified_set_target_refuses() {
     );
 }
 
-/// M3 — three-or-more-part SET targets refuse as nested-field assignment.
+/// Three-or-more-part SET targets refuse as nested-field assignment.
 #[test]
 fn nested_field_set_target_refuses() {
     let err = lower_error(
@@ -258,7 +247,7 @@ fn nested_field_set_target_refuses() {
     );
 }
 
-/// M3 positive — `t.amount` and bare `amount` both lower to the target column.
+/// `t.amount` and bare `amount` both lower to the target column.
 #[test]
 fn target_qualified_and_bare_set_targets_lower() {
     let (_, qualified) = lower_sql(
@@ -295,7 +284,7 @@ fn target_qualified_and_bare_set_targets_lower() {
     assert_eq!(assignments[0].0, "amount");
 }
 
-/// M3 — quoted target alias + `"Tgt".amount` still resolves (unquote before compare).
+/// A quoted target alias plus `"Tgt".amount` still resolves after unquoting.
 #[test]
 fn quoted_target_alias_set_target_lowers() {
     let (_, spec) = lower_sql(
@@ -312,7 +301,7 @@ fn quoted_target_alias_set_target_lowers() {
     );
 }
 
-/// M3 — source-qualified INSERT columns refuse, naming qualifier and target alias.
+/// Source-qualified INSERT columns refuse, naming qualifier and target alias.
 #[test]
 fn source_qualified_insert_column_refuses() {
     let err = lower_error(
@@ -329,7 +318,7 @@ fn source_qualified_insert_column_refuses() {
     );
 }
 
-/// M3 — three-or-more-part INSERT columns refuse as nested-field assignment.
+/// Three-or-more-part INSERT columns refuse as nested-field assignment.
 #[test]
 fn nested_field_insert_column_refuses() {
     let err = lower_error(
@@ -342,7 +331,7 @@ fn nested_field_insert_column_refuses() {
     );
 }
 
-/// M3 positive — target-qualified INSERT columns strip to the column names.
+/// Target-qualified INSERT columns strip to the column names.
 #[test]
 fn target_qualified_insert_columns_lower() {
     let (_, spec) = lower_sql(
@@ -355,7 +344,7 @@ fn target_qualified_insert_columns_lower() {
     assert_eq!(columns, &vec!["id".to_string(), "amount".to_string()]);
 }
 
-/// M10 / r12 — an unconditioned MATCHED clause before another MATCHED clause refuses.
+/// An unconditioned MATCHED clause before another MATCHED clause refuses.
 #[test]
 fn non_last_unconditional_matched_clause_refuses() {
     let err = lower_error(
@@ -369,7 +358,7 @@ fn non_last_unconditional_matched_clause_refuses() {
     );
 }
 
-/// M10 — an unconditioned NOT MATCHED clause before another NOT MATCHED clause refuses.
+/// An unconditioned NOT MATCHED clause before another NOT MATCHED clause refuses.
 #[test]
 fn non_last_unconditional_not_matched_clause_refuses() {
     let err = lower_error(
@@ -383,7 +372,7 @@ fn non_last_unconditional_not_matched_clause_refuses() {
     );
 }
 
-/// M10 positive — an unconditioned LAST clause of its kind still lowers (first-match-wins).
+/// An unconditioned last clause of its kind still lowers with first-match-wins semantics.
 #[test]
 fn unconditional_last_matched_clause_still_lowers() {
     let (_, spec) = lower_sql(
@@ -396,8 +385,7 @@ fn unconditional_last_matched_clause_still_lowers() {
     assert!(spec.matched[1].predicate_sql.is_none());
 }
 
-/// The star forms are parse-level absent in this door (no sentinel machinery is duplicated) —
-/// so they never reach the lowering at all, and the wrong-door sniff answers them instead.
+/// The star forms are parse-level absent in this door; no sentinel machinery is duplicated.
 #[test]
 fn spark_star_forms_do_not_parse_in_this_door() {
     for sql in [

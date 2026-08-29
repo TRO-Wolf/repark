@@ -1,14 +1,8 @@
-"""Vector types — dense :class:`DenseVector` / sparse :class:`SparseVector` / :class:`Vectors`.
+"""Dense and sparse vectors with Spark-compatible logical schema markers.
 
-Vector Arrow layout (design decision 1 — this module is the home):
-
-* dense → Arrow ``FixedSizeList<float64>[n]`` (fixed width per column)
-* sparse → struct ``{size: int32, indices: list<int32>, values: list<float64>}``
-* mixed dense widths in one column → loud :class:`~repark.errors.AnalysisException`
-  naming the fixed-width limitation (do **not** fall back to variable ``List<float64>``)
-
-``Vectors.dense`` / ``Vectors.sparse`` constructors mirror Spark. ``VectorUDT`` is a
-schema marker for createDataFrame / display parity (simpleString ``vector``).
+Dense columns use Arrow ``FixedSizeList<float64>[n]``. Sparse columns use
+``{size: int32, indices: list<int32>, values: list<float64>}``. Mixed dense widths are refused.
+``vector`` is a logical schema tag, not a SQL cast target.
 """
 
 from __future__ import annotations
@@ -31,47 +25,47 @@ class Vector:
     """Base class for dense and sparse vectors."""
 
     def size(self) -> int:
-        """Dimensionality."""
+        """Return the vector dimension."""
         raise NotImplementedError
 
     def toArray(self) -> list[float]:
-        """Dense float list of length ``size()``."""
+        """Return dense float values."""
         raise NotImplementedError
 
     def numNonzeros(self) -> int:
-        """Count of non-zero entries."""
+        """Return the count of non-zero entries."""
         raise NotImplementedError
 
 
 class DenseVector(Vector):
-    """Dense vector backed by a fixed-length list of floats."""
+    """Vector backed by a fixed-length float list."""
 
     def __init__(self, values: Sequence[float] | Iterable[float]) -> None:
-        """Store values as ``list[float]``."""
+        """Copy values into a float list."""
         self._values = [float(item) for item in values]
 
     def size(self) -> int:
-        """Length of the dense array."""
+        """Return the vector dimension."""
         return len(self._values)
 
     def toArray(self) -> list[float]:
-        """Copy of underlying values."""
+        """Return a copy of the values."""
         return list(self._values)
 
     def numNonzeros(self) -> int:
-        """Count of non-zeros."""
+        """Return the count of non-zero values."""
         return sum(1 for value in self._values if value != 0.0)
 
     def __len__(self) -> int:
-        """Same as :meth:`size`."""
+        """Return the vector dimension."""
         return len(self._values)
 
     def __getitem__(self, index: int) -> float:
-        """Index into the dense array."""
+        """Return the value at ``index``."""
         return self._values[index]
 
     def __eq__(self, other: object) -> bool:
-        """Value equality with dense or sparse (via dense array)."""
+        """Compare values with another vector or sequence."""
         if isinstance(other, DenseVector):
             return self._values == other._values
         if isinstance(other, SparseVector):
@@ -81,24 +75,24 @@ class DenseVector(Vector):
         return NotImplemented
 
     def __repr__(self) -> str:
-        """Spark-like ``[1.0,2.0]`` form."""
+        """Return Spark-like bracketed values."""
         body = ",".join(str(value) for value in self._values)
         return f"[{body}]"
 
     def __str__(self) -> str:
-        """Same as repr for display."""
+        """Return the display representation."""
         return repr(self)
 
 
 class SparseVector(Vector):
-    """Sparse vector: size + sorted indices + values."""
+    """Sparse vector represented by size, sorted indices, and values."""
 
     def __init__(
         self,
         size: int,
         *args: Any,
     ) -> None:
-        """Construct from ``(size, indices, values)`` or ``(size, {index: value})``."""
+        """Construct from indices and values or an index-to-value mapping."""
         if size < 0:
             raise IllegalArgumentException(f"SparseVector size must be >= 0, got {size}")
         self._size = int(size)
@@ -122,7 +116,7 @@ class SparseVector(Vector):
                     f"SparseVector index {index} out of range for size {self._size}"
                 )
         if self._indices != sorted(self._indices):
-            # Spark requires sorted unique indices — sort for convenience but refuse dups.
+            # Spark requires sorted indices. Preserve input values while sorting.
             pairs = sorted(zip(self._indices, self._values, strict=True))
             self._indices = [index for index, _ in pairs]
             self._values = [value for _, value in pairs]
@@ -130,36 +124,36 @@ class SparseVector(Vector):
             raise IllegalArgumentException("SparseVector indices must be unique")
 
     def size(self) -> int:
-        """Declared dimensionality."""
+        """Return the declared dimension."""
         return self._size
 
     def toArray(self) -> list[float]:
-        """Materialize dense form."""
+        """Return dense values with absent entries set to zero."""
         result = [0.0] * self._size
         for index, value in zip(self._indices, self._values, strict=True):
             result[index] = value
         return result
 
     def numNonzeros(self) -> int:
-        """Count of stored non-zeros (values may include explicit 0.0)."""
+        """Return the count of non-zero stored values."""
         return sum(1 for value in self._values if value != 0.0)
 
     @property
     def indices(self) -> list[int]:
-        """Non-zero indices."""
+        """Return a copy of stored indices."""
         return list(self._indices)
 
     @property
     def values(self) -> list[float]:
-        """Non-zero values."""
+        """Return a copy of stored values."""
         return list(self._values)
 
     def __len__(self) -> int:
-        """Same as :meth:`size`."""
+        """Return the vector dimension."""
         return self._size
 
     def __getitem__(self, index: int) -> float:
-        """Element at ``index`` (0.0 when absent — sparse zero)."""
+        """Return the value at ``index``, or zero when it is absent."""
         position = int(index)
         if position < 0 or position >= self._size:
             raise IndexError(f"SparseVector index {position} out of range for size {self._size}")
@@ -171,21 +165,21 @@ class SparseVector(Vector):
         return 0.0
 
     def __eq__(self, other: object) -> bool:
-        """Value equality via dense array."""
+        """Compare vector values through their dense forms."""
         if isinstance(other, (DenseVector, SparseVector)):
             return self.toArray() == other.toArray()
         return NotImplemented
 
     def __repr__(self) -> str:
-        """Spark-like ``(5,[1,3],[1.0,2.0])`` form."""
+        """Return Spark-like tuple values."""
         return f"({self._size},{self._indices},{self._values})"
 
     def __str__(self) -> str:
-        """Same as repr."""
+        """Return the display representation."""
         return repr(self)
 
     def as_struct_dict(self) -> dict[str, Any]:
-        """Arrow/JSON-friendly sparse struct payload."""
+        """Return an Arrow- and JSON-friendly sparse payload."""
         return {
             "size": self._size,
             "indices": list(self._indices),
@@ -194,51 +188,51 @@ class SparseVector(Vector):
 
 
 class Vectors:
-    """Factory for dense and sparse vectors (Spark ``Vectors``)."""
+    """Factory for dense and sparse vectors."""
 
     @staticmethod
     def dense(*args: Any) -> DenseVector:
-        """Build a :class:`DenseVector` from values or a single sequence."""
+        """Build a dense vector from variadic values or one list or tuple."""
         if len(args) == 1 and isinstance(args[0], (list, tuple)):
             return DenseVector(args[0])
         return DenseVector(args)
 
     @staticmethod
     def sparse(size: int, *args: Any) -> SparseVector:
-        """Build a :class:`SparseVector``."""
+        """Build a sparse vector."""
         return SparseVector(size, *args)
 
     @staticmethod
     def zeros(size: int) -> DenseVector:
-        """Dense zero vector of ``size``."""
+        """Build a dense zero vector of ``size``."""
         return DenseVector([0.0] * size)
 
 
 class VectorUDT(DataType):
-    """Schema marker for ML vector columns (Spark ``VectorUDT``).
+    """Schema marker for ML vector columns with Spark ``vector`` display type.
 
-    ``simpleString()`` is ``vector``. createDataFrame binding expands dense cells to
-    FixedSizeList and sparse cells to the sparse struct (see session hooks).
+    ``sqlType`` includes ``type: int32`` plus nullable ``size``, ``indices``, and ``values``.
+    The tag is logical metadata, not a SQL cast target.
     """
 
     def _engine_type(self) -> str:
-        """Logical type tag (not a SQL cast target)."""
+        """Return the logical vector type tag."""
         return "vector"
 
     def simpleString(self) -> str:
-        """Spark display ``vector``."""
+        """Return the Spark display name."""
         return "vector"
 
     def typeName(self) -> str:
-        """Type name ``vector``."""
+        """Return the type name."""
         return "vector"
 
     def jsonValue(self) -> dict[str, object]:
-        """JSON descriptor."""
+        """Return the JSON type descriptor."""
         return {"type": "vector", "class": "repark.spark.ml.linalg.VectorUDT"}
 
     def sqlType(self) -> StructType:
-        """Underlying SQL struct used by Spark's VectorUDT (for reference)."""
+        """Return the SQL struct with ``type`` and nullable vector fields."""
         return StructType(
             [
                 StructField("type", IntegerType(), False),
@@ -249,19 +243,22 @@ class VectorUDT(DataType):
         )
 
     def __repr__(self) -> str:
-        """``VectorUDT()``."""
+        """Return the constructor representation."""
         return "VectorUDT()"
 
 
 def is_vector(value: Any) -> bool:
-    """True if ``value`` is a repark or duck-typed Spark vector."""
+    """Return whether ``value`` is a Repark or vector-shaped object."""
     return isinstance(value, Vector) or (
         hasattr(value, "toArray") and hasattr(value, "size") and callable(value.toArray)
     )
 
 
 def sparse_struct_type() -> StructType:
-    """Arrow/SQL struct schema for sparse vectors."""
+    """Return sparse fields with these types:
+
+    ``size: int32``, ``indices: list<int32>``, and ``values: list<float64>``.
+    """
     return StructType(
         [
             StructField("size", IntegerType(), False),

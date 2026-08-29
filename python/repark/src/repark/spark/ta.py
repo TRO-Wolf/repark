@@ -1,49 +1,8 @@
-"""The :mod:`repark.ta` facade — native technical-analysis indicators (TA-Lib parity).
+"""Technical-analysis indicators backed by the native repark-ta kernels.
 
-Each function returns a :class:`repark.column.Column` carrying a **window function** over the
-kernel that lives in the Rust ``repark-ta`` crate (a bit-exact port of TA-Lib C 0.4.0). The kernels
-are *stateful, full-series* functions — every value depends on the whole ordered history — so the
-column must be completed with an ``OVER`` window that supplies the ordering::
-
-    from repark.spark import Window
-    from repark.spark import ta
-
-    w = Window.orderBy("ts")                      # or partitionBy("symbol").orderBy("ts")
-    df.withColumn("ema21", ta.ema("close", timeperiod=21).over(w))
-    df.withColumn("ema21", ta.ema(F.col("close"), timeperiod=21).over(w))  # Column form too
-
-The call shape mirrors TA-Lib / ``polars_talib`` so notebook code ports by import swap: function
-form with named keyword parameters (``timeperiod``, ``nbdev``, ``nbdevup``/``nbdevdn``), the price
-series as either a :class:`~repark.column.Column` or a bare column-name ``str``, and multi-output
-indicators split into one function per output (``bbands_upper`` / ``bbands_middle`` /
-``bbands_lower``). Defaults match TA-Lib.
-
-**Lookback nulls (opt-in).** Kernels emit a NaN lookback prefix (bit-exact with C TA-Lib /
-``to_bits`` goldens). Pass ``null_lookback=True`` to convert only that deterministic prefix to
-SQL NULL after ``.over(...)`` — matching ``polars_talib``'s null surface. Default is ``False``
-(byte-unchanged). Mid-series NaN is never rewritten; distinction is by lookback length, never
-blanket ``isnan``.
-
-**Ordering is the caller's responsibility.** Without an ``ORDER BY`` inside ``.over(...)`` the
-partition order is undefined, exactly as in Spark; always pass a window with an ordering.
-
-# === r21 T4: ta-etl ===
-**Windowed ETL throughput (measure-first, release wheel).** Same-spec TA windows in a single
-``DataFrame.withColumns({...})`` lower to **one** DataFusion ``WindowAggExec`` (fused partition
-sort + multi-UDF pass). Since r23b N2, sequential **independent** same-spec ``withColumn`` calls
-also merge into that one operator (pinned in ``test_n2_plan_collapse.py``); only *dependent*
-stacks (a TA column consumed by a later TA window) still emit stacked operators, by design.
-:func:`over_columns` remains the preferred spelling — one fused pass, no reliance on the plan
-optimizer. Hour-0 r21 T4: on the Arrow path the fused vs sequential gap is real but modest at
-operator scale once ``withColumns`` is already used; kernel work dominates; collect
-Row materialization is a separate surface (not this module). See ``task/t4-ta-etl-ledger.md``.
-
-# === conductor-13 TA-2: with_indicators ===
-**Serving helper.** :func:`with_indicators` is the ETL door that **requires** ``partition`` and
-``order`` (keyword-only, no guessed column names). A missing ``partitionBy`` is the silent
-cross-symbol RSI footgun: ``Window.orderBy("ts")`` alone treats every symbol as one series, so
-RSI / EMA / MACD leak across instruments that share timestamps. ``last_row=True`` keeps the
-last bar per partition so serving collects ``N_symbols`` rows, not the full history.
+Indicators are ordered window functions and require an OVER ordering. Kernels emit a
+deterministic NaN lookback prefix; null_lookback=True converts only that prefix to SQL
+NULL. Mid-series NaN values remain unchanged.
 """
 
 from __future__ import annotations
@@ -95,7 +54,7 @@ def _ma_lookback(period: int, matype: int) -> int:
         return period
     if matype == 7:  # MAMA(0.5, 0.05) — fixed 32
         return 32
-    if matype == 8:  # T3
+    if matype == 8:
         return 6 * (period - 1)
     # Unknown matype: kernel will reject; report a safe non-negative prefix.
     return period - 1 if period > 0 else 0
@@ -184,9 +143,6 @@ def _window(
     return _LookbackAwareColumn(column._inner, lookback_length)
 
 
-# === r21 T4: ta-etl ===
-
-
 def over_columns(window: WindowSpec, columns: dict[str, Column]) -> dict[str, Column]:
     """Apply one shared :class:`~repark.window.WindowSpec` to many un-``OVER``ed window columns.
 
@@ -245,7 +201,7 @@ def over_columns(window: WindowSpec, columns: dict[str, Column]) -> dict[str, Co
     return result
 
 
-# === conductor-13 TA-2: with_indicators ===
+# Technical-analysis indicator helpers.
 
 _LAST_ROW_NUMBER = "__repark_ta_last_row"
 _LAST_ROW_MAX = "__repark_ta_last_row_max"
@@ -361,7 +317,7 @@ def with_indicators(
     null_lookback=True)`` still wins on its own via ``.over``.
 
     ``last_row=True`` keeps the last bar of the TA window in each partition so serving
-    collects ``N_symbols`` rows, not the full history.
+    collects ``N_symbols`` rows, not all input rows.
 
     Example::
 

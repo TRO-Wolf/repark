@@ -1,27 +1,4 @@
-//! Branch / tag DDL — `ALTER TABLE t CREATE|DROP BRANCH|TAG …` (design §2 Q6, graft G6).
-//!
-//! **Precedent-copying, not invention.** The grammar below is exactly the ALTER-scoped subset the
-//! Spark door ships (verified at the port pin `fc3f48102`), and it executes through the SAME
-//! tier-1 [`repark_iceberg::write`] `ManageSnapshots` seams that door calls — shared code below
-//! both doors, never a door→door import. What this door does NOT take is the Spark-only top-level
-//! spelling (`CREATE BRANCH b IN t`): that stays a wrong-door sniff steer.
-//!
-//! Grammar:
-//!
-//! ```text
-//! ALTER TABLE c.s.t CREATE [OR REPLACE] BRANCH|TAG <name>
-//!     [AS OF VERSION <snapshot-id>]
-//!     [RETAIN <n> DAYS|HOURS|MINUTES]
-//!     [WITH SNAPSHOT RETENTION <n> SNAPSHOTS | <n> DAYS|HOURS|MINUTES]
-//! ALTER TABLE c.s.t DROP BRANCH|TAG [IF EXISTS] <name>
-//! ```
-//!
-//! Stock sqlparser cannot reach any of it (`Expected: ADD, RENAME, … found: CREATE`), so this is
-//! a pre-parse recognizer, in the class the design pre-authorised for exactly this production.
-//! It runs on TOKENS, not on raw text, so a `BRANCH` inside a string literal is invisible.
-//!
-//! Writing to a ref stays refused ([`crate::guards::refuse_write_to_branch`]): the fork's append
-//! always sets `main`, so re-pinning a ref with this DDL is the write path for refs today.
+//! Branch / tag DDL — `ALTER TABLE t CREATE|DROP BRANCH|TAG …`.
 
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::DataFrame;
@@ -70,8 +47,7 @@ enum Sig {
     Quoted(String),
     Period,
     Number(String),
-    /// Anything else, carrying its source text so a leftover can be NAMED in a refusal rather
-    /// than silently dropped.
+    /// Other tokens retain their text so refusals can name unsupported syntax.
     Other(String),
 }
 
@@ -84,8 +60,7 @@ impl Sig {
         }
     }
 
-    /// How this token is quoted back to the user in a refusal. Every variant is printable —
-    /// that is what makes "refuse rather than ignore it" true for punctuation and numbers.
+    /// Quote this token in a refusal. Every variant is printable.
     fn text(&self) -> &str {
         match self {
             Self::Word(value) | Self::Quoted(value) | Self::Number(value) | Self::Other(value) => {
@@ -95,8 +70,7 @@ impl Sig {
         }
     }
 
-    /// True when this is a BARE word equal (case-insensitively) to `expected`. A quoted
-    /// identifier never matches a keyword — `"branch"` is a name, not the BRANCH keyword.
+    /// True when this is a bare word equal to `expected`, case-insensitively. Quoted words do not match.
     fn keyword(&self, expected: &str) -> bool {
         matches!(self, Self::Word(value) if value.eq_ignore_ascii_case(expected))
     }
@@ -104,9 +78,6 @@ impl Sig {
 
 /// ===========================================================================================
 /// Recognize `ALTER TABLE … CREATE|DROP BRANCH|TAG …`.
-///
-/// `None` = not this statement shape (the router carries on). `Some(Err(…))` = it IS this shape
-/// but malformed, which must be a targeted error rather than an opaque parse failure.
 /// ===========================================================================================
 pub(crate) fn try_parse_ref_ddl(sql: &str) -> Option<Result<RefDdl>> {
     let tokens = tokenize_significant(sql)?;
@@ -202,9 +173,7 @@ fn parse_drop(
     })
 }
 
-/// The ref name, which must be an identifier and must not contain path-escape characters (the
-/// name becomes part of a metadata ref key, so the same identifier hygiene the rest of the door
-/// applies to namespace/table segments applies here).
+/// The ref name must be an identifier without path-escape characters.
 fn ref_name(tokens: &[Sig], index: usize, form: &str) -> Result<String> {
     let name = tokens
         .get(index)
@@ -345,12 +314,6 @@ fn signed_number(tokens: &[Sig], index: usize) -> Option<(String, usize)> {
 }
 
 /// Anything left over is a clause this door did not understand — refuse rather than ignore it.
-///
-/// EVERY leftover token counts, not just identifiers. Filtering the tail through [`Sig::ident`]
-/// made `… DROP BRANCH audit 5` and `… CREATE BRANCH audit AS OF VERSION 7 99` succeed with the
-/// trailing token silently dropped, which is exactly the "ignore it" this function exists to
-/// prevent — a user who wrote a retention clause we misread would have gotten a snapshot
-/// operation they did not ask for.
 fn reject_trailing(tokens: &[Sig], index: usize, form: &str) -> Result<()> {
     let Some(leftover) = tokens
         .get(index.min(tokens.len())..)
@@ -376,23 +339,14 @@ fn dotted_name(tokens: &[Sig], index: usize) -> Option<(Vec<String>, usize)> {
     Some((parts, cursor))
 }
 
-/// Tokenize with the stock Generic dialect, dropping whitespace and comments. `"x"` is an
-/// identifier (ANSI) and lands as [`Sig::Quoted`]; `'x'` is a STRING and is therefore not usable
-/// as a name here at all (it falls into [`Sig::Other`]).
-///
-/// A statement terminator at the very END is dropped: `ALTER TABLE t DROP BRANCH b;` is one
-/// statement (the router's multi-statement guard has already refused genuine scripts), and now
-/// that [`reject_trailing`] refuses non-identifier leftovers the `;` would otherwise be read as
-/// an unsupported trailing clause.
+/// Tokenize with the stock Generic dialect, dropping whitespace and comments. `"x"` is an identifier.
 fn tokenize_significant(sql: &str) -> Option<Vec<Sig>> {
     let tokens = Tokenizer::new(&GenericDialect {}, sql).tokenize().ok()?;
     let mut significant: Vec<Sig> = tokens
         .into_iter()
         .filter(|token| !matches!(token, Token::Whitespace(_) | Token::EOF))
         .map(|token| match token {
-            // sqlparser hands back a QUOTED identifier as a `Word` carrying its quote style —
-            // there is no separate token for it on a dialect where `"` quotes identifiers. The
-            // distinction is load-bearing here: `"branch"` must be a NAME, never the keyword.
+            // sqlparser returns a quoted identifier as a `Word` carrying its quote style.
             Token::Word(word) if word.quote_style.is_some() => Sig::Quoted(word.value),
             Token::Word(word) => Sig::Word(word.value),
             Token::Number(text, _) => Sig::Number(text),
@@ -411,10 +365,6 @@ fn tokenize_significant(sql: &str) -> Option<Vec<Sig>> {
 /// ===========================================================================================
 /// Execute a recognized ref-DDL statement through the tier-1 `ManageSnapshots` seams.
 /// ===========================================================================================
-///
-/// # Errors
-/// The Q15 target refusal, a missing current snapshot on a `CREATE` without `AS OF VERSION`, or
-/// any fork validation error (unknown snapshot, ref kind mismatch, tag-invalid retention).
 pub(crate) async fn execute_ref_ddl(cx: &EngineContext<'_>, ddl: RefDdl) -> Result<DataFrame> {
     let name = object_name(&ddl.table_parts);
     let target = crate::create_table::resolve_target(cx, &name, "ALTER TABLE (branch/tag DDL)")?;
@@ -468,9 +418,7 @@ pub(crate) async fn execute_ref_ddl(cx: &EngineContext<'_>, ddl: RefDdl) -> Resu
     cx.ctx.read_empty()
 }
 
-/// The snapshot the new ref points at: the explicit `AS OF VERSION`, else the table's current
-/// snapshot. A schema-only table has no current snapshot, and pinning a ref at "nothing" is not a
-/// thing Iceberg can express — so that refuses, naming the fix.
+/// Return the snapshot the new ref points at: explicit `AS OF VERSION`, else the table's current
 async fn pin_snapshot(
     target: &CreateTarget,
     as_of_version: Option<i64>,
@@ -508,8 +456,7 @@ async fn ref_exists(target: &CreateTarget, name: &str) -> Result<bool> {
     Ok(table.metadata().snapshot_for_ref(name).is_some())
 }
 
-/// Re-render the recognized dotted name as an `ObjectName` so it can go through the ONE Q15
-/// target resolver the rest of the door uses (same refusal text, same read-only handling).
+/// Re-render the recognized dotted name as an `ObjectName` for the Q15 target resolver.
 fn object_name(parts: &[String]) -> datafusion::sql::sqlparser::ast::ObjectName {
     use datafusion::sql::sqlparser::ast::{Ident, ObjectName, ObjectNamePart};
     ObjectName(

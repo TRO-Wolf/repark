@@ -1,31 +1,4 @@
-//! **The ANSI-door cell** of the `CAST(TIMESTAMP AS <numeric>)` epoch-seconds matrix (registry
-//! row TZ-5).
-//!
-//! The other cells live elsewhere — `crates/repark-spark/tests/timestamp_cast_seconds.rs` (Spark
-//! door + native `DataFrame` API) and `python/repark/tests/test_timestamp_cast_parity.py` (the
-//! facade's two spellings). This file is the ANSI one, and it lives HERE for the same policy
-//! reason `session_timezone_ansi_door.rs` states in full: `scripts/check_crate_dag.py` allows
-//! `repark-sql -> repark-spark` as a **dev** edge and allows no edge the other way, so the ANSI
-//! door and the Spark extension can only meet inside this crate's test binary.
-//!
-//! # What is being claimed, precisely
-//!
-//! Extensions are **session-scoped, not dialect-scoped**. The epoch-seconds scaling rides on the
-//! session's analyzer rules, so the claim is:
-//!
-//! > on ONE Spark-extended session, the ANSI door (`sql_with(AnsiDialect)`) scales a timestamp
-//! > cast to epoch seconds exactly as the Spark door does.
-//!
-//! That is a **single-session** row on purpose — the legal kind. Running it as a two-session row
-//! would compare a Spark-extended session against a native one, which have different analyzer
-//! rule sets, and would be measuring the extension rather than the door.
-//!
-//! The native (extension-free) profile is pinned too, as the honest negative: stock DataFusion
-//! reinterprets the raw tick, and a bare session is not a Spark session, so that is not a repark
-//! divergence from Spark. Saying so with a test keeps the boundary from being read as a gap.
-//!
-//! Expectations are live-Spark-4.1.2-recorded (`task/tz5-cast-seconds-ledger.md` §2). AWS-free by
-//! construction.
+//! The ANSI-door cell of the `CAST(TIMESTAMP AS <numeric>)` epoch-seconds matrix.
 
 use std::sync::Arc;
 
@@ -38,12 +11,11 @@ use repark_sql::AnsiDialect;
 
 const NEW_YORK: &str = "America/New_York";
 
-/// The instants: a whole half-hour before 1970 and the negative FRACTIONAL second that separates
-/// Spark's floor from a truncating cast (`-0.5 s` is `-1`, not `0`).
+/// The instants include a whole half-hour before 1970 and a negative fractional second.
 const INSTANTS: [&str; 2] = ["1969-12-31T23:30:00Z", "1969-12-31T23:59:59.5Z"];
 const EXPECTED_SECONDS: [Option<i64>; 3] = [Some(-1800), Some(-1), None];
 
-/// Register the instants (plus a trailing NULL) as a nanosecond-backed tz-aware `ts` column.
+/// Register the instants and a trailing NULL as a nanosecond-backed, time-zone-aware `ts` column.
 fn register_instants(session: &ReparkSession) {
     let values: Vec<Option<&str>> = INSTANTS
         .iter()
@@ -90,9 +62,6 @@ async fn epoch_seconds_through(
 
 /// ===========================================================================================
 /// One Spark-extended session, both doors, the same seconds — value AND Arrow type.
-///
-/// The two doors are compared on a surface the analyzer layer owns, so what is measured is that
-/// the DOOR CHOICE does not change the answer.
 /// ===========================================================================================
 #[tokio::test]
 async fn both_doors_of_one_spark_extended_session_scale_to_epoch_seconds() {
@@ -120,11 +89,6 @@ async fn both_doors_of_one_spark_extended_session_scale_to_epoch_seconds() {
 
 /// ===========================================================================================
 /// The honest negative: a BARE session (no Spark extension) keeps DataFusion's raw tick.
-///
-/// This is not a repark-vs-Spark divergence — a bare session is not a Spark session, and the ANSI
-/// dialect does not promise Spark's cast semantics. Pinning it keeps the boundary from being read
-/// as a gap, and it is also the revert-red evidence for the whole class: the number below is
-/// exactly what the Spark door returned before the fix.
 /// ===========================================================================================
 #[tokio::test]
 async fn a_bare_session_keeps_the_raw_nanosecond_tick() {

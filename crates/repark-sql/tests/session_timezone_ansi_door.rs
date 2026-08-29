@@ -1,34 +1,4 @@
-//! **The ANSI-door cell** of the session-timezone matrix (H-1a split B).
-//!
-//! The campaign narrows `docs/testing.md`'s matrix row 3 into four cells — native `DataFrame`,
-//! ANSI door, Spark door, facade. Three live elsewhere
-//! (`crates/repark-spark/tests/session_timezone.rs` and the facade corpus); this file is the
-//! ANSI one, and it lives HERE for a policy reason worth stating: `scripts/check_crate_dag.py`
-//! allows `repark-sql -> repark-spark` as a **dev** edge (that is what the cross-door protocol
-//! needs) and allows no edge the other way at all, so the ANSI door and the Spark extension can
-//! only meet inside this crate's test binary.
-//!
-//! # What is being claimed, precisely
-//!
-//! Extensions are **session-scoped, not dialect-scoped** (`tests/cross_door.rs` is emphatic about
-//! this, and it is the whole reason the cross-door protocol runs two sessions). The session
-//! timezone rides on the session's `ConfigOptions`, so the claim this file pins is:
-//!
-//! > on ONE Spark-extended session at a non-UTC zone, the ANSI door (`sql_with(AnsiDialect)`)
-//! > resolves timestamp fields in that zone exactly as the Spark door does.
-//!
-//! That is a **single-session** row on purpose, and it is the legal kind: the two doors are being
-//! compared on a surface the analyzer/UDF layer owns, and what is measured is that the door
-//! choice does NOT change the answer. Running it as a two-session row would compare a
-//! Spark-extended session against a native one — which have different function registries — and
-//! would be measuring the extension, not the door.
-//!
-//! The native (extension-free) profile is pinned too, as the honest negative: stock DataFusion
-//! has no session-timezone notion here, so a bare session keeps reading the stored zone. That is
-//! not a repark divergence from Spark — a bare session is not a Spark session — and saying so
-//! with a test keeps the boundary from being read as a gap.
-//!
-//! AWS-free by construction.
+//! The ANSI-door cell of the session-timezone matrix.
 
 use std::sync::Arc;
 
@@ -42,15 +12,10 @@ use repark_sql::AnsiDialect;
 const NEW_YORK: &str = "America/New_York";
 const TOKYO: &str = "Asia/Tokyo";
 
-/// `2024-06-15T12:00:00Z` — the census's four-hour offset instant — and `2024-01-01T04:30:00Z`,
-/// which crosses a calendar YEAR in New York.
+/// The fixture uses `2024-06-15T12:00:00Z` and `2024-01-01T04:30:00Z`.
 const INSTANTS: [&str; 2] = ["2024-06-15T12:00:00Z", "2024-01-01T04:30:00Z"];
 
 /// The instants under test, as RFC-3339 strings so an expectation is checkable by eye.
-///
-/// They are converted with arrow's own string→timestamp cast rather than a date library: the
-/// fixture then cannot disagree with the engine about what `2024-06-15T12:00:00Z` means, and this
-/// test binary needs no clock dependency of its own.
 fn utc_instants(rfc3339: &[&str]) -> ArrayRef {
     let text = StringArray::from(rfc3339.to_vec());
     cast(
@@ -122,9 +87,7 @@ async fn int_columns_through(
 
 const EXTRACT_SQL: &str = "SELECT year(ts) AS y, hour(ts) AS h FROM t ORDER BY ts";
 
-/// The ANSI-door cell: the same session, the same data, both doors — and the same answer, value
-/// AND Arrow type. If the zone ever reached only the Spark door's own routing (rather than the
-/// session's function layer), the two halves would disagree here.
+/// Both doors use the session time zone and return the same values and Arrow types.
 #[tokio::test]
 async fn ansi_door_and_spark_door_agree_under_a_non_utc_session() {
     let ansi: Arc<dyn SqlDialect> = Arc::new(AnsiDialect);
@@ -154,9 +117,7 @@ async fn ansi_door_and_spark_door_agree_under_a_non_utc_session() {
     );
 }
 
-/// The honest negative: a session with NO extension is stock DataFusion, whose `date_part` reads
-/// the array's own zone and knows nothing about `spark.sql.session.timeZone`. Recorded so the
-/// boundary is a stated property of the extension-less profile rather than an unexplained gap.
+/// A session without the extension uses stock DataFusion and reads the stored time zone.
 #[tokio::test]
 async fn a_native_session_without_the_spark_extension_reads_the_stored_zone() {
     let ansi: Arc<dyn SqlDialect> = Arc::new(AnsiDialect);

@@ -1,13 +1,6 @@
-//! PERF-10 (r24 G10) — **ratio** micro-benches for repark-functions shims.
+//! PERF-10 ratio micro-benches for Spark date-format and substring shims.
 //!
-//! Absolute wall times are runner-noise; we pin **ratios** of related work units so a slow
-//! machine cannot false-fail:
-//!
-//! - `date_format` (Spark Java-pattern shim) vs DataFusion `to_char` (chrono-style)
-//! - Spark `substring` shim vs DataFusion `upper`
-//!
-//! Ceilings are **FINAL** — set on the r24 mega tip (see `task/g10-enforcement-ledger.md`).
-//! Morning mega sets finals = tip measured × 1.5.
+//! Gates compare related work-unit ratios, not absolute wall time; ceilings are fixed by the r24 tip.
 
 use std::hint::black_box;
 use std::sync::Arc;
@@ -20,14 +13,8 @@ use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::prelude::SessionContext;
 
 // ===========================================================================================
-// FINAL ratio ceilings (subject / baseline), set on the r24 mega tip per greylight Q14:
-// max of three tip samples x 1.5. date_format 1.271/1.273/1.285 -> 2.0; substring
-// 1.827/1.859/1.913 -> 3.0. BASE was 1.642 / 1.811 (PERF-02 improved; PERF-03 flat).
-// Seeded from hour-0 release-equivalent measurement at BASE; overwritten after first
-// local `cargo bench` sample in the same unit if measured ratio is higher (never lower
-// the committed provisional without a ledger note).
+// Final ratio ceilings from the r24 tip.
 // ===========================================================================================
-// Hour-0 BASE measured ~1.64 (date_format/to_char) and ~1.81 (substring/upper) on
 const DATE_FORMAT_VS_TO_CHAR_CEILING: f64 = 2.0;
 const SUBSTRING_VS_UPPER_CEILING: f64 = 3.0;
 
@@ -43,7 +30,6 @@ fn session() -> SessionContext {
 }
 
 fn register_date_table(ctx: &SessionContext) {
-    // 2020-01-01 = days since epoch 18262; stride keeps values in chrono range.
     let days: Vec<i32> = (0..ROW_COUNT)
         .map(|i| 18_262 + i32::try_from(i % 3_650).unwrap_or(0))
         .collect();
@@ -83,7 +69,6 @@ async fn collect_sql(ctx: &SessionContext, sql: &str) {
 
 async fn median_wall(ctx: &SessionContext, sql: &str, samples: u32) -> Duration {
     let mut walls = Vec::with_capacity(samples as usize);
-    // Warm once so the first sample is not cold-plan dominated.
     collect_sql(ctx, sql).await;
     for _ in 0..samples {
         let start = Instant::now();
@@ -110,7 +95,6 @@ fn bench_date_format_vs_to_char(c: &mut Criterion) {
     let ctx = session();
     register_date_table(&ctx);
 
-    // Spark Java pattern vs DataFusion chrono-style — same calendar shape, different formatter.
     let date_format_sql = "SELECT date_format(d, 'yyyy-MM-dd') AS r FROM dates";
     let to_char_sql = "SELECT to_char(d, '%Y-%m-%d') AS r FROM dates";
 
@@ -125,8 +109,6 @@ fn bench_date_format_vs_to_char(c: &mut Criterion) {
         });
     });
 
-    // Ratio pin (not absolute wall): run outside criterion's timing loop so the assert is one
-    // deterministic sample pair, not a noisy multi-run absolute gate.
     let date_format_wall = runtime.block_on(median_wall(&ctx, date_format_sql, 7));
     let to_char_wall = runtime.block_on(median_wall(&ctx, to_char_sql, 7));
     let ratio = ratio_or_inf(date_format_wall, to_char_wall);

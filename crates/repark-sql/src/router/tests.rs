@@ -1,5 +1,4 @@
-//! Router tests: the routing DECISIONS (which statements are intercepted, which are delegated,
-//! and in what order the guards run), as distinct from what each handler then does.
+//! Router tests pin which statements are intercepted and which are delegated.
 
 use std::collections::HashSet;
 
@@ -21,9 +20,6 @@ async fn run(ctx: &SessionContext, sql: &str) -> Result<DataFrame> {
 }
 
 /// A plain `SELECT` is delegated to DataFusion untouched — value AND type on the Arrow path.
-///
-/// This is the delegation baseline the whole door rests on: if reads did not pass through
-/// cleanly, every other interception would be beside the point.
 #[tokio::test]
 async fn select_delegates_to_datafusion() {
     let ctx = native_ctx();
@@ -53,12 +49,7 @@ async fn select_delegates_to_datafusion() {
     assert_eq!(answer.value(0), 42, "value");
 }
 
-/// A `$`-suffixed metadata-table reference reaches delegation through the ordinary `_ =>` arm —
-/// the stock parser accepts `$` in an identifier, so no pre-parse passthrough is needed.
-///
-/// Asserted through the routing OUTCOME rather than a mock: with no such table registered, the
-/// delegated plan fails with DataFusion's table-not-found error. A statement-match route would
-/// have produced a different error entirely (or silently done nothing).
+/// A `$`-suffixed metadata-table reference reaches delegation through the ordinary `_ =>` arm.
 #[tokio::test]
 async fn metadata_dollar_form_passes_through() {
     let ctx = native_ctx();
@@ -73,12 +64,7 @@ async fn metadata_dollar_form_passes_through() {
 }
 
 /// A `$` ANYWHERE in a statement must not route a `CREATE TABLE` away from its handler.
-///
-/// The regression this pins: a pre-parse "`$` → delegate" passthrough sent `CREATE TABLE t AS
-/// SELECT … FROM x$snapshots` into DataFusion's own CTAS, which happily built a session-local
-/// `MemTable` — the silent-fallthrough failure graft G1 forbids, on a statement (CTAS from a
-/// metadata table) users really write. Here the target is unregistered, so the Q15 routing check
-/// must REFUSE it, not create anything.
+/// This pins the rule that `$` metadata references do not bypass the CREATE TABLE handler.
 #[tokio::test]
 async fn metadata_reference_does_not_bypass_the_create_handler() {
     let ctx = native_ctx();
@@ -108,8 +94,7 @@ async fn metadata_reference_does_not_bypass_the_create_handler() {
     );
 }
 
-/// The guard set runs BEFORE the parse: a script refuses even when its first statement is one
-/// the router would have intercepted.
+/// The guard set runs before parsing, so a multi-statement script refuses before parsing.
 #[tokio::test]
 async fn guards_run_before_parsing() {
     let ctx = native_ctx();
@@ -154,8 +139,7 @@ async fn create_schema_authorization_refuses() {
     assert!(err.contains("AUTHORIZATION"), "must name the clause: {err}");
 }
 
-/// A DataFusion parser EXTENSION statement (`COPY TO`) reaches delegation, where the SEC-02
-/// guard sees the plan — the route that would otherwise be the door's local-filesystem hole.
+/// A DataFusion parser extension statement (`COPY TO`) reaches delegation, where the SEC-02 guard runs.
 #[tokio::test]
 async fn datafusion_extension_statements_reach_the_local_filesystem_guard() {
     let ctx = native_ctx();

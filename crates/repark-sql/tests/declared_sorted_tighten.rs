@@ -1,4 +1,4 @@
-//! SE-1 PR-D1: ANSI-door Iceberg-CREATE refuse of a `tightenNulls` frame.
+//! ANSI-door Iceberg-CREATE refusal of a `tightenNulls` frame.
 
 use std::sync::Arc;
 
@@ -259,7 +259,7 @@ async fn ansi_ctas_from_lazy_view_of_derived_plan_refuses() {
     );
 }
 
-/// Shared fixture for the round-4 DDL-sink pins (Y-3 / Y-4, ANSI door).
+/// Shared fixture for the ANSI DDL-sink pins.
 async fn ansi_ddl_sink_session() -> (TempDir, ReparkSession) {
     let warehouse_dir = TempDir::new().expect("warehouse tempdir");
     let warehouse = warehouse_dir.path().to_str().expect("utf8").to_string();
@@ -286,11 +286,7 @@ async fn ansi_ddl_sink_session() -> (TempDir, ReparkSession) {
 
 #[tokio::test]
 async fn ansi_create_view_in_iceberg_catalog_over_tightened_source_refuses() {
-    // Y-3, ANSI twin. Kills: the ANSI router's `_ => delegate` arm letting `CREATE VIEW
-    // ice.ns.v AS …` reach the Iceberg schema provider's `register_table` sink (which persists
-    // a real table — MEASURED on BASE through the Spark door with the same provider).
-    // Deleting the `refuse_iceberg_create_of_tightened_ddl` call in `router::delegate`
-    // turns this red.
+    // The ANSI router must refuse a DDL sink over a tightened source.
     let (_dir, session) = ansi_ddl_sink_session().await;
     for sql in [
         "CREATE VIEW ice.sales.v_limit AS SELECT * FROM tight LIMIT 0",
@@ -310,8 +306,7 @@ async fn ansi_create_view_in_iceberg_catalog_over_tightened_source_refuses() {
 
 #[tokio::test]
 async fn ansi_select_into_iceberg_catalog_over_tightened_source_refuses() {
-    // Y-4, ANSI twin. Independent statement (`CreateMemoryTable`, not `CreateView`): a fix
-    // wired only to the `CreateView` DDL arm leaves this green — measured both ways.
+    // SELECT INTO is an independent DDL sink and must receive the same refusal.
     let (_dir, session) = ansi_ddl_sink_session().await;
     for sql in [
         "SELECT * INTO ice.sales.t_limit FROM tight LIMIT 0",
@@ -332,7 +327,6 @@ async fn ansi_select_into_iceberg_catalog_over_tightened_source_refuses() {
 #[tokio::test]
 async fn ansi_session_scoped_create_view_and_select_into_stay_allowed() {
     // Allowed side. Kills: a blanket DDL refuse — a one-part name is not a registered Iceberg
-    // catalog and persists nothing.
     let (_dir, session) = ansi_ddl_sink_session().await;
     session
         .sql("CREATE VIEW session_v AS SELECT * FROM tight")
@@ -352,8 +346,7 @@ async fn ansi_session_scoped_create_view_and_select_into_stay_allowed() {
 
 #[tokio::test]
 async fn ansi_create_view_in_iceberg_catalog_over_untightened_source_stays_allowed() {
-    // The PAYLOAD boundary: `CREATE VIEW` persisting an Iceberg table at all predates this
-    // branch. This round fixes only the tighten leak — the untightened statement is unchanged.
+    // The payload boundary: this test keeps ordinary CREATE VIEW behavior unchanged.
     let (_dir, session) = ansi_ddl_sink_session().await;
     session
         .sql("CREATE VIEW ice.sales.v_plain AS SELECT * FROM plain LIMIT 0")
@@ -364,25 +357,9 @@ async fn ansi_create_view_in_iceberg_catalog_over_untightened_source_stays_allow
         .expect("collect");
 }
 
-// ===========================================================================================
-// SQM round 5 — ANSI door: resolved-catalog gating (Z-1) and plan-before-execute (Z-3).
-// ===========================================================================================
-
 #[tokio::test]
 async fn ansi_default_catalog_bare_name_ddl_over_tightened_source_refuses() {
-    // Z-1, ANSI door. Kills: gating the DDL refuse on the three-part SPELLING. With
-    // `SET datafusion.catalog.default_catalog = ice` (+ `default_schema = sales`) a one-part
-    // or two-part name resolves into the Iceberg catalog and persists the same required
-    // columns. Deleting the resolve in `refuse_iceberg_create_of_tightened_ddl` (gating on
-    // `TableReference::Full` again) turns this red.
-    //
-    // MEASURED on BASE (675a413) through this door's `delegate`, PER ROW (R6-3 discipline):
-    // the Bare and Partial rows returned **Ok** (the reds this pin kills); the Full row
-    // **already refused** on BASE (round 4 wired the three-part spelling on this door) and is
-    // here as the regression fence.
-    //
-    // R6-4 (round 6): each refusal also asserts the UNPUBLISHED half — `table_exists` FALSE for
-    // the name the statement resolves to.
+    // Default catalog and schema settings must resolve a bare target before the refusal.
     let (_dir, session) = ansi_ddl_sink_session().await;
     session
         .sql("SET datafusion.catalog.default_catalog = 'ice'")
@@ -405,7 +382,7 @@ async fn ansi_default_catalog_bare_name_ddl_over_tightened_source_refuses() {
             "CREATE VIEW sales.v_partial AS SELECT * FROM datafusion.public.tight LIMIT 0",
             "ice.sales.v_partial",
         ),
-        // Three-part still refuses — round 4's behaviour is not traded away.
+        // A fully qualified target must receive the same refusal.
         (
             "CREATE VIEW ice.sales.v_full AS SELECT * FROM datafusion.public.tight LIMIT 0",
             "ice.sales.v_full",
@@ -429,16 +406,7 @@ async fn ansi_default_catalog_bare_name_ddl_over_tightened_source_refuses() {
 
 #[tokio::test]
 async fn ansi_ctas_wrapping_a_ddl_sink_refuses_without_publishing_the_inner_table() {
-    // Z-3, ANSI door. Kills: `create_table.rs` deriving the CTAS schema with
-    // `cx.ctx.sql(&query.to_string())`, which EXECUTES the inner statement — so
-    // `SELECT … INTO ice.sales.inner_x` inside a CTAS published `inner_x` (tightened, required
-    // columns) BEFORE the next line's refuse ever saw the plan. MEASURED on BASE (675a413) —
-    // and it is worse than "refuses too late": the statement returned **Ok**, with
-    // `ice.sales.wrap_inner` persisted carrying required `symbol` / `ts`, and `ice.sales.wrap`
-    // created too. The eager `ctx.sql` returns the DDL's own empty result, so the
-    // next-line `refuse_iceberg_create_of_tightened_plan` walked an `EmptyRelation` and saw no
-    // tightened source at all. The Spark door refuses the same wrap; this pins the ANSI door to
-    // that outcome AND to not publishing the inner table.
+    // CTAS must plan the inner DDL sink before execution.
     let (_dir, session) = ansi_ddl_sink_session().await;
     let sql =
         "CREATE TABLE ice.sales.wrap AS SELECT * INTO ice.sales.wrap_inner FROM tight LIMIT 0";
@@ -461,8 +429,7 @@ async fn ansi_ctas_wrapping_a_ddl_sink_refuses_without_publishing_the_inner_tabl
 
 #[tokio::test]
 async fn ansi_plain_ctas_still_derives_and_writes() {
-    // Z-3 allowed side. Kills: the plan-before-execute rewrite breaking ordinary CTAS schema
-    // derivation (the derived schema must still come from the same plan that is executed).
+    // Ordinary CTAS must still derive its schema and write successfully.
     let (_dir, session) = ansi_ddl_sink_session().await;
     session
         .sql("CREATE TABLE ice.sales.plain_ctas AS SELECT symbol, ts FROM plain")

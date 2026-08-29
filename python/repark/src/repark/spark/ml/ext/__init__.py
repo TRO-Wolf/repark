@@ -1,15 +1,7 @@
-"""``repark.ml.ext`` — delegated ML backends (M4).
+"""Delegated ML backends with lazy optional-dependency imports.
 
-Bare import of this package **succeeds without** the optional extra installed::
-
-    import repark.spark.ml.ext  # always OK
-
-Touching a concrete class (``XGBoostRegressor``, …) without
-``pip install 'repark[ml-ext]'`` raises ``ImportError`` naming the extra.
-
-Native estimators under ``repark.ml`` remain under the M3 Rust rule; only this
-subpackage may call optional external libraries on Arrow/pandas frames derived
-from ``to_arrow()``.
+Bare package imports succeed without ``repark[ml-ext]``. Touching a backend
+class raises ``ImportError`` naming the extra when its dependency is missing.
 """
 
 from __future__ import annotations
@@ -54,7 +46,7 @@ _EXPORT_MAP: dict[str, tuple[str, str]] = {
 
 
 def __getattr__(name: str) -> Any:
-    """Lazy-load ext classes so bare ``import repark.ml.ext`` needs no extra."""
+    """Load an exported backend lazily so package import needs no extra."""
     if name not in _EXPORT_MAP:
         raise AttributeError(f"module 'repark.ml.ext' has no attribute {name!r}")
     module_name, attr_name = _EXPORT_MAP[name]

@@ -1,22 +1,7 @@
 //! `ALTER TABLE` table-level mutations on the iceberg-rust 0.9.1 **public** API.
 //!
-//! These are the first real `repark-write` primitives. Each drives iceberg-rust's public
-//! `Transaction` / `Catalog` surface — no forked or `pub(crate)` internals:
-//!
-//! - [`set_table_properties`] / [`unset_table_properties`] build an
-//!   [`UpdatePropertiesAction`](iceberg::transaction::Transaction::update_table_properties),
-//!   `apply` it to a [`Transaction`], and `commit` against the catalog.
-//! - [`rename_table`] calls [`Catalog::rename_table`].
-//! - [`apply_schema_changes`] drives the fork's native
-//!   [`UpdateSchemaAction`](iceberg::transaction::Transaction::update_schema) (ADD / DROP /
-//!   RENAME COLUMN, type-widen, DROP NOT NULL, column COMMENT) — I6 / R-ALTER-TABLE.
-//! - [`apply_partition_spec_changes`] drives the fork's native
-//!   [`UpdatePartitionSpecAction`](iceberg::transaction::Transaction::update_partition_spec)
-//!   (ADD / DROP / REPLACE PARTITION FIELD) — I7 / R-PARTITION-EVOLUTION.
-//!
-//! The SQL router (`repark-sql`) resolves the three-part `catalog.namespace.table` name, looks up
-//! the iceberg handle, calls one of these, then re-registers the DataFusion provider. Errors are
-//! returned as [`iceberg::Error`] so the SQL layer adapts them with its existing `iceberg_err` fold.
+//! Property, table-name, schema, and partition-spec changes commit through public fork actions.
+//! Errors remain [`iceberg::Error`] for the SQL layer's existing fold.
 
 use std::collections::HashMap;
 use std::hash::BuildHasher;
@@ -195,22 +180,10 @@ pub async fn unset_table_properties(
 }
 
 /// ===========================================================================================
-/// `ALTER TABLE … SET/UNSET TBLPROPERTIES (…)` as ONE atomic transaction (BUG-012).
+/// Apply all property changes in one atomic transaction (BUG-012).
 ///
-/// Builds a **single** [`UpdatePropertiesAction`](iceberg::transaction) carrying every `sets`
-/// entry as `.set(k, v)` and every `unsets` key as `.remove(k)`, applies it to ONE
-/// [`Transaction`], and `commit`s ONCE. A mixed SET+UNSET therefore commits in a single catalog
-/// `update_table` CAS — it can never leave half-applied property state on a mid-operation failure
-/// (the two-call `set` then `unset` shape it replaces had a gap between its two commits). Empty
-/// `sets` AND empty `unsets` still load + apply + commit a property-update transaction with no
-/// set/remove ops (a no-op catalog CAS — not a short-circuit skip; unreachable via SQL, which
-/// always has at least one SET/UNSET key).
-///
-/// A key present in BOTH `sets` and `unsets` is rejected by the action's own precondition
-/// ("present in both removal set and update set") — the whole transaction fails and nothing lands,
-/// so a same-key set+unset is atomic-loud rather than silently set-then-removed. The SQL router
-/// only ever passes disjoint keys (a property is either a real `SET` value or a sentinel-flagged
-/// `UNSET` removal — never both), so this precondition is unreachable from Spark SQL.
+/// SET and UNSET operations share one catalog CAS, so a mid-operation failure cannot leave half
+/// the requested state. The fork rejects a key present in both collections before commit.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -316,28 +289,11 @@ pub async fn apply_schema_changes(
 }
 
 /// ===========================================================================================
-/// Apply a batch of partition-spec evolution ops as ONE `UpdatePartitionSpec` transaction (I7).
+/// Apply partition-spec changes in one transaction (I7).
 ///
-/// Builds a single
-/// [`UpdatePartitionSpecAction`](iceberg::transaction::Transaction::update_partition_spec) with
-/// Spark-default **case-insensitive** source-column resolution (`case_sensitive(false)`), folds
-/// every [`PartitionSpecChange`] in order (add / remove-by-name / remove-by-transform / replace =
-/// remove+add / rename), `apply`s it, and `commit`s once. An empty `changes` slice is a no-op
-/// (no catalog CAS). The new spec becomes the table default (fork `set_as_default` default);
-/// existing data files keep their recorded `partition_spec_id` (Iceberg multi-spec guarantee).
-///
-/// Partition **field names** on DROP/REPLACE/RENAME are also resolved case-insensitively against
-/// the current default spec (and names introduced earlier in the same batch): the fork's
-/// `remove_field` / `rename_field` match names exactly, while Spark's default
-/// `spark.sql.caseSensitive=false` treats partition field identifiers like source columns.
-///
-/// Supported transforms are whatever the fork's builder accepts: identity, `bucket[N]`,
-/// `truncate[W]`, year/month/day/hour, void. Unsupported transforms must be refused at the SQL
-/// boundary before calling here.
-///
-/// Fork cite (pin `b009ac158f7584a956fa9292c0e9675a411ecf0d`):
-/// `crates/iceberg/src/transaction/update_partition_spec.rs` (`UpdatePartitionSpecAction`);
-/// `GAP_MATRIX` R95 ✅ interop; `ENGINE_CONTRACT` schema/partition evolution section.
+/// Changes fold in declaration order with Spark's case-insensitive field resolution. An empty
+/// batch does nothing. Existing files retain their recorded spec IDs; the resulting spec is the
+/// table default. Unsupported transforms are rejected by the SQL boundary.
 /// ===========================================================================================
 ///
 /// # Errors

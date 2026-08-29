@@ -4,6 +4,7 @@
 
 Spark `MERGE INTO` adapter (copy-on-write + merge-on-read). The former `merge.rs` monolith
 lives as this module directory (move-only; pub surface frozen).
+Source comments retain OCC, streaming, and cleanup invariants; implementation narration is omitted.
 
 ## Contents
 

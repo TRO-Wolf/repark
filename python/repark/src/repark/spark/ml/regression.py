@@ -1,9 +1,4 @@
-"""Regression estimators — native Rust OLS (M3).
-
-``LinearRegression.fit`` streams Arrow batches inside Rust (``repark-ml`` Cholesky OLS).
-Python never trains; the model holds coefficients / intercept only. ``transform`` is
-plan-built (dot product + intercept).
-"""
+"""Linear regression backed by native streaming ordinary least squares."""
 
 from __future__ import annotations
 
@@ -12,8 +7,6 @@ from typing import Any
 
 from repark import _native
 from repark.errors import IllegalArgumentException, UnsupportedOperationException
-
-# === r23 QI1: idents ===
 from repark.spark._idents import quote_ident as _quote_ident
 from repark.spark._temp_views import scratch_view_name
 from repark.spark.ml.base import (
@@ -31,7 +24,6 @@ from repark.spark.ml.param import (
     TypeConverters,
 )
 
-# Divergence pins (oracle strings; this module is the home)
 SOLVER_DIVERGENCE = (
     "repark LinearRegression uses streaming normal equations + Cholesky; Spark MLlib uses "
     "normal equations / L-BFGS / OWL-QN depending on params. Singular / ill-conditioned designs "
@@ -44,8 +36,8 @@ STANDARDIZATION_NOTE = (
 
 
 def _sql_float(value: float) -> str:
-    """Render a float for SQL (Infinity-safe)."""
-    if value != value:  # NaN
+    """Render a finite or special float as a SQL literal."""
+    if value != value:
         return "CAST('NaN' AS DOUBLE)"
     if value == float("inf"):
         return "CAST('Infinity' AS DOUBLE)"
@@ -60,10 +52,11 @@ class LinearRegression(
     HasPredictionCol,
     Estimator["LinearRegressionModel"],
 ):
-    """Ordinary least squares (native Rust stream + Cholesky).
+    """Fit ordinary least squares with a native streaming solver.
 
-    Params mirror Spark shape. Defaults: ``fitIntercept=True``, ``elasticNetParam=0``,
-    ``standardization=False`` (raw features). ``regParam`` is accepted only as 0.
+    Defaults are ``fitIntercept=True``, ``regParam=0``, ``elasticNetParam=0``, and
+    ``standardization=False``. Fit refuses nonzero regularization or elastic net and
+    refuses ``standardization=True``.
     """
 
     def __init__(
@@ -79,7 +72,7 @@ class LinearRegression(
         maxIter: int | None = None,  # noqa: N803
         tol: float | None = None,
     ) -> None:
-        """Optional kwargs mirror Spark constructor names."""
+        """Initialize parameters with Spark-shaped defaults and supported-fit guards."""
         super().__init__()
         self.fitIntercept: Param[bool] = Param(
             self,
@@ -145,39 +138,39 @@ class LinearRegression(
             self._set(tol=tol)
 
     def setFitIntercept(self, value: bool) -> LinearRegression:
-        """Set fitIntercept."""
+        """Set whether to fit an intercept."""
         return self._set(fitIntercept=value)
 
     def getFitIntercept(self) -> bool:
-        """Get fitIntercept."""
+        """Return whether to fit an intercept."""
         return bool(self.getOrDefault(self.fitIntercept))
 
     def setElasticNetParam(self, value: float) -> LinearRegression:
-        """Set elasticNetParam."""
+        """Set the elastic-net mixing parameter."""
         return self._set(elasticNetParam=value)
 
     def getElasticNetParam(self) -> float:
-        """Get elasticNetParam."""
+        """Return the elastic-net mixing parameter."""
         return float(self.getOrDefault(self.elasticNetParam))
 
     def setRegParam(self, value: float) -> LinearRegression:
-        """Set regParam."""
+        """Set the regularization parameter."""
         return self._set(regParam=value)
 
     def getRegParam(self) -> float:
-        """Get regParam."""
+        """Return the regularization parameter."""
         return float(self.getOrDefault(self.regParam))
 
     def setStandardization(self, value: bool) -> LinearRegression:
-        """Set standardization."""
+        """Set whether to standardize features."""
         return self._set(standardization=value)
 
     def getStandardization(self) -> bool:
-        """Get standardization."""
+        """Return whether features are standardized."""
         return bool(self.getOrDefault(self.standardization))
 
     def _fit(self, dataset: Any) -> LinearRegressionModel:
-        """Native Rust streaming OLS; Python never iterates training rows."""
+        """Fit native streaming OLS. Refuse unsupported regularization and standardization."""
         frame = _require_repark_dataframe(dataset, verb="LinearRegression.fit")
         reg = float(self.getOrDefault(self.regParam))
         if abs(reg) > 1e-15:
@@ -190,7 +183,6 @@ class LinearRegression(
         fit_intercept = bool(self.getOrDefault(self.fitIntercept))
         features_col = self.getFeaturesCol()
         label_col = self.getLabelCol()
-        # Native stream fit — no numpy, no Python row loops.
         result = _native.fit_linear_regression(
             frame._plan(),
             features_col,
@@ -213,7 +205,7 @@ class LinearRegression(
 
 
 class LinearRegressionModel(HasFeaturesCol, HasPredictionCol, Model):
-    """Fitted OLS model — params only; plan-built transform."""
+    """Fitted OLS model that adds a plan-built prediction."""
 
     def __init__(
         self,
@@ -226,7 +218,7 @@ class LinearRegressionModel(HasFeaturesCol, HasPredictionCol, Model):
         num_features: int = 0,
         num_rows: int = 0,
     ) -> None:
-        """Store coefficients / intercept (never training rows)."""
+        """Initialize fitted coefficients, intercept, and metadata."""
         super().__init__()
         self.coefficients = [float(value) for value in (coefficients or [])]
         self.intercept = float(intercept)
@@ -239,12 +231,14 @@ class LinearRegressionModel(HasFeaturesCol, HasPredictionCol, Model):
             self.setPredictionCol(predictionCol)
 
     def _transform(self, dataset: Any) -> Any:
-        """Plan: prediction = intercept + sum_i coef_i * array_element(features, i)."""
+        """Add a prediction after validating feature width.
+
+        Coefficients map to zero-based ``array_element`` feature indices.
+        """
         frame = _require_repark_dataframe(dataset, verb="LinearRegressionModel.transform")
         _refuse_output_collision(
             frame, self.getPredictionCol(), stage="LinearRegressionModel.transform"
         )
-        # Coefficients are the source of truth for width; refuse desynced num_features.
         width = len(self.coefficients)
         if self.num_features != width:
             raise IllegalArgumentException(
@@ -261,7 +255,6 @@ class LinearRegressionModel(HasFeaturesCol, HasPredictionCol, Model):
         prediction = _quote_ident(self.getPredictionCol())
         terms = [_sql_float(self.intercept)]
         for index, coef in enumerate(self.coefficients):
-            # DataFusion array_element is 0-based (M2 ledger).
             terms.append(f"({_sql_float(coef)} * array_element({features}, {index}))")
         expr = " + ".join(terms) if terms else "CAST(0.0 AS DOUBLE)"
         view = scratch_view_name(frame._session, "__repark_lr_")
@@ -274,7 +267,7 @@ class LinearRegressionModel(HasFeaturesCol, HasPredictionCol, Model):
                 frame._session.drop_temp_view(view)
 
     def _ml_fitted_state(self) -> dict[str, Any]:
-        """Params only — never training rows."""
+        """Return fitted parameters without training rows."""
         return {
             "coefficients": list(self.coefficients),
             "intercept": self.intercept,
@@ -293,7 +286,7 @@ class LinearRegressionModel(HasFeaturesCol, HasPredictionCol, Model):
         fitted: bool,
         fitted_state: dict[str, Any],
     ) -> LinearRegressionModel:
-        """Rebuild from repark-ml persistence."""
+        """Rebuild a model from persisted parameters and fitted state."""
         payload = {**params, **(fitted_state or {})}
         return cls(
             coefficients=list(payload.get("coefficients") or []),
@@ -306,7 +299,7 @@ class LinearRegressionModel(HasFeaturesCol, HasPredictionCol, Model):
         )
 
     def copy(self, extra: dict[Any, Any] | None = None) -> LinearRegressionModel:
-        """Copy model params; apply ``extra`` so ``transform(df, params)`` works (C4-L-002)."""
+        """Deep-copy model parameters and apply optional overrides."""
         that = LinearRegressionModel(
             coefficients=list(self.coefficients),
             intercept=self.intercept,
@@ -325,14 +318,14 @@ class LinearRegressionModel(HasFeaturesCol, HasPredictionCol, Model):
 
 
 class LinearRegressionSummary:
-    """Minimal summary placeholder — absent metrics are loud-disclosed."""
+    """Summary proxy that refuses metrics not computed by the model."""
 
     def __init__(self, model: LinearRegressionModel) -> None:
-        """Bind a fitted model (no residual materialization)."""
+        """Bind a fitted model without materializing residuals."""
         self.model = model
 
     def __getattr__(self, name: str) -> Any:
-        """Loud-disclose Spark summary fields we do not compute in M3."""
+        """Reject summary fields that are not computed."""
         raise UnsupportedOperationException(
             f"LinearRegressionSummary.{name} is not computed in M3 "
             f"(minimal summaries only; use repark.ml.evaluation.RegressionEvaluator)"

@@ -271,11 +271,8 @@ async fn setup_time_travel_leak_table(
 
 /// I1 leak pin (H-1b): the rewrite's ephemeral views must NOT survive the statement.
 ///
-/// Before the fix, every pinned read left a `__repark_tt_N` registered forever on the session —
-/// unbounded accumulation on a long-lived session, and rows in the introspection surface. The
-/// other half of the claim is that releasing the name does not break the read: the `DataFrame` is
-/// collected AFTER `execute` returned (the plan owns its provider) and still returns the pinned
-/// rows.
+/// Statement-scoped `PinnedViews` releases every temporary provider while the returned plan keeps
+/// its pinned rows readable after `execute` returns.
 ///
 /// Mutation: drop the `pinned.release(ctx)` in `execute_with_read_only` → the leftover assertions
 /// red.
@@ -396,28 +393,14 @@ fn temp_view_sequence(name: &str) -> u64 {
         .unwrap_or_else(|| panic!("not an engine-minted temp-view name: {name}"))
 }
 
-/// I1 collision pin (H-1b panel fix pass): a Spark-door time-travel STATEMENT must not disturb a
+/// I1 collision pin: a Spark-door time-travel statement must not disturb a
 /// reader-options registration, even though both live in the same `__repark_tt_` namespace on the
 /// same session.
 ///
 /// The defect this fences: two process-global counters used to mint that prefix — one in
 /// `repark_core::time_travel`, one in this crate's `time_travel` — both starting at 1, so they
-/// handed out IDENTICAL names. On a session that had read through
-/// `spark.read.option("snapshot-id", …)` first, the door's mint step deregistered the reader's
-/// live view before registering its own pinned provider under the same name, and the
-/// post-planning `PinnedViews::release` then deleted the name outright. That registration is the
-/// one that must survive: it backs the `DataFrame` handed to the user, and it is what makes the
-/// facade's `listTables` filter pin non-vacuous. Fixed by minting from ONE counter
-/// (`repark_core::next_temp_view_name`).
-///
-/// Two assertions, because they fail under different circumstances:
-/// 1. the SURVIVAL assertion is the user-facing claim, and reds under a reintroduced second
-///    counter whenever the two sequences happen to be aligned (they are, when this test runs
-///    before any other time-travel test in the binary);
-/// 2. the SHARED-SEQUENCE assertion — mint on either side of a statement and the gap must exceed
-///    the two names the mints themselves took — reds under a second counter unconditionally,
-///    whatever the process history, because a door with its own counter consumes NOTHING from
-///    this one.
+/// Reader-option views must survive a statement rewrite, and both paths must use the shared
+/// `repark_core::next_temp_view_name` counter so exact-once cleanup cannot delete a live view.
 ///
 /// Mutation: give `crate::time_travel` its own `static TEMP_VIEW_SEQ` + local minter again → red.
 #[tokio::test]

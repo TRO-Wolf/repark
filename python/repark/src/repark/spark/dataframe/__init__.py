@@ -1,4 +1,4 @@
-"""repark.spark.dataframe package (r26 T1; re-homed Q1 2026-08-14)."""
+"""repark.spark.dataframe package."""
 
 from __future__ import annotations
 
@@ -12,8 +12,7 @@ from repark.spark.dataframe.core import (
     GroupedData,
 )
 
-# Star-import skips leading-underscore names; bind them for pre-split parity
-# (`from repark.spark.dataframe import _reset_…`, udtf helpers, etc.).
+# Star imports omit private names. Bind them for compatibility imports.
 for _name in dir(_core):
     if _name.startswith("__"):
         continue

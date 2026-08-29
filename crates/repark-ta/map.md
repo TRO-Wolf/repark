@@ -3,9 +3,8 @@
 ## Purpose
 
 RePark's own pure-Rust technical-analysis kernels (crate-DAG tier 3, a door-neutral capability
-crate): bit-exact hand-ports of the TA-Lib C 0.4.0
-algorithms (no C compiled/linked/vendored, no third-party TA crate — decision trail in
-task/todo.md T0). This is the kernel layer only — plain `&[f64]` in → `Vec<f64>` out,
+crate): bit-exact hand-ports of the TA-Lib C 0.4.0 algorithms (no C compiled/linked/vendored and
+no third-party TA crate). This is the kernel layer only — plain `&[f64]` in → `Vec<f64>` out,
 dependency-light (runtime dep: `thiserror`; dev-dep: `serde_json` for the goldens
 manifest), independently publishable. **68 public kernel functions** (the frozen 64 plus the TA-4 volume
 four: AD, ADOSC, OBV, MFI). The optional `datafusion` feature adds the
@@ -22,9 +21,9 @@ API — the `repark.ta` Python namespace is built on it). **68/68 functions, 81/
   and the `extension` module), dev-deps `serde_json` + `tokio` + crate-level `criterion` 0.8
   (`async_tokio` + `html_reports`, never `[workspace.dependencies]`) and `[[bench]] ta_kernels`
   (`harness = false`). Workspace lints (`unsafe_code = "forbid"`, clippy pedantic) apply.
-- [benches/](benches/map.md) — **P-1** criterion kernel baseline (`ema`/`sma`/`rsi`/`bbands`
-  + volume `ad`/`adosc`/`obv`/`mfi` at n=1e6; BBANDS cold vs three-sibling vs cache-hit
-  shape). Measure-only; no `src/` instrumentation.
+- [benches/](benches/map.md) — criterion kernel baseline (`ema`/`sma`/`rsi`/`bbands` plus
+  volume representatives at n=1e6; BBANDS one-run, three-run, and one-run-plus-clones shapes).
+  Measure-only; no `src/` instrumentation.
 - `NOTICE` — TA-Lib BSD-3-Clause attribution (algorithms ported by reference; carry this into
   any distribution).
 - [src/](src/map.md) — the kernels, grouped by TA-Lib category. C-mirrored `*_idx` local names
@@ -66,6 +65,11 @@ API — the `repark.ta` Python namespace is built on it). **68/68 functions, 81/
   TA-Lib 0.4.0) + lib unit + numerics-contract tests.
 - **Known limitations:** `linearreg_angle` may differ by a few ulp off glibc-x86-64 (`atan` is not
   required to be correctly rounded); goldens are recorded on glibc x86-64.
+- **2026-08-29:** Multi-output UDF cache keys omit Float64 validity-buffer and nested
+  dictionary-child identity. Distinct inputs sharing values/keys buffers and null count can collide
+  and silently reuse a sibling result in BBANDS, MACD/FIX/EXT, STOCH/F/RSI, AROON, or MAMA. A
+  separate fix must bypass nullable/non-Float64 caching or key complete array identity, with
+  shared-buffer regression pins.
 
 ## Pointers
 
@@ -84,7 +88,7 @@ API — the `repark.ta` Python namespace is built on it). **68/68 functions, 81/
 | ONLY `linearreg_angle` goldens fail, on a new platform | Known libm caveat (`atan` is not required to be correctly rounded — see the crate docs "Known, deliberate divergences"); goldens are recorded/tested on glibc x86-64 |
 | New kernel is "close but not exact" (≤ a few ulp) | Look for `mul_add`, reordered accumulation, or a recomputed-per-window sum that C keeps incremental |
 | Values differ only late in a long series | Accumulator-drift mismatch: C's running totals were replaced by per-window recomputation (or vice versa) |
-| Three BBANDS columns ~3× slower than one | Pre-#8 path: each split UDF re-ran the full kernel. Post-P1c: thread-local multi-output cache should make siblings share one run — see `src/udf.rs` multi-out docs + `tests/p1c_microbench.rs` |
+| Three BBANDS columns ~3× slower than one | Check the thread-local multi-output cache in `src/udf/mod.rs` and the `tests/p1c_microbench.rs` shape |
 | Need a recorded kernel ns/row | P-1 criterion: `cargo bench -p repark-ta --bench ta_kernels -- --quick` — [benches/map.md](benches/map.md); numbers stay planning-side |
 
 First checks: `cargo test -p repark-ta` (lib unit tests + goldens + contract). Escalate to:

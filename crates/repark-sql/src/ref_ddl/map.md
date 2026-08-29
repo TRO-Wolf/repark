@@ -2,7 +2,7 @@
 
 ## Purpose
 
-File-backed tests for `../ref_ddl.rs` — branch / tag DDL.
+File-backed tests for `../ref_ddl.rs` (branch and tag DDL).
 
 Recognizer pins only: which statements this door claims, what it parses them into, and which
 malformed shapes refuse loud instead of falling through to an opaque parse error. The execution

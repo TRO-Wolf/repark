@@ -1,18 +1,7 @@
-//! G15 — loud refusal of collation spellings at the executing parse.
+//! Refuse unsupported collation syntax at the executing parse.
 //!
-//! Collation is unimplemented. Before this valve a collation request was either a raw
-//! DataFusion `Unsupported ast node: Collate` or — on `createDataFrame` with
-//! `StringType("UNICODE_CI")` — silently ignored (binary compare, wrong distinct count).
-//! The valve names what was requested, that repark does not implement collation, and
-//! that the caller should use binary/default ordering.
-//!
-//! Attached at the parse every route agrees on (G3-E8 altitude):
-//! [`crate::spark_ast::execute_passthrough`] (the executing parse) **and** the router's
-//! successful `parse_single_normalized` result (intercepted `CREATE` / `ALTER` never
-//! reach the passthrough). Type-position `CAST(x AS STRING COLLATE name)` is scanned
-//! on the executing-parse text because sqlparser cannot attach it. The binding
-//! (`F.expr`, `DataFrame.filter` SQL-string form) calls [`refuse_collation_in_sql`]
-//! so those fragments see the same message.
+//! The valve covers router parses, passthrough parses, type-position casts, and binding SQL
+//! fragments so unsupported collations never become silent binary comparisons.
 
 use std::ops::ControlFlow;
 

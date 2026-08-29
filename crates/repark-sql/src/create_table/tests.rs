@@ -1,9 +1,4 @@
 //! `CREATE TABLE` clause-refusal unit tests.
-//!
-//! The end-to-end behavior lives in `crate::tests` (native session, Arrow path). What is pinned
-//! here is the set of clauses that must never be SILENTLY DROPPED: each one, if ignored, would
-//! produce a table that exists but does not match what the user asked for — the failure mode
-//! worth the most refusals.
 
 use std::sync::Arc;
 
@@ -55,8 +50,7 @@ fn silently_droppable_clauses_all_refuse() {
     }
 }
 
-/// The bare `LOCATION` refusal points at the property spelling this door DOES accept — a refusal
-/// that only says "no" sends the user hunting.
+/// The bare `LOCATION` refusal points at the property spelling this door accepts.
 #[test]
 fn bare_location_refusal_offers_the_property_spelling() {
     let create = create_of("CREATE TABLE c.s.t (a INT) LOCATION 'file:///w/t'");
@@ -69,8 +63,7 @@ fn bare_location_refusal_offers_the_property_spelling() {
     );
 }
 
-/// A column list together with `AS SELECT`, and a create with neither, both refuse: the table's
-/// schema must have exactly one unambiguous source.
+/// A column list with `AS SELECT`, and a create with neither, both refuse because the schema source is ambiguous.
 #[test]
 fn schema_source_must_be_unambiguous() {
     let both = create_of("CREATE TABLE c.s.t (a INT) AS SELECT 1 AS a");
@@ -89,8 +82,7 @@ fn schema_source_must_be_unambiguous() {
     assert!(err.contains("column list"), "must name the class: {err}");
 }
 
-/// A well-formed create passes the clause gate untouched — the gate is not simply refusing
-/// everything.
+/// A well-formed create passes the clause gate, proving the gate is selective.
 #[test]
 fn well_formed_creates_pass_the_clause_gate() {
     for sql in [
@@ -104,8 +96,7 @@ fn well_formed_creates_pass_the_clause_gate() {
     }
 }
 
-/// Only the `WITH (…)` option syntax is read as properties; Spark's `TBLPROPERTIES` refuses with
-/// a steer rather than being interpreted.
+/// Only `WITH (…)` is read as properties; Spark's `TBLPROPERTIES` refuses with a steer.
 #[test]
 fn only_the_with_option_syntax_is_accepted() {
     let spark = create_of("CREATE TABLE c.s.t (a INT) TBLPROPERTIES ('k' = 'v')");

@@ -1,4 +1,4 @@
-"""re-export binding of :mod:`repark.spark.functions` (Q1 deprecation shim)."""
+"""re-export binding from :mod:`repark.spark.functions`."""
 
 from __future__ import annotations
 

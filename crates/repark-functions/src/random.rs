@@ -1,17 +1,7 @@
-//! Spark-compatible seeded `rand` / `randn` (`XORShiftRandom` + `MurmurHash3` seed hash).
+//! Spark-compatible seeded `rand` / `randn` using XORShiftRandom and MurmurHash3.
 //!
-//! Spark source (v4.1.2):
-//! * `sql/catalyst/.../randomExpressions.scala` — `Rand`/`Randn` with
-//!   `new XORShiftRandom(seed + partitionIndex)` then `nextDouble()` / `nextGaussian()`.
-//! * `core/.../util/random/XORShiftRandom.scala` — Marsaglia xorshift; `hashSeed` via
-//!   double `MurmurHash3.bytesHash` over big-endian 8-byte seed (`arraySeed = 0x3c074a61`).
-//!
-//! Partition index is fixed at **0** (repark single-node v1). Values are generated
-//! sequentially within each `invoke` batch starting from a fresh `XORShift` state for
-//! `(seed + partition_index)`. Same seed + same single-batch partition layout ⇒ same
-//! values (the contract documented for sampleBy / `F.rand`). Multi-batch layouts that
-//! re-enter `invoke` restart the sequence from index 0 of that batch — disclosed
-//! residual vs Spark's per-partition task state.
+//! RePark fixes the single-node partition index at zero and restarts each invoke batch. This is
+//! deterministic for one batch and a documented residual for multi-batch execution.
 
 // Intentional Java/Scala bit-width casts for XORShift + MurmurHash3 bit-exact parity.
 #![allow(
@@ -65,7 +55,7 @@ impl XorShiftRandom {
         (next_seed & mask) as i32
     }
 
-    /// `java.util.Random.nextDouble()` over `XORShift` `next`.
+    /// Generate a `java.util.Random.nextDouble()` value from XORShift output.
     fn next_double(&mut self) -> f64 {
         let high = i64::from(self.next_bits(26));
         let low = i64::from(self.next_bits(27));
@@ -171,25 +161,19 @@ pub fn spark_randn_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkRandn::new()))
 }
 
-/// Spark `randstr(length[, seed])` — a random alphanumeric string (FNP-6b).
+/// Spark `randstr(length[, seed])` — a random alphanumeric string.
 #[must_use]
 pub fn spark_randstr_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkRandstr::new()))
 }
 
-/// Spark `uniform(min, max[, seed])` — i.i.d. values in `[min, max)` (FNP-6b).
+/// Spark `uniform(min, max[, seed])` — i.i.d. values in `[min, max)`.
 #[must_use]
 pub fn spark_uniform_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkUniform::new()))
 }
 
-/// Upper bound on a `randstr` length literal.
-///
-/// Spark's own literal is a two- or four-byte integer, so past `i32::MAX` is already out of
-/// contract. The cap matters because the failure mode WITHOUT it is not an error at all:
-/// `String::with_capacity(length)` per row aborts the process on a large constant — SIGABRT, no
-/// traceback, the whole session lost — while every other refusal in this module is catchable
-/// (F-CFS-1).
+/// Cap `randstr` length to keep per-row allocation failures catchable.
 const MAX_RANDSTR_LENGTH: i64 = 1_000_000;
 
 /// Spark `randstr`'s character pool, in Spark's own order: digits, then lower, then upper.
@@ -203,9 +187,7 @@ const RANDSTR_POOL: &[u8] = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMN
 /// ===========================================================================================
 fn extract_seed(args: &[ColumnarValue]) -> Result<i64> {
     if args.is_empty() {
-        // Unseeded: use a non-stable wall-clock-ish value; callers that need determinism
-        // pass an explicit seed. Match Spark hideSeed path loosely via 0 for plan tests
-        // that call rand() without seed and only check range.
+        // Unseeded calls use deterministic seed zero; explicit seeds select other deterministic streams.
         return Ok(0);
     }
     match &args[0] {
@@ -369,8 +351,6 @@ mod tests {
     #[test]
     fn sample_by_seed_zero_count_in_spark_band() {
         // Apache FunctionsTests.test_sampleby: 100 rows, b=i%3, fractions {0:0.5,1:0.5}, seed=0
-        // → count in [35, 36] on live Spark (partition layout dependent). Single partition
-        // (partitionIndex=0) yields 36 with this XORShift sequence.
         let mut rng = XorShiftRandom::new(0);
         let mut count = 0;
         for a in 0..100 {
@@ -430,10 +410,6 @@ impl ScalarUDFImpl for SparkRandstr {
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
         let length = constant_i64(args.args.first(), "randstr length")?;
-        // Spark's own literal is a two- or four-byte integer, so past i32::MAX is already out
-        // of contract. The cap matters because the failure mode without it is not an error at
-        // all: `String::with_capacity(length)` per row ABORTS the process on a large constant
-        // (SIGABRT, no traceback, whole session lost) rather than raising (F-CFS-1).
         if !(0..=MAX_RANDSTR_LENGTH).contains(&length) {
             return exec_err!(
                 "randstr length must be between 0 and {MAX_RANDSTR_LENGTH}, got {length}"
@@ -442,10 +418,6 @@ impl ScalarUDFImpl for SparkRandstr {
         let length = usize::try_from(length).map_err(|_| {
             DataFusionError::Execution(format!("randstr length must not be negative, got {length}"))
         })?;
-        // The per-row cap is not enough on its own: `StringArray` addresses its values with i32
-        // offsets, so a legal length times a large batch still overflows and panics inside
-        // arrow-rs. Caught at the PyO3 boundary rather than aborting, but a panic is not a
-        // contract — state the limit instead (round 2 F-R3-9).
         if length.saturating_mul(args.number_rows) > i32::MAX as usize {
             return exec_err!(
                 "randstr would build {length} characters x {} rows, past the {} byte limit of a \
@@ -527,9 +499,6 @@ impl ScalarUDFImpl for SparkUniform {
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
         let low = constant_f64(args.args.first(), "uniform min")?;
         let high = constant_f64(args.args.get(1), "uniform max")?;
-        // `partial_cmp` rather than `!(low <= high)`: a NaN bound is INCOMPARABLE, not merely
-        // out of order, and both cases must refuse. Clippy is right that the negated form hides
-        // which of the two is being caught.
         match low.partial_cmp(&high) {
             Some(Ordering::Less | Ordering::Equal) => {}
             Some(Ordering::Greater) => {

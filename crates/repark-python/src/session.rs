@@ -1,20 +1,6 @@
-//! [`PyReparkSession`] — the synchronous Python wrapper over [`repark_core::ReparkSession`].
-//!
-//! [`repark_core::ReparkSession::sql`] and `read_parquet` are `async`; Python is synchronous.
-//! Every `PyReparkSession` routes `block_on` through a **process-wide** multi-thread Tokio
-//! [`Runtime`] (a single `OnceLock` instance — not one runtime per constructor call), held as an
-//! [`EngineRuntime`] (EC-5: the TYPE is engine API in `repark-core`; the INSTANCE is this
-//! crate's, with the same lifetime and behavior as at the port pin). The runtime is shared
-//! (`Arc`) into each [`PyDataFrame`] this session produces, so a [`PyDataFrame`] can drive its
-//! own async `collect`/`count` without re-entering the session.
-//!
-//! **EC-2 — the door is installed here.** Phase 1 inverted v1's two wiring seams, so a bare
-//! [`repark_core::ReparkSession::builder`] yields *stock DataFusion*: no Spark function
-//! registry, no analyzer rules, no Spark statement router. `__new__` therefore installs
-//! [`repark_spark::SparkDialect`] + [`repark_spark::SparkExtension`] explicitly before
-//! `build()`. Dropping either call compiles and runs and silently produces a non-Spark session
-//! — which is why `spark_doored_session_resolves_spark_function_and_routes_spark_statement`
-//! pins both halves (design §5, F3).
+//! Synchronous Python wrapper over [`repark_core::ReparkSession`].
+//! Async engine calls use one process-wide Tokio runtime. Spark sessions install both the
+//! Spark extension and dialect; `native` uses the stock DataFusion door.
 
 use std::collections::HashMap;
 use std::ffi::CStr;
@@ -43,8 +29,7 @@ fn apply_session_knobs(
     config: Option<HashMap<String, String>>,
 ) -> PyResult<ReparkSessionBuilder> {
     let mut builder = ReparkSession::builder();
-    // `None` → engine default 8 GiB pool. `Some(0)` → explicit unbounded opt-out
-    // (`memory_limit_bytes(0)`). `Some(n>0)` → n GiB (C2-Q-002 / C2-L-004).
+    // Zero explicitly opts out of the bounded pool; other values select the requested limit.
     match memory_limit_gb {
         None => {}
         Some(0) => {
@@ -54,8 +39,7 @@ fn apply_session_knobs(
             builder = builder.memory_limit_gb(gb);
         }
     }
-    // Refuse zero explicitly (Critic-octo P3C1-Q-002). Silent filter would drop the
-    // user's request and leave DataFusion defaults — same class as Rust builder Config.
+    // Zero is invalid for batch and partition counts; do not silently apply defaults.
     if let Some(0) = batch_size {
         return Err(to_py_err(repark_core::Error::Config(
             "batch_size must be >= 1 (got 0)".to_string(),
@@ -87,13 +71,7 @@ fn finish_session(py: Python<'_>, builder: ReparkSessionBuilder) -> PyResult<PyR
     Ok(PyReparkSession { session, runtime })
 }
 
-/// Process-wide Tokio runtime shared by every [`PyReparkSession`] (and every [`PyDataFrame`] it
-/// mints). Constructed on first session build; subsequent sessions reuse the same `Arc`.
-///
-/// EC-5: the slot holds the engine's named handle type ([`EngineRuntime`], defined in
-/// `repark-core`), not a bare `Arc<Runtime>` — the INSTANCE stays here (this crate is the
-/// embedding; core never constructs a runtime), while the TYPE is engine API. Same lifetime,
-/// same behavior, same pin test (`sequential_sessions_share_one_tokio_runtime`).
+/// Process-wide Tokio runtime shared by sessions and their DataFrames.
 static SHARED_RUNTIME: OnceLock<EngineRuntime> = OnceLock::new();
 
 /// ===========================================================================================
@@ -112,8 +90,7 @@ fn shared_runtime() -> PyResult<Arc<Runtime>> {
         ))
     })?;
     let arc = Arc::new(runtime);
-    // First successful `set` wins. `OnceLock::set` returns `Err(value)` with the *rejected*
-    // value (ours), not the installed one — so on race we must re-read the lock.
+    // A losing initializer must use the installed runtime, not its rejected value.
     match SHARED_RUNTIME.set(EngineRuntime::new(Arc::clone(&arc))) {
         Ok(()) => Ok(arc),
         Err(_rejected) => SHARED_RUNTIME
@@ -127,14 +104,7 @@ fn shared_runtime() -> PyResult<Arc<Runtime>> {
     }
 }
 
-/// ===========================================================================================
-/// The Python-facing session handle (`repark._native.PyReparkSession`).
-///
-/// Construction mirrors `ReparkSession.builder…getOrCreate()`: the keyword args are the builder
-/// knobs (`memory_limit_gb`, `batch_size`, `target_partitions`), all optional. The engine session
-/// is cheap to clone; the process-shared [`Runtime`] is what makes the async engine callable
-/// synchronously.
-/// ===========================================================================================
+/// The Python-facing session handle and shared runtime.
 #[pyclass(name = "PyReparkSession", module = "repark._native")]
 pub struct PyReparkSession {
     session: ReparkSession,
@@ -145,23 +115,10 @@ pub struct PyReparkSession {
 impl PyReparkSession {
     /// Build a session, applying the builder knobs the facade's `ReparkSession.Builder` collected.
     ///
-    /// All knobs are optional (PySpark `.config(...)` analogues); unset ones use DataFusion
-    /// defaults. Explicit `batch_size=0` / `target_partitions=0` **fail loud** (`Error::Config` →
-    /// `IllegalArgument`), matching the Rust builder (audit SAF-006 / octo P3C1-Q-002). These are
-    /// ENGINE knobs, not Spark keys: `spark.sql.execution.arrow.maxRecordsPerBatch <= 0` is Spark's
-    /// documented "no limit" sentinel and is translated to `None` (plus a disclosure warning) by
-    /// the Python facade before it reaches here, so a legal PySpark program never hits this
-    /// refusal — only a direct `_native.PyReparkSession(batch_size=0)` call does.
-    /// `memory_limit_gb=0` still opts out of the bounded pool; a non-zero `memory_limit_gb` is
-    /// always >= 1 GiB, so this path can never trip the engine's 1 MiB floor (SAF-007).
-    /// `config` is the facade's full
-    /// `.config(...)` map: the engine knobs above are extracted facade-side (kept for backward
-    /// compatibility), and the whole map additionally drives `spark.sql.catalog.<name>.*` catalog
-    /// registration — parsed at build time (a malformed block raises here) and registered on the
-    /// shared runtime before the session is returned.
+    /// Optional builder knobs use engine defaults when omitted. Zero batch or partition counts
+    /// fail. `config` also drives build-time `spark.sql.catalog.<name>.*` registration.
     ///
-    /// Releases the GIL while catalog registration `block_on`s, matching the other async entry
-    /// points.
+    /// Releases the GIL while catalog registration runs.
     ///
     /// # Errors
     /// Returns `RuntimeError` if the DataFusion session or the Tokio runtime fails to build, if a
@@ -178,11 +135,7 @@ impl PyReparkSession {
         fenced_span!("py.session", "PyReparkSession.__new__", {
             let builder =
                 apply_session_knobs(memory_limit_gb, batch_size, target_partitions, config)?;
-            // EC-2 (design §3 / §5 F3): install the Spark DOOR before `build()`. A bare builder
-            // is stock DataFusion — `SparkExtension` supplies the Spark function registry + the
-            // analyzer rules v1 inlined into `build()`, and `SparkDialect` routes `sql()` through
-            // the Spark statement router v1's `sql()` called positionally. Both are
-            // session-scoped (the frozen seam rule), so they are installed per session, here.
+            // Install both Spark components before building the session.
             let builder = builder
                 .with_sql_dialect(Arc::new(repark_spark::SparkDialect))
                 .with_extension(Arc::new(repark_spark::SparkExtension));
@@ -289,13 +242,7 @@ impl PyReparkSession {
         })
     }
 
-    /// Read one Excel sheet (disclosed extension `spark.read.excel` — r25 T5).
-    ///
-    /// **EC-3 refuse-arm.** The pymethod keeps its port-pin name, arity and defaults so the
-    /// facade's `DataFrameReader.excel()` ports byte-identical and the deferral is visible in
-    /// exactly one file; the `repark-excel` reader crate itself is scheduled post-milestone-one.
-    /// A refusal is a behavior, so it is pinned by
-    /// `read_excel_refuses_with_named_unsupported_operation`.
+    /// Read one Excel sheet. This build returns a named unsupported-operation error.
     ///
     /// # Errors
     /// Always `UnsupportedOperationException` — the reader is not in this build.
@@ -315,8 +262,7 @@ impl PyReparkSession {
 
     /// List Excel workbook sheet names in workbook order (`spark.read.sheet_names` helper).
     ///
-    /// **EC-3 refuse-arm** — see [`Self::read_excel`]. Pinned by
-    /// `excel_sheet_names_refuses_with_named_unsupported_operation`.
+    /// This build returns a named unsupported-operation error.
     ///
     /// # Errors
     /// Always `UnsupportedOperationException` — the reader is not in this build.
@@ -332,11 +278,7 @@ impl PyReparkSession {
 
     /// Read PostgreSQL via the own-stack connector (PySpark `spark.read.jdbc` / format postgres).
     ///
-    /// **EC-3 refuse-arm.** Name, arity and every default are the port pin's, so the facade's
-    /// `DataFrameReader.jdbc()` ports byte-identical (its offline argument validation still
-    /// raises `IllegalArgumentException` from the facade, before this arm is reached); the
-    /// `repark-postgres` connector is scheduled post-milestone-one. Pinned by
-    /// `read_postgres_refuses_with_named_unsupported_operation`.
+    /// This build returns a named unsupported-operation error without exposing credentials.
     ///
     /// # Errors
     /// Always `UnsupportedOperationException` — the connector is not in this build.
@@ -369,10 +311,9 @@ impl PyReparkSession {
         num_partitions: Option<usize>,
         predicates: Option<Vec<String>>,
     ) -> PyResult<PyDataFrame> {
-        // Family span only — never log url/properties (may carry passwords / DSNs).
+        // Never log URL or properties because they may contain credentials.
         fenced_span!("py.read", "PyReparkSession.read_postgres", {
-            // Bind and drop every argument WITHOUT formatting it: `url` / `properties` may carry
-            // a password or a DSN, and a refusal must not become the thing that leaks one.
+            // Bind and drop arguments without formatting credential-bearing values.
             let _ = (
                 py,
                 url,
@@ -403,7 +344,7 @@ impl PyReparkSession {
     }
 
     /// Declare the in-memory temp view `name` pre-sorted by `keys` (engine field names) so
-    /// DataFusion elides redundant window `SortExec`s (SE-1). The engine ALWAYS verifies the
+    /// DataFusion elides redundant window `SortExec`s. The engine always verifies the
     /// claim before re-registering — a wrong claim raises `AnalysisException` and the view is
     /// untouched. The facade resolves display→engine names before calling.
     ///
@@ -435,11 +376,7 @@ impl PyReparkSession {
         })
     }
 
-    /// Collect `frame` once and register as an in-memory (`MemTable`) temp view so later scans
-    /// do not re-execute the plan body (R-PERF-VALUES: createDataFrame VALUES materialization).
-    ///
-    /// **CACHE1:** createDataFrame / VALUES only. Cache/persist uses
-    /// [`Self::materialize_as_cache_view`] (caller-level branch; do not change this path).
+    /// Collect `frame` once and register it as an in-memory temp view for reuse.
     ///
     /// # Errors
     /// Returns `RuntimeError` if collect or registration fails.
@@ -459,8 +396,7 @@ impl PyReparkSession {
         })
     }
 
-    // === r23 CACHE1: cache-honesty ===
-    /// Cache-path materialize with optional ``repark.cache.max_bytes`` guard (OTH-014).
+    /// Cache-path materialize with an optional ``repark.cache.max_bytes`` guard.
     ///
     /// # Errors
     /// Returns a PySpark-shaped error if collect/registration fails or ``max_bytes`` is exceeded.
@@ -484,15 +420,12 @@ impl PyReparkSession {
         })
     }
 
-    /// Register an Arrow IPC stream as a `MemTable` temp view (R-PERF-ARROW-CDF ingest).
+    /// Register an Arrow IPC stream as a `MemTable` temp view.
     ///
     /// `ipc_bytes` is a complete Arrow IPC **stream** (not file) payload produced by
     /// `pyarrow.ipc.new_stream`. Empty streams with a schema still register a zero-row view.
     ///
-    /// **createDataFrame transport (P1a):** the facade prefers
-    /// [`Self::register_arrow_stream_as_temp_view`] (C Stream, no encode/`to_vec`) and only
-    /// falls back here when the C-stream symbol is absent (version-skew). mapInArrow uses the
-    /// same preference order.
+    /// The facade prefers C Stream transport and falls back to IPC when the symbol is absent.
     ///
     /// # Errors
     /// Returns `RuntimeError` if the IPC payload cannot be decoded or registration fails.
@@ -539,29 +472,15 @@ impl PyReparkSession {
     }
 
     /// ===========================================================================================
-    /// Register any Arrow **C Stream** exporter as a `MemTable` temp view (I4 / R-STREAM-IPC-INGEST).
+    /// Register any Arrow C Stream exporter as a `MemTable` temp view.
     ///
-    /// `obj` is either an `arrow_array_stream` [`PyCapsule`] or any object implementing the Arrow
-    /// `PyCapsule` protocol (`__arrow_c_stream__` — e.g. `pyarrow.RecordBatchReader`). The stream is
-    /// imported via the same C-stream machinery as the export path / test helpers
-    /// (`dataframe.rs` `import_capsule_stream` ~769; `tests/bindings.rs` `import_stream` ~806):
-    /// `FFI_ArrowArrayStream::from_raw` → [`ArrowArrayStreamReader::try_new`], then drained
-    /// batch-by-batch into the `MemTable` batches vec and registered through the existing
-    /// [`ReparkSession::register_record_batches_as_temp_view`] seam.
-    ///
-    /// **GIL model:** the drain runs **while holding the GIL**. A stream backed by a Python
-    /// iterator (mapInArrow's `RecordBatchReader.from_batches` over the user func) re-enters
-    /// Python on every `get_next`; releasing the GIL around the drain would deadlock. Pure-Rust
-    /// post-drain registration is sync and cheap, so it stays on the same thread (no `py.detach`).
-    /// Peak memory is one resident `RecordBatch` copy in the `MemTable` — no IPC encode/decode
-    /// intermediate buffer (structural win over [`Self::register_ipc_stream_as_temp_view`]).
-    ///
-    /// Zero-row batches are skipped (parity with the IPC path); an empty stream still registers a
-    /// zero-row view from the stream schema.
+    /// Accepts an `arrow_array_stream` capsule or an object with `__arrow_c_stream__`.
+    /// The drain holds the GIL for Python-backed streams and retains all non-empty batches.
+    /// It uses no IPC intermediate buffer. An empty stream still registers its schema.
     ///
     /// # Errors
-    /// Returns a typed engine exception if the capsule is missing/invalid, the stream cannot be
-    /// opened, a batch fails mid-stream, or `MemTable` registration fails.
+    /// Missing exporters and non-capsule exporter results return `TypeError`; exporter errors are
+    /// preserved. Capsule validation, stream, batch, and `MemTable` failures use engine exceptions.
     /// ===========================================================================================
     pub fn register_arrow_stream_as_temp_view(
         &self,
@@ -573,13 +492,7 @@ impl PyReparkSession {
             "py.action",
             "PyReparkSession.register_arrow_stream_as_temp_view",
             {
-                // `_py` keeps the GIL token on the signature (same as sibling register methods) and
-                // documents that the drain intentionally does NOT `detach` (Python-backed streams
-                // re-enter the interpreter per batch — see GIL model above).
-                //
-                // `with_stream_poll_no_detach`: if the C stream re-enters a repark
-                // `__arrow_c_stream__` (nested generator), `StreamingBatchReader::next` must not
-                // attach+detach or the process aborts (octo C1-SAF-001).
+                // Keep the existing GIL during nested Python-backed stream polls.
                 let (schema, batches) = with_stream_poll_no_detach(|| drain_arrow_c_stream(obj))?;
                 self.session
                     .register_record_batches_as_temp_view(name, schema, batches)
@@ -610,7 +523,7 @@ impl PyReparkSession {
         })
     }
 
-    /// This session's temp-view home as `[catalog, schema]` (R7-1) — the prefix the facade puts
+    /// This session's temp-view home as `[catalog, schema]` — the prefix the facade puts
     /// on the internal scratch views it mints, so the read that follows the mint cannot be
     /// re-resolved against the live `datafusion.catalog.default_catalog`.
     ///
@@ -624,7 +537,7 @@ impl PyReparkSession {
     }
 
     /// The home-qualified `[catalog, schema, table]` segments a one-part temp-view `name`
-    /// resolves to, or `None` when no such view lives in this session's temp-view home (R7-1).
+    /// resolves to, or `None` when no such view lives in this session's temp-view home.
     ///
     /// The facade's name resolver calls this instead of `table_exists` + "keep the bare name":
     /// the bare spelling is re-resolved against the LIVE
@@ -669,16 +582,15 @@ impl PyReparkSession {
         })
     }
 
-    /// Mark a local destination as trusted for the SEC-02 gate (typed `DataFrameWriter` only).
+    /// Mark a local destination as trusted for typed-writer generated SQL.
     ///
-    /// Not a public PySpark surface — the facade's writer calls this with the path the caller
-    /// passed to `df.write.<fmt>(path)` before running its generated `COPY … TO`. Free SQL to
-    /// any other local path still refuses.
+    /// Register a trusted root for typed-writer generated SQL. This low-level method does not
+    /// authenticate its caller; free SQL to another local path still refuses.
     pub fn note_local_write_root(&self, path: &str) {
         self.session.note_local_write_root(path);
     }
 
-    /// Read an Iceberg catalog table with optional time-travel pins (I1 / R-TIME-TRAVEL).
+    /// Read an Iceberg catalog table with optional time-travel pins.
     ///
     /// At most one of `snapshot_id`, `as_of_timestamp_ms`, `branch`, `tag` may be set; mutual
     /// exclusion fails loud. With none set, reads the current snapshot.
@@ -717,8 +629,6 @@ impl PyReparkSession {
             Ok(PyDataFrame::new(df, Arc::clone(&self.runtime)))
         })
     }
-
-    // === r21 T6: catalog-staleness ============================================================
 
     /// Live Iceberg table names in `namespace` (list-on-access; no DF provider snapshot).
     ///
@@ -899,13 +809,13 @@ impl PyReparkSession {
 
     /// Create a namespace in a registered catalog, optionally with a `location` property.
     ///
-    /// SQL `CREATE NAMESPACE … LOCATION` / `WITH DBPROPERTIES` can also set properties (WG-5);
+    /// SQL `CREATE NAMESPACE … LOCATION` / `WITH DBPROPERTIES` can also set properties;
     /// either way, a namespace destined for a Glue / S3 Tables
-    /// (`RequireExplicitLocation`) catalog must be created here with `location` — otherwise a later
+    /// (`RequireExplicitLocation`) catalog must be created here with `location`; otherwise a later
     /// CTAS into it fails loud (it has no warehouse path to write to). `location` is threaded into
     /// the namespace's `location` property, and the session seam mirrors it onto `location_uri`
-    /// (the key the fork's Glue catalog maps to the Glue database `locationUri` — audit BUG-001 /
-    /// U2), so the canonical Glue field is set too; `None` creates a property-less namespace (the
+    /// (the key the fork's Glue catalog maps to the Glue database `locationUri`), so the canonical
+    /// Glue field is set too; `None` creates a property-less namespace (the
     /// memory / temp-fallback catalog is fine without one).
     ///
     /// # Errors
@@ -921,9 +831,7 @@ impl PyReparkSession {
         fenced_span!("py.catalog", "PyReparkSession.create_namespace", {
             let mut properties = HashMap::new();
             if let Some(location) = location {
-                // The namespace warehouse-path property (read by the CTAS create arm's
-                // `resolve_ctas_table_location`, `location_uri` fallback included; the session's
-                // `create_namespace` mirrors this key onto `location_uri` — U2 dual-write).
+                // Mirror the warehouse path onto the catalog's `location_uri` key.
                 properties.insert("location".to_string(), location.to_string());
             }
             py.detach(|| {
@@ -936,13 +844,7 @@ impl PyReparkSession {
         })
     }
 
-    /// Test-only deterministic panic injection through a REAL fenced pymethod (SAF-007 / WG-3).
-    ///
-    /// Compiled ONLY under `cfg(test)` — the shipped wheel never carries it — so a unit test can
-    /// drive a genuine panic through the pyclass dispatch boundary and observe that the shared
-    /// [`fenced!`] fence catches it (→ `PySparkException`, not `PanicException`/abort). Removing the
-    /// `fenced!` wrapper here is the PL-2 mutation: the panic then escapes to PyO3's trampoline and
-    /// the probe raises `PanicException` (a `BaseException`) instead.
+    /// Test-only panic injection through a fenced Python method.
     #[cfg(test)]
     #[allow(clippy::unused_self)] // an instance method by design — it drives the pyclass boundary
     fn panic_probe(&self) -> PyResult<()> {
@@ -963,19 +865,7 @@ impl PyReparkSession {
 }
 
 /// ===========================================================================================
-/// The ONE EC-3 refusal (design §3): a deferred engine reader, named, with its schedule and its
-/// tracking row.
-///
-/// The deferral boundary is drawn HERE, at the Rust binding, and never in the Python facade —
-/// which is what lets `python/repark/src/**` port byte-identical. The message names the user
-/// surface it refuses, says the reason ("scheduled post-milestone-one"), and points at the
-/// tracking row (`task/todo.md`, "Post-milestone-one (BACKLOG)": `repark-postgres` +
-/// `repark-excel`), so a user who hits it learns what is missing and when it lands rather than
-/// meeting an `AttributeError`.
-///
-/// `UnsupportedOperationException` is the correct class by the taxonomy's own rule: this is an
-/// operation the engine deterministically does not support in this build, exactly like the
-/// documented scope gates.
+/// Build the named unsupported-operation error for deferred readers.
 /// ===========================================================================================
 fn deferred_reader_error(surface: &str) -> PyErr {
     UnsupportedOperationException::new_err(format!(
@@ -986,15 +876,11 @@ fn deferred_reader_error(surface: &str) -> PyErr {
 }
 
 /// ===========================================================================================
-/// Resolve `obj` to an Arrow C Stream capsule, import it, and drain all non-empty batches.
-///
-/// Accepts a bare `arrow_array_stream` capsule **or** any `__arrow_c_stream__` exporter. Import
-/// pattern matches production-safe error paths of the test helpers at
-/// `dataframe.rs::import_capsule_stream` (~769) and `tests/bindings.rs::import_stream` (~806) —
-/// no `expect`/`unwrap` in this production path.
+/// Resolve an Arrow C Stream capsule or exporter and drain non-empty batches.
 ///
 /// # Errors
-/// Capsule missing/wrong name, stream open failure, or a mid-stream batch error.
+/// Returns `TypeError` for a missing exporter or non-capsule exporter result. Other failures use
+/// the engine exception taxonomy.
 /// ===========================================================================================
 fn drain_arrow_c_stream(
     obj: &Bound<'_, PyAny>,
@@ -1010,10 +896,7 @@ fn drain_arrow_c_stream(
                  (missing __arrow_c_stream__) and is not an arrow_array_stream PyCapsule",
             )
         })?;
-        // Protocol: `__arrow_c_stream__(requested_schema=None)` — call with no args (pyarrow
-        // accepts that; requested_schema is optional negotiation we ignore on import too).
-        // Propagate the original `PyErr` (type + cause chain) — do not remap to TypeError
-        // (octo C1-Q-001): a raising exporter is not a "wrong type", it is a failed export.
+        // Call the optional-schema protocol without negotiation and preserve exporter errors.
         exporter.call0()?
     };
     let capsule = capsule_obj.cast::<PyCapsule>().map_err(|error| {
@@ -1033,12 +916,9 @@ fn drain_arrow_c_stream(
         .as_ptr()
         .cast::<FFI_ArrowArrayStream>();
 
-    // SAFETY: `pointer_checked` verified the capsule name is `arrow_array_stream` and the
-    // pointer is non-null. The Arrow C Stream protocol guarantees an initialized
-    // `FFI_ArrowArrayStream` at that address. `from_raw` moves ownership out of the capsule
-    // (nulling the producer's release callback so the capsule destructor is a no-op); we own
-    // the moved value for the reader's lifetime. Same contract as
-    // `dataframe.rs::import_capsule_stream` (tests, ~769) and `bindings.rs::import_stream` (~806).
+    // SAFETY: `pointer_checked` verifies the capsule name and non-null pointer. The Arrow C Stream
+    // producer protocol guarantees an initialized, layout-valid `FFI_ArrowArrayStream` here.
+    // `from_raw` transfers ownership and disables the capsule release callback.
     let ffi_stream = unsafe { FFI_ArrowArrayStream::from_raw(pointer) };
     let mut reader = ArrowArrayStreamReader::try_new(ffi_stream)
         .map_err(|error| {
@@ -1050,8 +930,7 @@ fn drain_arrow_c_stream(
 
     let schema = reader.schema();
     let mut batches = Vec::new();
-    // Hold GIL for the whole drain (caller already holds it). A Python-backed stream re-enters
-    // the interpreter on each `get_next` — releasing the GIL here would deadlock.
+    // Python-backed streams re-enter the interpreter on every `get_next`.
     for batch_result in &mut reader {
         let batch = batch_result
             .map_err(|error| {
@@ -1073,25 +952,10 @@ mod tests {
     use std::sync::Arc;
 
     /// ===========================================================================================
-    /// **EC-2 / design §5 F3 — the door-wiring pin. Written before anything else in this crate.**
+    /// The Spark session must install both the Spark extension and dialect.
     ///
-    /// A session built by `PyReparkSession::__new__` must have the SPARK door installed, both
-    /// halves:
-    ///
-    /// 1. **`SparkExtension`** — the function registry + analyzer rules v1's session crate
-    ///    inlined into `build()`. `weekofyear` is a Spark-only name: DataFusion has no such
-    ///    function (it spells the concept `date_part('week', …)`), so it resolves ONLY if the
-    ///    extension ran at build time.
-    /// 2. **`SparkDialect`** — the statement router v1's `sql()` called positionally.
-    ///    `TRUNCATE TABLE` carries a router-owned refusal message (C4-L-001) that stock
-    ///    DataFusion cannot produce, so the message *is* the routing evidence.
-    ///
-    /// Mutation observables (both directions, and both are silent-wrong without this test):
-    /// delete `.with_extension(...)` and part 1 fails with "Invalid function 'weekofyear'";
-    /// delete `.with_sql_dialect(...)` and part 2 stops naming INSERT OVERWRITE / DELETE FROM
-    /// because DataFusion's own unsupported-statement error answers instead. A verbatim port of
-    /// `__new__` compiles and runs and produces a non-Spark session — that failure mode is the
-    /// reason this test exists.
+    /// `weekofyear` resolves only with the extension. Spark-only statements route only with the
+    /// dialect. The test checks both failure signatures.
     /// ===========================================================================================
     #[test]
     fn spark_doored_session_resolves_spark_function_and_routes_spark_statement() {
@@ -1180,16 +1044,13 @@ mod tests {
         });
     }
 
-    /// EC-3 (design §3): `read_excel` keeps its port-pin name/arity/defaults and refuses loudly.
-    /// A refusal is a behavior — the exception TYPE and the three things the message must say
-    /// (the surface, the schedule, the tracking row) are all pinned, because a refusal whose
-    /// message goes vague is how a deferral turns into a mystery.
+    /// `read_excel` keeps its port-pin name, arity, and defaults and refuses loudly.
+    /// The test pins its exception type, surface, reason, and tracking row.
     #[test]
     fn read_excel_refuses_with_named_unsupported_operation() {
         Python::attach(|py| {
             let session = PyReparkSession::new(py, None, None, None, None).expect("session builds");
-            // `PyDataFrame` is not `Debug` (verbatim from the pin), so unwrap the error arm by
-            // pattern rather than `expect_err` — the deferral, not the frame, is the subject.
+            // `PyDataFrame` is not `Debug`; pattern-match the error arm instead of `expect_err`.
             let Err(error) = session.read_excel(py, "/tmp/never-opened.xlsx", None) else {
                 panic!(
                     "the excel reader is deferred post-milestone-one — it must not return a frame"
@@ -1219,7 +1080,7 @@ mod tests {
         });
     }
 
-    /// EC-3: `excel_sheet_names` — same arm, its own named surface (see the sibling test).
+    /// `excel_sheet_names` refuses with its own named surface.
     #[test]
     fn excel_sheet_names_refuses_with_named_unsupported_operation() {
         Python::attach(|py| {
@@ -1240,7 +1101,7 @@ mod tests {
         });
     }
 
-    /// EC-3: `read_postgres` — the nine-argument jdbc surface refuses with its own name, and the
+    /// The nine-argument JDBC surface refuses with its own name, and the
     /// refusal must NOT echo **either** credential-bearing argument the claim names: the
     /// connection `url` OR the `properties` map (both can carry a password / DSN). Each vector
     /// carries its own sentinel so a leak of either one is pinned independently — passing
@@ -1292,12 +1153,12 @@ mod tests {
         });
     }
 
-    /// PL-2 (SAF-007 / WG-3): a Rust panic driven THROUGH a real fenced pymethod surfaces as the
-    /// base `PySparkException` (a `RuntimeError` — near-drop-in, catchable by `except RuntimeError`),
+    /// A Rust panic through a fenced Python method surfaces as the
+    /// base `PySparkException` (a `RuntimeError`, catchable by `except RuntimeError`),
     /// NOT PyO3's `PanicException` (a `BaseException` that tears down the interpreter); the panic
     /// text is preserved under the internal-error framing; and the SAME session is still usable
-    /// afterward (a real query runs and returns the right count) — proving the interpreter survived
-    /// and nothing was poisoned (design D-WG3-4 / O-3).
+    /// afterward (a real query runs and returns the right count), proving the interpreter survived
+    /// and nothing was poisoned.
     #[test]
     fn fenced_panic_surfaces_as_pyspark_exception_and_leaves_session_usable() {
         Python::attach(|py| {
@@ -1310,7 +1171,7 @@ mod tests {
             // Drive the panic through the REAL Python dispatch (`call_method0`), so PyO3's
             // trampoline is in the loop: with the fence the method returns `Err(PySparkException)`;
             // remove the `fenced!` wrapper and the same call raises PyO3's `PanicException` (a
-            // `BaseException`) instead — the PL-5 mutation observable.
+            // `BaseException`) instead.
             let error = session
                 .call_method0(py, "panic_probe")
                 .expect_err("the probe deterministically panics through the fence");
@@ -1347,7 +1208,7 @@ mod tests {
 
     #[test]
     fn sequential_sessions_share_one_tokio_runtime() {
-        // WU-4: one process-wide Tokio runtime — two sequential constructors must Arc-share it.
+        // Two sequential constructors must share one process-wide Tokio runtime.
         Python::attach(|py| {
             let first = PyReparkSession::new(py, None, None, None, None).expect("first session");
             let second = PyReparkSession::new(py, None, None, None, None).expect("second session");
@@ -1417,9 +1278,7 @@ mod tests {
         }
     }
 
-    /// QUAL-05 / OBS1: all five hang families emit `py.entry` spans so a hang can be localized
-    /// without a debugger. Mutation-proof for `py.read` / `py.catalog` (not only session/sql/action).
-    /// Span creation is on the calling thread (`fence_with_span` before `block_on`).
+    /// Entry-point families emit `py.entry` spans with the family and operation fields.
     #[test]
     fn entry_point_families_emit_py_entry_spans() {
         use std::fs;

@@ -27,8 +27,10 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   session-local home at all, and the whole family refuses loud rather than write that catalog
   (round-6 critic S1, MEASURED).
 - `df_guards.rs` — the DataFusion **54.1 regression guards**, CORE (never door-extension —
-  design G8), split out of `session.rs` when DEFECT-2 added the second one and `build()` crossed
-  the `too_many_lines` / file-size ceilings. The two guards sit at **different altitudes**,
+  design G8). Guard 1 is a configurable scalar-subquery default; guard 2 wraps
+  `push_down_leaf_projections`, declining failed rewrites only on an `Unnest` path while keeping
+  unrelated siblings loud. The wrapper preserves DataFusion's rule name and order.
+  The two guards sit at **different altitudes**,
   because the two bugs are:
   * **Guard 1, a config default:** `optimizer.enable_physical_uncorrelated_scalar_subquery =
     false` — the 54.1 physical scalar-subquery path drops a top-level Sort (fuzz-42-1/2). The

@@ -1,13 +1,10 @@
-"""XGBoost delegated estimators — ``pyspark.ml``-shaped Params/fit/transform (M4/M5/M8).
+"""Delegated XGBoost estimators with Spark-shaped parameters.
 
-Fit pulls training via ``to_arrow()``; the model holds the external booster + params
-only (**no training-row re-hold** after fit). Transform: batch predict → Arrow →
-``createDataFrame`` re-entry.
+Fit reads an Arrow batch. The fitted model retains the external booster and
+parameters, not training rows. Transform predicts in batches and re-enters Arrow.
 
-**M8 persistence:** ``XGBoostRegressorModel`` and ``XGBoostClassifierModel`` save/load
-via the repark-ml v1 envelope (``metadata.json`` + fitted params parquet +
-``booster.raw`` from ``save_raw()``), atomic write (M7 staging), and library-major
-version guard on load. Never pickle.
+Fitted models use the repark-ml envelope and XGBoost's native ``save_raw`` format.
+Writes are atomic, loads check the library major version, and pickle is forbidden.
 """
 
 from __future__ import annotations
@@ -41,14 +38,13 @@ from repark.spark.ml.param import (
 )
 from repark.spark.ml.util import MLReadable, MLReader, MLWritable, MLWriter
 
-# Booster-bytes layout (M1 envelope + blob).
 _XGB_BOOSTER_BLOB_NAME = "booster.raw"
 _XGB_BOOSTER_FORMAT = "ubj"
 _XGB_LIBRARY_NAME = "xgboost"
 
 
 def _ensure_xgboost_loaded() -> Any:
-    """Force xgboost import at class-touch time (ImportError names the extra)."""
+    """Force xgboost import when a backend class is touched."""
     return require_xgboost()
 
 
@@ -259,7 +255,6 @@ class XGBoostRegressor(
         kwargs = self._booster_kwargs()
         booster = xgb.XGBRegressor(**kwargs)
         booster.fit(feature_matrix, labels)
-        # Deliberately drop feature_matrix / labels / table references after fit.
         del feature_matrix, labels, table
         model = XGBoostRegressorModel(
             booster=booster,
@@ -274,12 +269,7 @@ class XGBoostRegressor(
 
 
 class XGBoostRegressorModel(HasFeaturesCol, HasPredictionCol, Model, MLWritable, MLReadable):
-    """Fitted XGBoost regressor — holds external booster + params only.
-
-    **M8:** :meth:`save` / :meth:`load` use the repark-ml v1 envelope plus a
-    ``booster.raw`` blob from ``get_booster().save_raw()``, atomic M7 publish, and
-    library-major version guard. Load restores predict-parity with the pre-save model.
-    """
+    """Fitted XGBoost regressor with native booster-byte persistence."""
 
     def __init__(
         self,
@@ -327,11 +317,11 @@ class XGBoostRegressorModel(HasFeaturesCol, HasPredictionCol, Model, MLWritable,
         return reenter_with_prediction(frame, table, predictions, self.getPredictionCol())
 
     def write(self) -> MLWriter:
-        """Return a booster-bytes writer (M8 / repark-ml v1 envelope + atomic)."""
+        """Return an atomic native-booster writer."""
         return _XGBoostModelWriter(self, kind="XGBoostRegressorModel", classifier=False)
 
     def save(self, path: str) -> None:
-        """Save via :meth:`write` (booster-bytes + M1 envelope)."""
+        """Save via :meth:`write`."""
         self.write().save(path)
 
     @classmethod
@@ -345,7 +335,7 @@ class XGBoostRegressorModel(HasFeaturesCol, HasPredictionCol, Model, MLWritable,
         return cls.read().load(path)
 
     def copy(self, extra: dict[Any, Any] | None = None) -> XGBoostRegressorModel:
-        """Shallow copy of model shell; apply ``extra`` for ``transform(df, params)`` (C4-L-002)."""
+        """Copy the model shell and apply optional parameter overrides."""
         that = XGBoostRegressorModel(
             booster=self._booster,
             featuresCol=self.getFeaturesCol(),
@@ -458,7 +448,7 @@ class XGBoostClassifier(
 
 
 class XGBoostClassifierModel(HasFeaturesCol, HasPredictionCol, Model, MLWritable, MLReadable):
-    """Fitted XGBoost classifier — booster + params only (M8 booster-bytes save/load)."""
+    """Fitted XGBoost classifier with native booster-byte persistence."""
 
     def __init__(
         self,
@@ -508,7 +498,7 @@ class XGBoostClassifierModel(HasFeaturesCol, HasPredictionCol, Model, MLWritable
         return reenter_with_prediction(frame, table, predictions, self.getPredictionCol())
 
     def write(self) -> MLWriter:
-        """Return a booster-bytes writer (M8)."""
+        """Return a native-booster writer."""
         return _XGBoostModelWriter(self, kind="XGBoostClassifierModel", classifier=True)
 
     def save(self, path: str) -> None:
@@ -559,7 +549,7 @@ class _XGBoostModelWriter(MLWriter):
         self._classifier = classifier
 
     def saveImpl(self, path: str) -> None:
-        """M1 envelope + booster-bytes blob via atomic M7 publish (never training rows)."""
+        """Write the envelope and native booster bytes atomically."""
         model = self.instance
         if model._booster is None:
             raise IllegalArgumentException(f"{self._kind}.save: no fitted booster")

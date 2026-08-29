@@ -2,9 +2,8 @@
 
 ## Purpose
 
-File-backed tests for `TaExtension` (`../extension.rs`): the `register` hook's window-UDF
-installation (bit-exact SQL-vs-kernel on a bare `SessionContext`, plus a whole-registry name-set
-assertion) and the trait-wrapping **both-sides** audit of the *defaulted* `configure` hook.
+DataFusion-only tests for `TaExtension` (`../extension.rs`). Registration must expose the complete
+UDF set and match kernel bits. The default `configure` hook must pass configuration through.
 
 Both live behind the `datafusion` feature — the module does not exist without it.
 
@@ -22,10 +21,10 @@ Both live behind the `datafusion` feature — the module does not exist without 
 
 | Symptom | First check |
 |---|---|
-| `ta_ema` unknown after `register` | The kernel spec table in `../udf.rs` (`SPECS`) — `register_all` iterates `window_udfs()`, so a missing name is a missing spec row, not an extension bug |
+| `ta_ema` unknown after `register` | The kernel spec table in `../udf/mod.rs` (`SPECS`) — `register_all` iterates `window_udfs()`, so a missing name is a missing spec row, not an extension bug |
 | Bit mismatch vs the kernel | An engine/UDF regression — never edit the assertion. Reproduce with the goldens battery: `cargo test -p repark-ta --features datafusion` |
 | `configure` test fails | Someone gave `TaExtension` a `configure` override; TA installs no `ConfigExtension` by design (design Q11 "register-only") |
-| `configure` test stops COMPILING | The `SessionExtension::configure` signature moved. It now takes a `repark_core::SessionBuildConf` (H-1a split B added the resolved session timezone beside the conf map); the pass-through assertion is unchanged in meaning |
+| `configure` test stops compiling | Check the current `SessionExtension::configure` signature; the pass-through assertion must remain unchanged in meaning |
 
 First checks: `cargo test -p repark-ta --features datafusion extension::`. Escalate to:
 [../map.md#debug](../map.md).

@@ -1,17 +1,7 @@
-//! Product snapshot-ref helpers over fork `ManageSnapshots` (R97/R98 + r25 T2).
+//! Snapshot-ref helpers over the fork's `ManageSnapshots` transaction API.
 //!
-//! Used by public SQL `ALTER TABLE … CREATE|DROP|REPLACE BRANCH|TAG` (I5 / R-ICEBERG-HYGIENE +
-//! r25 ICE-REF) and by the test-support seam [`crate::write::testing_create_ref`].
-//!
-//! Write-to-branch (`INSERT INTO t.branch_name`) remains a **STOP** — fork `FastAppendAction` /
-//! snapshot produce always `SetSnapshotRef` on `MAIN_BRANCH` only (pin
-//! `b009ac158f7584a956fa9292c0e9675a411ecf0d` `transaction/append.rs` + `snapshot.rs`); no
-//! `to_branch` / `with_branch` commit target API. Fork-workstream seed, not a RePark hack.
-//!
-//! Fork cite (pin `b009ac158f7584a956fa9292c0e9675a411ecf0d` / R97–R98):
-//! `crates/iceberg/src/transaction/manage_snapshots.rs:90-208`
-//! (`create_*` / `replace_*` / `remove_*` / `set_min_snapshots_to_keep` /
-//! `set_max_snapshot_age_ms` / `set_max_ref_age_ms`).
+//! Public SQL supports create, replace, and drop for branches and tags. Writes to a branch remain
+//! refused because the fork's append action targets `MAIN_BRANCH` only.
 
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
 use iceberg::{Catalog, Result, TableIdent};

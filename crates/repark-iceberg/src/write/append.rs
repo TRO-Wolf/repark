@@ -1,40 +1,10 @@
-//! Public append — the downstream consumer's first-write entry point (downstream ask A1).
+//! Public bulk append through the fork's `fast_append` transaction path.
 //!
-//! A plain bulk append into an Iceberg table through the sanctioned commit path — **no MERGE
-//! machinery** (no scratch tables, no generated SQL, no `OverwriteFiles`): the fork
-//! `ENGINE_CONTRACT` §4 maps INSERT/append onto `Transaction::fast_append`, and Java
-//! `AppendFiles` (the commit-semantics arbiter, apache-iceberg-1.10.0) carries **no conflict
-//! validation** — "commit conflicts will be resolved by applying the changes to the new latest
-//! snapshot and reattempting the commit" (`AppendFiles.java` L26-28), which the fork implements
-//! as `Transaction::commit`'s refresh-and-re-apply retry loop (fork `transaction/mod.rs`,
-//! `ENGINE_CONTRACT` §8). The §5 validation base binds row-level ops (DELETE/UPDATE/MERGE) whose
-//! output depended on a read of the table; a blind append has no read dependency, so appends
-//! commute with appends. Every commit is stamped with the same
-//! [`crate::write::merge::OPERATION_ID_PROP`] snapshot-summary property class the MERGE executor stamps
-//! (§8 ambiguous-commit mitigation).
-//!
-//! **Partition fanout.** A partitioned table routes rows through the fork's public partitioning
-//! machinery: `RecordBatchPartitionSplitter` in computed mode groups each conformed batch by its
-//! computed partition values, and a `FanoutWriter` keeps one `DataFileWriter` per distinct
-//! partition key (consumers send arbitrary unsorted batches — the fork's `ClusteredWriter`
-//! hard-errors on unsorted input), so every produced [`DataFile`] carries its partition value
-//! into the manifest and partition pruning works at plan level. Computed mode means the fork's
-//! `PartitionValueCalculator` derives each value from the RAW source columns, so identity AND
-//! non-identity transforms (bucket/truncate/temporal) all route correctly (Group P). A
-//! non-Parquet `write.format.default` remains a deterministic `NotImplemented` scope gate
-//! (tracked in `task/todo.md`), never a wrong answer. Partition-path RENDERING is Java parity for the null
-//! slot and URL-safe human strings only: Java URL-encodes every path segment
-//! (`PartitionSpec.escape` = `URLEncoder.encode`, apache-iceberg-1.10.0 `PartitionSpec.java`
-//! L205-228) while the fork emits the raw human string, so a string identity key needing
-//! escaping (`/`, space, `..`) gets a divergent physical layout — manifest partition values,
-//! plan-level pruning, and read-back stay correct; the escape is a filed fork parity-queue
-//! follow-up (`task/todo.md`).
-//!
-//! **Empty input is Java parity**: `SparkWrite.BatchAppend.commit` (1.10.0, L292-305) commits
-//! unconditionally, producing an empty `append` snapshot for an empty write. The fork rejects a
-//! *truly*-empty commit but counts snapshot properties as content (its `snapshot.rs`
-//! empty-commit precondition, the apache/iceberg-rust#1548 workaround) — the always-on
-//! operation-id stamp makes the empty append commit exactly as Java does.
+//! Appends are blind writes, so the fork's refresh-and-retry commit semantics apply without row
+//! validation. Each commit receives the MERGE operation-id snapshot property. Partitioned writes
+//! use the fork's computed partition fanout for identity and transformed fields; non-Parquet
+//! formats remain a loud `NotImplemented` scope gate. Empty appends commit with the operation-id
+//! stamp, matching Java's empty-snapshot behavior.
 
 use std::collections::HashMap;
 use std::str::FromStr;

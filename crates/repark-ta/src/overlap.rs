@@ -1,5 +1,4 @@
-//! Overlap Studies — `SMA`, `EMA`, `WMA`, `DEMA`, `TEMA`, `TRIMA`, `KAMA`, `T3`, `MIDPOINT`,
-//! `MIDPRICE`, `BBANDS` (TA-Lib C 0.4.0 ports; see the crate docs for the numerics contract).
+//! TA-Lib C 0.4.0 ports for overlap studies.
 
 use crate::{
     Result, TaError, as_f64, check_lengths, check_period, check_real_param, is_zero,
@@ -9,9 +8,7 @@ use crate::{
 /// ===========================================================================================
 /// `SMA` — simple moving average (`ta_SMA.c`, `TA_INT_SMA`).
 ///
-/// Incremental running total: add the incoming value, snapshot the total, subtract the
-/// trailing value, divide the snapshot. The subtract-BEFORE-divide snapshot order is C's and
-/// is load-bearing for bit-exactness.
+/// Compute an incremental moving average in C's add, snapshot, subtract, divide order.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -46,9 +43,7 @@ pub fn sma(input: &[f64], period: usize) -> Result<Vec<f64>> {
 /// ===========================================================================================
 /// `EMA` — exponential moving average (`ta_EMA.c`, `TA_INT_EMA`, Classic compatibility).
 ///
-/// Seed = SMA over the first `period` values; recursion `prev = (x − prev) * k + prev` with
-/// `k = 2 / (period + 1)`. Two separate roundings per step — never `mul_add` (the fused form
-/// is exactly how the rejected `talib-rs` port drifted).
+/// Seed with an SMA, then apply `prev = (x − prev) * k + prev` without fused multiply-add.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -56,9 +51,6 @@ pub fn sma(input: &[f64], period: usize) -> Result<Vec<f64>> {
 pub fn ema(input: &[f64], period: usize) -> Result<Vec<f64>> {
     check_period("optInTimePeriod", period, 2)?;
     let len = input.len();
-    // Single-write construction (measured −11% vs nan_vec at n=1e6): NaN lookback prefix via
-    // resize, then the recursion streamed through a TrustedLen extend — one write per slot.
-    // The push-per-element form measured +61% SLOWER; do not "simplify" to it.
     let mut out = Vec::with_capacity(len);
     if len < period {
         out.resize(len, f64::NAN);
@@ -83,11 +75,7 @@ pub fn ema(input: &[f64], period: usize) -> Result<Vec<f64>> {
 /// ===========================================================================================
 /// `BBANDS` — Bollinger Bands, SMA flavor (`ta_BBANDS.c` + `TA_INT_stddev_using_precalc_ma`).
 ///
-/// Middle = SMA; deviation = the MA-centered stddev variant (running sum of squares, mean of
-/// squares minus the PRECALCULATED MA squared) — subtly different accumulation from calling
-/// [`crate::stddev`] and required for bit parity. Bands apply `nbdev_up`/`nbdev_dn` through the
-/// same branch structure C uses (the `nbdev == 1.0` fast paths change rounding). Returns
-/// `(upper, middle, lower)`.
+/// Return SMA-centered Bollinger bands with C's running square sums and branch order.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -110,7 +98,6 @@ pub fn bbands(
     let lookback = period - 1;
     let deviation = stddev_using_precalc_ma(input, &middle, period);
 
-    // The four rounding-distinct band branches from ta_BBANDS.c, in C's order.
     if nbdev_up == nbdev_dn {
         if nbdev_up == 1.0 {
             for i in lookback..len {
@@ -147,9 +134,7 @@ pub fn bbands(
     Ok((upper, middle, lower))
 }
 
-/// C's `TA_INT_stddev_using_precalc_ma`: stddev centered on an already-computed MA, one dense
-/// value per MA output (index 0 ↔ input index `period − 1`). `ma` is the full-length
-/// NaN-prefixed SMA from [`sma`].
+/// Compute C's standard deviation over a precomputed SMA.
 fn stddev_using_precalc_ma(input: &[f64], ma: &[f64], period: usize) -> Vec<f64> {
     let len = input.len();
     let lookback = period - 1;
@@ -188,15 +173,11 @@ fn stddev_using_precalc_ma(input: &[f64], ma: &[f64], period: usize) -> Vec<f64>
 /// ===========================================================================================
 /// `WMA` — weighted moving average (`ta_WMA.c`).
 ///
-/// Weights `1..period` on the trailing window, divided by `period*(period+1)/2`. C's incremental
-/// `periodSum`/`periodSub` accumulator (add `x*period` to the sum, carry a running `periodSub`
-/// that the next iteration subtracts off) is replicated statement-for-statement — the running
-/// drift is part of the golden.
+/// Compute C's weighted moving average with its incremental `periodSum`/`periodSub` state.
 /// ===========================================================================================
 ///
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if `period < 2`.
-// `period_sum`/`period_sub` are C's `periodSum`/`periodSub` — kept verbatim for the port.
 #[allow(clippy::similar_names)]
 pub fn wma(input: &[f64], period: usize) -> Result<Vec<f64>> {
     check_period("optInTimePeriod", period, 2)?;
@@ -207,7 +188,6 @@ pub fn wma(input: &[f64], period: usize) -> Result<Vec<f64>> {
         return Ok(out);
     }
     let divider = (period * (period + 1)) / 2;
-    // trailingIdx = startIdx - lookbackTotal = 0 for the full array.
     let mut trailing_idx = 0_usize;
     let mut period_sum = 0.0_f64;
     let mut period_sub = 0.0_f64;
@@ -240,11 +220,8 @@ pub fn wma(input: &[f64], period: usize) -> Result<Vec<f64>> {
 /// ===========================================================================================
 /// `DEMA` — double exponential moving average (`ta_DEMA.c`).
 ///
-/// C's EMA-of-EMA composition, NOT a re-derived closed form: `firstEMA = EMA(input)`, then
-/// `secondEMA = EMA(firstEMA_dense)`, then `DEMA = 2·firstEMA − secondEMA` over the aligned
-/// tail. Both internal EMAs are [`ema`] itself (Classic SMA seed + two-rounding recursion), so
-/// DEMA inherits EMA's bit-exactness. Lookback is `2·(period−1)`; the `firstEMAIdx` /
-/// `secondEMABegIdx` bookkeeping is `ta_DEMA.c`'s.
+/// Compute DEMA from two [`ema`] passes and C's aligned tail.
+/// Lookback is `2·(period−1)`.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -260,8 +237,6 @@ pub fn dema(input: &[f64], period: usize) -> Result<Vec<f64>> {
     let first = ema(input, period)?;
     let first_dense = &first[lookback..];
     let second = ema(first_dense, period)?;
-    // firstEMAIdx starts at secondEMABegIdx (= lookback into first_dense); secondEMA's dense
-    // values start `lookback` into `second`; output begins at input index 2·lookback.
     for out_idx in 0..(len - 2 * lookback) {
         let first_ema = first_dense[lookback + out_idx];
         let second_ema = second[lookback + out_idx];
@@ -273,10 +248,8 @@ pub fn dema(input: &[f64], period: usize) -> Result<Vec<f64>> {
 /// ===========================================================================================
 /// `TEMA` — triple exponential moving average (`ta_TEMA.c`).
 ///
-/// `TEMA = 3·EMA1 − 3·EMA2 + EMA3` where `EMA2 = EMA(EMA1)` and `EMA3 = EMA(EMA2)`, each an
-/// [`ema`] over the previous stage's dense tail. C accumulates `EMA3 += (3·EMA1) − (3·EMA2)`, so
-/// the emit is `e3 + ((3·e1) − (3·e2))` — that grouping (two `3·` roundings, then subtract, then
-/// add) is load-bearing. Lookback is `3·(period−1)`.
+/// Compute TEMA from three [`ema`] passes using C's grouped arithmetic.
+/// Lookback is `3·(period−1)`.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -294,8 +267,6 @@ pub fn tema(input: &[f64], period: usize) -> Result<Vec<f64>> {
     let second = ema(first_dense, period)?;
     let second_dense = &second[lookback..];
     let third = ema(second_dense, period)?;
-    // firstEMAIdx = 2·lookback into first_dense; secondEMAIdx = lookback into second_dense;
-    // EMA3 (third) dense begins at lookback; output begins at input index 3·lookback.
     for out_idx in 0..(len - 3 * lookback) {
         let e1 = first_dense[2 * lookback + out_idx];
         let e2 = second_dense[lookback + out_idx];
@@ -308,11 +279,7 @@ pub fn tema(input: &[f64], period: usize) -> Result<Vec<f64>> {
 /// ===========================================================================================
 /// `TRIMA` — triangular moving average (`ta_TRIMA.c`).
 ///
-/// A double-weighted window (more weight in the middle). C uses a `numeratorAdd`/`numeratorSub`
-/// incremental accumulator with an **odd/even period split**: the weight divisor and the
-/// `middleIdx` offset differ, and in the per-bar step the odd branch does `numerator += add`
-/// *before* `add -= x` while the even branch does `add -= x` *before* `numerator += add` — the
-/// two statement orders are ported verbatim. Lookback is `period − 1`.
+/// Compute C's triangular average with separate odd/even accumulators and statement order.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -327,7 +294,6 @@ pub fn trima(input: &[f64], period: usize) -> Result<Vec<f64>> {
     }
     let half = period / 2;
     if period % 2 == 1 {
-        // Odd period: divisor (n+1)², middleIdx = trailingIdx + n.
         let mut factor = as_f64((half + 1) * (half + 1));
         factor = 1.0 / factor;
         let mut trailing_idx = 0_usize;
@@ -335,8 +301,6 @@ pub fn trima(input: &[f64], period: usize) -> Result<Vec<f64>> {
         let mut today_idx = middle_idx + half;
         let mut numerator = 0.0_f64;
         let mut numerator_sub = 0.0_f64;
-        // Exempt from the single-write construction sweep: keeps `nan_vec`, backward reader —
-        // this seed walks `input` newest-to-oldest and the sum order is bit-exactness-critical.
         for idx in (trailing_idx..=middle_idx).rev() {
             let temp = input[idx];
             numerator_sub += temp;
@@ -372,7 +336,6 @@ pub fn trima(input: &[f64], period: usize) -> Result<Vec<f64>> {
             out_pos += 1;
         }
     } else {
-        // Even period: divisor n·(n+1), middleIdx = trailingIdx + n − 1.
         let mut factor = as_f64(half * (half + 1));
         factor = 1.0 / factor;
         let mut trailing_idx = 0_usize;
@@ -380,8 +343,6 @@ pub fn trima(input: &[f64], period: usize) -> Result<Vec<f64>> {
         let mut today_idx = middle_idx + half;
         let mut numerator = 0.0_f64;
         let mut numerator_sub = 0.0_f64;
-        // Exempt from the single-write construction sweep: keeps `nan_vec`, backward reader —
-        // this seed walks `input` newest-to-oldest and the sum order is bit-exactness-critical.
         for idx in (trailing_idx..=middle_idx).rev() {
             let temp = input[idx];
             numerator_sub += temp;
@@ -423,12 +384,8 @@ pub fn trima(input: &[f64], period: usize) -> Result<Vec<f64>> {
 /// ===========================================================================================
 /// `KAMA` — Kaufman adaptive moving average (`ta_KAMA.c`).
 ///
-/// An EMA whose smoothing constant adapts per bar to the efficiency ratio (net move over the
-/// summed absolute 1-bar moves). C's `sumROC1` is carried incrementally (subtract the trailing
-/// ROC1, add the new one); the ER divide is guarded by `TA_IS_ZERO(sumROC1)` and the
-/// `sumROC1 <= periodROC` short-circuit, both producing `1.0` there. Constants `constMax = 2/31`,
-/// `constDiff = 2/3 − constMax`; smoothing `sc = (er·constDiff + constMax)²`. Lookback is
-/// `period` (one bar more than an EMA — the first ROC1 needs a prior bar).
+/// Compute Kaufman's adaptive moving average with C's incremental efficiency ratio.
+/// Zero and saturated ratios produce efficiency `1.0`; lookback is `period`.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -454,7 +411,6 @@ pub fn kama(input: &[f64], period: usize) -> Result<Vec<f64>> {
         sum_roc1 += temp.abs();
     }
 
-    // First KAMA: yesterday's price seeds prevKAMA.
     let mut prev_kama = input[today - 1];
     let temp = input[today];
     let temp2 = input[trailing_idx];
@@ -470,7 +426,6 @@ pub fn kama(input: &[f64], period: usize) -> Result<Vec<f64>> {
     sc *= sc;
     prev_kama = ((input[today] - prev_kama) * sc) + prev_kama;
     today += 1;
-    // The unstable-period skip loop `while today <= startIdx` is empty at unstable period 0.
 
     let mut out_pos = lookback; // outBegIdx = today − 1 = period
     out[out_pos] = prev_kama;
@@ -501,10 +456,7 @@ pub fn kama(input: &[f64], period: usize) -> Result<Vec<f64>> {
 /// ===========================================================================================
 /// `T3` — Tillson T3 moving average (`ta_T3.c`).
 ///
-/// Six chained EMA accumulators (`e1..e6`, each `k·x + (1−k)·prev`) primed through six SMA-style
-/// seed loops, then combined with the volume-factor constants
-/// `c1 = −v³`, `c2 = 3(v²−c1)`, `c3 = −6v² − 3(v−c1)`, `c4 = 1 + 3v − c1 + 3v²`, emitting
-/// `c1·e6 + c2·e5 + c3·e4 + c4·e3`. `vfactor` (TA-Lib default 0.7) threads through the constants.
+/// Compute Tillson T3 from six chained EMAs and its volume-factor constants.
 /// Lookback is `6·(period−1)`.
 /// ===========================================================================================
 ///
@@ -522,7 +474,6 @@ pub fn t3(input: &[f64], period: usize, vfactor: f64) -> Result<Vec<f64>> {
     let one_minus_k = 1.0 - k;
     let mut today = 0_usize;
 
-    // Initialize e1 (SMA seed).
     let mut temp = input[today];
     today += 1;
     for _ in 0..(period - 1) {
@@ -531,7 +482,6 @@ pub fn t3(input: &[f64], period: usize, vfactor: f64) -> Result<Vec<f64>> {
     }
     let mut e1 = temp / as_f64(period);
 
-    // Initialize e2.
     let mut temp = e1;
     for _ in 0..(period - 1) {
         e1 = (k * input[today]) + (one_minus_k * e1);
@@ -540,7 +490,6 @@ pub fn t3(input: &[f64], period: usize, vfactor: f64) -> Result<Vec<f64>> {
     }
     let mut e2 = temp / as_f64(period);
 
-    // Initialize e3.
     let mut temp = e2;
     for _ in 0..(period - 1) {
         e1 = (k * input[today]) + (one_minus_k * e1);
@@ -550,7 +499,6 @@ pub fn t3(input: &[f64], period: usize, vfactor: f64) -> Result<Vec<f64>> {
     }
     let mut e3 = temp / as_f64(period);
 
-    // Initialize e4.
     let mut temp = e3;
     for _ in 0..(period - 1) {
         e1 = (k * input[today]) + (one_minus_k * e1);
@@ -561,7 +509,6 @@ pub fn t3(input: &[f64], period: usize, vfactor: f64) -> Result<Vec<f64>> {
     }
     let mut e4 = temp / as_f64(period);
 
-    // Initialize e5.
     let mut temp = e4;
     for _ in 0..(period - 1) {
         e1 = (k * input[today]) + (one_minus_k * e1);
@@ -573,7 +520,6 @@ pub fn t3(input: &[f64], period: usize, vfactor: f64) -> Result<Vec<f64>> {
     }
     let mut e5 = temp / as_f64(period);
 
-    // Initialize e6.
     let mut temp = e5;
     for _ in 0..(period - 1) {
         e1 = (k * input[today]) + (one_minus_k * e1);
@@ -585,9 +531,7 @@ pub fn t3(input: &[f64], period: usize, vfactor: f64) -> Result<Vec<f64>> {
         temp += e5;
     }
     let mut e6 = temp / as_f64(period);
-    // The unstable-period skip loop `while today <= startIdx` is empty at unstable period 0.
 
-    // Volume-factor constants.
     let temp = vfactor * vfactor;
     let c1 = -(temp * vfactor);
     let c2 = 3.0 * (temp - c1);
@@ -614,15 +558,12 @@ pub fn t3(input: &[f64], period: usize, vfactor: f64) -> Result<Vec<f64>> {
 /// ===========================================================================================
 /// `MIDPOINT` — `(highest + lowest) / 2` over the trailing window of one series (`ta_MIDPOINT.c`).
 ///
-/// C rescans the full window each bar (this is NOT the [`crate::min`]/[`crate::max`] trailing-index
-/// algorithm — it is a fresh scan, ported as such), seeding `lowest`/`highest` from the trailing
-/// bar and updating with an `if/else if`. Lookback is `period − 1`.
+/// Rescan each trailing window for its midpoint; lookback is `period − 1`.
 /// ===========================================================================================
 ///
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if `period < 2`.
-// C computes `(highest + lowest) / 2.0` literally; `f64::midpoint` rounds differently, so the
-// manual form is load-bearing for bit-exactness.
+// Preserve C's literal addition and division; `f64::midpoint` rounds differently.
 #[allow(clippy::manual_midpoint)]
 pub fn midpoint(input: &[f64], period: usize) -> Result<Vec<f64>> {
     check_period("optInTimePeriod", period, 2)?;
@@ -654,14 +595,13 @@ pub fn midpoint(input: &[f64], period: usize) -> Result<Vec<f64>> {
 /// ===========================================================================================
 /// `MIDPRICE` — `(highest high + lowest low) / 2` over the trailing window (`ta_MIDPRICE.c`).
 ///
-/// The two-series sibling of [`midpoint`]: `highest` scans `high`, `lowest` scans `low`, each a
-/// full per-bar rescan (two independent `if`s, not `if/else`). Lookback is `period − 1`.
+/// Rescan high and low independently for each midpoint; lookback is `period − 1`.
 /// ===========================================================================================
 ///
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if `period < 2`; [`crate::TaError::LengthMismatch`] if the
 /// two inputs differ in length.
-// C computes `(highest + lowest) / 2.0` literally; keep the manual form (see [`midpoint`]).
+// Preserve C's literal addition and division.
 #[allow(clippy::manual_midpoint)]
 pub fn midprice(high: &[f64], low: &[f64], period: usize) -> Result<Vec<f64>> {
     check_period("optInTimePeriod", period, 2)?;
@@ -697,18 +637,8 @@ pub fn midprice(high: &[f64], low: &[f64], period: usize) -> Result<Vec<f64>> {
 /// ===========================================================================================
 /// `MA` — the moving-average selector (`ta_MA.c`).
 ///
-/// Forwards to the kernel named by `matype` (0 SMA / 1 EMA / 2 WMA / 3 DEMA / 4 TEMA / 5 TRIMA /
-/// 6 KAMA / 7 MAMA / 8 T3; T3 at TA-Lib's `MA`-default `vfactor` 0.7) through the shared
-/// [`crate::momentum::ma_dispatch`]. Two special cases mirror `ta_MA.c`:
-/// - `period == 1` (`ta_MA.c:266-274`): C returns the input unchanged (identity, no lookback) for
-///   ANY in-range `matype` — so MAMA(7) is the identity there too.
-/// - `matype == 7` (MAMA, `ta_MA.c:152-154,313-329`): C ignores `optInTimePeriod` and calls
-///   [`mama`] with the fixed limits `fastLimit = 0.5`, `slowLimit = 0.05`, taking the MAMA output
-///   and discarding FAMA. Lookback is MAMA's fixed 32. The same dispatch lives in
-///   [`crate::momentum::ma_dispatch`] so `APO`/`PPO`/`MACDEXT` and the stochastic smoothing legs
-///   (`STOCH`/`STOCHF`/`STOCHRSI`) share the path.
-///
-/// Lookback = the selected kernel's lookback.
+/// Dispatch to the selected moving-average kernel, including MAMA type 7.
+/// Period one is identity for every valid type; otherwise lookback follows the selected kernel.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -716,23 +646,17 @@ pub fn midprice(high: &[f64], low: &[f64], period: usize) -> Result<Vec<f64>> {
 /// `matype` outside 0..=8.
 pub fn ma(input: &[f64], period: usize, matype: usize) -> Result<Vec<f64>> {
     check_period("optInTimePeriod", period, 1)?;
-    // Single path: ma_dispatch owns period≤1 identity + matype 0..=8 (incl. MAMA 7).
-    // Octo C1-CRATE-001 — no duplicate MAMA arm here.
     crate::momentum::ma_dispatch(input, period, matype)
 }
 
-/// C TA-Lib's `MAMA` lookback (`ta_MAMA.c:280`, `32 + unstablePeriod`; unstable period 0). Fixed
-/// regardless of the fast/slow limits — the 10-bar price smoother + Hilbert warm-up consume 32 bars.
+/// Return MAMA's fixed 32-bar lookback.
 const MAMA_LOOKBACK: usize = 32;
 
-/// The Hilbert-transform FIR coefficients (`ta_MAMA.c:218-219` / `ta_utility.h:288`): `a = 0.0962`,
-/// `b = 0.5769`.
+/// Hilbert-transform FIR coefficients used by TA-Lib.
 const HILBERT_A: f64 = 0.0962;
 const HILBERT_B: f64 = 0.5769;
 
-/// One Hilbert-transform variable's state (`ta_utility.h`'s `HILBERT_VARIABLES` macro): a 3-slot
-/// circular buffer plus the `prev` and `prev_input` scalars, kept per price-bar **parity** (index
-/// 0 = even bars, 1 = odd bars). `MAMA` owns four — `detrender`, `Q1`, `jI`, `jQ`.
+/// Hold one Hilbert-transform variable for each bar parity.
 struct HilbertVar {
     buf: [[f64; 3]; 2],
     prev: [f64; 2],
@@ -748,8 +672,7 @@ impl HilbertVar {
         }
     }
 
-    /// `DO_HILBERT_TRANSFORM` (`ta_utility.h:288-298`), statement-for-statement. `parity` selects
-    /// the buffer (0 even / 1 odd); returns the new variable value (`varName`).
+    /// Apply C's Hilbert-transform recurrence for one bar parity.
     fn transform(
         &mut self,
         input: f64,
@@ -770,8 +693,7 @@ impl HilbertVar {
     }
 }
 
-/// C's `DO_PRICE_WMA` macro (`ta_MAMA.c:324-331`): advance the 4-period WMA price smoother one bar,
-/// returning the smoothed value. Mutates the running WMA accumulators and the trailing cursor.
+/// Advance MAMA's four-period WMA price smoother.
 #[allow(clippy::similar_names)] // period_wma_sub / period_wma_sum are C's periodWMASub / periodWMASum.
 fn do_price_wma(
     new_price: f64,
@@ -794,15 +716,8 @@ fn do_price_wma(
 /// ===========================================================================================
 /// `MAMA` — MESA Adaptive Moving Average, with FAMA (`ta_MAMA.c`). Returns `(mama, fama)`.
 ///
-/// John Ehlers' Hilbert-transform adaptive MA. A 4-period WMA price smoother (unrolled warm-up,
-/// `ta_MAMA.c:309-338`) feeds an odd/even Hilbert-transform state machine — four FIR variables
-/// (`detrender`, `Q1`, `jI`, `jQ`) over 3-slot circular buffers (`ta_utility.h`'s `DO_HILBERT_*`
-/// macros; the `hilbertIdx` cursor advances only on even bars, `ta_MAMA.c:387-388`) — that measures
-/// the dominant cycle period. The per-bar phase change drives an adaptive smoothing `alpha` clamped
-/// to `[slow_limit, fast_limit]`: `mama = alpha·price + (1−alpha)·mama`, `fama` follows at half
-/// alpha. Both limits ∈ `[0.01, 0.99]` (TA-Lib defaults 0.5 / 0.05). Lookback is the fixed 32.
-/// The atan / `Re`/`Im` zero guards and the period clamps are `ta_MAMA.c`'s exactly. `atan` is a
-/// transcendental libm call — the [`crate::linearreg_angle`] libm caveat applies (glibc x86-64).
+/// Compute Ehlers' adaptive MAMA and FAMA from the Hilbert state machine.
+/// Limits are in `[0.01, 0.99]`; lookback is 32. C's zero guards and clamps are preserved.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -825,7 +740,6 @@ pub fn mama(input: &[f64], fast_limit: f64, slow_limit: f64) -> Result<(Vec<f64>
     }
     let rad2deg = 180.0 / (4.0 * (1.0_f64).atan());
 
-    // Price-smoother init (WMA period 4), unrolled exactly as ta_MAMA.c:303-317.
     let mut trailing_wma_idx = 0_usize; // startIdx − lookbackTotal = 0 for the full array
     let mut today = 0_usize;
     let mut temp_real = input[today];
@@ -842,7 +756,6 @@ pub fn mama(input: &[f64], fast_limit: f64, slow_limit: f64) -> Result<(Vec<f64>
     period_wma_sum += temp_real * 3.0;
     let mut trailing_wma_value = 0.0_f64;
 
-    // Nine warm-up WMA iterations (ta_MAMA.c:333-338); the smoothed values are not yet output.
     for _ in 0..9 {
         temp_real = input[today];
         today += 1;
@@ -856,7 +769,6 @@ pub fn mama(input: &[f64], fast_limit: f64, slow_limit: f64) -> Result<(Vec<f64>
         );
     }
 
-    // Hilbert state.
     let mut hilbert_idx = 0_usize;
     let mut detrender_h = HilbertVar::new();
     let mut q1_h = HilbertVar::new();
@@ -891,7 +803,6 @@ pub fn mama(input: &[f64], fast_limit: f64, slow_limit: f64) -> Result<(Vec<f64>
         let i2;
         let alpha_deg; // tempReal2 — the phase, in degrees
         if today.is_multiple_of(2) {
-            // Even price bar (parity 0).
             let detrender =
                 detrender_h.transform(smoothed_value, hilbert_idx, adjusted_prev_period, 0);
             let q1 = q1_h.transform(detrender, hilbert_idx, adjusted_prev_period, 0);
@@ -911,7 +822,6 @@ pub fn mama(input: &[f64], fast_limit: f64, slow_limit: f64) -> Result<(Vec<f64>
                 0.0
             };
         } else {
-            // Odd price bar (parity 1).
             let detrender =
                 detrender_h.transform(smoothed_value, hilbert_idx, adjusted_prev_period, 1);
             let q1 = q1_h.transform(detrender, hilbert_idx, adjusted_prev_period, 1);
@@ -928,7 +838,6 @@ pub fn mama(input: &[f64], fast_limit: f64, slow_limit: f64) -> Result<(Vec<f64>
             };
         }
 
-        // Delta phase → alpha (ta_MAMA.c:435-451).
         let mut delta_phase = prev_phase - alpha_deg;
         prev_phase = alpha_deg;
         if delta_phase < 1.0 {
@@ -945,7 +854,6 @@ pub fn mama(input: &[f64], fast_limit: f64, slow_limit: f64) -> Result<(Vec<f64>
             fast_limit
         };
 
-        // MAMA / FAMA (ta_MAMA.c:453-456).
         mama_value = (alpha * today_value) + ((1.0 - alpha) * mama_value);
         let half_alpha = alpha * 0.5;
         fama_value = (half_alpha * mama_value) + ((1.0 - half_alpha) * fama_value);
@@ -954,7 +862,6 @@ pub fn mama(input: &[f64], fast_limit: f64, slow_limit: f64) -> Result<(Vec<f64>
             out_fama[today] = fama_value;
         }
 
-        // Adjust the period for the next bar (ta_MAMA.c:463-481).
         re = (0.2 * ((i2 * prev_i2) + (q2 * prev_q2))) + (0.8 * re);
         im = (0.2 * ((i2 * prev_q2) - (q2 * prev_i2))) + (0.8 * im);
         prev_q2 = q2;
@@ -986,14 +893,8 @@ pub fn mama(input: &[f64], fast_limit: f64, slow_limit: f64) -> Result<(Vec<f64>
 /// `SAR` — Parabolic SAR (`ta_SAR.c`; `SAR_ROUNDING` is a no-op in the default build — TA-Lib does
 /// not round).
 ///
-/// Wilder's stop-and-reverse. The initial trade direction is set from the one-period `−DM` between
-/// the first two bars — C's `TA_MINUS_DM(startIdx, startIdx, …, 1)` bootstrap (`ta_SAR.c:309-315`),
-/// reproduced bit-identically by [`crate::minus_dm`] at period 1 (`> 0` ⇒ short, else long). The
-/// first SAR consumes bar 0's high/low; each subsequent bar outputs the SAR computed on the prior
-/// bar, flipping direction — and resetting the acceleration factor `af` to `acceleration`, capped
-/// at `maximum` — when price penetrates the stop, then re-clamping the SAR into the prior two bars'
-/// range. Lookback 1. Both parameters ∈ `[0, 3e37]` (defaults 0.02 / 0.2); if
-/// `acceleration > maximum`, `af` and the increment both start at `maximum`.
+/// Compute Wilder's stop-and-reverse SAR with C's period-one direction bootstrap.
+/// Lookback is one; parameters are in `[0, 3e37]`.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -1015,17 +916,14 @@ pub fn sar(high: &[f64], low: &[f64], acceleration: f64, maximum: f64) -> Result
     if len < 2 {
         return Ok(out); // startIdx (1) > endIdx (< 1) → no output
     }
-    // Coherence (ta_SAR.c:301-303): af (and the increment) never exceed maximum.
     let mut acceleration = acceleration;
     let mut af = acceleration;
     if af > maximum {
         af = maximum;
         acceleration = maximum;
     }
-    // Initial direction from the first-two-bar −DM1.
     let minus_dm1 = crate::minus_dm(&high[..2], &low[..2], 1)?[1];
     let mut is_long = minus_dm1 <= 0.0;
-    // Seed the first SAR from bar 0's high/low (ta_SAR.c:330-353).
     let (mut ep, mut sar_value) = if is_long {
         (high[1], low[0])
     } else {
@@ -1043,7 +941,6 @@ pub fn sar(high: &[f64], low: &[f64], acceleration: f64, maximum: f64) -> Result
         today_idx += 1;
         if is_long {
             if new_low <= sar_value {
-                // Switch to short.
                 is_long = false;
                 sar_value = ep;
                 if sar_value < prev_high {
@@ -1082,7 +979,6 @@ pub fn sar(high: &[f64], low: &[f64], acceleration: f64, maximum: f64) -> Result
                 }
             }
         } else if new_high >= sar_value {
-            // Switch to long.
             is_long = true;
             sar_value = ep;
             if sar_value > prev_low {
@@ -1130,11 +1026,8 @@ pub fn sar(high: &[f64], low: &[f64], acceleration: f64, maximum: f64) -> Result
 /// and — the load-bearing difference — a **negative** output while the position is short
 /// (`outReal = −sar`; `ta_SAREXT.c:375-377,578,668`), so a sign flip in the output marks a reversal.
 ///
-/// `start_value`: `0` = auto (same −DM1 logic as [`sar`]), `>0` = start long at `start_value`,
-/// `<0` = start short at `|start_value|`. `offset_on_reverse`: fractional offset added to the stop
-/// on a long→short reversal / subtracted on a short→long reversal. The remaining six are the long-
-/// and short-side initial / step / max acceleration factors. All eight ∈ `[0, 3e37]` except
-/// `start_value` ∈ `[−3e37, 3e37]`. Lookback 1.
+/// Compute extended SAR with forced starts, offsets, and direction-specific accelerations.
+/// Short-side output is negative; `start_value` may be negative.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -1217,8 +1110,6 @@ pub fn sarext(
     if len < 2 {
         return Ok(out);
     }
-    // Coherence (ta_SAREXT.c:455-468): each af starts at its init, capped at its max; the per-step
-    // accelerations are capped too.
     let mut accel_init_long = accel_init_long;
     let mut accel_init_short = accel_init_short;
     let mut accel_long = accel_long;
@@ -1239,7 +1130,6 @@ pub fn sarext(
     if accel_short > accel_max_short {
         accel_short = accel_max_short;
     }
-    // Initial direction + first SAR (ta_SAREXT.c:472-537).
     let mut is_long = if start_value == 0.0 {
         crate::minus_dm(&high[..2], &low[..2], 1)?[1] <= 0.0
     } else {
@@ -1268,7 +1158,6 @@ pub fn sarext(
         today_idx += 1;
         if is_long {
             if new_low <= sar_value {
-                // Long → short reversal: output −sar (negative).
                 is_long = false;
                 sar_value = ep;
                 if sar_value < prev_high {
@@ -1310,7 +1199,6 @@ pub fn sarext(
                 }
             }
         } else if new_high >= sar_value {
-            // Short → long reversal: output +sar (positive).
             is_long = true;
             sar_value = ep;
             if sar_value > prev_low {
@@ -1334,7 +1222,6 @@ pub fn sarext(
                 sar_value = new_low;
             }
         } else {
-            // Short, no reversal: output −sar (negative).
             out[out_pos] = -sar_value;
             out_pos += 1;
             if new_low < ep {
@@ -1356,19 +1243,14 @@ pub fn sarext(
     Ok(out)
 }
 
-/// C's `tempInt = (int)(inPeriods[t])` then clamp to `[min, max]` (`ta_MAVP.c:284-289`): truncate
-/// toward zero, then clamp. Non-finite / out-of-`int` values saturate before the clamp.
+/// Truncate and clamp one MAVP period using C's cast semantics.
 #[allow(
     clippy::cast_possible_truncation,
     clippy::cast_sign_loss,
     clippy::cast_possible_wrap
 )]
-// The manual if-chain (not `.clamp()`) mirrors C's `if(<min)…else if(>max)…` AND stays panic-free
-// if a caller passes min_period > max_period (`.clamp()` panics on that; C does not).
 #[allow(clippy::manual_clamp)]
 fn clamp_period(raw: f64, min_period: usize, max_period: usize) -> usize {
-    // `f64 as i64` truncates toward zero (C's `(int)` cast) and saturates for non-finite / huge
-    // values; min/max ≤ MAX_PERIOD, so their `as i64` is lossless and the in-range branch fits usize.
     let truncated = raw as i64;
     if truncated < min_period as i64 {
         min_period
@@ -1382,16 +1264,8 @@ fn clamp_period(raw: f64, min_period: usize, max_period: usize) -> usize {
 /// ===========================================================================================
 /// `MAVP` — Moving Average with Variable Period (`ta_MAVP.c`).
 ///
-/// A moving average whose period varies per row: `periods[t]` (a second input series) is truncated
-/// to an integer and clamped into `[min_period, max_period]`, and the output at bar `t` is
-/// `MA(clampedPeriod, matype)` evaluated at `t`. C computes each distinct period's MA once over the
-/// whole range and fills every same-period row (`ta_MAVP.c:300-334`) — a memoization that is
-/// output-identical to a per-row MA, since `MA` is a pure function of the series. The per-period MA
-/// is taken over the shifted range `[lookback, end]` via [`crate::momentum::ma_range`]: for the
-/// recursive MA families (EMA/DEMA/TEMA/KAMA/T3) that seeds at `lookback − maLookback(period)`,
-/// exactly as C's `TA_MA(startIdx, …)` does — a full-array MA would diverge (proven). Output starts
-/// at `MA_lookback(max_period, matype)` (`ta_MAVP.c:245`); `matype == 7` (MAMA) ignores the periods
-/// and returns [`mama`]`(0.5, 0.05)` (`ta_MA.c:313-329`), lookback the fixed 32.
+/// Compute moving averages with a truncated, clamped period per row.
+/// C's shifted range and MAMA full-prefix behavior are preserved.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -1417,23 +1291,17 @@ pub fn mavp(
     let len = input.len();
     let mut out = nan_vec(len);
     if matype == 7 {
-        // ta_MA.c:313-329 — MAMA(0.5,0.05); periods ignored. C's TA_MA over [startIdx, end] seeds
-        // MAMA at startIdx − 32 = 0 (startIdx == lookback 32), i.e. the full-array MAMA output.
         return Ok(mama(input, 0.5, 0.05)?.0);
     }
     let lookback = crate::momentum::ma_lookback(max_period, matype)?;
     if len <= lookback {
         return Ok(out);
     }
-    // Clamp each output row's period (input index `lookback + k`). Sentinel 0 = "already emitted"
-    // in the memoization below — never a valid period, since min_period ≥ 2.
     let out_len = len - lookback;
     let mut clamped: Vec<usize> = Vec::with_capacity(out_len);
     for &raw in &periods[lookback..] {
         clamped.push(clamp_period(raw, min_period, max_period));
     }
-    // Distinct-period memoization (ta_MAVP.c:300-334): compute each period's MA once, fill all its
-    // rows. `ma_range` gives C's shifted-seed MA — bit-exact for recursive families.
     for i in 0..out_len {
         let cur = clamped[i];
         if cur != 0 {
@@ -1464,7 +1332,6 @@ mod tests {
                     .all(|(x, y)| x.to_bits() == y.to_bits() || (x.is_nan() && y.is_nan()))
         }
         let data: Vec<f64> = (1..=10).map(f64::from).collect();
-        // matype 0 == SMA; matype 1 == EMA (bit-for-bit through the dispatch).
         assert!(bit_eq(
             &ma(&data, 3, 0).expect("ma sma"),
             &sma(&data, 3).expect("sma")
@@ -1473,7 +1340,6 @@ mod tests {
             &ma(&data, 3, 1).expect("ma ema"),
             &ema(&data, 3).expect("ema")
         ));
-        // period 1 == identity, no NaN prefix, for any in-range matype (incl. MAMA 7).
         assert_eq!(ma(&data, 1, 0).expect("ma id"), data);
         assert_eq!(ma(&data, 1, 7).expect("ma id mama"), data);
     }
@@ -1481,13 +1347,9 @@ mod tests {
     #[test]
     fn ma_selector_matype7_dispatches_to_mama_and_rejects_out_of_range() {
         let data = [1.0, 2.0, 3.0, 4.0];
-        // matype 7 (MAMA) is now accepted; a short input yields all-NaN (MAMA lookback 32), not an
-        // error (ta_MA.c:313-329).
         let out = ma(&data, 3, 7).expect("ma matype 7 short");
         assert_eq!(out.len(), data.len());
         assert!(out.iter().all(|v| v.is_nan()));
-        // On a series long enough to produce output, matype 7 == MAMA(0.5, 0.05)'s mama output, and
-        // the period is ignored (30 vs 100 give the same result).
         let long: Vec<f64> = (1..=40).map(f64::from).collect();
         let (mama_out, _) = mama(&long, 0.5, 0.05).expect("mama");
         for period in [30, 100] {
@@ -1501,7 +1363,6 @@ mod tests {
                 "ma(period={period}, matype=7) must equal MAMA regardless of period"
             );
         }
-        // Out-of-range matype (> 8) is still rejected; period 0 is still rejected.
         assert!(matches!(
             ma(&data, 3, 9),
             Err(TaError::UnsupportedMaType { matype: 9, .. })
@@ -1558,41 +1419,31 @@ mod tests {
 
     #[test]
     fn wma_weights_the_window_by_recency() {
-        // period 3: weights 1,2,3, divider 6.
         let out = wma(&[1.0, 2.0, 3.0, 4.0], 3).expect("valid");
         assert!(out[0].is_nan());
         assert!(out[1].is_nan());
-        // (1*1 + 2*2 + 3*3) / 6 = 14/6
         assert!((out[2] - 14.0 / 6.0).abs() < 1e-12);
-        // (1*2 + 2*3 + 3*4) / 6 = 20/6
         assert!((out[3] - 20.0 / 6.0).abs() < 1e-12);
     }
 
     #[test]
     fn trima_odd_period_matches_hand_weights() {
-        // period 5 (odd): weights 1,2,3,2,1, divider 9.
         let out = trima(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0], 5).expect("valid");
         assert!(out[3].is_nan());
-        // (1 + 4 + 9 + 8 + 5) / 9 = 27/9 = 3
         assert!((out[4] - 3.0).abs() < 1e-12);
-        // (2 + 6 + 12 + 10 + 6) / 9 = 36/9 = 4
         assert!((out[5] - 4.0).abs() < 1e-12);
     }
 
     #[test]
     fn trima_even_period_matches_hand_weights() {
-        // period 4 (even): weights 1,2,2,1, divider 6.
         let out = trima(&[1.0, 2.0, 3.0, 4.0, 5.0], 4).expect("valid");
         assert!(out[2].is_nan());
-        // (1 + 4 + 6 + 4) / 6 = 15/6 = 2.5
         assert!((out[3] - 2.5).abs() < 1e-12);
-        // (2 + 6 + 8 + 5) / 6 = 21/6 = 3.5
         assert!((out[4] - 3.5).abs() < 1e-12);
     }
 
     #[test]
     fn midpoint_is_window_high_low_mean() {
-        // period 3 over [5,3,8,1,9]: windows (5,3,8)->5.5, (3,8,1)->4.5, (8,1,9)->5.0.
         let out = midpoint(&[5.0, 3.0, 8.0, 1.0, 9.0], 3).expect("valid");
         assert!(out[1].is_nan());
         assert!((out[2] - 5.5).abs() < 1e-12);
@@ -1602,7 +1453,6 @@ mod tests {
 
     #[test]
     fn midprice_uses_high_max_and_low_min() {
-        // period 2: (max high + min low)/2 over each 2-bar window.
         let high = [5.0, 6.0, 7.0];
         let low = [1.0, 2.0, 3.0];
         let out = midprice(&high, &low, 2).expect("valid");
@@ -1613,7 +1463,6 @@ mod tests {
 
     #[test]
     fn dema_nan_prefix_is_twice_the_ema_lookback() {
-        // DEMA lookback = 2*(period-1); the first non-NaN is at that index.
         let input: Vec<f64> = (1..=20).map(f64::from).collect();
         let out = dema(&input, 4).expect("valid");
         for value in &out[..6] {
@@ -1624,7 +1473,6 @@ mod tests {
 
     #[test]
     fn tema_nan_prefix_is_thrice_the_ema_lookback() {
-        // TEMA lookback = 3*(period-1).
         let input: Vec<f64> = (1..=30).map(f64::from).collect();
         let out = tema(&input, 4).expect("valid");
         for value in &out[..9] {
@@ -1635,7 +1483,6 @@ mod tests {
 
     #[test]
     fn kama_nan_prefix_is_period_then_finite() {
-        // KAMA lookback = period (one bar more than EMA). Rising series -> ER == 1.
         let input: Vec<f64> = (1..=30).map(f64::from).collect();
         let out = kama(&input, 5).expect("valid");
         for value in &out[..5] {
@@ -1646,8 +1493,6 @@ mod tests {
 
     #[test]
     fn kama_flat_series_holds_the_seed() {
-        // Dead-flat input -> sumROC1 is zero, the TA_IS_ZERO guard fires (ER=1), and every
-        // adaptive step reproduces the constant.
         let out = kama(&[7.0; 12], 4).expect("valid");
         assert!(out[3].is_nan());
         assert!((out[4] - 7.0).abs() < 1e-12);
@@ -1656,7 +1501,6 @@ mod tests {
 
     #[test]
     fn t3_nan_prefix_is_six_ema_lookbacks_and_vfactor_threads() {
-        // T3 lookback = 6*(period-1); a different vfactor must change the output.
         let input: Vec<f64> = (1..=40).map(f64::from).collect();
         let out = t3(&input, 3, 0.7).expect("valid");
         for value in &out[..12] {
@@ -1735,7 +1579,6 @@ mod tests {
 
     #[test]
     fn mama_lookback_is_32_and_rejects_out_of_range_limits() {
-        // Lookback 32: a 33-bar input has exactly one output bar (index 32).
         let input: Vec<f64> = (1..=33).map(f64::from).collect();
         let (mama_out, fama_out) = mama(&input, 0.5, 0.05).expect("mama");
         assert_eq!(mama_out.len(), 33);
@@ -1743,11 +1586,9 @@ mod tests {
             assert!(value.is_nan());
         }
         assert!(mama_out[32].is_finite() && fama_out[32].is_finite());
-        // 32 bars is too short for any output (all-NaN, not an error).
         let short: Vec<f64> = (1..=32).map(f64::from).collect();
         let (mama_out, _) = mama(&short, 0.5, 0.05).expect("mama short");
         assert!(mama_out.iter().all(|v| v.is_nan()));
-        // Limits outside [0.01, 0.99] error.
         assert!(matches!(
             mama(&input, 0.009, 0.05),
             Err(TaError::InvalidRealParam { .. })
@@ -1760,8 +1601,6 @@ mod tests {
 
     #[test]
     fn sar_rising_series_starts_long_and_seeds_at_first_low() {
-        // Rising highs/lows → initial −DM1 ≤ 0 → long start; the first SAR (bar 1) is the seeded
-        // bar-0 low, held through the first (no-penetration) bar.
         let high = [10.0, 11.0, 12.0, 13.0];
         let low = [9.0, 10.0, 11.0, 12.0];
         let out = sar(&high, &low, 0.02, 0.2).expect("sar");
@@ -1769,19 +1608,16 @@ mod tests {
         assert!(out[0].is_nan());
         assert!((out[1] - 9.0).abs() < 1e-12);
         assert!(out[2].is_finite() && out[3].is_finite());
-        // SAR is never negative (that is SAREXT's short-side convention, not SAR's).
         assert!(out[1..].iter().all(|v| *v > 0.0));
     }
 
     #[test]
     fn sarext_short_side_output_is_negative() {
-        // Falling series → initial −DM1 > 0 → short start; while short the output is −sar.
         let high = [13.0, 12.0, 11.0, 10.0];
         let low = [12.0, 11.0, 10.0, 9.0];
         let out = sarext(&high, &low, 0.0, 0.0, 0.02, 0.02, 0.2, 0.02, 0.02, 0.2).expect("sarext");
         assert_eq!(out.len(), 4);
         assert!(out[0].is_nan());
-        // First bar stays short (no reversal) → output is the negated seed high[0] = −13.0.
         assert!(
             (out[1] + 13.0).abs() < 1e-12,
             "short-side SAR is −sar, got {}",
@@ -1793,10 +1629,8 @@ mod tests {
     fn sarext_start_value_forces_direction_and_seed() {
         let high = [10.0, 11.0, 12.0, 13.0];
         let low = [9.0, 10.0, 11.0, 12.0];
-        // start_value > 0 → forced long, first SAR = the forced start value (positive).
         let long = sarext(&high, &low, 8.0, 0.0, 0.02, 0.02, 0.2, 0.02, 0.02, 0.2).expect("long");
         assert!((long[1] - 8.0).abs() < 1e-12);
-        // start_value < 0 (below-price magnitude 15 > price) → forced short, first output = −15.0.
         let short =
             sarext(&high, &low, -15.0, 0.0, 0.02, 0.02, 0.2, 0.02, 0.02, 0.2).expect("short");
         assert!((short[1] + 15.0).abs() < 1e-12);
@@ -1805,16 +1639,12 @@ mod tests {
     #[test]
     fn mavp_clamps_period_and_lookback_uses_max_period() {
         let input = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        // Periods below min clamp up to min = 2; the lookback still uses max_period (3) → SMA(3)'s
-        // lookback 2, so out[0] and out[1] are NaN even though a period-2 SMA could start at 1.
         let periods_low = [1.0; 8];
         let out = mavp(&input, &periods_low, 2, 3, 0).expect("mavp low");
         assert_eq!(out.len(), 8);
         assert!(out[0].is_nan() && out[1].is_nan());
-        // clamp → period 2 → SMA(2): out[2] = (2+3)/2 = 2.5, out[3] = (3+4)/2 = 3.5.
         assert!((out[2] - 2.5).abs() < 1e-12);
         assert!((out[3] - 3.5).abs() < 1e-12);
-        // Periods above max clamp down to max = 3 → SMA(3): out[2] = (1+2+3)/3 = 2.0.
         let periods_high = [9.0; 8];
         let out = mavp(&input, &periods_high, 2, 3, 0).expect("mavp high");
         assert!((out[2] - 2.0).abs() < 1e-12);
@@ -1823,10 +1653,6 @@ mod tests {
 
     #[test]
     fn mavp_uses_shifted_ma_seeding_not_full_array() {
-        // For a recursive MA (EMA), each per-row MA is seeded over the SHIFTED range starting at the
-        // MAVP lookback (from max_period), NOT the full array. Here every row uses period 6 but
-        // max_period is 10, so the lookback is ma_lookback(10, EMA) = 9 and each EMA(6) is seeded
-        // over input[9−5 ..] = input[4 ..], which differs from the full-array EMA(6).
         let input: Vec<f64> = (1..=30)
             .map(|i| f64::from(i) + (f64::from(i) * 0.3).sin())
             .collect();
@@ -1841,8 +1667,6 @@ mod tests {
                 "mavp must match the shifted ma_range at {i}"
             );
         }
-        // The shifted seed genuinely diverges from the full-array EMA(6) — a naive per-row full
-        // EMA would fail here (this is the guard for the `ma_range` choice).
         let full = ema(&input, 6).expect("ema");
         assert!(
             (lookback..input.len()).any(|i| out[i].to_bits() != full[i].to_bits()),

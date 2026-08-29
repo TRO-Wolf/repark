@@ -1,10 +1,6 @@
-"""Lazy optional-extra imports for ``repark.ml.ext`` (M4).
+"""Lazy imports for the optional ``repark[ml-ext]`` dependencies.
 
-Product surface: missing library → loud ``ImportError`` naming
-``pip install repark[ml-ext]``. Tests use ``pytest.importorskip``.
-
-Never import numpy / pandas / xgboost / lightgbm / sklearn at ``repark.ml``
-top level — only through this module (or after its guards) inside ``ext``.
+Missing libraries raise ``ImportError`` naming the installation extra.
 """
 
 from __future__ import annotations
@@ -46,7 +42,7 @@ def require_sklearn() -> Any:
 
 
 def require_numpy() -> Any:
-    """Import ``numpy`` (library-required; only behind ext path)."""
+    """Import ``numpy`` behind the optional dependency guard."""
     try:
         import numpy as np
     except ImportError as error:
@@ -55,7 +51,7 @@ def require_numpy() -> Any:
 
 
 def require_pandas() -> Any:
-    """Import ``pandas`` (library-required; only where the lib demands DataFrame)."""
+    """Import ``pandas`` behind the optional dependency guard."""
     try:
         import pandas as pd
     except ImportError as error:

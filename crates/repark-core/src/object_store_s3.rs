@@ -1,24 +1,7 @@
-//! `s3://` / `s3a://` object-store registration for `read_parquet`.
+//! Register `s3://` and `s3a://` object stores for `read_parquet`.
 //!
-//! DataFusion resolves `read_parquet("s3://…")` / `read_parquet("s3a://…")` through the
-//! `RuntimeEnv` object-store registry (NOT iceberg `FileIO`), and nothing registers an S3 store by
-//! default. This module supplies the two pieces WG3 needs:
-//!
-//! 1. **The credential bridge** ([`AwsConfigCredentialProvider`]) — `object_store`'s own
-//!    `AmazonS3Builder::from_env` reads *environment variables only*, so it cannot authenticate on a
-//!    machine that uses the AWS shared-credentials file (the common case). This adapter wraps the
-//!    `aws-config` default credential chain (env → shared file → IMDS) — resolved once into a
-//!    [`SharedCredentialsProvider`] — behind `object_store`'s [`CredentialProvider`] trait, calling
-//!    `provide_credentials` per `get_credential` (the SDK provider caches with expiry, so this is
-//!    cheap and refresh-safe).
-//! 2. **Dual-scheme registration** ([`register_bucket_store`]) — Spark bronze reads use `s3a://`
-//!    while Iceberg warehouses use `s3://`; the SAME store is registered under BOTH URL forms so
-//!    either scheme routes to it. DataFusion's `ListingTableUrl::parse` accepts any scheme (it
-//!    defers to `Url::parse`), so no `s3a`→`s3` path rewrite is required — the scheme is preserved
-//!    and looked up directly in the registry.
-//!
-//! The store construction ([`build_amazon_s3_store`]) is split from the registration so tests can
-//! register an in-memory store under the S3 URLs and prove URL→store routing end-to-end without AWS.
+//! AWS credentials resolve once at session finalization through `aws-config`; the same store is
+//! registered under both schemes so DataFusion preserves and resolves either URL unchanged.
 
 use std::sync::Arc;
 
@@ -69,12 +52,7 @@ pub(crate) fn parse_s3_bucket(path: &str) -> Option<(String, String)> {
 }
 
 /// ===========================================================================================
-/// Bridges the `aws-config` default credential chain into `object_store`'s [`CredentialProvider`].
-///
-/// Holds the SDK's resolved [`SharedCredentialsProvider`] and, on each `get_credential`, asks it for
-/// the current credentials (the provider caches with expiry, refreshing only when needed) and maps
-/// them into an [`AwsCredential`]. This is why the shared-credentials file works where
-/// `AmazonS3Builder::from_env` — which reads env vars only — does not.
+/// Bridges the resolved `aws-config` credential provider into `object_store`.
 /// ===========================================================================================
 #[derive(Debug)]
 pub(crate) struct AwsConfigCredentialProvider {
@@ -114,18 +92,8 @@ impl CredentialProvider for AwsConfigCredentialProvider {
 }
 
 /// ===========================================================================================
-/// Build an [`AmazonS3`](object_store::aws::AmazonS3) store for `bucket`, authenticated through
-/// `sdk_config` — the session-held AWS SDK config the FINALIZE step resolved (E-2: the chain is
-/// resolved once in `register_configured_catalogs`, never here at path-read time).
-///
-/// Region resolves from `region_override` (the session's `spark.hadoop.fs.s3a.endpoint.region`
-/// config) when set, else from `sdk_config` (env `AWS_REGION`/`AWS_DEFAULT_REGION` → shared
-/// config file → IMDS, resolved at finalize). Credentials are bridged via
-/// [`AwsConfigCredentialProvider`].
-///
-/// This function no longer touches AWS itself (the chain is pre-resolved, so it is sync now);
-/// it is still separated from [`register_bucket_store`] so tests register an in-memory store
-/// and never need an SDK config.
+/// Build an authenticated Amazon S3 store from the finalized SDK configuration and optional region
+/// override. This function performs no AWS resolution itself.
 ///
 /// # Errors
 /// Returns [`Error::DataFusion`] if no region can be resolved, the resolved config carries no
@@ -175,8 +143,7 @@ pub(crate) fn build_amazon_s3_store(
 /// Register one object store for `bucket` under BOTH `s3://bucket` and `s3a://bucket` in the
 /// session's `RuntimeEnv`, so `read_parquet` with either scheme routes to it.
 ///
-/// `store` is cloned (an `Arc`) once per scheme; DataFusion's `register_object_store` replaces any
-/// prior store for that URL and returns the old one, which is dropped.
+/// The same `Arc` is registered under both schemes; an existing store for either URL is replaced.
 ///
 /// # Errors
 /// Returns [`Error::DataFusion`] if a `scheme://bucket` URL cannot be constructed (an invalid

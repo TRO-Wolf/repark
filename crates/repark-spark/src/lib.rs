@@ -1,14 +1,7 @@
-//! repark-spark — the Spark SQL door: v1 `repark-sql` ported over the phase-1 seams.
+//! repark-spark — the Spark SQL door.
 //!
-//! The statement router ([`execute`] / [`execute_with_read_only`], in [`router`]) intercepts
-//! the Spark-SQL forms DataFusion cannot execute against an Iceberg catalog and passes
-//! everything else through with Spark AST defaults ([`spark_ast`]). [`SparkDialect`] adapts the
-//! router to the phase-1 `repark_core::SqlDialect` seam; the companion `SparkExtension`
-//! (`extension` module, PR-2 WS2) installs the Spark function registry + analyzer rules.
-//!
-//! **PR-3b completes the port** — every v1 handler module is live (CTAS / CREATE / DROP /
-//! ALTER / MERGE / INSERT OVERWRITE / CALL / ref DDL) and the router matches v1's execute
-//! family end-to-end (see [`router`]).
+//! The router intercepts Iceberg DDL and Spark maintenance forms, applies Spark AST defaults to
+//! passthrough SQL, and exposes [`SparkDialect`] and [`SparkExtension`] for session integration.
 
 mod alter;
 mod call;
@@ -32,7 +25,7 @@ mod spark_literals;
 mod time_travel;
 mod window_range;
 
-// --- The router entrypoints (v1 `repark_sql::execute` family, re-homed). ---
+// --- Router entrypoints. ---
 pub use router::{execute, execute_with_read_only};
 // G15: parse-altitude collation refuse (binding `F.expr` / `filter_sql` call this).
 pub use collation::{
@@ -40,16 +33,16 @@ pub use collation::{
     refuse_collation_in_sql, refuse_collation_in_statement,
 };
 
-// --- The phase-1 seam adapter. ---
+// --- Session seam adapter. ---
 pub use dialect::SparkDialect;
 
-// --- v1 crate-root public surface carried by the ported spine modules. ---
+// --- Crate-root public surface. ---
 pub use catalog_ops::postgres_read_only_dml_message;
 pub use metadata_tables::{
     canonical_metadata_table_name, is_metadata_table_name, sql_may_have_metadata_table_path,
 };
 
-// Domain-module re-exports — keep sibling `use crate::{…}` paths stable (MOVE-ONLY surface).
+// Domain-module re-exports keep sibling paths stable.
 pub use catalog_ops::reregister_catalog_provider;
 pub(crate) use catalog_ops::{
     catalog_handle, iceberg_err, name_parts, namespace_schema_name, passthrough_after_p11,
@@ -83,11 +76,7 @@ pub(crate) use normalize::{
 mod extension;
 pub use extension::SparkExtension;
 
-// The ported v1 lib-root battery (`src/tests/`, G-4 split of the former `src/tests.rs`
-// monolith) reaches the v1 crate-root scope through leaf `use super::super::*`; these
-// test-only imports reconstruct that scope (v1's root `use` lines + the types that moved
-// to repark-core in phase 1). Shared external imports for the battery also live as
-// `pub(super)` re-exports in `src/tests/common.rs`.
+// Test-only imports provide the crate-root scope shared by the leaf modules.
 #[cfg(test)]
 use std::collections::HashMap;
 #[cfg(test)]

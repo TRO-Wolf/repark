@@ -1,23 +1,8 @@
-//! Iceberg time-travel SQL rewrite: `VERSION AS OF` / `TIMESTAMP AS OF` (+ Spark's
-//! `FOR SYSTEM_VERSION` / `FOR SYSTEM_TIME` spellings).
+//! Rewrite Spark Iceberg time-travel clauses to snapshot-pinned temporary providers.
 //!
-//! sqlparser 0.59's `TableVersion` only models `FOR SYSTEM_TIME AS OF` and only when the dialect
-//! opts into `supports_timestamp_versioning()` — Databricks dialect does not. Spark Iceberg's bare
-//! `VERSION AS OF` / `TIMESTAMP AS OF` are unmodelled. This module therefore sniffs + rewrites at
-//! the **token** level (same pattern as `USING` / `NAMESPACE` / `UNSET TBLPROPERTIES`), resolves a
-//! snapshot id against table metadata, registers a fork
-//! [`IcebergStaticTableProvider::try_new_from_table_snapshot`](iceberg_datafusion::IcebergStaticTableProvider)
-//! (never a post-hoc filter), and rewrites the FROM/JOIN relation to an ephemeral temp view.
-//!
-//! The PIN half of v1's module — [`TimeTravelSpec`], its parsers, snapshot resolution, and the
-//! `read_iceberg_table` reader-options path (`read_table_at`) — was hoisted MOVE-ONLY to
-//! `repark_core::time_travel` in phase 1; this module keeps the SQL-TEXT half (the span scan +
-//! FROM/JOIN splice) and imports the pin half from repark-core.
-//!
-//! Fork citations (pin `4723104b`):
-//! - Static provider: `crates/integrations/datafusion/src/table/mod.rs:420`
-//! - `snapshot_by_id` / `snapshot_for_ref` / `history`: `crates/iceberg/src/spec/table_metadata.rs:290-326`
-//! - `snapshot_id_as_of_time` (`<=` semantics): `crates/iceberg/src/inspect/metadata_log_entries.rs:129-138`
+//! Token scanning handles Spark's unmodelled `VERSION AS OF`, `TIMESTAMP AS OF`, and
+//! `FOR SYSTEM_*` forms. Snapshot parsing and resolution live in `repark_core`; this module owns
+//! the SQL span scan, provider registration, and FROM/JOIN splice.
 
 use std::sync::Arc;
 
@@ -74,26 +59,10 @@ pub struct PinnedViews {
 }
 
 impl PinnedViews {
-    /// Deregister everything this statement registered. Best-effort by design: a name that is
-    /// already gone is not an error worth failing a successful statement over.
-    ///
-    /// **`release` only touches names this statement minted itself — true by construction since
-    /// H-1b, not by hope.** Every name comes from `repark_core::next_temp_view_name`, the SINGLE
-    /// process-global minter of the `__repark_tt_` prefix. While this module kept a counter of its
-    /// own, both sequences started at 1 and handed out identical names, so a statement's mint step
-    /// could deregister — and this method then delete — the reader-options view
-    /// (`repark_core::read_table_at`) that a user's live `spark.read.option("snapshot-id", …)`
-    /// frame had registered. Do not reintroduce a second counter.
-    ///
-    /// The `__repark` prefix is ENGINE-RESERVED: user code must not register tables or views under
-    /// it. The mint step still clobbers a squatter (`deregister_table` before `register_table`,
-    /// below — KEPT, and not dead: DataFusion's schema provider refuses a duplicate
-    /// `register_table`, so without it a squatted name would fail the statement instead of being
-    /// replaced), so a user table called `__repark_tt_<n>` was silently REPLACED before this fix
-    /// and is silently DELETED after it. That is the reserved prefix working as intended, not a
-    /// regression — the sequence is a process-global counter starting at 1, so the names are
-    /// guessable and reserving them is the only defence. Minting with a per-process nonce would
-    /// make the point moot; see `map.md` `## Debug`.
+    /// Deregister every name this statement minted. A missing name is harmless because cleanup is
+    /// best effort. Names come from the shared process-global minter, so reader-option views remain
+    /// distinct and survive statement cleanup. The `__repark` prefix is reserved; deregistration
+    /// before registration is required because the schema provider rejects duplicate names.
     pub fn release(&self, ctx: &SessionContext) {
         for name in &self.names {
             let _ = ctx.deregister_table(name.as_str());

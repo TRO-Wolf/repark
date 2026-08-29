@@ -1,16 +1,7 @@
-"""User-defined table functions (PySpark ``pyspark.sql.udtf`` / ``functions.udtf``).
+"""User-defined table functions for scalar literal arguments.
 
-**r23 C6 / U12 — scalar-arg UDTF phase-2 core** (U11 seed):
-
-* ``UserDefinedTableFunction(lit_args…)`` builds a one-shot relation via a synthetic
-  one-row arg frame + :meth:`~repark.dataframe.DataFrame.mapInArrow` expansion of
-  ``handler.eval(*args)`` iterators.
-* ``spark.udtf.register(name, udtf)`` stores the handler on the session; SQL
-  ``SELECT * FROM name(lit_args)`` rewrites to the same relation constructor.
-* **LATERAL** / non-literal / table-arg UDTFs stay blocked (DataFusion
-  ``OuterReferenceColumn`` has no physical support; U11 hour-0 evidence).
-* Construction still validates Spark ``INVALID_UDTF_*`` error classes.
-* Never surface ``__repark_sql_udf_*`` internal names.
+Construction validates Spark UDTF errors. Calls and SQL registration use the Arrow bridge;
+non-literal, table-argument, and LATERAL forms remain explicitly unsupported.
 """
 
 from __future__ import annotations
@@ -27,8 +18,6 @@ from repark.errors import (
     PySparkTypeError,
     UnsupportedOperationException,
 )
-
-# === r23 C6: udtf-phase2-core ===
 
 _LATERAL_BLOCKED_MESSAGE = (
     "LATERAL / correlated UDTF is not supported in repark v1: DataFusion has no "
@@ -140,7 +129,7 @@ def _return_type_to_map_schema(struct_type: Any) -> str:
 
 
 def _is_table_arg(value: Any) -> bool:
-    """Whether ``value`` is a table / TableArg-shaped UDTF input (blocked in U12)."""
+    """Whether ``value`` is a table or ``TableArg``-shaped UDTF input."""
     type_name = type(value).__name__
     if type_name in {"DataFrame", "TableArg"}:
         return True
@@ -174,7 +163,7 @@ def _normalize_eval_rows(
     """Normalize ``eval`` return (iterator / list / single tuple) to a list of tuples.
 
     Each yielded row must match ``expected_width`` (declared returnType field count) —
-    short/long rows refuse loud (no silent Null-pad / tail-drop; octo C1-L-003).
+    short/long rows refuse loud; no silent NULL padding or tail drop occurs.
     """
     if result is None:
         return []
@@ -187,8 +176,7 @@ def _normalize_eval_rows(
     rows: list[tuple[Any, ...]] = []
     for item in items:
         if item is None:
-            # Bare None is not a row (octo C2-Q-002) — yield (None,) / (None, None, …)
-            # for null cells; refuse silent multiset shrink.
+            # Null cells preserve row width; refuse silent multiset shrink.
             raise PySparkException(
                 f"UDTF {surface} eval() yielded None; yield a tuple of length "
                 f"{expected_width} (use None cells for nulls)"
@@ -237,7 +225,6 @@ def _map_udtf_batches(
     handler = handler_cls()
     out_rows: list[tuple[Any, ...]] = []
     # start + eval share the same finally so terminate always runs after
-    # construction (octo C2-Q-001) — including when start() raises.
     try:
         start = getattr(handler, "start", None)
         if callable(start):
@@ -334,7 +321,7 @@ class UserDefinedTableFunction:
     """Python UDTF wrapper (PySpark ``UserDefinedTableFunction``).
 
     Construction validates handlers (Spark ``INVALID_UDTF_*``). Call with foldable
-    scalar args produces a :class:`~repark.dataframe.DataFrame` via mapInArrow (U12).
+    scalar args produces a :class:`~repark.dataframe.DataFrame` via mapInArrow.
     LATERAL / table-arg forms refuse loud.
     """
 
@@ -360,7 +347,7 @@ class UserDefinedTableFunction:
         return self._return_type
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
-        """Invoke scalar-arg UDTF → DataFrame (U12 mapInArrow relation constructor).
+        """Invoke a scalar-argument UDTF and return a DataFrame.
 
         Keyword arguments and non-literal / table args refuse loud.
         """
@@ -399,7 +386,7 @@ class UDTFRegistration:
     """``spark.udtf`` namespace (PySpark ``UDTFRegistration``).
 
     :meth:`register` stores a :class:`UserDefinedTableFunction` for SQL
-    ``SELECT * FROM name(lit_args)`` rewrite (U12). LATERAL stays blocked.
+    ``SELECT * FROM name(lit_args)`` rewrite. LATERAL stays blocked.
     """
 
     __slots__ = ("_session",)
@@ -409,7 +396,7 @@ class UDTFRegistration:
         self._session = session
 
     def register(self, name: str, f: Any) -> UserDefinedTableFunction:
-        """Register a UDTF for SQL ``FROM name(lit_args)`` (U12).
+        """Register a UDTF for SQL ``FROM name(lit_args)``.
 
         Validates that ``f`` is a :class:`UserDefinedTableFunction` with Spark
         ``CANNOT_REGISTER_UDTF`` when the type is wrong (handler class must be wrapped
@@ -458,7 +445,7 @@ def udtf(
     """Create a Python UDTF (PySpark ``functions.udtf``) — decorator / direct form.
 
     Construction validates the handler (Spark ``INVALID_UDTF_*``). Invocation with
-    scalar lit args produces a DataFrame (U12 mapInArrow core). ``spark.udtf.register``
+    scalar lit args produces a DataFrame via mapInArrow. ``spark.udtf.register``
     enables ``SELECT * FROM name(lit_args)``. LATERAL / table-arg stay blocked.
 
     Forms::
@@ -536,7 +523,6 @@ def _split_sql_literal_args(args_blob: str) -> list[Any]:
                 pieces.append(text[index])
                 index += 1
             if not closed:
-                # octo C1-SEC-002 / C1-L-002: refuse unclosed quotes (no silent value)
                 raise PySparkTypeError(
                     f"unclosed string literal in UDTF SQL arguments near {args_blob!r}"
                 )
@@ -565,7 +551,6 @@ def _split_sql_literal_args(args_blob: str) -> list[Any]:
                     ) and re.search(r"[.eE]", token):
                         # Floats: decimal and/or exponent (1.5, .5, 1e2, 1.0e-3).
                         # Pure ints already handled above; require . or e so we
-                        # do not re-parse ints as float (octo C2-L-001: 1e2).
                         values.append(float(token))
                     else:
                         raise PySparkTypeError(
@@ -584,7 +569,6 @@ def _split_sql_literal_args(args_blob: str) -> list[Any]:
                     f"expected comma between UDTF SQL arguments near {text[index:]!r}"
                 )
             index += 1
-            # Trailing comma with no following argument (octo C2-SEC-001).
             rest = text[index:].strip()
             if rest == "":
                 raise PySparkTypeError(f"trailing comma in UDTF SQL arguments near {args_blob!r}")
@@ -600,8 +584,8 @@ def _strip_sql_comments(text: str) -> str:
 def _sql_from_clause_region(body: str) -> str:
     """Return the text after the first top-level FROM until a clause keyword / end.
 
-    Used to detect registered UDTF **table factors** without matching SELECT-list
-    calls like ``SELECT id, max(1) FROM t`` (octo C5-SEC-001). Not a full SQL
+    Detects registered UDTF **table factors** without matching SELECT-list
+    calls like ``SELECT id, max(1) FROM t``. Not a full SQL
     parser — good enough to scope name( hits to the FROM region. Comments are
     stripped so ``FROM t -- name(\\n`` does not false-positive.
     """
@@ -628,8 +612,8 @@ def try_sql_registered_udtf(session: Any, query: str) -> Any | None:
     Returns ``None`` when no registered UDTF appears as a **table factor** in the
     FROM region. LATERAL / JOIN / multi-FROM table-factor hits refuse loud (not
     silent engine-parse failure). SELECT-list calls and name mentions only inside
-    string literals / comments do **not** hijack planning (octo C1-SEC-001,
-    C5-SEC-001).
+    string literals and comments do **not** hijack planning. The parser keeps the SQL
+    boundary intact.
     """
     if not isinstance(query, str):
         return None
@@ -648,7 +632,6 @@ def try_sql_registered_udtf(session: Any, query: str) -> Any | None:
     # Case-insensitive registry keys for table-factor scans.
     registry_by_lower = {key.lower(): (key, value) for key, value in registry.items()}
 
-    # Supported U12 form first (whole-statement match).
     match = _FROM_UDTF_SQL_RE.match(body)
     if match is not None:
         registered_name = match.group("name")
@@ -688,9 +671,7 @@ def try_sql_registered_udtf(session: Any, query: str) -> Any | None:
                 f"spark.sql LATERAL … {name}(…): {_LATERAL_BLOCKED_MESSAGE}"
             )
 
-    # Unsupported shapes: registered name as a call inside the FROM region only
     # (JOIN / multi-FROM / trailing clauses). Do **not** match SELECT-list
-    # ``, name(`` calls (octo C5-SEC-001).
     from_region = _sql_from_clause_region(body)
     if from_region:
         for name in registry:

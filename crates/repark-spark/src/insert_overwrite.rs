@@ -1,6 +1,4 @@
-//! `INSERT OVERWRITE` (empty probe/wipe + r23 OV1 stage-then-swap) and assignment-type guards.
-//!
-//! Extracted MOVE-ONLY from `lib.rs` (r25 T0 DataFusion-style reorg). Zero behavior change.
+//! `INSERT OVERWRITE` probing, stage-then-swap execution, and assignment-type guards.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -25,13 +23,8 @@ use crate::catalog_ops::{
 };
 use crate::spark_ast;
 
-// === r20 A1: insert-overwrite ===
-// === r23 OV1: streaming-overwrite ===
-// BUG-001: non-empty probe → passthrough original SQL re-executes the source; if the source
-// becomes empty on re-exec (non-deterministic / racing), the fork empty-overwrite path wipes
-// the target. OV1: stream source batches to staged data files first (no table mutation), then
-// wipe+commit via OV1-exclusive `commit_overwrite_replace_all`. Zero rows after non-empty probe
-// → refuse wipe (leave prior rows, fail loud). Empty arm unchanged (self-scan provider wipe).
+// A non-empty source is staged before the table is replaced. A source that becomes empty during
+// staging refuses the wipe so a race cannot erase existing rows.
 
 /// Monotonic counter for ephemeral `INSERT OVERWRITE` MemTable-fallback temp views.
 pub(crate) static OW_MATERIALIZE_SEQ: AtomicU64 = AtomicU64::new(1);
@@ -39,18 +32,9 @@ pub(crate) static OW_MATERIALIZE_SEQ: AtomicU64 = AtomicU64::new(1);
 /// ===========================================================================================
 /// `INSERT OVERWRITE` / `INSERT OVERWRITE TABLE` with a zero-row source must wipe the target.
 ///
-/// On the pinned iceberg-datafusion fork, empty overwrite commits a full-table replace (no
-/// silent empty-`data_files` short-circuit). When the planned source yields no rows, the engine
-/// **plan-validates** the original `INSERT OVERWRITE` (column count / schema — C5-Q-001) and
-/// assignment-checks types (O4-C2-Q-001), then wipes via a **self-scan empty** statement (not
-/// re-exec of the original source — P4C2-SAF-001). A historical `DELETE FROM` rewrite was
-/// removed: it mismatched merge-on-read physical shape and used `write.delete.isolation-level`
-/// (audit BUG-003).
-///
-/// Non-empty sources (audit BUG-001 / r20 A1 / OV1): the router **streams** the source once into
-/// staged Iceberg data files (no full `collect`), then commits a full-table overwrite via
-/// [`repark_iceberg::write::commit_overwrite_replace_all`]. A source that becomes empty between probe and
-/// stream write refuses the wipe. Probe is still `SELECT 1 … LIMIT 1` for empty classification.
+/// Validate schema and assignment types before an empty-source wipe. Use a self-scan source so the
+/// wipe cannot re-run a changing caller query. Stage non-empty rows before one replace-all publish;
+/// refuse if the source becomes empty between probe and staged write.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -122,7 +106,7 @@ pub(crate) async fn execute_insert_overwrite(
                 // Wipe via a **self-scan empty** statement, not re-exec of the original source
                 // (P4C2-SAF-001): re-running the caller's SQL after emptiness classification can
                 // still yield rows (TOCTOU / non-deterministic sources) and would hit the provider
-                // **without** the Group AA guard. `SELECT * FROM <target> WHERE false` is always
+                // without the partition guard. `SELECT * FROM <target> WHERE false` is always
                 // empty, schema-identical, and a positional-identity base-table passthrough — so
                 // it is guard-safe if a residual race ever made it non-empty (it cannot).
                 // Original source emptiness + assignment types were already validated above.
@@ -132,8 +116,7 @@ pub(crate) async fn execute_insert_overwrite(
             }
             // Fall through: re-probe saw rows → treat as non-empty (stage-then-swap path).
         }
-        // Non-empty path (audit BUG-001 / OV1): stream source → stage files → commit replace-all.
-        // A source that becomes empty between the non-empty probe and stream write must NOT wipe.
+        // Stage non-empty rows before replace-all. A source that becomes empty must not wipe.
         return insert_overwrite_from_staged_source(
             ctx,
             catalogs,
@@ -151,12 +134,9 @@ pub(crate) async fn execute_insert_overwrite(
 /// ===========================================================================================
 /// Non-empty `INSERT OVERWRITE` — stage-then-swap (OV1 / OTH-004).
 ///
-/// Resolves a 3-part Iceberg target, streams `SELECT * FROM (source)` with **SQL positional**
-/// assignment (D9 — never append by-name), writes data files without catalog mutation, refuses
-/// when `sum(record_count) == 0` after a non-empty probe (BUG-001), else commits via
-/// [`repark_iceberg::write::commit_overwrite_replace_all`] (Q9 exclusive). Non-resolvable targets fall
-/// back to the legacy `MemTable` collect path; catalog registered but `load_table` fails → loud
-/// (D7 — never silent `MemTable`-OOM of a shipping Iceberg target).
+/// Resolve the Iceberg target, stream positional assignments into staged files, and publish one
+/// replace-all commit. A zero-row staged result refuses the wipe. Non-resolvable targets use the
+/// existing fallback path; a registered catalog that cannot load the table fails loudly.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -472,32 +452,9 @@ pub(crate) async fn assert_empty_overwrite_types_assignment_compatible(
 
 /// ===========================================================================================
 /// True when a **value-producing** expression anywhere in `plan` carries a cast that can raise
-/// at value level (P5C1-Q-001; audit G1).
-///
-/// Two axes, each of which was a confirmed defect on its own:
-///
-/// 1. **Position: every expression of every node, none skipped.** "Empty" is a *runtime*
-///    property, not a static one, so a fallible cast anywhere in the source plan reproduces the
-///    asymmetry — the emptiness probe reads zero rows and therefore evaluates NOTHING, including
-///    predicates. Both of these WIPED a table the non-empty form refuses (audit G1 rework):
-///    `max(CAST(a AS INT))` hides its cast in [`Aggregate::aggr_expr`], never re-emitted in the
-///    wrapping `Projection`; and `… FROM empty_stage WHERE CAST(name AS INT) = 1` hides it in a
-///    `Filter` predicate that no row ever reaches. Join `ON` keys are the same class. So the walk
-///    uses [`LogicalPlan::apply_expressions`], which yields `Projection`/`Aggregate`/`Window`/
-///    `Values`/`Sort`/`Distinct On`/`Limit`/`Repartition`/`Unnest` expressions **and** the
-///    predicate-only ones (`Filter`, `Join.on` + `Join.filter`, `TableScan.filters`). Nothing is
-///    position-filtered; there is no "safe position".
-/// 2. **Fallibility, not assignment compatibility.** The inspected plan is *analyzed*
-///    ([`repark_functions::analyze_eagerly`]), so it also carries `TypeCoercion` casts the user
-///    never wrote — `concat(name, id)` becomes `concat(name, CAST(id AS Utf8))` and `id > '99'`
-///    becomes `CAST(id AS Utf8) > '99'`. Those cannot raise, so refusing them (as a
-///    "non-assignment cast" test does) breaks legitimate wipes. This axis — not position — is
-///    what makes analyzer coercions pass: the question the guard asks is
-///    [`cast_may_fail_at_runtime`].
-///
-/// Subquery plans hang off an [`DataFusionExpr::ScalarSubquery`] / `Exists` / `InSubquery`, not
-/// off [`LogicalPlan`]'s children, so [`TreeNode::apply`] never reaches them —
-/// [`expr_has_unsafe_cast`] recurses into them explicitly.
+/// at value level. Walk every expression position and inspect analyzed casts for runtime
+/// fallibility. Analyzer coercions that cannot raise remain allowed. Subquery expressions require
+/// explicit recursion because they are not logical-plan children.
 /// ===========================================================================================
 pub(crate) fn logical_plan_has_unsafe_cast(plan: &LogicalPlan) -> bool {
     let mut found = false;
@@ -718,11 +675,7 @@ mod assignment_type_unit_tests {
         ));
     }
 
-    /// Audit G1 / defect 2: the cast-safety question is **"can this cast raise?"**, not "is this
-    /// an assignment cast". The inspected source plan is analyzed, so it carries `TypeCoercion`
-    /// casts the user never wrote (`concat(name, id)` → `CAST(id AS Utf8)`); classifying those as
-    /// unsafe refused legitimate wipes. One arm of `renders_as_text_infallibly` per assertion —
-    /// every arm has a nameable input that flips the answer.
+    /// Analyzer-inserted infallible casts remain safe; user or analyzer casts that can raise refuse.
     #[test]
     fn cast_may_fail_at_runtime_matrix() {
         use super::cast_may_fail_at_runtime;

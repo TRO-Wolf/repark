@@ -1,26 +1,7 @@
-//! Spark-door `spark.sql.ansi.enabled` carrier + the ANSI `/0` / `% 0` raise kernel.
+//! Spark-door `spark.sql.ansi.enabled` carrier and ANSI `/0` / `% 0` raise kernel.
 //!
-//! **Why a sibling `ConfigExtension`, not [`crate::cardinality::ReparkSqlSettings`].**
-//! The cardinality extension is the `repark.sql.*` safety namespace (plan-time expansion
-//! ceilings, local-filesystem DDL). This key is Spark `SQLConf` (`spark.sql.ansi.enabled`).
-//! Mixing it into `repark.sql` would be a second spelling. DataFusion looks an extension
-//! namespace up on the text before the FIRST `.`, so `PREFIX = "spark"` would swallow every
-//! `spark.*` `SET` (including `spark.sql.session.timeZone`). `PREFIX = "repark.ansi"` is the
-//! same two-segment carrier shape as [`crate::session_time_zone`] — installed only by
-//! `SparkExtension::configure`, never a `SET`-able twin.
-//!
-//! **Type-validation seam (A1).** `repark_common::Error::Config` documents Spark's
-//! `IllegalArgumentException` for `spark.sql.ansi.enabled=notabool`. That variant is produced
-//! only inside `repark-core` (session builder / catalog parse) — `configure()` returns
-//! `datafusion::error::Result` and `session.rs` folds it with `engine_err`, which never emits
-//! `Error::Config`. The builder is CLOSED. This module fail-louds with
-//! [`DataFusionError::Configuration`] and the Spark message needle (`should be boolean, but
-//! was …`). The exception *class* at the Python boundary is therefore the base
-//! `PySparkException`, not `IllegalArgumentException` — named residue, not a silent omit.
-//!
-//! **Default TRUE** (owner Q10=A / Spark 4). Missing carrier (a bare `SessionContext` that
-//! still installed [`crate::analyzer::SparkExprSemantics`]) is also TRUE — the analyzer *is*
-//! the Spark-door semantics layer. `ansi=false` restores the `nullif` `/0` wrap.
+//! The separate non-`SET`-able extension keeps this key out of `repark.sql.*`; invalid values fail
+//! with configuration errors and the default is `true`.
 
 use std::any::Any;
 use std::collections::HashMap;
@@ -64,8 +45,7 @@ impl Default for SparkAnsiConfig {
 }
 
 impl ConfigExtension for SparkAnsiConfig {
-    /// Two segments so `SET spark.sql.ansi.enabled` cannot address this carrier (DataFusion
-    /// looks up an extension on the text before the first `.`).
+    /// Two segments keep the carrier unreachable through `SET`.
     const PREFIX: &'static str = "repark.ansi";
 }
 
@@ -82,7 +62,7 @@ impl ExtensionOptions for SparkAnsiConfig {
         Box::new(self.clone())
     }
 
-    /// Always refuses — the knob is `spark.sql.ansi.enabled` on the session builder.
+    /// Refuse because the knob is set on the session builder.
     fn set(&mut self, key: &str, _value: &str) -> Result<()> {
         Err(DataFusionError::Configuration(format!(
             "`{}.{key}` is not a settable option: ANSI mode is set with \
@@ -91,7 +71,7 @@ impl ExtensionOptions for SparkAnsiConfig {
         )))
     }
 
-    /// Empty so the carrier is not advertised as a `SET`-able option.
+    /// Keep the carrier out of `SET` listings.
     fn entries(&self) -> Vec<ConfigEntry> {
         Vec::new()
     }
