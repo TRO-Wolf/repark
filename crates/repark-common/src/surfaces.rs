@@ -1,28 +1,15 @@
-//! The dialect-neutral SQL **surface registry** — the typed vocabulary both doors are audited
-//! against (design `docs/design/sql-doors.md` §2 Q13, graft G2).
+//! Dialect-neutral SQL surface registry audited by both doors (design `docs/design/sql-doors.md`
+//! §2 Q13, graft G2).
 //!
-//! One const ID list lives here, at tier 0, because it is a statement about the PRODUCT surface,
-//! not about either dialect: "the engine has a CTAS surface" is true regardless of which door
-//! spells it. IDs are therefore named by CAPABILITY, never by spelling — one ID covers the ANSI
-//! `WITH (format_version = 2)` form and the Spark `TBLPROPERTIES` form.
+//! IDs name capabilities rather than syntax, and each door maps every ID to a [`Row`].
+//! [`audit`] rejects missing, unknown, duplicate, or untraceable rows.
 //!
-//! Each door carries its own `matrix.rs` mapping **every** ID in [`ALL`] to a [`Row`] — either
-//! [`Row::Tested`] naming the test that pins it and the session it ran under, or
-//! [`Row::DeliberatelyAbsent`] naming the reason and the design/ADR section that decided it —
-//! with a compile-run audit test ([`audit`]) that FAILS on an unmapped, unknown, duplicated or
-//! untraceable row. That is what makes **absence typed and build-enforced**: a surface cannot
-//! quietly not exist, and a new ID cannot land without both doors answering for it.
-//!
-//! Adding an ID is therefore a deliberate act with a cost: it reds both doors until each maps
-//! it. The module lives in `repark-common` (tier 0) so both tier-3 doors reach it without a
-//! door→door edge (design §1: "no door→door edge, ever").
+//! This tier-0 module lets both doors depend on the registry without a door-to-door edge.
 
 use std::collections::BTreeSet;
 
-/// A surface identifier: a stable, dialect-neutral name for one engine SQL capability.
-///
-/// A newtype rather than a bare `&str` so a matrix row cannot be keyed by an arbitrary string
-/// that merely looks like an ID.
+/// A stable, dialect-neutral name for one engine SQL capability.
+/// The newtype prevents matrix rows from using arbitrary strings.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct SurfaceId(&'static str);
 
@@ -40,19 +27,14 @@ impl std::fmt::Display for SurfaceId {
     }
 }
 
-/// Declare the surface-ID constants and the [`ALL`] slice from one list, so the two can never
-/// drift (a constant that is not in `ALL` is unauditable; an `ALL` entry with no constant is
-/// unreferenceable). The wire name is `stringify!`d from the constant's own identifier, so the
-/// third drift class — a constant whose string still spells the surface it was copied from —
-/// cannot be written either.
+/// Generates surface-ID constants and [`ALL`] from one list, preventing drift.
+/// `stringify!` derives each wire name from its constant identifier.
 macro_rules! surface_ids {
     ($($(#[$meta:meta])* $konst:ident;)+) => {
         $($(#[$meta])* pub const $konst: SurfaceId = SurfaceId(stringify!($konst));)+
 
-        /// Every surface ID, in declaration order (grouped by family: statement forms,
-        /// table-creation options, guard rails, ergonomics + seams, value semantics).
-        /// **The audit's universe** — [`audit`] fails a door whose matrix does not map
-        /// exactly this set.
+        /// Every surface ID in declaration order.
+        /// [`audit`] requires each door matrix to map exactly this set.
         pub const ALL: &[SurfaceId] = &[$($konst),+];
     };
 }
@@ -63,8 +45,7 @@ surface_ids! {
     SELECT_PASSTHROUGH;
     /// `CREATE TABLE … AS SELECT` onto a staged Iceberg create/replace transaction.
     CTAS;
-    /// How a CTAS target name resolves to a catalog — and what happens when it does not
-    /// (design §2 Q15 / graft G1: loud refuse, never a silent `MemTable`).
+    /// How a CTAS target resolves to a catalog, including loud refusal when it does not.
     CTAS_TARGET_ROUTING;
     /// `CREATE OR REPLACE TABLE … AS SELECT` (the staged replace).
     CREATE_OR_REPLACE_TABLE;
@@ -96,8 +77,7 @@ surface_ids! {
     MERGE;
     /// `TRUNCATE TABLE`.
     TRUNCATE;
-    /// Snapshot-pinned reads (design §2 Q5) — `VERSION`/`TIMESTAMP AS OF`, with or without
-    /// `FOR`.
+    /// Snapshot-pinned reads using `VERSION` or `TIMESTAMP AS OF`, with or without `FOR`.
     TIME_TRAVEL;
     /// Branch / tag DDL (design §2 Q6).
     BRANCH_TAG_DDL;
@@ -109,8 +89,7 @@ surface_ids! {
     INTROSPECTION;
 
     // --- Table-creation options ---
-    /// The data-file format option (`format = 'PARQUET'` / `USING parquet`); ORC + AVRO refuse
-    /// loud naming the trigger (design §0 graft G9).
+    /// Data-file format option. Unsupported ORC and AVRO formats refuse loudly (design §0 graft G9).
     TABLE_OPTION_FORMAT;
     /// The Iceberg format-version option.
     TABLE_OPTION_FORMAT_VERSION;
@@ -122,8 +101,7 @@ surface_ids! {
     TABLE_OPTION_RAW_PROPERTIES;
     /// The sort-order option (`sorted_by`) — held as a loud refuse naming its trigger (G9).
     TABLE_OPTION_SORT_ORDER;
-    /// The typo guard: an unknown BARE creation-option key refuses loud, listing the curated
-    /// set (design §2 Q1).
+    /// Unknown bare creation-option keys refuse loudly and list the curated set (design §2 Q1).
     TABLE_OPTION_UNKNOWN_KEY_REFUSE;
     /// Partition-transform validation — names, argument counts, bounds (design §2 Q2).
     PARTITION_TRANSFORM_VALIDATION;
@@ -133,8 +111,7 @@ surface_ids! {
     SCHEMA_OPTION_LOCATION;
 
     // --- Guard rails (design §2 Q12) ---
-    /// Multi-statement SQL refuses — quote-aware, and FIRST in the router (the ordering-defect
-    /// fix mandated by the design judges, §0).
+    /// Quote-aware multi-statement SQL refusal, checked first in the router.
     GUARD_MULTI_STATEMENT;
     /// P11: DML against a read-only catalog refuses with the generic message.
     GUARD_READ_ONLY_CATALOG;
@@ -146,8 +123,7 @@ surface_ids! {
     GUARD_MOR_MULTI_SPEC_DML;
 
     // --- Ergonomics + seams ---
-    /// The error-path-only wrong-door sniff: on parse/plan FAILURE, name the token, the native
-    /// equivalent, and the other door (design §2 Q10 / graft G3).
+    /// After a parse or plan failure, wrong-door sniff names the token, equivalent, and other door (design §2 Q10 / graft G3).
     WRONG_DOOR_SNIFF;
     /// Identifier case folding, and where it diverges between the doors (design §2 Q10).
     IDENTIFIER_CASE_FOLDING;
@@ -155,9 +131,7 @@ surface_ids! {
     TA_FUNCTIONS;
     /// The frozen `SqlDialect::execute` seam — the door is reachable through a session (§3).
     SQL_DIALECT_SEAM;
-    /// Two-session cross-door result equivalence (design §2 Q13 / graft G5). A single-session
-    /// `sql_with` row does NOT discharge this — extensions are session-scoped, so a
-    /// Spark-extended session has Spark expression semantics through every door.
+    /// Cross-door result equivalence (design §2 Q13 / graft G5).
     CROSS_DOOR_EQUIVALENCE;
 
     // --- Value semantics (H-2 G8) ---
@@ -178,50 +152,42 @@ surface_ids! {
 }
 
 /// ===========================================================================================
-/// Which session a matrix row's evidence ran under (design §2 Q13, graft G5).
+/// Session profile for matrix evidence (design §2 Q13, graft G5).
 ///
-/// Recorded per row because the cross-door protocol is only meaningful when the profile is
-/// explicit: a Spark-extended session has Spark expression semantics through EVERY door, so
-/// "native" evidence gathered on an extended session proves nothing about the native door.
+/// Explicit profiles prevent Spark-extended evidence from being misread as native evidence.
 /// ===========================================================================================
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SessionProfile {
-    /// An in-process unit test — no session, no extension (parsers, validators, refuse
-    /// helpers).
+    /// An in-process unit test without a session or extension.
     Unit,
-    /// A session with NO extension installed: native/ANSI expression semantics.
+    /// A session without extensions and with native/ANSI expression semantics.
     Native,
-    /// A session with the Spark extension installed (functions + analyzer rules).
+    /// A session with the Spark extension installed.
     SparkExtended,
-    /// TWO sessions — one native, one Spark-extended — each driven through its OWN door,
-    /// results compared on the Arrow path (value AND type). The only profile that discharges
-    /// [`CROSS_DOOR_EQUIVALENCE`].
+    /// Separate native and Spark-extended sessions use their own doors for Arrow value and type comparison.
+    /// One Spark-extended session cannot prove equivalence because its extensions affect every door.
     TwoSession,
 }
 
 /// ===========================================================================================
-/// How ONE door answers for ONE surface.
+/// One door's answer for one surface.
 ///
-/// The two variants are the whole point: a door either pins the surface with a named test, or
-/// states in the type system that it deliberately does not have it, with the reason and the
-/// deciding design/ADR section attached. There is no third "unknown" or "not yet" state — an ID
-/// with no row fails the door's audit test.
+/// Each surface is either `Tested` or `DeliberatelyAbsent`. Missing rows fail the audit.
 /// ===========================================================================================
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Row {
     /// The door implements this surface.
     Tested {
-        /// The pinning test's `cargo test -- --list` name (e.g. `ctas::tests::writes_rows`).
+        /// The pinning test's `cargo test -- --list` name.
         test: &'static str,
         /// The session profile the evidence was gathered under.
         profile: SessionProfile,
     },
-    /// The door deliberately does NOT implement this surface.
+    /// The door does not implement this surface.
     DeliberatelyAbsent {
-        /// Why — in the door's own terms, not a shrug; names the equivalent and the trigger
-        /// that would reopen it (design §6 R5).
+        /// Why the door lacks this surface and what would reopen it (design §6 R5).
         reason: &'static str,
-        /// The design section / ADR that decided it (e.g. `sql-doors.md §2 Q9`).
+        /// The design section or ADR that decided it.
         adr: &'static str,
     },
 }
@@ -235,24 +201,12 @@ impl Row {
 }
 
 /// ===========================================================================================
-/// Audit one door's matrix against [`ALL`]: every ID mapped exactly once, no unknown entries,
-/// every row traceable.
-///
-/// Lives here (not duplicated per door) so the two doors are audited by the SAME rule. Each
-/// door's `matrix.rs` test calls this with its own `(SurfaceId, Row)` table and its own name.
-///
-/// Four failure modes, reported together so one run names every problem: an ID in [`ALL`] with
-/// no row (the surface silently went missing), a row naming an unknown ID (a stale row after a
-/// rename), a duplicated ID (two rows disagreeing about one surface), and an untraceable row —
-/// a [`Row::Tested`] with an empty `test`, or a [`Row::DeliberatelyAbsent`] with an empty
-/// `reason`/`adr`. A row that cites nothing is indistinguishable from the oversight this
-/// machinery exists to prevent.
+/// Audits one door matrix against [`ALL`]. Missing, unknown, duplicate, and untraceable rows fail.
 /// ===========================================================================================
 ///
 /// # Errors
 ///
-/// A human-readable, newline-joined message naming the unmapped IDs, unknown IDs, duplicated
-/// IDs and untraceable rows. The caller (the door's audit test) asserts on `Ok`.
+/// Returns a newline-joined message listing every problem.
 pub fn audit(door: &str, rows: &[(SurfaceId, Row)]) -> Result<(), String> {
     let mut problems: Vec<String> = Vec::new();
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Isolated TPC-H query worker (R-TPCH-V3 / W1).
+"""Isolated TPC-H query worker.
 
 Parent scoreboard spawns one process per SF10 query so an OOM-kill (or other
 fatal signal) records DIED without killing the scoreboard. Config + result are
@@ -117,7 +117,7 @@ def main(argv: list[str] | None = None) -> int:
 def _max_rss_kb() -> int:
     """Peak RSS of this process in kibibytes (Linux ru_maxrss unit)."""
     usage = resource.getrusage(resource.RUSAGE_SELF)
-    # Linux: kilobytes; macOS: bytes — we only claim Linux for V3 measurement hosts.
+    # Linux: kilobytes; macOS: bytes — we only claim Linux for measurement hosts.
     return int(usage.ru_maxrss)
 
 

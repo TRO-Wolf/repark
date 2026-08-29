@@ -1,6 +1,4 @@
 //! Catalog builders (memory / Glue / S3 Tables) + shared prop helpers.
-//!
-//! Extracted from `lib.rs` in r26 LR3 (root-logic slim). Public paths re-exported from the crate root.
 
 use std::collections::HashMap;
 use std::hash::BuildHasher;
@@ -16,25 +14,18 @@ use tracing::Instrument;
 use crate::catalog::location::storage_factory_for_location;
 
 /// ===========================================================================================
-/// Build the AWS-free in-memory Iceberg catalog over a local-filesystem `warehouse` directory —
-/// the catalog for local development and tests (Spark `local` mode analogue). Table metadata
-/// lives in process memory; data/metadata files are written under `warehouse`, so everything a
-/// commit produces is inspectable on disk.
+/// Build the AWS-free in-memory catalog over `warehouse` for local development and tests.
 /// ===========================================================================================
 ///
 /// # Errors
-/// Returns an error if the catalog builder rejects the configuration (e.g. an empty warehouse
-/// path).
+/// Returns an error when the builder rejects the warehouse configuration.
 #[tracing::instrument(
     name = "catalog.memory_catalog",
     skip(warehouse),
     fields(warehouse = %warehouse)
 )]
 pub async fn memory_catalog(warehouse: &str) -> Result<Arc<dyn Catalog>> {
-    // Scheme-selected storage, through the same helper the CTAS create arm uses so no call site
-    // hardcodes a factory: a bare/`file://` warehouse (the documented local-dev use) selects
-    // `LocalFsStorageFactory` — behaviour-identical to the prior hardcode. (An object-store
-    // warehouse would select that backend, but the in-memory catalog is intended for local runs.)
+    // Use the shared scheme selector so local and object-store warehouses choose the correct backend.
     let catalog = MemoryCatalogBuilder::default()
         .with_storage_factory(storage_factory_for_location(warehouse)?)
         .load(
@@ -47,31 +38,18 @@ pub async fn memory_catalog(warehouse: &str) -> Result<Arc<dyn Catalog>> {
 }
 
 /// ===========================================================================================
-/// Build the AWS **Glue** Iceberg catalog (the primary product surface) from `props`, thin over
-/// the fork's `GlueCatalogBuilder`. The fork recognizes `uri` (endpoint override), `catalog_id`,
-/// and `warehouse` (**required**) and forwards every other property to Iceberg `FileIO` (so
-/// `s3.*` / `AWS_*`-style credentials pass straight through). Credentials otherwise resolve via the
-/// AWS SDK default chain inside the fork; `RePark` never handles them.
+/// Build the AWS Glue catalog from `props`.
 ///
-/// `warehouse` is validated fail-loud here — naming the missing key — *before* the fork builder is
-/// invoked, so a misconfiguration surfaces as a clear plan error rather than a downstream `FileIO`
-/// failure on first use.
+/// The required `warehouse` key fails loud before the fork builder runs. Other properties pass to
+/// Iceberg `FileIO`; the span records key names only.
 /// ===========================================================================================
 ///
 /// # Errors
-/// Returns an error if the required `warehouse` property is absent or empty, or if the fork builder
-/// rejects the configuration.
-///
-/// ## Observability (QUAL-05 / OBS1)
-/// Emits span `catalog.glue_catalog` with **prop key names only** (never values — credentials ride
-/// in the same map). Duration is available when a subscriber records span close events (the wheel's
-/// `REPARK_LOG`/`RUST_LOG` path uses `FmtSpan::CLOSE`). AWS SDK request ids / retry counts are
-/// not exposed by this thin wrapper (fork-internal residual; r25 seed).
+/// Returns an error when `warehouse` is absent, empty, or rejected by the fork builder.
 pub async fn glue_catalog<S: BuildHasher>(
     props: &HashMap<String, String, S>,
 ) -> Result<Arc<dyn Catalog>> {
-    // Generic + async: manual span (#[instrument] on generic async is awkward for prop_keys).
-    // Fields are key names + non-secret warehouse presence only — never prop values.
+    // Record property names only because this map can contain credentials.
     let prop_keys = prop_key_names(props);
     let has_warehouse = props
         .get(GLUE_CATALOG_PROP_WAREHOUSE)

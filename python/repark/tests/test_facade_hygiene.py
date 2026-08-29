@@ -1,4 +1,6 @@
-"""R-FACADE-HYGIENE (W7) — listTables cdf hide, weakref GC, fillna, dropDuplicates, OOS errors."""
+"""R-FACADE-HYGIENE pins: listTables CDF hide, weakref GC bound, fillna, dropDuplicates,
+OOS errors.
+"""
 
 from __future__ import annotations
 

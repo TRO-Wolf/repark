@@ -1,4 +1,4 @@
-"""X3 census pins — DataFrame error-class seed + high-leverage surface (test_dataframe).
+"""Census pins — DataFrame error-class seed + high-leverage surface (test_dataframe).
 
 Apache suite rows gated here: error kwargs / getQueryContext, drop(Column), join(on=None),
 sample seed stability, session.conf, count(star), table(None), show diagnostics, toDF types.
@@ -29,9 +29,7 @@ def spark() -> ReparkSession:
     session.stop()
 
 
-# ==================================================================================================
 # Error kwargs / getQueryContext seed (check_error surface)
-# ==================================================================================================
 
 
 def test_pyspark_type_error_errorclass_kwargs_and_query_context() -> None:
@@ -50,7 +48,7 @@ def test_pyspark_type_error_errorclass_kwargs_and_query_context() -> None:
     assert error.getSqlState() is None
     assert isinstance(error, TypeError)
     assert isinstance(error, Exception)
-    # Caller / returned-dict mutation must not corrupt the stored parameters (octo X3 C2).
+    # Caller / returned-dict mutation must not corrupt the stored parameters.
     params["arg_name"] = "MUTATED"
     returned = error.getMessageParameters()
     assert returned is not None
@@ -115,7 +113,7 @@ def test_drop_duplicates_str_raises_not_list_or_tuple(spark: ReparkSession) -> N
 
 
 def test_drop_duplicates_empty_subset_is_full_distinct(spark: ReparkSession) -> None:
-    """Empty subset must not hit DataFusion empty ORDER BY (octo X3 C3)."""
+    """Empty subset must not hit DataFusion empty ORDER BY."""
     frame = spark.createDataFrame(
         [("Alice", 50), ("Alice", 50), ("Bob", 60)],
         ["name", "age"],
@@ -173,7 +171,7 @@ def test_sample_missing_args_error_class(spark: ReparkSession) -> None:
 
 
 def test_sample_positional_fraction_seed_overload(spark: ReparkSession) -> None:
-    """sample(fraction, seed) must not treat the seed as fraction (octo X3 C1)."""
+    """sample(fraction, seed) must not treat the seed as fraction."""
     ids_seed7_a = {row[0] for row in spark.range(200).sample(0.3, 7).collect()}
     ids_seed7_b = {row[0] for row in spark.range(200).sample(0.3, 7).collect()}
     ids_seed8 = {row[0] for row in spark.range(200).sample(0.3, 8).collect()}
@@ -197,9 +195,7 @@ def test_to_df_none_raises_not_list_of_str(spark: ReparkSession) -> None:
     assert renamed.schema.simpleString() == "struct<key:string,value:bigint>"
 
 
-# ==================================================================================================
 # Surface unblocks
-# ==================================================================================================
 
 
 def test_drop_accepts_column(spark: ReparkSession) -> None:
@@ -227,7 +223,7 @@ def test_join_on_none_cross_and_invalid_how(spark: ReparkSession) -> None:
 
 
 def test_join_builder_conf_cross_join_disabled() -> None:
-    """Builder .config(crossJoin=false) must gate join(on=None) (octo X3 C1)."""
+    """Builder .config(crossJoin=false) must gate join(on=None)."""
     session = (
         ReparkSession.builder.appName("pytest-x3-builder-cross")
         .config("spark.sql.crossJoin.enabled", "false")
@@ -259,7 +255,7 @@ def test_sample_without_seed_is_action_stable(spark: ReparkSession) -> None:
 
 
 def test_explain_extended_does_not_execute_plan(spark: ReparkSession) -> None:
-    """extended=True must not map to EXPLAIN ANALYZE (octo X3 hang fix residual pin)."""
+    """extended=True must not map to EXPLAIN ANALYZE."""
     import io
     import time
     from contextlib import redirect_stdout
@@ -272,7 +268,7 @@ def test_explain_extended_does_not_execute_plan(spark: ReparkSession) -> None:
 
 
 def test_random_split_seed_sensitivity(spark: ReparkSession) -> None:
-    """Seeded randomSplit must diverge across seeds (octo X3 C6)."""
+    """Seeded randomSplit must diverge across seeds."""
     left7 = {row[0] for row in spark.range(200).randomSplit([0.5, 0.5], seed=7)[0].collect()}
     left8 = {row[0] for row in spark.range(200).randomSplit([0.5, 0.5], seed=8)[0].collect()}
     assert left7 != left8
@@ -311,7 +307,7 @@ def test_count_star_column_forms(spark: ReparkSession) -> None:
     nested = frame.select(F.struct("a", "b").alias("s"))
     assert nested.select(F.count(nested["*"])).columns == ["count(1)"]
     assert nested.select(F.count(F.col("*"))).collect()[0][0] == 1
-    # Field names must follow struct args (not DataFusion c0/c1) — octo X3 C4.
+    # Field names must follow struct args (not DataFusion c0/c1).
     arrow_table = nested.to_arrow()
     struct_type = arrow_table.schema.field("s").type
     assert struct_type.names == ["a", "b"]

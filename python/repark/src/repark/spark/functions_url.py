@@ -1,15 +1,4 @@
-"""URL facade wrappers (FN-GT2).
-
-Public names are re-exported from ``functions.py``. Bitmap helpers live
-in :mod:`repark.spark.functions_bitwise` (bit-family sibling).
-
-Every argument here is ``ColumnOrName`` exactly as PySpark 4.1.2 spells it: a
-bare ``str`` is a **column name**, never a literal. Pass ``F.lit('HOST')`` for
-a constant part name. The FN-GT2 X-round removed the ``force-lit`` convenience
-(ledger Q-010) — it made ``F.parse_url(url, 'HOST')`` mean the opposite of what
-the same call means on Spark, which is a silent wrong-column bug on migration,
-not a convenience.
-"""
+"""URL parsing and encoding function wrappers."""
 
 from __future__ import annotations
 
@@ -52,8 +41,6 @@ def parse_url(
     **raise** here (under this function and :func:`try_parse_url` alike) where
     Spark answers: ``a(?=1)`` lookahead (Spark NULL), ``(?<=&)b`` lookbehind,
     ``(a)\\1`` backreference, ``(?>a)`` atomic group, ``\\Qa\\E`` quoting.
-    Everything else measured agrees — ``(?i)``, alternation, ``{m,n}``,
-    ``\\d``, ``\\p{Alpha}``, ``a++``, ``[a-z&&[^b]]``, ``(?<n>a)``, ``\\A``.
 
     Order matters and is Spark's: a three-argument call whose part is not
     ``QUERY`` is NULL *before* the URL is parsed, so

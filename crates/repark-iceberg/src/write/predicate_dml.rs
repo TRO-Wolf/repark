@@ -1,22 +1,9 @@
-//! Identity DELETE/UPDATE via SELECT over a pinned `(_file, _pos)` streaming target.
+//! Identity DELETE/UPDATE through a SELECT over a pinned `(_file, _pos)` target stream.
 //!
-//! The G3-E8 valve refuses subquery `WHERE` clauses because DataFusion's DML planner drops them
-//! (`extract_dml_filters` sees a join and recovers nothing; empty filters = delete-all). This
-//! module is the RePark-owned capability that evaluates the original predicate as a **SELECT**
-//! over the MERGE streaming target (data columns + reserved identity) and then commits through
-//! the MERGE write arms — honoring `write.delete.mode` / `write.update.mode` and the matching
-//! isolation properties, **never** `write.merge.mode`.
-//!
-//! The capability is general (any `WHERE` that DataFusion can plan as a query). The product hole
-//! is the valve allow-list: uncorrelated `DELETE … WHERE col IN (SELECT …)` /
-//! `NOT IN (SELECT …)` (including the NULL 3VL trap), `DELETE … WHERE [NOT] EXISTS
-//! (SELECT …)` both uncorrelated and correlated, correlated
-//! `DELETE … WHERE col IN (SELECT s.col FROM s WHERE s.k = t.k)` (recorded equivalent to
-//! correlated EXISTS on every fixture), and identity
-//! `UPDATE … SET <scalar> WHERE col IN (SELECT …)` (uncorrelated). Mixed AND/OR, nested,
-//! scalar-subquery `WHERE`, CTE, USING/RETURNING, SET-subquery (D-4), UPDATE NOT IN / EXISTS,
-//! and every ANY/ALL spelling stay refused — Spark 4.1.2 parse-fails quantified
-//! comparisons (`= ANY` / `<> ALL` / …), so they cannot ship under the A4 bar.
+//! DataFusion can drop subquery DML filters, which would turn a filtered operation into delete-all.
+//! This module evaluates the predicate as a SELECT and commits through the MERGE arms, honoring
+//! the operation-specific mode and isolation properties. Unsupported subquery, CTE, and quantified
+//! forms remain refused at the product valve.
 
 use std::sync::Arc;
 

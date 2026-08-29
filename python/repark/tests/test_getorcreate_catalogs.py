@@ -1,10 +1,8 @@
 """``getOrCreate`` on an existing session registers NEWLY-configured catalogs (R-GETORCREATE).
 
-PySpark-parity rationale (recorded in the unit ledger): Spark instantiates catalogs lazily per
-name, so a catalog configured by a LATER builder works against the already-active session; an
-already-instantiated name keeps its registration regardless of changed conf. The dogfood finding
-was the notebook flow — a second ``getOrCreate`` carrying a new Glue catalog was warned about and
-dropped, forcing a kernel restart.
+PySpark parity: Spark instantiates catalogs lazily per name, so a catalog configured by a LATER
+builder works against the already-active session; an already-instantiated name keeps its
+registration regardless of changed conf.
 """
 
 from __future__ import annotations
@@ -33,8 +31,6 @@ def test_new_catalog_on_existing_session_registers_without_warning(tmp_path: Pat
             )
         assert reused is spark, "reuse path must hand back the active session"
         assert not _user_warnings(record), _user_warnings(record)
-        # The late-registered catalog is LIVE on the existing session — the exact notebook flow
-        # that previously required a kernel restart.
         reused.sql("CREATE NAMESPACE late_cat.ns")
         reused.sql("CREATE TABLE late_cat.ns.t USING iceberg AS SELECT 1 AS id UNION ALL SELECT 2")
         assert reused.sql("SELECT * FROM late_cat.ns.t").count() == 2

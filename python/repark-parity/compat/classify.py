@@ -323,16 +323,15 @@ def _is_needs_jvm(*, type_name: str, message: str, message_blob: str, blob: str)
 def _is_third_party_import(text: str) -> bool:
     """True when an ImportError points at env/third-party packages, not repark/pyspark gaps.
 
-    X1 note: Apache test cache lives under ``~/.cache/repark-pyspark-tests/`` — a bare
+    The Apache test cache lives under ``~/.cache/repark-pyspark-tests/`` — a bare
     ``"repark" in text`` match would false-negative every suite traceback that only
     *runs* a cached test while failing on pandas/numpy (e.g. ``assertDataFrameEqual``
     → ``pyspark.pandas`` → missing ``pandas.core.common._builtin_table``).
 
-    Octo C1: product detection must key off the **imported module / error message**, not
-    stack-frame paths. Frames under ``site-packages/repark`` or ``python/repark/`` are
-    normal after redirect (or when repark is installed in the venv); using them as a
-    short-circuit stole pandas ImportErrors into FAIL-MISSING and polluted the
-    engine-relevant denominator.
+    Product detection must key off the **imported module / error message**, not
+    stack-frame paths: frames under ``site-packages/repark`` or ``python/repark/``
+    are normal after redirect, and using them as a short-circuit stole pandas
+    ImportErrors into FAIL-MISSING, polluting the engine-relevant denominator.
     """
     lowered = text.lower()
     # Product repark import gaps stay FAIL-MISSING (not env HARNESS).

@@ -1,9 +1,4 @@
-"""Math facade wrappers (FN-GT1).
-
-Public names are re-exported from ``functions.py``. Most names are a thin
-``call_scalar`` wire onto a DF 54.1 / datafusion-spark kernel. ``bin`` /
-``rint`` add a unix_date-mold CAST first (G5).
-"""
+"""Mathematical and trigonometric function wrappers."""
 
 from __future__ import annotations
 

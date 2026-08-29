@@ -1,6 +1,6 @@
-"""``repark.ml.feature`` — plan-built feature transformers (M2 R-ML-FEATURE + Q1).
+"""``repark.ml.feature`` — plan-built feature transformers.
 
-Import paths mirror ``pyspark.ml.feature`` under ``repark.ml.feature`` only.
+Import paths mirror ``pyspark.ml.feature``.
 """
 
 from __future__ import annotations
@@ -9,7 +9,6 @@ from repark.spark.ml.feature._transformers import (
     COUNT_VECTORIZER_STATUS,
     IDF,
     IDF_STATUS,
-    # Quantile family / CV-IDF status exported for ledger/tests
     QUANTILE_FAMILY_STATUS,
     REGEX_TOKENIZER_GAPS_FALSE_STATUS,
     Binarizer,

@@ -78,9 +78,7 @@ SUM_SQL = f"SELECT sum(v) AS s FROM ({FIXTURE_VALUES_SQL}) src"
 AVG_SQL = f"SELECT avg(v) AS a FROM ({FIXTURE_VALUES_SQL}) src"
 
 
-# ==================================================================================================
 # Arrow helpers
-# ==================================================================================================
 
 
 def _one_row_f64(name: str, value: float, *, nullable: bool) -> pa.Table:
@@ -89,9 +87,7 @@ def _one_row_f64(name: str, value: float, *, nullable: bool) -> pa.Table:
     return pa.table({name: pa.array([value], type=pa.float64())}, schema=schema)
 
 
-# ==================================================================================================
 # Row shape
-# ==================================================================================================
 
 
 @dataclass(frozen=True)
@@ -129,9 +125,7 @@ class FloatAggRow:
         return self.max_ulps is not None and self.spark is not None and self.repark is None
 
 
-# ==================================================================================================
 # Dual-engine recipe (shared with the record driver — one SSOT)
-# ==================================================================================================
 
 
 def run_row(session: object, row: FloatAggRow) -> pa.Table:
@@ -173,9 +167,7 @@ def _single_f64(table: pa.Table) -> float:
     return float(column[0].as_py())
 
 
-# ==================================================================================================
 # Rows — spark halves filled by the record driver; repark halves measured on the facade
-# ==================================================================================================
 
 # Recorded 2026-08-11 against live PySpark 4.1.2 (zulu-17, local[2], ANSI on, shuffle=2).
 # Repark measured on the facade with spark.sql.shuffle.partitions=2 (→ target_partitions=2).
@@ -210,9 +202,7 @@ ROWS: list[FloatAggRow] = [
 ]
 
 
-# ==================================================================================================
 # Session + tests
-# ==================================================================================================
 
 
 def _repark_session() -> ReparkSession:

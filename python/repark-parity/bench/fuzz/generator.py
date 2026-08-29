@@ -2,20 +2,14 @@
 
 In scope: SELECT projections/arithmetic/CASE/casts, WHERE nested boolean,
 GROUP BY + common aggregates, ORDER BY NULLS FIRST/LAST, LIMIT, INNER/LEFT
-joins ≤3 tables, scalar subqueries.
+joins ≤3 tables, scalar subqueries. Out of scope (v2 seeds): window frames,
+set ops, laterals.
 
-Out of scope (v2 seeds): window frames, set ops, laterals.
-
-Exclusions (generator-side — full rationale in map.md EXCLUSIONS):
-
-- No float64 columns in SUM/AVG (float aggregation order / non-associativity).
-- No CAST(float → int) (DuckDB rounds half-up; Spark truncates toward zero).
-- No CAST(decimal|timestamp|bool|float → VARCHAR) (engine-specific string formats).
-- No NaN/Inf literals or expressions that produce them.
-- No division by bare integer columns without a non-zero guard (avoid engine-specific
-  div-by-zero error shapes polluting the differential signal).
-- LIMIT always pairs with ORDER BY; ORDER BY always ends with ``row_id`` tiebreaker
-  so tied keys cannot produce engine-specific LIMIT survivors.
+Exclusions keep the differential signal clean: no float64 SUM/AVG, no
+CAST(float → int), no CAST(decimal|timestamp|bool|float → VARCHAR), no
+NaN/Inf, no unguarded division by bare integer columns; LIMIT always pairs
+with ORDER BY ending in the ``row_id`` tiebreaker. Full rationale in
+map.md EXCLUSIONS.
 """
 
 from __future__ import annotations
@@ -122,8 +116,8 @@ def generate_queries(
 ) -> list[GeneratedQuery]:
     """Produce ``count`` queries deterministically from ``seed``.
 
-    The RNG stream is: one ``Random(seed)`` for the whole batch; each query
-    consumes from that stream in order. Same seed + count → byte-identical SQL.
+    One ``Random(seed)`` stream for the whole batch, consumed in query order;
+    same seed + count → byte-identical SQL.
     """
     if count < 0:
         msg = f"count must be >= 0; got {count}"
@@ -147,9 +141,7 @@ def _generate_one(rng: random.Random, index: int) -> QuerySpec:
     return _gen_join(rng, index)
 
 
-# ---------------------------------------------------------------------------
 # Column helpers
-# ---------------------------------------------------------------------------
 
 
 def _cols(table: str) -> list[tuple[str, ColumnType]]:
@@ -168,9 +160,7 @@ def _pick_table(rng: random.Random) -> str:
     return rng.choice(list(TABLE_NAMES))
 
 
-# ---------------------------------------------------------------------------
 # Expression builders (shared-dialect only)
-# ---------------------------------------------------------------------------
 
 
 def _numeric_expr(rng: random.Random, table: str, *, allow_float: bool = True) -> str:
@@ -212,8 +202,8 @@ def _case_numeric(rng: random.Random, table: str, base: str) -> str:
 def _cast_expr(rng: random.Random, table: str, col: str) -> str:
     """Safe casts only — never float→int; never format-sensitive →VARCHAR.
 
-    VARCHAR casts of decimal/timestamp/bool/float differ in spelling across
-    engines (padding, ``T`` vs space, true/false case) — excluded (map.md).
+    Engine VARCHAR spellings differ (padding, ``T`` vs space, true/false
+    case) — excluded (map.md).
     """
     type_by_name = dict(TABLE_SCHEMAS[table])
     col_type = type_by_name[col]
@@ -299,9 +289,7 @@ def _scalar_subquery_predicate(rng: random.Random, outer: str) -> str:
     return f"{outer}.{outer_col} {op} {sub}"
 
 
-# ---------------------------------------------------------------------------
 # Query shapes
-# ---------------------------------------------------------------------------
 
 
 def _gen_project(rng: random.Random, index: int) -> QuerySpec:
@@ -402,9 +390,9 @@ def _gen_aggregate(rng: random.Random, index: int) -> QuerySpec:
             for alias in aliases:
                 order_by.append(OrderItem(expr=alias, direction="ASC", nulls="LAST"))
 
-    # Total-order tiebreaker after GROUP BY: aliases alone can still tie when two
-    # groups share identical projected values. MIN(row_id) is unique per base row
-    # and stable per group (C1-L-001). Required whenever ORDER BY or LIMIT is set.
+    # Total-order tiebreaker after GROUP BY: groups can tie on projected
+    # values. MIN(row_id) is unique per base row and stable per group
+    # (C1-L-001). Required whenever ORDER BY or LIMIT is set.
     if order_by or limit is not None:
         tie_alias = "ord_tie"
         if tie_alias not in aliases:
@@ -469,7 +457,6 @@ def _gen_join(rng: random.Random, index: int) -> QuerySpec:
             )
         )
 
-    # Projections from left + first right.
     exprs: list[str] = []
     aliases: list[str] = []
     left_cols = [name for name, _ in _cols(left)]
@@ -523,10 +510,10 @@ def _make_order(
 ) -> list[OrderItem]:
     """ORDER BY alias or base column, with **explicit** NULLS FIRST/LAST.
 
-    Always terminates with ``table.row_id ASC`` (and any join-partner row_ids)
-    so the order is a total order and LIMIT cannot pick engine-specific tied
-    survivors. NULLS is never omitted — Spark and DuckDB disagree on the
-    default NULLS placement for ASC/DESC.
+    Always ends with ``table.row_id ASC`` (plus join-partner row_ids) so the
+    order is total and LIMIT cannot pick engine-specific tied survivors.
+    NULLS is never omitted — Spark and DuckDB disagree on the default
+    placement for ASC/DESC.
     """
     del exprs
     items: list[OrderItem] = []
@@ -556,8 +543,9 @@ def _make_order(
                 nulls=rng.choice(["FIRST", "LAST"]),
             )
         )
-    # Total-order tiebreakers (never null, unique per base-table row; for joins
-    # include every participating table's row_id so the join multiset is ordered).
+    # Total-order tiebreakers: row_id is never null and unique per base row;
+    # for joins include every participating table's row_id so the join
+    # multiset is ordered.
     items.append(OrderItem(expr=_qual(table, "row_id"), direction="ASC", nulls="LAST"))
     for extra in extra_tables or []:
         items.append(OrderItem(expr=_qual(extra, "row_id"), direction="ASC", nulls="LAST"))

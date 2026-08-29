@@ -1,19 +1,9 @@
 """Greedy query + data minimizer for differential divergences.
 
-On a WRONG-RESULT (or dual-ERROR with different messages is *not* minimized —
-only value divergences), shrink by:
-
-1. Drop LIMIT
-2. Drop ORDER BY items
-3. Drop WHERE
-4. Drop join arms (rightmost first)
-5. Drop SELECT columns (rightmost first, keep ≥1)
-6. Drop GROUP BY keys (and matching select projections)
-7. Drop trailing rows from every table (binary-ish greedy)
-
-Each candidate is re-executed on both engines; a shrink is kept only when the
-divergence **persists**. Returns the smallest QuerySpec + FuzzDatabase that
-still diverges, plus the compare message.
+Minimizes WRONG-RESULT divergences only — dual-ERROR with different messages
+is not minimized. Shrinks LIMIT, ORDER BY, WHERE, join arms, SELECT columns,
+GROUP BY keys, then trailing rows; a shrink is kept only when the divergence
+still reproduces on both engines.
 """
 
 from __future__ import annotations
@@ -75,9 +65,8 @@ def minimize_divergence(
             candidate_spec.has_order_by,
         )
         if repark_err is not None or duck_err is not None:
-            # Dual error or single-sided error: only keep if both succeeded before
-            # and now one side errors differently — treat as non-value divergence;
-            # do not accept shrinks that turn WRONG-RESULT into ERROR.
+            # Never accept a shrink that turns WRONG-RESULT into ERROR —
+            # any error is a non-value divergence.
             return False, None, [], []
         if repark_rows is None or duck_rows is None:
             return False, None, [], []
@@ -113,10 +102,9 @@ def minimize_divergence(
             repark_rows, duck_rows, compare_message = rp, dk, result.message
 
     # 2. Drop ORDER BY items **leftmost-first** so generator-appended tiebreakers
-    # (``row_id`` / ``ord_tie``) stay longer than user keys (C1-L-002). Dropping
-    # rightmost-first removed total-order keys while LIMIT remained and could
-    # invent non-deterministic false divergences. If ORDER BY becomes empty while
-    # LIMIT remains, also clear LIMIT (LIMIT without ORDER BY is non-deterministic).
+    # (``row_id`` / ``ord_tie``) stay longer than user keys (C1-L-002); dropping
+    # rightmost-first invented non-deterministic false divergences. Clear LIMIT
+    # too when ORDER BY empties (LIMIT without ORDER BY is non-deterministic).
     while spec.order_by and steps < max_steps:
         trial = copy.deepcopy(spec)
         trial.order_by = list(trial.order_by[1:])
@@ -144,7 +132,6 @@ def minimize_divergence(
     while spec.joins and steps < max_steps:
         trial = copy.deepcopy(spec)
         trial.joins = list(trial.joins[:-1])
-        # Drop select exprs that reference the dropped table.
         dropped = spec.joins[-1].right_table
         kept_exprs: list[str] = []
         kept_aliases: list[str] = []
@@ -159,7 +146,6 @@ def minimize_divergence(
             break
         trial.select_exprs = kept_exprs
         trial.select_aliases = kept_aliases
-        # Scrub ORDER BY aliases that vanished with the dropped projections.
         removed_set = set(removed_aliases)
         trial.order_by = [
             item
@@ -189,8 +175,7 @@ def minimize_divergence(
         trial.order_by = [item for item in trial.order_by if item.expr != dropped_alias]
         if not trial.order_by and trial.limit is not None:
             trial.limit = None
-        # If group_by references a dropped alias projection, leave group_by as-is
-        # (group keys are fully-qualified table.col, not aliases).
+        # Leave group_by alone — keys are fully-qualified table.col, not aliases.
         steps += 1
         diverges, result, rp, dk = still_diverges(trial, db)
         if diverges and result is not None:
@@ -204,7 +189,6 @@ def minimize_divergence(
         trial = copy.deepcopy(spec)
         dropped_key = trial.group_by[-1]
         trial.group_by = list(trial.group_by[:-1])
-        # Remove matching select projection if present.
         new_exprs: list[str] = []
         new_aliases: list[str] = []
         removed_aliases: list[str] = []

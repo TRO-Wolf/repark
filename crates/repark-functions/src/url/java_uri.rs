@@ -1,40 +1,7 @@
-//! `java.net.URI`-shaped RFC-2396 component splitting — **no normalization**.
+//! Raw RFC-2396 component splitting matching `java.net.URI` without normalization.
 //!
-//! Spark's `ParseUrl` is `new java.net.URI(s)` plus the component getters. `java.net.URI` is a
-//! *splitter*: it records the raw spans of scheme / authority / userinfo / host / path / query /
-//! fragment and hands them back without ever rewriting them. `url::Url` — what
-//! `datafusion-spark` 54.1 parses with — is a WHATWG-URL
-//! *normalizer*: it lowercases the scheme and host, drops a default port, resolves `.`/`..`
-//! segments, punycodes an IDN host, and re-serializes the authority. Those rewrites are exactly
-//! the `parse_url` dialect family this module exists to close (X8); a NULL-guard or a post-hoc
-//! patch over `Url` cannot recover the raw text `Url` already threw away, so the extraction is
-//! re-kernelled here on hand-rolled splitting.
-//!
-//! Faithfulness notes, because the divergences live in the details:
-//!
-//! - **Spark reads the `Raw` getters, so nothing is percent-decoded** (MEASURED-JAVAP).
-//!   `javap -p -c` over `ParseUrlEvaluator$` from a local `spark-catalyst_2.13-4.1.2.jar` — the
-//!   pyspark 4.1.2 sdist's copy; the jar is **not** vendored into this repo and no Spark runs
-//!   here — gives the getter per part exactly: `HOST` → `getHost`, `PROTOCOL` → `getScheme`, and
-//!   `PATH` → `getRawPath`, `QUERY` → `getRawQuery`, `REF` → `getRawFragment`,
-//!   `AUTHORITY` → `getRawAuthority`, `USERINFO` → `getRawUserInfo`,
-//!   `FILE` → `getRawPath` (+ `"?" + getRawQuery` when there is a query). Only two of the eight
-//!   parts use a non-`Raw` getter, and neither `scheme` nor `host` can legally hold an escape —
-//!   so **every** part this module serves is the raw span. `%2e` stays `%2e`, `%20` stays `%20`.
-//!   That is why the accessors below are `raw_*` and no decoder exists here: a decoder would be
-//!   dead code that could only ever reintroduce the divergence.
-//! - **Opaque URIs have no path.** `mailto:a@b.com` has a scheme-specific part, so `PATH`,
-//!   `QUERY`, `AUTHORITY`, `HOST` and `USERINFO` are all NULL.
-//! - **Server- vs registry-based authority.** An authority that does not parse as
-//!   `userinfo@host:port` (an IDN host, say) falls back to registry-based: `authority` keeps the
-//!   raw text and `host` is NULL. That is why Spark answers NULL — not punycode — for `HOST` on
-//!   `http://例え.jp/`.
-//! - **Escapes and non-ASCII.** Where RFC 2396 allows `escaped`, `java.net.URI` also allows any
-//!   visible non-US-ASCII character (`scanEscape`), and rejects a `%` that is not followed by two
-//!   hex digits.
-//!
-//! A parse failure is `Err` — the caller turns it into Spark's `INVALID_URL` (`parse_url`) or
-//! NULL (`try_parse_url`).
+//! Accessors preserve raw escapes, case, ports, and dot segments. Opaque and registry-based URIs
+//! follow Java's NULL component behavior; parse failures become `INVALID_URL` or NULL at the caller.
 
 /// A split URI. Every field holds the **raw** span, and every accessor hands it back verbatim —
 /// the accessors are the `Raw` getters, which is what Spark calls.
@@ -141,7 +108,6 @@ fn is_unreserved(c: char) -> bool {
 }
 
 fn is_uric(c: char) -> bool {
-    // reserved = ";/?:@&=+$,[]"
     is_unreserved(c)
         || matches!(
             c,
@@ -150,7 +116,6 @@ fn is_uric(c: char) -> bool {
 }
 
 fn is_path(c: char) -> bool {
-    // pchar | ";/"
     is_unreserved(c) || matches!(c, ':' | '@' | '&' | '=' | '+' | '$' | ',' | ';' | '/')
 }
 
@@ -207,8 +172,7 @@ const ALPHANUM_DASH: CharClass = CharClass {
     escaped: false,
 };
 
-/// Java `Character.isSpaceChar` — Unicode `Zs` / `Zl` / `Zp`. Spelled out because a
-/// `scanEscape` that let NBSP through would silently accept URIs Spark rejects.
+/// Match Java's Unicode space categories rejected by URI parsing.
 fn is_unicode_space(c: char) -> bool {
     matches!(
         c,
@@ -313,7 +277,6 @@ impl Parser {
                 if self.at(p, '/') {
                     p = self.parse_hierarchical(p, n)?;
                 } else {
-                    // Opaque: a scheme-specific part, and therefore no path / query / authority.
                     let q = self
                         .scan_stop(p, n, "", "#")
                         .ok_or_else(|| "Expected scheme-specific part".to_string())?;
@@ -349,7 +312,6 @@ impl Parser {
             if q > p {
                 p = self.parse_authority(p, q)?;
             } else if q < n {
-                // Java DEVIATION: an empty authority before a path / query / fragment is allowed.
             } else {
                 return Err(format!("Expected authority at index {p}"));
             }
@@ -397,7 +359,6 @@ impl Parser {
                     self.uri.authority = Some(self.span(start, n));
                 }
                 Err(error) => {
-                    // Undo the failed server parse and fall back to a registry-based authority.
                     self.uri.user_info = None;
                     self.uri.host = None;
                     server_error = Some(error);
@@ -430,7 +391,6 @@ impl Parser {
         }
 
         if self.at(p, '[') {
-            // RFC 2732 IPv6 literal: kept whole, brackets included, like `java.net.URI`.
             p += 1;
             let q = self
                 .scan_stop(p, n, "/?#", "]")
@@ -498,7 +458,6 @@ impl Parser {
                 return None;
             }
         }
-        // An IPv4 authority may only be followed by a port.
         if p < n && self.input[p] != ':' {
             return None;
         }
@@ -610,27 +569,17 @@ mod tests {
         assert_eq!(parsed.host(), None);
     }
 
-    /// X8-g: percent-escapes survive **verbatim** in every part Spark reads with a `Raw` getter.
-    ///
-    /// This is the getter dimension: an earlier cut of this module decoded these five parts,
-    /// which silently truncated a QUERY value at a decoded `&` and erased the difference between
-    /// `%2F` and a real path separator. Every expectation below is MEASURED-JVM — `new
-    /// java.net.URI(s)` on the local `OpenJDK` 11.0.31, read through the MEASURED-JAVAP
-    /// `ParseUrlEvaluator$` getter map, not recollection.
+    /// X8-g: preserve percent-escapes in Spark's raw URI components.
     #[test]
     fn percent_escapes_are_never_decoded() {
-        // `%2e%2e` is NOT decoded, and therefore also never resolved as a dot segment.
         assert_eq!(uri("http://h/a/%2e%2e/b").raw_path(), Some("/a/%2e%2e/b"));
         assert_eq!(uri("http://h/a%20b").raw_path(), Some("/a%20b"));
-        // `%2F` must stay distinguishable from a real separator.
         assert_eq!(uri("http://h/a%2Fb").raw_path(), Some("/a%2Fb"));
-        // A `%26` inside a QUERY value must NOT become an `&` — decoding truncates the value.
         assert_eq!(uri("http://h/p?a=1%26b=2").raw_query(), Some("a=1%26b=2"));
         assert_eq!(uri("http://h/p#f%20g").raw_fragment(), Some("f%20g"));
         let escaped_user = uri("http://us%65r@host/x");
         assert_eq!(escaped_user.raw_user_info(), Some("us%65r"));
         assert_eq!(escaped_user.raw_authority(), Some("us%65r@host"));
-        // HOST and PROTOCOL are the two non-`Raw` getters, and neither can hold an escape.
         assert_eq!(escaped_user.host(), Some("host"));
         assert_eq!(escaped_user.scheme(), Some("http"));
     }
@@ -659,7 +608,7 @@ mod tests {
         assert_eq!(uri("http://[::1]:9/x").host(), Some("[::1]"));
     }
 
-    /// A space is illegal everywhere ⇒ `URISyntaxException` ⇒ Spark `INVALID_URL`.
+    /// Reject spaces as Java does.
     #[test]
     fn illegal_characters_are_a_syntax_error() {
         assert!(JavaUri::parse("not a url").is_err());
@@ -667,7 +616,7 @@ mod tests {
         assert!(JavaUri::parse("http://h/a%2").is_err());
     }
 
-    /// A relative reference is legal: path/query/fragment only, everything else NULL.
+    /// Accept a relative reference with path, query, and fragment components.
     #[test]
     fn relative_reference_has_only_a_path() {
         let parsed = uri("a/b?c=1#d");
@@ -678,9 +627,7 @@ mod tests {
         assert_eq!(parsed.raw_fragment(), Some("d"));
     }
 
-    /// A multibyte escape sequence and a literal non-ASCII character are both handed back
-    /// verbatim — the escape is NOT folded into the character it encodes. MEASURED-JVM
-    /// (`OpenJDK` 11.0.31, `java.net.URI.getRawPath`): `/%E4%BE%8B` and `/例` respectively.
+    /// Preserve escaped and literal non-ASCII path text verbatim.
     #[test]
     fn multibyte_escapes_and_literal_non_ascii_both_survive_verbatim() {
         assert_eq!(uri("http://h/%E4%BE%8B").raw_path(), Some("/%E4%BE%8B"));

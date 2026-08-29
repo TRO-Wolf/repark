@@ -1,8 +1,4 @@
-//! Deferred test #1 (v1 `repark_session::tests::temp_view_then_sql_runs_the_spark_function_shim`,
-//! deferred at phase-1 PR-C): the Spark function shim is reachable through `session.sql` on a
-//! real session built with the Spark door installed — `SparkExtension` (registry + analyzer
-//! rules) + `SparkDialect` (the statement router). Landed phase-2 PR-2 per
-//! `task/port/deferred-tests.md`.
+//! End-to-end session test for Spark function shims through `SparkExtension` and `SparkDialect`.
 
 use std::sync::Arc;
 
@@ -31,8 +27,7 @@ fn sample_batch() -> RecordBatch {
     .unwrap()
 }
 
-/// Build the Spark-doored session the way a v1 session was assembled: extension at the two
-/// build hooks, dialect as the session default.
+/// Build a Spark-doored session with the extension and dialect installed as defaults.
 fn spark_session() -> ReparkSession {
     let dialect: Arc<dyn SqlDialect> = Arc::new(SparkDialect);
     ReparkSession::builder()

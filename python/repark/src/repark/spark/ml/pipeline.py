@@ -1,19 +1,4 @@
-"""Pipeline / PipelineModel — stage composition + repark-ml v1 persistence.
-
-Persistence layout (greylight Q9)::
-
-    <path>/metadata.json
-        format: "repark-ml", version: 1, pyspark-version provenance, stage uids
-    <path>/stages/<idx>_<uid>/metadata.json
-    <path>/stages/<idx>_<uid>/fitted/*.parquet
-        fitted params only (labels, means, splits…) — **never** training rows
-
-Hard test: save a fitted pipeline, assert no file contains input data.
-
-M7 atomic save (closes M4 C2-SAF-001): write a complete tree into a sibling staging
-directory, then rename into place (move-aside old on overwrite). Never
-``rmtree(target)`` before the new tree is fully written.
-"""
+"""Spark-shaped pipeline composition and staged ML persistence publication."""
 
 from __future__ import annotations
 
@@ -30,22 +15,20 @@ from repark.spark.ml.base import Estimator, Model, Transformer, _require_repark_
 from repark.spark.ml.param import Param, Params, TypeConverters
 from repark.spark.ml.util import MLReadable, MLReader, MLWritable, MLWriter
 
-# === r20 M7: PipelineModel atomic save ===
-
-# Format constants (pinned in python/repark/tests/test_ml_skeleton_oracle.py)
 REPARK_ML_FORMAT = "repark-ml"
 REPARK_ML_VERSION = 1
 
-# Stage class_path may only import under repark.spark.ml (not ext — no _ml_from_save)
-# (octo C2-SEC-002). Q1 re-home: prefix follows the moved package.
+# Persistence loads only allowlisted facade stages, never delegated extensions.
 _ML_STAGE_MODULE_PREFIX = "repark.spark.ml."
 _ML_STAGE_MODULE_DENY = ("repark.spark.ml.ext",)
-# Stage path segment: no traversal, no path separators (octo C2-SEC-001).
 _SAFE_STAGE_SEGMENT = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 
 
 def _pyspark_version_provenance() -> str:
-    """Best-effort pyspark version string for metadata provenance."""
+    """Return the installed PySpark version.
+
+    Return ``unknown`` when the version is missing and ``unavailable`` when import fails.
+    """
     try:
         import pyspark
 
@@ -55,10 +38,10 @@ def _pyspark_version_provenance() -> str:
 
 
 class Pipeline(Estimator["PipelineModel"], MLReadable, MLWritable):
-    """Estimator that chains stages (Spark ``Pipeline``)."""
+    """Estimator that chains stages."""
 
     def __init__(self, *, stages: list[Any] | None = None) -> None:
-        """Optional ``stages`` list of Estimators / Transformers."""
+        """Initialize an optional stage list."""
         super().__init__()
         self.stages: Param[list[Any]] = Param(
             self,
@@ -71,7 +54,7 @@ class Pipeline(Estimator["PipelineModel"], MLReadable, MLWritable):
             self.setStages(stages)
 
     def setStages(self, value: list[Any]) -> Pipeline:
-        """Set pipeline stages."""
+        """Validate and set pipeline stages."""
         if not isinstance(value, list):
             raise PySparkTypeError(f"stages must be a list, got {type(value).__name__}")
         for index, stage in enumerate(value):
@@ -82,11 +65,11 @@ class Pipeline(Estimator["PipelineModel"], MLReadable, MLWritable):
         return self._set(stages=list(value))
 
     def getStages(self) -> list[Any]:
-        """Return stages list."""
+        """Return a copy of the stage list."""
         return list(self.getOrDefault(self.stages))
 
     def _fit(self, dataset: Any) -> PipelineModel:
-        """Fit estimators left-to-right; transformers pass through (Spark ``_fit``)."""
+        """Fit and apply stages from left to right."""
         frame = _require_repark_dataframe(dataset, verb="Pipeline.fit")
         stages = self.getStages()
         transformers: list[Transformer] = []
@@ -104,18 +87,17 @@ class Pipeline(Estimator["PipelineModel"], MLReadable, MLWritable):
                     f"Pipeline stage must be Estimator or Transformer, got {type(stage).__name__}"
                 )
         model = PipelineModel(stages=transformers)
-        # Preserve pipeline uid lineage for explainParams stability where useful.
         model._source_pipeline_uid = self.uid  # type: ignore[attr-defined]
         return model
 
     def copy(self, extra: dict[Param[Any], Any] | None = None) -> Pipeline:
-        """Copy pipeline and deep-copy stages."""
+        """Copy the pipeline and its stages."""
         that = super().copy(extra)
         that.setStages([stage.copy() for stage in self.getStages()])
         return that
 
     def write(self) -> MLWriter:
-        """Return a writer for an unfitted pipeline (stages metadata only)."""
+        """Return a writer for this unfitted pipeline."""
         return _PipelineWriter(self)
 
     @classmethod
@@ -125,16 +107,16 @@ class Pipeline(Estimator["PipelineModel"], MLReadable, MLWritable):
 
 
 class PipelineModel(Model, MLReadable, MLWritable):
-    """Fitted pipeline — ordered list of transformers (Spark ``PipelineModel``)."""
+    """Fitted pipeline containing ordered transformers."""
 
     def __init__(self, stages: list[Transformer] | None = None) -> None:
-        """Hold fitted/passthrough stages."""
+        """Initialize fitted or passthrough stages."""
         super().__init__()
         self.stages = list(stages or [])
         self._source_pipeline_uid: str | None = None
 
     def _transform(self, dataset: Any) -> Any:
-        """Apply stages left-to-right."""
+        """Apply stages from left to right."""
         frame = _require_repark_dataframe(dataset, verb="PipelineModel.transform")
         current = frame
         for stage in self.stages:
@@ -142,7 +124,7 @@ class PipelineModel(Model, MLReadable, MLWritable):
         return current
 
     def copy(self, extra: dict[Param[Any], Any] | None = None) -> PipelineModel:
-        """Copy model and stages."""
+        """Copy the model and its stages."""
         that = PipelineModel(stages=[stage.copy() for stage in self.stages])
         that.uid = self.uid
         that._source_pipeline_uid = self._source_pipeline_uid
@@ -154,20 +136,20 @@ class PipelineModel(Model, MLReadable, MLWritable):
         return that
 
     def write(self) -> MLWriter:
-        """Return a writer (repark-ml v1 layout)."""
+        """Return a persistence writer."""
         return _PipelineModelWriter(self)
 
     @classmethod
     def read(cls) -> MLReader:
-        """Return a reader for repark-ml v1 layout."""
+        """Return a persistence reader."""
         return _PipelineModelReader()
 
 
 class _PipelineWriter(MLWriter):
-    """Save unfitted Pipeline metadata (stage class names + params)."""
+    """Write unfitted pipeline metadata."""
 
     def saveImpl(self, path: str) -> None:
-        """Write metadata.json describing unfitted stages (atomic staging + rename)."""
+        """Write stage metadata and publish the staged directory."""
         target = Path(path)
         staging = _begin_atomic_save(target, overwrite=self.should_overwrite)
         try:
@@ -201,10 +183,10 @@ class _PipelineWriter(MLWriter):
 
 
 class _PipelineReader(MLReader):
-    """Load unfitted Pipeline — only stages that know how to rebuild from params."""
+    """Read unfitted pipeline metadata."""
 
     def load(self, path: str) -> Pipeline:
-        """Load pipeline metadata; reconstruct stages when registry allows."""
+        """Load metadata and rebuild registered stages."""
         target = Path(path)
         metadata = _read_metadata(target)
         if metadata.get("kind") != "Pipeline":
@@ -216,18 +198,14 @@ class _PipelineReader(MLReader):
 
 
 class _PipelineModelWriter(MLWriter):
-    """Save fitted PipelineModel in repark-ml v1 layout."""
+    """Write fitted pipeline models."""
 
     def saveImpl(self, path: str) -> None:
-        """Write top-level + per-stage metadata and fitted parquet.
+        """Write metadata and fitted parameters, then publish the staged tree.
 
-        Preflight every stage's fitted state **before** creating the tree so a
-        non-persistable ext stage cannot leave a half-written repark-ml layout
-        (octo C1-Q-001 / C1-SAF-003). M7: write into a staging sibling, then
-        atomic rename into ``path`` (no rmtree-before-write window — M4 C2-SAF-001).
+        Fitted state is validated before staging so unsupported stages leave no tree.
         """
         model: PipelineModel = self.instance
-        # Refuse loud before mkdir — no hollow publish on ext / unserializable models.
         fitted_payloads = [_fitted_state(stage) for stage in model.stages]
         target = Path(path)
         staging = _begin_atomic_save(target, overwrite=self.should_overwrite)
@@ -281,10 +259,10 @@ class _PipelineModelWriter(MLWriter):
 
 
 class _PipelineModelReader(MLReader):
-    """Load PipelineModel from repark-ml v1 layout."""
+    """Read fitted pipeline models."""
 
     def load(self, path: str) -> PipelineModel:
-        """Reconstruct stages from metadata + fitted parquet."""
+        """Rebuild stages from metadata and fitted parameters."""
         target = Path(path)
         metadata = _read_metadata(target)
         if metadata.get("kind") != "PipelineModel":
@@ -315,10 +293,9 @@ class _PipelineModelReader(MLReader):
 
 
 def _prepare_path(target: Path, *, overwrite: bool) -> None:
-    """Legacy helper: create empty directory; refuse existing unless overwrite.
+    """Legacy helper. New writers should use atomic save helpers.
 
-    Prefer :func:`_begin_atomic_save` / :func:`_commit_atomic_save` for writers so
-    an existing tree is never deleted before the replacement is complete (M7).
+    This helper replaces a path before recreation and can delete an existing tree.
     """
     if target.exists():
         if not overwrite:
@@ -333,12 +310,7 @@ def _prepare_path(target: Path, *, overwrite: bool) -> None:
 
 
 def _begin_atomic_save(target: Path, *, overwrite: bool) -> Path:
-    """Create a unique sibling staging directory for an atomic save.
-
-    Refuses when ``target`` exists and ``overwrite`` is false **before** any write.
-    Returns the staging path (empty directory). Caller must
-    :func:`_commit_atomic_save` or :func:`_abort_atomic_save`.
-    """
+    """Create an empty sibling staging directory for an atomic save."""
     if target.exists() and not overwrite:
         raise IllegalArgumentException(
             f"path already exists: {target} (use write().overwrite().save(...))"
@@ -356,10 +328,11 @@ def _begin_atomic_save(target: Path, *, overwrite: bool) -> Path:
 
 
 def _commit_atomic_save(staging: Path, target: Path, *, overwrite: bool) -> None:
-    """Publish ``staging`` to ``target`` via rename; rmtree old only after success.
+    """Publish staging while retaining directory targets during replacement.
 
-    Sequence on overwrite: ``target → aside``, ``staging → target``, rmtree aside.
-    On failure after move-aside, attempt to restore ``aside → target``.
+    A directory moves aside and restores only while the target stays absent. Existing files are
+    unlinked before rename, so file replacement has a TOCTOU loss window and no restore source.
+    Cleanup and restoration can race with another target mutation.
     """
     if not staging.is_dir():
         raise IllegalArgumentException(f"atomic save staging missing: {staging}")
@@ -369,8 +342,6 @@ def _commit_atomic_save(staging: Path, target: Path, *, overwrite: bool) -> None
             raise IllegalArgumentException(
                 f"path already exists: {target} (use write().overwrite().save(...))"
             )
-        # File or non-dir target: unlink then rename staging (TOCTOU residual — octo M7 C5).
-        # Directory target: move-aside + rename dance below.
         if not target.is_dir():
             try:
                 target.unlink()
@@ -398,10 +369,6 @@ def _commit_atomic_save(staging: Path, target: Path, *, overwrite: bool) -> None
         try:
             staging.rename(target)
         except OSError as exc:
-            # Best-effort restore of the previous tree. When another writer already
-            # re-occupied ``target`` (concurrent overwrite race), restore is skipped —
-            # drop our aside so we do not leak a stale tree beside the winner
-            # (octo M7 C1 race residual).
             with contextlib.suppress(OSError):
                 if not target.exists() and aside.exists():
                     aside.rename(target)
@@ -432,7 +399,7 @@ def _commit_atomic_save(staging: Path, target: Path, *, overwrite: bool) -> None
 
 
 def _abort_atomic_save(staging: Path) -> None:
-    """Remove a staging directory after a failed save (best-effort)."""
+    """Remove staging after a failed save when possible."""
     if staging.exists():
         if staging.is_dir():
             shutil.rmtree(staging, ignore_errors=True)
@@ -442,7 +409,7 @@ def _abort_atomic_save(staging: Path) -> None:
 
 
 def _read_metadata(target: Path) -> dict[str, Any]:
-    """Load and validate top-level metadata.json."""
+    """Read and validate top-level metadata."""
     meta_path = target / "metadata.json"
     if not meta_path.is_file():
         raise IllegalArgumentException(f"missing metadata.json under {target}")
@@ -460,12 +427,12 @@ def _read_metadata(target: Path) -> dict[str, Any]:
 
 
 def _stage_class_path(stage: Any) -> str:
-    """Dotted class path for rebuild registry."""
+    """Return a stage's dotted class path."""
     return f"{type(stage).__module__}.{type(stage).__name__}"
 
 
 def _params_to_jsonable(stage: Any) -> dict[str, Any]:
-    """Extract set/default params as JSON-friendly dict."""
+    """Return defined stage parameters in JSON-friendly form."""
     if not isinstance(stage, Params):
         return {}
     result: dict[str, Any] = {}
@@ -477,7 +444,7 @@ def _params_to_jsonable(stage: Any) -> dict[str, Any]:
 
 
 def _jsonable(value: Any) -> Any:
-    """Convert param values to JSON-serializable form."""
+    """Convert a parameter value to JSON-compatible data."""
     if value is None or isinstance(value, (bool, int, float, str)):
         return value
     if isinstance(value, list):
@@ -486,23 +453,16 @@ def _jsonable(value: Any) -> Any:
         return {str(key): _jsonable(item) for key, item in value.items()}
     if isinstance(value, tuple):
         return [_jsonable(item) for item in value]
-    # Stages / nested estimators are not stored as param values in v1.
     return repr(value)
 
 
 def _fitted_state(stage: Any) -> dict[str, Any]:
-    """Pull fitted metadata from a model (never training rows).
-
-    Models without ``_ml_fitted_state`` (including ``repark.ml.ext`` boosters) must
-    refuse loud — never hollow-publish an empty fitted parquet that looks like a
-    valid repark-ml tree (octo C1-Q-001 / C1-SAF-003).
-    """
+    """Return serializable fitted metadata and reject unsupported models."""
     if hasattr(stage, "_ml_fitted_state") and callable(stage._ml_fitted_state):
         payload = stage._ml_fitted_state()
         if not isinstance(payload, dict):
             raise IllegalArgumentException("_ml_fitted_state must return a dict")
         return {str(key): _jsonable(value) for key, value in payload.items()}
-    # Fitted models require serializable state; passthrough transformers may be empty.
     if isinstance(stage, Model):
         module_name = type(stage).__module__ or ""
         class_name = type(stage).__name__
@@ -516,17 +476,18 @@ def _fitted_state(stage: Any) -> dict[str, Any]:
             f"PipelineModel.save: stage {class_name!r} has no _ml_fitted_state; "
             f"cannot hollow-publish fitted model without serializable params"
         )
-    # Passthrough transformers: empty fitted state.
     return {}
 
 
 def _write_fitted_parquet(path: Path, payload: dict[str, Any]) -> None:
-    """Write fitted params as a single-row parquet (keys as columns, JSON for complex)."""
+    """Write fitted parameters as one Parquet row.
+
+    An empty sentinel row preserves a readable file when fitted state has no fields.
+    """
     import pyarrow as pa
     import pyarrow.parquet as pq
 
     if not payload:
-        # Empty schema table — still a parquet file for layout stability.
         table = pa.table({"_empty": pa.array([True])})
         pq.write_table(table, path)
         return
@@ -541,7 +502,7 @@ def _write_fitted_parquet(path: Path, payload: dict[str, Any]) -> None:
 
 
 def _read_fitted_parquet(path: Path) -> dict[str, Any]:
-    """Read fitted params parquet back to a dict."""
+    """Read fitted parameters from Parquet."""
     import pyarrow.parquet as pq
 
     if not path.is_file():
@@ -552,7 +513,6 @@ def _read_fitted_parquet(path: Path) -> dict[str, Any]:
     if set(table.column_names) == {"_empty"}:
         return {}
     row = {name: table.column(name)[0].as_py() for name in table.column_names}
-    # Decode JSON-encoded complex fields when they look like JSON lists/dicts.
     decoded: dict[str, Any] = {}
     for key, value in row.items():
         if isinstance(value, str) and value[:1] in "[{":
@@ -571,7 +531,7 @@ def _rebuild_stage(
     fitted: bool,
     fitted_state: dict[str, Any] | None = None,
 ) -> Any:
-    """Rebuild a stage from class path + params (+ fitted state)."""
+    """Rebuild a stage from class path, parameters, and fitted state."""
     class_path = entry.get("class", "")
     params = entry.get("params") or {}
     stage = _instantiate_stage(class_path, params, fitted=fitted, fitted_state=fitted_state or {})
@@ -581,12 +541,11 @@ def _rebuild_stage(
 
 
 def _sanitize_stage_uid(uid: Any, *, index: int) -> str:
-    """Return a path-safe stage uid (no ``..`` / separators) — octo C2-SEC-001."""
+    """Return a path-safe stage uid, using an index fallback."""
     text = str(uid) if uid is not None else ""
     if _SAFE_STAGE_SEGMENT.fullmatch(text) and ".." not in text:
         return text
     fallback = f"stage_{index}"
-    # Keep a readable sanitized form when possible; still path-safe.
     cleaned = re.sub(r"[^A-Za-z0-9_.-]+", "_", text).strip("._-")
     if cleaned and _SAFE_STAGE_SEGMENT.fullmatch(cleaned) and ".." not in cleaned:
         return cleaned
@@ -594,10 +553,9 @@ def _sanitize_stage_uid(uid: Any, *, index: int) -> str:
 
 
 def _safe_stage_dir(root: Path, relative: str) -> Path:
-    """Join ``relative`` under ``root`` only; refuse traversal (octo C2-SEC-001)."""
+    """Resolve a safe stage path below ``root`` and reject traversal."""
     if not isinstance(relative, str) or not relative.strip():
         raise IllegalArgumentException("pipeline stage relative_path must be a non-empty string")
-    # Normalize separators; reject absolute / drive-rooted / empty segments / ``..``.
     normalized = relative.replace("\\", "/").strip("/")
     if not normalized:
         raise IllegalArgumentException(f"pipeline stage relative_path is empty: {relative!r}")
@@ -622,7 +580,7 @@ def _safe_stage_dir(root: Path, relative: str) -> Path:
 
 
 def _assert_allowed_stage_class_path(class_path: str) -> tuple[str, str]:
-    """Allow only ``repark.ml.*`` modules (deny ext) for importlib load — octo C2-SEC-002."""
+    """Validate facade class-path syntax and its allowlist before later import checks."""
     if not isinstance(class_path, str) or not class_path or "/" in class_path or "\\" in class_path:
         raise UnsupportedOperationException(
             f"cannot rebuild stage class {class_path!r} (invalid class path)"
@@ -648,7 +606,6 @@ def _assert_allowed_stage_class_path(class_path: str) -> tuple[str, str]:
                 f"cannot rebuild stage class {class_path!r}: module {module_name!r} is not "
                 f"loadable via pipeline persistence (denied prefix {denied!r})"
             )
-    # Reject path-like / relative import tricks in the dotted module name.
     for part in module_name.split("."):
         if not part.isidentifier():
             raise UnsupportedOperationException(
@@ -664,12 +621,10 @@ def _instantiate_stage(
     fitted: bool,
     fitted_state: dict[str, Any],
 ) -> Any:
-    """Import and construct a stage; supports identity test stages + registered feature classes."""
-    # Local test helpers + feature package registration.
+    """Import and construct a registered or allowlisted stage."""
     registry = _stage_registry()
     if class_path in registry:
         return registry[class_path](params=params, fitted=fitted, fitted_state=fitted_state)
-    # Dynamic import only for allowlisted repark.ml modules that implement _ml_from_save.
     module_name, class_name = _assert_allowed_stage_class_path(class_path)
     try:
         import importlib
@@ -688,8 +643,7 @@ def _instantiate_stage(
 
 
 def _stage_registry() -> dict[str, Any]:
-    """Built-in rebuild callables (extended by M2 feature package)."""
-    # Identity / constant stages used by skeleton tests.
+    """Return built-in stage rebuild callables."""
     return {
         "repark.spark.ml.pipeline._ConstantColumnModel": _rebuild_constant_column_model,
         "repark.spark.ml.pipeline._ConstantColumnEstimator": _rebuild_constant_column_estimator,
@@ -697,23 +651,23 @@ def _stage_registry() -> dict[str, Any]:
 
 
 class _ConstantColumnEstimator(Estimator["_ConstantColumnModel"]):
-    """Test-only estimator: fit records a literal, transform adds it as a column."""
+    """Estimator used to persist and test a constant-column stage."""
 
     def __init__(self, output_col: str = "const", value: float = 1.0) -> None:
-        """Configure output column and literal value."""
+        """Initialize the output column and literal value."""
         super().__init__()
         self.output_col = output_col
         self.value = float(value)
 
     def _fit(self, dataset: Any) -> _ConstantColumnModel:
-        """No query — fit stores the configured literal only (still no row touch)."""
+        """Validate the frame and return a model holding the literal."""
         _require_repark_dataframe(dataset, verb="_ConstantColumnEstimator.fit")
         model = _ConstantColumnModel(output_col=self.output_col, value=self.value)
         model.uid = self.uid.replace("Estimator", "Model") if "Estimator" in self.uid else self.uid
         return model
 
     def _ml_fitted_state(self) -> dict[str, Any]:
-        """Unfitted estimator has no fitted state."""
+        """Return the estimator's empty fitted state."""
         return {}
 
     @classmethod
@@ -724,7 +678,7 @@ class _ConstantColumnEstimator(Estimator["_ConstantColumnModel"]):
         fitted: bool,
         fitted_state: dict[str, Any],
     ) -> _ConstantColumnEstimator:
-        """Rebuild from save payload."""
+        """Rebuild an estimator from saved parameters."""
         return cls(
             output_col=str(params.get("output_col", "const")),
             value=float(params.get("value", 1.0)),
@@ -732,27 +686,27 @@ class _ConstantColumnEstimator(Estimator["_ConstantColumnModel"]):
 
 
 class _ConstantColumnModel(Model):
-    """Test-only model: adds ``lit(value)`` as ``output_col`` via plan."""
+    """Model that adds a literal output column through the plan."""
 
     def __init__(self, output_col: str = "const", value: float = 1.0) -> None:
-        """Store fitted literal + output name."""
+        """Initialize the fitted literal and output name."""
         super().__init__()
         self.output_col = output_col
         self.value = float(value)
 
     def _transform(self, dataset: Any) -> Any:
-        """Plan: ``SELECT *, lit(value) AS output_col``."""
+        """Add the literal output column lazily."""
         from repark.spark.functions import lit
 
         frame = _require_repark_dataframe(dataset, verb="_ConstantColumnModel.transform")
         return frame.withColumn(self.output_col, lit(self.value))
 
     def _ml_fitted_state(self) -> dict[str, Any]:
-        """Fitted params only — never training rows."""
+        """Return fitted parameters without training rows."""
         return {"output_col": self.output_col, "value": self.value}
 
     def copy(self, extra: dict[Param[Any], Any] | None = None) -> _ConstantColumnModel:
-        """Copy model."""
+        """Copy the model."""
         that = _ConstantColumnModel(output_col=self.output_col, value=self.value)
         that.uid = self.uid
         return that
@@ -765,7 +719,7 @@ class _ConstantColumnModel(Model):
         fitted: bool,
         fitted_state: dict[str, Any],
     ) -> _ConstantColumnModel:
-        """Rebuild from save payload."""
+        """Rebuild a model from saved parameters."""
         payload = fitted_state or params
         return cls(
             output_col=str(payload.get("output_col", "const")),
@@ -779,7 +733,7 @@ def _rebuild_constant_column_model(
     fitted: bool,
     fitted_state: dict[str, Any],
 ) -> _ConstantColumnModel:
-    """Registry entry for constant column model."""
+    """Rebuild a constant-column model."""
     return _ConstantColumnModel._ml_from_save(
         params=params, fitted=fitted, fitted_state=fitted_state
     )
@@ -791,7 +745,7 @@ def _rebuild_constant_column_estimator(
     fitted: bool,
     fitted_state: dict[str, Any],
 ) -> _ConstantColumnEstimator:
-    """Registry entry for constant column estimator."""
+    """Rebuild a constant-column estimator."""
     return _ConstantColumnEstimator._ml_from_save(
         params=params, fitted=fitted, fitted_state=fitted_state
     )

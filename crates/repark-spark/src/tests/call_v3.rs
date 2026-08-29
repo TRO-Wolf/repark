@@ -1,11 +1,6 @@
-//! V3-0 — what the `CALL` procedures do when the table is format-v3.
+//! Pins format-v3 maintenance behavior, including lineage and dangling-delete guards.
 //!
-//! Split from `call.rs` on subject, the same way `call_orphan.rs` was: these tests are all about
-//! one table property rather than one procedure. The fixture is built by upgrading a table the
-//! engine created, not by reading a Spark-written one, so the pins run in CI with no oracle. The
-//! Spark measurements that motivated them are in `task/v3-0-charter-ledger.md`.
-//!
-//! Registry rows `V3-LINEAGE-1` and `V3-DANGLE-1`.
+//! Registry rows: `V3-LINEAGE-1` and `V3-DANGLE-1`.
 
 use super::super::*;
 use super::common::*;
@@ -13,14 +8,10 @@ use super::common::*;
 use iceberg::spec::FormatVersion;
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
 
-/// Upgrade a table the engine created from v2 to v3, through the fork's own transaction action.
+/// Upgrade an engine-created v2 table to v3 through the fork's transaction action.
 ///
-/// Upgrade a v2 table the engine created. V3-2 can CREATE v3 behind a session opt-in; this
-/// helper stays for tests that must not depend on that path (the default-session blast-radius
-/// pin, and the lineage-refusal fixture that predates CREATE). Going through `Transaction`
-/// rather than hand-writing metadata means the fixture is a v3 table the fork itself considers
-/// valid — a hand-rolled one could be wrong in exactly the way that makes the pin below pass
-/// for the wrong reason.
+/// This helper avoids session opt-in so default-session and lineage-refusal pins use a fork-valid
+/// v3 table. `Transaction` prevents hand-written metadata from masking the tested behavior.
 async fn upgrade_to_v3(catalog: &Arc<dyn Catalog>, ident: &TableIdent) {
     let table = catalog.load_table(ident).await.expect("load for upgrade");
     let transaction = Transaction::new(&table);
@@ -80,18 +71,9 @@ async fn v3_fixture_really_is_format_v3() {
 
 /// **The guard.** `rewrite_data_files` refuses a v3 table instead of compacting it.
 ///
-/// Measured against Spark 4.0.1 + Iceberg 1.10.0 on a six-file v3 table with deletion vectors:
-/// Spark carries `_row_id` and `_last_updated_sequence_number` through the rewrite unchanged
-/// (`id=5099` kept `row_id=599, seq=6` on both sides of the CALL). The engine's rewrite produced
-/// the right rows and **reassigned every row's lineage** (`row_id=691, seq=9`), which tells a
-/// downstream consumer that all 546 rows were updated when none were. The fork's
-/// `maintenance/rewrite_data_files.rs` has no row-lineage handling at all, so this is not
-/// something the engine can fix in the CALL router.
-///
-/// Refusing is stricter than Spark, which does the rewrite correctly. It is the same trade MW-2
-/// took for deletion vectors: a loud refusal beats a silent, plausible, wrong result on a
-/// procedure an operator runs unattended. RP-2 (2026-08-27) re-measured the guard at fork
-/// `ce92a7bf` and it stays: the rewrite still reassigns lineage (ledger §2).
+/// Spark preserves `_row_id` and `_last_updated_sequence_number` through this rewrite. The fork
+/// reassigns both values, so the router refuses v3 lineage rewrites rather than report false row
+/// history to an unattended operator.
 /// pins: rp-2-fork-repin/C-004
 #[tokio::test]
 async fn call_rewrite_data_files_refuses_a_v3_table_rather_than_reassigning_row_lineage() {

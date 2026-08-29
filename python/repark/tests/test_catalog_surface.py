@@ -1,6 +1,6 @@
 """R-CURCAT-FACADE / G-INT catalog surface — current catalog + list* over existing primitives.
 
-Oracle: live PySpark 4.1.2 (zulu-17) measured 2026-07-27 (G-INT) and re-measured 2026-07-29
+Oracle: live PySpark 4.1.2 (zulu-17), G-INT measured 2026-07-27, re-measured 2026-07-29
 (overnight N1). Live V2 shapes:
 
 * ``listDatabases()`` → list of Database(name, catalog, description, locationUri)
@@ -18,14 +18,10 @@ Oracle: live PySpark 4.1.2 (zulu-17) measured 2026-07-27 (G-INT) and re-measured
   SCHEMA_NOT_FOUND
 * ``spark.sql.defaultCatalog`` defaults to ``spark_catalog``
 
-RePark is **two-part-namespace** Iceberg (``catalog.namespace.table`` three-part identifiers).
-R-CURCAT implements the Catalog list/current methods **facade-only** (no engine USE /
-bare SHOW NAMESPACES) over:
-
-* ``SHOW NAMESPACES IN`` — ``listDatabases`` / ``databaseExists`` / ``setCurrentDatabase``
-* ``DESCRIBE NAMESPACE`` — ``getDatabase`` (location/comment; ``listDatabases`` stays FA-2)
-* live Iceberg ``list_iceberg_table_names`` + session temp views — ``listTables``
-  (not global ``information_schema.tables``)
+R-CURCAT implements the list/current methods facade-only (no engine USE) over ``SHOW
+NAMESPACES IN``, ``DESCRIBE NAMESPACE`` (``getDatabase``; ``listDatabases`` stays FA-2), and
+live Iceberg listings + session temp views (``listTables``). RePark is two-part-namespace
+Iceberg.
 """
 
 from __future__ import annotations
@@ -49,15 +45,13 @@ def spark(tmp_path: Path) -> ReparkSession:
     return session
 
 
-# ==================================================================================================
-# Methods already on the facade — tableExists / dropTempView / clearCache
-# ==================================================================================================
+# Methods already on the facade: tableExists / dropTempView / clearCache
 
 
 def test_table_exists_three_part_and_temp_view(spark: ReparkSession) -> None:
     """Present Iceberg table True; missing table/namespace False; temp view by bare name."""
     assert spark.catalog.tableExists("glue_catalog.ns1.entity") is True
-    assert spark.catalog.table_exists("glue_catalog.ns1.entity") is True  # snake_case alias
+    assert spark.catalog.table_exists("glue_catalog.ns1.entity") is True
     assert spark.catalog.tableExists("glue_catalog.ns1.nope") is False
     # Missing namespace → False (live Spark tableExists also False for missing db.table)
     assert spark.catalog.tableExists("glue_catalog.no_such_ns.t") is False
@@ -95,7 +89,7 @@ def test_catalog_facade_public_surface() -> None:
     assert public == {
         "clearCache",
         "clear_cache",
-        # r23 C6: SQL-UDF catalog surface
+        # C6: SQL-UDF catalog surface
         "registerFunction",
         "register_function",
         "functionExists",
@@ -128,14 +122,12 @@ def test_catalog_facade_public_surface() -> None:
 def test_clear_cache_and_drop_temp_view_aliases(spark: ReparkSession) -> None:
     spark.sql("SELECT 1 AS n").createOrReplaceTempView("v")
     assert spark.catalog.drop_temp_view("v") is True
-    assert spark.catalog.dropTempView("v") is False  # already gone
+    assert spark.catalog.dropTempView("v") is False
     assert spark.catalog.clearCache() is None
     assert spark.catalog.clear_cache() is None
 
 
-# ==================================================================================================
 # R-CURCAT — current catalog / database / list* success pins
-# ==================================================================================================
 
 
 def test_current_catalog_defaults_then_tracks_register(spark: ReparkSession) -> None:
@@ -147,9 +139,8 @@ def test_current_catalog_defaults_then_tracks_register(spark: ReparkSession) -> 
 
 def test_set_current_catalog_and_list_catalogs(spark: ReparkSession) -> None:
     catalogs = spark.catalog.listCatalogs()
-    # R-AUTO-MEMCAT: the auto-registered spark_catalog is listed alongside the user catalog
-    # (live PySpark also always lists spark_catalog); currentCatalog still flipped to the
-    # user registration.
+    # R-AUTO-MEMCAT: the auto-registered spark_catalog lists alongside the user catalog (live
+    # PySpark also always lists spark_catalog); currentCatalog still flips to the registration.
     assert set(catalogs) == {
         CatalogMetadata(name="glue_catalog", description=None),
         CatalogMetadata(name="spark_catalog", description=None),
@@ -243,8 +234,8 @@ def test_database_exists(spark: ReparkSession) -> None:
 def test_get_database_bare_and_qualified_shape(spark: ReparkSession) -> None:
     """getDatabase field shape (live 4.1.2 Database); bare and qualified spellings agree.
 
-    A LOCATION-less namespace has ``locationUri is None`` / ``description is None`` — Spark's
-    ``makeDatabase`` uses ``orNull`` when ``comment`` / ``location`` metadata is absent.
+    A LOCATION-less namespace has None locationUri/description — Spark ``makeDatabase`` uses
+    ``orNull`` when ``comment`` / ``location`` metadata is absent.
     """
     spark.catalog.setCurrentCatalog("glue_catalog")
     bare = spark.catalog.getDatabase("ns1")
@@ -287,9 +278,8 @@ def test_get_database_returns_location_and_comment(tmp_path: Path) -> None:
 def test_get_database_missing_raises_schema_not_found(spark: ReparkSession) -> None:
     """Missing namespace: AnalysisException + SCHEMA_NOT_FOUND via DESCRIBE (not SHOW).
 
-    Existence is DESCRIBE's. The getDatabase message must match the DESCRIBE NAMESPACE
-    sibling on the same name — restoring a SHOW ``_namespace_exists`` precheck (different
-    text) or dropping DESCRIBE without an existence check turns this red.
+    Mutation guard: a SHOW ``_namespace_exists`` precheck (different message text) or dropping
+    the DESCRIBE existence check fails the message-equality pins below.
     """
     spark.catalog.setCurrentCatalog("glue_catalog")
     with pytest.raises(AnalysisException) as described:
@@ -415,27 +405,17 @@ def test_default_catalog_from_builder_config(tmp_path: Path) -> None:
         session.stop()
 
 
-# ==================================================================================================
 # Remaining disclosed divergences
-# ==================================================================================================
 
 
 def test_show_tables_in_not_implemented_divergence(spark: ReparkSession) -> None:
-    """Pin for registry row ST-1 — semantics live only there.
-
-    See ``docs/spark-sql-iceberg-parity.md`` §2.4
-    [ST-1](../../../docs/spark-sql-iceberg-parity.md#st-1--show-tables-in-is-unimplemented).
-    """
+    """Pin for registry row ST-1 (docs/spark-sql-iceberg-parity.md §2.4) — semantics live there."""
     with pytest.raises(UnsupportedOperationException, match="SHOW TABLES"):
         spark.sql("SHOW TABLES IN glue_catalog.ns1")
 
 
 def test_list_databases_location_uri_none_divergence(spark: ReparkSession) -> None:
-    """Pin for registry row FA-2 — semantics live only there.
-
-    See ``docs/spark-sql-iceberg-parity.md`` §5
-    [FA-2](../../../docs/spark-sql-iceberg-parity.md#fa-2--listdatabases-leaves-description-and-locationuri-as-none).
-    """
+    """Pin for registry row FA-2 (docs/spark-sql-iceberg-parity.md §5) — semantics live there."""
     spark.catalog.setCurrentCatalog("glue_catalog")
     for db in spark.catalog.listDatabases():
         assert db.locationUri is None

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-File-backed tests for `../partitioning.rs`. Partition-transform parsing and spec building: every transform name, every arity branch,
+File-backed tests for `../partitioning.rs`. They cover transform names, arity branches,
 every bound, and the schema-resolution failure. A partition spec that is wrong is not
 recoverable after the table exists.
 

@@ -1,13 +1,5 @@
-//! G8 / R-3 — ANSI-door Native-profile ROWS/RANGE frame-value pins (G11).
-//!
-//! Spark is **not** this door's oracle. Numeric ROWS/RANGE on INT keys currently
-//! agree with Spark 4.1.2 (G5 corpus); that agreement is documented, not a
-//! parity claim. The load-bearing DF-native split is a **unit-less** `RANGE`
-//! offset over `DATE`: DataFusion reads `"1"` as one month (Arrow
-//! `Interval(MonthDayNano)`), Spark 4.1.2 reads it as one day. This file pins
-//! the DF-native month reading and the portable `INTERVAL '1' DAY` spelling.
-//!
-//! Native `AnsiDialect` session, no extension. Arrow path, value AND type.
+//! Native-profile ROWS/RANGE frame-value pins.
+//! Spark is not this door's oracle; INT keys use DataFusion behavior.
 
 use std::sync::Arc;
 
@@ -25,8 +17,7 @@ fn native_ansi_session() -> ReparkSession {
         .expect("native session")
 }
 
-/// G5 numeric seed as an inline relation: `(id, k, v)` =
-/// `(1,1,10), (2,1,20), (3,2,30), (4,1,40), (5,3,50)`.
+/// Seed the numeric window relation with `(id, k, v)` columns.
 const WIN: &str = "\
 FROM ( \
   SELECT CAST(1 AS INT) AS id, CAST(1 AS INT) AS k, CAST(10 AS INT) AS v UNION ALL \
@@ -87,11 +78,6 @@ fn present(values: &[i64]) -> Vec<Option<i64>> {
 
 /// ===========================================================================================
 /// Native-profile ROWS / RANGE frame values (numeric + DATE unit-less).
-///
-/// Numeric frames match the G5 Spark table on this seed (documented agreement).
-/// Unit-less `RANGE 1 PRECEDING` over DATE is DF-native **months** (`[10, 30, 60]`);
-/// Spark 4.1.2 reads that spelling as **days** (`[10, 30, 30]`). `INTERVAL '1' DAY`
-/// is the portable spelling and lands the day window on this door too.
 /// ===========================================================================================
 #[tokio::test]
 async fn ansi_door_rows_and_range_frame_values() {
@@ -168,7 +154,6 @@ async fn ansi_door_rows_and_range_frame_values() {
     );
 
     // DF-native: unit-less 1 over DATE is one MONTH, so Jan 1/2/4 all sit in one frame.
-    // Spark 4.1.2 reads the same spelling as one DAY → [10, 30, 30]. Do not "fix" this.
     let date_unitless = collect_sum(
         &session,
         &format!(

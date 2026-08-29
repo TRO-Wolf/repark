@@ -22,7 +22,7 @@ _UNSUPPORTED_SEMANTIC_READER_OPTIONS: frozenset[str] = frozenset(
         "ignorecorruptfiles",
         "ignoremissingfiles",
         "encryption",
-        # Parquet value-semantic read options (C2-Q-003).
+        # Parquet value-semantic read options.
         "datetimerebasemode",
         "datetimerebasemodeinread",
         "int96rebasemode",

@@ -1,28 +1,4 @@
-//! **Cross-door equivalence** — the Q13 / graft-G5 TWO-SESSION protocol (design §2 Q13).
-//!
-//! The rule the design is emphatic about, because all three design attempts got it wrong: a
-//! cross-door row runs **two sessions**, not one.
-//!
-//! - **Session A — native**: no `SessionExtension` at all, `AnsiDialect` as the session dialect.
-//! - **Session B — Spark-extended**: `SparkExtension` at the build hooks, `SparkDialect` as the
-//!   session dialect.
-//!
-//! Each door is driven through its OWN session, and the FINAL Arrow results are compared — value
-//! AND type. Why not one session with `sql_with`: extensions are **session-scoped, not
-//! dialect-scoped**. A Spark-extended session has Spark expression semantics through every door,
-//! including this one, so a `sql_with(AnsiDialect)` call on it would be measuring the Spark
-//! analyzer wearing an ANSI hat. `sql_with` single-session rows are legal only for surfaces the
-//! analyzer/UDF layer cannot touch (pure DDL/catalog ops), and each row below states its profile.
-//!
-//! Each session gets its OWN in-memory catalog over its OWN warehouse: the two doors must produce
-//! equal RESULTS from independent state, which is a stronger claim than two doors agreeing about
-//! one shared table.
-//!
-//! `repark-spark` is a DEV-dependency of this crate for exactly this file. The crate-DAG guard
-//! scopes layering to normal edges (dev-/build-deps excluded by design), so no door→door product
-//! edge exists — verified with `make check-crate-dag`. Nothing in `src/` may name `repark_spark`.
-//!
-//! AWS-free by construction.
+//! Cross-door equivalence uses two sessions so each door keeps its own session extensions.
 
 use std::sync::Arc;
 
@@ -63,8 +39,7 @@ async fn native_ansi_door() -> Door {
     }
 }
 
-/// **Session B** — the Spark-extended profile: `SparkExtension` at both build hooks,
-/// `SparkDialect` as the session default. Assembled exactly as v1 assembled a session.
+/// **Session B** uses `SparkExtension` at both build hooks and the Spark dialect.
 async fn spark_extended_door() -> Door {
     let dir = TempDir::new().expect("warehouse");
     let warehouse = dir.path().to_str().expect("utf8").to_string();
@@ -86,10 +61,6 @@ async fn spark_extended_door() -> Door {
 }
 
 /// Create namespace `ice.sales` on a door's own catalog, the way that door spells it.
-///
-/// Pure catalog DDL — the two spellings differ (`CREATE SCHEMA … WITH (location = …)` vs Spark's
-/// `CREATE NAMESPACE … LOCATION`), which is precisely why the SETUP is per-door and only the
-/// RESULT is compared.
 async fn make_namespace(door: &Door, spark_spelling: bool) {
     let warehouse = &door.warehouse;
     let sql = if spark_spelling {
@@ -103,8 +74,7 @@ async fn make_namespace(door: &Door, spark_spelling: bool) {
         .unwrap_or_else(|error| panic!("namespace DDL failed ({sql}): {error}"));
 }
 
-/// The comparison primitive: run `sql` and return `(field name, Arrow type)` pairs plus the rows
-/// rendered as `(i64, String)`. Both halves are compared across doors — value AND type.
+/// Run `sql` and return `(field name, Arrow type)` pairs plus the rows.
 async fn typed_rows(
     session: &ReparkSession,
     sql: &str,
@@ -140,14 +110,7 @@ async fn typed_rows(
     (fields, rows)
 }
 
-/// ROW 1 — **CTAS**, content AND schema. Profile: **`TwoSession`** (native ANSI vs Spark-extended
-/// Spark). The two doors spell the create differently and route it through different lowerings
-/// (`repark_sql::create_table` vs the Spark door's ported CTAS handler), but they must land the
-/// same Iceberg table: same column names, same Arrow types, same rows.
-///
-/// This is the drift guard design §6 R3 asks for: the duplicated thin lowerings cannot diverge
-/// without turning a test red.
-///
+/// ROW 1 — CTAS preserves content and schema across native and Spark-extended sessions.
 /// Mutation: change either door's CTAS to widen `id` to a different integer width → the schema
 /// half REDs even though the value half would still pass.
 #[tokio::test]
@@ -188,12 +151,7 @@ async fn cross_door_ctas_produces_the_same_table_content_and_schema() {
     );
 }
 
-/// ROW 2 — **INSERT round-trip**, content AND schema. Profile: **`TwoSession`**. The ANSI door
-/// delegates `INSERT` to the fork's `TableProvider` (ADR-0003); the Spark door routes it through
-/// its ported eager-DML path. Same table, same rows afterwards.
-///
-/// Included because it is the DML pair PR-6 can pin without waiting on a handler: it exercises
-/// the same commit machinery MERGE does, one statement shape lower.
+/// ROW 2 — INSERT preserves content and schema across the two doors.
 #[tokio::test]
 async fn cross_door_insert_lands_the_same_rows() {
     let ansi = native_ansi_door().await;
@@ -223,16 +181,7 @@ async fn cross_door_insert_lands_the_same_rows() {
     assert_eq!(ansi_rows, vec![(1, "a".to_string()), (2, "b".to_string())]);
 }
 
-/// ROW 3 — **the protocol's own guard rail**, and the reason this file exists in this shape. A
-/// Spark-extended session driven through `sql_with(AnsiDialect)` is NOT a native ANSI session:
-/// the extension is installed on the SESSION, so its function registry and analyzer rules are
-/// live no matter which door the text enters by.
-///
-/// Concretely: `date_add` is a Spark-door function registered by `SparkExtension`. On the native
-/// session it does not exist; through the ANSI dialect ON THE EXTENDED SESSION it resolves fine.
-/// That asymmetry is what makes single-session cross-door rows invalid — and it is the exact
-/// sentence PR-6 freezes into `docs/design/session-api.md`.
-///
+/// ROW 3 — session extensions are shared by a session, not scoped to a dialect.
 /// Mutation: if extensions ever became dialect-scoped, this test REDs, and every cross-door row
 /// above would need re-reading.
 #[tokio::test]
@@ -240,14 +189,11 @@ async fn extensions_are_session_scoped_not_dialect_scoped() {
     let ansi = native_ansi_door().await;
     let spark = spark_extended_door().await;
 
-    // Native session, ANSI door: the Spark function is absent.
     ansi.session
         .sql("SELECT date_add(DATE '2024-01-01', CAST(1 AS INT)) AS d")
         .await
         .expect_err("a native session must not know the Spark function set");
 
-    // Spark-EXTENDED session, driven through the ANSI door: the same function resolves, because
-    // the extension is session-scoped.
     let ansi_dialect: Arc<dyn SqlDialect> = Arc::new(AnsiDialect);
     let through_ansi = spark
         .session
@@ -264,27 +210,18 @@ async fn extensions_are_session_scoped_not_dialect_scoped() {
     );
 }
 
-/// ROW 4 — **pure catalog DDL**, the one shape where a single session is legal (design §2 Q13:
-/// "`sql_with` single-session is legal only for surfaces the analyzer/UDF layer cannot touch").
-/// Profile: **Native, single-session `sql_with`** — recorded as such, deliberately not claimed as
-/// `TwoSession`.
-///
-/// Namespace creation reaches the catalog without planning an expression, so no extension can
-/// change its outcome; both doors' spellings must create the same namespace on one session.
+/// ROW 4 — **pure catalog DDL**, the one shape where a single session is legal (design §2 Q13).
 #[tokio::test]
 async fn cross_door_namespace_ddl_is_single_session_legal() {
     let ansi = native_ansi_door().await;
     let warehouse = &ansi.warehouse;
 
-    // ANSI spelling on the session default.
     ansi.session
         .sql(&format!(
             "CREATE SCHEMA ice.a WITH (location = '{warehouse}/a')"
         ))
         .await
         .expect("ANSI CREATE SCHEMA");
-    // Spark spelling through an explicitly-passed dialect on the SAME session — legal here, and
-    // only here, because nothing about it is analyzer-visible.
     let spark_dialect: Arc<dyn SqlDialect> = Arc::new(SparkDialect);
     ansi.session
         .sql_with(
@@ -294,8 +231,7 @@ async fn cross_door_namespace_ddl_is_single_session_legal() {
         .await
         .expect("Spark CREATE NAMESPACE through the same session");
 
-    // Both namespaces exist on the ONE catalog and are equally usable — the doors' different
-    // spellings produced the same catalog effect.
+    // Both namespaces use one catalog; the doors differ only in SQL spelling.
     for (namespace, table) in [("a", "t_a"), ("b", "t_b")] {
         ansi.session
             .sql(&format!(
@@ -324,8 +260,7 @@ async fn cross_door_namespace_ddl_is_single_session_legal() {
     }
 }
 
-/// The full read schema of `ice.sales.orders` as `(name, Arrow type)` pairs — the comparison
-/// primitive for the ALTER row, where the SCHEMA is the result under test.
+/// Return the full read schema of `ice.sales.orders` as `(name, Arrow type)` pairs.
 async fn table_schema(session: &ReparkSession) -> Vec<(String, DataType)> {
     let frame = session
         .sql("SELECT * FROM ice.sales.orders")
@@ -340,14 +275,7 @@ async fn table_schema(session: &ReparkSession) -> Vec<(String, DataType)> {
         .collect()
 }
 
-/// ROW 5 — **ALTER**, evolved schema equality. Profile: **`TwoSession`**.
-///
-/// Both doors reach the SAME fork `UpdateSchema` calls through tier-1 `repark_iceberg::write::
-/// alter` — but through independently-written lowerings from different grammars (ANSI
-/// `ADD COLUMN c TYPE` / `ALTER COLUMN c SET DATA TYPE t` vs Spark `ADD COLUMNS (c TYPE)` /
-/// `ALTER COLUMN c TYPE t`). Equal evolved schemas is the only thing that proves the two
-/// lowerings agree about what they asked the fork for.
-///
+/// ROW 5 — ALTER preserves the evolved schema across both sessions.
 /// Mutation: make either door's ADD COLUMN land a different Iceberg type (or a different
 /// required/optional flag that changes the Arrow nullability projection) → this REDs.
 #[tokio::test]
@@ -400,9 +328,7 @@ async fn cross_door_alter_lands_the_same_evolved_schema() {
         "…and the shared schema must be the RIGHT one (add + drop + rename all applied)"
     );
 
-    // TABLE rename (`ALTER TABLE … RENAME TO`) — the same spelling in both doors, both riding
-    // `repark_iceberg::write::alter::rename_table`. The old name must be gone and the new one
-    // must carry the evolved schema, identically on both sides.
+    // TABLE rename (`ALTER TABLE … RENAME TO`) uses the same spelling in both doors.
     for door in [&ansi, &spark] {
         door.session
             .sql("ALTER TABLE ice.sales.orders RENAME TO ice.sales.orders_v2")
@@ -422,14 +348,6 @@ async fn cross_door_alter_lands_the_same_evolved_schema() {
 }
 
 /// ROW 6 — **MERGE**, result table. Profile: **`TwoSession`**.
-///
-/// Both doors lower to `MergeSpec` and execute through the RePark-owned tier-1
-/// `repark_iceberg::write::merge::execute_merge` (never the fork's `TableProvider` — design §2
-/// Q4). The lowerings are separate ~150-LOC translations of two grammars that happen to be nearly
-/// identical; this row is the drift guard (§6 R3) over exactly that duplication.
-///
-/// The fixture exercises all three clause outcomes at once: one matched-update, one
-/// matched-delete, one not-matched-insert, and one untouched row.
 #[tokio::test]
 async fn cross_door_merge_produces_the_same_result_table() {
     let ansi = native_ansi_door().await;
@@ -473,25 +391,15 @@ async fn cross_door_merge_produces_the_same_result_table() {
     assert_eq!(
         ansi_rows,
         vec![
-            (1, "a".to_string()), // untouched
-            (2, "B".to_string()), // matched → UPDATE
-            (9, "N".to_string()), // not matched → INSERT
-                                  // id 3 matched the DELETE clause and is gone
+            (1, "a".to_string()),
+            (2, "B".to_string()),
+            (9, "N".to_string()),
         ],
         "…and the shared MERGE result must be the right one"
     );
 }
 
 /// ROW 7 — **TIME TRAVEL**, snapshot pin. Profile: **`TwoSession`**.
-///
-/// Two independently-written scanners (ANSI's quote-parameterized `FOR VERSION AS OF` over
-/// `GenericDialect` vs the Spark door's ported `VERSION AS OF` over `DatabricksDialect`) rewrite
-/// to the SAME hoisted repark-core resolution half (`TimeTravelSpec` / `read_table_at` over the
-/// fork's snapshot-pinned provider). Pinning the FIRST snapshot must return the pre-INSERT rows
-/// through both doors, while the live read returns the post-INSERT rows.
-///
-/// Each door pins its own catalog's snapshot id (the ids differ — they are per-table), which is
-/// the point: the comparison is of RESULTS, not of ids.
 #[tokio::test]
 async fn cross_door_time_travel_pins_the_same_snapshot_content() {
     let ansi = native_ansi_door().await;
@@ -560,39 +468,7 @@ async fn cross_door_time_travel_pins_the_same_snapshot_content() {
     );
 }
 
-/// ROW 8 — **identifier case folding**, the divergence DOC row (design §2 Q10 "case rules:
-/// stock DF ANSI folding; divergence from Spark documented, one doc-test row per door").
-/// Profile: **`TwoSession`**.
-///
-/// This row exists to make the folding claim a TESTED fact rather than a sentence in a doc, and
-/// what it found is worth stating plainly:
-///
-/// * **Unquoted** identifiers behave the same through both doors — a mixed-case reference
-///   resolves to the same column. This is the case that matters for portability, and it agrees.
-/// * **Quoted** identifiers ALSO agree — and both doors diverge from real Spark here. Stock
-///   DataFusion treats a quoted identifier as case-SENSITIVE, so neither ANSI `"ID"` nor Spark
-///   `` `ID` `` resolves against a column stored as `id`; Apache Spark resolves the backticked
-///   form case-insensitively (its default `spark.sql.caseSensitive = false` applies to quoted
-///   names too). The divergence is therefore **engine-wide, not door-specific**: it is a
-///   repark-vs-Spark difference the Spark door inherits, not a place the two doors disagree.
-///
-/// Recorded rather than fixed: changing it means changing the Spark door's resolution semantics
-/// against stock DataFusion, which is a decision, not a bug fix. An untested claim about folding
-/// would be worse than none — if either behavior changes, this REDs and the doc line moves with
-/// it.
-///
-/// # This is a DECLARED-DIVERGENCE test
-///
-/// The row it defends is **`docs/spark-sql-iceberg-parity.md` §3 row ID-1**, the divergence
-/// registry's first declared row (campaign decision D3, 2026-08-10). The registry holds the
-/// semantics — repark's behavior, Apache Spark's behavior, this pin, and the rationale for
-/// declaring rather than fixing; `STATUS.md` holds only the issue's state and links there.
-///
-/// The declaration is what makes the *failure* direction load-bearing: this test reds if the
-/// divergence silently DISAPPEARS (a quoted wrong-case identifier starting to resolve) exactly as
-/// it reds if the agreeing half breaks. Either RED means the registry row and this test move in
-/// the same change — a divergence must never stop being true quietly, and it must never be
-/// laundered into "parity" by a green suite.
+/// ROW 8 — **identifier case folding**, the divergence row for design §2 Q10.
 #[tokio::test]
 async fn cross_door_identifier_case_folding_agrees_unquoted_and_diverges_quoted() {
     let ansi = native_ansi_door().await;
@@ -617,13 +493,7 @@ async fn cross_door_identifier_case_folding_agrees_unquoted_and_diverges_quoted(
     assert_eq!(ansi_rows, spark_rows);
     assert_eq!(ansi_rows, vec![(1, "a".to_string())]);
 
-    // Quoted, wrong case: both doors refuse. The divergence recorded here is repark-vs-SPARK,
-    // not door-vs-door — Apache Spark would resolve the backticked form. The error TEXT is
-    // asserted, not merely `is_err`, so the row stays attributable to identifier resolution
-    // rather than to any other failure that happens to make the statement error. Both halves of
-    // the needle are load-bearing: `No field named` is the resolution-failure class, and the
-    // quoted `"ID"` is the identifier itself — a bare `contains("ID")` would also be satisfied by
-    // ordinary error vocabulary (`INVALID`, `UUID`), which is not attribution.
+    // Quoted, wrong case: both doors refuse; the registry records the repark-vs-Spark result.
     let ansi_quoted = match ansi
         .session
         .sql(r#"SELECT "ID" FROM ice.sales.orders"#)
@@ -658,14 +528,7 @@ async fn cross_door_identifier_case_folding_agrees_unquoted_and_diverges_quoted(
     );
 }
 
-// =================================================================================================
-// G-7b — decimal128 cross-door rows (same SQL through both doors; schema + i128 + nullability)
-// =================================================================================================
-
 /// One-column Decimal128 result through a session: `(precision, scale, nullable, i128_or_null)`.
-///
-/// Compared bit-exact across doors. Goldens derive from the Python corpus equality rows
-/// `add_same_precision_scale` / `mul_money_by_quantity` (repark already matches Spark there).
 async fn decimal128_scalar(session: &ReparkSession, sql: &str) -> (u8, i8, bool, Option<i128>) {
     let frame = session
         .sql(sql)
@@ -701,10 +564,6 @@ async fn decimal128_scalar(session: &ReparkSession, sql: &str) -> (u8, i8, bool,
 }
 
 /// G-7b cross-door row 1 — money add. Corpus row `add_same_precision_scale`.
-///
-/// Same SQL string through native ANSI (`AnsiDialect`, no extension) and Spark-extended
-/// (`SparkDialect` + `SparkExtension`). Asserts schema `(p,s)` + nullability + raw i128 are
-/// bit-exact equal across doors, and match the corpus golden (11,2) / 579.
 #[tokio::test]
 async fn cross_door_decimal_add_same_precision_scale_bit_exact() {
     let ansi = native_ansi_door().await;
@@ -726,8 +585,6 @@ async fn cross_door_decimal_add_same_precision_scale_bit_exact() {
 }
 
 /// G-7b cross-door row 2 — money × quantity. Corpus row `mul_money_by_quantity`.
-///
-/// Same two-session protocol as the add row. Golden: decimal128(21,2) non-null i128=5997.
 #[tokio::test]
 async fn cross_door_decimal_mul_money_by_quantity_bit_exact() {
     let ansi = native_ansi_door().await;
@@ -748,26 +605,7 @@ async fn cross_door_decimal_mul_money_by_quantity_bit_exact() {
     );
 }
 
-/// ROW 9 — **the G3-E8 residual refusal, RENDERED**, byte for byte. Profile: **`TwoSession`**.
-///
-/// Restated 2026-08-14 into its **permanent v1 valve** form: mixed AND/OR, nested, CTE (loud
-/// today), scalar subquery `WHERE`, SET-subquery (D-4 stays ungated when WHERE is clean),
-/// UPDATE NOT IN / EXISTS, and every ANY/ALL spelling. Uncorrelated `DELETE … IN` / `NOT IN`,
-/// `[NOT] EXISTS` ± correlation, correlated IN, and identity `UPDATE … IN` now execute.
-///
-/// The valve is deliberately implemented TWICE (this crate may not take a product edge to
-/// `repark-spark`), and the ledger's D-1 promises the two copies stay identical. Until this row
-/// the promise was pinned only at the template level — each door asserted its own copy of the
-/// message. The part a template pin cannot see is the part the copies actually disagreed about:
-/// the rendered TARGET, which the ANSI door used to read out of scrubbed text while the Spark
-/// door read it from the parse tree.
-///
-/// So: one statement, two doors, two independent warehouses, and the whole refusal string
-/// compared. Any drift — a reworded clause, a differently rendered target, one door's copy
-/// updated without the other's — REDs here, which is exactly the drift D-1 accepted the
-/// duplication's risk on. The quoted-target row is included because it is the spelling that was
-/// wrong.
-///
+/// ROW 9 — both doors render the G3-E8 residual refusal byte for byte.
 /// Mutation: change one door's message (or one door's target derivation) → this row reds while
 /// both doors' own message pins stay green.
 #[tokio::test]
@@ -1068,15 +906,7 @@ async fn cross_door_g3e8_update_in_executes_identically() {
     );
 }
 
-// =================================================================================================
-// G12 — three-valued logic cross-door rows (same SQL through both doors; type + nullability + value)
-// =================================================================================================
-
 /// One-column Boolean result: `(DataType, nullable, Option<bool>)`.
-///
-/// Goldens derive from the Python G12 corpus equality rows (`and_true_null_is_null` and the
-/// `eq` half of `null_eq_vs_null_safe_eq`). `<=>` is Spark-only — deliberately not used here so
-/// both doors share one portable SQL string.
 async fn boolean_scalar(session: &ReparkSession, sql: &str) -> (DataType, bool, Option<bool>) {
     let frame = session
         .sql(sql)
@@ -1114,8 +944,6 @@ async fn boolean_scalar(session: &ReparkSession, sql: &str) -> (DataType, bool, 
 }
 
 /// One-column Int32 result: `(DataType, nullable, Option<i32>)`.
-///
-/// Used by the CASE-WHEN null-predicate cross-door row (corpus `case_when_null_predicate`).
 async fn int32_scalar(session: &ReparkSession, sql: &str) -> (DataType, bool, Option<i32>) {
     let frame = session
         .sql(sql)
@@ -1153,10 +981,6 @@ async fn int32_scalar(session: &ReparkSession, sql: &str) -> (DataType, bool, Op
 }
 
 /// G12 cross-door row 1 — TRUE AND NULL → NULL. Corpus row `and_true_null_is_null`.
-///
-/// Same SQL string through native ANSI and Spark-extended doors. Asserts Boolean type +
-/// nullability + value are equal across doors, and match the recorded Spark golden
-/// (nullable bool NULL).
 #[tokio::test]
 async fn cross_door_tvl_true_and_null_is_null() {
     let ansi = native_ansi_door().await;
@@ -1177,11 +1001,7 @@ async fn cross_door_tvl_true_and_null_is_null() {
     );
 }
 
-/// G12 cross-door row 2 — CASE WHEN null-predicate falls through. Corpus
-/// `case_when_null_predicate`.
-///
-/// Portable ANSI/Spark SQL (no `<=>`). UNKNOWN WHEN does not match → next WHEN TRUE → 2.
-/// Asserts Int32 type + nullability + value across doors.
+/// CASE WHEN falls through when its first predicate is null.
 #[tokio::test]
 async fn cross_door_tvl_case_when_null_predicate() {
     let ansi = native_ansi_door().await;
@@ -1206,10 +1026,6 @@ async fn cross_door_tvl_case_when_null_predicate() {
     );
 }
 
-// =================================================================================================
-// G11 — intended ANSI vs Spark door divergences (correctness, not parity)
-// =================================================================================================
-
 /// Plan- or collect-time error text. Panics if `{sql}` succeeds through `{session}`.
 async fn collect_error(session: &ReparkSession, sql: &str) -> String {
     match session.sql(sql).await {
@@ -1222,8 +1038,6 @@ async fn collect_error(session: &ReparkSession, sql: &str) -> String {
 }
 
 /// One-column Float64 result: `(DataType, nullable, Option<f64>)`.
-///
-/// `None` is SQL NULL. Used by the G11 `/` rows where the Spark door promotes to float.
 async fn float64_scalar(session: &ReparkSession, sql: &str) -> (DataType, bool, Option<f64>) {
     let frame = session
         .sql(sql)
@@ -1275,8 +1089,6 @@ async fn make_nullable_ints(door: &Door, spark_spelling: bool) {
 }
 
 /// One-column Int32 result set in **statement order** (not sorted).
-///
-/// Default `ORDER BY` is the claim: sorting here would hide the null-placement divergence.
 async fn ordered_int32(session: &ReparkSession, sql: &str) -> (DataType, bool, Vec<Option<i32>>) {
     let frame = session
         .sql(sql)
@@ -1311,9 +1123,6 @@ async fn ordered_int32(session: &ReparkSession, sql: &str) -> (DataType, bool, V
 }
 
 /// G11 cross-door row 1 — integer `/`.
-///
-/// Standard SQL integer `/` truncates toward zero (`INT 5/2 = 2`); Spark `/` is always
-/// floating-point (`2.5`, nullable).
 #[tokio::test]
 async fn cross_door_integer_division_truncates_on_ansi_is_float_on_spark() {
     let ansi = native_ansi_door().await;
@@ -1336,9 +1145,6 @@ async fn cross_door_integer_division_truncates_on_ansi_is_float_on_spark() {
 }
 
 /// G11 cross-door row 2 — integer `/ 0`.
-///
-/// Standard SQL division by zero raises. U5: the Spark door (ANSI ON default) also raises
-/// after promoting integers to float — both doors raise; messages differ.
 #[tokio::test]
 async fn cross_door_integer_div_by_zero_raises_on_ansi_null_on_spark() {
     let ansi = native_ansi_door().await;
@@ -1359,9 +1165,6 @@ async fn cross_door_integer_div_by_zero_raises_on_ansi_null_on_spark() {
 }
 
 /// G11 cross-door row 3 — float `/ 0`.
-///
-/// Stock DataFusion / IEEE-754 `/` yields `+Infinity` (ANSI door, G11 correctness-not-parity).
-/// U5: the Spark door (ANSI ON default) raises `DIVIDE_BY_ZERO` — Spark 4 ANSI, not IEEE.
 #[tokio::test]
 async fn cross_door_float_div_by_zero_is_infinity_on_ansi_null_on_spark() {
     let ansi = native_ansi_door().await;
@@ -1388,9 +1191,6 @@ async fn cross_door_float_div_by_zero_is_infinity_on_ansi_null_on_spark() {
 }
 
 /// G11 cross-door row 4 — decimal `/ 0`.
-///
-/// Standard SQL decimal division by zero raises. U5: the Spark door (ANSI ON default) also
-/// raises `DIVIDE_BY_ZERO`.
 #[tokio::test]
 async fn cross_door_decimal_div_by_zero_raises_on_ansi_null_on_spark() {
     let ansi = native_ansi_door().await;
@@ -1411,9 +1211,6 @@ async fn cross_door_decimal_div_by_zero_raises_on_ansi_null_on_spark() {
 }
 
 /// G11 cross-door row 5 — default `ORDER BY … ASC` null placement.
-///
-/// Trino/PostgreSQL-style nulls-sort-high (`ASC` defaults to `NULLS LAST`) versus Spark/Hive
-/// nulls-sort-low (`ASC` defaults to `NULLS FIRST`).
 #[tokio::test]
 async fn cross_door_order_by_asc_default_nulls_last_on_ansi_first_on_spark() {
     let ansi = native_ansi_door().await;
@@ -1438,9 +1235,6 @@ async fn cross_door_order_by_asc_default_nulls_last_on_ansi_first_on_spark() {
 }
 
 /// G11 cross-door row 6 — default `ORDER BY … DESC` null placement.
-///
-/// The same nulls-sort-high versus nulls-sort-low rule: ANSI `DESC` defaults to `NULLS FIRST`;
-/// Spark `DESC` defaults to `NULLS LAST`.
 #[tokio::test]
 async fn cross_door_order_by_desc_default_nulls_first_on_ansi_last_on_spark() {
     let ansi = native_ansi_door().await;

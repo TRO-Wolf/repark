@@ -1,7 +1,7 @@
-"""Arrow ↔ feature-matrix helpers for ext estimators (M4).
+"""Arrow-to-matrix helpers for delegated estimators.
 
-Uses numpy **only** after optional-extra import. Peak held data is the training
-batch the library requires — not a second repark-owned row cache after fit.
+NumPy loads only after the optional dependency guard. Fitted models retain no
+training rows.
 """
 
 from __future__ import annotations
@@ -14,16 +14,11 @@ from repark.errors import IllegalArgumentException
 from repark.spark._temp_views import scratch_view_name
 from repark.spark.ml.ext._deps import require_numpy
 
-# Match crates/repark-ml MAX_FEATURES — data-controlled densify must not OOM (octo C1-SAF-002).
 MAX_EXT_FEATURES = 4096
 
 
 def _sized_sequence_len(seq: Any, *, field_name: str, features_col: str, row_index: int) -> int:
-    """Length of a sized sequence without materializing an unsized iterator.
-
-    Unbounded ``list(iterator)`` is refused (octo C3-SAF-001) — nnz must be
-    inspectable via ``len`` before densify allocation.
-    """
+    """Return a sequence length without materializing an unsized iterator."""
     if seq is None:
         return 0
     try:
@@ -43,7 +38,7 @@ def _refuse_sparse_nnz(
     features_col: str,
     row_index: int,
 ) -> None:
-    """Refuse nnz / value-length that would OOM or desync before densify."""
+    """Refuse sparse lengths that could allocate or desynchronize densification."""
     if nnz != n_vals:
         raise IllegalArgumentException(
             f"featuresCol {features_col!r} row {row_index} sparse indices length "
@@ -87,7 +82,6 @@ def _sparse_dict_to_dense(
         raw_values, field_name="values", features_col=features_col, row_index=row_index
     )
     _refuse_sparse_nnz(nnz, n_vals, size=size, features_col=features_col, row_index=row_index)
-    # Length already validated — iterate in place (no full list() copy of huge inputs).
     dense = [0.0] * size
     for sparse_index, val in zip(raw_indices, raw_values, strict=True):
         position = int(sparse_index)
@@ -106,12 +100,7 @@ def _try_sparse_struct_to_dense(
     features_col: str,
     row_index: int,
 ) -> list[float] | None:
-    """If ``cell`` is an Arrow StructScalar sparse vector, densify with nnz caps.
-
-    Returns ``None`` when the cell is not a struct-like sparse vector so the caller
-    can fall through to ``as_py()`` dense / dict paths.
-    """
-    # StructScalar / Mapping-like with size+indices+values fields (not a plain dict).
+    """Densify an Arrow sparse struct, or return ``None`` for other cells."""
     if isinstance(cell, dict):
         return None
     try:
@@ -133,7 +122,6 @@ def _try_sparse_struct_to_dense(
             f"featuresCol {features_col!r} sparse size={size} exceeds hard limit "
             f"p≤{MAX_EXT_FEATURES} (ext densify refuses data-controlled OOM)"
         )
-    # ListScalar supports len() without converting to a Python list of nnz elements.
     nnz = _sized_sequence_len(
         indices_field, field_name="indices", features_col=features_col, row_index=row_index
     )
@@ -141,7 +129,6 @@ def _try_sparse_struct_to_dense(
         values_field, field_name="values", features_col=features_col, row_index=row_index
     )
     _refuse_sparse_nnz(nnz, n_vals, size=size, features_col=features_col, row_index=row_index)
-    # Only materialize after nnz is proven ≤ MAX_EXT_FEATURES and ≤ size.
     indices = indices_field.as_py() if hasattr(indices_field, "as_py") else indices_field
     sparse_values = values_field.as_py() if hasattr(values_field, "as_py") else values_field
     dense = [0.0] * size
@@ -157,11 +144,7 @@ def _try_sparse_struct_to_dense(
 
 
 def _arrow_cell_is_null(cell: Any) -> bool:
-    """Null probe without ``as_py()`` materialize (octo C4-SAF-001).
-
-    Hostile sparse/dense StructScalar/ListScalar cells can be multi-GB when
-    fully converted; use Arrow ``is_valid`` (or plain ``None``) first.
-    """
+    """Check nullness without materializing an Arrow scalar."""
     if cell is None:
         return True
     if hasattr(cell, "is_valid"):
@@ -169,17 +152,11 @@ def _arrow_cell_is_null(cell: Any) -> bool:
             return not bool(cell.is_valid)
         except Exception:
             pass
-    # Non-Arrow fallback only (plain Python None already handled).
     return False
 
 
 def _dense_width_before_as_py(cell: Any) -> int | None:
-    """Known list width without materializing element values, or ``None``.
-
-    Prefers FixedSizeList ``type.list_size``, then ``len(cell)`` on ListScalar /
-    sized sequences. Unsized iterators return ``None`` (caller may still refuse
-    after a capped path).
-    """
+    """Return a known list width without materializing element values."""
     cell_type = getattr(cell, "type", None)
     list_size = getattr(cell_type, "list_size", None)
     if list_size is not None:
@@ -194,16 +171,7 @@ def _dense_width_before_as_py(cell: Any) -> int | None:
 
 
 def features_matrix_from_arrow(table: Any, features_col: str) -> Any:
-    """Build a 2-d float64 numpy array from a dense vector / list column.
-
-    Accepts FixedSizeList / list / fixed-width sequence cells produced by
-    ``VectorAssembler`` / dense vector columns. Sparse structs densify with a hard
-    ``size`` / width cap of :data:`MAX_EXT_FEATURES` (same as native ``p ≤ 4096``).
-
-    Null probes and dense width/nnz caps run **before** ``as_py()`` so hostile
-    Arrow-native cells cannot OOM the process past the densify limits (octo
-    C4-SAF-001; builds on C3 sparse nnz / C1 size caps).
-    """
+    """Build a float64 matrix and enforce row, width, null, and sparse-size limits."""
     np = require_numpy()
     if features_col not in table.column_names:
         raise IllegalArgumentException(
@@ -220,13 +188,10 @@ def features_matrix_from_arrow(table: Any, features_col: str) -> Any:
                 f"featuresCol {features_col!r} has null at row {index} "
                 f"(ext estimators require dense non-null features)"
             )
-        # Prefer Arrow StructScalar sparse path: cap size/nnz via len() before as_py
-        # materializes huge index/value lists (octo C3-SAF-001 / C4-SAF-001).
         sparse_dense = _try_sparse_struct_to_dense(cell, features_col=features_col, row_index=index)
         if sparse_dense is not None:
             values = sparse_dense
         else:
-            # Dense / list path: refuse width via len()/list_size *before* as_py.
             probe_width = _dense_width_before_as_py(cell)
             if probe_width is not None and probe_width > MAX_EXT_FEATURES:
                 raise IllegalArgumentException(
@@ -288,17 +253,13 @@ def label_vector_from_arrow(table: Any, label_col: str) -> Any:
 
 
 def _drop_ext_temp_view(session: Any, view_name: str) -> None:
-    """Best-effort drop of an ext-estimator scratch view on DataFrame GC."""
+    """Drop an estimator scratch view when its result frame is collected."""
     with contextlib.suppress(Exception):
         session.drop_temp_view(view_name)
 
 
 def _own_ext_temp_view(result_frame: Any, session: Any, view_name: str) -> None:
-    """Drop ``view_name`` when ``result_frame`` is GC'd (mapInArrow-class ownership).
-
-    Success-path re-entry must not orphan ``__repark_ml_ext_*`` MemTables across
-    transform / CV folds (octo C1-Q-002 / C1-SAF-001).
-    """
+    """Tie scratch-view cleanup to the result frame's lifetime."""
     weakref.finalize(result_frame, _drop_ext_temp_view, session, view_name)
 
 
@@ -308,14 +269,10 @@ def reenter_with_prediction(
     predictions: Any,
     prediction_col: str,
 ) -> Any:
-    """Append prediction column and re-enter via Arrow IPC MemTable on the native session.
+    """Append predictions through an Arrow IPC MemTable and tie its view to frame lifetime.
 
-    O(n) predict materialization is intentional (M4 charter). ``frame`` is a
-    :class:`~repark.dataframe.DataFrame` (its ``_session`` is the native handle —
-    same path as ``mapInArrow`` re-entry). Nested feature columns survive.
-
-    The registered ``__repark_ml_ext_*`` view is owned by the returned DataFrame and
-    dropped on GC (and on register/sql failure before ownership transfers).
+    ``predictions`` must contain one value per input row. The prediction column
+    must not already exist. The returned frame owns cleanup of the scratch view.
     """
     import io
 
@@ -345,7 +302,6 @@ def reenter_with_prediction(
     view_name = scratch_view_name(session, "__repark_ml_ext_")
     owned = False
     try:
-        # frame._session is native PyReparkSession (see dataframe.py mapInArrow notes).
         session.register_ipc_stream_as_temp_view(view_name, sink.getvalue())
         inner = session.sql(f"SELECT * FROM {view_name}")
         result = frame._spawn(inner)

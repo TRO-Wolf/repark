@@ -1,12 +1,4 @@
-"""Storage level markers for ``DataFrame.persist`` / ``cache`` (PySpark ``StorageLevel``).
-
-# === r23 CACHE1: cache-honesty ===
-repark always materializes to an in-process MemTable (single-node; O(result) peak memory —
-OTH-014). Disk / off-heap / replication flags are **recorded for signature parity** and
-reported on :attr:`DataFrame.storageLevel`; they do not change the materialize path.
-``DataFrame.persist`` warns **once per session** the first time a level claims disk,
-off-heap, or replication != 1 (OTH-005). Optional size guard: ``repark.cache.max_bytes``.
-"""
+"""StorageLevel markers for DataFrame persistence and caching."""
 
 from __future__ import annotations
 
@@ -51,7 +43,6 @@ class StorageLevel:
 
     def __eq__(self, other: object) -> bool:
         # Duck-type compare so Apache suite imports of ``pyspark.storagelevel.StorageLevel``
-        # still match repark levels when the bootstrap redirect is incomplete (X3 census).
         try:
             return (
                 bool(other.useDisk) == self.useDisk  # type: ignore[attr-defined]
@@ -61,7 +52,6 @@ class StorageLevel:
                 and int(other.replication) == self.replication  # type: ignore[attr-defined]
             )
         except (AttributeError, TypeError, ValueError):
-            # Missing attrs or non-coercible replication → not equal (octo X3 C2).
             return NotImplemented
 
     def __hash__(self) -> int:

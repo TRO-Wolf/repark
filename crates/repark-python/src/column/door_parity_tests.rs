@@ -1,19 +1,6 @@
-//! Clause C-012 — the facade and the SQL door must resolve the SAME kernel.
-//!
-//! The facade builds an [`Expr`] standalone, with no `SessionContext` to resolve names against
-//! (a `PyColumn` has none), so `function_dispatch` embeds a UDF instance by hand. The SQL door
-//! resolves the same spelling out of the session registry, where `repark_functions::register_all`
-//! installed `datafusion-spark` and then overwrote names with the repark shims. Nothing forces
-//! the two to agree, and where they disagree the same call returns different answers depending
-//! on which door the user came through — silently.
-//!
-//! FN-GT1/GT2 closed sixteen of these by hand under the policy *"both doors resolve the same
-//! UDF"*. This guard makes the policy mechanical: it compares the concrete implementation type
-//! behind each spelling on both paths. `EXPECTED_DIVERGENCES` is the sanctioned-out table, one
-//! row per name with the reason it is still open; it **ratchets DOWN only** — a name leaves when
-//! its unit closes it, and a new row needs the same justification any EXCEPTIONS entry does.
-//!
-//! Campaign: FNP-1. Charter: `task/fnp-0-charter-ledger.md` C-012.
+//! The facade and SQL door must resolve the same kernel.
+//! The facade embeds standalone UDFs; SQL resolves session-registered UDFs.
+//! `EXPECTED_DIVERGENCES` lists measured exceptions.
 
 use std::sync::Arc;
 
@@ -23,22 +10,12 @@ use datafusion::prelude::SessionContext;
 
 use super::function_dispatch::{call_scalar_expr, unary_aggregate_udaf};
 
-/// Names whose two doors are still known to resolve different kernels, with the reason.
-///
-/// RATCHETS DOWN ONLY. Every row is a live two-door divergence; leaving one here is a decision,
-/// not an oversight. They are the latent set measured 2026-08-20 — the facade lowers each to a
-/// DataFusion-core builder while the session resolves the `datafusion-spark` kernel — and each
-/// needs its own semantic adjudication before it can be closed or registered. The count is
-/// asserted rather than written in prose, because a number in a comment cannot ratchet.
-/// How the facade reaches a diverging name.
+/// Names whose two doors still resolve different kernels, with the measured reason.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum FacadeShape {
-    /// The facade embeds a single `ScalarUDF` — a DIFFERENT one from the door's. Checkable by
-    /// UDF identity, and the row leaves this table when the two are made to agree.
+    /// The facade embeds one UDF that differs from the door's UDF.
     Kernel(usize),
-    /// The facade does not call a kernel at all — it composes (`sec` is `1/cos`, `elt` is
-    /// `make_array` + `array_element`, `like` builds `Expr::Like`). Identity cannot be compared,
-    /// so the assertion is that it is STILL composed: turning one into a kernel must move the row.
+    /// The facade composes expressions instead of calling a kernel.
     Composed,
 }
 
@@ -119,8 +96,6 @@ const EXPECTED_DIVERGENCES: &[(&str, FacadeShape, &str)] = &[
         "DF-core date_part vs spark date_part field-name set",
     ),
     ("datepart", FacadeShape::Kernel(2), "alias of date_part"),
-    // LRS-4 — surfaced the day the guard's domain went from 20 hand-listed names to the session's
-    // own 341. Each is adjudicated in the ledger; two are user-visible enough to be registry rows.
     (
         "log",
         FacadeShape::Kernel(1),
@@ -147,12 +122,9 @@ const EXPECTED_DIVERGENCES: &[(&str, FacadeShape, &str)] = &[
     ),
 ];
 
-/// Scalar spellings this guard checks. Positive controls (the GT1/GT2-closed names) are included
-/// deliberately: if a future change re-opens one, this test goes red rather than staying silent.
+/// Scalar spellings covered by the explicit guard.
 const SCALAR_NAMES: &[(&str, usize)] = &[
-    // The two live divergences this unit closes.
     ("to_timestamp", 1),
-    // FNP-3 — arms added for kernels the session already registered.
     ("crc32", 1),
     ("sha1", 1),
     ("sha", 1),
@@ -164,7 +136,6 @@ const SCALAR_NAMES: &[(&str, usize)] = &[
     ("date_diff", 2),
     ("from_utc_timestamp", 2),
     ("to_utc_timestamp", 2),
-    // GT1/GT2-closed positive controls — these must agree.
     ("to_date", 1),
     ("make_date", 3),
     ("bit_length", 1),
@@ -179,10 +150,7 @@ fn registered_session() -> SessionContext {
     ctx
 }
 
-/// The UDF the facade embeds in its standalone expression for `name`.
-///
-/// `ScalarUDF`'s `PartialEq` delegates to the inner impl, so comparing two of these asks exactly
-/// the question this guard cares about: is it the same function?
+/// Return the UDF embedded by the facade for `name` and `arity`.
 fn facade_udf(name: &str, arity: usize) -> Option<Arc<ScalarUDF>> {
     let args = vec![lit("2026-01-01"); arity];
     match call_scalar_expr(name, args).ok()? {
@@ -228,12 +196,9 @@ fn facade_avg_is_the_repark_retracting_kernel_not_datafusion_core() {
     );
 }
 
-/// The sanctioned-out table is only honest if every name in it is really still diverging — a row
-/// that has quietly been fixed must be removed, or the table stops meaning anything.
+/// Confirm every sanctioned divergence remains real.
 #[test]
 fn expected_divergences_are_all_still_real() {
-    // The ratchet's size, asserted where it can go red. Lowering this number is the whole point;
-    // raising it is a decision that has to be made here, in the same commit as the new row.
     assert_eq!(
         EXPECTED_DIVERGENCES.len(),
         24,
@@ -244,9 +209,6 @@ fn expected_divergences_are_all_still_real() {
 
     let mut unbuildable = Vec::new();
     for (name, shape, _reason) in EXPECTED_DIVERGENCES {
-        // Skipping silently is how a ratchet rots: every row whose facade arm needed more than
-        // one argument used to fall through a `continue`, so roughly half this table was never
-        // checked and a quietly-fixed row would never have been noticed (F-CSP-11 / F-CFS-8).
         match shape {
             FacadeShape::Kernel(arity) => {
                 let (Some(facade), Ok(door)) = (facade_udf(name, *arity), ctx.udf(name)) else {
@@ -258,7 +220,6 @@ fn expected_divergences_are_all_still_real() {
                 }
             }
             FacadeShape::Composed => {
-                // Still composed? If the facade has been given a real kernel, the row is stale.
                 if facade_udf(name, 1).is_some() || facade_udf(name, 2).is_some() {
                     already_fixed.push(*name);
                 }
@@ -279,14 +240,7 @@ fn expected_divergences_are_all_still_real() {
     );
 }
 
-/// Every registered name the facade can also reach must resolve the same kernel.
-///
-/// The hand-listed [`SCALAR_NAMES`] is a domain someone has to remember to extend, so the kernels
-/// a campaign adds sit outside the guard until they are noticed — "makes the policy mechanical"
-/// claimed more than it enforced (round 2 FNP-R3-7). This walks the SESSION's own registry
-/// instead: whatever `register_all` installed, at every arity the facade will build, with
-/// [`EXPECTED_DIVERGENCES`] as the only way out. A name added to either side joins the checked set
-/// on the day it is added, with nobody maintaining a list.
+/// Confirm every registered name reachable by the facade resolves the same kernel.
 #[test]
 fn every_registered_name_the_facade_reaches_resolves_the_same_kernel() {
     let ctx = registered_session();
@@ -303,9 +257,6 @@ fn every_registered_name_the_facade_reaches_resolves_the_same_kernel() {
             continue;
         }
         let Ok(door) = ctx.udf(name) else { continue };
-        // Arity is not knowable from the registry, so try the shapes the facade builds and take
-        // the first that resolves — a name the facade cannot reach at any of them is simply not
-        // in this guard's domain, which is the honest reading of "the facade reaches it".
         let reached = (0..=3).find_map(|arity| facade_udf(name, arity));
         let Some(facade) = reached else { continue };
         if *facade != *door {

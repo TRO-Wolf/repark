@@ -1,6 +1,6 @@
-"""Collection facade wrappers (FN-E + FN-GT2).
+"""Collection facade wrappers.
 
-Public names are re-exported from ``functions.py``. FN-GT2 wires leftover
+Public names are re-exported from ``functions.py``. The module keeps collection
 ``element_at`` / ``array_compact`` / ``shuffle`` / ``map_from_entries`` /
 ``str_to_map``.
 """
@@ -158,7 +158,7 @@ def get(
 ) -> Column:
     """0-based array element or map value (PySpark ``functions.get``).
 
-    Spark 4.1.2 ``get`` is array-only (maps refuse). This FN-E wrapper is
+    Spark 4.1.2 ``get`` is array-only (maps refuse). This wrapper is
     ``getitem`` and currently also serves maps (``test_get_map_by_key``).
     Contrast ``element_at`` (1-based; index 0 raises
     ``INVALID_INDEX_OF_ZERO``; maps by key).
@@ -201,7 +201,7 @@ def element_at(
     documented scope of that flag is ``/`` and ``%`` by zero — see
     ``docs/guide/session-and-conf.md``: "Do not read 'ANSI on' as 'every
     arithmetic fault raises'". Element-at out-of-range is a recorded divergence
-    (FN-GT2 X9), not silent parity.
+    rather than silently changing behavior.
 
     Parameters
     ----------
@@ -231,7 +231,7 @@ def element_at(
 def array_compact(col: Column | str) -> Column:
     """Drop NULL elements from an array (PySpark ``functions.array_compact``).
 
-    Does not de-duplicate — that was the FN-E honest-cut miss.
+    Does not de-duplicate.
 
     Parameters
     ----------
@@ -258,8 +258,7 @@ def shuffle(col: Column | str, seed: Column | int | None = None) -> Column:
     the Spark SQL door produce the **same** permutation for the same seed
     because both resolve one UDF.
 
-    ``NULL`` in is ``NULL`` out (Spark). ``CAST(NULL AS ARRAY<INT>)`` used to
-    panic the engine here — see the FN-GT2 X-round.
+    ``NULL`` in is ``NULL`` out (Spark). Null array casts remain engine-defined.
 
     Parameters
     ----------

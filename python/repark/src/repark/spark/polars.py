@@ -87,10 +87,8 @@ def _sort_key(column: Column, *, ascending: bool) -> Column:
         has_ungroupable=column._has_ungroupable,
         is_aggregate_function=column._is_aggregate_function,
         partition_transform=column._partition_transform,
-        # Keep structural sql_expr (parity with Column.asc/desc — octo C6-Q-002).
         sql_expr=column._sql_expr,
         # Keep generators sticky — orderBy refuse must still fire after polars sort-key
-        # wrapping (combine octo C6-Q-002; matches Column.asc/desc).
         generator=column._generator,
         generator_cast=column._generator_cast,
         when_pairs=column._when_pairs,
@@ -174,7 +172,6 @@ class PolarsFrame:
             _reject_polars_expr(base, surface="sort")
             # Polars places nulls UNIFORMLY (first unless nulls_last), decoupled from
             # direction; the engine couples them (Spark rule). Emulate with an interleaved
-            # null-indicator key: indicator ascending==nulls_last puts the null group where
             # polars puts it, and the value key then orders within each group.
             indicator = base.is_null()
             keys.append(_sort_key(indicator, ascending=nulls_last))
@@ -207,7 +204,6 @@ class PolarsFrame:
         left_view = scratch_view_name(self._frame._session, "__rp_jl_")
         right_view = scratch_view_name(right._session, "__rp_jr_")
         session = self._frame._session
-        # Plan-stable MIA snapshots (combine C7-Q-002) — same as DataFrame.set-ops /
         # crossJoin. ``create_or_replace_temp_view`` → ``_native_for_registration`` is
         # action-like and would re-run a post-prepare mapInArrow UDF, diverging from
         # DataFrame.join (``_plan()``).
@@ -222,7 +218,6 @@ class PolarsFrame:
                     f"{left_view}.{_quote_join_ident(left_on)} = "
                     f"{right_view}.{_quote_join_ident(right_on)}"
                 )
-                # Keep right key (polars/Spark condition-join; octo C2-L-004).
                 right_extra = list(right.columns)
             elif on is not None:
                 on_list = [on] if isinstance(on, str) else list(on)
@@ -243,7 +238,6 @@ class PolarsFrame:
             child = self._frame._spawn(planned, right)
             return PolarsFrame(child)
         finally:
-            # Drop join staging views (octo C1-SEC-003); plan already holds MemTable/scan.
             session.drop_temp_view(left_view)
             session.drop_temp_view(right_view)
 
@@ -348,7 +342,7 @@ class _PolarsGrouped:
 
 
 class StringNameSpace:
-    """Polars-style ``.str`` namespace lowering to repark ``functions`` (R-POLARS-NS)."""
+    """Polars-style ``.str`` namespace lowered to repark ``functions``."""
 
     __slots__ = ("_column",)
 
@@ -470,7 +464,7 @@ class StringNameSpace:
 
 
 class DatetimeNameSpace:
-    """Polars-style ``.dt`` namespace lowering to repark date functions (R-POLARS-NS)."""
+    """Polars-style ``.dt`` namespace lowered to repark date functions."""
 
     __slots__ = ("_column",)
 

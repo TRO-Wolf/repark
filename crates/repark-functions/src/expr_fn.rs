@@ -1,15 +1,6 @@
-//! Logical-`Expr` builders for the Spark date functions the `DataFrame` facade wires up.
+//! Logical [`Expr`] builders for Spark functions used by the standalone facade.
 //!
-//! The Python facade (`repark.functions`) builds column expressions through `repark-python`, which
-//! must produce a self-contained [`Expr`] for each function *without* a `SessionContext` to resolve
-//! names against (a `PyColumn` is standalone). These builders return an [`Expr`] that embeds the UDF
-//! instance directly, so the resulting expression is valid on its own and is byte-for-byte the same
-//! function the SQL path resolves — [`crate::register_all`] installs the same UDFs by name.
-//!
-//! The calendar extractors and the calendar-math shims come from [`crate::datetime`]; `to_date`
-//! comes from [`crate::timestamp_cast`] (TZ-8); `date_add` and `last_day` come from
-//! `datafusion-spark` (which this crate already registers). The Spark argument
-//! order is preserved (notably `date_trunc(format, timestamp)` — format first).
+//! Each builder embeds the same UDF registered for SQL, preserving Spark argument order.
 
 use std::sync::Arc;
 
@@ -117,12 +108,7 @@ pub fn date_add(start: Expr, num_days: Expr) -> Expr {
 
 /// Spark `unix_date(date)` — days since 1970-01-01 → INT (from `datafusion-spark`).
 ///
-/// The Python facade spelled this `CAST(CAST(x AS DATE) AS INT)` until the G6-3 cast-legality
-/// gate landed, which refuses exactly that type pair — as Spark does. The engine's own
-/// `unix_date` is the correct builder and always was: `SparkUnixDate::simplify` lowers to the
-/// same two casts, but in the OPTIMIZER, one stage after the analyzer gate. That ordering is why
-/// the gate lives at analysis (`planning/hardening/G63-DATE-INT-DESIGN.md` §3.4) and why the
-/// remedy Spark's own error message names keeps working.
+/// Use the engine's `unix_date` builder because Spark rejects DATE-to-integer casts at analysis.
 #[must_use]
 pub fn unix_date(date: Expr) -> Expr {
     spark_datetime::unix_date(date)
@@ -163,17 +149,6 @@ pub fn second(arg: Expr) -> Expr {
 pub fn to_date(arg: Expr) -> Expr {
     call(crate::timestamp_cast::to_date_udf(), vec![arg])
 }
-
-// ===========================================================================================
-// FNP-3 — facade-embed builders for `datafusion-spark` kernels the SQL door already resolved.
-// ===========================================================================================
-//
-// Each of these names worked through `spark.sql(...)` and raised
-// `UnsupportedOperationException` through the facade, because `register_all` installs the kernel
-// by name while the facade's dispatch table had no arm for it. Every builder below embeds the
-// SAME singleton the registry installs (`make_udf_function!` hands out one instance), so the two
-// doors cannot diverge — charter clause C-012.
-
 /// Spark `crc32(expr)` — CRC-32 checksum as a bigint.
 #[must_use]
 pub fn crc32(arg: Expr) -> Expr {
@@ -232,8 +207,6 @@ pub fn map_from_arrays(keys: Expr, values: Expr) -> Expr {
 }
 
 /// Spark `to_timestamp(expr[, format])` — TZ-4 LTZ instant, session-zone localized.
-///
-/// Variadic to match the kernel's own signature and the facade's arity gate.
 #[must_use]
 pub fn to_timestamp(args: Vec<Expr>) -> Expr {
     call(crate::instant_ts::to_timestamp_udf(), args)
@@ -258,8 +231,6 @@ pub fn unhex(arg: Expr) -> Expr {
 }
 
 /// Spark `factorial(expr)` — `n!` for `n` in `[0, 20]`, else NULL (from `datafusion-spark`).
-///
-/// The kernel is `Int32`-exact; a facade `lit(5)` is `Int64`, so we cast like `date_add`.
 #[must_use]
 pub fn factorial(arg: Expr) -> Expr {
     let arg = Expr::Cast(Cast::new(Box::new(arg), DataType::Int32));
@@ -432,9 +403,6 @@ pub fn element_at(container: Expr, key: Expr) -> Expr {
 }
 
 /// Spark `shuffle(array[, seed])` — random permutation (X1 NULL-guarded shim).
-///
-/// `args` is the array alone, or the array plus the Spark 4.0 `Int64` seed. Both doors resolve
-/// the same UDF, so `F.shuffle(col, seed)` and `shuffle(col, seed)` in SQL are one permutation.
 #[must_use]
 pub fn shuffle(args: Vec<Expr>) -> Expr {
     call(crate::collection::shuffle_udf(), args)

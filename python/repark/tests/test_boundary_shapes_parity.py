@@ -1,51 +1,24 @@
 """Facade-boundary container-shape corpus (H-2 gap G10) — pandas / Arrow interchange.
 
-**Oracle.** Every Spark half below was RECORDED in record mode against live PySpark 4.1.2
-(zulu-17, ``master("local[2]")``, ``spark.sql.ansi.enabled=true``,
+Every Spark half was recorded in record mode against live PySpark 4.1.2 (zulu-17,
+``master("local[2]")``, ``spark.sql.ansi.enabled=true``,
 ``spark.sql.shuffle.partitions=2``, ``spark.sql.session.timeZone=UTC``,
-``spark.sql.execution.arrow.pyspark.enabled=true``) on 2026-08-12. One recipe per row runs
-on BOTH engines — the recorded recipe and the asserted recipe are the same code.
+``spark.sql.execution.arrow.pyspark.enabled=true``). One recipe per row runs on BOTH
+engines — the recorded recipe and the asserted recipe are the same code.
 
-**Home.** Sibling of ``test_interchange_parity.py`` (G-INT primitives, inline goldens) and of
-X-5 ``test_nested_container_parity.py`` (engine VALUES via createDataFrame tuples / SQL).
-These rows are **boundary SHAPES** (``toPandas`` dtypes + cell Python types, pandas timestamp
-unit, Arrow list field naming on the pandas ingest path). They do not duplicate X-5's
-tuple-roundtrip VALUES families.
+Rows assert value AND dtype/shape AND (Arrow surface) nullability — never ``show``.
+Where the engines disagree the row pins BOTH halves as a disclosure; a silent
+convergence goes red and forces a flip to equality, never delete.
 
-**Why some rows are DISCLOSURES.** Where the engines already agree (binary bytes, array
-ndarray cells, inbound ArrowDtype list field name, inbound object-dict inferred as struct,
-inbound ``datetime64[ns]``) the row is a plain equality. Where they honestly disagree the
-row pins BOTH halves:
-
-* map ``toPandas`` cells are ``dict`` on Spark and list-of-pairs on repark
-* struct ``toPandas`` Long fields can land as Python ``float`` on Spark (row-stable) and stay
-  ``int`` on repark
-* inbound pandas ``datetime64[us]`` exports as ``datetime64[ns]`` on Spark and ``datetime64[us]``
-  on repark; inbound ``datetime64[ns]`` is the same-path equality twin (both engines ``[ns]``)
-* inbound pandas object-list arrays export Arrow ``list<element: …>`` on Spark and
-  ``list<item: …>`` on repark (same type class as G18, **pandas ingest** entry)
-
-A silent CONVERGENCE goes red and forces the disclosure to flip to equality, never delete.
-
-**Rows assert value AND dtype/shape AND (Arrow surface) nullability** — never ``show``.
-Pandas-surface rows pin ``str(dtype)`` + cell ``type.__name__`` + normalized values.
-Arrow-surface rows use the parity comparator (name / type / nullability / values).
-
-**Re-deriving the goldens (record mode).** The driver that recorded every Spark half is
-committed beside this module::
+Re-derive goldens with the committed record driver (needs a JVM + ``pyspark``,
+``uv sync --extra record``; never collected by pytest)::
 
     JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \\
         PYTHONPATH=python/repark-parity/src \\
         .venv/bin/python python/repark/tests/_record_boundary_shapes_goldens.py
 
-It imports ``ROWS`` from THIS module and runs each row's own recipe. Needs a JVM +
-``pyspark`` (``uv sync --extra record``); never collected by pytest. CI stays JVM-free.
-
-**Entry points.** Facade interchange only (``createDataFrame`` in / ``toPandas`` /
-``to_arrow`` out). Claim scoped to the facade boundary. Arrow-Table ingest is not a
-repark API (ledger finding); inbound is pandas.
-
-**In-flight fix named by every disclosure** so a red row points at what flips it.
+Entry points: facade interchange only (``createDataFrame`` in / ``toPandas`` /
+``to_arrow`` out). Arrow-Table ingest is not a repark API; inbound is pandas.
 """
 
 from __future__ import annotations
@@ -90,9 +63,7 @@ MIN_OUT_ROWS = 2  # *_topandas_*
 Surface = Literal["arrow", "pandas"]
 
 
-# ==================================================================================================
 # Recorded pandas half
-# ==================================================================================================
 
 
 @dataclass(frozen=True)
@@ -124,12 +95,7 @@ def _pandas_shape(
 
 
 def _normalize_cell(cell: object) -> object:
-    """Comparable form of one pandas cell (dtype/kind are pinned separately).
-
-    Timestamp cells become naive ``datetime.datetime`` (microsecond resolution).
-    The pandas unit (``datetime64[ns]`` vs ``datetime64[us]``) lives on
-    ``str(series.dtype)``, not on these values.
-    """
+    """Comparable form of one pandas cell (dtype/kind are pinned separately)."""
     if cell is None:
         return None
     if type(cell).__name__ == "NaTType":
@@ -241,9 +207,7 @@ def assert_pandas_shapes_equal(actual: PandasShape, expected: PandasShape) -> No
             )
 
 
-# ==================================================================================================
 # Arrow helpers
-# ==================================================================================================
 
 
 def _table(
@@ -254,18 +218,12 @@ def _table(
     return pa.table({name: pa.array(values[name], kind) for name, kind, _ in fields}, schema)
 
 
-# ==================================================================================================
 # Row shape
-# ==================================================================================================
 
 
 @dataclass(frozen=True)
 class ShapeRow:
-    """One G10 boundary-shape row: recipe + recorded Spark half + optional repark half.
-
-    ``repark is None`` → EQUALITY (``repark == Spark`` on the chosen surface).
-    ``repark is not None`` → DISCLOSURE (both halves pinned; classifier is reachable).
-    """
+    """One G10 row: recipe + recorded Spark half; ``repark`` None → EQUALITY, set → DISCLOSURE."""
 
     name: str
     family: str
@@ -284,9 +242,7 @@ class ShapeRow:
         return self.repark is not None and self.spark is not None
 
 
-# ==================================================================================================
 # Dual-engine helpers (shared with the record driver)
-# ==================================================================================================
 
 
 def _types_module(session: object) -> object:
@@ -472,11 +428,7 @@ RECIPES: dict[str, Any] = {
 
 
 def run_row(row: ShapeRow, session: object) -> pa.Table | PandasShape:
-    """Run one row's recipe on a session (either engine) and capture the chosen surface.
-
-    Shared with the record driver so the recipe the oracle ran and the recipe asserted
-    here are the same code, not two copies.
-    """
+    """Run one row's recipe on a session (either engine) and capture the chosen surface."""
     recipe = RECIPES[row.recipe]
     frame = recipe(session)
     if row.surface == "arrow":
@@ -484,12 +436,10 @@ def run_row(row: ShapeRow, session: object) -> pa.Table | PandasShape:
     return capture_pandas(_to_pandas(frame))
 
 
-# ==================================================================================================
-# Gap G10 — boundary shapes (spark / repark halves filled after record mode)
-# ==================================================================================================
+# Gap G10 boundary-shape rows
 
 ROWS: list[ShapeRow] = [
-    # ----- pandas OUT: map / struct / binary / array cell shapes --------------------------------
+    # pandas OUT: map / struct / binary / array cell shapes
     ShapeRow(
         "map_topandas_cell_shape",
         "map",
@@ -576,7 +526,7 @@ ROWS: list[ShapeRow] = [
         "included). Pandas shape matches; Arrow list field name is X-5's family, not re-pinned "
         "here.",
     ),
-    # ----- pandas IN: createDataFrame from pandas -----------------------------------------------
+    # pandas IN: createDataFrame from pandas
     ShapeRow(
         "array_from_pandas_object",
         "array",
@@ -713,9 +663,7 @@ ROWS: list[ShapeRow] = [
 ]
 
 
-# ==================================================================================================
 # Session + classification helpers
-# ==================================================================================================
 
 
 def _repark_session() -> ReparkSession:
@@ -727,7 +675,7 @@ def _repark_session() -> ReparkSession:
 
 @pytest.fixture
 def repark() -> Iterator[ReparkSession]:
-    """Repark session for classifier tests. Yields then stops."""
+    """Repark session for classifier tests."""
     session = _repark_session()
     try:
         yield session
@@ -765,19 +713,12 @@ def _assert_half_equal(actual: pa.Table | PandasShape, expected: pa.Table | Pand
     assert_frames_equal(actual, expected)
 
 
-# ==================================================================================================
 # The differential rows
-# ==================================================================================================
 
 
 @pytest.mark.parametrize("row", ROWS, ids=[row.name for row in ROWS])
 def test_boundary_row_matches_spark_or_still_diverges(row: ShapeRow) -> None:
-    """Every recorded row: value AND dtype/shape AND (Arrow) nullability.
-
-    Equality rows assert ``repark == Spark``. Disclosure rows assert repark's pinned
-    actual output — and when that assertion fails, the failure is CLASSIFIED:
-    CONVERGED (flip-don't-delete) vs regression (re-derive both halves).
-    """
+    """Every recorded row: value AND dtype/shape AND (Arrow) nullability — never ``show``."""
     assert row.spark is not None, (
         f"{row.name}: spark golden is missing — run "
         "python/repark/tests/_record_boundary_shapes_goldens.py --emit and paste the halves"
@@ -943,9 +884,7 @@ def test_boundary_shapes_row_set_covers_g10_budget() -> None:
     )
 
 
-# ==================================================================================================
-# Classifier reachability (CP-1) — both arms proven by monkeypatch
-# ==================================================================================================
+# Classifier reachability (CP-1)
 
 
 def _disclosure(name: str) -> ShapeRow:

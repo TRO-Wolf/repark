@@ -1,8 +1,6 @@
 use super::super::*;
 
-// Shared external / std types (monolith preamble + lib.rs test-only uses).
-// Not every leaf uses every name — keep the full preamble so `use super::common::*`
-// reconstructs the monolith's import scope. Allow unused on the re-export block only.
+// Shared imports keep leaf test modules concise; unused names are intentional re-exports.
 #[allow(unused_imports)]
 pub(super) use std::collections::HashMap;
 #[allow(unused_imports)]
@@ -294,7 +292,7 @@ pub(super) async fn count_planned_data_files(catalog: &dyn Catalog, ident: &Tabl
     tasks.len()
 }
 
-/// Recursively count `*.parquet` files under `dir` (I5 octo C1-F3 no-data-write proof).
+/// Recursively count `*.parquet` files under `dir` (no-data-write proof).
 pub(super) fn walk_parquet(dir: &std::path::Path, count: &mut usize) {
     if let Ok(entries) = std::fs::read_dir(dir) {
         for entry in entries.flatten() {
@@ -345,7 +343,7 @@ pub(super) fn register_source(ctx: &SessionContext, name: &str, rows: &[(i32, &s
 
 /// Register an `(a string, b string)` source whose `a` values are **not** parseable as
 /// integers, so `CAST(a AS INT)` succeeds at plan time and fails at value time. This is the
-/// oracle the empty-`INSERT OVERWRITE` cast guard is built against (P5C1-Q-001): the empty
+/// oracle the empty-`INSERT OVERWRITE` cast guard is built against: the empty
 /// form must refuse the wipe, the non-empty form must fail at cast and keep prior rows.
 pub(super) fn register_unparsable_utf8_source(
     ctx: &SessionContext,
@@ -656,10 +654,8 @@ pub(super) async fn source_has_unsafe_cast(ctx: &SessionContext, source: &str) -
     logical_plan_has_unsafe_cast(df.logical_plan())
 }
 
-/// Execute a statement and DROP the returned `DataFrame` without collecting it — the exact shape
-/// of a bare `spark.sql("<DML>")` a migrated PySpark caller never collects. Post-fix the DML
-/// has already been applied by the time `execute` returns; pre-fix (lazy routing) the write is
-/// silently lost. (Contrast `run`, which collects.)
+/// Execute a statement and drop its returned `DataFrame` without collecting it. This models a
+/// bare `spark.sql("<DML>")`; eager DML is applied before `execute` returns.
 pub(super) async fn execute_without_collecting(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,

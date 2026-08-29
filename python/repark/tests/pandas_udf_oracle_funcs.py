@@ -1,7 +1,4 @@
-"""Picklable helpers for the live PySpark pandas_udf oracle (importable module).
-
-SCALAR + SCALAR_ITER + GROUPED_AGG helpers for U7/M5 named deliverables.
-"""
+"""Picklable helpers for the live PySpark pandas_udf oracle (importable module)."""
 
 from __future__ import annotations
 

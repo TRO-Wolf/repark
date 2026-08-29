@@ -75,9 +75,7 @@ def test_nullability_difference_raises() -> None:
         assert_frames_equal(nullable, non_nullable)
 
 
-# ==================================================================================================
-# G18 nested-type order-insensitive path (list / struct / map)
-# ==================================================================================================
+# Nested-type order-insensitive path (list / struct / map)
 
 
 def _list_table(ids: list[int | None], arrays: list[list[int] | None]) -> pa.Table:
@@ -113,11 +111,7 @@ def _map_table(ids: list[int], maps: list[list[tuple[str, int]] | None]) -> pa.T
 
 
 def test_flat_schema_sort_path_unchanged() -> None:
-    """Invariant 1: flat tables still use Arrow sort_by — order matches historical path.
-
-    Pins that a flat multiset still compares equal after permutation, and that the sorted
-    row order of the private helper matches ``Table.sort_by`` (the pre-G18 mechanism).
-    """
+    """Flat tables still use Arrow sort_by — sorted row order matches that path."""
     from repark_parity.compare import _sorted_by_all_columns
 
     left = _table([3, 1, 2, None, 1], ["c", "a", "b", "z", "a"])
@@ -131,7 +125,7 @@ def test_flat_schema_sort_path_unchanged() -> None:
 
 
 def test_nested_row_permutation_invariance_list_struct_map() -> None:
-    """Invariant 2: permuting equal nested multisets never changes the verdict."""
+    """Permuting equal nested multisets never changes the verdict."""
     # list
     list_a = _list_table([2, 1, 3], [[3, 1], [1, 2], None])
     list_b = _list_table([1, 3, 2], [[1, 2], None, [3, 1]])
@@ -161,18 +155,18 @@ def test_nested_row_permutation_invariance_list_struct_map() -> None:
 
 
 def test_nested_multiset_sensitivity_list_mutation() -> None:
-    """Invariant 3a: a changed list element fails the multiset compare."""
+    """A changed list element fails the multiset compare."""
     left = _list_table([1, 2], [[1, 2], [3]])
-    right = _list_table([1, 2], [[1, 9], [3]])  # mutated nested value
+    right = _list_table([1, 2], [[1, 9], [3]])
     with pytest.raises(FrameMismatchError, match="value mismatch"):
         assert_frames_equal(left, right)
-    dropped = _list_table([1], [[1, 2]])  # dropped row
+    dropped = _list_table([1], [[1, 2]])
     with pytest.raises(FrameMismatchError, match="row count mismatch"):
         assert_frames_equal(left, dropped)
 
 
 def test_nested_multiset_sensitivity_struct_mutation() -> None:
-    """Invariant 3b: a changed struct field fails the multiset compare."""
+    """A changed struct field fails the multiset compare."""
     left = _struct_table([1, 2], [{"x": 1, "y": "a"}, {"x": 2, "y": "b"}])
     right = _struct_table([1, 2], [{"x": 1, "y": "a"}, {"x": 2, "y": "Z"}])
     with pytest.raises(FrameMismatchError, match="value mismatch"):
@@ -180,7 +174,7 @@ def test_nested_multiset_sensitivity_struct_mutation() -> None:
 
 
 def test_nested_multiset_sensitivity_map_mutation() -> None:
-    """Invariant 3c: a changed map entry fails the multiset compare."""
+    """A changed map entry fails the multiset compare."""
     left = _map_table([1, 2], [[("a", 1)], [("b", 2)]])
     right = _map_table([1, 2], [[("a", 1)], [("b", 99)]])
     with pytest.raises(FrameMismatchError, match="value mismatch"):
@@ -192,7 +186,7 @@ def test_nested_multiset_sensitivity_map_mutation() -> None:
 
 
 def test_order_sensitive_nested_untouched() -> None:
-    """Invariant 4: order_sensitive=True does not reorder nested rows either."""
+    """order_sensitive=True does not reorder nested rows either."""
     left = _list_table([1, 2], [[1], [2]])
     right = _list_table([2, 1], [[2], [1]])
     # Default path: permutation ignored.

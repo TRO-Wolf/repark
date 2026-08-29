@@ -1,8 +1,7 @@
 """Facade tests for ``repark`` — import smoke, the builder chain, and an end-to-end SQL
 round-trip through the native engine to Arrow / Polars.
 
-These require the compiled wheel (``maturin develop``); they exercise the real boundary, not a
-mock — a ``SELECT`` literal must round-trip with correct values and counts.
+Requires the compiled wheel (``maturin develop``); these exercise the real boundary, not a mock.
 """
 
 from __future__ import annotations
@@ -24,10 +23,8 @@ from repark.spark.session import _reset_active_session_for_tests
 
 
 def test_import_smoke() -> None:
-    # `import repark` and the documented entry point both resolve.
     assert hasattr(repark, "ReparkSession")
     assert hasattr(repark, "DataFrame")
-    # `SparkSession` is kept as a byte-identical drop-in alias of ReparkSession.
     assert repark.SparkSession is repark.ReparkSession
     assert repark.ReparkSession is ReparkSession
     # The pre-rename capital-P casing stays importable (back-compat alias).
@@ -35,8 +32,7 @@ def test_import_smoke() -> None:
 
 
 def test_version_is_exposed() -> None:
-    # The wheel's CI import smoke prints `repark.__version__`; it must exist and be a non-empty
-    # string (a missing attribute is exactly the AttributeError that broke the smoke before).
+    # The wheel's CI import smoke prints `repark.__version__`; it must exist and be non-empty.
     assert isinstance(repark.__version__, str)
     assert repark.__version__
 
@@ -63,7 +59,6 @@ def test_stop_then_get_or_create_builds_fresh() -> None:
     first.stop()
     second = ReparkSession.builder.appName("second").getOrCreate()
     assert second is not first
-    # State pin: fresh session is alive (not stopped).
     assert second.sql("SELECT 1 AS n").count() == 1
 
 
@@ -93,10 +88,8 @@ def test_engine_knob_dual_spelling_identical_values_ok() -> None:
 
 def test_engine_knob_conflicting_values_raise() -> None:
     # Conflicting dual spellings fail loud naming both keys (never frozenset-order pick).
-    # Group X: the CLASS is now IllegalArgumentException — an invalid config value is a JVM
-    # IllegalArgumentException in Spark (live pyspark 4.0.0 oracle), which is NOT a ValueError.
-    # This pin used to assert `ValueError`, codifying the divergence; flipped in the same commit
-    # as the fix (the Group S discipline). Same class the ENGINE raises for `Error::Config`.
+    # Class is IllegalArgumentException: Spark raises that class for invalid config values
+    # (live pyspark 4.0.0 oracle), and the ENGINE raises it for `Error::Config`.
     with pytest.raises(IllegalArgumentException, match=r"conflicting config") as raised:
         (
             ReparkSession.builder.config("repark.memory.limit.gb", "2")
@@ -106,15 +99,14 @@ def test_engine_knob_conflicting_values_raise() -> None:
     message = str(raised.value)
     assert "repark.memory.limit.gb" in message
     assert "spark.repark.memory.limit.gb" in message
-    # Catch-compat all the way up the PySpark parents.
     assert isinstance(raised.value, PySparkException)
     assert isinstance(raised.value, RuntimeError)
-    # ...and the deliberate break: it is no longer a ValueError (PySpark's isn't either).
+    # Deliberate break: no longer a ValueError (PySpark's isn't either).
     assert not isinstance(raised.value, ValueError)
 
 
 def test_engine_knob_non_integer_raises() -> None:
-    # Unparsable ints raise naming the key (never warn-and-default). Group X: the class is now
+    # Unparsable ints raise naming the key (never warn-and-default). The class is
     # IllegalArgumentException (see the pin above) — MUTATION: revert the raise to ValueError → RED.
     with pytest.raises(
         IllegalArgumentException, match=r"repark\.memory\.limit\.gb.*must be an integer"
@@ -123,13 +115,11 @@ def test_engine_knob_non_integer_raises() -> None:
     assert isinstance(raised.value, PySparkException)
 
 
-# ---------------------------------------------------------------------------
-# C3 census expand — session active surface + RuntimeConfig additive blocks
-# ---------------------------------------------------------------------------
+# Session active surface + RuntimeConfig blocks
 
 
 def test_get_active_session_none_then_session() -> None:
-    """C3: getActiveSession tracks process-wide active; None when stopped."""
+    """getActiveSession tracks process-wide active; None when stopped."""
     _reset_active_session_for_tests()
     assert ReparkSession.getActiveSession() is None
     spark = ReparkSession.builder.appName("c3-active").getOrCreate()
@@ -139,7 +129,7 @@ def test_get_active_session_none_then_session() -> None:
 
 
 def test_active_raises_when_no_session() -> None:
-    """C3: active() → PySparkRuntimeError NO_ACTIVE_OR_DEFAULT_SESSION."""
+    """active() → PySparkRuntimeError NO_ACTIVE_OR_DEFAULT_SESSION."""
     _reset_active_session_for_tests()
     with pytest.raises(PySparkRuntimeError) as raised:
         ReparkSession.active()
@@ -148,7 +138,7 @@ def test_active_raises_when_no_session() -> None:
 
 
 def test_spark_session_alias_active_surface() -> None:
-    """C3 octo C6: SparkSession alias exposes getActiveSession/active (drop-in)."""
+    """SparkSession alias exposes getActiveSession/active (drop-in)."""
     from repark import SparkSession
 
     _reset_active_session_for_tests()
@@ -167,7 +157,7 @@ def test_spark_session_alias_active_surface() -> None:
 
 
 def test_session_context_manager_stops() -> None:
-    """C3: with session: … always stops (Apache test_create_new_session_with_statement)."""
+    """with session: … always stops (Apache test_create_new_session_with_statement)."""
     _reset_active_session_for_tests()
     with ReparkSession.builder.appName("c3-cm").getOrCreate() as spark:
         assert spark.sql("SELECT 1 AS n").count() == 1
@@ -177,18 +167,16 @@ def test_session_context_manager_stops() -> None:
 
 
 def test_context_manager_enter_does_not_promote_active() -> None:
-    """C3 octo C7: __enter__ is not an active-session promotion point."""
+    """__enter__ is not an active-session promotion point."""
     _reset_active_session_for_tests()
     first = ReparkSession.builder.appName("c3-cm-enter-a").getOrCreate()
     second = first.newSession()
     try:
         assert ReparkSession.getActiveSession() is first
         with second:
-            # Enter alone must not steal active from first.
             assert ReparkSession.getActiveSession() is first
             second.sql("SELECT 1 AS n").count()
             assert ReparkSession.getActiveSession() is second
-        # Exit stops second while it was active → process active clears.
         assert ReparkSession.getActiveSession() is None
     finally:
         first.stop()
@@ -197,7 +185,7 @@ def test_context_manager_enter_does_not_promote_active() -> None:
 
 
 def test_new_session_distinct_handle() -> None:
-    """C3: newSession() returns a different live session (Apache test_new_session)."""
+    """newSession() returns a different live session (Apache test_new_session)."""
     _reset_active_session_for_tests()
     first = ReparkSession.builder.appName("c3-new").getOrCreate()
     second = first.newSession()
@@ -213,11 +201,10 @@ def test_new_session_distinct_handle() -> None:
 
 
 def test_new_session_restores_active_on_base_exception() -> None:
-    """C3 octo C1-Q-001: BaseException mid-newSession must not steal process active.
+    """BaseException mid-newSession must not steal process active.
 
-    ``newSession`` calls ``Builder.getOrCreate`` (camelCase alias). Patch that name so
-    the decoy registers as active then raises ``KeyboardInterrupt``; ``try``/``finally``
-    must restore the prior active even on BaseException (not only Exception).
+    The decoy registers as active then raises ``KeyboardInterrupt``; the prior active must
+    restore even on ``BaseException`` (not only ``Exception``).
     """
     _reset_active_session_for_tests()
     first = ReparkSession.builder.appName("c3-be").getOrCreate()
@@ -249,7 +236,7 @@ def test_new_session_restores_active_on_base_exception() -> None:
 
 
 def test_create_dataframe_promotes_active_session() -> None:
-    """C3: createDataFrame on a newSession promotes active (Apache after_create_dataframe)."""
+    """createDataFrame on a newSession promotes active (Apache after_create_dataframe)."""
     _reset_active_session_for_tests()
     first = ReparkSession.builder.appName("c3-promote").getOrCreate()
     second = first.newSession()
@@ -265,7 +252,7 @@ def test_create_dataframe_promotes_active_session() -> None:
 
 
 def test_new_session_preserves_foreign_active() -> None:
-    """C3 octo C2-Q-002: newSession restores *current* active, not necessarily self."""
+    """newSession restores *current* active, not necessarily self."""
     _reset_active_session_for_tests()
     first = ReparkSession.builder.appName("c3-foreign-a").getOrCreate()
     second = first.newSession()
@@ -273,7 +260,6 @@ def test_new_session_preserves_foreign_active() -> None:
     try:
         second.sql("SELECT 1 AS n").count()
         assert ReparkSession.getActiveSession() is second
-        # first is not active; newSession must keep second active.
         third = first.newSession()
         assert third is not first and third is not second
         assert ReparkSession.getActiveSession() is second
@@ -285,7 +271,7 @@ def test_new_session_preserves_foreign_active() -> None:
 
 
 def test_get_or_create_reuse_skips_static_conf() -> None:
-    """C3 octo C2-Q-001: soft-conf fold must not mutate static keys."""
+    """soft-conf fold must not mutate static keys."""
     import warnings
 
     _reset_active_session_for_tests()
@@ -300,7 +286,7 @@ def test_get_or_create_reuse_skips_static_conf() -> None:
         assert second is first
         assert first.conf.getAll.get("spark.sql.warehouse.dir") == before
         assert not first.conf.isModifiable("spark.sql.warehouse.dir")
-        # Static skip must not false-warn as unapplied (octo C3 C4-Q-002).
+        # Static skip must not false-warn as unapplied.
         static_warns = [
             w
             for w in caught
@@ -312,7 +298,7 @@ def test_get_or_create_reuse_skips_static_conf() -> None:
 
 
 def test_create_dataframe_type_error_still_promotes() -> None:
-    """C3 octo C2 cheap: promote runs before validation (Spark method-entry parity)."""
+    """Cheap: promote runs before validation (Spark method-entry parity)."""
     _reset_active_session_for_tests()
     first = ReparkSession.builder.appName("c3-promote-fail").getOrCreate()
     second = first.newSession()
@@ -327,7 +313,7 @@ def test_create_dataframe_type_error_still_promotes() -> None:
 
 
 def test_runtime_config_get_all_and_unset_raise() -> None:
-    """C3: getAll / get-without-default / set(None) — Apache test_conf + test_get_all."""
+    """getAll / get-without-default / set(None) — Apache test_conf + test_get_all."""
     _reset_active_session_for_tests()
     spark = ReparkSession.builder.appName("c3-conf").getOrCreate()
     try:
@@ -361,7 +347,7 @@ def test_runtime_config_get_all_and_unset_raise() -> None:
 
 
 def test_get_or_create_applies_facade_conf_on_reuse() -> None:
-    """C3: soft conf keys fold into live session conf (Apache config_option_propagated)."""
+    """soft conf keys fold into live session conf (Apache config_option_propagated)."""
     _reset_active_session_for_tests()
     first = ReparkSession.builder.config("spark-config1", "a").getOrCreate()
     try:
@@ -374,7 +360,7 @@ def test_get_or_create_applies_facade_conf_on_reuse() -> None:
 
 
 def test_conf_unset_clears_builder_fallback() -> None:
-    """C3 octo C3-Q-001: unset must not resurrect Builder.config snapshot values."""
+    """unset must not resurrect Builder.config snapshot values."""
     _reset_active_session_for_tests()
     spark = ReparkSession.builder.config("soft", "1").appName("c3-unset").getOrCreate()
     try:
@@ -384,7 +370,6 @@ def test_conf_unset_clears_builder_fallback() -> None:
             spark.conf.get("soft")
         assert spark.conf.get("soft", "fallback") == "fallback"
         assert "soft" not in spark.conf.getAll
-        # set after unset clears the tombstone.
         spark.conf.set("soft", "2")
         assert spark.conf.get("soft") == "2"
         assert spark.conf.getAll["soft"] == "2"
@@ -393,7 +378,7 @@ def test_conf_unset_clears_builder_fallback() -> None:
 
 
 def test_get_or_create_soft_fold_after_unset() -> None:
-    """C3 octo C4: soft-fold after conf.unset re-applies and clears the tombstone."""
+    """soft-fold after conf.unset re-applies and clears the tombstone."""
     _reset_active_session_for_tests()
     first = ReparkSession.builder.config("k", "1").appName("c3-refold").getOrCreate()
     try:
@@ -477,8 +462,7 @@ def test_to_pandas_camelcase_alias(spark: ReparkSession) -> None:
 
 
 def test_to_numpy_numeric_matrix(spark: ReparkSession) -> None:
-    # The ML-feature-matrix case: an all-numeric frame yields a single numeric 2-D array.
-    # U2: VALUES (1.5, 2.5), (3.0, 4.0) are DECIMAL(2,1); Arrow decimal → object of Decimal.
+    # VALUES (1.5, 2.5), (3.0, 4.0) are DECIMAL(2,1); Arrow decimal → object of Decimal.
     from decimal import Decimal
 
     import numpy as np
@@ -545,21 +529,12 @@ def test_columns_and_schema(spark: ReparkSession) -> None:
 def test_columns_and_schema_resolve_without_executing(spark: ReparkSession) -> None:
     """Metadata ops resolve the schema WITHOUT running the plan — pinned by an un-runnable plan.
 
-    The plan casts a non-numeric string column to ``INT``: DataFusion resolves the output column
-    and type at analysis time (so ``columns``/``schema`` succeed), but the Arrow cast kernel raises
-    when the plan actually runs (so ``collect`` fails on the SAME df). ``columns``/``schema``
-    succeeding proves they never materialized; ``collect`` raising proves the probe is real (a
-    schema that also happened to execute cleanly would pin nothing).
-
-    This replaces the former monkeypatch-``to_arrow`` pin, which was vacuous: the native accessors
-    resolve the analyzed schema (``analyze_eagerly``) and never call the facade ``to_arrow``, so
-    patching it protected nothing.
+    The doomed ``INT`` cast resolves at analysis time but raises when executed, so
+    ``columns``/``schema`` succeeding and ``collect`` failing on the SAME df proves the split.
     """
     df = spark.sql("SELECT CAST(a AS INT) AS n FROM (VALUES ('abc')) AS t(a)")
-    # Metadata resolves — the doomed cast is never evaluated.
     assert df.columns == ["n"]
     assert df.schema.names == ["n"]
-    # The SAME plan raises when executed: the probe is a genuinely un-runnable plan, not a proxy.
     with pytest.raises(RuntimeError, match="Cast error"):
         df.collect()
 
@@ -573,16 +548,14 @@ def test_limit_and_show_cap_rows(spark: ReparkSession, capsys: pytest.CaptureFix
     assert len(df.limit(3).collect()) == 3
     df.show(2)
     out = capsys.readouterr().out
-    # Parse the PySpark-style ASCII grid (+sep+ / |header| / +sep+ / |row| … / +sep+): the
-    # `|`-prefixed lines are the single header then the data rows. A vacuous `"1" in out` passed
-    # even if show rendered all ten rows ("1" is a substring of "10"); count the data rows instead.
+    # The `|`-prefixed lines are the single header then data rows. A vacuous `"1" in out` matches
+    # "10"; count the data rows instead.
     bar_lines = [line for line in out.splitlines() if line.startswith("|")]
     header, *data_lines = bar_lines
     assert header.strip("| ").split() == ["id"]
     values = [line.strip("| ").strip() for line in data_lines]
-    # show(2) must render EXACTLY two data rows — the first two after ORDER BY — and nothing else.
     assert values == ["1", "2"], f"show(2) must cap at two rows, rendered: {values}"
-    # Belt-and-brace: rows 3..10 must be absent from the raw render (the cap really dropped them).
+    # Belt-and-brace: rows 3..10 absent from the raw render (the cap really dropped them).
     for dropped in range(3, 11):
         assert f"| {dropped} " not in out, f"row {dropped} leaked past show(2): {out!r}"
 
@@ -615,7 +588,6 @@ def test_is_null_and_when(spark: ReparkSession) -> None:
     df = spark.sql("SELECT * FROM (VALUES (1), (CAST(NULL AS INT))) AS t(a)")
     flags = df.select(F.col("a").isNull().alias("n")).collect()
     assert [row.n for row in flags] == [False, True]
-    # isNotNull is the complementary path (overnight WG2 requires both tested).
     not_null = df.select(F.col("a").isNotNull().alias("nn")).collect()
     assert [row.nn for row in not_null] == [True, False]
     labeled = df.select(

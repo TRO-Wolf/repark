@@ -1,10 +1,8 @@
-"""SE-1 PR-D1 facade pins for ``declareSorted(..., tightenNulls=True)``.
+"""Facade pins for ``declareSorted(..., tightenNulls=True)``.
 
-The existing hint-mode nodes in ``test_declare_sorted.py`` stay byte-identical.
-This file pins the c+ flag: value AND type, refuse-on-nulls, and hint-after-tighten
-restore. Serving-shape SortExec elision is the Rust Spark-door execution-layer pin
-(``crates/repark-spark/tests/declared_sorted_tighten.rs``) — facade EXPLAIN is still
-the unwritten plan until PR-D3.
+Pins value AND type, refuse-on-nulls, and hint-after-tighten restore. The hint-mode nodes stay
+byte-identical in ``test_declare_sorted.py``; the serving-shape SortExec elision pin is the Rust
+twin ``crates/repark-spark/tests/declared_sorted_tighten.rs``.
 """
 
 from __future__ import annotations
@@ -50,9 +48,8 @@ def spark() -> ReparkSession:
 def test_tighten_results_match_hint_and_keys_report_non_nullable(spark: ReparkSession) -> None:
     """Value-identical to hint; tightened keys are non-nullable on the Arrow path.
 
-    Also pins exact ``df.schema`` types (R-3 type-exactness) and that no internal
-    ``repark.tighten_nulls`` tag is visible on ``to_arrow()`` — an observation, not a strip
-    discriminator (see the MEASURED note at that assertion).
+    Also pins exact ``df.schema`` types and that no internal ``repark.tighten_nulls`` tag is
+    visible on ``to_arrow()``.
     """
     hint = spark.createDataFrame(SORTED_ROWS, SCHEMA).declareSorted("sym", "ts")
     tight = spark.createDataFrame(SORTED_ROWS, SCHEMA).declareSorted("sym", "ts", tightenNulls=True)
@@ -67,7 +64,7 @@ def test_tighten_results_match_hint_and_keys_report_non_nullable(spark: ReparkSe
     assert tight_arrow.schema.field("ts").nullable is False
     assert hint_arrow.schema.field("sym").nullable is True
     assert hint_arrow.schema.field("ts").nullable is True
-    # F4: df.schema is the analyzed logical path, distinct from to_arrow().
+    # df.schema is the analyzed logical path, distinct from to_arrow().
     assert tight.schema["sym"].nullable is False
     assert tight.schema["ts"].nullable is False
     assert hint.schema["sym"].nullable is True
@@ -77,11 +74,10 @@ def test_tighten_results_match_hint_and_keys_report_non_nullable(spark: ReparkSe
     assert isinstance(tight.schema["val"].dataType, DoubleType)
     assert tight.schema["val"].nullable is True
     assert tight_arrow.schema.field("val").nullable is True
-    # NOT a strip discriminator (Y-6, MEASURED): with BOTH the Rust
-    # `strip_tighten_export_metadata` and the facade `_strip_internal_tighten_metadata` no-oped,
-    # the collected schema's field metadata is already empty — DataFusion drops field metadata
-    # across physical execution. Kept as a user-visible no-leak assertion; the export-boundary
-    # discriminator is `test_analyzed_schema_export_carries_no_tighten_tag`.
+    # NOT a strip discriminator: DataFusion drops field metadata across physical execution, so the
+    # collected schema's metadata is empty even with the strips no-oped. Kept as a user-visible
+    # no-leak assertion; the export-boundary discriminator is
+    # test_analyzed_schema_export_carries_no_tighten_tag.
     ts_meta = tight_arrow.schema.field("ts").metadata or {}
     assert b"repark.tighten_nulls" not in ts_meta
     assert "repark.tighten_nulls" not in ts_meta
@@ -91,15 +87,11 @@ def test_tighten_results_match_hint_and_keys_report_non_nullable(spark: ReparkSe
 
 
 def test_analyzed_schema_export_carries_no_tighten_tag(spark: ReparkSession) -> None:
-    """Y-6 (round 4): the ``df.schema`` / Arrow-C-schema export boundary, not just the helper.
+    """The ``df.schema`` / Arrow-C-schema export boundary, not just the helper.
 
-    MEASURED: no-oping ``repark_core::strip_tighten_export_metadata`` leaves
-    ``analyzed_arrow_schema`` reporting ``{b'repark.tighten_nulls': b'1'}`` on both keys —
-    this node is the one that goes red. The ``to_arrow()`` assertions in
-    ``test_tighten_results_match_hint_and_keys_report_non_nullable`` do NOT cover that layer:
-    with BOTH strips no-oped the collected schema's field metadata is already empty (DataFusion
-    drops field metadata across physical execution), so they are non-discriminating for the
-    strip and are documented as such there.
+    No-oping ``repark_core::strip_tighten_export_metadata`` leaves ``analyzed_arrow_schema``
+    reporting the ``repark.tighten_nulls`` tag — this node is the one that goes red (the
+    ``to_arrow()`` layer cannot discriminate: DataFusion drops field metadata in execution).
     """
     import pyarrow as pa
 
@@ -187,8 +179,7 @@ def test_facade_layer_refuses_when_engine_source_walk_is_silent(
 ) -> None:
     """Kills: deleting ``_refuse_tightened_iceberg_create`` from saveAsTable / writeTo.
 
-    Engine plan-source walk is silent here (no tagged scan). Only the facade marker
-    refuses. A delete-the-facade-layer mutant lets CREATE succeed.
+    Engine plan-source walk is silent here (no tagged scan); only the facade marker refuses.
     """
     loose = spark_catalog.createDataFrame([(1,)], "x INT")
     marked = loose.select(F.lit(1).alias("one"))
@@ -203,7 +194,7 @@ def test_facade_layer_refuses_when_engine_source_walk_is_silent(
 
 
 def test_right_side_combinators_propagate_tighten_marker(spark: ReparkSession) -> None:
-    """Kills: ``_spawn`` copying ``_tighten_derived`` from self only (R-C)."""
+    """Kills: ``_spawn`` copying ``_tighten_derived`` from self only."""
     loose = spark.createDataFrame(SORTED_ROWS, SCHEMA)
     tight = spark.createDataFrame(SORTED_ROWS, SCHEMA).declareSorted("sym", "ts", tightenNulls=True)
     assert loose.union(tight)._tighten_derived is True
@@ -223,26 +214,12 @@ def test_right_side_combinators_propagate_tighten_marker(spark: ReparkSession) -
 
 
 def test_cache_of_derived_still_refuses_iceberg_create(spark_catalog: ReparkSession) -> None:
-    """Kills: cache/persist remint dropping tighten provenance (R-A) — SQL half only.
+    """Kills: cache/persist remint dropping tighten provenance — the SQL CTAS leg.
 
-    Y-7 (round 4) ran the previously NOT-RUN verifier P-3 on the ledger's "cache saveAsTable"
-    cell. MEASURED, no-oping the R-A stamp (``apply_tighten_provenance_on_materialize``):
-
-    ===========================================  ======================================
-    assertion                                    under the R-A mutant
-    ===========================================  ======================================
-    ``cached.write.saveAsTable(…)``              still refuses — the FACADE
-                                                 ``_tighten_derived`` marker survives cache
-    ``sql("CREATE TABLE … AS SELECT * FROM
-    cached_derived")``                           **DID NOT RAISE** — this is the R-A
-                                                 discriminator
-    ===========================================  ======================================
-
-    So the cell is genuinely green, but the ``saveAsTable`` statement is guarded by the facade
-    layer, not by the engine remint. The engine half is pinned here by the SQL statement and by
-    the Rust twins ``iceberg_create_from_cached_derived_frame_refuses`` (Spark door) /
-    ``ansi_ctas_from_cached_derived_frame_refuses`` (ANSI door), both of which the same mutant
-    turns red.
+    ``saveAsTable`` is guarded by the facade ``_tighten_derived`` marker; the SQL
+    ``CREATE TABLE … AS SELECT * FROM`` statement is the discriminator here, and the Rust twins
+    (``iceberg_create_from_cached_derived_frame_refuses`` /
+    ``ansi_ctas_from_cached_derived_frame_refuses``) turn red under the same mutant.
     """
     tight = spark_catalog.createDataFrame(SORTED_ROWS, SCHEMA).declareSorted(
         "sym", "ts", tightenNulls=True
@@ -262,7 +239,7 @@ def test_cache_of_derived_still_refuses_iceberg_create(spark_catalog: ReparkSess
 def test_all_nullable_projection_create_and_insert_are_allowed(
     spark_catalog: ReparkSession,
 ) -> None:
-    """Kills: hoisting refuse onto all-nullable CREATE or onto INSERT/append (R-D)."""
+    """Kills: hoisting refuse onto all-nullable CREATE or onto INSERT/append."""
     tight = spark_catalog.createDataFrame(SORTED_ROWS, SCHEMA).declareSorted(
         "sym", "ts", tightenNulls=True
     )
@@ -272,28 +249,13 @@ def test_all_nullable_projection_create_and_insert_are_allowed(
 
 
 def test_literal_over_tightened_source_is_refused(spark_catalog: ReparkSession) -> None:
-    """Belt-and-suspenders guard on the R-D conservative class — NOT a discriminator.
+    """Belt-and-suspenders guard — NOT a discriminator.
 
-    Kills: nothing on its own. ~~Kills: dropping the facade R-D half.~~ **Struck, round 4
-    (Y-1), MEASURED both directions** on this tree:
-
-    ==================================================  ==============================
-    mutant                                              this node
-    ==================================================  ==============================
-    facade ``_refuse_tightened_iceberg_create`` no-oped  **green** (engine walk refuses)
-    engine ``refuse_iceberg_create_of_tightened_plan``   **green** (facade refuses)
-      no-oped
-    ==================================================  ==============================
-
-    Two independent layers see the same statement — the write plan scans the tightened
-    ``MemTable`` (engine source walk) *and* the frame carries ``_tighten_derived`` with a
-    non-nullable ``lit(1)`` output (facade marker) — so no single-layer mutant can turn it
-    red. A genuinely facade-only discriminator needs a write plan the engine walk cannot
-    see, i.e. a frame with the marker but **no** tagged scan; that shape exists and is
-    already pinned by ``test_facade_layer_refuses_when_engine_source_walk_is_silent``
-    (the only node the facade no-op kills). This node keeps its value as an end-to-end
-    guard that the R-D conservative class (a literal over a tightened source) stays
-    refused through the real ``saveAsTable`` door.
+    Both layers see the same statement: the write plan scans the tightened ``MemTable`` (engine
+    source walk) and the frame carries ``_tighten_derived`` (facade marker), so no single-layer
+    mutant turns this red. The facade-only discriminator is
+    ``test_facade_layer_refuses_when_engine_source_walk_is_silent``; this node stays as an
+    end-to-end guard through the real ``saveAsTable`` door.
     """
     tight = spark_catalog.createDataFrame(SORTED_ROWS, SCHEMA).declareSorted(
         "sym", "ts", tightenNulls=True
@@ -307,7 +269,7 @@ def test_literal_over_tightened_source_is_refused(spark_catalog: ReparkSession) 
 def test_sql_derived_write_and_lazy_view_create_refuse(
     spark_catalog: ReparkSession,
 ) -> None:
-    """Kills: engine walk that does not enter into_view / lazy temp-view plans (Q-001)."""
+    """Kills: engine walk that does not enter into_view / lazy temp-view plans."""
     tight = spark_catalog.createDataFrame(SORTED_ROWS, SCHEMA).declareSorted(
         "sym", "ts", tightenNulls=True
     )
@@ -324,13 +286,7 @@ def test_sql_derived_write_and_lazy_view_create_refuse(
 def test_create_view_into_catalog_over_tightened_source_refuses(
     spark_catalog: ReparkSession,
 ) -> None:
-    """Y-3 (round 4). Kills: the Spark router's ``_ => execute_passthrough`` catch-all.
-
-    MEASURED on BASE (fe742a6): ``CREATE VIEW <catalog>.<ns>.v AS SELECT * FROM tight LIMIT 0``
-    returned a frame and the fork's ``register_table`` sink persisted a format-v2 Iceberg TABLE
-    whose ``sym``/``ts`` were ``required``. The refuse now lives on the planned DDL body
-    (``refuse_iceberg_create_of_tightened_ddl``); deleting that call turns this red.
-    """
+    """Kills: the Spark router's ``_ => execute_passthrough`` catch-all for CREATE VIEW."""
     tight = spark_catalog.createDataFrame(SORTED_ROWS, SCHEMA).declareSorted(
         "sym", "ts", tightenNulls=True
     )
@@ -346,10 +302,9 @@ def test_create_view_into_catalog_over_tightened_source_refuses(
 def test_select_into_catalog_over_tightened_source_refuses(
     spark_catalog: ReparkSession,
 ) -> None:
-    """Y-4 (round 4). Independent statement: ``SELECT … INTO`` plans as ``CreateMemoryTable``.
+    """Independent statement: ``SELECT … INTO`` plans as ``CreateMemoryTable``.
 
-    A fix wired only to the ``CreateView`` DDL arm leaves this green — measured both ways in
-    ``crates/repark-spark/tests/declared_sorted_tighten.rs``.
+    A fix wired only to the ``CreateView`` DDL arm leaves this green.
     """
     tight = spark_catalog.createDataFrame(SORTED_ROWS, SCHEMA).declareSorted(
         "sym", "ts", tightenNulls=True
@@ -366,10 +321,10 @@ def test_select_into_catalog_over_tightened_source_refuses(
 def test_session_scoped_create_view_and_select_into_stay_allowed(
     spark_catalog: ReparkSession,
 ) -> None:
-    """Y-3/Y-4 allowed side. Kills: a blanket DDL refuse.
+    """Allowed side. Kills: a blanket DDL refuse.
 
-    A one-part name is not a registered Iceberg catalog and persists nothing, so it must keep
-    working — ``test_sql_derived_write_and_lazy_view_create_refuse`` depends on exactly that.
+    A one-part name persists nothing and must keep working;
+    ``test_sql_derived_write_and_lazy_view_create_refuse`` depends on exactly that.
     """
     tight = spark_catalog.createDataFrame(SORTED_ROWS, SCHEMA).declareSorted(
         "sym", "ts", tightenNulls=True
@@ -383,7 +338,7 @@ def test_session_scoped_create_view_and_select_into_stay_allowed(
 
 
 def test_facade_rd_walks_array_and_map_element_nullability() -> None:
-    """Kills: facade R-D looking only at StructType.fields (C1-Q-003)."""
+    """Kills: facade R-D looking only at StructType.fields."""
     from repark.spark.dataframe.plan_collapse import _output_field_would_persist_required
     from repark.spark.types import IntegerType, MapType
 
@@ -411,23 +366,13 @@ def test_declare_sorted_docstring_examples_execute() -> None:
     assert failed == 0
 
 
-# ===========================================================================================
-# SQM round 6 (R6-1) — the temp-view API is not a catalog-write door.
-# ===========================================================================================
-
-
+# The temp-view API is not a catalog-write door.
 def test_qualified_temp_view_name_refuses_and_persists_nothing(
     spark_catalog: ReparkSession,
 ) -> None:
-    """R6-1 facade half. Kills: ``createOrReplaceTempView`` forwarding a qualified name to the
-    engine's ``register_table``, which resolved it into the Iceberg catalog provider and
-    PERSISTED a real table — carrying the ``tightenNulls`` ``required: True`` payload the DDL
-    doors refuse.
-
-    MEASURED on BASE (``68e98f4``) through the same fixture: a 3-part name with a LAZY/empty body
-    returned success and ``tableExists`` was **True**; with a non-empty body the Iceberg provider
-    itself errored ("register_table does not support tables with data"). Both are now one loud
-    ``AnalysisException`` and nothing reaches the catalog.
+    """Kills: ``createOrReplaceTempView`` forwarding a qualified name to the engine's
+    ``register_table``, which resolves it into the Iceberg catalog provider and persists a real
+    table — carrying the ``tightenNulls`` ``required: True`` payload the DDL doors refuse.
     """
     tight = spark_catalog.createDataFrame(SORTED_ROWS, SCHEMA).declareSorted(
         "sym", "ts", tightenNulls=True
@@ -442,14 +387,8 @@ def test_qualified_temp_view_name_refuses_and_persists_nothing(
 def test_one_part_temp_view_stays_session_local_under_set_default_catalog(
     spark_catalog: ReparkSession,
 ) -> None:
-    """R6-1 facade half, the ``SET`` leg. Kills: resolving a one-part temp-view name against the
-    LIVE ``datafusion.catalog.default_catalog``.
-
-    MEASURED on BASE: after ``SET datafusion.catalog.default_catalog = 'glue_catalog'`` the
-    registration left the session and hit the Iceberg schema provider. Now the view registers in
-    the session's pinned home, ``tableExists`` on the catalog name is FALSE, and the one-part
-    name still answers True.
-    """
+    """The ``SET`` leg. Kills: resolving a one-part temp-view name against the LIVE
+    ``datafusion.catalog.default_catalog`` instead of the session's pinned home."""
     tight = spark_catalog.createDataFrame(SORTED_ROWS, SCHEMA).declareSorted(
         "sym", "ts", tightenNulls=True
     )
@@ -461,8 +400,8 @@ def test_one_part_temp_view_stays_session_local_under_set_default_catalog(
 
 
 def test_one_part_temp_view_still_works_and_reads_back(spark: ReparkSession) -> None:
-    """R6-1 allowed side. Kills: the refusal turning into a blanket temp-view refusal — the
-    ordinary one-part ``createOrReplaceTempView`` must be untouched, value for value."""
+    """Allowed side. Kills: a blanket temp-view refusal — the ordinary one-part
+    ``createOrReplaceTempView`` must be untouched, value for value."""
     frame = spark.createDataFrame(SORTED_ROWS, SCHEMA)
     frame.createOrReplaceTempView("plain_tv")
     assert spark.sql("SELECT count(*) AS n FROM plain_tv").collect()[0]["n"] == len(SORTED_ROWS)
@@ -470,18 +409,12 @@ def test_one_part_temp_view_still_works_and_reads_back(spark: ReparkSession) -> 
 
 
 def test_a_catalog_over_the_build_time_default_is_not_a_temp_view_home(tmp_path: Path) -> None:
-    """R6-1 second pass (round-6 critic S1), facade half. Kills: pinning the temp-view home to
-    the CONFIGURED default-catalog NAME.
+    """Kills: pinning the temp-view home to the CONFIGURED default-catalog NAME.
 
-    ``datafusion.catalog.default_catalog`` is a supported BUILD-time conf, so a session built
-    with it pointing at the name a catalog is registered under had its home taken over by that
-    catalog. MEASURED on the name-only fix, this exact session shape:
-    ``createDataFrame([], schema)`` = Ok, ``df.createOrReplaceTempView("v_leak")`` = Ok,
-    ``spark.catalog.tableExists("ice.sales.v_leak")`` = **True** — the ``required: True``
-    tighten payload PERSISTED through the temp-view API.
-
-    MEASURED now: the session-local home is gone, so the very first temp-view mint
-    (``createDataFrame`` itself) refuses ``AnalysisException`` and the catalog stays empty.
+    ``datafusion.catalog.default_catalog`` is a build-time conf; a session built with it pointing
+    at a registered catalog's name had that catalog take over the home and the ``required: True``
+    tighten payload persisted through the temp-view API. The home must be absent instead, so the
+    first temp-view mint refuses.
     """
     session = (
         ReparkSession.builder.appName("pytest-temp-view-home")
@@ -499,29 +432,15 @@ def test_a_catalog_over_the_build_time_default_is_not_a_temp_view_home(tmp_path:
 def test_named_read_paths_find_a_temp_view_under_set_default_catalog(
     spark_catalog: ReparkSession,
 ) -> None:
-    """R7-1. Kills: product read paths emitting a BARE reference for a session-local view.
+    """Kills: product read paths emitting a BARE reference for a session-local view.
 
-    R6-1 pinned the temp-view WRITE to the session's build-time home; the READ side still emitted
-    the caller's bare name, which DataFusion re-resolves against the **live**
-    ``datafusion.catalog.default_catalog``. MEASURED on the round-7 BASE (``3910ac7``), this exact
-    shape — ``SET`` to a second catalog, then mint:
+    A bare name is re-resolved against the LIVE ``datafusion.catalog.default_catalog``, so
+    ``tableExists`` (asks the home) and the named read paths below disagreed; the facade now
+    spells a session-local view against its home.
 
-    * ``spark.catalog.tableExists("tv")`` = **True** (it asks the home) —
-    * ``spark.table("tv")`` = ``AnalysisException: table 'glue_catalog.writer_ns.tv' not found``
-    * ``cache()`` / ``persist()`` = the same miss on ``__repark_cache_*``
-    * ``createDataFrame(...)`` = the same miss on ``__repark_cdf_*``
-    * ``selectExpr`` / ``alias`` = the same miss on ``__repark_selx_*`` / the alias name
-
-    So ``tableExists`` and every named read path DISAGREED. Now the facade spells a session-local
-    view against its home (``python/repark/src/repark/spark/_temp_views.py``) and they agree.
-
-    SCOPE, so this pin is not read as more than it proves: it covers the paths asserted below —
-    the FACADE's own view spellings. It does NOT cover the scratch relations the ENGINE crates
-    register for themselves under a bare name (`repark-iceberg`'s MERGE / identity-DML tables,
-    the `__repark_tt_*` time-travel view). Those are still RED under this same ``SET`` — MEASURED
-    equally red on the round-7 BASE, so round 7 neither caused nor cured them; they need the home
-    plumbed into those crates and are recorded as a round-8 item in
-    ``task/se1-declared-sorted-ledger.md``.
+    SCOPE: only the facade paths asserted below. Engine-crate scratch relations registered under
+    a bare name (``repark-iceberg`` MERGE / identity-DML tables, ``__repark_tt_*``) are still red
+    under this ``SET`` and need the home plumbed into those crates.
     """
     spark_catalog.sql("SET datafusion.catalog.default_catalog = 'glue_catalog'")
     spark_catalog.sql("SET datafusion.catalog.default_schema = 'writer_ns'")
@@ -550,11 +469,11 @@ def test_named_read_paths_find_a_temp_view_under_set_default_catalog(
 
 
 def test_no_set_leaves_every_named_read_path_byte_identical(spark: ReparkSession) -> None:
-    """R7-1 no-SET leg. Kills: the home spelling changing an ORDINARY session's results.
+    """No-``SET`` leg. Kills: the home spelling changing an ORDINARY session's results.
 
-    Without a ``SET`` the home IS the live default, so the fix must be invisible: same rows, same
-    column names, same ``listTables``/``tableExists`` answers (which stay ONE-part — the home
-    spelling is a SQL reference, never a rename).
+    Without a ``SET`` the home IS the live default, so the fix must be invisible: same rows,
+    same names, and ``tableExists`` answers stay ONE-part (the home spelling is a SQL reference,
+    never a rename).
     """
     frame = spark.createDataFrame(SORTED_ROWS, SCHEMA)
     frame.createOrReplaceTempView("plain_read")
@@ -570,12 +489,11 @@ def test_no_set_leaves_every_named_read_path_byte_identical(spark: ReparkSession
 
 
 def test_a_catalog_over_the_home_refuses_the_read_spelling_too(tmp_path: Path) -> None:
-    """R7-1 plus R6-1 S1. Kills: the read seam becoming a way AROUND ``assert_home_intact``.
+    """Kills: the read seam becoming a way AROUND ``assert_home_intact``.
 
-    A session built with ``default_catalog = ice`` and a catalog registered under that same name
-    has no session-local home. Asking for the home spelling must refuse exactly like the write
-    side, not hand back ``ice.sales.<view>`` — that would be a catalog read dressed as a temp
-    view. MEASURED: the mint refuses first, and the native home lookup refuses on its own.
+    With a catalog registered over the session's default-catalog name there is no session-local
+    home; the home spelling must refuse exactly like the write side, not hand back
+    ``ice.sales.<view>`` — that would be a catalog read dressed as a temp view.
     """
     session = (
         ReparkSession.builder.appName("pytest-temp-view-home-read")

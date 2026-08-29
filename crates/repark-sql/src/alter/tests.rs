@@ -1,5 +1,4 @@
-//! Unit pins for the `SET PROPERTIES` recognizer and its curated vocabulary. The schema-evolution
-//! half needs a real catalog and is pinned end to end in `crate::tests`.
+//! Unit pins for the `SET PROPERTIES` recognizer and its curated vocabulary.
 
 use datafusion::sql::sqlparser::ast::Statement;
 use datafusion::sql::sqlparser::dialect::GenericDialect;
@@ -27,8 +26,7 @@ fn parse_error(sql: &str) -> String {
         .to_string()
 }
 
-/// The recognizer removes exactly the word `PROPERTIES` — nothing else about the user's text
-/// changes, so byte offsets, spacing and every value expression survive verbatim.
+/// The recognizer removes exactly the word `PROPERTIES` and preserves the remaining text.
 #[test]
 fn rewrite_removes_only_the_properties_keyword() {
     assert_eq!(
@@ -41,8 +39,7 @@ fn rewrite_removes_only_the_properties_keyword() {
     );
 }
 
-/// It does NOT fire on other statements, and — critically — a `SET PROPERTIES` inside a string
-/// literal or a comment is structurally invisible, so the user's data can never be edited.
+/// It does not fire on other statements or on `SET PROPERTIES` inside a string literal.
 #[test]
 fn rewrite_does_not_fire_on_other_statements_or_inside_literals() {
     for sql in [
@@ -61,8 +58,7 @@ fn rewrite_does_not_fire_on_other_statements_or_inside_literals() {
     assert!(rewrite_set_properties(sql).is_none(), "{sql}");
 }
 
-/// The G4 hatch works here exactly as it does at CREATE — which is the whole reason the
-/// recognizer routes through the stock parser instead of hand-reading the values.
+/// The G4 hatch has the same raw-key behavior as CREATE.
 #[test]
 fn extra_properties_sets_raw_iceberg_keys() {
     let (sets, unsets) = parse_set_properties(&options(
@@ -82,8 +78,7 @@ fn extra_properties_sets_raw_iceberg_keys() {
     assert!(unsets.is_empty());
 }
 
-/// `format` is validated against the create-time vocabulary and maps onto the real Iceberg key;
-/// `format = DEFAULT` is Trino's reset spelling and unsets that key.
+/// `format` uses the create-time vocabulary and maps onto the Iceberg key.
 #[test]
 fn format_sets_and_resets_the_iceberg_property() {
     let (sets, unsets) = parse_set_properties(&options(
@@ -104,8 +99,7 @@ fn format_sets_and_resets_the_iceberg_property() {
     assert_eq!(unsets, vec![FORMAT_PROPERTY.to_string()]);
 }
 
-/// The raw-key round trip: the hatch SETS a dotted key, and the quoted dotted spelling with
-/// DEFAULT is the only way to UNSET it.
+/// A quoted dotted spelling unsets the raw property; direct setting uses the `extra_properties` hatch.
 #[test]
 fn dotted_key_with_default_unsets_a_raw_property() {
     let (sets, unsets) = parse_set_properties(&options(
@@ -121,8 +115,7 @@ fn dotted_key_with_default_unsets_a_raw_property() {
     assert!(err.contains("extra_properties = MAP"), "{err}");
 }
 
-/// The G9 reserved refusals and the reserved-but-unchangeable keys each refuse loud and name
-/// their trigger or their reason.
+/// Reserved and unchangeable keys refuse loudly and name the offending key.
 #[test]
 fn reserved_and_unchangeable_keys_refuse_loud() {
     let sorted = parse_error("ALTER TABLE ice.s.t SET PROPERTIES (sorted_by = ARRAY['a'])");
@@ -142,8 +135,7 @@ fn reserved_and_unchangeable_keys_refuse_loud() {
     assert!(wipe.contains("wipe every raw property"), "{wipe}");
 }
 
-/// Q3: `partitioning` is the PRE-DESIGNATED future spelling for replace-spec, so its refusal must
-/// say so, cite the ruling, and name the callable op that does the job today.
+/// Q3 reserves `partitioning` for future replace-spec support.
 #[test]
 fn partitioning_refuses_citing_q3_and_names_the_callable_op() {
     let err = parse_error("ALTER TABLE ice.s.t SET PROPERTIES (partitioning = ARRAY['day(ts)'])");
@@ -153,8 +145,7 @@ fn partitioning_refuses_citing_q3_and_names_the_callable_op() {
     assert!(err.contains("TRIGGER"), "{err}");
 }
 
-/// The typo guard: an unknown bare key lists what IS supported and points dotted keys at the
-/// hatch, exactly as the CREATE-side guard does.
+/// The typo guard lists supported keys and directs dotted keys to the hatch.
 #[test]
 fn unknown_bare_key_refuses_listing_the_supported_set() {
     let err = parse_error("ALTER TABLE ice.s.t SET PROPERTIES (formatt = 'PARQUET')");
@@ -171,8 +162,7 @@ fn empty_property_list_refuses() {
     assert!(err.contains("at least one property"), "{err}");
 }
 
-/// Only promotion-shaped targets are accepted for `SET DATA TYPE`; the narrowing targets are
-/// rejected door-side with a stable message before any transaction opens.
+/// `SET DATA TYPE` accepts promotion-shaped targets and refuses narrowing.
 #[test]
 fn promotion_targets_are_bounded() {
     assert!(is_promotion_target(&PrimitiveType::Long));
@@ -186,8 +176,7 @@ fn promotion_targets_are_bounded() {
     assert!(!is_promotion_target(&PrimitiveType::Boolean));
 }
 
-/// `DEFAULT` is recognized only as the bare keyword — a quoted `"DEFAULT"` is an identifier the
-/// user chose, and a string `'DEFAULT'` is a value.
+/// `DEFAULT` is recognized only as a bare keyword; quoted `"DEFAULT"` is an identifier.
 #[test]
 fn default_keyword_recognition_is_quote_sensitive() {
     let bare = options("ALTER TABLE ice.s.t SET PROPERTIES (format = DEFAULT)");

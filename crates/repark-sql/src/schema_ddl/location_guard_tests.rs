@@ -1,6 +1,4 @@
-//! ANSI-door `CREATE SCHEMA IF NOT EXISTS` location-guard pins (G-6 Q1 / R-6).
-//!
-//! Four shapes matching the Spark `namespace_ddl` twins. Native session (no Spark extension).
+//! ANSI-door `CREATE SCHEMA IF NOT EXISTS` location-guard pins.
 
 use std::sync::Arc;
 

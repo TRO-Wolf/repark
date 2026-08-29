@@ -1,17 +1,16 @@
 """Sorted-row TPC-H result comparison.
 
-Correctness oracle = DuckDB result set. WRONG-RESULT is first-class and must never
-be massaged away.
+Correctness oracle = DuckDB result set. WRONG-RESULT is first-class and must never be
+massaged away.
 
-**Equality rules (disclosed):**
+Equality rules (disclosed):
 
-- Pure integers: **exact** equality.
-- Integral-valued floats and Decimals (including after Decimal→normalize): **exact**
-  integer equality — relative ``1e-6`` must not mask off-by-one at large magnitude
-  (octo C1-Q-001 / C2-L-001).
+- Pure integers: exact.
+- Integral-valued floats and Decimals (after Decimal normalize): exact integer equality —
+  relative ``1e-6`` must not mask off-by-one at large magnitude.
 - Non-integral floats: relative tolerance ``1e-6`` with floor scale ``1e-12``.
-- Mixed int/float: promote int → float rules when the float is non-integral; exact
-  when the float is integral-valued.
+- Mixed int/float: promote int → float rules when the float is non-integral; exact when
+  integral-valued.
 - NULL/None must match. Dates/timestamps normalize via ``isoformat()``.
 """
 
@@ -47,7 +46,7 @@ def compare_result_sets(
     """Compare two unordered result sets after sorting rows.
 
     ``subject_label`` names the left (subject) engine in mismatch messages so Sail
-    WRONG-RESULT rows do not mislabel the subject as ``repark`` (C1-H-001).
+    WRONG-RESULT rows do not mislabel the subject as ``repark``.
     """
     left = [_normalize_row(row) for row in repark_rows]
     right = [_normalize_row(row) for row in duckdb_rows]
@@ -108,7 +107,7 @@ def _normalize_cell(cell: Any) -> Any:
     if cell is None:
         return None
     if isinstance(cell, Decimal):
-        # Keep integral Decimals as int so exact equality applies (C2-L-001).
+        # Keep integral Decimals as int so exact equality applies.
         if cell == cell.to_integral_value():
             return int(cell)
         return float(cell)

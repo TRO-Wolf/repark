@@ -4,7 +4,7 @@
 (`#253`) · **Path:** LIGHT (planning documents, navigation, one read-only plan-contract test,
 and a lifecycle-only repair to an existing meta-pin; no runtime, dependency, workflow, or
 public-interface change) · **Policy:**
-[AGENTS.md](../../../AGENTS.md) "Markdown document lifecycle".
+[AGENTS.md](../../../../AGENTS.md) "Markdown document lifecycle".
 
 **Retires:** moved to `../completed/` when this plan-document PR is ready for review.
 

@@ -1,14 +1,11 @@
-//! Statistic Functions — `VAR`, `STDDEV`, the `LINEARREG` family, `TSF`, `CORREL` (TA-Lib C
-//! 0.4.0 ports; see the crate docs for the numerics contract).
+//! TA-Lib C 0.4.0 ports for variance, regression, forecast, and correlation.
 
 use crate::{Result, as_f64, check_lengths, check_period, is_zero, is_zero_or_neg, nan_vec};
 
 /// ===========================================================================================
 /// `VAR` — rolling population variance (`ta_VAR.c`, `TA_INT_VAR`).
 ///
-/// Running sums of values and squares; output `E[X²] − E[X]²` — including the catastrophic-
-/// cancellation drift TA-Lib's accumulators carry (that drift IS the reference behavior).
-/// `nbdev` is accepted for signature parity and ignored, exactly as C ignores it.
+/// Return `E[X²] − E[X]²` from C-compatible running sums; `nbdev` is ignored for parity.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -17,9 +14,7 @@ pub fn var(input: &[f64], period: usize, nbdev: f64) -> Result<Vec<f64>> {
     let _ = nbdev;
     check_period("optInTimePeriod", period, 1)?;
     let len = input.len();
-    // Keeps `nan_vec`: the extend form was MEASURED at +43% on `stddev_n1e6` (n=1e6) — two
-    // mutable running accumulators inside the closure defeat the optimization that makes the
-    // `ema` single-write form a win. Do not "modernize" this loop.
+    // The measured extend form is slower with two mutable accumulators.
     let mut out = nan_vec(len);
     if len < period {
         return Ok(out);
@@ -54,9 +49,7 @@ pub fn var(input: &[f64], period: usize, nbdev: f64) -> Result<Vec<f64>> {
 /// ===========================================================================================
 /// `STDDEV` — rolling population standard deviation (`ta_STDDEV.c`).
 ///
-/// [`var`] then per element: negatives/near-zero clamp to `0.0` (`TA_IS_ZERO_OR_NEG`), else
-/// `sqrt(v) * nbdev`. C splits an `nbdev == 1.0` fast path to skip the multiply; `x * 1.0` is
-/// bit-identical to `x` under IEEE-754, so one loop serves both (both goldens pin this).
+/// Apply C's near-zero clamp and `sqrt(v) * nbdev` to [`var`] output.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -77,9 +70,7 @@ pub fn stddev(input: &[f64], period: usize, nbdev: f64) -> Result<Vec<f64>> {
     Ok(out)
 }
 
-/// The per-window least-squares fit shared by the `LINEARREG` family (`ta_LINEARREG*.c`,
-/// `ta_TSF.c`): C's closed-form sums with x = 0..period−1 ordered oldest-first. Calls `emit`
-/// with `(m, b)` for each output row.
+/// Compute C's per-window least-squares fit and emit `(m, b)` for each row.
 #[allow(clippy::similar_names)] // sum_x/sum_y/sum_xy deliberately mirror C's SumX/SumY/SumXY.
 fn linearreg_core(
     input: &[f64],
@@ -88,9 +79,7 @@ fn linearreg_core(
 ) -> Result<Vec<f64>> {
     check_period("optInTimePeriod", period, 2)?;
     let len = input.len();
-    // Single-write construction (the `overlap::ema` pattern): NaN lookback prefix via resize,
-    // then one output per window through a TrustedLen extend. The per-window accumulation
-    // (oldest-first `i` countdown) and both closed-form expressions are unchanged.
+    // Preserve C's oldest-first accumulation; only output construction uses the measured form.
     let mut out = Vec::with_capacity(len);
     if len < period {
         out.resize(len, f64::NAN);
@@ -126,7 +115,6 @@ fn linearreg_core(
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if `period < 2`.
 pub fn linearreg(input: &[f64], period: usize) -> Result<Vec<f64>> {
-    // `period - 1` only after validation — `linearreg_core` rejects period < 2 first.
     linearreg_core(input, period, |m, b| b + m * as_f64(period - 1))
 }
 
@@ -176,8 +164,7 @@ pub fn tsf(input: &[f64], period: usize) -> Result<Vec<f64>> {
 /// ===========================================================================================
 /// `CORREL` — rolling Pearson correlation (`ta_CORREL.c`).
 ///
-/// Five running sums updated subtract-trailing-then-add-incoming per row, in C's exact
-/// statement order; a non-positive/near-zero denominator (`TA_IS_ZERO_OR_NEG`) yields `0.0`.
+/// Return Pearson correlation using C's ordered running sums and denominator guard.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -248,14 +235,7 @@ pub fn correl(input0: &[f64], input1: &[f64], period: usize) -> Result<Vec<f64>>
 /// ===========================================================================================
 /// `BETA` — rolling beta of `price0` vs `price1` (`ta_BETA.c`).
 ///
-/// The slope of a least-squares line through the per-bar percentage-return points
-/// `(x, y) = (Δprice1/price1, Δprice0/price0)` over the trailing `period` returns. Five running
-/// sums (`S_xx`, `S_xy`, `S_x`, `S_y`, plus the incoming/trailing return points) are maintained in
-/// C's exact statement order: each bar adds the incoming return, reads the trailing return *before*
-/// writing the output (C guards against in-place input/output aliasing), writes
-/// `(n·S_xy − S_x·S_y) / (n·S_xx − S_x·S_x)` with a `TA_IS_ZERO` denominator guard → `0.0`, then
-/// subtracts the trailing return. Returns use a `TA_IS_ZERO(prevPrice)` guard → `0.0`. Lookback =
-/// `period`.
+/// Return the rolling slope of percentage returns with C's ordered accumulators and zero guards.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -268,7 +248,6 @@ pub fn beta(price0: &[f64], price1: &[f64], period: usize) -> Result<Vec<f64>> {
     let len = price0.len();
     let mut out = nan_vec(len);
     if len <= period {
-        // Fewer than `period + 1` prices → no return window fills; C outputs zero elements.
         return Ok(out);
     }
     let n = as_f64(period);
@@ -282,7 +261,6 @@ pub fn beta(price0: &[f64], price1: &[f64], period: usize) -> Result<Vec<f64>> {
     let mut trailing_last_price_y = price1[0];
     let mut trailing_idx = 1_usize;
     let mut i = 1_usize;
-    // Prime the summation with the first `period − 1` return points (the lookback).
     while i < period {
         let tmp = price0[i];
         let x = if is_zero(last_price_x) {
@@ -306,7 +284,6 @@ pub fn beta(price0: &[f64], price1: &[f64], period: usize) -> Result<Vec<f64>> {
     }
     let mut out_idx = period;
     loop {
-        // Add the incoming return point at bar `i`.
         let tmp = price0[i];
         let x = if is_zero(last_price_x) {
             0.0
@@ -326,7 +303,6 @@ pub fn beta(price0: &[f64], price1: &[f64], period: usize) -> Result<Vec<f64>> {
         s_xy += x * y;
         s_x += x;
         s_y += y;
-        // Read the trailing return BEFORE writing the output (in-place aliasing safety in C).
         let tmp = price0[trailing_idx];
         let trail_x = if is_zero(trailing_last_price_x) {
             0.0
@@ -342,7 +318,6 @@ pub fn beta(price0: &[f64], price1: &[f64], period: usize) -> Result<Vec<f64>> {
         };
         trailing_last_price_y = tmp;
         trailing_idx += 1;
-        // Write the beta for the current window.
         let tmp_real = (n * s_xx) - (s_x * s_x);
         out[out_idx] = if is_zero(tmp_real) {
             0.0
@@ -350,7 +325,6 @@ pub fn beta(price0: &[f64], price1: &[f64], period: usize) -> Result<Vec<f64>> {
             ((n * s_xy) - (s_x * s_y)) / tmp_real
         };
         out_idx += 1;
-        // Remove the trailing return point.
         s_xx -= trail_x * trail_x;
         s_xy -= trail_x * trail_y;
         s_x -= trail_x;
@@ -390,7 +364,6 @@ mod tests {
         let forecast = tsf(&input, 4).expect("valid");
         assert!(value[2].is_nan());
         assert!((slope[5] - 2.0).abs() < 1e-9);
-        // Window ending at index 5 spans values 5,7,9,11 → intercept 5, last value 11, next 13.
         assert!((intercept[5] - 5.0).abs() < 1e-9);
         assert!((value[5] - 11.0).abs() < 1e-9);
         assert!((forecast[5] - 13.0).abs() < 1e-9);
@@ -414,7 +387,6 @@ mod tests {
 
     #[test]
     fn beta_of_identical_series_is_one() {
-        // Two series with identical (varying) returns fit the line y = x → beta = 1.
         let price = [100.0, 105.0, 103.0, 108.0, 110.0, 107.0, 112.0];
         let out = beta(&price, &price, 3).expect("valid");
         assert!(out[0].is_nan());
@@ -430,7 +402,6 @@ mod tests {
 
     #[test]
     fn beta_constant_returns_denominator_guard_is_zero() {
-        // Constant percentage returns → zero return-variance → TA_IS_ZERO denominator → 0.0.
         let geometric: Vec<f64> = (0..8).map(|i| 100.0 * 1.1_f64.powi(i)).collect();
         let out = beta(&geometric, &geometric, 4).expect("valid");
         for value in &out[4..] {

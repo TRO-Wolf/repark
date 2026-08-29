@@ -1,8 +1,6 @@
 //! Expression-construction helpers for [`super::PyColumn`].
 //!
-//! Cast vocabulary, alias-chain collapse, projection extract, reciprocal-trig Inf CASE,
-//! and the collect/count-distinct builders. Not `#[pymethods]` — the Python surface stays
-//! in `mod.rs`.
+//! Cast, alias, projection, reciprocal-trig, and aggregate expression builders.
 
 use datafusion::arrow::datatypes::{DataType, TimeUnit};
 use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
@@ -15,14 +13,7 @@ use pyo3::prelude::*;
 
 use super::PyColumn;
 
-/// ===========================================================================================
-/// Drop a single outer `AS name` alias so `F.expr(...).alias("x")` can re-alias cleanly.
-/// ===========================================================================================
-/// Spark `sec`/`csc` at exact zero divisor → `±Inf` (live 4.1.2), not NULL.
-///
-/// Global non-ANSI `/` rewrite (`nullif(divisor, 0)`) would turn bare `1/sin(0)` into NULL.
-/// Branch on exact zero so the reciprocal-trig surface matches Spark without changing the
-/// div-by-zero analyzer rule (F2).
+/// Preserve Spark's `±Inf` result at an exact zero reciprocal-trig divisor.
 pub(super) fn reciprocal_trig_or_inf(divisor: Expr) -> Expr {
     Expr::Case(Case {
         expr: None,
@@ -34,6 +25,7 @@ pub(super) fn reciprocal_trig_or_inf(divisor: Expr) -> Expr {
     })
 }
 
+/// Drop one outer alias so a standalone expression can be re-aliased by the facade.
 pub(super) fn strip_outer_alias(expr: Expr) -> Expr {
     match expr {
         Expr::Alias(alias) => *alias.expr,
@@ -42,27 +34,18 @@ pub(super) fn strip_outer_alias(expr: Expr) -> Expr {
 }
 
 /// ===========================================================================================
-/// Collapse nested ``Alias`` layers to a single outer rename (r25 T3 plan hygiene).
+/// Collapse nested `Alias` layers to one outer rename.
 /// ===========================================================================================
 ///
-/// DataFusion pretty-prints ``col.alias("x").alias("x")`` as ``… AS x AS x`` and
-/// ``col.alias("a").alias("b")`` as ``… AS a AS b``. The facade N2 collapse skipped a *further*
-/// ``for_select`` re-alias when ``display_name`` already matched, but did not unwrap aliases
-/// already stacked on the native [`Expr`]. Any nested Alias chain peels to the core expr plus
-/// **one** outer alias (outermost name wins) — matching H2's display-side re-alias collapse.
-/// The outer alias's qualifier (``relation``) and Arrow field ``metadata`` are part of the
-/// projection identity and survive the peel; a non-nested Alias passes through untouched.
+/// The outer alias name, qualifier, and field metadata remain part of the projection identity.
 pub(super) fn collapse_identity_alias_chain(expr: Expr) -> Expr {
     let Expr::Alias(alias) = expr else {
         return expr;
     };
-    // A lone Alias must not be rebuilt: `Expr::alias` would null out `relation`/`metadata`
-    // that DataFusion's optimizer attaches (e.g. `alias_qualified` in distinct rewrites).
+    // Rebuilding a lone alias would discard DataFusion's qualifier and field metadata.
     if !matches!(alias.expr.as_ref(), Expr::Alias(_)) {
         return Expr::Alias(alias);
     }
-    // Outermost name/qualifier/metadata are the projection identity; peel every
-    // intermediate Alias beneath them.
     let Alias {
         expr: boxed,
         relation,
@@ -86,7 +69,6 @@ pub(super) fn extract_projection_expr(plan: &LogicalPlan) -> PyResult<Expr> {
             .first()
             .cloned()
             .ok_or_else(|| PyValueError::new_err("expr plan produced an empty projection")),
-        // Optimized plans may wrap the projection (e.g. `SubqueryAlias` / `TableScan` empty).
         other => other
             .inputs()
             .iter()
@@ -99,13 +81,10 @@ pub(super) fn extract_projection_expr(plan: &LogicalPlan) -> PyResult<Expr> {
 
 impl PyColumn {
     /// ===========================================================================================
-    /// `array_agg` (+ optional `DISTINCT`) with Spark `collect_list` / `collect_set` NULL / empty
-    /// semantics: exclude NULL elements; empty group → empty array (not NULL).
+    /// Build Spark `collect_list` / `collect_set` semantics for NULL and empty groups.
     /// ===========================================================================================
     pub(super) fn collect_aggregate(argument: Expr, distinct: bool) -> PyResult<Self> {
         let base = array_agg_udaf().call(vec![argument]);
-        // FORCE IgnoreNulls: Spark `collect_list`/`collect_set` drop NULL elements (oracle-verified).
-        // `DISTINCT` only for the set form. Builder chain order is free (fields land on one struct).
         let aggregated = if distinct {
             base.distinct()
                 .null_treatment(NullTreatment::IgnoreNulls)
@@ -118,17 +97,14 @@ impl PyColumn {
                 "could not build collect aggregate expression: {err}"
             ))
         })?;
-        // DataFusion's empty `array_agg` evaluates to a NULL list; Spark returns `[]`. Coalesce with
-        // zero-arg `make_array()` restores the empty-array value (and keeps the list value type —
-        // verified against DataFusion 52.5: `coalesce(array_agg(int), make_array())` → `List(Int64)`).
+        // DataFusion returns NULL for an empty array_agg; Spark returns an empty array.
         let empty = datafusion::functions_nested::expr_fn::make_array(vec![]);
         let expr = datafusion::functions::expr_fn::coalesce(vec![aggregated, empty]);
         Ok(Self::from_expr(expr))
     }
 
     /// ===========================================================================================
-    /// Single-column `count(DISTINCT x)` passes through; multi-column packs into a null-if-any
-    /// `struct` so DataFusion's single-arg `COUNT DISTINCT` matches Spark tuple semantics.
+    /// Build a single count-distinct argument, nulling multi-column tuples when any field is NULL.
     /// ===========================================================================================
     pub(super) fn count_distinct_argument(args: Vec<Expr>) -> PyResult<Expr> {
         if args.len() == 1 {
@@ -136,9 +112,6 @@ impl PyColumn {
                 PyValueError::new_err("count(DISTINCT …) requires at least one argument column")
             });
         }
-        // Pack the tuple. A bare `struct(a,b)` would *include* rows with null fields as distinct
-        // keys; Spark excludes any row where ANY of the columns is NULL. Null the whole struct
-        // when any field is NULL so `count(DISTINCT …)` skips those rows.
         let packed = datafusion::functions::expr_fn::r#struct(args.clone());
         let all_present = args
             .into_iter()
@@ -150,7 +123,6 @@ impl PyColumn {
         Ok(Expr::Case(Case {
             expr: None,
             when_then_expr: vec![(Box::new(all_present), Box::new(packed))],
-            // ELSE NULL: type is inferred from the THEN arm (the struct).
             else_expr: None,
         }))
     }
@@ -162,18 +134,16 @@ pub(super) const TIMESTAMP_UNIT: TimeUnit = TimeUnit::Microsecond;
 /// ===========================================================================================
 /// Parse a canonical engine type string into an Arrow [`DataType`] for `CAST`.
 ///
-/// Vocabulary locksteps with the facade `types` classes that claim a primitive cast mapping and
-/// with `column.py` `_spark_cast_type_name` (r24 QUAL-03). Accepted tokens:
-/// - width integers: `byte`/`tinyint` → Int8, `short`/`smallint` → Int16, `int`/`integer` → Int32,
+/// Accepted primitive and parameterized cast tokens are:
+/// - width integers: `byte`/`tinyint` → Int8, `short`/`smallint` → Int16,
+///   `int`/`integer` → Int32,
 ///   `long`/`bigint` → Int64
 /// - floats: `float` → Float32, `double` → Float64
 /// - temporal / other primitives: `string`, `boolean`, `date`, `timestamp`, `binary`
 /// - parameterized: `decimal(p,s)` → Decimal128
 ///
-/// Unknown tokens (including `varchar`/`char`/`interval`/`variant` as bare engine tags) return
-/// `Err` so the `cast` / `try_cast` boundary can raise [`crate::AnalysisException`].
+/// Unknown tokens return `Err` so the boundary can raise [`crate::AnalysisException`].
 /// ===========================================================================================
-// === r24 A3: parse_data_type cast vocabulary ===
 pub(super) fn parse_data_type(spec: &str) -> Result<DataType, String> {
     match spec.trim() {
         "string" => Ok(DataType::Utf8),
@@ -197,8 +167,7 @@ pub(super) fn parse_data_type(spec: &str) -> Result<DataType, String> {
 
 /// Parse a `decimal(precision,scale)` type string into an Arrow `Decimal128`.
 ///
-/// Precision and scale are parsed as `u8` (Arrow's `Decimal128` widths); anything outside that
-/// shape is a descriptive error rather than a silent fallback.
+/// Invalid precision or scale returns a descriptive error.
 fn parse_decimal_type(spec: &str) -> Result<DataType, String> {
     let inner = spec
         .strip_prefix("decimal(")
@@ -218,26 +187,7 @@ fn parse_decimal_type(spec: &str) -> Result<DataType, String> {
     Ok(DataType::Decimal128(precision, scale))
 }
 
-/// Refuse a higher-order function nested inside another one's lambda body.
-///
-/// **This is an upstream DataFusion 54.1 limitation, measured, not a repark choice.** A nested
-/// lambda whose value argument is a real column fails during evaluation with
-/// `Field of physical LambdaVariable with index 0 doesn't match batch field` — and it fails the
-/// same way through DataFusion's OWN SQL planner, so no way of building the expression avoids it:
-///
-/// ```text
-/// SELECT array_any_match(a, x -> array_any_match(b, y -> y > 4)) FROM t
-///   => Field { "y": Int32 } != Field { "x": Int32 }
-/// ```
-///
-/// Both argument positions are checked, not just the lambda: a higher-order call in a VALUE
-/// argument reaches `unresolved LambdaVariable x_0` instead, which is the same class of internal
-/// error this refusal exists to replace.
-///
-/// Refusing here turns a cryptic execution-time error into a statement of the limit. It also
-/// closes the S0 this replaced: before lambda parameters were given unique plan names, two
-/// lambdas both minting `x` made the inner body bind to the OUTER variable, and
-/// `exists(a, x -> exists(b, y -> y > 4))` returned an exactly INVERTED boolean with no error.
+/// Detect a higher-order function anywhere in an expression tree.
 pub(super) fn contains_higher_order(expr: &Expr) -> PyResult<bool> {
     let mut found = false;
     expr.apply(|node| {
@@ -251,6 +201,7 @@ pub(super) fn contains_higher_order(expr: &Expr) -> PyResult<bool> {
     Ok(found)
 }
 
+/// Refuse nested higher-order functions with `UnsupportedOperationException`.
 pub(super) fn refuse_nested_higher_order(
     argument: &Expr,
     name: &str,
@@ -273,9 +224,7 @@ mod tests {
     use super::*;
     use datafusion::prelude::col;
 
-    /// Canonical + alias tokens the facade documents for primitive cast (QUAL-03).
-    /// Renamed from `parse_data_type_maps_the_seven_spark_types` (rule 11) — the old name
-    /// under-claimed the vocabulary after float/byte/short/binary landed.
+    /// Canonical and alias tokens map to the facade's primitive cast types.
     #[test]
     fn parse_data_type_maps_facade_primitive_cast_vocabulary() {
         assert_eq!(parse_data_type("string").unwrap(), DataType::Utf8);
@@ -285,8 +234,6 @@ mod tests {
         assert_eq!(parse_data_type("smallint").unwrap(), DataType::Int16);
         assert_eq!(parse_data_type("int").unwrap(), DataType::Int32);
         assert_eq!(parse_data_type("integer").unwrap(), DataType::Int32);
-        // `long` / `bigint` (Int64) — the PySpark integer-width spellings; no `types` object emits
-        // them, but `Column.cast("long")` and the na-fill width-preserving path both need Int64.
         assert_eq!(parse_data_type("long").unwrap(), DataType::Int64);
         assert_eq!(parse_data_type("bigint").unwrap(), DataType::Int64);
         assert_eq!(parse_data_type("float").unwrap(), DataType::Float32);
@@ -313,7 +260,7 @@ mod tests {
 
     #[test]
     fn parse_data_type_rejects_unknown_and_malformed() {
-        // Bare varchar/char/interval/variant refuse-loud (Q7) unless types.py claims cast.
+        // Bare varchar, char, interval, and variant require an explicit cast.
         assert!(parse_data_type("varchar").is_err());
         assert!(parse_data_type("char").is_err());
         assert!(parse_data_type("interval").is_err());
@@ -323,12 +270,11 @@ mod tests {
         assert!(parse_data_type("decimal(x,4)").is_err());
     }
 
-    /// r25 T3: nested Alias chains peel to one outer rename (plan shows one ``AS name``).
+    /// Nested aliases collapse to one outer rename.
     #[test]
     fn collapse_identity_alias_chain_peels_same_name_stack() {
         let stacked = col("close").alias("close").alias("close").alias("close");
         let collapsed = collapse_identity_alias_chain(stacked);
-        // Exactly one outer Alias named close over a non-alias leaf.
         match collapsed {
             Expr::Alias(alias) => {
                 assert_eq!(alias.name, "close");
@@ -340,7 +286,6 @@ mod tests {
             }
             other => panic!("expected single Alias, got {other:?}"),
         }
-        // Same-name rename chain peels to one outer alias.
         let renamed = col("close").alias("c").alias("c");
         match collapse_identity_alias_chain(renamed) {
             Expr::Alias(alias) => {
@@ -349,7 +294,6 @@ mod tests {
             }
             other => panic!("expected single Alias rename, got {other:?}"),
         }
-        // Distinct intermediate rename also peels (… AS a AS b → … AS b) — octo C1-Q-006.
         let chain = col("close").alias("a").alias("b");
         match collapse_identity_alias_chain(chain) {
             Expr::Alias(alias) => {
@@ -358,20 +302,17 @@ mod tests {
             }
             other => panic!("expected single outer Alias b, got {other:?}"),
         }
-        // Non-alias expr is a no-op.
         let bare = col("close");
         assert!(matches!(
             collapse_identity_alias_chain(bare.clone()),
             Expr::Column(_)
         ));
-        // Idempotent.
         let once = collapse_identity_alias_chain(col("x").alias("x").alias("x"));
         let twice = collapse_identity_alias_chain(once.clone());
         assert_eq!(format!("{once}"), format!("{twice}"));
     }
 
-    /// r25 morning critic pin: the outer Alias's qualifier + Arrow field metadata survive the
-    /// peel, and a non-nested Alias round-trips byte-identical (no silent rebuild).
+    /// Alias qualification and field metadata survive nested-alias collapse.
     #[test]
     fn collapse_identity_alias_chain_preserves_qualifier_and_metadata() {
         use datafusion::common::metadata::FieldMetadata;
@@ -381,10 +322,8 @@ mod tests {
             "repark.origin".to_string(),
             "t3-pin".to_string(),
         )]));
-        // Lone qualified+metadata alias is returned unchanged (no rebuild path).
         let lone = col("x").alias_qualified_with_metadata(Some("t"), "y", Some(metadata.clone()));
         assert_eq!(collapse_identity_alias_chain(lone.clone()), lone);
-        // Nested stack under a qualified+metadata outer alias: stack peels, identity stays.
         let stacked = col("x")
             .alias("x")
             .alias("x")

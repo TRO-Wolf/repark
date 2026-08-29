@@ -1,8 +1,8 @@
 """TPC-DS query texts from DuckDB ``tpcds_queries()`` plus an optional rewrite table.
 
 Rewrites are dialect compatibility only — every rewrite is a disclosed finding, never a
-semantic weakening of the benchmark. Query provenance: DuckDB's shipped ``tpcds``
-extension (``tpcds_queries()``) — **not** vendored TPC Council specification text.
+semantic weakening. Query text provenance: DuckDB's shipped ``tpcds`` extension, not
+vendored TPC Council specification text.
 """
 
 from __future__ import annotations
@@ -29,9 +29,9 @@ class TpcdsQuery(BaseModel):
         return sql_has_order_by(self.sql_for_repark)
 
 
-# Dialect rewrites applied ONLY when repark cannot parse the DuckDB/canonical text.
-# Keys are query numbers (1..99). Value: (rewritten_sql, disclosure note).
-# Start empty — populate only after a verified dialect gap (not a wrong-result massage).
+# Dialect rewrites applied ONLY when repark cannot parse the canonical text.
+# Keys are query numbers, values (rewritten_sql, disclosure note). Populate only on a
+# verified dialect gap — never a wrong-result massage.
 DIALECT_REWRITES: Final[dict[int, tuple[str, str]]] = {}
 
 _ORDER_BY_RE: Final[re.Pattern[str]] = re.compile(r"\border\s+by\b", re.IGNORECASE)

@@ -3,46 +3,32 @@
 
 This module is the SSOT for RePark's crate structure: `TIERS` is the tier map, `ROLES` names
 what each crate IS architecturally, and `ALLOWED_EDGES` is the explicit table of every internal
-dependency edge together with the dependency KINDS it may take. Prose (`crates/map.md`,
-`ARCHITECTURE.md`, `AGENTS.md`, `repo-manifest.toml`) points here rather than restating any of
-the three.
+dependency edge with the dependency KINDS it may take. Prose points here rather than restating
+any of the three.
 
-Dependency kinds, the vocabulary of the policy:
-
-    normal    a product edge — it ships in the built artifact
-    optional  a product edge behind a cargo feature (`optional = true`)
-    dev       a test/bench-only edge; invisible to the product graph
-    build     a build-script edge
+Dependency kinds: `normal` — a product edge; `optional` — a product edge behind a cargo
+feature; `dev` — a test/bench-only edge, invisible to the product graph; `build` — a
+build-script edge.
 
 Four rules, checked in this order:
 
-1. **Declaration audit.** The policy table itself must obey the structural rules below — a
-   forbidden edge cannot be legalized by writing it down. Adding the row is exactly the change
-   a reviewer must be able to see fail.
-2. **Explicit allowed edges.** Every observed internal edge must appear in `ALLOWED_EDGES`,
-   with its kind permitted for that pair. A new edge — including a SAME-TIER one, which the
-   layering rule alone would wave through — fails until it is declared with a reason.
-3. **Structural rules** (over `ROLES`, applied to declared AND observed edges):
-   no door -> door edge outside `dev`; nothing may depend on the bindings adapter; the
-   foundation crate depends on nothing internal; a capability (kernel/function) crate never
-   depends on a user-facing door.
-4. **Layering** (the original BH4 rule, unchanged): no `repark-*` crate may depend on a
-   STRICTLY HIGHER tier over a PRODUCT edge (`normal` / `optional`); same-tier edges are
-   allowed.
+1. Declaration audit. The policy table itself must obey the structural rules below — a
+   forbidden edge cannot be legalized by writing it down.
+2. Explicit allowed edges. Every observed internal edge must appear in `ALLOWED_EDGES` with its
+   kind permitted for that pair; a new edge, including a SAME-TIER one, fails until declared
+   with a reason.
+3. Structural rules (over `ROLES`, applied to declared AND observed edges): no door -> door
+   edge outside `dev`; nothing may depend on the bindings adapter; the foundation crate depends
+   on nothing internal; a capability (kernel/function) crate never depends on a user-facing
+   door.
+4. Layering (the original BH4 rule, unchanged): no `repark-*` crate may depend on a STRICTLY
+   HIGHER tier over a PRODUCT edge (`normal` / `optional`); same-tier edges are allowed.
 
-Why the layering rule stays an *intent* rule (what each crate is FOR, not how deep it currently
-sits): same-tier edges are legitimate, a strict "must be strictly lower" rule would red-flag
-them, and over *measured* depth it degenerates into a cycle check that Cargo already enforces
-as a hard error. What rule 4 catches is the acyclic-but-INVERTED edge — a foundation crate
-reaching up into an orchestration crate — which Cargo accepts happily and which no prose
-invariant can prevent. Rules 1-3 are what the tier map alone could never express: WHICH
-edges exist at all, and in which kind.
-
-Scope: INTERNAL means any Cargo workspace member — membership, not the `repark-` name, is the
-test, so a member outside the naming convention is policed like any other. All four kinds are in
-scope for the edge table (that is how the dev-only cross-door edge is expressible without
-permitting a product one); only PRODUCT kinds are subject to the tier rule, because a test-only
-edge is not a layering statement. Third-party crates are out of scope.
+Rule 4 stays an intent rule (what each crate is FOR, not measured depth): what it catches is
+the acyclic-but-INVERTED edge Cargo accepts and no prose invariant can prevent. Scope:
+INTERNAL means any Cargo workspace member — membership, not the `repark-` name, is the test.
+All four kinds are in scope for the edge table; only PRODUCT kinds are subject to the tier
+rule; third-party crates are out of scope.
 """
 
 from __future__ import annotations
@@ -50,11 +36,9 @@ from __future__ import annotations
 import json
 import sys
 
-# Internal = any Cargo workspace member (`cargo metadata --no-deps` lists exactly that set) —
-# MEMBERSHIP, not the name, is what makes a crate internal, so a member outside the `repark-`
-# naming convention is policed like any other. The prefix is belt-and-braces on the TARGET side
-# only: a third-party dependency that carries the family name is pulled into inspection (and
-# reds as unclassified) rather than silently skipped.
+# Internal = any Cargo workspace member: membership, not the name, makes a crate internal. The
+# prefix is belt-and-braces on the TARGET side only: a third-party dep carrying the family name
+# is inspected (and reds as unclassified), never silently skipped.
 INTERNAL_PREFIX = "repark-"
 
 # The dependency-kind vocabulary. `normal` / `optional` are PRODUCT kinds: they ship.
@@ -67,19 +51,15 @@ TIER_NAMES: dict[int, str] = {
     1: "table service",
     2: "engine session",
     3: "surface crates",
-    # Tier 4 exists so this guard states the real rule: no engine crate may ever reach the
-    # bindings adapter. `repark-python` is the only member and nothing may depend on it.
+    # Tier 4 states the real rule: nothing may ever depend on the bindings adapter.
     4: "bindings",
 }
 
-# The tier map. A new `repark-*` crate MUST be added here or this guard fails loudly —
-# an unclassified crate is an unstated layering claim. Crates listed here that do not exist
-# in the workspace yet are simply not inspected (the guard reads `cargo metadata`), so the
-# map may carry the phase-1 target shape before every crate lands.
-#
-# `repark-iceberg`'s catalog half deliberately speaks `datafusion::error::Result` (no
-# error-seed dependency on that surface); the conversion happens in `repark-core`. That is a
-# documented choice, not a missing edge — this guard only bans edges, it never requires one.
+# A new `repark-*` crate MUST be added here or this guard fails loudly — an unclassified crate
+# is an unstated layering claim. Rows for crates not yet in the workspace are simply not
+# inspected, so the map may carry the target shape. `repark-iceberg`'s catalog half
+# deliberately speaks `datafusion::error::Result` (converted in `repark-core`): a documented
+# choice, not a missing edge — this guard only bans edges, it never requires one.
 TIERS: dict[str, int] = {
     "repark-common": 0,
     "repark-iceberg": 1,
@@ -92,18 +72,16 @@ TIERS: dict[str, int] = {
     "repark-python": 4,
 }
 
-# The role vocabulary. `forbidden_reason` quantifies over exactly these; `audit_policy` rejects
-# any ROLES value outside this set, because an unrecognized role would match no structural rule
-# and silently disable every rule that quantifies over it (a one-character typo must fail
-# loudly, never pass quietly).
+# The role vocabulary. The structural rules quantify over exactly these; `audit_policy`
+# rejects any ROLES value outside this set, because an unrecognized role matches no rule and
+# must fail loudly, never pass quietly.
 ROLE_NAMES: frozenset[str] = frozenset(
     {"foundation", "table service", "engine", "capability", "door", "bindings"}
 )
 
-# What each crate IS, architecturally — the vocabulary the structural rules quantify over.
-# A tier says how deep a crate sits; a role says what it is FOR, which is what makes
-# "no door -> door edge" and "nothing depends on the bindings" statable at all. Every crate in
-# `TIERS` needs a row here (and vice versa) or the declaration audit fails.
+# What each crate IS, architecturally — the vocabulary the structural rules quantify over. A
+# tier says how deep a crate sits; a role says what it is FOR. Every crate in `TIERS` needs a
+# row here (and vice versa) or the declaration audit fails.
 #
 #   foundation     the bottom: shared seed types, no internal deps
 #   table service  the Iceberg surface (catalogs + the write adapter over the owned fork)
@@ -123,11 +101,9 @@ ROLES: dict[str, str] = {
     "repark-python": "bindings",
 }
 
-# The explicit edge table: (source, target) -> (permitted kinds, why the edge exists).
-# EVERY internal edge in the workspace must appear here. Adding a dependency is therefore a
-# two-file change — the manifest and this table — and the reason travels with it. Rows whose
-# endpoints both exist in the workspace but whose edge is gone are reported as stale, so the
-# table describes reality rather than history.
+# The explicit edge table: (source, target) -> (permitted kinds, why the edge exists). EVERY
+# internal edge must appear here, so adding a dependency is a two-file change — the manifest
+# and this table. Rows whose endpoints both exist but whose edge is gone are reported as stale.
 ALLOWED_EDGES: dict[tuple[str, str], tuple[frozenset[str], str]] = {
     ("repark-core", "repark-common"): (
         frozenset({"normal"}),
@@ -257,8 +233,7 @@ def forbidden_reason(source: str, target: str, kind: str) -> str | None:
     """Return why this edge SHAPE is structurally forbidden, or None if it is permitted.
 
     Role-based, so it holds for edges that do not exist yet: it is applied to the declared
-    policy table as well as to the observed workspace, which is what stops a forbidden edge
-    from being legalized by adding a row.
+    policy table as well as to the observed workspace.
     """
     source_role = ROLES.get(source, "unclassified")
     target_role = ROLES.get(target, "unclassified")
@@ -387,14 +362,13 @@ def check_edge(source: str, target: str, kind: str) -> list[str]:
 def collect_violations(metadata: dict) -> tuple[list[str], dict[str, int]]:
     """Return (error messages, edge counts by kind).
 
-    Errors cover unclassified `repark-*` crates, undeclared or wrongly-kinded edges, forbidden
-    edge shapes, layering inversions, and stale policy rows. The counts are reported on success
-    so a silently-empty run (wrong metadata, wrong cwd) is visible.
+    Counts are reported on success so a silently-empty run (wrong metadata, wrong cwd) is
+    visible.
     """
     errors: list[str] = []
     counts: dict[str, int] = dict.fromkeys(sorted(KINDS), 0)
     # With `--no-deps`, `packages` IS the workspace-member set: every member is internal and
-    # policed, whatever it is named (see the INTERNAL_PREFIX note).
+    # policed, whatever it is named.
     packages = list(metadata.get("packages", []))
     present = {p["name"] for p in packages}
 
@@ -425,8 +399,8 @@ def collect_violations(metadata: dict) -> tuple[list[str], dict[str, int]]:
             observed.add((source, target))
             errors.extend(check_edge(source, target, kind))
 
-    # A row that describes an edge which no longer exists is drift. Only reported when BOTH
-    # endpoints are present in the workspace, so rows for pre-declared crates stay legal.
+    # Drift: a declared edge that no longer exists. Only reported when BOTH endpoints are
+    # present in the workspace, so rows for pre-declared crates stay legal.
     for source, target in sorted(ALLOWED_EDGES):
         if source in present and target in present and (source, target) not in observed:
             errors.append(
@@ -466,9 +440,8 @@ def main() -> int:
         return 1
     edge_count = sum(counts.values())
     if edge_count == 0 and internal_count > 1:
-        # With 2+ internal crates present the workspace must have at least one internal edge;
-        # zero means the metadata (or cwd) is wrong. A single-crate workspace legitimately
-        # has zero internal edges (the phase-1 PR-A state), so it is not an error.
+        # With 2+ internal crates the workspace must have at least one internal edge; a
+        # single-crate workspace legitimately has zero, so it is not an error.
         print(
             "ERROR: crate-dag inspected zero internal edges — metadata looks wrong.",
             file=sys.stderr,

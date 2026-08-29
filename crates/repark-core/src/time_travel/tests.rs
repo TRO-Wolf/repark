@@ -40,7 +40,7 @@ fn parse_timestamp_ms_and_strings() {
     let with_time = parse_timestamp_to_ms("2020-01-15 12:30:00").unwrap();
     assert!(with_time > date_only);
     assert!(parse_timestamp_to_ms("not-a-time").is_err());
-    // RFC3339 / Zulu (octo C3-Q-001) — must equal naive UTC midnight.
+    // RFC3339 / Zulu — must equal naive UTC midnight.
     assert_eq!(
         parse_timestamp_to_ms("2020-01-15T00:00:00Z").unwrap(),
         date_only

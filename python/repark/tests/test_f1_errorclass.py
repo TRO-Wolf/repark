@@ -1,4 +1,4 @@
-"""F1 true-EC residual pins — class + parameter-key equality only.
+"""True-EC residual pins — class + parameter-key equality only.
 
 Covers array.array unsupported typecodes, calendar-interval collect refuse,
 ``_merge_type`` / ``_make_type_verifier`` (Apache test_types private helpers).
@@ -37,9 +37,7 @@ def spark() -> ReparkSession:
     _reset_active_session_for_tests()
 
 
-# ==================================================================================================
 # test_array_types residual — unsupported array.array typecodes
-# ==================================================================================================
 
 
 def test_array_array_supported_int_collects(spark: ReparkSession) -> None:
@@ -66,9 +64,7 @@ def test_array_array_unsupported_typecode_cannot_infer_field(spark: ReparkSessio
         assert caught.value.getMessageParameters() == {"field_name": "myarray"}
 
 
-# ==================================================================================================
 # test_cal_interval_in_collect residual
-# ==================================================================================================
 
 
 def test_cal_interval_make_interval_collect_not_implemented(spark: ReparkSession) -> None:
@@ -78,9 +74,7 @@ def test_cal_interval_make_interval_collect_not_implemented(spark: ReparkSession
     assert caught.value.getErrorClass() == "NOT_IMPLEMENTED"
 
 
-# ==================================================================================================
 # _merge_type / _make_type_verifier (Apache private helpers)
-# ==================================================================================================
 
 
 def test_merge_type_null_identity_and_same() -> None:
@@ -142,7 +136,7 @@ def test_make_type_verifier_nested_unacceptable_with_name() -> None:
 
 
 def test_make_type_verifier_integer_rejects_bool_and_float() -> None:
-    """octo C3-Q-002: IntegerType must not soft-accept bool/float."""
+    """IntegerType must not soft-accept bool/float."""
     verifier = _make_type_verifier(IntegerType(), name="n")
     for bad in (True, False, 1.5, "1"):
         with pytest.raises(PySparkTypeError) as caught:
@@ -150,7 +144,7 @@ def test_make_type_verifier_integer_rejects_bool_and_float() -> None:
         assert caught.value.getErrorClass() == "FIELD_DATA_TYPE_UNACCEPTABLE_WITH_NAME"
         assert caught.value.getMessageParameters() is not None
         assert caught.value.getMessageParameters()["field_name"] == "n"
-    verifier(42)  # plain int still ok
+    verifier(42)
 
 
 def test_merge_type_map_key_string_atomic_soft_merge() -> None:

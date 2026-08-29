@@ -1,4 +1,4 @@
-"""U8 classic scalar Python udf: per-row facade projection-rewrite over mapInArrow."""
+"""Classic scalar Python udf: per-row facade projection-rewrite over mapInArrow."""
 
 from __future__ import annotations
 
@@ -265,7 +265,7 @@ def test_sql_udf_with_pass_through(spark: SparkSession) -> None:
 
 
 def test_sql_udf_in_where_rewrites(spark: SparkSession) -> None:
-    """U8 residual / U10: WHERE scalar UDF rewrites (was refuse-loud)."""
+    """Residual: WHERE scalar UDF rewrites."""
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     frame = spark.createDataFrame([(1,), (2,)], "a long")
     frame.createOrReplaceTempView("t_udf3")
@@ -303,7 +303,7 @@ def test_udf_as_nondeterministic() -> None:
 
 
 def test_sql_udf_name_in_string_literal_not_scanned(spark: SparkSession) -> None:
-    """Registry scan must ignore UDF name text inside SQL string literals (octo C1-L-001)."""
+    """Registry scan must ignore UDF name text inside SQL string literals."""
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     frame = spark.createDataFrame([(1,)], "a long")
     frame.createOrReplaceTempView("t_udf_str")
@@ -312,7 +312,7 @@ def test_sql_udf_name_in_string_literal_not_scanned(spark: SparkSession) -> None
 
 
 def test_sql_udf_name_in_comment_not_scanned(spark: SparkSession) -> None:
-    """Registry scan must ignore UDF name text inside SQL comments (octo C1-L-001)."""
+    """Registry scan must ignore UDF name text inside SQL comments."""
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     frame = spark.createDataFrame([(7,)], "a long")
     frame.createOrReplaceTempView("t_udf_cmt")
@@ -332,7 +332,7 @@ def test_sql_udf_name_in_where_string_not_scanned(spark: SparkSession) -> None:
 
 
 def test_spark_udf_register_name_must_be_simple_ident(spark: SparkSession) -> None:
-    """Register names are simple SQL identifiers (octo C1-Q-002)."""
+    """Register names are simple SQL identifiers."""
     with pytest.raises(PySparkTypeError, match=r"simple SQL identifier"):
         spark.udf.register("my-udf", lambda x: x, "long")
     with pytest.raises(PySparkTypeError, match=r"simple SQL identifier"):
@@ -342,7 +342,7 @@ def test_spark_udf_register_name_must_be_simple_ident(spark: SparkSession) -> No
 
 
 def test_sql_udf_qualified_column_arg(spark: SparkSession) -> None:
-    """SELECT-list simple form accepts qualified column args ``t.a`` (octo C2-L-001)."""
+    """SELECT-list simple form accepts qualified column args ``t.a``."""
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     frame = spark.createDataFrame([(1,), (2,)], "a long")
     frame.createOrReplaceTempView("t_udf_qual")
@@ -353,7 +353,7 @@ def test_sql_udf_qualified_column_arg(spark: SparkSession) -> None:
 
 
 def test_sql_udf_nested_subquery_message(spark: SparkSession) -> None:
-    """Nested UDF refuse names nested subquery (not 'outside SELECT list') — octo C2-Q-001."""
+    """Nested UDF refuse names nested subquery (not 'outside SELECT list')."""
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     frame = spark.createDataFrame([(1,)], "a long")
     frame.createOrReplaceTempView("t_udf_nest")
@@ -362,7 +362,7 @@ def test_sql_udf_nested_subquery_message(spark: SparkSession) -> None:
 
 
 def test_udf_decimal_float_coercion(spark: SparkSession) -> None:
-    """Python float/int coerce into declared decimal returnType (octo C2-L-002)."""
+    """Python float/int coerce into declared decimal returnType."""
 
     @udf("decimal(10,2)")
     def as_dec(value: object) -> object:
@@ -379,7 +379,7 @@ def test_udf_decimal_float_coercion(spark: SparkSession) -> None:
 
 
 def test_spark_udf_register_case_insensitive_overwrite(spark: SparkSession) -> None:
-    """Second register differing only by case replaces the first (octo C3-L-001)."""
+    """Second register differing only by case replaces the first."""
     spark.udf.register("CamelCase", lambda x: int(x) + 1 if x is not None else None, "long")
     spark.udf.register("camelcase", lambda x: 0 if x is not None else None, "long")
     registry = spark._udf_registry()
@@ -410,7 +410,7 @@ def test_sql_udf_plan_captures_function_at_sql_time(spark: SparkSession) -> None
 
 
 def test_sql_udf_comment_between_name_and_paren(spark: SparkSession) -> None:
-    """``udf /*c*/ (col)`` still rewrites (octo C4-L-001)."""
+    """``udf /*c*/ (col)`` still rewrites."""
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     frame = spark.createDataFrame([(3,)], "a long")
     frame.createOrReplaceTempView("t_udf_cmt2")
@@ -421,7 +421,7 @@ def test_sql_udf_comment_between_name_and_paren(spark: SparkSession) -> None:
 
 
 def test_udf_join_union_after_projection(spark: SparkSession) -> None:
-    """Materialized udf columns compose with join/union (octo C4 composition pin)."""
+    """Materialized udf columns compose with join/union (composition pin)."""
 
     @udf("long")
     def double_long(value: int | None) -> int | None:
@@ -437,7 +437,7 @@ def test_udf_join_union_after_projection(spark: SparkSession) -> None:
 
 
 def test_sql_udf_sibling_engine_func_without_as(spark: SparkSession) -> None:
-    """Pass-through engine calls without AS keep Spark-style names (octo C5-L-001)."""
+    """Pass-through engine calls without AS keep Spark-style names."""
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     frame = spark.createDataFrame([(1,), (-2,)], "a long")
     frame.createOrReplaceTempView("t_udf_abs")
@@ -453,14 +453,14 @@ def test_sql_udf_sibling_engine_func_without_as(spark: SparkSession) -> None:
 
 
 def test_sql_udf_values_source(spark: SparkSession) -> None:
-    """SELECT-list UDF over VALUES/subquery FROM (octo C5)."""
+    """SELECT-list UDF over VALUES/subquery FROM."""
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     out = spark.sql("SELECT my_double(a) AS b FROM (VALUES (1), (2)) AS t(a)").to_arrow()
     assert _multiset(_rows(out)) == _multiset([{"b": 2}, {"b": 4}])
 
 
 def test_udf_multi_arg_null_propagation(spark: SparkSession) -> None:
-    """Null in any multi-arg input: user sees None (octo C6 S0 fresh-exec pin)."""
+    """Null in any multi-arg input: user sees None (fresh-exec pin)."""
 
     @udf("long")
     def add_long(left: int | None, right: int | None) -> int | None:
@@ -474,7 +474,7 @@ def test_udf_multi_arg_null_propagation(spark: SparkSession) -> None:
 
 
 def test_sql_mask_helpers_unit() -> None:
-    """Pure helper pins for registry scan mask / comment strip (octo C6)."""
+    """Pure helper pins for registry scan mask / comment strip."""
     from repark.spark.session import (
         _parse_simple_sql_udf_call,
         _sql_mask_strings_and_comments,
@@ -502,13 +502,11 @@ def test_sql_mask_helpers_unit() -> None:
     assert _sql_udf_in_nested_subquery(nest_sql, nest_at) is True
 
 
-# ---------------------------------------------------------------------------
-# U9 — SQL UDF composition (expression wrap / CTE / DISTINCT / ORDER BY alias)
-# ---------------------------------------------------------------------------
+# SQL UDF composition (expression wrap / CTE / DISTINCT / ORDER BY alias)
 
 
 def test_sql_udf_expression_wrap_plus(spark: SparkSession) -> None:
-    """SELECT-list ``my_udf(col) + 1`` materializes UDF then residual engine expr (U9)."""
+    """SELECT-list ``my_udf(col) + 1`` materializes UDF then residual engine expr."""
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     frame = spark.createDataFrame([(1,), (2,)], "a long")
     frame.createOrReplaceTempView("t_u9_wrap")
@@ -517,7 +515,7 @@ def test_sql_udf_expression_wrap_plus(spark: SparkSession) -> None:
 
 
 def test_sql_udf_expression_wrap_cast(spark: SparkSession) -> None:
-    """``CAST(my_udf(x) AS …)`` is expression-wrap, not nested-subquery refuse (U9)."""
+    """``CAST(my_udf(x) AS …)`` is expression-wrap, not nested-subquery refuse."""
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     frame = spark.createDataFrame([(3,)], "v long")
     frame.createOrReplaceTempView("t_u9_cast")
@@ -526,7 +524,7 @@ def test_sql_udf_expression_wrap_cast(spark: SparkSession) -> None:
 
 
 def test_sql_udf_nested_registered_calls(spark: SparkSession) -> None:
-    """Nested ``f(g(x))`` of registered UDFs in SELECT list (U9 multi-stage)."""
+    """Nested ``f(g(x))`` of registered UDFs in SELECT list (multi-stage)."""
     spark.udf.register("g_dbl", lambda x: None if x is None else int(x) * 2, "long")
     spark.udf.register("f_inc", lambda x: None if x is None else int(x) + 1, "long")
     frame = spark.createDataFrame([(1,), (2,)], "x long")
@@ -536,7 +534,7 @@ def test_sql_udf_nested_registered_calls(spark: SparkSession) -> None:
 
 
 def test_sql_udf_abs_wrap(spark: SparkSession) -> None:
-    """Engine function wrapping a registered UDF (``abs(my_udf(x))``) (U9)."""
+    """Engine function wrapping a registered UDF (``abs(my_udf(x))``)."""
     spark.udf.register("my_neg", lambda x: None if x is None else -int(x), "long")
     frame = spark.createDataFrame([(1,), (2,)], "a long")
     frame.createOrReplaceTempView("t_u9_abs")
@@ -545,7 +543,7 @@ def test_sql_udf_abs_wrap(spark: SparkSession) -> None:
 
 
 def test_sql_udf_with_cte_body(spark: SparkSession) -> None:
-    """UDF inside WITH/CTE body rewrites per region (U9)."""
+    """UDF inside WITH/CTE body rewrites per region."""
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     frame = spark.createDataFrame([(1,), (2,)], "v long")
     frame.createOrReplaceTempView("t_u9_cte_src")
@@ -556,7 +554,7 @@ def test_sql_udf_with_cte_body(spark: SparkSession) -> None:
 
 
 def test_sql_udf_distinct_projection(spark: SparkSession) -> None:
-    """SELECT DISTINCT with UDF projection (post-materialization dedup) (U9)."""
+    """SELECT DISTINCT with UDF projection (post-materialization dedup)."""
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     frame = spark.createDataFrame([(1,), (1,), (2,)], "v long")
     frame.createOrReplaceTempView("t_u9_dist")
@@ -565,7 +563,7 @@ def test_sql_udf_distinct_projection(spark: SparkSession) -> None:
 
 
 def test_sql_udf_order_by_alias(spark: SparkSession) -> None:
-    """ORDER BY UDF output alias works; never leaks ``__repark_sql_udf_*`` (U9 Q13)."""
+    """ORDER BY UDF output alias works; never leaks ``__repark_sql_udf_*``."""
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     frame = spark.createDataFrame([(3,), (1,), (2,)], "v long")
     frame.createOrReplaceTempView("t_u9_ord")
@@ -576,7 +574,7 @@ def test_sql_udf_order_by_alias(spark: SparkSession) -> None:
 
 
 def test_sql_udf_group_by_alias(spark: SparkSession) -> None:
-    """GROUP BY on UDF alias materializes then groups (U10); no internal-name leak."""
+    """GROUP BY on UDF alias materializes then groups; no internal-name leak."""
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     frame = spark.createDataFrame([(1,), (1,), (2,)], "v long")
     frame.createOrReplaceTempView("t_u10_gb")
@@ -586,7 +584,7 @@ def test_sql_udf_group_by_alias(spark: SparkSession) -> None:
 
 
 def test_sql_udf_where_filter(spark: SparkSession) -> None:
-    """WHERE scalar UDF rewrites and filters (U10); never leaks ``__repark_sql_udf_*``."""
+    """WHERE scalar UDF rewrites and filters; never leaks ``__repark_sql_udf_*``."""
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     frame = spark.createDataFrame([(1,), (2,), (3,)], "a long")
     frame.createOrReplaceTempView("t_u10_where")
@@ -596,7 +594,7 @@ def test_sql_udf_where_filter(spark: SparkSession) -> None:
 
 
 def test_sql_udf_where_with_select_udf(spark: SparkSession) -> None:
-    """SELECT + WHERE both using registered UDF (U10)."""
+    """SELECT + WHERE both using registered UDF."""
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     frame = spark.createDataFrame([(1,), (2,), (3,)], "a long")
     frame.createOrReplaceTempView("t_u10_where_sel")
@@ -607,7 +605,7 @@ def test_sql_udf_where_with_select_udf(spark: SparkSession) -> None:
 
 
 def test_sql_udf_group_by_matching_expression(spark: SparkSession) -> None:
-    """GROUP BY my_udf(v) when SELECT projects the same call (U10)."""
+    """GROUP BY my_udf(v) when SELECT projects the same call."""
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     frame = spark.createDataFrame([(1,), (1,), (2,)], "v long")
     frame.createOrReplaceTempView("t_u10_gb_expr")
@@ -616,7 +614,7 @@ def test_sql_udf_group_by_matching_expression(spark: SparkSession) -> None:
 
 
 def test_sql_udf_having_on_alias(spark: SparkSession) -> None:
-    """HAVING on UDF SELECT alias after keys-only GROUP BY (U10)."""
+    """HAVING on UDF SELECT alias after keys-only GROUP BY."""
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     frame = spark.createDataFrame([(1,), (1,), (2,), (3,)], "v long")
     frame.createOrReplaceTempView("t_u10_having")
@@ -625,7 +623,7 @@ def test_sql_udf_having_on_alias(spark: SparkSession) -> None:
 
 
 def test_sql_udf_group_by_agg_refuses_loud_no_leak(spark: SparkSession) -> None:
-    """GROUP BY + aggregate SELECT still refuses loud without internal leak (U10 bound)."""
+    """GROUP BY + aggregate SELECT still refuses loud without internal leak."""
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     frame = spark.createDataFrame([(1,), (2,)], "v long")
     frame.createOrReplaceTempView("t_u10_gb_agg")
@@ -635,7 +633,7 @@ def test_sql_udf_group_by_agg_refuses_loud_no_leak(spark: SparkSession) -> None:
 
 
 def test_sql_udf_join_on_still_refused(spark: SparkSession) -> None:
-    """UDF in JOIN ON remains refuse-loud (not U10)."""
+    """UDF in JOIN ON remains refuse-loud."""
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     left = spark.createDataFrame([(1,)], "a long")
     right = spark.createDataFrame([(2,)], "b long")
@@ -649,7 +647,7 @@ def test_sql_udf_join_on_still_refused(spark: SparkSession) -> None:
 
 
 def test_sql_udf_where_compound_base_column(spark: SparkSession) -> None:
-    """Compound WHERE: UDF residual + base column ref rewrites (U10 C1)."""
+    """Compound WHERE: UDF residual + base column ref rewrites."""
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     frame = spark.createDataFrame([(1, "x"), (2, "y"), (3, "z")], "a long, s string")
     frame.createOrReplaceTempView("t_u10_compound")
@@ -662,7 +660,7 @@ def test_sql_udf_where_compound_base_column(spark: SparkSession) -> None:
 
 
 def test_sql_udf_having_aggregate_refuses_loud_no_leak(spark: SparkSession) -> None:
-    """Aggregate HAVING after UDF GROUP BY refuses loud without internal leak (U10 C1)."""
+    """Aggregate HAVING after UDF GROUP BY refuses loud without internal leak."""
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     frame = spark.createDataFrame([(1,), (1,), (2,)], "v long")
     frame.createOrReplaceTempView("t_u10_having_agg")
@@ -675,7 +673,7 @@ def test_sql_udf_having_aggregate_refuses_loud_no_leak(spark: SparkSession) -> N
 
 
 def test_sql_udf_group_by_having_whitespace_match(spark: SparkSession) -> None:
-    """GROUP BY / HAVING UDF expr match ignores interior whitespace (U10 C2)."""
+    """GROUP BY / HAVING UDF expr match ignores interior whitespace."""
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     frame = spark.createDataFrame([(1,), (1,), (2,)], "v long")
     frame.createOrReplaceTempView("t_u10_ws")
@@ -689,7 +687,7 @@ def test_sql_udf_group_by_having_whitespace_match(spark: SparkSession) -> None:
 
 
 def test_sql_udf_where_subquery_refuses_loud_no_leak(spark: SparkSession) -> None:
-    """WHERE UDF + nested subquery residual refuses loud (U10 C3)."""
+    """WHERE UDF + nested subquery residual refuses loud."""
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     frame = spark.createDataFrame([(1,), (2,)], "a long")
     frame.createOrReplaceTempView("t_u10_subq")
@@ -702,7 +700,7 @@ def test_sql_udf_where_subquery_refuses_loud_no_leak(spark: SparkSession) -> Non
 
 
 def test_udf_register_reserved_internal_prefix_refused(spark: SparkSession) -> None:
-    """Register names must not use ``__repark_sql_udf_*`` materialization prefix (U10 C5)."""
+    """Register names must not use ``__repark_sql_udf_*`` materialization prefix."""
     with pytest.raises(PySparkTypeError, match=r"__repark_sql_udf|reserved|materialization"):
         spark.udf.register("__repark_sql_udf_evil", lambda value: value, "long")
     with pytest.raises(PySparkTypeError, match=r"__repark_sql_udf|reserved|materialization"):
@@ -710,7 +708,7 @@ def test_udf_register_reserved_internal_prefix_refused(spark: SparkSession) -> N
 
 
 def test_sql_udf_where_cast_residual(spark: SparkSession) -> None:
-    """CAST in WHERE residual must not identity-project type tokens (U10 C6)."""
+    """CAST in WHERE residual must not identity-project type tokens."""
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     frame = spark.createDataFrame([(1,), (None,), (3,)], "a long")
     frame.createOrReplaceTempView("t_u10_cast")
@@ -808,7 +806,7 @@ def test_sql_udf_where_type_token_column_names(spark: SparkSession) -> None:
         "SELECT a FROM t_u10_typetok WHERE my_double(a) > 0 AND end = 20"
     ).to_arrow()
     assert _multiset(_rows(out_end)) == _multiset([{"a": 2}])
-    # CAST residual still must not invent type-token base columns (U10 C6 held).
+    # CAST residual still must not invent type-token base columns (held).
     out_cast = spark.sql(
         "SELECT a FROM t_u10_typetok WHERE CAST(my_double(a) AS BIGINT) > 4"
     ).to_arrow()
@@ -831,7 +829,7 @@ def test_sql_udf_where_quoted_from_column(spark: SparkSession) -> None:
 
 
 def test_udf_decorator_return_type_kw_and_usearrow() -> None:
-    """Complete ``@udf(returnType=…)`` / ``useArrow=`` decorator arg-forms (U9)."""
+    """Complete ``@udf(returnType=…)`` / ``useArrow=`` decorator arg-forms."""
 
     @udf(returnType="long", useArrow=True)
     def as_long(value: object) -> object:
@@ -856,13 +854,13 @@ def test_udf_decorator_return_type_kw_and_usearrow() -> None:
 
 
 def test_spark_udf_register_java_udaf_loud(spark: SparkSession) -> None:
-    """``registerJavaUDAF`` stays loud-unsupported (U8 carry / U9 pin)."""
+    """``registerJavaUDAF`` stays loud-unsupported."""
     with pytest.raises(UnsupportedOperationException, match=r"registerJavaUDAF|no JVM"):
         spark.udf.registerJavaUDAF("jagg", "com.example.UDAF")
 
 
 def test_sql_udf_unaliased_wrap_no_internal_name_leak(spark: SparkSession) -> None:
-    """Unaliased wrap/nested defaults never surface ``__repark_sql_udf_*`` (U9-C1-001)."""
+    """Unaliased wrap/nested defaults never surface ``__repark_sql_udf_*``."""
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     spark.udf.register("my_inc", lambda x: None if x is None else int(x) + 1, "long")
     frame = spark.createDataFrame([(1,), (2,)], "v long")
@@ -881,7 +879,7 @@ def test_sql_udf_unaliased_wrap_no_internal_name_leak(spark: SparkSession) -> No
 
 
 def test_sql_udf_cte_does_not_pollute_session_temp_view(spark: SparkSession) -> None:
-    """WITH materialization is query-scoped — pre-existing temp views are restored (U9-C1-002)."""
+    """WITH materialization is query-scoped — pre-existing temp views are restored."""
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     spark.createDataFrame([(1,), (2,)], "v long").createOrReplaceTempView("t_u9_cte_src2")
     spark.createDataFrame([(99,)], "z long").createOrReplaceTempView("c_u9_poll")
@@ -896,7 +894,7 @@ def test_sql_udf_cte_does_not_pollute_session_temp_view(spark: SparkSession) -> 
 
 
 def test_sql_udf_star_expansion_refuses_loud(spark: SparkSession) -> None:
-    """``SELECT *, udf(...)`` / ``udf, *`` refuse before engine ParseException (U9-C1-003)."""
+    """``SELECT *, udf(...)`` / ``udf, *`` refuse before engine ParseException."""
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     spark.createDataFrame([(1,)], "v long").createOrReplaceTempView("t_u9_star")
     with pytest.raises(UnsupportedOperationException, match=r"star \(\*\)|expansion") as caught:
@@ -908,7 +906,7 @@ def test_sql_udf_star_expansion_refuses_loud(spark: SparkSession) -> None:
 
 
 def test_sql_udf_register_count_does_not_break_count_star(spark: SparkSession) -> None:
-    """Registering a UDF named ``count`` must not hijack engine ``count(*)`` (U9-C2-001)."""
+    """Registering a UDF named ``count`` must not hijack engine ``count(*)``."""
     spark.udf.register("count", lambda x: 1 if x is not None else None, "long")
     frame = spark.createDataFrame([(1,), (2,), (3,)], "v long")
     frame.createOrReplaceTempView("t_u9_count")
@@ -921,7 +919,7 @@ def test_sql_udf_register_count_does_not_break_count_star(spark: SparkSession) -
 
 
 def test_sql_udf_set_op_refuses_with_set_message(spark: SparkSession) -> None:
-    """UNION / INTERSECT / EXCEPT + UDF refuse with a set-op message (U9-C2-002)."""
+    """UNION / INTERSECT / EXCEPT + UDF refuse with a set-op message."""
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     spark.createDataFrame([(1,)], "v long").createOrReplaceTempView("t_u9_union")
     with pytest.raises(UnsupportedOperationException, match=r"UNION|INTERSECT|EXCEPT"):
@@ -932,7 +930,7 @@ def test_sql_udf_set_op_refuses_with_set_message(spark: SparkSession) -> None:
 
 
 def test_sql_udf_user_exception_not_rewrite_uoe(spark: SparkSession) -> None:
-    """User UDF raises surface as PySparkException, not rewrite-shape UOE (U9-C3-001)."""
+    """User UDF raises surface as PySparkException, not rewrite-shape UOE."""
     from repark.errors import PySparkException
 
     def boom(value: object) -> object:
@@ -948,7 +946,7 @@ def test_sql_udf_user_exception_not_rewrite_uoe(spark: SparkSession) -> None:
 
 
 def test_sql_udf_cte_new_name_not_left_in_catalog(spark: SparkSession) -> None:
-    """WITH introduces a fresh CTE name only for the query — dropped after plan (U9-C3)."""
+    """WITH introduces a fresh CTE name only for the query — dropped after plan."""
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     spark.createDataFrame([(1,), (2,)], "v long").createOrReplaceTempView("t_u9_cte_drop")
     assert spark.catalog.tableExists("c_u9_fresh") is False
@@ -960,7 +958,7 @@ def test_sql_udf_cte_new_name_not_left_in_catalog(spark: SparkSession) -> None:
 
 
 def test_sql_udf_order_by_nulls_clause_refuses_loud(spark: SparkSession) -> None:
-    """ORDER BY … NULLS FIRST/LAST after UDF refuses loud (no silent ignore) (U9-C4-001)."""
+    """ORDER BY … NULLS FIRST/LAST after UDF refuses loud (no silent ignore)."""
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     frame = spark.createDataFrame([(None,), (1,), (2,)], "v long")
     frame.createOrReplaceTempView("t_u9_nulls")
@@ -972,7 +970,7 @@ def test_sql_udf_order_by_nulls_clause_refuses_loud(spark: SparkSession) -> None
 
 
 def test_sql_udf_optional_as_alias(spark: SparkSession) -> None:
-    """Spark optional-AS form ``SELECT udf(col) alias`` (no AS keyword) (U9-C5-001)."""
+    """Spark optional-AS form ``SELECT udf(col) alias`` (no AS keyword)."""
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     frame = spark.createDataFrame([(1,), (2,)], "v long")
     frame.createOrReplaceTempView("t_u9_optas")
@@ -985,7 +983,7 @@ def test_sql_udf_optional_as_alias(spark: SparkSession) -> None:
 
 
 def test_sql_udf_multi_arg_sql_and_literal(spark: SparkSession) -> None:
-    """Multi-arg registered UDF with column + literal in SQL SELECT list (U9-C5/C8)."""
+    """Multi-arg registered UDF with column + literal in SQL SELECT list."""
     spark.udf.register(
         "add2",
         lambda left, right: None if left is None or right is None else int(left) + int(right),
@@ -998,7 +996,7 @@ def test_sql_udf_multi_arg_sql_and_literal(spark: SparkSession) -> None:
 
 
 def test_sql_udf_cte_column_list_rename(spark: SparkSession) -> None:
-    """``WITH c(z) AS (SELECT udf(v) …)`` renames CTE outputs (U9-C6-001)."""
+    """``WITH c(z) AS (SELECT udf(v) …)`` renames CTE outputs."""
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     frame = spark.createDataFrame([(1,), (2,)], "v long")
     frame.createOrReplaceTempView("t_u9_cte_cols")
@@ -1010,7 +1008,7 @@ def test_sql_udf_cte_column_list_rename(spark: SparkSession) -> None:
 
 
 def test_sql_udf_sort_by_refuses_loud(spark: SparkSession) -> None:
-    """SORT BY / DISTRIBUTE BY / CLUSTER BY + UDF refuse loud (U9-C6/C7)."""
+    """SORT BY / DISTRIBUTE BY / CLUSTER BY + UDF refuse loud."""
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     frame = spark.createDataFrame([(1,)], "v long")
     frame.createOrReplaceTempView("t_u9_sortby")
@@ -1019,7 +1017,7 @@ def test_sql_udf_sort_by_refuses_loud(spark: SparkSession) -> None:
 
 
 def test_sql_udf_select_without_from(spark: SparkSession) -> None:
-    """``SELECT udf(lit)`` with no FROM clause (U9-C7-001)."""
+    """``SELECT udf(lit)`` with no FROM clause."""
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     out = spark.sql("SELECT my_double(3) AS z").to_arrow()
     assert _rows(out) == [{"z": 6}]
@@ -1027,13 +1025,11 @@ def test_sql_udf_select_without_from(spark: SparkSession) -> None:
     assert _rows(out_order) == [{"z": 2, "y": 4}]
 
 
-# =============================================================================
-# r22 U11 — residual keyword poles (F-E1 class extensions beyond T7 EXTRA)
-# =============================================================================
+# Residual keyword poles (F-E1 class extensions)
 
 
 def test_sql_udf_where_interval_day_residual(spark: SparkSession) -> None:
-    """INTERVAL unit tokens must not be identity-projected in UDF WHERE residual (U11)."""
+    """INTERVAL unit tokens must not be identity-projected in UDF WHERE residual."""
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     frame = spark.createDataFrame([(1,), (2,)], "a long")
     frame.createOrReplaceTempView("t_u11_interval")
@@ -1045,12 +1041,10 @@ def test_sql_udf_where_interval_day_residual(spark: SparkSession) -> None:
 
 
 def test_sql_udf_where_interval_to_unit_not_projected(spark: SparkSession) -> None:
-    """INTERVAL multi-unit trailing unit after ``TO`` is syntax, not a column (octo U11 C1).
+    """INTERVAL multi-unit trailing unit after ``TO`` is syntax, not a column.
 
-    Actor only skipped the unit immediately after INTERVAL; ``SECOND`` / ``MONTH`` after
-    ``TO`` were identity-projected / quote-rewritten → Schema error naming the unit as a
-    field. Residual rewrite must leave ``DAY TO SECOND`` intact. Engine may still UOE the
-    multi-unit form (same without UDF); must not leak ``__repark_sql_udf_*`` or claim a
+    Residual rewrite must leave ``DAY TO SECOND`` intact. The engine may still refuse the
+    multi-unit form (same without UDF); it must not leak ``__repark_sql_udf_*`` or claim a
     missing column named SECOND/MONTH.
     """
     from repark.spark.session import _sql_where_residual_base_projections
@@ -1092,11 +1086,10 @@ def test_sql_udf_where_interval_to_unit_not_projected(spark: SparkSession) -> No
 def test_sql_udf_where_date_timestamp_typed_literal_residual(
     spark: SparkSession,
 ) -> None:
-    """Typed ``DATE '…'`` / ``TIMESTAMP '…'`` constructors are syntax in residual (octo U11 C2).
+    """Typed ``DATE '…'`` / ``TIMESTAMP '…'`` constructors are syntax in residual.
 
-    Without this skip, residual projected ``DATE`` as a column and rewrote
-    ``extract(YEAR FROM DATE '…')`` → ``FROM "DATE" '…'`` (Schema error). Quoted column
-    named ``date`` still works; never leak internals.
+    Residual must not project ``DATE`` as a column or quote-rewrite the constructor. A
+    quoted column named ``date`` still works; never leak internals.
     """
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     frame = spark.createDataFrame([(1,), (2,)], "a long")
@@ -1122,11 +1115,10 @@ def test_sql_udf_where_date_timestamp_typed_literal_residual(
 
 
 def test_sql_udf_where_quoted_and_column(spark: SparkSession) -> None:
-    """Quoted residual column ``\"and\"`` must not break filter boolean keyword AND (U11).
+    """Quoted residual column ``\"and\"`` must not break the boolean AND keyword.
 
-    DataFrame.filter's SQL-string identifier rewriter case-steals ``AND`` when a column
-    named ``and`` sits on the materialization frame; residual projection must temp-alias
-    the column so the residual parses. Never leak ``__repark_sql_udf_*``.
+    The identifier rewriter can case-steal ``AND`` beside a column named ``and``; residual
+    projection must temp-alias it so the residual parses. Never leak ``__repark_sql_udf_*``.
     """
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     frame = spark.createDataFrame([(1, 5), (2, 9)], "a long, and long")
@@ -1137,7 +1129,7 @@ def test_sql_udf_where_quoted_and_column(spark: SparkSession) -> None:
 
 
 def test_sql_udf_where_quoted_or_column(spark: SparkSession) -> None:
-    """Quoted residual column ``\"or\"`` with boolean OR must not filter-steal (U11)."""
+    """Quoted residual column ``\"or\"`` with boolean OR must not filter-steal."""
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     frame = spark.createDataFrame([(1, 5), (0, 9)], "a long, or long")
     frame.createOrReplaceTempView("t_u11_or")
@@ -1150,10 +1142,10 @@ def test_sql_udf_where_quoted_or_column(spark: SparkSession) -> None:
 def test_sql_udf_where_bare_when_column_refuses_or_requires_quote(
     spark: SparkSession,
 ) -> None:
-    """Bare reserved CASE keyword column in residual is not a silent wrong answer (U11 pin).
+    """Bare reserved ``when`` column in residual is not a silent wrong answer.
 
-    Spark requires quotes for bare ``when``; repark either refuses loud or requires the
-    quoted form (pin-refuse autonomy). Quoted form must work; no internal name leak.
+    repark refuses loud or requires the quoted form; the quoted form must work; no
+    internal name leak.
     """
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     frame = spark.createDataFrame([(1, 5), (2, 9)], "a long, when long")

@@ -1,11 +1,4 @@
-//! Integration tests for the PyO3 bindings, driven from Rust.
-//!
-//! These run under `cargo test -p repark-python` (NOT `--all-features` — `extension-module`
-//! must stay off so libpython links). The `auto-initialize` dev-dependency boots an embedded
-//! interpreter, so `Python::attach` works without a built wheel. They exercise the same pyclass
-//! methods the Python facade calls: session construction, `sql` round-trip, `count`, `show`, and
-//! the zero-copy Arrow `PyCapsule` export (`__arrow_c_stream__`), re-importing the stream to prove it
-//! is a valid, consumable Arrow C stream carrying the right values.
+//! Rust integration tests for the PyO3 bindings and Arrow C stream boundary.
 
 use _native::{PyColumn, PyDataFrame, PyReparkSession};
 use arrow::array::{
@@ -30,13 +23,11 @@ fn session(py: Python<'_>) -> Py<PyReparkSession> {
 #[test]
 fn session_constructs_with_builder_knobs() {
     Python::attach(|py| {
-        // All knobs set: mirrors `.config("spark.…", …)` then `.getOrCreate()`.
+        // Exercise configured and default builder paths.
         let s = PyReparkSession::new(py, Some(2), Some(4096), Some(4), None);
         assert!(s.is_ok(), "session with knobs must build");
-        // `memory_limit_gb=0` opts out of the bounded pool and still builds.
         let mem0 = PyReparkSession::new(py, Some(0), None, None, None);
         assert!(mem0.is_ok(), "memory_limit_gb=0 must opt out and build");
-        // Explicit zero batch/partition knobs fail loud (Rust builder parity; P3C1-Q-002).
         let batch0 = PyReparkSession::new(py, None, Some(0), None, None);
         assert!(batch0.is_err(), "batch_size=0 must refuse");
         let parts0 = PyReparkSession::new(py, None, None, Some(0), None);
@@ -52,8 +43,6 @@ fn config_driven_memory_catalog_registers_through_the_constructor() {
     Python::attach(|py| {
         let warehouse = std::env::temp_dir().join(format!("repark_cfg_{}", std::process::id()));
         std::fs::create_dir_all(&warehouse).expect("warehouse dir");
-        // The source publish job's config block shape, AWS-free (`type = memory`); the whole
-        // map is passed to the native constructor exactly as the facade passes it.
         let config = HashMap::from([
             (
                 "spark.sql.catalog.glue_alt".to_string(),
@@ -94,7 +83,6 @@ fn config_driven_memory_catalog_registers_through_the_constructor() {
                 .expect("table_exists probes the catalog"),
         );
 
-        // A malformed catalog block raises at construction (build-time parse), naming the key.
         let bad = HashMap::from([("spark.sql.catalog.x.type".to_string(), "hive".to_string())]);
         let err = PyReparkSession::new(py, None, None, None, Some(bad))
             .map(|_| ())
@@ -118,14 +106,12 @@ fn sql_select_literals_round_trips_and_counts() {
             .expect("sql plans + runs");
         let df_cell = Py::new(py, df).expect("dataframe pyclass");
 
-        // count(): one row.
         assert_eq!(
             df_cell.borrow(py).count(py).expect("count runs"),
             1,
             "SELECT one literal row → count 1"
         );
 
-        // show(): renders a text table containing the literal values.
         let table = df_cell.borrow(py).show(py, 20).expect("show renders");
         assert!(
             table.contains('a') && table.contains('b'),
@@ -148,22 +134,20 @@ fn arrow_c_stream_exports_a_consumable_stream_with_correct_values() {
             .expect("sql plans + runs");
         let df_cell: Py<PyDataFrame> = Py::new(py, df).expect("dataframe pyclass");
 
-        // Call the dunder the way pyarrow/polars do.
         let capsule = df_cell
             .borrow(py)
             .__arrow_c_stream__(py, None)
             .expect("stream capsule produced");
 
-        // The Arrow C stream protocol mandates this capsule name.
         let name = capsule
             .name()
             .expect("capsule has a name")
             .expect("name is not None");
-        // SAFETY: the `CStr` is used immediately (compared), well within the capsule's lifetime.
+        // SAFETY: the capsule name remains valid for this comparison.
         let name = unsafe { name.as_cstr() };
         assert_eq!(name.to_str().unwrap(), "arrow_array_stream");
 
-        // Re-import: move the FFI stream out of the capsule and read it back to Arrow batches.
+        // Re-import and consume the stream.
         let reader = import_stream(&capsule);
         let batches: Vec<_> = reader.map(|b| b.expect("batch decodes")).collect();
         let total: usize = batches
@@ -190,11 +174,6 @@ fn arrow_c_stream_exports_a_consumable_stream_with_correct_values() {
 
 #[test]
 fn arrow_c_stream_streams_values_and_types_end_to_end() {
-    // End-to-end value AND Arrow type across the streaming FFI export: three rows over three column
-    // types (Int64 / Decimal128 / Utf8) cross `__arrow_c_stream__` → the re-imported Arrow C stream
-    // and arrive with the right values AND the right Arrow types (each downcast asserts the type).
-    // U2: bare `1.5` is DECIMAL(2,1) on the Spark door. Exercises the real
-    // `DataFrame::execute_stream` producer, not a Rust-side collect.
     Python::attach(|py| {
         let s = session(py);
         let df = s
@@ -213,9 +192,7 @@ fn arrow_c_stream_streams_values_and_types_end_to_end() {
             3,
             "all three rows cross the streaming boundary"
         );
-        // id: Int64 values, in order (the helper downcast asserts Int64).
         assert_eq!(int64_column(&batch, 0), vec![1, 2, 3], "id values");
-        // amt: decimal128(2,1) after U2 — the downcast asserts the type, then i128 values.
         let amt = batch
             .column(1)
             .as_any()
@@ -228,7 +205,6 @@ fn arrow_c_stream_streams_values_and_types_end_to_end() {
             vec![15, 25, 35],
             "amt i128 scaled at scale 1"
         );
-        // label: Utf8.
         let label = batch
             .column(2)
             .as_any()
@@ -246,28 +222,13 @@ fn arrow_c_stream_streams_values_and_types_end_to_end() {
 
 #[test]
 fn arrow_c_stream_defers_execution_and_does_not_collect_up_front() {
-    // End-to-end laziness through the REAL facade path (audit F-BR-4): `__arrow_c_stream__` must not
-    // materialize the result at export time. Proof by an erroring query — an outer per-row CAST that
-    // fails on a later row. `DataFrame::execute_stream` builds the stream WITHOUT polling, so a lazy
-    // export returns a capsule cleanly (the failing row lives in an un-polled batch); a
-    // collect-then-wrap export ("the stream export lie") would drain the whole result at export time,
-    // hit the CAST error, and RAISE instead of returning a capsule — that is the revert this pins
-    // against.
-    //
-    // Deterministic (rule 12 — no RSS thresholds, no sleeps, no timing races): we assert
-    // return-vs-raise at export + that a FULL drain eventually surfaces the deferred error. We do NOT
-    // assert batch ordering — F-BR-5: a parallel engine plan can surface a later batch's error before
-    // batch 1, so "batch 1 before the error" is a sequential-reader property, not an end-to-end one.
-    // `target_partitions = 1` keeps execution sequential.
+    // Export must remain lazy while a full drain reports execution errors.
     Python::attach(|py| {
         let s = Py::new(
             py,
             PyReparkSession::new(py, None, None, Some(1), None).expect("session builds"),
         )
         .expect("pyclass instantiates");
-        // Rows 1..6; the outer `CAST(... AS INT)` fails on rows >= 4 (the string `'boom'`). The CAST
-        // wraps the column-dependent CASE, so it is NOT constant-folded — the error is deferred to
-        // EXECUTION (poll) time, not raised at plan time.
         let df = s
             .borrow(py)
             .sql(
@@ -278,15 +239,10 @@ fn arrow_c_stream_defers_execution_and_does_not_collect_up_front() {
             .expect("plan builds — the CAST error is deferred to execution, not raised at plan time");
         let df_cell: Py<PyDataFrame> = Py::new(py, df).expect("dataframe pyclass");
 
-        // LAZINESS: streaming defers the poll → a capsule is returned. A collect-then-wrap dunder
-        // would drain here, hit the CAST error, and raise — failing this `expect`.
         let capsule = df_cell.borrow(py).__arrow_c_stream__(py, None).expect(
             "streaming export returns a capsule WITHOUT materializing (no up-front collect)",
         );
 
-        // The query genuinely errors on full materialization: draining the re-imported stream
-        // eventually surfaces the engine CAST error (proving the clean export above was deferral, not
-        // a silent no-op).
         let reader = import_stream(&capsule);
         let drain: Result<Vec<RecordBatch>, ArrowError> = reader.collect();
         let error = drain.expect_err("a full drain surfaces the deferred CAST execution error");
@@ -590,7 +546,7 @@ fn join_on_names_merges_the_key_column() {
 
 /// Plan `l(k, lv)` LEFT-JOIN-shaped against `r(k, rv)` with the given `how`, collected to one
 /// batch. `l` has keys 1, 2 and a NULL-keyed row; `r` has key 1 and a NULL key — so the pair
-/// exercises the match, the no-match and the `NULL = NULL is unknown` arm at once (G4b).
+/// exercises the match, no-match, and `NULL = NULL is unknown` cases together.
 fn semi_family_batch(py: Python<'_>, how: &str) -> RecordBatch {
     let s = session(py);
     let left = s

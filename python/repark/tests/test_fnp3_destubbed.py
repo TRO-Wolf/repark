@@ -1,20 +1,9 @@
 """FNP-3 — the stubs whose kernel the engine already had.
 
-**The class.** Eleven names raised ``UnsupportedOperationException`` from the facade while
-``spark.sql("SELECT <name>(...)")`` evaluated them correctly, because ``register_all`` installs
-the ``datafusion-spark`` kernel by name and the facade's dispatch table simply had no arm for it.
-The capability was present; only one of the two doors could reach it. One stub said so in its own
-docstring — ``map_from_arrays`` read *"Unsupported as Column builder (SQL map_from_arrays may
-work)"* — so the asymmetry was observed and disclosed rather than closed.
-
-That is the same defect class as FNP-1's ``to_timestamp``/``avg``, pointing the other way: FNP-1
-had both doors reachable but resolving different kernels, this had one door refusing a kernel the
-other door used.
-
-Every row below is pinned on the Arrow path, value AND type, and cross-checked against the SQL
-door so the two cannot drift apart again.
-
-Ledger: ``task/fnp-3-destub-ledger.md``.
+``register_all`` installs the ``datafusion-spark`` kernel by name while the facade's dispatch
+table had no arm for it, so the SQL door evaluated these names while the facade refused. Every
+row below is pinned on the Arrow path, value AND type, and cross-checked against the SQL door so
+the two cannot drift apart. Ledger: ``task/fnp-3-destub-ledger.md``.
 """
 
 from __future__ import annotations
@@ -90,11 +79,7 @@ def test_sha1_matches_the_reference_implementation() -> None:
 
 
 def test_datediff_is_the_older_spelling_of_date_diff() -> None:
-    """PySpark 4.1.2 declares both with the same ``(end, start)`` order over one Catalyst expr.
-
-    A prior unit left a "do not alias" note on ``datediff``; reading its ledger shows that was a
-    SCOPE fence (FN-D could not touch the test asserting the refusal), not a semantic objection.
-    """
+    """PySpark 4.1.2 declares both with the same ``(end, start)`` order over one Catalyst expr."""
     spark = _session()
     frame = spark.createDataFrame([(dt.date(2026, 3, 1), dt.date(2026, 1, 1))], "e date, s date")
 
@@ -126,7 +111,7 @@ def test_utc_timestamp_pair_round_trips() -> None:
 
 
 def test_map_from_arrays_builds_a_map_column() -> None:
-    """The stub's docstring said the SQL door "may work" — it did, and only the facade refused."""
+    """The SQL door already evaluated ``map_from_arrays``; this pins the facade arm."""
     spark = _session()
     frame = spark.sql("SELECT array('a', 'b') AS k, array(1, 2) AS v")
 

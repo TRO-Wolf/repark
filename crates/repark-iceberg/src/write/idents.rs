@@ -1,4 +1,4 @@
-//! Shared Spark/DataFusion identifier quoting and path-escape needles (r23 QI1 / CQ-006/007).
+//! Shared Spark/DataFusion identifier quoting and path-escape needles (CQ-006/007).
 //!
 //! Single source for the triple-maintained path-escape mirrors (Python `session.py`,
 //! `repark-session`, `repark-sql`) and the Spark-dialect `quote_ident` used by MERGE SQL
@@ -6,7 +6,7 @@
 //! across dialects.
 //!
 //! Security: over-quote is acceptable; under-quote is not.
-//! Tags: O3-C4-SEC-001 (path-escape mirror); C2-SEC-003 / C1-SEC-001 (sql CTAS compose).
+//! Tags: path-escape mirror; C2-SEC-003 / C1-SEC-001 (sql CTAS compose).
 
 /// ===========================================================================================
 /// Double-quote a SQL identifier for the Spark / DataFusion dialect.
@@ -53,7 +53,7 @@ pub fn path_escape_kind(segment: &str) -> Option<PathEscapeKind> {
 
 /// Shared injection / path-escape probe strings (Spark/DF dialect + path-escape).
 ///
-/// Harvested from r21 T5 PG probes (adapted to Spark always-quote expectations) and the
+/// Harvested from PG probes (adapted to Spark always-quote expectations) and the
 /// 2026-08-03 audit path-escape surface. Used by unit tests in this crate, `repark-sql`,
 /// `repark-session`, and the Python `_idents` conformance suite — keep probe strings in lockstep
 /// with `python/repark/src/repark/_idents.py::INJECTION_PROBES` /
@@ -109,7 +109,7 @@ mod tests {
     fn spark_injection_probes_are_single_quoted_tokens() {
         for probe in probes::SPARK_INJECTION_PROBES {
             let quoted = quote_ident_spark(probe);
-            // Independent oracle (octo C1-Q-002 / C1-SEC-001): undouble round-trip alone
+            // Independent oracle: undouble round-trip alone
             // false-passes under-escape (forgetting to double embedded `"`).
             let expected = format!("\"{}\"", probe.replace('"', "\"\""));
             assert_eq!(quoted, expected, "under-quote residual for {probe:?}");
@@ -142,7 +142,7 @@ mod tests {
     }
 
     /// ===========================================================================================
-    /// Cross-lang lockstep freeze (octo C1-Q-003): probe literals must match Python `_idents`.
+    /// Cross-lang lockstep freeze: probe literals must match Python `_idents`.
     /// ===========================================================================================
     #[test]
     fn probe_tables_lockstep_frozen_with_python_ssot() {

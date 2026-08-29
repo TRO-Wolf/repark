@@ -1,16 +1,13 @@
 """Record mode for the window-function corpus — re-derive every `spark` half from live PySpark.
 
-NOT a `test_` module: pytest never collects it. It is the driver that produced the recorded Spark
-halves in `test_window_parity.py`, committed so the "recorded against live PySpark 4.1.2"
-claim is falsifiable from inside the repo rather than only from the session that made it
-(the golden-drift blind spot `docs/testing.md` names).
-
-It imports `ROWS` from the COMMITTED test module and runs each row's OWN recipe — the same
-`run_row` the assertions use — on a live PySpark session. The recorded golden and the asserted
-recipe therefore cannot drift apart: there is one recipe, not two copies.
-
-Raise-class rows (`spark_raises`) re-check that live Spark still raises a matching exception
-class rather than returning a table.
+Not collected by pytest: this driver produced the recorded Spark halves in
+`test_window_parity.py` and re-runs each row's own `run_row` on a live PySpark session,
+so the golden and the recipe cannot drift apart. Raise-class rows (`spark_raises`)
+re-check that live Spark still raises a matching exception class. Exit code 0 means
+every recorded half still reproduces bit-for-bit and every raise-class still raises;
+a mismatch prints the live schema and rows (or the live exception). It never edits the
+corpus — re-recording is a human decision, and a driver that rewrote its own oracle
+would launder drift.
 
 Run it (needs a JVM and `pyspark`, i.e. `uv sync --extra record`)::
 
@@ -18,17 +15,9 @@ Run it (needs a JVM and `pyspark`, i.e. `uv sync --extra record`)::
         PYTHONPATH=python/repark-parity/src \\
         .venv/bin/python python/repark/tests/_record_window_goldens.py
 
-With ``--emit`` the driver prints paste-ready ``_table(...)`` / ``_one_row(...)`` snippets for
-every row (used when first recording or re-deriving after a deliberate recipe change). Without
-the flag it only reports PASS / MISMATCH / MISSING and never rewrites the corpus.
-
-Exit code 0 means every recorded half still reproduces bit-for-bit (schema name/type/nullability
-then values) and every raise-class still raises. Non-zero prints each mismatch with the live
-schema and rows (or the live exception). It never edits the corpus — re-recording is a human
-decision, and a driver that rewrote its own oracle would launder drift.
-
-The Spark session basis is the one the corpus was recorded under and is pinned here, not guessed:
-`local[2]`, ANSI on, `spark.sql.shuffle.partitions=2`, UI off — the same basis
+With ``--emit`` it prints paste-ready ``_table(...)`` / ``_one_row(...)`` snippets for
+every row (used when first recording or re-deriving after a deliberate recipe change);
+without it, only PASS / MISMATCH / MISSING. The session basis matches the one
 `_live_parity.build_spark_engine` uses for the live oracle tier.
 """
 
@@ -39,8 +28,8 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-# Run as a script from anywhere: the corpus is a sibling module, imported by name so the driver
-# reads the SAME rows the suite asserts (never a copy).
+# Run as a script from anywhere: import the corpus sibling by name (same rows the
+# suite asserts, never a copy).
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 if TYPE_CHECKING:

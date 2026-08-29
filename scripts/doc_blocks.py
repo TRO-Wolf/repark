@@ -2,9 +2,9 @@
 """The block grammar of the two live documents, and the two transforms that keep them live.
 
 `STATUS.md` "Active workstreams" and `briefs/next-sequence.md` carry HTML-comment
-markers (DL-4, 2026-08-25) so that a merged unit can leave the slate and a closed
-campaign can leave STATUS mechanically — at pickup, with no judgement and no
-obituary. The markers render as nothing.
+markers so that a merged unit can leave the slate and a closed campaign can leave
+STATUS mechanically — at pickup, with no judgement and no obituary. The markers render
+as nothing.
 
     <!-- ws id=mw ledgers=mw- state=closed closed=2026-08-23 by=#224 history=docs/history/mw -->
     - **Iceberg maintenance wave (MW)** ...
@@ -57,8 +57,8 @@ class Block:
 
     An inline unit marker (a table row) is a one-line block with `inline=True`;
     its `start`/`end` cover the row and no marker line exists on its own.
-    (A plain class, not a model: the scripts run under the system interpreter
-    from the pre-commit hook and carry no dependencies.)
+    A plain class, not a model: the scripts run under the system interpreter
+    from the pre-commit hook and carry no dependencies.
     """
 
     __slots__ = ("attrs", "end", "inline", "kind", "start")

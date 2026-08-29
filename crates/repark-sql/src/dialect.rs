@@ -1,16 +1,4 @@
 //! [`AnsiDialect`] — the ANSI door's [`SqlDialect`] implementation.
-//!
-//! The seam is frozen at phase-2 start (design §3): `execute(EngineContext<'_>, &str)`, nothing
-//! more. This adapter is deliberately a one-liner onto [`crate::router::execute`] — all the
-//! behavior lives in the router and its handlers, so the seam stays the thing it was frozen as.
-//!
-//! Install it as the session default with `ReparkSessionBuilder::with_sql_dialect`, or pass it to
-//! `ReparkSession::sql_with` to run one statement through this door on a session whose default is
-//! another. **There is no `SessionExtension`**: this door installs nothing into the session,
-//! because native/ANSI semantics ARE stock DataFusion. That asymmetry with the Spark door is the
-//! design, not an omission — and it is exactly why cross-door equivalence rows must use TWO
-//! sessions (extensions are session-scoped, so a Spark-extended session has Spark expression
-//! semantics through every door, including this one).
 
 use async_trait::async_trait;
 use datafusion::prelude::DataFrame;
@@ -59,8 +47,7 @@ mod tests {
         assert_eq!(batches[0].num_rows(), 1);
     }
 
-    /// The dialect carries the router's guards — a script refuses through the seam, not only
-    /// through the router's own entry point.
+    /// The dialect carries the router's guards, so scripts refuse through the seam.
     #[tokio::test]
     async fn dialect_carries_the_guard_set() {
         let ctx = SessionContext::new();

@@ -1,19 +1,7 @@
-//! Spark collection-function shims.
+//! Spark collection shims for `element_at`, `[]`, `shuffle`, `str_to_map`, and map construction.
 //!
-//! DataFusion registers `element_at` only as an *alias of `map_extract`*, so on arrays it fails
-//! type coercion for every index (audit AR-1 finding #15), and on maps it returns `map_extract`'s
-//! list-wrapped value instead of Spark's plain value. This module registers a Spark-exact
-//! `element_at`:
-//!
-//! - **Array**: 1-based; a negative index counts from the end; out-of-range → NULL (non-ANSI);
-//!   index 0 → error (Spark `INVALID_INDEX_OF_ZERO` — indices start at 1). The computation
-//!   delegates to DataFusion's `array_element` kernel, whose 1-based/negative-from-end/NULL
-//!   semantics match Spark's `element_at` exactly once zero is rejected.
-//! - **Map**: the value for the key, NULL when absent — computed as `map_extract` (a
-//!   single-element list) unwrapped through the `array_element` kernel.
-//!
-//! The `[]` subscript is separate surface: Spark's `arr[i]` is 0-based and handled by the
-//! [`crate::analyzer`] rewrite; `element_at` is the 1-based spelling.
+//! `element_at` uses Spark's 1-based array and map-by-key semantics; `[]` is separately rewritten
+//! to 0-based access by [`crate::analyzer`].
 
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
@@ -40,9 +28,7 @@ mod shuffle;
 mod map_from_entries;
 
 /// ===========================================================================================
-/// The collection shims to register (after the defaults, so `element_at` sheds its
-/// `map_extract`-alias resolution, `str_to_map` overwrites the literal-split kernel,
-/// `shuffle` sheds the all-NULL panic, and `map_from_entries` refuses duplicate keys).
+/// The collection shims registered after DataFusion's defaults.
 /// ===========================================================================================
 #[must_use]
 pub fn functions() -> Vec<Arc<ScalarUDF>> {
@@ -79,12 +65,7 @@ pub fn element_at_udf() -> Arc<ScalarUDF> {
 }
 
 /// ===========================================================================================
-/// The Spark `[]` array-subscript UDF (`__repark_array_get__`): 0-based, invalid index → NULL.
-///
-/// Embedded directly into rewritten expressions by [`crate::analyzer`] — never registered, so
-/// it is not user-callable and the analyzer (which matches `array_element` by name) can run
-/// any number of times without re-rewriting its own output (rules must be idempotent: the
-/// analyzer runs once eagerly on the passthrough plan and again at physical planning).
+/// Embedded `[]` UDF: 0-based access with NULL for invalid indices.
 /// ===========================================================================================
 #[must_use]
 pub fn spark_array_get_udf() -> Arc<ScalarUDF> {
@@ -92,10 +73,7 @@ pub fn spark_array_get_udf() -> Arc<ScalarUDF> {
 }
 
 /// ===========================================================================================
-/// Spark `Column[key]` / `GetItem`: array (0-based) **or** map (by key).
-///
-/// Embedded by the Python facade for non-literal / Column keys so getitem never fails open to
-/// the parent container (octo C2-L-001). Not registered as a user-callable name.
+/// Embedded `Column[key]` UDF for 0-based arrays or map keys.
 /// ===========================================================================================
 #[must_use]
 pub fn spark_get_item_udf() -> Arc<ScalarUDF> {
@@ -145,13 +123,7 @@ impl ScalarUDFImpl for SparkArrayGet {
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
-        // Spark 0-based → array_element 1-based: shift non-negative indices up by one; a
-        // negative index (invalid in Spark's `[]`, non-ANSI → NULL) becomes a NULL index,
-        // which the kernel maps to a NULL element. The index is cast defensively: this UDF is
-        // embedded by the analyzer AFTER TypeCoercion has run, so a narrower integer index
-        // (`arr[CAST(i AS INT)]`) arrives un-coerced.
         let arrays = ColumnarValue::values_to_arrays(&args.args)?;
-        // SAF-002: `as_primitive` after successful Int64 `cast` (proven physical type).
         let indices = cast(arrays[1].as_ref(), &DataType::Int64)?;
         let indices = indices.as_primitive::<Int64Type>();
         let shifted: Int64Array = indices
@@ -176,7 +148,7 @@ impl ScalarUDFImpl for SparkArrayGet {
 }
 
 /// ===========================================================================================
-/// `SparkGetItem` — Spark `[]` / `GetItem`: array 0-based **or** map-by-key (octo C2-L-001).
+/// `SparkGetItem` — Spark `[]` / `GetItem`: array 0-based **or** map-by-key.
 /// ===========================================================================================
 #[derive(Debug)]
 struct SparkGetItem {
@@ -253,7 +225,6 @@ impl ScalarUDFImpl for SparkGetItem {
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
         let container_type = args.arg_fields[0].data_type().clone();
         if list_element_type(&container_type).is_some() {
-            // Reuse SparkArrayGet 0-based shift + array_element kernel.
             return SparkArrayGet::new().invoke_with_args(args);
         }
         invoke_map(&args)
@@ -343,7 +314,6 @@ impl ScalarUDFImpl for SparkElementAt {
                     "'element_at' array index must be an integer, got {key}"
                 )));
             }
-            // A fixed-size list coerces to a plain list so the array_element kernel applies.
             let container = match container {
                 DataType::FixedSizeList(..) => {
                     DataType::List(Arc::new(Field::new_list_field(element, true)))
@@ -390,7 +360,6 @@ fn delegate(
 /// is Spark's `element_at` exactly (1-based, negative-from-end, out-of-range → NULL).
 fn invoke_array(args: &ScalarFunctionArgs) -> Result<ColumnarValue> {
     let arrays = ColumnarValue::values_to_arrays(&args.args)?;
-    // SAF-002: `coerce_types` force Int64; defensive cast → typed Err on physical drift.
     let indices = cast(arrays[1].as_ref(), &DataType::Int64)?;
     let indices = indices.as_primitive::<Int64Type>();
     for row in 0..indices.len() {
@@ -412,9 +381,6 @@ fn invoke_array(args: &ScalarFunctionArgs) -> Result<ColumnarValue> {
     )
 }
 
-/// Map path: `map_extract` yields a single-element list of the matched value (empty when the
-/// key is absent); unwrapping element 1 through the `array_element` kernel produces Spark's
-/// plain value-or-NULL.
 fn invoke_map(args: &ScalarFunctionArgs) -> Result<ColumnarValue> {
     let value_type = args.return_field.data_type().clone();
     let list_type = DataType::List(Arc::new(Field::new_list_field(value_type.clone(), true)));
@@ -465,7 +431,6 @@ mod tests {
     }
 
     /// Spark array `element_at`: 1-based, negative counts from the end, out-of-range → NULL.
-    /// (Previously every one of these failed coercion — finding #15.)
     #[tokio::test]
     async fn element_at_array_is_one_based() {
         let ctx = ctx();
@@ -483,7 +448,7 @@ mod tests {
         );
     }
 
-    /// Index 0 errors (Spark `INVALID_INDEX_OF_ZERO`) — never a silent NULL.
+    /// Index 0 raises Spark's `INVALID_INDEX_OF_ZERO`.
     #[tokio::test]
     async fn element_at_array_zero_index_errors() {
         let ctx = ctx();
@@ -500,8 +465,7 @@ mod tests {
         );
     }
 
-    /// Spark map `element_at`: the plain value for the key (not `map_extract`'s list wrapper),
-    /// NULL when absent; the key may be a per-row column, not just a literal.
+    /// Spark map `element_at`: the plain value for the key, or NULL when absent.
     #[tokio::test]
     async fn element_at_map_returns_plain_value() {
         let ctx = ctx();
@@ -524,7 +488,7 @@ mod tests {
         );
     }
 
-    /// Polymorphic `GetItem` (octo C2-L-001): array 0-based + map-by-key; not identity.
+    /// Polymorphic `GetItem` for 0-based arrays and map keys.
     #[tokio::test]
     async fn get_item_array_zero_based_and_map_by_key() {
         use datafusion::logical_expr::{Expr, col, lit};

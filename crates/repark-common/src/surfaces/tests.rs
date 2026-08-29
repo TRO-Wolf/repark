@@ -14,9 +14,7 @@ fn absent() -> Row {
     }
 }
 
-/// `ALL` is the audit's universe, so a silent duplicate would let a door "map" a surface twice
-/// and still satisfy the per-ID count. The `surface_ids!` macro makes const↔`ALL` drift
-/// impossible, but not a repeated declaration.
+/// Duplicate IDs could satisfy per-ID counts while masking a missing surface.
 /// MUTATION: declare `CTAS;` twice in the macro → this REDs.
 #[test]
 fn all_ids_are_unique_and_named() {
@@ -32,9 +30,7 @@ fn all_ids_are_unique_and_named() {
     }
 }
 
-/// IDs are `SCREAMING_SNAKE_CASE`. Not cosmetics: the names appear verbatim in audit failures and
-/// in both doors' matrices, and a lowercase or hyphenated straggler is the first sign someone
-/// hand-wrote an ID string instead of using the const.
+/// IDs use `SCREAMING_SNAKE_CASE` because names appear in audit failures and both door matrices.
 #[test]
 fn ids_are_screaming_snake_case() {
     for id in ALL {
@@ -51,9 +47,7 @@ fn ids_are_screaming_snake_case() {
     }
 }
 
-/// The registry's size is itself a reviewed number: 50 surfaces as of G8 (43 + the 7
-/// `SEMANTICS_*` value-semantics IDs). A silent +1 means a capability entered the product
-/// vocabulary without the ledger's row counts being revisited.
+/// The reviewed registry count prevents a capability from bypassing the ledger's row counts.
 /// MUTATION: add an ID without updating this count → this REDs.
 #[test]
 fn all_has_the_reviewed_surface_count() {
@@ -64,9 +58,7 @@ fn all_has_the_reviewed_surface_count() {
     );
 }
 
-/// The macro derives each wire name from the constant's own identifier, so the copy-paste class
-/// (`pub const DELETE: SurfaceId = SurfaceId("UPDATE")`) is unrepresentable. This test pins that
-/// property for the few IDs most likely to be copied from each other.
+/// Wire names derive from constant identifiers, preventing copy-paste mismatches.
 #[test]
 fn ids_are_self_naming() {
     assert_eq!(DELETE.name(), "DELETE");
@@ -81,15 +73,14 @@ fn ids_are_self_naming() {
     assert_eq!(SEMANTICS_NULL_ORDERING.name(), "SEMANTICS_NULL_ORDERING");
 }
 
-/// A complete, exact mapping passes. The baseline both door matrices ride on.
+/// A complete matrix passes the audit.
 #[test]
 fn audit_accepts_a_complete_matrix() {
     let rows: Vec<(SurfaceId, Row)> = ALL.iter().map(|id| (*id, absent())).collect();
     assert_eq!(audit("test-door", &rows), Ok(()));
 }
 
-/// The core guarantee: a surface with no row FAILS, naming the ID and the door. This is the
-/// build-enforcement half of "absence is typed" — a capability cannot be dropped quietly.
+/// A surface without a row fails with the ID and door name.
 /// MUTATION: make `audit` skip the zero-count arm → this REDs.
 #[test]
 fn audit_reports_an_unmapped_surface() {
@@ -104,8 +95,7 @@ fn audit_reports_an_unmapped_surface() {
     assert!(err.contains("test-door"), "must name the door: {err}");
 }
 
-/// A row naming an ID outside `ALL` fails — the stale-row-after-rename case. Reachable only
-/// through a const the registry no longer lists, which is why it is worth catching.
+/// A row naming an ID outside `ALL` fails as a stale-row-after-rename case.
 #[test]
 fn audit_reports_an_unknown_id() {
     const GHOST: SurfaceId = SurfaceId("MERGE_INTO_LEGACY");
@@ -116,8 +106,7 @@ fn audit_reports_an_unknown_id() {
     assert!(err.contains("not a known surface ID"), "{err}");
 }
 
-/// Two rows for one surface fail. Without this, a duplicate could mask an unmapped ID by
-/// keeping the row count right.
+/// Two rows for one surface fail because duplicates can mask an unmapped ID.
 #[test]
 fn audit_reports_a_duplicate_row() {
     let mut rows: Vec<(SurfaceId, Row)> = ALL.iter().map(|id| (*id, absent())).collect();
@@ -127,9 +116,7 @@ fn audit_reports_a_duplicate_row() {
     assert!(err.contains("CTAS"), "{err}");
 }
 
-/// An untraceable row fails: a `Tested` with no test name, or an `Absent` with no reason/adr.
-/// A row that cites nothing is indistinguishable from an oversight — exactly the state the
-/// registry exists to make impossible.
+/// A `Tested` row needs a test name, and an `Absent` row needs a reason and ADR.
 #[test]
 fn audit_reports_untraceable_rows() {
     let mut rows: Vec<(SurfaceId, Row)> = ALL.iter().map(|id| (*id, absent())).collect();
@@ -146,15 +133,14 @@ fn audit_reports_untraceable_rows() {
     assert!(err.contains("BOTH a reason and an adr"), "{err}");
 }
 
-/// `is_tested` partitions the two variants — the accessor both doors' row-count pins use.
+/// `is_tested` distinguishes the two row variants.
 #[test]
 fn is_tested_partitions_the_variants() {
     assert!(tested("t").is_tested());
     assert!(!absent().is_tested());
 }
 
-/// The four session profiles are distinct values. Graft G5's whole point is that `Native` and
-/// `SparkExtended` are NOT interchangeable, and that `TwoSession` is its own thing.
+/// Session profiles remain distinct because native and Spark-extended evidence is not interchangeable.
 #[test]
 fn session_profiles_are_distinct() {
     let all = [

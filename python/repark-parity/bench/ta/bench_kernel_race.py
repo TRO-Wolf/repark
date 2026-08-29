@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""§8.1 — kernel race, one symbol, null-free, already sorted, Arrow only.
+"""Kernel race, one symbol, null-free, already sorted, Arrow only.
 
-Compares RePark DataFrame ``evaluate_all`` (``over_columns`` + ``to_arrow``)
-against ``polars_talib`` (C TA-Lib 0.4.0) and, where reachable, raw
-``repark_ta``. Raw kernels are a Rust crate with no Python import — this
-script records that SKIP and cites P-1 criterion (#132).
+Compares RePark DataFrame ``evaluate_all`` (``over_columns`` + ``to_arrow``) against
+``polars_talib`` (C TA-Lib 0.4.0) and, where reachable, raw ``repark_ta``. Raw kernels
+are a Rust crate with no Python import; the script records that SKIP and cites P-1
+criterion (#132).
 
 Usage::
 
-    # record env already has polars_talib 0.1.5 — prepend its site-packages,
-    # or: uv run --with polars-talib==0.1.5 python …/bench_kernel_race.py
+    # record env already has polars_talib 0.1.5 — prepend its site-packages, or:
+    # uv run --with polars-talib==0.1.5 python …/bench_kernel_race.py
     python python/repark-parity/bench/ta/bench_kernel_race.py [--quick]
 """
 
@@ -69,7 +69,7 @@ def _polars_kernel_work(frame: Any, plta: Any, kernel: str) -> object:
 
 
 def main() -> None:
-    """Run the §8.1 race and print ``TA_PIPELINE`` lines."""
+    """Run the kernel race and print ``TA_PIPELINE`` lines."""
     parser = argparse.ArgumentParser(description=__doc__)
     harness.add_timing_args(parser)
     parser.add_argument("--n-rows", type=int, default=None)
@@ -134,7 +134,7 @@ def main() -> None:
             repark_seed = harness.seed_repark_frame(spark, seed)
             for kernel in kernels:
                 plan_frame = _repark_kernel_work(spark, repark_seed, kernel)
-                # Plan shape on a fresh lazy rebuild (the timed path rebuilds too).
+                # Plan shape from a fresh lazy rebuild; the timed path rebuilds too.
                 from repark import Window
                 from repark.spark import ta
 

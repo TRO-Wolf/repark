@@ -10,8 +10,7 @@ Same bar as TPC-H/TPC-DS (``bench/tpch/compare.py``):
 - NULL/None must match. Dates/timestamps normalize via ``isoformat()``.
 - Order-insensitive multiset unless the query has ``ORDER BY`` (then ordered).
 
-Kept local (not imported from tpch) so the fuzzer package stays self-contained
-and can grow ORDER BY semantics without coupling scoreboard harness changes.
+Kept local so the fuzzer package stays self-contained.
 """
 
 from __future__ import annotations
@@ -122,7 +121,7 @@ def _normalize_cell(cell: Any) -> Any:
         if cell.is_integer():
             return int(cell)
         return cell
-    # TZ-4 PR-2: LTZ export is tz-aware UTC; DuckDB is naive. Same instant.
+    # LTZ export is tz-aware UTC; DuckDB is naive. Normalize to the same instant.
     if isinstance(cell, datetime.datetime) and cell.tzinfo is not None:
         cell = cell.astimezone(datetime.UTC).replace(tzinfo=None)
     iso = getattr(cell, "isoformat", None)

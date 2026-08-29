@@ -29,19 +29,16 @@ duckdb = pytest.importorskip("duckdb")
 
 from repark import ReparkSession  # noqa: E402
 
-# ---------------------------------------------------------------------------
 # Harness imports (bench/ is not under repark_parity/src — load as package)
-# ---------------------------------------------------------------------------
-
 _TPCDS_DIR = Path(__file__).resolve().parents[2] / "repark-parity" / "bench" / "tpcds"
 _LEDGER_PATH = _TPCDS_DIR / "sf1_status_ledger.json"
 
-# Explicit curated SF0.01 smoke pins (≥10). Chosen for cheap SF0.01 walls and
-# stable DuckDB-diff (established during D1 discovery; not "first N runnable").
-# Keep sorted for readability; order of parametrization is this list order.
+# Explicit curated SF0.01 smoke pins (≥10). Chosen for cheap SF0.01 walls and stable
+# DuckDB-diff — not "first N runnable". Keep sorted for readability; order of
+# parametrization is this list order.
 CURATED_SMOKE_QUERY_IDS: tuple[int, ...] = (
     3,
-    5,  # D2: was Schema ERROR (concat Utf8View); SparkConcat shim
+    5,  # D2 SparkConcat canary (was Schema ERROR on concat Utf8View)
     6,
     7,
     12,
@@ -50,9 +47,9 @@ CURATED_SMOKE_QUERY_IDS: tuple[int, ...] = (
     42,
     52,
     55,
-    80,  # D2: was Schema ERROR (concat Utf8View); SparkConcat shim
+    80,  # D2 SparkConcat canary (was Schema ERROR on concat Utf8View)
     82,
-    84,  # D2: was Schema ERROR (concat Utf8View); SparkConcat shim
+    84,  # D2 SparkConcat canary (was Schema ERROR on concat Utf8View)
     91,
     96,
 )
@@ -295,7 +292,6 @@ def test_tpcds_sf001_matches_sf1_ledger(
         expected_class = entry.get("error_class")
         try:
             repark_frame = spark_tpcds.sql(query.sql_for_repark)
-            # Force execution
             if hasattr(repark_frame, "to_arrow"):
                 _ = repark_frame.to_arrow()
             else:

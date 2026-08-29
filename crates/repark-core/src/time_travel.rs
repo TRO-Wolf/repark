@@ -1,19 +1,7 @@
-//! Iceberg time-travel PINS: spec parsing, snapshot resolution, and the reader-options path.
+//! Iceberg time-travel parsing, snapshot resolution, and reader-option support.
 //!
-//! Hoisted MOVE-ONLY (bodies byte-faithful at the port-source pin) from the v1 SQL crate's
-//! `time_travel` module — the subset the SESSION owns: [`TimeTravelSpec`] + its parsers
-//! ([`parse_version_value`], [`parse_timestamp_to_ms`]), snapshot resolution
-//! ([`resolve_snapshot_id`], [`snapshot_id_as_of_time`]), and [`read_table_at`] (the
-//! `read_iceberg_table` reader-options path — never a post-hoc filter; I1 / R-TIME-TRAVEL).
-//!
-//! The SQL-TEXT half of v1's module (`sql_has_time_travel` / `prepare_time_travel_sql` + the
-//! token-level `VERSION AS OF` / `TIMESTAMP AS OF` span scan and FROM/JOIN splice) is DEFERRED
-//! with the phase-2 statement router (design §5 deferred list) — v1 stays authoritative for it.
-//!
-//! Fork citations (pin `4723104b`):
-//! - Static provider: `crates/integrations/datafusion/src/table/mod.rs:420`
-//! - `snapshot_by_id` / `snapshot_for_ref` / `history`: `crates/iceberg/src/spec/table_metadata.rs:290-326`
-//! - `snapshot_id_as_of_time` (`<=` semantics): `crates/iceberg/src/inspect/metadata_log_entries.rs:129-138`
+//! SQL-text rewriting remains with the phase-2 statement router. The reader path registers a
+//! snapshot-pinned static provider and preserves its plan shape and name prefix for cleanup.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -32,11 +20,7 @@ use crate::catalog_state::CatalogRegistry;
 /// a second.
 static TEMP_VIEW_SEQ: AtomicU64 = AtomicU64::new(1);
 
-/// Fold an iceberg error into a DataFusion error (this module's contract is
-/// `datafusion::error::Result`, like v1's SQL layer; the session folds further via `engine_err`).
-/// Body identical to the v1 SQL crate's `iceberg_err` — hoisted alongside because the crate-level
-/// `crate::iceberg_err` here is the SESSION fold (`iceberg::Error` → `repark_common::Error`),
-/// a different type.
+/// Fold an Iceberg error into the DataFusion error type used by this module.
 #[allow(clippy::needless_pass_by_value)]
 fn iceberg_err(err: iceberg::Error) -> DataFusionError {
     DataFusionError::External(Box::new(err))
@@ -155,7 +139,7 @@ pub fn parse_timestamp_to_ms(raw: &str) -> Result<i64> {
     }
     // RFC 3339 / ISO-8601 with offset or `Z` (Spark jobs and JSON often emit these).
     // Without this arm, `…T00:00:00Z` failed loud while epoch-ms and naive UTC worked —
-    // a shipping-path compatibility hole (octo C3-Q-001).
+    // a shipping-path compatibility hole.
     if let Ok(offset_dt) = chrono::DateTime::parse_from_rfc3339(trimmed) {
         return Ok(offset_dt.timestamp_millis());
     }
@@ -192,25 +176,11 @@ pub fn parse_timestamp_to_ms(raw: &str) -> Result<i64> {
 }
 
 /// ===========================================================================================
-/// Build a snapshot-pinned [`DataFrame`] for a three-part Iceberg table + [`TimeTravelSpec`].
+/// Build a snapshot-pinned [`DataFrame`] for a three-part Iceberg table and specification.
 ///
-/// **Two callers, with different correct dispositions for the registration it leaves behind:**
-/// 1. the reader-options path (`session.rs`'s `read_iceberg_table` —
-///    `spark.read.option("snapshot-id" | "as-of-timestamp" | "branch" | "tag", …)`), which KEEPS
-///    it: the ephemeral view backs the frame handed to the user and there is no statement
-///    boundary to release at (the documented residual, H-1b);
-/// 2. the ANSI door (`repark_sql::time_travel::register_pinned_view`), which composes its own
-///    `__repark_ansi_tt_<n>` view over the returned frame and RELEASES both names once the
-///    statement is planned.
-///
-/// Caller 2 recovers the name minted here by reading it off the returned frame's logical plan
-/// (`repark_sql::time_travel::core_pinned_name`: a bare `LogicalPlan::TableScan` whose table name
-/// carries the `__repark_tt_` prefix). **That plan shape and that prefix are load-bearing at this
-/// producing site**: wrapping the returned frame in another node here, or minting under a
-/// different prefix, silently turns that recovery into a `None` and restores the leak — which is
-/// why the pin that fences it (`repark-sql`'s
-/// `tests/introspection.rs::time_travel_pinned_views_do_not_leak_into_the_introspection_surface`)
-/// asserts on the broad `LIKE '__repark_tt%'` pattern rather than on a name.
+/// The reader-options caller keeps the registered provider; SQL callers recover its name from
+/// the bare `TableScan` plan and release it after planning. The `__repark_tt_` prefix and shape
+/// are therefore part of the cross-crate cleanup contract.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -242,24 +212,10 @@ pub async fn read_table_at(
 }
 
 /// ===========================================================================================
-/// Mint the next ephemeral `__repark_tt_<n>` temp-view name. **The only minter of that prefix.**
+/// Mint the next ephemeral `__repark_tt_<n>` temp-view name.
 ///
-/// PUBLIC on purpose, and the reason is a correctness one rather than a convenience one: the
-/// `__repark_tt_` namespace is SHARED across crates, on a single `SessionContext`, so two
-/// independent counters do not merely produce untidy numbering — they produce the SAME name and
-/// one registration silently destroys the other. Three call sites live in that namespace:
-/// [`read_table_at`] below (the reader-options path, whose registration must SURVIVE — it backs
-/// the `DataFrame` handed to the user), the Spark door's SQL rewrite (`repark_spark::time_travel`),
-/// and the ANSI door by composition over [`read_table_at`] (`repark_sql::time_travel`).
-///
-/// Until H-1b (2026-08-11) the Spark door minted from a counter of its own, also starting at 1.
-/// On a session that had used the reader-options path first, the door's mint step therefore
-/// deregistered the reader's live view before registering its pinned provider under the same
-/// name, and the post-planning `PinnedViews::release` then deleted that name outright — a
-/// `spark.read.option("snapshot-id", …)` frame unregistered by an unrelated `VERSION AS OF`
-/// statement. Minting HERE, from one process-global counter, makes the collision impossible by
-/// construction. **Do not add a second counter**; the pin is
-/// `repark-spark`'s `tests::time_travel::time_travel_statement_pins_never_collide_with_a_reader_options_view`.
+/// All crates share this process-wide counter. A second counter could reuse a live name and
+/// unregister another caller's provider.
 /// ===========================================================================================
 #[must_use]
 pub fn next_temp_view_name() -> String {

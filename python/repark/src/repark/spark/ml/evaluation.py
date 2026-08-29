@@ -1,10 +1,4 @@
-"""ML evaluators — pure aggregate plan queries (M3/M5/M6/M7).
-
-``areaUnderROC`` is plan-built Mann-Whitney rank-sum (M5); ``areaUnderPR`` is plan-built
-average precision over ranked scores (M6). Vector / array ``rawPrediction`` positive-class
-score extraction uses ``array_element`` on the Arrow FixedSizeList / list path (M6) and
-sparse-aware index lookup on the ``{size,indices,values}`` struct path (M7).
-"""
+"""Spark ML evaluators implemented as aggregate SQL plans."""
 
 from __future__ import annotations
 
@@ -12,23 +6,16 @@ import contextlib
 from typing import Any
 
 from repark.errors import IllegalArgumentException, UnsupportedOperationException
-
-# === r23 QI1: idents ===
 from repark.spark._idents import quote_ident as _quote_ident
 from repark.spark._temp_views import scratch_view_name
 from repark.spark.ml.base import _require_repark_dataframe
 from repark.spark.ml.param import HasLabelCol, HasPredictionCol, Param, Params, TypeConverters
 
-# === r20 M7: evaluators / sparse rawPrediction ===
-
-# Historical M5 seed string — kept exported for residual pins; areaUnderPR is implemented (M6).
 AUC_PR_SEED = (
     "areaUnderPR is plan-built average precision (M6): precision-at-each-positive-hit "
     "averaged over n_pos, via window RANK on score DESC. areaUnderROC remains Mann-Whitney."
 )
 
-# Historical M5 gap string — dense (M6) + sparse struct (M7) rawPrediction are extracted;
-# remaining message covers non-list / non-sparse-struct nested layouts only.
 AUC_VECTOR_RAW_GAP = (
     "areaUnderROC/areaUnderPR: rawPrediction score column is not a scalar DOUBLE, not a "
     "dense list/FixedSizeList of length >= 2 (positive-class index 1), and not a sparse "
@@ -39,15 +26,11 @@ AUC_VECTOR_RAW_GAP = (
 
 
 def _sparse_positive_class_score_sql(score_quoted: str) -> str:
-    """SQL: positive-class score (index 1) from sparse VectorUDT struct column.
+    """Build SQL for sparse positive-class score extraction at zero-based index 1.
 
-    Missing index → ``0.0`` (sparse zero). Null cell / null ``size`` / ``size < 2`` →
-    NULL so null rows are filtered (not densified to score 0.0) and short vectors hit
-    the short-vector refuse path (not a silent all-zero / degenerate-labels path).
+    Logical class index 1 is zero-based. SQL ``array_position`` and ``element_at`` positions
+    are one-based. Guard null or short vectors before ``COALESCE``. Missing indices produce zero.
     """
-    # array_position is 1-based; element_at is 1-based; missing position → NULL → COALESCE 0.
-    # Guard null struct / null size *before* the ELSE extract so a null rawPrediction
-    # cannot densify to 0.0 via COALESCE (octo M7 C3 null-sparse).
     return (
         f"CASE WHEN {score_quoted} IS NULL OR {score_quoted}.size IS NULL "
         f"OR {score_quoted}.size < 2 THEN CAST(NULL AS DOUBLE) "
@@ -58,7 +41,7 @@ def _sparse_positive_class_score_sql(score_quoted: str) -> str:
 
 
 def _collect_scalar(frame: Any, sql: str) -> float:
-    """Run aggregate SQL and return the first cell as float."""
+    """Run aggregate SQL and return its first cell as a float."""
     rows = list(frame._spawn(frame._session.sql(sql)).collect())
     if not rows:
         raise IllegalArgumentException("evaluator query returned no rows")
@@ -73,7 +56,7 @@ def _collect_scalar(frame: Any, sql: str) -> float:
 
 
 def _require_nonempty_eval(frame: Any, view: str, *, verb: str) -> None:
-    """Refuse empty evaluation frames (avg/sum on zero rows → NULL/NaN)."""
+    """Refuse empty frames because aggregate metrics are undefined."""
     rows = list(frame._spawn(frame._session.sql(f"SELECT COUNT(*) AS n FROM {view}")).collect())
     if not rows:
         raise IllegalArgumentException(f"{verb}: count query returned no rows")
@@ -84,19 +67,22 @@ def _require_nonempty_eval(frame: Any, view: str, *, verb: str) -> None:
 
 
 class Evaluator(Params):
-    """Base evaluator (Spark ``Evaluator``)."""
+    """Base class for metric evaluators."""
 
     def evaluate(self, dataset: Any) -> float:
-        """Compute metric on ``dataset``."""
+        """Compute a metric on ``dataset``."""
         raise NotImplementedError
 
     def isLargerBetter(self) -> bool:
-        """Whether larger metric values are better."""
+        """Return whether larger metric values are better."""
         return True
 
 
 class RegressionEvaluator(HasLabelCol, HasPredictionCol, Evaluator):
-    """RMSE / MSE / MAE / R2 via aggregate SQL."""
+    """Evaluate RMSE, MSE, MAE, or R2 with aggregate SQL.
+
+    Metric names match case-insensitively. R2 is larger-is-better. Other metrics are not.
+    """
 
     def __init__(
         self,
@@ -105,7 +91,7 @@ class RegressionEvaluator(HasLabelCol, HasPredictionCol, Evaluator):
         predictionCol: str | None = None,  # noqa: N803
         metricName: str | None = None,  # noqa: N803
     ) -> None:
-        """Optional kwargs."""
+        """Initialize evaluator parameters."""
         super().__init__()
         self.metricName: Param[str] = Param(
             self,
@@ -122,23 +108,19 @@ class RegressionEvaluator(HasLabelCol, HasPredictionCol, Evaluator):
             self._set(metricName=metricName)
 
     def setMetricName(self, value: str) -> RegressionEvaluator:
-        """Set metric name."""
+        """Set the metric name."""
         return self._set(metricName=value)
 
     def getMetricName(self) -> str:
-        """Get metric name."""
+        """Return the metric name."""
         return str(self.getOrDefault(self.metricName))
 
     def isLargerBetter(self) -> bool:
-        """R2 is larger-better; error metrics are smaller-better.
-
-        Case-insensitive (matches ``evaluate()`` which lowercases metricName) —
-        ``metricName="R2"`` must not take the min path (octo C2-L-001).
-        """
+        """Return whether this metric is larger-is-better."""
         return self.getMetricName().lower() == "r2"
 
     def evaluate(self, dataset: Any) -> float:
-        """Plan-aggregate metric; no Python row loops for learning."""
+        """Evaluate the selected metric with a lazy aggregate plan."""
         frame = _require_repark_dataframe(dataset, verb="RegressionEvaluator.evaluate")
         label = _quote_ident(self.getLabelCol())
         pred = _quote_ident(self.getPredictionCol())
@@ -154,7 +136,6 @@ class RegressionEvaluator(HasLabelCol, HasPredictionCol, Evaluator):
             elif metric == "mae":
                 sql = f"SELECT avg(abs({pred} - {label})) AS metric FROM {view}"
             elif metric == "r2":
-                # 1 - SS_res / SS_tot
                 sql = (
                     f"SELECT 1.0 - (sum(power({pred} - {label}, 2)) / "
                     f"nullif(sum(power({label} - avg_label, 2)), 0.0)) AS metric "
@@ -172,7 +153,11 @@ class RegressionEvaluator(HasLabelCol, HasPredictionCol, Evaluator):
 
 
 class BinaryClassificationEvaluator(HasLabelCol, HasPredictionCol, Evaluator):
-    """Binary metrics: accuracy + plan-built areaUnderROC / areaUnderPR (M5/M6)."""
+    """Evaluate binary accuracy, areaUnderROC, or areaUnderPR.
+
+    Defaults are ``areaUnderROC`` and ``rawPredictionCol="rawPrediction"``. AUC score
+    resolution falls back to ``predictionCol`` when the raw score column is absent.
+    """
 
     def __init__(
         self,
@@ -182,7 +167,7 @@ class BinaryClassificationEvaluator(HasLabelCol, HasPredictionCol, Evaluator):
         metricName: str | None = None,  # noqa: N803
         rawPredictionCol: str | None = None,  # noqa: N803
     ) -> None:
-        """Optional kwargs. Default Spark metric is areaUnderROC (M5 rank-sum plan)."""
+        """Initialize evaluator parameters."""
         super().__init__()
         self.metricName: Param[str] = Param(
             self,
@@ -207,23 +192,23 @@ class BinaryClassificationEvaluator(HasLabelCol, HasPredictionCol, Evaluator):
             self._set(rawPredictionCol=rawPredictionCol)
 
     def setMetricName(self, value: str) -> BinaryClassificationEvaluator:
-        """Set metric name."""
+        """Set the metric name."""
         return self._set(metricName=value)
 
     def getMetricName(self) -> str:
-        """Get metric name."""
+        """Return the metric name."""
         return str(self.getOrDefault(self.metricName))
 
     def setRawPredictionCol(self, value: str) -> BinaryClassificationEvaluator:
-        """Set raw/score column name for ranking metrics."""
+        """Set the raw prediction or score column."""
         return self._set(rawPredictionCol=value)
 
     def getRawPredictionCol(self) -> str:
-        """Get raw/score column name."""
+        """Return the raw prediction or score column."""
         return str(self.getOrDefault(self.rawPredictionCol))
 
     def evaluate(self, dataset: Any) -> float:
-        """Accuracy / areaUnderROC / areaUnderPR via plan aggregates (M3/M5/M6)."""
+        """Evaluate the selected metric with a lazy aggregate plan."""
         frame = _require_repark_dataframe(dataset, verb="BinaryClassificationEvaluator.evaluate")
         metric = self.getMetricName()
         if metric == "areaUnderPR":
@@ -251,12 +236,13 @@ class BinaryClassificationEvaluator(HasLabelCol, HasPredictionCol, Evaluator):
                 frame._session.drop_temp_view(view)
 
     def _resolve_score_sql(self, frame: Any, *, verb: str) -> tuple[str, str, Any | None]:
-        """Resolve score column name + SQL expression (scalar or positive-class extract).
+        """Resolve binary ranking score metadata and SQL expression.
 
-        Returns ``(label_name, score_sql_expr, score_view_or_none)``. When the score is a
-        dense list/array (VectorUDT FixedSizeList path), ``score_sql_expr`` is
-        ``array_element(col, 1)`` (0-based positive-class index for binary ``[neg, pos]``).
-        Sparse / non-list layouts raise :class:`UnsupportedOperationException`.
+        Return ``(label_name, score_sql, score_view_or_none)``. Prefer ``rawPredictionCol``
+        over ``predictionCol``. Cast scalars to ``DOUBLE``. Use zero-based vector index 1 for
+        the positive class. Sparse vectors use ``indices``/``values`` with null and short-vector
+        guards before missing entries become zero. Unsupported nested layouts raise
+        ``UnsupportedOperationException`` with the gap contract.
         """
         label_name = self.getLabelCol()
         raw_name = self.getRawPredictionCol()
@@ -280,8 +266,6 @@ class BinaryClassificationEvaluator(HasLabelCol, HasPredictionCol, Evaluator):
 
         score_quoted = _quote_ident(score_name)
         score_sql = f"CAST({score_quoted} AS DOUBLE)"
-        # Schema-driven extract; narrow except so we never densify nested types via CAST
-        # and never swallow UnsupportedOperationException (octo M7 C3/C4 unwrap).
         score_type = None
         type_name = ""
         try:
@@ -289,16 +273,10 @@ class BinaryClassificationEvaluator(HasLabelCol, HasPredictionCol, Evaluator):
             score_type = field_types.get(score_name)
             type_name = type(score_type).__name__ if score_type is not None else ""
         except (AttributeError, TypeError, ValueError):
-            # Schema unavailable — keep scalar CAST; plan will refuse non-numeric loud.
             type_name = ""
-        # Dense ML vector / ArrayType → list; extract positive-class index 1 (M6).
         if "Array" in type_name or "List" in type_name or "Vector" in type_name:
-            # DataFusion array_element is 0-based; Spark rawPrediction[1] is positive class.
             score_sql = f"CAST(array_element({score_quoted}, 1) AS DOUBLE)"
         elif "Struct" in type_name:
-            # M7: sparse VectorUDT {size, indices, values} — index-1 positive class.
-            # Confirm sparse-shaped fields when schema exposes them; otherwise still try
-            # the sparse extract (createDataFrame sparse path always uses these names).
             nested_names: set[str] = set()
             try:
                 nested_names = {field.name for field in score_type.fields}  # type: ignore[union-attr]
@@ -315,8 +293,6 @@ class BinaryClassificationEvaluator(HasLabelCol, HasPredictionCol, Evaluator):
         elif type_name and any(
             token in type_name for token in ("Map", "Dict", "Binary", "String", "Boolean")
         ):
-            # Non-vector nested / scalar non-numeric layouts: refuse with the gap string
-            # (never CAST→engine "Unsupported CAST from Map…" — octo M7 C3).
             raise UnsupportedOperationException(
                 f"{verb}: score column {score_name!r} has type {type_name} which is not a "
                 f"scalar DOUBLE, dense list, or sparse VectorUDT. {AUC_VECTOR_RAW_GAP}"
@@ -324,13 +300,11 @@ class BinaryClassificationEvaluator(HasLabelCol, HasPredictionCol, Evaluator):
         return label_name, score_sql, None
 
     def _evaluate_area_under_roc(self, frame: Any) -> float:
-        """Mann-Whitney rank-sum AUC via window RANK + aggregate (M5 plan shape).
+        """Evaluate areaUnderROC with a Mann-Whitney rank-sum plan.
 
-        Equivalent to trapezoidal ROC for binary labels with a scalar score column.
-        Prefers ``rawPredictionCol`` when present on the frame; else ``predictionCol``.
-        Dense list/array rawPrediction extracts positive-class score at index 1 (M6);
-        sparse struct extract is M7. Scores are projected to a scalar column before
-        ``ORDER BY`` so complex sparse/array expressions do not break DF window sorting.
+        Refuse empty, non-binary, or degenerate labels. Project scores to scalars before ordering.
+        DataFusion window ordering cannot safely use complex array or struct expressions. Average
+        tied ranks, independent of input order. Unusable vectors fail loudly.
         """
         label_name, score_sql, _ = self._resolve_score_sql(
             frame, verb="BinaryClassificationEvaluator.areaUnderROC"
@@ -341,17 +315,11 @@ class BinaryClassificationEvaluator(HasLabelCol, HasPredictionCol, Evaluator):
         frame.createOrReplaceTempView(view)
         try:
             _require_nonempty_eval(frame, view, verb="BinaryClassificationEvaluator.areaUnderROC")
-            # Project extract to a simple DOUBLE column so ROW_NUMBER ORDER BY is scalar
-            # (complex get_field/array_position ORDER BY fails DataFusion SanityCheckPlan).
             scored_sql = (
                 f"SELECT CAST({label} AS DOUBLE) AS label, ({score_sql}) AS score FROM {view}"
             )
             scored_frame = frame._spawn(frame._session.sql(scored_sql))
             scored_frame.createOrReplaceTempView(scored)
-            # Average ranks for ties: rank() leaves gaps; mean of peer row_numbers is
-            # the Mann-Whitney midrank. Labels must be 0/1 binary — non-binary labels
-            # contaminate midranks without counting in n_pos/n_neg and can yield AUC
-            # outside [0, 1] (octo M5 C1-F-AUC-NONBIN).
             sql = f"""
             WITH ordered AS (
               SELECT
@@ -415,14 +383,12 @@ class BinaryClassificationEvaluator(HasLabelCol, HasPredictionCol, Evaluator):
                     "0/1 (found non-binary label values). Non-0/1 labels contaminate "
                     "Mann-Whitney midranks and can yield AUC outside [0, 1]."
                 )
-            if value != value:  # NaN — degenerate (no pos or no neg) or all scores null
+            if value != value:
                 if (
                     n_pos <= 0.0
                     and n_neg <= 0.0
                     and ("array_element" in score_sql or "array_position" in score_sql)
                 ):
-                    # Short / empty dense or size<2 sparse → NULL scores → all rows
-                    # filtered; "degenerate labels" misleads (octo M6 C4 / M7 sparse).
                     raise IllegalArgumentException(
                         "BinaryClassificationEvaluator.areaUnderROC: no usable scores after "
                         "rawPrediction extract (dense array_element index 1 or sparse "
@@ -441,19 +407,11 @@ class BinaryClassificationEvaluator(HasLabelCol, HasPredictionCol, Evaluator):
                 frame._session.drop_temp_view(view)
 
     def _evaluate_area_under_pr(self, frame: Any) -> float:
-        """Average precision (areaUnderPR) via plan-built score-group rank statistics (M6).
+        """Evaluate areaUnderPR with score-group average precision.
 
-        Distinct scores are processed high→low as threshold groups (not per-row
-        ``ROW_NUMBER``). For each score group that contains positives, contribution is
-        ``n_pos_at_score * precision_after_group`` where
-        ``precision_after_group = cum_tp / (cum_tp + cum_fp)``; AP = sum / n_pos.
-
-        Grouping by score makes AP **order-independent under ties** (per-row
-        ``ROW_NUMBER() … DESC`` followed the physical row order among equal scores and
-        could return AP ∈ {0.42, 0.5, 0.83, 1.0} for the same multiset — octo M6 C3).
-        Unique-score rankings match classic mean precision-at-hit. Perfect ranking of
-        positives above negatives → 1.0. Same binary-label / degenerate guards as
-        areaUnderROC.
+        Refuse empty, non-binary, or degenerate labels. Project scores to scalars. Process tied
+        scores as groups because DataFusion cannot safely order complex array or struct
+        expressions. Input order cannot change the result. Unusable vectors refuse.
         """
         label_name, score_sql, _ = self._resolve_score_sql(
             frame, verb="BinaryClassificationEvaluator.areaUnderPR"
@@ -464,7 +422,6 @@ class BinaryClassificationEvaluator(HasLabelCol, HasPredictionCol, Evaluator):
         frame.createOrReplaceTempView(view)
         try:
             _require_nonempty_eval(frame, view, verb="BinaryClassificationEvaluator.areaUnderPR")
-            # Scalar score projection first (same SanityCheckPlan reason as ROC / M7 sparse).
             scored_sql = (
                 f"SELECT CAST({label} AS DOUBLE) AS label, ({score_sql}) AS score FROM {view}"
             )
@@ -575,7 +532,6 @@ class BinaryClassificationEvaluator(HasLabelCol, HasPredictionCol, Evaluator):
                 frame._session.drop_temp_view(view)
 
 
-# Named seed for multiclass F1 (must not silently return accuracy — octo C1-L-002).
 MULTICLASS_F1_SEED = (
     "MulticlassClassificationEvaluator.metricName='f1' requires per-label precision/recall "
     "aggregation; not implemented in v1. Use metricName='accuracy'. Seed → later unit "
@@ -584,7 +540,11 @@ MULTICLASS_F1_SEED = (
 
 
 class MulticlassClassificationEvaluator(HasLabelCol, HasPredictionCol, Evaluator):
-    """Accuracy via plan aggregate; default Spark metric ``f1`` is loud-unsupported in v1."""
+    """Evaluate multiclass accuracy only.
+
+    The caller must set ``metricName="accuracy"``. The default ``f1`` is unsupported and
+    ``evaluate`` refuses it.
+    """
 
     def __init__(
         self,
@@ -593,7 +553,7 @@ class MulticlassClassificationEvaluator(HasLabelCol, HasPredictionCol, Evaluator
         predictionCol: str | None = None,  # noqa: N803
         metricName: str | None = None,  # noqa: N803
     ) -> None:
-        """Optional kwargs. Default Spark metric is ``f1`` (unsupported here — use accuracy)."""
+        """Initialize evaluator parameters."""
         super().__init__()
         self.metricName: Param[str] = Param(
             self,
@@ -610,19 +570,19 @@ class MulticlassClassificationEvaluator(HasLabelCol, HasPredictionCol, Evaluator
             self._set(metricName=metricName)
 
     def setMetricName(self, value: str) -> MulticlassClassificationEvaluator:
-        """Set metric name."""
+        """Set the metric name."""
         return self._set(metricName=value)
 
     def getMetricName(self) -> str:
-        """Get metric name."""
+        """Return the metric name."""
         return str(self.getOrDefault(self.metricName))
 
     def isLargerBetter(self) -> bool:
-        """Accuracy and F1 are larger-better."""
+        """Return ``True`` because classification metrics are larger-is-better."""
         return True
 
     def evaluate(self, dataset: Any) -> float:
-        """Accuracy via plan aggregate; ``f1`` refuses loud (never silent accuracy)."""
+        """Evaluate accuracy or refuse unsupported F1."""
         frame = _require_repark_dataframe(
             dataset, verb="MulticlassClassificationEvaluator.evaluate"
         )

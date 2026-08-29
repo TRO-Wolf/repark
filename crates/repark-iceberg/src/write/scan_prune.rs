@@ -1,55 +1,11 @@
-//! MERGE target-scan pruning — residual join-key bounds on the Iceberg scan (R-PERF-MERGE-PRUNE).
+//! MERGE target-scan pruning with residual join-key bounds.
 //!
-//! ## Analysis (2026-07-29) — what reaches the fork scan today
-//!
-//! [`crate::write::merge::TargetScanStream::execute`] opens:
-//!
-//! ```text
-//! table.scan().snapshot_id(pin).select([data…, _file, _pos]).build()
-//! ```
-//!
-//! Primary target may carry a residual join-key bounds filter (r24 PERF-04) when the shape is
-//! safe; otherwise the scan is unfiltered. MoR/COW then join against that (possibly pruned)
-//! primary; COW rewrite uses a separate file-scoped whole-file stream when conf allows.
-//!
-//! ## Seam — residual hazard + r24 PERF-04 partial lift
-//!
-//! `TableScanBuilder::with_filter(Predicate)` is public and **does** drive inclusive metrics
-//! evaluation (file prune) **and** residual row filtering after a file is opened. Residual row
-//! filtering is **incorrect for copy-on-write rewrite through the primary target**: survivors that
-//! share a data file with a matched key must remain visible to the rewrite SQL, but a residual
-//! `k ∈ [min,max]` filter drops them (reproduced: `merge_bucket_partitioned_routes_by_fork_hash`
-//! lost `id=1` when source keys were `{2,8}`).
-//!
-//! **r24 PERF-04 (bounded equi-key):** residual **is** pushed onto the primary target when safe:
-//!
-//! - **`MoR`** — discovery / matched work / insert never need unmatched survivors through residual.
-//! - **COW + `file_scoped_rewrite`** (default) — rewrite uses a separate whole-file allowlisted
-//!   stream (`filter=None`); residual only scopes discovery + insert anti-join.
-//! - **COW + file-scoped OFF** — residual stays **None** (full STOP).
-//!
-//! Bounded shapes only: bare equality ON, **identical** `Int32`/`Int64` source and target
-//! key types, source min/max. A non-identical pair (Utf8→Int32, Int64→Int32, …) skips that
-//! conjunct — pruning is an optimization; the unfiltered scan is always correct. No new
-//! prune types (no Utf8=Utf8) and no order-preserving-cast whitelist. Any remaining probe
-//! failure (cast, schema, unexpected null shape) also skips the conjunct rather than
-//! aborting MERGE. Source column names are resolved case-insensitively against the source
-//! schema before quoting. General multi-clause / non-equi ON is OUT (r25). Pins:
+//! Bounds are pushed only for bare equality keys with matching `Int32`/`Int64` types. A residual
+//! filter never reaches an unscoped COW rewrite, because it can hide unmatched survivors in an
+//! affected file. `MoR` and file-scoped COW use the bounds for discovery and insert anti-joins;
+//! file-scoped-off COW keeps the scan unfiltered. Unsupported shapes and probe failures skip
+//! pruning, preserving the correct unfiltered path. Pins:
 //! `cow_equi_key_residual_keeps_colocated_survivors`, `mor_equi_key_residual_upsert_correct`.
-//!
-//! **What the fork would need for a universal path:** a metrics-only / file-prune-only mode
-//! (Java-style inclusive metrics evaluator without residual apply), or a public API to plan files
-//! with a residual bound while still reading full files.
-//!
-//! ## Correctness of range residual
-//!
-//! For equality ON `target.k = source.k`, any matched target row must have `k` in
-//! `[min(source.k), max(source.k)]`. Files whose column bounds fall entirely outside that range
-//! can contain no MATCHED rows and need not be scanned for MATCHED work. Unmatched target rows
-//! outside the range stay untouched by MoR/COW rewrite either way (they are not rewritten and
-//! not position-deleted). Inserts never read those files for identity. Multi-column AND of bare
-//! equalities: conjunctive bounds remain necessary for a match. Expression / NULL-safe (`<=>`)
-//! conjuncts contribute no bounds; if no bare equality remains, pruning is skipped.
 
 use std::sync::Arc;
 

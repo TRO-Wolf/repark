@@ -1,18 +1,8 @@
-"""repark — native ANSI ``sql()`` door plus a deprecation shim for the PySpark facade.
+"""Native ANSI SQL entry point and compatibility exports for the Spark facade.
 
-The facade lives at :mod:`repark.spark`. Migrating a script is still one line::
-
-    from repark import ReparkSession   # was: from pyspark.sql import SparkSession
-
-    spark = ReparkSession.builder.appName("etl").getOrCreate()
-    spark.sql("SELECT 1 AS a, 'x' AS b").show()
-
-``repark.sql("SELECT 1")`` is the ANSI-door *callable* (not a package).
-``import repark.sql`` fails — the old pyspark-alias package moved to
-``repark.spark.sql`` so ``sed 's/pyspark/repark.spark/'`` still works.
-
-``SparkSession`` remains an alias of :class:`ReparkSession`. All compute happens
-in Rust; data crosses as Apache Arrow via the Arrow PyCapsule interface.
+The facade lives in :mod:`repark.spark`. ``repark.sql`` is a callable, not a
+package, and ``SparkSession`` remains an alias of :class:`ReparkSession`.
+Compute runs in Rust and crosses the boundary through Apache Arrow capsules.
 """
 
 from __future__ import annotations
@@ -23,11 +13,11 @@ from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _distribution_version
 from typing import Any
 
-# Session construction reads ``repark.__version__`` while this package is still
-# loading — bind it before any facade import.
+# Bind the version before facade imports because session construction reads it during package load.
+
 try:
     __version__ = _distribution_version("repark")
-except PackageNotFoundError:  # running from a source tree without an installed distribution
+except PackageNotFoundError:  # source-tree execution has no installed distribution
     __version__ = "0.0.0"
 
 from repark import errors
@@ -81,22 +71,22 @@ _ANSI_ALIVE: dict[str, bool] = {"alive": True}
 
 
 def sql(query: str) -> DataFrame:
-    """Run ``query`` through the native ANSI SQL door.
-
-    Uses a process-wide native engine session (stock DataFusion dialect, no
-    Spark extension) distinct from :meth:`ReparkSession.builder.getOrCreate`.
-    Results are a :class:`DataFrame`; pin value AND Arrow type via ``to_arrow``
-    / ``collect`` — never ``show`` alone.
+    """Run a query through the process-wide native ANSI SQL session.
 
     Parameters
     ----------
     query:
-        A SQL string. Must be ``str`` (no bytes / Column).
+        SQL text as a string.
 
     Returns
     -------
     DataFrame
-        The planned native-session frame.
+        The planned frame from the native session.
+
+    Raises
+    ------
+    TypeError
+        If ``query`` is not a string.
     """
     if not isinstance(query, str):
         raise TypeError(f"repark.sql() query must be str, got {type(query).__name__}")
@@ -108,14 +98,8 @@ def sql(query: str) -> DataFrame:
     return DataFrame(_ANSI_NATIVE.sql(query), _ANSI_NATIVE, _ANSI_ALIVE)
 
 
-# === r21 T3: ux-polish ===
 class _ReparkModule(_types_mod.ModuleType):
-    """Module type that refuses silent ``repark.display_style = …`` absorption.
-
-    Display style is a **session** attribute (or ``repark.display.style`` conf key). Assigning
-    it on the package object used to succeed as a dead module attribute while show() kept
-    the spark grid — refuse loud instead.
-    """
+    """Reject unsupported module-level display-style assignment."""
 
     def __setattr__(self, name: str, value: object) -> None:
         if name == "display_style":

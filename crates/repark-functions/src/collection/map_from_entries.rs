@@ -1,17 +1,6 @@
-//! Spark `map_from_entries` — duplicate keys raise `DUPLICATED_MAP_KEY` (X7).
+//! Spark `map_from_entries` rejects duplicate keys with `DUPLICATED_MAP_KEY`.
 //!
-//! Spark's default `spark.sql.mapKeyDedupPolicy` is `EXCEPTION`: building a map with a repeated
-//! key is an error, not a silent last-write-wins. This engine already enforces that for the two
-//! sibling constructors — `map(...)` (`map key must be unique, duplicate key found`) and
-//! `str_to_map` (the `DUPLICATED_MAP_KEY` message in [`crate::collection`]'s regex shim) — but
-//! `datafusion-spark` 54.1's `map_from_entries` silently keeps the LAST entry, so
-//! `map_from_entries(array(struct('a','1'), struct('a','2')))` returned `{a: 2}` where Spark
-//! raises. That is a silent-wrong-result divergence on a data-integrity path: a duplicate key in
-//! the input means the row is wrong, and dropping one of the two hides it.
-//!
-//! The check runs on the **input entries** (the kernel's own output has already collapsed the
-//! duplicate, so it cannot be detected afterwards) and then delegates: the map construction
-//! itself stays upstream's.
+//! The guard runs before construction because the upstream kernel silently keeps the last value.
 
 use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
@@ -70,7 +59,6 @@ fn duplicate_key(key: &ScalarValue) -> datafusion::error::DataFusionError {
 fn refuse_duplicate_keys(entries: &ArrayRef) -> Result<()> {
     let list = match entries.data_type() {
         DataType::List(_) | DataType::LargeList(_) => entries,
-        // FixedSizeList / Null: no duplicate is expressible that the kernel would hide.
         _ => return Ok(()),
     };
     for row in 0..list.len() {

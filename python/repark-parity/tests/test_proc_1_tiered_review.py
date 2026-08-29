@@ -1,9 +1,9 @@
-"""PR-244: revalidate the tiered-review process and preserve its evidence corrections.
+"""Tree pins for the tiered-review process revalidation and its evidence corrections.
 
-Tree pins for the PR-244 revalidation clauses. Each test reads a document relative to
-the repository root and asserts the load-bearing tokens the clause makes true. The
-comment on each test names what silently regresses if the pin is removed — the
-process rule these documents carry has no other mechanical guard.
+Each test reads a document relative to the repository root and asserts the
+load-bearing tokens the clause makes true. The comment on each test names what
+silently regresses if the pin is removed — the process rule these documents
+carry has no other mechanical guard.
 """
 
 from __future__ import annotations

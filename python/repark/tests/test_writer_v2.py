@@ -1,8 +1,8 @@
-"""Facade tests for Group I: DataFrameWriterV2 (writeTo), path parquet, sortWithinPartitions,
+"""Facade tests for DataFrameWriterV2 (writeTo), path parquet, sortWithinPartitions,
 partition transforms, and F.weekday.
 
 Routes only over existing CTAS / CREATE OR REPLACE / INSERT / COPY TO paths — no new commit
-machinery. Oracle notes (live PySpark 4.1.2, Java 17) are embedded in the test docstrings.
+machinery. Live-PySpark oracle notes are embedded in the test docstrings.
 """
 
 from __future__ import annotations
@@ -39,15 +39,11 @@ def _source(spark: ReparkSession, rows: str, cols: str = "id, name") -> object:
     return spark.sql(f"SELECT * FROM (VALUES {rows}) AS t({cols})")
 
 
-# ==================================================================================================
-# I5 — F.weekday (Monday=0)
-# ==================================================================================================
-
-
+# F.weekday (Monday=0)
 def test_weekday_monday_is_zero(spark: ReparkSession) -> None:
-    """Mutation proof #3: weekday Monday=0 / Sunday=6 (live PySpark 4.1.2)."""
+    """weekday Monday=0 / Sunday=6 (live PySpark 4.1.2)."""
     # 2024-01-08 = Monday, 2024-01-07 = Sunday, 2024-03-15 = Friday.
-    # createDataFrame does not accept Python date yet — use string + cast (WG2 spine pattern).
+    # createDataFrame does not accept Python dates yet — string + cast (spine pattern).
     frame = spark.createDataFrame(
         [("2024-01-08",), ("2024-01-07",), ("2024-03-15",)],
         ["calendar_date_str"],
@@ -59,11 +55,7 @@ def test_weekday_monday_is_zero(spark: ReparkSession) -> None:
     assert pa.types.is_integer(table.schema.field("w").type)
 
 
-# ==================================================================================================
-# I3 — sortWithinPartitions
-# ==================================================================================================
-
-
+# sortWithinPartitions
 def test_sort_within_partitions_orders_like_order_by(spark: ReparkSession) -> None:
     """Single-node repark = one partition → sortWithinPartitions ≡ orderBy (value + order)."""
     frame = spark.sql("SELECT * FROM (VALUES (3,'c'),(1,'a'),(2,'b')) AS t(id, name)")
@@ -93,11 +85,7 @@ def test_sort_within_partitions_multi_column(spark: ReparkSession) -> None:
     ]
 
 
-# ==================================================================================================
-# I2 — F.years/months/days/hours (partitionedBy only) + transform gate
-# ==================================================================================================
-
-
+# F.years/months/days/hours (partitionedBy only) + transform gate
 def test_years_outside_partitioned_by_raises(spark: ReparkSession) -> None:
     """Oracle: years() outside partitionedBy raises PARTITION_TRANSFORM…_NOT_IN_PARTITIONED_BY."""
     frame = spark.sql("SELECT DATE '2024-03-15' AS d")
@@ -105,8 +93,7 @@ def test_years_outside_partitioned_by_raises(spark: ReparkSession) -> None:
         AnalysisException, match="PARTITION_TRANSFORM_EXPRESSION_NOT_IN_PARTITIONED_BY"
     ):
         frame.select(F.years("d").alias("y")).collect()
-    # Compound ops must keep the marker sticky — never silent-empty on the dummy null literal
-    # (Critic C1-Q-001 / C2-S-006).
+    # Compound ops must keep the marker sticky — never silent-empty on the dummy null literal.
     with pytest.raises(
         AnalysisException, match="PARTITION_TRANSFORM_EXPRESSION_NOT_IN_PARTITIONED_BY"
     ):
@@ -115,8 +102,7 @@ def test_years_outside_partitioned_by_raises(spark: ReparkSession) -> None:
         AnalysisException, match="PARTITION_TRANSFORM_EXPRESSION_NOT_IN_PARTITIONED_BY"
     ):
         frame.select((F.years("d") + 1).alias("y")).collect()
-    # Entry points beyond select/filter (octo r1 C1-Q-002): groupBy / join must not evaluate the
-    # dummy null literal.
+    # groupBy / join must not evaluate the dummy null literal.
     with pytest.raises(
         AnalysisException, match="PARTITION_TRANSFORM_EXPRESSION_NOT_IN_PARTITIONED_BY"
     ):
@@ -126,7 +112,7 @@ def test_years_outside_partitioned_by_raises(spark: ReparkSession) -> None:
         AnalysisException, match="PARTITION_TRANSFORM_EXPRESSION_NOT_IN_PARTITIONED_BY"
     ):
         frame.join(other, F.years("d") == F.years(F.col("d2"))).collect()
-    # F.* wrappers must carry the marker (octo r1 C1-Q-003) — never silent NULL / lit fallback.
+    # F.* wrappers must carry the marker — never silent NULL / lit fallback.
     with pytest.raises(
         AnalysisException, match="PARTITION_TRANSFORM_EXPRESSION_NOT_IN_PARTITIONED_BY"
     ):
@@ -135,12 +121,12 @@ def test_years_outside_partitioned_by_raises(spark: ReparkSession) -> None:
         AnalysisException, match="PARTITION_TRANSFORM_EXPRESSION_NOT_IN_PARTITIONED_BY"
     ):
         frame.select(F.coalesce(F.years("d"), F.lit(1)).alias("y")).collect()
-    # Date-fn wrappers must carry the marker too (octo r2 C1-Q-001) — never year(NULL) silent.
+    # Date-fn wrappers must carry the marker too — never year(NULL) silent.
     with pytest.raises(
         AnalysisException, match="PARTITION_TRANSFORM_EXPRESSION_NOT_IN_PARTITIONED_BY"
     ):
         frame.select(F.year(F.years("d")).alias("y")).collect()
-    # Window.partitionBy must not evaluate the dummy null (octo r3 C3-L-001).
+    # Window.partitionBy must not evaluate the dummy null.
     from repark import Window
 
     with pytest.raises(
@@ -152,12 +138,10 @@ def test_years_outside_partitioned_by_raises(spark: ReparkSession) -> None:
 
 
 def test_bucket_partitioned_by_round_trips_e2e(spark: ReparkSession) -> None:
-    """PIN P8 (Group P) — `writeTo(t).partitionedBy(F.bucket(4,"id")).create()` round-trips
-    end-to-end through the facade → CTAS `PARTITIONED BY (bucket(4, "id"))` → the computed-mode
-    fork splitter. The table is created (NOT gated) and every row reads back value AND type.
+    """``writeTo(t).partitionedBy(F.bucket(4, "id")).create()`` round-trips end-to-end.
 
-    Mutation coverage: if `F.bucket` rendering regresses the create fails or misroutes; if the
-    engine reverted to rejecting non-identity transforms the create would raise instead.
+    Facade → CTAS ``PARTITIONED BY (bucket(4, "id"))`` → the computed-mode fork splitter; every
+    row reads back value AND type.
     """
     table = f"{CATALOG}.{NS}.bucket_e2e"
     frame = spark.sql(
@@ -176,8 +160,7 @@ def test_bucket_partitioned_by_round_trips_e2e(spark: ReparkSession) -> None:
 
 
 def test_years_partitioned_by_round_trips_e2e(spark: ReparkSession) -> None:
-    """PIN P8 (Group P) — a `years(event_date)`-partitioned create works end-to-end and the rows
-    round-trip (previously this surfaced the CTAS transform gate loud)."""
+    """A ``years(event_date)``-partitioned create works end-to-end and rows round-trip."""
     table = f"{CATALOG}.{NS}.years_e2e"
     frame = spark.sql(
         "SELECT * FROM (VALUES (DATE '2024-03-15', 1),(DATE '2025-06-01', 2)) AS t(event_date, id)"
@@ -191,10 +174,9 @@ def test_years_partitioned_by_round_trips_e2e(spark: ReparkSession) -> None:
 
 
 def test_partition_transform_quotes_identity_arg() -> None:
-    """C3-SEC-001: years/months/days/hours/bucket embed a double-quoted identity arg (not raw
-    text).
+    """Transforms embed a double-quoted identity arg, not raw text.
 
-    Mutation-proof: if quoting regresses, hostile fragments re-enter PARTITIONED BY unescaped.
+    If quoting regresses, hostile fragments re-enter PARTITIONED BY unescaped.
     """
     assert F.years("event_date")._partition_transform == 'years("event_date")'
     assert F.months(F.col("ts"))._partition_transform == 'months("ts")'
@@ -206,11 +188,7 @@ def test_partition_transform_quotes_identity_arg() -> None:
     assert F.bucket(8, 'x"; DROP')._partition_transform == 'bucket(8, "x""; DROP")'
 
 
-# ==================================================================================================
-# I1 — DataFrameWriterV2
-# ==================================================================================================
-
-
+# DataFrameWriterV2
 def test_write_to_create_and_create_on_existing(spark: ReparkSession) -> None:
     """create() works; create() on existing → AnalysisException (TABLE_OR_VIEW_ALREADY_EXISTS)."""
     _source(spark, "(1,'a')").writeTo(TABLE).create()
@@ -220,7 +198,7 @@ def test_write_to_create_and_create_on_existing(spark: ReparkSession) -> None:
 
 
 def test_write_to_create_or_replace_vs_create_discriminator(spark: ReparkSession) -> None:
-    """Mutation proof #2: createOrReplace replaces; create on existing errors."""
+    """createOrReplace replaces; create on existing errors."""
     _source(spark, "(1,'a')").writeTo(TABLE).createOrReplace()
     _source(spark, "(9,'z')").writeTo(TABLE).createOrReplace()
     assert _read(spark) == [{"id": 9, "name": "z"}]
@@ -238,7 +216,7 @@ def test_write_to_replace_missing_and_existing(spark: ReparkSession) -> None:
 
 
 def test_write_to_append_case_insensitive_by_name(spark: ReparkSession) -> None:
-    """Critic-1 Q-004 / audit BUG-007: writeTo.append by-name is case-insensitive."""
+    """writeTo.append by-name is case-insensitive."""
     table = "glue_catalog.writer_v2_ns.byname_ci"
     spark.createDataFrame([(1, 10)], ["a", "b"]).writeTo(table).create()
     spark.createDataFrame([(20, 2)], ["B", "A"]).writeTo(table).append()
@@ -247,7 +225,7 @@ def test_write_to_append_case_insensitive_by_name(spark: ReparkSession) -> None:
 
 
 def test_write_to_append_resolves_by_name(spark: ReparkSession) -> None:
-    """Mutation proof #1: V2 append is by-name (reordered frame does not transpose)."""
+    """V2 append is by-name (a reordered frame does not transpose)."""
     table = f"{CATALOG}.{NS}.byname"
     spark.createDataFrame([(1, 10)], ["a", "b"]).writeTo(table).create()
     spark.createDataFrame([(20, 2)], ["b", "a"]).writeTo(table).append()
@@ -276,14 +254,12 @@ def test_write_to_append_vs_v1_insert_into_discriminator(spark: ReparkSession) -
 def test_write_to_overwrite_partitions_refuses_loud_and_leaves_data(
     spark: ReparkSession,
 ) -> None:
-    """overwritePartitions raises UnsupportedOperationException; target untouched (review).
+    """overwritePartitions raises UnsupportedOperationException; target untouched.
 
     Spark Iceberg semantics are DYNAMIC partition overwrite (source partitions only; empty
-    source = no-op). repark's engine has only static whole-table INSERT OVERWRITE, so
-    honoring the call silently replaced ALL rows — and, pre-review, an empty source wiped
-    the table outright. The silent-data-loss class: refuse loud until the fork's
-    ReplacePartitions is wired. Both the camelCase and snake_case spellings gate; the
-    target's rows survive the raise bit-for-bit.
+    source = no-op), but the engine has only static whole-table INSERT OVERWRITE — honoring the
+    call silently replaced ALL rows. Refuse loud until the fork's ReplacePartitions is wired;
+    both spellings gate and the target's rows survive the raise bit-for-bit.
     """
     from repark.errors import UnsupportedOperationException
 
@@ -305,7 +281,7 @@ def test_write_to_overwrite_partitions_refuses_loud_and_leaves_data(
 
 
 def test_save_as_table_empty_overwrite_wipes_all(spark: ReparkSession) -> None:
-    """V1 mode('overwrite').saveAsTable empty source must wipe (octo r4 C1-Q-001)."""
+    """V1 mode('overwrite').saveAsTable empty source must wipe."""
     table = f"{CATALOG}.{NS}.v1_ow_empty"
     spark.sql("SELECT 1 AS id, 'a' AS n").write.mode("overwrite").saveAsTable(table)
     spark.sql("SELECT 1 AS id, 'a' AS n WHERE false").write.mode("overwrite").saveAsTable(table)
@@ -313,10 +289,10 @@ def test_save_as_table_empty_overwrite_wipes_all(spark: ReparkSession) -> None:
 
 
 def test_insert_into_empty_overwrite_wipes_all(spark: ReparkSession) -> None:
-    """O3-C1-Q-003: insertInto(overwrite=True) empty source must wipe via INSERT OVERWRITE SQL.
+    """insertInto(overwrite=True) empty source must wipe via INSERT OVERWRITE SQL.
 
-    Guards a regression that special-cases insertInto to bare DELETE (skipping engine schema
-    validate) or reverts to the fork empty short-circuit no-op.
+    Guards a special-case to bare DELETE (skipping engine schema validate) or a fork empty
+    short-circuit no-op regression.
     """
     table = f"{CATALOG}.{NS}.v1_ow_insert_into_empty"
     spark.sql("SELECT 1 AS id, 'a' AS n").write.mode("overwrite").saveAsTable(table)
@@ -359,7 +335,7 @@ def test_write_to_partitioned_by_string_identity(spark: ReparkSession) -> None:
 
 
 def test_write_to_option_warns_once(spark: ReparkSession) -> None:
-    """C1-Q-005: option/options emit a process-once UserWarning (ignored storage options)."""
+    """option/options emit a process-once UserWarning (ignored storage options)."""
     import warnings
 
     from repark.spark.dataframe import _reset_writer_v2_option_warnings_for_tests
@@ -375,11 +351,7 @@ def test_write_to_option_warns_once(spark: ReparkSession) -> None:
         assert caught == [], f"second option/options must not re-warn, got {caught}"
 
 
-# ==================================================================================================
-# I4 — path parquet / format.save via COPY TO
-# ==================================================================================================
-
-
+# path parquet / format.save via COPY TO
 def test_write_parquet_path_round_trip(spark: ReparkSession, tmp_path: Path) -> None:
     path = tmp_path / "out_parquet"
     frame = _source(spark, "(1,'a'),(2,'b')")
@@ -412,7 +384,7 @@ def test_write_parquet_error_mode_on_existing(spark: ReparkSession, tmp_path: Pa
 def test_write_parquet_path_braces_and_view_placeholder_literal(
     spark: ReparkSession, tmp_path: Path
 ) -> None:
-    """User path text must not be reinterpreted by writer SQL binding (Critic C2-S-001).
+    """User path text must not be reinterpreted by writer SQL binding.
 
     Brace segments and the substring ``{view}`` are literal path components — never
     ``str.format`` keys / placeholders.
@@ -433,7 +405,7 @@ def test_write_parquet_path_braces_and_view_placeholder_literal(
 def test_write_parquet_overwrite_preserves_data_until_success(
     spark: ReparkSession, tmp_path: Path
 ) -> None:
-    """Overwrite stages then swaps — prior path remains until COPY succeeds (C1-Q-003).
+    """Overwrite stages then swaps — prior path remains until COPY succeeds.
 
     On-disk parquet is the source of truth for the second write: DataFusion may cache a
     directory listing for ``read.parquet`` on a reused path within one session.
@@ -458,11 +430,11 @@ def test_write_parquet_overwrite_preserves_data_until_success(
 def test_write_parquet_empty_overwrite_does_not_destroy_prior(
     spark: ReparkSession, tmp_path: Path
 ) -> None:
-    """Empty-frame overwrite must not rmtree-then-fail (octo r1 C1-Q-001).
+    """Empty-frame overwrite must not rmtree-then-fail.
 
-    DataFusion COPY on an empty SELECT can succeed without creating the staging path. The
-    writer must materialize staging before touching the destination so prior data is either
-    fully replaced or left intact — never deleted into a missing rename.
+    DataFusion COPY on an empty SELECT can succeed without creating the staging path; the writer
+    must materialize staging before touching the destination so prior data is either fully
+    replaced or left intact — never deleted into a missing rename.
     """
     import pyarrow.parquet as pq
 
@@ -491,11 +463,10 @@ def test_write_parquet_empty_first_write_succeeds(spark: ReparkSession, tmp_path
 def test_write_parquet_overwrite_same_session_read_sees_new_rows(
     spark: ReparkSession, tmp_path: Path
 ) -> None:
-    """Same-session read.parquet after path overwrite must not return stale rows (octo r4 C1-Q-002).
+    """Same-session read.parquet after path overwrite must not return stale rows.
 
-    DataFusion's list-files cache keys directory listings by path; stage-swap reuses the
-    destination path. Session RuntimeEnv disables that cache so the public write→read path is
-    correct without requiring a new session or a pyarrow on-disk workaround.
+    DataFusion's list-files cache keys directory listings by path and stage-swap reuses the
+    destination path, so session RuntimeEnv disables that cache for the public write→read path.
     """
     path = tmp_path / "rw_cache"
     spark.sql("SELECT 1 AS id").write.mode("overwrite").parquet(str(path))
@@ -508,7 +479,7 @@ def test_write_parquet_overwrite_same_session_read_sees_new_rows(
 
 
 def test_write_to_table_property_view_placeholder_literal(spark: ReparkSession) -> None:
-    """TBLPROPERTIES values containing ``{view}`` must not be rewritten (C2-S-001)."""
+    """TBLPROPERTIES values containing ``{view}`` must not be rewritten."""
     table = f"{CATALOG}.{NS}.prop_view_token"
     (
         _source(spark, "(1,'a')")
@@ -517,9 +488,8 @@ def test_write_to_table_property_view_placeholder_literal(spark: ReparkSession) 
         .create()
     )
     assert _read(spark, table) == [{"id": 1, "name": "a"}]
-    # Property survives CTAS binding; engine may or may not surface SHOW TBLPROPERTIES —
-    # the critical pin is that create succeeds without format KeyError / silent rewrite
-    # of the SQL (value is only embedded via _sql_string_literal, not str.format).
+    # The critical pin: create succeeds without format KeyError or silent SQL rewrite
+    # (the value is embedded via _sql_string_literal, not str.format).
 
 
 def test_write_save_requires_path(spark: ReparkSession) -> None:
@@ -528,7 +498,7 @@ def test_write_save_requires_path(spark: ReparkSession) -> None:
 
 
 def test_write_csv_json_round_trip(spark: ReparkSession, tmp_path: Path) -> None:
-    """R1: csv/json path writes (was C4-Q-002 DATA_SOURCE_NOT_FOUND)."""
+    """csv/json path writes round-trip."""
     csv_path = tmp_path / "c"
     json_path = tmp_path / "j"
     _source(spark, "(1,'a')").write.mode("overwrite").csv(str(csv_path), header=True)
@@ -540,7 +510,7 @@ def test_write_csv_json_round_trip(spark: ReparkSession, tmp_path: Path) -> None
 
 
 def test_write_orc_loud(spark: ReparkSession, tmp_path: Path) -> None:
-    """Unsupported path format stays DATA_SOURCE_NOT_FOUND-shaped (R1 leaves orc out)."""
+    """Unsupported path format stays DATA_SOURCE_NOT_FOUND-shaped."""
     with pytest.raises(AnalysisException, match="DATA_SOURCE_NOT_FOUND") as raised:
         _source(spark, "(1,'a')").write.format("orc").save(str(tmp_path / "o"))
     assert "orc" in str(raised.value).lower()
@@ -554,16 +524,14 @@ def test_write_orc_loud(spark: ReparkSession, tmp_path: Path) -> None:
 def test_mini_dogfood_write_to_production_snippet(spark: ReparkSession) -> None:
     """Reproduce the production writeTo / sortWithinPartitions / createOrReplace shape.
 
-    Transform partitioning (years) is gated — dogfood uses identity partitioning for that case
-    and pins the transform gate separately. overwritePartitions is gated loud (2026-07-22
-    review — dynamic partition overwrite unavailable), exactly what the production
-    write_roll_schedule would hit on repark today.
+    overwritePartitions is refused loud (dynamic partition overwrite unavailable), exactly what
+    the production write_roll_schedule would hit on repark today.
     """
     fq_table = f"{CATALOG}.{NS}.spliced_futures_1m"
     schedule_table = f"{CATALOG}.{NS}.schedule"
 
-    # Avoid TIMESTAMP literals (DataFusion → timestamp_ns; Iceberg v2 rejects ns). Use a
-    # sortable string clock column that matches the production dual-key sort shape.
+    # No TIMESTAMP literals (DataFusion → timestamp_ns; Iceberg v2 rejects ns): a sortable
+    # string clock column matches the production dual-key sort shape.
     spliced = spark.sql(
         "SELECT * FROM (VALUES "
         "(DATE '2024-03-15', '2024-03-15 10:00:00', 1),"
@@ -589,8 +557,7 @@ def test_mini_dogfood_write_to_production_snippet(spark: ReparkSession) -> None:
 
     schedule_df = spark.sql("SELECT * FROM (VALUES (10, 'a'),(20, 'b')) AS t(id, cat)")
     schedule_df.writeTo(schedule_table).partitionedBy(F.col("cat"), F.col("id")).create()
-    # overwritePartitions is refused loud (dynamic partition overwrite unavailable) and the
-    # schedule table survives untouched — the production job fails HERE, visibly, not silently.
+    # The production job fails here, visibly, not silently.
     with pytest.raises(UnsupportedOperationException, match="dynamic partition overwrite"):
         spark.sql("SELECT * FROM (VALUES (99, 'a')) AS t(id, cat)").writeTo(
             schedule_table
@@ -602,8 +569,6 @@ def test_mini_dogfood_write_to_production_snippet(spark: ReparkSession) -> None:
         {"id": 20, "cat": "b"},
     ]
 
-    # Transform path now works end-to-end (Group P): a years(event_date)-partitioned create
-    # succeeds and the rows round-trip.
     spliced.writeTo(f"{CATALOG}.{NS}.years_prod").partitionedBy(
         F.years(F.col("event_date"))
     ).createOrReplace()

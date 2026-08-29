@@ -3,7 +3,7 @@
 Each function returns a :class:`repark.column.Column` backed by a native DataFusion expression.
 PySpark scripts import these as ``from repark.functions import col, lit, coalesce`` or,
 idiomatically, ``import repark.functions as F`` then ``F.col(...)`` — the one-line import swap from
-``pyspark.sql.functions``. This is WG1's in-use set; the date/window functions land in WG2.
+``pyspark.sql.functions``. Date and window helpers remain in dedicated modules.
 """
 
 from __future__ import annotations
@@ -15,8 +15,6 @@ from typing import Any
 
 from repark import _native
 from repark.errors import PySparkTypeError, PySparkValueError
-
-# === r23 QI1: idents ===
 from repark.spark._idents import quote_column_sql_expr as _quote_column_sql_expr
 from repark.spark._idents import sql_string_literal
 from repark.spark.column import Column, Scalar
@@ -27,9 +25,9 @@ def col(name: str) -> Column:
     """A column reference by name (PySpark ``functions.col``).
 
     Bare attributes are Spark ``NamedExpression``s: a plain ``.cast(...)`` keeps this name
-    in ``DataFrame.select`` (Group H; live PySpark 4.1.2). Structural ``sql_expr`` is a
-    double-quoted identifier so free-SQL surfaces cannot retarget FROM via hostile names
-    (octo C3-SEC-001). Qualified names (``source.col``) quote each segment.
+    in ``DataFrame.select`` (live PySpark 4.1.2). Structural ``sql_expr`` is a
+    double-quoted identifier so free-SQL surfaces cannot retarget FROM via hostile names.
+    Qualified names (``source.col``) quote each segment.
     """
     return Column(
         _native.PyColumn.column(name),
@@ -49,7 +47,7 @@ def lit(value: Any) -> Column:
     (uses ``.value``), ``list`` / ``tuple`` (array), and 1-D ``numpy.ndarray``
     (array with Spark element type from dtype — E2). Marked foldable so
     ``df.select(F.sum("x"), F.lit(1))`` is a global aggregate (Spark allows constants
-    beside aggregates — octo C1-Q-002), not ``[MISSING_GROUP_BY]``.
+    beside aggregates, not ``[MISSING_GROUP_BY]``.
     """
     if isinstance(value, enum.Enum):
         value = value.value
@@ -94,11 +92,9 @@ def lit(value: Any) -> Column:
             sql_expr=sql,
             is_foldable=True,
         )
-    # numpy.ndarray → typed array (E2 hand-off from E1; Apache test_*_ndarray*).
     ndarray_column = _lit_numpy_ndarray(value)
     if ndarray_column is not None:
         return ndarray_column
-    # Spark ``lit([1,2])`` builds an array column via engine ``make_array`` (X1 census).
     if isinstance(value, (list, tuple)):
         # Columns inside lit([...]) → COLUMN_IN_LIST (Apache test_lit_list).
         for item in value:
@@ -162,11 +158,10 @@ def _coerce_lit_list_mixed_to_string(values: list[Any]) -> list[Any]:
 
     Homogeneous non-null types (all int, all float, all str, all bool, nested lists of a
     single kind) pass through. Compatible numerics (int+float only) promote to float so
-    ``lit([1, 1.0])`` stays a numeric array — not a faked string cast (octo C1-Q-004).
-    Numpy integer/float scalars count as int/float (octo C4-Q-001) — ``lit([np.int64(1), 2])``
+    ``lit([1, 1.0])`` stays a numeric array, not a faked string cast.
+    Numpy integer/float scalars count as int/float — ``lit([np.int64(1), 2])``
     must not fake-string. Incompatible mixes — e.g. ``["a", 1, None, 1.0]`` — every non-None
-    leaf becomes ``str(...)`` matching live Spark 4.1.2. Nested lists are walked the same way
-    (Apache ``test_lit_list`` jagged mixed arrays — F2).
+    leaf becomes ``str(...)`` matching live Spark 4.1.2. Nested lists are walked the same way.
     """
     kinds = {_lit_list_item_kind(item) for item in values if item is not None}
     if "list" in kinds:
@@ -189,7 +184,6 @@ def _coerce_lit_list_mixed_to_string(values: list[Any]) -> list[Any]:
         ]
     if len(kinds) <= 1:
         # Normalize numpy scalars to Python builtins so ``lit(item)`` accepts them
-        # (octo C5 — C4 kind widen left np.int64 in homogeneous lists).
         if kinds == {"int"}:
             return [None if item is None else int(item) for item in values]
         if kinds == {"float"}:
@@ -207,7 +201,6 @@ def _coerce_lit_list_mixed_to_string(values: list[Any]) -> list[Any]:
 
 # numpy dtype name → Spark array element simpleString (Apache test_ndarray_input / empty).
 # object / |S (bytes) are intentionally absent — Spark 4.1.2 raises
-# UNSUPPORTED_NUMPY_ARRAY_SCALAR (octo C6-Q-001); do not map them to string.
 _NUMPY_DTYPE_TO_SPARK_ELEMENT: dict[str, str] = {
     "int8": "tinyint",
     "int16": "smallint",
@@ -242,8 +235,6 @@ def _lit_numpy_ndarray(value: Any) -> Column | None:
             messageParameters={"dtype": f"ndarray(ndim={value.ndim})"},
         )
     dtype = value.dtype
-    # Unsigned / object / bytes: Spark refuses with UNSUPPORTED_NUMPY_ARRAY_SCALAR
-    # (C6-Q-001 — no fail-open array<string> for object or |S).
     if dtype.kind in {"u", "O", "S"}:
         raise PySparkTypeError(
             errorClass="UNSUPPORTED_NUMPY_ARRAY_SCALAR",
@@ -302,7 +293,7 @@ def _lit_sql_expr(value: Scalar) -> str:
 
     Non-finite floats must not use bare ``nan`` / ``inf`` tokens — those bind as
     identifiers in free-SQL (select-global-agg, cube/rollup, MERGE) rather than float
-    constants (combine octo C6-SAF-002). Use CAST string forms DataFusion accepts.
+    constants. Use CAST string forms DataFusion accepts.
     """
     if value is None:
         return "NULL"
@@ -328,7 +319,7 @@ def _lit_spark_display(value: Scalar) -> str:
 
     Live PySpark 4.1.2 renders string literals **without** surrounding quotes in both projection
     names (``df.select(F.lit("s")).columns == ['s']``) and aggregate embeds
-    (``first(z)``, ``concat(s, z)``). Integer/float/bool/NULL match the prior Group F matrix.
+    (``first(z)``, ``concat(s, z)``). Integer/float/bool/NULL follow Spark coercion.
     """
     if value is None:
         return "NULL"
@@ -374,7 +365,7 @@ def expr(sql: str) -> Column:
 
 
 def _partition_transform_of(*columns: Column) -> str | None:
-    """First non-None Group I partition-transform marker among ``columns`` (sticky carry)."""
+    """Return the first non-None partition-transform marker among ``columns``."""
     for column in columns:
         transform = getattr(column, "_partition_transform", None)
         if transform is not None:
@@ -387,7 +378,7 @@ def _thread_origin(*columns: Column) -> dict[str, str | None]:
 
     Wrappers that build a fresh :class:`Column` must pass these through;
     otherwise ``F.abs(right["k"])`` after a semi join silently binds the left
-    column (Y-5 SAF-001).
+    column.
     """
     for column in columns:
         if column._origin_plan_id is not None:
@@ -404,7 +395,6 @@ def coalesce(*columns: Column) -> Column:
         from repark.errors import AnalysisException
 
         raise AnalysisException("coalesce requires at least 1 argument")
-    # Generators inside coalesce drop ``_generator`` and skip unnest (octo C5-Q-001 / C5-L-001).
     for column in columns:
         column._reject_nested_generator("coalesce")
     parts = ", ".join(column.spark_wrap_display_part() for column in columns)
@@ -436,17 +426,14 @@ def concat(*columns: Column) -> Column:
         from repark.errors import AnalysisException
 
         raise AnalysisException("concat requires at least 1 argument")
-    # Generators inside concat drop ``_generator`` and skip unnest (octo C5-Q-001 / C5-L-001).
     for column in columns:
         column._reject_nested_generator("concat")
     parts = ", ".join(column.spark_wrap_display_part() for column in columns)
     sql_parts = ", ".join(column.sql_expr_part() for column in columns)
     display = f"concat({parts})"
     # Spark null propagation: any NULL arg → NULL (not DF empty-string skip).
-    # MERGE embeds sql_expr, so match the native CASE guard (octo-extra C5-Q-001).
     null_guard = " OR ".join(f"({column.sql_expr_part()} IS NULL)" for column in columns)
     sql_expr = f"CASE WHEN {null_guard} THEN CAST(NULL AS VARCHAR) ELSE concat({sql_parts}) END"
-    # Sticky aggregate / free-attr (octo C2-Q-002 / C2-L-002): concat(sum(x), lit) is global-agg.
     is_aggregate = any(column._is_aggregate for column in columns)
     is_foldable = (not is_aggregate) and all(column._is_foldable for column in columns)
     has_free_attribute = any(column._has_free_attribute for column in columns)
@@ -475,7 +462,7 @@ def current_timestamp() -> Column:
     display is ``current_timestamp()`` (live Spark; not DataFusion's ``now()``).
 
     Marked foldable / free of attributes so ``df.select(F.sum("x"), F.current_timestamp())``
-    is a global aggregate (Spark allows no-arg non-attribute companions — octo C3-Q-002),
+    is a global aggregate (Spark allows no-arg non-attribute companions),
     not ``[MISSING_GROUP_BY]``.
     """
     display = "current_timestamp()"
@@ -512,7 +499,7 @@ def _integer_argument(value: Column | int | str) -> Column:
 
     PySpark accepts a Python ``int``, a :class:`Column`, or a column-name ``str`` (SPARK-37738;
     Apache ``test_date_add_function`` / ``test_add_months_function``). An ``int`` is wrapped with
-    ``lit``; a string becomes ``col(name)`` (octo C3).
+    ``lit``; a string becomes ``col(name)``.
     """
     if isinstance(value, Column):
         return value
@@ -525,13 +512,10 @@ def _integer_argument(value: Column | int | str) -> Column:
     )
 
 
-# ---- aggregate functions (Group E) --------------------------------------------------------------
 #
 # These deliberately shadow the Python builtins ``sum``/``min``/``max`` (and add ``count``) exactly
 # as ``pyspark.sql.functions`` does — a migrating ``F.sum(...)`` must resolve here, not to the
 # builtin. The returned :class:`Column` carries its PySpark default output name in ``_agg_name``
-# (``sum(x)``, ``count(1)``, …), which :meth:`repark.dataframe.GroupedData.agg` applies as the
-# aliased output column name. Every name below was verified against real PySpark 4.1.2.
 
 
 def _aggregate_argument(col: Column | str) -> tuple[Column, str]:
@@ -542,10 +526,10 @@ def _aggregate_argument(col: Column | str) -> tuple[Column, str]:
     (``col("x") + 1`` → ``(x + 1)``; never DataFusion's ``x + Int64(1)``).
 
     String arguments carry a quoted structural ``sql_expr`` so aggregate builders embed safe
-    identifiers into free-SQL global-agg select (octo C3-SEC-001 / C3-Q-001).
+    identifiers into free-SQL global-agg select.
     Generator arguments are refused loud (``UNSUPPORTED_GENERATOR``) — wrapping
     ``F.count(F.explode(...))`` / ``F.sum`` / ``collect_*`` would strip ``_generator`` and
-    aggregate the array placeholder instead of elements (octo C6-Q-001; Spark parity).
+    aggregate the array placeholder instead of elements (Spark parity).
     """
     if isinstance(col, str):
         # Build the column reference directly (the `col` parameter shadows the module `col` fn).
@@ -578,9 +562,7 @@ def abs(col: Column | str) -> Column:
     # 0 - column for negation (avoids a unary-minus native API).
     negated = lit(0) - column
     result = when(column < 0, negated).otherwise(column)
-    # H2: wrap-display collapses ``.alias("v")`` so abs shows ``abs(v)`` not ``abs(… AS v)``.
     display = f"abs({column.spark_wrap_display_part()})"
-    # Sticky identity for select global-agg (octo C2-Q-002 / C2-L-002): abs(sum(x)).
     return Column(
         result._inner,
         spark_display=display,
@@ -602,7 +584,7 @@ def sum(col: Column | str) -> Column:
 
     Integer inputs widen to ``LongType`` (Spark parity); the empty-group sum is NULL.
     Structural ``sql_expr`` uses the argument's quoted SQL fragment so free-SQL global-agg
-    select never falls back to DataFusion ``schema_name`` / ``Int64`` display (octo C3-Q-001).
+    select never falls back to DataFusion ``schema_name`` / ``Int64`` display.
     """
     column, part = _aggregate_argument(col)
     agg_name = f"sum({part})"
@@ -624,10 +606,8 @@ def count(col: Column | str) -> Column:
     ``count("*")`` (or ``count(lit(1))``) counts every row; ``count(col)`` counts non-NULL values
     of ``col``. The result is a non-nullable ``LongType``.
     """
-    # Star forms: bare ``"*"``, ``col("*")``, and ``df["*"]`` all mean count-all (X3 census).
     if isinstance(col, str) and col == "*":
         # Structural SQL for free-SQL surfaces (global-agg select, CUBE): never emit
-        # native ``count(Int64(1))`` and never rewrite it via substring replace (octo C2-SAF-001).
         return Column(
             _native.PyColumn.count_aggregate([_native.PyColumn.literal(1)], False),
             agg_name="count(1)",
@@ -644,7 +624,6 @@ def count(col: Column | str) -> Column:
     return Column(
         _native.PyColumn.count_aggregate([column._inner], False),
         agg_name=agg_name,
-        # Quoted identifier from _aggregate_argument / Column.sql_expr (octo C3-SEC-001).
         sql_expr=f"count({column.sql_expr_part()})",
         join_sql_expr=f"count({column.join_sql_part()})",
         spark_display=agg_name,
@@ -668,7 +647,6 @@ def count_distinct(col: Column | str, *cols: Column | str) -> Column:
     sql_parts = ", ".join(column.sql_expr_part() for column, _ in columns)
     agg_name = f"count(DISTINCT {parts})"
     # DataFusion rejects multi-arg COUNT DISTINCT; pack null-if-any struct so free-SQL
-    # global-agg select matches native/Spark (octo C5-L-001). Single-col stays plain.
     if len(columns) == 1:
         sql_expr = f"count(DISTINCT {sql_parts})"
     else:
@@ -755,7 +733,6 @@ def first(col: Column | str, ignorenulls: bool = False) -> Column:
     agg_name = f"first({part})"
     # DataFusion SQL: first_value [IGNORE NULLS]; facade default name stays Spark ``first(x)``.
     # Structural IGNORE NULLS keeps the SQL global-agg path (lit/cast/composition) aligned with
-    # the native aggregate (octo C4-L-001).
     base_sql = f"first_value({column.sql_expr_part()})"
     sql_expr = f"{base_sql} IGNORE NULLS" if ignorenulls else base_sql
     return Column(
@@ -801,7 +778,6 @@ def collect_list(col: Column | str) -> Column:
     """
     column, part = _aggregate_argument(col)
     agg_name = f"collect_list({part})"
-    # Match native collect_aggregate: IGNORE NULLS + coalesce empty → [] (octo C4-L-002).
     sql_expr = f"coalesce(array_agg({column.sql_expr_part()}) IGNORE NULLS, make_array())"
     return Column(
         column._inner.aggregate("collect_list", False),
@@ -825,7 +801,6 @@ def collect_set(col: Column | str) -> Column:
     agg_name = f"collect_set({part})"
     # DataFusion's ``array_agg(DISTINCT x) IGNORE NULLS`` still keeps NULL in the set.
     # ``array_distinct(array_agg(x) IGNORE NULLS)`` excludes nulls and de-dupes; empty
-    # coalesce restores ``[]`` (octo C4-L-002 / C5-Q-002).
     sql_expr = (
         f"coalesce(array_distinct(array_agg({column.sql_expr_part()}) IGNORE NULLS), make_array())"
     )
@@ -851,7 +826,6 @@ def row_number() -> Column:
 
     The result is ``IntegerType`` (Spark parity — the engine casts DataFusion's ``UInt64``).
     """
-    # spark_display set so Column.over can refuse missing ORDER BY (r20 G2 octo C2).
     return Column(
         _native.PyColumn.row_number(),
         spark_display="row_number()",
@@ -863,7 +837,6 @@ def row_number() -> Column:
     )
 
 
-# === r20 G2: window/rand/sampleBy ===
 def rank() -> Column:
     """Ranking with gaps on ties (PySpark ``functions.rank``). Requires ``.over(...)``."""
     return Column(
@@ -913,11 +886,9 @@ def ntile(n: int) -> Column:
 def _date_fn(column: Column | str, method_name: str, display_name: str) -> Column:
     """Build a unary date function with Spark projection/agg display ``display_name(child)``."""
     argument = _column_argument(column)
-    # Generators inside year/month/… strip ``_generator`` and skip unnest (octo C7-Q-001).
     argument._reject_nested_generator(f"function {display_name}")
     display = f"{display_name}({argument.spark_wrap_display_part()})"
     native = getattr(argument._inner, method_name)()
-    # Sticky aggregate / free-attr for select routing (octo C2-Q-002).
     return Column(
         native,
         spark_display=display,
@@ -988,7 +959,6 @@ def add_months(start: Column | str, months: Column | int | str) -> Column:
     ``functions.add_months``). ``months`` is a Column, column-name str, or ``int``."""
     start_column = _column_argument(start)
     months_column = _integer_argument(months)
-    # Generators strip ``_generator`` and skip unnest (octo C7-Q-001; Spark UNSUPPORTED_GENERATOR).
     start_column._reject_nested_generator("function add_months")
     months_column._reject_nested_generator("function add_months")
     display = (
@@ -996,7 +966,6 @@ def add_months(start: Column | str, months: Column | int | str) -> Column:
         f"{months_column.spark_wrap_display_part()})"
     )
     # Sticky free/aggregate so ``select(sum, add_months(d,1))`` is MISSING_GROUP_BY and
-    # ``add_months(max(d),1)`` stays global-agg (octo C4-L-003).
     is_aggregate = start_column._is_aggregate or months_column._is_aggregate
     has_free_attribute = start_column._has_free_attribute or months_column._has_free_attribute
     has_ungroupable = start_column._has_ungroupable or months_column._has_ungroupable
@@ -1026,7 +995,6 @@ def date_add(start: Column | str, days: Column | int | str) -> Column:
     Column, column-name str, or ``int`` (negative goes backwards)."""
     start_column = _column_argument(start)
     days_column = _integer_argument(days)
-    # Generators strip ``_generator`` and skip unnest (octo C7-Q-001; Spark UNSUPPORTED_GENERATOR).
     start_column._reject_nested_generator("function date_add")
     days_column._reject_nested_generator("function date_add")
     display = (
@@ -1064,7 +1032,6 @@ def date_format(date: Column | str, format: str) -> Column:
     An unsupported letter raises from the engine rather than emitting a wrong string.
     """
     argument = _column_argument(date)
-    # Generators strip ``_generator`` and skip unnest (octo C7-Q-001; Spark UNSUPPORTED_GENERATOR).
     argument._reject_nested_generator("function date_format")
     # Live PySpark 4.1.2: date_format(d, yyyy-MM) — pattern is unquoted in the name.
     display = f"date_format({argument.spark_wrap_display_part()}, {format})"
@@ -1087,7 +1054,6 @@ def trunc(date: Column | str, format: str) -> Column:
     """Truncate a DATE to ``format`` — ``year``/``month``/``week``/``quarter`` (PySpark
     ``functions.trunc``). An invalid format yields NULL (Spark semantics)."""
     argument = _column_argument(date)
-    # Generators strip ``_generator`` and skip unnest (octo C7-Q-001; Spark UNSUPPORTED_GENERATOR).
     argument._reject_nested_generator("function trunc")
     display = f"trunc({argument.spark_wrap_display_part()}, {format})"
     return Column(
@@ -1111,7 +1077,6 @@ def date_trunc(format: str, timestamp: Column | str) -> Column:
     down to ``microsecond`` (plus ``week`` / ``quarter``); an invalid format yields NULL.
     """
     argument = _column_argument(timestamp)
-    # Generators strip ``_generator`` and skip unnest (octo C7-Q-001; Spark UNSUPPORTED_GENERATOR).
     argument._reject_nested_generator("function date_trunc")
     display = f"date_trunc({format}, {argument.spark_wrap_display_part()})"
     return Column(
@@ -1128,9 +1093,6 @@ def date_trunc(format: str, timestamp: Column | str) -> Column:
     )
 
 
-# ---- partition transforms (Group I — valid ONLY inside DataFrameWriterV2.partitionedBy) ----------
-
-
 def _partition_transform(transform: str, col: Column | str) -> Column:
     """Build a partition-transform Column valid only inside ``writeTo(...).partitionedBy(...)``.
 
@@ -1141,11 +1103,10 @@ def _partition_transform(transform: str, col: Column | str) -> Column:
     other use raises :class:`~repark.errors.AnalysisException`. The engine's CTAS path builds the
     real Iceberg ``Transform`` (bucket/truncate/year/month/day/hour) and computes each partition
     value from the source column via the iceberg-rust fork, so these transforms work end-to-end
-    (Group P) — the former "engine rejects non-identity transforms" disclosure is retired.
+    The engine rejects non-identity transforms.
 
     The identity argument is double-quoted via :func:`repark._idents.quote_ident` so reserved
-    words / hostile text cannot break out of the transform call (C3-SEC-001 residual of
-    C1-SEC-001, which already quoted bare identity partitions).
+    words / hostile text cannot break out of the transform call.
     """
     from repark.spark._idents import quote_ident as _quote_ident
 
@@ -1186,7 +1147,7 @@ def bucket(numBuckets: int | Column, col: Column | str) -> Column:  # noqa: N803
     """Partition transform: bucket — only for ``partitionedBy`` (PySpark ``functions.bucket``).
 
     Renders ``bucket(<numBuckets>, "col")`` into CTAS ``PARTITIONED BY`` (the identity column arg
-    is double-quoted, C3-SEC-001). ``numBuckets`` must be a positive ``int`` (or Column); the engine
+    is double-quoted). ``numBuckets`` must be a positive ``int`` (or Column); the engine
     also rejects ``<= 0`` loudly at parse time (Spark/Iceberg analysis-error parity).
 
     E1: bad ``numBuckets`` type raises ``PySparkTypeError`` with ``NOT_COLUMN_OR_INT`` so Apache
@@ -1223,7 +1184,7 @@ column = col
 """PySpark ``functions.column`` — ``builtin.py`` defines it as a bare alias of ``col``."""
 
 
-# ---- R-FN-BATCH1: top-N scalar wrappers over engine call_scalar / Column methods ---------------
+# Scalar wrappers over engine calls and Column methods.
 
 
 def _as_column_arg(argument: Column | str | int | float | bool | None, *, as_lit: bool) -> Column:
@@ -1250,13 +1211,13 @@ def _scalar(
 
     ``foldable`` overrides inferred foldability. Default inference requires at least one
     argument — vacuous ``all([])`` must not mark nullary calls foldable (``F.rand`` →
-    ``random()`` is non-deterministic / non-foldable — octo C7-L-001). Pass
+    ``random()`` is non-deterministic and non-foldable. Pass
     ``foldable=True`` for known foldable nullaries such as ``current_date``.
 
     ``has_ungroupable`` overrides sticky ungroupable (OR with child bits when None).
-    Generator arguments are refused loud (``UNSUPPORTED_GENERATOR``) — wrapping
+    Generator arguments are refused loud (``UNSUPPORTED_GENERATOR``). Wrapping
     ``F.size(F.explode(...))`` / ``.str`` paths would strip ``_generator`` and skip
-    unnest rewrite (octo C5-Q-001 / C5-L-001; Spark parity).
+    unnest rewrite (Spark parity).
     """
     force_lit = lit_indices or frozenset()
     columns: list[Column] = []
@@ -1269,14 +1230,10 @@ def _scalar(
         if index in force_lit and isinstance(argument, str):
             display_parts.append(repr(argument))
         else:
-            # H2: collapse aliased children so ``round(col.alias("v"), 2)`` → ``round(v, 2)``.
             display_parts.append(column.spark_wrap_display_part())
         sql_parts.append(column.sql_expr_part())
     shown = display if display is not None else f"{name}({', '.join(display_parts)})"
-    # Sticky aggregate / free-attr (octo C2-Q-002 / C2-L-002): round(sum(x)), abs via CASE, …
-    # Sticky ungroupable (octo C7-L-002): abs(window) / coalesce via other builders.
     # Nullary: do NOT treat vacuous all([]) as foldable — F.rand→random() is non-foldable
-    # (octo C7-L-001). Known foldable nullaries (current_date) pass foldable=True.
     is_aggregate = any(column._is_aggregate for column in columns)
     if foldable is not None:
         is_foldable = bool(foldable) and not is_aggregate
@@ -1290,8 +1247,6 @@ def _scalar(
         ungroupable_flag = bool(has_ungroupable) or child_ungroupable
     else:
         ungroupable_flag = child_ungroupable
-    # === r23b N2: plan-collapse ===
-    # ``.round()`` / ``F.round`` on a windowed column is same-layer wrap (Q15) — keep the
     # WindowSpec so adjacent withColumn(s) can still merge. Other scalars clear it.
     window_spec = None
     if name == "round" and columns:
@@ -1313,7 +1268,7 @@ def _scalar(
     )
 
 
-# FN-SPLIT re-exports (move-only; public names stay on this module).
+# Re-export wrappers; public names stay on this module.
 # Late imports break the functions ↔ functions_expr / functions_udf cycle (helpers first).
 from repark.spark.functions_agg import (  # noqa: E402
     bool_and,

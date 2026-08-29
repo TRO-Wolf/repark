@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 """Fail if any GitHub Actions workflow is not parseable YAML.
 
-zizmor — the blocking workflow lint — *skips* files it cannot parse, reporting
-"collection yielded no auditable inputs" and exiting 0. So a workflow with broken YAML passes
-the security gate while GitHub silently never runs it. r24 shipped `tpch-sf1.yml` in exactly
-that state: a `python -c` body dedented to column 1 terminated the enclosing ``run: |`` block
-scalar, and the TPC-H gate never executed. This check closes that hole.
+zizmor — the blocking workflow lint — *skips* files it cannot parse, reporting "collection
+yielded no auditable inputs" and exiting 0: a broken workflow passes the security gate while
+GitHub silently never runs it. This check closes that hole.
 """
 
 from __future__ import annotations

@@ -1,10 +1,6 @@
 /// ===========================================================================================
-/// WG-1 pins — A4: `MERGE INTO` an IDENTITY-partitioned table (retires the v1 gate). Both arms
-/// (COW rewrite + insert-only) route their new files through the SAME A1/U1 fanout `append`
-/// uses, so partition values are asserted at the committed MANIFEST level (`DataFile.partition`),
-/// pruning at PLAN level (fork `plan_files`), and round-trips on the engine read path (value AND
-/// type via `table_rows`). Spark MERGE-on-partitioned semantics is the arbiter (fork
-/// `ENGINE_CONTRACT` §4 UPDATE/COW + §6 MERGE-is-engine-owned + §7 fan-out-by-partition).
+/// WG-1 pins identity-partitioned `MERGE INTO`: both COW and insert-only arms preserve manifest
+/// partition values, plan pruning, and Arrow-path value/type round trips.
 /// ===========================================================================================
 use std::collections::{BTreeMap, HashSet};
 use std::future::Future;
@@ -374,7 +370,7 @@ async fn merge_partitioned_star_forms_upsert() {
 // matrix in `repark_iceberg::write::merge::occ_tests` stays green as partition-agnostic regression.
 // These pins prove the *identity-partitioned MERGE PATH* (parse → fanout → resolve → commit)
 // still ARMS the serializable §5 validations end to end: a conflicting concurrent append
-// landed mid-commit is loudly rejected (both arms), while a genuinely non-conflicting
+// arriving mid-commit is loudly rejected (both arms), while a genuinely non-conflicting
 // concurrent commit on the same table is tolerated (the false-positive guard). Determinism
 // is by an attempt counter (fork `ENGINE_CONTRACT` §5; lessons rule 12 — no timing).
 // ===========================================================================================
@@ -770,7 +766,7 @@ async fn merge_partitioned_tolerates_nonconflicting_concurrent_commit() {
     .await
     .expect("a non-conflicting concurrent commit must not block the MERGE");
 
-    // The MERGE landed on top of the concurrent property commit, with the right rows AND
+    // The MERGE ran on top of the concurrent property commit, with the right rows AND
     // the concurrent property still present (proving it really raced through the CAS).
     assert_eq!(
         table_rows(&ctx, &catalogs, "ice.sales.pt").await,
@@ -793,14 +789,7 @@ async fn merge_partitioned_tolerates_nonconflicting_concurrent_commit() {
     );
 }
 
-// =======================================================================================
-// Group R — MERGE INTO a NON-identity transform-partitioned table (truncate/temporal +
-// transform-path OCC). The write-crate `repark_iceberg::write::merge::streaming_scan_tests` carries
-// the bucket round-trip (R1) + bucket partition-move-by-metadata (R2) pins; these prove the
-// remaining transforms end-to-end through the SQL front (R3) and that the serializable OCC
-// guard is still armed on the transform write path (R4). All route through the SAME
-// computed-mode fanout `append` uses (Group P); the `commit` seam is partition-agnostic.
-// =======================================================================================
+// Non-identity transform routing uses the shared computed partition path and retains OCC.
 
 /// The distinct partition slots (first field), formatted — for non-int transform slots
 /// (string truncate, temporal date/int) where `slot_int` does not apply.
@@ -938,7 +927,7 @@ async fn merge_days_partitioned_upsert() {
 
 /// PIN R4 — the serializable OCC guard is still ARMED on the NON-identity transform write
 /// path: a mixed (rewrite-arm) MERGE into a `bucket(4, id)` table, raced by a conflicting
-/// concurrent append landed mid-commit, is LOUDLY rejected (non-retryable
+/// concurrent append arrives mid-commit, it is LOUDLY rejected (non-retryable
 /// `validate_no_conflicting_data`). Removing the transform gate must not have exposed an
 /// unvalidated append. Mirrors the identity WG1-P5a on a transform-partitioned table; the
 /// `commit` seam is partition-agnostic, so the same guard fires. Dropping
@@ -982,13 +971,7 @@ async fn merge_bucket_partitioned_rewrite_arm_rejects_conflicting_concurrent_app
     );
 }
 
-// ===================================================================================
-// GROUP Y — merge-on-read MERGE on a TRANSFORM-partitioned table, at the SQL entry
-// point (Y3 temporal end-to-end, Y6 serializable OCC still armed). The write-crate pins
-// (Y1/Y2/Y4/Y5/Y7) carry the bucket/manifest/stamp calibration; these two carry the
-// user-surface composition — `PARTITIONED BY (days(ts))` + `write.merge.mode` set by
-// CTAS `TBLPROPERTIES`, driven by real SQL.
-// ===================================================================================
+// Transform-partitioned MERGE exercises computed fanout and serializable OCC.
 
 /// The live (Added/Existing) DELETE-file entries in the current snapshot's DELETE manifests
 /// — the manifest-level oracle for "this really was a merge-on-read commit", plus the
@@ -1137,7 +1120,7 @@ async fn merge_days_partitioned_mor_delete_and_insert() {
 
 /// PIN Y6 — the SERIALIZABLE OCC posture is still ARMED on the merge-on-read × transform
 /// path. A `bucket(4, id)` + `merge-on-read` MERGE, raced by a conflicting concurrent
-/// append landed mid-commit, is LOUDLY rejected. Two gates could have quietly disarmed
+/// append arrives mid-commit, it is LOUDLY rejected. Two gates could have quietly disarmed
 /// here and neither may: dropping the transform gate must not have exposed an unvalidated
 /// row-delta, and the `RowDelta` commit's `validate_no_conflicting_data_files` (the
 /// merge-on-read analogue of R4's `validate_no_conflicting_data`) must fire on a

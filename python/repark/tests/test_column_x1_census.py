@@ -1,4 +1,4 @@
-"""X1 — Column surface unblocks (between, pow, string predicates, bitwise, lit temporal)."""
+"""Column surface unblocks (between, pow, string predicates, bitwise, lit temporal)."""
 
 from __future__ import annotations
 
@@ -56,14 +56,14 @@ def test_bitwise_and_eqnullsafe(spark: ReparkSession) -> None:
 
 
 def test_bitwise_or_xor_values(spark: ReparkSession) -> None:
-    """bitwiseOR / bitwiseXOR Arrow values (octo C1)."""
+    """bitwiseOR / bitwiseXOR Arrow values."""
     frame = spark.createDataFrame([(1,), (3,)], ["x"])
     assert [row[0] for row in frame.select(frame.x.bitwiseOR(2)).collect()] == [3, 3]
     assert [row[0] for row in frame.select(frame.x.bitwiseXOR(1)).collect()] == [0, 2]
 
 
 def test_eqnullsafe_none_scalar_and_between_bounds(spark: ReparkSession) -> None:
-    """eqNullSafe(None) + between inclusive/inverted (octo C2)."""
+    """eqNullSafe(None) + between inclusive/inverted."""
     frame = spark.createDataFrame([(1,), (None,)], ["a"])
     assert frame.filter(frame.a.eqNullSafe(None)).count() == 1
     assert frame.filter(frame.a.eqNullSafe(1)).count() == 1
@@ -81,7 +81,7 @@ def test_reflected_bool_and(spark: ReparkSession) -> None:
 
 
 def test_reflected_bool_or(spark: ReparkSession) -> None:
-    """False | col / True | col — Column.__ror__ (octo C5)."""
+    """False | col / True | col — Column.__ror__."""
     frame = spark.createDataFrame([(True,), (False,)], ["b"])
     assert isinstance(False | frame.b, Column)
     assert frame.filter(False | frame.b).count() == 1
@@ -89,7 +89,7 @@ def test_reflected_bool_or(spark: ReparkSession) -> None:
 
 
 def test_array_from_column_names(spark: ReparkSession) -> None:
-    """F.array accepts column-name strings (octo C5)."""
+    """F.array accepts column-name strings."""
     frame = spark.createDataFrame([(1, 2, 3)], ["a", "b", "c"])
     assert list(frame.select(F.array("a", "b", "c").alias("x")).collect()[0][0]) == [1, 2, 3]
 
@@ -117,7 +117,7 @@ def test_lit_date_and_enum(spark: ReparkSession) -> None:
 
 
 def test_lit_time_list_and_empty_array(spark: ReparkSession) -> None:
-    """lit(time) / lit(list) / F.array() zero-arg (octo C1)."""
+    """lit(time) / lit(list) / F.array() zero-arg."""
     frame = spark.range(1).select(
         F.lit(datetime.time(12, 30, 45)).alias("t"),
         F.lit([1, 2, 3]).alias("arr"),
@@ -130,7 +130,7 @@ def test_lit_time_list_and_empty_array(spark: ReparkSession) -> None:
 
 
 def test_hour_minute_second_on_time(spark: ReparkSession) -> None:
-    """Apache test_hour|minute|second — extractors on lit(time) (octo C3)."""
+    """Apache test_hour|minute|second — extractors on lit(time)."""
     frame = spark.range(1).select(F.lit(datetime.time(12, 34, 56)).alias("time"))
     assert frame.select(F.hour(frame.time)).collect()[0][0] == 12
     assert frame.select(F.hour("time")).collect()[0][0] == 12
@@ -142,7 +142,7 @@ def test_hour_minute_second_on_time(spark: ReparkSession) -> None:
 
 
 def test_date_add_months_string_count_column(spark: ReparkSession) -> None:
-    """date_add/add_months/date_sub accept column-name str counts (SPARK-37738 / octo C3/C4)."""
+    """date_add/add_months/date_sub accept column-name str counts (SPARK-37738)."""
     day = datetime.date(2021, 12, 27)
     frame = spark.createDataFrame([(day, 2)], schema="date date, add int")
     assert frame.select(F.date_add(frame.date, "add")).collect()[0][0] == datetime.date(
@@ -164,7 +164,7 @@ def test_date_add_months_string_count_column(spark: ReparkSession) -> None:
 
 
 def test_longtype_api_surface() -> None:
-    """LongType typeName/simpleString/engine (X1 + octo C3)."""
+    """LongType typeName/simpleString/engine."""
     assert LongType().typeName() == "long"
     assert LongType().simpleString() == "bigint"
     assert LongType()._engine_type() == "long"
@@ -173,7 +173,7 @@ def test_longtype_api_surface() -> None:
 
 
 def test_lit_enum_list_value(spark: ReparkSession) -> None:
-    """Enum whose .value is a sequence → array column (octo C7)."""
+    """Enum whose .value is a sequence → array column."""
     from enum import Enum
 
     class Payload(Enum):
@@ -184,7 +184,7 @@ def test_lit_enum_list_value(spark: ReparkSession) -> None:
 
 
 def test_inverse_trig_domain(spark: ReparkSession) -> None:
-    """acos/asin domain pins for Apache inverse_trig PASS (octo C7)."""
+    """acos/asin domain pins for Apache inverse_trig PASS."""
     import math
 
     frame = spark.createDataFrame([(0.0,), (1.0,), (-1.0,)], ["a"])
@@ -207,7 +207,7 @@ def test_trig_and_dayname(spark: ReparkSession) -> None:
     assert abs(cos_rows[1] - 0.0) < 1e-9
     hypot_val = frame.select(F.hypot(frame.a, frame.a)).collect()[0][0]
     assert abs(hypot_val - 0.0) < 1e-9
-    # Non-degenerate Euclidean norm (3-4-5) + Apache lit-second forms (octo C6).
+    # Non-degenerate Euclidean norm (3-4-5) + Apache lit-second forms.
     right = spark.createDataFrame([(3.0, 4.0)], ["a", "b"])
     assert abs(right.select(F.hypot("a", "b")).collect()[0][0] - 5.0) < 1e-9
     assert abs(right.select(F.hypot("a", 2)).collect()[0][0] - math.hypot(3.0, 2)) < 1e-9

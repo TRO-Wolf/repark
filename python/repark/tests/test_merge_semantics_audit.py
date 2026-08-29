@@ -1,4 +1,4 @@
-"""MERGE-audit corpus — green pins for gap-map holes verified in the 2026-08-14 MERGE audit.
+"""MERGE-audit corpus — green pins for gap-map holes verified in the MERGE audit.
 
 Oracle surface: Spark 4 MERGE semantics (each docstring names the semantic; recipes verified
 against the engine during the audit; see planning/hardening/MERGE-AUDIT-FINDINGS.md, gap-map

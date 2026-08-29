@@ -221,13 +221,9 @@ pub fn refuse_iceberg_create_of_tightened_schema(schema: &Schema) -> Result<()> 
 }
 
 /// ===========================================================================================
-/// Source-based Iceberg-CREATE refuse (SQM F1 / R-B / R-D): walk every `TableScan`
-/// **including expression subqueries** and refuse if a scanned provider is tighten-derived
-/// AND the plan output has at least one non-nullable field. Output-schema tags are not
-/// enough — DataFusion drops field metadata on computed expressions while propagating
-/// non-nullability. `TreeNode::apply` misses subquery-expression sources; this walk uses
-/// [`LogicalPlan::apply_with_subqueries`] and also follows `TableSource::get_logical_plan`
-/// so a lazy `into_view` / `createOrReplaceTempView` hop cannot hide the `MemTable`.
+/// Walk every `TableScan`, including expression subqueries and lazy view plans, and refuse an
+/// Iceberg CREATE when a tightened source yields a non-nullable output. Output tags alone are
+/// insufficient because computed expressions can drop field metadata.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -242,33 +238,9 @@ pub fn refuse_iceberg_create_of_tightened_plan(plan: &LogicalPlan) -> Result<()>
 }
 
 /// ===========================================================================================
-/// Y-3 / Y-4 (round 4): the **DDL sink** door. `CREATE VIEW cat.ns.v AS SELECT …` and
-/// `SELECT … INTO cat.ns.t FROM …` never reach either door's CTAS derivation — both routers
-/// drop them into their catch-all passthrough/delegate arm. DataFusion plans them as
-/// `DdlStatement::CreateView` / `CreateMemoryTable` and registers the result through the
-/// target schema provider's `register_table`, which for an Iceberg catalog **persists a real
-/// format-v2 table** (measured — see `task/se1-declared-sorted-ledger.md` round 4). Applying
-/// the same R-D predicate to the DDL body closes the tighten leak on both statements.
-///
-/// Scope is deliberately narrow and matches the CTAS refuse exactly:
-/// - only when the DDL target **resolves** to a registered Iceberg catalog (a session-scoped
-///   `CREATE VIEW v AS …` / `SELECT … INTO t` persists nothing and stays allowed — the
-///   existing lazy-view pins depend on that);
-/// - only under the R-D predicate (tightened source AND ≥1 non-nullable output field).
-///
-/// This is NOT the fix for "CREATE VIEW persists a table at all" — that behaviour predates
-/// this branch (measured on BASE with an untightened source) and is recorded as a separate
-/// payload finding.
-/// ===========================================================================================
-///
-/// **Round 5 (Z-1): gate on the RESOLVED catalog, never on spelling.** A `Bare` / `Partial`
-/// name is not "session-scoped" — DataFusion resolves it against
-/// `datafusion.catalog.default_catalog` / `default_schema`, so after
-/// `SET datafusion.catalog.default_catalog = ice` a one-part `CREATE VIEW v AS …` registers
-/// into the Iceberg catalog and persists exactly the same required columns as the three-part
-/// spelling (MEASURED — round-5 ledger). The resolution below is DataFusion's own
-/// `TableReference::resolve` against this session's config, so the gate cannot drift from
-/// where the sink actually writes.
+/// Refuse DDL sinks that resolve to an Iceberg catalog when their tightened source would persist
+/// a required column. Session-scoped sinks remain allowed. Resolution uses DataFusion's configured
+/// default catalog and schema, never the target spelling.
 ///
 /// # Errors
 /// [`Error::Analysis`] when the DDL body would persist a required column from a tightened

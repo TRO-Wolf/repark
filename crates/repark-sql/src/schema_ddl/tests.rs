@@ -1,9 +1,4 @@
-//! Catalog-DDL helper tests: the schema `WITH (…)` vocabulary, name qualification, and the
-//! identifier hygiene that runs before any path is composed.
-//!
-//! The end-to-end effects (namespace created, table dropped, provider refreshed) live in
-//! `crate::tests` against a real catalog. What is pinned here is the validation that must fail
-//! BEFORE anything reaches the catalog.
+//! Catalog-DDL helper tests cover schema `WITH (…)` vocabulary, name qualification, and identifier hygiene.
 
 use datafusion::sql::sqlparser::ast::Statement;
 use datafusion::sql::sqlparser::dialect::GenericDialect;
@@ -51,8 +46,7 @@ fn no_properties_is_legal() {
     assert!(schema_properties(&[]).expect("empty is fine").is_empty());
 }
 
-/// An unknown schema property refuses, listing the supported set — the same typo-guard rule the
-/// table vocabulary uses.
+/// An unknown schema property refuses and lists the supported set.
 #[test]
 fn unknown_schema_property_refuses_listing_support() {
     let err = schema_properties(&options_of("owner = 'me'"))
@@ -112,8 +106,7 @@ fn namespace_resolution_requires_qualification() {
     );
 }
 
-/// A read-only catalog gets the direction note, not "unknown catalog": the user's problem is
-/// direction, not spelling — and the two errors send them to completely different places.
+/// A read-only catalog gets the direction note, not "unknown catalog".
 #[test]
 fn read_only_catalog_gets_the_direction_note() {
     let mut catalogs = CatalogRegistry::new();

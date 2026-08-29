@@ -841,7 +841,7 @@ def test_all_parent_symbols_remain_on_compatibility_namespace() -> None:
 
 
 def test_star_import_keeps_the_parent_public_namespace_exact() -> None:
-    """Router-only imports do not leak through the historical star export."""
+    """Router-only imports do not leak through the star export."""
     expected = {name for name in EXPECTED_RUNTIME_NAMES if not name.startswith("_")}
     expected.update(WIRED_RUNTIME_NAMES)
     measured = {name for name in dir(_funcs) if not name.startswith("_")}
@@ -855,7 +855,7 @@ def test_tree_consumers_keep_their_private_import_contract() -> None:
 
 
 def test_current_main_literal_helper_paths_remain_importable() -> None:
-    """The session package and compatibility router retain PR #245's public helper."""
+    """The session package and compatibility router share the same public helper."""
     import repark.spark.session as session_package
 
     assert _funcs.sql_string_literal is session_package.sql_string_literal

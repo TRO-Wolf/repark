@@ -1,5 +1,7 @@
 # map — python/repark-parity/bench/mw7
 
+CC-2 slice complete: comments and docstrings condensed; oracle discriminators, pins, mutation payloads, and safety contracts kept byte-exact; history narration deleted.
+
 ## Purpose
 
 **MW-7 scale measurement** — what a partitioned Iceberg v2 table costs as MERGEs

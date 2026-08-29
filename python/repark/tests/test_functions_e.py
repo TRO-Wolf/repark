@@ -4,10 +4,6 @@ Each new ``functions`` name is pinned through ``ReparkSession`` on the Arrow pat
 (``to_arrow()``): value AND type. Alias names resolve and share a behavior case
 with their canonical. ``get`` pins the 0-based vs SQL ``element_at`` 1-based
 hazard (index 0 / 1 / NULL).
-
-Deferred this batch (no stubs): charter higher-order / JSON / generators;
-``create_map`` (G3 extra). FN-GT2 later shipped ``map_from_entries`` /
-``shuffle`` / ``array_compact`` / ``element_at``.
 """
 
 from __future__ import annotations
@@ -35,9 +31,7 @@ def _is_string(arrow_type: pa.DataType) -> bool:
     return pa.types.is_string(arrow_type) or pa.types.is_large_string(arrow_type)
 
 
-# ==================================================================================================
 # Aliases: resolve + one behavior case
-# ==================================================================================================
 
 
 def test_cardinality_and_array_size_alias_of_size(spark: ReparkSession) -> None:
@@ -75,9 +69,7 @@ def test_array_agg_alias_of_collect_list(spark: ReparkSession) -> None:
     assert table.schema.field("aa").type == table.schema.field("cl").type
 
 
-# ==================================================================================================
 # SHIMs
-# ==================================================================================================
 
 
 def test_named_struct_fields_value_and_type(spark: ReparkSession) -> None:
@@ -168,9 +160,7 @@ def test_arrays_overlap(spark: ReparkSession) -> None:
     assert pa.types.is_boolean(yes.schema.field("o").type)
 
 
-# ==================================================================================================
 # SEMANTIC-HAZARD: get is 0-based; SQL element_at is 1-based and rejects 0
-# ==================================================================================================
 
 
 def test_get_is_zero_based_vs_sql_element_at(spark: ReparkSession) -> None:
@@ -206,11 +196,9 @@ def test_get_is_zero_based_vs_sql_element_at(spark: ReparkSession) -> None:
 def test_get_map_by_key(spark: ReparkSession) -> None:
     """Map lookup through ``get`` still works — but the key must be a Column.
 
-    UPDATED by FN-GT2 X4/X12: PySpark 4.1.2 ``get(col, index)`` is
-    ``ColumnOrName`` (it only wraps a bare ``int`` in ``lit``), so a bare
-    ``str`` is a **column name**, not a map key. The old spelling
-    ``F.get('m', 'z')`` meant the opposite of what the same call means on
-    Spark. ``F.element_at`` keeps the literal-key convenience (W1).
+    PySpark 4.1.2 ``get(col, index)`` is ``ColumnOrName`` (it only wraps a bare ``int`` in
+    ``lit``), so a bare ``str`` is a **column name**, not a map key — the opposite of what
+    the same call means on Spark. ``F.element_at`` keeps the literal-key convenience (W1).
     """
     frame = spark.sql("SELECT map('k', 1, 'z', 2) AS m, 'z' AS which")
     table = _table(

@@ -1,19 +1,13 @@
-"""MW-8: run the documented maintenance runbook end to end and pin what each step changes.
+"""Run the documented maintenance runbook end to end and pin what each step changes.
 
-The guide section `docs/guide/iceberg-guide.md` "The maintenance sequence" tells an operator
-to run six procedures in one order, on a schedule. This module runs that sequence against a
-local catalog and asserts the effect of every step. A guide that drifts from the engine reds
-here.
+The guide's "The maintenance sequence" section (``docs/guide/iceberg-guide.md``) documents six
+procedures in one order; this module runs that sequence on a local catalog and asserts the effect
+of every step, so a guide that drifts from the engine reds here.
 
-The scale is a gate's, not production's. The measured production numbers behind the guide's
-cadence, its budget and its 43x warehouse figure live in
-`task/ledgers/completed/mw-7-scale-measurement-ledger.md` section 6. They are cited by the
-guide and are deliberately not re-asserted here: one host's wall clock is not a proposition
-(the MW-5 and MW-7 precedent).
-
-The fixture reproduces the 1e7 x 50 run's residue at gate scale. Both CTAS data files sit
-inside Java's bin-pack band, the six MERGEs delete every row in them, and the complete
-sequence still cannot reclaim them — registry row `RDF-1`, fork ask F-16.
+The scale is a gate's, not production's — the guide's measured numbers live in the MW-7 ledger and
+are not re-asserted here. The fixture reproduces the 1e7 x 50 run's residue at gate scale: both
+CTAS files sit inside Java's bin-pack band, the six MERGEs delete every row in them, and the
+complete sequence still cannot reclaim them (registry row ``RDF-1``).
 """
 
 from __future__ import annotations
@@ -38,17 +32,14 @@ from repark.errors import PySparkException
 # pins: mw-8-maintenance-runbook/C-001, C-002, C-003, C-004, C-005
 # pins: mw-8-maintenance-runbook/C-006, C-007, C-008, C-009, C-010
 
-# The MW-7 driver lives under python/repark-parity/bench/, which is not on `repark_parity`'s
-# import path. It is loaded as a synthetic package — the shim `test_mw7_scale_smoke.py` and
-# `test_tpch_smoke.py` both use. This module reuses that driver rather than writing a second
-# implementation of the census, the generator or the sequence.
+# The MW-7 driver lives under python/repark-parity/bench/, off `repark_parity`'s import path, so
+# it loads as a synthetic package (same shim as test_mw7_scale_smoke.py / test_tpch_smoke.py).
 _BENCH_DIR = Path(__file__).resolve().parents[2] / "repark-parity" / "bench"
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _GUIDE = _REPO_ROOT / "docs" / "guide" / "iceberg-guide.md"
 
-# The runbook cycle the guide documents, at a scale that runs in seconds. Six MERGEs over two
-# partitions leave twelve position-delete files, which clears the five-file floor
-# `rewrite_position_delete_files` needs before it folds anything.
+# Six MERGEs over two partitions leave twelve position-delete files, which clears the five-file
+# floor `rewrite_position_delete_files` needs before it folds anything.
 RUNBOOK_ROWS = 6_000
 RUNBOOK_MERGES = 6
 RUNBOOK_PARTITIONS = 2
@@ -75,8 +66,8 @@ EXPIRE_RETAIN_LAST = 1
 
 ONE_HOUR_MS = 60 * 60 * 1000
 
-# Every source the guide's runbook section must link. A number without its home is a number
-# that goes stale silently, so the citation is checked rather than trusted.
+# Every source the guide's runbook section must link: a number without its home goes stale
+# silently, so the citation is checked rather than trusted.
 REQUIRED_CITATIONS = [
     "mw-7-scale-measurement-ledger.md",
     "mw-8-maintenance-runbook-ledger.md",
@@ -96,9 +87,7 @@ RUNBOOK_HEADING = "### The maintenance runbook"
 CALL_PROCEDURE = re.compile(r"system\.(\w+)\(")
 CALL_ARGUMENT = re.compile(r"(\w+)\s*=>\s*([^,)]+)")
 
-# The catalog and table the driver's sequence is rendered with for the comparison. Procedure
-# names, argument names, and literal argument values are compared. A placeholder value is
-# skipped: the guide passes a `TIMESTAMP` literal where the driver passes epoch milliseconds.
+# The catalog and table the driver's sequence is rendered with for the comparison.
 DRIVER_CATALOG = "mw8"
 DRIVER_TABLE_ARG = "ns.orders"
 
@@ -148,9 +137,8 @@ def _calls_of(statements: list[str]) -> list[tuple[str, list[tuple[str, str]]]]:
 def _printed_cycle() -> list[str]:
     """The `MAINTENANCE_CYCLE` statements the guide prints, read out of its python block.
 
-    The block is PARSED, not pattern-matched over the page. Two of the statements are
-    f-strings split across two source lines, and a regex over the markdown silently keeps
-    only the first half — which is the half without the arguments that matter.
+    The block is PARSED, not regex-matched: two statements are f-strings split across source
+    lines, and a regex over the markdown keeps only the first half — without the arguments.
     """
     block = re.search(r"```python\n(.*?)```", _guide_section(), re.S)
     assert block, "the runbook section must carry exactly one python block"
@@ -166,8 +154,8 @@ def _printed_cycle() -> list[str]:
 class RunbookCycle(BaseModel):
     """What one documented runbook cycle did, measured at every boundary.
 
-    The driver's own models fill the `Any` fields (`FileCensus`, `MaintenanceStep`). They
-    arrive through a dynamic import, so they cannot be named in a static annotation here.
+    The `Any` fields are the driver's own models (`FileCensus`, `MaintenanceStep`); they arrive
+    through a dynamic import, so they cannot be named in a static annotation.
     """
 
     seeded_files: list[tuple[str, int, int]]
@@ -220,8 +208,8 @@ def _run_merge_workload(spark: ReparkSession, table: str, scratch: Path) -> None
 def _floor_refusal_message(spark: ReparkSession, catalog: str, table_arg: str) -> str:
     """Arm the orphan call inside the 24-hour floor and return the refusal it raises.
 
-    The floor holds on the ARMED form too. That is the cell that matters: `dry_run => false`
-    is the one call in the runbook that destroys data.
+    The floor holds on the ARMED form too: ``dry_run => false`` is the one call in the runbook
+    that destroys data.
     """
     inside_floor = int(time.time() * 1000) - ONE_HOUR_MS
     with pytest.raises(PySparkException, match=r"less than 24 hours") as raised:
@@ -268,8 +256,8 @@ def cycle(tmp_path_factory: pytest.TempPathFactory) -> Any:
             for procedure, sql in measure.maintenance_sequence(catalog, table_arg)
         ]
 
-        # The dry run's schema. `MaintenanceStep` keeps the first row, and a zero-row answer
-        # has none, so the column list is read from a second execution of the same SQL.
+        # `MaintenanceStep` keeps the first row and a zero-row answer has none, so the column list
+        # is read from a second execution of the same SQL.
         dry_run = spark.sql(steps[-1].sql).to_arrow()
 
         floor_refusal = _floor_refusal_message(spark, catalog, table_arg)
@@ -305,12 +293,11 @@ def _step(cycle: RunbookCycle, procedure: str) -> Any:
 
 
 def test_the_runbook_runs_the_documented_procedures_in_order(cycle: RunbookCycle) -> None:
-    """C-001: the sequence the guide documents is the sequence that runs.
+    """The sequence the guide documents is the sequence that runs.
 
-    Order is load-bearing. Folding the delete files first is what stops `rewrite_data_files`
-    reading every one of them, and `remove_orphan_files` stays last because it is the one
-    procedure with no undo. The order comes from the driver, so the guide, the MW-7
-    measurement and this test cannot disagree about it.
+    Order is load-bearing: folding the delete files first stops ``rewrite_data_files`` reading
+    every one of them, and ``remove_orphan_files`` stays last as the one procedure with no undo.
+    The order comes from the driver, so the guide and this test cannot disagree about it.
     """
     assert [step.procedure for step in cycle.steps] == RUNBOOK_PROCEDURES
     assert "dry_run" not in _step(cycle, "remove_orphan_files").sql, (
@@ -322,11 +309,11 @@ def test_the_runbook_runs_the_documented_procedures_in_order(cycle: RunbookCycle
 def test_position_delete_compaction_folds_the_deletes_to_one_per_partition(
     cycle: RunbookCycle,
 ) -> None:
-    """C-002: step 2 folds `partitions x merges` delete files down to one per partition.
+    """Step 2 folds ``partitions x merges`` delete files down to one per partition.
 
-    The fixture sets `write.delete.granularity = 'partition'` (the MW-7 layout). So the
-    count before the step is arithmetic, not an observation, and the count after it is the
-    floor that layout allows. Spark's unset default is `file` (MOR-2, closed by MW-9).
+    The fixture sets ``write.delete.granularity = 'partition'``, so the before-count is
+    arithmetic and the after-count is the floor that layout allows; Spark's unset default is
+    ``file``.
     """
     before = cycle.census_before.delete_files
     step = _step(cycle, "rewrite_position_delete_files")
@@ -340,10 +327,10 @@ def test_position_delete_compaction_folds_the_deletes_to_one_per_partition(
 
 
 def test_data_compaction_reduces_the_data_file_count(cycle: RunbookCycle) -> None:
-    """C-003: step 3 compacts the files the MERGEs fanned out.
+    """Step 3 compacts the files the MERGEs fanned out.
 
-    Every merge-on-read MERGE appends the updated rows as a new small file. The data-file
-    count is what a scan opens, so this step is the one that pays back on read.
+    Every merge-on-read MERGE appends updated rows as a new small file; the data-file count is
+    what a scan opens, so this is the step that pays back on read.
     """
     step = _step(cycle, "rewrite_data_files")
     before = _step(cycle, "rewrite_position_delete_files").census_after.data_files
@@ -355,18 +342,13 @@ def test_data_compaction_reduces_the_data_file_count(cycle: RunbookCycle) -> Non
 
 
 def test_delete_laden_seed_files_survive_the_whole_runbook(cycle: RunbookCycle) -> None:
-    """C-004: the runbook cannot reclaim a delete-laden data file — registry row `RDF-1`.
+    """The runbook cannot reclaim a delete-laden data file — registry row ``RDF-1``.
 
-    Both CTAS files are inside Java's bin-pack band, and the six MERGEs delete every row in
-    them. A file is a rewrite candidate only when it is outside that band or carries at least
-    `delete_file_threshold` delete files, and the fork at pin `5e7b2e4` defers Java's third
-    clause, `tooHighDeleteRatio`. So the two dead files are invisible to compaction, the
-    delete files covering them survive, and `removed_delete_files_count` is 0.
-
-    The answers stay correct. What is retained is dead bytes and a delete file every scan
-    opens. The mechanism and the Spark oracle are pinned by MW-7 C-011
-    (`test_mw7_scale_smoke.py::test_delete_laden_in_band_file_survives_the_runbook`); this
-    clause holds the operator-visible half — a pass does not return the table to baseline.
+    A file is a rewrite candidate only when it is outside the bin-pack band or carries at least
+    ``delete_file_threshold`` delete files; the fork defers Java's third clause,
+    ``tooHighDeleteRatio``, so the two dead files are invisible to compaction and
+    ``removed_delete_files_count`` is 0. The answers stay correct — what is retained is dead
+    bytes and a delete file every scan opens; the mechanism is pinned by the MW-7 twin.
     """
     low = BAND_LOW * RUNBOOK_TARGET_FILE_SIZE
     high = BAND_HIGH * RUNBOOK_TARGET_FILE_SIZE
@@ -387,10 +369,10 @@ def test_delete_laden_seed_files_survive_the_whole_runbook(cycle: RunbookCycle) 
 
 
 def test_manifest_compaction_drops_the_manifest_count(cycle: RunbookCycle) -> None:
-    """C-005: step 4 re-groups the manifests the first two steps churned.
+    """Step 4 re-groups the manifests the first two steps churned.
 
-    Every reader opens the manifest list first, so this is the cheapest step per byte saved.
-    The result is Spark's two columns.
+    Every reader opens the manifest list first, so this is the cheapest step per byte saved; the
+    result is Spark's two columns.
     """
     step = _step(cycle, "rewrite_manifests")
     before = _step(cycle, "rewrite_data_files").census_after.manifests
@@ -406,10 +388,10 @@ def test_manifest_compaction_drops_the_manifest_count(cycle: RunbookCycle) -> No
 def test_expire_snapshots_prunes_the_snapshots_and_deletes_what_they_held(
     cycle: RunbookCycle,
 ) -> None:
-    """C-006: step 5 drops the snapshots, and with them the files the rewrites replaced.
+    """Step 5 drops the snapshots, and with them the files the rewrites replaced.
 
-    Nothing else deletes those files. Until this step runs, every rewritten data file and
-    every folded delete file stays reachable from the snapshot that wrote it.
+    Nothing else deletes those files: until this step runs, every rewritten data file and folded
+    delete file stays reachable from the snapshot that wrote it.
     """
     step = _step(cycle, "expire_snapshots")
     before = _step(cycle, "rewrite_manifests").census_after.snapshots
@@ -427,12 +409,11 @@ def test_expire_snapshots_prunes_the_snapshots_and_deletes_what_they_held(
 def test_the_orphan_step_is_a_lagging_net_and_the_armed_form_keeps_the_floor(
     cycle: RunbookCycle,
 ) -> None:
-    """C-007: step 6 lists, step 7 deletes, and both stay behind the 24-hour floor.
+    """Step 6 lists, step 7 deletes, and both stay behind the 24-hour floor.
 
-    The dry run answers Spark's one column. It answers zero rows here, and that is not a
-    clean bill of health: the floor means a cycle never sees the orphans the same cycle's
-    `expire_snapshots` just created (registry `ORPHAN-1`). The armed form refuses inside the
-    floor, so the one call that destroys data cannot be pointed at an in-flight commit.
+    A zero-row dry run is not a clean bill: the floor means a cycle never sees the orphans the
+    same cycle's ``expire_snapshots`` just created. The armed form refuses inside the floor, so
+    the one call that destroys data cannot be pointed at an in-flight commit.
     """
     dry_run = _step(cycle, "remove_orphan_files")
     assert cycle.dry_run_columns == ["orphan_file_location"]
@@ -445,10 +426,10 @@ def test_the_orphan_step_is_a_lagging_net_and_the_armed_form_keeps_the_floor(
 
 
 def test_the_runbook_never_changes_the_row_set(cycle: RunbookCycle) -> None:
-    """C-008: `COUNT(*)` holds across the whole sequence, value and Arrow type.
+    """``COUNT(*)`` holds across the whole sequence, value and Arrow type.
 
-    Maintenance rewrites which files hold the rows and which files mask them. It never
-    changes which rows are live. This is the correctness control under every other clause.
+    Maintenance rewrites which files hold and mask rows, never which rows are live; this is the
+    correctness control under every other clause.
     """
     assert cycle.rows_before == RUNBOOK_ROWS
     assert cycle.rows_after == RUNBOOK_ROWS
@@ -456,13 +437,10 @@ def test_the_runbook_never_changes_the_row_set(cycle: RunbookCycle) -> None:
 
 
 def test_the_guide_section_links_every_source_it_names() -> None:
-    """C-009: every source the runbook section relies on is linked from it.
+    """Every source the runbook section relies on is linked from it.
 
-    The cadence and the budget belong to the MW-7 ledger; each difference from Apache Spark
-    belongs to its registry row; the expire-cutoff measurements belong to this unit's ledger.
-    This checks that each of those homes is LINKED. It does not, and cannot cheaply, detect a
-    number in the prose that cites nothing — C-010 is the drift detector that reads the
-    statements the section actually prints.
+    This checks that each home is LINKED; it cannot cheaply detect an uncited number in the
+    prose — the next test reads the statements the section actually prints.
     """
     section = _guide_section()
     missing = [citation for citation in REQUIRED_CITATIONS if citation not in section]
@@ -470,17 +448,13 @@ def test_the_guide_section_links_every_source_it_names() -> None:
 
 
 def test_the_printed_cycle_matches_the_sequence_the_engine_runs() -> None:
-    """C-010: the SQL the guide prints is the SQL this unit measured, argument for argument.
+    """The SQL the guide prints is the SQL this unit measured, argument for argument.
 
-    An operator copies the block, not the prose around it. A statement that drifts from the
-    measured sequence is a runbook that documents one thing and proves another — and the
-    first way it drifts is by losing an argument, because a `CALL` with a missing argument
-    still runs and still answers a result shape that looks correct.
-
-    Values are compared wherever the guide prints a literal; a placeholder is skipped.
-    The guide passes a `TIMESTAMP` literal where the
-    driver passes epoch milliseconds; both are correct and neither is the claim. Procedure
-    names, their order, and the argument NAMES are the claim.
+    An operator copies the block, not the prose; the first way a statement drifts is by losing an
+    argument, because a ``CALL`` with a missing argument still runs and answers a shape that
+    looks correct. Values are compared where the guide prints a literal; a placeholder is skipped
+    (the guide passes a ``TIMESTAMP`` literal where the driver passes epoch milliseconds). The
+    claim is the procedure names, their order, and the argument NAMES.
     """
     printed = _calls_of(_printed_cycle())
     driven = _calls_of(
@@ -499,9 +473,8 @@ def test_the_printed_cycle_matches_the_sequence_the_engine_runs() -> None:
             f"the guide's {procedure} call has drifted from the sequence this unit measured:\n"
             f"  printed: {printed_arguments}\n  measured: {driven_arguments}"
         )
-        # A value is comparable only where the guide prints a literal. `table` and `older_than`
-        # are f-string placeholders there and a name and epoch milliseconds here; `retain_last`
-        # is the same literal on both sides, and it decides how much history survives.
+        # A value is comparable only where the guide prints a literal; `retain_last` is the same
+        # literal on both sides, and it decides how much history survives.
         for (name, printed_value), (_name, driven_value) in zip(
             printed_arguments, driven_arguments, strict=True
         ):

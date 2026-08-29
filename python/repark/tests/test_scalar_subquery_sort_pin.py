@@ -1,9 +1,8 @@
 """DF 54.1 regression pin: ORDER BY must survive an uncorrelated scalar subquery.
 
-DataFusion 54.1's new default-on `enable_physical_uncorrelated_scalar_subquery` physical
-path (`ScalarSubqueryExec` plan wrapping) drops the query's top-level Sort — found by the
-seeded fuzzer (banked repros fuzz-42-1 / fuzz-42-2, 2026-08-01). repark-session forces the
-flag OFF; these pins are the re-enable done-signal: they must stay green when the flag is
+DataFusion 54.1's default-on ``enable_physical_uncorrelated_scalar_subquery`` physical path
+(``ScalarSubqueryExec`` plan wrapping) drops the query's top-level Sort; repark-session forces
+the flag OFF. These pins are the re-enable done-signal: they must stay green when the flag is
 flipped back after the upstream fix.
 """
 
@@ -30,7 +29,7 @@ def test_order_by_desc_survives_scalar_subquery_filter() -> None:
 
 
 def test_multi_key_order_survives_aggregate_scalar_subquery() -> None:
-    """The fuzz-42-1 shape: COUNT subquery in WHERE + multi-key ORDER BY with NULLS."""
+    """COUNT subquery in WHERE + multi-key ORDER BY with NULLS."""
     spark = _session()
     spark.createDataFrame(
         [(0, 0, -6642), (1, 4, -4769)], ["row_id", "id", "b"]

@@ -1,18 +1,12 @@
-"""Facade tests for WG2: the ``Window`` / ``row_number`` surface and the 13 date functions.
+"""Facade tests for the ``Window`` / ``row_number`` surface and the 13 date functions.
 
-Every op runs against the real native engine (``maturin develop``); each behavior is pinned to an
-**exact Spark-semantics fixture**. The ``test_parity_*`` goldens are recorded differentially from
-**live PySpark 4.1.2** (``JAVA_HOME=/usr/lib/jvm/zulu-17-amd64``, Spark 4 needs Java 17 — the stale
-"not runnable here" note predated the zulu-17 install) and compared through
+``test_parity_*`` goldens are recorded differentially from live PySpark 4.1.2 and compared through
 ``repark_parity.assert_frames_equal`` (name + Arrow type + field nullability + bit-exact value).
 
-Genuine parity requires BOTH engines to infer the pinned type/nullability: the date parity goldens
-carry ``nullable=True``, which only holds when the date spine is nullable, so ``_date_spine`` builds
-``calendar_date`` via ``createDataFrame`` + ``cast`` (Spark's idiom) rather than an inline non-null
-``VALUES (DATE '…')`` — an inline date literal is non-null in Spark but nullable in repark, so the
-extractor/date-math/date-format nullability goldens would otherwise pin repark's shape as "Spark"
-(the cycle-2 mispin class — see ``_date_spine`` + ``task/lessons.md`` 2026-07-19). The final test
-reproduces the ``silver_dim_jobs.py`` dim-dates transform shape end to end (compared as exact rows).
+Genuine parity requires BOTH engines to infer the pinned type/nullability: the date goldens carry
+``nullable=True``, which only holds when the date spine is nullable, so ``_date_spine`` builds
+``calendar_date`` via ``createDataFrame`` + ``cast`` rather than an inline ``VALUES (DATE '…')``
+(an inline date literal is non-null in Spark but nullable in repark).
 """
 
 from __future__ import annotations
@@ -37,13 +31,9 @@ def spark() -> ReparkSession:
 def _date_spine(spark: ReparkSession, dates: list[str]) -> object:
     """A one-column nullable ``calendar_date`` DataFrame from ISO date strings (a dim-dates spine).
 
-    Built via ``createDataFrame`` (string) + ``cast(DateType())`` so ``calendar_date`` is
-    ``date32``/**nullable** on BOTH engines — Spark's ``createDataFrame`` idiom. An inline SQL
-    ``VALUES (DATE '…')`` column is non-null in Spark but nullable in repark, so date-function
-    outputs over it would pin repark's nullable shape as "Spark" (the parity-mispin class the
-    cycle-2 remediation closed: the ``test_parity_*`` date goldens carry ``nullable=True``, which
-    both engines agree on only when the spine is nullable). Values are identical either way, so the
-    value-only date tests are unaffected (verified against live PySpark 4.1.2, both engines).
+    Built via ``createDataFrame`` + ``cast(DateType())`` so ``calendar_date`` is date32/nullable
+    on BOTH engines (see module docstring: an inline ``VALUES (DATE '…')`` column is non-null in
+    Spark but nullable in repark).
     """
     rows = [(value,) for value in dates]
     return spark.createDataFrame(rows, ["calendar_date_str"]).select(
@@ -56,18 +46,13 @@ def _single(df: object, column: str) -> object:
     return df.to_arrow().column(column).to_pylist()[0]  # type: ignore[attr-defined]
 
 
-# ==================================================================================================
 # Window + row_number
-# ==================================================================================================
-
-
 def test_row_number_is_a_column() -> None:
     assert isinstance(F.row_number(), Column)
 
 
 def test_row_number_orders_rows_and_is_integer_typed(spark: ReparkSession) -> None:
-    # Spark row_number() is IntegerType (the engine casts DataFusion's UInt64). ORDER BY v ascending
-    # numbers the rows 1..n in value order.
+    # Spark row_number() is IntegerType (the engine casts DataFusion's UInt64).
     df = spark.sql("SELECT * FROM (VALUES (30), (10), (20)) AS t(v)")
     numbered = df.withColumn("rn", F.row_number().over(Window.orderBy(F.col("v").asc())))
     table = numbered.to_arrow()
@@ -77,7 +62,6 @@ def test_row_number_orders_rows_and_is_integer_typed(spark: ReparkSession) -> No
 
 
 def test_row_number_restarts_per_partition(spark: ReparkSession) -> None:
-    # PARTITION BY g restarts the numbering within each group (ordered by v ascending).
     df = spark.sql("SELECT * FROM (VALUES ('a', 5), ('a', 1), ('b', 9)) AS t(g, v)")
     spec = Window.partitionBy("g").orderBy(F.col("v").asc())
     numbered = df.withColumn("rn", F.row_number().over(spec))
@@ -106,18 +90,14 @@ def test_window_spec_is_immutable() -> None:
 
 
 def test_modulo_operator(spark: ReparkSession) -> None:
-    # The `%` operator (added so the dim-dates `(dayofweek + 5) % 7 + 1` ISO conversion runs).
+    # The `%` operator backs the dim-dates `(dayofweek + 5) % 7 + 1` ISO conversion.
     df = spark.sql("SELECT * FROM (VALUES (7), (8), (13)) AS t(a)")
     out = df.withColumn("m", F.col("a") % 7).withColumn("rm", 20 % F.col("a"))
     rows = {row["a"]: (row["m"], row["rm"]) for row in out.to_arrow().to_pylist()}
     assert rows == {7: (0, 6), 8: (1, 4), 13: (6, 7)}
 
 
-# ==================================================================================================
 # Extractors: year / month / quarter / weekofyear / dayofweek / dayofmonth / dayofyear
-# ==================================================================================================
-
-
 def test_calendar_extractors(spark: ReparkSession) -> None:
     # 2024-03-15 is a Friday in leap year 2024; day 75; ISO week 11.
     df = _date_spine(spark, ["2024-03-15"]).select(
@@ -150,11 +130,7 @@ def test_extractors_accept_a_column_object_not_only_a_name(spark: ReparkSession)
     assert _single(df.select("wk"), "wk") == 53
 
 
-# ==================================================================================================
 # last_day / add_months / date_add
-# ==================================================================================================
-
-
 def test_last_day(spark: ReparkSession) -> None:
     df = _date_spine(spark, ["2025-02-14"]).withColumn("last", F.last_day("calendar_date"))
     assert _single(df.select("last"), "last") == dt.date(2025, 2, 28)
@@ -175,15 +151,14 @@ def test_add_months_clamps_to_month_end(spark: ReparkSession) -> None:
 
 
 def test_add_months_preserves_month_end_into_longer_months(spark: ReparkSession) -> None:
-    # The disambiguating case for Spark's Hive-derived algorithm: a source on the LAST day of a
-    # SHORT month lands on the last day of the (longer) target month — 2015-02-28 + 1 month is
-    # 2015-03-31, NOT 03-28. A naive java.time-style plusMonths keeps day 28 and would pass
-    # every other fixture in this file; only this case pins the end-of-month branch.
+    # Disambiguating case for Spark's Hive-derived algorithm: a month-end source in a SHORT month
+    # lands on the last day of the (longer) target month — 2015-02-28 + 1 month is 2015-03-31,
+    # NOT 03-28. A naive plusMonths keeps day 28 and passes every other fixture in this file.
     df = _date_spine(spark, ["2015-02-28"])
     assert _single(
         df.withColumn("r", F.add_months("calendar_date", 1)).select("r"), "r"
     ) == dt.date(2015, 3, 31)
-    # And backwards: April 30 (month-end) minus one month is March 31 (month-end), not March 30.
+    # Backwards: April 30 (month-end) minus one month is March 31 (month-end), not March 30.
     back = _date_spine(spark, ["2025-04-30"]).withColumn("r", F.add_months("calendar_date", -1))
     assert _single(back.select("r"), "r") == dt.date(2025, 3, 31)
 
@@ -198,17 +173,12 @@ def test_date_add(spark: ReparkSession) -> None:
     assert _single(df.withColumn("r", F.date_add("calendar_date", 1)).select("r"), "r") == dt.date(
         2025, 2, 1
     )
-    # Negative days go backwards across the month boundary.
     assert _single(df.withColumn("r", F.date_add("calendar_date", -1)).select("r"), "r") == dt.date(
         2025, 1, 30
     )
 
 
-# ==================================================================================================
 # date_format
-# ==================================================================================================
-
-
 @pytest.mark.parametrize(
     ("date", "pattern", "expected"),
     [
@@ -233,11 +203,7 @@ def test_date_format_unsupported_pattern_raises(spark: ReparkSession) -> None:
         df.to_arrow()
 
 
-# ==================================================================================================
 # trunc / date_trunc
-# ==================================================================================================
-
-
 def test_trunc_granularities(spark: ReparkSession) -> None:
     # 2025-05-14 is a Wednesday in Q2.
     df = _date_spine(spark, ["2025-05-14"])
@@ -269,17 +235,12 @@ def test_date_trunc_argument_order_and_granularity(spark: ReparkSession) -> None
     assert _single(week.select("r"), "r") == dt.date(2025, 5, 12)
     quarter = df.withColumn("r", F.date_trunc("quarter", "calendar_date").cast(T.DateType()))
     assert _single(quarter.select("r"), "r") == dt.date(2025, 4, 1)
-    # The result of date_trunc is a timestamp type.
     assert pa.types.is_timestamp(
         df.withColumn("r", F.date_trunc("month", "calendar_date")).to_arrow().schema.field("r").type
     )
 
 
-# ==================================================================================================
 # Spark-parity fixtures (hand-computed goldens through the differential core)
-# ==================================================================================================
-
-
 def test_parity_extractor_row(spark: ReparkSession) -> None:
     # Two dates across a quarter boundary and a leap day; every extractor pinned at once.
     source = _date_spine(spark, ["2016-02-29", "2025-04-01"])
@@ -342,20 +303,16 @@ def test_parity_date_format_row(spark: ReparkSession) -> None:
 
 
 def test_parity_row_number_ordered(spark: ReparkSession) -> None:
-    # orderBy pins the row order → an order-sensitive differential; row_number is IntegerType.
-    # createDataFrame (NOT inline VALUES) so both engines infer v=int64/nullable (live PySpark
-    # 4.1.2); an inline VALUES source would type v as int32/non-null on Spark, making the int64/
-    # nullable `v` pin repark-only. `rn` (row_number) is int32/non-null on both — a real Spark
-    # guarantee.
+    # orderBy pins row order → an order-sensitive differential. createDataFrame so both engines
+    # genuinely infer the golden types (see module docstring); `rn` is int32/non-null on both.
     source = spark.createDataFrame([(30,), (10,), (20,)], ["v"])
     result = (
         source.withColumn("rn", F.row_number().over(Window.orderBy(F.col("v").asc())))
         .orderBy(F.col("rn").asc())
         .select("rn", "v")
     )
-    # row_number is never NULL, so `rn` is non-nullable — and the harness now asserts field
-    # nullability as part of the schema signature (name + type + nullable + bit-exact values), so
-    # the engine must reproduce this non-null guarantee.
+    # row_number is never NULL, so `rn` is non-nullable; the harness asserts field nullability as
+    # part of the schema signature.
     golden = pa.table(
         [pa.array([1, 2, 3], pa.int32()), pa.array([10, 20, 30], pa.int64())],
         schema=pa.schema(
@@ -368,20 +325,12 @@ def test_parity_row_number_ordered(spark: ReparkSession) -> None:
     assert_frames_equal(result.to_arrow(), golden, order_sensitive=True)
 
 
-# ==================================================================================================
 # Acceptance kernel — the silver_dim_jobs.py dim-dates transform shape, end to end
-# ==================================================================================================
-
-
 def test_acceptance_dim_dates_transform_shape(spark: ReparkSession) -> None:
-    """Reproduce the ``silver_dim_jobs.py`` dim-dates transform shape on the facade and assert the
-    exact output rows.
+    """Reproduce the ``silver_dim_jobs.py`` dim-dates transform shape on the facade.
 
-    A date spine → a surrogate ``date_key`` (``row_number`` over a ``Window`` ordered by the date,
-    the source publish job's pattern) + the dim-dates date columns: ``date_format`` keys/names,
-    ``year``/``quarter``/``month``, the ``dayofweek``→ISO arithmetic (``(dayofweek + 5) % 7 + 1``,
-    verbatim from the script), ``trunc``/``date_trunc``/``last_day``/``add_months``/``date_add``
-    period boundaries. Goldens are hand-computed from Spark's documented calendar semantics.
+    A date spine → surrogate ``date_key`` (``row_number`` over a date-ordered ``Window``) plus the
+    dim-dates date columns; goldens are hand-computed from Spark's documented calendar semantics.
     """
     spine = _date_spine(
         spark,
@@ -409,11 +358,9 @@ def test_acceptance_dim_dates_transform_shape(spark: ReparkSession) -> None:
         .drop("calendar_date")
     )
 
-    # Rows in row_key order (calendar order): 2016-02-29, 2025-01-05, 2025-01-06, 2025-03-31,
-    # 2025-04-01. Every value follows Spark's documented calendar semantics. Compared as exact row
-    # dicts (values, order-sensitive by row_key) so the ~15-column nullability bookkeeping does not
-    # obscure the assertion; the focused `test_parity_*` cases above pin schema/type through the
-    # differential core.
+    # Compared as exact row dicts, order-sensitive by row_key, so the ~15-column nullability
+    # bookkeeping does not obscure the assertion; the focused `test_parity_*` cases above pin
+    # schema/type through the differential core.
     def date(year: int, month: int, day: int) -> dt.date:
         return dt.date(year, month, day)
 

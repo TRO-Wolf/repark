@@ -1,14 +1,5 @@
-//! P-1 criterion kernel baseline — MEASURE ONLY (perf-wave-14).
-//!
-//! Per-kernel ns/row at n=1e6, null-free `f64`, pre-sorted walk. Kernels:
-//! `ema`/`sma`/`rsi`/`bbands` plus volume `ad`/`adosc`/`obv`/`mfi`, plus the
-//! iterator-construction sweep representatives `trange`/`atr`/`adx` (Wilder family),
-//! `macd` (three outputs, internal dense EMA) and `linearreg`/`stddev` (statistic family).
-//!
-//! Multi-output path extends the `p1c_microbench` convention as criterion benches
-//! (not `#[test]`): BBANDS cold single call vs three independent sibling runs vs
-//! the cache-hit shape (one kernel + clone the three bands). The UDF TLS cache
-//! lives in `src/udf.rs` and is not instrumented here — see the unit ledger.
+//! Criterion kernel measurements. This bench reports ns/row at one million null-free,
+//! pre-sorted rows. Multi-output BBANDS measures one run, three runs, and one run plus clones.
 //!
 //! Run: `cargo bench -p repark-ta --bench ta_kernels -- --quick`
 //! Machine-readable lines: `TA_KERNEL …` and `TA_KERNEL_RATIO …` on stderr.
@@ -22,9 +13,9 @@ use repark_ta::{
     ad, adosc, adx, atr, bbands, ema, linearreg, macd, mfi, obv, rsi, sma, stddev, trange,
 };
 
-/// Rows per kernel — large enough that arithmetic dominates call overhead.
+/// Rows per kernel.
 const ROW_COUNT: usize = 1_000_000;
-/// TA-Lib-default-ish periods (BBANDS matches `p1c_microbench`).
+/// TA-Lib-like periods.
 const SMA_PERIOD: usize = 20;
 const EMA_PERIOD: usize = 21;
 const RSI_PERIOD: usize = 14;
@@ -41,11 +32,11 @@ const MACD_SIGNAL: usize = 9;
 const LINEARREG_PERIOD: usize = 14;
 const STDDEV_PERIOD: usize = 20;
 const STDDEV_NBDEV: f64 = 1.0;
-/// Warm-up + N-iteration median (same shape as `p1c_microbench`).
+/// Warm-up and iteration count for median timing.
 const WARMUP: u32 = 3;
 const ROUNDS: u32 = 15;
 
-/// Pre-sorted OHLC+V fixture: index is time; no nulls.
+/// Pre-sorted OHLC+V fixture without nulls.
 struct Fixture {
     high: Vec<f64>,
     low: Vec<f64>,
@@ -62,7 +53,6 @@ impl Fixture {
         for (index, &price) in close.iter().enumerate() {
             let phase_steps = u32::try_from(index % 10_000).unwrap_or(0);
             let phase = f64::from(phase_steps) / 10_000.0;
-            // Always high > close > low for this positive walk.
             let half_range = 0.25 + phase * 0.5;
             high.push(price + half_range);
             low.push(price - half_range);
@@ -83,8 +73,6 @@ fn fixture() -> &'static Fixture {
 }
 
 fn walk(row_count: usize) -> Vec<f64> {
-    // Deterministic lognormal-ish walk; values only, no nulls. Same generator as
-    // `tests/p1c_microbench.rs` so the BBANDS floor is comparable.
     let mut out = Vec::with_capacity(row_count);
     let mut price = 100.0_f64;
     for index in 0..row_count {
@@ -264,11 +252,7 @@ fn bench_volume(criterion: &mut Criterion) {
 }
 
 /// ===========================================================================================
-/// BBANDS multi-output path — p1c convention as criterion, not a cargo-test `#[test]`.
-///
-/// * `bbands_cold_n1e6` — one kernel, three live outputs.
-/// * `bbands_three_sibling_n1e6` — three independent full runs (pre-#8 / cache-miss shape).
-/// * `bbands_cache_hit_shape_n1e6` — one kernel + clone three bands (ideal #8 proxy).
+/// BBANDS one-run, three-run, and one-run-plus-clones shapes.
 ///
 /// ===========================================================================================
 fn bench_bbands_cache_path(criterion: &mut Criterion) {
@@ -348,9 +332,7 @@ fn bench_bbands_cache_path(criterion: &mut Criterion) {
 }
 
 /// ===========================================================================================
-/// Wilder / true-range family (`trange` / `atr` / `adx`) — the iterator-construction sweep's
-/// forward-writing representatives. `atr` composes `trange`; `adx` is the three-phase
-/// `DirectionalState` loop.
+/// Wilder and true-range family measurements.
 /// ===========================================================================================
 fn bench_wilder(criterion: &mut Criterion) {
     let data = fixture();
@@ -410,8 +392,7 @@ fn bench_wilder(criterion: &mut Criterion) {
 }
 
 /// ===========================================================================================
-/// MACD (three outputs, internal dense EMA — NOT `overlap::ema`) plus the statistic family
-/// representatives `linearreg` (per-window closed form) and `stddev` (`var` + guarded sqrt).
+/// MACD and statistic-family measurements.
 /// ===========================================================================================
 fn bench_macd_statistic(criterion: &mut Criterion) {
     let data = fixture();

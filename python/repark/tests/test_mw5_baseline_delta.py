@@ -1,15 +1,12 @@
 """MW-5: re-run the MW-0 merge-on-read growth demo and pin the compact delta.
 
-MW-0 measured ten sequential MERGEs into a 1,000-row v2 merge-on-read table,
-each touching the same 200 ids: delete files grew one per merge and were never
-reclaimed, and ``COUNT(*)`` scan cost tracked that growth 2.1x while the answer
-stayed 1,000. This module re-runs that shape, then
-``rewrite_position_delete_files`` + ``rewrite_data_files`` + ``expire_snapshots``.
+MW-0's shape: ten sequential MERGEs into a 1,000-row v2 merge-on-read table, each touching the
+same 200 ids — delete files grew one per merge, never reclaimed, and ``COUNT(*)`` scan cost
+tracked that growth. This module re-runs that shape, then ``rewrite_position_delete_files`` +
+``rewrite_data_files`` + ``expire_snapshots``.
 
-CI pins the deterministic half (delete-file counts and Arrow row identity).
-Wall-clock scan times are measured on the same run and recorded in the unit
-ledger; they are not asserted, because a timing pin on CI hardware is not the
-MW-0 claim.
+CI pins the deterministic half (delete-file counts and Arrow row identity). Wall-clock scan times
+are recorded in the unit ledger, not asserted — a timing pin on CI hardware is not the MW-0 claim.
 """
 
 from __future__ import annotations
@@ -181,8 +178,7 @@ def test_mw0_demo_delete_files_grow_then_compact_reclaims(tmp_path: Path) -> Non
         count_warm, count_warm_type, _scan_warm = _count_star(spark, TABLE)
         assert count_warm == SEED_ROW_COUNT
         assert count_warm_type == pa.int64()
-        # Merge 1 was the cold-start outlier in MW-0; the post-expire scan is
-        # the same class. The timed figure is the second COUNT(*).
+        # Merge 1 was the cold-start outlier in MW-0; the timed figure is the second COUNT(*).
         count_after, count_after_type, scan_after = _count_star(spark, TABLE)
         assert count_after == SEED_ROW_COUNT
         assert count_after_type == pa.int64()

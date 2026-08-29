@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""§8.4 — ``batch_size`` sweep, one symbol, single-core isolation.
+"""``batch_size`` sweep, one symbol, single-core isolation.
 
-``target_partitions=1`` is deliberate isolation (not the default-conf primary).
-The sweep records wall time vs ``batch_size``. The measured lever is SortExec;
-WindowAggExec is batch-size-insensitive because ``evaluate_all`` already sees
-one concatenated partition.
+``target_partitions=1`` is deliberate isolation, not the default-conf primary. The measured
+lever is SortExec; WindowAggExec is batch-size-insensitive because ``evaluate_all`` already
+sees one concatenated partition.
 
 Usage::
 
@@ -33,7 +32,7 @@ def _ema_work(seed: object) -> object:
 
 
 def main() -> None:
-    """Run the §8.4 batch-size sweep and print ``TA_PIPELINE`` lines."""
+    """Run the batch-size sweep and print ``TA_PIPELINE`` lines."""
     parser = argparse.ArgumentParser(description=__doc__)
     harness.add_timing_args(parser)
     parser.add_argument("--n-rows", type=int, default=None)

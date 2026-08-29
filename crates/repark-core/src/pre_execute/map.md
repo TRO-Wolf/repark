@@ -3,7 +3,7 @@
 ## Purpose
 
 File-backed tests for the shared pre-execute belt (`../pre_execute.rs`): the ONE choke point
-every door's planned statement passes through before it executes (SQM round 5, Z-2 / Z-3).
+every door's planned statement passes through before it executes (Z-2 / Z-3).
 
 ## Contents
 

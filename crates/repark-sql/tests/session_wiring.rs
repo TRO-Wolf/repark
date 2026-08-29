@@ -1,15 +1,5 @@
-//! The door's REACHABILITY, pinned end to end: `AnsiDialect` installed on a real
-//! [`ReparkSession`] through the frozen seam (`ReparkSessionBuilder::with_sql_dialect`), driving
-//! Iceberg DDL + DML through `session.sql`.
-//!
-//! Why this file exists as a separate binary rather than a unit test: `surfaces::SQL_DIALECT_SEAM`
-//! means "the door is reachable through a SESSION", and a unit test that calls
-//! `AnsiDialect.execute(EngineContext::new(…))` on a bare `SessionContext` does not show that —
-//! it would stay green even if nothing ever installed the dialect. The Spark door pins its own
-//! reachability the same way (`crates/repark-spark/tests/*_sessions.rs`).
-//!
-//! Native profile throughout: NO `SessionExtension` is installed (this door ships none), so the
-//! semantics under test are stock DataFusion's, which is the whole claim of the ANSI door.
+//! Reachability pins install `AnsiDialect` through `ReparkSessionBuilder` and drive DDL/DML via `session.sql`.
+//! A direct router test cannot prove installation. Native sessions keep stock DataFusion semantics.
 
 use std::sync::Arc;
 
@@ -34,9 +24,7 @@ async fn ansi_session(warehouse: &str) -> ReparkSession {
     session
 }
 
-/// End to end through `ReparkSession::sql`: schema DDL, CTAS into the registered Iceberg catalog,
-/// a delegated INSERT, and a read asserted on the Arrow path (value AND type).
-///
+/// End to end through `ReparkSession::sql`, schema DDL, CTAS, and a typed read reach the catalog.
 /// Mutation: dropping `.with_sql_dialect(...)` from the builder turns this RED — the session
 /// default becomes `DataFusionDialect`, whose CTAS makes a session-local `MemTable` and never
 /// creates `ice.sales.orders`, so the catalog-visible read fails.
@@ -102,8 +90,7 @@ async fn ansi_dialect_on_a_repark_session_runs_the_door() {
     );
 }
 
-/// The door's REFUSALS reach the user through the session too — a session-installed dialect must
-/// not lose the Q15 routing refusal on its way out of `ReparkSession::sql`.
+/// The session-installed door exposes its refusal errors to the caller.
 #[tokio::test]
 async fn ansi_door_refusals_surface_through_the_session() {
     let warehouse_dir = TempDir::new().expect("warehouse tempdir");
@@ -131,17 +118,7 @@ async fn ansi_door_refusals_surface_through_the_session() {
     );
 }
 
-/// A11: ANSI column-def `CREATE TABLE` refuses nanosecond-precision timestamps at
-/// DDL time. DataFusion maps bare `TIMESTAMP` / `TIMESTAMP(9)` (and the WITH /
-/// WITHOUT TIME ZONE twins) to Arrow `timestamp[ns]`; Iceberg v2 cannot store
-/// that (`timestamp_ns`). The refuse names the column, the precision (9 /
-/// nanosecond), and the supported precision (6 / microseconds).
-///
-/// Cross-door: the Spark door is **not** changed here. Spark `CREATE TABLE
-/// (ts TIMESTAMP) USING iceberg` maps to Iceberg `timestamptz` (µs) via its own
-/// `sql_type_to_iceberg` table (`crates/repark-spark/src/create_table.rs`) and
-/// never takes this CAST-NULL derivation. CTAS and ALTER ADD COLUMN stay on
-/// the existing write-path / type-resolution refuse — out of this unit.
+/// A11: ANSI column-def `CREATE TABLE` refuses nanosecond-precision timestamps at DDL time.
 fn assert_ansi_ns_create_refusal(err: &str, column: &str) {
     assert!(
         err.contains(&format!("`{column}`")),
@@ -233,7 +210,6 @@ async fn ansi_column_def_nanosecond_timestamp_shapes_refuse() {
 }
 
 /// Positive control: `TIMESTAMP(6)` is microseconds and stays a successful CREATE.
-/// Arrow export is `timestamp[us]` (naive) — Iceberg v2 `timestamp`.
 #[tokio::test]
 async fn ansi_column_def_timestamp_6_create_is_unchanged() {
     let warehouse_dir = TempDir::new().expect("warehouse tempdir");

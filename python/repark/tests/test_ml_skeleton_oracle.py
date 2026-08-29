@@ -1,4 +1,4 @@
-"""M1 R-ML-SKELETON oracles — Param / Pipeline / uid / persistence / vectors.
+"""R-ML-SKELETON oracles — Param / Pipeline / uid / persistence / vectors.
 
 Live-pyspark differentials ``importorskip`` when Java/pyspark cannot launch (facade CI is
 JVM-free by design). EXPECTED-ERROR pins never skip.
@@ -34,9 +34,7 @@ from repark.spark.ml.pipeline import (
 )
 from repark.spark.ml.util import _random_uid
 
-# ---------------------------------------------------------------------------
 # Helpers
-# ---------------------------------------------------------------------------
 
 
 def _session() -> ReparkSession:
@@ -73,9 +71,7 @@ def _maybe_live_spark():
         pytest.skip(f"live pyspark unavailable: {error}")
 
 
-# ---------------------------------------------------------------------------
 # Uid + Param semantics
-# ---------------------------------------------------------------------------
 
 
 def test_random_uid_spark_shape() -> None:
@@ -120,9 +116,7 @@ def test_param_undefined_raises() -> None:
         toy.getOrDefault(toy.seed)
 
 
-# ---------------------------------------------------------------------------
 # fit/transform gate — Repark DataFrame only
-# ---------------------------------------------------------------------------
 
 
 def test_fit_refuses_foreign_dataframe() -> None:
@@ -143,9 +137,7 @@ def test_transform_refuses_pandas_name() -> None:
         model.transform(FakePandas())
 
 
-# ---------------------------------------------------------------------------
 # Pipeline fit/transform ordering
-# ---------------------------------------------------------------------------
 
 
 def test_pipeline_fit_transform_ordering() -> None:
@@ -186,9 +178,7 @@ def test_pipeline_passthrough_transformer() -> None:
         spark.stop()
 
 
-# ---------------------------------------------------------------------------
 # Persistence repark-ml v1
-# ---------------------------------------------------------------------------
 
 
 def test_pipeline_model_save_load_round_trip() -> None:
@@ -225,7 +215,7 @@ def test_pipeline_model_save_load_round_trip() -> None:
 
 
 def test_pipeline_model_save_atomic_overwrite() -> None:
-    """M7: overwrite is write-new + rename — never rmtree-then-write (M4 C2-SAF-001).
+    """M7: overwrite is write-new + rename — never rmtree-then-write (M4).
 
     After a successful overwrite the path is a complete repark-ml tree; a failed
     mid-write must not leave the destination deleted (staging aborted, original kept
@@ -258,7 +248,7 @@ def test_pipeline_model_save_atomic_overwrite() -> None:
         assert (path / "metadata.json").is_file()
         still = PipelineModel.load(str(path))
         assert sorted(row.asDict()["c"] for row in still.transform(df).collect()) == [9.0, 9.0]
-        # File target overwrite: replace file with directory tree (TOCTOU residual M7 C5).
+        # File target overwrite: replace file with directory tree (TOCTOU residual M7).
         file_path = Path(tmp) / "as_file"
         file_path.write_text("not-a-dir", encoding="utf-8")
         model_a.write().overwrite().save(str(file_path))
@@ -270,7 +260,7 @@ def test_pipeline_model_save_atomic_overwrite() -> None:
 
 
 def test_pipeline_model_save_race_aside_cleanup() -> None:
-    """M7 octo C1: failed publish after move-aside must not leak aside when target reoccupied.
+    """M7: failed publish after move-aside must not leak aside when target reoccupied.
 
     Simulates concurrent-overwrite race via rename hook: after target→aside, peer recreates
     target so staging→target fails → commit cleans aside (no `.repark-ml-aside-*` sibling).
@@ -343,7 +333,6 @@ def test_persistence_never_writes_training_rows() -> None:
                 continue
             raw = file_path.read_bytes()
             assert secret.encode("utf-8") not in raw, f"training data leaked into {file_path}"
-            # also scan as text when utf-8
             try:
                 text = raw.decode("utf-8")
             except UnicodeDecodeError:
@@ -354,9 +343,7 @@ def test_persistence_never_writes_training_rows() -> None:
         shutil.rmtree(tmp, ignore_errors=True)
 
 
-# ---------------------------------------------------------------------------
 # Vectors + createDataFrame / collect
-# ---------------------------------------------------------------------------
 
 
 def test_vectors_constructors() -> None:
@@ -421,9 +408,7 @@ def test_mixed_dense_widths_loud() -> None:
         spark.stop()
 
 
-# ---------------------------------------------------------------------------
 # Live pyspark Param oracle (optional)
-# ---------------------------------------------------------------------------
 
 
 def test_live_pyspark_uid_and_explain_shape() -> None:

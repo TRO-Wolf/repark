@@ -1,4 +1,4 @@
-//! Octo cycle-2/3 kernel pins (file split so `tests.rs` stays under the 1500-line ceiling).
+//! Kernel pins (file split so `tests.rs` stays under the 1500-line ceiling).
 
 use std::sync::Arc;
 

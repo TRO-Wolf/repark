@@ -4,13 +4,6 @@ Each new ``functions`` name is pinned through ``ReparkSession`` on the Arrow pat
 (``to_arrow()``): value AND type. Alias names resolve and share a behavior case
 with their canonical. ``unix_seconds`` / ``unix_millis`` pin toward-zero truncate
 (not TZ-5 ``CAST`` floor) on a negative fractional instant.
-
-Deferred this batch (no stubs): charter ENGINE-WORK
-(``make_timestamp_ltz`` / ``make_timestamp_ntz``, ``make_ym_interval``,
-``to_timestamp_ltz``, ``convert_timezone``, ``timestamp_add`` / ``timestamp_diff``)
-FN-GT2 later shipped ``make_date`` / ``make_interval`` / ``make_dt_interval`` /
-``unix_micros`` / ``date_diff``. Remaining honest-cut / DESIGN-GATED:
-``localtimestamp`` / ``to_timestamp_ntz``.
 """
 
 from __future__ import annotations
@@ -50,9 +43,7 @@ def _table(frame: object) -> pa.Table:
     return frame.to_arrow()  # type: ignore[attr-defined]
 
 
-# ==================================================================================================
 # Aliases
-# ==================================================================================================
 
 
 def test_day_alias_of_dayofmonth(spark: ReparkSession) -> None:
@@ -102,9 +93,8 @@ def test_datepart_alias_of_date_part(spark: ReparkSession) -> None:
     assert table.column("a").to_pylist() == table.column("b").to_pylist() == [2020]
     assert table.schema.field("a").type == table.schema.field("b").type
     assert pa.types.is_integer(table.schema.field("a").type)
-    # Sweep FIX: a bare str field is a column name (Spark 4.1.2). DF's kernel
-    # still requires a constant field *value*, so the discriminating pin is
-    # unresolved-column vs F.lit('YEAR').
+    # A bare str field is a column name (Spark 4.1.2); DF's kernel still requires a constant
+    # field *value*, so the discriminating pin is unresolved-column vs F.lit('YEAR').
     with pytest.raises(AnalysisException, match="No field named"):
         frame.select(F.date_part("YEAR", "d")).to_arrow()
 
@@ -117,9 +107,7 @@ def test_to_unix_timestamp_aliases_unix_timestamp_loud_gap() -> None:
         F.unix_timestamp()
 
 
-# ==================================================================================================
 # unix_date / unix_seconds / unix_millis / date_from_unix_date
-# ==================================================================================================
 
 
 def test_unix_date_days_since_epoch(spark: ReparkSession) -> None:
@@ -190,9 +178,7 @@ def test_unix_date_round_trips_date_from_unix_date(spark: ReparkSession) -> None
     assert pa.types.is_date(table.schema.field("d2").type)
 
 
-# ==================================================================================================
 # current_timezone — Session-only, no env reads
-# ==================================================================================================
 
 
 def test_current_timezone_default_is_utc_not_host_tz(spark: ReparkSession) -> None:
@@ -241,9 +227,7 @@ def test_current_timezone_stays_string_beside_an_aggregate(spark: ReparkSession)
     )
 
 
-# ==================================================================================================
 # Honest-cut / charter ENGINE-WORK names stay absent
-# ==================================================================================================
 
 
 @pytest.mark.parametrize("name", _FN_D_DEFERRED)

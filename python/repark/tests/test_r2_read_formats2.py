@@ -1,6 +1,6 @@
 """R2 — writer option matrix / path modes / partitionBy honesty pins (Arrow path).
 
-Charter: ``.r22/CHARTER.md`` (r22 TRACK R2). Ledger: ``task/r2-read-formats2-ledger.md``.
+Charter: ``.r22/CHARTER.md`` (TRACK R2). Ledger: ``task/r2-read-formats2-ledger.md``.
 """
 
 from __future__ import annotations
@@ -35,9 +35,7 @@ def _sorted_rows(frame: object) -> list[dict[str, object]]:
     return sorted(rows, key=lambda row: (row[key0] is None, row[key0]))
 
 
-# ==================================================================================================
 # Writer option matrix honesty
-# ==================================================================================================
 
 
 def test_write_csv_quote_all_always(spark: ReparkSession, tmp_path: Path) -> None:
@@ -137,9 +135,7 @@ def test_write_csv_unknown_option_loud(spark: ReparkSession, tmp_path: Path) -> 
         ).csv(str(path), header=True)
 
 
-# ==================================================================================================
 # Path write modes (oracle: Spark overwrite / append / error / ignore)
-# ==================================================================================================
 
 
 def test_path_mode_error_on_existing(spark: ReparkSession, tmp_path: Path) -> None:
@@ -196,9 +192,7 @@ def test_path_mode_overwrite_replaces(spark: ReparkSession, tmp_path: Path) -> N
     assert spark.read.json(str(path)).to_arrow().to_pylist() == [{"id": 9, "name": "z"}]
 
 
-# ==================================================================================================
 # partitionBy (hour-0 DF COPY PARTITIONED BY wire)
-# ==================================================================================================
 
 
 def test_partition_by_parquet_hive_layout(spark: ReparkSession, tmp_path: Path) -> None:
@@ -256,13 +250,11 @@ def test_partition_by_append_merges_partition_dirs(spark: ReparkSession, tmp_pat
 def test_partition_by_parquet_root_read_no_null_partition_keys(
     spark: ReparkSession, tmp_path: Path
 ) -> None:
-    """octo F-R2-C3-001 / C6-001: no empty full-schema root part; root read not null-filled.
+    """No empty full-schema root part; root read not null-filled.
 
-    Pre-fix: non-recursive empty-materialize injected ``part-00000.parquet`` (0 rows, schema
-    incl. partition cols) at the partitioned root; ``read.parquet(root)`` merged schemas so
-    every data row had partition keys as ``None`` (silent wrong). Post-fix: no root pollution;
-    partition keys are either omitted (hive-discovery residual) or present with real values —
-    never all-null fabricated columns.
+    Root schema pollution makes ``read.parquet(root)`` merge schemas so every data row gets
+    partition keys as ``None`` — silent wrong. Partition keys must be either omitted
+    (hive-discovery residual) or present with real values, never all-null fabricated columns.
     """
     path = tmp_path / "pb_root"
     spark.createDataFrame([(1, "a"), (2, "b")], ["id", "name"]).write.mode("overwrite").partitionBy(
@@ -287,7 +279,7 @@ def test_partition_by_parquet_root_read_no_null_partition_keys(
 
 
 def test_partition_by_duplicate_column_loud(spark: ReparkSession, tmp_path: Path) -> None:
-    """octo C3-002: duplicate partitionBy names refuse (no nested id=1/id=1/)."""
+    """Duplicate partitionBy names refuse (no nested id=1/id=1/)."""
     path = tmp_path / "pb_dup"
     with pytest.raises(AnalysisException, match=r"duplicate partitionBy"):
         spark.createDataFrame([(1, "a")], ["id", "name"]).write.mode("overwrite").partitionBy(
@@ -296,7 +288,7 @@ def test_partition_by_duplicate_column_loud(spark: ReparkSession, tmp_path: Path
 
 
 def test_path_append_schema_column_set_loud(spark: ReparkSession, tmp_path: Path) -> None:
-    """octo C2-001 / C6-002: append with fewer columns refuses (no silent null-fill)."""
+    """Append with fewer columns refuses (no silent null-fill)."""
     path = tmp_path / "app_schema"
     spark.createDataFrame([(1, "a")], ["id", "name"]).write.mode("overwrite").parquet(str(path))
     with pytest.raises(AnalysisException, match=r"column sets differ|cannot append"):
@@ -306,7 +298,7 @@ def test_path_append_schema_column_set_loud(spark: ReparkSession, tmp_path: Path
 
 
 def test_path_append_type_mismatch_loud(spark: ReparkSession, tmp_path: Path) -> None:
-    """octo C7-002: type-incompatible append fails at write (not only at read)."""
+    """Type-incompatible append fails at write (not only at read)."""
     path = tmp_path / "app_type"
     spark.createDataFrame([(1, "a")], ["id", "name"]).write.mode("overwrite").parquet(str(path))
     with pytest.raises(AnalysisException, match=r"type mismatch|cannot append"):
@@ -315,7 +307,7 @@ def test_path_append_type_mismatch_loud(spark: ReparkSession, tmp_path: Path) ->
 
 
 def test_path_append_onto_plain_file_loud(spark: ReparkSession, tmp_path: Path) -> None:
-    """octo C2-002: append onto a plain file → AnalysisException, not raw FileExistsError."""
+    """Append onto a plain file → AnalysisException, not raw FileExistsError."""
     path = tmp_path / "plain.parquet"
     path.write_bytes(b"not-a-dir")
     with pytest.raises(AnalysisException, match=r"PATH_ALREADY_EXISTS|is a file"):
@@ -323,7 +315,7 @@ def test_path_append_onto_plain_file_loud(spark: ReparkSession, tmp_path: Path) 
 
 
 def test_path_overwrite_symlink_dir_loud(spark: ReparkSession, tmp_path: Path) -> None:
-    """octo C2-003: overwrite of symlink directory → AnalysisException, not raw OSError."""
+    """Overwrite of symlink directory → AnalysisException, not raw OSError."""
     real = tmp_path / "real_dest"
     real.mkdir()
     (real / "marker.txt").write_text("keep", encoding="utf-8")
@@ -335,9 +327,7 @@ def test_path_overwrite_symlink_dir_loud(spark: ReparkSession, tmp_path: Path) -
     assert (real / "marker.txt").read_text(encoding="utf-8") == "keep"
 
 
-# ==================================================================================================
 # Residual read options (pins for R1 residuals; divergences.md is D3 sole-writer)
-# ==================================================================================================
 
 
 def test_read_csv_encoding_non_utf8_loud(spark: ReparkSession, tmp_path: Path) -> None:

@@ -27,7 +27,7 @@ DEFAULT_CACHE_ROOT = Path(
     os.environ.get("REPARK_PYSPARK_TESTS_CACHE", Path.home() / ".cache" / "repark-pyspark-tests")
 )
 SPARK_GIT_URL = "https://github.com/apache/spark.git"
-# Sparse paths required for night-1 modules + import scaffolding.
+# Sparse paths required for compat modules + import scaffolding.
 SPARSE_PATHS: tuple[str, ...] = (
     "python/pyspark/sql/tests",
     "python/pyspark/testing",

@@ -504,7 +504,7 @@ async fn mor_upsert_target_scan_pass_count_is_two() {
 /// hazard class (matched id=10 in a file that also holds id=11) without lost rows —
 /// residual is on the primary discovery/insert scan only; rewrite is whole-file scoped.
 ///
-/// Critic-octo C1-Q-001: also pins that residual **pushed** (task-local `residual_push` == 1).
+/// Also pins that residual **pushed** (task-local `residual_push` == 1).
 /// Reverting `residual_join_key_filter` to always `None` keeps row asserts green but fails
 /// the push counter — mutation-proof for the PERF-04 shipping claim.
 #[tokio::test]
@@ -559,7 +559,7 @@ async fn cow_equi_key_residual_keeps_colocated_survivors() {
 
 /// PERF-04 pin: `MoR` equi-key upsert under residual still updates + inserts correctly
 /// (unmatched target rows outside source key range stay; not-matched source inserts).
-/// C1-Q-001: residual push counter must fire for `MoR` equi as well.
+/// Residual push counter must fire for `MoR` equi as well.
 #[tokio::test]
 async fn mor_equi_key_residual_upsert_correct() {
     let push_counter = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
@@ -648,7 +648,7 @@ async fn cow_file_scoped_off_does_not_push_residual() {
     );
 }
 
-/// PERF-04 conf pin (critic-octo C4-Q-001): `repark.merge.scan-pruning=false` must not push
+/// PERF-04 conf pin: `repark.merge.scan-pruning=false` must not push
 /// residual even for equi Int32 ON. Mutation: drop the `scan_pruning_from_ctx` gate → push==1.
 #[tokio::test]
 async fn scan_pruning_false_does_not_push_residual() {
@@ -924,7 +924,7 @@ async fn multi_clause_first_match_survivors_cow_and_mor() {
     );
 }
 
-/// Critic-octo C1-Q1: NULL-predicate first-match (3VL) under `clause_id` — COW + `MoR`.
+/// NULL-predicate first-match (3VL) under `clause_id` — COW + `MoR`.
 ///
 /// Clause 0: `s.flag = 1` → UPDATE v = 'first'. When `flag` is SQL NULL the comparison is
 /// UNKNOWN; COALESCE → does-not-apply, so clause 1 (unconditional → 'second') must win.
@@ -998,7 +998,7 @@ async fn multi_clause_null_predicate_first_match_3vl_cow_and_mor() {
     }
 }
 
-/// Critic-octo C1-Q2: NOT MATCHED multi-clause first-match via `clause_id = index`.
+/// NOT MATCHED multi-clause first-match via `clause_id = index`.
 ///
 /// Empty target: every source row is NOT MATCHED. Clause 0 inserts when `flag = 1`;
 /// clause 1 is the unconditional fallback. `flag` NULL must not take clause 0 (3VL).
@@ -1057,7 +1057,7 @@ async fn multi_not_matched_clause_first_match_and_3vl() {
     );
 }
 
-/// Critic-octo C2-Q3: multi NOT MATCHED first-match against a **non-empty** target (anti-join).
+/// Multi NOT MATCHED first-match against a **non-empty** target (anti-join).
 /// id=1 is matched UPDATE; id=2/3 insert via dual NOT MATCHED clauses (flag steers).
 #[tokio::test]
 async fn multi_not_matched_with_partial_target_match() {
@@ -1118,7 +1118,7 @@ async fn multi_not_matched_with_partial_target_match() {
     );
 }
 
-/// Critic-octo C2-S1: two sequential COW MERGEs on one `SessionContext` with file-scoped off
+/// Two sequential COW MERGEs on one `SessionContext` with file-scoped off
 /// (path `MemTable` semi-join) — scratch guard must not leave a broken catalog between runs.
 #[tokio::test]
 async fn sequential_cow_path_semijoin_same_session_ctx() {

@@ -1,37 +1,9 @@
-//! Spark `DecimalPrecision` analyzer rule (campaign U3 + U4a).
+//! Spark `DecimalPrecision` analyzer rule.
 //!
-//! DataFusion + Arrow implement Hive add/mul **unbounded** `(p,s)` (identical to Spark) but
-//! then clamp with **keep-scale** (`p = min(p, 38)`, `s` unchanged) and **refuse** a multiply
-//! whose `s1+s2` exceeds 38. Spark's default `allowPrecisionLoss=true` uses
-//! `adjustPrecisionScale`: when unbounded `p > 38` it may **drop scale** so the result stays
-//! inside `DECIMAL(38, ·)`, and `(38,20)*(38,20)` therefore **plans**.
+//! Spark decimal precision and integer-literal coercion for `+`, `-`, and `*`.
 //!
-//! Integer **literals** mixed with a decimal are a second Spark rule (`fromLiteral`): the
-//! literal is `DECIMAL(digits, 0)` (min precision of the value), not DataFusion's
-//! `Int64 → DECIMAL(20,0)`. Typed INT / BIGINT **columns** already match Spark's `forType`
-//! table and are not rewritten.
-//!
-//! This rule is the **one seam** for both:
-//!
-//! - **U3 / DEC-8:** peel `TypeCoercion`'s `CAST(<int literal> AS DECIMAL(forType))` and recast
-//!   to `DECIMAL(digits, 0)` on `+ − *` only. `/` is U4b (a third type from min-precision
-//!   without Spark's division formula is a silent wrong).
-//! - **U4a / DEC-2, DEC-3:** when Spark's add/sub/mul result `(p,s)` differs from Arrow's
-//!   **and the plan constructed**, wrap `CAST(<op> AS spark_type)` (CAST-after). Operand
-//!   rescaling is **not** used: a second analyze would compute Spark's formula on the
-//!   already-clamped operands and drop scale again. Registry DEC-8 (`(38,20)*(38,20)`)
-//!   **refuses at plan construction** (`BinaryExpr::get_type` → Arrow `s1+s2>38`) before
-//!   any `AnalyzerRule` runs — this file cannot see that node. Closing it is an
-//!   `ExprPlanner` (now [`crate::decimal_spark`]). CAST-after on `/` is forbidden (value
-//!   is short, not only the type) and is not implemented here.
-//!
-//! Registered **before** [`crate::analyzer::SparkExprSemantics`] (see `analyzer_rules`):
-//! order is semantic. A later `/` rewrite (U4b) must see a clean `decimal / decimal`
-//! `BinaryExpr` so the existing `nullif` `/0` guard still wraps the divisor. `%` is
-//! UNPROBED-THIS-PASS. DEC-9 nullability and DEC-6/7 overflow stay out.
-//!
-//! Idempotent: `transform_down` stops on a `CAST(<add|sub|mul> AS spark_type)` that
-//! already matches; a min-precision CAST whose target is not `forType` is left alone.
+//! The rule applies Spark's scale-dropping precision clamp and minimum literal precision. It
+//! runs before decimal division rewriting; DEC-8 planning and DEC-6 overflow live elsewhere.
 
 use datafusion::arrow::datatypes::DataType;
 use datafusion::common::config::ConfigOptions;
@@ -175,12 +147,7 @@ fn rebuilt(left: Expr, operator: Operator, right: Expr, original: &Expr) -> Tran
 }
 
 /// ===========================================================================================
-/// U3: when an integer **literal** meets a decimal, CAST to `DECIMAL(digits, 0)`.
-///
-/// After `TypeCoercion` the literal is `CAST(<int lit> AS DECIMAL(forType))` — Int64 →
-/// `(20,0)`, Int32 → `(10,0)`. Recast to min precision. A typed INT column is a CAST of a
-/// *column* (or of `CAST(lit AS INT)`), not a bare integer literal, and is left alone.
-/// `/` is not a caller; applying this to division without Spark's `/` formula is U4b.
+/// U3: cast bare integer literals beside decimals to minimum-precision `DECIMAL(digits, 0)`.
 /// ===========================================================================================
 fn min_precision_integer_literal(operand: Expr, other_type: &DataType) -> Expr {
     if decimal128_parts(other_type).is_none() {

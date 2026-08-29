@@ -1,72 +1,12 @@
-//! Spark Iceberg `CALL catalog.system.<proc>(…)` maintenance procedure router (I3 /
-//! R-MAINTENANCE-CALL).
+//! Spark Iceberg `CALL catalog.system.<proc>(…)` maintenance procedure router.
 //!
-//! Seven procedures, each backed by an action the owned fork already provides:
-//!
-//! 1. `expire_snapshots` — fork R133 `Transaction::expire_snapshots` +
-//!    `ExpireSnapshotsCleanup::commit_and_clean`
-//!    (`crates/iceberg/src/transaction/expire_snapshots.rs` + `expire_cleanup.rs`, pin
-//!    `4723104b`).
-//! 2. `rewrite_data_files` — fork R135 bin-pack
-//!    (`crates/iceberg/src/maintenance/rewrite_data_files.rs`
-//!    `RewriteDataFiles::new(table).execute(&catalog)`).
-//! 3. `rewrite_position_delete_files` — fork R136
-//!    (`crates/iceberg/src/maintenance/rewrite_position_delete_files.rs`
-//!    `RewritePositionDeleteFiles::new(table).execute(&catalog)`), wired by MW-2 on 2026-08-21.
-//! 4. `remove_orphan_files` — fork `DeleteOrphanFiles`
-//!    (`crates/iceberg/src/maintenance/delete_orphan_files.rs`
-//!    `DeleteOrphanFiles::new(table).older_than(ms).execute()`), wired by MW-3 on 2026-08-21.
-//! 5. `rewrite_manifests` — fork R100 `RewriteManifestsAction`
-//!    (`crates/iceberg/src/transaction/rewrite_manifests.rs`
-//!    `Transaction::rewrite_manifests()`), wired by MW-6 on 2026-08-23. Its counts come from the
-//!    new snapshot's summary, because the action returns none ([`rewrite_manifests`]).
-//! 6. `rollback_to_snapshot` — fork R98 `ManageSnapshotsAction::rollback_to`
-//!    (`crates/iceberg/src/transaction/manage_snapshots.rs:164-167`).
-//! 7. `register_table` — fork `Catalog::register_table` (V3-1). Adoption, not create: the
-//!    metadata file is read and validated before the pointer is claimed. Spark signature
-//!    measured from the Iceberg 1.10.0 jar (`table` STRING, `metadata_file` STRING → three
-//!    nullable BIGINT columns). S3 Tables refuses `FeatureUnsupported` in the fork; this
-//!    router does not swallow that.
-//!
-//! **`remove_orphan_files` is the only one that destroys data, and its defaults invert Spark's.**
-//! `older_than` is REQUIRED where Spark defaults it to `now - 3 days`, and `dry_run` defaults to
-//! TRUE where Spark defaults it to false and deletes (owner decision OD-2; registry rows
-//! `ORPHAN-1` and `ORPHAN-2`). Every other procedure here is recoverable — a bad compaction is
-//! compacted again — while this one has no rollback. The 24-hour `older_than` floor is NOT part
-//! of that stricter posture: it is measured parity with Spark's own floor.
-//!
-//! **Every catalog policy** (MW-1, 2026-08-21). The v1 surface refused Glue and S3 Tables as a
-//! blast-radius fence; nothing downstream of that gate ever assumed a local filesystem, so
-//! lifting it was policy, not machinery.
-//!
-//! **On a service-managed (S3 Tables) catalog, expect commit conflicts and retry them.** The
-//! service runs its own compaction and snapshot expiry, committing concurrently with this engine
-//! (fork `ENGINE_CONTRACT` §8). `CommitFailed` requirement mismatches are ROUTINE there, and
-//! `validate_data_files_exist` trips when service compaction rewrites a file an in-flight
-//! position delete references. The commit fails loudly and the table is not damaged — this is
-//! Iceberg's optimistic concurrency working, not a sign of corruption. Re-run the procedure.
-//!
-//! **Parsing:** named (`arg => value`) and positional arguments are both accepted —
-//! Apache Iceberg Spark Procedures docs:
-//! "CALL supports passing arguments by name (recommended) or by position."
-//! <https://iceberg.apache.org/docs/latest/spark-procedures/#usage>
-//!
-//! **Result rows:** every *maintenance* procedure here returns Spark's full column list, in
-//! Spark's order, with Spark's types and nullability, each value measured against a live oracle
-//! rather than inferred. `register_table`'s three columns were read from the Iceberg 1.10.0
-//! jar's bytecode (V3-0), not from a live CALL.
-//! Counts are **never fabricated**: a column the engine cannot source honestly does not get a
-//! made-up number. As of MW-2 no procedure omits a Spark column.
-//!
-//! **Out of scope (loud):**
-//! - rewrite `strategy` / `sort_order` other than default bin-pack — R135 deferred list.
-//! - `rewrite_manifests`' `spec_id` — the current spec is the only one it rewrites.
-//! - `remove_orphan_files`' `max_concurrent_deletes` / `file_list_view` / `equal_schemes` /
-//!   `equal_authorities` / `prefix_mismatch_mode` / `prefix_listing`.
-//! - the `options` map and the `where` filter on both rewrite procedures.
-//! - format-v3 deletion-vector maintenance — `rewrite_position_delete_files` REFUSES a table
-//!   holding live Puffin deletion vectors rather than reporting a partial result.
-//! - any other `system.*` procedure.
+//! The seven supported procedures lower to actions in the owned fork. Every procedure preserves
+//! Spark's result schema and fails loudly for unsupported arguments or catalog capabilities.
+//! `remove_orphan_files` is destructive, so it requires `older_than` and defaults `dry_run` to
+//! true (`ORPHAN-1`, `ORPHAN-2`). Live deletion vectors make `rewrite_position_delete_files`
+//! refuse rather than report a partial result. `register_table` adopts validated metadata and
+//! propagates service-managed `FeatureUnsupported` errors.
+//! Service-managed catalogs can commit concurrently; conflicts fail loudly and callers retry.
 
 use std::path::{Component, Path, PathBuf};
 use std::sync::Arc;
@@ -369,31 +309,11 @@ fn expire_result_dataframe(ctx: &SessionContext, report: &CleanupReport) -> Resu
 
 /// Refuse `rewrite_data_files` on a format-v3 table rather than silently reassign row lineage.
 ///
-/// V3 makes row lineage mandatory: every row carries `_row_id` and
-/// `_last_updated_sequence_number`, and a data-file rewrite is required to carry both through
-/// unchanged — that is the whole point of the field, since a compaction changes where a row is
-/// stored and not what it is. Measured on Spark 4.0.1 + Iceberg 1.10.0 over a six-file v3 table
-/// with deletion vectors: `id=5099` kept `row_id=599, seq=6` on both sides of
-/// `CALL system.rewrite_data_files`. The same table compacted by this engine produced the right
-/// 546 rows and moved that row to `row_id=691, seq=9`, because the fork's
-/// `maintenance/rewrite_data_files.rs` has no row-lineage handling at all. The rows survive; the
-/// lineage does not, and a downstream consumer reading the result is told every row was updated.
+/// V3 requires `_row_id` and `_last_updated_sequence_number` to survive compaction. The fork's
+/// rewrite action does not preserve them, so refuse rather than return plausible but wrong lineage.
 ///
-/// Refusing is stricter than Spark, which performs the rewrite correctly. It is the trade MW-2
-/// took for deletion vectors and for the same reason: this procedure runs unattended, and a
-/// plausible wrong answer is worse than a loud stop. **By default** the engine cannot create a
-/// v3 table (`create_table.rs` and `ctas.rs` refuse `format-version = 3` unless
-/// `repark.sql.allowCreateFormatVersion3` is true; `ALTER TABLE … SET TBLPROPERTIES` is refused
-/// one layer down, by the fork rejecting reserved properties). Opt-in CREATE is pinned to still
-/// hit this guard (`opt_in_create_produces_v3_and_rewrite_still_refuses`). The drop-in case is
-/// a v3 table that was already in the catalog. Default-session doors are pinned together in
-/// `tests/call_v3.rs::the_engine_still_cannot_produce_a_v3_table`.
+/// The comparison is `< V3`, so unknown future versions also refuse. Registry: `V3-LINEAGE-1`.
 /// pins: v3-2-create-v3-opt-in/C-011, C-014
-///
-/// The comparison is `< V3`, so a format version *above* v3 refuses too — fail-closed is the
-/// right default for a version whose lineage rules are not known yet.
-///
-/// Registry row `V3-LINEAGE-1`. Lifting this is fork work, not router work.
 pub(crate) fn refuse_v3_rewrite_that_would_lose_row_lineage(
     format_version: FormatVersion,
     table_arg: &str,
@@ -491,7 +411,7 @@ async fn execute_rewrite_data_files(
     let namespace = crate::namespace_schema_name(ident.namespace());
     reregister(ctx, Arc::clone(&catalog), catalog_name, &namespace).await?;
 
-    // Spark's five columns, all of them, all non-nullable (MW-2 closed the fifth).
+    // Spark's five columns are non-nullable.
     //
     // | Spark column | Source |
     // |---|---|
@@ -579,29 +499,10 @@ pub(crate) async fn count_live_deletion_vectors(table: &iceberg::table::Table) -
     Ok(vectors)
 }
 
-/// Spark's four-column output, all of it. Measured by EXECUTING the procedure on a live
-/// Spark 4.0.1 + Iceberg 1.10.0 oracle, not read from a constant.
-///
-/// | Spark column | Type | Nullable | Source |
-/// |---|---|---|---|
-/// | `rewritten_delete_files_count` | int | false | `result.rewritten_delete_files_count` |
-/// | `added_delete_files_count` | int | false | `result.added_delete_files_count` |
-/// | `rewritten_bytes_count` | bigint | false | `result.rewritten_bytes_count` |
-/// | `added_bytes_count` | bigint | false | `result.added_bytes_count` |
-///
-/// Nothing is fabricated and nothing is omitted: the fork's `RewritePositionDeleteFilesResult`
-/// mirrors Java's `RewritePositionDeleteFiles$Result` one accessor at a time, so this is the one
-/// procedure whose schema the engine did not have to choose.
-///
-/// **A live Puffin deletion vector refuses.** Format-v3 tables carry deletion vectors instead of
-/// Parquet position deletes, and a vector is file-scoped — never bin-packed — so the fork's action
-/// skips it and returns it in no count. Without a guard this procedure would answer four zeros on
-/// such a table, which reads exactly like "nothing to compact" while every delete file stays put.
-/// See [`count_live_deletion_vectors`].
-///
-/// **`added_delete_files_count` after compact is still one per `(spec, partition)` group.**
-/// MW-9 closed writer-side `MOR-2`: this engine now honors `write.delete.granularity`
-/// (Spark default `file`). Compaction still groups by partition, matching Spark's rewrite.
+/// Return Spark's four measured columns — `rewritten_delete_files_count`,
+/// `added_delete_files_count`, `rewritten_bytes_count`, and `added_bytes_count` — from the fork
+/// result without fabricated counts. Refuse live Puffin deletion vectors because the fork action
+/// skips them and would report four zeros.
 async fn execute_rewrite_position_delete_files(
     ctx: &SessionContext,
     catalog: Arc<dyn Catalog>,
@@ -636,7 +537,7 @@ async fn execute_rewrite_position_delete_files(
     // so an operator runs the reclaim procedure forever on a table that never reclaims. Refusing
     // on ANY live vector, including a table that also holds compactable Parquet position deletes,
     // is deliberate: this procedure's contract to its caller is the table's position deletes, and
-    // silently doing part of that job is the failure this campaign exists to prevent.
+    // Silently doing part of that job would under-report the result.
     let vectors = count_live_deletion_vectors(&table).await?;
     if vectors > 0 {
         return Err(DataFusionError::NotImplemented(format!(
@@ -688,38 +589,13 @@ async fn execute_rewrite_position_delete_files(
 // remove_orphan_files
 // ===========================================================================================
 
-/// Java's floor, enforced here because here is where Java enforces it.
-///
-/// `RemoveOrphanFilesProcedure` refuses an interval under 24 hours with the reasoning that a
-/// short interval "may corrupt the table if other operations are happening at the same time",
-/// and its own message points callers at the Action API to bypass it. The floor is therefore a
-/// PROCEDURE-layer rule in Java, not an action-layer one — the fork's `DeleteOrphanFiles` has no
-/// floor for exactly that reason. This router is the procedure layer, so the floor belongs here.
-///
-/// Measured on a live Spark 4.0.1 + Iceberg 1.10.0 oracle: `older_than = now` refuses,
-/// `now - 23h` refuses, `now - 25h` runs.
+/// Java enforces a 24-hour orphan sweep floor at the procedure layer; the fork action does not.
 const ORPHAN_OLDER_THAN_FLOOR_MS: i64 = 24 * 60 * 60 * 1000;
 
 /// Refuse to sweep a table sitting in the shared CTAS temp-fallback root.
 ///
-/// A [`LocationPolicy::TempFallbackAllowed`] catalog whose namespace carries no `location`
-/// property places tables at `<root>/repark_ctas/<catalog>/<namespace>/<table>` (`ctas.rs`
-/// `resolve_create_location`). That path is derived from NAMES under `root`. A13 made `root`
-/// the catalog warehouse for `register_memory_catalog`, so two sessions with *different*
-/// warehouses no longer collide. Two processes that pass the *same* warehouse and the same
-/// names still share a directory, and memory-catalog metadata is process-local, so sweeping
-/// there can still delete another process's live files.
-///
-/// Orphan removal decides what to delete by subtracting ONE table's reachable set from a
-/// directory listing. In a shared directory, another session's live files are not in this
-/// session's reachable set, so they look exactly like orphans. Sweeping there can delete live data
-/// belonging to a table this catalog has never heard of.
-///
-/// Every other procedure on this surface only ever touches files its own metadata references, so
-/// none of them care. This one lists a directory, so it does.
-///
-/// A namespace created WITH a location is unaffected: its tables live under the caller's own
-/// warehouse and the fallback never fires.
+/// Refuse shared temporary fallback roots because directory-based orphan discovery can mistake
+/// another process's live files for orphans. Explicit namespace locations are unaffected.
 pub(crate) fn refuse_shared_temp_fallback_location(
     policy: Option<&LocationPolicy>,
     table_location: &str,
@@ -991,21 +867,9 @@ async fn execute_rollback_to_snapshot(
 
 /// Spark Iceberg `CALL system.register_table(table, metadata_file)`.
 ///
-/// Measured from the 1.10.0 jar's own bytecode (V3-0 ledger §4), not from documentation:
-///
-/// | Spark column | Type | Nullable | Source |
-/// |---|---|---|---|
-/// | `current_snapshot_id` | bigint | true | current snapshot id, or null if the table has none |
-/// | `total_records_count` | bigint | true | snapshot summary `total-records` |
-/// | `total_data_files_count` | bigint | true | snapshot summary `total-data-files` |
-///
-/// All three are null when there is no current snapshot. A missing or unparsable summary
-/// property is also null — this engine does not fabricate a count from a walk of the files.
-///
-/// This is adoption, not create: [`Catalog::register_table`] reads the metadata file and
-/// validates it before claiming the catalog pointer. Empty `metadata_file` refuses here, before
-/// the catalog sees it. Hadoop-catalog `vN.metadata.json` pointers register and read; a later
-/// write fails with the wrapped [`crate::iceberg_err`] text (registry `V3-ADOPT-1`).
+/// Return Spark's nullable `current_snapshot_id`, `total_records_count`, and
+/// `total_data_files_count`. Counts come from snapshot summaries; missing values remain null.
+/// Adoption validates the metadata file before claiming the catalog pointer.
 ///
 /// # Errors
 /// Plan errors for missing/empty arguments; catalog errors (unknown ident, already exists,

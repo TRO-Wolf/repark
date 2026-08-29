@@ -1,10 +1,4 @@
 //! Scanner-level pins for the ANSI `FOR … AS OF` rewrite.
-//!
-//! This is the v1 span pin set ported as double-quote ANSI variants (design graft G7): the same
-//! properties v1's `repark_sql::time_travel` pinned at the port pin `fc3f48102` — span extraction,
-//! ref-name strings, negative snapshot ids, multi-relation joins, comment and string-literal
-//! immunity, quoted name parts — re-expressed for a door whose identifier quote is `"` and whose
-//! `FOR` is mandatory. The end-to-end (session) rows live in `crate::tests`.
 
 use super::*;
 
@@ -24,8 +18,7 @@ fn scan_error(sql: &str) -> String {
         .to_string()
 }
 
-/// The two ANSI spellings are recognized; the Spark spellings and the FOR-less forms are NOT
-/// (they belong to the wrong-door sniff, which names the ANSI spelling).
+/// The two ANSI spellings are recognized; the Spark spellings and the FOR-less forms are not recognized.
 #[test]
 fn recognizes_only_the_ansi_for_spellings() {
     assert!(sql_has_time_travel(
@@ -81,8 +74,7 @@ fn span_extracts_table_and_spec() {
     );
 }
 
-/// A single-quoted version value is a branch/tag REF (the string-ref pin), a number is a snapshot
-/// id, and a timestamp value resolves through the hoisted core parser.
+/// A single-quoted version is a branch or tag reference; a number is a snapshot id.
 #[test]
 fn version_ref_string_and_timestamp_values() {
     assert_eq!(
@@ -104,8 +96,7 @@ fn version_ref_string_and_timestamp_values() {
     ));
 }
 
-/// Iceberg snapshot ids are signed `i64` and are routinely negative; sqlparser splits the unary
-/// minus from the digits, so the scanner must join them back.
+/// Iceberg snapshot ids are signed `i64`; the scanner accepts the split unary-minus token.
 #[test]
 fn negative_snapshot_id_is_scanned() {
     let found = spans("SELECT * FROM ice.sales.t FOR VERSION AS OF -9223372036854775807");
@@ -131,8 +122,8 @@ fn multi_relation_join_yields_one_span_per_relation() {
     assert_eq!(found[1].spec, TimeTravelSpec::SnapshotId(2));
 }
 
-/// The ANSI variant of the v1 quoted-name-parts pin: `"` quotes an IDENTIFIER here, so a quoted
-/// name part is unquoted into the catalog lookup.
+/// The ANSI variant of the quoted-name pin: `"` quotes an identifier, so quoted
+/// parts remain table-name components.
 #[test]
 fn double_quoted_table_parts_are_identifiers() {
     let found = spans(r#"SELECT * FROM ice."sales"."t" FOR VERSION AS OF 7"#);
@@ -141,8 +132,8 @@ fn double_quoted_table_parts_are_identifiers() {
     assert_eq!(found[0].spec, TimeTravelSpec::SnapshotId(7));
 }
 
-/// Comments and string literals can never produce a span — the tokenizer folds a comment into
-/// whitespace and a literal into one token, so neither can be read as structure.
+/// Comments and string literals never produce a span because the tokenizer folds their contents
+/// into spaces.
 #[test]
 fn comments_and_string_literals_do_not_false_positive() {
     assert!(!sql_has_time_travel(
@@ -157,8 +148,7 @@ fn comments_and_string_literals_do_not_false_positive() {
     assert!(spans("SELECT 'FOR VERSION AS OF 1' AS note FROM ice.sales.t").is_empty());
 }
 
-/// A RECOGNIZED clause with an unusable value refuses loud and names the spelling. Falling
-/// through would surrender the user to `Expected: one of UPDATE or SHARE, found: VERSION`.
+/// A recognized clause with an unusable value refuses loudly and names the spelling.
 #[test]
 fn recognized_clause_with_a_bad_value_refuses_loud() {
     let err = scan_error("SELECT * FROM ice.sales.t FOR VERSION AS OF main");

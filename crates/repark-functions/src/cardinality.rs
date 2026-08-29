@@ -1,10 +1,7 @@
-//! Plan-time cardinality ceilings for planner-visible expansion functions (r24 SB1 / SEC-01).
+//! Plan-time cardinality ceilings for planner-visible expansion functions (SEC-01).
 //!
-//! Arrow expression evaluation allocates buffers outside the DataFusion `FairSpillPool`, so a
-//! literal `array_repeat(1, 2_000_000_000)` can SIGABRT the process. These helpers refuse at
-//! plan / expression-build time when the expansion size is a **literal the planner can see**,
-//! converting the demonstrable cases into a catchable analysis error that names
-//! [`MAX_ARRAY_ELEMENTS_KEY`]. Non-literal counts remain data-dependent residuals.
+//! Arrow expression buffers bypass the `FairSpillPool`; planner-visible literal expansions therefore
+//! fail early with a catchable error naming [`MAX_ARRAY_ELEMENTS_KEY`]. Non-literal counts remain residuals.
 
 use std::sync::Arc;
 
@@ -24,7 +21,7 @@ const CONST_FOLD_MAX_DEPTH: u32 = 32;
 /// Canonical conf key (Spark-style camelCase). Default: [`DEFAULT_MAX_ARRAY_ELEMENTS`].
 pub const MAX_ARRAY_ELEMENTS_KEY: &str = "repark.sql.maxArrayElements";
 
-/// Underscore alt accepted at builder parse time.
+/// Underscore alias for [`MAX_ARRAY_ELEMENTS_KEY`].
 pub const MAX_ARRAY_ELEMENTS_KEY_ALT: &str = "repark.sql.max_array_elements";
 
 /// Default plan-time expansion ceiling (Q23 / greylight).
@@ -33,13 +30,13 @@ pub const DEFAULT_MAX_ARRAY_ELEMENTS: u64 = 10_000_000;
 /// Canonical conf key for local-filesystem DDL (SEC-02). Default **false**.
 pub const ALLOW_LOCAL_FILESYSTEM_DDL_KEY: &str = "repark.sql.allowLocalFilesystemDDL";
 
-/// Underscore alt accepted at builder parse time.
+/// Underscore alias for [`ALLOW_LOCAL_FILESYSTEM_DDL_KEY`].
 pub const ALLOW_LOCAL_FILESYSTEM_DDL_KEY_ALT: &str = "repark.sql.allow_local_filesystem_ddl";
 
 /// Canonical conf key for CREATE/CTAS `format-version = 3` (V3-2). Default **false**.
 pub const ALLOW_CREATE_FORMAT_VERSION_3_KEY: &str = "repark.sql.allowCreateFormatVersion3";
 
-/// Underscore alt accepted at builder parse time.
+/// Underscore alias for [`ALLOW_CREATE_FORMAT_VERSION_3_KEY`].
 pub const ALLOW_CREATE_FORMAT_VERSION_3_KEY_ALT: &str = "repark.sql.allow_create_format_version_3";
 
 /// Validated session knobs for plan-time SQL safety ceilings / gates.
@@ -152,8 +149,6 @@ where
     })
 }
 
-// DataFusion option extension: fields use snake_case under PREFIX `repark.sql`.
-// User-facing camelCase keys are accepted only via the builder map / from_config_map path.
 extensions_options! {
     /// RePark SQL safety knobs (session-scoped).
     pub struct ReparkSqlConfig {
@@ -203,10 +198,7 @@ pub fn repark_sql_settings_from_options(options: &ConfigOptions) -> ReparkSqlSet
 }
 
 /// ===========================================================================================
-/// Resolve CREATE/CTAS Iceberg format version. Default and `'2'` are v2. `'3'` requires
-/// [`ALLOW_CREATE_FORMAT_VERSION_3_KEY`]. Anything else refuses loud.
-///
-/// Returns `2` or `3`. Doors convert to `iceberg::spec::FormatVersion`.
+/// Resolve CREATE/CTAS Iceberg format version; v3 requires [`ALLOW_CREATE_FORMAT_VERSION_3_KEY`].
 /// pins: v3-2-create-v3-opt-in/C-001, C-003, C-004
 /// ===========================================================================================
 ///
@@ -255,11 +247,7 @@ pub fn refuse_if_over_ceiling(function_name: &str, cardinality: u64, max: u64) -
     Ok(())
 }
 
-/// Extract a planner-visible non-negative integer from an expression.
-///
-/// Accepts bare integer literals **and** simple const trees: `CAST` / `TRY_CAST`, unary `-`,
-/// and binary `+ - * / %` over integer consts (octo C2-SEC-001: free-SQL
-/// `array_repeat(1, 100 + 1)` / `CAST(101 AS BIGINT)` must not bypass the ceiling).
+/// Extract a planner-visible non-negative integer from literals and bounded constant trees.
 #[must_use]
 pub fn literal_nonneg_u64(expr: &Expr) -> Option<u64> {
     let value = const_i128(expr, CONST_FOLD_MAX_DEPTH)?;
@@ -279,10 +267,8 @@ fn scalar_to_i128(scalar: &ScalarValue) -> Option<i128> {
         ScalarValue::UInt16(Some(v)) => Some(i128::from(*v)),
         ScalarValue::UInt32(Some(v)) => Some(i128::from(*v)),
         ScalarValue::UInt64(Some(v)) => Some(i128::from(*v)),
-        // CAST(float AS int) peels to float literal (C6-SEC-001).
         ScalarValue::Float32(Some(value)) => f64_trunc_to_i128(f64::from(*value)),
         ScalarValue::Float64(Some(value)) => f64_trunc_to_i128(*value),
-        // CAST('101' AS BIGINT) peels to Utf8; parse decimal integer text (C5-SEC-001).
         ScalarValue::Utf8(Some(text))
         | ScalarValue::LargeUtf8(Some(text))
         | ScalarValue::Utf8View(Some(text)) => parse_decimal_integer_text(text),
@@ -298,17 +284,12 @@ fn parse_decimal_integer_text(text: &str) -> Option<i128> {
     trimmed.parse::<i128>().ok()
 }
 
-/// Truncate toward zero into `i128` when finite (matches SQL int CAST for ceiling checks).
-///
-/// Precision loss on `as f64` elsewhere is accepted: ceiling enforcement only needs
-/// order-of-magnitude correctness for huge bombs, not bit-exact float↔int recovery.
+/// Truncate a finite `f64` toward zero into `i128` for ceiling checks.
 #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
 fn f64_trunc_to_i128(value: f64) -> Option<i128> {
     if !value.is_finite() {
         return None;
     }
-    // Format truncated magnitude as integer text — avoids clippy-noisy `as` casts and
-    // handles values beyond i64 while staying correct for ceiling-scale counts.
     let truncated = value.trunc();
     format!("{truncated:.0}").parse::<i128>().ok()
 }
@@ -362,7 +343,6 @@ fn const_f64_scalar_function(name: &str, args: &[Expr], depth: u32) -> Option<f6
         "trunc" | "truncate" if args.len() == 1 => Some(const_f64(&args[0], depth - 1)?.trunc()),
         "round" if args.len() == 1 => Some(const_f64(&args[0], depth - 1)?.round()),
         "round" if args.len() == 2 => {
-            // round(x, ndigits) — only ndigits=0 folded for ceiling counts.
             let value = const_f64(&args[0], depth - 1)?;
             let digits = const_i128(&args[1], depth - 1)?;
             if digits == 0 {
@@ -435,9 +415,7 @@ fn const_i128(expr: &Expr, depth: u32) -> Option<i128> {
                 _ => None,
             }
         }
-        // Alias wrappers sometimes survive planning.
         Expr::Alias(alias) => const_i128(alias.expr.as_ref(), depth - 1),
-        // C3–C7: abs / arrow_cast / float math / bitwise / coalesce / greatest / least / nullif.
         Expr::ScalarFunction(ScalarFunction { func, args }) => {
             match func.name().to_ascii_lowercase().as_str() {
                 "abs" if args.len() == 1 => const_i128(&args[0], depth - 1)
@@ -518,7 +496,7 @@ fn const_bool(expr: &Expr, depth: u32) -> Option<bool> {
     }
 }
 
-/// Evaluate const `CASE` trees (octo C3/C4):
+/// Evaluate constant `CASE` trees:
 /// - searched: `CASE WHEN const-bool THEN const … [ELSE const]`
 /// - simple: `CASE const WHEN const THEN const …` via integer equality
 fn const_i128_case(case: &datafusion::logical_expr::expr::Case, depth: u32) -> Option<i128> {
@@ -526,7 +504,6 @@ fn const_i128_case(case: &datafusion::logical_expr::expr::Case, depth: u32) -> O
         return None;
     }
     if let Some(base) = &case.expr {
-        // Simple CASE: match base const against each WHEN const.
         let base_value = const_i128(base.as_ref(), depth - 1)?;
         for (when_expr, then_expr) in &case.when_then_expr {
             let when_value = const_i128(when_expr.as_ref(), depth - 1)?;
@@ -581,10 +558,8 @@ pub fn sequence_cardinality(start: i64, stop: i64, stride: i64) -> Option<u64> {
     }
 }
 
-/// Check facade-built `array_repeat` / `repeat` / `sequence` args against the default ceiling.
-///
-/// Used from `repark-python` `column.rs` where no live session conf is available; the free-SQL
-/// analyzer path reads the session conf extension instead.
+/// Check facade-built `array_repeat` / `repeat` / `sequence` args against the default ceiling;
+/// the analyzer variant reads the session-specific ceiling.
 ///
 /// # Errors
 /// Plan error when a literal expansion exceeds [`DEFAULT_MAX_ARRAY_ELEMENTS`].
@@ -801,8 +776,6 @@ mod tests {
         for rule in analyzer_rules() {
             ctx.add_analyzer_rule(rule);
         }
-        // DF `sql()` may return a pre-analysis plan; repark's free-SQL path always runs
-        // `analyze_eagerly` (and physical planning re-analyzes on collect).
         let df = ctx.sql("SELECT array_repeat(1, 101) AS a").await.unwrap();
         let err = crate::analyze_eagerly(&ctx.state(), df.logical_plan().clone())
             .unwrap_err()
@@ -813,8 +786,7 @@ mod tests {
         );
     }
 
-    /// C2–C7: const arithmetic / CAST / abs / CASE / float math / bitwise / greatest /
-    /// `arrow_cast` / utf8 cast / trivial scalar subquery must not bypass.
+    /// Constant arithmetic and casts must not bypass the ceiling.
     #[tokio::test]
     async fn analyzer_refuses_const_arithmetic_and_cast_counts() {
         let settings = ReparkSqlSettings {

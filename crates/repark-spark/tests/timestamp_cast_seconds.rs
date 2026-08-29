@@ -1,40 +1,6 @@
-//! **The `CAST(TIMESTAMP AS <numeric>)` epoch-seconds class** (divergence registry row TZ-5) —
-//! pinned at the engine layer, value AND Arrow type, through a real session built the way the
-//! product builds one.
-//!
-//! # What this file is the evidence for
-//!
-//! Apache Spark's `Cast(TimestampType, LongType)` is the **floor of epoch SECONDS**. repark stored
-//! timestamps as nanosecond ticks and let DataFusion's cast reinterpret the raw value, so
-//! `CAST(ts AS BIGINT)` returned a number 10⁹ too large — correctly signed, plausibly shaped, and
-//! wrong. The fix is `repark-functions`' analyzer rewrite plus the two embedded scaling UDFs
-//! (`repark_functions::timestamp_cast`); this file holds it from the OUTSIDE, where a user is.
-//!
-//! # The entry-point matrix (docs/testing.md matrix, split the way the tz campaign split it)
-//!
-//! | Cell | Where it is pinned |
-//! |---|---|
-//! | Spark door | HERE — every `session.sql(...)` pin below, on a `SparkDialect` session |
-//! | native `DataFrame` API | HERE — `native_dataframe_api_cast_is_epoch_seconds`, built as a standalone `Expr::Cast` over a registered batch (the shape `Column.cast("long")` crosses PyO3 as) |
-//! | ANSI door | `crates/repark-sql/tests/timestamp_cast_ansi_door.rs` (it lives in that crate because the crate-DAG policy allows `repark-sql -> repark-spark` as a dev edge and nothing the other way) |
-//! | facade | `python/repark/tests/test_timestamp_cast_parity.py` — the recorded differential corpus, whose TZ-5 disclosure row this fix flips to equality |
-//!
-//! # Why the negatives are half the file
-//!
-//! Spark floors (`Math.floorDiv`); truncation toward zero — what an arrow `Timestamp(Second)` cast
-//! hop would give — agrees with it on every positive instant and on every whole negative second.
-//! It disagrees only on a **negative fractional** second, which is why `-0.5 s → -1` and
-//! `-1.25 s → -2` are here: they are the two rows that separate the real fix from the plausible
-//! one. The positive fractional rows are the other half of that fence, so the fix cannot be
-//! "always subtract one".
-//!
-//! The class is **zone-independent on both engines** (probed under `America/New_York`,
-//! `Asia/Tokyo` and `UTC`): a cast reads the instant, never a wall clock. The two-zone pin below
-//! is the standing detector for a future change that wires a session zone into this path.
-//!
-//! Every expectation is live-Spark-4.1.2-recorded (`task/tz5-cast-seconds-ledger.md` §2), and
-//! instants are written as RFC-3339 strings so a reader can check one by eye. AWS-free by
-//! construction.
+//! Pins Spark's `CAST(TIMESTAMP AS <numeric>)` epoch-seconds semantics through a real Spark-door
+//! session, with values and Arrow types. Spark floors, so negative fractional instants distinguish
+//! floor from truncation toward zero. The cast is zone-independent.
 
 use std::sync::Arc;
 
@@ -46,8 +12,7 @@ use datafusion::prelude::col;
 use repark_core::{ReparkSession, SqlDialect};
 use repark_spark::{SparkDialect, SparkExtension};
 
-/// The two non-UTC zones the campaign uses: a DST-observing zone WEST of UTC and a fixed-offset
-/// zone EAST of it. For THIS class both must give the same answer — see the module docs.
+/// These two zones must produce the same result because this cast is zone-independent.
 const NEW_YORK: &str = "America/New_York";
 const TOKYO: &str = "Asia/Tokyo";
 
@@ -233,9 +198,8 @@ async fn spark_door_timestamp_column_casts_row_by_row_with_nulls() {
 /// ===========================================================================================
 /// Spark door — narrower signed integer targets share the class.
 ///
-/// The rewrite scales first and leaves the user's width to the outer cast, so `INT`/`SMALLINT`
-/// answer Spark's `-1800` in `Int32`/`Int16` — and repark answers them AT ALL, which it did not
-/// before (DataFusion refuses a direct `Timestamp -> Int32`).
+/// The rewrite scales first and leaves width to the outer cast, so `INT`/`SMALLINT` return Spark's
+/// `-1800` in `Int32`/`Int16`.
 /// ===========================================================================================
 #[tokio::test]
 async fn spark_door_narrower_integer_targets_get_the_same_scaling() {
@@ -357,7 +321,7 @@ async fn native_dataframe_api_cast_is_epoch_seconds() {
 /// The REVERSE direction stays correct — the regression fence for a symmetric "fix".
 ///
 /// `CAST(<integer> AS TIMESTAMP)` already reads SECONDS in repark, exactly as Spark does (probed
-/// 2026-08-11). Scaling it too would have INTRODUCED the divergence this unit removes, so the
+/// 2026-08-11). Scaling it too would introduce the divergence this test prevents, so the
 /// round trip is pinned rather than assumed. The remaining reverse-direction gap is the Arrow
 /// export TYPE (`timestamp[ns]` with no zone vs Spark's `timestamp[us, tz=UTC]`), which belongs
 /// to registry row TZ-4 and is deliberately not asserted here.

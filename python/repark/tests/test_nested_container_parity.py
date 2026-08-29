@@ -1,37 +1,28 @@
-"""Nested-container differential corpus (H-2 gap G18) — list / struct / map vs live Spark.
+"""Nested-container differential corpus — list / struct / map vs live Spark.
 
 **Oracle.** Every ``spark`` table below was RECORDED in record mode against live PySpark 4.1.2
-(zulu-17, ``master("local[2]")``, ``spark.sql.ansi.enabled=true``,
-``spark.sql.shuffle.partitions=2``) on 2026-08-11. One recipe per row runs on BOTH engines, so the
-recipe under test and the recipe the oracle ran are the same code — nothing here is hand-computed.
+(``master("local[2]")``, ``spark.sql.ansi.enabled=true``, ``spark.sql.shuffle.partitions=2``).
+One recipe per row runs on BOTH engines, so the recipe under test and the recipe the oracle ran
+are the same code — nothing here is hand-computed.
 
-**Why this corpus exists.** Gap G18 unblocked order-insensitive comparison for nested-typed
-columns in ``repark_parity.assert_frames_equal``. These rows were previously impossible: outer
-row order is unordered (e.g. ``GROUP BY`` + ``collect_list``), and nested cells are not
-``Table.sort_by``-able. The comparator enhancement is exercised on every content assertion.
+**Why this corpus exists.** Outer row order is unordered (``GROUP BY`` + ``collect_list``) and
+nested cells are not ``Table.sort_by``-able; the order-insensitive nested comparison in
+``repark_parity.assert_frames_equal`` is exercised on every content assertion.
 
-**Why some rows are DISCLOSURES.** Struct and map createDataFrame round-trips match Spark on
-value AND Arrow type AND nullability (equalities). Array-typed columns diverge on the list
-**field name** (repark ``item`` vs Spark ``element``) and sometimes on nullability /
-element-nullability (``collect_list``) — honest TYPE disclosures with both halves pinned.
-A silent CONVERGENCE goes red and forces the disclosure to be flipped to equality, never deleted.
+**Disclosures.** Struct and map round-trips match Spark on value AND Arrow type AND nullability
+(equalities). Array-typed columns diverge on the list field name (repark ``item`` vs Spark
+``element``) and sometimes nullability — honest TYPE disclosures with both halves pinned. A
+silent CONVERGENCE goes red and forces the disclosure to be flipped to equality, never deleted.
 
-**Rows assert on the Arrow path** (``to_arrow`` / Spark ``toArrow``) through the parity
-comparator — value AND type AND nullability; never ``show``. Order-insensitive by default so
-grouped / multi-row nested shapes do not need a total outer order.
+**Rows assert on the Arrow path** (``to_arrow`` / ``toArrow``) through the parity comparator —
+value AND type AND nullability; never ``show``; order-insensitive by default.
 
-**Re-deriving the goldens (record mode).** The driver that recorded every Spark half is
-committed beside this module::
+**Re-deriving goldens (record mode).** The committed driver
+``python/repark/tests/_record_nested_container_goldens.py`` (needs a JVM + ``pyspark``; never
+collected by pytest) imports ``ROWS`` from this module and runs each row's own recipe.
 
-    JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \\
-        PYTHONPATH=python/repark-parity/src \\
-        .venv/bin/python python/repark/tests/_record_nested_container_goldens.py
-
-It imports ``ROWS`` from THIS module and runs each row's own recipe. Needs a JVM + ``pyspark``
-(``uv sync --extra record``); never collected by pytest. CI stays JVM-free.
-
-**Entry points.** Facade DataFrame API (``createDataFrame`` / ``groupBy.agg``) and facade
-``sql()`` over a createDataFrame temp view. Claim scoped to the facade surface.
+**Entry points.** Facade DataFrame API and facade ``sql()`` over a createDataFrame temp view;
+the claim is scoped to the facade surface.
 """
 
 from __future__ import annotations
@@ -59,17 +50,13 @@ G18_BUDGET_MIN = 4
 G18_BUDGET_MAX = 6
 MIN_EQUALITY_ROWS = 2
 MIN_DISCLOSURE_ROWS = 2
-# Name-gated family coverage so a control equality cannot satisfy the pins (CP-2).
+# Name-gated family coverage so a control equality cannot satisfy the pins.
 MIN_STRUCT_ROWS = 1  # name-gated *struct*
 MIN_MAP_ROWS = 1  # name-gated *map*
 MIN_ARRAY_OR_LIST_ROWS = 2  # name-gated *array* or *collect_list*
 
 
-# ==================================================================================================
 # Arrow helpers
-# ==================================================================================================
-
-
 def _table(
     fields: list[tuple[str, pa.DataType, bool]], values: dict[str, list[object]]
 ) -> pa.Table:
@@ -80,19 +67,15 @@ def _table(
 
 # ==================================================================================================
 # Row shape
-# ==================================================================================================
 
 
 @dataclass(frozen=True)
 class NestedRow:
     """One differential nested-container row: recipe + recorded Spark half + optional repark half.
 
-    ``repark is None`` and ``spark is not None`` → plain EQUALITY (``repark == Spark``).
-
-    ``repark is not None`` and ``spark is not None`` → DISCLOSURE: repark's actual output is pinned
-    and a convergence onto the recorded Spark output is detected and reported as one.
-
-    ``entry_point`` selects the facade SPELLING: ``"sql"`` runs ``session.sql(row.sql)`` after
+    ``repark is None`` → plain EQUALITY. Both halves present → DISCLOSURE: repark's actual output
+    is pinned and a convergence onto the recorded Spark output is detected and reported.
+    ``entry_point`` selects the facade spelling: ``"sql"`` runs ``session.sql(row.sql)`` after
     registering the seed view; ``"dataframe_api"`` runs the named :data:`DF_RECIPES` helper.
     """
 
@@ -114,11 +97,7 @@ class NestedRow:
         return self.repark is not None and self.spark is not None
 
 
-# ==================================================================================================
 # Dual-engine helpers (shared with the record driver)
-# ==================================================================================================
-
-
 def _types_module(session: object) -> object:
     """The ``types`` module belonging to ``session``'s engine — PySpark's or repark's."""
     if session.__class__.__module__.split(".", maxsplit=1)[0] == "pyspark":
@@ -208,8 +187,7 @@ def _array_of_struct_schema(session: object) -> object:
 def dataframe_api_struct_roundtrip(session: object) -> pa.Table:
     """Struct column via createDataFrame — multi-row with a duplicate nested payload.
 
-    Outer row order is not pinned; the G18 comparator must accept any permutation of the
-    equal multiset. Values AND Arrow type AND nullability are part of the pin.
+    Outer row order is not pinned; values AND Arrow type AND nullability are part of the pin.
     """
     frame = session.createDataFrame(  # type: ignore[attr-defined]
         [
@@ -265,9 +243,8 @@ def dataframe_api_array_of_struct(session: object) -> pa.Table:
 def dataframe_api_collect_list(session: object) -> pa.Table:
     """``groupBy.agg(collect_list)`` — outer rows unordered; the G18 enabler for nested groups.
 
-    List *element* order within a group is part of the value (arrays are ordered). The seed is
-    small and single-partition-friendly so both engines produce the same within-group order
-    under the recorded basis; outer group order is not pinned.
+    List element order within a group is part of the value; the seed is small and
+    single-partition-friendly so both engines produce the same within-group order.
     """
     functions = _functions_module(session)
     frame = session.createDataFrame(  # type: ignore[attr-defined]
@@ -315,10 +292,7 @@ def run_row(row: NestedRow, session: object) -> pa.Table:
     return _to_arrow(frame)
 
 
-# ==================================================================================================
-# Gap G18 — nested containers (spark / repark halves filled after record mode)
-# ==================================================================================================
-
+# Gap G18 — nested containers
 ROWS: list[NestedRow] = [
     # ----- Equalities: struct + map (types match Spark on the Arrow path) -----------------------
     NestedRow(
@@ -522,11 +496,7 @@ ROWS: list[NestedRow] = [
 ]
 
 
-# ==================================================================================================
 # Session + classification helpers
-# ==================================================================================================
-
-
 def _session() -> ReparkSession:
     """A plain repark session for nested SQL / DataFrame API."""
     import repark
@@ -543,19 +513,13 @@ def _frames_differ(actual: pa.Table, expected: pa.Table) -> bool:
     return False
 
 
-# ==================================================================================================
 # The differential rows
-# ==================================================================================================
-
-
 @pytest.mark.parametrize("row", ROWS, ids=[row.name for row in ROWS])
 def test_nested_row_matches_spark_or_still_diverges(row: NestedRow) -> None:
     """Every recorded row, on the Arrow path (value AND exact Arrow type AND nullability).
 
-    Equality rows assert ``repark == Spark``.
-
-    Disclosure rows assert repark's pinned actual output — and when that assertion fails, the
-    failure is CLASSIFIED before it is raised: CONVERGED (flip-don't-delete) vs regression
+    Equality rows assert ``repark == Spark``. Disclosure rows pin repark's recorded output; a
+    mismatch is CLASSIFIED before it is raised: CONVERGED (flip-don't-delete) vs regression
     (re-derive both halves).
     """
     assert row.spark is not None, (
@@ -605,7 +569,7 @@ def test_nested_row_matches_spark_or_still_diverges(row: NestedRow) -> None:
 
 
 def test_nested_row_set_covers_g18_budget() -> None:
-    """Budget + name-gated family coverage pins (CP-2 / CP-10) — not incidental counts."""
+    """Budget + name-gated family coverage pins — not incidental counts."""
     names = [row.name for row in ROWS]
     assert len(names) == len(set(names)), f"duplicate row names: {names}"
     assert G18_BUDGET_MIN <= len(ROWS) <= G18_BUDGET_MAX, (

@@ -60,8 +60,8 @@ class QueryResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     query_nr: int
-    # str, not Literal: dataclass stored unknown labels; status_ledger / exit_code
-    # are the gates (BANANA must construct, then refuse a green exit).
+    # str, not Literal: unknown labels must construct so status_ledger / exit_code
+    # are the gates (a `BANANA` board must refuse a green exit).
     status: str
     repark_wall_s: float | None
     duckdb_wall_s: float | None
@@ -73,10 +73,9 @@ class QueryResult(BaseModel):
     rewrite_note: str | None = None
     missing_feature_hint: str | None = None
     rss_peak_kb: int | None = None
-    # Greylight: timeout_first_s = first-pass ceiling (usually 120).
-    # timeout_retry_s dual use (disclosed in report tags):
-    #   - error_class Slow → measured wall on the 300s retry
-    #   - error_class Timeout (hung) → retry budget ceiling (not a measured wall)
+    # Greylight: timeout_first_s = first-pass ceiling (usually 120). timeout_retry_s is
+    # dual use (disclosed in report tags): Slow → measured retry wall; hung → budget
+    # ceiling (not a measured wall).
     timeout_first_s: float | None = None
     timeout_retry_s: float | None = None
     ordered_compare: bool = False
@@ -218,19 +217,17 @@ def run_scoreboard(
 ) -> Scoreboard:
     """Run the full (or filtered) TPC-DS matrix for one scale factor.
 
-    D1 behaviour:
-    - Parquet temp views only (no Iceberg).
-    - Default timeout 120s; on TIMEOUT, one retry at 300s (Slow vs hung).
-    - SF >= 1: disk gate (default 5 GiB free) → SKIP FINDING, not hard-fail.
-    - SF datagen OOM → SKIP FINDING + partial census.
+    D1: parquet temp views only (no Iceberg); default timeout 120s with one 300s
+    retry on TIMEOUT (Slow vs hung); SF >= 1 disk gate → SKIP FINDING, not
+    hard-fail; SF datagen OOM → SKIP FINDING + partial census.
     """
     resolved_timeout = timeout_s if timeout_s is not None else DEFAULT_TIMEOUT_S
     resolved_retry = timeout_retry_s if timeout_retry_s is not None else TIMEOUT_RETRY_S
     resolved_isolation: IsolationKind = isolation or "inprocess"
     findings: list[str] = []
 
-    # Refuse invalid arguments before ANY datagen work — an empty filter must raise the
-    # same ValueError whether or not the parquet cache (or duckdb itself) is present.
+    # Refuse invalid arguments before ANY datagen work: an empty filter must raise
+    # the same ValueError with or without the parquet cache present.
     if query_filter is not None and len(query_filter) == 0:
         msg = "query_filter is empty — refusing 0-query scoreboard (would exit 0 silently)"
         raise ValueError(msg)
@@ -445,9 +442,8 @@ def _max_rss_kb() -> int:
 def _error_needle_matches(needle: str, lower_message: str) -> bool:
     """Match error-class needles without false-prefix hits.
 
-    Bare alphanumeric tokens use word boundaries so ``except`` does **not** match
-    ``exception`` / ``PySparkException`` (census-critical). Needles that already
-    contain spaces or punctuation keep substring match (e.g. ``over (``, ``like ``).
+    Bare alphanumeric tokens match on word boundaries so ``except`` does **not**
+    match ``exception``; needles with spaces or punctuation keep substring match.
     """
     if re.search(r"[^a-z0-9_]", needle):
         return needle in lower_message
@@ -507,7 +503,6 @@ def classify_error(message: str) -> tuple[str, str | None]:
     for needle, error_class, hint in patterns:
         if _error_needle_matches(needle, lower):
             return error_class, hint
-    # Truncate noisy messages for the class label
     short = message.strip().split("\n", maxsplit=1)[0][:80]
     return f"Other({short})", None
 
@@ -527,11 +522,10 @@ def gap_census(board: Scoreboard) -> list[tuple[str, int, list[int]]]:
 def exit_code_for_board(board: Scoreboard) -> int:
     """Map scoreboard statuses to CLI exit codes.
 
-    0 = all OK (or skipped-disk/datagen with no queries); 3 = any WRONG-RESULT;
-    4 = any ERROR (no WRONG); 6 = any DIED (outranks TIMEOUT — process death);
-    5 = any TIMEOUT only (includes Slow class). Skipped boards return 0
-    (measurement FINDING, never hard-fail the datagen gate).
-    Unknown statuses are ERROR-class (exit 4) — never silent 0.
+    0 = all OK (or skipped with no queries); 3 = any WRONG-RESULT; 4 = any ERROR
+    (no WRONG); 6 = any DIED (outranks TIMEOUT); 5 = TIMEOUT only (includes Slow).
+    Skipped boards return 0 (measurement FINDING, never a hard fail); unknown
+    statuses are ERROR-class — never silent 0.
     """
     if board.skipped and not board.queries:
         return 0
@@ -604,7 +598,6 @@ def render_markdown_report(board: Scoreboard, *, title: str | None = None) -> st
         if query.timeout_first_s is not None or query.timeout_retry_s is not None:
             first = f"{query.timeout_first_s:.1f}" if query.timeout_first_s is not None else "—"
             retry = f"{query.timeout_retry_s:.1f}" if query.timeout_retry_s is not None else "—"
-            # Dual storage: Slow records measured retry wall; hung records budget ceiling.
             retry_tag = "t300_wall" if (query.error_class or "") == "Slow" else "t300_budget"
             hint = f"{hint} [t120={first}s {retry_tag}={retry}s]".strip()
         lines.append(
@@ -683,10 +676,10 @@ def status_ledger(
 ) -> dict[str, Any]:
     """Status map for the SF1 smoke pin file (includes provenance metadata).
 
-    Raises ``ValueError`` when any status is outside :data:`KNOWN_STATUSES` so a
-    partial/corrupt board cannot overwrite the smoke pin file with garbage labels.
-    When ``expect_query_count`` is set (CLI full SF1 ledger writes use 99), also
-    refuses the wrong cardinality so a ``--queries`` subset cannot clobber the pin.
+    Raises ``ValueError`` on any status outside :data:`KNOWN_STATUSES` so a partial
+    or corrupt board cannot overwrite the pin file with garbage labels; with
+    ``expect_query_count`` set, also refuses the wrong cardinality so a
+    ``--queries`` subset cannot clobber the pin.
     """
     queries: dict[str, dict[str, str]] = {}
     for query in board.queries:
@@ -719,9 +712,7 @@ def status_ledger(
     }
 
 
-# ---------------------------------------------------------------------------
 # Internals
-# ---------------------------------------------------------------------------
 
 
 def _open_duckdb_over_parquet(data_dir: Path) -> Any:
@@ -758,10 +749,10 @@ def subprocess_hard_timeout_s(
 ) -> float:
     """Parent hard wall for one subprocess worker.
 
-    Must cover the greylight path on **both** sides (DuckDB + repark): each side
-    may spend ``repeats * timeout_s`` then one ``timeout_retry_s`` retry. Clamping
-    below this budget misclassifies Slow/TIMEOUT as DIED WorkerTimeout. A small
-    ``grace_s`` avoids racing a worker that finishes at the greylight ceiling.
+    Must cover the greylight path on **both** sides: each may spend
+    ``repeats * timeout_s`` then one ``timeout_retry_s`` retry; clamping below
+    this budget misclassifies Slow/TIMEOUT as DIED WorkerTimeout. ``grace_s``
+    avoids racing a worker finishing at the ceiling.
     """
     per_side = float(timeout_s) * float(repeats) + float(timeout_retry_s)
     return per_side * 2.0 + float(setup_budget_s) + float(grace_s)
@@ -788,9 +779,8 @@ def _run_one_query_subprocess(
 ) -> QueryResult:
     """Run one query in a child process; map signal deaths to DIED."""
     worker = Path(__file__).resolve().parent / "query_worker.py"
-    # Hard ceiling so a wedged child cannot block the scoreboard forever.
-    # Native DataFusion can ignore SIGALRM; parent kills the worker → DIED.
-    # Budget must include greylight (120 * repeats + 300) * both engines + setup.
+    # Hard ceiling so a wedged child cannot block the scoreboard forever: native
+    # DataFusion can ignore SIGALRM, so the parent kills the worker → DIED.
     hard_timeout_s = subprocess_hard_timeout_s(timeout_s, timeout_retry_s, repeats)
 
     with tempfile.TemporaryDirectory(prefix="tpcds-qworker-") as tmp:
@@ -1045,7 +1035,6 @@ def _run_one_query(
             repark_times.append(wall)
             repark_payloads.append(rows)
             timeout_retry_wall = wall
-            # Completed on retry → Slow (TIMEOUT status, class Slow) after compare.
         except FuturesTimeout:
             return QueryResult(
                 query_nr=query.query_nr,
@@ -1116,8 +1105,8 @@ def _run_one_query(
         )
 
     repark_median = statistics.median(repark_times)
-    # Any successful repark payload that disagrees with DuckDB is WRONG-RESULT,
-    # even if a later payload matches. Prefer reporting the first mismatch.
+    # Any payload disagreeing with DuckDB is WRONG-RESULT even if a later one
+    # matches; report the first mismatch.
     comparison = None
     for payload in repark_payloads:
         candidate = compare_result_sets(payload, duck_rows, ordered=ordered)
@@ -1217,8 +1206,8 @@ def _timed_call(
 ) -> tuple[float, list[tuple[Any, ...]]]:
     """Run ``function`` with a wall-clock timeout on the main thread.
 
-    Uses ``signal.setitimer`` (Unix) so a wall overrun raises ``TimeoutError`` without
-    a ThreadPoolExecutor that cannot cancel a running worker.
+    Uses ``signal.setitimer`` (Unix) so a wall overrun raises ``TimeoutError``
+    without a ThreadPoolExecutor that cannot cancel a running worker.
     """
     if timeout_s <= 0:
         msg = f"timeout_s must be positive, got {timeout_s}"
@@ -1235,8 +1224,8 @@ def _timed_call(
         signal.signal(signal.SIGALRM, _alarm_handler)
         signal.setitimer(signal.ITIMER_REAL, timeout_s)
         started = time.perf_counter()
-        # Mutable box so a SIGALRM after function() returns but before the
-        # assignment target is written still keeps completed rows.
+        # Mutable box: a SIGALRM after function() returns but before the assignment
+        # writes the target still keeps the completed rows.
         box: dict[str, list[tuple[Any, ...]] | None] = {"result": None}
         try:
 

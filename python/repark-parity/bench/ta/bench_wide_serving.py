@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
-"""§8.3 — wide serving SELECT (3xBBANDS + 3xMACD + 2xSTOCH + EMA/RSI/ATR).
+"""Wide serving SELECT (3xBBANDS + 3xMACD + 2xSTOCH + EMA/RSI/ATR).
 
-Times one fused ``over_columns`` / ``with_indicators`` plan, then the same
-set with an intervening ``filter`` (stacked ``WindowAggExec``). Plan-shape
-(``WindowAggExec`` count + window-fn tokens) is recorded next to wall time.
-
-§8.6 SQL same-OVER EXPLAIN already shipped as #116 — this script does not
-rebuild that pin.
+Times one fused ``over_columns`` / ``with_indicators`` plan, then the same set with an
+intervening ``filter`` (stacked ``WindowAggExec``). Plan shape (``WindowAggExec`` count
++ window-fn tokens) is recorded next to wall time.
 
 Usage::
 
@@ -66,8 +63,7 @@ def _stacked_filter(seed: object) -> object:
         )
     }
     mid = seed.withColumns(ta.over_columns(window, first))  # type: ignore[attr-defined]
-    # Always-true on the walk (close ≈ 100) so the row count is unchanged, but
-    # the filter is a live plan barrier (TA-1 stacked-window truth).
+    # Always-true on the walk (close > 0): row count unchanged; the filter is a live plan barrier.
     filtered = mid.filter(F.col("close") > 0)
     return filtered.withColumns(ta.over_columns(window, second)).to_arrow()
 
@@ -106,7 +102,7 @@ def _plan_for(seed: object, shape: str) -> str:
 
 
 def main() -> None:
-    """Run the §8.3 wide-serving shapes and print ``TA_PIPELINE`` lines."""
+    """Run the wide-serving shapes and print ``TA_PIPELINE`` lines."""
     parser = argparse.ArgumentParser(description=__doc__)
     harness.add_timing_args(parser)
     parser.add_argument("--n-rows", type=int, default=None)

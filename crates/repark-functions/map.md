@@ -62,14 +62,17 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
 - `src/cardinality.rs` — **r24 SB1 / SEC-01:** plan-time `array_repeat`/`repeat`/`sequence` ceilings
   (`repark.sql.maxArrayElements` default 10_000_000) + `ReparkSqlConfig` extension
   (`allowLocalFilesystemDDL` for SEC-02); analyzer rule `ArrayCardinalityCeiling`.
+  Known limitations (2026-08-29): reachable `i64::MIN` negative strides can panic in debug or
+  return `Some(1)` in release, and `i128::MIN / -1` or `% -1` can panic; these are pre-existing
+  separate-fix items.
 - `src/timestamp_cast.rs` — **TZ-5** plus **B-TZ-4:** the embedded UDFs the analyzer's
   `Expr::Cast` arm puts under timestamp casts. `__repark_epoch_seconds_floor__` (→ `Int64`,
   exact `div_euclid` **floor** — Spark uses `Math.floorDiv`, so `-0.5 s` is `-1`, not `0`)
   serves integer targets; `__repark_epoch_seconds_real__` (→ `Float64`) serves `DOUBLE`/`FLOAT`/
   `DECIMAL`, which keep the fraction. Two UDFs, not one: a decimal intermediate loses the floor
   edge to arrow's truncating decimal→int cast, and an f64 one cannot floor a sub-microsecond
-  present-day instant. Per-`TimeUnit` divisor (a `createDataFrame` column is `timestamp[us]`, a
-  `to_timestamp` literal `timestamp[ns]`). **B-TZ-4 (2026-08-13):**
+  present-day instant. Per-`TimeUnit` divisor; current timestamp outputs are `Timestamp(µs, UTC)`.
+  **B-TZ-4 (2026-08-13):**
   `__repark_timestamp_to_string__` (→ `Utf8`) emits Spark's session-zone space-separated
   wall (NTZ = stored wall; trailing-zero fraction trimmed; year −1 is `-0001`, year 10000 is
   `+10000`). Embedded, never registered. **TZ-8 (2026-08-14):**
@@ -87,35 +90,30 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   subscript, the planner-embedded-`substr` swap, and **TZ-5**
   `CAST(TIMESTAMP AS <numeric>)` → epoch SECONDS (scaling pushed UNDER the user's cast via
   [`timestamp_cast`], so the outer cast still applies the width; the reverse direction
-  `CAST(<integer> AS TIMESTAMP)` was probed and is already correct — do not "fix" it). **B-TZ-4:**
+  `CAST(<integer> AS TIMESTAMP)` remains unchanged). **B-TZ-4:**
   `CAST(TIMESTAMP AS STRING)` → `__repark_timestamp_to_string__` (`Utf8`, session-zone wall).
   **TZ-8:** `CAST(TIMESTAMP AS DATE)` → `__repark_timestamp_to_date__` (session-zone Date32).
-  Idempotent
-  by construction (see the module docs). NB: the rule runs after `TypeCoercion`, so ONE analyze is
-  not always a whole-plan fixpoint — a division under a set op (`UNION`) reaches `Float64` only on
-  the SECOND analyze; single-analyze *schema* consumers must analyze to the fixpoint (Group L-write,
-  `repark_sql::execute_ctas`; the `analyze_eagerly` docstring carries the rule).
+  Rewrites match source types and injected output shapes, so each rewrite is idempotent. Set-operation
+  schemas still require repeated analysis to reach the fixpoint; `analyze_eagerly` carries that rule.
 - `src/string.rs` — `substring`/`substr` with Spark's character-based position semantics;
   **D2** `concat` (`SparkConcat`) overwrites datafusion-spark: coerce all args → `Utf8`
   (Spark stringify), always emit `Utf8` (never `Utf8View`), any-NULL → NULL — fixes
   TPC-DS Q5/Q80/Q84; pins include `register_all` overwrite + multi-row null mask.
-  **GT1-FIX round-2:** also registers `regexp_count` / `regexp_instr` / `split_part`.
-- `src/collection/str_to_map.rs` — **FN-GT2 rework:** regex `str_to_map` UDF. Overwrites the DF
-  literal-split kernel. Depends on workspace `regex`. **LRS-5 (2026-08-20):** moved from
-  `src/str_to_map.rs` into the canonical module tree, with `src/collection/shuffle.rs`,
-  `src/collection/map_from_entries.rs` and `src/url/java_uri.rs` — the four `#[path]` inclusions
-  this crate carried are gone.
+  Also registers `regexp_count` / `regexp_instr` / `split_part`.
+- `src/collection/str_to_map.rs` — regex `str_to_map` UDF overwriting the DataFusion
+  literal-split kernel; it depends on workspace `regex` and lives in the canonical module tree
+  beside `shuffle.rs`, `map_from_entries.rs`, and `url/java_uri.rs`.
 - `src/collection.rs` — Spark `element_at` (arrays + maps) + the embedded `__repark_array_get__`
   subscript UDF + **`spark_get_item_udf` / `__repark_get_item__`** (polymorphic array 0-based or
-  map-by-key for facade `Column.__getitem__` non-int/non-str keys — octo C2-L-001).
+  map-by-key for facade `Column.__getitem__` non-int/non-str keys).
   Registers the `str_to_map` overwrite.
-- `src/aggregate.rs` — **LRS-3 (2026-08-20):** also carries `approx_count_distinct_udaf`, which
+- `src/aggregate.rs` — also carries `approx_count_distinct_udaf`, which
   registers DataFusion's `approx_distinct` under Spark's spelling as well. It lives in
   `functions()` rather than `register_all` because the crate root is at its ceiling, and because
   `functions()` is already the list `register_all` installs.
-- `src/instant_ts.rs` — **TZ-4 PR-1:** `now` / `current_timestamp` / `to_timestamp` emit
-  `timestamp[us, tz=UTC]`; analyzer wrap of leftover ns-naive TIMESTAMP expressions. Zoneless
-  values not localized (PR-2). **Q10:** NTZ opt-in arm of the CAST/literal rewrite.
+- `src/instant_ts.rs` — `now` / `current_timestamp` / `to_timestamp` emit `timestamp[us, tz=UTC]`;
+  zoneless values localize in the session zone, while zone-suffixed values remain instants.
+  **Q10:** NTZ opt-in arm of the CAST/literal rewrite.
 - `src/datetime.rs` — the Spark calendar date shim: extractors `year`/`month`/`dayofmonth`/`day`/
   `dayofyear`/`quarter`/`weekofyear`/`yearofweek`/`dayofweek`/`weekday`, **hour/minute/second**
   (Time+Timestamp; X1-octo C3), `make_date`, and the WG2 calendar-math shims `add_months`
@@ -130,10 +128,9 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   sized `StringBuilder` (no per-cell `Vec<char>`).
   **octo C1-Q-004:** `perf_measure_*` 1M-row benches gated on `REPARK_PERF_MEASURE=1`.
   **octo C2-Q-001:** compile pattern apostrophe/unterminated pins.
-- `src/expr_fn.rs` — logical-`Expr` builders for the date functions including Group I `weekday`
-  (embed the UDF instance so a `PyColumn` gets a self-contained expression); `date_add`/`last_day`
-  come from `datafusion-spark`. **GT1-FIX round-2:** `regexp_count` / `regexp_instr` /
-  `split_part` embed the Spark-shaped overwrites (same UDF the SQL door registers).
+- `src/expr_fn.rs` — logical-`Expr` builders for date functions, including `weekday`, that embed
+  UDF instances for facade columns; `date_add`/`last_day` and the regexp/split builders share the
+  same kernels registered by the SQL door.
 
 ## I want to...
 
@@ -169,8 +166,8 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   `lib.rs`); fix an operator-semantics mismatch in `analyzer.rs`.
 - **Test strategy:** `cargo test -p repark-functions` — golden unit tests per function (ISO-8601 basis,
   matching Spark); env-gated micro-benches.
-- **Known limitations:** session-timezone semantics for tz-timestamp extractors are a follow-up; the
-  analyzer rule runs after `TypeCoercion`, so single-analyze *schema* consumers must reach the fixpoint.
+- **Known limitations:** the analyzer runs after `TypeCoercion`, so single-analyze schema consumers
+  must reach the fixpoint; cardinality edge-case risks are listed under `src/cardinality.rs`.
 
 ## Dependencies worth knowing
 
@@ -197,7 +194,7 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
 | `make_date(2024, 2, 29)` errors on coercion | signature is `Int64` (DataFusion literals are Int64); Int32 columns widen in |
 | A date function is missing | hand-roll it in `datetime.rs` (`date_format` / `add_months` already ship) |
 | What arg types do extractors accept? | `coerce_types` accepts date / timestamp (any unit+zone) / string (parsed to date); anything else is a planning error. A bare `Int` is rejected (Spark has no such overload) |
-| `year(tz_timestamp)` value looks off | the field is extracted in the stored zone, not a session timezone — Spark session-tz semantics are a follow-up (planning works; only the tz interpretation differs) |
+| `year(tz_timestamp)` value looks off | check the installed session-timezone carrier and the LTZ/NTZ input type |
 | `CAST(ts AS BIGINT)` looks 10⁹ too big | the analyzer rule is not installed — the rewrite ships with the Spark door's `SessionExtension`; a bare session keeps DataFusion's raw tick (pinned in `crates/repark-sql/tests/timestamp_cast_ansi_door.rs`) |
 | `CAST(ts AS STRING)` is ISO-`T` / `string_view` | the B-TZ-4 rewrite is not firing — check `rewrite_timestamp_to_string_cast` and `__repark_timestamp_to_string__`; a bare session still rewrites (the UDF is in `SparkExprSemantics`) but renders NTZ/UTC |
 | `CAST(ts AS DATE)` / `to_date(ts)` is a day late west of UTC | the TZ-8 rewrite / `to_date` overwrite is not firing — check `rewrite_timestamp_to_date_cast` and `__repark_timestamp_to_date__`; `datediff` rides CAST; `last_day`/`date_add` over TIMESTAMP still refuse |

@@ -1,20 +1,5 @@
-//! Catalog DDL: `CREATE SCHEMA … WITH (location = …)`, `DROP SCHEMA`, `DROP TABLE`.
-//!
-//! "Schema" is ANSI's word for what Spark calls a namespace or database and what Iceberg calls a
-//! namespace — one concept, three names. This door speaks ANSI, so `CREATE SCHEMA` it is; the
-//! wrong-door sniff catches the other two spellings and steers.
-//!
-//! These handlers reach the SAME catalog operations the Spark door uses — `create_namespace` /
-//! `drop_namespace` / `drop_table` on the iceberg handle, plus the provider-invalidation helpers
-//! in `repark-iceberg`. Sharing the operations (not the parsers) is exactly the delegate-first
-//! shape: the grammars differ per door, the effects must not.
-//!
-//! `location` is the one schema property that matters, because a create with no table location
-//! resolves through it. It is mirrored onto `location_uri` by
-//! `repark_iceberg::catalog::mirror_namespace_location_keys` — unidirectional, never overwriting
-//! an explicit key — so a real Glue database's canonical `locationUri` field is set whichever key
-//! the catalog implementation maps. `IF NOT EXISTS` shares the G-6 Q1 location-conflict
-//! predicate: matching / no-location adopt; a contradictory location fails loud.
+//! Catalog DDL: `CREATE SCHEMA … WITH (location = …)`, `DROP SCHEMA`, and `DROP TABLE`.
+//! Each door keeps its grammar while sharing the catalog effects.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -31,9 +16,6 @@ const SCHEMA_KEYS: &[&str] = &["location"];
 /// ===========================================================================================
 /// `CREATE SCHEMA [IF NOT EXISTS] catalog.schema [WITH (location = '…')]`.
 /// ===========================================================================================
-///
-/// # Errors
-/// An unqualified name, an unknown catalog, an unknown `WITH` key, or an iceberg create failure.
 pub(crate) async fn execute_create_schema(
     cx: &EngineContext<'_>,
     name: &ObjectName,
@@ -47,7 +29,7 @@ pub(crate) async fn execute_create_schema(
     let ident = NamespaceIdent::from_strs(&namespace).map_err(iceberg_err)?;
     repark_iceberg::catalog::mirror_namespace_location_keys(&mut properties);
     if if_not_exists && handle.namespace_exists(&ident).await.map_err(iceberg_err)? {
-        // G-6 Q1: IF NOT EXISTS must not silently adopt a contradictory location.
+        // IF NOT EXISTS must not silently adopt a contradictory location.
         let existing = handle.get_namespace(&ident).await.map_err(iceberg_err)?;
         let leaf = namespace.last().cloned().unwrap_or_default();
         repark_core::refuse_contradictory_namespace_location(
@@ -75,13 +57,8 @@ pub(crate) async fn execute_create_schema(
 
 /// ===========================================================================================
 /// `DROP SCHEMA [IF EXISTS] catalog.schema` — `IF EXISTS` is idempotent.
-///
-/// `CASCADE` refuses: dropping a schema's tables as a side effect of a DDL statement is a
-/// destructive operation this engine will not perform implicitly.
+/// `CASCADE` refuses because dropping a schema's tables as a side effect of DDL is destructive.
 /// ===========================================================================================
-///
-/// # Errors
-/// `CASCADE`, an unqualified name, an unknown catalog, or an iceberg drop failure.
 pub(crate) async fn execute_drop_schema(
     cx: &EngineContext<'_>,
     names: &[ObjectName],
@@ -119,9 +96,6 @@ pub(crate) async fn execute_drop_schema(
 /// ===========================================================================================
 /// `DROP TABLE [IF EXISTS] catalog.schema.table[, …]` — `IF EXISTS` is idempotent.
 /// ===========================================================================================
-///
-/// # Errors
-/// An unqualified name, an unknown catalog, or an iceberg drop failure.
 pub(crate) async fn execute_drop_table(
     cx: &EngineContext<'_>,
     names: &[ObjectName],
@@ -259,10 +233,6 @@ pub(crate) fn name_parts(name: &ObjectName) -> Vec<String> {
 }
 
 /// Reject identifier segments that could escape a warehouse root once composed into a path.
-///
-/// Needles come from `repark_iceberg::write::idents::path_escape_kind`, the workspace's single
-/// source for what counts as traversal or a separator; empty segments are rejected here because
-/// they are only meaningless at compose time.
 pub(crate) fn reject_path_escape_ident(segment: &str, kind: &str) -> Result<()> {
     if segment.is_empty() {
         return Err(DataFusionError::Plan(format!(

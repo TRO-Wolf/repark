@@ -1,4 +1,4 @@
-"""r27 T0 — Q7 import freeze pins (package + core + private helper re-exports).
+"""T0 — Q7 import freeze pins (package + core + private helper re-exports).
 
 Mutation: drop a core re-export of GroupedData / _resolve_writer_table → RED.
 """

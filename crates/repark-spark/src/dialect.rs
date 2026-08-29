@@ -1,18 +1,13 @@
-//! [`SparkDialect`] — the Spark door's [`SqlDialect`] impl (seam-adaptation edit class).
+//! [`SparkDialect`] adapts the session SQL seam to the Spark statement router.
 //!
-//! v1's `ReparkSession::sql` called `repark_sql::execute_with_read_only(ctx, catalogs, query,
-//! read_only)` positionally; the phase-1 seam hands the same three inputs as an
-//! [`EngineContext`] struct. This adapter unpacks the struct back into that positional call —
-//! nothing else. Install it with `ReparkSessionBuilder::with_sql_dialect` (paired with the
-//! `SparkExtension` for full v1 Spark semantics — extensions are session-scoped).
+//! Install it with `ReparkSessionBuilder::with_sql_dialect` and pair it with `SparkExtension`.
 
 use async_trait::async_trait;
 use datafusion::prelude::DataFrame;
 use repark_core::{EngineContext, SqlDialect};
 
 /// ===========================================================================================
-/// The Spark statement front end: routes every `sql()` call through the ported v1 router
-/// ([`crate::execute_with_read_only`]).
+/// Route each session `sql()` call through the Spark router.
 /// ===========================================================================================
 #[derive(Debug, Clone, Copy, Default)]
 pub struct SparkDialect;

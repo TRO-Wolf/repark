@@ -1,10 +1,4 @@
-"""Hyperparameter tuning — ``ParamGridBuilder`` + ``CrossValidator`` (M4 / M6).
-
-Pure Python orchestration over estimators (native LR or ext boosters). No new Rust
-deps. Fold assignment is deterministic via SQL ``ROW_NUMBER`` + optional seed hash.
-``parallelism > 1`` thread-pools independent (fold, paramMap) fits (M6); metrics are
-order-independent sums so results match any parallelism.
-"""
+"""Spark-shaped parameter grids and cross-validation orchestration."""
 
 from __future__ import annotations
 
@@ -16,8 +10,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 from repark.errors import IllegalArgumentException, PySparkTypeError
-
-# === r23 QI1: idents ===
 from repark.spark._idents import quote_ident as _quote_ident
 from repark.spark._temp_views import scratch_view_name
 from repark.spark.ml.base import Estimator, Model, _require_repark_dataframe
@@ -26,15 +18,15 @@ from repark.spark.ml.param import Param, TypeConverters
 
 
 class ParamGridBuilder:
-    """Build a cartesian product of ``Param`` maps (Spark ``ParamGridBuilder``)."""
+    """Build a Cartesian product of parameter maps."""
 
     def __init__(self) -> None:
-        """Empty grid; call :meth:`addGrid` / :meth:`baseOn` then :meth:`build`."""
+        """Initialize an empty grid and base map."""
         self._grids: list[tuple[Param[Any], list[Any]]] = []
         self._base: dict[Param[Any], Any] = {}
 
     def baseOn(self, *args: Any) -> ParamGridBuilder:
-        """Fix base params. Accepts a dict or alternating Param/value pairs."""
+        """Set base parameters from a mapping or alternating pairs."""
         if len(args) == 1 and isinstance(args[0], dict):
             for param, value in args[0].items():
                 if not isinstance(param, Param):
@@ -59,7 +51,7 @@ class ParamGridBuilder:
         return self
 
     def addGrid(self, param: Param[Any], values: list[Any] | tuple[Any, ...]) -> ParamGridBuilder:
-        """Add a param axis (list of candidate values)."""
+        """Add a parameter axis of candidate values."""
         if not isinstance(param, Param):
             raise PySparkTypeError(
                 f"ParamGridBuilder.addGrid param must be Param, got {type(param).__name__}"
@@ -74,7 +66,7 @@ class ParamGridBuilder:
         return self
 
     def build(self) -> list[dict[Param[Any], Any]]:
-        """Cartesian product of grids over the base map (Spark ``build``)."""
+        """Return the Cartesian product over the base map."""
         if not self._grids:
             return [dict(self._base)]
         axes = [grid[1] for grid in self._grids]
@@ -89,10 +81,7 @@ class ParamGridBuilder:
 
 
 class CrossValidator(Estimator["CrossValidatorModel"]):
-    """K-fold cross-validation over an estimator + param grid (Spark ``CrossValidator``).
-
-    Works with native estimators (e.g. ``LinearRegression``) and ext estimators.
-    """
+    """Select estimator parameters by deterministic K-fold validation."""
 
     def __init__(
         self,
@@ -105,7 +94,7 @@ class CrossValidator(Estimator["CrossValidatorModel"]):
         parallelism: int | None = None,
         collectSubModels: bool | None = None,  # noqa: N803
     ) -> None:
-        """Optional kwargs mirror Spark constructor names."""
+        """Initialize cross-validation parameters."""
         super().__init__()
         self.estimator: Param[Any] = Param(
             self, "estimator", "estimator to be cross-validated", TypeConverters.identity
@@ -155,79 +144,74 @@ class CrossValidator(Estimator["CrossValidatorModel"]):
         if seed is not None:
             self._set(seed=seed)
         if parallelism is not None:
-            # Route through setter so ctor rejects < 1 (getParallelism's max(1, …) must not
-            # silently clamp a hostile constructor value — octo M6 C1).
             self.setParallelism(int(parallelism))
         if collectSubModels is not None:
             self._set(collectSubModels=collectSubModels)
 
     def setEstimator(self, value: Estimator[Any]) -> CrossValidator:
-        """Set estimator."""
+        """Set and validate the estimator."""
         if not isinstance(value, Estimator):
             raise PySparkTypeError(f"estimator must be Estimator, got {type(value).__name__}")
         return self._set(estimator=value)
 
     def getEstimator(self) -> Estimator[Any]:
-        """Get estimator."""
+        """Return the configured estimator."""
         value = self.getOrDefault(self.estimator)
         if value is None:
             raise IllegalArgumentException("CrossValidator.estimator is not set")
         return value  # type: ignore[no-any-return]
 
     def setEstimatorParamMaps(self, value: list[dict[Param[Any], Any]]) -> CrossValidator:
-        """Set param maps."""
+        """Set estimator parameter maps."""
         if not isinstance(value, list):
             raise PySparkTypeError(f"estimatorParamMaps must be list, got {type(value).__name__}")
         return self._set(estimatorParamMaps=list(value))
 
     def getEstimatorParamMaps(self) -> list[dict[Param[Any], Any]]:
-        """Get param maps."""
+        """Return estimator parameter maps."""
         return list(self.getOrDefault(self.estimatorParamMaps))  # type: ignore[no-any-return]
 
     def setEvaluator(self, value: Evaluator) -> CrossValidator:
-        """Set evaluator."""
+        """Set and validate the evaluator."""
         if not isinstance(value, Evaluator):
             raise PySparkTypeError(f"evaluator must be Evaluator, got {type(value).__name__}")
         return self._set(evaluator=value)
 
     def getEvaluator(self) -> Evaluator:
-        """Get evaluator."""
+        """Return the configured evaluator."""
         value = self.getOrDefault(self.evaluator)
         if value is None:
             raise IllegalArgumentException("CrossValidator.evaluator is not set")
         return value  # type: ignore[no-any-return]
 
     def setNumFolds(self, value: int) -> CrossValidator:
-        """Set number of folds (>= 2)."""
+        """Set the number of folds, which must be at least two."""
         if int(value) < 2:
             raise IllegalArgumentException(f"numFolds must be >= 2, got {value}")
         return self._set(numFolds=int(value))
 
     def getNumFolds(self) -> int:
-        """Get number of folds."""
+        """Return the number of folds."""
         return int(self.getOrDefault(self.numFolds))
 
     def setSeed(self, value: int) -> CrossValidator:
-        """Set seed."""
+        """Set the fold assignment seed."""
         return self._set(seed=int(value))
 
     def getSeed(self) -> int:
-        """Get seed."""
+        """Return the fold assignment seed."""
         return int(self.getOrDefault(self.seed))
 
     def _with_fold_column(self, frame: Any, num_folds: int, seed: int) -> tuple[Any, str, str]:
-        """Attach a deterministic ``__cv_fold`` column and **materialize** fold labels once.
+        """Assign deterministic fold labels and materialize them once.
 
-        Fold assignment uses ``ROW_NUMBER`` + hash. Without materialization, each later
-        ``fit``/``transform``/``to_arrow`` re-executes the window over a lazy plan and can
-        reassign folds (same bug class as F-Q1-009 / ``_materialize_rid_view``) — poisoning
-        ``bestModel`` selection (octo C1-L-001).
+        Materialization prevents lazy window re-evaluation from changing folds for unchanged
+        input row order.
         """
         fold_col = f"__cv_fold_{uuid.uuid4().hex[:8]}"
         view = scratch_view_name(frame._session, "__repark_cv_src_")
         mat_view = scratch_view_name(frame._session, "__repark_cv_mat_")
         frame.createOrReplaceTempView(view)
-        # Deterministic fold: hash(row_number || seed) % num_folds — stable on row order.
         sql = (
             f"SELECT {view}.*, "
             f"MOD(abs(hash(concat(CAST(ROW_NUMBER() OVER (ORDER BY 1) AS VARCHAR), "
@@ -238,14 +222,12 @@ class CrossValidator(Estimator["CrossValidatorModel"]):
             try:
                 folded_lazy = frame._spawn(frame._session.sql(sql))
             except Exception:
-                # Fallback when hash/concat unavailable: sequential modulo.
                 sql = (
                     f"SELECT {view}.*, "
                     f'MOD(ROW_NUMBER() OVER (ORDER BY 1) - 1, {int(num_folds)}) AS "{fold_col}" '
                     f"FROM {view}"
                 )
                 folded_lazy = frame._spawn(frame._session.sql(sql))
-            # Collect once into a MemTable so fold labels are scan-stable.
             frame._session.materialize_as_temp_view(mat_view, folded_lazy._inner)
             folded = frame._spawn(frame._session.sql(f"SELECT * FROM {mat_view}"))
         except Exception:
@@ -258,11 +240,11 @@ class CrossValidator(Estimator["CrossValidatorModel"]):
         return folded, fold_col, mat_view
 
     def getParallelism(self) -> int:
-        """Get max worker threads for independent fold x paramMap fits."""
+        """Return the maximum worker count."""
         return max(1, int(self.getOrDefault(self.parallelism)))
 
     def setParallelism(self, value: int) -> CrossValidator:
-        """Set max worker threads (>= 1)."""
+        """Set the worker count, which must be at least one."""
         if int(value) < 1:
             raise IllegalArgumentException(f"parallelism must be >= 1, got {value}")
         return self._set(parallelism=int(value))
@@ -270,7 +252,7 @@ class CrossValidator(Estimator["CrossValidatorModel"]):
     def _split_fold(
         self, frame: Any, folded: Any, fold_col: str, fold_index: int
     ) -> tuple[Any, Any, str]:
-        """Build train/test frames for one fold; return ``(train, test, train_view)``."""
+        """Return ``(train, test, train_view)`` for one fold."""
         quoted_fold = _quote_ident(fold_col)
         train_view = scratch_view_name(frame._session, "__repark_cv_tr_")
         folded.createOrReplaceTempView(train_view)
@@ -316,7 +298,7 @@ class CrossValidator(Estimator["CrossValidatorModel"]):
         map_index: int,
         fold_index: int,
     ) -> tuple[int, int, float]:
-        """Fit one param map on train, score on test. Returns ``(map_index, fold_index, score)``."""
+        """Return ``(map_index, fold_index, score)`` for one map and fold."""
         model = estimator.fit(train, params=param_map if param_map else None)
         predictions = model.transform(test)
         score = float(evaluator.evaluate(predictions))
@@ -330,13 +312,10 @@ class CrossValidator(Estimator["CrossValidatorModel"]):
         return map_index, fold_index, score
 
     def _fit(self, dataset: Any) -> CrossValidatorModel:
-        """K-fold grid search; refit best param map on full data.
+        """Search maps by fold metrics and refit the best map.
 
-        When ``parallelism > 1``, independent (fold, paramMap) fits run on a thread pool
-        (M6). Fold labels are still materialized once; train/test frames are built
-        sequentially per fold before the parallel fan-out so view registration stays
-        single-threaded. Metric accumulation is a pure sum → determinism across
-        parallelism levels.
+        Build and register fold views before worker fan-out. Reduce scores on the caller thread
+        to avoid session races and concurrent floating-point accumulation.
         """
         frame = _require_repark_dataframe(dataset, verb="CrossValidator.fit")
         estimator = self.getEstimator()
@@ -353,7 +332,6 @@ class CrossValidator(Estimator["CrossValidatorModel"]):
         metrics: list[float] = [0.0] * len(param_maps)
         train_views: list[str] = []
         try:
-            # Build all fold splits first (view registration is sequential).
             fold_splits: list[tuple[int, Any, Any]] = []
             for fold_index in range(num_folds):
                 train, test, train_view = self._split_fold(frame, folded, fold_col, fold_index)
@@ -387,8 +365,6 @@ class CrossValidator(Estimator["CrossValidatorModel"]):
                         )
                         for map_index, fold_index, train, test, param_map in jobs
                     ]
-                    # Collect then sum on the main thread — float += is not atomic across
-                    # threads (lost updates would break parallelism determinism).
                     fold_scores = [future.result() for future in as_completed(futures)]
                 for map_index, _fold_index, score in fold_scores:
                     metrics[map_index] += score
@@ -424,7 +400,7 @@ class CrossValidator(Estimator["CrossValidatorModel"]):
 
 
 class CrossValidatorModel(Model):
-    """Fitted ``CrossValidator`` — exposes ``bestModel`` + ``avgMetrics``."""
+    """Fitted cross-validator exposing ``bestModel`` and ``avgMetrics``."""
 
     def __init__(
         self,
@@ -436,7 +412,7 @@ class CrossValidatorModel(Model):
         estimatorParamMaps: list[dict[Param[Any], Any]] | None = None,  # noqa: N803
         numFolds: int = 3,  # noqa: N803
     ) -> None:
-        """Store best model and fold-averaged metrics (no training rows)."""
+        """Initialize the best model and fold-averaged metrics."""
         super().__init__()
         self.bestModel = bestModel
         self.avgMetrics = list(avgMetrics or [])
@@ -446,15 +422,13 @@ class CrossValidatorModel(Model):
         self.numFolds = int(numFolds)
 
     def _transform(self, dataset: Any) -> Any:
-        """Delegate transform to ``bestModel``."""
+        """Transform with ``bestModel``."""
         if self.bestModel is None:
             raise IllegalArgumentException("CrossValidatorModel has no bestModel")
         return self.bestModel.transform(dataset)
 
     def copy(self, extra: dict[Any, Any] | None = None) -> CrossValidatorModel:
-        """Copy shell; forward ``extra`` onto bestModel so transform overrides apply (C4-L-002)."""
-        # CrossValidatorModel has no predictionCol of its own — Param overrides for
-        # transform(df, params) must land on bestModel (Spark delegates transform there).
+        """Copy the wrapper and apply overrides to ``bestModel``."""
         best = self.bestModel.copy(extra=extra) if self.bestModel is not None else None
         that = CrossValidatorModel(
             bestModel=best,

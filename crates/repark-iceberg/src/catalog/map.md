@@ -1,10 +1,14 @@
 # map — repark-iceberg/src/catalog
 
+CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
+accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
+
 ## Purpose
 
 Iceberg catalog wiring for DataFusion (v1 `repark-catalog`, ported byte-faithful). Build AWS
 Glue (primary) and S3 Tables (secondary) catalogs and register any `iceberg::Catalog` as a
 DataFusion `CatalogProvider`, so `glue_catalog.namespace.table` resolves with zero translation.
+Source comments retain only API and safety contracts; implementation narration is omitted.
 
 ## Contents
 

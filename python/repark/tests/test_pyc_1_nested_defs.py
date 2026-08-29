@@ -1,8 +1,7 @@
 """PYC-1: ``core.py``, ``plan_collapse.py``, and ``udf_bridge.py`` have no nested ``def``.
 
-The conventions gate holds the same rule over the whole tree; this pin names the
-three modules this unit emptied so a regression that re-nests a helper fails here
-even if someone re-seeds an EXCEPTIONS row.
+The conventions gate holds the same rule over the whole tree; this pin names the three modules so
+a regression that re-nests a helper fails here even if someone re-seeds an EXCEPTIONS row.
 """
 
 from __future__ import annotations
@@ -35,9 +34,8 @@ def _collect_nested_function_names(
 def _nested_function_names(path: Path) -> list[str]:
     """Every ``def`` that has a ``def`` ancestor (including inside ``try`` / ``if``).
 
-    The conventions gate only counts a nested ``def`` whose *immediate* parent is a
-    ``def``, so a helper parked under ``try:`` is invisible to it. PYC-1 emptied the
-    ancestor set too (``_emit_side``).
+    The conventions gate only counts a nested ``def`` whose *immediate* parent is a ``def``, so
+    a helper parked under ``try:`` is invisible to it.
     """
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     found: list[str] = []

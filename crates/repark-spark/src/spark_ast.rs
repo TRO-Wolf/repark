@@ -1,14 +1,8 @@
-//! Spark AST-level defaults for the DataFusion passthrough path.
+//! Spark AST defaults for DataFusion passthrough statements.
 //!
-//! Spark and DataFusion disagree on where an `ORDER BY` puts NULLs **when the query does not
-//! say**: Spark defaults to `ASC → NULLS FIRST` / `DESC → NULLS LAST`, DataFusion to the exact
-//! opposite — so under a `LIMIT` the two engines return *different rows*, not just a different
-//! order (audit AR-1 finding #4). The distinction between "user wrote `NULLS LAST`" and "parser
-//! defaulted" only exists in the AST (`OrderByOptions::nulls_first: Option<bool>`); by logical
-//! plan time it is baked in. So [`execute_passthrough`] re-parses the statement exactly as
-//! `ctx.sql` would, injects Spark's defaults into every unspecified `ORDER BY` — top-level,
-//! subqueries, set operations, window specs (inline `OVER (…)` and named `WINDOW` clauses) —
-//! and only then plans it. Explicit `NULLS FIRST`/`NULLS LAST` is always honoured.
+//! The passthrough injects Spark's `ASC NULLS FIRST` and `DESC NULLS LAST` defaults into every
+//! unspecified order, including nested queries and window specifications. Explicit null placement
+//! remains unchanged. The same boundary owns DML, collation, range-frame, and filesystem valves.
 
 use std::ops::ControlFlow;
 
@@ -33,19 +27,12 @@ use repark_core::CatalogRegistry;
 /// ===========================================================================================
 /// Plan + execute one passthrough statement with Spark's ORDER BY null-placement defaults.
 ///
-/// The Spark-parity replacement for `ctx.sql(sql)` on every path the router does not
-/// intercept: parse with the session dialect (exactly as `ctx.sql` does), apply the AST
-/// defaults, then plan and execute. DataFusion-native statements that have no generic AST
-/// (`COPY`, `CREATE EXTERNAL TABLE`) carry no Spark ORDER BY surface and pass through
-/// unchanged — subject to the SEC-02 local-filesystem DDL gate (see [`local_fs_ddl`]).
+/// The Spark-parity replacement for `ctx.sql(sql)`: parse with the session dialect, apply AST
+/// defaults, then plan and execute. DataFusion-native statements without a generic AST pass
+/// through unchanged, subject to the SEC-02 local-filesystem gate.
 ///
-/// **This is also where the G3-E8 subquery-predicate valve attaches** (F-A). Every route into
-/// DataFusion's DML — the router's `DELETE`/`UPDATE` arms, the `_ =>` arm, and
-/// `execute_unparsable_fallthrough` — lands here, and the statement below is the one that will
-/// actually be planned. A guard wired to the router's own `DatabricksDialect` parse is fail-OPEN
-/// for any form the two parsers disagree about: Spark's FROM-less `DELETE <table> WHERE …` fails
-/// the router parse, falls through, is re-parsed here under the session dialect, and — before
-/// this call — emptied the table. Attach DML guards at THIS parse.
+/// The G3-E8 subquery-predicate valve attaches to this executing parse. Router and session
+/// dialects can disagree, so an earlier parse cannot safely guard DML.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -152,42 +139,19 @@ pub(crate) async fn execute_passthrough(
     // SQP-1: refuse an illegal `→ BINARY` cast before the eager analyze so repark's clean
     // `DATATYPE_MISMATCH` message wins over DataFusion's silent int→bytes / opaque optimizer error.
     refuse_illegal_binary_cast(&plan)?;
-    // r24 SB1 / SEC-02: refuse local CREATE EXTERNAL / COPY TO when conf is false (warehouse
-    // grandfather still allowed). Must run before eager collect so a blocked COPY never writes.
+    // Refuse local CREATE EXTERNAL and COPY TO before eager execution unless explicitly allowed.
     local_fs_ddl::refuse_local_filesystem_plan(ctx, catalogs, &plan)?;
-    // SE-1 D1 round 4 (Y-3 / Y-4), re-routed in round 5 (Z-2): `CREATE VIEW cat.ns.v AS …` and
-    // `SELECT … INTO cat.ns.t` reach the router's `_ =>` catch-all, so the CTAS tighten refuse
-    // never sees them — while the Iceberg schema provider's `register_table` sink persists a
-    // real table (measured). The refuse now lives in the shared belt's `guard`, which this door
-    // calls on the plan the sink will actually register (the Spark door keeps its own
-    // plan/execute halves — AST rewrites, temporal range conform, the eager-command fold).
+    // Apply the shared create guard to the plan the sink will register.
     repark_core::PreExecute::new(ctx, catalogs).guard(&plan)?;
-    // PySpark applies a command (INSERT / UPDATE / DELETE, and `COPY … TO`) eagerly at `sql()`;
-    // DataFusion plans it lazily — the write commits only when the returned DataFrame is collected —
-    // so a bare `spark.sql("INSERT …")` / `spark.sql("COPY …")` a migrated caller never collects
-    // silently loses the write (audit F-BR-2; `LogicalPlan::Copy` was the disclosed same-class
-    // residual, task/lessons.md 2026-07-16). Detect the command shape on the freshly-planned
-    // statement (before analysis, which never introduces or removes the `Dml` / `Copy` wrapper), so
-    // the command can be applied here, once. A pure query (SELECT) is neither a `Dml` nor a `Copy`
-    // plan and keeps its lazy DataFrame untouched — the N4 metadata-only path and WG-4's streaming
-    // laziness both ride that unchanged lazy plan.
+    // Spark applies commands eagerly. Materialize DML and COPY once, while leaving queries lazy.
     let is_eager_command = matches!(&plan, LogicalPlan::Dml(_) | LogicalPlan::Copy(_));
-    // Analyze eagerly: the Spark semantics rules can change expression types (int `/` →
-    // double), and this DataFrame's logical schema feeds real consumers — the PyO3 Arrow
-    // export and CTAS schema derivation — which must see the post-analysis types, not the raw
-    // planner output (a mismatch reinterprets the collected buffers).
+    // Eager analysis exposes Spark-adjusted types to Arrow export and CTAS schema derivation.
     let plan = repark_functions::analyze_eagerly(&state, plan)?;
     let dataframe = ctx.execute_logical_plan(plan).await?;
     if !is_eager_command {
         return Ok(dataframe);
     }
-    // A command (DML or `COPY … TO`): apply it now — the Iceberg write / file sink commits on this
-    // collect, exactly once — then re-wrap the already-computed affected-row `count` batches in an
-    // in-memory DataFrame. A later `.collect()` on what we return re-reads those batches instead of
-    // re-running the command, so the write is never applied twice (the trap the naive
-    // eager-collect-but-return-the-same-plan fix creates). `read_batches` is empty-safe (a
-    // `Schema::empty()` fallback); both `Dml` and `Copy` yield a single `count` batch, so the
-    // returned DataFrame carries DataFusion's command shape.
+    // Return materialized command results so later collection cannot re-run the write.
     let batches = dataframe.collect().await?;
     ctx.read_batches(batches)
 }
@@ -549,8 +513,7 @@ mod tests {
         rows
     }
 
-    /// Spark defaults: ASC → NULLS FIRST, DESC → NULLS LAST (DataFusion's are the opposite —
-    /// the audit proved the passthrough returned [1, 2, NULL] for ASC).
+    /// Spark defaults: ASC → NULLS FIRST and DESC → NULLS LAST.
     #[tokio::test]
     async fn order_by_defaults_are_spark() {
         let (ctx, catalogs) = ctx();
@@ -587,7 +550,7 @@ mod tests {
         );
     }
 
-    /// Under LIMIT the default changes *which rows* survive — the audit's data-changing case.
+    /// Under LIMIT the default determines which rows survive.
     #[tokio::test]
     async fn order_by_limit_returns_spark_rows() {
         let (ctx, catalogs) = ctx();
@@ -662,8 +625,7 @@ mod tests {
         assert_eq!(binary.value(0), b"ab");
     }
 
-    /// The Spark division semantics ride the passthrough end to end (the audit's S0 through
-    /// `execute` rather than a bare context): `SELECT 5/2` is 2.5, not 2.
+    /// The passthrough evaluates `SELECT 5/2` as `2.5`, not integer `2`.
     #[tokio::test]
     async fn passthrough_integer_division_is_double() {
         let (ctx, catalogs) = ctx();

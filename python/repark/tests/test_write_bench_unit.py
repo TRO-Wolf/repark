@@ -1,6 +1,6 @@
-"""Unit pins for R-WRITE-BENCH harness (no SF1 wall; pure helpers + tiny smoke).
+"""Unit pins for the write-bench harness (no SF1 wall; pure helpers + tiny smoke).
 
-Never touches AWS. Full SF1 matrix is measurement-night only
+Never touches AWS. The full SF1 matrix is measurement-night only
 (``bench/write/run_write_bench.py --sf 1``).
 """
 
@@ -418,8 +418,8 @@ def test_expected_rows_after_merge_full_overlap() -> None:
 
 
 def test_write_synthetic_parquet_narrow_wide(tmp_path: Path) -> None:
-    # Polars is optional (repark[polars]); bench night installs it. Skip write I/O
-    # pin when absent so default facade env stays green (width/estimate pins still run).
+    # Polars is optional (repark[polars]); skip the write-I/O pin when absent so the default
+    # facade env stays green.
     pytest.importorskip("polars")
     schemas = _load_schemas()
     narrow = schemas.write_synthetic_parquet(tmp_path / "n.parquet", rows=100, width="narrow")
@@ -567,7 +567,7 @@ def test_cli_merge_k_zero() -> None:
 
 
 def test_pinned_knobs_constants() -> None:
-    """Rule 10: shuffle partitions pinned and not the T2 OOM value 128."""
+    """Shuffle partitions pinned at 8, not the OOM-prone 128."""
     merge = _load_merge_runner()
     ow = _load_overwrite_runner()
     assert merge.PINNED_SHUFFLE_PARTITIONS == 8

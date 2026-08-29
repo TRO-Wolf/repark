@@ -1,10 +1,7 @@
-//! The crate-wide argument contract, enforced for EVERY kernel (docs/testing.md: every spec
-//! invariant gets ≥ 1 test):
+//! Crate-wide argument contracts for every kernel:
 //!
 //! 1. A period below the TA-Lib minimum → `TaError::InvalidPeriod` (never a panic).
-//! 2. A period above [`repark_ta::MAX_PERIOD`] → `TaError::InvalidPeriod` — this is also the
-//!    guard that keeps every internal period expression (`period + 1`, `2 * period`, the
-//!    linearreg cubic) far away from usize overflow, so it is probed with `usize::MAX`.
+//! 2. A period above [`repark_ta::MAX_PERIOD`] → `TaError::InvalidPeriod`, including `usize::MAX`.
 //! 3. An input too short for one output → a full-length all-NaN vector, not an error.
 //! 4. An empty input → an empty vector.
 
@@ -56,9 +53,6 @@ fn kernels() -> Vec<Kernel> {
             2,
             Box::new(|d, p| bbands(d, p, 2.0, 2.0).map(|(u, _, _)| u)),
         ),
-        // WG2 simple-momentum kernels whose period parameter is `optInTimePeriod` (MOM/ROC family
-        // allow period 1). ULTOSC/APO/PPO/BOP use different parameter names / no period, so they
-        // get dedicated contract tests below.
         ("mom", 1, Box::new(mom)),
         ("roc", 1, Box::new(roc)),
         ("rocp", 1, Box::new(rocp)),
@@ -79,9 +73,6 @@ fn kernels() -> Vec<Kernel> {
         ),
         ("aroonosc", 2, Box::new(|d, p| aroonosc(d, d, p))),
         ("trix", 2, Box::new(trix)),
-        // WG3 directional family (H/L/C or H/L collapsed onto one series). DX/ADXR require period
-        // 2; the DI/DM variants and the MA selector allow period 1 (so the below-min sweep skips
-        // them — their period-0 / MAMA rejections are pinned in `macd_ma_directional_contract`).
         ("dx", 2, Box::new(|d, p| dx(d, d, d, p))),
         ("adxr", 2, Box::new(|d, p| adxr(d, d, d, p))),
         ("plus_di", 1, Box::new(|d, p| plus_di(d, d, d, p))),
@@ -89,12 +80,8 @@ fn kernels() -> Vec<Kernel> {
         ("plus_dm", 1, Box::new(|d, p| plus_dm(d, d, p))),
         ("minus_dm", 1, Box::new(|d, p| minus_dm(d, d, p))),
         ("ma", 1, Box::new(|d, p| ma(d, p, 0))),
-        // WG5 sweep-up: NATR (H/L/C collapsed like ATR) and BETA (two-series like CORREL); both
-        // allow period 1. The no-period price transforms get a dedicated test below.
         ("natr", 1, Box::new(|d, p| natr(d, d, d, p))),
         ("beta", 1, Box::new(|d, p| beta(d, d, p))),
-        // TA-4 volume: MFI is the one-period kernel (min 2). AD/OBV have no period; ADOSC has
-        // two named periods — they get `volume_family_argument_contract` below.
         ("mfi", 2, Box::new(|d, p| mfi(d, d, d, d, p))),
     ]
 }
@@ -118,7 +105,6 @@ fn below_minimum_period_errors_for_every_kernel() {
             min - 1
         );
     }
-    // The min == 1 kernels reject 0 explicitly.
     assert!(matches!(
         atr(&data, &data, &data, 0),
         Err(TaError::InvalidPeriod { .. })
@@ -131,7 +117,6 @@ fn below_minimum_period_errors_for_every_kernel() {
         correl(&data, &data, 0),
         Err(TaError::InvalidPeriod { .. })
     ));
-    // linearreg's period-1 arithmetic must not run before validation (period 0 once panicked).
     assert!(matches!(
         linearreg(&data, 0),
         Err(TaError::InvalidPeriod { .. })
@@ -159,8 +144,6 @@ fn above_max_period_errors_not_overflows_for_every_kernel() {
 
 #[test]
 fn short_input_is_all_nan_for_every_kernel() {
-    // 3 rows can't produce a single output for any period-8 kernel (max lookback here is
-    // adx's 2*8-1 = 15).
     let data = [1.0, 2.0, 3.0];
     for (name, _, run) in kernels() {
         let out = run(&data, 8).unwrap_or_else(|e| panic!("{name}: short input errored: {e}"));
@@ -228,7 +211,6 @@ fn multi_series_length_mismatch_errors() {
         ultosc(&a, &a, &b, 2, 2, 2),
         Err(TaError::LengthMismatch { left: 3, right: 2 })
     );
-    // WG3 directional family.
     assert_eq!(
         dx(&a, &b, &a, 2),
         Err(TaError::LengthMismatch { left: 3, right: 2 })
@@ -253,7 +235,6 @@ fn multi_series_length_mismatch_errors() {
         minus_dm(&a, &b, 2),
         Err(TaError::LengthMismatch { left: 3, right: 2 })
     );
-    // WG5 sweep-up.
     assert_eq!(
         natr(&a, &b, &a, 2),
         Err(TaError::LengthMismatch { left: 3, right: 2 })
@@ -264,13 +245,10 @@ fn multi_series_length_mismatch_errors() {
     );
 }
 
-/// The four price transforms carry no period parameter and have lookback 0, so they sit outside the
-/// shared `kernels()` sweep — their empty-input, every-bar-output, and length-mismatch contract is
-/// pinned here directly (mirroring `trange`, the other no-lookback family member).
+/// Check the no-period price transforms' empty, output, and length contracts.
 #[test]
 fn price_transform_argument_contract() {
     let data = [1.0, 2.0, 3.0, 4.0];
-    // No lookback → every bar produces a finite value (no all-NaN prefix).
     let avg = avgprice(&data, &data, &data, &data).expect("avgprice");
     assert_eq!(avg.len(), data.len());
     assert!(avg.iter().all(|v| v.is_finite()));
@@ -281,13 +259,11 @@ fn price_transform_argument_contract() {
     let wcl = wclprice(&data, &data, &data).expect("wclprice");
     assert!(wcl.iter().all(|v| v.is_finite()));
 
-    // Empty in → empty out.
     assert!(avgprice(&[], &[], &[], &[]).expect("empty").is_empty());
     assert!(medprice(&[], &[]).expect("empty").is_empty());
     assert!(typprice(&[], &[], &[]).expect("empty").is_empty());
     assert!(wclprice(&[], &[], &[]).expect("empty").is_empty());
 
-    // Length mismatch across the O/H/L/C series.
     let a = [1.0, 2.0, 3.0];
     let b = [1.0, 2.0];
     assert_eq!(
@@ -308,13 +284,10 @@ fn price_transform_argument_contract() {
     );
 }
 
-/// The MACD family (`optInFast/Slow/SignalPeriod`), the `MA` selector, and the directional DI/DM
-/// functions that allow `period == 1` sit outside the shared `kernels()` sweep — their below-min,
-/// above-`MAX_PERIOD`, short/empty, and `UnsupportedMaType` contract is pinned here directly.
+/// Check MACD, MA, and period-one directional contracts.
 #[test]
 fn macd_ma_directional_contract() {
     let data = [1.0, 2.0, 3.0, 4.0, 5.0];
-    // MACD — each period is validated in its own name; signal minimum is 1.
     assert_eq!(
         macd(&data, 1, 26, 9),
         Err(TaError::InvalidPeriod {
@@ -353,7 +326,6 @@ fn macd_ma_directional_contract() {
             ..
         })
     ));
-    // MACDEXT accepts MAMA (7) on any leg — short series is all-NaN success; out-of-range fails.
     let (macd_m, sig_m, hist_m) = macdext(&data, 12, 7, 26, 0, 9, 0).expect("macdext mama short");
     assert!(
         macd_m
@@ -366,7 +338,6 @@ fn macd_ma_directional_contract() {
         macdext(&data, 12, 9, 26, 0, 9, 0),
         Err(TaError::UnsupportedMaType { matype: 9, .. })
     ));
-    // Short input → three full-length all-NaN outputs; empty → three empty.
     let short = [1.0, 2.0, 3.0];
     for (m, s, h) in [
         macd(&short, 12, 26, 9).expect("macd short"),
@@ -383,7 +354,6 @@ fn macd_ma_directional_contract() {
     ] {
         assert!(m.is_empty() && s.is_empty() && h.is_empty());
     }
-    // The MA selector rejects period 0 and out-of-range matypes (MAMA matype 7 is in-range for MA).
     assert!(matches!(
         ma(&data, 0, 0),
         Err(TaError::InvalidPeriod { .. })
@@ -392,7 +362,6 @@ fn macd_ma_directional_contract() {
         ma(&data, 3, 9),
         Err(TaError::UnsupportedMaType { matype: 9, .. })
     ));
-    // Octo C1-Q-006 / C1-L-006: MA@7 routes through mama (non-trivial values; not a zero stub).
     let mama_via_ma = ma(&data, 12, 7).expect("ma matype 7");
     let (mama_line, _) = mama(&data, 0.5, 0.05).expect("mama");
     assert_eq!(mama_via_ma.len(), mama_line.len());
@@ -403,7 +372,6 @@ fn macd_ma_directional_contract() {
             "ma(..., 7) must equal mama at {index}"
         );
     }
-    // DI/DM allow period 1; period 0 is still rejected.
     for got in [
         plus_di(&data, &data, &data, 0),
         minus_di(&data, &data, &data, 0),
@@ -420,13 +388,10 @@ fn macd_ma_directional_contract() {
     ));
 }
 
-/// ULTOSC/APO/PPO name their period parameters differently (or, for BOP, carry none), so they sit
-/// outside the shared `kernels()` sweep — the same below-min/above-MAX/short/empty contract is
-/// asserted here directly.
+/// Check ULTOSC, APO, PPO, and BOP argument contracts.
 #[test]
 fn ultosc_apo_ppo_bop_argument_contract() {
     let data = [1.0, 2.0, 3.0, 4.0];
-    // ULTOSC — each period is `optInTimePeriod{1,2,3}`, minimum 1.
     assert_eq!(
         ultosc(&data, &data, &data, 0, 14, 28),
         Err(TaError::InvalidPeriod {
@@ -444,7 +409,6 @@ fn ultosc_apo_ppo_bop_argument_contract() {
             })
         ));
     }
-    // APO/PPO — `optInFastPeriod`/`optInSlowPeriod`, minimum 2.
     assert_eq!(
         apo(&data, 1, 26, 0),
         Err(TaError::InvalidPeriod {
@@ -461,7 +425,6 @@ fn ultosc_apo_ppo_bop_argument_contract() {
         })
     ));
 
-    // Short input → full-length all-NaN (never an error) for the period-bearing kernels.
     let short = [1.0, 2.0, 3.0];
     for out in [
         ultosc(&short, &short, &short, 7, 14, 28).expect("ultosc short"),
@@ -472,18 +435,15 @@ fn ultosc_apo_ppo_bop_argument_contract() {
         assert!(out.iter().all(|v| v.is_nan()));
     }
 
-    // Empty in → empty out, for all four (BOP has no lookback, so it only needs the empty case).
     assert!(ultosc(&[], &[], &[], 7, 14, 28).expect("empty").is_empty());
     assert!(apo(&[], 12, 26, 0).expect("empty").is_empty());
     assert!(ppo(&[], 12, 26, 0).expect("empty").is_empty());
     assert!(bop(&[], &[], &[], &[]).expect("empty").is_empty());
 
-    // BOP has no lookback — every bar produces a value (no all-NaN short case).
     let bop_out = bop(&data, &data, &data, &data).expect("bop");
     assert_eq!(bop_out.len(), data.len());
     assert!(bop_out.iter().all(|v| v.is_finite()));
 
-    // APO/PPO accept MAMA (matype 7) — short series is all-NaN success; out-of-range still fails.
     let apo_mama = apo(&data, 12, 26, 7).expect("apo mama short");
     assert!(apo_mama.iter().all(|v| v.is_nan()));
     assert!(matches!(
@@ -492,14 +452,10 @@ fn ultosc_apo_ppo_bop_argument_contract() {
     ));
 }
 
-/// The stochastics (STOCH/STOCHF split into two outputs, STOCHRSI over RSI) are multi-input,
-/// multi-output, and carry named period + `matype` parameters, so they sit outside the shared
-/// `kernels()` sweep — the same below-min/above-MAX/short/empty/length-mismatch and matype
-/// contract is pinned here directly.
+/// Check stochastic period, length, short-input, and `matype` contracts.
 #[test]
 fn stochastics_argument_contract() {
     let data = [1.0, 2.0, 3.0, 4.0, 5.0];
-    // STOCH/STOCHF periods have minimum 1 (so 0 is rejected); STOCHRSI's RSI period has minimum 2.
     assert_eq!(
         stochf(&data, &data, &data, 0, 3, 0),
         Err(TaError::InvalidPeriod {
@@ -523,7 +479,6 @@ fn stochastics_argument_contract() {
             min: 2,
         })
     );
-    // Above-MAX periods error (never wrap/overflow).
     for period in [MAX_PERIOD + 1, usize::MAX] {
         assert!(matches!(
             stochf(&data, &data, &data, period, 3, 0),
@@ -540,7 +495,6 @@ fn stochastics_argument_contract() {
             })
         ));
     }
-    // Short input → two full-length all-NaN outputs (never an error); empty → two empty.
     let short = [1.0, 2.0, 3.0];
     for (k, d) in [
         stoch(&short, &short, &short, 5, 3, 0, 3, 0).expect("stoch short"),
@@ -560,7 +514,6 @@ fn stochastics_argument_contract() {
     }
     let (k, d) = stochrsi(&[], 14, 5, 3, 0).expect("stochrsi empty");
     assert!(k.is_empty() && d.is_empty());
-    // Length mismatch across the H/L/C series.
     let a = [1.0, 2.0, 3.0];
     let b = [1.0, 2.0];
     assert_eq!(
@@ -571,8 +524,6 @@ fn stochastics_argument_contract() {
         stochf(&a, &a, &b, 5, 3, 0),
         Err(TaError::LengthMismatch { left: 3, right: 2 })
     );
-    // Matype 7 (MAMA) is accepted on every stochastic smoothing leg — short series is all-NaN
-    // success (composed lookback includes MAMA's fixed 32). Out-of-range still fails loud.
     let (fk, fd) = stochf(&data, &data, &data, 5, 3, 7).expect("stochf matype 7 short");
     assert!(fk.iter().chain(&fd).all(|v| v.is_nan()));
     let (sk, sd) = stoch(&data, &data, &data, 5, 3, 7, 3, 7).expect("stoch all-MAMA short");
@@ -593,15 +544,12 @@ fn stochastics_argument_contract() {
     ));
 }
 
-/// The parked four (MAMA / SAR / SAREXT / MAVP) carry real-valued or multi-input parameters that
-/// sit outside the shared `kernels()` sweep — their range, length-mismatch, and short/empty
-/// contract is pinned here directly.
+/// Check MAMA, SAR, SAREXT, and MAVP parameter and shape contracts.
 #[test]
 #[allow(clippy::too_many_lines)] // one flat table of the four kernels' contracts.
 fn parked_four_argument_contract() {
     let data = [1.0, 2.0, 3.0, 4.0, 5.0];
 
-    // --- MAMA: fast/slow limits ∈ [0.01, 0.99]; NaN rejected; short/empty → all-NaN / empty. ---
     assert!(matches!(
         mama(&data, 0.001, 0.05),
         Err(TaError::InvalidRealParam {
@@ -623,14 +571,12 @@ fn parked_four_argument_contract() {
             ..
         })
     ));
-    // len 5 ≤ lookback 32 → two full-length all-NaN outputs (never an error).
     let (mama_out, fama_out) = mama(&data, 0.5, 0.05).expect("mama short");
     assert_eq!(mama_out.len(), data.len());
     assert!(mama_out.iter().chain(&fama_out).all(|v| v.is_nan()));
     let (mama_out, fama_out) = mama(&[], 0.5, 0.05).expect("mama empty");
     assert!(mama_out.is_empty() && fama_out.is_empty());
 
-    // --- SAR: acceleration/maximum ∈ [0, 3e37]; H/L length mismatch; short (< 2 bars) → all-NaN. ---
     assert!(matches!(
         sar(&data, &data, -0.01, 0.2),
         Err(TaError::InvalidRealParam {
@@ -656,8 +602,6 @@ fn parked_four_argument_contract() {
     assert!(short[0].is_nan());
     assert!(sar(&[], &[], 0.02, 0.2).expect("sar empty").is_empty());
 
-    // --- SAREXT: eight params; start ∈ [-3e37, 3e37] (negative is a legal short start), the rest
-    //     ∈ [0, 3e37]; H/L length mismatch; empty → empty. ---
     assert!(matches!(
         sarext(&data, &data, 0.0, -0.01, 0.02, 0.02, 0.2, 0.02, 0.02, 0.2),
         Err(TaError::InvalidRealParam {
@@ -672,7 +616,6 @@ fn parked_four_argument_contract() {
             ..
         })
     ));
-    // A negative start value is NOT rejected — it forces a short start at |start_value|.
     assert!(sarext(&data, &data, -50.0, 0.0, 0.02, 0.02, 0.2, 0.02, 0.02, 0.2).is_ok());
     assert_eq!(
         sarext(&a, &b, 0.0, 0.0, 0.02, 0.02, 0.2, 0.02, 0.02, 0.2),
@@ -684,7 +627,6 @@ fn parked_four_argument_contract() {
             .is_empty()
     );
 
-    // --- MAVP: min/max ∈ [2, MAX_PERIOD]; matype ∈ 0..=8; periods-series length; short/empty. ---
     let periods = [10.0; 5];
     assert!(matches!(
         mavp(&data, &periods, 1, 20, 0),
@@ -709,15 +651,13 @@ fn parked_four_argument_contract() {
         mavp(&a, &b, 5, 20, 0),
         Err(TaError::LengthMismatch { left: 3, right: 2 })
     );
-    // len 5 ≤ lookback 19 (SMA, max_period 20) → full-length all-NaN, not an error.
     let short = mavp(&data, &periods, 5, 20, 0).expect("mavp short");
     assert_eq!(short.len(), data.len());
     assert!(short.iter().all(|v| v.is_nan()));
     assert!(mavp(&[], &[], 5, 20, 0).expect("mavp empty").is_empty());
 }
 
-/// TA-4 volume family: AD/OBV have no period (lookback 0); ADOSC has two named periods
-/// (`optInFastPeriod` / `optInSlowPeriod`, min 2); MFI's period contract rides `kernels()`.
+/// Check volume-family period and shape contracts.
 #[test]
 fn volume_family_argument_contract() {
     let data = [1.0, 2.0, 3.0, 4.0];
@@ -752,7 +692,6 @@ fn volume_family_argument_contract() {
             ..
         })
     ));
-    // lookback = max(3,10)-1 = 9 > 4 → full-length all-NaN, not an error.
     let short = adosc(&data, &data, &data, &data, 3, 10).expect("adosc short");
     assert_eq!(short.len(), data.len());
     assert!(short.iter().all(|v| v.is_nan()));

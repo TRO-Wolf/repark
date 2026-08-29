@@ -1,4 +1,4 @@
-"""r23 QI1 — quoting / path-escape single-source pins (CQ-006/007).
+"""QI1 — quoting / path-escape single-source pins (CQ-006/007).
 
 Pins:
 * always-quote vs quote-if-needed call-site classes (behavior-preserving migration)
@@ -6,7 +6,7 @@ Pins:
 * path-escape needles lockstep with Rust ``repark_write::idents::probes``
 * re-exports from session / dataframe / catalog / column remain the same objects
 
-Live Spark oracle (Q6): unavailable mid-night → no divergence-as-bug fixes; pin current.
+No live Spark oracle: current behavior is pinned, not divergence-fixed.
 """
 
 from __future__ import annotations
@@ -28,9 +28,7 @@ from repark.spark._idents import (
     reject_path_escape_segment,
 )
 
-# ---------------------------------------------------------------------------
 # Behavior pins — call-site classes
-# ---------------------------------------------------------------------------
 
 
 def test_always_quote_class_doubles_embedded_quotes() -> None:
@@ -62,15 +60,13 @@ def test_quote_multipart_catalog_vs_always() -> None:
     assert quote_multipart(["cat", "db", "t"], always=True) == '"cat"."db"."t"'
 
 
-# ---------------------------------------------------------------------------
 # Injection-probe battery (Spark dialect) — every SSOT surface
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("probe", INJECTION_PROBES)
 def test_injection_probe_is_single_token_via_ssot(probe: str) -> None:
     quoted = assert_spark_injection_probe_is_single_token(probe)
-    # Independent oracle — undouble-only false-passes under-escape (octo C1-Q-002).
+    # Independent oracle — undouble-only false-passes under-escape.
     expected = '"' + probe.replace('"', '""') + '"'
     assert quoted == expected
     assert '"' not in quoted[1:-1].replace('""', "")
@@ -79,14 +75,14 @@ def test_injection_probe_is_single_token_via_ssot(probe: str) -> None:
 def test_injection_under_escape_oracle_would_reject() -> None:
     """Mutation-proof: forget-doubling is not a single token (C1-SEC-001)."""
     probe = 'id"; evil'
-    under = '"' + probe + '"'  # classic under-escape
+    under = '"' + probe + '"'
     correct = '"' + probe.replace('"', '""') + '"'
     assert under != correct
     assert '"' in under[1:-1].replace('""', "")
 
 
 def test_probe_tables_lockstep_frozen_with_rust_ssot() -> None:
-    """Cross-lang lockstep (C1-Q-003): frozen literals match repark_write::idents::probes."""
+    """Cross-lang lockstep: frozen literals match repark_write::idents::probes."""
     assert INJECTION_PROBES == (
         r'"; DROP TABLE x; --',
         r'id"; DROP TABLE x; --',
@@ -142,9 +138,7 @@ def test_merge_assign_target_is_quote_if_needed() -> None:
     assert merge_mod._quote_assign_target("a b") == '"a b"'
 
 
-# ---------------------------------------------------------------------------
 # Path-escape — lockstep with Rust probes table
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(("segment", "expected"), PATH_ESCAPE_PROBES)
@@ -162,7 +156,7 @@ def test_path_escape_probes_reject(segment: str, expected: str) -> None:
 @pytest.mark.parametrize("segment", PATH_ESCAPE_SAFE)
 def test_path_escape_safe_segments_pass(segment: str) -> None:
     assert path_escape_kind(segment) is None
-    reject_path_escape_segment(segment)  # no raise
+    reject_path_escape_segment(segment)
 
 
 def test_session_path_escape_reexport() -> None:
@@ -182,7 +176,7 @@ def test_is_plain_ident() -> None:
 
 
 def test_polars_join_quote_uses_ssot_for_bare() -> None:
-    """Q5: polars nested quote_ident builds SQL identifiers — bare-only + always-quote SSOT."""
+    """Polars nested quote_ident builds SQL identifiers — bare-only + always-quote SSOT."""
     from repark.spark._idents import is_plain_ident
     from repark.spark._idents import quote_ident as ssot
 

@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
-"""MW-7 scale-measurement CLI (LOCAL filesystem only; never AWS).
+"""MW7 scale-measurement CLI (LOCAL filesystem only; never AWS).
 
-Calibrate first, then run at scale — the charter's feasibility protocol::
+Usage::
 
     python python/repark-parity/bench/mw7/run_mw7.py \\
         --rows 1000000 --merges 10 --scratch /path/to/scratch --out calibration.json
     python python/repark-parity/bench/mw7/run_mw7.py \\
         --rows 10000000 --merges 100 --scratch /path/to/scratch --out full.json
 
-The scratch tree holds the warehouses and the Parquet seed. It is never committed and the
-operator deletes it when the run is read (PROJECT.md: generators are checked in, data is
-not). The JSON is the artifact the ledger tables are transcribed from.
+The scratch tree holds the warehouses and the Parquet seed; never commit it, delete it
+when the run is read (PROJECT.md: generators are checked in, data is not).
 """
 
 from __future__ import annotations
@@ -70,13 +69,11 @@ def format_leg_table(leg: LegResult) -> str:
 
 
 def format_projection(result: RunResult, target_rows: int, target_merges: int) -> str:
-    """Project this run's wall clock onto a bigger run, the charter's feasibility gate.
+    """Project this run's wall clock onto a bigger run.
 
-    MERGE cost scales with the rows each MERGE touches, which scales with the table, so the
-    merge phase is projected quadratically in the row ratio (rows x rows-per-merge) and
-    linearly in the merge count. CTAS and the scans are projected linearly in rows. The
-    projection is deliberately crude and stated as such; it exists to answer "hours or
-    days", not to predict a number.
+    MERGE cost scales with the rows each MERGE touches, so the merge phase is projected
+    quadratically in the row ratio and linearly in the merge count; CTAS and scans linearly.
+    Deliberately crude: it answers "hours or days", not a number.
     """
     row_ratio = target_rows / result.rows
     merge_ratio = target_merges / result.merges

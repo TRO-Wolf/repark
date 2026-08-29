@@ -1,41 +1,8 @@
-//! Map Spark `spark.sql.catalog.<name>.*` config keys onto `RePark` catalog registrations.
+//! Parse Spark and repark catalog configuration into typed registration specifications.
 //!
-//! PySpark scripts configure an Iceberg catalog with a block of `.config(...)` calls, e.g. the
-//! measured source publish job's block:
-//!
-//! ```text
-//! spark.sql.catalog.glue_alt              = org.apache.iceberg.spark.SparkCatalog
-//! spark.sql.catalog.glue_alt.catalog-impl = org.apache.iceberg.aws.glue.GlueCatalog
-//! spark.sql.catalog.glue_alt.warehouse    = s3://example-team-spark-iceberg-glue-v1/
-//! spark.sql.catalog.glue_alt.io-impl      = org.apache.iceberg.aws.s3.S3FileIO
-//! ```
-//!
-//! [`parse_catalog_specs`] turns such a config map into a [`CatalogSpec`] per configured catalog,
-//! which the session then hands to the matching `repark-catalog` builder. The mapping rules (all
-//! fail-loud on ambiguity, so a misconfiguration surfaces at `getOrCreate` time — not as a silent
-//! wrong-catalog on first query):
-//!
-//! - `spark.sql.catalog.<name>` (the bare key) is the Spark catalog *class*. It is recognized (it
-//!   marks the catalog as configured) but carries no kind on its own — a catalog needs a
-//!   `catalog-impl` or `type` to resolve.
-//! - `<name>.catalog-impl` ending in `GlueCatalog` → [`CatalogKind::Glue`]; ending in
-//!   `S3TablesCatalog` → [`CatalogKind::S3Tables`]. Spark's short form `<name>.type` = `glue` /
-//!   `s3tables` maps the same way; `type` = `memory` is the `RePark` extension for AWS-free local
-//!   development and tests (it requires a `warehouse`).
-//! - `<name>.io-impl` is **dropped silently**: iceberg-rust's `FileIO` is not pluggable by Java
-//!   class name (S3 access goes through opendal), so the Spark `S3FileIO` class name is inert here.
-//! - `<name>.warehouse` and every other `<name>.<prop>` pass through **verbatim** to the builder
-//!   (the fork forwards unrecognized props to `FileIO`); `warehouse` is included in the passthrough.
-//! - For an **S3 Tables** catalog, Spark's convention passes the table-bucket ARN as the
-//!   `warehouse`, but the `repark-catalog` builder requires it under `table_bucket_arn`. So when an
-//!   S3 Tables block has no `table_bucket_arn` but has a `warehouse`, the warehouse value is carried
-//!   into `table_bucket_arn` (an explicit `table_bucket_arn` always wins; `warehouse` stays as a
-//!   harmless passthrough). An S3 Tables block with neither is an error naming both keys.
-//! - An unrecognized `catalog-impl` / `type` value, or a catalog block with neither, is an error
-//!   that names the exact config key to fix.
-//!
-//! Non-catalog `spark.*` keys (engine knobs, `spark.app.name`, …) are ignored here, exactly as
-//! today — the session builder consumes the knobs it understands and tolerates the rest.
+//! Both prefixes share one normalized keyspace. Kind indicators resolve Glue, S3 Tables, memory,
+//! or Postgres catalogs; implementation-only keys are consumed, properties pass through, and
+//! ambiguous or incomplete blocks fail with key-only diagnostics.
 
 use std::collections::{BTreeMap, HashMap};
 use std::hash::BuildHasher;
@@ -125,10 +92,10 @@ impl std::fmt::Debug for CatalogSpec {
 /// only the associated values are replaced with `***`.
 fn prop_key_is_secret(key: &str) -> bool {
     // Hyphens and dots → underscore so `basic.auth.user.info` / `s3.access-key-id` share needles
-    // with snake_case (C2-SEC-002 / O4-C3-SEC-001).
+    // with snake_case (C2-SEC-002).
     let lower = key.to_ascii_lowercase().replace(['-', '.'], "_");
     // Underscores stripped so camelCase `accessKey` / `privateKey` / one-word `apikey` share
-    // needles with snake_case (O2-C2-SEC-001 / O4-C1-SEC-001 residual of C1-SEC-002 / C2-SEC-002).
+    // needles with snake_case (residual of C1-SEC-002 / C2-SEC-002).
     let compact = lower.replace('_', "");
     // Substring match covers `aws_secret_access_key`, `s3.access-key-id`, `session_token`, etc.
     // Hyphens normalized to underscores so OpenDAL / Spark spellings share one needle set (C2-SEC-002).
@@ -145,7 +112,7 @@ fn prop_key_is_secret(key: &str) -> bool {
         || compact.contains("privatekey")
         || compact == "bearer"
         || compact.ends_with("bearer")
-        // Kafka / Spark JDBC often embed `user:password` under this key (O4-C3-SEC-001).
+        // Kafka / Spark JDBC often embed `user:password` under this key.
         || lower.contains("user_info")
         || compact.contains("userinfo")
         || lower == "key"
@@ -168,12 +135,8 @@ struct Block {
 /// ===========================================================================================
 /// Parse a Spark / repark config map into one [`CatalogSpec`] per configured catalog.
 ///
-/// Both `spark.sql.catalog.*` (the near-drop-in PySpark contract) and `repark.sql.catalog.*`
-/// (the repark-native synonym) are consulted and normalized into one keyspace. Cross-prefix
-/// duplicates with identical values collapse; different values fail loud naming **both keys
-/// only** (raw values are never echoed — catalog props may carry credentials). Every other
-/// key is ignored. Catalogs are returned sorted by name so registration order and errors are
-/// deterministic regardless of the config map's iteration order.
+/// Both accepted prefixes normalize into one keyspace. Equal duplicates collapse; conflicting
+/// values fail naming both keys without exposing secrets. Results are sorted by catalog name.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -910,13 +873,13 @@ mod tests {
                 ("s3.access-key-id".to_string(), secret.to_string()),
                 ("s3.secret-access-key".to_string(), secret.to_string()),
                 ("credential".to_string(), secret.to_string()),
-                // O2-C2-SEC-001: camelCase / one-word spellings must redact too.
+                // camelCase / one-word spellings must redact too.
                 ("accessKey".to_string(), secret.to_string()),
                 ("apikey".to_string(), secret.to_string()),
-                // O4-C1-SEC-001: camelCase privateKey + bearer (OAuth) must redact too.
+                // camelCase privateKey + bearer (OAuth) must redact too.
                 ("privateKey".to_string(), secret.to_string()),
                 ("bearer".to_string(), secret.to_string()),
-                // O4-C3-SEC-001: Kafka/JDBC user:password blob key.
+                // Kafka/JDBC user:password blob key.
                 ("basic.auth.user.info".to_string(), secret.to_string()),
             ]),
         };
@@ -983,16 +946,7 @@ mod tests {
         assert!(err.to_string().contains("url"), "{err}");
     }
 
-    /// I5 acceptance matrix (happy paths) — config-plumbing pins only (no live AWS).
-    ///
-    /// | Form | Kind | Notes |
-    /// |---|---|---|
-    /// | bare `=memory` + warehouse | Memory | repark short |
-    /// | SparkCatalog + `type=memory` + warehouse | Memory | Spark class + type |
-    /// | SparkCatalog + catalog-impl Glue + warehouse | Glue | measured publish job |
-    /// | `type=glue` + warehouse | Glue | short type |
-    /// | catalog-impl S3Tables + ARN | S3Tables | impl suffix |
-    /// | `type=s3tables` + ARN warehouse | S3Tables | warehouse→table_bucket_arn |
+    /// Acceptance matrix for memory, Glue, and S3 Tables kind mappings; no live AWS.
     #[test]
     fn i5_catalog_config_acceptance_matrix_ok() {
         let bare_memory = HashMap::from([
@@ -1006,7 +960,7 @@ mod tests {
             parse_catalog_specs(&bare_memory).unwrap()[0].kind,
             CatalogKind::Memory
         );
-        // repark-prefix synonym of bare `=memory` (I5 octo C4-F4).
+        // repark-prefix synonym of bare `=memory`.
         let repark_bare_memory = HashMap::from([
             ("repark.sql.catalog.m".to_string(), "memory".to_string()),
             (
@@ -1088,15 +1042,7 @@ mod tests {
         );
     }
 
-    /// I5 acceptance matrix (loud / ambiguous rows) — config-plumbing only.
-    ///
-    /// | Form | Result |
-    /// |---|---|
-    /// | SparkCatalog alone | ERR missing kind |
-    /// | `type=memory` no warehouse | ERR warehouse required |
-    /// | impl Glue + type s3tables | ERR conflicting kinds |
-    /// | unknown catalog-impl | ERR loud value |
-    /// | unknown type | ERR loud value |
+    /// Acceptance matrix for missing, conflicting, and unknown catalog kinds; config only.
     #[test]
     fn i5_catalog_config_acceptance_matrix_loud() {
         let bare_class = HashMap::from([(

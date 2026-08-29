@@ -1,23 +1,4 @@
-//! The `WITH ( … )` table-property vocabulary (design §2 Q1/Q2, grafts G4 + G9).
-//!
-//! Trino's spelling, deliberately: a **curated** set of bare keys the engine understands and
-//! validates (`format`, `format_version`, `partitioning`, `location`), plus `sorted_by` held as a
-//! reserved refusal, plus the functional escape hatch `extra_properties = MAP(ARRAY[…],
-//! ARRAY[…])` carrying RAW Iceberg keys.
-//!
-//! The two halves solve opposite problems and both are needed:
-//! * **Curated bare keys** give typo protection and validation. An unknown bare key refuses LOUD
-//!   and lists the whole curated set, so `formatt` or `partition_by` is a one-line fix rather
-//!   than a silently-ignored clause that produces a wrong table.
-//! * **`extra_properties`** keeps every dotted Iceberg property reachable — `write.merge.mode`,
-//!   `write.target-file-size-bytes`, … — without freezing dotted keys into this door's API.
-//!   Merge-on-read table CREATION is therefore reachable in phase 2 (that is the concrete thing
-//!   the hatch buys).
-//!
-//! `sorted_by` and the `ORC`/`AVRO` formats are the G9 **reserved refusals**: the spelling is
-//! held so it cannot be re-used for something else, the refusal is loud, and the message names
-//! the TRIGGER that would make us implement it. A refusal that names its trigger is a roadmap
-//! entry; a refusal that does not is a wall.
+//! The `WITH ( … )` table-property vocabulary.
 
 use std::collections::HashMap;
 
@@ -43,8 +24,7 @@ const CURATED_KEYS: &[&str] = &[
 /// ===========================================================================================
 #[derive(Debug, Default, PartialEq, Eq)]
 pub(crate) struct TableProperties {
-    /// An explicit table location (`location = 's3://…'`). When absent the location is resolved
-    /// from the namespace, exactly as the Spark door resolves it.
+    /// An explicit table location. When absent, the location is resolved by catalog policy.
     pub(crate) location: Option<String>,
     /// The declared partition transforms, in clause order (empty = unpartitioned).
     pub(crate) partitioning: Vec<PartitionTransform>,
@@ -56,13 +36,7 @@ pub(crate) struct TableProperties {
 
 /// ===========================================================================================
 /// Validate a parsed `WITH ( … )` option list into [`TableProperties`].
-///
-/// `form` names the statement in refusal messages (`CREATE TABLE` / `CREATE TABLE AS SELECT`).
 /// ===========================================================================================
-///
-/// # Errors
-/// An unknown bare key, a reserved key, an out-of-vocabulary `format`, a malformed
-/// `partitioning` / `extra_properties` value, or an unsupported `format_version`.
 pub(crate) fn parse_with_options(options: &[SqlOption], form: &str) -> Result<TableProperties> {
     let mut properties = TableProperties::default();
     let mut seen: Vec<String> = Vec::new();
@@ -112,8 +86,7 @@ fn curated_list() -> String {
         .join(", ")
 }
 
-/// The typo guard (design §2 Q1): an unknown BARE key refuses loud and lists the whole curated
-/// set, and points dotted Iceberg keys at the escape hatch that carries them.
+/// Unknown bare keys refuse loudly and list the curated vocabulary.
 fn refuse_unknown_key(key: &str, form: &str) -> DataFusionError {
     DataFusionError::Plan(format!(
         "{form} WITH: unknown table property `{key}`. Supported properties are {}. Raw Iceberg \
@@ -135,9 +108,7 @@ pub(crate) fn refuse_sorted_by(form: &str) -> DataFusionError {
     ))
 }
 
-/// `format` vocabulary: PARQUET only. ORC/AVRO are the second G9 reserved refusal — they are
-/// real Iceberg formats, so the message must say we understood the request and why the answer is
-/// no, plus what would change it.
+/// `format` accepts PARQUET only. ORC/AVRO are reserved by G9 and refuse.
 pub(crate) fn refuse_format_value(value: &str, form: &str) -> Result<()> {
     match value.trim().to_ascii_uppercase().as_str() {
         "PARQUET" => Ok(()),
@@ -154,7 +125,6 @@ pub(crate) fn refuse_format_value(value: &str, form: &str) -> Result<()> {
 }
 
 /// `format_version`: `'2'` and `'3'` are stored for execute (v3 still needs the session opt-in).
-/// Anything else is a deterministic reject rather than a silently ignored request.
 fn parse_format_version(value: &str, form: &str) -> Result<String> {
     match value.trim() {
         version @ ("2" | "3") => Ok(version.to_string()),
@@ -187,8 +157,7 @@ fn parse_partitioning(value: &Expr, form: &str) -> Result<Vec<PartitionTransform
     Ok(transforms)
 }
 
-/// `extra_properties = MAP(ARRAY['k', …], ARRAY['v', …])` — the G4 escape hatch, in Trino's own
-/// spelling so a Trino/dbt user's SQL transfers unchanged.
+/// Parse `extra_properties` from Trino's `MAP(ARRAY[keys], ARRAY[values])` spelling.
 pub(crate) fn parse_extra_properties(value: &Expr, form: &str) -> Result<HashMap<String, String>> {
     let shape = || {
         DataFusionError::Plan(format!(
@@ -226,9 +195,7 @@ pub(crate) fn parse_extra_properties(value: &Expr, form: &str) -> Result<HashMap
                 "{form} WITH: `extra_properties` keys must not be empty"
             )));
         }
-        // `format-version` is an Iceberg RESERVED property: iceberg-rust rejects it as a plain
-        // table property at creation, so letting it through the hatch would fail deep inside the
-        // write path with an opaque error. Refuse here, naming the curated key that DOES it.
+        // Iceberg reserves `format-version`; use the curated `format_version` property instead.
         if key.trim().eq_ignore_ascii_case("format-version") {
             return Err(DataFusionError::Plan(format!(
                 "{form} WITH: `format-version` is an Iceberg reserved property and cannot be set \

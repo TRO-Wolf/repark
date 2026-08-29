@@ -1,16 +1,4 @@
-//! G8 / R-3 — ANSI-door JOIN NULL-key pins (G11: correctness, not Spark parity).
-//!
-//! SQL three-valued logic: `NULL = NULL` is unknown, so a NULL join key never
-//! matches. This file pins that class on a **native** `AnsiDialect` session
-//! (no `SessionExtension`) for INNER, LEFT, SEMI, and ANTI. Spark 4.1.2 agrees
-//! on the same 3VL table (G4 corpus); that agreement is documented in the row
-//! comments and is **not** a reason to retarget this door at Spark.
-//!
-//! SEMI / ANTI use DataFusion Generic `LEFT SEMI JOIN` / `LEFT ANTI JOIN`
-//! (the door accepts those keywords). `EXISTS` / `NOT EXISTS` are the
-//! standard-SQL spellings of the same class and were probed equivalent.
-//!
-//! Arrow path (`collect`), value AND type AND nullability. AWS-free.
+//! ANSI-door JOIN NULL-key correctness pins.
 
 use std::sync::Arc;
 
@@ -154,12 +142,6 @@ const RIGHT_NULL_ONLY: &str = "(SELECT CAST(NULL AS BIGINT) AS k) r ";
 
 /// ===========================================================================================
 /// NULL join keys never match on INNER / LEFT / SEMI / ANTI (native ANSI door).
-///
-/// Fixture: left `{(1,'a'), (NULL,'n')}`; right mixed `{(1,'x'), (NULL,'y')}` for
-/// INNER/LEFT; right `{NULL}` for SEMI/ANTI so emptiness cannot be blamed on a
-/// missing non-null partner. Spark 4.1.2 produces the same 3VL table (G4
-/// `null_keys_inner_no_match` / `null_keys_left_outer_fate` /
-/// `left_semi_null_keys_no_match` / `df_left_anti_null_keys_keeps_row`).
 /// ===========================================================================================
 #[tokio::test]
 async fn ansi_door_null_keys_never_match_inner_left_semi_anti() {

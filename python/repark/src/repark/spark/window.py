@@ -8,7 +8,6 @@ Build a window specification the same way as PySpark::
     spec = Window.partitionBy("group").orderBy(F.col("ts"))
     df.withColumn("rn", F.row_number().over(spec))
 
-    # r20 G2: framed windows
     w = Window.partitionBy("g").orderBy("k").rowsBetween(Window.currentRow, 1)
     df.withColumn("mx", F.max("k").over(w))
 
@@ -28,7 +27,6 @@ from repark.spark.column import Column
 if TYPE_CHECKING:
     from typing import Any
 
-# === r20 G2: window/rand/sampleBy ===
 # JVM long bounds used by PySpark Window (pyspark.util.JVM_LONG_MIN/MAX).
 _JVM_LONG_MIN = -9223372036854775808
 _JVM_LONG_MAX = 9223372036854775807
@@ -48,15 +46,15 @@ def _as_column(item: Column | str) -> Column:
 
 
 def _window_column(item: Column | str) -> Column:
-    """Coerce a window partition/order column and reject Group I partition transforms.
+    """Coerce a window partition/order column and reject partition transforms.
 
     ``F.years`` / ``months`` / ``days`` / ``hours`` are valid only inside
     ``DataFrameWriterV2.partitionedBy`` — using them as ``Window.partitionBy`` /
-    ``orderBy`` keys would silently evaluate the dummy null literal (octo r3).
+    ``orderBy`` keys would otherwise evaluate the dummy null literal.
 
     Generators only lower via select unnest — ``Window.partitionBy`` /
     ``orderBy`` on a generator would window over the array placeholder
-    (octo C7-Q-002; Spark ``UNSUPPORTED_GENERATOR``).
+    (Spark ``UNSUPPORTED_GENERATOR``).
     """
     column = _as_column(item)
     transform = getattr(column, "_partition_transform", None)
@@ -69,7 +67,7 @@ def _window_column(item: Column | str) -> Column:
     # Both window positions fail on a higher-order column, and each fails differently and
     # internally: `orderBy` at physical planning with a SanityCheckPlan dump, `partitionBy` with
     # DataFusion's "ORDER BY column cannot be empty … likely caused by a bug" internal error.
-    # Spark evaluates both (measured, LRS-1).
+    # Spark evaluates both forms.
     column._reject_higher_order("Window partitionBy/orderBy")
     return column
 
@@ -77,7 +75,7 @@ def _window_column(item: Column | str) -> Column:
 def _normalize_frame_bound(value: int | float, *, is_start: bool) -> int:
     """Clamp Spark frame bounds (accepts ``float('-inf')`` / ``float('inf')`` only among floats).
 
-    **r20 G2 octo C1-Q-004:** Spark's JVM ``Window.rowsBetween(long, long)`` rejects finite
+    Spark's JVM ``Window.rowsBetween(long, long)`` rejects finite
     ``Double`` bounds (no overload). Finite non-int floats must not silently ``int()``-truncate
     (``1.9 → 1``). Only integers and ±infinity (mapped to JVM long extremes, matching PySpark's
     threshold clamp for ``float('-inf')`` / ``float('inf')``) are accepted.
@@ -106,7 +104,7 @@ def _normalize_frame_bound(value: int | float, *, is_start: bool) -> int:
 
 
 def _reject_inverted_frame_bounds(start: int, end: int) -> None:
-    """Refuse start > end (Spark / DataFusion invalid window frame; octo C3-Q-001)."""
+    """Refuse start > end as an invalid Spark and DataFusion window frame."""
     if start > end:
         raise AnalysisException(
             "Invalid window frame: start bound cannot be larger than end bound "
@@ -225,7 +223,7 @@ class WindowSpec:
 
         * RANGE without ORDER BY → ``DATATYPE_MISMATCH.RANGE_FRAME_WITHOUT_ORDER``.
         * Value-offset RANGE with **multiple** ORDER BY expressions →
-          ``DATATYPE_MISMATCH.RANGE_FRAME_MULTI_ORDER`` (Spark 4.1.2 oracle; octo C2-Q-001).
+          ``DATATYPE_MISMATCH.RANGE_FRAME_MULTI_ORDER`` for multiple order columns.
         * Value-offset RANGE marks ``_g2_range_order_names`` on the result Column (set by
           ``Column.over``) so select/withColumn can refuse non-numeric order types against
           the DataFrame schema.
@@ -288,7 +286,6 @@ class Window:
     :class:`WindowSpec`.
     """
 
-    # === r20 G2: window/rand/sampleBy ===
     # PySpark camelCase constants (N815: surface is the Spark API).
     unboundedPreceding: int = _JVM_LONG_MIN  # noqa: N815
     unboundedFollowing: int = _JVM_LONG_MAX  # noqa: N815

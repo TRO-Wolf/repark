@@ -1,7 +1,7 @@
 """TA-2 — ``ta.with_indicators`` serving helper (required partition/order).
 
 Pins the helper against a hand-built ``over_columns`` window on the Arrow path
-(value AND type). A12: new file only — existing ``test_ta.py`` is not edited.
+(value AND type).
 """
 
 from __future__ import annotations

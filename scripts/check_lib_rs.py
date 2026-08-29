@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
 """Enforce crate-root thinness: no inline #[cfg(test)] test modules; non-test line ceilings.
 
-SSOT for lib.rs hygiene (r26 LR2). Prose (AGENTS.md / CLAUDE.md / crates/map.md) points
-here and never restates the ceilings. Mirrors BH4 dual-wire shape (py = logic + SSOT,
-sh = wrapper).
+SSOT for lib.rs hygiene. Prose points here and never restates the ceilings. Mirrors the
+dual-wire shape (py = logic + SSOT, sh = wrapper).
 
 Rules over every crates/*/src/lib.rs:
-1. No inline test block: an inline `#[cfg(test)] mod NAME {` fails — both the
-   multi-line form and the same-line form. File-backed `#[cfg(test)] mod NAME;`
-   is the only sanctioned form (any test module name).
-2. Non-test line ceiling: default 150 lines on the whole root file (docs count —
-   what a reader scrolls past). EXCEPTIONS table overrides with reason + ratchet note.
+1. No inline test block: an inline `#[cfg(test)] mod NAME {` fails — both the multi-line form
+   and the same-line form. File-backed `#[cfg(test)] mod NAME;` is the only sanctioned form
+   (any test module name).
+2. Non-test line ceiling: default 150 lines on the whole root file (docs count — what a
+   reader scrolls past). EXCEPTIONS table overrides with reason + ratchet note.
 
 Exit 0 on clean; non-zero with named crate, measured count, ceiling, and sanctioned outs.
 """
@@ -26,12 +25,11 @@ DEFAULT_CEILING = 150
 # crate directory name -> (ceiling, reason). Ceilings only go DOWN as follow-ups land;
 # never up without a stated reason in the commit that raises them.
 EXCEPTIONS: dict[str, tuple[int, str]] = {
-    # Measured line counts at the ported tip are noted in each reason; ceilings include slack.
-    # Keys sorted alphabetically. Ceilings ratchet DOWN only. Empty at phase-1 PR-A (only
-    # repark-common exists, well under the default); entries are added with a measured count
-    # and reason in the same change that makes a crate root exceed the default.
+    # Measured line counts are noted with each number; ceilings include slack. Keys sorted
+    # alphabetically; ceilings ratchet DOWN only. Entries are added with a measured count and
+    # reason in the same change that makes a crate root exceed the default.
     "repark-functions": (
-        175,  # measured 168 after FN-GT2 X8 (`pub mod url;` in, shim_udf_boilerplate! out)
+        175,  # measured 168 (`pub mod url;` in, `shim_udf_boilerplate!` out)
         "register_all / analyzer_rules registration glue is root-legitimate; "
         "U5 added the ANSI ConfigExtension module decl; "
         "FN-GT2 X8 added `pub mod url;` + a four-line register_all loop and paid for them "
@@ -40,7 +38,7 @@ EXCEPTIONS: dict[str, tuple[int, str]] = {
         "RATCHET: if registration moves",
     ),
     "repark-python": (
-        190,  # measured 180 (EC-10; ratcheted 230 -> 190 when the taxonomy moved out)
+        190,  # measured 180 (ratcheted when the taxonomy moved out)
         "the PyO3 crate root is a MANIFEST, not logic: doc lines, six `mod` decls, the "
         "`pub use` re-exports (incl. the exception taxonomy re-export), the two `to_py_err` "
         "folds, the env-gated tracing init, and the `#[pymodule]` registration. The "
@@ -50,7 +48,7 @@ EXCEPTIONS: dict[str, tuple[int, str]] = {
         "sanctioned file-backed test module (`#[cfg(test)] mod tests;` -> src/tests.rs)",
     ),
     "repark-ta": (
-        260,  # measured 249 (49 doc lines + the `TaError` enum + the kernel re-export block)
+        260,  # measured 249 (49 doc lines + `TaError` enum + kernel re-export block)
         "verbatim port of the v1 kernel crate root: the crate-wide `TaError` enum (the kernel "
         "contract every module returns) plus the flat `pub use` re-export surface — splitting "
         "either would break the port's identity diff against the pin; "
@@ -72,7 +70,7 @@ def check_lib(path: Path) -> list[str]:
     errors: list[str] = []
     text = path.read_text(encoding="utf-8")
     crate = path.parent.parent.name  # crates/<crate>/src/lib.rs
-    # wc-style: number of lines as splitlines length (docs count toward ceiling).
+    # Docs count toward the ceiling.
     line_count = len(text.splitlines())
 
     for match in INLINE_MOD_RE.finditer(text):
@@ -103,10 +101,8 @@ def main() -> int:
         print("ERROR: crates/ not found", file=sys.stderr)
         return 2
 
-    # Stale EXCEPTIONS rows: a crate-name key whose crates/<key>/src/lib.rs no
-    # longer exists is fail-closed (exception for a deleted/renamed crate would
-    # silently grandfather nothing). Mirrors check_rust_file_size's path-key
-    # stale check; keys here are crate directory names, not repo-relative paths.
+    # Stale rows fail closed: an EXCEPTIONS key with no crate root on disk is an error, never
+    # silently grandfathered. Keys here are crate directory names, not repo-relative paths.
     all_errors: list[str] = []
     for crate in sorted(EXCEPTIONS):
         lib = crates_root / crate / "src" / "lib.rs"

@@ -1,9 +1,4 @@
-"""Window facade wrappers (FN-W).
-
-Public names are re-exported from ``functions.py``. PySpark signatures live
-here; Rust ``PyColumn`` builds the DataFusion window UDWF with no IntegerType
-cast. ``ignoreNulls`` is an honest cut (not exposed).
-"""
+"""Window function wrappers for the Spark facade."""
 
 from __future__ import annotations
 

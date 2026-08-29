@@ -3,8 +3,7 @@
 //!
 //! Plan pins assert the CONTRACT (`SortExec` count 0 with a declaration, ≥1 without);
 //! whether DataFusion also plans a `RepartitionExec` is size/config-dependent and
-//! deliberately not pinned (at probe scale 1.2M rows it appears and the elision holds
-//! through it — recorded in the unit ledger, not asserted here).
+//! deliberately not pinned because its presence depends on size and configuration.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -751,18 +750,7 @@ fn nested_non_null_child_is_treated_as_required_output() {
 
 #[tokio::test]
 async fn export_strip_drops_tighten_tags_and_keeps_non_nullability() {
-    // Kills: `strip_tighten_export_metadata` no longer removing the tag (or removing the
-    // non-null lever with it). UNIT SCOPE — this node calls the helper directly.
-    // Y-6 (round 4): the old "Kills: leaking repark.tighten_nulls into user-visible
-    // to_arrow()/df.schema export" claim is ~~struck~~ — this node never touched either export
-    // path. MEASURED: the binding surface the helper actually guards is
-    // `PyDataFrame::analyzed_arrow_schema` (`crates/repark-python/src/dataframe.rs`), and with
-    // the helper no-oped that capsule reports `{b"repark.tighten_nulls": b"1"}` on both keys.
-    // Coverage extended rather than narrowed: the facade node
-    // `test_analyzed_schema_export_carries_no_tighten_tag` pins that boundary and is the node
-    // the helper mutant kills there. `to_arrow()` is NOT covered by either — DataFusion drops
-    // field metadata across physical execution, so the collected schema is already tag-free
-    // with both strip layers no-oped (measured).
+    // Kills: removing `repark.tighten_nulls` from the internal schema or the non-null lever.
     let session = ReparkSession::new().unwrap();
     let rows = batch(&["AAA", "AAA"], &[Some(1), Some(2)], true);
     session
@@ -798,27 +786,8 @@ async fn export_strip_drops_tighten_tags_and_keeps_non_nullability() {
 
 #[tokio::test]
 async fn filtered_scan_of_a_view_source_exercises_the_get_logical_plan_recurse() {
-    // Y-2 (round 4). Kills: deleting the `TableSource::get_logical_plan` recurse in the walk —
-    // which since the round-4 octo rewrite lives in the iterative
-    // `walk_tighten_sources` / `visit_tighten_sources` pair, NOT in `collect_tighten_sources`
-    // (that name is now a two-line adapter over `walk_tighten_sources`). R6-6 (round 6): the
-    // prose named the adapter, so the mutant it describes was not where the code is; Z-5 flagged
-    // the same drift in the ledger and missed this comment.
-    //
-    // MEASURED on this tree: with the recurse deleted, ALL FOUR existing Q-001 lazy-view pins
-    // (this file's `lazy_view_of_derived_plan_is_visible_to_the_create_walk`, the Spark-door
-    // and ANSI-door `*_lazy_view_of_derived_plan_refuses`, and the facade
-    // `test_sql_derived_write_and_lazy_view_create_refuse`) stayed GREEN — because
-    // DataFusion 54.1 `LogicalPlanBuilder::scan` INLINES a source that has a logical plan, so
-    // every SQL-door `SELECT * FROM <view>` puts the tightened `MemTable`'s `TableScan`
-    // directly in the outer plan and the walk never needs to recurse.
-    //
-    // The recurse is NOT dead code: `scan` skips the inline when `table_scan.filters` is
-    // non-empty (datafusion-expr 54.1 `builder.rs` L518), which leaves a real `TableScan`
-    // whose source still carries the view's plan. That is the shape below, built through the
-    // public `LogicalPlanBuilder` API against the public `refuse_iceberg_create_of_tightened_plan`
-    // entry point. No SQL-door statement reaches it today (measured above); it is the pin that
-    // makes the recurse a live branch instead of a belief about one DataFusion release.
+    // Y-2. Kills deleting the `TableSource::get_logical_plan` recurse. A filtered `TableScan`
+    // retains the source plan, so this public shape keeps that branch live.
     use std::borrow::Cow;
 
     use datafusion::catalog::TableProvider;
@@ -878,24 +847,8 @@ async fn filtered_scan_of_a_view_source_exercises_the_get_logical_plan_recurse()
 
 #[test]
 fn list_and_map_child_requiredness_is_seen_by_the_r_d_output_walk() {
-    // Y-8 (round 4) — verifier P-5, previously NOT-RUN. Question: does
-    // `field_or_child_is_non_nullable` see a REQUIRED child inside a List / Map element field?
-    // MEASURED here, through the public schema entry point (the helper is crate-private):
-    //
-    //   shape                                                   verdict
-    //   ------------------------------------------------------  --------
-    //   List<item: Int64 NOT NULL>            (outer nullable)   refuses
-    //   LargeList<item: Int64 NOT NULL>       (outer nullable)   refuses
-    //   FixedSizeList<item: Int64 NOT NULL,2> (outer nullable)   refuses
-    //   Map<key NOT NULL, value: Int64 NOT NULL> (outer nullable) refuses
-    //   Map<key NOT NULL, value: Int64 NULL>     (outer nullable) ALLOWED
-    //   List<item: Int64 NULL>                (outer nullable)   ALLOWED
-    //
-    // Kills: dropping the List/LargeList/FixedSizeList or the Map arm of
-    // `field_or_child_is_non_nullable` (measured: deleting either arm turns the matching rows
-    // red). The Map row's accepted scope is deliberate and pinned by the two Map rows together
-    // — Iceberg map KEYS are spec-required, so only a required VALUE persists a nested required
-    // field; a `Map<key NOT NULL, value NULL>` column must stay allowed.
+    // Y-8 / P-5. Kills dropping List/LargeList/FixedSizeList or Map handling in
+    // `field_or_child_is_non_nullable`; required children refuse, nullable values remain allowed.
     fn tighten_derived(field: Field) -> Schema {
         Schema::new_with_metadata(
             vec![field],
@@ -1090,13 +1043,7 @@ fn export_strip_does_not_stack_overflow_on_deep_struct() {
 }
 
 // ===========================================================================================
-// SQM round 5 — the NATIVE door (Z-2), resolved-name gating (Z-1), the walk's visit budget
-// (Z-6) and the nested export strip (Z-7).
-//
-// The native door is `ReparkSession::sql` on the default `DataFusionDialect`. Rounds 3 and 4
-// wired the tighten refuses into the Spark door and then the ANSI door; this door — the one
-// every `repark_core` embedder and every `pyspark`-free caller uses — had none, and persisted
-// `required: true` columns from a tightened frame. The pins below run on THIS door.
+// Native-door pins cover resolved-catalog refusal, visit budgets, and nested export stripping.
 // ===========================================================================================
 
 /// An Iceberg-catalog session on the native door with a tightened temp view `tight` and an
@@ -1133,14 +1080,8 @@ async fn native_ddl_sink_session() -> (tempfile::TempDir, ReparkSession) {
 
 #[tokio::test]
 async fn native_door_ddl_sink_over_tightened_source_refuses() {
-    // Z-2. Kills: `DataFusionDialect::execute` being a bare `cx.ctx.sql(query)` — the native
-    // door with no pre-execute guard. MEASURED on BASE (675a413): every statement below
-    // returned Ok and the persisted Iceberg table reported `symbol` / `ts` as required.
-    // Deleting the `PreExecute::guard` call in `pre_execute::PreExecute::run` (or reverting
-    // `DataFusionDialect::execute` to `cx.ctx.sql`) turns this red.
-    //
-    // R6-4 (round 6): each refusal also asserts the UNPUBLISHED half — `table_exists` FALSE for
-    // the target. The message-only assertion would pass even if the write had gone through.
+    // Z-2. Kills bypassing `PreExecute::guard` in the native door; tightened Iceberg DDL must
+    // refuse before publication.
     let (_dir, session) = native_ddl_sink_session().await;
     for (sql, target) in [
         (
@@ -1182,9 +1123,7 @@ async fn native_door_session_scoped_and_untightened_ddl_stay_allowed() {
     // name persists nothing, and an untightened source into the Iceberg catalog is not this
     // rule's business. Both halves must stay green with the guard installed.
     let (_dir, session) = native_ddl_sink_session().await;
-    // (The Iceberg-catalog halves are `LIMIT 0`: that provider's `register_table` refuses a
-    // non-empty result — "register_table does not support tables with data" — which is why the
-    // whole DDL-sink family is pinned on empty bodies. MEASURED here, not assumed.)
+    // Iceberg-catalog fixtures use `LIMIT 0` so registration remains a valid test fixture.
     for sql in [
         "CREATE VIEW session_v AS SELECT * FROM tight",
         "SELECT * INTO session_t FROM tight",
@@ -1203,20 +1142,8 @@ async fn native_door_session_scoped_and_untightened_ddl_stay_allowed() {
 
 #[tokio::test]
 async fn native_door_default_catalog_bare_name_ddl_over_tightened_source_refuses() {
-    // Z-1. Kills: gating the DDL refuse on the `TableReference::Full` SPELLING. With
-    // `SET datafusion.catalog.default_catalog = ice` (+ `default_schema = sales`) a ONE-part
-    // `CREATE VIEW v AS …` / `SELECT … INTO t` resolves into the Iceberg catalog and persists
-    // the same required columns as the three-part spelling. The source is named through its own
-    // catalog because the SET moves default resolution away from the temp-view schema.
-    //
-    // MEASURED on BASE (675a413), PER ROW (R6-3 discipline — no blanket claim): every row below,
-    // INCLUDING the Full one, returned Ok on THIS door, because on BASE the native door had no
-    // guard at all (that is Z-2). On the Spark and ANSI doors the Full row already refused on
-    // BASE; only Bare/Partial were red there.
-    //
-    // R6-4 (round 6): each refusal now also asserts the UNPUBLISHED half — `table_exists` is
-    // FALSE for the name the statement would have resolved to. A refusal that still persisted
-    // would pass a message-only assertion.
+    // Z-1. Kills gating DDL refusal on `TableReference::Full` spelling; bare and partial names
+    // resolve through the configured catalog and must refuse with no published table.
     let (_dir, session) = native_ddl_sink_session().await;
     session
         .sql("SET datafusion.catalog.default_catalog = 'ice'")
@@ -1244,7 +1171,7 @@ async fn native_door_default_catalog_bare_name_ddl_over_tightened_source_refuses
             "SELECT * INTO sales.t_partial FROM datafusion.public.tight LIMIT 0",
             "ice.sales.t_partial",
         ),
-        // Three-part: on THIS door it also returned Ok on BASE (no native guard existed).
+        // Three-part spelling exercises the same resolved-catalog guard.
         (
             "CREATE VIEW ice.sales.v_full AS SELECT * FROM datafusion.public.tight LIMIT 0",
             "ice.sales.v_full",
@@ -1313,18 +1240,8 @@ fn view_hop_chain(
 
 #[tokio::test]
 async fn view_visit_budget_overflow_is_a_generic_error_not_a_tighten_refusal() {
-    // Z-6. Kills: the walk's `MAX_VIEW_VISITS` overflow arm being unpinned — and, worse, an
-    // overflow message that blames `declareSorted` for a wide/deep non-tighten plan
-    // (C1-Q-001). The 65-wide UNION pin covers only the NOT-refused side.
-    //
-    // MEASURED while building this pin — the reachability question the battery flagged: a view
-    // graph written in SQL (or via `ctx.table`) cannot reach the budget at all, because
-    // DataFusion 54.1 INLINES a source that carries a logical plan (`SELECT * FROM v` and
-    // `ctx.table("v")` both plan to `SubqueryAlias` over the stored plan — a 5-level 8-way
-    // UNION of lazy views and a 4100-deep `into_view` chain each walked to ZERO inner visits).
-    // The budget is reachable exactly where the recurse is live: a RETAINED `TableScan` whose
-    // source still carries a plan, which `scan_with_filters` produces (the Y-2 pin's shape).
-    // 4100 such hops over an UNTIGHTENED source pass the 4096 budget.
+    // Z-6. Kills an unpinned `MAX_VIEW_VISITS` overflow arm and wrong blame for a non-tighten
+    // plan. The retained filtered `TableScan` shape reaches the bounded walk.
     let session = ReparkSession::new().unwrap();
     let rows = batch(&["AAA", "AAA"], &[Some(1), Some(2)], true);
     session

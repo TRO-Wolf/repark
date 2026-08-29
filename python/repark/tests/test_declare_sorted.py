@@ -6,13 +6,6 @@ same keys would otherwise plan. The engine **always verifies** the claim first (
 adjacent-pair scan) and refuses loudly when the data disagrees — there is no unverified
 fast path, so a wrong declaration can never corrupt a result.
 
-What these pins nail down:
-
-* results are bit-identical declared vs undeclared (the door is a planner hint, nothing else);
-* the physical plan really loses its ``SortExec`` (and keeps it without the declaration);
-* every refusal is loud: unsorted data, transformed frames, unknown names, no keys;
-* a refused declaration leaves the view fully queryable.
-
 **Ordering spelling (disclosed):** the engine declares ``ASC NULLS LAST`` per key, matching
 DataFusion's ``ORDER BY`` default. Spark's ``ORDER BY x ASC`` is ``NULLS FIRST``, and the
 ``Window`` facade follows Spark — so a window built from ``Window.orderBy("ts")`` over a
@@ -100,7 +93,6 @@ def test_declaration_elides_the_window_sortexec(spark: ReparkSession) -> None:
     # The declared ordering is what the scan now advertises.
     assert "output_ordering=sym@0 ASC NULLS LAST, ts@1 ASC NULLS LAST" in declared_plan
     assert "output_ordering" not in plain_plan
-    # ...and the elision does not move a single value.
     assert (
         spark.sql(WINDOW_SQL.format(view="declared_src"))
         .to_arrow()
@@ -203,8 +195,8 @@ def test_declaring_twice_is_idempotent(spark: ReparkSession) -> None:
 
 def test_cached_source_frame_refuses_and_keeps_its_cache(spark: ReparkSession) -> None:
     """cache()/persist() redirect the frame to a cache view; declaring afterwards would
-    detach it while ``is_cached`` kept reporting true (SQM finding, SE-1 PR-B review).
-    The door refuses loud and the cache stays intact."""
+    detach it while ``is_cached`` kept reporting true. The door refuses loud and the cache
+    stays intact."""
     frame = spark.createDataFrame(SORTED_ROWS, SCHEMA)
     frame.persist()
     assert frame.count() == len(SORTED_ROWS)

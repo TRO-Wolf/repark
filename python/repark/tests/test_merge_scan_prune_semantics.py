@@ -1,6 +1,6 @@
 """MERGE scan-prune / residual-probe hardening — M1, M5, M6, M7 (r1 / r2 / r3 / r11).
 
-Oracle surface: Spark 4 MERGE result sets from the 2026-08-14 MERGE-audit repro battery
+Oracle surface: Spark 4 MERGE result sets from the MERGE-audit repro battery
 (planning/hardening/merge-repro-battery.py cases r1, r2, r3, r11 — converted, not imported).
 End-to-end pins run against the in-memory Iceberg catalog (local only — no AWS). All
 assertions ride the Arrow path (``to_arrow``), value AND type.
@@ -57,14 +57,10 @@ def _make_session(tmp_path: Path, app_name: str, *, scan_pruning: bool) -> Repar
 def test_merge_string_source_int_target_updates_both_keys(spark: ReparkSession) -> None:
     """R1 / M1: Utf8 source keys vs INT target must yield Spark's 2-row upsert.
 
-    Without the identical-type skip, lexicographic min/max of ``'10'``/``'9'``
-    strict-casts to ``id >= 10 AND id <= 9``, every file is pruned, updates are
-    lost, and both source rows insert as duplicates (4 rows).
-
-    The INSERT arm casts explicitly: bare ``VALUES (s.id, …)`` with a Utf8 source
-    into an INT column is not ANSI-store-assignable — Spark refuses the whole
-    statement at analysis, and so does repark's M9 gate (declared pin flip with the
-    M4/M9 unit; the M1 corruption guard lives in the join/pruning, unchanged).
+    Without the identical-type skip, lexicographic min/max of ``'10'``/``'9'`` strict-casts to
+    ``id >= 10 AND id <= 9``, every file is pruned, updates are lost, and both source rows insert
+    as duplicates. The INSERT arm casts explicitly: a bare Utf8 ``s.id`` into an INT column is not
+    ANSI-store-assignable — Spark and repark both refuse the whole statement at analysis.
     """
     _create(spark, FQ, "id INT, v STRING")
     spark.sql(f"INSERT INTO {FQ} VALUES (9,'x'),(10,'y')")
@@ -101,10 +97,8 @@ def test_merge_bigint_source_int_target_does_not_abort(spark: ReparkSession) -> 
 
 
 def test_merge_on_utf8_literal_does_not_panic(spark: ReparkSession) -> None:
-    """R3 / M5: non-ASCII ON literal (battery shape) must not panic the scanners.
-
-    The byte-offset scanners sliced ``&sql[index..]`` mid-``ü``. After
-    ``char_indices()`` the MERGE updates the matched row.
+    """R3 / M5: non-ASCII ON literal (battery shape) must not panic the scanners on a mid-``ü``
+    byte slice; the MERGE updates the matched row.
     """
     _create(spark, FQ, "id BIGINT, city STRING, v STRING")
     spark.sql(f"INSERT INTO {FQ} VALUES (1,'Zürich','x')")
@@ -122,15 +116,9 @@ def test_merge_on_utf8_literal_does_not_panic(spark: ReparkSession) -> None:
 
 
 def test_merge_on_utf8_column_name_does_not_panic(spark: ReparkSession) -> None:
-    """M5: non-ASCII COLUMN name in ON must not panic.
-
-    Complements the r3 literal pin. Spark-dialect backticks are required to
-    *name* the column; the scanners still walk the ``ü`` inside
-    ``t.\\`Zürich\\```. The id equality drives the update.
-    """
-    # Spark-dialect backticks around the non-ASCII column (unquoted unicode
-    # in the column list is a parse error). ON still uses the unquoted
-    # identifier so the scanners walk `ü`.
+    """M5: non-ASCII COLUMN name in ON must not panic; the id equality drives the update."""
+    # Spark-dialect backticks are required to *name* the non-ASCII column (unquoted unicode in
+    # the column list is a parse error); ON stays unquoted so the scanners walk `ü`.
     _create(spark, FQ, "id BIGINT, `Zürich` STRING, v STRING")
     spark.sql(f"INSERT INTO {FQ} VALUES (1,'Zürich','x')")
     _create(spark, SRC, "id BIGINT, v STRING")
@@ -149,9 +137,8 @@ def test_merge_on_utf8_column_name_does_not_panic(spark: ReparkSession) -> None:
 def test_merge_mixed_case_on_matches_pruning_off(tmp_path: Path) -> None:
     """R11 / M7: mixed-case ON over lowercase schema, pruning on ≡ pruning off.
 
-    Quoting the unresolved ``CustomerId`` (case-sensitive) aborted the bounds
-    probe while the join itself resolved. After case-insensitive resolve-then-
-    quote, both knobs yield the same Arrow result.
+    Case-insensitive resolve-then-quote keeps the bounds probe from aborting on the unresolved
+    ``CustomerId`` (case-sensitive) while the join itself resolves.
     """
     on_session = _make_session(tmp_path / "on", "pytest-m7-on", scan_pruning=True)
     _create(on_session, FQ, "customerid BIGINT, amt DOUBLE")

@@ -1,19 +1,19 @@
 """Record mode for the V-4 partition-value corpus — re-derive every Spark half from live Iceberg.
 
-NOT a ``test_`` module: pytest never collects it. It is the driver that produced the recorded
-Spark halves in ``test_partition_value_audit.py``, committed so the "recorded against live
-PySpark 4.1.2 + Iceberg" claim is falsifiable from inside the repo.
+Not collected by pytest: this driver produced the recorded Spark halves in
+``test_partition_value_audit.py`` and re-runs each row's own lifecycle recipe on a live
+Spark+Iceberg session. Exit 0 means every recorded half still reproduces. ``--dump``
+prints paste-ready ``_table`` / ``_meta`` constructors. It never edits the corpus.
 
-**Why this driver provisions Iceberg.** Partition VALUES live in Iceberg manifests. Vanilla
-PySpark cannot write Iceberg tables. The driver pins and fetches the Iceberg Spark runtime
-by Maven coordinates (never commits the binary) and stands up a local Hadoop warehouse.
+Why Iceberg: partition VALUES live in Iceberg manifests and vanilla PySpark cannot
+write Iceberg tables, so the driver fetches the pinned Iceberg Spark runtime by Maven
+coordinates (never commits the binary) and stands up a local Hadoop warehouse.
 
-**Pinned GAV** (same ruling as the MERGE / DML corpora — exact Spark-minor match, derived
-from ``_oracle_pins`` / the ``record`` extra, never restated):
+Pinned GAV (exact Spark-minor match, derived from ``_oracle_pins`` — never restated):
 
     org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0
 
-**Recipe (re-derivable):**
+Recipe (re-derivable)::
 
     uv sync --locked --extra record \\
         --extra numpy --extra pandas --extra polars --extra ml-ext \\
@@ -23,12 +23,8 @@ from ``_oracle_pins`` / the ``record`` extra, never restated):
         PYTHONPATH=python/repark-parity/src \\
         .venv/bin/python python/repark/tests/_record_partition_value_goldens.py
 
-Requires: Java 17 (zulu-17), the sync above (pyspark==4.1.2), network on the first Ivy
-resolve. Hold ``/tmp/grok-jvm-record.lock`` (MARKER=v4-<step>) for the whole run.
-
-The driver imports ``ROWS`` from the COMMITTED test module and runs each row's OWN
-lifecycle recipe. Exit 0 means every recorded half still reproduces. ``--dump`` prints
-paste-ready ``_table`` / ``_meta`` constructors (it never edits the corpus).
+Requires Java 17 (zulu-17) and network on the first Ivy resolve. Hold
+``/tmp/grok-jvm-record.lock`` (MARKER=v4-<step>) for the whole run.
 """
 
 from __future__ import annotations
@@ -175,7 +171,6 @@ def _record_row(spark: Any, row: PartitionValueRow, *, dump: bool) -> str | None
 
     if live.write_error is not None:
         if row.kind == "split" and row.spark_error_needle:
-            # Unexpected: this row claims Spark succeeds.
             return f"[{row.name}] Spark refused (split claimed success): {live.write_error!r}"
         return f"[{row.name}] Spark write failed: {live.write_error!r}"
 

@@ -1,4 +1,4 @@
-//! Seam tests: the phase-1 default dialect and the [`EngineContext`] construction contract.
+//! Seam tests: the default dialect and the [`EngineContext`] construction contract.
 
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -67,10 +67,7 @@ async fn engine_context_constructs_with_explicit_fields() {
     assert_eq!(frame.schema().field(0).name(), "answer");
 }
 
-/// PIN (phase-2 PR-2) — `EngineContext::new` is the sanctioned DOWNSTREAM constructor:
-/// `#[non_exhaustive]` forbids literal construction outside this crate, so door crates
-/// (repark-spark's dialect tests) assemble the context through `new` with v1's three
-/// positional arguments. Field mapping is pinned by executing through it.
+/// `EngineContext::new` is the downstream constructor and preserves field mapping.
 #[tokio::test]
 async fn engine_context_new_is_the_downstream_constructor() {
     let ctx = SessionContext::new();

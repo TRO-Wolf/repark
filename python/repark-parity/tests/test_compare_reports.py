@@ -1,10 +1,9 @@
 """Unit battery for the census report comparator (design §6.4).
 
-The comparator is NEW code in the V2 port — it is the acceptance gate itself — so every
-property the design states is pinned here over synthetic reports: manifest-first loud
-failure, ledger-only subtraction, sorted-rendering byte comparison, both denominators,
-the direction-grouped delta, junit mode with skips first-class, and the provoked
-undeclared-subtraction attempt that proves the ledger is the only way out of the diff.
+Every design property is pinned over synthetic reports: manifest-first loud failure,
+ledger-only subtraction, sorted-rendering byte comparison, both denominators, the
+direction-grouped delta, junit mode with skips first-class, and the provoked
+undeclared-subtraction attempt.
 """
 
 from __future__ import annotations
@@ -51,8 +50,8 @@ _MANIFEST: dict[str, str] = {
 def _honest_denominators(rows: dict[str, str]) -> dict[str, Any]:
     """The denominator block a real runner would write for exactly these rows.
 
-    The comparator validates a report's recorded block against its own rows, so a fixture
-    that records a fictitious block is a malformed report — which is a different test.
+    The comparator validates a report's recorded block against its own rows; a fixture
+    recording a fictitious block is a malformed report — a different test.
     """
     return denominators(
         [CensusRow(test_id=test_id, module="", status=status) for test_id, status in rows.items()]
@@ -127,9 +126,7 @@ def _run(argv: list[str], capsys: pytest.CaptureFixture[str]) -> tuple[int, str,
     return code, captured.out, captured.err
 
 
-# ---------------------------------------------------------------------------
 # The happy path and the five difference directions
-# ---------------------------------------------------------------------------
 
 
 def test_identical_reports_exit_zero(tmp_path, capsys) -> None:
@@ -208,9 +205,7 @@ def test_denominators_are_reported_even_when_identical(tmp_path, capsys) -> None
     assert "pass/engine_relevant:   v1=2/3  v2=2/3" in out
 
 
-# ---------------------------------------------------------------------------
 # Ledgers: the ONLY subtraction inputs
-# ---------------------------------------------------------------------------
 
 
 def test_deferred_cell_present_on_one_side_only_passes(tmp_path, capsys) -> None:
@@ -292,9 +287,9 @@ def test_ledger_parsing_ignores_comments_and_blanks(tmp_path) -> None:
 def test_the_ledger_file_is_the_only_subtraction_input(tmp_path, capsys, monkeypatch) -> None:
     """PROVOKED undeclared subtraction: no flag and no environment variable can hide a row.
 
-    A row moved from PASS to FAIL-VALUE. The test then tries every non-ledger escape hatch a
-    future maintainer might reach for — plausible environment variables, and (structurally)
-    a CLI option — and asserts the comparator still fails and still names the row.
+    A row moves PASS → FAIL-VALUE; the test then tries every non-ledger escape hatch —
+    plausible environment variables and (structurally) a CLI option — and asserts the
+    comparator still fails and names the row.
     """
     moved_id = "pyspark.sql.tests.test_functions.FunctionsTests.test_a"
     moved = dict(_BASE_ROWS)
@@ -313,8 +308,8 @@ def test_the_ledger_file_is_the_only_subtraction_input(tmp_path, capsys, monkeyp
     assert code == EXIT_DIFFERENT
     assert moved_id in out
 
-    # Structural half of the property: the module reads no environment at all, so there is
-    # no env-shaped subtraction path to find.
+    # Structural half: the module reads no environment at all — no env-shaped
+    # subtraction path exists.
     source = Path(compare_reports.__file__).read_text(encoding="utf-8")
     assert "os.environ" not in source
     assert "os.getenv" not in source
@@ -336,9 +331,7 @@ def test_cli_option_set_is_frozen() -> None:
     assert {"--deferred", "--quarantine"} <= options
 
 
-# ---------------------------------------------------------------------------
 # Environment manifests — compared FIRST, loud failure before any diff
-# ---------------------------------------------------------------------------
 
 
 def test_mismatched_manifests_fail_loudly_before_any_diff(tmp_path, capsys) -> None:
@@ -423,10 +416,9 @@ def _manifest_pair(tmp_path: Path, left: dict[str, str], right: dict[str, str]) 
 def test_external_manifest_cannot_overwrite_a_key_the_report_records(tmp_path, capsys) -> None:
     """The first gate must not be defeatable from the CLI.
 
-    Two reports from genuinely different environments, plus one shared external manifest
-    handed to both sides: if the external file were allowed to overwrite, the manifests would
-    render identical, the gate would print "identical — gate passed", and two incomparable
-    runs would exit 0.
+    Two reports from different environments plus one shared external manifest handed
+    to both sides: if the external file could overwrite, the manifests would render
+    identical and two incomparable runs would exit 0.
     """
     v1 = _write(tmp_path / "v1.json", _report(_BASE_ROWS))
     v2 = _write(tmp_path / "v2.json", _report(dict(_BASE_ROWS), pyspark_version="4.0.0"))
@@ -518,9 +510,7 @@ def test_junit_mode_requires_the_pandas_major_but_not_pyspark(tmp_path, capsys) 
     assert "pyspark_version" not in err
 
 
-# ---------------------------------------------------------------------------
 # Recorded denominators — the half the byte comparison cannot imply
-# ---------------------------------------------------------------------------
 
 
 def test_recorded_denominators_are_validated_against_the_reports_own_rows(tmp_path, capsys) -> None:
@@ -539,8 +529,8 @@ def test_recorded_denominators_are_validated_against_the_reports_own_rows(tmp_pa
 def test_the_recorded_denominator_gate_is_not_implied_by_the_byte_comparison(
     tmp_path, capsys
 ) -> None:
-    """Both sides byte-identical AND identically wrong — the post-subtraction re-assert alone
-    passes this, which is exactly why the recorded block is validated separately."""
+    """Both sides byte-identical AND identically wrong — the post-subtraction re-assert
+    alone passes this, which is exactly why the recorded block is validated separately."""
     lying = _report(_BASE_ROWS)
     lying["denominators"] = {"pass": 999, "all_collected": 1, "engine_relevant": 0}
     v1 = _write(tmp_path / "v1.json", lying)
@@ -560,9 +550,7 @@ def test_a_report_without_a_recorded_denominator_block_still_compares(tmp_path, 
     assert code == EXIT_IDENTICAL
 
 
-# ---------------------------------------------------------------------------
 # Rendering / byte comparison
-# ---------------------------------------------------------------------------
 
 
 def test_render_side_is_sorted_and_byte_exact() -> None:
@@ -606,9 +594,7 @@ def test_compute_delta_is_deterministic_and_sorted() -> None:
     assert [test_id for test_id, _, _ in delta.pass_to_fail] == ["a", "z"]
 
 
-# ---------------------------------------------------------------------------
 # JUnit mode — skips are first-class outcomes
-# ---------------------------------------------------------------------------
 
 
 def _junit(path: Path, cases: dict[str, str]) -> Path:
@@ -703,7 +689,7 @@ def test_junit_node_id_translates_ledger_ids_into_the_junit_id_space(
 def test_junit_deferred_ledger_in_collect_only_form_actually_subtracts(tmp_path, capsys) -> None:
     """The regression itself: a collect-only ledger id must remove the matching JUnit row.
 
-    Before the translation this echoed ``deferred_subtracted: 0`` and the run exited 1 on a
+    Without the translation this echoed ``deferred_subtracted: 0`` and exited 1 on a
     phantom ``vanished`` row — a ledger that silently subtracts nothing.
     """
     left_manifest, right_manifest = _junit_manifests(tmp_path)
@@ -804,10 +790,13 @@ def test_comparator_error_is_raised_not_swallowed(tmp_path) -> None:
 
 
 def _inject_duplicate(payload: dict[str, Any], test_id: str, status: str) -> dict[str, Any]:
-    """Append a second row for an EXISTING test_id (a dict-of-rows fixture cannot express a
-    duplicate, so the raw modules list is edited the way the source runner actually emits it).
-    The recorded denominator block is recomputed over the rows AS CARRIED — duplicates
-    included — matching the real artifact, whose recorded counts cover every emitted row."""
+    """Append a second row for an EXISTING test_id.
+
+    A dict-of-rows fixture cannot express a duplicate, so the raw modules list is
+    edited the way the source runner emits it; the recorded denominator block is
+    recomputed over the rows AS CARRIED — duplicates included — matching the real
+    artifact.
+    """
     for module in payload["modules"]:
         for row in module["rows"]:
             if row["test_id"] == test_id:
@@ -832,10 +821,12 @@ def _inject_duplicate(payload: dict[str, Any], test_id: str, status: str) -> dic
 def test_duplicate_test_id_loads_when_quarantined(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """The one escape from the duplicate-id refusal: ids named in the QUARANTINE ledger may
-    repeat (the source runner emits a known duplicate pair with conflicting classes). The first
-    row wins at load, the id is excluded from the gate and echoed under quarantined, and
-    self-comparison exits 0."""
+    """The one escape from the duplicate-id refusal: QUARANTINE-ledger ids may repeat.
+
+    The source runner emits a known duplicate pair with conflicting classes; the first
+    row wins at load, the id is excluded from the gate and echoed under quarantined,
+    and self-comparison exits 0.
+    """
     dup_id = "pyspark.sql.tests.test_functions.FunctionsTests.test_a"
     payload = _inject_duplicate(_report(dict(_BASE_ROWS)), dup_id, "FAIL-MISSING")
     path = _write(tmp_path / "dup.json", payload)
@@ -887,11 +878,12 @@ def test_duplicate_test_id_without_quarantine_still_refuses(
 
 
 def test_added_cell_present_on_candidate_side_only_passes(tmp_path, capsys) -> None:
-    """A v2-only test is absent from the pin by design: subtract from the CANDIDATE only, pass.
+    """A v2-only test is absent from the pin by design: subtract from the CANDIDATE only.
 
-    The mirror of `test_deferred_cell_present_on_one_side_only_passes`: the reconciliation
-    identity `(candidate minus added) union deferred = baseline` holds when an added row is
-    subtracted."""
+    Mirror of `test_deferred_cell_present_on_one_side_only_passes`: the reconciliation
+    identity `(candidate minus added) union deferred = baseline` holds when an added
+    row is subtracted.
+    """
     added_id = "pyspark.sql.tests.test_functions.FunctionsTests.test_v2_only"
     right = {**_BASE_ROWS, added_id: "PASS"}
     v1, v2 = _pair(tmp_path, dict(_BASE_ROWS), right)
@@ -906,8 +898,8 @@ def test_added_cell_present_on_candidate_side_only_passes(tmp_path, capsys) -> N
 
 
 def test_added_does_not_subtract_from_the_baseline_side(tmp_path, capsys) -> None:
-    """An "added" id that shows up at the pin is a finding, not a free pass — the mirror of the
-    deferred-does-not-subtract-from-candidate guard."""
+    """An "added" id that shows up at the pin is a finding, not a free pass — the mirror
+    of the deferred-does-not-subtract-from-candidate guard."""
     added_id = "pyspark.sql.tests.test_functions.FunctionsTests.test_v2_only"
     left = {**_BASE_ROWS, added_id: "PASS"}
     v1, v2 = _pair(tmp_path, left, dict(_BASE_ROWS))

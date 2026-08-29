@@ -1,5 +1,7 @@
 # map — python/repark-parity/src/repark_parity
 
+CC-2 slice complete: comments and docstrings condensed; oracle discriminators, pins, mutation payloads, and safety contracts kept byte-exact; history narration deleted.
+
 ## Purpose
 
 The `repark_parity` package — the parity comparison core. See [../../map.md](../../map.md).

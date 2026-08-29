@@ -1,19 +1,13 @@
 """FNP-6b — ``randstr`` and ``uniform`` over the Spark ``XORShiftRandom`` repark already owns.
 
-``random.rs`` implements Spark's `XORShiftRandom` (Marsaglia xorshift over a double-MurmurHash3
-`hashSeed`) bit-exactly, and `rand` / `randn` were validated against Spark on it in an earlier
-campaign (r20 G2). These two kernels draw from that same stream rather than a second PRNG.
-
-**What these pins can and cannot prove.** The *stream* is Spark-faithful — that is inherited and
-already pinned. What is **DOC-SPARK, not MEASURED-SPARK**, is the per-function derivation: whether
-Spark's `randstr` indexes its pool in this order and consumes one draw per character, and whether
-`uniform` scales `nextDouble()` the way this does. No live Spark runs here, so these rows pin the
-properties Spark's documentation states — length, character pool, range, the integer-vs-double
-return rule, determinism per seed, and loud refusal of non-constant bounds — and deliberately do
-NOT assert specific generated values as though they were an oracle. A value pin here would look
-like parity evidence while being nothing but repark agreeing with itself.
-
-Ledger: ``task/fnp-6b-random-ledger.md``.
+``random.rs`` implements Spark's `XORShiftRandom` bit-exactly (already pinned for `rand` /
+`randn`); these kernels draw from that same stream. DOC-SPARK, not MEASURED-SPARK: the
+per-function derivation (pool order, one draw per character, `nextDouble()` scaling) is not
+measured against live Spark. These rows pin the properties Spark's documentation states — length,
+character pool, range, the integer-vs-double return rule, determinism per seed, loud refusal of
+non-constant bounds — and deliberately do NOT assert generated values as an oracle. A value pin
+here would look like parity evidence while being repark agreeing with itself. Ledger:
+``task/fnp-6b-random-ledger.md``.
 """
 
 from __future__ import annotations
@@ -59,8 +53,8 @@ def test_randstr_differs_across_seeds() -> None:
 def test_uniform_return_type_follows_its_bounds() -> None:
     """Spark's documented rule: two integer bounds give an integer, anything else a double.
 
-    Getting this wrong is a silent type change rather than an error, which is why it is pinned
-    on the type and not only on the values.
+    A wrong rule is a silent type change, not an error — so it is pinned on the type, not only
+    on the values.
     """
     frame = _session().range(4)
     table = frame.select(
@@ -125,9 +119,8 @@ def test_uniform_refuses_an_inverted_range() -> None:
 def test_uniform_refuses_a_nan_bound_distinctly_from_an_inverted_one() -> None:
     """A NaN bound is INCOMPARABLE, not merely out of order, and gets its own message.
 
-    Clippy's ``neg_cmp_op_on_partial_ord`` caught the original ``!(low <= high)`` for exactly this
-    reason: the negated form silently folded "NaN" into "min exceeds max". The two are different
-    mistakes and now say so.
+    A negated ``!(low <= high)`` would silently fold "NaN" into "min exceeds max"; the two are
+    different mistakes and must say so.
     """
     frame = _session().range(4)
     with pytest.raises(PySparkException, match="NaN"):

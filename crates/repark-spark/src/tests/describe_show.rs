@@ -951,20 +951,7 @@ async fn show_namespaces_without_a_catalog_or_with_a_nested_name_fails_loud() {
     );
 }
 
-/// AB6: the `SHOW NAMESPACES` intercept shadows NOTHING.
-///
-/// The Z6 question, re-asked for `SHOW`. Two halves, both measured before the code was written:
-///
-/// 1. **Other `SHOW` forms are untouched.** `SHOW TABLES` / `SHOW TABLES IN …` /
-///    `SHOW COLUMNS FROM …` / `SHOW VIEWS` / `SHOW ALL` all reach DataFusion exactly as before
-///    — and, measured on this base commit, every one of them ALREADY fails there
-///    ("SHOW TABLES is not supported unless `information_schema` is enabled",
-///    "Unsupported SQL statement: SHOW VIEWS", …). So this intercept cannot have broken a
-///    working statement: there was none. They must keep failing with DataFusion's own message,
-///    NOT with a namespace-shaped one.
-/// 2. **A table named `namespaces` / `schemas` / `databases` is unaffected**, because — unlike
-///    `DESCRIBE` — Spark has no `SHOW <relation>` form at all, so the head is unambiguous and
-///    a relation is never reached through `SHOW`.
+/// Other SHOW forms remain DataFusion-owned, and relation names do not become namespace targets.
 ///
 /// MUTATION: match on `SHOW` alone (dropping the `NAMESPACES|SCHEMAS|DATABASES` check) in
 /// `try_parse_show_namespaces` → RED (the other SHOW forms start reporting namespace errors).
@@ -983,6 +970,7 @@ async fn show_namespaces_intercept_shadows_no_other_statement() {
         "SHOW VIEWS",
         "SHOW ALL",
     ] {
+        // Unsupported SHOW form must fail without a namespace error.
         let error = execute(&ctx, &catalogs, sql)
             .await
             .expect_err("no other SHOW form works on this base commit");

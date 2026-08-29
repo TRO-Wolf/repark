@@ -1,7 +1,4 @@
-//! Momentum-family window-UDF dispatch (RSI/ADX, ROC, MACD*, stochastics, AROON*).
-//!
-//! Called only from [`TaFn::compute`](super::TaFn::compute) /
-//! [`TaFn::compute_all`](super::TaFn::compute_all). Kernel math stays in `crate::momentum`.
+//! Momentum-family window-UDF dispatch. Kernel math stays in `crate::momentum`.
 
 use crate::{
     adx, adxr, apo, aroon, aroonosc, bop, cci, cmo, dx, macd, macdext, macdfix, minus_di, minus_dm,
@@ -28,8 +25,6 @@ pub(super) fn compute(func: TaFn, series: &[&[f64]], params: &[f64]) -> crate::R
         TaFn::Cci => cci(series[0], series[1], series[2], period(params[0])?),
         TaFn::Cmo => cmo(series[0], period(params[0])?),
         TaFn::Bop => bop(series[0], series[1], series[2], series[3]),
-        // params: [fastPeriod, slowPeriod, matype]; `matype` is a small non-negative code
-        // coerced via [`period`] (kernel `ma_dispatch` range-validates it).
         TaFn::Apo => apo(
             series[0],
             period(params[0])?,
@@ -60,7 +55,6 @@ pub(super) fn compute(func: TaFn, series: &[&[f64]], params: &[f64]) -> crate::R
         TaFn::MinusDi => minus_di(series[0], series[1], series[2], period(params[0])?),
         TaFn::PlusDm => plus_dm(series[0], series[1], period(params[0])?),
         TaFn::MinusDm => minus_dm(series[0], series[1], period(params[0])?),
-        // MACD splits: params [fast, slow, signal]; each output picks one band.
         TaFn::Macd => macd(
             series[0],
             period(params[0])?,
@@ -82,12 +76,9 @@ pub(super) fn compute(func: TaFn, series: &[&[f64]], params: &[f64]) -> crate::R
             period(params[2])?,
         )
         .map(|(_, _, h)| h),
-        // MACDFIX splits: params [signal] (12/26 pinned).
         TaFn::Macdfix => macdfix(series[0], period(params[0])?).map(|(m, _, _)| m),
         TaFn::MacdfixSignal => macdfix(series[0], period(params[0])?).map(|(_, s, _)| s),
         TaFn::MacdfixHist => macdfix(series[0], period(params[0])?).map(|(_, _, h)| h),
-        // MACDEXT splits: params [fastPeriod, fastMAType, slowPeriod, slowMAType, signalPeriod,
-        // signalMAType], `matype`s coerced via [`period`] then range-validated by the kernel.
         TaFn::Macdext => macdext(
             series[0],
             period(params[0])?,
@@ -118,8 +109,6 @@ pub(super) fn compute(func: TaFn, series: &[&[f64]], params: &[f64]) -> crate::R
             period(params[5])?,
         )
         .map(|(_, _, h)| h),
-        // STOCH splits: params [fastkPeriod, slowkPeriod, slowkMAType, slowdPeriod,
-        // slowdMAType]; each output picks one line.
         TaFn::StochSlowk => stoch(
             series[0],
             series[1],
@@ -142,7 +131,6 @@ pub(super) fn compute(func: TaFn, series: &[&[f64]], params: &[f64]) -> crate::R
             period(params[4])?,
         )
         .map(|(_, d)| d),
-        // STOCHF splits: params [fastkPeriod, fastdPeriod, fastdMAType].
         TaFn::StochfFastk => stochf(
             series[0],
             series[1],
@@ -161,7 +149,6 @@ pub(super) fn compute(func: TaFn, series: &[&[f64]], params: &[f64]) -> crate::R
             period(params[2])?,
         )
         .map(|(_, d)| d),
-        // STOCHRSI splits: params [timeperiod, fastkPeriod, fastdPeriod, fastdMAType].
         TaFn::StochrsiFastk => stochrsi(
             series[0],
             period(params[0])?,
@@ -183,7 +170,7 @@ pub(super) fn compute(func: TaFn, series: &[&[f64]], params: &[f64]) -> crate::R
 }
 
 /// ===========================================================================================
-/// Momentum multi-output families (MACD* / STOCH* / AROON) — one kernel run, every band.
+/// Compute all bands for a momentum multi-output family in one kernel run.
 /// ===========================================================================================
 pub(super) fn compute_all(
     family: MultiFamily,

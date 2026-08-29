@@ -1,5 +1,5 @@
-//! SE-1 PR-D1: Spark-door execution-layer pin for `tightenNulls` on the `WindowSpec`
-//! serving shape (nullable keys, Spark ASC → NULLS FIRST), plus the Iceberg-CREATE refuse.
+//! Spark-door execution-layer pins for `tightenNulls` on nullable `WindowSpec` keys and the
+//! Iceberg-CREATE refuse.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -201,12 +201,11 @@ async fn iceberg_create_from_derived_expression_over_tightened_source_refuses() 
 #[tokio::test]
 async fn iceberg_create_from_subquery_over_tightened_source_refuses() {
     // Kills: plan.apply (no subquery walk) letting a CTAS whose only tightened source sits in an
-    // EXISTS subquery persist required (R-B). Y-5 (round 4): the prose said "scalar-subquery";
+    // EXISTS subquery persist required (R-B). The wording must name EXISTS, not "scalar-subquery";
     // the SQL below is and always was `WHERE EXISTS (SELECT 1 FROM tight)`. The core twin
     // (`subquery_expression_source_is_visible_to_the_create_walk`) and the ANSI twin
     // (`ansi_ctas_from_subquery_over_tightened_source_refuses`) both said "expression-subquery"
-    // and needed no change — checked, this door was the only drifted one. (The lane's octo
-    // remediation round made the same correction independently.)
+    // and needed no change.
     let warehouse_dir = TempDir::new().unwrap();
     let warehouse = warehouse_dir.path().to_str().unwrap().to_string();
     let session = spark_session();
@@ -372,8 +371,7 @@ async fn iceberg_create_from_lazy_view_of_derived_plan_refuses() {
     );
 }
 
-/// Shared fixture for the round-4 DDL-sink pins (Y-3 / Y-4): an Iceberg catalog `ice` with
-/// namespace `sales`, a tightened temp view `tight` and an untightened `plain`.
+/// Build an Iceberg catalog with tightened and untightened temporary views for DDL-sink tests.
 async fn ddl_sink_session() -> (TempDir, ReparkSession) {
     let warehouse_dir = TempDir::new().unwrap();
     let warehouse = warehouse_dir.path().to_str().unwrap().to_string();
@@ -490,9 +488,7 @@ async fn session_scoped_create_view_and_select_into_over_tightened_source_stay_a
 
 #[tokio::test]
 async fn create_view_in_iceberg_catalog_over_untightened_source_stays_allowed() {
-    // Y-3 allowed side + the PAYLOAD boundary: `CREATE VIEW` persisting an Iceberg table at all
-    // predates this branch (MEASURED on BASE with `plain`). This round fixes only the tighten
-    // leak, so the untightened statement must still behave exactly as it did on BASE.
+    // Untightened sources remain allowed while tightened sources are refused.
     let (_dir, session) = ddl_sink_session().await;
     session
         .sql("CREATE VIEW ice.sales.v_plain AS SELECT * FROM plain LIMIT 0")
@@ -504,7 +500,7 @@ async fn create_view_in_iceberg_catalog_over_untightened_source_stays_allowed() 
 }
 
 // ===========================================================================================
-// SQM round 5 — Spark door: resolved-catalog gating (Z-1) and the CTAS-wrapped DDL sink (Z-3).
+// SQM resolved-catalog gating (Z-1) and the CTAS-wrapped DDL sink (Z-3).
 // ===========================================================================================
 
 #[tokio::test]
@@ -513,13 +509,13 @@ async fn default_catalog_bare_name_ddl_over_tightened_source_refuses() {
     // `SET datafusion.catalog.default_catalog = ice` (+ `default_schema = sales`) a one-part or
     // two-part name resolves into the Iceberg catalog and persists the same required columns.
     //
-    // MEASURED on BASE (675a413), PER ROW — R6-3 (round 6) corrects the earlier blanket
+    // MEASURED on BASE (675a413), PER ROW — each row carries its own outcome.
     // "every statement below returned Ok", which was false for the Full row:
     //   - `CREATE VIEW v_bare …`      (Bare)    → **Ok** on BASE (the red this pin kills)
     //   - `SELECT * INTO t_bare …`    (Bare)    → **Ok** on BASE (the red this pin kills)
     //   - `CREATE VIEW sales.v_partial …` (Partial) → **Ok** on BASE (the red this pin kills)
-    //   - `CREATE VIEW ice.sales.v_full …` (Full) → **already refused** on BASE (round 4 wired
-    //     the three-part spelling on this door); it is the regression fence, not a round-5 red.
+    //   - `CREATE VIEW ice.sales.v_full …` (Full) → **already refused** on BASE; it is the
+    //     regression fence, not a new red.
     let (_dir, session) = ddl_sink_session().await;
     session
         .sql("SET datafusion.catalog.default_catalog = 'ice'")
@@ -530,7 +526,7 @@ async fn default_catalog_bare_name_ddl_over_tightened_source_refuses() {
         .await
         .expect("SET default_schema");
     //
-    // R6-4 (round 6): each refusal also asserts the UNPUBLISHED half — `table_exists` FALSE for
+    // Each refusal also asserts the UNPUBLISHED half — `table_exists` FALSE for
     // the name the statement resolves to.
     for (sql, resolved) in [
         (
@@ -545,7 +541,7 @@ async fn default_catalog_bare_name_ddl_over_tightened_source_refuses() {
             "CREATE VIEW sales.v_partial AS SELECT * FROM datafusion.public.tight LIMIT 0",
             "ice.sales.v_partial",
         ),
-        // Three-part still refuses — round 4's behaviour is not traded away.
+        // Three-part still refuses.
         (
             "CREATE VIEW ice.sales.v_full AS SELECT * FROM datafusion.public.tight LIMIT 0",
             "ice.sales.v_full",
@@ -569,12 +565,7 @@ async fn default_catalog_bare_name_ddl_over_tightened_source_refuses() {
 
 #[tokio::test]
 async fn ctas_wrapping_a_ddl_sink_refuses_without_publishing_the_inner_table() {
-    // Z-3, Spark door. This door plans the CTAS body through `execute_passthrough`, which now
-    // runs the shared belt's guard on the planned statement — so the inner
-    // `SELECT … INTO ice.sales.wrap_inner` refuses BEFORE it can publish. MEASURED on BASE
-    // (675a413): already green on THIS door (round 4's passthrough refuse fires on the inner
-    // statement's plan) — it is here as the regression fence for the outcome the ANSI door had
-    // to be fixed to match, where BASE returned Ok and persisted BOTH tables.
+    // The passthrough guard rejects the inner `SELECT … INTO` before either table is published.
     let (_dir, session) = ddl_sink_session().await;
     let sql =
         "CREATE TABLE ice.sales.wrap AS SELECT * INTO ice.sales.wrap_inner FROM tight LIMIT 0";

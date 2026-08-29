@@ -1,10 +1,4 @@
-"""Bitwise facade wrappers (FN-F + FN-GT1 + FN-GT2 bitmap).
-
-Public names are re-exported from ``functions.py``. ``bitwise_not`` is a SHIM
-(``Column.bitwiseXOR(lit(-1))``). FN-GT1 wires ``bit_count`` / ``bit_get`` /
-shifts through ``call_scalar``. FN-GT2 bitmap helpers live here (bit-family
-sibling of the URL wrappers).
-"""
+"""Bitwise function wrappers for the Spark facade."""
 
 from __future__ import annotations
 

@@ -1,9 +1,8 @@
 """Q1 re-home pins — ``import repark.sql`` fails; ``repark.sql()`` is the ANSI door.
 
-The pyspark-alias package now lives at ``repark.spark.sql`` so
-``sed 's/pyspark/repark.spark/'`` still works. Identity of alias names vs
-canonical ``repark.spark.*`` is pinned here; the old ``repark.sql`` *module*
-must not exist.
+The pyspark-alias package lives at ``repark.spark.sql`` so ``sed 's/pyspark/repark.spark/'``
+still works. Identity of alias names vs canonical ``repark.spark.*`` is pinned here; the old
+``repark.sql`` *module* must not exist.
 """
 
 from __future__ import annotations

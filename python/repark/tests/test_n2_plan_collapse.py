@@ -1,7 +1,7 @@
-"""r23b N2 — adjacent projection/window collapse (alias-chain squash + window merge).
+"""N2 — adjacent projection/window collapse (alias-chain squash + window merge).
 
 Plan-shape pins (WindowAggExec / logical ``AS`` chain counts) + Arrow value correctness.
-No brittle full plan-string pins (Q13). Synthetic OHLCV only.
+No brittle full plan-string pins. Synthetic OHLCV only.
 """
 
 from __future__ import annotations
@@ -98,8 +98,8 @@ def test_stage_a_alias_chain_squash_passthrough(bars: object) -> None:
     )
     frame = frame.withColumns({"sma10": ta.sma("close", timeperiod=10).over(window)})
     logical = _logical_plan_text(frame)
-    # After squash: at most one identity ``AS name`` per field per projection level —
-    # triple ``ts AS ts AS ts`` is the pre-fix anti-pattern.
+    # At most one identity ``AS name`` per field per projection level; triple
+    # ``ts AS ts AS ts`` is the anti-pattern this pins against.
     assert "ts AS ts AS ts" not in logical, logical[:1200]
     assert "close AS close AS close" not in logical, logical[:1200]
     # Still projects the columns (behavioral, not full-plan pin).
@@ -134,7 +134,7 @@ def test_stage_b_adjacent_same_spec_withcolumns_merges(bars: object) -> None:
 
 
 def test_stage_b_adjacent_same_spec_withcolumn_merges(bars: object) -> None:
-    """Independent same-spec sequential withColumn also merges (Q14)."""
+    """Independent same-spec sequential withColumn also merges."""
     window = Window.orderBy("ts")
     frame = bars  # type: ignore[assignment]
     specs = (
@@ -157,7 +157,7 @@ def test_stage_b_adjacent_same_spec_withcolumn_merges(bars: object) -> None:
 
 
 def test_stage_b_dependent_column_keeps_stacking(bars: object) -> None:
-    """ETR-style dep on prior-layer defined name MUST keep stacking (Q16)."""
+    """ETR-style dep on prior-layer defined name MUST keep stacking."""
     window = Window.orderBy("ts")
     frame = bars.withColumn("tr", ta.trange("high", "low", "close").over(window))  # type: ignore[attr-defined]
     frame = frame.withColumn("etr5", F.avg("tr").over(window))  # type: ignore[attr-defined]
@@ -165,12 +165,11 @@ def test_stage_b_dependent_column_keeps_stacking(bars: object) -> None:
     assert plan.count("WindowAggExec") == 2, plan[:2000]
     table = frame.to_arrow().sort_by("ts")  # type: ignore[attr-defined]
     assert "tr" in table.column_names and "etr5" in table.column_names
-    # Sanity: etr5 is null-safe float column with same length.
     assert table.num_rows == bars.count()  # type: ignore[attr-defined]
 
 
 def test_stage_b_filter_blocks_merge(bars: object) -> None:
-    """Intervening filter blocks adjacent merge (Q15)."""
+    """Intervening filter blocks adjacent merge."""
     window = Window.orderBy("ts")
     frame = bars.withColumns(  # type: ignore[attr-defined]
         {"ema5": ta.ema("close", timeperiod=5).over(window)}
@@ -182,7 +181,7 @@ def test_stage_b_filter_blocks_merge(bars: object) -> None:
 
 
 def test_stage_b_round_wrap_same_layer_merges(bars: object) -> None:
-    """``.round()`` is same-layer wrap (Q15) — chained round-wrapped withColumns still merge."""
+    """``.round()`` is same-layer wrap — chained round-wrapped withColumns still merge."""
     window = Window.orderBy("ts")
     batch1 = {
         "ema5": ta.ema("close", timeperiod=5).over(window).round(4),
@@ -254,7 +253,7 @@ def test_stage_b_different_window_spec_no_merge(bars: object) -> None:
 
 
 def test_stage_b_drop_blocks_merge(bars: object) -> None:
-    """Intervening drop blocks adjacent merge (Q15) — octo C1-Q-001."""
+    """Intervening drop blocks adjacent merge."""
     window = Window.orderBy("ts")
     frame = bars.withColumn("ema5", ta.ema("close", timeperiod=5).over(window))  # type: ignore[attr-defined]
     frame = frame.drop("volume")  # type: ignore[attr-defined]
@@ -267,7 +266,7 @@ def test_stage_b_drop_blocks_merge(bars: object) -> None:
 
 
 def test_stage_b_select_subset_blocks_merge(bars: object) -> None:
-    """Intervening select-subset blocks adjacent merge (Q15) — octo C1-Q-002."""
+    """Intervening select-subset blocks adjacent merge."""
     window = Window.orderBy("ts")
     frame = bars.withColumn("ema5", ta.ema("close", timeperiod=5).over(window))  # type: ignore[attr-defined]
     frame = frame.select("ts", "close", "high", "low", "ema5")  # type: ignore[attr-defined]
@@ -279,7 +278,7 @@ def test_stage_b_select_subset_blocks_merge(bars: object) -> None:
 
 
 def test_stage_b_alias_wrap_same_layer_merges(bars: object) -> None:
-    """``.alias`` is same-layer wrap (Q15) — octo C1-Q-003."""
+    """``.alias`` is same-layer wrap."""
     window = Window.orderBy("ts")
     frame = bars.withColumn(  # type: ignore[attr-defined]
         "ema5", ta.ema("close", timeperiod=5).over(window).alias("ema5")
@@ -305,7 +304,7 @@ def test_stage_b_alias_wrap_same_layer_merges(bars: object) -> None:
 
 
 def test_stage_b_cache_blocks_merge(bars: object) -> None:
-    """cache()/persist() return self — must not merge past a cache mark (octo C2-L-001)."""
+    """cache()/persist() return self — must not merge past a cache mark."""
     window = Window.orderBy("ts")
     frame = bars.withColumn("ema5", ta.ema("close", timeperiod=5).over(window))  # type: ignore[attr-defined]
     frame = frame.cache()  # type: ignore[attr-defined]
@@ -317,7 +316,7 @@ def test_stage_b_cache_blocks_merge(bars: object) -> None:
 
 
 def test_stage_b_overwrite_base_name_blocks_merge(bars: object) -> None:
-    """Layer that redefines a base name must not merge a later reader of that name — C1-Q-004.
+    """Layer that redefines a base name must not merge a later reader of that name.
 
     Sequential: second ``ema(close)`` sees the *replaced* close. Merged-on-base would see
     original close → wrong values. Dep sniff must keep stacking (2 WindowAggExec).
@@ -333,14 +332,11 @@ def test_stage_b_overwrite_base_name_blocks_merge(bars: object) -> None:
     assert plan.count("WindowAggExec") == 2, plan[:2000]
     table = frame.to_arrow().sort_by("ts")  # type: ignore[attr-defined]
     assert "close" in table.column_names and "ema10" in table.column_names
-    # Sanity: stacked path produces finite floats (not plan-only assert).
     close_vals = table.column("close").to_numpy(zero_copy_only=False)
     assert close_vals.shape[0] == bars.count()  # type: ignore[attr-defined]
 
 
-# ==================================================================================================
-# r25 T3 residual — nested identity Alias peel + operator-shaped 17-TA value parity
-# ==================================================================================================
+# T3 residual — nested identity Alias peel + operator-shaped 17-TA value parity
 
 
 def _repeated_alias_nodes(logical: str) -> list[str]:
@@ -349,10 +345,10 @@ def _repeated_alias_nodes(logical: str) -> list[str]:
 
 
 def test_t3_double_alias_select_peels_repeated_identity(bars: object) -> None:
-    """r25 T3: ``col.alias(name).alias(name)`` must not plan as ``… AS name AS name``.
+    """``col.alias(name).alias(name)`` must not plan as ``… AS name AS name``.
 
-    Extends N2 stage (a) collapse path — peel happens inside
-    ``_collapse_identity_projection_alias`` via native ``collapse_identity_aliases``.
+    Peel happens inside ``_collapse_identity_projection_alias`` via native
+    ``collapse_identity_aliases``.
     """
     stacked = F.col("close").alias("close").alias("close")
     frame = bars.select(stacked, "ts")  # type: ignore[attr-defined]
@@ -379,7 +375,7 @@ def test_t3_rename_double_alias_peels_to_single(bars: object) -> None:
 
 
 def test_t3_distinct_rename_chain_peels_to_outer(bars: object) -> None:
-    """``col.alias("a").alias("b")`` → ``… AS b`` (not ``… AS a AS b``) — octo C1-Q-006."""
+    """``col.alias("a").alias("b")`` → ``… AS b`` (not ``… AS a AS b``)."""
     frame = bars.select(F.col("close").alias("a").alias("b"), "ts")  # type: ignore[attr-defined]
     logical = _logical_plan_text(frame)
     assert " AS a AS b" not in logical, logical[:1200]
@@ -439,7 +435,7 @@ def test_t3_operator_17_ta_chain_plan_and_value_parity(bars: object) -> None:
     assert physical.count("WindowAggExec") == 1, physical[:2500]
     assert physical.count("ProjectionExec") <= 2, physical[:2500]
     assert _repeated_alias_nodes(logical) == [], logical[:1500]
-    # Triple identity anti-pattern (pre-N2) must stay dead.
+    # Triple identity anti-pattern must stay dead.
     assert "ts AS ts AS ts" not in logical
     assert "close AS close AS close" not in logical
     fused = bars.withColumns(combined)  # type: ignore[attr-defined]

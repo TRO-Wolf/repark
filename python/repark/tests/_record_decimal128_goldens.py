@@ -1,33 +1,20 @@
 """Record mode for the decimal128 corpus — re-derive every `spark` half from live PySpark.
 
-NOT a `test_` module: pytest never collects it. It is the driver that produced the recorded Spark
-halves in `test_decimal128_parity.py`, committed so the "recorded against live PySpark 4.1.2"
-claim is falsifiable from inside the repo rather than only from the session that made it
-(the golden-drift blind spot `docs/testing.md` names).
-
-It imports `ROWS` / `CTAS_ROWS` from the COMMITTED test module and runs each row's OWN recipe —
-the same `run_row` the assertions use — on a live PySpark session. The recorded golden and the
-asserted recipe therefore cannot drift apart: there is one recipe, not two copies.
-
-Raise-class rows (`spark_raises`) re-check that live Spark still raises a matching exception
-class rather than returning a table. CTAS `spark_select` halves (when set) are re-derived the
-same way as ordinary equality goldens.
-
-Run it (needs a JVM and `pyspark`, i.e. `uv sync --extra record`)::
+NOT a `test_` module: pytest never collects it. It imports `ROWS` / `CTAS_ROWS` from the
+committed test module and runs each row's own recipe (the same `run_row` the assertions use) on
+live PySpark, so the recorded golden and the asserted recipe cannot drift apart. Run it (needs a
+JVM and `pyspark`, i.e. `uv sync --extra record`)::
 
     JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \\
         PYTHONPATH=python/repark-parity/src \\
         .venv/bin/python python/repark/tests/_record_decimal128_goldens.py
 
-Exit code 0 means every recorded half still reproduces bit-for-bit (schema name/type/nullability
-then values) and every raise-class still raises. Non-zero prints each mismatch with the live
-schema and rows (or the live exception), which are the values to paste back into the module after
-deciding the move is deliberate. It never edits the corpus — re-recording is a human decision,
-and a driver that rewrote its own oracle would launder drift.
+Exit code 0 means every recorded half reproduces bit-for-bit and every raise class still raises;
+non-zero prints the live values to paste back after a deliberate move. It never edits the corpus —
+re-recording is a human decision; a driver that rewrote its own oracle would launder drift.
 
-The Spark session basis is the one the corpus was recorded under and is pinned here, not guessed:
-`local[2]`, ANSI on, `spark.sql.shuffle.partitions=2`, UI off — the same basis
-`_live_parity.build_spark_engine` uses for the live oracle tier.
+Spark basis pinned here, not guessed: `local[2]`, ANSI on, shuffle partitions 2, UI off — the same
+basis `_live_parity.build_spark_engine` uses for the live oracle tier.
 """
 
 from __future__ import annotations
@@ -36,8 +23,8 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-# Run as a script from anywhere: the corpus is a sibling module, imported by name so the driver
-# reads the SAME rows the suite asserts (never a copy).
+# Run as a script from anywhere: import the sibling corpus by name — the driver must read the
+# SAME rows the suite asserts, never a copy.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 if TYPE_CHECKING:
@@ -111,7 +98,6 @@ def _record_row(spark: Any, row: DecimalRow) -> str | None:
             f"    live returned schema={_signature(live)} rows={live.to_pydict()}"
         )
 
-    # repark_raises rows still have a successful Spark half to re-derive.
     try:
         live = run_row(row, spark)
     except Exception as exc:

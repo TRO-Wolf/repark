@@ -1,8 +1,5 @@
-//! `CALL <catalog>.system.rewrite_manifests(…)` — MW-6.
-//!
-//! Manifest re-organization over the fork's `RewriteManifestsAction`
-//! (`crates/iceberg/src/transaction/rewrite_manifests.rs`, pin `5e7b2e4`). The live file set is
-//! identical before and after; only the grouping of entries into manifests changes.
+//! `CALL <catalog>.system.rewrite_manifests(…)` over the fork's `RewriteManifestsAction`.
+//! The live file set stays identical; only manifest grouping changes.
 
 use std::sync::Arc;
 
@@ -30,23 +27,9 @@ struct MatchingManifests {
 /// ===========================================================================================
 /// Execute `CALL <catalog>.system.rewrite_manifests(table => …)`.
 ///
-/// Spark's two-column result, measured from the Iceberg 1.10.0 jar's `OUTPUT_TYPE` and by
-/// executing the procedure on a live Spark 4.0.1 oracle (2026-08-23):
-///
-/// | Spark column | Type | Nullable | Source |
-/// |---|---|---|---|
-/// | `rewritten_manifests_count` | int | false | new snapshot summary `manifests-replaced` |
-/// | `added_manifests_count` | int | false | new snapshot summary `manifests-created` |
-///
-/// The fork's action returns no counts, so the numbers come from the summary it writes.
-///
-/// `rewritten_manifests_count` matches Spark at every manifest size measured; the added side
-/// diverges above `commit.manifest.target-size-bytes` (registry `MANIFEST-3`).
-///
-/// **Spark rewrites delete manifests too; this engine cannot** (registry `MANIFEST-1`). The fork
-/// carries a delete manifest forward byte-identical so outstanding merge-on-read deletes still
-/// apply. A call that would answer two zeros while Spark would compact delete manifests refuses
-/// instead: zeros read as "nothing to compact", and an operator would run the procedure forever.
+/// Return `rewritten_manifests_count` and `added_manifests_count` from the new snapshot summary
+/// because the fork action returns no counts. Delete manifests remain unchanged; refusing a
+/// zero-result case avoids a false clean signal when Spark would rewrite them.
 ///
 /// # Errors
 /// Plan / `NotImplemented` / iceberg commit failures as [`DataFusionError`].

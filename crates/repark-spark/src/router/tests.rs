@@ -1,7 +1,4 @@
-//! Router-spine tests: passthrough/gate sanity checks that are NEW outside the ported v1
-//! census (the ported lib-root battery lives in `crate::tests`). The PR-2/PR-3a TEMPORARY
-//! refuse arms are all restored as of phase-2 PR-3b; their refuse tests were deleted with the
-//! arms, per the p2b/p2c/p2d ledgers.
+//! Router-spine tests for passthrough and gate ordering outside the main unit battery.
 
 use datafusion::prelude::SessionContext;
 use repark_core::CatalogRegistry;
@@ -30,8 +27,7 @@ fn source_locations_depend_on_rewrite_bytes_not_buffer_ownership() {
 
 #[tokio::test]
 async fn truncate_refusal_is_verbatim_v1() {
-    // TRUNCATE is a v1 targeted refuse (C4-L-001), not a PR-2 temporary arm — its message steers
-    // to the documented workarounds instead of naming a restoring PR.
+    // TRUNCATE is a targeted refusal with documented workarounds.
     let (ctx, catalogs) = ctx();
     let error = execute(&ctx, &catalogs, "TRUNCATE TABLE ice.ns.t")
         .await
@@ -77,8 +73,7 @@ async fn read_only_set_reaches_p11_refusal() {
 
 #[tokio::test]
 async fn multi_statement_still_refuses_before_refuse_arms() {
-    // BUG-010 ordering: the multi-statement gate runs before any PR-2 refuse arm, so a script
-    // refuses as a parse-class error, not as a NotImplemented construct refusal.
+    // The multi-statement gate precedes all statement-specific refusal arms.
     let (ctx, catalogs) = ctx();
     let error = execute(&ctx, &catalogs, "SELECT 1; DROP TABLE ice.ns.t")
         .await

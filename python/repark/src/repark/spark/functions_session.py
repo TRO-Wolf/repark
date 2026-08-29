@@ -1,10 +1,4 @@
-"""Session / identity / hint facade wrappers (FN-F).
-
-Public names are re-exported from ``functions.py``. Catalog and user strings
-are foldable session snapshots (ADR-0004: Session only, no env). ``version()``
-is the repark distribution string, not DataFusion ``version()``. ``uuid()``
-is non-deterministic (type + uniqueness, not value).
-"""
+"""Session-bound function and identity wrappers."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""U6 R-APPLYINPANDAS: GroupedData.applyInPandas over the mapInArrow bridge."""
+"""GroupedData.applyInPandas over the mapInArrow bridge."""
 
 from __future__ import annotations
 
@@ -152,8 +152,8 @@ def test_applyinpandas_schema_type_mismatch_loud(spark: SparkSession) -> None:
         return pd.DataFrame({"k": ["x"], "total": [1]})
 
     out = frame.groupBy("k").applyInPandas(wrong_type, "k INT, total INT")
-    # Loud either via cast-to-schema conversion error (names the column) or mapInArrow
-    # field-type validation — both are schema-mismatch class failures.
+    # Broad match: either the cast-to-schema conversion error or mapInArrow field-type
+    # validation — both are schema-mismatch class failures.
     with pytest.raises(
         PySparkException,
         match=r"schema mismatch|declared schema|Conversion failed",
@@ -162,11 +162,7 @@ def test_applyinpandas_schema_type_mismatch_loud(spark: SparkSession) -> None:
 
 
 def test_applyinpandas_empty_wrong_columns_loud(spark: SparkSession) -> None:
-    """Empty group result with wrong column names must not silently become [] (Spark parity).
-
-    octo U6 C1: zero-row ``to_batches()→[]`` previously re-emitted the declared schema and
-    swallowed RESULT_COLUMN_NAMES_MISMATCH-class errors.
-    """
+    """Empty group result with wrong column names must not silently become [] (Spark parity)."""
     frame = spark.createDataFrame([(1, 1), (2, 2)], "k INT, v INT")
 
     def empty_wrong(pdf: pd.DataFrame) -> pd.DataFrame:
@@ -223,8 +219,7 @@ def test_applyinpandas_user_raise_surfaces(spark: SparkSession) -> None:
     text = str(caught.value)
     assert "Traceback" in text
     assert "user boom apply" in text
-    # Chained cause preserved for debuggers; KeyboardInterrupt must not be wrapped
-    # (separate pin) — Exception subclass surfaces as PySparkException + cause.
+    # Chained cause preserved for debuggers.
     assert isinstance(caught.value.__cause__, RuntimeError)
 
 
@@ -314,11 +309,7 @@ def test_applyinpandas_pivot_refused(spark: SparkSession) -> None:
 
 
 def test_applyinpandas_boundary_stitch_multi_batch(spark: SparkSession) -> None:
-    """Same group split across two Arrow batches must still call func once (stitch).
-
-    Drives the facade boundary-stitch path by feeding a sorted multi-batch stream
-    through the private group iterator (same helper the bridge uses).
-    """
+    """Same group split across two Arrow batches must still call func once (stitch)."""
     from repark.spark.dataframe import _iter_apply_in_pandas_group_tables
 
     # Two batches, group k=1 straddles the edge; k=2 only in batch 2.
@@ -335,7 +326,7 @@ def test_applyinpandas_boundary_stitch_multi_batch(spark: SparkSession) -> None:
 
 
 def test_applyinpandas_boundary_stitch_null_type_promote(spark: SparkSession) -> None:
-    """Stitch when an all-null string key segment infers Arrow null vs string (octo U6 C2)."""
+    """Stitch when an all-null string key segment infers Arrow null vs string."""
     from repark.spark.dataframe import _iter_apply_in_pandas_group_tables
 
     # from_pydict infers g:null in batch_a and g:string in batch_b — from_batches alone fails.
@@ -377,9 +368,8 @@ def test_applyinpandas_engine_sort_key_contiguous_stream(spark: SparkSession) ->
 def test_applyinpandas_e2e_multi_batch_group_calls_once(spark: SparkSession) -> None:
     """Group spanning multiple engine Arrow batches must invoke func once (stitch e2e).
 
-    Batch size is pinned to 8192 here (the session default is 65536) so >8192 rows for
-    one key forces a multi-batch group through the real orderBy + mapInArrow bridge
-    (not only the unit iterator pin).
+    Batch size pinned to 8192 so one key's >8192 rows force a multi-batch group through the real
+    orderBy + mapInArrow bridge.
     """
     large_group_rows = 20_000  # > 8192 → at least 3 batches for k=1
     spark.conf.set("datafusion.execution.batch_size", "8192")

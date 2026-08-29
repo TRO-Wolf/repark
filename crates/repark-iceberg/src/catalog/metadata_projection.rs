@@ -1,43 +1,11 @@
-//! RePark-side policy for the fork's `table$meta` metadata tables — **projection honor** (r25 T2
-//! item 0) and **enumeration hiding** (ADR-0006, campaign decision D2 / unit H-1c).
+//! `RePark` policies for fork metadata tables: projection honor and enumeration hiding.
 //!
-//! ## Projection honor
-//!
-//! The fork's `IcebergMetadataTableProvider::scan` (iceberg-datafusion
-//! `table/metadata_table.rs`) **ignores** the `projection` argument — empty projection
-//! (`count()` / styled `.show()`) and partial column lists plan a logical schema that does not
-//! match the physical full-column scan → DataFusion Internal "Physical input schema should be
-//! the same … (physical) N vs (logical) 0".
-//!
-//! Fix (tonight): wrap every `table$meta` provider returned from the registered schema provider
-//! so `scan` applies DataFusion's [`ProjectionExec`] over the fork plan (never collect-then-
-//! project). Fork proper fix + shim removal = fork-workstream seed (ledger only).
-//!
-//! ## Enumeration hiding
-//!
-//! The fork's `IcebergSchemaProvider::table_names` (iceberg-datafusion `schema.rs`) does not
-//! return what the catalog holds: for **every** listed base table it also **synthesizes** one
-//! name per [`MetadataTableType`] (sixteen at pin `5e7b2e4`) so a namespace of N tables
-//! enumerates as 17 N names. Both engines the two SQL doors point at hide those names from enumeration (Apache
-//! Spark's Iceberg extension lists only what `Catalog::list_tables` returns; Trino documents
-//! metadata tables as queryable-but-unlisted), and DataFusion's `information_schema` builders
-//! call `table()` / `table_type()` **per enumerated name**. Resolving one synthesized name costs
-//! TWO `load_table` round-trips in the fork (`IcebergTableProvider::try_new`, then
-//! `metadata_table()`), so leaving them in costs **32** extra round-trips per base table
-//! (sixteen types × two loads). Measured on the fifteen-type pin: 31 calls before the
-//! filter and 1 after; the identity is `1 + 2×N`.
-//!
-//! [`MetadataProjectionSchemaProvider::table_names`] therefore drops exactly the synthesized
-//! names (last-`$` + [`MetadataTableType`] vocabulary, matching the fork at pin `5e7b2e4`).
-//! A base named `a$b` lists as itself; `a$b$snapshots` is hidden and still resolvable.
-//! Inherent residue: a base literally named `foo$files`.
+//! The fork scan ignores `projection`, so registered metadata providers apply
+//! [`ProjectionExec`] while preserving the full logical schema. The fork also synthesizes
+//! `<base>$<MetadataTableType>` names; `table_names` hides those names but leaves `table()` and
+//! `table_exist()` addressable. A base named `a$b` remains visible, while `a$b$snapshots` hides.
 //!
 //! pins: rp-1-fork-repin/C-004, C-006
-//! `table()` / `table_exist()` are deliberately **unchanged**: `t$snapshots` stays
-//! addressable by name (and so does the Spark door's `t.snapshots` spelling, which rewrites onto
-//! it), which is the Trino shape — hidden from the listing, not removed from the engine. The
-//! decision, its rationale and its rejected alternative are in
-//! `docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md`.
 
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -54,7 +22,7 @@ use datafusion::physical_plan::ExecutionPlan;
 use datafusion::physical_plan::projection::{ProjectionExec, ProjectionExpr};
 use iceberg::inspect::MetadataTableType;
 
-// === r25 T2 item 0: metadata-table projection wrap =========================================
+// === metadata-table projection wrap =========================================
 //
 // Sole-writer: T2 ICE-REF. Applied at SchemaProvider registration (ReparkCatalogProvider
 // snapshot / namespace refresh) so every free-SQL path through `table$meta` is covered.
@@ -517,7 +485,7 @@ mod tests {
         assert!(err.to_string().contains("out of range"), "got: {err}");
     }
 
-    /// r25 morning critic pin: an EMPTY projection over real batches preserves `num_rows` on
+    /// An EMPTY projection over real batches preserves `num_rows` on
     /// the zero-column output — the exact mechanism `count(*)` relies on. `EmptyExec` cannot pin
     /// this (it emits no batches), so this drives rows through a memory source.
     #[tokio::test]
@@ -554,7 +522,7 @@ mod tests {
         );
     }
 
-    /// r25 morning critic pin: projection indices are logical-schema-relative but bind by NAME
+    /// Projection indices are logical-schema-relative but bind by NAME
     /// into the scan's physical schema — a reordered scan output still yields the right DATA.
     #[tokio::test]
     async fn reordered_scan_schema_still_binds_projected_columns_by_name() {

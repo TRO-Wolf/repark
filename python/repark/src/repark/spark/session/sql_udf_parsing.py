@@ -109,8 +109,6 @@ def _sql_udf_in_nested_subquery(query: str, udf_index: int) -> bool:
 
     """
 
-    # === r20 U9: sql-udf-rewrite ===
-
     stack: list[bool] = []
 
     index = 0
@@ -442,8 +440,7 @@ def _parse_simple_sql_udf_call(
             return None
 
         # Bare ident / qualified col (t.a / cat.db.col) / quoted ident / numeric /
-
-        # string / NULL / boolean — simple form only (octo C2-L-001 qualified cols).
+        # string / NULL / boolean — simple form only.
 
         if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", arg):
             simple_args.append(arg)

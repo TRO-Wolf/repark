@@ -1,10 +1,7 @@
-//! Spark LTZ instant producers — Arrow `Timestamp(µs, UTC)` (TZ-4 PR-1 + PR-2).
+//! Spark LTZ instant producers — Arrow `Timestamp(µs, UTC)`.
 //!
-//! PR-1 typed `now` / `current_timestamp` / zone-suffixed `to_timestamp` / integer `CAST`
-//! as µs+UTC. PR-2 localizes zoneless LTZ inputs in `spark.sql.session.timeZone` then
-//! stores the instant: `TIMESTAMP '…'`, zoneless `to_timestamp`, `CAST(str AS TIMESTAMP)`,
-//! `CAST(date AS TIMESTAMP)`, `CAST(ntz AS TIMESTAMP)`. A zone-suffixed string is already
-//! an instant (do not localize — H-1a double-shift trap). NTZ stays naive.
+//! `now`, `current_timestamp`, and LTZ `to_timestamp` produce microsecond UTC timestamps.
+//! Zoneless inputs localize in the session zone; zone-suffixed inputs and NTZ remain unchanged.
 
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
@@ -64,11 +61,7 @@ fn current_timestamp_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkNow::current_timestamp()))
 }
 
-/// The instant-typed `to_timestamp` the SQL door resolves.
-///
-/// Public so the facade's dispatch table embeds this exact kernel rather than DataFusion-core's
-/// `to_timestamp`, which returns `Timestamp(ns, None)` and so drops both the TZ-4 PR-1 LTZ wire
-/// type and the PR-2 session-zone localization (charter clause C-012).
+/// Return the instant-typed `to_timestamp` kernel used by SQL and facade dispatch.
 #[must_use]
 pub fn to_timestamp_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkToTimestamp::new()))
@@ -162,9 +155,7 @@ impl ScalarUDFImpl for SparkNow {
 }
 
 /// ===========================================================================================
-/// `to_timestamp` — DataFusion's parser (no `execution.time_zone`, Q9), then localize
-/// zoneless strings in the session zone and emit µs+UTC. Zone-suffixed strings keep the
-/// parsed instant (H-1a double-shift control).
+/// `to_timestamp` parses strings, localizes zoneless values in the session zone, and emits µs+UTC.
 /// ===========================================================================================
 #[derive(Debug)]
 struct SparkToTimestamp {
@@ -174,15 +165,10 @@ struct SparkToTimestamp {
 
 impl SparkToTimestamp {
     fn new() -> Self {
-        // Default ConfigOptions leave `execution.time_zone` unset (Q9 / D-B2).
-        // Call the impl directly: `ScalarUDF::invoke_with_args` asserts the inner
-        // ns return against our promised µs+UTC field.
         let inner = datafusion::functions::datetime::to_timestamp::ToTimestampFunc::new_with_config(
             &ConfigOptions::default(),
         );
         Self {
-            // Volatile: zoneless parse localizes in the session zone. Const-eval
-            // materializes a tz-naive ScalarValue and date_format then reads NTZ.
             signature: Signature::variadic_any(Volatility::Volatile),
             inner,
         }
@@ -211,12 +197,10 @@ impl ScalarUDFImpl for SparkToTimestamp {
     }
 
     fn return_field_from_args(&self, _args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
-        // Spark `to_timestamp` is nullable even on a non-null literal.
         Ok(Field::new(self.name(), ltz_timestamp_type(), true).into())
     }
 
     fn with_updated_config(&self, _config: &ConfigOptions) -> Option<ScalarUDF> {
-        // Do not pick up `datafusion.execution.time_zone` (Q9).
         Some(ScalarUDF::from(Self::new()))
     }
 
@@ -455,10 +439,6 @@ fn rewrite_cast(
     if timestamp_type.is_ntz() {
         return rewrite_cast_as_ntz(expr, schema);
     }
-    // DataFusion plans `CAST(<int> AS TIMESTAMP)` as
-    // `CAST(CAST(int AS Timestamp(s)) AS Timestamp(ns))`. Wrap the seconds
-    // hop (not a retarget onto µs — that would read the integer as micros),
-    // then elide the ns hop so it cannot strip the UTC annotation.
     if let Expr::Cast(cast) = &expr {
         let targeting_naive_us = matches!(
             cast.field.data_type(),
@@ -531,8 +511,6 @@ fn peel_naive_cast_of_ltz_producer(expr: Expr, schema: &DFSchema) -> Transformed
 }
 
 fn is_wall_clock_cast_source(data_type: &DataType) -> bool {
-    // NTZ is µs-naive. Leftover `Timestamp(ns, None)` (DataFusion `now()`, folded
-    // instants) is an un-annotated instant — type-wrap only, do not localize.
     matches!(
         data_type,
         DataType::Utf8
@@ -587,12 +565,7 @@ fn wrap_as_ltz(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
     Transformed::yes(Expr::Cast(Cast::new_from_field(Box::new(expr), field)))
 }
 
-/// DataFusion folds `TIMESTAMP '…'` to `Timestamp(ns, None)` **literals** whose
-/// ticks are the spelled wall as UTC. Localize that wall in the session zone as
-/// a non-null µs+UTC literal (Spark `TIMESTAMP '…'` is non-null; rewriting to
-/// `to_timestamp` made `CAST(ts AS INT)` nullable and falsely converged TZ-5's
-/// nullability disclosure). `date_format` is `Volatile` so it does not const-eval
-/// this literal in UTC. A tz-annotated ns literal is already an instant.
+/// Localize zoneless nanosecond timestamp literals in the session zone; annotated literals are already instants.
 fn wrap_ns_literal(expr: Expr, schema: &DFSchema, zone: &str) -> Transformed<Expr> {
     let Expr::Literal(scalar, _) = &expr else {
         return Transformed::no(expr);
@@ -733,7 +706,6 @@ mod tests {
             .column(0)
             .as_primitive::<TimestampMicrosecondType>()
             .value(0);
-        // 2024-03-10 01:30-05:00 = 06:30Z
         assert_eq!(ticks, 1_710_052_200_000_000);
     }
 
@@ -750,7 +722,6 @@ mod tests {
             .column(0)
             .as_primitive::<TimestampMicrosecondType>()
             .value(0);
-        // Default session zone is UTC: wall 12:00 is 12:00Z.
         assert_eq!(ticks, 1_718_452_800_000_000);
     }
 
@@ -768,7 +739,6 @@ mod tests {
     #[tokio::test]
     async fn zoneless_inputs_localize_in_the_session_zone() {
         let ctx = ctx_at("America/New_York");
-        // 12:00 EDT = 16:00Z
         let expected = 1_718_467_200_000_000_i64;
         for sql in [
             "SELECT to_timestamp('2024-06-15 12:00:00') AS ts",
@@ -833,7 +803,6 @@ mod tests {
     #[tokio::test]
     async fn ntz_opt_in_bare_timestamp_is_naive_microseconds() {
         let ctx = ctx_ntz_at("America/New_York");
-        // Wall 12:00 stored as NTZ — session zone must NOT localize (would become 16:00Z).
         let expected = 1_718_452_800_000_000_i64;
         for sql in [
             "SELECT TIMESTAMP '2024-06-15 12:00:00' AS ts",

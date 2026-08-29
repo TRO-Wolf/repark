@@ -1,9 +1,9 @@
 """G-INT interchange parity — ``toPandas`` / ``createDataFrame`` / ``to_polars``.
 
 Oracle: live PySpark 4.1.2 (zulu-17, ``spark.sql.session.timeZone=UTC``,
-``spark.sql.execution.arrow.pyspark.enabled=true``) measured 2026-07-27. Routine CI is JVM-free;
-goldens are pinned inline from that oracle. Value AND type are asserted on the Arrow path
-(``to_arrow``) and on the pandas/polars export dtypes — never only via ``show()``.
+``spark.sql.execution.arrow.pyspark.enabled=true``); routine CI is JVM-free and goldens are
+pinned inline from that oracle. Value AND type are asserted on the Arrow path (``to_arrow``)
+and on the pandas/polars export dtypes — never only via ``show()``.
 """
 
 from __future__ import annotations
@@ -23,9 +23,7 @@ def spark() -> ReparkSession:
     return ReparkSession.builder.appName("pytest-interchange").getOrCreate()
 
 
-# ==================================================================================================
 # Shared typed fixture (SQL CAST) — produces the INT-001 type matrix on both engines
-# ==================================================================================================
 
 
 def _typed_frame_with_nulls(spark: ReparkSession) -> object:
@@ -103,9 +101,7 @@ def _typed_frame_no_nulls(spark: ReparkSession) -> object:
     ).drop("ord")
 
 
-# ==================================================================================================
 # INT-001 — toPandas / to_pandas: value AND dtype per column type
-# ==================================================================================================
 
 
 def _assert_polars_timestamp_dtype(dtype: object) -> None:
@@ -132,11 +128,8 @@ def _assert_timestamp_wall_clock(value: object, expected: dt.datetime) -> None:
 def test_to_pandas_with_nulls_values_and_dtypes(spark: ReparkSession) -> None:
     """Live Spark 4.1.2 Arrow-on: nulls promote int→float64, bool→object; decimal object+Decimal.
 
-    Measured under TZ=UTC / arrow.pyspark.enabled=true. repark routes to_pandas through
-    ``to_arrow().to_pandas()`` — the same path Arrow-enabled PySpark uses.
-
-    INT-001 matrix (C1-Q-004): every column has Arrow type + value cells for all three rows,
-    including i64 / f64 / ts (previously soft-pinned only).
+    repark routes to_pandas through ``to_arrow().to_pandas()`` — the same path Arrow-enabled
+    PySpark uses. INT-001 matrix (C1-Q-004): every column has Arrow type + value cells.
     """
     pd = pytest.importorskip("pandas")
     frame = _typed_frame_with_nulls(spark)
@@ -155,7 +148,7 @@ def test_to_pandas_with_nulls_values_and_dtypes(spark: ReparkSession) -> None:
     ), f"expected string family, got {string_type!r}"
     assert arrow.schema.field("b").type == pa.bool_()
     assert arrow.schema.field("d").type == pa.date32()
-    # TZ-4 PR-2: SQL TIMESTAMP is Spark's wire type (µs+UTC).
+    # SQL TIMESTAMP is Spark's wire type (µs+UTC).
     ts_type = arrow.schema.field("ts").type
     assert pa.types.is_timestamp(ts_type)
     assert ts_type.unit == "us"
@@ -163,7 +156,6 @@ def test_to_pandas_with_nulls_values_and_dtypes(spark: ReparkSession) -> None:
 
     rows = arrow.to_pylist()
     assert len(rows) == 3
-    # Row 0 — full type matrix values
     assert rows[0]["i32"] == 1
     assert rows[0]["i64"] == 10
     assert rows[0]["f64"] == 1.5
@@ -172,7 +164,6 @@ def test_to_pandas_with_nulls_values_and_dtypes(spark: ReparkSession) -> None:
     assert rows[0]["b"] is True
     assert rows[0]["d"] == dt.date(2024, 1, 15)
     _assert_timestamp_wall_clock(rows[0]["ts"], dt.datetime(2024, 1, 15, 12, 30, 0))
-    # Row 1 — all-null value cells (every column)
     assert rows[1]["i32"] is None
     assert rows[1]["i64"] is None
     assert rows[1]["f64"] is None
@@ -181,7 +172,6 @@ def test_to_pandas_with_nulls_values_and_dtypes(spark: ReparkSession) -> None:
     assert rows[1]["b"] is None
     assert rows[1]["d"] is None
     assert rows[1]["ts"] is None
-    # Row 2 — negative / second non-null
     assert rows[2]["i32"] == -2
     assert rows[2]["i64"] == -20
     assert rows[2]["f64"] == -0.5
@@ -220,7 +210,7 @@ def test_to_pandas_with_nulls_values_and_dtypes(spark: ReparkSession) -> None:
     # date → object with datetime.date
     assert pdf["d"].dtype == object
     assert pdf["d"].tolist() == [dt.date(2024, 1, 15), None, dt.date(2020, 6, 1)]
-    # timestamp → datetime64[ns] (tz-aware after TZ-4 PR-1 µs+UTC; compare wall clock)
+    # timestamp → datetime64[ns] (µs+UTC; compare wall clock)
     assert str(pdf["ts"].dtype).startswith("datetime64")
     _assert_timestamp_wall_clock(pdf["ts"].tolist()[0], dt.datetime(2024, 1, 15, 12, 30, 0))
     assert pd.isna(pdf["ts"].tolist()[1])
@@ -287,9 +277,7 @@ def test_to_pandas_camelcase_alias_is_same_method(spark: ReparkSession) -> None:
     assert pdf["n"].dtype == "int32"
 
 
-# ==================================================================================================
 # INT-002 — createDataFrame from pandas / dicts / Rows (value+type vs live Spark)
-# ==================================================================================================
 
 
 def test_create_dataframe_from_dicts_value_and_arrow_type(spark: ReparkSession) -> None:
@@ -426,9 +414,8 @@ def test_create_dataframe_pandas_typed_all_null_preserves_arrow_types(
 ) -> None:
     """pandas all-null typed columns must not collapse to VARCHAR (C3-Q-001).
 
-    Untyped ``None`` tuples stay string (C2-L-003); source dtypes on pandas/polars are load-bearing.
-    Mutation of all-null CAST → always-VARCHAR reds this pin on Arrow type
-    (value alone is insufficient).
+    Untyped ``None`` tuples stay string (C2-L-003); pandas/polars source dtypes are
+    load-bearing, so pin Arrow type — value alone is insufficient.
     """
     pd = pytest.importorskip("pandas")
     source = pd.DataFrame(
@@ -469,7 +456,7 @@ def test_create_dataframe_integer_all_null_width_stable_vs_non_null(
     """Narrow Int32/Int16/Int8 all-null must not become int32 while non-null is int64 (C4-Q-001).
 
     VALUES emits bare Python int → Arrow int64 for every non-null integer cell. All-null CAST
-    must match that width so null occupancy cannot change the schema (data-dependent type lie).
+    must match that width (null occupancy cannot change the schema).
     """
     pd = pytest.importorskip("pandas")
     pl = pytest.importorskip("polars")
@@ -584,7 +571,7 @@ def test_create_dataframe_list_all_nan_nat_preserves_arrow_types(
     assert nan_table.schema.field("x").type == pa.float64()
     assert nan_table.to_pylist() == [{"x": None}, {"x": None}]
 
-    # numpy NaT / datetime64 NaT → TIMESTAMP (type pin; prior pin was value-only on single NaT).
+    # numpy NaT / datetime64 NaT → TIMESTAMP (type pin).
     nat_table = spark.createDataFrame(
         [(np.datetime64("NaT", "ns"),), (np.datetime64("NaT", "ns"),)],
         ["ts"],
@@ -592,7 +579,6 @@ def test_create_dataframe_list_all_nan_nat_preserves_arrow_types(
     assert pa.types.is_timestamp(nat_table.schema.field("ts").type)
     assert nat_table.to_pylist() == [{"ts": None}, {"ts": None}]
 
-    # dict path — same witnesses.
     dict_table = spark.createDataFrame(
         [{"x": float("nan"), "ts": np.datetime64("NaT", "ns")}] * 2
     ).to_arrow()
@@ -600,7 +586,6 @@ def test_create_dataframe_list_all_nan_nat_preserves_arrow_types(
     assert pa.types.is_timestamp(dict_table.schema.field("ts").type)
     assert dict_table.to_pylist() == [{"x": None, "ts": None}, {"x": None, "ts": None}]
 
-    # Row path.
     row_table = spark.createDataFrame([Row(x=float("nan")), Row(x=float("nan"))]).to_arrow()
     assert row_table.schema.field("x").type == pa.float64()
     assert row_table.to_pylist() == [{"x": None}, {"x": None}]
@@ -689,7 +674,6 @@ def test_create_dataframe_schema_str_and_non_sequence_refuse(spark: ReparkSessio
         spark.createDataFrame([(1,)], schema={"id": "INT"})  # type: ignore[arg-type]
     with pytest.raises(PySparkTypeError, match="names must be str"):
         spark.createDataFrame([(1, 2)], schema=[1, 2])  # type: ignore[list-item]
-    # Tuple of names remains accepted.
     ok = spark.createDataFrame([(1, "x")], schema=("id", "name")).to_arrow()
     assert ok.column_names == ["id", "name"]
     assert ok.to_pylist() == [{"id": 1, "name": "x"}]
@@ -708,12 +692,11 @@ def test_create_dataframe_numpy_datetime64_ns_is_timestamp(spark: ReparkSession)
     assert pa.types.is_timestamp(table.schema.field("ts").type)
     _assert_timestamp_wall_clock(table.to_pylist()[0]["ts"], dt.datetime(2024, 1, 15, 12, 0, 0))
 
-    # NaT → SQL NULL on the timestamp path (type AND value — C4-L-001 strengthens value-only).
+    # NaT → SQL NULL on the timestamp path (type AND value — C4-L-001).
     nat_table = spark.createDataFrame([(np.datetime64("NaT", "ns"),)], ["ts"]).to_arrow()
     assert pa.types.is_timestamp(nat_table.schema.field("ts").type)
     assert nat_table.to_pylist()[0]["ts"] is None
 
-    # Coarser units still land as timestamp/date correctly.
     us = spark.createDataFrame([(np.datetime64("2024-01-15T12:30:00", "us"),)], ["ts"]).to_arrow()
     assert pa.types.is_timestamp(us.schema.field("ts").type)
     _assert_timestamp_wall_clock(us.to_pylist()[0]["ts"], dt.datetime(2024, 1, 15, 12, 30, 0))
@@ -760,8 +743,8 @@ def test_create_dataframe_tz_aware_datetime_converts_to_utc(spark: ReparkSession
 def test_create_dataframe_pandas_timestamp_tz_and_naive(spark: ReparkSession) -> None:
     """pandas Timestamp / datetime64 path must preserve absolute time (C2-Q-001).
 
-    Pure ``datetime`` was pinned in C1; the interchange entry is ``createDataFrame(pandas)``.
-    Mutation of the Timestamp→pydatetime normalize (strip tz / null) must red this pin.
+    The interchange entry is ``createDataFrame(pandas)``; stripping tz or nulling the
+    Timestamp→pydatetime normalize must red this pin.
     """
     pd = pytest.importorskip("pandas")
     # tz-aware Timestamp column (Etc/GMT+5 == UTC-5 fixed offset via tz_localize).
@@ -772,7 +755,6 @@ def test_create_dataframe_pandas_timestamp_tz_and_naive(spark: ReparkSession) ->
     )
     table_aware = spark.createDataFrame(aware).to_arrow()
     assert pa.types.is_timestamp(table_aware.schema.field("ts").type)
-    # 12:00 at GMT+5 (== UTC-5) → 17:00 UTC wall clock.
     _assert_timestamp_wall_clock(
         table_aware.to_pylist()[0]["ts"], dt.datetime(2024, 1, 15, 17, 0, 0)
     )
@@ -841,10 +823,10 @@ def test_create_dataframe_string_quote_and_escape(spark: ReparkSession) -> None:
 
 
 def test_create_dataframe_dict_missing_key_null_fills(spark: ReparkSession) -> None:
-    """r21 T1: schema=None dict lists Spark key-union null-fill (supersedes C1-L-001 refuse).
+    """schema=None dict lists Spark key-union null-fill (live Spark 4.1.2 oracle).
 
-    Live Spark 4.1.2: missing keys on later/earlier rows become NULL; they no longer refuse.
-    Name-list schema longer than source width still fails loud (length mismatch).
+    Missing keys on later/earlier rows become NULL. Name-list schema longer than source
+    width still fails loud (length mismatch).
     """
     from repark.errors import PySparkValueError
 
@@ -913,12 +895,12 @@ def test_create_dataframe_schema_reorder_by_name_across_entry_points(
     assert polars_out.column_names == ["b", "a"]
     assert polars_out.to_pylist() == expected
 
-    # Tuples have no source names — positional only (document + pin).
+    # Tuples have no source names — positional only.
     tuple_out = spark.createDataFrame([(1, 2)], schema=["b", "a"]).to_arrow()
     assert tuple_out.to_pylist() == [{"b": 1, "a": 2}]
 
-    # namedtuple / NamedTuple have _fields — reorder by name like dict/Row (C6-L-001).
-    # Positional-only bind would emit {b:1,a:2} and silently disagree with every named path.
+    # namedtuple / NamedTuple have _fields — reorder by name like dict/Row (C6-L-001);
+    # a positional-only bind would silently disagree with every named path.
     from collections import namedtuple
     from typing import NamedTuple
 
@@ -960,9 +942,9 @@ def test_create_dataframe_schema_subset_fails_loud_across_entry_points(
 
 
 def test_create_dataframe_dict_later_row_extra_keys_union(spark: ReparkSession) -> None:
-    """r21 T1: later-row extra keys join the key-union as new columns (Spark 4.1.2 oracle).
+    """Later-row extra keys join the key-union as new columns (Spark 4.1.2 oracle).
 
-    Supersedes C2-L-004 refuse. First-row keys sorted then new keys appended.
+    First-row keys sorted, then new keys appended.
     """
     table = spark.createDataFrame([{"a": 1}, {"a": 2, "secret": 99}]).to_arrow()
     assert table.column_names == ["a", "secret"]
@@ -1032,9 +1014,8 @@ def test_create_dataframe_numpy_datetime64_date_unit_null_occupancy_stable(
 ) -> None:
     """numpy.datetime64 calendar units must not flip DATE↔TIMESTAMP by null occupancy (C3-Q-001).
 
-    Non-null unit ``D``/``W``/``M``/``Y`` normalize to ``datetime.date`` → DATE Arrow. All-null
-    ``NaT`` with the same unit must witness DATE too — not TIMESTAMP (prior path forced
-    ``saw_timestamp`` for every ``datetime64``).
+    Non-null unit ``D``/``W``/``M``/``Y`` normalize to ``datetime.date`` → DATE Arrow; all-null
+    ``NaT`` with the same unit must witness DATE too.
     """
     np = pytest.importorskip("numpy")
 
@@ -1053,7 +1034,6 @@ def test_create_dataframe_numpy_datetime64_date_unit_null_occupancy_stable(
         ).to_arrow()
         assert pa.types.is_date(all_null.schema.field("d").type), unit
         assert all_null.to_pylist() == [{"d": None}, {"d": None}]
-        # Occupancy stability: all-null type == with-value type.
         assert all_null.schema.field("d").type == with_value.schema.field("d").type
 
     # Finer units still land as TIMESTAMP (regression guard for the ns path).
@@ -1085,11 +1065,11 @@ def test_create_dataframe_numpy_timedelta64_refuses(spark: ReparkSession) -> Non
 def test_create_dataframe_pandas_interval_dtype_refuses(spark: ReparkSession) -> None:
     """pandas IntervalDtype must not fail-open as BIGINT/DOUBLE (C3-L-002).
 
-    ``str(IntervalDtype).lower().startswith(\"int\")`` is true (\"interval…\"), so the integer
-    all-null arm silently typed interval columns as BIGINT. Float-closed intervals hit the
-    ``\"float\" in text`` DOUBLE arm. Dtype map runs for every pandas column (not only all-null),
-    so a non-null int-interval frame is enough to pin the startswith(\"int\") foot-gun; all-null
-    float-interval pins the float soft-map. Tuple-path Interval cells also refuse.
+    ``str(IntervalDtype).lower().startswith("int")`` is true ("interval…"), so the integer arm
+    types intervals BIGINT; float-closed intervals hit the DOUBLE arm. The dtype map runs for
+    every pandas column (not only all-null), so a non-null int-interval frame pins the
+    startswith("int") foot-gun; all-null float-interval pins the float soft-map. Tuple-path
+    Interval cells also refuse.
     """
     import numpy as np
 
@@ -1118,8 +1098,8 @@ def test_create_dataframe_polars_binary_time_all_null_refuses(
 ) -> None:
     """Unsupported polars Binary/Time must refuse all-null — not soft VARCHAR (C3-L-003).
 
-    r21 T1: nested List/Struct/Array are accepted via Arrow; Binary/Time/Object still refuse
-    so all-null cannot soft-succeed as VARCHAR while non-null cells raise elsewhere.
+    Nested List/Struct/Array are accepted via Arrow; Binary/Time/Object refuse so all-null
+    cannot soft-succeed as VARCHAR while non-null cells raise elsewhere.
     """
     pl = pytest.importorskip("polars")
     from repark.errors import PySparkTypeError
@@ -1172,8 +1152,8 @@ def test_create_dataframe_pandas_datetime64_ms_stays_timestamp(
 def test_create_dataframe_pandas_period_dtype_refuses(spark: ReparkSession) -> None:
     """PeriodDtype must not fail-open as VARCHAR/DATE while non-null Period raises (C4-Q-002).
 
-    ``period[M]`` previously fell through to VARCHAR; ``period[D]`` hit the date arm via
-    ``endswith(\"[d]\")`` → DATE32 — both soft successes while a Period cell TypeError'd.
+    Without the refuse, ``period[M]`` falls through to VARCHAR and ``period[D]`` hits the date
+    arm via ``endswith(\"[d]\")`` → DATE32 — both soft successes while a Period cell TypeError'd.
     """
     pd = pytest.importorskip("pandas")
     from repark.errors import PySparkTypeError
@@ -1213,9 +1193,9 @@ def test_create_dataframe_pandas_category_null_occupancy_stable(
     assert null_table.to_pylist() == [{"c": None}, {"c": None}]
     assert value_table.to_pylist() == [{"c": 1}, {"c": None}]
 
-    # String categories: both sides stay string-family (not int/date). Exact string vs
-    # string_view can still differ between CAST(NULL AS VARCHAR) and string literals — that
-    # is the pre-existing all-null VARCHAR path (C2-L-003), not the int occupancy flip.
+    # String categories: both sides stay string-family (not int/date). string vs
+    # string_view can differ between CAST(NULL AS VARCHAR) and string literals — the
+    # all-null VARCHAR path (C2-L-003), not the int occupancy flip.
     str_categories = pd.CategoricalDtype(categories=["a", "b"])
     str_null = spark.createDataFrame(
         pd.DataFrame({"c": pd.Series([None, None], dtype=str_categories)})
@@ -1239,8 +1219,8 @@ def test_create_dataframe_pandas_arrow_time_binary_all_null_refuses(
 ) -> None:
     """pandas ArrowDtype time/binary all-null must refuse — not VARCHAR (C4-Q-004).
 
-    r21 T1: nested list/struct ArrowDtype lands via ``pa.Table.from_pandas``; time/binary
-    still refuse so all-null cannot soft-succeed as VARCHAR.
+    Nested list/struct ArrowDtype lands via ``pa.Table.from_pandas``; time/binary refuse so
+    all-null cannot soft-succeed as VARCHAR.
     """
     pd = pytest.importorskip("pandas")
     from repark.errors import PySparkTypeError
@@ -1299,8 +1279,8 @@ def test_create_dataframe_pandas_datetime64_minute_not_month(
 def test_create_dataframe_pandas_complex_dtype_refuses(spark: ReparkSession) -> None:
     """complex64/128 must refuse all-null and non-null — not VARCHAR fail-open (C5-Q-002).
 
-    Previously the dtype map fell through to CAST(NULL AS VARCHAR) while non-null complex
-    cells raised at the SQL literal boundary (null-occupancy fail-open if nan→None).
+    Without the refuse the dtype map soft-maps VARCHAR all-null while non-null complex cells
+    raise at the SQL literal boundary (null-occupancy fail-open).
     """
     pd = pytest.importorskip("pandas")
     from repark.errors import PySparkTypeError
@@ -1320,11 +1300,10 @@ def test_create_dataframe_pandas_sparse_null_occupancy_stable(
 ) -> None:
     """Sparse[int64|bool|object] null occupancy stable (C5-Q-003 / C6-Q-001).
 
-    ``Sparse[int64, nan]`` does not startswith(\"int\") and previously soft-mapped VARCHAR while
-    non-null sparse cells typed as int64/bool (null-occupancy Arrow flip — C5-SAF-002).
-    ``Sparse[object]`` unwraps to object → VARCHAR via the dtype map and previously skipped the
-    object-cell NaN/NaT witness gate (top-level object only), so all-null NaN became string while
-    with-value float/timestamp became DOUBLE/TIMESTAMP (C6-Q-001).
+    ``Sparse[int64, nan]`` does not startswith(\"int\") and soft-maps VARCHAR while non-null
+    sparse cells type as int64/bool (null-occupancy Arrow flip — C5-SAF-002). ``Sparse[object]``
+    unwraps to object → VARCHAR via the dtype map, skipping the object-cell NaN/NaT witness
+    gate, so all-null NaN would be string while with-value float is DOUBLE (C6-Q-001).
     """
     np = pytest.importorskip("numpy")
     pd = pytest.importorskip("pandas")
@@ -1402,9 +1381,7 @@ def test_create_dataframe_pandas_object_nan_nat_witnesses(
     assert obj_none.to_pylist() == [{"x": None}, {"x": None}]
 
 
-# ==================================================================================================
 # INT-003 — to_polars value+dtype; round-trip to_polars → createDataFrame
-# ==================================================================================================
 
 
 def test_to_polars_value_and_dtype(spark: ReparkSession) -> None:
@@ -1503,9 +1480,8 @@ def test_to_polars_round_trip_create_dataframe_value_identity(spark: ReparkSessi
 def test_to_polars_round_trip_int32_widens_to_int64_divergence(spark: ReparkSession) -> None:
     """Pin for registry row TY-4 — semantics live only there.
 
-    See ``docs/spark-sql-iceberg-parity.md`` §4
-    [TY-4](../../../docs/spark-sql-iceberg-parity.md#ty-4--createdataframe-widens-arrow-int32-to-int64).
-    Strengthened pin (C1-Q-007): Arrow type on both sides of the round-trip, not only polars dtype.
+    See ``docs/spark-sql-iceberg-parity.md`` §4 "TY-4 — createDataFrame widens Arrow int32 to
+    int64". Pin (C1-Q-007): Arrow type on both sides of the round-trip, not only polars dtype.
     """
     pl = pytest.importorskip("polars")
     source = spark.sql(
@@ -1527,10 +1503,9 @@ def test_to_polars_round_trip_int32_widens_to_int64_divergence(spark: ReparkSess
 def test_to_polars_round_trip_decimal_precision_widens_divergence(spark: ReparkSession) -> None:
     """Pin for registry row TY-5 — semantics live only there.
 
-    See ``docs/spark-sql-iceberg-parity.md`` §4
-    [TY-5](../../../docs/spark-sql-iceberg-parity.md#ty-5--createdataframe-widens-decimal-precision-and-scale).
-    Strengthened pin (C1-Q-007): source Arrow type, polars dtype, and round-trip Arrow+polars
-    dtypes are all asserted; numeric value identity is independent of order.
+    See ``docs/spark-sql-iceberg-parity.md`` §4 "TY-5 — createDataFrame widens decimal
+    precision and scale". Pin (C1-Q-007): source Arrow type, polars dtype, and round-trip
+    Arrow+polars dtypes are all asserted; numeric value identity is independent of order.
     """
     pl = pytest.importorskip("polars")
     source = spark.sql(

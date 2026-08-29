@@ -1,6 +1,4 @@
-//! DataFusion/iceberg/postgres error classification into crate-wide [`repark_common::Error`].
-//!
-//! Extracted MOVE-ONLY from `lib.rs` (r25 T0). Zero behavior change.
+//! Classify DataFusion and Iceberg errors into the crate-wide error taxonomy.
 
 use std::collections::HashMap;
 
@@ -10,12 +8,8 @@ use repark_common::{Error, Result};
 
 use crate::object_store_s3;
 
-/// The partition a raw [`DataFusionError`] belongs to, before it is folded into a [`Error`].
-/// Mirrors [`repark_common::ErrorClass`] but is derived from the live *DataFusion* variant — the
-/// only place the parse-vs-analysis-vs-unsupported-vs-execution distinction still exists (once
-/// the error is stringified it is gone). The `Iceberg` arm carries the PEELED live iceberg error
-/// (borrowed from the classified `DataFusionError`), so its structured `ErrorKind` — lost the
-/// moment anything stringifies — reaches [`classify_iceberg_error`] intact (audit CQ-015).
+/// DataFusion error partition used before conversion to [`Error`]. Iceberg errors remain borrowed
+/// so their structured [`ErrorKind`] survives classification.
 #[derive(Debug)]
 pub(crate) enum EngineErrorKind<'a> {
     Parse,
@@ -28,25 +22,12 @@ pub(crate) enum EngineErrorKind<'a> {
     Other,
 }
 
-/// Hard cap on wrapper-peeling iterations (see [`classify_datafusion_error`]). DataFusion wraps a
-/// small, bounded number of times; 32 is far beyond any real nesting and guarantees termination.
+/// Cap wrapper peeling; exceeding this limit returns [`EngineErrorKind::Other`] and guarantees termination.
 pub(crate) const MAX_ERROR_PEEL_DEPTH: usize = 32;
 
 /// ===========================================================================================
-/// Classify a [`DataFusionError`] into the parse / analysis / unsupported / iceberg / other
-/// partition.
-///
-/// DataFusion loses the distinction the moment the error is stringified, so classification happens
-/// here, on the live error. Wrapper variants (`Context` / `Diagnostic` / `Shared` / `Collection`)
-/// are peeled **iteratively** to the innermost meaningful error — the iteration cap
-/// ([`MAX_ERROR_PEEL_DEPTH`]) makes even a pathologically nested error incapable of overflowing the
-/// stack (no unbounded recursion over an engine-produced structure). `SQL` → parse; `Plan` /
-/// `SchemaError` → analysis (unresolved table or column, a type/plan error); `NotImplemented` →
-/// unsupported (the deterministic scope gates — audit CQ-002); `External` carrying an
-/// [`iceberg::Error`] (the repark-sql / repark-write / fork-provider folds all box the live error)
-/// → the iceberg arm, handing the peeled error to [`classify_iceberg_error`] so its structured
-/// `ErrorKind` survives (audit CQ-015); everything else (execution, IO, internal, configuration,
-/// non-iceberg external, …) → other, which becomes the `RuntimeError`-compatible base exception.
+/// Classify a DataFusion error after peeling wrapper variants up to
+/// [`MAX_ERROR_PEEL_DEPTH`]. Structured Iceberg errors reach [`classify_iceberg_error`].
 /// ===========================================================================================
 pub(crate) fn classify_datafusion_error(error: &DataFusionError) -> EngineErrorKind<'_> {
     let mut current = error;
@@ -78,15 +59,7 @@ pub(crate) fn classify_datafusion_error(error: &DataFusionError) -> EngineErrorK
 }
 
 /// ===========================================================================================
-/// Convert a DataFusion engine error into the crate-wide [`Error`], **classified** into the parse /
-/// analysis / base partition.
-///
-/// The single `DataFusionError -> Error` boundary for the workspace: the session `sql` path and the
-/// PyO3 DataFrame-op / `F.expr` surface (`repark-python`) both route their DataFusion errors through
-/// here, so the Python exception taxonomy (`ParseException` / `AnalysisException` / the base
-/// `PySparkException`) is driven off one classifier rather than three ad-hoc conversions. (Orphan
-/// rules forbid a blanket `From<DataFusionError>` — neither type is local — so it is a plain public
-/// helper.) Takes the error by value so it slots straight into `.map_err`.
+/// Convert one DataFusion error into the crate-wide [`Error`] taxonomy.
 /// ===========================================================================================
 #[allow(clippy::needless_pass_by_value)]
 #[must_use]
@@ -121,22 +94,10 @@ pub(crate) fn resolve_s3_region_override(
 }
 
 /// ===========================================================================================
-/// Classify a live [`iceberg::Error`] into the crate-wide [`Error`] by its structured
-/// [`iceberg::ErrorKind`] — the ONE kind→class mapping for the workspace (audit CQ-004/CQ-015).
-///
-/// Both routes converge here: the direct session fold ([`iceberg_err`]) and the peeled
-/// `DataFusionError::External` arm of [`classify_datafusion_error`] (the repark-sql /
-/// repark-write / fork-provider folds). The mapping follows the PySpark v3.5.1 oracle (U4
-/// design records, `task/todo.md`): `FeatureUnsupported` → [`Error::NotImplemented`] (a JVM
-/// `UnsupportedOperationException` → PySpark `UnsupportedOperationException`); the not-found /
-/// already-exists catalog kinds → [`Error::Analysis`] (Spark's `NoSuchTableException` /
-/// `TableAlreadyExistsException` families all extend `AnalysisException`); everything else
-/// (commit conflicts, invalid data, unexpected, …) → [`Error::Iceberg`] — the base bucket,
-/// PySpark itself types no Iceberg commit/validation error. The message is the iceberg error's
-/// own Display, which leads with the kind name — canonical for both routes, so no
-/// "External error:" / "datafusion engine error:" wrapper misattributes the origin. The `_` arm
-/// is compiler-forced (`ErrorKind` is `#[non_exhaustive]` upstream) and routes FUTURE kinds to
-/// the base bucket; all 12 current kinds are matched explicitly.
+/// Classify a live [`iceberg::Error`] by structured [`iceberg::ErrorKind`] before choosing [`Error`].
+/// Both direct and peeled external routes use this mapping: `FeatureUnsupported` is
+/// [`Error::NotImplemented`], not-found and already-exists kinds are [`Error::Analysis`], and all
+/// other current or future kinds are [`Error::Iceberg`]. Preserve Iceberg's own display message.
 /// ===========================================================================================
 pub(crate) fn classify_iceberg_error(error: &iceberg::Error) -> Error {
     let message = error.to_string();

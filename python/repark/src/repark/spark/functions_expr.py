@@ -1,16 +1,7 @@
-"""Scalar / string / math / collection / remaining-agg wrappers (FN-SPLIT).
+"""Scalar, string, mathematical, collection, and remaining aggregate wrappers.
 
-Move-only origin: every name here previously lived in ``repark.spark.functions``.
-Public names are re-exported from ``functions.py``. Helpers ``_scalar`` /
-``_as_column_arg`` stay imported from ``functions`` (they serve these wrappers).
-
-FN-A (2026-08-15): ordering / null / math names land in this module.
-
-FN-B (2026-08-15): string-function names land in this module.
-
-FN-GT1 (2026-08-17): leftover string / utf8 thin-wires land in this module
-(``split_part`` / ``regexp_count`` / ``regexp_instr`` / ``bit_length`` /
-``octet_length`` / ``is_valid_utf8`` / ``make_valid_utf8``).
+Public names are re-exported from repark.spark.functions. Shared builders stay centralized
+so SQL lowering, type gates, and unsupported-operation errors remain consistent.
 """
 
 from __future__ import annotations
@@ -341,7 +332,7 @@ def isnull(col: Column | str) -> Column:
 
     Sticky free/aggregate identity matches :meth:`Column.is_null` so
     ``select(sum(x), isnull(id))`` is ``[MISSING_GROUP_BY]`` and ``isnull(sum(x))`` stays
-    global-agg (octo C4-L-003). Structural SQL is ``IS NULL`` (DataFusion has no ``isnull``
+    global-agg. Structural SQL is ``IS NULL`` (DataFusion has no ``isnull``
     scalar).
     """
     column = _column_argument(col)
@@ -390,9 +381,6 @@ def least(*cols: Column | str) -> Column:
             messageParameters={"func_name": "least", "num_cols": "2"},
         )
     return _scalar("least", *cols)
-
-
-# ---- E1 error-class pre-check stubs (type/arg validation only; happy path loud) ----------------
 
 
 def _require_column_or_str(value: object, arg_name: str) -> None:
@@ -492,7 +480,6 @@ def json_tuple(col: Column | str, *fields: str) -> Column:
     """
     if len(fields) == 0:
         # Apache test_json_tuple_empty_fields asserts message text via assertRaisesRegex
-        # (oracle: "At least one field must be specified") — faithful template, G5.
         raise PySparkValueError(
             "At least one field must be specified",
             errorClass="CANNOT_BE_EMPTY",
@@ -508,8 +495,8 @@ def json_tuple(col: Column | str, *fields: str) -> Column:
 def raise_error(errMsg: Column | str) -> Column:  # noqa: N803 — PySpark arg name
     """Throw at evaluation with the given message (PySpark ``functions.raise_error``).
 
-    E1: type pre-check (``NOT_COLUMN_OR_STR``). Happy path needs an engine raise kernel —
-    residual ``test_raise_error`` until that lands.
+    E1: type pre-check (``NOT_COLUMN_OR_STR``). The engine has no raise-error kernel,
+    so this function is unsupported.
     """
     if not isinstance(errMsg, (str, Column)):
         raise PySparkTypeError(
@@ -529,9 +516,9 @@ def raise_error(errMsg: Column | str) -> Column:  # noqa: N803 — PySpark arg n
 def current_date() -> Column:
     """Current date (PySpark ``functions.current_date``).
 
-    Explicitly foldable so ``select(sum(x), current_date())`` is global-agg (C3-Q-002).
+    Explicitly foldable so ``select(sum(x), current_date())`` is global-agg.
     Must not rely on vacuous ``all([])`` in ``_scalar`` (that path is non-foldable after
-    octo C7-L-001).
+    non-deterministic and non-foldable).
     """
     return _scalar("current_date", foldable=True)
 
@@ -544,7 +531,7 @@ def to_date(col: Column | str, format: str | None = None) -> Column:
 
     A bare ``str`` is a **column name** (Spark ColumnOrName), not a date literal. Pass
     ``lit("2020-01-02")`` for a string literal. ``format=`` is refused until Java-pattern
-    parity is wired (engine uses Chrono ``%Y`` not Spark ``yyyy`` — octo C3-Q-002).
+    parity is wired (engine uses Chrono ``%Y`` rather than Spark ``yyyy``).
     """
     if format is not None:
         from repark.errors import UnsupportedOperationException
@@ -584,11 +571,9 @@ def date_sub(start: Column | str, days: Column | int | str) -> Column:
         raise PySparkTypeError("date_sub days must be int, Column, or column name (str)")
     if isinstance(days, int):
         return date_add(start, -days)
-    # Column or column-name str (SPARK-37738 / octo C3).
     return date_add(start, lit(0) - _integer_argument(days))
 
 
-# Explicitly unsupported this unit (engine gap) — loud helpers for dogfood discoverability.
 def split(str: Column | str, pattern: str, limit: int = -1) -> Column:
     """Unsupported: engine has no Spark ``split`` (use SQL when available)."""
 
@@ -677,7 +662,6 @@ def struct(*cols: Column | str) -> Column:
         display_parts.append(str(field_name))
     sql = f"named_struct({', '.join(named_parts)})"
     display = f"struct({', '.join(display_parts)})"
-    # Alias children to field names so DF ``struct`` keeps Spark field names (c0/c1 otherwise).
     named_natives = [
         column._inner.alias(str(name)) for column, name in zip(columns, display_parts, strict=True)
     ]
@@ -699,7 +683,6 @@ def array(*cols: Column | str | int | float | bool | None) -> Column:
 def array_contains(col: Column | str, value: Column | str | int | float) -> Column:
     """True when the array column contains ``value`` (PySpark ``functions.array_contains``).
 
-    # === r21 T7: census-r6 ===
     Lowers via engine ``array_has`` (DataFusion name for Spark ``array_contains``).
     Literal ``value`` is forced so string needles are not misread as column names.
     """
@@ -718,7 +701,7 @@ def format_string(format: str, *cols: Column | str) -> Column:
     return _scalar("format_string", format, *cols, lit_indices=frozenset({0}))
 
 
-# ---- R-FN-BATCH2: strings / regexp / collection wrappers --------------------------------------
+# String, regexp, and collection wrappers.
 
 
 def reverse(col: Column | str) -> Column:
@@ -769,9 +752,8 @@ def overlay(
     When ``len`` is omitted (or the Spark default ``-1``), display shows ``-1`` and the
     engine uses the 3-arg form (replace-length semantics). DataFusion's 4-arg ``len=-1``
     replaces the *remainder* of the string — not Spark — so literal ``-1`` must not be
-    forwarded as a 4th arg (F2 / octo C1-Q-002).
+    forwarded as a fourth argument.
     """
-    # Apache test_overlay: float pos/len → NOT_COLUMN_OR_INT_OR_STR (octo C2-Q-002).
     if not isinstance(pos, (Column, int, str)) or isinstance(pos, bool):
         raise PySparkTypeError(
             errorClass="NOT_COLUMN_OR_INT_OR_STR",
@@ -1043,9 +1025,7 @@ def regexp_extract_all(
     """
     if idx is None:
         return _scalar("regexp_extract_all", str, regexp)
-    # A plain-string idx is a literal group index, not a column name — the same contract
-    # `regexp_instr` carries. F-FNP6A-1 correctly removed position 1 (a bare `regexp` IS a column
-    # name) but took position 2 with it; SEM-3 narrows rather than restores.
+    # Keep position one available for the bare ``regexp`` column name.
     return _scalar(
         "regexp_extract_all",
         str,
@@ -1076,7 +1056,7 @@ def soundex(col: Column | str) -> Column:
 
 
 def sentences(col: Column | str, language: Column | str | None = None) -> Column:
-    """Unsupported: engine has no ``sentences`` (R-FN-BATCH2 census)."""
+    """Unsupported because the engine has no ``sentences`` function."""
 
     raise UnsupportedOperationException(
         "functions.sentences is not supported yet (engine gap; disclosed R-FN-BATCH2)"
@@ -1084,7 +1064,7 @@ def sentences(col: Column | str, language: Column | str | None = None) -> Column
 
 
 def arrays_zip(*cols: Column | str) -> Column:
-    """Unsupported: engine has no ``arrays_zip`` (R-FN-BATCH2 census)."""
+    """Unsupported because the engine has no ``arrays_zip`` function."""
 
     raise UnsupportedOperationException(
         "functions.arrays_zip is not supported yet (engine gap; disclosed R-FN-BATCH2)"
@@ -1096,7 +1076,7 @@ def map_from_arrays(col1: Column | str, col2: Column | str) -> Column:
     return _scalar("map_from_arrays", col1, col2)
 
 
-# ---- R-FN-BATCH3: datetime / interval / formatting --------------------------------------------
+# Datetime, interval, and formatting wrappers.
 
 
 def next_day(date: Column | str, dayOfWeek: str) -> Column:  # noqa: N803 — PySpark name
@@ -1155,7 +1135,7 @@ def timestamp_micros(col: Column | str | int) -> Column:
 
 
 def format_number(col: Column | str, d: int) -> Column:
-    """Unsupported: Spark ``format_number`` not wired (R-FN-BATCH3 census)."""
+    """Unsupported because Spark ``format_number`` is not wired."""
 
     raise UnsupportedOperationException(
         "functions.format_number is not supported yet (engine gap; disclosed R-FN-BATCH3)"
@@ -1163,7 +1143,7 @@ def format_number(col: Column | str, d: int) -> Column:
 
 
 def try_to_timestamp(col: Column | str, format: str | None = None) -> Column:
-    """Unsupported: ``try_to_timestamp`` not wired (R-FN-BATCH3 census)."""
+    """Unsupported because ``try_to_timestamp`` is not wired."""
 
     raise UnsupportedOperationException(
         "functions.try_to_timestamp is not supported yet (engine gap; disclosed R-FN-BATCH3)"
@@ -1189,14 +1169,14 @@ def make_timestamp(
     secs: Column | float | int,
     timezone: str | None = None,
 ) -> Column:
-    """Unsupported: ``make_timestamp`` not wired (R-FN-BATCH3 census; use make_date + SQL)."""
+    """Unsupported because ``make_timestamp`` is not wired; use ``make_date`` and SQL."""
 
     raise UnsupportedOperationException(
         "functions.make_timestamp is not supported yet (engine gap; disclosed R-FN-BATCH3)"
     )
 
 
-# ---- R-FN-BATCH4: aggregates / stats / hashes / ids -------------------------------------------
+# Aggregate, statistic, hash, and identifier wrappers.
 
 
 def stddev(col: Column | str) -> Column:
@@ -1206,7 +1186,6 @@ def stddev(col: Column | str) -> Column:
     return Column(
         column._inner.aggregate("stddev", False),
         agg_name=agg_name,
-        # Structural quoted sql_expr for free-SQL global-agg (octo C4-Q-002 / C4-SEC-001).
         sql_expr=f"stddev({column.sql_expr_part()})",
         spark_display=agg_name,
         projection_name=agg_name,
@@ -1237,7 +1216,6 @@ def variance(col: Column | str) -> Column:
     """Sample variance (PySpark ``functions.variance`` / ``var_samp``)."""
     column, part = _aggregate_argument(col)
     agg_name = f"variance({part})"
-    # DataFusion SQL name is ``var_samp`` (``variance`` is not registered — octo C4-Q-002).
     return Column(
         column._inner.aggregate("variance", False),
         agg_name=agg_name,
@@ -1333,7 +1311,7 @@ def _binary_aggregate(name: str, col1: Column | str, col2: Column | str) -> Colu
 
     Every two-argument aggregate on this surface is this same shape, so it lives once. The
     ``agg_name`` is what PySpark puts in the projection (``corr(x, y)``), and ``sql_expr`` carries
-    the quoted structural spelling free-SQL global-agg needs (octo C3-SEC-001).
+    the quoted structural spelling free-SQL global-agg needs.
     """
     left, left_part = _aggregate_argument(col1)
     right, right_part = _aggregate_argument(col2)
@@ -1478,7 +1456,7 @@ def bit_xor(col: Column | str) -> Column:
 
 
 def sha2(col: Column | str, numBits: int) -> Column:  # noqa: N803
-    """SHA-2 hash; only 256-bit supported via engine ``sha256`` (R-FN-BATCH4)."""
+    """Compute a SHA-2 hash; only 256-bit output is supported by the engine."""
     if numBits != 256:
         from repark.errors import UnsupportedOperationException
 
@@ -1507,13 +1485,8 @@ def crc32(col: Column | str) -> Column:
 def xxhash64(*cols: Column | str) -> Column:
     """64-bit xxHash of the arguments (PySpark ``functions.xxhash64``).
 
-    **Variadic**, like PySpark's — this function exists mainly to hash a composite key across
-    several columns, and the one-column form is the uncommon case. The Rust builder and the
-    dispatch arm were already variadic; only this signature was not (F-CSP-5 / F-CFS-9).
-
-    The signature accepts zero arguments and Spark does not: it raises `WRONG_NUM_ARGS`, through
-    the facade and through SQL alike (measured, LRS-2). Refused here so the message names this
-    function rather than the internal dispatcher the user never called.
+    Accepts multiple columns to hash a composite key. Zero arguments raise ``WRONG_NUM_ARGS``
+    through the facade and SQL, with this function named in the error.
     """
     if not cols:
         raise AnalysisException(
@@ -1526,7 +1499,7 @@ def xxhash64(*cols: Column | str) -> Column:
 def rand(seed: int | None = None) -> Column:
     """Uniform random [0, 1) (PySpark ``functions.rand``).
 
-    **r20 G2:** seeded via Spark XORShiftRandom (``seed + partitionIndex``; repark
+    Seed via Spark XORShiftRandom (``seed + partitionIndex``; repark
     partitionIndex=0). Same seed ⇒ same values **per partition layout** (single-batch
     MemTable layout matches Spark single-partition tasks).
 
@@ -1537,9 +1510,8 @@ def rand(seed: int | None = None) -> Column:
     Spark seeded calls. Multi-batch layouts restart the sequence per batch (disclosed residual).
 
     Non-foldable and ungroupable (Spark ``Rand``): ``select(sum(x), rand())`` and nested
-    ``sum(x)+rand()`` raise ``[MISSING_GROUP_BY]`` — not pure_global (octo C7-L-001).
+    ``sum(x)+rand()`` raises ``[MISSING_GROUP_BY]`` rather than using global aggregation.
     """
-    # === r20 G2: window/rand/sampleBy ===
     if seed is None:
         return _scalar("rand", has_ungroupable=True)
     if isinstance(seed, bool) or not isinstance(seed, int):
@@ -1555,11 +1527,10 @@ def rand(seed: int | None = None) -> Column:
 def randn(seed: int | None = None) -> Column:
     """Standard normal (PySpark ``functions.randn``).
 
-    **r20 G2:** Spark XORShift + java.util.Random polar Gaussian. Seed contract same as
+    Spark XORShift + java.util.Random polar Gaussian. Seed contract matches
     :func:`rand` (per partition layout; partitionIndex=0; unseeded → seed ``0``, not Spark's
     non-deterministic unseeded path — see :func:`rand`).
     """
-    # === r20 G2: window/rand/sampleBy ===
     if seed is None:
         return _scalar("randn", has_ungroupable=True)
     if isinstance(seed, bool) or not isinstance(seed, int):
@@ -1578,7 +1549,7 @@ def random(seed: int | None = None) -> Column:
 
 
 def skewness(col: Column | str) -> Column:
-    """Unsupported: engine has no ``skewness`` (R-FN-BATCH4)."""
+    """Unsupported because the engine has no ``skewness`` function."""
 
     raise UnsupportedOperationException(
         "functions.skewness is not supported yet (engine gap; disclosed R-FN-BATCH4)"
@@ -1586,7 +1557,7 @@ def skewness(col: Column | str) -> Column:
 
 
 def kurtosis(col: Column | str) -> Column:
-    """Unsupported: engine has no ``kurtosis`` (R-FN-BATCH4)."""
+    """Unsupported because the engine has no ``kurtosis`` function."""
 
     raise UnsupportedOperationException(
         "functions.kurtosis is not supported yet (engine gap; disclosed R-FN-BATCH4)"
@@ -1605,8 +1576,8 @@ def percentile_approx(
     oracles pin bounds-windows, never cross-engine exact equality.
 
     ``accuracy`` is **accepted and ignored** (t-digest has no Greenwald-Khanna accuracy
-    knob). Array/list/tuple of percentages is not shipped yet (engine returns a scalar
-    per call) — loud STOP seed.
+    knob). Array/list/tuple percentages are unsupported because the engine returns one scalar
+    per call.
     """
     if isinstance(percentage, (list, tuple)):
         from repark.errors import UnsupportedOperationException
@@ -1616,7 +1587,6 @@ def percentile_approx(
             "(engine approx_percentile_cont is scalar-only; named seed: "
             "percentile_approx_array_percentages)"
         )
-    # bool is a subclass of int — reject before the numeric branch (octo F-Q1-008).
     if isinstance(percentage, bool) or not isinstance(percentage, (int, float)):
         from repark.errors import PySparkTypeError
 
@@ -1632,7 +1602,6 @@ def percentile_approx(
     # accuracy: facade accepts-and-ignores (Spark GK relative-error knob has no t-digest
     # equivalent). Free-SQL `percentile_approx(col, p, n)` is a *different* path: DataFusion
     # treats the optional third arg as t-digest **centroids**, not Spark accuracy
-    # (octo F-Q1-001; dual-path also noted on this module's map entry).
     del accuracy
     column, part = _aggregate_argument(col)
     # Spark display name keeps the user-facing Spark name; SQL path uses the engine name
@@ -1658,7 +1627,7 @@ def approx_percentile(
 
 
 def mode(col: Column | str) -> Column:
-    """Unsupported: engine has no ``mode`` (R-FN-BATCH4)."""
+    """Unsupported because the engine has no ``mode`` function."""
 
     raise UnsupportedOperationException(
         "functions.mode is not supported yet (engine gap; disclosed R-FN-BATCH4)"
@@ -1666,7 +1635,7 @@ def mode(col: Column | str) -> Column:
 
 
 def monotonically_increasing_id() -> Column:
-    """Unsupported: single-node id generator not wired (R-FN-BATCH4 disclosed)."""
+    """Unsupported because the single-node id generator is not wired."""
 
     raise UnsupportedOperationException(
         "functions.monotonically_increasing_id is not supported yet "
@@ -1675,7 +1644,7 @@ def monotonically_increasing_id() -> Column:
 
 
 def spark_partition_id() -> Column:
-    """Unsupported: single-node partition id (always 0 if implemented; R-FN-BATCH4 loud)."""
+    """Unsupported because the single-node partition id is not wired."""
 
     raise UnsupportedOperationException(
         "functions.spark_partition_id is not supported yet (single-node disclosed; R-FN-BATCH4)"
@@ -1683,7 +1652,7 @@ def spark_partition_id() -> Column:
 
 
 def input_file_name() -> Column:
-    """Unsupported: input_file_name not wired (R-FN-BATCH4 disclosed)."""
+    """Unsupported because ``input_file_name`` is not wired."""
 
     raise UnsupportedOperationException(
         "functions.input_file_name is not supported yet (disclosed R-FN-BATCH4)"
@@ -1694,17 +1663,17 @@ def explode(column: Column | str) -> Column:
     """Generator: one row per array element; drop null/empty arrays (PySpark ``explode``).
 
     Lowered at :meth:`~repark.dataframe.DataFrame.select` time via a guarded DataFusion
-    ``unnest`` (R-EXPLODE-REWRITE): pre-filter null/empty so the engine null-list gap is
+    ``unnest``: pre-filter null/empty so the engine null-list gap is
     avoided. Only one generator per select list.
 
-    A bare ``str`` is a **column name** (Spark ColumnOrName), not a string literal
-    (octo C1-Q-001). Pre-aliased inputs strip trailing ``AS name`` so unnest never
-    embeds illegal alias SQL (octo C1-Q-005). Nested generators
+    A bare ``str`` is a **column name** (Spark ColumnOrName), not a string literal.
+    Pre-aliased inputs strip trailing ``AS name`` so unnest never
+    embeds illegal alias SQL. Nested generators
     (``explode(explode_outer(...))``) refuse loud — overwriting kind would silently drop
-    null/empty rows (octo C5-L-002 / C5-Q-001). Sticky aggregate arguments
+    null/empty rows. Sticky aggregate arguments
     (``explode(collect_list(x))`` / ``explode(array_repeat(sum(x), 1))``) refuse with
     ``[MISSING_GROUP_BY]`` — building a generator Column would strip ``_is_aggregate`` and
-    let ``select`` enter unnest mid-project instead of the F1xF3 gate (combine octo C4-Q-001).
+    let ``select`` enter unnest mid-project instead of the aggregate gate.
     """
     array_column = _column_argument(column)
     array_column._reject_nested_generator("explode")
@@ -1724,11 +1693,10 @@ def explode_outer(column: Column | str) -> Column:
 
     Lowered via ``unnest(CASE WHEN null/empty THEN make_array(CAST(NULL AS <element>))
     ELSE col END)``; void elements use untyped ``make_array(NULL)``. Avoids DataFusion's
-    null-list ``unnest`` gap without forking the engine (R-EXPLODE-REWRITE / DF-2).
+    null-list ``unnest`` gap without forking the engine.
 
-    A bare ``str`` is a column name, not a literal (octo C1-Q-001). Pre-aliased inputs
-    strip trailing ``AS name`` (octo C1-Q-005). Nested generators refuse loud (octo C5-L-002).
-    Sticky aggregate arguments refuse ``[MISSING_GROUP_BY]`` (combine octo C4-Q-001).
+    A bare ``str`` is a column name, not a literal. Pre-aliased inputs strip trailing ``AS name``.
+    Nested generators refuse loud. Sticky aggregate arguments refuse ``[MISSING_GROUP_BY]``.
     """
     array_column = _column_argument(column)
     array_column._reject_nested_generator("explode_outer")
@@ -1746,7 +1714,7 @@ def explode_outer(column: Column | str) -> Column:
 def _reject_aggregate_generator_argument(array_column: Column, operation: str) -> None:
     """Refuse explode* on sticky-aggregate args so select cannot unnest past MISSING_GROUP_BY.
 
-    Combine octo C4-Q-001: ``explode`` / ``explode_outer`` previously built a generator
+    ``explode`` / ``explode_outer`` build a generator
     Column without ``_is_aggregate``, so ``select(explode(collect_list(x)))`` bypassed the
     F1xF3 sibling gate (``select(explode, sum)``) and entered unnest mid-project.
     """
@@ -1764,12 +1732,10 @@ def posexplode(column: Column | str) -> Column:
     """Generator with ordinal (PySpark ``posexplode``) — STOP: no DF unnest-with-ordinality.
 
     Raises :class:`~repark.errors.UnsupportedOperationException`. ``explode`` /
-    ``explode_outer`` are delivered separately (partial WIN per R-EXPLODE-REWRITE).
+    ``explode_outer`` are separate operations.
     """
 
     _ = column
-    # r24 A3 octo C1-Q-001: do not embed a DataFusion major in the user-facing
-    # message — the number rots (audit QUAL-06 cited the former "52.x" claim while
     # the wheel pins 54.1). Capability fact only.
     raise UnsupportedOperationException(
         "posexplode is not supported yet (no first-class unnest-with-ordinality; "
