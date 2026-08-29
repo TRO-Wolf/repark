@@ -125,9 +125,7 @@ def test_facade_v3_mor_first_delete_commits_a_deletion_vector_and_a_second_refus
     from repark import ReparkSession
 
     spark = (
-        ReparkSession.builder.appName("rp-2-mor")
-        .config(_ALLOW_CREATE_V3_KEY, "true")
-        .getOrCreate()
+        ReparkSession.builder.appName("rp-2-mor").config(_ALLOW_CREATE_V3_KEY, "true").getOrCreate()
     )
     try:
         spark.register_memory_catalog("ice", tmp_path)
