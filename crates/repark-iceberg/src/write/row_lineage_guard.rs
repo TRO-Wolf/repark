@@ -30,8 +30,8 @@ pub(crate) fn refuse_v3_cow_dml_that_would_reassign_row_lineage(
          surviving row in a rewritten file would take a new `_row_id`, telling downstream \
          consumers that all of them changed. Spark preserves lineage across the same statement \
          — run it there until the fork carries lineage through a rewrite (registry row \
-         V3-COW-1; the merge-on-read arm refuses format v3 too, so a v3 table is append-only \
-         in this engine for now)"
+         V3-COW-1; the plain-`WHERE` DELETE on a v3 table with no live deletion vectors runs \
+         since RP-2, every other row-DML form refuses)"
     )))
 }
 
@@ -110,7 +110,8 @@ pub async fn refuse_v3_cow_dml(
              {live_dvs} live deletion vector(s), and a DELETE on a v3 table with deletion \
              vectors resurrected a DV-deleted row when measured on 2026-08-27 (fork \
              `ce92a7bf`; registry row V3-COW-1). Run the delete where the vectors were \
-             written, or wait for V3-3"
+             written, or wait for RP-3 — fork F-17 landed the shared-Puffin closure on \
+             2026-08-28"
         )));
     }
     Ok(())

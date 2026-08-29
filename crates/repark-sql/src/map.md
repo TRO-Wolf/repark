@@ -26,7 +26,9 @@ reach delegation through the ordinary arm.
   (`Model: Grok 4.6 xHigh` on the module's functions).
 - `v3_cow.rs` — **V3R-1 (test-only, 2026-08-25); RP-2 2026-08-27 retarget:** ANSI adopted-v3 UPDATE/MERGE refuse, the plain-`WHERE` DELETE commits (DV-free) and refuses (DV-carrying)
   (`V3-COW-1`; plain-`WHERE` = passthrough seat, subquery-`WHERE` = resolver seat), the CCC
-  regressions (short names, dotted quoted name, padded merge-on-read), a v2 control.
+  regressions (short names, dotted quoted name, padded merge-on-read), a v2 control; the MOR
+  first-DELETE commit + second-DELETE refusal with the object set untouched, and
+  `count_objects` (pins: rp-2-fork-repin/C-003).
 - `v3_types.rs` — **V3R-1 (test-only):** `GEOMETRY` / `GEOGRAPHY` / `VARIANT` refuse at CREATE
   (`V3-GEO-1`); reuses `v3_cow.rs`'s `Door`.
 - `v3_branch_tag_time_travel.rs` — **V3E-4 (test-only):** ANSI branch/tag +

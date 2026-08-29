@@ -11,12 +11,13 @@
 //! pins: rp-2-fork-repin/C-003, C-005
 
 use std::collections::HashSet;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use datafusion::arrow::array::{Int32Array, StringArray};
 use datafusion::common::config::{ConfigEntry, ConfigExtension, ExtensionOptions};
 use datafusion::prelude::{SessionConfig, SessionContext};
-use iceberg::spec::FormatVersion;
+use iceberg::spec::{FormatVersion, ManifestContentType};
 use iceberg::{Catalog, NamespaceIdent, TableIdent};
 use repark_core::{CatalogRegistry, EngineContext, LocationPolicy};
 use tempfile::TempDir;
@@ -494,5 +495,115 @@ async fn adopted_v3_padded_merge_on_read_spelling_still_refuses_update() {
     assert_eq!(
         door.live_pairs("adopt_pad").await,
         vec![(1, "a".into()), (2, "b".into()), (3, "c".into())]
+    );
+}
+
+pub(crate) fn count_objects(root: &Path) -> usize {
+    let mut pending = vec![root.to_path_buf()];
+    let mut count = 0usize;
+    while let Some(dir) = pending.pop() {
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                pending.push(path);
+            } else {
+                count += 1;
+            }
+        }
+    }
+    count
+}
+
+async fn live_delete_file_kinds(door: &Door, table: &str) -> Vec<String> {
+    let loaded = door.table(table).await;
+    let metadata = loaded.metadata();
+    let mut kinds = Vec::new();
+    let Some(snapshot) = metadata.current_snapshot() else {
+        return kinds;
+    };
+    let manifest_list = snapshot
+        .load_manifest_list(loaded.file_io(), metadata)
+        .await
+        .expect("manifest list");
+    for manifest_file in manifest_list.entries() {
+        if manifest_file.content != ManifestContentType::Deletes {
+            continue;
+        }
+        let manifest = manifest_file
+            .load_manifest(loaded.file_io())
+            .await
+            .expect("manifest");
+        for entry in manifest.entries() {
+            if entry.is_alive() {
+                kinds.push(format!("{:?}", entry.data_file().file_format()));
+            }
+        }
+    }
+    kinds
+}
+
+#[tokio::test]
+async fn adopted_v3_mor_first_delete_commits_a_deletion_vector_and_a_second_refuses() {
+    let door = door_with_v3_opt_in().await;
+    adopt_v3(
+        &door,
+        "seed_mordel",
+        "adopt_mordel",
+        "format_version = 3, extra_properties = MAP(ARRAY['write.delete.mode'], \
+         ARRAY['merge-on-read'])",
+    )
+    .await;
+    let seeded_snapshot = door
+        .table("adopt_mordel")
+        .await
+        .metadata()
+        .current_snapshot_id();
+    door.ok("DELETE FROM ice.sales.adopt_mordel WHERE id = 2")
+        .await;
+    let after_first = door.table("adopt_mordel").await;
+    assert_ne!(
+        after_first.metadata().current_snapshot_id(),
+        seeded_snapshot,
+        "the first merge-on-read DELETE commits"
+    );
+    let survivors = vec![(1, "a".to_string()), (3, "c".to_string())];
+    assert_eq!(door.live_pairs("adopt_mordel").await, survivors);
+    let kinds = live_delete_file_kinds(&door, "adopt_mordel").await;
+    assert_eq!(
+        kinds,
+        vec!["Puffin".to_string()],
+        "one live deletion vector and no position-delete file"
+    );
+    let location = PathBuf::from(after_first.metadata().location());
+    let objects = count_objects(&location);
+    let lineage = door.lineage("adopt_mordel").await;
+    let err = door
+        .err("DELETE FROM ice.sales.adopt_mordel WHERE id = 3")
+        .await;
+    assert!(
+        err.contains("V3-COW-1") && err.contains("1 live deletion vector"),
+        "the second DELETE must refuse naming the live vector: {err}"
+    );
+    let after_second = door.table("adopt_mordel").await;
+    assert_eq!(
+        after_second.metadata().current_snapshot_id(),
+        after_first.metadata().current_snapshot_id(),
+        "a refused DELETE must not commit"
+    );
+    assert_eq!(
+        after_second.metadata_location(),
+        after_first.metadata_location(),
+        "the metadata pointer is unchanged"
+    );
+    assert_eq!(door.lineage("adopt_mordel").await, lineage);
+    assert_eq!(door.live_pairs("adopt_mordel").await, survivors);
+    assert_eq!(live_delete_file_kinds(&door, "adopt_mordel").await, kinds);
+    assert_eq!(
+        count_objects(&location),
+        objects,
+        "no object was written under the table location"
     );
 }

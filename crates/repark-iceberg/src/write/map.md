@@ -38,7 +38,9 @@ repark-core's error map.
   valve both doors call beside the BUG-001 valve. The resolvers refuse every v3 table. The
   passthrough valve lifts the plain-`WHERE` DELETE on a v3 table with **no live deletion
   vectors** (measured Spark-clean in both modes) and refuses it on DV-carrying tables
-  (measured resurrection) plus every v3 UPDATE.
+  (measured resurrection) plus every v3 UPDATE. RP-2 salvage (2026-08-28): the refusal names
+  the live count and points at RP-3 (fork F-17 landed the shared-Puffin closure); a second
+  DELETE on a table whose first DELETE wrote a vector refuses — pinned on all three doors.
 - `predicate_dml.rs` — **G3-E8 A1-identity** (`execute_predicate_dml`): evaluate the original
   `WHERE` as a SELECT over the pinned `(_file, _pos)` streaming target, then commit through the
   MERGE COW/MoR write arms honoring `write.delete.mode` / `write.update.mode` / isolation —

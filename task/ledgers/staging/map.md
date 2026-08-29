@@ -12,13 +12,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   [../docs/design/spark-function-parity.md](../../../docs/design/spark-function-parity.md); CAP-1
   appends a compatibility note that points its dated file-size premise at the live guards; slate:
   [../briefs/spark-function-parity.md](../../../briefs/spark-function-parity.md).
-- [rp-2-fork-repin-ledger.md](rp-2-fork-repin-ledger.md) — **RP-2 (2026-08-27; narrowed by the
-  2026-08-28 owner ruling):** salvage the `ce92a7b` repin and one first MOR DELETE on a DV-free
-  v3 table. Every live-DV input refuses, including second DELETE and shared Puffin;
-  `rewrite_data_files`, COW UPDATE, and MERGE stay guarded. F-17 plus RP-3 own DV merge,
-  supersession, and the full matrix. F-3 and a Spark-equal COW DELETE may land here. The
-  same-day full-batch amendment (#254, merged first) is superseded; its four clauses (F-16,
-  F-9, F-7 U3, F-15) transfer to RP-3.
+- [rp-3-fork-repin-ledger.md](rp-3-fork-repin-ledger.md) — **RP-3 (2026-08-28), drafted at
+  RP-2's departure for the owner's gate:** one frozen fork repin at `d408da42` (F-17, F-14,
+  F-7 U3, F-16, F-9, F-15, the public R114 DV API), the engine-side wiring of the fork's DV
+  container closure — opt-in for callers, so the engine's own MOR path must make the call — and
+  the eight-cell DV input-state matrix on all three doors. Eleven clauses, all OPEN; the four
+  #254 clauses ride here. Only the cells green everywhere lift the `V3-COW-1` live-DV refusal.
 - [sem-0-charter-ledger.md](sem-0-charter-ledger.md) — **SEM-0 (2026-08-21), queued and HELD at
   its approval gate:** the scope audit for closing the two silently wrong answers the low-risk
   sweep registered rather than fixed — `RE-1` (`regexp_extract_all` defaults to capture group 0,

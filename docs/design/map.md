@@ -11,7 +11,7 @@ changing a decision here means a new dated design pass, not an in-place edit.
 ## Contents
 
 - [format-v3-track.md](format-v3-track.md) — **the format-v3 track's scope audit
-  (2026-08-21):** what roadmap item A12 got wrong once the surfaces were actually run. The engine
+  (2026-08-21; §5 the delivery sequence, Steps 1–2 done 2026-08-28, RP-3 SHA frozen):** what roadmap item A12 got wrong once the surfaces were actually run. The engine
   already reads Spark-written deletion vectors and appends to a v3 table with correct row
   lineage, both verified by round trip; `rewrite_data_files` silently reassigned that lineage,
   which is why the audit ships a guard. Carries the `system.register_table` signature read from

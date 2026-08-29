@@ -32,15 +32,20 @@ def _matrix_row(text: str, label: str) -> str:
 
 
 def test_v3_cow_1_is_a_refusal_row_dated_by_the_ruling() -> None:
-    """C-007: the registry row now describes the refusal, still BACKLOG, dated and pinned."""
+    """C-007: the row keeps the ruling's refusals, BACKLOG, dated and pinned.
+
+    RP-2 (2026-08-28 salvage ruling) lifted exactly one form — the plain-`WHERE` DELETE on a
+    table with no live deletion vector — and pinned the refusal of everything else.
+    """
     registry = _registry()
-    heading = "### V3-COW-1 — copy-on-write DML refuses a format-v3 table"
+    heading = "### V3-COW-1 — v3 row-DML: one measured DELETE lifts; every other form refuses"
     assert heading in registry
     row = registry[registry.index(heading) : registry.index("### Surfaced, awaiting pins")]
     assert f"owner ruling {_RULING_DATE}" in row
     assert "BACKLOG" in row
-    assert "adopted_v3_cow_delete_refuses_rather_than_reassign_row_lineage" in row
-    assert "append-only" in row
+    assert "adopted_v3_cow_delete_carries_survivor_row_lineage" in row
+    assert "adopted_v3_mor_second_delete_refuses_while_a_deletion_vector_is_live" in row
+    assert "live deletion vector" in row
     assert "commits and reassigns row lineage" not in registry.split("## 7.")[1].split(heading)[0]
 
 

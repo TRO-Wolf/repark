@@ -14,6 +14,8 @@
 use super::super::*;
 use super::common::*;
 
+use std::path::PathBuf;
+
 use iceberg::spec::FormatVersion;
 
 /// Dated V3E-2 decision (2026-08-24): Spark 4.1.2 + Iceberg 1.11.0 runs v3
@@ -445,6 +447,76 @@ async fn adopted_v3_mor_delete_commits_a_puffin_deletion_vector() {
         !kinds.is_empty(),
         "the MOR DELETE must commit a delete file"
     );
+}
+
+#[tokio::test]
+async fn adopted_v3_mor_second_delete_refuses_while_a_deletion_vector_is_live() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    adopt_v3(
+        &ctx,
+        &catalogs,
+        "seed_mor2",
+        "adopt_mor2",
+        "'format-version' = '3', 'write.delete.mode' = 'merge-on-read'",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "DELETE FROM ice.sales.adopt_mor2 WHERE id = 2",
+    )
+    .await;
+    let first = load_sales(&catalogs, "adopt_mor2").await;
+    let kinds = live_delete_file_kinds(&catalogs, "adopt_mor2").await;
+    assert_eq!(
+        kinds,
+        vec!["Puffin".to_string()],
+        "one live deletion vector after the first DELETE"
+    );
+    let location = PathBuf::from(first.metadata().location());
+    let objects = count_objects(&location);
+    let before = lineage(&catalogs, "adopt_mor2").await;
+    let survivors = vec![(1, "a".to_string()), (3, "c".to_string())];
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.adopt_mor2").await,
+        survivors
+    );
+    let err = execute(
+        &ctx,
+        &catalogs,
+        "DELETE FROM ice.sales.adopt_mor2 WHERE id = 3",
+    )
+    .await
+    .expect_err("a second DELETE must refuse while a deletion vector is live")
+    .to_string();
+    assert!(
+        err.contains("V3-COW-1") && err.contains("1 live deletion vector"),
+        "the refusal must name the live vector: {err}"
+    );
+    let second = load_sales(&catalogs, "adopt_mor2").await;
+    assert_eq!(
+        second.metadata().current_snapshot_id(),
+        first.metadata().current_snapshot_id(),
+        "a refused DELETE must not commit"
+    );
+    assert_eq!(
+        second.metadata_location(),
+        first.metadata_location(),
+        "the metadata pointer is unchanged"
+    );
+    assert_eq!(lineage(&catalogs, "adopt_mor2").await, before);
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.adopt_mor2").await,
+        survivors
+    );
+    assert_eq!(live_delete_file_kinds(&catalogs, "adopt_mor2").await, kinds);
+    assert_eq!(
+        count_objects(&location),
+        objects,
+        "no object was written under the table location"
+    );
+    assert_still_v3(&second);
 }
 
 /// Live delete files in the CURRENT snapshot, as debug-formatted file formats.

@@ -40,15 +40,14 @@ text stays readable at `6d75b78`.
 |---|---|---|---|---|
 | C-001 | Every `iceberg*` `[patch.crates-io]` rev is `ce92a7bfe2c1be569ed0de1178ed410e8ec3a117` and `Cargo.lock` resolves to it; `datafusion`, `datafusion-spark`, `arrow*`, `parquet` and `rust-toolchain.toml` are byte-identical to `main` at `06a3e42` (the fork's family is still arrow/parquet 58.4). | `rg` on the workspace `Cargo.toml` + lock source entries; `git diff main -- Cargo.toml rust-toolchain.toml` empty outside the five revs. | **PROVEN** | commit `664701e`: five revs `ce92a7bfe…`; lock has 6 fork sources (incl. `iceberg-sketches`) at `ce92a7bf`, zero `5e7b2e4`; `cargo check --locked --workspace` exit 0 (1m29s). |
 | C-002 | The two standing repin duties hold on the new rev: `NamespaceScopedCatalog` forwards every required `Catalog` method (defaulted ones forwarded or an omission stated), and the metadata-projection shim is kept iff the fork's metadata-table `scan` still ignores `projection`; the two metadata-table emptiness pins pass. | Trait diff at the new rev; read fork `metadata_table.rs`; `cargo test` the two named pins (`repark-sql/tests/introspection.rs`, `repark-spark/src/tests/metadata_tables.rs`). | **PROVEN** | The 97-file range touches NO `Catalog` trait file and no `metadata_table.rs` (the only catalog change is a comment line in `memory/catalog.rs`). 14 required + 16 defaulted stand; shim stays. `introspection` 5 passed; `metadata_tables_are_hidden…spark_door` passed. |
-| C-003 | **F-13 measured under the narrowed guard.** A first MOR `DELETE` on a DV-free v3 table commits a Puffin deletion vector and reads back Spark-equal on both SQL doors and the facade. A second engine DELETE and the Spark-written shared-Puffin fixture refuse before a write. No document or pin claims DV merge or supersession. | First-delete `.delete_files` content and Spark read-back; one success pin per door; committed second-delete and shared-Puffin refusal pins with unchanged metadata and object sets. | OPEN | First-delete measured (§3) and pinned on the Spark door; the ANSI and facade first-delete pins, the second-delete refusal pins and the metadata-untouched check on the shared-Puffin pin land in the salvage commit. |
+| C-003 | **F-13 measured under the narrowed guard.** A first MOR `DELETE` on a DV-free v3 table commits a Puffin deletion vector and reads back Spark-equal on both SQL doors and the facade. A second engine DELETE and the Spark-written shared-Puffin fixture refuse before a write. No document or pin claims DV merge or supersession. | First-delete `.delete_files` content and Spark read-back; one success pin per door; committed second-delete and shared-Puffin refusal pins with unchanged metadata and object sets. | **PROVEN** | First delete pinned per door — Spark `adopted_v3_mor_delete_commits_a_puffin_deletion_vector`, ANSI `adopted_v3_mor_first_delete_commits_a_deletion_vector_and_a_second_refuses`, facade `test_facade_v3_mor_first_delete_commits_a_deletion_vector_and_a_second_refuses` — with the Spark read-back in §3. The second DELETE refuses on all three doors (`adopted_v3_mor_second_delete_refuses_while_a_deletion_vector_is_live` on the Spark door, the ANSI and facade pins above) naming `1 live deletion vector`, with snapshot, pointer, lineage counters, rows, live-DV set and object count unchanged; the Spark shared-Puffin fixture refuses (`ansi_cow_delete_on_a_dv_carrying_v3_table_refuses`) with snapshot, object set and Spark's live set unchanged. `rg 'merge \+ supersede|supersede on re-delete'` finds nothing live. Fresh execution §7. |
 | C-004 | **F-7 U1 measured and guarded.** `CALL system.rewrite_data_files` on the v3 fixture is measured at the new rev. The measured lineage reassignment is recorded and `V3-LINEAGE-1` stays armed. | Before/after lineage projection through the fork's R166 read path; Spark read-back; the existing refusal pin remains green. | **PROVEN** | Measured RED: 12 single-row INSERT statements → `rewrite_data_files` committed (rewritten 12, added 1) and Spark read `_row_id` 0..11 → 12..23 with `_last_updated_sequence_number` → 13. The guard stays; transcript in §3. Pin unchanged: `call_rewrite_data_files_refuses_a_v3_table_rather_than_reassigning_row_lineage`. RP-3 re-measures at its frozen SHA. |
 | C-005 | **F-7 U2 measured on the COW path.** COW DELETE may lift only if the adopted-v3 lineage projection is Spark-equal. COW UPDATE and MERGE remain guarded in this unit. | V3E-1 driver re-run at the new rev; Spark read-back; one COW DELETE disposition and committed pre-write refusals for UPDATE and MERGE. | **PROVEN** | Scratch: COW `DELETE id=2` on a DV-free v3 table; Spark reads survivors' `_row_id`/seq byte-identical to pre-delete; `next_row_id` 5 = Spark's own allocate-then-suppress counter (live oracle 2026-08-27). COW DELETE lifted per door; UPDATE and MERGE refusal pins stay on all three doors. |
 | C-006 | **F-3 taken.** `CALL system.rewrite_data_files(..., 'remove-dangling-deletes' => true)` on both doors passes the option to the fork and reports a true `removed_delete_files_count` instead of the hard-coded `0`; default stays `false` (Java's); the `V3-DANGLE-1` queue row is measured on the v3 fixture and dispositioned. | The option through `call.rs`; a 2-file position-delete fixture where the count is non-zero; the pin that asserted `0` retargeted. | **PROVEN** | `'remove-dangling-deletes' => true` accepted (quoted-name CALL grammar, `CallArgs`); fork GC composed; partitioned v2 fixture reports a true count with live rows intact. The unpartitioned-single-spec early return measured (Java-faithful). Pin: `call_rewrite_data_files_remove_dangling_deletes_reports_a_true_count`. The v3 half stays unreachable (C-004 guard). |
-| C-007 | The documents say only what the narrowed pins prove: first-delete support, every live-DV state guarded, `rewrite_data_files` guarded, and COW UPDATE/MERGE guarded. The north-star plan points shared-Puffin closure to F-17 and full DV support to RP-3. | `rg 'merge.*superseded|gated on fork F-13'` reviewed; `make check-map-sync`, `check-docs-compaction`, and `check-ledger-grammar` green. | OPEN | Closes on the departure commit. |
-| C-008 | Green on the whole surface: branch placeholders and duplicate headings are removed, provenance is accurate, `make preflight`, the parity suite, and the V3E-3/V3E-4 fixture pins pass at the new rev; the one-page note lists every fork BEHAVIOR/BREAKING change in the range. | Branch diff review, gate output, and the note in this ledger's §4. | OPEN | Closes at readiness. |
+| C-007 | The documents say only what the narrowed pins prove: first-delete support, every live-DV state guarded, `rewrite_data_files` guarded, and COW UPDATE/MERGE guarded. The north-star plan points shared-Puffin closure to F-17 and full DV support to RP-3. | `rg 'merge.*superseded|gated on fork F-13'` reviewed; `make check-map-sync`, `check-docs-compaction`, and `check-ledger-grammar` green. | **PROVEN** | Registry `V3-COW-1` rewritten (one measured DELETE lifts; the 2026-08-25 ruling's refusals kept; F-17 / RP-3 named), `V3-LINEAGE-1` re-measured note, `V3-DANGLE-1` queue note; north star §3 MOR / COW / rewrite rows dated, §4 lanes current; STATUS v3 workstream; the slate (RP-2 leaves, RP-3 chartered); the handoff marks F-3 / F-7 U1+U2 / F-13 taken and F-14 / F-16 / F-9 / F-15 / F-17 landed with fork PR and date; crate maps, test maps and `docs/fork-sync.md` in lockstep. `make check-map-sync`, `check-docs-compaction`, `check-ledger-grammar` green. |
+| C-008 | Green on the whole surface: branch placeholders and duplicate headings are removed, provenance is accurate, `make preflight`, the parity suite, and the V3E-3/V3E-4 fixture pins pass at the new rev; the one-page note lists every fork BEHAVIOR/BREAKING change in the range. | Branch diff review, gate output, and the note in this ledger's §4. | **PROVEN** | Duplicate `## 2` / `## 3` headings and the "filled at readiness" stub removed; provenance stated (OpenCode-lane build, Fable salvage on 2026-08-28); `make ci`, `make verify` (workspace `cargo test`), `make preflight` (facade suite) and the parity suite exit 0 at departure — §8; §4 lists #216 / #217 / #221 / #222 / #226 with the absorbing engine site and routes #227 / #232 / #233 to RP-3. |
 
-VERDICT: OPEN — 8 clauses, 5 PROVEN, 0 REJECTED. The gate passes when every row is PROVEN
-with its pin (`pins: rp-2-fork-repin/C-NNN`) and the owner confirms.
+VERDICT: PASS (OPEN=0, REJECTED=0). LOGIC_SCORE = 8/8.
 
 ## 2. Sequence
 
@@ -139,7 +138,7 @@ CONTEXT_BREAK:
 ```
 
 ```yaml
-COVERAGE_ATTESTATION:
+COVERAGE_ATTESTATION_CYCLE_1:
   pr_unit: rp-2-fork-repin
   cycle: 1
   risk_tier: high
@@ -190,3 +189,126 @@ COVERAGE_ATTESTATION:
       status: ATTACKED
       artifacts: [crates/repark-spark/src/tests/call.rs, crates/repark-spark/src/tests/call_rewrite_dangling.rs]
 ```
+
+## 7. Cycle 2 — the salvage (2026-08-28, Fable lane)
+
+The 2026-08-28 ruling narrowed the unit after cycle 1 converged. The salvage rebased the branch
+onto #255's head, adopted the narrowed clauses, and attacked the branch as artifacts.
+
+FINDING: F-rp2-3
+  severity: S1
+  category: AT-10
+  clauses: [C-007, C-008]
+  description: The parity meta-pin
+    `python/repark-parity/tests/test_v3r_1_rulings.py::test_v3_cow_1_is_a_refusal_row_dated_by_the_ruling`
+    was RED on the branch — it pinned the old `V3-COW-1` heading, the renamed Spark pin and the
+    phrase "append-only", all of which the branch's registry rewrite removed; cycle 1's C-008
+    named the parity suite without running it (it is not in `make preflight`).
+  disposition: REMEDIATED — the registry row keeps the 2026-08-25 ruling citation and the pin
+    is retargeted to the narrowed truth (new heading, both new pin names, "live deletion
+    vector"); red before, 5/5 green after.
+
+FINDING: F-rp2-4
+  severity: S1
+  category: AT-2
+  clauses: [C-003]
+  description: Under the narrowed C-003 the ANSI door and the facade had no first-delete
+    success pin, no door had a second-delete refusal pin, and the registry claimed
+    "merge + supersede on re-delete" — unpinned, and false on the shipped guard, which refuses
+    the second DELETE.
+  disposition: REMEDIATED — one first-delete + second-refusal pin per door (Spark
+    `adopted_v3_mor_second_delete_refuses_while_a_deletion_vector_is_live`, ANSI
+    `adopted_v3_mor_first_delete_commits_a_deletion_vector_and_a_second_refuses`, facade
+    `test_facade_v3_mor_first_delete_commits_a_deletion_vector_and_a_second_refuses`), each
+    asserting snapshot, pointer, lineage, rows, live-DV set and object count unchanged; the
+    claim removed from the registry and the handoff.
+
+FINDING: F-rp2-5
+  severity: S2
+  category: AT-6
+  clauses: [C-007]
+  description: Two guard messages were stale after the lift — the resolver seat still said
+    "a v3 table is append-only in this engine", and the live-DV refusal said "wait for V3-3"
+    after fork F-17 landed the closure.
+  disposition: REMEDIATED — strings updated (not test-expressible: the refusal pins assert the
+    row id and the vector count, not the advisory tail).
+
+FINDING: F-rp2-6
+  severity: S3
+  category: AT-6
+  clauses: [C-008]
+  description: The ledger carried duplicate `## 2` / `## 3` headings and a "filled at
+    readiness" stub table beside the filled one.
+  disposition: REMEDIATED — single numbered section sequence.
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: rp-2-fork-repin
+  cycle: 2
+  risk_tier: high
+  critic_engine: ccc
+  complete: true
+  note: >
+    Procedural in-session pass over the rebased branch (feat/rp-2-salvage) as
+    artifacts. Rust v3 pins 11/11 (Spark door) and 14/14 (ANSI door), facade
+    pin 2/2, parity rulings pin 5/5 before the gates; fresh execution below.
+  fresh_executions:
+    - input: partitioned MOR v3 table (ids 1..6 over part 0/1, two data files), facade .sql() "DELETE FROM ice.sales.probe WHERE id IN (3, 4)" then "DELETE FROM ice.sales.probe WHERE id = 1"
+      entry_point: facade .sql() + .to_arrow() on the built module
+      observed: first DELETE committed two Puffin DVs (record_count 1 each), live rows {1,2,5,6}; the second DELETE refused naming "2 live deletion vector(s)"; the object set under the table location and the live rows were unchanged
+      note: a two-file first delete and a count of 2 appear in no committed pin
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      artifacts: [Cargo.toml, Cargo.lock, docs/fork-sync.md]
+    - id: AT-2
+      status: ATTACKED
+      artifacts: [crates/repark-sql/src/v3_cow.rs, crates/repark-sql/src/v3_branch_tag_time_travel.rs, crates/repark-spark/src/tests/v3_cow.rs, python/repark/tests/test_v3_cow_dml.py]
+    - id: AT-3
+      status: ATTACKED
+      artifacts: [crates/repark-iceberg/src/write/row_lineage_guard.rs]
+    - id: AT-4
+      status: N/A
+      justification: the salvage changes no concurrency, lock or retry path; the guard's manifest walk is unchanged
+      artifacts: [crates/repark-iceberg/src/write/row_lineage_guard.rs]
+    - id: AT-5
+      status: ATTACKED
+      artifacts: [git diff 97eb178...HEAD — no .github/, no AWS/IAM, no secrets; [patch] revs unchanged from cycle 1]
+    - id: AT-6
+      status: ATTACKED
+      artifacts: [docs/spark-sql-iceberg-parity.md, task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md, task/roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md, docs/design/format-v3-track.md, STATUS.md, briefs/next-sequence.md]
+    - id: AT-7
+      status: N/A
+      justification: no performance claim in the salvage
+      artifacts: [git diff 97eb178...HEAD]
+    - id: AT-8
+      status: ATTACKED
+      artifacts: [crates/repark-sql/src/v3_cow.rs, crates/repark-spark/src/tests/common.rs, scripts/check_rust_file_size.py]
+    - id: AT-9
+      status: ATTACKED
+      artifacts: [crates/repark-sql/src/v3_branch_tag_time_travel.rs, python/repark/tests/test_v3_cow_dml.py]
+    - id: AT-10
+      status: ATTACKED
+      artifacts: [python/repark-parity/tests/test_v3r_1_rulings.py, python/repark-parity/tests/test_plan_1_northstar_fnp_sequence.py, scripts/check_ledger_grammar.py]
+```
+
+```yaml
+PR_READINESS_CHECKLIST:
+  id: RA-rp-2-fork-repin-2
+  self_run_by_orchestrator: true
+  checks:
+    ci_green: PASS (make ci, make verify, make preflight, parity suite — §8)
+    unit_clauses_proven: PASS (C-001..C-008, narrowed wording)
+    coverage_attestation_attached: PASS (cycles 1 and 2 complete: true)
+    findings_ledger_closed: PASS (F-rp2-1, F-rp2-3..6 REMEDIATED; F-rp2-2 WITHDRAWN)
+    clause_trace_complete: PASS (pins cited from the crate, test and facade maps)
+  verdict: READY
+  send_back_target: "N/A"
+```
+
+## 8. Gates at departure (2026-08-28)
+
+Filled on the departure commit: `make ci`, `make verify`, `make preflight` and
+`uv run --package repark-parity pytest python/repark-parity/tests -q` exit codes and counts.
+
+Disposition: CONVERGED (Critic, cycle 2). CCC-CONVERGED is not Delivery.

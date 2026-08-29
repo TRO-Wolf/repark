@@ -8,9 +8,9 @@ JVM, no repark required). See [../map.md](../map.md).
 ## Contents
 
 - `test_plan_1_northstar_fnp_sequence.py` — **PLAN-1 (2026-08-28; tree pins):** the guarded
-  North Star sequence, F-17's measured shared-Puffin closure request, the live RP-2/FNP slate,
-  the per-unit FNP order and delivery boundary, FNP-Z retirement, fork independence, and map
-  lockstep. `pins: plan-1-northstar-fnp-sequence/C-001, C-002, C-003, C-004, C-005, C-006`
+  North Star sequence, F-17's measured shared-Puffin closure request, the live slate (RP-3 then
+  FNP-15/16 since RP-2's departure on 2026-08-28), the per-unit FNP order and delivery boundary,
+  FNP-Z retirement, fork independence, and map lockstep. `pins: plan-1-northstar-fnp-sequence/C-001, C-002, C-003, C-004, C-005, C-006`
 - `test_pr_247_owner_ruling.py` — **PR #247 revalidation (2026-08-27):** the owner-ruling blocks
   in `AGENTS.md` and `CLAUDE.md` stay byte-exact, unique, at the document start, and in regular
   files; one-byte drift, malformed or missing files, relocation, duplication, and symlink
@@ -62,7 +62,9 @@ JVM, no repark required). See [../map.md](../map.md).
   recorded where the gate reads them — registry `V3-COW-1` (refusal row) and `V3-GEO-1`
   (DECLARED), the queued `V3-VARIANT-SHRED-1`, the north-star matrix rows (COW, types,
   upgrade) and OD-3b, the tier-2 runbook's scoped S3 Tables statement, and the no-obituary
-  rule for the unit itself.
+  rule for the unit itself. RP-2 salvage (2026-08-28) retargeted the `V3-COW-1` assertions to
+  the narrowed row: one measured DELETE lifts, every live-DV state refuses, the 2026-08-25
+  refusals kept.
 - `test_dl_2_ledger_grammar.py` — **DL-2 (2026-08-23):** the ledger grammar gate on a scratch
   tree seeded with the script's own `EXCEPTIONS` rows at their ceilings: a clean ledger counts;
   a bad verdict cell, a duplicate id and a row without evidence go red; an unpinned `PROVEN`

@@ -37,24 +37,26 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 
 | # | Unit | Track | Blocked by | Size |
 |---|---|---|---|---|
-| 1 | **RP-2** — salvage the guarded fork repin at `ce92a7bf` | North Star | branch hygiene and the narrowed charter | STANDARD <!-- unit id=rp-2 --> |
-| 2 | **FNP-15/16** — register every unreachable and declared-deferred family | Function parity | RP-2 departure | STANDARD <!-- unit id=fnp-15-16 --> |
+| 1 | **RP-3** — one frozen fork repin at `d408da42`, the F-17 wiring, the DV input-state matrix | North Star | the owner's gate on its charter | STANDARD <!-- unit id=rp-3 --> |
+| 2 | **FNP-15/16** — register every unreachable and declared-deferred family | Function parity | RP-3 departure, or a fork-wait window | STANDARD <!-- unit id=fnp-15-16 --> |
 
-<!-- unit id=rp-2 ledger=rp-2- -->
-**Why RP-2 is first.** Its branch already proves a useful first MOR DELETE on a DV-free v3
-table. The unit keeps that increment, adds the second-DELETE refusal pin, and leaves every
-live-DV table guarded. It does not claim shared-Puffin merge or lineage-preserving maintenance.
-Fork F-17 runs in parallel; after F-17 lands, RP-3 takes one fresh immutable fork batch and
-preempts side-lane work.
+<!-- unit id=rp-3 ledger=rp-3- -->
+**Why RP-3 is first.** Fork F-17 (#237), F-14 (#235), F-7 U3, F-16, F-9, F-15 and the public
+R114 DV discovery API are all on fork `main` at `d408da42`; nothing v3 moves until the engine
+consumes them. The unit is more than a rev bump: the fork's container closure is opt-in for
+callers, so the engine's MOR DML path wires `close_touched_dv_containers` in first, then the
+eight-cell DV input-state matrix runs on all three doors and only the cells green everywhere
+lift the `V3-COW-1` live-DV refusal. Charter:
+[../task/ledgers/staging/rp-3-fork-repin-ledger.md](../task/ledgers/staging/rp-3-fork-repin-ledger.md).
 <!-- /unit -->
 
 <!-- unit id=fnp-15-16 ledger=fnp-15-16- -->
 **Why FNP-15/16 follows.** This is the highest-value fork-independent honesty unit: it turns 62
-missing or ambiguous names into explicit refusing surfaces with exact registry reasons. It may
-use the fork wait after RP-2. It does not gate v1.0 and yields when F-17 makes RP-3 ready.
+missing or ambiguous names into explicit refusing surfaces with exact registry reasons. It does
+not gate v1.0 and yields to a ready v3 unit.
 <!-- /unit -->
 
-**Not in this queue (owner-sequenced or owner-gated):** fork F-17 runs in its separate repository;
-RP-3 opens after RP-2 and F-17; V3-3 and the engine units after it wait for RP-3; S3 Tables MOR (intake
-"MW-4b", gated on OD-3b); DML-A/B/C and Track A W-0. A merged unit leaves this file with no record here — its ledger is in
+**Not in this queue (owner-sequenced or owner-gated):** V3-3 and the engine units after it wait
+for RP-3's matrix; S3 Tables MOR (intake "MW-4b", gated on OD-3b); DML-A/B/C and Track A W-0. A
+merged unit leaves this file with no record here — its ledger is in
 [../task/ledgers/archive/](../task/ledgers/archive/map.md) and its PR on `main`.

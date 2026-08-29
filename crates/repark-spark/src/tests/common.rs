@@ -667,3 +667,22 @@ pub(super) async fn execute_without_collecting(
 ) {
     execute(ctx, catalogs, sql).await.unwrap();
 }
+
+pub(super) fn count_objects(root: &std::path::Path) -> usize {
+    let mut pending = vec![root.to_path_buf()];
+    let mut count = 0usize;
+    while let Some(dir) = pending.pop() {
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                pending.push(path);
+            } else {
+                count += 1;
+            }
+        }
+    }
+    count
+}
