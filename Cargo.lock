@@ -2949,7 +2949,7 @@ dependencies = [
 [[package]]
 name = "iceberg"
 version = "0.9.1"
-source = "git+https://github.com/TRO-Wolf/iceberg-rust?rev=5e7b2e4f8fcb0ff65943cdbc10cdd8f4132fe0b6#5e7b2e4f8fcb0ff65943cdbc10cdd8f4132fe0b6"
+source = "git+https://github.com/TRO-Wolf/iceberg-rust?rev=ce92a7bfe2c1be569ed0de1178ed410e8ec3a117#ce92a7bfe2c1be569ed0de1178ed410e8ec3a117"
 dependencies = [
  "anyhow",
  "apache-avro",
@@ -3005,7 +3005,7 @@ dependencies = [
 [[package]]
 name = "iceberg-catalog-glue"
 version = "0.9.1"
-source = "git+https://github.com/TRO-Wolf/iceberg-rust?rev=5e7b2e4f8fcb0ff65943cdbc10cdd8f4132fe0b6#5e7b2e4f8fcb0ff65943cdbc10cdd8f4132fe0b6"
+source = "git+https://github.com/TRO-Wolf/iceberg-rust?rev=ce92a7bfe2c1be569ed0de1178ed410e8ec3a117#ce92a7bfe2c1be569ed0de1178ed410e8ec3a117"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3021,7 +3021,7 @@ dependencies = [
 [[package]]
 name = "iceberg-catalog-s3tables"
 version = "0.9.1"
-source = "git+https://github.com/TRO-Wolf/iceberg-rust?rev=5e7b2e4f8fcb0ff65943cdbc10cdd8f4132fe0b6#5e7b2e4f8fcb0ff65943cdbc10cdd8f4132fe0b6"
+source = "git+https://github.com/TRO-Wolf/iceberg-rust?rev=ce92a7bfe2c1be569ed0de1178ed410e8ec3a117#ce92a7bfe2c1be569ed0de1178ed410e8ec3a117"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3034,7 +3034,7 @@ dependencies = [
 [[package]]
 name = "iceberg-datafusion"
 version = "0.9.1"
-source = "git+https://github.com/TRO-Wolf/iceberg-rust?rev=5e7b2e4f8fcb0ff65943cdbc10cdd8f4132fe0b6#5e7b2e4f8fcb0ff65943cdbc10cdd8f4132fe0b6"
+source = "git+https://github.com/TRO-Wolf/iceberg-rust?rev=ce92a7bfe2c1be569ed0de1178ed410e8ec3a117#ce92a7bfe2c1be569ed0de1178ed410e8ec3a117"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3050,12 +3050,12 @@ dependencies = [
 [[package]]
 name = "iceberg-sketches"
 version = "0.9.1"
-source = "git+https://github.com/TRO-Wolf/iceberg-rust?rev=5e7b2e4f8fcb0ff65943cdbc10cdd8f4132fe0b6#5e7b2e4f8fcb0ff65943cdbc10cdd8f4132fe0b6"
+source = "git+https://github.com/TRO-Wolf/iceberg-rust?rev=ce92a7bfe2c1be569ed0de1178ed410e8ec3a117#ce92a7bfe2c1be569ed0de1178ed410e8ec3a117"
 
 [[package]]
 name = "iceberg-storage-opendal"
 version = "0.9.1"
-source = "git+https://github.com/TRO-Wolf/iceberg-rust?rev=5e7b2e4f8fcb0ff65943cdbc10cdd8f4132fe0b6#5e7b2e4f8fcb0ff65943cdbc10cdd8f4132fe0b6"
+source = "git+https://github.com/TRO-Wolf/iceberg-rust?rev=ce92a7bfe2c1be569ed0de1178ed410e8ec3a117#ce92a7bfe2c1be569ed0de1178ed410e8ec3a117"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3888,6 +3888,9 @@ dependencies = [
  "num-integer",
  "num-traits",
  "object_store",
+ "parquet-variant",
+ "parquet-variant-compute",
+ "parquet-variant-json",
  "paste",
  "seq-macro",
  "simdutf8",
@@ -3896,6 +3899,53 @@ dependencies = [
  "tokio",
  "twox-hash",
  "zstd",
+]
+
+[[package]]
+name = "parquet-variant"
+version = "58.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3fc70e87931167a4a3fde2ee923023a0624367691e3fd503476a1084dda5a054"
+dependencies = [
+ "arrow",
+ "arrow-schema",
+ "chrono",
+ "half",
+ "indexmap 2.14.0",
+ "num-traits",
+ "simdutf8",
+ "uuid",
+]
+
+[[package]]
+name = "parquet-variant-compute"
+version = "58.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "823a9ecee8fd83a68f7165ef13acc840c4d7ed995838ba99d4714b20a2b5e780"
+dependencies = [
+ "arrow",
+ "arrow-schema",
+ "chrono",
+ "half",
+ "indexmap 2.14.0",
+ "parquet-variant",
+ "parquet-variant-json",
+ "serde_json",
+ "uuid",
+]
+
+[[package]]
+name = "parquet-variant-json"
+version = "58.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6f37a91177e2dddb10333546952fcf2b7674b97ebd9449432f24b883d6ea8108"
+dependencies = [
+ "arrow-schema",
+ "base64",
+ "chrono",
+ "parquet-variant",
+ "serde_json",
+ "uuid",
 ]
 
 [[package]]

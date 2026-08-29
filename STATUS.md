@@ -151,19 +151,25 @@ published history — an exposure **accepted by explicit decision**; provenance:
     ([#235](https://github.com/TRO-Wolf/repark/pull/235)); V3E-3 — partitioned-DV and
     equality-delete v3 fixtures CI-runnable, live rows Spark-exact on all three doors,
     `.delete_files` content 1/2 ([#236](https://github.com/TRO-Wolf/repark/pull/236)); V3R-1 —
-    **the 2026-08-25 owner rulings:** COW DML on a v3 table is **guarded** (registry `V3-COW-1`
-    refuses on both doors before any write — with MOR refused too, a v3 table is append-only
-    here until fork F-7), `geometry`/`geography` DECLARED out of v1.0 (`V3-GEO-1`),
+    **the 2026-08-25 owner rulings:** row-DML on v3 **guarded** (registry `V3-COW-1`; RP-2
+    2026-08-27 later lifted its measured DELETE half on DV-free tables), `geometry`/`geography` DECLARED out of v1.0 (`V3-GEO-1`),
     shredded-Parquet `variant` DECLARED out (queued `V3-VARIANT-SHRED-1`), the S3 Tables live
     legs are **in** (OD-3b; the scoped IAM statement is in `docs/tier2-aws.md` §2, owner-executed),
     and the v2→v3 in-place upgrade is built behind the create opt-in after V3-3. Ledgers in
     [task/ledgers/archive/2026-08/](task/ledgers/archive/2026-08/map.md).
     V3E-4 measured refs, `VERSION AS OF` over DVs, expire dual-probe, and the
     orphan 24h floor on adopted v3. V3E-5 added the nightly v3 live-oracle leg
-    ([#253](https://github.com/TRO-Wolf/repark/pull/253)).
-  - **Next:** salvage RP-2 with one safe MOR DELETE on a DV-free table and a broad live-DV
-    refusal. Fork F-17 repairs shared-Puffin sibling closure in parallel; RP-3 takes the repair
-    and the full DV matrix before V3-3. The ordered contract is
+    ([#253](https://github.com/TRO-Wolf/repark/pull/253)). RP-2 (2026-08-28, fork
+    `ce92a7bf`) landed the guarded increment: a first plain-`WHERE` DELETE on a DV-free v3
+    table runs on both modes Spark-clean (`V3-COW-1` rewritten); any table carrying a live DV
+    refuses DELETE before a write — a second engine DELETE and the Spark shared-Puffin fixture
+    are pinned; UPDATE / MERGE refuse; `rewrite_data_files` still reassigns lineage
+    (`V3-LINEAGE-1` stays, re-measured); F-3's `'remove-dangling-deletes' => true` taken.
+  - **Next:** RP-3 — one frozen repin at fork `d408da42` (F-7 U3, F-16, F-9, F-15, F-14,
+    F-17, H7-P1/R114), wiring the fork's `close_touched_dv_containers` into the engine's MOR
+    DML path, and the full DV input-state matrix; charter
+    [task/ledgers/staging/rp-3-fork-repin-ledger.md](task/ledgers/staging/rp-3-fork-repin-ledger.md).
+    V3-3 follows. The ordered contract is
     [docs/design/format-v3-track.md §5](docs/design/format-v3-track.md).
 <!-- /ws -->
 

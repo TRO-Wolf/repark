@@ -1,6 +1,9 @@
-"""V3R-1: facade Spark `.sql()` copy-on-write DML on an adopted v3 table refuses (V3-COW-1).
+"""V3R-1 facade `.sql()` v3 DML pins: UPDATE / MERGE refuse (V3-COW-1); RP-2 (2026-08-27)
+measured the plain-`WHERE` DELETE Spark-clean and lifted it; `rewrite_data_files` still
+refuses v3 (`V3-LINEAGE-1`).
 
 pins: v3r-1-rulings/C-006
+pins: rp-2-fork-repin/C-003, C-005
 """
 
 from __future__ import annotations
@@ -21,6 +24,7 @@ _COW_V3 = (
     "'write.update.mode' = 'copy-on-write', "
     "'write.merge.mode' = 'copy-on-write'"
 )
+_MOR_V3 = "'format-version' = '3', 'write.delete.mode' = 'merge-on-read'"
 _VERSION_UUID_METADATA = re.compile(r"^(\d+)-[0-9a-fA-F-]+\.metadata\.json$")
 
 
@@ -56,7 +60,7 @@ def _id_name_rows(table: pa.Table) -> list[tuple[int, str]]:
 def test_facade_adopted_v3_cow_dml_refuses_and_leaves_the_table_untouched(
     tmp_path: Path,
 ) -> None:
-    """Adopted v3 COW MERGE, DELETE and UPDATE raise naming V3-COW-1; rows stay put."""
+    """Adopted v3 MERGE and UPDATE raise naming V3-COW-1; the RP-2 DELETE commits."""
     from repark import ReparkSession
 
     spark = (
@@ -102,11 +106,57 @@ def test_facade_adopted_v3_cow_dml_refuses_and_leaves_the_table_untouched(
             "CALL ice.system.register_table("
             f"table => 'sales.adopt_del', metadata_file => '{delete_metadata}')"
         )
-        with pytest.raises(UnsupportedOperationException, match="V3-COW-1"):
-            spark.sql("DELETE FROM ice.sales.adopt_del WHERE id = 2").collect()
+        spark.sql("DELETE FROM ice.sales.adopt_del WHERE id = 2").collect()
+        deleted = spark.sql("SELECT id, name FROM ice.sales.adopt_del").to_arrow()
+        assert _id_name_rows(deleted) == [(1, "a"), (3, "c")]
         with pytest.raises(UnsupportedOperationException, match="V3-COW-1"):
             spark.sql("UPDATE ice.sales.adopt_del SET name = 'x' WHERE id = 2").collect()
-        untouched = spark.sql("SELECT id, name FROM ice.sales.adopt_del").to_arrow()
-        assert _id_name_rows(untouched) == seeded
+    finally:
+        spark.stop()
+
+
+def _objects_under(root: Path) -> list[str]:
+    return sorted(str(path) for path in root.rglob("*") if path.is_file())
+
+
+def test_facade_v3_mor_first_delete_commits_a_deletion_vector_and_a_second_refuses(
+    tmp_path: Path,
+) -> None:
+    from repark import ReparkSession
+
+    spark = (
+        ReparkSession.builder.appName("rp-2-mor").config(_ALLOW_CREATE_V3_KEY, "true").getOrCreate()
+    )
+    try:
+        spark.register_memory_catalog("ice", tmp_path)
+        sales = tmp_path / "sales"
+        spark.sql(f"CREATE NAMESPACE ice.sales LOCATION '{sales}'")
+        spark.sql(
+            "CREATE TABLE ice.sales.seed_mor (id INT, name STRING) USING iceberg "
+            f"TBLPROPERTIES ({_MOR_V3})"
+        )
+        spark.sql("INSERT INTO ice.sales.seed_mor VALUES (1, 'a'), (2, 'b'), (3, 'c')")
+        metadata_file = _latest_version_uuid_metadata(sales, "seed_mor")
+        spark.sql(
+            "CALL ice.system.register_table("
+            f"table => 'sales.adopt_mor', metadata_file => '{metadata_file}')"
+        )
+        spark.sql("DELETE FROM ice.sales.adopt_mor WHERE id = 2").collect()
+        survivors = [(1, "a"), (3, "c")]
+        first = spark.sql("SELECT id, name FROM ice.sales.adopt_mor").to_arrow()
+        assert _id_name_rows(first) == survivors
+        delete_files = spark.sql(
+            "SELECT file_format FROM ice.sales.adopt_mor.delete_files"
+        ).to_arrow()
+        kinds = [str(kind).upper() for kind in delete_files.column("file_format").to_pylist()]
+        assert kinds == ["PUFFIN"], kinds
+        pointer = _latest_version_uuid_metadata(sales, "seed_mor")
+        objects = _objects_under(sales / "seed_mor")
+        with pytest.raises(UnsupportedOperationException, match="1 live deletion vector"):
+            spark.sql("DELETE FROM ice.sales.adopt_mor WHERE id = 3").collect()
+        assert _latest_version_uuid_metadata(sales, "seed_mor") == pointer
+        assert _objects_under(sales / "seed_mor") == objects
+        second = spark.sql("SELECT id, name FROM ice.sales.adopt_mor").to_arrow()
+        assert _id_name_rows(second) == survivors
     finally:
         spark.stop()

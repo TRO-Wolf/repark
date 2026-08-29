@@ -73,8 +73,8 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   the fork changing its mind. **V3-2** lifts CREATE/CTAS `format-version = 3` behind
   `repark.sql.allowCreateFormatVersion3`; opt-in CREATE is pinned to still hit this guard.
   The same finding annotates
-  `removed_delete_files_count`, whose honest constant `0` holds on v2 and stops holding the moment
-  v3 is admitted.
+  `removed_delete_files_count`: RP-2 (2026-08-27) took fork F-3 — the CALL accepts
+  `'remove-dangling-deletes' => true` and reports the fork's true count; the default stays 0.
   **V3-1 wired `register_table`**, the sixth procedure: adoption via the fork's
   `Catalog::register_table` (memory and Glue implement it; S3 Tables refuses
   `FeatureUnsupported`). Spark's two required strings and three nullable BIGINT columns, measured
@@ -159,8 +159,12 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   opens uncorrelated `DELETE … col IN` / `NOT IN (SELECT …)`, `[NOT] EXISTS` ±
   correlation, correlated IN, and identity `UPDATE … IN` onto `execute_predicate_dml`;
   see the module doc and `task/r1-g3e8-pr4-ledger.md`), the MERGE
-  star rewrite call, partition-spec builders. V3R-1: `refuse_v3_cow_dml`, the `V3-COW-1` passthrough seat; `dml_target_ident` (shared
+  star rewrite call, partition-spec builders. V3R-1: `refuse_v3_cow_dml`, the `V3-COW-1` passthrough seat (RP-2 2026-08-27: lifted for the
+  plain-`WHERE` DELETE on DV-free v3 tables); `dml_target_ident` (shared
   with the BUG-001 valve) completes short names from the session defaults (SEC-001).
+- `call_args.rs` — **RP-2 (2026-08-27) split:** the CALL argument bag (`CallArgs::parse`,
+  scalar coercions, quoted-name keys for dashed options) moved here from `call.rs` along the
+  file-size gate's stated seam; procedure lowering stayed in `call.rs`.
 - `collation.rs` — **G15 (2026-08-12):** parse-altitude collation refuse. Walks
   `Expr::Collate`, column-def `COLLATE`, `CREATE`/`ALTER COLLATION`, `SET NAMES COLLATE`,
   session `SQLConf` keys containing `collation` (including `ParenthesizedAssignments`),

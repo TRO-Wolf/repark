@@ -130,6 +130,12 @@ unblocks a chartered or proposed engine unit; **P3** = real, not urgent.
 
 ### F-3 (P2) — `RewriteDataFiles`: dangling-delete removal and `removed_delete_files_count`
 
+*Taken by RP-2 (2026-08-27):* the CALL accepts `'remove-dangling-deletes' => true` (quoted-name
+CALL grammar) and reports the fork's true count; default stays false; the Java-faithful
+unpartitioned-single-spec early return measured. Pin:
+`call_rewrite_data_files_remove_dangling_deletes_reports_a_true_count`. The v3 half stays
+guarded (V3-LINEAGE-1).
+
 - **Engine observation.** The engine's `rewrite_data_files` result reports
   `removed_delete_files_count` as a constant `0` by construction, because the fork's action
   does not compose dangling-delete removal and the engine refuses the `options` map. On **v3**
@@ -201,6 +207,13 @@ unblocks a chartered or proposed engine unit; **P3** = real, not urgent.
 
 ### F-7 (A12-owned; unblocked 2026-08-23 — see the addendum below) — format v3 compaction
 
+*Partially consumed by RP-2 (2026-08-27, fork `ce92a7bf`):* U2 measured Spark-clean — a COW
+`DELETE` preserves every survivor's `_row_id`/seq and the `next_row_id` counter matches
+Spark's allocate-then-suppress exactly. U1 measured RED: `RewriteDataFiles` still reassigns
+every `_row_id` (0..11 → 12..23, seq → 13) — V3-LINEAGE-1 stays; the lift belongs to V3-5 on
+a fork rev that carries it. U3 (`RewritePositionDeleteFiles` on v3, fork #227) is RP-3's C-007;
+RP-3 also re-measures U1 at its frozen SHA (C-005).
+
 Listed so the fork plans it; as of 2026-08-21 the engine's V3-2+ units deliberately waited
 for the MW campaign to close (that wait is over — the addendum below), and the engine refuses
 these paths today.
@@ -269,6 +282,8 @@ on the `OverwriteFiles` (COW DML) path?
 
 ### F-9 (P3) — S3 Tables `register_table`
 
+*Ruled fork #233 (2026-08-28, row R126: dated service gap); taken by **RP-3** (C-008).*
+
 - **Engine observation.** V3-1 wired `CALL system.register_table`; Glue registers, S3 Tables
   returns `FeatureUnsupported` from the fork and the engine surfaces that loud.
 - **Fork location.** `crates/catalog/s3tables/src/catalog.rs:722` `register_table` (arguments
@@ -318,6 +333,12 @@ than duplicate.
 
 ### F-13 (north-star spine, added 2026-08-23) — Puffin deletion-vector write path
 
+*Consumed by RP-2 (2026-08-27, fork `ce92a7bf`):* measured engine-side — a plain-`WHERE`
+MOR `DELETE` on a DV-free v3 table commits Puffin DVs (one per touched data file; merge and supersession are RP-3's to measure) that PySpark
+4.1.2 + Iceberg 1.11.0 reads back to the same live set. On DV-carrying tables the same
+statement resurrected a DV-deleted row (measured; guard stays). UPDATE / MERGE / DV-carrying
+tables remain V3-3's measurement surface.
+
 The prerequisite for engine unit **V3-3** (merge-on-read DML on v3), the largest engine unit on
 the v1.0 path.
 
@@ -342,6 +363,12 @@ the v1.0 path.
 
 ### F-14 (north-star spine, added 2026-08-23) — `MetadataLocation` Hadoop pointer math
 
+*Landed fork #235 (2026-08-28):* `MetadataLocation` parses Hadoop `vN.metadata.json` and bumps
+to uncompressed `v(N+1).metadata.json` (Java `HadoopTableOperations` 1.10.0); Hive/REST names
+unchanged; gzip suffixes parse. Taken by **RP-3** — the engine pin retargets to "the write
+succeeds" and registry `V3-ADOPT-1` moves to FIXED. Residue on fork row R167: no
+`version-hint.text` writer, no exists-fail rename.
+
 - **Engine observation:** registry **V3-ADOPT-1** — a table registered from a Hadoop-convention
   pointer (`vN.metadata.json`) reads correctly but every write fails: the fork's
   `MetadataLocation` parser requires `<version>-<uuid>.metadata.json` to compute the next
@@ -360,6 +387,9 @@ the v1.0 path.
 
 ### F-15 (north-star spine, added 2026-08-23) — v3 type system and default values
 
+*`write_default` filled at `DataFileWriter::write` — fork #233 (2026-08-28); carried, not
+consumed, by **RP-3** (C-009). The rest of F-15 stays V3-6's substrate.*
+
 The prerequisite for engine unit **V3-6** (v3 types) and the H6 VARIANT design's fork-gated
 increments.
 
@@ -376,6 +406,8 @@ increments.
   1.10.0 bytecode where the spec is ambiguous.
 
 ### F-16 (P1, added 2026-08-24 from MW-7) — `RewriteDataFiles`: the delete-RATIO candidate clause
+
+*Landed fork #232 (2026-08-27) with v3 DV removal accounting; taken by **RP-3** (C-006).*
 
 - **Engine observation.** MW-7 ran 1e7 rows × 50 MERGEs through the full maintenance sequence
   and the merge-on-read table ended it holding **8 position-delete files with 10,000,000 delete
@@ -414,6 +446,15 @@ increments.
   Spark reaches zero with that option off.
 
 ### F-17 (north-star blocker, added 2026-08-28) — shared-Puffin DV sibling closure
+
+*Landed fork #237 (2026-08-28, same day):* `close_touched_dv_containers` /
+`rewrite_siblings_for_dropped_references` extracted into core, sibling data sequences stamped
+on `RowDelta`, 18 pins (sabotage mutation 11 red), Java reads the survivors. **The closure is a
+call the engine's own MOR path must make** — the fork's DataFusion `delete.rs` calls it; the
+engine's `plan_and_commit_mor` → `commit_row_delta` commits through `RowDelta` directly. Taken
+by **RP-3** (C-003 wiring, C-004 matrix). The fork's named residue — a Spark-job-written
+shared-Puffin fixture, row R114 🟡 — is exactly the engine's `v3-spark-part-dv`; RP-3 reports
+the result back.
 
 - **Engine observation.** One Spark-written Puffin contains two deletion-vector blobs. The
   `part=0` blob deletes id 2, and the `part=1` blob deletes id 5. An engine DELETE of id 1

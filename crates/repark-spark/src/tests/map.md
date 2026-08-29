@@ -17,9 +17,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 - `cast_binary.rs` — **SQP-1 (C-009):** `CAST … AS BINARY` plans to Arrow `Binary` (B1/B8–B10/B13/
   B15), refuses illegal sources (`DATATYPE_MISMATCH`, B2–B7), keeps `VARBINARY` refusing (B12),
   leaves a `BINARY` DDL column untouched; `TRY_CAST(<int>)` refuses without the ANSI-off suggestion.
-- `v3_cow.rs` — **V3R-1 (2026-08-25):** adopted-v3 copy-on-write DML refuses (`V3-COW-1`, both
-  seats), the CCC regressions (short names, padded merge-on-read), merge-on-read still refuses, a
-  v2 control; keeps `V3_MAINTENANCE_ORACLE` and ENC-1's pin.
+- `v3_cow.rs` — **V3R-1 (2026-08-25); RP-2 (2026-08-27) retarget:** adopted-v3 UPDATE / MERGE
+  refuse (`V3-COW-1`, both seats), the plain-`WHERE` DELETE commits on a DV-free table (COW
+  keeps survivor lineage, MOR commits a Puffin DV) and a second MOR DELETE refuses while the
+  vector is live with the object set untouched (pins: rp-2-fork-repin/C-003, C-005); the CCC
+  regressions (short names, padded merge-on-read), a v2 control; keeps `V3_MAINTENANCE_ORACLE`
+  and ENC-1's pin.
 - `create_table.rs` — also the V3R-1 type pin: `GEOMETRY` / `GEOGRAPHY` / `VARIANT` refuse at
   CREATE (`V3-GEO-1`).
 - `v3e4.rs` — **V3E-4:** snapshot refs, `VERSION AS OF` over DVs, expire with
@@ -32,6 +35,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 - `delete_granularity.rs` — **MW-9:** Spark-door `write.delete.granularity` (explicit
   file/partition, unknown refuse on MERGE and identity UPDATE, fork DELETE/UPDATE
   residual, ALTER-then-MERGE).
+- `call_rewrite_dangling.rs` — **RP-2 (2026-08-27):** the CALL's
+  `'remove-dangling-deletes' => true` reaches the fork's composed GC and reports a true
+  `removed_delete_files_count` on a partitioned v2 fixture (C-006).
 - `common.rs` — shared fixtures (`setup`, `rows`, `run`, `register_source`, `table_rows`, …)
   and the cross-cutting helpers that more than one leaf needs (`time_travel_id_multiset`,
   `execute_without_collecting`, unsafe-cast walk helpers). **V3-2:**

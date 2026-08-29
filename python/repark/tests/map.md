@@ -31,9 +31,12 @@ NOT in that file is a defect, not a decision.
   use the shared Spark literal helper across SQL, createDataFrame, unpivot, and ML paths.
 - [test_mw9_delete_granularity.py](test_mw9_delete_granularity.py) — **MW-9:** facade Spark
   `.sql()` unset `write.delete.granularity` writes one position-delete file per data file.
-- [test_v3_cow_dml.py](test_v3_cow_dml.py) — **V3R-1 (2026-08-25):** facade Spark `.sql()`
-  copy-on-write MERGE / DELETE / UPDATE on an adopted v3 table raise
-  `UnsupportedOperationException` naming `V3-COW-1`; rows untouched.
+- [test_v3_cow_dml.py](test_v3_cow_dml.py) — **V3R-1 (2026-08-25); RP-2 2026-08-27 retarget:** facade Spark `.sql()`
+  MERGE / UPDATE on an adopted v3 table raise `UnsupportedOperationException` naming
+  `V3-COW-1`; the plain-`WHERE` DELETE commits the right rows (RP-2 lift) with Spark-equal
+  survivor lineage — `next_row_id` = 5 on the 3-row recipe, Spark's own allocate-then-suppress
+  counter (live oracle 2026-08-27); a MOR first DELETE commits a Puffin DV and the second refuses
+  naming the live vector (`1 live deletion vector`), pointer and object set untouched (pins: rp-2-fork-repin/C-003, C-005).
 - [test_v3e4_refs_time_travel.py](test_v3e4_refs_time_travel.py) — **V3E-4:** facade
   branch/tag, `VERSION AS OF` over DVs, rollback, expire dual-probe, orphan
   24h floor on the partitioned-DV fixture after a RePark append.

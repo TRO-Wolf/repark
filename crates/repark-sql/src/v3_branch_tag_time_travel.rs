@@ -21,6 +21,7 @@ use repark_core::{CatalogRegistry, EngineContext, LocationPolicy};
 use tempfile::TempDir;
 
 use crate::execute;
+use crate::v3_cow::count_objects;
 
 const PART_DV_TABLE: &str = "/tmp/repark-v3e3-partdv/ns/v3part";
 static PART_DV_LOCK: Mutex<()> = Mutex::new(());
@@ -340,16 +341,34 @@ async fn ansi_for_version_as_of_branch_name_matches_that_snapshot() {
 }
 
 #[tokio::test]
-async fn ansi_cow_delete_still_refuses_on_appended_v3() {
+async fn ansi_cow_delete_on_a_dv_carrying_v3_table_refuses() {
     let fixture = materialize_writable();
     let door = door().await;
     adopt(&door, "partdv", &fixture.metadata_file).await;
+    let snapshot = door.snapshot_id("partdv").await;
+    let objects = count_objects(Path::new(PART_DV_TABLE));
     let err = match door.sql("DELETE FROM ice.sales.partdv WHERE id = 1").await {
-        Ok(_) => panic!("DELETE must refuse"),
+        Ok(_) => panic!("DELETE must refuse: the table carries deletion vectors"),
         Err(err) => err.to_string(),
     };
     assert!(
-        err.contains("V3-COW-1"),
-        "ANSI DELETE must still name V3-COW-1, got: {err}"
+        err.contains("V3-COW-1") && err.contains("2 live deletion vector"),
+        "the DV-carrying refusal must name the measured resurrection, got: {err}"
+    );
+    assert_eq!(
+        door.snapshot_id("partdv").await,
+        snapshot,
+        "a refused DELETE must not commit"
+    );
+    assert_eq!(
+        count_objects(Path::new(PART_DV_TABLE)),
+        objects,
+        "no object was written under the fixture"
+    );
+    assert_eq!(
+        door.live_triples("SELECT id, name, part FROM ice.sales.partdv ORDER BY id")
+            .await,
+        spark_dv_rows(),
+        "Spark's live set is intact"
     );
 }

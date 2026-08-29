@@ -184,6 +184,10 @@ already merges and supersedes. The guard is a temporary safety boundary, not the
 capability. PR #254 (merged 2026-08-28) had widened the charter to the full fork batch at
 `26088bb`; this ruling supersedes it, and its four added clauses transfer to RP-3.
 
+*Done 2026-08-28 — the RP-2 salvage PR: second-DELETE refusal pinned on all three doors, the
+shared-Puffin refusal pin checks snapshot, object set and Spark's live set, the registry claims
+narrowed.*
+
 ### Step 2 — repair shared-Puffin DV closure in the fork
 
 Fork item F-17 owns the table-format invariant. The measured fixture has two DV blobs in one
@@ -196,11 +200,24 @@ different partitions, DELETE and UPDATE, and Java reading the fork-written resul
 case removes sibling carry and must make the regression red. The detailed request and the engine
 pin are in the [fork handoff](../../task/roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md#f-17-north-star-blocker-added-2026-08-28--shared-puffin-dv-sibling-closure).
 
+*Done fork-side 2026-08-28 — fork #237: the closure lives in core
+(`close_touched_dv_containers`, `rewrite_siblings_for_dropped_references`), sibling data
+sequences are stamped on `RowDelta`, 18 pins, the sabotage mutation reds 11 of them, Java reads
+the survivors. Residue named by the fork: a Spark-job-written shared-Puffin fixture — RP-3's
+matrix cell (4) on `v3-spark-part-dv` closes it.*
+
 ### Step 3 — charter RP-3 against one post-fix fork SHA
 
 RP-3 takes the complete landed fork batch after F-17. It includes F-7 U3, F-16, F-9, F-15,
 F-14, and F-17 when they are present at the selected SHA. A later fork landing does not widen
-the unit. The repin re-runs every standing duty in `AGENTS.md` and measures these cells:
+the unit. The selected SHA is fork `main` `d408da42` (#240; F-17 in #237, F-14 in #235, H7-P1
+and the public R114 DV discovery API in #239). **The repin is not only a rev bump:** the fork's
+container closure is a public call its own DataFusion `delete.rs` makes
+(`close_touched_dv_containers`), and the engine's MOR DML path
+(`crates/repark-iceberg/src/write/merge/mod.rs`, `plan_and_commit_mor` → `commit_row_delta`)
+commits through `RowDelta` directly — RP-3 wires that call in first, then measures. Charter:
+[task/ledgers/staging/rp-3-fork-repin-ledger.md](../../task/ledgers/staging/rp-3-fork-repin-ledger.md).
+The repin re-runs every standing duty in `AGENTS.md` and measures these cells:
 
 | Input state | Operation | Required result |
 |---|---|---|
@@ -248,12 +265,12 @@ blocked. They do not replace or delay a ready v3 unit.
 
 ## 6. Fork work this track needs
 
-1. **Shared-Puffin DV sibling closure (F-17)** blocks lifting the broad live-DV guard and is the
-   immediate fork dependency for full V3-3.
+1. **Shared-Puffin DV sibling closure (F-17)** — landed fork #237 (2026-08-28); the engine
+   consumes it in RP-3, which must call the closure from its own MOR DML path.
 2. **Row lineage through `RewriteDataFiles`** remains an executed question. RP-2 measured a full
    reassignment at `ce92a7bf`; RP-3 re-runs it before assigning the fix to the fork or engine.
-3. **`MetadataLocation` Hadoop pointer math (F-14)** must write the next `vN.metadata.json`
-   pointer, or keep the dated engine refusal.
+3. **`MetadataLocation` Hadoop pointer math (F-14)** — landed fork #235 (2026-08-28): Hadoop
+   `vN` parses and bumps to `v(N+1).metadata.json`; RP-3 retargets the engine pin.
 4. **V3 schema and IO support (F-15)** gates each V3-6 type independently.
 
 The FNP and TA performance campaigns consume none of these fork surfaces.

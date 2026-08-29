@@ -578,37 +578,36 @@ async fn remove_orphan_files_on_v3_refuses_inside_twenty_four_hours() {
 }
 
 #[tokio::test]
-async fn cow_and_mor_dml_still_refuse_on_the_appended_v3_table() {
+async fn update_and_merge_still_refuse_on_the_appended_v3_table() {
     let fixture = materialize_part_dv();
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&warehouse).await;
     adopt_and_append(&ctx, &catalogs, &fixture.metadata_file).await;
 
-    let err = execute(&ctx, &catalogs, "DELETE FROM ice.sales.partdv WHERE id = 1")
-        .await
-        .expect_err("V3-COW-1");
+    let err = execute(
+        &ctx,
+        &catalogs,
+        "UPDATE ice.sales.partdv SET name = 'x' WHERE id = 1",
+    )
+    .await
+    .expect_err("V3-COW-1");
     let message = err.to_string();
     assert!(
-        message.contains("V3-COW-1"),
-        "copy-on-write DELETE must still name V3-COW-1, got: {message}"
+        message.contains("V3-COW-1") && message.contains("row lineage"),
+        "copy-on-write UPDATE must still name V3-COW-1, got: {message}"
     );
 
     let err = execute(
         &ctx,
         &catalogs,
-        "ALTER TABLE ice.sales.partdv SET TBLPROPERTIES ('write.delete.mode' = 'merge-on-read')",
+        "MERGE INTO ice.sales.partdv AS t USING (SELECT 1 AS id, 'z' AS name, 0 AS part) AS s \
+         ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.name = s.name",
     )
-    .await;
-    let _ = err;
-    let err = execute(&ctx, &catalogs, "DELETE FROM ice.sales.partdv WHERE id = 1")
-        .await
-        .expect_err("MOR or COW refuse");
+    .await
+    .expect_err("V3-COW-1");
     let message = err.to_string();
     assert!(
-        message.contains("V3-COW-1")
-            || message.contains("merge-on-read")
-            || message.contains("deletion vector")
-            || message.contains("format version"),
-        "DML on v3 must still refuse, got: {message}"
+        message.contains("V3-COW-1") || message.contains("merge-on-read"),
+        "DML that this engine owns must still refuse on v3, got: {message}"
     );
 }

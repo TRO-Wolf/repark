@@ -280,7 +280,8 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   pre-commit (n=5 median **0.13 s**, inside the sub-second hook budget).
 
 - `check_rust_file_size.sh` + `check_rust_file_size.py` — the **general Rust file-size** guard
-  (G-8 companion to `check_lib_rs`). The scan covers every `*.rs` under `crates/**`; the default
+  (G-8 companion to `check_lib_rs`). RP-2 (2026-08-27): `call.rs` ratcheted 1404 → 1111 — the
+  argument bag moved to `crates/repark-spark/src/call_args.rs` along the row's stated seam. The scan covers every `*.rs` under `crates/**`; the default
   and every exact exception baseline live only in the script. Each exception carries its debt
   reason and cohesive split seam. Growth fails, and shrinkage fails until the row ratchets down
   or retires; comment-only shrink or restoration has the same exact-baseline duty. Only
