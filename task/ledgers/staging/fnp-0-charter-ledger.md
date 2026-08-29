@@ -18,7 +18,7 @@ the four sub-project families declared absent-and-loud, collation and crypto bui
 **Delivery amendment (owner-approved 2026-08-28):** the first tranche landed as PRs #190–#193.
 The remaining campaign ships one coherent PR per unit or tightly coupled pair. This changes the
 review boundary, not the frozen proposition gate or the per-unit proof obligations. Change
-control: [PLAN-1](../completed/plan-1-northstar-fnp-sequence-ledger.md) C-004.
+control: [PLAN-1](../archive/2026-08/2026-08-28-plan-1-northstar-fnp-sequence-ledger.md) C-004.
 
 ## Evidence attached to this gate
 
