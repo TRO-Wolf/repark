@@ -1,4 +1,4 @@
-//! Pins Spark string-literal escape canonicalization on the Spark SQL door.
+//! SQP-1 pins — Spark string-literal escapes on the Spark SQL door.
 //!
 //! Oracle: PySpark 4.1.2 + Iceberg 1.11.0, `escapedStringLiterals=false`, `ansi.enabled=true`,
 //! measured against the live oracle (`<pyspark-4.1.2-oracle>`); the ledger
@@ -180,7 +180,8 @@ async fn unescape_covers_the_spark_escape_domain() {
     );
 }
 
-/// Escaped quotes stay inside the literal; an unpaired trailing backslash is a parse error.
+/// `\'` / `\"` no longer end the literal (E5, E22); an unpaired trailing backslash is a parse
+/// error (E16); `'a\\'` is `a\` (E15).
 /// pins: sqp-1-spark-string-literals/C-002
 #[tokio::test]
 async fn escaped_quotes_lex_and_unpaired_backslash_refuses() {
@@ -359,7 +360,8 @@ async fn read_path_failures() -> Vec<String> {
     .collect()
 }
 
-/// Exercise write, DML, and DDL classes through an Iceberg table; each half owns a fresh catalog.
+/// Paths (c)-(m) — the write/DML/DDL classes, round-tripped through an Iceberg table. Split by
+/// setup only (clippy line ceiling); each half owns a fresh catalog.
 async fn write_path_failures() -> Vec<String> {
     let mut failures = insert_delete_update_failures().await;
     failures.extend(merge_subquery_property_failures().await);

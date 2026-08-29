@@ -1,4 +1,9 @@
-//! Pins Spark-door `CAST(x AS BINARY)` values, Arrow types, and illegal-source refusals.
+//! SQP-1 pins — `CAST(x AS BINARY)` on the Spark SQL door.
+//!
+//! Oracle: PySpark 4.1.2 (`<pyspark-4.1.2-oracle>`), ANSI ON. A legal cast plans to Arrow `Binary`
+//! (value AND type); an illegal source (INT / BIGINT / DECIMAL / BOOLEAN / DATE) refuses with
+//! Spark's `DATATYPE_MISMATCH` naming the source; `VARBINARY` keeps refusing; a `BINARY` DDL column
+//! is untouched. Reverting `BINARY`→`BYTEA` reds the legal casts; reverting the refuse reds the refusals.
 use super::super::*;
 use super::common::*;
 

@@ -253,6 +253,10 @@ JVM, no repark required). See [../map.md](../map.md).
 
 ## Debug
 
+- `test_sqp_1_record.py` is itself byte-frozen by `test_pr_245_revalidation_record.py`.
+  `test_cap_1_source_file_line_cap.py` mirrors both size gates' exception tables and their row
+  counts: regenerate the tuples in the commit that ratchets a gate, then run this suite
+  (`make py-test` — it is not in `preflight`).
 | Symptom | First check |
 |---|---|
 | `test_datasets_manifest_types` reds | A schema field and its `manifest.json` row were edited one-sidedly; the failure names the family and class id |

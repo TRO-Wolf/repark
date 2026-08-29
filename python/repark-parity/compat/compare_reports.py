@@ -22,6 +22,14 @@ environment variable, or config path by which a row can be excluded without appe
 in a ledger file: this module reads no environment at all, and its option set is
 frozen and pinned by a unit test that provokes an undeclared subtraction.
 
+CLI::
+
+    PYTHONPATH=python/repark-parity python -m compat.compare_reports \\
+        --baseline task/census/baseline-<pin>/classic.json \\
+        --candidate task/census/v2-<sha>/classic.json \\
+        --deferred task/port/deferred-python-tests.txt \\
+        --quarantine task/census/baseline-<pin>/quarantine.txt
+
 Exit codes: ``0`` identical, ``1`` any difference, ``2`` loud failure (manifest
 mismatch, unreadable input, malformed report).
 """

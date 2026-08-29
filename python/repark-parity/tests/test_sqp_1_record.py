@@ -1,9 +1,9 @@
 """SQP-1 record pin (charter C-011) — the disposition is documented and single-homed.
 
-A tree pin over repository files: fixed entries left ``STATUS.md``, the three out-of-scope
-divergences are ``§7`` registry rows each with a pin, the GT1 residual comments are updated,
-and the new module carries the rule table with its oracle provenance. Files only — no engine,
-no JVM.
+A tree pin: it reads the repository's own files and asserts the merged truth of the unit. The two
+Known-correctness-issue entries have left ``STATUS.md``; the three out-of-scope divergences are
+``§7`` registry rows, each with a pin; the GT1 residual comments are updated; and the new module
+carries the rule table with its oracle provenance. Files only — no engine, no JVM.
 
 pins: sqp-1-spark-string-literals/C-011
 """
@@ -59,5 +59,6 @@ def test_module_doc_records_the_rule_table() -> None:
     module = _read("crates/repark-spark/src/spark_literals.rs")
     assert "The rules (Spark 4.1.2" in module
     assert "<pyspark-4.1.2-oracle>" in module
+    # A few load-bearing rows must be spelled out.
     assert "backslash KEPT" in module
     assert "one astral char" in module

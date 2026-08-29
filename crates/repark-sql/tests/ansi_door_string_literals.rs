@@ -1,4 +1,8 @@
-//! **ANSI-door control for SQP-1.** String-literal canonicalisation is Spark-only.
+//! **ANSI-door control for SQP-1.** The Spark door's string-literal canonicalisation is Spark-only
+//! (ADR-0002: two honest doors). This native/ANSI door keeps generic literal semantics — a
+//! backslash is literal, `\'` does not escape, raw strings are unsupported — so a change to the
+//! Spark door's lexer cannot silently move this door. No `crates/repark-sql/` production code
+//! changes for SQP-1; this is a control-only, AWS-free module.
 
 use std::sync::Arc;
 

@@ -13,7 +13,7 @@ is the compatibility router that re-exports every prior name.
 
 | Path | Role |
 |---|---|
-| `_coerce.py` | `range_bound_as_int`, `sql_clause_end_after` — lifted so `session_core.py` can ratchet its exact `check_lib_py` baseline. |
+| `_coerce.py` | `range_bound_as_int`, `sql_clause_end_after` — lifted so `session_core.py` can ratchet its exact `check_lib_py` exception baseline. |
 | `_funcs.py` | Compatibility router: imports each responsibility module, binds cross-module edges, re-exports every prior name. |
 | `session_configuration.py` | SQLConf defaults, DataFusion validation/forwarding, display-style normalization. `_SQLCONF_DEFAULTS` holds declared inference, session-timezone, and timestamp-type defaults. Runtime temp-directory `SET` stays refused (the Rust builder already applied it). DataFusion `SET` values route through the shared Spark string-literal helper. |
 | `catalog_resolution.py` | Catalog selection, aliasing, namespace defaults, table-name resolution; relation-parser edge bound by the router to avoid a cycle. |

@@ -68,6 +68,9 @@ stability run and quarantine rule, the full-extras facade cohort, the attributio
 
 ## Debug
 
+- The `CLI::` block in `compare_reports.py`'s module docstring is contract, not prose:
+  `tests/test_deferred_ledger.py` pins `--deferred task/port/deferred-python-tests.txt` there so
+  the ledger path cannot drift from the gate it feeds.
 | Symptom | First check |
 |---|---|
 | `ModuleNotFoundError: pyspark.sql.tests` | Cache missing / `install_redirect` not given `spark_tests_root` |

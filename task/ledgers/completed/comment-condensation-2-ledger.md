@@ -987,6 +987,24 @@ BASE_ONLY_FINDING:
   rationale: C-005 forbids changing executable schema validation in this comment-only unit.
 ```
 
+## Post-push CI remediation (2026-08-29)
+
+The `parity-harness tests` CI step (`make py-test`, not in `preflight`) went red on six pins after
+push; the slice evidence above records that focused pytest never ran locally. Each red traced to
+its cause and repaired on the branch:
+
+| Red | Cause | Repair |
+|---|---|---|
+| `test_cap_1_exception_tables_equal_the_measured_debt` | the gates were ratcheted (41 Rust, 32 Python rows equal the measured debt) but the test's mirror tuples were not | both tuples regenerated from the gates and the hard-coded row counts moved 45→41 / 34→32; 4 Rust + 2 Python rows retired below the ceiling |
+| `test_cap_1_prose_and_navigation_name_the_generalized_gate` | pinned phrases lost in three maps: the `_coerce.py` row in `spark/session/map.md` dropped "exception"; `spark/dataframe/map.md` dropped the PYC-1 / CAP-1 exception-row record; `repark-spark/src/call/map.md` dropped the exact `check_rust_file_size` baseline sentence | all three restored in the maps' current voice |
+| `test_deferred_ledger::…documented_allowlist_path` | the `CLI::` invocation block was cut from `compat/compare_reports.py`, the only place naming `--deferred task/port/deferred-python-tests.txt` | block restored (it is the contract the test guards) |
+| `test_plan_1…::test_navigation_describes_the_revised_authoritative_documents` | not condensation: the archive commit moved the RP-2 entry from `completed/map.md` to `archive/2026-08/map.md` and dropped its "became fork F-17" clause | test repointed at the archive map with a wrap-independent token; the outcome clause restored to the archived line |
+| `test_pr245…::…pin_family_are_byte_frozen` | the PR-245 record byte-freezes five files by sha256 and the sweep condensed four of them: `crates/repark-spark/src/tests/{spark_string_literals,cast_binary}.rs`, `crates/repark-sql/tests/ansi_door_string_literals.rs`, `python/repark/tests/test_sqp_1_string_literals.py`, `python/repark-parity/tests/test_sqp_1_record.py` | all four reverted to `main` byte-for-byte; a frozen record is not a condensation target |
+| `test_sqp_1_record::test_gt1_residual_comments_are_updated` | a rewrap split the pinned phrase "its own escape pins are in" across lines | rewrapped on one line |
+
+Verification: `python/repark-parity/tests` 459 passed locally; `check-ledgers`, `check-docs-compaction`,
+`spell-check`, `check-lib-rs`, `check-lib-py` clean; `make preflight` re-run before push.
+
 ## Scope-audit self-logic review
 
 ```yaml

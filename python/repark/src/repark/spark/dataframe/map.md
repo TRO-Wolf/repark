@@ -68,5 +68,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
 - Circular imports: region modules may import helpers from `core.py`; `core.py` binds them before
   importing region classes.
 - Origin or display regressions: inspect `_origin_map`, engine-name overlays, and `_spawn` paths.
+- File-size records: PYC-1 (2026-08-22) moved the UDF callbacks from `core.py` to
+  `udf_bridge.py`. Under CAP-1, `core.py` and `plan_collapse.py` carry exact exception rows;
+  `udf_bridge.py` stays below the source-size default.
 - Scratch-view failures: inspect `_temp_views.py`. Facade-owned views are home-qualified; engine-
   owned scratch registration has its own lifecycle.

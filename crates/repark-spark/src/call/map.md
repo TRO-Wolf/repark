@@ -4,7 +4,8 @@
 
 Per-procedure bodies for the maintenance `CALL` router (`../call.rs`). The router keeps argument
 parsing, table-ident resolution, and the other procedures; a procedure moves here when its body
-and measured-parity contract would exceed the file-size baseline. This directory contains
+and measured-parity contract would grow `call.rs` beyond its exact
+`check_rust_file_size` baseline. This directory contains
 `rewrite_manifests`; `call.rs` keeps `expire_snapshots`, `rewrite_data_files`,
 `rewrite_position_delete_files`, `remove_orphan_files`, `rollback_to_snapshot`,
 `register_table`).

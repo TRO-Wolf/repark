@@ -2330,6 +2330,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 
 ## Debug
 
+- `test_sqp_1_string_literals.py` is byte-frozen (sha256) by
+  `python/repark-parity/tests/test_pr_245_revalidation_record.py`, and `test_functions_gt1.py`'s
+  residual docstring phrases are pinned by `test_sqp_1_record.py` — a rewrap can red either.
 - ruff format lockstep (octo C8).
 
 

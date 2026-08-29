@@ -613,8 +613,8 @@ def test_regexp_count_start_anchor_skips_mid_surrogate(spark: ReparkSession) -> 
 
     ``is_match("")`` is a context-free proxy: ``^`` is nullable on ``""`` but a mid-surrogate
     index is always > 0. CAT = U+1F408. Live Spark 4.1.2: 1 and 2. The newline case is pinned
-    through F.* with a real newline; since SQP-1 the SQL door also accepts ``'\n'`` (its own
-    escape pins are in ``test_sqp_1_string_literals.py``).
+    through F.* with a real newline; since SQP-1 the SQL door also accepts ``'\n'``
+    (its own escape pins are in ``test_sqp_1_string_literals.py``).
     """
     cat = "🐈"
     sql = _table(spark.sql("SELECT regexp_count('🐈', '^') AS c"))

@@ -209,6 +209,9 @@ above.
 
 ## Debug
 
+- `spark_string_literals.rs` and `cast_binary.rs` are byte-frozen (sha256) by
+  `python/repark-parity/tests/test_pr_245_revalidation_record.py`; any edit, a comment rewrap
+  included, reds that record — revert, never re-hash.
 | Symptom | First check |
 |---|---|
 | Test identity doubt | `cargo test -p repark-spark --lib -- --list`; compare the production-aligned leaf names |

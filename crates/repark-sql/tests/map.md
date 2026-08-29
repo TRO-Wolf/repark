@@ -134,6 +134,9 @@ holds behavior observed from outside the crate.
 
 ## Debug
 
+- `ansi_door_string_literals.rs` is byte-frozen (sha256) by
+  `python/repark-parity/tests/test_pr_245_revalidation_record.py`; any edit, a comment rewrap
+  included, reds that record — revert, never re-hash.
 | Symptom | First check |
 |---|---|
 | `m2_productions_still_need_a_pre_parse_recognizer` RED | The parser now reaches a production expected to require recognition; inspect the matching handler and parser version |
