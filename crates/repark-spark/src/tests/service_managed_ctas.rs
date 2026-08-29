@@ -1,9 +1,7 @@
 /// =======================================================================================
 /// Service-managed CTAS pins (S3 Tables create-first flow, `ServiceManagedLocation`).
-/// Substrate: a fully-delegating wrapper over the in-memory catalog that mirrors the fork's
-/// `S3TablesCatalog` location contract — `create_table` REJECTS a caller-supplied location
-/// and injects a SERVICE-assigned one — plus a commit-fault knob on `update_table` so the
-/// drop-on-abort seam is pinned deterministically (the `CommitFaultCatalog` pattern).
+/// The test catalog mirrors service-assigned locations and exposes a commit fault for the
+/// drop-on-abort seam.
 /// =======================================================================================
 use super::super::*;
 use super::common::*;
@@ -13,10 +11,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 type BoxedCatalogFuture<'a, T> = Pin<Box<dyn Future<Output = iceberg::Result<T>> + Send + 'a>>;
 
-/// Mirrors the fork's S3 Tables contract at the `Catalog` seam. `service_root` is where
-/// "the service" places tables; pointing it under a regular file is NOT used here — the
-/// deterministic failure knob is `fail_update_table` (commit-time), so create succeeds
-/// and the abort path is exercised exactly.
+/// Mirrors the fork's service-assigned location contract and can fail at commit time.
 #[derive(Debug)]
 struct ServiceManagedTestCatalog {
     inner: Arc<dyn Catalog>,
@@ -250,7 +245,7 @@ impl Catalog for ServiceManagedTestCatalog {
     // `FeatureUnsupported`); delegate so the inner memory catalog's overrides stay
     // reachable through the wrapper. NOTE the real fork `S3TablesCatalog` does NOT
     // override `publish_replace_table` at pin `14921e78` — CTAS OR REPLACE on real
-    // S3 Tables fails loud at publish (fork-queue item; disclosed in the ledger).
+    // S3 Tables fails loudly at publish.
     fn publish_create_table<'life0, 'async_trait>(
         &'life0 self,
         table: iceberg::table::Table,

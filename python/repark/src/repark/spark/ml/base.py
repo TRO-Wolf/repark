@@ -1,17 +1,7 @@
-"""Estimator / Transformer / Model contracts (PySpark ``ml.base``).
+"""Estimator and transformer contracts for the Spark ML facade.
 
-**Design principle (campaign-wide):**
-
-* Feature ``fit(dataset)`` runs aggregate/distinct **queries** planned through the session.
-* Estimator ``fit`` (M3+) may multi-pass stream Arrow batches in Rust via the session;
-  models hold **params only** (never training rows). Python never trains.
-* ``transform(dataset)`` returns a DataFrame whose plan is expressions only
-  (CASE / join / arithmetic / array ops).
-
-Python never touches training rows. Stages hold Param maps + fitted metadata + plan
-fragments — never cached Arrow batches. ``fit`` / ``transform`` accept only
-:class:`~repark.dataframe.DataFrame` from a :class:`~repark.session.ReparkSession`;
-foreign objects (real PySpark DataFrames, pandas frames) are refused loud.
+Fits use session queries or Rust Arrow streams. Models store parameters and fitted
+metadata, while transforms remain lazy plan expressions. Foreign frames are refused.
 """
 
 from __future__ import annotations
@@ -21,8 +11,6 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 from repark.errors import AnalysisException, IllegalArgumentException, PySparkTypeError
-
-# === r23 QI1: idents ===
 from repark.spark._idents import quote_ident as _quote_ident
 from repark.spark._temp_views import scratch_view_name
 from repark.spark.ml.param import HasInputCol, HasOutputCol, Param, Params
@@ -34,7 +22,7 @@ M = TypeVar("M", bound="Model")
 
 
 def _require_repark_dataframe(dataset: Any, *, verb: str) -> DataFrame:
-    """Refuse foreign frame types loud, naming what was passed (greylight Q10)."""
+    """Require a DataFrame from a ReparkSession and name foreign inputs in the error."""
     from repark.spark.dataframe import DataFrame as ReparkDataFrame
 
     if isinstance(dataset, ReparkDataFrame):
@@ -48,7 +36,7 @@ def _require_repark_dataframe(dataset: Any, *, verb: str) -> DataFrame:
 
 
 def _refuse_output_collision(frame: Any, output_col: str, *, stage: str) -> None:
-    """Refuse if output column already exists (no silent overwrite on transform)."""
+    """Refuse an output column collision instead of silently overwriting input data."""
     names = list(frame.columns) if hasattr(frame, "columns") else []
     if not names:
         try:
@@ -69,10 +57,9 @@ def _require_dense_feature_width(
     *,
     verb: str,
 ) -> None:
-    """Refuse null / wrong-width dense feature rows before plan-built transform (octo C3).
+    """Validate dense feature nulls and width with a plan aggregate before transforms.
 
-    Uses a plan aggregate (not a Python training-row loop). ``array_element`` would
-    otherwise silently yield NULL for out-of-range indices.
+    Out-of-range ``array_element`` calls otherwise produce NULL without an error.
     """
     quoted = _quote_ident(features_col)
     view = scratch_view_name(frame._session, "__repark_fw_")
@@ -99,14 +86,14 @@ def _require_dense_feature_width(
 
 
 class Estimator(Params, Generic[M], ABC):
-    """Fits a :class:`Model` on a dataset (Spark ``Estimator``)."""
+    """Fit a model on a dataset."""
 
     @abstractmethod
     def _fit(self, dataset: DataFrame) -> M:
-        """Subclass implement: fit via session queries only."""
+        """Fit through the session and return a model."""
 
     def fit(self, dataset: Any, params: dict[Param[Any], Any] | None = None) -> M:
-        """Fit on ``dataset``; optional one-shot param override (Spark ``fit``)."""
+        """Fit on ``dataset`` with an optional one-shot parameter override."""
         frame = _require_repark_dataframe(dataset, verb="Estimator.fit")
         if params is None:
             return self._fit(frame)
@@ -118,14 +105,14 @@ class Estimator(Params, Generic[M], ABC):
 
 
 class Transformer(Params, ABC):
-    """Transforms a dataset into another (Spark ``Transformer``)."""
+    """Transform a dataset into another dataset."""
 
     @abstractmethod
     def _transform(self, dataset: DataFrame) -> DataFrame:
-        """Subclass implement: return a plan-built DataFrame (no Python row loops)."""
+        """Return a lazy plan-built DataFrame."""
 
     def transform(self, dataset: Any, params: dict[Param[Any], Any] | None = None) -> DataFrame:
-        """Transform ``dataset``; optional one-shot param override."""
+        """Transform ``dataset`` with an optional one-shot parameter override."""
         frame = _require_repark_dataframe(dataset, verb="Transformer.transform")
         if params is None:
             return self._transform(frame)
@@ -137,22 +124,22 @@ class Transformer(Params, ABC):
 
 
 class Model(Transformer, ABC):
-    """A fitted :class:`Transformer` produced by an :class:`Estimator`."""
+    """A fitted transformer produced by an estimator."""
 
 
 class UnaryTransformer(HasInputCol, HasOutputCol, Transformer, ABC):
-    """Transformer with single input/output columns (Spark ``UnaryTransformer``)."""
+    """Transformer with one input and one output column."""
 
     def __init__(self) -> None:
-        """Init input/output mixins (MRO cooperative)."""
+        """Initialize input and output parameters."""
         super().__init__()
 
     @abstractmethod
     def createTransformFunc(self) -> Any:
-        """Return a callable or plan factory (Spark API shape; repark uses plan paths)."""
+        """Return the Spark-shaped transform callable or plan factory."""
 
     def _transform(self, dataset: DataFrame) -> DataFrame:
-        """Default unary path: subclasses should override with plan SQL when possible."""
+        """Reject the default path because transforms must be plan-built."""
         raise IllegalArgumentException(
             f"{type(self).__name__} must implement _transform as a plan-built transform "
             "(repark does not apply Python row callables)"

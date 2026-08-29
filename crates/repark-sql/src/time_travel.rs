@@ -1,32 +1,4 @@
 //! ANSI/Trino time travel: `FOR VERSION AS OF <n | 'ref'>` and `FOR TIMESTAMP AS OF <ts>`
-//! (design §2 Q5, graft G7).
-//!
-//! The R1 spike settled the mechanism: stock sqlparser consumes `FOR` as the head of
-//! `FOR UPDATE` / `FOR SHARE`, so `SELECT … FROM t FOR VERSION AS OF 1` cannot parse. The clause
-//! is therefore recognized and REWRITTEN before the parser ever sees it — the table reference plus
-//! its AS OF clause are replaced by an ephemeral temp view backed by a snapshot-pinned provider,
-//! and the rewritten SQL parses as ordinary ANSI.
-//!
-//! **Ordering is load-bearing** (BUG-010, the ordering-defect class the design's judges named):
-//! the multi-statement refuse runs FIRST, in [`crate::guards`], so a script can never have its
-//! SECOND statement rewritten by this scanner. [`crate::router::execute`] slots the scan directly
-//! after the guard set and before the parse.
-//!
-//! **Quoting is ANSI, and that is the parameterization** (graft G7). The Spark door's scanner
-//! tokenizes with `DatabricksDialect` and treats a single-quoted string as a possible identifier;
-//! this one tokenizes with [`GenericDialect`] and takes `"quoted"` — never `'quoted'` — as an
-//! identifier. So `ice."sales"."t"` is a three-part name here, while `'sales'` in table position
-//! is not. The AS OF VALUE reads the other way round: `'main'` is a branch/tag ref STRING, and a
-//! double-quoted value is an identifier, which is not a legal version literal.
-//!
-//! `FOR` is MANDATORY (design §2 Q5). Bare `VERSION AS OF` / `TIMESTAMP AS OF` and Spark's
-//! `FOR SYSTEM_VERSION` / `FOR SYSTEM_TIME` are deliberately NOT scanned: they fail to parse and
-//! the wrong-door sniff ([`crate::sniff`]) names the ANSI spelling.
-//!
-//! Resolution is the phase-1 hoist, not a copy: [`repark_core::TimeTravelSpec`],
-//! [`repark_core::parse_version_value`] / [`repark_core::parse_timestamp_to_ms`], and
-//! [`repark_core::read_table_at`] (which builds the fork's snapshot-pinned static provider). This
-//! module owns only the SQL-TEXT half.
 
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -38,7 +10,7 @@ use repark_core::{
     EngineContext, TimeTravelSpec, parse_timestamp_to_ms, parse_version_value, read_table_at,
 };
 
-/// Process-wide counter so ephemeral temp-view names never collide across concurrent sessions.
+/// Process-wide counter for ephemeral temp-view names.
 static TEMP_VIEW_SEQ: AtomicU64 = AtomicU64::new(1);
 
 /// One FROM/JOIN relation carrying a `FOR … AS OF` pin, with token indices for the splice.
@@ -73,11 +45,6 @@ impl TimeTravelKind {
 
 /// ===========================================================================================
 /// True when `sql` carries an ANSI `FOR VERSION|TIMESTAMP AS OF` clause this door must rewrite.
-///
-/// The router does not need this predicate — [`prepare_time_travel_sql`] answers "nothing to do"
-/// with `Ok(None)` on the same scan — but the RECOGNITION boundary is a behavior in its own
-/// right (which spellings this door claims, and which it leaves to the wrong-door sniff), so it
-/// is pinned separately.
 /// ===========================================================================================
 #[cfg(test)]
 pub(crate) fn sql_has_time_travel(sql: &str) -> bool {
@@ -88,33 +55,15 @@ pub(crate) fn sql_has_time_travel(sql: &str) -> bool {
 }
 
 /// ===========================================================================================
-/// The ephemeral names one statement's rewrite registered, so the router can take them back off
-/// the session once the statement has been PLANNED.
+/// The ephemeral names registered by one rewrite are released by the router after planning.
 /// ===========================================================================================
-///
-/// Without this the pinned views accumulate forever — one per `FOR … AS OF` relation per query,
-/// on a session that may live for hours — and, since PR-6 also turns on `information_schema`,
-/// they are USER-VISIBLE: `SHOW TABLES` listed `__repark_ansi_tt_1`, `…_2`, `…_3` after three
-/// pinned reads. The registration only has to survive planning: DataFusion resolves the relation
-/// into a `TableScan` that owns the provider, so the returned `DataFrame` still collects
-/// correctly after the name is gone.
-///
-/// **Two names per relation, since H-1b (2026-08-11).** This door composes its view over
-/// [`read_table_at`], the shared core half, which registers a `__repark_tt_<n>` of its own before
-/// handing back the frame. That one escaped the original ledger (it is minted inside repark-core,
-/// under a DIFFERENT prefix) and leaked on the very door whose fix declared the leak closed —
-/// three `FOR … AS OF` reads left `__repark_tt_1|2|3` behind. [`register_pinned_view`] now records
-/// BOTH names here, so one ledger releases the whole composition. The reader-options caller of
-/// `read_table_at` is untouched by construction: it never reaches this module, and its
-/// registration must survive (it backs the `DataFrame` handed to the user).
 #[derive(Debug, Default)]
 pub(crate) struct PinnedViews {
     names: Vec<String>,
 }
 
 impl PinnedViews {
-    /// Deregister everything this statement registered. Best-effort by design: a name that is
-    /// already gone is not an error worth failing a successful statement over.
+    /// Deregister everything this statement registered. Best effort: a missing name is harmless.
     pub(crate) fn release(&self, ctx: &datafusion::prelude::SessionContext) {
         for name in &self.names {
             let _ = ctx.deregister_table(name.as_str());
@@ -123,17 +72,8 @@ impl PinnedViews {
 }
 
 /// ===========================================================================================
-/// Rewrite every `FOR … AS OF` relation in `sql` to an ephemeral snapshot-pinned temp view,
-/// returning the rewritten SQL. `Ok(None)` means there was nothing to rewrite.
+/// Rewrite every `FOR … AS OF` relation in `sql` to an ephemeral snapshot-pinned temp view.
 /// ===========================================================================================
-///
-/// Every name registered is recorded in `pinned` — including on the error paths, so a statement
-/// that fails half-way through a multi-relation rewrite still cleans up after itself.
-///
-/// # Errors
-/// A recognized-but-malformed clause (an AS OF value this door cannot read, a name that is not
-/// three-part), an unregistered catalog, a snapshot that does not resolve, or a provider /
-/// registration failure.
 pub(crate) async fn prepare_time_travel_sql(
     cx: &EngineContext<'_>,
     sql: &str,
@@ -165,18 +105,7 @@ pub(crate) async fn prepare_time_travel_sql(
     Ok(Some(tokens_to_sql(&tokens)))
 }
 
-/// Resolve one span to a snapshot-pinned relation and register it under a fresh ephemeral name.
-///
-/// [`read_table_at`] is the hoisted core half: it resolves the snapshot id against the table's
-/// metadata and builds the fork's `IcebergStaticTableProvider` — a real pinned scan, never a
-/// post-hoc filter over the current snapshot. Re-registering its frame as a view is what gives
-/// the rewrite a NAME to splice into the statement.
-///
-/// That composition registers TWICE — core's `__repark_tt_<n>` under the frame, this door's
-/// `__repark_ansi_tt_<n>` over it — so BOTH names go into `pinned` (H-1b). Releasing core's name
-/// is safe for exactly the reason releasing this one is: by the time the router releases, the
-/// statement is planned and the `ViewTable` this door registers already owns the resolved
-/// `TableScan`, provider and all — no name is resolved again.
+/// Resolve one span and register it under the rewrite's ephemeral name.
 async fn register_pinned_view(
     cx: &EngineContext<'_>,
     span: &TimeTravelSpan,
@@ -189,8 +118,7 @@ async fn register_pinned_view(
         )));
     }
     let frame = read_table_at(cx.ctx, cx.catalogs, &span.table_parts, &span.spec).await?;
-    // Recorded BEFORE `into_view` consumes the frame — and via the ledger rather than an immediate
-    // `deregister_table`, so a `register_table` failure below drains it too.
+    // `read_table_at` registers the core name first; record it before consuming the frame.
     if let Some(core_name) = core_pinned_name(frame.logical_plan()) {
         pinned.names.push(core_name);
     }
@@ -198,7 +126,7 @@ async fn register_pinned_view(
         "__repark_ansi_tt_{}",
         TEMP_VIEW_SEQ.fetch_add(1, Ordering::Relaxed)
     );
-    // Recorded BEFORE the registration attempt: `register_table` can fail after taking the name.
+    // Record the ANSI name before `register_table` so cleanup covers a failed registration.
     pinned.names.push(name.clone());
     cx.ctx
         .register_table(name.as_str(), frame.into_view())
@@ -211,25 +139,8 @@ async fn register_pinned_view(
     Ok(name)
 }
 
-/// The ephemeral name [`read_table_at`] registered under the frame it returned, if that frame is
-/// the plain `TableScan` over it this door always gets back.
-///
-/// Read off the plan rather than returned by `read_table_at` on purpose: the OTHER caller of that
-/// core function is the reader-options path, whose registration must SURVIVE (it backs the frame
-/// handed to the user), so the fix stays on this side of the seam. The prefix test keeps it honest
-/// — anything that is not a core-minted pin is left alone rather than deregistered blind.
-///
-/// **Two residuals, both real, both fenced or named** (H-1b):
-/// 1. This recovery cannot see a name whose registration succeeded inside `read_table_at` but
-///    whose immediately-following `ctx.table(…)` lookup then failed — that function returns `Err`
-///    with the name registered and no frame to read it off. Closing it needs Option 2 of the
-///    re-port map (thread the ledger INTO `read_table_at`), whose blast radius reaches the
-///    reader-options caller; recorded, not silently absorbed.
-/// 2. If this function ever returns `None` for a frame that DID carry a core-minted pin — a
-///    changed plan shape upstream, or a changed prefix — the leak returns silently, because
-///    `None` is also the legitimate answer for a frame this door did not compose. The fence is
-///    the pin's broadened `LIKE '__repark_tt%'` assertion in `tests/introspection.rs`, which reds
-///    on the leftover rather than on the recovery.
+/// Extract the core name after [`read_table_at`] registers it; `ctx.table` can fail before a frame
+/// returns, so SQL cannot discover or record that name.
 fn core_pinned_name(plan: &datafusion::logical_expr::LogicalPlan) -> Option<String> {
     let datafusion::logical_expr::LogicalPlan::TableScan(scan) = plan else {
         return None;
@@ -244,10 +155,6 @@ fn core_pinned_name(plan: &datafusion::logical_expr::LogicalPlan) -> Option<Stri
 type Sig<'a> = (usize, &'a Token);
 
 /// Scan for `<name> FOR VERSION|TIMESTAMP AS OF <value>`.
-///
-/// Returns `Err` when a clause is RECOGNIZED (the `FOR <kind> AS OF` keyword run is present) but
-/// its value cannot be read. Falling through silently would hand the user the parser's
-/// `Expected: one of UPDATE or SHARE, found: VERSION`, which explains nothing.
 fn find_time_travel_spans(tokens: &[Token]) -> Result<Vec<TimeTravelSpan>> {
     let significant: Vec<Sig<'_>> = tokens
         .iter()
@@ -288,9 +195,6 @@ fn find_time_travel_spans(tokens: &[Token]) -> Result<Vec<TimeTravelSpan>> {
 }
 
 /// The clause kind when `FOR VERSION AS OF` / `FOR TIMESTAMP AS OF` starts at `index`.
-///
-/// Spark's `FOR SYSTEM_VERSION` / `FOR SYSTEM_TIME` and the bare (FOR-less) forms are NOT
-/// recognized here by design — they are wrong-door spellings the sniff answers.
 fn clause_kind_at(significant: &[Sig<'_>], index: usize) -> Option<TimeTravelKind> {
     if !word_eq(significant, index, "FOR")
         || !word_eq(significant, index + 2, "AS")
@@ -309,11 +213,6 @@ fn clause_kind_at(significant: &[Sig<'_>], index: usize) -> Option<TimeTravelKin
 }
 
 /// Read the AS OF value, returning the spec and how many significant tokens it consumed.
-///
-/// Accepted: a number (with an optional unary minus — Iceberg snapshot ids are signed `i64` and
-/// are routinely negative), a single-quoted string (a branch/tag ref for VERSION, a timestamp
-/// literal for TIMESTAMP), and `TIMESTAMP '…'`. A double-quoted token is an IDENTIFIER in this
-/// door, not a literal, so it is refused rather than silently read as a ref name.
 fn parse_as_of_value(
     kind: TimeTravelKind,
     significant: &[Sig<'_>],
@@ -350,8 +249,7 @@ fn parse_as_of_value(
         };
     }
 
-    // Unary minus + number: sqlparser emits `Minus` then `Number`, so without this arm a
-    // negative snapshot id would not be recognized at all.
+    // Unary minus + number: sqlparser emits `Minus` then `Number`; without this arm a negative pin fails.
     if matches!(token, Token::Minus) {
         let Some(Token::Number(text, _)) = significant.get(index + 1).map(|(_, t)| *t) else {
             return Err(bad("`-` must be followed by a number"));
@@ -363,9 +261,7 @@ fn parse_as_of_value(
         Token::Number(text, _) | Token::SingleQuotedString(text) => {
             spec_from_literal(kind, text, 1).map_err(|detail| bad(&detail))
         }
-        // A `"quoted"` token arrives as a `Word` carrying its quote style — it is an IDENTIFIER in
-        // this door, and silently reading it as a ref name would make `"main"` and `'main'` mean
-        // the same thing here while meaning different things everywhere else in ANSI SQL.
+        // A `"quoted"` token arrives as a `Word` carrying its quote style. It is an identifier in this door.
         Token::Word(word) if word.quote_style == Some('"') => Err(bad(&format!(
             "`\"{0}\"` is a quoted IDENTIFIER in this door, not a literal — use '{0}'",
             word.value
@@ -394,8 +290,7 @@ fn spec_from_literal(
     }
 }
 
-/// Walk left from `clause_start` over `ident (. ident)*`, returning the run's start index and the
-/// unquoted name parts.
+/// Walk left from `clause_start` over `ident (. ident)*`, returning the run's start index and the token list.
 fn table_name_before(significant: &[Sig<'_>], clause_start: usize) -> Option<(usize, Vec<String>)> {
     if clause_start == 0 {
         return None;
@@ -424,10 +319,7 @@ fn table_name_before(significant: &[Sig<'_>], clause_start: usize) -> Option<(us
     }
 }
 
-/// ANSI identifier tokens: a word, quoted or not (sqlparser models a `"quoted"` identifier as a
-/// `Word` carrying its quote style). A single-quoted string is a STRING in this door and can never
-/// be a table reference — that is the G7 parameterization, and it is the whole difference from the
-/// Spark door's scanner, which accepts `'…'` in table position.
+/// ANSI identifier tokens: a word, quoted or not. sqlparser models a `"quoted"` identifier as a Word.
 fn is_ident_token(token: &Token) -> bool {
     matches!(token, Token::Word(_))
 }

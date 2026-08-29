@@ -1,21 +1,20 @@
 """Facade tests for ``DESCRIBE NAMESPACE [EXTENDED]`` and its ``DATABASE``/``SCHEMA`` synonyms.
 
-Group Z. The engine-side row set, ``EXTENDED`` ``Properties`` rendering and redaction are pinned in
-``crates/repark-sql/src/lib.rs``; these tests drive the *public* facade end to end through the built
-native module, pinning what a migrated PySpark caller actually sees:
+The engine-side row set, ``EXTENDED`` ``Properties`` rendering and redaction are pinned in
+``crates/repark-sql/src/lib.rs``; these tests drive the public facade end to end through the
+built native module, pinning what a migrated PySpark caller actually sees:
 
-- ``spark.sql(...).to_arrow()`` — column names, Arrow **types** and nullability, and the row VALUES
+- ``spark.sql(...).to_arrow()`` — column names, Arrow types and nullability, and the row VALUES
   (Z5: value AND type, on the Arrow path, never only ``show``);
-- ``.show()`` renders the frame;
-- a missing namespace raises :class:`repark.errors.AnalysisException` **by class identity** (Z4) —
-  the class live pyspark 4.0.0 raises for ``DESCRIBE NAMESPACE`` of a missing schema
-  (``AnalysisException`` / condition ``SCHEMA_NOT_FOUND`` / SQLSTATE 42704);
+- a missing namespace raises :class:`repark.errors.AnalysisException` by class identity (Z4) —
+  the class live pyspark 4.0.0 raises (``AnalysisException`` / ``SCHEMA_NOT_FOUND`` / SQLSTATE
+  42704);
 - ``DESCRIBE <table>`` is not shadowed (Z6).
 
-The output shape is pinned to a live pyspark 4.0.0 **DataSourceV2** oracle (2026-07-25), which
-differs from the v1 session catalog: v2 emits ``Comment``/``Location``/``Owner`` only when the
-namespace metadata carries the key. Divergences are disclosed in ``execute_describe_namespace``'s
-Rust doc block and in ``task/todo.md``'s GROUP Z ledger.
+The output shape is pinned to a live pyspark 4.0.0 **DataSourceV2** oracle, which differs from
+the v1 session catalog: v2 emits ``Comment``/``Location``/``Owner`` only when the namespace
+metadata carries the key. Divergences are disclosed in ``execute_describe_namespace``'s Rust
+doc block.
 """
 
 from __future__ import annotations
@@ -87,11 +86,11 @@ def test_describe_namespace_extended_properties_row(spark: ReparkSession) -> Non
 def test_describe_namespace_redaction_truth_table(spark: ReparkSession) -> None:
     """Z2 (security): the key-OR-value redaction truth table, at the facade.
 
-    Live pyspark 4.0.0 (v2 catalog, 2026-07-25). Spark folds TWO default patterns —
-    ``(?i)secret|password|token|access[.]?key`` and ``(?i)url`` — over the key AND the value,
-    replacing the value on either hit. ``innocent`` and ``bare`` are the value-only hits a
-    key-only predicate silently misses; ``access_key``/``ACCESS-KEY`` are shown by BOTH engines
-    (Spark's separator is ``[.]?``), a named inherited gap rather than a repark choice.
+    Live pyspark 4.0.0 (v2 catalog). Spark folds ``(?i)secret|password|token|access[.]?key``
+    and ``(?i)url`` over the key AND the value, replacing the value on either hit. ``innocent``
+    and ``bare`` are the value-only hits a key-only predicate silently misses;
+    ``access_key``/``ACCESS-KEY`` are shown by BOTH engines (Spark's separator is ``[.]?``),
+    a named inherited gap rather than a repark choice.
     """
     spark.sql(
         f"CREATE NAMESPACE {CATALOG}.creds WITH DBPROPERTIES ("

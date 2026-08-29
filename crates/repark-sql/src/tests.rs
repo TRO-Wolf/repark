@@ -1,13 +1,4 @@
-//! End-to-end door tests on a **native** session — no extension, no Spark analyzer, stock
-//! DataFusion semantics. That profile is load-bearing, not incidental: extensions are
-//! session-scoped, so evidence gathered on a Spark-extended session would describe the Spark
-//! analyzer rather than this door (design §2 Q13, graft G5). Every row the ANSI surface matrix
-//! marks `Native` is pinned here.
-//!
-//! Results are asserted on the **Arrow path** (`collect`), value AND type — never `show`. Where
-//! a statement's effect is metadata rather than rows (a partition spec, a format version, a raw
-//! property), the assertion loads the Iceberg table and reads the metadata directly, because
-//! that IS the observable effect.
+//! End-to-end door tests use a **native** session with no extension or Spark analyzer.
 
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -49,9 +40,6 @@ impl Door {
     }
 
     /// Run a statement that must succeed, returning its schema ALONGSIDE the batches.
-    ///
-    /// A zero-row result may collect to zero BATCHES, so `batches[0].schema()` is not a safe way
-    /// to assert types on an empty table — the schema has to come from the frame.
     async fn ok_typed(
         &self,
         sql: &str,
@@ -100,9 +88,7 @@ impl Door {
     }
 }
 
-/// Build the door session. `information_schema` is enabled at the DataFusion layer so the Q8
-/// delegation surface is reachable — see the PR-5 R2 spike: `ReparkSession`'s builder cannot yet
-/// enable it, which is a recorded repark-core gap, NOT a property of this door.
+/// Build the door session with `information_schema` enabled at the DataFusion layer.
 async fn door() -> Door {
     let warehouse_dir = TempDir::new().expect("warehouse tempdir");
     let warehouse = warehouse_dir
@@ -151,8 +137,7 @@ async fn door_with_schema() -> Door {
 
 // === Statement forms ========================================================================
 
-/// CTAS into a registered Iceberg catalog writes real rows into a real table, and reads back
-/// through the catalog provider with the right values AND types.
+/// CTAS into a registered Iceberg catalog writes real rows and reads them back.
 #[tokio::test]
 async fn ctas_into_registered_iceberg_catalog_round_trips() {
     let door = door_with_schema().await;
@@ -190,12 +175,7 @@ async fn ctas_into_registered_iceberg_catalog_round_trips() {
     assert!(door.table_exists("sales", "orders").await);
 }
 
-/// Q15/G1: a create target that does not resolve to a registered Iceberg catalog REFUSES,
-/// requiring qualification — and creates nothing.
-///
-/// The refusal is the whole point of the ruling: DataFusion's own CTAS would have made a
-/// session-local `MemTable` that reads back correctly all session and is gone tomorrow. The last
-/// assertion is the one that matters — nothing was created.
+/// Q15/G1: an unregistered or unqualified create target refuses with the required qualification.
 #[tokio::test]
 async fn ctas_unregistered_target_refuses_requiring_qualification() {
     let door = door_with_schema().await;
@@ -226,8 +206,7 @@ async fn ctas_unregistered_target_refuses_requiring_qualification() {
     );
 }
 
-/// A create naming a registered catalog but no schema gets a targeted message, not the generic
-/// qualification one.
+/// A create naming a registered catalog without a schema gets a targeted message.
 #[tokio::test]
 async fn ctas_missing_schema_segment_names_the_gap() {
     let door = door_with_schema().await;
@@ -238,8 +217,7 @@ async fn ctas_missing_schema_segment_names_the_gap() {
     );
 }
 
-/// `CREATE OR REPLACE TABLE … AS SELECT` replaces the table's contents through one staged
-/// publish — the old rows are gone, the new rows are there.
+/// `CREATE OR REPLACE TABLE … AS SELECT` replaces the table's contents through one staged transaction.
 #[tokio::test]
 async fn create_or_replace_table_as_select_replaces_rows() {
     let door = door_with_schema().await;
@@ -266,8 +244,7 @@ async fn create_or_replace_table_as_select_replaces_rows() {
     );
 }
 
-/// A plain `CREATE TABLE` on an existing table refuses; `IF NOT EXISTS` makes it a no-op that
-/// leaves the original rows untouched.
+/// A plain `CREATE TABLE` on an existing table refuses; `IF NOT EXISTS` makes it a no-op.
 #[tokio::test]
 async fn create_table_existing_refuses_and_if_not_exists_is_a_noop() {
     let door = door_with_schema().await;
@@ -291,8 +268,7 @@ async fn create_table_existing_refuses_and_if_not_exists_is_a_noop() {
     assert_eq!(ids.value(0), 1, "IF NOT EXISTS must not overwrite");
 }
 
-/// The column-def form creates a real, EMPTY Iceberg table whose declared types and NOT NULL
-/// constraints survive into the Iceberg schema.
+/// The column-def form creates an empty Iceberg table with declared types and NOT NULL fields.
 #[tokio::test]
 async fn create_table_column_def_creates_iceberg_table() {
     let door = door_with_schema().await;
@@ -318,8 +294,7 @@ async fn create_table_column_def_creates_iceberg_table() {
     assert!(!fields[1].required, "`name` must be optional");
 }
 
-/// A column-def create with no columns, and a CTAS carrying both a column list and a query, both
-/// refuse rather than guessing.
+/// A column-def create with no columns and a CTAS carrying both a column list and a query refuse.
 #[tokio::test]
 async fn create_table_shape_refusals() {
     let door = door_with_schema().await;
@@ -332,8 +307,7 @@ async fn create_table_shape_refusals() {
     );
 }
 
-/// `DROP TABLE` removes the table; `IF EXISTS` is idempotent and a bare drop of a missing table
-/// fails loud.
+/// `DROP TABLE` removes the table; `IF EXISTS` is idempotent and a missing bare drop refuses.
 #[tokio::test]
 async fn drop_table_if_exists_is_idempotent() {
     let door = door_with_schema().await;
@@ -406,8 +380,7 @@ async fn create_schema_creates_the_namespace() {
     door.err("CREATE SCHEMA ice.bronze").await;
 }
 
-/// `CREATE SCHEMA … WITH (location = …)` stores the location under BOTH canonical keys, so a
-/// later create resolves its table location whichever key the catalog implementation maps.
+/// `CREATE SCHEMA … WITH (location = …)` stores the location under both canonical keys, so a later lookup uses either key.
 #[tokio::test]
 async fn create_schema_with_location_stores_both_keys() {
     let door = door().await;
@@ -488,12 +461,7 @@ async fn drop_schema_drops_the_namespace() {
     assert!(cascade.contains("destructive"), "…and say why: {cascade}");
 }
 
-/// Q8: a registered Iceberg catalog enumerates through `information_schema` — the delegation
-/// this door's introspection ruling depends on.
-///
-/// (The PR-5 R2 spike recorded that `ReparkSession`'s builder cannot yet turn
-/// `information_schema` on; that is a repark-core gap filed separately. The door itself, given a
-/// session where it IS on, enumerates correctly — which is what this row claims.)
+/// A registered Iceberg catalog enumerates through `information_schema` via delegation.
 #[tokio::test]
 async fn information_schema_enumerates_registered_iceberg_catalogs() {
     let door = door_with_schema().await;
@@ -520,8 +488,7 @@ async fn information_schema_enumerates_registered_iceberg_catalogs() {
 
 // === Table-creation options =================================================================
 
-/// `format = 'PARQUET'` is accepted end to end; `ORC` and `AVRO` refuse loud, each naming its
-/// trigger — and, crucially, create nothing.
+/// `format = 'PARQUET'` succeeds; `ORC` and `AVRO` refuse and name their unsupported formats.
 #[tokio::test]
 async fn with_format_parquet_accepted_orc_and_avro_refuse_loud() {
     let door = door_with_schema().await;
@@ -545,8 +512,7 @@ async fn with_format_parquet_accepted_orc_and_avro_refuse_loud() {
     }
 }
 
-/// `format_version = 2` is accepted and the created table really is Iceberg v2; any other
-/// version refuses instead of being silently ignored.
+/// `format_version = 2` creates an Iceberg v2 table; unsupported versions refuse before creation.
 /// pins: v3-2-create-v3-opt-in/C-003, C-007
 #[tokio::test]
 async fn with_format_version_sets_the_table_format_version() {
@@ -567,8 +533,7 @@ async fn with_format_version_sets_the_table_format_version() {
     assert!(!door.table_exists("sales", "v1").await, "nothing created");
 }
 
-/// `partitioning = ARRAY[…]` builds the Iceberg partition spec, with Java-parity field names —
-/// and the partitioned table still round-trips its rows.
+/// `partitioning = ARRAY[…]` builds the Iceberg partition spec with Java-parity field names.
 #[tokio::test]
 async fn with_partitioning_array_builds_the_partition_spec() {
     let door = door_with_schema().await;
@@ -656,8 +621,7 @@ async fn with_extra_properties_map_passes_raw_iceberg_keys() {
     );
 }
 
-/// The concrete thing the hatch buys (design §2 Q1): a merge-on-read table is creatable in
-/// phase 2, without `write.merge.mode` being frozen into this door's bare-key API.
+/// The concrete thing the hatch buys is a merge-on-read table creatable in this door.
 #[tokio::test]
 async fn extra_properties_write_merge_mode_creates_a_mor_table() {
     let door = door_with_schema().await;
@@ -696,8 +660,7 @@ async fn with_sorted_by_refuses_loud_naming_the_trigger() {
     );
 }
 
-/// The typo guard end to end: an unknown bare key refuses listing the curated set, and points
-/// dotted keys at the hatch.
+/// The typo guard refuses an unknown bare key, lists the curated set, and points dotted keys to the hatch.
 #[tokio::test]
 async fn unknown_bare_property_refuses_listing_the_curated_set() {
     let door = door_with_schema().await;
@@ -737,8 +700,7 @@ async fn tblproperties_on_create_refuses_with_a_steer() {
     );
 }
 
-/// A create whose schema has NO location falls back to the registration-time root on a
-/// `TempFallbackAllowed` catalog — offline work keeps running without a namespace location.
+/// A create whose schema has no location falls back to the registration-time root on a temporary catalog.
 #[tokio::test]
 async fn location_less_schema_falls_back_on_a_temp_fallback_catalog() {
     let door = door().await;
@@ -760,8 +722,7 @@ async fn location_less_schema_falls_back_on_a_temp_fallback_catalog() {
     );
 }
 
-/// The same create on a `RequireExplicitLocation` catalog FAILS LOUD instead — a real warehouse
-/// must never have its data placed in a temporary directory.
+/// The same create on a `RequireExplicitLocation` catalog fails loudly because no location exists.
 #[tokio::test]
 async fn location_less_schema_fails_loud_on_a_strict_catalog() {
     let warehouse_dir = TempDir::new().expect("tempdir");
@@ -808,8 +769,7 @@ async fn location_less_schema_fails_loud_on_a_strict_catalog() {
     );
 }
 
-/// A read-only catalog is refused as a DDL target with the generic P11 message, not with an
-/// "unknown catalog" error — the user's problem is direction, not spelling.
+/// A read-only catalog is refused as a DDL target with the generic P11 message, not with an unknown-catalog error.
 #[tokio::test]
 async fn ddl_against_a_read_only_catalog_refuses_with_the_direction_note() {
     let door = door_with_schema().await;
@@ -841,8 +801,7 @@ async fn path_escaping_identifiers_are_rejected() {
     );
 }
 
-/// A CTAS whose SELECT produces zero rows still creates the table — an empty result is a valid
-/// answer, not a reason to skip the create.
+/// A CTAS whose SELECT produces zero rows still creates the table; an empty result is valid.
 #[tokio::test]
 async fn empty_ctas_still_creates_the_table() {
     let door = door_with_schema().await;
@@ -862,9 +821,7 @@ async fn empty_ctas_still_creates_the_table() {
     );
 }
 
-/// Native (ANSI) semantics, not Spark's: integer division stays integer through this door on a
-/// session with no extension installed. This is the one-line proof that the door did NOT quietly
-/// acquire Spark expression semantics.
+/// Native ANSI semantics, not Spark's: integer division stays integer through this door on a native session.
 #[tokio::test]
 async fn native_session_keeps_ansi_expression_semantics() {
     let door = door().await;
@@ -882,8 +839,7 @@ async fn native_session_keeps_ansi_expression_semantics() {
     assert_eq!(value.value(0), 3, "value");
 }
 
-/// A `CREATE TABLE` reaching an INT32 column type proves the column-def path is not silently
-/// widening declared types (the failure mode a hand-rolled type table would produce).
+/// A `CREATE TABLE` reaching an INT32 column type proves the column-def path is not silently altered.
 #[tokio::test]
 async fn column_def_types_are_not_widened() {
     let door = door_with_schema().await;
@@ -909,12 +865,7 @@ async fn column_def_types_are_not_widened() {
 
 // === Delegated DML (fork `TableProvider`, ADR-0003) =========================================
 
-/// `INSERT INTO` an Iceberg table delegates to the fork's `TableProvider` and really commits:
-/// the new row reads back through a FRESH catalog load, not just through the session.
-///
-/// This is a WRITE surface, so it is pinned rather than assumed. (An earlier revision marked it
-/// `DeliberatelyAbsent` while it was live — the exact false-absence the surface matrix exists to
-/// prevent.)
+/// `INSERT INTO` an Iceberg table delegates to the fork's `TableProvider` and commits rows.
 #[tokio::test]
 async fn insert_into_iceberg_table_round_trips() {
     let door = door_with_schema().await;
@@ -1012,14 +963,7 @@ async fn update_iceberg_table_rewrites_matching_rows() {
     );
 }
 
-/// BUG-001 valve, wired: `DELETE`/`UPDATE` against a merge-on-read table whose CURRENT spec is
-/// unpartitioned while its history carries an earlier spec REFUSES rather than silently
-/// under-deleting (the fork's unpartitioned position-delete fast path, `ENGINE_CONTRACT` §7a).
-///
-/// The fixture is built through this door plus the tier-1 spec-evolution helper, because that is
-/// the only way to reach the hazard shape in M1: create merge-on-read AND partitioned (the
-/// `extra_properties` hatch + `partitioning`), then drop the partition field so the current spec
-/// is unpartitioned and the history has two specs.
+/// BUG-001 valve, wired: `DELETE`/`UPDATE` against a merge-on-read table whose current spec is multi-spec.
 #[tokio::test]
 async fn mor_unpartitioned_multi_spec_dml_refuses() {
     use iceberg::spec::Transform;
@@ -1079,11 +1023,9 @@ async fn mor_unpartitioned_multi_spec_dml_refuses() {
     door.ok("DELETE FROM ice.sales.plain WHERE id = 1").await;
 }
 
-// === M2: ALTER TABLE ========================================================================
+// === ALTER TABLE ============================================================================
 
-/// Schema evolution round-trips on the Arrow path: after ADD / RENAME / DROP COLUMN the SELECT
-/// that reads the table sees the new shape, with the right names AND types — and the old rows are
-/// still there, because Iceberg schema evolution rewrites no data.
+/// Schema evolution round-trips on the Arrow path after ADD, RENAME, and DROP COLUMN.
 #[tokio::test]
 async fn alter_add_drop_rename_column_round_trips() {
     let door = door_with_schema().await;
@@ -1128,8 +1070,7 @@ async fn alter_add_drop_rename_column_round_trips() {
     );
 }
 
-/// Several ops in ONE statement commit as one transaction, and `IF NOT EXISTS` / `IF EXISTS` are
-/// idempotent rather than errors.
+/// Several ops in one statement commit as one transaction, and `IF NOT EXISTS` / `IF EXISTS` are idempotent.
 #[tokio::test]
 async fn alter_batches_ops_and_honours_if_exists() {
     let door = door_with_schema().await;
@@ -1163,8 +1104,7 @@ async fn alter_batches_ops_and_honours_if_exists() {
     );
 }
 
-/// `ALTER COLUMN … SET DATA TYPE` performs an Iceberg promotion (metadata-only), and the
-/// narrowing direction refuses BEFORE any transaction opens.
+/// `ALTER COLUMN … SET DATA TYPE` performs an Iceberg promotion (metadata-only), and the result is readable.
 #[tokio::test]
 async fn alter_column_set_data_type_promotes_and_refuses_narrowing() {
     let door = door_with_schema().await;
@@ -1193,8 +1133,7 @@ async fn alter_column_set_data_type_promotes_and_refuses_narrowing() {
     assert!(required.contains("incompatible change"), "{required}");
 }
 
-/// `RENAME TO` moves the table in the catalog and the new name becomes queryable in the same
-/// session (the provider is re-registered), while the old name stops resolving.
+/// `RENAME TO` moves the table and makes the new name queryable in the same catalog.
 #[tokio::test]
 async fn alter_table_rename_to_moves_the_table() {
     let door = door_with_schema().await;
@@ -1221,8 +1160,7 @@ async fn alter_table_rename_to_moves_the_table() {
     );
 }
 
-/// Trino `SET PROPERTIES` reaches real Iceberg table properties through the G4 hatch, and the
-/// dotted-key `= DEFAULT` spelling is the round trip that removes them again.
+/// Trino `SET PROPERTIES` updates real Iceberg table properties and preserves their values.
 #[tokio::test]
 async fn alter_set_properties_round_trips_raw_keys() {
     let door = door_with_schema().await;
@@ -1257,10 +1195,9 @@ async fn alter_set_properties_round_trips_raw_keys() {
     );
 }
 
-// === M2: MERGE INTO =========================================================================
+// === MERGE INTO =============================================================================
 
-/// `MERGE INTO` upserts through this door: matched rows update, unmatched rows insert, and the
-/// result reads back on the Arrow path with the right values AND types.
+/// `MERGE INTO` upserts through this door: matched rows update, unmatched rows insert, and the table commits.
 #[tokio::test]
 async fn merge_into_upserts_through_the_door() {
     let door = door_with_schema().await;
@@ -1361,11 +1298,9 @@ async fn merge_output_clause_refuses() {
     assert!(err.contains("OUTPUT/RETURNING"), "{err}");
 }
 
-// === M2: time travel ========================================================================
+// === TIME TRAVEL =============================================================================
 
-/// `FOR VERSION AS OF` reads a PINNED snapshot: the rows are the ones from before the second
-/// write, not the current ones. The type is asserted too — a pinned read must not quietly change
-/// the schema.
+/// `FOR VERSION AS OF` reads the pinned snapshot before the second write and preserves its type.
 #[tokio::test]
 async fn time_travel_reads_a_pinned_snapshot() {
     let door = door_with_schema().await;
@@ -1428,8 +1363,7 @@ async fn time_travel_by_ref_name_reads_the_ref() {
     assert_eq!(live.iter().map(RecordBatch::num_rows).sum::<usize>(), 2);
 }
 
-/// An unresolvable pin refuses loud rather than silently reading the current snapshot — and the
-/// multi-statement guard still beats the scanner (the BUG-010 ordering rule).
+/// An unresolvable pin refuses loud rather than silently reading the current snapshot.
 #[tokio::test]
 async fn time_travel_refuses_an_unresolvable_pin() {
     let door = door_with_schema().await;
@@ -1458,10 +1392,9 @@ async fn time_travel_refuses_an_unresolvable_pin() {
     );
 }
 
-// === M2: branch / tag DDL ===================================================================
+// === BRANCH / TAG DDL =========================================================================
 
-/// Branch and tag DDL round-trips through the tier-1 `ManageSnapshots` seams: the ref appears in
-/// table metadata, `CREATE OR REPLACE` re-pins it, and `DROP` removes it.
+/// Branch and tag DDL round-trips through the tier-1 `ManageSnapshots` seams.
 #[tokio::test]
 async fn branch_and_tag_ddl_round_trips() {
     let door = door_with_schema().await;
@@ -1530,8 +1463,7 @@ async fn branch_and_tag_ddl_round_trips() {
     );
 }
 
-/// A ref cannot be created on a table with no snapshot without an explicit pin — refusing names
-/// the fix instead of committing a ref that points at nothing.
+/// A ref cannot be created on a table with no snapshot without an explicit pin.
 #[tokio::test]
 async fn branch_ddl_on_an_empty_table_requires_an_explicit_pin() {
     let door = door_with_schema().await;
@@ -1542,8 +1474,7 @@ async fn branch_ddl_on_an_empty_table_requires_an_explicit_pin() {
     assert!(err.contains("AS OF VERSION"), "{err}");
 }
 
-/// Writing to a ref stays refused (the fork's append always sets `main`) — landing branch DDL
-/// does not open a branch WRITE path.
+/// Writing to a ref stays refused because the fork's append always sets `main`.
 #[tokio::test]
 async fn writing_to_a_ref_still_refuses_after_branch_ddl() {
     let door = door_with_schema().await;
@@ -1556,11 +1487,9 @@ async fn writing_to_a_ref_still_refuses_after_branch_ddl() {
     assert!(err.contains("snapshot ref"), "{err}");
 }
 
-// === M2: the refuse set =====================================================================
+// === REFUSE SET ===============================================================================
 
-/// Every deliberately-absent statement shape refuses LOUD through the door, naming what to do
-/// instead — never a silent success, never a raw parser error. The last assertion is the one that
-/// matters: the table is untouched by all four.
+/// Every deliberately absent statement shape refuses loudly and names the supported alternative.
 #[tokio::test]
 async fn the_refuse_set_refuses_loud_through_the_door() {
     let door = door_with_schema().await;

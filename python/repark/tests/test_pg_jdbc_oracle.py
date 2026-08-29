@@ -1,9 +1,8 @@
 """Named oracle deliverable for PG2 (env-gated live + DuckDB skip-loud).
 
-- Live PySpark 4.1.2 JDBC is the sole type-mapping authority when DSN + jar available
-  (orchestrator-only). Agents never invent passwords.
-- DuckDB postgres extension differential when DSN + extension available.
-- Without REPARK_PG_DSN: skip-loud, default gate stays green.
+Live PySpark 4.1.2 JDBC is the sole type-mapping authority when DSN + jar are available; the
+DuckDB postgres extension is the differential. Without REPARK_PG_DSN: skip-loud so the default
+gate stays green. Agents never invent credentials.
 """
 
 from __future__ import annotations
@@ -52,8 +51,8 @@ def test_live_jdbc_predicates_shape_or_skip(spark: SparkSession) -> None:
     dsn = _dsn_or_skip()
     if dsn is None:
         return
-    # predicates[] against a VALUES subquery wrapped as table form needs a real table;
-    # when only DSN is present, exercise single-partition jdbc(url, table_subquery, props).
+    # predicates[] needs a real table, not a VALUES subquery; exercise single-partition
+    # jdbc(url, table_subquery, props) instead.
     frame = spark.read.jdbc(
         dsn,
         "(SELECT 1::int4 AS id UNION ALL SELECT 2::int4) AS t",

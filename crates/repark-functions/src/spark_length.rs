@@ -1,12 +1,5 @@
-//! Spark `bit_length` / `octet_length` — stringifies non-binary inputs (G5).
-//!
-//! Spark 4.1.2 `bit_length` / `octet_length` accept STRING and BINARY, and
-//! stringify every other type (`bit_length(12)` is `16`, `bit_length(true)` is
-//! `32`). DataFusion's kernels are Utf8/Binary-exact, so an int/bool/float
-//! column fails. This shim coerces non-binary to `Utf8` then counts **bytes**
-//! (Spark `octet_length`) or `8 * bytes` (`bit_length`). `Binary` /
-//! `LargeBinary` / `BinaryView` / `FixedSizeBinary` pass through so `unhex`
-//! payloads stay bytes, not a stringified dump.
+//! Spark `bit_length` and `octet_length` shims stringify non-binary inputs before UTF-8 byte
+//! counting; binary inputs retain their byte values.
 
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
@@ -185,8 +178,6 @@ fn coerce_length_arg(arg_types: &[DataType]) -> Result<Vec<DataType>> {
             "bit_length/octet_length requires STRING or BINARY, got {data_type}"
         )));
     }
-    // Dictionary(_, Binary) must stay binary (byte length), not stringify.
-    // Dictionary(_, Utf8) unwraps to Utf8 so the planner inserts the cast (R3-1).
     let inner = unwrap_dictionary(data_type);
     let coerced = match inner {
         DataType::Binary
@@ -421,7 +412,6 @@ mod tests {
     #[tokio::test]
     async fn stringify_int_and_bool_match_spark() {
         let ctx = ctx();
-        // Spark: octet_length(12)=2 ("12"), bit_length(true)=32 ("true").
         assert_eq!(one_i32(&ctx, "SELECT octet_length(12)").await, Some(2));
         assert_eq!(one_i32(&ctx, "SELECT bit_length(12)").await, Some(16));
         assert_eq!(one_i32(&ctx, "SELECT octet_length(true)").await, Some(4));
@@ -456,7 +446,6 @@ mod tests {
         use datafusion::arrow::record_batch::RecordBatch;
 
         let ctx = ctx();
-        // One 0xFF byte: binary length 1. Utf8 stringify would fail or become U+FFFD (3).
         let values = BinaryArray::from_vec(vec![&[0xFF_u8][..]]);
         let keys = Int8Array::from(vec![0_i8]);
         let dict =
@@ -481,7 +470,6 @@ mod tests {
     #[tokio::test]
     async fn decimal_preserves_scale_padding() {
         let ctx = ctx();
-        // Spark 4.1.2: CAST(12.50 AS DECIMAL(4,2)) → '12.50' → octet 5 / bit 40.
         assert_eq!(
             one_i32(&ctx, "SELECT octet_length(CAST(12.50 AS DECIMAL(4, 2)))").await,
             Some(5)

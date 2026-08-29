@@ -1,8 +1,7 @@
 """Facade pin: namespace-create location guard (G-6 Q1 / R-6).
 
-Memory catalog only — no AWS. ``repark.sql``-era imports (A3). One file, four
-shapes through ``spark.create_namespace`` (the programmatic facade path that
-hits core ``Session::create_namespace``).
+Memory catalog only — no AWS. Four shapes through ``spark.create_namespace`` (the
+programmatic facade path that hits core ``Session::create_namespace``).
 """
 
 from __future__ import annotations
@@ -28,18 +27,14 @@ def test_create_namespace_location_guard_four_shapes(tmp_path: Path) -> None:
     existing = str(tmp_path / "existing_ns")
     requested = str(tmp_path / "requested_ns")
 
-    # create-new
     spark.create_namespace("guard_catalog", "silver", location=existing)
 
-    # re-create-same → idempotent
     spark.create_namespace("guard_catalog", "silver", location=existing)
 
-    # re-create-conflicting → fail loud naming both paths
     with pytest.raises(AnalysisException) as raised:
         spark.create_namespace("guard_catalog", "silver", location=requested)
     message = str(raised.value)
     assert existing in message, message
     assert requested in message, message
 
-    # re-create-without-location → idempotent
     spark.create_namespace("guard_catalog", "silver")

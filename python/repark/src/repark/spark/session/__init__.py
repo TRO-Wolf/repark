@@ -1,4 +1,4 @@
-"""repark.spark.session package (r26 T1; re-homed Q1 2026-08-14)."""
+"""repark.spark.session package."""
 
 from __future__ import annotations
 
@@ -41,7 +41,7 @@ from repark.spark.session.sql_udf import UDFRegistration
 
 
 def _wire(module: object) -> None:
-    """Install peer class names used by free functions / methods (pre-split globals)."""
+    """Install peer class names that the split modules reference as globals."""
     module.RuntimeConfig = RuntimeConfig
     module.SparkContext = SparkContext
     module.ReparkSession = ReparkSession

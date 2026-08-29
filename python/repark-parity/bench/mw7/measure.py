@@ -1,28 +1,17 @@
 """MW-7 scale measurement: what a merge-on-read table costs as MERGEs accumulate.
 
-The unit is measure-only. Nothing here changes engine behaviour; it drives the shipped
-`CALL` procedures and the shipped scan path, and records what they answer.
+Measure-only: drives the shipped `CALL` procedures and the shipped scan path. Each
+leg is a partitioned format-v2 table — merge-on-read (MOR) against a copy-on-write
+(COW) control — run through N MERGEs with a census and timed scans every
+`checkpoint_every` merges, then the full maintenance sequence with a per-step
+census, then the same scans again.
 
-The shape, from the MW-7 charter:
-
-* a partitioned format-v2 table, one merge-on-read (MOR) leg and one copy-on-write (COW) leg;
-* N MERGEs, each touching a fixed fraction of the rows;
-* every `checkpoint_every` merges: delete-file count, manifest count, manifest-list bytes,
-  `COUNT(*)`, and the p50/p99 of fixed predicate scans over `reps` repetitions;
-* then the full maintenance sequence, with a file census after every step;
-* then the same scans again.
-
-Two facts decide how the numbers are read. The MOR leg is created with
-`write.delete.granularity = 'partition'` so the recorded arithmetic stays the MW-7
-measurement (one position-delete file per `(spec, partition)` per commit). Spark's
-unset default is `file` (registry row `MOR-2`, closed by MW-9). And the COW leg has no
-delete files at all, so it is the control.
-
-Read the MOR-minus-COW gap as what merge-on-read costs on READ, not as a delete-file cost
-alone: the MOR leg also accumulates data files, because every MERGE appends the updated rows
-instead of rewriting in place (at 1e7 x 50 it held 16.3x the control's data files and 1.83x its
-live bytes). The gap is the delete files PLUS that fan-out. Separating them needs a third leg
-that compacts the deletes at every checkpoint, which this driver does not run.
+The MOR leg sets `write.delete.granularity = 'partition'` so the arithmetic is one
+position-delete file per `(spec, partition)` per commit (Spark's unset default is
+`file`, registry row `MOR-2`). Read the MOR-minus-COW gap as what merge-on-read
+costs on READ, not delete-file cost alone: every MERGE also appends data files
+instead of rewriting in place. Separating the two needs a compacting third leg this
+driver does not run.
 
 Wall-clock here is one machine's number, never a CI pin. Ratios are the deliverable.
 """
@@ -44,13 +33,12 @@ from repark import ReparkSession
 DATA_CONTENT = 0
 POSITION_DELETE_CONTENT = 1
 
-# `expire_snapshots` is driven by `retain_last`, not file age, so `older_than` is pushed
-# one day into the future (the same idiom as `python/repark/tests/_acceptance.py`).
+# `expire_snapshots` is driven by `retain_last`, not file age, so push `older_than` one
+# day into the future.
 EXPIRE_OLDER_THAN_FUTURE_MS = 86_400_000
 
-# `remove_orphan_files` enforces Spark's 24-hour floor (MW-3). 25 hours clears it. On a
-# warehouse this run just created, nothing is that old, so the dry run lists zero files by
-# construction — the wall clock of the walk is the number worth having, not the count.
+# `remove_orphan_files` enforces Spark's 24-hour floor (MW-3); 25 hours clears it. On a
+# fresh warehouse the dry run lists zero files by construction.
 ORPHAN_OLDER_THAN_PAST_MS = 25 * 60 * 60 * 1000
 
 # pins: mw-9-delete-granularity/C-008
@@ -66,8 +54,8 @@ COW_PROPERTIES = (
     "'write.merge.mode' = 'copy-on-write'"
 )
 
-# `value` and `amount` are hashes of `id` scaled into a range. The divisor is the span of
-# a uint64, so the quotient lands in [0, 1). Fixed seeds keep a re-run reproducible.
+# `value` and `amount` are hashes of `id` scaled by the uint64 span into [0, 1). Fixed
+# seeds keep a re-run reproducible.
 UINT64_SPAN = 1.8446744073709552e19
 VALUE_HASH_SEED = 11
 AMOUNT_HASH_SEED = 22
@@ -171,8 +159,7 @@ class RunResult(BaseModel):
 def peak_rss_bytes() -> int:
     """Peak resident set size of this process so far, in bytes.
 
-    `ru_maxrss` is kilobytes on Linux. The value is a high-water mark for the whole
-    process, so it never decreases and it covers every leg run before this call.
+    `ru_maxrss` is kilobytes on Linux; the value is a process-wide high-water mark.
     """
     return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024
 
@@ -185,15 +172,11 @@ def directory_bytes(root: Path) -> int:
 def seed_frame(rows: int, partitions: int) -> pl.DataFrame:
     """The seed table: `rows` rows of the six-column schema, `part = id % partitions`.
 
-    Every expression is vectorised polars. Building the frame from Python lists costs
-    minutes and gigabytes at 1e7 rows, and building it as SQL `VALUES` re-plans the whole
-    literal on every action (the `bench_mor_merge.py --seed parquet` precedent).
-
-    `value` and `amount` are hashes of `id` cast to doubles. They are deterministic, so a
-    re-run reproduces the table, and they do not compress, so 1e7 rows is a table with real
-    bytes in it rather than 15 MB of run-length-encoded counters. That matters: a table
-    that compresses to nothing writes one data file per partition, and a scan over one file
-    per partition cannot show what delete-file layout costs.
+    Built as vectorised polars: Python lists cost minutes and gigabytes at 1e7 rows, and a
+    SQL `VALUES` literal re-plans on every action. `value`/`amount` are deterministic
+    hashes of `id` cast to doubles; they are used because they do not compress — a table
+    that compresses to nothing writes one data file per partition and cannot show what
+    delete-file layout costs.
 
     Args:
         rows: number of rows to build.
@@ -214,13 +197,10 @@ def seed_frame(rows: int, partitions: int) -> pl.DataFrame:
 def merge_frame(start_id: int, count: int, partitions: int, generation: int) -> pl.DataFrame:
     """The source of one MERGE: `count` consecutive ids starting at `start_id`.
 
-    A contiguous id window is what a batch upsert pipeline produces, and it keeps the COW
-    leg tractable — a randomly scattered 2 % rewrites every data file in the table on every
-    merge. `part = id % partitions` still spreads the window over EVERY partition, so the
-    merge-on-read leg writes one position-delete file per partition per commit.
-
-    `generation` is folded into every mutable column, so each MERGE really changes each row
-    it matches and the delete-then-append is never optimised away.
+    A contiguous id window is what a batch upsert pipeline produces, and keeps the COW leg
+    tractable — a scattered 2 % rewrites every data file on every merge. `part = id %
+    partitions` still spreads the window over every partition. `generation` is folded into
+    every mutable column, so each MERGE really changes each row it matches.
 
     Args:
         start_id: first id in the window.
@@ -268,10 +248,9 @@ def create_table(
         table: fully-qualified table name.
         view: temp view holding the seed rows.
         mode: `"mor"` or `"cow"` — selects the three write-mode properties.
-        target_file_size_bytes: `write.target-file-size-bytes`. Set explicitly so a 1e7-row
-            table holds several data files per partition, which is the file COUNT a
-            production table has; leaving the default gives one file per partition and the
-            delete-attachment behaviour then has nothing to attach to.
+        target_file_size_bytes: `write.target-file-size-bytes`, set explicitly so a
+            1e7-row table holds several data files per partition; the default gives one
+            file per partition and delete attachment then has nothing to attach to.
 
     Returns:
         Wall seconds for the CTAS.
@@ -299,8 +278,8 @@ def merge_sql(table: str, view: str) -> str:
 def file_census(spark: ReparkSession, table: str) -> FileCensus:
     """Read the table's file, manifest and snapshot counts from its metadata tables.
 
-    `manifest_list_bytes` is the size of the CURRENT snapshot's manifest list on disk. It
-    is the file a reader opens first, so it is the one metadata size a scan always pays.
+    `manifest_list_bytes` is the CURRENT snapshot's manifest list on disk — the file a
+    reader opens first, so the one metadata size a scan always pays.
     """
     files = spark.sql(
         f"SELECT content, file_size_in_bytes, record_count FROM {table}.files"
@@ -362,15 +341,13 @@ def time_sql(
 ) -> ScanTiming:
     """Run `sql` `warmups` times untimed, then `reps` times timed, on the Arrow path.
 
-    The warm-up is load-bearing, not politeness. Without it the merge-0 baseline is the
-    only checkpoint whose files were never read, so it measures page-cache misses the later
-    checkpoints do not pay — and every "N merges cost this much more" ratio is then computed
-    against a number from a different regime. One untimed pass at EVERY checkpoint makes
-    the checkpoints comparable to each other, which is what a ratio needs.
+    The warm-up is load-bearing: without it the merge-0 baseline is the only checkpoint
+    whose files were never read, so every "N merges cost this much more" ratio is
+    computed against a number from a different regime. One untimed pass at EVERY
+    checkpoint makes the checkpoints comparable, which is what a ratio needs.
 
-    Every sample is kept. `p99` over a small `reps` is the maximum by construction; that is
-    stated rather than smoothed, because interpolating a p99 out of five samples invents
-    precision.
+    `p99` over a small `reps` is the maximum by construction; that is stated rather than
+    interpolated, which would invent precision.
     """
     for _ in range(warmups):
         spark.sql(sql).to_arrow()
@@ -400,21 +377,17 @@ def time_sql(
 def scan_specs(table: str, rows: int, partitions: int) -> list[tuple[str, str]]:
     """The fixed scans every checkpoint runs, as `(label, sql)` pairs.
 
-    Three probes, each with a different reason to exist:
+    * `count_star` — the MW-0/MW-5 continuity probe; must answer `rows` forever.
+    * `predicate_partition` — the charter's fixed predicate scan; prunes to one
+      partition's data files and delete files.
+    * `predicate_point` — narrow id window; data files prune, but `partition`-granularity
+      deletes force a read of EVERY delete file in the touched partitions. This probe
+      decides whether MW-9 is urgent.
 
-    * `count_star` — the MW-0/MW-5 continuity probe. It must answer `rows` forever.
-    * `predicate_partition` — the charter's fixed predicate scan. It prunes to one
-      partition, so it reads that partition's data files and that partition's delete files.
-    * `predicate_point` — a narrow id window. Iceberg prunes it to a few data files, but
-      `partition`-granularity deletes force the scan to read EVERY delete file in the
-      partitions it touches. This is the probe that decides whether MW-9 is urgent.
-
-    Both predicates aggregate `quantity`, an integer. Summing the float `value` column
-    instead moved the answer by one ULP across `rewrite_data_files`, because compaction
-    re-groups the rows and float addition is order-dependent (docs/testing.md, "float
-    aggregation across partitions"). That is correct engine behaviour, and it would make an
-    exact before/after identity check impossible. An integer sum reads the same rows and
-    reorders exactly.
+    Both predicates aggregate the integer `quantity`: summing float `value` moves by one
+    ULP across `rewrite_data_files` (order-dependent float addition, docs/testing.md
+    "float aggregation across partitions") and would break the exact before/after
+    identity check.
     """
     probe_partition = partitions // 2
     point_start = rows // 2
@@ -481,10 +454,9 @@ def maintenance_sequence(catalog: str, table_arg: str) -> list[tuple[str, str]]:
     """The Airflow-shaped sequence MW-8 will document, as `(procedure, sql)` pairs.
 
     Order is load-bearing: fold the delete files first so `rewrite_data_files` rewrites
-    fewer of them, compact the data, re-cluster the manifests the first two steps churned,
-    expire the snapshots that now hold only dead files, and only then look for orphans.
-    `remove_orphan_files` runs LAST and in its dry-run default, because it is the one
-    procedure with no undo.
+    fewer of them, compact the data, re-cluster the churned manifests, expire snapshots,
+    then look for orphans. `remove_orphan_files` runs LAST in its dry-run default — the
+    one procedure with no undo.
     """
     expire_older_than = int(time.time() * 1000) + EXPIRE_OLDER_THAN_FUTURE_MS
     orphan_older_than = int(time.time() * 1000) - ORPHAN_OLDER_THAN_PAST_MS
@@ -614,12 +586,11 @@ def run_scale_measurement(
 ) -> RunResult:
     """Run every requested leg in one process and return the whole measurement.
 
-    One process on purpose: peak RSS is a process-wide high-water mark, and the charter
-    asks for the peak of the process that did the work.
+    One process on purpose: peak RSS is a process-wide high-water mark.
 
     Args:
-        root: scratch root. A warehouse and a Parquet directory are created under it, and
-            the caller deletes the whole tree afterwards. Never a committed path.
+        root: scratch root holding the warehouse and Parquet directories; the caller
+            deletes the whole tree afterwards. Never a committed path.
         rows: seed rows per leg.
         merges: MERGEs per leg.
         partitions: identity-partition cardinality.
@@ -628,7 +599,7 @@ def run_scale_measurement(
         reps: repetitions per timed scan (the charter's floor is 5).
         target_file_size_bytes: `write.target-file-size-bytes` on each CTAS.
         modes: which legs to run, in order — any of `"mor"`, `"cow"`.
-        host_note: free text recorded with the result (machine, date, anything the reader
+        host_note: free text recorded with the result (machine, date, anything a reader
             needs to know the numbers are not portable).
 
     Returns:

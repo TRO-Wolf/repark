@@ -1,21 +1,17 @@
-//! Lloyd k-means over streamed batches (initMode=random only).
-//!
-//! Default Spark `initMode` is k-means|| — we **do not** fake it. Callers must set
-//! `initMode="random"` or fit fails with [`MlError::KMeansInitModeDefault`].
-//! Assignment parity vs Spark is up to label permutation when seeds and random init align.
+//! Lloyd k-means over streamed batches with `initMode="random"`.
+//! Spark's `k-means||` default is refused; callers must choose `random`.
 
 use crate::MAX_FEATURES;
 use crate::error::{MlError, Result};
 
 /// ===========================================================================================
-/// Validate `KMeans` `initMode` before any streaming work.
+/// Validate `KMeans` `initMode` before streaming.
 ///
 /// # Errors
 /// [`MlError::KMeansInitModeDefault`] or [`MlError::KMeansInitModeUnsupported`].
 /// ===========================================================================================
 pub fn validate_init_mode(init_mode: &str) -> Result<()> {
     match init_mode {
-        // Spark default — refuse so we never silently substitute random.
         "k-means||" | "kmeans||" | "" => Err(MlError::KMeansInitModeDefault),
         "random" => Ok(()),
         other => Err(MlError::KMeansInitModeUnsupported {
@@ -25,11 +21,10 @@ pub fn validate_init_mode(init_mode: &str) -> Result<()> {
 }
 
 /// ===========================================================================================
-/// Fitted centers (params only).
+/// Fitted `KMeans` parameters.
 /// ===========================================================================================
 #[derive(Debug, Clone, PartialEq)]
 pub struct KMeansSolution {
-    /// Cluster centers, each of length `num_features`.
     pub centers: Vec<Vec<f64>>,
     pub num_features: usize,
     pub k: usize,
@@ -37,14 +32,14 @@ pub struct KMeansSolution {
     pub iterations: usize,
 }
 
-/// Small deterministic PRNG (xorshift64*) — no external rand crate.
+/// Deterministic xorshift64* generator without an external dependency.
 #[derive(Debug, Clone)]
 pub struct XorShift64 {
     state: u64,
 }
 
 impl XorShift64 {
-    /// Seed must be non-zero (zero is remapped).
+    /// Create a generator; zero maps to a fixed non-zero seed.
     #[must_use]
     pub fn new(seed: u64) -> Self {
         Self {
@@ -56,7 +51,7 @@ impl XorShift64 {
         }
     }
 
-    /// Next u64.
+    /// Return the next pseudorandom value.
     pub fn next_u64(&mut self) -> u64 {
         let mut x = self.state;
         x ^= x >> 12;
@@ -66,26 +61,20 @@ impl XorShift64 {
         x.wrapping_mul(0x2545_F491_4F6C_DD1D)
     }
 
-    /// Uniform integer in `0..upper` (upper > 0).
+    /// Return an index in `0..upper`; `upper` must be positive.
     pub fn next_index(&mut self, upper: usize) -> usize {
         debug_assert!(upper > 0);
-        // u64 → usize: k / batch sizes are tiny vs 32-bit usize; explicit cast is fine.
+        // Narrowing changes distribution on smaller usize targets, but modulo still bounds it.
         #[allow(clippy::cast_possible_truncation)]
         let bits = self.next_u64() as usize;
         bits % upper
     }
 }
 
-/// Cap on rejection-sampling trials per requested center (SAF-004). When `k ≈ n` the
-/// random-distinct loop can thrash; after this budget we fall back to sequential fill.
 const KMEANS_INIT_MAX_ATTEMPTS_PER_CENTER: u64 = 64;
 
 /// ===========================================================================================
-/// Pick `k` distinct row indices as initial centers (needs `num_rows` from a count pass).
-///
-/// Uses rejection sampling with a hard attempt budget; if the budget is exhausted before `k`
-/// distinct indices are found (the `k ≈ n` hang class, audit SAF-004), fills the remainder with
-/// sequential unused indices `0, 1, 2, …` so fit always terminates.
+/// Pick `k` distinct row indices using bounded rejection sampling and sequential fallback.
 ///
 /// # Errors
 /// Empty design, `k == 0`, or `k > num_rows`.
@@ -104,7 +93,6 @@ pub fn random_center_indices(num_rows: u64, k: usize, seed: u64) -> Result<Vec<u
     }
     let mut rng = XorShift64::new(seed);
     let mut chosen = Vec::with_capacity(k);
-    // Budget scales with k so small-k stays random-first; large-k cannot hang.
     let max_attempts = (k as u64)
         .saturating_mul(KMEANS_INIT_MAX_ATTEMPTS_PER_CENTER)
         .max(1);
@@ -117,14 +105,12 @@ pub fn random_center_indices(num_rows: u64, k: usize, seed: u64) -> Result<Vec<u
         }
     }
     if chosen.len() < k {
-        // SAF-004 fallback: sequential distinct fill of remaining slots (deterministic).
         fill_sequential_distinct_indices(num_rows, k, &mut chosen);
     }
     chosen.sort_unstable();
     Ok(chosen)
 }
 
-/// Fill `chosen` up to `k` with the lowest unused indices in `0..num_rows` (SAF-004 fallback).
 fn fill_sequential_distinct_indices(num_rows: u64, k: usize, chosen: &mut Vec<u64>) {
     let mut index = 0_u64;
     while chosen.len() < k && index < num_rows {
@@ -135,7 +121,7 @@ fn fill_sequential_distinct_indices(num_rows: u64, k: usize, chosen: &mut Vec<u6
     }
 }
 
-/// Squared Euclidean distance. Prefers equal lengths; truncating zip is refused.
+/// Return squared Euclidean distance for equal-width vectors.
 ///
 /// # Errors
 /// [`MlError::FeatureWidthMismatch`] when `a.len() != b.len()`.
@@ -154,7 +140,7 @@ pub fn squared_distance(a: &[f64], b: &[f64]) -> Result<f64> {
     Ok(sum)
 }
 
-/// Nearest center index (ties → lowest index).
+/// Return the nearest center index, preferring the lowest index on ties.
 ///
 /// # Errors
 /// Empty `centers`, or a center width mismatch vs `point`.
@@ -177,14 +163,11 @@ pub fn nearest_center(point: &[f64], centers: &[Vec<f64>]) -> Result<usize> {
 }
 
 /// ===========================================================================================
-/// One Lloyd assignment+update pass over a stream of dense points.
-///
-/// Accumulates sum and count per cluster; does not store points.
+/// One Lloyd assignment and update pass; accumulates sums and counts without storing points.
 /// ===========================================================================================
 #[derive(Debug, Clone)]
 pub struct KMeansPass {
     num_features: usize,
-    /// Cluster count (kept for invariants / future diagnostics).
     #[allow(dead_code)]
     k: usize,
     centers: Vec<Vec<f64>>,
@@ -195,7 +178,7 @@ pub struct KMeansPass {
 }
 
 impl KMeansPass {
-    /// Start a pass from current centers.
+    /// Start a pass from the current centers.
     ///
     /// # Errors
     /// Empty centers, width mismatch, or non-finite coordinates.
@@ -242,7 +225,7 @@ impl KMeansPass {
         })
     }
 
-    /// Assign one point and accumulate.
+    /// Assign one point and add it to the selected cluster.
     ///
     /// # Errors
     /// Width mismatch or non-finite feature values.
@@ -271,7 +254,7 @@ impl KMeansPass {
         Ok(())
     }
 
-    /// Finish pass → new centers. Empty clusters keep previous center.
+    /// Return new centers; empty clusters retain their previous center.
     ///
     /// # Errors
     /// Empty stream (zero rows).
@@ -292,7 +275,7 @@ impl KMeansPass {
             if *count == 0 {
                 continue;
             }
-            // Counts are tiny cluster sizes in practice; f64 mantissa is enough.
+            // The mean is f64; counts beyond its exact integer range are not representable.
             #[allow(clippy::cast_precision_loss)]
             let inv = 1.0 / (*count as f64);
             for (dim_value, sum_value) in center.iter_mut().zip(sum.iter()) {
@@ -308,10 +291,12 @@ impl KMeansPass {
 }
 
 /// ===========================================================================================
-/// Run Lloyd with a caller-provided stream closure (re-executed each iteration).
+/// Run Lloyd with a stream closure re-executed for each iteration.
+///
+/// `max_iter=0` returns validated initial centers without invoking the closure.
 ///
 /// # Errors
-/// Propagates stream / assignment failures from each pass.
+/// Invalid centers, stream failures, or assignment failures.
 /// ===========================================================================================
 pub fn fit_kmeans_lloyd<F>(
     initial_centers: Vec<Vec<f64>>,
@@ -323,13 +308,11 @@ where
 {
     let num_features = initial_centers.first().map_or(0, Vec::len);
     let k = initial_centers.len();
-    // Validate initial centers even when max_iter == 0 (init-only path).
     let _ = KMeansPass::new(initial_centers.clone())?;
     let mut centers = initial_centers;
     let mut iterations = 0;
     let mut num_rows = 0_u64;
 
-    // max_iter == 0 → return init centers only (Spark: no Lloyd steps). No silent clamp.
     for _ in 0..max_iter {
         let mut pass = KMeansPass::new(centers.clone())?;
         stream_pass(&mut pass)?;
@@ -370,7 +353,6 @@ mod tests {
 
     #[test]
     fn two_blob_lloyd() {
-        // Two clusters around (0,0) and (10,10)
         let points: Vec<[f64; 2]> = vec![
             [0.0, 0.0],
             [0.1, -0.1],
@@ -388,7 +370,6 @@ mod tests {
         })
         .expect("lloyd");
         assert_eq!(sol.k, 2);
-        // Centers should sit near the two blobs (order preserved from init).
         assert!(sol.centers[0][0].abs() < 0.2);
         assert!((sol.centers[1][0] - 10.0).abs() < 0.2);
     }
@@ -419,8 +400,6 @@ mod tests {
         ));
     }
 
-    /// SAF-004: `k == n` must terminate (no unbounded rejection sampling hang) with all
-    /// distinct indices covering `0..n`.
     #[test]
     fn random_center_indices_k_equals_n_terminates_with_full_cover() {
         for seed in [0_u64, 1, 42, 0xDEAD_BEEF] {
@@ -434,7 +413,6 @@ mod tests {
                 "k=n must cover every index, seed={seed}"
             );
         }
-        // Larger near-full k also terminates.
         let indices = random_center_indices(100, 100, 7).expect("k=n=100");
         assert_eq!(indices.len(), 100);
         let mut sorted = indices;

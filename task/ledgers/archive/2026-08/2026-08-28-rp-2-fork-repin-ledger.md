@@ -2,8 +2,8 @@
 
 **Date:** 2026-08-27 · **Branch:** `feat/rp-2-fork-repin` (built by the OpenCode lane; salvaged
 as `feat/rp-2-salvage` on 2026-08-28) · **Base:** `06a3e42` (`main`, post-#250) · **Policy:**
-[../../../AGENTS.md](../../../AGENTS.md) "Version-pin contract" · **Handoff:**
-[../../roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md](../../roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md)
+[../../../AGENTS.md](../../../../AGENTS.md) "Version-pin contract" · **Handoff:**
+[../../roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md](../../../roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md)
 §5 (the repin protocol) · **Path:** STANDARD (code changes; one Actor cycle, one Critic pass).
 
 **Retires:** moved to `completed/` in this unit's departure commit.

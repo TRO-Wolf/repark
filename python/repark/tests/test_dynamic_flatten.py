@@ -1,10 +1,8 @@
-"""r24 DF1 — DataFrame.dynamicFlatten / dynamic_flatten (repark-extra).
+"""DataFrame.dynamicFlatten / dynamic_flatten facade contract.
 
 Semantic pins against the operator-supplied polars ``unnest_lazyframe`` reference
 (``specs/dynamic-flatten-reference.md``). Arrow path: value **and** type (never only show).
-Synthetic fixtures only.
-
-The planner is native (``repark_core::dynamic_flatten``); this file remains the facade contract.
+Synthetic fixtures only; the planner is native (``repark_core::dynamic_flatten``).
 """
 
 from __future__ import annotations
@@ -49,9 +47,7 @@ def spark() -> Iterator[ReparkSession]:
         _reset_active_session_for_tests()
 
 
-# ==================================================================================================
 # Surface + idempotence
-# ==================================================================================================
 
 
 def test_both_method_names_bound(spark: ReparkSession) -> None:
@@ -155,31 +151,23 @@ def test_expanding_h1_flatten_drops_stale_overlay(spark: ReparkSession) -> None:
     assert joined.columns == ["aa", "b", "payload", "a", "b"]
     assert "payload_x" not in joined.columns
     flat = joined.dynamicFlatten()
-    # Schema-only overlay contract: prefixed leaf, not parent display name.
-    # ``to_arrow`` on this join+flatten plan is a kernel mixed-qualifier optimizer
-    # class (DEFECT-2 / Unnest already reprojects; struct expand is out of this slice).
+    # Schema-only overlay contract: prefixed leaf, not parent display name. (``to_arrow`` on
+    # this plan is a kernel mixed-qualifier class — Unnest already reprojects there.)
     assert "payload_x" in flat.columns
     assert "payload" not in flat.columns
     assert any(name.startswith("__repark_") for name in flat.columns)
 
 
-# ==================================================================================================
 # mapInArrow _plan() seam
-# ==================================================================================================
 
 
 def test_mapinarrow_dynamic_flatten_materializes_bridge(spark: ReparkSession) -> None:
     """mapInArrow → dynamicFlatten materializes the bridge (UDF rows, not 0).
 
-    Uncached ``mapInArrow`` leaves ``_inner`` as an empty schema-only MemTable.
-    Flatten of that placeholder is an already-flat kernel no-op (engine field names
-    unchanged; spawn may preserve identity) and a child ``_spawn`` has no
-    ``_map_bridge``, so actions return zero rows while parent collect still re-runs
-    the UDF.
-
-    Reverting ``planned = self._plan()`` / ``planned.dynamic_flatten(...)`` to raw
-    ``self._inner.dynamic_flatten(...)`` reds this (0 rows). Ordinary
-    ``createDataFrame`` flatten tests stay green (``_inner == _plan()``).
+    Uncached ``mapInArrow`` leaves ``_inner`` as an empty schema-only MemTable; flattening
+    that placeholder is an already-flat no-op and a child ``_spawn`` has no ``_map_bridge``,
+    so an ``_inner``-revert makes actions return zero rows while ordinary ``createDataFrame``
+    flatten tests stay green (``_inner == _plan()``).
     """
     calls = {"n": 0}
 
@@ -229,9 +217,9 @@ def test_mapinarrow_nested_dynamic_flatten_materializes_bridge(
 ) -> None:
     """mapInArrow nested struct → dynamicFlatten yields ``payload_x`` UDF values, not 0 rows.
 
-    Expanding rewrite (``payload{x}`` → ``payload_x``) still must go through
-    ``_plan()``. Flatten of the empty nested placeholder expands schema but the
-    child has no ``_map_bridge``, so collect is 0 rows on an ``_inner`` revert.
+    The expanding rewrite (``payload{x}`` → ``payload_x``) must also go through ``_plan()``:
+    flatten of the empty nested placeholder expands schema, but the child has no
+    ``_map_bridge``, so collect is 0 rows on an ``_inner`` revert.
     """
     payload_type = pa.struct([("x", pa.int64())])
 
@@ -265,9 +253,7 @@ def test_mapinarrow_nested_dynamic_flatten_materializes_bridge(
     assert parent_xs == [20, 40]
 
 
-# ==================================================================================================
 # Nested struct-in-struct
-# ==================================================================================================
 
 
 def test_nested_struct_in_struct(spark: ReparkSession) -> None:
@@ -317,10 +303,9 @@ def test_nested_struct_in_struct(spark: ReparkSession) -> None:
 def test_null_parent_struct_fields_are_null_not_zero(spark: ReparkSession) -> None:
     """Null parent struct → NULL leaf fields (not type defaults 0/''/False).
 
-    Pins the createDataFrame door: Python ``None`` parent (clean child slots).
-    Does **not** pin CASE-drop / C1-L-001 — that mutation is the engine pin of
-    the same name, with dirty children at the parent-null slot. Dict ``None``
-    does not emit dirty children, so this fixture cannot mutation-proof the CASE.
+    Pins the createDataFrame door: Python ``None`` parent (clean child slots). Does **not**
+    pin CASE-drop / C1-L-001 — that mutation is the engine pin of the same name, with dirty
+    children at the parent-null slot; dict ``None`` cannot emit dirty children.
     """
     schema = StructType(
         [
@@ -360,9 +345,8 @@ def test_null_parent_struct_fields_are_null_not_zero(spark: ReparkSession) -> No
 def test_null_mid_struct_fields_are_null_not_zero(spark: ReparkSession) -> None:
     """Null intermediate struct after first unnest → NULL leaves (multi-pass).
 
-    Pins the createDataFrame door: Python ``None`` mid/outer (clean child slots).
-    Does **not** pin CASE-drop — dirty-child CASE-drop is the engine pin of the
-    same name (C2-L-001 / C3-L-003).
+    Pins the createDataFrame door (Python ``None`` mid/outer); dirty-child CASE-drop is the
+    engine pin of the same name (C2-L-001 / C3-L-003).
     """
     schema = StructType(
         [
@@ -397,9 +381,7 @@ def test_null_mid_struct_fields_are_null_not_zero(spark: ReparkSession) -> None:
     assert table.schema.field("o_inner_x").type == pa.int64()
 
 
-# ==================================================================================================
 # List-of-struct
-# ==================================================================================================
 
 
 def test_list_of_struct_explodes_then_unnests(spark: ReparkSession) -> None:
@@ -546,9 +528,7 @@ def test_list_explode_preserves_interleaved_column_order(spark: ReparkSession) -
     assert table.schema.field("xs").type == pa.int64()
 
 
-# ==================================================================================================
 # Struct-in-list-in-struct
-# ==================================================================================================
 
 
 def test_struct_in_list_in_struct(spark: ReparkSession) -> None:
@@ -615,18 +595,15 @@ def test_struct_in_list_in_struct(spark: ReparkSession) -> None:
     assert table.schema.field("payload_fills_px").type == pa.int64()
 
 
-# ==================================================================================================
 # Null-typed list (List(Null) / array<void>)
-# ==================================================================================================
 
 
 def test_drop_null_typed_list(spark: ReparkSession) -> None:
     """``drop_null_lists=True`` drops ``array<void>`` / List(Null) instead of exploding.
 
-    Engine ``make_array()`` yields ``array<Null>`` (void element). This pin uses the SQL
-    path; the createDataFrame door is pinned separately by
-    ``test_create_dataframe_honors_requested_void`` (G3b D-5 — it used to silently
-    substitute array<string>, it now honors the requested ``array<void>``).
+    Engine ``make_array()`` yields ``array<Null>`` (void element). This pin uses the SQL path;
+    the createDataFrame door is pinned separately by
+    ``test_create_dataframe_honors_requested_void`` (G3b D-5).
     """
     frame = spark.sql(
         """
@@ -649,18 +626,9 @@ def test_drop_null_typed_list(spark: ReparkSession) -> None:
 def test_drop_null_lists_false_keeps_null_list_column(spark: ReparkSession) -> None:
     """``drop_null_lists=False`` keeps the ``array<void>`` column as one null-element row.
 
-    Discriminates THIS PR (SQM #176 V-1/V-2). MEASURED: BASE b628b0f and
-    f6aed24 inner-explode the empty void list → ``count()==0``. After the
-    untyped ``make_array(NULL)`` arm the row survives with ``props`` NULL.
-    Kills: void inner-explode fallback; missing ``make_array(NULL)`` CASE.
-
-    Schema-mapper leg MEASURED on this round's BASE c38578d: the kept flat
-    ``props`` column carries the Arrow Debug type key ``'Null'``, which the
-    lowercase-only void arm missed, so ``.schema['props'].dataType`` was
-    ``StringType()`` and ``.dtypes`` said ``('props', 'string')`` while
-    ``to_arrow()`` was already ``pa.null()``. After the ``'Null'`` arm:
-    ``NullType()`` / ``('props', 'void')``.
-    Kills: the StringType fail-open on the Debug-spelled void key (DF-2 W-1).
+    With the untyped ``make_array(NULL)`` arm the row survives with ``props`` NULL and the
+    reported schema is ``NullType()`` / ``('props', 'void')`` — the lowercase-only void arm
+    fail-opened the Debug-spelled ``'Null'`` type key to ``StringType``.
     """
     frame = spark.sql("SELECT 1 AS id, make_array() AS props")
     props_type = frame.schema["props"].dataType
@@ -681,11 +649,8 @@ def test_drop_null_lists_false_void_sibling_keeps_typed_list_rows(
 ) -> None:
     """Empty ``array<void>`` sibling must not cartesian-drop typed lists (SQM #176 V-2).
 
-    MEASURED on f6aed24: ``{props: [] void, items: [{item_id: SKU}]}`` with
-    ``drop_null_lists=False`` (default ``empty_as_null=True``) returned 0 rows;
-    default ``drop_null_lists=True`` kept SKU; typed-empty sibling contrast
-    kept SKU. After ``make_array(NULL)`` the void-empty row survives.
-    Kills: void inner-explode fallback that annihilates sibling lists.
+    With ``drop_null_lists=False`` (default ``empty_as_null=True``) the void-empty row
+    survives alongside the typed list; the void inner-explode fallback annihilated it.
     """
     frame = spark.sql(
         """
@@ -715,9 +680,8 @@ def test_drop_null_lists_false_void_sibling_keeps_typed_list_rows(
     empty_drops = frame.dynamicFlatten(drop_null_lists=False, empty_as_null=False)
     assert empty_drops.count() == 0
 
-    # NULL void + typed items: False still keeps the row (NULL-only CASE).
-    # Input type is pinned: a scalar-null props would skip explode_keep_null
-    # and stay green on BASE inner-explode (Critic-1 Q-010).
+    # NULL void + typed items: False still keeps the row (NULL-only CASE). Input type is
+    # pinned: a scalar-null props would stay green on the BASE inner-explode.
     null_void = spark.sql(
         """
         SELECT 1 AS id,
@@ -741,7 +705,6 @@ def test_explode_null_and_empty_array_values_drop_rows(spark: ReparkSession) -> 
     """Default ``empty_as_null=True`` keeps NULL and EMPTY lists as one null-element row.
 
     ``empty_as_null=False`` is the polars ≥2.0 default (NULL kept, EMPTY dropped).
-    Name kept (flip-don't-delete of the pre-fix inner-explode drop pin).
     """
     schema = StructType(
         [
@@ -777,9 +740,7 @@ def test_explode_null_and_empty_array_values_drop_rows(spark: ReparkSession) -> 
     assert dropped_table.schema.field("xs").type == pa.int64()
 
 
-# ==================================================================================================
 # Depth-cap LOUD refuse
-# ==================================================================================================
 
 
 def test_max_depth_refuses_loud_never_silent_truncate(spark: ReparkSession) -> None:
@@ -802,13 +763,10 @@ def test_max_depth_refuses_loud_never_silent_truncate(spark: ReparkSession) -> N
         ]
     )
     frame = spark.createDataFrame([{"a": {"b": {"c": 1}}}], schema=schema)
-    # depth 1: unnest a → column a_b still struct → refuse
     with pytest.raises(AnalysisException, match=r"\[DYNAMIC_FLATTEN_MAX_DEPTH\]"):
         frame.dynamicFlatten(max_depth=1).collect()
-    # depth 0 with nested work: refuse immediately
     with pytest.raises(AnalysisException, match=r"\[DYNAMIC_FLATTEN_MAX_DEPTH\]"):
         frame.dynamicFlatten(max_depth=0).collect()
-    # ample depth succeeds
     ok = frame.dynamicFlatten(max_depth=5)
     assert ok.columns == ["a_b_c"]
     assert ok.to_arrow().to_pylist() == [{"a_b_c": 1}]
@@ -836,9 +794,7 @@ def test_bool_flag_type_gates(spark: ReparkSession) -> None:
         frame.dynamicFlatten(empty_as_null="yes")  # type: ignore[arg-type]
 
 
-# ==================================================================================================
 # Name-collision: prefix disambiguates; refuse if still collides
-# ==================================================================================================
 
 
 def test_prefix_disambiguates_sibling_struct_fields(spark: ReparkSession) -> None:
@@ -916,9 +872,7 @@ def test_prefixed_name_collision_with_top_level_refuses(spark: ReparkSession) ->
 
 def test_prefixed_name_collision_between_expansions_refuses(spark: ReparkSession) -> None:
     """Two expansions producing the same prefixed name → LOUD refuse."""
-    # outer_inner as a sibling column of outer, both yield outer_inner_x style paths:
-    # outer.inner_x  → outer_inner_x
-    # outer_inner.x  → outer_inner_x
+    # Both spellings yield outer_inner_x-style paths: outer.inner_x and outer_inner.x.
     schema = StructType(
         [
             StructField(
@@ -999,9 +953,7 @@ def test_empty_struct_only_schema_refuses_loud(spark: ReparkSession) -> None:
         frame.dynamicFlatten().collect()
 
 
-# ==================================================================================================
 # Flags + schema-only walk (no forced collect)
-# ==================================================================================================
 
 
 def test_explode_lists_false_leaves_arrays(spark: ReparkSession) -> None:
@@ -1071,8 +1023,7 @@ def test_custom_separator_list_column_unnest(spark: ReparkSession) -> None:
 def test_dynamic_flatten_docstring_describes_native_kernel() -> None:
     """C1-Q-001: the method docstring must describe the native plan rewrite.
 
-    Mutation-proof: restoring the retired SQL ``explode_outer`` / ``make_array(NULL)``
-    algorithm block reds this.
+    Restoring the retired SQL ``explode_outer`` / ``make_array(NULL)`` block reds this.
     """
     from repark.spark.dataframe import DataFrame
 
@@ -1097,10 +1048,8 @@ def test_schema_walk_does_not_require_prior_collect(spark: ReparkSession) -> Non
         ]
     )
     frame = spark.createDataFrame([{"id": 1, "nested": {"v": 99}}], schema=schema)
-    # Touch schema only (analyzed, no row exec), then flatten without intermediate collect.
     assert any(f.name == "nested" for f in frame.schema.fields)
     planned = frame.dynamicFlatten()
-    # Still a plan: columns available before any action.
     assert planned.columns == ["id", "nested_v"]
     table = planned.to_arrow()
     assert table.to_pylist() == [{"id": 1, "nested_v": 99}]
@@ -1156,15 +1105,12 @@ def test_dynamic_flatten_plan_build_does_not_force_collect(
     planned = frame.dynamicFlatten()
     assert actions == []
     assert planned.columns == ["id", "outer_inner_x", "legs_leg_id"]
-    # Action after plan is allowed and expected.
     table = planned.to_arrow()
     assert "to_arrow" in actions
     assert table.to_pylist() == [{"id": 1, "outer_inner_x": 2, "legs_leg_id": 3}]
 
 
-# ==================================================================================================
 # GA4-shaped fixture (empty_as_null both flag states)
-# ==================================================================================================
 
 
 _GA4_VALUE = StructType(
@@ -1182,8 +1128,6 @@ _GA4_PARAM = StructType(
     ]
 )
 # G3b: the real GA4 ``items`` element carries its OWN ``item_params`` array-of-struct.
-# The fixture used to stop at the scalar fields, which is exactly why the
-# array-of-struct-inside-an-array-element-struct spelling defect shipped unpinned.
 _GA4_ITEM = StructType(
     [
         StructField("item_id", StringType(), True),
@@ -1300,10 +1244,9 @@ def _ga4_rows() -> list[dict[str, object]]:
 def test_dynamic_flatten_ga4_empty_as_null_keeps_export_rows(spark: ReparkSession) -> None:
     """GA4-shaped 3-row frame: default empty_as_null keeps all three event_names.
 
-    page_view has EMPTY user_properties/items; session_start has NULL arrays;
-    purchase has all three lists non-empty. Default True returns all three
-    (the 0-rows class is dead). False returns purchase + session_start only
-    (polars ≥2.0: empty drops, NULL keeps).
+    page_view has EMPTY user_properties/items; session_start has NULL arrays; purchase has
+    all three lists non-empty. Default True returns all three; False returns
+    purchase + session_start only (polars ≥2.0: empty drops, NULL keeps).
     """
     frame = spark.createDataFrame(_ga4_rows(), schema=_GA4_SCHEMA)
 
@@ -1325,8 +1268,7 @@ def test_dynamic_flatten_ga4_empty_as_null_keeps_export_rows(spark: ReparkSessio
     assert by_name["purchase"]["items_item_id"] == "SKU-1"
     assert by_name["purchase"]["items_price"] == 9.99
     assert by_name["purchase"]["items_quantity"] == 1
-    # G3b: items[].item_params[] — an array-of-struct nested inside an array-element
-    # struct. Red on BASE (AnalysisException type_coercion, "Failed to coerce … CASE WHEN").
+    # G3b: items[].item_params[] — an array-of-struct nested inside an array-element struct.
     assert by_name["purchase"]["items_item_params_key"] == "item_category"
     assert by_name["purchase"]["items_item_params_value_string_value"] == "shoes"
     assert by_name["page_view"]["items_item_params_key"] is None
@@ -1363,15 +1305,10 @@ def test_dynamic_flatten_array_of_struct_inside_array_element_struct(
 ) -> None:
     """G3b minimal repro: array-of-struct nested INSIDE an array-element struct.
 
-    This is GA4's real ``items[].item_params[]`` shape reduced to its smallest form.
-    Red on BASE (95cfaf9) for BOTH doors — ``dynamicFlatten()`` and a bare
-    ``explode_outer`` — with ``AnalysisException type_coercion`` / "Failed to coerce …
-    CASE WHEN", because the nested array was spelled postfix (``…[]``) and the engine
-    parser migrated the ``[]`` onto the innermost field.
-
-    ``dynamicFlatten`` is native Unnest (``repark_core::dynamic_flatten``); it no
-    longer goes through ``_sql_array_of``. Reverting that helper to
-    ``f"{inner}[]"`` only kills the ``explode_outer`` door — not flatten.
+    GA4's real ``items[].item_params[]`` shape, reduced to its smallest form; covered on
+    BOTH doors — ``dynamicFlatten()`` and bare ``explode_outer``. ``dynamicFlatten`` is
+    native Unnest (``repark_core::dynamic_flatten``), so reverting ``_sql_array_of`` to
+    ``f"{inner}[]"`` only kills the ``explode_outer`` door, not flatten.
     """
     param = StructType(
         [
@@ -1433,7 +1370,6 @@ def test_dynamic_flatten_array_of_struct_inside_array_element_struct(
     ]
     assert _is_arrow_string_type(table.schema.field("items_item_params_key").type)
 
-    # Second door: bare explode_outer on the same shape (also red on BASE).
     from repark import functions as F  # noqa: N812
 
     exploded = frame.select(F.explode_outer("items").alias("item")).to_arrow()
@@ -1500,15 +1436,10 @@ def test_dynamic_flatten_map_element_still_refuses_loud(spark: ReparkSession) ->
 def test_create_dataframe_honors_requested_void(spark: ReparkSession) -> None:
     """G3b D-5: an explicitly requested void / array<void> is HONORED, not substituted.
 
-    Red on BASE (95cfaf9): ``_data_type_to_sql_type`` spelled ``NullType`` as ``VARCHAR``, so
-    ``createDataFrame`` returned ``struct<v:string, a:array<string>>`` for the schema below
-    with **no** warning or refuse — the only silent schema substitution on the ingest path.
-    Mutation-proof: restoring ``return "VARCHAR"`` (or dropping the ``VOID``/``NULL`` entries
-    from ``_sql_type_to_arrow``) reds every assertion here.
-
-    The ruling hierarchy was HONOR > refuse-loud > silent-substitute; HONOR is reachable
-    because the whole path already carries void: Arrow ``null`` / ``list<item: null>``, the
-    ``CAST(NULL AS VOID)`` empty-frame seed, and the DF-2 void machinery below.
+    Mutation-proof: restoring ``return "VARCHAR"`` (or dropping the ``VOID``/``NULL``
+    entries from ``_sql_type_to_arrow``) reds every assertion here. HONOR is reachable
+    because the whole path already carries void (Arrow ``null`` / ``list<item: null>``,
+    the ``CAST(NULL AS VOID)`` empty-frame seed, and the DF-2 void machinery).
     """
     schema = StructType(
         [
@@ -1518,7 +1449,6 @@ def test_create_dataframe_honors_requested_void(spark: ReparkSession) -> None:
     )
     frame = spark.createDataFrame([(None, [None, None]), (None, None)], schema)
 
-    # 1. The reported schema is the requested schema.
     assert frame.schema.simpleString() == "struct<v:void,a:array<void>>"
     assert isinstance(frame.schema["v"].dataType, NullType)
     element = frame.schema["a"].dataType
@@ -1526,7 +1456,6 @@ def test_create_dataframe_honors_requested_void(spark: ReparkSession) -> None:
     assert isinstance(element.elementType, NullType)
     assert frame.dtypes == [("v", "void"), ("a", "array<void>")]
 
-    # 2. Arrow agrees — null / list<item: null>, not string / list<item: string>.
     table = frame.to_arrow()
     assert table.schema.field("v").type == pa.null()
     assert table.schema.field("a").type == pa.list_(pa.null())
@@ -1534,7 +1463,6 @@ def test_create_dataframe_honors_requested_void(spark: ReparkSession) -> None:
     assert frame.count() == 2
     assert frame.collect() == frame.collect()
 
-    # 3. Nested + DDL doors spell it the same way.
     nested = spark.createDataFrame(
         [(([None],),)],
         StructType(
@@ -1546,24 +1474,22 @@ def test_create_dataframe_honors_requested_void(spark: ReparkSession) -> None:
         "struct<a:array<void>>"
     )
 
-    # 4. Empty-frame seed (CAST(NULL AS VOID)) keeps the requested type too.
     assert spark.createDataFrame([], schema).schema.simpleString() == (
         "struct<v:void,a:array<void>>"
     )
 
-    # 5. The DF-2 void machinery still holds on the ingested (not SQL-built) frame.
+    # The DF-2 void machinery still holds on the ingested (not SQL-built) frame.
     assert frame.dynamicFlatten().columns == ["v"]
     kept = frame.dynamicFlatten(drop_null_lists=False)
     assert kept.columns == ["v", "a"]
-    # MEASURED: the 2-element void list contributes one null row per element, the NULL
-    # array row contributes one — 3 rows, every cell NULL (void has no other value).
+    # The 2-element void list contributes one null row per element, the NULL array row one —
+    # 3 rows, every cell NULL (void has no other value).
     assert kept.to_arrow().to_pylist() == [
         {"v": None, "a": None},
         {"v": None, "a": None},
         {"v": None, "a": None},
     ]
 
-    # 6. Non-void requests are untouched (the substitution is gone, not inverted).
     assert (
         spark.createDataFrame(
             [([None],)], StructType([StructField("a", ArrayType(StringType()), True)])
@@ -1572,14 +1498,10 @@ def test_create_dataframe_honors_requested_void(spark: ReparkSession) -> None:
     )
 
 
-# ==================================================================================================
-# DEFECT-2 — projection over a multi-pass dynamicFlatten (task/c25-bugfix-ledger.md, 2026-08-18)
-# ==================================================================================================
+# DEFECT-2 — projection over a multi-pass dynamicFlatten
 #
-# The defect (pre-existing, measured twice before the fix): after a flatten that takes 2+ explode
-# passes, a projection that DROPPED the output of an explode whose ``Unnest`` sits UNDER another
-# ``Unnest`` (an earlier prose said "the LAST explode pass's column" — retracted, the sibling
-# exploded second is the trigger here) raised inside DataFusion 54.1's
+# After a flatten taking 2+ explode passes, a projection that DROPPED the output of an explode
+# whose ``Unnest`` sits UNDER another ``Unnest`` raised inside DataFusion 54.1's
 # ``push_down_leaf_projections``. Two distinct upstream failures on one plan:
 #
 #   * ``Internal error: Assertion failed: expr.is_empty(): Unnest(…)`` — the rule pushes into a
@@ -1589,14 +1511,11 @@ def test_create_dataframe_honors_requested_void(spark: ReparkSession) -> None:
 #     name id which would be ambiguous`` — merging a pushed pass-through column into a projection
 #     that already re-aliases the same name puts both spellings into one ``DFSchema``.
 #
-# Neither is reachable from repark's plan shape, and both are optimizer-only. The fix is a
-# SCOPED rule, not a flag: the core session installs DataFusion's own rule list with
+# The fix is a SCOPED rule, not a flag: the core session installs DataFusion's own rule list with
 # ``push_down_leaf_projections`` wrapped so it declines on the ``Unnest``-carrying plans it
 # miscompiles and runs untouched everywhere else (``crates/repark-core/src/session/df_guards.rs``;
 # ``datafusion.optimizer.enable_leaf_expression_pushdown`` stays at DataFusion's default, because
-# turning it off measured up to ~8x in one run on a filtered wide-struct parquet scan —
-# load-sensitive ratio, ledger §3).
-# Engine-side pins: the five ``session::df_guard_tests::*leaf_pushdown*`` tests.
+# turning it off measured up to ~8x on a filtered wide-struct parquet scan).
 # These are the facade halves — they red the moment that wrapper is removed.
 
 
@@ -1617,12 +1536,10 @@ def test_multi_pass_flatten_every_projection_subset_is_green(
 ) -> None:
     """Every non-empty projection subset works, in BOTH explode orders, value-checked.
 
-    ``sibling="Tags"`` is the order that reded before the fix (the sibling list explodes LAST, so
-    every subset dropping it raised); ``sibling="Alpha"`` is the order that always worked. Same
-    data, same 15 subsets — the pin is that the two orders are now indistinguishable.
-
-    Values are compared against the whole-frame ``to_arrow`` export (the path that stayed correct
-    throughout), so this pins results, not merely "did not raise".
+    ``sibling="Tags"`` is the order that reded before the fix (the sibling list explodes
+    LAST, so every subset dropping it raised); ``sibling="Alpha"`` always worked. Values are
+    compared against the whole-frame ``to_arrow`` export, so this pins results, not merely
+    "did not raise".
     """
     import itertools
 
@@ -1647,9 +1564,8 @@ def test_multi_pass_flatten_every_projection_subset_is_green(
 def test_multi_pass_flatten_count_and_agg_are_green(spark: ReparkSession, sibling: str) -> None:
     """``count()`` / ``agg`` — the extreme case that projects every column away — both orders.
 
-    Before the fix ``count()`` raised on the ``Tags`` order while the same frame's
-    ``to_arrow().num_rows`` returned the right number: the row count was reachable and correct
-    on the export path while the cheapest way to ask for it failed.
+    Before the fix ``count()`` raised on the ``Tags`` order while ``to_arrow().num_rows``
+    returned the right number.
     """
     from repark import functions as F  # noqa: N812
 
@@ -1663,10 +1579,10 @@ def test_multi_pass_flatten_count_and_agg_are_green(spark: ReparkSession, siblin
 def test_ga4_real_shape_flatten_then_project(spark: ReparkSession) -> None:
     """The GA4 ``items[].item_params[]`` frame: flatten, then project every single column.
 
-    Coverage for the real-world shape only — MEASURED not to reproduce DEFECT-2
-    (deleting ``UnnestSafeLeafProjectionPushdown`` leaves this green). The guard
-    pin is ``test_multi_pass_flatten_every_projection_subset_is_green`` (and the
-    kernel twin ``multi_pass_flatten_then_project_survives_leaf_pushdown``).
+    Coverage for the real-world shape only — MEASURED not to reproduce DEFECT-2 (deleting
+    ``UnnestSafeLeafProjectionPushdown`` leaves this green). The guard pin is
+    ``test_multi_pass_flatten_every_projection_subset_is_green`` (and the kernel twin
+    ``multi_pass_flatten_then_project_survives_leaf_pushdown``).
     """
     from repark import functions as F  # noqa: N812
 
@@ -1678,7 +1594,6 @@ def test_ga4_real_shape_flatten_then_project(spark: ReparkSession) -> None:
     for name in frame.columns:
         got = frame.select(name).to_arrow().to_pylist()
         assert got == [{name: row[name]} for row in whole], name
-    # A narrowing multi-column projection that drops the flattened array columns entirely.
     narrow = ("event_name", "device_category", "device_web_info_browser")
     assert frame.select(*narrow).to_arrow().to_pylist() == [
         {name: row[name] for name in narrow} for row in whole
@@ -1686,10 +1601,9 @@ def test_ga4_real_shape_flatten_then_project(spark: ReparkSession) -> None:
 
 
 def test_multi_pass_flatten_cache_is_still_a_plain_pattern(spark: ReparkSession) -> None:
-    """The retired workaround still works as an ordinary pattern (it is no longer required).
+    """The retired workaround still works as an ordinary pattern (no longer required).
 
-    ``cache()`` used to be the documented escape hatch for the defect. It is now just caching:
-    the cached and uncached frames agree, column for column.
+    ``cache()`` is now just caching: the cached and uncached frames agree, column for column.
     """
     frame = _defect2_frame(spark, "Tags")
     cached = frame.cache()

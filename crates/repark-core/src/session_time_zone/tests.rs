@@ -1,6 +1,4 @@
-//! Session-timezone conf pins (H-1a split A): parse/validate, the ONE spelling, and the value
-//! actually reaching engine session state. Extraction semantics are NOT pinned here — they are
-//! unchanged in this unit by design (split B owns them).
+//! Session-timezone pins: validation, one spelling, and resolved engine state.
 
 use std::collections::HashMap;
 

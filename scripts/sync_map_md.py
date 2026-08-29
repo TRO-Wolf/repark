@@ -1,48 +1,39 @@
 #!/usr/bin/env python3
 """Keep every `map.md` honest about the tree it navigates.
 
-The repo's hard rule is "`map.md` in every directory, updated in the same
-change" (AGENTS.md). `scripts/check_map_md.sh` holds the *lockstep* half of it:
-staged code forces a staged map. This script holds the *content* half — a map
-that was touched can still point at a file that moved and stay silent about a
-file that arrived.
+The repo's hard rule is "`map.md` in every directory, updated in the same change" (AGENTS.md).
+`scripts/check_map_md.sh` holds the *lockstep* half: staged code forces a staged map. This
+script holds the *content* half — a touched map can still point at a file that moved and stay
+silent about a file that arrived.
 
 Two rules, over every tracked `map.md`:
 
-1. **Link validity.** Every relative markdown link in the map resolves to a
-   file or directory that exists. External links (`http:`, `https:`, `mailto:`)
-   and bare anchors (`#section`) are out of scope: nothing local can check them.
-   An absolute target (`/docs/foo.md`) is a finding in its own right — it is
-   neither repo-relative nor resolvable by GitHub, and resolving it against the
-   filesystem root would make the answer depend on the machine. Link-shaped text
-   inside an inline code span or a fenced block is documentation of the syntax,
-   not a link, and is skipped. Inline `[text](target)` links only: reference-style
-   definitions (`[text][ref]`) and bare URLs are not link rows in this repo's
-   maps and are not parsed, so a map that adopts them gets no link checking.
-2. **Coverage** (`--strict`). Every *mappable* tracked file sitting in the map's
-   own directory is mentioned somewhere in the map by name. Mappable = one of
-   MAPPABLE_SUFFIXES, excluding `map.md` itself, lockfiles, and dotfiles.
-   Directories below the map belong to their own map and are not counted here.
+1. **Link validity.** Every relative markdown link in the map resolves to a file or directory
+   that exists. External links (`http:`, `https:`, `mailto:`) and bare anchors (`#section`) are
+   out of scope: nothing local can check them. An absolute target (`/docs/foo.md`) is a finding
+   in its own right — it is neither repo-relative nor resolvable by GitHub. Link-shaped text
+   inside an inline code span or a fenced block is documentation of the syntax, not a link, and
+   is skipped. Inline `[text](target)` links only: reference-style definitions and bare URLs
+   are not link rows in this repo's maps and are not parsed.
 
-Coverage is behind `--strict` because it was measured before it was wired: the
-tree carries a large body of pre-existing unmentioned files, and a gate nobody
-can run green is not a gate. Link validity is armed unconditionally — it
-measured clean. The recorded coverage count is a **floor**, not an exact debt:
-a name is counted as mentioned wherever it appears as a whole token in the map,
-including inside a sentence that is about something else.
+2. **Coverage** (`--strict`). Every *mappable* tracked file sitting in the map's own directory
+   is mentioned somewhere in the map by name. Mappable = one of MAPPABLE_SUFFIXES, excluding
+   `map.md` itself, lockfiles, and dotfiles. Directories below the map belong to their own map.
 
-`--fix` performs only the mechanical half of the repair and never writes prose:
-a row whose target does not exist is deleted when the row is a list item whose
-*only* link is the dead one, and an unmentioned file gets a stub row ending in
-`TODO(describe)`. An absolute target is never deleted — it is a misspelling of
-a link that may well resolve once repointed, so it is reported, not repaired.
-A list item's continuation lines are part of the row and are deleted with it;
-a row carrying a nested sub-list is never deleted, because the sub-items would
-be orphaned — it is reported as needing a hand edit instead. Descriptions stay
-agent-authored, because the description is the whole value of a map.
+Coverage is behind `--strict` because the tree carries a large body of pre-existing unmentioned
+files; a gate nobody can run green is not a gate. Link validity is armed unconditionally. The
+recorded coverage count is a **floor**: a name counts as mentioned wherever it appears as a
+whole token in the map.
 
-Exit 0 clean, 1 findings, 2 usage/environment error. The tracked set comes from
-`git ls-files`, so an untracked build directory is never walked.
+`--fix` performs only the mechanical half of the repair and never writes prose: a row whose
+target does not exist is deleted when the row is a list item whose *only* link is the dead one,
+and an unmentioned file gets a stub row ending in `TODO(describe)`. An absolute target is never
+deleted — it is a misspelling that may well resolve once repointed. A row carrying a nested
+sub-list is never deleted, because the sub-items would be orphaned; it is reported for a hand
+edit. Descriptions stay agent-authored: the description is the whole value of a map.
+
+Exit 0 clean, 1 findings, 2 usage/environment error. The tracked set comes from `git ls-files`,
+so an untracked build directory is never walked.
 """
 
 from __future__ import annotations
@@ -64,10 +55,9 @@ MAPPABLE_SUFFIXES: frozenset[str] = frozenset({".rs", ".py", ".sh", ".md", ".tom
 # them from lockstep for the same reason), so they are not coverage subjects.
 LOCKFILE_NAMES: frozenset[str] = frozenset({"Cargo.lock", "uv.lock"})
 
-# Inline `[text](target)` links. The target body allows one level of balanced
-# parentheses so a real filename like `weird(1).md` is read whole instead of
-# being truncated at its first `)`. Reference-style definitions and bare URLs
-# are not link rows in this repo's maps and are not parsed.
+# Inline `[text](target)` links. The target body allows one level of balanced parentheses so
+# a filename like `weird(1).md` is read whole instead of truncated at its first `)`.
+# Reference-style definitions and bare URLs are not link rows in this repo's maps.
 LINK_PATTERN = re.compile(
     r"\[[^\]]*\]\(\s*(<[^<>]*>|(?:[^()\s]|\([^()]*\))*)(?:\s+\"[^\"]*\")?\s*\)"
 )
@@ -75,9 +65,8 @@ LINK_PATTERN = re.compile(
 # A markdown list item: `- `, `* `, or `1. `, with optional leading indent.
 LIST_ITEM_PATTERN = re.compile(r"^\s*(?:[-*+]|\d+\.)\s")
 
-# Inline code spans and fenced blocks hold link-shaped TEXT that is documentation
-# of the syntax, not a link — a map that documents `[<name>](<name>)` must not be
-# told its own example is broken.
+# Code spans and fenced blocks hold link-shaped TEXT that documents the syntax, not a link —
+# a map that documents `[<name>](<name>)` must not be told its own example is broken.
 CODE_SPAN_PATTERN = re.compile(r"`[^`]*`")
 FENCE_PATTERN = re.compile(r"^\s*(?:```|~~~)")
 
@@ -192,11 +181,9 @@ def _stub_row(name: str) -> str:
 def _item_span(lines: list[str], start: int) -> tuple[int, bool]:
     """Exclusive end index of the list item at `start`, and whether it nests.
 
-    A row is its bullet line plus every indented continuation line under it —
-    this repo's maps wrap descriptions constantly, and deleting only the bullet
-    line would leave the rest as orphaned prose. An indented *list item* is a
-    nested sub-list, not a continuation: the row cannot be deleted mechanically
-    without orphaning its children, so the caller is told to hand it back.
+    A row is its bullet plus every indented continuation line — deleting only the bullet would
+    orphan the wrapped prose. An indented *list item* is a nested sub-list, not a continuation:
+    the row cannot be deleted mechanically, so the caller is told to hand it back.
     """
     end = start + 1
     while end < len(lines):
@@ -221,8 +208,8 @@ def drop_dead_rows(
     dropped = 0
     refused = 0
     for lineno, _target, problem in dead:
-        # An absolute target is a misspelling of a link that may well resolve
-        # once repointed; deleting the row would throw away a live description.
+        # An absolute target may resolve once repointed; deleting the row throws away a
+        # live description.
         if problem != MISSING:
             continue
         start = lineno - 1

@@ -1,21 +1,21 @@
 """Write-path partition-key VALUE audit — CTAS + INSERT vs live Spark 4.1.2 + Iceberg.
 
-**The charge.** Pin what each engine *writes* into Iceberg partition slots, not what a SELECT
-over the source would extract. Three classes (TZ4-DESIGN §4 / A2):
+Pin what each engine *writes* into Iceberg partition slots, not what a SELECT over the
+source would extract. Three classes:
 
-* **carry_check** — identity (int / string / date / timestamp post-#79/#85), ``bucket``,
-  ``truncate``, and Iceberg ``years``/``months``/``days``/``hours``(ts). The temporal
-  transforms are UTC-epoch *from 1970* (fork ``Transform::Year`` etc.), already pinned at
-  ``crates/repark-spark/src/tests/partitioned_ctas.rs`` ``ctas_temporal_partition_spec_and_routing``
-  (distinct-count). This corpus pins the VALUES.
+* **carry_check** — identity (int / string / date / timestamp), ``bucket``, ``truncate``,
+  and Iceberg ``years``/``months``/``days``/``hours``(ts); the temporal transforms are
+  UTC-epoch *from 1970* (fork ``Transform::Year`` etc.), pinned Rust-side at
+  ``crates/repark-spark/src/tests/partitioned_ctas.rs``
+  ``ctas_temporal_partition_spec_and_routing`` (distinct-count) — this corpus pins VALUES.
 * **load_bearing** — identity partitions of SQL ``year(ts)`` / ``date_format(ts, …)`` under a
-  **non-UTC** session. Session-zone extractors; the classic silent-corruption hole.
-* **tz8** — identity partitions of ``CAST(ts AS DATE)`` / ``to_date(ts)``. R-4 flipped
-  both date-key rows to equality (session-zone dates). ``datediff`` rides CAST.
-  ``last_day`` / ``date_add`` over TIMESTAMP stay residual.
+  **non-UTC** session (the classic silent-corruption hole).
+* **tz8** — identity partitions of ``CAST(ts AS DATE)`` / ``to_date(ts)`` as session-zone
+  date keys; ``datediff`` rides CAST, ``last_day`` / ``date_add`` over TIMESTAMP stay
+  residual.
 
-Transforms the engine refuses today get **refusal-class** pins (needle + class), never silent
-skips. The swept transform x type matrix is enumerated in
+Transforms the engine refuses get **refusal-class** pins (needle + class), never silent
+skips; the swept transform x type matrix is enumerated in
 ``task/v4-partition-values-ledger.md``.
 
 **Oracle.** Every Spark half is RECORDED against live PySpark 4.1.2 + Iceberg
@@ -35,9 +35,6 @@ per-slot ``record_count`` on both ``files`` and ``partitions``.
         .venv/bin/python python/repark/tests/_record_partition_value_goldens.py
 
 It imports ``ROWS`` from THIS module. Never collected by pytest. CI stays JVM-free.
-
-**Out of scope.** Fixes >5 lines; the iceberg-rust fork; ``_live_parity.py`` / registry;
-tz representation surfaces (#85 closed).
 """
 
 from __future__ import annotations
@@ -78,16 +75,14 @@ ZONE_NEW_YORK = "America/New_York"
 ZONE_TOKYO = "Asia/Tokyo"
 ZONE_UTC = "UTC"
 
-# Budget is part of the unit (CP-10). Name-gated coverage lives in the budget pin.
+# Budget gate (CP-10); name-gated coverage lives in the budget pin.
 BUDGET_MIN = 24
 BUDGET_MAX = 34
 
 # Fork #192 projects timestamptz/timestamptz_ns in data_file metadata tables (F-V4-1 unlocked).
 
 
-# ==================================================================================================
 # Arrow helpers
-# ==================================================================================================
 
 _I64 = pa.int64()
 _I32 = pa.int32()
@@ -129,9 +124,7 @@ def _meta(
     )
 
 
-# ==================================================================================================
 # Instants — RFC-3339 checkable without epoch arithmetic
-# ==================================================================================================
 
 # Iceberg years/months/days/hours carry-check (matches partitioned_ctas.rs micros + the
 # year-boundary instant that separates UTC-epoch 54 from SQL year 2023 under New York).
@@ -169,9 +162,7 @@ DATE_ROWS: tuple[tuple[int, dt.date], ...] = (
 )
 
 
-# ==================================================================================================
 # Row shape
-# ==================================================================================================
 
 
 Family = Literal["carry_check", "load_bearing", "tz8", "refuse"]
@@ -225,9 +216,7 @@ class WriteAudit:
     meta_error: str | None
 
 
-# ==================================================================================================
 # Canonical partition-slot JSON (engine-agnostic)
-# ==================================================================================================
 
 
 def _json_ready(value: object) -> object:
@@ -295,9 +284,7 @@ def extract_meta(session: Any, fq_table: str) -> pa.Table:
     return _meta(spec, rows)
 
 
-# ==================================================================================================
 # Source registration + lifecycle (recipe SSOT the record driver imports)
-# ==================================================================================================
 
 
 def target_fqn(catalog: str, namespace: str, table: str) -> str:
@@ -413,9 +400,7 @@ def run_write_lifecycle(
         drop_source_view(session)
 
 
-# ==================================================================================================
 # The corpus
-# ==================================================================================================
 
 
 def _carry(
@@ -829,7 +814,7 @@ ROWS: list[PartitionValueRow] = [
 ]
 
 
-# Recorded Spark 4.1.2 + Iceberg 1.11.0 halves (2026-08-13, zulu-17, local[2], ANSI on).
+# Recorded Spark 4.1.2 + Iceberg 1.11.0 halves (record mode: zulu-17, local[2], ANSI on).
 # Fork #193: timestamptz Arrow annotation is UTC (F-V4-2). TZ-8 date-key rows are equality.
 _GOLDENS: dict[str, dict[str, object]] = {
     "carry_identity_int_ctas": {
@@ -1222,9 +1207,7 @@ def _with_recorded_halves(row: PartitionValueRow) -> PartitionValueRow:
 ROWS = [_with_recorded_halves(row) for row in ROWS]
 
 
-# ==================================================================================================
 # Comparator + session
-# ==================================================================================================
 
 
 def _frames_differ(actual: pa.Table, expected: pa.Table) -> bool:
@@ -1395,9 +1378,7 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
         metafunc.parametrize("row", ROWS, ids=[item.name for item in ROWS])
 
 
-# ==================================================================================================
 # Budget / coverage / GAV / cleanup / classifier reachability
-# ==================================================================================================
 
 
 def test_partition_value_row_set_covers_the_v4_budget() -> None:

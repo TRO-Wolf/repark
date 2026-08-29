@@ -1,6 +1,6 @@
-"""V3R-1 facade `.sql()` v3 DML pins: UPDATE / MERGE refuse (V3-COW-1); RP-2 (2026-08-27)
-measured the plain-`WHERE` DELETE Spark-clean and lifted it; `rewrite_data_files` still
-refuses v3 (`V3-LINEAGE-1`).
+"""V3R-1 facade `.sql()` v3 DML pins: UPDATE / MERGE refuse (V3-COW-1); the RP-2-repinned
+plain-`WHERE` DELETE is Spark-clean and commits; `rewrite_data_files` still refuses v3
+(`V3-LINEAGE-1`).
 
 pins: v3r-1-rulings/C-006
 pins: rp-2-fork-repin/C-003, C-005

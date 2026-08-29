@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare a TPC-H scoreboard JSON against committed ratio ceilings (r24 G10 / Q15).
+"""Compare a TPC-H scoreboard JSON against committed ratio ceilings.
 
 Exit codes:
   0 — all OK queries are within ceiling (or baseline missing a query → skip that query)
@@ -29,7 +29,7 @@ def _load_json(path: Path) -> dict[str, Any]:
 def compare(scoreboard: dict[str, Any], baseline: dict[str, Any]) -> int:
     """Return process exit code after printing a per-query report.
 
-    Fail-closed (critic-octo C1-L-001): empty scoreboard, zero ceiling checks, or scoreboard
+    Fail-closed: empty scoreboard, zero ceiling checks, or scoreboard
     missing any baseline query number is a gate failure — never green-lie "OK (0 queries)".
     """
     ceilings: dict[str, float] = {}
@@ -81,7 +81,7 @@ def compare(scoreboard: dict[str, Any], baseline: dict[str, Any]) -> int:
         except (TypeError, ValueError):
             failures.append(f"Q{query_nr}: OK but ratio is not a number ({ratio!r})")
             continue
-        # critic-octo C3-L-001: NaN is not > ceiling in IEEE/Python — refuse non-finite.
+        # NaN is not > ceiling in IEEE/Python — refuse non-finite.
         if not math.isfinite(ratio_value):
             failures.append(f"Q{query_nr}: OK but ratio is non-finite ({ratio_value})")
             continue

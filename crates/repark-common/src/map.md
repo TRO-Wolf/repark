@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Source for `repark-common` — shared types + the `Error` enum. See [../map.md](../map.md).
+Source for `repark-common` — shared types, the `Error` enum, and concise API contracts. See [../map.md](../map.md).
 
 ## Contents
 - `tests.rs` — unit tests for Error / ErrorClass

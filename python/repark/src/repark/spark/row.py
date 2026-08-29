@@ -26,18 +26,18 @@ class Row:
     (incl. vs plain tuples of the same values — live PySpark 4.1.2; ``Row`` is a ``tuple``
     subclass there), iteration over values, :attr:`__fields__`, and a readable :func:`repr`.
 
-    **Factory form (R-PARITY3):** ``Row("name", "age")`` when every positional argument is a
+    **Factory form:** ``Row("name", "age")`` when every positional argument is a
     ``str`` (and no kwargs) returns a **callable factory** (repr ``<Row('name', 'age')>``).
     Calling the factory builds a value row: ``Row("name", "age")("alice", 1)`` →
     ``Row(name='alice', age=1)``. Factories pickle/unpickle and re-call. Mixed
     ``Row("x", 1)`` is a normal positional value row (not a factory).
 
-    Oracle basis (live PySpark 4.1.2, zulu-17): see ``tests/test_row.py`` and G-ROW /
-    R-PARITY3 ledgers in ``task/todo.md``.
+    Live PySpark 4.1.2 defines this factory form; see ``tests/test_row.py``.
+    The row facade follows the current PySpark attribute contract.
 
     Internal storage uses name-mangled slots (``__field_names`` / ``__field_values`` →
     ``_Row__…``) so user fields literally named ``_fields`` or ``_values`` still work via
-    attribute access (octo C1-L-001).
+    attribute access.
     """
 
     __slots__ = ("__factory", "__field_names", "__field_values")
@@ -99,7 +99,6 @@ class Row:
     ) -> Row:
         """Build a value row from parallel name/value sequences (duplicate names allowed).
 
-        # === r21 T3: ux-polish ===
         Used by export/collect when H1 multi-name display maps rename engine fields to
         Spark-legal duplicate display names — kwargs / dict paths cannot preserve dups.
         """
@@ -246,10 +245,9 @@ class Row:
     def __reduce__(self) -> Any:
         """Pickle support: factories rebuild as ``Row(*names)``; value rows preserve order.
 
-        # === r21 T3: ux-polish ===
         Value rows use :meth:`from_ordered_fields` (not :meth:`asDict` / :meth:`from_mapping`)
         so Spark-legal duplicate display names from H1 multi-name collect rows round-trip
-        without silent value loss (F-T3-002).
+        without silent value loss.
         """
         if self.__factory:
             return (Row, tuple(self.__field_names))

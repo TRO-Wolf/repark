@@ -1,8 +1,8 @@
-"""I2 / R-METADATA-TABLES oracle — Spark-style Iceberg metadata tables.
+"""Oracle — Spark-style Iceberg metadata tables.
 
-Resolution only: ``cat.ns.tbl.snapshots`` (+ history/files/manifests/partitions/refs/
-entries/metadata_log_entries/all_* family) and ``spark.table("<tbl>.files")`` rewrite
-onto the fork's ``table$meta`` DataFusion providers (R142).
+Resolution only: ``cat.ns.tbl.snapshots`` (+ history/files/manifests/partitions/refs/entries/
+metadata_log_entries/all_* family) and ``spark.table("<tbl>.files")`` rewrite onto the fork's
+``table$meta`` DataFusion providers.
 
 Pins:
 - column NAMES + Arrow types for core tables (schema from fork inspect sources)
@@ -13,17 +13,14 @@ Pins:
 - unpartitioned metadata tables drop the empty ``partition`` column (fork #194 / Java)
 
 Fork pin ``b009ac1`` (the rev in the workspace ``[patch.crates-io]``; re-verify on every repin).
-Symbols, not line numbers — the ranges here went stale across one repin already:
-- ``MetadataTableType`` (enum + ``all_types`` + ``TryFrom<&str>``) — ``crates/iceberg/src/inspect/
-  metadata_table.rs``
-- DF ``name.rsplit_once('$')`` in ``IcebergSchemaProvider::{table, table_exist}``, and the
-  ``table_names`` synthesis this module's ADR-0006 pins hide —
+Symbols, not line numbers:
+- ``MetadataTableType`` — ``crates/iceberg/src/inspect/metadata_table.rs``
+- DF ``name.rsplit_once('$')`` in ``IcebergSchemaProvider::{table, table_exist}`` —
   ``crates/integrations/datafusion/src/schema.rs``
-- snapshots / history schemas — ``inspect/snapshots.rs::SnapshotsTable::schema`` /
-  ``inspect/history.rs::HistoryTable::schema``
+- snapshots / history schemas — ``inspect/snapshots.rs`` / ``inspect/history.rs``
 - files/data_file columns — ``inspect/data_file.rs`` + ``inspect/files.rs``
 - unpartitioned files/partitions drop the empty ``partition`` column — fork #194
-- readable_metrics by name — ``inspect/readable_metrics.rs`` / entries/files (R142)
+- readable_metrics by name — ``inspect/readable_metrics.rs``
 
 Local memory-catalog only (no AWS, no docker).
 """
@@ -46,7 +43,7 @@ COW = """
     'write.merge.mode' = 'copy-on-write'
 """
 
-# Fork inspect/snapshots.rs:49-73 (Iceberg → Arrow).
+# Fork inspect/snapshots.rs (Iceberg → Arrow).
 SNAPSHOTS_SCHEMA: list[tuple[str, str]] = [
     ("committed_at", "timestamp[us, tz=UTC]"),
     ("snapshot_id", "int64"),
@@ -56,7 +53,7 @@ SNAPSHOTS_SCHEMA: list[tuple[str, str]] = [
     ("summary", "map<string, string>"),
 ]
 
-# Fork inspect/history.rs:50-63.
+# Fork inspect/history.rs.
 HISTORY_SCHEMA: list[tuple[str, str]] = [
     ("made_current_at", "timestamp[us, tz=UTC]"),
     ("snapshot_id", "int64"),
@@ -64,7 +61,7 @@ HISTORY_SCHEMA: list[tuple[str, str]] = [
     ("is_current_ancestor", "bool"),
 ]
 
-# Fork inspect/refs.rs:47-66.
+# Fork inspect/refs.rs.
 REFS_SCHEMA_NAMES = [
     "name",
     "type",
@@ -103,7 +100,7 @@ def _schema_names(table: pa.Table) -> list[str]:
 
 @pytest.fixture
 def multi_snapshot(spark: ReparkSession) -> dict[str, object]:
-    """≥3 snapshots via CTAS + INSERT + MERGE (same shape as I1 fixture)."""
+    """≥3 snapshots via CTAS + INSERT + MERGE."""
     spark.sql(
         f"CREATE TABLE {TABLE} USING iceberg TBLPROPERTIES ({COW}) AS "
         "SELECT * FROM (VALUES (1, 'a'), (2, 'b'), (3, 'c')) AS t(id, name)"
@@ -169,19 +166,17 @@ def test_snapshots_schema_and_count(
 def test_snapshots_count_show_and_partial_projection(
     spark: ReparkSession, multi_snapshot: dict[str, object]
 ) -> None:
-    """r25 morning critic pin — the user-reported empty-projection class at the facade.
+    """``.count()`` plans a zero-column projection over the metadata provider.
 
-    ``.count()`` plans a zero-column projection over the metadata provider (the exact
-    "Physical … N vs (logical) 0" Internal-error class); the styled ``.show()`` routes
-    through ``count()`` first, which is how the report surfaced. Values AND types pinned
-    on the Arrow path per the divergence-class rule.
+    That is the "Physical … N vs (logical) 0" Internal-error class; the styled ``.show()`` routes
+    through ``count()`` first. Values AND types pinned on the Arrow path.
     """
     df = spark.sql(f"SELECT * FROM {TABLE}.snapshots")
     assert df.count() == multi_snapshot["snapshot_count"]
     df.show()  # plain style must not raise
     spark.conf.set("repark.display.style", "polars")
     try:
-        df.show()  # styled renderer calls count() — the reported repro
+        df.show()  # styled renderer calls count()
     finally:
         spark.conf.set("repark.display.style", "spark")
 
@@ -273,8 +268,8 @@ def test_manifests_partitions_refs_entries_metadata_log(
 
     entries = spark.sql(f"SELECT * FROM {TABLE}.entries").to_arrow()
     assert entries.num_rows >= 1
-    # readable_metrics present; compare interior fields by name (fork field-id order residue).
-    # C1-Q-001: interior pin must go red if the struct is empty or missing leaf names.
+    # readable_metrics present; compare interior fields by name (fork field-id order residue):
+    # the pin must go red if the struct is empty or missing leaf names.
     assert "readable_metrics" in _schema_names(entries), (
         f"entries schema missing readable_metrics: {_schema_names(entries)}"
     )
@@ -309,7 +304,7 @@ def test_all_family_resolves(spark: ReparkSession, multi_snapshot: dict[str, obj
         # all_delete_files / delete_files may be empty on COW-only fixture — schema still resolves.
         assert arrow.schema is not None
         assert len(_schema_names(arrow)) >= 1
-    # C2-Q-003: all_files must be at least as large as current-snapshot files (not a hollow stub).
+    # all_files must be at least as large as current-snapshot files (not a hollow stub).
     current_files = spark.sql(f"SELECT * FROM {TABLE}.files").to_arrow()
     all_files = spark.sql(f"SELECT * FROM {TABLE}.all_files").to_arrow()
     assert all_files.num_rows >= current_files.num_rows
@@ -329,11 +324,11 @@ def test_real_table_named_files_wins(spark: ReparkSession) -> None:
     spark.sql(f"CREATE TABLE mem.ns.base USING iceberg TBLPROPERTIES ({COW}) AS SELECT 1 AS id")
     meta = spark.sql("SELECT * FROM mem.ns.base.files").to_arrow()
     assert "record_count" in _schema_names(meta)
-    # C1-L-003: metadata of the real table named ``files`` still resolves.
+    # Metadata of the real table named ``files`` still resolves.
     files_snaps = spark.sql("SELECT * FROM mem.ns.files.snapshots").to_arrow()
     assert "snapshot_id" in _schema_names(files_snaps)
     assert files_snaps.num_rows >= 1
-    # C1-Q-003: INSERT into real ``files`` must not be blocked as metadata DML.
+    # INSERT into real ``files`` must not be blocked as metadata DML.
     spark.sql("INSERT INTO mem.ns.files SELECT 7 AS x, 'more' AS label")
     after = spark.sql("SELECT * FROM mem.ns.files").to_arrow()
     assert after.num_rows == 2
@@ -361,7 +356,7 @@ def test_dml_on_metadata_table_loud(
     message = str(raised.value).lower()
     assert "read-only" in message or "metadata table" in message
 
-    # C1-Q-003: UPDATE + CTAS targets also refuse loud.
+    # UPDATE + CTAS targets also refuse loud.
     with pytest.raises(AnalysisException) as raised:
         spark.sql(f"UPDATE {TABLE}.refs SET name = 'x'").to_arrow()
     message = str(raised.value).lower()
@@ -382,13 +377,13 @@ def test_as_of_composition_loud_out_of_scope(
     message = str(raised.value).lower()
     assert "not supported" in message or "time travel" in message or "as of" in message
 
-    # C1-L-002: parenthesized composition still refuses.
+    # Parenthesized composition still refuses.
     with pytest.raises(AnalysisException) as raised:
         spark.sql(f"SELECT * FROM ({TABLE}.snapshots) VERSION AS OF {s1}").to_arrow()
     message = str(raised.value).lower()
     assert "not supported" in message or "time travel" in message or "as of" in message
 
-    # C3-Q-001: TIMESTAMP / SYSTEM_* forms refuse loud (not only VERSION).
+    # TIMESTAMP / SYSTEM_* forms refuse loud (not only VERSION).
     with pytest.raises(AnalysisException) as raised:
         spark.sql(
             f"SELECT * FROM {TABLE}.snapshots TIMESTAMP AS OF '2099-01-01 00:00:00'"
@@ -405,7 +400,7 @@ def test_as_of_composition_loud_out_of_scope(
 def test_fq_column_named_files_not_rewritten(
     spark: ReparkSession, multi_snapshot: dict[str, object]
 ) -> None:
-    """C1-L-001: a column literally named ``files`` must not rewrite as metadata."""
+    """A column literally named ``files`` must not rewrite as metadata."""
     _ = multi_snapshot
     spark.sql(
         f"CREATE TABLE mem.ns.with_files_col USING iceberg TBLPROPERTIES ({COW}) AS "
@@ -417,10 +412,10 @@ def test_fq_column_named_files_not_rewritten(
 
 
 def test_join_metadata_files(spark: ReparkSession, multi_snapshot: dict[str, object]) -> None:
-    """C2-Q-001: JOIN to a metadata table rewrites and returns rows."""
+    """JOIN to a metadata table rewrites and returns rows."""
     _ = multi_snapshot
-    # SELECT * — narrow projections off files metadata hit Arrow FFI shape issues on some
-    # paths (fork/DF residue); full-row JOIN still proves the `$` rewrite on JOIN positions.
+    # Narrow projections off files metadata hit Arrow FFI shape issues on some paths (fork/DF
+    # residue); SELECT * still proves the `$` rewrite on JOIN positions.
     arrow = spark.sql(f"SELECT * FROM {TABLE} e JOIN {TABLE}.files f ON true").to_arrow()
     assert arrow.num_rows >= 1
     names = _schema_names(arrow)
@@ -429,7 +424,7 @@ def test_join_metadata_files(spark: ReparkSession, multi_snapshot: dict[str, obj
 
 
 def test_real_table_named_snapshots_wins(spark: ReparkSession) -> None:
-    """C2-Q-004: a real table literally named ``snapshots`` must not rewrite as metadata."""
+    """A real table literally named ``snapshots`` must not rewrite as metadata."""
     spark.sql(f"CREATE TABLE mem.ns.snapshots USING iceberg TBLPROPERTIES ({COW}) AS SELECT 7 AS k")
     arrow = spark.sql("SELECT * FROM mem.ns.snapshots").to_arrow()
     assert _schema_names(arrow) == ["k"]
@@ -437,7 +432,7 @@ def test_real_table_named_snapshots_wins(spark: ReparkSession) -> None:
 
 
 def test_truncate_metadata_loud(spark: ReparkSession, multi_snapshot: dict[str, object]) -> None:
-    """C2-Q-002: TRUNCATE TABLE on a metadata path refuses loud."""
+    """TRUNCATE TABLE on a metadata path refuses loud."""
     _ = multi_snapshot
     with pytest.raises(AnalysisException) as raised:
         spark.sql(f"TRUNCATE TABLE {TABLE}.files").to_arrow()
@@ -446,7 +441,7 @@ def test_truncate_metadata_loud(spark: ReparkSession, multi_snapshot: dict[str, 
 
 
 def test_create_view_metadata_loud(spark: ReparkSession, multi_snapshot: dict[str, object]) -> None:
-    """C5-Q-001: CREATE VIEW targeting a metadata path refuses loud."""
+    """CREATE VIEW targeting a metadata path refuses loud."""
     _ = multi_snapshot
     with pytest.raises(AnalysisException) as raised:
         spark.sql(f"CREATE VIEW {TABLE}.files AS SELECT 1 AS id").to_arrow()
@@ -455,7 +450,7 @@ def test_create_view_metadata_loud(spark: ReparkSession, multi_snapshot: dict[st
 
 
 def test_drop_alter_metadata_loud(spark: ReparkSession, multi_snapshot: dict[str, object]) -> None:
-    """C6-Q-001: DROP/ALTER TABLE on a metadata path refuses loud."""
+    """DROP/ALTER TABLE on a metadata path refuses loud."""
     _ = multi_snapshot
     with pytest.raises(AnalysisException) as raised:
         spark.sql(f"DROP TABLE {TABLE}.files").to_arrow()
@@ -471,10 +466,7 @@ def test_drop_alter_metadata_loud(spark: ReparkSession, multi_snapshot: dict[str
 def test_unpartitioned_files_have_no_partition_column(
     spark: ReparkSession, multi_snapshot: dict[str, object]
 ) -> None:
-    """Fork #194: unpartitioned ``.files`` drops the empty ``partition`` column (Java parity).
-
-    Declared rename of ``test_unpartitioned_partition_column_divergence``.
-    """
+    """Fork #194: unpartitioned ``.files`` drops the empty ``partition`` column (Java parity)."""
     _ = multi_snapshot
     files = spark.sql(f"SELECT * FROM {TABLE}.files").to_arrow()
     assert "partition" not in _schema_names(files), (
@@ -486,19 +478,12 @@ def test_unpartitioned_files_have_no_partition_column(
 def test_metadata_tables_are_hidden_from_enumeration_at_the_facade(
     spark: ReparkSession, multi_snapshot: dict[str, object]
 ) -> None:
-    """ADR-0006 (campaign decision D2, unit H-1c) at the **facade**.
+    """Metadata tables are hidden from listing but still queryable (ADR-0006) at the facade.
 
-    The fork's ``IcebergSchemaProvider.table_names`` synthesizes ``<base>$<type>`` for every
-    metadata table type, so a namespace of one table used to enumerate as sixteen names. The
-    catalog layer now drops the synthesized names
-    (``repark_iceberg::catalog::MetadataProjectionSchemaProvider::table_names``), matching what
-    both reference engines do: Apache Spark's Iceberg extension lists only what the catalog
-    returns, and Trino documents metadata tables as queryable-but-unlisted.
-
-    Risk pinned: a migrating user's ``SHOW TABLES`` burying real tables under synthesized noise —
-    and, on the other side, a filter placed in the resolution path instead of the listing path,
-    which would break every ``t.snapshots`` query the rest of this module pins. Both halves are
-    asserted, on the twin introspection paths (``SHOW TABLES`` and ``information_schema.tables``).
+    The fork synthesizes ``<base>$<type>`` names for every metadata-table type; the catalog drops
+    them from the LISTING path only, matching Spark and Trino. A filter in the resolution path
+    instead would break every ``t.snapshots`` query this module pins. Both halves are asserted
+    (``SHOW TABLES`` and ``information_schema.tables``).
     """
     _ = multi_snapshot
     spark._ensure_information_schema()
@@ -519,19 +504,10 @@ def test_metadata_tables_are_hidden_from_enumeration_at_the_facade(
 def test_a_hidden_metadata_table_is_still_queryable_at_the_facade(
     spark: ReparkSession, multi_snapshot: dict[str, object]
 ) -> None:
-    """ADR-0006's other half: hidden from the listing is not removed from the engine.
+    """Hidden from the listing is not removed from the engine: both facade spellings resolve.
 
-    Both facade spellings still resolve — the Spark dotted form the door rewrites, and the ``$``
-    form it rewrites onto. Risk pinned: a filter written into ``SchemaProvider::table`` /
-    ``table_exist`` rather than ``table_names`` satisfies the row above and breaks this one.
-
-    The two spellings are compared as SORTED lists, not element-wise: an unordered metadata-table
-    scan has no row order to promise (the fork emits snapshots in whatever order the manifest
-    walk yields, and a re-scan reorders), so an ordered comparison is a coin flip, not a pin.
-    That is this module's own convention for metadata-table row content — see
-    ``test_snapshots_schema_and_count``, which compares the same column as a set. What IS pinned
-    here is that the two spellings resolve to the same table and return the same multiset of
-    snapshot ids.
+    Compared as SORTED lists, not element-wise: an unordered metadata-table scan has no row order
+    to promise (a re-scan reorders), so an ordered comparison is a coin flip, not a pin.
     """
     dotted = spark.sql(f"SELECT snapshot_id FROM {TABLE}.snapshots").to_arrow()
     assert dotted.num_rows == multi_snapshot["snapshot_count"]

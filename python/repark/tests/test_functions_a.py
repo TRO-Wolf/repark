@@ -4,11 +4,6 @@ Each new ``functions`` name is pinned through ``ReparkSession`` on the Arrow pat
 (``to_arrow()``): value AND type. Alias names resolve and share a behavior case
 with their canonical. SEMANTIC-HAZARD names that shipped (``cbrt`` negatives)
 hit the named hazard.
-
-Deferred this batch (no stubs): ``typeof``, ``bround``, ``conv`` (charter);
-``asc_nulls_last``, ``desc_nulls_first`` (``DataFrame`` sort couples nulls to
-ascending and ignores ``_sort_nulls_first``). FN-GT1 later shipped ``rint`` /
-``factorial`` / ``bin`` / ``hex`` / ``unhex``.
 """
 
 from __future__ import annotations
@@ -33,9 +28,7 @@ def _table(frame: object) -> pa.Table:
     return frame.to_arrow()  # type: ignore[attr-defined]
 
 
-# ==================================================================================================
 # Aliases: resolve + one behavior case
-# ==================================================================================================
 
 
 def test_sign_alias_of_signum(spark: ReparkSession) -> None:
@@ -87,9 +80,7 @@ def test_asc_nulls_first_and_desc_nulls_last_are_aliases(spark: ReparkSession) -
     assert desc_rows == [2, 1, None]
 
 
-# ==================================================================================================
 # Ordering SHIMs
-# ==================================================================================================
 
 
 def test_asc_and_desc_null_ordering(spark: ReparkSession) -> None:
@@ -101,9 +92,7 @@ def test_asc_and_desc_null_ordering(spark: ReparkSession) -> None:
     assert pa.types.is_integer(asc_table.schema.field("a").type)
 
 
-# ==================================================================================================
 # Constants + unary
-# ==================================================================================================
 
 
 def test_e_and_pi_are_foldable_constants(spark: ReparkSession) -> None:
@@ -136,9 +125,7 @@ def test_negative_and_positive(spark: ReparkSession) -> None:
     assert table.schema.field("p").type == table.schema.field("x").type
 
 
-# ==================================================================================================
 # Math SHIMs / THIN-WIRE stand-ins
-# ==================================================================================================
 
 
 def test_pmod_positive_remainder(spark: ReparkSession) -> None:
@@ -195,9 +182,7 @@ def test_cbrt_real_root_including_negatives(spark: ReparkSession) -> None:
     assert pa.types.is_floating(table.schema.field("c").type)
 
 
-# ==================================================================================================
 # Null helpers
-# ==================================================================================================
 
 
 def test_nvl2_picks_present_or_absent(spark: ReparkSession) -> None:

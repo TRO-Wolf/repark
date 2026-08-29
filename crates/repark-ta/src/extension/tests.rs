@@ -9,14 +9,14 @@ use repark_core::SessionExtension;
 use super::TaExtension;
 use crate::{ema, udf};
 
-/// A tiny deterministic bar series — enough rows to clear `ta_ema`'s NaN prefix at period 3.
+/// Deterministic bars long enough to clear the period-3 EMA prefix.
 fn closes() -> Vec<f64> {
     vec![
         10.0, 10.5, 11.25, 10.75, 12.0, 12.5, 11.5, 13.0, 13.75, 13.25,
     ]
 }
 
-/// Register `closes()` as table `bars` (`ts` orders the window frame) on a bare context.
+/// Register deterministic bars with an ordered timestamp column.
 fn context_with_bars() -> SessionContext {
     let close = closes();
     let ts: Vec<i64> = (0..close.len())
@@ -39,10 +39,7 @@ fn context_with_bars() -> SessionContext {
     ctx
 }
 
-/// `register` is the whole point of the wrapper: after the hook runs, the TA window UDFs are
-/// SQL-callable and the SQL route is **bit-exact** against the kernel the goldens gate — the
-/// crate's own `to_bits` idiom, not an approximate compare. The name-set assertion pins that the
-/// wrapper forwards the *whole* registry, not one function.
+/// Verify SQL registration, bit-exact kernel parity, and complete registry forwarding.
 #[tokio::test]
 async fn ta_extension_register_installs_the_whole_ta_udf_set_bit_exact() {
     let ctx = context_with_bars();
@@ -87,7 +84,6 @@ async fn ta_extension_register_installs_the_whole_ta_udf_set_bit_exact() {
         );
     }
 
-    // The whole set, not just the one exercised above.
     let registered = ctx
         .state()
         .window_functions()
@@ -103,10 +99,7 @@ async fn ta_extension_register_installs_the_whole_ta_udf_set_bit_exact() {
     }
 }
 
-/// The trait-wrapping both-sides audit: TA registers no `ConfigExtension` and reads no conf key,
-/// so `configure` must stay the trait default — a pass-through that returns the `SessionConfig`
-/// untouched even when unrelated `repark.*` keys are present (v1 behaviour: `build()` called only
-/// `udf::register_all`, never a TA-side config install).
+/// Verify the default hook returns configuration unchanged because TA owns no configuration.
 #[test]
 fn ta_extension_configure_is_the_trait_default_pass_through() {
     let mut conf = HashMap::new();

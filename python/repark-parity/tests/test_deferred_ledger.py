@@ -2,25 +2,13 @@
 
 `docs/design/python-facade.md` §3 EC-4: *"a harness test asserts the checked-in ledger and the
 comparator's machine-readable allowlist are byte-identical — a ledger that can drift from the gate
-it feeds is not a ledger."* This module is that test.
-
-There is exactly one file (`task/port/deferred-python-tests.txt`), so byte-identity is pinned by
-proving the *single-file* property rather than by diffing two copies: the comparator's documented
-acceptance invocation names this path, the comparator's own loader parses it, and nothing else in
-the repository is a subtraction input. The remaining assertions close both failure directions
-EC-4 names — over-deferral and under-deferral are both gate failures:
-
-* every deferred id must be a **pin-collected** name (it exists on the baseline side, so the
-  subtraction actually removes something); and
-* every deferred id must be **absent from the ported tree** (a test that is both listed and
-  ported would be subtracted from the baseline while still running here — a silent gate hole);
-  and
-* every deferred id must resolve to a baseline row **through the loader the facade cohort's own
-  mode uses** (``--junit``), because a ledger that parses but subtracts nothing in the mode that
-  runs it is exactly the drift EC-4 forbids.
-
-Absence is checked statically (the file is gone, or the file carries no such `def`), so this test
-needs no wheel and runs in the ordinary `make py-test` loop.
+it feeds is not a ledger."* There is exactly one file (`task/port/deferred-python-tests.txt`);
+byte-identity is pinned by proving the single-file property, not by diffing two copies. The
+remaining assertions close both failure directions EC-4 names: every deferred id must be
+pin-collected (the subtraction actually removes something), absent from the ported tree (listed
+AND ported would be a silent gate hole), and resolvable through the loader the facade cohort's
+own ``--junit`` mode uses. Absence is checked statically (the file is gone, or carries no such
+`def`), so this test needs no wheel and runs in the ordinary `make py-test` loop.
 """
 
 from __future__ import annotations
@@ -47,8 +35,8 @@ _PIN_FACADE = _REPO / "task" / "census" / "baseline-fc3f48102" / "facade"
 PIN_COLLECTED = _PIN_FACADE / "collected.txt"
 PIN_JUNIT = _PIN_FACADE / "facade.xml"
 
-# `path::name` — the node-id shape the recorded collection emits (no parametrized ids are
-# deferred; a `[param]` suffix would still parse, and is allowed).
+# `path::name` — the node-id shape the recorded collection emits; a `[param]` suffix
+# parses and is allowed (no parametrized ids are deferred).
 _NODE_ID = re.compile(r"^(?P<path>tests/[\w./-]+\.py)::(?P<name>[A-Za-z_]\w*)(?P<param>\[.*\])?$")
 
 
@@ -101,12 +89,10 @@ def test_every_deferred_id_is_a_pin_collected_name() -> None:
 def test_every_deferred_id_subtracts_through_the_junit_loader() -> None:
     """The gate the facade cohort actually runs is ``--junit`` — the ledger must bite THERE.
 
-    The collect-only oracle above proves the ids name real pin rows, but the facade cohort has
-    no census-JSON mode: PR-7 compares two JUnit XMLs. JUnit keys rows ``classname::name``
-    (``tests.test_excel_reader::test_excel_skip_rows``) while the ledger is written in
-    collect-only ``path::name`` form, so an untranslated ledger subtracts NOTHING and the
-    acceptance invocation can never exit 0. This asserts the translation against the recorded
-    baseline XML *through the loader that mode uses* — the assertion that catches that drift.
+    The ledger is written in collect-only ``path::name`` form while JUnit keys rows
+    ``classname::name``; untranslated, it subtracts nothing in the mode that runs it — the
+    drift EC-4 forbids. This asserts the translation against the recorded baseline XML
+    through the loader that mode uses.
     """
     side = load_junit_report(PIN_JUNIT, label="v1", manifest={})
     assert side.classes, "the recorded pin JUnit report is the oracle; it must not be empty"

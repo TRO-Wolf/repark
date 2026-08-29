@@ -4,18 +4,18 @@
 Modes
 -----
 * ``ctas`` (default) - original SF CTAS+append K x file-size matrix
-* ``merge`` - 1M/10M x narrow/wide x K MERGE matrix (r22 extension)
+* ``merge`` - 1M/10M x narrow/wide x K MERGE matrix
 * ``overwrite`` - INSERT OVERWRITE peak RSS 1M/10M x narrow/wide (OTH-004)
 * ``extension`` - merge + overwrite only (prior CTAS NO_K stands; not re-run)
 * ``all`` - ctas + merge + overwrite
 
 Usage::
 
-    # Prefer SF1 CTAS matrix (prior unit):
+    # SF1 CTAS matrix:
     python …/run_write_bench.py --mode ctas --sf 1 --assert-release \\
         --report task/write-bench-report-….md
 
-    # r22 extension (MERGE + OVERWRITE RSS):
+    # Extension (MERGE + OVERWRITE RSS):
     python …/run_write_bench.py --mode extension --assert-release \\
         --report task/write-bench-report-….md --out /tmp/write-bench-ext.json
 
@@ -82,7 +82,7 @@ def main(argv: list[str] | None = None) -> int:
         default="ctas",
         help="bench mode (default ctas = prior SF matrix; extension = merge+overwrite)",
     )
-    # --- CTAS/append (prior) ---
+    # --- CTAS/append ---
     parser.add_argument(
         "--sf",
         type=float,
@@ -197,7 +197,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"usage error: {exc}", file=sys.stderr)
         return 2
 
-    # ----- CTAS (prior) -----
+    # ----- CTAS -----
     if mode in ("ctas", "all"):
         try:
             k_default = DEFAULT_K_VALUES

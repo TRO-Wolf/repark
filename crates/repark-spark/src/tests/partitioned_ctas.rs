@@ -1,8 +1,6 @@
 /// ===========================================================================================
-/// U1 pins — CTAS `PARTITIONED BY` (audit P0-1 / BUG-008+OTH-001; ledger in `task/todo.md`).
-/// Partition values are asserted at the committed MANIFEST level (`DataFile.partition`),
-/// pruning at PLAN level (fork `plan_files` → planned data-file paths), and round-trips on
-/// the engine read path (value AND type via the `table_rows` downcasts) — the A1 style.
+/// U1 pins CTAS `PARTITIONED BY`: committed manifest values, plan pruning, and Arrow-path
+/// value/type round trips all agree.
 /// ===========================================================================================
 use std::collections::HashSet;
 
@@ -772,11 +770,7 @@ async fn ctas_partitioned_location_check_precedes_source_execution() {
     );
 }
 
-/// PIN U1-P9 — the TYPED Hive-style form (`PARTITIONED BY (name STRING)`) is a LOUD
-/// error carrying Spark's message class ("Partition column types may not be specified
-/// in Create Table As Select" — v3.5.1 `AstBuilder` L3884-3888); no table is created.
-/// THIS was the audit's literal silent fail-open: sqlparser parses the typed form into
-/// `hive_distribution`, which the lowering dropped.
+/// Typed partition columns refuse with Spark's partition-type error class and create no table.
 #[tokio::test]
 async fn ctas_partitioned_by_typed_column_rejected_spark_parity() {
     let wh = TempDir::new().unwrap();

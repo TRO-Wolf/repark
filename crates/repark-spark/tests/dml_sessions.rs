@@ -1,9 +1,5 @@
-//! Deferred row #3 (v1 `repark_session::tests::session_sql_bare_dml_applies_eagerly`, deferred
-//! at phase-1 PR-C): the eager-DML half of the Spark door — a bare `INSERT` whose returned
-//! `DataFrame` is dropped without collecting must still apply (the F-BR-2 trap), exercised
-//! end-to-end through `session.sql` on a real session built with the door installed
-//! (`SparkExtension` + `SparkDialect`). Landed phase-2 PR-3b per `task/port/deferred-tests.md`
-//! (the CTAS setup unblocked at PR-3a; the DML arm routing completed at PR-3b).
+//! End-to-end Spark-door DML tests. A bare `INSERT` applies even when its returned `DataFrame`
+//! is dropped without collection, preserving eager execution through the session seam.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -15,7 +11,7 @@ use repark_core::{ReparkSession, SqlDialect};
 use repark_spark::{SparkDialect, SparkExtension};
 use tempfile::TempDir;
 
-/// A two-row batch: an id (Int32) and a label (Utf8) — the v1 session fixture shape.
+/// A two-row batch with an Int32 id and Utf8 label.
 fn sample_batch() -> RecordBatch {
     let schema = Arc::new(Schema::new(vec![
         Field::new("id", DataType::Int32, false),
@@ -31,8 +27,7 @@ fn sample_batch() -> RecordBatch {
     .unwrap()
 }
 
-/// Build the Spark-doored session the way a v1 session was assembled: extension at the two
-/// build hooks, dialect as the session default (v1's `ReparkSession::new()`).
+/// Build a Spark-doored session with the extension and dialect installed as defaults.
 fn spark_session() -> ReparkSession {
     let dialect: Arc<dyn SqlDialect> = Arc::new(SparkDialect);
     ReparkSession::builder()
@@ -43,7 +38,7 @@ fn spark_session() -> ReparkSession {
 }
 
 /// F-BR-2: a bare `INSERT` through `session.sql` applies eagerly even when the returned
-/// `DataFrame` is dropped uncollected; the follow-up SELECT sees the new row with its Int32
+/// `DataFrame` is dropped uncollected; a later SELECT sees the new row with its Int32
 /// type intact (the downcast proves the column type survived the insert).
 #[tokio::test]
 async fn session_sql_bare_dml_applies_eagerly() {

@@ -4,7 +4,7 @@
 //! / `begin_replace` → commit with **no data files**). No SELECT is planned or executed.
 //!
 //! CTAS with an explicit column list stays OUT — that reject lives in [`crate::build_ctas`]
-//! (Group Q pins). This module handles non-CTAS `Statement::CreateTable` only.
+//! This module handles non-CTAS `Statement::CreateTable` only.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -74,7 +74,7 @@ fn build_schema_create(
         ));
     }
     // TEMPORARY / EXTERNAL / TRANSIENT / VOLATILE must not silently create durable Iceberg
-    // tables (I5 octo C3-F1).
+    // tables.
     if create.temporary {
         return Err(DataFusionError::NotImplemented(
             "CREATE TEMPORARY TABLE is not supported for Iceberg tables yet — omit TEMPORARY \
@@ -93,10 +93,10 @@ fn build_schema_create(
                 .into(),
         ));
     }
-    // LOCATION / Hive ROW FORMAT etc. must not be silently dropped (I5 octo C4-F1 / C5-F2).
+    // LOCATION / Hive ROW FORMAT etc. must not be silently dropped.
     crate::refuse_unsupported_create_table_clauses(create, "column-def CREATE")?;
     // LIKE / CLONE before empty-column check so the honest NotImplemented surfaces
-    // (I5 octo C2-F2 — empty-column message must not mask LIKE/CLONE).
+    // (empty-column message must not mask LIKE/CLONE).
     if create.like.is_some() || create.clone.is_some() {
         return Err(DataFusionError::NotImplemented(
             "CREATE TABLE … LIKE / CLONE is not supported yet".into(),
@@ -192,8 +192,7 @@ fn schema_from_column_defs(
         })?;
         let iceberg_type =
             sql_type_to_iceberg_with_timestamp_type(&column.data_type, timestamp_type)?;
-        // Only NULL / NOT NULL are handled. DEFAULT / UNIQUE / CHECK / COMMENT / … must not be
-        // silently dropped (I5 octo C1-F2 — same fail-open class as historical CTAS column lists).
+        // Only NULL and NOT NULL are supported. Reject other options instead of dropping them.
         let mut required = false;
         for option in &column.options {
             match &option.option {

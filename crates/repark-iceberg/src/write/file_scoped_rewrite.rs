@@ -72,7 +72,7 @@ pub fn filter_tasks_to_allowlist<S: std::hash::BuildHasher>(
 
 /// ===========================================================================================
 /// File-scoped filter that **fails loud** when a non-empty allowlist does not fully match
-/// planned tasks (audit BUG-009 / r22 A2 + critic-octo C2): a path-identity miss would yield
+/// planned tasks (audit BUG-009): a path-identity miss would yield
 /// a partial/empty rewrite stream while COW still deletes every affected path → silent
 /// survivor loss. Over-refuse of a true empty snapshot with a stale allowlist is preferred
 /// to under-refuse. **Partial** misses (some allowlist paths match, others do not) refuse too —

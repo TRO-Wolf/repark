@@ -1,49 +1,27 @@
 """Cast-failure semantics differential corpus (H-2 gap G6) vs live Spark 4.1.2 ANSI ON.
 
-**Oracle.** Every Spark half / error needle below was RECORDED in record mode against live
-PySpark 4.1.2 (zulu-17, ``master("local[2]")``, ``spark.sql.ansi.enabled=true``,
-``spark.sql.shuffle.partitions=2``, ``spark.sql.session.timeZone=UTC``) on 2026-08-11. One recipe
-per row runs on BOTH engines, so the recipe under test and the recipe the oracle ran are the same
-code path — nothing here is hand-computed.
+Every Spark half / error needle was recorded in record mode against live PySpark 4.1.2
+(zulu-17, ``master("local[2]")``, ``spark.sql.ansi.enabled=true``,
+``spark.sql.shuffle.partitions=2``, ``spark.sql.session.timeZone=UTC``). One recipe per
+row runs on BOTH engines — nothing here is hand-computed.
 
-**§0 premise (binding).** The slate line ("repark raises where **non-ANSI** Spark yields NULL")
-predates the choice of PySpark 4.1.2 with ANSI ON as the recorded oracle. Under ANSI, Spark raises
-on the same malformed / overflow casts repark raises on. The honest corpus is therefore mostly
-**shared-raise error equalities** and **try_cast NULL equalities**, with a small number of true
-divergences (DATE→INT plan refuse vs days-since-epoch; TIMESTAMP→INT unix-seconds vs raise). Real
-divergence count is recorded in the unit ledger; this lane does not manufacture more.
-*(2026-08-12: the TZ-5 cast unit un-refused TIMESTAMP→INT — that split is now a nullability-only
-content disclosure; see its row note.)*
+Premise (binding): under ANSI ON, Spark raises on the same malformed / overflow casts
+repark raises on, so the corpus is mostly shared-raise error and try_cast NULL
+equalities, with a small number of true divergences. The budget test bounds
+disclosures so regressions cannot be absorbed as new ones.
 
-**Row kinds** (join-corpus mold):
+Rows assert on the Arrow path (``to_arrow`` / Spark ``toArrow``) — value AND Arrow type
+AND nullability, never ``show``. Entry points: facade ``sql()`` primary, plus a
+DataFrame-API ``Column.cast(...)`` error row (CP-11). Row-kind contract: ``CastRow``.
 
-* ``content`` — both engines produce an Arrow table. ``repark is None`` → plain equality;
-  ``repark is not None`` → content disclosure (CONVERGED-flip-don't-delete).
-* ``error`` — both engines raise; pins each engine's error *needle* (class-or-message token),
-  not a full stack trace (A7 in-scope).
-* ``split`` — one engine succeeds (table half) and the other refuses (error needle).
-  ``which_raises="repark"`` pins Spark's success table + repark's refuse needle;
-  ``which_raises="spark"`` pins repark's success table + Spark's refuse needle.
-  A refuse side that starts succeeding is CLASSIFIED CONVERGED vs regression.
-
-**Rows assert on the Arrow path** (``to_arrow`` / Spark ``toArrow``) through
-``repark_parity.assert_frames_equal`` — value AND Arrow type AND nullability; never ``show``.
-
-**Entry points (CP-11).** Facade ``sql()`` is primary. At least one DataFrame-API
-``Column.cast(...)`` error row pins the DF door.
-
-**Re-deriving the goldens (record mode).** Committed beside this module::
+Re-deriving the goldens (record mode)::
 
     JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \\
         PYTHONPATH=python/repark-parity/src \\
         .venv/bin/python python/repark/tests/_record_cast_failure_goldens.py
 
 Hold ``/tmp/grok-jvm-record.lock`` around the process (B4). Needs a JVM + ``pyspark``
-(``uv sync --extra record``); never collected by pytest. CI stays JVM-free.
-
-**Out of scope (named, not silent):** fixing any divergence; editing
-``docs/spark-sql-iceberg-parity.md`` / ``_live_parity.py`` / live size pins (A3 — §6 paste-true
-handoff only); engine code; Cargo.lock / uv.lock.
+(``uv sync --extra record``); never collected by pytest; CI stays JVM-free.
 """
 
 from __future__ import annotations
@@ -62,18 +40,12 @@ from repark_parity import FrameMismatchError, assert_frames_equal
 if TYPE_CHECKING:
     from repark.spark.session import ReparkSession
 
-# ==================================================================================================
-# Budget floors/ceilings — pinned by test_cast_failure_row_set_covers_g6_budget (not incidental)
-# ==================================================================================================
+# Budget floors/ceilings — pinned by test_cast_failure_row_set_covers_g6_budget.
 
 G6_BUDGET_MIN = 8
-# 2026-08-15 (G6-3 / G6-5): raised 10 -> 15 in the landing diff, with the reason the design
-# (`planning/hardening/G63-DATE-INT-DESIGN.md` §4.2) requires. The DATE-INT gate closed FIVE
-# recipes, not one: the pinned `CAST(DATE AS INT)` row plus four doors §1.2 measured as unpinned
-# divergences (BIGINT target, `try_cast` in SQL, `Column.cast`, `Column.try_cast`) and the G6-5
-# reverse (`CAST(INT AS DATE)`, §1.3). Recording them was the design's stated alternative to
-# filing a follow-on corpus unit; the ceiling exists to force that choice explicitly, and this is
-# the explicit choice. RATCHET: back down if any door is retired.
+# Ceiling 15 (was 10): the DATE-INT gate closed five doors at once — the pinned CAST(DATE AS
+# INT) row, four measured doors, and the reverse (G63-DATE-INT-DESIGN.md §4.2 / §1.3).
+# Ratchet back down if any door is retired.
 G6_BUDGET_MAX = 15
 MIN_EQUALITY_ROWS = 3  # content equalities + shared-raise error rows count as equality-class
 MIN_ERROR_ROWS = 3  # shared-raise error equalities
@@ -86,9 +58,8 @@ MIN_NUMERIC_OVERFLOW = 1  # *overflow* / *decimal_narrowing_overflow*
 # True content/split disclosures found under ANSI ON — do not invent more (brief A3 / item 6).
 MAX_DISCLOSURE_OR_SPLIT_ROWS = 4
 
-# The Spark class BOTH engines now raise for every DATE ↔ INT cast door (G6-3 / G6-5). Recorded
-# verbatim against live PySpark 4.1.2 ANSI; repark emits the same bracketed class from
-# `repark-functions`' analyzer, so one needle pins both halves.
+# The Spark class both engines raise for every DATE ↔ INT cast door, recorded verbatim
+# against live PySpark 4.1.2 ANSI; repark emits the same class, so one needle pins both halves.
 _DATE_INT_NEEDLE = "DATATYPE_MISMATCH.CAST_WITH_FUNC_SUGGESTION"
 
 FIX_G6 = (
@@ -97,9 +68,7 @@ FIX_G6 = (
 )
 
 
-# ==================================================================================================
 # Arrow helpers
-# ==================================================================================================
 
 
 def _table(
@@ -119,32 +88,20 @@ _I32 = pa.int32()
 _I8 = pa.int8()
 
 
-# ==================================================================================================
 # Row shape
-# ==================================================================================================
 
 
 @dataclass(frozen=True)
 class CastRow:
     """One differential cast row: a recipe + recorded Spark half + optional repark half.
 
-    ``kind="content"`` — result set on the Arrow path.
-      * ``repark is None`` means the engines AGREE — plain equality against ``spark``.
-      * ``repark is not None`` means DISCLOSURE: repark's actual output is pinned, and a
-        convergence onto the recorded Spark output is detected and reported as one.
-
-    ``kind="error"`` — both engines refuse; pins the error *token* each raises.
-
-    ``kind="split"`` — one engine succeeds (content) and the other refuses (error).
-      * ``which_raises="repark"``: Spark golden in ``spark``; repark needle in
-        ``repark_error_needle``.
-      * ``which_raises="spark"``: repark golden in ``repark``; Spark needle in
-        ``spark_error_needle``.
-      If the refuse side starts succeeding, the harness classifies CONVERGED (matches the
-      success golden → flip) vs regression (committed but mismatched).
-
-    ``entry="sql"`` runs ``session.sql(sql)``. ``entry="df_cast"`` runs ``createDataFrame`` +
-    ``Column.cast`` (CP-11 door). ``entry="df_try_cast"`` runs ``Column.try_cast``.
+    ``kind="content"``: Arrow result; ``repark is None`` → equality, else disclosure.
+    ``kind="error"``: both engines refuse; pins each engine's error needle.
+    ``kind="split"``: one engine succeeds, the other refuses; ``which_raises`` picks which
+    side pins the golden vs the needle. A refuse side that starts succeeding is classified
+    CONVERGED vs regression.
+    ``entry="sql"`` runs ``session.sql(sql)``; ``df_cast`` / ``df_try_cast`` run the CP-11
+    ``Column.cast`` / ``Column.try_cast`` door.
     """
 
     name: str
@@ -180,9 +137,7 @@ class CastRow:
         return self.kind == "content" and self.repark is not None
 
 
-# ==================================================================================================
-# Lifecycle helpers — one recipe SSOT the record driver imports
-# ==================================================================================================
+# Lifecycle helpers (recipe SSOT the record driver imports)
 
 
 def _functions_for(session: Any) -> Any:
@@ -241,12 +196,10 @@ def _needle_in(message: str, needle: str) -> bool:
     return needle in message
 
 
-# ==================================================================================================
-# The corpus (gap G6: budget 8-10)
-# ==================================================================================================
+# The corpus (gap G6)
 
 ROWS: list[CastRow] = [
-    # ----- shared-raise error equalities (ANSI ON: both engines raise) ----------------------------
+    # shared-raise error equalities (ANSI ON: both engines raise)
     CastRow(
         name="malformed_string_to_int_both_raise",
         kind="error",
@@ -301,7 +254,7 @@ ROWS: list[CastRow] = [
             f"scale-only rounding which succeeds on both. {FIX_G6}."
         ),
     ),
-    # ----- try_cast twins of failing casts (NULL equality) ----------------------------------------
+    # try_cast twins of failing casts (NULL equality)
     CastRow(
         name="try_cast_malformed_string_to_int_null",
         kind="content",
@@ -328,7 +281,7 @@ ROWS: list[CastRow] = [
             "instead of CAST_OVERFLOW."
         ),
     ),
-    # ----- control equality -----------------------------------------------------------------------
+    # control equality
     CastRow(
         name="valid_string_to_int_control",
         kind="content",
@@ -342,7 +295,7 @@ ROWS: list[CastRow] = [
             "Arrow int32 (VALUES path nullability matches)."
         ),
     ),
-    # ----- DataFrame-API door (CP-11) -------------------------------------------------------------
+    # DataFrame-API door (CP-11)
     CastRow(
         name="df_cast_malformed_string_to_int_both_raise",
         kind="error",
@@ -360,7 +313,7 @@ ROWS: list[CastRow] = [
             f"entry point so a SQL-only green cannot claim the cast surface. {FIX_G6}."
         ),
     ),
-    # ----- true divergences under ANSI ON (do not invent more) ------------------------------------
+    # true divergences under ANSI ON (do not invent more)
     CastRow(
         name="date_to_int_spark_refuses_repark_days",
         kind="error",
@@ -378,7 +331,7 @@ ROWS: list[CastRow] = [
             f"flip; the rename ships alone per relocation discipline. Flipped by {FIX_G6}."
         ),
     ),
-    # ----- the four doors §1.2 measured as unpinned divergences beside the pinned one ------------
+    # the four DATE ↔ INT doors beside the pinned one
     CastRow(
         name="date_to_bigint_both_refuse",
         kind="error",
@@ -483,9 +436,7 @@ ROWS: list[CastRow] = [
 ]
 
 
-# ==================================================================================================
 # Session
-# ==================================================================================================
 
 
 def _repark_session() -> ReparkSession:
@@ -497,7 +448,7 @@ def _repark_session() -> ReparkSession:
 
 @pytest.fixture
 def repark() -> Iterator[ReparkSession]:
-    """Repark session for the facade door. Yields then stops."""
+    """Repark session for the facade door."""
     session = _repark_session()
     try:
         yield session
@@ -506,31 +457,19 @@ def repark() -> Iterator[ReparkSession]:
             session.stop()
 
 
-# ==================================================================================================
 # The rows
-# ==================================================================================================
 
 
 @pytest.mark.parametrize("row", ROWS, ids=[row.name for row in ROWS])
 def test_cast_failure_row(row: CastRow, repark: ReparkSession) -> None:
-    """Every recorded row on the Arrow path (value AND type AND nullability) or error class.
+    """Every recorded row on the Arrow path (value AND type AND nullability) or error needle.
 
-    Content equality rows assert ``repark == Spark``.
-
-    Content disclosure rows assert repark's pinned actual output — and when that assertion fails,
-    the failure is CLASSIFIED (CONVERGED vs regression).
-
-    Error rows assert both engines' needles appear in the raised message (honest class compare);
-    the suite pins the repark needle live; the record driver pins the Spark needle.
-
-    Split rows assert the refuse side still refuses with its needle AND the success half is
-    well-formed. If the refuse side starts *succeeding*, the failure is CLASSIFIED: CONVERGED
-    (matches the success golden → flip) vs regression/partial.
+    Disclosures and splits classify a mismatch: CONVERGED (flip, never delete) vs regression.
+    Error rows pin the repark needle live; the record driver pins the Spark needle.
     """
     if row.kind == "error":
         assert row.repark_error_needle is not None
-        # Drive the real lifecycle so a future engine that starts *succeeding* is CLASSIFIED
-        # rather than getting a bare "expected raise" assert (CP-1).
+        # Drive the real lifecycle so an engine that starts succeeding is CLASSIFIED (CP-1).
         try:
             actual = run_cast_content(repark, row)
         except Exception as exc:  # both engines' error types; message is the pin
@@ -552,7 +491,6 @@ def test_cast_failure_row(row: CastRow, repark: ReparkSession) -> None:
     if row.kind == "split":
         assert row.which_raises is not None
         if row.which_raises == "repark":
-            # repark refuses; Spark golden is the success half.
             assert row.repark_error_needle is not None
             assert row.spark is not None
             try:
@@ -566,7 +504,6 @@ def test_cast_failure_row(row: CastRow, repark: ReparkSession) -> None:
                 assert row.spark.num_rows >= 1, f"{row.name}: spark golden is empty - re-record"
                 return
 
-            # Recipe committed — repark no longer refuses this surface.
             if not _frames_differ(actual, row.spark):
                 raise AssertionError(
                     f"{row.name}: repark and Spark have CONVERGED - repark now succeeds with the "
@@ -581,7 +518,6 @@ def test_cast_failure_row(row: CastRow, repark: ReparkSession) -> None:
                 f"docstring) before flipping the pin. {row.note}"
             )
 
-        # which_raises == "spark": Spark refuses; repark produces a pinned table.
         assert row.spark_error_needle is not None
         assert row.repark is not None
         try:
@@ -610,7 +546,6 @@ def test_cast_failure_row(row: CastRow, repark: ReparkSession) -> None:
             ) from mismatch
         return
 
-    # kind == "content"
     assert row.spark is not None
     actual = run_cast_content(repark, row)
 
@@ -641,11 +576,7 @@ def test_cast_failure_row(row: CastRow, repark: ReparkSession) -> None:
 
 
 def test_cast_failure_row_set_covers_g6_budget() -> None:
-    """The pin budget is part of the unit — corpus size and class coverage are pinned.
-
-    Family coverage pins are **name-gated** so a control row cannot satisfy them (CP-2
-    tautological-pin lesson). Entry-point coverage pins the DF door (CP-11).
-    """
+    """Corpus size and class coverage are pinned; family floors are name-gated (CP-2, CP-11)."""
     assert G6_BUDGET_MIN <= len(ROWS) <= G6_BUDGET_MAX, (
         f"G6 budget {G6_BUDGET_MIN}-{G6_BUDGET_MAX} differential rows (got {len(ROWS)})"
     )
@@ -664,7 +595,6 @@ def test_cast_failure_row_set_covers_g6_budget() -> None:
 
     names = {row.name for row in ROWS}
 
-    # 1. Malformed string→numeric — name-gated (control valid_string_to_int does NOT satisfy).
     malformed_numeric = [
         name
         for name in names
@@ -674,7 +604,6 @@ def test_cast_failure_row_set_covers_g6_budget() -> None:
         f"need >={MIN_MALFORMED_NUMERIC} malformed string→numeric rows; got {malformed_numeric}"
     )
 
-    # 2. Malformed string→date/timestamp — name-gated.
     malformed_temporal = [
         name
         for name in names
@@ -685,7 +614,6 @@ def test_cast_failure_row_set_covers_g6_budget() -> None:
         f"got {malformed_temporal}"
     )
 
-    # 3. Numeric overflow / narrowing — name-gated *overflow* (not try_cast twin alone).
     overflow_rows = [
         name for name in names if "overflow" in name and not name.startswith("try_cast_")
     ]
@@ -693,31 +621,26 @@ def test_cast_failure_row_set_covers_g6_budget() -> None:
         f"need >={MIN_NUMERIC_OVERFLOW} strict-cast overflow rows; got {overflow_rows}"
     )
 
-    # 4. try_cast twins of ≥2 failing casts — name-gated *try_cast*.
     try_cast_rows = [name for name in names if name.startswith("try_cast_")]
     assert len(try_cast_rows) >= MIN_TRY_CAST_ROWS, (
         f"need >={MIN_TRY_CAST_ROWS} try_cast_* twins; got {try_cast_rows}"
     )
 
-    # 5. ≥1 equality control (well-formed cast succeeds).
     assert any(row.family == "control" and row.is_equality() for row in ROWS), (
         "must keep at least one well-formed cast control equality"
     )
 
-    # 6. Entry points — CP-11 DF door (Column.cast).
     df_rows = [row for row in ROWS if row.entry in ("df_cast", "df_try_cast")]
     assert len(df_rows) >= MIN_DF_API_ROWS, (
         f"need >={MIN_DF_API_ROWS} DataFrame-API cast rows (CP-11); got {len(df_rows)}"
     )
     assert any(row.entry == "sql" for row in ROWS), "sql() door must remain primary"
 
-    # 7. Shared-raise error rows present (ANSI convergence class).
     error_rows = [row for row in ROWS if row.kind == "error"]
     assert len(error_rows) >= MIN_ERROR_ROWS, (
         f"need >={MIN_ERROR_ROWS} shared-raise error rows under ANSI ON; got {len(error_rows)}"
     )
 
-    # Well-formedness.
     for row in ROWS:
         if row.kind == "content":
             assert row.spark is not None, f"{row.name}: content needs spark golden"
@@ -742,15 +665,11 @@ def test_cast_failure_row_set_covers_g6_budget() -> None:
                 assert row.spark is None
 
 
-# ==================================================================================================
-# Classifier reachability (CP-1) — both arms proven by monkeypatch
-# ==================================================================================================
+# Classifier reachability (CP-1)
 
 
-# The corpus no longer carries a repark-raises split (the TIMESTAMP→INT one flipped to a
-# nullability disclosure when the TZ-5 cast unit landed, 2026-08-12), but the harness branch
-# still exists and stays proven — via a synthetic exemplar that never joins ROWS (so the
-# budget pins see only real rows).
+# Synthetic exemplar: the classifier arm must stay proven even with no real row exercising it;
+# it never joins ROWS so the budget pins see only real rows.
 _SYNTHETIC_REPARK_RAISES_SPLIT = CastRow(
     name="synthetic_repark_raises_split_exemplar",
     kind="split",
@@ -810,11 +729,7 @@ def test_split_repark_raises_classifier_regression_arm(
 def test_content_disclosure_classifier_converged_arm(
     repark: ReparkSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """CP-1: content disclosure landing ON the recorded Spark output → CONVERGED guidance.
-
-    The TIMESTAMP→INT flip (2026-08-12) made the content-disclosure branch reachable by a real
-    row for the first time; both its arms are proven here on that row.
-    """
+    """CP-1: content disclosure landing ON the recorded Spark output → CONVERGED guidance."""
     import test_cast_failure_parity as cast_mod
 
     row = next(row for row in ROWS if row.name == "timestamp_to_int_nullability")
@@ -854,12 +769,8 @@ def test_content_disclosure_classifier_regression_arm(
     assert "Re-derive" in message
 
 
-# The corpus no longer carries a SPARK-raises split either: `date_to_int_spark_refuses_repark_days`
-# flipped to a shared-raise error equality on 2026-08-15 when the G6-3 gate landed, which is
-# exactly the convergence this classifier arm exists to announce. CP-1 requires both arms stay
-# reachable whether or not a real row exercises them, so the arm keeps its exemplar the same way
-# the repark-raises arm did in 2026-08-12: a synthetic CastRow that never joins ROWS, so the
-# budget pins still see only real rows.
+# Synthetic exemplar: the classifier arm must stay proven even with no real row exercising it;
+# it never joins ROWS so the budget pins see only real rows.
 _SYNTHETIC_SPARK_RAISES_SPLIT = CastRow(
     name="synthetic_spark_raises_split_exemplar",
     kind="split",

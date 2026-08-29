@@ -1,11 +1,9 @@
 """Redirect seam: install repark into the pyspark namespace before suite imports.
 
-Replace **session / bootstrap layer only** (base-class session factories → repark).
-Never rewrite Apache test bodies.
-
-The patch map (:data:`PATCH_MAP`) is a charter deliverable — it measures how
-drop-in "change one import line" really is when the suite still imports from
-``pyspark.*``.
+Replace **session / bootstrap layer only** (base-class session factories → repark);
+never rewrite Apache test bodies. The patch map (:data:`PATCH_MAP`) is a charter
+deliverable — it measures how drop-in "change one import line" really is when the
+suite still imports from ``pyspark.*``.
 """
 
 from __future__ import annotations
@@ -168,16 +166,12 @@ def patch_map_as_markdown() -> str:
 def install_redirect(*, spark_tests_root: Path | None = None) -> list[str]:
     """Install the repark→pyspark redirect seam. Idempotent.
 
-    Parameters
-    ----------
-    spark_tests_root:
-        Path to the cached Spark tree (the directory that contains ``python/``).
-        Required so ``pyspark.sql.tests`` can be injected. If the first call omits
-        it, a later call with a root still injects the package.
+    Args:
+        spark_tests_root: path to the cached Spark tree (the directory containing
+            ``python/``), required so ``pyspark.sql.tests`` can be injected. If the
+            first call omits it, a later call with a root still injects the package.
 
-    Returns
-    -------
-    list[str]
+    Returns:
         Human-readable log of patches applied (also stored for the report).
     """
     global _REDIRECT_INSTALLED, _SQL_TESTS_INJECTED
@@ -188,9 +182,8 @@ def install_redirect(*, spark_tests_root: Path | None = None) -> list[str]:
             _SQL_TESTS_INJECTED = True
         return list(_PATCH_LOG)
 
-    # No JVM markers in the environment that repark must not rely on.
-    # (pyspark.find_spark_home still resolves to the wheel path — that is fine;
-    # we assert elsewhere that no Java gateway starts.)
+    # No JVM markers repark must not rely on; find_spark_home resolving to the
+    # wheel path is fine — no Java gateway may start (asserted below).
     os.environ.pop("PYSPARK_SUBMIT_ARGS", None)
     # Refuse accidental real cluster masters in the harness process.
     os.environ.setdefault("REPARK_PYSPARK_COMPAT", "1")
@@ -214,9 +207,8 @@ def install_redirect(*, spark_tests_root: Path | None = None) -> list[str]:
 def inject_sql_tests_package(spark_tests_root: Path) -> None:
     """Make ``import pyspark.sql.tests.*`` resolve into the cached Apache tree.
 
-    Uses a package module with ``__path__`` pointing at the cache directory so
-    individual test modules load from disk without shadowing the installed
-    ``pyspark`` runtime package.
+    Uses a package module with ``__path__`` pointing at the cache directory so test
+    modules load from disk without shadowing the installed ``pyspark`` package.
     """
     tests_dir = Path(spark_tests_root) / "python" / "pyspark" / "sql" / "tests"
     if not tests_dir.is_dir():
@@ -277,9 +269,7 @@ def assert_no_jvm() -> None:
     _assert_no_jvm_started()
 
 
-# ---------------------------------------------------------------------------
 # Internal patch helpers
-# ---------------------------------------------------------------------------
 
 
 def _log(message: str) -> None:
@@ -355,17 +345,17 @@ def _patch_session_and_types() -> None:
 
     overlaid = _overlay_public_names(pyspark_types, repark_types)
     _log(f"overlay: pyspark.sql.types ← repark.spark.types ({overlaid} names)")
-    # F1 true-EC: Apache test_types imports private helpers by name
-    # (`from pyspark.sql.types import _merge_type, _make_type_verifier`). Public-name
-    # overlay skips underscore attrs; pin the repark implementations so check_error
-    # sees repark's PySparkTypeError / parameter keys (not a pre-overlay pyspark class).
+    # Apache test_types imports private helpers by name (`from pyspark.sql.types
+    # import _merge_type, _make_type_verifier`). Public-name overlay skips
+    # underscore attrs; pin the repark implementations so check_error sees
+    # repark's PySparkTypeError / parameter keys.
     for private_name in ("_merge_type", "_make_type_verifier"):
         if hasattr(repark_types, private_name):
             setattr(pyspark_types, private_name, getattr(repark_types, private_name))
             _log(f"replace: pyspark.sql.types.{private_name} → repark.spark.types.{private_name}")
 
-    # StorageLevel: Apache cache tests import pyspark.storagelevel.StorageLevel and compare
-    # to DataFrame.storageLevel (repark). Replace the class so identity + equality match.
+    # Apache cache tests compare pyspark.storagelevel.StorageLevel to
+    # DataFrame.storageLevel (repark); replace the class so identity matches.
     try:
         import pyspark.storagelevel as pyspark_storagelevel
 
@@ -421,11 +411,11 @@ def _patch_errors_overlay() -> None:
     except ImportError:
         pass
 
-    # C4 / octo C2: ``pyspark.testing.utils`` does ``from pyspark.errors import
-    # PySparkAssertionError, PySparkException, …`` at import time. Module-level overlay
-    # alone does not rebind those names if testing.utils was already imported. Rebind
-    # any already-loaded testing helpers so check_error / assertSchemaEqual raise and
-    # isinstance-check repark's tree (not a silent hour-0 FAIL-ERROR-CLASS regression).
+    # pyspark.testing.utils imports error classes from pyspark.errors at import
+    # time; module-level overlay alone does not rebind them if testing.utils was
+    # already imported. Rebind already-loaded testing helpers so check_error /
+    # assertSchemaEqual raise and isinstance-check repark's tree (not a silent
+    # FAIL-ERROR-CLASS regression).
     _rebind_errors_on_loaded_testing_modules(repark_errors)
 
 
@@ -460,7 +450,7 @@ def _overlay_public_names(target: Any, source: Any) -> int:
     """Copy public attributes from source onto target; return count copied.
 
     Prefer ``source.__all__`` when present so private helpers and import residue
-    (``re``, ``json``, ``Any``, …) do not pollute the target module (octo X2 C5).
+    (``re``, ``json``, ``Any``, …) do not pollute the target module.
     """
     count = 0
     names: list[str]
@@ -508,15 +498,15 @@ def _reused_sql_setup(cls: type) -> None:
     cls.spark = (  # type: ignore[attr-defined]
         ReparkSession.builder.master("local[4]").appName(cls.__name__).getOrCreate()
     )
-    # E2: Apache sqlutils bare names (``saveAsTable("t")``, ``DROP TABLE t``) need a
-    # registered default catalog + namespace. Spark's ``spark_catalog.default`` always
-    # exists; repark seeds an in-memory Iceberg catalog under that name for the suite.
+    # Apache sqlutils bare names (`saveAsTable("t")`, `DROP TABLE t`) need a
+    # registered default catalog + namespace, matching Spark's always-present
+    # spark_catalog.default.
     warehouse = Path(tempfile.mkdtemp(prefix="repark-compat-warehouse-"))
     cls._repark_compat_warehouse = warehouse  # type: ignore[attr-defined]
     try:
         cls.spark.register_memory_catalog(DEFAULT_CATALOG_NAME, warehouse)  # type: ignore[attr-defined]
-        # Ensure current catalog/database stay at the Spark oracle defaults +
-        # create the default namespace (Spark's default database always exists).
+        # Keep current catalog/database at the Spark oracle defaults; create the
+        # default namespace (Spark's default database always exists).
         state = cls.spark._catalog_state()  # type: ignore[attr-defined]
         state["current_catalog"] = DEFAULT_CATALOG_NAME
         state["current_database"] = DEFAULT_DATABASE_NAME
@@ -526,13 +516,13 @@ def _reused_sql_setup(cls: type) -> None:
             )
     except Exception as error:
         LOGGER.warning("compat: default spark_catalog memory registration failed: %s", error)
-    # repark's minimal SparkContext (no JVM). Tests that touch _jvm / parallelize
+    # repark's minimal SparkContext (no JVM); tests touching _jvm / parallelize
     # classify as NEEDS-JVM at runtime.
     cls.sc = cls.spark.sparkContext  # type: ignore[attr-defined]
     cls._legacy_sc = cls.sc  # type: ignore[attr-defined]
 
-    # Mirror Apache: NamedTemporaryFile(delete=False) + unlink leaves a path name for
-    # tests that write under cls.tempdir.name (not a held open handle).
+    # Mirror Apache: NamedTemporaryFile(delete=False) + unlink leaves a path name
+    # for tests that write under cls.tempdir.name.
     temp_handle = tempfile.NamedTemporaryFile(delete=False)  # noqa: SIM115
     temp_handle.close()
     Path(temp_handle.name).unlink(missing_ok=True)
@@ -583,8 +573,9 @@ def _patch_test_case_factories() -> None:
 def _assert_no_jvm_started() -> None:
     """Raise if a Py4J / Spark JVM gateway is already live in this process.
 
-    Best-effort (no OS process-tree walk): SparkContext active singleton, class-level
-    gateway handle, and py4j ``JavaGateway._gateway_client`` when the module is loaded.
+    Best-effort (no OS process-tree walk): SparkContext active singleton,
+    class-level gateway handle, and py4j ``JavaGateway._gateway_client`` when the
+    module is loaded.
     """
     context_mod = sys.modules.get("pyspark.context")
     if context_mod is not None:

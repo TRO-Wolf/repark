@@ -1,33 +1,8 @@
-//! The session timezone — `spark.sql.session.timeZone`, resolved ONCE at session construction.
+//! Session timezone configuration, resolved once during session construction.
 //!
-//! **One authoritative spelling.** [`SESSION_TIME_ZONE_KEY`] is the only conf key this engine
-//! reads for the session zone, and this constant is the only place that string literal is
-//! written in the Rust tree. There is deliberately **no** alternate spelling (no `snake_case`
-//! twin, no `repark.`-namespaced alias, no case-insensitive lookalike): a second spelling of one
-//! knob is how two sources of truth are born. An unrecognized lookalike therefore falls through
-//! to the default exactly like any other unknown `.config(...)` key, which is PySpark's own
-//! tolerance for unknown configuration.
-//!
-//! **Resolved once, at construction.** [`ReparkSessionBuilder::build`](crate::ReparkSessionBuilder::build)
-//! parses and *validates* the value and stores the result on the session
-//! ([`ReparkSession::session_time_zone`](crate::ReparkSession::session_time_zone)). Nothing reads
-//! the process environment (`TZ`, the host's local zone) at query time — that is the
-//! everything-through-Session discipline in `docs/adr/0004-server-prep-disciplines.md`, and it is
-//! also why the default is a fixed [`DEFAULT_SESSION_TIME_ZONE`] rather than the host zone.
-//!
-//! **Declared divergence from Apache Spark (carried, not hidden).** Spark defaults
-//! `spark.sql.session.timeZone` to the JVM's *local* zone, so the same job produces different
-//! wall-clock values on two hosts. repark defaults to `UTC` so a run is reproducible on any
-//! host; a job that wants host-local behavior sets the key explicitly.
-//!
-//! **Scope of this module.** The session zone is a *carried, validated* session value here, and
-//! nothing in this module changes an evaluated result. Since H-1a split B (2026-08-10) the value
-//! reaches the extractors: `repark-spark`'s `configure` hands it to `repark-functions`' carrier,
-//! and every calendar field of an INSTANT-typed `TIMESTAMP` is resolved in it. What is still NOT
-//! honored is recorded as divergence-registry rows, not left implicit — a **zoneless** timestamp
-//! input is localized in this zone then stored as µs+UTC (TZ-4 PR-2). `CAST(ts AS DATE)` /
-//! `to_date` take the date in this zone (TZ-8; NTZ stays the stored wall). `datediff` of a
-//! TIMESTAMP rides that CAST. `last_day` / `date_add` over TIMESTAMP stay residual.
+//! [`SESSION_TIME_ZONE_KEY`] is the only accepted spelling. The value is validated and stored on
+//! the session; queries do not read host timezone state. Repark defaults to UTC for reproducible
+//! runs, a declared divergence from Spark's host-local default.
 
 use std::collections::HashMap;
 use std::hash::BuildHasher;

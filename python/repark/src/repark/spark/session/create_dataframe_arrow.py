@@ -91,7 +91,7 @@ def _normalize_frame_arrow_column(column: Any, *, engine_type: str | None) -> An
 
         column = column.cast(value_type)
 
-    # Inf refuse must run for BOTH untyped and engine_type paths (octo C1).
+    # Inf refuse must run for BOTH untyped and engine_type paths.
 
     if pa.types.is_floating(column.type) and len(column) > 0:
         # is_inf is null-safe; any true → refuse (tuple path refuses bare inf).
@@ -133,7 +133,7 @@ def _normalize_frame_arrow_column(column: Any, *, engine_type: str | None) -> An
     elif pa.types.is_large_binary(column.type):
         column = column.cast(pa.binary())
 
-    # Inferred pandas/polars naive timestamps stay naive (G10 unit-family pins).
+    # Inferred pandas/polars naive timestamps stay naive.
     # Python-tuple naive datetime is LTZ via `_arrow_table_from_tuples`.
 
     return column
@@ -225,9 +225,8 @@ def _arrow_table_from_pandas(
     names, permutation = _schema_names_and_permutation(source_columns, schema, kind="pandas")
 
     if len(data) == 0:
-        # Typed StructType/DDL empty frames keep declared types (list-path parity — octo C4).
-
-        # Name-only schema still cannot infer payload types → CANNOT_INFER_EMPTY_SCHEMA.
+        # Typed StructType/DDL empty frames keep declared types (list-path parity);
+        # name-only schema cannot infer payload types → CANNOT_INFER_EMPTY_SCHEMA.
 
         if engine_types is not None:
             column_null_sql = [f"CAST(NULL AS {sql_type})" for sql_type in engine_types]
@@ -246,10 +245,8 @@ def _arrow_table_from_pandas(
         )
 
     # SparseDtype: ``pa.Table.from_pandas`` refuses sparse blocks, and densify-with-fill
-
-    # corrupts nulls (int fill becomes a sentinel). Keep the proven cell extractor for any
-
-    # frame that carries Sparse columns (rare; not the ingest hot path).
+    # corrupts nulls (int fill becomes a sentinel). Use the cell extractor for any frame
+    # with Sparse columns (rare; not the ingest hot path).
 
     for source_index in range(data.shape[1]):
         dtype = data.iloc[:, source_index].dtype
@@ -326,9 +323,8 @@ def _arrow_table_from_pandas(
                     column = column.cast(target)
 
                 except (pa.ArrowInvalid, pa.ArrowNotImplementedError) as error:
-                    # Witness type (NaT→timestamp, NaN→double) vs StructType mismatch —
-
-                    # fail as PySparkTypeError, not a raw Arrow stack (octo C2).
+                    # Witness type (NaT→timestamp, NaN→double) vs StructType mismatch:
+                    # fail as PySparkTypeError, not a raw Arrow stack.
 
                     raise PySparkTypeError(
                         f"createDataFrame cannot cast inferred null type {column.type} to "
@@ -369,7 +365,7 @@ def _arrow_table_from_polars(
     names, permutation = _schema_names_and_permutation(source_columns, schema, kind="polars")
 
     if data.height == 0:
-        # Typed StructType/DDL empty frames keep declared types (list-path parity — octo C4).
+        # Typed StructType/DDL empty frames keep declared types (list-path parity).
 
         if engine_types is not None:
             column_null_sql = [f"CAST(NULL AS {sql_type})" for sql_type in engine_types]

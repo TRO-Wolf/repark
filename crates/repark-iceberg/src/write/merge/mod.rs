@@ -1,90 +1,18 @@
-//! `MERGE INTO` — the `RePark`-owned Spark-semantics executor (copy-on-write + merge-on-read).
+//! `MERGE INTO` executor with copy-on-write and merge-on-read arms.
 //!
-//! The fork's `ENGINE_CONTRACT.md` §6 makes MERGE engine-owned: DataFusion has no MERGE planner
-//! and iceberg-core deliberately carries no SQL semantics. This module implements the COW recipe
-//! from §4–§5: pin the current snapshot, find the data files that contain rows a WHEN MATCHED
-//! clause mutates, rewrite exactly those files (survivors kept, matched rows updated/dropped),
-//! write the WHEN NOT MATCHED insert rows, and commit everything as ONE `OverwriteFiles`
-//! transaction under SERIALIZABLE isolation (§5 row 142, Java's MERGE default) —
-//! `.delete_data_files(affected).add_files(new)` + `validate_from_snapshot(pin)` + BOTH
-//! `validate_no_conflicting_deletes()` (armed by the FULL `DataFile` entries; the path-only
-//! `delete_files` form would leave it structurally inert) AND `validate_no_conflicting_data()`
-//! (rejects a concurrent add matching the ON condition — the F-BR-1 silent-duplicate guard) +
-//! a conservative `AlwaysTrue` conflict-detection filter + an `engine.operation-id`
-//! snapshot-summary stamp (§8 mitigation for the ambiguous-commit gap, fork row R157).
+//! The executor pins the read snapshot, streams the target with stable `(_file, _pos)` identity,
+//! resolves Spark first-match and cardinality rules, and performs one atomic OCC-validated commit.
+//! COW rewrites affected files and preserves survivors. Insert-only merges still validate against
+//! concurrent matching adds to prevent duplicates. The `engine.operation-id` stamp supports
+//! recovery after an ambiguous commit; failed commits best-effort-delete files written by the
+//! operation.
 //!
-//! An **insert-only** MERGE (no WHEN MATCHED clause matched anything ⇒ nothing rewritten) still
-//! pinned snapshot S to decide which source rows were NOT MATCHED, so it cannot append blindly: a
-//! concurrent commit that added a matching row between S and the commit would make the append a
-//! silent duplicate. It commits an ADD-ONLY `OverwriteFiles` (recorded `Operation::Append`,
-//! identical snapshot semantics to `fast_append`) carrying the §5 SERIALIZABLE-isolation
-//! `validate_no_conflicting_data()` guard on the same pin + `AlwaysTrue` filter — the only §5
-//! check that fires for a pure append (`validate_no_conflicting_deletes` is a dead no-op with no
-//! removed files, so it is not set). See [`commit`].
+//! `MoR` leaves data files untouched, writes position deletes plus updated/inserted rows, and commits
+//! them together in one `RowDelta` with the same conflict guards. Both arms use computed partition
+//! fanout, including transformed fields. Target streaming bounds memory to the scan batch/file and
+//! join working sets rather than a full-target `MemTable`.
 //!
-//! Row identity is `(_file, _pos)` — the two reserved metadata columns the pinned core scan
-//! surfaces (fork rev `c10ea425`: `_pos` is the per-file 0-based physical ordinal — `reader.rs`
-//! `finish_whole_file_scan_task` threads a per-file counter), a stable, RE-SCAN-INVARIANT identity
-//! that supersedes the former materialize-time synthesized `__repark_row_id` counter. The pinned
-//! target is consumed as a **streaming, re-scannable** `StreamingTable` over the snapshot scan
-//! (never a full-target `MemTable`), so the whole target is never resident as rows. Peak scan-side
-//! residency is `O(num_cpus × largest data file)` — the fork whole-file-materializes a data file
-//! when `_pos` is projected (reader.rs at c10ea425) — plus the per-query join working set
-//! (`O(source)` for the rewrite/cardinality joins, `O(target keys)` for the insert anti-join), NOT
-//! `O(target rows)`. That is the OTH-001/SAF-001 bound: the persistent full-target `MemTable` is gone. The join/clause computation
-//! runs as DataFusion SQL over that streaming target, so Spark expressions in `ON` / `WHEN … AND` /
-//! `SET` / `VALUES` evaluate with DataFusion semantics — the same engine that runs them in reads.
-//!
-//! Clause semantics follow Spark: clauses apply in declaration order (first match wins — encoded
-//! as a single O(C) `clause_id` CASE, scout #18; rewrite columns are `CASE (clause_id) WHEN i
-//! THEN …`), a clause predicate evaluating to NULL means "does not apply" (every predicate is
-//! wrapped `COALESCE((p), FALSE)` — 3-valued-logic footgun), and a target row matched by more
-//! than one source row raises `MERGE_CARDINALITY_VIOLATION` except a lone unconditional DELETE.
-//! The star forms (`UPDATE SET *` / `INSERT *`) expand with Spark's star resolution before any SQL
-//! is generated: every TARGET column takes the same-named source column — a target column missing
-//! from the source errors up front, extra source columns are ignored (see [`expand_star_clauses`]).
-//!
-//! **Partitioned targets (A4 + Group R)** run — identity AND non-identity transforms
-//! (bucket/truncate/temporal): both arms route their new files (rewritten COW survivors + inserted
-//! rows) through the SAME A1/U1 fanout `append` uses
-//! ([`crate::write::append::write_partitioned_data_files`] — one fanout in the engine, never a second, in
-//! the fork's computed-transform mode since Group P), so every produced [`DataFile`] carries its
-//! transform-computed partition value at the manifest level and a partition-key-changing UPDATE
-//! re-routes its survivor to the new partition (fork `ENGINE_CONTRACT` §4 UPDATE/COW: "a
-//! partition-key-changing UPDATE re-routes rows via the partition-aware writer"; §7 "fan out rows by
-//! partition before writing"). The `commit` seam is partition-agnostic, so the FULL serializable OCC
-//! posture carries over verbatim to every partitioned path.
-//!
-//! **Merge-on-read (Group T).** `write.merge.mode = 'merge-on-read'` selects a sibling WRITE arm
-//! that shares ALL of the above — same streamed target, same `(_file, _pos)` identity, same
-//! first-match-wins clause resolution, same cardinality check — and differs only in what it writes
-//! and how it commits ([`plan_and_commit_mor`]). Data files are left COMPLETELY untouched: every
-//! mutated row (DELETE and UPDATE alike) contributes its `(_file, _pos)` to a **position-delete
-//! file** ([`crate::write::position_delete`]), UPDATE additionally re-emits its NEW values as a fresh
-//! data-file row (merge-on-read UPDATE == delete-old + insert-new), and the delete files + data
-//! files commit together in ONE `RowDelta` snapshot ([`commit_row_delta`]) under the same
-//! SERIALIZABLE isolation, with the `validate_data_files_exist` / `validate_deleted_files` /
-//! `validate_no_conflicting_delete_files` guards Java arms for `command == UPDATE || MERGE`
-//! (`SparkPositionDeltaWrite.commit`). The next scan applies the deletes (fork `GAP_MATRIX` row
-//! R117), so a merge-on-read MERGE and a copy-on-write MERGE of the same source into the same target
-//! are SCAN-EQUIVALENT while being physically different — the differential the Group T pins assert.
-//!
-//! **Merge-on-read × transform partitioning (Group Y).** merge-on-read runs on EVERY partitioning
-//! the copy-on-write arm supports — unpartitioned, identity, and non-identity transforms
-//! (bucket/truncate/temporal). Three mechanisms compose it, each pinned rather than assumed: the
-//! delete-file stamp is the OWNING data file's own `(spec_id, partition)` read off the manifests,
-//! which for a transform-partitioned file is ALREADY the transformed value (bucket ordinal /
-//! truncated prefix / day) — no recomputation, so the stamp is transform-agnostic by construction;
-//! the scan applies position deletes against that TRANSFORMED partition `Struct` (fork `GAP_MATRIX`
-//! row R117, interop-proven both directions on `truncate[10]`); and the new data files ride the
-//! SAME Group P computed-mode fanout, so a partition-key-changing UPDATE re-routes its new row to
-//! the new partition while its OLD row is position-deleted in the OLD one. Pins Y1-Y8.
-//!
-//! v1 limits (deterministic `NotImplemented`, tracked in `task/todo.md`): a non-Parquet
-//! `write.format.default`, an unrecognised `write.merge.mode`, merge-on-read on a non-V2 table
-//! (position deletes are V2-only; V3 needs deletion vectors), `WHEN NOT MATCHED BY SOURCE`,
-//! `INSERT ROW`. Also out of merge-on-read scope: equality deletes (position deletes only),
-//! deletion vectors, and the fork's sorting position-delete writer variant.
+//! Unsupported formats, modes, V3 `MoR`, `WHEN NOT MATCHED BY SOURCE`, and `INSERT ROW` fail loud.
 
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
@@ -243,7 +171,6 @@ pub enum InsertAction {
 /// `validate_no_conflicting_data` (a pure append removes nothing) — plus the §8
 /// `engine.operation-id` summary stamp. A MERGE that changes nothing commits nothing.
 /// ===========================================================================================
-///
 /// # Errors
 /// `NotImplemented` for the documented v1 limits; `MERGE_CARDINALITY_VIOLATION` when a target
 /// row matches more than one source row (except a lone unconditional DELETE); otherwise any
@@ -256,7 +183,7 @@ pub async fn execute_merge(
     // Serialize merge execution under `cfg(test)` so concurrent MERGEs do not interleave
     // on shared catalog/scratch fixtures. Instrument counters (PERF-19/01/04) are **task-local**
     // — see `MERGE_TEST_INSTRUMENTS` — so parallel cargo tests never clobber each other's Arc
-    // slots (critic-octo C1: process-global `Mutex<Option<Arc>>` install raced install→execute).
+    // slots (process-global `Mutex<Option<Arc>>` install raced install→execute).
     #[cfg(test)]
     let _merge_serialize = {
         static LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
@@ -322,7 +249,7 @@ pub async fn execute_merge(
 /// - source min/max non-null (empty source → None); any probe failure → skip conjunct (M6)
 /// - `MoR` always OK; COW only when `file_scoped_rewrite` (rewrite is a separate unfiltered scan)
 ///
-/// General multi-clause / non-equi ON pushdown is OUT (r25 seed). Wrong push = S0 lost rows;
+/// General multi-clause / non-equi ON pushdown is OUT. Wrong push = S0 lost rows;
 /// over-scan residual is OK.
 /// ===========================================================================================
 async fn residual_join_key_filter(
@@ -438,33 +365,10 @@ pub enum MergeMode {
 }
 
 /// ===========================================================================================
-/// v1 scope gate + mode resolution, both checked before any IO.
+/// Resolve the merge mode and reject unsupported formats before any IO.
 ///
-/// Partitioned targets ARE supported (A4 + Group R) — identity AND non-identity transforms
-/// (bucket/truncate/temporal): the rewritten COW survivors and inserted rows route through the SAME
-/// A1/U1 fanout as `append` (`write_partitioned_data_files`, in the fork's computed-transform mode
-/// since Group P), so every produced `DataFile` carries its transform-computed partition value (fork
-/// `ENGINE_CONTRACT` §4 UPDATE/COW + §7 "fan out rows by partition before writing").
-///
-/// What stays a deterministic `NotImplemented`, never a wrong answer:
-///   * a non-Parquet `write.format.default` — BOTH modes write Parquet only, and the partitioned
-///     write path does not re-check format, so it must be guarded here (as `append` does);
-///   * a `write.merge.mode` value that is neither `copy-on-write` nor `merge-on-read`;
-///   * **merge-on-read on a non-V2 table** — position-delete files exist only in V2. V1 has no
-///     delete files at all, and V3 mandates Puffin deletion vectors, which the fork's
-///     `PositionDeleteFileWriter` does not produce (row R113). Guarded BEFORE any write so a
-///     commit-time format rejection can never orphan an already-written delete file;
-///
-/// **Group Y retired the transform gate.** merge-on-read used to refuse a NON-identity-transform
-/// -partitioned table as UNPROVEN (not broken). It is now PROVEN and runs: the delete-file stamp is
-/// each data file's OWN `(spec_id, partition)` read off the manifests, which for a
-/// transform-partitioned file is ALREADY the transformed value (the bucket ordinal / truncated
-/// prefix / day) — nothing recomputes it, so the stamp is transform-agnostic *by construction*; the
-/// scan applies position deletes against the TRANSFORMED partition `Struct` (fork `GAP_MATRIX` row
-/// R117, interop-proven both directions on `truncate[10]`); and the new data files (updated
-/// new-values + inserts) ride the SAME Group P computed-mode fanout the copy-on-write arm uses, so
-/// a partition-key-changing UPDATE re-routes to the new partition. Pins Y1-Y8.
-///
+/// Both modes use computed partition fanout. Unknown modes and non-Parquet tables fail loud.
+/// `MoR` requires V2 because V3 deletion vectors are not supported; this guard prevents orphan files.
 /// ===========================================================================================
 fn resolve_merge_mode(table: &Table) -> Result<MergeMode> {
     let table_props = table.metadata().table_properties().map_err(iceberg_err)?;
@@ -981,7 +885,7 @@ async fn plan_and_commit_cow(
         let mut streams: Vec<std::pin::Pin<Box<dyn Stream<Item = Result<RecordBatch>> + Send>>> =
             Vec::new();
         // Scratches to drop on every exit of this block (file-scoped target and/or path table).
-        // Critic-octo C1-Q3: `stream_sql` / insert plan failures must not leave scratches registered.
+        // `stream_sql` / insert plan failures must not leave scratches registered.
         let mut rewrite_scratches = MergeScratchGuard::new(ctx);
         if !affected.is_empty() {
             // R-MERGE-FILE-SCAN: rewrite against a file-scoped target scan when enabled.
@@ -1339,7 +1243,7 @@ fn fold_discovery_batch_into_affected(
                 "match-discovery row has a NULL `_file`/`_pos` row identity".to_string(),
             ));
         }
-        // Critic-octo C3-Q1: same fail-loud null flags as Stage B (C1-S1).
+        // Same fail-loud null flags as Stage B.
         let match_count = require_non_null_i64(match_counts, row, "match_count")?;
         let is_mutated_flag = require_non_null_i64(is_mutated, row, "is_mutated")?;
         if match_count > 1 && !skip_cardinality {
@@ -1395,7 +1299,7 @@ async fn matched_work_mor(
     Vec<crate::write::position_delete::PositionDeletePair>,
     Vec<RecordBatch>,
 )> {
-    // === r20 P2a: merge ===
+    // === merge ===
     let mut stream =
         update_stream_checked(ctx, sql, &sql.matched_work_sql(write_schema), write_schema).await?;
     let mut path_intern: HashMap<String, usize> = HashMap::new();
@@ -1484,7 +1388,7 @@ fn consume_matched_work_batch(
                 "matched_work row has a NULL `_file`/`_pos` row identity".to_string(),
             ));
         }
-        // Critic-octo C1-S1 / C3-Q1: flag columns are CASE/window outputs and must be non-null.
+        // Flag columns are CASE/window outputs and must be non-null.
         let match_count = require_non_null_i64(match_counts, row, "match_count")?;
         let is_mutated_flag = require_non_null_i64(is_mutated, row, "is_mutated")?;
         let is_update_flag = require_non_null_i64(is_update, row, "is_update")?;
@@ -1543,7 +1447,7 @@ fn consume_matched_work_batch(
 
 /// ===========================================================================================
 /// Fail loud when a Stage A/B Int64 flag column is null (Arrow `.value` would silently yield 0).
-/// Shared by match discovery and `matched_work` consume (critic-octo C1-S1 / C3-Q1).
+/// Shared by match discovery and `matched_work` consume.
 /// ===========================================================================================
 fn require_non_null_i64(array: &Int64Array, row: usize, label: &str) -> Result<i64> {
     if array.is_null(row) {
@@ -1560,7 +1464,7 @@ const AFFECTED_PATHS_COL: &str = "path";
 /// ===========================================================================================
 /// RAII guard for MERGE scratch tables registered during COW rewrite (file-scoped target and/or
 /// path `MemTable`). Drops every name via [`deregister_merge_scratch`] on success **and** on early
-/// `?` exits (critic-octo C1-Q3).
+/// `?` exits.
 /// ===========================================================================================
 struct MergeScratchGuard<'a> {
     ctx: &'a SessionContext,
@@ -1626,7 +1530,7 @@ struct MergeSql<'a> {
 impl MergeSql<'_> {
     /// `FROM` fragment for the scratch target, aliased as the statement's target alias.
     fn target_from(&self) -> String {
-        // Engine UUID names today; still route through quote_ident (octo C2-SEC-002).
+        // Engine UUID names today; still route through quote_ident.
         format!(
             "{} AS {}",
             quote_ident(self.target_name),
@@ -2023,7 +1927,6 @@ fn cast_one_batch_to_write_schema(
 /// in-memory stream so the single writer-construction + drive loop lives in ONE place. Uses
 /// [`WriteConcurrency::default`] (session default 4 concurrent file writers). Prefer
 /// [`write_data_files_with_concurrency`] when the caller has a resolved session knob.
-///
 /// # Errors
 /// Returns a DataFusion error if the table is not Parquet-default, writer setup fails, or a
 /// batch cannot be written/closed.
@@ -2500,41 +2403,12 @@ pub(super) async fn commit_overwrite(
 }
 
 /// ===========================================================================================
-/// One atomic merge-on-read commit: the position-delete files for every mutated row PLUS the new
-/// data files (updated new-values + inserts) in a SINGLE `RowDelta` snapshot — the fork
-/// `ENGINE_CONTRACT` §5 row-delta recipe, MERGE row.
+/// Commit `MoR` position deletes and new rows in one `RowDelta`.
 ///
-/// Java's `SparkPositionDeltaWrite.commit` is the oracle for which validations are armed, and MERGE
-/// sits in the `command == UPDATE || MERGE` bucket, so ALL of these are set:
-///   * `validate_data_files_exist(referenced)` — unconditional for every command (L243): a
-///     position delete cannot apply to a data file a concurrent commit compacted or rewrote away,
-///     and applying it blind would silently lose the delete (resurrecting the row) or, worse, land
-///     on a different file. Java's own `if (!referencedDataFiles.isEmpty())` guard is what enables
-///     the check, so an insert-only merge-on-read MERGE (no deletes, empty set) correctly leaves it
-///     inert — there is nothing to reference.
-///   * `validate_deleted_files()` + `validate_no_conflicting_delete_files()` — armed for
-///     UPDATE/MERGE and deliberately NOT for DELETE (L251-254). This op READ the rows it mutates, so
-///     a concurrent row-level delete of those same rows is a genuine conflict; and it widens the
-///     files-exist check's op set from `{OVERWRITE}` to `{OVERWRITE, DELETE}` so a concurrent
-///     merge-on-read DELETE that removed a referenced data file also conflicts.
-///   * `validate_no_conflicting_data_files()` — the SERIALIZABLE guard (L256-258); Java's MERGE
-///     default, gated on `write.merge.isolation-level` (snapshot drops this call):
-///     rejects a concurrent ADD that could match the ON condition, the F-BR-1 silent-duplicate class.
-///   * `conflict_detection_filter(AlwaysTrue)` — deliberately MORE conservative than the PERF-04
-///     residual (audit M15). Narrowing to the residual would be WRONG: residual is source-key
-///     min/max, not the ON condition. `AlwaysTrue` is the safe conservative value.
-///   * `validate_from_snapshot(pin)` — anchored to the snapshot the merge queries actually read,
-///     and only when the scan captured one (an empty-at-read-time table depended on no prior state;
-///     Java runs no from-snapshot validation there either).
-///
-/// Every commit carries the §8 `engine.operation-id` summary stamp, exactly as [`commit`] does. A
-/// MERGE that changes nothing commits nothing.
-///
-/// The position-delete files are written HERE rather than by the caller so the write and the commit
-/// stay adjacent: the pairs are grouped, sorted and encoded, and the very next statement commits
-/// them, so no code path can produce delete files and then take a branch that fails to commit them.
-/// On `tx.commit` `Err`, [`commit_row_delta_kind`] best-effort deletes the new data-file and
-/// delete-file paths then re-raises the original error (M14).
+/// The commit validates referenced data files, concurrent delete files, and serializable matching
+/// adds as applicable, stamps the operation ID, and removes newly written files on commit error.
+/// Delete files are written HERE, not by the caller, so write and commit stay adjacent: no code
+/// path can produce delete files and then take a branch that fails to commit them.
 /// ===========================================================================================
 async fn commit_row_delta(
     catalog: &Arc<dyn Catalog>,
@@ -2666,7 +2540,7 @@ fn sql_literal(value: &str) -> String {
 /// interpolated into generated SQL goes through here: Iceberg/Arrow place no restriction on
 /// column names, so a name containing `"` must not break out of the identifier.
 ///
-/// Delegates to [`crate::write::idents::quote_ident_spark`] (r23 QI1 single-source Spark/DF dialect).
+/// Delegates to [`crate::write::idents::quote_ident_spark`] (single-source Spark/DF dialect).
 pub(super) fn quote_ident(name: &str) -> String {
     crate::write::idents::quote_ident_spark(name)
 }

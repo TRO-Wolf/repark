@@ -1,9 +1,5 @@
-//! Deferred rows #2, #4, #5, #6, #7 (v1 `repark_session::tests::*`, deferred at phase-1 PR-C):
-//! the DDL half of the Spark door — CTAS lowering, namespace `location` handling, and the
-//! catalog metadata surface — exercised end-to-end through `session.sql` on a real session
-//! built with the door installed (`SparkExtension` + `SparkDialect`). Landed phase-2 PR-3a per
-//! `task/port/deferred-tests.md`; row #3 (`session_sql_bare_dml_applies_eagerly`) landed at
-//! PR-3b in `dml_sessions.rs` (eager-DML routing).
+//! End-to-end Spark-door DDL tests for CTAS, namespace locations, and catalog metadata.
+//! Sessions use both [`SparkExtension`] and [`SparkDialect`].
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -35,8 +31,7 @@ fn sample_batch() -> RecordBatch {
     .unwrap()
 }
 
-/// Build the Spark-doored session the way a v1 session was assembled: extension at the two
-/// build hooks, dialect as the session default (v1's `ReparkSession::new()`).
+/// Build a Spark-doored session with the extension and dialect installed as defaults.
 fn spark_session() -> ReparkSession {
     let dialect: Arc<dyn SqlDialect> = Arc::new(SparkDialect);
     ReparkSession::builder()
@@ -146,14 +141,8 @@ async fn create_namespace_with_location_lets_ctas_succeed_on_strict_catalog() {
     );
 }
 
-/// U2-P4 (audit BUG-001, the dual-write at the session seam — the chokepoint the PyO3
-/// `create_namespace` and the facade `spark.create_namespace(..., location=…)` route through):
-/// a `location`-bearing create stores BOTH `location` AND `location_uri`, equal, and nothing
-/// else — asserted on the STORED property map via the test-owned catalog handle. Risk pinned:
-/// without the mirror, `RePark` namespaces never set the canonical field the fork's Glue
-/// catalog maps to the Glue database `locationUri` (what other engines and the fork's own
-/// default-table-path read) — the split-brain half of BUG-001. The CTAS then proves the
-/// dual-keyed namespace still resolves end to end.
+/// Both namespace-create routes store equal `location` and `location_uri` keys. The CTAS then
+/// proves the dual-keyed namespace resolves end to end.
 #[tokio::test]
 async fn create_namespace_with_location_stores_both_location_keys() {
     let wh = TempDir::new().unwrap();

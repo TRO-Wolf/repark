@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 """Enforce the Python conventions Ruff cannot express.
 
-SSOT for the nested-`def` ban, the "Pydantic, never `dataclasses`/`attrs`"
-rule, and the SQP-1 SQL-string-literal-escape rule. Prose (AGENTS.md "Python",
-.agents/skills/code-quality/SKILL.md, .agents/skills/engineering-method/SKILL.md)
-points here and never restates the tables. Mirrors the check_rust_file_size
-dual-wire shape (py = logic + SSOT, sh = wrapper).
+SSOT for the nested-`def` ban, the "Pydantic, never `dataclasses`/`attrs`" rule, and the
+SQP-1 SQL-string-literal-escape rule. Prose points here and never restates the tables.
+Mirrors the check_rust_file_size dual-wire shape (py = logic + SSOT, sh = wrapper).
 
 The other Python conventions are already mechanically enforced and are
 deliberately NOT re-implemented here: type coverage is Ruff's `ANN` rule set
@@ -61,21 +59,16 @@ SCAN_ROOTS: tuple[str, ...] = (
 # The text after the colon is the reason and may not be empty.
 NESTED_DEF_PRAGMA = "# nested-def:"
 
-# repo-relative posix path -> (ceiling, reason). Keys sorted alphabetically.
-# Seeded from the measured tree at the commit that armed this guard (2026-08-21):
-# 66 nested defs across 21 files. PYC-1..3 emptied the shipped package. PYC-4
-# lifted the harness walkers/factories/flush/execute; remaining nested defs
-# are inline `# nested-def:` pragmas (signal handlers, shrink predicate, spy,
-# dual-wire comparator) so they do not need EXCEPTIONS rows. A row whose file
-# drops to zero is deleted rather than kept at 0.
+# repo-relative posix path -> (ceiling, reason). Keys sorted alphabetically; ceilings ratchet
+# DOWN only. The table is empty: remaining nested defs carry inline `# nested-def:` pragmas
+# (signal handlers, shrink predicate, spy, dual-wire comparator). A row whose file drops to
+# zero is deleted rather than kept at 0.
 NESTED_DEF_EXCEPTIONS: dict[str, tuple[int, str]] = {}
 
-# repo-relative posix path -> reason. Keys sorted alphabetically. Every row is
-# debt: the file still imports `dataclasses` and PYC converts it to Pydantic.
-# A row is deleted when its file converts; rows are never added without the
-# owner ruling that the file genuinely cannot take a BaseModel. PYC-3 deleted
-# the two shipped-package rows. PYC-4 converted the harness; this script is
-# invoked as bare ``python3`` from make (no venv pydantic).
+# repo-relative posix path -> reason. Keys sorted alphabetically. Every row is debt: the file
+# still imports `dataclasses` and is converted to Pydantic when its environment allows it. A
+# row is deleted when its file converts; rows are never added without the owner ruling that
+# the file genuinely cannot take a BaseModel.
 DATACLASS_EXCEPTIONS: dict[str, str] = {
     "scripts/check_parity_live_dual_wire.py": (
         "CI dual-wire guard runs as python3 without the wheel venv; cannot take pydantic"
@@ -127,9 +120,8 @@ def find_nested_definitions(
 ) -> list[ast.FunctionDef | ast.AsyncFunctionDef]:
     """Every `def` whose immediate parent is a `def`, minus the pragma-sanctioned ones.
 
-    A method of a class that is itself defined inside a function is NOT a nested
-    definition: its immediate parent is the class, and a local class is a
-    different question from a local function.
+    A method of a class defined inside a function is NOT nested: its immediate parent is the
+    class, a different question from a local function.
     """
     found: list[ast.FunctionDef | ast.AsyncFunctionDef] = []
     stack: list[ast.AST] = [tree]

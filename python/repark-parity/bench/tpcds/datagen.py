@@ -19,7 +19,7 @@ LOGGER = logging.getLogger(__name__)
 # Shared with CLI — library API enforces the same bound.
 MAX_SCALE_FACTOR: Final[float] = 100.0
 
-# DuckDB tpcds / TPC-DS standard 24 base tables (dsdgen materializes these).
+# The TPC-DS standard 24 base tables (dsdgen materializes these).
 TABLES: Final[tuple[str, ...]] = (
     "call_center",
     "catalog_page",
@@ -72,7 +72,6 @@ def ensure_parquet_sf(
         msg = f"scale_factor must be finite and in (0, {MAX_SCALE_FACTOR}]; got {scale_factor!r}"
         raise ValueError(msg)
     root = (data_root if data_root is not None else default_data_root()).expanduser()
-    # Format SF path: 0.01 → sf0.01, 1 → sf1, 10 → sf10
     sf_label = _sf_label(scale_factor)
     out_dir = root / sf_label
     _assert_safe_cache_path(root, out_dir)
@@ -83,7 +82,6 @@ def ensure_parquet_sf(
         LOGGER.info("TPC-DS SF%s parquet cache hit at %s", scale_factor, out_dir)
         return out_dir
 
-    # Drop zero-size / incomplete leftovers before regenerate.
     for table_name in TABLES:
         target = out_dir / f"{table_name}.parquet"
         if target.is_symlink() or (target.is_file() and target.stat().st_size == 0):
@@ -148,7 +146,6 @@ def _sf_label(scale_factor: float) -> str:
     """Canonical cache directory name for a scale factor."""
     if scale_factor == int(scale_factor):
         return f"sf{int(scale_factor)}"
-    # trim trailing zeros: 0.010 → 0.01
     text = f"{scale_factor:g}"
     return f"sf{text}"
 

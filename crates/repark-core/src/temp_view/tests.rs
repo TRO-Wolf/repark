@@ -1,4 +1,4 @@
-//! Unit pins for the temp-view name choke point (R6-1).
+//! Unit pins for the temp-view name choke point.
 
 use super::{TempViewHome, temp_view_ref, temp_view_ref_from_segment};
 
@@ -6,15 +6,12 @@ fn home() -> TempViewHome {
     TempViewHome {
         catalog: "datafusion".to_string(),
         schema: "public".to_string(),
-        // NAME-only home: these unit pins are about the name rule. The provider-identity half of
-        // the home (`assert_home_intact`) needs a live `SessionContext`, so it is pinned in
-        // `repark-core/tests/temp_view_doors.rs` instead.
+        // These unit pins cover name resolution; provider identity requires a live session.
         provider: None,
     }
 }
 
-/// Kills: forwarding the raw name to `register_table` (BASE) — a one-part name must be pinned
-/// `Full` against the HOME, not left `Bare` for the live default catalog to resolve.
+/// A single-part name resolves to the build-time home, not the live default catalog.
 #[test]
 fn a_single_part_name_is_pinned_full_against_the_home() {
     let reference = temp_view_ref(&home(), "v").expect("one-part name registers");
@@ -23,8 +20,7 @@ fn a_single_part_name_is_pinned_full_against_the_home() {
     assert_eq!(reference.table(), "v");
 }
 
-/// Kills: dropping the `parse_str` and building the reference from the raw `&str` — that would
-/// silently change identifier normalization (BASE lowercased unquoted names via `register_table`).
+/// Identifier normalization follows DataFusion: unquoted names fold; quoted names preserve case.
 #[test]
 fn identifier_normalization_matches_datafusions_own_parse() {
     assert_eq!(temp_view_ref(&home(), "MyView").unwrap().table(), "myview");
@@ -36,10 +32,7 @@ fn identifier_normalization_matches_datafusions_own_parse() {
     assert_eq!(temp_view_ref(&home(), r#""a.b""#).unwrap().table(), "a.b");
 }
 
-/// Kills: letting a qualified name through (the R6-1 leak). The four-part row also kills
-/// trusting `TableReference::parse_str`'s arity alone — MEASURED: it returns
-/// `Bare { table: "a.b.c.d" }` past three parts, so a `Bare` check by itself would let a
-/// qualified spelling become one oddly-named temp view.
+/// Qualified names refuse at every arity, including parser fallback for four-part input.
 #[test]
 fn qualified_names_refuse_at_every_arity() {
     for name in ["ice.sales.v", "sales.v", "a.b.c.d"] {
@@ -53,9 +46,7 @@ fn qualified_names_refuse_at_every_arity() {
     }
 }
 
-/// Kills: re-parsing an ALREADY-parsed segment on the `table_exists` path — which refused the
-/// allowed quoted spelling `"a.b"` as "qualified" (round-6 critic S3) — and kills dropping the
-/// case fold, which BASE got for free from `TableReference::parse_str` inside `table_exist(&str)`.
+/// The segment overload preserves quoted dots and folds unquoted names like `parse_str`.
 #[test]
 fn the_segment_overload_normalizes_like_parse_str() {
     let home = home();
@@ -78,9 +69,7 @@ fn the_segment_overload_normalizes_like_parse_str() {
     assert_eq!(reference.schema(), Some("public"));
 }
 
-/// Kills: dropping the R7-1 home-spelling arm (product read paths would lose the ONLY spelling
-/// that survives a `SET datafusion.catalog.default_catalog`), and kills widening it to "any
-/// three-part name" — a different catalog is still a refusal, which is the whole R6-1 rule.
+/// Only the session's own home-qualified spelling resolves; other three-part names refuse.
 #[test]
 fn the_sessions_own_home_spelling_is_the_home_not_a_qualified_refusal() {
     let home = home();

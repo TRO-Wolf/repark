@@ -10,7 +10,7 @@ fresh execution through each door whose guard lifts).
 
 **Retires:** moved to `completed/` in this unit's departure commit.
 
-**Why now.** RP-2 ([completed ledger](../completed/rp-2-fork-repin-ledger.md)) left every
+**Why now.** RP-2 ([completed ledger](../archive/2026-08/2026-08-28-rp-2-fork-repin-ledger.md)) left every
 live-DV input guarded because the engine's DELETE on a Spark-written shared Puffin resurrected a
 row (finding F-rp2-1: the Puffin held two DV blobs, the engine superseded the container by path
 and dropped the untouched sibling). The fork fixed the invariant as **F-17** (fork #237,
@@ -58,7 +58,7 @@ with its pin (`pins: rp-3-fork-repin/C-NNN`) and the owner confirms.
 
 ## 3. Pickup — what the next agent needs to know
 
-- Read the [RP-2 completed ledger](../completed/rp-2-fork-repin-ledger.md) first: finding
+- Read the [RP-2 completed ledger](../archive/2026-08/2026-08-28-rp-2-fork-repin-ledger.md) first: finding
   F-rp2-1 is the defect the guard holds, with its mechanism and the fixture path.
 - The fork's F-17 evidence: fork PR #237 — `crates/iceberg/src/delete_vector_container.rs`,
   `crates/iceberg/src/transaction/row_delta.rs`, and

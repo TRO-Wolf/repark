@@ -2,7 +2,7 @@
 
 ## Purpose
 
-File-backed tests for `../alter.rs` — `ALTER TABLE`.
+File-backed tests for `../alter.rs` (`ALTER TABLE`).
 
 The schema-evolution half needs a real Iceberg catalog, so it is pinned end to end in
 `../tests.rs`; what lives here is the `SET PROPERTIES` recognizer and its curated vocabulary,

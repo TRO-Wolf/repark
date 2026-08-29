@@ -1,7 +1,7 @@
 """Spark SQL type objects for :meth:`repark.column.Column.cast` and schema surface.
 
-Near-drop-in for ``pyspark.sql.types`` constructors used by scripts and the Apache
-``test_types`` census (simpleString / typeName / json / fromDDL / StructType.add /
+Near-drop-in for ``pyspark.sql.types`` constructors used by scripts and tests.
+Supported surfaces include simpleString / typeName / json / fromDDL / StructType.add /
 ArrayType / MapType / Row-adjacent). Each type maps to a *canonical engine type string*
 (``_engine_type``) that native ``PyColumn.cast`` parses into an Arrow ``DataType``.
 
@@ -457,7 +457,7 @@ class LongType(DataType):
     """64-bit signed integer (Arrow ``Int64``; PySpark ``LongType``).
 
     Engine cast string is ``"long"`` / bigint path. Distinct from :class:`IntegerType` so
-    ``Column.cast(LongType())`` and schema literals resolve (X1 census / ColumnTests).
+    ``Column.cast(LongType())`` and schema literals resolve.
     """
 
     def __init__(self) -> None:
@@ -992,7 +992,6 @@ _ATOMIC_TYPE_NAMES: dict[str, type[DataType]] = {
     "string": StringType,
     "str": StringType,
     # Bare VARCHAR (no length) is treated as string — nested engine markers from
-    # session._data_type_to_sql_type historically emitted VARCHAR (octo X2 C1).
     "varchar": StringType,
     "binary": BinaryType,
     "boolean": BooleanType,
@@ -1488,11 +1487,6 @@ def repark_type_to_arrow(data_type: DataType) -> Any:
     return pa.string()
 
 
-# ==================================================================================================
-# Private Spark type helpers (F1 true-EC) — Apache test_types imports these from pyspark.sql.types
-# ==================================================================================================
-
-
 def _merge_type(a: DataType, b: DataType, name: str | None = None) -> DataType:
     """Merge two Spark SQL types for schema inference (pyspark ``_merge_type`` parity).
 
@@ -1720,7 +1714,6 @@ def _make_type_verifier(
             # Spark accepts many types for string fields; type check is soft here.
             return
         if isinstance(data_type, IntegerType):
-            # Reject bool/float/str/other (octo C3-Q-002) — was soft fall-through.
             if name is not None:
                 raise PySparkTypeError(
                     errorClass="FIELD_DATA_TYPE_UNACCEPTABLE_WITH_NAME",
@@ -1742,8 +1735,6 @@ def _make_type_verifier(
 
     return verifier
 
-
-# === G15: collation refuse (first evaluation, not construction) ===============================
 
 COLLATION_REFUSAL_NEEDLE = "does not implement collation"
 _DEFAULT_BINARY_COLLATION = "UTF8_BINARY"

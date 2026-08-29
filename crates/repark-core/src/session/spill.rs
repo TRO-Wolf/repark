@@ -1,12 +1,7 @@
-//! `FairSpillPool` install, runtime SET intercept, and spill-disk (`temp_directory`) policy.
+//! Install `FairSpillPool` and intercept runtime memory and temporary-directory settings.
 //!
-//! DataFusion 54.1's `SET datafusion.runtime.memory_limit` handler rebuilds the live
-//! `RuntimeEnv` with a `GreedyMemoryPool` inside `TrackConsumersPool` — the pool type its
-//! own rustdoc says "works well for queries that do not need to spill". Repark intercepts
-//! that key at [`crate::ReparkSession::sql_with`] (every door, including raw SQL `SET`) and
-//! swaps a **new** [`FairSpillPool`] of the requested size. `FairSpillPool` stores
-//! `pool_size` outside its mutex — there is no in-place resize — so in-flight reservations
-//! stay on the old pool.
+//! DataFusion 54.1 cannot resize a `FairSpillPool` in place, so runtime memory settings swap a
+//! new pool and leave in-flight reservations on the old pool.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -29,15 +24,8 @@ pub(crate) const MIN_MEMORY_LIMIT_BYTES: usize = 1024 * 1024;
 
 /// Cap of the RAM-relative default `FairSpillPool` (and the historical 8 GiB constant).
 ///
-/// The live default is [`default_memory_limit_bytes`]:
-/// `clamp(0.6 × detected, MIN_MEMORY_LIMIT_BYTES, DEFAULT_MEMORY_LIMIT_BYTES)` where
-/// `detected` is cgroup `memory.max` (if present and not `max`) else `/proc/meminfo`
-/// `MemTotal`. Read **only** at `build()` (ADR-0004: never at query time). Explicit
-/// builder / `SET` wins; `0` stays unbounded.
-///
-/// `sort_spill_reservation_bytes × target_partitions` is a **non-spillable** floor claimed
-/// per partition by `ExternalSorterMerge` before a row is sorted. At shipped defaults that
-/// floor scales with host cores (10 MiB × cores).
+/// The live default clamps 60% of cgroup or host memory to the configured minimum and maximum.
+/// It resolves only at build; explicit builder or runtime values win, and zero is unbounded.
 pub(crate) const DEFAULT_MEMORY_LIMIT_BYTES: usize = 8 * BYTES_PER_GB;
 
 /// ===========================================================================================
@@ -117,14 +105,8 @@ pub(crate) const TEMP_DIRECTORY_RUNTIME_REFUSAL: &str = "datafusion.runtime.temp
 const REPARK_MEMORY_LIMIT_KEYS: &[&str] =
     &["repark.memory.limit.gb", "spark.repark.memory.limit.gb"];
 
-/// Repark-owned pseudo-keys that share the `datafusion.` prefix but are NOT DataFusion
-/// `ConfigOptions` keys, excluded from `apply_datafusion_config_keys`'s build-time sweep.
-///
-/// `datafusion.runtime.memory_limit` is applied to a [`FairSpillPool`] at `build()` and on
-/// runtime `SET`. `datafusion.runtime.temp_directory` is applied via
-/// `RuntimeEnvBuilder::with_temp_file_path` at `build()` only; runtime SET refuses loud
-/// (names `TMPDIR`). Pushing either through `options_mut().set` fails loud. The exclusion is
-/// EXACT-KEY, never a prefix: a typo of a pseudo-key must still fail loud.
+/// Repark-owned `datafusion.` pseudo-keys excluded from DataFusion option parsing. Memory applies
+/// to `FairSpillPool`; temporary-directory applies only at build and runtime SET refuses loudly.
 pub const REPARK_OWNED_DATAFUSION_PSEUDO_KEYS: &[&str] = &[MEMORY_LIMIT_KEY, TEMP_DIRECTORY_KEY];
 
 /// ===========================================================================================

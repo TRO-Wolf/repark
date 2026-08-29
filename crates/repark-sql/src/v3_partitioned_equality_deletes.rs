@@ -1,8 +1,5 @@
 //! Model: Grok 4.6 xHigh
-//!
 //! ANSI-door pins for Spark-written partitioned v3 DV and equality-delete
-//! fixtures. This door refuses `CALL`; adoption uses `Catalog::register_table`.
-//!
 //! pins: v3e-3-partitioned-eqdel-fixtures/C-007, C-008, C-010
 
 use std::collections::HashSet;

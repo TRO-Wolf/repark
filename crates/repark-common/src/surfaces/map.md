@@ -3,7 +3,8 @@
 ## Purpose
 
 File-backed tests for the SQL surface registry (`../surfaces.rs`) — the dialect-neutral ID list
-both SQL doors are audited against (design `docs/design/sql-doors.md` §2 Q13, graft G2).
+both SQL doors are audited against, with mutation directives for its invariants (design
+`docs/design/sql-doors.md` §2 Q13, graft G2).
 
 ## Contents
 

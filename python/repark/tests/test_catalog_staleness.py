@@ -1,12 +1,10 @@
 """T6 / CQ-008 / BUG-007 — catalog listing list-on-access (out-of-band create/drop).
 
-Pins: after a Catalog-API create that does **not** re-register the DataFusion provider,
-``spark.catalog.listTables`` still sees the table; after an out-of-band drop it is absent
-(not a phantom). Includes OOB drop of a **DF-known** name (product CREATE then Catalog-API
-drop without reregister) — must not hard-fail via information_schema (F-T6-PHANTOM-A /
-F-T6-PIN-DROP-A). Temps still list when Iceberg side is cleaned (F-T6-TEMP-A). Free SQL
-residual (provider snapshot) is covered in the Rust residual pin and ADR-0004 — not claimed
-fixed here.
+After a Catalog-API create that does not re-register the DataFusion provider,
+``spark.catalog.listTables`` still sees the table; after an out-of-band drop it is absent, not a
+phantom — including OOB drop of a DF-known name (F-T6-PHANTOM-A / F-T6-PIN-DROP-A). Temps still
+list when the Iceberg side is cleaned (F-T6-TEMP-A). Free-SQL residual is covered in the Rust
+residual pin and ADR-0004 — not claimed fixed here.
 """
 
 from __future__ import annotations

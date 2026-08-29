@@ -1,8 +1,8 @@
-"""BH-1 target_partitions emit / session contract.
+"""Target_partitions emit / session contract.
 
 Primary cells omit the session knob (DataFusion ``num_cpus`` default) and emit
-``target_partitions=default``. Isolation cells set ``target_partitions=1`` and
-emit ``isolation=single_core``. No spaces in TA_PIPELINE kv values.
+``target_partitions=default``; isolation cells set ``target_partitions=1`` and emit
+``isolation=single_core``. No spaces in TA_PIPELINE kv values.
 """
 
 from __future__ import annotations

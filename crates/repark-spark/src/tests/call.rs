@@ -1,15 +1,11 @@
-/// C3-L-001 residual: unknown / deferred `CALL system.*` procedures fail loud listing
-/// the supported set (the three I3 procs succeed separately).
+/// Unknown or deferred procedures fail loudly and list the supported set.
 use super::super::*;
 use super::common::*;
 
-/// MW-1: Spark's full six-column `expire_snapshots` result, in Spark's order and nullability.
-///
-/// Measured on a live Spark 4.0.1 + Iceberg 1.10.0 oracle — the 4.1.2 oracle cannot execute this
-/// procedure (a Spark 4.0-to-4.1 `DataSourceV2Relation.create` signature break), which is why the
-/// campaign runs two. Nullability comes from the shipping jar's `OUTPUT_TYPE` constant:
-/// `iconst_1` on each `StructField`. This engine had pinned all six non-nullable while agreeing
-/// with Spark on the two rewrite procedures — one procedure out of step, not a blanket policy.
+/// MW-1: Spark's live 4.0.1 + Iceberg 1.10.0 oracle defines the six-column `expire_snapshots`
+/// schema and nullability. Spark 4.1.2 cannot execute this procedure because of a
+/// `DataSourceV2Relation.create` signature break. The shipping jar's `OUTPUT_TYPE` uses
+/// `iconst_1` for each `StructField`.
 fn assert_expire_schema_is_sparks(batch: &datafusion::arrow::array::RecordBatch) {
     assert_eq!(batch.num_columns(), 6, "expire result schema is Spark's");
     let names: Vec<_> = batch
@@ -63,7 +59,6 @@ async fn call_unknown_procedure_refuses_loud_listing_supported() {
     );
 }
 
-/// `remove_orphan_files` is a deliberate loud-unsupported (fork-queue; do not hand-roll).
 /// I3: `rollback_to_snapshot` restores the prior multiset; result columns match Spark.
 #[tokio::test]
 async fn call_rollback_to_snapshot_restores_multiset() {
@@ -654,19 +649,8 @@ fn expire_result_i64(batches: &[RecordBatch], name: &str) -> i64 {
 
 /// pins: rp-1-fork-repin/C-009
 ///
-/// MW-1: the expire result splits content files the way Spark does, with real numbers behind it.
+/// The expire result splits content files into Spark's typed columns.
 ///
-/// **Measured on a live Spark 4.0.1 + Iceberg 1.10.0 oracle.** Three merge-on-read MERGEs plus a
-/// compaction expire as `deleted_data_files_count=4` and
-/// `deleted_position_delete_files_count=2`. RP-1 / fork F-2: the three content-file columns
-/// come from `CleanupReport`'s typed views. Before F-2 the engine rebuilt the split from a
-/// pre-expiry walk; this pin still holds the split, now sourced from the fork.
-///
-/// **Why this reaches the position-delete column by rollback rather than by compaction:** this
-/// engine's `rewrite_data_files` rewrites data files and KEEPS the position deletes (verified —
-/// the compacted table still reads correctly, with the deletes still applied). Orphaning a
-/// delete file through compaction is what `rewrite_position_delete_files` is for, and that is
-/// MW-2. Rolling back past the MERGEs strands their delete files now, without waiting.
 #[tokio::test]
 async fn call_expire_splits_content_files_like_spark() {
     let wh = TempDir::new().unwrap();
@@ -780,13 +764,8 @@ async fn call_expire_splits_content_files_like_spark() {
     );
 }
 
-/// MW-1: the maintenance fence is lifted for BOTH remote catalog policies.
-///
-/// The refusal was a v1 blast-radius decision, not a capability gap — nothing downstream of the
-/// gate assumes a local filesystem. The owner ruled on 2026-08-21 to lift for both, so a
-/// Glue-policy and an S3-Tables-policy catalog each execute the three procedures. What the fence
-/// guarded against is a commit conflict the fork's own `validate_data_files_exist` already
-/// catches loudly (fork `ENGINE_CONTRACT` §8), not corruption.
+/// Maintenance procedures execute under both remote catalog policies; unknown catalogs still
+/// refuse.
 #[tokio::test]
 async fn call_runs_against_both_remote_catalog_policies() {
     for policy in [
@@ -1078,9 +1057,7 @@ async fn call_rewrite_position_delete_files_is_a_zero_result_when_there_is_nothi
     }
 }
 
-/// Registry row `MOR-1` retired (RP-1 / fork F-1) — the position-delete planner now shares
-/// Spark's `min-input-files = 5` floor. Four files is the largest count that used to disagree.
-///
+/// The position-delete planner follows Spark's `min-input-files = 5` floor.
 /// pins: rp-1-fork-repin/C-007
 #[tokio::test]
 async fn call_mor1_compacts_below_sparks_min_input_files_floor() {
@@ -1160,9 +1137,6 @@ async fn call_rpdf_compacts_at_sparks_min_input_files_floor() {
     );
 }
 
-/// Registry row `MOR-2` closed for RePark-owned MERGE (fork SQL DELETE/UPDATE still
-/// partition-group; `fork_table_provider_delete_is_not_this_writer`).
-///
 /// Spark-default `write.delete.granularity = 'file'`.
 ///
 /// One MERGE touching six distinct data files writes SIX position-delete files. The MW-2 pin
@@ -1254,16 +1228,9 @@ async fn call_rewrite_position_delete_files_refuses_options_and_where() {
     }
 }
 
-/// MW-2: `rewrite_data_files` returns Spark's FIVE columns — the fifth was previously omitted.
-///
-/// Oracle — live Spark 4.0.1 + Iceberg 1.10.0. `removed_delete_files_count` read `0` on every
-/// fixture measured, including a partitioned table with six data files per partition and twelve
-/// live position deletes, run BOTH with `options => map('remove-dangling-deletes','true')` and
-/// with the default options. The Java default for that option is false
-/// (`RewriteDataFiles.REMOVE_DANGLING_DELETES_DEFAULT`, javap-verified against the shipping jar),
-/// and this procedure refuses the options map, so the non-default path is unreachable here.
-///
-/// Before MW-2 a job migrating off Spark got a missing-column error where it read this.
+/// `rewrite_data_files` returns Spark's five-column schema, including `removed_delete_files_count`.
+/// Oracle: live Spark 4.0.1 + Iceberg 1.10.0; the options-map form refuses, so the default path is
+/// the supported case.
 #[tokio::test]
 async fn call_rewrite_data_files_returns_sparks_five_columns() {
     let wh = TempDir::new().unwrap();
@@ -1333,7 +1300,7 @@ async fn call_rewrite_data_files_returns_sparks_five_columns() {
 /// rather than through a fixture because **this engine cannot produce a deletion vector**: it
 /// creates tables at format v2 (`'format-version' = '3'` refuses at CREATE) and refuses
 /// merge-on-read writes on a v3 table. Pinning the vector-present path end to end needs a v3
-/// table written by another engine. That fixture landed in V3-1 (`fixtures/v3-spark-mor/` +
+/// table written by another engine. That fixture lives in `fixtures/v3-spark-mor/` +
 /// `call_register.rs`). What IS pinned here is the other half — that the guard does not
 /// fire on the v2 tables this engine does write — by every other rewrite pin in this file, and
 /// explicitly by `call_rewrite_position_delete_files_guard_passes_a_v2_table`.

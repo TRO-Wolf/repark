@@ -1,8 +1,4 @@
-//! Native-door execute pins for the M11 lone-unconditional-DELETE cardinality exemption.
-//!
-//! The shared executor skips `MERGE_CARDINALITY_VIOLATION` only when `spec.matched` is exactly
-//! one unconditional `DELETE`. These pins go through the ANSI door (`crate::execute`) on a
-//! native session and assert on the Arrow path (value AND type).
+//! Native-door execute pins for the lone-unconditional-DELETE cardinality exemption.
 
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -133,8 +129,7 @@ fn id_name_rows(batches: &[RecordBatch]) -> Vec<(i64, String)> {
     rows
 }
 
-/// Dup source keys + lone unconditional `WHEN MATCHED THEN DELETE` must commit; survivor is
-/// the unmatched target row (id=1 / name='a').
+/// Duplicate source keys plus lone unconditional `WHEN MATCHED THEN DELETE` must commit; the survivor is checked.
 #[tokio::test]
 async fn merge_dup_source_keys_unconditional_delete_succeeds() {
     let door = door_with_schema().await;

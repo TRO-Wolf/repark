@@ -550,7 +550,7 @@ fn arrow_rows(b: &datafusion::arrow::array::RecordBatch) -> usize {
 }
 
 // ---------------------------------------------------------------------------------------
-// r21 T6 — catalog listing staleness (CQ-008 / BUG-007). AWS-free MemoryCatalog only.
+// catalog listing staleness (CQ-008 / BUG-007). AWS-free MemoryCatalog only.
 // ---------------------------------------------------------------------------------------
 
 /// Documented strategy pin: facade uses list-on-access (not TTL).
@@ -763,7 +763,7 @@ async fn live_list_namespaces_sees_oob_namespace() {
     );
 }
 
-/// PERF-07 / octo C3-Q-001: product CREATE NAMESPACE shape — invalidate one ns adds it to DF.
+/// PERF-07: product CREATE NAMESPACE shape — invalidate one ns adds it to DF.
 #[tokio::test]
 async fn invalidate_adds_new_namespace_to_df_provider() {
     let wh = TempDir::new().expect("tempdir");
@@ -802,7 +802,7 @@ async fn invalidate_adds_new_namespace_to_df_provider() {
     );
 }
 
-/// T6 / octo C3-Q-002: OOB namespace drop — live list clean; DF phantoms until full rebuild.
+/// T6: OOB namespace drop — live list clean; DF phantoms until full rebuild.
 #[tokio::test]
 async fn oob_namespace_drop_phantoms_until_full_rebuild() {
     let wh = TempDir::new().expect("tempdir");
@@ -853,7 +853,7 @@ async fn oob_namespace_drop_phantoms_until_full_rebuild() {
 }
 
 // ---------------------------------------------------------------------------------------
-// r24 P7 / PERF-07 — incremental namespace invalidation (counting catalog, no AWS).
+// PERF-07 — incremental namespace invalidation (counting catalog, no AWS).
 // ---------------------------------------------------------------------------------------
 
 /// Boxed future for desugared [`Catalog`] methods (no `async-trait` dep in this crate).
@@ -1261,7 +1261,7 @@ async fn incremental_provider_preserves_oob_staleness_residual() {
     );
 }
 
-/// PERF-07 / octo C2-Q-001: live table drop + namespace invalidate must clear DF phantoms
+/// PERF-07: live table drop + namespace invalidate must clear DF phantoms
 /// (product DROP TABLE shape — no silent drop cache after invalidate).
 #[tokio::test]
 async fn invalidate_after_live_table_drop_removes_df_name() {
@@ -1325,7 +1325,7 @@ async fn invalidate_after_live_table_drop_removes_df_name() {
     );
 }
 
-/// PERF-07 / octo C1-Q-001: product DROP NAMESPACE path must not list (zero-list map remove).
+/// PERF-07: product DROP NAMESPACE path must not list (zero-list map remove).
 #[tokio::test]
 async fn drop_namespace_from_provider_is_zero_list() {
     let wh = TempDir::new().expect("tempdir");
@@ -1377,7 +1377,7 @@ async fn drop_namespace_from_provider_is_zero_list() {
     );
 }
 
-/// PERF-07 / octo C1-Q-002: empty invalidate is a no-op (does not silently full-rebuild / heal OOB).
+/// PERF-07: empty invalidate is a no-op (does not silently full-rebuild / heal OOB).
 /// pins: rp-1-fork-repin/C-011
 #[tokio::test]
 async fn empty_invalidate_is_noop_not_full_rebuild() {
@@ -1421,7 +1421,7 @@ async fn empty_invalidate_is_noop_not_full_rebuild() {
     );
 }
 
-/// PERF-07 / octo C1-Q-004: multi-namespace invalidate is O(|namespaces|) not O(databases).
+/// PERF-07: multi-namespace invalidate is O(|namespaces|) not O(databases).
 #[tokio::test]
 async fn invalidate_two_namespaces_is_o_namespaces_not_o_databases() {
     let wh = TempDir::new().expect("tempdir");
@@ -1493,7 +1493,7 @@ async fn invalidate_two_namespaces_is_o_namespaces_not_o_databases() {
     );
 }
 
-/// PERF-07 / octo C6-Q-001: invalidating one namespace must not rebuild sibling schema Arcs.
+/// PERF-07: invalidating one namespace must not rebuild sibling schema Arcs.
 #[tokio::test]
 async fn invalidate_preserves_sibling_schema_arc_identity() {
     let wh = TempDir::new().expect("tempdir");
@@ -1544,7 +1544,7 @@ async fn invalidate_preserves_sibling_schema_arc_identity() {
     );
 }
 
-/// PERF-07 / octo C5-Q-001: same-Arc rebuild is the ADR-0004 escape hatch (in-place heal).
+/// PERF-07: same-Arc rebuild is the ADR-0004 escape hatch (in-place heal).
 /// pins: rp-1-fork-repin/C-011
 #[tokio::test]
 async fn rebuild_same_catalog_heals_oob_and_stays_repark_provider() {
@@ -1611,7 +1611,7 @@ async fn rebuild_same_catalog_heals_oob_and_stays_repark_provider() {
     );
 }
 
-/// PERF-07 / octo C4-Q-001: invalidate/drop on an unregistered catalog name fail-loud
+/// PERF-07: invalidate/drop on an unregistered catalog name fail-loud
 /// (must not silently register a new DF catalog under a typo).
 #[tokio::test]
 async fn invalidate_unregistered_catalog_fails_loud() {
@@ -1647,7 +1647,7 @@ async fn invalidate_unregistered_catalog_fails_loud() {
     );
 }
 
-/// PERF-07 / octo C1-Q-003: rebuild with a different catalog Arc replaces the provider
+/// PERF-07: rebuild with a different catalog Arc replaces the provider
 /// (does not silently `refresh_all` from the old interior handle).
 #[tokio::test]
 async fn rebuild_with_different_catalog_arc_rebinds_provider() {

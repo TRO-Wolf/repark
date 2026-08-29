@@ -1,8 +1,7 @@
-"""Pandas / Python UDF surface extracted from ``functions.py`` (FN-SPLIT).
+"""Python and pandas UDF markers and validation helpers.
 
-Move-only: every name here previously lived in ``repark.spark.functions``.
-Public names are re-exported from ``functions.py`` so ``from repark.spark.functions
-import pandas_udf`` is unchanged.
+Decorators preserve Spark evaluation-type tags and declared return types. DataFrame execution
+owns the Arrow bridge; unsupported composition and unsafe type fallbacks fail loudly.
 """
 
 from __future__ import annotations
@@ -19,19 +18,13 @@ from repark.spark.column import Column
 from repark.spark.functions import col
 from repark.spark.udtf import UserDefinedTableFunction
 
-# =============================================================================
-# U7 — scalar pandas_udf (decorator/export only; bridge lives in dataframe.py)
-# =============================================================================
-
 
 class PandasUDFType:
     """Eval-type tags mirroring ``pyspark.sql.functions.PandasUDFType`` (int values).
 
     Values match PySpark 4.1.2: SCALAR=200, GROUPED_MAP=201, GROUPED_AGG=202,
-    SCALAR_ITER=204. repark implements **SCALAR**, **SCALAR_ITER**, and **GROUPED_AGG**
-    (M5/M6). **GROUPED_MAP** remains loud-unsupported. Window form is **GROUPED_AGG**
-    + :meth:`PandasUDFColumn.over` over ``Window.partitionBy`` (unbounded whole-partition
-    only — M6); ``functionType=WINDOW`` stays a loud refuse (use GROUPED_AGG + ``.over``).
+    SCALAR_ITER=204. Repark supports scalar, iterator, grouped-aggregate, and windowed
+    grouped-aggregate forms. Grouped-map and ``functionType=WINDOW`` forms are refused.
     """
 
     SCALAR = 200
@@ -62,8 +55,6 @@ def _is_pandas_udf_function_type(value: Any) -> bool:
         }
     if isinstance(value, str):
         # Include WINDOW so positional ``@pandas_udf("long", "WINDOW")`` routes to the
-        # FT-first / normalize UOE (M6 seed) instead of the dual-returnType refuse
-        # (octo M5 C4 — window pandas_udf HARD OUT honesty).
         return value.upper() in {
             "SCALAR",
             "SCALAR_ITER",
@@ -81,7 +72,7 @@ def _pandas_udf_refuse_fail_open_string_leaves(data_type: Any, arrow_type: Any) 
     Top-level and nested (array/map/struct-in-array) variant / interval / time markers
     fail-open to ``pa.string()`` via ``repark_type_to_arrow`` — walk leaves so
     ``array<variant>`` / ``map<string,time>`` / ``array<struct<a:variant>>`` cannot
-    silently declare string payloads (octo C1-SEC-001 top-level; C2-SEC-001 nested).
+    silently declare string payloads.
     """
     import pyarrow as pa
 
@@ -147,7 +138,7 @@ def _pandas_udf_arrow_type_for_return(data_type: Any) -> Any:
 
     ``repark_type_to_arrow`` / ``_sql_type_to_arrow`` map unknown markers (variant / interval /
     time / …) to ``pa.string()``. Scalar pandas_udf must not silently declare string when the
-    user asked for another type (octo C1-SEC-001 top-level; C2-SEC-001 nested leaves).
+    user asked for another type.
     """
     from repark.spark.session import _data_type_to_sql_type, _sql_type_to_arrow
     from repark.spark.types import (
@@ -183,13 +174,13 @@ def _normalize_pandas_udf_return_type_sql(return_type: Any) -> str:
 
     Stores :meth:`~repark.types.DataType.simpleString` (not ``_data_type_to_sql_type``), so
     ``timestamp_ntz`` / ``varchar(n)`` / ``char(n)`` survive round-trip through the bridge
-    ``DataType.fromDDL`` → :attr:`DataFrame.schema` (octo C4-Q-001). Engine cast tokens
+    ``DataType.fromDDL`` → :attr:`DataFrame.schema`. Engine cast tokens
     (``TIMESTAMP`` / ``STRING``) collapse those distinctions and must not be stored.
 
     Parses string DDL fully so field-list forms (``a int, b string`` / ``a: int``) are
-    detected as :class:`~repark.types.StructType` and refused (octo C1-SEC-002), not only
+    detected as :class:`~repark.types.StructType` and refused, not only
     ``struct…`` prefixes. Unsupported markers that would fail-open to Arrow string are
-    refused (octo C1-SEC-001). Arrow physical mapping still uses ``_data_type_to_sql_type``
+    refused. Arrow physical mapping still uses ``_data_type_to_sql_type``
     inside :func:`_pandas_udf_arrow_type_for_return` at validation / bridge time.
     """
     from repark.spark.types import DataType, StructType
@@ -198,7 +189,6 @@ def _normalize_pandas_udf_return_type_sql(return_type: Any) -> str:
         text = return_type.strip()
         if not text:
             raise PySparkTypeError("pandas_udf returnType must be a non-empty type string")
-        # Prefix refuse keeps the historical M5 message for explicit struct spellings.
         if text.lower().startswith("struct"):
             raise UnsupportedOperationException(
                 "pandas_udf StructType / struct returnType is not supported in repark v1 "
@@ -211,7 +201,6 @@ def _normalize_pandas_udf_return_type_sql(return_type: Any) -> str:
                 f"pandas_udf returnType {text!r} is not a valid type: {error}"
             ) from error
         # Field-list DDL (``a int, b string`` / ``a: int``) parses as StructType without a
-        # ``struct`` prefix — refuse the same as StructType objects (octo C1-SEC-002).
         if isinstance(parsed, StructType):
             raise UnsupportedOperationException(
                 "pandas_udf StructType / struct returnType is not supported in repark v1 "
@@ -235,7 +224,7 @@ def _normalize_pandas_udf_return_type_sql(return_type: Any) -> str:
 
 
 def _normalize_pandas_udf_function_type(function_type: Any) -> int:
-    """Accept SCALAR / SCALAR_ITER / GROUPED_AGG; GROUPED_MAP + window are loud seeds."""
+    """Accept SCALAR, SCALAR_ITER, and GROUPED_AGG; refuse GROUPED_MAP and window forms."""
     if function_type is None:
         return PandasUDFType.SCALAR
     if isinstance(function_type, str):
@@ -277,16 +266,16 @@ class PandasUDFColumn:
 
     Produced by calling a :func:`pandas_udf`-decorated function with column arguments.
 
-    * **SCALAR / SCALAR_ITER** — top-level ``select`` / ``withColumn`` only (U7/M5 bridge).
-    * **GROUPED_AGG** — ``groupBy(...).agg(...)`` (M5 pure / M6 mixed with builtins).
+    * **SCALAR / SCALAR_ITER** — top-level ``select`` / ``withColumn`` only.
+    * **GROUPED_AGG** — ``groupBy(...).agg(...)``.
     * **Windowed GROUPED_AGG** — ``.over(Window.partitionBy(...))`` unbounded whole-partition
-      (M6); M7 adds ``orderBy`` with default frame
+      with ``orderBy`` and the default frame
       ``ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW``, plus duck-typed
-      ``_frame_start`` / ``_frame_end`` when G2 lands ``rowsBetween`` plumbing.
+      ``_frame_start`` / ``_frame_end`` integer offsets.
 
     Mid-expression composition (``udf_col + 1``, ``udf_col > 0`` in filter, nesting under
     ``coalesce``) is refused — the result is a mapInArrow / applyInPandas bridge-node
-    output, same composition limit class as ``mapInArrow`` (U7 v1).
+    output, with the same composition limit as ``mapInArrow``.
     """
 
     __slots__ = (
@@ -314,10 +303,9 @@ class PandasUDFColumn:
 
         ``return_type_sql`` is re-normalized here so a hostile public constructor call
         (or a hand-built marker) cannot skip decorator validation and fail-open to
-        Arrow string via ``_sql_type_to_arrow`` (octo C3-SEC-001).
+        an Arrow string.
         """
         self._user_func = user_func
-        # Revalidate every construction path — not only ``@pandas_udf`` (octo C3-SEC-001).
         self._return_type_sql = _normalize_pandas_udf_return_type_sql(return_type_sql)
         self._inputs = list(inputs)
         self._function_name = function_name
@@ -340,23 +328,20 @@ class PandasUDFColumn:
         )
 
     def over(self, window: Any) -> PandasUDFColumn:
-        """Attach a window for GROUPED_AGG (M6 unbounded / M7 ordered frames).
+        """Attach a window for GROUPED_AGG with an optional ordered frame.
 
         Accepted :class:`~repark.window.WindowSpec` forms:
 
-        * ``Window.partitionBy(...)`` only — unbounded whole-partition (M6).
+        * ``Window.partitionBy(...)`` only — unbounded whole-partition.
         * ``Window.partitionBy(...).orderBy(...)`` — default frame
-          ``ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`` (M7 engine frames).
-        * Same with duck-typed ``_frame_start`` / ``_frame_end`` int offsets when G2
-          lands ``rowsBetween`` on :class:`~repark.window.WindowSpec` (M7; G2 owns
-          the facade methods — this path does not edit ``window.py``).
+          ``ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW``.
+        * The same form with duck-typed ``_frame_start`` / ``_frame_end`` integer offsets.
 
         Requires ``functionType=GROUPED_AGG``. Scalar / SCALAR_ITER refuse.
         """
         from repark.errors import AnalysisException
         from repark.spark.window import WindowSpec
 
-        # === r20 M7: pandas_udf-over-frames (not G2 window.py facade) ===
         if not isinstance(window, WindowSpec):
             raise PySparkTypeError(
                 f"pandas_udf.over expects a WindowSpec, got {type(window).__name__}"
@@ -381,7 +366,6 @@ class PandasUDFColumn:
                 "windowed pandas_udf supports only ROWS frames "
                 f"(got frame_units={frame_units!r}); RANGE frames are not supported"
             )
-        # Frame bounds (G2 rowsBetween): WindowSpec always DECLARES _frame_start/_frame_end
         # (None until rowsBetween/rangeBetween sets normalized ints) — presence means
         # value-is-not-None, never hasattr. When orderBy is present and bounds are absent →
         # Spark default UNBOUNDED PRECEDING … CURRENT ROW (start=None, end=0).
@@ -421,7 +405,7 @@ class PandasUDFColumn:
         return self.default_name()
 
     def _refuse_composition(self, surface: str) -> None:
-        """Loud composition limit (U7 v1 — not a SQL Column expression)."""
+        """Refuse composition because this marker is not a SQL Column expression."""
         raise UnsupportedOperationException(
             f"pandas_udf result cannot be used in {surface} in repark v1 "
             "(facade projection-rewrite bridge only; not a Column expression in the SQL plan). "
@@ -457,18 +441,15 @@ class PandasUDFColumn:
         self._refuse_composition("arithmetic (%)")
 
     def __rmod__(self, _other: Any) -> None:
-        # Column-parity reflected mod — UOE not TypeError (octo C5-Q-002).
         self._refuse_composition("arithmetic (%)")
 
     def __pow__(self, _other: Any) -> None:
-        # Column-parity power — UOE not TypeError (octo C5-Q-002).
         self._refuse_composition("arithmetic (**)")
 
     def __rpow__(self, _other: Any) -> None:
         self._refuse_composition("arithmetic (**)")
 
     def __neg__(self) -> None:
-        # Unary minus must refuse UOE, not TypeError (octo C5-Q-002).
         self._refuse_composition("unary (-)")
 
     def __eq__(self, _other: Any) -> bool:  # type: ignore[override]
@@ -499,7 +480,6 @@ class PandasUDFColumn:
         self._refuse_composition("logical (&)")
 
     def __rand__(self, _other: Any) -> None:
-        # Column-parity reflected and — UOE not TypeError (octo C5-Q-002).
         self._refuse_composition("logical (&)")
 
     def __or__(self, _other: Any) -> None:
@@ -514,11 +494,6 @@ class PandasUDFColumn:
     def cast(self, *_args: Any, **_kwargs: Any) -> None:
         """Refuse ``cast`` — select the marker first, then cast the materialized column."""
         self._refuse_composition("cast")
-
-    # ``over`` is implemented above for M6 unbounded windowed GROUPED_AGG (not refused).
-
-    # Column-parity methods that would otherwise AttributeError (octo C7-Q-002 /
-    # C5 residual). All refuse UOE M5 seed — same class as arithmetic/cast.
 
     def is_null(self) -> None:
         """Refuse ``isNull`` — a pandas_udf marker is not a plan :class:`Column`."""
@@ -601,7 +576,7 @@ class PandasUDFColumn:
         """Raise — a pandas_udf marker has no truth value (parity with :class:`Column.__bool__`).
 
         Without this guard, Python ``and`` / ``or`` / ``not`` / ``if`` treat the marker as
-        always-truthy and silently drop composition (octo C1-Q-001).
+        always-truthy and silently drop composition.
         """
         raise PySparkValueError(
             "Cannot convert column into bool: please use '&' for 'and', '|' for 'or', "
@@ -674,13 +649,13 @@ def pandas_udf(
 ) -> Any:
     """Vectorized pandas UDF decorator (PySpark ``functions.pandas_udf``).
 
-    **Supported (U7 + M5):**
+    **Supported:**
 
     * **SCALAR** (default) — ``Series → Series`` in ``select`` / ``withColumn``.
     * **SCALAR_ITER** — ``Iterator[Series] → Iterator[Series]`` (or multi-arg
-      ``Iterator[tuple[Series, …]]``) via the same U7 bridge with a batch-iterator adapter.
-    * **GROUPED_AGG** — ``Series → scalar`` in ``groupBy(...).agg(...)`` (pure pandas_udf
-      form only; mixed UDF+builtin is a loud M6 seed).
+      ``Iterator[tuple[Series, …]]``) via the same Arrow bridge with a batch-iterator adapter.
+    * **GROUPED_AGG** — ``Series → scalar`` in ``groupBy(...).agg(...)``. Mixed UDF and builtin
+      aggregation is refused.
 
     Usage::
 
@@ -711,8 +686,7 @@ def pandas_udf(
     optional ``pandas`` extra at execution time (import is deferred to the bridge).
 
     **OUT (loud):** ``GROUPED_MAP`` and window pandas_udf —
-    :class:`~repark.errors.UnsupportedOperationException` naming M6-class seed.
-    Apache ``test_pandas_udf*`` census claims are out of scope for this unit.
+    :class:`~repark.errors.UnsupportedOperationException` naming the unsupported type.
     """
     # Direct: pandas_udf(fn, returnType[, functionType])
     if f is not None and callable(f) and not _is_pandas_udf_datatype_like(f):
@@ -736,10 +710,7 @@ def pandas_udf(
 
     # @pandas_udf("long", "double") — two datatype positionals is not a legal form; the old
     # keyword fall-through silently took the second as returnType and dropped the first
-    # (octo C1-Q-002). Second positional must be functionType when present.
-    # Exclude functionType-like first positionals (string "SCALAR" / "GROUPED_AGG" / …): those
     # are dual-datatype-looking only because every str is datatype-like, but they must reach
-    # the C7 functionType-first route (octo C8-Q-001) — not this refuse.
     if (
         f is not None
         and returnType is not None
@@ -755,11 +726,8 @@ def pandas_udf(
             "Use @pandas_udf('long') or @pandas_udf('long', PandasUDFType.SCALAR)."
         )
 
-    # @pandas_udf(PandasUDFType.GROUPED_AGG, "long") / @pandas_udf(201, returnType="long") —
     # first positional is a functionType tag and the second/kw is returnType. Old keyword
     # fall-through ignored ``f`` and built SCALAR (fail-open). Route through normalize so
-    # non-SCALAR raises UOE M5 seed (octo C7-L-001). String tags ("GROUPED_AGG", "SCALAR", …)
-    # are also functionType-first (octo C8-Q-001) — dual-datatype refuse must not steal them.
     if (
         f is not None
         and returnType is not None
@@ -788,7 +756,6 @@ def pandas_udf(
 
     # @pandas_udf(returnType=..., functionType=...) — keyword / returnType-only form.
     # When the first positional is also a datatype (not a function), refuse rather than
-    # silently ignoring it (octo C1-Q-002 companion of the dual-datatype case above).
     if returnType is not None:
         if f is not None and _is_pandas_udf_datatype_like(f) and not callable(f):
             raise PySparkTypeError(
@@ -807,21 +774,14 @@ def pandas_udf(
     )
 
 
-# =============================================================================
-# U8 — scalar Python udf (decorator/export; bridge lives in dataframe.py)
-# =============================================================================
-#
-# Per-row Python by design (same shape as PySpark's classic scalar UDF): each
-# batch is Arrow → Python scalars row-by-row → user func → Arrow re-ingest.
-# That is O(rows) Python calls and slower than :func:`pandas_udf` (vectorized
-# Series path). Document the cost honestly; do not pretend it is vectorized.
+# Classic scalar UDFs call Python once per row; pandas UDFs vectorize by batch.
 
 
 def _is_python_udf_datatype_like(value: Any) -> bool:
     """True when ``value`` is a returnType (str DDL, repark/pyspark DataType, or duck-typed).
 
-    U9: accept duck-typed DataType objects (``simpleString`` / ``jsonValue``) so harness
-    imports that bind Apache ``StringType()`` instances still validate as returnType.
+    Accept duck-typed DataType objects (``simpleString`` / ``jsonValue``) so callers that import
+    Apache ``StringType()`` instances still validate as returnType.
     """
     if isinstance(value, str):
         return True
@@ -871,7 +831,7 @@ def _normalize_python_udf_return_type_sql(return_type: Any) -> str:
 
     Default when omitted is Spark's ``string``. Struct / field-list DDL is allowed for
     classic scalar UDFs (unlike :func:`pandas_udf` scalar which is Series-shaped).
-    U9: duck-typed DataType instances (harness / pyspark types) via ``simpleString()``.
+    Accept duck-typed DataType instances via ``simpleString()``.
     """
     from repark.spark.types import DataType, StringType
 
@@ -978,7 +938,7 @@ class PythonUDFColumn:
         return self.default_name()
 
     def _refuse_composition(self, surface: str) -> None:
-        """Loud composition limit (U8 v1 — not a SQL Column expression)."""
+        """Refuse composition because this marker is not a SQL Column expression."""
         raise UnsupportedOperationException(
             f"udf result cannot be used in {surface} in repark v1 "
             "(facade projection-rewrite bridge only; not a Column expression in the SQL plan). "
@@ -1167,10 +1127,9 @@ class UserDefinedFunction:
 
     ``deterministic`` defaults to ``True`` (Spark parity); :meth:`asNondeterministic`
     flips it to ``False`` (accepted flag; repark has no Spark codegen path that
-    consults it for fold/cache — flag is surface-honest only; r23 C6 census).
+    consults it for fold/cache; the flag is surface-honest only).
     """
 
-    # === r23 C6: census-catalog-udf ===
     __slots__ = ("__name__", "_deterministic", "_return_type_sql", "_user_func")
 
     def __init__(
@@ -1227,10 +1186,11 @@ class UserDefinedFunction:
 
 
 def _refuse_udtf_as_scalar_udf(user_func: Any, *, surface: str) -> None:
-    """Refuse wrapping a table UDTF as a classic scalar UDF (r22 U11 half-wired guard).
+    """Refuse wrapping a table UDTF as a classic scalar UDF.
 
-    ``UserDefinedTableFunction`` is callable (scalar-arg call produces a DataFrame in
-    U12), so without this gate ``F.udf(udtf_obj)`` / ``spark.udf.register(name, udtf_obj)``
+    ``UserDefinedTableFunction`` is callable (a scalar-argument call produces a DataFrame in
+    the FROM path). Without this gate ``F.udf(udtf_obj)`` /
+    ``spark.udf.register(name, udtf_obj)``
     would half-wire a table function as a scalar UDF.
     """
     if isinstance(user_func, UserDefinedTableFunction):

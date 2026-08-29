@@ -1,24 +1,24 @@
 """Record mode for the MERGE INTO differential corpus — re-derive Spark halves from live Iceberg.
 
-NOT a ``test_`` module: pytest never collects it. It is the driver that produced the recorded Spark
-halves in ``test_merge_differential_parity.py``, committed so the "recorded against live PySpark
-4.1.2 + Iceberg" claim is falsifiable from inside the repo.
+Not collected by pytest: this driver produced the recorded Spark halves in
+``test_merge_differential_parity.py`` and re-runs each row's own lifecycle recipe (the
+same helpers the suite uses) on a live Spark+Iceberg session. Exit 0 means every
+recorded half still reproduces (content: schema then values; error: needle in message;
+split: Spark success half matches). It never edits the corpus — re-recording is a human
+decision.
 
-**Why this driver provisions Iceberg.** Vanilla PySpark cannot run ``MERGE INTO`` against temp
-views — it needs a real table format. The live/record oracle elsewhere in the suite is plain
-PySpark 4.1.2 with no Iceberg jar. This unit's record path therefore pins and fetches the
-Iceberg Spark runtime by Maven coordinates (never commits the binary) and stands up a local
-Hadoop warehouse catalog.
+Why Iceberg: ``MERGE INTO`` needs a real table format, so the record path fetches the
+pinned Iceberg Spark runtime by Maven coordinates (never commits the binary) and stands
+up a local Hadoop warehouse catalog. CI stays JVM-free — this driver is on no CI path.
 
-**Pinned GAV (Q2 ruling — exact Spark-minor match):**
+Pinned GAV (exact Spark-minor match):
 
     org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0
 
-Fetched at record time via ``spark.jars.packages``. CI stays JVM-free — this driver is never
-collected by pytest and is not on any CI path.
+Fetched at record time via ``spark.jars.packages``.
 
-**Recipe (re-derivable).** First the full parity-live sync line (load-bearing flags; dual-wired
-Makefile ↔ ``parity-live.yml``)::
+Recipe (re-derivable). First the full parity-live sync line (load-bearing flags;
+dual-wired Makefile ↔ ``parity-live.yml``)::
 
     uv sync --locked --extra record \\
         --extra numpy --extra pandas --extra polars --extra ml-ext \\
@@ -30,19 +30,10 @@ Then the record driver::
         PYTHONPATH=python/repark-parity/src \\
         .venv/bin/python python/repark/tests/_record_merge_differential_goldens.py
 
-Requires: Java 17 (zulu-17), the sync above (``record`` extra → pyspark==4.1.2), network on first
-resolve for the Ivy/Maven fetch (then cached under ``~/.ivy2.5.2/jars``).
-
-The driver imports ``ROWS`` from the COMMITTED test module and runs each row's OWN lifecycle
-recipe (the same helpers the suite uses) on a live Spark+Iceberg session. Exit 0 means every
-recorded half still reproduces (content: schema name/type/nullability then values; error: needle
-in message; split: Spark success half matches). It never edits the corpus — re-recording is a
-human decision.
-
-**Lifecycle helper.** ``create → seed → MERGE → read back`` (and the error-path twin) live in
-``test_merge_differential_parity`` — imported here so there is one helper, not two copies. A
-failed MERGE drops the per-row target in ``finally``; the driver's warehouse is a temp directory
-that is removed on exit.
+Requires Java 17 (zulu-17), the ``record`` extra (pyspark==4.1.2), and network on first
+resolve for the Ivy/Maven fetch (then cached under ``~/.ivy2.5.2/jars``). Lifecycle
+helpers live in ``test_merge_differential_parity`` — one helper, not two copies. The
+warehouse is a temp directory removed on exit.
 """
 
 from __future__ import annotations
@@ -53,8 +44,8 @@ import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-# Run as a script from anywhere: the corpus is a sibling module, imported by name so the driver
-# reads the SAME rows the suite asserts (never a copy).
+# Run as a script from anywhere: import the corpus sibling by name (same rows the
+# suite asserts, never a copy).
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 if TYPE_CHECKING:
@@ -73,12 +64,7 @@ def _signature(table: pa.Table) -> list[tuple[str, str, bool]]:
 
 
 def _spark_iceberg_session(warehouse: Path) -> Any:
-    """Build the recorded-basis Spark session with the pinned Iceberg runtime + local catalog.
-
-    Config surface is pinned here (not guessed): ``local[2]``, ANSI on,
-    ``spark.sql.shuffle.partitions=2``, UI off — the same basis the timezone record driver uses —
-    plus the Iceberg extensions and a Hadoop catalog rooted at ``warehouse``.
-    """
+    """Build the recorded-basis Spark session: pinned Iceberg runtime + Hadoop catalog."""
     from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
     from pyspark.sql import SparkSession
 
@@ -152,7 +138,6 @@ def _record_split_row(spark: Any, row: MergeDiffRow) -> str | None:
     from test_merge_differential_parity import run_merge_lifecycle
 
     assert row.spark is not None
-    # Spark side of a split is a successful MERGE — same as content.
     live = run_merge_lifecycle(
         spark,
         row,
@@ -197,7 +182,6 @@ def _assert_warehouse_clean_after_error(spark: Any) -> str | None:
         namespace=SPARK_NAMESPACE,
         with_cow_props=False,  # Spark Iceberg 1.11 accepts MERGE without COW TBLPROPERTIES
     )
-    # listTables via Spark SQL
     try:
         listed = spark.sql(f"SHOW TABLES IN {SPARK_CATALOG}.{SPARK_NAMESPACE}").collect()
         names = {row.tableName if hasattr(row, "tableName") else row[1] for row in listed}

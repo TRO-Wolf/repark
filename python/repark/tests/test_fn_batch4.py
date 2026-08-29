@@ -60,7 +60,7 @@ def test_stats_aggregates(spark: ReparkSession) -> None:
         collect_list("x").alias("cl"),
     ).to_arrow()
     row = table.to_pylist()[0]
-    # U2: VALUES (1.0),(2.0),(3.0) are DECIMAL(2,1). stddev/corr stay float; median
+    # VALUES (1.0),(2.0),(3.0) are DECIMAL(2,1). stddev/corr stay float; median
     # and collect_list follow the decimal column.
     assert abs(row["sd"] - 1.0) < 1e-9
     assert abs(row["cr"] - 1.0) < 1e-9
@@ -84,7 +84,6 @@ def test_bit_aggregates(spark: ReparkSession) -> None:
 def test_sha2_256(spark: ReparkSession) -> None:
     frame = spark.sql("SELECT 'a' AS s")
     table = frame.select(sha2("s", 256).alias("h")).to_arrow()
-    # binary or hex depending on engine
     assert table.num_rows == 1
 
 
@@ -96,7 +95,7 @@ def test_rand_returns_float(spark: ReparkSession) -> None:
 
 
 def test_percentile_approx_scalar_bounds(spark: ReparkSession) -> None:
-    """Q1: percentile_approx / approx_percentile lower to t-digest; bounds-window oracle.
+    """percentile_approx / approx_percentile lower to t-digest; bounds-window oracle.
 
     Fixture sorted exact p50 neighbor window on {1,2,3} is [1,3] (exact median 2.0).
     Never pin exact cross-engine equality vs Spark GK.
@@ -135,7 +134,7 @@ def test_percentile_approx_array_stop(spark: ReparkSession) -> None:
 
 
 def test_percentile_approx_bool_percentage_rejected(spark: ReparkSession) -> None:
-    """bool is not a valid percentage type (octo F-Q1-008; bool subclasses int)."""
+    """bool is not a valid percentage type (bool subclasses int)."""
     from repark.errors import PySparkTypeError
 
     with pytest.raises(PySparkTypeError, match="percentage"):
@@ -143,7 +142,7 @@ def test_percentile_approx_bool_percentage_rejected(spark: ReparkSession) -> Non
 
 
 def test_percentile_approx_sql_third_arg_is_centroids(spark: ReparkSession) -> None:
-    """SQL 3rd arg is t-digest centroids (not facade-ignored GK accuracy) — F-Q1-001.
+    """SQL 3rd arg is t-digest centroids (not facade-ignored GK accuracy).
 
     On a fixed 1..200 fixture, centroids=2 must be allowed to diverge from the
     default/high-centroid path within the global bounds window [1, 200].
@@ -162,8 +161,8 @@ def test_percentile_approx_sql_third_arg_is_centroids(spark: ReparkSession) -> N
     for key in ("p_default", "p_c2", "p_c10k"):
         value = float(row[key])
         assert 1.0 <= value <= 200.0, f"{key}={value} outside fixture bounds"
-    # centroids=2 is a coarser t-digest — pin that the path is live (may equal by chance
-    # on tiny data, so only require finite + in-window; divergence documented).
+    # centroids=2 is a coarser t-digest; it may equal by chance, so only finite + in-window
+    # is required.
     assert row["p_c2"] is not None
 
 
@@ -172,13 +171,13 @@ def test_batch4_loud_unsupported(spark: ReparkSession) -> None:
         skewness("x")
     with pytest.raises(UnsupportedOperationException, match="kurtosis"):
         kurtosis("x")
-    # Q1: percentile_approx / approx_percentile flipped to shipped (see
-    # test_percentile_approx_scalar_bounds); remain loud-unsupported for the rest.
+    # percentile_approx / approx_percentile ship (see test_percentile_approx_scalar_bounds);
+    # the rest stay loud-unsupported.
     with pytest.raises(UnsupportedOperationException, match="mode"):
         mode("x")
-    # FNP-3: sha1 / crc32 / xxhash64 flipped to shipped (datafusion-spark hash kernels); keep
-    # the other loud stubs. Behaviour: test_fnp3_destubbed.py.
-    # r20 G2: randn is live (XORShift Gaussian); keep other loud stubs.
+    # FNP-3: sha1 / crc32 / xxhash64 ship (datafusion-spark hash kernels). Behavior:
+    # test_fnp3_destubbed.py.
+    # G2: randn is live (XORShift Gaussian); keep other loud stubs.
     with pytest.raises(UnsupportedOperationException, match="monotonically_increasing_id"):
         monotonically_increasing_id()
     with pytest.raises(UnsupportedOperationException, match="spark_partition_id"):

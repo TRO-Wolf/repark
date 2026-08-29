@@ -1,21 +1,8 @@
-"""Single-source SQL identifier quoting and path-escape needles (r23 QI1 / CQ-006/007).
+"""Central SQL identifier, path-segment, and string-literal escaping helpers.
 
-Quote semantics by call-site class (behavior-preserving vs prior per-module copies):
-
-* **Always-quote (Spark / DataFusion column + alias class)** — :func:`quote_ident`:
-  every name becomes ``"…"`` with embedded ``"`` doubled. Used by session, dataframe,
-  column, functions, ML, and polars (after bare-name validation).
-* **Quote-if-needed (catalog / assign-target class)** — :func:`quote_ident_if_needed`:
-  plain ``[A-Za-z_][A-Za-z0-9_]*`` stays unquoted; everything else is always-quoted.
-* **Path-escape** — :func:`reject_path_escape_segment` mirrors the Rust shared needles in
-  ``repark_write::idents`` (O3-C4-SEC-001 / C2-SEC-003 / C1-SEC-001).
-
-PostgreSQL dialect quoting lives only in ``repark-postgres`` — never import this module
-for PG SQL. Security: over-quote is acceptable; under-quote is not.
-
-Live-Spark oracle (Q6): mid-night Zulu/pyspark unavailable → pin existing always-quote vs
-quote-if-needed split (DF-dialect evidence for engine-side; no divergence-as-bug fix without
-oracle). Probe tables lockstep with ``crates/repark-write/src/idents.rs::probes``.
+Always-quote and quote-if-needed forms serve different SQL call sites. Path segments reject
+traversal and separators. Embedded values must use these helpers so quoting and injection
+behavior stays single-homed.
 """
 
 from __future__ import annotations
@@ -29,11 +16,10 @@ from repark.errors import PySparkValueError
 _PLAIN_IDENT: Final[re.Pattern[str]] = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 
 # ---------------------------------------------------------------------------
-# Shared probe tables (lockstep with repark_write::idents::probes)
+# Shared probe tables (lockstep with crates/repark-iceberg/src/write/idents.rs).
 # ---------------------------------------------------------------------------
 
 # Hostile / edge identifier strings for the Spark always-quote dialect.
-# Harvested from r21 T5 PG probes (adapted) + 2026-08-03 audit.
 INJECTION_PROBES: Final[tuple[str, ...]] = (
     r'"; DROP TABLE x; --',
     r'id"; DROP TABLE x; --',
@@ -112,7 +98,7 @@ def quote_ident_if_needed(segment: str) -> str:
 
 
 def quote_column_sql_expr(name: str) -> str:
-    """Double-quote a column reference for free-SQL embeds (octo C3-SEC-001).
+    """Double-quote a column reference for free-SQL embeds.
 
     Unqualified names become ``\"x\"``. Dotted qualifiers (``source.name`` for MERGE)
     are quoted per segment as ``\"source\".\"name\"`` so a single identifier containing a
@@ -136,7 +122,7 @@ def quote_multipart(parts: list[str] | tuple[str, ...], *, always: bool = False)
 def path_escape_kind(segment: str) -> str | None:
     """Classify a path-escape segment; return ``\"traversal\"``, ``\"separator\"``, or None.
 
-    Needles match ``repark_write::idents::path_escape_kind`` byte-for-byte.
+    Needles match the owned Iceberg write identifier rules byte-for-byte.
     """
     if segment == "." or segment == ".." or ".." in segment:
         return "traversal"
@@ -146,7 +132,7 @@ def path_escape_kind(segment: str) -> str | None:
 
 
 def reject_path_escape_segment(segment: str) -> None:
-    """Reject identifier segments that could escape a warehouse root (O3-C4-SEC-001).
+    """Reject identifier segments that could escape a warehouse root.
 
     Mirrors the engine CTAS ``reject_path_escape_ident`` needles so writer / ``table`` /
     ``table_exists`` fail at the API boundary rather than only at path composition.
@@ -165,10 +151,8 @@ def assert_spark_injection_probe_is_single_token(probe: str) -> str:
 
     Returns the quoted form. Used by the injection-probe battery and cross-lang pins.
 
-    Mutation-proof (octo C1-Q-002 / C1-SEC-001): equality to an independent oracle
-    (always-quote with ``"`` → ``""``) — a bare starts/ends-``"`` + undouble round-trip
-    **false-passes** under-escape (forgetting to double embedded quotes), which leaves a
-    mid-token ``"`` that closes the identifier early in SQL.
+    The test compares an independent always-quote oracle because an undouble round-trip
+    can miss an embedded quote that closes the SQL identifier early.
     """
     quoted = quote_ident(probe)
     # Independent oracle — do not derive expected solely from undoubling the result.

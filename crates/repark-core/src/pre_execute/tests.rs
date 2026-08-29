@@ -1,9 +1,4 @@
-//! Belt pins: the sequencing contract of [`PreExecute`] itself (SQM round 5, Z-2 / Z-3).
-//!
-//! Catalog-backed refusal behaviour (which statements the guard refuses) is pinned end-to-end
-//! on every door in `tests/declared_sorted.rs` and each door crate's
-//! `declared_sorted_tighten.rs`. What is pinned HERE is the property those door pins depend on:
-//! `plan` must not execute, and `run` must be plan → guard → execute.
+//! Pre-execute pins: planning is side-effect free and execution orders plan → guard → execute.
 
 use std::sync::Arc;
 
@@ -30,10 +25,7 @@ fn ctx_with_source() -> SessionContext {
     ctx
 }
 
-/// PIN (Z-3) — `plan` is side-effect-free. A `SELECT … INTO t` planned through the belt must NOT
-/// register `t`; the contrast half proves the property is real by showing `SessionContext::sql`
-/// (what `create_table.rs` used to call, and what `DataFusionDialect` used to be) DOES publish
-/// it. This is the whole reason a guard can sit between planning and execution.
+/// Z-3 pin: `plan` does not execute a DDL sink; direct `SessionContext::sql` provides the contrast.
 #[tokio::test]
 async fn plan_does_not_execute_a_ddl_sink_but_sql_does() {
     let ctx = ctx_with_source();

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CLI entry for the seeded SQL differential fuzzer (R-SQL-FUZZER / D3).
+"""CLI entry for the seeded SQL differential fuzzer.
 
 Usage::
 
@@ -13,8 +13,8 @@ Usage::
     # Explicit seed:
     python …/run_fuzz.py --seed 7 --n 100
 
-Determinism: seed is CLI ``--seed`` / env ``REPARK_FUZZ_SEED`` / default ``42``.
-Never time-based. Never touches AWS.
+Seed is CLI ``--seed`` / env ``REPARK_FUZZ_SEED`` / default ``42``; never time-based.
+Never touches AWS.
 """
 
 from __future__ import annotations
@@ -121,17 +121,14 @@ def main(argv: list[str] | None = None) -> int:
         )
         print(f"wrote {args.out}")
 
-    # Exit codes: 0 all OK (errors are census, not gate-fail for long runs);
-    # smoke tests assert their own bar. CLI returns 0 for completed run, 2 on usage.
-    # WRONG-RESULT does not flip the process red here — banking is the deliverable;
-    # the smoke test decides the CI pin policy.
+    # Exit 0 = completed run; argparse exits 2 on usage. WRONG-RESULT does not fail the
+    # process here — banking is the deliverable; the smoke test owns the CI pin policy.
     return 0
 
 
 if __name__ == "__main__":
-    # Script invocation: put the repark-parity root (the `bench` package parent) on the
-    # path so `bench.fuzz.*` package imports resolve — bank/runner use package-relative
-    # imports internally, so the fuzz DIR itself must never be the import root.
+    # Put the repark-parity root (the `bench` package parent) on the path so
+    # `bench.fuzz.*` imports resolve; the fuzz DIR itself must never be the import root.
     _parity_root = Path(__file__).resolve().parents[2]
     if str(_parity_root) not in sys.path:
         sys.path.insert(0, str(_parity_root))

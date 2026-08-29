@@ -1,4 +1,4 @@
-"""PR-245 integration pins for exact ratchets and the frozen SQP-1 record.
+"""Integration pins for exact ratchets and the frozen SQP-1 record.
 
 pins: pr-245-revalidation/C-004, C-005, C-006, C-007, C-008, C-009
 """

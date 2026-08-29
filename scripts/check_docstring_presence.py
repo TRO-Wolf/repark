@@ -1,27 +1,21 @@
 #!/usr/bin/env python3
 """Enforce public-docstring presence with a per-file ratchet.
 
-SSOT for the five Ruff presence rules the owner ruled 2026-08-22: D101, D102,
-D103, D105, D107. Style ``D`` is declined permanently and is not selected
-here. Prose (AGENTS.md "Python", .agents/skills/code-quality/SKILL.md) points
-here and never restates the table. Mirrors the check_python_conventions
-dual-wire shape (py = logic + SSOT, sh = wrapper).
+SSOT for the five Ruff presence rules: D101, D102, D103, D105, D107. Style ``D`` is declined
+permanently and is not selected here. Prose points here and never restates the table. Mirrors
+the check_python_conventions dual-wire shape (py = logic + SSOT, sh = wrapper).
 
-Ruff is the parser; this wrapper is the ratchet Ruff cannot express: per-file
-ceilings that go DOWN only, seeded from the measured tree at arming
-(2026-08-22: 136 findings across 39 files under SCAN_ROOTS excluding tests).
-The ~266 figure in the slate included tests; tests keep the per-file ignore.
+Ruff is the parser; this wrapper is the ratchet Ruff cannot express: per-file ceilings that go
+DOWN only, seeded from the measured tree at arming. Scan: every ``*.py`` under SCAN_ROOTS
+except a ``tests`` path part and ``__pycache__``. A new undocumented public name in an
+unlisted file is red; a listed file may not grow past its ceiling; a row whose file drops to
+zero is deleted rather than kept at 0. Ruff treats a module whose filename starts with ``_``
+as private, so D103 does not apply there — that is the parser's definition of public, not a
+second rule.
 
-Scan: every ``*.py`` under SCAN_ROOTS except a ``tests`` path part and
-``__pycache__``. A new undocumented public name in an unlisted file is red; a
-listed file may not grow past its ceiling; a row whose file drops to zero is
-deleted rather than kept at 0. Ruff treats a module whose filename starts
-with ``_`` as private, so D103 does not apply there — that is the parser's
-definition of public, not a second rule.
-
-Exit 0 on clean; 1 on findings; 2 on environment or usage error. Fail-closed:
-uvx/ruff missing, ruff exit other than 0/1, JSON parse miss, empty scan, a
-missing scan root, a stale EXCEPTIONS key, a row whose measured count is 0.
+Exit 0 on clean; 1 on findings; 2 on environment or usage error. Fail-closed: uvx/ruff
+missing, ruff exit other than 0/1, JSON parse miss, empty scan, a missing scan root, a stale
+EXCEPTIONS key, a row whose measured count is 0.
 """
 
 from __future__ import annotations
@@ -33,27 +27,23 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-# Trees the guard owns — same three as check_python_conventions.py. Tests are
-# out of scope (pyproject.toml per-file-ignores keep ``D`` off ``**/tests/**``).
+# Same three trees as check_python_conventions.py. Tests are out of scope: pyproject.toml
+# per-file-ignores keep ``D`` off ``**/tests/**``.
 SCAN_ROOTS: tuple[str, ...] = (
     "python/repark/src",
     "python/repark-parity",
     "scripts",
 )
 
-# Must match the Makefile ``RUFF := uvx ruff@…`` pin. A test pins the two
-# together so they cannot drift.
+# Must match the Makefile ``RUFF := uvx ruff@…`` pin; a test holds the two together.
 RUFF_PIN: str = "0.15.22"
 
 # Presence only. Style codes (D401, D202, D205, D413, …) stay off this list.
 PRESENCE_RULES: tuple[str, ...] = ("D101", "D102", "D103", "D105", "D107")
 
-# repo-relative posix path -> (ceiling, reason). Keys sorted alphabetically.
-# Seeded from ``uvx ruff@0.15.22 check`` over SCAN_ROOTS with
-# ``--select D101,D102,D103,D105,D107 --extend-exclude '**/tests/**'`` at
-# arming (2026-08-22). Ceilings equal the measured count (no slack: a new
-# undocumented public name is exactly the debt). A row whose file drops to
-# zero is deleted rather than kept at 0.
+# repo-relative posix path -> (ceiling, reason). Keys sorted alphabetically. Ceilings equal the
+# measured count (no slack: a new undocumented public name is exactly the debt) and ratchet
+# down only; a row whose file drops to zero is deleted rather than kept at 0.
 EXCEPTIONS: dict[str, tuple[int, str]] = {
     "python/repark-parity/bench/bench_coalesce_chain.py": (
         1,
@@ -293,13 +283,12 @@ def parse_ruff_stdout(returncode: int, stdout: str, stderr: str) -> list[dict[st
 def run_ruff(repo: Path, paths: list[Path]) -> list[dict[str, object]]:
     """Run pinned Ruff on the collected files and return the JSON diagnostic list.
 
-    Files are passed explicitly so Ruff's default exclude (``build``, ``dist``,
-    ``venv``, …) cannot silently omit a path ``collect_python_files`` scanned.
-    ``--isolated`` and ``--ignore-noqa`` keep pyproject / ``# noqa`` from
-    dropping presence diagnostics the ratchet must see.
+    Files are passed explicitly so Ruff's default exclude cannot silently omit a scanned
+    path; ``--isolated`` and ``--ignore-noqa`` keep pyproject / ``# noqa`` from dropping
+    presence diagnostics the ratchet must see.
 
-    Ruff exits 1 when it reports findings; that is not an environment error.
-    Any other non-zero, a missing binary, or stdout that is not JSON is fail-closed.
+    Ruff exits 1 when it reports findings; that is not an environment error. Any other
+    non-zero, a missing binary, or stdout that is not JSON is fail-closed.
     """
     uvx_path = shutil.which("uvx")
     if uvx_path is None:
@@ -331,8 +320,8 @@ def run_ruff(repo: Path, paths: list[Path]) -> list[dict[str, object]]:
 def resolve_diagnostic_path(repo: Path, filename: str) -> str:
     """Map a Ruff ``filename`` to a repo-relative posix path.
 
-    Relative names are resolved against ``repo``, not the parent process cwd,
-    because the wrapper may be invoked without first ``cd``-ing to the repo.
+    Relative names resolve against ``repo``, not the process cwd: the wrapper may be invoked
+    without first ``cd``-ing to the repo.
     """
     raw_path = Path(filename)
     absolute = raw_path.resolve() if raw_path.is_absolute() else (repo / raw_path).resolve()
@@ -368,8 +357,8 @@ def check_counts(
 ) -> list[str]:
     """Compare measured counts to the exceptions table. Returns error strings.
 
-    ``exceptions`` defaults to the module EXCEPTIONS table. Tests pass a
-    closed-world fixture so a live 39-row walk cannot satisfy an assertion.
+    ``exceptions`` defaults to the module EXCEPTIONS table; tests pass a closed-world
+    fixture so a live walk cannot satisfy an assertion.
     """
     table = EXCEPTIONS if exceptions is None else exceptions
     errors: list[str] = []

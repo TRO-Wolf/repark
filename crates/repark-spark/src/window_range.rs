@@ -1,50 +1,11 @@
-//! Temporal `RANGE` window-frame conformance for the Spark door (G5b).
+//! Temporal `RANGE` window-frame conformance for the Spark door.
 //!
-//! Interval-bounded `RANGE` frames over a datetime order key
-//! (`RANGE BETWEEN INTERVAL '1' DAY PRECEDING AND CURRENT ROW`) already agree with Spark
-//! bit-for-bit — ascending, descending, ties, NULL order keys, DATE keys, partitioned frames
-//! (the G5b §0 recon transcript, `task/g5b-temporal-range-ledger.md`). This module closes the
-//! **bare-number** bound over a datetime order key, which does not.
-//!
-//! DataFusion carries a `RANGE` frame offset as `ScalarValue::Utf8` until type coercion, then
-//! casts it to the order key's *natural* type — `Interval(MonthDayNano)` for any datetime key
-//! (`datafusion_optimizer::analyzer::type_coercion::extract_window_frame_target_type`). Arrow's
-//! interval parser reads a unit-less `"1"` as **one month**, so `RANGE BETWEEN 1 PRECEDING`
-//! over a timestamp/date key silently becomes a *one-month* window. Spark does neither:
-//!
-//! | Order key | `RANGE BETWEEN 1 PRECEDING …` in Spark 4.1.2 | before this module |
-//! |---|---|---|
-//! | `TIMESTAMP` | refuses: `DATATYPE_MISMATCH.RANGE_FRAME_INVALID_TYPE` | silently 1 MONTH |
-//! | `DATE` | accepts, `1` means **one day** | silently 1 MONTH |
-//!
-//! Both are silent wrong answers on a query that migrates unchanged, which is the exact
-//! failure class `docs/testing.md` "Divergence-class claims" exists to catch.
-//!
-//! **Why two mechanisms.** A window expression's *schema name* embeds its frame
-//! (`datafusion_expr::expr`'s `SchemaDisplay` writes `" {window_frame}"`), so rewriting a bound
-//! on the planned `LogicalPlan` renames the Window node's output field and strands every parent
-//! `Expr::Column` that already references the old name. Refusing needs no rewrite, so the
-//! TIMESTAMP arm reads the planned tree directly ([`classify_planned_range_frames`]); the DATE
-//! arm restates the **AST** ([`rewrite_bare_range_bounds_to_days`]) and re-plans, where the
-//! whole plan is rebuilt consistently.
-//!
-//! **Scope.** Unit-less numbers under `RANGE` over a datetime key (G5b), plus the G5b-R
-//! residuals that share this seam: a **negative** or **value-inverted** interval offset over
-//! a `TIMESTAMP` key (R3 — wrapping `count(*)` / debug panic) and a `DAY TO SECOND` qualified
-//! literal (R2). Invert is kind-or-magnitude after sign-normalize (`-2 PRECEDING AND -1
-//! PRECEDING` becomes `2 FOLLOWING AND 1 FOLLOWING`: same kind, start after end). An inverted
-//! frame is Spark-empty: the restatement attaches `FILTER (WHERE false)` and a current-row
-//! frame so DataFusion never executes the inverted search. Unquoted `INTERVAL 1 DAY` (R1)
-//! is quoted at `spark_ast` altitude before first plan (`convert_frame_bound_to_scalar_value`
-//! accepts only `SingleQuotedString`). Both-bounds-`FOLLOWING` values that are **not**
-//! inverted (R4) still include the current row on DataFusion 54.1.0 (120 vs Spark 90);
-//! sqlparser 0.62 `WindowFrame` has no `EXCLUDE` (`// TBD: EXCLUDE`), and an in-place
-//! plan rewrite strands parent column refs. An interval over a numeric key (R5) is
-//! restated to unit-less `n` when classify sees a numeric order key — Spark 4.1.2
-//! (Z-4 / W-4) treats `INTERVAL 'n' UNIT` as **numeric `n` RANGE**, unit ignored
-//! (`1 DAY` = `1 HOUR` = `1 MONTH` = `1 PRECEDING`; `10 DAY` = `10 PRECEDING`;
-//! `0 DAY` = peer group). Mixed datetime-interval + numeric-interval stays on the
-//! first plan (statement-wide rewrite cannot tell the sites apart).
+//! DataFusion reads a unit-less datetime bound as an interval whose bare `1` means one month.
+//! Spark refuses that bound for `TIMESTAMP` and reads it as one day for `DATE`. The timestamp path
+//! refuses on the planned tree; the date path rewrites the AST and re-plans so parent column names
+//! remain consistent. Negative or inverted timestamp intervals become Spark-empty frames, while
+//! interval bounds over numeric keys restate to their numeric magnitude. Mixed datetime and
+//! numeric statements stay on the first plan because a statement-wide rewrite cannot separate them.
 
 use std::collections::HashSet;
 use std::ops::ControlFlow;
@@ -455,16 +416,8 @@ fn window_frame_wrong_comparison_error(window_frame: &str) -> DataFusionError {
 /// ===========================================================================================
 /// Restate `RANGE` frame bounds the DATE / G5b-R arms need, then the caller re-plans.
 ///
-/// Applied only when [`classify_planned_range_frames`] returned
-/// [`RangeFrameVerdict::RestateBareBoundsAsDays`]:
-/// - unit-less numbers become `INTERVAL '<n>' DAY` (DATE key, Spark days not Arrow months);
-/// - a negative interval over a `TIMESTAMP` key is sign-normalized; a value-inverted
-///   frame (kind or same-kind magnitude) becomes Spark-empty via `FILTER (WHERE false)`
-///   over a current-row frame (R3 — no far-future YEAR pair);
-/// - `DAY TO SECOND` literals become an Arrow-accepted interval string (R2).
-///
-/// Mirrors [`crate::spark_ast::apply_spark_order_by_defaults`]'s traversal: `post_visit_expr`
-/// reaches inline `OVER (…)`, `post_visit_query` the named `WINDOW` clauses.
+/// Restate DATE bounds as day intervals and preserve the surrounding AST so window schema
+/// references remain valid when the caller re-plans.
 /// ===========================================================================================
 pub(crate) fn rewrite_bare_range_bounds_to_days(statement: &mut Statement) {
     let mut visitor = BareRangeBoundsAsDays {

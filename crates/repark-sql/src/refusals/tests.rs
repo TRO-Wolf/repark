@@ -1,10 +1,8 @@
-//! Every refusal is a behavior. Each message class is pinned by the property that makes it
-//! useful — it names the shape, and it names what to do instead — not by its exact wording.
+//! Every refusal is a behavior. Each message class is pinned by its safety or routing contract.
 
 use super::*;
 
-/// Q9: the INSERT OVERWRITE refusal names all three replacements and carries the dbt-trino
-/// evidence the design records for the absence (graft G10).
+/// The INSERT OVERWRITE refusal names all three replacements and carries the dbt-trino evidence.
 #[test]
 fn insert_overwrite_refusal_steers_three_ways_and_cites_the_evidence() {
     let message = insert_overwrite("ice.sales.orders").to_string();
@@ -36,8 +34,7 @@ fn call_refusal_steers_to_callable_ops_and_names_the_trigger() {
     );
 }
 
-/// Q7: EXECUTE says out loud that it is the PRE-DESIGNATED future spelling — that is the whole
-/// reason it refuses rather than falling through to a parse error.
+/// EXECUTE states its pre-designated future spelling so callers have a clear replacement.
 #[test]
 fn alter_execute_refusal_declares_itself_the_future_spelling() {
     let message = alter_table_execute("optimize").to_string();
@@ -75,8 +72,7 @@ fn alter_execute_recognizer_fires_on_the_statement_shape() {
     );
 }
 
-/// …and it does NOT fire on anything else, including the supported ALTER forms and a column
-/// literally named `execute`.
+/// The recognizer does not fire on supported ALTER forms or a column named `execute`.
 #[test]
 fn alter_execute_recognizer_does_not_fire_on_other_statements() {
     for sql in [
@@ -95,15 +91,7 @@ fn alter_execute_recognizer_does_not_fire_on_other_statements() {
     }
 }
 
-/// The recognizer is ANCHORED to the VERB slot — the word right after the table name — so a
-/// legal `ALTER TABLE` that merely CONTAINS the bare word `execute` is left alone.
-///
-/// This is a regression pin. An unanchored search of the whole statement refused
-/// `ALTER TABLE ice.sales.orders ADD COLUMN execute BIGINT` with "ALTER TABLE … EXECUTE BIGINT is
-/// not supported yet" — a legal schema-evolution statement rejected, naming the column's TYPE as
-/// the "procedure", and because the recognizer runs pre-parse nothing downstream recovered it.
-/// `execute` is not a reserved word for a column.
-///
+/// The recognizer is anchored to the verb slot after the table name, so a column named `execute` remains legal.
 /// Mutation: restore the free `position(|w| w == "EXECUTE")` search → every row below reds.
 #[test]
 fn alter_execute_recognizer_is_anchored_to_the_verb_slot() {
@@ -123,8 +111,7 @@ fn alter_execute_recognizer_is_anchored_to_the_verb_slot() {
     }
 }
 
-/// …and the anchor still finds the verb across every way the name can be spelled: one-, two- and
-/// three-part, quoted parts (blanked to nothing by the scrubber), and spaces around the dots.
+/// The anchor finds the verb across one-, two-, and three-part names.
 #[test]
 fn alter_execute_recognizer_finds_the_verb_after_any_name_spelling() {
     for sql in [

@@ -4,8 +4,8 @@
 when the returned DataFrame is never collected; collecting it does not re-apply (exactly-once). A
 runtime DML failure surfaces at ``sql()`` time as the base :class:`PySparkException` (WG-3), never
 :class:`AnalysisException`/:class:`ParseException`. Every value check is on the export path the
-migrated caller reads — ``to_arrow`` — with the Arrow **type** pinned too, never ``show``. Requires
-the compiled wheel (``maturin develop``) — the real facade boundary, no mocks.
+migrated caller reads — ``to_arrow`` — with the Arrow **type** pinned too, never ``show``.
+Requires the compiled wheel (``maturin develop``) — the real facade boundary, no mocks.
 """
 
 from __future__ import annotations
@@ -36,8 +36,8 @@ def _table(spark: ReparkSession) -> pa.Table:
 
 
 def test_bare_sql_insert_applies_without_collect(spark: ReparkSession) -> None:
-    # The returned DataFrame is never collected — the F-BR-2 trap (pre-fix: a silent no-op through
-    # the primary facade). Post-fix the write applies at sql() time (PySpark-eager).
+    # The returned DataFrame is never collected — the F-BR-2 trap: the write must apply at
+    # sql() time (PySpark-eager).
     spark.sql(f"INSERT INTO {TABLE} VALUES (3, 'c')")
 
     table = _table(spark)
@@ -46,7 +46,6 @@ def test_bare_sql_insert_applies_without_collect(spark: ReparkSession) -> None:
         {"id": 2, "name": "b"},
         {"id": 3, "name": "c"},
     ]
-    # Value AND Arrow type on the export path (to_arrow), never show.
     assert table.schema.field("id").type == pa.int64()
     assert table.schema.field("name").type == pa.string()
 
@@ -72,11 +71,7 @@ def test_bare_sql_insert_applies_exactly_once_when_collected(spark: ReparkSessio
     # returned DataFrame must NOT insert a second copy.
     expected = [{"id": 1, "name": "a"}, {"id": 2, "name": "b"}, {"id": 3, "name": "c"}]
     returned = spark.sql(f"INSERT INTO {TABLE} VALUES (3, 'c')")
-
-    # Already applied before the returned DataFrame is touched.
     assert _table(spark).to_pylist() == expected
-
-    # Collecting the returned DataFrame must not re-run the INSERT.
     returned.collect()
     assert _table(spark).to_pylist() == expected
 
@@ -84,11 +79,9 @@ def test_bare_sql_insert_applies_exactly_once_when_collected(spark: ReparkSessio
 def test_bare_sql_failing_dml_raises_base_pyspark_exception_at_sql_time(
     spark: ReparkSession,
 ) -> None:
-    # A DML whose per-row CAST fails at RUNTIME. The source is a temp-view column (not a literal,
-    # so it is not constant-folded to a plan error at analysis time). Post-fix it surfaces at
-    # sql() time (eager), and the WG-3 taxonomy classifies a runtime failure as the base
-    # PySparkException — NOT an AnalysisException/ParseException (neither a parse nor an analysis
-    # error).
+    # A DML whose per-row CAST fails at RUNTIME: the source is a temp-view column, not a literal,
+    # so it is not constant-folded to a plan error at analysis time. WG-3 classifies a runtime
+    # failure as the base PySparkException — not AnalysisException/ParseException.
     spark.sql("SELECT 'abc' AS s").createOrReplaceTempView("bad_src")
     with pytest.raises(PySparkException) as raised:
         spark.sql(f"INSERT INTO {TABLE} SELECT CAST(s AS INT) AS id, s AS name FROM bad_src")
@@ -105,9 +98,8 @@ def test_bare_sql_empty_insert_overwrite_wipes_table(spark: ReparkSession) -> No
     """
     prior = _table(spark)
     assert prior.num_rows == 2
-    # Never collect the returned DataFrame — wipe must apply at sql() time (F-BR-2 + C1-Q-001).
-    # Source is an independent empty VALUES projection (not self-scan) so the pin isolates the
-    # empty-OW intercept from same-table read/write edge cases.
+    # Never collect the returned frame — wipe must apply at sql() time. Source is an independent
+    # empty VALUES projection (not self-scan) so the pin isolates the empty-OW intercept.
     spark.sql(
         f"INSERT OVERWRITE {TABLE} SELECT * FROM (VALUES (1, 'x')) AS v(id, name) WHERE false"
     )
@@ -150,22 +142,16 @@ def test_bare_sql_empty_overwrite_incompatible_schema_does_not_wipe(
 
 
 def test_bare_sql_branch_tag_replace_round_trip(spark: ReparkSession) -> None:
-    """r25 T2: CREATE OR REPLACE / bare REPLACE BRANCH|TAG re-pin on the facade ``spark.sql`` path.
-
-    Supersedes I5 loud-refuse pin ``test_bare_sql_branch_tag_replace_refuses_loud``.
-    """
+    """CREATE OR REPLACE / bare REPLACE BRANCH|TAG re-pin on the facade ``spark.sql`` path."""
     prior = _table(spark).to_pylist()
-    # CREATE OR REPLACE when absent = create at current — both spellings, BRANCH and TAG
-    # (the `TAG … IN <table>` form kept from the superseded refuse-loud pin; morning critic).
+    # CREATE OR REPLACE when absent = create at current — both spellings, BRANCH and TAG.
     spark.sql(f"CREATE OR REPLACE BRANCH audit_branch IN {TABLE}")
     spark.sql(f"CREATE OR REPLACE TAG t1 IN {TABLE}")
     spark.sql(f"ALTER TABLE {TABLE} CREATE OR REPLACE TAG t1")
     # Bare REPLACE re-pins existing refs (still current after no new commits).
     spark.sql(f"ALTER TABLE {TABLE} REPLACE BRANCH audit_branch")
     spark.sql(f"ALTER TABLE {TABLE} REPLACE TAG t1")
-    # Data multiset unchanged by ref DDL.
     assert _table(spark).to_pylist() == prior, "REPLACE BRANCH|TAG must not mutate table rows"
-    # Time-travel via the replaced branch still reads current rows.
     branch_rows = (
         spark.sql(f"SELECT id FROM {TABLE} VERSION AS OF 'audit_branch' ORDER BY id")
         .to_arrow()

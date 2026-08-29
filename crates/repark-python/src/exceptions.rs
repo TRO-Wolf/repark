@@ -1,10 +1,6 @@
-//! The five native exception types, in their own module file so the panic-ban's
-//! `disallowed_methods` lint stays LIVE for the rest of the crate: `pyo3::create_exception!`
-//! expands to `Result::expect` (five macro sites, compile-time registration, unreachable from
+//! Native exception types used by the Python boundary.
+//! The module-scoped expectation covers macro-generated `Result::expect` (unreachable from
 //! user input), and a per-call-site `#[expect]` cannot reach inside the macro expansion
-//! (provocations P-4/P-5, p3c ledger). Re-exported at the crate root — `crate::…Exception`
-//! paths are unchanged. File-backed per the `check_lib_rs` ratchet ("if the exception
-//! taxonomy moves to its own module").
 #![expect(
     clippy::disallowed_methods,
     reason = "pyo3::create_exception! expands to Result::expect at the five macro \

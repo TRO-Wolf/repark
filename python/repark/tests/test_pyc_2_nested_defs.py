@@ -1,8 +1,7 @@
 """PYC-2: remaining shipped nested ``def``s are lifted or pragma-sanctioned.
 
-The conventions gate holds the same rule over the whole tree; this pin names the
-ten modules this unit emptied (or reduced to a sanctioned pragma) so a regression
-that re-nests a helper fails here even if someone re-seeds an EXCEPTIONS row.
+The conventions gate holds the same rule over the whole tree; this pin names the ten modules so
+a regression that re-nests a helper fails here even if someone re-seeds an EXCEPTIONS row.
 """
 
 from __future__ import annotations
@@ -64,8 +63,7 @@ def _collect_nested_function_names(
 def _nested_function_names(path: Path) -> list[str]:
     """Every ``def`` that has a ``def`` ancestor (including inside ``try`` / ``if``).
 
-    The conventions gate only counts a nested ``def`` whose *immediate* parent is a
-    ``def``. PYC-2 empties the ancestor set on the lifted modules (same as PYC-1).
+    The conventions gate only counts a nested ``def`` whose *immediate* parent is a ``def``.
     """
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     found: list[str] = []

@@ -1,33 +1,7 @@
-//! **The session-timezone extraction class** (H-1a split B, campaign decision D7) — pinned on the
-//! coercion path, value AND Arrow type, under two non-UTC session zones with the DST boundaries
-//! included.
+//! Pins Spark timestamp extraction in the session timezone, including DST boundaries.
 //!
-//! # What this file is the evidence for
-//!
-//! Apache Spark resolves every calendar field of a `TIMESTAMP` in `spark.sql.session.timeZone`.
-//! Before this unit repark resolved them in the STORED zone, which the census measured as a
-//! four-hour silent offset (divergence registry §7 row TZ-1). The fix is in
-//! `repark-functions`' extractor coercion path; this file holds it from the outside, through a
-//! real session built exactly the way the product builds one.
-//!
-//! # The four-entry-point matrix (docs/testing.md matrix row 3, split by this campaign)
-//!
-//! | Cell | Where it is pinned |
-//! |---|---|
-//! | native `DataFrame` API | HERE — `native_dataframe_api_extracts_in_the_session_zone`, built from `repark_functions::expr_fn` (a standalone `Expr`, no session attached — the facade's `F.year(col)` shape) |
-//! | Spark door | HERE — every `session.sql(...)` pin below, on a `SparkDialect` session |
-//! | ANSI door | `crates/repark-sql/tests/session_timezone_ansi_door.rs` (that crate owns the DEV edge to this one; the reverse edge does not exist, by crate-DAG policy) |
-//! | facade | `python/repark/tests/test_session_timezone_parity.py` — the recorded differential corpus, whose disclosure rows this fix flips to equality |
-//!
-//! # Why the negatives are half the file
-//!
-//! A zone-blind engine and a zone-*drunk* engine both fail Spark. The `DATE` / `TIME` pins below
-//! (and the corpus's two control rows) exist because pushing the session zone into a path that
-//! carries no instant is the exact failure mode a careless fix produces: a `DATE` has no instant,
-//! so nothing about it may move.
-//!
-//! Instants are written as RFC-3339 strings and converted once, so a reader can check an
-//! expectation against the string without decoding epoch arithmetic. AWS-free by construction.
+//! Timestamp calendar fields use `spark.sql.session.timeZone`; `DATE` and `TIME` controls remain
+//! zone-independent. Assertions cover values and Arrow types through a real Spark-door session.
 
 use std::sync::Arc;
 
@@ -42,8 +16,7 @@ use repark_core::{ReparkSession, SqlDialect};
 use repark_functions::expr_fn;
 use repark_spark::{SparkDialect, SparkExtension};
 
-/// The two non-UTC zones the whole campaign uses: one DST-observing zone WEST of UTC and one
-/// fixed-offset zone EAST of it, so an offset-sign error cannot pass both.
+/// Use one DST-observing zone and one fixed-offset zone to catch offset-sign errors.
 const NEW_YORK: &str = "America/New_York";
 const TOKYO: &str = "Asia/Tokyo";
 /// A half-hour offset, so a fix that only ever moves whole hours is caught (`minute` moves here).
@@ -336,7 +309,7 @@ async fn week_and_quarter_extractors_resolve_in_the_session_zone() {
 /// FAMILY 5 — `date_trunc`. Spark truncates to LOCAL midnight and returns the instant that
 /// denotes, which is the daily-rollup boundary a migrated aggregate depends on.
 ///
-/// TZ-4 PR-1 annotates the return as `timestamp[us, tz=UTC]`. The ticks were already Spark's
+/// The return is `timestamp[us, tz=UTC]`. The ticks were already Spark's
 /// instant; the type pin here is the representation half.
 #[tokio::test]
 async fn date_trunc_truncates_on_the_session_zone_calendar() {
@@ -557,7 +530,7 @@ async fn date_arguments_never_move_with_the_session_zone() {
 }
 
 /// `date_trunc(fmt, DATE)` / `date_trunc(fmt, STRING)` — the composed claim, which is where the
-/// first draft of this unit was a whole day wrong under `America/New_York`.
+/// The result is an instant; a session-zone mistake produces a whole-day shift in this case.
 ///
 /// Spark promotes the `DATE` (or string) to a `TIMESTAMP` before truncating, and that promotion is
 /// a **session-zone localization**, so the result is the INSTANT of local midnight. Every value
@@ -569,7 +542,7 @@ async fn date_arguments_never_move_with_the_session_zone() {
 /// date_format(date_trunc('day', DATE …),'yyyy-MM-dd HH:mm') '2024-01-01 00:00'    identical in both zones
 /// ```
 ///
-/// The COMPOSITION legs are the point. `date_trunc`'s output is an instant (TZ-4 PR-1: µs+UTC).
+/// The composition legs are the point. `date_trunc` returns an instant (`timestamp[us, tz=UTC]`).
 /// Extractors resolve that instant in the session zone; these legs hold that the DATE-argument
 /// promotion wrote local midnight's instant, not a wall-clock tick under a naive type.
 #[tokio::test]
@@ -665,7 +638,7 @@ async fn date_trunc_of_a_date_or_string_lands_on_the_session_zone_timeline() {
 /// ```
 ///
 /// An implementation that re-resolves the truncated local time to the EARLIEST valid offset —
-/// which the first draft of this unit did, on a doc comment that claimed it was what
+/// which would incorrectly apply a session zone to a value
 /// `java.time` does — collapses the pair onto `05:00Z` and puts the `'minute'` row an hour early.
 /// Every instant in every repeated hour, in every DST-observing zone, at hour/minute/second
 /// granularity, is behind this one pin.
@@ -985,7 +958,7 @@ async fn a_tz_naive_timestamp_is_read_as_a_utc_instant() {
     );
 }
 
-/// TZ-4 PR-2: a zoneless LTZ input is a session-zone wall clock. Flip evidence for TZ-7.
+/// A zoneless LTZ input is a session-zone wall clock (TZ-7).
 #[tokio::test]
 async fn a_zoneless_timestamp_input_localizes_in_the_session_zone() {
     for zone in [NEW_YORK, TOKYO] {
@@ -1016,7 +989,7 @@ async fn a_zoneless_timestamp_input_localizes_in_the_session_zone() {
     );
 }
 
-/// TZ-4 PR-2: a tz-naive column is NTZ — extractors do not apply the session zone.
+/// A tz-naive column is NTZ; extractors do not apply the session zone.
 #[tokio::test]
 async fn a_naive_ntz_timestamp_is_not_shifted_by_the_session_zone() {
     use datafusion::arrow::array::TimestampMicrosecondArray;

@@ -1,18 +1,4 @@
-//! Q8 INTROSPECTION, delivered through the ANSI door (design §2 Q8: "delegate — DF
-//! `information_schema` + stock `SHOW TABLES` / `DESCRIBE t`").
-//!
-//! PR-5's R2 day-1 spike found there was nothing to delegate TO: `ReparkSession` could not enable
-//! `information_schema` at all, because the builder's `.config(k, v)` map never reached
-//! `SessionConfig`. That was filed as a repark-core gap — exactly as Q8 instructs ("gaps are
-//! core/fork fixes, not door parsers") — and PR-6 fixes it in
-//! `repark_core::session::apply_datafusion_config_keys`. This file is the DOOR half of that
-//! delivery: with the conf set on the builder, introspection works through `AnsiDialect` with no
-//! door-side parser at all.
-//!
-//! Native profile throughout — no `SessionExtension`. Q8 is a delegation claim, and delegation is
-//! stock DataFusion; an extended session would prove something else.
-//!
-//! AWS-free by construction (in-memory Iceberg catalog over a `TempDir` warehouse).
+//! Q8 introspection is delegated through the ANSI door to stock DataFusion.
 
 use std::sync::Arc;
 
@@ -22,8 +8,7 @@ use repark_core::{ReparkSession, SqlDialect};
 use repark_sql::AnsiDialect;
 use tempfile::TempDir;
 
-/// A session whose default dialect is the ANSI door, with `information_schema` enabled the
-/// PRODUCT way — through the builder config map (the surface the R2 fix opened).
+/// A session whose default dialect is the ANSI door, with `information_schema` enabled through the builder.
 async fn introspective_ansi_session(warehouse: &str) -> ReparkSession {
     let dialect: Arc<dyn SqlDialect> = Arc::new(AnsiDialect);
     let session = ReparkSession::builder()
@@ -38,8 +23,7 @@ async fn introspective_ansi_session(warehouse: &str) -> ReparkSession {
     session
 }
 
-/// Create `ice.sales.orders` through this door, so the enumeration below is enumerating a table
-/// the ANSI door itself made (not a fixture smuggled in another way).
+/// Create `ice.sales.orders` through this door so enumeration observes a real table.
 async fn seed(session: &ReparkSession, warehouse: &str) {
     session
         .sql(&format!(
@@ -53,8 +37,7 @@ async fn seed(session: &ReparkSession, warehouse: &str) {
         .expect("CTAS");
 }
 
-/// Collect one `Utf8` column into a sorted `Vec<String>`, asserting the Arrow TYPE as well as the
-/// values (docs/testing.md: value AND type, never `show` alone).
+/// Collect one `Utf8` column into a sorted `Vec<String>`, asserting the Arrow type as well as values.
 async fn utf8_column(session: &ReparkSession, sql: &str) -> Vec<String> {
     let frame = session.sql(sql).await.expect("plan");
     let batches = frame.collect().await.expect("collect");
@@ -78,14 +61,7 @@ async fn utf8_column(session: &ReparkSession, sql: &str) -> Vec<String> {
     out
 }
 
-/// The Q8 delivery: a REGISTERED ICEBERG CATALOG enumerates through `information_schema` — its
-/// namespace in `schemata`, its table in `tables` — with the ANSI door installed as the session
-/// dialect. This is the enumeration verification the design asks for, on the product path.
-///
-/// Honest result recorded here rather than in prose: enumeration DOES work through the fork's
-/// providers. The R2 spike had already proved the machinery on a raw `SessionContext`; the only
-/// thing missing was the conf, and the conf is now reachable.
-///
+/// A registered Iceberg catalog enumerates through `information_schema`.
 /// Mutation: drop `.config("datafusion.catalog.information_schema", …)` → both queries fail.
 #[tokio::test]
 async fn information_schema_enumerates_an_iceberg_catalog_through_the_ansi_door() {
@@ -128,10 +104,7 @@ async fn information_schema_enumerates_an_iceberg_catalog_through_the_ansi_door(
     assert_eq!(columns, vec!["id".to_string(), "label".to_string()]);
 }
 
-/// Stock `SHOW TABLES` and `DESCRIBE t` reach DataFusion THROUGH this door — no ANSI-side
-/// handler, which is the whole content of the Q8 "delegate" ruling. Both are asserted on the
-/// Arrow path.
-///
+/// Stock `SHOW TABLES` and `DESCRIBE t` reach DataFusion through this door.
 /// Mutation: adding a router intercept for either statement that does not delegate turns this red
 /// (the row counts / column names would stop matching stock DataFusion's shape).
 #[tokio::test]
@@ -150,8 +123,7 @@ async fn show_tables_and_describe_delegate_through_the_ansi_door() {
         .expect("SHOW TABLES must execute");
     let mut found = false;
     for batch in &shown {
-        // Stock DataFusion's SHOW TABLES shape: table_catalog, table_schema, table_name,
-        // table_type — all Utf8.
+        // Stock DataFusion places the table name in the third column.
         let names = batch
             .column(2)
             .as_any()
@@ -201,7 +173,6 @@ async fn show_tables_and_describe_delegate_through_the_ansi_door() {
 }
 
 /// The negative half — WITHOUT the conf, the same door refuses with DataFusion's own message.
-/// This is what makes the two rows above attributable to the R2 fix rather than to a default.
 #[tokio::test]
 async fn introspection_still_refuses_without_the_information_schema_conf() {
     let warehouse_dir = TempDir::new().expect("warehouse");
@@ -227,29 +198,7 @@ async fn introspection_still_refuses_without_the_information_schema_conf() {
     );
 }
 
-/// The time-travel rewrite's ephemeral pinned relations must NOT survive the statement — neither
-/// as an unbounded per-query accumulation on a long-lived session nor as rows in the very
-/// introspection surface this file exists to prove.
-///
-/// Regression pin: before the fix, three pinned reads left `__repark_ansi_tt_1|2|3` registered
-/// forever and `information_schema.tables` listed all three. The other half of the claim is that
-/// releasing the name does not break the read — the `DataFrame` is collected AFTER `execute`
-/// returned (the plan owns its provider), and it still returns the pinned rows.
-///
-/// **Both prefixes, since H-1b (2026-08-11).** This door composes TWO registrations per relation:
-/// the `__repark_ansi_tt_<n>` view it mints itself, and the `__repark_tt_<n>` the shared core half
-/// [`repark_core::read_table_at`] registers underneath it. The original pin filtered the ANSI
-/// prefix ONLY, so the core-minted half escaped it and leaked on the very door whose fix this test
-/// defends (three `FOR … AS OF` reads → `__repark_tt_1|2|3` left behind). The two `LIKE` patterns
-/// are disjoint — `__repark_tt%` does not match `__repark_ansi_tt_<n>` — so each half is its own
-/// assertion and neither can go quiet again.
-///
-/// Mutations, both run and captured (H-1b, `task/h1b-ledger.md`): drop the
-/// `pinned.release(cx.ctx)` in `router::execute` → the test reds at the FIRST leftover assertion,
-/// naming `__repark_ansi_tt_1|2|3` (the core half leaks too, but a panic reports one assertion, so
-/// that is what the transcript can show). Drop the core-name record in
-/// `time_travel::register_pinned_view` → the ANSI half stays green and the SECOND assertion reds,
-/// naming `__repark_tt_1|2|3` — which is what earns the broadened half its place.
+/// Time-travel pinned relations must not survive the statement or appear in enumeration.
 #[tokio::test]
 async fn time_travel_pinned_views_do_not_leak_into_the_introspection_surface() {
     let warehouse_dir = TempDir::new().expect("warehouse");
@@ -290,8 +239,7 @@ async fn time_travel_pinned_views_do_not_leak_into_the_introspection_surface() {
         leftover.is_empty(),
         "time-travel temp views must be released, not left on the session: {leftover:?}"
     );
-    // The core-minted half (`repark_core::read_table_at`), which the ANSI-prefix filter above is
-    // blind to by construction.
+    // The core-minted half (`repark_core::read_table_at`) is also checked.
     let core_leftover = utf8_column(
         &session,
         "SELECT table_name FROM information_schema.tables \
@@ -305,22 +253,8 @@ async fn time_travel_pinned_views_do_not_leak_into_the_introspection_surface() {
     );
 }
 
-/// **Pin flipped on purpose (2026-08-10, ADR-0006 / campaign decision D2, unit H-1c).** This row
-/// used to assert the opposite — that the fork's `$`-suffixed metadata tables enumerate alongside
-/// the real table — and it was named `metadata_tables_currently_enumerate_alongside_the_real_table`.
-/// The open product question it carried is now closed: the catalog layer hides them
-/// (`repark_iceberg::catalog::MetadataProjectionSchemaProvider::table_names`), matching what both
-/// engines these doors point at do — Apache Spark's Iceberg extension lists only what the catalog
-/// returns, and Trino documents metadata tables as queryable-but-unlisted. The rationale and the
-/// rejected alternative are in `docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md`.
-///
-/// The ANSI door's half of the claim, on the twin introspection paths (`information_schema.tables`
-/// and the `SHOW TABLES` that DataFusion rewrites onto it), plus the half that makes hiding
-/// honest: the hidden table is still queryable BY NAME through this same door.
-///
+/// Metadata projections hide time-travel relations from enumeration while keeping them queryable.
 /// Mutation: drop the `.filter(…)` in `MetadataProjectionSchemaProvider::table_names` → the two
-/// emptiness assertions red.
-///
 /// pins: rp-1-fork-repin/C-005
 #[tokio::test]
 async fn metadata_tables_are_hidden_from_enumeration_but_stay_queryable_through_the_ansi_door() {

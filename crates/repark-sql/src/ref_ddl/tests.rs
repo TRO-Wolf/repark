@@ -1,8 +1,4 @@
-//! Recognizer pins for the ALTER-scoped branch/tag grammar (design §2 Q6, graft G6).
-//!
-//! The executor half is the tier-1 `ManageSnapshots` seam, which carries its own battery; what is
-//! pinned here is exactly what this door adds — which statements it claims, what it parses them
-//! into, and which shapes it refuses loud instead of leaving to an opaque parse error.
+//! Recognizer pins for the ALTER-scoped branch/tag grammar.
 
 use super::*;
 
@@ -61,8 +57,7 @@ fn parses_negative_snapshot_pin() {
     assert_eq!(as_of_version, Some(-9_223_372_036_854_775_807));
 }
 
-/// `CREATE OR REPLACE` is a distinct op (create-if-absent vs create-only), so it must survive
-/// into the parse rather than being folded into plain CREATE.
+/// `CREATE OR REPLACE` is distinct from create-only and must survive lowering.
 #[test]
 fn parses_create_or_replace() {
     let RefOp::Create {
@@ -75,8 +70,7 @@ fn parses_create_or_replace() {
     assert_eq!(name, "audit");
 }
 
-/// Both retention clauses map onto the tier-1 retention fields, including the SNAPSHOTS count
-/// form (which is a different field from the duration form).
+/// Both retention clauses map onto the tier-1 retention fields, including the snapshot count.
 #[test]
 fn parses_retention_clauses() {
     let RefOp::Create { retention, .. } = parsed(
@@ -103,8 +97,7 @@ fn parses_retention_clauses() {
     assert_eq!(retention.min_snapshots_to_keep, None);
 }
 
-/// Per-branch snapshot retention on a TAG is meaningless (a tag pins one snapshot), and refusing
-/// here is better than letting the fork reject it with a lower-level message.
+/// Per-branch snapshot retention on a TAG is meaningless because a tag pins one snapshot.
 #[test]
 fn snapshot_retention_on_a_tag_refuses() {
     let err =
@@ -134,8 +127,7 @@ fn parses_drop_branch_and_tag() {
     );
 }
 
-/// ANSI quoting: `"audit"` is an identifier and unquotes into the ref name; a keyword-shaped
-/// name is usable when quoted, because a quoted token never matches a keyword.
+/// ANSI quoting: `"audit"` is an identifier and unquotes into the ref name.
 #[test]
 fn double_quoted_names_are_identifiers() {
     let ddl = parsed(r#"ALTER TABLE ice."sales"."orders" CREATE BRANCH "audit branch""#);
@@ -167,8 +159,7 @@ fn does_not_claim_other_statements() {
     }
 }
 
-/// A recognized-but-malformed statement refuses with a targeted message. Silence here would hand
-/// the user `Expected: ADD, RENAME, … found: CREATE`, which describes nothing they wrote.
+/// A recognized-but-malformed statement refuses with a targeted message.
 #[test]
 fn malformed_forms_refuse_loud() {
     let trailing = refused("ALTER TABLE ice.sales.orders CREATE BRANCH audit SOMETHING ELSE");
@@ -194,13 +185,6 @@ fn malformed_forms_refuse_loud() {
 }
 
 /// EVERY leftover token refuses, not just identifiers — numbers and punctuation included.
-///
-/// Regression pin. `reject_trailing` used to filter the tail through `Sig::ident`, so a trailing
-/// NUMBER or a stray symbol was silently DROPPED and the statement executed anyway: `… DROP
-/// BRANCH audit 5` dropped a branch, and `… CREATE BRANCH audit AS OF VERSION 7 99` created one
-/// pinned at 7. A user who meant `RETAIN 5 DAYS` and mistyped it got a snapshot operation they
-/// did not ask for — precisely the "refuse rather than ignore it" this function names.
-///
 /// Mutation: restore the `filter_map(Sig::ident)` → the first four rows red.
 #[test]
 fn trailing_non_identifier_tokens_refuse_too() {
@@ -228,9 +212,7 @@ fn trailing_non_identifier_tokens_refuse_too() {
     }
 }
 
-/// …but a single trailing statement terminator is not a leftover. One statement ending in `;` is
-/// still one statement (the router's multi-statement guard is the authority on scripts), so it
-/// must still execute rather than trip the refusal above.
+/// A single trailing statement terminator is not a leftover. One statement ending in `;` is accepted.
 #[test]
 fn a_trailing_semicolon_is_not_a_trailing_clause() {
     assert_eq!(
@@ -251,8 +233,7 @@ fn a_trailing_semicolon_is_not_a_trailing_clause() {
     );
 }
 
-/// A ref name is part of a metadata key, so it gets the same path-escape hygiene every other
-/// identifier segment in this door gets.
+/// A ref name is part of a metadata key, so it uses the same path-escape hygiene as other names.
 #[test]
 fn path_escaping_ref_names_refuse() {
     let err = refused("ALTER TABLE ice.sales.orders CREATE BRANCH \"../escape\"");

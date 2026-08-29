@@ -1,5 +1,7 @@
 # map — python/repark-parity/bench/fuzz
 
+CC-2 slice complete: comments and docstrings condensed; oracle discriminators, pins, mutation payloads, and safety contracts kept byte-exact; history narration deleted.
+
 ## Purpose
 
 **R-SQL-FUZZER (D3)** — seeded differential correctness fuzzer. Generated queries over

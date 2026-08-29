@@ -1,53 +1,5 @@
-//! The ANSI door's guard set (design §2 Q12), called explicitly at the router head.
-//!
-//! The seam is untouched: `repark-core` has no pre-execution hook, so each door calls its own
-//! guards. Order is load-bearing and matches the design's judge-mandated fix — **multi-statement
-//! refuses FIRST**, before any text rewrite or sniff, so a script can never have its second
-//! statement silently rewritten or its first statement's target sniffed out of a string literal.
-//!
-//! Four guards run on TEXT at the router head:
-//! 1. [`refuse_multi_statement`] — quote-aware (ANSI: `'…'` literals, `"…"` identifiers, no
-//!    backticks), Spark-oracle message class.
-//! 2. [`refuse_read_only_catalog_dml`] — P11: DML against a catalog the session registered
-//!    read-only. Generic message (this door is not postgres-specific).
-//! 3. [`refuse_write_to_branch`] — writes targeting a branch-suffixed name; the fork's append
-//!    always sets `main`, so a branch-targeted write would silently land on `main`.
-//!
-//! More guards need something the text does not carry, so they run later — and the ORDER
-//! between the DML pair is load-bearing:
-//!
-//! 4. [`refuse_collation_in_statement`] (G15) needs the PARSED statement. The router calls it
-//!    immediately after the stock parse, before the statement match, so `COLLATE` / column
-//!    collation / session collation conf refuse at parse altitude (G3-E8 lesson).
-//!    Type-position `CAST AS STRING COLLATE` is refused on the parse-fail arm
-//!    ([`refuse_type_position_collation_in_sql`]); `RESET` of a collation key is
-//!    refused before delegate.
-//! 5. [`refuse_dml_subquery_predicate`] (G3-E8) needs the PARSED statement (it reads the `WHERE`
-//!    expression), so the router calls it from its `DELETE` / `UPDATE` arms. It closes a
-//!    silent-data-loss window: a subquery predicate is lost at DataFusion's DML planning boundary
-//!    and degenerates into match-all.
-//! 6. [`refuse_mor_multi_spec_dml`] (the hoisted BUG-001 valve) is `async` — it loads the target
-//!    table's Iceberg metadata to decide — so the router calls it from the SAME two arms,
-//!    immediately AFTER the G3-E8 valve. Both are data-loss valves, so either message is honest;
-//!    the cheap sync AST walk runs before the metadata round-trip, which is the Spark door's
-//!    order and rationale exactly (`repark_spark::router::execute_delete`). Pinned by
-//!    `guards::tests::mor_valve_runs_after_the_g3e8_valve`.
-//!
-//! The last, [`refuse_local_filesystem_plan`] (SEC-02), needs a `LogicalPlan`, so it runs in the
-//! delegation path immediately after planning and before execution — the same position the Spark
-//! door's passthrough uses. Note its scope: it gates the surfaces DataFusion's own DDL would use
-//! to read/write the local filesystem as data (`CREATE EXTERNAL TABLE`, `COPY TO`). An
-//! INTERCEPTED `CREATE TABLE … WITH (location = 'file:///…')` is NOT in scope — that path creates
-//! an Iceberg table under a warehouse root and is governed by the catalog's
-//! [`repark_core::LocationPolicy`], which is a different (and stricter, per-catalog) rule.
-//!
-//! **Guard provenance (design §5 / the PR-5 ruling).** The Spark door's `local_fs_ddl`,
-//! `ref_ddl::sniff_write_to_branch` and `normalize::refuse_dml_subquery_predicate` are
-//! `pub(crate)`/private inside `repark-spark`, and this crate must not take a door→door edge (nor
-//! the `repark-functions` edge the Spark gate uses to read its conf). None was importable, so all
-//! are RE-IMPLEMENTED here against the same observable contract — same conf key, same grandfather
-//! rule, same refusal class, same refusal text — and pinned by this door's own tests. Recorded as
-//! such in `task/p2f-ansi-m1-ledger.md` and `task/g3e8-guard-ledger.md`.
+//! The ANSI door's guard set runs before rewrites and on parsed DML arms.
+//! G3-E8 runs before the async `MoR` and V3 valves. SEC-02 runs after planning.
 
 use std::ops::ControlFlow;
 
@@ -71,25 +23,15 @@ use crate::scan::{blank_out_quoted_and_comments, leading_keyword};
 /// Needle pinned by the G15 refusal tests (both doors). Byte-identical to the Spark door.
 pub(crate) const COLLATION_REFUSAL_NEEDLE: &str = "does not implement collation";
 
-/// The conf key that opens the SEC-02 local-filesystem gate. Spelled identically to the Spark
-/// door's `repark_functions::cardinality::ALLOW_LOCAL_FILESYSTEM_DDL_KEY` — one user-visible
-/// knob governs both doors, and the DataFusion `ConfigExtension` the session installs is read
-/// here through the dependency-free `ConfigOptions::entries()` view (the extension TYPE lives in
-/// `repark-functions`, which this crate deliberately does not depend on).
+/// The conf key that opens the SEC-02 local-filesystem gate. It matches the Spark key.
 pub(crate) const ALLOW_LOCAL_FILESYSTEM_DDL_KEY: &str = "repark.sql.allowLocalFilesystemDDL";
 
-/// The `snake_case` spelling DataFusion's `extensions_options!` macro registers the field under
-/// (`PREFIX = "repark.sql"`, field `allow_local_filesystem_ddl`) — this is what actually appears
-/// in `ConfigOptions::entries()`.
+/// DataFusion's `extensions_options!` macro registers this `snake_case` field under the session key.
 const ALLOW_LOCAL_FILESYSTEM_DDL_OPTION: &str = "repark.sql.allow_local_filesystem_ddl";
 
 /// ===========================================================================================
-/// Run the text-level guard set. Called FIRST in [`crate::router::execute`], before any rewrite,
-/// sniff, or parse.
+/// Run text guards first in [`crate::router::execute`], before any rewrite.
 /// ===========================================================================================
-///
-/// # Errors
-/// The first guard that fires, as a classified [`DataFusionError`].
 pub(crate) fn run_text_guards(cx: &EngineContext<'_>, sql: &str) -> Result<()> {
     let scrubbed = blank_out_quoted_and_comments(sql);
     refuse_multi_statement(&scrubbed)?;
@@ -100,18 +42,8 @@ pub(crate) fn run_text_guards(cx: &EngineContext<'_>, sql: &str) -> Result<()> {
 // === Guard 1 — multi-statement (design §2 Q12; runs FIRST) ==================================
 
 /// ===========================================================================================
-/// Refuse genuine multi-statement scripts. A trailing `;`, whitespace, or comment after ONE
-/// statement stays legal (that is the shape every client emits); a `;` followed by real content
-/// is refused.
-///
-/// Takes the SCRUBBED text, so `SELECT 'a; b'` and `-- ;` are structurally invisible here. That
-/// is the whole reason this guard is text-level and quote-aware rather than parser-level: a
-/// parser-level check cannot refuse `SELECT 1; XYZZY 2`, where the second statement does not
-/// parse at all — fail-closed matters more than precision.
+/// Refuse genuine multi-statement scripts. A trailing terminator and whitespace are allowed.
 /// ===========================================================================================
-///
-/// # Errors
-/// [`DataFusionError::SQL`] (→ `Error::Parse` → Python `ParseException`) naming the class.
 pub(crate) fn refuse_multi_statement(scrubbed: &str) -> Result<()> {
     let mut saw_semicolon = false;
     for ch in scrubbed.chars() {
@@ -124,8 +56,7 @@ pub(crate) fn refuse_multi_statement(scrubbed: &str) -> Result<()> {
     Ok(())
 }
 
-/// The multi-statement refusal, in Spark's own error class so a migrated job sees a familiar
-/// diagnostic through either door.
+/// The multi-statement refusal uses Spark's error class so migrated jobs see a familiar diagnostic.
 fn multi_statement_error() -> DataFusionError {
     DataFusionError::SQL(
         Box::new(ParserError::ParserError(
@@ -141,15 +72,8 @@ fn multi_statement_error() -> DataFusionError {
 // === Guard 2 — P11 read-only-catalog DML ====================================================
 
 /// ===========================================================================================
-/// Refuse `INSERT` / `UPDATE` / `DELETE` / `MERGE` whose target's leading name segment is a
-/// catalog the session registered read-only.
-///
-/// The message is **generic** by ruling: this door is not postgres-flavoured, so it names the
-/// catalog and the direction that IS supported rather than a specific external system.
+/// Refuse DML whose target's leading name segment is a registered read-only catalog.
 /// ===========================================================================================
-///
-/// # Errors
-/// [`DataFusionError::Plan`] naming the catalog and the supported direction.
 pub(crate) fn refuse_read_only_catalog_dml(
     catalogs: &CatalogRegistry,
     scrubbed: &str,
@@ -178,12 +102,9 @@ pub(crate) fn read_only_catalog_message(catalog: &str, verb: &str) -> String {
     )
 }
 
-/// The DML verb and its target name, read from scrubbed text. `None` when the statement is not
-/// DML (or the target cannot be read, in which case the parser will produce the better error).
+/// Read the DML verb and target name from scrubbed text. Return `None` for other statements.
 fn dml_target(scrubbed: &str) -> Option<(&'static str, String)> {
     let mut words = word_iter(scrubbed);
-    // The verb comes from the leading-keyword scan (comment/whitespace tolerant); the word
-    // iterator is then advanced past it so the two agree on position.
     let leading = leading_keyword(scrubbed)?;
     words.next()?;
     let verb = match leading.as_str() {
@@ -193,7 +114,6 @@ fn dml_target(scrubbed: &str) -> Option<(&'static str, String)> {
         "MERGE" => "MERGE",
         _ => return None,
     };
-    // Skip the verb's connective words to reach the target name.
     let target = loop {
         let word = words.next()?;
         let upper = word.to_ascii_uppercase();
@@ -212,7 +132,6 @@ fn dml_target(scrubbed: &str) -> Option<(&'static str, String)> {
 fn word_iter(scrubbed: &str) -> impl Iterator<Item = String> + '_ {
     let mut chars = scrubbed.char_indices().peekable();
     std::iter::from_fn(move || {
-        // Skip anything that cannot start a name.
         while let Some(&(_, ch)) = chars.peek() {
             if ch.is_alphanumeric() || ch == '_' || ch == '"' || ch == '$' {
                 break;
@@ -237,20 +156,7 @@ fn word_iter(scrubbed: &str) -> impl Iterator<Item = String> + '_ {
 
 /// ===========================================================================================
 /// Refuse a WRITE whose target names a snapshot branch.
-///
-/// The fork's fast-append always sets `SetSnapshotRef(MAIN_BRANCH)` — there is no branch-target
-/// commit — so `INSERT INTO cat.ns.t.branch_audit …` would silently write to `main`. Silent
-/// wrong-branch data is the worst failure mode available here, so it refuses.
-///
-/// Two shapes, with the ambiguity handled the way the Spark door settled it: a FOUR-part name
-/// after a three-part table is unambiguously a ref suffix and always refuses; a TWO-part
-/// `x.branch_y` is ambiguous with a real table literally named `branch_y`, so it refuses only
-/// when the full name does NOT resolve while the prefix DOES. Neither resolving falls through to
-/// planning's own "table not found", which is the more useful error.
 /// ===========================================================================================
-///
-/// # Errors
-/// [`DataFusionError::Plan`] naming the branch spelling and the supported alternative.
 pub(crate) fn refuse_write_to_branch(ctx: &SessionContext, scrubbed: &str) -> Result<()> {
     let Some((_, target)) = dml_target(scrubbed) else {
         return Ok(());
@@ -264,10 +170,11 @@ pub(crate) fn refuse_write_to_branch(ctx: &SessionContext, scrubbed: &str) -> Re
     };
     let branch_suffixed = last.to_ascii_lowercase().starts_with("branch_");
 
+    // Writes commit to `main`, so a reference target could land on the wrong branch.
     let refuse = match parts.len() {
-        // catalog.namespace.table.<ref> — unambiguous.
+        // Four or more parts are unambiguous reference syntax.
         n if n >= 4 => true,
-        // x.branch_y — ambiguous with a real table called `branch_y`.
+        // Two-part branch names can also be ordinary table names.
         2 if branch_suffixed => {
             let full = datafusion::sql::TableReference::partial(
                 parts[0].to_string(),
@@ -289,25 +196,11 @@ pub(crate) fn refuse_write_to_branch(ctx: &SessionContext, scrubbed: &str) -> Re
     Ok(())
 }
 
-// === Guard 4 — BUG-001 MoR valve (async; runs at the router head) ===========================
+// === Guard 4 — BUG-001 MoR valve (async; runs in the parsed DML arm) ========================
 
 /// ===========================================================================================
-/// Refuse a delegated `DELETE` / `UPDATE` against a merge-on-read table whose CURRENT partition
-/// spec is unpartitioned while its metadata carries more than one spec in history.
-///
-/// This door delegates DML to the fork's `TableProvider` (ADR-0003), which is exactly the path
-/// the hoisted valve gates: the fork's unpartitioned fast path stamps every position delete with
-/// `partition_key = None`, so after partition-spec evolution a delete can commit while rows
-/// remain visible. The valve is tier-1 (`repark_iceberg::write`); this function is the ANSI
-/// door's resolution wrapper — the twin of the Spark door's `ObjectName` wrapper, reading its
-/// target from the same scrubbed text the other guards use.
-///
-/// `INSERT` is not gated (it writes no position deletes) and `MERGE` is never gated (the
-/// RePark-owned merge-on-read writer stamps per-file partitions correctly).
+/// Refuse delegated `DELETE` / `UPDATE` when current metadata has unpartitioned multi-spec history.
 /// ===========================================================================================
-///
-/// # Errors
-/// [`DataFusionError::Plan`] from the tier-1 valve, naming the fork hazard and the workarounds.
 pub(crate) async fn refuse_mor_multi_spec_dml(
     cx: &EngineContext<'_>,
     statement: &Statement,
@@ -318,11 +211,11 @@ pub(crate) async fn refuse_mor_multi_spec_dml(
     let Some(catalog) = cx.catalogs.get(&catalog_name) else {
         return Ok(());
     };
+    // Unpartitioned position deletes are unsafe after multi-spec history.
     refuse_mor_unpartitioned_multi_spec_dml(catalog.as_ref(), &ident, &target, kind).await
 }
 
-/// V3R-1 valve (`V3-COW-1`) for the delegated plain-`WHERE` DELETE / UPDATE; runs after the
-/// BUG-001 valve.
+/// V3R-1 valve (`V3-COW-1`) for delegated plain-`WHERE` DELETE / UPDATE. It runs after G3-E8.
 pub(crate) async fn refuse_v3_cow_dml(cx: &EngineContext<'_>, statement: &Statement) -> Result<()> {
     let Some((kind, _target, catalog_name, ident)) = dml_target_ident(cx, statement) else {
         return Ok(());
@@ -333,8 +226,7 @@ pub(crate) async fn refuse_v3_cow_dml(cx: &EngineContext<'_>, statement: &Statem
     refuse_v3_cow_dml_in_catalog(catalog.as_ref(), &ident, kind).await
 }
 
-/// Resolve a `DELETE` / `UPDATE` target from the AST as DataFusion will: short names complete
-/// from the session defaults, a quoted identifier is one part (SEC-001 / SEC-003); else `None`.
+/// Resolve a `DELETE` / `UPDATE` target from the AST as DataFusion will, completing short names.
 fn dml_target_ident(
     cx: &EngineContext<'_>,
     statement: &Statement,
@@ -385,17 +277,8 @@ fn delete_target_name(delete: &Delete) -> Option<&ObjectName> {
 // === Guard 5 — SEC-02 local-filesystem plans (runs after planning) ==========================
 
 /// ===========================================================================================
-/// Refuse a planned `CREATE EXTERNAL TABLE … LOCATION` / `COPY … TO` that targets the local
-/// filesystem, unless the conf opens the gate or the path sits under a registered warehouse root.
-///
-/// Delegation is this door's whole strategy, and DataFusion's DDL happily reads and writes the
-/// process's local filesystem. A near-drop-in migration must not inherit that surface just
-/// because the ANSI door hands statements to DataFusion. Remote schemes (`s3://`, `s3a://`, …)
-/// are out of scope — this gate is about the local OS identity.
+/// Gate DataFusion filesystem-as-data plans. Intercepted Iceberg CREATE uses catalog policy.
 /// ===========================================================================================
-///
-/// # Errors
-/// [`DataFusionError::Plan`] naming the surface, the path, and the conf key that opens the gate.
 pub(crate) fn refuse_local_filesystem_plan(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -413,9 +296,7 @@ pub(crate) fn refuse_local_filesystem_plan(
     }
 }
 
-/// Read the gate conf from the live session options WITHOUT the `repark-functions` extension
-/// type: `ConfigOptions::entries()` renders every registered extension field as a flat
-/// `prefix.field` key/value pair, which is exactly what is needed and costs no crate edge.
+/// Read the gate conf from live session options without the `repark-functions` extension.
 fn allow_local_filesystem_ddl(ctx: &SessionContext) -> bool {
     ctx.copied_config()
         .options()
@@ -441,9 +322,8 @@ fn refuse_local_path(catalogs: &CatalogRegistry, surface: &str, raw_location: &s
     )))
 }
 
-/// Map a location to a local path when it is bare or `file:`-schemed; `None` for remote schemes.
-/// Scheme matching is case-insensitive — `FILE:///etc/passwd` must not classify as "some remote
-/// scheme" and skip the gate.
+/// Map a location to a local path when it is bare or `file:`-schemed; return `None` for remote schemes.
+/// Scheme matching is case-insensitive, so `FILE:///etc/passwd` remains local.
 fn local_filesystem_path(location: &str) -> Option<std::path::PathBuf> {
     const REMOTE_SCHEMES: &[&str] = &[
         "s3://",
@@ -507,8 +387,7 @@ fn path_under_any_warehouse(catalogs: &CatalogRegistry, path: &std::path::Path) 
     })
 }
 
-/// Canonicalize what exists; fall back to the parent (a COPY TO destination file need not exist
-/// yet); fall back to a lexical `.`/`..` collapse so a traversal cannot slip past the check.
+/// Canonicalize existing paths; fall back to the parent when a COPY destination does not exist.
 fn canonicalize_best_effort(path: &std::path::Path) -> std::path::PathBuf {
     if let Ok(canonical) = path.canonicalize() {
         return canonical;
@@ -521,6 +400,7 @@ fn canonicalize_best_effort(path: &std::path::Path) -> std::path::PathBuf {
             None => canonical_parent,
         };
     }
+    // Lexical dot and dot-dot handling blocks traversal bypass when canonicalization fails.
     let mut out = std::path::PathBuf::new();
     for component in path.components() {
         match component {
@@ -572,39 +452,8 @@ impl DmlSubqueryVerb {
 }
 
 /// ===========================================================================================
-/// Refuse a delegated `DELETE` / `UPDATE` whose `WHERE` clause contains a **subquery** (G3-E8).
-///
-/// This door delegates DML to DataFusion, which recovers the `WHERE` clause for the fork's
-/// `TableProvider::delete_from` / `::update` by walking the **optimized** plan for `Filter` /
-/// `TableScan.filters` nodes (`datafusion::physical_planner::extract_dml_filters`). The optimizer
-/// has by then decorrelated `IN` / `NOT IN` / `EXISTS` / `ANY` / `ALL` / correlated predicates
-/// into a semi/anti/mark **join**, from which that walk recovers nothing — and an empty filter
-/// list is the provider's spelling of "no `WHERE` clause", so the statement matches **every row**.
-/// Silent, total, and reproduced identically through BOTH doors.
-///
-/// **Guard provenance (design §5 / the PR-5 ruling).** The Spark door carries the twin of this
-/// valve as `repark_spark::normalize::refuse_dml_subquery_predicate`; that crate is a door, so
-/// this crate must not take a product edge to it. Re-implemented here against the same observable
-/// contract — same detection rule, same refusal text — and pinned by this door's own tests.
-///
-/// Detection is "**any `Query` node under the `WHERE` expression**", not an enumeration of
-/// subquery-bearing `Expr` variants, so a sqlparser upgrade cannot silently widen the hole. The
-/// class is refused wholesale even though an *uncorrelated* scalar subquery executes correctly
-/// today: its *correlated* twin is the same parse tree and destroys the table, and the two are
-/// not separable without full name resolution (rationale + the over-refused spellings:
-/// `task/g3e8-guard-ledger.md`).
-///
-/// The refused target is read from the PARSED statement, not from the scrubbed text: this door's
-/// text scrubber blanks quoted regions, so a quoted target (`DELETE FROM "ice"."sales"."t"`)
-/// would otherwise be rendered into the message as blanks and the suggested `MERGE INTO` rewrite
-/// would name a table that does not exist. Reading the AST also makes the rendered string equal
-/// to the Spark door's for the same statement, which
-/// `tests/cross_door.rs::cross_door_g3e8_refusals_render_identically` pins.
+/// Refuse delegated `DELETE` / `UPDATE` whose `WHERE` subquery can become a match-all write.
 /// ===========================================================================================
-///
-/// # Errors
-/// [`DataFusionError::Plan`] naming the defect class, the `MERGE INTO` workaround, and that
-/// support returns with the fix.
 pub(crate) fn refuse_dml_subquery_predicate(statement: &Statement) -> Result<()> {
     let (verb, selection, target) = match statement {
         Statement::Delete(delete) => (
@@ -635,9 +484,7 @@ pub(crate) fn refuse_dml_subquery_predicate(statement: &Statement) -> Result<()>
     )))
 }
 
-/// The `ObjectName` a `DELETE` targets, from the parse tree — `FROM t` and the FROM-less
-/// `DELETE t` spellings alike. `None` for the shapes that have no single named relation
-/// (`USING`, a derived table), which fall back to `<table>` in the message.
+/// The `ObjectName` a `DELETE` targets from the parse tree, including `FROM t` forms.
 fn delete_target(delete: &Delete) -> Option<&ObjectName> {
     let tables = match &delete.from {
         FromTable::WithFromKeyword(tables) | FromTable::WithoutKeyword(tables) => tables,
@@ -658,9 +505,7 @@ fn object_name_of(table: &TableWithJoins) -> Option<&ObjectName> {
     }
 }
 
-/// True when a `Query` node appears anywhere inside `expr` — i.e. the expression carries a
-/// subquery at any depth (`IN (…)`, `NOT IN`, `EXISTS`, `ANY`/`ALL`, a scalar `(SELECT …)`,
-/// nested under `NOT` / `OR` / a function argument, or inside another subquery).
+/// Return true when a `Query` node appears inside `expr`, so the expression carries a subquery.
 fn expression_contains_subquery(expr: &Expr) -> bool {
     struct SawSubquery;
     struct SubqueryProbe;
@@ -674,8 +519,7 @@ fn expression_contains_subquery(expr: &Expr) -> bool {
     expr.visit(&mut SubqueryProbe).is_break()
 }
 
-/// The G3-E8 refusal text. Byte-identical to the Spark door's (the parity corpus asserts the
-/// needle `subquery predicates are silently mis-executed` through either door).
+/// The G3-E8 refusal text is byte-identical to the Spark door's.
 fn dml_subquery_refusal_message(verb: DmlSubqueryVerb, table: &str) -> String {
     format!(
         "{verb_name} with a subquery in its WHERE clause is refused on `{table}`: subquery \
@@ -708,15 +552,8 @@ pub(crate) fn collation_refusal_message(requested: &str) -> String {
 }
 
 /// ===========================================================================================
-/// Refuse a collation spelling on the router's parsed statement (G3-E8 altitude).
+/// Refuse a collation spelling on the router's parsed statement (parse altitude).
 /// ===========================================================================================
-///
-/// Called immediately after the stock parse, before the statement match, so SELECT
-/// COLLATE, ORDER BY COLLATE, CREATE TABLE column COLLATE, SET collation, and
-/// CREATE/ALTER COLLATION all refuse on the parse every route agrees on.
-///
-/// # Errors
-/// [`DataFusionError::NotImplemented`] naming the requested collation.
 pub(crate) fn refuse_collation_in_statement(statement: &Statement) -> Result<()> {
     let mut probe = CollationProbe { requested: None };
     if statement.visit(&mut probe).is_break()
@@ -847,9 +684,6 @@ fn collation_requested_by_set(set: &Set) -> Option<String> {
 /// ===========================================================================================
 /// Refuse type-position `STRING COLLATE name` that sqlparser's CAST cannot attach.
 /// ===========================================================================================
-///
-/// # Errors
-/// [`DataFusionError::NotImplemented`] when a type-position collation is present.
 pub(crate) fn refuse_type_position_collation_in_sql(sql: &str) -> Result<()> {
     if let Some(requested) = type_position_collation(sql) {
         return Err(DataFusionError::NotImplemented(collation_refusal_message(
@@ -862,9 +696,6 @@ pub(crate) fn refuse_type_position_collation_in_sql(sql: &str) -> Result<()> {
 /// ===========================================================================================
 /// Refuse `RESET` of a collation session key (DataFusion extension, not `Statement::Set`).
 /// ===========================================================================================
-///
-/// # Errors
-/// [`DataFusionError::NotImplemented`] when the variable name contains `collation`.
 pub(crate) fn refuse_collation_reset_variable(variable: &str) -> Result<()> {
     if variable.to_ascii_lowercase().contains("collation") {
         return Err(DataFusionError::NotImplemented(collation_refusal_message(

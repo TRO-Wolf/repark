@@ -1,14 +1,11 @@
-"""I3 / R-MAINTENANCE-CALL oracle — Spark ``CALL catalog.system.<proc>(…)``.
+"""R-MAINTENANCE-CALL oracle — Spark ``CALL catalog.system.<proc>(…)``.
 
 Seven procedures: expire_snapshots, rewrite_data_files, rewrite_position_delete_files,
 remove_orphan_files, rewrite_manifests (MW-6), rollback_to_snapshot, and register_table
-(V3-1 adoption).
-Unknown names refuse loud listing the supported set.
+(V3-1 adoption). Unknown names refuse loud listing the supported set.
 
-Oracle discipline: Arrow ``to_arrow`` value AND type pins (docs/testing.md
-divergence-class). Result schemas pin Spark names and types. MW-1 closed the
-expire content-file funnel (six Spark columns, all nullable); MW-2 closed
-``removed_delete_files_count`` (honest 0). Neither is a live divergence.
+Oracle discipline: Arrow ``to_arrow`` value AND type pins (docs/testing.md divergence-class).
+Result schemas pin Spark names and types.
 
 Fork pin ``4723104b``:
 - expire: ``transaction/expire_snapshots.rs`` + ``expire_cleanup.rs``
@@ -130,9 +127,8 @@ def test_expire_snapshots_keeps_tag_reachable(
         f"table => 'ns.events', older_than => {older_than_ms}, retain_last => 1)"
     ).to_arrow()
     # MW-1: Spark's full six-column result, in Spark's order. The fork returns all content files
-    # in ONE funnel, so this used to report position-delete files under the data-file name and
-    # omit the pos/eq columns entirely; `classify_content_files` rebuilds the split from the
-    # manifest entries' own content type. Measured on a live Spark 4.0.1 + Iceberg 1.10.0 oracle.
+    # in ONE funnel; `classify_content_files` rebuilds the data/delete split from the manifest
+    # entries' own content type. Measured on a live Spark 4.0.1 + Iceberg 1.10.0 oracle.
     assert _schema_names(result) == [
         "deleted_data_files_count",
         "deleted_position_delete_files_count",
@@ -141,8 +137,8 @@ def test_expire_snapshots_keeps_tag_reachable(
         "deleted_manifest_lists_count",
         "deleted_statistics_files_count",
     ]
-    # All six are bigint and NULLABLE — Spark declares them so (jar `OUTPUT_TYPE`, `iconst_1` per
-    # StructField), unlike its two rewrite procedures. Matched per procedure, not by one rule.
+    # All six are bigint and NULLABLE — Spark declares them so (jar `OUTPUT_TYPE`, `iconst_1`
+    # per StructField), unlike its two rewrite procedures. Matched per procedure, not by one rule.
     for name in _schema_names(result):
         assert result.schema.field(name).type == pa.int64()
         assert result.schema.field(name).nullable
@@ -208,8 +204,8 @@ def test_rewrite_data_files_preserves_multiset_and_reduces_files(spark: ReparkSe
     assert n_files_before >= 5
 
     result = spark.sql("CALL mem.system.rewrite_data_files(table => 'ns.compact')").to_arrow()
-    # MW-2 closed the fifth column. Spark's five, in Spark's order, all non-nullable — measured
-    # on a live Spark 4.0.1 + Iceberg 1.10.0 oracle.
+    # MW-2: Spark's five, in Spark's order, all non-nullable — measured on a live Spark 4.0.1
+    # + Iceberg 1.10.0 oracle.
     assert _schema_names(result) == [
         "rewritten_data_files_count",
         "added_data_files_count",
@@ -287,8 +283,7 @@ def test_remove_orphan_files_requires_an_explicit_older_than(spark: ReparkSessio
 
     Spark defaults ``older_than`` to ``now - 3 days`` and runs; this engine refuses. The
     procedure deletes files with no rollback, so the most dangerous argument must not be the one
-    the caller never typed. Replaces the pre-MW-3 pin that asserted the whole procedure was
-    unsupported.
+    the caller never typed.
     """
     with pytest.raises(
         (UnsupportedOperationException, PySparkException),
@@ -374,7 +369,6 @@ def test_rewrite_sort_strategy_refuses_loud(spark: ReparkSession) -> None:
 def test_positional_rollback_args(spark: ReparkSession, multi_snapshot: dict[str, object]) -> None:
     """Spark docs: positional args accepted (cite iceberg spark-procedures Usage)."""
     s1 = multi_snapshot["s1"]
-    # Re-advance past s1 first if already rolled back by another test — fixture is function-scoped.
     result = spark.sql(f"CALL mem.system.rollback_to_snapshot('ns.events', {s1})").to_arrow()
     assert result.column("current_snapshot_id")[0].as_py() == s1
     after = spark.sql(f"SELECT id FROM {TABLE} ORDER BY id").to_arrow()
@@ -391,9 +385,6 @@ def test_remove_orphan_files_refuses_the_shared_ctas_fallback_root(
     (A13: ``warehouse`` is the catalog argument, not the process temp dir). That path is still
     derived from NAMES under the warehouse, so two processes sharing one warehouse share the
     directory. Orphan removal deletes what one table's metadata does not reference.
-
-    Found while writing the MW-3 pins: the facade fixture's ``mem.ns.events`` resolved into that
-    shared root and a dry run listed 139,179 files left there by unrelated runs.
     """
     spark.sql(
         f"CREATE TABLE {TABLE} USING iceberg TBLPROPERTIES ({COW}) AS SELECT 1 AS id, 'a' AS name"

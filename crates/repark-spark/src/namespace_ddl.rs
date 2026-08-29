@@ -1,6 +1,4 @@
 //! Namespace and table catalog DDL handlers.
-//!
-//! Extracted MOVE-ONLY from `lib.rs` (r25 T0 DataFusion-style reorg). Zero behavior change.
 
 use std::collections::HashMap;
 
@@ -86,7 +84,7 @@ pub(crate) struct CreateNamespace {
 /// (either the `LOCATION` clause or `DBPROPERTIES ('location' = …)`) is mirrored onto
 /// `location_uri` by `repark_iceberg::catalog::mirror_namespace_location_keys` — unidirectional,
 /// never overwriting an explicit key — so the canonical Glue `locationUri` field is set whichever
-/// key the catalog implementation maps (audit BUG-001 / U2).
+/// key that the catalog implementation maps.
 ///
 /// `IF NOT EXISTS` is idempotent when the request carries no location or the resolved location
 /// matches. A contradictory `LOCATION` fails loud (both paths named) rather than silently

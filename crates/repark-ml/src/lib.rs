@@ -1,21 +1,6 @@
-//! Native tier-1 ML estimators for repark (M3).
-//!
-//! ## Design (docs/design/python-facade.md §4 Q3)
-//!
-//! * **Fit** may be multi-pass / multi-iter **Rust scans over Arrow batches** via the session
-//!   stream. Peak held state is `O(p²)` (normal equations / IRLS weights) or `O(k·p)` (centers)
-//!   — **never** the full training matrix in Rust or Python.
-//! * **Models hold params only** (coefficients, intercept, centers). No cached training rows.
-//! * **Transform** remains plan-built on the Python facade (expression projection).
-//! * **Zero new crates.io deps** — hand-rolled Cholesky; no ndarray / nalgebra / linfa.
-//!
-//! ## Surface
-//!
-//! * [`linear_regression`] — streaming OLS (`XᵀX` / `Xᵀy` + Cholesky). **Must-land.**
-//! * [`logistic_regression`] — IRLS reusing Cholesky.
-//! * [`kmeans`] — Lloyd; default `initMode` errors (must set `initMode="random"`).
-//!
-//! The PyO3 binder in `repark-python` streams DataFusion batches into these accumulators.
+//! Native ML estimator kernels for repark.
+//! The PyO3 binder streams Arrow batches; fits retain only `O(p²)` normal equations or `O(k·p)`
+//! centers, never training rows. Models hold parameters; the Python facade builds transforms.
 
 #![forbid(unsafe_code)]
 

@@ -118,7 +118,7 @@ def _bind_named_row(
                 f"(expected keys {list(names)!r}; silent drop is not supported)"
             )
 
-    # Raw cells — normalize later so all-null NaN/NaT can still witness DOUBLE/TIMESTAMP (C4-L-001).
+    # Raw cells — normalize later so all-null NaN/NaT can still witness DOUBLE/TIMESTAMP.
 
     if allow_missing:
         return tuple(mapping.get(name) for name in names)
@@ -279,7 +279,7 @@ def _rows_from_pandas(
             "(repark createDataFrame is VALUES-only and has no StructType path yet)"
         )
 
-    # Positional series (iloc) — name lookup is wrong under duplicate labels (octo C2).
+    # Positional series (iloc) — name lookup is wrong under duplicate labels.
 
     column_series = [data.iloc[:, source_index] for source_index in range(data.shape[1])]
 
@@ -287,7 +287,7 @@ def _rows_from_pandas(
 
     # all-null columns witness raw cells (NaN→DOUBLE, NaT→TIMESTAMP) like the list path
 
-    # (C5-SAF-001 / C6-Q-001). Sparse[int64]/Sparse[bool] stay on the dtype-map unwrap path.
+    # Sparse[int64]/Sparse[bool] stay on the dtype-map unwrap path.
 
     source_null_sql: list[str] = []
 
@@ -467,16 +467,13 @@ def _create_dataframe_from_rows(
 
     """
 
-    # === r21 T1 (combine rider): legacy first-element coerce follows the session conf.
-
+    # Legacy first-element coerce follows the session conf.
     legacy_first = str(
         session.conf.get("spark.sql.pyspark.legacy.inferArrayTypeFromFirstElement.enabled", "false")
     ).lower() in {"true", "1"}
 
-    # === r23b N1: nested dict-cell → StructType (Spark SPARK-35929) ===
-
-    # strip() matches other bool conf parsers in this module (octo C2-Q-001).
-
+    # Nested dict-cell → StructType (Spark SPARK-35929); strip() matches other bool conf
+    # parsers in this module.
     infer_dict_as_struct = str(
         session.conf.get("spark.sql.pyspark.inferNestedDictAsStruct.enabled", "true")
     ).strip().lower() in {"true", "1"}
@@ -510,13 +507,9 @@ def _create_dataframe_from_rows_inner(
     column_null_sql: list[str] | None = None
 
     # Frame-shaped inputs first — never `if not data` on a DataFrame (pandas raises
+    # "truth value is ambiguous"; G-INT).
 
-    # "truth value is ambiguous"; that was the G-INT bug that forced this expansion).
-
-    # === r20 P2a: cdf-extractor ===
-
-    # P2a: pandas/polars → native Arrow (from_pandas / .to_arrow) + cast/null/refuse rules,
-
+    # pandas/polars → native Arrow (from_pandas / .to_arrow) + cast/null/refuse rules,
     # then P1a C-stream materialize. No per-row Python tuple explode on the hot path.
 
     if _is_pandas_dataframe(data):
@@ -542,7 +535,7 @@ def _create_dataframe_from_rows_inner(
 
             # Typed schema (StructType / DDL / bare DataType wrap) must keep declared
 
-            # types on a 0-row frame — string default was silent wrong (octo C2-Q-001).
+            # types on a 0-row frame — string default was silent wrong.
 
             if engine_types is not None:
                 return _empty_typed_arrow_frame(session, list(schema), engine_types)
@@ -552,8 +545,7 @@ def _create_dataframe_from_rows_inner(
         first = data[0]
 
         if isinstance(first, dict):
-            # r21 T1: schema=None → Spark key-union; StructType/DDL → null-fill field names.
-
+            # schema=None → Spark key-union; StructType/DDL → null-fill field names.
             names, tuples = _rows_from_mapping_list(
                 data,
                 schema,
@@ -576,11 +568,10 @@ def _create_dataframe_from_rows_inner(
             fields = getattr(first, "_fields", None)
 
             if fields is not None:
-                # collections.namedtuple / typing.NamedTuple — source names are _fields
+                # collections.namedtuple / typing.NamedTuple — source names are _fields.
+                # schema= uses the same by-name reorder / positional rename /
 
-                # (C3-Q-002). schema= uses the same by-name reorder / positional rename /
-
-                # fail-loud partial as dict/Row (C6-L-001); never positional-only when names
+                # fail-loud partial as dict/Row; never positional-only when names
 
                 # are known (that swapped values vs dict/Row/pandas/polars under reorder).
 
@@ -615,9 +606,8 @@ def _create_dataframe_from_rows_inner(
             tuples = []
 
             for row_index, row in enumerate(data):
-                # Refuse str / other iterables — character-iterating a string yields wrong rows
-
-                # (C1-Q-002). Only list/tuple are row shapes on this path.
+                # Refuse str / other iterables — character-iterating a string yields wrong rows.
+                # Only list/tuple are row shapes on this path.
 
                 if not isinstance(row, (list, tuple)):
                     raise PySparkTypeError(
@@ -631,7 +621,7 @@ def _create_dataframe_from_rows_inner(
                         f"(row 0 width {width}, row {row_index} width {len(row)})"
                     )
 
-                # Raw cells — normalize after all-null type inference (C4-L-001).
+                # Raw cells — normalize after all-null type inference.
 
                 tuples.append(_apply_permutation(tuple(row), permutation))
 
@@ -773,9 +763,9 @@ def _materialize_values_as_memtable_frame(session: ReparkSession, values_sql: st
         frame = session.sql(f"SELECT * FROM {view_name}")
 
     except BaseException:
-        # Drop orphan MemTable if sql() fails after register (parity mapInArrow C3-SAF-001).
+        # Drop orphan MemTable if sql() fails after register (mapInArrow parity).
 
-        # BaseException so KeyboardInterrupt/SystemExit also release the view (octo C3).
+        # BaseException so KeyboardInterrupt/SystemExit also release the view.
 
         if registered:
             with contextlib.suppress(Exception):
@@ -785,13 +775,10 @@ def _materialize_values_as_memtable_frame(session: ReparkSession, values_sql: st
 
     _register_cdf_view_cleanup(session, frame, view_name)
 
-    # === SE-1: declared-sorted door ===
-
-    # Tag the handed-back frame as the *source* frame over this MemTable view, so
-
-    # ``DataFrame.declareSorted`` knows which registered view to verify and declare.
-
-    # Transformed frames get a fresh handle from ``_spawn`` and never inherit the tag.
+    # SE-1 declared-sorted door: tag the handed-back frame as the *source* frame over this
+    # MemTable view, so ``DataFrame.declareSorted`` knows which registered view to verify
+    # and declare. Transformed frames get a fresh handle from ``_spawn`` and never inherit
+    # the tag.
 
     frame._source_view_name = view_name
 
@@ -838,8 +825,7 @@ def _materialize_arrow_as_memtable_frame(session: ReparkSession, table: Any) -> 
 
     try:
         if callable(register_stream):
-            # pa.Table is an Arrow C Stream exporter — same path mapInArrow uses post-I4.
-
+            # pa.Table is an Arrow C Stream exporter — same path mapInArrow uses.
             register_stream(view_name, table)
 
         else:
@@ -862,7 +848,7 @@ def _materialize_arrow_as_memtable_frame(session: ReparkSession, table: Any) -> 
         frame = session.sql(f"SELECT * FROM {view_name}")
 
     except BaseException:
-        # BaseException: also drop on KeyboardInterrupt/SystemExit after register (octo C3).
+        # BaseException: also drop on KeyboardInterrupt/SystemExit after register.
 
         if registered:
             with contextlib.suppress(Exception):
@@ -872,13 +858,10 @@ def _materialize_arrow_as_memtable_frame(session: ReparkSession, table: Any) -> 
 
     _register_cdf_view_cleanup(session, frame, view_name)
 
-    # === SE-1: declared-sorted door ===
-
-    # Tag the handed-back frame as the *source* frame over this MemTable view, so
-
-    # ``DataFrame.declareSorted`` knows which registered view to verify and declare.
-
-    # Transformed frames get a fresh handle from ``_spawn`` and never inherit the tag.
+    # SE-1 declared-sorted door: tag the handed-back frame as the *source* frame over this
+    # MemTable view, so ``DataFrame.declareSorted`` knows which registered view to verify
+    # and declare. Transformed frames get a fresh handle from ``_spawn`` and never inherit
+    # the tag.
 
     frame._source_view_name = view_name
 

@@ -1,10 +1,6 @@
-"""I6 / R-ALTER-TABLE — Spark ALTER TABLE schema evolution facade pins.
+"""R-ALTER-TABLE — Spark ALTER TABLE schema evolution facade pins.
 
-READY core: ADD/DROP/RENAME COLUMN + SET/UNSET TBLPROPERTIES (already landed).
-Stretch: TYPE widen with narrow-refuse twin; DROP NOT NULL.
-Tests use fully-qualified ``catalog.ns.table`` only (F1 — no bare-name dependency).
-
-Schema-equality + read-after: added→NULL, rename→data intact / field-id.
+Tests use fully-qualified ``catalog.ns.table`` only (no bare-name dependency).
 """
 
 from __future__ import annotations
@@ -92,7 +88,7 @@ def test_alter_column_drop_not_null(spark: ReparkSession) -> None:
 
 def test_alter_unsupported_forms_refuse_loud(spark: ReparkSession) -> None:
     spark.sql("CREATE TABLE mem.ns.loud (id INT, name STRING) USING iceberg")
-    # I7 identity-trap twin: same-name incompatible type on REPLACE COLUMNS.
+    # Identity-trap twin: same-name incompatible type on REPLACE COLUMNS.
     with pytest.raises((UnsupportedOperationException, AnalysisException, Exception)) as caught:
         spark.sql("ALTER TABLE mem.ns.loud REPLACE COLUMNS (id STRING, name STRING)")
     message = str(caught.value).lower()
@@ -104,12 +100,12 @@ def test_alter_unsupported_forms_refuse_loud(spark: ReparkSession) -> None:
 
 
 def test_alter_add_drop_partition_field_and_write_after(spark: ReparkSession) -> None:
-    """I7 READY: ADD/DROP PARTITION FIELD; write-after-evo; mixed-spec read; time-travel."""
+    """READY: ADD/DROP PARTITION FIELD; write-after-evo; mixed-spec read; time-travel."""
     spark.sql("CREATE TABLE mem.ns.pevo (id INT, category STRING) USING iceberg")
     spark.sql("INSERT INTO mem.ns.pevo VALUES (1, 'a'), (2, 'b')")
     pre = spark.sql("SELECT * FROM mem.ns.pevo").to_arrow()
     assert pre.num_rows == 2
-    # Octo C5 — pin pre-evolution snapshot for VERSION AS OF after later writes.
+    # Pin pre-evolution snapshot for VERSION AS OF after later writes.
     pre_snaps = spark._testing_list_snapshots("mem.ns.pevo")
     assert pre_snaps, "seed insert must create a snapshot"
     pre_snap_id = int(pre_snaps[-1][0])
@@ -131,13 +127,13 @@ def test_alter_add_drop_partition_field_and_write_after(spark: ReparkSession) ->
     # Still readable after DROP (files keep their own spec-ids).
     still = spark.sql("SELECT id FROM mem.ns.pevo ORDER BY id").to_arrow()
     assert still.column("id").to_pylist() == [1, 2, 3]
-    # Case-insensitive DROP name (octo C1 adapter) — re-ADD then DROP with different case.
+    # Case-insensitive DROP name — re-ADD then DROP with different case.
     spark.sql("ALTER TABLE mem.ns.pevo ADD PARTITION FIELD category AS cat")
     spark.sql("ALTER TABLE mem.ns.pevo DROP PARTITION FIELD CAT")
 
 
 def test_alter_replace_partition_field_and_replace_columns(spark: ReparkSession) -> None:
-    """I7 stretch: REPLACE PARTITION FIELD; REPLACE COLUMNS promote + identity-trap twin."""
+    """Stretch: REPLACE PARTITION FIELD; REPLACE COLUMNS promote + identity-trap twin."""
     spark.sql("CREATE TABLE mem.ns.prepl (id INT, label STRING) USING iceberg")
     spark.sql("ALTER TABLE mem.ns.prepl ADD PARTITION FIELD bucket(8, id) AS id_b8")
     spark.sql(
@@ -161,7 +157,7 @@ def test_alter_replace_partition_field_and_replace_columns(spark: ReparkSession)
 
 
 def test_alter_float_decimal_twins_and_case_insensitive(spark: ReparkSession) -> None:
-    """Octo C3/C5 facade: float→double + decimal widen twins; case-insensitive DROP."""
+    """Facade: float→double + decimal widen twins; case-insensitive DROP."""
     spark.sql("CREATE TABLE mem.ns.fd (measure FLOAT, amount DECIMAL(5,2)) USING iceberg")
     spark.sql("INSERT INTO mem.ns.fd VALUES (1.5, 12.34)")
     spark.sql("ALTER TABLE mem.ns.fd ALTER COLUMN measure TYPE DOUBLE")

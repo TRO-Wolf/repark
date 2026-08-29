@@ -1,5 +1,7 @@
 # map — python/repark-parity/bench
 
+CC-2 slice complete: comments and docstrings condensed; oracle discriminators, pins, mutation payloads, and safety contracts kept byte-exact; history narration deleted.
+
 ## Purpose
 
 Reproducible **local** performance measurement scripts (R-PERF-MEASURE). No product code;

@@ -1,21 +1,16 @@
-"""r21 T2 — ExternalSorter / datafusion conf passthrough / export error UX.
+"""T2 — ExternalSorter / datafusion conf passthrough / export error UX.
 
-Measure-first diagnosis (hour-0, synthetic OHLCV + 17 float cols, no AWS):
+Environment contract (synthetic OHLCV + 17 float cols, no AWS): the default pool is
+FairSpillPool, RAM-relative (``clamp(0.6 * detected, 1 MiB, 8 GiB)``); under
+``repark.memory.limit.gb=1`` a 2M-row x ~23-col reverse sort fails with DataFusion
+pool-pressure class text (``Resources exhausted`` / ``not enough memory``; operator may be
+ExternalSorter *or* SortPreservingMergeExec) naming ``fair(pool_size: …)`` and usually
+``datafusion.runtime.memory_limit`` / ``sort_spill_reservation_bytes``.
 
-* Default pool is FairSpillPool, RAM-relative (``clamp(0.6 * detected, 1 MiB, 8 GiB)``).
-* Under ``repark.memory.limit.gb=1``, a 2M-row x ~23-col reverse sort fails with
-  DataFusion pool-pressure class text (``Resources exhausted`` / ``not enough
-  memory``; operator may be ExternalSorter *or* SortPreservingMergeExec) naming
-  ``fair(pool_size: …)`` and usually ``datafusion.runtime.memory_limit`` /
-  ``sort_spill_reservation_bytes``.
-* Disconfirming measurement WIN: large growth requests are FairSpillPool pressure
-  on a wide projection against the default/small pool — fix altitude is conf
-  surface + error UX, not a plan rewrite.
-* ``spark.conf.set("datafusion.*")`` was facade-local only; this module pins the
-  forward-to-engine path, one-truth vs builder memory, and clean PySparkException shape.
-
-Oracle: engine message text is DataFusion's (not hand-computed). Conf round-trip is
-get/set equality on the facade store after a successful engine SET.
+``spark.conf.set("datafusion.*")`` pins the forward-to-engine path, one-truth vs builder
+memory, and clean PySparkException shape. Oracle: engine message text is DataFusion's (not
+hand-computed); conf round-trip is get/set equality on the facade store after a successful
+engine SET.
 """
 
 from __future__ import annotations
@@ -64,9 +59,7 @@ def _wide_frame(spark: ReparkSession, n_rows: int):
     return frame
 
 
-# ---------------------------------------------------------------------------------------------
 # datafusion.* conf allow-list — get/set round-trip + refuse-loud unknown
-# ---------------------------------------------------------------------------------------------
 
 
 def test_datafusion_execution_batch_size_conf_round_trip() -> None:
@@ -123,7 +116,7 @@ def test_datafusion_malformed_key_refuses_loud() -> None:
 
 
 def test_datafusion_noncanonical_case_refuses_loud_no_store() -> None:
-    """Mixed-case lookalike must not become a silent facade-only twin (octo T2 C2)."""
+    """Mixed-case lookalike must not become a silent facade-only twin."""
     spark = ReparkSession.builder.getOrCreate()
     with pytest.raises(IllegalArgumentException) as raised:
         spark.conf.set("DataFusion.execution.batch_size", "4096")
@@ -135,7 +128,7 @@ def test_datafusion_noncanonical_case_refuses_loud_no_store() -> None:
 
 
 def test_datafusion_padded_key_refuses_loud_no_store() -> None:
-    """Leading/trailing whitespace lookalike refuses — no store-only twin (octo T2 C2)."""
+    """Leading/trailing whitespace lookalike refuses — no store-only twin."""
     spark = ReparkSession.builder.getOrCreate()
     with pytest.raises(IllegalArgumentException) as raised:
         spark.conf.set(" datafusion.execution.batch_size", "4096")
@@ -144,11 +137,10 @@ def test_datafusion_padded_key_refuses_loud_no_store() -> None:
 
 
 def test_datafusion_trailing_newline_key_refuses_loud_no_store_no_engine() -> None:
-    """Trailing ``\\n`` must not pass the key regex (Python ``$`` hole) — extra-octo T2 E1-1.
+    """Trailing ``\\n`` must not pass the key regex (Python ``$`` hole).
 
-    Pre-fix: ``datafusion.execution.batch_size\\n`` matched ``…$``, SQL SET still updated the
-    live option (newline-as-whitespace), and the facade stored a non-canonical twin while
-    ``get(canonical)`` stayed ``None``.
+    A newline key that slips the regex stores a non-canonical facade twin (SQL SET treats the
+    newline as whitespace) while ``get(canonical)`` stays ``None``.
     """
     spark = ReparkSession.builder.getOrCreate()
     # Capture pre-SET engine value so we can prove the refuse path did not mutate it.
@@ -173,7 +165,7 @@ def test_datafusion_trailing_newline_key_refuses_loud_no_store_no_engine() -> No
 
 
 def test_datafusion_set_value_quote_escape_no_injection() -> None:
-    """Value is single-quoted + quote-doubled; engine parse fails closed (octo T2 C4)."""
+    """Value is single-quoted + quote-doubled; engine parse fails closed."""
     from repark.spark.session import _format_datafusion_set_sql
 
     assert (
@@ -188,7 +180,7 @@ def test_datafusion_set_value_quote_escape_no_injection() -> None:
 
 
 def test_runtime_repark_memory_limit_gb_refuses_loud() -> None:
-    """repark.memory.limit.gb is build-time only — conf.set must not lie (octo T2 C3)."""
+    """repark.memory.limit.gb is build-time only — conf.set must not lie."""
     spark = ReparkSession.builder.config("repark.memory.limit.gb", "1").getOrCreate()
     with pytest.raises(IllegalArgumentException) as raised:
         spark.conf.set("repark.memory.limit.gb", "8")
@@ -229,9 +221,7 @@ def test_dual_memory_knobs_refuse_loud() -> None:
     assert "FairSpillPool" in message or "same" in message.lower()
 
 
-# ---------------------------------------------------------------------------------------------
 # Error UX — clean PySparkException, no pyarrow dynamic-source wrapper
-# ---------------------------------------------------------------------------------------------
 
 
 def test_sort_oom_error_is_pyspark_exception_with_df_message_and_hint() -> None:
@@ -247,8 +237,8 @@ def test_sort_oom_error_is_pyspark_exception_with_df_message_and_hint() -> None:
     assert isinstance(raised.value, RuntimeError)
     assert "dynamically evaluated source" not in lower
     # Pool-pressure class, not a single operator name: DF may surface ExternalSorter
-    # *or* SortPreservingMergeExec under the same FairSpillPool shortfall (octo T2 C1
-    # flake: ExternalSorter-only assert RED under suite load without product regression).
+    # *or* SortPreservingMergeExec under the same FairSpillPool shortfall
+    # (flake: ExternalSorter-only assert RED under suite load without product regression).
     assert "resources exhausted" in lower or "not enough memory" in lower
     assert (
         "externalsorter" in lower
@@ -302,9 +292,7 @@ def test_export_error_helper_strips_pyarrow_noise() -> None:
     assert "dynamically evaluated" not in text.lower()
 
 
-# ---------------------------------------------------------------------------------------------
 # Measure-first before/after bench (recorded; not a flaky wall-time assert)
-# ---------------------------------------------------------------------------------------------
 
 
 def test_runtime_temp_directory_refuses_loud_no_store() -> None:

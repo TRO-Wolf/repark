@@ -8,15 +8,13 @@ treating row order as insignificant by default (Spark result sets are unordered 
 The schema signature is ``(name, type, nullable)`` per field: **field nullability is part of the
 parity contract**. Spark carries a real nullability guarantee (e.g. ``coalesce`` with a non-null
 fallback, or ``row_number``, are non-nullable), and the engine reproduces it, so a nullability
-divergence is a genuine parity failure — not a decorative annotation. (This closes the residual that
-the comparison core ignored nullability; verified empirically to keep every existing parity case
-green.)
+divergence is a genuine parity failure — not a decorative annotation.
 
 **Nested columns (list / struct / map).** Arrow's ``Table.sort_by`` rejects nested types, so the
 order-insensitive path cannot sort every column when the schema is nested. The nested path (see
 :func:`_sorted_by_all_columns`) builds a **total, deterministic** per-row sort key via recursive
 canonical encoding, reorders with ``Table.take``, then compares with Arrow ``equals`` as before.
-Flat-only schemas keep the historical ``sort_by`` path so existing corpora do not re-record.
+Flat-only schemas keep the original ``sort_by`` path so existing corpora do not re-record.
 Map entry order is normalized (keys sorted) before sort+equals so equal maps with different
 storage order still match — list element order remains significant.
 """
@@ -94,7 +92,7 @@ def _schema_has_nested(schema: pa.Schema) -> bool:
 def _sorted_by_all_columns(table: pa.Table) -> pa.Table:
     """Sort a table so two equal row-multisets become directly comparable via ``equals``.
 
-    **Flat schemas** keep the historical ``Table.sort_by`` path (all columns ascending). That
+    **Flat schemas** keep the original ``Table.sort_by`` path (all columns ascending). That
     preserves the exact row order existing goldens and the facade suite already rely on.
 
     **Nested schemas** (any list/struct/map column) cannot use ``sort_by``. The nested path:
@@ -105,10 +103,6 @@ def _sorted_by_all_columns(table: pa.Table) -> pa.Table:
        cell (nulls first; list order significant; struct fields in schema order; map entries
        sorted by key).
     3. Reorders with ``Table.take`` and returns the permuted table.
-
-    Rejected alternatives (recorded in the unit ledger): sort-by-flat-columns-only (not total when
-    nested values distinguish rows); always-Counter-of-pylist (drops Arrow ``equals`` and changes
-    the difference message path); JSON sort keys (not bit-exact for float/decimal).
     """
     if table.num_columns == 0 or table.num_rows == 0:
         return table
@@ -253,7 +247,6 @@ def _scalar_sort_payload(value: object) -> Any:
     # date / datetime / time and other Arrow pylist leaves: fall back to their natural order
     # when comparable; otherwise to a type-tagged repr (total, deterministic for a given class).
     try:
-        # Probe whether the value is totally ordered against itself (NaN-like rejects).
         # Intentional self-equality probe: NaN-like values reject `value == value`.
         if value == value:
             return (6, type(value).__qualname__, value)

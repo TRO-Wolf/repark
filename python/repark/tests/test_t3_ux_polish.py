@@ -1,7 +1,7 @@
-"""r21 T3 UX polish: display_style, Column.round, default app name, H1 export naming.
+"""T3 UX polish: display_style, Column.round, default app name, H1 export naming.
 
-Pins the four must-ship surfaces from charter-t3 (feat/grok-ux-polish). Synthetic
-fixtures only — no brokerage values.
+Pins the four must-ship surfaces from charter-t3. Synthetic fixtures only — no brokerage
+values.
 """
 
 from __future__ import annotations
@@ -29,9 +29,7 @@ def spark() -> ReparkSession:
     session.stop()
 
 
-# -------------------------------------------------------------------------------------------------
 # display_style — conf.set applies; wrong module surface refuses loud
-# -------------------------------------------------------------------------------------------------
 
 
 def test_conf_set_display_style_applies_to_show(spark: ReparkSession) -> None:
@@ -100,9 +98,7 @@ def test_conf_unset_display_style_resets_to_spark(spark: ReparkSession) -> None:
     assert "shape:" not in rendered
 
 
-# -------------------------------------------------------------------------------------------------
 # Default session / app name → repark
-# -------------------------------------------------------------------------------------------------
 
 
 def test_default_app_name_is_repark(spark: ReparkSession) -> None:
@@ -122,9 +118,7 @@ def test_explicit_app_name_is_surfaced() -> None:
         session.stop()
 
 
-# -------------------------------------------------------------------------------------------------
 # Column.round (repark-extra)
-# -------------------------------------------------------------------------------------------------
 
 
 def test_column_round_delegates_to_f_round(spark: ReparkSession) -> None:
@@ -155,9 +149,7 @@ def test_column_round_on_windowed_ta(spark: ReparkSession) -> None:
     assert values[-1] == pytest.approx(12.5)
 
 
-# -------------------------------------------------------------------------------------------------
 # H1 residual — export display overlay (collect / to_arrow / to_polars / to_pandas)
-# -------------------------------------------------------------------------------------------------
 
 
 def _bare_multi_name_join(spark: ReparkSession):

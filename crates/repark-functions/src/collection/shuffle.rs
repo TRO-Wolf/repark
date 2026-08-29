@@ -1,27 +1,7 @@
 //! Spark `shuffle(array[, seed])` — NULL-guarded wrapper over the `datafusion-spark` kernel.
 //!
-//! **Why a wrapper (X1, S0).** `datafusion-spark` 54.1's `general_array_shuffle` writes a
-//! placeholder slot for every NULL row with `mutable.extend(0, 0, 1)` — a read of source
-//! range `0..1`. When the child values buffer is *empty* that read is out of bounds and
-//! `arrow-data`'s primitive transform panics (`range end index 1 out of range for slice of
-//! length 0`). A panic at the Python boundary is an S0: Spark returns NULL for `shuffle(NULL)`.
-//!
-//! **The trigger needs both halves** (measured on BASE `5f13647`, per batch): an empty values
-//! buffer *and* at least one NULL row. `CAST(NULL AS ARRAY<INT>)` and a batch of `[[], NULL]`
-//! panic; `CAST(array() AS ARRAY<INT>)` alone does **not** (empty buffer, no NULL row, so the
-//! placeholder write never happens), and neither does `[[1, 2], NULL, [3]]` (a NULL row, but
-//! the buffer is populated). The guard keys on the buffer alone, which is the wider of the two
-//! conditions — deliberately, because it is the cheap one to test and the extra inputs it
-//! intercepts are exactly those the kernel cannot change.
-//!
-//! The guard is exact, not defensive padding: when the values buffer is empty every row is
-//! either NULL or the empty list, and a permutation of `[]` is `[]` — so the input *is* the
-//! answer and the kernel has nothing to do. Any other input reaches the upstream kernel
-//! untouched, so the permutation quality and the seed contract stay upstream's.
-//!
-//! **Seed (X2).** Upstream already accepts the Spark 4.0 `shuffle(array, seed)` overload
-//! (`Int64` scalar). This wrapper keeps that arity so the Spark door and the facade
-//! (`F.shuffle(col, seed)`) resolve the *same* UDF and produce the same permutation.
+//! Spark `shuffle` wrapper: empty child values return unchanged, avoiding the upstream NULL panic;
+//! populated inputs, including the optional `Int64` seed overload, delegate unchanged.
 
 use std::sync::Arc;
 
@@ -33,10 +13,7 @@ use datafusion::logical_expr::{
 };
 
 /// ===========================================================================================
-/// The Spark `shuffle` UDF instance (NULL-guarded).
-///
-/// Registered after `datafusion-spark`'s defaults so it overwrites the panicking name on the
-/// SQL doors, and embedded directly by [`crate::expr_fn::shuffle`] for the facade.
+/// The Spark `shuffle` UDF instance with a NULL guard.
 /// ===========================================================================================
 #[must_use]
 pub fn shuffle_udf() -> Arc<ScalarUDF> {
@@ -108,8 +85,6 @@ impl ScalarUDFImpl for ReparkShuffle {
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
         match args.args.first() {
-            // A NULL list scalar (`CAST(NULL AS ARRAY<INT>)`) is its own shuffle. Returning it
-            // unexpanded also keeps `shuffle(NULL)` foldable.
             Some(ColumnarValue::Scalar(scalar)) if scalar.is_null() => {
                 return Ok(ColumnarValue::Scalar(scalar.clone()));
             }
@@ -149,7 +124,7 @@ mod tests {
         })
     }
 
-    /// X1: the S0 panic input. A NULL list scalar must come back NULL, not abort the process.
+    /// A NULL list scalar returns NULL without panicking.
     #[test]
     fn null_array_scalar_returns_null_instead_of_panicking() {
         let null_list = ScalarValue::List(Arc::new(ListArray::new_null(int_list_field(), 1)));
@@ -160,7 +135,7 @@ mod tests {
         }
     }
 
-    /// X1: the array form of the same degenerate shape (all rows NULL ⇒ empty values buffer).
+    /// An all-NULL list array returns all NULL rows without panicking.
     #[test]
     fn all_null_list_array_returns_all_nulls_instead_of_panicking() {
         let array: ArrayRef = Arc::new(ListArray::new_null(int_list_field(), 3));
@@ -172,9 +147,7 @@ mod tests {
         assert_eq!(out.null_count(), 3);
     }
 
-    /// X1, second panic shape: an empty list and a NULL in ONE batch. The values buffer is
-    /// empty (so the placeholder read is out of bounds) but the rows are not all NULL, so the
-    /// all-NULL test above does not cover it.
+    /// An empty list beside a NULL row remains unchanged without panicking.
     #[test]
     fn empty_list_beside_a_null_row_returns_both_instead_of_panicking() {
         let values = Arc::new(Int32Array::from(Vec::<i32>::new()));
@@ -195,9 +168,7 @@ mod tests {
         assert!(list.is_null(1), "row 1 stays NULL");
     }
 
-    /// The guard must not swallow real work: a populated array still reaches the kernel and
-    /// keeps its multiset. (Drop the `values_buffer_is_empty` gate and this stays green — it is
-    /// the *panic* tests above that kill the guard.)
+    /// A populated array still delegates and preserves its multiset.
     #[test]
     fn populated_array_still_shuffles_the_same_multiset() {
         let values = Arc::new(Int32Array::from(vec![1, 2, 3, 4, 5]));

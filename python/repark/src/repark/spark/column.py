@@ -21,8 +21,6 @@ from repark.errors import (
     PySparkValueError,
     UnsupportedOperationException,
 )
-
-# === r23 QI1: idents ===
 from repark.spark._idents import quote_ident as _quote_sql_field_ident
 
 if TYPE_CHECKING:
@@ -33,9 +31,8 @@ if TYPE_CHECKING:
 # wrapped with ``lit`` before crossing the boundary.
 Scalar = int | float | str | bool | None
 
-# Exact ``decimal(p,s)`` shape after :func:`_normalize_type_string` (digits only). Used to
+# Exact ``decimal(p,s)`` shape after :func:`_normalize_type_string` (digits only). Rejects
 # reject hostile cast suffixes before they are embedded into generator unnest SQL
-# (octo C4-SEC-001 / C4-L-002).
 _DECIMAL_CAST_TYPE_RE = re.compile(r"^decimal\(\d+,\d+\)$")
 
 
@@ -58,7 +55,6 @@ class Column:
         "_is_aggregate",
         "_is_aggregate_function",
         "_is_foldable",
-        # === r20 H1: join/identity ===
         "_join_sql_expr",
         "_origin_field",
         "_origin_plan_id",
@@ -70,9 +66,7 @@ class Column:
         "_sql_expr",
         "_stable_name",
         "_when_pairs",
-        # === r23b N2: plan-collapse ===
         # Retained after ``.over(WindowSpec)`` for adjacent same-spec withColumn(s) merge.
-        # Alias / for_select / ``round`` wrappers preserve it (Q15 same-layer wraps).
         "_window_spec",
     )
 
@@ -111,7 +105,7 @@ class Column:
         ``agg_name`` reset to ``None`` — so an explicit ``.alias(...)`` overrides the default.
 
         ``is_aggregate`` is sticky aggregate identity for :meth:`~repark.dataframe.DataFrame.select`
-        global-agg routing (R-SELECT-GLOBAL-AGG / octo C1-Q-001). True for ``F.sum``/… builders
+        global-agg routing. True for ``F.sum``/… builders
         (via ``agg_name``) and preserved across ``.alias``, ``cast``, arithmetic, unary ops, and
         null checks so ``df.select(F.sum("x") + 1)`` still routes as a global aggregate. Cleared
         by :meth:`over` (window aggregates are not GROUP BY aggregates).
@@ -119,10 +113,10 @@ class Column:
         ``is_foldable`` marks constant/literal expressions (``F.lit``, pure-literal arithmetic).
         Spark allows foldables beside aggregates in an ungrouped ``select``; the select
         classifier treats aggregate-or-foldable lists as global agg, not
-        ``[MISSING_GROUP_BY]`` (octo C1-Q-002).
+        ``[MISSING_GROUP_BY]``.
 
         ``has_free_attribute`` is sticky free (non-aggregated) column-ref identity for
-        select routing (octo C2-Q-001 / C2-L-001). True for bare ``F.col`` / ``df["x"]``
+        select routing. True for bare ``F.col`` / ``df["x"]``
         and OR-propagated across binary / when / coalesce / scalar wrappers. Aggregate
         builders absorb their arguments (result leaves this False). An expression that is
         both aggregate and free-attribute (``sum(x) + id``) must raise
@@ -130,15 +124,14 @@ class Column:
 
         ``has_ungroupable`` is sticky non-groupable identity for analytics / generators
         (window ``.over(...)``, ``F.rand()``) that are neither foldable nor free attrs
-        (octo C7-L-002). OR-propagated like free so nested ``sum(x)+row_number().over(...)``
-        / ``coalesce(sum, window)`` raise ``[MISSING_GROUP_BY]`` instead of pure_global
-        (list-level window companions were fixed in C6-L-001; nested composition needs
-        this bit).
+        OR-propagated like free so nested ``sum(x)+row_number().over(...)``
+        / ``coalesce(sum, window)`` raise ``[MISSING_GROUP_BY]`` instead of pure_global.
+        Nested compositions also need this marker.
 
         ``is_aggregate_function`` marks a bare AggregateFunction (``F.sum``/… builders)
         acceptable to native ``DataFrame.aggregate``. Preserved only across ``.alias`` /
         ``for_select`` / sort markers — cleared by cast / arithmetic / scalar wrappers so
-        those take the SQL global-agg path (octo C2-Q-002 fallout).
+        those take the SQL global-agg path.
 
         ``spark_display`` is the PySpark-style expression string embedded in aggregate output
         names (``sum((x + 1))``, ``sum(CAST(x AS DOUBLE))``, ``sum(x AS y)``). Tracked on the
@@ -146,7 +139,7 @@ class Column:
         unset, :meth:`spark_display_part` falls back to the native ``display_name()``.
 
         ``projection_name`` is the name applied at the :meth:`~repark.dataframe.DataFrame.select`
-        boundary when the user gave no explicit alias (Group H). It matches live PySpark's
+        boundary when the user gave no explicit alias. It matches live PySpark's
         projection display (``(x + 1)``, ``negative(x)``, …) and is **not** always identical
         to ``spark_display`` — a plain cast of a named attribute keeps the child name
         (``df.x.cast("double")`` → ``"x"``) even though the agg embed is
@@ -156,11 +149,11 @@ class Column:
         (Spark ``NamedExpression``). :meth:`cast` preserves that name; compound ops clear it.
 
         ``partition_transform`` is set only by ``F.years`` / ``F.months`` / ``F.days`` /
-        ``F.hours`` (Group I) — the SQL fragment for ``writeTo(...).partitionedBy(...)``.
+        ``F.hours`` — the SQL fragment for ``writeTo(...).partitionedBy(...)``.
         Sticky across derived Columns so the transform still fails loud outside
         ``partitionedBy`` (Spark ``PARTITION_TRANSFORM_EXPRESSION_NOT_IN_PARTITIONED_BY``).
 
-        ``origin_plan_id`` / ``origin_field`` (H1 Group H): set when this Column is a pure
+        ``origin_plan_id`` / ``origin_field``: set when this Column is a pure
         schema bind from a DataFrame (``df["x"]`` / ``df.x``). Join conditions and
         post-join ``select``/``drop`` resolve the correct side via these tokens. Cleared
         on compound ops (binary/arithmetic); preserved across ``.alias`` / ``for_select``.
@@ -175,13 +168,11 @@ class Column:
         self._when_pairs = when_pairs
         self._agg_name = agg_name
         # True for aggregate expressions even after .alias() clears _agg_name
-        # (alias must not re-apply default agg output names — GroupedData contract).
         self._is_aggregate = bool(agg_name is not None if is_aggregate is None else is_aggregate)
         # Aggregates are never foldable constants; OR-propagation on ops clears foldable.
         self._is_foldable = bool(is_foldable) and not self._is_aggregate
         # Free attrs and aggregates can both be True on composed exprs (sum(x)+id).
         self._has_free_attribute = bool(has_free_attribute)
-        # Window / non-deterministic generators: sticky across composition (octo C7-L-002).
         self._has_ungroupable = bool(has_ungroupable)
         # Bare AggregateFunction only (builders); default True when agg_name is set.
         if is_aggregate_function is None:
@@ -192,7 +183,6 @@ class Column:
         # Optional SQL cast type(s) applied *after* unnest (``explode(...).cast("string")``).
         # Sticky across further casts; rewrite wraps ``CAST(unnest(...) AS <type>)``.
         # A tuple is an ordered cast chain (innermost first) for ``.cast().cast()``
-        # composition — overwriting would drop intermediate types (octo C5-L-003).
         self._generator_cast = generator_cast if generator is not None else None
         self._spark_display = spark_display
         # Default projection_name to spark_display when the caller only set the latter
@@ -207,14 +197,11 @@ class Column:
         # assignments). Distinct from ``spark_display``: string literals are unquoted in
         # display names but must be quoted in SQL. Unset → fall back to spark_display_part().
         self._sql_expr = sql_expr
-        # === r20 H1: join/identity ===
         self._origin_plan_id = origin_plan_id
         self._origin_field = origin_field
         self._join_sql_expr = join_sql_expr
-        # === r20 G2: window/rand/sampleBy ===
         # Simple ORDER BY column names for value-offset RANGE numeric-type check at select.
         self._g2_range_order_names = list(g2_range_order_names) if g2_range_order_names else None
-        # === r23b N2: plan-collapse ===
         self._window_spec = window_spec
 
     def sql_expr_part(self) -> str:
@@ -239,7 +226,7 @@ class Column:
 
         ``Column.alias`` embeds ``… AS name`` into ``sql_expr`` for MERGE/select surfaces.
         Generator rewrites (``unnest`` / ``WHERE array_length(…)``) need the bare array
-        expression only — never an illegal ``AS`` inside ``unnest(...)`` (octo C1-Q-005).
+        expression only — never an illegal ``AS`` inside ``unnest(...)``.
         """
         text = self.sql_expr_part()
         if not self._stable_name or self._projection_name is None:
@@ -271,7 +258,7 @@ class Column:
         keep Spark's ``sum(x AS y)`` form via :meth:`spark_display_part`. Outer wrappers
         (``round`` / ``abs`` / arithmetic / cast / ``_scalar``) collapse that NamedExpression
         to the projection name so ``.alias("v").round(2)`` displays ``round(v, 2)`` rather
-        than ``round((id * 1.234) AS v, 2)`` (H2 Group H naming polish).
+        than ``round((id * 1.234) AS v, 2)``.
         """
         if (
             self._stable_name
@@ -283,7 +270,7 @@ class Column:
         return self.spark_display_part()
 
     def _reject_nested_generator(self, operation: str) -> None:
-        """Refuse ops that would drop ``_generator`` and silently skip unnest (octo C4-L-001).
+        """Refuse ops that would drop ``_generator`` and silently skip unnest.
 
         Spark rejects nested generators (``UNSUPPORTED_GENERATOR``). Alias / cast / asc / desc
         keep the generator sticky on purpose; every other Column operator must fail loud rather
@@ -303,8 +290,8 @@ class Column:
         Spark evaluates all of these. repark cannot yet: the Spark facade's own generated SQL is
         read back by a dialect that parses ``x -> y`` as an operator, and the window path fails at
         physical planning. Both surface as an engine internal — a `ParserError` naming a column
-        offset, a `SanityCheckPlan` dump — so the honest answer is a refusal that names the
-        workaround, which does work.
+        offset, a ``SanityCheckPlan`` dump — so the honest answer is a refusal that names the
+        supported alternative.
         """
         if self._inner.contains_higher_order():
             raise UnsupportedOperationException(
@@ -325,15 +312,11 @@ class Column:
         right = self._to_column(other)
         right._reject_nested_generator(f"binary op {spark_op!r}")
         native = getattr(self._inner, op_method)(right._inner)
-        # H2: collapse aliased children so ``.alias("v") + 1`` displays ``(v + 1)``.
         display = f"({self.spark_wrap_display_part()} {spark_op} {right.spark_wrap_display_part()})"
-        # Track SQL embedding so MERGE / free-SQL surfaces quote lit operands (octo C1-Q-005).
         sql_expr = f"({self.sql_expr_part()} {spark_op} {right.sql_expr_part()})"
-        # H1: parallel join-ON fragment with origin tokens (df1.b == df2.b stays sided).
         join_sql_expr = f"({self.join_sql_part()} {spark_op} {right.join_sql_part()})"
         # Sticky aggregate identity (OR): ``sum(x) + 1`` remains an aggregate for select routing.
         # Sticky free attribute (OR): ``sum(x) + id`` is both aggregate and free → MISSING_GROUP_BY.
-        # Sticky ungroupable (OR): ``sum + row_number().over(...)`` → MISSING_GROUP_BY (C7-L-002).
         is_aggregate = self._is_aggregate or right._is_aggregate
         is_foldable = self._is_foldable and right._is_foldable and not is_aggregate
         has_free_attribute = self._has_free_attribute or right._has_free_attribute
@@ -565,7 +548,6 @@ class Column:
     def substr(self, startPos: Column | int, length: Column | int) -> Column:  # noqa: N803
         """Substring slice (PySpark ``Column.substr``).
 
-        # === r21 T7: census-r6 ===
         Spark 1-based positions; ``startPos=0`` is treated as 1 (owned substring UDF).
         ``startPos`` and ``length`` must share a type (both int or both Column) — same
         checks as classic ``Column.__getitem__`` slice path.
@@ -752,7 +734,6 @@ class Column:
         self._reject_nested_generator("isNull")
         display = f"({self.spark_wrap_display_part()} IS NULL)"
         sql_expr = f"({self.sql_expr_part()} IS NULL)"
-        # H1: keep join_sql QCOL tokens so post-join filter can rewrite to engine fields.
         join_sql_expr = f"({self.join_sql_part()} IS NULL)"
         return Column(
             self._inner.is_null(),
@@ -774,7 +755,6 @@ class Column:
         self._reject_nested_generator("isNotNull")
         display = f"({self.spark_wrap_display_part()} IS NOT NULL)"
         sql_expr = f"({self.sql_expr_part()} IS NOT NULL)"
-        # H1: keep join_sql QCOL tokens so post-join filter can rewrite to engine fields.
         join_sql_expr = f"({self.join_sql_part()} IS NOT NULL)"
         return Column(
             self._inner.is_not_null(),
@@ -800,7 +780,6 @@ class Column:
     ) -> Column:
         """Build a searched CASE column from ordered WHEN arms (used by ``F.when``)."""
         # Generators inside CASE arms strip ``_generator`` and skip unnest rewrite
-        # (octo C5-L-001 / C5-Q-001). Spark: UNSUPPORTED_GENERATOR.
         for condition, value in pairs:
             condition._reject_nested_generator("when/CASE")
             value._reject_nested_generator("when/CASE")
@@ -817,7 +796,6 @@ class Column:
             f"WHEN {condition.sql_expr_part()} THEN {value.sql_expr_part()}"
             for condition, value in pairs
         )
-        # H1: CASE join_sql keeps QCOL tokens from origin-bearing arms (post-join when).
         join_arms = " ".join(
             f"WHEN {condition.join_sql_part()} THEN {value.join_sql_part()}"
             for condition, value in pairs
@@ -832,10 +810,7 @@ class Column:
             display = f"CASE {arms} ELSE {otherwise.spark_wrap_display_part()} END"
             sql_expr = f"CASE {sql_arms} ELSE {otherwise.sql_expr_part()} END"
             join_sql_expr = f"CASE {join_arms} ELSE {otherwise.join_sql_part()} END"
-            # Closed with ELSE — further .when() must fail (Spark; octo C2-L-003).
             retained_pairs = None
-        # Sticky partition-transform (Group I): CASE arms embedding F.years/... still fail
-        # loud outside partitionedBy (octo r1 C1-Q-003).
         arm_columns = [col for pair in pairs for col in pair] + (
             [otherwise] if otherwise is not None else []
         )
@@ -891,19 +866,18 @@ class Column:
 
     @property
     def str(self) -> Any:
-        """Polars-style string namespace (``col.str.to_uppercase()``) — R-POLARS-NS."""
+        """Polars-style string namespace (``col.str.to_uppercase()``)."""
         from repark.spark.polars import StringNameSpace
 
         return StringNameSpace(self)
 
     @property
     def dt(self) -> Any:
-        """Polars-style datetime namespace (``col.dt.year()``) — R-POLARS-NS."""
+        """Polars-style datetime namespace (``col.dt.year()``)."""
         from repark.spark.polars import DatetimeNameSpace
 
         return DatetimeNameSpace(self)
 
-    # === r21 T3: ux-polish ===
     def round(self, scale: int = 0) -> Column:
         """Round this column to ``scale`` decimal places (repark extension; not PySpark).
 
@@ -928,7 +902,7 @@ class Column:
         ``sql_expr`` keeps the child expression **without** embedding ``AS name`` so
         post-alias composition (``sum(x).alias("t") + 1``, ``.cast(...)``) and free-SQL
         global-agg select stay valid; the output name is ``projection_name`` (quoted at
-        the SELECT boundary — octo C3-002 / C3-SEC-001 / C3-SAF-001).
+        the SELECT boundary.
 
         E1: accepts ``*alias`` and optional ``metadata=``. Multi-name + ``metadata`` raises
         ``ONLY_ALLOWED_FOR_SINGLE_COLUMN`` (Apache ``test_alias_negative``). Schema metadata
@@ -951,11 +925,9 @@ class Column:
         if self._generator is not None:
             # Generators keep the *array* SQL in sql_expr; only the output name changes.
             # Sticky aggregate / free / ungroupable / AF must survive ``.alias`` so select
-            # generator+agg still raises ``[MISSING_GROUP_BY]`` (combine octo C5-Q-002) —
-            # pre-fix dropped those bits and ``select(synth.alias("e"))`` bypassed the gate.
+            # Keep aggregate metadata so synthesized aliases still reach the select gate.
             return Column(
                 self._inner.alias(name),
-                # H2: collapse prior alias so re-alias is ``a AS b`` not ``x AS a AS b``.
                 spark_display=f"{self.spark_wrap_display_part()} AS {name}",
                 sql_expr=self.sql_expr_part(),
                 projection_name=name,
@@ -976,7 +948,6 @@ class Column:
             )
         return Column(
             self._inner.alias(name),
-            # H2: collapse prior alias so re-alias is ``a AS b`` not ``x AS a AS b``.
             spark_display=f"{self.spark_wrap_display_part()} AS {name}",
             # Do not embed ``AS name`` into sql_expr — composition and CAST would break.
             sql_expr=self.sql_expr_part(),
@@ -988,17 +959,13 @@ class Column:
             is_foldable=self._is_foldable and not self._is_aggregate,
             has_free_attribute=self._has_free_attribute,
             has_ungroupable=self._has_ungroupable,
-            # Alias alone keeps native AggregateFunction purity (GroupedData / global agg).
             is_aggregate_function=self._is_aggregate_function,
             generator=self._generator,
             generator_cast=self._generator_cast,
-            # H1: alias renames the projection but the leaf still came from the same DF field.
             origin_plan_id=self._origin_plan_id,
             origin_field=self._origin_field,
             join_sql_expr=self._join_sql_expr,
-            # Sticky RANGE order-name check (r20 G2 octo C1) across .alias.
             g2_range_order_names=self._g2_range_order_names,
-            # === r23b N2: plan-collapse ===
             window_spec=self._window_spec,
         )
 
@@ -1019,7 +986,7 @@ class Column:
         E1 surface: returns a :class:`Column`. A slice with ``step`` raises
         ``PySparkValueError`` / ``SLICE_WITH_STEP`` (Apache classic). Open-bound slices
         (``None`` start and/or stop) raise the same ``substr`` type errors classic raises
-        — never invent defaults (octo C3-L-001). Index/key paths lower via native
+        — never invent defaults. Index/key paths lower via native
         ``array_element`` / ``get_field`` / ``getitem`` where possible.
         """
         self._reject_nested_generator("__getitem__")
@@ -1028,7 +995,6 @@ class Column:
         if isinstance(key, slice):
             # Apache classic (4.1.2 classic/column.py): step → SLICE_WITH_STEP; else
             # return self.substr(k.start, k.stop) with *no* open-bound defaults
-            # (octo C3-L-001 / C3-L-002). Inventing start=1 / length=start made
             # col[:n]/col[i:]/col[:] silently evaluate wrong substr.
             if key.step is not None:
                 raise PySparkValueError(
@@ -1068,7 +1034,6 @@ class Column:
                     },
                 )
             # call_scalar("substr") embeds owned Spark substring_udf (pos 0 ≡ 1), not DF
-            # built-in — see crates/repark-python call_scalar arm (octo C7-L-001).
             display = f"substr({self.spark_wrap_display_part()}, {start_display}, {length_display})"
             return Column(
                 _native.PyColumn.call_scalar(
@@ -1088,8 +1053,6 @@ class Column:
 
         key_column = key if isinstance(key, Column) else lit(key)
         # Integer: Spark Python ``Column[i]`` is 0-based element extract (not a 1-element slice).
-        # call_scalar ``array_element`` embeds owned ``__repark_array_get__`` (octo C1-L-001 /
-        # C1-Q-002 — no fail-open to parent ``_inner``).
         if isinstance(key, int) and not isinstance(key, bool):
             display = f"{self.spark_wrap_display_part()}[{key}]"
             index_lit = lit(key)
@@ -1107,10 +1070,7 @@ class Column:
                 has_ungroupable=self._has_ungroupable,
             )
 
-        # String key — struct field via native get_field (octo C1-L-002); free-SQL always
-        # double-quotes the ident so hostile fragments cannot widen ON/GROUP BY (C1-SEC-001).
         # get_field also resolves map[str] (Apache field_accessor / access_nested_types);
-        # pinned by test_column_getitem_map_str_key_extracts_value (octo C4-Q-001).
         display = f"{self.spark_wrap_display_part()}[{key!r}]"
         if isinstance(key, str):
             key_lit = lit(key)
@@ -1131,7 +1091,6 @@ class Column:
             )
 
         # Column / other key — polymorphic GetItem (array 0-based or map-by-key). Never
-        # fail-open to parent ``_inner`` (octo C2-L-001 / C2-SAF-001 residual).
         if isinstance(key, Column):
             display = f"{self.spark_wrap_display_part()}[{key.spark_wrap_display_part()}]"
         native = _native.PyColumn.call_scalar(
@@ -1150,7 +1109,6 @@ class Column:
             has_ungroupable=self._has_ungroupable,
         )
 
-    # === r22 C5: census-r7 Column access surface ===
     def getItem(self, key: Any) -> Column:  # noqa: N802 — PySpark camelCase
         """Get an array element or map value (PySpark ``Column.getItem``).
 
@@ -1209,7 +1167,6 @@ class Column:
         engine_type = _engine_type_from_cast_arg(data_type)
         normalized = _normalize_type_string(engine_type)
         # Allowlist Spark CAST tokens — never fail-open unknown/hostile type text into SQL
-        # (generator path embeds ``CAST(unnest(...) AS {type})``; octo C4-SEC-001 / C4-L-002).
         spark_type = _spark_cast_type_name(normalized)
         cast_display = f"CAST({self.spark_wrap_display_part()} AS {spark_type})"
         # Live PySpark 4.1.2: cast of a NamedExpression (bare col / alias) keeps the child
@@ -1222,12 +1179,7 @@ class Column:
             stable = False
         if self._generator is not None:
             # Element cast after unnest: keep the *array* native + sql_expr + generator
-            # sticky so select still rewrites (octo C1-Q-003 / C1-L-003). Do not cast the
-            # array itself — the two-phase rewrite projects the array then
-            # ``CAST(unnest(...) AS <type>)`` via ``_generator_cast`` (octo C3).
-            # spark_type is allowlisted above so phase-2 SQL cannot reshape SELECT.
             # Chained ``.cast().cast()`` *composes* (innermost first), never overwrites —
-            # float→int→string must apply every CAST (octo C5-L-003).
             previous = self._generator_cast
             if previous is None:
                 composed_cast: str | tuple[str, ...] = spark_type
@@ -1242,8 +1194,7 @@ class Column:
                 projection_name=projection,
                 stable_name=stable,
                 partition_transform=self._partition_transform,
-                # Sticky aggregate / free / ungroupable across generator cast (combine
-                # octo C5-Q-002) — same contract as non-generator cast below. AF purity
+                # Sticky aggregate, free, and ungroupable flags across generator casts.
                 # is cleared by cast (SQL path), matching the non-generator branch.
                 is_aggregate=self._is_aggregate,
                 is_foldable=self._is_foldable and not self._is_aggregate,
@@ -1253,7 +1204,6 @@ class Column:
                 generator_cast=composed_cast,
             )
         cast_sql = f"CAST({self.sql_expr_part()} AS {spark_type})"
-        # H1: keep join_sql QCOL tokens so post-join filter / SQL select can rewrite the
         # cast to the correct engine field. Origin is *not* preserved — pure origin rebind
         # would drop the cast and project the uncast leaf.
         join_sql_expr = f"CAST({self.join_sql_part()} AS {spark_type})"
@@ -1311,22 +1261,21 @@ class Column:
         """Apply a window specification to this window/aggregate column (PySpark ``Column.over``).
 
         Used on a window function such as :func:`repark.functions.row_number` or an aggregate
-        with a frame (r20 G2)::
+        with a frame::
 
             F.row_number().over(Window.partitionBy("g").orderBy("ts"))
             F.max("k").over(Window.orderBy("k").rowsBetween(0, 1))
 
         Clears aggregate / free-attribute / foldable markers — a window expression is not a
         GROUP BY aggregate and must not classify as a foldable global-agg companion
-        (``select(sum(x), row_number().over(...))`` → ``[MISSING_GROUP_BY]`` — octo C6-L-001).
+        (``select(sum(x), row_number().over(...))`` → ``[MISSING_GROUP_BY]``).
         Sets sticky ``_has_ungroupable`` so nested compositions (``sum+over``,
         ``coalesce(sum, window)``, ``when(...).otherwise(window)``) also raise
-        ``[MISSING_GROUP_BY]`` rather than pure_global (octo C7-L-002).
+        ``[MISSING_GROUP_BY]`` rather than pure_global.
 
         Raises (from the engine) if this column is not a window or aggregate function.
         """
         self._reject_nested_generator("over")
-        # === r20 G2: window/rand/sampleBy ===
         # RANGE without ORDER BY / multi-order value-offset + mark numeric ORDER BY names.
         window._validate_at_over()
         # Ranking / row_number / ntile require ORDER BY (Spark AnalysisException; DF Internal).
@@ -1354,9 +1303,8 @@ class Column:
                 # (`col("d").cast("timestamp").cast("long")` still projects as `d`), so naming it
                 # here made the guard below read the SOURCE column's dtype and refuse a perfectly
                 # numeric order key — Spark accepts `CAST(ts AS BIGINT)` as a RANGE key, and so
-                # does repark since the TZ-5 cast fix made that expression epoch seconds
-                # (task/tz5-cast-seconds-ledger.md; the arithmetic wrapper the moving-average pin
-                # used to carry had been hiding this). Requiring the display to EQUAL the
+                # does repark because that expression uses epoch seconds. Requiring the display
+                # to equal the
                 # projection name is what separates a bare reference from an expression over one;
                 # an expression falls to the display branch, whose name matches no schema field,
                 # so the guard skips it and the engine remains the authority on its type.
@@ -1371,9 +1319,7 @@ class Column:
             range_order_names = names
         # Explicit non-agg / non-foldable / non-free so select's pure_global predicate
         # rejects window companions beside aggregates (defaults already False — keep
-        # intentional so a future sticky copy cannot reintroduce C6-L-001). Sticky
         # ungroupable so nested sum∘window composition cannot OR-aggregate away the
-        # window leaf (octo C7-L-002).
         return Column(
             self._inner.over(
                 partitions,
@@ -1390,7 +1336,6 @@ class Column:
             has_ungroupable=True,
             is_aggregate_function=False,
             g2_range_order_names=range_order_names,
-            # === r23b N2: plan-collapse ===
             # Retain the facade WindowSpec so adjacent withColumn(s) can merge same-spec
             # windows (structural equality). Native expr alone does not expose the spec.
             window_spec=window,
@@ -1401,8 +1346,8 @@ class Column:
 
         The marker is the ONLY thing that changes. Dropping any of the carried attributes here
         silently breaks a different subsystem: `sql_expr` keeps free-SQL global-agg from falling
-        back to unquoted display (octo C4-SEC-002), `generator` keeps explode rewrite alive
-        through an `orderBy` marker (octo C2-Q-005 / C2-L-003), and the origin fields keep join
+        back to unquoted display, ``generator`` keeps explode rewrite alive
+        through an ``orderBy`` marker, and the origin fields keep join
         identity through `orderBy(parent.col.desc())` (H1).
         """
         return Column(
@@ -1455,7 +1400,7 @@ class Column:
     def for_select(self) -> Column:
         """Return this column with the native expression aliased to the Spark projection name.
 
-        Used by :meth:`repark.dataframe.DataFrame.select` (Group H) so
+        Matches :meth:`repark.dataframe.DataFrame.select` so
         ``df.select(df.x + 1).columns`` is ``['(x + 1)']`` rather than DataFusion's
         ``t.x + Int64(1)``. An explicit :meth:`alias` already names the native; re-aliasing
         to ``projection_name`` is idempotent. When no projection name is tracked, the
@@ -1466,7 +1411,7 @@ class Column:
         ``df.select("X")`` and ``df.select(F.col("X"))`` keep ``"X"`` when the schema
         column is ``x`` — not the engine's canonical field name). Skipping the alias
         collapsed CI-equivalent projections (``select("X", "x")``) into a single
-        DataFusion name and bypassed the facade duplicate preflight (octo C3-L-001/002).
+        DataFusion name and bypasses the facade duplicate preflight.
         Cast-of-attribute still differs: ``spark_display`` is ``CAST(...)`` while
         ``projection_name`` stays the child name, so the child name is applied here.
         """
@@ -1503,7 +1448,7 @@ def _engine_type_from_cast_arg(data_type: Any) -> str:
 
     Accepts ``str`` or a :class:`~repark.types.DataType` instance. Any other Python type raises
     :class:`PySparkTypeError` with ``NOT_DATATYPE_OR_STR`` (Apache ``test_cast_negative``) —
-    never bare ``AttributeError`` on ``_engine_type`` (octo C5-C1-001).
+    never a bare ``AttributeError`` on ``_engine_type``.
     """
     if isinstance(data_type, str):
         from repark.spark.types import refuse_collated_type_string
@@ -1557,22 +1502,20 @@ def _spark_cast_type_name(engine_type: str) -> str:
 
     Unknown / hostile type text raises :class:`ParseException` — never fail-open via
     ``.upper()`` or a loose decimal suffix. Generator unnest SQL embeds this token as
-    ``CAST(... AS {type})`` (octo C4-SEC-001 / C4-L-002); non-generator casts still go
+    ``CAST(... AS {type})``; non-generator casts still go
     through native ``parse_data_type`` as a second gate.
 
     The allowlist is the security control; the *exception class* is parity. Live PySpark
     4.1.2 raises ``ParseException`` for an unparsable cast token — and ``ParseException``
     subclasses :class:`AnalysisException` (see :mod:`repark.errors`), so user code written
     as ``except AnalysisException`` catches a bad cast on both engines. A bare
-    ``ValueError`` would not be caught by that idiom (r24 morning rider; oracle-recorded
-    ``notatype``/``varchar`` → ``ParseException``, ``ValueError=False``).
+    ``ValueError`` would not be caught by that idiom.
     """
     if engine_type.startswith("decimal"):
         if _DECIMAL_CAST_TYPE_RE.fullmatch(engine_type) is None:
             raise ParseException(f"unknown cast type {engine_type!r}")
         # engine: decimal(10,4) → Spark: DECIMAL(10,4)
         return "DECIMAL" + engine_type[len("decimal") :].upper()
-    # Lockstep with native ``parse_data_type`` (r24 QUAL-03). Aliases ``tinyint``/``smallint``
     # match Spark short forms; ``byte``/``short`` are the ``types.py`` ``_engine_type`` tokens.
     mapping = {
         "boolean": "BOOLEAN",
@@ -1601,7 +1544,7 @@ def _require_allowlisted_spark_cast_token(spark_type: str) -> str:
     """Return ``spark_type`` if it is a safe CAST SQL token; else raise ``ValueError``.
 
     Used at generator unnest embed time so a poisoned ``_generator_cast`` cannot reshape
-    ``SELECT`` (octo C4-SEC-001). Accepts only tokens emitted by :func:`_spark_cast_type_name`.
+    ``SELECT``. Accepts only tokens emitted by :func:`_spark_cast_type_name`.
     """
     if spark_type in _SPARK_CAST_SIMPLE_TOKENS:
         return spark_type
@@ -1639,10 +1582,8 @@ def sort_nulls_first_for(column: Column, is_ascending: bool) -> bool:
     follows Spark's default, which is derived from the direction (ascending → nulls first,
     descending → nulls last).
 
-    The default USED to be the whole story, because only ``asc``/``asc_nulls_first`` and
-    ``desc``/``desc_nulls_last`` were reachable and each agreed with the derivation. Deriving is
-    wrong the moment the other two corners exist, and it is wrong silently — the rows come back in
-    a plausible order. Every ordering path resolves null placement through here.
+    The default is correct only when no explicit marker exists. The other two corners need
+    their own markers, or rows return in a plausible but wrong order.
     """
     explicit = column._sort_nulls_first
     return is_ascending if explicit is None else bool(explicit)

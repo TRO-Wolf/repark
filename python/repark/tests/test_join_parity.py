@@ -1,32 +1,22 @@
 """Joins differential corpus (H-2 gap G4) - value AND Arrow type AND nullability vs live Spark.
 
 **Oracle.** Every ``spark`` table / error needle below was RECORDED in record mode against live
-PySpark 4.1.2 (zulu-17, ``master("local[2]")``, ANSI on, ``spark.sql.shuffle.partitions=2``) on
-2026-08-11. One recipe per row runs on BOTH engines (facade ``sql()`` primary; DataFrame-API
-``df.join`` for the CP-11 door rows), so the recipe under test and the recipe the oracle ran are
-the same code path - nothing here is hand-computed.
+PySpark 4.1.2 (zulu-17, ``master("local[2]")``, ANSI on, ``spark.sql.shuffle.partitions=2``).
+One recipe per row runs on BOTH engines, so the recipe under test and the recipe the oracle ran
+are the same code path - nothing here is hand-computed.
 
-**Why some rows are DISCLOSURES / splits.** When the engines agree on value AND Arrow type AND
-nullability, the row is a plain equality (``repark is None``). When one engine refuses a surface
-the other runs, the row is a **split** that pins the recorded Spark success half and repark's
-refuse needle. A silent CONVERGENCE goes red and forces the disclosure to be revisited rather
-than laundered into "parity".
+**Disclosures / splits.** When one engine refuses a surface the other runs, the row is a
+**split** pinning the recorded Spark success half and repark's refuse needle. A silent
+CONVERGENCE goes red and forces the disclosure to be revisited, not laundered into "parity".
 
-**G4b (2026-08-11): the two DataFrame semi/anti splits CONVERGED.** ``df_left_semi_on_name``
-and ``df_left_anti_on_name`` pinned repark's facade refusing ``how='leftsemi'`` /
-``how='leftanti'``. The DataFrame-door widening landed the surface, the split classifier reported
-CONVERGED against those already-recorded Spark goldens, and both rows are now content equalities
-- their Spark halves are UNCHANGED, only repark's side moved. Their names are kept byte-identical
-(a pin's name is part of the pin; the ``_unsupported`` suffix retires in a declared-rename unit).
-Four rows were added beside them so the claim covers the whole surface rather than one shape:
-``on='k'`` / ``on=['k']`` / ``left.k == right.k``, and the NULL-key edge on both semi and anti.
-The corpus currently holds NO splits; the classifier's two arms stay proven by an explicit
-harness probe row (see ``_CLASSIFIER_PROBE_SPLIT``).
+Former refuse splits ``df_left_semi_on_name`` / ``df_left_anti_on_name`` are now content
+equalities; their names stay byte-identical (a pin's name is part of the pin; the
+``_unsupported`` suffix retires in a declared-rename unit). The corpus currently holds no
+splits; the classifier's arms stay proven by ``_CLASSIFIER_PROBE_SPLIT``.
 
 **Rows assert on the Arrow path** (``to_arrow`` / Spark ``toArrow``) through the parity
-comparator, so schema name, Arrow type and nullability are part of every content assertion -
-never ``show``. The comparator is order-insensitive by default (mxn fan-out rows do not pin
-order). Error-class rows pin the error *token* each engine raises, not a full stack trace.
+comparator - schema name, Arrow type and nullability are part of every content assertion, never
+``show``. The comparator is order-insensitive by default. Error rows pin the error *token*.
 
 **Re-deriving the goldens (record mode).** The driver that recorded every Spark half is committed
 beside this module::
@@ -37,14 +27,13 @@ beside this module::
 
 It imports ``ROWS`` from THIS module and runs each row's own recipe, so the recorded golden and
 the asserted recipe cannot drift apart. Needs a JVM + ``pyspark`` (``uv sync --extra record``);
-never collected by pytest. CI stays JVM-free.
+never collected by pytest.
 
-**Entry points (CP-11).** Facade ``sql()`` is the primary door (every SQL-tagged row). The
-DataFrame-API (``df.join``) door carries its own content rows, including the whole semi family
-across every ``on`` shape (G4b). A class claim is scoped to the entry it names.
+**Entry points (CP-11).** Facade ``sql()`` is the primary door; the DataFrame-API door carries
+its own content rows including the whole semi family across every ``on`` shape.
 
-**Out of scope (named, not silent):** fixing any divergence found (rows document; fixes are
-future units); the registry file; window functions (W-4).
+**Out of scope (named, not silent):** fixing any divergence found (rows document), the registry
+file, window functions (W-4).
 """
 
 from __future__ import annotations
@@ -63,29 +52,22 @@ from repark_parity import FrameMismatchError, assert_frames_equal
 if TYPE_CHECKING:
     from repark.spark.session import ReparkSession
 
-# ==================================================================================================
-# Budget floors/ceilings - pinned by test_join_row_set_covers_g4_budget (not incidental)
-# ==================================================================================================
+# Budget floors/ceilings - pinned by test_join_row_set_covers_g4_budget
 
 G4_BUDGET_MIN = 20
-# G4b raised the ceiling 28 -> 30 for the four DataFrame-door semi-family rows the widening
-# added (condition-join + NULL-key, semi and anti). Deliberate, not incidental: the budget is a
-# sprawl guard, so growing it is a reviewed act with a named driver, never a silent bump.
+# The budget is a sprawl guard: growing it is a reviewed act with a named driver, never a
+# silent bump.
 G4_BUDGET_MAX = 30
 MIN_EQUALITY_ROWS = 14
 MAX_DISCLOSURE_OR_SPLIT_ROWS = 8
-# G4b: the DF door was 2 content rows + 2 refuse splits; it is now 9 content rows. The floor
-# tracks that so the door cannot quietly shrink back.
-MIN_DF_API_ROWS = 6
+MIN_DF_API_ROWS = 6  # floor keeps the DF door from quietly shrinking back
 MIN_NULL_KEY_ROWS = 4  # every join type: inner/left/right/full (name-gated *null_keys_*)
 MIN_DUPLICATE_KEY_ROWS = 2
 MIN_TYPE_MISMATCH_ROWS = 2
 MIN_NULLABILITY_ROWS = 2  # outer-join schema nullability flips (name-gated *nullable*)
 
 
-# ==================================================================================================
 # Arrow helpers
-# ==================================================================================================
 
 
 def _table(
@@ -101,25 +83,22 @@ _STR = pa.string()
 _DEC_10_2 = pa.decimal128(10, 2)
 
 
-# ==================================================================================================
 # Row shape
-# ==================================================================================================
 
 
 @dataclass(frozen=True)
 class JoinRow:
     """One differential join row: a recipe + recorded Spark half + optional repark half.
 
-    ``kind="content"`` - result set on the Arrow path.
-      * ``repark is None`` means the engines AGREE - plain equality against ``spark``.
-      * ``repark is not None`` means DISCLOSURE: repark's actual output is pinned, and a
-        convergence onto the recorded Spark output is detected and reported as one.
+    ``kind="content"`` - result set on the Arrow path. ``repark is None``: the engines AGREE,
+    plain equality against ``spark``. ``repark is not None``: DISCLOSURE - repark's actual
+    output is pinned, and convergence onto the Spark output is detected and reported.
 
     ``kind="error"`` - both engines refuse; pins the error *token* each raises.
 
-    ``kind="split"`` - one engine succeeds (content) and the other refuses (error). Pins both
-    halves. If the refuse side starts succeeding, the harness classifies CONVERGED (matches the
-    success golden -> flip to content equality) vs regression (committed but mismatched).
+    ``kind="split"`` - one engine succeeds, the other refuses; pins both halves. If the refuse
+    side starts succeeding, the harness classifies CONVERGED (matches the success golden ->
+    flip to content equality) vs regression.
 
     ``entry="sql"`` runs ``session.sql(sql)``. ``entry="df"`` runs ``createDataFrame`` +
     ``DataFrame.join`` (CP-11 door).
@@ -140,9 +119,9 @@ class JoinRow:
     on: str | None = None
     how: str = "inner"
     # ``name`` = ``on="k"``; ``name_list`` = ``on=["k"]``; ``condition`` = ``left.k == right.k``;
-    # ``eq_null_safe`` = ``left.k.eqNullSafe(right.k)``; ``none`` = no ``on`` at all. The four
-    # ``on`` shapes are separate engine paths (name equi-join vs the H1 condition rewrite), so a
-    # claim proven on one says nothing about the others - G4b pins the semi family on both.
+    # ``eq_null_safe`` = ``left.k.eqNullSafe(right.k)``; ``none`` = no ``on`` at all. The shapes
+    # are separate engine paths (name equi-join vs the H1 condition rewrite), so a claim proven
+    # on one says nothing about the others.
     on_mode: Literal["name", "name_list", "condition", "eq_null_safe", "none"] = "name"
     # When True, post-join select aliases left.k->lk / right.k->rk to avoid duplicate names.
     select_eq_null_safe: bool = False
@@ -162,9 +141,7 @@ class JoinRow:
         return self.kind == "content" and self.repark is not None
 
 
-# ==================================================================================================
 # Lifecycle helpers - one recipe SSOT the record driver imports
-# ==================================================================================================
 
 
 def run_join_content(session: Any, row: JoinRow) -> pa.Table:
@@ -226,9 +203,7 @@ def _frames_differ(actual: pa.Table, expected: pa.Table) -> bool:
     return False
 
 
-# ==================================================================================================
-# The corpus (gap G4: budget 20-28)
-# ==================================================================================================
+# The corpus (gap G4)
 
 ROWS: list[JoinRow] = [
     # ----- controls ------------------------------------------------------------------------------
@@ -473,7 +448,7 @@ ROWS: list[JoinRow] = [
             "solo row on k=2."
         ),
     ),
-    # ----- 3. Missing types - semi / anti / cross (SQL accepts; DF semi/anti refuse) -------------
+    # ----- 3. Missing types - semi / anti / cross -----------------------------------------------
     JoinRow(
         name="cross_join_sql",
         kind="content",
@@ -746,7 +721,7 @@ ROWS: list[JoinRow] = [
         repark=None,
         note="composite equi-join on (k1, k2): only the matching pair survives.",
     ),
-    # ----- 6. DataFrame-API door (CP-11) >=2 content + semi/anti refuse splits --------------------
+    # ----- 6. DataFrame-API door (CP-11) ---------------------------------------------------------
     JoinRow(
         name="df_join_inner_on_name",
         kind="content",
@@ -816,7 +791,7 @@ ROWS: list[JoinRow] = [
             "Post-join select aliases keys to avoid duplicate column names in Arrow."
         ),
     ),
-    # ----- 7. G4b: DataFrame-door semi family (was two refuse splits; now content) ---------------
+    # ----- 7. DataFrame-door semi family ---------------------------------------------------------
     JoinRow(
         name="df_left_semi_on_name",
         kind="content",
@@ -967,9 +942,7 @@ ROWS: list[JoinRow] = [
 ]
 
 
-# ==================================================================================================
 # Session builders
-# ==================================================================================================
 
 
 def _repark_session() -> ReparkSession:
@@ -979,14 +952,12 @@ def _repark_session() -> ReparkSession:
     return ReparkSession.builder.appName("join-parity").getOrCreate()
 
 
-# ==================================================================================================
 # The rows
-# ==================================================================================================
 
 
 @pytest.fixture
 def repark() -> Iterator[ReparkSession]:
-    """Repark session for the facade door. Yields then stops."""
+    """Repark session for the facade door."""
     session = _repark_session()
     try:
         yield session
@@ -999,16 +970,11 @@ def repark() -> Iterator[ReparkSession]:
 def test_join_parity_row(row: JoinRow, repark: ReparkSession) -> None:
     """Every recorded row on the Arrow path (value AND type AND nullability) or error class.
 
-    Content equality rows assert ``repark == Spark``.
-
-    Content disclosure rows assert repark's pinned actual output - and when that assertion fails,
-    the failure is CLASSIFIED (CONVERGED vs regression).
-
-    Error rows assert both engines' needles appear in the raised message (honest class compare).
-
-    Split rows assert repark still refuses with its needle AND that the recorded Spark success
-    half is well-formed. If repark starts *succeeding*, the failure is CLASSIFIED: CONVERGED
-    (matches Spark golden -> flip to content equality) vs regression/partial.
+    Content equality rows assert ``repark == Spark``. Content disclosure rows assert repark's
+    pinned output, with failures CLASSIFIED (CONVERGED vs regression). Error rows assert both
+    engines' needles appear in the raised message. Split rows assert repark still refuses with
+    its needle AND the recorded Spark half is well-formed; if repark starts succeeding, the
+    failure is CLASSIFIED (CONVERGED -> flip to content equality vs regression).
     """
     if row.kind == "error":
         assert row.repark_error_needle is not None
@@ -1019,8 +985,8 @@ def test_join_parity_row(row: JoinRow, repark: ReparkSession) -> None:
         return
 
     if row.kind == "split":
-        # Drive the real lifecycle so a future engine that starts accepting the surface is
-        # CLASSIFIED: matching the Spark golden -> CONVERGED; other result -> regression.
+        # Drive the real lifecycle so a future accepting engine is CLASSIFIED (CONVERGED vs
+        # regression).
         assert row.repark_error_needle is not None
         assert row.spark is not None
         try:
@@ -1034,7 +1000,6 @@ def test_join_parity_row(row: JoinRow, repark: ReparkSession) -> None:
             assert row.spark.num_rows >= 1, f"{row.name}: spark golden is empty - re-record"
             return
 
-        # Recipe committed - repark no longer refuses this surface.
         if not _frames_differ(actual, row.spark):
             raise AssertionError(
                 f"{row.name}: repark and Spark have CONVERGED - repark now succeeds with the "
@@ -1082,8 +1047,8 @@ def test_join_parity_row(row: JoinRow, repark: ReparkSession) -> None:
 def test_join_row_set_covers_g4_budget() -> None:
     """The pin budget is part of the unit - corpus size and class coverage are pinned.
 
-    Family coverage pins are **name-gated** so a control row cannot satisfy them (CP-2
-    tautological-pin lesson). Entry-point coverage pins the DF door (CP-11).
+    Family coverage pins are name-gated so a control row cannot satisfy them (CP-2);
+    entry-point coverage pins the DF door (CP-11).
     """
     assert G4_BUDGET_MIN <= len(ROWS) <= G4_BUDGET_MAX, (
         f"G4 budget {G4_BUDGET_MIN}-{G4_BUDGET_MAX} differential rows (got {len(ROWS)})"
@@ -1123,13 +1088,12 @@ def test_join_row_set_covers_g4_budget() -> None:
         f"need >={MIN_DUPLICATE_KEY_ROWS} *duplicate_keys_* rows; got {dup_rows}"
     )
 
-    # 3. Missing types - semi / anti / cross present (SQL content or DF split).
+    # 3. Missing types - semi / anti / cross present.
     assert any("cross" in name for name in names), "must pin CROSS JOIN"
     assert any("semi" in name for name in names), "must pin LEFT SEMI"
     assert any("anti" in name for name in names), "must pin LEFT ANTI"
-    # G4b: the two former DF refuse splits are now CONTENT equalities - the widening landed, so
-    # the corpus must state parity, not a stale disclosure. Re-splitting them (a regression that
-    # re-refuses the surface) reds here as well as on the row itself.
+    # The two former DF refuse splits are now content equalities; a re-refuse of the surface
+    # reds here as well as on the row itself.
     for flipped_name in ("df_left_semi_on_name", "df_left_anti_on_name"):
         flipped = next(row for row in ROWS if row.name == flipped_name)
         assert flipped.kind == "content", (
@@ -1139,9 +1103,8 @@ def test_join_row_set_covers_g4_budget() -> None:
         assert flipped.repark is None, f"{flipped_name} asserts repark == Spark, not a pin"
         assert flipped.repark_error_needle is None, f"{flipped_name} must not keep a refuse needle"
         assert flipped.spark is not None
-    # G4b entry-point matrix: the semi family is pinned on the DF door across BOTH `on` shapes
-    # (name/list key AND Column condition) and on the NULL-key edge - name-gated so no single
-    # control row can satisfy the family (CP-2).
+    # Entry-point matrix: the semi family is pinned on the DF door across both `on` shapes and
+    # the NULL-key edge - name-gated so no single control row can satisfy the family (CP-2).
     df_semi_family = [row for row in ROWS if row.entry == "df" and row.family == "missing_type"]
     df_semi_modes = {(row.how, row.on_mode) for row in df_semi_family}
     for how in ("leftsemi", "leftanti"):
@@ -1199,16 +1162,11 @@ def test_join_row_set_covers_g4_budget() -> None:
             assert row.repark is None
 
 
-# ==================================================================================================
 # Classifier reachability (CP-1) - both arms proven by monkeypatch
-# ==================================================================================================
 
-# G4b: the corpus's last two splits became content equalities when the DataFrame semi family
-# landed, so the split classifier no longer has a live row to exercise. The classifier is
-# HARNESS machinery, not a corpus pin - deleting its coverage because today's corpus happens to
-# be split-free would leave the next lane's split disclosure unguarded. This probe row keeps
-# both arms provable; it is deliberately NOT in ROWS (it would be an unrecorded golden and would
-# count against the budget).
+# The split classifier has no live split row in today's corpus; the classifier is HARNESS
+# machinery, not a corpus pin, so its coverage must not die with the corpus. This probe row
+# keeps both arms provable; it is deliberately NOT in ROWS (unrecorded golden, budget count).
 _CLASSIFIER_PROBE_SPLIT = JoinRow(
     name="_classifier_probe_split",
     kind="split",

@@ -1,7 +1,5 @@
 //! Model: Claude Fable 5
-//!
-//! ANSI-door pins: `geometry` / `geography` DECLARED out (`V3-GEO-1`), `variant` stays V3-6;
-//! all three refuse at CREATE, naming the type.
+//! ANSI-door pins declare `geometry`, `geography`, and `variant` out at CREATE (`V3-GEO-1`).
 //! pins: v3r-1-rulings/C-008, C-009
 
 use iceberg::{NamespaceIdent, TableIdent};

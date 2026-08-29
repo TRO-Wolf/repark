@@ -1,25 +1,17 @@
 """FNP-6a — ``regexp_extract_all`` and ``regexp_substr``, over machinery repark already wrote.
 
-These are the first NEW kernels of the campaign: FNP-1/2/3/5 moved 34 names without writing one,
-because the engine already had them. It does not have these.
+``spark_regexp.rs`` already implements Java's ``Matcher.find()`` stepping (an empty match is
+reported where a previous non-empty match ended and advances by a UTF-16 unit) plus the ASCII
+binding for Java's ``\\d``/``\\w``/``\\s``; both kernels reuse that walk. Two conventions Spark
+deliberately keeps apart, and so do these:
 
-What made them cheap is that the hard part was paid for earlier. ``spark_regexp.rs`` already
-implements Java's ``Matcher.find()`` stepping — an empty match is reported where a previous
-non-empty match ended, and empty matches advance by a UTF-16 unit — plus the ASCII binding for
-Java's ``\\d``/``\\w``/``\\s`` (the ``regex`` crate's are Unicode). Both kernels reuse that walk
-rather than re-deriving it.
-
-**Two conventions Spark deliberately keeps apart**, and so do these:
-
-* ``regexp_extract_all`` returns an EMPTY ARRAY when nothing matches. NULL means a NULL input.
+* ``regexp_extract_all`` returns an EMPTY ARRAY when nothing matches; NULL means a NULL input.
 * ``regexp_substr`` returns NULL when nothing matches — unlike ``regexp_extract``, whose
   empty-string convention cannot tell "matched empty" from "did not match".
 
-**Oracle.** Python's ``re`` module, not repark's own output. The patterns here are ones where
-Python and Java agree, so ``re`` is a fair judge; the Java-specific divergences (empty-match
-stepping, ASCII classes) are already pinned by ``regexp_count``'s own tests.
-
-Ledger: ``task/fnp-6a-regexp-ledger.md``.
+**Oracle.** Python's ``re`` module, not repark's own output; the patterns are ones where Python
+and Java agree, so Java-specific divergences are pinned by ``regexp_count``'s own tests. Ledger:
+``task/fnp-6a-regexp-ledger.md``.
 """
 
 from __future__ import annotations
@@ -92,8 +84,8 @@ def test_substr_returns_null_on_no_match_not_empty_string() -> None:
         .to_pylist()
     )
     assert got == ["100", None, None]
-    # Was `is not ""` (F632-suppressed): an identity test that only caught the empty string by the
-    # accident of interning, and would have read as passing for any other falsy value. SEM-6.
+    # `is None` rather than `is not ""` (SEM-6): an identity test against "" only catches the
+    # empty string by interning accident and would pass for any other falsy value.
     assert got[1] is None, "no match is NULL for regexp_substr, not an empty string"
 
 
@@ -136,9 +128,9 @@ def test_extract_all_reuses_the_java_matcher_stepping() -> None:
     ``[0-9]*`` on ``2026`` matches at every position plus the end — Java's stepping, which the
     ``regex`` crate's ``find_iter`` does not reproduce. Counting and collecting must not disagree.
 
-    ``idx=0`` is named explicitly (SEM-1, 2026-08-21). ``[0-9]*`` has no capture group, and the
-    two-argument default is now Spark's group 1, which RAISES on such a pattern — this test is
-    about the stepping walk, not about the group default, so it asks for the whole match.
+    ``idx=0`` is named explicitly (SEM-1): ``[0-9]*`` has no capture group, and the two-argument
+    default is Spark's group 1, which RAISES on such a pattern — this test is about the stepping
+    walk, not the group default.
     """
     frame = _session().createDataFrame([("2026",)], "s string")
     out = frame.select(

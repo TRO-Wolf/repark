@@ -1,18 +1,14 @@
-//! Volume-family window-UDF dispatch (`ad`/`adosc`/`obv`/`mfi`).
-//!
-//! Called only from [`TaFn::compute`](super::TaFn::compute). Kernel math stays in
-//! `crate::volume`.
+//! Volume-family window-UDF dispatch. Kernel math stays in `crate::volume`.
 
 use crate::{ad, adosc, mfi, obv};
 
 use super::{TaFn, family_dispatch_miss, period};
 
 /// ===========================================================================================
-/// Volume-family single-output dispatch (TA-4).
+/// Dispatch the volume kernels.
 /// ===========================================================================================
 pub(super) fn compute(func: TaFn, series: &[&[f64]], params: &[f64]) -> crate::Result<Vec<f64>> {
     match func {
-        // TA-4 volume: AD/ADOSC/MFI are H/L/C/V; OBV is close+volume.
         TaFn::Ad => ad(series[0], series[1], series[2], series[3]),
         TaFn::Adosc => adosc(
             series[0],

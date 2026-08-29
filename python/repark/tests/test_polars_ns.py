@@ -87,7 +87,6 @@ def test_str_slice_zero_based(spark: ReparkSession) -> None:
         rp.col("s").str.slice(2).alias("sl2"),
     ).spark.to_arrow()
     rows = table.to_pylist()
-    # offset 1 length 3 → chars index 1..3 → "ell"
     assert rows[0]["sl"] == "ell"
     assert rows[0]["sl2"] == "llo"
     assert rows[1]["sl"] is None
@@ -124,8 +123,7 @@ def test_dt_year_month_day_weekday_ordinal_truncate(spark: ReparkSession) -> Non
         rp.col("d").dt.ordinal_day().alias("od"),
         rp.col("d").dt.truncate("month").alias("tr"),
     ).spark.to_arrow()
-    # UNION ALL row order is nondeterministic — sort client-side so the date row is rows[0]
-    # (combine rider: this test flaked when the NULL row arrived first).
+    # UNION ALL row order is nondeterministic — sort client-side so the date row is rows[0].
     rows = sorted(table.to_pylist(), key=lambda r: r["y"] is None)
     assert rows[0]["y"] == 2020
     assert rows[0]["m"] == 6

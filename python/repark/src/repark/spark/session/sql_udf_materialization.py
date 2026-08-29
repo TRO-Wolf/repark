@@ -33,8 +33,6 @@ def _sql_materialize_expr_udfs(
 
     """
 
-    # === r21 T7: census-r6 ===
-
     calls = _sql_find_registry_udf_calls(expr_text, registry)
 
     if not calls:
@@ -166,8 +164,6 @@ def _sql_plan_order_by_aliases(
 
     """
 
-    # === r20 U9: sql-udf-rewrite ===
-
     text = order_by_sql.strip()
 
     if not re.match(r"(?is)^ORDER\s+BY\b", text):
@@ -192,7 +188,7 @@ def _sql_plan_order_by_aliases(
 
         ascending = True
 
-        # Explicit NULLS FIRST/LAST: refuse loud (do not silently ignore — U9-C4-001).
+        # Explicit NULLS FIRST/LAST: refuse loud, do not silently ignore.
 
         if re.search(r"(?is)\bNULLS\s+(FIRST|LAST)\b", piece):
             return None
@@ -256,8 +252,6 @@ def _sql_plan_order_by_aliases(
 def _sql_udf_public_error_text(error: BaseException) -> str:
     """Strip internal ``__repark_sql_udf_*`` names from error text (U9 Q13)."""
 
-    # === r20 U9: sql-udf-rewrite ===
-
     text = str(error)
 
     if "__repark_sql_udf" not in text:
@@ -284,8 +278,6 @@ def _sql_udf_clean_exception(error: BaseException) -> BaseException:
 
     """
 
-    # === r20 U9: sql-udf-rewrite ===
-
     from repark.errors import PySparkException, UnsupportedOperationException
 
     text = str(error)
@@ -302,7 +294,7 @@ def _sql_udf_clean_exception(error: BaseException) -> BaseException:
     if isinstance(error, UnsupportedOperationException):
         return error
 
-    # Surface user UDF / analysis / parse errors without rewrite framing (U9-C3-001).
+    # Surface user UDF / analysis / parse errors without rewrite framing.
 
     if isinstance(error, PySparkException):
         return error

@@ -1,5 +1,10 @@
 # map — python/repark-parity/compat
 
+CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
+accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
+
+CC-2 slice complete: comments and docstrings condensed; oracle discriminators, pins, mutation payloads, and safety contracts kept byte-exact; history narration deleted.
+
 ## Purpose
 
 The PySpark-compat measurement harness plus **the port's acceptance gate**. Q1 re-home
@@ -63,6 +68,9 @@ stability run and quarantine rule, the full-extras facade cohort, the attributio
 
 ## Debug
 
+- The `CLI::` block in `compare_reports.py`'s module docstring is contract, not prose:
+  `tests/test_deferred_ledger.py` pins `--deferred task/port/deferred-python-tests.txt` there so
+  the ledger path cannot drift from the gate it feeds.
 | Symptom | First check |
 |---|---|
 | `ModuleNotFoundError: pyspark.sql.tests` | Cache missing / `install_redirect` not given `spark_tests_root` |

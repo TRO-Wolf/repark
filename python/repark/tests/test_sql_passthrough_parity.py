@@ -9,11 +9,10 @@ wrong, straight through ``spark.sql()`` — no DataFrame-API mediation.
 
 Goldens are hand-computed from Spark's documented semantics. U5: the Spark door defaults
 ``spark.sql.ansi.enabled=true`` (Spark 4 / Q10=A) so divide/modulo-by-zero **raises**;
-``.config(..., false)`` restores the legacy NULL wrap. Invalid array index / substring
-bounds stay NULL (those arms are not gated tonight). Real pyspark goldens for this
-passthrough file are still not the record-driver path (Connect-only note in
-``task/todo.md``); the decimal ``/0`` Spark halves live in
-``test_decimal128_parity.py``.
+``.config(..., false)`` restores the legacy NULL wrap. Invalid array index / substring bounds
+stay NULL (those arms are not knob-gated). Real pyspark goldens for this passthrough file are
+still not on the record-driver path (Connect-only note in ``task/todo.md``); the decimal ``/0``
+Spark halves live in ``test_decimal128_parity.py``.
 
 Known divergence NOT yet pinned here (parity backlog): a runtime ``CAST`` of a non-numeric or
 out-of-range string to a numeric type — e.g. ``CAST('abc' AS INT)`` — **raises** in repark today
@@ -40,9 +39,7 @@ def spark() -> ReparkSession:
     return ReparkSession.builder.appName("pytest-sql-passthrough").getOrCreate()
 
 
-# ==================================================================================================
 # C-AR-001 — integer `/` is always-double division (the audit's S0: `SELECT 5/2` returned 2)
-# ==================================================================================================
 
 
 def test_integer_division_is_double(spark: ReparkSession) -> None:
@@ -113,9 +110,7 @@ def test_decimal_division_stays_decimal(spark: ReparkSession) -> None:
     assert table.column("d").to_pylist() == [Decimal("0.3333333333333")]
 
 
-# ==================================================================================================
 # C-AR-002 — ORDER BY default null placement (audit #4: inverted, changes rows under LIMIT)
-# ==================================================================================================
 
 
 def test_order_by_asc_defaults_nulls_first(spark: ReparkSession) -> None:
@@ -152,9 +147,7 @@ def test_window_order_by_defaults_nulls_first(spark: ReparkSession) -> None:
     assert table.column("rn").to_pylist() == [1]
 
 
-# ==================================================================================================
 # C-AR-003 — `[]` is 0-based; `element_at` is 1-based and works on arrays (audit #5, #15)
-# ==================================================================================================
 
 
 def test_array_subscript_is_zero_based(spark: ReparkSession) -> None:
@@ -167,7 +160,6 @@ def test_array_subscript_is_zero_based(spark: ReparkSession) -> None:
 
 
 def test_element_at_array_is_one_based(spark: ReparkSession) -> None:
-    # Previously every one of these failed coercion (element_at resolved to map_extract).
     table = spark.sql(
         "SELECT element_at(array(10,20,30), 1) AS first, "
         "element_at(array(10,20,30), -1) AS last, element_at(array(10,20,30), 4) AS oob"
@@ -189,9 +181,7 @@ def test_element_at_map_returns_plain_value(spark: ReparkSession) -> None:
     assert table.column("miss").to_pylist() == [None]
 
 
-# ==================================================================================================
 # C-AR-004 — substr/substring position edge cases (audit #6)
-# ==================================================================================================
 
 
 def test_substr_spark_edge_positions(spark: ReparkSession) -> None:
@@ -216,14 +206,9 @@ def test_substr_null_and_multibyte(spark: ReparkSession) -> None:
     assert table.column("multibyte").to_pylist() == ["éll"]  # characters, not bytes
 
 
-# ==================================================================================================
 # Divergence corpus x entry points — every divergence class above, pinned through EVERY user
-# entry point on the Arrow path (value AND type). Added 2026-07-13 after the F.expr regression:
-# `F.expr("5/2")` handed off a pre-analysis Int64 label over Float64 buffers, so `collect()`
-# returned 2.5's bit pattern as an int while the identical string through `spark.sql()` was
-# correct (and `show()` looked right on both). One green entry point is not parity — a new user
-# entry point that evaluates SQL expressions must join this matrix.
-# ==================================================================================================
+# entry point on the Arrow path (value AND type). A new user entry point that evaluates SQL
+# expressions must join this matrix.
 
 # (expression, expected value, expected Arrow type or None when the value alone is the pin)
 DIVERGENCE_CORPUS: list[tuple[str, object, pa.DataType | None]] = [

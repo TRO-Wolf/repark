@@ -1,12 +1,8 @@
-"""Seeded differential SQL fuzzer — RePark vs DuckDB (R-SQL-FUZZER / D3).
-
-Infrastructure deliverable: generate shared-dialect queries over seeded in-memory
-tables, compare RePark to DuckDB, minimize and bank divergences. Engine product
-fixes are **out of scope** for this unit — bank + pin only.
+"""Seeded differential SQL fuzzer — RePark vs DuckDB.
 
 Determinism contract (HARD): every run is keyed by an explicit integer seed
-(CLI / env ``REPARK_FUZZ_SEED``; test default fixed literal ``42``). Same seed →
-byte-identical query set. No time-based seeding anywhere.
+(CLI / env ``REPARK_FUZZ_SEED``; test default fixed literal ``42``).
+Same seed → byte-identical query set; no time-based seeding anywhere.
 """
 
 from __future__ import annotations

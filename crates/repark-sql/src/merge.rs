@@ -1,21 +1,4 @@
 //! `MERGE INTO` — the ANSI door's thin lowering (design §2 Q4).
-//!
-//! Ownership is the point of the ruling. **Execution is shared and RePark-owned**:
-//! [`repark_iceberg::write::merge::execute_merge`] does first-match-wins, the cardinality check,
-//! the copy-on-write rewrite, and the commit — the fork's `TableProvider` DML path (ADR-0003) is
-//! deliberately NOT used for MERGE. **Lowering is per-door**: this module maps sqlparser's
-//! `Statement::Merge` onto the shared [`MergeSpec`], and the Spark door maps its own AST onto the
-//! same type. There is no door→door edge, and the shared target TYPE is what turns any drift
-//! between the two lowerings into a cross-door test failure (design §6 R3).
-//!
-//! What this door does NOT carry, by ruling:
-//! * **The star forms.** `WHEN MATCHED THEN UPDATE SET *` and `THEN INSERT *` are Spark spellings
-//!   that stock sqlparser cannot parse; the Spark door earns them with a token-level sentinel
-//!   rewrite. Here they are parse-level absent, and the wrong-door sniff already steers. No
-//!   sentinel machinery is duplicated.
-//! * **`OUTPUT` / `RETURNING`.** They parse, and silently dropping the clause would hand back a
-//!   result set the user never asked for — so they refuse loud, in the same message class the
-//!   Spark door uses.
 
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::DataFrame;
@@ -51,11 +34,6 @@ const NON_LAST_NOT_MATCHED_CLAUSE_OMIT_CONDITION: &str = "NON_LAST_NOT_MATCHED_C
 /// ===========================================================================================
 /// Lower and execute a parsed `MERGE INTO`.
 /// ===========================================================================================
-///
-/// # Errors
-/// An OUTPUT/RETURNING refusal, a malformed target/source/clause shape, the P11 or `MoR` guard
-/// refusals already raised at the router head, or anything the shared executor surfaces
-/// (including `MERGE_CARDINALITY_VIOLATION`).
 pub(crate) async fn execute_merge(cx: &EngineContext<'_>, merge: &Merge) -> Result<DataFrame> {
     if merge.output.is_some() {
         return Err(DataFusionError::NotImplemented(
@@ -70,8 +48,7 @@ pub(crate) async fn execute_merge(cx: &EngineContext<'_>, merge: &Merge) -> Resu
     cx.ctx.read_empty()
 }
 
-/// Lower the sqlparser pieces into the executor's plain-string spec, returning the catalog name
-/// the target resolved to.
+/// Lower the sqlparser pieces into the executor's plain-string spec and return the catalog name.
 fn lower(
     table: &TableFactor,
     source: &TableFactor,
@@ -119,9 +96,6 @@ fn lower(
 }
 
 /// Sort one WHEN clause into the matched / not-matched lists, validating the kind–action pairing.
-///
-/// Every expression is re-rendered to SQL verbatim (`ToString`), so quoting the user wrote is
-/// preserved and resolves against the aliases chosen here.
 fn lower_clause(
     clause: &MergeClause,
     target_alias: &str,
@@ -213,8 +187,7 @@ fn lower_clause(
     Ok(())
 }
 
-/// `SET col = expr` pairs. Accepts a bare column or `<target-alias>.column`; any other
-/// qualifier or a three-or-more-part (nested) name is refused.
+/// Lower `SET col = expr` pairs. Accept a bare column or `<target-alias>.column`.
 fn lower_assignments(
     assignments: &[Assignment],
     target_alias: &str,
@@ -274,8 +247,7 @@ fn refuse_non_last_unconditional_clause(
     Ok(())
 }
 
-/// Bare column, or `<target-alias>.column` (qualifier compared case-insensitively to the
-/// statement's target alias). Three-or-more-part names are nested-field assignment.
+/// Resolve a bare column or `<target-alias>.column` with case-insensitive qualifier matching.
 fn resolve_merge_column(name: &ObjectName, target_alias: &str, construct: &str) -> Result<String> {
     let parts = name_parts(name);
     match parts.as_slice() {
@@ -298,8 +270,7 @@ fn resolve_merge_column(name: &ObjectName, target_alias: &str, construct: &str) 
     }
 }
 
-/// Strip a matching pair of `"` or `` ` `` from a rendered identifier so alias comparison
-/// uses the ident value, not the quote style.
+/// Strip a matching pair of `"` or `` ` `` so alias comparison uses identifier text.
 fn unquoted_ident(rendered: &str) -> &str {
     let trimmed = rendered.trim();
     let bytes = trimmed.as_bytes();
@@ -312,8 +283,7 @@ fn unquoted_ident(rendered: &str) -> &str {
     trimmed
 }
 
-/// The MERGE target: a plain table factor with an optional alias, rendered WITH its quoting so it
-/// matches the references the user's ON/SET expressions re-render with.
+/// Render the MERGE target and optional alias while preserving identifier quoting.
 fn target_table(factor: &TableFactor) -> Result<(ObjectName, Option<String>)> {
     let TableFactor::Table { name, alias, .. } = factor else {
         return Err(DataFusionError::Plan(

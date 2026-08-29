@@ -8,9 +8,9 @@ Arrow export path (``to_arrow`` — value AND type), never ``show``:
 * **casefold collisions refuse at the REFERENCE** (audit G2). A frame carrying both ``id`` and
   ``ID`` is legal; Spark under ``spark.sql.caseSensitive=false`` raises ``AMBIGUOUS_REFERENCE`` only
   when the predicate names the colliding column. Filtering an unrelated column of that frame still
-  runs. The two failure modes this sits between are both pinned: whole-frame refusal (the
-  over-refusal) and last-write-wins (P4C5-Q-001 — silently binding the ident to the wrong column).
-* **a token followed by ``(`` is a function call, not a column** (P5C5-Q-001): ``year(ts)`` stays a
+  runs. Both failure modes this sits between are pinned: whole-frame refusal (the over-refusal) and
+  last-write-wins (silently binding the ident to the wrong column).
+* **a token followed by ``(`` is a function call, not a column**: ``year(ts)`` stays a
   function even when a column named ``year`` exists — while bare ``year`` on the SAME frame is still
   rewritten.
 * **SQL literal keywords are never bound to a same-named column**: ``true`` / ``false`` / ``null``
@@ -18,19 +18,16 @@ Arrow export path (``to_arrow`` — value AND type), never ``show``:
   ``null``. **All three** members of ``_SQL_LITERAL_KEYWORDS`` are pinned against a frame that
   actually carries a column of that name — dropping any one member reds this module.
 
-Each keyword/lookahead pin carries its discriminator — the *rewritten* form the skip suppresses
-(``"true"`` / ``"false"`` as a predicate, ``b IS NOT "null"``) is asserted to fail, so removing the
-skip turns the test red rather than merely changing an unobserved plan.
+Each keyword/lookahead pin also asserts the rewritten form the skip suppresses fails, so removing
+the skip turns the test red rather than merely changing an unobserved plan.
 
-**Oracle basis.** Every golden below was derived from **live PySpark 4.1.2** (``local[2]``, ANSI on,
-``spark.sql.caseSensitive=false``, ``timeZone=UTC``) during audit G2, not hand-guessed. Two of the
-recipes carry a standing live leg in ``_live_parity.py``
+**Oracle basis.** Goldens derived from **live PySpark 4.1.2** (``local[2]``, ANSI on,
+``spark.sql.caseSensitive=false``, ``timeZone=UTC``), audit G2. Two recipes carry a standing live
+leg in ``_live_parity.py``
 (``filter_unambiguous_on_case_colliding_frame``, ``filter_keyword_literal_false_column``) and the
-three disclosed divergences below carry live ``DISCLOSURES`` entries, so the whole family is
-re-derived from real Spark by the nightly ``make parity-live`` tier rather than pinned once and
-forgotten. The remaining goldens here (function-call skip, ``null`` keyword, mixed-case survival)
-are **hand-derived from that same oracle session with no standing live leg** — a JVM-free pin whose
-drift detector is the two scenarios above plus the disclosures.
+disclosed divergences below carry live ``DISCLOSURES`` entries; the remaining goldens here
+(function-call skip, ``null`` keyword, mixed-case survival) are hand-derived from that same oracle
+session with no standing live leg — their drift detector is the live legs plus the disclosures.
 
 **Disclosed divergences from live Spark, characterized here so they cannot drift unobserved:**
 
@@ -39,8 +36,8 @@ drift detector is the two scenarios above plus the disclosures.
 * an explicitly double-quoted ``'"ID" > 1'`` does NOT refuse — DataFusion resolves it
   case-sensitively; Spark reads ``"ID"`` as a string *literal* and raises ``CAST_INVALID_INPUT``;
 * backtick-quoted identifiers are **not** a protected span — ``filter("`x` > 0")`` is corrupted
-  into ``No field named \"\"\"x\"\"\"``; live Spark filters normally. Pre-existing (main had no
-  backtick handling either); the fix belongs in a follow-up unit.
+  into ``No field named \"\"\"x\"\"\"``; live Spark filters normally; the fix belongs in a
+  follow-up unit.
 """
 
 from __future__ import annotations
@@ -63,7 +60,7 @@ def _collides(spark: ReparkSession) -> DataFrame:
     return spark.createDataFrame([(1, 2, 3)], ["id", "ID", "other"])
 
 
-# ---- casefold collisions refuse at the reference, not for the whole frame (audit G2) ----------
+# casefold collisions refuse at the reference, not for the whole frame (audit G2)
 
 
 @pytest.mark.parametrize("entry_point", ["filter", "where"])
@@ -92,7 +89,7 @@ def test_ambiguous_reference_raises_analysis_exception(
     spark: ReparkSession, entry_point: str, spelling: str
 ) -> None:
     """Referencing the colliding name — in ANY spelling — is a loud refusal, never last-write-wins
-    (P4C5-Q-001: the ident used to silently bind to whichever column was seen last).
+    (the ident used to silently bind to whichever column was seen last).
     """
     df = _collides(spark)
     with pytest.raises(AnalysisException, match="ambiguous"):
@@ -115,8 +112,8 @@ def test_ambiguous_reference_error_uses_the_spark_message_shape(spark: ReparkSes
     message = str(excinfo.value)
 
     assert message == "[AMBIGUOUS_REFERENCE] Reference `id` is ambiguous, could be: [`id`, `ID`]."
-    # The recorded differences are asserted, not merely commented, so a later "parity" edit that
-    # adds SQLSTATE or copies Spark's duplicated-spelling candidate list has to update this pin.
+    # Asserted, not merely commented: a later "parity" edit adding SQLSTATE or copying Spark's
+    # duplicated candidate list must update this pin.
     assert "SQLSTATE" not in message
 
 
@@ -133,18 +130,18 @@ def test_colliding_name_inside_a_string_literal_does_not_refuse(
     assert got.schema.field("id").type == pa.int64()
 
 
-# ---- disclosed bypasses of the refusal + the unprotected backtick span (audit G2 review) ------
+# disclosed bypasses of the refusal + the unprotected backtick span (audit G2 review)
 
 
 @pytest.mark.parametrize("entry_point", ["filter", "where"])
 def test_column_entry_point_bypasses_the_ambiguity_refusal(
     spark: ReparkSession, entry_point: str
 ) -> None:
-    """DISCLOSED DIVERGENCE (not a fix): the ``Column`` form never reaches the rewriter, so it does
-    not refuse — it resolves **exact-case-first**. Live PySpark 4.1.2 raises ``AMBIGUOUS_REFERENCE``
-    for ``df.filter(df["id"] > 0)``. Characterized so a later ``_resolve_getitem_column_name``
-    refactor cannot flip it in either direction unobserved (live leg:
-    ``filter_case_collision_bypasses``).
+    """DISCLOSED DIVERGENCE (not a fix): the ``Column`` form never reaches the rewriter, so it
+    resolves **exact-case-first** and does not refuse. Live PySpark 4.1.2 raises
+    ``AMBIGUOUS_REFERENCE`` for ``df.filter(df["id"] > 0)``. Characterized so a later
+    ``_resolve_getitem_column_name`` refactor cannot flip it in either direction unobserved (live
+    leg: ``filter_case_collision_bypasses``).
     """
     df = _collides(spark)
     lower = getattr(df, entry_point)(df["id"] > 1).to_arrow()
@@ -161,10 +158,10 @@ def test_column_entry_point_bypasses_the_ambiguity_refusal(
 def test_explicitly_double_quoted_ident_bypasses_the_ambiguity_refusal(
     spark: ReparkSession, entry_point: str
 ) -> None:
-    """DISCLOSED DIVERGENCE (not a fix): an already-double-quoted span is a protected span, so it
-    is passed through and DataFusion resolves it case-**sensitively** rather than refusing. Spark
-    does not even read ``"ID"`` as an identifier — it is a string literal there, and live PySpark
-    4.1.2 raises ``CAST_INVALID_INPUT`` on ``'"ID" > 1'``.
+    """DISCLOSED DIVERGENCE (not a fix): an already-double-quoted span is a protected span, passed
+    through; DataFusion resolves it case-**sensitively** rather than refusing. Spark does not even
+    read ``"ID"`` as an identifier — it is a string literal there, and live PySpark 4.1.2 raises
+    ``CAST_INVALID_INPUT`` on ``'"ID" > 1'``.
     """
     df = _collides(spark)
     upper = getattr(df, entry_point)('"ID" > 1').to_arrow()
@@ -182,8 +179,8 @@ def test_backtick_quoted_identifier_is_not_a_protected_span(
 ) -> None:
     """DISCLOSED HOLE (pre-existing, not a G2 regression): backticks — Spark's own quoting
     spelling — are NOT protected, so the token inside them is rewritten and DataFusion re-quotes
-    the result. The user sees a field spelling they never wrote. Live PySpark 4.1.2 filters
-    normally. Pinned with the observed text so the follow-up fix has to update this test.
+    the result. Live PySpark 4.1.2 filters normally. Pinned with the observed text so the
+    follow-up fix has to update this test.
     """
     df = spark.createDataFrame([(1, 2)], ["x", "b"])
     with pytest.raises(AnalysisException) as excinfo:
@@ -192,7 +189,7 @@ def test_backtick_quoted_identifier_is_not_a_protected_span(
     assert 'No field named """x"""' in str(excinfo.value)
 
 
-# ---- a token followed by `(` is a function call, not a column (P5C5-Q-001) --------------------
+# a token followed by `(` is a function call, not a column
 
 
 @pytest.mark.parametrize("entry_point", ["filter", "where"])
@@ -218,7 +215,7 @@ def test_function_call_survives_a_case_differing_same_named_column(
 ) -> None:
     """The discriminating shape for the call-site skip: the column is ``YEAR`` and the predicate
     calls ``year(ts)``. Rewriting the token would emit ``"YEAR"(ts)`` — DataFusion resolves
-    function names case-SENSITIVELY, so that is ``Invalid function 'YEAR'`` (P5C5-Q-001). The
+    function names case-SENSITIVELY, so that is ``Invalid function 'YEAR'``. The
     lowercase-column case above cannot catch this: ``"year"(ts)`` still resolves.
     """
     df = spark.sql(
@@ -264,7 +261,7 @@ def test_mixed_case_column_survives_the_rewrite(spark: ReparkSession) -> None:
     assert df.where("x > 1").to_arrow().column("X").to_pylist() == [5]
 
 
-# ---- SQL literal keywords are never bound to a same-named column ------------------------------
+# SQL literal keywords are never bound to a same-named column
 
 
 @pytest.mark.parametrize("entry_point", ["filter", "where"])
@@ -300,8 +297,8 @@ def test_false_keyword_is_not_bound_to_a_column_named_false(
 ) -> None:
     """The third member of ``_SQL_LITERAL_KEYWORDS`` needs its own frame: on a ``["true", "b"]``
     frame the token ``false`` matches no column, so the skip is never consulted for it and the
-    member is unpinned (audit G2 review G2-C-001 — mutation-proved: dropping ``"false"`` left the
-    whole suite green). Here the column IS named ``false``, so the keyword and the column collide.
+    member was unpinned until this frame (audit G2-C-001 — mutation-proved: dropping ``"false"``
+    left the whole suite green). Here the keyword and the column collide.
 
     Live PySpark 4.1.2 on this exact frame: ``filter("false")`` → 0 rows, ``filter("true")`` → 2.
     """
@@ -315,8 +312,8 @@ def test_false_keyword_is_not_bound_to_a_column_named_false(
     assert kept.to_pylist() == [{"false": 1, "b": 2}, {"false": 3, "b": 4}]
     assert kept.schema.field("false").type == pa.int64()
     assert kept.schema.field("b").type == pa.int64()
-    # The keyword also survives inside a compound predicate (it is a token skip, not a whole-
-    # predicate special case): `false` stays the literal while `b` is still rewritten.
+    # The keyword also survives inside a compound predicate (a token skip, not a whole-predicate
+    # special case): `false` stays the literal while `b` is still rewritten.
     combined = getattr(df, entry_point)("b > 3 OR false").to_arrow()
     assert combined.to_pylist() == [{"false": 3, "b": 4}]
     assert combined.schema.field("b").type == pa.int64()
@@ -352,18 +349,16 @@ def test_bound_null_column_predicate_is_the_discriminator(spark: ReparkSession) 
         df.filter('b IS NOT "null"').to_arrow()
 
 
-# ---- the upstream guard the writer helper's exact-duplicate branch depends on -----------------
+# the upstream guard the writer helper's exact-duplicate branch depends on
 
 
 def test_exact_duplicate_column_names_are_rejected_at_frame_construction(
     spark: ReparkSession,
 ) -> None:
-    """Pin for registry row ID-3 — semantics live only there.
+    """Pin for registry row ID-3 (docs/spark-sql-iceberg-parity.md §3) — semantics live there.
 
-    See ``docs/spark-sql-iceberg-parity.md`` §3
-    [ID-3](../../../docs/spark-sql-iceberg-parity.md#id-3--exact-duplicate-column-names-are-refused-at-construction).
-    If this ever goes green-with-duplicates, the filter rewriter's exact-duplicate defensive
-    branch becomes live and needs a facade-level pin in the same change that retires the row.
+    If this ever goes green-with-duplicates, the rewriter's exact-duplicate defensive branch is
+    live and needs a facade-level pin in the change that retires the row.
     """
     with pytest.raises(AnalysisException, match="unique expression names"):
         spark.createDataFrame([(1, 2)], ["id", "id"])

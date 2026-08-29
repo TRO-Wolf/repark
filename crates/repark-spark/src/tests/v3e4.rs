@@ -1,4 +1,4 @@
-//! V3E-4 — snapshot refs, time travel over DVs, expire/orphans on format-v3.
+//! Pins format-v3 snapshot refs, time travel over deletion vectors, and maintenance.
 //!
 //! Model: Grok 4.6 xHigh
 //!

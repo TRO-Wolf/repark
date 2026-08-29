@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """Move ledgers between their bins and keep every link to them true.
 
-A unit ledger's state is its directory (AGENTS.md "Markdown document
-lifecycle", chartered by DL-1):
+A unit ledger's state is its directory (AGENTS.md "Markdown document lifecycle"):
 
     task/ledgers/staging/                    in flight; born on the unit's branch
     task/ledgers/completed/                  finished; the agent's move, in the unit's last commit
@@ -32,15 +31,13 @@ Four subcommands:
   `-ledger.md` that does not exist; a `completed/` or `archive/` file changed
   since the base commit beyond a link repair or an errata note prepended at its
   top (the "frozen" and "immutable" rules).
-- `compact` — the live documents carry only live state (DL-4): every `unit`
-  marker in `briefs/next-sequence.md` whose ledger sits in `completed/` or the
-  archive leaves the slate whole (row, prose, no obituary), and every
-  `state=closed` ws block in `STATUS.md` moves to its campaign's
-  `docs/history/<dir>/status-record.md` (bin and `map.md` created, links
-  rewritten, refused on a dangling one) leaving one line in STATUS's
-  closed-campaigns list. Grammar and transforms: `scripts/doc_blocks.py`.
-  `archive` and a `move` to `completed/` run it themselves, so a pickup and a
-  departure never leave the slate or STATUS stale.
+- `compact` — the live documents carry only live state: every `unit` marker in
+  `briefs/next-sequence.md` whose ledger sits in `completed/` or the archive leaves the slate
+  whole (row, prose, no obituary), and every `state=closed` ws block in `STATUS.md` moves to
+  its campaign's `docs/history/<dir>/status-record.md` (bin and `map.md` created, links
+  rewritten, refused on a dangling one) leaving one line in STATUS's closed-campaigns list.
+  Grammar and transforms: `scripts/doc_blocks.py`. `archive` and a `move` to `completed/` run
+  it themselves, so a pickup and a departure never leave the slate or STATUS stale.
 
 Determinism: no wall clock (dates come from git), no network, sorted inputs,
 idempotent (`archive` over an empty `completed/` is a no-op). Nothing is
@@ -106,7 +103,7 @@ MAPS = _load_sync_map_md()
 
 
 def _load_doc_blocks() -> ModuleType:
-    """The block grammar of the two live documents (DL-4)."""
+    """The block grammar of the two live documents."""
     location = Path(__file__).resolve().parent / "doc_blocks.py"
     specification = importlib.util.spec_from_file_location("doc_blocks", location)
     if specification is None or specification.loader is None:
@@ -287,10 +284,9 @@ def cut_row(text: str, map_dir: str, path: str) -> tuple[str, str | None]:
 def _condense_row(row: str) -> str:
     """One line: the bullet with its wrapped lines joined, cut at the first sentence.
 
-    Archive month maps are an index off the normal read path (DL-3, owner ruling
-    2026-08-23): the record is the ledger and git history keeps the long row, so
-    the map carries the link plus the first sentence of the description. A
-    description with no `. ` boundary stays whole.
+    Archive month maps are an index off the normal read path, by owner ruling: the record is
+    the ledger and git history keeps the long row, so the map carries the link plus the first
+    sentence of the description. A description with no `. ` boundary stays whole.
     """
     joined = " ".join(part.strip() for part in row.splitlines() if part.strip())
     marker = " — "

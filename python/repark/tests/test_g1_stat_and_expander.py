@@ -1,4 +1,4 @@
-"""G1 census r4 — DataFrame.stat family + UPDATE/DELETE expander e2e pins.
+"""G1 — DataFrame.stat family + UPDATE/DELETE expander e2e pins.
 
 Apache FAIL-MISSING TOP-1 family (blocked-count 4): ``df.stat.corr/cov/crosstab/sampleBy``.
 Expander UPDATE/DELETE unit pins live in ``test_f1_sql_expander.py``; this file owns the
@@ -106,7 +106,7 @@ def test_stat_sample_by_type_errors(spark: ReparkSession) -> None:
 
 
 def test_stat_sample_by_fraction_range(spark: ReparkSession) -> None:
-    """octo C1-Q-001: fractions must be in [0, 1] (Spark sampleBy; NaN included)."""
+    """Fractions must be in [0, 1] (Spark sampleBy; NaN included)."""
     frame = spark.createDataFrame([(index, index % 3) for index in range(20)], ["a", "b"])
     with pytest.raises(IllegalArgumentException, match=r"Fraction must be in \[0, 1\]"):
         frame.sampleBy("b", fractions={0: 1.5})
@@ -137,7 +137,7 @@ def test_stat_approx_quantile_list(spark: ReparkSession) -> None:
 
 
 def test_stat_approx_quantile_relative_error(spark: ReparkSession) -> None:
-    """octo C1-Q-002 / C2-Q-001: relativeError must be a non-negative number (not NaN)."""
+    """relativeError must be a non-negative number (not NaN)."""
     frame = spark.createDataFrame([(float(index),) for index in range(10)], ["a"])
     with pytest.raises(PySparkValueError) as caught:
         frame.approxQuantile("a", [0.5], -0.1)
@@ -151,7 +151,7 @@ def test_stat_approx_quantile_relative_error(spark: ReparkSession) -> None:
 
 
 def test_stat_approx_quantile_probability_domain(spark: ReparkSession) -> None:
-    """octo C2-Q-002: probability domain is value-class, not type-class."""
+    """Probability domain is value-class, not type-class."""
     frame = spark.createDataFrame([(float(index),) for index in range(10)], ["a"])
     with pytest.raises(PySparkValueError) as caught:
         frame.approxQuantile("a", [1.5], 0.0)
@@ -176,9 +176,7 @@ def test_e2e_bare_update_delete_public_sql(spark: ReparkSession) -> None:
     assert rows == [{"id": 1, "name": "z"}, {"id": 3, "name": "c"}]
 
 
-# ---------------------------------------------------------------------------
 # Group H attempt — SubqueryAlias both join sides (partial)
-# ---------------------------------------------------------------------------
 
 
 def test_group_h_self_join_on_name(spark: ReparkSession) -> None:
@@ -209,7 +207,7 @@ def test_group_h_condition_join_duplicate_nonkey_is_stop(spark: ReparkSession) -
 
 
 def test_group_h_join_no_alias_when_column_sets_disjoint(spark: ReparkSession) -> None:
-    """octo C1-Q-003: disjoint schemas skip SubqueryAlias temp views (no session pollution)."""
+    """Disjoint schemas skip SubqueryAlias temp views (no session pollution)."""
     left = spark.createDataFrame([(1, "L")], ["lid", "lv"])
     right = spark.createDataFrame([(1, "R")], ["rid", "rv"])
     before = {table.name for table in spark.catalog.listTables() if table.isTemporary}
@@ -225,7 +223,7 @@ def test_group_h_join_no_alias_when_column_sets_disjoint(spark: ReparkSession) -
 
 
 def test_join_empty_on_list_respects_cross_join_gate(spark: ReparkSession) -> None:
-    """octo C3-Q-001: join(on=[]) must not silent-cartesian without conf."""
+    """join(on=[]) must not silent-cartesian without conf."""
     from repark.errors import AnalysisException
 
     left = spark.range(2)
@@ -241,9 +239,7 @@ def test_join_empty_on_list_respects_cross_join_gate(spark: ReparkSession) -> No
     assert left.join(right, []).count() == 4
 
 
-# ---------------------------------------------------------------------------
-# === r20 H1: join/identity === (extends G1 Group H attempt)
-# ---------------------------------------------------------------------------
+# H1: join/identity (extends the Group H attempt)
 
 
 def test_h1_condition_join_duplicate_nonkey(spark: ReparkSession) -> None:
@@ -335,7 +331,7 @@ def test_h1_select_join_keys_all_how(spark: ReparkSession) -> None:
 
 
 def test_h1_select_star_multi_name(spark: ReparkSession) -> None:
-    """octo H1-C1-002: select('*') on multi-name join keeps display names + row count."""
+    """select('*') on multi-name join keeps display names + row count."""
     frame = spark.createDataFrame([(1, 2), (3, 4)], ["a", "b"])
     left = frame.select(frame.a.alias("aa"), frame.b)
     joined = left.join(frame, left.b == frame.b)
@@ -345,7 +341,7 @@ def test_h1_select_star_multi_name(spark: ReparkSession) -> None:
 
 
 def test_h1_chained_condition_join_multi_name(spark: ReparkSession) -> None:
-    """octo H1-C1-001: chained condition join after dup display names plans cleanly."""
+    """Chained condition join after dup display names plans cleanly."""
     frame = spark.createDataFrame([(1, 2), (3, 4)], ["a", "b"])
     left = frame.select(frame.a.alias("aa"), frame.b)
     joined = left.join(frame, left.b == frame.b)
@@ -356,7 +352,7 @@ def test_h1_chained_condition_join_multi_name(spark: ReparkSession) -> None:
 
 
 def test_h1_filter_order_by_parent_columns(spark: ReparkSession) -> None:
-    """octo H1-C1-003: post-join filter/orderBy on parent Columns for dup field names."""
+    """Post-join filter/orderBy on parent Columns for dup field names."""
     frame = spark.createDataFrame([(1, 2), (3, 4), (5, 6)], ["a", "b"])
     left = frame.select(frame.a.alias("aa"), frame.b)
     joined = left.join(frame, left.b == frame.b)
@@ -372,7 +368,7 @@ def test_h1_filter_order_by_parent_columns(spark: ReparkSession) -> None:
 
 
 def test_h1_select_cast_parent_column(spark: ReparkSession) -> None:
-    """octo H1-C1-004: select(parent.col.cast(...)) after multi-name join."""
+    """select(parent.col.cast(...)) after multi-name join."""
     frame = spark.createDataFrame([(1, 2), (3, 4)], ["a", "b"])
     left = frame.select(frame.a.alias("aa"), frame.b)
     joined = left.join(frame, left.b == frame.b)
@@ -384,7 +380,7 @@ def test_h1_select_cast_parent_column(spark: ReparkSession) -> None:
 
 
 def test_h1_rename_dropna_fillna_when_multi_name(spark: ReparkSession) -> None:
-    """octo H1-C2-001..004: rename / na / when on multi-name condition joins."""
+    """Rename / na / when on multi-name condition joins."""
     from repark import functions as functions_mod
 
     frame = spark.createDataFrame([(1, 2), (3, None)], ["a", "b"])
@@ -404,7 +400,7 @@ def test_h1_rename_dropna_fillna_when_multi_name(spark: ReparkSession) -> None:
 
 
 def test_h1_todf_alias_union_sample_multi_name(spark: ReparkSession) -> None:
-    """octo H1-C3: toDF / alias / union / sample keep multi-name display identity."""
+    """toDF / alias / union / sample keep multi-name display identity."""
     frame = spark.createDataFrame([(1, 2), (3, 4)], ["a", "b"])
     left = frame.select(frame.a.alias("aa"), frame.b)
     joined = left.join(frame, left.b == frame.b)
@@ -422,7 +418,7 @@ def test_h1_todf_alias_union_sample_multi_name(spark: ReparkSession) -> None:
 
 
 def test_h1_withcolumns_describe_dropdup_multi_name(spark: ReparkSession) -> None:
-    """octo H1-C4: withColumns / describe / dropDuplicates on multi-name joins."""
+    """withColumns / describe / dropDuplicates on multi-name joins."""
     frame = spark.createDataFrame([(1, 2), (3, 4)], ["a", "b"])
     left = frame.select(frame.a.alias("aa"), frame.b)
     joined = left.join(frame, left.b == frame.b)
@@ -440,7 +436,7 @@ def test_h1_withcolumns_describe_dropdup_multi_name(spark: ReparkSession) -> Non
 
 
 def test_h1_rename_replace_rsplit_dtypes_multi_name(spark: ReparkSession) -> None:
-    """octo H1-C5/C6: withColumnsRenamed / replace / randomSplit / dtypes overlay."""
+    """withColumnsRenamed / replace / randomSplit / dtypes overlay."""
     frame = spark.createDataFrame([(1, 2), (3, 4)], ["a", "b"])
     left = frame.select(frame.a.alias("aa"), frame.b)
     joined = left.join(frame, left.b == frame.b)

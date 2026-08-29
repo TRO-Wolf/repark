@@ -1,4 +1,4 @@
-"""DL-1: the ledger lifecycle script — archive/move rewrite links; check goes red on plants."""
+"""The ledger lifecycle script — archive/move rewrite links; check goes red on plants."""
 
 from __future__ import annotations
 
@@ -214,10 +214,10 @@ def test_a_moved_ledger_keeps_its_sibling_links_true(repo: Path) -> None:
 
 
 def test_a_plus_continuation_is_joined_not_split(repo: Path) -> None:
-    # Review finding (2026-08-23): `task/map.md` wraps three descriptions onto lines that
-    # begin with `+ `, which a list-item regex reads as a nested bullet. Under DL-3 the
-    # archive destination condenses to the first sentence — the `+ ` line must be IN it,
-    # joined, never orphaned in the source map. Live bins carry rows whole
+    # `task/map.md` wraps descriptions onto lines that begin with `+ `, which a
+    # list-item regex reads as a nested bullet. Under DL-3 the archive destination
+    # condenses to the first sentence — the `+ ` line must be IN it, joined, never
+    # orphaned in the source map. Live bins carry rows whole
     # (test_a_move_to_a_live_bin_still_carries_the_whole_row).
     _write(
         repo,
@@ -258,8 +258,6 @@ def test_frozen_rule_sees_prose_smuggled_into_a_link_target(repo: Path) -> None:
 
 def test_an_archive_month_map_row_is_one_line_first_sentence(repo: Path) -> None:
     # pins: dl-3-archive-map-compaction-charter/C-001, C-003
-    # (C-003's migration ran this same function over the real 2026-08 map; the
-    # tree-level evidence is the migration commit's recorded gate runs.)
     _write(
         repo,
         "task/ledgers/completed/map.md",

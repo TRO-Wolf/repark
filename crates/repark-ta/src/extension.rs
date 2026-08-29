@@ -1,37 +1,23 @@
-//! `TaExtension` — the register-only [`SessionExtension`] for the TA window UDFs.
+//! Register-only [`SessionExtension`] for the TA window UDFs.
 //!
-//! Design SSOT: [`docs/design/sql-doors.md`] Q11 — the TA function set is owned by **neither**
-//! SQL door. It ports as its own crate with a thin extension; the Spark door composes it (v1
-//! parity — v1's `ReparkSessionBuilder::build()` called `repark_ta::udf::register_all` inline,
-//! immediately after the Spark function registry + analyzer rules), and a native session opts in
-//! by installing this extension itself.
-//!
-//! The wrapper is deliberately thin — it adds no behaviour over
-//! [`udf::register_all`](crate::udf::register_all). The trait-wrapping both-sides audit applies:
-//! [`configure`](SessionExtension::configure) is left at the trait default (TA registers no
-//! `ConfigExtension` and reads no `repark.*` conf key — v1 did not either), and
-//! [`register`](SessionExtension::register) forwards the whole UDF set.
-//!
-//! Feature-gated behind `datafusion` alongside [`crate::udf`]: the kernel core stays
-//! dependency-light and independently publishable.
+//! The extension forwards registration to [`udf::register_all`](crate::udf::register_all).
+//! `configure` remains the trait default because TA installs no configuration extension.
+//! Feature `datafusion` gates this module and the UDF layer.
 
 use datafusion::prelude::SessionContext;
 use repark_core::SessionExtension;
 
 /// ===========================================================================================
-/// The TA door-neutral session extension: every `ta_*` window UDF, registered.
+/// The TA door-neutral session extension.
 ///
-/// Install with `ReparkSessionBuilder::with_extension(Arc::new(TaExtension))` for a native
-/// session; the Spark door composes it from `SparkExtension` so Spark-extended sessions keep
-/// v1's behaviour without opting in. Extensions are session-scoped, not dialect-scoped — once
-/// installed the UDFs are callable through every door.
+/// Install it with `ReparkSessionBuilder::with_extension` to register every `ta_*` UDF.
+/// Extensions are session-scoped, so the UDFs are available through every door.
 /// ===========================================================================================
 #[derive(Debug, Clone, Copy, Default)]
 pub struct TaExtension;
 
 impl SessionExtension for TaExtension {
-    /// v1 position: immediately after the Spark function registry + analyzer rules — the TA
-    /// window UDFs (`ta_ema`, `ta_adx`, `ta_bbands_*`, …), SQL- and DataFrame-callable.
+    /// Register the TA window UDFs on the session context.
     ///
     /// # Errors
     /// None — [`udf::register_all`](crate::udf::register_all) is infallible; the seam's

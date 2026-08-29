@@ -130,8 +130,8 @@ def test_navigation_describes_the_revised_authoritative_documents() -> None:
         "task/roadmap/epic-term/map.md": ("F-17 shared-Puffin closure",),
         "task/roadmap/mid-term/map.md": ("**F-17 added 2026-08-28 from RP-2:**",),
         "task/ledgers/staging/map.md": ("**RP-3 (2026-08-28)", "opt-in for callers"),
-        "task/ledgers/completed/map.md": (
-            "narrowed and\n  salvaged 2026-08-28",
+        "task/ledgers/archive/2026-08/map.md": (
+            "salvaged 2026-08-28",
             "became fork F-17",
         ),
     }

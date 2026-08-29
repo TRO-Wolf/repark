@@ -1,11 +1,10 @@
 """TPC-H scoreboard runner: repark (and optional Sail) vs DuckDB over parquet/Iceberg.
 
-Statuses: OK | WRONG-RESULT | ERROR | TIMEOUT | DIED (subprocess OOM/signal, V3).
+Statuses: OK | WRONG-RESULT | ERROR | TIMEOUT | DIED (subprocess OOM/signal).
 Wall times are median of ``repeats`` (default 3). Default timeout 120s per side;
-on TIMEOUT, **one** retry at 300s (Slow vs hung; B1 / TPC-DS refinement, both engines).
-SF10 defaults 300s + subprocess isolation (R-TPCH-V3 greylight B3).
-``--engine sail`` / ``both`` (B1): Sail via Spark Connect loopback is measurement
-prior-art only — never a RePark product dependency.
+on TIMEOUT, **one** retry at 300s (Slow vs hung, both engines). SF10 defaults
+300s + subprocess isolation. ``--engine sail`` / ``both``: Sail via Spark Connect
+loopback is measurement prior-art only — never a RePark product dependency.
 """
 
 from __future__ import annotations
@@ -60,7 +59,7 @@ STATUS_RANK: Final[dict[str, int]] = {
     "DIED": 3,
     "WRONG-RESULT": 4,
 }
-# Unknown/hostile status strings rank as ERROR for merge + exit (C4-Q-001 / C4-Q-002).
+# Unknown/hostile status strings rank as ERROR for merge + exit.
 _UNKNOWN_STATUS_RANK: Final[int] = STATUS_RANK["ERROR"]
 
 
@@ -68,8 +67,8 @@ class QueryResult(BaseModel):
     """Per-query scoreboard row.
 
     Single-engine runs store the subject wall in ``repark_wall_s`` (historical name;
-    report renames the column for ``engine=sail`` / Iceberg). Three-way boards fill
-    both ``repark_*`` and ``sail_*`` fields.
+    the report renames the column for ``engine=sail`` / Iceberg). Three-way boards
+    fill both ``repark_*`` and ``sail_*`` fields.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -86,7 +85,7 @@ class QueryResult(BaseModel):
     rewrite_note: str | None = None
     missing_feature_hint: str | None = None
     rss_peak_kb: int | None = None
-    # B1 greylight: first-pass ceiling (usually 120) + retry wall or budget.
+    # Greylight: first-pass ceiling (usually 120) + retry wall or budget.
     timeout_first_s: float | None = None
     timeout_retry_s: float | None = None
     # Three-way Sail columns (engine=both); unused for single-engine runs.
@@ -153,7 +152,7 @@ def query_result_to_dict(result: QueryResult) -> dict[str, Any]:
 
 
 def _coerce_status(raw: object, *, field_name: str = "status") -> StatusKind:
-    """Map a status string to a known :data:`StatusKind` (C4-Q-001).
+    """Map a status string to a known :data:`StatusKind`.
 
     Unknown values become ERROR so hostile/malformed Sail board JSON cannot
     green-exit the scoreboard.
@@ -229,7 +228,7 @@ def merge_three_way(repark_board: Scoreboard, sail_board: Scoreboard) -> Scorebo
     for repark_query in repark_board.queries:
         sail_query = sail_by_nr.get(repark_query.query_nr)
         if sail_query is None:
-            # Board-level skip (empty sail matrix) must not look like per-query ERROR (C2-H-002).
+            # Board-level skip (empty sail matrix) must not look like per-query ERROR.
             if sail_board.skipped and not sail_board.queries:
                 sail_status: StatusKind | None = None
                 sail_error_class = "SailBoardSkipped"
@@ -304,7 +303,7 @@ def merge_three_way(repark_board: Scoreboard, sail_board: Scoreboard) -> Scorebo
     findings = list(repark_board.findings) + [
         f"[sail] {finding}" for finding in sail_board.findings
     ]
-    # Boilerplate only when Sail actually ran (C1-H-003 / C6-H-001). A fully-skipped
+    # Boilerplate only when Sail actually ran. A fully-skipped
     # Sail board must not invent gRPC transport cost in Findings.
     sail_actually_ran = bool(sail_board.queries) and not (
         sail_board.skipped and not sail_board.queries
@@ -344,8 +343,8 @@ def _subprocess_run_kill_group(
 ) -> subprocess.CompletedProcess[str]:
     """Run ``command`` in a new session; on timeout SIGKILL the whole process group.
 
-    Plain ``subprocess.run(..., timeout=)`` only kills the direct child. Sail's
-    SparkConnectServer is often a grandchild — without ``killpg`` it orphans (C1-L-001).
+    Plain ``subprocess.run(..., timeout=)`` only kills the direct child; Sail's
+    SparkConnectServer is often a grandchild and would orphan.
     """
     process = subprocess.Popen(
         list(command),
@@ -397,12 +396,10 @@ def run_scoreboard(
 ) -> Scoreboard:
     """Run the full (or filtered) TPC-H matrix for one scale factor.
 
-    V3 (W1) behaviour:
-    - SF >= 10: default timeout 300s, default isolation=subprocess, disk gate.
-    - storage=iceberg: CTAS SF tables into local memory-catalog Iceberg, then query.
-
-    B1: ``engine=sail`` uses Sail Spark Connect; ``engine=both`` runs repark then
-    Sail (Sail via ``sail_python`` subprocess when needed) and merges three walls.
+    SF >= 10: default timeout 300s, default isolation=subprocess, disk gate.
+    storage=iceberg: CTAS SF tables into local memory-catalog Iceberg, then query.
+    ``engine=sail`` uses Sail Spark Connect; ``engine=both`` runs repark then Sail
+    (via ``sail_python`` subprocess when needed) and merges three walls.
     """
     if engine == "both":
         repark_board = run_scoreboard(
@@ -442,8 +439,8 @@ def run_scoreboard(
         "subprocess" if is_sf10_or_above else "inprocess"
     )
     findings: list[str] = []
-    # Iceberg CTAS is session-local; subprocess-per-query would re-CTAS 8 tables each
-    # time. Iceberg leg runs in-process (SF1 measurement); SF10 isolation stays parquet.
+    # Iceberg CTAS is session-local; subprocess-per-query would re-CTAS 8 tables
+    # per query. Iceberg runs in-process; SF10 isolation stays parquet.
     if storage == "iceberg" and resolved_isolation == "subprocess":
         findings.append(
             "isolation coerced inprocess for storage=iceberg "
@@ -530,7 +527,7 @@ def run_scoreboard(
     }
     if warehouse is not None:
         environment["iceberg_warehouse"] = str(warehouse)
-    # gRPC / prior-art disclosure is appended only after Sail actually opens (C1-H-004).
+    # gRPC / prior-art disclosure is appended only after Sail actually opens.
 
     board = Scoreboard(
         scale_factor=scale_factor,
@@ -575,7 +572,7 @@ def run_scoreboard(
         except SailUnavailableError as exc:
             board.findings.append(f"Sail unavailable: {exc}")
             board.environment["sail_status"] = "unavailable"
-            board.skipped = True  # C1-Q-001: empty matrix is a skip FINDING, not success
+            board.skipped = True  # empty matrix is a skip FINDING, not success
             duckdb_conn.close()
             return board
         except Exception as exc:
@@ -649,8 +646,8 @@ def _run_sail_scoreboard(
 ) -> Scoreboard:
     """Run the Sail leg, preferring an in-process open when pysail is importable.
 
-    Only :class:`SailUnavailableError` falls through to ``sail_python`` subprocess.
-    Real scoreboard failures must not be swallowed and re-run (C1-Q-002).
+    Only :class:`SailUnavailableError` falls through to ``sail_python`` subprocess;
+    real scoreboard failures must not be swallowed and re-run.
     """
     in_process_error: str | None = None
     from .sail_engine import SailUnavailableError, require_sail_imports
@@ -754,7 +751,7 @@ def _run_sail_scoreboard_subprocess(
         if query_filter is not None:
             command.extend(["--queries", ",".join(str(number) for number in sorted(query_filter))])
         # Hard wall: 22 queries * (repeats * timeout + retry) * 2 sides + setup.
-        # Match SF≥10 default timeout (300s) when caller left timeout_s unset (C1-Q-004).
+        # Match SF≥10 default timeout (300s) when caller left timeout_s unset.
         is_sf10_or_above = scale_factor >= 10.0
         resolved_timeout = (
             timeout_s
@@ -856,7 +853,7 @@ def classify_error(message: str) -> tuple[str, str | None]:
     patterns: list[tuple[str, str, str | None]] = [
         ("unsupportedoperationexception", "UnsupportedOperationException", None),
         ("not implemented", "NotImplemented", None),
-        # Sail / Spark Connect transport (B1 third engine) — before generic "type".
+        # Sail / Spark Connect transport — before generic "type".
         ("statusruntimeexception", "SailGrpc", "Spark Connect gRPC transport"),
         ("grpc", "SailGrpc", "Spark Connect gRPC transport"),
         ("connection refused", "SailConnect", "Spark Connect server unreachable"),
@@ -890,7 +887,6 @@ def classify_error(message: str) -> tuple[str, str | None]:
     for needle, error_class, hint in patterns:
         if needle in lower:
             return error_class, hint
-    # Truncate noisy messages for the class label
     short = message.strip().split("\n", maxsplit=1)[0][:80]
     return f"Other({short})", None
 
@@ -910,9 +906,9 @@ def gap_census(board: Scoreboard) -> list[tuple[str, int, list[int]]]:
 def exit_code_for_board(board: Scoreboard) -> int:
     """Map scoreboard statuses to CLI exit codes (E1-L-005 / E2-L-002 / V3 DIED).
 
-    0 = all OK (or skipped-disk with no queries); 3 = any WRONG-RESULT;
-    4 = any ERROR (no WRONG); 6 = any DIED (outranks TIMEOUT — process death);
-    5 = any TIMEOUT only. Skipped-disk boards return 0 (measurement FINDING).
+    0 = all OK (or skipped with no queries); 3 = any WRONG-RESULT; 4 = any ERROR
+    (no WRONG); 6 = any DIED (outranks TIMEOUT); 5 = TIMEOUT only. Skipped boards
+    return 0 (measurement FINDING).
     """
     if board.skipped and not board.queries:
         return 0
@@ -920,12 +916,12 @@ def exit_code_for_board(board: Scoreboard) -> int:
         return 3
     if any(query.status == "ERROR" for query in board.queries):
         return 4
-    # DIED outranks TIMEOUT: a killed worker is worse than a soft wall overrun (C1-Q-001).
+    # DIED outranks TIMEOUT: a killed worker is worse than a soft wall overrun.
     if any(query.status == "DIED" for query in board.queries):
         return EXIT_DIED
     if any(query.status == "TIMEOUT" for query in board.queries):
         return 5
-    # Unknown statuses should already be coerced to ERROR; belt-and-suspenders (C4-Q-001).
+    # Unknown statuses should already be coerced to ERROR; belt-and-suspenders.
     if any(query.status not in VALID_STATUSES for query in board.queries):
         return 4
     return 0
@@ -964,8 +960,8 @@ def render_markdown_report(board: Scoreboard, *, title: str | None = None) -> st
         return "\n".join(lines)
 
     storage = board.environment.get("storage", "")
-    # Prefer explicit kind key (set by run_scoreboard); fall back carefully —
-    # "parquet-not-Iceberg" must NOT match a naive "Iceberg" substring check.
+    # Prefer the explicit kind key; the fallback must not match "parquet-not-Iceberg"
+    # on a naive "Iceberg" substring check.
     storage_kind = board.environment.get("storage_kind", "")
     iceberg_mode = storage_kind == "iceberg" or storage.startswith("Iceberg ")
     subject_engine = board.environment.get("subject_engine", "repark")
@@ -1003,7 +999,7 @@ def render_markdown_report(board: Scoreboard, *, title: str | None = None) -> st
             if query.sail_error_message and query.sail_status not in (None, "OK"):
                 short_sail = query.sail_error_message.split("\n", maxsplit=1)[0][:40]
                 hint_parts.append(short_sail)
-            # Surface Slow/hung timeout walls on three-way rows (C1-H-002).
+            # Surface Slow/hung timeout walls on three-way rows.
             if query.timeout_first_s is not None or query.timeout_retry_s is not None:
                 first = f"{query.timeout_first_s:.1f}" if query.timeout_first_s is not None else "—"
                 retry = f"{query.timeout_retry_s:.1f}" if query.timeout_retry_s is not None else "—"
@@ -1124,7 +1120,7 @@ def render_markdown_report(board: Scoreboard, *, title: str | None = None) -> st
         else "- Isolation: in-process (SF1 default); SF10 uses subprocess."
     )
     sail_disclose: list[str] = []
-    # Only claim gRPC / Sail version when Sail actually produced rows or env (C6-H-001).
+    # Only claim gRPC / Sail version when Sail actually produced rows or env.
     # engine=both with a fully-skipped Sail board must not invent transport cost.
     sail_rows_present = any(query.sail_status is not None for query in board.queries)
     sail_env_present = bool(
@@ -1182,7 +1178,7 @@ def status_ledger(board: Scoreboard) -> dict[str, Any]:
             entry["error_class"] = query.error_class
         if query.missing_feature_hint:
             entry["missing_feature_hint"] = query.missing_feature_hint
-        # Three-way boards: keep per-engine status for ledger honesty (C2-H-003).
+        # Three-way boards: keep per-engine status for ledger honesty.
         if query.repark_status is not None:
             entry["repark_status"] = query.repark_status
         if query.sail_status is not None:
@@ -1197,9 +1193,7 @@ def status_ledger(board: Scoreboard) -> dict[str, Any]:
     }
 
 
-# ---------------------------------------------------------------------------
 # Internals
-# ---------------------------------------------------------------------------
 
 
 def _open_duckdb_over_parquet(data_dir: Path) -> Any:
@@ -1244,8 +1238,8 @@ def _open_repark_over_iceberg(
 ) -> Any:
     """CTAS the eight parquet tables into a local memory-catalog Iceberg warehouse.
 
-    Temp views keep short TPC-H names so the 22 query texts stay unchanged.
-    Never touches AWS — memory catalog + local filesystem warehouse only.
+    Temp views keep short TPC-H names so the 22 query texts stay unchanged. Never
+    touches AWS — memory catalog + local filesystem warehouse only.
     """
     from repark import ReparkSession
 
@@ -1291,7 +1285,7 @@ def _run_one_query_subprocess(
 ) -> QueryResult:
     """Run one query in a child process; map signal deaths to DIED (B3)."""
     worker = Path(__file__).resolve().parent / "query_worker.py"
-    # Hard ceiling so a wedged child cannot block the scoreboard forever.
+    # Hard ceiling so a wedged child cannot block the scoreboard forever:
     # (timeout * repeats + retry) * 2 sides + CTAS/setup budget.
     setup_budget_s = 600.0 if storage == "iceberg" else 120.0
     per_side = float(timeout_s) * float(repeats) + float(timeout_retry_s)
@@ -1317,7 +1311,7 @@ def _run_one_query_subprocess(
         }
         config_path.write_text(json.dumps(config), encoding="utf-8")
         try:
-            # Kill process group so Sail Connect grandchildren cannot orphan (C1-L-001).
+            # Kill process group so Sail Connect grandchildren cannot orphan.
             completed = _subprocess_run_kill_group(
                 [sys.executable, str(worker), str(config_path)],
                 timeout_s=hard_timeout_s,
@@ -1407,9 +1401,9 @@ def _run_one_query(
 ) -> QueryResult:
     """Run DuckDB oracle + subject engine for one query.
 
-    ``timeout_retry_s``: when > 0, one extra attempt at this ceiling after a full
-    first-pass TIMEOUT (B1 / TPC-DS Slow-vs-hung). Default ``0.0`` preserves unit
-    tests that sequence only first-pass timeouts; production scoreboard passes 300.
+    ``timeout_retry_s`` > 0: one extra attempt at this ceiling after a full
+    first-pass TIMEOUT. Default ``0.0`` preserves unit tests that sequence only
+    first-pass timeouts; production passes 300.
     """
     # DuckDB first (oracle) — uses original SQL.
     duck_times: list[float] = []
@@ -1425,7 +1419,7 @@ def _run_one_query(
             duck_times.append(wall)
             duck_payloads.append(rows)
         except FuturesTimeout:
-            # Drain remaining attempts when no rows yet (E1-L-001); keep prior (C4-L-002).
+            # Drain remaining attempts when no rows yet (E1-L-001); keep prior.
             if duck_payloads:
                 break
             duck_timed_out = True
@@ -1518,7 +1512,7 @@ def _run_one_query(
     duck_median = statistics.median(duck_times)
 
     # Subject engine SQL: repark may apply dialect rewrites; Sail must use the
-    # canonical DuckDB text so repark-only rewrites never reach the third engine (C2-Q-001).
+    # canonical DuckDB text so repark-only rewrites never reach the third engine.
     subject_sql = query.original_sql if subject_label == "sail" else query.sql_for_repark
     subject_times: list[float] = []
     subject_payloads: list[list[tuple[Any, ...]]] = []
@@ -1548,7 +1542,7 @@ def _run_one_query(
     timeout_retry_wall: float | None = None
 
     if not subject_payloads and subject_timed_out and subject_error is None and timeout_retry_s > 0:
-        # Greylight refinement: one retry at 300s after 120s TIMEOUT (B1).
+        # Greylight refinement: one retry at 300s after 120s TIMEOUT.
         timeout_first_s = timeout_s
         try:
             wall, rows = _timed_call(
@@ -1714,7 +1708,7 @@ def _subject_collect(
 def _repark_collect(spark: Any, sql: str) -> list[tuple[Any, ...]]:
     frame = spark.sql(sql)
     # Prefer Arrow path for value fidelity; fall back to collect().
-    # Schema-name order (not dict.values()) so projection renames stay stable (C3-L-006).
+    # Schema-name order (not dict.values()) so projection renames stay stable.
     if hasattr(frame, "to_arrow"):
         table = frame.to_arrow()
         names = list(table.column_names)
@@ -1730,11 +1724,10 @@ def _timed_call(
 ) -> tuple[float, list[tuple[Any, ...]]]:
     """Run ``function`` with a wall-clock timeout on the main thread.
 
-    Uses ``signal.setitimer`` (Unix) so a wall overrun raises ``TimeoutError`` without
-    a ThreadPoolExecutor that cannot cancel a running worker (octo C1-Q-002 / C3-L-002).
-    Native code that ignores signals may still overshoot; the timeout is best-effort
-    for interruptible Python / many C extensions, and hard-bounds *observed* wall when
-    the timer fires.
+    Uses ``signal.setitimer`` (Unix) so a wall overrun raises ``TimeoutError``
+    without a ThreadPoolExecutor that cannot cancel a running worker.
+    Native code that ignores signals may still
+    overshoot; the timer hard-bounds *observed* wall only.
     """
     if timeout_s <= 0:
         msg = f"timeout_s must be positive, got {timeout_s}"
@@ -1752,7 +1745,7 @@ def _timed_call(
         signal.setitimer(signal.ITIMER_REAL, timeout_s)
         started = time.perf_counter()
         # Mutable box so a SIGALRM after function() returns but before the
-        # assignment target is written still keeps completed rows (C5-Q-001).
+        # assignment target is written still keeps completed rows.
         box: dict[str, list[tuple[Any, ...]] | None] = {"result": None}
         try:
 
@@ -1772,8 +1765,8 @@ def _timed_call(
             raise FuturesTimeout
         return elapsed, stored
 
-    # Fallback platforms without setitimer: soft wall after completion only.
-    # If the call returns, keep the result (do not map slow-OK → TIMEOUT).
+    # Fallback platforms without setitimer: soft wall after completion only; a
+    # returning call keeps its result (never map slow-OK → TIMEOUT).
     started = time.perf_counter()
     result = function()
     elapsed = time.perf_counter() - started

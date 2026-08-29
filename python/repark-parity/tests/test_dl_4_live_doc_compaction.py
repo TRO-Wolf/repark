@@ -1,4 +1,4 @@
-"""DL-4: the live documents carry only live state — compact, the grammar, and the gate."""
+"""The live documents carry only live state — compact, the grammar, and the gate."""
 
 from __future__ import annotations
 

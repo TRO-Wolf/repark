@@ -109,10 +109,9 @@ def leading_zero_width(rows: int) -> int:
     """Zero-pad width that keeps a leading zero on EVERY id of a ``rows``-row run.
 
     A fixed ``06d`` silently retires the class once ``row_index >= 1_000_000``
-    (``1000000`` has no leading zero) — and :data:`MAX_ROWS` is 10_000_000, so the
-    CLI can reach there. The width is therefore derived from the requested row
-    count: one digit wider than the largest index, floored at
-    :data:`LEADING_ZERO_MIN_WIDTH` so small runs keep the historical six.
+    (``1000000`` has no leading zero) and :data:`MAX_ROWS` allows that, so the
+    width is one digit wider than the largest index, floored at
+    :data:`LEADING_ZERO_MIN_WIDTH` for small runs.
     """
     if rows < 1:
         return LEADING_ZERO_MIN_WIDTH

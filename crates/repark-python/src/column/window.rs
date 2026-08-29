@@ -1,7 +1,6 @@
 //! Window-UDF constructors and Spark `rowsBetween` / `rangeBetween` frame translation.
 //!
-//! Crate-internal helpers for [`super::PyColumn`]'s `#[pymethods]` arms. These are not
-//! themselves `#[pymethods]` — PyO3 `multiple-pymethods` stays off.
+//! Crate-internal helpers for [`super::PyColumn`]; these are not `#[pymethods]`.
 
 use datafusion::arrow::datatypes::DataType;
 use datafusion::logical_expr::expr::WindowFunction;
@@ -38,10 +37,8 @@ impl PyColumn {
 }
 
 /// ===========================================================================================
-/// Build a DataFusion [`WindowFrame`] from Spark-relative `rowsBetween` / `rangeBetween` offsets.
-///
-/// Spark offsets: `i64::MIN` → unbounded preceding; `i64::MAX` → unbounded following;
-/// `0` → current row; negative → N preceding; positive → N following.
+/// Build a DataFusion [`WindowFrame`] from Spark-relative offsets.
+/// `i64::MIN`/`MAX` are unbounded; zero is the current row; signs select preceding/following.
 /// ===========================================================================================
 pub(super) fn spark_window_frame(
     units_text: &str,
@@ -62,24 +59,11 @@ pub(super) fn spark_window_frame(
     Ok(WindowFrame::new_bounds(units, start_bound, end_bound))
 }
 
-/// The frame a window with **no** `ORDER BY` gets — or the error Spark gives instead.
-///
-/// Spark documents two defaults: an ordered window frames `RANGE BETWEEN UNBOUNDED PRECEDING AND
-/// CURRENT ROW`, an unordered one frames `ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED
-/// FOLLOWING`. DataFusion supplies the first and has no answer for the second — an unordered
-/// window reaches physical planning and fails with `Internal error: ORDER BY column cannot be
-/// empty. This issue was likely caused by a bug in DataFusion's code`, for
-/// `count(v).over(Window.partitionBy("k"))`, which is ordinary PySpark.
-///
-/// The default applies to **aggregates only**. Spark requires an ordering for every ranking and
-/// offset function, and refuses `row_number`, `rank`, `dense_rank`, `percent_rank`, `cume_dist`,
-/// `ntile`, `lag`, `lead` and `nth_value` over an unordered window (measured, LRS-7). That set is
-/// exactly the window UDFs — `first` / `last`, which Spark allows, arrive as aggregates — so the
-/// split is read off the function's kind rather than a name list that would drift.
+/// Return Spark's unordered-window frame or refuse an unordered window UDF.
+/// Aggregates use an unbounded `ROWS` frame; ranking and offset UDFs require `ORDER BY`.
 ///
 /// # Errors
-/// The message Spark and DataFusion both give, so the four DataFusion already catches keep the
-/// wording they had and the five it does not are refused the same way.
+/// The refusal names the function and requests `ORDER BY`.
 pub(super) fn unordered_window_frame(window_expr: &Expr) -> Result<WindowFrame, String> {
     if let Expr::WindowFunction(function) = window_expr
         && matches!(function.fun, WindowFunctionDefinition::WindowUDF(_))
@@ -98,7 +82,6 @@ pub(super) fn unordered_window_frame(window_expr: &Expr) -> Result<WindowFrame, 
 }
 
 fn spark_offset_to_bound(offset: i64, units: WindowFrameUnits) -> Result<WindowFrameBound, String> {
-    // Mirror PySpark `Window` JVM-long clamping (facade already clamps to `i64` extremes).
     if offset == i64::MIN {
         return Ok(WindowFrameBound::Preceding(unbounded_scalar(units)));
     }
@@ -121,7 +104,6 @@ fn spark_offset_to_bound(offset: i64, units: WindowFrameUnits) -> Result<WindowF
 fn unbounded_scalar(units: WindowFrameUnits) -> ScalarValue {
     match units {
         WindowFrameUnits::Rows | WindowFrameUnits::Groups => ScalarValue::UInt64(None),
-        // RANGE unbounded uses null of a numeric type; Int64 is the common Spark long path.
         WindowFrameUnits::Range => ScalarValue::Int64(None),
     }
 }
@@ -129,8 +111,6 @@ fn unbounded_scalar(units: WindowFrameUnits) -> ScalarValue {
 fn offset_scalar(units: WindowFrameUnits, n: u64) -> ScalarValue {
     match units {
         WindowFrameUnits::Rows | WindowFrameUnits::Groups => ScalarValue::UInt64(Some(n)),
-        // Frame offsets from Spark are non-negative magnitudes; i64::MAX is the only
-        // out-of-range input and is handled as unbounded before this path.
         WindowFrameUnits::Range => ScalarValue::Int64(Some(i64::try_from(n).unwrap_or(i64::MAX))),
     }
 }

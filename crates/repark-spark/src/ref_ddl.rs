@@ -1,20 +1,13 @@
-//! Iceberg snapshot-ref DDL: `CREATE|DROP|REPLACE BRANCH|TAG` (I5 + r25 T2 ICE-REF).
+//! Iceberg snapshot-ref DDL: `CREATE|DROP|REPLACE BRANCH|TAG`.
 //!
-//! Stock sqlparser does not model these forms. The router sniffs them via
-//! [`crate::starts_with_branch_or_tag_ddl`] and routes here. Supported (product):
+//! Stock sqlparser does not model these forms. The router sniffs them and routes here. Supported:
 //! - `ALTER TABLE t CREATE [OR REPLACE] BRANCH|TAG b [AS OF VERSION n] [RETAIN …] [WITH SNAPSHOT RETENTION …]`
 //! - `ALTER TABLE t REPLACE BRANCH|TAG b [AS OF VERSION n] [RETAIN …] [WITH SNAPSHOT RETENTION …]`
 //! - `ALTER TABLE t DROP BRANCH b` / `DROP TAG tag`
 //! - Top-level `CREATE [OR REPLACE] BRANCH|TAG b IN t` / `DROP … IN t`
 //!
-//! Retention maps onto fork `ManageSnapshotsAction::set_max_ref_age_ms` /
-//! `set_min_snapshots_to_keep` / `set_max_snapshot_age_ms` (Q8 / greylit).
-//!
-//! Write-to-branch (`INSERT INTO t.branch_name`) is a **STOP** — see
-//! [`crate::write_to_branch`] and the ledger seed (fork has no branch-target commit).
-//!
-//! Fork cite (pin `b009ac158f7584a956fa9292c0e9675a411ecf0d`):
-//! `crates/iceberg/src/transaction/manage_snapshots.rs:90-208`.
+//! Retention maps to the fork's snapshot-management actions. Write-to-branch inserts refuse
+//! because the fork has no branch-target commit operation.
 
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
@@ -228,8 +221,7 @@ fn finish_drop(
     })
 }
 
-/// Unquote + refuse empty / path-escape ref names before catalog I/O
-/// (I5 octo C2-F1 / C3-F4).
+/// Unquote + refuse empty / path-escape ref names before catalog I/O.
 fn require_ref_name(significant: &[Sig], name_index: usize, form: &str) -> Result<String> {
     let name = word_at(significant, name_index)
         .map(unquote_ident)
@@ -239,8 +231,7 @@ fn require_ref_name(significant: &[Sig], name_index: usize, form: &str) -> Resul
             "{form} ref name must not be empty"
         )));
     }
-    // Same hygiene as table identifiers (r23 QI1 / octo C2-Q-001): shared needles via
-    // `reject_path_escape_ident` → `repark_iceberg::write::idents::path_escape_kind` (O3-C4-SEC-001).
+    // Apply the same path-escape hygiene as table identifiers.
     crate::reject_path_escape_ident(&name, &format!("{form} ref name"))?;
     Ok(name)
 }
@@ -303,8 +294,7 @@ fn parse_drop_with_in(
 
 /// Fail loud when significant tokens remain after a fully-parsed ref DDL form.
 ///
-/// Silent trailing drop is the same fail-open class as historical CTAS column-list ignore
-/// (I5 octo C1-F1). Known-but-unsupported spellings (IF EXISTS, IF NOT EXISTS) name the gap.
+/// Reject trailing tokens and known-but-unsupported `IF EXISTS` spellings instead of dropping them.
 fn reject_trailing_tokens(significant: &[Sig], end_index: usize, form: &str) -> Result<()> {
     if end_index < significant.len() {
         let leftover = match significant.get(end_index) {
@@ -555,7 +545,7 @@ fn parse_as_of_version(significant: &[Sig], index: usize) -> Result<(Option<i64>
 fn unquote_ident(raw: &str) -> String {
     let trimmed = raw.trim();
     if trimmed.len() >= 2 && trimmed.starts_with('"') && trimmed.ends_with('"') {
-        // Double-quote dialect: undouble embedded `""` (octo C3-Q-001 / C3-L-001).
+        // Double-quote dialect: undouble embedded `""`.
         return trimmed[1..trimmed.len() - 1].replace("\"\"", "\"");
     }
     if trimmed.len() >= 2 && trimmed.starts_with('`') && trimmed.ends_with('`') {
@@ -682,12 +672,7 @@ pub(crate) async fn execute_ref_ddl(
     ctx.read_empty()
 }
 
-// === r25 T2: write-to-branch STOP =============================================================
-//
-// Spark: INSERT INTO t.branch_name / t.tag_name. Fork FastAppend / snapshot produce always
-// SetSnapshotRef on MAIN_BRANCH — no to_branch commit target. Loud refuse with the precise
-// fork gap named (not a silent main write).
-// ==============================================================================
+// Write-to-branch targets must refuse because the fork commits only to MAIN_BRANCH.
 
 /// Loud refuse message for write-to-branch (fork gap seed).
 pub(crate) const WRITE_TO_BRANCH_NOT_SUPPORTED: &str = "\
@@ -700,17 +685,10 @@ CREATE|REPLACE BRANCH re-pin is the product write path for refs today \
 (docs/spark-sql-iceberg-parity.md §2.2 / r25 T2 ledger).";
 
 /// ===========================================================================================
-/// Sniff write-to-branch / write-to-tag targets: `INSERT INTO cat.ns.t.branch_x` and the
-/// Spark `table.branch_name` form when the last segment is not a metadata-table suffix.
-///
-/// Returns `true` for DML that looks like a branch-target write so the router can refuse
-/// before falling through to a main-branch write (silent wrong-target is worse than loud stop).
-/// ===========================================================================================
-/// ===========================================================================================
 /// A sniffed write-to-branch candidate. `MultiPart` (≥4 dotted parts) is unambiguous — no
 /// 4-part name can be a real table. `TwoPart` is AMBIGUOUS with a genuine
 /// `schema.branch_daily` table under the default catalog; the caller must disambiguate by
-/// resolution before refusing (r25 morning critic — false-refusal fix).
+/// resolution before refusing.
 /// ===========================================================================================
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum WriteToBranchSniff {
@@ -1071,7 +1049,7 @@ mod tests {
         assert!(sniff_write_to_branch("INSERT INTO ice.sales.t.snapshots SELECT 1").is_none());
     }
 
-    /// r25 morning critic: the sniff separates the unambiguous ≥4-part form from the
+    /// The sniff separates the unambiguous ≥4-part form from the
     /// resolution-ambiguous two-part form so the router can disambiguate the latter.
     #[test]
     fn write_to_branch_sniff_kinds() {

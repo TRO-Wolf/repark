@@ -1,11 +1,7 @@
-"""r21 T1 — createDataFrame ingestion parity (dict key-union + nested List/Struct).
+"""createDataFrame ingestion parity (dict key-union + nested List/Struct).
 
-Charter: ``charter-t1.md`` / PLAN TRACK 1.
-Ledger: ``task/t1-cdf-ingest-ledger.md``.
-
-Divergence-class pins: ``collect`` / ``to_arrow`` value **and** Arrow type, per entry
-point (dict list, polars, pandas). Live Spark 4.1.2 oracle recorded hour-0 in the ledger.
-Synthetic Orders-shaped fixtures only (invented IDs).
+Divergence-class pins: ``collect`` / ``to_arrow`` value AND Arrow type, per entry point (dict
+list, polars, pandas). Live Spark 4.1.2 oracle; synthetic Orders-shaped fixtures only.
 """
 
 from __future__ import annotations
@@ -33,11 +29,7 @@ def spark() -> ReparkSession:
     _reset_active_session_for_tests()
 
 
-# ==================================================================================================
 # Dict key-union (Spark 4.1.2 oracle)
-# ==================================================================================================
-
-
 @pytest.mark.parametrize(
     ("rows", "expected_columns"),
     [
@@ -80,7 +72,7 @@ def test_dict_key_union_order_first_row_sorted_then_append(
 
 
 def test_dict_key_union_empty_first_mapping_null_fills(spark: ReparkSession) -> None:
-    """Empty first dict still key-unions later keys; missing → null (octo C4-Q1)."""
+    """Empty first dict still key-unions later keys; missing → null."""
     table = spark.createDataFrame([{}, {"a": 1}, {"a": 2, "b": 3}]).to_arrow()
     assert table.column_names == ["a", "b"]
     assert table.to_pylist() == [
@@ -89,7 +81,6 @@ def test_dict_key_union_empty_first_mapping_null_fills(spark: ReparkSession) -> 
         {"a": 2, "b": 3},
     ]
     assert table.schema.field("a").type == pa.int64()
-    # keys then empty mapping
     table2 = spark.createDataFrame([{"a": 1}, {}]).to_arrow()
     assert table2.to_pylist() == [{"a": 1}, {"a": None}]
 
@@ -102,7 +93,6 @@ def test_dict_key_union_null_fill_and_type_widening(spark: ReparkSession) -> Non
         {"id": 3, "extra": "only-row3"},
     ]
     table = spark.createDataFrame(rows).to_arrow()
-    # First-row keys sorted (id, name) then score, extra appended.
     assert table.column_names == ["id", "name", "score", "extra"]
     assert table.to_pylist() == [
         {"id": 1, "name": "a", "score": None, "extra": None},
@@ -126,8 +116,8 @@ def test_dict_key_union_null_fill_and_type_widening(spark: ReparkSession) -> Non
 
 def test_dict_key_union_orders_shaped_synthetic(spark: ReparkSession) -> None:
     """Synthetic Orders-shaped ragged optional fields (invented IDs only)."""
-    # FA-4: repark defaults inferNestedDictAsStruct to true; this r21 key-union pin keeps
-    # the PySpark-default MAP cell path (the struct shape is pinned in the N1 file).
+    # repark defaults inferNestedDictAsStruct to true; the conf off keeps the PySpark-default
+    # MAP cell path.
     spark.conf.set("spark.sql.pyspark.inferNestedDictAsStruct.enabled", "false")
     rows = [
         {
@@ -152,7 +142,6 @@ def test_dict_key_union_orders_shaped_synthetic(spark: ReparkSession) -> None:
         },
     ]
     table = spark.createDataFrame(rows).to_arrow()
-    # First-row keys sorted: Legs, OrderId, Quantity, Symbol — then new keys appended.
     assert table.column_names[0:4] == ["Legs", "OrderId", "Quantity", "Symbol"]
     assert "StopPrice" in table.column_names
     assert "AdvancedOptions" in table.column_names
@@ -166,7 +155,7 @@ def test_dict_key_union_orders_shaped_synthetic(spark: ReparkSession) -> None:
     assert table.schema.field("OrderId").type == pa.int64()
     assert pa.types.is_floating(table.schema.field("StopPrice").type)
     # schema=None dict path: nested list-of-dicts → list<map> (Spark array<map>; not struct).
-    # Typed ArrayType(StructType) path is pinned separately (octo C5-Q1 residual honesty).
+    # Typed ArrayType(StructType) path is pinned separately.
     legs_type = table.schema.field("Legs").type
     assert pa.types.is_list(legs_type) or pa.types.is_large_list(legs_type)
     assert pa.types.is_map(legs_type.value_type)
@@ -198,7 +187,7 @@ def test_dict_structtype_schema_null_fill_drops_extras(spark: ReparkSession) -> 
 
 
 def test_dict_structtype_nested_array_struct_value_and_type(spark: ReparkSession) -> None:
-    """Explicit nested ArrayType(StructType) dict path — value+type (octo C3)."""
+    """Explicit nested ArrayType(StructType) dict path — value+type."""
     schema = StructType(
         [
             StructField("OrderId", LongType(), True),
@@ -245,10 +234,7 @@ def test_row_key_mismatch_still_refuses(spark: ReparkSession) -> None:
 
 
 def test_dict_int_float_same_key_refuses_merge(spark: ReparkSession) -> None:
-    """Spark CANNOT_MERGE_TYPE: LongType + DoubleType on same inferred column (octo C1-L1/L2).
-
-    Prior bug: first int inferred int64 then ``int(2.5)`` silently truncated to 2.
-    """
+    """Spark CANNOT_MERGE_TYPE: LongType + DoubleType on the same inferred column."""
     with pytest.raises(PySparkTypeError, match=r"CANNOT_MERGE_TYPE|LongType|DoubleType"):
         spark.createDataFrame([{"a": 1}, {"a": 2.5}])
     with pytest.raises(PySparkTypeError, match=r"CANNOT_MERGE_TYPE|LongType|DoubleType"):
@@ -256,7 +242,7 @@ def test_dict_int_float_same_key_refuses_merge(spark: ReparkSession) -> None:
 
 
 def test_dict_list_int_float_elements_refuse_merge(spark: ReparkSession) -> None:
-    """Nested list Long+Double must refuse — not truncate 1.5→1 (octo C2-L1)."""
+    """Nested list Long+Double must refuse — not truncate 1.5→1."""
     with pytest.raises(PySparkTypeError, match=r"CANNOT_MERGE_TYPE|LongType|DoubleType"):
         spark.createDataFrame([{"v": [1, 2]}, {"v": [1.5, 2.5]}])
     with pytest.raises(PySparkTypeError, match=r"CANNOT_MERGE_TYPE|LongType|DoubleType"):
@@ -266,10 +252,7 @@ def test_dict_list_int_float_elements_refuse_merge(spark: ReparkSession) -> None
 
 
 def test_dict_int_decimal_same_key_refuses_merge(spark: ReparkSession) -> None:
-    """Spark CANNOT_MERGE_TYPE: LongType + DecimalType — no silent 2.5→2 (extra XC1-L1).
-
-    Prior bug: first int inferred int64 then ``pa.array`` truncated ``Decimal("2.5")`` to 2.
-    """
+    """Spark CANNOT_MERGE_TYPE: LongType + DecimalType — no silent 2.5→2."""
     with pytest.raises(PySparkTypeError, match=r"CANNOT_MERGE_TYPE|LongType|DecimalType"):
         spark.createDataFrame([{"a": 1}, {"a": Decimal("2.5")}])
     with pytest.raises(PySparkTypeError, match=r"CANNOT_MERGE_TYPE|LongType|DecimalType"):
@@ -280,7 +263,7 @@ def test_dict_int_decimal_same_key_refuses_merge(spark: ReparkSession) -> None:
 
 
 def test_dict_decimal_double_same_key_refuses_merge(spark: ReparkSession) -> None:
-    """Spark CANNOT_MERGE_TYPE: DecimalType ↔ DoubleType (extra XC1-L2)."""
+    """Spark CANNOT_MERGE_TYPE: DecimalType ↔ DoubleType."""
     with pytest.raises(PySparkTypeError, match=r"CANNOT_MERGE_TYPE|DecimalType|DoubleType"):
         spark.createDataFrame([{"a": Decimal("2.5")}, {"a": 1.5}])
     with pytest.raises(PySparkTypeError, match=r"CANNOT_MERGE_TYPE|DecimalType|DoubleType"):
@@ -288,7 +271,7 @@ def test_dict_decimal_double_same_key_refuses_merge(spark: ReparkSession) -> Non
 
 
 def test_dict_float_bool_same_key_refuses_merge(spark: ReparkSession) -> None:
-    """Spark CANNOT_MERGE_TYPE: DoubleType + BooleanType — no True→1.0 (extra XC1-L3)."""
+    """Spark CANNOT_MERGE_TYPE: DoubleType + BooleanType — no True→1.0."""
     with pytest.raises(PySparkTypeError, match=r"CANNOT_MERGE_TYPE|DoubleType|BooleanType"):
         spark.createDataFrame([{"a": 1.5}, {"a": True}])
     with pytest.raises(PySparkTypeError, match=r"CANNOT_MERGE_TYPE|BooleanType|DoubleType"):
@@ -296,7 +279,7 @@ def test_dict_float_bool_same_key_refuses_merge(spark: ReparkSession) -> None:
 
 
 def test_dict_int_bool_same_key_refuses_merge(spark: ReparkSession) -> None:
-    """Spark CANNOT_MERGE_TYPE: LongType ↔ BooleanType (extra XC1-L4)."""
+    """Spark CANNOT_MERGE_TYPE: LongType ↔ BooleanType."""
     with pytest.raises(PySparkTypeError, match=r"CANNOT_MERGE_TYPE|LongType|BooleanType"):
         spark.createDataFrame([{"a": 1}, {"a": True}])
     with pytest.raises(PySparkTypeError, match=r"CANNOT_MERGE_TYPE|BooleanType|LongType"):
@@ -304,7 +287,7 @@ def test_dict_int_bool_same_key_refuses_merge(spark: ReparkSession) -> None:
 
 
 def test_dict_list_int_decimal_elements_refuse_merge(spark: ReparkSession) -> None:
-    """Nested list/map Long+Decimal must refuse — not truncate via pa.array (extra XC1-L1)."""
+    """Nested list/map Long+Decimal must refuse — not truncate via pa.array."""
     with pytest.raises(PySparkTypeError, match=r"CANNOT_MERGE_TYPE|LongType|DecimalType"):
         spark.createDataFrame([{"v": [1]}, {"v": [Decimal("2.5")]}])
     with pytest.raises(PySparkTypeError, match=r"CANNOT_MERGE_TYPE|LongType|DecimalType"):
@@ -314,10 +297,7 @@ def test_dict_list_int_decimal_elements_refuse_merge(spark: ReparkSession) -> No
 
 
 def test_dict_timestamp_numeric_same_key_refuses_merge(spark: ReparkSession) -> None:
-    """Spark CANNOT_MERGE_TYPE: TimestampType + Long/Double — no epoch coercion (extra XC2-L1).
-
-    Prior bug: ``pa.array`` accepted int/float under timestamp as epoch micros → 1970-01-01.
-    """
+    """Spark CANNOT_MERGE_TYPE: TimestampType + Long/Double — no epoch coercion."""
     stamp = datetime(2020, 1, 1)
     with pytest.raises(PySparkTypeError, match=r"CANNOT_MERGE_TYPE|TimestampType|LongType"):
         spark.createDataFrame([{"a": stamp}, {"a": 1}])
@@ -328,7 +308,7 @@ def test_dict_timestamp_numeric_same_key_refuses_merge(spark: ReparkSession) -> 
 
 
 def test_dict_date_numeric_and_timestamp_refuse_merge(spark: ReparkSession) -> None:
-    """Spark CANNOT_MERGE_TYPE: DateType + Long/Timestamp — no day-epoch (extra XC2-L2/L3)."""
+    """Spark CANNOT_MERGE_TYPE: DateType + Long/Timestamp — no day-epoch."""
     day = date(2020, 1, 1)
     stamp = datetime(2020, 1, 1)
     with pytest.raises(PySparkTypeError, match=r"CANNOT_MERGE_TYPE|DateType|LongType"):
@@ -342,26 +322,22 @@ def test_dict_date_numeric_and_timestamp_refuse_merge(spark: ReparkSession) -> N
 def test_dict_int_string_same_key_refuses_not_silent_string_coerce(
     spark: ReparkSession,
 ) -> None:
-    """Residual (octo C6): Spark stringifies int+str same key; repark fails loud (not absorbed)."""
+    """Residual: Spark stringifies int+str same key; repark fails loud (not absorbed)."""
     with pytest.raises(PySparkTypeError):
         spark.createDataFrame([{"a": 1}, {"a": "x"}])
 
 
 def test_dict_name_list_schema_ragged_keys_length_bind(spark: ReparkSession) -> None:
-    """Residual (octo C6): name-list schema length-binds first-row keys (not Spark null-fill).
+    """Residual: name-list schema length-binds first-row keys (not Spark null-fill).
 
-    Spark ``schema=['a','b']`` + ``[{a:1},{b:2}]`` null-fills; repark keeps pre-T1 name-list
-    length/overlap contract (StructType is the null-fill explicit-schema path).
+    Spark ``schema=['a','b']`` + ``[{a:1},{b:2}]`` null-fills; StructType is the null-fill
+    explicit-schema path here.
     """
     with pytest.raises(PySparkValueError, match=r"schema length|partially overlaps|column count"):
         spark.createDataFrame([{"a": 1}, {"b": 2}], schema=["a", "b"])
 
 
-# ==================================================================================================
 # Polars nested List(Struct) + pandas Arrow nested
-# ==================================================================================================
-
-
 def test_polars_list_struct_nested_roundtrip_value_and_type(spark: ReparkSession) -> None:
     """Polars List(Struct) via Arrow path — collect/to_arrow value + type."""
     pl = pytest.importorskip("polars")
@@ -446,20 +422,16 @@ def test_pandas_arrow_list_struct_nested_roundtrip(spark: ReparkSession) -> None
     assert pa.types.is_struct(legs_type.value_type)
     assert table.to_pylist()[0]["legs"][0]["leg_id"] == 10
     assert table.to_pylist()[1]["legs"][0]["side"] == "Sell"
-    # collect entry point (divergence-class: value per entry point — octo C1-Q2)
+    # collect entry point (divergence-class: value per entry point)
     collected = spark.createDataFrame(pdf).collect()
     assert collected[0]["order_id"] == 1
     assert collected[0]["legs"][0]["leg_id"] == 10
     assert collected[1]["legs"][0]["side"] == "Sell"
 
 
-# ==================================================================================================
 # Wrapped JSON {"Orders":[...]} → json.load + createDataFrame
-# ==================================================================================================
-
-
 def test_wrapped_json_object_via_json_load_dict_path(spark: ReparkSession, tmp_path: Path) -> None:
-    """R1 ``read.json`` is NDJSON; object wrapper goes via json.load + dict key-union."""
+    """``read.json`` is NDJSON; object wrapper goes via json.load + dict key-union."""
     payload = {
         "Orders": [
             {"OrderId": 7001, "Status": "Filled", "Quantity": 10},
@@ -472,7 +444,6 @@ def test_wrapped_json_object_via_json_load_dict_path(spark: ReparkSession, tmp_p
         loaded = json.load(handle)
     assert isinstance(loaded, dict) and "Orders" in loaded
     table = spark.createDataFrame(loaded["Orders"]).to_arrow()
-    # First-row keys sorted: OrderId, Quantity, Status — then StopPrice.
     assert table.column_names == ["OrderId", "Quantity", "Status", "StopPrice"]
     assert table.to_pylist() == [
         {"OrderId": 7001, "Quantity": 10, "Status": "Filled", "StopPrice": None},
@@ -483,12 +454,12 @@ def test_wrapped_json_object_via_json_load_dict_path(spark: ReparkSession, tmp_p
 
 
 def test_legacy_first_element_conf_coerces_float_into_long_array(spark: ReparkSession) -> None:
-    """r21 combine rider: the numeric-merge refuse is conf-aware.
+    """The numeric-merge refuse is conf-aware.
 
-    With ``spark.sql.pyspark.legacy.inferArrayTypeFromFirstElement.enabled=true`` Spark
-    infers the array element type from the FIRST element and truncate-coerces later
-    numerics (Apache ``test_infer_nested_array_element_type_with_struct``); with the conf
-    off (default) the T1 CANNOT_MERGE_TYPE refuse stands.
+    With ``spark.sql.pyspark.legacy.inferArrayTypeFromFirstElement.enabled=true`` Spark infers
+    the element type from the FIRST element and truncate-coerces later numerics (Apache
+    ``test_infer_nested_array_element_type_with_struct``); with the conf off (default) the
+    CANNOT_MERGE_TYPE refuse stands.
     """
     key = "spark.sql.pyspark.legacy.inferArrayTypeFromFirstElement.enabled"
     spark.conf.set(key, "true")

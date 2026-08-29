@@ -1,6 +1,4 @@
 //! V3-2 — ANSI CREATE/CTAS `format_version = 3` behind the session opt-in.
-//!
-//! Lives beside `tests.rs` so that crate-root file does not cross its rust-file-size ceiling.
 
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -173,7 +171,6 @@ async fn door_with_v3_opt_in() -> Door {
 }
 
 /// pins: v3-2-create-v3-opt-in/C-004
-///
 /// Model: Grok 4.6 xHigh
 #[tokio::test]
 async fn format_version_three_without_opt_in_refuses() {
@@ -197,7 +194,6 @@ async fn format_version_three_without_opt_in_refuses() {
 }
 
 /// pins: v3-2-create-v3-opt-in/C-002, C-006, C-013
-///
 /// Model: Grok 4.6 xHigh
 #[tokio::test]
 async fn format_version_three_opt_in_creates_v3() {
@@ -231,7 +227,6 @@ async fn format_version_three_opt_in_creates_v3() {
 }
 
 /// pins: v3-2-create-v3-opt-in/C-006
-///
 /// Model: Grok 4.6 xHigh
 #[tokio::test]
 async fn or_replace_applies_requested_v3() {

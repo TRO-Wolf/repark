@@ -1,5 +1,7 @@
 # map — python/repark-parity/bench/write
 
+CC-2 slice complete: comments and docstrings condensed; oracle discriminators, pins, mutation payloads, and safety contracts kept byte-exact; history narration deleted.
+
 ## Purpose
 
 **R-WRITE-BENCH (W1)** measurement-only harness: large **append + CTAS**, plus r22

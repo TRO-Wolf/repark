@@ -1,28 +1,9 @@
-//! ANSI-quoting-aware SQL text scanning — the one place this door reads raw SQL text.
-//!
-//! Three router-head concerns (multi-statement refuse, the write-to-branch sniff, the error-path
-//! wrong-door sniff) have to look at SQL *before* or *without* a parse. Each of them is a
-//! false-positive machine if written against the raw string: `SELECT 'a; b'` is not two
-//! statements, `-- USING` is not a Spark-ism, and `"tbl;name"` is one identifier. So all three go
-//! through [`blank_out_quoted_and_comments`], which replaces the CONTENT of string literals,
-//! quoted identifiers, and comments with spaces while preserving byte length and every structural
-//! character.
-//!
-//! **ANSI quoting, and only ANSI quoting** (design §2 Q10/Q12): `'…'` is a string literal with
-//! `''` as the escape, `"…"` is a QUOTED IDENTIFIER with `""` as the escape (never a string —
-//! that is the ANSI/Trino rule and the Spark divergence), `--` runs to end of line, `/* … */`
-//! nests-not (SQL block comments do not nest). Backticks are **not** quoting characters here:
-//! a backtick is a Spark-ism, so it is left in the scrubbed text on purpose, where the wrong-door
-//! sniff can find it and refuse. Blanking a backtick "string" would hide exactly the token this
-//! door most wants to report.
+//! ANSI-aware SQL text scanning for the router's pre-parse guards.
+//! Scrubbing hides quoted and comment contents while preserving structure. Backticks stay visible.
 
 /// ===========================================================================================
-/// Replace the contents of string literals, quoted identifiers, and comments with ASCII spaces,
-/// preserving length and all structural punctuation.
-///
-/// The result is safe to scan for `;`, keywords, or `` ` `` without literal/comment false
-/// positives. Multi-byte characters inside a literal are replaced byte-for-byte with spaces, so
-/// byte offsets into the result still line up with the input.
+/// Replace string-literal, quoted-identifier, and comment contents with ASCII spaces.
+/// Preserve byte length and structural punctuation because offsets index original SQL.
 /// ===========================================================================================
 pub(crate) fn blank_out_quoted_and_comments(sql: &str) -> String {
     let bytes = sql.as_bytes();
@@ -45,15 +26,11 @@ pub(crate) fn blank_out_quoted_and_comments(sql: &str) -> String {
             }
         }
     }
-    // Every byte written is ASCII or a byte copied verbatim from a valid UTF-8 string outside any
-    // literal, so the result is valid UTF-8 by construction; the lossy conversion is a
-    // total-function formality, never a lossy path in practice.
+    // Every byte written is ASCII or a byte copied from valid UTF-8 outside a delimited region.
     String::from_utf8_lossy(&out).into_owned()
 }
 
 /// Blank a `'…'` / `"…"` run, honouring the doubled-delimiter escape. Returns the next index.
-/// An UNTERMINATED literal blanks to end of input (fail-closed: the tail cannot then be read as
-/// structure).
 fn blank_delimited(bytes: &[u8], start: usize, delimiter: u8, out: &mut Vec<u8>) -> usize {
     out.push(delimiter);
     let mut index = start + 1;
@@ -102,10 +79,7 @@ fn blank_block_comment(bytes: &[u8], start: usize, out: &mut Vec<u8>) -> usize {
 }
 
 /// ===========================================================================================
-/// True when `needle` (ASCII, case-insensitive) occurs in `haystack` as a whole WORD — i.e. not
-/// flanked by an identifier character. `needle` may itself contain spaces, in which case the run
-/// of whitespace in `haystack` is collapsed for the comparison (`PARTITIONED    BY` matches
-/// `"PARTITIONED BY"`).
+/// Return true when `needle` occurs in `haystack` as a whole word, not as a substring.
 /// ===========================================================================================
 pub(crate) fn contains_word(haystack: &str, needle: &str) -> bool {
     let normalized = collapse_whitespace(haystack);
@@ -130,8 +104,7 @@ pub(crate) fn contains_word(haystack: &str, needle: &str) -> bool {
     false
 }
 
-/// Collapse every whitespace run to one ASCII space (leading/trailing runs are kept as one space
-/// so word-boundary logic stays uniform).
+/// Collapse every whitespace run to one ASCII space, preserving one leading or trailing space.
 fn collapse_whitespace(value: &str) -> String {
     let mut out = String::with_capacity(value.len());
     let mut in_space = false;
@@ -149,19 +122,13 @@ fn collapse_whitespace(value: &str) -> String {
     out
 }
 
-/// Identifier bytes for word-boundary purposes: ASCII alphanumerics, `_`, and `$` (so
-/// `orders$snapshots` is one word and cannot half-match).
+/// Identifier bytes for word-boundary purposes are ASCII alphanumerics, `_`, and `$`.
 fn is_ident_byte(byte: u8) -> bool {
     byte.is_ascii_alphanumeric() || byte == b'_' || byte == b'$'
 }
 
 /// ===========================================================================================
 /// Every identifier-ish word in already-scrubbed text as `(start, end, word)` BYTE spans.
-///
-/// The spans index the scrubbed string, which is byte-length-identical to the input, so they are
-/// valid offsets into the ORIGINAL SQL too. That is the whole point: a pre-parse recognizer can
-/// locate a keyword and edit the user's text at that offset while remaining structurally blind to
-/// string literals, quoted identifiers, and comments.
 /// ===========================================================================================
 pub(crate) fn word_spans(scrubbed: &str) -> Vec<(usize, usize, &str)> {
     let mut spans = Vec::new();
@@ -184,7 +151,6 @@ pub(crate) fn word_spans(scrubbed: &str) -> Vec<(usize, usize, &str)> {
 }
 
 /// The first significant word of a statement (uppercased), skipping comments/whitespace.
-/// `None` for an empty / comment-only string.
 pub(crate) fn leading_keyword(scrubbed: &str) -> Option<String> {
     scrubbed
         .split(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_'))
@@ -288,8 +254,7 @@ mod tests {
         assert!(contains_word("SELECT * FROM t", "t"));
     }
 
-    /// Word spans index the SCRUBBED text, and those offsets are valid in the original SQL —
-    /// which is what lets a pre-parse recognizer edit at an offset without seeing into literals.
+    /// Word spans index the scrubbed text, and those offsets remain valid in the original SQL.
     #[test]
     fn word_spans_offsets_are_valid_in_the_original_sql() {
         let sql = "ALTER TABLE t SET PROPERTIES (a = 'SET PROPERTIES')";

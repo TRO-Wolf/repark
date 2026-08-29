@@ -3,11 +3,6 @@
 Each shipped ``functions`` name is pinned through ``ReparkSession`` on the Arrow
 path (``to_arrow()``): value AND type. ``uuid`` pins type + uniqueness, not a
 golden value. ``version`` is the repark string (not DataFusion ``version()``).
-
-Deferred this batch (no stubs): charter try_* / to_number / to_binary;
-camelCase ``shiftLeft`` / ``shiftRight`` / ``shiftRightUnsigned`` (PySpark
-``__all__`` is snake_case; FN-GT1 shipped the snake names);
-``assert_true`` — ``raise_error`` is construction-time UOE, not an evaluable Column.
 """
 
 from __future__ import annotations
@@ -37,9 +32,7 @@ def _is_string(field_type: pa.DataType) -> bool:
     return pa.types.is_string(field_type) or pa.types.is_large_string(field_type)
 
 
-# ==================================================================================================
 # Bitwise
-# ==================================================================================================
 
 
 def test_bitwise_not_and_alias(spark: ReparkSession) -> None:
@@ -57,9 +50,7 @@ def test_bitwise_not_and_alias(spark: ReparkSession) -> None:
     assert pa.types.is_int64(table.schema.field("n").type)
 
 
-# ==================================================================================================
 # Broadcast hint
-# ==================================================================================================
 
 
 def test_broadcast_dataframe_and_column_are_identity(spark: ReparkSession) -> None:
@@ -79,9 +70,7 @@ def test_broadcast_dataframe_and_column_are_identity(spark: ReparkSession) -> No
         F.broadcast(123)
 
 
-# ==================================================================================================
 # Session strings
-# ==================================================================================================
 
 
 def test_current_user_and_user_are_stable_repark_string(spark: ReparkSession) -> None:
@@ -143,9 +132,7 @@ def test_version_is_repark_string_not_datafusion(spark: ReparkSession) -> None:
     assert table.column("s").to_pylist() == [3]
 
 
-# ==================================================================================================
 # uuid (non-deterministic)
-# ==================================================================================================
 
 
 def test_uuid_type_and_uniqueness(spark: ReparkSession) -> None:
@@ -157,9 +144,7 @@ def test_uuid_type_and_uniqueness(spark: ReparkSession) -> None:
     assert _is_string(table.schema.field("u").type)
 
 
-# ==================================================================================================
 # Deferred names stay absent (no stubs)
-# ==================================================================================================
 
 
 @pytest.mark.parametrize(
@@ -182,11 +167,7 @@ def test_uuid_type_and_uniqueness(spark: ReparkSession) -> None:
 def test_deferred_fn_f_names_are_absent(name: str) -> None:
     """Names FN-F left absent, with the reason each is still absent.
 
-    RATCHETS DOWN. FNP-6c (2026-08-20) shipped ``assert_true`` off this list — it is a raise
-    kernel over the pattern ``ansi.rs`` already established, not the engine work the list implied.
-    Behaviour: ``test_fnp6_validate.py``.
-
-    A name on a deferred list with no reason is indistinguishable from a name nobody has looked
-    at, so each remaining entry now says why.
+    RATCHETS DOWN. ``assert_true`` shipped off this list (FNP-6c) — a raise kernel over the
+    pattern ``ansi.rs`` already established. Behavior: ``test_fnp6_validate.py``.
     """
     assert not hasattr(F, name)

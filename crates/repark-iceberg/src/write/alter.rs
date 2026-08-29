@@ -1,22 +1,7 @@
 //! `ALTER TABLE` table-level mutations on the iceberg-rust 0.9.1 **public** API.
 //!
-//! These are the first real `repark-write` primitives. Each drives iceberg-rust's public
-//! `Transaction` / `Catalog` surface — no forked or `pub(crate)` internals:
-//!
-//! - [`set_table_properties`] / [`unset_table_properties`] build an
-//!   [`UpdatePropertiesAction`](iceberg::transaction::Transaction::update_table_properties),
-//!   `apply` it to a [`Transaction`], and `commit` against the catalog.
-//! - [`rename_table`] calls [`Catalog::rename_table`].
-//! - [`apply_schema_changes`] drives the fork's native
-//!   [`UpdateSchemaAction`](iceberg::transaction::Transaction::update_schema) (ADD / DROP /
-//!   RENAME COLUMN, type-widen, DROP NOT NULL, column COMMENT) — I6 / R-ALTER-TABLE.
-//! - [`apply_partition_spec_changes`] drives the fork's native
-//!   [`UpdatePartitionSpecAction`](iceberg::transaction::Transaction::update_partition_spec)
-//!   (ADD / DROP / REPLACE PARTITION FIELD) — I7 / R-PARTITION-EVOLUTION.
-//!
-//! The SQL router (`repark-sql`) resolves the three-part `catalog.namespace.table` name, looks up
-//! the iceberg handle, calls one of these, then re-registers the DataFusion provider. Errors are
-//! returned as [`iceberg::Error`] so the SQL layer adapts them with its existing `iceberg_err` fold.
+//! Property, table-name, schema, and partition-spec changes commit through public fork actions.
+//! Errors remain [`iceberg::Error`] for the SQL layer's existing fold.
 
 use std::collections::HashMap;
 use std::hash::BuildHasher;
@@ -195,22 +180,10 @@ pub async fn unset_table_properties(
 }
 
 /// ===========================================================================================
-/// `ALTER TABLE … SET/UNSET TBLPROPERTIES (…)` as ONE atomic transaction (BUG-012).
+/// Apply all property changes in one atomic transaction (BUG-012).
 ///
-/// Builds a **single** [`UpdatePropertiesAction`](iceberg::transaction) carrying every `sets`
-/// entry as `.set(k, v)` and every `unsets` key as `.remove(k)`, applies it to ONE
-/// [`Transaction`], and `commit`s ONCE. A mixed SET+UNSET therefore commits in a single catalog
-/// `update_table` CAS — it can never leave half-applied property state on a mid-operation failure
-/// (the two-call `set` then `unset` shape it replaces had a gap between its two commits). Empty
-/// `sets` AND empty `unsets` still load + apply + commit a property-update transaction with no
-/// set/remove ops (a no-op catalog CAS — not a short-circuit skip; unreachable via SQL, which
-/// always has at least one SET/UNSET key).
-///
-/// A key present in BOTH `sets` and `unsets` is rejected by the action's own precondition
-/// ("present in both removal set and update set") — the whole transaction fails and nothing lands,
-/// so a same-key set+unset is atomic-loud rather than silently set-then-removed. The SQL router
-/// only ever passes disjoint keys (a property is either a real `SET` value or a sentinel-flagged
-/// `UNSET` removal — never both), so this precondition is unreachable from Spark SQL.
+/// SET and UNSET operations share one catalog CAS, so a mid-operation failure cannot leave half
+/// the requested state. The fork rejects a key present in both collections before commit.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -316,28 +289,11 @@ pub async fn apply_schema_changes(
 }
 
 /// ===========================================================================================
-/// Apply a batch of partition-spec evolution ops as ONE `UpdatePartitionSpec` transaction (I7).
+/// Apply partition-spec changes in one transaction (I7).
 ///
-/// Builds a single
-/// [`UpdatePartitionSpecAction`](iceberg::transaction::Transaction::update_partition_spec) with
-/// Spark-default **case-insensitive** source-column resolution (`case_sensitive(false)`), folds
-/// every [`PartitionSpecChange`] in order (add / remove-by-name / remove-by-transform / replace =
-/// remove+add / rename), `apply`s it, and `commit`s once. An empty `changes` slice is a no-op
-/// (no catalog CAS). The new spec becomes the table default (fork `set_as_default` default);
-/// existing data files keep their recorded `partition_spec_id` (Iceberg multi-spec guarantee).
-///
-/// Partition **field names** on DROP/REPLACE/RENAME are also resolved case-insensitively against
-/// the current default spec (and names introduced earlier in the same batch): the fork's
-/// `remove_field` / `rename_field` match names exactly, while Spark's default
-/// `spark.sql.caseSensitive=false` treats partition field identifiers like source columns.
-///
-/// Supported transforms are whatever the fork's builder accepts: identity, `bucket[N]`,
-/// `truncate[W]`, year/month/day/hour, void. Unsupported transforms must be refused at the SQL
-/// boundary before calling here.
-///
-/// Fork cite (pin `b009ac158f7584a956fa9292c0e9675a411ecf0d`):
-/// `crates/iceberg/src/transaction/update_partition_spec.rs` (`UpdatePartitionSpecAction`);
-/// `GAP_MATRIX` R95 ✅ interop; `ENGINE_CONTRACT` schema/partition evolution section.
+/// Changes fold in declaration order with Spark's case-insensitive field resolution. An empty
+/// batch does nothing. Existing files retain their recorded spec IDs; the resulting spec is the
+/// table default. Unsupported transforms are rejected by the SQL boundary.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -1040,7 +996,7 @@ mod tests {
         assert!(!id_field.required);
     }
 
-    /// Build a one-column optional table for type-promotion twins (octo C3).
+    /// Build a one-column optional table for type-promotion twins.
     async fn setup_typed(
         warehouse: &TempDir,
         name: &str,
@@ -1098,7 +1054,7 @@ mod tests {
         }
     }
 
-    /// Octo C3 — float→double widen lands; double→float narrow refuses (ledger twin claim).
+    /// Float→double widen lands; double→float narrow refuses (ledger twin claim).
     #[tokio::test]
     async fn schema_type_widen_float_to_double_and_narrow_refuses() {
         let warehouse = TempDir::new().unwrap();
@@ -1138,7 +1094,7 @@ mod tests {
         );
     }
 
-    /// Octo C3 — decimal same-scale precision widen lands; narrow precision refuses.
+    /// Decimal same-scale precision widen lands; narrow precision refuses.
     #[tokio::test]
     async fn schema_type_widen_decimal_precision_and_narrow_refuses() {
         let warehouse = TempDir::new().unwrap();
@@ -1195,7 +1151,7 @@ mod tests {
         );
     }
 
-    /// Octo C4 — multi schema-op batch commits as exactly ONE catalog `update_table` CAS.
+    /// Multi schema-op batch commits as exactly ONE catalog `update_table` CAS.
     /// (Rename targets a *pre-existing* column — same-batch add-then-rename of the new
     /// column is refused by the fork as "missing column"; residual F-I6-C4-R1.)
     #[tokio::test]
@@ -1240,7 +1196,7 @@ mod tests {
         );
     }
 
-    /// Octo C4 twin — injected commit failure leaves schema unchanged (no partial batch).
+    /// Twin — injected commit failure leaves schema unchanged (no partial batch).
     #[tokio::test]
     async fn schema_injected_commit_failure_leaves_no_partial_state() {
         let warehouse = TempDir::new().unwrap();
@@ -1274,7 +1230,7 @@ mod tests {
         );
     }
 
-    /// Octo residual F-I6-C4-R1 — same-batch add-then-rename of the *new* column is refused
+    /// Residual F-I6-C4-R1 — same-batch add-then-rename of the *new* column is refused
     /// loud by the fork (not a silent partial). Documented so a future silent absorption is RED.
     #[tokio::test]
     async fn schema_same_batch_add_then_rename_new_column_refuses_loud() {
@@ -1312,7 +1268,7 @@ mod tests {
         );
     }
 
-    /// Octo C5 — case-insensitive column resolution (Spark default) for rename + drop.
+    /// Case-insensitive column resolution (Spark default) for rename + drop.
     #[tokio::test]
     async fn schema_case_insensitive_rename_and_drop() {
         let warehouse = TempDir::new().unwrap();
@@ -1562,7 +1518,7 @@ mod tests {
         );
     }
 
-    /// Octo C4 — multi [`PartitionSpecChange`] batch commits as exactly ONE catalog CAS.
+    /// Multi [`PartitionSpecChange`] batch commits as exactly ONE catalog CAS.
     #[tokio::test]
     async fn partition_spec_multi_change_commits_exactly_once() {
         let warehouse = TempDir::new().unwrap();
@@ -1608,7 +1564,7 @@ mod tests {
         assert!(names.contains(&"cat".to_string()) && names.contains(&"id_b8".to_string()));
     }
 
-    /// Octo C4 twin — injected partition commit failure leaves default spec unchanged.
+    /// Twin — injected partition commit failure leaves default spec unchanged.
     #[tokio::test]
     async fn partition_spec_injected_commit_failure_leaves_no_partial_state() {
         let warehouse = TempDir::new().unwrap();
@@ -1636,7 +1592,7 @@ mod tests {
         );
     }
 
-    /// Octo C6 — double ADD of the same identity field refuses loud (no silent no-op).
+    /// Double ADD of the same identity field refuses loud (no silent no-op).
     #[tokio::test]
     async fn partition_spec_double_add_same_field_refuses() {
         let wh = TempDir::new().unwrap();
@@ -1687,7 +1643,7 @@ mod tests {
         );
     }
 
-    /// Octo C1 — DROP/REPLACE partition field names are case-insensitive (Spark default).
+    /// DROP/REPLACE partition field names are case-insensitive (Spark default).
     /// Mutation: pass-through `remove_field("CATEGORY")` against stored `category` → `DataInvalid`.
     #[tokio::test]
     async fn partition_spec_drop_replace_field_name_case_insensitive() {

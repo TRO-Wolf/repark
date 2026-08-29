@@ -3,7 +3,7 @@
 ## Purpose
 
 The **ANSI/Trino-flavoured SQL door** (tier 3) — NEW code, not a port. `AnsiDialect` implements
-the frozen phase-1 `repark_core::SqlDialect` seam and routes one statement at a time. The door
+the frozen `repark_core::SqlDialect` seam and routes one statement at a time. The door
 **delegates** wherever DataFusion is already right (reads, `information_schema`, temp views, the
 fork `TableProvider`'s DML) and intercepts only the Iceberg catalog DDL DataFusion cannot
 express. There is deliberately **no `SessionExtension`**: native/ANSI semantics ARE stock
@@ -11,18 +11,12 @@ DataFusion, which is why cross-door equivalence must run two sessions (extension
 session-scoped).
 
 Design SSOT: [../../docs/design/sql-doors.md](../../docs/design/sql-doors.md) §2 (Q1–Q15).
-Milestone ledgers: [p2f-ansi-m1-ledger.md](../../docs/history/port-v2/p2f-ansi-m1-ledger.md) (M1 /
-PR-5) and [p2g-ansi-m2-ledger.md](../../docs/history/port-v2/p2g-ansi-m2-ledger.md) (M2 / PR-6).
+Historical delivery records live in the [archived port-v2 ledgers](../../docs/history/port-v2/map.md);
+current behavior is described below and in the source and test maps.
 
-**The door is CLOSED as of M2 (PR-6).** M1 landed the crate spine + `AnsiDialect`, the guard set
-(multi-statement FIRST, P11 read-only-catalog DML, write-to-branch, SEC-02 local-filesystem),
-the error-path wrong-door sniff, the `CREATE TABLE` family (CTAS + column-def) with the curated
-`WITH (…)` vocabulary, `extra_properties`, partitioning and Q15 loud-refuse routing,
-`CREATE`/`DROP SCHEMA` and `DROP TABLE`. M2 added ALTER (+ `SET PROPERTIES`, `RENAME TO`), the
-MERGE lowering, `FOR … AS OF` time travel, the ALTER-scoped branch/tag DDL, the completed refuse
-set, Q8 introspection and the two-session cross-door rows. `src/matrix.rs` now reads 46 tested /
-4 deliberately absent (four standing design rulings; the three G8 value-semantics
-pin-absences flipped to Tested at R-3).
+The crate owns `AnsiDialect`, its guards, wrong-door sniff,
+Iceberg DDL handlers, MERGE lowering, time travel, branch/tag DDL, refusals, and the surface
+matrix. Stock DataFusion handles delegated reads and DML.
 
 ## Contents
 
@@ -39,7 +33,7 @@ pin-absences flipped to Tested at R-3).
 - [src/map.md](src/map.md) — module-by-module navigation.
 - [tests/map.md](tests/map.md) — integration tests: the R1 parser-production pins, the
   two-session `cross_door.rs` rows (incl. G11 intended divergences), Q8 `introspection.rs`,
-  the Q11 `ta_toll.rs`, the G11 ANSI-door value pins (`ansi_door_values.rs`), the R-3 / G8
+  the Q11 `ta_toll.rs`, the G11 ANSI-door value pins (`ansi_door_values.rs`), the
   Native-profile pins (`ansi_door_join_null_keys.rs`, `ansi_door_window_frames.rs`,
   `ansi_door_float_agg.rs`).
 
@@ -66,8 +60,8 @@ pin-absences flipped to Tested at R-3).
 - **Public inputs:** a `SessionContext` + `CatalogRegistry` + ANSI SQL text (one statement at a time).
 - **Public outputs:** DataFusion `DataFrame`s; intercepted Iceberg DDL commits; loud refusals for
   out-of-scope forms.
-- **State & lifecycle:** per-call routing; `FOR … AS OF` registers ephemeral pinned relations released
-  right after planning (they never accumulate, never appear in `SHOW TABLES`).
+- **State & lifecycle:** per-call routing; successful time-travel rewrites release both ephemeral
+  names after planning. A core name can remain if post-registration lookup fails before the frame returns.
 - **Allowed internal deps:** `repark-core`, `repark-iceberg`, `repark-common`. **No `sqlparser` /
   `datafusion-spark`.** Dev-only: `repark-spark` + `repark-ta` (cross-door tests + the Q11 toll) —
   not product edges; nothing in `src/` may name them.
@@ -77,15 +71,22 @@ pin-absences flipped to Tested at R-3).
   (`partitioning.rs`); a guard (`guards.rs`); a wrong-door steer (`sniff.rs`).
 - **Test strategy:** `cargo test -p repark-sql` — R1 parser-production pins, the two-session
   `cross_door.rs` rows (incl. G11 intended divergences), Q8 introspection, the Q11 ta-toll,
-  G11 ANSI-door value pins (`tests/ansi_door_values.rs`), R-3 / G8 Native-profile pins
+  G11 ANSI-door value pins (`tests/ansi_door_values.rs`), and Native-profile pins
   (`tests/ansi_door_join_null_keys.rs`, `tests/ansi_door_window_frames.rs`,
   `tests/ansi_door_float_agg.rs`).
 - **Known limitations:** `matrix.rs` reads 46 tested / 4 deliberately absent; the four
-  statement-surface absences are standing design rulings. The three G8 `SEMANTICS_*`
-  pin-absences (window frames, JOIN NULL keys, float determinism) are Tested as of R-3.
+  statement-surface absences are standing design rulings. The three `SEMANTICS_*`
+  pin-absences (window frames, JOIN NULL keys, float determinism) are tested.
   **A11:** column-def `CREATE TABLE` refuses nanosecond `TIMESTAMP` / `TIMESTAMP(9)`
   (DDL needle). `TIMESTAMP(6)` is the supported spelling. CTAS / ALTER / Spark door
-  are not this refuse.
+  are not this refuse. Base audit findings, 2026-08-29:
+  - `BF-CC2-SQL-001` (S1): quoted catalog identifiers bypass the text-level read-only DML guard.
+  - `BF-CC2-SQL-002` (S1): service-managed CREATE can commit, then return an invalidation error
+    without undoing the table.
+  - `BF-CC2-SQL-003` (S2): quoted branch targets bypass the text guard, but the current planner
+    rejects four-part names before execution.
+  - `BF-CC2-SQL-004` (S2): a user table that squats on a reserved time-travel name can be removed
+    during registration or cleanup.
 
 ## Pointers
 
@@ -101,7 +102,7 @@ pin-absences flipped to Tested at R-3).
 | `unknown table property` on a create | The curated set is in `src/properties.rs`; dotted Iceberg keys go through `extra_properties = MAP(…)` |
 | `cannot resolve a storage location` | The schema has no `location` property and the catalog is `RequireExplicitLocation` — set it on the schema or per-table |
 | An error suddenly mentions Spark | The wrong-door sniff fired on the ERROR path (`src/sniff.rs`); the original error is still the first line |
-| `SHOW TABLES` / `information_schema` empty or missing | Build the session with `.config("datafusion.catalog.information_schema", "true")` — the builder now carries `datafusion.*` keys through to `SessionConfig` (PR-6 R2 fix); without the conf the refusal is DataFusion's own |
+| `SHOW TABLES` / `information_schema` empty or missing | Build the session with `.config("datafusion.catalog.information_schema", "true")`; without the setting the refusal is DataFusion's own |
 | A `FOR … AS OF` query fails to parse | The scanner runs AFTER the multi-statement refuse and BEFORE the parse (`src/time_travel.rs`); bare `VERSION AS OF` (no `FOR`) is the Spark spelling and steers |
 
 First checks: `cargo test -p repark-sql`. Escalate to: [../map.md#debug](../map.md).

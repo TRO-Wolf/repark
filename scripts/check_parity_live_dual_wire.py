@@ -5,8 +5,7 @@ Compares the two surfaces to EACH OTHER — never to a third hand-maintained fla
 Fail-closed: a parse miss on either side is a failure, not a skip.
 
 Scope: the one Makefile ``parity-live`` target ↔ ``.github/workflows/parity-live.yml`` pair.
-# Extensibility: additional dual-wired pairs can become additional compare_* functions;
-# this checker deliberately does not implement a multi-pair framework.
+Additional dual-wired pairs are deliberately out of scope — no multi-pair framework.
 
 SSOT is the comparison itself. Prose (AGENTS.md / Makefile comments) points here.
 
@@ -30,8 +29,7 @@ MAKEFILE = REPO_ROOT / "Makefile"
 WORKFLOW = REPO_ROOT / ".github" / "workflows" / "parity-live.yml"
 
 # Floor: both sides must carry these known-critical tokens (fail-closed against coordinated
-# drop). The comparison itself is still pairwise — this is not a substitute for comparing the
-# two surfaces to each other.
+# drop); the comparison itself is still pairwise, not a substitute for it.
 REQUIRED_SYNC_EXTRAS = frozenset({"record", "numpy", "pandas", "polars", "ml-ext"})
 REQUIRED_SYNC_FLAGS = frozenset({"--locked", "--no-install-package"})
 REQUIRED_UV_RUN_FLAGS = frozenset({"--locked", "--no-sync"})
@@ -83,7 +81,7 @@ def _strip_shell_trailing_comment(line: str) -> str:
 
 def _makefile_maturin_global_pin(makefile_text: str) -> str:
     """Exactly one ``MATURIN := uvx maturin@X.Y.Z`` — Make's last assignment would otherwise
-    diverge from a first-match pin (W3-SEC-003).
+    diverge from a first-match pin.
     """
     match = _unique_match(r"(?m)^MATURIN\s*:=\s*uvx\s+maturin@([0-9.]+)\s*$", makefile_text)
     _require(match is not None, "Makefile: MATURIN := uvx maturin@X.Y.Z pin not found")
@@ -96,7 +94,7 @@ def _makefile_parity_live_recipe(makefile_text: str) -> str:
 
     Exactly one ``parity-live:`` rule (not ``parity-live::``) — multi-fire ``::`` recipes and
     redefinitions are fail-closed so the checker cannot greenwash a stripped executable body
-    against a decoy twin (W3-SEC-002).
+    against a decoy twin.
     """
     if re.search(r"(?m)^parity-live::", makefile_text):
         raise ParseError(

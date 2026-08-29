@@ -1,8 +1,7 @@
-"""LightGBM delegated estimators — stretch twins of XGBoost (M4/M8).
+"""Delegated LightGBM estimators.
 
-**M8 persistence:** both ``LightGBMRegressorModel`` and ``LightGBMClassifierModel``
-save/load via repark-ml v1 + ``booster.model_to_string()`` text blob (library OWN
-non-pickle format), atomic M7 publish, and library-major version guard. Never pickle.
+Fitted models save and load with LightGBM's native text format and a library-major
+version guard. Persistence is atomic and never uses pickle.
 """
 
 from __future__ import annotations
@@ -48,12 +47,7 @@ def _lightgbm_version() -> str:
 
 
 class _LgbmPredictShell:
-    """Thin predict shell over a native ``lightgbm.Booster`` (post-load).
-
-    sklearn ``LGBM*`` wrappers have no public non-pickle restore path; we keep the
-    booster text + optional class labels and reimplement ``predict`` for transform
-    parity (regression raw scores; classification class labels).
-    """
+    """Predict through a native ``lightgbm.Booster`` restored from text."""
 
     def __init__(
         self,
@@ -74,7 +68,6 @@ class _LgbmPredictShell:
         if not self._classifier:
             return raw.reshape(-1)
         if raw.ndim == 1:
-            # Binary: probability of positive class → 0/1 index.
             indices = (raw > 0.5).astype(np.int64)
         else:
             indices = raw.argmax(axis=1).astype(np.int64)
@@ -201,7 +194,7 @@ class LightGBMRegressor(
 
 
 class LightGBMRegressorModel(HasFeaturesCol, HasPredictionCol, Model, MLWritable, MLReadable):
-    """Fitted LightGBM regressor — booster + params only (M8 model_to_string save/load)."""
+    """Fitted LightGBM regressor with native text persistence."""
 
     def __init__(
         self,
@@ -249,7 +242,7 @@ class LightGBMRegressorModel(HasFeaturesCol, HasPredictionCol, Model, MLWritable
         return reenter_with_prediction(frame, table, predictions, self.getPredictionCol())
 
     def write(self) -> MLWriter:
-        """Return model_to_string writer (M8)."""
+        """Return a native text writer."""
         return _LightGBMModelWriter(self, kind="LightGBMRegressorModel", classifier=False)
 
     def save(self, path: str) -> None:
@@ -290,7 +283,7 @@ class LightGBMClassifier(
     HasPredictionCol,
     Estimator["LightGBMClassifierModel"],
 ):
-    """Delegated LightGBM classifier (stretch)."""
+    """Delegated LightGBM classifier."""
 
     def __init__(
         self,
@@ -303,7 +296,7 @@ class LightGBMClassifier(
         learningRate: float | None = None,  # noqa: N803
         seed: int | None = None,
     ) -> None:
-        """Optional kwargs."""
+        """Configure optional parameters."""
         _ensure_lightgbm_loaded()
         super().__init__()
         self.maxDepth: Param[int] = Param(self, "maxDepth", "max depth", TypeConverters.toInt)
@@ -367,7 +360,7 @@ class LightGBMClassifier(
 
 
 class LightGBMClassifierModel(HasFeaturesCol, HasPredictionCol, Model, MLWritable, MLReadable):
-    """Fitted LightGBM classifier (M8 model_to_string save/load)."""
+    """Fitted LightGBM classifier with native text persistence."""
 
     def __init__(
         self,
@@ -417,7 +410,7 @@ class LightGBMClassifierModel(HasFeaturesCol, HasPredictionCol, Model, MLWritabl
         return reenter_with_prediction(frame, table, predictions, self.getPredictionCol())
 
     def write(self) -> MLWriter:
-        """Return model_to_string writer (M8)."""
+        """Return a native text writer."""
         return _LightGBMModelWriter(self, kind="LightGBMClassifierModel", classifier=True)
 
     def save(self, path: str) -> None:
@@ -454,7 +447,7 @@ class LightGBMClassifierModel(HasFeaturesCol, HasPredictionCol, Model, MLWritabl
 
 
 class _LightGBMModelWriter(MLWriter):
-    """Write LightGBM*Model via model_to_string + M7 atomic envelope."""
+    """Write a LightGBM model with native text and an atomic envelope."""
 
     def __init__(
         self,
@@ -469,11 +462,10 @@ class _LightGBMModelWriter(MLWriter):
         self._classifier = classifier
 
     def saveImpl(self, path: str) -> None:
-        """M1 envelope + booster text blob (never training rows / never pickle)."""
+        """Write the envelope and native booster text without training rows or pickle."""
         model = self.instance
         if model._booster is None:
             raise IllegalArgumentException(f"{self._kind}.save: no fitted booster")
-        # Prefer native sklearn wrapper; post-load shell exposes underlying booster.
         if isinstance(model._booster, _LgbmPredictShell):
             text = model._booster._booster.model_to_string()
             if not isinstance(text, str) or not text:

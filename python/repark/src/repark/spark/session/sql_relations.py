@@ -175,8 +175,6 @@ def _sql_mask_strings_and_comments(query: str) -> str:
     while index < length:
         char = query[index]
 
-        # Line comment
-
         if char == "-" and index + 1 < length and query[index + 1] == "-":
             end = query.find("\n", index)
 
@@ -193,8 +191,6 @@ def _sql_mask_strings_and_comments(query: str) -> str:
 
             continue
 
-        # Block comment
-
         if char == "/" and index + 1 < length and query[index + 1] == "*":
             end = query.find("*/", index + 2)
 
@@ -210,8 +206,6 @@ def _sql_mask_strings_and_comments(query: str) -> str:
             index = end + 2
 
             continue
-
-        # Quoted string / identifier
 
         if char in {"'", '"', "`"}:
             quote = char

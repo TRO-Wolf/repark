@@ -1,8 +1,8 @@
-"""PYC-4: parity harness dataclasses → BaseModel; nested defs lifted or pragma'd.
+"""Parity-harness BaseModel conversion and nested-def pins.
 
-Pins EXCEPTIONS-table identity, the dual-wire sanctioned leftover, the ANN split,
-and the CensusRow type check the conversion added. Behaviour of the comparator
-and census runner stays on ``test_compare_reports.py`` / ``test_compat_harness.py``.
+Pins the EXCEPTIONS-table identity, the dual-wire sanctioned leftover, the ANN
+split, and the CensusRow type check. Behaviour of the comparator and census
+runner stays on ``test_compare_reports.py`` / ``test_compat_harness.py``.
 """
 
 from __future__ import annotations

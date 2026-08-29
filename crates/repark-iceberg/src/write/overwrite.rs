@@ -1,13 +1,8 @@
-//! OV1 exclusive full-table overwrite stage + commit (Q9 — CACHE1 must not call this round).
+//! OV1 full-table overwrite using stage-then-swap.
 //!
-//! Stage-then-swap:
-//! 1. [`write_overwrite_staged_files_from_stream`] — SQL **positional** map (D9) + stream write
-//!    of data files **without** catalog mutation (lives here so `repark-sql` needs no `futures`
-//!    dep — Cargo.toml freeze).
-//! 2. [`commit_overwrite_replace_all`] — `overwrite_by_row_filter(AlwaysTrue)` + `add_files`
-//!    in one transaction, mirroring frozen-pin `iceberg-datafusion` `IcebergCommitExec`
-//!    `InsertOp::Overwrite` (`integrations/datafusion/.../commit.rs` L338–357 on pin
-//!    `b009ac15`). Isolation parse matches that provider bit-for-bit (BUG-004 / design D10).
+//! Staging writes data files without catalog mutation. The commit atomically replaces all rows
+//! with those files using `AlwaysTrue`, matching the fork provider's overwrite semantics and
+//! isolation parsing.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -307,7 +302,7 @@ fn positional_map_column_list(
         let field = table_schema.field(target_index);
         if columns[target_index].is_some() {
             // Duplicate list entry (same target twice, possibly different case spellings).
-            // Refuse — silent last-wins would drop the earlier source column (octo C2-Q-001).
+            // Refuse — silent last-wins would drop the earlier source column.
             return Err(DataFusionError::Plan(format!(
                 "INSERT OVERWRITE column list names `{name}` more than once (duplicate target \
                  field `{}`)",
@@ -712,7 +707,7 @@ mod tests {
     }
 
     /// Invalid isolation fails at helper entry — no catalog pointer move.
-    /// (SQL path also fails pre-stage via `parse_overwrite_isolation` — octo C3-Q-001.)
+    /// (SQL path also fails pre-stage via `parse_overwrite_isolation`.)
     #[tokio::test]
     async fn commit_overwrite_invalid_isolation_refuses_before_commit() {
         let warehouse = TempDir::new().expect("temp");
@@ -888,7 +883,7 @@ mod tests {
         );
     }
 
-    /// Arity mismatch (empty column list) refuses loud — octo C4-Q-001.
+    /// Arity mismatch (empty column list) refuses loud.
     #[test]
     fn positional_map_all_columns_arity_mismatch_refuses() {
         use datafusion::arrow::array::StringArray;
@@ -916,7 +911,7 @@ mod tests {
         );
     }
 
-    /// Column-list arity mismatch refuses — octo C4-Q-001.
+    /// Column-list arity mismatch refuses.
     #[test]
     fn positional_map_column_list_arity_mismatch_refuses() {
         use datafusion::arrow::array::Int32Array;
@@ -1030,7 +1025,7 @@ mod tests {
         );
     }
 
-    /// Unknown column-list name refuses — octo C5-Q-001.
+    /// Unknown column-list name refuses.
     #[test]
     fn positional_map_column_list_unknown_name_refuses() {
         use datafusion::arrow::array::Int32Array;
@@ -1061,7 +1056,7 @@ mod tests {
         );
     }
 
-    /// Case-ambiguous table fields refuse list resolve — octo C5-Q-001.
+    /// Case-ambiguous table fields refuse list resolve.
     #[test]
     fn positional_map_column_list_ambiguous_field_refuses() {
         use datafusion::arrow::array::Int32Array;
@@ -1087,7 +1082,7 @@ mod tests {
         assert!(error.to_string().contains("ambiguous"), "got: {error}");
     }
 
-    /// Duplicate column-list target refuses (no silent last-wins — octo C2-Q-001).
+    /// Duplicate column-list target refuses (no silent last-wins).
     #[test]
     fn positional_map_column_list_duplicate_target_refuses() {
         use datafusion::arrow::array::Int32Array;

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CLI entry for the TPC-DS scoreboard (R-TPCDS-HARNESS / D1).
+"""CLI entry for the TPC-DS scoreboard.
 
 Usage::
 
@@ -11,7 +11,7 @@ Usage::
     python …/run_tpcds.py --sf 0.01 --repeats 1 --queries 3,6,7,19,42,52,55,82,91,96
 
 Never touches AWS. Parquet cache: ``~/.cache/repark-tpcds (or $XDG_CACHE_HOME)/sf{N}/``.
-D1: parquet temp views only — no Iceberg leg.
+Parquet temp views only — no Iceberg leg.
 """
 
 from __future__ import annotations

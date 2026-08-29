@@ -1,43 +1,26 @@
 """Census report comparator — the port's acceptance gate (design §6.4).
 
-NEW CODE in the V2 port: v1 emits census reports, but nothing in either repository turns
-two reports into a verdict. This module does exactly that and nothing else.
+Two modes: **census** (default) — two ``compat.runner`` JSON reports in; and
+**``--junit``** — two pytest JUnit XMLs in, outcome ∈ ``passed | failed | skipped |
+xfailed | error``. Skips are first-class: a test that silently stops skipping is as
+interesting as one that stops passing.
 
-Two modes:
-
-* **census mode** (default) — two ``compat.runner`` JSON reports in, ``{test_id → census
-  class}`` per side.
-* **``--junit`` mode** — two pytest JUnit XMLs in, ``{node id → outcome}`` per side, where
-  outcome ∈ ``passed | failed | skipped | xfailed | error``. Skips are first-class: a test
-  that silently stops skipping is exactly as interesting as one that stops passing.
-
-Procedure, in order (each step is a hard gate):
-
-1. **Environment manifests are compared FIRST** and any difference is a loud failure — the
-   comparator refuses to diff two runs that are not the same measurement (§6.1). Two
-   properties make that gate real rather than nominal: an external manifest may only
-   **augment** a report's own manifest (a contradiction is a loud failure, so the CLI cannot
-   fabricate agreement), and the keys that decide the measurement — ``python_version``,
-   ``pandas_version``, and ``pyspark_version`` in census mode — must be **recorded**, because
-   a key nobody records compares equal by absence.
-2. The deferred ledger is subtracted **from the baseline (v1) side only**, and the
-   subtraction is **echoed** so the reconciliation identity is visible.
-3. Quarantined-unstable rows are excluded on **both** sides and reported separately.
-4. The two sides are rendered sorted and compared **byte for byte** — no fuzzy matching, no
-   aggregate-only comparison, no per-class tolerance.
-5. Both denominators (``pass / all_collected`` and ``pass / engine_relevant``) are
-   re-asserted over the compared row sets; any difference fails. Separately — and this is the
-   half the byte comparison does not already imply — each report's **own recorded**
-   denominator block is validated against the rows that report carries; a disagreement is a
-   malformed report and a loud failure.
-6. The delta is grouped by direction (pass→fail, fail→pass, class-change, appeared,
-   vanished) and the process exits non-zero on **any** difference. An empty diff is the only
-   pass.
+Hard gates, in order: (1) environment manifests are compared FIRST; any difference
+is a loud failure — an external manifest may only **augment** a report's own
+manifest, and the keys that decide the measurement must be **recorded** (a key
+nobody records compares equal by absence); (2) the deferred ledger is subtracted
+from the baseline side only, and the subtraction is echoed; (3) quarantined-unstable
+rows are excluded on both sides and reported separately; (4) the rendered sides are
+compared **byte for byte** — no fuzzy matching, no aggregate-only comparison;
+(5) both denominators are re-asserted over the compared row sets, and each report's
+own recorded denominator block is validated against the rows it carries; (6) the
+delta is grouped by direction and the process exits non-zero on **any** difference.
+An empty diff is the only pass.
 
 **The checked-in ledger files are the ONLY subtraction inputs.** There is no flag,
-environment variable, or config path by which a row can be excluded without appearing in a
-ledger file: this module reads no environment at all, and its option set is frozen and
-pinned by a unit test that provokes an undeclared subtraction.
+environment variable, or config path by which a row can be excluded without appearing
+in a ledger file: this module reads no environment at all, and its option set is
+frozen and pinned by a unit test that provokes an undeclared subtraction.
 
 CLI::
 
@@ -47,8 +30,8 @@ CLI::
         --deferred task/port/deferred-python-tests.txt \\
         --quarantine task/census/baseline-<pin>/quarantine.txt
 
-Exit codes: ``0`` identical, ``1`` any difference, ``2`` loud failure (manifest mismatch,
-unreadable input, malformed report).
+Exit codes: ``0`` identical, ``1`` any difference, ``2`` loud failure (manifest
+mismatch, unreadable input, malformed report).
 """
 
 from __future__ import annotations
@@ -79,12 +62,11 @@ MANIFEST_KEYS: tuple[str, ...] = (
     "pandas_version",
     "pyarrow_version",
 )
-# Manifest keys that must be RECORDED (present and non-empty) on both sides, per mode. A key
-# that nobody records compares equal-by-absence, which is how an unrecorded environment
-# sneaks past an equality gate — design §5 F2: "a baseline whose environment is not recorded
-# is not a baseline". ``pandas_version`` is required in both modes because the pandas major
-# changes the measurement (docs/port/census.md §1); ``pyspark_version`` is required in census
-# mode only — the facade cohort is defined by pyspark being ABSENT (§4).
+# Manifest keys that must be RECORDED (present and non-empty) on both sides, per mode.
+# A key nobody records compares equal-by-absence (design §5 F2: "a baseline whose
+# environment is not recorded is not a baseline"). ``pandas_version`` is required in
+# both modes (the pandas major changes the measurement); ``pyspark_version`` in census
+# mode only — the facade cohort is defined by pyspark being ABSENT.
 REQUIRED_MANIFEST_KEYS_CENSUS: tuple[str, ...] = (
     "python_version",
     "pyspark_version",
@@ -94,21 +76,20 @@ REQUIRED_MANIFEST_KEYS_JUNIT: tuple[str, ...] = (
     "python_version",
     "pandas_version",
 )
-# The denominator keys re-asserted over the compared rows AND validated against each
+# Denominator keys re-asserted over the compared rows AND validated against each
 # report's own recorded block.
 GATED_DENOMINATOR_KEYS: tuple[str, ...] = ("pass", "all_collected", "engine_relevant")
-# Keys deliberately NOT part of the manifest, each with its reason. They are echoed in the
-# report for the human reader but never gate the comparison.
+# Keys deliberately NOT part of the manifest; echoed in the report, never gate it.
 MANIFEST_EXCLUDED: dict[str, str] = {
     "generated_at": "wall-clock stamp; two runs are never simultaneous",
     "repark_version": "the engine version differs across the two repositories by construction",
 }
 
-# JUnit outcomes that mean "this test was not executed against the engine" — the junit-mode
-# analogue of the census classes excluded from the engine-relevant denominator.
+# JUnit outcomes meaning "not executed against the engine" — junit-mode analogue of
+# the census classes excluded from the engine-relevant denominator.
 _JUNIT_NON_ENGINE_OUTCOMES: frozenset[str] = frozenset({"skipped", "xfailed"})
 
-# The complete, frozen set of CLI option strings. Pinned by a unit test: a new option is a
+# The complete, frozen set of CLI option strings, unit-pinned: a new option is a
 # deliberate act, and no option may ever subtract a row (only the ledger files do).
 FROZEN_OPTIONS: tuple[str, ...] = (
     "--baseline",
@@ -130,9 +111,7 @@ class ComparatorError(Exception):
     """Loud failure: the two runs cannot be compared at all (exit 2)."""
 
 
-# ---------------------------------------------------------------------------
 # Loading
-# ---------------------------------------------------------------------------
 
 
 class Side(BaseModel):
@@ -145,9 +124,9 @@ class Side(BaseModel):
     manifest: dict[str, str]
     classes: dict[str, str]
     recorded_denominators: dict[str, Any] = Field(default_factory=dict)
-    # The raw status multiset as CARRIED by the report, duplicates included — the recorded
-    # denominator block is validated against this, while `classes` (deduped; quarantined ids
-    # may repeat at load) drives the comparison. None for junit sides.
+    # Raw status multiset as CARRIED by the report, duplicates included: the recorded
+    # denominator block is validated against this, while `classes` (deduped;
+    # quarantined ids may repeat at load) drives the comparison. None for junit sides.
     carried_statuses: list[str] | None = None
 
 
@@ -172,17 +151,13 @@ def load_ledger(path: Path | None) -> list[str]:
 def junit_node_id(node_id: str) -> str:
     """Canonicalize a collect-only node id into the JUnit id space.
 
-    A ledger is written in the id form a human can check against the tree —
-    ``tests/test_excel_reader.py::test_excel_skip_rows`` — while JUnit XML carries the
-    ``classname``/``name`` pair, which this module keys as
-    ``tests.test_excel_reader::test_excel_skip_rows``. Without a translation the ledger
-    subtracts nothing in ``--junit`` mode, which is precisely the drift EC-4 forbids.
-
-    The translation runs in this direction on purpose: *path → dotted module* is total and
-    injective (strip ``.py``, ``/`` → ``.``), whereas *dotted → path* is ambiguous — nothing in
-    ``tests.test_facade.TestX`` says where the module ends and the class begins. Ids already in
-    the JUnit form (no ``::``, or a left side that is not a ``.py`` path) are returned unchanged,
-    so the function is idempotent and safe to apply to any ledger.
+    A ledger is written as ``tests/test_excel_reader.py::test_excel_skip_rows`` while
+    JUnit XML carries the ``classname``/``name`` pair, keyed here as
+    ``tests.test_excel_reader::test_excel_skip_rows``; without the translation a
+    ledger subtracts nothing in ``--junit`` mode. Path → dotted module is total and
+    injective; the reverse is ambiguous (nothing in ``tests.test_facade.TestX`` says
+    where the module ends and the class begins). Ids already in JUnit form are
+    returned unchanged, so the function is idempotent.
     """
     path, separator, remainder = node_id.partition("::")
     if not separator or not path.endswith(".py"):
@@ -207,11 +182,10 @@ def _read_json(path: Path) -> dict[str, Any]:
 def load_census_report(path: Path, *, label: str, quarantine: frozenset[str] = frozenset()) -> Side:
     """Load a ``compat.runner`` JSON report into a comparison side.
 
-    A duplicate ``test_id`` is a loud refusal — a report with duplicate keys cannot be
-    multiset-compared — with exactly one escape: ids named in the QUARANTINE ledger may appear
-    more than once (the source repo's runner emits duplicate rows with conflicting classes for
-    a known pair of ids; quarantined rows are excluded from the gate and echoed separately, so
-    keeping the first row is sufficient and the conflict never reaches the comparison).
+    A duplicate ``test_id`` is a loud refusal — a report with duplicate keys cannot
+    be multiset-compared — with one escape: ids named in the QUARANTINE ledger may
+    repeat (the source repo's runner emits conflicting classes for a known pair;
+    quarantined rows are excluded from the gate, so keeping the first row suffices).
     """
     payload = _read_json(path)
     manifest = {key: str(payload.get(key, "")) for key in MANIFEST_KEYS}
@@ -263,10 +237,9 @@ def _junit_outcome(case: ElementTree.Element) -> str:
 def load_junit_report(path: Path, *, label: str, manifest: dict[str, str]) -> Side:
     """Load a pytest JUnit XML into a comparison side.
 
-    Node ids are reconstructed as ``classname::name`` — the only node-identifying pair JUnit
-    XML carries without a pytest plugin, and stable across two identical trees. Ledger ids,
-    which are written in collect-only ``path::name`` form, are translated into this same space
-    by :func:`junit_node_id` before subtraction.
+    Node ids are reconstructed as ``classname::name`` — the only node-identifying
+    pair JUnit XML carries, stable across identical trees. Ledger ids are translated
+    into this space by :func:`junit_node_id` before subtraction.
     """
     if not path.is_file():
         raise ComparatorError(f"report not found: {path}")
@@ -290,9 +263,7 @@ def load_junit_report(path: Path, *, label: str, manifest: dict[str, str]) -> Si
     return Side(label=label, path=path, manifest=dict(manifest), classes=classes)
 
 
-# ---------------------------------------------------------------------------
 # Manifests
-# ---------------------------------------------------------------------------
 
 
 def load_manifest_file(path: Path | None) -> dict[str, str]:
@@ -308,12 +279,11 @@ def merge_external_manifest(
 ) -> dict[str, str]:
     """Merge an external manifest INTO a report's own manifest — augment only, never override.
 
-    The external file carries the half of the environment the JSON report does not (the
-    ``pip freeze``: pandas, pyarrow, …). It may **fill** a key the report does not record, and
-    it may **restate** a key with the same value; it may never *change* one. Overwriting is
-    how a CLI flag would silently defeat the comparator's first gate — two runs from
-    genuinely different interpreters would render an identical, fabricated manifest and exit
-    0. A contradiction is therefore a loud failure, named key by key.
+    The external file (the ``pip freeze`` half: pandas, pyarrow, …) may **fill** a
+    key the report does not record, or **restate** one with the same value; it may
+    never *change* one. Overwriting is how a CLI flag would silently defeat the first
+    gate — two runs from different interpreters would render an identical, fabricated
+    manifest and exit 0. A contradiction is a loud failure, named key by key.
     """
     merged = dict(manifest)
     conflicts: list[str] = []
@@ -366,9 +336,7 @@ def compare_manifests(
     return differences
 
 
-# ---------------------------------------------------------------------------
 # Comparison
-# ---------------------------------------------------------------------------
 
 
 def render_side(classes: dict[str, str]) -> str:
@@ -379,11 +347,10 @@ def render_side(classes: dict[str, str]) -> str:
 def compute_denominators(classes: dict[str, str], *, junit: bool) -> dict[str, Any]:
     """Both charter denominators over a compared row set.
 
-    In census mode the rule is imported from :mod:`compat.classify` verbatim, so the
-    comparator can never drift from the runner's own definition. In junit mode the
-    charter classes do not exist, so the documented mapping is: ``pass`` = ``passed``;
-    ``engine_relevant`` = everything except ``skipped`` / ``xfailed`` (the outcomes that
-    mean the test never reached the engine).
+    Census mode imports the rule from :mod:`compat.classify` verbatim so the
+    comparator cannot drift from the runner. Junit mode maps ``pass`` = ``passed``;
+    ``engine_relevant`` = everything except ``skipped`` / ``xfailed`` (the outcomes
+    meaning the test never reached the engine).
     """
     if not junit:
         rows = [
@@ -408,20 +375,18 @@ def compute_denominators(classes: dict[str, str], *, junit: bool) -> dict[str, A
 def check_recorded_denominators(side: Side, *, junit: bool) -> None:
     """Validate a report's OWN recorded denominators against its own rows (census mode).
 
-    The post-subtraction re-assert in :func:`compare` is implied by the byte comparison — two
-    row sets that render identically necessarily produce identical denominators — so on its
-    own it can never catch a report whose *recorded* counts disagree with the rows it ships.
-    That is the failure this gate exists for: a report that claims 171 collected while
-    carrying 169 rows is malformed, and a malformed report is a loud failure (exit 2), not a
-    silent baseline.
+    The post-subtraction re-assert is implied by the byte comparison, so on its own it
+    cannot catch a report whose *recorded* counts disagree with the rows it ships. A
+    report claiming 171 collected while carrying 169 rows is malformed — a loud
+    failure, not a silent baseline.
     """
     if junit or not side.recorded_denominators:
         return
     carried = (
         side.carried_statuses if side.carried_statuses is not None else list(side.classes.values())
     )
-    # Dummy ids: denominators inspect status only. Keys must be str — CensusRow.test_id
-    # is str, and pydantic rejects the int keys dict(enumerate(...)) used to produce.
+    # Dummy ids: denominators inspect status only. Keys must be str; pydantic
+    # rejects the int keys dict(enumerate(...)) would produce.
     carried_classes: dict[str, str] = {
         f"carried-{index}": status for index, status in enumerate(carried)
     }
@@ -509,10 +474,10 @@ def apply_ledgers(
 ) -> tuple[dict[str, str], dict[str, str], dict[str, list[str]]]:
     """Subtract the ledgers and return ``(baseline_rows, candidate_rows, echo)``.
 
-    Deferred entries are removed from the **baseline side only** (v1 tests this repository
-    deliberately did not port). Added entries are removed from the **candidate side only**
-    (v2-only tests for capabilities the pin has no equivalent for — the mirror of deferred).
-    Quarantined-unstable entries are removed from **both** sides. The reconciliation identity is
+    Deferred entries are removed from the **baseline side only** (v1 tests this
+    repository deliberately did not port); added entries from the **candidate side
+    only** (v2-only tests — the mirror of deferred); quarantined-unstable from
+    **both**. The reconciliation identity is
     `(candidate minus added) union deferred = baseline`. Everything removed is echoed.
     """
     deferred_set = set(deferred)
@@ -544,9 +509,7 @@ def apply_ledgers(
     return baseline_rows, candidate_rows, echo
 
 
-# ---------------------------------------------------------------------------
 # Rendering
-# ---------------------------------------------------------------------------
 
 
 def _echo_lines(echo: dict[str, list[str]]) -> list[str]:
@@ -620,9 +583,7 @@ def _delta_lines(delta: Delta, *, baseline_label: str, candidate_label: str) -> 
     return lines
 
 
-# ---------------------------------------------------------------------------
 # Orchestration
-# ---------------------------------------------------------------------------
 
 
 class ComparisonResult(BaseModel):
@@ -669,9 +630,9 @@ def compare(
     check_recorded_denominators(candidate, junit=junit)
 
     if junit:
-        # The checked-in ledgers are written in collect-only id form; JUnit rows are keyed
-        # ``classname::name``. Canonicalize the ledger side ONCE, here, so a ledger cannot
-        # silently subtract nothing (EC-4).
+        # Ledgers are written in collect-only id form; JUnit rows are keyed
+        # ``classname::name``. Canonicalize the ledger side ONCE here so a ledger
+        # cannot silently subtract nothing (EC-4).
         deferred = [junit_node_id(entry) for entry in deferred]
         added = [junit_node_id(entry) for entry in added]
         quarantined = [junit_node_id(entry) for entry in quarantined]

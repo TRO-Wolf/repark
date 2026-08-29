@@ -13,7 +13,6 @@ Width = Literal["narrow", "wide"]
 
 # Wide: id + 32 float64 payload columns (~264 B/row raw) - stresses materialize/RSS.
 WIDE_FLOAT_COLS: Final[int] = 32
-# Source fraction for MERGE upserts (matched + a tail of inserts).
 DEFAULT_SOURCE_FRACTION: Final[float] = 0.10
 
 
@@ -61,10 +60,8 @@ def write_synthetic_parquet(
 ) -> Path:
     """Write ``rows`` synthetic rows starting at ``id_start`` to ``path``.
 
-    Uses Polars column expressions (no Python per-row lists) so 10M-wide seeds
-    stay tractable. Requires optional ``polars`` (bench night / ``repark[polars]``);
-    width/rows are validated **before** the import so unit pins reject bad inputs
-    without the extra.
+    Uses Polars column expressions so 10M-wide seeds stay tractable; width/rows are
+    validated before the optional ``polars`` import so bad inputs reject without the extra.
 
     Raises:
         ValueError: non-positive rows or unknown width.
@@ -78,7 +75,6 @@ def write_synthetic_parquet(
 
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    # id_start .. id_start+rows-1 as int64; payload from modular arithmetic.
     base = pl.int_range(id_start, id_start + rows, dtype=pl.Int64, eager=True).alias("id")
     if width == "narrow":
         frame = pl.DataFrame({"id": base}).with_columns(
@@ -130,7 +126,6 @@ def merge_source_plan(
         msg = f"source_fraction must be in (0, 1]; got {source_fraction}"
         raise ValueError(msg)
     source_rows = max(1, int(target_rows * source_fraction))
-    # Overlap half (or all if tiny): start so roughly half the source keys match.
     overlap = source_rows // 2
     id_start = max(0, target_rows - overlap)
     return source_rows, id_start

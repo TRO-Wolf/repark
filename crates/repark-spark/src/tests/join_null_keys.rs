@@ -1,13 +1,7 @@
-//! G8 / R-3 — Spark-door JOIN NULL-key value pins (Spark-parity).
+//! Pins Spark SQL three-valued JOIN behavior for NULL keys on the Arrow path.
 //!
-//! SQL three-valued logic: `NULL = NULL` is unknown, so a NULL join key never
-//! matches. Goldens are the G4 live-Spark 4.1.2 table (`test_join_parity.py`
-//! `null_keys_inner_no_match`, `null_keys_left_outer_fate`,
-//! `left_semi_null_keys_no_match`, `df_left_anti_null_keys_keeps_row`) and are
-//! re-verified against live Spark under this unit's JVM-lock record step.
-//! This file does **not** rewrite the G4 Python corpus.
-//!
-//! Arrow path (`collect`), value AND type AND nullability.
+//! `NULL = NULL` is unknown, so NULL keys do not match. Values, types, and nullability are
+//! checked against the Spark 4.1.2 corpus.
 
 use super::super::*;
 use super::common::*;

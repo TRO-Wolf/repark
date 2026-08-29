@@ -46,7 +46,7 @@ async fn metadata_tables_spark_dot_form_and_guards() {
         snap_rows >= 3,
         "expected ≥3 snapshots after CTAS+2 inserts, got {snap_rows}"
     );
-    // Partial projection must return only requested columns (r25 T2 item 0 wrap).
+    // Partial projection must return only requested columns.
     let snap_schema = snap_batches[0].schema();
     let snap_names: Vec<_> = snap_schema
         .fields()
@@ -58,7 +58,7 @@ async fn metadata_tables_spark_dot_form_and_guards() {
         vec!["snapshot_id", "operation"],
         "partial SELECT must project (not full metadata schema)"
     );
-    // Full-schema drift guard (restored, morning critic): SELECT * still pins the fork's
+    // Full-schema drift guard: SELECT * still pins the fork's
     // snapshots column set (fork inspect/snapshots.rs:49-73) so a fork-side schema change
     // goes red here, not in production.
     let snap_star = execute(&ctx, &catalogs, "SELECT * FROM ice.sales.mt.snapshots")
@@ -409,16 +409,8 @@ async fn metadata_tables_spark_dot_form_and_guards() {
     );
 }
 
-/// ADR-0006 (campaign decision D2, unit H-1c) at the **Spark door**: the fork's synthesized
-/// `$`-metadata names do not enumerate, and the Spark dotted spelling that rewrites onto them
-/// still works. The decision is made once at the catalog layer
-/// (`repark_iceberg::catalog::MetadataProjectionSchemaProvider::table_names`), never in a door
-/// parser — this row is what proves the single decision reaches THIS door.
-///
-/// Risk pinned: enumeration and resolution are different surfaces, and a filter placed wrong
-/// breaks the second while satisfying the first. Both are asserted here, plus the twin path
-/// (`SHOW TABLES` and `information_schema.tables`) that a fix touching only one of them would
-/// leave inconsistent.
+/// Synthesized `$` metadata names stay hidden from enumeration while remaining directly queryable.
+/// Both `SHOW TABLES` and `information_schema.tables` must apply the same filter.
 ///
 /// Mutation: drop the `.filter(…)` in `MetadataProjectionSchemaProvider::table_names` → the two
 /// emptiness assertions red.
@@ -532,11 +524,8 @@ async fn metadata_tables_are_hidden_from_enumeration_but_stay_queryable_through_
     );
 }
 
-/// r25 T2 item 0: metadata-table projection honor — empty (`count`), partial, full `SELECT *`
-/// parameterized across ALL supported metadata table names (`LocalFS` memory catalog only).
-///
-/// Root cause: fork `IcebergMetadataTableProvider::scan` ignores projection; wrap
-/// at `SchemaProvider` registration with `ProjectionExec` (never collect-then-project).
+/// Metadata-table projection honors empty, partial, and full `SELECT *` projections for every
+/// supported metadata table name.
 ///
 /// pins: rp-1-fork-repin/C-012 — `position_deletes` is schema-only at this pin; scan refuses.
 #[tokio::test]
@@ -620,7 +609,7 @@ async fn metadata_table_projection_honor_all_types() {
             1,
             "{suffix}: count(*) returns one aggregate column"
         );
-        // Value pin (morning critic): count(*) must equal the SELECT * row total — a
+        // Value pin: count(*) must equal the SELECT * row total — a
         // zero-column projection that lost `num_rows` would return 0 and stay green on
         // shape alone. snapshots/history are additionally pinned exact (CTAS + INSERT = 2).
         let counted = count_batches[0]

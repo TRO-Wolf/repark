@@ -1,9 +1,7 @@
-//! Plan-rewrite kernel for `dynamicFlatten`: structs first, then lists one-at-a-time.
+//! Plan-rewrite kernel for `dynamicFlatten`: structs first, then lists one at a time.
 //!
-//! Free function over a DataFusion [`DataFrame`] — no engine-owned frame newtype (O-6).
-//! Struct expansion is a null-safe `Project` of `get_field`; list explosion is
-//! `unnest_columns_with_options` with [`Column::new_unqualified`]. DataFusion's struct
-//! `unnest_columns` is not used (wrong names, wrong collisions, null-parent default-fill).
+//! Struct expansion uses null-safe `get_field` projections. List expansion uses unqualified
+//! columns so dotted field names bind correctly; unsupported nested elements refuse loudly.
 
 use std::collections::HashMap;
 use std::fmt::Write;

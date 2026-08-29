@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""§8.5 — ``null_lookback=True`` x 10 columns vs the default NaN-prefix path.
+"""``null_lookback=True`` x 10 columns vs the default NaN-prefix path.
 
-Records ``WindowAggExec`` count and window-fn tokens (``ta_*`` + ``row_number``)
-alongside wall time. The opt-in rewrite is a Python ``when(row_number() > L,
-ta.over(w))`` per column — extra window work, same Arrow sink.
+Records ``WindowAggExec`` count and window-fn tokens alongside wall time. The opt-in
+rewrite is a Python ``when(row_number() > L, ta.over(w))`` per column — extra window
+work, same Arrow sink.
 
 Usage::
 
@@ -32,7 +32,7 @@ def _work(seed: object, *, null_lookback: bool) -> object:
 
 
 def main() -> None:
-    """Run the §8.5 null-lookback pair and print ``TA_PIPELINE`` lines."""
+    """Run the null-lookback pair and print ``TA_PIPELINE`` lines."""
     parser = argparse.ArgumentParser(description=__doc__)
     harness.add_timing_args(parser)
     parser.add_argument("--n-rows", type=int, default=None)

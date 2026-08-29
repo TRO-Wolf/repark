@@ -10,7 +10,7 @@ async fn bug010_multi_statement_refuses_parse_class() {
         "SELECT 1; SELECT 2",
         "SELECT 1; SELECT 2;",
         "SELECT 1;\nSELECT 2",
-        // Critic F-A2-C1-002: second "statement" fails parse — still refuse (fail-closed).
+        // A second statement that fails to parse still refuses the whole input.
         "SELECT 1; XYZZY 2",
         "SELECT 1; NOT_A_STATEMENT",
     ] {
@@ -89,8 +89,7 @@ async fn truncate_table_refuses_loud_naming_gap() {
     );
 }
 
-/// C-1: a bare `INSERT INTO` whose returned `DataFrame` is never collected still applies the
-/// write. Pre-fix this was a silent no-op (the DML plan was lazy).
+/// A bare `INSERT INTO` applies its write even when the returned `DataFrame` is not collected.
 #[tokio::test]
 async fn bare_insert_applies_without_collect() {
     let wh = TempDir::new().unwrap();
@@ -111,8 +110,7 @@ async fn bare_insert_applies_without_collect() {
     );
 }
 
-/// C-2: a bare `DELETE FROM` whose returned `DataFrame` is never collected still removes the
-/// matched rows. Pre-fix this was a silent no-op.
+/// C-2: lazy routing must not silently drop a bare `DELETE` when its `DataFrame` is not collected.
 #[tokio::test]
 async fn bare_delete_applies_without_collect() {
     let wh = TempDir::new().unwrap();
@@ -133,8 +131,7 @@ async fn bare_delete_applies_without_collect() {
     );
 }
 
-/// C-3: a bare `UPDATE` whose returned `DataFrame` is never collected still applies the SET.
-/// Pre-fix this was a silent no-op.
+/// C-3: lazy routing must not silently drop a bare `UPDATE` when its `DataFrame` is not collected.
 #[tokio::test]
 async fn bare_update_applies_without_collect() {
     let wh = TempDir::new().unwrap();
@@ -227,10 +224,8 @@ async fn erroring_select_resolves_at_sql_and_errors_only_on_collect() {
     );
 }
 
-/// C-7 disclosed behavior change: an eagerly-applied DML surfaces its RUNTIME failure at
-/// `sql()` time (pre-fix the lazy plan deferred it to collect). The failed write commits
-/// nothing — the table is unchanged. (The Python facade pins the WG-3 exception TYPE; this pin
-/// covers that the failure is raised at `execute`/`sql()` time, not swallowed.)
+/// Eager DML surfaces runtime failure at `sql()` time and commits nothing. The Python facade pins
+/// the WG-3 exception type.
 #[tokio::test]
 async fn failing_dml_surfaces_its_runtime_error_at_sql_time() {
     let wh = TempDir::new().unwrap();
@@ -242,8 +237,7 @@ async fn failing_dml_surfaces_its_runtime_error_at_sql_time() {
     )
     .await;
 
-    // INSERT ... SELECT with a per-row CAST that fails at RUNTIME ('a' -> int). Pre-fix this
-    // DML was lazy — the failure hid until collect; post-fix it surfaces eagerly at execute().
+    // INSERT ... SELECT with a per-row CAST that fails at runtime ('a' -> int).
     let result = execute(
         &ctx,
         &catalogs,

@@ -1,9 +1,6 @@
 //! Name → DataFusion-expr match tables for [`super::PyColumn`].
 //!
-//! Extracted from `mod.rs` so `call_scalar` / `aggregate` / `aggregate_binary`
-//! `#[pymethods]` stay thin and the file-size EXCEPTIONS row can ratchet DOWN.
-//! New function names land as arms here, not in `mod.rs`. Not `#[pymethods]` —
-//! PyO3 `multiple-pymethods` stays off.
+//! Dispatch tables extracted from `mod.rs`; this module is not `#[pymethods]`.
 
 use std::sync::Arc;
 
@@ -36,9 +33,8 @@ use super::expr_build::reciprocal_trig_or_inf;
 /// Lower a facade `call_scalar` name + already-built argument [`Expr`]s.
 /// ===========================================================================================
 ///
-/// Unknown names and arity mismatches are `ValueError` (same strings as the pre-extract
-/// `PyColumn::call_scalar` match). Cardinality refusals stay `AnalysisException` via
-/// [`crate::datafusion_to_py_err`].
+/// Unknown names and arity mismatches return `ValueError`; cardinality errors use the shared
+/// mapper.
 #[allow(clippy::too_many_lines)] // large match table of expr_fn bindings
 #[allow(clippy::needless_pass_by_value)] // owned Vec is the pre-extract table shape
 pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
@@ -111,9 +107,7 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         }
         "regexp_replace" => {
             need_at_least(3)?;
-            // Spark `regexp_replace` is always global (all matches). DataFusion defaults
-            // to first-match only unless flags include `g` (F2 / Apache test_regexp_replace).
-            // Optional 4th arg is an explicit flags Column (advanced); default is `"g"`.
+            // Spark replacement is global; DataFusion needs the explicit `g` flag.
             let flags = if exprs.len() >= 4 {
                 Some(exprs[3].clone())
             } else {
@@ -145,7 +139,6 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             need(2)?;
             expr_fn::power(exprs[0].clone(), exprs[1].clone())
         }
-        // ---- X1 census: trig / hyperbolic / inverse (DataFusion math expr_fn) ----------
         "cos" => {
             need(1)?;
             expr_fn::cos(exprs[0].clone())
@@ -200,15 +193,9 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         }
         "cot" => {
             need(1)?;
-            // DF cot already yields ±Inf at tan=0; bare 1/tan would hit SparkExprSemantics
-            // nullif-zero → NULL (F2 / Apache test_reciprocal_trig_functions).
             expr_fn::cot(exprs[0].clone())
         }
-        // Spark sec/csc = 1/cos, 1/sin. Bare `/` is rewritten by SparkExprSemantics to
-        // `nullif(divisor, 0)` (non-ANSI div-by-zero → NULL). Live Spark 4.1.2 still
-        // returns ±Inf from F.sec/F.csc at exact zeros (csc(0)=Inf) — special-case via
-        // CASE so the reciprocal trig surface matches without loosening the global
-        // div-by-zero rule (F2 FAIL-VALUE harvest).
+        // Reciprocal trig uses the helper so exact zero returns Spark's infinity.
         "sec" => {
             need(1)?;
             reciprocal_trig_or_inf(expr_fn::cos(exprs[0].clone()))
@@ -223,7 +210,6 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             let yy = expr_fn::power(exprs[1].clone(), lit(2i64));
             expr_fn::sqrt(xx + yy)
         }
-        // Bitwise (Spark Column.bitwiseAND / | / ^) via DF Operator.
         "bitwise_and" | "bit_and_scalar" => {
             need(2)?;
             datafusion::logical_expr::binary_expr(
@@ -276,7 +262,6 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
                 expr_fn::round(vec![exprs[0].clone(), exprs[1].clone()])
             }
         }
-        // Spark `log` is natural log (ln). Keep `log10` as base-10 for callers who ask.
         "log" | "ln" => {
             need(1)?;
             expr_fn::ln(exprs[0].clone())
@@ -318,17 +303,14 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             repark_functions::expr_fn::to_timestamp(exprs.clone())
         }
         "from_unixtime" => {
-            // Spark returns a STRING formatted timestamp, not a timestamp type.
             need(1)?;
             let ts = expr_fn::to_timestamp_seconds(vec![exprs[0].clone()]);
             expr_fn::to_char(ts, lit("%Y-%m-%d %H:%M:%S"))
         }
-        // ---- R-FN-BATCH2: strings / collections (engine expr_fn lowerings) ---------------
         "reverse" => {
             need(1)?;
             expr_fn::reverse(exprs[0].clone())
         }
-        // === r24 SB1: cardinality ceilings ===
         "repeat" => {
             need(2)?;
             repark_functions::cardinality::refuse_facade_literal_expansion("repeat", &exprs)
@@ -356,10 +338,7 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             expr_fn::chr(exprs[0].clone())
         }
         "overlay" => {
-            // DF overlay(str, replace, pos [, len]) — 3 or 4 args.
-            // Spark default len=-1 means "use length of replace" (same as the
-            // 3-arg form). DataFusion treats len=-1 as "replace to end of string",
-            // so drop a literal -1 4th arg (F2 octo C1-Q-002 / SQL overlay).
+            // Spark's `len=-1` means replacement length; DataFusion's means string end.
             need_at_least(3)?;
             let mut overlay_args = exprs.clone();
             if overlay_args.len() >= 4 {
@@ -384,7 +363,6 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             expr_fn::find_in_set(exprs[0].clone(), exprs[1].clone())
         }
         "locate" | "position" => {
-            // Spark locate(substr, str) / position(substr IN str) → DF strpos(str, substr).
             need(2)?;
             expr_fn::strpos(exprs[1].clone(), exprs[0].clone())
         }
@@ -425,7 +403,6 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             nested_fn::array_union(exprs[0].clone(), exprs[1].clone())
         }
         "array_join" | "array_to_string" => {
-            // Spark array_join(arr, delim [, null_rep]); DF array_to_string is 2-arg.
             need_at_least(2)?;
             nested_fn::array_to_string(exprs[0].clone(), exprs[1].clone())
         }
@@ -438,7 +415,6 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             nested_fn::array_min(exprs[0].clone())
         }
         "array_position" => {
-            // DF array_position(array, element, index) — index defaults to 1 (Spark).
             need_at_least(2)?;
             let index = if exprs.len() >= 3 {
                 exprs[2].clone()
@@ -447,7 +423,6 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             };
             nested_fn::array_position(exprs[0].clone(), exprs[1].clone(), index)
         }
-        // r21 T7 census-r6: Spark array_contains → DF array_has
         "array_contains" | "array_has" => {
             need(2)?;
             nested_fn::array_has(exprs[0].clone(), exprs[1].clone())
@@ -456,7 +431,6 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             need(2)?;
             nested_fn::array_remove(exprs[0].clone(), exprs[1].clone())
         }
-        // === r24 SB1: cardinality ceilings ===
         "array_repeat" => {
             need(2)?;
             repark_functions::cardinality::refuse_facade_literal_expansion("array_repeat", &exprs)
@@ -464,25 +438,20 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             nested_fn::array_repeat(exprs[0].clone(), exprs[1].clone())
         }
         "array_sort" | "sort_array" => {
-            // DF array_sort(array [, order: 'ASC'|'DESC' [, nulls: 'NULLS FIRST'|…]]).
-            // Spark sort_array(arr [, asc: bool]). Default ascending uses 1-arg form.
             need_at_least(1)?;
             if exprs.len() == 1 {
                 nested_fn::array_sort(exprs[0].clone(), lit("ASC"), lit("NULLS FIRST"))
             } else if exprs.len() == 2 {
-                // Second arg from Python may already be ASC/DESC lit.
                 nested_fn::array_sort(exprs[0].clone(), exprs[1].clone(), lit("NULLS FIRST"))
             } else {
                 nested_fn::array_sort(exprs[0].clone(), exprs[1].clone(), exprs[2].clone())
             }
         }
         "array_slice" => {
-            // DF array_slice(arr, begin, end) — end inclusive 1-indexed.
             need_at_least(3)?;
             nested_fn::array_slice(exprs[0].clone(), exprs[1].clone(), exprs[2].clone(), None)
         }
         "slice" => {
-            // Spark slice(arr, start, length) → DF array_slice(arr, start, start+length-1).
             need(3)?;
             let end = exprs[1].clone() + exprs[2].clone() - lit(1i64);
             nested_fn::array_slice(exprs[0].clone(), exprs[1].clone(), end, None)
@@ -503,9 +472,7 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             need(1)?;
             nested_fn::map_entries(exprs[0].clone())
         }
-        // === r24 SB1: cardinality ceilings ===
         "sequence" | "generate_series" | "gen_series" => {
-            // Spark sequence(start, stop [, step]); DF gen_series(start, stop, step).
             need_at_least(2)?;
             let step = if exprs.len() >= 3 {
                 exprs[2].clone()
@@ -518,14 +485,11 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             nested_fn::gen_series(exprs[0].clone(), exprs[1].clone(), step)
         }
         "elt" => {
-            // Spark elt(n, e1, e2, ...) — 1-indexed pick; DF array_element is 0-indexed.
             need_at_least(2)?;
             let index = exprs[0].clone() - lit(1i64);
             let elements = nested_fn::make_array(exprs[1..].to_vec());
             nested_fn::array_element(elements, index)
         }
-        // Spark ``Column[i]`` (0-based) via owned ``__repark_array_get__`` (octo C1-L-001).
-        // Not DF's 1-based ``array_element`` — avoids array_slice 1-element-list residual.
         "array_element" => {
             need(2)?;
             Expr::ScalarFunction(ScalarFunction::new_udf(
@@ -533,8 +497,6 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
                 vec![exprs[0].clone(), exprs[1].clone()],
             ))
         }
-        // Polymorphic Spark GetItem: array 0-based **or** map-by-key (octo C2-L-001).
-        // Used for Column / non-int/non-str keys so getitem never fails open to parent.
         "getitem" => {
             need(2)?;
             Expr::ScalarFunction(ScalarFunction::new_udf(
@@ -542,15 +504,11 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
                 vec![exprs[0].clone(), exprs[1].clone()],
             ))
         }
-        // Struct field extract for ``Column['field']`` (octo C1-L-002); free-SQL still
-        // quotes the ident on the Python side (octo C1-SEC-001).
         "get_field" => {
             need(2)?;
             datafusion::functions::core::get_field().call(exprs.clone())
         }
-        // Spark ``array(e1, e2, …)`` / ``lit([…])`` — zero-arg is empty array.
         "array" | "make_array" => nested_fn::make_array(exprs.clone()),
-        // ---- R-FN-BATCH3: datetime / extract lowerings --------------------------------
         "next_day" => {
             need(2)?;
             repark_functions::expr_fn::next_day(exprs[0].clone(), exprs[1].clone())
@@ -567,16 +525,12 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             need(1)?;
             repark_functions::expr_fn::second(exprs[0].clone())
         }
-        // The facade's `F.unix_date` builds the ENGINE's function, not a hand-rolled
-        // `CAST(x AS DATE) AS INT` chain — that pair is refused at analysis (G6-3), and
-        // the UDF's own `simplify` re-creates it in the optimizer where it is legal.
         "unix_date" => {
             need(1)?;
             repark_functions::expr_fn::unix_date(exprs[0].clone())
         }
         "date_part" | "datepart" => {
             need(2)?;
-            // Spark date_part(field, source); DF same order.
             expr_fn::date_part(exprs[0].clone(), exprs[1].clone())
         }
         "timestamp_seconds" | "to_timestamp_seconds" => {
@@ -595,7 +549,6 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             need(1)?;
             expr_fn::sha256(exprs[0].clone())
         }
-        // r20 G2: Spark XORShift `rand`/`randn`/`random` (seeded; overwrites DF random).
         "random" | "rand" => {
             if exprs.len() > 1 {
                 return Err(PyValueError::new_err(format!(
@@ -614,7 +567,6 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             }
             repark_functions::random::spark_randn_udf().call(exprs.clone())
         }
-        // R-POLARS-NS: string predicates / substr (plan path, no SQL string concat)
         "starts_with" => {
             need(2)?;
             expr_fn::starts_with(exprs[0].clone(), exprs[1].clone())
@@ -628,11 +580,7 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             expr_fn::contains(exprs[0].clone(), exprs[1].clone())
         }
         "substr" | "substring" => {
-            // Embed owned Spark `substring` UDF (pos 0 ≡ 1, negative from end) —
-            // never DF built-in `expr_fn::substr`/`substring`. Analyzer rewrites
-            // only planner-embedded name=="substr"; call_scalar 3-arg used to
-            // embed DF `substring` (name ≠ "substr") so Column.__getitem__ slices
-            // and F.substr bypassed the shim (octo C7-L-001: 'hello'[0:3] → 'he').
+            // Use the owned substring shim so position zero follows Spark semantics.
             need_at_least(2)?;
             if exprs.len() > 3 {
                 return Err(PyValueError::new_err(format!(
@@ -650,7 +598,6 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
                 args,
             ))
         }
-        // ---- FN-GT1: leftover THIN-WIRE math / string / bitwise / utf8 ----------------------
         "bin" => {
             need(1)?;
             repark_functions::expr_fn::bin(exprs[0].clone())
@@ -709,13 +656,10 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             )
         }
         "regexp_count" => {
-            // One semantics source: spark_regexp.rs (NULL-in NULL-out, int32).
             need(2)?;
             repark_functions::expr_fn::regexp_count(exprs[0].clone(), exprs[1].clone())
         }
         "regexp_instr" => {
-            // One semantics source: spark_regexp.rs. 3rd arg is Spark idx
-            // (NULL-propagate, value ignored) — never DataFusion start-position.
             need_at_least(2)?;
             if exprs.len() > 3 {
                 return Err(PyValueError::new_err(format!(
@@ -741,7 +685,6 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             need(1)?;
             repark_functions::expr_fn::make_valid_utf8(exprs[0].clone())
         }
-        // ---- FN-GT2: leftover THIN-WIRE datetime / collections / url / bitmap ---------------
         "make_date" => {
             need(3)?;
             repark_functions::expr_fn::make_date(
@@ -772,7 +715,6 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             need(1)?;
             repark_functions::expr_fn::unix_micros(exprs[0].clone())
         }
-        // ---- FNP-3: names the SQL door already resolved; the facade had no arm ---------
         "crc32" => {
             need(1)?;
             repark_functions::expr_fn::crc32(exprs[0].clone())
@@ -833,8 +775,6 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             need(2)?;
             repark_functions::expr_fn::map_from_arrays(exprs[0].clone(), exprs[1].clone())
         }
-        // Spark's older spelling of `date_diff`; PySpark 4.1.2 defines both with the same
-        // (end, start) order over the same Catalyst expression, so they share one arm.
         "date_diff" | "datediff" => {
             need(2)?;
             repark_functions::expr_fn::date_diff(exprs[0].clone(), exprs[1].clone())
@@ -847,8 +787,6 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             need(1)?;
             nested_fn::array_compact(exprs[0].clone())
         }
-        // X2: Spark 4.0 `shuffle(array, seed)`. The facade used to drop the seed; the SQL door
-        // already had it, so the two doors disagreed on a *deterministic* result.
         "shuffle" => {
             need_at_least(1)?;
             if exprs.len() > 2 {
@@ -929,8 +867,7 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
 }
 
 /// ===========================================================================================
-/// Unary aggregate UDAF for [`super::PyColumn::aggregate`] (`collect_list`/`set` stay in
-/// the pymethod — they are not this match table).
+/// Unary aggregate UDAF for [`super::PyColumn::aggregate`].
 /// ===========================================================================================
 pub(super) fn unary_aggregate_udaf(kind: &str) -> PyResult<Arc<AggregateUDF>> {
     let udaf = match kind {
@@ -940,7 +877,6 @@ pub(super) fn unary_aggregate_udaf(kind: &str) -> PyResult<Arc<AggregateUDF>> {
         "max" => max_udaf(),
         "first" => first_value_udaf(),
         "last" => last_value_udaf(),
-        // R-FN-BATCH4 unary stats / bits
         "stddev" | "stddev_samp" => stddev_udaf(),
         "stddev_pop" => stddev_pop_udaf(),
         "variance" | "var_samp" => var_samp_udaf(),
@@ -949,9 +885,6 @@ pub(super) fn unary_aggregate_udaf(kind: &str) -> PyResult<Arc<AggregateUDF>> {
         "bit_and" => bit_and_udaf(),
         "bit_or" => bit_or_udaf(),
         "bit_xor" => bit_xor_udaf(),
-        // FNP-5: already in `all_default_aggregate_functions()`, so the SQL door resolved these
-        // and only the facade had no arm. `approx_count_distinct` is Spark's spelling of
-        // DataFusion's `approx_distinct` — see the facade wrapper for the HLL/HLL++ divergence.
         "approx_count_distinct" | "approx_distinct" => approx_distinct_udaf(),
         "grouping" => grouping_udaf(),
         other => {
@@ -966,16 +899,8 @@ pub(super) fn unary_aggregate_udaf(kind: &str) -> PyResult<Arc<AggregateUDF>> {
 /// ===========================================================================================
 /// Cast an aggregate whose declared return type is unsigned to `Int64`.
 ///
-/// Spark has no unsigned integer type, so an unsigned result is a fidelity defect however it
-/// arises: `DataFrame.schema` reports bigint while the buffer holds `UInt64`, one arithmetic step
-/// then widens the count to DECIMAL(21,0), and that is what lands in Parquet/Iceberg — where
-/// Spark reads it back as decimal(20,0) and the file does not round-trip.
-///
-/// Measured from the UDAF rather than keyed on a name, so an aggregate added to either dispatch
-/// table is covered the day it is added (F-CFS-5 fixed `approx_count_distinct` by name and left
-/// its sibling `regr_count` unsigned — FNP-R3-1). The probe uses Int64 arguments: the count-like
-/// aggregates return unsigned for every numeric input, and a UDAF that rejects the probe (the
-/// string ones) keeps its own type.
+/// Cast unsigned aggregate results to Spark's signed `Int64` representation.
+/// Inspect the declared UDAF type so every count-like aggregate follows the same rule.
 /// ===========================================================================================
 pub(super) fn cast_unsigned_count_to_signed(udaf: &AggregateUDF, arity: usize, expr: Expr) -> Expr {
     match udaf.return_type(&vec![DataType::Int64; arity]) {
@@ -994,9 +919,6 @@ pub(super) fn binary_aggregate_udaf(kind: &str) -> PyResult<Arc<AggregateUDF>> {
         "corr" => corr_udaf(),
         "covar_pop" => covar_pop_udaf(),
         "covar_samp" | "covar" => covar_samp_udaf(),
-        // FNP-5: the nine linear-regression aggregates. All are in
-        // `all_default_aggregate_functions()`, so `register_all` already put them on every
-        // session and the SQL door resolved them — only the facade had no arm.
         "regr_avgx" => regr_avgx_udaf(),
         "regr_avgy" => regr_avgy_udaf(),
         "regr_count" => regr_count_udaf(),
@@ -1006,7 +928,6 @@ pub(super) fn binary_aggregate_udaf(kind: &str) -> PyResult<Arc<AggregateUDF>> {
         "regr_sxx" => regr_sxx_udaf(),
         "regr_sxy" => regr_sxy_udaf(),
         "regr_syy" => regr_syy_udaf(),
-        // Spark `listagg` is `string_agg` under its Spark spelling (both take a delimiter).
         "string_agg" | "listagg" => string_agg_udaf(),
         other_kind => {
             return Err(PyValueError::new_err(format!(

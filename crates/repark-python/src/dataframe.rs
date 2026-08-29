@@ -1,10 +1,6 @@
-//! [`PyDataFrame`] — the Python-facing wrapper over a DataFusion [`DataFrame`].
+//! Python-facing wrapper over a DataFusion [`DataFrame`].
 //!
-//! Exposes the eager actions PySpark users expect (`count`, `show`, `collect`) and the **zero-copy
-//! Arrow handoff**: `__arrow_c_stream__` exports the rows through the Arrow `PyCapsule` interface, so
-//! `pyarrow.table(df)` and `polars.from_arrow(df)` read the engine's Arrow buffers directly with no
-//! serialization. The held [`DataFrame`] is cheap to [`Clone`]; the consuming engine actions
-//! (`collect`/`count`) clone it so a [`PyDataFrame`] stays reusable.
+//! Exposes reusable plans, eager actions, and zero-copy Arrow C stream export.
 
 use std::cell::Cell;
 use std::collections::HashSet;
@@ -35,32 +31,17 @@ use crate::{datafusion_to_py_err, to_py_err};
 /// The Arrow C stream interface mandates this exact capsule name (a NUL-terminated C string).
 const ARROW_STREAM_CAPSULE_NAME: &CStr = c"arrow_array_stream";
 
-/// Arrow C Data Interface schema capsule name (`PyCapsule` protocol / `pa.Schema._import_from_c_capsule`).
+/// Arrow C Data Interface schema capsule name used by the `PyCapsule` protocol.
 const ARROW_SCHEMA_CAPSULE_NAME: &CStr = c"arrow_schema";
 
-// STREAM_POLL_NO_DETACH — see [`with_stream_poll_no_detach`]. (Doc comments cannot attach to
-// `thread_local!` expansions under rustdoc.)
+// See `with_stream_poll_no_detach`; this flag covers nested Python-backed stream polls.
 thread_local! {
     static STREAM_POLL_NO_DETACH: Cell<bool> = const { Cell::new(false) };
 }
 
-/// ===========================================================================================
-/// Run `body` with `STREAM_POLL_NO_DETACH` set so nested repark-stream polls skip attach/detach.
-///
-/// Used by `register_arrow_stream_as_temp_view` while draining an Arrow C Stream that may re-enter
-/// a repark `__arrow_c_stream__` through a Python generator (I4 / octo C1-SAF-001).
-///
-/// Why: the outer pymethod holds a PyO3 attach while an intermediate consumer (typical Cython
-/// `RecordBatchReader.__next__` under `nogil`) may call `StreamingBatchReader::next` with the real
-/// GIL already released. `Python::attach` then *assumes* attached (attach-count still >0) and
-/// `detach`'s `PyEval_SaveThread` aborts with "GIL is released / thread state is NULL". Under the
-/// flag we just `block_on` — process-safe; the outer drain owns the GIL story. abi3/limited-API
-/// builds cannot use `PyGILState_Check`, so a thread-local flag is the portable contract.
-///
-/// Panic-safe (octo C2-SAF-001): a `Drop` guard restores the previous flag value even if `body`
-/// panics (outer `fenced!` may catch the panic — without the guard the flag would stick `true`
-/// and poison later export polls on this thread).
-/// ===========================================================================================
+/// Run `body` with nested polls skipping PyO3 attach/detach. Attach while the real GIL is
+/// released makes `detach` abort; abi3 builds cannot use `PyGILState_Check`, so a thread-local
+/// flag is the portable contract (C1-SAF-001). A drop guard restores the prior flag after panic.
 pub(crate) fn with_stream_poll_no_detach<T>(body: impl FnOnce() -> T) -> T {
     struct RestoreNoDetach {
         previous: bool,
@@ -76,18 +57,7 @@ pub(crate) fn with_stream_poll_no_detach<T>(body: impl FnOnce() -> T) -> T {
     body()
 }
 
-/// ===========================================================================================
-/// Map a PySpark `how=` join keyword to a DataFusion [`JoinType`].
-///
-/// Supports the Spark join kinds the facade normalizes to (`inner` / `left` / `right` / `full`
-/// plus the G4b semi family `leftsemi` / `leftanti`). An unrecognized keyword is a descriptive
-/// error rather than a silent default (a silent `inner` would corrupt a left-join result set).
-/// H1 (Group H) needs `right`/`full` for the Apache self-join / select-join-keys battery.
-///
-/// Every PySpark spelling is accepted here even though the facade normalizes before calling —
-/// the binding is a public engine surface in its own right (`join_on_names` is called from the
-/// Rust binding tests), so it must not depend on a caller-side normalization it cannot enforce.
-/// ===========================================================================================
+/// Map a PySpark join keyword to a DataFusion join type. Unknown kinds fail instead of defaulting.
 fn join_type_from_str(how: &str) -> PyResult<JoinType> {
     match how {
         "inner" => Ok(JoinType::Inner),
@@ -103,28 +73,12 @@ fn join_type_from_str(how: &str) -> PyResult<JoinType> {
     }
 }
 
-/// ===========================================================================================
-/// True when a join type's output schema is the LEFT input's schema alone.
-///
-/// `LeftSemi` / `LeftAnti` are filters expressed as joins: the right side decides which left
-/// rows survive and contributes no columns. The Spark key-merge projection
-/// ([`spark_join_projection`]) therefore must NOT run for them — there is no duplicate
-/// right-hand key column to merge away, and building a projection over the joined schema would
-/// be a no-op node at best and would mask a schema surprise at worst.
-/// ===========================================================================================
+/// Whether a join returns only the left input columns.
 fn join_keeps_only_left_columns(join_type: JoinType) -> bool {
     matches!(join_type, JoinType::LeftSemi | JoinType::LeftAnti)
 }
 
-/// ===========================================================================================
-/// Build the Spark-style output projection for an equi-join on named columns.
-///
-/// DataFusion's `join` keeps both the left and the right copy of each join key; PySpark keeps a
-/// single merged key column. This projection keeps the first (left) occurrence of every join key
-/// and every non-key column, dropping the duplicate right-side keys — reproducing Spark's
-/// `df.join(other, on="k")` schema. Column collisions on *non-key* names are left to surface as
-/// DataFusion's ambiguous-reference error, exactly as Spark raises on an ambiguous column.
-/// ===========================================================================================
+/// Build Spark's one-key-column projection for a named equi-join.
 fn spark_join_projection(joined: &DataFrame, keys: &[String]) -> Vec<Expr> {
     let mut projection = Vec::new();
     let mut seen_keys = HashSet::new();
@@ -132,7 +86,7 @@ fn spark_join_projection(joined: &DataFrame, keys: &[String]) -> Vec<Expr> {
         let name = field.name();
         let is_key = keys.iter().any(|key| key == name);
         if is_key && !seen_keys.insert(name.clone()) {
-            // The duplicate (right-side) copy of a join key — Spark merges it away.
+            // Spark exposes one copy of each join key.
             continue;
         }
         projection.push(Expr::Column(Column::new(qualifier.cloned(), name.clone())));
@@ -140,40 +94,17 @@ fn spark_join_projection(joined: &DataFrame, keys: &[String]) -> Vec<Expr> {
     projection
 }
 
-/// ===========================================================================================
-/// The Python-facing `DataFrame` (`repark._native.PyDataFrame`).
-///
-/// Holds the planned DataFusion [`DataFrame`] plus a handle to the session's Tokio [`Runtime`] so
-/// it can drive its own async actions without re-entering the session.
-///
-/// # === r20 P2b: action/export ===
-/// Plan handles are immutable: analyzed Arrow schema is cached once per handle (`OnceLock`) and
-/// never invalidated. Interactive `columns` / `schema` / stream-export open no longer re-run
-/// `analyze_eagerly` on every call.
-/// ===========================================================================================
+/// The Python-facing immutable `DataFrame` plan and its shared runtime.
 #[pyclass(name = "PyDataFrame", module = "repark._native")]
 pub struct PyDataFrame {
     df: DataFrame,
     runtime: Arc<Runtime>,
-    /// Cached post-`analyze_eagerly` Arrow schema for this plan handle (P2b scout #25).
-    ///
-    /// Filled on first [`Self::analyzed_arrow_schema_native`]; handles never mutate their plan, so
-    /// the cache is never invalidated.
+    /// Cached analyzed Arrow schema. The immutable plan never invalidates it.
     analyzed_schema: OnceLock<SchemaRef>,
 }
 
 impl PyDataFrame {
-    /// This column's expression with any lambda variables bound to the frame's schema.
-    ///
-    /// A lambda built through the expression API (`F.transform(col, lambda x: ...)`) carries
-    /// UNRESOLVED variables — `LambdaVariable::field` is `None` — because the facade has no schema
-    /// when it builds the Column. DataFusion's SQL planner resolves them as it plans; the
-    /// expression API does not, and an unresolved variable fails when the plan asks it for a type.
-    /// Every method that hands a `PyColumn` to DataFusion goes through here — `select`, `filter`,
-    /// `with_column`, `sort`, `join_on` and `aggregate`. The domain is `grep -n 'PyColumn::expr'`
-    /// in this file; a method that maps that directly instead of calling `bound` is a lambda that
-    /// works everywhere except there. `aggregate` was exactly that gap (F-CSP-4 / F-CFS-2), and
-    /// the claim of totality is what stopped it being looked for.
+    /// Bind a column's lambda variables to this frame schema before planning.
     fn bound(&self, column: &PyColumn) -> PyResult<Expr> {
         column
             .expr()
@@ -192,13 +123,12 @@ impl PyDataFrame {
         }
     }
 
-    /// The held plan — for session-side operations that take a `DataFrame` (temp-view
-    /// registration) and for M3 ML fit streams (`ml` module).
+    /// The held plan for session operations and ML streams.
     pub(crate) fn inner(&self) -> &DataFrame {
         &self.df
     }
 
-    /// Shared Tokio runtime handle (M3 ML fit binder streams batches via `block_on`).
+    /// Shared Tokio runtime handle for asynchronous engine calls.
     pub(crate) fn runtime_handle(&self) -> Arc<Runtime> {
         Arc::clone(&self.runtime)
     }
@@ -207,12 +137,8 @@ impl PyDataFrame {
     ///
     /// Runs [`repark_functions::analyze_eagerly`] so type-changing Spark rules (int `/` → float)
     /// are reflected — never pre-analysis labels. Exposed to Python as
-    /// [`PyDataFrame::analyzed_arrow_schema`] (Arrow C schema capsule) for plan-only consumers
-    /// such as the U7 `pandas_udf` pass-through type path (octo C6-Q-001).
-    ///
-    /// # === r20 P2b: action/export ===
-    /// Result is cached on the handle (`OnceLock<SchemaRef>`). First call pays analysis; later
-    /// metadata/export opens reuse the same `SchemaRef` (handles are immutable — never invalidate).
+    /// [`PyDataFrame::analyzed_arrow_schema`] (Arrow C schema capsule) for plan-only consumers.
+    /// The result is cached because the plan is immutable.
     fn analyzed_arrow_schema_native(&self) -> PyResult<SchemaRef> {
         if let Some(schema) = self.analyzed_schema.get() {
             return Ok(Arc::clone(schema));
@@ -229,9 +155,8 @@ impl PyDataFrame {
     }
 }
 
-/// Max nesting depth for Arrow list/map type-key formatting (E2 / octo C3-CRATE-001).
-///
-/// `arrow_type_key` and [`spark_array_element_simple_string_at_depth`] recurse on nested
+/// Max nesting depth for Arrow list/map type-key formatting. `arrow_type_key` and
+/// [`spark_array_element_simple_string_at_depth`] recurse on nested
 /// `List` / `LargeList` / `FixedSizeList` (and `Map` entry types). Without a bound, an
 /// adversarial deep `List` schema can stack-overflow via `logical_schema_fields` / facade
 /// `dtypes`. Past this depth the walk terminates with the fallback key
@@ -246,16 +171,14 @@ fn arrow_type_key(data_type: &ArrowDataType) -> String {
     arrow_type_key_at_depth(data_type, 0)
 }
 
-/// Depth-bounded implementation of [`arrow_type_key`] (octo C3-CRATE-001).
+/// Depth-bounded implementation of [`arrow_type_key`].
 fn arrow_type_key_at_depth(data_type: &ArrowDataType, depth: usize) -> String {
     if depth >= ARROW_TYPE_KEY_MAX_DEPTH {
         return ARROW_TYPE_KEY_DEPTH_FALLBACK.to_string();
     }
     match data_type {
-        // Top-level width collapse is intentional (Spark IntegerType / DoubleType dtypes
-        // surface): Int8/16/32 → "int", Float* → "double". Nested array elements use
-        // [`spark_array_element_simple_string_at_depth`] so `array<tinyint>` / `array<float>`
-        // match Spark (E2 ndarray lit).
+        // Collapse top-level integer and float widths to Spark's `int` and `double` keys.
+        // Nested array elements retain their own Spark keys.
         ArrowDataType::Int8
         | ArrowDataType::Int16
         | ArrowDataType::Int32
@@ -280,7 +203,7 @@ fn arrow_type_key_at_depth(data_type: &ArrowDataType, depth: usize) -> String {
         | ArrowDataType::Decimal256(precision, scale) => {
             format!("decimal({precision},{scale})")
         }
-        // List / LargeList / FixedSizeList → Spark simpleString `array<element>` (E2).
+        // List variants use Spark's `array<element>` syntax.
         ArrowDataType::List(field)
         | ArrowDataType::LargeList(field)
         | ArrowDataType::FixedSizeList(field, _) => {
@@ -300,9 +223,7 @@ fn arrow_type_key_at_depth(data_type: &ArrowDataType, depth: usize) -> String {
             }
             format!("{data_type:?}")
         }
-        // Nested struct → Spark simpleString `struct<_1:bigint,_2:bigint>` (F2 nested
-        // createDataFrame / printSchema). Debug `Struct([Field…])` is not a DDL key and
-        // the facade previously collapsed it to StringType.
+        // Nested structs use Spark's field-name and child-type syntax, not Debug formatting.
         ArrowDataType::Struct(fields) => {
             let parts: Vec<String> = fields
                 .iter()
@@ -318,9 +239,8 @@ fn arrow_type_key_at_depth(data_type: &ArrowDataType, depth: usize) -> String {
     }
 }
 
-/// Spark `simpleString` element token for nested array/map keys (E2 ndarray / array dtypes).
-///
-/// Depth-bounded (octo C3-CRATE-001) — see [`ARROW_TYPE_KEY_MAX_DEPTH`].
+/// Spark `simpleString` element token for nested array and map keys;
+/// depth-bounded.
 fn spark_array_element_simple_string_at_depth(data_type: &ArrowDataType, depth: usize) -> String {
     if depth >= ARROW_TYPE_KEY_MAX_DEPTH {
         return ARROW_TYPE_KEY_DEPTH_FALLBACK.to_string();
@@ -363,39 +283,11 @@ fn spark_array_element_simple_string_at_depth(data_type: &ArrowDataType, depth: 
 }
 
 /// ===========================================================================================
-/// A synchronous [`RecordBatchReader`] that lazily pulls ONE batch per `next()` from a DataFusion
-/// [`SendableRecordBatchStream`], blocking the calling thread on the shared Tokio runtime for each
-/// poll.
-///
-/// This is the producer half of the zero-copy Arrow export. [`FFI_ArrowArrayStream::new`] wraps it,
-/// and the Arrow C stream consumer (`pyarrow.table(df)` / `polars.from_arrow(df)`) drives `next()`
-/// through the FFI `get_next` callback. A batch is materialized only when the consumer asks for it,
-/// so peak memory is O(one batch), not O(whole result) — the correction for the "stream export lie"
-/// (audit SAF-003 / finding #14), replacing the prior full `collect()`-then-wrap.
-///
-/// The laziness guarantee is a **memory** bound — O(one batch) peak — not an *ordering* one. Over a
-/// **sequential** stream this reader necessarily yields batch 1 before a later batch's error (the
-/// reader pin `streaming_reader_yields_first_batch_before_a_later_error`); but the *end-to-end*
-/// export ([`PyDataFrame::__arrow_c_stream__`]) runs a real, possibly parallel DataFusion plan whose
-/// repartitioned execution may surface a later batch's error before batch 1 (audit F-BR-5). Callers
-/// are promised O(batch) peak memory, never that "batch 1 arrives before any error".
-///
-/// Runtime safety: `block_on` runs on the *consumer's* calling thread (the Python thread for
-/// pyarrow/polars; the test thread under `cargo test`), never a runtime worker thread, and is never
-/// nested inside another `block_on` — so it cannot re-enter the process-wide `OnceLock` runtime
-/// (SAF-008). The GIL is released for each poll ([`Python::detach`]) so other Python threads make
-/// progress while the engine produces the next batch.
-///
-/// # `KeyboardInterrupt` / Ctrl-C (r23 PG2 / OTH-009 / Q15)
-///
-/// While this poll is parked in `block_on`, a SIGINT is **deferred** until the poll returns —
-/// Python only raises `KeyboardInterrupt` when the main thread resumes bytecode. A
-/// `python.check_signals()` call between batches was evaluated as the candidate abort seam and
-/// **rejected for shipping**: the only channel out of `extern "C" get_next` is `ArrowError`, and
-/// the facade re-raises mid-stream Arrow failures as `PySparkException`, which would **launder**
-/// `KeyboardInterrupt` into the wrong type (see `test_applyinpandas` "must not be wrapped" and
-/// `task/pg2-pg-runtime-ledger.md`). No runtime architecture change this unit. Residual: Ctrl-C
-/// during a long single-batch poll waits for that poll; cooperative cancellation is parked.
+/// A synchronous reader that polls one DataFusion batch per Arrow C Stream callback.
+/// The consumer controls materialization, so peak export memory is O(one batch).
+/// Normal export polls run on the consumer thread and release the GIL, never nested inside
+/// another `block_on` (SAF-008: no `OnceLock` runtime re-entry). Nested ingest polls skip
+/// attach/detach. `KeyboardInterrupt` is deferred until a poll returns.
 /// ===========================================================================================
 struct StreamingBatchReader {
     runtime: Arc<Runtime>,
@@ -409,15 +301,8 @@ impl Iterator for StreamingBatchReader {
     /// Pull exactly one batch. A DataFusion error becomes [`ArrowError::ExternalError`] — whose
     /// `Display` preserves the engine text — which the FFI stream surfaces to the consumer.
     fn next(&mut self) -> Option<Self::Item> {
-        // SAF-007: this poll is the body of `arrow`'s `extern "C" fn get_next` (the Arrow C-stream
-        // callback); an escaping panic would unwind across `extern "C"` and ABORT the process (it is
-        // NOT covered by PyO3's pymethod trampoline — see `fence.rs`). Fence the poll so a panic
-        // becomes a terminal `Err(ArrowError)` on the stream's error channel instead.
-        //
-        // GIL model (I4 / octo C1-SAF-001): default path is `Python::attach` + `detach` so other
-        // Python threads progress while the engine produces a batch. When
-        // [`with_stream_poll_no_detach`] is active (C-stream *ingest* drain), skip attach/detach —
-        // see that helper's docs for the process-abort footgun under nested repark-stream re-entry.
+        // The Arrow callback cannot unwind across extern "C"; fence the poll and report an error.
+        // Nested Python-backed ingestion already holds the GIL, so it skips attach/detach.
         let Self {
             runtime, stream, ..
         } = self;
@@ -434,11 +319,8 @@ impl Iterator for StreamingBatchReader {
 }
 
 impl RecordBatchReader for StreamingBatchReader {
-    /// The declared schema for the exported stream. The caller ([`PyDataFrame::__arrow_c_stream__`])
-    /// hands it the analyzed LOGICAL schema (`analyze_eagerly`): the same TYPES the physical batches
-    /// carry (so the consumer never bit-reinterprets — the F.expr class, `task/lessons.md`
-    /// 2026-07-13), but Spark-style `nullable = true`, so the export matches Spark parity and the
-    /// `columns`/`schema` metadata path rather than the physical `nullable = false`.
+    /// The exported stream uses the analyzed logical types and Spark-style `nullable = true`.
+    /// Physical batches keep those types, so consumers do not reinterpret their buffers.
     fn schema(&self) -> SchemaRef {
         Arc::clone(&self.schema)
     }
@@ -503,12 +385,12 @@ impl PyDataFrame {
         })
     }
 
-    /// Post-analysis Arrow schema as an Arrow C Data Interface `PyCapsule` — **no plan execution**.
+    /// Post-analysis Arrow schema as an Arrow C Data Interface `PyCapsule`.
+    /// This performs no plan execution.
     ///
     /// Returns a capsule named `arrow_schema` suitable for `pyarrow.Schema._import_from_c_capsule`.
-    /// Physical Arrow field types are preserved (float32, int16, binary, timestamp with tz, …) —
-    /// unlike the collapsed type keys from [`Self::logical_schema_fields`]. Analysis only:
-    /// no `limit`/`collect`/`to_arrow` and no row materialization (U7 octo C6-Q-001).
+    /// Physical Arrow field types are preserved (float32, int16, binary, timestamp with tz, …).
+    /// Analysis only: no row materialization.
     ///
     /// # Errors
     /// Returns a classified engine exception if analysis fails, or `ValueError` if the schema
@@ -591,24 +473,22 @@ impl PyDataFrame {
 
     /// Export the rows through the **Arrow `PyCapsule` interface** (zero-copy, **streaming**).
     ///
-    /// Returns a single capsule named `arrow_array_stream` wrapping an [`FFI_ArrowArrayStream`] over
-    /// a [`StreamingBatchReader`]. `pyarrow.table(df)` / `polars.from_arrow(df)` call this, then pull
+    /// Returns an `arrow_array_stream` capsule wrapping a [`StreamingBatchReader`]. Consumers pull
     /// batches through the stream's C `get_next` callback — each pull runs one
     /// [`DataFrame::execute_stream`] poll on demand, so peak memory is O(one batch), not O(whole
-    /// result) — a peak-**memory** bound, not a batch/error ordering guarantee (the engine plan may
-    /// be parallel; see [`StreamingBatchReader`] and audit F-BR-5). pyo3 owns the
+    /// result) — a peak-**memory** bound, not a batch/error ordering guarantee. Engine
+    /// parallelism can affect batch ordering; see [`StreamingBatchReader`]. PyO3 owns the
     /// [`FFI_ArrowArrayStream`] value inside the capsule; its destructor drops
     /// it — a no-op once the consumer has moved the stream out, since [`FFI_ArrowArrayStream`]'s
     /// `Drop` only fires the still-set `release` callback.
     ///
     /// `requested_schema` (schema-cast negotiation) is accepted for protocol compatibility but not
     /// honored — the engine always exports its native (analyzed) schema. This matches what
-    /// pyarrow/polars do when they cannot satisfy a requested cast (they fall back to the producer's
-    /// schema).
+    /// pyarrow and polars do when they cannot satisfy a requested cast.
     ///
     /// # Errors
-    /// Returns a classified engine exception if the physical plan cannot be built, or `RuntimeError`
-    /// if the capsule cannot be allocated. A failure encountered mid-stream surfaces to the consumer
+    /// Returns a classified engine exception for physical-plan failures or `RuntimeError`
+    /// if the capsule cannot be allocated. Mid-stream failures surface to the consumer
     /// as an Arrow stream error (see [`StreamingBatchReader::next`]).
     // `requested_schema` is part of the Arrow PyCapsule protocol signature; we accept but ignore it
     // (we always export the native schema), so it is intentionally passed by value and unused.
@@ -621,14 +501,9 @@ impl PyDataFrame {
     ) -> PyResult<Bound<'py, PyCapsule>> {
         fenced_span!("py.action", "PyDataFrame.__arrow_c_stream__", {
             let _ = requested_schema;
-            // Declared stream schema = the analyzed LOGICAL schema (the blessed `analyze_eagerly`
-            // path): right TYPES and Spark-style `nullable = true`. NOT the physical
-            // `stream.schema()`, which reports `nullable = false` for computed/literal columns and
-            // would diverge from Spark parity (and the `columns`/`schema` metadata path). The
-            // physical batches carry the SAME types (so no Arrow reinterpret — `task/lessons.md`
-            // 2026-07-13), and their non-null data is validly read under a nullable-permissive
-            // schema. Matches the pre-streaming export schema.
-            // P2b: analyzed schema is cached on the handle (OnceLock) — open does not re-analyze.
+            // Use analyzed logical types with Spark nullability; physical batches retain these
+            // types.
+            // Cache the schema per plan handle so repeated opens do not re-analyze.
             let schema: SchemaRef = self.analyzed_arrow_schema_native()?;
             // Open a lazy batch stream — the physical plan build runs with the GIL released.
             let stream = py
@@ -669,7 +544,7 @@ impl PyDataFrame {
         })
     }
 
-    /// Keep only rows matching a [`PyColumn`] predicate (PySpark `DataFrame.filter` / `where` with a
+    /// Keep rows matching a [`PyColumn`] predicate (PySpark `DataFrame.filter` / `where` with a
     /// `Column`).
     ///
     /// # Errors
@@ -694,7 +569,7 @@ impl PyDataFrame {
     /// Returns `RuntimeError` if the predicate does not parse or cannot be planned.
     pub fn filter_sql(&self, predicate: &str) -> PyResult<Self> {
         fenced!("PyDataFrame.filter_sql", {
-            // G15: filter("col COLLATE name = …") never hits the statement router.
+            // This path bypasses the statement router, so apply its COLLATE refusal here.
             repark_spark::refuse_collation_in_sql(predicate).map_err(datafusion_to_py_err)?;
             let expr = self
                 .df
@@ -742,13 +617,15 @@ impl PyDataFrame {
         })
     }
 
-    /// Order rows by the given columns (PySpark `DataFrame.orderBy` / `sort`). The three vectors are
+    /// Order rows by the given columns (PySpark `DataFrame.orderBy` / `sort`). The three vectors
+    /// are
     /// parallel: `columns[i]` is sorted `ascending[i]` with `nulls_first[i]` — the facade derives
     /// the direction/null-ordering from each column's `asc()` / `desc()` and Spark's defaults
     /// (ascending → nulls first, descending → nulls last).
     ///
     /// # Errors
-    /// Returns `RuntimeError` if the three vectors differ in length or the sort cannot be planned.
+    /// Returns `ValueError` for vector length mismatch; planning failures use the engine
+    /// classifier.
     pub fn sort(
         &self,
         columns: Vec<PyColumn>,
@@ -784,13 +661,14 @@ impl PyDataFrame {
     /// join types that carry both sides through. `how` accepts every keyword
     /// [`join_type_from_str`] maps.
     ///
-    /// **Semi family (G4b).** `leftsemi` / `leftanti` output the LEFT side's columns only, so the
+    /// **Semi joins.** `leftsemi` and `leftanti` output only the left columns, so the
     /// key-merge projection is skipped ([`join_keeps_only_left_columns`]) and the join's own
     /// schema is the result schema. NULL keys never match (`NULL = NULL` is unknown), so a semi
     /// join drops NULL-keyed left rows and an anti join keeps them.
     ///
     /// # Errors
-    /// Returns `RuntimeError` for an unsupported `how`, or if the join/projection cannot be planned.
+    /// Returns `ValueError` for unsupported `how`; join and projection failures use the engine
+    /// classifier.
     pub fn join_on_names(
         &self,
         right: PyRef<'_, PyDataFrame>,
@@ -822,7 +700,8 @@ impl PyDataFrame {
     /// the left side alone, matching Spark.
     ///
     /// # Errors
-    /// Returns `RuntimeError` for an unsupported `how`, or if the join cannot be planned.
+    /// Returns `ValueError` for unsupported `how`; join and binding failures use the engine
+    /// classifier.
     pub fn join_on_condition(
         &self,
         right: PyRef<'_, PyDataFrame>,
@@ -908,7 +787,8 @@ impl PyDataFrame {
     /// Distinct rows keyed on a **subset** of columns (PySpark `dropDuplicates(subset)`).
     ///
     /// Keeps one row per distinct `subset` key and projects every original column, in order. Like
-    /// Spark, which row survives per key is not specified when the non-key columns differ — parity
+    /// Spark, which row survives per key is not specified when the non-key columns differ.
+    /// Parity
     /// fixtures pin a deterministic survivor (a unique key set, or identical non-key values).
     ///
     /// # Errors
@@ -977,21 +857,7 @@ impl PyDataFrame {
 
 #[cfg(test)]
 mod tests {
-    //! Streaming Arrow-export pins, in two layers.
-    //!
-    //! **Reader-level** ([`StreamingBatchReader`]): driven through hand-scripted
-    //! [`SendableRecordBatchStream`]s — the exact type `DataFrame::execute_stream` hands the reader —
-    //! so the batch/error sequence is under the test's control (no engine, no wheel): multi-batch
-    //! value+type fidelity, error surfacing, and — over a **sequential** stream — batch-1-before-a-
-    //! later-error (a sequential-stream *ordering* property).
-    //!
-    //! **End-to-end** ([`PyDataFrame::__arrow_c_stream__`]):
-    //! `arrow_c_stream_export_is_lazy_and_does_not_materialize_up_front` drives the *real* dunder over
-    //! a real single-partition DataFusion plan whose source counts the batches it produces, proving
-    //! the export does not collect up front — the pin that goes red on a collect-then-wrap revert
-    //! (audit F-BR-4). The export's contract is O(one batch) **peak memory**, NOT batch/error
-    //! ordering (audit F-BR-5). Every pin is deterministic — no RSS thresholds, no sleeps, no timing
-    //! races (rule 12): the counter is a synchronous atomic read.
+    //! Arrow export tests pin values, types, lazy execution, and errors.
 
     use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -1006,8 +872,7 @@ mod tests {
     use datafusion::physical_plan::streaming::PartitionStream;
     use datafusion::prelude::{SessionConfig, SessionContext};
 
-    /// octo C2-SAF-001: panic inside `with_stream_poll_no_detach` must restore the TLS flag so a
-    /// later export poll does not permanently skip attach/detach on this thread.
+    /// A panic in the nested-poll guard restores the TLS flag for later export polls.
     #[test]
     fn stream_poll_no_detach_restores_flag_after_panic() {
         assert!(
@@ -1055,7 +920,7 @@ mod tests {
             .to_vec()
     }
 
-    /// Wrap a scripted sequence of batch results in a [`SendableRecordBatchStream`] — the reader is
+    /// Wrap scripted batch results in a [`SendableRecordBatchStream`]. The reader is
     /// driven through its real code path, only the batch/error script is the test's.
     fn scripted_stream(
         schema: SchemaRef,
@@ -1067,17 +932,12 @@ mod tests {
         ))
     }
 
-    /// A private multi-thread runtime for the reader to `block_on` — independent of the process
-    /// `OnceLock` runtime (the reader only needs *a* runtime to drive its poll).
+    /// A private runtime used to drive reader polls in isolation.
     fn reader_test_runtime() -> Arc<Runtime> {
         Arc::new(Runtime::new().expect("tokio runtime builds"))
     }
 
-    /// A [`PartitionStream`] that counts how many batches it has actually **produced** (yielded on a
-    /// poll). `futures::stream::iter(..).inspect(..)` fires the closure only as each item is polled
-    /// through, so nothing is counted until a consumer drives the stream — an *un-consumed* export
-    /// reads zero. This lets a pin prove `__arrow_c_stream__` pulls lazily instead of draining the
-    /// whole result up front (audit F-BR-4).
+    /// A partition stream that counts batches only when a consumer polls them.
     #[derive(Debug)]
     struct CountingPartitionStream {
         schema: SchemaRef,
@@ -1106,7 +966,7 @@ mod tests {
         }
     }
 
-    /// Move the `FFI_ArrowArrayStream` out of a capsule and wrap it as a reader — the consumer half
+    /// Move the `FFI_ArrowArrayStream` out of a capsule and wrap it as a reader, the consumer half
     /// of the Arrow C stream protocol (what pyarrow/polars do internally). Mirrors
     /// `tests/bindings.rs::import_stream`.
     fn import_capsule_stream(capsule: &Bound<'_, PyCapsule>) -> ArrowArrayStreamReader {
@@ -1116,13 +976,13 @@ mod tests {
             .as_ptr()
             .cast::<FFI_ArrowArrayStream>();
         // SAFETY: `__arrow_c_stream__` placed a valid, initialized `FFI_ArrowArrayStream` here;
-        // `from_raw` moves it out (nulling the producer's release callback so the capsule destructor
-        // is a no-op) and we own the moved value for the reader's lifetime.
+        // `from_raw` takes ownership and nulls the capsule release callback, so later destruction
+        // is a no-op. We own the moved stream for the reader's lifetime.
         let stream = unsafe { FFI_ArrowArrayStream::from_raw(pointer) };
         ArrowArrayStreamReader::try_new(stream).expect("stream is a valid Arrow C stream")
     }
 
-    /// P2b: analyzed schema is cached per plan handle (`OnceLock`); repeated opens share one
+    /// Analyzed schema is cached per plan handle (`OnceLock`); repeated opens share one
     /// `SchemaRef` and never re-clone a fresh schema tree from analysis.
     #[test]
     fn analyzed_arrow_schema_native_caches_schema_ref_per_handle() {
@@ -1153,18 +1013,7 @@ mod tests {
 
     #[test]
     fn arrow_c_stream_export_is_lazy_and_does_not_materialize_up_front() {
-        // The END-TO-END laziness pin for `__arrow_c_stream__` itself (audit F-BR-4). The three
-        // reader-level pins drive `StreamingBatchReader` directly and never call the dunder, and the
-        // `bindings.rs` end-to-end pins assert value/type — so reverting `__arrow_c_stream__` to the
-        // "stream export lie" (a full `collect()` then wrap) left the WHOLE suite green. This pin
-        // drives the REAL dunder over a source that counts every batch it produces and proves NOTHING
-        // is materialized until the consumer pulls.
-        //
-        // Deterministic by construction (rule 12 — no RSS thresholds, no sleeps, no timing races):
-        // `DataFrame::execute_stream` returns the stream WITHOUT polling (`StreamingTableExec::execute`
-        // hands back the un-polled partition stream), so a lazy export reads `produced == 0` while a
-        // `collect()`-first export reads `produced == N`. `target_partitions = 1` forbids a
-        // `RepartitionExec` that could pull the source on a background task.
+        // The source counter proves that export opens lazily and polls only on consumption.
         Python::attach(|python| {
             let produced = Arc::new(AtomicUsize::new(0));
             let batches = vec![
@@ -1188,7 +1037,7 @@ mod tests {
                 .expect("read_table yields a DataFrame over the counting source");
             let py_dataframe = PyDataFrame::new(dataframe, reader_test_runtime());
 
-            // Export the Arrow C stream. A LAZY dunder builds the stream and returns without polling;
+            // Export the Arrow C stream. The lazy dunder returns without polling;
             // the collect-then-wrap "lie" would drain all `batch_count` batches right here.
             let capsule = py_dataframe
                 .__arrow_c_stream__(python, None)
@@ -1200,7 +1049,7 @@ mod tests {
                  __arrow_c_stream__ would have drained all {batch_count} batches before returning"
             );
 
-            // The exported stream is BOTH lazy and functional: draining it now yields every batch, in
+            // The exported stream is lazy and functional: draining it yields every batch, in
             // order, with the right values — and only NOW is the source fully consumed.
             let reader = import_capsule_stream(&capsule);
             let drained: Vec<RecordBatch> =
@@ -1340,8 +1189,7 @@ mod tests {
         });
     }
 
-    /// A [`PartitionStream`] whose executed stream PANICS on its first poll — the SAF-007 injection
-    /// for the FFI-callback abort path (the panicking analogue of [`CountingPartitionStream`]).
+    /// A partition stream whose first poll panics, exercising the FFI callback fence.
     #[derive(Debug)]
     struct PanicOnPollPartitionStream {
         schema: SchemaRef,
@@ -1353,8 +1201,7 @@ mod tests {
         }
 
         fn execute(&self, _ctx: Arc<TaskContext>) -> SendableRecordBatchStream {
-            // One item whose future panics when polled. The `Ok(..)` after the panic is unreachable
-            // but pins the stream's item type to `Result<RecordBatch, DataFusionError>`.
+            // The unreachable Ok value fixes the stream item type.
             let panicking = futures::stream::once(async {
                 panic!("SAF-007 injected stream-poll panic");
                 #[allow(unreachable_code)]
@@ -1367,11 +1214,7 @@ mod tests {
         }
     }
 
-    /// The child half of the subprocess-isolated abort pin: export `__arrow_c_stream__` over a
-    /// poll-panicking source and drain it through the REAL FFI reader (the `extern "C"` `get_next`
-    /// callback). WITH `fence_stream_poll`, the panicking poll surfaces as a terminal
-    /// `Err(ArrowError)` carrying the framed panic text and this returns normally (child exits 0).
-    /// WITHOUT the fence, the poll panic unwinds across `extern "C"` and ABORTS this process.
+    /// Drive a poll-panicking export through the FFI reader and verify the fence returns an error.
     fn drive_panicking_stream_export_child() {
         Python::attach(|python| {
             let context =
@@ -1391,8 +1234,7 @@ mod tests {
                 .expect("export returns a capsule (execute_stream is lazy — no poll yet)");
             let mut reader = import_capsule_stream(&capsule);
 
-            // The source panics on its FIRST poll, so the first item the FFI reader yields is the
-            // fenced panic — a terminal `Err(ArrowError)`, never an abort.
+            // The first poll returns the fenced panic as an Arrow error.
             match reader.next() {
                 Some(Ok(_)) => panic!("the panicking source must never yield a clean batch"),
                 Some(Err(error)) => assert!(
@@ -1410,14 +1252,8 @@ mod tests {
 
     #[test]
     fn arrow_stream_poll_panic_is_fenced_not_aborting_subprocess_isolated() {
-        // PL-4 (SAF-007 / WG-3): a panic inside the Arrow C-stream `get_next` callback would unwind
-        // across `extern "C"` and ABORT the interpreter (arrow-array-57.3.1 ffi_stream.rs has no
-        // catch there, and PyO3's pymethod trampoline does not cover it — the pulls happen after
-        // `__arrow_c_stream__` returned). `fence_stream_poll` turns that panic into a clean terminal
-        // Arrow error. Because the mutation (removing the fence) genuinely ABORTS, the drain runs in
-        // a re-exec of THIS test binary as a CHILD process: with the fence the child exits 0; with
-        // the fence removed the child dies by SIGABRT and only the child dies — the parent survives
-        // to observe RED. Deterministic (rule 12): no sleeps, no timing, no RSS.
+        // The callback cannot unwind across extern "C". The subprocess isolates an unfenced abort
+        // while the fenced path returns a typed Arrow error.
         const CHILD_ENV: &str = "REPARK_SAF007_STREAM_CHILD";
         if std::env::var_os(CHILD_ENV).is_some() {
             drive_panicking_stream_export_child();
@@ -1443,7 +1279,7 @@ mod tests {
         );
     }
 
-    /// E2 ndarray / array dtypes: shallow List element tokens stay Spark simpleString.
+    /// Shallow list element tokens retain Spark `simpleString` formatting.
     #[test]
     fn arrow_type_key_list_element_simple_string_matches_spark() {
         let list_i8 = ArrowDataType::List(Arc::new(Field::new("item", ArrowDataType::Int8, true)));
@@ -1457,7 +1293,7 @@ mod tests {
         assert_eq!(arrow_type_key(&nested), "array<array<int>>");
     }
 
-    /// octo C3-CRATE-001: deeply nested List must not stack-overflow; depth bound truncates.
+    /// Deeply nested List types stop at the configured depth bound.
     #[test]
     fn arrow_type_key_deep_list_nesting_is_depth_bounded() {
         // Far past ARROW_TYPE_KEY_MAX_DEPTH — without the bound this would blow the stack.

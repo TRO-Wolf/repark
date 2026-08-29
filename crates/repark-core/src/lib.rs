@@ -1,4 +1,4 @@
-//! repark-core — the Session-centric engine API (v1 `repark-session`, re-homed).
+//! repark-core — the Session-centric engine API.
 //!
 //! [`ReparkSession`] constructs the DataFusion `SessionContext` (memory pool, batch size,
 //! partitions, write knobs as `ConfigExtension`s), holds the iceberg `Catalog` handles
@@ -49,8 +49,8 @@ pub use session_time_zone::{
 pub use backend::{ExecutionBackend, SingleNodeBackend};
 pub use dialect::{DataFusionDialect, EngineContext, SqlDialect};
 
-// --- The shared pre-execute belt (SQM round 5 Z-2): plan → guard → execute, the ONE choke
-// point every door's planned statement passes through before it runs. ---
+// --- The shared pre-execute belt: plan → guard → execute, the ONE choke point every door's
+// planned statement passes through before it runs. ---
 pub use extension::{SessionBuildConf, SessionExtension};
 pub use pre_execute::PreExecute;
 
@@ -91,9 +91,7 @@ pub use datafusion::prelude::DataFrame;
 // --- Plan-rewrite kernels (no DataFrame newtype). ---
 pub use dynamic_flatten::{DynamicFlattenOptions, dynamic_flatten};
 
-// Crate-internal re-exports (v1 lib.rs scope, minus the deferred excel/postgres folds).
 // v1's two `#[cfg(test)] pub(crate) use` companions live in `session.rs` — the module split
-// made it the test cohort's parent module.
 pub(crate) use error_map::{iceberg_err, resolve_s3_region_override};
 pub(crate) use idents::parse_table_identifier_segments;
 pub(crate) use read_options::{

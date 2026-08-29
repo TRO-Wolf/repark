@@ -1,12 +1,7 @@
-//! The engine-side catalog registry: iceberg `Catalog` handles + per-catalog location policy.
+//! Engine-side Iceberg catalog handles and per-catalog staged-CTAS location policy.
 //!
-//! Hoisted MOVE-ONLY from the v1 SQL crate's root (the phase-2 statement router consumes these
-//! types but the SESSION owns them — the phase cut moves the types to their owner). Bodies are
-//! byte-faithful to v1 at the port-source pin except forced-edit **E-4**:
-//! [`LocationPolicy::TempFallbackAllowed`] gains `{ root: PathBuf }`, resolved once at
-//! `register_memory_catalog` time — removing the phase-2 CTAS-time `std::env::temp_dir()`
-//! env read before the type becomes public phase-1 API. (E-4 consequences: the enum loses
-//! `Copy` — `PathBuf` is not `Copy` — and [`CatalogRegistry::location_policy`] clones.)
+//! Memory fallback roots resolve at registration, so query-time CTAS never reads the process
+//! environment. External catalogs require explicit locations; service-managed catalogs supply one.
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -18,33 +13,19 @@ use iceberg::Catalog;
 /// How a registered catalog resolves a table location for a **staged CTAS create** whose target
 /// namespace carries no `location` property.
 ///
-/// A real warehouse (Glue / S3 Tables, or any externally-supplied catalog) must never have its
-/// data silently placed under a process-temp directory — that is the audit's BUG-002 / SEC-003
-/// data-mis-placement hole. Such a catalog gets [`LocationPolicy::RequireExplicitLocation`], where
-/// a missing namespace location is a loud, actionable error. The temp fallback survives only for
-/// [`LocationPolicy::TempFallbackAllowed`] — the in-memory / local-filesystem catalog used offline.
+/// External catalogs require an explicit namespace location. Only local memory catalogs use a
+/// registration-time fallback root, preventing data placement under process-temporary storage.
 /// ===========================================================================================
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum LocationPolicy {
     /// Glue (or any externally-supplied catalog): a table location must be resolvable
     /// from the namespace `location` property; a missing location fails loud, never a temp dir.
     RequireExplicitLocation,
-    /// AWS S3 Tables: the SERVICE assigns each table's storage location at create time —
-    /// namespaces carry no `location` property (structurally: there is nothing to set), and the
-    /// fork's `S3TablesCatalog::create_table` REJECTS a caller-supplied location outright. A
-    /// staged "pick location → write → register" CTAS is impossible here; the create arm instead
-    /// routes create-first (create through the catalog to obtain the service location, stream the
-    /// SELECT into it, commit ONE fast-append, drop the table on abort — Spark's non-staging
-    /// `StagingTableCatalog` semantics: `BasicStagedTable.abortStagedChanges` → `dropTable`).
+    /// AWS S3 Tables assigns each table location. CTAS must create the table first, then write
+    /// into the service-provided location.
     ServiceManagedLocation,
-    /// In-memory / local-filesystem catalog: fall back to the registration-time-resolved `root`
-    /// when a namespace has no `location`, so offline development and tests run without a
-    /// configured warehouse. **E-4:** `root` is resolved ONCE when the catalog is registered —
-    /// the CTAS consumer reads `root` and never touches the process environment at query time.
-    /// **A13:** `register_memory_catalog` sets `root` to the supplied warehouse, so two sessions
-    /// with different warehouses no longer share `<temp>/repark_ctas/<catalog>/<ns>/<table>`.
-    /// [`CatalogRegistry::from`] (test helper, no warehouse argument) still uses
-    /// `std::env::temp_dir()`.
+    /// Local memory catalog fallback root resolved once at registration. The test-only conversion
+    /// without a warehouse uses `std::env::temp_dir()`.
     TempFallbackAllowed {
         /// The root a location-less staged CTAS resolves table locations under.
         root: PathBuf,

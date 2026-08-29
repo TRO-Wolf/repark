@@ -1,24 +1,7 @@
-//! Shared test-only tracing harness — ONE global subscriber for the whole test binary.
+//! Shared test-only tracing harness with one global subscriber per test binary.
 //!
-//! Forced-edit class 6 (docs/design/session-api.md §5): the two v1 crates each installed
-//! their own process-global `tracing` subscriber (repark-catalog's thread-routed span-field
-//! capture; repark-write's merge `SpanNameRecorder`). Merged into a single test binary, only
-//! the first `set_global_default` wins and the other harness silently records nothing — a
-//! per-binary invariant both v1 harnesses relied on. This module installs ONE global
-//! subscriber carrying BOTH layers, exactly once, tolerant of repeat calls; the two v1
-//! install call sites (`catalog::tests::capture_catalog_spans`,
-//! `write::merge::streaming_scan_tests::mor_merge_emits_five_phase_spans_with_commit_last`)
-//! route through the accessors below. Every test assertion is byte-unchanged from v1.
-//!
-//! **Why global, not `set_default` per test** (v1 rationale, carried verbatim in spirit):
-//! `tracing` caches each callsite's *interest* globally on first evaluation. Under parallel
-//! `cargo test` an unrelated test reaches an instrumented callsite on a thread with no
-//! subscriber, the callsite is cached as never-interested, and a later thread-local
-//! subscriber silently records nothing (measured v1 flake: 21/25 failures at two cores with
-//! `--test-threads=4`; `rebuild_interest_cache()` does not fix it). One subscriber for the
-//! whole binary keeps every callsite evaluated against an interested subscriber. The merge
-//! future can also be polled on threads other than the test thread (CI 2-core runners
-//! provoke this), which is why the merge recorder must be global too.
+//! One subscriber carries both capture layers. This avoids callsite-interest caching and keeps
+//! merge events visible when futures are polled on worker threads.
 
 use std::cell::RefCell;
 use std::sync::{Arc, Mutex, Once, OnceLock};
@@ -27,10 +10,6 @@ use tracing::span::{Attributes, Id};
 use tracing_subscriber::Layer;
 use tracing_subscriber::layer::{Context, SubscriberExt};
 use tracing_subscriber::registry::LookupSpan;
-
-// -------------------------------------------------------------------------------------------
-// Catalog half — v1 repark-catalog span-field capture (thread-routed), semantics verbatim.
-// -------------------------------------------------------------------------------------------
 
 /// One recorded span field: `(field name, rendered value)`.
 pub(crate) type SpanField = (String, String);

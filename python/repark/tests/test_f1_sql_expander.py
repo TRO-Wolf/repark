@@ -1,8 +1,7 @@
-"""F1 free-SQL bare-name expander — Path A statement forms via resolve_table_name SSOT.
+"""Free-SQL bare-name expander — Path A statement forms via resolve_table_name SSOT.
 
 Covers INSERT / SELECT / CTAS / MERGE expansion, temp-view prefer on FROM, and non-rewrite
-residuals (VIEW, TEMP TABLE, multi-statement scripts). Engine probe (DF default_catalog)
-was abandoned — see task/f1-census-r3-ledger.md.
+residuals (VIEW, TEMP TABLE, multi-statement scripts).
 """
 
 from __future__ import annotations
@@ -69,7 +68,7 @@ def test_create_view_name_not_qualified(spark: ReparkSession) -> None:
 
 
 def test_create_view_body_from_expands(spark: ReparkSession) -> None:
-    """octo C5-Q-002: CREATE VIEW AS SELECT … FROM bare expands the body only."""
+    """CREATE VIEW AS SELECT … FROM bare expands the body only."""
     expanded = spark._expand_bare_table_names_in_sql("CREATE VIEW bare_v AS SELECT * FROM bare_t")
     assert expanded == ('CREATE VIEW bare_v AS SELECT * FROM "glue_catalog"."default"."bare_t"')
 
@@ -186,7 +185,7 @@ def test_cte_name_not_expanded(spark: ReparkSession) -> None:
 
 
 def test_nested_with_cte_name_not_expanded(spark: ReparkSession) -> None:
-    """octo C1-Q-001: nested WITH CTE must stay bare (not catalog-qualified)."""
+    """Nested WITH CTE must stay bare (not catalog-qualified)."""
     sql = "SELECT * FROM (WITH q AS (SELECT 1 AS id) SELECT * FROM q) t"
     expanded = spark._expand_bare_table_names_in_sql(sql)
     assert "FROM q" in expanded
@@ -195,7 +194,7 @@ def test_nested_with_cte_name_not_expanded(spark: ReparkSession) -> None:
 
 
 def test_e2e_nested_with_cte(spark: ReparkSession) -> None:
-    """octo C1-L-001: nested WITH plans and returns rows (public sql entry)."""
+    """Nested WITH plans and returns rows (public sql entry)."""
     rows = (
         spark.sql("SELECT * FROM (WITH q AS (SELECT 7 AS id) SELECT * FROM q) t")
         .to_arrow()
@@ -205,7 +204,7 @@ def test_e2e_nested_with_cte(spark: ReparkSession) -> None:
 
 
 def test_expand_comma_join_both_relations(spark: ReparkSession) -> None:
-    """octo C1-Q-002: FROM a, b qualifies every relation in the list."""
+    """FROM a, b qualifies every relation in the list."""
     expanded = spark._expand_bare_table_names_in_sql("SELECT * FROM a, b WHERE a.id = b.id")
     assert expanded == (
         'SELECT * FROM "glue_catalog"."default"."a", "glue_catalog"."default"."b" WHERE a.id = b.id'
@@ -231,7 +230,7 @@ def test_cte_plus_comma_real_table_expands(spark: ReparkSession) -> None:
 
 
 def test_insert_overwrite_directory_not_table_target(spark: ReparkSession) -> None:
-    """octo C1-Q-003: DIRECTORY path-insert is not rewritten as a catalog table."""
+    """DIRECTORY path-insert is not rewritten as a catalog table."""
     sql = "INSERT OVERWRITE DIRECTORY '/tmp/x' SELECT * FROM src"
     expanded = spark._expand_bare_table_names_in_sql(sql)
     assert "DIRECTORY" in expanded
@@ -248,13 +247,13 @@ def test_insert_overwrite_local_directory_not_table_target(spark: ReparkSession)
 
 
 def test_insert_into_table_keyword_optional(spark: ReparkSession) -> None:
-    """octo C1-Q-004: INSERT INTO TABLE t — TABLE is keyword, not the table name."""
+    """INSERT INTO TABLE t — TABLE is keyword, not the table name."""
     expanded = spark._expand_bare_table_names_in_sql("INSERT INTO TABLE bare_t VALUES (1)")
     assert expanded == 'INSERT INTO TABLE "glue_catalog"."default"."bare_t" VALUES (1)'
 
 
 def test_sql_comment_from_not_expanded(spark: ReparkSession) -> None:
-    """octo C1-Q-005: FROM inside -- / /* */ comments is left alone."""
+    """FROM inside -- / /* */ comments is left alone."""
     line_comment = "SELECT 1 -- FROM bare\nFROM real_t"
     expanded_line = spark._expand_bare_table_names_in_sql(line_comment)
     assert "-- FROM bare" in expanded_line
@@ -268,7 +267,7 @@ def test_sql_comment_from_not_expanded(spark: ReparkSession) -> None:
 
 
 def test_leading_trivia_still_expands_select(spark: ReparkSession) -> None:
-    """octo C1-Q-006: leading comments do not prevent SELECT classification."""
+    """Leading comments do not prevent SELECT classification."""
     sql = "/* lead */ SELECT * FROM bare"
     expanded = spark._expand_bare_table_names_in_sql(sql)
     assert expanded.startswith("/* lead */")
@@ -276,7 +275,7 @@ def test_leading_trivia_still_expands_select(spark: ReparkSession) -> None:
 
 
 def test_from_subquery_then_comma_table_expands(spark: ReparkSession) -> None:
-    """octo C2-Q-001: FROM (subq) a, bare_t expands the bare sibling."""
+    """FROM (subq) a, bare_t expands the bare sibling."""
     expanded = spark._expand_bare_table_names_in_sql("SELECT * FROM (SELECT 1 AS id) a, bare_t b")
     assert expanded == ('SELECT * FROM (SELECT 1 AS id) a, "glue_catalog"."default"."bare_t" b')
 
@@ -292,7 +291,7 @@ def test_from_comma_then_subquery_then_table(spark: ReparkSession) -> None:
 
 
 def test_merge_using_subquery_expands_inner_from(spark: ReparkSession) -> None:
-    """octo C2-Q-002: MERGE USING (SELECT … FROM bare) qualifies the inner table."""
+    """MERGE USING (SELECT … FROM bare) qualifies the inner table."""
     expanded = spark._expand_bare_table_names_in_sql(
         "MERGE INTO tgt USING (SELECT * FROM bare_src) s ON tgt.id = s.id WHEN MATCHED THEN DELETE"
     )
@@ -311,7 +310,7 @@ def test_merge_using_with_cte_stays_bare(spark: ReparkSession) -> None:
 
 
 def test_tablesample_then_comma_expands_sibling(spark: ReparkSession) -> None:
-    """octo C2-Q-003: TABLESAMPLE does not stop comma-list expansion."""
+    """TABLESAMPLE does not stop comma-list expansion."""
     expanded = spark._expand_bare_table_names_in_sql("SELECT * FROM a TABLESAMPLE (10 PERCENT), b")
     assert expanded == (
         'SELECT * FROM "glue_catalog"."default"."a" TABLESAMPLE (10 PERCENT), '
@@ -320,13 +319,13 @@ def test_tablesample_then_comma_expands_sibling(spark: ReparkSession) -> None:
 
 
 def test_from_only_prefix_expands_table(spark: ReparkSession) -> None:
-    """octo C3-Q-001: ONLY is a prefix, not a relation name."""
+    """ONLY is a prefix, not a relation name."""
     expanded = spark._expand_bare_table_names_in_sql("SELECT * FROM ONLY bare_t")
     assert expanded == 'SELECT * FROM ONLY "glue_catalog"."default"."bare_t"'
 
 
 def test_nonrecursive_cte_body_expands_same_name_table(spark: ReparkSession) -> None:
-    """octo C4-Q-001: non-recursive WITH body does not treat its own name as CTE."""
+    """Non-recursive WITH body does not treat its own name as CTE."""
     expanded = spark._expand_bare_table_names_in_sql("WITH t AS (SELECT * FROM t) SELECT * FROM t")
     assert expanded == ('WITH t AS (SELECT * FROM "glue_catalog"."default"."t") SELECT * FROM t')
 
@@ -352,7 +351,7 @@ def test_recursive_cte_self_ref_stays_bare(spark: ReparkSession) -> None:
 
 
 def test_comment_between_relation_and_comma_expands_sibling(spark: ReparkSession) -> None:
-    """octo C5-Q-001: comments must not break comma-list expansion."""
+    """Comments must not break comma-list expansion."""
     expanded = spark._expand_bare_table_names_in_sql("SELECT * FROM t/*c*/ , u")
     assert expanded == (
         'SELECT * FROM "glue_catalog"."default"."t"/*c*/ , "glue_catalog"."default"."u"'
@@ -360,7 +359,7 @@ def test_comment_between_relation_and_comma_expands_sibling(spark: ReparkSession
 
 
 def test_tablesample_bernoulli_then_comma(spark: ReparkSession) -> None:
-    """octo C6-Q-001: TABLESAMPLE BERNOULLI (n) does not stop comma expansion."""
+    """TABLESAMPLE BERNOULLI (n) does not stop comma expansion."""
     expanded = spark._expand_bare_table_names_in_sql(
         "SELECT * FROM t TABLESAMPLE BERNOULLI (10), u"
     )
@@ -370,9 +369,7 @@ def test_tablesample_bernoulli_then_comma(spark: ReparkSession) -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# G1 — UPDATE / DELETE bare targets (F1 residual)
-# ---------------------------------------------------------------------------
+# G1 — UPDATE / DELETE bare targets (residual)
 
 
 def test_expand_update_bare_target(spark: ReparkSession) -> None:
@@ -418,13 +415,13 @@ def test_expand_update_set_body_not_regexed(spark: ReparkSession) -> None:
 
 
 def test_expand_update_table_name_ending_in_set(spark: ReparkSession) -> None:
-    """octo C1-Q-004: table identifiers ending in ``set`` are not truncated at SET."""
+    """Table identifiers ending in ``set`` are not truncated at SET."""
     expanded = spark._expand_bare_table_names_in_sql("UPDATE bare_set SET x = 1 WHERE id = 0")
     assert expanded == ('UPDATE "glue_catalog"."default"."bare_set" SET x = 1 WHERE id = 0')
 
 
 def test_expand_update_missing_table_does_not_eat_set_keyword(spark: ReparkSession) -> None:
-    """octo C1-Q-005: ``UPDATE SET x = 1`` must not treat SET as a table name."""
+    """``UPDATE SET x = 1`` must not treat SET as a table name."""
     sql = "UPDATE SET x = 1"
     assert spark._expand_bare_table_names_in_sql(sql) == sql
 

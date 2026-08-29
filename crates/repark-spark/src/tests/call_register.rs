@@ -1,9 +1,4 @@
-//! V3-1 — `CALL system.register_table` and the Spark-written format-v3 fixture.
-//!
-//! Split from `call.rs` on subject, the same way `call_v3` and `call_orphan` were. Every test
-//! here is about adopting an existing table, not about a maintenance action on one this engine
-//! created. The Spark-written fixture is checked in under `fixtures/v3-spark-mor/` so CI can
-//! load Puffin deletion vectors without a live JVM.
+//! Pins `CALL system.register_table` and adoption of the Spark-written format-v3 fixture.
 
 use std::fs;
 use std::path::{Path, PathBuf};

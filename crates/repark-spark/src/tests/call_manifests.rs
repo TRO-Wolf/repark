@@ -1,8 +1,4 @@
-//! MW-6 — `CALL <catalog>.system.rewrite_manifests`.
-//!
-//! Every count here is measured on a live Spark 4.0.1 + Iceberg 1.10.0 oracle (2026-08-23); the
-//! schema is also the Iceberg 1.10.0 jar's `OUTPUT_TYPE` constant. The oracle scenarios and the
-//! numbers they produced are in `task/ledgers/completed/mw-6-rewrite-manifests-ledger.md`.
+//! Pins `CALL <catalog>.system.rewrite_manifests` result schema, counts, no-op, and guards.
 
 use iceberg::spec::ManifestContentType;
 

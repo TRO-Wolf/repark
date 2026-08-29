@@ -1,12 +1,6 @@
 //! Model: Claude Fable 5
-//!
 //! ANSI-door pins: copy-on-write UPDATE / MERGE and the resolver seat refuse an adopted v3
-//! table (`V3-COW-1`, 2026-08-25); RP-2 (2026-08-27) measured the plain-`WHERE` DELETE
-//! Spark-clean and lifted it on both modes.
-//!
-//! The ANSI door refuses `CALL` (Q7). Adoption uses the same `Catalog::register_table` the
-//! Spark procedure reaches. Memory-catalog `DROP TABLE` deletes the metadata pointer, so the
-//! seed ident stays; DML runs against the adopted ident.
+//! table (`V3-COW-1`); plain-`WHERE` DELETE
 //! pins: v3r-1-rulings/C-001, C-002, C-003, C-004, C-005
 //! pins: rp-2-fork-repin/C-003, C-005
 
@@ -420,8 +414,7 @@ async fn adopted_v3_cow_subquery_where_dml_refuses_at_the_resolver_seat() {
     .await;
 }
 
-/// SEC-001: two-part and bare names under a session default catalog / schema resolve the same
-/// guard seats: the UPDATE refuses, the DELETE (RP-2 lift) commits the right rows.
+/// SEC-001: two-part and bare names under session defaults resolve the same target.
 /// pins: rp-2-fork-repin/C-003, C-005
 #[tokio::test]
 async fn adopted_v3_cow_dml_with_default_catalog_short_names_refuses() {
@@ -451,7 +444,6 @@ async fn adopted_v3_cow_dml_with_default_catalog_short_names_refuses() {
 }
 
 /// SEC-003: a dotted quoted name `ice.sales."a.b"` (creatable here) resolves as ONE table —
-/// the RP-2 DELETE runs on it and commits the right rows (never a silent miss).
 /// pins: rp-2-fork-repin/C-005
 #[tokio::test]
 async fn adopted_v3_cow_delete_on_a_dotted_quoted_name_resolves() {
@@ -468,8 +460,7 @@ async fn adopted_v3_cow_delete_on_a_dotted_quoted_name_resolves() {
     );
 }
 
-/// SEC-002: a padded merge-on-read spelling still refuses on v3 — the UPDATE refusal never
-/// consults the property (RP-2), so the spelling cannot slip past.
+/// A padded merge-on-read spelling still refuses UPDATE on v3 without changing table lineage.
 /// pins: v3r-1-rulings/C-004
 /// pins: rp-2-fork-repin/C-005
 #[tokio::test]

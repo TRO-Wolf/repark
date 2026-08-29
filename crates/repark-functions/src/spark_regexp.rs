@@ -1,15 +1,9 @@
 //! Spark `regexp_count` / `regexp_instr` — NULL-in NULL-out, INT, ignore-idx (G6 / P1).
 //!
-//! DataFusion's kernels return `0` for NULL inputs (int64) and treat a 3rd
-//! `regexp_instr` argument as START POSITION. Spark 4.1.2 (live oracle):
-//! - `regexp_count(NULL, 'ab')` / `regexp_count('ababab', NULL)` → NULL, INT
-//! - `regexp_instr` 3rd arg is accepted, **ignored as a value**, NULL-propagates,
-//!   and the result is the 1-based **UTF-16** start of the first match
-//!   (`'abcde'` / `'b(c)d'` / idx 0, 1, 3, 99 all → `2`; NULL idx → NULL;
-//!   `'🐈ab'` / `'ab'` → `3` because 🐈 is two UTF-16 units).
+//! Spark regexp shims with Spark's NULL, integer, UTF-16, and capture-group semantics.
 //!
-//! This module overwrites both names from [`crate::string::functions`] so the
-//! Spark SQL door and the facade `expr_fn` builders share one kernel.
+//! The overwrite supplies `regexp_count`, `regexp_instr`, `regexp_extract_all`, and
+//! `regexp_substr` to SQL and facade builders.
 
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
@@ -44,25 +38,20 @@ pub fn regexp_instr_udf() -> Arc<ScalarUDF> {
 }
 
 /// ===========================================================================================
-/// Spark `regexp_extract_all(str, regexp[, idx])` UDF (FNP-6).
+/// Spark `regexp_extract_all(str, regexp[, idx])` UDF.
 /// ===========================================================================================
 ///
-/// Every match's `idx`-th capture group, as an array. `idx` defaults to **1** — Spark's default,
-/// not the whole match. A pattern with no capture group therefore RAISES on the two-argument
-/// form; pass `idx = 0` for the whole match.
-/// No match yields an EMPTY array, not NULL — NULL is reserved for a NULL input, which is the
-/// distinction `regexp_extract`'s empty-string-on-no-match convention loses.
+/// Return each match's capture group as an array; `idx` defaults to 1 and no match returns `[]`.
 #[must_use]
 pub fn regexp_extract_all_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkRegexpExtractAll::new()))
 }
 
 /// ===========================================================================================
-/// Spark `regexp_substr(str, regexp)` UDF (FNP-6).
+/// Spark `regexp_substr(str, regexp)` UDF.
 /// ===========================================================================================
 ///
-/// The first match, or **NULL** when there is none — deliberately unlike `regexp_extract`, which
-/// returns an empty string. Spark keeps the two conventions apart and so does this.
+/// Return the first match, or NULL when no match exists.
 #[must_use]
 pub fn regexp_substr_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkRegexpSubstr::new()))
@@ -262,7 +251,6 @@ impl ScalarUDFImpl for SparkRegexpSubstr {
     }
 
     fn return_field_from_args(&self, _args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
-        // Always nullable: "no match" is NULL even when every input is non-null.
         Ok(Arc::new(Field::new("regexp_substr", DataType::Utf8, true)))
     }
 
@@ -286,8 +274,6 @@ fn any_arg_nullable(fields: &[FieldRef]) -> bool {
 fn is_utf8_family(data_type: &DataType) -> bool {
     match data_type {
         DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View | DataType::Null => true,
-        // Dictionary-encoded strings (Parquet) must not plan-refuse; coerced
-        // output is Utf8 and the planner inserts the cast (R3-1).
         DataType::Dictionary(_, value_type) => is_utf8_family(value_type),
         _ => false,
     }
@@ -375,10 +361,6 @@ fn invoke_regexp(args: &ScalarFunctionArgs, kind: RegexpKind) -> Result<Columnar
 /// Shared row walk for the two collecting kernels: NULL-in NULL-out, one compiled regex per
 /// distinct pattern, and the group index passed through RAW.
 ///
-/// The index is deliberately NOT validated here. Spark reports one condition for both an
-/// over-large and a negative index, and its text carries the pattern's group count — which is
-/// only known once the regex is compiled, i.e. in the caller. `regexp_substr` never sees a third
-/// argument (`coerce_regexp_args(.., false)` caps it at two), so it has nothing to validate.
 fn extract_rows<T>(
     args: &ScalarFunctionArgs,
     name: &str,
@@ -409,9 +391,6 @@ fn extract_rows<T>(
             Some(index) => index
                 .as_primitive::<datafusion::arrow::datatypes::Int32Type>()
                 .value(row),
-            // Spark's default is capture group 1, not the whole match (RE-1, closed by SEM-1).
-            // One knob for both doors: the facade omits this argument rather than defaulting it.
-            // `regexp_substr` shares this walk but binds the group as `_group` and never reads it.
             None => 1,
         };
         let pattern_text = patterns.value(row);
@@ -434,12 +413,10 @@ fn invoke_extract_all(args: &ScalarFunctionArgs) -> Result<ColumnarValue> {
             Some((text, regex, raw_group)) => {
                 let group = validate_group_index(raw_group, regex)?;
                 for found in collect_matches(text, regex)? {
-                    // Re-capture at the match's own start so group offsets are this match's.
                     let captured = regex
                         .captures_at(text, found.start())
                         .and_then(|caps| caps.get(group).map(|m| m.as_str().to_owned()));
                     match captured {
-                        // An optional group that did not participate is an empty string in Spark.
                         Some(value) => builder.values().append_value(value),
                         None => builder.values().append_value(""),
                     }
@@ -457,10 +434,6 @@ fn invoke_substr(args: &ScalarFunctionArgs) -> Result<ColumnarValue> {
     let values = extract_rows(args, "regexp_substr", |row| {
         Ok(match row {
             None => None,
-            // NULL on no match, deliberately unlike `regexp_extract`'s empty string — and NULL
-            // for a ZERO-WIDTH match too (RE-3, closed by SEM-6). Spark takes the FIRST match and
-            // nulls it when empty; it does not look for a later non-empty one, so
-            // `regexp_substr('a1b2', '[0-9]*')` is NULL even though `'1'` matches at position 1.
             Some((text, regex, _group)) => regex
                 .find(text)
                 .map(|found| found.as_str())
@@ -472,12 +445,7 @@ fn invoke_substr(args: &ScalarFunctionArgs) -> Result<ColumnarValue> {
     Ok(ColumnarValue::Array(array))
 }
 
-/// Spark's one condition for a group index outside `0 ..= <group count>`, in Spark's own words.
-///
-/// Spark folds "negative" and "too large" into a single `REGEX_GROUP_INDEX`, so repark does too —
-/// it had two messages of its own and neither was greppable by the condition name a migrating
-/// user already knows. Text taken verbatim from a live PySpark 4.1.2 (`-1`, `3` and `99` all
-/// produce it, with the bound filled in).
+/// Negative or over-large groups use Spark's single `REGEX_GROUP_INDEX` error contract.
 fn validate_group_index(raw_group: i32, regex: &Regex) -> Result<usize> {
     let bound = regex.captures_len().saturating_sub(1);
     let group = usize::try_from(raw_group)
@@ -493,7 +461,6 @@ fn validate_group_index(raw_group: i32, regex: &Regex) -> Result<usize> {
 }
 
 fn compile_spark_regex(pattern: &str) -> Result<Regex> {
-    // Java/Spark `\d` `\w` `\s` are ASCII; the regex crate's are Unicode.
     let bound = crate::collection::bind_ascii_perl_classes(pattern);
     Regex::new(&bound).map_err(|error| {
         DataFusionError::Execution(format!("invalid regular expression '{pattern}': {error}"))
@@ -513,13 +480,7 @@ fn bump_count(count: i32) -> Result<i32> {
 const MID_SURROGATE_PROBE: &str = "\u{FFFD}\u{FFFD}";
 const MID_SURROGATE_PROBE_OFFSET: usize = 3;
 
-/// True when the pattern can match starting at a mid-surrogate UTF-16 index.
-///
-/// `is_match("")` is the wrong proxy: start-anchored patterns are nullable on
-/// `""` but a mid-surrogate index is always > 0 and never after a line
-/// terminator, so `^` / `(?m)^` overcounted every supplementary-plane char.
-/// Predicate is `start == offset` (any match starting there), **not** also
-/// `end == offset` — Java counts a non-empty match at the mid-surrogate too.
+/// Detect a match starting at a mid-surrogate UTF-16 index; matching requires `start == offset`.
 fn matches_at_mid_surrogate_index(pattern: &Regex) -> bool {
     pattern
         .find_at(MID_SURROGATE_PROBE, MID_SURROGATE_PROBE_OFFSET)
@@ -527,30 +488,12 @@ fn matches_at_mid_surrogate_index(pattern: &Regex) -> bool {
 }
 
 /// ===========================================================================================
-/// The `Matcher.find()` walk again, yielding match byte-ranges instead of a count (FNP-6).
+/// Collect matches with Java's empty-after-non-empty stepping.
+/// Astral mid-surrogate starts remain a counting-only residual.
 /// ===========================================================================================
-///
-/// `regexp_extract_all` and `regexp_substr` need the SAME stepping rule
-/// [`count_non_overlapping`] implements — an empty match is reported where a previous non-empty
-/// match ended, and empty matches advance — but they need *where* each match is, not how many.
-///
-/// **One documented difference from the counting walk, and it is deliberate.** The counting walk
-/// probes for matches at mid-surrogate UTF-16 indices, which Java can reach and Rust's `&str`
-/// cannot address: such a position is not a byte boundary, so there is no range to extract. This
-/// collector therefore steps over supplementary-plane characters whole. The consequence is that
-/// on a supplementary-plane input `regexp_count` can exceed `size(regexp_extract_all(...))` — a
-/// real divergence between two of our own functions, recorded rather than hidden, and reachable
-/// only with an empty-matching pattern over astral text.
 fn collect_matches<'text>(text: &'text str, pattern: &Regex) -> Result<Vec<regex::Match<'text>>> {
     let mut found_all = Vec::new();
     if pattern.as_str().is_empty() {
-        // Java's `Matcher` on `Pattern.compile("")` finds an empty match at EVERY position plus
-        // the end, which is what `count_non_overlapping` counts. Returning early here made the
-        // two disagree on plain ASCII — `regexp_count('abc', '')` was 4 while
-        // `size(regexp_extract_all('abc', ''))` was 0 (F-CSP-3 / F-CFS-3).
-        // One empty match at every char boundary, plus one at the end — `find_at` returns Some
-        // at each of them for an empty pattern, and a None is simply nothing to collect rather
-        // than an impossible state to panic on.
         let boundaries = text
             .char_indices()
             .map(|(offset, _)| offset)
@@ -585,16 +528,7 @@ fn collect_matches<'text>(text: &'text str, pattern: &Regex) -> Result<Vec<regex
     Ok(found_all)
 }
 
-/// Java `Matcher.find()`: report an empty match where a previous non-empty
-/// match ended, and advance empty matches by one UTF-16 unit. This loop
-/// approximates the mid-surrogate step on supplementary-plane chars with a
-/// positional probe; Java scans every UTF-16 index and can match there with
-/// no preceding empty match (not fixable without a UTF-16 code-unit matcher).
-/// The `regex` crate's `find_iter` suppresses the empty-after-non-empty case
-/// (`[0-9]*` on `2026-08-19` is 3 there, 6 in Spark).
-///
-/// [`collect_matches`] is the same walk yielding positions; it cannot reproduce the
-/// mid-surrogate probe, which is why the two can disagree on astral text.
+/// Count matches with Java's empty-after-non-empty stepping and UTF-16 mid-surrogate probe.
 fn count_non_overlapping(text: &str, pattern: &Regex) -> Result<i32> {
     if pattern.as_str().is_empty() {
         let count = text.encode_utf16().count().saturating_add(1);
@@ -817,7 +751,6 @@ mod tests {
         let a_star = compile_spark_regex("a*").expect("a*");
         assert_eq!(count_non_overlapping("🐈", &a_star).expect("c"), 3);
         // R4-1: `is_match("")` overcounts start-anchored patterns at a
-        // mid-surrogate (CAT = U+1F408). Live Spark 4.1.2: 1 / 1 / 2.
         let caret = compile_spark_regex("^").expect("caret");
         assert!(!matches_at_mid_surrogate_index(&caret));
         assert_eq!(count_non_overlapping("🐈", &caret).expect("c"), 1);

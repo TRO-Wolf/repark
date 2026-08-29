@@ -1,17 +1,10 @@
-//! The Spark door's **surface matrix** — every `repark_common::surfaces` ID, disposed.
+//! The Spark door's test-only surface matrix.
 //!
-//! Design SSOT: `docs/design/sql-doors.md` §2 Q13 (graft G2). The registry in
-//! `repark_common::surfaces` is the dialect-neutral universe; this file says what THIS door does
-//! with each ID, and [`matrix_maps_every_surface`] fails the build if any ID has no row. Absence
-//! is typed: a surface this door does not ship carries a reason and a design citation, never
-//! silence.
+//! Every registry ID maps to a tested or deliberately absent row. Test names are collected
+//! verbatim, so a rename must update this matrix.
 //!
 //! The whole module is `#[cfg(test)]` — it is audit evidence, not product code, so it adds
 //! nothing to the shipped crate.
-//!
-//! **Test names are `cargo test -p repark-spark -- --list` names**, verbatim. They are strings,
-//! so nothing but review keeps them honest — when a test is renamed, its row moves with it.
-//! (The ported battery's names are pinned by the census, which makes drift here loud.)
 
 use repark_common::surfaces::{self, Row, SessionProfile, SurfaceId};
 
@@ -29,14 +22,6 @@ const fn absent(reason: &'static str, adr: &'static str) -> Row {
 
 /// ===========================================================================================
 /// The Spark door's disposition of every surface ID.
-///
-/// The door is a VERBATIM port of v1 `repark-sql` (design §0: delegate-first, no half-file
-/// surgery), so almost every row is `Tested` and names a ported battery test. Three absences
-/// remain: two are ANSI-only ergonomics (`sorted_by` / unknown-key refuse have no Spark
-/// spelling to guard) and one is the wrong-door sniff (this IS the Spark door).
-/// `TA_FUNCTIONS` flipped at PR-4 (`TaExtension` composition) and `CROSS_DOOR_EQUIVALENCE`
-/// at PR-6, when the two-session protocol was actually run. The `SEMANTICS_*` family
-/// landed at G8; `SEMANTICS_JOIN_NULL_KEYS` flipped from pin-absence to Tested at R-3.
 /// ===========================================================================================
 const ROWS: &[(SurfaceId, Row)] = &[
     // --- Statement forms ---
@@ -410,11 +395,7 @@ fn matrix_maps_every_surface() {
     }
 }
 
-/// The Spark door is a verbatim port of a shipped v1 engine, so the shipped/absent split is
-/// itself a fact worth pinning: three structural absences (PR-6), every one of them named
-/// above. The G8 pin-absence for `SEMANTICS_JOIN_NULL_KEYS` flipped to Tested at R-3. A
-/// fourth absence appearing without a reviewer noticing is exactly how "typed absence"
-/// rots into "typed excuse".
+/// Pin the three declared structural absences so an unreviewed fourth absence cannot pass.
 /// MUTATION: flip any `Tested` row to `absent(...)` → this REDs.
 #[test]
 fn spark_door_absences_are_the_declared_ones() {
@@ -436,10 +417,7 @@ fn spark_door_absences_are_the_declared_ones() {
     assert_eq!(ROWS.len() - absent_ids.len(), 47, "shipped-surface count");
 }
 
-/// `TwoSession` may be claimed by exactly ONE row — `CROSS_DOOR_EQUIVALENCE` — and only because
-/// PR-6 actually ran the protocol. The failure this prevents is the original one restated: a
-/// single-door battery cannot produce cross-door evidence, so letting an ordinary ported test
-/// claim the profile would launder exactly what the protocol exists to establish.
+/// `TwoSession` may be claimed only by `CROSS_DOOR_EQUIVALENCE`, whose protocol uses both doors.
 /// MUTATION: mark any other row `TwoSession` → this REDs.
 #[test]
 fn only_the_cross_door_row_claims_the_two_session_profile() {

@@ -50,7 +50,7 @@ def test_set_ops_and_cross_join(spark: ReparkSession) -> None:
     left = spark.sql("SELECT 1 AS id UNION ALL SELECT 1 UNION ALL SELECT 2")
     right = spark.sql("SELECT 1 AS id UNION ALL SELECT 3")
     assert left.intersect(right).to_arrow().to_pylist() == [{"id": 1}]
-    # Multiset *All forms: engine bags diverge from Spark — fail loud (octo C1-L-005/006).
+    # Multiset *All forms: engine bags diverge from Spark — fail loud.
     with pytest.raises(UnsupportedOperationException, match="intersectAll"):
         left.intersectAll(right)
     with pytest.raises(UnsupportedOperationException, match="exceptAll"):

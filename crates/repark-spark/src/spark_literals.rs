@@ -7,7 +7,7 @@
 //! because it accepts triple-quoted strings that Spark rejects.
 //!
 //! **The rules (Spark 4.1.2, `spark.sql.parser.escapedStringLiterals=false`, measured against the
-//! live oracle `<pyspark-4.1.2-oracle>`; the charter ledger holds the full transcript):**
+//! live oracle `<pyspark-4.1.2-oracle>`):**
 //!
 //! | Input after `\` | Result | Oracle |
 //! |---|---|---|

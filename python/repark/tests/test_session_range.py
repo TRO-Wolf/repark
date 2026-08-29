@@ -59,7 +59,7 @@ def test_range_float_end_coerced(spark: ReparkSession) -> None:
 
 
 def test_range_empty_and_negative_step_values(spark: ReparkSession) -> None:
-    """Empty-path SQL + negative-step multisets (octo C1 mutation pins)."""
+    """Empty-path SQL + negative-step multisets."""
     assert spark.range(1, 1).collect() == []
     assert spark.range(5, 0, 1).count() == 0
     assert spark.range(0, 5, -1).count() == 0
@@ -78,7 +78,7 @@ def test_range_bool_and_num_partitions_validation(spark: ReparkSession) -> None:
 
 
 def test_range_float_step_truncated_and_physical_int64(spark: ReparkSession) -> None:
-    """Float step uses int() (Spark Long coerce); Arrow id stays int64 (octo C2)."""
+    """Float step uses int() (Spark Long coerce); Arrow id stays int64."""
     import pyarrow as pa
 
     assert [row.id for row in spark.range(0, 5, 1.9).collect()] == [0, 1, 2, 3, 4]
@@ -89,7 +89,7 @@ def test_range_float_step_truncated_and_physical_int64(spark: ReparkSession) -> 
 
 
 def test_range_after_stop_raises(spark: ReparkSession) -> None:
-    """Stopped session refuses range (octo C3)."""
+    """Stopped session refuses range."""
     spark.stop()
     with pytest.raises(RuntimeError, match="stopped"):
         spark.range(3)

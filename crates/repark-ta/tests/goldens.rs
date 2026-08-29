@@ -1,14 +1,7 @@
-//! The bit-exactness gate: every kernel × param-set against goldens recorded from C TA-Lib
-//! 0.4.0 (`python/repark-parity/record_ta_goldens.py`).
+//! Bit-exactness gate against C TA-Lib 0.4.0 goldens.
 //!
-//! Comparison is **strict `f64::to_bits` equality** per element (NaN ↔ NaN allowed — any NaN
-//! payload counts, since the oracle round-trips nulls through one canonical NaN). A tolerance
-//! comparison here would defeat the crate's whole purpose; see the crate docs.
-//!
-//! Two fixtures: the 5000-row lognormal walk (happy path) and the 600-row flat-plateau series
-//! (drives the `TA_IS_ZERO` guard branches). Both carry a strictly-positive `volume` column
-//! (TA-3; dedicated RNGs). `manifest.json` is the recorder's ledger; the
-//! `manifest_and_tests_cover_the_same_series` test keeps recorder and tests in sync both ways.
+//! Compare each element by `f64::to_bits`; NaN payloads may differ. The walk and flat-plateau
+//! fixtures cover normal and `TA_IS_ZERO` branches. `manifest.json` must match test coverage.
 
 use std::collections::BTreeSet;
 use std::fs;
@@ -90,7 +83,6 @@ const CONSUMED: &[&str] = &[
     "flat_bbands_20_upper",
     "flat_bbands_20_middle",
     "flat_bbands_20_lower",
-    // WG2 simple-momentum batch (walk).
     "mom_10",
     "roc_10",
     "rocp_10",
@@ -109,14 +101,12 @@ const CONSUMED: &[&str] = &[
     "aroonosc_14",
     "trix_30",
     "ultosc_7_14_28",
-    // WG2 guard-branch coverage (flat plateau) + the flat open series BOP needs.
     "fixture_flat_open",
     "flat_cmo_14",
     "flat_willr_14",
     "flat_cci_14",
     "flat_bop",
     "flat_ultosc_7_14_28",
-    // WG3 directional + MACD families (walk).
     "dx_14",
     "adxr_14",
     "plus_di_14",
@@ -140,18 +130,15 @@ const CONSUMED: &[&str] = &[
     "macdext_mixed_7_0_1_hist",
     "ma_30_type0",
     "ma_20_type1",
-    // WG3 flat-plateau guard branches (DX re-emit + DI zero short-circuit).
     "flat_dx_14",
     "flat_plus_di_14",
     "flat_minus_di_14",
-    // WG4 stochastics (walk) + the flat-plateau raw-%K zero-guard branch.
     "stoch_slowk",
     "stoch_slowd",
     "stochf_fastk",
     "stochf_fastd",
     "stochrsi_fastk",
     "stochrsi_fastd",
-    // Group G2 — matype 7 (MAMA) on stochastic smoothing legs.
     "stoch_type7_slowk",
     "stoch_type7_slowd",
     "stoch_mixed_7_0_slowk",
@@ -162,8 +149,6 @@ const CONSUMED: &[&str] = &[
     "stochrsi_type7_fastd",
     "flat_stochf_fastk",
     "flat_stochf_fastd",
-    // WG5 sweep-up: NATR + BETA (walk) and the four O/H/L/C price transforms, plus BETA's
-    // flat-plateau zero-guard branch.
     "natr_14",
     "beta_5",
     "avgprice",
@@ -171,9 +156,6 @@ const CONSUMED: &[&str] = &[
     "typprice",
     "wclprice",
     "flat_beta_5",
-    // T3 — the parked four: MAMA (two outputs, walk + flat guards), SAR, SAREXT (auto default +
-    // forced-long-offset + forced-short), MAVP (SMA + EMA over the `fixture_periods` series), and
-    // the MA-selector matype-7 (= MAMA) extension pin.
     "fixture_periods",
     "mama_mama",
     "mama_fama",
@@ -186,7 +168,6 @@ const CONSUMED: &[&str] = &[
     "mavp",
     "mavp_ema",
     "ma_30_type7",
-    // TA-4 volume family — kernel `to_bits` vs the TA-3-recorded C 0.4.0 goldens.
     "fixture_volume",
     "fixture_flat_volume",
     "ad",
@@ -200,12 +181,8 @@ const CONSUMED: &[&str] = &[
 ];
 
 fn goldens_dir() -> PathBuf {
-    // Prefer the RUNTIME `CARGO_MANIFEST_DIR` (cargo sets it in the test process's environment) over
-    // the compile-time `env!`: a test binary cached in a SHARED `target/` and re-run from a
-    // DIFFERENT worktree must resolve fixtures against the worktree cargo is invoking from — NOT the
-    // stale path baked in when the binary was first compiled in another (possibly deleted) worktree.
-    // That stale-path reuse is what failed all 38 goldens pins hunting a removed worktree's
-    // fixtures. Fallback to the compile-time value for a direct binary invocation outside cargo.
+    // Runtime `CARGO_MANIFEST_DIR` avoids stale fixture paths when a shared target is reused by
+    // another worktree. Fall back to the compile-time value outside Cargo.
     let manifest_dir =
         std::env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| env!("CARGO_MANIFEST_DIR").into());
     PathBuf::from(manifest_dir).join("tests/goldens")
@@ -289,11 +266,7 @@ fn flat_fixture() -> Fixture {
 
 #[test]
 fn goldens_dir_resolves_from_the_runtime_manifest_dir() {
-    // The stale-path footgun fix: `goldens_dir()` must resolve against the RUNTIME
-    // `CARGO_MANIFEST_DIR` cargo sets in the test process, so a shared-`target/` cached binary
-    // re-run from another worktree finds the right fixtures. This test also PROVES the assumption
-    // the fix rests on — cargo sets `CARGO_MANIFEST_DIR` at run time — via `.expect`. If that ever
-    // stops holding, this reddens loudly instead of the fix silently degrading to the stale `env!`.
+    // A shared target may run this binary from another worktree; runtime Cargo resolution must win.
     let runtime = std::env::var("CARGO_MANIFEST_DIR")
         .expect("cargo sets CARGO_MANIFEST_DIR in the test process environment");
     assert!(
@@ -316,7 +289,6 @@ fn manifest_and_tests_cover_the_same_series() {
         .keys()
         .map(String::as_str)
         .collect();
-    // `fixture_open` is recorded for completeness but has no consuming kernel yet.
     let untested: Vec<&&str> = recorded.difference(&consumed).collect();
     let unrecorded: Vec<&&str> = consumed.difference(&recorded).collect();
     assert!(
@@ -329,8 +301,7 @@ fn manifest_and_tests_cover_the_same_series() {
     );
 }
 
-/// TA-4: volume-family kernels vs the TA-3-recorded C 0.4.0 goldens (`f64::to_bits`).
-/// Shape pins (lookback / OBV seed) stay so a bit-exact miss still names the C contract.
+/// Compare volume-family kernels with their C 0.4.0 goldens by `f64::to_bits`.
 #[test]
 fn volume_family_matches_c_talib() {
     let f = fixture();
@@ -515,11 +486,9 @@ fn overlap_ma_family_matches_c_talib() {
     assert_bit_exact("wma_10", &wma(&f.close, 10).expect("wma_10"));
     assert_bit_exact("dema_10", &dema(&f.close, 10).expect("dema_10"));
     assert_bit_exact("tema_10", &tema(&f.close, 10).expect("tema_10"));
-    // TRIMA odd + even period branches.
     assert_bit_exact("trima_10", &trima(&f.close, 10).expect("trima_10"));
     assert_bit_exact("trima_5", &trima(&f.close, 5).expect("trima_5"));
     assert_bit_exact("kama_10", &kama(&f.close, 10).expect("kama_10"));
-    // T3 at the default vfactor and a non-default one (proves vfactor threads through).
     assert_bit_exact("t3_5", &t3(&f.close, 5, 0.7).expect("t3_5"));
     assert_bit_exact("t3_5_vf05", &t3(&f.close, 5, 0.5).expect("t3_5_vf05"));
     assert_bit_exact("midpoint_10", &midpoint(&f.close, 10).expect("midpoint_10"));
@@ -540,7 +509,6 @@ fn bbands_matches_c_talib() {
 
 #[test]
 fn bbands_band_branches_match_c_talib() {
-    // The four other rounding-distinct branches in ta_BBANDS.c's band application.
     let f = fixture();
     let (upper, _, lower) = bbands(&f.close, 20, 1.0, 1.0).expect("bbands unit");
     assert_bit_exact("bbands_20_unit_upper", &upper);
@@ -589,7 +557,6 @@ fn bop_matches_c_talib() {
 
 #[test]
 fn apo_ppo_match_c_talib() {
-    // matype 0 (SMA), the polars_talib defaults 12/26.
     let f = fixture();
     assert_bit_exact("apo_12_26", &apo(&f.close, 12, 26, 0).expect("apo_12_26"));
     assert_bit_exact("ppo_12_26", &ppo(&f.close, 12, 26, 0).expect("ppo_12_26"));
@@ -597,7 +564,6 @@ fn apo_ppo_match_c_talib() {
 
 #[test]
 fn apo_ppo_matype7_match_c_talib() {
-    // matype 7 (MAMA): both legs are MAMA(0.5, 0.05) — period ignored (ta_MA.c:313-329).
     let f = fixture();
     assert_bit_exact(
         "apo_12_26_type7",
@@ -664,12 +630,10 @@ fn macd_family_matches_c_talib() {
     assert_bit_exact("macd_12_26_9_macd", &m);
     assert_bit_exact("macd_12_26_9_signal", &s);
     assert_bit_exact("macd_12_26_9_hist", &h);
-    // MACDFIX pins 12/26 with the fixed 0.15/0.075 constants (distinct from macd(_,12,26,_)).
     let (m, s, h) = macdfix(&f.close, 9).expect("macdfix");
     assert_bit_exact("macdfix_9_macd", &m);
     assert_bit_exact("macdfix_9_signal", &s);
     assert_bit_exact("macdfix_9_hist", &h);
-    // MACDEXT at the matype-0 (SMA) defaults.
     let (m, s, h) = macdext(&f.close, 12, 0, 26, 0, 9, 0).expect("macdext");
     assert_bit_exact("macdext_12_26_9_macd", &m);
     assert_bit_exact("macdext_12_26_9_signal", &s);
@@ -678,7 +642,6 @@ fn macd_family_matches_c_talib() {
 
 #[test]
 fn macdext_matype7_match_c_talib() {
-    // All-MAMA (7/7/7) and mixed fast=MAMA/slow=SMA/signal=EMA (7/0/1).
     let f = fixture();
     let (m, s, h) = macdext(&f.close, 12, 7, 26, 7, 9, 7).expect("macdext type7");
     assert_bit_exact("macdext_12_26_9_type7_macd", &m);
@@ -700,8 +663,6 @@ fn ma_selector_matches_c_talib() {
 #[test]
 #[allow(clippy::similar_names)] // slowk/slowd, fastk/fastd mirror TA-Lib's output names.
 fn stochastics_match_c_talib() {
-    // polars_talib defaults: STOCH fastk 5 / slowk 3 / slowd 3, STOCHF fastk 5 / fastd 3,
-    // STOCHRSI timeperiod 14 / fastk 5 / fastd 3 (all matype 0 = SMA).
     let f = fixture();
     let (slowk, slowd) = stoch(&f.high, &f.low, &f.close, 5, 3, 0, 3, 0).expect("stoch");
     assert_bit_exact("stoch_slowk", &slowk);
@@ -717,8 +678,6 @@ fn stochastics_match_c_talib() {
 #[test]
 #[allow(clippy::similar_names)] // slowk/slowd, fastk/fastd mirror TA-Lib's output names.
 fn stochastics_matype7_match_c_talib() {
-    // Group G2: matype 7 (MAMA) on stochastic smoothing — all-MAMA, mixed 7/0, and fastd=7.
-    // Lookback composes MA_Lookback(MAMA)=32 when period>1 (ta_MA.c:152-154; ta_STOCH.c family).
     let f = fixture();
     let (slowk, slowd) = stoch(&f.high, &f.low, &f.close, 5, 3, 7, 3, 7).expect("stoch type7");
     assert_bit_exact("stoch_type7_slowk", &slowk);
@@ -737,8 +696,6 @@ fn stochastics_matype7_match_c_talib() {
 #[test]
 #[allow(clippy::similar_names)] // fastk/fastd mirror TA-Lib's output names.
 fn stochastics_flat_guard_branch_matches_c_talib() {
-    // The dead-flat plateau makes highest == lowest, so the raw %K `diff != 0.0` guard fires
-    // (→ 0.0), then the SMA smoothing carries the zeros — bit-exactly as C.
     let f = flat_fixture();
     let (fastk, fastd) = stochf(&f.high, &f.low, &f.close, 5, 3, 0).expect("flat stochf");
     assert_bit_exact("flat_stochf_fastk", &fastk);
@@ -747,8 +704,6 @@ fn stochastics_flat_guard_branch_matches_c_talib() {
 
 #[test]
 fn wg3_flat_guard_branches_match_c_talib() {
-    // The dead-flat plateau decays prevTR to zero: DX re-emits its previous value, and both DI
-    // functions hit the TA_IS_ZERO(prevTR) short-circuit (→ 0.0) — bit-exactly as C.
     let f = flat_fixture();
     assert_bit_exact(
         "flat_dx_14",
@@ -766,9 +721,6 @@ fn wg3_flat_guard_branches_match_c_talib() {
 
 #[test]
 fn wg2_flat_guard_branches_match_c_talib() {
-    // The flat plateau drives each WG2 zero short-circuit that the smooth walk never reaches:
-    // CMO's gain+loss, WILLR's high−low diff, CCI's deviation/MAD, BOP's high−low range, and
-    // ULTOSC's three true-range totals.
     let f = flat_fixture();
     let open = golden("fixture_flat_open");
     assert_bit_exact("flat_cmo_14", &cmo(&f.close, 14).expect("flat cmo"));
@@ -792,8 +744,6 @@ fn wg2_flat_guard_branches_match_c_talib() {
 
 #[test]
 fn flat_plateau_guard_branches_match_c_talib() {
-    // 300 dead-flat bars decay the Wilder accumulators under TA-Lib's 1e-8 epsilon, so the
-    // TA_IS_ZERO / TA_IS_ZERO_OR_NEG branches genuinely execute — bit-exactly as C.
     let f = flat_fixture();
     assert_bit_exact("flat_rsi_3", &rsi(&f.close, 3).expect("flat rsi"));
     assert_bit_exact(
@@ -813,7 +763,6 @@ fn flat_plateau_guard_branches_match_c_talib() {
         "flat_correl_5",
         &correl(&f.high, &f.low, 5).expect("flat correl"),
     );
-    // KAMA's efficiency-ratio zero-guard (TA_IS_ZERO(sumROC1)) fires on the flat plateau.
     assert_bit_exact("flat_kama_10", &kama(&f.close, 10).expect("flat kama"));
     let (upper, middle, lower) = bbands(&f.close, 20, 2.0, 2.0).expect("flat bbands");
     assert_bit_exact("flat_bbands_20_upper", &upper);
@@ -828,7 +777,6 @@ fn natr_and_beta_match_c_talib() {
         "natr_14",
         &natr(&f.high, &f.low, &f.close, 14).expect("natr_14"),
     );
-    // BETA of high vs low — the two-series (CORREL-shaped) golden pairing.
     assert_bit_exact("beta_5", &beta(&f.high, &f.low, 5).expect("beta_5"));
 }
 
@@ -853,15 +801,12 @@ fn price_transforms_match_c_talib() {
 
 #[test]
 fn beta_flat_guard_branch_matches_c_talib() {
-    // The dead-flat plateau zeroes every return, so BETA hits both the TA_IS_ZERO(prevPrice) return
-    // guard and the TA_IS_ZERO denominator guard (→ 0.0) — bit-exactly as C.
     let f = flat_fixture();
     assert_bit_exact("flat_beta_5", &beta(&f.high, &f.low, 5).expect("flat beta"));
 }
 
 #[test]
 fn mama_matches_c_talib() {
-    // MAMA at TA-Lib's default limits (fastlimit 0.5 / slowlimit 0.05), both outputs.
     let f = fixture();
     let (mama_out, fama_out) = mama(&f.close, 0.5, 0.05).expect("mama");
     assert_bit_exact("mama_mama", &mama_out);
@@ -870,8 +815,6 @@ fn mama_matches_c_talib() {
 
 #[test]
 fn mama_flat_guard_branches_match_c_talib() {
-    // On the flat plateau the Hilbert detrender decays, so the atan phase guard (I1 == 0.0 → 0) and
-    // the Re/Im period-adjust guard fire in steady state — bit-exactly as C.
     let f = flat_fixture();
     let (mama_out, fama_out) = mama(&f.close, 0.5, 0.05).expect("flat mama");
     assert_bit_exact("flat_mama_mama", &mama_out);
@@ -882,12 +825,10 @@ fn mama_flat_guard_branches_match_c_talib() {
 fn sar_and_sarext_match_c_talib() {
     let f = fixture();
     assert_bit_exact("sar", &sar(&f.high, &f.low, 0.02, 0.2).expect("sar"));
-    // SAREXT auto default (startvalue 0, symmetric af, no offset) — the NEGATIVE short-side output.
     assert_bit_exact(
         "sarext",
         &sarext(&f.high, &f.low, 0.0, 0.0, 0.02, 0.02, 0.2, 0.02, 0.02, 0.2).expect("sarext"),
     );
-    // Forced-long start (startvalue > 0) + offset-on-reverse + asymmetric long/short accelerations.
     assert_bit_exact(
         "sarext_long_offset",
         &sarext(
@@ -895,7 +836,6 @@ fn sar_and_sarext_match_c_talib() {
         )
         .expect("sarext long offset"),
     );
-    // Forced-short start (startvalue < 0 → |value|).
     assert_bit_exact(
         "sarext_short",
         &sarext(
@@ -913,13 +853,10 @@ fn mavp_matches_c_talib() {
         "mavp",
         &mavp(&f.close, &periods, 5, 20, 0).expect("mavp sma"),
     );
-    // EMA over the variable periods pins C's SHIFTED MA seeding — a full-array per-row MA diverges
-    // here (verified against the oracle), so this case is the guard for the `ma_range` choice.
     assert_bit_exact(
         "mavp_ema",
         &mavp(&f.close, &periods, 5, 20, 1).expect("mavp ema"),
     );
-    // matype 7 (MAMA) ignores the periods entirely → MAMA(0.5, 0.05); pinned against the mama golden.
     assert_bit_exact(
         "mama_mama",
         &mavp(&f.close, &periods, 5, 20, 7).expect("mavp mama"),
@@ -928,11 +865,8 @@ fn mavp_matches_c_talib() {
 
 #[test]
 fn ma_selector_matype7_is_mama_matches_c_talib() {
-    // The `ma()` matype-7 extension: TA_MA routes matype 7 to MAMA(0.5, 0.05), ignoring the period
-    // and discarding FAMA (ta_MA.c:152-154,313-329). `ma_30_type7` is recorded from the oracle.
     let f = fixture();
     assert_bit_exact("ma_30_type7", &ma(&f.close, 30, 7).expect("ma matype 7"));
-    // The period is truly ignored: a different period yields the same MAMA output.
     assert_bit_exact(
         "mama_mama",
         &ma(&f.close, 100, 7).expect("ma matype 7, other period"),

@@ -7,8 +7,7 @@ use tempfile::TempDir;
 
 use crate::AnsiDialect;
 
-/// A13 product path: `register_memory_catalog` + location-less ANSI CREATE lands under the
-/// warehouse, not `<temp>/repark_ansi_ctas`.
+/// A13 product path uses the registration warehouse for location-less ANSI CREATE.
 #[tokio::test]
 async fn register_memory_catalog_location_less_create_lands_under_warehouse() {
     let warehouse_dir = TempDir::new().expect("tempdir");
