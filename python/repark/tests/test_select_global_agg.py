@@ -71,7 +71,7 @@ def test_select_agg_alias(frame: object) -> None:
 
 
 def test_is_aggregate_sticky_on_alias_cast_and_binary() -> None:
-    """Mutation-proof: sticky ``_is_aggregate`` across alias / cast / arithmetic (C1-Q-001)."""
+    """Mutation-proof: sticky ``_is_aggregate`` across alias / cast / arithmetic."""
     bare = F.sum("x")
     assert bare._is_aggregate is True
     assert (bare + 1)._is_aggregate is True
@@ -95,7 +95,7 @@ def test_select_sum_plus_one_is_global_agg(frame: object) -> None:
 
 
 def test_select_cast_sum_is_global_agg(frame: object) -> None:
-    """``select(sum(x).cast("double"))`` is global agg with floating type (C1-Q-001)."""
+    """``select(sum(x).cast("double"))`` is global agg with floating type."""
     table = frame.select(F.sum("x").cast("double").alias("total")).to_arrow()
     assert table.num_rows == 1
     assert table.column_names == ["total"]
@@ -104,7 +104,7 @@ def test_select_cast_sum_is_global_agg(frame: object) -> None:
 
 
 def test_select_sum_with_lit_is_global_agg(frame: object) -> None:
-    """Spark allows foldable constants with aggregates — not ``[MISSING_GROUP_BY]`` (C1-Q-002)."""
+    """Spark allows foldable constants with aggregates — not ``[MISSING_GROUP_BY]``."""
     table = frame.select(F.sum("x"), F.lit(1).alias("one")).to_arrow()
     assert table.num_rows == 1
     row = table.to_pylist()[0]
@@ -113,35 +113,35 @@ def test_select_sum_with_lit_is_global_agg(frame: object) -> None:
 
 
 def test_select_composed_agg_with_bare_column_missing_group_by(frame: object) -> None:
-    """Composed agg + bare col must still raise ``[MISSING_GROUP_BY]`` (C1-L-002)."""
+    """Composed agg + bare col must still raise ``[MISSING_GROUP_BY]``."""
     with pytest.raises(AnalysisException, match=r"MISSING_GROUP_BY") as caught:
         frame.select(F.sum("x") + 1, F.col("id")).collect()
     assert "GROUP BY" in str(caught.value)
 
 
 def test_select_sum_plus_bare_column_missing_group_by(frame: object) -> None:
-    """Nested free attr inside sticky-OR agg expr → ``[MISSING_GROUP_BY]`` (C2-Q-001 / C2-L-001)."""
+    """Nested free attr inside sticky-OR agg expr → ``[MISSING_GROUP_BY]``."""
     with pytest.raises(AnalysisException, match=r"MISSING_GROUP_BY") as caught:
         frame.select(F.sum("x") + F.col("id")).collect()
     assert "GROUP BY" in str(caught.value)
 
 
 def test_select_coalesce_sum_and_bare_missing_group_by(frame: object) -> None:
-    """``coalesce(sum(x), id)`` is mixed free+agg, not pure global (C2-Q-001 / C2-L-001)."""
+    """``coalesce(sum(x), id)`` is mixed free+agg, not pure global."""
     with pytest.raises(AnalysisException, match=r"MISSING_GROUP_BY") as caught:
         frame.select(F.coalesce(F.sum("x"), F.col("id"))).collect()
     assert "GROUP BY" in str(caught.value)
 
 
 def test_select_when_bare_and_sum_missing_group_by(frame: object) -> None:
-    """``when(id > 0, sum(x))`` free condition + agg → ``[MISSING_GROUP_BY]`` (C2-L-001)."""
+    """``when(id > 0, sum(x))`` free condition + agg → ``[MISSING_GROUP_BY]``."""
     with pytest.raises(AnalysisException, match=r"MISSING_GROUP_BY") as caught:
         frame.select(F.when(F.col("id") > 0, F.sum("x")).otherwise(0)).collect()
     assert "GROUP BY" in str(caught.value)
 
 
 def test_select_abs_sum_is_global_agg(frame: object) -> None:
-    """``select(abs(sum(x)))`` is global agg — scalar wrappers keep sticky (C2-Q-002 / C2-L-002)."""
+    """``select(abs(sum(x)))`` is global agg — scalar wrappers keep sticky."""
     table = frame.select(F.abs(F.sum("x")).alias("a")).to_arrow()
     assert table.num_rows == 1
     assert table.column_names == ["a"]
@@ -149,7 +149,7 @@ def test_select_abs_sum_is_global_agg(frame: object) -> None:
 
 
 def test_select_round_sum_is_global_agg(frame: object) -> None:
-    """``select(round(sum(x)))`` is global agg via ``_scalar`` sticky (C2-Q-002)."""
+    """``select(round(sum(x)))`` is global agg via ``_scalar`` sticky."""
     table = frame.select(F.round(F.sum("x")).alias("r")).to_arrow()
     assert table.num_rows == 1
     assert table.column_names == ["r"]
@@ -157,7 +157,7 @@ def test_select_round_sum_is_global_agg(frame: object) -> None:
 
 
 def test_select_sum_with_hostile_count_lit_string(frame: object) -> None:
-    """Foldable lit must not be corrupted by count SQL rewrite (C2-SAF-001)."""
+    """Foldable lit must not be corrupted by count SQL rewrite."""
     table = frame.select(
         F.sum("x"),
         F.lit("count(Int64(1))").alias("token"),
@@ -169,10 +169,10 @@ def test_select_sum_with_hostile_count_lit_string(frame: object) -> None:
 
 
 def test_select_sum_with_nonfinite_float_lit(frame: object) -> None:
-    """Free-SQL global-agg must embed NaN/Inf as CAST floats, not bare identifiers (C6-SAF-002).
+    """Free-SQL global-agg must embed NaN/Inf as CAST floats, not bare identifiers.
 
-    Pre-fix: ``_lit_sql_expr`` used ``repr(float)`` → bare ``nan``/``inf`` which DataFusion
-    treats as column refs (Schema error / binds a column named nan).
+    Bare ``nan``/``inf`` (repr(float)) are treated by DataFusion as column refs (Schema error /
+    binds a column named nan).
     """
     import math
 
@@ -204,7 +204,7 @@ def test_select_sum_with_nonfinite_float_lit(frame: object) -> None:
 
 
 def test_is_aggregate_sticky_on_null_when_coalesce_abs() -> None:
-    """Mutation-proof sticky ``_is_aggregate`` / free-attr on null/when/coalesce/abs (C2-Q-003)."""
+    """Mutation-proof sticky ``_is_aggregate`` / free-attr on null/when/coalesce/abs."""
     bare = F.sum("x")
     free = F.col("id")
     assert bare.is_null()._is_aggregate is True
@@ -223,7 +223,7 @@ def test_is_aggregate_sticky_on_null_when_coalesce_abs() -> None:
     assert F.abs(bare)._has_free_attribute is False
     assert F.round(bare)._is_aggregate is True
     assert F.concat(bare.cast("string"), F.lit("x"))._is_aggregate is True
-    # Free-attribute sticky on bare col compositions (mutation-proof for C2 free bit).
+    # Free-attribute sticky on bare col compositions.
     assert free._has_free_attribute is True
     assert (bare + free)._has_free_attribute is True
     assert (bare + free)._is_aggregate is True
@@ -231,7 +231,7 @@ def test_is_aggregate_sticky_on_null_when_coalesce_abs() -> None:
 
 
 def test_select_sum_compound_with_lit_is_global_agg(frame: object) -> None:
-    """``select(sum(x+1), lit)`` uses structural sql_expr, not Int64 schema_name (C3-Q-001)."""
+    """``select(sum(x+1), lit)`` uses structural sql_expr, not Int64 schema_name."""
     table = frame.select(F.sum(F.col("x") + 1), F.lit(0).alias("z")).to_arrow()
     assert table.num_rows == 1
     row = table.to_pylist()[0]
@@ -240,7 +240,7 @@ def test_select_sum_compound_with_lit_is_global_agg(frame: object) -> None:
 
 
 def test_select_sum_compound_plus_one_and_cast(frame: object) -> None:
-    """``sum(x+1)+1`` / ``cast(sum(x+1))`` stay global-agg via structural sql_expr (C3-001)."""
+    """``sum(x+1)+1`` / ``cast(sum(x+1))`` stay global-agg via structural sql_expr."""
     plus = frame.select((F.sum(F.col("x") + 1) + 1).alias("s")).to_arrow()
     assert plus.num_rows == 1
     assert plus.to_pylist() == [{"s": 64}]
@@ -251,7 +251,7 @@ def test_select_sum_compound_plus_one_and_cast(frame: object) -> None:
 
 
 def test_select_sum_with_current_timestamp_is_global_agg(frame: object) -> None:
-    """``current_timestamp()`` with aggregates is global agg, not MISSING_GROUP_BY (C3-Q-002)."""
+    """``current_timestamp()`` with aggregates is global agg, not MISSING_GROUP_BY."""
     table = frame.select(F.sum("x"), F.current_timestamp().alias("ts")).to_arrow()
     assert table.num_rows == 1
     assert table.column_names == ["sum(x)", "ts"]
@@ -260,7 +260,7 @@ def test_select_sum_with_current_timestamp_is_global_agg(frame: object) -> None:
 
 
 def test_select_sum_with_current_date_is_global_agg(frame: object) -> None:
-    """``current_date()`` companion with aggregates is global agg (C3-Q-002 companion)."""
+    """``current_date()`` companion with aggregates is global agg."""
     table = frame.select(F.sum("x"), F.current_date().alias("d")).to_arrow()
     assert table.num_rows == 1
     assert table.to_pylist()[0]["sum(x)"] == 60
@@ -268,14 +268,14 @@ def test_select_sum_with_current_date_is_global_agg(frame: object) -> None:
 
 
 def test_select_alias_then_arithmetic_is_global_agg(frame: object) -> None:
-    """``sum(x).alias(t)+1`` must not embed intermediate AS into SQL (C3-002)."""
+    """``sum(x).alias(t)+1`` must not embed intermediate AS into SQL."""
     table = frame.select((F.sum("x").alias("t") + 1).alias("s")).to_arrow()
     assert table.num_rows == 1
     assert table.to_pylist() == [{"s": 61}]
 
 
 def test_select_alias_then_cast_is_global_agg(frame: object) -> None:
-    """``sum(x).alias(t).cast("double")`` is CAST(sum) not CAST(... AS t AS DOUBLE) (C3-SAF-001)."""
+    """``sum(x).alias(t).cast("double")`` is CAST(sum) not CAST(... AS t AS DOUBLE)."""
     table = frame.select(F.sum("x").alias("t").cast("double")).to_arrow()
     assert table.num_rows == 1
     assert table.column_names == ["t"]
@@ -284,7 +284,7 @@ def test_select_alias_then_cast_is_global_agg(frame: object) -> None:
 
 
 def test_select_hostile_count_name_does_not_retarget_from(frame: object) -> None:
-    """Quoted count identifier — hostile name must not rewrite FROM (C3-SEC-001)."""
+    """Quoted count identifier — hostile name must not rewrite FROM."""
     hostile = "x) FROM secret --"
     with pytest.raises(Exception) as caught:
         frame.select(F.count(hostile), F.lit(1).alias("one")).collect()
@@ -298,7 +298,7 @@ def test_select_hostile_count_name_does_not_retarget_from(frame: object) -> None
 
 
 def test_select_case_preserved_sum_with_lit(frame: object) -> None:
-    """SQL path rebinds case-preserved ``sum("X")`` like native (C3-003)."""
+    """SQL path rebinds case-preserved ``sum("X")`` like native."""
     preserved = frame.select("X")  # type: ignore[attr-defined]
     via_native = preserved.select(F.sum("X")).to_arrow()
     via_sql = preserved.select(F.sum("X"), F.lit(1).alias("one")).to_arrow()
@@ -310,29 +310,29 @@ def test_select_case_preserved_sum_with_lit(frame: object) -> None:
 
 
 def test_aggregate_structural_sql_expr_quoted() -> None:
-    """Mutation-proof: AF builders carry structural quoted sql_expr (C3-Q-001 / C3-SEC-001)."""
+    """Mutation-proof: AF builders carry structural quoted sql_expr."""
     assert F.sum("x").sql_expr_part() == 'sum("x")'
     assert F.avg("x").sql_expr_part() == 'avg("x")'
     assert F.min("x").sql_expr_part() == 'min("x")'
     assert F.max("x").sql_expr_part() == 'max("x")'
     assert F.count("x").sql_expr_part() == 'count("x")'
     assert F.sum(F.col("x") + 1).sql_expr_part() == 'sum(("x" + 1))'
-    # alias does not embed AS into sql_expr (C3-002).
+    # alias does not embed AS into sql_expr.
     assert F.sum("x").alias("total").sql_expr_part() == 'sum("x")'
     assert (F.sum("x").alias("total") + 1).sql_expr_part() == '(sum("x") + 1)'
     assert F.sum("x").alias("total").cast("double").sql_expr_part() == 'CAST(sum("x") AS DOUBLE)'
-    # current_timestamp is free of attributes / foldable for classifier (C3-Q-002).
+    # current_timestamp is free of attributes / foldable for the classifier.
     ts = F.current_timestamp()
     assert ts._has_free_attribute is False
     assert ts._is_foldable is True
     assert ts._is_aggregate is False
 
 
-# ---- Cycle-4 pins (alias rebind / batch-4 sql_expr / IGNORE NULLS / sticky wrappers) ----------
+# ---- alias rebind / batch-4 sql_expr / IGNORE NULLS / sticky wrappers -------------------------
 
 
 def test_select_case_preserved_sum_alias_and_alias_lit(frame: object) -> None:
-    """``.alias`` clears ``_agg_name`` but rebind still binds case-preserved leaves (C4-Q-001)."""
+    """``.alias`` clears ``_agg_name`` but rebind still binds case-preserved leaves."""
     preserved = frame.select("X")  # type: ignore[attr-defined]
     pure = preserved.select(F.sum("X").alias("total")).to_arrow()
     assert pure.num_rows == 1
@@ -345,7 +345,7 @@ def test_select_case_preserved_sum_alias_and_alias_lit(frame: object) -> None:
 
 
 def test_select_batch4_af_sql_expr_and_case_preserved(frame: object) -> None:
-    """Batch-4 AFs: structural sql_expr + rebind allowlist (C4-Q-002 / C4-SEC-001 / C4-L-002)."""
+    """Structural sql_expr + rebind allowlist for the batch-4 AFs."""
     assert F.stddev("x").sql_expr_part() == 'stddev("x")'
     assert F.variance("x").sql_expr_part() == 'var_samp("x")'
     assert F.median("x").sql_expr_part() == 'median("x")'
@@ -363,7 +363,7 @@ def test_select_batch4_af_sql_expr_and_case_preserved(frame: object) -> None:
     via_sql = preserved.select(F.stddev("X"), F.lit(0).alias("z")).to_arrow()
     assert pure.num_rows == via_sql.num_rows == 1
     assert pure.to_pylist()[0]["stddev(X)"] == via_sql.to_pylist()[0]["stddev(X)"]
-    # Hostile identifier stays quoted (C4-SEC-001).
+    # Hostile identifier stays quoted.
     hostile = "x) FROM secret --"
     assert F.stddev(hostile).sql_expr_part() == f'stddev("{hostile}")'
     with pytest.raises(Exception) as caught:
@@ -374,7 +374,7 @@ def test_select_batch4_af_sql_expr_and_case_preserved(frame: object) -> None:
 
 
 def test_select_asc_preserves_sql_expr() -> None:
-    """``Column.asc``/``desc`` keep structural sql_expr (C4-SEC-002)."""
+    """``Column.asc``/``desc`` keep structural sql_expr."""
     bare = F.sum("x")
     assert bare.asc().sql_expr_part() == 'sum("x")'
     assert bare.desc().sql_expr_part() == 'sum("x")'
@@ -385,7 +385,7 @@ def test_select_asc_preserves_sql_expr() -> None:
 
 
 def test_select_first_ignorenulls_sql_path(spark: ReparkSession) -> None:
-    """``first/last(ignorenulls=True)`` free-SQL global-agg value parity (C4-L-001 / C5-Q-003)."""
+    """``first/last(ignorenulls=True)`` free-SQL global-agg value parity."""
     source = spark.createDataFrame([(None,), (20,), (30,)], ["v"])
     assert F.first("v", ignorenulls=True).sql_expr_part() == 'first_value("v") IGNORE NULLS'
     assert F.last("v", ignorenulls=True).sql_expr_part() == 'last_value("v") IGNORE NULLS'
@@ -397,7 +397,7 @@ def test_select_first_ignorenulls_sql_path(spark: ReparkSession) -> None:
     assert via_sql.to_pylist()[0]["first(v)"] == via_native.to_pylist()[0]["first(v)"] == 20
     casted = source.select(F.first("v", ignorenulls=True).cast("int").alias("f")).to_arrow()
     assert casted.to_pylist() == [{"f": 20}]
-    # last value pin: SQL + pure native both skip leading NULL to 30 (C5-Q-003).
+    # last value pin: SQL + pure native both skip leading NULL to 30.
     last_sql = source.select(F.last("v", ignorenulls=True), F.lit(1).alias("one")).to_arrow()
     last_native = source.agg(F.last("v", ignorenulls=True)).to_arrow()
     last_pure = source.select(F.last("v", ignorenulls=True)).to_arrow()
@@ -406,11 +406,11 @@ def test_select_first_ignorenulls_sql_path(spark: ReparkSession) -> None:
 
 
 def test_select_collect_list_sql_nulls_and_empty(spark: ReparkSession) -> None:
-    """``collect_list/set`` SQL path excludes nulls and empty→[] (C4-L-002 / C5-Q-002)."""
+    """``collect_list/set`` SQL path excludes nulls and empty→[]."""
     assert "IGNORE NULLS" in F.collect_list("x").sql_expr_part()
     assert "make_array()" in F.collect_list("x").sql_expr_part()
     # collect_set uses array_distinct(array_agg … IGNORE NULLS) — DF DISTINCT+IGNORE NULLS
-    # keeps NULL (C5-Q-002).
+    # keeps NULL.
     set_sql = F.collect_set("x").sql_expr_part()
     assert "array_distinct" in set_sql
     assert "IGNORE NULLS" in set_sql
@@ -435,7 +435,7 @@ def test_select_collect_list_sql_nulls_and_empty(spark: ReparkSession) -> None:
 
 
 def test_select_isnull_and_date_family_sticky(frame: object, spark: ReparkSession) -> None:
-    """``isnull`` / date_* keep free+agg sticky for select routing (C4-L-003)."""
+    """``isnull`` / date_* keep free+agg sticky for select routing."""
     free = F.col("id")
     bare = F.sum("x")
     assert F.isnull(free)._has_free_attribute is True
@@ -462,7 +462,7 @@ def test_select_isnull_and_date_family_sticky(frame: object, spark: ReparkSessio
     wrapped = dated.select(F.date_add(F.max("d"), 1).alias("next")).to_arrow()
     assert wrapped.num_rows == 1
     assert wrapped.to_pylist() == [{"next": date(2024, 1, 16)}]
-    # Mutation-proof sticky on the rest of the date family named in C4-L-003.
+    # Mutation-proof sticky on the rest of the date family.
     assert F.add_months(F.col("d"), 1)._has_free_attribute is True
     assert F.date_format(F.col("d"), "yyyy")._has_free_attribute is True
     assert F.trunc(F.col("d"), "month")._has_free_attribute is True
@@ -472,7 +472,7 @@ def test_select_isnull_and_date_family_sticky(frame: object, spark: ReparkSessio
 
 
 def test_select_case_preserved_rebind_extended_afs(spark: ReparkSession) -> None:
-    """Pure native rebind covers first/last/collect_*/count_distinct/corr (C5-Q-001 / C5-L-002).
+    """Pure native rebind covers first/last/collect_*/count_distinct/corr.
 
     After ``select("X")`` the field is case-preserved; unquoted AF leaves fail without rebind.
     Pure ``select(AF)`` (native path) must match lit-companion SQL path and ``agg``.
@@ -511,7 +511,7 @@ def test_select_case_preserved_rebind_extended_afs(spark: ReparkSession) -> None
 
 
 def test_select_count_distinct_multi_sql_null_if_any(spark: ReparkSession) -> None:
-    """Multi-col ``count_distinct`` free-SQL path keeps null-if-any pack (C5-L-001).
+    """Multi-col ``count_distinct`` free-SQL path keeps null-if-any pack.
 
     Fixture: ``(1,NULL),(1,1),(1,1),(NULL,2),(2,2)`` → count 2 (tuples ``(1,1)`` and ``(2,2)``).
     SQL path (lit companion) must match pure native / ``agg``, not bare multi-arg COUNT DISTINCT.
@@ -543,14 +543,14 @@ def test_select_count_distinct_multi_sql_null_if_any(spark: ReparkSession) -> No
     assert multi_sql.to_pylist()[0]["count(DISTINCT A, B)"] == 2
 
 
-# ---- Cycle-6 pins (free-OR scalar/concat, pure_global vs window, compound rebind) ------------
+# ---- free-OR scalar/concat, pure_global vs window, compound rebind ----------------------------
 
 
 def test_select_free_scalar_concat_greatest_missing_group_by(frame: object) -> None:
     """Free (non-agg) args through ``_scalar``/``concat``/``greatest`` → MISSING_GROUP_BY.
 
-    Mutation-proof for free-OR on builders (octo C6-Q-001): deleting
-    ``has_free_attribute=any(...)`` must fail these select-boundary pins, not only metadata.
+    Mutation-proof for free-OR on builders: deleting ``has_free_attribute=any(...)`` must fail
+    these select-boundary pins, not only metadata.
     """
     free_upper = F.upper(F.col("id"))
     free_concat = F.concat(F.col("id").cast("string"), F.lit("x"))
@@ -579,7 +579,7 @@ def test_select_free_scalar_concat_greatest_missing_group_by(frame: object) -> N
 
 
 def test_select_sum_with_window_over_missing_group_by(frame: object) -> None:
-    """``select(sum, row_number().over(...))`` must not take pure_global SQL (C6-L-001).
+    """``select(sum, row_number().over(...))`` must not take pure_global SQL.
 
     Window ``.over`` clears agg/free/foldable; pure_global = all(¬free) alone mis-routed
     into global-agg SQL. Predicate requires aggregate|foldable + not free.
@@ -601,7 +601,7 @@ def test_select_sum_with_window_over_missing_group_by(frame: object) -> None:
 
 
 def test_select_case_preserved_sum_compound_pure_and_sql(frame: object) -> None:
-    """Case-preserved ``sum(col(X)+1)`` pure ≡ SQL lit-companion path (C6-L-002).
+    """Case-preserved ``sum(col(X)+1)`` pure ≡ SQL lit-companion path.
 
     Nested structural sql_expr forces free-SQL (native rebind is simple-name only).
     """
@@ -622,7 +622,7 @@ def test_select_case_preserved_sum_compound_pure_and_sql(frame: object) -> None:
 
 
 def test_select_pure_collect_set_excludes_nulls(spark: ReparkSession) -> None:
-    """Pure ``select(collect_set)`` excludes nulls like SQL/agg paths (C6-L-003)."""
+    """Pure ``select(collect_set)`` excludes nulls like SQL/agg paths."""
     with_nulls = spark.createDataFrame([(None,), (20,), (None,), (30,), (20,)], ["v"])
     pure = with_nulls.select(F.collect_set("v")).to_arrow()
     via_sql = with_nulls.select(F.collect_set("v"), F.lit(1).alias("one")).to_arrow()
@@ -636,11 +636,10 @@ def test_select_pure_collect_set_excludes_nulls(spark: ReparkSession) -> None:
 
 
 def test_polars_sort_key_preserves_sql_expr(frame: object) -> None:
-    """``polars._sort_key`` keeps structural sql_expr + generator sticky (C6-Q-002).
+    """``polars._sort_key`` keeps structural sql_expr + generator sticky.
 
-    Pre-fix: only sql_expr was copied; ``_generator``/``_generator_cast`` were stripped
-    while Column.asc/desc keep them — hollow pin for generator refuse on pl.sort /
-    orderBy after sort-key wrapping (combine octo C6-Q-002).
+    Only copying sql_expr strips ``_generator``/``_generator_cast`` while Column.asc/desc keep
+    them — a hollow pin for generator refuse on pl.sort / orderBy after sort-key wrapping.
     """
     from repark.spark.polars import _sort_key
 
@@ -668,11 +667,11 @@ def test_polars_sort_key_preserves_sql_expr(frame: object) -> None:
         frame.pl.sort(F.explode(F.col("a"))).spark.collect()
 
 
-# ---- Cycle-7 pins (rand non-foldable; sticky ungroupable for nested window) --------------------
+# ---- rand non-foldable; sticky ungroupable for nested window -----------------------------------
 
 
 def test_select_sum_with_rand_missing_group_by(frame: object) -> None:
-    """``select(sum, rand)`` must not pure_global — Rand is non-foldable (C7-L-001).
+    """``select(sum, rand)`` must not pure_global — Rand is non-foldable.
 
     Mutation-proof: vacuous ``all([])`` in ``_scalar`` must not mark nullary random foldable.
     Foldable companions (lit / current_date) still allowed so the fix is not over-tight.
@@ -682,7 +681,7 @@ def test_select_sum_with_rand_missing_group_by(frame: object) -> None:
     assert rand_col._is_aggregate is False
     assert rand_col._has_free_attribute is False
     assert rand_col._has_ungroupable is True
-    # current_date remains foldable after vacuous-all fix (explicit foldable=True).
+    # current_date is explicitly foldable=True.
     assert F.current_date()._is_foldable is True
     with pytest.raises(AnalysisException, match=r"MISSING_GROUP_BY") as caught:
         frame.select(F.sum("x"), rand_col.alias("r")).collect()
@@ -701,10 +700,10 @@ def test_select_sum_with_rand_missing_group_by(frame: object) -> None:
 
 
 def test_select_nested_window_with_aggregate_missing_group_by(frame: object) -> None:
-    """Nested window∘aggregate must raise ``[MISSING_GROUP_BY]`` (C7-L-002).
+    """Nested window∘aggregate must raise ``[MISSING_GROUP_BY]``.
 
-    C6 only fixed list-level ``select(sum, window)``. Sticky ``_has_ungroupable`` from
-    ``.over`` OR-propagates through binary / coalesce / when so nested composition cannot
+    List-level ``select(sum, window)`` is pinned elsewhere; sticky ``_has_ungroupable`` from
+    ``.over`` must OR-propagate through binary / coalesce / when so nested composition cannot
     pure_global via sticky ``_is_aggregate`` alone.
     """
     from repark.spark.window import Window
@@ -732,16 +731,16 @@ def test_select_nested_window_with_aggregate_missing_group_by(frame: object) -> 
     with pytest.raises(AnalysisException, match=r"MISSING_GROUP_BY") as caught_when:
         frame.select(when_col.alias("s")).collect()
     assert "GROUP BY" in str(caught_when.value)
-    # List-level window companion still raises (C6-L-001 regression guard).
+    # List-level window companion still raises (regression guard).
     with pytest.raises(AnalysisException, match=r"MISSING_GROUP_BY"):
         frame.select(F.sum("x"), windowed).collect()
 
 
 def test_select_generator_plus_aggregate_missing_group_by(spark: ReparkSession) -> None:
-    """Generator sibling of sticky aggregate refuses before unnest (combine octo C1-Q-002).
+    """Generator sibling of sticky aggregate refuses before unnest.
 
-    Cross-unit pin with R-EXPLODE-REWRITE: aggregate classification must run before the
-    generator short-circuit so ``select(explode, sum)`` never mid-projects aggregates.
+    Aggregate classification must run before the generator short-circuit so
+    ``select(explode, sum)`` never mid-projects aggregates.
     """
     frame = spark.sql(
         """
@@ -752,22 +751,22 @@ def test_select_generator_plus_aggregate_missing_group_by(spark: ReparkSession) 
     with pytest.raises(AnalysisException, match=r"MISSING_GROUP_BY") as caught:
         frame.select(F.explode(frame.a).alias("e"), F.sum("x").alias("total")).collect()
     assert "GROUP BY" in str(caught.value)
-    # Alias / cast sticky aggregate still classified (mutation-proof with F1 sticky bits).
+    # Alias / cast sticky aggregate still classified.
     sticky = F.sum("x").alias("total").cast("double")
     assert sticky._is_aggregate is True
     with pytest.raises(AnalysisException, match=r"MISSING_GROUP_BY"):
         frame.select(F.explode(frame.a).alias("e"), sticky).collect()
 
 
-# ---- Combine cycle-3 pins (rebind sort sticky / withColumns refuse aggregate) ----------------
+# ---- rebind sort sticky / withColumns refuse aggregate -----------------------------------------
 
 
 def test_grouping_col_sql_quotes_hostile_string_keys(spark: ReparkSession) -> None:
-    """CUBE/ROLLUP/GROUPING SETS str keys use _quote_ident (combine octo C4-SEC-001).
+    """CUBE/ROLLUP/GROUPING SETS str keys use _quote_ident.
 
-    Pre-fix: non-identifier keys used f'\"{item}\"' without doubling embedded quotes, so
-    ``a\") UNION ALL SELECT 1 --`` broke out of free-SQL GROUP BY. Mutation that reverts to
-    naive quoting fails the doubled-quote pin and/or injection refuse.
+    Naive f'"{item}"' quoting does not double embedded quotes, so ``a") UNION ALL SELECT 1 --``
+    breaks out of free-SQL GROUP BY. Reverting to naive quoting fails the doubled-quote pin
+    and/or the injection refuse.
     """
     from repark.spark._idents import quote_ident as _quote_ident
 
@@ -800,7 +799,7 @@ def test_grouping_col_sql_quotes_hostile_string_keys(spark: ReparkSession) -> No
 
 
 def test_rebind_sort_marker_preserves_sticky_bits(spark: ReparkSession) -> None:
-    """``_rebind_stable_name_column`` sort branch keeps sql_expr/AF/generator (C3-Q-001).
+    """``_rebind_stable_name_column`` sort branch keeps sql_expr/AF/generator.
 
     ``Column.asc`` preserves sticky bits; rebind at select/group/order must not drop them.
     Reserved name ``order`` must stay quoted for cube free-SQL SELECT.
@@ -849,7 +848,7 @@ def test_rebind_sort_marker_preserves_sticky_bits(spark: ReparkSession) -> None:
 
 
 def test_with_columns_pure_aggregate_refused(frame: object) -> None:
-    """``withColumns({x: sum(x)})`` must not pure_global collapse N→1 (combine octo C3-001).
+    """``withColumns({x: sum(x)})`` must not pure_global collapse N→1.
 
     Spark rejects aggregates in withColumn/withColumns; global agg stays on select/agg.
     """

@@ -71,9 +71,7 @@ def _maybe_live_spark():
         pytest.skip(f"live pyspark unavailable: {error}")
 
 
-# ---------------------------------------------------------------------------
-# LinearRegression — must-land
-# ---------------------------------------------------------------------------
+# LinearRegression
 
 
 def test_linear_regression_perfect_line() -> None:
@@ -211,9 +209,7 @@ def test_solver_divergence_pin_documented() -> None:
     assert "pinv" in lowered or "pseudo" in lowered or "ridge" in lowered
 
 
-# ---------------------------------------------------------------------------
-# Evaluators — merge bar requires ≥1
-# ---------------------------------------------------------------------------
+# Evaluators
 
 
 def test_regression_evaluator_empty_dataset_loud() -> None:
@@ -728,9 +724,7 @@ def test_binary_accuracy() -> None:
         spark.stop()
 
 
-# ---------------------------------------------------------------------------
-# Logistic + KMeans (ship if green; clean STOP still mergeable)
-# ---------------------------------------------------------------------------
+# Logistic + KMeans
 
 
 def test_logistic_regression_separable() -> None:
@@ -786,9 +780,7 @@ def test_kmeans_random_init_two_blobs() -> None:
         spark.stop()
 
 
-# ---------------------------------------------------------------------------
 # Live PySpark parity (1e-6 rel) — skip without JVM
-# ---------------------------------------------------------------------------
 
 
 def test_linear_regression_live_pyspark_parity() -> None:
@@ -835,9 +827,7 @@ def test_linear_regression_live_pyspark_parity() -> None:
         spark.stop()
 
 
-# ---------------------------------------------------------------------------
 # Grep-gate helpers (import surface)
-# ---------------------------------------------------------------------------
 
 
 def test_no_numpy_import_in_ml_fit_modules() -> None:

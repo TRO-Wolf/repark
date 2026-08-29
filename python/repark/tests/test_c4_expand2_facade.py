@@ -1,8 +1,8 @@
 """C4 expand2 — facade pins for repartition* validation + fillna errorClass + AssertionError.
 
 Apache cohort: ``test_repartition`` / ``test_stat`` fillna EC tails; ``PySparkAssertionError``
-identity for ``check_error`` after the errors overlay (hour-0 FAIL-ERROR-CLASS x5 in
-``test_utils``). Single-node no-op bodies stay disclosed — multi-partition routing is a seed.
+identity for ``check_error`` after the errors overlay. Single-node no-op bodies stay
+disclosed — multi-partition routing is a seed.
 """
 
 from __future__ import annotations
@@ -28,9 +28,7 @@ def spark() -> ReparkSession:
     _reset_active_session_for_tests()
 
 
-# ==================================================================================================
 # PySparkAssertionError (check_error / assert*equal overlay)
-# ==================================================================================================
 
 
 def test_pyspark_assertion_error_is_pyspark_exception() -> None:
@@ -72,9 +70,7 @@ def test_pyspark_assertion_error_preserves_none_message_parameter() -> None:
     assert params["arg_name"] == "actual"
 
 
-# ==================================================================================================
 # repartition / repartitionByRange / repartitionById
-# ==================================================================================================
 
 
 def test_repartition_list_num_partitions_error_class(spark: ReparkSession) -> None:
@@ -173,9 +169,7 @@ def test_repartition_by_id_non_int_column_raises(spark: ReparkSession) -> None:
         frame.repartitionById(5, F.col("s")).collect()
 
 
-# ==================================================================================================
 # fillna errorClass (Apache test_fillna tails)
-# ==================================================================================================
 
 
 def test_fillna_list_value_error_class(spark: ReparkSession) -> None:

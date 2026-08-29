@@ -1,4 +1,4 @@
-"""G1 census r4 — DataFrame.stat family + UPDATE/DELETE expander e2e pins.
+"""G1 — DataFrame.stat family + UPDATE/DELETE expander e2e pins.
 
 Apache FAIL-MISSING TOP-1 family (blocked-count 4): ``df.stat.corr/cov/crosstab/sampleBy``.
 Expander UPDATE/DELETE unit pins live in ``test_f1_sql_expander.py``; this file owns the
@@ -176,9 +176,7 @@ def test_e2e_bare_update_delete_public_sql(spark: ReparkSession) -> None:
     assert rows == [{"id": 1, "name": "z"}, {"id": 3, "name": "c"}]
 
 
-# ---------------------------------------------------------------------------
 # Group H attempt — SubqueryAlias both join sides (partial)
-# ---------------------------------------------------------------------------
 
 
 def test_group_h_self_join_on_name(spark: ReparkSession) -> None:
@@ -241,9 +239,7 @@ def test_join_empty_on_list_respects_cross_join_gate(spark: ReparkSession) -> No
     assert left.join(right, []).count() == 4
 
 
-# ---------------------------------------------------------------------------
-# === r20 H1: join/identity === (extends G1 Group H attempt)
-# ---------------------------------------------------------------------------
+# H1: join/identity (extends the Group H attempt)
 
 
 def test_h1_condition_join_duplicate_nonkey(spark: ReparkSession) -> None:

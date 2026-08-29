@@ -1,27 +1,12 @@
 """FN-SPLIT identity: ``functions.__all__`` is unchanged and every name resolves.
 
-Relocation discipline (docs/testing.md): this began as a declared move-only split. The
-``__all__`` tuple is the surface pin. FN-C/D/E/F/W/GT1/GT2 deliberately grow the pin - each
-batch's names are declared in its PR body.
+The ``__all__`` tuple is the surface pin (relocation discipline, docs/testing.md).
 """
 
 from __future__ import annotations
 
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
 
-# Moved 2026-08-15 with FN-C, unioned with FN-D/E/F/W at SQM (was 253 on freeze cd0db4f).
-# Moved 2026-08-20 with FNP-2: 333 -> 338, adding asc_nulls_last, column, desc_nulls_first,
-# negate, session_user. Declared in the PR body per the discipline above.
-# Moved 2026-08-20 with FNP-3: 338 -> 339, adding sha (Spark's older spelling of sha1).
-# Moved 2026-08-20 with FNP-4a: 339 -> 340, adding exists (the first higher-order function).
-# Moved 2026-08-20 with FNP-5: 340 -> 353, adding the nine regr_*, grouping,
-# approx_count_distinct, listagg and string_agg.
-# Moved 2026-08-20 with FNP-6a: 353 -> 355, adding regexp_extract_all and regexp_substr
-# (the campaign's first NEW kernels).
-# Moved 2026-08-20 with FNP-6b: 355 -> 357, adding randstr and uniform over the
-# XORShiftRandom rand/randn already use.
-# Moved 2026-08-20 with FNP-6c: 357 -> 360, adding validate_utf8, try_validate_utf8
-# and assert_true.
 _PRE_SPLIT_ALL: tuple[str, ...] = (
     "PandasUDFType",
     "PythonUDFColumn",

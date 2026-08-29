@@ -1,10 +1,6 @@
 """I6 / R-ALTER-TABLE — Spark ALTER TABLE schema evolution facade pins.
 
-READY core: ADD/DROP/RENAME COLUMN + SET/UNSET TBLPROPERTIES (already landed).
-Stretch: TYPE widen with narrow-refuse twin; DROP NOT NULL.
 Tests use fully-qualified ``catalog.ns.table`` only (F1 — no bare-name dependency).
-
-Schema-equality + read-after: added→NULL, rename→data intact / field-id.
 """
 
 from __future__ import annotations

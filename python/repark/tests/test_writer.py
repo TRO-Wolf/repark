@@ -39,9 +39,7 @@ def _source(spark: ReparkSession, rows: str) -> object:
     return spark.sql(f"SELECT * FROM (VALUES {rows}) AS t(id, name)")
 
 
-# ==================================================================================================
 # E6 — saveAsTable: create / append / overwrite / error / ignore
-# ==================================================================================================
 
 
 def test_save_as_table_creates_via_ctas(spark: ReparkSession) -> None:
@@ -89,9 +87,7 @@ def test_save_as_table_ignore_mode_is_noop_on_existing(spark: ReparkSession) -> 
     assert _read(spark) == [{"id": 1, "name": "a"}], "ignore leaves the existing table untouched"
 
 
-# ==================================================================================================
 # E6 — insertInto (position-based) + partitionBy
-# ==================================================================================================
 
 
 def test_insert_into_is_position_based(spark: ReparkSession) -> None:
@@ -107,9 +103,7 @@ def test_insert_into_overwrite(spark: ReparkSession) -> None:
     assert _read(spark) == [{"id": 9, "name": "z"}]
 
 
-# ==================================================================================================
 # E6/R1 — saveAsTable resolves columns BY NAME (append/overwrite), unlike positional insertInto
-# ==================================================================================================
 
 
 def _read2(spark: ReparkSession, table: str) -> pa.Table:
@@ -120,13 +114,12 @@ def _read2(spark: ReparkSession, table: str) -> pa.Table:
 def test_parity_save_as_table_append_resolves_by_name(spark: ReparkSession) -> None:
     """R1 (S1 — the transposition bug): append into an existing table resolves columns BY NAME.
 
-    The judges proved the old positional ``INSERT INTO … SELECT *`` silently TRANSPOSES a reordered
-    same-typed frame into the persisted table. PySpark ``DataFrameWriter.saveAsTable`` resolves by
-    name (its docs: unlike ``insertInto``). Recorded from live PySpark 4.1.2 (Java 17): creating
-    ``t(a,b)`` from ``[(1,10)]`` then appending a frame whose columns are spelled ``(b, a)`` with
-    values ``(20, 2)`` yields rows ``[{a:1,b:10}, {a:2,b:20}]`` — ``a`` gets 2 and ``b`` gets 20
-    (by NAME), NOT a=20 / b=2 (position).
-    Both columns are ``bigint``. repark now agrees (both engines), pinned on value AND Arrow type.
+    Positional ``INSERT INTO … SELECT *`` silently TRANSPOSES a reordered same-typed frame;
+    PySpark ``DataFrameWriter.saveAsTable`` resolves by name (its docs: unlike ``insertInto``).
+    Recorded from live PySpark 4.1.2 (Java 17): creating ``t(a,b)`` from ``[(1,10)]`` then
+    appending a frame whose columns are spelled ``(b, a)`` with values ``(20, 2)`` yields rows
+    ``[{a:1,b:10}, {a:2,b:20}]`` — ``a`` gets 2 and ``b`` gets 20 (by NAME), NOT a=20 / b=2
+    (position). Both columns are ``bigint``. repark agrees; pinned on value AND Arrow type.
     """
     table = "glue_catalog.writer_ns.byname"
     spark.createDataFrame([(1, 10)], ["a", "b"]).write.saveAsTable(table)
@@ -155,9 +148,8 @@ def test_parity_save_as_table_overwrite_resolves_by_name(spark: ReparkSession) -
 def test_parity_save_as_table_append_case_insensitive_by_name(spark: ReparkSession) -> None:
     """Audit BUG-007: saveAsTable by-name conform is case-insensitive (Spark caseSensitive=false).
 
-    Target columns ``a``/``b``; source frame spells ``A``/``B``. Pre-fix the exact-set match
-    refused; post-fix the values land by casefold name (positional SELECT uses source names
-    in target order).
+    Target columns ``a``/``b``; source frame spells ``A``/``B`` — values land by casefold name
+    (positional SELECT uses source names in target order).
     """
     table = "glue_catalog.writer_ns.byname_ci"
     spark.createDataFrame([(1, 10)], ["a", "b"]).write.saveAsTable(table)
@@ -232,9 +224,7 @@ def test_save_as_table_partition_by(spark: ReparkSession) -> None:
     assert only_a == [{"id": 1}, {"id": 3}]
 
 
-# ==================================================================================================
 # E6/E8 — format / mode validation (reject loudly)
-# ==================================================================================================
 
 
 def test_format_rejects_non_iceberg_for_save_as_table(spark: ReparkSession) -> None:
@@ -254,8 +244,7 @@ def test_mode_rejects_invalid(spark: ReparkSession) -> None:
     # Group X (Critic F5): the CLASS is AnalysisException, not ValueError. Live pyspark 4.0.0
     # rejects an unknown save mode JVM-side with `[INVALID_SAVE_MODE] The specified save mode
     # "bogus" is invalid…` — an AnalysisException — so this is NOT Python-side arg validation and
-    # must not be a PySpark*Error wrapper. This pin used to assert `ValueError`, codifying the
-    # divergence; flipped in the same commit as the fix (the Group S discipline).
+    # must not be a PySpark*Error wrapper.
     # MUTATION: revert the one-line raise in `DataFrameWriter.mode` to PySparkValueError → RED
     # (facade-side, so no maturin rebuild is needed to reproduce).
     with pytest.raises(AnalysisException, match="mode must be one of") as raised:
@@ -269,9 +258,7 @@ def test_mode_rejects_invalid(spark: ReparkSession) -> None:
     assert not isinstance(raised.value, ValueError)
 
 
-# ==================================================================================================
 # C1-SEC-001 — writer table-name identifier injection (quote + reject SQL fragments)
-# ==================================================================================================
 
 
 def test_save_as_table_rejects_sql_fragment_name(spark: ReparkSession) -> None:

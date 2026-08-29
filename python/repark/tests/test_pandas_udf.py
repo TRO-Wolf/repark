@@ -227,7 +227,6 @@ def test_pandas_udf_lazy_until_action(spark: SparkSession, monkeypatch: pytest.M
 
     monkeypatch.setattr(DataFrame, "to_arrow", tracking_to_arrow)
 
-    # withColumn pass-through path also needed physical types historically via limit(0).
     out = frame.withColumn("y", counted(col("x")))
     # schema / columns must not run the UDF (mapInArrow placeholder contract).
     assert out.columns == ["x", "y"]
@@ -247,8 +246,7 @@ def test_pandas_udf_bridge_defers_pandas_import() -> None:
     """pandas import lives inside the mapInArrow callback, not at select entry (octo C6-Q-001).
 
     MUTATION: move ``import pandas as pd`` into ``_select_with_pandas_udfs`` (plan time)
-    → this pin fails red. PYC-1 lifted the callback to ``udf_bridge``; the contract is
-    still plan-time vs action-time, not the nested-def spelling.
+    → this pin fails red.
     """
     import inspect
 
@@ -337,19 +335,16 @@ def test_pandas_udf_wrong_length_loud(spark: SparkSession) -> None:
 def test_pandas_udf_composition_refused(spark: SparkSession) -> None:
     """Composition limit: every Column-parity dunder/method refuses UOE (not TypeError).
 
-    octo C5-Q-001: pin beyond +/>/cast so deleting ``__mul__`` / ``.over`` / reflected
-    ops cannot stay green. octo C5-Q-002: ``__neg__`` / ``__pow__`` / ``__rpow__`` /
-    ``__rmod__`` / ``__rand__`` / ``__ror__`` must raise UnsupportedOperationException
-    (M5-class composition seed), not bare TypeError from a missing dunder.
-    octo C7-Q-002: Column methods ``isNull`` / ``between`` / ``when`` / ``asc`` /
-    ``__contains__`` / string preds / bitwise must raise UOE, not AttributeError.
+    octo C5-Q-001: pin beyond +/>/cast so deleting ``__mul__`` / ``.over`` / reflected ops
+    cannot stay green. octo C5-Q-002: power/unary/reflected dunders must raise UOE, not
+    TypeError from a missing dunder. octo C7-Q-002: Column methods (``isNull`` /
+    ``between`` / ``when`` / string preds / bitwise) must raise UOE, not AttributeError.
     """
     marker = double_long(col("x"))
     match = r"mid-expression|projection-rewrite"
 
-    # Binary arithmetic (+ reflected via scalar left so PandasUDFColumn.__r* runs —
-    # lit(1)+marker hits Column.__add__ first and never reaches the marker).
-    # C5-Q-001 mutates if __mul__/__mod__/__rmod__ deleted.
+    # Binary arithmetic (+ reflected via scalar left so PandasUDFColumn.__r* runs;
+    # lit(1)+marker hits Column.__add__ first). C5-Q-001 mutates on __mul__ deletion.
     with pytest.raises(UnsupportedOperationException, match=match):
         _ = marker + lit(1)
     with pytest.raises(UnsupportedOperationException, match=match):
@@ -371,7 +366,7 @@ def test_pandas_udf_composition_refused(spark: SparkSession) -> None:
     with pytest.raises(UnsupportedOperationException, match=match):
         _ = 2 % marker
 
-    # Power + unary (were TypeError before C5-Q-002).
+    # Power + unary (C5-Q-002: must be UOE, not TypeError).
     with pytest.raises(UnsupportedOperationException, match=match):
         _ = marker**2
     with pytest.raises(UnsupportedOperationException, match=match):
@@ -393,7 +388,7 @@ def test_pandas_udf_composition_refused(spark: SparkSession) -> None:
     with pytest.raises(UnsupportedOperationException, match=match):
         _ = marker != 0
 
-    # Logical (+ reflected; reflected were TypeError before C5-Q-002).
+    # Logical (+ reflected; reflected must be UOE, not TypeError — C5-Q-002).
     with pytest.raises(UnsupportedOperationException, match=match):
         _ = marker & True
     with pytest.raises(UnsupportedOperationException, match=match):
@@ -417,7 +412,7 @@ def test_pandas_udf_composition_refused(spark: SparkSession) -> None:
     with pytest.raises(AnalysisException, match=r"GROUPED_AGG|functionType"):
         marker.over(Window.partitionBy("x"))
 
-    # Column-parity methods (AttributeError before C7-Q-002).
+    # Column-parity methods (must be UOE, not AttributeError — C7-Q-002).
     with pytest.raises(UnsupportedOperationException, match=match):
         marker.isNull()
     with pytest.raises(UnsupportedOperationException, match=match):
@@ -464,7 +459,6 @@ def test_pandas_udf_grouped_map_window_loud() -> None:
     """GROUPED_MAP / window remain loud M6 seeds; SCALAR_ITER + GROUPED_AGG build (M5).
 
     octo C7-L-001 / C8-Q-001: functionType-first routes must not fall through to SCALAR.
-    M5 implements SCALAR_ITER + GROUPED_AGG; only GROUPED_MAP (and window tag) stay refused.
     """
     with pytest.raises(UnsupportedOperationException, match="M6-class"):
 
@@ -991,9 +985,7 @@ def test_pandas_udf_return_type_schema_preserves_logical_identity(
             assert field_after.dataType.length == int(expected_simple.split("(")[1].rstrip(")"))
 
 
-# ---------------------------------------------------------------------------
 # M5 — SCALAR_ITER + pure GROUPED_AGG
-# ---------------------------------------------------------------------------
 
 
 def test_pandas_udf_scalar_iter_basic(spark: SparkSession) -> None:
@@ -1282,7 +1274,7 @@ def test_pandas_udf_window_partition_unbounded(spark: SparkSession) -> None:
         by_key.setdefault(row["k"], []).append(row["m"])
     assert by_key["a"] == pytest.approx([2.0, 2.0])
     assert by_key["b"] == pytest.approx([20.0, 20.0])
-    # withColumn path
+
     with_col = frame.withColumn("m", mean_udf("v").over(window))
     assert "m" in with_col.columns
     wc_rows = with_col.to_arrow().to_pylist()
@@ -1384,7 +1376,6 @@ def test_pandas_udf_window_select_alias_overwrites_source_column(spark: SparkSes
     values = sorted(row["v"] for row in out.to_arrow().to_pylist())
     # Two rows for "a" (mean 2.0) + one for "b" (mean 10.0) — not the raw 1/3/10.
     assert values == pytest.approx([2.0, 2.0, 10.0])
-    # Explicit source + overwrite in one select.
     both = frame.select("k", "v", mean_udf("v").over(window).alias("v"))
     assert both.columns == ["k", "v"]
     by_key = {}

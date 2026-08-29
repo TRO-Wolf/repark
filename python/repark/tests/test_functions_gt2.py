@@ -2,17 +2,14 @@
 
 Each new ``functions`` name is pinned through ``ReparkSession`` on the Arrow
 path (``to_arrow()``): value AND type. ``shuffle`` pins type + length, not order.
-``datediff`` was the DISPOSED-STUB here until FNP-3 (2026-08-20) shipped it as the
-same engine arm as ``date_diff``.
 
-Oracle — CORRECTED: the previous record incorrectly claimed live PySpark with OpenJDK 21.
-- **No Spark and no pyspark run here.** ``pyspark`` is not installed in this
-  worktree's ``.venv``, so nothing below was derived from a live Spark.
+Oracle classes, stated honestly:
+- **No Spark and no pyspark run here** (``pyspark`` is not installed in this
+  worktree's ``.venv``).
 - The ``parse_url`` / ``try_parse_url`` family (X8) is **MEASURED-JVM**: a
-  ``java.net.URI`` probe on the locally installed **OpenJDK 11.0.31** — not 21 —
-  driven through the MEASURED-JAVAP ``ParseUrlEvaluator$`` getter map, replayed
-  through both repark doors. Getter mapping uses ``javap -p -c`` over a
-  local ``spark-catalyst_2.13-4.1.2.jar``; that jar is not vendored here.
+  ``java.net.URI`` probe on the locally installed **OpenJDK 11.0.31**, driven
+  through the MEASURED-JAVAP ``ParseUrlEvaluator$`` getter map (``javap -p -c``
+  over a local ``spark-catalyst_2.13-4.1.2.jar``; that jar is not vendored).
 - Everything else is **DOC-SPARK**: the documented PySpark 4.1.2 signature and
   semantics plus values measured against *repark* on both doors. Where a claim
   needs Spark itself to check, it says so at the assertion.
@@ -108,9 +105,8 @@ def test_make_interval_and_dt(spark: ReparkSession) -> None:
 def test_make_interval_str_is_column_name(spark: ReparkSession) -> None:
     """W2: ``str`` parts are column names (``F.make_interval("y")`` uses column ``y``).
 
-    Spark 4.1.2 stringifies this as ``'2 years'``. Repark's calendar-interval
-    display is ``'24 mons'`` (same 2-year span). The pin is the column-name
-    direction, not the display spelling.
+    The pin is the column-name direction, not the display spelling: repark shows
+    ``'24 mons'`` where Spark 4.1.2 stringifies the same span as ``'2 years'``.
     """
     frame = spark.createDataFrame([(2,)], ["y"])
     table = _table(frame.select(F.make_interval("y").alias("i")))
@@ -167,14 +163,11 @@ def test_unix_micros_non_utc_non_epoch() -> None:
 
 
 def test_unix_micros_accepts_date_where_spark_refuses() -> None:
-    """X13: the FN-GT2 ledger's ``unix_micros(DATE)`` claim, now PINNED.
+    """X13: ``unix_micros(DATE)`` accepts and session-localizes (Spark refuses DATE).
 
-    Spark 4.1.2 refuses a DATE argument (``DATATYPE_MISMATCH``); the facade's
-    ``.cast('timestamp')`` accepts it and session-localizes, so under
-    America/Los_Angeles ``make_date(1970, 1, 1)`` is ``28_800_000_000`` (the
-    8-hour PST offset in micros), not ``0``. Drop the cast-first in
-    ``functions_datetime.unix_micros`` and this reds with a type error; make it
-    zone-blind and it reds with ``0``.
+    Under America/Los_Angeles ``make_date(1970, 1, 1)`` is the 8-hour PST offset in
+    micros, not ``0``. Drop the cast-first in ``functions_datetime.unix_micros`` and this
+    reds with a type error; make it zone-blind and it reds with ``0``.
     """
     session = _la_session()
     try:
@@ -212,14 +205,7 @@ def test_datetime_names_hold_under_non_utc_session() -> None:
 
 
 def test_datediff_is_the_same_function_as_date_diff(spark: ReparkSession) -> None:
-    """FN-GT2 pinned ``datediff`` as an untouched stub; FNP-3 ships it.
-
-    The stub was never a semantic ruling. FN-D's ledger records the real reason it stayed —
-    that unit was fenced out of ``test_fn_batch1.py``, which asserted the refusal — and PySpark
-    4.1.2 declares ``datediff(end, start)`` and ``date_diff(end, start)`` with the same signature
-    over one Catalyst expression. This asserts the two spellings agree rather than that one of
-    them refuses.
-    """
+    """``datediff`` and ``date_diff`` are one Catalyst expression: the spellings must agree."""
     frame = spark.sql("SELECT 1")
     table = _table(
         frame.select(
@@ -295,21 +281,15 @@ def test_shuffle_preserves_type_and_length(spark: ReparkSession) -> None:
 
 
 def test_shuffle_null_array_is_null_not_a_panic(spark: ReparkSession) -> None:
-    """X1 (S0): ``shuffle(CAST(NULL AS ARRAY<INT>))`` used to panic the arrow-data
-    primitive transform (``range end index 1 out of range for slice of length 0``)
-    and surface as a caught-Rust-panic ``PySparkException``. Spark returns NULL.
+    """X1 (S0): ``shuffle(CAST(NULL AS ARRAY<INT>))`` must return NULL, not a caught
+    Rust-panic ``PySparkException`` (Spark returns NULL). Both reachable entry points are
+    pinned (SQL door, facade); the native ANSI door refuses ``shuffle`` (row below).
 
-    Both reachable entry points: the Spark SQL door and the facade DataFrame API.
-    (``shuffle`` is a Spark-only name — the native ANSI door refuses it with
-    ``Invalid function 'shuffle'``, pinned below, so there is no third row.)
-    Drop the ``values_buffer_is_empty`` guard in ``crates/repark-functions/src/shuffle.rs``
-    and the NULL/mixed-batch assertions here red with the panic message.
-
-    The exact trigger, measured on BASE ``5f13647``: a record batch whose list
-    *values* buffer is empty **and** which carries at least one NULL row. Both
-    halves are needed — the empty-array and populated-with-NULLs rows below are
-    controls that were already green on BASE, and they are here so the guard
-    cannot be widened into swallowing real work.
+    The trigger is one batch with an empty list *values* buffer AND at least one NULL row.
+    Drop the ``values_buffer_is_empty`` guard in
+    ``crates/repark-functions/src/shuffle.rs`` and the NULL/mixed-batch assertions red
+    with the panic message. The empty-array and populated-with-NULLs controls exist so the
+    guard cannot be widened into swallowing real work.
     """
     sql_door = _table(spark.sql("SELECT shuffle(CAST(NULL AS ARRAY<INT>)) AS s"))
     assert sql_door.column("s").to_pylist() == [None]
@@ -341,9 +321,7 @@ def test_shuffle_null_array_is_null_not_a_panic(spark: ReparkSession) -> None:
 
 
 def test_shuffle_seed_is_wired_and_agrees_across_doors(spark: ReparkSession) -> None:
-    """X2: PySpark 4.0's ``shuffle(col, seed)`` was seeded on the SQL door and
-    silently dropped by the facade, so the two doors disagreed on a result the
-    user asked to be *deterministic*.
+    """X2: the seeded ``shuffle(col, seed)`` must agree across both doors.
 
     Revert ``functions_collections.shuffle``'s ``seed`` passthrough (or the
     ``call_scalar('shuffle')`` two-arg arm) and this reds — first with a
@@ -387,13 +365,11 @@ def test_map_from_entries_and_str_to_map(spark: ReparkSession) -> None:
 
 
 def test_map_from_entries_duplicate_key_raises(spark: ReparkSession) -> None:
-    """X7: Spark's default ``spark.sql.mapKeyDedupPolicy`` is ``EXCEPTION``.
+    """X7: duplicate keys raise — Spark's ``mapKeyDedupPolicy`` default is ``EXCEPTION``.
 
-    The upstream kernel kept the LAST entry (``{'a': '2'}``) — a silent wrong
-    result on an integrity path, and out of line with ``map()`` and
-    ``str_to_map`` which already raise here. Delete
-    ``refuse_duplicate_keys`` in ``crates/repark-functions/src/map_from_entries.rs``
-    and both doors below red with ``{'a': '2'}``.
+    Delete ``refuse_duplicate_keys`` in ``crates/repark-functions/src/map_from_entries.rs``
+    and both doors below red with ``{'a': '2'}`` (the silent last-entry-wins result,
+    out of line with ``map()`` and ``str_to_map`` which raise here).
     """
     duplicate = "array(struct('a', '1'), struct('a', '2'))"
     with pytest.raises(PySparkException, match="Duplicate map key"):
@@ -416,13 +392,12 @@ def test_map_from_entries_duplicate_key_raises(spark: ReparkSession) -> None:
 
 
 def test_str_to_map_backslash_s_is_ascii_only(spark: ReparkSession) -> None:
-    """X6: Java's ``\\s`` is ``[ \\t\\n\\x0B\\f\\r]`` — ASCII only.
+    """X6: Java's ``\\s`` is ASCII-only; the ``regex`` crate's ``\\s`` is Unicode.
 
-    The ``regex`` crate's ``\\s`` is Unicode, so a non-breaking space (U+00A0)
-    split a pair that Spark keeps whole: a silent row-shape divergence, not an
-    error. Drop ``bind_ascii_perl_classes`` in
-    ``crates/repark-functions/src/str_to_map.rs`` and the NBSP assertions red
-    with a third entry ``{'c': '3'}``.
+    A non-breaking space (U+00A0) would otherwise split a pair Spark keeps whole — a
+    silent row-shape divergence, not an error. Drop ``bind_ascii_perl_classes`` in
+    ``crates/repark-functions/src/str_to_map.rs`` and the NBSP assertions red with a
+    third entry ``{'c': '3'}``.
     """
     nbsp = "\u00a0"
     text = f"a:1 b:2{nbsp}c:3"
@@ -536,11 +511,7 @@ def test_parse_url_and_try(spark: ReparkSession) -> None:
 
 
 def test_parse_url_query_key_is_a_java_regex(spark: ReparkSession) -> None:
-    """X8: Spark compiles the QUERY key as ``(&|^)<key>=([^&]*)`` and returns
-    group 2. The upstream kernel did exact key equality, so ``'f.o'`` on
-    ``?foo=1`` was NULL — the FN-GT2 ledger recorded that as a DF-owned
-    residual and this X-round CLOSES it.
-    """
+    """X8: Spark compiles the QUERY key as ``(&|^)<key>=([^&]*)`` and returns group 2."""
     frame = spark.range(1)
     table = _table(
         frame.select(
@@ -561,14 +532,11 @@ def test_parse_url_query_key_is_a_java_regex(spark: ReparkSession) -> None:
     assert table.column("missing").to_pylist() == [None]
     assert table.column("whole").to_pylist() == ["foo=1"]
 
-    # A key that cannot compile raises under BOTH UDFs, and that is MEASURED-JAVAP, not
-    # recollection: `javap -p -c` over ParseUrlEvaluator$ shows getPattern calling
-    # Pattern.compile with NO exception table, and TryParseUrl's replacement is
-    # `ParseUrl(params, failOnError = false)` (iconst_0 into ParseUrl.<init>:(Seq;Z)V) —
-    # NOT TryEval(ParseUrl). So failOnError never reaches the compile. An earlier cut of
-    # this suite asserted try_parse_url NULLed here; that was the TryEval error.
-    # Fold ExtractError::KeyPattern back into ExtractError::InvalidUrl in
-    # crates/repark-functions/src/url.rs and the try_parse_url half below reds with None.
+    # MEASURED-JAVAP: getPattern calls Pattern.compile with NO exception table, and
+    # TryParseUrl's replacement is ParseUrl(params, failOnError = false) — NOT
+    # TryEval(ParseUrl) — so failOnError never reaches the compile: a non-compiling key
+    # raises under BOTH UDFs. Folding ExtractError::KeyPattern into InvalidUrl in
+    # crates/repark-functions/src/url.rs reds the try_parse_url half below.
     for bad in ["(", "[", "a{2,", "a)b"]:
         for udf, sql_name in ((F.parse_url, "parse_url"), (F.try_parse_url, "try_parse_url")):
             for door in (
@@ -582,11 +550,9 @@ def test_parse_url_query_key_is_a_java_regex(spark: ReparkSession) -> None:
                 with pytest.raises(PySparkException, match="invalid QUERY key pattern"):
                     door(bad)
 
-    # Compile ORDER is the bytecode's, and it is what keeps these three NULL rather than
-    # raising: the 3-arg evaluate returns NULL when the part is not QUERY (before the URL is
-    # parsed at all), then parses the URL, then returns NULL when there is no raw query — the
-    # key pattern is compiled LAST. MEASURED-JVM: the same rows come back NULL from a
-    # java.net.URI probe driven through that getter map on OpenJDK 11.0.31.
+    # Compile ORDER is the bytecode's and keeps these three NULL rather than raising: the
+    # 3-arg evaluate returns NULL for a non-QUERY part, then parses the URL, then returns
+    # NULL for no raw query — the key pattern compiles LAST. MEASURED-JVM on OpenJDK 11.0.31.
     ordering = _table(
         frame.select(
             F.try_parse_url(F.lit("not a url"), F.lit("QUERY"), F.lit("(")).alias("url_first"),
@@ -621,16 +587,11 @@ def test_parse_url_query_key_is_a_java_regex(spark: ReparkSession) -> None:
 def test_parse_url_query_key_regex_dialect_residual(spark: ReparkSession) -> None:
     """X8 RESIDUAL: the key is ``java.util.regex`` on Spark, ``regex`` crate here.
 
-    This X-round *introduced* the regex-key path (upstream did exact key
-    equality), so it introduced this residual — recorded, not papered over.
     Both halves are MEASURED: live ``java.util.regex.Pattern`` on the local
     OpenJDK 11.0.31 for the Spark column, and both repark doors for the repark
-    column, over the raw query ``a=1&b=2&aa=3&xx=4``.
-
-    The ``regex`` crate is a finite automaton, so lookaround, backreferences,
-    atomic groups and ``\\Q…\\E`` are not merely unimplemented — they cannot be
-    expressed. A key using one raises here under ``parse_url`` AND
-    ``try_parse_url`` where Spark answers a value or NULL.
+    column. The ``regex`` crate is a finite automaton, so lookaround,
+    backreferences, atomic groups and ``\\Q…\\E`` cannot be expressed: a key using
+    one raises here where Spark answers a value or NULL.
     """
     frame = spark.range(1)
     url = "http://h/p?a=1&b=2&aa=3&xx=4"
@@ -684,9 +645,9 @@ def test_parse_url_is_java_net_uri_not_a_normalizer(spark: ReparkSession) -> Non
     """X8: the confirmed dialect divergences, pinned both doors (MEASURED-JVM).
 
     ``datafusion-spark`` 54.1 extracts with ``url::Url`` (a WHATWG-URL
-    *normalizer*); Spark uses ``java.net.URI`` (a *splitter*). Revert
+    *normalizer*); Spark uses ``java.net.URI`` (a *splitter*). Reverting
     ``crates/repark-functions/src/url.rs`` to ``spark_url_udfs::parse_url()``
-    and every row below reds with the normalized answer named in ``was``.
+    reds every row below with the normalized answer named in ``was``.
     """
     #   url                      part          spark (java.net.URI)   was (url::Url)
     cases = [
@@ -729,13 +690,11 @@ def test_parse_url_is_java_net_uri_not_a_normalizer(spark: ReparkSession) -> Non
 def test_parse_url_hostile_urls_split_like_java_net_uri(spark: ReparkSession) -> None:
     """X8 hostile tier, MEASURED-JVM on the local OpenJDK 11.0.31.
 
-    Every expectation below is what ``new java.net.URI(s)`` plus the
-    MEASURED-JAVAP ``ParseUrlEvaluator$`` getter map answers — the empty-string
-    cases especially, which are the ones a NULL-vs-``''`` slip silently eats:
-    ``http://h/p?`` has an empty raw QUERY (so FILE keeps its trailing ``?``),
-    ``http://h/p#`` an empty raw REF, and ``http:///p`` a NULL AUTHORITY beside a
-    real PATH. The registry-based fallback rows (``a-``, ``a_b.c``) are the
-    reason HOST can be NULL while AUTHORITY is not.
+    Every expectation is what ``new java.net.URI(s)`` plus the ``ParseUrlEvaluator$``
+    getter map answers — the empty-string cases especially, which a NULL-vs-``''`` slip
+    silently eats: ``http://h/p?`` has an empty raw QUERY (FILE keeps its trailing ``?``),
+    ``http://h/p#`` an empty raw REF, ``http:///p`` a NULL AUTHORITY beside a real PATH.
+    The registry-based fallback rows are why HOST can be NULL while AUTHORITY is not.
     """
     #   url                    part         java.net.URI
     cases = [
@@ -778,21 +737,12 @@ def test_parse_url_never_percent_decodes(spark: ReparkSession) -> None:
     """X8 getter dimension: Spark reads the ``Raw`` getters, so nothing is decoded.
 
     MEASURED-JAVAP: ``javap -p -c`` over ``ParseUrlEvaluator$`` from a local
-    ``spark-catalyst_2.13-4.1.2.jar`` (the pyspark 4.1.2 sdist's copy — the jar
-    is not vendored here and no Spark runs in this suite) gives the getter per
-    part in ``$anonfun$getExtractPartFunc$1..8``: ``HOST`` is ``getHost`` and
-    ``PROTOCOL`` is ``getScheme``, but ``PATH``, ``QUERY``, ``REF``, ``FILE``,
-    ``AUTHORITY`` and ``USERINFO`` are all ``getRaw*``.
-
-    MEASURED-JVM: every ``spark`` value below was then derived by running ``new
-    java.net.URI(s)`` on that getter map on the local OpenJDK 11.0.31 — not
-    recollection, and not a Spark run.
-
-    An earlier cut of ``crates/repark-functions/src/java_uri.rs`` decoded these
-    six parts, which truncated a QUERY value at a decoded ``&`` and erased the
-    difference between ``%2F`` and a real path separator. Bind them back to
-    decoding getters and every row here reds with the decoded answer named in
-    ``if_decoded``.
+    ``spark-catalyst_2.13-4.1.2.jar`` (no Spark runs in this suite) — ``HOST`` is
+    ``getHost``, ``PROTOCOL`` is ``getScheme``; ``PATH``, ``QUERY``, ``REF``, ``FILE``,
+    ``AUTHORITY`` and ``USERINFO`` are all ``getRaw*``. Every ``spark`` value below was
+    derived by running ``new java.net.URI(s)`` under that getter map (OpenJDK 11.0.31).
+    Decoding getters truncate a QUERY value at a decoded ``&`` and erase ``%2F`` vs a
+    real path separator — every row here reds with the decoded answer in ``if_decoded``.
     """
     #   url                     part         key   spark (getRaw*)  if_decoded
     cases = [
@@ -819,12 +769,8 @@ def test_parse_url_never_percent_decodes(spark: ReparkSession) -> None:
 
 
 def test_url_codec_keyword_is_str_like_pyspark(spark: ReparkSession) -> None:
-    """X5: PySpark 4.1.2 spells the parameter ``str``, not ``col``.
-
-    Positional compatibility is kept; the keyword form is the pin. Rename the
-    parameter back to ``col`` and every keyword call below reds with
-    ``TypeError: got an unexpected keyword argument 'str'``.
-    """
+    """X5: PySpark 4.1.2 spells the parameter ``str``, not ``col``; renaming it back reds
+    every keyword call below with ``TypeError: got an unexpected keyword argument 'str'``."""
     frame = spark.range(1)
     table = _table(
         frame.select(
@@ -860,9 +806,8 @@ def test_url_codec_keyword_is_str_like_pyspark(spark: ReparkSession) -> None:
 def test_element_at_and_get_column_name_direction(spark: ReparkSession) -> None:
     """X4 + X12: ``F.get``'s index is ColumnOrName (PySpark only wraps ``int``).
 
-    ``F.get('a', 'i')`` used to force ``lit('i')`` and fail planning with
-    ``array index must be an integer, got Utf8``. Restore the ``lit`` wrap and
-    the by-name row reds with that planning error.
+    Restoring the old ``lit('i')`` wrap reds the by-name row with
+    ``array index must be an integer, got Utf8``.
     """
     frame = spark.sql("SELECT array(10, 20, 30) AS a, 1 AS i, 'b' AS k")
     table = _table(
@@ -893,13 +838,9 @@ def test_ansi_pair_is_null_not_a_raise(spark: ReparkSession) -> None:
     """X9: ``element_at`` out-of-range and ``make_date`` invalid-Y-M-D are NULL
     here; Spark under ANSI raises.
 
-    repark's ``spark.sql.ansi.enabled`` defaults to TRUE, but the DOCUMENTED
-    scope of the flag is division / modulo by zero only —
-    ``docs/guide/session-and-conf.md``: "ANSI mode does **not** currently make
-    arithmetic *overflow* raise … Do not read 'ANSI on' as 'every arithmetic
-    fault raises'", with every other class carried as a §7 registry row. This
-    test codifies today's behavior so the unit that closes the class reds it on
-    purpose (docs/spark-sql-iceberg-parity.md §7 preamble).
+    The documented ANSI scope is division / modulo by zero only
+    (``docs/guide/session-and-conf.md``); other classes are §7 registry rows.
+    This pins today's behavior so the unit closing the class reds it on purpose.
     """
     frame = spark.range(1)
     facade = _table(

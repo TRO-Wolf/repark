@@ -13,9 +13,7 @@ from repark.spark.row import Row
 from repark.spark.session import ReparkSession
 from repark.spark.types import IntegerType, LongType, StringType, StructField, StructType
 
-# ==================================================================================================
 # Row factory / repr (Apache DataTypeTests)
-# ==================================================================================================
 
 
 def test_row_without_column_name_repr() -> None:
@@ -45,9 +43,7 @@ def test_empty_row_len() -> None:
     assert len(Row()) == 0
 
 
-# ==================================================================================================
 # createDataFrame LongType + nested
-# ==================================================================================================
 
 
 def test_create_dataframe_long_type_schema() -> None:

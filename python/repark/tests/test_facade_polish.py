@@ -1,9 +1,8 @@
-"""Facade polish unit — aggregate display naming + ``spark.read`` expansion.
+"""Facade polish — aggregate display naming + ``spark.read`` expansion.
 
-Goldens for **column names** and **values** were recorded from live PySpark 4.1.2
-(``JAVA_HOME=/usr/lib/jvm/zulu-17-amd64``, ANSI on, ``SPARK_LOCAL_IP=127.0.0.1``) via the
-session matrix in ``{SCRATCH}/b-oracle-naming-matrix.txt`` / the Actor report. Routine tests
-are JVM-free and pin those recorded names; they do not re-invoke Spark.
+Goldens for column names and values were recorded from live PySpark 4.1.2
+(``JAVA_HOME=/usr/lib/jvm/zulu-17-amd64``, ANSI on, ``SPARK_LOCAL_IP=127.0.0.1``). Routine
+tests are JVM-free and pin those recorded names; they do not re-invoke Spark.
 """
 
 from __future__ import annotations
@@ -31,7 +30,7 @@ def _source(spark: ReparkSession) -> object:
     return spark.createDataFrame([(1, 10), (1, 20), (2, 30)], ["g", "x"])
 
 
-# ---- Scope A: aggregate display naming (live-recorded PySpark 4.1.2 matrix) ---------------------
+# Scope A: aggregate display naming (live-recorded PySpark 4.1.2 matrix)
 
 
 def test_agg_naming_matrix_matches_live_pyspark(spark: ReparkSession) -> None:
@@ -63,8 +62,8 @@ def test_agg_naming_matrix_matches_live_pyspark(spark: ReparkSession) -> None:
     assert df.groupBy("g").sum("x").columns == ["g", "sum(x)"]
     assert df.groupBy("g").agg(F.count("*")).columns == ["g", "count(1)"]
     assert df.groupBy("g").agg(F.min("x"), F.max("x")).columns == ["g", "min(x)", "max(x)"]
-    # Reflected operators (2026-07-21 review recording, live 4.1.2): PySpark commutes
-    # reflected + and * — but NOT reflected - and / — and keeps the double point on literals.
+    # Reflected operators (live 4.1.2): PySpark commutes reflected + and * — but NOT reflected
+    # - and / — and keeps the double point on literals.
     assert df.groupBy("g").agg(F.sum(2 + F.col("x"))).columns == ["g", "sum((x + 2))"]
     assert df.groupBy("g").agg(F.sum(2 * F.col("x"))).columns == ["g", "sum((x * 2))"]
     assert df.groupBy("g").agg(F.sum(100 - F.col("x"))).columns == ["g", "sum((100 - x))"]
@@ -95,7 +94,7 @@ def test_agg_compound_and_nested_values_match_oracle(spark: ReparkSession) -> No
 def test_abs_values_include_negatives_null_and_zero(spark: ReparkSession) -> None:
     """Octo C1-Q-001 / C1-L-003: abs true-branch must run.
 
-    Positives-only fixtures stay green if abs is the identity — so pin negatives too.
+    Positives-only fixtures stay green if abs is the identity — pin negatives too.
     """
     df = spark.createDataFrame(
         [(1, -10), (1, 5), (1, None), (2, 0), (2, -3)],
@@ -117,17 +116,7 @@ def test_user_alias_always_wins_over_default_agg_name(spark: ReparkSession) -> N
 def test_agg_comparison_and_logical_display_names_match_live_pyspark(
     spark: ReparkSession,
 ) -> None:
-    """CCC Q-001 fix: comparison/logical ops track ``_spark_display`` (live PySpark 4.1.2).
-
-    Recorded names::
-
-        sum(CAST((x > 0) AS INT))
-        sum(CAST((x = 10) AS INT))
-        sum(CAST((NOT (x = 10)) AS INT))
-        sum(CAST(((x > 0) AND (x < 20)) AS INT))
-        sum(CAST((NOT (x > 0)) AS INT))
-        sum(CAST((x IS NULL) AS INT))
-    """
+    """CCC Q-001: comparison/logical ops track ``_spark_display`` (live PySpark 4.1.2)."""
     df = _source(spark)
     assert df.groupBy("g").agg(F.sum((F.col("x") > 0).cast("int"))).columns == [
         "g",
@@ -187,7 +176,7 @@ def test_agg_comparison_and_logical_display_names_match_live_pyspark(
     assert vals == {"g": [1, 2], "s": [2, 1]}
 
 
-# ---- Scope B: spark.read expansion -------------------------------------------------------------
+# Scope B: spark.read expansion
 
 
 def test_read_returns_fresh_dataframe_reader(spark: ReparkSession) -> None:
@@ -294,8 +283,8 @@ def test_read_semantic_option_rejected_on_parquet_and_iceberg_snapshot(
 ) -> None:
     """Octo C2-SAF-001/002: semantic gate on parquet(); I1 time-travel options no longer denylisted.
 
-    ``snapshot-id`` on format('iceberg') is supported (I1) — unknown table/snapshot still fails
-    analysis (not the old denylist message). Incremental ``start-snapshot-id`` stays loud.
+    ``snapshot-id`` on format('iceberg') is supported (I1); unknown table/snapshot still fails
+    analysis. Incremental ``start-snapshot-id`` stays loud.
     """
     import pyarrow.parquet as pq
 
@@ -303,7 +292,6 @@ def test_read_semantic_option_rejected_on_parquet_and_iceberg_snapshot(
     pq.write_table(pa.table({"id": [1]}), path)
     with pytest.raises(AnalysisException, match=r"pathGlobFilter|not supported"):
         spark.read.option("pathGlobFilter", "*.ok.parquet").parquet(str(path))
-    # snapshot-id is no longer denylisted; missing catalog/table fails analysis (not denylist).
     with pytest.raises(AnalysisException, match=r"catalog|not registered|table|snapshot"):
         spark.read.format("iceberg").option("snapshot-id", "1").load("glue_catalog.db.t")
     with pytest.raises(AnalysisException, match=r"start-snapshot-id|incremental"):
@@ -357,7 +345,6 @@ def test_multi_arm_case_values(spark: ReparkSession) -> None:
         .to_arrow()
         .to_pydict()
     )
-    # arms: 25→1, 5→2, 0→0, -1→0 → sum = 3
     assert got == {"g": [1], "s": [3]}
 
 
@@ -430,7 +417,7 @@ def test_read_iceberg_option_path_load(spark: ReparkSession, tmp_path: Path) -> 
 
 
 def test_read_schema_stores_for_csv_json(spark: ReparkSession, tmp_path: Path) -> None:
-    """R1: DataFrameReader.schema chains and applies on csv/json (was C1-Q-007 unsupported)."""
+    """R1: DataFrameReader.schema chains and applies on csv/json (C1-Q-007)."""
     from repark.spark.types import IntegerType, StructField, StructType
 
     path = tmp_path / "schema.csv"

@@ -1,11 +1,11 @@
 """Drop-in no-op / accepted-ignored disclosure surface (WG-4 Clause 2, OTH-010).
 
 PySpark methods repark accepts for source compatibility but does not reproduce Spark's effect:
-`SparkSession.builder.master(...)` (warn-once). ``spark.catalog.clearCache()`` is a **real drop**
-of session cache MemTables as of r23 CACHE1 (Q11) — not a no-op; see ``test_cache_persist.py``.
-``DataFrame.show(vertical=True)`` is **implemented** (R-PARITY3 — real ``-RECORD`` layout; no
-longer OTH-010 warn-only). This pins each remaining disclosure decision. The full rationale table
-lives in `docs/spark-sql-iceberg-parity.md` §8. Needs the compiled wheel.
+``SparkSession.builder.master(...)`` (warn-once). ``spark.catalog.clearCache()`` is a real drop of
+session cache MemTables (Q11) — not a no-op; see ``test_cache_persist.py``.
+``DataFrame.show(vertical=True)`` is implemented (R-PARITY3 ``-RECORD`` layout). This pins each
+remaining disclosure decision; the full rationale table lives in
+``docs/spark-sql-iceberg-parity.md`` §8. Needs the compiled wheel.
 """
 
 from __future__ import annotations
@@ -42,14 +42,13 @@ def spark(tmp_path: Path) -> ReparkSession:
 
 
 def test_clear_cache_is_real_drop_without_warning(spark: ReparkSession) -> None:
-    # r23 CACHE1 / Q11: clearCache is a REAL drop of session cache MemTables (not a silent
-    # no-op). It must NOT warn (migration scripts call it every run). Behavior pins live in
-    # test_cache_persist.py; this disclosure pin only asserts no warn + honest docstring.
+    # Q11: clearCache is a REAL drop of session cache MemTables, not a silent no-op. It must
+    # NOT warn (migration scripts call it every run). Behavior pins live in test_cache_persist.py.
     docstring = Catalog.clear_cache.__doc__ or ""
     assert "MemTable" in docstring or "cache" in docstring.lower()
     assert "no-op" not in docstring
     with warnings.catch_warnings():
-        warnings.simplefilter("error")  # any warning would fail here
+        warnings.simplefilter("error")
         assert spark.catalog.clearCache() is None
 
 
@@ -67,8 +66,7 @@ def test_show_vertical_true_no_longer_warns(
 
 
 def test_show_vertical_false_does_not_warn(spark: ReparkSession) -> None:
-    # The default (vertical=False) is the horizontal grid repark actually renders — no divergence,
-    # so no disclosure warning.
+    # vertical=False is the horizontal grid repark actually renders — no divergence, no warning.
     frame = spark.sql("SELECT id, name FROM cat.ns.t")
     with warnings.catch_warnings():
         warnings.simplefilter("error")
@@ -88,22 +86,20 @@ def test_show_does_not_log_row_data_at_info(
     info = [r.getMessage() for r in caplog.records if r.levelno == logging.INFO]
     debug = [r.getMessage() for r in caplog.records if r.levelno == logging.DEBUG]
 
-    # INFO: the row-count breadcrumb is present, and the cell value is NOT (the leak we prevent).
     assert any("show(1 rows)" in m for m in info), f"missing INFO breadcrumb; got {info!r}"
     assert not any("SENTINEL_PII_CELL" in m for m in info), "row data leaked to INFO (SEC-008)"
-    # DEBUG: the full rendered table (opt-in) does carry the row data.
     assert any("SENTINEL_PII_CELL" in m for m in debug), "full render should be present at DEBUG"
 
 
 def test_master_warns_once(tmp_path: Path) -> None:
-    # .master(url) is recorded but ignored (single-node). The first call warns so a cluster URL is
-    # not silently downgraded; a second call is silent (warn-once).
+    # .master(url) is recorded but ignored (single-node); the first call warns so a cluster URL
+    # is not silently downgraded (warn-once).
     with pytest.warns(UserWarning, match="single-node"):
         builder = ReparkSession.builder.master("spark://example:7077")
 
     with warnings.catch_warnings():
         warnings.simplefilter("error")
-        builder.master("local[4]")  # second call: must NOT warn again
+        builder.master("local[4]")
 
 
 def test_set_log_level_is_documented_silent_noop(spark: ReparkSession) -> None:
@@ -127,17 +123,17 @@ def test_spark_version_discloses_repark_not_spark_release(spark: ReparkSession) 
 
 
 def test_with_columns_lateral_alias_divergence_disclosed(spark: ReparkSession) -> None:
-    """DIVERGENCE (Group F review, 2026-07-21): Spark lateral column aliases in withColumns.
+    """DIVERGENCE: Spark lateral column aliases in withColumns; repark raises on both orders.
 
-    Live PySpark 4.1.2 recording on ``(a=1, b=2, c=3)``:
+    Live PySpark 4.1.2 on ``(a=1, b=2, c=3)``:
 
     - ``{"x": col("a")+1, "y": col("x")}`` → columns ``[a,b,c,x,y]``, ``x=2, y=2`` (a later
       NEW name resolves an earlier NEW name laterally).
     - The REVERSE dict order ``{"y": col("x"), "x": col("a")+1}`` raises AnalysisException.
 
-    repark has no lateral-alias resolution: BOTH orders raise. This test is load-bearing —
-    if the forward order ever stops raising, repark has (partially) converged and this
-    disclosure plus the withColumns docstring must be updated with fresh recordings.
+    repark has no lateral-alias resolution: BOTH orders raise. Load-bearing: if the forward
+    order ever stops raising, repark has (partially) converged and this disclosure plus the
+    withColumns docstring must be updated with fresh recordings.
     """
     from repark import functions as F  # noqa: N812 — PySpark idiom
     from repark.errors import AnalysisException

@@ -1,10 +1,9 @@
 """TA-4 facade tests: volume-family kernels through ``repark.ta``.
 
-Does **not** edit ``test_ta.py``. The DataFrame route
-(``ta.ad(...).over(Window.orderBy("ts"))``) must produce output that is
-``f64::to_bits``-identical to the TA-3-recorded C TA-Lib 0.4.0 goldens (and therefore
-to the ``repark-ta`` kernels). Input is the 5000-row OHLC + volume fixture written to
-Parquet and ``read_parquet``-ed.
+The DataFrame route (``ta.ad(...).over(Window.orderBy("ts"))``) must produce output that is
+``f64::to_bits``-identical to the TA-3-recorded C TA-Lib 0.4.0 goldens (and therefore to the
+``repark-ta`` kernels). Input is the 5000-row OHLC + volume fixture written to Parquet and
+``read_parquet``-ed.
 """
 
 from __future__ import annotations

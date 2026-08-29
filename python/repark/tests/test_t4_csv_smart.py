@@ -1,7 +1,6 @@
-"""r25 T4 — smartCsv + inference PROTOCOL pins (Arrow path: value AND type).
+"""smartCsv + inference PROTOCOL pins (Arrow path: value AND type).
 
-Charter: greylit Q1/Q5; ledger ``task/t4-csv-smart-ledger.md``.
-Default ``spark.read.csv`` remains r20-R1 byte-identical (separate pin below).
+Default ``spark.read.csv`` stays byte-identical (separate pin below).
 """
 
 from __future__ import annotations
@@ -35,13 +34,9 @@ def spark(tmp_path: Path) -> ReparkSession:
     _reset_active_session_for_tests()
 
 
-# ==================================================================================================
 # Protocol pure pins (no engine)
-# ==================================================================================================
-
-
 def test_protocol_rung_order_frozen() -> None:
-    """Ladder order is the greylit Q1 contract (deterministic SSOT)."""
+    """Ladder order is the protocol contract (deterministic SSOT)."""
     assert RUNG_ORDER == (
         "bool",
         "int32",
@@ -71,12 +66,11 @@ def test_protocol_cell_rungs() -> None:
 
 
 def test_detect_delimiter_ds4_ragged_picks_semicolon_rival() -> None:
-    """Known-limit (DS-4): origin/main agreement-first elects the ``;`` rival.
+    """Known-limit: agreement-first elects the ``;`` rival.
 
-    Measured on origin/main ``csv.reader`` scores: ``;`` (agreement 7, mode 2)
-    beats ``,`` (agreement 4, mode 12). Declared ``preferred=','`` is the
-    remedy. Discriminates a quote-aware / header-join redesign that would
-    pick comma here.
+    ``;`` (agreement 7, mode 2) beats ``,`` (agreement 4, mode 12); the declared
+    ``preferred=","`` is the remedy. Discriminates a quote-aware / header-join redesign that
+    would pick comma here.
     """
     header = ",".join(f"col_{index}" for index in range(12))
     full = ",".join(["1"] * 11 + ['"a;b"'])
@@ -87,10 +81,9 @@ def test_detect_delimiter_ds4_ragged_picks_semicolon_rival() -> None:
 
 
 def test_detect_delimiter_tsv_with_unquoted_commas_keeps_tab() -> None:
-    """origin/main: headed 2-col TSV with commas keeps tab.
+    """Headed 2-col TSV with commas keeps tab.
 
-    Measured: ``\\t`` (agreement 4, mode 2) over ``,`` (agreement 3, mode 3).
-    Field-count-first (round 1) elects comma — this pin goes red on that key.
+    Field-count-first elects comma — this pin goes red on that key.
     """
     lines = [
         "name\tnote",
@@ -102,10 +95,7 @@ def test_detect_delimiter_tsv_with_unquoted_commas_keeps_tab() -> None:
 
 
 def test_detect_delimiter_two_column_semicolon_beats_wider_comma() -> None:
-    """origin/main: headed 2-col ``;`` file with commas keeps ``;``.
-
-    Measured: ``;`` (agreement 4, mode 2) over ``,`` (agreement 3, mode 3).
-    """
+    """Headed 2-col ``;`` file with commas keeps ``;``."""
     lines = [
         "id;note",
         "1;a,b,c",
@@ -116,11 +106,7 @@ def test_detect_delimiter_two_column_semicolon_beats_wider_comma() -> None:
 
 
 def test_detect_delimiter_quoted_pipe_list_does_not_elect_pipe() -> None:
-    """origin/main: headed quoted pipe-list keeps comma.
-
-    Measured: ``,`` (agreement 4, mode 3) over ``|`` (agreement 3, mode 4).
-    Field-count-first elects pipe.
-    """
+    """Headed quoted pipe-list keeps comma (field-count-first elects pipe)."""
     lines = [
         "id,note,extra",
         '1,"a|b|c|d",x',
@@ -131,17 +117,15 @@ def test_detect_delimiter_quoted_pipe_list_does_not_elect_pipe() -> None:
 
 
 def test_detect_delimiter_honest_small_file_picks_semicolon() -> None:
-    """origin/main: ``['id,name', '1;2;3;4;5']`` elects ``;``.
+    """``['id,name', '1;2;3;4;5']`` elects ``;``.
 
-    Measured: agr tie (1), wider mode 5 beats 2. Kills the round-3 ``-mode``
-    key (that key picked comma). Green on origin/main *and* on
-    field-count-first — not a discriminator for the naive re-rank.
+    Green on field-count-first too — not a discriminator for the naive re-rank.
     """
     assert detect_delimiter(["id,name", "1;2;3;4;5"]) == ";"
 
 
 def test_detect_delimiter_preferred_refuses_non_single_char() -> None:
-    """D2: empty / multi-char / newline / CR / quote refuse; ``\\x01`` allowed."""
+    """Empty / multi-char / newline / CR / quote refuse; ``\\x01`` allowed."""
     lines = ["a,b", "1,2"]
     for bad in ("", "||", "sep", "\n", "\r", '"'):
         with pytest.raises(ValueError, match="single character"):
@@ -151,12 +135,7 @@ def test_detect_delimiter_preferred_refuses_non_single_char() -> None:
 
 
 def test_parse_quoted_embedded_delimiter_unquotes(tmp_path: Path) -> None:
-    """Non-discriminating regression guard — origin/main ``csv.reader`` unquote.
-
-    Green on origin/main and on every B4 head that still parsed with
-    ``csv.reader``. Does not kill a rejected rank key; it only fails if parse
-    stops unquoting a quoted embedded delimiter.
-    """
+    """Non-discriminating regression guard: the quoted embedded delimiter stays unquoted."""
     path = tmp_path / "q.csv"
     path.write_text('id,note\n1,"a,b"\n', encoding="utf-8")
     prepared = prepare_messy_csv(path)
@@ -165,11 +144,7 @@ def test_parse_quoted_embedded_delimiter_unquotes(tmp_path: Path) -> None:
 
 
 def test_parse_escaped_quote_unescapes(tmp_path: Path) -> None:
-    """Non-discriminating regression guard — origin/main ``csv.reader`` ``""``.
-
-    Green on origin/main and on every B4 head that still parsed with
-    ``csv.reader``. Does not kill a rejected rank key.
-    """
+    """Non-discriminating regression guard: ``""`` unescapes."""
     path = tmp_path / "esc.csv"
     path.write_text('id,note\n1,"say ""hi"""\n', encoding="utf-8")
     prepared = prepare_messy_csv(path)
@@ -177,11 +152,9 @@ def test_parse_escaped_quote_unescapes(tmp_path: Path) -> None:
 
 
 def test_parse_inch_mark_declared_sep_keeps_cells(tmp_path: Path) -> None:
-    """Non-discriminating regression guard — declared-sep inch marks.
+    """Non-discriminating regression guard: declared-sep inch marks.
 
-    Green on origin/main ``csv.reader`` (and on B4 heads that kept that
-    parse). Kills only a one-splitter that merges cells between two inch
-    marks; it does not kill a rank-key mutant. Relabeled per SQM L2.
+    Kills only a one-splitter that merges cells between two inch marks, not a rank-key mutant.
     """
     path = tmp_path / "inch.csv"
     path.write_text('id,size,other,n\nA1,3" pipe,5" hose,2\n', encoding="utf-8")
@@ -190,7 +163,7 @@ def test_parse_inch_mark_declared_sep_keeps_cells(tmp_path: Path) -> None:
 
 
 def test_parse_preserves_leading_trailing_whitespace(tmp_path: Path) -> None:
-    """Non-discriminating regression guard — origin/main whitespace keep."""
+    """Non-discriminating regression guard: whitespace kept."""
     path = tmp_path / "ws.csv"
     path.write_text("id,note\n1,  hi  \n", encoding="utf-8")
     prepared = prepare_messy_csv(path)
@@ -212,15 +185,10 @@ def test_protocol_column_promotion_and_nulls() -> None:
     assert resolve_column_type(cells).rung == resolve_column_type(list(cells)).rung
 
 
-# ==================================================================================================
 # smartCsv integration — messy fixtures, value + type on Arrow path
-# ==================================================================================================
-
-
 def test_smart_csv_messy_preamble_bom_types(spark: ReparkSession, tmp_path: Path) -> None:
     """Preamble junk + BOM skipped; protocol types on Arrow (value AND type)."""
     path = tmp_path / "messy.csv"
-    # UTF-8 BOM + two junk lines then a real header table.
     body = (
         "\ufeffNOTE: export dump v1\n"
         "# not,csv,header\n"
@@ -276,7 +244,6 @@ def test_smart_csv_ragged_rows_and_diagnostics(spark: ReparkSession, tmp_path: P
     report = frame.describe_ingest()
     assert report["ragged_rows_padded"] >= 1
     rows = frame.orderBy("a").to_arrow().to_pylist()
-    # Short row → c is null
     short = next(row for row in rows if row["a"] == 4)
     assert short["b"] == 5
     assert short["c"] is None
@@ -337,7 +304,7 @@ def test_smart_csv_describe_ingest_empty_on_plain_csv(spark: ReparkSession, tmp_
 def test_default_csv_still_r20_r1_all_string_when_infer_false(
     spark: ReparkSession, tmp_path: Path
 ) -> None:
-    """Default .csv with inferSchema=false stays all-string (r20-R1 pin shape)."""
+    """Default .csv with inferSchema=false stays all-string."""
     path = tmp_path / "s.csv"
     path.write_text("id,name\n1,a\n", encoding="utf-8")
     frame = spark.read.option("header", "true").option("inferSchema", "false").csv(str(path))
@@ -349,7 +316,7 @@ def test_default_csv_still_r20_r1_all_string_when_infer_false(
 
 
 def test_default_csv_header_values_unchanged(spark: ReparkSession, tmp_path: Path) -> None:
-    """Default .csv header+inferSchema value pin (r20-R1 regression guard)."""
+    """Default .csv header+inferSchema value pin (regression guard)."""
     path = tmp_path / "t.csv"
     path.write_text("id,name\n1,a\n2,b\n", encoding="utf-8")
     frame = spark.read.csv(str(path), header=True, inferSchema=True)
@@ -389,9 +356,7 @@ def test_protocol_int64_overflow_falls_to_decimal_or_string() -> None:
     assert resolve_column_type([str(2**63 - 1)]).rung == "int64"
 
 
-# --- r26 T2: decimal union + sampling --------------------------------------------------------
-
-
+# Decimal union + sampling
 def test_decimal_union_mixed_int_digits_max_not_max_precision(spark: Any, tmp_path: Path) -> None:
     """19.99 + 250 + 3.5 → decimal(5,2), not decimal(4,2); Arrow values pin."""
     path = tmp_path / "mixed_decimal.csv"
@@ -495,7 +460,7 @@ def test_sampling_cap_limits_inference_rows(spark: Any, tmp_path: Path) -> None:
 
 
 def test_sampling_rows_via_option_map(spark: Any, tmp_path: Path) -> None:
-    """option("samplingRows", N) must honor the same cap as kwargs (octo C1-Q-001)."""
+    """option("samplingRows", N) must honor the same cap as kwargs."""
     path = tmp_path / "opt_cap.csv"
     path.write_text("amount\n1.5\n2.5\n3.5\n", encoding="utf-8")
     frame = spark.read.option("samplingRows", 2).smartCsv(str(path), header=True)
@@ -522,10 +487,8 @@ def test_smart_csv_option_empty_sep_refuses_and_does_not_fall_through(
 ) -> None:
     """Empty option('sep') refuses; a present option('sep') beats auto-detect.
 
-    Refuse arms kill origin/main unvalidated preferred / falsy ``or`` fall-through.
-    The positive arm uses a file whose *auto-detect* elects ``;`` (measured) so
-    ignoring ``option('sep', ',')`` would shred — not the ``a,b`` file that
-    auto-detects as comma on every head.
+    The positive arm uses a file whose auto-detect elects ``;``, so ignoring
+    ``option('sep', ',')`` would shred — not a file that auto-detects as comma anyway.
     """
     from repark.errors import IllegalArgumentException
 
@@ -579,7 +542,7 @@ def test_sampling_rows_non_integral_float_loud_refuse(spark: Any, tmp_path: Path
 
 
 def test_decimal_union_order_independent_int_before_fraction() -> None:
-    """Integer cells before first fraction must still widen int_digits (octo C3-Q-001)."""
+    """Integer cells before first fraction must still widen int_digits."""
     forward = resolve_column_type(["19.99", "250", "3.5"])
     reverse = resolve_column_type(["250", "19.99", "3.5"])
     int_first = resolve_column_type(["100", "200", "1.5"])

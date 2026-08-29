@@ -1,8 +1,8 @@
 """Group G1 — column-access sugar: ``df.x``, ``df["x"]``, ``-col``.
 
 Goldens recorded from live PySpark 4.1.2
-(``JAVA_HOME=/usr/lib/jvm/zulu-17-amd64``, ``SPARK_LOCAL_IP=127.0.0.1``, ANSI on).
-Routine tests are JVM-free and pin those recorded behaviours; they do not re-invoke Spark.
+(``JAVA_HOME=/usr/lib/jvm/zulu-17-amd64``, ``SPARK_LOCAL_IP=127.0.0.1``, ANSI on). Routine
+tests are JVM-free and pin those recorded behaviours.
 
 Probe matrix (verbatim intent vs live 4.1.2)::
 
@@ -29,10 +29,10 @@ Probe matrix (verbatim intent vs live 4.1.2)::
     values negate ints; double → negative(negative(x))
 
 repark raises :class:`AttributeError` (no ``PySparkAttributeError``) with the same
-``[ATTRIBUTE_NOT_SUPPORTED]`` message text; missing ``df["col"]`` raises
+``[ATTRIBUTE_NOT_SUPPORTED]`` message; missing ``df["col"]`` raises
 :class:`~repark.errors.AnalysisException` naming the column. ``df["X"]`` resolves
-case-insensitively to canonical schema name ``x`` (Spark analyzer default); ``df.X``
-stays case-sensitive and fails (PySpark attr surface).
+case-insensitively to the canonical schema name (Spark analyzer default); ``df.X`` stays
+case-sensitive (PySpark attr surface).
 """
 
 from __future__ import annotations
@@ -56,7 +56,7 @@ def _source(spark: ReparkSession) -> object:
     return spark.createDataFrame([(1, 10), (2, 20), (3, 30)], ["x", "y"])
 
 
-# ---- G1a: DataFrame.__getattr__ -----------------------------------------------------------------
+# ---- G1a: DataFrame.__getattr__ ----
 
 
 def test_getattr_returns_column(spark: ReparkSession) -> None:
@@ -96,7 +96,6 @@ def test_getattr_case_sensitive(spark: ReparkSession) -> None:
     df = _source(spark)
     with pytest.raises(AttributeError, match=r"ATTRIBUTE_NOT_SUPPORTED"):
         _ = df.X
-    # lowercase still works
     assert isinstance(df.x, Column)
 
 
@@ -131,7 +130,7 @@ def test_getattr_getitem_repr_str(spark: ReparkSession) -> None:
     assert str(df.y) == "Column<'y'>"
 
 
-# ---- G1b: DataFrame.__getitem__ -----------------------------------------------------------------
+# ---- G1b: DataFrame.__getitem__ ----
 
 
 def test_getitem_str_returns_column(spark: ReparkSession) -> None:
@@ -146,12 +145,9 @@ def test_getitem_str_returns_column(spark: ReparkSession) -> None:
 def test_getitem_str_case_insensitive_resolves_canonical(spark: ReparkSession) -> None:
     """C2-L-001 / C2-L-002: ``df["X"]`` succeeds when the column is ``x`` (Spark CI default).
 
-    Live PySpark 4.1.2 with ``spark.sql.caseSensitive=false``: getitem goes through the
-    analyzer resolver, so a differently-cased key resolves — and the REQUESTED spelling
-    becomes the output name (2026-07-21 review re-recording: ``df.select(df["X"]).columns``
-    is ``["X"]`` on live Spark, not the canonical ``["x"]`` this test previously pinned).
-    Display identity matches ``F.col("X")`` (NamedExpression, not ``x AS X``) so compounds
-    stay clean (octo r2 C3-L-005). ``df.X`` stays case-sensitive AttributeError (G1a).
+    Live 4.1.2 (caseSensitive=false): the analyzer resolver accepts the differently-cased key
+    and the REQUESTED spelling becomes the output name; display matches ``F.col("X")`` so
+    compounds stay clean (octo C3-L-005). ``df.X`` stays case-sensitive AttributeError (G1a).
     """
     df = _source(spark)
     column = df["X"]
@@ -163,11 +159,10 @@ def test_getitem_str_case_insensitive_resolves_canonical(spark: ReparkSession) -
     assert table.to_pydict() == {"X": [1, 2, 3]}
     # Compound projection names match F.col path (live Spark 4.1.2).
     assert df.select(df["X"] + 1).columns == ["(X + 1)"]
-    # getattr remains exact (already pinned in test_getattr_case_sensitive).
     with pytest.raises(AttributeError, match=r"ATTRIBUTE_NOT_SUPPORTED"):
         _ = df.X
-    # Engine select path keeps the requested spelling too (Group H for_select aliases bare
-    # refs — live Spark 4.1.2; octo C3-L-001). Values still come from schema column ``x``.
+    # Engine select path keeps the requested spelling too (octo C3-L-001); values still come
+    # from schema column ``x``.
     via_select = df.select("X").to_arrow()
     assert via_select.column_names == ["X"]
     assert via_select.to_pydict() == {"X": [1, 2, 3]}
@@ -176,8 +171,8 @@ def test_getitem_str_case_insensitive_resolves_canonical(spark: ReparkSession) -
 def test_getitem_str_case_ambiguous_raises(spark: ReparkSession) -> None:
     """Multiple case-insensitive matches (exact miss) → AnalysisException naming ambiguity.
 
-    When schema has both ``Foo`` and ``foo``, a third spelling ``FOO`` exact-misses both
-    but casefolds to both → ambiguous. Exact keys still prefer the exact schema name.
+    With schema ``Foo`` and ``foo``, spelling ``FOO`` exact-misses both but casefolds to both.
+    Exact keys still prefer the exact schema name.
     """
     df = spark.createDataFrame([(1, 2)], ["Foo", "foo"])
     with pytest.raises(AnalysisException, match=r"ambiguous") as caught:
@@ -217,7 +212,7 @@ def test_getitem_column_filters(spark: ReparkSession) -> None:
     )
     assert filtered.column_names == expected.column_names
     assert filtered.to_pydict() == expected.to_pydict()
-    # C1-Q-006: live schema equality (was dead fixture — type/nullability unpinned).
+    # C1-Q-006: live schema equality (type/nullability pinned).
     assert filtered.schema.equals(expected.schema)
     # Same as explicit filter.
     via_filter = df.filter(df.x > 1).orderBy("x").to_arrow().to_pydict()
@@ -274,16 +269,16 @@ def test_getitem_rejects_unsupported_key_type(spark: ReparkSession) -> None:
 def test_held_dataframe_column_access_raises_after_stop() -> None:
     """C1-SEC-001 / C1-L-001: G1 entry points gate after ``session.stop()``.
 
-    Prefer-stop over TypeError for unsupported keys (``df[1.5]``) — first-line
-    ``_ensure_alive`` is the only control that preserves that ordering.
+    Prefer-stop over TypeError for unsupported keys — first-line ``_ensure_alive`` preserves
+    that ordering.
     """
     from repark import session as session_module
 
     session_module._reset_active_session_for_tests()
     session = ReparkSession.builder.appName("g1-stop-pins").getOrCreate()
     frame = session.createDataFrame([(1, 10), (2, 20)], ["x", "y"])
-    # Mint Column predicate *before* stop so the getitem Column→filter arm is pinned
-    # (post-stop ``frame.x`` would raise on getattr and never reach getitem).
+    # Mint the predicate before stop: post-stop ``frame.x`` would raise on getattr and never
+    # reach the getitem Column→filter arm.
     predicate = frame.x > 0
     session.stop()
     with pytest.raises(RuntimeError, match="stopped"):
@@ -297,12 +292,11 @@ def test_held_dataframe_column_access_raises_after_stop() -> None:
     with pytest.raises(RuntimeError, match="stopped"):
         _ = frame[["x"]]
     with pytest.raises(RuntimeError, match="stopped"):
-        # Prefer-stop over TypeError for unsupported key types.
         _ = frame[1.5]  # type: ignore[index]
     session_module._reset_active_session_for_tests()
 
 
-# ---- G1c: Column.__neg__ ------------------------------------------------------------------------
+# ---- G1c: Column.__neg__ ----
 
 
 def test_neg_select_column_name_and_values(spark: ReparkSession) -> None:
@@ -351,7 +345,6 @@ def test_neg_str_and_repr_match_pyspark(spark: ReparkSession) -> None:
 def test_neg_agg_sum_display_name(spark: ReparkSession) -> None:
     """``df.agg(F.sum(-df.x)).columns == ['sum(negative(x))']`` + value pin."""
     df = spark.createDataFrame([(1,), (2,), (-4,)], ["x"])
-    # sum(negative(x)) = -1 + -2 + 4 = 1
     aggregated = df.agg(F.sum(-df.x))
     assert aggregated.columns == ["sum(negative(x))"]
     table = aggregated.to_arrow()
@@ -373,7 +366,6 @@ def test_neg_double_negation_display_and_values(spark: ReparkSession) -> None:
 def test_neg_composes_with_binary_ops_in_agg_name(spark: ReparkSession) -> None:
     """Nested ``sum(negative((x + 1)))`` via ``-(df.x + 1)`` — display + values (C1-Q-004)."""
     df = _source(spark)
-    # x=[1,2,3] → sum(-(x+1)) = -(2+3+4) = -9
     aggregated = df.agg(F.sum(-(df.x + 1)))
     assert aggregated.columns == ["sum(negative((x + 1)))"]
     table = aggregated.to_arrow()
@@ -382,10 +374,10 @@ def test_neg_composes_with_binary_ops_in_agg_name(spark: ReparkSession) -> None:
 
 
 def test_getitem_case_insensitive_keeps_requested_spelling(spark: ReparkSession) -> None:
-    """Review pin (live 4.1.2, 2026-07-21): df["B"] on column `b` names the output `B`.
+    """Live-oracle pin: ``df["B"]`` on column ``b`` names the output ``B``.
 
-    The analyzer resolves case-insensitively but the REQUESTED spelling wins in the
-    output schema; exact-case access keeps the canonical name untouched.
+    The analyzer resolves case-insensitively but the REQUESTED spelling wins in the output
+    schema; exact-case access keeps the canonical name.
     """
     df = spark.createDataFrame([(1, 2)], ["a", "b"])
     assert df.select(df["B"]).columns == ["B"]
@@ -394,11 +386,11 @@ def test_getitem_case_insensitive_keeps_requested_spelling(spark: ReparkSession)
 
 
 def test_copy_protocols_do_not_recurse(spark: ReparkSession) -> None:
-    """Review pin (2026-07-21): a half-built instance's attribute miss must not recurse.
+    """A half-built instance's attribute miss must not recurse.
 
-    copy.copy creates the object before filling __dict__; `_inner` misses re-entered
-    __getattr__ unguarded (RecursionError pre-fix). Any outcome except RecursionError is
-    acceptable — PySpark itself raises from its JVM handle here, so no parity pin.
+    copy.copy creates the object before filling ``__dict__``; ``_inner`` misses re-entered
+    ``__getattr__`` unguarded. Any outcome except RecursionError is acceptable — PySpark
+    raises from its JVM handle here, so no parity pin.
     """
     import copy
 
@@ -407,5 +399,5 @@ def test_copy_protocols_do_not_recurse(spark: ReparkSession) -> None:
         copy.copy(df)
     except RecursionError:  # pragma: no cover — the defect class under pin
         raise AssertionError("copy.copy(df) recursed through __getattr__") from None
-    except Exception:  # non-recursion failures are acceptable
+    except Exception:
         pass

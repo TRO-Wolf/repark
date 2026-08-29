@@ -1,23 +1,11 @@
 """R-DISPLAY: opt-in ``DataFrame.show()`` styles (``spark`` / ``polars`` / ``duckdb``).
 
-Default remains PySpark-parity (byte-identical to the pre-style ASCII grid). Styles are selected
-via ``repark.display.style`` builder config or the runtime ``session.display_style`` attribute.
-
-Oracle notes (measured 2026-07-28, not from memory):
-
-* **spark (repark pre-change / this unit default):** ``+---+`` grid, ``NULL`` for nulls, cell
-  truncate with ``...`` — existing ``test_session.py::test_show_*`` pins stay green.
-* **polars 1.32.3:** ``shape: (rows, cols)`` + box with ``┆`` separators, ``---`` underline,
-  dtype row (``i64``/``str``/…), first 5 / last 5 with ``…`` when rows > 10, ``null`` / ``NaN``.
-* **duckdb 1.3.1 ``Relation.show()``:** box-drawing with type row under header, numeric right-
-  align, ``NULL`` / ``nan``, footer ``N rows`` and ``(K shown)`` when truncated with middle ``·``.
-
+Default stays PySpark-parity (byte-identical ASCII grid). Styles select via
+``repark.display.style`` builder config or the runtime ``session.display_style`` attribute.
 Head+tail styles call ``count()`` (extra scan, disclosed on ``show`` docstring), ``limit`` for
 the head, and ``_preview_tail_rows`` (engine-side skip+fetch) for the tail — never a full-table
-collect for the preview path.
-
-``n`` is a keep-set cap on every style: duckdb ``show(1)`` keeps the first row (not last-only);
-polars ``show(0)``/``show(k)`` must not over-show (edges still never enlarge past 5).
+collect. ``n`` is a keep-set cap on every style: duckdb ``show(1)`` keeps the first row (not
+last-only); polars ``show(0)``/``show(k)`` must not over-show (edges never enlarge past 5).
 
 MUTATION: force default style to polars → ``test_default_show_byte_identical_spark_grid`` reds.
 MUTATION: drop head+tail on polars → ``test_polars_style_head_tail_golden`` reds (rows 6/7 appear).
@@ -66,9 +54,7 @@ from repark.spark.session import (
     normalize_display_style,
 )
 
-# =============================================================================================
-# Fixtures + live-captured goldens (repark 2026-07-28, pin what we ship)
-# =============================================================================================
+# Fixtures + live-captured goldens (pin what we ship)
 
 _ORDERED_12_SQL = """\
 SELECT id, label FROM (VALUES
@@ -222,9 +208,7 @@ def _session_with_style(style: str) -> ReparkSession:
     return ReparkSession.builder.config(_DISPLAY_STYLE_KEY, style).getOrCreate()
 
 
-# =============================================================================================
 # Config knob
-# =============================================================================================
 
 
 def test_default_display_style_is_spark(spark: ReparkSession) -> None:
@@ -266,9 +250,7 @@ def test_display_style_key_is_repark_prefixed_not_spark() -> None:
     assert not _DISPLAY_STYLE_KEY.startswith("spark.")
 
 
-# =============================================================================================
-# Default spark style — byte-identical regression (near-drop-in mandate)
-# =============================================================================================
+# Default spark style — byte-identical regression
 
 
 def test_default_show_byte_identical_spark_grid(spark: ReparkSession) -> None:
@@ -316,9 +298,7 @@ def test_spark_style_does_not_call_count_for_show(
     assert calls["count"] == 0
 
 
-# =============================================================================================
 # polars style goldens
-# =============================================================================================
 
 
 def test_polars_style_head_tail_golden() -> None:
@@ -403,7 +383,8 @@ def test_polars_style_uses_count(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_polars_style_honors_n_keep_set() -> None:
-    """``show(n)`` must not over-show under polars (n caps; edges still never enlarge past 5).
+    """``show(n)`` must not over-show under polars
+    (n caps; edges still never enlarge past 5).
 
     MUTATION: ignore ``n`` again → ``show(0)`` still prints body rows / ``show(1)`` prints >1.
     MUTATION: ``use_ellipsis=True`` with ``tail_n=0`` → ``show(1)`` bare ``…`` row (C8-Q-001 class).
@@ -423,13 +404,11 @@ def test_polars_style_honors_n_keep_set() -> None:
         # Head-only keep-set: no bare middle ellipsis without a following tail (C8-Q-001 class).
         assert "│ …   ┆ …     │" not in out1
 
-        # When both head and tail exist, the middle ellipsis row is present.
         out2 = _capture_show(frame, 2, truncate=False)
         assert "│ 1   ┆ x1    │" in out2
         assert "│ 12  ┆ x12   │" in out2
         assert "│ …   ┆ …     │" in out2
 
-        # n does not enlarge past the 5+5 polars edges (default n=20 already pinned elsewhere).
         out20 = _capture_show(frame, 20, truncate=False)
         assert out20 == _POLARS_12_GOLDEN
         assert "│ 6   ┆ x6    │" not in out20
@@ -451,9 +430,7 @@ def test_polars_style_n_caps_small_frame() -> None:
         session.stop()
 
 
-# =============================================================================================
 # duckdb style goldens
-# =============================================================================================
 
 
 def test_duckdb_style_small_frame_golden() -> None:
@@ -519,11 +496,9 @@ def test_duckdb_style_show_one_keeps_first_row() -> None:
     try:
         frame = session.sql(_ORDERED_12_SQL)
         out = _capture_show(frame, 1, truncate=False)
-        # Exact first-row keep-set: id=1 / label=x1 present; id=12 / x12 absent (no vacuous
-        # ``"1" in out`` that also matches ``12 rows`` / ``(1 shown)``).
+        # Exact first-row keep-set; no vacuous ``"1" in out`` (matches ``12 rows`` / ``(1 shown)``).
         assert "x1" in out
         assert "x12" not in out
-        # Body cell for id 1 (right-aligned in the id column).
         assert "│     1 │ x1      │" in out or "│        1 │" in out
         assert "12 rows" in out
         assert "(1 shown)" in out
@@ -537,7 +512,6 @@ def test_duckdb_style_show_one_keeps_first_row() -> None:
         assert middle_dot_lines == [], (
             f"show(1) must not render middle · rows when tail_n=0; got {middle_dot_lines!r}"
         )
-        # Header + type row + one data row (no · / tail rows).
         assert len(body_lines) == 3, body_lines
     finally:
         session.stop()
@@ -546,7 +520,7 @@ def test_duckdb_style_show_one_keeps_first_row() -> None:
 def test_duckdb_style_show_zero_footer_reports_zero_shown() -> None:
     """duckdb ``show(0)`` on a non-empty frame must footer ``(0 shown)``, not full-N only.
 
-    Keep-set is empty (no body rows) while cardinality stays in the main footer. MUTATION:
+    MUTATION:
     ``shown_rows=total_rows`` when ``use_ellipsis`` is False, or gate ``(K shown)`` on
     ``show_ellipsis`` alone → footer claims ``12 rows`` with no ``(0 shown)`` (C4-L-001).
     """
@@ -565,7 +539,6 @@ def test_duckdb_style_show_zero_footer_reports_zero_shown() -> None:
             for line in out.splitlines()
             if line.startswith("│") and "rows" not in line and "shown" not in line
         ]
-        # Header + type row only (no data / · rows).
         assert len(body_lines) == 2, body_lines
     finally:
         session.stop()
@@ -602,14 +575,11 @@ def test_styled_show_narrow_arrow_type_labels() -> None:
             "CAST(1.5 AS FLOAT) AS f, CAST(2.5 AS DOUBLE) AS d"
         )
         out = _capture_show(frame, truncate=False)
-        # Type row must name precise widths (order: t, s, f, d).
         assert "│ i8  ┆ i16 ┆ f32 ┆ f64 │" in out or (
             "i8" in out and "i16" in out and "f32" in out and "f64" in out
         )
-        # Collapsed labels from logical_schema_fields must not win.
         type_line = next(line for line in out.splitlines() if "i8" in line or "i32" in line)
         assert "i8" in type_line and "i16" in type_line and "f32" in type_line
-        # Ensure we did not label tinyint/smallint as plain i32-only.
         assert type_line.count("i32") == 0
     finally:
         session.stop()
@@ -628,7 +598,6 @@ def test_styled_show_narrow_arrow_type_labels() -> None:
         joined = "\n".join(type_lines)
         assert "int8" in joined and "int16" in joined
         assert "float" in out
-        # Narrow int columns must not be labeled int32.
         assert "int32" not in joined
     finally:
         session.stop()
@@ -652,9 +621,7 @@ def test_polars_show_zero_logs_zero_shown_rows(
     assert not any("show(12 rows)" in message for message in info_messages), info_messages
 
 
-# =============================================================================================
 # Private tail preview path + no full-table collect discipline
-# =============================================================================================
 
 
 def test_preview_tail_rows_returns_last_n(spark: ReparkSession) -> None:
@@ -678,8 +645,6 @@ def test_preview_tail_rows_uses_limit_with_skip(
     Hollow decoy (C5-Q-001): call ``limit_with_skip(skip, fetch)`` then discard it and
     ``pa.table(self._inner).slice(...)`` — facade ``to_arrow`` / ``__arrow_c_stream__`` spies
     stay quiet while the unlimited plan fully materializes via the *native* root stream.
-    This pin also forbids root-native ``__arrow_c_stream__`` and requires the
-    ``limit_with_skip`` return value to be the plan that crosses the Arrow boundary.
     """
     frame = spark.sql(_ORDERED_12_SQL)
     root_inner = frame._inner
@@ -793,24 +758,10 @@ def test_runtime_style_switch_affects_show(spark: ReparkSession) -> None:
 def test_styled_show_does_not_full_collect(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Styled head+tail must not fully materialize the unlimited plan.
+    """Styled head+tail must not fully materialize the unlimited plan (decoy class C5-Q-001).
 
-    Hollow pin history:
-
-    * C2-Q-001 — only ``to_arrow`` row counts + forced ``_preview_tail_rows``;
-    * C4-Q-001 — facade root ``to_arrow`` / ``__arrow_c_stream__`` (``pa.table(self)``);
-    * C5-Q-001 — still green under decoy ``limit_with_skip`` + ``pa.table(self._inner)``
-      (native root stream bypasses the facade dunder).
-
-    This pin also:
-
-    * asserts native ``limit_with_skip(skip=total-fetch, fetch=tail_n)``;
-    * forbids ``DataFrame.collect`` / ``to_polars`` during styled show;
-    * forbids unlimited export on the root *facade* via ``to_arrow`` / ``__arrow_c_stream__``;
-    * forbids unlimited export on the root *native* via ``__arrow_c_stream__``
-      (covers ``pa.table(self._inner)``);
-    * requires the ``limit_with_skip`` return value to be the plan that streams;
-    * keeps per-``to_arrow`` row counts strictly below the full result size.
+    The ``limit_with_skip`` return must be the plan that streams, and per-``to_arrow`` row
+    counts stay below the full result size.
     """
     from repark import dataframe as dataframe_module
 
@@ -840,8 +791,7 @@ def test_styled_show_does_not_full_collect(
         return table
 
     def tracking_arrow_c_stream(self: object, requested_schema: object | None = None) -> object:
-        # ``pa.table(self)`` / ``pyarrow`` stream consumers hit this dunder without
-        # going through ``to_arrow`` — spy must catch root unlimited stream export.
+        # ``pa.table(self)`` hits this dunder without ``to_arrow`` — spy catches root export.
         if root_frame_box and self is root_frame_box[0]:
             forbidden_calls.append("__arrow_c_stream__(root)")
         return original_arrow_c_stream(self, requested_schema)  # type: ignore[arg-type]
@@ -921,7 +871,6 @@ def test_styled_show_does_not_full_collect(
         _ensure_native_partial_collect_spies(frame)
         out = _capture_show(frame, truncate=False)
         assert out == _POLARS_12_GOLDEN
-        # polars 12-row default: head 5 + tail 5 → skip=7, fetch=5
         _assert_partial_collect_discipline(expected_skip=(7, 5), max_rows_per_export=5)
     finally:
         session.stop()
@@ -942,7 +891,6 @@ def test_styled_show_does_not_full_collect(
         _ensure_native_partial_collect_spies(frame)
         out = _capture_show(frame, 4, truncate=False)
         assert out == _DUCKDB_ELLIPSIS_GOLDEN
-        # duckdb n=4 on 12 rows: head 2 + tail 2 → skip=10, fetch=2
         _assert_partial_collect_discipline(expected_skip=(10, 2), max_rows_per_export=2)
     finally:
         session.stop()
@@ -970,9 +918,8 @@ def test_get_or_create_reuse_applies_display_style() -> None:
 def test_get_or_create_reuse_display_style_no_false_config_warning() -> None:
     """Pure ``repark.display.style`` reuse must apply style without the engine-knob warning.
 
-    Display style is always applied on reuse (facade-only). Emitting
-    "some configuration may not apply" for a pure style delta is a false positive (C6-Q-001).
-    Engine-knob reuse still warns (see ``test_session_config_knobs``).
+    Emitting "some configuration may not apply" for a pure style delta is a false positive
+    (C6-Q-001); engine-knob reuse still warns (see ``test_session_config_knobs``).
 
     MUTATION: compare full ``_config`` (incl. display style) for the warn → first reuse warns.
     MUTATION: apply style but skip ``_sync_display_style_into_builder_config`` and reinstate
@@ -995,7 +942,6 @@ def test_get_or_create_reuse_display_style_no_false_config_warning() -> None:
             "pure display-style reuse must not claim configuration may not apply; "
             f"got {[str(w.message) for w in config_warns]}"
         )
-        # Repeat pure-style reuse (same value): still silent after _builder_config sync.
         with warnings.catch_warnings(record=True) as caught_again:
             warnings.simplefilter("always", UserWarning)
             again = ReparkSession.builder.config(_DISPLAY_STYLE_KEY, "polars").getOrCreate()
@@ -1092,7 +1038,6 @@ def test_builder_display_style_dual_case_last_wins() -> None:
     finally:
         session.stop()
 
-    # Opposite order: mixed-case first, canonical last → last (canonical) wins.
     builder2 = ReparkSession.builder.config("REPARK.DISPLAY.STYLE", "duckdb").config(
         _DISPLAY_STYLE_KEY, "polars"
     )
@@ -1185,9 +1130,8 @@ def test_get_or_create_reuse_without_style_key_leaves_style() -> None:
 def test_show_rejects_bool_n(spark: ReparkSession) -> None:
     """``show(True)`` / ``show(False)`` must raise — bool is not a row count (C8-L-001).
 
-    ``bool`` is an ``int`` subclass, so ``max(0, int(False))`` → 0 and ``int(True)`` → 1 would
-    silently empty or shrink the keep-set. PySpark 3.5+ refuses a bool ``n``; use
-    ``truncate=False`` as a keyword for the truncate flag.
+    ``bool`` is an ``int`` subclass: ``show(False)`` would keep 0 rows, ``show(True)`` one.
+    PySpark 3.5+ refuses a bool ``n``; use ``truncate=False`` as a keyword for that flag.
 
     MUTATION: drop the ``isinstance(n, bool)`` guard (or only ``isinstance(n, int)``) →
     ``show(False)`` prints an empty keep-set and ``show(True)`` prints one row.
@@ -1210,13 +1154,11 @@ def test_show_rejects_bool_n(spark: ReparkSession) -> None:
 
 
 def test_public_tail_and_preview_tail_coexist_and_agree() -> None:
-    """The combined R-TAIL x R-DISPLAY contract (supersedes the pre-combine ownership pin
-    ``test_no_public_dataframe_tail``, whose premise died when the branches merged).
+    """The combined R-TAIL x R-DISPLAY contract: public ``tail`` and ``_preview_tail_rows``.
 
-    Public ``tail`` is PySpark-parity (full collect, then trailing slice — PySpark's own
-    documented driver-memory caveat). Private ``_preview_tail_rows`` stays the DISPLAY path:
-    engine-side ``limit_with_skip``, so ``show()`` never pays a full collect for a preview.
-    They coexist deliberately and must agree on the rows they return.
+    Public ``tail`` is PySpark-parity (full collect, then trailing slice — PySpark's documented
+    driver-memory caveat); ``_preview_tail_rows`` stays the DISPLAY path via engine-side
+    ``limit_with_skip``, so ``show()`` never pays a full collect. Both must return the same rows.
     """
     assert hasattr(DataFrame, "tail")
     assert hasattr(DataFrame, "_preview_tail_rows")

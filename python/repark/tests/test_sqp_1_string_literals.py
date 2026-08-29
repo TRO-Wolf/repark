@@ -3,12 +3,10 @@
 Live PySpark 4.1.2 oracle (``<pyspark-4.1.2-oracle>``); the charter ledger
 ``task/ledgers/staging/sqp-1-spark-string-literals-ledger.md`` holds the transcript.
 
-The facade was a CONTROL for cycle 1: a Python string carries no SQL-lexer escapes, so
-``F.lit(r"\\d")`` was already the regex ``\\d``; what changed is the SQL door, so the two doors now
-AGREE. Cycle 2 (C-013) makes the facade a CHANGE: the front door Spark-unescapes every statement,
-facade-generated SQL included, so a facade embed of a backslash (or leading apostrophe) value is
-correct only when spelled the Spark way, through the one helper
-``repark.spark._idents.sql_string_literal``.
+A Python string carries no SQL-lexer escapes, so ``F.lit(r"\\d")`` is already the regex ``\\d``;
+the SQL door Spark-unescapes every statement, facade-generated SQL included, so a facade embed of
+a backslash (or leading apostrophe) value is correct only when spelled the Spark way, through the
+one helper ``repark.spark._idents.sql_string_literal``.
 
 pins: sqp-1-spark-string-literals/C-007
 """
@@ -52,7 +50,7 @@ def test_facade_regexp_count_is_unchanged_and_matches_the_sql_door(spark: Repark
     sql = _table(spark.sql(r"SELECT regexp_count('a1', '\\d') AS c"))
     assert sql.column("c").to_pylist() == [1], "the SQL door now agrees with the facade"
 
-    # Raw ``'\d'`` now reaches the engine as ``d`` (no digit) — the changed-answer direction.
+    # Raw ``'\d'`` reaches the engine as ``d`` (no digit).
     raw = _table(spark.sql(r"SELECT regexp_count('a1', '\d') AS c"))
     assert raw.column("c").to_pylist() == [0]
 

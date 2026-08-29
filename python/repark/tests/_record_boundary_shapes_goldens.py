@@ -1,12 +1,11 @@
 """Record mode for the G10 boundary-shape corpus — re-derive every Spark half.
 
-NOT a ``test_`` module: pytest never collects it. It is the driver that produced the
-recorded Spark halves in ``test_boundary_shapes_parity.py``, committed so the
-"recorded against live PySpark 4.1.2" claim is falsifiable from inside the repo.
-
-It imports ``ROWS`` from the COMMITTED test module and runs each row's OWN recipe —
-the same ``run_row`` the suite uses — on a live PySpark session. The recorded golden
-and the asserted recipe therefore cannot drift apart: there is one recipe, not two.
+Not collected by pytest: this driver produced the recorded Spark halves in
+``test_boundary_shapes_parity.py`` and re-runs each row's own ``run_row`` on a
+live PySpark session, so the golden and the recipe cannot drift apart. Exit
+code 0 means every recorded half still reproduces; a mismatch prints and the
+exit code is non-zero. It never edits the corpus — re-recording is a human
+decision.
 
 Run it (needs a JVM and ``pyspark``, i.e. ``uv sync --extra record``)::
 
@@ -14,25 +13,12 @@ Run it (needs a JVM and ``pyspark``, i.e. ``uv sync --extra record``)::
         PYTHONPATH=python/repark-parity/src \\
         .venv/bin/python python/repark/tests/_record_boundary_shapes_goldens.py
 
-With ``--emit`` the driver prints paste-ready constructors for every row (Spark and,
-when the engines diverge, a repark half from a live repark session). Without the flag
-it only reports PASS / MISMATCH / MISSING and never rewrites the corpus.
-
-Exit code 0 means every recorded half still reproduces (pandas dtype/cell-type/values,
-or Arrow name/type/nullability/values). Non-zero prints each mismatch. It never edits
-the corpus — re-recording is a human decision.
-
-The Spark session basis is pinned here: ``local[2]``, ANSI on,
-``spark.sql.shuffle.partitions=2``, UI off, ``spark.sql.session.timeZone=UTC``,
-``spark.sql.execution.arrow.pyspark.enabled=true`` — G10's interchange basis (arrow-on
-toPandas is the boundary under test).
-
-The expected Spark coordinate is **derived** from ``python/repark-parity/pyproject.toml``
-``[project.optional-dependencies] record`` (CP-8: never restate a version literal).
-
-**JVM serialization.** Coordinate via ``/tmp/grok-jvm-record.lock`` (exclusive create)
-when other lanes are recording. This driver itself does not take the lock — the
-operator / orchestrator holds it around the process.
+With ``--emit`` it prints paste-ready constructors (Spark, plus a divergent
+repark half) instead of only reporting PASS / MISMATCH / MISSING. The pyspark
+pin is derived from ``python/repark-parity/pyproject.toml``'s record extra
+(CP-8: never restate a version literal). When other lanes record, the operator
+holds ``/tmp/grok-jvm-record.lock`` (exclusive create) around this process;
+the driver itself does not take the lock.
 """
 
 from __future__ import annotations

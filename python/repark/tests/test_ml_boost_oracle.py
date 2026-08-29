@@ -3,32 +3,6 @@
 Booster parity is vs the library run **directly** on the same frame (not Spark).
 CrossValidator live-pyspark differentials importorskip when JVM unavailable.
 No bit-exact claim beyond library determinism with seed.
-
-Octo cycle-1 pins: PipelineModel ext soft-save refuse, CV best-map selection,
-training-row re-hold, write() STOP-loud, MemTable ownership, feature-dim cap,
-multiclass f1 loud refuse, CV fold materialization honesty.
-
-Octo cycle-2 pins: CV materialize call oracle, dense MAX_EXT_FEATURES, R2 case
-isLargerBetter, NaN fold refuse, pipeline path traversal + class import allowlist.
-
-Octo cycle-3 pins: ImportError naming repark[ml-ext] always-on (monkeypatch),
-XGBoostRegressorModel wrong-width transform, sparse nnz cap, OHE handleInvalid
-validation + outputCol collision refuse.
-
-Octo cycle-4 pins: CV materialize *use* of mat_view (not call-only), classifier
-save/write STOP-loud, as_py-before-cap refuse, OHE keep+dropLast=False size,
-Model.copy(extra) / transform(df, params) predictionCol override.
-
-Octo cycle-5 pins: require_* ImportError rewrite for lightgbm/sklearn/numpy/pandas
-(+ LGBM/RF class-touch), not only xgboost; training-row re-hold scan covers
-fit_params nesting + list/Arrow/table holds (not ndarray-only / fit_params skip).
-
-Octo cycle-6 pins: stretch XGBClassifier / LightGBMRegressor / sklearn RF oracles
-lib-direct prediction equality (not row-count-only — zeros-predict must go red).
-
-Octo cycle-7 pins: training-row re-hold on every fitted ext model (not XGBRegressor-
-only); LightGBMClassifier + RandomForestClassifier lib-direct transform oracles;
-class-touch ImportError enumerates XGB/LGBM/RF Classifiers as well as regressors.
 """
 
 from __future__ import annotations
@@ -102,12 +76,10 @@ def _looks_like_training_row_batch(
 ) -> str | None:
     """Return a reason string if ``value`` looks like a re-held training batch.
 
-    Catches ndarray, list/tuple of length n_rows, and Arrow tables — including
-    nested under dicts (e.g. ``fit_params['_rows']``). Depth-limited.
+    Catches ndarray, list/tuple, Arrow-table, and nested dict holds; depth-limited.
     """
     if expected_num_rows <= 0 or depth > 4:
         return None
-    # numpy / array-protocol with a leading dim == n_rows
     shape = getattr(value, "shape", None)
     if shape is not None and hasattr(value, "dtype"):
         try:
@@ -115,7 +87,7 @@ def _looks_like_training_row_batch(
                 return f"array-like shape={shape!r}"
         except (TypeError, ValueError):
             pass
-    # pyarrow.Table (module-agnostic: num_rows + column API)
+    # Module-agnostic: no pyarrow import required.
     num_rows_attr = getattr(value, "num_rows", None)
     if num_rows_attr is not None and hasattr(value, "column_names"):
         try:
@@ -123,7 +95,6 @@ def _looks_like_training_row_batch(
                 return f"Arrow-like table num_rows={num_rows_attr}"
         except (TypeError, ValueError):
             pass
-    # Nested row list/tuple of length n_rows (tolist() re-hold)
     if isinstance(value, (list, tuple)) and len(value) == expected_num_rows:
         return f"sequence len={len(value)}"
     if isinstance(value, dict):
@@ -139,8 +110,8 @@ def _looks_like_training_row_batch(
 def _assert_no_training_row_rehold(model: Any, *, expected_num_rows: int) -> None:
     """Pin: fitted ext model shell must not re-hold training rows (octo C5-Q-002).
 
-    Scans **all** instance attrs including ``fit_params`` (must not skip it).
-    Name denylist alone is insufficient; list/Arrow holds must fail too.
+    Name denylist alone is insufficient; list/Arrow holds, including fit_params,
+    must fail too.
     """
     forbidden_names = (
         "_training_rows",
@@ -197,9 +168,7 @@ def _maybe_live_spark():
         pytest.skip(f"live pyspark unavailable: {error}")
 
 
-# ---------------------------------------------------------------------------
 # Package surface — bare import + loud ImportError naming the extra
-# ---------------------------------------------------------------------------
 
 
 def test_ext_package_import_succeeds_bare() -> None:
@@ -225,10 +194,8 @@ def test_ext_require_names_extra_when_missing(
 ) -> None:
     """Every require_* must rewrite ImportError to name repark[ml-ext] (octo C5-Q-001).
 
-    Mutation-proof (C3-Q-001 + C5): only pinning require_xgboost left
-    require_lightgbm/sklearn/numpy/pandas rewrites untested — deleting those
-    rewrites stayed green when extras are installed. Always force missing-dep
-    via import monkeypatch.
+    Mutation-proof (C3-Q-001 + C5): only pinning require_xgboost left the other
+    rewrites untested; force missing-dep via import monkeypatch.
     """
     _block_module_import(monkeypatch, module_root)
     import repark.spark.ml.ext._deps as deps
@@ -257,8 +224,7 @@ def test_ext_class_touch_names_extra_when_missing(
 ) -> None:
     """Class-touch for XGB/LGBM/RF (regressor + classifier) must name repark[ml-ext].
 
-    Complements require_* pins: construction calls _ensure_*_loaded → require_*.
-    Octo C7-Q-003: regressor-only enum left classifier ``__init__`` free to drop
+    Octo C7-Q-003: a regressor-only enum left classifier ``__init__`` free to drop
     ``_ensure_*_loaded`` while the suite stayed green.
     """
     _block_module_import(monkeypatch, module_root)
@@ -270,9 +236,7 @@ def test_ext_class_touch_names_extra_when_missing(
         estimator_cls()
 
 
-# ---------------------------------------------------------------------------
 # ParamGridBuilder + CrossValidator (merge bar; CV over LR counts)
-# ---------------------------------------------------------------------------
 
 
 def test_param_grid_builder_cartesian() -> None:
@@ -285,7 +249,6 @@ def test_param_grid_builder_cartesian() -> None:
         .build()
     )
     assert len(grid) == 4
-    # Each map has both keys (matched by param name).
     names_sets = [{param.name for param in param_map} for param_map in grid]
     assert all(names == {"maxIter", "fitIntercept"} for names in names_sets)
 
@@ -316,8 +279,8 @@ def test_cross_validator_over_linear_regression() -> None:
         # Smaller RMSE is better — best avg should be the min (isLargerBetter=False path).
         best_index = min(range(len(model.avgMetrics)), key=lambda index: model.avgMetrics[index])
         assert model.avgMetrics[best_index] == min(model.avgMetrics)
-        # Mutation-proof: bestModel must match the param map at best_index (not always [0]).
-        # Data is y≈1+2x with intercept — fitIntercept=True must win on RMSE.
+        # Mutation-proof: bestModel must match the param map at best_index (not
+        # always [0]); y≈1+2x with intercept means fitIntercept=True wins on RMSE.
         best_map = model.estimatorParamMaps[best_index]
         fit_intercept = None
         for param, value in best_map.items():
@@ -416,9 +379,7 @@ def test_cross_validator_live_pyspark_shape() -> None:
         spark.stop()
 
 
-# ---------------------------------------------------------------------------
 # OneHotEncoder plural inputCols/outputCols (merge bar)
-# ---------------------------------------------------------------------------
 
 
 def test_one_hot_encoder_plural_cols() -> None:
@@ -442,7 +403,7 @@ def test_one_hot_encoder_plural_cols() -> None:
 
 
 def test_one_hot_encoder_singular_still_works() -> None:
-    """Singular inputCol path remains green after plural landing."""
+    """Singular inputCol path remains green."""
     spark = _session()
     try:
         df = spark.createDataFrame([(0.0,), (1.0,), (0.0,)], ["idx"])
@@ -458,8 +419,7 @@ def test_one_hot_encoder_handle_invalid_rejects_illegal_mode() -> None:
     """Illegal handleInvalid must fail loud — not silently act as keep (octo C3-L-001).
 
     Mutation-proof: deleting the {error,keep,skip} membership check lets illegal
-    modes like ``Error`` (wrong case) or ``bogus`` emit empty sparse vectors
-    without exception.
+    modes emit empty sparse vectors without exception.
     """
     spark = _session()
     try:
@@ -486,7 +446,7 @@ def test_one_hot_encoder_refuses_existing_output_col() -> None:
     """OHE transform must refuse pre-existing outputCols (octo C3-L-002).
 
     Mutation-proof: without _refuse_output_collision, SELECT view.*, expr AS oh
-    can silently duplicate/overwrite an existing column name.
+    silently overwrites an existing column name.
     """
     spark = _session()
     try:
@@ -507,9 +467,7 @@ def test_one_hot_encoder_refuses_existing_output_col() -> None:
         spark.stop()
 
 
-# ---------------------------------------------------------------------------
 # XGBoostRegressor E2E + lib-direct parity (merge bar)
-# ---------------------------------------------------------------------------
 
 
 def test_xgboost_regressor_e2e_and_lib_parity() -> None:
@@ -539,12 +497,10 @@ def test_xgboost_regressor_e2e_and_lib_parity() -> None:
         assert model.num_rows == 40
         assert model.num_features == 1
         assert model.booster is not None
-        # No training-row re-hold: shell is booster + scalar hyperparams only.
-        # C5-Q-002: must scan fit_params + list/Arrow forms (not ndarray-only skip).
+        # C5-Q-002: shell is booster + scalars only; scan fit_params + list/Arrow.
         _assert_no_training_row_rehold(model, expected_num_rows=40)
-        # Mutation-proof the pin itself: list under fit_params and Arrow-like
-        # non-denylist attr must go red (prior hollow pin skipped fit_params +
-        # only flagged ndarray; name denylist alone missed content holds).
+        # Mutation-proof the pin itself: fit_params list hold and Arrow-like
+        # non-denylist attr must go red.
         injected_rows = [[float(x)] for x, _ in rows]
         model.fit_params["_rows"] = injected_rows
         with pytest.raises(AssertionError, match=r"training-row re-hold"):
@@ -631,7 +587,6 @@ def test_xgboost_regressor_load_requires_params_parquet() -> None:
             )
             with pytest.raises(IllegalArgumentException, match=r"params\.parquet|1 row|exactly"):
                 XGBoostRegressorModel.load(str(target))
-            # Empty booster.raw
             model.write().overwrite().save(str(target))
             (target / "fitted" / "booster.raw").write_bytes(b"")
             with pytest.raises(IllegalArgumentException, match=r"empty booster|booster blob"):
@@ -678,7 +633,6 @@ def test_xgboost_regressor_load_refuses_booster_blob_path_escape() -> None:
                 match=r"booster_blob|\.\.|escape|relative|absolute",
             ):
                 XGBoostRegressorModel.load(str(target))
-            # Absolute path must also refuse.
             meta["booster_blob"] = str(outside.resolve())
             meta_path.write_text(json.dumps(meta), encoding="utf-8")
             with pytest.raises(
@@ -724,8 +678,8 @@ def test_xgboost_regressor_booster_bytes_save_load_predict_parity() -> None:
             assert meta["kind"] == "XGBoostRegressorModel"
             assert (target / "fitted" / "booster.raw").is_file()
             assert (target / "fitted" / "params.parquet").is_file()
-            # Mutation-proof layout: non-empty booster bytes + confined relative blob path
-            # (octo M5 C8 — empty/missing blob or num_features=0 soft-load must go red).
+            # Mutation-proof layout: non-empty booster bytes + confined blob path
+            # (octo M5 C8: empty blob or num_features=0 soft-load must go red).
             booster_bytes = (target / "fitted" / "booster.raw").read_bytes()
             assert len(booster_bytes) > 0
             assert meta.get("booster_blob") == "fitted/booster.raw"
@@ -753,7 +707,6 @@ def test_xgboost_regressor_booster_bytes_save_load_predict_parity() -> None:
         lib_after = [float(value) for value in loaded.booster.predict(matrix)]
         for left, right in zip(lib_before, lib_after, strict=True):
             assert _rel_close(left, right, tol=1e-9), (left, right)
-        # write().overwrite().save round-trip
         with tempfile.TemporaryDirectory() as tmp2:
             target2 = Path(tmp2) / "xgb-ow"
             model.write().save(str(target2))
@@ -1201,9 +1154,7 @@ def test_sklearn_random_forest_classifier_stretch() -> None:
         spark.stop()
 
 
-# ---------------------------------------------------------------------------
 # Grep-style gates: numpy not at repark.ml top-level; no crates numpy
-# ---------------------------------------------------------------------------
 
 
 def test_numpy_not_imported_at_repark_ml_toplevel() -> None:
@@ -1277,17 +1228,14 @@ def test_cv_over_small_xgb_grid() -> None:
         spark.stop()
 
 
-# ---------------------------------------------------------------------------
 # Octo cycle-2 mutation-proof pins (S1)
-# ---------------------------------------------------------------------------
 
 
 def test_cross_validator_materializes_fold_labels() -> None:
     """CV must materialize fold labels *and use* the mat_view (octo C2-Q-001 / C4-Q-001).
 
-    Mutation-proof: calling materialize then ``folded = folded_lazy`` still leaves
-    call-only oracles green on ORDER BY 1 fixtures. Pin that SQL after materialize
-    reads ``__repark_cv_mat_*`` (fold train/test derive from the MemTable).
+    Mutation-proof: call-only oracles stay green when materialize is called then
+    ignored; SQL after materialize must read ``__repark_cv_mat_*``.
     """
     spark = _session()
     try:
@@ -1336,7 +1284,6 @@ def test_cross_validator_materializes_fold_labels() -> None:
             if local_view_name(name).startswith("__repark_cv_mat_")  # R7-1 home spelling
         ]
         assert mat_names, materialize_calls
-        # C4-Q-001: fold frame must SELECT FROM the materialize view (not ignore it).
         used = any(any(mat_name in query for mat_name in mat_names) for query in sql_queries)
         assert used, (
             "materialize_as_temp_view was called but no SQL read a __repark_cv_mat_* view "
@@ -1435,7 +1382,6 @@ def test_pipeline_load_refuses_path_traversal() -> None:
         model_dir.mkdir()
         outside = root / "outside_secret.txt"
         outside.write_text("SECRET_PAYLOAD_SHOULD_NOT_READ\n", encoding="utf-8")
-        # Hostile metadata points relative_path outside the model tree.
         metadata = {
             "format": REPARK_ML_FORMAT,
             "version": REPARK_ML_VERSION,
@@ -1456,7 +1402,6 @@ def test_pipeline_load_refuses_path_traversal() -> None:
         with pytest.raises(IllegalArgumentException, match=r"relative_path|\.\.|escape|unsafe"):
             PipelineModel.load(str(model_dir))
 
-        # Nested traversal segment.
         metadata["stages"][0]["relative_path"] = "stages/../../outside_secret.txt"
         (model_dir / "metadata.json").write_text(
             json.dumps(metadata, indent=2) + "\n", encoding="utf-8"
@@ -1504,8 +1449,8 @@ def test_pipeline_instantiate_stage_allowlists_repark_ml() -> None:
             fitted=True,
             fitted_state={},
         )
-    # Legitimate repark.ml module path is allowed by the allowlist (import may still fail
-    # if class lacks _ml_from_save — that is a different refuse).
+    # Legitimate repark.ml path is allowed (import may still fail on a missing
+    # _ml_from_save — that is a different refuse).
     module_name, class_name = _assert_allowed_stage_class_path(
         "repark.spark.ml.regression.LinearRegressionModel"
     )
@@ -1516,8 +1461,7 @@ def test_pipeline_instantiate_stage_allowlists_repark_ml() -> None:
 def test_stretch_ext_write_stop_loud() -> None:
     """M8: LightGBM regressor save/load works; sklearn still pin-refuses (pickle).
 
-    Supersedes M4/M5 STOP-loud for LightGBM (now model_to_string). sklearn remains
-    refuse-only with the exact pickle-forbidden reason (octo C2-L-003 residual class).
+    sklearn refuses with the exact pickle-forbidden reason (octo C2-L-003 residual).
     """
     import importlib.util
 
@@ -1582,16 +1526,14 @@ def test_stretch_ext_write_stop_loud() -> None:
         spark.stop()
 
 
-# ---------------------------------------------------------------------------
 # Octo cycle-4 mutation-proof pins (S1) — M8 update for classifier save matrix
-# ---------------------------------------------------------------------------
 
 
 def test_classifier_models_save_write_stop_loud() -> None:
     """M8 matrix: XGB/LGBM classifiers save/load; sklearn RF classifier pin-refuses.
 
-    Supersedes C4-Q-002 STOP-loud-for-all-classifiers. Every fitted classifier model
-    is either round-trip-pinned or refuse-pinned (no silent third state).
+    Every fitted classifier model is either round-trip-pinned or refuse-pinned
+    (no silent third state).
     """
     import importlib.util
 
@@ -1686,8 +1628,8 @@ def test_classifier_models_save_write_stop_loud() -> None:
 def test_features_matrix_caps_before_as_py() -> None:
     """Null probe + dense width must refuse without as_py materialize (octo C4-SAF-001).
 
-    Mutation-proof: ``cell.as_py() is None`` / dense ``as_py`` then ``len`` reintroduces
-    hostile materialize before MAX_EXT_FEATURES; this pin raises if as_py runs first.
+    Mutation-proof: an as_py-first implementation reintroduces hostile materialize
+    before MAX_EXT_FEATURES; this pin raises if as_py runs first.
     """
     pytest.importorskip("numpy")
     from repark.spark.ml.ext._arrow_util import MAX_EXT_FEATURES, features_matrix_from_arrow
@@ -1742,7 +1684,6 @@ def test_one_hot_encoder_keep_drop_last_false_extra_invalid_bucket() -> None:
     spark = _session()
     try:
         train = spark.createDataFrame([(0.0,), (1.0,)], ["idx"])
-        # Fit categories {0,1}; transform includes null + out-of-range.
         model = OneHotEncoder(
             inputCol="idx",
             outputCol="oh",
@@ -1785,7 +1726,7 @@ def test_model_copy_extra_applies_prediction_col_override() -> None:
     """Model.copy(extra) must apply Param overrides (octo C4-L-002).
 
     Mutation-proof: discarding extra leaves transform(df, {predictionCol: pred_out})
-    still writing ``prediction``. Pin LR, Logit, XGB regressor, and CV model.
+    still writing ``prediction``; pin LR, Logit, XGB regressor, and CV model.
     """
     import importlib.util
 
@@ -1805,7 +1746,6 @@ def test_model_copy_extra_applies_prediction_col_override() -> None:
         assert all("pred_out" in row.asDict() for row in out)
         assert all("prediction" not in row.asDict() for row in out)
 
-        # Binary labels for logistic.
         class_rows = [(float(x), 1.0 if x >= 8 else 0.0) for x in range(16)]
         cdf = spark.createDataFrame(class_rows, ["x", "label"])
         cassembled = VectorAssembler(inputCols=["x"], outputCol="features").transform(cdf)
@@ -1855,9 +1795,7 @@ def test_model_copy_extra_applies_prediction_col_override() -> None:
         spark.stop()
 
 
-# ---------------------------------------------------------------------------
 # M8 — ext estimator save/load matrix (booster-bytes / pin-refuse)
-# ---------------------------------------------------------------------------
 
 
 def test_m8_xgboost_regressor_atomic_overwrite_and_version_guard() -> None:
@@ -1908,7 +1846,7 @@ def test_m8_xgboost_regressor_atomic_overwrite_and_version_guard() -> None:
                 match=r"major version mismatch|xgboost",
             ):
                 XGBoostRegressorModel.load(str(target))
-            # Restore and confirm same-major still loads (old_bytes still valid path).
+            # Same-major metadata still loads after restore.
             meta["library_version"] = xgb.__version__
             (target / "metadata.json").write_text(json.dumps(meta), encoding="utf-8")
             assert len(old_bytes) > 0

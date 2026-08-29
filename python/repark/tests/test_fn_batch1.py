@@ -152,8 +152,8 @@ def test_greatest_least_dates(spark: ReparkSession) -> None:
 def test_unsupported_loud(spark: ReparkSession) -> None:
     with pytest.raises(UnsupportedOperationException, match="split"):
         split("s", ",")
-    # FNP-3: datediff flipped to shipped — it is Spark's older spelling of date_diff and shares
-    # its engine arm. Behaviour: test_fnp3_destubbed.py.
+    # FNP-3: datediff ships — Spark's older spelling of date_diff, same engine arm.
+    # Behavior: test_fnp3_destubbed.py.
 
 
 def test_null_arg_propagation_lower(spark: ReparkSession) -> None:

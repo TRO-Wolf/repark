@@ -2,13 +2,12 @@
 
 Oracle: Spark's DML store-assignment policy (``Cast.canANSIStoreAssign``, default
 ``spark.sql.storeAssignmentPolicy=ANSI``) rejects boolean→int, timestamp→bigint and
-string→numeric at ANALYSIS time (``INCOMPATIBLE_DATA_FOR_TABLE``) — far narrower than a CAST.
-Before the fix repark's insert path ran the full arrow cast kernel, silently committing
-``flag = 1`` for a boolean and the raw epoch micros for a timestamp. INSERT pins are red
-without ``validate_insert_store_assignment`` (merge/insert.rs). UPDATE ``SET`` twins are red
-without ``update_stream_checked``: the rewrite ``CASE`` would otherwise fail with an
-incidental DataFusion coercion error instead of the shared ``not ANSI-store-assignable``
-needle (Spark ``INCOMPATIBLE_DATA_FOR_TABLE``).
+string→numeric at ANALYSIS time (``INCOMPATIBLE_DATA_FOR_TABLE``) — far narrower than a CAST;
+without the gate the insert path silently commits ``flag = 1`` for a boolean and raw epoch
+micros for a timestamp. INSERT pins are red without ``validate_insert_store_assignment``
+(merge/insert.rs). UPDATE ``SET`` twins are red without ``update_stream_checked``: the rewrite
+``CASE`` would otherwise fail with an incidental DataFusion coercion error instead of the shared
+``not ANSI-store-assignable`` needle (Spark ``INCOMPATIBLE_DATA_FOR_TABLE``).
 """
 
 from __future__ import annotations

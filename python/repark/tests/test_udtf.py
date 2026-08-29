@@ -1,7 +1,7 @@
-"""r23 C6 / U12 — UDTF scalar-arg phase-2 core (mapInArrow + FROM name(lit_args)).
+"""C6 / U12 — UDTF scalar-arg core (mapInArrow + FROM name(lit_args)).
 
-U11 residual: validation error classes held. Execution path flipped from full refuse
-to scalar-arg relation constructor; LATERAL / table-arg stay blocked.
+Validation error classes held (U11); the scalar-arg relation constructor executes; LATERAL and
+table-arg stay blocked.
 """
 
 from __future__ import annotations

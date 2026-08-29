@@ -84,7 +84,6 @@ def test_bit_aggregates(spark: ReparkSession) -> None:
 def test_sha2_256(spark: ReparkSession) -> None:
     frame = spark.sql("SELECT 'a' AS s")
     table = frame.select(sha2("s", 256).alias("h")).to_arrow()
-    # binary or hex depending on engine
     assert table.num_rows == 1
 
 
@@ -162,8 +161,8 @@ def test_percentile_approx_sql_third_arg_is_centroids(spark: ReparkSession) -> N
     for key in ("p_default", "p_c2", "p_c10k"):
         value = float(row[key])
         assert 1.0 <= value <= 200.0, f"{key}={value} outside fixture bounds"
-    # centroids=2 is a coarser t-digest — pin that the path is live (may equal by chance
-    # on tiny data, so only require finite + in-window; divergence documented).
+    # centroids=2 is a coarser t-digest; it may equal by chance, so only finite + in-window
+    # is required.
     assert row["p_c2"] is not None
 
 
@@ -172,13 +171,13 @@ def test_batch4_loud_unsupported(spark: ReparkSession) -> None:
         skewness("x")
     with pytest.raises(UnsupportedOperationException, match="kurtosis"):
         kurtosis("x")
-    # Q1: percentile_approx / approx_percentile flipped to shipped (see
-    # test_percentile_approx_scalar_bounds); remain loud-unsupported for the rest.
+    # Q1: percentile_approx / approx_percentile ship (see test_percentile_approx_scalar_bounds);
+    # the rest stay loud-unsupported.
     with pytest.raises(UnsupportedOperationException, match="mode"):
         mode("x")
-    # FNP-3: sha1 / crc32 / xxhash64 flipped to shipped (datafusion-spark hash kernels); keep
-    # the other loud stubs. Behaviour: test_fnp3_destubbed.py.
-    # r20 G2: randn is live (XORShift Gaussian); keep other loud stubs.
+    # FNP-3: sha1 / crc32 / xxhash64 ship (datafusion-spark hash kernels). Behavior:
+    # test_fnp3_destubbed.py.
+    # G2: randn is live (XORShift Gaussian); keep other loud stubs.
     with pytest.raises(UnsupportedOperationException, match="monotonically_increasing_id"):
         monotonically_increasing_id()
     with pytest.raises(UnsupportedOperationException, match="spark_partition_id"):

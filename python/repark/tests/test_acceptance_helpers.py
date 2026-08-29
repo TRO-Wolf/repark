@@ -1,9 +1,8 @@
 """AWS-free unit tests for the acceptance-harness helpers — these run EVERYWHERE (no gate).
 
-They cover the publish-job builders + ``deduplicate`` in ``_acceptance``, the MW-4
-merge-on-read compact+expire helper (memory analog), and assert the gated harness plus
-``_acceptance.py`` carry no DROP/DELETE SQL against AWS. The gated real-AWS test itself lives
-in ``test_aws_acceptance.py`` behind the ``REPARK_AWS_ACCEPTANCE`` gate.
+They cover the publish-job builders + ``deduplicate`` in ``_acceptance``, the merge-on-read
+compact+expire helper (memory analog), and assert the gated harness plus ``_acceptance.py``
+carry no DROP/DELETE SQL against AWS.
 """
 
 from __future__ import annotations
@@ -65,10 +64,8 @@ def test_fq_table_is_three_part() -> None:
 
 
 def test_acceptance_namespace_location_is_under_the_glue_warehouse() -> None:
-    # ADV-1: the harness creates the scratch namespace WITH this `location` (SQL `LOCATION`
-    # also works since WG-5), so
-    # a CTAS on the RequireExplicitLocation Glue catalog does not hit N5. The warehouse's trailing
-    # slash must not double up.
+    # The harness creates the scratch namespace WITH this `location`: a Glue
+    # RequireExplicitLocation catalog has no default path for a CTAS to write to.
     location = acceptance_namespace_location(GLUE_WAREHOUSE)
     assert location == "s3://example-warehouse/testing_repark_acceptance"
     assert location.startswith("s3://")
@@ -99,8 +96,7 @@ def test_glue_catalog_config_carries_the_glue_impl_and_s3_warehouse() -> None:
 
 
 def test_s3tables_catalog_config_carries_the_arn_as_warehouse() -> None:
-    # AWS-free: a DUMMY ARN (never a real one) proves the config shape. The S3 Tables catalog-impl
-    # is used and the ARN is passed as `warehouse` (RePark carries it into `table_bucket_arn`).
+    # AWS-free: a DUMMY ARN (never a real one) proves the config shape.
     dummy_arn = "arn:aws:s3tables:us-east-2:000000000000:bucket/dummy-acceptance-bucket"
     cfg = s3tables_catalog_config("s3tables_catalog", dummy_arn)
     assert cfg == {
@@ -144,8 +140,7 @@ def test_merge_sql_shape_keys_on_the_id_column() -> None:
 
 
 def test_scratch_namespace_is_never_the_production_namespace() -> None:
-    # A guard against a copy-paste regression aiming the harness at production silver. Namespace
-    # AND created tables carry the testing_ prefix so they read as disposable in the Glue console.
+    # Guard against a copy-paste regression aiming the harness at production silver.
     assert ACCEPTANCE_NAMESPACE == "testing_repark_acceptance"
     assert ACCEPTANCE_NAMESPACE != PRODUCTION_NAMESPACE
     assert ACCEPTANCE_TABLE_PREFIX == "testing_"
@@ -153,9 +148,8 @@ def test_scratch_namespace_is_never_the_production_namespace() -> None:
 
 def test_the_gated_harness_has_no_drop_or_delete_against_aws() -> None:
     # Structural guard: the harness must NEVER emit DROP TABLE / DELETE FROM / DROP NAMESPACE.
-    # CALL expire_snapshots / rewrite_* may remove expired snapshot *files* under the scratch
-    # prefix (OD-3); that is not table teardown. Tables still accumulate.
-    # MW-4 live SQL lives in `_acceptance.py` as well as the gated module (octo C1-Q-002).
+    # CALL expire_snapshots / rewrite_* may remove expired snapshot files under the scratch
+    # prefix; that is not table teardown.
     for filename in ("test_aws_acceptance.py", "_acceptance.py"):
         source = (_TESTS_DIR / filename).read_text(encoding="utf-8")
         upper = source.upper()
@@ -166,7 +160,6 @@ def test_the_gated_harness_has_no_drop_or_delete_against_aws() -> None:
 
 
 def test_deduplicate_keeps_the_newest_row_per_id() -> None:
-    # AWS-free: a memory session proves the dedup transform keeps the latest ingestion_timestamp.
     spark = ReparkSession.builder.appName("pytest-dedup").getOrCreate()
     df = spark.sql(
         "SELECT 1 AS id, 'old' AS name, TIMESTAMP '2020-01-01 00:00:00' AS ingestion_timestamp "
@@ -201,9 +194,7 @@ def test_operator_buckets_pass_the_guard(monkeypatch: pytest.MonkeyPatch) -> Non
     _acceptance.assert_real_buckets_configured()  # must not raise
 
 
-# ==============================================================================================
-# Namespace location-mismatch guard (G-6) — pure comparison, no AWS
-# ==============================================================================================
+# Namespace location-mismatch guard — pure comparison, no AWS
 def test_normalize_location_uri_strips_trailing_slashes_only() -> None:
     assert normalize_location_uri("s3://bucket/ns/") == "s3://bucket/ns"
     assert normalize_location_uri("s3://bucket/ns///") == "s3://bucket/ns"
@@ -328,9 +319,7 @@ def test_assert_glue_scratch_namespace_location_composes_getdatabase_and_compare
 def test_glue_harness_calls_location_guard_and_s3tables_does_not() -> None:
     """Structural pin: Glue leg *invokes* the guard; S3 Tables body must not.
 
-    AST-based (comments/strings do not count): the Glue test function must contain a real
-    ``Call`` to ``assert_glue_scratch_namespace_location`` after a real ``create_namespace``
-    call. Commenting the call out must turn this red.
+    AST-based, so comments/strings do not count and commenting the call out turns this red.
     """
     import ast
 
@@ -421,7 +410,7 @@ def test_glue_harness_calls_location_guard_and_s3tables_does_not() -> None:
 
 
 def test_glue_location_guard_calls_get_database() -> None:
-    """Y-3 activation: the Glue wrapper's live read is ``catalog.getDatabase``, not DESCRIBE."""
+    """The Glue wrapper's live read is ``catalog.getDatabase``, not DESCRIBE."""
     import ast
 
     source = (_TESTS_DIR / "_acceptance.py").read_text(encoding="utf-8")
@@ -471,10 +460,9 @@ def test_mor_acceptance_expected_rows_renames_the_updated_ids() -> None:
 
 
 def test_mor_helper_replays_the_last_merge() -> None:
-    """C1-Q-004: the identical MERGE is a second ``merge_named_updates`` of ``[updates[-1]]``.
+    """The identical MERGE is a second ``merge_named_updates`` of ``[updates[-1]]``.
 
-    Removing that replay must turn this pin red; a row-set compare around a deleted call
-    would stay green.
+    AST-checked: a row-set compare around a deleted replay call would stay green.
     """
     import ast
 
@@ -566,7 +554,7 @@ class _OkSql:
 
 
 def test_require_snapshot_expired_rejects_id_echo_and_generic_snapshot() -> None:
-    """C4-L-001: id-echo or 'snapshot' alone is not expire proof."""
+    """id-echo or 'snapshot' alone is not expire proof."""
     with pytest.raises(AnalysisException):
         require_snapshot_expired(_RaisingSql("VERSION AS OF 99 failed"), "t", 99)
     with pytest.raises(AnalysisException):

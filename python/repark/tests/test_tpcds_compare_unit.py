@@ -1,4 +1,4 @@
-"""Unit pins for the TPC-DS compare kernel + runner helpers (R-TPCDS-HARNESS / D1).
+"""Unit pins for the TPC-DS compare kernel + runner helpers.
 
 Mutation-proof: off-by-one large integers must fail; near-equal floats pass;
 ORDER BY paths use ordered compare; exit codes and disk gate match the charter.
@@ -304,7 +304,7 @@ def test_subprocess_hard_timeout_covers_greylight_budget() -> None:
     hard = runner.subprocess_hard_timeout_s(120.0, 300.0, 3)
     # per side: 3*120 + 300 = 660; both sides + setup 90 + grace 30 → 1440
     assert hard == 1440.0
-    # Must exceed the old broken clamp (570) and a single-side Slow path (660).
+    # Must exceed the 570 clamp and a single-side Slow path (660).
     assert hard > 570.0
     assert hard >= (120.0 * 3 + 300.0) * 2 + 90.0
 

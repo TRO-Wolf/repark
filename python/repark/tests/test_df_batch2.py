@@ -19,8 +19,7 @@ def spark() -> ReparkSession:
 def test_cube_rollup_count(spark: ReparkSession) -> None:
     """CUBE/ROLLUP agg AS-aliases Spark / user names (combine C5-L-002).
 
-    Len-only residual-green left ``.alias('c')`` silently dropped; pin column ``c`` and
-    count values.
+    Pin column ``c``, not just row count.
     """
     frame = spark.sql("SELECT * FROM (VALUES (1,'a'),(1,'b'),(2,'a')) t(g,v)")
     cube_table = frame.cube("g").agg(functions_api.count("*").alias("c")).to_arrow()
@@ -28,7 +27,6 @@ def test_cube_rollup_count(spark: ReparkSession) -> None:
     cube_rows = cube_table.to_pylist()
     assert len(cube_rows) >= 2
     by_g = {row["g"]: row["c"] for row in cube_rows}
-    # g=1 → 2 rows, g=2 → 1 row, grand total → 3
     assert by_g[1] == 2
     assert by_g[2] == 1
     assert by_g[None] == 3
@@ -51,9 +49,7 @@ def test_cube_rollup_count(spark: ReparkSession) -> None:
 def test_cube_first_hostile_count_lit_uncorrupted(spark: ReparkSession) -> None:
     """CUBE free-SQL must not substring-rewrite count(Int64(1)) inside AF args (C6-SAF-001).
 
-    Pre-fix: ``_agg_via_sql_group`` did ``expression_sql.replace("count(Int64(1))", "count(*)")``
-    so ``first(lit('count(Int64(1))'))`` became ``first_value('count(*)')``. Select-global-agg
-    already used structural count(*) (C2-SAF-001); cube/rollup must match.
+    Select-global-agg is already structural count(*) (C2-SAF-001); cube/rollup must match.
     """
     frame = spark.sql("SELECT * FROM (VALUES (1,'a'),(1,'b'),(2,'a')) t(g,v)")
     hostile = "count(Int64(1))"
@@ -86,18 +82,14 @@ def test_unpivot(spark: ReparkSession) -> None:
 def test_unpivot_quotes_hostile_names_and_labels(spark: ReparkSession) -> None:
     """unpivot quotes idents + string-literal labels (combine octo C5-SEC-001).
 
-    Pre-fix interpolated unquoted ids/values/output names and bare single-quoted
-    value labels into UNION ALL SQL. Hostile labels / output names must not retarget
-    FROM or break string literals; reserved id column ``order`` still works when quoted.
-    Mutation that reverts to bare ``'{value_col}'`` / unquoted AS names fails the
-    single-column / no-breakout pins below.
+    Hostile labels / output names must not retarget FROM or break string literals; reserved id
+    column ``order`` still works when quoted.
     """
     from repark.errors import AnalysisException
     from repark.spark._idents import quote_ident as _quote_ident
     from repark.spark.dataframe import _sql_string_literal
 
     frame = spark.sql('SELECT 1 AS "order", 10 AS a, 20 AS b')
-    # Reserved-name id column must quote cleanly.
     out = frame.unpivot("order", ["a", "b"], "variable", "value").to_arrow().to_pylist()
     assert len(out) == 2
     assert {row["variable"] for row in out} == {"a", "b"}
@@ -112,8 +104,7 @@ def test_unpivot_quotes_hostile_names_and_labels(spark: ReparkSession) -> None:
     # Missing hostile value column → schema analysis error (quoted), not free-SQL inject.
     with pytest.raises(AnalysisException, match=r"No field named|Schema error"):
         frame.unpivot("order", [hostile_label], "variable", "value").collect()
-    # Hostile output names stay *one* quoted identifier — pre-fix bare AS would
-    # introduce extra columns ``y`` / ``z`` or reshape SELECT.
+    # Hostile output names stay *one* quoted identifier, not extra columns or a reshaped SELECT.
     var_table = frame.unpivot("order", ["a"], hostile_out, "value").to_arrow()
     assert list(var_table.column_names) == ["order", hostile_out, "value"]
     assert "y" not in var_table.column_names
@@ -129,7 +120,6 @@ def test_create_temp_view_and_explain(spark: ReparkSession) -> None:
     frame = spark.sql("SELECT 1 AS x")
     frame.createTempView("tv_batch2")
     assert spark.sql("SELECT * FROM tv_batch2").collect()[0][0] == 1
-    # explain prints; does not raise
     frame.explain()
     frame.explain(True)
 
@@ -140,7 +130,7 @@ def test_tojson_and_global_temp_loud(spark: ReparkSession) -> None:
         frame.toJSON()
     with pytest.raises(UnsupportedOperationException, match="createGlobalTempView"):
         frame.createGlobalTempView("g")
-    # R-PIVOT: W5 loud-unsupported removed — pivot returns GroupedData (done-signal).
+    # R-PIVOT: pivot returns GroupedData (W5 done-signal).
     pivoted = frame.groupBy("x").pivot("x", [1])
     assert pivoted is not None
     # G1: approxQuantile / stat.corr are live (property form). Loud residual is freqItems.

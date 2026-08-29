@@ -22,6 +22,9 @@ NOT in that file is a defect, not a decision.
 
 ## Contents
 
+CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
+mutation payloads, pins, and safety contracts kept, narration and round history deleted.
+
 - `test_pr_245_revalidation.py` — PR #245 public-door revalidation for Spark string literals,
   binary casts, parser limits, and facade controls.
 - `test_production_file_size.py` — frozen parent-symbol inventory, integrated AST body hashes,

@@ -1,4 +1,4 @@
-"""r23b N2 — adjacent projection/window collapse (alias-chain squash + window merge).
+"""N2 — adjacent projection/window collapse (alias-chain squash + window merge).
 
 Plan-shape pins (WindowAggExec / logical ``AS`` chain counts) + Arrow value correctness.
 No brittle full plan-string pins (Q13). Synthetic OHLCV only.
@@ -98,8 +98,8 @@ def test_stage_a_alias_chain_squash_passthrough(bars: object) -> None:
     )
     frame = frame.withColumns({"sma10": ta.sma("close", timeperiod=10).over(window)})
     logical = _logical_plan_text(frame)
-    # After squash: at most one identity ``AS name`` per field per projection level —
-    # triple ``ts AS ts AS ts`` is the pre-fix anti-pattern.
+    # At most one identity ``AS name`` per field per projection level; triple
+    # ``ts AS ts AS ts`` is the anti-pattern this pins against.
     assert "ts AS ts AS ts" not in logical, logical[:1200]
     assert "close AS close AS close" not in logical, logical[:1200]
     # Still projects the columns (behavioral, not full-plan pin).
@@ -165,7 +165,6 @@ def test_stage_b_dependent_column_keeps_stacking(bars: object) -> None:
     assert plan.count("WindowAggExec") == 2, plan[:2000]
     table = frame.to_arrow().sort_by("ts")  # type: ignore[attr-defined]
     assert "tr" in table.column_names and "etr5" in table.column_names
-    # Sanity: etr5 is null-safe float column with same length.
     assert table.num_rows == bars.count()  # type: ignore[attr-defined]
 
 
@@ -333,14 +332,11 @@ def test_stage_b_overwrite_base_name_blocks_merge(bars: object) -> None:
     assert plan.count("WindowAggExec") == 2, plan[:2000]
     table = frame.to_arrow().sort_by("ts")  # type: ignore[attr-defined]
     assert "close" in table.column_names and "ema10" in table.column_names
-    # Sanity: stacked path produces finite floats (not plan-only assert).
     close_vals = table.column("close").to_numpy(zero_copy_only=False)
     assert close_vals.shape[0] == bars.count()  # type: ignore[attr-defined]
 
 
-# ==================================================================================================
-# r25 T3 residual — nested identity Alias peel + operator-shaped 17-TA value parity
-# ==================================================================================================
+# T3 residual — nested identity Alias peel + operator-shaped 17-TA value parity
 
 
 def _repeated_alias_nodes(logical: str) -> list[str]:
@@ -349,10 +345,10 @@ def _repeated_alias_nodes(logical: str) -> list[str]:
 
 
 def test_t3_double_alias_select_peels_repeated_identity(bars: object) -> None:
-    """r25 T3: ``col.alias(name).alias(name)`` must not plan as ``… AS name AS name``.
+    """``col.alias(name).alias(name)`` must not plan as ``… AS name AS name``.
 
-    Extends N2 stage (a) collapse path — peel happens inside
-    ``_collapse_identity_projection_alias`` via native ``collapse_identity_aliases``.
+    Peel happens inside ``_collapse_identity_projection_alias`` via native
+    ``collapse_identity_aliases``.
     """
     stacked = F.col("close").alias("close").alias("close")
     frame = bars.select(stacked, "ts")  # type: ignore[attr-defined]
@@ -439,7 +435,7 @@ def test_t3_operator_17_ta_chain_plan_and_value_parity(bars: object) -> None:
     assert physical.count("WindowAggExec") == 1, physical[:2500]
     assert physical.count("ProjectionExec") <= 2, physical[:2500]
     assert _repeated_alias_nodes(logical) == [], logical[:1500]
-    # Triple identity anti-pattern (pre-N2) must stay dead.
+    # Triple identity anti-pattern must stay dead.
     assert "ts AS ts AS ts" not in logical
     assert "close AS close AS close" not in logical
     fused = bars.withColumns(combined)  # type: ignore[attr-defined]

@@ -35,18 +35,15 @@ def _hof():
 
 
 def test_a_higher_order_call_in_a_value_argument_is_refused() -> None:
-    """The guard walked lambda BODIES only, so this position reached the engine and produced
-    ``AnalysisException: unresolved LambdaVariable x_0`` — the internal-error class the guard was
-    added to abolish, escaping through the door next to the one it was watching.
+    """Refused before the engine leaks the internal-error class the guard abolishes:
+    ``AnalysisException: unresolved LambdaVariable x_0``.
     """
     with pytest.raises(UnsupportedOperationException, match="value argument"):
         _frame().select(F.exists(F.array(F.exists("a", lambda y: y > 4)), lambda x: x)).toArrow()
 
 
 def test_a_higher_order_call_in_a_lambda_body_is_still_refused() -> None:
-    """The position that was already covered, pinned next to the one that was not — the two are
-    one guard now, and a change that fixes one must not drop the other.
-    """
+    """Both argument positions are one guard; a change that fixes one must not drop the other."""
     with pytest.raises(UnsupportedOperationException, match="lambda"):
         _frame().select(F.exists("a", lambda x: F.exists("a", lambda y: y > 4))).toArrow()
 
@@ -62,9 +59,8 @@ def test_a_higher_order_call_in_a_lambda_body_is_still_refused() -> None:
     ],
 )
 def test_a_higher_order_window_key_is_refused(label: str, build) -> None:
-    """Both window positions failed, and each failed differently and internally: ``orderBy`` with a
-    ``SanityCheckPlan`` dump naming a physical operator, ``partitionBy`` with DataFusion's "ORDER BY
-    column cannot be empty … likely caused by a bug" internal error.
+    """Both window positions refused; ungated they fail internally (a ``SanityCheckPlan`` dump
+    for ``orderBy``, a "likely caused by a bug" internal error for ``partitionBy``).
     """
     with pytest.raises(UnsupportedOperationException, match="higher-order function column"):
         _frame().select(F.count("k").over(build(_hof()))).toArrow()
@@ -72,9 +68,8 @@ def test_a_higher_order_window_key_is_refused(label: str, build) -> None:
 
 @pytest.mark.parametrize("operation", ["cube", "rollup"])
 def test_a_higher_order_grouping_set_key_is_refused(operation: str) -> None:
-    """These lower the column to SQL TEXT, which the facade's own dialect then cannot read back —
-    the user saw a raw ``ParserError`` quoting a character offset into generated SQL they never
-    wrote. Refused before the text is built.
+    """These lower the column to SQL TEXT the facade's dialect cannot read back, surfacing a raw
+    ``ParserError`` quoting generated SQL. Refused before the text is built.
     """
     with pytest.raises(UnsupportedOperationException, match="higher-order function column"):
         getattr(_frame(), operation)(_hof()).count().toArrow()
@@ -92,9 +87,8 @@ def test_the_workaround_the_message_names_actually_works() -> None:
 
 
 def test_ordinary_columns_are_not_caught_by_any_of_these_refusals() -> None:
-    """The guard asks the expression whether it carries a higher-order function. A column that does
-    not must pass every one of these paths untouched — a refusal that over-fires is a worse
-    regression than the internal error it replaced.
+    """The guard asks whether the expression carries a higher-order function; anything else must
+    pass untouched — an over-firing refusal is a worse regression than the internal error.
     """
     frame = _frame()
     assert frame.cube("k").count().toArrow().num_rows > 0
@@ -104,8 +98,8 @@ def test_ordinary_columns_are_not_caught_by_any_of_these_refusals() -> None:
 
 
 def test_a_higher_order_column_still_works_everywhere_it_worked_before() -> None:
-    """The paths this unit did NOT touch keep working — select, alias, groupBy, and a lambda body
-    that captures an outer column.
+    """Untouched paths keep working: select, alias, groupBy, and a lambda body that captures an
+    outer column.
     """
     frame = _frame()
     assert frame.select(_hof().alias("e")).toArrow().column("e").to_pylist() == [True, True]

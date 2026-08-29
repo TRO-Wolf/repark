@@ -1,7 +1,4 @@
-"""E2 readwriter + session residuals: bare-name resolution, parquet path forms, ndarray lit.
-
-Charter: ``briefs/2026-08-05-grok-errorclass-m4-slate.md`` track 1b / E2.
-"""
+"""Readwriter + session residuals: bare-name resolution, parquet path forms, ndarray lit."""
 
 from __future__ import annotations
 
@@ -33,11 +30,7 @@ def spark(tmp_path: Path) -> ReparkSession:
     _reset_active_session_for_tests()
 
 
-# ==================================================================================================
 # Bare / default-namespace resolution (shared layer)
-# ==================================================================================================
-
-
 def test_resolve_table_name_one_two_three_part() -> None:
     known = {"glue_catalog"}
     assert (
@@ -83,11 +76,11 @@ def test_resolve_spark_catalog_alias() -> None:
 
 
 def test_resolve_prefer_temp_view() -> None:
-    """R7-1: a one-part name that IS a temp view resolves to that view's session-local HOME.
+    """A one-part name that IS a temp view resolves to that view's session-local HOME.
 
-    It used to stay bare — and a bare reference is re-resolved by the engine against the live
-    ``datafusion.catalog.default_catalog``, which is exactly how ``spark.table`` missed a view
-    ``tableExists`` reported present. The probe now answers the home segments (or ``None``).
+    A bare reference is re-resolved by the engine against the live
+    ``datafusion.catalog.default_catalog``, so the probe must answer the home segments (or
+    ``None``).
     """
     known = {"glue_catalog"}
     assert (
@@ -116,7 +109,7 @@ def test_resolve_prefer_temp_view() -> None:
 
 
 def test_resolve_quoted_dotted_segments_survive_rejoin() -> None:
-    """C2-SEC-001: dotted quoted segments must not re-split after resolve → _sql_table_ref."""
+    """Dotted quoted segments must not re-split after resolve → _sql_table_ref."""
     known = {"glue_catalog"}
     three_part = 'glue_catalog."analytics.v2".events'
     resolved_three = resolve_table_name(
@@ -172,7 +165,7 @@ def test_bare_save_as_table_and_table_read(spark: ReparkSession) -> None:
 
 
 def test_table_prefers_temp_view_over_catalog_table(spark: ReparkSession) -> None:
-    """C2-Q-003: session.table() wiring prefers temp view, not only the injectable unit probe."""
+    """session.table() wiring prefers temp view, not only the injectable unit probe."""
     spark.createDataFrame([(1,)], ["id"]).write.saveAsTable("shadow_tv")
     spark.createDataFrame([(99,)], ["id"]).createOrReplaceTempView("shadow_tv")
     rows = spark.table("shadow_tv").to_arrow().to_pylist()
@@ -184,10 +177,10 @@ def test_table_prefers_temp_view_over_catalog_table(spark: ReparkSession) -> Non
 
 
 def test_format_iceberg_load_does_not_prefer_temp_view(spark: ReparkSession) -> None:
-    """C4-L-001: format('iceberg').load(bare) is catalog-table only, not temp-view shadow.
+    """format('iceberg').load(bare) is catalog-table only, not temp-view shadow.
 
-    Counterexample held by this pin: saveAsTable id=1 + temp view id=99 → load must yield 1.
-    session.table() still prefers the temp (see test_table_prefers_temp_view_over_catalog_table).
+    Counterexample held by this pin: saveAsTable id=1 + temp view id=99 → load must yield 1;
+    session.table() still prefers the temp.
     """
     spark.createDataFrame([(1,)], ["id"]).write.saveAsTable("shadow_iceberg_load")
     spark.createDataFrame([(99,)], ["id"]).createOrReplaceTempView("shadow_iceberg_load")
@@ -198,7 +191,7 @@ def test_format_iceberg_load_does_not_prefer_temp_view(spark: ReparkSession) -> 
 
 
 def test_list_tables_spark_catalog_alias(spark: ReparkSession) -> None:
-    """C2-Q-002: listTables two-part catalog.db aliases spark_catalog like tableExists."""
+    """listTables two-part catalog.db aliases spark_catalog like tableExists."""
     spark.createDataFrame([(1,)], ["id"]).write.saveAsTable("listed_t")
     names_real = {table.name for table in spark.catalog.listTables("glue_catalog.default")}
     names_alias = {table.name for table in spark.catalog.listTables("spark_catalog.default")}
@@ -209,7 +202,7 @@ def test_list_tables_spark_catalog_alias(spark: ReparkSession) -> None:
 
 
 def test_read_table_time_travel_resolves_bare_name(spark: ReparkSession) -> None:
-    """C2-Q-001: DataFrameReader.table + snapshot-id qualifies bare names (API FULL)."""
+    """DataFrameReader.table + snapshot-id qualifies bare names."""
     spark.createDataFrame([(1, "a")], ["id", "name"]).write.saveAsTable("tt_bare")
     snaps = spark._testing_list_snapshots("glue_catalog.default.tt_bare")
     assert snaps, "expected at least one snapshot after saveAsTable"
@@ -231,7 +224,7 @@ def test_bare_write_to_create(spark: ReparkSession) -> None:
 
 
 def test_bare_insert_into(spark: ReparkSession) -> None:
-    """C1-Q-004: bare insertInto resolves under currentCatalog.currentDatabase end-to-end."""
+    """bare insertInto resolves under currentCatalog.currentDatabase end-to-end."""
     spark.createDataFrame([(1, "a")], ["id", "name"]).write.saveAsTable("ins_t")
     spark.createDataFrame([(2, "b")], ["id", "name"]).write.insertInto("ins_t")
     rows = sorted(spark.table("ins_t").to_arrow().to_pylist(), key=lambda row: row["id"])
@@ -240,7 +233,7 @@ def test_bare_insert_into(spark: ReparkSession) -> None:
 
 
 def test_bare_merge_into(spark: ReparkSession) -> None:
-    """C1-Q-004: bare mergeInto target resolves under current catalog/NS end-to-end."""
+    """bare mergeInto target resolves under current catalog/NS end-to-end."""
     spark.createDataFrame([(1, "a")], ["id", "name"]).write.saveAsTable("merge_t")
     source = spark.createDataFrame([(1, "A"), (2, "b")], ["id", "name"])
     (
@@ -256,7 +249,7 @@ def test_bare_merge_into(spark: ReparkSession) -> None:
 
 
 def test_spark_catalog_alias_table_exists(spark: ReparkSession) -> None:
-    """C1-Q-001 / C1-L-001: tableExists aliases spark_catalog like table()/writers."""
+    """tableExists aliases spark_catalog like table()/writers."""
     spark.createDataFrame([(1,)], ["id"]).write.saveAsTable("alias_t")
     assert spark.catalog.tableExists("glue_catalog.default.alias_t")
     assert spark.catalog.tableExists("spark_catalog.default.alias_t") is True
@@ -267,14 +260,12 @@ def test_spark_catalog_alias_table_exists(spark: ReparkSession) -> None:
 
 
 def test_spark_catalog_alias_writer_paths(spark: ReparkSession) -> None:
-    """C5-Q-001: saveAsTable / writeTo / insertInto / MERGE honor spark_catalog.* e2e.
+    """saveAsTable / writeTo / insertInto / MERGE honor spark_catalog.* end-to-end.
 
-    Bare-name suite alone stays green if ``_resolve_writer_table`` drops
-    ``known_catalogs`` (empty set → ``spark_catalog`` no longer aliases to the
-    registered catalog). These four writer entry points must land under the real
-    catalog and be readable via both the alias and ``glue_catalog`` three-part ids.
+    Bare-name pins alone stay green if ``_resolve_writer_table`` drops ``known_catalogs``
+    (empty set → ``spark_catalog`` no longer aliases), so these four writer entry points must
+    land under the real catalog and read back via both spellings.
     """
-    # saveAsTable via three-part spark_catalog alias.
     spark.createDataFrame([(1, "a")], ["id", "name"]).write.saveAsTable(
         "spark_catalog.default.alias_sat"
     )
@@ -284,12 +275,10 @@ def test_spark_catalog_alias_writer_paths(spark: ReparkSession) -> None:
     ]
     assert spark.table("spark_catalog.default.alias_sat").count() == 1
 
-    # writeTo.create via alias.
     spark.createDataFrame([(9,)], ["id"]).writeTo("spark_catalog.default.alias_wt").create()
     assert spark.catalog.tableExists("glue_catalog.default.alias_wt")
     assert spark.table("glue_catalog.default.alias_wt").to_arrow().to_pylist() == [{"id": 9}]
 
-    # insertInto via alias (target created bare so only the writer path must alias).
     spark.createDataFrame([(1, "a")], ["id", "name"]).write.saveAsTable("alias_ins")
     spark.createDataFrame([(2, "b")], ["id", "name"]).write.insertInto(
         "spark_catalog.default.alias_ins"
@@ -300,7 +289,6 @@ def test_spark_catalog_alias_writer_paths(spark: ReparkSession) -> None:
     )
     assert insert_rows == [{"id": 1, "name": "a"}, {"id": 2, "name": "b"}]
 
-    # MERGE via alias target.
     spark.createDataFrame([(1, "a")], ["id", "name"]).write.saveAsTable("alias_merge")
     source = spark.createDataFrame([(1, "A"), (2, "b")], ["id", "name"])
     (
@@ -319,7 +307,7 @@ def test_spark_catalog_alias_writer_paths(spark: ReparkSession) -> None:
 
 
 def test_write_to_re_resolves_after_set_current_database(spark: ReparkSession) -> None:
-    """C1-L-002: writeTo action uses NS at create(), not frozen at construction."""
+    """writeTo action uses NS at create(), not frozen at construction."""
     spark.create_namespace("glue_catalog", "analytics")
     writer = spark.createDataFrame([(1,)], ["id"]).writeTo("late_ns_t")
     spark.catalog.setCurrentDatabase("analytics")
@@ -331,7 +319,7 @@ def test_write_to_re_resolves_after_set_current_database(spark: ReparkSession) -
 
 
 def test_merge_re_resolves_after_set_current_database(spark: ReparkSession) -> None:
-    """C1-L-002: mergeInto action qualifies under NS at merge(), not at construction."""
+    """mergeInto action qualifies under NS at merge(), not at construction."""
     spark.create_namespace("glue_catalog", "analytics")
     spark.catalog.setCurrentDatabase("analytics")
     spark.createDataFrame([(1, "a")], ["id", "name"]).write.saveAsTable("merge_late")
@@ -355,30 +343,26 @@ def test_bare_drop_table_sql_entry_point(spark: ReparkSession) -> None:
 
 
 def test_drop_expander_does_not_rewrite_non_drop_sql(spark: ReparkSession) -> None:
-    """C1-Q-003 / C5-Q-002: DROP expander whole-statement-only + exact rewrite (no inject).
+    """DROP expander is whole-statement-only + exact rewrite (no injection).
 
-    Substring-only positive pins stay green if the expander injects extra targets
-    (e.g. appends another qualified name). Exact equality is the mutation-proof bar.
+    Substring-only positive pins stay green if the expander injects extra targets; exact
+    equality is the mutation-proof bar.
     """
-    # Positive control: exact rewritten DROP (quoted three-part; sole target).
     bare_drop = "DROP TABLE IF EXISTS bare_x"
     expanded_drop = spark._expand_bare_table_names_in_sql(bare_drop)
     assert expanded_drop == 'DROP TABLE IF EXISTS "glue_catalog"."default"."bare_x"'
 
-    # Multi-name list must expand each name only — no extra injected targets.
     multi_drop = "DROP TABLE IF EXISTS bare_a, bare_b"
     expanded_multi = spark._expand_bare_table_names_in_sql(multi_drop)
     assert expanded_multi == (
         'DROP TABLE IF EXISTS "glue_catalog"."default"."bare_a", "glue_catalog"."default"."bare_b"'
     )
 
-    # Without IF EXISTS: still exact single-target rewrite.
     plain_drop = "DROP TABLE bare_y"
     assert spark._expand_bare_table_names_in_sql(plain_drop) == (
         'DROP TABLE "glue_catalog"."default"."bare_y"'
     )
 
-    # F1 Path A: SELECT / INSERT are expanded (were residual under E2-only DROP expander).
     select_sql = "SELECT * FROM bare_x"
     assert spark._expand_bare_table_names_in_sql(select_sql) == (
         'SELECT * FROM "glue_catalog"."default"."bare_x"'
@@ -416,11 +400,7 @@ def test_default_namespace_seeds_current_database(tmp_path: Path) -> None:
         _reset_active_session_for_tests()
 
 
-# ==================================================================================================
 # save(path) / load(path) parquet + loud unsupported
-# ==================================================================================================
-
-
 def test_parquet_save_load_round_trip(spark: ReparkSession, tmp_path: Path) -> None:
     path = tmp_path / "part_out"
     frame = spark.createDataFrame([(1, "a"), (2, "b")], ["id", "name"])
@@ -431,11 +411,10 @@ def test_parquet_save_load_round_trip(spark: ReparkSession, tmp_path: Path) -> N
 
 
 def test_save_unsupported_format_loud(spark: ReparkSession, tmp_path: Path) -> None:
-    """Path save unsupported format must be DATA_SOURCE_NOT_FOUND-shaped (E2 / C3-Q-001).
+    """Path save of an unsupported format must be DATA_SOURCE_NOT_FOUND-shaped.
 
-    The match requires the Spark error-class token — format-name-only AnalysisException
-    must not keep this pin green (load pin is the same strict shape).
-    R1 wired csv/json; pin now uses orc as the permanent unsupported path format.
+    The match requires the Spark error-class token — a format-name-only AnalysisException must
+    not keep this pin green (the load pin is the same strict shape).
     """
     path = tmp_path / "orc_out"
     with pytest.raises(AnalysisException, match="DATA_SOURCE_NOT_FOUND") as raised:
@@ -445,7 +424,7 @@ def test_save_unsupported_format_loud(spark: ReparkSession, tmp_path: Path) -> N
 
 
 def test_write_csv_json_round_trip_e2(spark: ReparkSession, tmp_path: Path) -> None:
-    """R1 supersedes C4-Q-002: Writer.csv/json are wired (was DATA_SOURCE_NOT_FOUND)."""
+    """Writer.csv/json round-trip paths are wired."""
     frame = spark.createDataFrame([(1, "a")], ["id", "name"])
     csv_path = tmp_path / "c"
     json_path = tmp_path / "j"
@@ -462,11 +441,7 @@ def test_load_unsupported_format_loud(spark: ReparkSession) -> None:
         spark.read.format("orc").load("/tmp/does-not-matter")
 
 
-# ==================================================================================================
-# ndarray lit (E1 hand-off; flips Apache test_*_ndarray* wall)
-# ==================================================================================================
-
-
+# ndarray lit
 @pytest.mark.parametrize(
     ("dtype_name", "expected_simple"),
     [
@@ -479,7 +454,7 @@ def test_load_unsupported_format_loud(spark: ReparkSession) -> None:
     ],
 )
 def test_lit_ndarray_dtypes(spark: ReparkSession, dtype_name: str, expected_simple: str) -> None:
-    """Dtype + Arrow values (C4-Q-001): dtype-only pin stays green under value corruption."""
+    """Dtype + Arrow values: dtype-only pin stays green under value corruption."""
     np = pytest.importorskip("numpy")
     arr = np.array([1, 2]).astype(dtype_name)
     frame = spark.range(1).select(F.lit(arr).alias("b"))
@@ -499,7 +474,7 @@ def test_lit_empty_ndarray_keeps_element_type(spark: ReparkSession) -> None:
     arr = np.array([]).astype("int8")
     frame = spark.range(1).select(F.lit(arr).alias("b"))
     assert frame.dtypes == [("b", "array<tinyint>")]
-    # Empty array value pin (C4-Q-001): type alone would miss non-empty corruption.
+    # Empty array value pin: type alone would miss non-empty corruption.
     assert frame.to_arrow().to_pylist() == [{"b": []}]
 
 
@@ -525,7 +500,7 @@ def test_lit_uint_ndarray_unsupported(spark: ReparkSession) -> None:
 
 
 def test_lit_object_ndarray_unsupported(spark: ReparkSession) -> None:
-    """object dtype must refuse (Spark 4.1.2) — not fail-open array<string> (C6-Q-001)."""
+    """object dtype must refuse (Spark 4.1.2) — not fail-open array<string>."""
     np = pytest.importorskip("numpy")
     arr = np.array([1, 2], dtype=object)
     with pytest.raises(PySparkTypeError) as raised:
@@ -540,7 +515,7 @@ def test_lit_object_ndarray_unsupported(spark: ReparkSession) -> None:
 
 
 def test_lit_bytes_ndarray_unsupported(spark: ReparkSession) -> None:
-    """|S (bytes) dtype must refuse — not coerce to array<string> (C6-Q-001)."""
+    """|S (bytes) dtype must refuse — not coerce to array<string>."""
     np = pytest.importorskip("numpy")
     arr = np.array([b"a", b"b"], dtype="|S1")
     with pytest.raises(PySparkTypeError) as raised:

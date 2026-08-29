@@ -1,13 +1,9 @@
 """LRS-7 — a window with no ORDER BY frames the whole partition, as Spark documents.
 
-``count(v).over(Window.partitionBy("k"))`` is ordinary PySpark and failed here with
-``Internal error: ORDER BY column cannot be empty. This issue was likely caused by a bug in
-DataFusion's code``. Spark documents two defaults — ordered windows frame ``RANGE … CURRENT ROW``,
-unordered ones frame ``ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING`` — and DataFusion
-supplies only the first.
-
-Every expected value below is Spark's own answer for the same frame, taken from a live PySpark
-4.1.2 (design §7), not read back from repark.
+Spark documents two defaults — ordered windows frame ``RANGE … CURRENT ROW``, unordered ones
+frame ``ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING`` — and DataFusion supplies only
+the first, so an unordered window failed internally here. Every expected value below is Spark's
+own answer for the same frame, from a live PySpark 4.1.2 (design §7), not read back from repark.
 
 Ledger: ``task/lrs-7-unordered-window-ledger.md``.
 """
@@ -62,12 +58,11 @@ def test_an_unordered_window_with_no_partition_is_the_whole_frame() -> None:
     ["row_number", "rank", "dense_rank", "percent_rank", "cume_dist", "lag", "lead", "nth_value"],
 )
 def test_a_function_that_needs_an_ordering_is_refused_on_an_unordered_window(label: str) -> None:
-    """Spark refuses all of these, and so must repark — supplying a default frame to them would
-    have answered where Spark raises.
+    """Spark refuses all of these; supplying a default frame would answer where Spark raises.
 
-    The split is read off the function's KIND, not a name list: Spark's ordering-requiring set is
-    exactly the window UDFs, while ``first`` / ``last``, which Spark allows, arrive as aggregates.
-    A name list would drift the first time a function is added.
+    The split is read off the function's KIND, not a name list: the ordering-requiring set is
+    exactly the window UDFs, while ``first`` / ``last`` arrive as aggregates. A name list would
+    drift the first time a function is added.
     """
     columns = {
         "row_number": F.row_number(),
@@ -106,7 +101,7 @@ def test_windows_that_already_worked_are_untouched(label: str, window, expected:
 
 def test_the_default_frame_does_not_disturb_the_signed_count_cast() -> None:
     """``approx_count_distinct`` carries a CAST that ``over`` peels and re-applies; it must still
-    come back signed when the frame is the one this unit supplies.
+    come back signed on an unordered window.
     """
     got = (
         _frame()

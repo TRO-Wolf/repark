@@ -1,17 +1,11 @@
 """FNP-6c — ``validate_utf8`` / ``try_validate_utf8`` / ``assert_true``.
 
-All three share one shape: inspect a value, hand it back when acceptable, and fail loudly or
-yield NULL when not. None of them computes anything.
-
-**The structural note that matters for the UTF-8 pair.** An Arrow ``Utf8`` array cannot hold
-invalid UTF-8 — Rust's ``&str`` forbids it — so on a string column these are tautologies. The case
-that can actually fail is **binary**, and that is how ``datafusion-spark``'s ``is_valid_utf8``
-already behaves. Spark's own strings are ``UTF8String`` byte arrays that *can* carry invalid
-sequences, so a Spark program can reach these on a STRING column where repark cannot. That is a
-difference in value representation, not a behaviour choice, and these rows exercise the binary
-path where the two engines genuinely agree.
-
-Ledger: ``task/fnp-6c-validate-ledger.md``.
+All three inspect a value, hand it back when acceptable, and fail loudly or yield NULL when not.
+The UTF-8 pair is a tautology on a string column (an Arrow ``Utf8`` array cannot hold invalid
+UTF-8); the case that can fail is **binary**. Spark's ``UTF8String`` byte arrays can carry
+invalid sequences, so a Spark program can reach these on a STRING column where repark cannot —
+a value-representation difference, not a behaviour choice. These rows exercise the binary path
+where the two engines genuinely agree. Ledger: ``task/fnp-6c-validate-ledger.md``.
 """
 
 from __future__ import annotations

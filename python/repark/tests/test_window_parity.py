@@ -2,15 +2,13 @@
 
 **Oracle.** Every ``spark`` table below was RECORDED in record mode against live PySpark 4.1.2
 (zulu-17, ``master("local[2]")``, ``spark.sql.ansi.enabled=true``,
-``spark.sql.shuffle.partitions=2``) on 2026-08-11. One recipe per row runs on BOTH engines, so the
-recipe under test and the recipe the oracle ran are the same code — nothing here is hand-computed.
+``spark.sql.shuffle.partitions=2``). One recipe per row runs on BOTH engines, so the recipe under
+test and the recipe the oracle ran are the same code — nothing here is hand-computed.
 
-**Why some rows may be DISCLOSURES.** When the engines agree on value AND Arrow type AND
-nullability the row is a plain equality (``repark is None``). When they honestly disagree the row
-pins BOTH halves and asserts the divergence still holds. A silent CONVERGENCE goes red and forces
-the disclosure to be revisited rather than laundered into "parity" — the same discipline
-``docs/testing.md`` puts on the live tier's disclosures. When a G5 fix lands, each divergent row
-flips to ``repark=None`` (equality) and that flip is the fix's revert-red evidence.
+**Disclosures.** When the engines honestly disagree the row pins BOTH halves and asserts the
+divergence still holds. A silent CONVERGENCE goes red and forces the disclosure to be revisited
+rather than laundered into "parity". When a G5 fix lands, each divergent row flips to
+``repark=None`` (equality) and that flip is the fix's revert-red evidence.
 
 **The default-frame trap is first-class.** With ``ORDER BY``, Spark's default frame is
 ``RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`` (peers included). An aggregate-over-window
@@ -32,14 +30,13 @@ committed beside this module::
         PYTHONPATH=python/repark-parity/src \\
         .venv/bin/python python/repark/tests/_record_window_goldens.py
 
-It imports ``ROWS`` from THIS module and runs each row's own recipe, so the recorded golden and the
-asserted recipe cannot drift apart. Needs a JVM + ``pyspark`` (``uv sync --extra record``); never
-collected by pytest. ``--emit`` prints paste-ready table constructors.
+It imports ``ROWS`` from THIS module and runs each row's own recipe, so the recorded golden and
+the asserted recipe cannot drift apart. Needs a JVM + ``pyspark`` (``uv sync --extra record``);
+never collected by pytest. ``--emit`` prints paste-ready table constructors.
 
 **Entry points.** Facade ``sql()`` is primary. The ``df_api_*`` rows go through the DataFrame-API
 ``Window.partitionBy(...).orderBy(...)`` spelling (CP-11) via the same dual-engine recipe helper.
-The claim is scoped to the facade surface (sql + DataFrame API); native / ANSI doors are not in
-this corpus.
+The claim is scoped to the facade surface (sql + DataFrame API).
 
 **In-flight fix named by every disclosure** so a red row points at what flips it.
 """
@@ -72,19 +69,15 @@ TYPE_DISC = (
 
 # Budget floors/ceilings pinned by test_window_row_set_covers_gap_budgets (not incidental).
 G5_BUDGET_MIN = 20
-# Raised 20-28 -> 20-45 by G5b, which appends the temporal-RANGE family (15 rows) to W-4's
-# 27. The ceiling is a shape pin, not a cap on honest coverage; the equality floor and the
-# disclosure ceiling below are what keep the corpus from degenerating.
+# The ceiling is a shape pin, not a cap on honest coverage; the equality floor and the
+# disclosure ceiling below keep the corpus from degenerating.
 G5_BUDGET_MAX = 45
-# Corpus cannot degenerate to all-disclosures: at least this many plain equalities, and at most
-# this many disclosures among the differential ROWS.
+# At least this many plain equalities, at most this many disclosures among the differential ROWS.
 MIN_EQUALITY_ROWS = 6
 MAX_DISCLOSURE_ROWS = 22
 
 
-# ==================================================================================================
 # Arrow helpers
-# ==================================================================================================
 
 
 def _table(
@@ -100,9 +93,7 @@ def _one_row(fields: list[tuple[str, pa.DataType, bool]], values: dict[str, obje
     return _table(fields, {name: [values[name]] for name, _, _ in fields})
 
 
-# ==================================================================================================
 # Shared seed data (VALUES / createDataFrame) — total-order friendly where needed
-# ==================================================================================================
 
 # Five-row window input: ties on (grp, k) so default RANGE peers are observable; unique `id`
 # provides a total-order tie-breaker when the row needs one.
@@ -167,9 +158,7 @@ FIX_G5B = (
 )
 
 
-# ==================================================================================================
 # Row shape
-# ==================================================================================================
 
 
 @dataclass(frozen=True)
@@ -217,9 +206,7 @@ class WindowRow:
         return not self.is_equality()
 
 
-# ==================================================================================================
 # Dual-engine helpers (shared with the record driver)
-# ==================================================================================================
 
 
 def _functions_module(session: object) -> object:
@@ -340,13 +327,10 @@ def run_row(row: WindowRow, session: object) -> pa.Table:
     return _to_arrow(frame)
 
 
-# ==================================================================================================
 # Gap G5 — window frames, ranking, offsets (spark halves filled after record mode)
-# ==================================================================================================
 #
-# Placeholders: spark=None until `_record_window_goldens.py --emit` pastes live goldens. The suite
-# fails closed on missing goldens (equality/disclosure runners require a spark table). Record mode
-# is the only path that fills them.
+# spark=None until `_record_window_goldens.py --emit` pastes live goldens; the suite fails
+# closed on missing goldens. Record mode is the only path that fills them.
 
 ROWS: list[WindowRow] = [
     # ----- 1. Default-frame trap (RANGE peers with ties) — name-gated family --------------------
@@ -487,8 +471,7 @@ ROWS: list[WindowRow] = [
     WindowRow(
         "rows_vs_range_peers_differ_on_ties",
         "explicit_frame",
-        # Project both frames side-by-side under the same ORDER BY k, id so the ROWS half is
-        # deterministic and the RANGE half still peers on k alone.
+        # ORDER BY k, id keeps the ROWS half deterministic while RANGE still peers on k alone.
         f"SELECT id, k, v, "
         f"sum(v) OVER (ORDER BY k, id ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS rows_s, "
         f"sum(v) OVER (ORDER BY k RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS range_s "
@@ -873,16 +856,13 @@ ROWS: list[WindowRow] = [
     ),
     # ----- 7. G5b temporal RANGE frames (interval bounds over datetime order keys) --------------
     #
-    # The G5b section-0 recon (task/g5b-temporal-range-ledger.md) found this family ALREADY
-    # matching Spark for interval-bounded frames — it was never "rejected outright" — and found
-    # the real divergences at its edges. The equalities below are the standing detector for the
-    # working path; the disclosures pin every edge that still differs, each naming what flips it.
+    # The equalities are the standing detector for the working interval-bounded path; the
+    # disclosures pin every edge that still differs, each naming what flips it.
     #
     # The refuse-arm twin (`RANGE BETWEEN <n> PRECEDING` over a TIMESTAMP key, where BOTH engines
-    # raise once the G5b fix lands) cannot be expressed as a WindowRow — the shape forbids
-    # pinning both engines raising — so it is pinned by
-    # `test_temporal_range_bare_offset_over_timestamp_refuses` below, and on the Spark door by
-    # `temporal_range_bare_offset_over_timestamp_key_refuses_like_spark`
+    # raise) cannot be expressed as a WindowRow (the shape forbids pinning both engines raising),
+    # so it is pinned by `test_temporal_range_bare_offset_over_timestamp_refuses` below, and on
+    # the Spark door by `temporal_range_bare_offset_over_timestamp_key_refuses_like_spark`
     # (crates/repark-spark/src/tests/window_temporal_range.rs).
     WindowRow(
         "temporal_range_ts_asc_interval_day",
@@ -1005,7 +985,7 @@ ROWS: list[WindowRow] = [
         "The Spark door now restates the bound as INTERVAL '1' DAY and re-plans. Reverting that "
         "turns this row red on value.",
     ),
-    # --- Residuals: R2/R3 flipped by Y-1; R1/R5 flipped by W-4; R4 still recorded -------------
+    # --- Residuals: each note names what flips it ---
     WindowRow(
         "temporal_range_unquoted_interval_literal",
         TEMPORAL_FAMILY,
@@ -1106,9 +1086,7 @@ ROWS: list[WindowRow] = [
 ]
 
 
-# ==================================================================================================
 # Session + classification helpers
-# ==================================================================================================
 
 
 def _session() -> ReparkSession:
@@ -1140,9 +1118,7 @@ def _matches_raise(exc: BaseException, expected_substring: str) -> bool:
     return expected_substring in str(exc)
 
 
-# ==================================================================================================
 # The differential rows
-# ==================================================================================================
 
 
 @pytest.mark.parametrize("row", ROWS, ids=[row.name for row in ROWS])
@@ -1234,13 +1210,11 @@ def test_window_row_matches_spark_or_still_diverges(row: WindowRow) -> None:
 
 
 def test_window_row_set_covers_gap_budgets() -> None:
-    """The pin budget is part of the unit, so the corpus size and shape are pinned, not incidental.
+    """Corpus size and shape are pinned, not incidental.
 
-    G5's budget is 20-28 differential rows. At least :data:`MIN_EQUALITY_ROWS` plain equalities
-    keep the corpus from degenerating into all-disclosures, and at most
-    :data:`MAX_DISCLOSURE_ROWS` disclosures keep a future edit from turning every control red into
-    a silent disclosure. Family coverage pins are name-gated or semantics-gated so a CONTROL row
-    cannot satisfy them (CP-2).
+    The equality floor keeps the corpus from degenerating into all-disclosures; the disclosure
+    ceiling keeps a future edit from turning every control red into a silent disclosure. Family
+    coverage pins are name-gated or semantics-gated so a CONTROL row cannot satisfy them (CP-2).
     """
     assert G5_BUDGET_MIN <= len(ROWS) <= G5_BUDGET_MAX, (
         f"G5 budget {G5_BUDGET_MIN}-{G5_BUDGET_MAX}, got {len(ROWS)}"
@@ -1312,10 +1286,8 @@ def test_window_row_set_covers_gap_budgets() -> None:
     assert len(df_api) >= 2, f"CP-11 requires ≥2 DataFrame-API rows; got {len(df_api)}"
     assert all(row.df_recipe in DF_RECIPES for row in df_api), "df_recipe must resolve"
 
-    # Determinism discipline: every DF-API recipe uses total order (documented on the helper).
-    # SQL rows that use non-total ORDER BY must be peer-determined (rank/default-RANGE) —
-    # enforced by construction in the row notes; pin that default_frame rows do NOT order by id
-    # alone as the window key (they order by k, which has ties, intentionally).
+    # Determinism: DF-API recipes use total order; default_frame rows must keep the tied key k
+    # as the window ORDER BY (not a total order) — that is the trap being pinned.
     for row in default_frame:
         assert "ORDER BY k" in row.sql or "ORDER BY k)" in row.sql or "ORDER BY k " in row.sql, (
             f"{row.name}: default-frame trap must ORDER BY the tied key k (not a total order)"
@@ -1367,22 +1339,19 @@ def test_window_row_set_covers_gap_budgets() -> None:
             assert row.spark is not None and row.repark is None
 
 
-# ==================================================================================================
 # G5b — the refuse arm, which the WindowRow shape cannot express (both engines raise)
-# ==================================================================================================
 
 
 def test_temporal_range_bare_offset_over_timestamp_refuses() -> None:
     """A unit-less RANGE offset over a TIMESTAMP order key must refuse with Spark's error class.
 
-    Spark 4.1.2 raises ``DATATYPE_MISMATCH.RANGE_FRAME_INVALID_TYPE`` here (recorded live in the
-    G5b section-0 recon). Before the fix repark ANSWERED instead: DataFusion coerces the bare
-    offset to ``Interval(MonthDayNano)`` and Arrow reads a unit-less ``"1"`` as one *month*, so a
-    migrated query silently got a one-month window and no warning.
+    Spark 4.1.2 raises ``DATATYPE_MISMATCH.RANGE_FRAME_INVALID_TYPE`` here. Without the
+    restatement, DataFusion coerces the bare offset to ``Interval(MonthDayNano)`` and Arrow reads
+    a unit-less ``"1"`` as one *month* — a silently wider window, no error.
 
     This lives outside :data:`ROWS` because a differential row cannot pin both engines raising
     (``WindowRow`` forbids ``spark_raises`` and ``repark_raises`` together) — the shared refusal
-    is the point, so it is asserted directly. The Spark-door twin is
+    is the point. The Spark-door twin is
     ``temporal_range_bare_offset_over_timestamp_key_refuses_like_spark`` in
     ``crates/repark-spark/src/tests/window_temporal_range.rs``.
     """
@@ -1409,10 +1378,10 @@ def test_temporal_range_bare_offset_over_timestamp_refuses() -> None:
 def test_temporal_range_negative_both_preceding_refuses_like_spark() -> None:
     """Q-001: ``-2 PRECEDING AND -1 PRECEDING`` must not wrap.
 
-    After sign-normalize this is ``2 FOLLOWING AND 1 FOLLOWING``. Spark 4.1.2 refuses
-    with ``DATATYPE_MISMATCH.SPECIFIED_WINDOW_FRAME_WRONG_COMPARISON``. A kind-only
-    invert check used to miss it and DataFusion wrapped ``count(*)`` to -1. Both
-    engines raise, so this cannot be a ``WindowRow``. Live-recorded MARKER=y1-g5br-fix.
+    After sign-normalize this is ``2 FOLLOWING AND 1 FOLLOWING``; Spark refuses with
+    ``DATATYPE_MISMATCH.SPECIFIED_WINDOW_FRAME_WRONG_COMPARISON``. A kind-only invert check would
+    miss it (DataFusion wraps ``count(*)`` to -1). Both engines raise, so this cannot be a
+    ``WindowRow``. Live-recorded MARKER=y1-g5br-fix.
     """
     session = _session()
     register_temporal_seed_views(session)

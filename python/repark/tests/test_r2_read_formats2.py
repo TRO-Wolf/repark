@@ -35,9 +35,7 @@ def _sorted_rows(frame: object) -> list[dict[str, object]]:
     return sorted(rows, key=lambda row: (row[key0] is None, row[key0]))
 
 
-# ==================================================================================================
 # Writer option matrix honesty
-# ==================================================================================================
 
 
 def test_write_csv_quote_all_always(spark: ReparkSession, tmp_path: Path) -> None:
@@ -137,9 +135,7 @@ def test_write_csv_unknown_option_loud(spark: ReparkSession, tmp_path: Path) -> 
         ).csv(str(path), header=True)
 
 
-# ==================================================================================================
 # Path write modes (oracle: Spark overwrite / append / error / ignore)
-# ==================================================================================================
 
 
 def test_path_mode_error_on_existing(spark: ReparkSession, tmp_path: Path) -> None:
@@ -196,9 +192,7 @@ def test_path_mode_overwrite_replaces(spark: ReparkSession, tmp_path: Path) -> N
     assert spark.read.json(str(path)).to_arrow().to_pylist() == [{"id": 9, "name": "z"}]
 
 
-# ==================================================================================================
 # partitionBy (hour-0 DF COPY PARTITIONED BY wire)
-# ==================================================================================================
 
 
 def test_partition_by_parquet_hive_layout(spark: ReparkSession, tmp_path: Path) -> None:
@@ -258,11 +252,9 @@ def test_partition_by_parquet_root_read_no_null_partition_keys(
 ) -> None:
     """octo F-R2-C3-001 / C6-001: no empty full-schema root part; root read not null-filled.
 
-    Pre-fix: non-recursive empty-materialize injected ``part-00000.parquet`` (0 rows, schema
-    incl. partition cols) at the partitioned root; ``read.parquet(root)`` merged schemas so
-    every data row had partition keys as ``None`` (silent wrong). Post-fix: no root pollution;
-    partition keys are either omitted (hive-discovery residual) or present with real values —
-    never all-null fabricated columns.
+    Root schema pollution makes ``read.parquet(root)`` merge schemas so every data row gets
+    partition keys as ``None`` — silent wrong. Partition keys must be either omitted
+    (hive-discovery residual) or present with real values, never all-null fabricated columns.
     """
     path = tmp_path / "pb_root"
     spark.createDataFrame([(1, "a"), (2, "b")], ["id", "name"]).write.mode("overwrite").partitionBy(
@@ -335,9 +327,7 @@ def test_path_overwrite_symlink_dir_loud(spark: ReparkSession, tmp_path: Path) -
     assert (real / "marker.txt").read_text(encoding="utf-8") == "keep"
 
 
-# ==================================================================================================
 # Residual read options (pins for R1 residuals; divergences.md is D3 sole-writer)
-# ==================================================================================================
 
 
 def test_read_csv_encoding_non_utf8_loud(spark: ReparkSession, tmp_path: Path) -> None:

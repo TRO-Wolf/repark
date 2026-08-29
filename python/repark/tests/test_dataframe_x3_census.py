@@ -29,9 +29,7 @@ def spark() -> ReparkSession:
     session.stop()
 
 
-# ==================================================================================================
 # Error kwargs / getQueryContext seed (check_error surface)
-# ==================================================================================================
 
 
 def test_pyspark_type_error_errorclass_kwargs_and_query_context() -> None:
@@ -197,9 +195,7 @@ def test_to_df_none_raises_not_list_of_str(spark: ReparkSession) -> None:
     assert renamed.schema.simpleString() == "struct<key:string,value:bigint>"
 
 
-# ==================================================================================================
 # Surface unblocks
-# ==================================================================================================
 
 
 def test_drop_accepts_column(spark: ReparkSession) -> None:

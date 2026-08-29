@@ -141,13 +141,12 @@ def test_ref_ddl_create_branch_tag_time_travel(spark: ReparkSession) -> None:
         spark.sql(f"SELECT id FROM {TABLE} VERSION AS OF 'tag_s1'").to_arrow()
 
     spark.sql(f"DROP BRANCH branch_s2 IN {TABLE}")
-    # Current multiset unaffected.
     current = spark.sql(f"SELECT id FROM {TABLE} ORDER BY id").to_arrow()
     assert _arrow_ids(current) == [1, 2, 3, 4]
 
 
 def test_ref_ddl_replace_and_retain(spark: ReparkSession) -> None:
-    """r25 T2: CREATE OR REPLACE lands; misspelled RETENTION (not RETAIN) still refuses loud."""
+    """CREATE OR REPLACE lands; misspelled RETENTION (not RETAIN) still refuses loud."""
     spark.sql(
         f"CREATE TABLE {TABLE} USING iceberg TBLPROPERTIES ({COW}) AS SELECT 1 AS id, 'a' AS name"
     )

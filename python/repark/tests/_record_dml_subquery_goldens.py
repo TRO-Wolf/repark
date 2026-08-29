@@ -1,41 +1,25 @@
 """Record mode for the G3-E8 DML-subquery corpus — re-derive every Spark half from live Iceberg.
 
-NOT a ``test_`` module: pytest never collects it. It is the driver that produced the recorded Spark
-halves in ``test_dml_subquery_parity.py``, committed so the "recorded against live PySpark 4.1.2 +
-Iceberg" claim is falsifiable from inside the repo rather than only from the session that made it.
-
-**Why this driver provisions Iceberg.** Vanilla PySpark cannot run `DELETE`/`UPDATE` against temp
-views — row-level DML needs a real table format. The live/record oracle elsewhere in the suite is
-plain PySpark 4.1.2 with no Iceberg jar. This driver therefore pins and fetches the Iceberg Spark
+NOT a ``test_`` module: pytest never collects it, and it is on no CI path. Vanilla PySpark cannot
+run `DELETE`/`UPDATE` against temp views, so this driver pins and fetches the Iceberg Spark
 runtime by Maven coordinates (never commits the binary) and stands up a local Hadoop warehouse
-catalog.
-
-**Pinned GAV (same ruling as the MERGE corpus — exact Spark-minor match):**
+catalog. Pinned GAV (same ruling as the MERGE corpus — exact Spark-minor match):
 
     org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0
 
-Fetched at record time via ``spark.jars.packages``. CI stays JVM-free — this driver is never
-collected by pytest and is not on any CI path.
-
-**Recipe (re-derivable):**
+Recipe (needs Java 17 (zulu-17), ``uv sync --extra record``, network on the first Maven/Ivy fetch;
+cached thereafter):
 
     JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \\
         PYTHONPATH=python/repark-parity/src \\
         .venv/bin/python python/repark/tests/_record_dml_subquery_goldens.py
 
-Requires: Java 17 (zulu-17), ``uv sync --extra record`` (pyspark==4.1.2), network on the first
-resolve for the Ivy/Maven fetch (cached thereafter).
-
-**JVM coordination.** Only ONE local Spark driver at a time: before running, check that no other
-lane holds one (``pgrep -af 'pyspark|SparkSubmit'``, ignoring any standing container cluster —
-``deploy.master`` / ``deploy.worker`` / ``HistoryServer`` / ``HiveThriftServer2`` /
-``CoarseGrainedExecutorBackend`` are somebody else's long-lived infrastructure, not a record run)
-and wait until it is clear.
-
-The driver imports ``ROWS`` from the COMMITTED test module and runs each row's OWN lifecycle recipe
-(the same helpers the suite uses) on a live Spark+Iceberg session. Exit 0 means every recorded half
-still reproduces: schema name/type/nullability first, then values. It never edits the corpus —
-re-recording is a human decision, and a driver that rewrote its own oracle would launder drift.
+Only ONE local Spark driver at a time: check no other lane holds one (``pgrep -af
+'pyspark|SparkSubmit'``, ignoring standing container infrastructure) and wait until it is clear.
+The driver imports ``ROWS`` from the committed test module and runs each row's own lifecycle recipe
+on a live Spark+Iceberg session. Exit 0 means every recorded half reproduces (schema, then
+values). It never edits the corpus — re-recording is a human decision; a driver that rewrote its
+own oracle would launder drift.
 """
 
 from __future__ import annotations
@@ -46,8 +30,8 @@ import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-# Run as a script from anywhere: the corpus is a sibling module, imported by name so the driver
-# reads the SAME rows the suite asserts (never a copy).
+# Run as a script from anywhere: import the sibling corpus by name — the driver must read the
+# SAME rows the suite asserts, never a copy.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 if TYPE_CHECKING:
@@ -96,9 +80,7 @@ def _spark_iceberg_session(warehouse: Path) -> Any:
 def _record_row(spark: Any, row: DmlSubqueryRow) -> str | None:
     """Re-derive one row's Spark half. Returns a mismatch report, or None when it matches.
 
-    Both kinds run the same Spark-side recipe: a `content` row's Spark half and a `split` row's
-    Spark half are both "the statement succeeded, here is the table afterwards". Only repark's
-    half differs between the kinds, and repark is not this driver's business.
+    Both kinds run the same Spark-side recipe; only repark's half differs between the kinds.
     """
     from test_dml_subquery_parity import run_dml_lifecycle
 

@@ -40,9 +40,7 @@ def _by(rows: list[dict[str, object]], key: str) -> list[dict[str, object]]:
     return sorted(rows, key=lambda row: (row[key] is None, row[key]))
 
 
-# ==================================================================================================
 # E3 — union by position
-# ==================================================================================================
 
 
 def test_union_is_union_all_by_position(spark: ReparkSession) -> None:
@@ -104,22 +102,16 @@ def test_parity_union_type_coercion(spark: ReparkSession) -> None:
 def test_union_inline_decimal_literal_diverges_from_spark(spark: ReparkSession) -> None:
     """DISCLOSED DIVERGENCE (TY-3): U3 does not move this row to Spark's (11,1).
 
-    Dated 2026-08-13 (U2): ``VALUES (2.5)`` is DECIMAL(2,1); ``VALUES (1)`` is Int64 ->
-    ``DECIMAL(20,0) union DECIMAL(2,1)`` -> ``decimal128(21, 1)`` **nullable**. Spark 4.1.2
-    treats the int as INT -> ``DECIMAL(10,0) union DECIMAL(2,1)`` -> ``decimal128(11, 1)``
-    **non-null**.
+    ``VALUES (2.5)`` is DECIMAL(2,1); ``VALUES (1)`` is Int64 -> ``DECIMAL(20,0) union
+    DECIMAL(2,1)`` -> ``decimal128(21, 1)`` **nullable**. Spark 4.1.2 treats the int as INT ->
+    ``DECIMAL(10,0) union DECIMAL(2,1)`` -> ``decimal128(11, 1)`` **non-null**.
 
-    Dated 2026-08-13 (U3): integer-literal ``fromLiteral`` applies to ``+ - *`` only
-    (Spark ``literalPickMinimumPrecision``). UNION set-op widening uses Spark
-    ``forType(INT) = DECIMAL(10,0)``, not digits-of-the-value. Applying fromLiteral
-    here would yield ``DECIMAL(1,0) union DECIMAL(2,1)`` -> ``(3,1)``, which is neither
-    today's ``(21,1)`` nor Spark's ``(11,1)``. Observed type after U3 is still
-    ``decimal128(21, 1)`` nullable. Still DECLARED.
-
-    Dated 2026-08-14 (R-2 / TY-3): the honest hook is DataFusion ``TypeCoercion`` /
-    ``coerce_union`` (Int64 → DECIMAL(20,0)), not a ``decimal_precision.rs`` arithmetic
-    arm. Parse-time INT-vs-Int64 is a session-wide bomb; a UNION-only ``forType(INT)``
-    rewrite cannot tell ``VALUES (1)`` from a BIGINT column. Still DECLARED.
+    UNION set-op widening uses Spark ``forType(INT) = DECIMAL(10,0)``, not integer-literal
+    ``fromLiteral`` digits (which apply to ``+ - *`` only); applying fromLiteral here would
+    yield ``DECIMAL(1,0) union DECIMAL(2,1)`` -> ``(3,1)``, neither today's ``(21,1)`` nor
+    Spark's ``(11,1)``. The honest hook is DataFusion ``TypeCoercion`` / ``coerce_union``
+    (Int64 → DECIMAL(20,0)); a UNION-only ``forType(INT)`` rewrite cannot tell
+    ``VALUES (1)`` from a BIGINT column. Still DECLARED.
     """
     ints = spark.sql("SELECT * FROM (VALUES (1)) AS t(v)")
     dec = spark.sql("SELECT * FROM (VALUES (2.5)) AS t(v)")
@@ -150,9 +142,7 @@ def test_union_column_count_mismatch_raises(spark: ReparkSession) -> None:
         a.union(narrow).to_arrow()
 
 
-# ==================================================================================================
 # E3 — unionByName
-# ==================================================================================================
 
 
 def test_union_by_name_resolves_by_name_not_position(spark: ReparkSession) -> None:
@@ -178,12 +168,10 @@ def test_union_by_name_missing_columns_raises_by_default(spark: ReparkSession) -
 def test_parity_union_by_name_allow_missing_fills_null(spark: ReparkSession) -> None:
     # allowMissingColumns=True: the extra column is filled with NULL on the side that lacks it.
     # R4 (S2): inputs are built with ``createDataFrame`` (NOT inline SQL ``VALUES``) so both engines
-    # infer int64 / nullable=True identically — a GENUINE parity pin. The prior fixture used inline
-    # ``VALUES`` where live Spark yields int32 / non-null while the golden claimed int64 / nullable
-    # (it pinned repark's own output as "Spark"). Re-recorded from PySpark 4.1.2
-    # (``JAVA_HOME=/usr/lib/jvm/zulu-17-amd64``): schema ``[(id,bigint,True),(name,string,True),
-    # (extra,bigint,True)]``, rows ``[{id:1,name:a,extra:None},{id:9,name:z,extra:99}]`` — matched
-    # by repark, so the golden below is the real cross-engine agreement.
+    # infer int64 / nullable=True identically — a GENUINE parity pin. Re-recorded from
+    # PySpark 4.1.2 (``JAVA_HOME=/usr/lib/jvm/zulu-17-amd64``): schema
+    # ``[(id,bigint,True),(name,string,True),(extra,bigint,True)]``, rows
+    # ``[{id:1,name:a,extra:None},{id:9,name:z,extra:99}]``.
     a = spark.createDataFrame([(1, "a")], ["id", "name"])
     wide = spark.createDataFrame([(9, "z", 99)], ["id", "name", "extra"])
     result = a.unionByName(wide, allowMissingColumns=True)
@@ -204,9 +192,7 @@ def test_parity_union_by_name_allow_missing_fills_null(spark: ReparkSession) -> 
     assert_frames_equal(result.to_arrow(), golden)
 
 
-# ==================================================================================================
 # E4 — distinct / dropDuplicates
-# ==================================================================================================
 
 
 def test_distinct_dedups_full_rows(spark: ReparkSession) -> None:
@@ -243,8 +229,7 @@ def test_parity_drop_duplicates_subset_deterministic_survivor(spark: ReparkSessi
     # When every row sharing a key has identical non-key values, the survivor's full row IS
     # deterministic — so this can be a strict frame-equal golden.
     # R4 (S2): inputs built with ``createDataFrame`` so both engines infer int64 / nullable=True
-    # identically — a GENUINE parity pin (the prior inline-``VALUES`` fixture had Spark at int32 /
-    # non-null while the golden claimed int64 / nullable). Re-recorded from PySpark 4.1.2: schema
+    # identically — a GENUINE parity pin. Re-recorded from PySpark 4.1.2: schema
     # ``[(k,bigint,True),(v,string,True)]``, rows ``[{k:1,v:a},{k:2,v:b}]``.
     source = spark.createDataFrame([(1, "a"), (1, "a"), (2, "b")], ["k", "v"])
     result = source.dropDuplicates(["k"])
@@ -260,9 +245,7 @@ def test_parity_drop_duplicates_subset_deterministic_survivor(spark: ReparkSessi
     assert_frames_equal(result.to_arrow(), golden)
 
 
-# ==================================================================================================
 # R5 — int UNION string: a DISCLOSED divergence (repark coerces to string; ANSI Spark 4 raises)
-# ==================================================================================================
 
 
 def test_union_int_string_coerces_to_string_diverges_from_ansi_spark(spark: ReparkSession) -> None:
@@ -276,7 +259,7 @@ def test_union_int_string_coerces_to_string_diverges_from_ansi_spark(spark: Repa
     repark lowers the union through DataFusion, which picks ``Utf8`` (string) as the common type, so
     it yields ``['1', 'x']`` string with NO error. We pin repark's ACTUAL output and record that
     Spark RAISES — the gap is documented, not silently encoded as "parity" (docs/testing.md
-    divergence-class discipline; task/lessons.md 2026-07-19). This guard is load-bearing: if a
+    divergence-class discipline; task/lessons.md). This guard is load-bearing: if a
     future ANSI-cast change made repark raise here too (converging), ``.to_arrow()`` below would
     raise and the test flips RED, forcing the disclosure to be revisited.
     """
@@ -290,9 +273,7 @@ def test_union_int_string_coerces_to_string_diverges_from_ansi_spark(spark: Repa
     assert sorted(result.column("v").to_pylist()) == ["1", "x"]
 
 
-# ==================================================================================================
 # R6 — dropDuplicates(subset) arg forms: list/tuple accepted, a bare str rejected (no char-iter)
-# ==================================================================================================
 
 
 def test_drop_duplicates_subset_accepts_list_and_tuple(spark: ReparkSession) -> None:

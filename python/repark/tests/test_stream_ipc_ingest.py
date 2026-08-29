@@ -149,8 +149,8 @@ def test_register_arrow_stream_nested_repark_stream_no_abort(
 ) -> None:
     """Generator that re-enters a repark C-stream must not process-abort (octo C1-SAF-001).
 
-    Pre-fix: ``register_arrow_stream`` draining ``from_batches(gen)`` where ``gen`` iterates
-    ``from_stream(repark_df)`` aborted with ``PyEval_SaveThread`` / thread-state-NULL.
+    Draining ``from_batches(gen)`` where ``gen`` iterates ``from_stream(repark_df)`` is the
+    re-entrancy shape that aborts with ``PyEval_SaveThread`` / thread-state-NULL when unguarded.
     """
     native = spark._ensure_alive()
     frame = spark.createDataFrame([(1,), (2,), (3,)], "x INT")

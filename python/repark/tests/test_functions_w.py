@@ -35,9 +35,7 @@ def _ordered_window() -> WindowSpec:
     return Window.partitionBy("g").orderBy("id")
 
 
-# ==================================================================================================
 # lag / lead
-# ==================================================================================================
 
 
 def test_lag_default_offset_first_row_is_null(spark: ReparkSession) -> None:
@@ -124,9 +122,7 @@ def test_lag_preserves_string_input_type(spark: ReparkSession) -> None:
     )
 
 
-# ==================================================================================================
 # nth_value
-# ==================================================================================================
 
 
 def test_nth_value_is_one_based(spark: ReparkSession) -> None:
@@ -156,9 +152,7 @@ def test_nth_value_rejects_non_positive_offset() -> None:
         F.nth_value("v", 0)
 
 
-# ==================================================================================================
 # percent_rank / cume_dist
-# ==================================================================================================
 
 
 def test_percent_rank_is_float64(spark: ReparkSession) -> None:
@@ -191,9 +185,7 @@ def test_cume_dist_is_float64(spark: ReparkSession) -> None:
     assert pa.types.is_float64(table.schema.field("cd").type)
 
 
-# ==================================================================================================
 # Honest cuts
-# ==================================================================================================
 
 
 def test_ignore_nulls_is_not_a_parameter() -> None:

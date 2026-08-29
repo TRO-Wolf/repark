@@ -1,8 +1,7 @@
-"""R-PERF-CACHE + r23 CACHE1 cache-honesty — cache / persist / unpersist / clearCache.
+"""R-PERF-CACHE + CACHE1 cache-honesty — cache / persist / unpersist / clearCache.
 
 Oracle shapes: live PySpark 4.1.2 (return self, is_cached, storageLevel repr for
-MEMORY-backed frames). Cache materialize seam: ``materialize_as_cache_view`` (caller-level
-branch; VALUES keeps ``materialize_as_temp_view``). Object-identity only — disclosed.
+MEMORY-backed frames). Object-identity only — disclosed.
 """
 
 from __future__ import annotations
@@ -25,9 +24,7 @@ def spark() -> ReparkSession:
 
 def _expensive_frame(spark: ReparkSession, rows: int = 8_000):
     """A plan that is not pre-MemTable'd (sql UNION chain) so cache timing is meaningful."""
-    # Build via createDataFrame then project — createDataFrame already MemTables; use pure SQL.
     parts = [f"SELECT {index} AS id, 'r{index}' AS label" for index in range(min(rows, 200))]
-    # Expand with cross-join against a small side to make re-execution noticeable without huge SQL.
     spark.sql("SELECT 1 AS k UNION ALL SELECT 2 UNION ALL SELECT 3").createOrReplaceTempView("side")
     base = " UNION ALL ".join(parts)
     spark.sql(base).createOrReplaceTempView("base_rows")
@@ -163,7 +160,7 @@ def test_cache_transform_child_does_not_inherit_mark(spark: ReparkSession) -> No
     assert frame._cache_view is None or frame.is_cached is True
 
 
-# === r23 CACHE1: cache-honesty ===
+# === CACHE1: cache-honesty ===
 
 
 def test_clear_cache_drops_session_cache_views(spark: ReparkSession) -> None:
@@ -240,7 +237,6 @@ def test_storage_level_disk_warns_once_per_session(spark: ReparkSession) -> None
         spark.sql("SELECT 1 AS id").persist(StorageLevel.MEMORY_AND_DISK)
     with warnings.catch_warnings():
         warnings.simplefilter("error")
-        # Second persist in the same session must not warn again.
         spark.sql("SELECT 2 AS id").persist(StorageLevel.DISK_ONLY)
 
 
@@ -332,8 +328,7 @@ def test_cache_max_bytes_unset_does_not_resurrect_builder(spark: ReparkSession) 
 def test_cache_materialize_uses_cache_entry_point_not_temp_view(spark: ReparkSession) -> None:
     """Caller-level branch: cache path must call materialize_as_cache_view only (R-PERF-VALUES).
 
-    PyO3 methods are read-only on the native object — wrap via a session proxy on the handle
-    (same pattern as test_ml_boost_oracle CrossValidator materialize pin).
+    PyO3 methods are read-only on the native object — wrap via a session proxy on the handle.
     """
     frame = spark.sql("SELECT 1 AS id UNION ALL SELECT 2")
     real_session = frame._session

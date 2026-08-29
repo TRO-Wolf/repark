@@ -80,9 +80,7 @@ def _assert_bit_exact(engine: np.ndarray, expected: np.ndarray) -> None:
         )
 
 
-# ==================================================================================================
 # Call-site surface (no engine needed)
-# ==================================================================================================
 
 
 def test_ta_functions_return_columns() -> None:
@@ -169,9 +167,7 @@ def test_unknown_indicator_is_rejected() -> None:
         _native.PyColumn.ta_window("ta_not_real", [])
 
 
-# ==================================================================================================
 # DataFrame route — bit-exact vs the C-TA-Lib goldens (== the kernel)
-# ==================================================================================================
 
 
 def test_ema_dataframe_route_matches_the_kernel(spark: ReparkSession, bars: object) -> None:
@@ -605,9 +601,7 @@ def test_column_form_and_string_shorthand_agree(spark: ReparkSession, bars: obje
     _assert_bit_exact(via_string, via_column)
 
 
-# ==================================================================================================
 # G-NAN — null_lookback opt-in (NaN lookback prefix → SQL NULL; mid-series NaN preserved)
-# ==================================================================================================
 
 
 def _engine_arrow_column(df: object, indicator: Column, ts_order: str = "ts"):
@@ -912,9 +906,7 @@ def test_null_lookback_ma_type_and_compound_formulas(spark: ReparkSession, bars:
     )
 
 
-# ==================================================================================================
-# r21 T4: ta-etl — window fusion plan shape + over_columns helper
-# ==================================================================================================
+# ta-etl — window fusion plan shape + over_columns helper
 
 
 def _physical_plan_text(df: object) -> str:
@@ -955,8 +947,8 @@ def test_over_columns_type_guards() -> None:
 def test_over_columns_withcolumns_fuses_window_agg(bars: object) -> None:
     """Same-spec multi-TA via ``over_columns`` + ``withColumns`` → one ``WindowAggExec``.
 
-    r21 T4 hour-0: sequential ``withColumn`` stacks N window operators; batching is the
-    fused plan the ETL path should use. Pin the plan shape (not wall time).
+    Sequential ``withColumn`` stacks N window operators; pin the fused plan shape, not
+    wall time.
     """
     window = Window.orderBy("ts")
     bare = {
@@ -983,8 +975,8 @@ def test_over_columns_withcolumns_fuses_window_agg(bars: object) -> None:
 def test_sequential_withcolumn_same_spec_merges_window_aggs(bars: object) -> None:
     """N x ``withColumn`` of independent same-spec TA → 1 ``WindowAggExec`` (r23b N2 stage b).
 
-    Pre-N2 this stacked N WindowAggExec nodes (T4 anti-pattern). Adjacent same-spec merge
-    collapses independent chains; dependent stacks still pin in ``test_n2_plan_collapse``.
+    Adjacent same-spec merge collapses independent chains; dependent stacks still pin in
+    ``test_n2_plan_collapse``.
     """
     window = Window.orderBy("ts")
     frame = bars  # type: ignore[assignment]
@@ -1011,8 +1003,7 @@ def test_sequential_withcolumn_same_spec_merges_window_aggs(bars: object) -> Non
 
 
 def test_all_covers_every_public_ta_entry_point() -> None:
-    """``ta.__all__`` lists every public def — ``wma`` was silently missing (F-4 finding),
-    so ``from repark.spark.ta import *`` skipped it. This pin closes the class."""
+    """``ta.__all__`` must list every public def — a star import skips any missing name."""
     import ast
     import inspect
 

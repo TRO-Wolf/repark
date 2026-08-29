@@ -9,7 +9,9 @@ CC-2 audits the tracked Python helper scripts after all crate and package slices
 pins: comment-condensation-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011.
 
 CC-2 scripts slice: every tracked `scripts/*.py` audited; gate-rule statements and constant
-tables kept, narration and dated history removed.
+tables kept, narration and dated history removed. The same unit ratcheted 17
+`check_lib_py.py` test-module baselines down to their condensed lengths and retired 2 rows
+that fell below the default ceiling.
 
 ## Contents
 

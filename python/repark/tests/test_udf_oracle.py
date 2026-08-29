@@ -1,8 +1,6 @@
 """Live PySpark 4.1.2 oracle for classic scalar Python udf (U8).
 
-Records values, null handling, type coercion, multi-arg, register+SQL, and error
-surfacing. Skips cleanly when pyspark/JVM is unavailable so JVM-free
-``make py-test-facade`` stays green.
+Skips cleanly when pyspark/JVM is unavailable so JVM-free ``make py-test-facade`` stays green.
 """
 
 from __future__ import annotations
@@ -124,7 +122,6 @@ def test_oracle_udf_type_coercion_long(spark_oracle: Any, spark_repark: SparkSes
     jvm = spark_oracle.createDataFrame(data, "a long").select(jvm_fn("a").alias("b"))
     repark = spark_repark.createDataFrame(data, "a long").select(repark_fn("a").alias("b"))
     assert _multiset(_rows(jvm)) == _multiset(_rows(repark))
-    # Arrow type pin on repark path (value AND type — never only show).
     arrow = repark.to_arrow()
     assert arrow.schema.field("b").type.bit_width == 64
 

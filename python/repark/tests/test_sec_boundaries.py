@@ -1,4 +1,4 @@
-"""r24 SB1 — trust boundaries: array cardinality ceilings (SEC-01) + local DDL gate (SEC-02).
+"""SB1 — trust boundaries: array cardinality ceilings (SEC-01) + local DDL gate (SEC-02).
 
 Facade entry point (`F.array_repeat` / `F.sequence` / `F.repeat`) and free-SQL path both refuse
 planner-visible expansions over ``repark.sql.maxArrayElements`` (default 10_000_000) with a
@@ -108,10 +108,8 @@ def test_copy_to_inside_registered_warehouse_is_grandfathered(
     """SEC-02 grandfather: local COPY TO *under a registered catalog warehouse* stays allowed.
 
     The gate defaults to refusing local-filesystem DDL, but must not break local-dev CTAS into
-    the warehouse the session itself registered (r24 greylight Q22). The exemption is scoped to
-    that warehouse root — a sibling path outside it still refuses, so the grandfather cannot be
-    used as a general escape. Rust-side coverage is `local_fs_ddl.rs`; this pins the Python
-    entry point, which is the one local-dev actually uses.
+    the warehouse the session itself registered (Q22). The exemption is scoped to that warehouse
+    root — a sibling path outside it still refuses. Rust-side coverage is ``local_fs_ddl.rs``.
     """
     warehouse = tmp_path / "warehouse"
     warehouse.mkdir()
@@ -129,14 +127,13 @@ def test_runtime_conf_set_cannot_loosen_local_fs_ddl_gate(session: ReparkSession
     """SEC-02 fails closed: a *runtime* ``conf.set`` cannot open the local-filesystem DDL gate.
 
     The gate reads its flag from the DataFusion config extension attached at session build, so
-    the opt-in is build-time only (see ``test_copy_to_allowed_when_conf_true``, which rebuilds
-    the builder). Both spellings are pinned because the extension stores snake_case while the
-    user-facing key is camelCase.
+    the opt-in is build-time only. Both spellings are pinned because the extension stores
+    snake_case while the user-facing key is camelCase.
 
-    Known limitation (r25 seed): ``conf.set`` *reads back* the value it did not honor, rather
-    than refusing the way Spark refuses a static-conf write. That is a truthfulness bug, not a
-    hole — the failure direction is closed, which is what this pin guards. If runtime conf
-    plumbing lands later, this test must be rewritten deliberately, not deleted.
+    Known limitation: ``conf.set`` *reads back* the value it did not honor, rather than refusing
+    the way Spark refuses a static-conf write. That is a truthfulness bug, not a hole — the
+    failure direction is closed. If runtime conf plumbing lands later, this test must be
+    rewritten deliberately, not deleted.
     """
     for key in (_ALLOW_LOCAL_FS_DDL_KEY, "repark.sql.allow_local_filesystem_ddl"):
         session.conf.set(key, "true")
@@ -150,16 +147,12 @@ def test_typed_writer_works_by_default_but_free_sql_to_same_path_still_refuses(
 ) -> None:
     """SEC-02 is scoped to *free* SQL — the typed writer must keep working with the gate on.
 
-    Regression pin (r24 morning). The facade implements `df.write.<fmt>(path)` as a generated
-    `COPY … TO`, which shares the SQL path the gate guards, so the gate refused every local
-    write: 31 writer tests failed on the combined branch though each unit gate was green.
-
-    The narrowing must not become a general escape, so this pins both halves:
-      1. the typed writer succeeds at its own destination, with the gate at its default; and
-      2. *free* SQL COPY TO a different local path still refuses.
-
-    `SECURITY.md` "Input surfaces" gates the **Free SQL** rows only, and lists the typed
-    `spark.read.*` API as un-gated — this pins the code to that documented boundary.
+    The facade implements ``df.write.<fmt>(path)`` as a generated ``COPY … TO``, which shares
+    the SQL path the gate guards, so an unscoped gate refuses every local write. The narrowing
+    must not become a general escape, so both halves are pinned: the typed writer succeeds at
+    its own destination with the gate at default, and *free* SQL COPY TO a different local path
+    still refuses. ``SECURITY.md`` "Input surfaces" gates the Free SQL rows only and lists the
+    typed ``spark.read.*`` API as un-gated — this pins the code to that documented boundary.
     """
     dest = tmp_path / "typed_writer_out"
     session.range(3).write.mode("overwrite").option("header", "true").csv(str(dest))
@@ -167,7 +160,7 @@ def test_typed_writer_works_by_default_but_free_sql_to_same_path_still_refuses(
     assert session.read.option("header", "true").csv(str(dest)).count() == 3
 
     # Deliberately a SIBLING of the write destination: trusting the destination's *parent*
-    # would open every neighbouring path to free SQL, so this must still refuse.
+    # would open every neighbouring path to free SQL.
     elsewhere = tmp_path / "free_sql_escape.parquet"
     with pytest.raises(AnalysisException, match=_ALLOW_LOCAL_FS_DDL_KEY):
         session.sql(f"COPY (SELECT 1 AS a) TO '{elsewhere}' STORED AS PARQUET").collect()

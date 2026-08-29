@@ -265,7 +265,7 @@ def test_sql_udf_with_pass_through(spark: SparkSession) -> None:
 
 
 def test_sql_udf_in_where_rewrites(spark: SparkSession) -> None:
-    """U8 residual / U10: WHERE scalar UDF rewrites (was refuse-loud)."""
+    """U8 residual / U10: WHERE scalar UDF rewrites."""
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     frame = spark.createDataFrame([(1,), (2,)], "a long")
     frame.createOrReplaceTempView("t_udf3")
@@ -502,9 +502,7 @@ def test_sql_mask_helpers_unit() -> None:
     assert _sql_udf_in_nested_subquery(nest_sql, nest_at) is True
 
 
-# ---------------------------------------------------------------------------
 # U9 — SQL UDF composition (expression wrap / CTE / DISTINCT / ORDER BY alias)
-# ---------------------------------------------------------------------------
 
 
 def test_sql_udf_expression_wrap_plus(spark: SparkSession) -> None:
@@ -1027,9 +1025,7 @@ def test_sql_udf_select_without_from(spark: SparkSession) -> None:
     assert _rows(out_order) == [{"z": 2, "y": 4}]
 
 
-# =============================================================================
-# r22 U11 — residual keyword poles (F-E1 class extensions beyond T7 EXTRA)
-# =============================================================================
+# U11 — residual keyword poles (F-E1 class extensions)
 
 
 def test_sql_udf_where_interval_day_residual(spark: SparkSession) -> None:
@@ -1047,10 +1043,8 @@ def test_sql_udf_where_interval_day_residual(spark: SparkSession) -> None:
 def test_sql_udf_where_interval_to_unit_not_projected(spark: SparkSession) -> None:
     """INTERVAL multi-unit trailing unit after ``TO`` is syntax, not a column (octo U11 C1).
 
-    Actor only skipped the unit immediately after INTERVAL; ``SECOND`` / ``MONTH`` after
-    ``TO`` were identity-projected / quote-rewritten → Schema error naming the unit as a
-    field. Residual rewrite must leave ``DAY TO SECOND`` intact. Engine may still UOE the
-    multi-unit form (same without UDF); must not leak ``__repark_sql_udf_*`` or claim a
+    Residual rewrite must leave ``DAY TO SECOND`` intact. The engine may still refuse the
+    multi-unit form (same without UDF); it must not leak ``__repark_sql_udf_*`` or claim a
     missing column named SECOND/MONTH.
     """
     from repark.spark.session import _sql_where_residual_base_projections
@@ -1094,9 +1088,8 @@ def test_sql_udf_where_date_timestamp_typed_literal_residual(
 ) -> None:
     """Typed ``DATE '…'`` / ``TIMESTAMP '…'`` constructors are syntax in residual (octo U11 C2).
 
-    Without this skip, residual projected ``DATE`` as a column and rewrote
-    ``extract(YEAR FROM DATE '…')`` → ``FROM "DATE" '…'`` (Schema error). Quoted column
-    named ``date`` still works; never leak internals.
+    Residual must not project ``DATE`` as a column or quote-rewrite the constructor. A
+    quoted column named ``date`` still works; never leak internals.
     """
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     frame = spark.createDataFrame([(1,), (2,)], "a long")
@@ -1122,11 +1115,10 @@ def test_sql_udf_where_date_timestamp_typed_literal_residual(
 
 
 def test_sql_udf_where_quoted_and_column(spark: SparkSession) -> None:
-    """Quoted residual column ``\"and\"`` must not break filter boolean keyword AND (U11).
+    """Quoted residual column ``\"and\"`` must not break the boolean AND keyword (U11).
 
-    DataFrame.filter's SQL-string identifier rewriter case-steals ``AND`` when a column
-    named ``and`` sits on the materialization frame; residual projection must temp-alias
-    the column so the residual parses. Never leak ``__repark_sql_udf_*``.
+    The identifier rewriter can case-steal ``AND`` beside a column named ``and``; residual
+    projection must temp-alias it so the residual parses. Never leak ``__repark_sql_udf_*``.
     """
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     frame = spark.createDataFrame([(1, 5), (2, 9)], "a long, and long")
@@ -1150,10 +1142,10 @@ def test_sql_udf_where_quoted_or_column(spark: SparkSession) -> None:
 def test_sql_udf_where_bare_when_column_refuses_or_requires_quote(
     spark: SparkSession,
 ) -> None:
-    """Bare reserved CASE keyword column in residual is not a silent wrong answer (U11 pin).
+    """Bare reserved ``when`` column in residual is not a silent wrong answer (U11 pin).
 
-    Spark requires quotes for bare ``when``; repark either refuses loud or requires the
-    quoted form (pin-refuse autonomy). Quoted form must work; no internal name leak.
+    repark refuses loud or requires the quoted form; the quoted form must work; no
+    internal name leak.
     """
     spark.udf.register("my_double", lambda x: None if x is None else int(x) * 2, "long")
     frame = spark.createDataFrame([(1, 5), (2, 9)], "a long, when long")

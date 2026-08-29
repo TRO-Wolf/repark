@@ -1,13 +1,9 @@
 """F2 / R-CENSUS-R3-VALUE — FAIL-VALUE harvest pins (Arrow path value + type).
 
-Hour-0 carve families (static 08-03 FAIL-VALUE + F1 reclassify hand-offs):
-
-* nested createDataFrame infer residual (tuple→struct, name padding, map collect dict)
-* lit display forms (overlay default -1; mixed-type lit list string coercion)
-* csc/sec(0) Inf (not NULL); U5: global float /0 raises under default ANSI
-* dtypes / schema display shapes (``str(df)``, ``printSchema(level)``)
-* scalar DataType createDataFrame (``DoubleType()`` → ``value`` column)
-
+Families: nested createDataFrame infer residuals (tuple→struct, name padding, map collect
+dict), lit display forms (overlay default -1; mixed-type lit list string coercion),
+csc/sec(0) Inf (not NULL) with U5 global float /0 raising under default ANSI, dtypes /
+schema display shapes, scalar DataType createDataFrame (``DoubleType()`` → ``value``).
 Self-join / Group H duplicate names remain engine-divergence seed (not faked).
 """
 
@@ -35,9 +31,7 @@ def spark() -> ReparkSession:
     session.stop()
 
 
-# ==================================================================================================
 # Nested createDataFrame infer residual
-# ==================================================================================================
 
 
 def test_nested_tuple_infers_struct_fields(spark: ReparkSession) -> None:
@@ -86,7 +80,6 @@ def test_empty_map_null_before_int_apache_order(spark: ReparkSession) -> None:
 
     Null-only witness must not pin map value type to string (octo C1-Q-001).
     """
-    # FA-4: repark defaults inferNestedDictAsStruct to true; this pin is about the MAP path.
     spark.conf.set("spark.sql.pyspark.inferNestedDictAsStruct.enabled", "false")
     frame = spark.createDataFrame([({},), ({"a": None},), ({"a": 1},)], ["f1"])
     assert frame.schema.fields[0].dataType.simpleString() == "map<string,bigint>"
@@ -103,7 +96,6 @@ def test_empty_map_null_before_int_apache_order(spark: ReparkSession) -> None:
 
 def test_nested_array_of_maps_collects_dicts(spark: ReparkSession) -> None:
     """array<map> collect → list[dict], empty map → {} (octo C1-Q-003)."""
-    # FA-4: repark defaults inferNestedDictAsStruct to true; this pin is about the MAP path.
     spark.conf.set("spark.sql.pyspark.inferNestedDictAsStruct.enabled", "false")
     frame = spark.createDataFrame([([{"a": 1}, {}],)], ["x"])
     rows = frame.collect()
@@ -139,9 +131,7 @@ def test_empty_scalar_double_type_keeps_double(spark: ReparkSession) -> None:
     assert csc_table.num_rows == 0
 
 
-# ==================================================================================================
 # csc / sec Inf at zero (global div-by-zero stays NULL)
-# ==================================================================================================
 
 
 def test_csc_zero_is_inf_not_null(spark: ReparkSession) -> None:
@@ -169,9 +159,7 @@ def test_sec_csc_collect_matches_arrow(spark: ReparkSession) -> None:
     assert table.column("sec").to_pylist()[1] == pytest.approx(1.0 / math.cos(math.pi / 3))
 
 
-# ==================================================================================================
 # lit display / regexp / overlay
-# ==================================================================================================
 
 
 def test_overlay_default_len_display() -> None:
@@ -283,9 +271,7 @@ def test_lit_mixed_list_coerces_to_string(spark: ReparkSession) -> None:
     assert numpy_ints.column("n").to_pylist() == [[1, 2]]
 
 
-# ==================================================================================================
 # dtypes / schema display shapes
-# ==================================================================================================
 
 
 def test_dataframe_str_and_dtypes_non_ascii(spark: ReparkSession) -> None:
@@ -320,7 +306,6 @@ def test_print_schema_level_truncates_nested(spark: ReparkSession) -> None:
 
 def test_mutation_proof_combo_map_overlay_empty_scalar(spark: ReparkSession) -> None:
     """Combined C1+C2 surfaces stay correct after interleaved actions (octo C3)."""
-    # FA-4: repark defaults inferNestedDictAsStruct to true; this pin is about the MAP path.
     spark.conf.set("spark.sql.pyspark.inferNestedDictAsStruct.enabled", "false")
     maps = spark.createDataFrame([({},), ({"a": None},), ({"a": 1},)], ["f1"])
     _ = maps.collect()

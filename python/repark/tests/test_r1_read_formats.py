@@ -1,8 +1,4 @@
-"""R1 — CSV/JSON read + write facade pins (Arrow path: value AND type).
-
-Charter: ``briefs/2026-08-09-grok-r20-grouph-census5-slate.md`` TRACK 8 / R1.
-Ledger: ``task/r1-read-formats-ledger.md``.
-"""
+"""R1 — CSV/JSON read + write facade pins (Arrow path: value AND type)."""
 
 from __future__ import annotations
 
@@ -37,9 +33,7 @@ def _sorted_rows(frame: object) -> list[dict[str, object]]:
     return sorted(rows, key=lambda row: (row[key0] is None, row[key0]))
 
 
-# ==================================================================================================
 # Readers — csv / json / format.load
-# ==================================================================================================
 
 
 def test_read_csv_header_and_values(spark: ReparkSession, tmp_path: Path) -> None:
@@ -167,9 +161,7 @@ def test_load_orc_still_data_source_not_found(spark: ReparkSession) -> None:
         spark.read.format("orc").load("/tmp/does-not-matter")
 
 
-# ==================================================================================================
 # Writers + round-trips (Arrow value AND type)
-# ==================================================================================================
 
 
 def test_write_csv_round_trip(spark: ReparkSession, tmp_path: Path) -> None:
@@ -259,9 +251,7 @@ def test_write_empty_csv_overwrite_preserves_path(spark: ReparkSession, tmp_path
     assert loaded.count() == 0
 
 
-# ==================================================================================================
 # Critic-octo pins (R1-C1 … C5)
-# ==================================================================================================
 
 
 def test_read_csv_null_value_numeric_column(spark: ReparkSession, tmp_path: Path) -> None:

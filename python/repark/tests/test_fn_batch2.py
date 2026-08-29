@@ -109,7 +109,6 @@ def test_unbase64_roundtrip(spark: ReparkSession) -> None:
     frame = spark.sql("SELECT 1 AS x")
     table = frame.select(unbase64(base64(lit("hi"))).alias("raw")).to_arrow()
     raw = table.to_pylist()[0]["raw"]
-    # binary or bytes
     if isinstance(raw, (bytes, bytearray, memoryview)):
         assert bytes(raw) == b"hi"
     else:
@@ -151,7 +150,7 @@ def test_array_batch2_values(spark: ReparkSession) -> None:
     assert 2 in (row["ai"] or [])
     assert row["amax"] == 3
     assert row["amin"] == 1
-    assert row["apos"] == 3  # first 2 is at index 3 in [1,1,2,3]
+    assert row["apos"] == 3
     assert row["sz"] == 4
     # Spark slice([1,1,2,3], 2, 2) → [1, 2] (1-based start=2, length=2)
     assert list(row["sl"]) == [1, 2]
@@ -178,13 +177,13 @@ def test_map_batch2(spark: ReparkSession) -> None:
 
 
 def test_batch2_loud_unsupported(spark: ReparkSession) -> None:
-    # FNP-3: soundex flipped to shipped (datafusion-spark kernel). See test_fnp3_destubbed.py.
+    # FNP-3: soundex ships (datafusion-spark kernel). See test_fnp3_destubbed.py.
     with pytest.raises(UnsupportedOperationException, match="sentences"):
         sentences("s")
     with pytest.raises(UnsupportedOperationException, match="arrays_zip"):
         arrays_zip("a", "b")
-    # FNP-3: map_from_arrays flipped to shipped — the stub's own docstring already noted the SQL
-    # door resolved it. See test_fnp3_destubbed.py.
+    # FNP-3: map_from_arrays ships — its stub docstring noted the SQL door already resolved it.
+    # See test_fnp3_destubbed.py.
     with pytest.raises(UnsupportedOperationException, match="locate"):
         locate("b", "s", pos=2)
 

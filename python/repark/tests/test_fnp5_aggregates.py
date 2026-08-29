@@ -1,13 +1,9 @@
 """FNP-5 — aggregates DataFusion already had registered and the facade could not reach.
 
-Every kernel here is in ``all_default_aggregate_functions()``, so ``register_all`` put it on every
-session and ``spark.sql(...)`` resolved it; the facade's aggregate dispatch simply had no arm.
-Thirteen names for roughly the cost of one — the same class FNP-3 closed for scalars.
-
-The nine ``regr_*`` are pinned against an **exact** fit (``y = 2x + 1``), so every statistic has a
-closed-form answer that does not depend on RePark agreeing with itself.
-
-Ledger: ``task/fnp-5-aggregates-ledger.md``.
+The kernels are in ``all_default_aggregate_functions()``, so ``spark.sql(...)`` resolved them
+while the facade's aggregate dispatch had no arm. The nine ``regr_*`` are pinned against an
+**exact** fit (``y = 2x + 1``), so every statistic has a closed-form answer. Ledger:
+``task/fnp-5-aggregates-ledger.md``.
 """
 
 from __future__ import annotations
@@ -54,10 +50,9 @@ def test_regression_aggregate_matches_the_closed_form(name: str, expected: float
 
 
 # Names whose two doors reach the same kernel but hand back different TYPES, with the reason.
-# RATCHETS DOWN ONLY. The facade casts a count-like aggregate to signed bigint because Spark has
-# no unsigned integer type; the SQL door still returns the engine's `UInt64`, so the two disagree
-# until the correction moves into the shared analyzer layer where both doors would see it. Fixing
-# the door turns this test red — which is the point: the row leaves, it does not get widened.
+# RATCHETS DOWN ONLY. The facade casts a count-like aggregate to signed bigint (Spark has no
+# unsigned integer type); the SQL door still returns the engine's `UInt64`. Fixing the door turns
+# this test red — the row leaves, it does not get widened.
 DOOR_RETURNS_UNSIGNED = {"regr_count"}
 
 
@@ -107,7 +102,6 @@ def test_grouping_marks_the_aggregated_level_of_a_cube() -> None:
     frame = _session().createDataFrame([("a", 1), ("b", 2), ("a", 3)], "k string, v int")
 
     marks = frame.cube("k").agg(F.grouping("k").alias("g")).toArrow().column("g").to_pylist()
-    # Two real key groups (0) plus the rolled-up total row (1).
     assert sorted(marks) == [0, 0, 1]
 
 

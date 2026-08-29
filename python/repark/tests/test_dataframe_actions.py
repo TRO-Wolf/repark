@@ -1,28 +1,8 @@
 """R-TAIL — DataFrame action surface: take / head / first / tail / isEmpty / toLocalIterator.
 
-Oracle: live PySpark 4.1.2 under ``JAVA_HOME=/usr/lib/jvm/zulu-17-amd64``,
-``SPARK_LOCAL_IP=127.0.0.1``, ANSI on, Arrow on. Full capture in
-``/tmp/sepmo-dogfood-r2-2026-07-28/r-tail-oracle.{py,out}`` (2026-07-28).
-
-Return types (verbatim from the oracle):
-
-* ``take(n)`` → ``list[Row]``
-* ``head()`` → ``Row | None`` (None on empty)
-* ``head(n)`` → ``list[Row]`` (incl. ``head(0) → []``)
-* ``first()`` → ``Row | None``
-* ``tail(n)`` → ``list[Row]``
-* ``isEmpty()`` → ``bool``
-* ``toLocalIterator()`` → iterator of ``Row``
-
-Edges:
-
-* ``n=0`` → empty list (take/head/tail)
-* ``n > count`` → all rows
-* ``take(-1)`` / ``head(-1)`` → ``AnalysisException``
-  ``[INVALID_LIMIT_LIKE_EXPRESSION.IS_NEGATIVE]`` (minus SQLSTATE + plan dump)
-* ``tail(-1)`` → ``[]`` (Spark does **not** raise — live-recorded)
-
-Value pins use ``collect`` / ``to_arrow`` (value AND type), never only ``show``.
+Oracle: live PySpark 4.1.2, ANSI on, Arrow on. Value pins use ``collect`` / ``to_arrow``
+(value AND type), never only ``show``. Asymmetric edge: ``tail(-1)`` → ``[]`` while
+``take(-1)`` / ``head(-1)`` raise ``[INVALID_LIMIT_LIKE_EXPRESSION.IS_NEGATIVE]``.
 """
 
 from __future__ import annotations
@@ -57,9 +37,7 @@ def _row_tuples(rows: list[Row]) -> list[tuple[object, ...]]:
     return [tuple(row) for row in rows]
 
 
-# ==================================================================================================
 # take
-# ==================================================================================================
 
 
 def test_take_returns_list_of_rows_prefix(spark: ReparkSession) -> None:
@@ -113,11 +91,10 @@ def test_take_rejects_non_int(spark: ReparkSession) -> None:
 
 
 def test_take_rejects_bool_false(spark: ReparkSession) -> None:
-    """Oracle EDGE: bool⊂int reject spans False, not only True (C8-Q-001).
+    """Oracle EDGE: bool⊂int reject spans False, not only True.
 
-    ``isinstance(False, int)`` is True in Python. A residual ``num is True`` (or truthy-only)
-    guard still raises on ``take(True)`` while accepting ``take(False)`` as limit/collect of 0
-    → silent ``[]``. Pin both bool domain members on the take path.
+    ``isinstance(False, int)`` is True in Python; a truthy-only guard raises on True while
+    accepting ``take(False)`` as limit 0 → silent ``[]``.
     """
     df = _ordered_frame(spark)
     with pytest.raises(PySparkTypeError, match=r"num"):
@@ -125,13 +102,11 @@ def test_take_rejects_bool_false(spark: ReparkSession) -> None:
 
 
 def test_take_rejects_none_and_float(spark: ReparkSession) -> None:
-    """Oracle EDGE type matrix: take(None) / take(1.5) → type error (C8-Q-002).
+    """Oracle EDGE type matrix: take(None) / take(1.5) → type error (live PySpark rejects
+    null and Double on the JVM limit path).
 
-    Live PySpark 4.1.2 rejects null and Double on the JVM limit path. Production raises
-    ``PySparkTypeError`` naming ``num``. Without these pins: ``if num is None: return []``
-    short-circuits before the type guard (``take(0)==[]`` stays green), and a float-truncating
-    path (``int(1.5)→1`` / ``DataFrame.limit``'s ``int(n)``) still passes string/True pins while
-    returning the wrong prefix length.
+    Stops a ``num is None → []`` short-circuit and an ``int(1.5)`` truncation that
+    string/True pins miss.
     """
     df = _ordered_frame(spark)
     with pytest.raises(PySparkTypeError, match=r"num"):
@@ -140,9 +115,7 @@ def test_take_rejects_none_and_float(spark: ReparkSession) -> None:
         df.take(1.5)  # type: ignore[arg-type]
 
 
-# ==================================================================================================
 # head / first
-# ==================================================================================================
 
 
 def test_head_no_arg_returns_row(spark: ReparkSession) -> None:
@@ -165,11 +138,7 @@ def test_head_n_returns_list(spark: ReparkSession) -> None:
 
 
 def test_head_one_returns_list_not_row(spark: ReparkSession) -> None:
-    """Oracle: head(1) → list[Row]; head() (no arg) → Row. Polymorphism pin (C2-Q-002).
-
-    A wrong ``if n == 1: return row`` branch would still pass ``head(2)`` list pins while
-    breaking the head(1) vs head() return-type split recorded live.
-    """
+    """Oracle: head(1) → list[Row]; head() (no arg) → Row (return-type polymorphism pin)."""
     df = _ordered_frame(spark)
     one = df.head(1)
     assert isinstance(one, list)
@@ -177,7 +146,6 @@ def test_head_one_returns_list_not_row(spark: ReparkSession) -> None:
     assert len(one) == 1
     assert isinstance(one[0], Row)
     assert tuple(one[0]) == (1, "a")
-    # Contrast: no-arg head is a single Row, not a one-element list.
     bare = df.head()
     assert isinstance(bare, Row)
     assert not isinstance(bare, list)
@@ -204,10 +172,9 @@ def test_head_negative_raises_analysis_exception(spark: ReparkSession) -> None:
 
 
 def test_head_rejects_bool(spark: ReparkSession) -> None:
-    """Oracle EDGE head(True): reject bool⊂int (C2-Q-003).
+    """Oracle EDGE head(True): reject bool⊂int; take/tail True pins do not cover head.
 
-    take(True)/tail(True) are pinned separately; without this, head could route True→limit(1)
-    and return a list while take still raises.
+    Without this, head could route True → limit(1) and return a list while take still raises.
     """
     df = _ordered_frame(spark)
     with pytest.raises(PySparkTypeError, match=r"num"):
@@ -215,10 +182,11 @@ def test_head_rejects_bool(spark: ReparkSession) -> None:
 
 
 def test_head_rejects_bool_false_and_float(spark: ReparkSession) -> None:
-    """head routes n≠None through take; pin False + float on that path (C8-Q-001/002).
+    """head routes n≠None through take; pin False + float on that path (take EDGE pins
+    do not cover head).
 
-    ``head(False)`` must not become ``head(0)→[]`` under a truthy-only bool guard.
-    ``head(1.5)`` must not truncate via ``int(1.5)`` while True/string pins stay green.
+    ``head(False)`` must not become ``head(0) → []`` under a truthy-only guard; ``head(1.5)``
+    must not truncate via ``int(1.5)``.
     """
     df = _ordered_frame(spark)
     with pytest.raises(PySparkTypeError, match=r"num"):
@@ -228,11 +196,10 @@ def test_head_rejects_bool_false_and_float(spark: ReparkSession) -> None:
 
 
 def test_head_none_returns_first_row(spark: ReparkSession) -> None:
-    """Oracle EDGE: head(None) is OK → first Row (same as no-arg head) (C8-Q-002).
+    """Oracle EDGE: head(None) is OK → first Row, same as no-arg head.
 
-    ``None`` is the default sentinel for bare ``head()``, not a type reject. take(None)/tail(None)
-    raise; pin the polymorphism so a universal ``if n is None: raise`` mutation fails this pin
-    while those rejects stay green.
+    take(None)/tail(None) raise; a universal ``if n is None: raise`` mutation must fail
+    this pin while those rejects stay green.
     """
     df = _ordered_frame(spark)
     first_row = df.head(None)
@@ -244,9 +211,7 @@ def test_head_none_returns_first_row(spark: ReparkSession) -> None:
     assert empty.head(None) is None
 
 
-# ==================================================================================================
 # tail
-# ==================================================================================================
 
 
 def test_tail_returns_last_n_rows(spark: ReparkSession) -> None:
@@ -280,20 +245,17 @@ def test_tail_rejects_non_int(spark: ReparkSession) -> None:
     df = _ordered_frame(spark)
     with pytest.raises(PySparkTypeError, match=r"num"):
         df.tail("2")  # type: ignore[arg-type]
-    # Mutation guard (C1-Q-003): bool is a subclass of int — without an explicit bool reject,
-    # ``tail(True)`` becomes ``tail(1)`` and returns the last row while take(True) still raises
-    # (take is pinned separately). Live PySpark rejects Boolean on the JVM limit/tail path.
+    # bool is a subclass of int: without an explicit reject, tail(True) becomes tail(1) and
+    # returns the last row while take(True) still raises. Live PySpark rejects Boolean here.
     with pytest.raises(PySparkTypeError, match=r"num"):
         df.tail(True)  # type: ignore[arg-type]
 
 
 def test_tail_rejects_bool_false_none_and_float(spark: ReparkSession) -> None:
-    """tail local type guard: False / None / float → PySparkTypeError (C8-Q-001/002).
+    """tail local type guard: False / None / float → PySparkTypeError.
 
-    tail does **not** share take's ``_require_non_negative_limit``; it has a duplicate
-    ``isinstance(num, bool) or not isinstance(num, int)`` check. Pins on take alone leave tail
-    free to accept ``False→[]`` (``num <= 0`` short-circuit), ``None→[]``, or ``int(1.5)→1``
-    last-row truncation while the take EDGE pins stay green.
+    tail does not share take's limit guard; take-only pins leave tail free to accept
+    ``False → []`` (``num <= 0`` short-circuit), ``None → []``, or ``int(1.5)`` truncation.
     """
     df = _ordered_frame(spark)
     with pytest.raises(PySparkTypeError, match=r"num"):
@@ -312,10 +274,10 @@ def test_tail_is_not_limit_head(spark: ReparkSession) -> None:
 
 
 def test_tail_zero_and_negative_raise_after_stop() -> None:
-    """Stopped-session contract: tail(0)/tail(-1) must not silent-return [] (C2-L-001).
+    """Stopped-session contract: tail(0)/tail(-1) must not silent-return [] after stop.
 
-    Production previously short-circuited ``num <= 0`` before ``_ensure_alive``; take(0) still
-    fails loud via limit/collect. Pin both zero and negative after stop.
+    A ``num <= 0`` short-circuit before the liveness gate hides a stopped session;
+    take(0) fails loud via limit/collect.
     """
     from repark import session as session_module
 
@@ -335,13 +297,10 @@ def test_tail_zero_and_negative_raise_after_stop() -> None:
 
 
 def test_take_and_head_zero_raise_after_stop() -> None:
-    """Stopped-session contract: take(0)/head(0) must not silent-return [] (C5-Q-001).
+    """Stopped-session contract: take(0)/head(0) must not silent-return [] after stop.
 
-    Production routes take/head through ``limit`` + ``collect`` (and ``_spawn``), so they fail
-    loud after stop today. A zero short-circuit before limit/collect — the same class of bug
-    that pre-C2-L-001 had on ``tail`` — would return ``[]`` while positive-n pins, live-frame
-    ``take(0)==[]`` / ``head(0)==[]``, and the tail-stop pin all stay green. The take docstring
-    claims the limit+collect path; pin the zero path after stop explicitly.
+    A zero short-circuit before limit/collect returns [] while positive-n pins stay green;
+    the take docstring claims the limit+collect path.
     """
     from repark import session as session_module
 
@@ -354,7 +313,7 @@ def test_take_and_head_zero_raise_after_stop() -> None:
             frame.take(0)
         with pytest.raises(RuntimeError, match="stopped"):
             frame.head(0)
-        # Positive n still fails loud (regression guard; not a zero short-circuit hole alone).
+        # Positive n must fail loud too.
         with pytest.raises(RuntimeError, match="stopped"):
             frame.take(1)
         with pytest.raises(RuntimeError, match="stopped"):
@@ -364,14 +323,10 @@ def test_take_and_head_zero_raise_after_stop() -> None:
 
 
 def test_is_empty_to_local_iterator_first_raise_after_stop() -> None:
-    """Stopped-session contract: isEmpty/toLocalIterator/first/bare head fail loud (C6-Q-002).
+    """Stopped-session contract: isEmpty/toLocalIterator/first/bare head fail loud after stop.
 
-    take/head(n)/tail after stop are pinned elsewhere (C5-Q-001 / C2-L-001). Without this pin,
-    ``isEmpty``, ``toLocalIterator``, ``first``, and bare ``head()`` can short-circuit to a
-    live-frame-shaped success (``False``/``[]``/``None``/row) while those other stop pins and
-    the happy-path return-type matrix stay green. Production routes them through
-    ``limit``/``count``/``collect``/``_spawn`` (or ``head``→``take``), which already gate
-    liveness — pin the lifecycle parity explicitly.
+    These can short-circuit to a live-frame-shaped success (False/[]/None/row) while the
+    take/head(n)/tail stop pins stay green.
     """
     from repark import session as session_module
 
@@ -396,9 +351,7 @@ def test_is_empty_to_local_iterator_first_raise_after_stop() -> None:
         session_module._reset_active_session_for_tests()
 
 
-# ==================================================================================================
 # isEmpty
-# ==================================================================================================
 
 
 def test_is_empty_bool(spark: ReparkSession) -> None:
@@ -412,9 +365,7 @@ def test_is_empty_bool(spark: ReparkSession) -> None:
     assert nulls.isEmpty() is False
 
 
-# ==================================================================================================
 # toLocalIterator
-# ==================================================================================================
 
 
 def test_to_local_iterator_yields_rows(spark: ReparkSession) -> None:
@@ -436,7 +387,7 @@ def test_to_local_iterator_empty(spark: ReparkSession) -> None:
 
 
 def test_to_local_iterator_matches_collect_values_and_types(spark: ReparkSession) -> None:
-    """P2b: streaming iterator is value+type equivalent to collect/to_arrow (not show-only)."""
+    """Streaming iterator is value+type equivalent to collect/to_arrow (not show-only)."""
     df = _ordered_frame(spark)
     collected = df.collect()
     streamed = list(df.toLocalIterator())
@@ -447,20 +398,19 @@ def test_to_local_iterator_matches_collect_values_and_types(spark: ReparkSession
 
 
 def test_to_local_iterator_partial_consume_is_iterator(spark: ReparkSession) -> None:
-    """P2b: return kind is a live iterator — first() style partial pull works without list()."""
+    """Return kind is a live iterator: partial pull works without list()."""
     df = _ordered_frame(spark)
     iterator = df.toLocalIterator()
     first = next(iterator)
     assert tuple(first) == (1, "a")
     second = next(iterator)
     assert tuple(second) == (2, "b")
-    # Remaining rows still available on the same generator.
     rest = list(iterator)
     assert _row_tuples(rest) == [(3, "c"), (4, "d"), (5, "e")]
 
 
 def test_to_local_iterator_maps_nulls_match_collect(spark: ReparkSession) -> None:
-    """P2b octo C1: stream Row path shares map→dict + null conversion with collect."""
+    """Stream Row path shares map→dict + null conversion with collect."""
     frame = spark.createDataFrame(
         [({"a": 1}, None), ({}, "x"), ({"b": 2, "c": 3}, "y")],
         "m map<string,int>, s string",
@@ -481,7 +431,7 @@ def test_to_local_iterator_maps_nulls_match_collect(spark: ReparkSession) -> Non
 
 
 def test_to_local_iterator_partial_abandon_then_full_action(spark: ReparkSession) -> None:
-    """P2b octo C1: abandon a partial stream; later actions on the handle still work."""
+    """Abandon a partial stream; later actions on the handle still work."""
     frame = spark.range(20_000).orderBy("id")
     iterator = frame.toLocalIterator()
     assert next(iterator)[0] == 0
@@ -493,13 +443,11 @@ def test_to_local_iterator_partial_abandon_then_full_action(spark: ReparkSession
     assert [row[0] for row in frame.limit(3).collect()] == [0, 1, 2]
 
 
-# ==================================================================================================
-# to_arrow_batches (P2b repark extension)
-# ==================================================================================================
+# to_arrow_batches (repark extension)
 
 
 def test_to_arrow_batches_concat_equals_to_arrow(spark: ReparkSession) -> None:
-    """P2b: batch iterator reconstructs the full table (value + schema types)."""
+    """Batch iterator reconstructs the full table (value + schema types)."""
     df = _ordered_frame(spark)
     batches = list(df.to_arrow_batches())
     assert batches, "expected at least one RecordBatch"
@@ -514,9 +462,8 @@ def test_to_arrow_batches_concat_equals_to_arrow(spark: ReparkSession) -> None:
 
 
 def test_to_arrow_batches_multibatch_orderby_equals_to_arrow(spark: ReparkSession) -> None:
-    """P2b octo C1: multi-batch stream concat ≡ to_arrow under orderBy (positional)."""
-    # range(n) without orderBy is multi-partition unordered across separate executions;
-    # orderBy pins a stable row order so concat equality is mutation-proof.
+    """Multi-batch stream concat ≡ to_arrow under orderBy (positional)."""
+    # orderBy pins a stable row order (range(n) alone is multi-partition unordered);
     # 200_000 > the 65536 session-default batch_size, so the stream is genuinely multi-batch.
     frame = spark.range(200_000).selectExpr("id", "cast(id as string) as s").orderBy("id")
     batches = list(frame.to_arrow_batches())
@@ -526,7 +473,6 @@ def test_to_arrow_batches_multibatch_orderby_equals_to_arrow(spark: ReparkSessio
     assert reconstructed.num_rows == full.num_rows == 200_000
     assert reconstructed.schema.equals(full.schema)
     assert reconstructed.to_pydict() == full.to_pydict()
-    # Stream rows match collect under the same orderBy (value + int type).
     streamed = list(frame.toLocalIterator())
     collected = frame.collect()
     assert _row_tuples(streamed) == _row_tuples(collected)
@@ -535,7 +481,7 @@ def test_to_arrow_batches_multibatch_orderby_equals_to_arrow(spark: ReparkSessio
 
 
 def test_to_arrow_batches_empty_frame(spark: ReparkSession) -> None:
-    """P2b octo C1: empty emits a schema-bearing zero-row batch (twin of to_arrow)."""
+    """Empty emits a schema-bearing zero-row batch (twin of to_arrow)."""
     empty = spark.createDataFrame([], ["id", "s"])
     batches = list(empty.to_arrow_batches())
     assert len(batches) == 1, "empty must yield exactly one zero-row schema batch"
@@ -553,7 +499,7 @@ def test_to_arrow_batches_empty_frame(spark: ReparkSession) -> None:
 
 
 def test_to_arrow_batches_empty_nested_schemas(spark: ReparkSession) -> None:
-    """P2b octo C4: empty nested/extension schemas still get a schema-eq zero-row batch."""
+    """Empty nested/extension schemas still get a schema-equal zero-row batch."""
     cases = [
         "select array(1, 2) as a where 1=0",
         "select named_struct('x', 1, 'y', 'z') as s where 1=0",
@@ -576,7 +522,7 @@ def test_to_arrow_batches_empty_nested_schemas(spark: ReparkSession) -> None:
 
 
 def test_to_arrow_batches_mid_stream_error_is_pyspark_exception(spark: ReparkSession) -> None:
-    """P2b octo C1: mid-stream engine error → PySparkException (same contract as to_arrow)."""
+    """Mid-stream engine error → PySparkException (same contract as to_arrow)."""
     # element_at index 0 is invalid in Spark (1-based); fails at execution when the batch pulls.
     bad = spark.sql("select element_at(array(1, 2), 0) as x")
     with pytest.raises(PySparkException) as batches_exc:
@@ -592,7 +538,7 @@ def test_to_arrow_batches_mid_stream_error_is_pyspark_exception(spark: ReparkSes
 
 
 def test_schema_metadata_stable_across_repeated_access(spark: ReparkSession) -> None:
-    """P2b: repeated schema/columns access on one handle is stable (cache-safe)."""
+    """Repeated schema/columns access on one handle is stable (cache-safe)."""
     df = spark.range(10).selectExpr("id", "id * 2 as doubled")
     first_schema = df.schema
     first_columns = list(df.columns)
@@ -611,7 +557,7 @@ def test_schema_metadata_stable_across_repeated_access(spark: ReparkSession) -> 
 
 
 def test_collect_stream_complex_types_and_dual_iterators(spark: ReparkSession) -> None:
-    """P2b octo C2: collect≡stream on decimal/struct/date/ts; dual iterators independent."""
+    """Collect ≡ stream on decimal/struct/date/ts; dual iterators independent."""
     from datetime import date, datetime
     from decimal import Decimal
 
@@ -658,13 +604,13 @@ def test_collect_stream_complex_types_and_dual_iterators(spark: ReparkSession) -
 
 
 def test_collect_matches_tolocaliterator_ordered(spark: ReparkSession) -> None:
-    """P2b octo C2: collect (batch-wise) ≡ toLocalIterator under orderBy (dual-peak fix)."""
+    """Collect (batch-wise) ≡ toLocalIterator under orderBy."""
     frame = spark.range(5_000).selectExpr("id", "cast(id as string) as s").orderBy("id")
     assert _row_tuples(frame.collect()) == _row_tuples(list(frame.toLocalIterator()))
 
 
 def test_cache_stream_and_collect_paths(spark: ReparkSession) -> None:
-    """P2b octo C3: cached MemTable is visible to collect / stream / batches; unpersist re-runs."""
+    """Cached MemTable is visible to collect / stream / batches; unpersist re-runs."""
     frame = spark.range(100).selectExpr("id", "id * 2 as d").orderBy("id").cache()
     try:
         assert frame.count() == 100
@@ -676,13 +622,12 @@ def test_cache_stream_and_collect_paths(spark: ReparkSession) -> None:
         assert collected[0][0] == 0 and collected[-1][0] == 99
     finally:
         frame.unpersist()
-    # After unpersist, actions still work (re-execute plan).
     assert len(frame.collect()) == 100
     assert len(list(frame.toLocalIterator())) == 100
 
 
 def test_collect_mid_stream_error_is_pyspark_exception(spark: ReparkSession) -> None:
-    """P2b octo C3: collect batch-wise path maps engine errors like to_arrow/batches."""
+    """Collect batch-wise path maps engine errors like to_arrow/batches."""
     bad = spark.sql("select element_at(array(1, 2), 0) as x")
     with pytest.raises(PySparkException) as collect_exc:
         bad.collect()
@@ -694,13 +639,11 @@ def test_collect_mid_stream_error_is_pyspark_exception(spark: ReparkSession) -> 
     assert spark.range(1).count() == 1
 
 
-# ==================================================================================================
-# r22 P5: collect Row materialization (primitive fast path + map convert)
-# ==================================================================================================
+# collect Row materialization (primitive fast path + map convert)
 
 
 def test_p5_collect_primitive_fast_path_matches_arrow(spark: ReparkSession) -> None:
-    """P5: all-primitive collect matches to_arrow values AND types (Arrow path, not show)."""
+    """All-primitive collect matches to_arrow values AND types (Arrow path, not show)."""
     from repark.spark.dataframe import DataFrame
 
     frame = (
@@ -741,7 +684,7 @@ def test_p5_collect_primitive_fast_path_matches_arrow(spark: ReparkSession) -> N
 
 
 def test_p5_collect_map_and_nested_array_map_convert(spark: ReparkSession) -> None:
-    """P5: map→dict + array<map> still convert on the optimized collect path."""
+    """Map→dict + array<map> still convert on the optimized collect path."""
     frame = spark.createDataFrame(
         [({"a": 1},), ({},), ({"b": 2, "c": 3},)],
         "m map<string,int>",
@@ -760,7 +703,7 @@ def test_p5_collect_map_and_nested_array_map_convert(spark: ReparkSession) -> No
 
 
 def test_p5_collect_nested_empty_map_value_is_dict(spark: ReparkSession) -> None:
-    """P5 octo C1: nested empty map values are ``{}`` (not ``[]``) — schema-aware item convert."""
+    """Nested empty map values are ``{}`` (not ``[]``) — schema-aware item convert."""
     frame = spark.createDataFrame(
         [({"a": {}, "b": {"x": 1}},)],
         "m map<string,map<string,int>>",
@@ -793,7 +736,7 @@ def test_p5_collect_nan_and_none_preserved(spark: ReparkSession) -> None:
 
 
 def test_p5_nested_calendar_interval_refused(spark: ReparkSession) -> None:
-    """P5 octo C1: nested MonthDayNano refuses on collect (list/struct/map containers)."""
+    """Nested MonthDayNano refuses on collect (list/struct/map containers)."""
     from repark.errors import PySparkNotImplementedError
     from repark.spark.dataframe import DataFrame
 
@@ -825,11 +768,11 @@ def test_p5_nested_calendar_interval_refused(spark: ReparkSession) -> None:
 
 
 def test_p5_collect_duplicate_display_names_positional(spark: ReparkSession) -> None:
-    """P5: duplicate field names stay positional (T3 pins) under bulk Row assembly."""
+    """Duplicate field names stay positional under bulk Row assembly."""
     from repark.spark.dataframe import DataFrame
 
     table = pa.table({"a": [1, 2], "b": [10, 20]})
-    # Simulate H1 multi-name rename: two columns both display as ``id``.
+    # Simulate a multi-name rename: two columns both display as ``id``.
     table = table.rename_columns(["id", "id"])
     rows = DataFrame._rows_from_arrow_table(table)
     assert len(rows) == 2
@@ -849,7 +792,6 @@ def test_p5_rows_from_arrow_empty_and_zero_column(spark: ReparkSession) -> None:
     # Zero-column empty schema (zip(*[]) would otherwise drop rows if row_count > 0).
     schema = pa.schema([])
     batch = pa.RecordBatch.from_arrays([], schema=schema)
-    # 0-col 0-row is the supported empty case.
     assert DataFrame._rows_from_arrow_table(batch) == []
     assert DataFrame._rows_from_arrow_table(pa.Table.from_batches([], schema=schema)) == []
     # Live zero-column frame with rows (drop sole column) still materializes n empty Rows.
@@ -859,9 +801,7 @@ def test_p5_rows_from_arrow_empty_and_zero_column(spark: ReparkSession) -> None:
     assert list(zero_col_rows[0]) == []
 
 
-# ==================================================================================================
-# Empty-frame matrix (oracle EMPTY FRAME section)
-# ==================================================================================================
+# Empty-frame matrix
 
 
 def test_empty_frame_action_matrix(spark: ReparkSession) -> None:

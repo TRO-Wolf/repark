@@ -3,10 +3,6 @@
 Each new ``functions`` name is pinned through ``ReparkSession`` on the Arrow path
 (``to_arrow()``): value AND type. Alias names resolve and share a behavior case.
 ``replace`` pins the literal-vs-regexp hazard.
-
-Deferred this batch (no stubs): ``regexp_extract_all``, ``regexp_substr`` (charter);
-``to_char``, ``to_varchar`` (DESIGN-GATED). FN-GT1 later shipped ``split_part`` /
-``regexp_count`` / ``regexp_instr`` / ``bit_length`` / ``octet_length``.
 """
 
 from __future__ import annotations
@@ -137,7 +133,9 @@ def test_btrim(spark: ReparkSession) -> None:
 
 
 def test_fn_b_str_is_column_name(spark: ReparkSession) -> None:
-    """Sweep FIX: contains/like/ilike/regexp_like/btrim/starts/ends are ColumnOrName."""
+    """contains/like/ilike/regexp_like/btrim/starts/ends are ColumnOrName:
+    a bare str is the column name.
+    """
     frame = spark.createDataFrame(
         [("xxhelloxx", "ell", "xx", "xx", "x", "%ell%", "%ELL%")],
         ["s", "needle", "pre", "suf", "trimc", "pat", "ipat"],
@@ -194,7 +192,7 @@ def test_quote_sql_literal(spark: ReparkSession) -> None:
 
 
 def test_printf_aliases_format_string() -> None:
-    """FNP-3 flipped ``format_string`` to shipped; ``printf`` delegates to it, so both are live."""
+    """``printf`` delegates to ``format_string`` (FNP-3), so both are live."""
     assert callable(F.printf)
     assert F.printf("%s", "x") is not None
     assert F.format_string("%s", "x") is not None

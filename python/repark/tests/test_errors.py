@@ -1,18 +1,17 @@
-"""Facade tests for the error taxonomy (WG-3; U4 added the unsupported/iceberg classes).
+"""Facade tests for the error taxonomy.
 
-``repark.errors`` mirrors ``pyspark.errors``: a SQL/expression **syntax** error surfaces as
-:class:`ParseException`, a **planning/analysis** error (an unresolved table or column, an iceberg
-not-found / already-exists) as :class:`AnalysisException`, a deterministic **scope gate** or
+``repark.errors`` mirrors ``pyspark.errors``: a SQL/expression syntax error surfaces as
+:class:`ParseException`, a planning/analysis error (an unresolved table or column, an iceberg
+not-found / already-exists) as :class:`AnalysisException`, a deterministic scope gate or
 unsupported iceberg feature as :class:`UnsupportedOperationException` (the class PySpark raises
 for a JVM ``UnsupportedOperationException``), an invalid ``.config(...)`` value as
-:class:`IllegalArgumentException` (Group X), and everything else (execution, iceberg commit/data
-errors) as the base :class:`PySparkException`. All subclass :class:`RuntimeError`, so the
-near-drop-in ``except RuntimeError`` path keeps working after migrating from PySpark.
+:class:`IllegalArgumentException`, and everything else (execution, iceberg commit/data errors) as
+the base :class:`PySparkException`. All subclass :class:`RuntimeError`, so the near-drop-in
+``except RuntimeError`` path keeps working after migrating from PySpark.
 
-Group X also adds the **Python-argument** wrappers the facade raises —
-:class:`PySparkTypeError` / :class:`PySparkValueError` / :class:`PySparkAttributeError`, each
-inheriting both :class:`PySparkException` and the builtin it wraps, exactly as ``pyspark.errors``
-does.
+The Python-argument wrappers :class:`PySparkTypeError` / :class:`PySparkValueError` /
+:class:`PySparkAttributeError` each inherit both :class:`PySparkException` and the builtin they
+wrap, exactly as ``pyspark.errors`` does.
 
 Every case drives the *public* facade (``spark.sql``, ``F.expr``, DataFrame ops) end to end through
 the built native module, asserting the exception **type** and that the original engine text
@@ -56,7 +55,6 @@ def spark_with_catalog(tmp_path: Path) -> ReparkSession:
     return session
 
 
-# ==================================================================================================
 # The taxonomy shape: subclassing + re-export identity
 
 
@@ -70,21 +68,18 @@ def test_exception_hierarchy_subclasses_runtime_error() -> None:
     assert issubclass(AnalysisException, RuntimeError)
     assert issubclass(ParseException, RuntimeError)
     assert issubclass(UnsupportedOperationException, RuntimeError)
-    # C4 expand2: PySparkAssertionError under repark tree for check_error isinstance.
+    # C4 expand2: PySparkAssertionError sits under the repark tree for check_error isinstance.
     assert issubclass(PySparkAssertionError, PySparkException)
     assert issubclass(PySparkAssertionError, AssertionError)
     assert issubclass(PySparkAssertionError, RuntimeError)
-    # PySpark parity (Group S): ParseException IS-A AnalysisException — `pyspark.errors` defines
-    # `ParseException(AnalysisException)` (base.py), so `except AnalysisException` catches a parse
-    # error. Before Group S, ParseException subclassed PySparkException directly and a migrated
-    # `except AnalysisException` silently missed syntax errors.
+    # PySpark parity: `pyspark.errors` defines `ParseException(AnalysisException)` (base.py), so
+    # `except AnalysisException` catches a parse error.
     assert issubclass(ParseException, AnalysisException)
-    # ...but the relation is one-way, and the other leaves stay distinct.
     assert not issubclass(AnalysisException, ParseException)
     assert not issubclass(UnsupportedOperationException, AnalysisException)
     assert not issubclass(UnsupportedOperationException, ParseException)
     assert not issubclass(AnalysisException, UnsupportedOperationException)
-    # Group X: IllegalArgumentException is a PySparkException leaf, distinct from the others.
+    # IllegalArgumentException is a PySparkException leaf, distinct from the others.
     assert issubclass(IllegalArgumentException, PySparkException)
     assert issubclass(IllegalArgumentException, RuntimeError)
     assert not issubclass(IllegalArgumentException, AnalysisException)
@@ -99,8 +94,6 @@ def test_analysis_exception_catches_parse_errors_pyspark_parity(spark: ReparkSes
     # parse error is no longer an AnalysisException, so pytest.raises(AnalysisException) escapes).
     with pytest.raises(AnalysisException):
         spark.sql("SELECT * FROM")
-    # Still catchable as ParseException, and still an AnalysisException / PySparkException /
-    # RuntimeError all the way up — no broader catch regressed.
     try:
         spark.sql("SELECT * FROM")
     except ParseException as error:
@@ -119,14 +112,12 @@ def test_errors_reexported_with_same_identity() -> None:
     assert PySparkException is _native.PySparkException
     assert UnsupportedOperationException is _native.UnsupportedOperationException
     assert IllegalArgumentException is _native.IllegalArgumentException
-    # The three Python-argument leaves are facade-defined (they need MULTIPLE bases, which
-    # `pyo3::create_exception!` cannot express) — nothing in the engine raises them, so there is
-    # deliberately NO native twin whose identity could drift.
+    # The Python-argument leaves are facade-defined: they need MULTIPLE bases, which
+    # `pyo3::create_exception!` cannot express — no native twin exists whose identity could drift.
     for facade_only in (PySparkValueError, PySparkTypeError, PySparkAttributeError):
         assert not hasattr(_native, facade_only.__name__)
 
 
-# ==================================================================================================
 # Entry point: spark.sql
 
 
@@ -155,7 +146,6 @@ def test_sql_execution_error_raises_base_exception(spark: ReparkSession) -> None
     assert "Cast error" in str(raised.value)
 
 
-# ==================================================================================================
 # Entry point: F.expr
 
 
@@ -171,7 +161,6 @@ def test_expr_unresolved_column_raises_analysis_exception(spark: ReparkSession) 
         F.expr("a + 1")
 
 
-# ==================================================================================================
 # Entry point: DataFrame ops
 
 
@@ -198,21 +187,17 @@ def test_dataframe_collect_execution_error_raises_base_exception(spark: ReparkSe
     assert not isinstance(raised.value, (AnalysisException, ParseException))
 
 
-# ==================================================================================================
-# U4 (audit CQ-002/CQ-015, OTH-009): scope gates → UnsupportedOperationException; iceberg kinds
-# classified. Each case drives the public `spark.sql` surface end to end.
+# Scope gates → UnsupportedOperationException; iceberg kinds classified (CQ-002/CQ-015/OTH-009).
 
 
 def test_merge_partitioned_target_gate_retired_now_runs(
     spark_with_catalog: ReparkSession,
 ) -> None:
-    # A4 gate RETIREMENT (was U4-P1). `MERGE INTO` an IDENTITY-partitioned table used to raise the
-    # UnsupportedOperationException scope gate; it now RUNS — both arms route through the A1/U1
-    # fanout. This pins the retirement at the facade: the exact statement that used to raise must
-    # now commit and round-trip, and must NOT raise the scope gate. (The
+    # `MERGE INTO` an IDENTITY-partitioned table now RUNS (both arms route through the A1/U1
+    # fanout); the exact statement must commit and round-trip without the scope gate. The
     # UnsupportedOperationException taxonomy stays covered by the MoR-mode gate below +
     # test_runtime_error_still_catches...; the positive value-AND-type e2e lives in
-    # test_catalog_flow.py::test_merge_partitioned_by_end_to_end.)
+    # test_catalog_flow.py::test_merge_partitioned_by_end_to_end.
     spark = spark_with_catalog
     spark.sql(
         "CREATE TABLE mem.silver.part_t USING iceberg PARTITIONED BY (id) "
@@ -238,12 +223,8 @@ def test_merge_partitioned_target_gate_retired_now_runs(
 def test_merge_mor_mode_gate_raises_unsupported_operation_exception(
     spark_with_catalog: ReparkSession,
 ) -> None:
-    # U4-P2 — the second NotImplemented surface: the `write.merge.mode` gate. Risk: only one gate
-    # rerouted (a special-cased fix) instead of the whole NotImplemented class.
-    # Group T narrowed this gate (merge-on-read MERGE started RUNNING, leaving transform
-    # partitioning as the probe); Group Y removed the transform limit too, so the probe moved once
-    # more — to the UNRECOGNISED mode value, which is a permanent `NotImplemented` on the same
-    # property rather than a scope boundary that a later group will retire.
+    # U4-P2 — the probe is the UNRECOGNISED `write.merge.mode` value: a permanent
+    # `NotImplemented` on that property, not a retireable scope boundary.
     spark = spark_with_catalog
     spark.sql(
         "CREATE TABLE mem.silver.mor_t USING iceberg "
@@ -262,10 +243,9 @@ def test_merge_mor_mode_gate_raises_unsupported_operation_exception(
 def test_create_namespace_duplicate_raises_analysis_exception(
     spark_with_catalog: ReparkSession,
 ) -> None:
-    # U4-P5 — an iceberg-origin error through the External route, end to end: a duplicate
-    # CREATE NAMESPACE (no IF NOT EXISTS) carries iceberg's NamespaceAlreadyExists kind. Spark
-    # raises NamespaceAlreadyExistsException, an AnalysisException subclass — pre-U4 repark raised
-    # the bare base type here. The kind must be visible in str(exc) (the cause chain).
+    # U4-P5 — an iceberg-origin error end to end: a duplicate CREATE NAMESPACE (no IF NOT EXISTS)
+    # carries iceberg's NamespaceAlreadyExists kind; Spark raises NamespaceAlreadyExistsException,
+    # an AnalysisException subclass. The kind must be visible in str(exc) (the cause chain).
     spark = spark_with_catalog
     with pytest.raises(AnalysisException) as raised:
         spark.sql("CREATE NAMESPACE mem.silver")  # the fixture already created it
@@ -284,23 +264,21 @@ def test_drop_missing_table_raises_analysis_exception(
     assert "TableNotFound" in str(raised.value)
 
 
-# ==================================================================================================
 # Near-drop-in compatibility: the whole reason the typed exceptions subclass RuntimeError
 
 
 def test_runtime_error_still_catches_the_typed_exceptions(
     spark_with_catalog: ReparkSession,
 ) -> None:
-    # Pre-migration `except RuntimeError` on engine failures must keep working after the taxonomy.
+    # `except RuntimeError` on engine failures must keep working after the taxonomy.
     spark = spark_with_catalog
     with pytest.raises(RuntimeError):
         spark.sql("SELECT * FROM __no_such_table__")  # AnalysisException IS-A RuntimeError
     with pytest.raises(RuntimeError):
         spark.sql("SELECT * FROM")  # ParseException IS-A RuntimeError
-    # U4: UnsupportedOperationException IS-A RuntimeError — the `write.merge.mode` gate as the
-    # probe. Group Y moved it from "merge-on-read + a non-identity transform" (now supported) to an
-    # UNRECOGNISED mode value, which stays a `NotImplemented` permanently. Setup (CTAS + temp view)
-    # runs OUTSIDE the raises block so only the gate can satisfy it.
+    # UnsupportedOperationException IS-A RuntimeError — the `write.merge.mode` gate (an
+    # UNRECOGNISED mode value, a permanent `NotImplemented`) as the probe. Setup (CTAS + temp
+    # view) runs OUTSIDE the raises block so only the gate can satisfy it.
     spark.sql(
         "CREATE TABLE mem.silver.rt_t USING iceberg "
         "TBLPROPERTIES ('write.merge.mode' = 'merge-on-write') "
@@ -314,14 +292,8 @@ def test_runtime_error_still_catches_the_typed_exceptions(
         )
 
 
-# ==================================================================================================
-# GROUP X — the reachable PySpark exception leaf types.
-#
-# Method: a LIVE pyspark 4.0.0 oracle (JVM local[1], ANSI on — the shipped
-# `iBergSpark/.venv` install) was probed for the class PySpark raises at each repark raise site;
-# only types with >=1 reachable repark raise were wired (the Group S no-stubs rule). The oracle
-# results that drive the pins below:
-#
+# Reachable PySpark exception leaf types. Probed from a LIVE pyspark 4.0.0 oracle (JVM local[1],
+# ANSI on); only types with >=1 reachable repark raise were wired. Oracle results driving the pins:
 #   spark.conf invalid value          -> IllegalArgumentException  ("'-1' in
 #                                        spark.sql.shuffle.partitions is invalid")
 #   df.select(123) / df.filter(123)   -> PySparkTypeError(PySparkException, TypeError)
@@ -331,9 +303,8 @@ def test_runtime_error_still_catches_the_typed_exceptions(
 
 def test_invalid_catalog_config_raises_illegal_argument_exception() -> None:
     # ENGINE path: `repark_core::Error::Config` (an unmappable `spark.sql.catalog.<name>.*` block)
-    # now classifies to IllegalArgumentException — what live pyspark 4.0.0 raises for an invalid
-    # SQLConf value. Before Group X this landed in the base `PySparkException` bucket, so a
-    # migrated `except IllegalArgumentException` silently missed it (the Group S failure mode).
+    # classifies to IllegalArgumentException — what live pyspark 4.0.0 raises for an invalid
+    # SQLConf value.
     # MUTATION: route `Error::Config` back to `ErrorClass::Base` in repark-core → this REDs
     # (needs a maturin rebuild between mutation and test — the class identity is compiled in).
     with pytest.raises(IllegalArgumentException) as raised:
@@ -343,7 +314,6 @@ def test_invalid_catalog_config_raises_illegal_argument_exception() -> None:
     # Cause chain: the offending key AND value survive verbatim in str(exc).
     assert "spark.sql.catalog.badcat.type" in str(raised.value)
     assert "nosuchtype" in str(raised.value)
-    # Parent catch-compat, and NOT the classes it must not be confused with.
     assert isinstance(raised.value, PySparkException)
     assert isinstance(raised.value, RuntimeError)
     assert not isinstance(raised.value, (AnalysisException, ParseException))
@@ -366,9 +336,8 @@ def test_engine_and_facade_config_errors_share_one_class() -> None:
 
 
 def test_python_type_misuse_raises_pyspark_type_error(spark: ReparkSession) -> None:
-    # A wrong-typed argument to a facade method is PySpark's PySparkTypeError. The payoff: a
-    # migrated `except PySparkException` (or `except PySparkTypeError`) now catches it — before
-    # Group X repark raised a bare TypeError, which PySparkException never caught.
+    # A wrong-typed argument to a facade method is PySpark's PySparkTypeError, so a migrated
+    # `except PySparkException` (or `except PySparkTypeError`) catches it.
     # MUTATION: revert `raise PySparkTypeError` to `raise TypeError` in dataframe.py → RED.
     df = spark.sql("SELECT 1 AS a")
     for misuse in (lambda: df.select(123), lambda: df.filter(123), lambda: df.drop(123)):
@@ -395,7 +364,6 @@ def test_python_value_misuse_raises_pyspark_value_error(spark: ReparkSession) ->
             misuse()
         assert isinstance(raised.value, ValueError)
         assert isinstance(raised.value, PySparkException)
-    # The session surface too.
     with pytest.raises(PySparkValueError) as raised:
         spark.createDataFrame([])
     assert isinstance(raised.value, ValueError)
@@ -403,9 +371,8 @@ def test_python_value_misuse_raises_pyspark_value_error(spark: ReparkSession) ->
 
 
 def test_unknown_column_attribute_raises_pyspark_attribute_error(spark: ReparkSession) -> None:
-    # `df.nosuchattr` is PySpark's PySparkAttributeError. repark already emitted PySpark's exact
-    # `[ATTRIBUTE_NOT_SUPPORTED]` message here — Group X gives it PySpark's CLASS too, so the
-    # message was never the only oracle.
+    # `df.nosuchattr` is PySpark's PySparkAttributeError (repark already emitted PySpark's exact
+    # `[ATTRIBUTE_NOT_SUPPORTED]` message; this gives it PySpark's CLASS too).
     # MUTATION: revert `raise PySparkAttributeError` to `raise AttributeError` → RED.
     df = spark.sql("SELECT 1 AS a")
     with pytest.raises(PySparkAttributeError) as raised:
@@ -419,18 +386,15 @@ def test_unknown_column_attribute_raises_pyspark_attribute_error(spark: ReparkSe
 
 
 def test_row_missing_key_and_bad_index_raise_pyspark_value_error() -> None:
-    """G-ROW / E8 residual (Group X deferred): live PySpark 4.1.2 Row error classes.
+    """Live PySpark 4.1.2 Row error classes (oracle 2026-07-27, zulu-17).
 
-    Oracle (2026-07-27, zulu-17):
-
-    * ``Row(a=1)["zz"]`` → ``PySparkValueError`` (NOT ``KeyError``) — Group X archive
-      named this a deliberate deferral; G-ROW closes it with the existing leaf.
+    * ``Row(a=1)["zz"]`` → ``PySparkValueError`` (NOT ``KeyError``).
     * ``Row(a=1)[object()]`` / ``[1.5]`` → ``PySparkValueError`` (NOT ``PySparkTypeError``)
       — same ``__fields__.index`` funnel as live ``pyspark.sql.types.Row``.
     * ``Row(a=1).missing`` → ``PySparkAttributeError`` ``[ATTRIBUTE_NOT_SUPPORTED]``.
     * ``Row(1, a=2)`` → ``PySparkValueError`` ``[CANNOT_SET_TOGETHER]``.
 
-    No new exception leaves — reuses Group S/X ``errors.py`` types only. ``PySparkKeyError``
+    No new exception leaves — reuses the existing ``errors.py`` types only. ``PySparkKeyError``
     stays deferred (malformed-Row IndexError branch unreachable while fields/values lock-step).
     """
     from repark.spark.row import Row
@@ -459,8 +423,7 @@ def test_row_missing_key_and_bad_index_raise_pyspark_value_error() -> None:
 
 def test_python_arg_errors_runtime_error_divergence_is_deliberate(spark: ReparkSession) -> None:
     # Pin for registry row FA-3 — semantics live only there
-    # (docs/spark-sql-iceberg-parity.md §5 FA-3). A future unit that decouples
-    # PySparkException from RuntimeError UPDATES this pin with the row.
+    # (docs/spark-sql-iceberg-parity.md §5 FA-3); a future decoupling unit UPDATES this pin.
     df = spark.sql("SELECT 1 AS a")
     with pytest.raises(RuntimeError):
         df.select(123)

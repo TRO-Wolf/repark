@@ -1,10 +1,9 @@
-"""r24 A3 QUAL-03 — native cast vocabulary locksteps with types.py primitives.
+"""Native cast vocabulary locksteps with ``types.py`` primitives (QUAL-03).
 
-Parametrized over every ``types.py`` class that claims a primitive Arrow mapping
-via ``_engine_type`` and is in the facade cast allowlist. Covers ``cast`` and
-``try_cast``, string tokens + type objects, and residual unknown → AnalysisException
-on the native path (Python allowlist still raises ValueError for hostile tokens —
-generator security gate).
+Parametrized over every ``types.py`` class that claims a primitive Arrow mapping via
+``_engine_type`` and is in the facade cast allowlist: ``cast`` and ``try_cast``, string tokens +
+type objects, and residual unknown → AnalysisException on the native path (the Python allowlist
+still raises ValueError for hostile tokens — generator security gate).
 """
 
 from __future__ import annotations
@@ -49,12 +48,11 @@ _PRIMITIVE_CAST_TYPES: list[tuple[str, DataType, pa.DataType]] = [
     ("decimal(10,4)", DecimalType(10, 4), pa.decimal128(10, 4)),
 ]
 
-# Source column per token. Everything casts from the LONG `v` except DATE, which casts from the
-# STRING `s`: Spark refuses `CAST(BIGINT AS DATE)` at analysis
-# (`DATATYPE_MISMATCH.CAST_WITH_FUNC_SUGGESTION` — "use `DATE_FROM_UNIX_DATE` instead", divergence
-# registry row G6-5), and so does repark since the cast-legality gate landed. The claim this file
-# makes is a VOCABULARY claim — that the string token and the type object reach the same native
-# cast — and it is unchanged by which legal source column the cast starts from.
+# Source column per token: everything casts from the LONG `v` except DATE, which casts from the
+# STRING `s` — Spark refuses `CAST(BIGINT AS DATE)` at analysis
+# (`DATATYPE_MISMATCH.CAST_WITH_FUNC_SUGGESTION`, divergence registry row G6-5), and so does
+# repark. The claim here is a VOCABULARY claim — string token and type object reach the same
+# native cast — unchanged by which legal source column the cast starts from.
 _CAST_SOURCE: dict[str, str] = {"date": "s"}
 
 
@@ -110,9 +108,8 @@ def test_try_cast_primitive_type_object_and_token(
 ) -> None:
     """try_cast accepts the same vocabulary; schema matches cast.
 
-    ``try_cast`` shares the source-column note above: Spark's legality check is
-    ``Cast.checkInputDataTypes``, which ``TryCast`` (``Cast(evalMode = TRY)``) inherits — the eval
-    mode governs VALUES that a legal cast cannot represent, never which type pairs are castable.
+    Spark's legality check is ``Cast.checkInputDataTypes``, inherited by ``TryCast``: the eval
+    mode governs VALUES a legal cast cannot represent, never which type pairs are castable.
     """
     frame = spark.range(1).select(F.col("id").alias("v"), F.lit("2020-01-01").alias("s"))
     source = _CAST_SOURCE.get(token, "v")
@@ -135,15 +132,14 @@ def test_cast_unknown_type_raises_parse_exception_at_facade_allowlist(
 ) -> None:
     """Hostile / unknown tokens refuse at the Python allowlist as ``ParseException``.
 
-    The allowlist is the security control (generator unnest gate C4-SEC-001); the
-    exception *class* is Spark parity. Live PySpark 4.1.2 oracle, recorded r24 morning::
+    The allowlist is the security control (generator unnest gate C4-SEC-001); the exception
+    *class* is Spark parity. Live PySpark 4.1.2 oracle::
 
         col.cast("notatype")  -> ParseException  AnalysisException=True ValueError=False
         col.cast("varchar")   -> ParseException  AnalysisException=True ValueError=False
 
     ``ParseException`` subclasses ``AnalysisException``, so the Spark idiom
-    ``except AnalysisException`` catches a bad cast on repark too — a bare ``ValueError``
-    (the pre-rider behavior) would not be. Renamed with its assertion per rule 11.
+    ``except AnalysisException`` catches a bad cast on repark too.
     """
     for bad in ("notatype", "varchar"):
         with pytest.raises(ParseException, match=r"unknown cast type"):

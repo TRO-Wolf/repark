@@ -1,12 +1,9 @@
-"""MERGE `WHEN NOT MATCHED` source-only resolution scope (audit M4, repro r4).
+"""MERGE ``WHEN NOT MATCHED`` source-only resolution scope.
 
-Oracle: Spark 4 resolves NOT MATCHED conditions and ``VALUES`` expressions against the SOURCE
-plan only (``ResolveMergeIntoTable`` → ``InsertAction`` under ``Project(Nil, sourceTable)``);
-a target-column reference is an ``UNRESOLVED_COLUMN`` analysis error. Before the fix repark
-evaluated both over the anti-join's LEFT JOIN, so ``t.col`` silently read the join NULL —
-``WHEN NOT MATCHED AND t.score > 0`` disabled the insert with no diagnostic and
-``VALUES (…, t.col)`` inserted NULL. These pins are red without the source-only insert scope
-(merge/mod.rs ``insert_sql`` sentinel subquery).
+Oracle (Spark 4): NOT MATCHED conditions and ``VALUES`` expressions resolve against the SOURCE
+plan only; a target-column reference is an ``UNRESOLVED_COLUMN`` analysis error. Evaluating
+``t.col`` over the join instead silently disables the insert or inserts NULL. These pins are
+red without the source-only insert scope (merge/mod.rs ``insert_sql`` sentinel subquery).
 """
 
 from __future__ import annotations
@@ -60,7 +57,7 @@ def test_not_matched_condition_rejects_target_column(spark: ReparkSession) -> No
 
 
 def test_not_matched_values_rejects_target_column(spark: ReparkSession) -> None:
-    """``VALUES (s.id, t.score)``: loud analysis error, nothing inserted (was: NULL row)."""
+    """``VALUES (s.id, t.score)``: loud analysis error, nothing inserted."""
     _seed(spark)
     with pytest.raises(AnalysisException, match=r"No field named t\.score"):
         spark.sql(
@@ -82,7 +79,7 @@ def test_not_matched_source_references_still_work(spark: ReparkSession) -> None:
 
 def test_not_matched_bare_column_resolves_to_source(spark: ReparkSession) -> None:
     """A bare column name shared by both sides resolves to the SOURCE (Spark source-only
-    resolution) — previously ambiguous-or-target through the exposed LEFT JOIN scope."""
+    resolution)."""
     _seed(spark)
     spark.sql(
         f"MERGE INTO {FQ} AS t USING {SRC} AS s ON t.id = s.id "

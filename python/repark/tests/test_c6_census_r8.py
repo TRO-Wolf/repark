@@ -1,8 +1,4 @@
-"""r23 C6 census-r8 pins — Catalog.registerFunction / functionExists + UDF.deterministic.
-
-Own-denominator mechanism pins only (census scoreboard claims are morning-owned).
-Outside QI1/OV1/CACHE1 regions (catalog clear_cache band untouched).
-"""
+"""C6 mechanism pins: Catalog.registerFunction / functionExists + UDF.deterministic."""
 
 from __future__ import annotations
 
@@ -32,11 +28,10 @@ def test_catalog_register_function_sql_and_dataframe(spark: SparkSession) -> Non
     assert double is not None
     assert "double_int" in spark._udf_registry()
 
-    # SQL rewrite path (U8) after catalog registration.
+    # SQL rewrite path (U8).
     row = spark.sql("SELECT double_int(1) AS d").collect()[0]
     assert row.d == 2
 
-    # Returned callable works on DataFrames (Spark contract).
     frame = spark.range(1, 4).select(double("id").alias("d"))
     assert sorted(frame.to_arrow().column("d").to_pylist()) == [2, 4, 6]
 

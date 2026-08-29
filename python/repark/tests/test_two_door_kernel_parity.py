@@ -1,24 +1,11 @@
 """Charter clause C-012 — the facade and the SQL door must resolve the same kernel.
 
-**The class.** The facade builds a Column expression standalone, with no session to resolve
-names against, so ``crates/repark-python``'s dispatch table embeds a UDF instance by hand. The
-SQL door resolves the same spelling out of the session registry, where ``register_all`` installed
-``datafusion-spark`` and then overwrote names with the repark shims. Nothing forces the two to
-agree, and where they disagree ``F.f(x)`` and ``spark.sql("SELECT f(x)")`` return different
-answers for the same input — with no error anywhere.
-
-**Why this file exists.** FNP-1 measured two live divergences. ``F.to_timestamp`` reached
-DataFusion-core's kernel and so returned ``timestamp[ns]`` with no zone, dropping the TZ-4 PR-1
-LTZ wire type and the PR-2 session-zone localization that the SQL door kept; ``F.avg`` reached
-DataFusion-core's ``Avg`` instead of ``SparkAvgWithRetract``. Both were fixed in
-``function_dispatch.rs`` and are guarded at the Rust layer by
-``crates/repark-python/src/column/door_parity_tests.rs``, which compares UDF identity.
-
-That guard is necessary and not sufficient: it proves the two paths hold the same *function*, not
-that a user sees the same *answer*. **The whole facade suite passed unchanged across the fix** —
-3,437 tests, none of which pinned the old type — which is exactly the coverage miss that let the
-divergence live. These rows are the missing evidence, on the Arrow path, value AND type, per the
-entry-point matrix in ``docs/testing.md``.
+The facade embeds a UDF instance by hand (a Column has no session to resolve names against); the
+SQL door resolves the same spelling out of the session registry. Nothing forces the two to agree,
+and a divergence returns different answers for the same input with no error anywhere. The Rust
+guard ``crates/repark-python/src/column/door_parity_tests.rs`` proves the two paths hold the same
+*function*, not that a user sees the same *answer*. These rows are that evidence, on the Arrow
+path, value AND type, per the entry-point matrix in ``docs/testing.md``.
 
 Ledger: ``task/fnp-1-two-door-asymmetry-ledger.md``.
 """

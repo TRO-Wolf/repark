@@ -25,10 +25,7 @@ duckdb = pytest.importorskip("duckdb")
 
 from repark import ReparkSession  # noqa: E402
 
-# ---------------------------------------------------------------------------
 # Harness imports (bench/ is not under repark_parity/src — load as package)
-# ---------------------------------------------------------------------------
-
 # test file lives at python/repark/tests/ → peer is python/repark-parity/bench/tpch
 _TPCH_DIR = Path(__file__).resolve().parents[2] / "repark-parity" / "bench" / "tpch"
 _LEDGER_PATH = _TPCH_DIR / "sf1_status_ledger.json"
@@ -206,7 +203,6 @@ def test_tpch_sf001_matches_sf1_ledger(
         expected_class = entry.get("error_class")
         try:
             repark_frame = spark_tpch.sql(query.sql_for_repark)
-            # Force execution
             if hasattr(repark_frame, "to_arrow"):
                 _ = repark_frame.to_arrow()
             else:

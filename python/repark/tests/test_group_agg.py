@@ -1,11 +1,10 @@
 """Facade tests for the DataFrame aggregation family (Group E: E1, E2, E7).
 
-`groupBy`/`agg` + the aggregate functions in :mod:`repark.functions`, all pinned to **real
-PySpark 4.1.2** semantics. The venv's PySpark runs locally under Java 17
-(``JAVA_HOME=/usr/lib/jvm/zulu-17-amd64``), so every golden below — output column name, Arrow type,
-field nullability, and values — was recorded by executing the operation on real Spark, not recalled
-from memory. Parity cases (``test_parity_*``) compare the engine output against those goldens
-through the real ``repark_parity.assert_frames_equal`` core (value AND type on the Arrow path).
+``groupBy``/``agg`` + the aggregate functions in :mod:`repark.functions`, pinned to real
+PySpark 4.1.2 (local JVM 17, ``JAVA_HOME=/usr/lib/jvm/zulu-17-amd64``): every golden —
+output column name, Arrow type, nullability, values — was executed on real Spark, not
+recalled. Parity cases compare through ``repark_parity.assert_frames_equal`` (value AND
+type on the Arrow path).
 """
 
 from __future__ import annotations
@@ -45,9 +44,7 @@ def _by(rows: list[dict[str, object]], key: str) -> list[dict[str, object]]:
     return sorted(rows, key=lambda row: (row[key] is None, row[key]))
 
 
-# ==================================================================================================
 # E2 — aggregate functions exist, shadow the builtins, and return Columns
-# ==================================================================================================
 
 
 def test_aggregate_functions_are_columns_and_shadow_builtins() -> None:
@@ -62,9 +59,7 @@ def test_aggregate_functions_are_columns_and_shadow_builtins() -> None:
     assert isinstance(F.count("*"), Column)
 
 
-# ==================================================================================================
 # E1/E2 — output column naming matches PySpark exactly (oracle-verified)
-# ==================================================================================================
 
 
 def test_aggregate_output_names_match_pyspark(spark: ReparkSession) -> None:
@@ -82,21 +77,12 @@ def test_aggregate_output_names_match_pyspark(spark: ReparkSession) -> None:
     assert df.groupBy("g").sum("x").columns == ["g", "sum(x)"]
 
 
-# ==================================================================================================
 # R3 — zero-arg GroupedData shortcuts aggregate ALL numeric columns (incl. the grouping key)
-# ==================================================================================================
 
 
 def test_parity_groupby_sum_no_args_aggregates_all_numeric_incl_key(spark: ReparkSession) -> None:
-    """R3 (S2): ``df.groupBy(g).sum()`` with NO column names aggregates EVERY numeric column —
-    including the grouping key — in schema order, so the output is ``[g, sum(g), sum(x), sum(y)]``
-    (the old facade raised ``ValueError('requires at least one column')``).
-
-    Recorded from live PySpark 4.1.2 (``JAVA_HOME=/usr/lib/jvm/zulu-17-amd64``): columns
-    ``[g, sum(g), sum(x), sum(y)]`` all ``bigint``; for input ``[(1,10,100),(1,20,200),(2,30,300)]``
-    group g=1 → ``sum(g)=2, sum(x)=30, sum(y)=300`` and g=2 → ``sum(g)=2, sum(x)=30, sum(y)=300``.
-    Full frame-equal golden (naming + values + Arrow type + nullability).
-    """
+    """R3 (S2): no-arg ``sum()`` aggregates EVERY numeric column, key included, in schema
+    order (recorded from live PySpark 4.1.2)."""
     source = spark.createDataFrame([(1, 10, 100), (1, 20, 200), (2, 30, 300)], ["g", "x", "y"])
     result = source.groupBy("g").sum()
     assert result.columns == ["g", "sum(g)", "sum(x)", "sum(y)"], "sum(g) included; schema order"
@@ -123,10 +109,8 @@ def test_parity_groupby_sum_no_args_aggregates_all_numeric_incl_key(spark: Repar
 
 
 def test_parity_groupby_min_no_args_aggregates_all_numeric_incl_key(spark: ReparkSession) -> None:
-    """R3 (S2): ``df.groupBy(g).min()`` with no args → ``[g, min(g), min(x), min(y)]``, numeric-only
-    (a string column is excluded), including the key. Oracle (PySpark 4.1.2): all ``bigint``, group
-    g=1 → ``min(g)=1, min(x)=10, min(y)=100`` and g=2 → ``min(g)=2, min(x)=30, min(y)=300``.
-    """
+    """R3 (S2): no-arg ``min()`` → ``[g, min(g), min(x), min(y)]``, numeric-only (a string
+    column is excluded), key included. Oracle: live PySpark 4.1.2, all ``bigint``."""
     source = spark.createDataFrame([(1, 10, 100), (1, 20, 200), (2, 30, 300)], ["g", "x", "y"])
     result = source.groupBy("g").min()
     assert result.columns == ["g", "min(g)", "min(x)", "min(y)"]
@@ -186,9 +170,7 @@ def test_alias_overrides_the_default_aggregate_name(spark: ReparkSession) -> Non
     assert out.columns == ["g", "total"], "an explicit .alias overrides the sum(x) default"
 
 
-# ==================================================================================================
 # E7 — NULL-skipping, count(*) vs count(col), int→long widening (the mandatory edge pins)
-# ==================================================================================================
 
 
 def test_parity_groupby_sum_skips_nulls(spark: ReparkSession) -> None:
@@ -292,9 +274,7 @@ def test_parity_count_distinct(spark: ReparkSession) -> None:
     assert_frames_equal(result.to_arrow(), golden)
 
 
-# ==================================================================================================
 # E1 — GroupedData shortcuts + dict form
-# ==================================================================================================
 
 
 def test_groupby_shortcuts(spark: ReparkSession) -> None:
@@ -334,16 +314,13 @@ def test_agg_dict_rejects_unknown_function(spark: ReparkSession) -> None:
         source.groupBy("g").agg({"x": "median"})
 
 
-# ==================================================================================================
 # E7 — first/last with ignorenulls (deterministic under a single partition)
-# ==================================================================================================
 
 
 def test_parity_first_last_ignorenulls(single_partition: ReparkSession) -> None:
-    # A single group [NULL, 20, 30] under one partition (input order preserved, like Spark's
-    # coalesce(1) oracle run): first(ignorenulls=False) is the leading NULL; first(ignorenulls=True)
-    # skips it to 20; last is 30 either way. The column name is `first(v)` / `last(v)` regardless of
-    # ignorenulls (Spark 4.1.2).
+    # One group [NULL, 20, 30] under one partition (input order preserved, like Spark's
+    # coalesce(1) oracle run): first(ignorenulls=False) is the NULL; first(ignorenulls=True)
+    # skips to 20; last is 30 either way. Names stay `first(v)` / `last(v)` (Spark 4.1.2).
     source = single_partition.createDataFrame([(1, None), (1, 20), (1, 30)], ["g", "v"])
     grouped = source.groupBy("g")
 
@@ -370,9 +347,7 @@ def test_first_ignorenulls_is_order_independent_for_a_unique_nonnull(spark: Repa
     ]
 
 
-# ==================================================================================================
 # E7 — empty group vs empty-DataFrame global aggregate
-# ==================================================================================================
 
 
 def test_empty_dataframe_grouped_is_zero_rows_global_is_one_null_row(spark: ReparkSession) -> None:
@@ -391,9 +366,7 @@ def test_df_agg_is_global_single_row(spark: ReparkSession) -> None:
     assert result.to_arrow().to_pylist() == [{"sum(x)": 80}]
 
 
-# ==================================================================================================
 # E8 — an aggregate over an unresolvable column surfaces AnalysisException
-# ==================================================================================================
 
 
 def test_aggregate_unresolvable_column_raises_analysis_exception(spark: ReparkSession) -> None:
@@ -402,13 +375,10 @@ def test_aggregate_unresolvable_column_raises_analysis_exception(spark: ReparkSe
         source.groupBy("g").agg(F.sum("no_such_column")).to_arrow()
 
 
-# ==================================================================================================
 # GROUP J — collect_list / collect_set / multi-col countDistinct
-# ==================================================================================================
 #
-# Oracle: live PySpark 4.1.2 (JAVA_HOME=/usr/lib/jvm/zulu-17-amd64). Order of collect_list /
-# collect_set is nondeterministic in Spark — every value pin compares SORTED list contents (or
-# single-element groups). Fixture-determinism argument is stated in each test docstring.
+# Oracle: live PySpark 4.1.2. collect_list/collect_set order is nondeterministic in Spark —
+# every value pin compares SORTED contents (or single-element groups).
 
 
 def _sorted_list_field(rows: list[dict[str, object]], group_key: str, list_key: str) -> dict:
@@ -420,10 +390,7 @@ def _sorted_list_field(rows: list[dict[str, object]], group_key: str, list_key: 
 
 
 def test_collect_list_set_exist_and_name(spark: ReparkSession) -> None:
-    """J1 surface: snake_case only (no camelCase aliases — live PySpark 4.1.2 inspect).
-
-    Fixture-determinism: names only (no order-sensitive values).
-    """
+    """J1 surface: snake_case only (no camelCase aliases — live PySpark 4.1.2 inspect)."""
     from repark import Column
 
     assert callable(F.collect_list) and callable(F.collect_set)
@@ -437,12 +404,7 @@ def test_collect_list_set_exist_and_name(spark: ReparkSession) -> None:
 
 
 def test_parity_collect_list_excludes_nulls_and_keeps_dupes(spark: ReparkSession) -> None:
-    """J1: ``collect_list`` drops NULL elements and keeps duplicates (Spark 4.1.2).
-
-    Fixture-determinism: multi-element groups compare **sorted** list contents — arrival order is
-    nondeterministic in both engines (docs/testing.md row-order / nondeterministic-agg discipline).
-    Oracle values for g=1 over ``[10, 10, 20, NULL]`` → sorted ``[10, 10, 20]``.
-    """
+    """J1: ``collect_list`` drops NULLs and keeps duplicates (Spark 4.1.2)."""
     source = spark.createDataFrame(
         [(1, 10), (1, 10), (1, 20), (1, None), (2, 30), (2, None)],
         ["g", "x"],
@@ -459,11 +421,7 @@ def test_parity_collect_list_excludes_nulls_and_keeps_dupes(spark: ReparkSession
 
 
 def test_parity_collect_set_dedups_and_excludes_nulls(spark: ReparkSession) -> None:
-    """J1: ``collect_set`` is distinct + NULL-excluding (Spark 4.1.2).
-
-    Fixture-determinism: compare **sorted unique** contents — set order is nondeterministic.
-    Oracle for g=1 over ``[10, 10, 20, NULL]`` → sorted ``[10, 20]``.
-    """
+    """J1: ``collect_set`` is distinct + NULL-excluding (Spark 4.1.2)."""
     source = spark.createDataFrame(
         [(1, 10), (1, 10), (1, 20), (1, None), (2, 30), (2, 30)],
         ["g", "x"],
@@ -479,8 +437,8 @@ def test_parity_collect_set_dedups_and_excludes_nulls(spark: ReparkSession) -> N
 def test_collect_empty_group_is_empty_array_not_null(spark: ReparkSession) -> None:
     """J1: empty group / only-NULL group → ``[]``, not NULL (Spark 4.1.2).
 
-    Fixture-determinism: empty list is order-free; SQL-typed NULL column so the list value type
-    stays ``int64`` (not the all-None inference trap).
+    The SQL-typed NULL column keeps the list value type ``int64`` (not the all-None
+    inference trap).
     """
     only_nulls = spark.sql(
         "SELECT * FROM (VALUES (1, CAST(NULL AS BIGINT)), (1, CAST(NULL AS BIGINT))) AS t(g, x)"
@@ -502,14 +460,9 @@ def test_collect_empty_group_is_empty_array_not_null(spark: ReparkSession) -> No
 def test_parity_count_distinct_multi_column_two_and_three(spark: ReparkSession) -> None:
     """J2: multi-col ``countDistinct`` — 2-col and 3-col names, LongType, values.
 
-    Fixture-determinism: counts are scalars (order-free). Oracle (Spark 4.1.2): over
-    ``(g,x,y) = (1,10,a),(1,10,b),(1,20,a),(1,NULL,c),(2,30,x),(2,30,x),(2,NULL,NULL)`` →
-    g=1 count=3, g=2 count=1; output name ``count(DISTINCT x, y)`` (space after commas);
-    Arrow ``int64 not null``.
-
-    The 3-col arm uses a **within-group-varying** third column ``z`` (not the grouping key).
-    Octo r1: packing only the first two args would yield g=1 → 2 on that fixture, so the pin
-    has span semantics for "3-col supported end-to-end".
+    Oracle (Spark 4.1.2): ``count(DISTINCT x, y)`` naming (space after commas), Arrow
+    ``int64 not null``. The 3-col arm uses a within-group-varying third column: packing
+    only the first two args would yield 2 there, so the pin has span semantics.
     """
     source = spark.createDataFrame(
         [
@@ -562,12 +515,7 @@ def test_parity_count_distinct_multi_column_two_and_three(spark: ReparkSession) 
 
 
 def test_parity_count_distinct_multi_excludes_any_null_row(spark: ReparkSession) -> None:
-    """J2: a row is excluded from multi-col countDistinct when **any** column is NULL.
-
-    Fixture-determinism: global scalar. Oracle over ``(a,b) =
-    (1,NULL),(1,1),(1,1),(NULL,2),(2,2)`` → ``count(DISTINCT a, b) = 2`` (tuples ``(1,1)`` and
-    ``(2,2)`` only).
-    """
+    """J2: a row is excluded from multi-col countDistinct when **any** column is NULL."""
     source = spark.createDataFrame(
         [(1, None), (1, 1), (1, 1), (None, 2), (2, 2)],
         ["a", "b"],
@@ -581,11 +529,7 @@ def test_parity_count_distinct_multi_excludes_any_null_row(spark: ReparkSession)
 
 
 def test_collect_and_count_distinct_work_in_agg_and_global(spark: ReparkSession) -> None:
-    """J3: expr form + dict form inside ``groupBy().agg`` and global ``df.agg``.
-
-    Fixture-determinism: list pins sort contents; counts are scalars. Dict form
-    ``{"x": "collect_list"}`` / ``{"x": "collect_set"}`` is supported by live PySpark 4.1.2.
-    """
+    """J3: expr form + dict form inside ``groupBy().agg`` and global ``df.agg``."""
     source = spark.createDataFrame(
         [(1, 10), (1, 10), (1, 20), (1, None), (2, 30)],
         ["g", "x"],
@@ -634,11 +578,7 @@ def test_collect_and_count_distinct_work_in_agg_and_global(spark: ReparkSession)
 
 
 def test_parity_collect_list_set_string_empty_vs_null(spark: ReparkSession) -> None:
-    """J1 (octo r1): string collect keeps empty string, drops NULL (Spark 4.1.2).
-
-    Fixture-determinism: sorted contents. Oracle over ``["", NULL, "", "x"]`` →
-    list ``['', '', 'x']``, set ``['', 'x']``.
-    """
+    """J1 (octo r1): string collect keeps empty string, drops NULL (Spark 4.1.2)."""
     source = spark.createDataFrame(
         [(1, ""), (1, None), (1, ""), (1, "x")],
         ["g", "s"],
@@ -672,17 +612,16 @@ def test_parity_count_distinct_multi_empty_frame_is_zero(spark: ReparkSession) -
 def test_cross_engine_collect_and_multi_count_distinct_vs_pyspark() -> None:
     """Cross-engine e2e: groupBy + collect_list + collect_set + 2-col countDistinct vs live Spark.
 
-    Fixture with NULLs and duplicates. List contents compared **sorted** (order-nondeterministic).
-    Requires pyspark + a Java-17 JVM (``/usr/lib/jvm/zulu-17-amd64`` preferred). Skips cleanly when
-    pyspark is absent, no usable JVM is found, or the Spark gateway fails to launch.
+    Requires pyspark + a Java-17 JVM; skips cleanly when pyspark is absent, no usable JVM
+    is found, or the Spark gateway fails to launch. List contents compare **sorted**
+    (order-nondeterministic).
     """
     pytest.importorskip("pyspark")
     import os
     from pathlib import Path
 
-    # Prefer the recorded oracle JVM even when ambient JAVA_HOME is an older runtime (e.g. Java 11).
-    # Spark 4.1.2 requires class-file 61 (Java 17+); a wrong ambient JAVA_HOME must not hard-fail
-    # the routine facade suite when pyspark happens to be installed (record extra).
+    # Prefer the recorded oracle JVM: Spark 4.1.2 requires class-file 61 (Java 17+); a wrong
+    # ambient JAVA_HOME must not hard-fail the routine suite when pyspark is installed.
     jvm_home = Path("/usr/lib/jvm/zulu-17-amd64")
     if jvm_home.is_dir():
         os.environ["JAVA_HOME"] = str(jvm_home)
@@ -765,11 +704,7 @@ def test_cross_engine_collect_and_multi_count_distinct_vs_pyspark() -> None:
 
 
 def test_mutation_collect_set_is_not_list_routing(spark: ReparkSession) -> None:
-    """Mutation proof 1: collect_set must dedup — a list-routing swap would keep duplicates.
-
-    Fixture-determinism: sorted unique pin. If ``collect_set`` were routed like ``collect_list``
-    (no DISTINCT), the multiset ``[10, 10, 20]`` would survive and this pin would go RED.
-    """
+    """Mutation proof 1: collect_set must dedup — a list-routing swap would keep duplicates."""
     source = spark.createDataFrame([(1, 10), (1, 10), (1, 20)], ["g", "x"])
     collected = source.groupBy("g").agg(F.collect_set("x")).to_arrow().to_pylist()
     assert _sorted_list_field(collected, "g", "collect_set(x)") == {1: [10, 20]}
@@ -778,22 +713,17 @@ def test_mutation_collect_set_is_not_list_routing(spark: ReparkSession) -> None:
 
 
 def test_mutation_multi_count_distinct_is_not_first_col_only(spark: ReparkSession) -> None:
-    """Mutation proof 2: multi-col countDistinct must see every column.
-
-    Fixture-determinism: scalar. Over tuples ``(1,"a"), (1,"b"), (2,"a")`` the 2-col distinct
-    count is 3; collapsing to first-col-only would yield 2 and this pin goes RED.
-    """
+    """Mutation proof 2: multi-col countDistinct must see every column — first-col-only yields 2."""
     source = spark.createDataFrame([(1, "a"), (1, "b"), (2, "a")], ["x", "y"])
     result = source.agg(F.countDistinct("x", "y")).to_arrow().to_pylist()
     assert result == [{"count(DISTINCT x, y)": 3}]
 
 
 def test_mutation_multi_count_distinct_null_if_any_pack(spark: ReparkSession) -> None:
-    """Mutation proof 3: multi-col pack must null the whole row when ANY column is NULL.
+    """Mutation proof 3: the pack must null the whole row when ANY column is NULL.
 
-    Fixture-determinism: global scalar. Oracle over ``(1,NULL),(1,1),(1,1),(NULL,2),(2,2)`` →
-    ``count(DISTINCT a, b) = 2``. A bare ``struct(a,b)`` without the CASE null-if-any wrapper
-    would still count null-field structs as distinct keys (typically 4) and this pin goes RED.
+    A bare ``struct(a,b)`` without the CASE null-if-any wrapper counts null-field structs
+    as distinct keys (4) and goes RED.
     """
     source = spark.createDataFrame(
         [(1, None), (1, 1), (1, 1), (None, 2), (2, 2)],
@@ -804,11 +734,7 @@ def test_mutation_multi_count_distinct_null_if_any_pack(spark: ReparkSession) ->
 
 
 def test_mutation_multi_count_distinct_third_col_matters(spark: ReparkSession) -> None:
-    """Mutation proof 4: 3-col pack must see the third column (octo r1 / C1-Q-001).
-
-    Fixture-determinism: scalar. Over tuples ``(1,"a",1), (1,"a",2), (1,"a",1)`` the 3-col
-    distinct count is 2; packing only the first two columns yields 1 and this pin goes RED.
-    """
+    """Mutation proof 4: 3-col pack must see the third column (octo r1 / C1-Q-001)."""
     source = spark.createDataFrame(
         [(1, "a", 1), (1, "a", 2), (1, "a", 1)],
         ["x", "y", "z"],
@@ -821,13 +747,11 @@ def test_mutation_multi_count_distinct_third_col_matters(spark: ReparkSession) -
 
 
 def test_collect_set_signed_zero_preserves_distinct_bits(spark: ReparkSession) -> None:
-    """J1 float edge (octo r2 + r4): DataFusion DISTINCT keeps IEEE ``-0.0`` distinct from ``+0.0``.
+    """J1 float edge (octo r2 + r4): DF DISTINCT keeps IEEE ``-0.0`` distinct from ``+0.0``.
 
-    Live PySpark 4.1.2 normalizes ``CAST(-0.0 AS DOUBLE)`` to ``+0`` and yields set cardinality 1
-    (and multi-col ``countDistinct`` cardinality 1 over sign-bit-only pairs). Repark/DataFusion
-    preserves the sign bit → ``collect_set`` length 2 and multi-col count 3 on the tuple fixture.
-    Standing pin documents the accepted divergence (not a silent int-path defect).
-    Fixture-determinism: length + sign bits + scalar multi-cd.
+    Live PySpark 4.1.2 normalizes ``-0.0`` to ``+0`` (set cardinality 1, multi-col count 1);
+    repark preserves the sign bit. Standing pin documents the accepted divergence, not a
+    silent defect.
     """
     import math
 
@@ -858,12 +782,7 @@ def test_collect_set_signed_zero_preserves_distinct_bits(spark: ReparkSession) -
 
 
 def test_dict_agg_collect_function_names_are_case_insensitive(spark: ReparkSession) -> None:
-    """J3 (octo r4): dict form reducer names match Spark case-insensitively.
-
-    Live PySpark 4.1.2 accepts ``COLLECT_LIST`` / ``COLLECT_SET`` (and ``SUM``/…) and still emits
-    the snake_case output name. CamelCase ``collectList`` remains unsupported on both engines.
-    Fixture-determinism: sorted list/set contents.
-    """
+    """J3 (octo r4): dict reducer names match Spark case-insensitively (snake_case out)."""
     source = spark.createDataFrame(
         [(1, 10), (1, 10), (1, 20), (1, None)],
         ["g", "x"],
@@ -884,12 +803,7 @@ def test_dict_agg_collect_function_names_are_case_insensitive(spark: ReparkSessi
 
 
 def test_parity_count_distinct_multi_empty_string_vs_null(spark: ReparkSession) -> None:
-    """J2 (octo r4): empty string is a real multi-cd key; NULL still excludes the row.
-
-    Fixture-determinism: global scalar. Oracle (Spark 4.1.2) over
-    ``("", "a"), ("", "a"), (None, "a"), ("x", ""), ("x", None), ("x", "")`` →
-    ``count(DISTINCT a, b) = 2`` (tuples ``("", "a")`` and ``("x", "")``).
-    """
+    """J2 (octo r4): empty string is a real multi-cd key; NULL still excludes the row."""
     source = spark.createDataFrame(
         [("", "a"), ("", "a"), (None, "a"), ("x", ""), ("x", None), ("x", "")],
         ["a", "b"],

@@ -1,8 +1,7 @@
 """F1 free-SQL bare-name expander — Path A statement forms via resolve_table_name SSOT.
 
 Covers INSERT / SELECT / CTAS / MERGE expansion, temp-view prefer on FROM, and non-rewrite
-residuals (VIEW, TEMP TABLE, multi-statement scripts). Engine probe (DF default_catalog)
-was abandoned — see task/f1-census-r3-ledger.md.
+residuals (VIEW, TEMP TABLE, multi-statement scripts).
 """
 
 from __future__ import annotations
@@ -370,9 +369,7 @@ def test_tablesample_bernoulli_then_comma(spark: ReparkSession) -> None:
     )
 
 
-# ---------------------------------------------------------------------------
 # G1 — UPDATE / DELETE bare targets (F1 residual)
-# ---------------------------------------------------------------------------
 
 
 def test_expand_update_bare_target(spark: ReparkSession) -> None:
