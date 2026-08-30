@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>v0.6 Execution Plan</title>
+<style>
+  :root{
+    --ground:#F2F5F7; --card:#FFFFFF; --ink:#16232B; --ink-2:#4A5D68; --line:#D8E2E8;
+    --teal:#0E6C88; --teal-2:#0B5065; --chip-green-bg:#E3F2E8; --chip-green-ink:#1E6B3A;
+    --chip-amber-bg:#FBF0DC; --chip-amber-ink:#8A5E0C; --chip-hold-bg:#E8E3F2; --chip-hold-ink:#4A3A8A;
+    --chip-guard-bg:#F2E3E3; --chip-guard-ink:#8A2E2E; --mono-bg:#EAF1F5;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ground:#0E1418; --card:#162027; --ink:#E4ECF1; --ink-2:#9AB0BC; --line:#243440;
+      --teal:#4DB1CF; --teal-2:#7CC7DD; --chip-green-bg:#173324; --chip-green-ink:#7CD9A0;
+      --chip-amber-bg:#332A14; --chip-amber-ink:#E5C071; --chip-hold-bg:#221D38; --chip-hold-ink:#B0A2E8;
+      --chip-guard-bg:#331B1B; --chip-guard-ink:#E89B9B; --mono-bg:#1B2830;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0E1418; --card:#162027; --ink:#E4ECF1; --ink-2:#9AB0BC; --line:#243440;
+    --teal:#4DB1CF; --teal-2:#7CC7DD; --chip-green-bg:#173324; --chip-green-ink:#7CD9A0;
+    --chip-amber-bg:#332A14; --chip-amber-ink:#E5C071; --chip-hold-bg:#221D38; --chip-hold-ink:#B0A2E8;
+    --chip-guard-bg:#331B1B; --chip-guard-ink:#E89B9B; --mono-bg:#1B2830;
+  }
+  body{background:var(--ground);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;
+       font-size:15px;line-height:1.55;margin:0;padding:0 16px 64px;}
+  .wrap{max-width:960px;margin:0 auto;}
+  h1,h2,h3{font-family:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;
+           text-wrap:balance;line-height:1.15;}
+  h1{font-size:34px;margin:40px 0 4px;}
+  h2{font-size:22px;margin:36px 0 12px;color:var(--teal-2);}
+  h3{font-size:17px;margin:20px 0 8px;}
+  .kicker{font-family:"IBM Plex Sans Condensed",sans-serif;text-transform:uppercase;
+          letter-spacing:.12em;font-size:12px;color:var(--teal);margin-top:36px;}
+  .sub{color:var(--ink-2);margin:0 0 8px;max-width:70ch;}
+  code,.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.88em;
+             background:var(--mono-bg);border-radius:4px;padding:1px 5px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;
+        padding:20px 24px;margin:14px 0;}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media (max-width:760px){.cols{grid-template-columns:1fr;}}
+  .chip{display:inline-block;font-family:"IBM Plex Sans Condensed",sans-serif;font-size:12px;
+        font-weight:600;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;
+        padding:2px 10px;vertical-align:middle;}
+  .green{background:var(--chip-green-bg);color:var(--chip-green-ink);}
+  .amber{background:var(--chip-amber-bg);color:var(--chip-amber-ink);}
+  .hold{background:var(--chip-hold-bg);color:var(--chip-hold-ink);}
+  .guard{background:var(--chip-guard-bg);color:var(--chip-guard-ink);}
+  table{border-collapse:collapse;width:100%;font-size:14px;}
+  .tablewrap{overflow-x:auto;}
+  th{font-family:"IBM Plex Sans Condensed",sans-serif;text-transform:uppercase;font-size:11.5px;
+     letter-spacing:.08em;color:var(--ink-2);text-align:left;padding:6px 10px;
+     border-bottom:2px solid var(--line);}
+  td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top;}
+  td:first-child{white-space:nowrap;}
+  ul{margin:6px 0;padding-left:22px;}
+  li{margin:4px 0;}
+  a{color:var(--teal);text-decoration-thickness:1px;}
+  .num{font-variant-numeric:tabular-nums;}
+  .prhead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;}
+  .prhead .badge{font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:700;font-size:15px;
+        color:var(--card);background:var(--teal);border-radius:6px;padding:2px 10px;}
+  .foot{color:var(--ink-2);font-size:13px;margin-top:40px;border-top:1px solid var(--line);
+        padding-top:12px;}
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+</head>
+<body>
+<div class="wrap">
+  <p class="kicker">RePark · v0.6 execution plan · 2026-08-30 · pre-authorized</p>
+  <h1>v0.6 — Iceberg DML Remainder</h1>
+  <p class="sub">Owner rulings 2026-08-30: the four ready units are <strong>pre-authorized</strong> and run
+  without per-unit confirms; v0.6 does <strong>not wait</strong> for fork F-6 — REF ships in a later release;
+  the owner reviews and merges the parked PRs, and Fable pre-cuts the release tag after the merge walk.
+  Every unit holds the production bar: charter ledger first, red-first pins, live PySpark 4.1.2 oracle
+  with incidental controls, three-door coverage, map lockstep, Grok Critic before any PR parks.</p>
+
+  <h2>The four units, in merge order</h2>
+  <div class="card tablewrap"><table>
+    <tr><th>Order</th><th>Unit</th><th>Scope and recipe</th><th>Acceptance bar</th></tr>
+    <tr><td class="num">1</td><td><strong>DML-B</strong></td>
+      <td><code>INSERT OVERWRITE … PARTITION</code> static + dynamic and <code>writeTo().overwritePartitions()</code>. The recipe is Spark's own (verified 2026-08-29; fork F-5 landed as #217): static <span class="mono">PARTITION (k=v,…)</span> → <span class="mono">Transaction::overwrite_files().overwrite_by_row_filter(k=v AND …)</span> + <span class="mono">validate_added_files_match_overwrite_filter</span>; dynamic → <span class="mono">Transaction::replace_partitions()</span> with <span class="mono">add_file</span>; the engine guards empty-input dynamic overwrite itself.</td>
+      <td>Three doors Spark-equal vs the live oracle; the two acceptance pins (<span class="mono">empty_insert_overwrite_partition_refuses_full_wipe</span>, <span class="mono">…_nonempty_refuses_whole_table_replace</span>) flip against the current pin, no repin.</td></tr>
+    <tr><td class="num">2</td><td><strong>DML-C</strong></td>
+      <td><code>TRUNCATE TABLE</code> as a first-class statement, replacing today's empty-overwrite substitute, on both SQL doors + the facade spelling.</td>
+      <td>Spark-equal semantics incl. snapshot/metadata shape vs oracle; the substitute path retired or refusing loud; time-travel to pre-truncate still reads.</td></tr>
+    <tr><td class="num">3</td><td><strong>DML-A</strong></td>
+      <td><code>MERGE … WHEN NOT MATCHED BY SOURCE</code> (DELETE / UPDATE arms), COW + MOR, reusing the existing cardinality and store-assignment gates.</td>
+      <td>Three-door Spark-equal on values, Arrow types, and (on v2) row counts per action; cardinality-violation raise matches Spark's.</td></tr>
+    <tr><td class="num">4</td><td><strong>MAINT</strong></td>
+      <td><code>rewrite_data_files</code> gains <span class="mono">where</span>, <span class="mono">sort_order</span>, and strategy (<span class="mono">binpack</span>/<span class="mono">sort</span>) on v2 tables. The v3 lineage half stays V3-5's — this unit must not touch it.</td>
+      <td>Procedure-result columns Spark-equal; filtered scope proven (untouched files byte-identical); sort proven by file-level min/max.</td></tr>
+  </table></div>
+
+  <h2>REF — deliberately out, with its later path</h2>
+  <div class="card">
+    <p class="sub" style="margin:0">Branch/tag write ops + write-audit-publish need the fork's F-6 (branch commit target).
+    Ruling: <strong>don't hold the tag</strong>. The fork lane charters F-6 alongside F-7 (already the v3 critical path);
+    once F-6 lands and re-pins, REF becomes a standard unit and joins the next open release window (v0.7 tag or later).
+    Until then the refusal stays loud and registry-documented — nothing pretends.</p>
+  </div>
+
+  <h2>How it runs</h2>
+  <div class="card">
+    <ul>
+      <li><strong>Workers:</strong> Grok 4.6 Actor + fresh-clone Grok Critic per unit (all-Grok ruling; Opus 4.8 only as the owner's fail-often fallback, tightly briefed, never for prose). Actors may <em>read</em> the reference clones on this box — the iceberg-rust fork checkout and the Spark/Iceberg setups — never edit them.</li>
+      <li><strong>Charter-first:</strong> each unit's first commit is its proposition ledger in <span class="mono">task/ledgers/staging/</span> (grammar-gated), then red-first implementation.</li>
+      <li><strong>Parking:</strong> each unit ends as an open green PR labeled <span class="mono">merge order N of 4 for v0.6</span>, continuously rebased, full parity harness re-run before every push.</li>
+      <li><strong>Your walkthrough:</strong> merge the four PRs in order → say the word → Fable cuts <span class="mono">v0.6.0</span> per the publish-pypi runbook → wheels + PyPI publish on the tag → release notes filed.</li>
+    </ul>
+  </div>
+
+  <p class="foot">Sources: release-roadmap-2026-08-29.md §v0.6 (incl. the verified DML-B correction) ·
+  roadmap-intake-2026-08-23.md Track B · docs/release.md · owner rulings 2026-08-30. Series: RePark status boards.</p>
+</div>
+</body>
+</html>
