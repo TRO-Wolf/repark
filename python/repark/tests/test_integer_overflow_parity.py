@@ -8,11 +8,10 @@ pins: f-y10-1-int-overflow/C-002
 
 from __future__ import annotations
 
-import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
-from repark.spark import functions as F
+from repark.spark import functions as F  # noqa: N812 — PySpark idiom
 from repark.spark.types import IntegerType, LongType, StructField, StructType
 
 
