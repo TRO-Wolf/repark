@@ -1,5 +1,4 @@
 //! The ANSI door's guard set runs before rewrites and on parsed DML arms.
-//! G3-E8 runs before the async `MoR` and V3 valves. SEC-02 runs after planning.
 
 use std::ops::ControlFlow;
 
@@ -20,18 +19,16 @@ use repark_iceberg::write::{
 
 use crate::scan::{blank_out_quoted_and_comments, leading_keyword};
 
-/// Needle pinned by the G15 refusal tests (both doors). Byte-identical to the Spark door.
+/// Needle pinned by the G15 refusal tests (both doors).
 pub(crate) const COLLATION_REFUSAL_NEEDLE: &str = "does not implement collation";
 
-/// The conf key that opens the SEC-02 local-filesystem gate. It matches the Spark key.
+/// The conf key that opens the SEC-02 local-filesystem gate.
 pub(crate) const ALLOW_LOCAL_FILESYSTEM_DDL_KEY: &str = "repark.sql.allowLocalFilesystemDDL";
 
-/// DataFusion's `extensions_options!` macro registers this `snake_case` field under the session key.
+/// DataFusion's `extensions_options!` macro registers this field under the session key.
 const ALLOW_LOCAL_FILESYSTEM_DDL_OPTION: &str = "repark.sql.allow_local_filesystem_ddl";
 
-/// ===========================================================================================
 /// Run text guards first in [`crate::router::execute`], before any rewrite.
-/// ===========================================================================================
 pub(crate) fn run_text_guards(cx: &EngineContext<'_>, sql: &str) -> Result<()> {
     let scrubbed = blank_out_quoted_and_comments(sql);
     refuse_multi_statement(&scrubbed)?;
@@ -39,11 +36,9 @@ pub(crate) fn run_text_guards(cx: &EngineContext<'_>, sql: &str) -> Result<()> {
     refuse_write_to_branch(cx.ctx, &scrubbed)
 }
 
-// === Guard 1 — multi-statement (design §2 Q12; runs FIRST) ==================================
+// Guard 1: multi-statement, design section 2 Q12; runs first.
 
-/// ===========================================================================================
-/// Refuse genuine multi-statement scripts. A trailing terminator and whitespace are allowed.
-/// ===========================================================================================
+/// Refuse genuine multi-statement scripts.
 pub(crate) fn refuse_multi_statement(scrubbed: &str) -> Result<()> {
     let mut saw_semicolon = false;
     for ch in scrubbed.chars() {
@@ -69,11 +64,9 @@ fn multi_statement_error() -> DataFusionError {
     )
 }
 
-// === Guard 2 — P11 read-only-catalog DML ====================================================
+// Guard 2: P11 read-only-catalog DML.
 
-/// ===========================================================================================
 /// Refuse DML whose target's leading name segment is a registered read-only catalog.
-/// ===========================================================================================
 pub(crate) fn refuse_read_only_catalog_dml(
     catalogs: &CatalogRegistry,
     scrubbed: &str,
@@ -102,7 +95,7 @@ pub(crate) fn read_only_catalog_message(catalog: &str, verb: &str) -> String {
     )
 }
 
-/// Read the DML verb and target name from scrubbed text. Return `None` for other statements.
+/// Read the DML verb and target name from scrubbed text.
 fn dml_target(scrubbed: &str) -> Option<(&'static str, String)> {
     let mut words = word_iter(scrubbed);
     let leading = leading_keyword(scrubbed)?;
@@ -152,11 +145,9 @@ fn word_iter(scrubbed: &str) -> impl Iterator<Item = String> + '_ {
     })
 }
 
-// === Guard 3 — write-to-branch ==============================================================
+// Guard 3: write-to-branch.
 
-/// ===========================================================================================
 /// Refuse a WRITE whose target names a snapshot branch.
-/// ===========================================================================================
 pub(crate) fn refuse_write_to_branch(ctx: &SessionContext, scrubbed: &str) -> Result<()> {
     let Some((_, target)) = dml_target(scrubbed) else {
         return Ok(());
@@ -196,11 +187,9 @@ pub(crate) fn refuse_write_to_branch(ctx: &SessionContext, scrubbed: &str) -> Re
     Ok(())
 }
 
-// === Guard 4 — BUG-001 MoR valve (async; runs in the parsed DML arm) ========================
+// Guard 4: BUG-001 MoR valve, async, runs in the parsed DML arm.
 
-/// ===========================================================================================
 /// Refuse delegated `DELETE` / `UPDATE` when current metadata has unpartitioned multi-spec history.
-/// ===========================================================================================
 pub(crate) async fn refuse_mor_multi_spec_dml(
     cx: &EngineContext<'_>,
     statement: &Statement,
@@ -215,7 +204,7 @@ pub(crate) async fn refuse_mor_multi_spec_dml(
     refuse_mor_unpartitioned_multi_spec_dml(catalog.as_ref(), &ident, &target, kind).await
 }
 
-/// V3R-1 valve (`V3-COW-1`) for delegated plain-`WHERE` DELETE / UPDATE. It runs after G3-E8.
+/// V3R-1 valve (`V3-COW-1`) for delegated plain-`WHERE` DELETE / UPDATE.
 pub(crate) async fn refuse_v3_cow_dml(cx: &EngineContext<'_>, statement: &Statement) -> Result<()> {
     let Some((kind, _target, catalog_name, ident)) = dml_target_ident(cx, statement) else {
         return Ok(());
@@ -274,11 +263,9 @@ fn delete_target_name(delete: &Delete) -> Option<&ObjectName> {
     tables.first().and_then(object_name_of)
 }
 
-// === Guard 5 — SEC-02 local-filesystem plans (runs after planning) ==========================
+// Guard 5: SEC-02 local-filesystem plans, runs after planning.
 
-/// ===========================================================================================
-/// Gate DataFusion filesystem-as-data plans. Intercepted Iceberg CREATE uses catalog policy.
-/// ===========================================================================================
+/// Gate DataFusion filesystem-as-data plans.
 pub(crate) fn refuse_local_filesystem_plan(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -322,8 +309,7 @@ fn refuse_local_path(catalogs: &CatalogRegistry, surface: &str, raw_location: &s
     )))
 }
 
-/// Map a location to a local path when it is bare or `file:`-schemed; return `None` for remote schemes.
-/// Scheme matching is case-insensitive, so `FILE:///etc/passwd` remains local.
+/// Map a location to a local path when it is bare or file-schemed; remote schemes return None.
 fn local_filesystem_path(location: &str) -> Option<std::path::PathBuf> {
     const REMOTE_SCHEMES: &[&str] = &[
         "s3://",
@@ -414,7 +400,7 @@ fn canonicalize_best_effort(path: &std::path::Path) -> std::path::PathBuf {
     out
 }
 
-// === Guard 6 — G3-E8 subquery-predicate DML valve (runs on the parsed statement) ============
+// Guard 6: G3-E8 subquery-predicate DML valve, runs on the parsed statement.
 
 /// The DML verb a G3-E8 subquery-predicate refusal names.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -451,9 +437,7 @@ impl DmlSubqueryVerb {
     }
 }
 
-/// ===========================================================================================
 /// Refuse delegated `DELETE` / `UPDATE` whose `WHERE` subquery can become a match-all write.
-/// ===========================================================================================
 pub(crate) fn refuse_dml_subquery_predicate(statement: &Statement) -> Result<()> {
     let (verb, selection, target) = match statement {
         Statement::Delete(delete) => (
@@ -537,11 +521,9 @@ fn dml_subquery_refusal_message(verb: DmlSubqueryVerb, table: &str) -> String {
     )
 }
 
-// === Guard — G15 collation refuse (parse altitude) ==========================================
+// Guard: G15 collation refuse at parse altitude.
 
-/// ===========================================================================================
-/// Render the G15 refusal. Byte-identical to the Spark door's message (same needles).
-/// ===========================================================================================
+/// Render the G15 refusal.
 pub(crate) fn collation_refusal_message(requested: &str) -> String {
     format!(
         "repark {COLLATION_REFUSAL_NEEDLE}: requested `{requested}`. Spark 4 would apply \
@@ -551,9 +533,7 @@ pub(crate) fn collation_refusal_message(requested: &str) -> String {
     )
 }
 
-/// ===========================================================================================
 /// Refuse a collation spelling on the router's parsed statement (parse altitude).
-/// ===========================================================================================
 pub(crate) fn refuse_collation_in_statement(statement: &Statement) -> Result<()> {
     let mut probe = CollationProbe { requested: None };
     if statement.visit(&mut probe).is_break()
@@ -681,9 +661,7 @@ fn collation_requested_by_set(set: &Set) -> Option<String> {
     }
 }
 
-/// ===========================================================================================
 /// Refuse type-position `STRING COLLATE name` that sqlparser's CAST cannot attach.
-/// ===========================================================================================
 pub(crate) fn refuse_type_position_collation_in_sql(sql: &str) -> Result<()> {
     if let Some(requested) = type_position_collation(sql) {
         return Err(DataFusionError::NotImplemented(collation_refusal_message(
@@ -693,9 +671,7 @@ pub(crate) fn refuse_type_position_collation_in_sql(sql: &str) -> Result<()> {
     Ok(())
 }
 
-/// ===========================================================================================
 /// Refuse `RESET` of a collation session key (DataFusion extension, not `Statement::Set`).
-/// ===========================================================================================
 pub(crate) fn refuse_collation_reset_variable(variable: &str) -> Result<()> {
     if variable.to_ascii_lowercase().contains("collation") {
         return Err(DataFusionError::NotImplemented(collation_refusal_message(

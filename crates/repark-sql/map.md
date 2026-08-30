@@ -1,5 +1,8 @@
 # map — repark-sql
 
+CC-4 (2026-08-30): remaining banner files condensed to the one-line rule
+(pins: cc-3-comment-condensation/C-009).
+
 ## Purpose
 
 The **ANSI/Trino-flavoured SQL door** (tier 3) — NEW code, not a port. `AnsiDialect` implements

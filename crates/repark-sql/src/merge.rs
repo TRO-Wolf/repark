@@ -14,8 +14,7 @@ use repark_iceberg::write::merge::{
 
 use crate::schema_ddl::{catalog_handle, name_parts};
 
-/// Oracle-style action sub-predicates (`UPDATE SET … WHERE` / `DELETE WHERE` /
-/// `INSERT … WHERE`) are not Spark MERGE grammar. Copied into both doors.
+/// Oracle-style action sub-predicates are not Spark MERGE grammar.
 const ORACLE_STYLE_SUB_PREDICATE_REFUSAL: &str = "Oracle-style `UPDATE SET … WHERE` / `DELETE WHERE` / `INSERT … WHERE` is not Spark MERGE \
      grammar; move the predicate into `WHEN MATCHED AND <cond>` / `WHEN NOT MATCHED AND <cond>`";
 
@@ -31,9 +30,7 @@ const NON_LAST_MATCHED_CLAUSE_OMIT_CONDITION: &str = "NON_LAST_MATCHED_CLAUSE_OM
 const NON_LAST_NOT_MATCHED_CLAUSE_OMIT_CONDITION: &str = "NON_LAST_NOT_MATCHED_CLAUSE_OMIT_CONDITION: When there are more than one NOT MATCHED \
      clauses in a MERGE statement, only the last NOT MATCHED clause can omit the condition";
 
-/// ===========================================================================================
 /// Lower and execute a parsed `MERGE INTO`.
-/// ===========================================================================================
 pub(crate) async fn execute_merge(cx: &EngineContext<'_>, merge: &Merge) -> Result<DataFrame> {
     if merge.output.is_some() {
         return Err(DataFusionError::NotImplemented(
@@ -187,7 +184,7 @@ fn lower_clause(
     Ok(())
 }
 
-/// Lower `SET col = expr` pairs. Accept a bare column or `<target-alias>.column`.
+/// Lower `SET col = expr` pairs.
 fn lower_assignments(
     assignments: &[Assignment],
     target_alias: &str,
@@ -270,7 +267,7 @@ fn resolve_merge_column(name: &ObjectName, target_alias: &str, construct: &str) 
     }
 }
 
-/// Strip a matching pair of `"` or `` ` `` so alias comparison uses identifier text.
+/// Strip a matching pair of double or backtick quotes so alias comparison uses identifier text.
 fn unquoted_ident(rendered: &str) -> &str {
     let trimmed = rendered.trim();
     let bytes = trimmed.as_bytes();

@@ -4,9 +4,7 @@ use datafusion::error::DataFusionError;
 
 use crate::scan::{blank_out_quoted_and_comments, leading_keyword, word_spans};
 
-/// ===========================================================================================
 /// Q9: `INSERT OVERWRITE` is not a surface of this door.
-/// ===========================================================================================
 pub(crate) fn insert_overwrite(target: &str) -> DataFusionError {
     DataFusionError::NotImplemented(format!(
         "INSERT OVERWRITE is not supported by this (ANSI/Trino-flavoured) door — it is a Spark \
@@ -19,9 +17,7 @@ pub(crate) fn insert_overwrite(target: &str) -> DataFusionError {
     ))
 }
 
-/// ===========================================================================================
 /// Q7: statement-shaped maintenance (`CALL`) is not a surface of this door.
-/// ===========================================================================================
 pub(crate) fn maintenance_call(procedure: &str) -> DataFusionError {
     DataFusionError::NotImplemented(format!(
         "CALL `{procedure}` is not supported: maintenance in this engine runs as a CALLABLE \
@@ -32,9 +28,7 @@ pub(crate) fn maintenance_call(procedure: &str) -> DataFusionError {
     ))
 }
 
-/// ===========================================================================================
 /// Q7: `ALTER TABLE … EXECUTE …` — the PRE-DESIGNATED future spelling, refused today.
-/// ===========================================================================================
 pub(crate) fn alter_table_execute(procedure: &str) -> DataFusionError {
     DataFusionError::NotImplemented(format!(
         "ALTER TABLE … EXECUTE {procedure} is not supported yet. This IS the spelling reserved \
@@ -46,9 +40,7 @@ pub(crate) fn alter_table_execute(procedure: &str) -> DataFusionError {
     ))
 }
 
-/// ===========================================================================================
 /// `TRUNCATE TABLE` — no Iceberg primitive, and the two plausible meanings differ.
-/// ===========================================================================================
 pub(crate) fn truncate(target: &str) -> DataFusionError {
     DataFusionError::NotImplemented(format!(
         "TRUNCATE TABLE {target} is not supported: Iceberg has no truncate primitive, and the \
@@ -58,9 +50,7 @@ pub(crate) fn truncate(target: &str) -> DataFusionError {
     ))
 }
 
-/// ===========================================================================================
-/// The pre-parse recognizer for `ALTER TABLE <name> EXECUTE <procedure>`, which stock sqlparser cannot parse.
-/// ===========================================================================================
+/// Pre-parse recognizer for `ALTER TABLE <name> EXECUTE <procedure>`, which sqlparser cannot parse.
 pub(crate) fn recognize_alter_table_execute(sql: &str) -> Option<DataFusionError> {
     let scrubbed = blank_out_quoted_and_comments(sql);
     if leading_keyword(&scrubbed).as_deref() != Some("ALTER") {

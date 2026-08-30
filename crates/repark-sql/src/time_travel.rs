@@ -43,9 +43,7 @@ impl TimeTravelKind {
     }
 }
 
-/// ===========================================================================================
 /// True when `sql` carries an ANSI `FOR VERSION|TIMESTAMP AS OF` clause this door must rewrite.
-/// ===========================================================================================
 #[cfg(test)]
 pub(crate) fn sql_has_time_travel(sql: &str) -> bool {
     let Ok(tokens) = Tokenizer::new(&GenericDialect {}, sql).tokenize() else {
@@ -54,16 +52,14 @@ pub(crate) fn sql_has_time_travel(sql: &str) -> bool {
     matches!(find_time_travel_spans(&tokens), Ok(spans) if !spans.is_empty())
 }
 
-/// ===========================================================================================
 /// The ephemeral names registered by one rewrite are released by the router after planning.
-/// ===========================================================================================
 #[derive(Debug, Default)]
 pub(crate) struct PinnedViews {
     names: Vec<String>,
 }
 
 impl PinnedViews {
-    /// Deregister everything this statement registered. Best effort: a missing name is harmless.
+    /// Deregister everything this statement registered.
     pub(crate) fn release(&self, ctx: &datafusion::prelude::SessionContext) {
         for name in &self.names {
             let _ = ctx.deregister_table(name.as_str());
@@ -71,9 +67,7 @@ impl PinnedViews {
     }
 }
 
-/// ===========================================================================================
 /// Rewrite every `FOR … AS OF` relation in `sql` to an ephemeral snapshot-pinned temp view.
-/// ===========================================================================================
 pub(crate) async fn prepare_time_travel_sql(
     cx: &EngineContext<'_>,
     sql: &str,
@@ -139,8 +133,7 @@ async fn register_pinned_view(
     Ok(name)
 }
 
-/// Extract the core name after [`read_table_at`] registers it; `ctx.table` can fail before a frame
-/// returns, so SQL cannot discover or record that name.
+/// Extract the core name after [`read_table_at`] registers it; SQL cannot discover that name.
 fn core_pinned_name(plan: &datafusion::logical_expr::LogicalPlan) -> Option<String> {
     let datafusion::logical_expr::LogicalPlan::TableScan(scan) = plan else {
         return None;
@@ -149,7 +142,7 @@ fn core_pinned_name(plan: &datafusion::logical_expr::LogicalPlan) -> Option<Stri
     name.starts_with("__repark_tt_").then(|| name.to_string())
 }
 
-// === The scanner ============================================================================
+// The scanner.
 
 /// A token paired with its index in the original stream, whitespace and EOF dropped.
 type Sig<'a> = (usize, &'a Token);
@@ -173,7 +166,7 @@ fn find_time_travel_spans(tokens: &[Token]) -> Result<Vec<TimeTravelSpan>> {
         let value_index = index + 4;
         let (spec, consumed) = parse_as_of_value(kind, &significant, value_index)?;
 
-        // The table name is the `ident (. ident)*` run immediately before `FOR`.
+        // The table name is the ident-dot-ident run immediately before FOR.
         let (name_start, table_parts) =
             table_name_before(&significant, index).ok_or_else(|| {
                 DataFusionError::Plan(format!(
@@ -249,7 +242,7 @@ fn parse_as_of_value(
         };
     }
 
-    // Unary minus + number: sqlparser emits `Minus` then `Number`; without this arm a negative pin fails.
+    // Unary minus then number: sqlparser emits Minus then Number; a negative pin needs this arm.
     if matches!(token, Token::Minus) {
         let Some(Token::Number(text, _)) = significant.get(index + 1).map(|(_, t)| *t) else {
             return Err(bad("`-` must be followed by a number"));
@@ -261,7 +254,7 @@ fn parse_as_of_value(
         Token::Number(text, _) | Token::SingleQuotedString(text) => {
             spec_from_literal(kind, text, 1).map_err(|detail| bad(&detail))
         }
-        // A `"quoted"` token arrives as a `Word` carrying its quote style. It is an identifier in this door.
+        // A `"quoted"` token arrives as a `Word` carrying its quote style.
         Token::Word(word) if word.quote_style == Some('"') => Err(bad(&format!(
             "`\"{0}\"` is a quoted IDENTIFIER in this door, not a literal — use '{0}'",
             word.value
@@ -290,7 +283,7 @@ fn spec_from_literal(
     }
 }
 
-/// Walk left from `clause_start` over `ident (. ident)*`, returning the run's start index and the token list.
+/// Walk left from `clause_start` over ident-dot-ident, returning the run start and token list.
 fn table_name_before(significant: &[Sig<'_>], clause_start: usize) -> Option<(usize, Vec<String>)> {
     if clause_start == 0 {
         return None;
@@ -319,7 +312,7 @@ fn table_name_before(significant: &[Sig<'_>], clause_start: usize) -> Option<(us
     }
 }
 
-/// ANSI identifier tokens: a word, quoted or not. sqlparser models a `"quoted"` identifier as a Word.
+/// ANSI identifier tokens: a word, quoted or not.
 fn is_ident_token(token: &Token) -> bool {
     matches!(token, Token::Word(_))
 }

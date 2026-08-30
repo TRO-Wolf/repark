@@ -19,12 +19,10 @@ const CURATED_KEYS: &[&str] = &[
     "extra_properties",
 ];
 
-/// ===========================================================================================
 /// A `WITH ( … )` clause, validated.
-/// ===========================================================================================
 #[derive(Debug, Default, PartialEq, Eq)]
 pub(crate) struct TableProperties {
-    /// An explicit table location. When absent, the location is resolved by catalog policy.
+    /// An explicit table location.
     pub(crate) location: Option<String>,
     /// The declared partition transforms, in clause order (empty = unpartitioned).
     pub(crate) partitioning: Vec<PartitionTransform>,
@@ -34,9 +32,7 @@ pub(crate) struct TableProperties {
     pub(crate) format_version: Option<String>,
 }
 
-/// ===========================================================================================
 /// Validate a parsed `WITH ( … )` option list into [`TableProperties`].
-/// ===========================================================================================
 pub(crate) fn parse_with_options(options: &[SqlOption], form: &str) -> Result<TableProperties> {
     let mut properties = TableProperties::default();
     let mut seen: Vec<String> = Vec::new();
@@ -108,7 +104,7 @@ pub(crate) fn refuse_sorted_by(form: &str) -> DataFusionError {
     ))
 }
 
-/// `format` accepts PARQUET only. ORC/AVRO are reserved by G9 and refuse.
+/// `format` accepts PARQUET only.
 pub(crate) fn refuse_format_value(value: &str, form: &str) -> Result<()> {
     match value.trim().to_ascii_uppercase().as_str() {
         "PARQUET" => Ok(()),

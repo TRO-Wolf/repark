@@ -1,10 +1,6 @@
 //! ANSI-aware SQL text scanning for the router's pre-parse guards.
-//! Scrubbing hides quoted and comment contents while preserving structure. Backticks stay visible.
 
-/// ===========================================================================================
 /// Replace string-literal, quoted-identifier, and comment contents with ASCII spaces.
-/// Preserve byte length and structural punctuation because offsets index original SQL.
-/// ===========================================================================================
 pub(crate) fn blank_out_quoted_and_comments(sql: &str) -> String {
     let bytes = sql.as_bytes();
     let mut out: Vec<u8> = Vec::with_capacity(bytes.len());
@@ -30,7 +26,7 @@ pub(crate) fn blank_out_quoted_and_comments(sql: &str) -> String {
     String::from_utf8_lossy(&out).into_owned()
 }
 
-/// Blank a `'…'` / `"…"` run, honouring the doubled-delimiter escape. Returns the next index.
+/// Blank a `'…'` / `"…"` run, honouring the doubled-delimiter escape.
 fn blank_delimited(bytes: &[u8], start: usize, delimiter: u8, out: &mut Vec<u8>) -> usize {
     out.push(delimiter);
     let mut index = start + 1;
@@ -52,7 +48,7 @@ fn blank_delimited(bytes: &[u8], start: usize, delimiter: u8, out: &mut Vec<u8>)
     index
 }
 
-/// Blank a `-- …` line comment (the newline itself survives). Returns the next index.
+/// Blank a `-- …` line comment (the newline itself survives).
 fn blank_line_comment(bytes: &[u8], start: usize, out: &mut Vec<u8>) -> usize {
     let mut index = start;
     while index < bytes.len() && bytes[index] != b'\n' {
@@ -62,8 +58,7 @@ fn blank_line_comment(bytes: &[u8], start: usize, out: &mut Vec<u8>) -> usize {
     index
 }
 
-/// Blank a `/* … */` block comment. Newlines survive so line numbers in any downstream parser
-/// error stay meaningful. Returns the next index.
+/// Blank a `/* … */` block comment.
 fn blank_block_comment(bytes: &[u8], start: usize, out: &mut Vec<u8>) -> usize {
     let mut index = start;
     while index < bytes.len() {
@@ -78,9 +73,7 @@ fn blank_block_comment(bytes: &[u8], start: usize, out: &mut Vec<u8>) -> usize {
     index
 }
 
-/// ===========================================================================================
 /// Return true when `needle` occurs in `haystack` as a whole word, not as a substring.
-/// ===========================================================================================
 pub(crate) fn contains_word(haystack: &str, needle: &str) -> bool {
     let normalized = collapse_whitespace(haystack);
     let normalized_lower = normalized.to_ascii_lowercase();
@@ -127,9 +120,7 @@ fn is_ident_byte(byte: u8) -> bool {
     byte.is_ascii_alphanumeric() || byte == b'_' || byte == b'$'
 }
 
-/// ===========================================================================================
 /// Every identifier-ish word in already-scrubbed text as `(start, end, word)` BYTE spans.
-/// ===========================================================================================
 pub(crate) fn word_spans(scrubbed: &str) -> Vec<(usize, usize, &str)> {
     let mut spans = Vec::new();
     let mut start: Option<usize> = None;

@@ -60,7 +60,7 @@ impl Sig {
         }
     }
 
-    /// Quote this token in a refusal. Every variant is printable.
+    /// Quote this token in a refusal.
     fn text(&self) -> &str {
         match self {
             Self::Word(value) | Self::Quoted(value) | Self::Number(value) | Self::Other(value) => {
@@ -70,15 +70,13 @@ impl Sig {
         }
     }
 
-    /// True when this is a bare word equal to `expected`, case-insensitively. Quoted words do not match.
+    /// True when this is a bare word equal to `expected`, case-insensitively.
     fn keyword(&self, expected: &str) -> bool {
         matches!(self, Self::Word(value) if value.eq_ignore_ascii_case(expected))
     }
 }
 
-/// ===========================================================================================
 /// Recognize `ALTER TABLE … CREATE|DROP BRANCH|TAG …`.
-/// ===========================================================================================
 pub(crate) fn try_parse_ref_ddl(sql: &str) -> Option<Result<RefDdl>> {
     let tokens = tokenize_significant(sql)?;
     if !tokens.first()?.keyword("ALTER") || !tokens.get(1)?.keyword("TABLE") {
@@ -188,7 +186,7 @@ fn ref_name(tokens: &[Sig], index: usize, form: &str) -> Result<String> {
     Ok(name.to_string())
 }
 
-/// `AS OF VERSION <snapshot-id>` (optional). Returns the id and the next index.
+/// `AS OF VERSION <snapshot-id>` (optional).
 fn parse_as_of_version(tokens: &[Sig], index: usize, form: &str) -> Result<(Option<i64>, usize)> {
     if !tokens.get(index).is_some_and(|t| t.keyword("AS")) {
         return Ok((None, index));
@@ -339,7 +337,7 @@ fn dotted_name(tokens: &[Sig], index: usize) -> Option<(Vec<String>, usize)> {
     Some((parts, cursor))
 }
 
-/// Tokenize with the stock Generic dialect, dropping whitespace and comments. `"x"` is an identifier.
+/// Tokenize with the stock Generic dialect, dropping whitespace and comments.
 fn tokenize_significant(sql: &str) -> Option<Vec<Sig>> {
     let tokens = Tokenizer::new(&GenericDialect {}, sql).tokenize().ok()?;
     let mut significant: Vec<Sig> = tokens
@@ -360,11 +358,9 @@ fn tokenize_significant(sql: &str) -> Option<Vec<Sig>> {
     Some(significant)
 }
 
-// === Execution ==============================================================================
+// Execution.
 
-/// ===========================================================================================
 /// Execute a recognized ref-DDL statement through the tier-1 `ManageSnapshots` seams.
-/// ===========================================================================================
 pub(crate) async fn execute_ref_ddl(cx: &EngineContext<'_>, ddl: RefDdl) -> Result<DataFrame> {
     let name = object_name(&ddl.table_parts);
     let target = crate::create_table::resolve_target(cx, &name, "ALTER TABLE (branch/tag DDL)")?;

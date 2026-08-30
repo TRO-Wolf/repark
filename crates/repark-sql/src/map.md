@@ -1,5 +1,8 @@
 # map — repark-sql/src
 
+CC-4 (2026-08-30): remaining banner files condensed to the one-line rule
+(pins: cc-3-comment-condensation/C-009).
+
 CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
 accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
 

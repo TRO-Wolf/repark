@@ -1,5 +1,4 @@
 //! The ANSI door's **surface matrix** — every `repark_common::surfaces` ID, disposed.
-//! The whole module is `#[cfg(test)]` — audit evidence, not product code.
 
 use repark_common::surfaces::{self, Row, SessionProfile, SurfaceId};
 
@@ -15,11 +14,9 @@ const fn absent(reason: &'static str, adr: &'static str) -> Row {
     Row::DeliberatelyAbsent { reason, adr }
 }
 
-/// ===========================================================================================
 /// The ANSI door's disposition of every surface ID.
-/// ===========================================================================================
 const ROWS: &[(SurfaceId, Row)] = &[
-    // --- Statement forms ---
+    // Statement forms.
     (
         surfaces::SELECT_PASSTHROUGH,
         t("router::tests::select_delegates_to_datafusion", Native),
@@ -75,7 +72,7 @@ const ROWS: &[(SurfaceId, Row)] = &[
             Native,
         ),
     ),
-    // --- The ALTER family. Stock-parsed, executed through the same tier-1 fork.
+    // --- The ALTER family.
     (
         surfaces::ALTER_TABLE_RENAME,
         t(
@@ -107,7 +104,7 @@ const ROWS: &[(SurfaceId, Row)] = &[
             "docs/design/sql-doors.md §2 Q3",
         ),
     ),
-    // --- Delegated DML. These are write surfaces backed by the fork.
+    // --- Delegated DML.
     (
         surfaces::INSERT_INTO,
         t("tests::insert_into_iceberg_table_round_trips", Native),
@@ -177,7 +174,7 @@ const ROWS: &[(SurfaceId, Row)] = &[
             "docs/design/sql-doors.md §2 Q7 / ADR-0002",
         ),
     ),
-    // --- Table-creation options: the curated `WITH (…)` vocabulary (design §2 Q1/Q2) ---
+    // Table-creation options: the curated WITH vocabulary (design section 2 Q1/Q2).
     (
         surfaces::TABLE_OPTION_FORMAT,
         t(
@@ -249,7 +246,7 @@ const ROWS: &[(SurfaceId, Row)] = &[
             Native,
         ),
     ),
-    // --- Guard rails (design §2 Q12) ---
+    // Guard rails (design section 2 Q12).
     (
         surfaces::GUARD_MULTI_STATEMENT,
         t(
@@ -276,7 +273,7 @@ const ROWS: &[(SurfaceId, Row)] = &[
         surfaces::GUARD_MOR_MULTI_SPEC_DML,
         t("tests::mor_unpartitioned_multi_spec_dml_refuses", Native),
     ),
-    // --- Ergonomics + seams ---
+    // Ergonomics and seams.
     (
         surfaces::WRONG_DOOR_SNIFF,
         t("sniff::tests::spark_isms_upgrade_the_parse_error", Unit),
@@ -309,7 +306,7 @@ const ROWS: &[(SurfaceId, Row)] = &[
             TwoSession,
         ),
     ),
-    // --- Value semantics. Test names are `cargo test -- --list` names. ---
+    // --- Value semantics.
     (
         surfaces::SEMANTICS_NULL_ORDERING,
         t("ansi_door_order_by_asc_defaults_to_nulls_last", Native),
@@ -349,10 +346,8 @@ const ROWS: &[(SurfaceId, Row)] = &[
     ),
 ];
 
-/// ===========================================================================================
-/// The compile-run audit (design §2 Q13): this door maps EXACTLY the registry, once each.
 /// MUTATION: delete the `CTAS` row → this REDs naming `CTAS`.
-/// ===========================================================================================
+/// The compile-run audit (design §2 Q13): this door maps EXACTLY the registry, once each.
 #[test]
 fn matrix_maps_every_surface() {
     if let Err(problems) = surfaces::audit("repark-sql", ROWS) {
@@ -362,8 +357,8 @@ fn matrix_maps_every_surface() {
     }
 }
 
-/// No `Tested` row claims `SparkExtended`; the ANSI door's evidence uses native profiles.
 /// MUTATION: set any row's profile to `SparkExtended` → this REDs.
+/// No `Tested` row claims `SparkExtended`; the ANSI door's evidence uses native profiles.
 #[test]
 fn ansi_rows_never_claim_a_spark_extended_session() {
     for (id, row) in ROWS {
@@ -377,8 +372,8 @@ fn ansi_rows_never_claim_a_spark_extended_session() {
     }
 }
 
-/// Every `TwoSession` row must be supported by both doors.
 /// MUTATION: mark any of these rows `TwoSession` on an ANSI-only surface → this REDs.
+/// Every `TwoSession` row must be supported by both doors.
 #[test]
 fn two_session_rows_name_surfaces_both_doors_have() {
     const ANSI_ONLY: &[SurfaceId] = &[
@@ -401,9 +396,8 @@ fn two_session_rows_name_surfaces_both_doors_have() {
     }
 }
 
-/// Four statement surfaces remain absent by ruling: Q3 partition-spec evolution, Q9 INSERT OVERWRITE,
-/// TRUNCATE, and Q7 maintenance calls.
 /// MUTATION: flip any `Tested` row to `absent(...)` → this REDs.
+/// Four surfaces stay absent by ruling: Q3 partition-spec evolution, Q9 overwrite, TRUNCATE, Q7.
 #[test]
 fn m2_closes_the_ansi_door() {
     let absent_ids: Vec<SurfaceId> = ROWS

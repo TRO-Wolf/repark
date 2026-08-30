@@ -12,20 +12,16 @@ use crate::{
     alter, create_table, guards, merge, ref_ddl, refusals, schema_ddl, sniff, time_travel,
 };
 
-/// The dialect handed to DataFusion's parser. It must match the session parser used during planning.
+/// The dialect handed to DataFusion's parser.
 pub(crate) const PARSER_DIALECT: datafusion::config::Dialect = datafusion::config::Dialect::Generic;
 
-/// ===========================================================================================
 /// Execute one ANSI SQL statement against an [`EngineContext`].
-/// ===========================================================================================
-///
 /// # Errors
-/// A guard refusal, a parse/plan failure (upgraded by the wrong-door sniff when it recognizes a
-/// Spark-ism), or any iceberg / execution error from an intercepted handler.
+/// A guard refusal, a parse or plan failure, or an iceberg or execution error from a handler.
 pub async fn execute(cx: EngineContext<'_>, sql: &str) -> Result<DataFrame> {
     guards::run_text_guards(&cx, sql)?;
 
-    // --- Pre-parse stage: productions stock sqlparser cannot reach. ---
+    // --- Pre-parse stage: productions stock sqlparser cannot reach.
     if let Some(refusal) = refusals::recognize_alter_table_execute(sql) {
         return Err(refusal);
     }
@@ -107,7 +103,7 @@ async fn execute_time_travelled(
         } => schema_ddl::execute_drop_schema(cx, names, *if_exists, *cascade).await,
         Statement::AlterTable(alter) => alter::execute_alter_table(cx, alter).await,
         Statement::Merge(merge) => merge::execute_merge(cx, merge).await,
-        // --- The refuse set (design §2 Q7 / Q9). ---
+        // --- The refuse set (design §2 Q7 / Q9).
         Statement::Insert(insert) if insert.overwrite => {
             Err(refusals::insert_overwrite(&insert.table.to_string()))
         }
@@ -118,7 +114,7 @@ async fn execute_time_travelled(
                 .first()
                 .map_or_else(|| "<table>".to_string(), |target| target.name.to_string()),
         )),
-        // --- Delegated DML: allow-list first, then G3-E8 and async MoR/V3 valves. ---
+        // --- Delegated DML: allow-list first, then G3-E8 and async MoR/V3 valves.
         Statement::Delete(_) | Statement::Update(_) => {
             if let Some(allowed) =
                 repark_iceberg::write::predicate_dml::try_allowed_delete_in(statement.as_ref())?
