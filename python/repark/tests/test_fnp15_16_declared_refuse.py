@@ -268,44 +268,23 @@ def test_registry_wording_distinguishes_unreachable_from_deferred_cost() -> None
         assert "deferred by cost" not in chunk, heading
         classification = chunk.lower().replace("unsupportedoperationexception", "")
         assert "unsupported" not in classification, heading
-    sketch_heading = "### FNP-16-sketches"
-    assert sketch_heading in section
-    chunk_start = section.index(sketch_heading)
-    rest = section[chunk_start + len(sketch_heading) :]
-    next_chunk = rest.find("\n### ")
-    chunk = rest if next_chunk < 0 else rest[:next_chunk]
-    assert "deferred by cost" in chunk
-    assert "reachable" in chunk
-    assert "unreachable" not in chunk
-    classification = chunk.lower().replace("unsupportedoperationexception", "")
-    assert "unsupported" not in classification
-    csv_heading = "### FNP-16-csv-xml-xpath"
-    assert csv_heading in section
-    chunk_start = section.index(csv_heading)
-    rest = section[chunk_start + len(csv_heading) :]
-    next_chunk = rest.find("\n### ")
-    chunk = rest if next_chunk < 0 else rest[:next_chunk]
-    assert "deferred by cost" in chunk
-    assert "reachable" in chunk
-    assert "unreachable" not in chunk
-    variant_heading = "### FNP-16-variant"
-    assert variant_heading in section
-    chunk_start = section.index(variant_heading)
-    rest = section[chunk_start + len(variant_heading) :]
-    next_chunk = rest.find("\n### ")
-    chunk = rest if next_chunk < 0 else rest[:next_chunk]
-    assert "deferred by cost" in chunk
-    assert "reachable" in chunk
-    assert "unreachable" not in chunk
-    geo_heading = "### FNP-16-geospatial"
-    assert geo_heading in section
-    chunk_start = section.index(geo_heading)
-    rest = section[chunk_start + len(geo_heading) :]
-    next_chunk = rest.find("\n### ")
-    chunk = rest if next_chunk < 0 else rest[:next_chunk]
-    assert "deferred by cost" in chunk
-    assert "reachable" in chunk
-    assert "unreachable" not in chunk
+    fnp16_headings = (
+        "### FNP-16-sketches",
+        "### FNP-16-csv-xml-xpath",
+        "### FNP-16-variant",
+        "### FNP-16-geospatial",
+    )
+    for heading in fnp16_headings:
+        assert heading in section, f"missing registry section {heading}"
+        chunk_start = section.index(heading)
+        rest = section[chunk_start + len(heading) :]
+        next_chunk = rest.find("\n### ")
+        chunk = rest if next_chunk < 0 else rest[:next_chunk]
+        assert "deferred by cost" in chunk, heading
+        assert "reachable" in chunk, heading
+        assert "unreachable" not in chunk, heading
+        classification = chunk.lower().replace("unsupportedoperationexception", "")
+        assert "unsupported" not in classification, heading
 
 
 def test_roster_counts_fnp15_six() -> None:
