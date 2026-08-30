@@ -197,8 +197,8 @@ published history — an exposure **accepted by explicit decision**; provenance:
   **Delivered:** `__all__` 333 → 360, 41 names from refusing-or-absent to working (FNP-1..6c);
   thirty-six needed no new kernel — that seam is exhausted. **F-Y10-1 (2026-08-30):** integer
   `+` / `-` / `*` raise `ARITHMETIC_OVERFLOW` where Spark raises; FNP-7b is unblocked.
-  Remaining work ships as one coherent PR per unit or tightly coupled pair. **Next, in order
-  (revised 2026-08-30):** FNP-15/16 → FNP-4c → FNP-7a/7b → FNP-9/10 → FNP-8 → FNP-11/12 → FNP-Z.
+  Remaining work ships as one coherent PR per unit or tightly coupled pair.
+  **Next, in order (revised 2026-08-30):** FNP-15/16 → FNP-4c → FNP-7a/7b → FNP-9/10 → FNP-8 → FNP-11/12 → FNP-Z.
   Deferred with reasons in the design: FNP-4b, FNP-6d, FNP-13, FNP-14. This campaign and TA
   performance consume no F-17 surface and may use fork-wait windows; neither gates v1.0.
 <!-- /ws -->
