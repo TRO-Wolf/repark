@@ -28,11 +28,10 @@ the measurement that settles it.
 | C-002 | **Spark door raises where Spark raises.** With `ansi=true` (the landed default), integer `+`, `-`, `*` at the boundary raise `ARITHMETIC_OVERFLOW` exactly where live Spark raises, as shared-raise equality pins on the DEC-6 pattern; with `ansi=false`, the result equals live Spark's non-ANSI result (two's-complement wrap) cell for cell, value and Arrow type. No silent widening remains on any Spark-door path the matrix touched. | Checked kernels in `crates/repark-functions` reading the ANSI knob (DEC U5 shape); red-first corpus pins per cell; oracle read-back. | **PROVEN** | `integer_spark.rs` tests; `test_integer_overflow_parity.py`. C-001 matrix was the red. |
 | C-003 | **The ANSI door serves standard SQL.** Overflow on the ANSI door raises per the standard (its own oracle, owner ruling 2026-08-12 Option A) — it does not silently wrap once the Spark-door kernels are checked. Any INTENDED door-vs-door split this creates is pinned in `cross_door.rs` like the six existing ones, not left implicit. | ANSI-door value pins; a cross-door pin per intended split. | **PROVEN** | `ansi_door_int32_add_overflow_raises`; `cross_door_int32_add_overflow_wraps_on_spark_ansi_false_raises_on_ansi`. |
 | C-004 | **Documents match the pins.** The registry's routed note (F-Y10-1 under "routed, not invented as DEC rows") moves to a dated FIXED row or an updated finding; gap G13's integer half is closed or narrowed with the residue named; the FNP-7b row in `docs/design/spark-function-parity.md` flips from BLOCKED to unblocked; STATUS; maps in lockstep. | `check-map-sync`, `check-ledger-grammar`, registry diff. | **PROVEN** | Registry F-Y10-1 FIXED 2026-08-30; G13 integer half closed; residue G5b-R3-ANSI and F-Y10-2 named; FNP-7b unblocked. |
-| C-005 | **Green on the whole surface, and the hot path is not quietly slower.** `make verify`, `make preflight`, full `make py-test`; the checked kernels' cost on non-overflowing arithmetic is measured (a micro-benchmark or the existing perf harness) and recorded — an order-of-magnitude regression is a finding, not a silent tax. | Gate output; the recorded measurement. | OPEN | Measured 2026-08-30: non-overflow Int32 add checked=523ms / baseline=419ms over 200 collects, **ratio 1.25**. Not an order-of-magnitude tax. Gates still to run. |
+| C-005 | **Green on the whole surface, and the hot path is not quietly slower.** `make verify`, `make preflight`, full `make py-test`; the checked kernels' cost on non-overflowing arithmetic is measured (a micro-benchmark or the existing perf harness) and recorded — an order-of-magnitude regression is a finding, not a silent tax. | Gate output; the recorded measurement. | **PROVEN** | `make verify` exit 0; facade 3793 passed / 75 skipped; `make py-test` 459 passed; `make audit` + `workflows-lint` exit 0. Non-overflow Int32 add ratio **1.25** (523 ms / 419 ms, 200 collects). |
 
-VERDICT: OPEN — 5 clauses, 4 PROVEN (C-001..C-004), 0 REJECTED. C-005 waits on
-`make verify` / `make preflight` / `make py-test`. The gate passes when every row is PROVEN with
-its pin (`pins: f-y10-1-int-overflow/C-NNN`) and the owner confirms.
+VERDICT: PROVEN — 5 clauses, 5 PROVEN, 0 REJECTED. Critic CCC attestation may replace the
+Actor-phase coverage block below. The owner confirms.
 
 ## 1. Out of scope
 
@@ -150,3 +149,65 @@ the op stays Int64 and Arrow wraps.
 `REPARK_PERF_MEASURE=1 cargo test -p repark-functions --lib perf_measure_non_overflow_int32_add`:
 checked integer add 522.8 ms vs DataFusion baseline 419.4 ms over 200 scalar collects
 (ratio **1.25**). Not an order-of-magnitude regression.
+
+`make verify` exit 0. Facade suite 3793 passed, 75 skipped. `make py-test` 459 passed.
+`make audit` and `make workflows-lint` exit 0.
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: f-y10-1-int-overflow
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: >
+        C-001 matrix from live Spark 4.1.2 and repark probes. C-002/C-003 pins raise and wrap
+        per operator and door. C-004 registry/FNP-7b/STATUS. C-005 gates and 1.25x measurement.
+      artifacts: [crates/repark-functions/src/integer_spark.rs, python/repark/tests/test_integer_overflow_parity.py]
+    - id: AT-2
+      status: ATTACKED
+      evidence: >
+        Overflow boundaries MAX+1, MIN-1, MAX*2, MIN*-1, CAST+lit, facade col+col and col+1,
+        null+1, non-overflow control, explicit BIGINT cast not narrowed.
+      artifacts: [crates/repark-functions/src/integer_spark.rs, crates/repark-sql/tests/cross_door_int_overflow.rs]
+    - id: AT-3
+      status: ATTACKED
+      evidence: >
+        ANSI raise is DataFusion Execution ARITHMETIC_OVERFLOW; ansi=false wrapping path is the
+        documented Spark non-ANSI result, not NULL.
+      artifacts: [crates/repark-functions/src/integer_spark.rs]
+    - id: AT-4
+      status: N/A
+      justification: kernels are per-row pure arithmetic with no shared mutable session state beyond the ANSI flag.
+    - id: AT-5
+      status: N/A
+      justification: no auth, injection, or filesystem surface; SQL is planned through existing doors.
+    - id: AT-6
+      status: ATTACKED
+      evidence: >
+        Arrow type is part of every pin (Int32 wrap vs Int64 widen). Explicit CAST AS BIGINT + 1
+        stays Int64 2147483648.
+      artifacts: [crates/repark-functions/src/integer_spark.rs]
+    - id: AT-7
+      status: ATTACKED
+      evidence: >
+        Non-overflow Int32 add measured at 1.25x DataFusion baseline over 200 collects. Not
+        system-breaking.
+      artifacts: [crates/repark-functions/src/integer_spark.rs]
+    - id: AT-8
+      status: ATTACKED
+      evidence: >
+        Error needle matches Spark ARITHMETIC_OVERFLOW / try_add|try_subtract|try_multiply /
+        integer vs long overflow. Lit(int) that fits is Int32 like Spark IntegerType.
+      artifacts: [crates/repark-python/src/column/mod.rs]
+    - id: AT-9
+      status: N/A
+      justification: no new log/metric surface; failures are query-time Execution errors.
+    - id: AT-10
+      status: ATTACKED
+      evidence: >
+        Red-first C-001 matrix; pins name raise vs wrap vs widen; mutation of select alias still
+        leaks Int32(1). Revert of checked rewrite would red the raise tests.
+      artifacts: [python/repark/tests/test_select_naming.py, python/repark/tests/test_integer_overflow_parity.py]
+  reattested: []
+  complete: true
+```
