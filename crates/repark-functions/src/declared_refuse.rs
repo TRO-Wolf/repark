@@ -123,6 +123,18 @@ const VARIANT_REASON: &str = "is reachable without a JVM and is deferred by cost
      is a specific value/metadata binary encoding; repark's VariantType is a shell with \
      nothing behind it. See docs/spark-sql-iceberg-parity.md (FNP-16 VARIANT).";
 
+const GEOSPATIAL: &[&str] = &[
+    "st_asbinary",
+    "st_geogfromwkb",
+    "st_geomfromwkb",
+    "st_setsrid",
+    "st_srid",
+];
+
+const GEOSPATIAL_REASON: &str = "is reachable without a JVM and is deferred by cost: Spark \
+     GEOGRAPHY/GEOMETRY have no Arrow representation and no vendored WKB codec. See \
+     docs/spark-sql-iceberg-parity.md (FNP-16 geospatial).";
+
 /// Message for a declared-absent Spark function, if this unit currently owns the name.
 #[must_use]
 pub fn refusal_message(name: &str) -> Option<String> {
@@ -139,6 +151,9 @@ pub fn refusal_message(name: &str) -> Option<String> {
     if VARIANT.binary_search(&key.as_str()).is_ok() {
         return Some(format!("{key} {VARIANT_REASON}"));
     }
+    if GEOSPATIAL.binary_search(&key.as_str()).is_ok() {
+        return Some(format!("{key} {GEOSPATIAL_REASON}"));
+    }
     None
 }
 
@@ -149,6 +164,7 @@ pub fn armed_names() -> Vec<&'static str> {
     names.extend(SKETCHES.iter().copied());
     names.extend(CSV_XML_XPATH.iter().copied());
     names.extend(VARIANT.iter().copied());
+    names.extend(GEOSPATIAL.iter().copied());
     names
 }
 
@@ -215,7 +231,7 @@ fn object_name_last(name: &ObjectName) -> String {
 
 #[cfg(test)]
 mod tests {
-    // pins: fnp-15-16/C-001, C-002, C-008, C-009, C-010, C-017
+    // pins: fnp-15-16/C-001, C-002, C-008, C-009, C-010, C-011, C-013, C-017
     use super::*;
 
     #[test]
@@ -269,6 +285,24 @@ mod tests {
         assert_eq!(VARIANT.len(), 8);
         for name in VARIANT {
             let message = refusal_message(name).expect("variant name has a message");
+            assert!(message.contains("deferred by cost"), "{name}: {message}");
+            assert!(
+                message.contains("reachable without a JVM"),
+                "{name}: {message}"
+            );
+            assert!(!message.contains("unreachable"), "{name}: {message}");
+            let error = refuse_in_sql(&format!("SELECT {name}(1)")).expect_err(*name);
+            assert!(matches!(error, DataFusionError::NotImplemented(_)));
+        }
+    }
+
+    #[test]
+    fn geospatial_is_deferred_by_cost_and_sorted() {
+        assert!(GEOSPATIAL.is_sorted());
+        assert_eq!(GEOSPATIAL.len(), 5);
+        assert_eq!(armed_names().len(), 62);
+        for name in GEOSPATIAL {
+            let message = refusal_message(name).expect("geospatial name has a message");
             assert!(message.contains("deferred by cost"), "{name}: {message}");
             assert!(
                 message.contains("reachable without a JVM"),

@@ -2319,3 +2319,17 @@ oracle is involved.
   `crates/repark-functions/src/declared_refuse.rs::variant_is_deferred_by_cost_and_sorted`.
 - **Rationale** — DECLARED deferred-by-cost (design D-7 / §8). This is a cost deferral, not a
   JVM-only gap. Implementing the binary encoding is a sub-project.
+
+### FNP-16-geospatial — GEOGRAPHY/GEOMETRY are reachable, deferred by cost
+
+- **repark** — `st_asbinary`, `st_geogfromwkb`, `st_geomfromwkb`, `st_setsrid`, and `st_srid`
+  are exported and refuse as **reachable without a JVM and deferred by cost**. Spark
+  GEOGRAPHY/GEOMETRY have no Arrow representation and no vendored WKB codec.
+- **Apache Spark** — constructs and inspects GEOGRAPHY/GEOMETRY values.
+  *(oracle: documented.)*
+- **Pin** — `python/repark/tests/test_fnp15_16_declared_refuse.py::test_geospatial_facade_refuses_deferred_by_cost`,
+  `…::test_geospatial_spark_sql_door_refuses`,
+  `…::test_geospatial_ansi_sql_door_refuses`;
+  `crates/repark-functions/src/declared_refuse.rs::geospatial_is_deferred_by_cost_and_sorted`.
+- **Rationale** — DECLARED deferred-by-cost (design D-7 / §8). This is a cost deferral, not a
+  JVM-only gap. A WKB codec plus Arrow representation is a sub-project.

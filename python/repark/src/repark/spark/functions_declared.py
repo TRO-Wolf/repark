@@ -186,8 +186,22 @@ _VARIANT_REASON = (
 )
 _bind_family(VARIANT_NAMES, _VARIANT_REASON)
 
+GEOSPATIAL_NAMES: tuple[str, ...] = (
+    "st_asbinary",
+    "st_geogfromwkb",
+    "st_geomfromwkb",
+    "st_setsrid",
+    "st_srid",
+)
+_GEOSPATIAL_REASON = (
+    "is reachable without a JVM and is deferred by cost: Spark GEOGRAPHY/GEOMETRY have no "
+    "Arrow representation and no vendored WKB codec. See docs/spark-sql-iceberg-parity.md "
+    "(FNP-16 geospatial)."
+)
+_bind_family(GEOSPATIAL_NAMES, _GEOSPATIAL_REASON)
+
 DECLARED_REFUSE_NAMES: tuple[str, ...] = (
-    tuple(FNP15_MESSAGES) + SKETCH_NAMES + CSV_XML_XPATH_NAMES + VARIANT_NAMES
+    tuple(FNP15_MESSAGES) + SKETCH_NAMES + CSV_XML_XPATH_NAMES + VARIANT_NAMES + GEOSPATIAL_NAMES
 )
 
 

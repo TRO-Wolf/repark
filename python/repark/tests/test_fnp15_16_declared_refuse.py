@@ -1,7 +1,7 @@
 """FNP-15/16 — declared-absent Spark functions refuse loudly.
 
 pins: fnp-15-16/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
-C-010, C-012, C-013, C-016, C-017
+C-010, C-011, C-012, C-013, C-016, C-017
 """
 
 from __future__ import annotations
@@ -13,7 +13,12 @@ import pytest
 
 from repark.errors import UnsupportedOperationException
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
-from repark.spark.functions_declared import CSV_XML_XPATH_NAMES, SKETCH_NAMES, VARIANT_NAMES
+from repark.spark.functions_declared import (
+    CSV_XML_XPATH_NAMES,
+    GEOSPATIAL_NAMES,
+    SKETCH_NAMES,
+    VARIANT_NAMES,
+)
 from repark.spark.session import ReparkSession
 
 FNP15_NAMES: tuple[str, ...] = (
@@ -199,6 +204,30 @@ def test_variant_ansi_sql_door_refuses(name: str) -> None:
     _assert_deferred_cost(caught.value, name, "VARIANT")
 
 
+@pytest.mark.parametrize("name", GEOSPATIAL_NAMES)
+def test_geospatial_facade_refuses_deferred_by_cost(name: str) -> None:
+    fn: Callable[..., Any] = getattr(F, name)
+    with pytest.raises(UnsupportedOperationException) as caught:
+        fn("x")
+    _assert_deferred_cost(caught.value, name, "WKB")
+
+
+@pytest.mark.parametrize("name", GEOSPATIAL_NAMES)
+def test_geospatial_spark_sql_door_refuses(name: str, spark: ReparkSession) -> None:
+    with pytest.raises(UnsupportedOperationException) as caught:
+        spark.sql(_sql_call(name)).collect()
+    _assert_deferred_cost(caught.value, name, "WKB")
+
+
+@pytest.mark.parametrize("name", GEOSPATIAL_NAMES)
+def test_geospatial_ansi_sql_door_refuses(name: str) -> None:
+    import repark
+
+    with pytest.raises(UnsupportedOperationException) as caught:
+        repark.sql(_sql_call(name))
+    _assert_deferred_cost(caught.value, name, "WKB")
+
+
 def test_still_missing_name_stays_attribute_error() -> None:
     """FNP-Z owns wholesale __all__ completion; names outside the 62 stay absent."""
     with pytest.raises(AttributeError):
@@ -268,6 +297,15 @@ def test_registry_wording_distinguishes_unreachable_from_deferred_cost() -> None
     assert "deferred by cost" in chunk
     assert "reachable" in chunk
     assert "unreachable" not in chunk
+    geo_heading = "### FNP-16-geospatial"
+    assert geo_heading in section
+    chunk_start = section.index(geo_heading)
+    rest = section[chunk_start + len(geo_heading) :]
+    next_chunk = rest.find("\n### ")
+    chunk = rest if next_chunk < 0 else rest[:next_chunk]
+    assert "deferred by cost" in chunk
+    assert "reachable" in chunk
+    assert "unreachable" not in chunk
 
 
 def test_roster_counts_fnp15_six() -> None:
@@ -292,3 +330,21 @@ def test_roster_counts_variant_eight() -> None:
     """FNP-16 VARIANT family is 8 names."""
     assert len(VARIANT_NAMES) == 8
     assert len(set(VARIANT_NAMES)) == 8
+
+
+def test_roster_counts_geospatial_five() -> None:
+    """FNP-16 geospatial family is 5 names."""
+    assert len(GEOSPATIAL_NAMES) == 5
+    assert len(set(GEOSPATIAL_NAMES)) == 5
+
+
+def test_roster_total_is_sixty_two() -> None:
+    """62 names: 6 unreachable plus 56 deferred-by-cost. pins: fnp-15-16/C-013"""
+    from repark.spark.functions_declared import DECLARED_REFUSE_NAMES
+
+    assert len(DECLARED_REFUSE_NAMES) == 62
+    assert len(set(DECLARED_REFUSE_NAMES)) == 62
+    assert set(FNP15_NAMES).isdisjoint(SKETCH_NAMES)
+    assert set(FNP15_NAMES) | set(SKETCH_NAMES) | set(CSV_XML_XPATH_NAMES) | set(
+        VARIANT_NAMES
+    ) | set(GEOSPATIAL_NAMES) == set(DECLARED_REFUSE_NAMES)
