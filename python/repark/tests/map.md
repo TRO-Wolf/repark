@@ -146,7 +146,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   names (253 after FN-A + FN-B + 8 aggregate additions) + every name resolves.
   (2026-08-15): `__all__` before==after pin. **FN-D moved the pin** 253→264
   (11 datetime additions on the freeze inventory; independent of FN-C) + every
-  name resolves.
+  name resolves. **FNP-15/16:** the pre-split 360 names stay the prefix; 62
+  declared-absent names append. pins: fnp-15-16/C-016
   (2026-08-15): `__all__` before==after pin. **FN-E moved the pin** to 262 names
   (freeze 253 + 9 collection additions) + every name resolves.
   (2026-08-15): `__all__` before==after pin. **FN-F moved the pin** to 263
