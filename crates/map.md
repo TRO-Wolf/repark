@@ -10,8 +10,9 @@ It preserves only the shortest required contract, invariant, directive, citation
 pins: comment-condensation-2/C-002, C-003, C-004, C-005, C-007, C-008, C-009, C-010, C-011.
 
 CC-3 (2026-08-30) continues one level deeper on a named roster and moves test modules under
-`tests/` plus `repark-sql` v3 modules under `v3/`. Ledger:
-[cc-3-comment-condensation-ledger.md](../task/ledgers/completed/cc-3-comment-condensation-ledger.md).
+`tests/` plus `repark-sql` v3 modules under `v3/`. CC-4 (2026-08-30) applies the same one-line
+rule to the 64 remaining banner files. Ledger:
+[cc-3-comment-condensation-ledger.md](../task/ledgers/staging/cc-3-comment-condensation-ledger.md).
 
 | Clause | What changed |
 |---|---|
@@ -23,6 +24,7 @@ CC-3 (2026-08-30) continues one level deeper on a named roster and moves test mo
 | C-006 | Maps, ledger links, and doc links stay in lockstep. pins: cc-3-comment-condensation/C-006 |
 | C-007 | One PR; `make verify` and `make preflight` exit 0. pins: cc-3-comment-condensation/C-007 |
 | C-008 | Closing Critic attestation (orchestrator). pins: cc-3-comment-condensation/C-008 |
+| C-009 | CC-4: the 64 remaining banner files receive the one-line rule; protected inventory, token equivalence, and gate ratchets hold as for C-002..C-005. pins: cc-3-comment-condensation/C-009 |
 
 ## Contents
 
