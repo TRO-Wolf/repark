@@ -142,7 +142,7 @@ tools never silently skip locally (uvx provisions the pinned tool on demand).
   are **hand-written**: there is no generator, and the one piece of `map.md` automation
   (`check_manifest.py`'s crate-root consistency rule) only *checks* that a map exists and agrees
   with `repo-manifest.toml` — it never writes, scaffolds, or rewrites one.
-- **Rust house style:** 91-`=` banner doc blocks on section fns; one blank line between top-level
+- **Rust house style:** one-line comments, no banners; `// === name ===` markers stay; one blank line between top-level
   items; `max_width=100`, `edition=2024`; clippy `all`+`pedantic`, `-D warnings`; `thiserror`
   (libs) / `anyhow` (bins); `tracing`; no panics in prod — no `unwrap`/`expect`
   (`with_context()?` / `.ok_or_else(…)?`).

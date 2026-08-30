@@ -1,5 +1,3 @@
-# Stable-rustfmt-only options (no nightly-gated keys, so `cargo fmt --check` is a hard CI gate).
-# The house-style section banners + one-blank-line spacing are hand-authored and preserved by
-# rustfmt; they are not generated. See AGENTS.md "Rust house style".
+# Stable-rustfmt-only options (no nightly-gated keys). See AGENTS.md Rust house style.
 max_width = 100
 edition = "2024"
