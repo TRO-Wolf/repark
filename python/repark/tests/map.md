@@ -2070,9 +2070,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **MW-10:** `retry_on_commit_conflict` (default 3; `CatalogCommitConflicts` /
   `CommitFailed` requirement mismatch / `validate_data_files_exist`); MERGE and each
   maintenance CALL are wrapped; `MorMaintenanceOutcome` records `retry_count`,
-  `service_commits`, snapshot log before/after expire, and whether current after expire
-  matches the engine (pins: mw-10-s3tables-mor/C-003, C-004). `mask_account_ids` /
-  `format_denial_failure` (pins: mw-10-s3tables-mor/C-001).
+  `max_call_retries`, `service_commits` (union of both expire logs minus engine ids),
+  snapshot log before/after expire, whether current after expire matches the engine, and
+  `ambiguous_engine_windows`. Denial signatures win over conflict signatures.
+  `assert_retry_counts` caps per-call retries, not the sum. `assert_engine_expire_removed_ctas`
+  requires the CTAS id in the before-expire log. (pins: mw-10-s3tables-mor/C-001, C-003, C-004).
 - `test_acceptance_helpers.py` — WG4 AWS-free unit tests for `_acceptance` that run **everywhere**
   (no gate): the builder outputs (s3a bronze path, the measured glue config block, CTAS/MERGE SQL
   shape keyed on the id column, the real TBLPROPERTIES block, and `acceptance_namespace_location`
@@ -2094,13 +2096,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **MW-10:** memory-analog retry pins — conflict twice then success (`retry_count == 2`);
   exhausted budget raises after exactly `attempts` with the count in the message; a
   non-conflict error is re-raised on the first call; each named conflict signature
-  retries. The local-catalog analog asserts `retry_count == 0`, `service_commits == 0`,
-  and snapshot-log shape (pins: mw-10-s3tables-mor/C-003, C-004). Account-id mask pin
-  (`<ACCOUNT>` for a 12-digit id; 11- and 13-digit numbers unchanged) and the loud-fail
-  denial text (action, resource, masked account) (pins: mw-10-s3tables-mor/C-001).
-  AST pin that the S3 Tables MOR leg skips on absent `TABLE_BUCKET_ARN`, creates the
-  namespace without `location`, does not call the Glue location guard, and runs the
-  shared helper on `mw10_mor_` plus uuid4.
+  retries. Per-call budget: sum 4 with max 2 passes; max 4 fails. Service-commit union
+  includes a pre-expire id that vanishes; a two-id engine window is ambiguous.
+  Injection pin: first MERGE and first CALL each conflict once → `retry_count == 2`,
+  `max_call_retries == 1`. Denial wins over `CommitFailed`+requirement. CTAS missing
+  from the before-expire log names automatic expiry. AST: `retry_on_commit_conflict`
+  inside MERGE and the runner; `create_namespace` has no `location` keyword; denial
+  path is `pytest.fail(format_denial_failure(...))` (pins: mw-10-s3tables-mor/C-001,
+  C-002, C-003, C-004).
 - `test_aws_acceptance.py` — WG4 the env-gated real-AWS acceptance harness: a **module-level**
   `pytest.mark.skipif` on `REPARK_AWS_ACCEPTANCE != "1"` skips the whole module by default (CI
   stays AWS-free; the single sanctioned real-AWS run is the Fable audit's). Gated in, it mirrors
