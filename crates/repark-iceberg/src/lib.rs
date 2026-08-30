@@ -11,16 +11,8 @@
 pub mod catalog;
 pub mod write;
 
-/// Shared test-only tracing harness (forced-edit class 6): one global subscriber carrying
-/// both v1 capture layers, so the merged test binary keeps each v1 harness's per-binary
-/// global-subscriber invariant.
 #[cfg(test)]
-mod test_tracing;
-
-/// Fork-pin proof (ADR-0001): names + exercises fork-only public API, so the test target
-/// compile-fails on a silent crates.io registry fallback.
-#[cfg(test)]
-mod fork_pin_tests;
+mod tests;
 
 // v1 repark-catalog crate-root surface (names unchanged).
 pub use catalog::{

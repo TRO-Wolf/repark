@@ -2,16 +2,17 @@
 
 ## Purpose
 
-Focused session regression cohorts split from `../tests.rs`.
+Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
 
 ## Contents
 
-- `catalog_registration.rs` — atomic same-name provider/handle publication, distinct-name build
-  overlap, exact duplicate errors, and provider-build failure isolation.
-  `pins: rust-catalog-registration/C-001`
-  `pins: rust-catalog-registration/C-002`
-  `pins: rust-catalog-registration/C-003`
-  `pins: rust-catalog-registration/C-004`
+- `mod.rs` — thin index (rustfmt module order).
+- `session.rs` — ported v1 session battery plus P2G R2 / A13 / metadata-enumeration pins.
+  Child: [session/catalog_registration.rs](session/map.md).
+- `aws_gate.rs` — E-2 offline AWS-gate pins.
+- `df_guard.rs` — seven DataFusion 54.1 guard pins.
+- `namespace_create.rs` — `create_namespace` location-guard pins (G-6 Q1 / R-6).
+- `a13.rs` — `file://` warehouse fallback-root pin.
 
 ## Pointers
 

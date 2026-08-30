@@ -70,7 +70,7 @@ or un-restored byte pins.
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | Scope A is one commit of `git mv` plus the minimal `mod` path edits that keep the tree compiling. No comment edits and no other content edits in that commit. | Rename detection; diff of non-path tokens empty except `mod` / `use` path lines. | **OPEN** | Q-001: destination `tests/mod.rs` files grow if they gain sibling `mod` lines. |
+| C-001 | Scope A is one commit of `git mv` plus the minimal `mod` path edits that keep the tree compiling. No comment edits and no other content edits in that commit. | Rename detection; diff of non-path tokens empty except `mod` / `use` path lines. | **PROVEN** | Q-001 alternative: thin `tests/mod.rs` indexes; batteries `git mv` with unchanged line counts. rustfmt alphabetizes `mod` lines. |
 | C-002 | Every comment block in the five-slice roster receives the one-line rule. | Per-slice file coverage; before/after comment census. | **OPEN** | Slices run after Scope A. |
 | C-003 | Protected inventory is preserved: `grep -c` of `Model:`, `pins:`, `MUTATION:` per rostered file is identical before and after each slice. | Per-slice inventory tables. | **OPEN** | Pickup repo-wide counts: Model 28, MUTATION 31. |
 | C-004 | No executable change: identifiers, signatures, control flow, literals, test inputs, assertions, attributes, and dependencies stay. | Equivalence harness at `/tmp/grok-worker/cc3/equiv.py` plus crate tests. | **OPEN** | Harness not yet run. |
@@ -79,7 +79,7 @@ or un-restored byte pins.
 | C-007 | One PR. `make verify` and `make preflight` exit 0. | Recorded commands and exit codes. | **OPEN** | After the last slice. |
 | C-008 | Closing Critic attestation. | Orchestrator Critic. | **OPEN** | Actor does not close this clause. |
 
-VERDICT: OPEN (PROVEN=0, OPEN=8, REJECTED=0).
+VERDICT: OPEN (PROVEN=1, OPEN=7, REJECTED=0).
 
 ```yaml
 PROPORTIONALITY_RUBRIC:

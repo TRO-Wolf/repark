@@ -13,8 +13,8 @@ use iceberg::spec::{NestedField, PrimitiveType, Schema, Type};
 use iceberg::{Catalog, NamespaceIdent, TableCreation, TableIdent};
 use tempfile::TempDir;
 
-use super::builders::memory_catalog;
-use super::provider::NamespaceScopedCatalog;
+use super::super::builders::memory_catalog;
+use super::super::provider::NamespaceScopedCatalog;
 
 // === Boxed future alias matching provider.rs (desugared Catalog methods) =====================
 

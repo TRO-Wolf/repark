@@ -1246,15 +1246,4 @@ impl std::fmt::Debug for ReparkSession {
 }
 
 #[cfg(test)]
-mod aws_gate_tests;
-
-#[cfg(test)]
-mod df_guard_tests;
-
-#[cfg(test)]
-mod namespace_create_tests;
-
-#[cfg(test)]
-mod a13_tests;
-#[cfg(test)]
 mod tests;

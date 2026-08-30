@@ -1,4 +1,4 @@
-use super::*;
+use super::super::*;
 
 use iceberg::spec::{NestedField, PrimitiveType, Schema, Type};
 use iceberg::{Catalog, NamespaceIdent, TableCreation};
@@ -1699,11 +1699,11 @@ async fn rebuild_with_different_catalog_arc_rebinds_provider() {
 
 /// Snapshot handle for one test's `catalog.*` span capture; clears the thread's capture
 /// slot on drop so one test cannot leak into another.
-struct CaptureGuard(std::sync::Arc<crate::test_tracing::SpanFieldCapture>);
+struct CaptureGuard(std::sync::Arc<crate::tests::tracing::SpanFieldCapture>);
 
 impl Drop for CaptureGuard {
     fn drop(&mut self) {
-        crate::test_tracing::clear_catalog_capture_slot();
+        crate::tests::tracing::clear_catalog_capture_slot();
     }
 }
 
@@ -1713,7 +1713,7 @@ impl CaptureGuard {
     }
 }
 
-use crate::test_tracing::SpanEvent;
+use crate::tests::tracing::SpanEvent;
 
 /// ===========================================================================================
 /// Begin capturing `catalog.*` spans on this thread (process-global subscriber, installed once).
@@ -1729,7 +1729,7 @@ use crate::test_tracing::SpanEvent;
 /// capture private; `#[tokio::test]` is current-thread, so the span is always created on the
 /// capturing thread). Every assertion below is byte-unchanged from v1.
 fn capture_catalog_spans() -> CaptureGuard {
-    CaptureGuard(crate::test_tracing::begin_catalog_capture())
+    CaptureGuard(crate::tests::tracing::begin_catalog_capture())
 }
 
 /// Live list + register emit `catalog.*` spans (hang localization for catalog edge).

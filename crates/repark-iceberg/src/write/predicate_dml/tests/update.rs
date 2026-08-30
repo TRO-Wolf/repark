@@ -19,7 +19,7 @@ use iceberg::spec::{
 use iceberg::{Catalog, CatalogBuilder, NamespaceIdent, TableCreation, TableIdent};
 use tempfile::TempDir;
 
-use super::{
+use super::super::{
     IsolationLevel, WRITE_UPDATE_ISOLATION_LEVEL, commit_overwrite, resolve_update_isolation, *,
 };
 

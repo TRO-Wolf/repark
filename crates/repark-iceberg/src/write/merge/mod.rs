@@ -2552,14 +2552,4 @@ pub(crate) fn iceberg_err(err: iceberg::Error) -> DataFusionError {
 }
 
 #[cfg(test)]
-mod occ_conflict_tests;
-#[cfg(test)]
-mod occ_tests;
-#[cfg(test)]
-mod parallel_write_tests;
-#[cfg(test)]
-mod streaming_scan_tests;
-#[cfg(test)]
-mod streaming_tests;
-#[cfg(test)]
 mod tests;

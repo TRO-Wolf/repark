@@ -1,4 +1,4 @@
-use super::*;
+use super::super::*;
 use arrow::array::{Date32Array, Int32Array, RecordBatch, StringArray};
 use arrow::datatypes::{DataType, Field, Schema};
 use datafusion::error::DataFusionError;

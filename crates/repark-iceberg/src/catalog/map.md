@@ -61,11 +61,7 @@ Source comments retain only API and safety contracts; implementation narration i
   residual). Hosts `NamespaceScopedCatalog` (G17 closed): 14 required
   + 13 of 16 defaulted `Catalog` methods are explicit forwards; 3 composition defaults are
   stated omissions at pin `5e7b2e4` (see crate-root map "Known limitations").
-- `namespace_scoped_tests.rs` — G17 wrapper pins (file-backed): `publish_replace_table`
-  reaches a spy inner; `name()` returns the inner value; stated-omission
-  `update_namespace_properties` composes via forwarded `get_namespace`/`update_namespace`;
-  `list_views` reaches the inner (not `FeatureUnsupported`).
-- `tests.rs` — the file-backed unit battery (all AWS-free): CTAS reality, AWS-builder
+- [tests/](tests/map.md) — G17 wrapper pins and the file-backed unit battery (all AWS-free): CTAS reality, AWS-builder
   validation + namespace construction, live-list staleness pins, O(1) invalidation pins,
   scheme-selection + key-identity partitions, span secret-hygiene pins, the fork-patch
   proof test (`fork_patch_in_effect_deletefilter_is_public` — names a fork-only public symbol,

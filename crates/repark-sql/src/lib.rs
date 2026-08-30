@@ -33,12 +33,4 @@ mod delete_granularity;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
-mod v3_branch_tag_time_travel;
-#[cfg(test)]
-mod v3_cow;
-#[cfg(test)]
-mod v3_create;
-#[cfg(test)]
-mod v3_partitioned_equality_deletes;
-#[cfg(test)]
-mod v3_types;
+mod v3;

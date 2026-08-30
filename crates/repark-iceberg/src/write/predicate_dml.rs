@@ -1279,7 +1279,4 @@ fn object_name_parts(name: &ObjectName) -> Vec<String> {
 }
 
 #[cfg(test)]
-mod predicate_dml_tests;
-
-#[cfg(test)]
-mod predicate_dml_update_tests;
+mod tests;

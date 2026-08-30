@@ -30,11 +30,11 @@ v1 crate-root re-export lists.
   `tracing-subscriber` (registry). The `iceberg*` family is sourced from the owned fork via the
   workspace `[patch.crates-io]`.
 - `src/lib.rs` — thin manifest: `pub mod catalog; pub mod write;` + the union re-export lists
-  (+ the file-backed `#[cfg(test)] mod test_tracing;`).
-- `src/test_tracing.rs` — shared test-only tracing harness (forced-edit class 6): ONE global
+  (+ the file-backed `#[cfg(test)] mod tests;`).
+- `src/tests/tracing.rs` — shared test-only tracing harness (forced-edit class 6): ONE global
   subscriber carrying both v1 capture layers (catalog span-field capture + merge span-name
-  recorder), installed once via a tolerant `Once`; accessors used by `catalog/tests.rs` and
-  `write/merge/streaming_scan_tests.rs`.
+  recorder), installed once via a tolerant `Once`; accessors used by `catalog/tests/catalog.rs` and
+  `write/merge/tests/streaming_scan.rs`.
 - `src/catalog/`, `src/write/` — see [src/map.md](src/map.md) and the per-module maps.
 
 ## I want to...
@@ -88,7 +88,7 @@ v1 crate-root re-export lists.
     (`update_namespace_properties` / `set_namespace_properties` /
     `remove_namespace_properties`) are **stated omissions**: the trait defaults compose only
     from methods already forwarded. Pins live in
-    `src/catalog/namespace_scoped_tests.rs`. **Repin duty:** re-enumerate the fork trait
+    `src/catalog/tests/namespace_scoped.rs`. **Repin duty:** re-enumerate the fork trait
     surface; a method that newly gains a real override (no longer a pure composition default)
     becomes an explicit forward.
     pins: rp-1-fork-repin/C-001, C-002, C-003
@@ -135,7 +135,7 @@ v1 crate-root re-export lists.
 |---|---|
 | Catalog registration / listing / staleness issues | [src/catalog/map.md](src/catalog/map.md#debug) |
 | MERGE / append / overwrite / ALTER issues | [src/write/map.md](src/write/map.md#debug) |
-| Fork-pin doubt (crates.io fallback?) | `src/fork_pin_tests.rs` (exercises fork-only `plan_commit_base_load`) + the ported name-only proof in `src/catalog/tests.rs` — neither compiles against crates.io iceberg 0.9.1 |
+| Fork-pin doubt (crates.io fallback?) | `src/tests/fork_pin.rs` (exercises fork-only `plan_commit_base_load`) + the ported name-only proof in `src/catalog/tests/catalog.rs` — neither compiles against crates.io iceberg 0.9.1 |
 
 First checks: `cargo test -p repark-iceberg` (all AWS-free on `MemoryCatalog`). Escalate to:
 [../map.md#debug](../map.md).

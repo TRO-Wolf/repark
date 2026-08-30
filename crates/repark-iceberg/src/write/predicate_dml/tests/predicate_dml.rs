@@ -19,7 +19,7 @@ use iceberg::spec::{
 use iceberg::{Catalog, CatalogBuilder, NamespaceIdent, TableCreation, TableIdent};
 use tempfile::TempDir;
 
-use super::{IsolationLevel, WRITE_DELETE_ISOLATION_LEVEL, resolve_delete_isolation, *};
+use super::super::{IsolationLevel, WRITE_DELETE_ISOLATION_LEVEL, resolve_delete_isolation, *};
 
 fn parse_statement(sql: &str) -> Statement {
     Parser::parse_sql(&GenericDialect {}, sql)

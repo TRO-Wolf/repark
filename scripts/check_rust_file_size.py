@@ -42,11 +42,11 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split structural cases from list and refusal cases with an identity check.",
     ),
     "crates/repark-core/src/session.rs": (
-        1260,
+        1249,
         "The session root still combines construction, planning, and execution entry points.",
         "Extract one existing responsibility when a charter already changes that region.",
     ),
-    "crates/repark-core/src/session/tests.rs": (
+    "crates/repark-core/src/session/tests/session.rs": (
         1415,
         "Session behavior scenarios remain in one file-backed test module.",
         "Split by configuration, planning, and execution scenario families.",
@@ -66,7 +66,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Calendar and timestamp Spark-semantics functions share one module.",
         "Split calendar extractors from timezone-aware timestamp functions.",
     ),
-    "crates/repark-iceberg/src/catalog/tests.rs": (
+    "crates/repark-iceberg/src/catalog/tests/catalog.rs": (
         1930,
         "Memory, Glue, and S3 Tables catalog adapter tests share one battery.",
         "Split tests by catalog backend with shared helpers kept local.",
@@ -82,29 +82,29 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Extract writer preparation from transaction commit assembly.",
     ),
     "crates/repark-iceberg/src/write/merge/mod.rs": (
-        2565,
+        2555,
         "The RePark-owned MERGE executor combines plan, COW, and MOR paths.",
         "Split plan preparation from COW and MOR execution modules.",
     ),
-    "crates/repark-iceberg/src/write/merge/occ_conflict_tests.rs": (
-        1085,
-        "Optimistic-concurrency conflict cases share one scenario battery.",
-        "Split retryable conflicts from terminal conflict cases.",
+    "crates/repark-iceberg/src/write/merge/tests/merge.rs": (
+        1139,
+        "General MERGE behavior cases remain in one file-backed module.",
+        "Split common plan cases from write-mode-specific cases.",
     ),
-    "crates/repark-iceberg/src/write/merge/occ_tests.rs": (
+    "crates/repark-iceberg/src/write/merge/tests/occ.rs": (
         1009,
         "Optimistic-concurrency happy paths narrowly exceed the default.",
         "Extract shared setup or split by commit-attempt scenario.",
     ),
-    "crates/repark-iceberg/src/write/merge/streaming_scan_tests.rs": (
+    "crates/repark-iceberg/src/write/merge/tests/occ_conflict.rs": (
+        1085,
+        "Optimistic-concurrency conflict cases share one scenario battery.",
+        "Split retryable conflicts from terminal conflict cases.",
+    ),
+    "crates/repark-iceberg/src/write/merge/tests/streaming_scan.rs": (
         3365,
         "Streaming MERGE scan and rewrite scenarios share one test battery.",
         "Split position-delete, rewrite, and scan-shape scenario families.",
-    ),
-    "crates/repark-iceberg/src/write/merge/tests.rs": (
-        1139,
-        "General MERGE behavior cases remain in one file-backed module.",
-        "Split common plan cases from write-mode-specific cases.",
     ),
     "crates/repark-iceberg/src/write/overwrite.rs": (
         1148,
@@ -117,11 +117,11 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Extract row-position selection from delete-file emission.",
     ),
     "crates/repark-iceberg/src/write/predicate_dml.rs": (
-        1285,
+        1282,
         "Predicate DELETE and UPDATE planning share one adapter.",
         "Split predicate validation from operation-specific plan construction.",
     ),
-    "crates/repark-iceberg/src/write/predicate_dml/predicate_dml_tests.rs": (
+    "crates/repark-iceberg/src/write/predicate_dml/tests/predicate_dml.rs": (
         1448,
         "Predicate DML scenarios share one consolidated test module.",
         "Split DELETE and UPDATE scenario families with shared setup retained.",

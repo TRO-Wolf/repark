@@ -11,7 +11,7 @@ use iceberg::{CatalogBuilder, NamespaceIdent, TableCreation};
 use crate::write::position_delete::PositionDeletePair;
 use tempfile::TempDir;
 
-use super::*;
+use super::super::*;
 
 /// A [`PartitionStream`] over a scripted batch list that counts how many batches it has
 /// PRODUCED (yielded on a poll) — the streaming-target analogue of the F-BR-4
@@ -1586,7 +1586,7 @@ async fn mor_merge_emits_five_phase_spans_with_commit_last() {
     // global install live in `crate::test_tracing`; the recorder's semantics (global
     // subscriber, `merge.trace_test_root`-descended `merge.*` spans only) are v1's,
     // unchanged, and every assertion below is byte-unchanged from v1.
-    let recorded = crate::test_tracing::merge_span_names();
+    let recorded = crate::tests::tracing::merge_span_names();
     recorded.lock().expect("span name lock").clear();
 
     let warehouse = TempDir::new().expect("temp warehouse");

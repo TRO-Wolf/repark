@@ -1,6 +1,6 @@
 //! A13: `file://` warehouse strings on the `register_memory_catalog` product path.
 
-use super::*;
+use super::super::*;
 use crate::LocationPolicy;
 
 /// Skipping `memory_warehouse_fallback_root` at registration (plain `PathBuf::from(warehouse)`)

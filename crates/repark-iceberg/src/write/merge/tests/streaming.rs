@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use datafusion::arrow::array::Int32Array;
 use datafusion::arrow::datatypes::{DataType, Field, Schema as ArrowSchema};
 
-use super::*;
+use super::super::*;
 
 /// A one-column `Int32` batch (`id`) — a trivial payload; the interleaving pin's writer discards
 /// the bytes and only counts writes, so the values never leave the driver.

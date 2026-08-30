@@ -13,7 +13,7 @@ Charter: `planning/grok/BRIEF-x4-g17-catalog-forwards.md` (conductor overnight #
 | Artifact | Role |
 |---|---|
 | [`crates/repark-iceberg/src/catalog/provider.rs`](../../../../crates/repark-iceberg/src/catalog/provider.rs) | `NamespaceScopedCatalog`: explicit forwards for 13 defaulted methods + 3 stated omissions; HIGH `publish_replace_table` forwards |
-| [`crates/repark-iceberg/src/catalog/namespace_scoped_tests.rs`](../../../../crates/repark-iceberg/src/catalog/namespace_scoped_tests.rs) | 4 file-backed wrapper pins (spy/memory) |
+| [`crates/repark-iceberg/src/catalog/namespace_scoped_tests.rs`](../../../../crates/repark-iceberg/src/catalog/tests/namespace_scoped.rs) | 4 file-backed wrapper pins (spy/memory) |
 | [`crates/repark-iceberg/src/catalog/mod.rs`](../../../../crates/repark-iceberg/src/catalog/mod.rs) | wires `#[cfg(test)] mod namespace_scoped_tests` |
 | map lockstep | crate-root + `src/catalog/map.md` Known-limitations / Contents |
 | this ledger | linked from [`task/map.md`](../../../map.md) |

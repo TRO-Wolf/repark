@@ -252,7 +252,7 @@ Supported surface, for reference:
   `write.merge.mode` flips changes which snapshots an `IncrementalAppendScan` (CDC-style
   consumer) sees, so the stamp is a visibility contract worth declaring. *(oracle: documented —
   audit M20.)*
-- **Pin** — `crates/repark-iceberg/src/write/merge/occ_conflict_tests.rs`
+- **Pin** — `crates/repark-iceberg/src/write/merge/tests/occ_conflict.rs`
   `merge_insert_only_cow_stamps_append_m20` / `merge_insert_only_mor_stamps_overwrite_m20`
   (plus the mixed/delete-only stamps in the same battery).
 - **Rationale** — DECLARED. The stamps match Spark class-for-class; the row exists to warn CDC
@@ -266,7 +266,7 @@ Supported surface, for reference:
   MERGE with a conflict error.
 - **Apache Spark** — scopes serializable validation to a filter derived from the scan, so the
   same unrelated-partition append commits. *(oracle: documented — audit M15.)*
-- **Pin** — `crates/repark-iceberg/src/write/merge/occ_conflict_tests.rs`
+- **Pin** — `crates/repark-iceberg/src/write/merge/tests/occ_conflict.rs`
   `commit_serializable_merge_rejects_concurrent_append_in_a_different_partition_m15` (and the
   snapshot-isolation contrast cases beside it; `write.merge.isolation-level = snapshot` (#117)
   is the user-facing relief valve).
@@ -593,7 +593,7 @@ them, and the document is ordered by surface, never by date.
   scenario.)*
 - **Pin** —
   `crates/repark-spark/src/tests/create_table.rs::v3_type_columns_geometry_geography_variant_refuse_naming_the_type`
-  (ANSI twin of the same name in `crates/repark-sql/src/v3_types.rs`; facade
+  (ANSI twin of the same name in `crates/repark-sql/src/v3/types.rs`; facade
   `python/repark/tests/test_v3_create_opt_in.py::test_v3_geometry_geography_variant_columns_refuse_naming_the_type`)
 - **Rationale** — DECLARED, owner-dated 2026-08-25. Spatial types are fork work (F-15 → R89)
   with no consumer on the v1.0 path; the ruling keeps the gate honest instead of silent.
@@ -1981,7 +1981,7 @@ the pin rather than obeying it.
 - **Pin** —
   `crates/repark-spark/src/tests/call_register.rs::call_register_table_of_hadoop_named_metadata_writes_name_the_convention`
   (Spark door),
-  `crates/repark-sql/src/v3_cow.rs::ansi_hadoop_named_metadata_write_bumps_to_the_next_hadoop_pointer`
+  `crates/repark-sql/src/v3/cow.rs::ansi_hadoop_named_metadata_write_bumps_to_the_next_hadoop_pointer`
   (ANSI door)
 - **Rationale** — retired. The owned fork closed Hadoop pointer math; this engine consumed
   it at `d408da42`.
@@ -2028,7 +2028,7 @@ the pin rather than obeying it.
   (`adopted_v3_cow_second_delete_refuses_before_lineage_diverges`,
   `adopted_v3_mor_delete_commits_a_puffin_deletion_vector`,
   `adopted_v3_mor_second_delete_merges_into_the_live_deletion_vector`, the UPDATE / MERGE
-  refusals and the v2 control in the same leaf; ANSI twins in `crates/repark-sql/src/v3_cow.rs`
+  refusals and the v2 control in the same leaf; ANSI twins in `crates/repark-sql/src/v3/cow.rs`
   including `adopted_v3_mor_first_delete_commits_a_deletion_vector_and_a_second_merges`;
   partitioned cells in `crates/repark-spark/src/tests/v3e3.rs`; facade
   `python/repark/tests/test_v3_cow_dml.py`; live-DV UPDATE refuse in

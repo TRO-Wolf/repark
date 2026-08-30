@@ -23,7 +23,7 @@ use iceberg::transaction::{ApplyTransactionAction, Transaction};
 use iceberg::{Catalog, CatalogBuilder, NamespaceIdent, TableCreation, TableIdent};
 use tempfile::TempDir;
 
-use super::{
+use super::super::{
     IsolationLevel, OPERATION_ID_PROP, RowDeltaKind, RowDeltaPolicy, commit, commit_row_delta,
     commit_row_delta_kind, write_data_files,
 };

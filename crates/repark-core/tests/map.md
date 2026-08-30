@@ -4,7 +4,7 @@
 
 Integration tests exercising `repark-core` through its PUBLIC API only (`ReparkSession` +
 the `context()` escape hatch). Unit batteries that need crate internals live in the
-in-crate `<module>/tests.rs` files (e.g. `../src/session/tests.rs`); this directory is for
+in-crate `<module>/tests/` files (e.g. `../src/session/tests/session.rs`); this directory is for
 behavior only reachable end-to-end.
 
 ## Contents

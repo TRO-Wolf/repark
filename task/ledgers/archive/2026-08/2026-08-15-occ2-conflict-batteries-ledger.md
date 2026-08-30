@@ -56,7 +56,7 @@ characterizations. Engine is the freeze recipe: MERGE `commit` /
 
 ## 1. Implementation
 
-- New sibling [`crates/repark-iceberg/src/write/merge/occ_conflict_tests.rs`](../../../../crates/repark-iceberg/src/write/merge/occ_conflict_tests.rs)
+- New sibling [`crates/repark-iceberg/src/write/merge/occ_conflict_tests.rs`](../../../../crates/repark-iceberg/src/write/merge/tests/occ_conflict.rs)
   (split rather than grow `occ_tests.rs` past 1500).
 - `#[cfg(test)] mod occ_conflict_tests;` in `merge/mod.rs` (test-module wire
   only; production commit region untouched).

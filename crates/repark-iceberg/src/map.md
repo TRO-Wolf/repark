@@ -18,11 +18,7 @@ Source comments are condensed to API and safety contracts; executable behavior i
   session-refresh adapter (`catalog_ops.rs`). See [catalog/map.md](catalog/map.md).
 - `write/` — MERGE INTO / identity DELETE+UPDATE (`predicate_dml`) / append / overwrite / ALTER /
   snapshot refs over the owned fork. See [write/map.md](write/map.md).
-- `fork_pin_tests.rs` — `cfg(test)`-only fork-pin proof (ADR-0001): names + exercises
-  fork-only public API (`iceberg::plan_commit_base_load` / `CommitBaseLoadPlan`), so the test
-  target compile-fails on a silent crates.io registry fallback.
-- `test_tracing.rs` — `cfg(test)`-only shared tracing harness (one global subscriber, both
-  cohorts' capture layers; forced-edit class 6 — see docs/design/session-api.md §5).
+- [tests/](tests/map.md) — crate-root test modules: fork-pin proof and shared tracing harness.
 
 ## I want to...
 
@@ -31,7 +27,7 @@ Source comments are condensed to API and safety contracts; executable behavior i
 | Catalog wiring | [catalog/map.md](catalog/map.md) |
 | Write paths | [write/map.md](write/map.md) |
 | Re-export surface | `lib.rs` |
-| Span-capture in tests records nothing | `test_tracing.rs` (one global subscriber; install via its accessors, never `set_global_default` directly) |
+| Span-capture in tests records nothing | `tests/tracing.rs` (one global subscriber; install via its accessors, never `set_global_default` directly) |
 
 ## Pointers
 

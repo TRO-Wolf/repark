@@ -8,7 +8,7 @@ use iceberg::{
 };
 use tokio::sync::Barrier;
 
-use super::super::*;
+use super::super::super::*;
 
 #[derive(Debug)]
 struct ControlledCatalog {
