@@ -595,7 +595,14 @@ These procedures run against every catalog, including Glue and S3 Tables.
 compaction and snapshot expiry, which commits alongside yours. When the service rewrites a file
 that one of your in-flight position deletes refers to, Iceberg's validation catches it and the
 commit fails. That is the concurrency control working. Your table is not damaged, and re-running
-the procedure is the correct response.
+the procedure is the correct response. The acceptance helper retries a commit conflict a
+bounded number of times (three) and records the retry count.
+
+**Scratch tables keep S3 Tables automatic snapshot management on.** Do not add a branch, a tag,
+or a `history.expire.*` property on those tables. The engine's `expire_snapshots` and the
+service's expiry may run at the same time. MW-10 records the snapshot log before and after
+the engine's expire, and whether the two disagree on the table's current snapshot.
+Measured result: pending the first owner dispatch after merge (the orchestrator fills this).
 
 Anything else refuses and lists what is supported, rather than pretending:
 

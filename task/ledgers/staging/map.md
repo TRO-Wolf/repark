@@ -12,12 +12,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   [../docs/design/spark-function-parity.md](../../../docs/design/spark-function-parity.md); CAP-1
   appends a compatibility note that points its dated file-size premise at the live guards; slate:
   [../briefs/spark-function-parity.md](../../../briefs/spark-function-parity.md).
-- [mw-10-s3tables-mor-ledger.md](mw-10-s3tables-mor-ledger.md) — **MW-10 (2026-08-28), drafted
-  for the owner's gate:** the S3 Tables merge-on-read leg the intake called "MW-4b" (that ledger
-  id is taken by the archived Glue metadata-rewrite unit). Measure-first on OD-3b: the Glue
-  maintenance helper against the table bucket, a bounded retry for service-side compaction, and
-  the one question the ruling left open — whether `s3tables:PutTableData` lets `expire_snapshots`
-  remove files; a denial is a stop. Six clauses, all OPEN.
+- [mw-10-s3tables-mor-ledger.md](mw-10-s3tables-mor-ledger.md) — **MW-10 (2026-08-28), in
+  flight:** the S3 Tables merge-on-read leg the intake called "MW-4b". Measure-first on OD-3b.
+  C-002, C-003, C-004 PROVEN (test twin, bounded retry, snapshot-log record). C-001, C-005,
+  C-006 stay OPEN for the owner dispatch.
 - [sem-0-charter-ledger.md](sem-0-charter-ledger.md) — **SEM-0 (2026-08-21), queued and HELD at
   its approval gate:** the scope audit for closing the two silently wrong answers the low-risk
   sweep registered rather than fixed — `RE-1` (`regexp_extract_all` defaults to capture group 0,
