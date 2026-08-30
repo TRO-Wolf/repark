@@ -361,7 +361,7 @@ where
     fanout.close().await.map_err(iceberg_err)
 }
 
-/// One stamped `fast_append` commit: ENGINE_CONTRACT §4 INSERT/append with MERGE's stamp class.
+/// One stamped `fast_append` commit: `ENGINE_CONTRACT` §4 INSERT/append with MERGE's stamp class.
 /// # Errors
 /// Returns the fork's transaction/commit error (folded to this crate's error type) when the append
 pub async fn commit_append(

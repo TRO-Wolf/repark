@@ -227,7 +227,7 @@ pub fn try_allowed_update_in(statement: &Statement) -> Result<Option<AllowedDele
 
 /// Execute an identity DELETE or UPDATE: SELECT over the pinned scratch, then COW-rewrite or `MoR`
 /// # Errors
-/// Planning, write, or commit errors, plus `NotImplemented` for non-Parquet or non-V2 MoR.
+/// Planning, write, or commit errors, plus `NotImplemented` for non-Parquet or non-V2 `MoR`.
 pub async fn execute_predicate_dml(
     ctx: &SessionContext,
     catalog: &Arc<dyn Catalog>,

@@ -61,7 +61,7 @@ pub async fn glue_catalog<S: BuildHasher>(
     .await
 }
 
-/// Build the AWS S3 Tables Iceberg catalog from `props` over the fork's S3TablesCatalogBuilder.
+/// Build the AWS S3 Tables Iceberg catalog from `props` over the fork's `S3TablesCatalogBuilder`.
 /// # Errors
 /// Returns an error if `table_bucket_arn` is absent/empty or the fork builder rejects config.
 pub async fn s3tables_catalog<S: BuildHasher>(
