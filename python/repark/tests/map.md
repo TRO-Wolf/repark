@@ -2194,7 +2194,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `F.expr` over every family. The C-012 "unsupported" strip-check covers all four
   FNP-16 family sections. C-013 member sets are asserted against an independent
   census literal in the test, not against `functions_declared` tuples. pins: fnp-15-16/C-001,
-  C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-015, C-016, C-017
+  C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-016, C-017
+- FNP-15/16 C-015 — gates live in the execution-record table of
+  [fnp-15-16-ledger.md](../../../task/ledgers/staging/fnp-15-16-ledger.md), not in the
+  refuse tests. pins: fnp-15-16/C-015
 - `test_fnp_critic_remediation.py` — **Critic round 1 (2026-08-20):** regression pins for the
   findings two independent adversarial passes raised on this branch, including the S0 (nested
   higher-order functions returned an inverted boolean), the `ascending=` override matrix, the
