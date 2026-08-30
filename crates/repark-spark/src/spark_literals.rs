@@ -1,4 +1,4 @@
-//! Spark string-literal canonicalisation at the Spark SQL front door.
+//! The rules (Spark 4.1.2, `<pyspark-4.1.2-oracle>`): backslash KEPT; one astral char.
 
 use std::any::TypeId;
 use std::borrow::Cow;

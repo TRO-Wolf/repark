@@ -38,7 +38,8 @@ pub async fn execute_with_read_only<S: std::hash::BuildHasher>(
     sql: &str,
     read_only_catalogs: &HashSet<String, S>,
 ) -> Result<DataFrame> {
-    // Canonicalize once at the Spark SQL front door.
+    // Canonicalize once at the Spark SQL front door so later tokenizers cannot re-process escapes.
+    // Translate downstream parser locations back to the caller's SQL before returning an error.
     let canonical = crate::spark_literals::canonicalize(sql)?;
     let canonical_sql = canonical.as_ref();
     // Clone the registry snapshot so P11 survives `.await` thread hops.
