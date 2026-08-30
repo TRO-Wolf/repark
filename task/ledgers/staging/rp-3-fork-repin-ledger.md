@@ -995,3 +995,113 @@ FINDING:
 ```
 
 The C7 refuse is the charter-legal disposition of a measured red cell, not a waiver of a live write. Severity of the underlying fork defect is S1; the engine does not ship the silent rewrite.
+
+## 14. Critic review (procedural context break)
+
+Context break executed; attacking artifacts, not memory. Procedural in-session break (binding
+`context_break_mechanics`). Novel public-door execution is `{SCRATCH}/critic-novel.txt`.
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: rp-3-fork-repin
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: >
+        Walked C-001..C-011 against the frozen charter. C-006 measured red (8 delete files)
+        is recorded; the pin was not flipped to a false zero. C-007 kept B-MOR-3 after the
+        R136 conversion no-op. C-004 C7 is refused, not claimed Spark-equal.
+      artifacts: [task/ledgers/staging/rp-3-fork-repin-ledger.md:C-001..C-011]
+    - id: AT-2
+      status: ATTACKED
+      evidence: >
+        DV matrix cells include DV-free, live DV, shared Puffin, cross-partition, eq-delete+DV,
+        sequential COW, live-DV UPDATE. Hadoop v1 and S3 Tables register empty metadata_file
+        refusals already pinned.
+      artifacts: [crates/repark-spark/src/tests/v3e3.rs, crates/repark-spark/src/tests/call_register.rs]
+    - id: AT-3
+      status: ATTACKED
+      evidence: >
+        Pre-write refusals leave snapshot, rows, and fixture bytes unchanged (C-004 C7/C8).
+        Occupied-ident register_table does not swap the pointer.
+      artifacts: [crates/repark-sql/src/v3_cow.rs, crates/repark-spark/src/tests/v3e4.rs]
+    - id: AT-4
+      status: ATTACKED
+      evidence: >
+        Fixture DirLocks serialize Hadoop copies. C-003 sibling sequence stamping on RowDelta
+        remains. No new shared mutable state.
+      artifacts: [crates/repark-iceberg/src/write/merge/dv_close.rs]
+    - id: AT-5
+      status: ATTACKED
+      evidence: >
+        S3 Tables register_table refuses before AWS. iceberg_to_datafusion no longer rewrites
+        Hadoop names. Catalog spans still key-names only.
+      artifacts: [crates/repark-spark/src/tests/call_register.rs::call_register_table_on_s3_tables_names_the_dated_service_gap]
+    - id: AT-6
+      status: ATTACKED
+      evidence: >
+        C7 lineage rewrite is refused. C-005 rewrite_data_files still reassigns; guard stays.
+        C-006 1e7 census still 8 delete files / 10M records. Hadoop write bumps vN to v(N+1).
+      artifacts: [python/repark/tests/test_mw7_scale_smoke.py, crates/repark-spark/src/tests/v3_cow.rs]
+    - id: AT-7
+      status: N/A
+      justification: No system-breaking resource change; 1e7 measurement is evidence, not a product path change.
+    - id: AT-8
+      status: ATTACKED
+      evidence: >
+        Fork R114 public live_deletion_vectors_by_data_file; R136 v3 conversion arm measured;
+        MetadataLocation Hadoop bump consumed; write_default unset by engine.
+      artifacts: [python/repark/tests/test_rp3_c009_write_default.py, crates/repark-iceberg/src/write/map.md]
+    - id: AT-9
+      status: ATTACKED
+      evidence: >
+        B-MOR-3 and V3-COW-1 refusals name the row and the reason. S3T-1 names R126.
+      artifacts: [crates/repark-spark/src/call.rs, docs/spark-sql-iceberg-parity.md]
+    - id: AT-10
+      status: ATTACKED
+      evidence: >
+        Clause pins exist for every PROVEN row. Novel Critic input DELETE id=6 on partitioned
+        DV kept sibling rows; Arrow types int32/string/int32.
+      artifacts: [task/ledgers/staging/rp-3-fork-repin-ledger.md §14]
+  reattested: []
+  complete: true
+```
+
+Novel public-door execution, 2026-08-30. Committed pins use `id=1`, `id=3`,
+`IN (1,4)`; `id=6` is absent from the suite.
+
+Facade (`spark.sql` + `to_arrow`):
+- input: `DELETE FROM ice.sales.partdv WHERE id = 6`
+- expected: live `{(1,a,0),(3,c,0),(4,d,1)}`; Arrow int32/string/int32
+- observed: `[(1, 'a', 0), (3, 'c', 0), (4, 'd', 1)]` — NOVEL_OK
+
+ANSI (`repark_sql::execute` on the same adopted fixture; throwaway, not committed):
+- input: `DELETE FROM ice.sales.partdv WHERE id = 6`
+- expected: live `{(1,a,0),(3,c,0),(4,d,1)}`
+- observed: test `v3_partitioned_equality_deletes::critic_novel_ansi_delete_id_6_keeps_sibling_rows` ok in 0.12s — NOVEL_OK
+
+Spark SQL door is the same dialect as the facade pin.
+
+```yaml
+SELF_LOGIC_REVIEW:
+  id: SLR-C-010-DOCS-LOCKSTEP
+  agent: Actor
+  action: restore emptied spark src map.md and truth-up C-010 docs; leave C-010/C-011 OPEN until preflight and departure
+  charter_trace: C-010, C-011
+  preconditions:
+    - C-001 through C-009 PROVEN: SATISFIED (ledger clause table)
+    - spark src map.md emptied in 4f88ef0: SATISFIED (HEAD blob e69de29; origin/main 244 lines)
+    - V3-COW-1 claimed live-DV DELETE still refuses: SATISFIED (registry text before this edit)
+  success_condition: map.md restored with the C-007 call.rs sentence versus 4f88ef0^; V3-COW-1 matches cells 1-8; C-010 and C-011 remain OPEN
+  step_risks:
+    - restoring map.md from memory: HANDLED(diff against 4f88ef0^ is the C-007 sentence only)
+    - STATUS Next and plan-1 drift: HANDLED(leave both for the departure commit)
+    - STATUS 25k ceiling: HANDLED(departure replaces Next RP-3, does not append)
+  contingencies:
+    - map-sync red: EXECUTABLE(additive map.md edit)
+    - grammar red on early attestation: EXECUTABLE(attestation is allowed while clauses remain OPEN)
+  tripwire_scan: CLEAN
+  uncertainty: NONE
+  verdict: PROCEED
+  escalation: —
+```

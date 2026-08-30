@@ -1,6 +1,7 @@
 """V3E-4: facade refs, time travel over DVs, expire/orphans on format-v3.
 
 pins: v3e-4-refs-time-travel/C-012, C-008, C-009, C-011, C-014
+pins: rp-3-fork-repin/C-004, C-011
 """
 
 from __future__ import annotations
@@ -162,6 +163,6 @@ def test_facade_v3_refs_time_travel_expire_orphan(tmp_path: Path) -> None:
             assert planted.is_file()
 
             with pytest.raises(UnsupportedOperationException, match="V3-COW-1"):
-                spark.sql(f"DELETE FROM {table} WHERE id = 1")
+                spark.sql(f"UPDATE {table} SET name = 'x' WHERE id = 3")
     finally:
         spark.stop()

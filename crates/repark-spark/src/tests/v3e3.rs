@@ -8,7 +8,7 @@
 //! is not a read entry point for these adopted tables (C-010).
 //!
 //! pins: v3e-3-partitioned-eqdel-fixtures/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-010, C-011, C-012, C-013
-//! pins: rp-3-fork-repin/C-004, C-007
+//! pins: rp-3-fork-repin/C-004, C-007, C-011
 
 use std::fs;
 use std::io::ErrorKind;
@@ -439,13 +439,10 @@ async fn partitioned_v3_dv_fork_rewrite_position_delete_files_measurement() {
         .load_table(&ident)
         .await
         .expect("load adopted partitioned DV table");
-    let first = iceberg::maintenance::RewritePositionDeleteFiles::new(table)
+    let first_result = iceberg::maintenance::RewritePositionDeleteFiles::new(table)
         .execute(catalog.as_ref())
-        .await;
-    let Ok(first_result) = first else {
-        let err = first.err().expect("error");
-        panic!("fork v3 RewritePositionDeleteFiles: {err}");
-    };
+        .await
+        .expect("fork v3 RewritePositionDeleteFiles must run");
     reregister(&ctx, Arc::clone(&catalog), "ice", "sales")
         .await
         .expect("invalidate after first rewrite");

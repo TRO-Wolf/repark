@@ -22,8 +22,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `feat/rp-3-fork-repin`:** one frozen fork repin at `d408da42` (F-17, F-14,
   F-7 U3, F-16, F-9, F-15, the public R114 DV API), the engine-side wiring of the fork's DV
   container closure — opt-in for callers, so the engine's own MOR path must make the call — and
-  the eight-cell DV input-state matrix on all three doors. Eleven clauses; C-001 through C-005
-  and C-007 through C-009 PROVEN; C-006/C-010/C-011 close at departure.
+  the eight-cell DV input-state matrix on all three doors. Eleven clauses; C-001 through C-009
+  PROVEN; C-010/C-011 close at departure.
 - [v3-3-dml-ledger.md](v3-3-dml-ledger.md) — **V3-3 (2026-08-30), chartered from RP-3 C-004
   red cells:** v3 `UPDATE` and `MERGE`. Sequential COW DELETE lineage (F-rp3-c7) is fork work,
   not this unit. Three OPEN clauses.

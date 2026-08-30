@@ -89,9 +89,9 @@ The delivery sequence lives in [docs/design/format-v3-track.md](../../../docs/de
 sibling closure in fork F-17 → take one fresh immutable RP-3 repin → V3-3 → V3-4 and V3-5 →
 the production gate. V3-6 may run beside V3-3 or V3-4 once its fork type support is pinned.
 
-**Engine lane.** RP-2 keeps only what its committed pins prove. In particular, a DV-free v3
-table may take one MOR DELETE, while any live-DV table refuses until F-17 lands. RP-3 owns the
-full DV input-state matrix and re-measures the row-lineage rewrite at its selected fork SHA.
+**Engine lane.** RP-2 kept the DV-free first DELETE. RP-3 (2026-08-30) consumed F-17 and
+measured the DV matrix: live-DV DELETE merge is green on three doors; a second COW DELETE after
+overwrite stays refused (F-rp3-c7); `rewrite_data_files` still reassigns (`V3-LINEAGE-1`).
 
 **Fork lane.** F-17 — path-keyed removal of one blob from a shared Puffin must carry every
 still-live sibling blob — landed as fork #237 on 2026-08-28, F-14 (Hadoop pointer writes) as

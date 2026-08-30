@@ -236,6 +236,12 @@ asserted through `collect` or `to_arrow`. RP-3 also re-measures `rewrite_data_fi
 the selected SHA. A red result becomes a fork or engine-owned finding before V3-5 charters; it
 is never treated as closed because fork row R166 is green.
 
+*Done 2026-08-30 — RP-3 at `d408da42`:* cells 1–6 green on all three doors. Cell 7: first COW
+DELETE is Spark-equal; a second after overwrite refuses (`V3-COW-1`, F-rp3-c7). Cell 8: live-DV
+UPDATE refuses. `rewrite_data_files` still reassigns (`V3-LINEAGE-1`, C-005).
+`rewrite_position_delete_files` stays refused (`B-MOR-3`, C-007). Hadoop writes FIXED
+(`V3-ADOPT-1`).
+
 ### Step 4 — deliver V3-3 and the guarded upgrade
 
 V3-3 completes MOR DELETE, UPDATE, and MERGE across partitioned and spec-evolved tables. It
@@ -268,12 +274,12 @@ blocked. They do not replace or delay a ready v3 unit.
 
 ## 6. Fork work this track needs
 
-1. **Shared-Puffin DV sibling closure (F-17)** — landed fork #237 (2026-08-28); the engine
-   consumes it in RP-3, which must call the closure from its own MOR DML path.
-2. **Row lineage through `RewriteDataFiles`** remains an executed question. RP-2 measured a full
-   reassignment at `ce92a7bf`; RP-3 re-runs it before assigning the fix to the fork or engine.
+1. **Shared-Puffin DV sibling closure (F-17)** — landed fork #237 (2026-08-28); RP-3 (2026-08-30)
+   wired `close_touched_dv_containers` on the engine MOR path; matrix cell (4) is green.
+2. **Row lineage through `RewriteDataFiles`** remains open. RP-3 re-measured at `d408da42`
+   (C-005): still reassigns; `V3-LINEAGE-1` stays. The lift belongs to V3-5.
 3. **`MetadataLocation` Hadoop pointer math (F-14)** — landed fork #235 (2026-08-28): Hadoop
-   `vN` parses and bumps to `v(N+1).metadata.json`; RP-3 retargets the engine pin.
+   `vN` parses and bumps to `v(N+1).metadata.json`; RP-3 retargeted the engine pin (`V3-ADOPT-1` FIXED).
 4. **V3 schema and IO support (F-15)** gates each V3-6 type independently.
 
 The FNP and TA performance campaigns consume none of these fork surfaces.

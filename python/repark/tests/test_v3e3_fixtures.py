@@ -1,7 +1,7 @@
 """V3E-3: facade reads of Spark-written partitioned v3 DV and equality-delete fixtures.
 
 pins: v3e-3-partitioned-eqdel-fixtures/C-009, C-010
-pins: rp-3-fork-repin/C-004, C-007
+pins: rp-3-fork-repin/C-004, C-007, C-011
 """
 
 from __future__ import annotations

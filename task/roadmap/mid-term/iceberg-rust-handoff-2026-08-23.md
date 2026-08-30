@@ -417,7 +417,9 @@ increments.
 
 ### F-16 (P1, added 2026-08-24 from MW-7) — `RewriteDataFiles`: the delete-RATIO candidate clause
 
-*Landed fork #232 (2026-08-27) with v3 DV removal accounting; taken by **RP-3** (C-006).*
+*Landed fork #232 (2026-08-27) with v3 DV removal accounting; taken by **RP-3** (C-006).
+RP-3 C-006 (2026-08-30, `d408da42`): the 1e7×50 MOR driver still ends at 8 delete files /
+10,000,000 delete records. The 2,500-row pin retains the gap. F-16 did not close this shape.*
 
 - **Engine observation.** MW-7 ran 1e7 rows × 50 MERGEs through the full maintenance sequence
   and the merge-on-read table ended it holding **8 position-delete files with 10,000,000 delete

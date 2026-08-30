@@ -339,7 +339,7 @@ def test_partitioned_dv_update_and_rewrite_refuse_pre_write(tmp_path: Path) -> N
     """The partitioned-DV DELETE succeeds; UPDATE and unsafe rewrite refuse before writing.
 
     pins: v3e-5-nightly-v3-oracle/C-008
-    pins: rp-3-fork-repin/C-004
+    pins: rp-3-fork-repin/C-004, C-011
     """
     from repark import ReparkSession
     from repark.errors import UnsupportedOperationException

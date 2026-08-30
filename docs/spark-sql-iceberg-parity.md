@@ -2003,49 +2003,40 @@ the pin rather than obeying it.
   `FeatureUnsupported` before any AWS call so the engine can cite R126 instead of "not
   supported yet". Pins: rp-3-fork-repin/C-008.
 
-### V3-COW-1 — v3 row-DML: one measured DELETE lifts; every other form refuses
+### V3-COW-1 — v3 row-DML: measured DELETE lifts; UPDATE, MERGE, and sequential COW after overwrite refuse
 
-- **repark** — plain-`WHERE` `DELETE` on a format-v3 table with **no live deletion vectors**
-  runs on both modes (RP-2, 2026-08-27, fork `ce92a7bf`): merge-on-read commits one Puffin
-  deletion vector per touched data file (no position-delete file), and copy-on-write preserves
-  every survivor's lineage — Spark's live oracle reads the same `_row_id` /
-  `_last_updated_sequence_number` per id, and the `next_row_id` counter matches Spark's own
-  allocate-then-suppress exactly (5 on the 3-row recipe). Any table **carrying a live deletion
-  vector** refuses `DELETE` before a write, naming the count — the engine's own second DELETE
-  and the Spark-written shared-Puffin fixture alike: on that fixture the unguarded statement
-  resurrected a DV-deleted row (measured 2026-08-27; the Puffin held two blobs and the engine's
-  container rewrite dropped the untouched sibling — fork F-17, landed 2026-08-28). DV merge and
-  supersession are **not** claimed; RP-3 measures them at the post-F-17 pin. `UPDATE` on v3
-  refuses (not measured; V3-3's to measure and lift). `MERGE INTO` and the subquery-`WHERE`
-  `DELETE` / `UPDATE` form refuse at the write-mode resolver: the engine-owned COW writer
-  reassigns every survivor's `_row_id` (V3E-1, 2026-08-24: a 3-row seed went `next_row_id`
-  3 → 5 after deleting one row, 6 after updating one, 7 after a MERGE). A v2 control commits
-  unchanged.
+- **repark** — RP-3 (2026-08-30, fork `d408da42`) lifts live-DV `DELETE` on all three doors:
+  a second MOR DELETE merges positions into the live Puffin (one live DV); shared-Puffin
+  `DELETE id = 1` on `v3-spark-part-dv` keeps `{3,4,6}`; a multi-file DELETE writes one DV
+  per data file; equality-delete + DV loses neither class. RP-2's DV-free first DELETE stays
+  Spark-clean, including COW lineage (`next_row_id` = 5 on the 3-row recipe). A **second COW
+  DELETE after that overwrite snapshot** refuses `V3-COW-1` before write — fork
+  `iceberg-datafusion` `FirstRowIdPolicy::Suppress` would reassign `_row_id` / `next-row-id`
+  (measured next-row-id 6; Spark stays 5). Filed as F-rp3-c7, not V3-3. Live-DV `UPDATE`
+  refuses pre-write. `MERGE INTO` and subquery-`WHERE` DML still refuse at the write-mode
+  resolver (V3E-1: the engine-owned COW writer reassigns every survivor's `_row_id`). A v2
+  control commits unchanged.
 - **Apache Spark** — COW `DELETE` on v3 **preserves** `_row_id` /
   `_last_updated_sequence_number`. Seed `(id,_row_id,seq) = (1,0,1), (2,1,1), (3,2,1)`;
   after `DELETE WHERE id = 2` the survivors are still `(1,0,1), (3,2,1)`; Spark's own
-  `next-row-id` after the same delete is `5` — the engine's counter matches
-  *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, Hadoop catalog, 2026-08-24 V3E-2 session
-  and the 2026-08-27 RP-2 counter check)*.
+  `next-row-id` after the same delete is `5`. A second COW DELETE does not bump
+  `next-row-id` again.
+  *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, Hadoop catalog, 2026-08-24 V3E-2 session,
+  the 2026-08-27 RP-2 counter check, and the 2026-08-30 RP-3 C7 transcript)*.
 - **Pin** —
   `crates/repark-spark/src/tests/v3_cow.rs::adopted_v3_cow_delete_carries_survivor_row_lineage`
-  (`adopted_v3_mor_delete_commits_a_puffin_deletion_vector`,
-  `adopted_v3_mor_second_delete_refuses_while_a_deletion_vector_is_live`, the short-name and
-  padded merge-on-read UPDATE regressions, the UPDATE / MERGE refusals and the v2 control in the
-  same leaf; ANSI twins in `crates/repark-sql/src/v3_cow.rs` including
-  `adopted_v3_mor_first_delete_commits_a_deletion_vector_and_a_second_refuses`, plus
-  `v3_branch_tag_time_travel.rs::ansi_cow_delete_on_a_dv_carrying_v3_table_refuses` (snapshot,
-  object set and Spark's live set untouched); the subquery-`WHERE` resolver seat unchanged;
-  facade MERGE + UPDATE refusals, the COW DELETE commit and the MOR first-delete /
-  second-refusal pair in `python/repark/tests/test_v3_cow_dml.py`; the appended-fixture UPDATE +
-  MERGE control in `crates/repark-spark/src/tests/v3e4.rs`)
-- **Rationale** — the lift is measured; the refusals keep the **owner ruling 2026-08-25** (guard
-  COW DML on v3) and stay BACKLOG, stricter than Spark on purpose — an unattended job gets a
-  loud stop rather than a plausible wrong answer. The salvage ruling of 2026-08-28 narrowed
-  RP-2 to exactly this: one DELETE per DV-free table, everything with a live vector guarded
-  until RP-3 takes fork F-17 and measures the full DV input-state matrix. `UPDATE` measurement
-  rides V3-3. V3-4 still owns row lineage as a whole (`_row_id` is not yet plannable,
-  `V3-ROWID-1`).
+  (`adopted_v3_cow_second_delete_refuses_before_lineage_diverges`,
+  `adopted_v3_mor_delete_commits_a_puffin_deletion_vector`,
+  `adopted_v3_mor_second_delete_merges_into_the_live_deletion_vector`, the UPDATE / MERGE
+  refusals and the v2 control in the same leaf; ANSI twins in `crates/repark-sql/src/v3_cow.rs`
+  including `adopted_v3_mor_first_delete_commits_a_deletion_vector_and_a_second_merges`;
+  partitioned cells in `crates/repark-spark/src/tests/v3e3.rs`; facade
+  `python/repark/tests/test_v3_cow_dml.py`; live-DV UPDATE refuse in
+  `python/repark/tests/test_v3e4_refs_time_travel.py`). Pins: rp-3-fork-repin/C-004.
+- **Rationale** — remaining refusals keep the **owner ruling 2026-08-25** (guard COW DML on v3)
+  where the write is still unsafe. Live-DV DELETE is measured green. Sequential COW lineage is
+  a fork defect (F-rp3-c7). `UPDATE` / `MERGE` ride V3-3. V3-4 still owns row lineage as a
+  whole (`V3-ROWID-1`).
 
 ### BL-9 — a double-quoted string literal is an identifier on the SQL door
 
