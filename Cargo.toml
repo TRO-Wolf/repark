@@ -137,16 +137,16 @@ repark-ml = { path = "crates/repark-ml", default-features = false }
 # The owned iceberg-rust fork: the whole iceberg* family is sourced from the owned fork, whose
 # main has been the owned 0.9.1 base (same DF 54.1 / arrow 58.4 family). The rev is pinned;
 # bump it together with datafusion/arrow/parquet per the version-pin contract.
-# pins: rp-1-fork-repin/C-001, C-002 (family freeze: DF/arrow/parquet/toolchain unchanged)
+# pins: rp-3-fork-repin/C-001, C-002 (family freeze: DF/arrow/parquet/toolchain unchanged)
 # iceberg-catalog-glue / -s3tables are patched for family consistency and consumed by the
 # repark-iceberg catalog module (Glue primary + S3 Tables secondary builders).
 # -------------------------------------------------------------------------------------------
 [patch.crates-io]
-iceberg = { git = "https://github.com/TRO-Wolf/iceberg-rust", rev = "ce92a7bfe2c1be569ed0de1178ed410e8ec3a117" }
-iceberg-datafusion = { git = "https://github.com/TRO-Wolf/iceberg-rust", rev = "ce92a7bfe2c1be569ed0de1178ed410e8ec3a117" }
-iceberg-catalog-glue = { git = "https://github.com/TRO-Wolf/iceberg-rust", rev = "ce92a7bfe2c1be569ed0de1178ed410e8ec3a117" }
-iceberg-catalog-s3tables = { git = "https://github.com/TRO-Wolf/iceberg-rust", rev = "ce92a7bfe2c1be569ed0de1178ed410e8ec3a117" }
-iceberg-storage-opendal = { git = "https://github.com/TRO-Wolf/iceberg-rust", rev = "ce92a7bfe2c1be569ed0de1178ed410e8ec3a117" }
+iceberg = { git = "https://github.com/TRO-Wolf/iceberg-rust", rev = "d408da42fb91db2010662fe1da3783b82fa6e1ed" }
+iceberg-datafusion = { git = "https://github.com/TRO-Wolf/iceberg-rust", rev = "d408da42fb91db2010662fe1da3783b82fa6e1ed" }
+iceberg-catalog-glue = { git = "https://github.com/TRO-Wolf/iceberg-rust", rev = "d408da42fb91db2010662fe1da3783b82fa6e1ed" }
+iceberg-catalog-s3tables = { git = "https://github.com/TRO-Wolf/iceberg-rust", rev = "d408da42fb91db2010662fe1da3783b82fa6e1ed" }
+iceberg-storage-opendal = { git = "https://github.com/TRO-Wolf/iceberg-rust", rev = "d408da42fb91db2010662fe1da3783b82fa6e1ed" }
 
 # -------------------------------------------------------------------------------------------
 # Build profiles (carried from the private v1 repository). Profiles are architecture — every
