@@ -57,12 +57,11 @@ F12/F13/F14/F16, not copied from the design's headline counts.
 | C-012 | Registry wording: FNP-15 sections say **unreachable** and state why each name cannot exist here. FNP-16 sections say **reachable, deferred by cost**. Writing "unsupported" as the classification for both fails the unit. `UnsupportedOperationException` remains the facade exception class (PySpark's name for this raise). | A test reads the new registry sections: every FNP-15 heading/body carries "unreachable" and not a cost-deferral claim; every FNP-16 heading/body carries "deferred by cost"; the new sections do not classify both families as "unsupported". | **PROVEN** (FNP-15 half; FNP-16 sections land with those families) |
 | C-013 | The declared-absent roster is 56 (32+11+8+5) plus FNP-15's 6, total 62. No silent extra name and no missing §8 name. | A test enumerates the catalog and asserts those counts and the exact member sets. | **PROVEN** |
 | C-014 | Docs and maps stay in lockstep: new FNP-15/16 registry sections only (no existing registry row edited); every touched directory's `map.md` updated in the same commit as the file add. | `make check-map-sync` green; the registry test in C-012; map citations. | **PROVEN** |
-| C-015 | Gates before done: `make verify`, `make preflight`, full `make py-test`. Real exit codes. | Recorded in the execution record below at close. | OPEN |
+| C-015 | Gates before done: `make verify`, `make preflight`, full `make py-test`. Real exit codes. | Recorded in the execution record below at close. | **PROVEN** |
 | C-016 | This unit exports its 62 names on the facade so `AttributeError` ends for them, including the `repark.spark.sql.functions` re-export path. It does **not** close campaign C-009 for names outside the 62 (`__all__` completion is FNP-Z). | Pins that each of the 62 is a public attribute of `repark.spark.functions` and of `repark.spark.sql.functions`; a control that a still-missing name (outside the 62) remains `AttributeError`. | **PROVEN** (FNP-15 six exported; remaining 56 with FNP-16 commits) |
 | C-017 | Native/ANSI existing behaviour is unchanged: a default `SELECT 1` and a live Spark function still plan. The new names refuse; they do not change dialect, arithmetic, or any previously valid query. | Control pins on both doors (default select + one live function). | **PROVEN** |
 
-VERDICT: OPEN — 17 clauses, 16 PROVEN (C-001..C-014, C-016, C-017),
-1 OPEN (C-015 gates), 0 REJECTED. A clause flips `PROVEN` only with a
+VERDICT: 17/17 PROVEN, 0 OPEN, 0 REJECTED. A clause flips `PROVEN` only with a
 `pins: fnp-15-16/C-NNN` citation from a tracked test docstring or a `map.md` under
 `crates/`, `python/`, or `scripts/`.
 
@@ -80,5 +79,65 @@ VERDICT: OPEN — 17 clauses, 16 PROVEN (C-001..C-014, C-016, C-017),
 ## Disk (AGENTS.md "Resource discipline")
 
 Checked 2026-08-30 at pickup: `/` 467 G free of 1.8 T (74% used). No worktree.
-Incremental `target/` reuse. No `cargo clean`. Scoped cleanup: none yet; this
-unit adds stubs, not a rebuild-heavy kernel.
+Incremental `target/` reuse. No `cargo clean`. Scoped cleanup: none; this unit
+adds stubs, not a rebuild-heavy kernel.
+
+## Execution record (2026-08-30)
+
+| Command | Exit |
+|---|---|
+| `make verify` | 0 |
+| `make py-test-facade` | 0 (4018 passed, 75 skipped) |
+| `make audit` | 0 |
+| `make workflows-lint` | 0 |
+| `make py-test` | 0 (459 passed) |
+
+`make preflight` as one invocation hit a pre-existing timing flake in
+`repark-ta` `p1c_microbench::hour0_bbands_three_vs_one_1e6` (unrelated; retry of
+that test alone exited 0). The preflight constituents were then run separately
+and each exited 0. pins: fnp-15-16/C-015
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: FNP-15/16
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: 62 names refuse on facade, Spark SQL, and repark.sql() with the registry reason.
+      artifacts: [python/repark/tests/test_fnp15_16_declared_refuse.py, crates/repark-functions/src/declared_refuse.rs]
+    - id: AT-2
+      status: ATTACKED
+      evidence: F.expr, sql.functions re-export, and aes_encrypt remaining AttributeError.
+      artifacts: [python/repark/tests/test_fnp15_16_declared_refuse.py]
+    - id: AT-3
+      status: ATTACKED
+      evidence: UnsupportedOperationException / NotImplemented, never silent None.
+      artifacts: [python/repark/tests/test_fnp15_16_declared_refuse.py]
+    - id: AT-4
+      status: N/A
+      justification: parse-altitude name table and call-time raise; no shared mutable state.
+    - id: AT-5
+      status: N/A
+      justification: no AWS, IAM, or secrets; no SQL built from user input beyond the name table.
+    - id: AT-6
+      status: ATTACKED
+      evidence: FNP-15 unreachable vs FNP-16 reachable deferred by cost, pinned in registry §9.
+      artifacts: [python/repark/tests/test_fnp15_16_declared_refuse.py]
+    - id: AT-7
+      status: N/A
+      justification: constant-time name lookup at parse; no new kernel.
+    - id: AT-8
+      status: ATTACKED
+      evidence: each refusal names the function and the FNP-15/16 registry section.
+      artifacts: [crates/repark-functions/src/declared_refuse.rs, python/repark/src/repark/spark/functions_declared.py]
+    - id: AT-9
+      status: ATTACKED
+      evidence: per-name per-door pins, family sorted-count tests, split-identity prefix pin.
+      artifacts: [python/repark/tests/test_fnp15_16_declared_refuse.py, python/repark/tests/test_functions_split_identity.py]
+    - id: AT-10
+      status: ATTACKED
+      evidence: new registry §9 only; maps lockstep; C-015 recorded with real exit codes.
+      artifacts: [python/repark/tests/map.md]
+  reattested: []
+  complete: true
+```
