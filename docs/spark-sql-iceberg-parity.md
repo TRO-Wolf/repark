@@ -2188,8 +2188,8 @@ than quietly restoring a divergence this table once documented.
 
 These names are exported and refuse. FNP-15 names are **unreachable** in a no-JVM engine.
 FNP-16 families are **reachable without a JVM and deferred by cost**. The two claims are not
-the same. Each row is DECLARED. FNP-16 family sections land in the commit that arms that
-family.
+the same. Each row is DECLARED. All four FNP-16 family sections (sketches, CSV/XML/XPath,
+VARIANT, geospatial) have landed.
 
 Oracle basis for this section: *documented* — Spark 4.1.2 `pyspark.sql.functions` exports
 the name; the divergence is that repark refuses the call Spark would evaluate. No value
