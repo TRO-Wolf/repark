@@ -220,6 +220,10 @@ every `_row_id` (0..11 → 12..23, seq → 13) — V3-LINEAGE-1 stays; the lift 
 a fork rev that carries it. U3 (`RewritePositionDeleteFiles` on v3, fork #227) is RP-3's C-007;
 RP-3 also re-measures U1 at its frozen SHA (C-005).
 
+*RP-3 at `d408da42` (2026-08-30):* U1 still reassigns (`V3-LINEAGE-1` stays). U3's v3 arm
+converts parquet position deletes to DVs; on a DV-only fixture it is a zero-result no-op and
+`B-MOR-3` stays.
+
 Listed so the fork plans it; as of 2026-08-21 the engine's V3-2+ units deliberately waited
 for the MW campaign to close (that wait is over — the addendum below), and the engine refuses
 these paths today.
@@ -413,7 +417,9 @@ increments.
 
 ### F-16 (P1, added 2026-08-24 from MW-7) — `RewriteDataFiles`: the delete-RATIO candidate clause
 
-*Landed fork #232 (2026-08-27) with v3 DV removal accounting; taken by **RP-3** (C-006).*
+*Landed fork #232 (2026-08-27) with v3 DV removal accounting; taken by **RP-3** (C-006).
+RP-3 C-006 (2026-08-30, `d408da42`): the 1e7×50 MOR driver still ends at 8 delete files /
+10,000,000 delete records. The 2,500-row pin retains the gap. F-16 did not close this shape.*
 
 - **Engine observation.** MW-7 ran 1e7 rows × 50 MERGEs through the full maintenance sequence
   and the merge-on-read table ended it holding **8 position-delete files with 10,000,000 delete

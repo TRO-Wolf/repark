@@ -29,6 +29,7 @@ from repark import ReparkSession
 
 # pins: mw-7-scale-measurement/C-001, C-002, C-003, C-004, C-005
 # pins: mw-7-scale-measurement/C-006, C-007, C-008, C-009, C-010, C-011
+# pins: rp-3-fork-repin/C-006
 
 # The driver lives beside the other measurement harnesses, under
 # python/repark-parity/bench/. That tree is not on `repark_parity`'s import path, so it is

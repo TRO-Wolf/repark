@@ -10,6 +10,7 @@ Source for the Spark SQL door. `lib.rs` is a manifest (check_lib_rs); the router
 share the session and catalog seams. The MoR valve predicate is owned by
 `repark_iceberg::write`; `normalize.rs` keeps the resolution wrapper.
 Source documentation may retain model provenance; code-quality grade tags stay outside code.
+pins: rp-3-fork-repin/C-010
 
 ## Contents
 
@@ -19,7 +20,8 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   `execute_time_travelled` is a **release seam, not a routing step** (H-1b): it exists so
   `execute_with_read_only` can own a `time_travel::PinnedViews` and release it on every `?` /
   `return` path of the rewrite — see the `time_travel.rs` row below. V3R-1: DELETE / UPDATE call
-  `refuse_v3_cow_dml` after the BUG-001 valve. SQP-1: the front door canonicalizes escapes once and
+  `refuse_v3_cow_dml` after the BUG-001 valve; a v3 COW DELETE after an overwrite snapshot refuses
+  before fork lineage divergence. SQP-1: the front door canonicalizes escapes once and
   translates downstream parser locations back to the caller's SQL.
 - `merge.rs` — MERGE INTO lowering (sqlparser AST → `repark_iceberg::write::merge::MergeSpec`,
   star-sentinel rewrite); 24 in-module tests (MG-2: M2 Oracle sub-predicates, M3
@@ -31,8 +33,9 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   write-to-branch sniff; 14 in-module tests.
 - `call.rs` — seven maintenance procedures: six maintenance calls plus `register_table`. Each
   preserves Spark's result schema and count sources. Orphan removal requires `older_than`, defaults
-  `dry_run` to true, and refuses shared fallback roots; rewrite-position-delete refuses live
-  deletion vectors; rewrite-data-files refuses v3 lineage loss. Details and test pointers:
+  `dry_run` to true, and refuses shared fallback roots; rewrite-position-delete still refuses
+  live Puffin DVs (`B-MOR-3`; RP-3 C-007 measured R136 as a parquet-to-DV conversion no-op);
+  rewrite-data-files refuses v3 lineage loss. Details and test pointers:
   [call/map.md](call/map.md).
 - `ctas.rs` — CTAS staged create/replace (fork `StagedTableTransaction`, one catalog publish),
   service-managed (S3 Tables) create-first path, create-clause refuse helpers.
@@ -97,7 +100,8 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   see the module doc and `task/r1-g3e8-pr4-ledger.md`), the MERGE
   star rewrite call, partition-spec builders. V3R-1: `refuse_v3_cow_dml`, the `V3-COW-1` passthrough seat (lifted for the
   plain-`WHERE` DELETE on DV-free v3 tables); `dml_target_ident` (shared
-  with the BUG-001 valve) completes short names from the session defaults (SEC-001).
+  with the BUG-001 valve) completes short names from the session defaults (SEC-001). A v3 COW
+  DELETE after an overwrite snapshot stays a pre-write V3-COW-1 refusal (RP-3 C-004 C7).
 - `call_args.rs` — CALL argument bag, scalar coercions, and quoted-name keys for dashed options.
 - `collation.rs` — **G15:** parse-altitude collation refuse. Walks
   `Expr::Collate`, column-def `COLLATE`, `CREATE`/`ALTER COLLATION`, `SET NAMES COLLATE`,

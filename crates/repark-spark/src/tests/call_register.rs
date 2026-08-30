@@ -1,4 +1,5 @@
 //! Pins `CALL system.register_table` and adoption of the Spark-written format-v3 fixture.
+//! pins: rp-3-fork-repin/C-007, C-008
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -318,34 +319,64 @@ async fn call_register_table_of_hadoop_named_metadata_writes_name_the_convention
         "Hadoop-named adopt must still read"
     );
 
-    // Plain INSERT rides DataFusion onto the fork TableProvider and does not pass through this
-    // crate's error map. `expire_snapshots` is the CALL write this unit owns, and it is the
-    // path that has to compute the next metadata pointer.
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.hadoop SELECT 4 AS id, 'd' AS name",
+    )
+    .await;
+    assert_eq!(
+        rows(&ctx, &catalogs, "SELECT * FROM ice.sales.hadoop").await,
+        4,
+        "a Hadoop vN pointer must take a write"
+    );
+    let written = catalog
+        .load_table(&ident)
+        .await
+        .expect("reload after Hadoop write");
+    let pointer = PathBuf::from(written.metadata_location().expect("pointer after write"));
+    assert_eq!(
+        pointer.file_name().and_then(|name| name.to_str()),
+        Some("v2.metadata.json"),
+        "fork #235 bumps Hadoop vN to uncompressed v(N+1): {}",
+        pointer.display()
+    );
+}
+
+#[tokio::test]
+async fn call_register_table_on_s3_tables_names_the_dated_service_gap() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, mut catalogs) = setup(&warehouse).await;
+    let s3_tables = repark_iceberg::catalog::s3tables_catalog(&HashMap::from([
+        (
+            "table_bucket_arn".to_string(),
+            "arn:aws:s3tables:us-east-2:123456789012:bucket/example".to_string(),
+        ),
+        ("region_name".to_string(), "us-east-2".to_string()),
+    ]))
+    .await
+    .expect("s3tables catalog constructs offline");
+    catalogs.insert(
+        "s3t".to_string(),
+        s3_tables,
+        LocationPolicy::ServiceManagedLocation,
+    );
     let err = execute(
         &ctx,
         &catalogs,
-        "CALL ice.system.expire_snapshots(table => 'sales.hadoop', retain_last => 1)",
+        "CALL s3t.system.register_table(table => 'ns.t', metadata_file => '/tmp/x.metadata.json')",
     )
     .await
-    .expect_err("write against a Hadoop pointer must fail");
-    let message = err.to_string();
+    .expect_err("S3 Tables has no register-by-metadata-location API")
+    .to_string();
     assert!(
-        message.contains("vN.metadata.json") || message.contains("Hadoop"),
-        "write error must name the Hadoop convention, not only the filename: {message}"
+        err.contains("R126"),
+        "refusal must cite fork gap R126: {err}"
     );
     assert!(
-        message.contains("version-uuid") || message.contains("<version>-<uuid>"),
-        "write error must name the pointer shape that works: {message}"
+        err.contains("no register-by-metadata-location"),
+        "refusal must name the missing operation: {err}"
     );
-    match err {
-        DataFusionError::External(inner) => {
-            assert!(
-                inner.downcast_ref::<iceberg::Error>().is_some(),
-                "Hadoop wrap must stay iceberg::Error so session classification is Iceberg, not DataFusion"
-            );
-        }
-        other => panic!("Hadoop write must stay External(iceberg::Error), got {other}"),
-    }
 }
 
 #[tokio::test]

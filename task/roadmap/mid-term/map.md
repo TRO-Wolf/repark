@@ -24,7 +24,7 @@ declines it (a dated ruling in the intake, then the archive).
   **F-17 added 2026-08-28 from RP-2:** DML that supersedes one blob in a shared Puffin must
   carry every still-live sibling blob. The measured engine fixture loses the untouched sibling
   delete; the fork reuses its maintenance sibling-closure primitive and proves Java read-back.
-  Landed fork #237 the same day; RP-3 wires the call from the engine's own MOR path.
+  Landed fork #237 the same day; RP-3 (2026-08-30) wired the call from the engine's own MOR path.
   **F-5 corrected 2026-08-29:** answered in fork #217 (inside the engine pin) — the static half
   of the ask was void; DML-B is not blocked.
 - [roadmap-intake-2026-08-21.md](roadmap-intake-2026-08-21.md) — **the roadmap intake

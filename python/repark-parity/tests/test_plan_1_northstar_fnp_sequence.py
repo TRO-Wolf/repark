@@ -49,18 +49,18 @@ def test_north_star_sequence_keeps_the_guard_before_the_fork_fix() -> None:
 
 
 def test_live_slate_retires_v3e_5_and_queues_the_safe_work() -> None:
-    """C-002: the rolling slate starts with the ready v3 unit; FNP work fills the gaps."""
+    """C-002: the rolling slate starts with fork-independent work; FNP fills the gaps."""
     slate = _read("briefs/next-sequence.md")
-    _assert_in_order(slate, ("| 1 | **RP-3**", "| 2 | **FNP-15/16**"))
+    _assert_in_order(slate, ("| 1 | **FNP-15/16**", "| 2 | **MW-10**"))
     assert "<!-- unit id=v3e-5" not in slate
     assert "<!-- unit id=rp-2" not in slate
+    assert "<!-- unit id=rp-3" not in slate
     flat = _normalize_whitespace(slate)
-    assert "opt-in for callers" in flat
     assert "It does not gate v1.0" in flat
-    assert "wait for RP-3's matrix" in flat
+    assert "V3-3 (chartered" in flat
     status = _read("STATUS.md")
     assert "V3E-5 added the nightly v3 live-oracle leg" in status
-    assert "**Next:** RP-3" in status
+    assert "**Next:** V3-3" in status
 
 
 def test_fork_handoff_records_the_shared_puffin_failure_and_acceptance() -> None:
@@ -125,11 +125,12 @@ def test_fnp_retirement_and_fork_independence_are_explicit() -> None:
 def test_navigation_describes_the_revised_authoritative_documents() -> None:
     """C-006: each touched planning directory maps the revised contract."""
     assertions = {
-        "briefs/map.md": ("**RP-3**", "per remaining unit or coupled pair"),
+        "briefs/map.md": ("**FNP-15/16**", "per remaining unit or coupled pair"),
         "docs/design/map.md": ("2026-08-28 per-unit delivery order",),
         "task/roadmap/epic-term/map.md": ("F-17 shared-Puffin closure",),
         "task/roadmap/mid-term/map.md": ("**F-17 added 2026-08-28 from RP-2:**",),
-        "task/ledgers/staging/map.md": ("**RP-3 (2026-08-28)", "opt-in for callers"),
+        "task/ledgers/completed/map.md": ("**RP-3 (2026-08-28)", "opt-in for callers"),
+        "task/ledgers/staging/map.md": ("**V3-3 (2026-08-30)", "F-rp3-c7"),
         "task/ledgers/archive/2026-08/map.md": (
             "salvaged 2026-08-28",
             "became fork F-17",

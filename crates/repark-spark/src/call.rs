@@ -17,7 +17,7 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::ast::Function;
 use iceberg::maintenance::{DeleteOrphanFiles, RewriteDataFiles, RewritePositionDeleteFiles};
-use iceberg::spec::{DataContentType, DataFileFormat, FormatVersion};
+use iceberg::spec::FormatVersion;
 use iceberg::transaction::{
     ApplyTransactionAction, CleanupReport, ExpireSnapshotsCleanup, Transaction,
 };
@@ -459,44 +459,14 @@ async fn execute_rewrite_data_files(
 // rewrite_position_delete_files
 // ===========================================================================================
 
-/// Whether a live manifest entry is a Puffin DELETION VECTOR — a format-v3 delete file this
-/// procedure cannot compact.
-///
-/// The rule is exactly the fork collector's skip clause, inverted: a delete entry (position or
-/// equality) whose file format is not Parquet. A deletion vector is file-scoped — one per data
-/// file, never bin-packed across files — so [`RewritePositionDeleteFiles`] skips it by design and
-/// returns it in no count.
-pub(crate) const fn is_deletion_vector(content: DataContentType, format: DataFileFormat) -> bool {
-    !matches!(content, DataContentType::Data) && !matches!(format, DataFileFormat::Parquet)
-}
-
 /// Count the live Puffin deletion vectors in the table's CURRENT snapshot.
 ///
-/// Errors propagate. A guard that passes quietly when it could not read the manifests is the same
-/// silent-success failure it exists to prevent, so this walk does not swallow load errors.
+/// The fork owns discovery, including malformed-reference errors.
 pub(crate) async fn count_live_deletion_vectors(table: &iceberg::table::Table) -> Result<usize> {
-    let metadata = table.metadata();
-    let Some(snapshot) = metadata.current_snapshot() else {
-        return Ok(0);
-    };
-    let file_io = table.file_io();
-    let manifest_list = snapshot
-        .load_manifest_list(file_io, metadata)
+    iceberg::live_deletion_vectors_by_data_file(table)
         .await
-        .map_err(iceberg_err)?;
-    let mut vectors = 0;
-    for manifest_file in manifest_list.entries() {
-        let manifest = manifest_file
-            .load_manifest(file_io)
-            .await
-            .map_err(iceberg_err)?;
-        for entry in manifest.entries() {
-            if entry.is_alive() && is_deletion_vector(entry.content_type(), entry.file_format()) {
-                vectors += 1;
-            }
-        }
-    }
-    Ok(vectors)
+        .map(|vectors| vectors.len())
+        .map_err(iceberg_err)
 }
 
 /// Return Spark's four measured columns — `rewritten_delete_files_count`,
@@ -542,12 +512,10 @@ async fn execute_rewrite_position_delete_files(
     if vectors > 0 {
         return Err(DataFusionError::NotImplemented(format!(
             "CALL rewrite_position_delete_files found {vectors} live Puffin deletion vector(s) on \
-             `{table_arg}` and will not report a partial result. A deletion vector is file-scoped \
-             and is never bin-packed, so this procedure cannot compact one; running anyway would \
-             return counts that silently exclude every vector. Format-v3 deletion-vector \
-             maintenance is not ported (fork R136 scope is V2 Parquet position deletes). This \
-             engine writes neither: it creates tables at format v2 and refuses merge-on-read \
-             writes on v3."
+             `{table_arg}` and will not report a partial result. Fork R136's v3 arm converts \
+             parquet position deletes into Puffin DVs; it does not compact live DVs. Running \
+             anyway returns four zeros on a DV-only table, which reads as already-clean. \
+             B-MOR-3 stays."
         )));
     }
 

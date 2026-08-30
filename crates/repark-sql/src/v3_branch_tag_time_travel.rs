@@ -1,6 +1,7 @@
 //! Model: Grok 4.6 xHigh
 //! ANSI-door twins for V3E-4: branch/tag DDL and `FOR VERSION AS OF` over a v3 fixture.
 //! pins: v3e-4-refs-time-travel/C-002, C-005, C-006, C-007, C-013, C-014
+//! pins: rp-3-fork-repin/C-004
 
 use std::collections::HashSet;
 use std::fs;
@@ -17,7 +18,6 @@ use repark_core::{CatalogRegistry, EngineContext, LocationPolicy};
 use tempfile::TempDir;
 
 use crate::execute;
-use crate::v3_cow::count_objects;
 
 const PART_DV_TABLE: &str = "/tmp/repark-v3e3-partdv/ns/v3part";
 static PART_DV_LOCK: Mutex<()> = Mutex::new(());
@@ -337,34 +337,43 @@ async fn ansi_for_version_as_of_branch_name_matches_that_snapshot() {
 }
 
 #[tokio::test]
-async fn ansi_cow_delete_on_a_dv_carrying_v3_table_refuses() {
+async fn ansi_mor_delete_on_a_shared_puffin_keeps_the_untouched_sibling() {
     let fixture = materialize_writable();
     let door = door().await;
     adopt(&door, "partdv", &fixture.metadata_file).await;
     let snapshot = door.snapshot_id("partdv").await;
-    let objects = count_objects(Path::new(PART_DV_TABLE));
-    let err = match door.sql("DELETE FROM ice.sales.partdv WHERE id = 1").await {
-        Ok(_) => panic!("DELETE must refuse: the table carries deletion vectors"),
-        Err(err) => err.to_string(),
-    };
-    assert!(
-        err.contains("V3-COW-1") && err.contains("2 live deletion vector"),
-        "the DV-carrying refusal must name the measured resurrection, got: {err}"
-    );
-    assert_eq!(
+    door.ok("DELETE FROM ice.sales.partdv WHERE id = 1").await;
+    assert_ne!(
         door.snapshot_id("partdv").await,
         snapshot,
-        "a refused DELETE must not commit"
-    );
-    assert_eq!(
-        count_objects(Path::new(PART_DV_TABLE)),
-        objects,
-        "no object was written under the fixture"
+        "the shared-Puffin DELETE commits"
     );
     assert_eq!(
         door.live_triples("SELECT id, name, part FROM ice.sales.partdv ORDER BY id")
             .await,
-        spark_dv_rows(),
-        "Spark's live set is intact"
+        vec![
+            (3, "c".to_string(), 0),
+            (4, "d".to_string(), 1),
+            (6, "f".to_string(), 1),
+        ],
+        "id 5 stays deleted"
+    );
+}
+
+#[tokio::test]
+async fn ansi_mor_delete_on_a_spark_written_dv_merges_into_that_file() {
+    let fixture = materialize_writable();
+    let door = door().await;
+    adopt(&door, "partdv", &fixture.metadata_file).await;
+    door.ok("DELETE FROM ice.sales.partdv WHERE id = 3").await;
+    assert_eq!(
+        door.live_triples("SELECT id, name, part FROM ice.sales.partdv ORDER BY id")
+            .await,
+        vec![
+            (1, "a".to_string(), 0),
+            (4, "d".to_string(), 1),
+            (6, "f".to_string(), 1),
+        ],
+        "DELETE id = 3 on the Spark-written part=0 DV"
     );
 }

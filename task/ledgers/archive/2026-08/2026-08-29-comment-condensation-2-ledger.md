@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-28 · **Branch:** `codex/comment-condensation` · **Base:** `73af134`
 (`#256`) · **Path:** STANDARD (repository-wide Rust and Python documentation surface; no intended
-runtime change) · **Prior sweep:** [CC-1 / PR #249](../archive/2026-08/2026-08-27-comment-compaction-ledger.md).
+runtime change) · **Prior sweep:** [CC-1 / PR #249](2026-08-27-comment-compaction-ledger.md).
 
 **Retires:** move this ledger to `../completed/` in this PR's final commit after every clause is
 proved, the closing Critic converges, and the preflight gate passes.

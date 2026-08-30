@@ -664,6 +664,7 @@ pub(super) async fn execute_without_collecting(
     execute(ctx, catalogs, sql).await.unwrap();
 }
 
+#[allow(dead_code)]
 pub(super) fn count_objects(root: &std::path::Path) -> usize {
     let mut pending = vec![root.to_path_buf()];
     let mut count = 0usize;

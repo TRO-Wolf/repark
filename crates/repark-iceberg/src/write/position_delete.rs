@@ -318,14 +318,12 @@ async fn prepare_position_delete_groups(
 /// Write ONE `(spec_id, partition)` group's pairs through the fork's `PositionDeleteFileWriter`.
 ///
 /// `pairs` must already be in spec `(file_path, pos)` order (the callers sort each group).
-/// `builder_spec` is the resolved unpartitioned-but-not-spec-0 spec, if any: the fork's writer
-/// stamps `DEFAULT_PARTITION_SPEC_ID` (0) when `partition_key` is `None` unless
-/// `.with_partition_spec` is chained (M16). The spec-0 unpartitioned path passes `None` here so
-/// that construction stays byte-identical. The Parquet metrics config is `for_position_delete` —
-/// Java's choice, which keeps the `file_path` / `pos` bounds FULL so delete-file path pruning
-/// stays precise (the default `truncate(16)` would widen the path range and defeat it). A
-/// non-empty group that produced no file is an internal error, never a silent success: the
-/// deletes would be lost and the rows resurrected.
+/// `builder_spec` is the resolved unpartitioned-but-not-spec-0 spec, if any (M16). Fork #239
+/// errors on `build(None)` with no spec; the spec-0 unpartitioned path calls `.unpartitioned()`.
+/// The Parquet metrics config is `for_position_delete` — Java's choice, which keeps the
+/// `file_path` / `pos` bounds FULL so delete-file path pruning stays precise. A non-empty
+/// group that produced no file is an internal error, never a silent success: the deletes
+/// would be lost and the rows resurrected.
 /// ===========================================================================================
 async fn write_position_deletes_for_partition(
     table: &Table,
@@ -351,9 +349,11 @@ async fn write_position_deletes_for_partition(
         file_name_generator,
     );
     let mut writer_builder = PositionDeleteFileWriterBuilder::new(rolling_builder, config.clone());
-    if let Some(spec) = builder_spec {
-        writer_builder = writer_builder.with_partition_spec(spec);
-    }
+    writer_builder = match builder_spec {
+        Some(spec) => writer_builder.with_partition_spec(spec),
+        None if partition_key.is_none() => writer_builder.unpartitioned(),
+        None => writer_builder,
+    };
     let mut writer = writer_builder
         .build(partition_key)
         .await

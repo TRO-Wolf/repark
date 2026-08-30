@@ -30,6 +30,7 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   each dedicated bump is one row in the [docs/fork-sync.md](docs/fork-sync.md) pin-history table.
   **RP-1 (2026-08-23):** `5e7b2e4` (F-0 / F-1 / F-2 / F-8a); DataFusion family frozen.
   **RP-2 (2026-08-27):** `ce92a7bf` (F-3 / F-5 / F-13 / F-7 U1+U2); DataFusion family frozen.
+  **RP-3 (2026-08-30):** `d408da42` (F-7 U3 / F-16 / F-9 / F-15 / F-14 / F-17 / H7-P1); DataFusion family frozen.
   Optional `mimalloc = "0.1"` (conductor-19 AL-1a; default-off `allocator-mimalloc` on
   `repark-python` only — not a family pin).
 - `crates/` — the Cargo workspace members (the engine). See [crates/map.md](crates/map.md).

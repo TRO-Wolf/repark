@@ -3,8 +3,10 @@
 //! table (`V3-COW-1`); plain-`WHERE` DELETE
 //! pins: v3r-1-rulings/C-001, C-002, C-003, C-004, C-005
 //! pins: rp-2-fork-repin/C-003, C-005
+//! pins: rp-3-fork-repin/C-004, C-008
 
 use std::collections::HashSet;
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -275,6 +277,26 @@ async fn adopted_v3_cow_delete_carries_survivor_row_lineage() {
     );
 }
 
+#[tokio::test]
+async fn ansi_adopted_v3_cow_second_delete_refuses_before_lineage_diverges() {
+    let door = door_with_v3_opt_in().await;
+    adopt_cow_v3(&door, "seed_seq", "adopt_seq").await;
+    door.ok("DELETE FROM ice.sales.adopt_seq WHERE id = 2")
+        .await;
+    assert_eq!(door.lineage("adopt_seq").await, (5, Some(3), Some(2)));
+    assert_cow_refused_untouched(
+        &door,
+        "adopt_seq",
+        "DELETE FROM ice.sales.adopt_seq WHERE id = 3",
+        "DELETE",
+    )
+    .await;
+    assert_eq!(
+        door.live_pairs("adopt_seq").await,
+        vec![(1, "a".into()), (3, "c".into())]
+    );
+}
+
 /// pins: v3r-1-rulings/C-002
 #[tokio::test]
 async fn adopted_v3_cow_update_refuses_rather_than_reassign_row_lineage() {
@@ -489,6 +511,7 @@ async fn adopted_v3_padded_merge_on_read_spelling_still_refuses_update() {
     );
 }
 
+#[allow(dead_code)]
 pub(crate) fn count_objects(root: &Path) -> usize {
     let mut pending = vec![root.to_path_buf()];
     let mut count = 0usize;
@@ -537,7 +560,7 @@ async fn live_delete_file_kinds(door: &Door, table: &str) -> Vec<String> {
 }
 
 #[tokio::test]
-async fn adopted_v3_mor_first_delete_commits_a_deletion_vector_and_a_second_refuses() {
+async fn adopted_v3_mor_first_delete_commits_a_deletion_vector_and_a_second_merges() {
     let door = door_with_v3_opt_in().await;
     adopt_v3(
         &door,
@@ -568,33 +591,91 @@ async fn adopted_v3_mor_first_delete_commits_a_deletion_vector_and_a_second_refu
         vec!["Puffin".to_string()],
         "one live deletion vector and no position-delete file"
     );
-    let location = PathBuf::from(after_first.metadata().location());
-    let objects = count_objects(&location);
-    let lineage = door.lineage("adopt_mordel").await;
-    let err = door
-        .err("DELETE FROM ice.sales.adopt_mordel WHERE id = 3")
+    door.ok("DELETE FROM ice.sales.adopt_mordel WHERE id = 3")
         .await;
-    assert!(
-        err.contains("V3-COW-1") && err.contains("1 live deletion vector"),
-        "the second DELETE must refuse naming the live vector: {err}"
-    );
     let after_second = door.table("adopt_mordel").await;
-    assert_eq!(
+    assert_ne!(
         after_second.metadata().current_snapshot_id(),
         after_first.metadata().current_snapshot_id(),
-        "a refused DELETE must not commit"
+        "the second DELETE commits"
     );
     assert_eq!(
-        after_second.metadata_location(),
-        after_first.metadata_location(),
-        "the metadata pointer is unchanged"
+        door.live_pairs("adopt_mordel").await,
+        vec![(1, "a".to_string())],
+        "positions merge; only id 1 remains"
     );
-    assert_eq!(door.lineage("adopt_mordel").await, lineage);
-    assert_eq!(door.live_pairs("adopt_mordel").await, survivors);
-    assert_eq!(live_delete_file_kinds(&door, "adopt_mordel").await, kinds);
+    let after_kinds = live_delete_file_kinds(&door, "adopt_mordel").await;
     assert_eq!(
-        count_objects(&location),
-        objects,
-        "no object was written under the table location"
+        after_kinds,
+        vec!["Puffin".to_string()],
+        "exactly one live DV after the second DELETE"
+    );
+}
+
+#[tokio::test]
+async fn ansi_hadoop_named_metadata_write_bumps_to_the_next_hadoop_pointer() {
+    let door = door_with_v3_opt_in().await;
+    door.ok("CREATE TABLE ice.sales.hadoop (id INT, name VARCHAR)")
+        .await;
+    door.ok("INSERT INTO ice.sales.hadoop VALUES (1, 'a'), (2, 'b'), (3, 'c')")
+        .await;
+    let ident = TableIdent::new(
+        NamespaceIdent::new("sales".to_string()),
+        "hadoop".to_string(),
+    );
+    let original = PathBuf::from(
+        door.table("hadoop")
+            .await
+            .metadata_location()
+            .expect("pointer"),
+    );
+    let hadoop = original
+        .parent()
+        .expect("metadata dir")
+        .join("v1.metadata.json");
+    fs::copy(&original, &hadoop).expect("copy to Hadoop name");
+    door.catalog.drop_table(&ident).await.expect("drop pointer");
+    door.catalog
+        .register_table(&ident, hadoop.to_string_lossy().into_owned())
+        .await
+        .expect("Hadoop-named metadata must register");
+    repark_iceberg::catalog::invalidate_catalog_namespaces(
+        &door.ctx,
+        Arc::clone(&door.catalog),
+        "ice",
+        &["sales"],
+    )
+    .await
+    .expect("invalidate after register_table");
+    assert_eq!(
+        door.live_pairs("hadoop").await,
+        vec![
+            (1, "a".to_string()),
+            (2, "b".to_string()),
+            (3, "c".to_string())
+        ]
+    );
+    door.ok("INSERT INTO ice.sales.hadoop VALUES (4, 'd')")
+        .await;
+    assert_eq!(
+        door.live_pairs("hadoop").await,
+        vec![
+            (1, "a".to_string()),
+            (2, "b".to_string()),
+            (3, "c".to_string()),
+            (4, "d".to_string())
+        ]
+    );
+    let pointer = PathBuf::from(
+        door.table("hadoop")
+            .await
+            .metadata_location()
+            .expect("pointer after write"),
+    );
+    assert_eq!(
+        pointer.file_name().and_then(|name| name.to_str()),
+        Some("v2.metadata.json"),
+        "fork #235 bumps Hadoop vN to uncompressed v(N+1): {}",
+        pointer.display()
     );
 }

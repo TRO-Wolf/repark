@@ -67,6 +67,10 @@ def _materialize(src: Path, dest: Path) -> Iterator[str]:
         lock.close()
 
 
+def _objects_under(root: Path) -> list[str]:
+    return sorted(str(path) for path in root.rglob("*") if path.is_file())
+
+
 def _id_name_part_rows(table: pa.Table) -> list[tuple[int, str, int]]:
     """Sorted (id, name, part) rows with Arrow type check.
 
@@ -331,12 +335,11 @@ def _assert_delete_files_live_against_spark(part_meta: str, eq_meta: str) -> Non
     assert ICEBERG_SPARK_RUNTIME_GAV == "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0"
 
 
-def test_partitioned_dv_still_refuses_position_delete_rewrite(tmp_path: Path) -> None:
-    """Control that B-MOR-3 guard was not lifted.
-
-    The partitioned-DV fixture still refuses rewrite_position_delete_files.
+def test_partitioned_dv_update_and_rewrite_refuse_pre_write(tmp_path: Path) -> None:
+    """The partitioned-DV DELETE succeeds; UPDATE and unsafe rewrite refuse before writing.
 
     pins: v3e-5-nightly-v3-oracle/C-008
+    pins: rp-3-fork-repin/C-004, C-011
     """
     from repark import ReparkSession
     from repark.errors import UnsupportedOperationException
@@ -350,12 +353,23 @@ def test_partitioned_dv_still_refuses_position_delete_rewrite(tmp_path: Path) ->
                 "CALL ice.system.register_table("
                 f"table => 'sales.partdv', metadata_file => '{metadata_file}')"
             )
+            before = session.sql("SELECT id, name, part FROM ice.sales.partdv").to_arrow()
+            before_objects = _objects_under(_PART_DV_DEST)
+            with pytest.raises(UnsupportedOperationException, match="V3-COW-1"):
+                session.sql("UPDATE ice.sales.partdv SET name = 'x' WHERE id = 1").collect()
+            refused_update = session.sql("SELECT id, name, part FROM ice.sales.partdv").to_arrow()
+            assert _id_name_part_rows(refused_update) == _id_name_part_rows(before)
+            assert _objects_under(_PART_DV_DEST) == before_objects
             with pytest.raises(UnsupportedOperationException, match="Puffin deletion vector"):
                 session.sql(
                     "CALL ice.system.rewrite_position_delete_files(table => 'sales.partdv')"
                 ).collect()
-            with pytest.raises(UnsupportedOperationException, match="V3-COW-1"):
-                session.sql("DELETE FROM ice.sales.partdv WHERE id = 1").collect()
+            refused = session.sql("SELECT id, name, part FROM ice.sales.partdv").to_arrow()
+            assert _id_name_part_rows(refused) == _id_name_part_rows(before)
+            assert _objects_under(_PART_DV_DEST) == before_objects
+            session.sql("DELETE FROM ice.sales.partdv WHERE id = 1").collect()
+            live = session.sql("SELECT id, name, part FROM ice.sales.partdv").to_arrow()
+            assert _id_name_part_rows(live) == [(3, "c", 0), (4, "d", 1), (6, "f", 1)]
     finally:
         session.stop()
 

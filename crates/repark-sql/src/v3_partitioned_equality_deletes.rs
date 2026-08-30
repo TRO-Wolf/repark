@@ -1,6 +1,7 @@
 //! Model: Grok 4.6 xHigh
 //! ANSI-door pins for Spark-written partitioned v3 DV and equality-delete
 //! pins: v3e-3-partitioned-eqdel-fixtures/C-007, C-008, C-010
+//! pins: rp-3-fork-repin/C-007
 
 use std::collections::HashSet;
 use std::fs;
@@ -11,7 +12,7 @@ use std::time::{Duration, Instant};
 
 use datafusion::arrow::array::{Int32Array, Int64Array, StringArray};
 use datafusion::prelude::{SessionConfig, SessionContext};
-use iceberg::spec::FormatVersion;
+use iceberg::spec::{FormatVersion, Literal};
 use iceberg::{Catalog, NamespaceIdent, TableIdent};
 use repark_core::{CatalogRegistry, EngineContext, LocationPolicy};
 use tempfile::TempDir;
@@ -75,6 +76,21 @@ fn copy_dir_all(from: &Path, to: &Path) {
             fs::copy(entry.path(), dest).expect("copy file");
         }
     }
+}
+
+fn files_with_bytes(root: &Path) -> Vec<(PathBuf, Vec<u8>)> {
+    let mut files = Vec::new();
+    for entry in fs::read_dir(root).expect("read fixture tree") {
+        let entry = entry.expect("fixture dirent");
+        let path = entry.path();
+        if entry.file_type().expect("fixture file type").is_dir() {
+            files.extend(files_with_bytes(&path));
+        } else {
+            files.push((path.clone(), fs::read(path).expect("read fixture file")));
+        }
+    }
+    files.sort_by(|left, right| left.0.cmp(&right.0));
+    files
 }
 
 fn materialize(
@@ -299,4 +315,194 @@ async fn ansi_equality_delete_delete_files_name_both_kinds() {
         contents.contains(&1) && contents.contains(&2),
         "ANSI .delete_files must list Puffin (1) and equality-delete (2): {contents:?}"
     );
+}
+
+#[tokio::test]
+async fn ansi_partitioned_v3_dv_delete_across_files_keeps_per_file_partitions() {
+    let fixture = materialize(
+        &PART_DV_LOCK,
+        "v3-spark-part-dv",
+        PART_DV_TABLE,
+        "v3.metadata.json",
+    );
+    let door = door().await;
+    adopt(&door, "partdv", &fixture.metadata_file).await;
+    door.sql("DELETE FROM ice.sales.partdv WHERE id IN (1, 4)")
+        .await
+        .expect("DELETE one row from each partition");
+    assert_eq!(
+        door.live_triples("partdv").await,
+        vec![(3, "c".to_string(), 0), (6, "f".to_string(), 1)]
+    );
+    let table = door
+        .catalog
+        .load_table(&TableIdent::new(
+            NamespaceIdent::new("sales".into()),
+            "partdv".into(),
+        ))
+        .await
+        .expect("load partitioned DV table");
+    let vectors = iceberg::live_deletion_vectors_by_data_file(&table)
+        .await
+        .expect("discover live DVs by referenced data file");
+    assert_eq!(vectors.len(), 2, "R114 maps one DV to each data file");
+    let mut partitions: Vec<_> = vectors
+        .values()
+        .map(|file| {
+            assert_eq!(file.partition_spec_id(), 0, "the fixture uses spec 0");
+            file.partition().fields().to_vec()
+        })
+        .collect();
+    partitions.sort_by_key(|partition| format!("{partition:?}"));
+    assert_eq!(
+        partitions,
+        vec![vec![Some(Literal::int(0))], vec![Some(Literal::int(1))],]
+    );
+}
+
+#[tokio::test]
+async fn ansi_equality_delete_and_dv_keep_both_delete_classes_after_delete() {
+    let fixture = materialize(
+        &EQ_DV_LOCK,
+        "v3-spark-eq-dv",
+        EQ_DV_TABLE,
+        "v4.metadata.json",
+    );
+    let door = door().await;
+    adopt(&door, "eqdv", &fixture.metadata_file).await;
+    door.sql("DELETE FROM ice.sales.eqdv WHERE id = 2")
+        .await
+        .expect("DELETE against the data file with the live DV");
+    assert_eq!(
+        door.live_triples("eqdv").await,
+        vec![(3, "c".to_string(), 1)]
+    );
+    let batches = door
+        .sql("SELECT content FROM ice.sales.eqdv$delete_files")
+        .await
+        .expect("read equality-delete plus DV metadata");
+    let mut contents = Vec::new();
+    for batch in &batches {
+        let column = batch.column(0);
+        for index in 0..batch.num_rows() {
+            let value = if let Some(values) = column.as_any().downcast_ref::<Int32Array>() {
+                values.value(index)
+            } else if let Some(values) = column.as_any().downcast_ref::<Int64Array>() {
+                i32::try_from(values.value(index)).expect("content fits i32")
+            } else {
+                panic!("content Int32/Int64, got {:?}", batch.schema());
+            };
+            contents.push(value);
+        }
+    }
+    contents.sort_unstable();
+    assert_eq!(
+        contents,
+        vec![1, 2],
+        "the DV and equality delete both stay live"
+    );
+}
+
+#[tokio::test]
+async fn ansi_partitioned_dv_update_refuses_before_writing() {
+    let fixture = materialize(
+        &PART_DV_LOCK,
+        "v3-spark-part-dv",
+        PART_DV_TABLE,
+        "v3.metadata.json",
+    );
+    let door = door().await;
+    adopt(&door, "partdv", &fixture.metadata_file).await;
+    let ident = TableIdent::new(NamespaceIdent::new("sales".into()), "partdv".into());
+    let before_snapshot = door
+        .catalog
+        .load_table(&ident)
+        .await
+        .expect("load before refused update")
+        .metadata()
+        .current_snapshot_id();
+    let before_rows = door.live_triples("partdv").await;
+    let before_files = files_with_bytes(Path::new(PART_DV_TABLE));
+    let error = door
+        .sql("UPDATE ice.sales.partdv SET name = 'x' WHERE id = 1")
+        .await
+        .expect_err("live-DV UPDATE must refuse before writing")
+        .to_string();
+    assert!(
+        error.contains("V3-COW-1"),
+        "refusal must name V3-COW-1: {error}"
+    );
+    assert_eq!(
+        door.catalog
+            .load_table(&ident)
+            .await
+            .expect("load after refused update")
+            .metadata()
+            .current_snapshot_id(),
+        before_snapshot
+    );
+    assert_eq!(door.live_triples("partdv").await, before_rows);
+    assert_eq!(files_with_bytes(Path::new(PART_DV_TABLE)), before_files);
+}
+
+#[tokio::test]
+async fn ansi_partitioned_dv_rewrite_position_delete_files_call_is_spark_only() {
+    let door = door().await;
+    let error = door
+        .sql("CALL ice.system.rewrite_position_delete_files(table => 'sales.partdv')")
+        .await
+        .expect_err("ANSI CALL is Q7")
+        .to_string();
+    assert!(
+        error.contains("CALLABLE OPERATION") || error.contains("not supported"),
+        "ANSI must refuse CALL, not run B-MOR-3: {error}"
+    );
+}
+
+#[tokio::test]
+async fn ansi_partitioned_dv_fork_rewrite_position_delete_files_is_a_conversion_noop() {
+    let fixture = materialize(
+        &PART_DV_LOCK,
+        "v3-spark-part-dv",
+        PART_DV_TABLE,
+        "v3.metadata.json",
+    );
+    let door = door().await;
+    adopt(&door, "partdv", &fixture.metadata_file).await;
+    let before = door.live_triples("partdv").await;
+    let before_sum: i32 = before.iter().map(|row| row.0).sum();
+    let ident = TableIdent::new(NamespaceIdent::new("sales".into()), "partdv".into());
+    let table = door
+        .catalog
+        .load_table(&ident)
+        .await
+        .expect("load adopted partitioned DV");
+    let first = iceberg::maintenance::RewritePositionDeleteFiles::new(table)
+        .execute(door.catalog.as_ref())
+        .await
+        .expect("fork v3 arm must run");
+    repark_iceberg::catalog::invalidate_catalog_namespaces(
+        &door.ctx,
+        std::sync::Arc::clone(&door.catalog),
+        "ice",
+        &["sales"],
+    )
+    .await
+    .expect("invalidate after first rewrite");
+    let after = door.live_triples("partdv").await;
+    assert_eq!(after, before, "read identity");
+    assert_eq!(
+        after.iter().map(|row| row.0).sum::<i32>(),
+        before_sum,
+        "sum(id)"
+    );
+    assert_eq!(first.rewritten_delete_files_count, 0);
+    assert_eq!(first.added_delete_files_count, 0);
+    let table = door.catalog.load_table(&ident).await.expect("reload");
+    let second = iceberg::maintenance::RewritePositionDeleteFiles::new(table)
+        .execute(door.catalog.as_ref())
+        .await
+        .expect("second rewrite");
+    assert_eq!(second.rewritten_delete_files_count, 0);
+    assert_eq!(door.live_triples("partdv").await, after);
 }

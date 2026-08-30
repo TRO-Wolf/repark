@@ -157,6 +157,7 @@ One line per ledger, and off the normal read path: grep this directory for a uni
 - [2026-08-28-plan-1-northstar-fnp-sequence-ledger.md](2026-08-28-plan-1-northstar-fnp-sequence-ledger.md) — **PLAN-1 (2026-08-28):** truth up the v1.0 critical path, add fork F-17 shared-Puffin closure, narrow RP-2 to its safe guarded increment, and align FNP on per-unit delivery and one remaining order.
 - [2026-08-28-rp-2-fork-repin-ledger.md](2026-08-28-rp-2-fork-repin-ledger.md) — **RP-2 (2026-08-27; narrowed and salvaged 2026-08-28):** the fork repin `5e7b2e4` → `ce92a7bf` (F-13, F-7 U1+U2, F-3); one safe plain-`WHERE` DELETE on a DV-free v3 table, every live-DV state refuses before a write; finding F-rp2-1 (shared-Puffin sibling loss) became fork F-17; the #254 clauses moved to RP-3.
 - [2026-08-28-v3e-5-nightly-v3-oracle-ledger.md](2026-08-28-v3e-5-nightly-v3-oracle-ledger.md) — **V3E-5 (2026-08-27):** the nightly v3 live-oracle leg — `REPARK_PARITY_LIVE=1` repark == Spark on the V3E-3 fixtures (`v3-spark-part-dv` / `v3-spark-eq-dv`), dual-wired `parity-live` leg green, northstar nightly row dated.
+- [2026-08-29-comment-condensation-2-ledger.md](2026-08-29-comment-condensation-2-ledger.md) — **CC-2 (2026-08-29), closed:** sentence-level condensation of comments and docstrings in 698 Rust and Python source files under `crates/`, `python/`, and `scripts/`.
 
 ## Pointers
 - Up: [../map.md](../map.md)

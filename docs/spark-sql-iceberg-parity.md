@@ -1763,6 +1763,10 @@ the pin rather than obeying it.
   `expire_snapshots` → `remove_orphan_files`) the file is still live with 2,500 dead rows, and
   one 8,240 B delete file still names it. At 1e7 rows × 50 MERGEs the same shape ended the
   sequence with **8 delete files holding 10,000,000 delete records** (MW-7 §4.4).
+  **RP-3 C-006 (2026-08-30, fork `d408da42` / F-16):** the same 1e7×50 MOR driver still ends
+  at **8 delete files / 10,000,000 delete records** after the full maintenance sequence
+  (`rewrite_position_delete_files` folds 400 → 8; `rewrite_data_files` leaves those 8). The
+  2,500-row pin still holds. F-16 did not close this shape.
 - **Apache Spark** — the same sequence on the same shape ends with **zero** delete files and
   **zero** delete records, at **both** `write.delete.granularity` settings, with
   `removed_delete_files_count` reported as 0 and `remove-dangling-deletes` OFF (jar default
@@ -1945,76 +1949,94 @@ the pin rather than obeying it.
 - **Pin** —
   `crates/repark-spark/src/tests/call_register.rs::call_rewrite_position_delete_files_refuses_spark_written_puffin_vectors`
   (CI-runnable Spark-written fixture; 37 live rows after the vectors apply, pinned beside it by
-  `call_register_table_adopts_a_spark_written_v3_table_with_puffin_vectors`).
-- **Rationale** — DELIBERATE, stricter than Spark on purpose, same reasoning as the orphan-files
-  dry-run default (owner decision OD-2): on a maintenance surface a silent zero is
-  indistinguishable from "already clean", and the operator never learns the reclaim never
-  happened. A deletion vector is file-scoped and is never bin-packed, so this procedure cannot
-  compact one. Format-v3 deletion-vector maintenance is V3-3/V3-5, not this row.
+  `call_register_table_adopts_a_spark_written_v3_table_with_puffin_vectors`);
+  `crates/repark-spark/src/tests/v3e3.rs::partitioned_v3_dv_rewrite_position_delete_files_still_refuses`
+  and `partitioned_v3_dv_fork_rewrite_position_delete_files_measurement` (RP-3 C-007);
+  facade `python/repark/tests/test_v3e3_fixtures.py::test_facade_partitioned_v3_dv_matches_spark_live_rows`.
+- **Rationale** — DELIBERATE, stricter than Spark on purpose (owner decision OD-2). **RP-3
+  C-007 (2026-08-30, fork `d408da42` / R136 F-7 U3):** the v3 arm *runs* and is read-identity
+  on the V3E-3 partitioned-DV fixture, but it **converts parquet position deletes into DVs**.
+  On a DV-only table it returns four zeros (`rewritten=0 added=0`, two DVs stay two) and a
+  second run converges. Zeros still read as already-clean, so `B-MOR-3` stays. DV compaction
+  remains V3-5.
 
-### V3-ADOPT-1 — Hadoop `vN.metadata.json` pointers register and read, but cannot be written
+### V3-ADOPT-1 — Hadoop `vN.metadata.json` pointers register, read, and write `v(N+1)`
+
+> **FIXED 2026-08-30 (RP-3 / fork #235 F-14).** A table registered from a Hadoop
+> `vN.metadata.json` pointer now takes a write; the next pointer is uncompressed
+> `v(N+1).metadata.json`. The pin flipped from "the refusal names the convention" to
+> "the write succeeds". Residue on fork row R167: no `version-hint.text` writer, no
+> exists-fail rename.
 
 - **repark** — `CALL system.register_table` of a metadata file named `vN.metadata.json` (the
   Hadoop catalog convention) succeeds and subsequent reads return the adopted rows. A later
-  write that has to compute the next metadata pointer — `CALL expire_snapshots` is the CALL
-  write this engine owns — fails and names **both** the Hadoop convention and the
-  version-uuid shape (`<version>-<uuid>.metadata.json`) that works. Glue is unaffected: it
-  already writes version-uuid pointers.
-- **Apache Spark** — registers the Hadoop-named pointer the same way; reads work; writes also
-  work, because Spark's Hadoop catalog writes the next `v(N+1).metadata.json` itself.
+  write — Spark-door `INSERT` and the ANSI-door `INSERT` after `Catalog::register_table` —
+  commits `v(N+1).metadata.json` and serves the new rows. Glue is unaffected: it already
+  writes version-uuid pointers.
+- **Apache Spark** — registers the Hadoop-named pointer the same way; reads work; writes
+  also work, because Spark's Hadoop catalog writes the next `v(N+1).metadata.json` itself.
   *(oracle: recorded — V3-0 isolated the cause by copying the identical file to a version-uuid
-  name, after which `INSERT` and `expire_snapshots` both succeeded on this engine.)*
+  name, after which `INSERT` and `expire_snapshots` both succeeded on this engine. RP-3
+  remeasured the Hadoop name itself at fork `d408da42`.)*
 - **Pin** —
   `crates/repark-spark/src/tests/call_register.rs::call_register_table_of_hadoop_named_metadata_writes_name_the_convention`
-- **Rationale** — DELIBERATE error-quality, not a write-path fix. The fork's
-  `MetadataLocation` parser requires `<version>-<uuid>.metadata.json` to compute the next
-  pointer (fork work, format-v3-track §6). This row exists so the operator is told the
-  convention, not only the filename. Catalogs that already write version-uuid pointers never
-  hit it.
+  (Spark door),
+  `crates/repark-sql/src/v3_cow.rs::ansi_hadoop_named_metadata_write_bumps_to_the_next_hadoop_pointer`
+  (ANSI door)
+- **Rationale** — retired. The owned fork closed Hadoop pointer math; this engine consumed
+  it at `d408da42`.
 
-### V3-COW-1 — v3 row-DML: one measured DELETE lifts; every other form refuses
+### S3T-1 — S3 Tables `register_table` is a dated service gap (fork R126)
 
-- **repark** — plain-`WHERE` `DELETE` on a format-v3 table with **no live deletion vectors**
-  runs on both modes (RP-2, 2026-08-27, fork `ce92a7bf`): merge-on-read commits one Puffin
-  deletion vector per touched data file (no position-delete file), and copy-on-write preserves
-  every survivor's lineage — Spark's live oracle reads the same `_row_id` /
-  `_last_updated_sequence_number` per id, and the `next_row_id` counter matches Spark's own
-  allocate-then-suppress exactly (5 on the 3-row recipe). Any table **carrying a live deletion
-  vector** refuses `DELETE` before a write, naming the count — the engine's own second DELETE
-  and the Spark-written shared-Puffin fixture alike: on that fixture the unguarded statement
-  resurrected a DV-deleted row (measured 2026-08-27; the Puffin held two blobs and the engine's
-  container rewrite dropped the untouched sibling — fork F-17, landed 2026-08-28). DV merge and
-  supersession are **not** claimed; RP-3 measures them at the post-F-17 pin. `UPDATE` on v3
-  refuses (not measured; V3-3's to measure and lift). `MERGE INTO` and the subquery-`WHERE`
-  `DELETE` / `UPDATE` form refuse at the write-mode resolver: the engine-owned COW writer
-  reassigns every survivor's `_row_id` (V3E-1, 2026-08-24: a 3-row seed went `next_row_id`
-  3 → 5 after deleting one row, 6 after updating one, 7 after a MERGE). A v2 control commits
-  unchanged.
+- **repark** — `CALL <catalog>.system.register_table` against an S3 Tables catalog refuses
+  before any AWS call, naming the missing register-by-metadata-location operation, the
+  Iceberg REST register endpoint, `UpdateTableMetadataLocation`, and fork GAP_MATRIX row
+  **R126**. Glue implements the same CALL.
+- **Apache Spark** — S3 Tables has no register-by-metadata-location API either; Spark cannot
+  adopt an existing metadata file into a table bucket. The service mapping does not include
+  the Iceberg REST `register` endpoint.
+  *(oracle: documented — Iceberg REST register vs S3 Tables `UpdateTableMetadataLocation`;
+  fork #233 dated the gap as R126.)*
+- **Pin** —
+  `crates/repark-spark/src/tests/call_register.rs::call_register_table_on_s3_tables_names_the_dated_service_gap`
+- **Rationale** — DECLARED, dated service gap, not an engine stub. The fork returns
+  `FeatureUnsupported` before any AWS call so the engine can cite R126 instead of "not
+  supported yet". Pins: rp-3-fork-repin/C-008.
+
+### V3-COW-1 — v3 row-DML: measured DELETE lifts; UPDATE, MERGE, and sequential COW after overwrite refuse
+
+- **repark** — RP-3 (2026-08-30, fork `d408da42`) lifts live-DV `DELETE` on all three doors:
+  a second MOR DELETE merges positions into the live Puffin (one live DV); shared-Puffin
+  `DELETE id = 1` on `v3-spark-part-dv` keeps `{3,4,6}`; a multi-file DELETE writes one DV
+  per data file; equality-delete + DV loses neither class. RP-2's DV-free first DELETE stays
+  Spark-clean, including COW lineage (`next_row_id` = 5 on the 3-row recipe). A **second COW
+  DELETE after that overwrite snapshot** refuses `V3-COW-1` before write — fork
+  `iceberg-datafusion` `FirstRowIdPolicy::Suppress` would reassign `_row_id` / `next-row-id`
+  (measured next-row-id 6; Spark stays 5). Filed as F-rp3-c7, not V3-3. Live-DV `UPDATE`
+  refuses pre-write. `MERGE INTO` and subquery-`WHERE` DML still refuse at the write-mode
+  resolver (V3E-1: the engine-owned COW writer reassigns every survivor's `_row_id`). A v2
+  control commits unchanged.
 - **Apache Spark** — COW `DELETE` on v3 **preserves** `_row_id` /
   `_last_updated_sequence_number`. Seed `(id,_row_id,seq) = (1,0,1), (2,1,1), (3,2,1)`;
   after `DELETE WHERE id = 2` the survivors are still `(1,0,1), (3,2,1)`; Spark's own
-  `next-row-id` after the same delete is `5` — the engine's counter matches
-  *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, Hadoop catalog, 2026-08-24 V3E-2 session
-  and the 2026-08-27 RP-2 counter check)*.
+  `next-row-id` after the same delete is `5`. A second COW DELETE does not bump
+  `next-row-id` again.
+  *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, Hadoop catalog, 2026-08-24 V3E-2 session,
+  the 2026-08-27 RP-2 counter check, and the 2026-08-30 RP-3 C7 transcript)*.
 - **Pin** —
   `crates/repark-spark/src/tests/v3_cow.rs::adopted_v3_cow_delete_carries_survivor_row_lineage`
-  (`adopted_v3_mor_delete_commits_a_puffin_deletion_vector`,
-  `adopted_v3_mor_second_delete_refuses_while_a_deletion_vector_is_live`, the short-name and
-  padded merge-on-read UPDATE regressions, the UPDATE / MERGE refusals and the v2 control in the
-  same leaf; ANSI twins in `crates/repark-sql/src/v3_cow.rs` including
-  `adopted_v3_mor_first_delete_commits_a_deletion_vector_and_a_second_refuses`, plus
-  `v3_branch_tag_time_travel.rs::ansi_cow_delete_on_a_dv_carrying_v3_table_refuses` (snapshot,
-  object set and Spark's live set untouched); the subquery-`WHERE` resolver seat unchanged;
-  facade MERGE + UPDATE refusals, the COW DELETE commit and the MOR first-delete /
-  second-refusal pair in `python/repark/tests/test_v3_cow_dml.py`; the appended-fixture UPDATE +
-  MERGE control in `crates/repark-spark/src/tests/v3e4.rs`)
-- **Rationale** — the lift is measured; the refusals keep the **owner ruling 2026-08-25** (guard
-  COW DML on v3) and stay BACKLOG, stricter than Spark on purpose — an unattended job gets a
-  loud stop rather than a plausible wrong answer. The salvage ruling of 2026-08-28 narrowed
-  RP-2 to exactly this: one DELETE per DV-free table, everything with a live vector guarded
-  until RP-3 takes fork F-17 and measures the full DV input-state matrix. `UPDATE` measurement
-  rides V3-3. V3-4 still owns row lineage as a whole (`_row_id` is not yet plannable,
-  `V3-ROWID-1`).
+  (`adopted_v3_cow_second_delete_refuses_before_lineage_diverges`,
+  `adopted_v3_mor_delete_commits_a_puffin_deletion_vector`,
+  `adopted_v3_mor_second_delete_merges_into_the_live_deletion_vector`, the UPDATE / MERGE
+  refusals and the v2 control in the same leaf; ANSI twins in `crates/repark-sql/src/v3_cow.rs`
+  including `adopted_v3_mor_first_delete_commits_a_deletion_vector_and_a_second_merges`;
+  partitioned cells in `crates/repark-spark/src/tests/v3e3.rs`; facade
+  `python/repark/tests/test_v3_cow_dml.py`; live-DV UPDATE refuse in
+  `python/repark/tests/test_v3e4_refs_time_travel.py`). Pins: rp-3-fork-repin/C-004.
+- **Rationale** — remaining refusals keep the **owner ruling 2026-08-25** (guard COW DML on v3)
+  where the write is still unsafe, and stay BACKLOG. Live-DV DELETE is measured green.
+  Sequential COW lineage is a fork defect (F-rp3-c7). `UPDATE` / `MERGE` ride V3-3. V3-4 still
+  owns row lineage as a whole (`V3-ROWID-1`).
 
 ### BL-9 — a double-quoted string literal is an identifier on the SQL door
 

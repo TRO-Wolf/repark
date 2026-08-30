@@ -38,19 +38,24 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   use the shared Spark literal helper across SQL, createDataFrame, unpivot, and ML paths.
 - [test_mw9_delete_granularity.py](test_mw9_delete_granularity.py) — **MW-9:** facade Spark
   `.sql()` unset `write.delete.granularity` writes one position-delete file per data file.
+- [test_rp3_c009_write_default.py](test_rp3_c009_write_default.py) — **RP-3 C-009:** no engine
+  caller sets `write_default`; Iceberg fixture bytes stay flat vs `origin/main` when that
+  ref exists (skips on a shallow checkout). pins: rp-3-fork-repin/C-009, C-010, C-011
 - [test_v3_cow_dml.py](test_v3_cow_dml.py) — **V3R-1 (2026-08-25); RP-2 2026-08-27 retarget:** facade Spark `.sql()`
   MERGE / UPDATE on an adopted v3 table raise `UnsupportedOperationException` naming
   `V3-COW-1`; the plain-`WHERE` DELETE commits the right rows (RP-2 lift) with Spark-equal
-  survivor lineage — `next_row_id` = 5 on the 3-row recipe, Spark's own allocate-then-suppress
-  counter (live oracle 2026-08-27); a MOR first DELETE commits a Puffin DV and the second refuses
-  naming the live vector (`1 live deletion vector`), pointer and object set untouched (pins: rp-2-fork-repin/C-003, C-005).
+  survivor lineage — `next_row_id` = 5 on the 3-row recipe; a second COW DELETE after that
+  overwrite snapshot refuses before lineage diverges. A MOR first DELETE commits a Puffin DV and the second merges
+  into that live vector (pins: rp-2-fork-repin/C-003, C-005; rp-3-fork-repin/C-004).
 - [test_v3e4_refs_time_travel.py](test_v3e4_refs_time_travel.py) — **V3E-4:** facade
   branch/tag, `VERSION AS OF` over DVs, rollback, expire dual-probe, orphan
-  24h floor on the partitioned-DV fixture after a RePark append.
+  24h floor on the partitioned-DV fixture after a RePark append; live-DV UPDATE
+  still refuses `V3-COW-1` (RP-3 C-004; DELETE on live DVs is lifted).
 - [test_v3e3_fixtures.py](test_v3e3_fixtures.py) — **V3E-3 (2026-08-24):** facade adopt of
   the Spark-written partitioned v3 DV fixture and the equality-delete + DV fixture;
-  live rows, partition prune, `.delete_files` content 1/2.
-- [test_v3_live_oracle.py](test_v3_live_oracle.py) — **V3E-5 (2026-08-27):** nightly live oracle for the two V3E-3 fixtures — `REPARK_PARITY_LIVE=1` repark == Spark on partitioned-DV prune and equality-delete alongside DV, plus `.delete_files` kinds, with `B-MOR-3`/`V3-COW-1` control still refusing; JVM-free twins stay in `test_v3e3_fixtures.py`. Critic remediation (2026-08-27): prune1 on Spark, combined DirLock, exact content sets, mirrored format, GAV full equality, version sort, COW, `py-format` single-line, meta-pin now asserts archive/dual-wire/diff allowlist. Formal CCC + cargo-deny/wheel remediation (2026-08-28): `chacha20` yanked and `thiserror` duplicate `skip`. PLAN-1 makes the ledger lookup lifecycle-aware across staging, completed, and archive, and checks the landed #253 commit instead of the current branch.
+  live rows, partition prune, `.delete_files` content 1/2; RP-3 C-007 CALL still refuses
+  live DVs. pins: rp-3-fork-repin/C-007, C-011
+- [test_v3_live_oracle.py](test_v3_live_oracle.py) — **V3E-5 (2026-08-27):** nightly live oracle for the two V3E-3 fixtures — `REPARK_PARITY_LIVE=1` repark == Spark on partitioned-DV prune and equality-delete alongside DV, plus `.delete_files` kinds; live-DV UPDATE and rewrite controls refuse with rows and fixture bytes unchanged. JVM-free twins stay in `test_v3e3_fixtures.py`. Critic remediation (2026-08-27): prune1 on Spark, combined DirLock, exact content sets, mirrored format, GAV full equality, version sort, COW, `py-format` single-line, meta-pin now asserts archive/dual-wire/diff allowlist. Formal CCC + cargo-deny/wheel remediation (2026-08-28): `chacha20` yanked and `thiserror` duplicate `skip`. PLAN-1 makes the ledger lookup lifecycle-aware across staging, completed, and archive, and checks the landed #253 commit instead of the current branch.
 - [test_v3_create_opt_in.py](test_v3_create_opt_in.py) — **V3-2 (2026-08-24):** facade CREATE/CTAS
   `format-version = 3` refuses unless `repark.sql.allowCreateFormatVersion3` is true; opt-in
   CREATE is readable and still hits `V3-LINEAGE-1` on `rewrite_data_files`. Also the V3R-1

@@ -10,7 +10,7 @@ is now the epic list from v0.6 through 3.0 — PROJECT.md points here rather tha
 - [v1-0-iceberg-v3-northstar.md](v1-0-iceberg-v3-northstar.md) — **the v1.0 north star
   (owner-set 2026-08-23):** full production-grade Iceberg format-v3 — the four pillars, the
   acceptance matrix that gates the v1.0 tag, and the two-lane path (guarded RP-2 salvage — landed; fork
-  F-17 shared-Puffin closure — landed #237; immutable RP-3 at fork `d408da42` next, then V3-3+; OD-3b's IAM applied 2026-08-28, measured by MW-10). Matrix cells carry dated updates as rows move;
+  F-17 shared-Puffin closure — landed #237; RP-3 consumed at fork `d408da42` 2026-08-30, then V3-3+; OD-3b's IAM applied 2026-08-28, measured by MW-10). Matrix cells carry dated updates as rows move;
   the 2026-08-24 owner rulings (Lane A charter, the encryption-keys DECLARED exclusion) are
   recorded in the matrix and sequenced on [../../../briefs/next-sequence.md](../../../briefs/next-sequence.md).
 - [release-roadmap-2026-08-29.md](release-roadmap-2026-08-29.md) — **the release roadmap

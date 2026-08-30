@@ -8,6 +8,7 @@
 //! is not a read entry point for these adopted tables (C-010).
 //!
 //! pins: v3e-3-partitioned-eqdel-fixtures/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-010, C-011, C-012, C-013
+//! pins: rp-3-fork-repin/C-004, C-007, C-011
 
 use std::fs;
 use std::io::ErrorKind;
@@ -19,6 +20,7 @@ use super::super::*;
 use super::common::*;
 
 use datafusion::arrow::array::{Int32Array, Int64Array, ListArray, StringArray};
+use iceberg::spec::Literal;
 
 /// Table location baked into the partitioned-DV fixture.
 const PART_DV_TABLE: &str = "/tmp/repark-v3e3-partdv/ns/v3part";
@@ -422,6 +424,178 @@ async fn partitioned_v3_dv_rewrite_position_delete_files_still_refuses() {
     );
 }
 
+#[tokio::test]
+async fn partitioned_v3_dv_fork_rewrite_position_delete_files_measurement() {
+    let fixture = materialize_part_dv();
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    register_adopted(&ctx, &catalogs, "sales.partdv", &fixture.metadata_file).await;
+    let before_rows = live_triples(&ctx, &catalogs, "ice.sales.partdv").await;
+    let before_sum: i32 = before_rows.iter().map(|row| row.0).sum();
+    let before_deletes = delete_file_rows(&ctx, &catalogs, "ice.sales.partdv").await;
+    let ident = TableIdent::from_strs(["sales", "partdv"]).expect("ident");
+    let catalog = Arc::clone(catalogs.get("ice").expect("ice catalog"));
+    let table = catalog
+        .load_table(&ident)
+        .await
+        .expect("load adopted partitioned DV table");
+    let first_result = iceberg::maintenance::RewritePositionDeleteFiles::new(table)
+        .execute(catalog.as_ref())
+        .await
+        .expect("fork v3 RewritePositionDeleteFiles must run");
+    reregister(&ctx, Arc::clone(&catalog), "ice", "sales")
+        .await
+        .expect("invalidate after first rewrite");
+    let after_first = live_triples(&ctx, &catalogs, "ice.sales.partdv").await;
+    let after_first_sum: i32 = after_first.iter().map(|row| row.0).sum();
+    let after_first_deletes = delete_file_rows(&ctx, &catalogs, "ice.sales.partdv").await;
+    assert_eq!(
+        after_first, before_rows,
+        "first rewrite must keep live rows"
+    );
+    assert_eq!(
+        after_first_sum, before_sum,
+        "first rewrite must keep sum(id)"
+    );
+    let table = catalog
+        .load_table(&ident)
+        .await
+        .expect("reload after first rewrite");
+    let second = iceberg::maintenance::RewritePositionDeleteFiles::new(table)
+        .execute(catalog.as_ref())
+        .await
+        .expect("second rewrite");
+    reregister(&ctx, Arc::clone(&catalog), "ice", "sales")
+        .await
+        .expect("invalidate after second rewrite");
+    let after_second = live_triples(&ctx, &catalogs, "ice.sales.partdv").await;
+    assert_eq!(
+        after_second, after_first,
+        "second rewrite must converge on the same live rows"
+    );
+    let summary = format!(
+        "C-007 first rewritten={} added={} bytes_in={} bytes_out={} deletes {} -> {}; second rewritten={} added={}",
+        first_result.rewritten_delete_files_count,
+        first_result.added_delete_files_count,
+        first_result.rewritten_bytes_count,
+        first_result.added_bytes_count,
+        before_deletes.len(),
+        after_first_deletes.len(),
+        second.rewritten_delete_files_count,
+        second.added_delete_files_count,
+    );
+    assert_eq!(first_result.rewritten_delete_files_count, 0, "{summary}");
+    assert_eq!(first_result.added_delete_files_count, 0, "{summary}");
+    assert_eq!(second.rewritten_delete_files_count, 0, "{summary}");
+    assert_eq!(after_first_deletes.len(), before_deletes.len(), "{summary}");
+}
+
+#[tokio::test]
+async fn partitioned_v3_dv_delete_id_3_merges_into_the_touched_file() {
+    let fixture = materialize_part_dv();
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    register_adopted(&ctx, &catalogs, "sales.partdv", &fixture.metadata_file).await;
+    execute(&ctx, &catalogs, "DELETE FROM ice.sales.partdv WHERE id = 3")
+        .await
+        .expect("DELETE id = 3")
+        .collect()
+        .await
+        .expect("collect DELETE id = 3");
+    assert_eq!(
+        live_triples(&ctx, &catalogs, "ice.sales.partdv").await,
+        vec![
+            (1, "a".to_string(), 0),
+            (4, "d".to_string(), 1),
+            (6, "f".to_string(), 1),
+        ]
+    );
+    let deletes = delete_file_rows(&ctx, &catalogs, "ice.sales.partdv").await;
+    assert_eq!(deletes.len(), 2, "still one DV per data file");
+    let records: i64 = deletes.iter().map(|row| row.record_count).sum();
+    assert_eq!(records, 3, "part=0 gained the new position");
+}
+
+#[tokio::test]
+async fn partitioned_v3_dv_delete_id_1_keeps_the_untouched_sibling() {
+    let fixture = materialize_part_dv();
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    register_adopted(&ctx, &catalogs, "sales.partdv", &fixture.metadata_file).await;
+    execute(&ctx, &catalogs, "DELETE FROM ice.sales.partdv WHERE id = 1")
+        .await
+        .expect("DELETE id = 1")
+        .collect()
+        .await
+        .expect("collect DELETE id = 1");
+    assert_eq!(
+        live_triples(&ctx, &catalogs, "ice.sales.partdv").await,
+        vec![
+            (3, "c".to_string(), 0),
+            (4, "d".to_string(), 1),
+            (6, "f".to_string(), 1),
+        ],
+        "id 5 stays deleted"
+    );
+    let deletes = delete_file_rows(&ctx, &catalogs, "ice.sales.partdv").await;
+    assert_eq!(deletes.len(), 2, "untouched sibling stays live");
+}
+
+#[tokio::test]
+async fn partitioned_v3_dv_delete_across_files_keeps_per_file_partitions() {
+    let fixture = materialize_part_dv();
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    register_adopted(&ctx, &catalogs, "sales.partdv", &fixture.metadata_file).await;
+    execute(
+        &ctx,
+        &catalogs,
+        "DELETE FROM ice.sales.partdv WHERE id IN (1, 4)",
+    )
+    .await
+    .expect("DELETE one row from each partition")
+    .collect()
+    .await
+    .expect("collect partition-spanning DELETE");
+    assert_eq!(
+        live_triples(&ctx, &catalogs, "ice.sales.partdv").await,
+        vec![(3, "c".to_string(), 0), (6, "f".to_string(), 1)]
+    );
+    let deletes = delete_file_rows(&ctx, &catalogs, "ice.sales.partdv").await;
+    assert_eq!(deletes.len(), 2, "one live DV for each data file");
+    assert!(
+        deletes.iter().all(|file| {
+            file.content == 1
+                && file.file_format.eq_ignore_ascii_case("PUFFIN")
+                && file.record_count == 2
+        }),
+        "each replacement DV carries two deleted positions: {deletes:?}"
+    );
+    let table = catalogs["ice"]
+        .load_table(&TableIdent::new(
+            NamespaceIdent::new("sales".into()),
+            "partdv".into(),
+        ))
+        .await
+        .expect("load partitioned DV table");
+    let vectors = iceberg::live_deletion_vectors_by_data_file(&table)
+        .await
+        .expect("discover live DVs by referenced data file");
+    assert_eq!(vectors.len(), 2, "R114 maps one DV to each data file");
+    let mut partitions: Vec<_> = vectors
+        .values()
+        .map(|file| {
+            assert_eq!(file.partition_spec_id(), 0, "the fixture uses spec 0");
+            file.partition().fields().to_vec()
+        })
+        .collect();
+    partitions.sort_by_key(|partition| format!("{partition:?}"));
+    assert_eq!(
+        partitions,
+        vec![vec![Some(Literal::int(0))], vec![Some(Literal::int(1))],]
+    );
+}
+
 // =================================================================================================
 // Equality-delete + DV fixture
 // =================================================================================================
@@ -489,6 +663,43 @@ async fn equality_delete_alongside_dv_delete_files_name_both_kinds() {
         equality.file_format.eq_ignore_ascii_case("PARQUET"),
         "content=2 is PARQUET: {equality:?}"
     );
+    assert_eq!(equality.record_count, 1);
+    assert_eq!(equality.equality_ids.as_deref(), Some(&[1][..]));
+}
+
+#[tokio::test]
+async fn equality_delete_and_dv_keep_both_delete_classes_after_delete() {
+    let fixture = materialize_eq_dv();
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    register_adopted(&ctx, &catalogs, "sales.eqdv", &fixture.metadata_file).await;
+    execute(&ctx, &catalogs, "DELETE FROM ice.sales.eqdv WHERE id = 2")
+        .await
+        .expect("DELETE against the data file with the live DV")
+        .collect()
+        .await
+        .expect("collect equality-delete plus DV DELETE");
+    assert_eq!(
+        live_triples(&ctx, &catalogs, "ice.sales.eqdv").await,
+        vec![(3, "c".to_string(), 1)]
+    );
+    let deletes = delete_file_rows(&ctx, &catalogs, "ice.sales.eqdv").await;
+    assert_eq!(
+        deletes.len(),
+        2,
+        "the DV and equality delete both stay live"
+    );
+    let vector = deletes
+        .iter()
+        .find(|file| file.content == 1)
+        .expect("Puffin DV remains live");
+    assert!(vector.file_format.eq_ignore_ascii_case("PUFFIN"));
+    assert_eq!(vector.record_count, 2);
+    let equality = deletes
+        .iter()
+        .find(|file| file.content == 2)
+        .expect("Parquet equality delete remains live");
+    assert!(equality.file_format.eq_ignore_ascii_case("PARQUET"));
     assert_eq!(equality.record_count, 1);
     assert_eq!(equality.equality_ids.as_deref(), Some(&[1][..]));
 }

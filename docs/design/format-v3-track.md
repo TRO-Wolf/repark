@@ -157,8 +157,9 @@ write failed with `Invalid metadata file name format: v3.metadata.json`, because
 Copying the identical file to a name of that shape made `INSERT` and `expire_snapshots` both
 succeed, which is how the cause was isolated from anything to do with v3. Catalogs that write
 version-uuid pointers, Glue among them, are unaffected. **Admitted as registry row
-`V3-ADOPT-1` by V3-1 (2026-08-21):** the CALL write now names the Hadoop convention and the
-version-uuid shape; the fork still cannot compute the next pointer from `vN.metadata.json`.
+`V3-ADOPT-1` by V3-1 (2026-08-21).** **Errata 2026-08-30 (RP-3 / fork #235):** Hadoop `vN`
+parses and a write commits uncompressed `v(N+1).metadata.json`; `V3-ADOPT-1` is FIXED. S3 Tables
+`register_table` remains a dated service gap (fork R126 / #233; registry `S3T-1`).
 
 ## 5. The delivery sequence, revised 2026-08-28
 
@@ -216,7 +217,7 @@ container closure is a public call its own DataFusion `delete.rs` makes
 (`close_touched_dv_containers`), and the engine's MOR DML path
 (`crates/repark-iceberg/src/write/merge/mod.rs`, `plan_and_commit_mor` → `commit_row_delta`)
 commits through `RowDelta` directly — RP-3 wires that call in first, then measures. Charter:
-[task/ledgers/staging/rp-3-fork-repin-ledger.md](../../task/ledgers/staging/rp-3-fork-repin-ledger.md).
+[task/ledgers/completed/rp-3-fork-repin-ledger.md](../../task/ledgers/completed/rp-3-fork-repin-ledger.md).
 The repin re-runs every standing duty in `AGENTS.md` and measures these cells:
 
 | Input state | Operation | Required result |
@@ -235,6 +236,12 @@ asserted through `collect` or `to_arrow`. RP-3 also re-measures `rewrite_data_fi
 the selected SHA. A red result becomes a fork or engine-owned finding before V3-5 charters; it
 is never treated as closed because fork row R166 is green.
 
+*Done 2026-08-30 — RP-3 at `d408da42`:* cells 1–6 green on all three doors. Cell 7: first COW
+DELETE is Spark-equal; a second after overwrite refuses (`V3-COW-1`, F-rp3-c7). Cell 8: live-DV
+UPDATE refuses. `rewrite_data_files` still reassigns (`V3-LINEAGE-1`, C-005).
+`rewrite_position_delete_files` stays refused (`B-MOR-3`, C-007). Hadoop writes FIXED
+(`V3-ADOPT-1`).
+
 ### Step 4 — deliver V3-3 and the guarded upgrade
 
 V3-3 completes MOR DELETE, UPDATE, and MERGE across partitioned and spec-evolved tables. It
@@ -251,7 +258,9 @@ V3-3 proves the engine can safely mutate an upgraded table.
   maintenance suite.
 - **V3-6:** finish binary variant, nanosecond timestamps, unknown, and column defaults. V3-6 may
   run in parallel with V3-3 or V3-4 after its fork type support is pinned; it does not wait for
-  V3-5 merely because its unit number is higher.
+  V3-5 merely because its unit number is higher. **RP-3 C-009 (2026-08-30):** fork #233 fills
+  `write_default` inside `DataFileWriter::write`; no engine surface sets a `write_default`.
+  The fork surface exists; V3-6 consumes it.
 
 ### Step 6 — close the v1.0 gate
 
@@ -265,12 +274,12 @@ blocked. They do not replace or delay a ready v3 unit.
 
 ## 6. Fork work this track needs
 
-1. **Shared-Puffin DV sibling closure (F-17)** — landed fork #237 (2026-08-28); the engine
-   consumes it in RP-3, which must call the closure from its own MOR DML path.
-2. **Row lineage through `RewriteDataFiles`** remains an executed question. RP-2 measured a full
-   reassignment at `ce92a7bf`; RP-3 re-runs it before assigning the fix to the fork or engine.
+1. **Shared-Puffin DV sibling closure (F-17)** — landed fork #237 (2026-08-28); RP-3 (2026-08-30)
+   wired `close_touched_dv_containers` on the engine MOR path; matrix cell (4) is green.
+2. **Row lineage through `RewriteDataFiles`** remains open. RP-3 re-measured at `d408da42`
+   (C-005): still reassigns; `V3-LINEAGE-1` stays. The lift belongs to V3-5.
 3. **`MetadataLocation` Hadoop pointer math (F-14)** — landed fork #235 (2026-08-28): Hadoop
-   `vN` parses and bumps to `v(N+1).metadata.json`; RP-3 retargets the engine pin.
+   `vN` parses and bumps to `v(N+1).metadata.json`; RP-3 retargeted the engine pin (`V3-ADOPT-1` FIXED).
 4. **V3 schema and IO support (F-15)** gates each V3-6 type independently.
 
 The FNP and TA performance campaigns consume none of these fork surfaces.
