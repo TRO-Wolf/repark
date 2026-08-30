@@ -38,21 +38,11 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 | # | Unit | Track | Blocked by | Size |
 |---|---|---|---|---|
 | 1 | **FNP-15/16** — register every unreachable and declared-deferred family | Function parity | RP-3 departure, or a fork-wait window | STANDARD <!-- unit id=fnp-15-16 --> |
-| 2 | **MW-10** — the S3 Tables merge-on-read leg, measure-first on OD-3b | Maintenance / AWS evidence | the owner's gate; an owner dispatch per measurement | STANDARD <!-- unit id=mw-10 --> |
 
 <!-- unit id=fnp-15-16 ledger=fnp-15-16- -->
 **Why FNP-15/16 follows.** This is the highest-value fork-independent honesty unit: it turns 62
 missing or ambiguous names into explicit refusing surfaces with exact registry reasons. It does
 not gate v1.0 and yields to a ready v3 unit.
-<!-- /unit -->
-
-<!-- unit id=mw-10 ledger=mw-10- -->
-**Why MW-10 is queued.** OD-3b's scoped S3 Tables IAM was applied on 2026-08-28; nothing measures
-what it allows until the Glue maintenance helper runs against the table bucket. One new
-acceptance test plus a bounded retry for service-side compaction; the first dispatch answers
-whether `s3tables:PutTableData` lets `expire_snapshots` remove files — a denial is a stop. It
-runs in any window and serves the v1.0 gate's S3 Tables rows. Charter:
-[../task/ledgers/staging/mw-10-s3tables-mor-ledger.md](../task/ledgers/staging/mw-10-s3tables-mor-ledger.md).
 <!-- /unit -->
 
 **Not in this queue (owner-sequenced or owner-gated):** V3-3 (chartered; opens after RP-3

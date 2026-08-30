@@ -37,7 +37,7 @@ declines it (a dated ruling in the intake, then the archive).
   intake-time measurements MW-0 starts from — including an undeclared `rewrite_data_files`
   result-schema divergence found while verifying the scope.
 - [roadmap-intake-2026-08-23.md](roadmap-intake-2026-08-23.md) — **roadmap intake
-  (2026-08-23), two tracks** (Track B's MW-4b row in flight as MW-10). Track A: the six DuckDB window-operator optimizations evaluated
+  (2026-08-23), two tracks** (Track B's MW-4b row delivered as MW-10 — measured allow 2026-08-30). Track A: the six DuckDB window-operator optimizations evaluated
   against the pinned DataFusion 54.1.0 sources — two already in DataFusion, two upstream
   operator work this engine should not own, two real gaps (non-retractable aggregates over
   sliding frames; sort elision via Iceberg ordering provenance) — proposed as a measure-first
