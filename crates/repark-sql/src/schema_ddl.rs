@@ -1,5 +1,4 @@
 //! Catalog DDL: `CREATE SCHEMA … WITH (location = …)`, `DROP SCHEMA`, and `DROP TABLE`.
-//! Each door keeps its grammar while sharing the catalog effects.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -13,9 +12,7 @@ use repark_core::{CatalogRegistry, EngineContext};
 /// The curated `CREATE SCHEMA … WITH (…)` vocabulary.
 const SCHEMA_KEYS: &[&str] = &["location"];
 
-/// ===========================================================================================
 /// `CREATE SCHEMA [IF NOT EXISTS] catalog.schema [WITH (location = '…')]`.
-/// ===========================================================================================
 pub(crate) async fn execute_create_schema(
     cx: &EngineContext<'_>,
     name: &ObjectName,
@@ -55,10 +52,7 @@ pub(crate) async fn execute_create_schema(
     cx.ctx.read_empty()
 }
 
-/// ===========================================================================================
 /// `DROP SCHEMA [IF EXISTS] catalog.schema` — `IF EXISTS` is idempotent.
-/// `CASCADE` refuses because dropping a schema's tables as a side effect of DDL is destructive.
-/// ===========================================================================================
 pub(crate) async fn execute_drop_schema(
     cx: &EngineContext<'_>,
     names: &[ObjectName],
@@ -93,9 +87,7 @@ pub(crate) async fn execute_drop_schema(
     cx.ctx.read_empty()
 }
 
-/// ===========================================================================================
 /// `DROP TABLE [IF EXISTS] catalog.schema.table[, …]` — `IF EXISTS` is idempotent.
-/// ===========================================================================================
 pub(crate) async fn execute_drop_table(
     cx: &EngineContext<'_>,
     names: &[ObjectName],
@@ -130,7 +122,7 @@ pub(crate) async fn execute_drop_table(
     cx.ctx.read_empty()
 }
 
-// === Shared helpers =========================================================================
+// Shared helpers.
 
 /// Split a two-or-more-part `catalog.schema[.sub…]` name.
 fn resolve_namespace(

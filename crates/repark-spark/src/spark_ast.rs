@@ -1,8 +1,4 @@
 //! Spark AST defaults for DataFusion passthrough statements.
-//!
-//! The passthrough injects Spark's `ASC NULLS FIRST` and `DESC NULLS LAST` defaults into every
-//! unspecified order, including nested queries and window specifications. Explicit null placement
-//! remains unchanged. The same boundary owns DML, collation, range-frame, and filesystem valves.
 
 use std::ops::ControlFlow;
 
@@ -24,20 +20,9 @@ use datafusion::sql::sqlparser::ast::{
 use crate::{local_fs_ddl, window_range};
 use repark_core::CatalogRegistry;
 
-/// ===========================================================================================
 /// Plan + execute one passthrough statement with Spark's ORDER BY null-placement defaults.
-///
-/// The Spark-parity replacement for `ctx.sql(sql)`: parse with the session dialect, apply AST
-/// defaults, then plan and execute. DataFusion-native statements without a generic AST pass
-/// through unchanged, subject to the SEC-02 local-filesystem gate.
-///
-/// The G3-E8 subquery-predicate valve attaches to this executing parse. Router and session
-/// dialects can disagree, so an earlier parse cannot safely guard DML.
-/// ===========================================================================================
-///
 /// # Errors
-/// Propagates parse, planning, and execution errors as [`datafusion::error::DataFusionError`],
-/// plus the G3-E8 refusal for a `DELETE`/`UPDATE` carrying a subquery predicate.
+/// Propagates parse, planning, and execution errors, plus the G3-E8 subquery-predicate refusal.
 pub(crate) async fn execute_passthrough(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -46,23 +31,14 @@ pub(crate) async fn execute_passthrough(
     let state = ctx.state();
     let dialect = state.config().options().sql_parser.dialect;
     // G15 type-position (`CAST(x AS STRING COLLATE name)`) fails `sql_to_statement`.
-    // Scan the executing-parse text first so that spelling is G15, not ParserError.
     crate::collation::refuse_type_position_collation_in_sql(sql)?;
     let mut statement = state.sql_to_statement(sql, &dialect)?;
     let mut may_have_bare_range_bound = false;
     match &mut statement {
         DfStatement::Statement(inner) => {
-            // G15 — collation at the EXECUTING parse (G3-E8 altitude). A COLLATE
-            // spelling must not reach DataFusion's unsupported-AST path or be
-            // silently dropped. Router-parsable SELECT/ORDER BY still land here
-            // when tests call execute_passthrough directly (Q-001 pin).
+            // G15 — collation at the EXECUTING parse (G3-E8 altitude).
             crate::refuse_collation_in_statement(inner)?;
-            // G3-E8 identity path — allow-listed DELETE / UPDATE via
-            // try_allowed_delete_in / try_allowed_update_in → execute_predicate_dml
-            // (attach is spelling-generic; the allow-list exports uncorrelated IN /
-            // NOT IN, [NOT] EXISTS ± correlation, correlated IN, and identity
-            // UPDATE … SET <scalar> WHERE col IN). Fail-closed: every other
-            // subquery spelling still hits the valve below (never DataFusion DML).
+            // G3-E8 identity path.
             if let Some(allowed) =
                 repark_iceberg::write::predicate_dml::try_allowed_delete_in(inner)?
             {
@@ -114,11 +90,9 @@ pub(crate) async fn execute_passthrough(
             // G3-E8 — on the EXECUTING parse, before anything else touches the statement.
             crate::refuse_dml_subquery_predicate_in_statement(inner)?;
             apply_spark_order_by_defaults(inner);
-            // SQP-1: rewrite `CAST(x AS BINARY)` to `BYTEA` — `BINARY` alone is `Unsupported SQL
-            // type` at planning. Type legality is checked on the planned tree below.
+            // SQP-1: rewrite `CAST` to `BYTEA`.
             rewrite_binary_casts(inner);
-            // R1: DataFusion's convert_frame_bound_to_scalar_value accepts only
-            // SingleQuotedString inside INTERVAL. Quote `INTERVAL 1 DAY` before first plan.
+            // R1: DataFusion accepts only SingleQuotedString inside INTERVAL frame bounds.
             window_range::quote_unquoted_interval_range_bounds(inner);
             may_have_bare_range_bound = window_range::statement_has_bare_range_bound(inner);
         }
@@ -128,22 +102,19 @@ pub(crate) async fn execute_passthrough(
         _ => {}
     }
     let plan = state.statement_to_plan(statement).await?;
-    // G5b: a unit-less `RANGE` offset over a datetime order key is Spark's refusal (TIMESTAMP)
-    // or means DAYS (DATE), never DataFusion's silent MONTHS. The AST probe above keeps every
-    // statement without such a bound — effectively all of them — on the single-plan path.
+    // G5b: a unit-less RANGE offset over datetime is Spark refusal or DAYS, never silent MONTHS.
     let plan = if may_have_bare_range_bound {
         conform_temporal_range_frames(&state, sql, &dialect, plan).await?
     } else {
         plan
     };
-    // SQP-1: refuse an illegal `→ BINARY` cast before the eager analyze so repark's clean
-    // `DATATYPE_MISMATCH` message wins over DataFusion's silent int→bytes / opaque optimizer error.
+    // SQP-1: refuse an illegal `→ BINARY` cast before the eager analyze.
     refuse_illegal_binary_cast(&plan)?;
     // Refuse local CREATE EXTERNAL and COPY TO before eager execution unless explicitly allowed.
     local_fs_ddl::refuse_local_filesystem_plan(ctx, catalogs, &plan)?;
     // Apply the shared create guard to the plan the sink will register.
     repark_core::PreExecute::new(ctx, catalogs).guard(&plan)?;
-    // Spark applies commands eagerly. Materialize DML and COPY once, while leaving queries lazy.
+    // Spark applies commands eagerly.
     let is_eager_command = matches!(&plan, LogicalPlan::Dml(_) | LogicalPlan::Copy(_));
     // Eager analysis exposes Spark-adjusted types to Arrow export and CTAS schema derivation.
     let plan = repark_functions::analyze_eagerly(&state, plan)?;
@@ -156,15 +127,7 @@ pub(crate) async fn execute_passthrough(
     ctx.read_batches(batches)
 }
 
-/// ===========================================================================================
 /// Apply Spark's bare-`RANGE`-offset rules to a freshly-planned statement (G5b).
-///
-/// Refuses the TIMESTAMP arm on the planned tree; for the DATE arm restates the offsets as
-/// `INTERVAL '<n>' DAY` in the AST and re-plans, because a window expression's schema name
-/// embeds its frame and an in-place plan rewrite would strand every parent column reference.
-/// See [`window_range`] for the full rationale.
-/// ===========================================================================================
-///
 /// # Errors
 /// Propagates the Spark refusal, and any parse / planning error of the restated statement.
 async fn conform_temporal_range_frames(
@@ -197,9 +160,6 @@ async fn conform_temporal_range_frames(
 }
 
 /// Re-parse, re-apply Spark ORDER BY defaults + R1 quoting, run `rewrite`, re-plan.
-///
-/// The restatement path starts from the original SQL text (window names embed the
-/// frame), so unquoted `INTERVAL 1 DAY` must be quoted again before the second plan.
 async fn restate_range_frames_and_replan(
     state: &SessionState,
     sql: &str,
@@ -209,8 +169,7 @@ async fn restate_range_frames_and_replan(
     let mut restated = state.sql_to_statement(sql, dialect)?;
     if let DfStatement::Statement(inner) = &mut restated {
         apply_spark_order_by_defaults(inner);
-        // Keep the BINARY→BYTEA rewrite in lockstep: this re-parse starts from the original SQL,
-        // so a statement with both a bare RANGE bound and a BINARY cast would else fail at planning.
+        // Keep the BINARY→BYTEA rewrite in lockstep: this re-parse starts from the original SQL.
         rewrite_binary_casts(inner);
         window_range::quote_unquoted_interval_range_bounds(inner);
         rewrite(inner);
@@ -218,16 +177,14 @@ async fn restate_range_frames_and_replan(
     state.statement_to_plan(restated).await
 }
 
-/// Inject Spark's null-placement defaults into every `ORDER BY` whose placement is unspecified,
-/// across the whole statement (queries, subqueries, window specs).
+/// Inject Spark null-placement defaults into every ORDER BY whose placement is unspecified.
 pub(crate) fn apply_spark_order_by_defaults(statement: &mut Statement) {
     let mut visitor = OrderByDefaults;
     // The visitor's Break type is uninhabited — traversal always completes.
     let _ = statement.visit(&mut visitor);
 }
 
-/// The visitor: `post_visit_query` covers query-level `ORDER BY` and the named `WINDOW` clauses
-/// of every SELECT in the query body; `post_visit_expr` covers inline `OVER (ORDER BY …)`.
+/// The visitor covers query-level ORDER BY, named WINDOW clauses, and inline OVER ORDER BY.
 struct OrderByDefaults;
 
 impl VisitorMut for OrderByDefaults {
@@ -253,9 +210,7 @@ impl VisitorMut for OrderByDefaults {
     }
 }
 
-/// Fix the named `WINDOW w AS (…)` clauses of the `SELECT` nodes in a query body. Nested
-/// `Query` nodes are handled by their own `post_visit_query` call; set operations are walked
-/// to reach the `SELECT` nodes on either side.
+/// Fix the named `WINDOW w AS (…)` clauses of the `SELECT` nodes in a query body.
 fn apply_to_set_expr(body: &mut SetExpr) {
     match body {
         SetExpr::Select(select) => {
@@ -273,26 +228,21 @@ fn apply_to_set_expr(body: &mut SetExpr) {
     }
 }
 
-/// Spark's default: ascending → NULLS FIRST, descending → NULLS LAST. Only fills the gap —
-/// an explicit `NULLS FIRST`/`NULLS LAST` is untouched.
+/// Spark's default: ascending → NULLS FIRST, descending → NULLS LAST.
 fn apply_default(order_by: &mut OrderByExpr) {
     if order_by.options.nulls_first.is_none() {
         order_by.options.nulls_first = Some(order_by.options.asc.unwrap_or(true));
     }
 }
 
-/// Rewrite every `CAST(x AS BINARY)` / `TRY_CAST` / `::BINARY` target to `BYTEA` (SQP-1):
-/// sqlparser's [`DataType::Binary`] is `Unsupported SQL type BINARY` at planning, while `BYTEA`
-/// plans to the Arrow `Binary` that Spark's `BINARY` is. `VARBINARY` is left alone — Spark rejects
-/// it too (`UNSUPPORTED_DATATYPE`, B12). The DDL `BINARY` column path is intercepted before this parse.
+/// Rewrite every `CAST` / `TRY_CAST` / `::BINARY` target to `BYTEA`.
 fn rewrite_binary_casts(statement: &mut Statement) {
     let mut visitor = BinaryCastToBytea;
     // The visitor's Break type is uninhabited — traversal always completes.
     let _ = statement.visit(&mut visitor);
 }
 
-/// Rewrites a `BINARY` cast target to `BYTEA` at every cast kind (`CAST`, `TRY_CAST`, `::`) and
-/// every nesting depth.
+/// Rewrites a `BINARY` cast target to `BYTEA` at every cast kind and every nesting depth.
 struct BinaryCastToBytea;
 
 impl VisitorMut for BinaryCastToBytea {
@@ -308,17 +258,9 @@ impl VisitorMut for BinaryCastToBytea {
     }
 }
 
-/// Refuse a cast to Arrow `Binary` whose input type Spark refuses (SQP-1 / B2–B7). Spark allows
-/// only STRING / BINARY / NULL → BINARY; every other source is an analysis error. After
-/// [`rewrite_binary_casts`], DataFusion would otherwise **silently** cast an integer to bytes — a
-/// wrong answer, not a refusal — so the check is repark's. It runs on the planned tree because the
-/// input type is only known after name resolution: `CAST(c AS BINARY)` is legal over a STRING
-/// column (B13), illegal over an INT column, and the two are the same parse tree. The walk reuses
-/// the `insert_overwrite` cast-walk shape so no cast hides in a subquery, predicate or aggregate.
-///
+/// Refuse a cast to Arrow `Binary` whose input type Spark refuses (SQP-1 / B2–B7).
 /// # Errors
-/// [`DataFusionError::Plan`] carrying Spark's `DATATYPE_MISMATCH` and the source type name; it
-/// folds to `AnalysisException` at the PyO3 boundary.
+/// Returns Plan carrying Spark `DATATYPE_MISMATCH`; it folds to `AnalysisException` at PyO3.
 fn refuse_illegal_binary_cast(plan: &LogicalPlan) -> Result<()> {
     match find_illegal_binary_cast(plan) {
         Some(offender) => Err(illegal_binary_cast_error(&offender)),
@@ -326,10 +268,7 @@ fn refuse_illegal_binary_cast(plan: &LogicalPlan) -> Result<()> {
     }
 }
 
-/// An illegal `→ BINARY` cast the walk found: the refused source type, and whether it was a
-/// `TRY_CAST`. The kind changes the message — Spark quotes `CAST_WITH_CONF_SUGGESTION` only for a
-/// plain `CAST` of an integer; `TRY_CAST` of any source quotes `CAST_WITHOUT_SUGGESTION` (measured
-/// B2, `<pyspark-4.1.2-oracle>`).
+/// An illegal `→ BINARY` cast the walk found.
 struct IllegalBinaryCast {
     source: ArrowDataType,
     is_try_cast: bool,
@@ -355,9 +294,7 @@ fn find_illegal_binary_cast(plan: &LogicalPlan) -> Option<IllegalBinaryCast> {
     offender
 }
 
-/// The illegal `→ Binary` cast inside `expr` (or a subquery hanging off it), or `None`. Subquery
-/// plans hang off the expression, not off [`LogicalPlan`] children, so they are recursed into
-/// explicitly — the same reason [`crate::insert_overwrite`] does.
+/// The illegal `→ Binary` cast inside `expr` (or a subquery hanging off it), or `None`.
 fn expr_illegal_binary_cast_source(
     expr: &DataFusionExpr,
     schema: &DFSchema,
@@ -394,8 +331,7 @@ fn expr_illegal_binary_cast_source(
     offender
 }
 
-/// True for the source types Spark allows to cast to `BINARY`: the string family, the binary
-/// family (re-cast of a binary value), and `NULL` (B8). Everything else refuses.
+/// True for the source types Spark allows to cast to `BINARY`.
 fn is_binary_castable_source(data_type: &ArrowDataType) -> bool {
     matches!(
         data_type,
@@ -409,10 +345,7 @@ fn is_binary_castable_source(data_type: &ArrowDataType) -> bool {
     )
 }
 
-/// Build Spark's refusal for an illegal `→ BINARY` cast, naming the source type. A plain `CAST` of
-/// an integer quotes `CAST_WITH_CONF_SUGGESTION` and the "with ANSI mode on" clause (ANSI-off would
-/// big-endian-encode the int — B11, tabled); `TRY_CAST` of any source and a plain `CAST` of any
-/// non-integer quote `CAST_WITHOUT_SUGGESTION` (measured `TRY_CAST(1 AS BINARY)`, B2).
+/// Build Spark's refusal for an illegal `→ BINARY` cast, naming the source type.
 fn illegal_binary_cast_error(offender: &IllegalBinaryCast) -> DataFusionError {
     let source_name = spark_source_type_name(&offender.source);
     if is_spark_integer(&offender.source) && !offender.is_try_cast {
@@ -428,8 +361,7 @@ fn illegal_binary_cast_error(offender: &IllegalBinaryCast) -> DataFusionError {
     }
 }
 
-/// The Arrow integer types (INT / BIGINT / …) whose `→ BINARY` refusal carries
-/// `CAST_WITH_CONF_SUGGESTION` (they cast under ANSI OFF).
+/// The Arrow integer types whose `→ BINARY` refusal carries `CAST_WITH_CONF_SUGGESTION`.
 fn is_spark_integer(data_type: &ArrowDataType) -> bool {
     matches!(
         data_type,
@@ -437,8 +369,7 @@ fn is_spark_integer(data_type: &ArrowDataType) -> bool {
     )
 }
 
-/// The Spark SQL type name a `→ BINARY` refusal quotes for `source`. An unlisted type falls back
-/// to Arrow's own spelling so the message is never empty.
+/// The Spark SQL type name a `→ BINARY` refusal quotes for `source`.
 fn spark_source_type_name(source: &ArrowDataType) -> String {
     match source {
         ArrowDataType::Int8 => "TINYINT".to_string(),
@@ -471,8 +402,7 @@ mod tests {
 
     use crate::execute;
 
-    /// A context whose `v` table carries (2, NULL, 1) — the null-placement fixture — wired the
-    /// way `repark-core` builds sessions (Spark analyzer rules installed).
+    /// A context whose `v` table carries.
     fn ctx() -> (SessionContext, CatalogRegistry) {
         let ctx = SessionContext::new();
         for rule in repark_functions::analyzer_rules() {
@@ -560,8 +490,7 @@ mod tests {
         );
     }
 
-    /// The default reaches subqueries and window `OVER (ORDER BY …)` specs: with NULLS FIRST
-    /// the NULL row takes `row_number` 1.
+    /// The default reaches subqueries and window `OVER` specs.
     #[tokio::test]
     async fn window_order_by_gets_spark_default() {
         let (ctx, catalogs) = ctx();
@@ -585,11 +514,8 @@ mod tests {
         assert_eq!(column.value(0), 1, "the NULL row must rank first (Spark)");
     }
 
-    /// The rewrites survive the double analyzer run this path creates (eager analysis here +
-    /// physical planning's own) — the idempotency contract: the subscript must not shift
-    /// twice, the divisor must not be double-guarded into a type error, and the SQP-1
-    /// `BINARY`→`BYTEA` cast rewrite must plan to `Binary` under the same double analysis.
     /// pins: sqp-1-spark-string-literals/C-010
+    /// The rewrites survive the double analyzer run this path creates.
     #[tokio::test]
     async fn passthrough_rewrites_are_idempotent_across_reanalysis() {
         let (ctx, catalogs) = ctx();

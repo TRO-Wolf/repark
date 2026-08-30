@@ -1,5 +1,7 @@
 # map — repark-iceberg/src/write/predicate_dml
 
+CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated comments rewritten as complete sentences (D-001).
+
 ## Purpose
 
 Test modules for [`predicate_dml.rs`](../predicate_dml.rs) (`execute_predicate_dml` — identity
@@ -13,11 +15,7 @@ works, so the attribute is gone rather than documented.
 
 ## Contents
 
-- `predicate_dml_tests.rs` — DELETE: `IN` / `NOT IN (SELECT …)` including the NULL 3VL trap,
-  `[NOT] EXISTS` with and without correlation, correlated `IN`. Also the isolation-level property
-  pins (M19 / A10).
-- `predicate_dml_update_tests.rs` — the identity `UPDATE … SET <scalar> WHERE col IN` arm.
-  **MW-9:** unknown `write.delete.granularity` refuses before any parquet write.
+- [tests/](tests/map.md) — DELETE and identity UPDATE batteries.
 
 ## Pointers
 

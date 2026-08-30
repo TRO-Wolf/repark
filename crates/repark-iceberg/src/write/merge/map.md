@@ -1,5 +1,7 @@
 # map — repark-iceberg/src/write/merge/
 
+CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated comments rewritten as complete sentences (D-001). Wrapped-line fragments rewritten as complete sentences (D-002).
+
 CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
 accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
 
@@ -61,21 +63,9 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   `write.merge.isolation-level` (default serializable; snapshot drops
   `validate_no_conflicting_data` / `validate_no_conflicting_data_files`;
   M15 AlwaysTrue is more conservative than the residual). Pins in
-  `occ_tests.rs` (M13 parse + M19-A snapshot split + RP-1 F-0 Replace
+  `tests/occ.rs` (M13 parse + M19-A snapshot split + RP-1 F-0 Replace
   files-exist pin on the snapshot arm).
-- `tests.rs` — primary unit battery
-- `occ_tests.rs` — OCC / commit conflict pins + M13 isolation parse +
-  M19-A serializable-vs-snapshot split
-- `occ_tests.rs` — OCC / commit conflict pins
-- `occ_conflict_tests.rs` — OCC-2 M19/M20 batteries B/C/E/F/G/H/I
-  (`RowDeltaKind::Delete`, MERGE↔MERGE both orders, retry-from-original-pin,
-  empty-table from-root, M15 partitioned over-rejection, M20 operation stamps,
-  M14 abort-path cleanup: rejected files removed, success-path files kept,
-  delete-failure does not mask OCC).
-- `streaming_tests.rs` — stream write interleaving pins
-- `parallel_write_tests.rs` — concurrent file write pins
-- `streaming_scan_tests.rs` — streaming target-scan pins + PERF-04 residual-push
-  battery + MG-1 `utf8_source_int32_target_does_not_push_residual`
+- [tests/](tests/map.md) — MERGE unit batteries (primary, OCC, streaming, parallel write).
 
 ## I want to…
 
@@ -83,8 +73,8 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
 |---|---|
 | Change MERGE execute / MoR-CoW arms | `mod.rs` |
 | Change rejected-commit file cleanup | `abort.rs` + `commit_overwrite` / `commit_row_delta_kind` |
-| Add a unit pin for SQL shape | `tests.rs` |
-| Touch OCC commit behavior | `occ_tests.rs` / `occ_conflict_tests.rs` |
+| Add a unit pin for SQL shape | `tests/merge.rs` |
+| Touch OCC commit behavior | `tests/occ.rs` / `tests/occ_conflict.rs` |
 
 ## Pointers
 

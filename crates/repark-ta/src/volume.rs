@@ -1,16 +1,8 @@
-//! Volume indicators from TA-Lib C 0.4.0. See the crate docs for numeric contracts.
-//!
-//! Incremental accumulators preserve C order. AD/ADOSC use strict `tmp > 0.0`; MFI uses the
-//! hard `pos+neg < 1.0` guard. None use FMA.
+//! Volume indicators from TA-Lib C 0.4.0.
 
 use crate::{Result, as_f64, check_lengths, check_period, nan_vec};
 
-/// ===========================================================================================
 /// C's `CALCULATE_AD` increment (`ta_AD.c` / `ta_ADOSC.c`).
-///
-/// Add only when `tmp = high − low > 0.0`. Preserve the CLV order
-/// `(((close−low)−(high−close))/tmp)*volume`; algebraic rewrites round differently.
-/// ===========================================================================================
 fn calculate_ad(ad: &mut f64, high: f64, low: f64, close: f64, volume: f64) {
     let tmp = high - low;
     if tmp > 0.0 {
@@ -18,12 +10,7 @@ fn calculate_ad(ad: &mut f64, high: f64, low: f64, close: f64, volume: f64) {
     }
 }
 
-/// ===========================================================================================
-/// `AD` — Chaikin A/D Line (`ta_AD.c`). Lookback 0.
-///
-/// Emits the incremental cumulative CLV·volume. Flat bars re-emit the previous total.
-/// ===========================================================================================
-///
+/// `AD` — Chaikin A/D Line (`ta_AD.c`).
 /// # Errors
 /// [`crate::TaError::LengthMismatch`] if the series differ in length.
 pub fn ad(high: &[f64], low: &[f64], close: &[f64], volume: &[f64]) -> Result<Vec<f64>> {
@@ -37,17 +24,9 @@ pub fn ad(high: &[f64], low: &[f64], close: &[f64], volume: &[f64]) -> Result<Ve
     Ok(out)
 }
 
-/// ===========================================================================================
 /// `ADOSC` — Chaikin A/D Oscillator (`ta_ADOSC.c`, unstable period 0).
-///
-/// Lookback is `slowest − 1`. C seeds both EMAs with the first AD value and updates them as
-/// `(k*ad)+(one_minus_k*ema)` with `k = 2/(period+1)`; do not call standalone [`crate::ema`].
-/// `fast` and `slow` are slots, so reversing them negates the result.
-/// ===========================================================================================
-///
 /// # Errors
-/// [`crate::TaError::InvalidPeriod`] if `fast` or `slow` is outside `2..=MAX_PERIOD`;
-/// [`crate::TaError::LengthMismatch`] if the series differ in length.
+/// `InvalidPeriod` if `fast` or `slow` is outside `2..=MAX_PERIOD`.
 pub fn adosc(
     high: &[f64],
     low: &[f64],
@@ -114,13 +93,7 @@ pub fn adosc(
     Ok(out)
 }
 
-/// ===========================================================================================
-/// `OBV` — On Balance Volume (`ta_OBV.c`). Lookback 0.
-///
-/// Seeds `prevOBV = volume[0]`, so the first output is the first volume. Later bars add, subtract,
-/// or hold volume according to the close comparison.
-/// ===========================================================================================
-///
+/// `OBV` — On Balance Volume (`ta_OBV.c`).
 /// # Errors
 /// [`crate::TaError::LengthMismatch`] if the series differ in length.
 pub fn obv(close: &[f64], volume: &[f64]) -> Result<Vec<f64>> {
@@ -145,8 +118,7 @@ pub fn obv(close: &[f64], volume: &[f64]) -> Result<Vec<f64>> {
     Ok(out)
 }
 
-/// Classify money flow in C's statement order: negative delta updates only the negative sum,
-/// positive delta only the positive sum, and zero updates neither.
+/// Classify money flow as C does: negative, positive, and zero deltas update separate sums.
 fn classify_money_flow(
     delta: f64,
     money_flow: f64,
@@ -169,17 +141,9 @@ fn classify_money_flow(
     }
 }
 
-/// ===========================================================================================
-/// `MFI` — Money Flow Index (`ta_MFI.c`, unstable period 0). Lookback = `period`.
-///
-/// Uses a rolling positive/negative money-flow buffer, not Wilder smoothing. Subtract the
-/// trailing slot before writing the new typical price. The output uses the hard `pos+neg < 1.0`
-/// guard and is not clamped; incremental drift can make `pos_sum_mf` slightly negative.
-/// ===========================================================================================
-///
+/// `MFI` — Money Flow Index (`ta_MFI.c`, unstable period 0).
 /// # Errors
-/// [`crate::TaError::InvalidPeriod`] if `period < 2`;
-/// [`crate::TaError::LengthMismatch`] if the series differ in length.
+/// `InvalidPeriod` if `period < 2`; `LengthMismatch` if the input series lengths differ.
 pub fn mfi(
     high: &[f64],
     low: &[f64],

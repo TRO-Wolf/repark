@@ -1,6 +1,4 @@
-/// A bare `COPY … TO …` writes files before its returned `DataFrame` is collected. `LogicalPlan::Copy` is DataFusion-lazy (the file sink
-/// commits only on collect) exactly like DML — PySpark applies commands eagerly. Mutation: drop
-/// `Copy` from the eager-command predicate → the write never happens → no files → RED.
+/// A bare `COPY … TO …` writes files before its returned `DataFrame` is collected.
 use super::super::*;
 use super::common::*;
 
@@ -25,9 +23,7 @@ async fn bare_copy_to_applies_without_collect() {
     );
 }
 
-/// COPY applies eagerly, and collecting the returned `DataFrame` does not apply it again. The no-double-apply trap the naive return-the-live-plan fix
-/// creates. Files are deleted after the eager write; a `.collect()` that re-ran the sink would
-/// recreate them. Mutation: return the live `Copy` plan → the deleted files reappear → RED.
+/// COPY applies eagerly, and collecting the returned `DataFrame` does not apply it again.
 #[tokio::test]
 async fn copy_to_applies_exactly_once_across_a_later_collect() {
     let wh = TempDir::new().unwrap();

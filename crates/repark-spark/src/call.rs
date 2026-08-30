@@ -1,12 +1,4 @@
 //! Spark Iceberg `CALL catalog.system.<proc>(…)` maintenance procedure router.
-//!
-//! The seven supported procedures lower to actions in the owned fork. Every procedure preserves
-//! Spark's result schema and fails loudly for unsupported arguments or catalog capabilities.
-//! `remove_orphan_files` is destructive, so it requires `older_than` and defaults `dry_run` to
-//! true (`ORPHAN-1`, `ORPHAN-2`). Live deletion vectors make `rewrite_position_delete_files`
-//! refuse rather than report a partial result. `register_table` adopts validated metadata and
-//! propagates service-managed `FeatureUnsupported` errors.
-//! Service-managed catalogs can commit concurrently; conflicts fail loudly and callers retry.
 
 use std::path::{Component, Path, PathBuf};
 use std::sync::Arc;
@@ -41,13 +33,7 @@ const SUPPORTED_PROCEDURES: &[&str] = &[
     "rollback_to_snapshot",
 ];
 
-/// ===========================================================================================
 /// Execute one `CALL catalog.system.<proc>(…)` statement.
-///
-/// Routes the seven CALL procedures (six maintenance + `register_table`); unknown / deferred
-/// procedures fail loud with the supported list. Every catalog policy (MW-1).
-/// ===========================================================================================
-///
 /// # Errors
 /// Plan / `NotImplemented` / iceberg commit failures as [`DataFusionError`].
 pub async fn execute_call(
@@ -108,16 +94,9 @@ fn resolve_call_target(
     }
 }
 
-// ===========================================================================================
-// Table identity resolution
-// ===========================================================================================
+// === Table identity resolution ===
 
 /// Resolve the Spark `table` string against the CALL catalog.
-///
-/// Accepts `namespace.table` (two-part, relative to the CALL catalog) or
-/// `catalog.namespace.table` when the catalog segment matches the CALL catalog.
-/// Each segment is path-escape rejected (same contract as CTAS idents — C1-SEC-001).
-/// Empty segments (`a..b`, leading/trailing `.`) refuse loud rather than collapsing.
 fn resolve_table_ident(catalog_name: &str, table_arg: &str) -> Result<TableIdent> {
     let raw_parts: Vec<&str> = table_arg.split('.').map(str::trim).collect();
     if raw_parts.iter().any(|part| part.is_empty()) {
@@ -169,8 +148,7 @@ fn count_as_i32(count: usize) -> Result<i32> {
     })
 }
 
-/// Byte totals arrive from the fork as `u64`; Spark's column is a signed `bigint`. Refuse rather
-/// than saturate, for the same reason the count helpers do.
+/// Byte totals arrive from the fork as `u64`; Spark's column is a signed `bigint`.
 fn bytes_as_i64(bytes: u64) -> Result<i64> {
     i64::try_from(bytes).map_err(|_| {
         DataFusionError::Plan(format!(
@@ -179,25 +157,9 @@ fn bytes_as_i64(bytes: u64) -> Result<i64> {
     })
 }
 
-// ===========================================================================================
-// expire_snapshots
-// ===========================================================================================
+// === expire_snapshots ===
 
-/// Spark's six-column output, all of it (MW-1). Measured against a live Spark 4.0.1 +
-/// Iceberg 1.10.0 oracle.
-///
-/// | Spark column | Source |
-/// |---|---|
-/// | `deleted_data_files_count` | [`CleanupReport::deleted_data_files`] |
-/// | `deleted_position_delete_files_count` | [`CleanupReport::deleted_position_delete_files`] |
-/// | `deleted_equality_delete_files_count` | [`CleanupReport::deleted_equality_delete_files`] |
-/// | `deleted_manifest_files_count` | `deleted_manifests.len()` |
-/// | `deleted_manifest_lists_count` | `deleted_manifest_lists.len()` |
-/// | `deleted_statistics_files_count` | `deleted_statistics_files.len()` |
-///
-/// RP-1 / fork F-2: the three content-file columns come from the report's typed views
-/// (derived from the union + `deleted_content_file_types`). A path the fork did not
-/// classify is in none of the three views. Counts are still never fabricated.
+/// Spark's six-column output, all of it (MW-1).
 async fn execute_expire_snapshots(
     ctx: &SessionContext,
     catalog: Arc<dyn Catalog>,
@@ -241,8 +203,7 @@ async fn execute_expire_snapshots(
         action = action.expire_older_than(timestamp_ms);
     }
     if let Some(retain) = retain_last {
-        // Pre-validate Java/fork floor (`retain_last >= 1`) so CALL fails at plan time with a
-        // stable message rather than only as an iceberg commit error (C3-Q-001).
+        // Pre-validate Java/fork floor so CALL fails at plan time with a stable message.
         if retain < 1 {
             return Err(DataFusionError::Plan(format!(
                 "CALL expire_snapshots retain_last must be >= 1, got {retain}"
@@ -266,9 +227,7 @@ async fn execute_expire_snapshots(
 
 /// pins: rp-1-fork-repin/C-009
 fn expire_result_dataframe(ctx: &SessionContext, report: &CleanupReport) -> Result<DataFrame> {
-    // Spark declares every one of these NULLABLE (jar `OUTPUT_TYPE`, `iconst_1` per StructField),
-    // unlike its two rewrite procedures, which it declares non-nullable. Match Spark per
-    // procedure rather than applying one blanket rule across the surface.
+    // Spark declares every one of these NULLABLE, unlike its two rewrite procedures.
     let schema = Arc::new(Schema::new(vec![
         Field::new("deleted_data_files_count", DataType::Int64, true),
         Field::new("deleted_position_delete_files_count", DataType::Int64, true),
@@ -303,17 +262,10 @@ fn expire_result_dataframe(ctx: &SessionContext, report: &CleanupReport) -> Resu
     ctx.read_batches(vec![batch])
 }
 
-// ===========================================================================================
-// rewrite_data_files
-// ===========================================================================================
+// === rewrite_data_files ===
 
-/// Refuse `rewrite_data_files` on a format-v3 table rather than silently reassign row lineage.
-///
-/// V3 requires `_row_id` and `_last_updated_sequence_number` to survive compaction. The fork's
-/// rewrite action does not preserve them, so refuse rather than return plausible but wrong lineage.
-///
-/// The comparison is `< V3`, so unknown future versions also refuse. Registry: `V3-LINEAGE-1`.
 /// pins: v3-2-create-v3-opt-in/C-011, C-014
+/// Refuse `rewrite_data_files` on a format-v3 table rather than silently reassign row lineage.
 pub(crate) fn refuse_v3_rewrite_that_would_lose_row_lineage(
     format_version: FormatVersion,
     table_arg: &str,
@@ -345,9 +297,7 @@ async fn execute_rewrite_data_files(
         "where",
         "remove-dangling-deletes",
     ])?;
-    // Supported positional arity v1: table + optional strategy only (C2-Q-002). sort_order /
-    // options / where are named-only deferred; extra positionals refuse as excess arity (not a
-    // misleading sort_order message).
+    // Supported positional arity v1: table + optional strategy only (C2-Q-002).
     args.reject_excess_positional(2)?;
     // strategy: named OR positional #1 (Spark rewrite_data_files positional order).
     let strategy = if let Some(named) = args.optional_string("strategy")? {
@@ -398,10 +348,7 @@ async fn execute_rewrite_data_files(
         .optional_bool("remove-dangling-deletes", None)?
         .unwrap_or(false);
 
-    // For multi-small-file fixtures under Spark's default min_input_files=5, pure inserts of a
-    // few rows each are always "small". Lower min_input_files only when the caller cannot pass
-    // options (options map is deferred) — keep Java default of 5 so empty/no-op plans match
-    // Spark. Tests build ≥5 small files.
+    // Under Spark's default min_input_files=5, a few small inserts are always treated as small.
     let result = RewriteDataFiles::new(table)
         .remove_dangling_deletes(remove_dangling_deletes)
         .execute(catalog.as_ref())
@@ -412,21 +359,6 @@ async fn execute_rewrite_data_files(
     reregister(ctx, Arc::clone(&catalog), catalog_name, &namespace).await?;
 
     // Spark's five columns are non-nullable.
-    //
-    // | Spark column | Source |
-    // |---|---|
-    // | `rewritten_data_files_count` | `result.rewritten_data_files_count` |
-    // | `added_data_files_count` | `result.added_data_files_count` |
-    // | `rewritten_bytes_count` | `result.rewritten_bytes_count` |
-    // | `failed_data_files_count` | always 0 — partial progress is deferred, so nothing can fail |
-    // | `removed_delete_files_count` | `result.removed_delete_files_count` — 0 unless `'remove-dangling-deletes' => true` |
-    //
-    // `removed_delete_files_count` counts what the fork's composed RemoveDanglingDeletes
-    // sub-action removed. It runs only under the `remove-dangling-deletes` option, whose Java
-    // default is false, so the default path still reports 0 (RP-2 / C-006 took the option).
-    // On a **v3** table a deletion vector dies when its data file is rewritten, so compaction
-    // removes delete files there as an ordinary consequence — but v3 is still refused above
-    // (`V3-LINEAGE-1`), so this column stays 0 on v3 until that guard lifts.
     let schema = Arc::new(Schema::new(vec![
         Field::new("rewritten_data_files_count", DataType::Int32, false),
         Field::new("added_data_files_count", DataType::Int32, false),
@@ -455,13 +387,9 @@ async fn execute_rewrite_data_files(
     ctx.read_batches(vec![batch])
 }
 
-// ===========================================================================================
-// rewrite_position_delete_files
-// ===========================================================================================
+// === rewrite_position_delete_files ===
 
 /// Count the live Puffin deletion vectors in the table's CURRENT snapshot.
-///
-/// The fork owns discovery, including malformed-reference errors.
 pub(crate) async fn count_live_deletion_vectors(table: &iceberg::table::Table) -> Result<usize> {
     iceberg::live_deletion_vectors_by_data_file(table)
         .await
@@ -469,10 +397,7 @@ pub(crate) async fn count_live_deletion_vectors(table: &iceberg::table::Table) -
         .map_err(iceberg_err)
 }
 
-/// Return Spark's four measured columns — `rewritten_delete_files_count`,
-/// `added_delete_files_count`, `rewritten_bytes_count`, and `added_bytes_count` — from the fork
-/// result without fabricated counts. Refuse live Puffin deletion vectors because the fork action
-/// skips them and would report four zeros.
+/// Return Spark's four measured columns.
 async fn execute_rewrite_position_delete_files(
     ctx: &SessionContext,
     catalog: Arc<dyn Catalog>,
@@ -480,8 +405,7 @@ async fn execute_rewrite_position_delete_files(
     args: &CallArgs,
 ) -> Result<DataFrame> {
     args.reject_unknown_named(&["table", "options", "where"])?;
-    // Only `table` is supported positionally; `options` / `where` are named-only deferred, so an
-    // extra positional refuses as excess arity rather than under a misleading argument name.
+    // Only `table` is supported positionally.
     args.reject_excess_positional(1)?;
     if args.has_named("options") {
         return Err(DataFusionError::NotImplemented(
@@ -502,12 +426,7 @@ async fn execute_rewrite_position_delete_files(
     let ident = resolve_table_ident(catalog_name, &table_arg)?;
     let table = catalog.load_table(&ident).await.map_err(iceberg_err)?;
 
-    // Refuse rather than under-report. Without this the procedure returns four zeros on a table
-    // whose delete files are deletion vectors, which reads exactly like "nothing to compact" —
-    // so an operator runs the reclaim procedure forever on a table that never reclaims. Refusing
-    // on ANY live vector, including a table that also holds compactable Parquet position deletes,
-    // is deliberate: this procedure's contract to its caller is the table's position deletes, and
-    // Silently doing part of that job would under-report the result.
+    // Refuse rather than under-report.
     let vectors = count_live_deletion_vectors(&table).await?;
     if vectors > 0 {
         return Err(DataFusionError::NotImplemented(format!(
@@ -553,17 +472,12 @@ async fn execute_rewrite_position_delete_files(
     ctx.read_batches(vec![batch])
 }
 
-// ===========================================================================================
-// remove_orphan_files
-// ===========================================================================================
+// === remove_orphan_files ===
 
 /// Java enforces a 24-hour orphan sweep floor at the procedure layer; the fork action does not.
 const ORPHAN_OLDER_THAN_FLOOR_MS: i64 = 24 * 60 * 60 * 1000;
 
 /// Refuse to sweep a table sitting in the shared CTAS temp-fallback root.
-///
-/// Refuse shared temporary fallback roots because directory-based orphan discovery can mistake
-/// another process's live files for orphans. Explicit namespace locations are unaffected.
 pub(crate) fn refuse_shared_temp_fallback_location(
     policy: Option<&LocationPolicy>,
     table_location: &str,
@@ -617,10 +531,6 @@ fn scan_hits_fallback(scan: &Path, fallback_root: &Path) -> bool {
 }
 
 /// Wall-clock millis since the epoch, for the `older_than` floor.
-///
-/// `std::time` rather than `chrono`, which is a DEV dependency of this crate on purpose — the
-/// floor is the only production code here that needs a clock, and it is not worth promoting a
-/// dependency for one subtraction.
 fn now_millis() -> Result<i64> {
     let since_epoch = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -641,14 +551,6 @@ fn now_millis() -> Result<i64> {
 }
 
 /// Spark's one-column output: one ROW PER ORPHAN, not a summary count.
-///
-/// | Spark column | Type | Nullable |
-/// |---|---|---|
-/// | `orphan_file_location` | string | false |
-///
-/// Measured by executing the procedure on a live Spark 4.0.1 + Iceberg 1.10.0 oracle. The dry-run
-/// and armed forms return the SAME shape — Spark's `dry_run => true` still lists every orphan —
-/// so the listing IS the Spark-shaped result rather than a second surface bolted on.
 fn orphan_result_dataframe(ctx: &SessionContext, locations: &[String]) -> Result<DataFrame> {
     let schema = Arc::new(Schema::new(vec![Field::new(
         "orphan_file_location",
@@ -663,14 +565,6 @@ fn orphan_result_dataframe(ctx: &SessionContext, locations: &[String]) -> Result
 }
 
 /// The one procedure here that destroys data, and the only one whose defaults invert Spark's.
-///
-/// **`older_than` is REQUIRED** where Spark defaults it to `now - 3 days`, and **`dry_run`
-/// defaults to TRUE** where Spark defaults it to false and deletes. Both are owner decision OD-2
-/// and both are declared registry rows (`ORPHAN-1`, `ORPHAN-2`) rather than silent improvements.
-/// The reasoning is that every other procedure on this surface is recoverable — a bad compaction
-/// is compacted again — while this one has no rollback: the files are gone.
-///
-/// The 24-hour floor is NOT stricter than Spark; it is [`ORPHAN_OLDER_THAN_FLOOR_MS`], measured.
 async fn execute_remove_orphan_files(
     ctx: &SessionContext,
     catalog: Arc<dyn Catalog>,
@@ -710,8 +604,7 @@ async fn execute_remove_orphan_files(
 
     let table_arg = args.require_string("table", 0)?;
 
-    // REQUIRED, unlike Spark. A defaulted `older_than` on a procedure with no rollback means the
-    // most dangerous argument is the one the caller never typed (registry row ORPHAN-1).
+    // REQUIRED, unlike Spark.
     let older_than_ms = args
         .optional_timestamp_ms("older_than", Some(1))?
         .ok_or_else(|| {
@@ -751,14 +644,12 @@ async fn execute_remove_orphan_files(
         action = action.location(location);
     }
     if dry_run {
-        // The fork returns the full orphan list regardless of the deleter, so swapping in a
-        // no-op deleter yields Spark's exact dry-run result: every orphan listed, none removed.
+        // The fork returns the full orphan list regardless of the deleter.
         action = action.delete_with(|_path| Box::pin(async { Ok(()) }));
     }
     let result = action.execute().await.map_err(iceberg_err)?;
 
-    // Never report a partial delete as a success. The rows say "these were orphans"; if some
-    // could not be removed, saying so is the whole difference between a report and a lie.
+    // Never report a partial delete as a success.
     if let Some(first) = result.delete_failures.first() {
         return Err(DataFusionError::Execution(format!(
             "CALL remove_orphan_files deleted {deleted} of {total} orphan files; {failed} could \
@@ -774,9 +665,7 @@ async fn execute_remove_orphan_files(
     orphan_result_dataframe(ctx, &result.orphan_file_locations)
 }
 
-// ===========================================================================================
-// rollback_to_snapshot
-// ===========================================================================================
+// === rollback_to_snapshot ===
 
 async fn execute_rollback_to_snapshot(
     ctx: &SessionContext,
@@ -802,8 +691,7 @@ async fn execute_rollback_to_snapshot(
         ))
     })?;
 
-    // Fork R98: ManageSnapshotsAction::rollback_to — snapshot_id must be an ancestor of
-    // current main (`crates/iceberg/src/transaction/manage_snapshots.rs:162-167`).
+    // Fork R98: ManageSnapshotsAction::rollback_to.
     let tx = Transaction::new(&table);
     let action = tx.manage_snapshots().rollback_to(snapshot_id);
     let tx = action.apply(tx).map_err(iceberg_err)?;
@@ -829,19 +717,11 @@ async fn execute_rollback_to_snapshot(
     ctx.read_batches(vec![batch])
 }
 
-// ===========================================================================================
-// register_table
-// ===========================================================================================
+// === register_table ===
 
 /// Spark Iceberg `CALL system.register_table(table, metadata_file)`.
-///
-/// Return Spark's nullable `current_snapshot_id`, `total_records_count`, and
-/// `total_data_files_count`. Counts come from snapshot summaries; missing values remain null.
-/// Adoption validates the metadata file before claiming the catalog pointer.
-///
 /// # Errors
-/// Plan errors for missing/empty arguments; catalog errors (unknown ident, already exists,
-/// unreadable metadata, S3 Tables `FeatureUnsupported`) via [`crate::iceberg_err`].
+/// # Errors Plan errors for missing/empty arguments; catalog errors via [`crate::iceberg_err`].
 async fn execute_register_table(
     ctx: &SessionContext,
     catalog: Arc<dyn Catalog>,
@@ -889,10 +769,6 @@ async fn execute_register_table(
 }
 
 /// Snapshot-summary integer, or none if the key is absent or not an i64.
-///
-/// Spark reads these from the current snapshot summary and nulls the column when the table has
-/// no snapshot. Fabricating a count by walking files would disagree with Spark on a summary that
-/// is simply missing the key.
 fn summary_i64(snapshot: &iceberg::spec::Snapshot, key: &str) -> Option<i64> {
     snapshot
         .summary()

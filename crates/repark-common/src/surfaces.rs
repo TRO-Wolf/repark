@@ -1,15 +1,8 @@
-//! Dialect-neutral SQL surface registry audited by both doors (design `docs/design/sql-doors.md`
-//! §2 Q13, graft G2).
-//!
-//! IDs name capabilities rather than syntax, and each door maps every ID to a [`Row`].
-//! [`audit`] rejects missing, unknown, duplicate, or untraceable rows.
-//!
-//! This tier-0 module lets both doors depend on the registry without a door-to-door edge.
+//! Dialect-neutral SQL surface registry both doors audit (design sql-doors.md section 2 Q13).
 
 use std::collections::BTreeSet;
 
 /// A stable, dialect-neutral name for one engine SQL capability.
-/// The newtype prevents matrix rows from using arbitrary strings.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct SurfaceId(&'static str);
 
@@ -28,19 +21,17 @@ impl std::fmt::Display for SurfaceId {
 }
 
 /// Generates surface-ID constants and [`ALL`] from one list, preventing drift.
-/// `stringify!` derives each wire name from its constant identifier.
 macro_rules! surface_ids {
     ($($(#[$meta:meta])* $konst:ident;)+) => {
         $($(#[$meta])* pub const $konst: SurfaceId = SurfaceId(stringify!($konst));)+
 
         /// Every surface ID in declaration order.
-        /// [`audit`] requires each door matrix to map exactly this set.
         pub const ALL: &[SurfaceId] = &[$($konst),+];
     };
 }
 
 surface_ids! {
-    // --- Statement forms ---
+    // Statement forms.
     /// A plain `SELECT` reaching the engine unchanged (the delegation baseline).
     SELECT_PASSTHROUGH;
     /// `CREATE TABLE … AS SELECT` onto a staged Iceberg create/replace transaction.
@@ -88,8 +79,8 @@ surface_ids! {
     /// Catalog introspection: `SHOW` / `DESCRIBE` / `information_schema` (design §2 Q8).
     INTROSPECTION;
 
-    // --- Table-creation options ---
-    /// Data-file format option. Unsupported ORC and AVRO formats refuse loudly (design §0 graft G9).
+    // Table-creation options.
+    /// Data-file format option.
     TABLE_OPTION_FORMAT;
     /// The Iceberg format-version option.
     TABLE_OPTION_FORMAT_VERSION;
@@ -110,7 +101,7 @@ surface_ids! {
     /// The namespace-location option on `CREATE SCHEMA`.
     SCHEMA_OPTION_LOCATION;
 
-    // --- Guard rails (design §2 Q12) ---
+    // Guard rails (design section 2 Q12).
     /// Quote-aware multi-statement SQL refusal, checked first in the router.
     GUARD_MULTI_STATEMENT;
     /// P11: DML against a read-only catalog refuses with the generic message.
@@ -122,8 +113,8 @@ surface_ids! {
     /// BUG-001: DML on an unpartitioned-after-evolution merge-on-read table refuses.
     GUARD_MOR_MULTI_SPEC_DML;
 
-    // --- Ergonomics + seams ---
-    /// After a parse or plan failure, wrong-door sniff names the token, equivalent, and other door (design §2 Q10 / graft G3).
+    // Ergonomics and seams.
+    /// After a parse or plan failure, wrong-door sniff names the token, equivalent, and other door.
     WRONG_DOOR_SNIFF;
     /// Identifier case folding, and where it diverges between the doors (design §2 Q10).
     IDENTIFIER_CASE_FOLDING;
@@ -134,7 +125,7 @@ surface_ids! {
     /// Cross-door result equivalence (design §2 Q13 / graft G5).
     CROSS_DOOR_EQUIVALENCE;
 
-    // --- Value semantics (H-2 G8) ---
+    // Value semantics (H-2 G8).
     /// `ORDER BY` / window `ORDER BY` default null placement (`NULLS FIRST` vs `LAST`).
     SEMANTICS_NULL_ORDERING;
     /// Decimal arithmetic: result `(p,s)`, the 38-digit clamp, and bit-exact `i128` payloads.
@@ -151,11 +142,7 @@ surface_ids! {
     SEMANTICS_FLOAT_DETERMINISM;
 }
 
-/// ===========================================================================================
 /// Session profile for matrix evidence (design §2 Q13, graft G5).
-///
-/// Explicit profiles prevent Spark-extended evidence from being misread as native evidence.
-/// ===========================================================================================
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SessionProfile {
     /// An in-process unit test without a session or extension.
@@ -164,16 +151,11 @@ pub enum SessionProfile {
     Native,
     /// A session with the Spark extension installed.
     SparkExtended,
-    /// Separate native and Spark-extended sessions use their own doors for Arrow value and type comparison.
-    /// One Spark-extended session cannot prove equivalence because its extensions affect every door.
+    /// Separate native and Spark-extended sessions use their own doors for Arrow comparison.
     TwoSession,
 }
 
-/// ===========================================================================================
 /// One door's answer for one surface.
-///
-/// Each surface is either `Tested` or `DeliberatelyAbsent`. Missing rows fail the audit.
-/// ===========================================================================================
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Row {
     /// The door implements this surface.
@@ -200,12 +182,8 @@ impl Row {
     }
 }
 
-/// ===========================================================================================
-/// Audits one door matrix against [`ALL`]. Missing, unknown, duplicate, and untraceable rows fail.
-/// ===========================================================================================
-///
+/// Audits one door matrix against [`ALL`].
 /// # Errors
-///
 /// Returns a newline-joined message listing every problem.
 pub fn audit(door: &str, rows: &[(SurfaceId, Row)]) -> Result<(), String> {
     let mut problems: Vec<String> = Vec::new();

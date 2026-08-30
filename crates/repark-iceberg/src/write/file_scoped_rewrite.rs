@@ -1,12 +1,4 @@
 //! COW rewrite file-scoped scan helpers (R-MERGE-FILE-SCAN / M2).
-//!
-//! After `affected_files` discovery, the rewrite pass only needs data files that contain at
-//! least one mutated row. Opening the full snapshot and residual-filtering `_file IN (…)`
-//! post-download is wasteful on multi-file S3 tables.
-//!
-//! Session conf lives on [`crate::write::scan_prune::ReparkMergeConfig::file_scoped_rewrite`]
-//! (`repark.merge.file-scoped-rewrite`, default **true**). Whole-file reads of the **subset**
-//! are survivor-safe (P2 STOP only forbids residual *row* filters).
 
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -20,9 +12,7 @@ pub const FILE_SCOPED_REWRITE_KEY: &str = "repark.merge.file-scoped-rewrite";
 /// Underscore alt accepted at parse time.
 pub const FILE_SCOPED_REWRITE_KEY_ALT: &str = "repark.merge.file_scoped_rewrite";
 
-/// Parse a raw conf string (`"true"` / `"false"`, case-insensitive). Missing key → default true
-/// is handled by the caller (extension default).
-///
+/// Parse a raw conf string (`"true"` / `"false"`, case-insensitive).
 /// # Errors
 /// Unknown values fail loud naming the key and accepted set.
 pub fn parse_file_scoped_rewrite(raw: &str) -> Result<bool> {
@@ -35,10 +25,7 @@ pub fn parse_file_scoped_rewrite(raw: &str) -> Result<bool> {
     }
 }
 
-/// ===========================================================================================
-/// Pull the conf from a builder map (hyphen + underscore). Missing → default **true**.
-/// ===========================================================================================
-///
+/// Pull the conf from a builder map (hyphen + underscore).
 /// # Errors
 /// Present but unparsable value.
 pub fn file_scoped_rewrite_from_config_map<S>(
@@ -56,9 +43,7 @@ where
     }
 }
 
-/// ===========================================================================================
 /// Keep only tasks whose [`FileScanTask::data_file_path`] is in `allowlist`.
-/// ===========================================================================================
 #[must_use]
 pub fn filter_tasks_to_allowlist<S: std::hash::BuildHasher>(
     tasks: Vec<FileScanTask>,
@@ -70,18 +55,9 @@ pub fn filter_tasks_to_allowlist<S: std::hash::BuildHasher>(
         .collect()
 }
 
-/// ===========================================================================================
-/// File-scoped filter that **fails loud** when a non-empty allowlist does not fully match
-/// planned tasks (audit BUG-009): a path-identity miss would yield
-/// a partial/empty rewrite stream while COW still deletes every affected path → silent
-/// survivor loss. Over-refuse of a true empty snapshot with a stale allowlist is preferred
-/// to under-refuse. **Partial** misses (some allowlist paths match, others do not) refuse too —
-/// COW deletes the full allowlist set, not only the matched subset.
-///
+/// File-scoped filter that **fails loud** when a non-empty allowlist does not fully match planned
 /// # Errors
-/// [`DataFusionError::Plan`] when `allowlist` is non-empty and the set of matched
-/// `data_file_path` values is empty **or** a proper subset of the allowlist.
-/// ===========================================================================================
+/// [`DataFusionError::Plan`] when `allowlist` is non-empty and the set of matched `data_file_path`
 pub fn filter_tasks_to_allowlist_nonempty<S: std::hash::BuildHasher>(
     tasks: Vec<FileScanTask>,
     allowlist: &HashSet<String, S>,

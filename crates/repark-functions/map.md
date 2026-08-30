@@ -2,6 +2,9 @@
 
 ## Purpose
 
+CC-4 (2026-08-30): remaining banner files condensed to the one-line rule
+(pins: cc-3-comment-condensation/C-009).
+
 The Spark-compatible function registry **and the Spark expression-semantics layer** (crate-DAG
 tier 3, a capability leaf with no internal deps — the doors consume it, never the reverse): wire
 `datafusion-spark` into a session, hand-implement the Spark functions it lacks (date / string /

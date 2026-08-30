@@ -1,7 +1,4 @@
 //! Refuse unsupported collation syntax at the executing parse.
-//!
-//! The valve covers router parses, passthrough parses, type-position casts, and binding SQL
-//! fragments so unsupported collations never become silent binary comparisons.
 
 use std::ops::ControlFlow;
 
@@ -15,9 +12,7 @@ use datafusion::sql::sqlparser::parser::Parser;
 /// Needle pinned by the G15 refusal tests (both doors, facade).
 pub const COLLATION_REFUSAL_NEEDLE: &str = "does not implement collation";
 
-/// ===========================================================================================
-/// Render the G15 refusal. Byte-identical to the ANSI door's message (same needles).
-/// ===========================================================================================
+/// Render the G15 refusal.
 #[must_use]
 pub fn collation_refusal_message(requested: &str) -> String {
     format!(
@@ -28,10 +23,7 @@ pub fn collation_refusal_message(requested: &str) -> String {
     )
 }
 
-/// ===========================================================================================
 /// Refuse a collation spelling on a parsed statement (the executing parse).
-/// ===========================================================================================
-///
 /// # Errors
 /// [`DataFusionError::NotImplemented`] naming the requested collation.
 pub fn refuse_collation_in_statement(statement: &Statement) -> Result<()> {
@@ -46,22 +38,11 @@ pub fn refuse_collation_in_statement(statement: &Statement) -> Result<()> {
     Ok(())
 }
 
-/// ===========================================================================================
 /// Refuse a collation spelling in a SQL string or expression fragment.
-///
-/// Used by the Spark-door router (statement text) and the Python binding (`F.expr`,
-/// `filter_sql`). A fragment that is not a full statement is wrapped as `SELECT (…)` so
-/// `col COLLATE name` still parses. Unparsable text is left to the caller — this valve
-/// only upgrades a *parsed* collation request.
-/// ===========================================================================================
-///
 /// # Errors
 /// [`DataFusionError::NotImplemented`] when a collation spelling is present.
 pub fn refuse_collation_in_sql(sql: &str) -> Result<()> {
-    // Type-position COLLATE (`CAST(x AS STRING COLLATE name)`) is not an
-    // `Expr::Collate` — sqlparser's CAST production does not consume COLLATE —
-    // so the AST walk never sees it. Scan text first (quote-aware) so the
-    // spelling Spark 4 accepts is G15, not a generic ParserError.
+    // Type-position COLLATE is not an `Expr::Collate`.
     refuse_type_position_collation_in_sql(sql)?;
     if let Ok(statements) = Parser::parse_sql(&DatabricksDialect {}, sql) {
         return refuse_parsed(&statements);
@@ -73,10 +54,7 @@ pub fn refuse_collation_in_sql(sql: &str) -> Result<()> {
     Ok(())
 }
 
-/// ===========================================================================================
 /// Refuse `AS STRING COLLATE name` / column-type COLLATE that sqlparser cannot attach.
-/// ===========================================================================================
-///
 /// # Errors
 /// [`DataFusionError::NotImplemented`] when a type-position collation is present.
 pub(crate) fn refuse_type_position_collation_in_sql(sql: &str) -> Result<()> {
@@ -88,10 +66,7 @@ pub(crate) fn refuse_type_position_collation_in_sql(sql: &str) -> Result<()> {
     Ok(())
 }
 
-/// ===========================================================================================
 /// Refuse `RESET` of a collation session key (DataFusion extension, not `Statement::Set`).
-/// ===========================================================================================
-///
 /// # Errors
 /// [`DataFusionError::NotImplemented`] when the variable name contains `collation`.
 pub(crate) fn refuse_collation_reset_variable(variable: &str) -> Result<()> {
@@ -111,11 +86,6 @@ fn refuse_parsed(statements: &[Statement]) -> Result<()> {
 }
 
 /// True when a Spark `SQLConf` / session key would change compare/order collation.
-///
-/// Spark 4.1.2 keys include `spark.sql.collation.objectLevel.enabled`,
-/// `spark.sql.collation.schemaLevel.enabled`, `spark.sql.collation.trim.enabled`,
-/// `spark.sql.collation.allowInMapKeys`, and
-/// `spark.sql.legacy.collationAwareHashFunctions`.
 #[must_use]
 pub fn is_collation_session_key(key: &str) -> bool {
     key.to_ascii_lowercase().contains("collation")
@@ -145,8 +115,7 @@ impl Visitor for CollationProbe {
     }
 }
 
-/// Statement-shaped collation requests that are not `Expr::Collate` (column options,
-/// default-collation DDL, SET NAMES, session conf assignments, CREATE/ALTER COLLATION).
+/// Statement-shaped collation requests that are not `Expr::Collate`.
 fn collation_requested_by_statement(statement: &Statement) -> Option<String> {
     match statement {
         Statement::CreateTable(create) => {
@@ -237,10 +206,6 @@ fn collation_requested_by_set(set: &Set) -> Option<String> {
 }
 
 /// Quote-aware scan for a string-type token immediately before `COLLATE`.
-///
-/// Spark's `CAST(x AS STRING COLLATE name)` never becomes `Expr::Collate`.
-/// `CREATE TABLE … (col STRING COLLATE name)` is also type-position; the AST
-/// walk already catches the parsed form, and this scan is the unparsable twin.
 fn type_position_collation(sql: &str) -> Option<String> {
     let scrubbed = blank_sql_quotes_and_comments(sql);
     let lower = scrubbed.to_ascii_lowercase();
@@ -310,8 +275,7 @@ fn is_ident_byte(byte: u8) -> bool {
     byte.is_ascii_alphanumeric() || byte == b'_'
 }
 
-/// Blank `'…'` / `"…"` / `` `…` `` / `--` / `/* … */` content so COLLATE inside a
-/// literal is not a request. Spark quoting includes backticks.
+/// Blank `'…'` / `"…"` / `` `…` `` / `--` / `/* … */` content.
 fn blank_sql_quotes_and_comments(sql: &str) -> String {
     let bytes = sql.as_bytes();
     let mut out = Vec::with_capacity(bytes.len());

@@ -2,12 +2,7 @@
 
 use crate::{Result, as_f64, check_lengths, check_period, is_zero, is_zero_or_neg, nan_vec};
 
-/// ===========================================================================================
 /// `VAR` — rolling population variance (`ta_VAR.c`, `TA_INT_VAR`).
-///
-/// Return `E[X²] − E[X]²` from C-compatible running sums; `nbdev` is ignored for parity.
-/// ===========================================================================================
-///
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if `period < 1`.
 pub fn var(input: &[f64], period: usize, nbdev: f64) -> Result<Vec<f64>> {
@@ -46,12 +41,7 @@ pub fn var(input: &[f64], period: usize, nbdev: f64) -> Result<Vec<f64>> {
     Ok(out)
 }
 
-/// ===========================================================================================
 /// `STDDEV` — rolling population standard deviation (`ta_STDDEV.c`).
-///
-/// Apply C's near-zero clamp and `sqrt(v) * nbdev` to [`var`] output.
-/// ===========================================================================================
-///
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if `period < 2`.
 pub fn stddev(input: &[f64], period: usize, nbdev: f64) -> Result<Vec<f64>> {
@@ -107,41 +97,28 @@ fn linearreg_core(
     Ok(out)
 }
 
-/// ===========================================================================================
-/// `LINEARREG` — rolling linear-regression value at the window's last bar (`ta_LINEARREG.c`):
-/// `b + m * (period − 1)`.
-/// ===========================================================================================
-///
+/// `LINEARREG` — rolling linear-regression value at the window's last bar (`ta_LINEARREG.c`): `b + m * (period − 1)`
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if `period < 2`.
 pub fn linearreg(input: &[f64], period: usize) -> Result<Vec<f64>> {
     linearreg_core(input, period, |m, b| b + m * as_f64(period - 1))
 }
 
-/// ===========================================================================================
 /// `LINEARREG_SLOPE` — the rolling regression slope `m` (`ta_LINEARREG_SLOPE.c`).
-/// ===========================================================================================
-///
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if `period < 2`.
 pub fn linearreg_slope(input: &[f64], period: usize) -> Result<Vec<f64>> {
     linearreg_core(input, period, |m, _b| m)
 }
 
-/// ===========================================================================================
 /// `LINEARREG_INTERCEPT` — the rolling regression intercept `b` (`ta_LINEARREG_INTERCEPT.c`).
-/// ===========================================================================================
-///
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if `period < 2`.
 pub fn linearreg_intercept(input: &[f64], period: usize) -> Result<Vec<f64>> {
     linearreg_core(input, period, |_m, b| b)
 }
 
-/// ===========================================================================================
 /// `LINEARREG_ANGLE` — the slope as degrees (`ta_LINEARREG_ANGLE.c`): `atan(m) * (180 / π)`.
-/// ===========================================================================================
-///
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if `period < 2`.
 pub fn linearreg_angle(input: &[f64], period: usize) -> Result<Vec<f64>> {
@@ -149,11 +126,7 @@ pub fn linearreg_angle(input: &[f64], period: usize) -> Result<Vec<f64>> {
     linearreg_core(input, period, |m, _b| m.atan() * rad_to_deg)
 }
 
-/// ===========================================================================================
-/// `TSF` — time-series forecast, the regression projected one bar ahead (`ta_TSF.c`):
-/// `b + m * period`.
-/// ===========================================================================================
-///
+/// `TSF` — time-series forecast, the regression projected one bar ahead (`ta_TSF.c`): `b + m * period`
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if `period < 2`.
 pub fn tsf(input: &[f64], period: usize) -> Result<Vec<f64>> {
@@ -161,15 +134,9 @@ pub fn tsf(input: &[f64], period: usize) -> Result<Vec<f64>> {
     linearreg_core(input, period, |m, b| b + m * next_x)
 }
 
-/// ===========================================================================================
 /// `CORREL` — rolling Pearson correlation (`ta_CORREL.c`).
-///
-/// Return Pearson correlation using C's ordered running sums and denominator guard.
-/// ===========================================================================================
-///
 /// # Errors
-/// [`crate::TaError::InvalidPeriod`] if `period < 1`;
-/// [`crate::TaError::LengthMismatch`] if the series differ in length.
+/// `InvalidPeriod` if `period < 1`; `LengthMismatch` if the input series lengths differ.
 #[allow(clippy::similar_names)] // sum_x/sum_y/sum_x2/… deliberately mirror C's sumX/sumY/sumX2.
 pub fn correl(input0: &[f64], input1: &[f64], period: usize) -> Result<Vec<f64>> {
     check_period("optInTimePeriod", period, 1)?;
@@ -232,15 +199,9 @@ pub fn correl(input0: &[f64], input1: &[f64], period: usize) -> Result<Vec<f64>>
     Ok(out)
 }
 
-/// ===========================================================================================
 /// `BETA` — rolling beta of `price0` vs `price1` (`ta_BETA.c`).
-///
-/// Return the rolling slope of percentage returns with C's ordered accumulators and zero guards.
-/// ===========================================================================================
-///
 /// # Errors
-/// [`crate::TaError::InvalidPeriod`] if `period < 1`;
-/// [`crate::TaError::LengthMismatch`] if the series differ in length.
+/// `InvalidPeriod` if `period < 1`; `LengthMismatch` if the input series lengths differ.
 #[allow(clippy::similar_names)] // s_xx/s_xy/s_x/s_y mirror C's S_xx/S_xy/S_x/S_y.
 pub fn beta(price0: &[f64], price1: &[f64], period: usize) -> Result<Vec<f64>> {
     check_period("optInTimePeriod", period, 1)?;

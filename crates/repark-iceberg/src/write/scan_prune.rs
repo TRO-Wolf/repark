@@ -1,11 +1,4 @@
 //! MERGE target-scan pruning with residual join-key bounds.
-//!
-//! Bounds are pushed only for bare equality keys with matching `Int32`/`Int64` types. A residual
-//! filter never reaches an unscoped COW rewrite, because it can hide unmatched survivors in an
-//! affected file. `MoR` and file-scoped COW use the bounds for discovery and insert anti-joins;
-//! file-scoped-off COW keeps the scan unfiltered. Unsupported shapes and probe failures skip
-//! pruning, preserving the correct unfiltered path. Pins:
-//! `cow_equi_key_residual_keeps_colocated_survivors`, `mor_equi_key_residual_upsert_correct`.
 
 use std::sync::Arc;
 
@@ -22,8 +15,7 @@ use iceberg::spec::Datum;
 use crate::write::idents::quote_ident_spark;
 use crate::write::name_resolution::{CaseInsensitiveColumnIndex, SourceMatch};
 
-/// Session conf: `repark.merge.scan-pruning` — `true` (default) enables residual scan bounds;
-/// `false` restores today's unfiltered target scan.
+/// Session conf: `repark.merge.scan-pruning`.
 pub const SCAN_PRUNING_KEY: &str = "repark.merge.scan-pruning";
 
 /// One bare-column equality extracted from ON: target column name (unqualified).
@@ -35,16 +27,7 @@ pub struct BareEquality {
     pub source_column: String,
 }
 
-/// ===========================================================================================
 /// Extract bare-column equality conjuncts from an ON SQL string.
-///
-/// Accepts only forms (after whitespace normalize, case-insensitive keywords):
-/// - `t.col = s.col` / `s.col = t.col` / `col = s.col` when aliases match the MERGE aliases
-/// - AND-chained; each conjunct independent
-///
-/// Skips entirely (returns empty → no pruning) when ON contains `<=>`, OR, or any conjunct
-/// that is not a bare two-side column equality (functions, arithmetic, literals).
-/// ===========================================================================================
 #[must_use]
 pub fn bare_equalities_from_on(
     on_sql: &str,
@@ -63,8 +46,7 @@ pub fn bare_equalities_from_on(
         if trimmed.is_empty() {
             continue;
         }
-        // A non-bare conjunct contributes no bounds but does not invalidate the others
-        // (slate refinement: bounds from the bare-equality subset remain necessary).
+        // A non-bare conjunct contributes no bounds but does not invalidate the others.
         if let Some(equality) = parse_bare_equality(trimmed, target_alias, source_alias) {
             out.push(equality);
         }
@@ -73,9 +55,6 @@ pub fn bare_equalities_from_on(
 }
 
 /// Split on top-level `AND` (case-insensitive), respecting parentheses.
-///
-/// Walks `char_indices()` so a non-ASCII byte in ON text never slices mid-UTF-8
-/// (M5). ASCII keyword matching is unchanged.
 fn split_and_conjuncts(sql: &str) -> Vec<String> {
     let mut parts = Vec::new();
     let mut depth = 0i32;
@@ -121,8 +100,7 @@ fn contains_or_outside_parens(lowered: &str) -> bool {
 }
 
 fn matches_keyword_at(sql: &str, index: usize, keyword: &str) -> bool {
-    // Callers walk `char_indices()`, so `index` is a char boundary. Refuse any
-    // other offset rather than slice mid-character (M5).
+    // Callers walk `char_indices()`, so `index` is a char boundary.
     if !sql.is_char_boundary(index) {
         return false;
     }
@@ -228,16 +206,12 @@ fn parse_column_ref(raw: &str, target_alias: &str, source_alias: &str) -> Option
                 None
             }
         }
-        // Bare name (ambiguous — not a proven bare equality under both aliases) or deeper
-        // qualification: skip.
+        // Bare name or deeper qualification: skip.
         _ => None,
     }
 }
 
-/// ===========================================================================================
 /// Build an Iceberg residual predicate `col >= min AND col <= max` for one column.
-/// ===========================================================================================
-///
 /// # Errors
 /// Returns a plan error when the Datum cannot be constructed for the value type.
 pub fn range_predicate_i64(column: &str, min: i64, max: i64) -> Result<Predicate> {
@@ -246,10 +220,7 @@ pub fn range_predicate_i64(column: &str, min: i64, max: i64) -> Result<Predicate
     Ok(lower.and(upper))
 }
 
-/// ===========================================================================================
 /// Build an Iceberg residual predicate for an `i32` column (`Datum::int`).
-/// ===========================================================================================
-///
 /// # Errors
 /// Returns a plan error when min/max do not fit `i32` (should not happen for Int32 arrays).
 pub fn range_predicate_i32(column: &str, min: i32, max: i32) -> Result<Predicate> {
@@ -272,10 +243,7 @@ pub(crate) enum IntKeyWidth {
     I64,
 }
 
-/// ===========================================================================================
-/// Skip-conjunct gate (M1): push Int32/Int64 bounds only when source and target Arrow types
-/// are identical. Non-identical pairs and every other type (including Utf8=Utf8) skip.
-/// ===========================================================================================
+/// Skip-conjunct gate (M1): push Int32/Int64 bounds only when source and target Arrow types are
 #[must_use]
 pub(crate) fn identical_int_key_width(
     source_type: &DataType,
@@ -291,10 +259,7 @@ pub(crate) fn identical_int_key_width(
     }
 }
 
-/// ===========================================================================================
 /// Resolve `name` against `schema` case-insensitively (Spark `caseSensitive=false`).
-/// Missing or ambiguous case-collision → None (M7: skip the conjunct).
-/// ===========================================================================================
 #[must_use]
 pub(crate) fn unique_schema_field<'a>(schema: &'a ArrowSchema, name: &str) -> Option<&'a Field> {
     let names = schema.fields().iter().map(|field| field.name().as_str());
@@ -305,7 +270,7 @@ pub(crate) fn unique_schema_field<'a>(schema: &'a ArrowSchema, name: &str) -> Op
     }
 }
 
-/// Plan-only source schema (`SELECT * … LIMIT 0`). Any failure → None (M6: do not abort MERGE).
+/// Plan-only source schema (`SELECT * … LIMIT 0`).
 async fn source_schema_for_bounds(
     ctx: &SessionContext,
     source_from_sql: &str,
@@ -323,7 +288,7 @@ fn strict_cast() -> CastOptions<'static> {
     }
 }
 
-/// Probe source min/max and build one residual range. Any failure → None (M6).
+/// Probe source min/max and build one residual range.
 async fn try_int_key_range_predicate(
     ctx: &SessionContext,
     source_from_sql: &str,
@@ -373,12 +338,7 @@ async fn try_int_key_range_predicate(
     }
 }
 
-/// ===========================================================================================
 /// Residual Iceberg predicate for bare-equality join keys (M1/M6/M7).
-///
-/// Never errors: type mismatch, ambiguous/missing names, cast/schema/null-shape probe
-/// failures skip that conjunct. Empty after skips → None (unfiltered scan).
-/// ===========================================================================================
 pub async fn residual_bounds_predicate(
     ctx: &SessionContext,
     source_from_sql: &str,
@@ -418,7 +378,6 @@ pub async fn residual_bounds_predicate(
 }
 
 /// Parse `repark.merge.scan-pruning` — missing → true; invalid → error.
-///
 /// # Errors
 /// Non-boolean string.
 pub fn parse_scan_pruning_enabled(raw: Option<&str>) -> Result<bool> {
@@ -450,9 +409,6 @@ impl ConfigExtension for ReparkMergeConfig {
 }
 
 /// Attach merge scan-pruning config to a session.
-///
-/// Sets `file_scoped_rewrite` to its default (`true`). Call
-/// [`with_merge_session_knobs`] when both knobs are known at build time.
 #[must_use]
 pub fn with_scan_pruning(config: SessionConfig, enabled: bool) -> SessionConfig {
     config.with_option_extension(ReparkMergeConfig {
@@ -504,7 +460,6 @@ pub fn scan_pruning_from_ctx(ctx: &SessionContext) -> bool {
 }
 
 /// Pull `repark.merge.scan-pruning` from a builder conf map.
-///
 /// # Errors
 /// Invalid boolean string.
 pub fn scan_pruning_from_config_map<S>(

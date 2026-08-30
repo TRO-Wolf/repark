@@ -1,5 +1,8 @@
 # map — repark-common
 
+CC-4 (2026-08-30): remaining banner files condensed to the one-line rule
+(pins: cc-3-comment-condensation/C-009).
+
 ## Purpose
 
 Shared error-seed types, the workspace-wide `Error` enum, and the dialect-neutral SQL **surface

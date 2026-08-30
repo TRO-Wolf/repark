@@ -1,8 +1,4 @@
 //! Engine pins for [`crate::dynamic_flatten`] — value AND Arrow type.
-//!
-//! The first four tests plus the Pin-1 list-child companion are the mutation pins
-//! that decide the design. The rest clone the Python suite's ENGINE cases (not the
-//! Python-only type-gate cases).
 
 use std::sync::Arc;
 
@@ -28,9 +24,7 @@ fn options() -> DynamicFlattenOptions {
 }
 
 fn test_context() -> SessionContext {
-    // Same optimizer surface as ReparkSession: leaf pushdown stays ON, wrapped by
-    // UnnestSafeLeafProjectionPushdown (DEFECT-2). Disabling the flag instead is
-    // the blanket skip the session pins forbid.
+    // Same optimizer surface as ReparkSession: leaf pushdown stays on, wrapped for Unnest safety.
     crate::ReparkSession::new()
         .expect("ReparkSession")
         .context()
@@ -270,13 +264,9 @@ fn analysis_token(result: Result<datafusion::prelude::DataFrame, Error>, token: 
     }
 }
 
-// =================================================================================================
-// DESIGN MUTATION PINS (first four + Pin-1 list-child companion)
-// =================================================================================================
+// Design mutation pins.
 
-/// Pin 1: null parent struct → NULL leaves, not 0/""/false. Removing the CASE must red this.
-/// Children at the parent-null slot are *dirty* (Some(0)/Some("")/Some(false)): `get_field`
-/// returns the raw child column and would leak those values without the CASE.
+/// Pin 1: null parent struct → NULL leaves, not 0/""/false.
 #[tokio::test]
 async fn null_parent_struct_fields_are_null_not_zero() {
     let outer = struct_array(
@@ -326,9 +316,7 @@ async fn null_parent_struct_fields_are_null_not_zero() {
     assert_utf8(&table, "outer_label");
 }
 
-/// Pin 1 list-child companion: null parent + dirty valid List → one typed-null
-/// explode row, not leaked elements. Skipping CASE only for list fields
-/// (`get_field` clones the raw child) must red this: Unnest would emit 99 and 100.
+/// Pin 1 list-child companion: null parent plus dirty valid List yields one typed-null explode row.
 #[tokio::test]
 async fn null_parent_dirty_list_child_is_null_not_exploded() {
     let xs = list_of(
@@ -362,7 +350,7 @@ async fn null_parent_dirty_list_child_is_null_not_exploded() {
     assert_int64(&table, "outer_xs");
 }
 
-/// Pin 2: in-place column order `z, a_x, a_y, m`. Hoisting scalars first must red this.
+/// Pin 2: in-place column order `z, a_x, a_y, m`.
 #[tokio::test]
 async fn unnest_preserves_interleaved_column_order() {
     let nested = struct_array(
@@ -399,7 +387,6 @@ async fn unnest_preserves_interleaved_column_order() {
 }
 
 /// Pin 3: list-of-struct then unnest: `legs` → `legs_leg_id`, `legs_side`.
-/// Unnesting lists in the struct pass must red this.
 #[tokio::test]
 async fn list_of_struct_explodes_then_unnests() {
     let leg = struct_array(
@@ -448,7 +435,6 @@ async fn list_of_struct_explodes_then_unnests() {
 }
 
 /// Pin 4: prefixed name collision with top-level (`a_x` + `a.x`) refuses LOUD.
-/// Last-write-wins must red this.
 #[test]
 fn prefixed_name_collision_with_top_level_refuses() {
     let nested = struct_array(vec![("x", DataType::Int64, i64_array(vec![Some(2)]))], None);
@@ -467,9 +453,7 @@ fn prefixed_name_collision_with_top_level_refuses() {
     );
 }
 
-// =================================================================================================
-// Remaining engine cases
-// =================================================================================================
+// Remaining engine cases.
 
 #[tokio::test]
 async fn nested_struct_in_struct() {
@@ -523,9 +507,7 @@ async fn nested_struct_in_struct() {
 
 #[tokio::test]
 async fn null_mid_struct_fields_are_null_not_zero() {
-    // Dirty children at every null slot: valid inner + x=Some(0) under a null
-    // outer, and x=Some(0) under a null mid-struct. Already-null children would
-    // stay green if the CASE were dropped (C2-L-001).
+    // Dirty children at every null slot sit under a null outer or a null mid-struct.
     let inner = struct_array(
         vec![(
             "x",
@@ -1003,8 +985,6 @@ async fn custom_separator_names_column_literally() {
 }
 
 /// C1-SEC-001: `separator="."` produces a list column named `wrap.nums`.
-/// `DataFrame::unnest_columns` / `Column::from(&str)` would parse that as qualified
-/// `wrap`.`nums` and fail. Unnest must bind through `Column::new_unqualified`.
 #[tokio::test]
 async fn dotted_list_column_unnest_uses_unqualified_bind() {
     let nums = list_of(
@@ -1060,7 +1040,7 @@ async fn already_flat_is_idempotent() {
     assert_eq!(i64_cells(&table, "a"), [Some(1)]);
 }
 
-/// A [`TableProvider`] whose `scan` fails. Plan rewrite must never reach it.
+/// A [`TableProvider`] whose `scan` fails.
 #[derive(Debug)]
 struct ScanForbidden {
     schema: SchemaRef,
@@ -1189,7 +1169,7 @@ async fn dictionary_struct_is_unwrapped_one_level() {
     );
 }
 
-/// C2-L-002: Utf8 dict-struct leaf. `decode_i64` cannot pass a leftover Dictionary.
+/// C2-L-002: Utf8 dict-struct leaf.
 #[tokio::test]
 async fn dictionary_utf8_struct_is_unwrapped_one_level() {
     let values = struct_array(
@@ -1218,9 +1198,7 @@ async fn dictionary_utf8_struct_is_unwrapped_one_level() {
     assert_utf8(&table, "wrapped_label");
 }
 
-/// C1-L-004: `list_element_type` unwraps Dictionary for detection; Unnest still needs
-/// the column cast to the List value type. Skipping the cast reds this (DF rejects
-/// Dictionary).
+/// C1-L-004: detection unwraps Dictionary; Unnest still needs a List-value-type cast.
 #[tokio::test]
 async fn dictionary_list_is_unwrapped_one_level() {
     let values = list_of(
@@ -1291,8 +1269,7 @@ async fn map_column_is_not_unnested() {
     );
 }
 
-/// C1-Q-002: `array<map<…>>` must refuse LOUD. Native Unnest would succeed and
-/// fail-open vs the old `explode_outer` CAST refuse.
+/// C1-Q-002: `array<map<…>>` must refuse LOUD.
 #[test]
 fn list_of_map_refuses_loud() {
     let keys = StringArray::from(vec!["k"]);
@@ -1394,8 +1371,7 @@ async fn scalar_array_inside_array_element_struct() {
     assert_int64(&table, "a_nums");
 }
 
-/// C1-L-003: the kernel harness must install [`crate::ReparkSession`]'s wrapper with leaf
-/// pushdown left ON — not `enable_leaf_expression_pushdown = false`.
+/// C1-L-003: the harness must install the session wrapper with leaf pushdown left on.
 #[test]
 fn kernel_harness_installs_unnest_safe_leaf_pushdown() {
     let context = test_context();
@@ -1420,9 +1396,7 @@ fn kernel_harness_installs_unnest_safe_leaf_pushdown() {
     );
 }
 
-/// C1-L-002: flatten then project-away the last explode. Stock DF-54.1
-/// `push_down_leaf_projections` miscompiles this shape (DEFECT-2). Green only
-/// because `test_context` installs `UnnestSafeLeafProjectionPushdown`.
+/// C1-L-002: flatten then project-away the last explode.
 #[tokio::test]
 async fn multi_pass_flatten_then_project_survives_leaf_pushdown() {
     let fill = struct_array(

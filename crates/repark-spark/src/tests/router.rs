@@ -56,8 +56,7 @@ async fn bug010_trailing_semicolon_whitespace_comments_allowed() {
     }
 }
 
-/// C4-L-001: truncate-table statement must fail loud with a targeted message (not DF opaque
-/// Unsupported). Rows unchanged. Keyword assembled so this source file stays tooling-safe.
+/// C4-L-001: truncate-table statement must fail loud with a targeted message.
 #[tokio::test]
 async fn truncate_table_refuses_loud_naming_gap() {
     let wh = TempDir::new().unwrap();
@@ -170,11 +169,7 @@ async fn bare_update_applies_without_collect() {
     );
 }
 
-/// C-4 exactly-once: the INSERT is applied eagerly at `sql()` (present before the returned
-/// `DataFrame` is touched) AND collecting the returned `DataFrame` does NOT insert a second copy —
-/// the no-double-apply trap the naive eager-collect-but-return-the-lazy-plan fix creates. The
-/// first assert goes RED if the eager branch is dropped (restore lazy routing); the second goes
-/// RED if the returned `DataFrame` still wraps the live DML plan.
+/// C-4 exactly-once: INSERT applies at `sql()`; collecting the `DataFrame` does not insert again.
 #[tokio::test]
 async fn insert_applies_exactly_once_across_a_later_collect() {
     let wh = TempDir::new().unwrap();
@@ -206,10 +201,7 @@ async fn insert_applies_exactly_once_across_a_later_collect() {
     assert_eq!(rows(&ctx, &catalogs, "SELECT * FROM ice.sales.t").await, 4);
 }
 
-/// C-5 boundary: eager DML must NOT make a SELECT eager. A SELECT whose per-row CAST fails at
-/// runtime (a column ref, so not constant-folded at plan time) resolves at `sql()` without
-/// error and raises only on collect — the N4 metadata path and WG-4 streaming laziness ride
-/// this unchanged lazy plan. Goes RED if the eager predicate is widened to non-DML plans.
+/// C-5 boundary: eager DML must NOT make a SELECT eager.
 #[tokio::test]
 async fn erroring_select_resolves_at_sql_and_errors_only_on_collect() {
     let wh = TempDir::new().unwrap();
@@ -224,8 +216,7 @@ async fn erroring_select_resolves_at_sql_and_errors_only_on_collect() {
     );
 }
 
-/// Eager DML surfaces runtime failure at `sql()` time and commits nothing. The Python facade pins
-/// the WG-3 exception type.
+/// Eager DML surfaces runtime failure at `sql()` time and commits nothing.
 #[tokio::test]
 async fn failing_dml_surfaces_its_runtime_error_at_sql_time() {
     let wh = TempDir::new().unwrap();
@@ -237,7 +228,7 @@ async fn failing_dml_surfaces_its_runtime_error_at_sql_time() {
     )
     .await;
 
-    // INSERT ... SELECT with a per-row CAST that fails at runtime ('a' -> int).
+    // INSERT ...
     let result = execute(
         &ctx,
         &catalogs,

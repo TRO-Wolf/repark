@@ -11,12 +11,9 @@ use iceberg::{CatalogBuilder, NamespaceIdent, TableCreation};
 use crate::write::position_delete::PositionDeletePair;
 use tempfile::TempDir;
 
-use super::*;
+use super::super::*;
 
-/// A [`PartitionStream`] over a scripted batch list that counts how many batches it has
-/// PRODUCED (yielded on a poll) — the streaming-target analogue of the F-BR-4
-/// `CountingPartitionStream`. Proves `register_streaming_target` wires a LAZY `StreamingTable`
-/// (nothing produced until a query pulls) instead of collecting the whole target up front.
+/// A [`PartitionStream`] over a scripted batch list that counts how many batches it has PRODUCED.
 #[derive(Debug)]
 struct ScriptedTargetStream {
     schema: SchemaRef,
@@ -71,15 +68,7 @@ fn count_value(rows: &[RecordBatch]) -> i64 {
         .sum()
 }
 
-/// PIN K-MEM (OTH-001/SAF-001) — `register_streaming_target` wires a LAZY, re-scannable
-/// `StreamingTable`, so the whole target is NEVER collected up front. A scripted source counts
-/// every batch it PRODUCES: immediately after registration the count is 0 (nothing scanned),
-/// each query streams every batch, and a SECOND query RE-SCANS (the count climbs again — a
-/// materialized `MemTable` is built once and never re-pulls). Mutation M-K-MEM: reverting
-/// `register_streaming_target` to collect the source into a `MemTable` drains all N batches at
-/// registration ⇒ `produced == N` at the first assert ⇒ RED (a materialized full-target copy is
-/// exactly the residency this unit removes). Deterministic (rule 12): synchronous atomic reads,
-/// `target_partitions = 1` so no `RepartitionExec` pulls the source on a background task.
+/// PIN K-MEM.
 #[tokio::test]
 async fn register_streaming_target_is_lazy_and_rescannable() {
     let produced = Arc::new(AtomicUsize::new(0));
@@ -101,9 +90,7 @@ async fn register_streaming_target_is_lazy_and_rescannable() {
         produced: Arc::clone(&produced),
     });
     let name = register_streaming_target(&ctx, Arc::clone(&schema), source).unwrap();
-    // Structural bind (review 2026-07-23, K-S2): the registered provider MUST be a
-    // StreamingTable, never a MemTable — a downcast that fails the instant anyone swaps the
-    // registration back to a materializing provider (the O(target-rows) residency class).
+    // Structural bind: the registered provider MUST be a StreamingTable, never a MemTable.
     let provider = ctx.table_provider(name.as_str()).await.unwrap();
     assert!(
         provider.as_ref().is::<StreamingTable>(),
@@ -177,8 +164,7 @@ async fn create_target(catalog: &Arc<dyn Catalog>, name: &str) -> TableIdent {
     create_target_with(catalog, name, HashMap::new()).await
 }
 
-/// [`create_target`] with table properties — the seam the merge-on-read pins use to set
-/// `write.merge.mode` (and the copy-on-write side of the T4 differential to set it explicitly).
+/// [`create_target`] with table properties.
 async fn create_target_with(
     catalog: &Arc<dyn Catalog>,
     name: &str,
@@ -220,8 +206,7 @@ fn consumer_batch(ids: &[i32], vs: &[Option<&str>]) -> RecordBatch {
     .expect("consumer batch builds")
 }
 
-/// Append `batch` as its OWN data file (one `fast_append` commit) — separate appends produce
-/// separate files, so `_pos` (per-file ordinal) recurs across them.
+/// Append `batch` as its OWN data file.
 async fn append_file(catalog: &Arc<dyn Catalog>, ident: &TableIdent, batch: RecordBatch) {
     crate::write::append::append(catalog, ident, vec![batch])
         .await
@@ -310,13 +295,7 @@ fn insert_values(cols: &[&str], vals: &[&str]) -> InsertClause {
     }
 }
 
-/// PIN K-IDENTITY (NOVEL target≫source, multi-file) — a streamed, RE-SCANNED target keeps
-/// `(_file, _pos)` row identity exact across data files. Three separate appends put rows at
-/// `_pos = 0` in THREE different files (id1@f1/0, id3@f2/0, id5@f3/0); the MERGE updates id1 and
-/// id3 (same `_pos`, different files) and inserts id99 — every row lands correctly, so a
-/// `_pos`-alone identity (which would conflate the three `_pos=0` rows and raise a spurious
-/// cardinality violation) is provably wrong. This is the plan's target≫source multi-partition
-/// NOVEL execution; results are row-for-row what the pre-change materialized engine produced.
+/// PIN K-IDENTITY: a streamed re-scanned target keeps `(_file, _pos)` identity across data files.
 #[tokio::test]
 async fn merge_streams_multi_file_target_identity_holds_across_files() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -361,14 +340,9 @@ async fn merge_streams_multi_file_target_identity_holds_across_files() {
 }
 
 /// PERF-01 pin: COW Stage A discovery retains **O(files)** path strings, not O(matched rows).
-///
-/// Fixture: one data file, `n` matched rows, then `10×n` matched rows (same single file).
-/// Driver path-`String` allocations (test-only counter at first-seen insert) must stay
-/// `== 1` in both cases — bar: 10× rows ≲ 2× driver alloc. Knobs: default
-/// `file-scoped-rewrite` + default `scan-pruning` (no custom `SessionConfig`).
 #[tokio::test]
 async fn cow_discovery_path_allocs_scale_with_files_not_matched_rows() {
-    // --- n matched rows, 1 file ----------------------------------------------------------
+    // --- n matched rows, 1 file ----------------------------------------------------------.
     let counter_small = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
     let warehouse = TempDir::new().expect("temp warehouse");
     let catalog = memory_catalog(&warehouse).await;
@@ -399,7 +373,7 @@ async fn cow_discovery_path_allocs_scale_with_files_not_matched_rows() {
         "one data file → exactly one path String retained (got {allocs_small})"
     );
 
-    // --- 10× rows, still 1 file ----------------------------------------------------------
+    // --- 10× rows, still 1 file ----------------------------------------------------------.
     let counter_large = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
     let warehouse2 = TempDir::new().expect("temp warehouse 2");
     let catalog2 = memory_catalog(&warehouse2).await;
@@ -446,12 +420,7 @@ async fn cow_discovery_path_allocs_scale_with_files_not_matched_rows() {
     assert_eq!(rows[ids_large.len() - 1], (n_large, Some("A".to_string())));
 }
 
-/// R-MERGE-ONEPASS Stage B + PERF-19 pin: `MoR` upsert (MATCHED UPDATE + NOT MATCHED INSERT)
-/// issues exactly **two** logical target-SQL consumptions — `matched_work` (discovery+updates)
-/// + insert anti-join — not three (pre-Stage-B) or four (pre-Stage-A).
-///
-/// Counts repark `stream_sql` calls (plan-level), **not**
-/// `PartitionStream::execute` (flaky under DF re-plans / parallel cargo tests — Q16).
+/// `MoR` upsert issues two logical target-SQL consumptions: `matched_work` plus insert anti-join.
 #[tokio::test]
 async fn mor_upsert_target_scan_pass_count_is_two() {
     let counter = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
@@ -499,14 +468,7 @@ async fn mor_upsert_target_scan_pass_count_is_two() {
     );
 }
 
-/// PERF-04 pin: COW equi-key upsert with default scan-pruning (residual on) + default
-/// file-scoped rewrite keeps co-located survivors. Reproduces the R-PERF-MERGE-PRUNE
-/// hazard class (matched id=10 in a file that also holds id=11) without lost rows —
-/// residual is on the primary discovery/insert scan only; rewrite is whole-file scoped.
-///
-/// Also pins that residual **pushed** (task-local `residual_push` == 1).
-/// Reverting `residual_join_key_filter` to always `None` keeps row asserts green but fails
-/// the push counter — mutation-proof for the PERF-04 shipping claim.
+/// PERF-04: COW equi-key upsert with default pruning and file-scoped rewrite keeps survivors.
 #[tokio::test]
 async fn cow_equi_key_residual_keeps_colocated_survivors() {
     let push_counter = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
@@ -557,9 +519,7 @@ async fn cow_equi_key_residual_keeps_colocated_survivors() {
     );
 }
 
-/// PERF-04 pin: `MoR` equi-key upsert under residual still updates + inserts correctly
-/// (unmatched target rows outside source key range stay; not-matched source inserts).
-/// Residual push counter must fire for `MoR` equi as well.
+/// PERF-04 pin: `MoR` equi-key upsert under residual still updates + inserts correctly.
 #[tokio::test]
 async fn mor_equi_key_residual_upsert_correct() {
     let push_counter = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
@@ -606,10 +566,7 @@ async fn mor_equi_key_residual_upsert_correct() {
     );
 }
 
-/// PERF-04 mode-gate pin: COW + `file-scoped-rewrite=false` must **not** push residual
-/// (R-PERF-MERGE-PRUNE STOP) while still keeping co-located survivors. Mutation: drop the
-/// mode gate → residual pushes and survivors outside `[min_s,max_s]` are dropped on path-semijoin
-/// rewrite through the primary → rows pin RED *or* push counter is non-zero here.
+/// PERF-04: COW with `file-scoped-rewrite=false` must not push residual.
 #[tokio::test]
 async fn cow_file_scoped_off_does_not_push_residual() {
     let push_counter = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
@@ -648,8 +605,7 @@ async fn cow_file_scoped_off_does_not_push_residual() {
     );
 }
 
-/// PERF-04 conf pin: `repark.merge.scan-pruning=false` must not push
-/// residual even for equi Int32 ON. Mutation: drop the `scan_pruning_from_ctx` gate → push==1.
+/// PERF-04: `repark.merge.scan-pruning=false` must not push residual even for an equi Int32 ON.
 #[tokio::test]
 async fn scan_pruning_false_does_not_push_residual() {
     let push_counter = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
@@ -688,9 +644,7 @@ async fn scan_pruning_false_does_not_push_residual() {
     );
 }
 
-/// M1 scan-level pin: Utf8 source keys vs Int32 target must **not** push residual
-/// (lexicographic min/max of `'9'`/`'10'` is inverted after strict-cast). Mutation:
-/// drop the identical-type skip → push==1 and/or the update of id=9 is lost.
+/// M1 scan-level pin: Utf8 source keys vs Int32 target must **not** push residual.
 #[tokio::test]
 async fn utf8_source_int32_target_does_not_push_residual() {
     let push_counter = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
@@ -743,16 +697,13 @@ async fn utf8_source_int32_target_does_not_push_residual() {
     );
 }
 
-/// R-MERGE-FILE-SCAN pin: multi-file COW where only file B is affected — survivors
-/// co-located in B are preserved (P2-shape), files A/C untouched, and escape hatch
-/// `file-scoped-rewrite=false` yields the same rows. Task-count filtering is unit-pinned
-/// in `file_scoped_rewrite::filter_tasks_keeps_only_allowlisted_paths`.
+/// R-MERGE-FILE-SCAN pin: multi-file COW where only file B is affected.
 #[tokio::test]
 async fn cow_file_scoped_rewrite_opens_only_affected_files_and_keeps_survivors() {
     let warehouse = TempDir::new().expect("temp warehouse");
     let catalog = memory_catalog(&warehouse).await;
     let ident = create_target(&catalog, "scoped").await;
-    // Three files: A={1,2}, B={10,11}, C={20}. Source updates id=10 only → only B affected.
+    // Three files: A={1,2}, B={10,11}, C={20}.
     append_file(
         &catalog,
         &ident,
@@ -767,7 +718,7 @@ async fn cow_file_scoped_rewrite_opens_only_affected_files_and_keeps_survivors()
     .await;
     append_file(&catalog, &ident, consumer_batch(&[20], &[Some("z")])).await;
 
-    // --- file-scoped path (default conf true) -------------------------------------------
+    // --- file-scoped path (default conf true) -------------------------------------------.
     let ctx = SessionContext::new();
     register_source(&ctx, &[10], &[Some("X")]);
     let spec = merge_spec("scoped", vec![update_set("v", "s.v")], vec![]);
@@ -786,7 +737,7 @@ async fn cow_file_scoped_rewrite_opens_only_affected_files_and_keeps_survivors()
         ],
     );
 
-    // --- escape hatch: conf false still correct -----------------------------------------
+    // --- escape hatch: conf false still correct -----------------------------------------.
     let warehouse2 = TempDir::new().expect("temp warehouse 2");
     let catalog2 = memory_catalog(&warehouse2).await;
     let ident2 = create_target(&catalog2, "scoped2").await;
@@ -814,12 +765,6 @@ async fn cow_file_scoped_rewrite_opens_only_affected_files_and_keeps_survivors()
 }
 
 /// Scout #18 survivor-row pin: multi-clause first-match (`clause_id` CASE) on COW + `MoR`.
-///
-/// Target: id∈{1,2,3} with v=`old`. Source carries `flag` that steers clause selection:
-/// - clause 0: `s.flag = 1` → UPDATE v = 'first'
-/// - clause 1: unconditional → UPDATE v = 'second'  (must NOT win when flag=1)
-/// - unmatched id=3 is a co-located survivor (same data file) and stays `old`
-/// - `MoR` twin must scan-equal the COW result (first-match + survivors bit-identical)
 #[tokio::test]
 async fn multi_clause_first_match_survivors_cow_and_mor() {
     let matched = vec![
@@ -842,7 +787,7 @@ async fn multi_clause_first_match_survivors_cow_and_mor() {
         (3, Some("old".to_string())),    // unmatched survivor in same file
     ];
 
-    // --- COW -----------------------------------------------------------------------------
+    // --- COW -----------------------------------------------------------------------------.
     let warehouse_cow = TempDir::new().expect("temp warehouse cow");
     let catalog_cow = memory_catalog(&warehouse_cow).await;
     let ident_cow = create_target_with(&catalog_cow, "fm_cow", cow_props()).await;
@@ -883,7 +828,7 @@ async fn multi_clause_first_match_survivors_cow_and_mor() {
         "COW first-match + survivor rows"
     );
 
-    // --- MoR twin ------------------------------------------------------------------------
+    // --- MoR twin ------------------------------------------------------------------------.
     let warehouse_mor = TempDir::new().expect("temp warehouse mor");
     let catalog_mor = memory_catalog(&warehouse_mor).await;
     let ident_mor = create_target_with(&catalog_mor, "fm_mor", mor_props()).await;
@@ -925,10 +870,6 @@ async fn multi_clause_first_match_survivors_cow_and_mor() {
 }
 
 /// NULL-predicate first-match (3VL) under `clause_id` — COW + `MoR`.
-///
-/// Clause 0: `s.flag = 1` → UPDATE v = 'first'. When `flag` is SQL NULL the comparison is
-/// UNKNOWN; COALESCE → does-not-apply, so clause 1 (unconditional → 'second') must win.
-/// A regression that dropped COALESCE inside the O(C) CASE would mis-assign or drop the row.
 #[tokio::test]
 async fn multi_clause_null_predicate_first_match_3vl_cow_and_mor() {
     let matched = vec![
@@ -945,9 +886,7 @@ async fn multi_clause_null_predicate_first_match_3vl_cow_and_mor() {
             },
         },
     ];
-    // id=1 flag=NULL → clause0 UNKNOWN → clause1 'second'
-    // id=2 flag=1    → clause0 'first'
-    // id=3 unmatched survivor → 'old'
+    // id=1 flag=NULL takes clause1; id=2 flag=1 takes clause0; id=3 is an unmatched survivor.
     let expected = vec![
         (1, Some("second".to_string())),
         (2, Some("first".to_string())),
@@ -999,9 +938,6 @@ async fn multi_clause_null_predicate_first_match_3vl_cow_and_mor() {
 }
 
 /// NOT MATCHED multi-clause first-match via `clause_id = index`.
-///
-/// Empty target: every source row is NOT MATCHED. Clause 0 inserts when `flag = 1`;
-/// clause 1 is the unconditional fallback. `flag` NULL must not take clause 0 (3VL).
 #[tokio::test]
 async fn multi_not_matched_clause_first_match_and_3vl() {
     let warehouse = TempDir::new().expect("temp warehouse insert fm");
@@ -1058,7 +994,6 @@ async fn multi_not_matched_clause_first_match_and_3vl() {
 }
 
 /// Multi NOT MATCHED first-match against a **non-empty** target (anti-join).
-/// id=1 is matched UPDATE; id=2/3 insert via dual NOT MATCHED clauses (flag steers).
 #[tokio::test]
 async fn multi_not_matched_with_partial_target_match() {
     let warehouse = TempDir::new().expect("temp warehouse partial ins");
@@ -1118,8 +1053,7 @@ async fn multi_not_matched_with_partial_target_match() {
     );
 }
 
-/// Two sequential COW MERGEs on one `SessionContext` with file-scoped off
-/// (path `MemTable` semi-join) — scratch guard must not leave a broken catalog between runs.
+/// Two sequential COW MERGEs on one `SessionContext` with file-scoped off.
 #[tokio::test]
 async fn sequential_cow_path_semijoin_same_session_ctx() {
     let warehouse = TempDir::new().expect("temp warehouse seq cow");
@@ -1159,12 +1093,7 @@ fn repark_write_scan_prune_file_scoped_off() -> datafusion::prelude::SessionConf
     )
 }
 
-/// PIN K-CARDINALITY (row-identity mutation target M-K-ID) — the cardinality check groups on
-/// `(_file, _pos)`, NOT `_file` alone. TWO distinct-key target rows in ONE file, each matched by
-/// exactly one source row, must NOT raise a cardinality violation; a `_file`-alone GROUP BY
-/// would mis-count them as a single 2-source-match group and FALSELY error (the M-K-ID mutation:
-/// drop `_pos` from `match_discovery_sql`'s GROUP BY → this pin RED). A GENUINE multi-source match
-/// (two source rows for one target row) still errors — the guard stays live.
+/// PIN K-CARDINALITY: the cardinality check groups on `(_file, _pos)`, not `_file` alone.
 #[tokio::test]
 async fn merge_cardinality_uses_file_and_pos_not_file_alone() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -1202,9 +1131,7 @@ async fn merge_cardinality_uses_file_and_pos_not_file_alone() {
     );
 }
 
-/// PIN K-EMPTY — a target with NO snapshot streams as an empty relation: every source row is
-/// NOT MATCHED (`_pos IS NULL` over the empty target) and is inserted. Risk: the streaming
-/// empty-target path (no scan opened) diverges from the old empty-`MemTable` behavior.
+/// PIN K-EMPTY.
 #[tokio::test]
 async fn merge_empty_target_streams_all_inserts() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -1227,19 +1154,9 @@ async fn merge_empty_target_streams_all_inserts() {
     );
 }
 
-// ===========================================================================================
-// Group R — MERGE INTO a NON-identity transform-partitioned table (the gate `reject_unsupported`
-// used to fence). Both arms route through the SAME `append::write_partitioned_data_files` fanout
-// in the fork's COMPUTED-transform mode (Group P), so every produced `DataFile` carries its
-// transform-computed partition value at the manifest level. These write-crate pins read the
-// committed partition slots straight off the manifests (NOT just row values), with the fork's own
-// `Transform::Bucket(N)` function as the self-oracle — a survivor silently left in the old
-// partition is the exact failure mode R2 catches. (R3 temporal/truncate + R4 transform-path OCC
-// + R5 MoR-on-a-transform-table live end-to-end in `repark-sql::tests::partitioned_merge`.)
-// ===========================================================================================
+// Group R: MERGE INTO a non-identity transform-partitioned table (`reject_unsupported` gate).
 
-/// Create `sales.<name>` with `id int` (required) + `v string` (optional), partitioned by
-/// `bucket(<num_buckets>, id)` — a NON-identity transform spec.
+/// Create `sales.<name>` with `id int` + `v string`, partitioned by `bucket`.
 async fn create_bucket_target(
     catalog: &Arc<dyn Catalog>,
     name: &str,
@@ -1248,8 +1165,7 @@ async fn create_bucket_target(
     create_bucket_target_with(catalog, name, num_buckets, HashMap::new()).await
 }
 
-/// [`create_bucket_target`] with table properties — the seam the Group Y merge-on-read ×
-/// transform pins use to set `write.merge.mode` on a `bucket(N, id)` table.
+/// [`create_bucket_target`] with table properties.
 async fn create_bucket_target_with(
     catalog: &Arc<dyn Catalog>,
     name: &str,
@@ -1282,8 +1198,7 @@ async fn create_bucket_target_with(
     TableIdent::new(NamespaceIdent::new("sales".to_string()), name.to_string())
 }
 
-/// The live (Added/Existing) DATA-file entries in the current snapshot's manifests — the
-/// manifest-level oracle for the partition slot every committed file actually carries.
+/// The live DATA-file entries in the current snapshot's manifests.
 async fn live_data_files(catalog: &Arc<dyn Catalog>, ident: &TableIdent) -> Vec<DataFile> {
     let table = catalog.load_table(ident).await.expect("load table");
     let metadata = table.metadata();
@@ -1312,8 +1227,7 @@ async fn live_data_files(catalog: &Arc<dyn Catalog>, ident: &TableIdent) -> Vec<
     files
 }
 
-/// The single bucket-ordinal partition slot of a `DataFile` (the tables here partition by one
-/// non-null `bucket(N, id)` field, so a null or non-int slot is a hard test failure).
+/// The single bucket-ordinal partition slot of a `DataFile`.
 fn bucket_slot(file: &DataFile) -> i32 {
     use iceberg::spec::{Literal, PrimitiveLiteral};
     match file.partition().fields().first().cloned().flatten() {
@@ -1322,8 +1236,7 @@ fn bucket_slot(file: &DataFile) -> i32 {
     }
 }
 
-/// The fork's OWN `Transform::Bucket(n)` ordinal for a key — the self-oracle: the engine must
-/// drive the same hash the fork computes, so expected buckets come from the fork, not a re-impl.
+/// The fork's OWN `Transform::Bucket` ordinal for a key.
 fn fork_bucket(n: u32, key: i32) -> i32 {
     use datafusion::arrow::array::AsArray;
     use datafusion::arrow::datatypes::Int32Type;
@@ -1336,12 +1249,7 @@ fn fork_bucket(n: u32, key: i32) -> i32 {
     out.as_primitive::<Int32Type>().value(0)
 }
 
-/// PIN R1 — MERGE into a `bucket(4, id)` table: a matched UPDATE (rewrite arm) and a not-matched
-/// INSERT both route through the computed-mode fanout, so every committed `DataFile` lands in the
-/// bucket the FORK's `Bucket(4)` assigns its key — NOT the identity key, NOT a single silent
-/// partition. Manifest slots are checked against the self-oracle AND the table round-trips
-/// value+type. Mutation M-R (restore the non-identity gate in `reject_unsupported`) → the MERGE
-/// returns `NotImplemented` and `execute_merge` errors → RED.
+/// PIN R1.
 #[tokio::test]
 async fn merge_bucket_partitioned_routes_by_fork_hash() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -1377,9 +1285,7 @@ async fn merge_bucket_partitioned_routes_by_fork_hash() {
         ],
     );
 
-    // Manifest-level: total records per bucket slot equal the fork's own Bucket(4) routing of the
-    // FINAL key set {1,2,3,8}. A slot that carried the identity key (or a single silent
-    // partition) would fail this against the self-oracle.
+    // Manifest totals per bucket equal the fork's Bucket(4) routing of the final key set {1,2,3,8}.
     let mut expected: HashMap<i32, u64> = HashMap::new();
     for key in [1, 2, 3, 8] {
         *expected.entry(fork_bucket(4, key)).or_insert(0) += 1;
@@ -1399,18 +1305,13 @@ async fn merge_bucket_partitioned_routes_by_fork_hash() {
     );
 }
 
-/// PIN R2 (the load-bearing partition-move pin) — a matched UPDATE that CHANGES the partition
-/// SOURCE column (`id`) re-routes the survivor to the NEW bucket: the old data file is rewritten
-/// away and the survivor is written into the bucket the FORK assigns the NEW key. Verified via
-/// the written PARTITION METADATA (not only the row value) — a survivor silently left in the old
-/// bucket is the exact failure mode. Keys chosen so `bucket(old) != bucket(new)` (asserted), so
-/// the move is observable. Mutation M-R (restore the non-identity gate) → RED.
+/// PIN R2.
 #[tokio::test]
 async fn merge_bucket_partition_key_changing_update_reroutes_survivor() {
     let warehouse = TempDir::new().expect("temp warehouse");
     let catalog = memory_catalog(&warehouse).await;
     let ident = create_bucket_target(&catalog, "mv", 4).await;
-    // Base rows id 1 and 7. The MERGE moves id=1 → id=42; id=7 is untouched.
+    // Base rows id 1 and 7.
     append_file(
         &catalog,
         &ident,
@@ -1440,10 +1341,7 @@ async fn merge_bucket_partition_key_changing_update_reroutes_survivor() {
         "the matched row moved from id=1 to id=42, carrying its value",
     );
 
-    // Manifest metadata: every surviving row's file carries the bucket of its CURRENT key. The
-    // survivor is in `bucket(42)`, id=7 in `bucket(7)`, and `bucket(1)` holds nothing anymore
-    // (its old file was rewritten away) — unless bucket(42)/bucket(7) happen to collide with it,
-    // which the per-slot record counts still disambiguate.
+    // Manifest metadata: every surviving row's file carries the bucket of its CURRENT key.
     let mut records_by_slot: HashMap<i32, u64> = HashMap::new();
     for file in &live_data_files(&catalog, &ident).await {
         *records_by_slot.entry(bucket_slot(file)).or_insert(0) += file.record_count();
@@ -1462,16 +1360,7 @@ async fn merge_bucket_partition_key_changing_update_reroutes_survivor() {
     );
 }
 
-// ===================================================================================
 // GROUP T — merge-on-read MERGE INTO pins (T1-T4, T7, T8 gates).
-//
-// The claim these pins defend: a merge-on-read MERGE and a copy-on-write MERGE of the SAME
-// source into the SAME target are SCAN-EQUIVALENT (identical rows, identical types, on the
-// Arrow path), while being PHYSICALLY different — merge-on-read leaves every original data
-// file in place and adds position-delete files, copy-on-write rewrites the affected files
-// away. Every pin below asserts BOTH halves where they apply: a pin that only checked rows
-// would stay green if the merge-on-read arm silently fell back to copy-on-write.
-// ===================================================================================
 
 /// Table properties selecting merge-on-read.
 fn mor_props() -> HashMap<String, String> {
@@ -1486,16 +1375,12 @@ fn mor_props() -> HashMap<String, String> {
     ])
 }
 
-/// Table properties selecting copy-on-write EXPLICITLY (the T4 differential's control arm —
-/// stated rather than defaulted, so the pin compares two deliberate modes).
+/// Table properties selecting copy-on-write EXPLICITLY.
 fn cow_props() -> HashMap<String, String> {
     HashMap::from([(MERGE_MODE_PROP.to_string(), "copy-on-write".to_string())])
 }
 
-/// The live (Added/Existing) DELETE-file entries in the current snapshot's DELETE manifests —
-/// the manifest-level oracle for "a position-delete file was actually committed". The
-/// physical-shape half of every merge-on-read pin reads this; without it a pin cannot tell a
-/// real merge-on-read commit from a copy-on-write fallback that happens to produce the same rows.
+/// The live DELETE-file entries in the current snapshot's DELETE manifests.
 async fn live_delete_files(catalog: &Arc<dyn Catalog>, ident: &TableIdent) -> Vec<DataFile> {
     let table = catalog.load_table(ident).await.expect("load table");
     let metadata = table.metadata();
@@ -1535,8 +1420,7 @@ async fn live_data_file_paths(catalog: &Arc<dyn Catalog>, ident: &TableIdent) ->
     paths
 }
 
-/// The Arrow SCHEMA the read-back scan produces — the TYPE half of the T4 differential (rule:
-/// a parity claim pins value AND type on the Arrow path, never value alone).
+/// The Arrow SCHEMA the read-back scan produces — the TYPE half of the T4 differential.
 async fn read_back_schema(catalog: &Arc<dyn Catalog>, ident: &TableIdent) -> SchemaRef {
     let table = catalog.load_table(ident).await.expect("load table");
     let batches: Vec<RecordBatch> = table
@@ -1564,29 +1448,13 @@ fn delete_matched() -> MatchedClause {
     }
 }
 
-/// R-MERGE-TRACING pin: on a local merge-on-read MERGE, all five phase spans fire and `merge.commit`
-/// is the last of the five by first-record order. Zero overhead when no subscriber is installed
-/// (standard `tracing` macros only). Live profile:
-/// `RUST_LOG=repark_write=info` (or `RUST_LOG=merge=info` if targets are filtered by name).
-///
-/// Capture is a GLOBAL subscriber (installed once per process), not `set_default`: the merge
-/// future can be polled on threads other than the test thread (CI 2-core runners provoke
-/// this), and a thread-local subscriber records nothing there. Spans from parallel tests are
-/// excluded by requiring the unique `merge.trace_test_root` ancestor this test wraps its
-/// merge in — the five production spans are created while that root is entered, so contextual
-/// parenting links them regardless of which thread polls.
+/// R-MERGE-TRACING: on a local `MoR` MERGE, all five phase spans fire and `merge.commit` is last.
 #[tokio::test]
 async fn mor_merge_emits_five_phase_spans_with_commit_last() {
     use tracing::Instrument;
 
-    // v1 installed THIS test's own process-global subscriber (a per-binary invariant its
-    // `expect` message asserted). Merged with the catalog cohort into one binary that
-    // collides with the catalog capture install — forced-edit class 6
-    // (docs/design/session-api.md §5) — so the `SpanNameRecorder` layer and the single
-    // global install live in `crate::test_tracing`; the recorder's semantics (global
-    // subscriber, `merge.trace_test_root`-descended `merge.*` spans only) are v1's,
-    // unchanged, and every assertion below is byte-unchanged from v1.
-    let recorded = crate::test_tracing::merge_span_names();
+    // v1 installed THIS test's own process-global subscriber.
+    let recorded = crate::tests::tracing::merge_span_names();
     recorded.lock().expect("span name lock").clear();
 
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -1634,12 +1502,7 @@ async fn mor_merge_emits_five_phase_spans_with_commit_last() {
     );
 }
 
-/// PIN T1 (matched DELETE, merge-on-read) — the deleted row vanishes from the next scan, a
-/// POSITION-DELETE file is committed, and every original DATA file is left byte-identically in
-/// place (same paths, same count). The data-file assertion is the load-bearing half: it is what
-/// distinguishes a real merge-on-read commit from a copy-on-write rewrite that produces the same
-/// rows. Mutation M-T-PD (skip the position-delete write — return `Ok(Vec::new())` from
-/// `write_position_deletes`): the deleted row survives the read-back ⇒ RED.
+/// PIN T1.
 #[tokio::test]
 async fn mor_matched_delete_position_deletes_row_and_leaves_data_files() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -1690,18 +1553,7 @@ async fn mor_matched_delete_position_deletes_row_and_leaves_data_files() {
     );
 }
 
-/// PIN QA-176 (fork #176 rider, repin `14921e78`) — position deletes scope to the data file
-/// they name, across a MULTI-file scan. Fork #176 (`fix/delete-filter-per-task-scope`) fixed
-/// a per-scan `DeleteFilter` cache that could apply position deletes across scan tasks
-/// (cross-task OVER-delete = silent row loss on read; Java builds one filter per task). The
-/// shape here is the RePark-visible contract: two data files with ALIGNED ordinal positions
-/// and ONE MERGE deleting the pos-1 row of BOTH files, so a single position-delete file is in
-/// scope for both scan tasks — each task must apply only the entries naming its own data
-/// file. HONEST LIMIT: this pin ran GREEN at the pre-#176 rev `a08a0957` in both this shape
-/// and a two-sequential-MERGE variant (repin ledger C-011) — it does NOT discriminate the
-/// fixed defect (whose trigger needs a task shape `RePark`'s writers don't produce here); the
-/// authoritative pre-fix repro is the fork's own interop crosstask leg (id 30 survives =
-/// Java {10,30,40,60}). It stands as the regression contract for the over-delete class.
+/// PIN QA-176 — position deletes scope to the data file they name, across a MULTI-file scan.
 #[tokio::test]
 async fn mor_deletes_scope_to_their_own_data_file_across_a_multi_file_scan() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -1725,9 +1577,7 @@ async fn mor_deletes_scope_to_their_own_data_file_across_a_multi_file_scan() {
         "two data files with aligned ordinal positions"
     );
 
-    // ONE MERGE deleting the pos-1 row of BOTH files: the committed position-delete file(s)
-    // carry entries for two data files, so both scan tasks have the same delete file in
-    // scope — the cross-task sharing shape #176's cache fix is about.
+    // One MERGE deleting pos-1 of both files commits position-deletes that span two data files.
     let ctx = SessionContext::new();
     register_source(&ctx, &[20, 50], &[Some("ignored"), Some("ignored")]);
     execute_merge(
@@ -1756,12 +1606,7 @@ async fn mor_deletes_scope_to_their_own_data_file_across_a_multi_file_scan() {
     );
 }
 
-/// PIN T2 (matched UPDATE, merge-on-read) — an update is delete-old + insert-new: the OLD row's
-/// `(_file, _pos)` is position-deleted and the NEW values land in a FRESH data file, so the scan
-/// shows the updated row EXACTLY ONCE (never twice — the duplicate is the signature failure of
-/// writing the new row without deleting the old) and the untouched sibling row is unchanged. The
-/// original data file survives. Mutation M-T-PD (skip the position-delete write): id=2 appears
-/// twice, once with the old value ⇒ RED.
+/// PIN T2.
 #[tokio::test]
 async fn mor_matched_update_deletes_old_row_and_writes_new_values() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -1802,10 +1647,7 @@ async fn mor_matched_update_deletes_old_row_and_writes_new_values() {
     assert_eq!(deletes[0].record_count(), 1, "exactly the one updated row");
 }
 
-/// PIN T3 (not-matched INSERT, merge-on-read) — a pure insert writes a new data file and NO
-/// delete file at all (there is no old row to retire). Guards the arm that would otherwise
-/// commit an empty or spurious position-delete file: an unconditional delete-file write would
-/// make this RED.
+/// PIN T3 — a pure insert writes a new data file and NO delete file at all.
 #[tokio::test]
 async fn mor_not_matched_insert_writes_data_file_and_no_delete_file() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -1841,17 +1683,7 @@ async fn mor_not_matched_insert_writes_data_file_and_no_delete_file() {
     );
 }
 
-/// PIN T4 — THE differential oracle (the whole point of Group T). A three-clause MERGE
-/// (`WHEN MATCHED AND v = 'drop' THEN DELETE`, then `WHEN MATCHED THEN UPDATE`, then
-/// `WHEN NOT MATCHED THEN INSERT`) is run against two IDENTICAL targets that differ only in
-/// `write.merge.mode`, from the same source. The pin asserts:
-///   * **scan-equivalence** — identical rows AND an identical Arrow schema on the read path
-///     (value + type, per the divergence-class rule);
-///   * **physical divergence** — merge-on-read keeps EVERY original data file and commits
-///     position-delete files; copy-on-write commits NO delete file and has rewritten the
-///     affected original file away.
-/// Either half alone is insufficient: rows-only would pass if merge-on-read secretly ran the
-/// copy-on-write arm, and shape-only would pass if the deletes landed on the wrong rows.
+/// PIN T4 — THE differential oracle (the whole point of Group T).
 #[tokio::test]
 async fn mor_and_cow_merges_are_scan_equivalent_but_physically_different() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -1859,9 +1691,7 @@ async fn mor_and_cow_merges_are_scan_equivalent_but_physically_different() {
     let mor = create_target_with(&catalog, "diff_mor", mor_props()).await;
     let cow = create_target_with(&catalog, "diff_cow", cow_props()).await;
 
-    // Same two data files in each target: id=1 is deleted, id=2 updated, id=3 untouched
-    // (and lives in the same file as id=1, so copy-on-write must rewrite it while merge-on-read
-    // must NOT disturb it), id=9 inserted.
+    // Same two data files: id=1 deleted, id=2 updated, id=3 untouched, id=9 inserted.
     for ident in [&mor, &cow] {
         append_file(
             &catalog,
@@ -1896,7 +1726,7 @@ async fn mor_and_cow_merges_are_scan_equivalent_but_physically_different() {
             .unwrap_or_else(|error| panic!("{name} MERGE commits: {error}"));
     }
 
-    // --- scan-equivalence: value AND type ---
+    // --- scan-equivalence: value AND type ---.
     let expected = vec![
         (2, Some("NEW".to_string())), // first-match-wins: clause 2 (UPDATE) applied
         (3, Some("keep".to_string())), // untouched sibling of the deleted row
@@ -1915,7 +1745,7 @@ async fn mor_and_cow_merges_are_scan_equivalent_but_physically_different() {
         "scan-equivalence is value AND type — the Arrow schemas must match too"
     );
 
-    // --- physical divergence ---
+    // --- physical divergence ---.
     let mor_data_after = live_data_file_paths(&catalog, &mor).await;
     assert!(
         mor_data_before
@@ -1941,9 +1771,7 @@ async fn mor_and_cow_merges_are_scan_equivalent_but_physically_different() {
     );
 }
 
-/// Create `sales.<name>` with `id int` + `v string`, IDENTITY-partitioned on `id`, with the
-/// given properties — the T7 target (each distinct id is its own partition, so a position-delete
-/// file must carry the partition of the data file it deletes from).
+/// Create `sales.<name>` with `id int` plus `v string`, IDENTITY-partitioned on `id`.
 async fn create_identity_target(
     catalog: &Arc<dyn Catalog>,
     name: &str,
@@ -1986,12 +1814,7 @@ fn identity_slot(file: &DataFile) -> i32 {
     }
 }
 
-/// PIN T7 (identity-partitioned merge-on-read) — a position-delete file is stamped with the
-/// partition of the DATA FILE IT DELETES FROM, not the table's default or the first partition
-/// seen. With one partition per id, a DELETE of id=1 and an UPDATE of id=2 must produce delete
-/// files in partitions {1, 2} respectively — a single mis-stamped delete file would either be
-/// rejected at commit or, worse, be pruned away at scan time and silently resurrect the row.
-/// The read-back is asserted too, so a "right partition, wrong rows" stamp cannot pass.
+/// PIN T7.
 #[tokio::test]
 async fn mor_identity_partitioned_stamps_deletes_with_the_owning_partition() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -2056,31 +1879,14 @@ async fn mor_identity_partitioned_stamps_deletes_with_the_owning_partition() {
     );
 }
 
-// ===================================================================================
-// GROUP Y — merge-on-read MERGE × NON-IDENTITY TRANSFORM partitioning (Y1, Y2, Y4, Y5, Y7,
-// Y8a). The composition of Group T (merge-on-read) and Group R (transform partitioning),
-// which Group T deliberately gated as UNPROVEN. Repro-first observation (2026-07-25) settled
-// the crux before a line of the gate moved: on a `bucket(4, id)` table the committed
-// position-delete file is stamped `Struct { fields: [Some(Primitive(Int(0)))] }` for a row
-// whose identity key is `2` — i.e. the OWNING data file's TRANSFORMED bucket ordinal
-// (`bucket(4, 2) = 0`), never the identity key, and never the table's default/empty partition.
-// Nothing recomputes it: `write_position_deletes` reads the stamp straight off the manifests,
-// where a transform-partitioned file already carries its transformed value.
-//
-// Every pin below therefore asserts the TRANSFORMED stamp against the fork's own transform
-// function as self-oracle AND the physical merge-on-read shape (originals live + delete files
-// committed) — a rows-only pin would stay green under a copy-on-write fallback, and a
-// shape-only pin would stay green under a mis-targeted stamp.
-// ===================================================================================
+// GROUP Y — merge-on-read MERGE × NON-IDENTITY TRANSFORM partitioning (Y1, Y2, Y4, Y5, Y7, Y8a).
 
-/// The single bucket-ordinal slot of a committed DELETE file (same shape as [`bucket_slot`];
-/// named separately so a pin reads as "the delete file's stamp", not "some file's partition").
+/// The single bucket-ordinal slot of a committed DELETE file.
 fn delete_bucket_slot(file: &DataFile) -> i32 {
     bucket_slot(file)
 }
 
-/// The live data file whose bucket slot is `slot` — the "owning file" a delete stamped with
-/// `slot` must actually reference. Exactly one such file is expected in these fixtures.
+/// The live data file whose bucket slot is `slot`.
 fn only_file_in_bucket(files: &[DataFile], slot: i32) -> &DataFile {
     let mut matching = files.iter().filter(|file| bucket_slot(file) == slot);
     let file = matching.next().unwrap_or_else(|| {
@@ -2093,26 +1899,7 @@ fn only_file_in_bucket(files: &[DataFile], slot: i32) -> &DataFile {
     file
 }
 
-/// PIN Y1 (THE Group Y crux — matched DELETE on a `bucket(4, id)` merge-on-read table) — every
-/// committed position-delete file is stamped with the OWNING data file's TRANSFORMED partition
-/// value (its bucket ordinal), the data files are left completely untouched, and the next scan
-/// hides the deleted rows.
-///
-/// The fixture is built to be discriminating three ways at once:
-///   * the deleted rows' identity keys differ from their bucket ordinals (`bucket(4, 2) = 0`),
-///     so a stamp that leaked the identity key is a different value;
-///   * the MERGE deletes rows from **two different buckets**, so the stamp must be resolved
-///     PER OWNING FILE — one partition broadcast across every delete file (a plausible
-///     simplification, and what a "look up the first pair's file" implementation does) is
-///     visibly wrong here, where a single-bucket fixture could not tell the difference;
-///   * each delete file's decoded `(file_path, pos)` rows must name the data file that actually
-///     lives in the bucket it is stamped with — "the owning file's partition", not merely "a
-///     partition that type-checks".
-///
-/// Mutation M-Y-GATE (restore the transform+merge-on-read gate) → `NotImplemented` ⇒ RED.
-/// Mutation M-Y-DEFAULTSPEC (stamp the default spec's placeholder partition instead of the data
-/// file's own) ⇒ RED. Mutation M-Y-COLLAPSE (stamp every delete with the FIRST pair's owning
-/// partition) ⇒ RED — the two-bucket fixture is what buys that one.
+/// PIN Y1.
 #[tokio::test]
 async fn mor_bucket_partitioned_stamps_deletes_with_the_owning_transformed_partition() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -2128,10 +1915,7 @@ async fn mor_bucket_partitioned_stamps_deletes_with_the_owning_transformed_parti
     let data_before = live_data_file_paths(&catalog, &ident).await;
     assert_eq!(data_before.len(), 2, "two buckets ⇒ two data files");
 
-    // The discriminating facts: each deleted row's TRANSFORMED partition differs from its key;
-    // the two deleted rows live in DIFFERENT buckets; and they sit at DIFFERENT physical
-    // ordinals within their files (id=1 at pos 0, id=7 at pos 1), so a delete file that took
-    // the other file's ordinal would be caught too.
+    // The discriminating facts: each deleted row's TRANSFORMED partition differs from its key.
     let (bucket_of_1, bucket_of_7) = (fork_bucket(4, 1), fork_bucket(4, 7));
     assert_ne!(
         bucket_of_1, 1,
@@ -2157,7 +1941,7 @@ async fn mor_bucket_partitioned_stamps_deletes_with_the_owning_transformed_parti
         "the scan applies the position deletes on a transform-partitioned table (fork R117)"
     );
 
-    // Physical half #1: merge-on-read never rewrites. Byte-identical file set.
+    // Physical half #1: merge-on-read never rewrites.
     assert_eq!(
         live_data_file_paths(&catalog, &ident).await,
         data_before,
@@ -2207,16 +1991,7 @@ async fn mor_bucket_partitioned_stamps_deletes_with_the_owning_transformed_parti
     );
 }
 
-/// PIN Y2 (partition-MOVING matched UPDATE, merge-on-read × transform) — the load-bearing
-/// composition pin. A merge-on-read UPDATE is delete-old + insert-new, and on a transform table
-/// those two halves live in DIFFERENT partitions when the update changes the partition-source
-/// column: the NEW row must be routed by `RePark`'s own computed-mode fanout into
-/// `bucket(new key)`, while the OLD row's position delete must be stamped `bucket(old key)` —
-/// the partition of the file it deletes from, which the update did not move.
-///
-/// Keys are asserted to straddle a bucket boundary, so "stamped the new bucket" and "stamped
-/// the old bucket" are distinguishable. Mutation M-Y-DEFAULTSPEC (stamp the default spec) → RED;
-/// M-Y-GATE (restore the gate) → RED.
+/// PIN Y2 — the load-bearing composition pin.
 #[tokio::test]
 async fn mor_bucket_partition_key_changing_update_splits_across_old_and_new_buckets() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -2301,18 +2076,7 @@ async fn mor_bucket_partition_key_changing_update_splits_across_old_and_new_buck
     );
 }
 
-/// PIN Y4 — the merge-on-read/copy-on-write DIFFERENTIAL, run on a TRANSFORM-partitioned table
-/// (the T4 oracle transferred to the Group Y surface). Two `bucket(4, id)` targets differ ONLY
-/// in `write.merge.mode`; the same three-clause MERGE runs against both. Rows AND the Arrow
-/// schema must be identical (scan-equivalence, value + type), while the physical shapes must
-/// DIVERGE — merge-on-read keeps every original data file and commits position deletes,
-/// copy-on-write rewrites an original away and commits none. The copy-on-write arm is already
-/// Spark-pinned on transform tables by Group R, so this transfers that pinning to the
-/// merge-on-read arm without a live Spark, and it cannot be satisfied by a fallback: a
-/// merge-on-read arm that secretly ran copy-on-write would make the shapes match ⇒ RED.
-///
-/// Mutation M-Y-COW (route the merge-on-read arm to `plan_and_commit_cow`) → RED on the
-/// PHYSICAL assertions only; the row/schema assertions still pass. That asymmetry is the point.
+/// PIN Y4 — the merge-on-read/copy-on-write DIFFERENTIAL, run on a TRANSFORM-partitioned table.
 #[tokio::test]
 async fn mor_and_cow_transform_partitioned_merges_are_scan_equivalent_but_divergent() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -2320,9 +2084,7 @@ async fn mor_and_cow_transform_partitioned_merges_are_scan_equivalent_but_diverg
     let mor = create_bucket_target_with(&catalog, "ydiff_mor", 4, mor_props()).await;
     let cow = create_bucket_target_with(&catalog, "ydiff_cow", 4, cow_props()).await;
 
-    // id=1 is deleted, id=2 updated, id=3 untouched, id=42 inserted. `bucket(4, 1)` and
-    // `bucket(4, 2)` coincide, so the deleted and updated rows share a data file — copy-on-write
-    // must rewrite it, merge-on-read must not touch it.
+    // id=1 is deleted, id=2 updated, id=3 untouched, id=42 inserted.
     for ident in [&mor, &cow] {
         append_file(
             &catalog,
@@ -2353,7 +2115,7 @@ async fn mor_and_cow_transform_partitioned_merges_are_scan_equivalent_but_diverg
             .unwrap_or_else(|error| panic!("{name} transform MERGE commits: {error}"));
     }
 
-    // --- scan-equivalence: value AND type ---
+    // --- scan-equivalence: value AND type ---.
     let expected = vec![
         (2, Some("NEW".to_string())),
         (3, Some("keep".to_string())),
@@ -2372,7 +2134,7 @@ async fn mor_and_cow_transform_partitioned_merges_are_scan_equivalent_but_diverg
         "scan-equivalence is value AND type"
     );
 
-    // --- physical divergence ---
+    // --- physical divergence ---.
     let mor_after = live_data_file_paths(&catalog, &mor).await;
     assert!(
         mor_before.iter().all(|path| mor_after.contains(path)),
@@ -2393,19 +2155,7 @@ async fn mor_and_cow_transform_partitioned_merges_are_scan_equivalent_but_diverg
     );
 }
 
-/// PIN Y5 (ORDINAL VALIDITY across SEQUENTIAL merge-on-read MERGEs on a TRANSFORM table) — T9's
-/// deep question, re-asked where partitioning is transform-computed: after MERGE #1 has
-/// position-deleted a row, does MERGE #2 still see each survivor's ORIGINAL physical ordinal in
-/// its data file, and does the second delete file still carry the owning file's bucket ordinal?
-///
-/// Five keys chosen at runtime to share ONE bucket (so they land in ONE data file at physical
-/// `_pos` 0..4 — derived from the FORK's own `Bucket(4)` function, never hard-coded). MERGE #1
-/// deletes `ids[1]` (physical `_pos` 1); MERGE #2 deletes `ids[3]`, whose ORIGINAL ordinal is 3
-/// but whose ordinal among the four SURVIVORS would be 2. The final table decides:
-///   * original ordinals (correct)  ⇒ `[ids[0], ids[2], ids[4]]`
-///   * renumbered survivors (wrong) ⇒ `[ids[0], ids[3], ids[4]]`
-/// Both delete files must be stamped with the shared bucket ordinal and reference the ORIGINAL
-/// data file, which is never rewritten.
+/// PIN Y5.
 #[tokio::test]
 async fn sequential_mor_merges_on_a_transform_table_keep_original_ordinals_and_stamps() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -2499,10 +2249,7 @@ async fn sequential_mor_merges_on_a_transform_table_keep_original_ordinals_and_s
     );
 }
 
-/// Create `sales.<name>` with `id int` (required) + `k int` (OPTIONAL, the partition source) +
-/// `v string` (optional), partitioned by `bucket(4, k)` — the Y7 fixture. The partition source
-/// being NULLABLE is the whole point: a NULL `k` has no bucket, so its rows must route to the
-/// partition's `None` slot.
+/// Create `sales.<name>` with `id int` + `k int` + `v string`, partitioned by `bucket`.
 async fn create_nullable_bucket_target(
     catalog: &Arc<dyn Catalog>,
     name: &str,
@@ -2605,8 +2352,7 @@ async fn read_back_with_key(
     rows
 }
 
-/// The single partition slot of a file as an `Option<i32>` — `None` is the NULL-partition slot,
-/// which is a DIFFERENT thing from "bucket ordinal 0" and must never be conflated with it.
+/// The single partition slot of a file as an `Option<i32>`.
 fn optional_bucket_slot(file: &DataFile) -> Option<i32> {
     use iceberg::spec::{Literal, PrimitiveLiteral};
     match file.partition().fields().first().cloned().flatten() {
@@ -2616,18 +2362,7 @@ fn optional_bucket_slot(file: &DataFile) -> Option<i32> {
     }
 }
 
-/// PIN Y7 (NULL partition source through a merge-on-read MERGE — the FORK-O7-class CONTROL) —
-/// a row whose partition-source column is NULL has no bucket, so it belongs in the partition's
-/// `None` slot, which is NOT bucket ordinal 0. Group O found the fork provider's overwrite path
-/// mis-slotting NULLs (FORK-O7); this path is `RePark`'s OWN computed-mode fanout, so O7 does
-/// not apply to it — but "does not apply" is a claim, and this pin is the measurement.
-///
-/// Three things are checked on the NULL row, end to end: the pre-merge APPEND puts it in the
-/// `None` slot; a merge-on-read matched DELETE of a NULL-`k` row stamps its delete file with
-/// the `None` slot (not `Some(0)`, and not the first slot seen); and a NOT-MATCHED INSERT of a
-/// fresh NULL-`k` row routes its NEW data file to the `None` slot too. A non-NULL row is
-/// updated in the same MERGE so the pin also proves NULL and non-NULL stamps do not collapse
-/// onto each other.
+/// PIN Y7.
 #[tokio::test]
 #[allow(clippy::too_many_lines)] // one linear end-to-end fixture: append → MERGE → three stamps.
 async fn mor_null_partition_source_row_routes_to_the_none_slot() {
@@ -2748,11 +2483,7 @@ async fn mor_null_partition_source_row_routes_to_the_none_slot() {
     }
 }
 
-/// PIN Y8a (gate-retirement guard) — Group Y removed the transform gate from `resolve_merge_mode`
-/// and must NOT have removed the V2-format gate that precedes it. A `bucket(4, id)` V1 table
-/// asking for merge-on-read is STILL a deterministic `NotImplemented` naming V2. The
-/// transform-partitioned V1 combination is the one a "delete the whole tail of the function"
-/// edit would have silently accepted.
+/// PIN Y8a.
 #[tokio::test]
 async fn mor_on_v1_transform_partitioned_table_is_still_rejected() {
     use iceberg::spec::{FormatVersion, Transform, UnboundPartitionSpec};
@@ -2793,10 +2524,7 @@ async fn mor_on_v1_transform_partitioned_table_is_still_rejected() {
     );
 }
 
-/// PIN T8b — the merge-on-read gate REFUSES a non-V2 table. Position-delete files exist only in
-/// V2: V1 has no delete files at all, and V3 mandates deletion vectors the fork's
-/// `PositionDeleteFileWriter` does not produce. Checked BEFORE any write, so a commit-time
-/// format rejection can never orphan an already-written delete file.
+/// PIN T8b — the merge-on-read gate REFUSES a non-V2 table.
 #[tokio::test]
 async fn mor_on_v1_table_is_rejected_before_any_write() {
     use iceberg::spec::FormatVersion;
@@ -2831,11 +2559,7 @@ async fn mor_on_v1_table_is_rejected_before_any_write() {
     );
 }
 
-/// PIN T8c — mode RESOLUTION itself: unset and `copy-on-write` both resolve to the
-/// copy-on-write arm (Iceberg's default), `merge-on-read` resolves to the new arm, and an
-/// unrecognised value is a loud `NotImplemented` rather than a silent fallback to either arm
-/// (the failure mode a bare `!= "copy-on-write"` check or a `== "merge-on-read"` check would
-/// each produce, in opposite directions).
+/// PIN T8c.
 #[tokio::test]
 async fn merge_mode_resolves_from_the_table_property() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -2844,8 +2568,7 @@ async fn merge_mode_resolves_from_the_table_property() {
         ("mode_unset", HashMap::new(), Some(MergeMode::CopyOnWrite)),
         ("mode_cow", cow_props(), Some(MergeMode::CopyOnWrite)),
         ("mode_mor", mor_props(), Some(MergeMode::MergeOnRead)),
-        // Audit M12: Iceberg-Java `RowLevelOperationMode.fromName` is equalsIgnoreCase and the
-        // position_delete.rs valve trims — mixed case / padded values must resolve, not refuse.
+        // Iceberg-Java mode names are case-insensitive; mixed-case or padded values must resolve.
         (
             "mode_mor_upper",
             HashMap::from([(MERGE_MODE_PROP.to_string(), "MERGE-ON-READ".to_string())]),
@@ -2890,25 +2613,7 @@ async fn snapshot_id(catalog: &Arc<dyn Catalog>, ident: &TableIdent) -> Option<i
         .map(|snapshot| snapshot.snapshot_id())
 }
 
-/// PIN T9 (ORDINAL VALIDITY across sequential merge-on-read MERGEs) — the deep correctness
-/// question this whole arm rests on: after MERGE #1 has position-deleted a row, does the NEXT
-/// scan report each surviving row's ORIGINAL physical ordinal in its data file, or does it
-/// renumber the survivors? Position deletes are `(file, physical ordinal)`; if a re-scan
-/// renumbered, MERGE #2's `_pos` would name a DIFFERENT physical row and delete the wrong one —
-/// silently, with no error anywhere.
-///
-/// Five rows in ONE data file. MERGE #1 deletes id=2 (physical `_pos` 1). MERGE #2 then deletes
-/// id=4, whose ORIGINAL ordinal is 3 but whose ordinal among the four SURVIVORS would be 2. The
-/// answer is decided by the final table:
-///   * original ordinals (correct)  ⇒ `[1, 3, 5]`
-///   * renumbered survivors (wrong) ⇒ `[1, 4, 5]` (a `_pos` of 2 names id=3)
-/// Confirmed against fork source (`reader.rs` threads a per-file counter over the WHOLE file,
-/// independent of applied deletes) — this pin holds that guarantee to execution, so a future
-/// fork change that renumbered would fail HERE instead of corrupting data.
-///
-/// MERGE #3 then targets the ALREADY-deleted id=2: it must be a pure no-op — the scan no longer
-/// sees that row, so nothing matches, and a MERGE that changes nothing commits nothing (same
-/// snapshot id, no phantom delete file re-deleting an already-deleted ordinal).
+/// PIN T9.
 #[tokio::test]
 async fn sequential_mor_merges_use_original_physical_ordinals() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -2925,7 +2630,7 @@ async fn sequential_mor_merges_use_original_physical_ordinals() {
     )
     .await;
 
-    // --- MERGE #1: delete id=2 (physical _pos 1) ---
+    // --- MERGE #1: delete id=2 (physical _pos 1) ---.
     let ctx = SessionContext::new();
     register_source(&ctx, &[2], &[Some("x")]);
     execute_merge(
@@ -2946,7 +2651,7 @@ async fn sequential_mor_merges_use_original_physical_ordinals() {
         "MERGE #1 removes exactly id=2"
     );
 
-    // --- MERGE #2: delete id=4 — ORIGINAL _pos 3, SURVIVOR ordinal 2 ---
+    // --- MERGE #2: delete id=4 — ORIGINAL _pos 3, SURVIVOR ordinal 2 ---.
     let ctx = SessionContext::new();
     register_source(&ctx, &[4], &[Some("x")]);
     execute_merge(
@@ -2978,7 +2683,7 @@ async fn sequential_mor_merges_use_original_physical_ordinals() {
         "one position-delete file per committed MERGE"
     );
 
-    // --- MERGE #3: target the ALREADY-deleted id=2 ⇒ a pure no-op ---
+    // --- MERGE #3: target the ALREADY-deleted id=2 ⇒ a pure no-op ---.
     let before = snapshot_id(&catalog, &ident).await;
     let ctx = SessionContext::new();
     register_source(&ctx, &[2], &[Some("x")]);
@@ -3010,8 +2715,7 @@ async fn sequential_mor_merges_use_original_physical_ordinals() {
     );
 }
 
-/// Decode a committed position-delete Parquet file into its `(file_path, pos)` rows, in FILE
-/// ORDER — read back through the table's own `FileIO`, so this is what a Java reader would see.
+/// Decode a committed position-delete Parquet file into `(file_path, pos)` rows, in file order.
 async fn decode_position_delete_file(
     catalog: &Arc<dyn Catalog>,
     ident: &TableIdent,
@@ -3056,19 +2760,7 @@ async fn decode_position_delete_file(
     rows
 }
 
-/// PIN T-SORT-ONDISK — the Iceberg spec's ascending `(file_path, pos)` ordering survives all the
-/// way ONTO DISK, and the deletes for several data files are coalesced into ONE delete file.
-/// `sorts_pairs_by_file_then_position` pins the helper in isolation; this pins the property a
-/// Java reader actually depends on, by DECODING the committed Parquet through the table's own
-/// `FileIO`. The gap it closes is real: the helper could be correct and still never be reached
-/// (or be reached before the pairs are assembled), and the scan produces the pairs in arbitrary
-/// interleaved file order, so unsorted output is the natural failure.
-///
-/// Three data files; matches in files #1 and #3 only, three matched rows total. Sortedness is
-/// asserted structurally (the decoded rows equal their own sorted copy) rather than against a
-/// hard-coded order, because the writer's UUID file names make the lexicographic order of the
-/// two referenced paths unknowable up front — while the SET of referenced `(path, pos)` pairs is
-/// pinned exactly, so a sorted-but-wrong file cannot pass.
+/// PIN T-SORT-ONDISK.
 #[tokio::test]
 async fn position_delete_file_is_sorted_on_disk_and_coalesced() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -3097,7 +2789,6 @@ async fn position_delete_file_is_sorted_on_disk_and_coalesced() {
     assert_eq!(data_before.len(), 3, "three data files");
 
     // Delete id=1 and id=2 (both in file #1, _pos 0 and 1) and id=5 (file #3, _pos 0).
-    // File #2 is untouched, so the delete file must reference exactly TWO data files.
     let ctx = SessionContext::new();
     register_source(&ctx, &[1, 2, 5], &[Some("x"), Some("y"), Some("z")]);
     execute_merge(
@@ -3117,8 +2808,7 @@ async fn position_delete_file_is_sorted_on_disk_and_coalesced() {
         ],
     );
 
-    // ONE delete file for all three deletes: the table is unpartitioned, so every pair resolves
-    // to the same (spec_id, partition) group and coalesces.
+    // One delete file for all three deletes: unpartitioned pairs share the same partition group.
     let deletes = live_delete_files(&catalog, &ident).await;
     assert_eq!(
         deletes.len(),
@@ -3141,18 +2831,9 @@ async fn position_delete_file_is_sorted_on_disk_and_coalesced() {
         "the Iceberg spec requires position-delete rows ascending by (file_path, pos), and the \
          scan produces them interleaved — the sort must survive onto disk, got: {rows:?}"
     );
-    // HONESTY (measured, not assumed): this sortedness assertion is a real guard but only a
-    // PROBABILISTIC mutation carrier — with the sort no-op'd it reddens ~4 runs in 10, because
-    // the scan's join output order is sometimes already ascending for this small fixture. The
-    // DETERMINISTIC carrier for "the sort reaches disk" is
-    // `write_position_deletes_sorts_reverse_ordered_pairs_onto_disk` below, which feeds
-    // deliberately reverse-ordered pairs. What THIS pin carries deterministically is the
-    // coalescing + record_count + exact-referenced-set half asserted around it.
+    // HONESTY: this sortedness assertion is a real guard but only a PROBABILISTIC mutation carrier.
 
-    // The exact rows: one referenced file at _pos 0 and 1 (ids 1,2), the other at _pos 0 (id 5),
-    // and the untouched file never referenced. `data_before` is path-sorted rather than
-    // append-sorted (UUID file names), so the files are identified by their delete SHAPE, not by
-    // index — which is the property that matters and is stable.
+    // Exact rows: one file at _pos 0,1 (ids 1,2), the other at _pos 0 (id 5); third is untouched.
     let mut referenced: Vec<String> = rows
         .iter()
         .map(|(path, _)| path.as_ref().to_string())
@@ -3189,15 +2870,7 @@ async fn position_delete_file_is_sorted_on_disk_and_coalesced() {
     );
 }
 
-/// PIN T-SORT-ONDISK-DET — the DETERMINISTIC companion to
-/// `position_delete_file_is_sorted_on_disk_and_coalesced`: drive `write_position_deletes`
-/// directly with pairs in deliberately REVERSE `(file_path, pos)` order and decode the Parquet
-/// it produced. Because the input order is chosen rather than observed, no-op'ing
-/// `sort_position_delete_pairs` reddens this EVERY run — where the end-to-end pin only reddens
-/// when the scan happens to emit unsorted order (~4 runs in 10, measured).
-///
-/// This is the pin that actually holds "the sort survives from the helper onto disk": the helper
-/// unit test proves the comparator, this proves the write path calls it.
+/// PIN T-SORT-ONDISK-DET.
 #[tokio::test]
 async fn write_position_deletes_sorts_reverse_ordered_pairs_onto_disk() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -3256,13 +2929,7 @@ async fn write_position_deletes_sorts_reverse_ordered_pairs_onto_disk() {
     );
 }
 
-/// P2a hour-0 evidence for scout #6: serial `resolve_affected_data_files` share of a
-/// same-process multi-file COW MERGE wall on local-fs. Concurrent resolve is **not**
-/// implemented when the share is under 10% (WIN close with the number).
-///
-/// Measures resolve in isolation after a warm load, and full `execute_merge` wall on a
-/// fresh 8-file target of the same shape. Ratio is profile-stable (debug vs release both
-/// scale). Python hour-0 release wheel re-derived COW merge ~0.18 s at 8×5k rows.
+/// P2a hour-0: serial `resolve_affected_data_files` share of a multi-file COW MERGE wall.
 #[tokio::test]
 async fn resolve_affected_data_files_local_fs_is_sub_10pct_of_merge_budget() {
     use std::time::Instant;
@@ -3270,7 +2937,7 @@ async fn resolve_affected_data_files_local_fs_is_sub_10pct_of_merge_budget() {
     let warehouse = TempDir::new().expect("temp warehouse");
     let catalog = memory_catalog(&warehouse).await;
 
-    // --- resolve absolute (8 files, warm) ---
+    // --- resolve absolute (8 files, warm) ---.
     let ident_resolve = create_target(&catalog, "p2a_resolve").await;
     for file_index in 0..8_i32 {
         let base = file_index * 100;
@@ -3300,7 +2967,7 @@ async fn resolve_affected_data_files_local_fs_is_sub_10pct_of_merge_budget() {
     }
     let resolve_ms = t_resolve.elapsed().as_secs_f64() * 1000.0 / f64::from(resolve_rounds);
 
-    // --- full COW MERGE wall (same 8-file shape, update a row in every file) ---
+    // --- full COW MERGE wall (same 8-file shape, update a row in every file) ---.
     let ident_merge = create_target(&catalog, "p2a_merge_wall").await;
     for file_index in 0..8_i32 {
         let base = file_index * 100;
@@ -3331,8 +2998,7 @@ async fn resolve_affected_data_files_local_fs_is_sub_10pct_of_merge_budget() {
         ],
     );
     let spec = merge_spec("p2a_merge_wall", vec![update_set("v", "s.v")], Vec::new());
-    // Warm plan path once, then time a second MERGE is not free (table already mutated);
-    // time the first execute_merge as the wall (includes resolve).
+    // Warm plan path once, then time a second MERGE is not free.
     let t_merge = Instant::now();
     execute_merge(&ctx, &catalog, &spec)
         .await
@@ -3348,10 +3014,7 @@ async fn resolve_affected_data_files_local_fs_is_sub_10pct_of_merge_budget() {
         resolve_ms < 500.0,
         "resolve_affected avg {resolve_ms:.3} ms looks hung on local-fs"
     );
-    // Scout #6 gate is profile-sensitive: debug inflates both sides and the ratio on
-    // tiny fixtures. The authoritative hour-0 is release (Python wheel + this test under
-    // `--release`): 2026-08-03 release measured ~5.4% — under the 10% implement bar.
-    // In debug, only pin absolute hang; in release, pin share <10%.
+    // Scout #6 gate is profile-sensitive: debug inflates both sides and the ratio on tiny fixtures.
     #[cfg(not(debug_assertions))]
     assert!(
         share_pct < 10.0,

@@ -60,9 +60,7 @@ async fn epoch_seconds_through(
     (field_type, values)
 }
 
-/// ===========================================================================================
 /// One Spark-extended session, both doors, the same seconds — value AND Arrow type.
-/// ===========================================================================================
 #[tokio::test]
 async fn both_doors_of_one_spark_extended_session_scale_to_epoch_seconds() {
     let spark: Arc<dyn SqlDialect> = Arc::new(SparkDialect);
@@ -87,9 +85,7 @@ async fn both_doors_of_one_spark_extended_session_scale_to_epoch_seconds() {
     );
 }
 
-/// ===========================================================================================
 /// The honest negative: a BARE session (no Spark extension) keeps DataFusion's raw tick.
-/// ===========================================================================================
 #[tokio::test]
 async fn a_bare_session_keeps_the_raw_nanosecond_tick() {
     let ansi: Arc<dyn SqlDialect> = Arc::new(AnsiDialect);

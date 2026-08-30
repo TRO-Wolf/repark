@@ -1,5 +1,11 @@
 # map — python/repark-parity/tests
 
+CC-4 (2026-08-30): CAP-1 mirror tuples ratchet down only
+(pins: cc-3-comment-condensation/C-009). analyzer.rs 1194→1161; datetime.rs 1783→1709;
+dynamic_flatten/tests.rs 1469→1443; declared_sorted.rs 1381→1348.
+
+CC-3 (2026-08-30): comments condensed to one line; banners removed. CAP-1 mirror tuples ratcheted with each slice, including the Python binding files. D-001 catalog.rs 1845→1843; TA kernels 2284→2098 / 1676→1578 / 1873→1821. Spark CAP-1 rows ratcheted; session_timezone.rs retired at 891. Rust exception count 39→38. Router comment-pin expected string restored byte-exact (pins: cc-3-comment-condensation/C-003, C-004).
+
 CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
 accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
 
@@ -36,7 +42,7 @@ JVM, no repark required). See [../map.md](../map.md).
   facade no-stub scope; existing Makefile/CI wiring and contract/navigation carriers. The
   owner correction restores `position_delete.rs` to 1,068 lines with model provenance. The
   production file-size refactor removes `session/_funcs.py` when its exception retires. The
-  catalog-registration test split ratchets `session/tests.rs` from 1,485 to 1,461 lines.
+  catalog-registration test split ratchets `session/tests/session.rs` from 1,485 to 1,461 lines.
 - `test_reg_1_registry_truth_up.py` — **REG-1 (2026-08-26; tree pins):** the divergence registry
   says what the pins prove — DEC-2 / DEC-6 / DEC-7 / DEC-8 carry dated FIXED notes naming #94 / #99
   and their equality pins (C-001); TZ-8 splits into the FIXED `CAST(ts AS DATE)` / `to_date` /

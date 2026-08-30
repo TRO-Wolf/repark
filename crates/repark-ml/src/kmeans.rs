@@ -1,15 +1,11 @@
 //! Lloyd k-means over streamed batches with `initMode="random"`.
-//! Spark's `k-means||` default is refused; callers must choose `random`.
 
 use crate::MAX_FEATURES;
 use crate::error::{MlError, Result};
 
-/// ===========================================================================================
 /// Validate `KMeans` `initMode` before streaming.
-///
 /// # Errors
 /// [`MlError::KMeansInitModeDefault`] or [`MlError::KMeansInitModeUnsupported`].
-/// ===========================================================================================
 pub fn validate_init_mode(init_mode: &str) -> Result<()> {
     match init_mode {
         "k-means||" | "kmeans||" | "" => Err(MlError::KMeansInitModeDefault),
@@ -20,9 +16,7 @@ pub fn validate_init_mode(init_mode: &str) -> Result<()> {
     }
 }
 
-/// ===========================================================================================
 /// Fitted `KMeans` parameters.
-/// ===========================================================================================
 #[derive(Debug, Clone, PartialEq)]
 pub struct KMeansSolution {
     pub centers: Vec<Vec<f64>>,
@@ -73,12 +67,9 @@ impl XorShift64 {
 
 const KMEANS_INIT_MAX_ATTEMPTS_PER_CENTER: u64 = 64;
 
-/// ===========================================================================================
 /// Pick `k` distinct row indices using bounded rejection sampling and sequential fallback.
-///
 /// # Errors
 /// Empty design, `k == 0`, or `k > num_rows`.
-/// ===========================================================================================
 pub fn random_center_indices(num_rows: u64, k: usize, seed: u64) -> Result<Vec<u64>> {
     if k == 0 {
         return Err(MlError::IllegalArgument("KMeans k must be ≥ 1".into()));
@@ -122,7 +113,6 @@ fn fill_sequential_distinct_indices(num_rows: u64, k: usize, chosen: &mut Vec<u6
 }
 
 /// Return squared Euclidean distance for equal-width vectors.
-///
 /// # Errors
 /// [`MlError::FeatureWidthMismatch`] when `a.len() != b.len()`.
 pub fn squared_distance(a: &[f64], b: &[f64]) -> Result<f64> {
@@ -141,7 +131,6 @@ pub fn squared_distance(a: &[f64], b: &[f64]) -> Result<f64> {
 }
 
 /// Return the nearest center index, preferring the lowest index on ties.
-///
 /// # Errors
 /// Empty `centers`, or a center width mismatch vs `point`.
 pub fn nearest_center(point: &[f64], centers: &[Vec<f64>]) -> Result<usize> {
@@ -162,9 +151,7 @@ pub fn nearest_center(point: &[f64], centers: &[Vec<f64>]) -> Result<usize> {
     Ok(best_index)
 }
 
-/// ===========================================================================================
 /// One Lloyd assignment and update pass; accumulates sums and counts without storing points.
-/// ===========================================================================================
 #[derive(Debug, Clone)]
 pub struct KMeansPass {
     num_features: usize,
@@ -179,7 +166,6 @@ pub struct KMeansPass {
 
 impl KMeansPass {
     /// Start a pass from the current centers.
-    ///
     /// # Errors
     /// Empty centers, width mismatch, or non-finite coordinates.
     pub fn new(centers: Vec<Vec<f64>>) -> Result<Self> {
@@ -226,7 +212,6 @@ impl KMeansPass {
     }
 
     /// Assign one point and add it to the selected cluster.
-    ///
     /// # Errors
     /// Width mismatch or non-finite feature values.
     pub fn observe_row(&mut self, features: &[f64]) -> Result<()> {
@@ -255,7 +240,6 @@ impl KMeansPass {
     }
 
     /// Return new centers; empty clusters retain their previous center.
-    ///
     /// # Errors
     /// Empty stream (zero rows).
     pub fn finish(self) -> Result<(Vec<Vec<f64>>, u64, bool)> {
@@ -290,14 +274,9 @@ impl KMeansPass {
     }
 }
 
-/// ===========================================================================================
 /// Run Lloyd with a stream closure re-executed for each iteration.
-///
-/// `max_iter=0` returns validated initial centers without invoking the closure.
-///
 /// # Errors
 /// Invalid centers, stream failures, or assignment failures.
-/// ===========================================================================================
 pub fn fit_kmeans_lloyd<F>(
     initial_centers: Vec<Vec<f64>>,
     max_iter: usize,

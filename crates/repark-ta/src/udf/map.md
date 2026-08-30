@@ -1,5 +1,7 @@
 # map — repark-ta/src/udf
 
+CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated comments rewritten as complete sentences (D-001).
+
 ## Purpose
 
 DataFusion window-UDF wrappers for the TA kernels (feature `datafusion`). Shared machinery lives

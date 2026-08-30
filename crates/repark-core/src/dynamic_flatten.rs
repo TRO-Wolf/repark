@@ -1,7 +1,4 @@
 //! Plan-rewrite kernel for `dynamicFlatten`: structs first, then lists one at a time.
-//!
-//! Struct expansion uses null-safe `get_field` projections. List expansion uses unqualified
-//! columns so dotted field names bind correctly; unsupported nested elements refuse loudly.
 
 use std::collections::HashMap;
 use std::fmt::Write;
@@ -13,8 +10,7 @@ use datafusion::prelude::{DataFrame, array_length, get_field, lit, make_array};
 
 use crate::{Error, Result, engine_err};
 
-/// Options for [`dynamic_flatten`]. Defaults match the facade (`separator="_"`,
-/// `explode_lists=true`, `drop_null_lists=true`, `empty_as_null=true`, `max_depth=100`).
+/// Options for [`dynamic_flatten`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DynamicFlattenOptions {
     /// Parent-path prefix separator for expanded struct fields.
@@ -23,11 +19,9 @@ pub struct DynamicFlattenOptions {
     pub explode_lists: bool,
     /// Drop `List(Null)` / `array<void>` columns instead of exploding them.
     pub drop_null_lists: bool,
-    /// `true`: NULL and EMPTY lists become one null-element row. `false`: keep NULL,
-    /// drop EMPTY (polars ≥2.0).
+    /// `true`: NULL and EMPTY lists become one null-element row.
     pub empty_as_null: bool,
     /// Rewrite-pass bound, not a row-cartesian or schema-width memory limiter.
-    /// Remaining nested work after this many passes refuses LOUD.
     pub max_depth: usize,
 }
 
@@ -59,19 +53,9 @@ struct ExpandedField {
     data_type: DataType,
 }
 
-/// ===========================================================================================
 /// Recursively flatten nested structs (and optionally explode lists) as a plan rewrite.
-/// ===========================================================================================
-///
-/// Algorithm (matches the Python state machine): structs first (always), then lists
-/// one-at-a-time in schema order; a list-of-struct becomes a same-name struct and is
-/// unnested on the next pass. Plan-only — no row execution.
-///
 /// # Errors
-///
-/// [`Error::Analysis`] with tokens `[DYNAMIC_FLATTEN_NAME_COLLISION]`,
-/// `[DYNAMIC_FLATTEN_MAX_DEPTH]`, `[DYNAMIC_FLATTEN_EMPTY_STRUCT]`, or
-/// `[DYNAMIC_FLATTEN_UNSUPPORTED_ELEMENT]` (list-of-map and `ListView`).
+/// Returns [`Error::Analysis`] with a `DYNAMIC_FLATTEN_*` token.
 pub fn dynamic_flatten(frame: DataFrame, options: DynamicFlattenOptions) -> Result<DataFrame> {
     let DynamicFlattenOptions {
         separator,
@@ -122,9 +106,7 @@ pub fn dynamic_flatten(frame: DataFrame, options: DynamicFlattenOptions) -> Resu
     Ok(current)
 }
 
-/// ===========================================================================================
 /// Expand every top-level struct in place with parent-path prefixes (null-safe Project).
-/// ===========================================================================================
 fn expand_structs(frame: DataFrame, separator: &str) -> Result<DataFrame> {
     let schema_fields: Vec<(String, DataType)> = frame
         .schema()
@@ -203,9 +185,7 @@ fn expand_structs(frame: DataFrame, separator: &str) -> Result<DataFrame> {
     frame.select(projection).map_err(engine_err)
 }
 
-/// ===========================================================================================
 /// Null-safe struct field extract: CASE WHEN parent IS NULL THEN <typed null> ELSE `get_field`.
-/// ===========================================================================================
 fn null_safe_field(
     parent: Expr,
     nested_name: &str,
@@ -219,9 +199,7 @@ fn null_safe_field(
         .map(|expr| expr.alias(prefixed))
 }
 
-/// ===========================================================================================
 /// Explode every list column in schema order (drop void lists when `drop_null_lists`).
-/// ===========================================================================================
 fn explode_lists_in_schema_order(
     mut frame: DataFrame,
     drop_null_lists: bool,
@@ -255,9 +233,7 @@ fn explode_lists_in_schema_order(
     Ok(frame)
 }
 
-/// ===========================================================================================
 /// Rewrite one list column, then unnest it in place with unqualified binding.
-/// ===========================================================================================
 fn explode_one_list(
     frame: DataFrame,
     name: &str,
@@ -265,8 +241,7 @@ fn explode_one_list(
     column_type: &DataType,
     element_type: &DataType,
 ) -> Result<DataFrame> {
-    // Dictionary<_, List> is a list for the walk, but DataFusion Unnest rejects
-    // Dictionary. Unwrap one level (charter) so Parquet dict-lists explode.
+    // Dictionary<_, List> is a list for the walk, but DataFusion Unnest rejects Dictionary.
     let column = list_column_as_list(name, column_type);
     let singleton_null_list = make_array(vec![typed_null_literal(element_type)?]);
     let rewritten = if empty_as_null {
@@ -298,9 +273,7 @@ fn explode_one_list(
     unnest_list_column(frame, name)
 }
 
-/// ===========================================================================================
 /// Unnest a list column via `Column::new_unqualified` (`From<&str>` parses `s.f` as qualified).
-/// ===========================================================================================
 fn unnest_list_column(frame: DataFrame, name: &str) -> Result<DataFrame> {
     let (session_state, plan) = frame.into_parts();
     let options = UnnestOptions {
@@ -312,15 +285,11 @@ fn unnest_list_column(frame: DataFrame, name: &str) -> Result<DataFrame> {
         .map_err(engine_err)?
         .build()
         .map_err(engine_err)?;
-    // Re-alias every output unqualified. Unnest of a MemTable scan otherwise keeps
-    // `catalog.schema.view.col` beside later `col` aliases — the DF-54.1 mixed-qualifier
-    // schema the leaf-projection rule then fails on (DEFECT-2).
+    // Re-alias every output unqualified.
     reproject_unqualified(DataFrame::new(session_state, plan))
 }
 
-/// ===========================================================================================
 /// Project every field as an unqualified name (`Column::new_unqualified` + alias).
-/// ===========================================================================================
 fn reproject_unqualified(frame: DataFrame) -> Result<DataFrame> {
     let projection: Vec<Expr> = frame
         .schema()
@@ -331,9 +300,7 @@ fn reproject_unqualified(frame: DataFrame) -> Result<DataFrame> {
     frame.select(projection).map_err(engine_err)
 }
 
-/// ===========================================================================================
 /// Drop a column by projecting every other field through [`Column::new_unqualified`].
-/// ===========================================================================================
 fn drop_unqualified_column(frame: DataFrame, name: &str) -> Result<DataFrame> {
     let projection: Vec<Expr> = frame
         .schema()

@@ -1,11 +1,4 @@
 //! MERGE target-scan concurrency (session conf only — never a table property).
-//!
-//! [`SCAN_CONCURRENCY_LIMIT_KEY`] (`repark.scan.concurrency-limit`) caps how many files the
-//! Iceberg `TableScan` may open concurrently on the RePark-owned MERGE target scan. S3 GETs are
-//! latency-bound, not CPU-bound — a limit above `num_cpus` can win on multi-file tables; the knob
-//! lets the orchestrator measure live. **Unset** keeps the fork's default (`num_cpus`); set values
-//! must be ≥ 1 (0 / non-integer fail loud). SELECT reads go through the fork's `TableProvider` and
-//! are out of scope for this knob.
 
 use datafusion::common::config::ConfigExtension;
 use datafusion::common::extensions_options;
@@ -19,9 +12,6 @@ pub const SCAN_CONCURRENCY_LIMIT_KEY: &str = "repark.scan.concurrency-limit";
 pub const SCAN_CONCURRENCY_LIMIT_KEY_ALT: &str = "repark.scan.concurrency_limit";
 
 /// Validated optional scan concurrency limit.
-///
-/// `None` = do not call `TableScanBuilder::with_concurrency_limit` (fork `num_cpus` default).
-/// `Some(n)` with `n >= 1` = pass `n` to the builder.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct ScanConcurrency {
     /// Concurrent file-open limit for the MERGE target scan, when set.
@@ -30,7 +20,6 @@ pub struct ScanConcurrency {
 
 impl ScanConcurrency {
     /// Build from a positive limit.
-    ///
     /// # Errors
     /// Returns a DataFusion plan error when `limit < 1`.
     pub fn new(limit: usize) -> Result<Self> {
@@ -45,7 +34,6 @@ impl ScanConcurrency {
     }
 
     /// Parse a raw conf string (`"8"`, `"16"`, …).
-    ///
     /// # Errors
     /// Non-integer or `< 1` values fail loud with the key name in the message.
     pub fn parse(raw: &str) -> Result<Self> {
@@ -59,7 +47,6 @@ impl ScanConcurrency {
 }
 
 // DataFusion extension: field is 0 when unset (fork default); ≥1 when the user set a limit.
-// Zero is never a valid user value — parse rejects it before the extension is written.
 extensions_options! {
     /// RePark MERGE target-scan execution knobs (session-scoped, not table properties).
     pub struct ReparkScanConfig {
@@ -72,9 +59,7 @@ impl ConfigExtension for ReparkScanConfig {
     const PREFIX: &'static str = "repark.scan";
 }
 
-/// ===========================================================================================
 /// Attach [`ReparkScanConfig`] to a [`SessionConfig`] (called from session build).
-/// ===========================================================================================
 #[must_use]
 pub fn with_scan_concurrency(config: SessionConfig, scan: ScanConcurrency) -> SessionConfig {
     config.with_option_extension(ReparkScanConfig {
@@ -82,11 +67,7 @@ pub fn with_scan_concurrency(config: SessionConfig, scan: ScanConcurrency) -> Se
     })
 }
 
-/// ===========================================================================================
 /// Resolve scan concurrency from a live [`SessionContext`].
-///
-/// Missing extension or stored `0` → [`ScanConcurrency`] with `None` (do not override the fork).
-/// ===========================================================================================
 #[must_use]
 pub fn scan_concurrency_from_ctx(ctx: &SessionContext) -> ScanConcurrency {
     ctx.copied_config()
@@ -105,11 +86,7 @@ pub fn scan_concurrency_from_ctx(ctx: &SessionContext) -> ScanConcurrency {
         .unwrap_or_default()
 }
 
-/// ===========================================================================================
 /// Pull `repark.scan.concurrency-limit` (or underscore alt) from a builder conf map.
-/// Missing key → unset (fork default); present but invalid → error.
-/// ===========================================================================================
-///
 /// # Errors
 /// Invalid integer or value `< 1`.
 pub fn scan_concurrency_from_config_map<S>(

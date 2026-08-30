@@ -1,10 +1,4 @@
 //! The Spark door's test-only surface matrix.
-//!
-//! Every registry ID maps to a tested or deliberately absent row. Test names are collected
-//! verbatim, so a rename must update this matrix.
-//!
-//! The whole module is `#[cfg(test)]` — it is audit evidence, not product code, so it adds
-//! nothing to the shipped crate.
 
 use repark_common::surfaces::{self, Row, SessionProfile, SurfaceId};
 
@@ -20,11 +14,9 @@ const fn absent(reason: &'static str, adr: &'static str) -> Row {
     Row::DeliberatelyAbsent { reason, adr }
 }
 
-/// ===========================================================================================
 /// The Spark door's disposition of every surface ID.
-/// ===========================================================================================
 const ROWS: &[(SurfaceId, Row)] = &[
-    // --- Statement forms ---
+    // --- Statement forms ---.
     (
         surfaces::SELECT_PASSTHROUGH,
         t(
@@ -161,10 +153,7 @@ const ROWS: &[(SurfaceId, Row)] = &[
             SparkExtended,
         ),
     ),
-    // The Spark door ships its OWN `SHOW NAMESPACES` / `DESCRIBE NAMESPACE` intercepts, so this
-    // row is Tested independently of the R2 core gap (`ReparkSession` cannot enable
-    // `information_schema`, so DF-delegated `SHOW TABLES` is dead in BOTH doors — filed against
-    // core in task/p2f-ansi-m1-ledger.md).
+    // The Spark door ships its OWN `SHOW NAMESPACES` / `DESCRIBE NAMESPACE` intercepts.
     (
         surfaces::INTROSPECTION,
         t(
@@ -172,10 +161,7 @@ const ROWS: &[(SurfaceId, Row)] = &[
             SparkExtended,
         ),
     ),
-    // --- Table-creation options. The Spark spellings are `USING` + `TBLPROPERTIES` +
-    // `PARTITIONED BY` + `LOCATION`; `ctas_parses_using_and_threads_tblproperties` is the one
-    // test that pins the format half AND the raw-properties half of that clause set, so it
-    // legitimately backs both rows (the surfaces are distinct; the evidence is shared).
+    // --- Table-creation options.
     (
         surfaces::TABLE_OPTION_FORMAT,
         t(
@@ -252,7 +238,7 @@ const ROWS: &[(SurfaceId, Row)] = &[
             SparkExtended,
         ),
     ),
-    // --- Guard rails (design §2 Q12: the Spark door keeps all v1 guards verbatim) ---
+    // --- Guard rails (design §2 Q12: the Spark door keeps all v1 guards verbatim) ---.
     (
         surfaces::GUARD_MULTI_STATEMENT,
         t(
@@ -285,7 +271,7 @@ const ROWS: &[(SurfaceId, Row)] = &[
             SparkExtended,
         ),
     ),
-    // --- Ergonomics + seams ---
+    // --- Ergonomics + seams ---.
     (
         surfaces::WRONG_DOOR_SNIFF,
         absent(
@@ -318,17 +304,13 @@ const ROWS: &[(SurfaceId, Row)] = &[
     ),
     (
         surfaces::CROSS_DOOR_EQUIVALENCE,
-        // The evidence lives in the OTHER crate's test binary
-        // (`crates/repark-sql/tests/cross_door.rs`), and that is the honest place for it: the
-        // protocol needs both doors in one process, and only a dev-dependency may cross the
-        // door boundary. This row cites it with its crate so the reference is followable —
-        // running `cargo test -p repark-spark` alone will not execute it.
+        // The evidence lives in the OTHER crate's test binary, and that is the honest place for it.
         t(
             "repark-sql tests/cross_door.rs::cross_door_ctas_produces_the_same_table_content_and_schema",
             TwoSession,
         ),
     ),
-    // --- Value semantics (H-2 G8). Test names are `cargo test -- --list` names. ---
+    // --- Value semantics (H-2 G8).
     (
         surfaces::SEMANTICS_NULL_ORDERING,
         t(
@@ -377,15 +359,8 @@ const ROWS: &[(SurfaceId, Row)] = &[
     ),
 ];
 
-/// ===========================================================================================
-/// The compile-run audit (design §2 Q13): this door maps EXACTLY the registry, once each.
-///
-/// The failure this prevents is the quiet one — a surface added to
-/// `repark_common::surfaces::ALL` that this door neither ships nor refuses, drifting into an
-/// undocumented gap. `audit` reports unmapped IDs, stale IDs, duplicates and untraceable rows
-/// together, so one run names every problem.
 /// MUTATION: delete the `MERGE` row → this REDs naming `MERGE`.
-/// ===========================================================================================
+/// The compile-run audit (design §2 Q13): this door maps EXACTLY the registry, once each.
 #[test]
 fn matrix_maps_every_surface() {
     if let Err(problems) = surfaces::audit("repark-spark", ROWS) {
@@ -395,8 +370,8 @@ fn matrix_maps_every_surface() {
     }
 }
 
-/// Pin the three declared structural absences so an unreviewed fourth absence cannot pass.
 /// MUTATION: flip any `Tested` row to `absent(...)` → this REDs.
+/// Pin the three declared structural absences so an unreviewed fourth absence cannot pass.
 #[test]
 fn spark_door_absences_are_the_declared_ones() {
     let absent_ids: Vec<SurfaceId> = ROWS
@@ -417,8 +392,8 @@ fn spark_door_absences_are_the_declared_ones() {
     assert_eq!(ROWS.len() - absent_ids.len(), 47, "shipped-surface count");
 }
 
-/// `TwoSession` may be claimed only by `CROSS_DOOR_EQUIVALENCE`, whose protocol uses both doors.
 /// MUTATION: mark any other row `TwoSession` → this REDs.
+/// `TwoSession` may be claimed only by `CROSS_DOOR_EQUIVALENCE`, whose protocol uses both doors.
 #[test]
 fn only_the_cross_door_row_claims_the_two_session_profile() {
     for (id, row) in ROWS {

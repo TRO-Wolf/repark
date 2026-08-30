@@ -1,5 +1,7 @@
 # map — crates/repark-spark/tests/
 
+CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated comments rewritten as complete sentences (D-001). Wrapped-line fragments rewritten as complete sentences (D-002).
+
 ## Purpose
 
 Integration tests of the assembled Spark door: a real `repark_core::ReparkSession` built with

@@ -4,7 +4,7 @@
 
 use iceberg::{NamespaceIdent, TableIdent};
 
-use crate::v3_cow::door_with_v3_opt_in;
+use super::cow::door_with_v3_opt_in;
 
 #[tokio::test]
 async fn v3_type_columns_geometry_geography_variant_refuse_naming_the_type() {

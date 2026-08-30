@@ -4,9 +4,7 @@ use async_trait::async_trait;
 use datafusion::prelude::DataFrame;
 use repark_core::{EngineContext, SqlDialect};
 
-/// ===========================================================================================
 /// The ANSI/Trino-flavoured statement front end.
-/// ===========================================================================================
 #[derive(Debug, Clone, Copy, Default)]
 pub struct AnsiDialect;
 

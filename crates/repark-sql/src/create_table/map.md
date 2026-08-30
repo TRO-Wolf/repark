@@ -5,7 +5,7 @@
 File-backed tests for `../create_table.rs`. Clause refusals prevent silent loss of requested semantics. Each one,
 if ignored, produces a table that exists but does not match what was asked for.
 **V3-2:** `format_version = 3` is stored at parse and resolved at execute against the session
-opt-in; end-to-end pins live in [`../v3_create.rs`](../v3_create.rs).
+opt-in; end-to-end pins live in [`../v3/create.rs`](../v3/create.rs).
 
 ## Contents
 

@@ -1,7 +1,5 @@
-//! MW-9 — Spark-door `write.delete.granularity` (MOR-2).
-//!
-//! The writer lives in `repark-iceberg`; this leaf pins the Spark SQL door and the default flip.
 //! pins: mw-9-delete-granularity/C-009, C-011
+//! MW-9 — Spark-door `write.delete.granularity` (MOR-2).
 
 use super::super::*;
 use super::common::*;

@@ -9,6 +9,23 @@ CC-2 audits every tracked Rust source comment in the nine delivered crates, one 
 It preserves only the shortest required contract, invariant, directive, citation, or provenance.
 pins: comment-condensation-2/C-002, C-003, C-004, C-005, C-007, C-008, C-009, C-010, C-011.
 
+CC-3 (2026-08-30) continues one level deeper on a named roster and moves test modules under
+`tests/` plus `repark-sql` v3 modules under `v3/`. CC-4 (2026-08-30) applies the same one-line
+rule to the 64 remaining banner files. Ledger:
+[cc-3-comment-condensation-ledger.md](../task/ledgers/completed/cc-3-comment-condensation-ledger.md).
+
+| Clause | What changed |
+|---|---|
+| C-001 | One commit of `git mv` plus minimal `mod` path edits; no comment edits in that commit. pins: cc-3-comment-condensation/C-001 |
+| C-002 | Every rostered comment block receives the one-line rule. pins: cc-3-comment-condensation/C-002 |
+| C-003 | `Model:` / `pins:` / `MUTATION:` counts per rostered file stay identical. pins: cc-3-comment-condensation/C-003 |
+| C-004 | Equivalence harness plus tests prove no executable change. pins: cc-3-comment-condensation/C-004 |
+| C-005 | Both size-gate homes ratchet to the exact new line counts. pins: cc-3-comment-condensation/C-005 |
+| C-006 | Maps, ledger links, and doc links stay in lockstep. pins: cc-3-comment-condensation/C-006 |
+| C-007 | One PR; `make verify` and `make preflight` exit 0. pins: cc-3-comment-condensation/C-007 |
+| C-008 | Closing Critic attestation (orchestrator). pins: cc-3-comment-condensation/C-008 |
+| C-009 | CC-4: the 64 remaining banner files receive the one-line rule; protected inventory, token equivalence, and gate ratchets hold as for C-002..C-005. pins: cc-3-comment-condensation/C-009 |
+
 ## Contents
 
 | Crate | Responsibility |

@@ -1,4 +1,4 @@
-//! The wrong-door sniff runs on the error path only. Unrecognized errors keep their original text.
+//! The wrong-door sniff runs on the error path only.
 
 use datafusion::error::DataFusionError;
 
@@ -35,9 +35,7 @@ struct SparkIsm {
     equivalent: &'static str,
 }
 
-/// ===========================================================================================
 /// Add a Spark steer to a failed statement when recognized, preserving the original error first.
-/// ===========================================================================================
 pub(crate) fn upgrade_error(sql: &str, original: DataFusionError) -> DataFusionError {
     let scrubbed = blank_out_quoted_and_comments(sql);
     let Some(sniff) = sniff(&scrubbed) else {
@@ -52,7 +50,7 @@ pub(crate) fn upgrade_error(sql: &str, original: DataFusionError) -> DataFusionE
     ))
 }
 
-/// The scope of a single-token rule, keyed by its needle. Keep it beside the table.
+/// The scope of a single-token rule, keyed by its needle.
 fn scope_for(needle: &str) -> Scope {
     match needle {
         "USING" => Scope::Leading(&["CREATE"]),
@@ -61,7 +59,7 @@ fn scope_for(needle: &str) -> Scope {
     }
 }
 
-/// The single-token Spark-isms, as a table: token → steer. Order most-specific first.
+/// The single-token Spark-isms, as a table: token → steer.
 const RULES: &[(&str, SparkIsm)] = &[
     (
         "TBLPROPERTIES",
@@ -140,8 +138,7 @@ const RULES: &[(&str, SparkIsm)] = &[
     ),
 ];
 
-/// Recognize a Spark-ism in already-scrubbed text. Check backticks first because they cause
-/// a distinct syntax error in this door.
+/// Recognize a Spark-ism in already-scrubbed text.
 fn sniff(scrubbed: &str) -> Option<SparkIsm> {
     // Backticks are checked first and by character because they are not ANSI quotes in this door.
     if scrubbed.contains('`') {
@@ -175,7 +172,7 @@ fn sniff_composite_forms(scrubbed: &str, leading: Option<&str>) -> Option<SparkI
         });
     }
 
-    // Top-level snapshot-ref DDL (`CREATE BRANCH b IN t`) is Spark-only. Scope it to the leading keyword.
+    // Top-level snapshot-ref DDL (`CREATE BRANCH b IN t`) is Spark-only.
     if Scope::Leading(DDL_VERBS).admits(leading)
         && (contains_word(scrubbed, "BRANCH") || contains_word(scrubbed, "TAG"))
     {
@@ -186,7 +183,7 @@ fn sniff_composite_forms(scrubbed: &str, leading: Option<&str>) -> Option<SparkI
         });
     }
 
-    // `CALL cat.system.<proc>(…)` is a maintenance procedure. The statement must lead with CALL.
+    // `CALL cat.system.<proc>(…)` is a maintenance procedure.
     if leading == Some("CALL") && contains_word(scrubbed, "system") {
         return Some(SparkIsm {
             token: "CALL <catalog>.system.<procedure>",

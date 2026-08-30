@@ -1,7 +1,4 @@
-/// ===========================================================================================
-/// U1 pins CTAS `PARTITIONED BY`: committed manifest values, plan pruning, and Arrow-path
-/// value/type round trips all agree.
-/// ===========================================================================================
+/// U1: CTAS PARTITIONED BY agrees on manifests, plan pruning, and Arrow value and type.
 use std::collections::HashSet;
 
 use futures::TryStreamExt;
@@ -28,8 +25,7 @@ async fn loaded_table(
         .expect("load table")
 }
 
-/// The live (Added/Existing) DATA-file entries in the current snapshot's manifests —
-/// the committed `DataFile` records, partition values included.
+/// The live DATA-file entries in the current snapshot's manifests.
 async fn live_data_files(table: &Table) -> Vec<DataFile> {
     let metadata = table.metadata();
     let Some(snapshot) = metadata.current_snapshot() else {
@@ -57,8 +53,7 @@ async fn live_data_files(table: &Table) -> Vec<DataFile> {
     files
 }
 
-/// The data-file paths a filtered scan PLANS (fork `plan_files`) — the plan-level
-/// pruning observation: no file outside the returned set is opened by the scan.
+/// The data-file paths a filtered scan PLANS.
 async fn planned_paths(table: &Table, predicate: Predicate) -> HashSet<String> {
     let scan = table
         .scan()
@@ -78,11 +73,7 @@ async fn planned_paths(table: &Table, predicate: Predicate) -> HashSet<String> {
         .collect()
 }
 
-/// PIN U1-P1 — single identity partition column: every committed `DataFile` carries its
-/// own key value in the manifest, a partition predicate plans ONLY the matching
-/// partition's file paths, and the rows round-trip. Risk: the audit's fail-open — the
-/// clause silently dropped — yields one unpartitioned file set, no manifest values, no
-/// pruning.
+/// PIN U1-P1.
 #[tokio::test]
 async fn ctas_partitioned_single_column_manifest_pruning_and_rows() {
     let wh = TempDir::new().unwrap();
@@ -145,9 +136,7 @@ async fn ctas_partitioned_single_column_manifest_pruning_and_rows() {
     );
 }
 
-/// PIN U1-P2 — two-column identity spec: BOTH fields land in the default spec (clause
-/// order, identity, field name = column name) and every manifest `DataFile.partition`
-/// carries BOTH key values. Risk: a one-column-only wiring drops the second key.
+/// PIN U1-P2.
 #[tokio::test]
 async fn ctas_partitioned_two_columns_spec_and_manifest_values() {
     let wh = TempDir::new().unwrap();
@@ -206,10 +195,7 @@ async fn ctas_partitioned_two_columns_spec_and_manifest_values() {
     );
 }
 
-/// PIN U1-P3 — multi-partition UNSORTED interleaved source: the fanout writes one file
-/// set per distinct partition and every file's manifest value matches its routed rows.
-/// Risk: a `ClusteredWriter`-style path errors on unsorted input, or a broken fanout
-/// routes all rows through one partition writer.
+/// PIN U1-P3.
 #[tokio::test]
 async fn ctas_partitioned_unsorted_source_fanout_one_file_set_per_partition() {
     let wh = TempDir::new().unwrap();
@@ -248,9 +234,7 @@ async fn ctas_partitioned_unsorted_source_fanout_one_file_set_per_partition() {
     assert_eq!(table_rows(&ctx, &catalogs, "ice.sales.pt3").await.len(), 6);
 }
 
-/// Register a `(id int, name string, ts timestamp)` source (micros, no tz → Iceberg
-/// `Timestamp`) for the temporal-transform CTAS pins. `ts` values are microseconds since
-/// the epoch.
+/// Register an id-name-timestamp source for the temporal-transform CTAS pins.
 fn register_ts_source(ctx: &SessionContext, name: &str, rows: &[(i32, &str, i64)]) {
     use datafusion::arrow::array::TimestampMicrosecondArray;
     use datafusion::arrow::datatypes::TimeUnit;
@@ -291,11 +275,7 @@ async fn partition_slots(table: &Table) -> HashSet<String> {
         .collect()
 }
 
-/// PIN P1 (Group P) — `bucket(4, id)` CTAS: the default spec carries ONE field named
-/// `id_bucket` with transform `bucket[4]`, rows route by the FORK's own Iceberg bucket
-/// hash (self-oracle, derived from `Transform::Bucket(4)` — not the identity key, not one
-/// silent partition), and the rows round-trip value AND type. Reverting
-/// `build_partition_spec` to identity turns the spec assert AND the routing assert RED.
+/// PIN P1.
 #[tokio::test]
 async fn ctas_bucket_partition_spec_and_fork_hash_routing() {
     use datafusion::arrow::array::AsArray;
@@ -364,10 +344,7 @@ async fn ctas_bucket_partition_spec_and_fork_hash_routing() {
     assert_eq!(table_rows(&ctx, &catalogs, "ice.sales.bkt").await.len(), 12);
 }
 
-/// PIN P2 (Group P) — `truncate(2, name)` CTAS: spec field `name_trunc` transform
-/// `truncate[2]`; each committed partition slot is the 2-char string prefix (Iceberg
-/// truncate on a string), one file set per distinct prefix, rows round-trip. Reverting to
-/// identity makes `name_trunc`/`truncate[2]` RED and routes by the whole string.
+/// PIN P2.
 #[tokio::test]
 async fn ctas_truncate_str_partition_spec_and_routing() {
     let wh = TempDir::new().unwrap();
@@ -401,9 +378,7 @@ async fn ctas_truncate_str_partition_spec_and_routing() {
     assert_eq!(table_rows(&ctx, &catalogs, "ice.sales.tr").await.len(), 4);
 }
 
-/// PIN P3 (Group P) — `truncate(10, id)` CTAS: spec field `id_trunc` transform
-/// `truncate[10]`; each partition slot is `id - id % 10` (Iceberg int truncate), rows
-/// round-trip. Reverting to identity makes the spec + routing RED.
+/// PIN P3.
 #[tokio::test]
 async fn ctas_truncate_int_partition_spec_and_routing() {
     let wh = TempDir::new().unwrap();
@@ -435,11 +410,7 @@ async fn ctas_truncate_int_partition_spec_and_routing() {
     assert_eq!(table_rows(&ctx, &catalogs, "ice.sales.tri").await.len(), 4);
 }
 
-/// PIN P4 (Group P) — temporal transforms `years|months|days|hours(ts)` CTAS: each builds
-/// the right spec (field `ts_year`/`ts_month`/`ts_day`/`ts_hour`, transform
-/// Year/Month/Day/Hour), routes distinct timestamps into distinct partitions (proving the
-/// temporal transform value drives placement, not identity), and round-trips. Reverting
-/// to identity makes every temporal spec assert RED.
+/// PIN P4.
 #[tokio::test]
 async fn ctas_temporal_partition_spec_and_routing() {
     // Three timestamps: 1970-01-01T00, 1970-01-02T00, 1970-01-02T05 (micros).
@@ -486,10 +457,7 @@ async fn ctas_temporal_partition_spec_and_routing() {
     }
 }
 
-/// PIN P5 (Group P) — MIXED identity + transform in one clause
-/// (`PARTITIONED BY (name, bucket(4, id))`): the spec carries BOTH fields in clause order
-/// (identity `name`, then `id_bucket` = `bucket[4]`), every `DataFile.partition` carries
-/// BOTH slots, and rows round-trip. Reverting to identity makes the `bucket[4]` assert RED.
+/// PIN P5.
 #[tokio::test]
 async fn ctas_mixed_identity_and_transform_spec() {
     let wh = TempDir::new().unwrap();
@@ -521,10 +489,7 @@ async fn ctas_mixed_identity_and_transform_spec() {
     assert_eq!(table_rows(&ctx, &catalogs, "ice.sales.mx").await.len(), 4);
 }
 
-/// PIN P6 (Group P) — `bucket(0,…)` / `truncate(0,…)` / negative width / an unknown
-/// transform is a LOUD typed error, NEVER a panic and NEVER a created table (Spark/Iceberg
-/// reject `numBuckets`/`width` `<= 0` as an analysis error; the fork's `Transform::Bucket`
-/// would otherwise accept `0`). Reverting the `> 0` guard makes the width cases RED.
+/// PIN P6.
 #[tokio::test]
 async fn ctas_partition_transform_zero_width_and_unknown_rejected() {
     let wh = TempDir::new().unwrap();
@@ -566,8 +531,7 @@ async fn ctas_partition_transform_zero_width_and_unknown_rejected() {
     );
 }
 
-/// PIN U1-P5 — an unpartitioned CTAS stays unpartitioned (the regression guard for the
-/// new discriminator; the pre-existing CTAS suite pins its rows/placement behavior).
+/// PIN U1-P5 — an unpartitioned CTAS stays unpartitioned.
 #[tokio::test]
 async fn ctas_without_partitioned_by_stays_unpartitioned() {
     let wh = TempDir::new().unwrap();
@@ -588,10 +552,7 @@ async fn ctas_without_partitioned_by_stays_unpartitioned() {
     );
 }
 
-/// PIN U1-P6 — `CREATE OR REPLACE … PARTITIONED BY` over an existing UNPARTITIONED
-/// table: the staged replace carries the NEW spec (D4), the data is fanned out, and
-/// pruning works on the replaced table. Risk: the replace reuses the old (empty) spec
-/// and the clause is silently lost on exactly the staged-replace path.
+/// PIN U1-P6.
 #[tokio::test]
 async fn ctas_or_replace_carries_new_partition_spec() {
     let wh = TempDir::new().unwrap();
@@ -647,10 +608,7 @@ async fn ctas_or_replace_carries_new_partition_spec() {
     );
 }
 
-/// PIN U1-P13 — `CREATE OR REPLACE` WITHOUT the clause over a PARTITIONED table resets
-/// it to unpartitioned (the new definition is authoritative — D4 `unwrap_or` empty
-/// spec, Java `buildReplacement`): proves the write discriminator reads the STAGED
-/// spec, not the pre-replace table's.
+/// PIN U1-P13.
 #[tokio::test]
 async fn ctas_or_replace_without_clause_resets_to_unpartitioned() {
     let wh = TempDir::new().unwrap();
@@ -696,10 +654,7 @@ async fn ctas_or_replace_without_clause_resets_to_unpartitioned() {
     );
 }
 
-/// PIN U1-P7a — a partitioned CTAS on a strict `RequireExplicitLocation` catalog
-/// composes with the namespace-location resolution: the partitioned data lands under
-/// the SQL-set `LOCATION`. Risk: the partition wiring re-orders or bypasses the ADV-3
-/// location resolution.
+/// PIN U1-P7a.
 #[tokio::test]
 async fn ctas_partitioned_on_strict_catalog_lands_under_location() {
     let wh = TempDir::new().unwrap();
@@ -734,10 +689,7 @@ async fn ctas_partitioned_on_strict_catalog_lands_under_location() {
     );
 }
 
-/// PIN U1-P7b — the ADV-3 ordering holds WITH the clause present: a partitioned CTAS on
-/// a location-less strict namespace fails with the LOCATION error and the (erroring)
-/// source never executes. Risk: the partition wiring accidentally hoists query
-/// execution above the location gate.
+/// PIN U1-P7b.
 #[tokio::test]
 async fn ctas_partitioned_location_check_precedes_source_execution() {
     let wh = TempDir::new().unwrap();
@@ -801,10 +753,7 @@ async fn ctas_partitioned_by_typed_column_rejected_spark_parity() {
     );
 }
 
-/// PIN U1-P10 — an unknown partition column errors loudly naming the column AND the
-/// available query outputs, WITHOUT executing the source (the failing-scalar source
-/// proves the ordering — D6). Risk: the spec resolved after `collect()` runs a doomed
-/// or expensive query before rejecting.
+/// PIN U1-P10.
 #[tokio::test]
 async fn ctas_partitioned_by_unknown_column_rejected_before_source_runs() {
     let wh = TempDir::new().unwrap();
@@ -839,9 +788,7 @@ async fn ctas_partitioned_by_unknown_column_rejected_before_source_runs() {
     );
 }
 
-/// PIN U1-P11 — a duplicate partition column (`PARTITIONED BY (id, id)`) is rejected
-/// loudly by the spec builder ("Cannot use partition name more than once" — the fork's
-/// Java-parity check); no table is created.
+/// PIN U1-P11.
 #[tokio::test]
 async fn ctas_partitioned_by_duplicate_column_rejected_loud() {
     let wh = TempDir::new().unwrap();
@@ -870,10 +817,7 @@ async fn ctas_partitioned_by_duplicate_column_rejected_loud() {
     );
 }
 
-/// PIN U1-P12 — a view-typed (`Utf8View`) partition column from the SELECT conforms and
-/// round-trips: manifest values + rows. The conform-before-fanout branch (D5) is LIVE —
-/// without it the fork's splitter rejects the view array ("not a string array"); the
-/// M-U1-C mutation turns exactly this pin RED.
+/// PIN U1-P12.
 #[tokio::test]
 async fn ctas_partitioned_by_utf8view_key_conforms_and_roundtrips() {
     let wh = TempDir::new().unwrap();
@@ -911,9 +855,7 @@ async fn ctas_partitioned_by_utf8view_key_conforms_and_roundtrips() {
     );
 }
 
-/// PIN U1-P14 — an empty partitioned CTAS (`WHERE false`) creates the table WITH its
-/// spec, zero rows, zero data files. Risk: the empty fanout path errors or drops the
-/// spec.
+/// PIN U1-P14.
 #[tokio::test]
 async fn ctas_partitioned_empty_select_creates_empty_partitioned_table() {
     let wh = TempDir::new().unwrap();
@@ -937,8 +879,7 @@ async fn ctas_partitioned_empty_select_creates_empty_partitioned_table() {
     );
 }
 
-/// PIN U1-P15 — a multipart/nested partition reference (`s.f`) is a deterministic
-/// `NotImplemented` scope gate naming the reference (top-level columns only, v1).
+/// PIN U1-P15.
 #[tokio::test]
 async fn ctas_partitioned_by_nested_reference_rejected() {
     let wh = TempDir::new().unwrap();
@@ -959,9 +900,7 @@ async fn ctas_partitioned_by_nested_reference_rejected() {
     );
 }
 
-/// PIN U1-P16 — clause-shape guards are loud, never a silent pass: a DUPLICATE
-/// `PARTITIONED BY` clause (Spark `checkDuplicateClauses` parity) and an EMPTY field
-/// list both error naming the clause.
+/// PIN U1-P16.
 #[tokio::test]
 async fn ctas_partitioned_by_malformed_clause_shapes_rejected() {
     let wh = TempDir::new().unwrap();

@@ -1,7 +1,4 @@
 //! Pins Spark-door float aggregation bits at target partition counts 1, 2, and 8.
-//!
-//! The cancellation fixture exposes accumulation-order drift. Each configured count is pinned
-//! independently with `f64::to_bits`.
 
 use super::super::*;
 use super::common::*;
@@ -10,13 +7,9 @@ use datafusion::arrow::array::Float64Array;
 use datafusion::datasource::MemTable;
 use datafusion::prelude::SessionConfig;
 
-// =================================================================================================
-// Catastrophic-cancellation fixture (exact bit patterns fixed in the unit ledger)
-// =================================================================================================
+// === Catastrophic-cancellation fixture ===
 
-/// Large ± magnitudes that cancel, interleaved with small values lost under some accumulation
-/// orders. Exact `f64::to_bits` of each element is re-asserted by
-/// [`pin_fixture_element_bit_patterns`].
+/// Large ± magnitudes that cancel, interleaved.
 const FIXTURE: [f64; 8] = [
     1.0e16,  // bits 0x4341c37937e08000
     1.0,     // bits 0x3ff0000000000000
@@ -28,8 +21,7 @@ const FIXTURE: [f64; 8] = [
     0.25,    // bits 0x3fd0000000000000
 ];
 
-/// Measured goldens (Spark-door Arrow path, 2026-08-11). p=1 and p=2 land the accurate
-/// compensated sum; p=8 (one row per input partition) loses small addends under final merge.
+/// Measured goldens (Spark-door Arrow path, 2026-08-11).
 const SUM_BITS_P1: u64 = 0x400e_0000_0000_0000; // 3.75
 const SUM_BITS_P2: u64 = 0x400e_0000_0000_0000; // 3.75
 const SUM_BITS_P8: u64 = 0x4002_0000_0000_0000; // 2.25
@@ -37,9 +29,7 @@ const AVG_BITS_P1: u64 = 0x3fde_0000_0000_0000; // 0.46875 = 3.75/8
 const AVG_BITS_P2: u64 = 0x3fde_0000_0000_0000; // 0.46875
 const AVG_BITS_P8: u64 = 0x3fd2_0000_0000_0000; // 0.28125 = 2.25/8
 
-// =================================================================================================
-// Setup — input partitions + engine target_partitions locked together
-// =================================================================================================
+// === Setup ===
 
 async fn setup_with_target_partitions(
     warehouse_dir: &TempDir,
@@ -75,9 +65,7 @@ async fn setup_with_target_partitions(
         .await
         .unwrap();
 
-    // Match input MemTable partitions to target_partitions so the aggregate's partial stage
-    // fans out for real — a single-partition MemTable can keep partial aggregation sequential
-    // even when the config advertises more target_partitions.
+    // Match input MemTable partitions to target_partitions.
     register_float_fixture(&ctx, "float_src", &FIXTURE, target_partitions);
 
     let mut catalogs = CatalogRegistry::from([("ice".to_string(), catalog)]);
@@ -85,8 +73,7 @@ async fn setup_with_target_partitions(
     (ctx, catalogs)
 }
 
-/// Register `values` as a one-column `v DOUBLE` [`MemTable`] with `input_partitions` outer
-/// partitions (round-robin row assignment).
+/// Register `values` as a one-column `v DOUBLE` [`MemTable`].
 fn register_float_fixture(
     ctx: &SessionContext,
     name: &str,
@@ -112,9 +99,7 @@ fn register_float_fixture(
     ctx.register_table(name, Arc::new(table)).unwrap();
 }
 
-// =================================================================================================
-// Collect helpers — one-column Float64 on the Arrow path (value bits AND type AND nullability)
-// =================================================================================================
+// === Collect helpers ===
 
 async fn collect_float64_bits(
     ctx: &SessionContext,
@@ -165,11 +150,9 @@ async fn avg_bits_at(target_partitions: usize) -> (bool, u64) {
     collect_float64_bits(&ctx, &catalogs, "SELECT avg(v) AS a FROM float_src").await
 }
 
-// =================================================================================================
-// Fixture SSOT — a silent edit of FIXTURE reds immediately
-// =================================================================================================
+// === Fixture SSOT ===
 
-/// Element bit patterns the ledger cites. Not a sum/avg pin; guards the fixture itself.
+/// Element bit patterns the ledger cites.
 #[test]
 fn pin_fixture_element_bit_patterns() {
     let expected: [u64; 8] = [
@@ -191,9 +174,7 @@ fn pin_fixture_element_bit_patterns() {
     }
 }
 
-// =================================================================================================
-// sum(f64) absolute pins — one per partition count (6 of the 6–8 f64::to_bits budget with avg)
-// =================================================================================================
+// === sum(f64) absolute pins ===
 
 /// `sum(v)` at `target_partitions=1` — bits of 3.75.
 #[tokio::test]
@@ -219,9 +200,7 @@ async fn pin_sum_f64_bits_at_target_partitions_8() {
     assert_eq!(bits, SUM_BITS_P8, "sum p=8 f64::to_bits (2.25)");
 }
 
-// =================================================================================================
-// avg(f64) absolute pins
-// =================================================================================================
+// === avg(f64) absolute pins ===
 
 /// `avg(v)` at `target_partitions=1` — bits of 0.46875.
 #[tokio::test]
@@ -247,9 +226,7 @@ async fn pin_avg_f64_bits_at_target_partitions_8() {
     assert_eq!(bits, AVG_BITS_P8, "avg p=8 f64::to_bits (0.28125)");
 }
 
-// =================================================================================================
-// Run-to-run stability (determinism claim) + explicit cross-count spread disclosure
-// =================================================================================================
+// === Run-to-run stability ===
 
 /// Same input + same config → same bits, twice, at each of the three partition counts.
 #[tokio::test]
@@ -273,9 +250,7 @@ async fn pin_avg_f64_run_to_run_stable_at_three_partition_counts() {
     }
 }
 
-/// Cross-count spread is REAL for this fixture: p=1/2 share bits; p=8 differs. Pin that the
-/// spread still holds so a future "make all counts equal" fix flips this disclosure red
-/// (honest outcome — never pin cross-count equality that does not hold).
+/// Cross-count spread is REAL for this fixture: p=1/2 share bits; p=8 differs.
 #[tokio::test]
 async fn pin_sum_f64_cross_count_spread_p8_differs_from_p1() {
     let (_nullable_1, bits_1) = sum_bits_at(1).await;

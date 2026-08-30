@@ -1,5 +1,7 @@
 # map — repark-spark/src/router
 
+CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated comments rewritten as complete sentences (D-001).
+
 ## Purpose
 
 File-backed tests for the statement router (`../router.rs`): the TRUNCATE targeted-refuse

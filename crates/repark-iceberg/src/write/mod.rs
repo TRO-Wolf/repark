@@ -1,9 +1,4 @@
 //! Spark-semantics write adapter over the owned iceberg-rust fork.
-//!
-//! This crate translates MERGE, DML, append, overwrite, and ALTER operations onto fork actions.
-//! The fork owns table-format writers and commit machinery; this crate owns Spark policy and OCC
-//! coordination. The error boundary remains mixed: MERGE and append re-export `repark_common`,
-//! while ALTER returns `iceberg::Result` for the SQL layer to fold.
 
 pub mod alter;
 pub mod append;
@@ -11,13 +6,11 @@ pub mod concurrency;
 pub mod file_scoped_rewrite;
 /// Shared Spark/DF `quote_ident` + path-escape needles (CQ-006/007).
 pub mod idents;
-/// WI-2: the plain-INSERT store-assignment gate, as an `AnalyzerRule` over
-/// `LogicalPlan::Dml(WriteOp::Insert)` — the one stage where the pre-cast source type is still
-/// in the plan. Same matrix as [`store_assign`], imported not duplicated.
+/// WI-2: the plain-INSERT store-assignment gate, as an `AnalyzerRule` over `LogicalPlan::Dml`.
 pub mod insert_gate;
 pub mod merge;
 mod name_resolution;
-/// OV1 exclusive full-table overwrite commit (stage-then-swap). CACHE1 must not call (Q9).
+/// OV1 exclusive full-table overwrite commit (stage-then-swap).
 pub mod overwrite;
 pub(crate) mod position_delete;
 /// Identity DELETE/UPDATE (G3-E8 A1): SELECT over pinned `(_file, _pos)`, MERGE write arms.
@@ -27,11 +20,9 @@ pub mod scan_concurrency;
 pub mod scan_prune;
 /// Product snapshot-ref helpers (CREATE/DROP BRANCH|TAG) + test-support seam.
 pub mod snapshot_refs;
-/// The ANSI store-assignment matrix (`Cast.canANSIStoreAssign`) — ONE home for MERGE and the
-/// non-MERGE insert/append lowerings (WI-1 hoist out of `merge/insert.rs`).
+/// The ANSI store-assignment matrix — ONE home for MERGE and the non-MERGE insert/append lowerings.
 pub(crate) mod store_assign;
-/// Test-support-only snapshot-ref helpers (`_testing_create_ref`). Product SQL routes via
-/// [`snapshot_refs`]; this seam stays for existing fixtures (I1 / I5).
+/// Test-support-only snapshot-ref helpers (`_testing_create_ref`).
 pub mod testing_support;
 pub mod writer_props;
 

@@ -1,9 +1,4 @@
-//! Crate-wide argument contracts for every kernel:
-//!
-//! 1. A period below the TA-Lib minimum → `TaError::InvalidPeriod` (never a panic).
-//! 2. A period above [`repark_ta::MAX_PERIOD`] → `TaError::InvalidPeriod`, including `usize::MAX`.
-//! 3. An input too short for one output → a full-length all-NaN vector, not an error.
-//! 4. An empty input → an empty vector.
+//! Crate-wide argument contracts for every kernel: 1.
 
 use repark_ta::{
     MAX_PERIOD, TA_REAL_MAX, TaError, ad, adosc, adx, adxr, apo, aroon, aroonosc, atr, avgprice,
@@ -20,8 +15,7 @@ type Kernel = (
     Box<dyn Fn(&[f64], usize) -> Result<Vec<f64>, TaError>>,
 );
 
-/// Every public kernel with a period parameter, adapted to one shape: (name, TA-Lib documented
-/// minimum, runner over a single OHLC-ish input).
+/// Every public kernel with a period parameter, adapted to one shape:.
 fn kernels() -> Vec<Kernel> {
     vec![
         ("sma", 2, Box::new(sma)),

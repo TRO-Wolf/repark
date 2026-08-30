@@ -1,7 +1,4 @@
 //! Spark's analysis-time `CAST` / `TRY_CAST` deny list for DATE↔integer pairs.
-//!
-//! Arrow can reinterpret these pairs as backing values, producing wrong answers. The gate keeps
-//! Spark's refusal class in both ANSI modes; timestamp and store-assignment matrices stay separate.
 
 use datafusion::arrow::datatypes::DataType;
 use datafusion::common::{DataFusionError, Result};
@@ -50,8 +47,7 @@ fn spark_type_name(data_type: &DataType) -> &'static str {
     }
 }
 
-/// Return the conversion function named by Spark's refusal; the gate must run before optimizer
-/// simplification lowers `unix_date` to a cast, or it would reject its own remedy.
+/// Return Spark's named conversion function; run this gate before simplify lowers `unix_date`.
 fn conversion_function(src: &DataType) -> &'static str {
     if is_date(src) {
         "UNIX_DATE"
@@ -60,13 +56,9 @@ fn conversion_function(src: &DataType) -> &'static str {
     }
 }
 
-/// ===========================================================================================
 /// Refuse a denied cast with Spark's type names, class, remedy, and child expression.
-/// ===========================================================================================
-///
 /// # Errors
-/// [`DataFusionError::Plan`] carrying `[DATATYPE_MISMATCH.CAST_WITH_FUNC_SUGGESTION]` when
-/// `(src, dst)` is denied; the bracketed class folds to Spark's `AnalysisException` boundary.
+/// Plan error with Spark's `[DATATYPE_MISMATCH.CAST_WITH_FUNC_SUGGESTION]` class when denied.
 pub(super) fn refuse_spark_illegal_cast(
     keyword: CastKeyword,
     inner: &Expr,
@@ -93,8 +85,7 @@ mod tests {
 
     use super::{CastKeyword, refuse_spark_illegal_cast, spark_refuses_cast};
 
-    /// The G6-3 pairs (the two silently-wrong ones plus the two already-loud narrow ones) and
-    /// the G6-5 reverse, in both Date widths.
+    /// Cover the G6-3 pairs and the G6-5 reverse in both Date widths.
     #[test]
     fn the_deny_matrix_is_exactly_date_to_int_and_back() {
         use DataType::{Date32, Date64, Int8, Int16, Int32, Int64};
@@ -106,8 +97,7 @@ mod tests {
         }
     }
 
-    /// Everything the design's §5.2 blast-radius table says must NOT move. The `Timestamp` rows
-    /// are the load-bearing ones: TZ-5 / B-TZ-4 / TZ-8 share the analyzer arm this gate heads.
+    /// Everything the design's §5.2 blast-radius table says must NOT move.
     #[test]
     fn adjacent_temporal_and_numeric_pairs_are_untouched() {
         use DataType::{Boolean, Date32, Float64, Int32, Int64, Utf8, Utf8View};

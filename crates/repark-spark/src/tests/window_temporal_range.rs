@@ -1,5 +1,4 @@
-//! Pins Spark temporal `RANGE` frame behavior for unit-less, interval, inverted, and numeric-key
-//! bounds. Assertions use live Spark 4.1.2 expectations on the Arrow path, including types.
+//! Pins Spark temporal `RANGE` frame behavior for unit-less, interval, inverted.
 
 use super::super::*;
 use super::common::*;
@@ -7,14 +6,9 @@ use super::common::*;
 use datafusion::arrow::array::{Date32Array, TimestampMicrosecondArray};
 use datafusion::arrow::datatypes::TimeUnit;
 
-// =================================================================================================
-// Fixtures — the §0 recon seed rows, registered as plain temp views (leaf-private)
-// =================================================================================================
+// === Fixtures ===
 
 /// `(id, ts, v)` with a same-day pair, a next-day row, and a tied pair three days later.
-///
-/// The tie on `ts` (ids 4 and 5) is what makes peer handling observable; the 12-hour gap between
-/// ids 1 and 2 is what makes a sub-day interval observable.
 const TIMESTAMP_SEED: &[(i64, &str, i64)] = &[
     (1, "2024-01-01T00:00:00", 10),
     (2, "2024-01-01T12:00:00", 20),
@@ -118,8 +112,6 @@ fn register_date_seed(ctx: &SessionContext) {
 }
 
 /// Ties + close values so `INTERVAL 'n' UNIT` magnitude over INT is observable.
-///
-/// `(id, v) = (1,10), (2,20), (3,20), (4,21), (5,30)` — Z-4 / W-4 live Spark seed.
 fn register_numeric_ties_seed(ctx: &SessionContext) {
     let schema = Arc::new(Schema::new(vec![
         Field::new("id", DataType::Int64, true),
@@ -137,9 +129,6 @@ fn register_numeric_ties_seed(ctx: &SessionContext) {
 }
 
 /// Collect one `BIGINT`-typed measured column, asserting its Arrow type and returning its cells.
-///
-/// The query must project exactly `(id, <measured>)` ordered by `id`, so the returned vector is
-/// row-ordered and comparable to the recorded Spark half directly.
 async fn collect_measured_int64(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -180,13 +169,9 @@ fn present(values: &[i64]) -> Vec<Option<i64>> {
     values.iter().copied().map(Some).collect()
 }
 
-// =================================================================================================
-// Pin 1 — the refuse arm: a unit-less RANGE offset over a TIMESTAMP order key
-// =================================================================================================
+// === Pin 1 refuse arm ===
 
-/// Spark 4.1.2 refuses `RANGE BETWEEN <n> PRECEDING` over a `TIMESTAMP` order key with
-/// `DATATYPE_MISMATCH.RANGE_FRAME_INVALID_TYPE` (§0 recon, live oracle). Bare datetime bounds must
-/// refuse instead of being interpreted as months.
+/// Spark 4.1.2 refuses `RANGE BETWEEN <n> PRECEDING` over a `TIMESTAMP` order key.
 #[tokio::test]
 async fn temporal_range_bare_offset_over_timestamp_key_refuses_like_spark() {
     let warehouse = TempDir::new().unwrap();
@@ -232,18 +217,9 @@ async fn temporal_range_bare_offset_over_timestamp_key_refuses_like_spark() {
     }
 }
 
-// =================================================================================================
-// Pin 2 — the restate arm: a unit-less RANGE offset over a DATE order key means DAYS
-// =================================================================================================
+// === Pin 2 restate arm ===
 
-/// Spark reads `RANGE BETWEEN 1 PRECEDING` over a `DATE` key as **one day** and answers
-/// `[10, 30, 30]` on the seed (§0 recon, live oracle). DataFusion's coercion read it as one
-/// month and answered `[10, 30, 60]` — the same query, a silently wider window, no error. The
-/// door restates the bound as `INTERVAL '1' DAY` and re-plans, so the values match Spark.
-///
-/// The `30 PRECEDING` case is the second half of the claim: it must mean thirty **days** (which
-/// does span the whole seed, `[10, 30, 60]`), not thirty months — identical output to the
-/// one-month reading is exactly why a single offset could not carry this pin alone.
+/// Spark reads RANGE BETWEEN 1 PRECEDING over DATE as one day; the seed answers [10, 30, 30].
 #[tokio::test]
 async fn temporal_range_bare_offset_over_date_key_means_days() {
     let warehouse = TempDir::new().unwrap();
@@ -290,15 +266,9 @@ async fn temporal_range_bare_offset_over_date_key_means_days() {
     );
 }
 
-// =================================================================================================
-// Pin 3 — the already-correct interval path is undisturbed (asc, desc, ties, NULL keys)
-// =================================================================================================
+// === Pin 3 interval path ===
 
 /// Interval-bounded temporal `RANGE` matches Spark.
-///
-/// Four classes in one pin because they share the seed and the claim is "the fix touched no
-/// interval-bounded frame": ascending, descending, a tie on the order key, and NULL order keys.
-/// Every golden is the recorded live-Spark half from the §0 recon.
 #[tokio::test]
 async fn temporal_range_interval_bounds_still_match_spark() {
     let warehouse = TempDir::new().unwrap();
@@ -345,8 +315,7 @@ async fn temporal_range_interval_bounds_still_match_spark() {
         "a zero interval is the peer group: only the tied ids 4/5 see more than themselves"
     );
 
-    // Sub-day unit: the 12-hour gap between ids 1 and 2 is inside a 12-hour window, the 24-hour
-    // gap to id 3 is not — so HOUR and DAY must disagree, which is what proves the unit is read.
+    // Sub-day unit: a 12-hour gap fits a 12-hour window; a 24-hour gap does not.
     let twelve_hours = collect_measured_int64(
         &ctx,
         &catalogs,
@@ -365,8 +334,7 @@ async fn temporal_range_interval_bounds_still_match_spark() {
     );
 }
 
-/// NULL order keys under a temporal `RANGE`: Spark groups the NULL rows as their own peers and
-/// answers `[10, 60, 40, 60]` on the null-bearing seed (§0 recon, live oracle).
+/// NULL order keys under a temporal `RANGE`.
 #[tokio::test]
 async fn temporal_range_null_order_keys_match_spark() {
     let warehouse = TempDir::new().unwrap();
@@ -410,18 +378,9 @@ async fn temporal_range_null_order_keys_match_spark() {
     );
 }
 
-// =================================================================================================
-// Pin 4 — the fix is scoped: numeric order keys and mixed statements are left alone
-// =================================================================================================
+// === Pin 4 scoped fix ===
 
-/// A unit-less `RANGE` offset over a **numeric** order key is the ordinary value-offset frame and
-/// must be untouched — neither refused nor re-scaled to days.
-///
-/// The mixed case is the reason [`crate::window_range`]'s restatement is statement-wide-or-nothing:
-/// one statement carrying both a DATE-keyed and an INT-keyed bare-number frame must leave the
-/// INT frame exactly as it was, because the AST restatement cannot tell the two bound sites
-/// apart. The DATE frame then keeps its recorded divergence rather than the INT frame acquiring
-/// a new one — a narrower fix, never a wider bug.
+/// A unit-less RANGE offset over a numeric order key is an ordinary value-offset frame.
 #[tokio::test]
 async fn temporal_range_numeric_order_keys_are_untouched() {
     let warehouse = TempDir::new().unwrap();
@@ -429,7 +388,7 @@ async fn temporal_range_numeric_order_keys_are_untouched() {
     register_timestamp_seed(&ctx);
     register_date_seed(&ctx);
 
-    // `v` is BIGINT: 10, 20, 30, 40, 50. A ±10 value window is the ordinary numeric RANGE.
+    // `v` is BIGINT: 10, 20, 30, 40, 50.
     let numeric = collect_measured_int64(
         &ctx,
         &catalogs,
@@ -469,9 +428,7 @@ async fn temporal_range_numeric_order_keys_are_untouched() {
     );
 }
 
-// =================================================================================================
 // Temporal RANGE refusal and residual behavior pins.
-// =================================================================================================
 
 /// Plan or execute error text for a statement that must stay loud.
 async fn execute_error(ctx: &SessionContext, catalogs: &CatalogRegistry, sql: &str) -> String {
@@ -484,9 +441,7 @@ async fn execute_error(ctx: &SessionContext, catalogs: &CatalogRegistry, sql: &s
     }
 }
 
-/// R3 HIGH: `INTERVAL '-1' DAY PRECEDING` over a TIMESTAMP key is Spark's empty frame
-/// (sum NULL, count 0), not a wrapped `count(*)` = -1 / debug panic. DATE already answered
-/// empty at the pin and must stay empty (the restatement is TIMESTAMP-only).
+/// R3: INTERVAL '-1' DAY PRECEDING over TIMESTAMP is Spark's empty frame, not a wrapped count.
 #[tokio::test]
 async fn temporal_range_negative_offset_is_spark_empty_frame() {
     let warehouse = TempDir::new().unwrap();
@@ -547,8 +502,7 @@ async fn temporal_range_negative_offset_is_spark_empty_frame() {
     );
 }
 
-/// Spark refuses same-kind magnitude inversions with
-/// `SPECIFIED_WINDOW_FRAME_WRONG_COMPARISON`; kind inversions remain Spark-empty.
+/// Spark refuses same-kind magnitude inversions with `SPECIFIED_WINDOW_FRAME_WRONG_COMPARISON`.
 #[tokio::test]
 async fn temporal_range_value_inverted_frames_do_not_wrap() {
     let warehouse = TempDir::new().unwrap();
@@ -577,9 +531,7 @@ async fn temporal_range_value_inverted_frames_do_not_wrap() {
     }
 }
 
-/// Q-003: a statement that mixes a negative TIMESTAMP interval with a numeric unit-less
-/// `RANGE` bound cannot use the statement-wide restatement. Refuse so wrapping cannot
-/// ride the mix.
+/// Q-003: a statement that mixes a negative TIMESTAMP interval.
 #[tokio::test]
 async fn temporal_range_mixed_negative_timestamp_and_numeric_bare_refuses() {
     let warehouse = TempDir::new().unwrap();
@@ -601,8 +553,7 @@ async fn temporal_range_mixed_negative_timestamp_and_numeric_bare_refuses() {
     );
 }
 
-/// R2: `INTERVAL '1 12:00:00' DAY TO SECOND` (and the brief's `'1 0:0:0'`) is Spark's
-/// one-day-plus-hours trailing window, not an Arrow parse error.
+/// R2: INTERVAL DAY TO SECOND is Spark's day-plus-hours window, not an Arrow parse error.
 #[tokio::test]
 async fn temporal_range_day_to_second_literal_matches_spark() {
     let warehouse = TempDir::new().unwrap();
@@ -636,8 +587,7 @@ async fn temporal_range_day_to_second_literal_matches_spark() {
     );
 }
 
-/// R1 (W-4): unquoted `INTERVAL 1 DAY` is quoted before first plan and matches the
-/// quoted `INTERVAL '1' DAY` table (Spark 4.1.2).
+/// R1: unquoted INTERVAL 1 DAY is quoted before first plan and matches INTERVAL '1' DAY.
 #[tokio::test]
 async fn temporal_range_unquoted_interval_literal_matches_quoted() {
     let warehouse = TempDir::new().unwrap();
@@ -668,8 +618,7 @@ async fn temporal_range_unquoted_interval_literal_matches_quoted() {
     );
 }
 
-/// Both-bounds-FOLLOWING includes the current row (120 vs Spark 90). The planned frame is typed,
-/// but this seam cannot exclude the current row without inventing row-level compensation.
+/// Both-bounds-FOLLOWING includes the current row (120 vs Spark 90).
 #[tokio::test]
 async fn temporal_range_following_to_following_still_includes_current_row() {
     let warehouse = TempDir::new().unwrap();
@@ -690,9 +639,7 @@ async fn temporal_range_following_to_following_still_includes_current_row() {
     );
 }
 
-/// R5 (W-4): `INTERVAL 'n' UNIT` over a numeric key is Spark's numeric `n` RANGE
-/// (unit ignored). Unique `v` gaps of 10 make `n=1` look like "self only"; the
-/// magnitude pin below is the one that distinguishes that guess.
+/// R5 (W-4): `INTERVAL 'n' UNIT` over a numeric key is Spark's numeric `n` RANGE (unit ignored).
 #[tokio::test]
 async fn temporal_range_interval_bound_over_int_key_is_numeric_n() {
     let warehouse = TempDir::new().unwrap();
@@ -795,7 +742,6 @@ async fn temporal_range_interval_bound_over_int_key_uses_numeric_magnitude() {
 }
 
 /// Mixed TIMESTAMP-interval + INT-interval cannot use the statement-wide R5 rewrite.
-/// The numeric site stays the recorded Arrow cast (same mixed-statement rule as G5b).
 #[tokio::test]
 async fn temporal_range_mixed_datetime_and_numeric_interval_leaves_numeric_loud() {
     let warehouse = TempDir::new().unwrap();

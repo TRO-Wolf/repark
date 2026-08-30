@@ -1,9 +1,4 @@
 //! Identity DELETE/UPDATE through a SELECT over a pinned `(_file, _pos)` target stream.
-//!
-//! DataFusion can drop subquery DML filters, which would turn a filtered operation into delete-all.
-//! This module evaluates the predicate as a SELECT and commits through the MERGE arms, honoring
-//! the operation-specific mode and isolation properties. Unsupported subquery, CTE, and quantified
-//! forms remain refused at the product valve.
 
 use std::sync::Arc;
 
@@ -58,12 +53,11 @@ pub struct PredicateDmlSpec {
     pub target_alias: String,
     /// The original `WHERE` predicate, SQL-rendered verbatim.
     pub selection_sql: String,
-    /// `None` = identity DELETE. `Some` = identity UPDATE SET (column, scalar SQL expr).
+    /// `None` = identity DELETE.
     pub assignments: Option<Vec<(String, String)>>,
 }
 
-/// Catalog name + identity spec extracted from an allow-listed `DELETE … IN` / `NOT IN` /
-/// `[NOT] EXISTS`.
+/// Catalog name and identity spec from an allow-listed `DELETE … IN` / `NOT IN` / `[NOT] EXISTS`.
 #[derive(Debug, Clone)]
 pub struct AllowedDeleteIn {
     /// Leading catalog identifier (`ice` in `ice.sales.tgt`).
@@ -72,14 +66,7 @@ pub struct AllowedDeleteIn {
     pub spec: PredicateDmlSpec,
 }
 
-/// ===========================================================================================
-/// True when `selection` is exactly uncorrelated `col IN (SELECT col FROM <table> …)` or
-/// `col NOT IN (SELECT col FROM <table> …)` — one 3VL family, both spellings.
-///
-/// Fail-closed: `NOT (col IN …)`, scalars, mixed AND/OR, nested FROM, aggregates, WITH, and
-/// correlated outer refs stay **outside** this helper. Correlated IN uses
-/// [`is_allowed_in_selection`]. `[NOT] EXISTS` is a sibling helper.
-/// ===========================================================================================
+/// True when `selection` is exactly uncorrelated `col IN (SELECT col FROM <table> …)` or `col NOT IN (SELECT col FROM <table> …)`
 #[must_use]
 pub fn is_allowed_uncorrelated_in_selection(selection: &Expr) -> bool {
     let Expr::InSubquery {
@@ -93,10 +80,7 @@ pub fn is_allowed_uncorrelated_in_selection(selection: &Expr) -> bool {
     is_column_expr(expr) && is_simple_uncorrelated_in_subquery(subquery)
 }
 
-/// ===========================================================================================
-/// True when `selection` is `col [NOT] IN (SELECT …)` whose compound refs are only the subquery
-/// source or the DELETE target (uncorrelated **or** correlated to that target).
-/// ===========================================================================================
+/// True when `selection` is `col [NOT] IN (SELECT …)` whose refs are only the subquery source.
 #[must_use]
 pub fn is_allowed_in_selection(
     selection: &Expr,
@@ -114,11 +98,7 @@ pub fn is_allowed_in_selection(
     is_column_expr(expr) && is_simple_in_subquery(subquery, target_parts, target_alias)
 }
 
-/// ===========================================================================================
-/// True when `selection` is exactly `[NOT] EXISTS (SELECT … FROM <table> [WHERE …])` whose
-/// compound refs are only the subquery source or the DELETE target (uncorrelated or correlated
-/// to that target). Nested / mixed / CTE / third-table refs stay outside the hole.
-/// ===========================================================================================
+/// True when `selection` is `[NOT] EXISTS (SELECT …)` whose refs are only the subquery source.
 #[must_use]
 pub fn is_allowed_exists_selection(
     selection: &Expr,
@@ -135,23 +115,9 @@ pub fn is_allowed_exists_selection(
     is_simple_exists_subquery(subquery, target_parts, target_alias)
 }
 
-/// ===========================================================================================
-/// If `statement` is an allow-listed IN / NOT IN / `[NOT] EXISTS` DELETE, return the catalog +
-/// spec; otherwise `None`.
-///
-/// Unhandled subquery shapes return `None` so the caller can keep the G3-E8 valve. A recognized
-/// spelling whose target is not a three-part Iceberg name is not an executable hole
-/// (fail-closed — never DataFusion DML). USING / RETURNING / OUTPUT / LIMIT / ORDER BY /
-/// multi-table stay outside the hole. ANY / ALL stay outside — Spark 4.1.2 parse-fails them.
-///
-/// Target FQN refs inside the predicate are rewritten to the scratch alias so the identity
-/// SELECT evaluates the same predicate against the pinned `(_file, _pos)` stream (not a
-/// second scan of the user table).
-/// ===========================================================================================
-///
+/// If `statement` is an allow-listed IN / EXISTS DELETE, return catalog plus spec; else `None`.
 /// # Errors
-/// [`DataFusionError::Plan`] when the spelling is allowed but the target is not
-/// `catalog.namespace.table`.
+/// Fails with [`DataFusionError::Plan`] when the allowed spelling's target is not three-part.
 pub fn try_allowed_delete_in(statement: &Statement) -> Result<Option<AllowedDeleteIn>> {
     let Statement::Delete(delete) = statement else {
         return Ok(None);
@@ -203,19 +169,9 @@ pub fn try_allowed_delete_in(statement: &Statement) -> Result<Option<AllowedDele
     }))
 }
 
-/// ===========================================================================================
-/// If `statement` is an allow-listed uncorrelated `UPDATE … SET <scalar> WHERE col IN (SELECT …)`,
-/// return the catalog + spec; otherwise `None`.
-///
-/// D-4: a SET value that itself carries a `Query` stays outside the hole (ungated on the
-/// non-subquery-WHERE path; refused here because the WHERE is a subquery). NOT IN / EXISTS /
-/// ANY / ALL / mixed / nested / FROM / RETURNING stay outside. Fail-closed for a non-three-part
-/// target — never DataFusion DML.
-/// ===========================================================================================
-///
+/// Return catalog plus spec for allow-listed uncorrelated `UPDATE … SET` with `WHERE col IN`.
 /// # Errors
-/// [`DataFusionError::Plan`] when the spelling is allowed but the target is not
-/// `catalog.namespace.table`.
+/// Fails with [`DataFusionError::Plan`] when the allowed spelling's target is not three-part.
 pub fn try_allowed_update_in(statement: &Statement) -> Result<Option<AllowedDeleteIn>> {
     let Statement::Update(update) = statement else {
         return Ok(None);
@@ -269,15 +225,9 @@ pub fn try_allowed_update_in(statement: &Statement) -> Result<Option<AllowedDele
     }))
 }
 
-/// ===========================================================================================
-/// Execute an identity DELETE or UPDATE: SELECT over the pinned scratch, then COW-rewrite
-/// or `MoR` position-delete (+ append for UPDATE) using MERGE write/commit arms and
-/// `write.delete.mode` / `write.update.mode`.
-/// ===========================================================================================
-///
+/// Execute an identity DELETE or UPDATE: SELECT over the pinned scratch, then COW-rewrite or `MoR`
 /// # Errors
-/// Planning / execution / write / commit errors, plus `NotImplemented` for a non-Parquet default
-/// format or merge-on-read on a non-V2 table.
+/// Planning, write, or commit errors, plus `NotImplemented` for non-Parquet or non-V2 `MoR`.
 pub async fn execute_predicate_dml(
     ctx: &SessionContext,
     catalog: &Arc<dyn Catalog>,
@@ -350,8 +300,7 @@ pub async fn execute_predicate_dml(
     result
 }
 
-/// Identity UPDATE: SELECT `(_file, _pos, <SET-projected data>)` then `MoR` delete+append or
-/// COW rewrite (survivors UNION ALL new values). Honors `write.update.mode`.
+/// Identity UPDATE selects `(_file, _pos)` then applies `MoR` delete+append or COW rewrite.
 async fn execute_identity_update(
     ctx: &SessionContext,
     catalog: &Arc<dyn Catalog>,
@@ -420,8 +369,7 @@ async fn execute_identity_update(
                     data_files,
                     concurrency_from_ctx(ctx),
                     RowDeltaPolicy {
-                        // Java buckets UPDATE with MERGE (L251-254). No new RowDeltaKind —
-                        // merge/mod.rs stays identity-diff (file-size ceiling).
+                        // Java buckets UPDATE with MERGE (L251-254).
                         kind: RowDeltaKind::Merge,
                         isolation,
                     },
@@ -1086,8 +1034,7 @@ fn subquery_has_nested_query(query: &Query) -> bool {
     query.visit(&mut Nested { seen: 0 }).is_break()
 }
 
-/// Compound identifiers that do not prefix-match the subquery's own table name or alias are
-/// treated as outer (correlated) refs — fail-closed.
+/// Compound identifiers that do not prefix-match the subquery table or alias are outer refs.
 fn subquery_has_outer_ref(query: &Query, source_parts: &[String], aliases: &[String]) -> bool {
     struct Outer<'a> {
         source_parts: &'a [String],
@@ -1115,8 +1062,7 @@ fn subquery_has_outer_ref(query: &Query, source_parts: &[String], aliases: &[Str
     query.visit(&mut visitor).is_break() || visitor.found
 }
 
-/// Compound identifiers that are neither the subquery source nor the DELETE target are a
-/// third-table (or otherwise unhandled) correlation — fail-closed.
+/// Compound identifiers that are neither subquery source nor DELETE target fail closed.
 fn subquery_has_disallowed_ref(
     query: &Query,
     source_parts: &[String],
@@ -1179,8 +1125,7 @@ fn compound_refers_to_target(
             .all(|(part, ident)| part.eq_ignore_ascii_case(&ident.value))
 }
 
-/// Rewrite `catalog.ns.tgt.col` (and only that prefix) to `alias.col` so the identity SELECT
-/// correlates against the scratch, not a second scan of the user table.
+/// Rewrite `catalog.ns.tgt.col` to `alias.col` so identity SELECT correlates against scratch.
 fn rewrite_target_refs_in_expr(expr: &mut Expr, target_parts: &[String], alias: &str) {
     struct Rewrite<'a> {
         target_parts: &'a [String],
@@ -1279,7 +1224,4 @@ fn object_name_parts(name: &ObjectName) -> Vec<String> {
 }
 
 #[cfg(test)]
-mod predicate_dml_tests;
-
-#[cfg(test)]
-mod predicate_dml_update_tests;
+mod tests;

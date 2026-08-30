@@ -1,5 +1,4 @@
-//! Spark-door execution-layer pins for `tightenNulls` on nullable `WindowSpec` keys and the
-//! Iceberg-CREATE refuse.
+//! Spark-door pins for `tightenNulls` on nullable `WindowSpec` keys and the Iceberg-CREATE refuse.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -52,8 +51,7 @@ fn keys() -> Vec<String> {
     vec!["symbol".to_string(), "ts".to_string()]
 }
 
-/// Spark-default window: `ORDER BY ts` is NULLS FIRST. This is the cell hint-mode cannot elide
-/// over nullable keys.
+/// Spark-default window: `ORDER BY ts` is NULLS FIRST.
 const SERVING_WINDOW: &str =
     "SELECT symbol, ts, sum(close) OVER (PARTITION BY symbol ORDER BY ts) AS s FROM {table}";
 
@@ -200,12 +198,7 @@ async fn iceberg_create_from_derived_expression_over_tightened_source_refuses() 
 
 #[tokio::test]
 async fn iceberg_create_from_subquery_over_tightened_source_refuses() {
-    // Kills: plan.apply (no subquery walk) letting a CTAS whose only tightened source sits in an
-    // EXISTS subquery persist required (R-B). The wording must name EXISTS, not "scalar-subquery";
-    // the SQL below is and always was `WHERE EXISTS (SELECT 1 FROM tight)`. The core twin
-    // (`subquery_expression_source_is_visible_to_the_create_walk`) and the ANSI twin
-    // (`ansi_ctas_from_subquery_over_tightened_source_refuses`) both said "expression-subquery"
-    // and needed no change.
+    // Kills: plan.apply without subquery walk letting an EXISTS tightened source persist required.
     let warehouse_dir = TempDir::new().unwrap();
     let warehouse = warehouse_dir.path().to_str().unwrap().to_string();
     let session = spark_session();
@@ -404,13 +397,7 @@ async fn ddl_sink_session() -> (TempDir, ReparkSession) {
 
 #[tokio::test]
 async fn create_view_in_iceberg_catalog_over_tightened_source_refuses() {
-    // Y-3. Kills: the router `_ => execute_passthrough` catch-all letting `CREATE VIEW
-    // ice.ns.v AS …` reach the fork's `register_table` sink, which persists a format-v2
-    // Iceberg TABLE with required tightened keys. MEASURED on BASE (fe742a6): both statements
-    // below returned Ok and `SELECT * FROM ice.sales.v` reported `symbol`/`ts` non-nullable
-    // carrying `PARQUET:field_id` metadata. Deleting the
-    // `refuse_iceberg_create_of_tightened_ddl` call in `spark_ast::execute_passthrough` turns
-    // this red — the CTAS derivation never sees a `CREATE VIEW`.
+    // Y-3.
     let (_dir, session) = ddl_sink_session().await;
     for sql in [
         "CREATE VIEW ice.sales.v_limit AS SELECT * FROM tight LIMIT 0",
@@ -430,10 +417,7 @@ async fn create_view_in_iceberg_catalog_over_tightened_source_refuses() {
 
 #[tokio::test]
 async fn select_into_iceberg_catalog_over_tightened_source_refuses() {
-    // Y-4. Kills: `SELECT … INTO ice.ns.t` (planned as `CreateMemoryTable`) reaching the same
-    // sink through the catch-all. Independent statement from Y-3 — a fix wired only to
-    // `CreateView` leaves this green. MEASURED on BASE: Ok, and `SELECT * FROM ice.sales.t`
-    // reported required `symbol`/`ts`.
+    // Y-4.
     let (_dir, session) = ddl_sink_session().await;
     for sql in [
         "SELECT * INTO ice.sales.t_limit FROM tight LIMIT 0",
@@ -453,9 +437,7 @@ async fn select_into_iceberg_catalog_over_tightened_source_refuses() {
 
 #[tokio::test]
 async fn session_scoped_create_view_and_select_into_over_tightened_source_stay_allowed() {
-    // Y-3/Y-4 allowed side. Kills: a blanket DDL refuse. A one-part (session-scoped) name is
-    // not a registered Iceberg catalog, persists nothing, and must keep working — the lazy-view
-    // pins above depend on exactly this.
+    // Y-3/Y-4 allowed side.
     let (_dir, session) = ddl_sink_session().await;
     session
         .sql("CREATE VIEW session_v AS SELECT * FROM tight")
@@ -499,23 +481,11 @@ async fn create_view_in_iceberg_catalog_over_untightened_source_stays_allowed() 
         .expect("collect");
 }
 
-// ===========================================================================================
 // SQM resolved-catalog gating (Z-1) and the CTAS-wrapped DDL sink (Z-3).
-// ===========================================================================================
 
 #[tokio::test]
 async fn default_catalog_bare_name_ddl_over_tightened_source_refuses() {
-    // Z-1, Spark door. Kills: gating the DDL refuse on the three-part SPELLING — with
-    // `SET datafusion.catalog.default_catalog = ice` (+ `default_schema = sales`) a one-part or
-    // two-part name resolves into the Iceberg catalog and persists the same required columns.
-    //
-    // MEASURED on BASE (675a413), PER ROW — each row carries its own outcome.
-    // "every statement below returned Ok", which was false for the Full row:
-    //   - `CREATE VIEW v_bare …`      (Bare)    → **Ok** on BASE (the red this pin kills)
-    //   - `SELECT * INTO t_bare …`    (Bare)    → **Ok** on BASE (the red this pin kills)
-    //   - `CREATE VIEW sales.v_partial …` (Partial) → **Ok** on BASE (the red this pin kills)
-    //   - `CREATE VIEW ice.sales.v_full …` (Full) → **already refused** on BASE; it is the
-    //     regression fence, not a new red.
+    // Z-1, Spark door.
     let (_dir, session) = ddl_sink_session().await;
     session
         .sql("SET datafusion.catalog.default_catalog = 'ice'")
@@ -525,9 +495,7 @@ async fn default_catalog_bare_name_ddl_over_tightened_source_refuses() {
         .sql("SET datafusion.catalog.default_schema = 'sales'")
         .await
         .expect("SET default_schema");
-    //
-    // Each refusal also asserts the UNPUBLISHED half — `table_exists` FALSE for
-    // the name the statement resolves to.
+    // Each refusal also asserts the UNPUBLISHED half.
     for (sql, resolved) in [
         (
             "CREATE VIEW v_bare AS SELECT * FROM datafusion.public.tight LIMIT 0",

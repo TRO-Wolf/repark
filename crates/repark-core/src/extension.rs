@@ -1,7 +1,4 @@
 //! Build-time registration seam for SQL-door extensions.
-//!
-//! `configure` runs before runtime construction and `register` runs after context creation. The
-//! default hooks preserve a pure-DataFusion session.
 
 use std::collections::HashMap;
 
@@ -9,9 +6,7 @@ use datafusion::prelude::{SessionConfig, SessionContext};
 
 use crate::session_time_zone::SessionTimeZone;
 
-/// ===========================================================================================
 /// Values already resolved by `build()` and passed to the configure hook.
-/// ===========================================================================================
 #[derive(Debug, Clone, Copy)]
 pub struct SessionBuildConf<'a> {
     /// The builder's full Spark-style `.config(key, value)` map, as before.
@@ -20,19 +15,11 @@ pub struct SessionBuildConf<'a> {
     pub session_time_zone: &'a SessionTimeZone,
 }
 
-/// ===========================================================================================
 /// Build-time extension with configure-then-register hooks.
-/// ===========================================================================================
 pub trait SessionExtension: Send + Sync {
-    /// Amend the [`SessionConfig`] before the runtime and context are assembled (v1 position:
-    /// the cardinality/`repark.sql.*` `ConfigExtension` install). [`SessionBuildConf::conf`] is
-    /// the builder's full Spark-style `.config(key, value)` map, so an extension parses its own
-    /// keys the way v1's inline code did; [`SessionBuildConf::session_time_zone`] is the value
-    /// `build()` already resolved, for the door that must carry it down to the function layer.
-    ///
+    /// Amend the [`SessionConfig`] before the runtime and context are assembled.
     /// # Errors
-    /// A malformed conf value → [`datafusion::error::DataFusionError`]; `build()` folds it into
-    /// the crate [`Error`](crate::Error) via [`engine_err`](crate::engine_err).
+    /// # Errors A malformed conf value → [`datafusion::error::DataFusionError`].
     fn configure(
         &self,
         session: SessionBuildConf<'_>,
@@ -42,22 +29,16 @@ pub trait SessionExtension: Send + Sync {
         Ok(config)
     }
 
-    /// Register runtime objects on the freshly built [`SessionContext`] (v1 position: the Spark
-    /// function registry + analyzer rules + TA window UDFs, straight after
-    /// `SessionContext::new_with_config_rt`).
-    ///
+    /// Register runtime objects on the freshly built [`SessionContext`].
     /// # Errors
-    /// A registration failure → [`datafusion::error::DataFusionError`]; `build()` folds it via
-    /// [`engine_err`](crate::engine_err).
+    /// A registration failure is a DataFusion error; `build()` folds it via [`engine_err`].
     fn register(&self, ctx: &SessionContext) -> datafusion::error::Result<()> {
         let _ = ctx;
         Ok(())
     }
 }
 
-/// The defaulted no-op extension `build()` runs when no [`SessionExtension`] was supplied —
-/// both hooks inherit the trait defaults, so the no-extension session is the pure-DataFusion
-/// baseline by construction.
+/// The defaulted no-op extension `build` runs when no [`SessionExtension`] was supplied.
 #[derive(Debug, Clone, Copy, Default)]
 pub(crate) struct NoopSessionExtension;
 

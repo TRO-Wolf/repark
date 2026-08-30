@@ -35,10 +35,7 @@ async fn describe_rows(
     rows
 }
 
-/// Group Z fixture: a namespace carrying every row-bearing key (`comment` / `location` /
-/// `owner`) plus three user properties supplied in NON-sorted insertion order, so the
-/// `Properties` rendering has to sort them itself. The `LOCATION` clause also makes the U2
-/// dual-write mirror `location_uri` — which must NOT leak into `Properties`.
+/// Group Z fixture: a namespace carrying comment, location, owner, plus unsorted user properties.
 async fn create_described_namespace(ctx: &SessionContext, catalogs: &CatalogRegistry) {
     execute(
         ctx,
@@ -51,15 +48,8 @@ async fn create_described_namespace(ctx: &SessionContext, catalogs: &CatalogRegi
     .unwrap();
 }
 
-/// Z1: `DESCRIBE NAMESPACE` returns Spark's exact column shape — names, Utf8 types,
-/// nullability (`info_name` NOT NULL, `info_value` nullable) and the field-level `comment`
-/// metadata — plus the v2 row set, in the oracle's order, from the real namespace properties.
-///
-/// Live oracle rows for a fully-populated v2 namespace: Catalog Name / Namespace Name /
-/// Comment / Location / Owner, and NO `Properties` row without `EXTENDED`.
-///
-/// MUTATION: rename `info_name` to `col_name` (or flip either nullability, or drop the field
-/// metadata) in `describe_namespace_batch` → RED.
+/// MUTATION: rename `info_name` to `col_name` (or flip either nullability, or drop the field metadata) in `describe_namespace_batch` → RED.
+/// Z1: `DESCRIBE NAMESPACE` returns Spark's exact column shape.
 #[tokio::test]
 async fn describe_namespace_returns_spark_column_shape_and_rows() {
     let wh = TempDir::new().unwrap();
@@ -116,12 +106,8 @@ async fn describe_namespace_returns_spark_column_shape_and_rows() {
     );
 }
 
-/// Z1 (the v2 semantics that differ from v1): a row whose backing property is ABSENT is
-/// OMITTED, not emitted as an empty string. Live oracle: a v2 namespace with empty metadata
-/// returns only Catalog Name + Namespace Name. This is also how the `Owner` divergence stays
-/// honest — `RePark` never writes an `owner`, so the row simply does not appear.
-///
 /// MUTATION: emit `Comment`/`Location`/`Owner` unconditionally with `unwrap_or_default()` → RED.
+/// Z1: a row whose backing property is ABSENT is OMITTED, not emitted as an empty string.
 #[tokio::test]
 async fn describe_namespace_omits_rows_whose_property_is_absent() {
     let wh = TempDir::new().unwrap();
@@ -139,15 +125,8 @@ async fn describe_namespace_omits_rows_whose_property_is_absent() {
     );
 }
 
-/// Z2: `EXTENDED` appends the `Properties` row in Spark's rendering — the non-reserved keys
-/// sorted by key (byte order: `Amid` before `k1`), each `(key,value)`, joined `", "`, wrapped
-/// in one more paren pair. Non-EXTENDED omits the row entirely.
-///
-/// The `location_uri` the `LOCATION` clause mirrored (U2) is filtered — the disclosed Group Z
-/// divergence from a naive "everything not Spark-reserved" filter.
-///
-/// MUTATION: drop the `if describe.extended` branch in `describe_namespace_batch` → RED (both
-/// halves: the row vanishes from EXTENDED, or appears in the plain form).
+/// MUTATION: drop the `if describe.extended` branch in `describe_namespace_batch` → RED (both halves: the row vanishes from EXTENDED, or appears in the plain form).
+/// Z2: `EXTENDED` appends the `Properties` row in Spark's rendering.
 #[tokio::test]
 async fn describe_namespace_extended_adds_the_properties_row() {
     let wh = TempDir::new().unwrap();
@@ -179,10 +158,8 @@ async fn describe_namespace_extended_adds_the_properties_row() {
     );
 }
 
-/// Z2: with no non-reserved properties, `EXTENDED` still emits the row and its value is the
-/// EMPTY STRING — not `()`, not absent (live oracle, v2 bare namespace).
-///
 /// MUTATION: return `"()"` instead of `String::new()` from `render_namespace_properties` → RED.
+/// Z2: with no user properties, EXTENDED still emits Properties as the empty string.
 #[tokio::test]
 async fn describe_namespace_extended_empty_properties_render_as_empty_string() {
     let wh = TempDir::new().unwrap();
@@ -206,10 +183,8 @@ async fn describe_namespace_extended_empty_properties_render_as_empty_string() {
     );
 }
 
-/// Z2: values are rendered RAW — Spark neither quotes nor escapes them. Live oracle for
-/// `{"a b": "c,d", "z": "(paren)", "empty": ""}` → `((a b,c,d), (empty,), (z,(paren)))`.
-///
 /// MUTATION: quote either side (`('{key}','{value}')`) → RED.
+/// Z2: values are rendered RAW — Spark neither quotes nor escapes them.
 #[tokio::test]
 async fn describe_namespace_extended_renders_property_values_raw() {
     let wh = TempDir::new().unwrap();
@@ -233,24 +208,7 @@ async fn describe_namespace_extended_renders_property_values_raw() {
     );
 }
 
-/// Z2 (security): the redaction TRUTH TABLE, reproduced row for row from a live pyspark 4.0.0
-/// v2-catalog run (2026-07-25). Spark's path is `DescribeNamespaceExec` → `SQLConf.redactOptions`
-/// → `Utils.redact`, which matches the pattern against the **key OR the value** and replaces the
-/// value, folding TWO defaults: `(?i)secret|password|token|access[.]?key` and `(?i)url`.
-///
-/// The fixture covers every discriminating case at once:
-/// - key hits on pattern 1: `password`, `SeCrEt` (case-insensitive), `my_token_2` (substring),
-///   `accesskey`, `access.key`;
-/// - key hits on pattern 2: `jdbc_url`, `urlish`, `valueurl`;
-/// - **VALUE** hits (the class a key-only predicate silently misses): `innocent` = "my password
-///   is hunter2", `bare` = `"http://x/URL"` (also proving `(?i)` applies to values);
-/// - SHOWN by both engines: `plain`, and the `access_key` / `ACCESS-KEY` / `dashaccess-key`
-///   spellings Spark's `[.]?` separator does not cover (divergence 5 — an inherited Spark gap
-///   `RePark` matches rather than over-redacting).
-///
-/// MUTATIONS: revert the predicate to key-only → RED on `innocent`/`bare`; drop the `url`
-/// pattern → RED on `jdbc_url`/`urlish`/`valueurl`/`bare`; widen `access.key` back to
-/// `access_key` → RED on `access_key`.
+/// Z2: the redaction TRUTH TABLE, reproduced row for row from a live pyspark 4.0.0 v2-catalog run.
 #[tokio::test]
 async fn describe_namespace_extended_redaction_truth_table() {
     let wh = TempDir::new().unwrap();
@@ -280,9 +238,7 @@ async fn describe_namespace_extended_redaction_truth_table() {
              (urlish,*********(redacted)), (valueurl,*********(redacted)))",
         "the rendered Properties string must match live Spark byte for byte"
     );
-    // Negative-assert every plaintext secret the redaction is there to stop. Matched as the
-    // rendered `(key,value)` pair, because the bare tokens overlap (`p1` is a substring of the
-    // legitimately-shown `p10`) and a substring test would fail for the wrong reason.
+    // Negative-assert every plaintext secret the redaction is there to stop.
     for (key, secret) in [
         ("password", "p1"),
         ("SeCrEt", "p2"),
@@ -309,11 +265,8 @@ async fn describe_namespace_extended_redaction_truth_table() {
     }
 }
 
-/// Group Z divergence 3 (S3-3): the `Namespace Name` row goes through Spark's
-/// `NamespaceHelper.quoted` — bare only for `[a-zA-Z0-9_]+` that is not all digits, else
-/// backtick-wrapped with interior backticks doubled. Live-oracle-pinned, all six shapes.
-///
 /// MUTATION: emit `describe.namespace` raw → RED on every quoted case.
+/// Group Z divergence 3: the `Namespace Name` row goes through Spark's `NamespaceHelper.quoted`.
 #[tokio::test]
 async fn describe_namespace_name_row_is_quoted_like_spark() {
     let wh = TempDir::new().unwrap();
@@ -353,14 +306,8 @@ async fn describe_namespace_name_row_is_quoted_like_spark() {
     }
 }
 
-/// Group Z divergence 7 (S3-2): a LONE trailing `EXTENDED` is the namespace NAME, not the flag —
-/// live oracle: `DESCRIBE NAMESPACE EXTENDED` raises `SCHEMA_NOT_FOUND` for a schema called
-/// `EXTENDED`. `RePark` binds it the same way, so the statement stays an `AnalysisException`
-/// (`DataFusionError::Plan`) instead of leaking a parse error; the message differs because
-/// `RePark` needs a two-part name (divergence 2).
-///
-/// MUTATION: drop the `parser.prev_token()` rewind → the flag is eaten, no name parses, the
-/// statement falls through to DataFusion and the class changes → RED.
+/// MUTATION: drop the `parser.prev_token()` rewind → the flag is eaten, no name parses, the statement falls through to DataFusion and the class changes → RED.
+/// Group Z divergence 7: a LONE trailing `EXTENDED` is the namespace NAME, not the flag.
 #[tokio::test]
 async fn describe_namespace_lone_trailing_extended_is_the_name() {
     let wh = TempDir::new().unwrap();
@@ -385,12 +332,8 @@ async fn describe_namespace_lone_trailing_extended_is_the_name() {
     }
 }
 
-/// Z3: `DESCRIBE DATABASE` / `DESCRIBE SCHEMA` / the `DESC` abbreviation are exact synonyms of
-/// `DESCRIBE NAMESPACE`, with and without `EXTENDED` (live-oracle verified: all six spellings
-/// returned byte-identical row sets).
-///
-/// MUTATION: drop the `Keyword::DATABASE` (or `SCHEMA`, or `DESC`) arm in
-/// `try_parse_describe_namespace` → RED.
+/// MUTATION: drop the `Keyword::DATABASE` (or `SCHEMA`, or `DESC`) arm in `try_parse_describe_namespace` → RED.
+/// Z3: DESCRIBE DATABASE, SCHEMA, and DESC are synonyms of DESCRIBE NAMESPACE.
 #[tokio::test]
 async fn describe_database_and_schema_synonyms_are_identical() {
     let wh = TempDir::new().unwrap();
@@ -427,15 +370,8 @@ async fn describe_database_and_schema_synonyms_are_identical() {
     }
 }
 
-/// Z4: describing a namespace that does not exist raises the oracle's exception class. Live
-/// pyspark 4.0.0 raises `AnalysisException` (condition `SCHEMA_NOT_FOUND`, SQLSTATE 42704);
-/// `RePark`'s taxonomy maps `DataFusionError::Plan` → `Error::Analysis` →
-/// `ErrorClass::Analysis` → `repark.errors.AnalysisException`. This test pins the VARIANT (the
-/// taxonomy input); the Python-side class identity is pinned in
-/// `python/repark/tests/test_describe_namespace.py`.
-///
-/// MUTATION: return `DataFusionError::NotImplemented` (or `External`) instead of `Plan` → the
-/// variant assertion REDs, and with it the `AnalysisException` class the facade raises.
+/// MUTATION: return `DataFusionError::NotImplemented` (or `External`) instead of `Plan` → the variant assertion REDs, and with it the `AnalysisException` class the facade raises.
+/// Z4: describing a namespace that does not exist raises the oracle's exception class.
 #[tokio::test]
 async fn describe_namespace_missing_raises_schema_not_found_as_analysis() {
     let wh = TempDir::new().unwrap();
@@ -465,8 +401,7 @@ async fn describe_namespace_missing_raises_schema_not_found_as_analysis() {
     );
 }
 
-/// Z4 neighbour: an unregistered catalog fails loud on the catalog, not with a misleading
-/// `SCHEMA_NOT_FOUND` (the catalog lookup happens first).
+/// Z4 neighbour: an unregistered catalog fails loud on the catalog, not.
 #[tokio::test]
 async fn describe_namespace_unknown_catalog_fails_loud() {
     let wh = TempDir::new().unwrap();
@@ -481,10 +416,7 @@ async fn describe_namespace_unknown_catalog_fails_loud() {
     );
 }
 
-/// Group Z disclosed divergence #2: Spark resolves a single-part `DESCRIBE NAMESPACE ns`
-/// against the current catalog and supports nested `cat.a.b` namespaces. `RePark`'s namespace
-/// surface is two-part `catalog.namespace` everywhere (CREATE / DROP alike), so both forms fail
-/// LOUD naming the expected shape rather than guessing a catalog or silently truncating.
+/// Group Z disclosed divergence #2.
 #[tokio::test]
 async fn describe_namespace_non_two_part_name_fails_loud() {
     let wh = TempDir::new().unwrap();
@@ -504,16 +436,8 @@ async fn describe_namespace_non_two_part_name_fails_loud() {
     }
 }
 
-/// Z6 regression: the namespace intercept must not shadow `DESCRIBE <table>`, and a table
-/// literally named `namespace` / `database` / `schema` must still be describable.
-///
-/// The live oracle pins the disambiguation: `DESCRIBE namespace` (no name after the word)
-/// describes the TABLE `namespace`; `DESCRIBE namespace.tbl` describes table `tbl` in database
-/// `namespace`. `try_parse_describe_namespace` reproduces this by falling through (returning
-/// `None`) whenever the keyword is not followed by a complete, statement-ending object name.
-///
-/// MUTATION: make `try_parse_describe_namespace` return `Some(Err(..))` instead of `None` on a
-/// missing/partial object name → RED (the table describes start erroring).
+/// MUTATION: make `try_parse_describe_namespace` return `Some(Err(..))` instead of `None` on a missing/partial object name → RED (the table describes start erroring).
+/// Z6 regression: the namespace intercept must not shadow `DESCRIBE <table>`.
 #[tokio::test]
 async fn describe_table_is_not_shadowed_by_the_namespace_intercept() {
     let wh = TempDir::new().unwrap();
@@ -560,8 +484,6 @@ async fn describe_table_is_not_shadowed_by_the_namespace_intercept() {
 }
 
 /// The live oracle's namespace fixture, in the catalog's own (deliberately unsorted) order.
-/// The rendered rows this produces are the exact strings pyspark 4.0.0 showed:
-/// `[zeta, alpha, beta, Mixed_Case9, `my ns`, `123`, `dash-name`, `weird.name`]`.
 fn oracle_namespaces() -> Vec<NamespaceIdent> {
     [
         "zeta",
@@ -601,17 +523,8 @@ async fn show_rows(ctx: &SessionContext, catalogs: &CatalogRegistry, sql: &str) 
         .collect()
 }
 
-/// AB1: `SHOW NAMESPACES IN cat` returns the live oracle's exact column shape — ONE field
-/// named `namespace`, `Utf8`, **non-nullable**, with NO field metadata — and the rows come from
-/// the catalog's real `list_namespaces`, not a fixture.
-///
-/// Oracle schema JSON, verbatim:
-/// `{"fields":[{"metadata":{},"name":"namespace","nullable":false,"type":"string"}],
-/// "type":"struct"}`. Note it differs from `DESCRIBE NAMESPACE`'s frame, whose two fields DO
-/// carry `comment` metadata — the two commands were captured separately, not assumed alike.
-///
-/// MUTATION: rename the field to `namespace_name`, flip `nullable` to `true`, or attach field
-/// metadata in `show_namespaces_batch` → RED.
+/// MUTATION: rename the field to `namespace_name`, flip `nullable` to `true`, or attach field metadata in `show_namespaces_batch` → RED.
+/// AB1: `SHOW NAMESPACES IN cat` returns the live oracle's exact column shape.
 #[tokio::test]
 async fn show_namespaces_returns_spark_column_shape_and_real_namespaces() {
     let wh = TempDir::new().unwrap();
@@ -648,14 +561,8 @@ async fn show_namespaces_returns_spark_column_shape_and_real_namespaces() {
     );
 }
 
-/// AB2: `SHOW SCHEMAS` and `SHOW DATABASES` are byte-identical synonyms of `SHOW NAMESPACES`,
-/// and `FROM` is identical to `IN` — all four spellings oracle-confirmed to return the same
-/// schema and the same rows. Both synonyms currently parse to sqlparser statements DataFusion
-/// refuses outright ("Unsupported SQL statement: SHOW SCHEMAS"), so this is also the pin that
-/// they are routed HERE.
-///
-/// MUTATION: drop the `Keyword::SCHEMAS` (or `DATABASES`, or `FROM`) arm from
-/// `try_parse_show_namespaces` / `parse_show_namespaces_tail` → RED.
+/// MUTATION: drop the `Keyword::SCHEMAS` (or `DATABASES`, or `FROM`) arm from `try_parse_show_namespaces` / `parse_show_namespaces_tail` → RED.
+/// AB2: `SHOW SCHEMAS` and `SHOW DATABASES` are byte-identical synonyms of `SHOW NAMESPACES`.
 #[tokio::test]
 async fn show_schemas_and_databases_synonyms_are_identical() {
     let wh = TempDir::new().unwrap();
@@ -691,18 +598,8 @@ async fn show_schemas_and_databases_synonyms_are_identical() {
     }
 }
 
+/// MUTATION: sort the rows in `show_namespace_rows` → RED (the order flips to `` `123` ``-first); emit the raw namespace instead of `quoted_namespace` → RED (the four backticked rows lose their quotes).
 /// AB1/AB3: the row RENDERING and the row ORDER, on the live oracle's own fixture.
-///
-/// Spark maps each namespace through `NamespaceHelper.quoted` — every part `quoteIfNeeded`,
-/// joined with `.` — and emits matches in the CATALOG's order with no sort of its own. The
-/// oracle catalog returned `zeta, alpha, beta, Mixed_Case9, my ns, 123, dash-name, weird.name`
-/// and pyspark printed exactly:
-/// `zeta`, `alpha`, `beta`, `Mixed_Case9`, `` `my ns` ``, `` `123` ``, `` `dash-name` ``,
-/// `` `weird.name` `` — unsorted, and quoted per part.
-///
-/// MUTATION: sort the rows in `show_namespace_rows` → RED (the order flips to
-/// `` `123` ``-first); emit the raw namespace instead of `quoted_namespace` → RED (the four
-/// backticked rows lose their quotes).
 #[test]
 fn show_namespace_rows_are_quoted_like_spark_and_keep_catalog_order() {
     assert_eq!(
@@ -719,10 +616,7 @@ fn show_namespace_rows_are_quoted_like_spark_and_keep_catalog_order() {
         ],
         "the live oracle's rows, in the live oracle's (catalog) order"
     );
-    // A nested namespace renders its FULL path from the root, part by part (oracle:
-    // `SHOW NAMESPACES IN abcat.alpha` → `alpha.child1`, and `IN abcat.alpha.child1` →
-    // `alpha.child1.grand`). RePark cannot REACH nested namespaces (divergence 2), but the
-    // renderer is the same one and is pinned so a future nested surface inherits it.
+    // A nested namespace renders its FULL path from the root, part by part.
     assert_eq!(
         quoted_namespace(
             &NamespaceIdent::from_vec(vec!["alpha".to_string(), "child 1".to_string(),]).unwrap()
@@ -732,33 +626,6 @@ fn show_namespace_rows_are_quoted_like_spark_and_keep_catalog_order() {
 }
 
 /// AB3: the `LIKE` truth table, reproduced from the live oracle row for row.
-///
-/// Spark's `SHOW … LIKE` is NOT SQL `LIKE`: it is `StringUtils.filterPattern`, which trims the
-/// WHOLE pattern once, splits it on a literal `|`, replaces `*` with `.*` in each alternative,
-/// and FULL-matches the result as a case-insensitive Java regex against the RENDERED (quoted)
-/// row. Each `(pattern, expected)` pair below was executed against pyspark 4.0.0 on the
-/// fixture in [`oracle_namespaces`] — see `execute_show_namespaces`'s doc block for the
-/// capture. The discriminating rows, one per rule:
-///
-/// - `lph` vs `*lph*` — FULL match, not substring;
-/// - `ALPHA` / `AlPhA` — case-insensitive;
-/// - `a?pha` — `?` is a regex QUANTIFIER, not a glob wildcard;
-/// - `al%` / `bet_` — SQL-`LIKE` wildcards are literals here;
-/// - `.*` — `.` is a live regex metacharacter (so this shows EVERYTHING);
-/// - `dash-name` vs `` `dash-name` `` — the pattern sees the QUOTED string;
-/// - `weird.name` — near-miss the engine must NOT show (the row has backticks);
-/// - `[` and `alpha|[` — an invalid alternative is silently dropped, not raised;
-/// - `  alpha  ` — the pattern is trimmed, but `alpha| beta` proves the trim is on the WHOLE
-///   pattern, not per alternative;
-/// - `alpha|zeta` — alternation does NOT reorder (catalog order wins);
-/// - `al*|alpha` — a namespace matching two alternatives appears ONCE.
-///
-/// MUTATIONS: use `is_match` without the `\A`/`\z` anchors → `lph` starts matching, RED;
-/// drop `.case_insensitive(true)` → `ALPHA`/`AlPhA`/`mixed_case9` RED; replace the regex with a
-/// hand-rolled glob (`?` → any char) → `a?pha` RED; `unwrap()`/`expect()` the compiled regex instead of
-/// `is_ok_and` → `[` PANICS instead of matching nothing, RED; trim each alternative instead of
-/// the whole pattern → `alpha| beta` RED; filter the RAW name instead of the rendered one →
-/// `dash-name` / `` `dash-name` `` RED.
 #[test]
 fn show_namespaces_like_truth_table() {
     let namespaces = oracle_namespaces();
@@ -805,10 +672,7 @@ fn show_namespaces_like_truth_table() {
         ("alpha|beta", vec!["alpha", "beta"]),
         ("al*|alpha", vec!["alpha"]),
         ("[", vec![]),
-        // C-AB-S2: shifted-but-balanced parens are a Java `PatternSyntaxException` → the
-        // alternative is DROPPED (empty result). A `\A(?:…)\z` wrapper would rebalance them
-        // into a VALID regex that matches — the wrapper-artifact class the Critic's
-        // 64-pattern oracle diff caught. Mutation: restore the `(?:…)` wrapper → both RED.
+        // C-AB-S2: shifted-but-balanced parens drop the LIKE alternative as Java does.
         ("alpha)(", vec![]),
         ("a)(b", vec![]),
         ("alpha|[", vec!["alpha"]),
@@ -822,12 +686,8 @@ fn show_namespaces_like_truth_table() {
     }
 }
 
-/// AB3 at the USER entry point: the `LIKE` keyword is optional (the oracle accepts a bare
-/// pattern literal, `SHOW NAMESPACES IN cat 'al*'`), and the pattern really reaches the filter
-/// through SQL — the truth table above tests the function, this tests the statement.
-///
-/// MUTATION: ignore `show.pattern` in `execute_show_namespaces` → RED (every form returns both
-/// namespaces).
+/// MUTATION: ignore `show.pattern` in `execute_show_namespaces` → RED (every form returns both namespaces).
+/// AB3 at the USER entry point.
 #[tokio::test]
 async fn show_namespaces_like_filters_through_sql() {
     let wh = TempDir::new().unwrap();
@@ -865,14 +725,6 @@ async fn show_namespaces_like_filters_through_sql() {
 }
 
 /// AB4: an unregistered catalog fails loud with the oracle's exception CLASS.
-///
-/// Live oracle: `SHOW NAMESPACES IN nosuchcatalog` raises `AnalysisException` /
-/// `SCHEMA_NOT_FOUND` / SQLSTATE 42704 for `` `spark_catalog`.`nosuchcatalog` `` — Spark falls
-/// back to reading the unknown name as a NAMESPACE of the current catalog. `RePark` has no
-/// fallback catalog, so it raises the registry's own error; the CLASS matches
-/// (`DataFusionError::Plan` → `AnalysisException`, WG-3), the message does not (divergence 3).
-/// The class-identity half of this pin is at the facade in
-/// `python/repark/tests/test_show_namespaces.py`.
 #[tokio::test]
 async fn show_namespaces_unknown_catalog_fails_loud() {
     let wh = TempDir::new().unwrap();
@@ -897,21 +749,8 @@ async fn show_namespaces_unknown_catalog_fails_loud() {
     }
 }
 
+/// MUTATION: default a missing `IN` to any catalog (or truncate a two-part name to its first part) in `parse_show_namespaces_tail` → RED.
 /// AB6: the two disclosed divergences fail LOUD naming the requirement, never guessing.
-///
-/// 1. **No `IN`/`FROM`.** Live oracle: Spark resolves a bare `SHOW NAMESPACES` against the
-///    CURRENT catalog and — measured, not assumed — ignores the current NAMESPACE entirely
-///    (after `USE abcat.alpha` it still listed the eight ROOT namespaces, not `alpha`'s two
-///    children). `RePark` has no current-catalog concept, so the clause is required.
-/// 2. **Nested `IN cat.ns`.** Live oracle lists the CHILDREN (`IN abcat.alpha` →
-///    `alpha.child1`, `alpha.child2`). `RePark`'s namespaces are single-level, so a nested
-///    listing would always be empty — an empty frame would read as "no children exist".
-///
-/// Both are `DataFusionError::Plan` → `AnalysisException`, matching the oracle's exception
-/// family though not its message.
-///
-/// MUTATION: default a missing `IN` to any catalog (or truncate a two-part name to its first
-/// part) in `parse_show_namespaces_tail` → RED.
 #[tokio::test]
 async fn show_namespaces_without_a_catalog_or_with_a_nested_name_fails_loud() {
     let wh = TempDir::new().unwrap();
@@ -938,8 +777,7 @@ async fn show_namespaces_without_a_catalog_or_with_a_nested_name_fails_loud() {
             "{sql} must name the expected shape, got: {error}"
         );
     }
-    // A malformed tail is reported, not passed through to DataFusion's opaque `ShowVariable`
-    // refusal (oracle: Spark raises ParseException / PARSE_SYNTAX_ERROR here — divergence 5).
+    // A malformed SHOW tail is reported, not passed through to DataFusion's ShowVariable refusal.
     let error = execute(&ctx, &catalogs, "SHOW NAMESPACES IN ice GARBAGE")
         .await
         .expect_err("a malformed tail must fail loud");
@@ -951,10 +789,8 @@ async fn show_namespaces_without_a_catalog_or_with_a_nested_name_fails_loud() {
     );
 }
 
+/// MUTATION: match on `SHOW` alone (dropping the `NAMESPACES|SCHEMAS|DATABASES` check) in `try_parse_show_namespaces` → RED (the other SHOW forms start reporting namespace errors).
 /// Other SHOW forms remain DataFusion-owned, and relation names do not become namespace targets.
-///
-/// MUTATION: match on `SHOW` alone (dropping the `NAMESPACES|SCHEMAS|DATABASES` check) in
-/// `try_parse_show_namespaces` → RED (the other SHOW forms start reporting namespace errors).
 #[tokio::test]
 async fn show_namespaces_intercept_shadows_no_other_statement() {
     let wh = TempDir::new().unwrap();

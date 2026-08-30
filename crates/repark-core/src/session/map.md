@@ -1,13 +1,15 @@
 # map — repark-core/src/session
 
+CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated comments rewritten as complete sentences (D-001). Wrapped-line fragments rewritten as complete sentences (D-002).
+
 CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
 accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
 
 ## Purpose
 
 File-backed modules of `../session.rs` (`ReparkSession`): the behavior modules (`temp_views.rs`,
-`spill.rs`, `df_guards.rs`) plus the test cohorts (`tests.rs`, `tests/catalog_registration.rs`,
-`df_guard_tests.rs`, `aws_gate_tests.rs`, `namespace_create_tests.rs`). Test cohorts are two: the E-2 gate tests
+`spill.rs`, `df_guards.rs`) plus the test cohorts under `tests/` (`session.rs`,
+`session/catalog_registration.rs`, `df_guard.rs`, `aws_gate.rs`, `namespace_create.rs`, `a13.rs`). Test cohorts are two: the E-2 gate tests
 (new, additive) and — landing with the PR-C test-audit commit — the ported v1 session unit-test
 battery (names under the declared-rename map; the not-yet-ported subset is listed in
 `task/port/deferred-tests.md`).
@@ -56,9 +58,9 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
     wide-struct scan that merely has an unnest nearby. Recorded trade: within an
     `Unnest`-carrying subtree the rule's error is swallowed (repark-core has no logging dep), so
     a genuinely-failing shape silently keeps the slower, correct plan.
-  Pins: all seven live in `df_guard_tests.rs` (below), not in `tests.rs`;
+  Pins: all seven live in `tests/df_guard.rs` (below), not in `tests/session.rs`;
   ledger `task/c25-bugfix-ledger.md` → DEFECT-2.
-- `df_guard_tests.rs` — the seven `df_guards.rs` pins, split out of `tests.rs` when the DEFECT-2
+- `tests/df_guard.rs` — the seven `df_guards.rs` pins, split out of `tests.rs` when the DEFECT-2
   cohort pushed that file past the 1500-line ceiling (the sanctioned "split the module" out, not
   an EXCEPTIONS row). Guard 1: a bare no-extension session carries the scalar-subquery config
   default. Guard 2, six pins: the `enable_leaf_expression_pushdown` flag stays ENABLED (the
@@ -76,19 +78,19 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   **R3:** RAM-relative default `clamp(0.6 × cgroup-or-MemTotal, MIN, 8 GiB)` at `build()`
   only; `builder_default_installs_eight_gib_fair_spill_pool` asserts Finite / floor / cap /
   equals helper.
-- `aws_gate_tests.rs` — E-2 gate pins, AWS-free by construction: an offline session's finalize
+- `tests/aws_gate.rs` — E-2 gate pins, AWS-free by construction: an offline session's finalize
   never resolves the AWS SDK chain (no IMDS probe); an S3-path read on a session that never
   resolved fails loud naming `register_configured_catalogs` and the `repark.aws.enable` opt-in;
   opt-in without finalize still refuses (no lazy query-time resolution); the late config map's
   region-conf signal class is consulted (dual-spelling conflict fails loud pre-resolution).
-- `namespace_create_tests.rs` — **R-6 / G-6 Q1 (2026-08-14):** session
+- `tests/namespace_create.rs` — **R-6 / G-6 Q1 (2026-08-14):** session
   `create_namespace` location-guard pins on a memory catalog: create-new, re-create
   same location (idempotent), re-create conflicting (Analysis, both paths named,
   stored location unchanged), re-create without request location (idempotent),
   trailing-slash-only difference (idempotent).
-- `tests/` — focused session cohorts split from `tests.rs`; see [tests/map.md](tests/map.md).
+- `tests/` — session test modules; see [tests/map.md](tests/map.md).
   Registration pins cover `rust-catalog-registration/C-001` through `C-004`.
-- `tests.rs` — the ported v1 session test battery (38 port-now tests, v1 order; the deferred
+- `tests/session.rs` — the ported v1 session test battery (38 port-now tests, v1 order; the deferred
   subset is in `task/port/deferred-tests.md`), plus the P2G R2 cohort at the tail: the
   builder→`SessionConfig` `datafusion.*` plumbing (key lands / unprefixed key still ignored /
   unknown key fails loud / explicit conf overrides a core default / unset `batch_size` lands
@@ -105,7 +107,7 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   replace the former single row that pinned the opposite
   (`information_schema_still_exposes_the_dollar_metadata_tables`), flipped in the same diff as the
   behavior.
-- `a13_tests.rs` — **A13:** `file://` / `FILE://` / `file://localhost` warehouses become a
+- `tests/a13.rs` — **A13:** `file://` / `FILE://` / `file://localhost` warehouses become a
   filesystem fallback root on the product path (skipping the helper reds this pin).
 
 ## Pointers
@@ -129,7 +131,7 @@ First checks: `cargo test -p repark-core session`. Escalate to: [../map.md#debug
   neutral placeholders — the upstream job the acceptance shape mirrors is named generically
   ("the source publish job"), and example table/view/entity names are placeholders carrying no
   domain vocabulary. Outcome-neutral: every renamed fixture moved together with the assertions
-  that read it. Sites here: `tests.rs` — the doc comment on
+  that read it. Sites here: `tests/session.rs` — the doc comment on
   `late_catalog_registration_adds_new_names_and_skips_existing`.
 **SQM round 7 (R7-1):** `temp_views.rs` also owns the READ spelling — `temp_view_home` and
 `resolve_temp_view_home_ref`, the two lookups the Python facade uses so a product read path never

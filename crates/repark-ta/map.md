@@ -1,5 +1,9 @@
 # map — repark-ta
 
+CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated comments rewritten as complete sentences (D-001).
+CC-4 (2026-08-30): Cargo.toml crate banner condensed to one line
+(pins: cc-3-comment-condensation/C-009).
+
 ## Purpose
 
 RePark's own pure-Rust technical-analysis kernels (crate-DAG tier 3, a door-neutral capability

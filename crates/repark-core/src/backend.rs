@@ -1,13 +1,8 @@
 //! Execution-backend seam for the local DataFusion context.
-//!
-//! [`SingleNodeBackend`] is the only implementation. A distributed backend would require widening
-//! this trait and its call sites; distribution remains deferred by decision.
 
 use datafusion::prelude::SessionContext;
 
-/// ===========================================================================================
 /// Local execution-context holder and future backend boundary.
-/// ===========================================================================================
 pub trait ExecutionBackend: Send + Sync {
     /// The DataFusion session this backend executes against.
     fn session_context(&self) -> &SessionContext;

@@ -13,10 +13,7 @@ use tracing::Instrument;
 
 use crate::catalog::location::storage_factory_for_location;
 
-/// ===========================================================================================
 /// Build the AWS-free in-memory catalog over `warehouse` for local development and tests.
-/// ===========================================================================================
-///
 /// # Errors
 /// Returns an error when the builder rejects the warehouse configuration.
 #[tracing::instrument(
@@ -25,7 +22,7 @@ use crate::catalog::location::storage_factory_for_location;
     fields(warehouse = %warehouse)
 )]
 pub async fn memory_catalog(warehouse: &str) -> Result<Arc<dyn Catalog>> {
-    // Use the shared scheme selector so local and object-store warehouses choose the correct backend.
+    // Use the shared scheme selector so warehouses pick the correct FileIO backend.
     let catalog = MemoryCatalogBuilder::default()
         .with_storage_factory(storage_factory_for_location(warehouse)?)
         .load(
@@ -37,13 +34,7 @@ pub async fn memory_catalog(warehouse: &str) -> Result<Arc<dyn Catalog>> {
     Ok(Arc::new(catalog))
 }
 
-/// ===========================================================================================
 /// Build the AWS Glue catalog from `props`.
-///
-/// The required `warehouse` key fails loud before the fork builder runs. Other properties pass to
-/// Iceberg `FileIO`; the span records key names only.
-/// ===========================================================================================
-///
 /// # Errors
 /// Returns an error when `warehouse` is absent, empty, or rejected by the fork builder.
 pub async fn glue_catalog<S: BuildHasher>(
@@ -70,24 +61,9 @@ pub async fn glue_catalog<S: BuildHasher>(
     .await
 }
 
-/// ===========================================================================================
-/// Build the AWS **S3 Tables** Iceberg catalog (the secondary product surface) from `props`, thin
-/// over the fork's `S3TablesCatalogBuilder`. The fork recognizes `table_bucket_arn` (**required**)
-/// and `endpoint_url`, and forwards every other property to Iceberg `FileIO`. S3 Tables addresses
-/// its virtual bucket by ARN (not an `s3://` warehouse path), so `table_bucket_arn` is the required
-/// handle.
-///
-/// `table_bucket_arn` is validated fail-loud here — naming the missing key — *before* the fork
-/// builder is invoked.
-/// ===========================================================================================
-///
+/// Build the AWS S3 Tables Iceberg catalog from `props` over the fork's `S3TablesCatalogBuilder`.
 /// # Errors
-/// Returns an error if the required `table_bucket_arn` property is absent or empty, or if the fork
-/// builder rejects the configuration.
-///
-/// ## Observability (QUAL-05 / OBS1)
-/// Emits span `catalog.s3tables_catalog` with **prop key names only** (never values). See
-/// [`glue_catalog`] for the residual note on SDK request ids / retries.
+/// Returns an error if `table_bucket_arn` is absent/empty or the fork builder rejects config.
 pub async fn s3tables_catalog<S: BuildHasher>(
     props: &HashMap<String, String, S>,
 ) -> Result<Arc<dyn Catalog>> {
@@ -111,22 +87,14 @@ pub async fn s3tables_catalog<S: BuildHasher>(
     .await
 }
 
-/// ===========================================================================================
 /// Comma-separated sorted catalog property **key names only** for span fields (QUAL-05).
-///
-/// Never includes values — the same map may carry `aws_secret_access_key` / tokens. Key names
-/// stay visible so operators can see which props were configured without leaking credentials
-/// (mirrors the C1-SEC-002 "key names always shown" half of `prop_key_is_secret` in
-/// `repark-session` — that twin is READ ONLY this round; needles live there, not duplicated here).
-/// ===========================================================================================
 pub(crate) fn prop_key_names<S: BuildHasher>(props: &HashMap<String, String, S>) -> String {
     let mut keys: Vec<&str> = props.keys().map(String::as_str).collect();
     keys.sort_unstable();
     keys.join(",")
 }
 
-/// Reject a missing or blank required catalog property with a clear plan error that names the key,
-/// before any fork builder runs. `kind` labels the catalog surface in the message (e.g. `"Glue"`).
+/// Reject a missing or blank required catalog property with a plan error that names the key.
 pub(crate) fn require_non_empty_prop<S: BuildHasher>(
     props: &HashMap<String, String, S>,
     key: &str,
@@ -140,17 +108,14 @@ pub(crate) fn require_non_empty_prop<S: BuildHasher>(
     }
 }
 
-/// Copy a caller's property map (any hasher) into the default-hasher `HashMap` the fork's
-/// `CatalogBuilder::load` consumes by value.
+/// Copy a caller's property map into the default-hasher `HashMap` `CatalogBuilder::load` consumes.
 pub(crate) fn clone_props<S: BuildHasher>(
     props: &HashMap<String, String, S>,
 ) -> HashMap<String, String> {
     props.iter().map(|(k, v)| (k.clone(), v.clone())).collect()
 }
 
-/// Fold an iceberg error into a DataFusion error so the session layer can carry it as one engine
-/// error type. The payload stays `iceberg::Error` so `classify_datafusion_error` still peels
-/// Iceberg, not `Error::DataFusion`.
+/// Fold an iceberg error into a DataFusion error so the session carries one engine error type.
 pub fn iceberg_to_datafusion(err: iceberg::Error) -> DataFusionError {
     DataFusionError::External(Box::new(err))
 }

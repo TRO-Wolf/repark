@@ -1,15 +1,4 @@
 //! WI-2 ANSI store-assignment gate for plain `INSERT` plans.
-//!
-//! DataFusion inserts synthesized casts in the DML projection. This rule reads the projection's
-//! input schema and applies the shared Spark ANSI matrix before the fork writer runs. All plain
-//! `INSERT` spellings converge on this node.
-//!
-//! # Cast boundary
-//!
-//! DataFusion's DML projection identifies synthesized casts as `Alias(Cast(Column, target))`;
-//! this rule judges them against Spark's ANSI matrix. Explicit user casts are already conformed
-//! inside the source plan and remain legal. Literal `VALUES` casts are indistinguishable from
-//! explicit casts, so `Cast(Literal, …)` remains the documented policy residual.
 
 use datafusion::common::ExprSchema;
 use datafusion::common::config::ConfigOptions;
@@ -21,13 +10,7 @@ use datafusion::optimizer::AnalyzerRule;
 
 use super::store_assign::refuse_unless_write_store_assignable;
 
-/// ===========================================================================================
-/// The rule. Stateless and read-only — it rewrites nothing, it only refuses.
-///
-/// Register it **before** `repark_functions::analyzer_rules()` so a DML insert whose pair is on
-/// BOTH matrices (`DATE → INT`) cites Spark's write class (`INCOMPATIBLE_DATA_FOR_TABLE`), which
-/// is what Spark raises for that statement, rather than the CAST class.
-/// ===========================================================================================
+/// The rule.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct InsertStoreAssignment;
 
@@ -55,13 +38,9 @@ const fn insert_label(op: InsertOp) -> &'static str {
     }
 }
 
-/// Check one plan node. Everything that is not an `INSERT` DML over a synthesized projection is
-/// a no-op, so the rule is invisible to every other plan shape.
-///
+/// Check one plan node.
 /// # Errors
-/// [`datafusion::error::DataFusionError::Plan`] from
-/// [`refuse_unless_write_store_assignable`] when a synthesized conform-cast's SOURCE type is not
-/// ANSI-store-assignable to the target column's type.
+/// Returns `Plan` from `refuse_unless_write_store_assignable` when INSERT is not assignable.
 fn refuse_unassignable_insert(plan: &LogicalPlan) -> Result<()> {
     let LogicalPlan::Dml(dml) = plan else {
         return Ok(());
@@ -69,8 +48,7 @@ fn refuse_unassignable_insert(plan: &LogicalPlan) -> Result<()> {
     let WriteOp::Insert(insert_op) = dml.op else {
         return Ok(());
     };
-    // `insert_to_plan` always stacks its conform projection on top of the planned source. Any
-    // other input shape is not a plan this rule can read pre-cast types out of, and is left alone.
+    // `insert_to_plan` always stacks its conform projection on top of the planned source.
     let LogicalPlan::Projection(projection) = dml.input.as_ref() else {
         return Ok(());
     };
@@ -85,9 +63,7 @@ fn refuse_unassignable_insert(plan: &LogicalPlan) -> Result<()> {
         let Expr::Cast(cast) = inner else {
             continue;
         };
-        // ONLY a cast over a bare source COLUMN is provably synthesized (module docs). A cast
-        // over a literal is the `VALUES` residual; a cast over anything else is not a shape
-        // `insert_to_plan` produces at all.
+        // ONLY a cast over a bare source COLUMN is provably synthesized (module docs).
         let Expr::Column(column) = cast.expr.as_ref() else {
             continue;
         };
@@ -114,8 +90,7 @@ mod tests {
 
     use super::InsertStoreAssignment;
 
-    /// A context with the rule installed and two empty tables: `t` (the target) and `s` (the
-    /// source). Column names are `k` and `v` on both sides.
+    /// A context with the rule installed and two empty tables: `t` and `s`.
     fn ctx(target: DataType, source: DataType) -> SessionContext {
         let ctx = SessionContext::new();
         ctx.add_analyzer_rule(Arc::new(InsertStoreAssignment));
@@ -130,8 +105,7 @@ mod tests {
         ctx
     }
 
-    /// Plan AND execute — the analyzer runs at physical planning, so a rule that only fires on
-    /// `collect` and one that fires on `sql` are both caught here.
+    /// Plan AND execute.
     async fn run(ctx: &SessionContext, sql: &str) -> Result<(), String> {
         match ctx.sql(sql).await {
             Err(error) => Err(error.to_string()),
@@ -181,9 +155,7 @@ mod tests {
         }
     }
 
-    /// **The correctness constraint.** A user-written explicit `CAST` is the user's stated
-    /// intent and is legal Spark even where store assignment refuses — and it must not be
-    /// mistaken for the conform-cast DataFusion synthesizes.
+    /// An explicit user `CAST` is stated intent, not a synthesized conform cast.
     #[tokio::test]
     async fn an_explicit_user_cast_in_the_select_is_not_gated() {
         let ctx = ctx(DataType::Int32, DataType::Boolean);
@@ -208,9 +180,7 @@ mod tests {
         }
     }
 
-    /// The NAMED residual, pinned so it cannot rot into a surprise: a literal `VALUES` row is
-    /// conformed inside the `Values` node, where a synthesized cast and a user-written one are
-    /// byte-identical. This rule deliberately does not judge it.
+    /// A literal `VALUES` row is conformed inside `Values`, where both casts are byte-identical.
     #[tokio::test]
     async fn a_literal_values_row_is_the_named_residual_and_is_not_gated() {
         let ctx = ctx(DataType::Int32, DataType::Boolean);

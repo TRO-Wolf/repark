@@ -1,7 +1,4 @@
-/// ===========================================================================================
-/// WG-1 pins identity-partitioned `MERGE INTO`: both COW and insert-only arms preserve manifest
-/// partition values, plan pruning, and Arrow-path value/type round trips.
-/// ===========================================================================================
+/// WG-1: identity-partitioned MERGE preserves manifests, pruning, and Arrow value and type.
 use std::collections::{BTreeMap, HashSet};
 use std::future::Future;
 use std::pin::Pin;
@@ -75,8 +72,7 @@ async fn planned_paths(table: &Table, predicate: Predicate) -> HashSet<String> {
         .collect()
 }
 
-/// The single identity partition slot of a `DataFile` as an int — the tables here all
-/// partition by the non-null `id` column, so a null or non-int slot is a hard test failure.
+/// The single identity partition slot of a `DataFile` as an int.
 fn slot_int(file: &DataFile) -> i32 {
     match file.partition().fields().first().cloned().flatten() {
         Some(Literal::Primitive(PrimitiveLiteral::Int(key))) => key,
@@ -84,8 +80,7 @@ fn slot_int(file: &DataFile) -> i32 {
     }
 }
 
-/// Map partition-slot value → total manifest record count across that partition's files —
-/// the manifest-level proof that every committed file carries the right partition value.
+/// Map partition-slot value → total manifest record count across that partition's files.
 async fn slot_record_counts(catalogs: &CatalogRegistry, table: &str) -> BTreeMap<i32, u64> {
     let handle = loaded_table(catalogs, table).await;
     let mut counts: BTreeMap<i32, u64> = BTreeMap::new();
@@ -106,13 +101,7 @@ async fn slot_paths(catalogs: &CatalogRegistry, table: &str, key: i32) -> HashSe
         .collect()
 }
 
-/// WG1-P1 — mixed MERGE (matched-UPDATE + not-matched-INSERT) on a single-key
-/// identity-partitioned table: the matched row is rewritten IN its partition and the
-/// not-matched row is inserted into a NEW partition, both carrying correct manifest
-/// partition values; the whole table round-trips. Risk: the fanout is bypassed on the
-/// MERGE path (as `write_data_files` does — empty partition struct), so the rewritten /
-/// inserted files land unpartitioned or in the wrong partition — readable today,
-/// unprunable and spec-corrupting forever.
+/// WG1-P1.
 #[tokio::test]
 async fn merge_partitioned_mixed_upsert_stamps_partition_values() {
     let wh = TempDir::new().unwrap();
@@ -134,8 +123,7 @@ async fn merge_partitioned_mixed_upsert_stamps_partition_values() {
     )
     .await;
 
-    // The matched row (id=2) took the source value; the not-matched row (id=4) inserted;
-    // untouched partitions (1, 3) survived.
+    // The matched row took the source value.
     assert_eq!(
         table_rows(&ctx, &catalogs, "ice.sales.pt").await,
         vec![
@@ -146,16 +134,14 @@ async fn merge_partitioned_mixed_upsert_stamps_partition_values() {
         ],
     );
 
-    // Every committed file — the REWRITTEN id=2 file AND the INSERTED id=4 file — carries
-    // its own partition value at the manifest level.
+    // Every committed file.
     assert_eq!(
         slot_record_counts(&catalogs, "pt").await,
         BTreeMap::from([(1, 1), (2, 1), (3, 1), (4, 1)]),
         "one record per partition slot 1..4 (rewrite + insert both correctly partitioned)"
     );
 
-    // The inserted row prunes to exactly the new partition's file (plan level); ditto the
-    // rewritten row.
+    // The inserted row prunes to exactly the new partition's file; ditto the rewritten row.
     let handle = loaded_table(&catalogs, "pt").await;
     assert_eq!(
         planned_paths(&handle, Reference::new("id").equal_to(Datum::int(4))).await,
@@ -169,11 +155,7 @@ async fn merge_partitioned_mixed_upsert_stamps_partition_values() {
     );
 }
 
-/// WG1-P2 — insert-only MERGE on a partitioned table: the not-matched row fans out into its
-/// partition (correct manifest value), matched-but-unclaused rows are untouched, and every
-/// pre-existing partition file survives (insert-only never rewrites). Risk: the insert-only
-/// arm appends through the unpartitioned writer, so the new file has an empty partition
-/// struct.
+/// WG1-P2.
 #[tokio::test]
 async fn merge_partitioned_insert_only_fans_out() {
     let wh = TempDir::new().unwrap();
@@ -221,17 +203,12 @@ async fn merge_partitioned_insert_only_fans_out() {
     );
 }
 
-/// WG1-P3 — a MERGE whose source rows span MULTIPLE partitions in UNSORTED order: the
-/// fanout regroups per partition (updates across partitions 1/2/3 + an insert into 5),
-/// every file lands in its own partition, and the table round-trips. Risk: a clustered
-/// (sort-required) writer would hard-error on the unsorted multi-partition rewrite/insert
-/// batch, or route rows to the wrong partition.
+/// WG1-P3.
 #[tokio::test]
 async fn merge_partitioned_multi_partition_unsorted_source() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
-    // Base table spans partitions 1..4; the update source is deliberately unsorted and
-    // spans partitions 3, 1, 5, 2 (a mix of matched updates and a not-matched insert).
+    // Base table spans partitions 1..4.
     register_source(&ctx, "part_base", &[(1, "a"), (2, "b"), (3, "c"), (4, "d")]);
     run(
         &ctx,
@@ -268,12 +245,7 @@ async fn merge_partitioned_multi_partition_unsorted_source() {
     );
 }
 
-/// WG1-P4 — a matched UPDATE that CHANGES the partition key moves the row to the NEW
-/// partition (Spark copy-on-write, fork `ENGINE_CONTRACT` §4 UPDATE/COW: "a
-/// partition-key-changing UPDATE re-routes rows via the partition-aware writer"). The old
-/// partition's file is rewritten away (no live file, empty prune) and the moved row lands
-/// under the new key. Risk: the survivor is written back to the OLD partition (partition
-/// value inferred from the file, not the row), silently corrupting the layout.
+/// WG1-P4 — a matched UPDATE that CHANGES the partition key moves the row to the NEW partition.
 #[tokio::test]
 async fn merge_partitioned_update_moves_row_to_new_partition() {
     let wh = TempDir::new().unwrap();
@@ -322,10 +294,7 @@ async fn merge_partitioned_update_moves_row_to_new_partition() {
     );
 }
 
-/// WG1-P8 — the `UPDATE SET *` / `INSERT *` star forms (the source publish job's MERGE
-/// shape) on a partitioned target: star resolution feeds the fanout exactly like the
-/// explicit-column forms, so partition values are still stamped. Risk: the star-expanded
-/// batch loses a column or bypasses the partitioned writer.
+/// WG1-P8.
 #[tokio::test]
 async fn merge_partitioned_star_forms_upsert() {
     let wh = TempDir::new().unwrap();
@@ -364,33 +333,18 @@ async fn merge_partitioned_star_forms_upsert() {
     );
 }
 
-// ===========================================================================================
-// WG1-P5 — partitioned-MERGE optimistic-concurrency (per arm). The MERGE `commit` seam does
-// NOT branch on partitioning, so the exhaustive add-vs-delete false-positive/rejection
-// matrix in `repark_iceberg::write::merge::occ_tests` stays green as partition-agnostic regression.
-// These pins prove the *identity-partitioned MERGE PATH* (parse → fanout → resolve → commit)
-// still ARMS the serializable §5 validations end to end: a conflicting concurrent append
-// arriving mid-commit is loudly rejected (both arms), while a genuinely non-conflicting
-// concurrent commit on the same table is tolerated (the false-positive guard). Determinism
-// is by an attempt counter (fork `ENGINE_CONTRACT` §5; lessons rule 12 — no timing).
-// ===========================================================================================
+// WG1-P5 — partitioned-MERGE optimistic-concurrency (per arm).
 
-/// The concurrent commit the injector lands mid-MERGE, INSIDE the victim's first
-/// `update_table` (after the fork's `do_commit` refresh, before its CAS) — so the victim
-/// refreshes to a base carrying it and re-runs the §5 validations against it.
+/// The concurrent commit the injector lands mid-MERGE, INSIDE the victim's first `update_table`.
 #[derive(Clone, Copy, Debug)]
 enum ConcurrentOp {
-    /// Adds a data file → serializable `validate_no_conflicting_data` (`AlwaysTrue` filter)
-    /// must reject the MERGE.
+    /// Adds a data file → serializable `validate_no_conflicting_data` must reject the MERGE.
     ConflictingAppend,
-    /// Sets a table property → a real CAS conflict + refresh, but NO added data, so the
-    /// validation must NOT reject (the merge retries and commits): the false-positive guard.
+    /// Sets a table property → a real CAS conflict + refresh, but NO added data.
     NonConflictingProperty,
 }
 
-/// A conforming one-row batch (`id`, `name`) — the injected competing append's payload. With
-/// the MERGE's `AlwaysTrue` conflict filter, ANY concurrently-added data file conflicts, so
-/// the specific id is irrelevant.
+/// A conforming one-row batch (`id`, `name`) — the injected competing append's payload.
 fn conflict_batch() -> RecordBatch {
     let schema = Arc::new(Schema::new(vec![
         Field::new("id", DataType::Int32, false),
@@ -406,14 +360,10 @@ fn conflict_batch() -> RecordBatch {
     .expect("build conflict batch")
 }
 
-/// The boxed-future return type of an `#[async_trait]` `Catalog` method (this crate has no
-/// `async-trait` dep, so the trait is implemented in its desugared form — every method
-/// forwards the inner catalog's already-boxed future).
+/// The boxed-future return type of an `#[async_trait]` `Catalog` method.
 type BoxedCatalogFuture<'a, T> = Pin<Box<dyn Future<Output = iceberg::Result<T>> + Send + 'a>>;
 
-/// A fully-delegating `Catalog` wrapper that lands one [`ConcurrentOp`] against the inner
-/// catalog on the victim MERGE's FIRST `update_table` (mirrors `append.rs`'s injector —
-/// deterministic, attempt-counter-keyed, no timing).
+/// A fully-delegating `Catalog` wrapper.
 #[derive(Debug)]
 struct ConflictInjector {
     inner: Arc<dyn Catalog>,
@@ -606,8 +556,7 @@ impl Catalog for ConflictInjector {
     {
         Box::pin(async move {
             let attempt = self.update_table_attempts.fetch_add(1, Ordering::SeqCst) + 1;
-            // Take the op out and DROP the guard before any await (a `MutexGuard` is not
-            // `Send`; `ConcurrentOp` is `Copy`).
+            // Take the op out and DROP the guard before any await.
             let op = if attempt == 1 {
                 self.op
                     .lock()
@@ -617,9 +566,7 @@ impl Catalog for ConflictInjector {
                 None
             };
             if let Some(op) = op {
-                // The victim's `do_commit` has already refreshed its base; landing the
-                // concurrent commit NOW (against the inner catalog — no recursion) puts it
-                // between the MERGE's pinned snapshot and its CAS.
+                // The victim's `do_commit` has already refreshed its base.
                 match op {
                     ConcurrentOp::ConflictingAppend => {
                         repark_iceberg::write::append(
@@ -651,11 +598,7 @@ fn registry_over(catalog: Arc<dyn Catalog>) -> CatalogRegistry {
     CatalogRegistry::from([("ice".to_string(), catalog)])
 }
 
-/// WG1-P5a — mixed (rewrite-arm) partitioned MERGE × a conflicting concurrent append: the
-/// serializable `validate_no_conflicting_data` guard (armed on the rewrite arm since F-BR-1)
-/// must LOUDLY reject the stale-pinned commit — a non-retryable data conflict — so the
-/// concurrent add is never silently duplicated. Risk: the partitioned write path reaches
-/// `commit` without the pin / validation armed, so a mid-flight add slips through.
+/// WG1-P5a.
 #[tokio::test]
 async fn merge_partitioned_rewrite_arm_rejects_conflicting_concurrent_append() {
     let wh = TempDir::new().unwrap();
@@ -692,9 +635,7 @@ async fn merge_partitioned_rewrite_arm_rejects_conflicting_concurrent_append() {
     );
 }
 
-/// WG1-P5b — insert-only partitioned MERGE × a conflicting concurrent append: the same
-/// serializable guard armed on the add-only arm (BUG-005) must reject. Risk: only the
-/// rewrite arm was rerouted through the armed commit and the insert-only arm appends blindly.
+/// WG1-P5b.
 #[tokio::test]
 async fn merge_partitioned_insert_only_rejects_conflicting_concurrent_append() {
     let wh = TempDir::new().unwrap();
@@ -730,12 +671,7 @@ async fn merge_partitioned_insert_only_rejects_conflicting_concurrent_append() {
     );
 }
 
-/// WG1-P5c — the false-positive guard: a NON-conflicting concurrent commit (a table-property
-/// set — a real CAS conflict + refresh, but NO added data) must NOT trip the serializable
-/// guard: the partitioned MERGE retries and commits, and the row result is correct. Risk:
-/// an over-broad conflict filter rejects every concurrent commit, breaking liveness. This is
-/// the GREEN half of the concurrency mutation proof (dropping `validate_no_conflicting_data`
-/// reddens P5a/P5b while this stays green).
+/// WG1-P5c.
 #[tokio::test]
 async fn merge_partitioned_tolerates_nonconflicting_concurrent_commit() {
     let wh = TempDir::new().unwrap();
@@ -766,8 +702,7 @@ async fn merge_partitioned_tolerates_nonconflicting_concurrent_commit() {
     .await
     .expect("a non-conflicting concurrent commit must not block the MERGE");
 
-    // The MERGE ran on top of the concurrent property commit, with the right rows AND
-    // the concurrent property still present (proving it really raced through the CAS).
+    // The MERGE ran on top of the concurrent property commit.
     assert_eq!(
         table_rows(&ctx, &catalogs, "ice.sales.pt").await,
         vec![
@@ -791,8 +726,7 @@ async fn merge_partitioned_tolerates_nonconflicting_concurrent_commit() {
 
 // Non-identity transform routing uses the shared computed partition path and retains OCC.
 
-/// The distinct partition slots (first field), formatted — for non-int transform slots
-/// (string truncate, temporal date/int) where `slot_int` does not apply.
+/// The distinct partition slots, formatted.
 async fn partition_slot_strings(table: &Table) -> HashSet<String> {
     live_data_files(table)
         .await
@@ -832,11 +766,7 @@ fn register_ts_source(ctx: &SessionContext, name: &str, rows: &[(i32, &str, i64)
     ctx.register_batch(name, batch).unwrap();
 }
 
-/// PIN R3a — MERGE into a `truncate(2, name)` table: a matched UPDATE that changes `name`
-/// ACROSS the truncate boundary re-routes the survivor to the NEW prefix partition, and a
-/// not-matched INSERT lands in its own prefix. Manifest slots are the 2-char string prefixes
-/// (Iceberg string truncate), and the table round-trips. Restoring the non-identity gate in
-/// `reject_unsupported` → the MERGE returns `NotImplemented` → RED.
+/// PIN R3a.
 #[tokio::test]
 async fn merge_truncate_partitioned_reroutes_and_inserts() {
     let wh = TempDir::new().unwrap();
@@ -849,8 +779,7 @@ async fn merge_truncate_partitioned_reroutes_and_inserts() {
              SELECT * FROM tbase",
     )
     .await;
-    // id=1 "apple"(ap) → "berry"(be): a cross-prefix MOVE; id=3 "cocoa"(co): a new-prefix
-    // insert. id=2 "cherry"(ch) is untouched.
+    // id=1 "apple"(ap) → "berry"(be): a cross-prefix MOVE; id=3 "cocoa"(co): a new-prefix insert.
     register_source(&ctx, "updates", &[(1, "berry"), (3, "cocoa")]);
     run(
         &ctx,
@@ -881,10 +810,7 @@ async fn merge_truncate_partitioned_reroutes_and_inserts() {
     );
 }
 
-/// PIN R3b — MERGE into a `days(ts)` (temporal) table: a matched UPDATE (name only, `ts`
-/// unchanged so the survivor stays in its day) rewrites in-partition and a not-matched INSERT
-/// lands in a NEW day partition; the temporal transform drives placement (3 distinct day
-/// slots), and the table round-trips. Restoring the non-identity gate → RED.
+/// PIN R3b.
 #[tokio::test]
 async fn merge_days_partitioned_upsert() {
     const DAY: i64 = 86_400_000_000;
@@ -925,13 +851,7 @@ async fn merge_days_partitioned_upsert() {
     );
 }
 
-/// PIN R4 — the serializable OCC guard is still ARMED on the NON-identity transform write
-/// path: a mixed (rewrite-arm) MERGE into a `bucket(4, id)` table, raced by a conflicting
-/// concurrent append arrives mid-commit, it is LOUDLY rejected (non-retryable
-/// `validate_no_conflicting_data`). Removing the transform gate must not have exposed an
-/// unvalidated append. Mirrors the identity WG1-P5a on a transform-partitioned table; the
-/// `commit` seam is partition-agnostic, so the same guard fires. Dropping
-/// `validate_no_conflicting_data` on the MERGE commit reddens this exactly as it reddens P5a.
+/// PIN R4.
 #[tokio::test]
 async fn merge_bucket_partitioned_rewrite_arm_rejects_conflicting_concurrent_append() {
     let wh = TempDir::new().unwrap();
@@ -973,9 +893,7 @@ async fn merge_bucket_partitioned_rewrite_arm_rejects_conflicting_concurrent_app
 
 // Transform-partitioned MERGE exercises computed fanout and serializable OCC.
 
-/// The live (Added/Existing) DELETE-file entries in the current snapshot's DELETE manifests
-/// — the manifest-level oracle for "this really was a merge-on-read commit", plus the
-/// partition stamp each delete file carries.
+/// The live DELETE-file entries in the current snapshot's DELETE manifests.
 async fn live_delete_files(table: &Table) -> Vec<DataFile> {
     let metadata = table.metadata();
     let Some(snapshot) = metadata.current_snapshot() else {
@@ -1003,24 +921,12 @@ async fn live_delete_files(table: &Table) -> Vec<DataFile> {
     files
 }
 
-/// A file's single partition slot, formatted — works for every transform's literal type
-/// (int bucket ordinal, string truncate prefix, date/int temporal), and for the NULL slot.
+/// A file's single partition slot, formatted.
 fn slot_string(file: &DataFile) -> String {
     format!("{:?}", file.partition().fields().first().cloned().flatten())
 }
 
-/// PIN Y3 — a `days(ts)` TEMPORAL transform-partitioned table under
-/// `write.merge.mode = 'merge-on-read'`, end to end through SQL: a matched DELETE and a
-/// not-matched INSERT in one MERGE. Temporal is the transform family whose partition value
-/// is neither the source value (unlike identity) nor an ordinal derived from a hash (unlike
-/// bucket) — a date ordinal — so it is a genuinely independent instance of "the stamp is
-/// the file's own TRANSFORMED partition".
-///
-/// The discriminating assertions: the committed delete file's partition slot must equal the
-/// slot of the DATA FILE the deleted row lives in (day 0), NOT the day the INSERT created
-/// (day 2) and not an empty/default slot; every pre-merge data file survives; and the
-/// insert lands in its own new day partition. Restoring the transform gate → the MERGE
-/// raises `NotImplemented` and `run` panics ⇒ RED.
+/// PIN Y3.
 #[tokio::test]
 async fn merge_days_partitioned_mor_delete_and_insert() {
     const DAY: i64 = 86_400_000_000;
@@ -1046,8 +952,7 @@ async fn merge_days_partitioned_mor_delete_and_insert() {
         2,
         "day 0 and day 1 each get a data file"
     );
-    // The day-0 file is the one holding id=1 — resolved through the scan's `_file` column,
-    // so the expected stamp is READ from the fixture rather than assumed.
+    // The day-0 file is the one holding id=1.
     let day0_path = id_file_pairs(&catalogs, "dymor")
         .await
         .into_iter()
@@ -1061,7 +966,7 @@ async fn merge_days_partitioned_mor_delete_and_insert() {
             .expect("the scanned `_file` is a live data file"),
     );
 
-    // id=1 (day 0) is deleted; id=3 (day 2) is inserted. id=2 (day 1) is untouched.
+    // id=1 (day 0) is deleted; id=3 (day 2) is inserted.
     register_ts_source(&ctx, "updates", &[(1, "x", 0), (3, "c", 2 * DAY)]);
     run(
         &ctx,
@@ -1118,14 +1023,7 @@ async fn merge_days_partitioned_mor_delete_and_insert() {
     );
 }
 
-/// PIN Y6 — the SERIALIZABLE OCC posture is still ARMED on the merge-on-read × transform
-/// path. A `bucket(4, id)` + `merge-on-read` MERGE, raced by a conflicting concurrent
-/// append arrives mid-commit, it is LOUDLY rejected. Two gates could have quietly disarmed
-/// here and neither may: dropping the transform gate must not have exposed an unvalidated
-/// row-delta, and the `RowDelta` commit's `validate_no_conflicting_data_files` (the
-/// merge-on-read analogue of R4's `validate_no_conflicting_data`) must fire on a
-/// transform-partitioned target exactly as it does on an unpartitioned one — the commit
-/// seam is partition-agnostic, and this pin holds that to execution.
+/// PIN Y6 — the SERIALIZABLE OCC posture is still ARMED on the merge-on-read × transform path.
 #[tokio::test]
 async fn merge_bucket_partitioned_mor_rejects_conflicting_concurrent_append() {
     let wh = TempDir::new().unwrap();

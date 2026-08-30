@@ -74,9 +74,7 @@ impl PartitionTransform {
     }
 }
 
-/// ===========================================================================================
 /// Parse one transform spelling (`'ts'`, `'month(ts)'`, or `'bucket(16, id)'`).
-/// ===========================================================================================
 pub(crate) fn parse_transform(spelling: &str, form: &str) -> Result<PartitionTransform> {
     let trimmed = spelling.trim();
     if trimmed.is_empty() {
@@ -179,9 +177,7 @@ pub(crate) fn parse_transform(spelling: &str, form: &str) -> Result<PartitionTra
     }
 }
 
-/// ===========================================================================================
 /// Resolve declared transforms against the table's derived Iceberg schema into an Iceberg spec.
-/// ===========================================================================================
 pub(crate) fn build_partition_spec(
     schema: &iceberg::spec::Schema,
     transforms: &[PartitionTransform],

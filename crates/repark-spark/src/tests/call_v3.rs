@@ -1,6 +1,4 @@
 //! Pins format-v3 maintenance behavior, including lineage and dangling-delete guards.
-//!
-//! Registry rows: `V3-LINEAGE-1` and `V3-DANGLE-1`.
 
 use super::super::*;
 use super::common::*;
@@ -9,9 +7,6 @@ use iceberg::spec::FormatVersion;
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
 
 /// Upgrade an engine-created v2 table to v3 through the fork's transaction action.
-///
-/// This helper avoids session opt-in so default-session and lineage-refusal pins use a fork-valid
-/// v3 table. `Transaction` prevents hand-written metadata from masking the tested behavior.
 async fn upgrade_to_v3(catalog: &Arc<dyn Catalog>, ident: &TableIdent) {
     let table = catalog.load_table(ident).await.expect("load for upgrade");
     let transaction = Transaction::new(&table);
@@ -25,8 +20,7 @@ async fn upgrade_to_v3(catalog: &Arc<dyn Catalog>, ident: &TableIdent) {
         .expect("commit upgrade");
 }
 
-/// Six single-row data files, which is one over Spark's `min-input-files` floor of five, so the
-/// rewrite has real work to do and a zero result cannot be mistaken for "nothing to compact".
+/// Six single-row data files, which is one over Spark's `min-input-files` floor of five.
 async fn seed_six_files(ctx: &SessionContext, catalogs: &CatalogRegistry, table: &str) {
     run(
         ctx,
@@ -45,9 +39,6 @@ async fn seed_six_files(ctx: &SessionContext, catalogs: &CatalogRegistry, table:
 }
 
 /// The fixture is genuinely v3, asserted before anything is concluded from it.
-///
-/// Without this the refusal pin below would still pass if `upgrade_to_v3` silently no-opped and
-/// left a v2 table behind — it would just be passing for a different reason than the one claimed.
 #[tokio::test]
 async fn v3_fixture_really_is_format_v3() {
     let wh = TempDir::new().unwrap();
@@ -69,13 +60,9 @@ async fn v3_fixture_really_is_format_v3() {
     assert_eq!(after.metadata().format_version(), FormatVersion::V3);
 }
 
-/// **The guard.** `rewrite_data_files` refuses a v3 table instead of compacting it.
-///
-/// Spark preserves `_row_id` and `_last_updated_sequence_number` through this rewrite. The fork
-/// reassigns both values, so the router refuses v3 lineage rewrites rather than report false row
-/// history to an unattended operator.
 /// pins: rp-2-fork-repin/C-004
 /// pins: rp-3-fork-repin/C-005
+/// **The guard.** `rewrite_data_files` refuses a v3 table instead of compacting it.
 #[tokio::test]
 async fn call_rewrite_data_files_refuses_a_v3_table_rather_than_reassigning_row_lineage() {
     let wh = TempDir::new().unwrap();
@@ -108,9 +95,6 @@ async fn call_rewrite_data_files_refuses_a_v3_table_rather_than_reassigning_row_
 }
 
 /// The incidental control: v2 still compacts, and still reports five columns.
-///
-/// The guard is a format-version test, so the failure mode worth pinning is that it fires one
-/// version too early and quietly disables compaction on every table the engine actually creates.
 #[tokio::test]
 async fn call_rewrite_data_files_still_compacts_a_v2_table() {
     let wh = TempDir::new().unwrap();
@@ -143,20 +127,6 @@ async fn call_rewrite_data_files_still_compacts_a_v2_table() {
 }
 
 /// The guard's blast-radius argument, pinned instead of asserted.
-///
-/// `V3-LINEAGE-1` claims the refusal costs nothing on tables this engine wrote **by default**,
-/// because CREATE/CTAS without the session opt-in still cannot write a v3 table. That claim is
-/// doing real work — it is why a refusal stricter than Spark is defensible on the drop-in path
-/// — so every default-session door to a v3 table is pinned here rather than left to the prose.
-/// Opt-in CREATE is a separate pin (`opt_in_create_produces_v3_and_rewrite_still_refuses`).
-/// This test lives beside the guard for that reason, not because it is about `CALL`.
-///
-/// The `ALTER` doors are the ones worth having. They are refused **one layer down**, by the
-/// fork's `set_properties` rejecting reserved properties — nothing in this engine looks at
-/// `format-version` on the `ALTER` path. That makes it an upstream behaviour the guard's argument
-/// depends on, and the fork's own doc comment on that function describes the opposite policy
-/// ("the corresponding action is performed"). If the fork ever matches its comment, this pin goes
-/// red and the reachability claim gets revisited before the guard does.
 // pins: v3-2-create-v3-opt-in/C-004, C-008
 #[tokio::test]
 async fn the_engine_still_cannot_produce_a_v3_table() {
@@ -187,8 +157,7 @@ async fn the_engine_still_cannot_produce_a_v3_table() {
         );
     }
 
-    // And the table it did create is still v2 — a refusal that fired after a partial upgrade
-    // would satisfy the loop above while breaking the claim.
+    // And the table it did create is still v2.
     let catalog = catalogs.get("ice").expect("ice catalog");
     let ident = TableIdent::from_strs(["sales", "v2only"]).unwrap();
     assert_eq!(
@@ -203,7 +172,6 @@ async fn the_engine_still_cannot_produce_a_v3_table() {
 }
 
 /// pins: v3-2-create-v3-opt-in/C-005, C-011, C-015
-///
 /// Model: Grok 4.6 xHigh
 #[tokio::test]
 async fn opt_in_create_produces_v3_and_rewrite_still_refuses() {

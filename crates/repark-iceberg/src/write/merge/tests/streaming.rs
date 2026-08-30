@@ -4,10 +4,9 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use datafusion::arrow::array::Int32Array;
 use datafusion::arrow::datatypes::{DataType, Field, Schema as ArrowSchema};
 
-use super::*;
+use super::super::*;
 
-/// A one-column `Int32` batch (`id`) — a trivial payload; the interleaving pin's writer discards
-/// the bytes and only counts writes, so the values never leave the driver.
+/// A one-column `Int32` batch.
 fn id_batch(values: &[i32]) -> RecordBatch {
     let schema = Arc::new(ArrowSchema::new(vec![Field::new(
         "id",
@@ -18,9 +17,7 @@ fn id_batch(values: &[i32]) -> RecordBatch {
         .expect("id batch builds")
 }
 
-/// A [`BatchWriter`] that only COUNTS the batches written into it (no IO) — the sink half of the
-/// interleaving detector. Plugs into the SAME generic `write_stream_into` driver the production
-/// `write_data_files_from_stream` uses, so the pin exercises real driver code.
+/// A [`BatchWriter`] that only COUNTS the batches written into it.
 struct CountingWriter {
     written: Arc<AtomicUsize>,
 }
@@ -38,15 +35,7 @@ impl BatchWriter for CountingWriter {
 
 #[tokio::test]
 async fn write_stream_into_interleaves_writes_with_source_production() {
-    // P2 — the DETERMINISTIC interleaving pin. A source of three batches records, at the instant
-    // it YIELDS each batch (`inspect` fires per poll that produces an item), how many batches the
-    // sink has WRITTEN so far. The streaming driver writes batch k before polling batch k+1, so
-    // the observations climb: [0, 1, 2]. A collect-then-write driver would drain ALL three
-    // batches (observations [0, 0, 0]) before the first write — the mutation P5 flips this pin.
-    //
-    // Deterministic by construction (rule 12 — no RSS, no sleeps, no timing race, no file/roll
-    // coupling): both counters are synchronous atomics read on the same task; the ordering is a
-    // structural property of the pull loop, not a clock.
+    // P2 — the DETERMINISTIC interleaving pin.
     let written = Arc::new(AtomicUsize::new(0));
     let observed_written = Arc::new(Mutex::new(Vec::<usize>::new()));
 
@@ -89,8 +78,7 @@ async fn write_stream_into_interleaves_writes_with_source_production() {
     );
 }
 
-/// A [`BatchWriter`] that sleeps `latency` on every `finish` — models per-file close/upload
-/// latency so the parallel driver can be wall-clock pinned without AWS.
+/// A [`BatchWriter`] that sleeps `latency` on every `finish`.
 struct LatencyFinishWriter {
     latency: std::time::Duration,
     files_to_emit: usize,
@@ -111,7 +99,6 @@ impl BatchWriter for LatencyFinishWriter {
 #[tokio::test]
 async fn parallel_finish_is_faster_than_serial_under_injected_latency() {
     // R-PERF-MERGE-S3 proof pin: N finish operations with injected latency L.
-    // Serial wall ≈ N×L; parallel K=N wall ≈ L. Pin: parallel < 0.5 × serial.
     const N: usize = 4;
     const LATENCY_MS: u64 = 80;
     let latency = std::time::Duration::from_millis(LATENCY_MS);
@@ -235,8 +222,7 @@ async fn parallel_source_error_does_not_finish_sinks() {
     );
 }
 
-/// A sink that fails on its first write — used to pin worker-error preference over the
-/// dispatcher's secondary "channel closed" message.
+/// A sink that fails on its first write.
 struct FailingWriter {
     finishes: Arc<AtomicUsize>,
 }
@@ -252,8 +238,7 @@ impl BatchWriter for FailingWriter {
     }
 }
 
-/// P1-R1: when a worker dies first, the surfaced error is the worker's root cause — not the
-/// dispatcher's generic "channel closed before the source stream was exhausted".
+/// P1-R1: when a worker dies first, the surfaced error is the worker's root cause.
 #[tokio::test]
 async fn parallel_worker_error_preferred_over_channel_closed() {
     const K: usize = 2;

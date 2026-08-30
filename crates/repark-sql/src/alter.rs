@@ -24,9 +24,7 @@ const FORM: &str = "ALTER TABLE";
 /// The Iceberg property the curated `format` key maps onto.
 const FORMAT_PROPERTY: &str = "write.format.default";
 
-/// ===========================================================================================
 /// Execute a stock-parsed `ALTER TABLE catalog.schema.table <op>…`.
-/// ===========================================================================================
 pub(crate) async fn execute_alter_table(
     cx: &EngineContext<'_>,
     alter: &AlterTable,
@@ -132,7 +130,7 @@ async fn invalidate(cx: &EngineContext<'_>, target: &CreateTarget) -> Result<()>
     .await
 }
 
-// === Schema evolution =======================================================================
+// Schema evolution handlers.
 
 /// `ADD COLUMN name <type> [NULL] [COMMENT '…']`, as an optional (nullable) Iceberg column.
 async fn add_column_change(cx: &EngineContext<'_>, column: &ColumnDef) -> Result<SchemaChange> {
@@ -212,7 +210,7 @@ async fn alter_column_change(
     })
 }
 
-/// Types accepted as Iceberg promotion targets. The fork still validates the final operation.
+/// Types accepted as Iceberg promotion targets.
 fn is_promotion_target(new_type: &PrimitiveType) -> bool {
     matches!(
         new_type,
@@ -265,11 +263,9 @@ fn unsupported_operation(operation: &AlterTableOperation) -> DataFusionError {
     ))
 }
 
-// === SET PROPERTIES =========================================================================
+// SET PROPERTIES handlers.
 
-/// ===========================================================================================
 /// Rewrite `SET PROPERTIES` into the stock `SET` options form before parsing.
-/// ===========================================================================================
 pub(crate) fn rewrite_set_properties(sql: &str) -> Option<String> {
     let scrubbed = blank_out_quoted_and_comments(sql);
     if leading_keyword(&scrubbed).as_deref() != Some("ALTER") {
@@ -324,7 +320,7 @@ fn parse_set_properties(options: &[SqlOption]) -> Result<(HashMap<String, String
         let name = key.value.to_ascii_lowercase();
         let reset = is_default_keyword(value);
 
-        // A dotted key is a raw Iceberg property. It is settable only through the hatch.
+        // A dotted key is a raw Iceberg property.
         if name.contains('.') {
             if reset {
                 unsets.push(key.value.clone());

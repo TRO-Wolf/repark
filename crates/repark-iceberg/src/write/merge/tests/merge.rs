@@ -1,11 +1,9 @@
-use super::*;
+use super::super::*;
 
 use datafusion::datasource::MemTable;
 use iceberg::NamespaceIdent;
 
-/// An empty [`PartitionStream`] (yields no batches) — a trivial registerable source for the
-/// scratch-deregister pins, which only exercise [`deregister_merge_scratch`] and so need any
-/// registered table, not a real scan.
+/// An empty [`PartitionStream`].
 #[derive(Debug)]
 struct EmptyTargetStream(SchemaRef);
 
@@ -93,10 +91,6 @@ impl tracing::field::Visit for FieldVisitor {
 }
 
 /// Captures `tracing` WARN event messages (target + rendered message body).
-///
-/// Used so SAF-010 tests fail if both `tracing::warn!` calls are deleted while the function
-/// still returns `Err` — `execute_merge` discards that `Err`, so runtime silence is only
-/// caught by asserting the log side effect.
 struct WarnCapture {
     lines: std::sync::Mutex<Vec<String>>,
 }
@@ -147,8 +141,7 @@ impl tracing::Subscriber for WarnCapture {
     fn exit(&self, _span: &tracing::span::Id) {}
 }
 
-/// SAF-010 / WU-5: missing scratch → DataFusion `Ok(None)` → **WARN** + `Err` naming the
-/// scratch. Deleting the `tracing::warn!` in the `Ok(None)` arm must fail this test.
+/// SAF-010 / WU-5: missing scratch → DataFusion `Ok(None)` → **WARN** + `Err` naming the scratch.
 #[test]
 fn deregister_merge_scratch_warns_when_table_missing() {
     let capture = std::sync::Arc::new(WarnCapture::new());
@@ -202,9 +195,7 @@ fn deregister_merge_scratch_succeeds_when_registered_then_warns_on_second() {
     );
 }
 
-/// SAF-010 / WU-5: when DataFusion returns a hard `Err` from `deregister_table`, the
-/// `Err` arm emits **WARN** with the scratch name (deleting that `tracing::warn!` fails
-/// this test even though `execute_merge` discards the returned `Err`).
+/// SAF-010: a hard `deregister_table` `Err` emits WARN with the scratch name.
 #[test]
 fn deregister_merge_scratch_warns_when_deregister_returns_err() {
     let capture = std::sync::Arc::new(WarnCapture::new());
@@ -229,8 +220,7 @@ fn deregister_merge_scratch_warns_when_deregister_returns_err() {
     );
 }
 
-/// Clause predicates are 3VL-hardened: every applies-test is COALESCE-wrapped so a NULL
-/// predicate means "does not apply" (not "unknown"), including inside first-match CASE arms.
+/// Clause predicates are 3VL-hardened: a NULL predicate means it does not apply.
 #[test]
 fn applies_wraps_predicates_in_coalesce() {
     assert_eq!(MergeSql::applies(None), "TRUE");
@@ -261,8 +251,6 @@ fn applies_wraps_predicates_in_coalesce() {
 }
 
 /// First-match-wins: rewrite CASE is driven by a single `matched_clause_id` (scout #18).
-/// A clause that does not assign a column emits NO branch for it — branch conditions are
-/// mutually exclusive via `clause_id`, so those rows fall to the ELSE (original).
 #[test]
 fn rewrite_case_encodes_clause_order() {
     let spec = spec(
@@ -304,9 +292,7 @@ fn rewrite_case_encodes_clause_order() {
     );
 }
 
-/// DELETE clauses contribute no CASE branch (their rows are filtered out) but DO
-/// claim a `clause_id` slot so later UPDATE branches only fire for their own id, and
-/// `delete_applies` is `clause_id = delete_index`.
+/// DELETE clauses claim a `clause_id` slot so later UPDATE branches fire only for their own id.
 #[test]
 fn delete_clause_shapes_filter_not_projection() {
     let spec = spec(
@@ -411,9 +397,6 @@ fn consume_matched_work_batch_rejects_null_flag_columns() {
 }
 
 /// P2a: Stage B intern shares one `Arc<str>` across pairs for the same path.
-///
-/// Mutation: push `Arc::from(path_str)` per row without intern lookup → `ptr_eq` fails
-/// and strong count no longer equals 1 + `pair_count` for that path.
 #[test]
 fn stage_b_path_intern_shares_arc_across_pairs() {
     let write_schema = Arc::new(arrow_schema());
@@ -488,8 +471,7 @@ fn require_non_null_i64_rejects_null() {
     assert!(err.to_string().contains("NULL match_count"), "got: {err}");
 }
 
-/// [`MergeSql::insert_sql`] encodes NOT MATCHED first-match via `clause_id`,
-/// not O(C²) `NOT applies` chains.
+/// `insert_sql` encodes NOT MATCHED first-match via `clause_id`, not O(C²) `NOT applies` chains.
 #[test]
 fn insert_sql_uses_clause_id_not_oc2_prior_chain() {
     let merge_spec = spec(
@@ -576,8 +558,6 @@ fn rewrite_sql_drops_in_list_when_allowlisted_else_path_semijoin() {
 }
 
 /// Scout #18 generation-time microbench: 20 matched UPDATE clauses × 100 columns.
-/// Asserts O(C) `clause_id` shape (no nested NOT-applies AND-chain) and records wall vs the
-/// residual O(C²) generator (same inputs) for before/after ledger numbers.
 #[test]
 fn rewrite_projection_20_clauses_100_cols_generation_time() {
     const CLAUSE_COUNT: usize = 20;
@@ -607,7 +587,7 @@ fn rewrite_projection_20_clauses_100_cols_generation_time() {
         .collect();
     let schema = ArrowSchema::new(fields);
 
-    // --- residual O(C²) generator (pre-#18 shape) for before numbers -----------------------
+    // --- residual O(C²) generator (pre-#18 shape) for before numbers -----------------------.
     let before_started = std::time::Instant::now();
     let before_projection = legacy_oc2_rewrite_projection(&sql, &schema);
     let before_elapsed = before_started.elapsed();
@@ -616,7 +596,7 @@ fn rewrite_projection_20_clauses_100_cols_generation_time() {
         "legacy generator must emit O(C²) NOT-applies chains"
     );
 
-    // --- scout #18 O(C) path --------------------------------------------------------------
+    // --- scout #18 O(C) path --------------------------------------------------------------.
     let started = std::time::Instant::now();
     let projection = sql.rewrite_projection(&schema);
     let elapsed = started.elapsed();
@@ -705,13 +685,7 @@ fn legacy_oc2_rewrite_projection(sql: &MergeSql<'_>, write_schema: &ArrowSchema)
         .join(", ")
 }
 
-/// PIN (K1 row-identity SQL) — the generated MERGE SQL keys row identity on `(_file, _pos)`,
-/// never the retired `__repark_row_id` (which the streaming target no longer surfaces): the
-/// cardinality check GROUPs on BOTH metadata columns and the insert anti-join tests
-/// `_pos IS NULL`. The two INNER-join queries put the SOURCE first so it is the hash BUILD side
-/// and the streamed target is the probe. Risk: a silent revert to `__repark_row_id` would make
-/// every generated query reference a non-existent column; a `_file`-alone GROUP BY would
-/// mis-count multi-row files (the M-K1-ID correctness mutation).
+/// PIN.
 #[test]
 fn merge_sql_keys_identity_on_file_and_pos() {
     let spec = spec(
@@ -730,16 +704,13 @@ fn merge_sql_keys_identity_on_file_and_pos() {
         discovery.contains("GROUP BY t.\"_file\", t.\"_pos\""),
         "match discovery must group on the (_file, _pos) identity, got: {discovery}"
     );
-    // INNER-join puts the SOURCE first so it is the hash build side and the
-    // streamed target is the probe (`… ) AS s JOIN "scratch" AS t …`).
+    // INNER JOIN puts SOURCE first so it is the hash build side and the target is the probe.
     assert!(
         discovery.contains(") AS s JOIN \"scratch\" AS t"),
         "must build the join on the source (source JOIN target), got: {discovery}"
     );
     let insert = sql.insert_sql(0, &arrow_schema()).unwrap();
-    // Audit M4: the anti-join `_pos` rides through the source-only scope as a sentinel alias —
-    // the outer WHERE keys on the sentinel, and the target alias is NOT in the outer scope
-    // (a target-column reference in a NOT MATCHED condition/VALUES must fail resolution).
+    // Audit M4: the anti-join `_pos` rides through the source-only scope as a sentinel alias.
     assert!(
         insert.contains("t.\"_pos\" AS \"__repark_not_matched_pos\"")
             && insert.contains("WHERE \"__repark_not_matched_pos\" IS NULL"),
@@ -764,8 +735,7 @@ fn insert(columns: &[&str], values: &[&str]) -> InsertClause {
     }
 }
 
-/// Insert projection: named columns take their VALUES expression, nullable unnamed columns
-/// become NULL, required unnamed columns are rejected up front, unknown columns error.
+/// Insert projection: named columns take VALUES; unnamed nullable become NULL, required reject.
 #[test]
 fn insert_projection_validates_columns() {
     let schema = arrow_schema();
@@ -789,8 +759,7 @@ fn insert_projection_validates_columns() {
     assert!(err.to_string().contains("2 columns but 1 VALUES"));
 }
 
-/// A column named twice in the INSERT list is an error (Spark rejects it), never a silent
-/// last-value-wins.
+/// A column named twice in the INSERT list is an error, never a silent last-value-wins.
 #[test]
 fn insert_projection_rejects_duplicate_columns() {
     let schema = arrow_schema();
@@ -808,8 +777,7 @@ fn insert_projection_positional() {
     );
 }
 
-/// An unexpanded `INSERT *` marker reaching SQL generation is an executor bug, never a
-/// silent no-op.
+/// An unexpanded `INSERT *` marker reaching SQL generation is an executor bug.
 #[test]
 fn insert_projection_rejects_unexpanded_star() {
     let schema = arrow_schema();
@@ -821,9 +789,7 @@ fn insert_projection_rejects_unexpanded_star() {
     assert!(err.to_string().contains("unexpanded"));
 }
 
-/// The same guard on the UPDATE side: `validate_update_columns` runs on the expanded spec,
-/// so a surviving `UpdateAll` marker is an internal error (`rewrite_column` would silently
-/// treat it as a no-op).
+/// UPDATE validation runs on the expanded spec, so a leftover `UpdateAll` is an internal error.
 #[test]
 fn validate_update_columns_rejects_unexpanded_star() {
     let schema = arrow_schema();
@@ -838,8 +804,7 @@ fn validate_update_columns_rejects_unexpanded_star() {
     assert!(err.to_string().contains("unexpanded"));
 }
 
-/// Audit BUG-006: `UPDATE SET` / `INSERT` column names resolve case-insensitively
-/// (Spark `caseSensitive=false`).
+/// Audit BUG-006: `UPDATE SET` / `INSERT` column names resolve case-insensitively.
 #[test]
 fn validate_update_columns_case_insensitive() {
     let schema = arrow_schema();
@@ -929,9 +894,7 @@ fn insert_projection_case_insensitive_columns() {
     );
 }
 
-/// Star expansion — Spark's star resolution: every TARGET column takes the same-named
-/// source column (quoted, alias-qualified), extra source columns are ignored, and a spec
-/// without stars is passed through untouched (borrowed, no clone).
+/// Star expansion.
 #[tokio::test]
 async fn expand_star_clauses_resolves_by_name() {
     let ctx = SessionContext::new();
@@ -984,8 +947,7 @@ async fn expand_star_clauses_resolves_by_name() {
     assert!(matches!(untouched, Cow::Borrowed(_)));
 }
 
-/// A target column the source cannot provide is an up-front error naming the column — a
-/// star must never silently NULL-fill.
+/// A target column the source cannot provide is an up-front error naming the column.
 #[tokio::test]
 async fn expand_star_clauses_errors_on_missing_source_column() {
     let ctx = SessionContext::new();
@@ -1010,12 +972,7 @@ async fn expand_star_clauses_errors_on_missing_source_column() {
     assert!(err.to_string().contains("missing from the source: `name`"));
 }
 
-/// PIN PL-5 (WG-4, BUG-007) — star expansion resolves each target column to a differently-cased
-/// source column BY NAME (Spark default `spark.sql.caseSensitive=false`) and references the
-/// ACTUAL source name in the generated SQL. Source `ID`/`NAME` (uppercase), target `id`/`name`:
-/// the assignment/insert TARGET keeps `id`/`name`, but the value binds to `s."ID"`/`s."NAME"`
-/// so DataFusion resolves the source column. Risk: emitting `s."id"` against an `ID` source
-/// column fails to bind, silently dropping the update (the exact-case divergence BUG-007 names).
+/// PIN PL-5.
 #[tokio::test]
 async fn expand_star_clauses_resolves_source_case_insensitively() {
     let ctx = SessionContext::new();
@@ -1062,9 +1019,7 @@ async fn expand_star_clauses_resolves_source_case_insensitively() {
     assert_eq!(values_sql, &["s.\"ID\"", "s.\"NAME\""]);
 }
 
-/// PIN PL-6 (WG-4, BUG-007) — two source columns colliding on one target (`id` AND `ID`) is a
-/// loud AMBIGUOUS error naming both (Spark `reorderColumnsByName` rejects `matched.length > 1`).
-/// Risk: a first-match resolver silently binds one, so the star would drop the other's data.
+/// PIN PL-6 — two source columns colliding on one target is a loud AMBIGUOUS error naming both.
 #[tokio::test]
 async fn expand_star_clauses_rejects_case_ambiguous_source() {
     let ctx = SessionContext::new();
@@ -1099,8 +1054,7 @@ fn sql_literal_escapes_quotes() {
     assert_eq!(sql_literal("plain"), "'plain'");
 }
 
-/// Schema-derived column names survive embedded double quotes in every generated-SQL
-/// interpolation site (a `"` in a column name must not break out of the identifier).
+/// Schema-derived names keep embedded double quotes from breaking generated-SQL identifiers.
 #[test]
 fn generated_sql_quotes_identifiers() {
     assert_eq!(quote_ident("plain"), "\"plain\"");
@@ -1123,9 +1077,7 @@ fn generated_sql_quotes_identifiers() {
 }
 
 // === idents ===
-/// ===========================================================================================
 /// MERGE `quote_ident` joins the shared Spark/DF injection-probe battery (`idents::probes`).
-/// ===========================================================================================
 #[test]
 fn qi1_merge_quote_ident_joins_spark_injection_battery() {
     for probe in crate::write::idents::probes::SPARK_INJECTION_PROBES {

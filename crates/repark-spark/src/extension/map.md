@@ -1,5 +1,7 @@
 # map — repark-spark/src/extension
 
+CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated comments rewritten as complete sentences (D-001).
+
 ## Purpose
 
 File-backed tests for `SparkExtension` (`../extension.rs`): the `configure` hook's

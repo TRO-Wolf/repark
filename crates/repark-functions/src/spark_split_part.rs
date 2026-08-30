@@ -1,7 +1,4 @@
 //! Spark `split_part` — STRING `partNum` implicitly casts to INT (F-6c).
-//!
-//! DataFusion accepts an integer third argument, while Spark also casts STRING `partNum` to INT.
-//! This overwrite widens coercion and keeps the upstream kernel.
 
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
@@ -15,9 +12,7 @@ use datafusion::logical_expr::{
     TypeSignature, Volatility,
 };
 
-/// ===========================================================================================
 /// Spark `split_part` UDF (overwrites DataFusion's integer-only `partNum`).
-/// ===========================================================================================
 #[must_use]
 pub fn split_part_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkSplitPart::new()))

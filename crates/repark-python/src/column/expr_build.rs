@@ -1,6 +1,4 @@
 //! Expression-construction helpers for [`super::PyColumn`].
-//!
-//! Cast, alias, projection, reciprocal-trig, and aggregate expression builders.
 
 use datafusion::arrow::datatypes::{DataType, TimeUnit};
 use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
@@ -33,11 +31,7 @@ pub(super) fn strip_outer_alias(expr: Expr) -> Expr {
     }
 }
 
-/// ===========================================================================================
 /// Collapse nested `Alias` layers to one outer rename.
-/// ===========================================================================================
-///
-/// The outer alias name, qualifier, and field metadata remain part of the projection identity.
 pub(super) fn collapse_identity_alias_chain(expr: Expr) -> Expr {
     let Expr::Alias(alias) = expr else {
         return expr;
@@ -59,9 +53,7 @@ pub(super) fn collapse_identity_alias_chain(expr: Expr) -> Expr {
     inner.alias_qualified_with_metadata(relation, name, metadata)
 }
 
-/// ===========================================================================================
 /// Pull the first projection expression out of an analyzed/optimized plan.
-/// ===========================================================================================
 pub(super) fn extract_projection_expr(plan: &LogicalPlan) -> PyResult<Expr> {
     match plan {
         LogicalPlan::Projection(projection) => projection
@@ -80,9 +72,7 @@ pub(super) fn extract_projection_expr(plan: &LogicalPlan) -> PyResult<Expr> {
 }
 
 impl PyColumn {
-    /// ===========================================================================================
     /// Build Spark `collect_list` / `collect_set` semantics for NULL and empty groups.
-    /// ===========================================================================================
     pub(super) fn collect_aggregate(argument: Expr, distinct: bool) -> PyResult<Self> {
         let base = array_agg_udaf().call(vec![argument]);
         let aggregated = if distinct {
@@ -103,9 +93,7 @@ impl PyColumn {
         Ok(Self::from_expr(expr))
     }
 
-    /// ===========================================================================================
     /// Build a single count-distinct argument, nulling multi-column tuples when any field is NULL.
-    /// ===========================================================================================
     pub(super) fn count_distinct_argument(args: Vec<Expr>) -> PyResult<Expr> {
         if args.len() == 1 {
             return args.into_iter().next().ok_or_else(|| {
@@ -131,19 +119,7 @@ impl PyColumn {
 /// Spark's `TimestampType` is microsecond precision; map it to an Arrow microsecond timestamp.
 pub(super) const TIMESTAMP_UNIT: TimeUnit = TimeUnit::Microsecond;
 
-/// ===========================================================================================
 /// Parse a canonical engine type string into an Arrow [`DataType`] for `CAST`.
-///
-/// Accepted primitive and parameterized cast tokens are:
-/// - width integers: `byte`/`tinyint` → Int8, `short`/`smallint` → Int16,
-///   `int`/`integer` → Int32,
-///   `long`/`bigint` → Int64
-/// - floats: `float` → Float32, `double` → Float64
-/// - temporal / other primitives: `string`, `boolean`, `date`, `timestamp`, `binary`
-/// - parameterized: `decimal(p,s)` → Decimal128
-///
-/// Unknown tokens return `Err` so the boundary can raise [`crate::AnalysisException`].
-/// ===========================================================================================
 pub(super) fn parse_data_type(spec: &str) -> Result<DataType, String> {
     match spec.trim() {
         "string" => Ok(DataType::Utf8),
@@ -166,8 +142,6 @@ pub(super) fn parse_data_type(spec: &str) -> Result<DataType, String> {
 }
 
 /// Parse a `decimal(precision,scale)` type string into an Arrow `Decimal128`.
-///
-/// Invalid precision or scale returns a descriptive error.
 fn parse_decimal_type(spec: &str) -> Result<DataType, String> {
     let inner = spec
         .strip_prefix("decimal(")

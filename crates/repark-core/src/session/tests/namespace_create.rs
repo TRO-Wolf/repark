@@ -9,7 +9,7 @@ use std::sync::Arc;
 use iceberg::{Catalog, NamespaceIdent};
 use tempfile::TempDir;
 
-use super::*;
+use super::super::*;
 
 async fn session_with_catalog(warehouse: &str) -> (ReparkSession, Arc<dyn Catalog>) {
     let session = ReparkSession::builder().build().unwrap();

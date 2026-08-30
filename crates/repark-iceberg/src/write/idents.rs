@@ -1,20 +1,6 @@
 //! Shared Spark/DataFusion identifier quoting and path-escape needles (CQ-006/007).
-//!
-//! Single source for the triple-maintained path-escape mirrors (Python `session.py`,
-//! `repark-session`, `repark-sql`) and the Spark-dialect `quote_ident` used by MERGE SQL
-//! generation. PostgreSQL keeps its own dialect helper in `repark-postgres` — never unify
-//! across dialects.
-//!
-//! Security: over-quote is acceptable; under-quote is not.
-//! Tags: path-escape mirror; C2-SEC-003 / C1-SEC-001 (sql CTAS compose).
 
-/// ===========================================================================================
 /// Double-quote a SQL identifier for the Spark / DataFusion dialect.
-///
-/// Embedded `"` become `""` so a name containing quotes remains a single identifier token.
-/// Always quotes — even plain bare names — matching the facade always-quote call-site class
-/// (session / column / dataframe / ML).
-/// ===========================================================================================
 #[must_use]
 pub fn quote_ident_spark(name: &str) -> String {
     format!("\"{}\"", name.replace('"', "\"\""))
@@ -29,17 +15,7 @@ pub enum PathEscapeKind {
     Separator,
 }
 
-/// ===========================================================================================
 /// Classify a warehouse-path segment against the shared path-escape needles.
-///
-/// Returns [`None`] when the segment is safe. Callers map the kind into their error type
-/// (DataFusion plan error, `String`, Python `PySparkValueError`). Empty segments are **not**
-/// handled here — `repark-sql` additionally refuses empty before calling this (compose-time).
-///
-/// Needles (byte-identical across Python / repark-session / repark-sql): exact `.` or `..`,
-/// or contains `..` → [`PathEscapeKind::Traversal`]; contains `/` or `\` →
-/// [`PathEscapeKind::Separator`].
-/// ===========================================================================================
 #[must_use]
 pub fn path_escape_kind(segment: &str) -> Option<PathEscapeKind> {
     if segment == "." || segment == ".." || segment.contains("..") {
@@ -52,12 +28,6 @@ pub fn path_escape_kind(segment: &str) -> Option<PathEscapeKind> {
 }
 
 /// Shared injection / path-escape probe strings (Spark/DF dialect + path-escape).
-///
-/// Harvested from PG probes (adapted to Spark always-quote expectations) and the
-/// 2026-08-03 audit path-escape surface. Used by unit tests in this crate, `repark-sql`,
-/// `repark-session`, and the Python `_idents` conformance suite — keep probe strings in lockstep
-/// with `python/repark/src/repark/_idents.py::INJECTION_PROBES` /
-/// `PATH_ESCAPE_PROBES`.
 pub mod probes {
     /// Hostile identifier strings that must remain a single quoted token after Spark quoting.
     pub const SPARK_INJECTION_PROBES: &[&str] = &[
@@ -71,7 +41,6 @@ pub mod probes {
     ];
 
     /// Path-escape segments that must be rejected (segment, expected kind tag).
-    /// Kind tags: `"traversal"` | `"separator"`.
     pub const PATH_ESCAPE_PROBES: &[(&str, &str)] = &[
         (".", "traversal"),
         ("..", "traversal"),
@@ -89,9 +58,7 @@ pub mod probes {
 mod tests {
     use super::*;
 
-    /// ===========================================================================================
     /// Spark `quote_ident`: plain + embedded quote + injection payloads stay single tokens.
-    /// ===========================================================================================
     #[test]
     fn quote_ident_spark_doubles_embedded_quotes() {
         assert_eq!(quote_ident_spark("plain"), "\"plain\"");
@@ -102,15 +69,12 @@ mod tests {
         );
     }
 
-    /// ===========================================================================================
     /// Injection probes: quoted form starts/ends with `"` and round-trips the payload.
-    /// ===========================================================================================
     #[test]
     fn spark_injection_probes_are_single_quoted_tokens() {
         for probe in probes::SPARK_INJECTION_PROBES {
             let quoted = quote_ident_spark(probe);
-            // Independent oracle: undouble round-trip alone
-            // false-passes under-escape (forgetting to double embedded `"`).
+            // Independent oracle: undouble round-trip alone false-passes under-escape.
             let expected = format!("\"{}\"", probe.replace('"', "\"\""));
             assert_eq!(quoted, expected, "under-quote residual for {probe:?}");
             let inner = &quoted[1..quoted.len() - 1];
@@ -121,9 +85,7 @@ mod tests {
         }
     }
 
-    /// ===========================================================================================
     /// Path-escape needle table: every probe maps to the expected kind; safe names pass.
-    /// ===========================================================================================
     #[test]
     fn path_escape_probes_match_shared_table() {
         for &(segment, expected) in probes::PATH_ESCAPE_PROBES {
@@ -141,9 +103,7 @@ mod tests {
         }
     }
 
-    /// ===========================================================================================
     /// Cross-lang lockstep freeze: probe literals must match Python `_idents`.
-    /// ===========================================================================================
     #[test]
     fn probe_tables_lockstep_frozen_with_python_ssot() {
         assert_eq!(

@@ -1,10 +1,4 @@
 //! Write-path concurrency knobs (session conf only — never table properties).
-//!
-//! [`MAX_CONCURRENT_FILES_KEY`] (`repark.write.max-concurrent-files`) caps how many Iceberg
-//! data-file (or position-delete-file) writers may be open and writing at once. Default **4**;
-//! **1** restores the historical serial `while` loop. The key is an **engine execution** knob
-//! (builder `.config` + DataFusion session extension), not an Iceberg `write.*` table property —
-//! it must not travel with the table or be readable by another engine as a format contract.
 
 use datafusion::common::config::ConfigExtension;
 use datafusion::common::extensions_options;
@@ -23,7 +17,7 @@ pub const DEFAULT_MAX_CONCURRENT_FILES: usize = 4;
 /// Validated write-path concurrency.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct WriteConcurrency {
-    /// Maximum number of concurrent file-writer tasks (≥ 1). `1` is serial.
+    /// Maximum number of concurrent file-writer tasks (≥ 1).
     pub max_concurrent_files: usize,
 }
 
@@ -37,7 +31,6 @@ impl Default for WriteConcurrency {
 
 impl WriteConcurrency {
     /// Build from a validated positive count.
-    ///
     /// # Errors
     /// Returns a DataFusion plan error when `max_concurrent_files < 1`.
     pub fn new(max_concurrent_files: usize) -> Result<Self> {
@@ -52,7 +45,6 @@ impl WriteConcurrency {
     }
 
     /// Parse a raw conf string (`"4"`, `"1"`, …).
-    ///
     /// # Errors
     /// Non-integer or `< 1` values fail loud with the key name in the message.
     pub fn parse(raw: &str) -> Result<Self> {
@@ -65,8 +57,7 @@ impl WriteConcurrency {
     }
 }
 
-// DataFusion extension: SET / options key is `repark.write.max_concurrent_files` (underscore
-// field). The hyphen user spelling is translated at session-build time.
+// DataFusion extension: SET / options key is `repark.write.max_concurrent_files`.
 extensions_options! {
     /// RePark write-path execution knobs (session-scoped, not table properties).
     pub struct ReparkWriteConfig {
@@ -79,9 +70,7 @@ impl ConfigExtension for ReparkWriteConfig {
     const PREFIX: &'static str = "repark.write";
 }
 
-/// ===========================================================================================
 /// Attach [`ReparkWriteConfig`] to a [`SessionConfig`] (called from session build).
-/// ===========================================================================================
 #[must_use]
 pub fn with_write_concurrency(
     config: SessionConfig,
@@ -92,9 +81,7 @@ pub fn with_write_concurrency(
     })
 }
 
-/// ===========================================================================================
 /// Resolve write concurrency from a live [`SessionContext`] (extension or default).
-/// ===========================================================================================
 #[must_use]
 pub fn concurrency_from_ctx(ctx: &SessionContext) -> WriteConcurrency {
     ctx.copied_config()
@@ -107,11 +94,7 @@ pub fn concurrency_from_ctx(ctx: &SessionContext) -> WriteConcurrency {
         .unwrap_or_default()
 }
 
-/// ===========================================================================================
 /// Pull `repark.write.max-concurrent-files` (or underscore alt) from a builder conf map.
-/// Missing key → default; present but invalid → error.
-/// ===========================================================================================
-///
 /// # Errors
 /// Invalid integer or value `< 1`.
 pub fn concurrency_from_config_map<S>(

@@ -1,5 +1,4 @@
-/// Column-def CREATE TABLE (schema-only) schema-equals a CTAS twin; empty row count;
-/// **no data write** (zero `*.parquet` under table location; no current snapshot).
+/// Column-def CREATE TABLE schema-equals a CTAS twin; empty row count; **no data write**.
 use super::super::*;
 use super::common::*;
 
@@ -262,8 +261,8 @@ async fn column_def_location_and_ctas_temporary_refuse() {
         "got: {comment_err}"
     );
 
-    // format-version=1 refuse on column-def.
     // pins: v3-2-create-v3-opt-in/C-007
+    // format-version=1 refuse on column-def.
     let fv1 = execute(
         &ctx,
         &catalogs,
@@ -456,8 +455,7 @@ async fn column_def_temporary_refuse_testing_create_ref_and_types() {
     );
 }
 
-/// OR REPLACE column-def wipes prior rows; IF NOT EXISTS preserves schema;
-/// LIKE surfaces `NotImplemented` (not empty-column message).
+/// OR REPLACE column-def wipes prior rows.
 #[tokio::test]
 async fn column_def_or_replace_wipe_if_not_exists_and_like() {
     let wh = TempDir::new().unwrap();
@@ -530,8 +528,7 @@ async fn column_def_or_replace_wipe_if_not_exists_and_like() {
     );
 }
 
-/// One-row CTAS type smoke — `current_timestamp` / zone-suffixed `to_timestamp`
-/// store Iceberg `timestamptz`, including an identity-partitioned table (Q5 rider).
+/// One-row CTAS type smoke.
 #[tokio::test]
 async fn ctas_of_instant_producers_stores_timestamptz() {
     use iceberg::spec::PrimitiveType;
@@ -722,8 +719,8 @@ async fn or_replace_applies_requested_v3_and_alter_still_refuses_with_opt_in() {
     );
 }
 
-/// V3R-1: `geometry` / `geography` DECLARED out (`V3-GEO-1`), `variant` stays V3-6; all refuse.
 /// pins: v3r-1-rulings/C-008, C-009
+/// V3R-1: `geometry` / `geography` DECLARED out (`V3-GEO-1`), `variant` stays V3-6; all refuse.
 #[tokio::test]
 async fn v3_type_columns_geometry_geography_variant_refuse_naming_the_type() {
     let wh = TempDir::new().unwrap();

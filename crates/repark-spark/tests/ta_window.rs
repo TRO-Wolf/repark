@@ -1,7 +1,4 @@
 //! End-to-end TA window UDF tests through `spark.sql`.
-//!
-//! Each SQL result is bit-identical to the direct [`repark_ta`] kernel on the shared 5000-row
-//! fixture. The fixture remains the crate's golden path; no values are re-recorded here.
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -35,8 +32,7 @@ fn fixture(name: &str) -> Vec<f64> {
         .collect()
 }
 
-/// Build a Spark-doored session with the extension and dialect installed as defaults. The extension
-/// composes `repark_ta::TaExtension`, which registers the `ta_*` window UDFs.
+/// Build a Spark-doored session with the extension and dialect installed as defaults.
 fn spark_session() -> ReparkSession {
     let dialect: Arc<dyn SqlDialect> = Arc::new(SparkDialect);
     ReparkSession::builder()
@@ -46,8 +42,7 @@ fn spark_session() -> ReparkSession {
         .expect("session")
 }
 
-/// A session with the OHLC fixture registered as temp view `bars` (columns `ts`, `open`, `high`,
-/// `low`, `close`), plus the four input series for the direct kernel oracle.
+/// A session with OHLC fixture temp view `bars` plus the four input series for the direct kernel.
 fn session_with_bars() -> (ReparkSession, Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>) {
     let open = fixture("fixture_open");
     let high = fixture("fixture_high");
@@ -88,8 +83,7 @@ fn session_with_bars() -> (ReparkSession, Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>
     (session, open, high, low, close)
 }
 
-/// Run `SELECT {expr} AS v FROM bars ORDER BY ts` and return column `v` as `Vec<f64>`, in ts order
-/// (the same index order as the fixture, so it aligns element-for-element with the kernel output).
+/// Run `SELECT {expr} AS v FROM bars ORDER BY ts` and return column `v` as `Vec<f64>`, in ts order.
 async fn window_column(session: &ReparkSession, expr: &str) -> Vec<f64> {
     let sql = format!("SELECT {expr} AS v FROM bars ORDER BY ts");
     let batches = session
@@ -375,8 +369,7 @@ async fn sql_route_multi_series_kernels_match_the_kernel() {
             "ta_stochf_fastd(high, low, close, 5, 3, 7)",
             stochf(&high, &low, &close, 5, 3, 7).unwrap().1,
         ),
-        // WG5 sweep-up: NATR (H/L/C + period), BETA (two-series + period), and the four no-period
-        // O/H/L/C price transforms.
+        // WG5 sweep-up: NATR, BETA, and the four no-period O/H/L/C price transforms.
         (
             "ta_natr(high, low, close, 14)",
             natr(&high, &low, &close, 14).unwrap(),
@@ -435,8 +428,7 @@ async fn sql_route_parked_four_match_the_kernel() {
 
 #[tokio::test]
 async fn sql_route_partition_by_scopes_the_series() {
-    // Two interleaved symbols in one table; PARTITION BY must run the kernel per symbol, so each
-    // symbol's output equals the kernel on that symbol's ordered closes alone.
+    // Two interleaved symbols in one table.
     let close = fixture("fixture_close");
     let n = close.len().min(200);
     let close = &close[..n];
@@ -502,13 +494,8 @@ async fn sql_route_partition_by_scopes_the_series() {
 
 #[tokio::test]
 async fn sql_route_multi_batch_partition_matches_the_kernel() {
-    // Residual (d): a partition larger than DataFusion's 8192-row batch size, supplied as several
-    // input RecordBatches, so the window operator must assemble the whole ordered partition across
-    // batch boundaries before the stateful kernel runs. The engine output must still be
-    // `to_bits`-identical to the kernel on the full series — proving no per-batch truncation.
+    // Residual (d): a partition larger than 8192 rows arrives as several batches the window joins.
     const N: usize = 12_000; // > 8192, and split into 3 physical batches below.
-    // A deterministic positive series (a small drift + bounded oscillation), reproducible with no
-    // RNG so the fixture is stable across runs.
     #[allow(clippy::cast_precision_loss)]
     let close: Vec<f64> = (0..N)
         .map(|i| {
@@ -581,8 +568,7 @@ async fn sql_route_multi_batch_partition_matches_the_kernel() {
 
 #[tokio::test]
 async fn sql_route_rejects_a_non_literal_period() {
-    // The scalar period must be a constant literal — a column reference is a plan error, not a
-    // silently-wrong result.
+    // The scalar period must be a constant literal.
     let (session, _open, _high, _low, _close) = session_with_bars();
     let result = session
         .sql("SELECT ta_ema(close, ts) OVER (ORDER BY ts) AS v FROM bars")
@@ -600,9 +586,7 @@ async fn sql_route_rejects_a_non_literal_period() {
     );
 }
 
-// =================================================================================================
-// TA-1 — SQL same-OVER WindowAggExec fusion (Spark door). Plan-shape only; no kernel edits.
-// =================================================================================================
+// TA-1 — SQL same-OVER WindowAggExec fusion (Spark door).
 
 /// Four independent TA windows sharing one named `WINDOW w` (same PARTITION BY / ORDER BY).
 const SAME_NAMED_OVER_SQL: &str = "\
@@ -623,8 +607,7 @@ SELECT \
   ta_mom(close, 10) OVER (PARTITION BY sym ORDER BY ts) AS mom10 \
 FROM (SELECT ts, close, CAST(1 AS BIGINT) AS sym FROM bars) bars_part";
 
-/// Window → filter on an input column → window. Both outputs stay live so dead-code
-/// elimination cannot drop the first `WindowAggExec` and fake a fused count of 1.
+/// Window → filter on an input column → window.
 const INTERVENING_INPUT_FILTER_SQL: &str = "\
 SELECT ema5, \
        ta_sma(close, 10) OVER (PARTITION BY sym ORDER BY ts) AS sma10 \
@@ -637,7 +620,7 @@ FROM ( \
   WHERE close > 0 \
 ) filtered";
 
-/// Window → filter on the first window's output → window. Same live-output rule as above.
+/// Window → filter on the first window's output → window.
 const INTERVENING_OUTPUT_FILTER_SQL: &str = "\
 SELECT ema5, \
        ta_sma(close, 10) OVER (PARTITION BY sym ORDER BY ts) AS sma10 \
@@ -736,8 +719,7 @@ async fn assert_window_agg_exec_count(
 
 #[tokio::test]
 async fn sql_same_named_over_window_fuses_to_one_window_agg_exec() {
-    // Perf-note idea 11: many `ta_*(…) OVER w` sharing PARTITION BY / ORDER BY must plan
-    // one WindowAggExec. DataFrame-door fusion is N2; this is the Spark-door SQL pin.
+    // Many `ta_*() OVER w` sharing PARTITION BY and ORDER BY must plan one WindowAggExec.
     let (session, _open, _high, _low, _close) = session_with_bars();
     assert_window_agg_exec_count(
         &session,
@@ -763,10 +745,7 @@ async fn sql_same_inline_over_spec_fuses_to_one_window_agg_exec() {
 
 #[tokio::test]
 async fn sql_intervening_filter_between_windows_stacks_window_agg_exec() {
-    // Measured truth (2026-08-15, freeze cd0db4f): an intervening filter between two *live*
-    // windows stacks (2 WindowAggExec). Predicate pushdown of `close > 0` does not re-fuse
-    // the two logical WindowAggr nodes. A filter that does not keep `ema5` live is not this
-    // pin — unused first-window output is eliminated and the count collapses to 1 by DCE.
+    // Measured truth: an intervening filter between two *live* windows stacks.
     let (session, _open, _high, _low, _close) = session_with_bars();
     assert_window_agg_exec_count(
         &session,

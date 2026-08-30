@@ -1,6 +1,4 @@
-//! Pins Spark's `CAST(TIMESTAMP AS <numeric>)` epoch-seconds semantics through a real Spark-door
-//! session, with values and Arrow types. Spark floors, so negative fractional instants distinguish
-//! floor from truncation toward zero. The cast is zone-independent.
+//! Pins Spark's `CAST` epoch-seconds semantics through a real Spark-door session.
 
 use std::sync::Arc;
 
@@ -24,8 +22,7 @@ const FRACTION_AFTER_EPOCH: &str = "1970-01-01T00:00:00.75Z";
 const MODERN_INSTANT: &str = "2024-06-15T12:00:00Z";
 const MODERN_INSTANT_WITH_FRACTION: &str = "2024-06-15T12:00:01.999999Z";
 
-/// A tz-aware `timestamp[ns, tz=UTC]` array — nanosecond-backed on purpose: nanoseconds are the
-/// unit that made the divergence 10⁹ rather than 10⁶, so a µs-only fixture would under-test it.
+/// A tz-aware `timestamp[ns, tz=UTC]` array.
 fn utc_instants(rfc3339: &[&str]) -> ArrayRef {
     let text = StringArray::from(rfc3339.to_vec());
     cast(
@@ -46,8 +43,7 @@ fn session_at(zone: &str) -> ReparkSession {
         .expect("a session at a real zone")
 }
 
-/// Register `rfc3339` as a NULLABLE tz-aware `ts` column on table `t`, with a trailing NULL row so
-/// every pin below carries the null mask a production column has.
+/// Register `rfc3339` as a NULLABLE tz-aware `ts` column on table `t`, with a trailing NULL row.
 fn register_instants(session: &ReparkSession, rfc3339: &[&str]) {
     let present = utc_instants(rfc3339);
     let with_null = cast(
@@ -101,12 +97,7 @@ fn cast_literal_sql(rfc3339: &str, target: &str) -> String {
     format!("SELECT CAST(to_timestamp('{rfc3339}') AS {target}) AS epoch_value")
 }
 
-/// ===========================================================================================
 /// Spark door — the charged class: whole instants either side of 1970 cast to epoch SECONDS.
-///
-/// Live Spark 4.1.2: `-1800` and `1718452800`. DataFusion's own cast answers the raw nanosecond
-/// tick (`-1800000000000`), which is what reverting the analyzer rewrite restores.
-/// ===========================================================================================
 #[tokio::test]
 async fn spark_door_timestamp_cast_to_bigint_is_epoch_seconds() {
     let session = session_at(NEW_YORK);
@@ -125,10 +116,7 @@ async fn spark_door_timestamp_cast_to_bigint_is_epoch_seconds() {
     }
 }
 
-/// ===========================================================================================
-/// Spark door — the FLOOR edge, both signs. The rows that separate the fix from the plausible
-/// truncating one (`-0.5 s` would be `0`, `-1.25 s` would be `-1`).
-/// ===========================================================================================
+/// Spark door — the FLOOR edge, both signs.
 #[tokio::test]
 async fn spark_door_timestamp_cast_floors_toward_negative_infinity() {
     let session = session_at(NEW_YORK);
@@ -147,13 +135,7 @@ async fn spark_door_timestamp_cast_floors_toward_negative_infinity() {
     }
 }
 
-/// ===========================================================================================
 /// Spark door — the session zone does NOT move the answer.
-///
-/// A cast reads the instant; only a wall-clock reading would need a zone. Two zones with opposite
-/// UTC offsets (and one DST-observing) are the standing detector for a change that wires the
-/// session zone into this path by accident.
-/// ===========================================================================================
 #[tokio::test]
 async fn spark_door_epoch_seconds_are_zone_independent() {
     for zone in [NEW_YORK, TOKYO, "UTC"] {
@@ -168,12 +150,7 @@ async fn spark_door_epoch_seconds_are_zone_independent() {
     }
 }
 
-/// ===========================================================================================
 /// Spark door — a real timestamp COLUMN, with its null mask.
-///
-/// A folded literal proves nothing about the per-row kernel, and a NULL row is the input a
-/// scaling bug most often turns into a zero.
-/// ===========================================================================================
 #[tokio::test]
 async fn spark_door_timestamp_column_casts_row_by_row_with_nulls() {
     let session = session_at(TOKYO);
@@ -195,12 +172,7 @@ async fn spark_door_timestamp_column_casts_row_by_row_with_nulls() {
     );
 }
 
-/// ===========================================================================================
 /// Spark door — narrower signed integer targets share the class.
-///
-/// The rewrite scales first and leaves width to the outer cast, so `INT`/`SMALLINT` return Spark's
-/// `-1800` in `Int32`/`Int16`.
-/// ===========================================================================================
 #[tokio::test]
 async fn spark_door_narrower_integer_targets_get_the_same_scaling() {
     let session = session_at(NEW_YORK);
@@ -228,12 +200,7 @@ async fn spark_door_narrower_integer_targets_get_the_same_scaling() {
     }
 }
 
-/// ===========================================================================================
 /// Spark door — float and decimal targets keep the FRACTION Spark keeps.
-///
-/// `CAST(ts AS DOUBLE)` of a half-second before the epoch is `-0.5` in Spark, not `-1` and not
-/// `-500000000`. This is the sibling that shares the wrong scaling but NOT the floor.
-/// ===========================================================================================
 #[tokio::test]
 async fn spark_door_real_targets_keep_the_fractional_second() {
     let session = session_at(NEW_YORK);
@@ -274,13 +241,7 @@ async fn spark_door_real_targets_keep_the_fractional_second() {
     );
 }
 
-/// ===========================================================================================
 /// Native `DataFrame` API — the OTHER engine-side entry point.
-///
-/// `Column.cast("long")` crosses PyO3 as a standalone `Expr::Cast` over a frame, with no SQL
-/// string anywhere. It is a distinct user entry point, not a synonym for the SQL door, and it is
-/// the spelling a migrated PySpark job most often uses.
-/// ===========================================================================================
 #[tokio::test]
 async fn native_dataframe_api_cast_is_epoch_seconds() {
     let session = session_at(NEW_YORK);
@@ -294,8 +255,7 @@ async fn native_dataframe_api_cast_is_epoch_seconds() {
         .await
         .expect("the registered table")
         .select(vec![
-            // Built as a bare `Expr::Cast`, which is exactly what `Column.cast("long")` carries
-            // across PyO3 — no schema in hand, no SQL string anywhere.
+            // Built as a bare `Expr::Cast`.
             Expr::Cast(Cast::new(Box::new(col("ts")), DataType::Int64)).alias("epoch_value"),
         ])
         .expect("project the cast");
@@ -317,15 +277,7 @@ async fn native_dataframe_api_cast_is_epoch_seconds() {
     );
 }
 
-/// ===========================================================================================
 /// The REVERSE direction stays correct — the regression fence for a symmetric "fix".
-///
-/// `CAST(<integer> AS TIMESTAMP)` already reads SECONDS in repark, exactly as Spark does (probed
-/// 2026-08-11). Scaling it too would introduce the divergence this test prevents, so the
-/// round trip is pinned rather than assumed. The remaining reverse-direction gap is the Arrow
-/// export TYPE (`timestamp[ns]` with no zone vs Spark's `timestamp[us, tz=UTC]`), which belongs
-/// to registry row TZ-4 and is deliberately not asserted here.
-/// ===========================================================================================
 #[tokio::test]
 async fn the_reverse_direction_still_reads_seconds_and_round_trips() {
     let session = session_at(NEW_YORK);
@@ -348,11 +300,7 @@ async fn the_reverse_direction_still_reads_seconds_and_round_trips() {
     );
 }
 
-/// ===========================================================================================
-/// DATE / TIMESTAMP stay outside TZ-5's *scale*. STRING is B-TZ-4: Spark `Utf8`. DATE is
-/// TZ-8 (session-zone value; type stays `Date32`). Flipped 2026-08-13 (V-3 named A5 overflow
-/// — the string-shape change forced this Spark-door type pin red).
-/// ===========================================================================================
+/// DATE / TIMESTAMP stay outside TZ-5's *scale*.
 #[tokio::test]
 async fn casts_outside_the_class_are_untouched() {
     let session = session_at(NEW_YORK);

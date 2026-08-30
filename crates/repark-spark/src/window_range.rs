@@ -1,11 +1,4 @@
 //! Temporal `RANGE` window-frame conformance for the Spark door.
-//!
-//! DataFusion reads a unit-less datetime bound as an interval whose bare `1` means one month.
-//! Spark refuses that bound for `TIMESTAMP` and reads it as one day for `DATE`. The timestamp path
-//! refuses on the planned tree; the date path rewrites the AST and re-plans so parent column names
-//! remain consistent. Negative or inverted timestamp intervals become Spark-empty frames, while
-//! interval bounds over numeric keys restate to their numeric magnitude. Mixed datetime and
-//! numeric statements stay on the first plan because a statement-wide rewrite cannot separate them.
 
 use std::collections::HashSet;
 use std::ops::ControlFlow;
@@ -29,32 +22,17 @@ use datafusion::sql::sqlparser::tokenizer::Span;
 /// What a planned statement's `RANGE` frames ask the door to do before execution.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum RangeFrameVerdict {
-    /// Nothing to do — no bare-number `RANGE` bound sits over a datetime order key, and no
-    /// G5b-R interval restatement (negative TIMESTAMP offset / `DAY TO SECOND` / numeric
-    /// key) is pending.
+    /// Nothing to do.
     Unchanged,
-    /// Restate the AST and re-plan: DATE-keyed unit-less bounds become `INTERVAL '<n>' DAY`,
-    /// negative / value-inverted TIMESTAMP interval offsets become a Spark-empty frame
-    /// (`FILTER (WHERE false)` over a current-row frame), and `DAY TO SECOND` literals
-    /// become an Arrow-accepted interval string. Only safe when no numeric-keyed unit-less
-    /// bound in the same statement would be caught by that restatement.
+    /// Restate the AST and re-plan.
     RestateBareBoundsAsDays,
-    /// Restate every `RANGE` `INTERVAL 'n' UNIT` bound to the unit-less number `n`
-    /// (Spark 4.1.2 over a numeric order key: unit ignored). Only safe when the
-    /// statement has no datetime-keyed interval frame that must stay an interval.
+    /// Restate every `RANGE` `INTERVAL 'n' UNIT` bound to the unit-less number `n`.
     RestateIntervalBoundsAsNumeric,
 }
 
-/// ===========================================================================================
 /// Classify a freshly-planned statement's `RANGE` window frames against Spark's rules.
-///
-/// Refuses the TIMESTAMP arm outright (Spark's own error class) and reports whether the DATE
-/// arm needs the AST restatement. Reads the plan; never rewrites it.
-/// ===========================================================================================
-///
 /// # Errors
-/// [`DataFusionError::Plan`] carrying Spark's `DATATYPE_MISMATCH.RANGE_FRAME_INVALID_TYPE` when
-/// a unit-less `RANGE` offset sits over a timestamp order key.
+/// Returns Plan with `RANGE_FRAME_INVALID_TYPE` when a unit-less RANGE sits over a timestamp key.
 pub(crate) fn classify_planned_range_frames(plan: &LogicalPlan) -> Result<RangeFrameVerdict> {
     let mut date_keyed_sites = 0usize;
     let mut other_keyed_sites = 0usize;
@@ -113,11 +91,7 @@ pub(crate) fn classify_planned_range_frames(plan: &LogicalPlan) -> Result<RangeF
     if let Some(error) = refusal {
         return Err(error);
     }
-    // The restatement is statement-wide (the AST carries no resolved order-key type), so it is
-    // only safe when no unit-less RANGE bound in the statement belongs to a numeric-keyed frame.
-    // A mixed DATE/INT bare-number statement keeps its recorded divergence rather than
-    // silently re-scaling the numeric frame to days. A mixed inverted-TIMESTAMP / numeric-bare
-    // statement cannot be restated either — refuse so R3 wrapping cannot ride the mix.
+    // The restatement is statement-wide.
     if negative_timestamp_sites > 0 && other_keyed_sites > 0 {
         return Err(negative_range_offset_error());
     }
@@ -155,9 +129,7 @@ enum FrameSite {
     NumericKeyedInterval,
 }
 
-/// ===========================================================================================
 /// Classify one window function's frame; `Ok(None)` when it carries no unit-less `RANGE` bound.
-/// ===========================================================================================
 fn classify_one_frame(
     params: &WindowFunctionParams,
     input_schema: &datafusion::common::DFSchemaRef,
@@ -208,9 +180,7 @@ fn classify_one_frame(
         DataType::Timestamp(_, _)
             if inverted && planned_frame_is_same_kind_magnitude_invert(&params.window_frame) =>
         {
-            // Spark 4.1.2 refuses same-kind magnitude invert (`2 FOLLOWING AND 1 FOLLOWING`,
-            // including after `-2 PRECEDING AND -1 PRECEDING` flips). Empty is the
-            // CURRENT-ROW kind-invert class only. Never execute: wrapping is the DF defect.
+            // Spark 4.1.2 refuses same-kind magnitude invert.
             Err(window_frame_wrong_comparison_error(
                 &params.window_frame.to_string(),
             ))
@@ -275,11 +245,6 @@ fn bound_is_interval_shaped(bound: &WindowFrameBound) -> bool {
 }
 
 /// True when, after sign-normalizing each bound, the start sits strictly after the end.
-///
-/// Kind invert (`FOLLOWING` then `CURRENT ROW`) and same-kind magnitude invert
-/// (`2 FOLLOWING AND 1 FOLLOWING`, including after `-2 PRECEDING AND -1 PRECEDING` flips)
-/// are both invert. DataFusion's start≤end check is kind-only, so the magnitude case wraps
-/// (`count(*)` = -1) unless we restated it first.
 fn planned_frame_is_value_inverted(frame: &datafusion::logical_expr::WindowFrame) -> bool {
     if frame.units != WindowFrameUnits::Range {
         return false;
@@ -293,8 +258,7 @@ fn planned_frame_is_value_inverted(frame: &datafusion::logical_expr::WindowFrame
     )
 }
 
-/// Same-kind magnitude invert: both bounds are finite offsets and start sits after end
-/// (`2 FOLLOWING AND 1 FOLLOWING`). Distinct from kind invert (`FOLLOWING` vs `CURRENT ROW`).
+/// Same-kind magnitude invert: both bounds are finite offsets and start sits after end.
 fn planned_frame_is_same_kind_magnitude_invert(
     frame: &datafusion::logical_expr::WindowFrame,
 ) -> bool {
@@ -332,8 +296,7 @@ fn scalar_offset_axis(value: &ScalarValue) -> Option<Axis> {
     }
 }
 
-/// Utf8 offset text of a value bound when it is interval-shaped (`"1 DAY"`, `"-1 DAY"`,
-/// `"1 12:00:00 DAY"`). Bare numbers and unbounded bounds yield `None`.
+/// Utf8 offset text of a value bound when it is interval-shaped.
 fn interval_bound_text(bound: &WindowFrameBound) -> Option<&str> {
     let scalar = match bound {
         WindowFrameBound::Preceding(value) | WindowFrameBound::Following(value) => value,
@@ -352,8 +315,7 @@ fn interval_bound_text(bound: &WindowFrameBound) -> Option<&str> {
     None
 }
 
-/// The still-`Utf8` offset text of a value bound, when it is a unit-less number (`"1"`, `"2.5"`,
-/// `"-1"`). An interval-shaped offset (`"1 DAY"`) and an unbounded bound both yield `None`.
+/// The still-`Utf8` offset text of a value bound, when it is a unit-less number.
 fn bare_number_bound_text(bound: &WindowFrameBound) -> Option<&str> {
     let scalar = match bound {
         WindowFrameBound::Preceding(value) | WindowFrameBound::Following(value) => value,
@@ -369,13 +331,7 @@ fn bare_number_bound_text(bound: &WindowFrameBound) -> Option<&str> {
     Some(trimmed)
 }
 
-/// ===========================================================================================
 /// Spark 4.1.2's refusal for a unit-less `RANGE` offset over a timestamp order key.
-///
-/// Recorded verbatim from the live oracle in the G5b §0 recon (`spark.sql.ansi.enabled=true`,
-/// `local[2]`); only the window-spec rendering is ours, because Spark quotes its own resolved
-/// plan text there and we have no equivalent to quote.
-/// ===========================================================================================
 fn range_frame_invalid_type_error(order_key: &str, window_frame: &str) -> DataFusionError {
     DataFusionError::Plan(format!(
         "[DATATYPE_MISMATCH.RANGE_FRAME_INVALID_TYPE] Cannot resolve \"(ORDER BY {order_key} \
@@ -385,13 +341,7 @@ fn range_frame_invalid_type_error(order_key: &str, window_frame: &str) -> DataFu
     ))
 }
 
-/// ===========================================================================================
-/// Refusal when a negative TIMESTAMP `RANGE` offset shares a statement with a numeric
-/// unit-less bound, so the statement-wide AST restatement cannot run.
-///
-/// The wrapping class (release `count(*)` = -1 / debug panic) must not survive. Mixed
-/// statements take this loud out instead of executing the inverted search.
-/// ===========================================================================================
+/// Refuse when a negative TIMESTAMP RANGE offset shares a statement with a numeric unit-less bound.
 fn negative_range_offset_error() -> DataFusionError {
     DataFusionError::Plan(
         "[UNSUPPORTED.NEGATIVE_RANGE_OFFSET] RANGE frame with a negative interval offset \
@@ -403,8 +353,7 @@ fn negative_range_offset_error() -> DataFusionError {
     )
 }
 
-/// Spark 4.1.2's refusal when a RANGE frame's lower bound sits after its upper bound
-/// (same-kind magnitude invert after sign-normalize). Recorded live under MARKER=y1-g5br-fix.
+/// Spark 4.1.2's refusal when a RANGE frame's lower bound sits after its upper bound.
 fn window_frame_wrong_comparison_error(window_frame: &str) -> DataFusionError {
     DataFusionError::Plan(format!(
         "[DATATYPE_MISMATCH.SPECIFIED_WINDOW_FRAME_WRONG_COMPARISON] Cannot resolve \
@@ -413,12 +362,7 @@ fn window_frame_wrong_comparison_error(window_frame: &str) -> DataFusionError {
     ))
 }
 
-/// ===========================================================================================
 /// Restate `RANGE` frame bounds the DATE / G5b-R arms need, then the caller re-plans.
-///
-/// Restate DATE bounds as day intervals and preserve the surrounding AST so window schema
-/// references remain valid when the caller re-plans.
-/// ===========================================================================================
 pub(crate) fn rewrite_bare_range_bounds_to_days(statement: &mut Statement) {
     let mut visitor = BareRangeBoundsAsDays {
         inverted_named_windows: HashSet::new(),
@@ -427,14 +371,7 @@ pub(crate) fn rewrite_bare_range_bounds_to_days(statement: &mut Statement) {
     let _ = VisitMut::visit(statement, &mut visitor);
 }
 
-/// ===========================================================================================
 /// Quote `INTERVAL 1 DAY` (Number) as `INTERVAL '1' DAY` in `RANGE` frame bounds (R1).
-///
-/// DataFusion's `convert_frame_bound_to_scalar_value` accepts only `SingleQuotedString`
-/// inside an interval bound. Spark 4.1.2 accepts the unquoted spelling and answers the
-/// same table as the quoted form. Called from `spark_ast` *before* first plan, and again
-/// on every restatement re-parse (the rewrite starts from the original SQL text).
-/// ===========================================================================================
 pub(crate) fn quote_unquoted_interval_range_bounds(statement: &mut Statement) {
     let mut visitor = QuoteUnquotedIntervalBounds;
     let _ = VisitMut::visit(statement, &mut visitor);
@@ -531,14 +468,7 @@ fn quote_unquoted_interval_value(value: &mut AstExpr) {
     }
 }
 
-/// ===========================================================================================
 /// Restate `RANGE` `INTERVAL 'n' UNIT` bounds to the unit-less number `n` (R5).
-///
-/// Applied only when [`classify_planned_range_frames`] returned
-/// [`RangeFrameVerdict::RestateIntervalBoundsAsNumeric`]: every interval site in the
-/// statement sits over a numeric order key, so statement-wide conversion matches Spark
-/// (unit ignored). The caller re-plans.
-/// ===========================================================================================
 pub(crate) fn rewrite_interval_range_bounds_to_numeric(statement: &mut Statement) {
     let mut visitor = IntervalBoundsAsNumeric;
     let _ = VisitMut::visit(statement, &mut visitor);
@@ -638,9 +568,7 @@ fn interval_leading_number_text(interval: &Interval) -> Option<String> {
 
 /// The visitor behind [`rewrite_bare_range_bounds_to_days`].
 struct BareRangeBoundsAsDays {
-    /// Named `WINDOW w AS (…)` specs that were inverted and restated to a current-row
-    /// frame. Each `OVER w` reference must also get `FILTER (WHERE false)` so the
-    /// restated spec is Spark-empty, not a peer-group window.
+    /// Named `WINDOW w AS (…)` specs that were inverted and restated to a current-row frame.
     inverted_named_windows: HashSet<String>,
 }
 
@@ -648,8 +576,7 @@ impl VisitorMut for BareRangeBoundsAsDays {
     type Break = std::convert::Infallible;
 
     fn pre_visit_query(&mut self, query: &mut Query) -> ControlFlow<Self::Break> {
-        // Named windows must be classified before the SELECT-list functions that
-        // reference them (`OVER w`) are visited.
+        // Named windows must be classified before the SELECT-list functions.
         restate_set_expr(&mut query.body, &mut self.inverted_named_windows);
         ControlFlow::Continue(())
     }
@@ -675,8 +602,7 @@ impl VisitorMut for BareRangeBoundsAsDays {
     }
 }
 
-/// Reach the named `WINDOW w AS (…)` clauses of every `SELECT` in a query body. Nested
-/// queries get their own `pre_visit_query`; set operations are walked to both sides.
+/// Reach the named `WINDOW w AS (…)` clauses of every `SELECT` in a query body.
 fn restate_set_expr(body: &mut SetExpr, inverted_named_windows: &mut HashSet<String>) {
     match body {
         SetExpr::Select(select) => {
@@ -697,10 +623,6 @@ fn restate_set_expr(body: &mut SetExpr, inverted_named_windows: &mut HashSet<Str
 }
 
 /// Restate both bounds of one window spec's `RANGE` frame (no-op for `ROWS` / `GROUPS`).
-///
-/// Returns `true` when the frame is value-inverted after sign-normalize and was rewritten
-/// to a current-row frame; the caller must attach `FILTER (WHERE false)` so the window is
-/// Spark-empty rather than a peer group.
 fn restate_window_spec(spec: &mut WindowSpec) -> bool {
     let Some(frame) = &mut spec.window_frame else {
         return false;
@@ -721,10 +643,6 @@ fn restate_window_spec(spec: &mut WindowSpec) -> bool {
 }
 
 /// Flip `INTERVAL '-n' UNIT PRECEDING` ↔ `INTERVAL 'n' UNIT FOLLOWING` (and the inverse).
-///
-/// DataFusion's start≤end check looks at bound *kind*, not the sign inside the interval
-/// scalar, so a negative PRECEDING is not seen as FOLLOWING and the sliding window wraps.
-/// Returns whether any bound was flipped.
 fn normalize_negative_interval_bounds(frame: &mut AstWindowFrame) -> bool {
     let start_flipped = flip_negative_interval_bound(&mut frame.start_bound);
     let end_flipped = frame
@@ -734,7 +652,7 @@ fn normalize_negative_interval_bounds(frame: &mut AstWindowFrame) -> bool {
     start_flipped || end_flipped
 }
 
-/// Flip one negative interval bound's sign and PRECEDING/FOLLOWING kind. `true` if flipped.
+/// Flip one negative interval bound's sign and PRECEDING/FOLLOWING kind.
 fn flip_negative_interval_bound(bound: &mut AstWindowFrameBound) -> bool {
     {
         let Some(interval) = bound_interval_mut(bound) else {
@@ -757,10 +675,6 @@ fn flip_negative_interval_bound(bound: &mut AstWindowFrameBound) -> bool {
 }
 
 /// True when, after reading each bound's signed position, start sits strictly after end.
-///
-/// Replaces a kind-only check: `-2 PRECEDING AND -1 PRECEDING` sign-normalizes to
-/// `2 FOLLOWING AND 1 FOLLOWING` (same kind, magnitude inverted). Kind-only would miss
-/// that and DataFusion would wrap.
 fn frame_is_value_inverted(frame: &AstWindowFrame) -> bool {
     let start = ast_bound_position(&frame.start_bound);
     let end = frame
@@ -770,8 +684,7 @@ fn frame_is_value_inverted(frame: &AstWindowFrame) -> bool {
     matches!(position_is_strictly_after(start, end), Some(true))
 }
 
-/// `RANGE BETWEEN CURRENT ROW AND CURRENT ROW` — a valid (non-inverted) frame. Combined
-/// with `FILTER (WHERE false)` this is Spark's empty window without a far-future YEAR pair.
+/// `RANGE BETWEEN CURRENT ROW AND CURRENT ROW` — a valid (non-inverted) frame.
 fn write_current_row_range_frame(frame: &mut AstWindowFrame) {
     frame.start_bound = AstWindowFrameBound::CurrentRow;
     frame.end_bound = Some(AstWindowFrameBound::CurrentRow);
@@ -790,7 +703,7 @@ const SECONDS_PER_MINUTE: i128 = 60;
 const SECONDS_PER_HOUR: i128 = 3_600;
 const SECONDS_PER_DAY: i128 = 86_400;
 
-/// A comparable RANGE offset. Distinct axes never compare (1 MONTH vs 1 DAY is unknown).
+/// A comparable RANGE offset.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Axis {
     Months(i128),
@@ -1101,10 +1014,6 @@ fn restate_bound(bound: &mut AstWindowFrameBound) {
 }
 
 /// `INTERVAL '1 12:00:00' DAY TO SECOND` → `INTERVAL '1 days 12 hours 0 minutes 0 seconds'`.
-///
-/// DataFusion concatenates only the leading field (`"1 12:00:00 DAY"`), which Arrow rejects.
-/// Clearing `leading_field` / `last_field` and spelling the parts out is what Arrow's
-/// interval parser accepts (G5b-R2 recon).
 fn restate_day_to_second_interval(interval: &mut Interval) {
     let Some(literal) = interval_quoted_literal(&interval.value) else {
         return;
@@ -1224,15 +1133,12 @@ fn interval_value_span(value: &AstExpr) -> Span {
     }
 }
 
-/// True when a `RANGE` bound needs classify: unit-less number (DATE arm) or any interval
-/// (R1 quote is already applied; R2/R3/R5 classify on the planned interval).
+/// True when a `RANGE` bound needs classify: unit-less number or any interval.
 fn bound_needs_conform(bound: &AstWindowFrameBound) -> bool {
     bound_is_bare_number(bound) || bound_interval(bound).is_some()
 }
 
 /// The AST frame shape a caller can cheaply test for before paying for a second planning pass.
-/// True when any `RANGE` frame in the statement carries a unit-less numeric bound or any
-/// interval (R2 / R3 / R5 / ordinary quoted interval so classify can see a numeric key).
 pub(crate) fn statement_has_bare_range_bound(statement: &Statement) -> bool {
     let mut visitor = BareRangeBoundProbe { found: false };
     // The visitor's Break type is uninhabited — traversal always completes.
@@ -1295,8 +1201,7 @@ fn probe_window_spec(found: &mut bool, spec: &WindowSpec) {
     if frame.end_bound.as_ref().is_some_and(bound_needs_conform) {
         *found = true;
     }
-    // Positive same-kind invert (`2 FOLLOWING AND 1 FOLLOWING`) has no negative and no
-    // field qualifier, so the cheap probes above miss it — it must still enter classify.
+    // Positive same-kind invert has no negative and no field qualifier.
     if frame_is_value_inverted(frame) {
         *found = true;
     }

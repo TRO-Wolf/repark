@@ -140,9 +140,7 @@ const RIGHT_BOTH: &str = "\
 
 const RIGHT_NULL_ONLY: &str = "(SELECT CAST(NULL AS BIGINT) AS k) r ";
 
-/// ===========================================================================================
 /// NULL join keys never match on INNER / LEFT / SEMI / ANTI (native ANSI door).
-/// ===========================================================================================
 #[tokio::test]
 async fn ansi_door_null_keys_never_match_inner_left_semi_anti() {
     let session = native_ansi_session();

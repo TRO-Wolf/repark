@@ -1,7 +1,4 @@
 //! Spark calendar functions and date-part shims.
-//!
-//! Extractors follow Spark indexing and ISO-week rules. Timestamp instants resolve fields in the
-//! session zone; NTZ, DATE, TIME, and string inputs retain their wall-clock semantics.
 
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
@@ -33,13 +30,7 @@ const TIMESTAMP_UNIT: TimeUnit = TimeUnit::Microsecond;
 /// The zone annotation applied to instant arguments before session-zone extraction.
 const INSTANT_ZONE: &str = "UTC";
 
-/// ===========================================================================================
 /// The Spark date functions this module contributes.
-///
-/// Returned as ready-to-register `ScalarUDF`s; `crate::register_all` installs these into a
-/// `SessionContext` after `datafusion-spark`'s own set (so a name clash resolves in our favour).
-/// `day` is registered as a Spark-compatible alias of `dayofmonth`.
-/// ===========================================================================================
 #[must_use]
 pub fn functions() -> Vec<Arc<ScalarUDF>> {
     vec![
@@ -184,9 +175,7 @@ fn coerce_date_arg(arg: &DataType) -> Option<DataType> {
     }
 }
 
-/// ===========================================================================================
 /// Resolve the session zone once per invocation and retain a typed error for invalid carriers.
-/// ===========================================================================================
 fn extraction_time_zone(options: &ConfigOptions) -> Result<Tz> {
     let zone = session_time_zone_from_options(options);
     Tz::from_str(zone).map_err(|error| {
@@ -215,9 +204,7 @@ fn resolve_instant_in_zone(array: &ArrayRef, zone: &str) -> Result<ArrayRef> {
     )?)
 }
 
-/// ===========================================================================================
 /// `DatePartUdf` — vectorized calendar-field extraction with a Spark indexing offset.
-/// ===========================================================================================
 #[derive(Debug)]
 struct DatePartUdf {
     name: &'static str,
@@ -299,9 +286,7 @@ impl ScalarUDFImpl for DatePartUdf {
     }
 }
 
-/// ===========================================================================================
 /// `MakeDate` — Spark `make_date(year, month, day) -> DATE`; invalid dates return NULL.
-/// ===========================================================================================
 #[derive(Debug)]
 struct MakeDate {
     name: &'static str,
@@ -434,10 +419,7 @@ fn invoke_local_micros(
     Ok((micros, zone, source))
 }
 
-/// The `add_months` / `trunc` / TZ-8 `to_date` / `CAST(ts AS DATE)` argument as `Date32` on the
-/// calendar Spark reads it against.
-///
-/// Return a Spark session-zone `Date32` for LTZ values and the stored wall for NTZ values.
+/// Read date-like args as `Date32` on the calendar Spark uses.
 pub(crate) fn invoke_local_dates(array: &ArrayRef, options: &ConfigOptions) -> Result<ArrayRef> {
     if !is_instant(array.data_type()) {
         return Ok(cast(array.as_ref(), &DataType::Date32)?);
@@ -460,15 +442,11 @@ pub(crate) fn invoke_local_dates(array: &ArrayRef, options: &ConfigOptions) -> R
 }
 
 /// A microsecond timestamp (µs since the Unix epoch, UTC) as a naive local-instant datetime.
-/// `None` if the value is more than ~262 000 years from the common era.
 pub(crate) fn datetime_from_micros(micros: i64) -> Option<NaiveDateTime> {
     DateTime::from_timestamp_micros(micros).map(|instant| instant.naive_utc())
 }
 
 /// Localize a zoneless wall clock (ticks as if the digits were UTC) in `zone` → instant µs.
-///
-/// Used by [`crate::instant_ts`] for `TIMESTAMP '…'`, zoneless `to_timestamp`, and
-/// `CAST(str AS TIMESTAMP)`. Gap/fold arms match [`micros_from_local_datetime`] (`ofLocal`).
 pub(crate) fn localize_wall_micros_in_zone(wall_micros: i64, zone: Tz) -> Option<i64> {
     datetime_from_micros(wall_micros)
         .and_then(|naive| micros_from_local_datetime(naive, zone, None))
@@ -495,8 +473,7 @@ fn offset_before_gap(local: NaiveDateTime, zone: Tz) -> Option<FixedOffset> {
     Some(zone.offset_from_utc_datetime(&probe).fix())
 }
 
-/// Convert a local wall to epoch micros using Spark's DST rules: preserve a preferred offset across
-/// overlaps, use the earlier offset otherwise, and resolve gaps with [`offset_before_gap`].
+/// Map a local wall to epoch micros with Spark DST rules for overlaps and gaps.
 pub(crate) fn micros_from_local_datetime(
     local: NaiveDateTime,
     zone: Tz,
@@ -518,8 +495,7 @@ pub(crate) fn micros_from_local_datetime(
     Some(utc.and_utc().timestamp_micros())
 }
 
-/// Number of days in `(year, month)` — computed as the day before the first of the next month, so
-/// leap years fall out naturally. `None` only if the neighbouring first-of-month is unrepresentable.
+/// Days in `(year, month)`: the day before the first of the next month, so leap years fall out.
 fn days_in_month(year: i32, month: u32) -> Option<u32> {
     let (next_year, next_month) = if month == 12 {
         (year + 1, 1)
@@ -530,9 +506,7 @@ fn days_in_month(year: i32, month: u32) -> Option<u32> {
     Some(first_of_next.pred_opt()?.day())
 }
 
-/// ===========================================================================================
-/// Spark `add_months` clamps end-of-month and nonexistent target days; invalid target years return NULL.
-/// ===========================================================================================
+/// Spark `add_months` clamps end-of-month and missing target days; invalid years return NULL.
 fn spark_add_months(date: NaiveDate, months: i32) -> Option<NaiveDate> {
     let source_month_index = date
         .year()
@@ -552,8 +526,7 @@ fn spark_add_months(date: NaiveDate, months: i32) -> Option<NaiveDate> {
     NaiveDate::from_ymd_opt(target_year, target_month, day)
 }
 
-/// The first day of the calendar week (Monday) containing `date` — Spark's `trunc`/`date_trunc`
-/// `'WEEK'` anchor (ISO-8601, matching `weekofyear`).
+/// Monday of the ISO week containing `date`, matching Spark `trunc`/`date_trunc` `'WEEK'`.
 fn start_of_week(date: NaiveDate) -> Option<NaiveDate> {
     let days_back = u64::from(date.weekday().num_days_from_monday());
     date.checked_sub_days(Days::new(days_back))
@@ -565,13 +538,7 @@ fn start_of_quarter(date: NaiveDate) -> Option<NaiveDate> {
     NaiveDate::from_ymd_opt(date.year(), first_month_of_quarter, 1)
 }
 
-/// ===========================================================================================
 /// Spark `trunc(date, format)` — truncate a DATE to `format`, returning a DATE.
-///
-/// Valid formats (case-insensitive) are exactly Spark's: `YEAR`/`YYYY`/`YY`, `MONTH`/`MON`/`MM`,
-/// `WEEK`, `QUARTER`. Any other format string (e.g. `'Q'`, `'DAY'`) is invalid and yields `None`
-/// (→ NULL), matching Spark — `trunc` has no day/hour granularity (that is `date_trunc`).
-/// ===========================================================================================
 fn trunc_date_to(date: NaiveDate, format: &str) -> Option<NaiveDate> {
     match format.to_ascii_uppercase().as_str() {
         "YEAR" | "YYYY" | "YY" => NaiveDate::from_ymd_opt(date.year(), 1, 1),
@@ -582,13 +549,7 @@ fn trunc_date_to(date: NaiveDate, format: &str) -> Option<NaiveDate> {
     }
 }
 
-/// ===========================================================================================
 /// Spark `date_trunc(format, timestamp)` — truncate a TIMESTAMP to `format`, returning a TIMESTAMP.
-///
-/// Supports every Spark granularity (case-insensitive): `YEAR`/`YYYY`/`YY`, `QUARTER`,
-/// `MONTH`/`MON`/`MM`, `WEEK`, `DAY`/`DD`, `HOUR`, `MINUTE`, `SECOND`, `MILLISECOND`, `MICROSECOND`.
-/// An unknown format yields `None` (→ NULL), matching Spark.
-/// ===========================================================================================
 fn trunc_datetime_to(datetime: NaiveDateTime, format: &str) -> Option<NaiveDateTime> {
     let date = datetime.date();
     let at_midnight = |day: NaiveDate| day.and_hms_opt(0, 0, 0);
@@ -612,10 +573,7 @@ fn trunc_datetime_to(datetime: NaiveDateTime, format: &str) -> Option<NaiveDateT
     }
 }
 
-/// Render one run of `count` repeats of pattern letter `letter` against `datetime`, Spark
-/// `date_format` semantics (a subset of Java `DateTimeFormatter`). Names use English (the Spark
-/// default locale). Returns `Err` for a letter this shim does not implement — a clear execution
-/// error beats a silently-wrong string.
+/// Render `count` repeats of pattern letter `letter` against `datetime` as Spark `date_format`.
 fn render_pattern_field(letter: char, count: usize, datetime: NaiveDateTime) -> Result<String> {
     let unsupported = |letter: char| {
         Err(DataFusionError::Execution(format!(
@@ -657,9 +615,6 @@ fn render_pattern_field(letter: char, count: usize, datetime: NaiveDateTime) -> 
 }
 
 /// One token of a pre-compiled Java-style `date_format` pattern (PERF-02).
-///
-/// Compiling once per invocation (the pattern is a scalar literal in every realistic call)
-/// avoids re-parsing `pattern.chars().collect()` on every row.
 #[derive(Clone, Debug)]
 enum JavaPatternToken {
     /// Verbatim text (quoted runs + non-letter punctuation).
@@ -668,9 +623,7 @@ enum JavaPatternToken {
     Field { letter: char, count: usize },
 }
 
-/// Compile a Java-style `date_format` pattern into tokens. Single-quoted runs are literal text
-/// (`''` is a literal apostrophe); ASCII letters are pattern fields; every other character is
-/// emitted verbatim. Returns `Err` on an unterminated quote (same surface as the per-row path).
+/// Compile a Java-style `date_format` pattern into tokens.
 fn compile_java_pattern(pattern: &str) -> Result<Vec<JavaPatternToken>> {
     let characters: Vec<char> = pattern.chars().collect();
     let mut tokens = Vec::new();
@@ -728,7 +681,7 @@ fn compile_java_pattern(pattern: &str) -> Result<Vec<JavaPatternToken>> {
     Ok(tokens)
 }
 
-/// Render a pre-compiled pattern against `datetime`. Returns `Err` on an unsupported field.
+/// Render a pre-compiled pattern against `datetime`.
 fn format_compiled_java_pattern(
     datetime: NaiveDateTime,
     tokens: &[JavaPatternToken],
@@ -745,12 +698,9 @@ fn format_compiled_java_pattern(
     Ok(output)
 }
 
-// SAF-001: Out-of-range Date32 values return NULL instead of panicking; extreme-year arithmetic remains a Spark residual.
-// SAF-002: Primitive downcasts occur after coercion or a kernel with the documented output type.
+// SAF-001: out-of-range Date32 values return NULL instead of panicking.
 
-/// ===========================================================================================
 /// `AddMonths` — Spark `add_months(start_date, num_months) -> DATE`.
-/// ===========================================================================================
 #[derive(Debug)]
 struct AddMonths {
     signature: Signature,
@@ -838,9 +788,7 @@ impl ScalarUDFImpl for AddMonths {
     }
 }
 
-/// ===========================================================================================
 /// `TruncDate` — Spark `trunc(date, format) -> DATE`.
-/// ===========================================================================================
 #[derive(Debug)]
 struct TruncDate {
     signature: Signature,
@@ -914,12 +862,7 @@ impl ScalarUDFImpl for TruncDate {
     }
 }
 
-/// ===========================================================================================
 /// `DateTrunc` — Spark `date_trunc(format, timestamp) -> TIMESTAMP`.
-///
-/// Note Spark's argument order — the format is FIRST. This shim registers over DataFusion's native
-/// `date_trunc` so the Spark ordering, granularity set, and microsecond output type all hold.
-/// ===========================================================================================
 #[derive(Debug)]
 struct DateTrunc {
     signature: Signature,
@@ -1022,9 +965,7 @@ impl ScalarUDFImpl for DateTrunc {
     }
 }
 
-/// ===========================================================================================
 /// `DateFormat` — Spark `date_format(timestamp, format) -> STRING`.
-/// ===========================================================================================
 #[derive(Debug)]
 struct DateFormat {
     signature: Signature,
@@ -1195,8 +1136,7 @@ mod tests {
         }
     }
 
-    /// Only a tz-ANNOTATED argument is an instant, and the coercion is what puts the annotation
-    /// there. This is the one-line rule the invoke paths depend on, pinned directly.
+    /// Only a tz-annotated argument is an instant; the coercion is what puts the annotation there.
     #[test]
     fn only_timestamp_arguments_are_coerced_to_instants() {
         for (input, instant) in [
@@ -1229,8 +1169,7 @@ mod tests {
         }
     }
 
-    // Golden values were computed independently with Python's ISO-8601 calendar
-    // (`datetime.date.isocalendar`), which is the same basis Spark's date functions use.
+    // Golden values use Python's ISO-8601 calendar, the same basis Spark's date functions use.
 
     #[tokio::test]
     async fn extractors_match_spark_on_a_rich_date() {
@@ -1258,8 +1197,7 @@ mod tests {
         assert_eq!(eval_i32("SELECT weekday(DATE '2024-03-15')").await, Some(4));
     }
 
-    /// The headline Spark-semantics trap: `dayofweek` is 1=Sunday..7=Saturday, and `weekday` is
-    /// 0=Monday..6=Sunday. Sweep a full week so an off-by-one or wrong anchor cannot pass.
+    /// `dayofweek` is 1=Sunday..7=Saturday; `weekday` is 0=Monday..6=Sunday.
     #[tokio::test]
     async fn dayofweek_and_weekday_use_spark_indexing() {
         // 2024-01-07 Sunday, 2024-01-08 Monday, 2024-01-13 Saturday.
@@ -1347,9 +1285,7 @@ mod tests {
         );
     }
 
-    /// Spark applies these to strings and timestamps of any precision/zone, not just `DATE`. The
-    /// `user_defined` signature + `coerce_types` must accept all of them (a fixed type list missed
-    /// string args and non-microsecond timestamps — DataFusion's `TIMESTAMP` literal is nanosecond).
+    /// Spark applies these to strings and timestamps of any precision/zone, not just `DATE`.
     #[tokio::test]
     async fn extractors_accept_strings_and_timestamps_like_spark() {
         // String literal -> parsed to a date (Spark coerces 'yyyy-MM-dd').
@@ -1374,7 +1310,6 @@ mod tests {
     }
 
     /// Decode column 0 of the single result row as an ISO date string (`Date32` → `yyyy-MM-dd`).
-    /// Out-of-chrono Date32 values decode as `None` (SAF-001: production maps them to NULL).
     async fn eval_date_iso(sql: &str) -> Option<String> {
         let batches = ctx().sql(sql).await.unwrap().collect().await.unwrap();
         let col = batches[0]
@@ -1388,7 +1323,7 @@ mod tests {
         Date32Type::to_naive_date_opt(col.value(0)).map(|date| date.format("%Y-%m-%d").to_string())
     }
 
-    /// Decode column 0 of the single result row as an ISO timestamp string (µs → `yyyy-MM-dd HH:mm:ss`).
+    /// Decode column 0 as an ISO timestamp string at microsecond precision.
     async fn eval_timestamp_iso(sql: &str) -> Option<String> {
         let batches = ctx().sql(sql).await.unwrap().collect().await.unwrap();
         let col = batches[0]
@@ -1536,8 +1471,7 @@ mod tests {
         );
     }
 
-    /// SAF-001 companion: calendar extractors on extreme Date32 must not panic (arrow kernel
-    /// or our Int32 offset path). Null-ness is kernel-defined; we pin no-panic + type.
+    /// SAF-001: calendar extractors on extreme Date32 must not panic.
     #[tokio::test]
     async fn extreme_date32_year_extractor_no_panic() {
         let context = ctx();
@@ -1558,16 +1492,13 @@ mod tests {
             .downcast_ref::<Int32Array>()
             .unwrap();
         assert_eq!(col.len(), 4);
-        // Epoch control is defined; extremes may be null or a computed year — either is fine
-        // as long as we did not panic and NULL input stays NULL.
+        // Epoch control is defined; extremes may be null or a year, and NULL input stays NULL.
         assert!(!col.is_null(2), "year(epoch) must be non-null");
         assert_eq!(col.value(2), 1970);
         assert!(col.is_null(3), "year(NULL) stays NULL");
     }
 
-    /// Spark `add_months` clamps to the last day when the start is month-end OR the day overflows the
-    /// target month — the trap a naive "same day, N months later" gets wrong. Sweep both branches
-    /// plus the sign of `num_months`.
+    /// Spark `add_months` clamps to the last day when the start is month-end or the day overflows.
     #[tokio::test]
     async fn add_months_matches_spark_end_of_month_semantics() {
         // Jan-31 is month-end → clamp to Feb-28 (2015 is not a leap year).
@@ -1596,8 +1527,7 @@ mod tests {
         );
     }
 
-    /// Spark `trunc(date, fmt)` truncates a DATE. Sweep every valid granularity; an invalid format
-    /// (Spark accepts `QUARTER`, not `'Q'`) must return NULL, not throw.
+    /// Spark `trunc(date, fmt)` truncates a DATE.
     #[tokio::test]
     async fn trunc_matches_spark_and_nulls_invalid_formats() {
         // 2025-05-14 is a Wednesday in Q2.
@@ -1629,9 +1559,7 @@ mod tests {
         );
     }
 
-    /// Spark `date_trunc(fmt, ts)` truncates a TIMESTAMP (note the format-first argument order) and
-    /// returns a microsecond timestamp. Sweep a date-granularity and a time-granularity plus the
-    /// NULL-on-invalid-format path.
+    /// Spark `date_trunc(fmt, ts)` truncates a TIMESTAMP (format first) to a microsecond timestamp.
     #[tokio::test]
     async fn date_trunc_matches_spark() {
         // A DATE argument widens to midnight; WEEK → the containing Monday.
@@ -1729,9 +1657,7 @@ mod tests {
         let _ = (sink, sink_recompile, ns_compiled, ns_recompile);
     }
 
-    /// Spark `date_format(ts, java_pattern)`. Covers the exact patterns the `silver_dim_jobs.py`
-    /// dim-dates transform uses (numeric fields, a quoted literal, month/day names) plus an
-    /// unsupported pattern letter, which must raise rather than emit a wrong string.
+    /// Spark `date_format(ts, java_pattern)`.
     #[tokio::test]
     async fn date_format_matches_spark_on_the_dim_dates_patterns() {
         // 2025-01-08 is a Wednesday.
@@ -1743,7 +1669,7 @@ mod tests {
             eval_string("SELECT date_format(DATE '2025-01-08', 'yyyyMM')").await,
             Some("202501".to_string())
         );
-        // Single-quoted 'Q' is a literal; q is the quarter number. 2025-05-14 is Q2.
+        // Single-quoted 'Q' is a literal; q is the quarter number.
         assert_eq!(
             eval_string("SELECT date_format(DATE '2025-05-14', 'yyyy''Q''q')").await,
             Some("2025Q2".to_string())

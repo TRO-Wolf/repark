@@ -1,7 +1,4 @@
 //! Spark `shuffle(array[, seed])` — NULL-guarded wrapper over the `datafusion-spark` kernel.
-//!
-//! Spark `shuffle` wrapper: empty child values return unchanged, avoiding the upstream NULL panic;
-//! populated inputs, including the optional `Int64` seed overload, delegate unchanged.
 
 use std::sync::Arc;
 
@@ -12,17 +9,13 @@ use datafusion::logical_expr::{
     ColumnarValue, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
 };
 
-/// ===========================================================================================
 /// The Spark `shuffle` UDF instance with a NULL guard.
-/// ===========================================================================================
 #[must_use]
 pub fn shuffle_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(ReparkShuffle::new()))
 }
 
-/// ===========================================================================================
 /// NULL-guarded `shuffle`; every non-degenerate input delegates to `datafusion-spark`.
-/// ===========================================================================================
 #[derive(Debug)]
 struct ReparkShuffle {
     inner: Arc<ScalarUDF>,
@@ -50,8 +43,7 @@ impl std::hash::Hash for ReparkShuffle {
     }
 }
 
-/// `true` when the kernel's NULL-slot placeholder read (`extend(0, 0, 1)`) would be out of
-/// bounds — i.e. the list's child values buffer is empty. Every row is then NULL or `[]`.
+/// True when the list values buffer is empty, so a NULL-slot placeholder read is out of bounds.
 fn values_buffer_is_empty(array: &ArrayRef) -> bool {
     match array.data_type() {
         DataType::List(_) => array

@@ -1,6 +1,4 @@
 //! Synchronous Python wrapper over [`repark_core::ReparkSession`].
-//! Async engine calls use one process-wide Tokio runtime. Spark sessions install both the
-//! Spark extension and dialect; `native` uses the stock DataFusion door.
 
 use std::collections::HashMap;
 use std::ffi::CStr;
@@ -17,8 +15,7 @@ use crate::dataframe::{PyDataFrame, with_stream_poll_no_detach};
 use crate::fence::{fenced, fenced_span};
 use crate::{UnsupportedOperationException, to_py_err};
 
-/// Arrow C Stream `PyCapsule` name — same constant as `dataframe.rs` export path
-/// (`ARROW_STREAM_CAPSULE_NAME`). Consumers must request this exact name.
+/// Arrow C Stream `PyCapsule` name — same constant as `dataframe.rs` export path.
 const ARROW_STREAM_CAPSULE_NAME: &CStr = c"arrow_array_stream";
 
 /// Apply the shared builder knobs used by both the Spark-door constructor and the native door.
@@ -74,11 +71,9 @@ fn finish_session(py: Python<'_>, builder: ReparkSessionBuilder) -> PyResult<PyR
 /// Process-wide Tokio runtime shared by sessions and their `DataFrames`.
 static SHARED_RUNTIME: OnceLock<EngineRuntime> = OnceLock::new();
 
-/// ===========================================================================================
 /// Return the process-wide multi-thread Tokio runtime, initializing it on first use.
 /// # Errors
 /// Returns `RuntimeError` if the Tokio runtime fails to build on the first call.
-/// ===========================================================================================
 fn shared_runtime() -> PyResult<Arc<Runtime>> {
     if let Some(runtime) = SHARED_RUNTIME.get() {
         return Ok(Arc::clone(runtime.runtime()));
@@ -113,15 +108,8 @@ pub struct PyReparkSession {
 #[pymethods]
 impl PyReparkSession {
     /// Build a session, applying the builder knobs the facade's `ReparkSession.Builder` collected.
-    ///
-    /// Optional builder knobs use engine defaults when omitted. Zero batch or partition counts
-    /// fail. `config` also drives build-time `spark.sql.catalog.<name>.*` registration.
-    ///
-    /// Releases the GIL while catalog registration runs.
-    ///
     /// # Errors
-    /// Returns `RuntimeError` if the DataFusion session or the Tokio runtime fails to build, if a
-    /// `spark.sql.catalog.*` block is malformed, or if a configured catalog fails to register.
+    /// Returns `RuntimeError` if the DataFusion session or the Tokio runtime fails to build.
     #[new]
     #[pyo3(signature = (memory_limit_gb=None, batch_size=None, target_partitions=None, config=None))]
     pub fn new(
@@ -143,12 +131,6 @@ impl PyReparkSession {
     }
 
     /// Build a **native** (non-Spark) session for the ANSI-door callable `repark.sql()`.
-    ///
-    /// A bare builder is stock DataFusion (`DataFusionDialect`, no `SparkExtension`). That is
-    /// the honest native door reachable from Python tonight without a new
-    /// `repark-python → repark-sql` product edge (lockfile-illegal on this unit). Iceberg-DDL
-    /// `AnsiDialect` handlers remain a recorded residual.
-    ///
     /// # Errors
     /// Same knob refusals as [`Self::new`].
     #[staticmethod]
@@ -168,9 +150,6 @@ impl PyReparkSession {
     }
 
     /// Run a Spark-SQL string, returning a [`PyDataFrame`] (PySpark `spark.sql`).
-    ///
-    /// Releases the GIL while the engine plans + runs the query so other Python threads progress.
-    ///
     /// # Errors
     /// Returns `RuntimeError` on parse, planning, iceberg, or execution failure.
     pub fn sql(&self, py: Python<'_>, query: &str) -> PyResult<PyDataFrame> {
@@ -183,7 +162,6 @@ impl PyReparkSession {
     }
 
     /// Read a Parquet file or directory into a [`PyDataFrame`] (PySpark `spark.read.parquet`).
-    ///
     /// # Errors
     /// Returns `RuntimeError` if the path cannot be read or planned.
     pub fn read_parquet(&self, py: Python<'_>, path: &str) -> PyResult<PyDataFrame> {
@@ -196,10 +174,6 @@ impl PyReparkSession {
     }
 
     /// Read a CSV file or directory (PySpark `spark.read.csv` / `format("csv").load`).
-    ///
-    /// `options` is a string map of Spark reader keys (already lowercased by the facade where
-    /// needed). Rows never cross the Python boundary — only Arrow via `collect` / `to_arrow`.
-    ///
     /// # Errors
     /// Maps engine analysis / I/O errors through the exception taxonomy.
     #[pyo3(signature = (path, options=None))]
@@ -219,10 +193,6 @@ impl PyReparkSession {
     }
 
     /// Read a JSON file or directory (PySpark `spark.read.json` / `format("json").load`).
-    ///
-    /// Default is newline-delimited JSON. `options["multiline"] = "true"` selects multi-line /
-    /// JSON-array files (DataFusion `newline_delimited=false`).
-    ///
     /// # Errors
     /// Maps engine analysis / I/O errors through the exception taxonomy.
     #[pyo3(signature = (path, options=None))]
@@ -241,8 +211,7 @@ impl PyReparkSession {
         })
     }
 
-    /// Read one Excel sheet. This build returns a named unsupported-operation error.
-    ///
+    /// Read one Excel sheet.
     /// # Errors
     /// Always `UnsupportedOperationException` — the reader is not in this build.
     #[pyo3(signature = (path, options=None))]
@@ -260,9 +229,6 @@ impl PyReparkSession {
     }
 
     /// List Excel workbook sheet names in workbook order (`spark.read.sheet_names` helper).
-    ///
-    /// This build returns a named unsupported-operation error.
-    ///
     /// # Errors
     /// Always `UnsupportedOperationException` — the reader is not in this build.
     #[allow(clippy::unused_self)]
@@ -276,9 +242,6 @@ impl PyReparkSession {
     }
 
     /// Read PostgreSQL via the own-stack connector (PySpark `spark.read.jdbc` / format postgres).
-    ///
-    /// This build returns a named unsupported-operation error without exposing credentials.
-    ///
     /// # Errors
     /// Always `UnsupportedOperationException` — the connector is not in this build.
     #[pyo3(signature = (
@@ -329,9 +292,7 @@ impl PyReparkSession {
         })
     }
 
-    /// Register `frame` as a replaceable lazy temp view named `name` (the engine side of PySpark
-    /// `DataFrame.createOrReplaceTempView` — the facade calls this from the `DataFrame`).
-    ///
+    /// Register `frame` as a replaceable lazy temp view named `name`.
     /// # Errors
     /// Returns `RuntimeError` if registration fails.
     pub fn create_or_replace_temp_view(&self, name: &str, frame: &PyDataFrame) -> PyResult<()> {
@@ -342,19 +303,9 @@ impl PyReparkSession {
         })
     }
 
-    /// Declare the in-memory temp view `name` pre-sorted by `keys` (engine field names) so
-    /// DataFusion elides redundant window `SortExec`s. The engine always verifies the
-    /// claim before re-registering — a wrong claim raises `AnalysisException` and the view is
-    /// untouched. The facade resolves display→engine names before calling.
-    ///
-    /// `tighten_nulls` (facade `tightenNulls`) is the c+ lever: after verify, a NULL in a
-    /// key refuses; otherwise verified-null-free keys flip to non-nullable.
-    ///
-    /// Releases the GIL for the verification scan (O(n) over the sort keys).
-    ///
+    /// Declare in-memory temp view `name` pre-sorted by `keys` so DataFusion elides window sorts.
     /// # Errors
-    /// `AnalysisException` for unknown view/key, non-in-memory frames, unsorted data, or a
-    /// NULL key under tighten.
+    /// `AnalysisException` for unknown view/key, non-in-memory frames, unsorted data, or a NULL
     #[pyo3(signature = (name, keys, tighten_nulls=false))]
     pub fn declare_temp_view_sorted(
         &self,
@@ -376,7 +327,6 @@ impl PyReparkSession {
     }
 
     /// Collect `frame` once and register it as an in-memory temp view for reuse.
-    ///
     /// # Errors
     /// Returns `RuntimeError` if collect or registration fails.
     pub fn materialize_as_temp_view(
@@ -395,10 +345,9 @@ impl PyReparkSession {
         })
     }
 
-    /// Cache-path materialize with an optional ``repark.cache.max_bytes`` guard.
-    ///
+    /// Cache-path materialize with an optional `repark.cache.max_bytes` guard.
     /// # Errors
-    /// Returns a PySpark-shaped error if collect/registration fails or ``max_bytes`` is exceeded.
+    /// Returns a PySpark-shaped error if collect/registration fails or `max_bytes` is exceeded.
     #[pyo3(signature = (name, frame, max_bytes=None))]
     pub fn materialize_as_cache_view(
         &self,
@@ -420,12 +369,6 @@ impl PyReparkSession {
     }
 
     /// Register an Arrow IPC stream as a `MemTable` temp view.
-    ///
-    /// `ipc_bytes` is a complete Arrow IPC **stream** (not file) payload produced by
-    /// `pyarrow.ipc.new_stream`. Empty streams with a schema still register a zero-row view.
-    ///
-    /// The facade prefers C Stream transport and falls back to IPC when the symbol is absent.
-    ///
     /// # Errors
     /// Returns `RuntimeError` if the IPC payload cannot be decoded or registration fails.
     pub fn register_ipc_stream_as_temp_view(
@@ -470,17 +413,9 @@ impl PyReparkSession {
         )
     }
 
-    /// ===========================================================================================
     /// Register any Arrow C Stream exporter as a `MemTable` temp view.
-    ///
-    /// Accepts an `arrow_array_stream` capsule or an object with `__arrow_c_stream__`.
-    /// The drain holds the GIL for Python-backed streams and retains all non-empty batches.
-    /// It uses no IPC intermediate buffer. An empty stream still registers its schema.
-    ///
     /// # Errors
-    /// Missing exporters and non-capsule exporter results return `TypeError`; exporter errors are
-    /// preserved. Capsule validation, stream, batch, and `MemTable` failures use engine exceptions.
-    /// ===========================================================================================
+    /// Missing exporters and non-capsule results return `TypeError`; exporter errors are preserved.
     pub fn register_arrow_stream_as_temp_view(
         &self,
         _py: Python<'_>,
@@ -491,8 +426,7 @@ impl PyReparkSession {
             "py.action",
             "PyReparkSession.register_arrow_stream_as_temp_view",
             {
-                // A re-entrant repark `__arrow_c_stream__` must not attach+detach here or the
-                // process aborts (C1-SAF-001); see `with_stream_poll_no_detach`.
+                // Do not attach+detach on re-entrant `__arrow_c_stream__` or the process aborts.
                 let (schema, batches) = with_stream_poll_no_detach(|| drain_arrow_c_stream(obj))?;
                 self.session
                     .register_record_batches_as_temp_view(name, schema, batches)
@@ -502,7 +436,6 @@ impl PyReparkSession {
     }
 
     /// Drop a temp view (PySpark `spark.catalog.dropTempView`); returns whether it existed.
-    ///
     /// # Errors
     /// Returns `RuntimeError` if the name cannot be resolved as a table reference.
     pub fn drop_temp_view(&self, name: &str) -> PyResult<bool> {
@@ -511,9 +444,7 @@ impl PyReparkSession {
         })
     }
 
-    /// Whether a table exists (PySpark `spark.catalog.tableExists`): three-part
-    /// `catalog.namespace.table` names ask the iceberg catalog, one-part names check temp views.
-    ///
+    /// Whether a table exists: three-part names ask Iceberg; one-part names check temp views.
     /// # Errors
     /// Returns `RuntimeError` for a two-part name, an unregistered catalog, or a probe failure.
     pub fn table_exists(&self, py: Python<'_>, name: &str) -> PyResult<bool> {
@@ -523,32 +454,18 @@ impl PyReparkSession {
         })
     }
 
-    /// This session's temp-view home as `[catalog, schema]` — the prefix the facade puts
-    /// on the internal scratch views it mints, so the read that follows the mint cannot be
-    /// re-resolved against the live `datafusion.catalog.default_catalog`.
-    ///
+    /// This session's temp-view home as `[catalog, schema]`.
     /// # Errors
-    /// Returns `RuntimeError` when the session's temp-view home was taken over by a registered
-    /// catalog.
+    /// Returns `RuntimeError` when a catalog took over the temp-view home, or engine lookup fails.
     pub fn temp_view_home(&self) -> PyResult<Vec<String>> {
         fenced!("PyReparkSession.temp_view_home", {
             self.session.temp_view_home().map_err(to_py_err)
         })
     }
 
-    /// The home-qualified `[catalog, schema, table]` segments a one-part temp-view `name`
-    /// resolves to, or `None` when no such view lives in this session's temp-view home.
-    ///
-    /// The facade's name resolver calls this instead of `table_exists` + "keep the bare name":
-    /// the bare spelling is re-resolved against the LIVE
-    /// `datafusion.catalog.default_catalog`, so under a `SET` to another catalog the product
-    /// read paths (`spark.table`, cache/persist re-scan, the internal scratch views) missed a
-    /// view `tableExists` reported present. One call answers both halves — does it exist, and
-    /// what does a read path emit for it.
-    ///
+    /// Home-qualified `[catalog, schema, table]` for a one-part temp-view name, or `None`.
     /// # Errors
-    /// Returns `RuntimeError` when the session's temp-view home was taken over by a registered
-    /// catalog, or when the engine lookup fails.
+    /// Returns `RuntimeError` when a catalog took over the temp-view home, or engine lookup fails.
     pub fn resolve_temp_view_home_ref(&self, name: &str) -> PyResult<Option<Vec<String>>> {
         fenced_span!(
             "py.catalog",
@@ -561,10 +478,7 @@ impl PyReparkSession {
         )
     }
 
-    /// Register the AWS-free in-memory Iceberg catalog (local-filesystem `warehouse`) under
-    /// `name` — local development and tests. (Glue / S3 Tables catalogs register through the
-    /// `spark.sql.catalog.<name>.*` config path on the constructor, not a dedicated method.)
-    ///
+    /// Register the AWS-free in-memory Iceberg catalog under `name` — local development and tests.
     /// # Errors
     /// Returns `RuntimeError` if the catalog cannot be built or registered.
     pub fn register_memory_catalog(
@@ -583,18 +497,11 @@ impl PyReparkSession {
     }
 
     /// Mark a local destination as trusted for typed-writer generated SQL.
-    ///
-    /// Register a trusted root for typed-writer generated SQL. This low-level method does not
-    /// authenticate its caller; free SQL to another local path still refuses.
     pub fn note_local_write_root(&self, path: &str) {
         self.session.note_local_write_root(path);
     }
 
     /// Read an Iceberg catalog table with optional time-travel pins.
-    ///
-    /// At most one of `snapshot_id`, `as_of_timestamp_ms`, `branch`, `tag` may be set; mutual
-    /// exclusion fails loud. With none set, reads the current snapshot.
-    ///
     /// # Errors
     /// Classified engine errors (analysis for unknown snapshot/ref/mutex; execution otherwise).
     #[pyo3(signature = (
@@ -631,7 +538,6 @@ impl PyReparkSession {
     }
 
     /// Live Iceberg table names in `namespace` (list-on-access; no DF provider snapshot).
-    ///
     /// # Errors
     /// Unknown catalog or list failure → classified engine error.
     pub fn list_iceberg_table_names(
@@ -650,7 +556,6 @@ impl PyReparkSession {
     }
 
     /// Session temp-view names from the default catalog/schema (no `information_schema` scan).
-    ///
     /// # Errors
     /// Classified engine error (currently infallible empty-or-list).
     pub fn list_temp_view_names(&self, py: Python<'_>) -> PyResult<Vec<String>> {
@@ -661,7 +566,6 @@ impl PyReparkSession {
     }
 
     /// DF provider name directory for `catalog.schema` (no table load; snapshot for Iceberg).
-    ///
     /// # Errors
     /// Classified engine error (currently infallible empty-or-list).
     pub fn list_df_schema_table_names(
@@ -681,7 +585,6 @@ impl PyReparkSession {
     }
 
     /// Rebuild the DataFusion catalog provider from the live Iceberg handle.
-    ///
     /// # Errors
     /// Unknown catalog or rebuild failure → classified engine error.
     pub fn refresh_catalog_provider(&self, py: Python<'_>, catalog: &str) -> PyResult<()> {
@@ -695,7 +598,6 @@ impl PyReparkSession {
     }
 
     /// Test-support only: Catalog-API create without DF provider re-register (OOB create).
-    ///
     /// # Errors
     /// Unknown catalog or create failure → classified engine error.
     pub fn testing_oob_create_table(
@@ -720,7 +622,6 @@ impl PyReparkSession {
     }
 
     /// Test-support only: Catalog-API drop without DF provider re-register (OOB drop).
-    ///
     /// # Errors
     /// Unknown catalog or drop failure → classified engine error.
     pub fn testing_oob_drop_table(
@@ -742,8 +643,7 @@ impl PyReparkSession {
         })
     }
 
-    /// Test-support only: create a branch or tag ref (`ManageSnapshots`). Not public SQL.
-    ///
+    /// Test-support only: create a branch or tag ref (`ManageSnapshots`).
     /// # Errors
     /// Unknown table/snapshot or ref-already-exists → classified engine error.
     pub fn testing_create_ref(
@@ -768,7 +668,6 @@ impl PyReparkSession {
     }
 
     /// Test-support only: list `(snapshot_id, timestamp_ms)` in history order.
-    ///
     /// # Errors
     /// Unknown table → classified engine error.
     pub fn testing_list_snapshots(
@@ -785,14 +684,9 @@ impl PyReparkSession {
         })
     }
 
-    /// Register catalogs from a LATE builder config onto this LIVE session (the facade
-    /// `getOrCreate` reuse path). Returns `(added, skipped_existing)` catalog-name lists.
-    /// GIL released around the async registration, like the constructor's initial pass.
-    ///
+    /// Register catalogs from a LATE builder config onto this LIVE session.
     /// # Errors
-    /// Raises when the `spark.sql.catalog.*` block is malformed or a NEW catalog fails to
-    /// build/register — the same failure classes as session construction; a mid-list failure
-    /// leaves earlier additions registered (additive semantics, documented on the seam).
+    /// Raises when the `spark.sql.catalog.*` block is malformed or a new catalog fails to register.
     pub fn register_late_catalogs(
         &self,
         py: Python<'_>,
@@ -808,16 +702,6 @@ impl PyReparkSession {
     }
 
     /// Create a namespace in a registered catalog, optionally with a `location` property.
-    ///
-    /// SQL `CREATE NAMESPACE … LOCATION` / `WITH DBPROPERTIES` can also set properties;
-    /// either way, a namespace destined for a Glue / S3 Tables
-    /// (`RequireExplicitLocation`) catalog must be created here with `location`; otherwise a later
-    /// CTAS into it fails loud (it has no warehouse path to write to). `location` is threaded into
-    /// the namespace's `location` property, and the session seam mirrors it onto `location_uri`
-    /// (the key the fork's Glue catalog maps to the Glue database `locationUri`), so the canonical
-    /// Glue field is set too; `None` creates a property-less namespace (the
-    /// memory / temp-fallback catalog is fine without one).
-    ///
     /// # Errors
     /// Returns `RuntimeError` if the catalog is unknown or creation fails.
     #[pyo3(signature = (catalog, namespace, location=None))]
@@ -855,18 +739,14 @@ impl PyReparkSession {
 }
 
 impl PyReparkSession {
-    /// ===========================================================================================
     /// Shared-runtime pointer equality helper for integration tests.
-    /// ===========================================================================================
     #[cfg(test)]
     pub(crate) fn runtime_arc(&self) -> Arc<Runtime> {
         Arc::clone(&self.runtime)
     }
 }
 
-/// ===========================================================================================
 /// Build the named unsupported-operation error for deferred readers.
-/// ===========================================================================================
 fn deferred_reader_error(surface: &str) -> PyErr {
     UnsupportedOperationException::new_err(format!(
         "{surface} is not available in this build: the repark-excel / repark-postgres read \
@@ -875,17 +755,13 @@ fn deferred_reader_error(surface: &str) -> PyErr {
     ))
 }
 
-/// ===========================================================================================
 /// Resolve an Arrow C Stream capsule or exporter and drain non-empty batches.
 /// # Errors
-/// Returns `TypeError` for a missing exporter or non-capsule exporter result. Other failures use
-/// the engine exception taxonomy.
-/// ===========================================================================================
+/// Returns `TypeError` for a missing exporter or non-capsule exporter result.
 fn drain_arrow_c_stream(
     obj: &Bound<'_, PyAny>,
 ) -> PyResult<(arrow::datatypes::SchemaRef, Vec<RecordBatch>)> {
-    // Keep the resolved capsule object alive for the whole import: `from_raw` moves the FFI
-    // stream out and nulls the capsule's release callback; dropping afterward is a no-op.
+    // Keep the capsule alive for the import: `from_raw` moves the FFI stream and nulls release.
     let capsule_obj: Bound<'_, PyAny> = if obj.is_instance_of::<PyCapsule>() {
         obj.clone()
     } else {
@@ -915,9 +791,7 @@ fn drain_arrow_c_stream(
         .as_ptr()
         .cast::<FFI_ArrowArrayStream>();
 
-    // SAFETY: `pointer_checked` verifies the capsule name and non-null pointer. The Arrow C Stream
-    // producer protocol guarantees an initialized, layout-valid `FFI_ArrowArrayStream` here.
-    // `from_raw` transfers ownership and disables the capsule release callback.
+    // SAFETY: `pointer_checked` verifies the capsule name and non-null pointer.
     let ffi_stream = unsafe { FFI_ArrowArrayStream::from_raw(pointer) };
     let mut reader = ArrowArrayStreamReader::try_new(ffi_stream)
         .map_err(|error| {
@@ -929,8 +803,7 @@ fn drain_arrow_c_stream(
 
     let schema = reader.schema();
     let mut batches = Vec::new();
-    // Python-backed streams re-enter the interpreter on every `get_next`;
-    // releasing the GIL here would deadlock. (No `detach` on this drain.)
+    // Python-backed streams re-enter the interpreter on every `get_next`.
     for batch_result in &mut reader {
         let batch = batch_result
             .map_err(|error| {
@@ -951,19 +824,13 @@ mod tests {
     use super::*;
     use std::sync::Arc;
 
-    /// ===========================================================================================
     /// The Spark session must install both the Spark extension and dialect.
-    ///
-    /// `weekofyear` resolves only with the extension. Spark-only statements route only with the
-    /// dialect. The test checks both failure signatures.
-    /// ===========================================================================================
     #[test]
     fn spark_doored_session_resolves_spark_function_and_routes_spark_statement() {
         Python::attach(|py| {
             let session = PyReparkSession::new(py, None, None, None, None).expect("session builds");
 
-            // (1) The Spark function registry is installed: a Spark-only name resolves AND
-            // evaluates through `spark.sql`. 2021-01-01 is ISO week 53 (Spark semantics).
+            // (1) Spark function registry is installed: a Spark-only name resolves and evaluates.
             let frame = session
                 .sql(py, "SELECT weekofyear(DATE '2021-01-01') AS w")
                 .expect("a Spark-only function resolves — SparkExtension installed the registry");
@@ -983,9 +850,7 @@ mod tests {
                 "weekofyear must carry SPARK's ISO week-year semantics, not a DataFusion default"
             );
 
-            // (2) The Spark statement router is installed: a Spark-only statement reaches the
-            // router's own refusal, which names the Iceberg-shaped alternatives. Stock
-            // DataFusion answers with its own generic unsupported-statement error instead.
+            // (2) Spark statement router is installed: a Spark-only statement reaches its refusal.
             let Err(routed) = session.sql(py, "TRUNCATE TABLE any_table") else {
                 panic!("TRUNCATE is a loud router refusal (C4-L-001), not a plan")
             };
@@ -1004,10 +869,6 @@ mod tests {
     }
 
     /// Native door: `PyReparkSession::native` must NOT install the Spark extension or dialect.
-    ///
-    /// Integer `/` truncates (DataFusion / ANSI) instead of promoting to float (Spark).
-    /// `weekofyear` must fail to resolve. Mutation: wiring `SparkExtension` here would make
-    /// `/` return Float64 2.5 and this pin go red.
     #[test]
     fn native_session_is_not_spark_doored() {
         Python::attach(|py| {
@@ -1045,7 +906,6 @@ mod tests {
     }
 
     /// `read_excel` keeps its port-pin name, arity, and defaults and refuses loudly.
-    /// The test pins its exception type, surface, reason, and tracking row.
     #[test]
     fn read_excel_refuses_with_named_unsupported_operation() {
         Python::attach(|py| {
@@ -1101,12 +961,7 @@ mod tests {
         });
     }
 
-    /// The nine-argument JDBC surface refuses with its own name, and the
-    /// refusal must NOT echo **either** credential-bearing argument the claim names: the
-    /// connection `url` OR the `properties` map (both can carry a password / DSN). Each vector
-    /// carries its own sentinel so a leak of either one is pinned independently — passing
-    /// `properties=None` would leave half the claim unpinned (docs/testing.md, "Pin every class
-    /// the claim names").
+    /// The nine-argument JDBC refusal must not echo the connection URL or the properties map.
     #[test]
     fn read_postgres_refuses_with_named_unsupported_operation() {
         Python::attach(|py| {
@@ -1153,12 +1008,7 @@ mod tests {
         });
     }
 
-    /// A Rust panic through a fenced Python method surfaces as the
-    /// base `PySparkException` (a `RuntimeError`, catchable by `except RuntimeError`),
-    /// NOT PyO3's `PanicException` (a `BaseException` that tears down the interpreter); the panic
-    /// text is preserved under the internal-error framing; and the SAME session is still usable
-    /// afterward (a real query runs and returns the right count), proving the interpreter survived
-    /// and nothing was poisoned.
+    /// A Rust panic through a fenced Python method surfaces as base `PySparkException`.
     #[test]
     fn fenced_panic_surfaces_as_pyspark_exception_and_leaves_session_usable() {
         Python::attach(|py| {
@@ -1168,10 +1018,7 @@ mod tests {
             )
             .expect("pyclass instantiates");
 
-            // Drive the panic through the REAL Python dispatch (`call_method0`), so PyO3's
-            // trampoline is in the loop: with the fence the method returns `Err(PySparkException)`;
-            // remove the `fenced!` wrapper and the same call raises PyO3's `PanicException` (a
-            // `BaseException`) instead.
+            // Drive the panic through real Python dispatch so PyO3's trampoline is in the loop.
             let error = session
                 .call_method0(py, "panic_probe")
                 .expect_err("the probe deterministically panics through the fence");

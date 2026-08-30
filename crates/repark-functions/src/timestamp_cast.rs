@@ -1,7 +1,4 @@
 //! Embedded Spark timestamp casts for epoch seconds, strings, and dates.
-//!
-//! Integer targets floor epoch seconds; real targets retain fractions. LTZ strings and dates use
-//! the session zone, while NTZ values retain stored walls.
 
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
@@ -21,49 +18,37 @@ use datafusion::logical_expr::{
 use crate::datetime::invoke_local_dates;
 use crate::session_time_zone::session_time_zone_from_options;
 
-/// ===========================================================================================
 /// The embedded integer-target UDF: floored epoch seconds as `Int64`.
-/// ===========================================================================================
 #[must_use]
 pub fn spark_epoch_seconds_floor_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkEpochSecondsFloor::new()))
 }
 
-/// ===========================================================================================
 /// The embedded real-target UDF: fractional epoch seconds as `Float64`.
-/// ===========================================================================================
 #[must_use]
 pub fn spark_epoch_seconds_real_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkEpochSecondsReal::new()))
 }
 
-/// ===========================================================================================
 /// The embedded string-target UDF: Spark's session-zone LTZ or stored-wall NTZ `Utf8` cast.
-/// ===========================================================================================
 #[must_use]
 pub fn spark_timestamp_to_string_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkTimestampToString::new()))
 }
 
-/// ===========================================================================================
 /// The embedded DATE-target UDF: session-zone LTZ or stored-wall NTZ `Date32` cast.
-/// ===========================================================================================
 #[must_use]
 pub fn spark_timestamp_to_date_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkTimestampToDate::new()))
 }
 
-/// ===========================================================================================
 /// Registered `to_date` overwrite using the timestamp cast kernel for TIMESTAMP arguments.
-/// ===========================================================================================
 #[must_use]
 pub fn to_date_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkToDate::new()))
 }
 
-/// ===========================================================================================
 /// Return ticks per second for an Arrow [`TimeUnit`].
-/// ===========================================================================================
 const fn ticks_per_second(unit: TimeUnit) -> i64 {
     match unit {
         TimeUnit::Second => 1,
@@ -73,9 +58,7 @@ const fn ticks_per_second(unit: TimeUnit) -> i64 {
     }
 }
 
-/// ===========================================================================================
 /// Return Spark's floor-divided epoch seconds; positive divisors preserve `-0.5 s` as `-1`.
-/// ===========================================================================================
 const fn seconds_floor_from_ticks(ticks: i64, per_second: i64) -> i64 {
     ticks.div_euclid(per_second)
 }
@@ -96,9 +79,7 @@ fn timestamp_ticks(array: &dyn Array) -> Result<Int64Array> {
     Ok(ticks.as_primitive::<Int64Type>().clone())
 }
 
-/// ===========================================================================================
 /// `SparkEpochSecondsFloor` — the integer path: floored epoch seconds as `Int64`.
-/// ===========================================================================================
 #[derive(Debug)]
 struct SparkEpochSecondsFloor {
     signature: Signature,
@@ -154,9 +135,7 @@ impl ScalarUDFImpl for SparkEpochSecondsFloor {
     }
 }
 
-/// ===========================================================================================
 /// `SparkEpochSecondsReal` — the float / decimal path: epoch seconds with the fraction kept.
-/// ===========================================================================================
 #[derive(Debug)]
 struct SparkEpochSecondsReal {
     signature: Signature,
@@ -224,9 +203,7 @@ impl ScalarUDFImpl for SparkEpochSecondsReal {
     }
 }
 
-/// ===========================================================================================
 /// `SparkTimestampToString` — B-TZ-4: Spark `CAST(TIMESTAMP AS STRING)` as `Utf8`.
-/// ===========================================================================================
 #[derive(Debug)]
 struct SparkTimestampToString {
     signature: Signature,
@@ -297,9 +274,7 @@ impl ScalarUDFImpl for SparkTimestampToString {
     }
 }
 
-/// ===========================================================================================
 /// `SparkTimestampToDate` — TZ-8: Spark `CAST(TIMESTAMP AS DATE)` as `Date32`.
-/// ===========================================================================================
 #[derive(Debug)]
 struct SparkTimestampToDate {
     signature: Signature,
@@ -351,9 +326,7 @@ impl ScalarUDFImpl for SparkTimestampToDate {
     }
 }
 
-/// ===========================================================================================
 /// `SparkToDate` — registered `to_date` overwrite (TZ-8 TIMESTAMP arm + date/string pass-through).
-/// ===========================================================================================
 #[derive(Debug)]
 struct SparkToDate {
     signature: Signature,
@@ -421,7 +394,7 @@ fn parse_session_zone(zone_id: &str) -> Result<Tz> {
     })
 }
 
-/// Ticks → microseconds. Spark's timestamp is µs; a leftover ns column floors toward −∞.
+/// Ticks → microseconds.
 fn ticks_to_micros(ticks: i64, unit: TimeUnit) -> Option<i64> {
     match unit {
         TimeUnit::Second => ticks.checked_mul(1_000_000),
@@ -431,7 +404,7 @@ fn ticks_to_micros(ticks: i64, unit: TimeUnit) -> Option<i64> {
     }
 }
 
-/// LTZ (`Some` annotation) → session-zone wall. NTZ (`None`) → stored wall (ticks as UTC digits).
+/// LTZ (`Some` annotation) → session-zone wall.
 fn wall_clock_from_ticks(
     ticks: i64,
     unit: TimeUnit,
@@ -447,9 +420,7 @@ fn wall_clock_from_ticks(
     }
 }
 
-/// Spark 4.1.2 `CAST(ts AS STRING)` (recorded): `yyyy-MM-dd HH:mm:ss` plus a fraction with
-/// trailing zeros stripped. Whole seconds have no decimal point. Year 10000 is `+10000`;
-/// year −1 is `-0001`.
+/// Spark `CAST(ts AS STRING)` is `yyyy-MM-dd HH:mm:ss` plus a fraction without trailing zeros.
 fn format_spark_timestamp_string(wall: NaiveDateTime) -> String {
     let date = format_iso_local_date(wall.date());
     let time = format!(
@@ -639,8 +610,7 @@ mod tests {
         );
     }
 
-    /// LTZ reads the session zone; NTZ keeps the stored wall. Recorded under `America/New_York`:
-    /// 2024-06-15T12:00:00Z → `2024-06-15 08:00:00`; the same ticks as NTZ stay `12:00:00`.
+    /// LTZ reads the session zone; NTZ keeps the stored wall.
     #[test]
     fn ltz_renders_in_the_session_zone_and_ntz_does_not() {
         let new_york = Tz::from_str("America/New_York").expect("IANA zone");
@@ -669,8 +639,7 @@ mod tests {
         assert_eq!(ticks_to_micros(-1_500, TimeUnit::Nanosecond), Some(-2));
     }
 
-    /// TZ-8 kernel: LTZ `2024-06-15T03:00:00Z` is 2024-06-14 under New York; the same ticks as
-    /// NTZ stay 2024-06-15. Recorded Spark 4.1.2 (V-3 handoff + this unit's live table).
+    /// TZ-8: LTZ `2024-06-15T03:00:00Z` is 2024-06-14 in New York; NTZ ticks stay 2024-06-15.
     #[test]
     fn ltz_date_is_session_zone_and_ntz_is_stored_wall() {
         use datafusion::arrow::array::{ArrayRef, Date32Array, TimestampMicrosecondArray};

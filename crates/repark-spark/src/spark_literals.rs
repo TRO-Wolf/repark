@@ -1,29 +1,4 @@
-//! Spark string-literal canonicalisation at the Spark SQL front door.
-//!
-//! [`canonicalize`] applies Spark's escapes before router tokenizers parse the text. Its output uses
-//! Generic quoting, so later Generic parses cannot process an escape twice.
-//!
-//! [`SparkLexDialect`] differs from Generic only for backslash escapes. BigQuery is unsuitable
-//! because it accepts triple-quoted strings that Spark rejects.
-//!
-//! **The rules (Spark 4.1.2, `spark.sql.parser.escapedStringLiterals=false`, measured against the
-//! live oracle `<pyspark-4.1.2-oracle>`):**
-//!
-//! | Input after `\` | Result | Oracle |
-//! |---|---|---|
-//! | `\` `'` `"` | `\` `'` `"` (drop the leading backslash) | E5, E15, E28 |
-//! | `n` `t` `r` `b` | LF, TAB, CR, U+0008 | E3, E4 |
-//! | `0` | U+0000 (NUL) | E4 |
-//! | `Z` | U+001A | E4 |
-//! | `%` `_` | `\%` `\_` (backslash KEPT — LIKE reads it) | E12 |
-//! | `NNN` (3 octal, first `0`–`1`) | that byte (`\101`→`A`, `\000`→NUL) | E11, U13 |
-//! | `uXXXX` (exactly 4 hex) | that code point; a `\uD8xx\uDCxx` pair → one astral char | U1–U6 |
-//! | `UXXXXXXXX` (exactly 8 hex) | that code point | U5 |
-//! | any other `c` | `c` (`\d`→d, `\q`→q, `\f`→f, `\1`→1, `\200`→2 then `00`) | E1, E8, E11, E27 |
-//! | `''` (doubled quote) | `'` | E6 |
-//!
-//! A lone surrogate or out-of-range scalar becomes `?`, matching Spark's measured surrogate byte.
-//! Raw strings stay verbatim; identifiers stay untouched; an unpaired backslash keeps its position.
+//! The rules (Spark 4.1.2, `<pyspark-4.1.2-oracle>`): backslash KEPT; one astral char.
 
 use std::any::TypeId;
 use std::borrow::Cow;
@@ -40,7 +15,6 @@ use datafusion::sql::sqlparser::tokenizer::{Location, Token, TokenWithSpan, Toke
 const UNREPRESENTABLE: char = '\u{003F}';
 
 /// Generic lexing with Spark's single-quoted backslash behavior.
-/// Generic identity keeps sqlparser's raw-string prefix checks active.
 #[derive(Debug)]
 struct SparkLexDialect(GenericDialect);
 
@@ -121,19 +95,11 @@ impl Dialect for SparkLexDialect {
     }
 }
 
-/// Rewrite every single-quoted literal in `sql` to the value Spark 4.1.2's lexer would produce,
-/// re-emitted as a Generic-canonical literal. The single caller is `router::execute`'s first act
-/// (pinned by `front_door_has_one_caller`). Returns [`Cow::Borrowed`] unchanged in the common case
-/// (no `'` and no `\`, where both lexers already agree); otherwise only literal spans are replaced
-/// and everything else is copied byte-for-byte, so a backtick identifier with a backslash is left
-/// as written.
-///
+/// Rewrite every single-quoted literal to the value Spark 4.1.2's lexer would produce.
 /// # Errors
-/// [`DataFusionError::SQL`] with the lexer's line/column when the text does not tokenise — most
-/// visibly an unpaired trailing backslash `'a\'` (Spark's `PARSE_SYNTAX_ERROR`).
+/// # Errors [`DataFusionError::SQL`] with the lexer's line/column when the text does not tokenise.
 pub(crate) fn canonicalize(sql: &str) -> Result<Cow<'_, str>> {
-    // Neither a `'` nor a `\`: Spark's lexer and Generic agree, so borrow without tokenising. (A
-    // `\` inside an identifier reaches the slow path but is copied verbatim there, never unescaped.)
+    // Neither a `'` nor a `\`: Spark's lexer and Generic agree, so borrow without tokenising.
     if !sql.as_bytes().contains(&b'\'') && !sql.as_bytes().contains(&b'\\') {
         return Ok(Cow::Borrowed(sql));
     }
@@ -144,7 +110,6 @@ pub(crate) fn canonicalize(sql: &str) -> Result<Cow<'_, str>> {
 }
 
 /// Translate a downstream parser location from canonical text to the caller's SQL.
-/// The passthrough parser returns SQL or Diagnostic(SQL); later error trees stay intact.
 pub(crate) fn translate_downstream_error(
     original: &str,
     canonical: &str,
@@ -220,9 +185,7 @@ fn canonical_rewrite(sql: &str) -> Result<Option<CanonicalRewrite>> {
         .with_unescape(false)
         .tokenize_with_location()
         .map_err(|error| DataFusionError::SQL(Box::new(ParserError::from(error)), None))?;
-    // COPY and CREATE [OR REPLACE] EXTERNAL TABLE are DataFusion-native, not Spark: their
-    // `OPTIONS ('key' 'value')` pairs are adjacent quoted words, not Spark concatenation, so
-    // canonicalising would merge each pair into one literal. Spark has neither, so leave them Generic.
+    // COPY and CREATE [OR REPLACE] EXTERNAL TABLE are DataFusion-native, not Spark.
     if is_datafusion_native_statement(&tokens) {
         return Ok(None);
     }
@@ -233,8 +196,7 @@ fn canonical_rewrite(sql: &str) -> Result<Option<CanonicalRewrite>> {
     Ok(Some(apply_regions(sql, &regions)))
 }
 
-/// The leading significant word tokens (whitespace skipped), up to `max`; stops at the first
-/// non-word token.
+/// The leading significant word tokens, up to `max`; stops at the first non-word token.
 fn leading_significant_words(tokens: &[TokenWithSpan], max: usize) -> Vec<&str> {
     let mut words: Vec<&str> = Vec::new();
     for token in tokens {
@@ -252,8 +214,7 @@ fn leading_significant_words(tokens: &[TokenWithSpan], max: usize) -> Vec<&str> 
     words
 }
 
-/// True for a `COPY …` or `CREATE [OR REPLACE] EXTERNAL TABLE …` statement, which keep Generic
-/// literal semantics and must NOT be canonicalised (see [`canonicalize`]).
+/// True for a `COPY …` or `CREATE [OR REPLACE] EXTERNAL TABLE …` statement.
 fn is_datafusion_native_statement(tokens: &[TokenWithSpan]) -> bool {
     let words = leading_significant_words(tokens, 5);
     let eq = |a: &&str, b: &str| a.eq_ignore_ascii_case(b);
@@ -277,7 +238,7 @@ fn is_datafusion_native_statement(tokens: &[TokenWithSpan]) -> bool {
     }
 }
 
-/// A source span (bounding [`Location`]s + replacement text) to swap in for a canonicalised literal group.
+/// A source span to swap in for a canonicalised literal group.
 struct LiteralRegion {
     start: Location,
     end: Location,
@@ -307,9 +268,7 @@ impl CanonicalRewrite {
     }
 }
 
-/// Collect the literal spans that must change. A single literal is copied verbatim unless it is a
-/// raw string or carries a backslash; two or more adjacent literals always form one region, because
-/// Spark concatenates them (`'ab' 'cd'` → `abcd`, E7) where the downstream parser errors.
+/// Collect the literal spans that must change.
 fn plan_literal_regions(tokens: &[TokenWithSpan]) -> Vec<LiteralRegion> {
     let mut regions = Vec::new();
     let mut index = 0;
@@ -323,8 +282,7 @@ fn plan_literal_regions(tokens: &[TokenWithSpan]) -> Vec<LiteralRegion> {
         let mut merged = first_value;
         let mut literal_count = 1usize;
         let single_needs_rewrite = literal_needs_rewrite(&tokens[index].token);
-        // Absorb following literals separated only by whitespace (Spark's adjacent-literal
-        // concatenation); the inter-literal whitespace falls inside [start, end) and is dropped.
+        // Absorb following literals separated only by whitespace.
         let mut cursor = index + 1;
         loop {
             let mut lookahead = cursor;
@@ -365,9 +323,7 @@ fn literal_token_value(token: &Token) -> Option<String> {
     }
 }
 
-/// True when a single literal alone produces different text than the downstream Generic lexer: a
-/// raw string, or one carrying a backslash. `''` doubling is not a difference — Generic already
-/// folds it — so a literal whose only special content is `''` is copied verbatim.
+/// True when a single literal alone produces different text than the downstream Generic lexer.
 fn literal_needs_rewrite(token: &Token) -> bool {
     match token {
         Token::SingleQuotedString(raw) => raw.contains('\\'),
@@ -377,8 +333,6 @@ fn literal_needs_rewrite(token: &Token) -> bool {
 }
 
 /// Re-quote a finished Spark string value as Generic-canonical: wrap in `'…'`, double every `'`.
-/// Backslashes and control characters stay literal — Generic gives them no meaning, so the value
-/// round-trips through the executing parse unchanged.
 fn requote_generic(value: &str) -> String {
     let mut out = String::with_capacity(value.len() + 2);
     out.push('\'');
@@ -392,9 +346,7 @@ fn requote_generic(value: &str) -> String {
     out
 }
 
-/// Rebuild `sql`, replacing each [`LiteralRegion`] with its canonical text and copying every other
-/// character. The walk tracks sqlparser's `(line, column)` (column counts characters) so region
-/// boundaries match without byte-offset arithmetic. Regions arrive in source order and do not overlap.
+/// Rebuild `sql`, replacing each [`LiteralRegion`].
 fn apply_regions(sql: &str, regions: &[LiteralRegion]) -> CanonicalRewrite {
     let mut out = String::with_capacity(sql.len());
     let mut original_locations = Vec::with_capacity(sql.chars().count() + 1);
@@ -487,9 +439,7 @@ fn ascii_digit_end(text: &str, start: usize) -> usize {
         .map_or(text.len(), |offset| start + offset)
 }
 
-/// Apply Spark 4.1.2's escape rules to the raw between-quote text `raw` (kept by `unescape(false)`:
-/// backslash sequences survive as `\`+char, a doubled `''` as two quotes). Every rule row in the
-/// module doc is discharged here.
+/// Apply Spark 4.1.2's escape rules to the raw between-quote text `raw`.
 fn unescape_spark_literal(raw: &str) -> String {
     let characters: Vec<char> = raw.chars().collect();
     let mut out = String::with_capacity(raw.len());
@@ -497,7 +447,7 @@ fn unescape_spark_literal(raw: &str) -> String {
     while index < characters.len() {
         let current = characters[index];
         if current == '\'' {
-            // A `'` here is only ever the first of a doubled `''` (E6); a lone `'` ends the literal.
+            // A `'` here is only ever the first of a doubled `''`; a lone `'` ends the literal.
             out.push('\'');
             index += if characters.get(index + 1) == Some(&'\'') {
                 2
@@ -511,8 +461,7 @@ fn unescape_spark_literal(raw: &str) -> String {
             index += 1;
             continue;
         }
-        // The lexer refuses `'a\'` as unterminated before this runs, so a trailing `\` cannot
-        // occur; keep the byte rather than panic if it ever does.
+        // The lexer refuses `'a\'` as unterminated before this runs.
         let Some(&escaped) = characters.get(index + 1) else {
             out.push('\\');
             index += 1;
@@ -523,8 +472,7 @@ fn unescape_spark_literal(raw: &str) -> String {
     out
 }
 
-/// Handle one `\<escaped>` sequence starting at `index` (the backslash); returns the next
-/// unconsumed index.
+/// Handle one `\<escaped>` sequence starting at `index`; returns the next unconsumed index.
 fn apply_escape(escaped: char, characters: &[char], index: usize, out: &mut String) -> usize {
     match escaped {
         'n' => push_and_advance('\n', index, out),
@@ -538,8 +486,7 @@ fn apply_escape(escaped: char, characters: &[char], index: usize, out: &mut Stri
         'u' => apply_unicode_16(characters, index, out),
         'U' => apply_unicode_32(characters, index, out),
         '0'..='7' => apply_octal(escaped, characters, index, out),
-        // Any other escape drops the backslash and keeps the character: `\\`→`\`, `\'`→`'`,
-        // `\"`→`"`, `\d`→d, `\q`→q, `\f`→f (E1, E5, E8; measured `\f` is `f`, not form-feed).
+        // Any other escape drops the backslash and keeps the character.
         other => push_and_advance(other, index, out),
     }
 }
@@ -557,8 +504,7 @@ fn push_kept_backslash(wildcard: char, index: usize, out: &mut String) -> usize 
     index + 2
 }
 
-/// `\NNN` octal (E11, E27, U13). Three octal digits ≤ 0o177 (first digit `0` or `1`) map to that
-/// byte; `\0` alone maps to NUL; every other run drops the backslash (`\200` → `2` then `00`).
+/// `\NNN` octal (E11, E27, U13).
 fn apply_octal(first: char, characters: &[char], index: usize, out: &mut String) -> usize {
     let second = characters.get(index + 2).copied();
     let third = characters.get(index + 3).copied();
@@ -585,9 +531,7 @@ fn octal_value(digit: char) -> u8 {
     (digit as u8).saturating_sub(b'0')
 }
 
-/// `\uXXXX` (exactly 4 hex → a code point). A high surrogate followed by a `\uYYYY` low surrogate
-/// combines into one astral char (U6); a lone surrogate becomes [`UNREPRESENTABLE`]. Fewer than 4
-/// hex digits is the unknown-escape rule: `\u004` → `u` then literal `004` (U3).
+/// `\uXXXX` (exactly 4 hex → a code point).
 fn apply_unicode_16(characters: &[char], index: usize, out: &mut String) -> usize {
     let Some(high) = read_hex(characters, index + 2, 4) else {
         out.push('u');
@@ -607,8 +551,7 @@ fn apply_unicode_16(characters: &[char], index: usize, out: &mut String) -> usiz
     index + 6
 }
 
-/// `\UXXXXXXXX` (exactly 8 hex → a code point; U5). Fewer than 8 hex digits is the unknown-escape
-/// rule: `\U0001F40` → `U` then literal `0001F40`.
+/// `\UXXXXXXXX` (exactly 8 hex → a code point; U5).
 fn apply_unicode_32(characters: &[char], index: usize, out: &mut String) -> usize {
     let Some(value) = read_hex(characters, index + 2, 8) else {
         out.push('U');
@@ -618,8 +561,7 @@ fn apply_unicode_32(characters: &[char], index: usize, out: &mut String) -> usiz
     index + 10
 }
 
-/// Read exactly `count` hex digits from `start`, or `None` if fewer are present — Spark requires
-/// the exact width (the unknown-escape fall-through).
+/// Read exactly `count` hex digits from `start`, or `None` if fewer are present.
 fn read_hex(characters: &[char], start: usize, count: usize) -> Option<u32> {
     let end = start.checked_add(count)?;
     let slice = characters.get(start..end)?;
@@ -630,9 +572,7 @@ fn read_hex(characters: &[char], start: usize, count: usize) -> Option<u32> {
     Some(value)
 }
 
-/// Emit the character for `code_point`, or [`UNREPRESENTABLE`] (`?`) when it is not a Unicode
-/// scalar — a lone surrogate or a `\U` past `U+10FFFF`. Matches Spark's Java UTF-8 encoder
-/// (measured `hex('\ud83d')` = `3F`).
+/// Emit the character for `code_point`, or [`UNREPRESENTABLE`] when it is not a Unicode scalar.
 fn push_code_point(code_point: u32, out: &mut String) {
     match char::from_u32(code_point) {
         Some(character) => out.push(character),

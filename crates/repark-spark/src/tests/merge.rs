@@ -65,8 +65,7 @@ async fn bug001_merge_mor_not_blocked_by_delete_update_valve() {
     );
 }
 
-/// The classic upsert (the source publish job's MERGE shape): matched rows take the source
-/// values, unmatched source rows are inserted, untouched target rows survive — one commit.
+/// Classic upsert: matched rows take source values; unmatched source rows insert; others survive.
 #[tokio::test]
 async fn merge_upsert_updates_and_inserts() {
     let wh = TempDir::new().unwrap();
@@ -99,9 +98,7 @@ async fn merge_upsert_updates_and_inserts() {
     );
 }
 
-/// The literal source publish job MERGE text — `UPDATE SET *` / `INSERT *` — end to end:
-/// stars expand to every target column by name from the source (extra source columns
-/// ignored), producing the same upsert as the explicit form.
+/// The literal source publish job MERGE text.
 #[tokio::test]
 async fn merge_star_forms_upsert() {
     let wh = TempDir::new().unwrap();
@@ -152,8 +149,7 @@ async fn merge_star_forms_upsert() {
     );
 }
 
-/// A star whose source cannot provide every target column errors up front, naming the
-/// missing column — never a silent NULL-fill.
+/// A star whose source cannot provide every target column errors up front, never silent NULL-fill.
 #[tokio::test]
 async fn merge_star_missing_source_column_errors() {
     let wh = TempDir::new().unwrap();
@@ -182,8 +178,7 @@ async fn merge_star_missing_source_column_errors() {
     );
 }
 
-/// `WHEN MATCHED AND <cond> THEN DELETE`: only the row passing the clause predicate is
-/// deleted; a matched row failing it survives byte-identical (matched-but-no-clause path).
+/// `WHEN MATCHED AND <cond> THEN DELETE`: only the row passing the clause predicate is deleted.
 #[tokio::test]
 async fn merge_matched_delete_with_predicate() {
     let wh = TempDir::new().unwrap();
@@ -210,8 +205,7 @@ async fn merge_matched_delete_with_predicate() {
     );
 }
 
-/// Clause declaration order is first-match-wins (Spark): a row captured by the first clause
-/// never reaches the second, even when both predicates hold.
+/// Clause declaration order is first-match-wins.
 #[tokio::test]
 async fn merge_clause_order_first_match_wins() {
     let wh = TempDir::new().unwrap();
@@ -239,8 +233,7 @@ async fn merge_clause_order_first_match_wins() {
     );
 }
 
-/// A target row matched by two source rows raises Spark's `MERGE_CARDINALITY_VIOLATION`
-/// instead of picking one arbitrarily.
+/// A target row matched by two source rows raises Spark's `MERGE_CARDINALITY_VIOLATION`.
 #[tokio::test]
 async fn merge_cardinality_violation_errors() {
     let wh = TempDir::new().unwrap();
@@ -268,8 +261,7 @@ async fn merge_cardinality_violation_errors() {
     );
 }
 
-/// Insert-only MERGE takes the `fast_append` path: no target file is rewritten (every
-/// pre-merge `(id, file)` pair survives identically) and only the new row is added.
+/// Insert-only MERGE takes the `fast_append` path.
 #[tokio::test]
 async fn merge_insert_only_appends_without_rewriting() {
     let wh = TempDir::new().unwrap();
@@ -310,8 +302,7 @@ async fn merge_insert_only_appends_without_rewriting() {
     );
 }
 
-/// Copy-on-write granularity: only files containing a mutated row are rewritten; a second
-/// file whose rows the MERGE never touches keeps its exact path across the commit.
+/// Copy-on-write granularity: only files containing a mutated row are rewritten.
 #[tokio::test]
 async fn merge_rewrites_only_affected_files() {
     let wh = TempDir::new().unwrap();
@@ -398,8 +389,7 @@ async fn merge_into_empty_table_inserts_all() {
     );
 }
 
-/// Every MERGE commit is stamped with a unique `engine.operation-id` snapshot-summary
-/// property — the fork `ENGINE_CONTRACT` §8 ambiguous-commit mitigation.
+/// Every MERGE commit is stamped with a unique `engine.operation-id` snapshot-summary property.
 #[tokio::test]
 async fn merge_stamps_operation_id_in_snapshot_summary() {
     let wh = TempDir::new().unwrap();
@@ -432,17 +422,12 @@ async fn merge_stamps_operation_id_in_snapshot_summary() {
     );
 }
 
-/// A bucket-partitioned table with `write.merge.mode = 'merge-on-read'` runs a three-clause MERGE
-/// through the SQL door and produces Spark's answer on the Arrow path.
-///
-/// The physical assertions are the load-bearing half — routing this table to the copy-on-write
-/// arm produces the SAME three rows: position-delete files MUST be committed, and EVERY
-/// pre-merge data file must still be live.
+/// A bucket-partitioned merge-on-read MERGE through the SQL door matches Spark on the Arrow path.
 #[tokio::test]
 async fn merge_bucket_partitioned_mor_mode_runs_end_to_end() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
-    // src = (1,'a'), (2,'b'), (3,'c'). Drop id=1, update id=2, insert id=4.
+    // src = (1,'a'), (2,'b'), (3,'c').
     register_source(&ctx, "updates", &[(1, "drop"), (2, "bee"), (4, "dee")]);
     run(
         &ctx,
@@ -453,9 +438,7 @@ async fn merge_bucket_partitioned_mor_mode_runs_end_to_end() {
              AS SELECT * FROM src",
     )
     .await;
-    // The MANIFEST-level file set, not the scan's `_file` column: this MERGE empties the
-    // `bucket(4, 1) == bucket(4, 2)` file of every visible row, so a scan-based oracle would
-    // call a perfectly correct merge-on-read commit a rewrite.
+    // The MANIFEST-level file set, not the scan's `_file` column.
     let before = live_data_file_paths(&catalogs, "bkt_mor").await;
     assert!(!before.is_empty(), "the CTAS wrote at least one data file");
 
@@ -492,12 +475,11 @@ async fn merge_bucket_partitioned_mor_mode_runs_end_to_end() {
 }
 
 /// Runs merge-on-read end to end and requires position deletes without rewriting data files.
-/// Row equality alone cannot distinguish a copy-on-write fallback.
 #[tokio::test]
 async fn merge_merge_on_read_mode_runs_end_to_end() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
-    // src = (1,'a'), (2,'b'), (3,'c'). Drop id=1, update id=2, insert id=4.
+    // src = (1,'a'), (2,'b'), (3,'c').
     register_source(&ctx, "updates", &[(1, "drop"), (2, "bee"), (4, "dee")]);
     run(
         &ctx,
@@ -507,11 +489,7 @@ async fn merge_merge_on_read_mode_runs_end_to_end() {
              AS SELECT * FROM src",
     )
     .await;
-    // MANIFEST oracle, not the scan's `_file` (C-Y-1): a file whose every row is
-    // position-deleted vanishes from `_file` while staying live in the manifests, so the
-    // scan-based `before ⊆ after` would FALSE-RED on a correct MoR commit (and a pre-emptied
-    // file absent from `before` would let a COW rewrite of it slip). `live_data_file_paths`
-    // reads the manifests directly and closes both directions.
+    // MANIFEST oracle, not the scan's `_file`.
     let before = live_data_file_paths(&catalogs, "t").await;
 
     run(
@@ -527,10 +505,7 @@ async fn merge_merge_on_read_mode_runs_end_to_end() {
     assert_eq!(
         table_rows(&ctx, &catalogs, "ice.sales.t").await,
         vec![
-            // id=1 is ABSENT, and that absence is the first-match-wins proof: BOTH matched
-            // clauses applied to it (the DELETE's `s.name = 'drop'` held AND the UPDATE is
-            // unconditional), so only declaration order decides. Last-match-wins would have
-            // left `(1, "drop")` here.
+            // id=1 is ABSENT, and that absence is the first-match-wins proof.
             (2, "bee".to_string()), // the DELETE predicate did not hold ⇒ the UPDATE clause ran
             (3, "c".to_string()),   // untouched
             (4, "dee".to_string()), // not-matched INSERT
@@ -550,8 +525,7 @@ async fn merge_merge_on_read_mode_runs_end_to_end() {
     }
 }
 
-/// An unparsable MERGE (`BigQuery`'s `INSERT ROW`, which the Databricks dialect rejects)
-/// gets OUR targeted error, not DataFusion's opaque parse failure from the passthrough.
+/// An unparsable MERGE gets our targeted error, not DataFusion's opaque parse failure.
 #[tokio::test]
 async fn merge_unparsable_form_gets_targeted_error() {
     let wh = TempDir::new().unwrap();
@@ -571,8 +545,7 @@ async fn merge_unparsable_form_gets_targeted_error() {
     );
 }
 
-/// A MERGE carrying an MSSQL-style `OUTPUT` clause (sqlparser parses it; we cannot honour
-/// it) is rejected deterministically instead of executing the write and dropping the output.
+/// A MERGE carrying an MSSQL-style `OUTPUT` clause is rejected deterministically.
 #[tokio::test]
 async fn merge_output_clause_rejected() {
     let wh = TempDir::new().unwrap();
@@ -592,8 +565,7 @@ async fn merge_output_clause_rejected() {
     );
 }
 
-/// A typo'd `UPDATE SET` column is an error, never a silent no-op:
-/// case-insensitive resolution still refuses names that match no schema field).
+/// A typo'd `UPDATE SET` column is an error, never a silent no-op.
 #[tokio::test]
 async fn merge_update_set_unknown_column_errors() {
     let wh = TempDir::new().unwrap();
@@ -618,8 +590,7 @@ async fn merge_update_set_unknown_column_errors() {
         err.to_string().contains("`nope_col` does not exist"),
         "expected the unknown-SET-column error, got: {err}"
     );
-    // Case-differing spelling of a real column must APPLY (Spark caseSensitive=false), not
-    // refuse as unknown; column resolution is case-insensitive.
+    // Case-differing spelling of a real column must APPLY, not refuse as unknown.
     run(
         &ctx,
         &catalogs,
@@ -634,8 +605,7 @@ async fn merge_update_set_unknown_column_errors() {
     );
 }
 
-/// Casefold-duplicate SET keys on the wire path must fail loud
-/// (not first-win). Deleting `validate_update_columns` in `execute_merge` must RED this pin.
+/// Casefold-duplicate SET keys on the wire path must fail loud (not first-win).
 #[tokio::test]
 async fn merge_update_set_casefold_duplicate_errors_without_write() {
     let wh = TempDir::new().unwrap();
@@ -668,8 +638,7 @@ async fn merge_update_set_casefold_duplicate_errors_without_write() {
     );
 }
 
-/// Quoted, case-sensitive aliases survive lowering: the alias declaration in the generated
-/// FROM keeps its quoting, so the user's quoted references in ON/SET resolve.
+/// Quoted, case-sensitive aliases survive lowering.
 #[tokio::test]
 async fn merge_quoted_alias_resolves() {
     let wh = TempDir::new().unwrap();
@@ -701,8 +670,7 @@ async fn merge_quoted_alias_resolves() {
     );
 }
 
-/// A source that happens to carry a column named `__repark_matched` merges fine — the match
-/// sentinel is UUID-suffixed per execution, so no fixed source column can collide with it.
+/// A source that happens to carry a column named `__repark_matched` merges fine.
 #[tokio::test]
 async fn merge_source_with_reserved_flag_column_works() {
     let wh = TempDir::new().unwrap();
@@ -747,15 +715,9 @@ async fn merge_source_with_reserved_flag_column_works() {
     );
 }
 
-// ================================================================================================
-// N-2b / G3 deferred pins — mirror the Python differential corpus shapes that G-4's file ban
-// blocked from landing with N-2. Sibling of `python/repark/tests/test_merge_differential_parity.py`
-// rows of the same names; Spark-door SQL entry point, Arrow collect path.
-// ================================================================================================
+// N-2b / G3 deferred cases: mirror Python corpus shapes that G-4's file ban blocked with N-2.
 
-/// G3 pin 1 / N-2b — duplicate source keys under a `WHEN MATCHED` arm raise
-/// `MERGE_CARDINALITY_VIOLATION` (never silent last-writer-wins). Mirrors the Python differential
-/// row `duplicate_source_keys_with_matched_raises` (both engines share the token).
+/// G3 pin 1 / N-2b.
 #[tokio::test]
 async fn merge_duplicate_source_keys_with_matched_raises() {
     let wh = TempDir::new().unwrap();
@@ -791,9 +753,7 @@ async fn merge_duplicate_source_keys_with_matched_raises() {
     );
 }
 
-/// G3 pin 2 / N-2b — insert-only MERGE (no `WHEN MATCHED`) does NOT fire the cardinality check:
-/// both source rows with the same unmatched key are inserted. Mirrors
-/// `duplicate_source_keys_insert_only_commits_both`.
+/// G3 pin 2 / N-2b.
 #[tokio::test]
 async fn merge_duplicate_source_keys_insert_only_commits_both() {
     let wh = TempDir::new().unwrap();
@@ -831,10 +791,7 @@ async fn merge_duplicate_source_keys_insert_only_commits_both() {
     );
 }
 
-/// G3 pin 3 / N-2b — `WHEN MATCHED AND …` arm ordering is first-match-wins: the conditional
-/// UPDATE captures id=1 (score=10); the unconditional DELETE captures id=2. Mirrors
-/// `matched_and_arm_order_update_then_delete` (UPDATE-then-DELETE shape; the reverse DELETE-then-
-/// UPDATE shape is already pinned by `merge_clause_order_first_match_wins`).
+/// G3 pin 3 / N-2b.
 #[tokio::test]
 async fn merge_matched_and_arm_order_update_then_delete() {
     let wh = TempDir::new().unwrap();
@@ -882,8 +839,7 @@ async fn merge_matched_and_arm_order_update_then_delete() {
     );
 }
 
-/// G3 pin 4 / N-2b — multi-arm threshold: high scores UPDATE, low scores DELETE, both arms
-/// conditional. Mirrors `matched_and_threshold_update_or_delete` (sibling of the arm-order pin).
+/// G3 pin 4 / N-2b.
 #[tokio::test]
 async fn merge_matched_and_threshold_update_or_delete() {
     let wh = TempDir::new().unwrap();
@@ -931,9 +887,7 @@ async fn merge_matched_and_threshold_update_or_delete() {
     );
 }
 
-// ================================================================================================
 // Spark-door MERGE lowering strictness pins.
-// ================================================================================================
 
 /// M2 / r5 — Oracle-style `UPDATE SET … WHERE` refuses at the door (not silently dropped).
 #[tokio::test]

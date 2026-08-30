@@ -1,5 +1,4 @@
 //! Shared PyO3 and Arrow C-stream panic fences.
-//! Panics become Python or Arrow errors instead of unwinding across FFI or aborting the process.
 
 use std::any::Any;
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -10,9 +9,7 @@ use pyo3::prelude::PyErr;
 
 use crate::PySparkException;
 
-/// ===========================================================================================
 /// Extract panic text and add the boundary operation to the internal-error message.
-/// ===========================================================================================
 fn describe_panic(operation: &str, payload: &(dyn Any + Send)) -> String {
     let detail = if let Some(text) = payload.downcast_ref::<&'static str>() {
         (*text).to_string()
@@ -27,13 +24,7 @@ fn describe_panic(operation: &str, payload: &(dyn Any + Send)) -> String {
     )
 }
 
-/// ===========================================================================================
 /// Run a `#[pymethods]` body under the panic fence.
-///
-/// Successful results pass through. A panic becomes [`crate::PySparkException`] with its text.
-/// [`AssertUnwindSafe`] covers engine handles that are not statically `UnwindSafe`: a caught
-/// panic returns an error and a fresh exception, so no partially-mutated state is observed.
-/// ===========================================================================================
 pub(crate) fn fence<T>(
     operation: &str,
     body: impl FnOnce() -> Result<T, PyErr>,
@@ -47,9 +38,7 @@ pub(crate) fn fence<T>(
     }
 }
 
-/// ===========================================================================================
 /// Fence a method body and record its static entry-point family and operation.
-/// ===========================================================================================
 pub(crate) fn fence_with_span<T>(
     family: &'static str,
     operation: &'static str,
@@ -60,11 +49,7 @@ pub(crate) fn fence_with_span<T>(
     fence(operation, body)
 }
 
-/// ===========================================================================================
 /// A caught-panic error carried on the Arrow C-stream error channel.
-///
-/// Carry a framed panic through [`ArrowError::ExternalError`].
-/// ===========================================================================================
 #[derive(Debug)]
 struct FencedStreamPanic(String);
 
@@ -76,11 +61,7 @@ impl std::fmt::Display for FencedStreamPanic {
 
 impl std::error::Error for FencedStreamPanic {}
 
-/// ===========================================================================================
 /// Run one Arrow-C-stream batch poll under the panic fence.
-///
-/// Convert a poll panic into `Some(Err(ArrowError))` for that poll; other results pass through.
-/// ===========================================================================================
 pub(crate) fn fence_stream_poll(
     operation: &str,
     body: impl FnOnce() -> Option<Result<RecordBatch, ArrowError>>,

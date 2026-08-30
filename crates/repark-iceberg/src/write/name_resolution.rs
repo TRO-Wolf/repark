@@ -1,38 +1,26 @@
 //! Case-insensitive by-name column resolution shared by append and MERGE.
-//!
-//! Spark's default is case-insensitive: zero matches fail, multiple matches fail loudly, and one
-//! match is selected. Callers render [`SourceMatch`] as a surface-specific `DataFusionError`.
 
 use std::collections::HashMap;
 
-/// ===============================================================================================
-/// The outcome of resolving one target column name against a set of source column names, mirroring
-/// Spark's `reorderColumnsByName` decision (zero / one / many candidates).
-/// ===============================================================================================
+/// Outcome of resolving one target column name against source names (Spark `reorderColumnsByName`).
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) enum SourceMatch {
     /// No source column resolves to the target (Spark's `matched.isEmpty`).
     Missing,
     /// Exactly one source column resolves to the target — its index into the source name list.
     Unique(usize),
-    /// More than one source column resolves to the target (Spark's `matched.length > 1`); carries
-    /// every colliding source column name so the caller's error can name them all.
+    /// More than one source column resolves to the target.
     Ambiguous(Vec<String>),
 }
 
-/// ===============================================================================================
-/// Index source names case-insensitively. Zero matches are missing, one is unique, and multiple
-/// matches are ambiguous, matching Spark's collision behavior.
-/// ===============================================================================================
+/// Index source names case-insensitively.
 pub(crate) struct CaseInsensitiveColumnIndex<'a> {
     source_names: Vec<&'a str>,
     indices_by_lowercase: HashMap<String, Vec<usize>>,
 }
 
 impl<'a> CaseInsensitiveColumnIndex<'a> {
-    /// Index `source_names` (in their original order) by lowercased form. Full-Unicode
-    /// `to_lowercase` matches Java `String.equalsIgnoreCase` on the ASCII identifiers that dominate
-    /// real schemas; exotic non-ASCII case-folding differences are out of scope.
+    /// Index `source_names` (in their original order) by lowercased form.
     pub(crate) fn new(source_names: impl IntoIterator<Item = &'a str>) -> Self {
         let source_names: Vec<&'a str> = source_names.into_iter().collect();
         let mut indices_by_lowercase: HashMap<String, Vec<usize>> =
@@ -49,10 +37,7 @@ impl<'a> CaseInsensitiveColumnIndex<'a> {
         }
     }
 
-    /// Resolve one target column name against the indexed source columns (Spark's per-target
-    /// `reorderColumnsByName` filter). Zero candidates → [`SourceMatch::Missing`]; more than one →
-    /// [`SourceMatch::Ambiguous`] naming every colliding source column; exactly one →
-    /// [`SourceMatch::Unique`] with its source index.
+    /// Resolve one target column name against the indexed source columns.
     pub(crate) fn resolve(&self, target_name: &str) -> SourceMatch {
         match self
             .indices_by_lowercase
@@ -75,20 +60,12 @@ impl<'a> CaseInsensitiveColumnIndex<'a> {
     }
 }
 
-/// ===============================================================================================
-/// Shared resolver pins — the case/collision decision that both by-name conform surfaces depend on
-/// (append `conform_batch` + MERGE `expand_star_clauses`). Kept here, on the semantics, so a
-/// surface-level regression cannot silently weaken the resolver.
-/// ===============================================================================================
+/// Shared resolver pins for the case/collision decision both by-name conform surfaces depend on.
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    /// PIN PL-8a — an EXACT-case name resolves uniquely. The resolver always lowercases the target
-    /// (and indexes sources by lowercase at build), so there is **no** no-alloc exact-case short
-    /// circuit — every resolve allocates the lowercased lookup key. Risk: a regression that only
-    /// matched lowercased forms would still pass this, so PL-8b/PL-8c carry the case-insensitive
-    /// contract.
+    /// PIN PL-8a — an EXACT-case name resolves uniquely.
     #[test]
     fn exact_case_name_resolves_uniquely() {
         let index = CaseInsensitiveColumnIndex::new(["key", "payload"]);
@@ -97,9 +74,7 @@ mod tests {
         assert_eq!(index.source_name(0), "key");
     }
 
-    /// PIN PL-8b — a differently-cased source name resolves to the target (Spark
-    /// `equalsIgnoreCase`), and the resolved index points at the ORIGINAL-cased source name so the
-    /// caller can emit `s."KEY"`. Risk: an exact-only resolver reports Missing here.
+    /// PIN PL-8b.
     #[test]
     fn differently_cased_name_resolves_case_insensitively() {
         let index = CaseInsensitiveColumnIndex::new(["KEY", "Payload"]);
@@ -108,9 +83,7 @@ mod tests {
         assert_eq!(index.source_name(0), "KEY");
     }
 
-    /// PIN PL-8c — two source columns colliding on one target (case-differing OR exact duplicate)
-    /// is AMBIGUOUS, naming EVERY colliding source column (Spark `matched.length > 1`). Risk: a
-    /// first-match-wins resolver silently drops one; the exact-dup case is the degenerate ambiguity.
+    /// PIN PL-8c.
     #[test]
     fn colliding_source_columns_are_ambiguous_naming_all() {
         let case_collision = CaseInsensitiveColumnIndex::new(["id", "ID"]);
@@ -126,8 +99,7 @@ mod tests {
         );
     }
 
-    /// PIN PL-8d — a target with no source column is Missing (Spark `matched.isEmpty`). Risk: a
-    /// resolver that defaulted to index 0 would misroute an absent column's data.
+    /// PIN PL-8d — a target with no source column is Missing (Spark `matched.isEmpty`).
     #[test]
     fn absent_target_column_is_missing() {
         let index = CaseInsensitiveColumnIndex::new(["key"]);

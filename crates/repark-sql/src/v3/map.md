@@ -1,0 +1,30 @@
+# map — repark-sql/src/v3
+
+## Purpose
+
+ANSI-door format-v3 test modules. `lib.rs` declares `#[cfg(test)] mod v3;`.
+
+## Contents
+
+- `mod.rs` — thin index.
+- `create.rs` — **V3-2:** ANSI CREATE/CTAS `format_version = 3` opt-in pins
+  (`Model: Grok 4.6 xHigh` on the module's functions).
+- `cow.rs` — **V3-COW-1:** adopted-v3 UPDATE/MERGE refusal, COW second-DELETE pre-write
+  refusal after an overwrite snapshot, and plain-`WHERE` DELETE including a second MOR DELETE
+  that merges into the live vector (pins: rp-3-fork-repin/C-004), v2 control, object-cleanup
+  checks, and the ANSI Hadoop `vN.metadata.json` write that bumps to `v(N+1)`
+  (pins: rp-3-fork-repin/C-008).
+- `types.rs` — `GEOMETRY` / `GEOGRAPHY` / `VARIANT` refuse at CREATE (`V3-GEO-1`);
+  reuses `cow.rs`'s `Door`.
+- `branch_tag_time_travel.rs` — ANSI branch/tag + `FOR VERSION AS OF` over the partitioned
+  v3 DV fixture; RP-3 shared-Puffin DELETE keeps the untouched sibling
+  (pins: rp-3-fork-repin/C-004).
+- `partitioned_equality_deletes.rs` — ANSI live-row twins of the Spark-written partitioned
+  DV and equality-delete + DV fixtures, plus `$delete_files` content 1/2, cross-partition DV
+  DELETE, live-DV UPDATE pre-write refusal (`Model: Grok 4.6 xHigh`; rp-3-fork-repin/C-004),
+  and C-007 ANSI CALL / fork no-op of `rewrite_position_delete_files`
+  (pins: rp-3-fork-repin/C-007).
+
+## Pointers
+
+- Up: [../map.md](../map.md)

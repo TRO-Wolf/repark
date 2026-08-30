@@ -68,15 +68,8 @@ fn to_py_err_routes_to_typed_exceptions_subclassing_runtime_error() {
     });
 }
 
-/// ===========================================================================================
+/// MUTATION: give `repark-core` its own `Error` enum (a plausible future re-split) and this crate stops compiling here — loudly, at the seam — instead of silently binding `to_py_err`'s exhaustive fold to a type the doors no longer raise.
 /// The native and facade error paths use the same core error type.
-///
-/// Coercions compile only while `repark-core` and `repark-common` expose the same taxonomy types.
-///
-/// MUTATION: give `repark-core` its own `Error` enum (a plausible future re-split) and this
-/// crate stops compiling here — loudly, at the seam — instead of silently binding
-/// `to_py_err`'s exhaustive fold to a type the doors no longer raise.
-/// ===========================================================================================
 const _: fn(repark_common::Error) -> repark_core::Error = |error| error;
 const _: fn(repark_core::Error) -> repark_common::Error = |error| error;
 const _: fn(repark_common::ErrorClass) -> repark_core::ErrorClass = |class| class;

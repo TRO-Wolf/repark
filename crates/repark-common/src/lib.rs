@@ -1,20 +1,14 @@
 //! Shared domain types and the crate-wide error type for the repark engine.
-//!
-//! This dependency-free leaf breaks the otherwise-circular `session ↔ sql` relationship.
 
 pub mod surfaces;
 
 use thiserror::Error;
 
-/// ===========================================================================================
 /// The crate-wide error type for repark.
-///
-/// Intermediate engine errors fold at the session or PyO3 boundary (C1-CRATE-001).
-/// ===========================================================================================
 #[derive(Debug, Error)]
 #[non_exhaustive]
 pub enum Error {
-    /// The engine does not support this operation. The original diagnostic remains in `{0}`.
+    /// The engine does not support this operation.
     #[error("{0}")]
     NotImplemented(String),
 
@@ -31,45 +25,30 @@ pub enum Error {
     Analysis(String),
 
     /// A session or catalog configuration error naming the invalid key.
-    /// Maps to [`ErrorClass::IllegalArgument`] for PySpark's `IllegalArgumentException`.
     #[error("repark config error: {0}")]
     Config(String),
 
     /// An Iceberg error other than an unsupported feature or catalog analysis error.
-    /// The session classifies live errors before conversion. This leaf stores the resulting text.
     #[error("{0}")]
     Iceberg(String),
 }
 
-/// ===========================================================================================
 /// The PySpark exception partition an [`Error`] maps onto at the Python (PyO3) boundary.
-///
-/// This is the enumerated variant-to-exception routing for the Python boundary.
-///
-/// [`Error::exception_class`] matches exhaustively, so each new [`Error`] variant needs explicit
-/// routing.
-/// ===========================================================================================
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ErrorClass {
     /// A SQL or expression syntax error mapped to `repark.errors.ParseException`.
     Parse,
     /// A planning or analysis error mapped to `repark.errors.AnalysisException`.
     Analysis,
-    /// A deterministic unsupported operation mapped to
-    /// `repark.errors.UnsupportedOperationException`.
+    /// A deterministic unsupported operation mapped to `UnsupportedOperationException`.
     Unsupported,
-    /// An invalid engine or catalog configuration value mapped to
-    /// `repark.errors.IllegalArgumentException`.
+    /// An invalid engine or catalog config value mapped to `IllegalArgumentException`.
     IllegalArgument,
     /// Everything else mapped to the `RuntimeError`-compatible `repark.errors.PySparkException`.
     Base,
 }
 
-/// ===========================================================================================
 /// Classifies each [`Error`] variant into the PySpark exception partition.
-///
-/// The exhaustive match forces explicit routing for every variant.
-/// ===========================================================================================
 impl Error {
     /// The PySpark exception partition this error belongs to (see [`ErrorClass`]).
     #[must_use]

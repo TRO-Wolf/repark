@@ -26,22 +26,14 @@ pub(crate) struct DescribeNamespace {
     pub(crate) extended: bool,
 }
 
-/// Keys rendered as dedicated rows instead of inside `Properties`. The reserved-key match is
-/// case-sensitive (live-oracle provenance: `pyspark` 4.0.0 `DataSourceV2` run).
-/// `location_uri` is a disclosed `RePark` divergence: not a Spark reserved key — it is `RePark`'s
-/// own U2 dual-write mirror of `location`, filtered so the internal bookkeeping key never renders.
+/// Keys rendered as dedicated rows instead of inside `Properties`.
 pub(crate) const RESERVED_NAMESPACE_PROPERTIES: [&str; 4] =
     ["comment", "location", "owner", "location_uri"];
 
 /// Spark's default replacement for redacted namespace properties.
 pub(crate) const REDACTION_REPLACEMENT_TEXT: &str = "*********(redacted)";
 
-/// ===========================================================================================
 /// Recognise and parse `DESCRIBE|DESC {NAMESPACE|DATABASE|SCHEMA} [EXTENDED] catalog.namespace`.
-///
-/// Parse the namespace form while letting table describes fall through. A complete object name
-/// commits to this handler; malformed or ambiguous tails remain on normal routing.
-/// ===========================================================================================
 pub(crate) fn try_parse_describe_namespace(sql: &str) -> Option<Result<DescribeNamespace>> {
     let dialect = DatabricksDialect {};
     let tokens = Tokenizer::new(&dialect, sql).tokenize().ok()?;
@@ -56,15 +48,12 @@ pub(crate) fn try_parse_describe_namespace(sql: &str) -> Option<Result<DescribeN
         return None;
     }
     let mut extended = parser.parse_keyword(Keyword::EXTENDED);
-    // Spark's grammar needs a namespace name, and `EXTENDED` is only the flag when something
-    // follows it: live oracle, `DESCRIBE NAMESPACE EXTENDED` (nothing after) resolves EXTENDED as
-    // the NAMESPACE NAME and raises SCHEMA_NOT_FOUND. Give the token back so it parses as the name.
+    // Spark's grammar needs a namespace name, and `EXTENDED` is only the flag.
     if extended && matches!(parser.peek_token().token, Token::EOF | Token::SemiColon) {
         parser.prev_token();
         extended = false;
     }
-    // Z6: no parseable object name after the keyword → this is Spark's relation-describe of a table
-    // literally named `namespace`/`database`/`schema`. Fall through, never error.
+    // Z6: no object name after the keyword is Spark describe of a table named namespace.
     let name = parser.parse_object_name(false).ok()?;
     if !matches!(parser.peek_token().token, Token::EOF | Token::SemiColon) {
         return None;
@@ -78,19 +67,9 @@ pub(crate) fn try_parse_describe_namespace(sql: &str) -> Option<Result<DescribeN
     )
 }
 
-/// ===========================================================================================
-/// `DESCRIBE {NAMESPACE|DATABASE|SCHEMA} [EXTENDED] catalog.namespace` → Spark's two-column
-/// `info_name` / `info_value` metadata frame, read from the catalog's namespace properties.
-///
-/// The v2 Spark shape is two columns with rows for catalog, quoted namespace, present comment,
-/// resolved location, present owner, and optional extended properties. Missing namespaces use the
-/// analysis error class; namespace resolution remains the two-part `RePark` contract.
-///
-/// ===========================================================================================
-///
+/// DESCRIBE NAMESPACE returns Spark's two-column `info_name` / `info_value` metadata frame.
 /// # Errors
-/// Returns a plan error when the catalog is not registered or the namespace does not exist, and
-/// propagates catalog-load failures.
+/// Returns a plan error when the catalog is unregistered or the namespace does not exist.
 pub(crate) async fn execute_describe_namespace(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -109,11 +88,7 @@ pub(crate) async fn execute_describe_namespace(
     ctx.read_batch(describe_namespace_batch(&describe, namespace.properties())?)
 }
 
-/// Build the `info_name` / `info_value` batch for one namespace (row set per
-/// [`execute_describe_namespace`]).
-///
-/// The schema is the live oracle's verbatim: `info_name` **non-nullable** `Utf8`, `info_value`
-/// nullable `Utf8`, each carrying Spark's field-level `comment` metadata.
+/// Build the `info_name` / `info_value` batch for one namespace.
 pub(crate) fn describe_namespace_batch(
     describe: &DescribeNamespace,
     properties: &HashMap<String, String>,
@@ -160,8 +135,6 @@ pub(crate) fn describe_namespace_batch(
 }
 
 /// Render the `EXTENDED` `Properties` value in Spark's exact format.
-///
-/// Non-reserved keys are sorted and rendered as raw `(key,value)` pairs; an empty set is empty.
 pub(crate) fn render_namespace_properties(properties: &HashMap<String, String>) -> String {
     let mut pairs: Vec<(&String, &String)> = properties
         .iter()
@@ -186,9 +159,6 @@ pub(crate) fn render_namespace_properties(properties: &HashMap<String, String>) 
 }
 
 /// Whether a namespace property's VALUE must be redacted in `DESCRIBE … EXTENDED` output.
-///
-/// Redact when either the key or value matches Spark's default secret or URL patterns. The key
-/// check matters because Spark replaces the value on a key match.
 pub(crate) fn property_is_redacted(key: &str, value: &str) -> bool {
     redaction_pattern_matches(key) || redaction_pattern_matches(value)
 }
@@ -211,14 +181,6 @@ pub(crate) fn redaction_pattern_matches(text: &str) -> bool {
 }
 
 /// Render one namespace-name part the way Spark's `NamespaceHelper.quoted` does.
-///
-/// Spark's `quoteIfNeeded` leaves a part bare only when it matches `[a-zA-Z0-9_]+` **and** is not
-/// all digits; otherwise it wraps it in backticks, doubling any interior backtick. Live oracle
-/// (pyspark 4.0.0, v2 catalog): `Mixed_Case9` → `Mixed_Case9`, `my ns` → `` `my ns` ``,
-/// `weird.name` → `` `weird.name` ``, `dash-name` → `` `dash-name` ``, `123` → `` `123` ``,
-/// ``has`tick`` → ``` `has``tick` ```.
-///
-/// Applies to the `Namespace Name` row only — Spark emits `Catalog Name` from `catalog.name()` raw.
 pub(crate) fn quote_namespace_name_if_needed(part: &str) -> String {
     let bare = !part.is_empty()
         && part
@@ -233,21 +195,13 @@ pub(crate) fn quote_namespace_name_if_needed(part: &str) -> String {
 
 /// A parsed Spark `SHOW {NAMESPACES|SCHEMAS|DATABASES} [{IN|FROM} catalog] [LIKE] ['pattern']`.
 pub(crate) struct ShowNamespaces {
-    /// The catalog named by `IN`/`FROM`. `RePark` has no current-catalog concept, so the clause is
-    /// mandatory here; resolution happens in the parser.
+    /// The catalog named by `IN`/`FROM`.
     catalog: String,
-    /// The `LIKE` pattern, unevaluated (Spark's `filterPattern` grammar — see
-    /// [`filter_pattern_matches`]). `None` = show every namespace.
+    /// The `LIKE` pattern, unevaluated.
     pattern: Option<String>,
 }
 
-/// ===========================================================================================
-/// Recognise and parse `SHOW {NAMESPACES|SCHEMAS|DATABASES} [{IN|FROM} catalog] [LIKE] ['pattern']`.
-///
-/// The head is unambiguous because `SHOW <relation>` is not a supported Spark form. Once matched,
-/// malformed tails return a targeted error instead of falling through to another handler. `FROM`
-/// is a synonym for `IN`, and the `LIKE` keyword is optional before a pattern literal.
-/// ===========================================================================================
+/// Parse `SHOW NAMESPACES|SCHEMAS|DATABASES` with optional IN/FROM catalog and LIKE pattern.
 pub(crate) fn try_parse_show_namespaces(sql: &str) -> Option<Result<ShowNamespaces>> {
     let dialect = DatabricksDialect {};
     let tokens = Tokenizer::new(&dialect, sql).tokenize().ok()?;
@@ -298,8 +252,7 @@ pub(crate) fn parse_show_namespaces_tail(parser: &mut Parser) -> Result<ShowName
             parser.peek_token()
         )));
     }
-    // Spark resolves a missing `IN` against the CURRENT catalog; `RePark` has none, so the clause
-    // is required and its absence names the requirement instead of guessing a catalog (AB6).
+    // Spark resolves a missing `IN` against the CURRENT catalog.
     let Some(name) = scope else {
         return Err(DataFusionError::Plan(
             "SHOW NAMESPACES requires an explicit catalog — `SHOW NAMESPACES IN <catalog>` \
@@ -320,24 +273,15 @@ pub(crate) fn parse_show_namespaces_tail(parser: &mut Parser) -> Result<ShowName
     })
 }
 
-/// Fold a sqlparser error from the `SHOW NAMESPACES` tail into a plan-class [`DataFusionError`]
-/// (classified `AnalysisException` by WG-3, the family Spark's `ParseException` also belongs to).
+/// Fold a sqlparser error from the `SHOW NAMESPACES` tail into a plan-class [`DataFusionError`].
 #[allow(clippy::needless_pass_by_value)]
 pub(crate) fn show_namespaces_err(err: ParserError) -> DataFusionError {
     DataFusionError::Plan(format!("could not parse SHOW NAMESPACES: {err}"))
 }
 
-/// ===========================================================================================
 /// `SHOW NAMESPACES`, `SHOW SCHEMAS`, and `SHOW DATABASES` return a one-column namespace frame.
-///
-/// The `namespace` field is non-nullable. Names use quoted parts and catalog order. `LIKE` matches
-/// the rendered name. `IN` or `FROM` is required for the single-level catalog contract, and a
-/// malformed tail commits to a targeted analysis error.
-///
-/// ===========================================================================================
-///
 /// # Errors
-/// Returns a plan error when the catalog is not registered, and propagates catalog-listing failures.
+/// Returns a plan error when the catalog is not registered, and propagates listing failures.
 pub(crate) async fn execute_show_namespaces(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -349,11 +293,7 @@ pub(crate) async fn execute_show_namespaces(
     ctx.read_batch(show_namespaces_batch(rows)?)
 }
 
-/// Spark's `ShowNamespacesExec.run` body: render every namespace, then keep the ones the `LIKE`
-/// pattern matches. Split out from [`execute_show_namespaces`] so the two oracle claims it carries
-/// are testable without a catalog.
-///
-/// Render before filtering and preserve catalog order; each namespace is emitted once.
+/// Spark's `ShowNamespacesExec.run` body: render every namespace.
 pub(crate) fn show_namespace_rows(
     namespaces: &[NamespaceIdent],
     pattern: Option<&str>,
@@ -366,9 +306,6 @@ pub(crate) fn show_namespace_rows(
 }
 
 /// Build the one-column `namespace` batch (schema per [`execute_show_namespaces`]).
-///
-/// The schema is the live oracle's verbatim: a single `namespace` field, `Utf8`, **non-nullable**,
-/// carrying no field metadata (unlike `DESCRIBE NAMESPACE`'s two fields, which do).
 pub(crate) fn show_namespaces_batch(rows: Vec<String>) -> Result<RecordBatch> {
     let schema = Arc::new(Schema::new(vec![Field::new(
         "namespace",
@@ -381,12 +318,7 @@ pub(crate) fn show_namespaces_batch(rows: Vec<String>) -> Result<RecordBatch> {
     )?)
 }
 
-/// Render a namespace the way Spark's `NamespaceHelper.quoted` does: every part through
-/// `quoteIfNeeded` ([`quote_namespace_name_if_needed`]), joined with `.`.
-///
-/// Live oracle (pyspark 4.0.0, v2 catalog): a flat catalog shows `zeta` / `Mixed_Case9` /
-/// `` `my ns` `` / `` `123` `` / `` `dash-name` `` / `` `weird.name` ``, and a nested listing shows
-/// the FULL path from the root — `alpha.child1`, `alpha.child1.grand` — never the leaf alone.
+/// Render a namespace the way Spark's `NamespaceHelper.quoted` does.
 pub(crate) fn quoted_namespace(namespace: &NamespaceIdent) -> String {
     namespace
         .iter()
@@ -396,8 +328,6 @@ pub(crate) fn quoted_namespace(namespace: &NamespaceIdent) -> String {
 }
 
 /// Spark's `StringUtils.filterPattern` is a case-insensitive Java-regex matcher, not SQL `LIKE`.
-/// Trim once, split on `|`, replace `*` with `.*`, and full-match each alternative. Invalid
-/// alternatives are silently dropped. `\A` and `\z` preserve Java's full-match behavior.
 pub(crate) fn filter_pattern_matches(name: &str, pattern: &str) -> bool {
     pattern.trim().split('|').any(|alternative| {
         // Keep each alternative unwrapped so invalid syntax stays invalid.

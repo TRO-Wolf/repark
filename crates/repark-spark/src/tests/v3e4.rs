@@ -1,14 +1,7 @@
-//! Pins format-v3 snapshot refs, time travel over deletion vectors, and maintenance.
-//!
 //! Model: Grok 4.6 xHigh
-//!
-//! Adopts the V3E-3 partitioned-DV Spark-written fixture, then `INSERT`s so the
-//! table has a DV snapshot and a later append snapshot (v3 is append-only here:
-//! `V3-COW-1`). Native `DataFrame` has no Iceberg snapshot-ref / CALL surface
-//! (C-002).
-//!
 //! pins: v3e-4-refs-time-travel/C-001, C-002, C-003, C-004, C-006, C-007, C-008
 //! pins: v3e-4-refs-time-travel/C-009, C-010, C-011, C-013, C-014, C-015, C-016
+//! Pins format-v3 snapshot refs, time travel over deletion vectors, and maintenance.
 
 use std::fs;
 use std::io::ErrorKind;

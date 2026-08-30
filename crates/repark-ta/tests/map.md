@@ -1,5 +1,7 @@
 # map — repark-ta/tests
 
+CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated comments rewritten as complete sentences (D-001).
+
 ## Purpose
 
 The crate's integration gates: bit-exactness against C TA-Lib (goldens) and the crate-wide

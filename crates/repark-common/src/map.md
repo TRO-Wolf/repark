@@ -1,5 +1,8 @@
 # map — repark-common/src
 
+CC-4 (2026-08-30): remaining banner files condensed to the one-line rule
+(pins: cc-3-comment-condensation/C-009).
+
 ## Purpose
 
 Source for `repark-common` — shared types, the `Error` enum, and concise API contracts. See [../map.md](../map.md).

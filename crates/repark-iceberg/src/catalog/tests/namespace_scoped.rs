@@ -1,9 +1,5 @@
-//! G17 wrapper tests for [`super::provider::NamespaceScopedCatalog`].
-//!
-//! Pins the both-sides trait-wrapping audit: every defaulted `Catalog` method is either an
-//! explicit forward or a stated omission; silent fall-throughs are gone.
-//!
 //! pins: rp-1-fork-repin/C-003
+//! G17 wrapper tests for [`super::provider::NamespaceScopedCatalog`].
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -13,19 +9,17 @@ use iceberg::spec::{NestedField, PrimitiveType, Schema, Type};
 use iceberg::{Catalog, NamespaceIdent, TableCreation, TableIdent};
 use tempfile::TempDir;
 
-use super::builders::memory_catalog;
-use super::provider::NamespaceScopedCatalog;
+use super::super::builders::memory_catalog;
+use super::super::provider::NamespaceScopedCatalog;
 
-// === Boxed future alias matching provider.rs (desugared Catalog methods) =====================
+// === Boxed future alias matching provider.rs (desugared Catalog methods) =====================.
 
 type BoxedCatalogFuture<'a, T> =
     std::pin::Pin<Box<dyn std::future::Future<Output = iceberg::Result<T>> + Send + 'a>>;
 
-// === Spy catalog =============================================================================
+// === Spy catalog =============================================================================.
 
 /// Counts selected `Catalog` methods while fully forwarding to `inner`.
-///
-/// Used to prove `NamespaceScopedCatalog` reaches the real inner override (not a trait default).
 #[derive(Debug)]
 struct SpyCatalog {
     inner: Arc<dyn Catalog>,
@@ -275,7 +269,7 @@ impl Catalog for SpyCatalog {
     }
 }
 
-// === Fixtures =================================================================================
+// === Fixtures =================================================================================.
 
 fn sample_schema() -> Schema {
     Schema::builder()
@@ -300,10 +294,9 @@ async fn sales_namespace_on_memory(warehouse: &str) -> (Arc<dyn Catalog>, Namesp
     (catalog, namespace)
 }
 
-// === Tests ====================================================================================
+// === Tests
 
-/// HIGH (G17): `publish_replace_table` must reach the inner catalog. The trait default is
-/// `FeatureUnsupported`; a silent fall-through would never increment the spy and would error.
+/// HIGH (G17): `publish_replace_table` must reach the inner catalog.
 #[tokio::test]
 async fn publish_replace_table_forwards_to_inner_spy() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -359,8 +352,7 @@ async fn name_forwards_inner_value_unchanged() {
     );
 }
 
-/// Stated omission: `update_namespace_properties` composes from forwarded
-/// `get_namespace` + `update_namespace` — the spy observes both; the merged property is stored.
+/// `update_namespace_properties` composes from forwarded `get_namespace` plus `update_namespace`.
 #[tokio::test]
 async fn update_namespace_properties_composes_via_forwarded_methods() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -397,7 +389,6 @@ async fn update_namespace_properties_composes_via_forwarded_methods() {
 }
 
 /// Views family forward: `list_views` must hit the inner (`MemoryCatalog` supports views).
-/// A silent fall-through would return `FeatureUnsupported` without calling the spy.
 #[tokio::test]
 async fn list_views_forwards_to_inner_spy() {
     let warehouse = TempDir::new().expect("temp warehouse");

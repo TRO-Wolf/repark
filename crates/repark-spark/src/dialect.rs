@@ -1,14 +1,10 @@
 //! [`SparkDialect`] adapts the session SQL seam to the Spark statement router.
-//!
-//! Install it with `ReparkSessionBuilder::with_sql_dialect` and pair it with `SparkExtension`.
 
 use async_trait::async_trait;
 use datafusion::prelude::DataFrame;
 use repark_core::{EngineContext, SqlDialect};
 
-/// ===========================================================================================
 /// Route each session `sql()` call through the Spark router.
-/// ===========================================================================================
 #[derive(Debug, Clone, Copy, Default)]
 pub struct SparkDialect;
 

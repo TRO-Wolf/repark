@@ -1,7 +1,4 @@
 //! repark-spark — the Spark SQL door.
-//!
-//! The router intercepts Iceberg DDL and Spark maintenance forms, applies Spark AST defaults to
-//! passthrough SQL, and exposes [`SparkDialect`] and [`SparkExtension`] for session integration.
 
 mod alter;
 mod call;
@@ -25,7 +22,7 @@ mod spark_literals;
 mod time_travel;
 mod window_range;
 
-// --- Router entrypoints. ---
+// --- Router entrypoints.
 pub use router::{execute, execute_with_read_only};
 // G15: parse-altitude collation refuse (binding `F.expr` / `filter_sql` call this).
 pub use collation::{
@@ -33,10 +30,10 @@ pub use collation::{
     refuse_collation_in_sql, refuse_collation_in_statement,
 };
 
-// --- Session seam adapter. ---
+// --- Session seam adapter.
 pub use dialect::SparkDialect;
 
-// --- Crate-root public surface. ---
+// --- Crate-root public surface.
 pub use catalog_ops::postgres_read_only_dml_message;
 pub use metadata_tables::{
     canonical_metadata_table_name, is_metadata_table_name, sql_may_have_metadata_table_path,
@@ -93,9 +90,7 @@ use iceberg::Catalog;
 #[cfg(test)]
 use repark_core::{CatalogRegistry, LocationPolicy};
 
-// The Q13 surface matrix: this door's disposition of every `repark_common::surfaces` ID, with
-// the compile-run audit that fails on an unmapped surface (design `docs/design/sql-doors.md`
-// §2 Q13, graft G2). Test-only — audit evidence, not product code.
+// The Q13 surface matrix.
 #[cfg(test)]
 mod matrix;
 

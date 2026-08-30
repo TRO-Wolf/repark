@@ -1,21 +1,12 @@
 //! Shared Spark ANSI store-assignment matrix for every write path.
-//!
-//! The matrix rejects pairs such as boolean→integer, timestamp→bigint, string→numeric, and
-//! date→integer before Arrow casts can reinterpret values. It is distinct from CAST legality:
-//! callers must not use this predicate to validate explicit casts.
 
 use datafusion::arrow::datatypes::DataType;
 use datafusion::error::{DataFusionError, Result};
 
-/// Spark's error class for the MERGE store-assignment refusals (#111 / #135 text — byte-stable;
-/// changing it moves a shipped needle).
+/// Spark's error class for the MERGE store-assignment refusals.
 pub(crate) const MERGE_SPARK_CLASS: &str = "INCOMPATIBLE_DATA_FOR_TABLE";
 
-/// Spark's sub-class for the plain INSERT / append store-assignment refusals. Measured against
-/// live PySpark 4.1.2 ANSI on every non-MERGE write door (`INSERT INTO … SELECT`,
-/// `INSERT INTO … VALUES`, `INSERT OVERWRITE`, `writeTo().append()`, `write.insertInto()`):
-/// `INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST`. The coarse class above is a prefix of it, so
-/// a pin on either engine can use the coarse needle and a stronger pin can use the sub-class.
+/// Spark's sub-class for the plain INSERT / append store-assignment refusals.
 pub(crate) const WRITE_SPARK_CLASS: &str = "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST";
 
 /// Strip wrappers that do not change assignability (dictionary encoding).
@@ -26,8 +17,7 @@ pub(crate) fn normalize_for_assignment(data_type: &DataType) -> &DataType {
     }
 }
 
-/// Spark `Cast.canANSIStoreAssign`, translated to Arrow types (v1: nested types must be
-/// identical — Spark's per-field recursion is a named residual).
+/// Spark `Cast.canANSIStoreAssign`, translated to Arrow types.
 pub(crate) fn ansi_store_assignable(src: &DataType, dst: &DataType) -> bool {
     use DataType::{
         Binary, Boolean, Date32, Date64, LargeBinary, LargeUtf8, Null, Timestamp, Utf8, Utf8View,
@@ -39,8 +29,7 @@ pub(crate) fn ansi_store_assignable(src: &DataType, dst: &DataType) -> bool {
     if matches!(src, Null) {
         return true;
     }
-    // NumericType → NumericType (widening AND narrowing — overflow is the strict runtime cast's
-    // ANSI error, exactly Spark's split between analysis-legal and runtime-failing).
+    // NumericType → NumericType.
     if src.is_numeric() && dst.is_numeric() {
         return true;
     }
@@ -76,16 +65,9 @@ pub(crate) fn ansi_store_assignable(src: &DataType, dst: &DataType) -> bool {
     false
 }
 
-/// ===========================================================================================
-/// The shared refusal. `op` is the whole path label the message opens with — `MERGE INSERT`,
-/// `MERGE UPDATE SET`, `INSERT OVERWRITE`, `append` — and `spark_class` is the class citation.
-/// The MERGE callers pass [`MERGE_SPARK_CLASS`] so their shipped text stays byte-identical; the
-/// non-MERGE write paths pass [`WRITE_SPARK_CLASS`], the sub-class Spark actually raises there.
-/// ===========================================================================================
-///
+/// The shared refusal.
 /// # Errors
-/// [`DataFusionError::Plan`] carrying the `not ANSI-store-assignable` needle, the column name and
-/// BOTH types, when `source_type` is not ANSI-store-assignable to `target_type`.
+/// Returns `Plan` with the `not ANSI-store-assignable` needle, the column name, and both types.
 pub(crate) fn refuse_unless_ansi_store_assignable(
     op: &str,
     spark_class: &str,
@@ -105,19 +87,7 @@ pub(crate) fn refuse_unless_ansi_store_assignable(
     Ok(())
 }
 
-/// ===========================================================================================
-/// The non-MERGE write-path gate (WI-1): same matrix, [`WRITE_SPARK_CLASS`] citation, and one
-/// deliberate narrowing — **nested pairs are not judged**.
-///
-/// [`ansi_store_assignable`] answers nested types by identity only (`src == dst`), which is a
-/// named v1 residual rather than Spark's per-field recursion. On the MERGE path that strictness
-/// is already shipped behaviour; on the append / overwrite conform paths it would be a NEW
-/// refusal for pairs this unit never measured — e.g. a `List<Utf8View>` plan column landing in a
-/// `List<Utf8>` Iceberg column, which conforms correctly today through the strict arrow cast.
-/// A nested pair therefore falls through to that cast (loud on failure, never silent), exactly as
-/// before. Flat pairs — where every measured silently-wrong reinterpretation lives — are gated.
-/// ===========================================================================================
-///
+/// The non-MERGE write-path gate (WI-1): same matrix, with nested pairs not judged.
 /// # Errors
 /// Same as [`refuse_unless_ansi_store_assignable`], for flat `(source, target)` pairs.
 pub(crate) fn refuse_unless_write_store_assignable(
@@ -134,8 +104,7 @@ pub(crate) fn refuse_unless_write_store_assignable(
     refuse_unless_ansi_store_assignable(op, WRITE_SPARK_CLASS, column, source_type, target_type)
 }
 
-/// Whether `data_type` is a leaf Arrow type the v1 matrix can judge (see
-/// [`refuse_unless_write_store_assignable`] for why nested pairs are excused).
+/// Whether `data_type` is a leaf Arrow type the v1 matrix can judge.
 fn is_flat(data_type: &DataType) -> bool {
     !matches!(
         data_type,
@@ -161,11 +130,7 @@ mod tests {
         refuse_unless_ansi_store_assignable, refuse_unless_write_store_assignable,
     };
 
-    /// The WI-1 row the hoist exists for: `Date32 → Int32|Int64` is the silently-wrong pair every
-    /// plain INSERT door persisted before the gate (Spark refuses
-    /// `INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST`), and the reverse `Int → Date` is refused
-    /// in the same stroke because the matrix was always right about it — only the call sites were
-    /// missing.
+    /// WI-1: `Date32 → Int32|Int64` is the silently-wrong pair every plain INSERT persisted before.
     #[test]
     fn date_and_int_are_not_store_assignable_in_either_direction() {
         use DataType::{Date32, Date64, Int32, Int64};
@@ -242,8 +207,7 @@ mod tests {
         );
     }
 
-    /// Nested pairs fall through to the strict arrow cast rather than gaining a NEW refusal
-    /// (the documented WI-1 narrowing) — while the flat matrix would have refused them.
+    /// Nested pairs fall through to the strict arrow cast rather than gaining a NEW refusal.
     #[test]
     fn nested_pairs_are_excused_by_the_write_gate() {
         let list_view = DataType::List(Arc::new(Field::new("item", DataType::Utf8View, true)));

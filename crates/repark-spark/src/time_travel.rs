@@ -1,8 +1,4 @@
 //! Rewrite Spark Iceberg time-travel clauses to snapshot-pinned temporary providers.
-//!
-//! Token scanning handles Spark's unmodelled `VERSION AS OF`, `TIMESTAMP AS OF`, and
-//! `FOR SYSTEM_*` forms. Snapshot parsing and resolution live in `repark_core`; this module owns
-//! the SQL span scan, provider registration, and FROM/JOIN splice.
 
 use std::sync::Arc;
 
@@ -19,9 +15,7 @@ use repark_core::{
 
 use crate::catalog_ops::iceberg_err;
 
-/// ===========================================================================================
 /// Whether `sql` contains a Spark Iceberg time-travel clause we must rewrite.
-/// ===========================================================================================
 #[must_use]
 pub fn sql_has_time_travel(sql: &str) -> bool {
     let Ok(tokens) = Tokenizer::new(&DatabricksDialect {}, sql).tokenize() else {
@@ -41,28 +35,14 @@ struct TimeTravelSpan {
     spec: TimeTravelSpec,
 }
 
-/// ===========================================================================================
-/// The ephemeral names one statement's rewrite registered, so the router can take them back off
-/// the session once the statement has been PLANNED.
-/// ===========================================================================================
-///
-/// Without this the pinned temp views accumulate forever — one per AS OF relation per query, on a
-/// session that may live for hours — and they are USER-VISIBLE: `SHOW TABLES` /
-/// `information_schema.tables` listed `__repark_tt_1`, `…_2`, `…_3` after three pinned reads, and
-/// listed them after a FAILED statement too (the rewrite registers before the plan can fail).
-/// The registration only has to survive planning: DataFusion resolves the relation into a
-/// `TableScan` that owns the provider, so the returned `DataFrame` still collects correctly after
-/// the name is gone.
+/// Ephemeral names one statement registered, so the router can drop them after planning.
 #[derive(Debug, Default)]
 pub struct PinnedViews {
     names: Vec<String>,
 }
 
 impl PinnedViews {
-    /// Deregister every name this statement minted. A missing name is harmless because cleanup is
-    /// best effort. Names come from the shared process-global minter, so reader-option views remain
-    /// distinct and survive statement cleanup. The `__repark` prefix is reserved; deregistration
-    /// before registration is required because the schema provider rejects duplicate names.
+    /// Deregister every name this statement minted.
     pub fn release(&self, ctx: &SessionContext) {
         for name in &self.names {
             let _ = ctx.deregister_table(name.as_str());
@@ -70,15 +50,7 @@ impl PinnedViews {
     }
 }
 
-/// ===========================================================================================
-/// If `sql` has time-travel clauses: resolve each to a snapshot-pinned
-/// [`IcebergStaticTableProvider`], register ephemeral temp views, rewrite FROM/JOIN relations,
-/// and return the rewritten SQL. Returns `Ok(None)` when there is nothing to rewrite.
-/// ===========================================================================================
-///
-/// Every name registered is recorded in `pinned` — including on the error paths, so a statement
-/// that fails part-way through a multi-relation rewrite still cleans up after itself.
-///
+/// Resolve time-travel clauses to snapshot-pinned providers and rewrite FROM to ephemeral views.
 /// # Errors
 /// Propagates parse, catalog, snapshot-resolution, and provider-build errors.
 pub async fn prepare_time_travel_sql(
@@ -104,17 +76,11 @@ pub async fn prepare_time_travel_sql(
         let provider = IcebergStaticTableProvider::try_new_from_table_snapshot(table, snapshot_id)
             .await
             .map_err(iceberg_err)?;
-        // The SHARED minter in repark-core (H-1b): one process-global counter for the whole
-        // `__repark_tt_` namespace, so this name can never be one the reader-options path or the
-        // ANSI door's composed half is still using.
+        // The SHARED minter in repark-core.
         let temp_name = next_temp_view_name();
-        // KEPT after the unification, and not dead: an ENGINE-minted collision is now impossible,
-        // but DataFusion's schema provider refuses a duplicate `register_table`, so this line is
-        // what makes a user squatting the reserved `__repark_tt_<n>` name a clobber (the
-        // reserved-prefix rule) rather than a statement failure.
+        // KEPT after the unification, and not dead.
         let _ = ctx.deregister_table(temp_name.as_str());
-        // Recorded BEFORE the registration attempt: `register_table` can fail after taking the
-        // name, and every later `?` in this loop must still release what earlier turns took.
+        // Recorded BEFORE the registration attempt.
         pinned.names.push(temp_name.clone());
         ctx.register_table(temp_name.as_str(), Arc::new(provider))
             .map_err(|error| {
@@ -231,7 +197,6 @@ fn find_time_travel_spans(tokens: &[Token]) -> Vec<TimeTravelSpan> {
         }
 
         // Table name is the multipart identifier immediately before the clause.
-        // Walk left over Ident (Period Ident)*.
         if clause_sig_start == 0 {
             sig_index += 1;
             continue;
@@ -250,8 +215,7 @@ fn find_time_travel_spans(tokens: &[Token]) -> Vec<TimeTravelSpan> {
             name_sig_start -= 2;
         }
 
-        // Value is the token(s) after OF. Accept number, string, bare identifier, or
-        // `TIMESTAMP '…'` (two significant tokens).
+        // Value is the token(s) after OF.
         let value_sig = sig_index + 2;
         let Some((spec, value_tokens)) = parse_as_of_value(kind, &significant, value_sig) else {
             sig_index += 1;
@@ -333,10 +297,7 @@ fn parse_as_of_value(
         };
     }
 
-    // Unary minus + number: Iceberg snapshot ids are signed i64 and are often negative
-    // (Java `ThreadLocalRandom.nextLong()`). sqlparser emits `Minus` + `Number` rather than a
-    // single signed number token — without this arm, `VERSION AS OF -N` is not rewritten and
-    // time travel silently fails open to a parse error.
+    // Unary minus + number: Iceberg snapshot ids are signed i64 and are often negative.
     if matches!(token, Token::Minus) {
         let next = significant.get(value_sig + 1).map(|(_, t)| *t)?;
         let Token::Number(text, _) = next else {

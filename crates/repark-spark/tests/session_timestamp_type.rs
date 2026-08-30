@@ -1,9 +1,4 @@
 //! Q10 — `spark.sql.timestampType` at the Spark door + native `DataFrame` API.
-//!
-//! Default `TIMESTAMP_LTZ` is today's type-resolution (existing suites are the
-//! default-mode gate and are not edited). This file pins the NTZ opt-in: bare
-//! `TIMESTAMP` literals / casts / DDL resolve to naive µs / Iceberg `timestamp`,
-//! value AND Arrow type. `to_timestamp` / `current_timestamp` stay LTZ.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -110,9 +105,7 @@ async fn invalid_timestamp_type_fails_loud_naming_both_values() {
     );
 }
 
-/// Native `DataFrame` API: a standalone `Expr::Cast` of a string to the SQL `TIMESTAMP`
-/// target — the shape `Column.cast("timestamp")` / `F.expr("CAST(… AS TIMESTAMP)")`
-/// crosses as — on an NTZ session.
+/// Native `DataFrame` API: a standalone `Expr::Cast` of a string to the SQL `TIMESTAMP` target.
 #[tokio::test]
 async fn native_dataframe_api_cast_as_timestamp_follows_ntz() {
     let session = spark_session_with_timestamp_type("TIMESTAMP_NTZ");

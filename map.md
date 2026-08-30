@@ -1,5 +1,7 @@
 # map — repository root
 
+CC-3 (2026-08-30): AGENTS.md house-style clause and rustfmt.toml comment now state one-line comments; `// === name ===` markers stay. Compaction ceiling restored to 32000.
+
 ## Purpose
 
 RePark: a pure-Rust, no-JVM data engine over DataFusion + Arrow + the owned iceberg-rust fork,

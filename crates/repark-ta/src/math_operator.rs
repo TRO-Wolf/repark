@@ -1,17 +1,8 @@
 //! TA-Lib C 0.4.0 ports for `MIN`, `MAX`, and `SUM`.
-//!
-//! `MIN` and `MAX` retain the extreme's index and rescan only when it leaves the window.
-//! Equal extrema prefer the most recent value, matching C. `SUM` uses the SMA accumulator.
 
 use crate::{Result, check_period, nan_vec};
 
-/// ===========================================================================================
 /// `MIN` — lowest value over the trailing `period` window (`ta_MIN.c`, `TA_MIN`).
-///
-/// Retain the minimum index and rescan the window when that index expires.
-/// Equal values adopt the current index to match C's rescan cadence.
-/// ===========================================================================================
-///
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if `period < 2`.
 pub fn min(input: &[f64], period: usize) -> Result<Vec<f64>> {
@@ -54,13 +45,7 @@ pub fn min(input: &[f64], period: usize) -> Result<Vec<f64>> {
     Ok(out)
 }
 
-/// ===========================================================================================
 /// `MAX` — highest value over the trailing `period` window (`ta_MAX.c`, `TA_MAX`).
-///
-/// Retain the maximum index and rescan the window when that index expires.
-/// Equal values adopt the current index, matching C.
-/// ===========================================================================================
-///
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if `period < 2`.
 pub fn max(input: &[f64], period: usize) -> Result<Vec<f64>> {
@@ -103,12 +88,7 @@ pub fn max(input: &[f64], period: usize) -> Result<Vec<f64>> {
     Ok(out)
 }
 
-/// ===========================================================================================
 /// `SUM` — rolling sum over the trailing `period` window (`ta_SUM.c`, `TA_SUM`).
-///
-/// Add, snapshot, then subtract the trailing value, matching C's bit-exact order.
-/// ===========================================================================================
-///
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if `period < 2`.
 pub fn sum(input: &[f64], period: usize) -> Result<Vec<f64>> {

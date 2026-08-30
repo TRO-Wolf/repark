@@ -1,30 +1,5 @@
-//! Pure-Rust, bit-exact ports of TA-Lib C 0.4.0 technical-analysis kernels.
-//!
-//! Each kernel preserves C's operation order and is checked by strict `f64::to_bits` goldens
-//! over random-walk and flat-plateau fixtures. TA-Lib C is a read-only porting reference.
-//!
-//! ## The numerics contract (violating any of these breaks bit-exactness)
-//!
-//! - Do not use `mul_add`: C rounds multiplication and addition separately.
-//! - Preserve incremental window accumulators and their drift.
-//! - Preserve Wilder's three-statement smoothing order.
-//! - Preserve `TA_IS_ZERO` guards and their `0.0` results.
-//! - Return input-length outputs with NaN lookback prefixes; short input is all NaN.
-//!
-//! TA-Lib compatibility is Classic with unstable period zero; these settings are fixed.
-//!
-//! ## Known, deliberate divergences from C
-//!
-//! - `LINEARREG` uses 64-bit sums through [`MAX_PERIOD`], avoiding C's 32-bit overflow.
-//! - `linearreg_angle` can differ by about one ulp across libm implementations; goldens use
-//!   glibc/x86-64.
-//!
-//! ## Attribution
-//!
-//! The algorithms are ported from TA-Lib (<https://ta-lib.org>), BSD-3-Clause,
 //! Copyright (c) 1999-2007 Mario Fortier et al. See `NOTICE` in this crate.
-//!
-//! Kernel locals retain C-mirrored names so reviewers can compare the port with TA-Lib.
+//! Pure-Rust, bit-exact ports of TA-Lib C 0.4.0 technical-analysis kernels.
 
 use thiserror::Error;
 
@@ -60,18 +35,14 @@ pub use statistic::{
 pub use volatility::{atr, natr, trange};
 pub use volume::{ad, adosc, mfi, obv};
 
-/// ===========================================================================================
 /// Kernel-argument errors.
-///
-/// Represents invalid arguments; short input remains a successful all-NaN result.
-/// ===========================================================================================
 #[derive(Debug, Error, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum TaError {
     /// The period parameter is outside the function's TA-Lib documented range.
     #[error("invalid {name}: {value} (TA-Lib requires {min}..={MAX_PERIOD})")]
     InvalidPeriod {
-        /// Parameter name as documented by TA-Lib (e.g. `optInTimePeriod`).
+        /// Parameter name as documented by TA-Lib (e.g.
         name: &'static str,
         /// The rejected value.
         value: usize,
@@ -81,7 +52,7 @@ pub enum TaError {
     /// A window-UDF period argument was not a whole number.
     #[error("invalid {name}: {value} is not a whole number")]
     NonIntegralPeriod {
-        /// Parameter name (e.g. `optInTimePeriod`).
+        /// Parameter name (e.g.
         name: &'static str,
         /// The rejected floating value, rendered for the error message.
         value: String,
@@ -113,11 +84,11 @@ pub enum TaError {
     /// A real-valued parameter is outside its TA-Lib range; NaN is rejected.
     #[error("invalid {name}: {value} (TA-Lib requires {range})")]
     InvalidRealParam {
-        /// Parameter name as documented by TA-Lib (e.g. `optInAcceleration`).
+        /// Parameter name as documented by TA-Lib (e.g.
         name: &'static str,
         /// The rejected value, rendered for the message (`f64` is not `Eq`).
         value: String,
-        /// The documented valid range, as text (e.g. `0..=3e37`).
+        /// The documented valid range, as text (e.g.
         range: &'static str,
     },
 }

@@ -9,7 +9,7 @@ use datafusion::optimizer::{
     ApplyOrder, Optimizer, OptimizerConfig, OptimizerContext, OptimizerRule,
 };
 
-use super::df_guards::wrap_leaf_rule_for_test;
+use super::super::df_guards::wrap_leaf_rule_for_test;
 use crate::ReparkSession;
 
 /// A bare session carries the scalar-subquery guard in its core defaults.

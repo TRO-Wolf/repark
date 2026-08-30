@@ -1,14 +1,10 @@
 //! Streaming ordinary least squares via normal equations and Cholesky.
-//! Accumulates `XᵀX` and `Xᵀy` without retaining rows. An optional intercept is column zero.
-//! Singular or ill-conditioned designs fail without pseudoinversion or ridge regularization.
 
 use crate::MAX_FEATURES;
 use crate::cholesky::cholesky_factor_and_solve;
 use crate::error::{MlError, Result};
 
-/// ===========================================================================================
 /// Fitted OLS parameters; training rows are not retained.
-/// ===========================================================================================
 #[derive(Debug, Clone, PartialEq)]
 pub struct LinearRegressionSolution {
     /// Coefficients for the original feature columns.
@@ -20,9 +16,7 @@ pub struct LinearRegressionSolution {
     pub num_rows: u64,
 }
 
-/// ===========================================================================================
 /// Streaming OLS normal-equation accumulator with `O(p²)` state.
-/// ===========================================================================================
 #[derive(Debug, Clone)]
 pub struct LinearRegressionAccumulator {
     num_features: usize,
@@ -35,13 +29,9 @@ pub struct LinearRegressionAccumulator {
 }
 
 impl LinearRegressionAccumulator {
-    /// =======================================================================================
     /// Start an accumulator for raw feature columns.
-    ///
     /// # Errors
     /// [`MlError::FeatureDimTooLarge`] when `num_features > MAX_FEATURES`.
-    /// [`MlError::EmptyDesign`] when `num_features == 0` and `!fit_intercept`.
-    /// =======================================================================================
     pub fn new(num_features: usize, fit_intercept: bool) -> Result<Self> {
         if num_features > MAX_FEATURES {
             return Err(MlError::FeatureDimTooLarge {
@@ -78,12 +68,9 @@ impl LinearRegressionAccumulator {
         self.num_rows
     }
 
-    /// =======================================================================================
     /// Observe one dense training row and label.
-    ///
     /// # Errors
     /// Width mismatch, non-finite values.
-    /// =======================================================================================
     pub fn observe_row(&mut self, features: &[f64], label: f64) -> Result<()> {
         if features.len() != self.num_features {
             return Err(MlError::FeatureWidthMismatch {
@@ -127,12 +114,9 @@ impl LinearRegressionAccumulator {
         Ok(())
     }
 
-    /// =======================================================================================
     /// Observe row-major dense rows and their labels.
-    ///
     /// # Errors
     /// Same as [`Self::observe_row`], plus length mismatch on the flat buffer.
-    /// =======================================================================================
     pub fn observe_dense(&mut self, features_flat: &[f64], labels: &[f64]) -> Result<()> {
         if labels.is_empty() {
             return Ok(());
@@ -153,12 +137,9 @@ impl LinearRegressionAccumulator {
         Ok(())
     }
 
-    /// =======================================================================================
     /// Consume the accumulator and solve its normal equations.
-    ///
     /// # Errors
     /// Empty design (zero rows), singular / ill-conditioned `XᵀX`.
-    /// =======================================================================================
     pub fn finish(self) -> Result<LinearRegressionSolution> {
         if self.num_rows == 0 {
             return Err(MlError::EmptyDesign(
@@ -205,12 +186,9 @@ fn design_entry(
     }
 }
 
-/// ===========================================================================================
 /// Validate estimator parameters before streaming.
-///
 /// # Errors
 /// [`MlError::StandardizationUnsupported`] or [`MlError::ElasticNetUnsupported`].
-/// ===========================================================================================
 pub fn validate_linear_regression_params(
     elastic_net_param: f64,
     standardization: bool,

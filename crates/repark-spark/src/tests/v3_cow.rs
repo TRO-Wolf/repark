@@ -1,24 +1,17 @@
-//! Pins format-v3 copy-on-write DML refusal and the resolver safety seat.
-//! before any write (`V3-COW-1`). RP-2 (2026-08-27, fork `ce92a7bf`) measured the plain-`WHERE`
-//! DELETE on v3 Spark-clean in both modes and lifted it: MOR commits Puffin DVs, COW preserves
-//! survivor lineage. No native `DataFrame` DML (C-012).
-//!
 //! Model: Claude Fable 5
-//!
-//! [`V3_MAINTENANCE_ORACLE`] identifies the maintenance-oracle pair.
 //! pins: v3r-1-rulings/C-001, C-002, C-003, C-004, C-005, C-012
 //! pins: v3e-1-2-cow-oracle/C-009, C-010
 //! pins: rp-2-fork-repin/C-002, C-003, C-005
 //! pins: rp-2-fork-repin/C-001, C-004, C-007, C-008
 //! pins: rp-3-fork-repin/C-004
+//! Pins format-v3 copy-on-write DML refusal and the resolver safety seat.
 
 use super::super::*;
 use super::common::*;
 
 use iceberg::spec::FormatVersion;
 
-/// Dated V3E-2 decision (2026-08-24): Spark 4.1.2 + Iceberg 1.11.0 runs v3
-/// `rewrite_data_files` / `expire_snapshots`. Aligns the nightly pin. Transcript in the unit ledger.
+/// V3E-2 (2026-08-24): Spark 4.1.2 plus Iceberg 1.11.0 runs v3 `rewrite_data_files`.
 pub(super) const V3_MAINTENANCE_ORACLE: &str = "pyspark-4.1.2+iceberg-1.11.0";
 
 const COW_V3: &str = "'format-version' = '3', \
@@ -40,8 +33,6 @@ struct Lineage {
 }
 
 /// CREATE v3 (opt-in) + seed + `register_table` under `adopted`.
-///
-/// Returns the metadata pointer the CALL adopted.
 async fn adopt_v3(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -190,8 +181,8 @@ async fn assert_cow_refused_untouched(
     assert_still_v3(&load_sales(catalogs, table).await);
 }
 
-/// RP-2: plain-`WHERE` COW DELETE on v3 runs; every survivor keeps its lineage counters.
 /// pins: rp-2-fork-repin/C-005
+/// RP-2: plain-`WHERE` COW DELETE on v3 runs; every survivor keeps its lineage counters.
 #[tokio::test]
 async fn adopted_v3_cow_delete_carries_survivor_row_lineage() {
     let warehouse = TempDir::new().unwrap();
@@ -440,9 +431,9 @@ async fn v3_create_with_encryption_key_id_still_scans_without_a_kms() {
     );
 }
 
-/// RP-2: merge-on-read plain-`WHERE` DELETE on v3 commits a Puffin deletion vector.
 /// pins: rp-2-fork-repin/C-003
 /// pins: rp-3-fork-repin/C-004
+/// RP-2: merge-on-read plain-`WHERE` DELETE on v3 commits a Puffin deletion vector.
 #[tokio::test]
 async fn adopted_v3_mor_delete_commits_a_puffin_deletion_vector() {
     let warehouse = TempDir::new().unwrap();
@@ -562,9 +553,8 @@ async fn live_delete_file_kinds(catalogs: &CatalogRegistry, table: &str) -> Vec<
     kinds
 }
 
-/// SEC-001: two-part and bare names under a session default catalog / schema resolve the same
-/// guard seats: the UPDATE refuses, the DELETE (RP-2 lift) commits the right rows.
 /// pins: rp-2-fork-repin/C-003, C-005
+/// SEC-001: two-part and bare names under the session default resolve the same guard seats.
 #[tokio::test]
 async fn adopted_v3_cow_dml_with_default_catalog_short_names_refuses() {
     let warehouse = TempDir::new().unwrap();
@@ -597,10 +587,9 @@ async fn adopted_v3_cow_dml_with_default_catalog_short_names_refuses() {
     );
 }
 
-/// SEC-002: a padded `' Merge-On-Read '` (copy-on-write to the fork) still refuses on v3 —
-/// the UPDATE refusal never consults the property (RP-2), so the spelling cannot slip past.
 /// pins: v3r-1-rulings/C-004
 /// pins: rp-2-fork-repin/C-005
+/// SEC-002: a padded `' Merge-On-Read '` still refuses on v3.
 #[tokio::test]
 async fn adopted_v3_padded_merge_on_read_spelling_still_refuses_update() {
     let warehouse = TempDir::new().unwrap();

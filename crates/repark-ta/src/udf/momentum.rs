@@ -1,4 +1,4 @@
-//! Momentum-family window-UDF dispatch. Kernel math stays in `crate::momentum`.
+//! Momentum-family window-UDF dispatch.
 
 use crate::{
     adx, adxr, apo, aroon, aroonosc, bop, cci, cmo, dx, macd, macdext, macdfix, minus_di, minus_dm,
@@ -8,9 +8,7 @@ use crate::{
 
 use super::{MultiFamily, TaFn, family_dispatch_miss, family_dispatch_miss_multi, period};
 
-/// ===========================================================================================
 /// Momentum-family single-output dispatch.
-/// ===========================================================================================
 #[allow(clippy::too_many_lines)] // one flat match arm per UDF — splitting it would obscure the table.
 pub(super) fn compute(func: TaFn, series: &[&[f64]], params: &[f64]) -> crate::Result<Vec<f64>> {
     match func {
@@ -169,9 +167,7 @@ pub(super) fn compute(func: TaFn, series: &[&[f64]], params: &[f64]) -> crate::R
     }
 }
 
-/// ===========================================================================================
 /// Compute all bands for a momentum multi-output family in one kernel run.
-/// ===========================================================================================
 pub(super) fn compute_all(
     family: MultiFamily,
     series: &[&[f64]],

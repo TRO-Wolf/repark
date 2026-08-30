@@ -1,5 +1,10 @@
 # map — repark-core/src
 
+CC-4 (2026-08-30): remaining banner files condensed to the one-line rule
+(pins: cc-3-comment-condensation/C-009).
+
+CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated comments rewritten as complete sentences (D-001). Wrapped-line fragments rewritten as complete sentences (D-002). Clippy doc_markdown backticks added.
+
 CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
 accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
 
@@ -264,12 +269,12 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 - `session/` — `temp_views.rs` (the temp-view family: register / replace / materialize / cache /
   declare-sorted / drop, all through `temp_view_ref`; split out of `session.rs` in round 6) and
   `spill.rs` (S-1: FairSpillPool install + runtime SET intercept; production
-  siblings of `session.rs`) plus file-backed test modules of `session.rs`: `aws_gate_tests.rs`
+  siblings of `session.rs`) plus file-backed test modules of `session.rs`: `tests/aws_gate.rs`
   (E-2 gate pins incl. the late-config region-signal pin, AWS-free),
-  `namespace_create_tests.rs` (R-6 / G-6 Q1: create-new / same / conflicting / no-location),
-  `tests/catalog_registration.rs` (same-name linearization, duplicate rejection before provider
+  `tests/namespace_create.rs` (R-6 / G-6 Q1: create-new / same / conflicting / no-location),
+  `tests/session/catalog_registration.rs` (same-name linearization, duplicate rejection before provider
   build, distinct-name build overlap, and provider-build failure atomicity),
-  and `tests.rs` (the ported v1 battery, 38 port-now tests in v1 order; names port
+  and `tests/session.rs` (the ported v1 battery, 38 port-now tests in v1 order; names port
   under the declared-rename map — the 18-test deferred subset is in
   `task/port/deferred-tests.md`; plus the phase-2 PR-2 G8 pin
   `bare_session_without_extension_carries_df_54_1_subquery_guard`, NEW — outside the ported
@@ -286,7 +291,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   build-time sweep must skip (`datafusion.runtime.memory_limit`, applied to a FairSpillPool
   at build and on runtime SET; `datafusion.runtime.temp_directory` is build-time only,
   runtime SET refuses and names `TMPDIR`). Typos of a pseudo-key still fail loud; both
-  directions pinned in `session/tests.rs` / `session/spill.rs`.
+  directions pinned in `session/tests/session.rs` / `session/spill.rs`.
 
 ## Debug
 

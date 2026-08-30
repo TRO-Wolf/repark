@@ -1,14 +1,7 @@
-//! Pins partitioned and equality-delete Spark-written format-v3 fixtures.
-//!
 //! Model: Grok 4.6 xHigh
-//!
-//! Two Hadoop-catalog tables written by PySpark 4.1.2 + Iceberg 1.11.0, checked
-//! in under `fixtures/` so CI can apply Puffin deletion vectors and equality
-//! deletes with no JVM. Native `DataFrame` has no Iceberg DML write surface and
-//! is not a read entry point for these adopted tables (C-010).
-//!
 //! pins: v3e-3-partitioned-eqdel-fixtures/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-010, C-011, C-012, C-013
 //! pins: rp-3-fork-repin/C-004, C-007, C-011
+//! Pins partitioned and equality-delete Spark-written format-v3 fixtures.
 
 use std::fs;
 use std::io::ErrorKind;
@@ -315,9 +308,7 @@ async fn delete_file_rows(
     rows
 }
 
-// =================================================================================================
-// Partitioned DV fixture
-// =================================================================================================
+// === Partitioned DV fixture ===
 
 #[tokio::test]
 async fn partitioned_v3_dv_fixture_adopts_and_matches_spark_live_rows() {
@@ -596,9 +587,7 @@ async fn partitioned_v3_dv_delete_across_files_keeps_per_file_partitions() {
     );
 }
 
-// =================================================================================================
-// Equality-delete + DV fixture
-// =================================================================================================
+// === Equality-delete + DV fixture ===
 
 #[tokio::test]
 async fn equality_delete_alongside_dv_adopts_and_matches_spark_live_rows() {

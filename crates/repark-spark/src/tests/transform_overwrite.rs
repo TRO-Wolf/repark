@@ -1,8 +1,4 @@
-/// ===========================================================================================
-/// GROUP O pins static Spark `INSERT OVERWRITE` on transform-partitioned tables. The commit is a
-/// whole-table replace; manifest partition slots, fork transform values, and Arrow values/types
-/// are checked. Dynamic per-partition overwrite is out of scope.
-/// ===========================================================================================
+/// GROUP O pins static Spark `INSERT OVERWRITE` on transform-partitioned tables.
 use std::collections::{HashMap as StdHashMap, HashSet};
 
 use datafusion::arrow::array::AsArray;
@@ -67,8 +63,7 @@ fn slot_str(file: &DataFile, index: usize) -> String {
     }
 }
 
-/// slot value → total manifest record count over the live files (the committed proof that
-/// each file carries the partition value its rows actually belong to).
+/// slot value → total manifest record count over the live files.
 async fn int_slot_counts(table: &Table) -> StdHashMap<i32, u64> {
     let mut counts = StdHashMap::new();
     for file in &live_data_files(table).await {
@@ -181,22 +176,7 @@ fn register_ts_source(ctx: &SessionContext, name: &str, rows: &[(i32, &str, i64)
     ctx.register_batch(name, batch).unwrap();
 }
 
-/// PIN O1 (Group O) — a NON-EMPTY `INSERT OVERWRITE` into a `bucket(4, id)` table is a
-/// STATIC whole-table replace whose new files carry the FORK's own `Bucket(4)` ordinals.
-///
-/// Three things are pinned at once, all discriminating:
-/// 1. **Static, not dynamic** — the fixture's old ids cover a bucket the NEW ids never
-///    land in; after the overwrite that bucket has ZERO live files. Dynamic-mode
-///    (`overwriteDynamicPartitions`) would have left it behind, and the surviving rows
-///    would be a silent Spark divergence.
-/// 2. **Transform routing survives the overwrite** — the manifest slot → record-count map
-///    equals the fork's `Bucket(4)` over the new ids exactly (not identity, not one
-///    unpartitioned blob).
-/// 3. **Spec is untouched** and the rows round-trip on the Arrow path (value AND type).
-///
-/// RED on: routing `bucket` → identity in `build_partition_spec` (slot map wrong), or
-/// degrading the non-empty overwrite to an append in `execute_insert_overwrite` (old rows
-/// survive / the old-only bucket comes back).
+/// PIN O1.
 #[tokio::test]
 async fn overwrite_bucket_table_static_replace_and_fork_hash_routing() {
     let wh = TempDir::new().unwrap();
@@ -275,10 +255,7 @@ async fn overwrite_bucket_table_static_replace_and_fork_hash_routing() {
     );
 }
 
-/// PIN O2a (Group O) — the same static-replace + transform-routing contract on a TEMPORAL
-/// `days(ts)` table: the overwrite's rows land in the fork's own `Day` ordinals, and the
-/// old days (none of which the new data touches) are gone. Reverting to identity or
-/// degrading the overwrite to an append turns the slot-map / row asserts RED.
+/// PIN O2a.
 #[tokio::test]
 async fn overwrite_days_table_static_replace_and_day_routing() {
     const DAY: i64 = 86_400_000_000;
@@ -301,8 +278,7 @@ async fn overwrite_days_table_static_replace_and_day_routing() {
     .await
     .expect("days CTAS must succeed");
 
-    // Two new rows, both on ONE day far from every old day: static overwrite must leave
-    // exactly that one partition, dynamic would have kept the three old ones.
+    // Two new rows, both on ONE day far from every old day.
     let new_ts: Vec<i64> = vec![100 * DAY, 100 * DAY + 3_600_000_000];
     let new_rows: Vec<(i32, &str, i64)> = vec![(50, "new", new_ts[0]), (51, "new", new_ts[1])];
     register_ts_source(&ctx, "o2_new", &new_rows);
@@ -346,10 +322,7 @@ async fn overwrite_days_table_static_replace_and_day_routing() {
     );
 }
 
-/// PIN O2b (Group O) — MIXED `PARTITIONED BY (name, bucket(4, id))`: a non-empty overwrite
-/// keeps BOTH slots on every committed file, the identity slot is the row's `name` and the
-/// transform slot is the fork's `Bucket(4)` ordinal, and every old (name, bucket) pair is
-/// gone. Reverting the transform to identity, or appending instead of overwriting, is RED.
+/// PIN O2b.
 #[tokio::test]
 async fn overwrite_mixed_identity_and_transform_table_static_replace() {
     let wh = TempDir::new().unwrap();
@@ -430,10 +403,7 @@ async fn overwrite_mixed_identity_and_transform_table_static_replace() {
     );
 }
 
-/// PIN O2c (Group O) — `truncate(3, name)` (the string-truncate transform, the remaining
-/// in-scope transform family): a non-empty overwrite's files carry the 3-char prefix as the
-/// partition slot, the old prefixes are gone (static replace), and the rows round-trip.
-/// Reverting the transform to identity routes by the whole string and is RED.
+/// PIN O2c.
 #[tokio::test]
 async fn overwrite_truncate_str_table_static_replace_and_prefix_routing() {
     let wh = TempDir::new().unwrap();
@@ -492,10 +462,6 @@ async fn overwrite_truncate_str_table_static_replace_and_prefix_routing() {
 }
 
 /// A NULL computed partition value must land in the NULL partition slot, where `IS NULL` finds it.
-///
-/// Mutation: re-pinning the workspace to pre-Unit-1 makes this RED (no `None` slot /
-/// `IS NULL` = 0). The CTAS control remains as a same-engine oracle that the splitter
-/// path was always correct.
 #[tokio::test]
 async fn overwrite_null_partition_source_lands_in_null_slot() {
     let wh = TempDir::new().unwrap();
@@ -571,8 +537,7 @@ async fn overwrite_null_partition_source_lands_in_null_slot() {
     );
 }
 
-/// FROM-less literal sources must succeed for partitioned tables and preserve payload and
-/// partition correctness.
+/// FROM-less literal sources must succeed for partitioned tables and keep payload and partitions.
 #[test]
 fn overwrite_fromless_literal_source_succeeds_on_partitioned_table() {
     #[derive(Debug, PartialEq, Eq)]
@@ -665,10 +630,7 @@ fn overwrite_fromless_literal_source_succeeds_on_partitioned_table() {
     );
 }
 
-/// O8 companion — FROM-less literal into a PARTITIONED table whose partition column is
-/// **optional** (nullable). Unit-1 alone still rejected optional-column tables; Unit-2
-/// G0 nullability widening makes this `Ok` at pin `a08a0957`. Schema-aware expectation
-/// per the fork work order. Asserts payload **and** recorded identity partition tuple.
+/// O8 companion.
 #[tokio::test]
 async fn fromless_literal_into_optional_partition_column_succeeds() {
     let wh = TempDir::new().unwrap();
@@ -708,11 +670,7 @@ async fn fromless_literal_into_optional_partition_column_succeeds() {
     );
 }
 
-/// PIN O3 (Group O) — an EMPTY `INSERT OVERWRITE` into a transform-partitioned table still
-/// wipes (the C1-Q-001 empty-overwrite wipe intercept, which exists because the fork's provider
-/// would silent-no-op an empty write), and the table SURVIVES with its transform spec
-/// intact — a wipe must not degrade `bucket(4, id)` to unpartitioned or drop the table.
-/// Removing the empty-source intercept in `execute_insert_overwrite` is RED.
+/// PIN O3.
 #[tokio::test]
 async fn empty_overwrite_on_transform_table_wipes_and_keeps_spec() {
     let wh = TempDir::new().unwrap();
@@ -762,12 +720,7 @@ async fn empty_overwrite_on_transform_table_wipes_and_keeps_spec() {
     );
 }
 
-/// PIN O4 (Group O) — the C5-Q-001 / O4-C2-Q-001 assignment check still fires on a
-/// TRANSFORM-partitioned target: an empty overwrite whose source types (or arity) do not
-/// match must fail LOUD and leave the prior rows AND their partition routing untouched.
-/// The fail-open here would be the worst outcome in the group — a full-table wipe of a
-/// partitioned table for a statement that a non-empty run would have rejected at cast.
-/// Skipping `assert_empty_overwrite_types_assignment_compatible` is RED.
+/// PIN O4.
 #[tokio::test]
 async fn empty_overwrite_type_mismatch_on_transform_table_does_not_wipe() {
     let wh = TempDir::new().unwrap();
@@ -799,8 +752,7 @@ async fn empty_overwrite_type_mismatch_on_transform_table_does_not_wipe() {
         "must be the assignment-compat refusal, got: {type_error}"
     );
 
-    // Wrong arity — refused one step earlier, by the C5-Q-001 plan-validate
-    // (`ctx.sql(INSERT …)`), before the assignment check is even reached.
+    // Wrong arity.
     let arity_error = execute(
         &ctx,
         &catalogs,
@@ -833,12 +785,7 @@ async fn empty_overwrite_type_mismatch_on_transform_table_does_not_wipe() {
     );
 }
 
-/// PIN O5 (Group O) — `INSERT OVERWRITE … PARTITION (…)` on a TRANSFORM-partitioned table
-/// is still a loud `NotImplemented`, empty source AND non-empty source, and neither form
-/// touches a row. A transform table is exactly where a silently-degraded partition
-/// overwrite would be most destructive (the `PARTITION (id = 1)` predicate does not even
-/// name a partition field of a `bucket(4, id)` spec). Dropping the `insert.partitioned`
-/// reject is RED.
+/// PIN O5.
 #[tokio::test]
 async fn overwrite_partition_clause_on_transform_table_still_rejected() {
     let wh = TempDir::new().unwrap();
@@ -883,12 +830,7 @@ async fn overwrite_partition_clause_on_transform_table_still_rejected() {
     assert_eq!(table_rows(&ctx, &catalogs, "ice.sales.bkt").await.len(), 4);
 }
 
-/// PIN O6 (Group O) — regression: the IDENTITY-partitioned overwrite keeps the same static
-/// whole-table-replace semantics (old identity partitions gone, new files carry their own
-/// identity slot) and the UNPARTITIONED overwrite still replaces all rows. The transform
-/// work must not have shifted either. (The unpartitioned round-trip is also pinned by
-/// `insert_overwrite_replaces_all`; this asserts it beside the partitioned case so a
-/// single mutation of the overwrite path shows up in one place.)
+/// PIN O6.
 #[tokio::test]
 async fn overwrite_identity_and_unpartitioned_regression() {
     let wh = TempDir::new().unwrap();
@@ -955,9 +897,7 @@ async fn overwrite_identity_and_unpartitioned_regression() {
     );
 }
 
-/// ===================================================================================
 /// Provider partition correctness on the public router path.
-/// ===================================================================================
 mod provider_partition_correctness {
     use super::*;
 
@@ -1162,7 +1102,6 @@ mod provider_partition_correctness {
     }
 
     /// FROM-less literal INSERT into a partitioned target succeeds (was O8 panic).
-    /// Payload + identity partition slot — not merely row count (CCC Q-002 / L-001).
     #[tokio::test]
     async fn fromless_literal_into_partitioned_target_succeeds() {
         let wh = TempDir::new().unwrap();

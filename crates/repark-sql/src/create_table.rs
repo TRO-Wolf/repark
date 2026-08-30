@@ -57,9 +57,7 @@ impl CreateTarget {
     }
 }
 
-/// ===========================================================================================
 /// Route and execute a `CREATE TABLE` (with or without `AS SELECT`).
-/// ===========================================================================================
 pub(crate) async fn execute_create_table(
     cx: &EngineContext<'_>,
     create: &CreateTable,
@@ -92,7 +90,7 @@ pub(crate) async fn execute_create_table(
         }
     }
 
-    // Derive the table's Arrow schema. CTAS uses the SELECT's logical plan without publishing it.
+    // Derive the table's Arrow schema.
     let (arrow_schema, query) = if let Some(query) = create.query.as_ref() {
         let frame = derive_ctas_query(cx, query).await?;
         let schema = Arc::new(frame.schema().as_arrow().clone());
@@ -188,8 +186,7 @@ async fn execute_staged_create(
             .map_err(iceberg_err)?
     };
 
-    // Streaming bounds memory by batch size and open writers. A failure leaves the staged
-    // transaction unpublished; one commit publishes it.
+    // Streaming bounds memory by batch size and open writers.
     let data_files = match query {
         Some(frame) => {
             let stream = frame.execute_stream().await?;
@@ -218,7 +215,7 @@ enum Placement {
     ServiceManaged,
 }
 
-/// Resolve create placement. REPLACE reuses the existing table's location.
+/// Resolve create placement.
 async fn resolve_placement(
     target: &CreateTarget,
     properties: &TableProperties,
@@ -230,8 +227,7 @@ async fn resolve_placement(
     }
     let policy = catalogs
         .location_policy(&target.catalog_name)
-        // Default to the STRICT policy when a catalog somehow carries none: an unknown policy
-        // must never silently mean "temp directory is fine".
+        // Default to STRICT when a catalog carries no policy; unknown is not a temp directory.
         .unwrap_or(LocationPolicy::RequireExplicitLocation);
 
     if matches!(policy, LocationPolicy::ServiceManagedLocation) {
@@ -323,15 +319,15 @@ fn validate_identifiers(target: &CreateTarget) -> Result<()> {
     reject_path_escape_ident(&target.table, "table")
 }
 
-/// Canonical conf key (Spark-style camelCase). Default **false**.
+/// Canonical conf key (Spark-style camelCase).
 pub(crate) const ALLOW_CREATE_FORMAT_VERSION_3_KEY: &str = "repark.sql.allowCreateFormatVersion3";
 
 /// The `snake_case` spelling DataFusion's `extensions_options!` macro registers the field under.
 const ALLOW_CREATE_FORMAT_VERSION_3_OPTION: &str = "repark.sql.allow_create_format_version_3";
 
-/// Resolve CREATE/CTAS `WITH (format_version)` against the session opt-in.
 /// pins: v3-2-create-v3-opt-in/C-006, C-013
 /// Model: Grok 4.6 xHigh
+/// Resolve CREATE/CTAS `WITH (format_version)` against the session opt-in.
 #[allow(clippy::too_many_arguments)] // schema + location + requested format-version travel together
 fn iceberg_table_creation(
     name: &str,
@@ -402,8 +398,7 @@ fn iceberg_create_format_version(
     }
 }
 
-/// Create first because the service assigns storage during create. Drop after any query, file-write,
-/// or append-commit failure. A later catalog-refresh failure leaves the created table intact.
+/// Create first because the service assigns storage during create.
 #[allow(clippy::too_many_arguments)] // placement + schema + the V3-2 format version travel together
 async fn create_first_service_managed(
     cx: &EngineContext<'_>,
@@ -483,7 +478,7 @@ async fn write_stream(
     }
 }
 
-/// Refresh the touched schema's name directory, then return an empty frame; refresh errors do not roll back.
+/// Refresh the touched schema's name directory, then return an empty frame.
 async fn finish(ctx: &SessionContext, target: &CreateTarget) -> Result<DataFrame> {
     repark_iceberg::catalog::invalidate_catalog_namespaces(
         ctx,
@@ -495,11 +490,9 @@ async fn finish(ctx: &SessionContext, target: &CreateTarget) -> Result<DataFrame
     ctx.read_empty()
 }
 
-// === Q15 routing ============================================================================
+// Q15 routing.
 
-/// ===========================================================================================
 /// Resolve a create target's leading segment against the registered Iceberg catalogs (Q15/G1).
-/// ===========================================================================================
 pub(crate) fn resolve_target(
     cx: &EngineContext<'_>,
     name: &ObjectName,
@@ -567,9 +560,9 @@ fn refuse_unqualified(
     ))
 }
 
-// === Clause refusals ========================================================================
+// Clause refusals.
 
-/// Return the `WITH (…)` option list. Reject other option syntaxes.
+/// Return the `WITH (…)` option list.
 fn with_options(create: &CreateTable, form: &str) -> Result<Vec<SqlOption>> {
     match &create.table_options {
         CreateTableOptions::None => Ok(Vec::new()),
@@ -659,7 +652,7 @@ fn refuse_unsupported_clauses(create: &CreateTable, form: &str) -> Result<()> {
     Ok(())
 }
 
-// === Column-def schema derivation ===========================================================
+// Column-def schema derivation.
 
 /// Derive a column-def `CREATE TABLE` Arrow schema by planning a zero-row projection.
 async fn column_def_schema(
@@ -711,9 +704,7 @@ const SUPPORTED_TIMESTAMP_PRECISION: u8 = 6;
 /// DataFusion's default / `TIMESTAMP(9)` precision (nanoseconds).
 const NANOSECOND_TIMESTAMP_PRECISION: u8 = 9;
 
-/// ===========================================================================================
 /// Refuse column-def timestamps the write path cannot honor (Arrow nanoseconds).
-/// ===========================================================================================
 fn refuse_nanosecond_timestamp_columns(schema: &ArrowSchema, form: &str) -> Result<()> {
     for field in schema.fields() {
         if matches!(
@@ -733,9 +724,7 @@ fn refuse_nanosecond_timestamp_columns(schema: &ArrowSchema, form: &str) -> Resu
     Ok(())
 }
 
-/// ===========================================================================================
 /// Resolve one declared SQL type to its Iceberg type through the shared planner.
-/// ===========================================================================================
 pub(crate) async fn sql_type_to_iceberg(
     ctx: &SessionContext,
     data_type: &datafusion::sql::sqlparser::ast::DataType,

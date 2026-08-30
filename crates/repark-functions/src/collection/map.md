@@ -1,5 +1,8 @@
 # map — repark-functions/src/collection
 
+CC-4 (2026-08-30): remaining banner files condensed to the one-line rule
+(pins: cc-3-comment-condensation/C-009).
+
 ## Purpose
 
 The child modules of [`collection.rs`](../collection.rs). Each holds one Spark collection shim whose

@@ -19,7 +19,7 @@ use iceberg::spec::{
 use iceberg::{Catalog, CatalogBuilder, NamespaceIdent, TableCreation, TableIdent};
 use tempfile::TempDir;
 
-use super::{
+use super::super::{
     IsolationLevel, WRITE_UPDATE_ISOLATION_LEVEL, commit_overwrite, resolve_update_isolation, *,
 };
 
@@ -409,7 +409,7 @@ async fn identity_update_null_in_subquery_still_matches_the_found_key() {
     execute_predicate_dml(&ctx, &catalog, &update_spec("nullkeys", vec![("v", "'z'")]))
         .await
         .expect("NULL-in-keys UPDATE IN");
-    // 2 IN (2, NULL) is TRUE; 1/3 IN (2, NULL) is UNKNOWN. Spark remaining name={'a','z','c'}.
+    // 2 IN (2, NULL) is TRUE; 1/3 IN (2, NULL) is UNKNOWN.
     assert_eq!(
         read_back(&catalog, &ident).await,
         vec![
@@ -632,8 +632,7 @@ async fn collect_sorted_ids(ctx: &SessionContext, sql: &str) -> Vec<Option<i32>>
     ids
 }
 
-/// A4: identity SELECT remaining set for correlated IN equals correlated EXISTS, matching
-/// live Spark 4.1.2 on every recorded fixture. Not an assumed rewrite.
+/// A4: identity SELECT remaining set for correlated IN equals correlated EXISTS on live Spark.
 #[tokio::test]
 async fn identity_select_correlated_in_matches_exists_and_spark_412() {
     let cases = [
@@ -762,9 +761,7 @@ async fn table_with_update_isolation(
     catalog.load_table(&ident).await.expect("load")
 }
 
-/// Isolation-property cases (M19) for `write.update.isolation-level`. Live resolver
-/// semantics (conductor-13 A10): no trim, `to_ascii_lowercase`, default serializable,
-/// garbage ⇒ `DataFusionError::Plan` `Invalid isolation level: {name}`.
+/// Isolation-property cases (M19) for `write.update.isolation-level`.
 #[tokio::test]
 async fn update_isolation_property_a10_no_trim_lowercase_default_garbage() {
     use datafusion::error::DataFusionError;
@@ -851,8 +848,7 @@ async fn fast_append_files(
     (table, snapshot_id)
 }
 
-/// Isolation policy thread (M19): `write.update.isolation-level = serializable` (default)
-/// rejects a concurrent append on the identity-UPDATE COW arm (`commit_overwrite`).
+/// Isolation M19: serializable (default) rejects a concurrent append on identity-UPDATE COW.
 #[tokio::test]
 async fn update_isolation_serializable_rejects_concurrent_append() {
     use datafusion::error::DataFusionError;
@@ -904,8 +900,7 @@ async fn update_isolation_serializable_rejects_concurrent_append() {
     );
 }
 
-/// Isolation policy thread (M19): `write.update.isolation-level = SNAPSHOT` (case-folded)
-/// commits through the same concurrent append — the Spark S5 shape for UPDATE.
+/// Isolation M19: SNAPSHOT isolation (case-folded) commits through the same concurrent append.
 #[tokio::test]
 async fn update_isolation_snapshot_commits_through_concurrent_append() {
     let warehouse = TempDir::new().expect("temp warehouse");

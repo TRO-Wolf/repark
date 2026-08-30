@@ -1,7 +1,4 @@
-//! Format-v3 row-DML guard — registry `V3-COW-1`. Plain-`WHERE` DELETE on v3, including on a
-//! table that already carries deletion vectors, runs at fork `d408da42` (RP-3 / F-17). A COW
-//! DELETE after an overwrite snapshot refuses before the fork can reassign lineage. UPDATE on v3
-//! still refuses and waits for V3-3.
+//! Format-v3 row-DML guard — registry `V3-COW-1`.
 
 use datafusion::error::{DataFusionError, Result};
 use iceberg::spec::{FormatVersion, Operation};
@@ -32,12 +29,7 @@ pub(crate) fn refuse_v3_cow_dml_that_would_reassign_row_lineage(
     )))
 }
 
-/// Passthrough seat for the plain-`WHERE` DELETE / UPDATE both doors delegate to the fork's
-/// `TableProvider` (never reaching `predicate_dml`). A missing table passes. `DELETE` on v3
-/// passes, including when live deletion vectors are present (RP-3 / F-17 at `d408da42`). A COW
-/// DELETE after an overwrite snapshot refuses before it can reassign survivor lineage. `UPDATE`
-/// on v3 refuses (V3-3) — without consulting `write.<verb>.mode` (SEC-002).
-///
+/// Passthrough seat for plain-WHERE DELETE/UPDATE both doors delegate to the fork provider.
 /// # Errors
 /// [`DataFusionError::NotImplemented`].
 pub async fn refuse_v3_cow_dml(

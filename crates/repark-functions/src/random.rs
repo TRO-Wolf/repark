@@ -1,7 +1,4 @@
 //! Spark-compatible seeded `rand` / `randn` using `XORShiftRandom` and `MurmurHash3`.
-//!
-//! `RePark` fixes the single-node partition index at zero and restarts each invoke batch. This is
-//! deterministic for one batch and a documented residual for multi-batch execution.
 
 // Intentional Java/Scala bit-width casts for XORShift + MurmurHash3 bit-exact parity.
 #![allow(
@@ -26,9 +23,7 @@ use datafusion::logical_expr::{
 /// Scala `MurmurHash3.arraySeed` (spark `XORShiftRandom.hashSeed`).
 const MURMUR3_ARRAY_SEED: u32 = 0x3c_07_4a_61;
 
-/// ===========================================================================================
 /// Spark `XORShiftRandom` (extends `java.util.Random`; only `next(bits)` overridden).
-/// ===========================================================================================
 #[derive(Clone, Debug)]
 struct XorShiftRandom {
     seed: i64,
@@ -81,9 +76,7 @@ impl XorShiftRandom {
     }
 }
 
-/// ===========================================================================================
 /// Spark `XORShiftRandom.hashSeed` — double `MurmurHash3` over big-endian long bytes.
-/// ===========================================================================================
 fn hash_seed(seed: i64) -> i64 {
     let bytes = seed.to_be_bytes();
     let low_bits = murmur3_x86_32(&bytes, MURMUR3_ARRAY_SEED);
@@ -136,9 +129,7 @@ fn murmur3_x86_32(data: &[u8], seed: u32) -> u32 {
     h1
 }
 
-/// ===========================================================================================
 /// Registered Spark `rand` / `randn` UDF instances.
-/// ===========================================================================================
 #[must_use]
 pub fn functions() -> Vec<Arc<ScalarUDF>> {
     vec![
@@ -149,7 +140,7 @@ pub fn functions() -> Vec<Arc<ScalarUDF>> {
     ]
 }
 
-/// Spark `rand([seed])` — uniform [0, 1). Alias `random` overwrites DF's unseeded `random()`.
+/// Spark `rand([seed])` — uniform [0, 1).
 #[must_use]
 pub fn spark_rand_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkRand::new()).with_aliases(["random"]))
@@ -167,7 +158,7 @@ pub fn spark_randstr_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkRandstr::new()))
 }
 
-/// Spark `uniform(min, max[, seed])` — i.i.d. values in `[min, max)`.
+/// Spark `uniform(min, max[, seed])` — i.i.d.
 #[must_use]
 pub fn spark_uniform_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkUniform::new()))
@@ -177,17 +168,12 @@ pub fn spark_uniform_udf() -> Arc<ScalarUDF> {
 const MAX_RANDSTR_LENGTH: i64 = 1_000_000;
 
 /// Spark `randstr`'s character pool, in Spark's own order: digits, then lower, then upper.
-///
-/// The order is load-bearing, not cosmetic — the index comes from the same `XORShift` stream
-/// `rand` uses, so a different ordering yields a different string for the same seed.
 const RANDSTR_POOL: &[u8] = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-/// ===========================================================================================
 /// Shared seed extraction (null seed → 0 like Spark `UnresolvedSeed` fallback examples).
-/// ===========================================================================================
 fn extract_seed(args: &[ColumnarValue]) -> Result<i64> {
     if args.is_empty() {
-        // Unseeded calls use deterministic seed zero; explicit seeds select other deterministic streams.
+        // Unseeded calls use seed zero; explicit seeds pick other deterministic streams.
         return Ok(0);
     }
     match &args[0] {
@@ -217,9 +203,7 @@ fn fill_doubles(number_rows: usize, seed: i64, gaussian: bool) -> Float64Array {
     Float64Array::from(values)
 }
 
-/// ===========================================================================================
 /// `SparkRand` — name `rand` (also registered as `random` for DataFusion SQL parity).
-/// ===========================================================================================
 #[derive(Debug)]
 struct SparkRand {
     signature: Signature,
@@ -272,9 +256,7 @@ impl ScalarUDFImpl for SparkRand {
     }
 }
 
-/// ===========================================================================================
 /// `SparkRandn` — name `randn`.
-/// ===========================================================================================
 #[derive(Debug)]
 struct SparkRandn {
     signature: Signature,
@@ -368,12 +350,7 @@ mod tests {
     }
 }
 
-/// ===========================================================================================
 /// `SparkRandstr` — `randstr(length[, seed])`.
-/// ===========================================================================================
-///
-/// Spark requires `length` to be a **constant** SMALLINT/INT, so a column argument is refused
-/// loudly rather than silently reading the first row.
 #[derive(Debug)]
 struct SparkRandstr {
     signature: Signature,
@@ -447,13 +424,7 @@ impl ScalarUDFImpl for SparkRandstr {
     }
 }
 
-/// ===========================================================================================
 /// `SparkUniform` — `uniform(min, max[, seed])`.
-/// ===========================================================================================
-///
-/// **The return type follows the argument types**, which is Spark's documented rule: two integer
-/// bounds give an integer result, anything else gives a double. Getting this wrong would be a
-/// silent type change rather than an error, so the bounds are inspected at planning time.
 #[derive(Debug)]
 struct SparkUniform {
     signature: Signature,
@@ -531,8 +502,7 @@ impl ScalarUDFImpl for SparkUniform {
     }
 }
 
-/// A bound that Spark requires to be constant — a column argument is a loud refusal, never a
-/// silent read of row zero.
+/// A bound Spark requires to be constant: a column argument is a loud refusal, never row zero.
 fn constant_i64(value: Option<&ColumnarValue>, what: &str) -> Result<i64> {
     match value {
         Some(ColumnarValue::Scalar(scalar)) => match scalar {

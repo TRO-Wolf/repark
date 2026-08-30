@@ -1,9 +1,4 @@
 //! Spark `DecimalPrecision` analyzer rule.
-//!
-//! Spark decimal precision and integer-literal coercion for `+`, `-`, and `*`.
-//!
-//! The rule applies Spark's scale-dropping precision clamp and minimum literal precision. It
-//! runs before decimal division rewriting; DEC-8 planning and DEC-6 overflow live elsewhere.
 
 use datafusion::arrow::datatypes::DataType;
 use datafusion::common::config::ConfigOptions;
@@ -13,15 +8,11 @@ use datafusion::logical_expr::expr_rewriter::NamePreserver;
 use datafusion::logical_expr::{BinaryExpr, Cast, Expr, ExprSchemable, LogicalPlan, Operator};
 use datafusion::optimizer::AnalyzerRule;
 
-/// Spark / Arrow decimal128 limits. Unbounded math uses [`i32`] so `p1+p2+1` (77) fits.
+/// Spark / Arrow decimal128 limits.
 pub(crate) const MAX_PRECISION: i32 = 38;
 pub(crate) const MINIMUM_ADJUSTED_SCALE: i32 = 6;
 
-/// ===========================================================================================
 /// Spark result-type + integer-literal min-precision over type-coerced `+ − *`.
-///
-/// Stateless — one instance serves every session. See the module docs for the exact rewrites.
-/// ===========================================================================================
 #[derive(Debug, Default)]
 pub struct SparkDecimalPrecision;
 
@@ -36,8 +27,7 @@ impl AnalyzerRule for SparkDecimalPrecision {
     }
 }
 
-/// Rewrite one plan node's expressions against its merged input schema, preserving output
-/// field names (`NamePreserver` — same discipline as `TypeCoercion` / `SparkExprSemantics`).
+/// Rewrite one plan node's expressions against its merged input schema, keeping output field names.
 fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
     let mut schema = DFSchema::empty();
     for input in plan.inputs() {
@@ -52,8 +42,7 @@ fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
     transformed.map_data(LogicalPlan::recompute_schema)
 }
 
-/// Top-down: stop on an already-correct `CAST(<op> AS spark_type)` so a second
-/// analyze cannot recompute Spark's formula on the clamped result type.
+/// Stop on an already-correct Spark-typed `CAST` so a second analyze cannot recompute the formula.
 fn rewrite_expr(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
     if let Expr::Cast(cast) = &expr
         && let Expr::BinaryExpr(inner) = cast.expr.as_ref()
@@ -79,9 +68,7 @@ fn is_decimal_arithmetic(operator: Operator) -> bool {
     )
 }
 
-/// ===========================================================================================
-/// U3 then U4a on one `+ − *` node. A `get_type` miss leaves the expression untouched.
-/// ===========================================================================================
+/// U3 then U4a on one `+ − *` node.
 fn rewrite_decimal_arithmetic(binary: BinaryExpr, schema: &DFSchema) -> Transformed<Expr> {
     let (Ok(left_type), Ok(right_type)) =
         (binary.left.get_type(schema), binary.right.get_type(schema))
@@ -146,9 +133,7 @@ fn rebuilt(left: Expr, operator: Operator, right: Expr, original: &Expr) -> Tran
     }
 }
 
-/// ===========================================================================================
 /// U3: cast bare integer literals beside decimals to minimum-precision `DECIMAL(digits, 0)`.
-/// ===========================================================================================
 fn min_precision_integer_literal(operand: Expr, other_type: &DataType) -> Expr {
     if decimal128_parts(other_type).is_none() {
         return operand;
@@ -213,7 +198,7 @@ fn is_default_integer_to_decimal(cast_target: &DataType, native: &DataType) -> b
     )
 }
 
-/// Digits of the integer value (Spark `fromLiteral`). `0` and `-5` are precision 1.
+/// Digits of the integer value (Spark `fromLiteral`).
 fn min_precision_digits(value: i128) -> u8 {
     let magnitude = value.unsigned_abs();
     if magnitude == 0 {
@@ -233,9 +218,7 @@ pub(crate) fn decimal128_parts(data_type: &DataType) -> Option<(u8, i8)> {
     }
 }
 
-/// ===========================================================================================
 /// Spark `resultDecimalType` + `adjustPrecisionScale` (`allowPrecisionLoss=true`).
-/// ===========================================================================================
 pub(crate) fn spark_result_type(
     operator: Operator,
     left: (u8, i8),
@@ -385,9 +368,7 @@ mod tests {
         (precision, scale, value)
     }
 
-    // ===========================================================================================
-    // Formula pins — mutation-proof against a wrong clamp / fromLiteral digit count
-    // ===========================================================================================
+    // === Formula pins ===
 
     #[test]
     fn adjust_precision_scale_matches_photographed_spark_halves() {
@@ -472,9 +453,7 @@ mod tests {
         assert_eq!(min_precision_digits(i64::MIN.into()), 19);
     }
 
-    // ===========================================================================================
-    // SQL pins — production `analyzer_rules()` wiring (U3 then SparkExprSemantics)
-    // ===========================================================================================
+    // === SQL pins ===
 
     #[tokio::test]
     async fn integer_literal_times_decimal_is_spark_min_precision() {
@@ -590,7 +569,6 @@ mod tests {
     #[tokio::test]
     async fn mul_38_20_plans_via_the_expr_planner() {
         // DEC-8: the ExprPlanner replaces Arrow-refusing `*` before `get_type`.
-        // This rule still cannot see a BinaryExpr of (38,20)*(38,20).
         let ctx = ctx();
         let batch = batch(
             &ctx,
@@ -648,8 +626,7 @@ mod tests {
 
     #[tokio::test]
     async fn add_clamp_value_survives_a_second_analyze() {
-        // Operand-scale rewrite computed Spark's formula on the already-clamped
-        // (38,17)+(38,17) and dropped another digit (2e17 → 2e16). CAST-after must not.
+        // Operand-scale rewrite ran Spark's formula on a clamped pair and dropped a digit.
         let ctx = ctx();
         let batch = batch(
             &ctx,

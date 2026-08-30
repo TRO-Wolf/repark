@@ -1,6 +1,4 @@
-/// `DELETE FROM … WHERE` passes through to the fork provider's `delete_from` (copy-on-write
-/// default) and removes exactly the matched rows. Lock-down for the D1 adapter slice: `RePark`
-/// adds no code here — DataFusion 52.2 plans SQL DML onto the `TableProvider`.
+/// DELETE FROM WHERE passes through to the fork provider and removes exactly the matched rows.
 use super::super::*;
 use super::common::*;
 
@@ -41,8 +39,7 @@ async fn delete_all_rows_empties_table() {
     assert_eq!(rows(&ctx, &catalogs, "SELECT * FROM ice.sales.t").await, 0);
 }
 
-/// `UPDATE … SET … WHERE` passes through to the provider's `update` (copy-on-write default):
-/// matched rows take the SET values, unmatched rows survive byte-identical.
+/// `UPDATE … SET … WHERE` passes through to the provider's `update`.
 #[tokio::test]
 async fn update_where_copy_on_write() {
     let wh = TempDir::new().unwrap();
@@ -81,10 +78,7 @@ async fn update_where_copy_on_write() {
     );
 }
 
-/// `write.delete.mode = merge-on-read` threads through CTAS `TBLPROPERTIES` and the provider
-/// takes the merge-on-read path (position deletes / DVs); the merged read hides the deleted row. The
-/// mode-dispatch internals are the fork's tests' job — this locks `RePark`'s property plumbing
-/// plus the merged read through our registered provider.
+/// write.delete.mode merge-on-read threads through CTAS TBLPROPERTIES onto the provider path.
 #[tokio::test]
 async fn delete_merge_on_read_mode() {
     let wh = TempDir::new().unwrap();
@@ -112,8 +106,7 @@ async fn delete_merge_on_read_mode() {
     );
 }
 
-/// `write.update.mode = merge-on-read`: the merge-on-read UPDATE (delete + re-insert in one commit)
-/// reads back with the new values through our registered provider.
+/// `write.update.mode = merge-on-read`: the merge-on-read UPDATE reads back.
 #[tokio::test]
 async fn update_merge_on_read_mode() {
     let wh = TempDir::new().unwrap();
@@ -432,16 +425,9 @@ async fn bug001_mor_update_refuses_unpartitioned_after_partition_evolution() {
     );
 }
 
-// === G3-E8 — the subquery-predicate DML valve ===============================================
-//
-// The defect these pin: a subquery in a DELETE/UPDATE `WHERE` clause is lost at DataFusion's DML
-// planning boundary (`extract_dml_filters` recovers nothing from the semi/anti/mark join the
-// optimizer decorrelated it into), and an empty filter list is the fork provider's spelling of
-// "no WHERE clause" — so the statement matched EVERY row. Recorded pre-guard behaviour and the
-// full statement-form matrix: task/g3e8-guard-ledger.md.
+// === G3-E8.
 
-/// A target + a one-key source table, the G3-E8 fixture. `keys` holds exactly `(2, 'K')`, and
-/// `'K'` appears in no `tgt` row, so an assignment sourced from it is observable.
+/// A target + a one-key source table, the G3-E8 fixture.
 async fn g3e8_setup(wh: &TempDir) -> (SessionContext, CatalogRegistry) {
     let (ctx, catalogs) = setup(wh).await;
     run(
@@ -468,8 +454,7 @@ fn g3e8_seed() -> Vec<(i32, String)> {
     ]
 }
 
-/// Assert the refusal is the G3-E8 valve's OWN message — the defect class, the consequence, the
-/// MERGE workaround, and that support returns. A generic planner error must NOT satisfy this.
+/// Assert the refusal is the G3-E8 valve's OWN message.
 fn assert_g3e8_message(text: &str, verb: &str, sql: &str) {
     assert!(
         text.contains("subquery predicates are silently mis-executed"),
@@ -494,7 +479,6 @@ fn assert_g3e8_message(text: &str, verb: &str, sql: &str) {
 }
 
 /// The confirmed repro (intake G3-E8): `DELETE … WHERE id IN (SELECT …)` emptied the table.
-/// The identity path now deletes exactly the matching row (Spark `{1,3}`).
 #[tokio::test]
 async fn g3e8_delete_in_subquery_deletes_exactly_the_matching_row() {
     let wh = TempDir::new().unwrap();
@@ -813,47 +797,33 @@ async fn g3e8_update_in_subquery_rewrites_only_the_matching_row() {
     );
 }
 
-/// Every DELETE subquery spelling the recon proved silently wrong refuses, and none of them
-/// touches a row. One fresh table per form, so a leaked write cannot hide behind a later one.
+/// Every DELETE subquery spelling the recon proved silently wrong refuses.
 #[tokio::test]
 async fn g3e8_delete_subquery_family_all_refuse() {
     for sql in [
-        // IN / NOT IN are the product hole (executed by g3e8_delete_in_subquery_* /
-        // g3e8_delete_not_in_*). Residual refuse:
-        // negated, disjunctive and conjunctive positions (the AND form silently PARTIALLY
-        // over-deleted — the surviving conjunct was applied alone)
+        // IN / NOT IN are the product hole.
         "DELETE FROM ice.sales.tgt WHERE NOT (id IN (SELECT id FROM ice.sales.keys))",
         "DELETE FROM ice.sales.tgt WHERE id = 1 OR id IN (SELECT id FROM ice.sales.keys)",
         "DELETE FROM ice.sales.tgt WHERE id > 1 AND id IN (SELECT id FROM ice.sales.keys)",
-        // EXISTS / NOT EXISTS / correlated IN now execute. Residual refuse:
-        // quantified comparison (Spark 4.1.2 parse-fails ANY/ALL — permanent v1 valve)
+        // EXISTS / NOT EXISTS / correlated IN now execute.
         "DELETE FROM ice.sales.tgt WHERE id > ANY (SELECT id FROM ice.sales.keys)",
         "DELETE FROM ice.sales.tgt WHERE id > ALL (SELECT id FROM ice.sales.keys)",
         "DELETE FROM ice.sales.tgt WHERE id = ANY (SELECT id FROM ice.sales.keys)",
         "DELETE FROM ice.sales.tgt WHERE id <> ALL (SELECT id FROM ice.sales.keys)",
-        // nested subquery inside the subquery's own FROM
+        // nested subquery inside the subquery's own FROM.
         "DELETE FROM ice.sales.tgt WHERE id IN (SELECT id FROM (SELECT id FROM ice.sales.keys) \
          AS inner_alias)",
-        // correlated AGGREGATE scalar subquery — the spelling that shares a parse tree with the
-        // uncorrelated scalar form that works today, and destroys the table
+        // correlated AGGREGATE scalar subquery.
         "DELETE FROM ice.sales.tgt WHERE id = (SELECT max(k.id) FROM ice.sales.keys k \
          WHERE k.name = ice.sales.tgt.name)",
-        // uncorrelated scalar subquery — DELIBERATELY over-refused (see the ledger): correct
-        // today, syntactically inseparable from the correlated form above
+        // uncorrelated scalar subquery.
         "DELETE FROM ice.sales.tgt WHERE id = (SELECT max(id) FROM ice.sales.keys)",
         "DELETE FROM ice.sales.tgt WHERE (SELECT count(*) FROM ice.sales.keys) > 0",
-        // the remaining ⚠️ (correct-today, over-refused) scalar comparisons — pinned so the
-        // The "over-refused" list is a list of pins, not prose (L2 N8).
+        // the remaining ⚠️ scalar comparisons.
         "DELETE FROM ice.sales.tgt WHERE id > (SELECT max(id) FROM ice.sales.keys)",
         "DELETE FROM ice.sales.tgt WHERE id <> (SELECT max(id) FROM ice.sales.keys)",
         "DELETE FROM ice.sales.tgt WHERE (SELECT count(*) FROM ice.sales.keys) > 99",
-        // subquery over a TEMP VIEW — still uncorrelated IN, now executed
-        // (g3e8_delete_in_subquery_from_temp_view_source_executes). Residual refuse:
-        // === parser spellings covered by the matrix (L1 M-4 / F-D) =============================
-        // They are NOT safe-because-uncorrelated: the boundary is per-shape, not
-        // correlated-vs-uncorrelated. Pre-guard behaviour, executed under the neutered valve and
-        // recorded in task/g3e8-guard-ledger.md §2: all three EMPTIED the table.
-        // an AGGREGATE scalar inside IN — an uncorrelated aggregate, still refused
+        // subquery over a TEMP VIEW — still uncorrelated IN, now executed.
         "DELETE FROM ice.sales.tgt WHERE id IN (SELECT max(id) FROM ice.sales.keys)",
     ] {
         let wh = TempDir::new().unwrap();
@@ -870,8 +840,7 @@ async fn g3e8_delete_subquery_family_all_refuse() {
     }
 }
 
-/// Every UPDATE subquery spelling the recon proved silently wrong refuses, and none of them
-/// rewrites a value. Pre-guard each of these set EVERY row to the SET value.
+/// Every UPDATE subquery spelling the recon proved silently wrong refuses.
 #[tokio::test]
 async fn g3e8_update_subquery_family_all_refuse() {
     for sql in [
@@ -903,8 +872,7 @@ async fn g3e8_update_subquery_family_all_refuse() {
     }
 }
 
-/// The adjacent NEGATIVE half: non-subquery DELETE/UPDATE predicates still execute, and produce
-/// exactly the rows they always did. A guard that refused these would be an over-refusal.
+/// The adjacent NEGATIVE half.
 #[tokio::test]
 async fn g3e8_non_subquery_dml_still_executes() {
     for (sql, expected) in [
@@ -954,9 +922,7 @@ async fn g3e8_non_subquery_dml_still_executes() {
     }
 }
 
-/// The other adjacent negatives: the two verbs the recon proved UNAFFECTED still run with a
-/// subquery. Guarding either would break working surface — `INSERT` hands DataFusion a whole
-/// `ExecutionPlan` (no filter recovery), and MERGE is RePark-owned end to end.
+/// The other adjacent negatives.
 #[tokio::test]
 async fn g3e8_insert_and_merge_with_subqueries_still_execute() {
     let wh = TempDir::new().unwrap();
@@ -996,11 +962,7 @@ async fn g3e8_insert_and_merge_with_subqueries_still_execute() {
     );
 }
 
-/// An `UPDATE … SET col = (SELECT …)` with a NON-subquery WHERE — and with NO `WHERE` at all —
-/// is deliberately NOT gated: an assignment subquery is either correct (this pin) or a loud plan
-/// error, never silently wrong. If a future change starts gating assignments, this pin reds and
-/// the decision gets re-made. Both spellings are pinned, because the matrix carries both and an
-/// An unpinned matrix row is a claim, not a fact (L2 N8).
+/// An `UPDATE … SET col =` with a NON-subquery WHERE.
 #[tokio::test]
 async fn g3e8_update_set_subquery_without_where_subquery_still_executes() {
     let wh = TempDir::new().unwrap();
@@ -1041,21 +1003,7 @@ async fn g3e8_update_set_subquery_without_where_subquery_still_executes() {
     );
 }
 
-/// ===========================================================================================
-/// CTE-prefixed DML (`WITH … DELETE/UPDATE`) — a KNOWN un-valved attachment that is LOUD today
-/// (L1 N-1 / F-E).
-///
-/// sqlparser parses `WITH c AS (…) DELETE …` as a `Query` whose body is `SetExpr::Delete`, so it
-/// never reaches the router's `Statement::Delete` arm NOR the passthrough's — the valve does not
-/// see it. It is nonetheless safe today because DataFusion refuses to plan that shape at all
-/// (`NotImplemented: Query DELETE … not implemented yet`), which is loud and writes nothing.
-///
-/// This pin exists so the gap cannot reopen SILENTLY: the day DataFusion learns to plan
-/// `SetExpr::Delete`, this test reds, and whoever bumps DataFusion has to route the form through
-/// the valve in the same change instead of shipping a second silent-data-loss window. The
-/// non-subquery spelling is included so the pin reds on the DataFusion change rather than on any
-/// change to the valve.
-/// ===========================================================================================
+/// CTE-prefixed DML is a known un-valved attachment that is loud today.
 #[tokio::test]
 async fn g3e8_cte_prefixed_dml_is_loud_today_and_writes_nothing() {
     for sql in [
@@ -1089,9 +1037,7 @@ async fn g3e8_cte_prefixed_dml_is_loud_today_and_writes_nothing() {
     }
 }
 
-/// Guard ORDER: on a table that trips BOTH data-loss valves, the cheap sync G3-E8 valve fires
-/// first and the async BUG-001 metadata load never happens. Without the ordering pin a later
-/// refactor could silently swap them and change which message a user sees.
+/// Guard ORDER: on a table.
 #[tokio::test]
 async fn g3e8_subquery_valve_precedes_the_mor_multi_spec_valve() {
     let wh = TempDir::new().unwrap();
@@ -1128,8 +1074,7 @@ async fn g3e8_subquery_valve_precedes_the_mor_multi_spec_valve() {
     )
     .await;
 
-    // Non-subquery DELETE on this table still hits the BUG-001 valve (the control that proves
-    // the hazard is real and the two messages are distinguishable).
+    // Non-subquery DELETE on this table still hits the BUG-001 valve.
     let mor = execute(&ctx, &catalogs, "DELETE FROM ice.sales.both WHERE id = 1")
         .await
         .expect_err("BUG-001 must still refuse the non-subquery DELETE")
@@ -1152,12 +1097,7 @@ async fn g3e8_subquery_valve_precedes_the_mor_multi_spec_valve() {
     );
 }
 
-/// ===========================================================================================
 /// The FROM-less `DELETE <table> WHERE …` family exercises the executing-parse valve (L1 M-1).
-///
-/// The session parser accepts FROM-less DELETE while the router parser rejects it. The G3-E8
-/// valve therefore runs on the executing parse so the subquery predicate cannot fail open.
-/// ===========================================================================================
 #[tokio::test]
 async fn g3e8_fromless_delete_in_subquery_deletes_exactly_the_matching_row() {
     for sql in [
@@ -1200,9 +1140,7 @@ async fn g3e8_fromless_delete_subquery_family_all_refuse() {
     }
 }
 
-/// The adjacent negative for the FROM-less family (F10): a FROM-less DELETE with a plain
-/// predicate is not a subquery statement and must keep executing exactly as it did — the valve's
-/// new attachment point must not turn the passthrough into an over-refusal.
+/// The adjacent negative for the FROM-less family.
 #[tokio::test]
 async fn g3e8_fromless_non_subquery_delete_still_executes() {
     let wh = TempDir::new().unwrap();

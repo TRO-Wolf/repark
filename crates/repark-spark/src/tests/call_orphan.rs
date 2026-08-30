@@ -1,6 +1,4 @@
 //! Pins the destructive `CALL system.remove_orphan_files` surface and its safety defaults.
-//!
-//! Registry rows: `ORPHAN-1` and `ORPHAN-2`.
 
 use super::super::*;
 use super::common::*;
@@ -29,10 +27,6 @@ async fn call_remove_orphan_files_is_no_longer_an_unsupported_procedure() {
 }
 
 /// Every non-hidden file under the table's directory, relative paths, sorted.
-///
-/// The orphan pins compare the WHOLE directory before and after, not just the orphan set. That is
-/// the difference between proving the armed run deleted the orphans and proving it deleted the
-/// orphans *and nothing else*.
 fn files_under(dir: &std::path::Path) -> Vec<String> {
     fn walk(dir: &std::path::Path, base: &std::path::Path, out: &mut Vec<String>) {
         let Ok(entries) = std::fs::read_dir(dir) else {
@@ -54,9 +48,6 @@ fn files_under(dir: &std::path::Path) -> Vec<String> {
 }
 
 /// Plant `count` orphan files, aged `age_days` days, in the table's `data` directory.
-///
-/// Aged deliberately: an orphan younger than the `older_than` cutoff is not an orphan yet, and a
-/// fixture whose files are all seconds old would pass whatever cutoff the test happens to pick.
 fn plant_orphans(table_dir: &std::path::Path, count: usize, age_days: u64) -> Vec<String> {
     let data_dir = table_dir.join("data");
     std::fs::create_dir_all(&data_dir).expect("data dir");
@@ -66,10 +57,7 @@ fn plant_orphans(table_dir: &std::path::Path, count: usize, age_days: u64) -> Ve
         let name = format!("orphan-{index}.parquet");
         let path = data_dir.join(&name);
         std::fs::write(&path, b"not really parquet").expect("write orphan");
-        // The fork cuts on the LISTED file's `created_at_millis`, which for local storage is
-        // opendal's `last_modified`. A freshly written orphan is therefore newer than any legal
-        // cutoff (the floor forbids one under 24 hours old), so the fixture has to age the file
-        // or the armed path is untestable.
+        // The fork cuts on the LISTED file's `created_at_millis`.
         let handle = std::fs::OpenOptions::new()
             .write(true)
             .open(&path)
@@ -92,10 +80,6 @@ fn older_than_two_days_ago_ms() -> i64 {
 }
 
 /// MW-3: the dry run lists every orphan and deletes nothing.
-///
-/// Oracle — live Spark 4.0.1 + Iceberg 1.10.0: `dry_run => true` on a table with two orphans
-/// returned **2 rows** and left all five files (3 data + 2 orphans) on disk. Same result shape as
-/// the armed run, one row per orphan, `orphan_file_location` a non-nullable string.
 #[tokio::test]
 async fn call_remove_orphan_files_dry_run_lists_without_deleting() {
     let wh = TempDir::new().unwrap();
@@ -160,9 +144,6 @@ async fn call_remove_orphan_files_dry_run_lists_without_deleting() {
 }
 
 /// MW-3: the armed run deletes the orphans **and provably not one live file**.
-///
-/// "It deleted the orphans" is half a test. This compares the entire table directory before and
-/// after, and asserts the difference is exactly the planted set.
 #[tokio::test]
 async fn call_remove_orphan_files_armed_deletes_orphans_and_nothing_else() {
     let wh = TempDir::new().unwrap();
@@ -239,9 +220,6 @@ async fn call_remove_orphan_files_armed_deletes_orphans_and_nothing_else() {
 }
 
 /// Registry row `ORPHAN-1` — `older_than` is required here and defaulted in Spark.
-///
-/// Oracle — live Spark 4.0.1: `CALL … remove_orphan_files(table => 't')` with no `older_than`
-/// runs, defaulting to `now - 3 days`, and DELETES. This engine refuses.
 #[tokio::test]
 async fn call_orphan1_requires_an_explicit_older_than() {
     let wh = TempDir::new().unwrap();
@@ -276,11 +254,6 @@ async fn call_orphan1_requires_an_explicit_older_than() {
 }
 
 /// MW-3: the 24-hour floor, which is PARITY with Spark rather than stricter.
-///
-/// Oracle — live Spark 4.0.1 + Iceberg 1.10.0, measured across the boundary:
-/// `older_than = now` refuses, `now - 23h` refuses, `now - 25h` runs and deletes. Java's floor
-/// lives in `RemoveOrphanFilesProcedure`, not the Action API — its own message points callers at
-/// the Action API to bypass it — so the fork has no floor and this router carries it.
 #[tokio::test]
 async fn call_remove_orphan_files_enforces_sparks_twenty_four_hour_floor() {
     let wh = TempDir::new().unwrap();
@@ -297,7 +270,7 @@ async fn call_remove_orphan_files_enforces_sparks_twenty_four_hour_floor() {
     let now_ms = chrono::Utc::now().timestamp_millis();
     let hour_ms = 60 * 60 * 1000;
 
-    // Inside the floor: refused. Both `now` and `now - 23h`, the two Spark was measured on.
+    // Inside the floor: refused.
     for (label, older_than) in [("now", now_ms), ("now-23h", now_ms - 23 * hour_ms)] {
         let err = execute(
             &ctx,
@@ -320,7 +293,7 @@ async fn call_remove_orphan_files_enforces_sparks_twenty_four_hour_floor() {
         );
     }
 
-    // Outside it: runs. The control that makes the refusals above mean something.
+    // Outside it: runs.
     execute(
         &ctx,
         &catalogs,
@@ -335,9 +308,6 @@ async fn call_remove_orphan_files_enforces_sparks_twenty_four_hour_floor() {
 }
 
 /// MW-3: deferred arguments refuse by name rather than being ignored.
-///
-/// On a procedure that deletes files, silently ignoring `location` narrowing or an
-/// `equal_schemes` mapping would widen the blast radius past what the caller asked for.
 #[tokio::test]
 async fn call_remove_orphan_files_refuses_deferred_arguments() {
     let wh = TempDir::new().unwrap();
@@ -375,9 +345,6 @@ async fn call_remove_orphan_files_refuses_deferred_arguments() {
 }
 
 /// MW-3: `dry_run` takes a boolean literal, not a quoted string.
-///
-/// Coercing `'false'` would mean a typo silently arming the only procedure here that destroys
-/// data. It refuses instead.
 #[tokio::test]
 async fn call_remove_orphan_files_refuses_a_quoted_dry_run() {
     let wh = TempDir::new().unwrap();
@@ -411,16 +378,6 @@ async fn call_remove_orphan_files_refuses_a_quoted_dry_run() {
 }
 
 /// MW-3: the shared-CTAS-root rule, pinned directly.
-///
-/// Found while writing the pins above: the facade's `mem.ns.events` fixture resolved into
-/// `<temp>/repark_ctas/mem/ns/events`, and a dry run there listed **139,179** files left behind by
-/// unrelated runs. That path is derived from the catalog, namespace and table NAME alone, so two
-/// sessions using the same names share a directory — and orphan removal deletes what one table's
-/// metadata does not reference.
-///
-/// Pinned as a table because the interesting cases are about paths, not about catalogs: the rule
-/// must fire on the fallback root and must NOT fire on a namespace that owns its location, which
-/// is what every other test in this module relies on.
 #[test]
 fn call_orphan_shared_ctas_root_rule() {
     use repark_core::LocationPolicy;
@@ -445,8 +402,7 @@ fn call_orphan_shared_ctas_root_rule() {
         "the refusal must tell the caller how to get out of it: {message}"
     );
 
-    // A namespace that owns its location is untouched, even under the SAME temp root — this is
-    // the case every other pin in this module runs in, so a rule that caught it would be useless.
+    // A namespace that owns its location is untouched, even under the SAME temp root.
     refuse_shared_temp_fallback_location(Some(&policy), "/scratch/my-warehouse/ns/events", "x")
         .expect("an owned location under the same root is fine");
 
@@ -501,8 +457,7 @@ fn call_orphan_shared_ctas_root_rule() {
     .expect_err("hostless file://path must refuse — FileIO treats it as absolute");
 }
 
-/// A13: CALL `location` pointing at the fallback tree must refuse on the execute path
-/// (a helper-only pin stays green if the `location` arm is deleted).
+/// A13: CALL `location` pointing at the fallback tree must refuse on the execute path.
 #[tokio::test]
 async fn call_remove_orphan_files_refuses_a_location_arg_under_the_fallback_root() {
     use std::sync::Arc;

@@ -1,5 +1,4 @@
 //! Native-profile ROWS/RANGE frame-value pins.
-//! Spark is not this door's oracle; INT keys use DataFusion behavior.
 
 use std::sync::Arc;
 
@@ -76,9 +75,7 @@ fn present(values: &[i64]) -> Vec<Option<i64>> {
     values.iter().copied().map(Some).collect()
 }
 
-/// ===========================================================================================
 /// Native-profile ROWS / RANGE frame values (numeric + DATE unit-less).
-/// ===========================================================================================
 #[tokio::test]
 async fn ansi_door_rows_and_range_frame_values() {
     let session = native_ansi_session();

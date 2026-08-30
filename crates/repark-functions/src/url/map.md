@@ -1,5 +1,8 @@
 # map — repark-functions/src/url
 
+CC-4 (2026-08-30): remaining banner files condensed to the one-line rule
+(pins: cc-3-comment-condensation/C-009).
+
 ## Purpose
 
 The child module of [`url.rs`](../url.rs), which implements Spark `parse_url` / `try_parse_url`.

@@ -1,5 +1,11 @@
 # map — scripts/
 
+CC-4 (2026-08-30): remaining banner files; size-gate rows ratchet down only
+(pins: cc-3-comment-condensation/C-009). analyzer.rs 1194→1161; datetime.rs 1783→1709;
+dynamic_flatten/tests.rs 1469→1443; declared_sorted.rs 1381→1348.
+
+CC-3 (2026-08-30): comments condensed to one line; banners removed. Size-gate rows ratcheted with each slice, including the Python binding files. D-001 catalog.rs 1845→1843; TA kernels 2284→2098 / 1676→1578 / 1873→1821. Spark size-gate rows ratcheted; session_timezone.rs retired at 891. AGENTS.md compaction ceiling restored to 32000 (pins: cc-3-comment-condensation/C-006).
+
 CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
 accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
 
@@ -302,7 +308,7 @@ repark-parity slice.
   or retires; comment-only shrink or restoration has the same exact-baseline duty. Only
   generated-test sources under
   `tests/goldens/` or `tests/fixtures/` are excluded.
-  The catalog-registration test split ratchets `crates/repark-core/src/session/tests.rs` from
+  The catalog-registration test split ratchets `crates/repark-core/src/session/tests/session.rs` from
   1,485 to 1,461 lines; the new focused module stays under the default.
   Fail-closed on an unreadable file, empty scan, or exception outside the scan. Dual-wired through
   `make check-rust-file-size`, the ci.yml guards job, and both pre-commit surfaces.

@@ -1,6 +1,4 @@
 //! Binary logistic regression via multi-pass IRLS and Cholesky.
-//! Each pass accumulates `O(p²)` weighted normal equations; only `O(p)` coefficients persist.
-//! The fit loop is bounded by `max_iter` and `tol`.
 
 use crate::MAX_FEATURES;
 use crate::cholesky::cholesky_factor_and_solve;
@@ -12,9 +10,7 @@ pub const DEFAULT_MAX_ITER: usize = 100;
 /// Default maximum coefficient delta for convergence.
 pub const DEFAULT_TOL: f64 = 1e-6;
 
-/// ===========================================================================================
 /// Fitted logistic parameters.
-/// ===========================================================================================
 #[derive(Debug, Clone, PartialEq)]
 pub struct LogisticRegressionSolution {
     pub coefficients: Vec<f64>,
@@ -27,9 +23,7 @@ pub struct LogisticRegressionSolution {
     pub converged: bool,
 }
 
-/// ===========================================================================================
 /// One IRLS weighted least-squares step using `w = p(1-p)` and `z = η + (y-p)/w`.
-/// ===========================================================================================
 #[derive(Debug, Clone)]
 pub struct LogisticIrlsAccumulator {
     num_features: usize,
@@ -43,12 +37,9 @@ pub struct LogisticIrlsAccumulator {
 }
 
 impl LogisticIrlsAccumulator {
-    /// =======================================================================================
     /// Start an IRLS pass from design-ordered coefficients.
-    ///
     /// # Errors
     /// [`MlError::FeatureDimTooLarge`] or beta / design-width mismatch.
-    /// =======================================================================================
     pub fn new_pass(num_features: usize, fit_intercept: bool, beta: Vec<f64>) -> Result<Self> {
         if num_features > MAX_FEATURES {
             return Err(MlError::FeatureDimTooLarge {
@@ -77,7 +68,6 @@ impl LogisticIrlsAccumulator {
     }
 
     /// Return zero coefficients for the requested design width.
-    ///
     /// # Errors
     /// [`MlError::FeatureDimTooLarge`] or empty design.
     pub fn zero_beta(num_features: usize, fit_intercept: bool) -> Result<Vec<f64>> {
@@ -96,12 +86,9 @@ impl LogisticIrlsAccumulator {
         Ok(vec![0.0; design_width])
     }
 
-    /// =======================================================================================
     /// Observe one training row for this IRLS pass.
-    ///
     /// # Errors
     /// Width mismatch, non-finite values, or label outside `[0, 1]`.
-    /// =======================================================================================
     pub fn observe_row(&mut self, features: &[f64], label: f64) -> Result<()> {
         if features.len() != self.num_features {
             return Err(MlError::FeatureWidthMismatch {
@@ -167,12 +154,9 @@ impl LogisticIrlsAccumulator {
         Ok(())
     }
 
-    /// =======================================================================================
     /// Finish this IRLS pass and return design-ordered coefficients.
-    ///
     /// # Errors
     /// Empty pass or singular weighted normal equations.
-    /// =======================================================================================
     pub fn finish_pass(self) -> Result<Vec<f64>> {
         if self.num_rows == 0 {
             return Err(MlError::EmptyDesign(
@@ -184,14 +168,9 @@ impl LogisticIrlsAccumulator {
     }
 }
 
-/// ===========================================================================================
 /// Run IRLS with a closure that re-streams all rows into each accumulator.
-///
-/// `max_iter=0` returns cold-start zeros without invoking the closure.
-///
 /// # Errors
 /// Invalid tolerance or design, stream failures, or Cholesky failures.
-/// ===========================================================================================
 pub fn fit_logistic_irls<F>(
     num_features: usize,
     fit_intercept: bool,

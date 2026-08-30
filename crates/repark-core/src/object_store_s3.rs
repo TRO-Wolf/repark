@@ -1,7 +1,4 @@
 //! Register `s3://` and `s3a://` object stores for `read_parquet`.
-//!
-//! AWS credentials resolve once at session finalization through `aws-config`; the same store is
-//! registered under both schemes so DataFusion preserves and resolves either URL unchanged.
 
 use std::sync::Arc;
 
@@ -17,16 +14,12 @@ use url::Url;
 use repark_common::{Error, Result};
 
 /// The URL schemes `RePark` treats as S3: `s3` (Iceberg warehouses) and `s3a` (Spark bronze reads).
-/// A store built for a bucket is registered under both so either scheme resolves to it.
 pub(crate) const S3_SCHEMES: [&str; 2] = ["s3", "s3a"];
 
-/// The Spark/Hadoop config key that overrides the S3 read region (`spark.hadoop.` prefix + the
-/// Hadoop `fs.s3a.endpoint.region` key). When absent, the region resolves from the aws-config
-/// chain. Kept accepted verbatim — the near-drop-in contract.
+/// The Spark/Hadoop config key that overrides the S3 read region.
 pub(crate) const S3A_REGION_CONFIG_KEY: &str = "spark.hadoop.fs.s3a.endpoint.region";
 
-/// The repark-native spelling of the same override, accepted as a synonym (2026-07-12 naming
-/// decision). When both keys are set with different values, build fails loud naming both keys (identical values collapse).
+/// The repark-native spelling of the same override, accepted as a synonym.
 pub(crate) const REPARK_S3A_REGION_CONFIG_KEY: &str = "repark.hadoop.fs.s3a.endpoint.region";
 
 /// Whether `scheme` is one `RePark` routes to an S3 object store.
@@ -34,10 +27,7 @@ pub(crate) fn is_s3_scheme(scheme: &str) -> bool {
     S3_SCHEMES.contains(&scheme)
 }
 
-/// The `(scheme, bucket)` of an `s3`/`s3a` URL, or `None` for any other path (local, relative, a
-/// non-S3 scheme). The bucket is the URL host — e.g. `s3a://my-bucket/a/b.parquet` → `("s3a",
-/// "my-bucket")`. A non-parseable or host-less string is not an S3 path, so it returns `None` and
-/// the caller passes the path through to DataFusion unchanged.
+/// The `(scheme, bucket)` of an `s3`/`s3a` URL, or `None` for any other path.
 pub(crate) fn parse_s3_bucket(path: &str) -> Option<(String, String)> {
     let url = Url::parse(path).ok()?;
     let scheme = url.scheme();
@@ -51,17 +41,14 @@ pub(crate) fn parse_s3_bucket(path: &str) -> Option<(String, String)> {
     Some((scheme.to_string(), bucket.to_string()))
 }
 
-/// ===========================================================================================
 /// Bridges the resolved `aws-config` credential provider into `object_store`.
-/// ===========================================================================================
 #[derive(Debug)]
 pub(crate) struct AwsConfigCredentialProvider {
     inner: SharedCredentialsProvider,
 }
 
 impl AwsConfigCredentialProvider {
-    /// Wrap an already-resolved SDK credentials provider (the aws-config default chain, or a static
-    /// provider in tests).
+    /// Wrap an already-resolved SDK credentials provider.
     pub(crate) fn new(inner: SharedCredentialsProvider) -> Self {
         Self { inner }
     }
@@ -72,10 +59,8 @@ impl CredentialProvider for AwsConfigCredentialProvider {
     type Credential = AwsCredential;
 
     /// Resolve the current AWS credentials from the wrapped chain and adapt them to `object_store`.
-    ///
     /// # Errors
-    /// Returns an `object_store` `Generic` error if the underlying provider fails to supply
-    /// credentials (e.g. no profile resolved, IMDS unreachable) — surfaced with the S3 store label.
+    /// Returns an `object_store` `Generic` error if the provider cannot supply credentials.
     async fn get_credential(&self) -> object_store::Result<Arc<AwsCredential>> {
         let credentials = self.inner.provide_credentials().await.map_err(|source| {
             object_store::Error::Generic {
@@ -91,14 +76,9 @@ impl CredentialProvider for AwsConfigCredentialProvider {
     }
 }
 
-/// ===========================================================================================
-/// Build an authenticated Amazon S3 store from the finalized SDK configuration and optional region
-/// override. This function performs no AWS resolution itself.
-///
+/// Build an authenticated Amazon S3 store from the SDK config and an optional region.
 /// # Errors
-/// Returns [`Error::DataFusion`] if no region can be resolved, the resolved config carries no
-/// credentials provider, or the `object_store` builder rejects the configuration.
-/// ===========================================================================================
+/// Returns [`Error::DataFusion`] if region, credentials, or the store builder fail.
 pub(crate) fn build_amazon_s3_store(
     bucket: &str,
     region_override: Option<&str>,
@@ -140,14 +120,9 @@ pub(crate) fn build_amazon_s3_store(
     Ok(Arc::new(store))
 }
 
-/// Register one object store for `bucket` under BOTH `s3://bucket` and `s3a://bucket` in the
-/// session's `RuntimeEnv`, so `read_parquet` with either scheme routes to it.
-///
-/// The same `Arc` is registered under both schemes; an existing store for either URL is replaced.
-///
+/// Register one object store for `bucket` under both `s3://` and `s3a://` in the `RuntimeEnv`.
 /// # Errors
-/// Returns [`Error::DataFusion`] if a `scheme://bucket` URL cannot be constructed (an invalid
-/// bucket name).
+/// Returns [`Error::DataFusion`] if a `scheme://bucket` URL cannot be built (bad bucket name).
 pub(crate) fn register_bucket_store(
     context: &SessionContext,
     bucket: &str,
@@ -170,8 +145,7 @@ mod tests {
     use super::*;
     use aws_credential_types::Credentials;
 
-    /// A static credentials provider (no network) for the adapter unit test — the aws-config chain
-    /// resolves to one of these under the hood, so a static one exercises the same bridge code.
+    /// A static credentials provider for the adapter unit test.
     fn static_provider() -> SharedCredentialsProvider {
         SharedCredentialsProvider::new(Credentials::new(
             "AKIAIOSFODNN7EXAMPLE",
@@ -219,8 +193,7 @@ mod tests {
 
     #[tokio::test]
     async fn credential_bridge_maps_static_credentials() {
-        // The adapter must surface the wrapped provider's key/secret/token as an `AwsCredential` —
-        // the exact mapping `read_parquet` relies on to sign S3 requests. Static provider = no AWS.
+        // The adapter must surface the wrapped provider's key/secret/token as an `AwsCredential`.
         let bridge = AwsConfigCredentialProvider::new(static_provider());
         let credential = bridge
             .get_credential()
