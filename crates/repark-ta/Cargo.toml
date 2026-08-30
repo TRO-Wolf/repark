@@ -1,12 +1,4 @@
-# ===========================================================================================
-# repark-ta — RePark's own pure-Rust technical-analysis kernels.
-#
-# Bit-exact ports of the TA-Lib C 0.4.0 reference algorithms (no C linkage, no vendored
-# code — hand-ported, golden-gated). Dependency-light by design — the kernel core's only
-# runtime dep is `thiserror`, so the crate stays independently publishable; the optional
-# `datafusion` feature (T1b, landed) adds the window-UDF wrapper layer (`udf` module) plus the
-# thin `TaExtension` that the Spark door composes to register the TA UDFs at session build.
-# ===========================================================================================
+# The repark-ta crate provides pure-Rust, bit-exact TA-Lib C 0.4.0 technical-analysis kernels.
 
 [package]
 name = "repark-ta"

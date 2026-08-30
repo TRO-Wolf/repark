@@ -1,7 +1,7 @@
 # map — repark-ml
 
 CC-4 (2026-08-30): remaining banner files condensed to the one-line rule
-(pins: cc-3-comment-condensation/C-009).
+(pins: cc-3-comment-condensation/C-009). Cargo.toml crate banner condensed to one line.
 
 ## Purpose
 
