@@ -51,7 +51,8 @@ def test_north_star_sequence_keeps_the_guard_before_the_fork_fix() -> None:
 def test_live_slate_retires_v3e_5_and_queues_the_safe_work() -> None:
     """C-002: the rolling slate starts with fork-independent work; FNP fills the gaps."""
     slate = _read("briefs/next-sequence.md")
-    _assert_in_order(slate, ("| 1 | **FNP-15/16**", "| 2 | **MW-10**"))
+    _assert_in_order(slate, ("| 1 | **FNP-15/16**",))
+    assert "<!-- unit id=mw-10" not in slate
     assert "<!-- unit id=v3e-5" not in slate
     assert "<!-- unit id=rp-2" not in slate
     assert "<!-- unit id=rp-3" not in slate

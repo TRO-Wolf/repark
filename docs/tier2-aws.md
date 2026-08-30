@@ -83,7 +83,7 @@ the OD-3 exception on the warehouse scratch prefix only (MW-4 compact + expire):
   `PutTableData` and names no action for `DeleteObject` on table storage: whether
   `expire_snapshots` can remove files there is measured by the first S3 Tables maintenance
   unit — a denial is a stop, not a design; do not widen pre-emptively.
-  Measured result: pending the first owner dispatch after merge (the orchestrator fills this).
+  Measured result (2026-08-30, [run 33333274383](https://github.com/TRO-Wolf/repark/actions/runs/33333274383) — the owner's first `aws-acceptance` dispatch on merged `main` `afe3b807`): **allow**. `test_mor_merge_compact_expire_against_s3tables` ran green (`4 passed in 145.15s`): the expired CTAS snapshot's files were removed from table storage under this exact policy, the live row set was unchanged, and no denial signature appeared — `s3tables:PutTableData` does authorize the removal; nothing was widened.
   S3 Tables' automatic
   snapshot management (keep 1 / 120 h, then permanent removal of noncurrent objects) fails for
   a whole table that carries any user-defined branch or tag or a `history.expire.*` property —

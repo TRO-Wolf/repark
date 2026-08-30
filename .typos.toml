@@ -32,6 +32,7 @@ tema = "tema"       # TA-Lib TEMA (triple exponential moving average)
 TEMA = "TEMA"       # TA-Lib TEMA (triple exponential moving average)
 CMO = "CMO"         # TA-Lib CMO (Chande momentum oscillator)
 TRO = "TRO"         # TRO-Wolf org / owned iceberg-rust fork (typos splits TRO-Wolf → TRO)
+afe = "afe"
 formatt = "formatt" # DELIBERATE misspelling: the ANSI door's unknown-bare-key refusal fixture
 SELCT = "SELCT"     # DELIBERATE misspelling: the wrong-door sniff's "don't speculate" fixture
 limt = "limt"       # DELIBERATE misspelling: the pseudo-key-typo loud-refusal fixture (P3E B-1)

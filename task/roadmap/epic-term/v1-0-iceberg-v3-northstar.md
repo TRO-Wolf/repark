@@ -73,7 +73,7 @@ Every row means **both SQL doors plus the facade** unless the cell says otherwis
 | Maintain: `rewrite_manifests` | ✅ wired on v2 (MW-6, [#230](https://github.com/TRO-Wolf/repark/pull/230); rows MANIFEST-1/2/3) | exercised on v3 | evidence (intake) |
 | Refs + time travel on v3 (rollback, branch/tag DDL, `AS OF` over DVs) | ✅ V3E-4 (2026-08-25): BRANCH/TAG on adopted partitioned-DV v3; `VERSION AS OF` / `FOR VERSION AS OF` over DVs matches V3E-3 Spark live set; `rollback_to_snapshot` restores it. Three doors (native DF N/A) | stays + live leg | evidence (intake) |
 | Adopt: `register_table` | ✅ wired (#203); Hadoop `vN` writes FIXED RP-3 / F-14 (`V3-ADOPT-1`); S3 Tables is dated R126 (`S3T-1`, F-9) | stays | done |
-| Live: Glue + S3 Tables v3 legs | ❌ nothing measured live on v3 (format-v3-track §7). MW-10 is format v2 — it proves the S3 Tables expire permission, not this v3 leg. Evidence: [mw-10-s3tables-mor-ledger.md](../../ledgers/staging/mw-10-s3tables-mor-ledger.md). Measured result: pending the first owner dispatch after merge (the orchestrator fills this). | every green row re-proven live where the service supports it | evidence (intake) (+OD-3b / MW-10) |
+| Live: Glue + S3 Tables v3 legs | ❌ nothing measured live on v3 (format-v3-track §7). MW-10 is format v2 — it proves the S3 Tables expire permission, not this v3 leg. Evidence: [mw-10-s3tables-mor-ledger.md](../../ledgers/completed/mw-10-s3tables-mor-ledger.md). Measured 2026-08-30: the permission leg is green — [run 33333274383](https://github.com/TRO-Wolf/repark/actions/runs/33333274383) answered PutTableData **allow**; the v3 live legs themselves stay unmeasured. | every green row re-proven live where the service supports it | evidence (intake) (+OD-3b / MW-10) |
 | Nightly oracle: v3 leg | ✅ V3E-5 (2026-08-27): `v3-spark-part-dv` and `v3-spark-eq-dv` live triple `repark == Spark` (PySpark 4.1.2 + Iceberg 1.11.0) — nightly `parity-live` leg green | a v3 fixture leg in the nightly, green | evidence (intake) |
 | Scale | ⚠ v2 measured at 1e7×50 (MW-7 — driver + census exist; ratios recorded) | the same measurement on a v3 table | evidence (intake) |
 
@@ -107,9 +107,9 @@ engine's own MOR path must make, so RP-3 wires it before it measures.
   [docs/tier2-aws.md](../../../docs/tier2-aws.md) §2 (owner-executed IAM). Whether
   `DeleteObject` on table storage is authorized by `s3tables:PutTableData` is MW-10's first
   clause, measured on **format v2** (it proves the permission, not the v3 leg). Evidence:
-  [mw-10-s3tables-mor-ledger.md](../../ledgers/staging/mw-10-s3tables-mor-ledger.md). A denial
+  [mw-10-s3tables-mor-ledger.md](../../ledgers/completed/mw-10-s3tables-mor-ledger.md). A denial
   is a stop, not a design. **The IAM was applied on 2026-08-28.**
-  Measured result: pending the first owner dispatch after merge (the orchestrator fills this).
+  Measured result (2026-08-30, first owner dispatch after the MW-10 merge — [run 33333274383](https://github.com/TRO-Wolf/repark/actions/runs/33333274383), green): **allow** — `expire_snapshots` removed the expired snapshot's files from table storage under the applied policy; no widen needed.
 - **Sequencing vs the other campaigns.** This ruling makes v3 the spine to v1.0; FNP, perf,
   dbt, and the correctness backlog may use fork-wait windows as separately chartered units.
   They do not consume F-17 and do not gate the tag unless ruled into §3. A ready v3 unit takes

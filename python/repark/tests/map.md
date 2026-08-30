@@ -2130,7 +2130,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **MW-10:** `test_mor_merge_compact_expire_against_s3tables` — the Glue leg's twin against
   `S3TABLES_CATALOG` (namespace without `location`; skip when `TABLE_BUCKET_ARN` is absent;
   `testing_mw10_mor_*`; dual probe via the shared helper; a table-storage denial fails
-  loud with action, resource, and masked account). No DROP TABLE.
+  loud with action, resource, and masked account). No DROP TABLE. The first owner dispatch
+  (2026-08-30, run 33333274383) ran it green — the measured **allow** filled the tier2-aws,
+  north-star, and guide slots and no denial registry row was filed
+  (pins: mw-10-s3tables-mor/C-005); that green dispatch on merged `main`, with preflight and
+  the parity harness, is the unit's whole-surface gate (pins: mw-10-s3tables-mor/C-006).
 
 - `test_two_door_kernel_parity.py` — **FNP-1 (2026-08-20):** charter clause C-012 at the facade
   layer. Pins that a name reachable from both doors returns the same Arrow **type and value**
