@@ -286,8 +286,8 @@ def test_pr245_router_comment_states_only_the_local_front_door_invariant() -> No
     """Pin the two durable reasons in the canonicalization call-site comment."""
     text = (_REPO / "crates/repark-spark/src/router.rs").read_text(encoding="utf-8")
     expected = (
-        "// Canonicalize once at the Spark SQL front door so later tokenizers cannot "
-        "re-process escapes.\n"
+        "// Canonicalize once at the Spark SQL front door so later tokenizers cannot process "
+        "escapes again.\n"
         "    // Translate downstream parser locations back to the caller's SQL before returning "
         "an error."
     )
