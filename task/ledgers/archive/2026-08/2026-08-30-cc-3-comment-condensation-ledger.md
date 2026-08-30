@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-30 · **Branch:** `grok/cc3-comment-condensation` · **Base:** `6774ebd`
 (`#261`) · **Path:** STANDARD (named Rust roster; no intended runtime change) · **Prior sweep:**
-[CC-2](../archive/2026-08/2026-08-29-comment-condensation-2-ledger.md).
+[CC-2](2026-08-29-comment-condensation-2-ledger.md).
 
 **Retires:** the orchestrator moves this ledger to `../completed/` after the closing Critic
 converges. The Actor does not move it.

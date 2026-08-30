@@ -2,15 +2,15 @@
 
 **Date:** 2026-08-28 · **Branch:** `feat/rp-3-fork-repin` (opens when the owner confirms this
 gate) · **Base:** `main` after the RP-2 salvage PR · **Policy:**
-[../../../AGENTS.md](../../../AGENTS.md) "Version-pin contract" · **Handoff:**
-[../../roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md](../../roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md)
+[../../../AGENTS.md](../../../../AGENTS.md) "Version-pin contract" · **Handoff:**
+[../../roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md](../../../roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md)
 §5 (the repin protocol) · **Path:** STANDARD (code changes: the repin, the engine wiring of the
 fork's DV container closure, every pin the matrix flips; one Actor cycle, one Critic pass with a
 fresh execution through each door whose guard lifts).
 
 **Retires:** moved to `completed/` in this unit's departure commit.
 
-**Why now.** RP-2 ([completed ledger](../archive/2026-08/2026-08-28-rp-2-fork-repin-ledger.md)) left every
+**Why now.** RP-2 ([completed ledger](2026-08-28-rp-2-fork-repin-ledger.md)) left every
 live-DV input guarded because the engine's DELETE on a Spark-written shared Puffin resurrected a
 row (finding F-rp2-1: the Puffin held two DV blobs, the engine superseded the container by path
 and dropped the untouched sibling). The fork fixed the invariant as **F-17** (fork #237,
@@ -57,7 +57,7 @@ VERDICT: 11 clauses, 11 PROVEN, 0 OPEN, 0 REJECTED. The owner confirms by mergin
 
 ## 3. Pickup — what the next agent needs to know
 
-- Read the [RP-2 completed ledger](../archive/2026-08/2026-08-28-rp-2-fork-repin-ledger.md) first: finding
+- Read the [RP-2 completed ledger](2026-08-28-rp-2-fork-repin-ledger.md) first: finding
   F-rp2-1 is the defect the guard holds, with its mechanism and the fixture path.
 - The fork's F-17 evidence: fork PR #237 — `crates/iceberg/src/delete_vector_container.rs`,
   `crates/iceberg/src/transaction/row_delta.rs`, and
