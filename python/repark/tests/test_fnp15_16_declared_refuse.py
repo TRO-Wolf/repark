@@ -355,6 +355,75 @@ def test_registry_wording_distinguishes_unreachable_from_deferred_cost() -> None
         assert "unsupported" not in classification, heading
 
 
+INDEPENDENT_SKETCH_NAMES: tuple[str, ...] = (
+    "hll_sketch_agg",
+    "hll_sketch_estimate",
+    "hll_union",
+    "hll_union_agg",
+    "theta_difference",
+    "theta_intersection",
+    "theta_intersection_agg",
+    "theta_sketch_agg",
+    "theta_sketch_estimate",
+    "theta_union",
+    "theta_union_agg",
+    "kll_merge_agg_bigint",
+    "kll_merge_agg_double",
+    "kll_merge_agg_float",
+    "kll_sketch_agg_bigint",
+    "kll_sketch_agg_double",
+    "kll_sketch_agg_float",
+    "kll_sketch_get_n_bigint",
+    "kll_sketch_get_n_double",
+    "kll_sketch_get_n_float",
+    "kll_sketch_get_quantile_bigint",
+    "kll_sketch_get_quantile_double",
+    "kll_sketch_get_quantile_float",
+    "kll_sketch_get_rank_bigint",
+    "kll_sketch_get_rank_double",
+    "kll_sketch_get_rank_float",
+    "kll_sketch_merge_bigint",
+    "kll_sketch_merge_double",
+    "kll_sketch_merge_float",
+    "kll_sketch_to_string_bigint",
+    "kll_sketch_to_string_double",
+    "kll_sketch_to_string_float",
+)
+
+INDEPENDENT_CSV_XML_XPATH_NAMES: tuple[str, ...] = (
+    "to_csv",
+    "to_xml",
+    "xpath",
+    "xpath_boolean",
+    "xpath_double",
+    "xpath_float",
+    "xpath_int",
+    "xpath_long",
+    "xpath_number",
+    "xpath_short",
+    "xpath_string",
+)
+
+INDEPENDENT_VARIANT_NAMES: tuple[str, ...] = (
+    "parse_json",
+    "try_parse_json",
+    "is_variant_null",
+    "variant_get",
+    "try_variant_get",
+    "schema_of_variant",
+    "schema_of_variant_agg",
+    "to_variant_object",
+)
+
+INDEPENDENT_GEOSPATIAL_NAMES: tuple[str, ...] = (
+    "st_asbinary",
+    "st_geogfromwkb",
+    "st_geomfromwkb",
+    "st_setsrid",
+    "st_srid",
+)
+
+
 def test_roster_counts_fnp15_six() -> None:
     """FNP-15 is exactly the six unreachable names."""
     assert len(FNP15_NAMES) == 6
@@ -363,35 +432,47 @@ def test_roster_counts_fnp15_six() -> None:
 
 def test_roster_counts_sketches_thirty_two() -> None:
     """FNP-16 sketches family is 32 names."""
-    assert len(SKETCH_NAMES) == 32
-    assert len(set(SKETCH_NAMES)) == 32
+    assert len(INDEPENDENT_SKETCH_NAMES) == 32
+    assert len(set(INDEPENDENT_SKETCH_NAMES)) == 32
+    assert set(SKETCH_NAMES) == set(INDEPENDENT_SKETCH_NAMES)
 
 
 def test_roster_counts_csv_xml_xpath_eleven() -> None:
     """FNP-16 CSV/XML/XPath family is 11 names."""
-    assert len(CSV_XML_XPATH_NAMES) == 11
-    assert len(set(CSV_XML_XPATH_NAMES)) == 11
+    assert len(INDEPENDENT_CSV_XML_XPATH_NAMES) == 11
+    assert len(set(INDEPENDENT_CSV_XML_XPATH_NAMES)) == 11
+    assert set(CSV_XML_XPATH_NAMES) == set(INDEPENDENT_CSV_XML_XPATH_NAMES)
 
 
 def test_roster_counts_variant_eight() -> None:
     """FNP-16 VARIANT family is 8 names."""
-    assert len(VARIANT_NAMES) == 8
-    assert len(set(VARIANT_NAMES)) == 8
+    assert len(INDEPENDENT_VARIANT_NAMES) == 8
+    assert len(set(INDEPENDENT_VARIANT_NAMES)) == 8
+    assert set(VARIANT_NAMES) == set(INDEPENDENT_VARIANT_NAMES)
 
 
 def test_roster_counts_geospatial_five() -> None:
     """FNP-16 geospatial family is 5 names."""
-    assert len(GEOSPATIAL_NAMES) == 5
-    assert len(set(GEOSPATIAL_NAMES)) == 5
+    assert len(INDEPENDENT_GEOSPATIAL_NAMES) == 5
+    assert len(set(INDEPENDENT_GEOSPATIAL_NAMES)) == 5
+    assert set(GEOSPATIAL_NAMES) == set(INDEPENDENT_GEOSPATIAL_NAMES)
 
 
 def test_roster_total_is_sixty_two() -> None:
-    """62 names: 6 unreachable plus 56 deferred-by-cost. pins: fnp-15-16/C-013"""
+    """62 names vs census F12/F13/F14/F16 + FNP-15, not the module tuples.
+
+    pins: fnp-15-16/C-013
+    """
     from repark.spark.functions_declared import DECLARED_REFUSE_NAMES
 
+    independent = (
+        set(FNP15_NAMES)
+        | set(INDEPENDENT_SKETCH_NAMES)
+        | set(INDEPENDENT_CSV_XML_XPATH_NAMES)
+        | set(INDEPENDENT_VARIANT_NAMES)
+        | set(INDEPENDENT_GEOSPATIAL_NAMES)
+    )
+    assert len(independent) == 62
     assert len(DECLARED_REFUSE_NAMES) == 62
     assert len(set(DECLARED_REFUSE_NAMES)) == 62
-    assert set(FNP15_NAMES).isdisjoint(SKETCH_NAMES)
-    assert set(FNP15_NAMES) | set(SKETCH_NAMES) | set(CSV_XML_XPATH_NAMES) | set(
-        VARIANT_NAMES
-    ) | set(GEOSPATIAL_NAMES) == set(DECLARED_REFUSE_NAMES)
+    assert set(DECLARED_REFUSE_NAMES) == independent
