@@ -17,11 +17,16 @@ pub(crate) fn refuse_v3_cow_dml_that_would_reassign_row_lineage(
         return Ok(());
     }
     let ident = table.identifier();
+    let spark_lineage = if verb.eq_ignore_ascii_case("UPDATE") {
+        "every existing row keeps its `_row_id` and only the changed row bumps \
+         `_last_updated_sequence_number`"
+    } else {
+        "matched rows keep their ids and only inserts take a new id"
+    };
     Err(DataFusionError::NotImplemented(format!(
         "copy-on-write {verb} will not run on `{ident}`: it is a {format_version:?} table. Spark \
-         4.1.2 + Iceberg 1.11.0 preserves row lineage (`_row_id`) across {verb}: matched rows \
-         keep their ids and only inserts take a new id. This engine's row rewrite reassigns \
-         every row in a rewritten file. Registry V3-COW-1"
+         4.1.2 + Iceberg 1.11.0 preserves row lineage (`_row_id`) across {verb}: {spark_lineage}. \
+         This engine's row rewrite reassigns every row in a rewritten file. Registry V3-COW-1"
     )))
 }
 

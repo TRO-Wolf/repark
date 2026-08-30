@@ -12,7 +12,8 @@ ANSI-door format-v3 test modules. `lib.rs` declares `#[cfg(test)] mod v3;`.
 - `cow.rs` — **V3-COW-1:** adopted-v3 UPDATE/MERGE refusal (V3-3 measured keep-refusal:
   Spark preserves `_row_id`; the engine rewrite reassigns), COW second-DELETE pre-write
   refusal after an overwrite snapshot, and plain-`WHERE` DELETE including a second MOR DELETE
-  that merges into the live vector (pins: rp-3-fork-repin/C-004; v3-3-dml/C-001, C-002), v2 control, object-cleanup
+  that merges into the live vector; subquery-`WHERE` UPDATE refuses MERGE insert wording
+  (pins: rp-3-fork-repin/C-004; v3-3-dml/C-001, C-002), v2 control, object-cleanup
   checks, and the ANSI Hadoop `vN.metadata.json` write that bumps to `v(N+1)`
   (pins: rp-3-fork-repin/C-008).
 - `types.rs` — `GEOMETRY` / `GEOGRAPHY` / `VARIANT` refuse at CREATE (`V3-GEO-1`);

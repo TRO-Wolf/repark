@@ -421,6 +421,7 @@ async fn adopted_v3_mor_merge_still_refuses() {
 
 /// Resolver seat: subquery-`WHERE` DELETE / UPDATE take `predicate_dml`, not the router valve.
 /// pins: v3r-1-rulings/C-001, C-002
+/// pins: v3-3-dml/C-001
 #[tokio::test]
 async fn adopted_v3_cow_subquery_where_dml_refuses_at_the_resolver_seat() {
     let door = door_with_v3_opt_in().await;
@@ -433,14 +434,16 @@ async fn adopted_v3_cow_subquery_where_dml_refuses_at_the_resolver_seat() {
         "DELETE",
     )
     .await;
-    assert_cow_refused_untouched(
-        &door,
-        "adopt_sub",
-        "UPDATE ice.sales.adopt_sub SET name = 'x' WHERE id IN \
-         (SELECT id FROM ice.sales.adopt_sub WHERE id = 2)",
-        "UPDATE",
-    )
-    .await;
+    let update_sql = "UPDATE ice.sales.adopt_sub SET name = 'x' WHERE id IN \
+         (SELECT id FROM ice.sales.adopt_sub WHERE id = 2)";
+    assert_cow_refused_untouched(&door, "adopt_sub", update_sql, "UPDATE").await;
+    let update_err = door.err(update_sql).await;
+    assert!(
+        !update_err.contains("inserts")
+            && update_err.contains("existing row")
+            && update_err.contains("_last_updated_sequence_number"),
+        "resolver-seat UPDATE must name Spark's keep-and-bump, not MERGE inserts: {update_err}"
+    );
 }
 
 /// SEC-001: two-part and bare names under session defaults resolve the same target.
