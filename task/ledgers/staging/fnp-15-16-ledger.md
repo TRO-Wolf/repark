@@ -97,6 +97,19 @@ adds stubs, not a rebuild-heavy kernel.
 that test alone exited 0). The preflight constituents were then run separately
 and each exited 0. pins: fnp-15-16/C-015
 
+## Remediation execution record (2026-08-30)
+
+Critic F-1..F-6 + orchestrator O-1.
+
+| Command | Exit |
+|---|---|
+| `make verify` | 0 |
+| `make py-test` | 0 (459 passed) |
+| `cargo test -p repark-sql --lib refuse` | 0 (91 passed, includes `execute_refuses_every_armed_declared_name`) |
+| `cargo test -p repark-functions declared_refuse` | 0 (7 passed) |
+| `cargo test -p repark-spark declared_refuse` | 0 (10 passed) |
+| `uv run --package repark pytest python/repark/tests/test_fnp15_16_declared_refuse.py` | 0 (319 passed) |
+
 ```yaml
 COVERAGE_ATTESTATION:
   pr_unit: FNP-15/16
