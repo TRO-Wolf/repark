@@ -42,8 +42,10 @@ from _acceptance import (
     bronze_path,
     ctas_sql,
     deduplicate,
+    format_denial_failure,
     fq_table,
     glue_catalog_config,
+    is_storage_delete_denial,
     merge_sql,
     run_mor_merge_compact_expire,
     s3tables_catalog_config,
@@ -202,7 +204,7 @@ def test_mor_merge_compact_expire_against_glue() -> None:
 
     A new scratch MOR table each run (never-teardown: tables accumulate). OD-3 scoped
     object-delete on the warehouse scratch prefix is what lets expire remove snapshot files.
-    S3 Tables is out of scope: OD-3 is the Glue warehouse prefix, not the table bucket.
+    S3 Tables MOR is ``test_mor_merge_compact_expire_against_s3tables`` (MW-10 / OD-3b).
     """
     assert_real_buckets_configured()
 
@@ -225,3 +227,42 @@ def test_mor_merge_compact_expire_against_glue() -> None:
     table_name = f"{ACCEPTANCE_TABLE_PREFIX}mw4_mor_{uuid.uuid4().hex[:12]}"
     outcome = run_mor_merge_compact_expire(spark, SILVER_CATALOG, ACCEPTANCE_NAMESPACE, table_name)
     assert_mor_maintenance_outcome(spark, outcome)
+
+
+def test_mor_merge_compact_expire_against_s3tables() -> None:
+    """MW-10: merge-on-read CTAS → MERGE → compact + expire on real S3 Tables.
+
+    OD-3b: whether ``s3tables:PutTableData`` authorizes ``expire_snapshots`` file removal
+    on table storage. A denial fails loud (action, resource, account masked as
+    ``<ACCOUNT>``) and stops; the harness never widens IAM.
+
+    pins: mw-10-s3tables-mor/C-001, C-002
+    """
+    arn = os.environ.get("TABLE_BUCKET_ARN")
+    if not arn:
+        pytest.skip(
+            "S3 Tables acceptance needs TABLE_BUCKET_ARN (a us-east-2 table-bucket ARN); "
+            "absent → skip so the Glue bullet is unaffected"
+        )
+    assert_real_buckets_configured()
+
+    builder = ReparkSession.builder.appName("mw10-mor-acceptance-s3tables")
+    for key, value in s3tables_catalog_config(S3TABLES_CATALOG, arn).items():
+        builder = builder.config(key, value)
+    spark = builder.getOrCreate()
+
+    try:
+        spark.create_namespace(S3TABLES_CATALOG, ACCEPTANCE_NAMESPACE)
+    except RuntimeError as error:
+        if "exist" not in str(error).lower():
+            raise
+    table_name = f"{ACCEPTANCE_TABLE_PREFIX}mw10_mor_{uuid.uuid4().hex[:12]}"
+    try:
+        outcome = run_mor_merge_compact_expire(
+            spark, S3TABLES_CATALOG, ACCEPTANCE_NAMESPACE, table_name
+        )
+        assert_mor_maintenance_outcome(spark, outcome)
+    except Exception as error:
+        if is_storage_delete_denial(error):
+            pytest.fail(format_denial_failure(error))
+        raise

@@ -13,6 +13,7 @@ import pytest
 from _acceptance import (
     ACCEPTANCE_NAMESPACE,
     ACCEPTANCE_TABLE_PREFIX,
+    COMMIT_CONFLICT_RETRY_ATTEMPTS,
     GLUE_WAREHOUSE,
     ICEBERG_TABLE_PROPERTIES,
     MOR_ICEBERG_TABLE_PROPERTIES,
@@ -20,23 +21,34 @@ from _acceptance import (
     MOR_UPDATED_ID_COUNT,
     PRODUCTION_NAMESPACE,
     TARGET_FILE_SIZE_BYTES,
+    EngineSnapshotTracker,
+    MorMaintenanceOutcome,
     acceptance_namespace_location,
+    assert_engine_expire_removed_ctas,
     assert_mor_maintenance_outcome,
     assert_namespace_location_matches,
+    assert_retry_counts,
     bronze_path,
     ctas_sql,
     deduplicate,
+    format_denial_failure,
     fq_table,
     glue_catalog_config,
+    is_commit_conflict_error,
+    is_storage_delete_denial,
     location_from_describe_rows,
     maintenance_call_sql,
+    mask_account_ids,
     merge_sql,
     mor_acceptance_expected_rows,
     mor_ctas_sql,
     normalize_location_uri,
     require_snapshot_expired,
+    retry_on_commit_conflict,
     run_mor_merge_compact_expire,
     s3tables_catalog_config,
+    service_commit_count,
+    wrapped_retry_call_count,
 )
 
 from repark import ReparkSession
@@ -408,6 +420,85 @@ def test_glue_harness_calls_location_guard_and_s3tables_does_not() -> None:
         table_name_bound_to_uuid = has_uuid4 and has_mw4_prefix
     assert table_name_bound_to_uuid, "table_name must be mw4_mor_ plus uuid4, not a docstring"
 
+    mor_s3 = _function("test_mor_merge_compact_expire_against_s3tables")
+    mor_s3_calls = _call_names(mor_s3)
+    mor_s3_names = {name for name, _ in mor_s3_calls}
+    assert "create_namespace" in mor_s3_names
+    assert "assert_glue_scratch_namespace_location" not in mor_s3_names
+    assert "run_mor_merge_compact_expire" in mor_s3_names
+    assert "assert_mor_maintenance_outcome" in mor_s3_names
+    assert "s3tables_catalog_config" in mor_s3_names
+    mor_s3_source = ast.get_source_segment(source, mor_s3) or ""
+    assert "TABLE_BUCKET_ARN" in mor_s3_source
+    assert "pytest.skip" in mor_s3_source or "skip(" in mor_s3_source
+    assert "mw10_mor_" in mor_s3_source
+    s3_create_calls = [
+        node
+        for node in ast.walk(mor_s3)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "create_namespace"
+    ]
+    assert s3_create_calls, "S3 Tables MOR leg must call create_namespace"
+    for create_call in s3_create_calls:
+        keyword_names = {keyword.arg for keyword in create_call.keywords if keyword.arg}
+        assert "location" not in keyword_names
+        assert len(create_call.args) == 2
+    fail_uses_format_denial = False
+    for node in ast.walk(mor_s3):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        is_fail = (isinstance(func, ast.Attribute) and func.attr == "fail") or (
+            isinstance(func, ast.Name) and func.id == "fail"
+        )
+        if not is_fail or not node.args:
+            continue
+        argument = node.args[0]
+        if (
+            isinstance(argument, ast.Call)
+            and isinstance(argument.func, ast.Name)
+            and argument.func.id == "format_denial_failure"
+        ):
+            fail_uses_format_denial = True
+    assert fail_uses_format_denial, "denial path must pytest.fail(format_denial_failure(...))"
+    helper_call_s3 = None
+    for node in ast.walk(mor_s3):
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "run_mor_merge_compact_expire"
+        ):
+            helper_call_s3 = node
+    assert helper_call_s3 is not None
+    assert len(helper_call_s3.args) >= 4
+    fourth_s3 = helper_call_s3.args[3]
+    assert isinstance(fourth_s3, ast.Name) and fourth_s3.id == "table_name"
+    table_name_mw10 = False
+    for node in ast.walk(mor_s3):
+        if not isinstance(node, ast.Assign):
+            continue
+        targets = [t.id for t in node.targets if isinstance(t, ast.Name)]
+        if "table_name" not in targets:
+            continue
+        has_uuid4 = False
+        has_mw10_prefix = False
+        for child in ast.walk(node.value):
+            if (
+                isinstance(child, ast.Call)
+                and isinstance(child.func, ast.Attribute)
+                and child.func.attr == "uuid4"
+            ):
+                has_uuid4 = True
+            if (
+                isinstance(child, ast.Constant)
+                and isinstance(child.value, str)
+                and "mw10_mor_" in child.value
+            ):
+                has_mw10_prefix = True
+        table_name_mw10 = has_uuid4 and has_mw10_prefix
+    assert table_name_mw10, "table_name must be mw10_mor_ plus uuid4, not a docstring"
+
 
 def test_glue_location_guard_calls_get_database() -> None:
     """The Glue wrapper's live read is ``catalog.getDatabase``, not DESCRIBE."""
@@ -492,6 +583,32 @@ def test_mor_helper_replays_the_last_merge() -> None:
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
     }
     assert "require_snapshot_readable" in helper_calls
+    assert "retry_on_commit_conflict" in helper_calls
+    merge_helper = None
+    for node in tree.body:
+        if isinstance(node, ast.FunctionDef) and node.name == "merge_named_updates":
+            merge_helper = node
+            break
+    assert merge_helper is not None
+    merge_helper_calls = {
+        node.func.id
+        for node in ast.walk(merge_helper)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+    }
+    assert "retry_on_commit_conflict" in merge_helper_calls
+    asserter_retry = None
+    for node in tree.body:
+        if isinstance(node, ast.FunctionDef) and node.name == "assert_mor_maintenance_outcome":
+            asserter_retry = node
+            break
+    assert asserter_retry is not None
+    asserter_retry_calls = {
+        node.func.id
+        for node in ast.walk(asserter_retry)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+    }
+    assert "assert_retry_counts" in asserter_retry_calls
+    assert "assert_engine_expire_removed_ctas" in asserter_retry_calls
 
     asserter = None
     for node in tree.body:
@@ -531,6 +648,151 @@ def test_maintenance_call_sql_is_catalog_dot_system() -> None:
     assert sql.startswith("CALL glue_catalog.system.expire_snapshots(")
     assert "table => 'testing_repark_acceptance.testing_mw4'" in sql
     assert "retain_last => 1" in sql
+
+
+class _ConflictOnceSql:
+    """SQL runner that raises one commit conflict matching ``prefix`` or ``token``."""
+
+    def __init__(self, real: object, prefix: str = "", token: str = "") -> None:
+        self._real = real
+        self._prefix = prefix
+        self._token = token
+        self.conflicts = 0
+
+    def __call__(self, spark: object, statement: str) -> object:
+        hit_prefix = bool(self._prefix) and statement.startswith(self._prefix)
+        hit_token = bool(self._token) and self._token in statement
+        if self.conflicts == 0 and (hit_prefix or hit_token):
+            self.conflicts += 1
+            raise RuntimeError("CatalogCommitConflicts => metadata changed concurrently")
+        return self._real(spark, statement)  # type: ignore[operator]
+
+
+class _ScriptedCall:
+    """Callable that raises or returns from a scripted list of outcomes."""
+
+    def __init__(self, outcomes: list[object]) -> None:
+        self._outcomes = list(outcomes)
+        self.calls = 0
+
+    def __call__(self) -> object:
+        self.calls += 1
+        if not self._outcomes:
+            raise AssertionError("scripted callable invoked past its outcomes")
+        outcome = self._outcomes.pop(0)
+        if isinstance(outcome, BaseException):
+            raise outcome
+        return outcome
+
+
+def test_retry_on_commit_conflict_returns_after_two_conflicts() -> None:
+    """Conflict twice then success returns the result and retry_count == 2.
+
+    pins: mw-10-s3tables-mor/C-003
+    """
+    scripted = _ScriptedCall(
+        [
+            RuntimeError("CatalogCommitConflicts => metadata changed concurrently"),
+            RuntimeError("CatalogCommitConflicts => metadata changed concurrently"),
+            "merged",
+        ]
+    )
+    result, retry_count = retry_on_commit_conflict(scripted)
+    assert result == "merged"
+    assert retry_count == 2
+    assert scripted.calls == 3
+
+
+def test_retry_on_commit_conflict_exhausted_raises_with_attempt_count() -> None:
+    """A perpetual conflict raises after exactly attempts calls, count in the message.
+
+    pins: mw-10-s3tables-mor/C-003
+    """
+    attempts = COMMIT_CONFLICT_RETRY_ATTEMPTS
+    scripted = _ScriptedCall(
+        [
+            RuntimeError("CatalogCommitConflicts => metadata changed concurrently")
+            for _ in range(attempts + 2)
+        ]
+    )
+    with pytest.raises(RuntimeError, match=rf"{attempts}") as excinfo:
+        retry_on_commit_conflict(scripted, attempts=attempts)
+    assert scripted.calls == attempts
+    assert "CatalogCommitConflicts" in str(excinfo.value)
+
+
+def test_retry_on_commit_conflict_non_conflict_is_not_retried() -> None:
+    """A non-conflict error is re-raised on the first call with no retry.
+
+    pins: mw-10-s3tables-mor/C-003
+    """
+    scripted = _ScriptedCall([ValueError("not a commit conflict")])
+    with pytest.raises(ValueError, match="not a commit conflict"):
+        retry_on_commit_conflict(scripted)
+    assert scripted.calls == 1
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        "CatalogCommitConflicts => metadata changed concurrently",
+        "CommitFailed: requirement mismatch on snapshot",
+        "validate_data_files_exist failed for referenced data file",
+    ],
+)
+def test_retry_on_commit_conflict_signatures_are_retried(message: str) -> None:
+    """Each named conflict signature retries and then returns.
+
+    pins: mw-10-s3tables-mor/C-003
+    """
+    scripted = _ScriptedCall([RuntimeError(message), "ok"])
+    result, retry_count = retry_on_commit_conflict(scripted)
+    assert result == "ok"
+    assert retry_count == 1
+    assert scripted.calls == 2
+
+
+def test_mask_account_ids_replaces_twelve_digit_account() -> None:
+    """A 12-digit account id in a denial message is replaced with ``<ACCOUNT>``.
+
+    pins: mw-10-s3tables-mor/C-001
+    """
+    raw = (
+        "User: arn:aws:sts::123456789012:assumed-role/acceptance/job "
+        "is not authorized to perform: s3tables:PutTableData on resource: "
+        "arn:aws:s3tables:us-east-2:123456789012:bucket/dummy/table/t"
+    )
+    masked = mask_account_ids(raw)
+    assert "123456789012" not in masked
+    assert masked.count("<ACCOUNT>") == 2
+    assert "s3tables:PutTableData" in masked
+
+
+def test_mask_account_ids_leaves_non_account_numbers() -> None:
+    """11-digit and 13-digit numbers are not account ids and stay unchanged.
+
+    pins: mw-10-s3tables-mor/C-001
+    """
+    raw = "snapshot 12345678901 and file 1234567890123"
+    assert mask_account_ids(raw) == raw
+
+
+def test_format_denial_failure_names_action_resource_and_masks_account() -> None:
+    """The loud-fail text carries action, resource, and a masked account.
+
+    pins: mw-10-s3tables-mor/C-001
+    """
+    error = RuntimeError(
+        "User: arn:aws:sts::123456789012:assumed-role/acceptance/job "
+        "is not authorized to perform: s3tables:PutTableData on resource: "
+        "arn:aws:s3tables:us-east-2:123456789012:bucket/dummy/table/t "
+        "(AccessDenied)"
+    )
+    message = format_denial_failure(error)
+    assert "123456789012" not in message
+    assert "action='s3tables:PutTableData'" in message
+    assert "resource='arn:aws:s3tables:us-east-2:<ACCOUNT>:bucket/dummy/table/t'" in message
+    assert "AccessDenied" in message
 
 
 class _RaisingSql:
@@ -577,7 +839,10 @@ def test_require_snapshot_expired_still_resolves_is_a_no_op() -> None:
 
 
 def test_mor_merge_compact_expire_on_memory_catalog(tmp_path: pathlib.Path) -> None:
-    """Always-run analog of the Glue MW-4 leg. Same helper, local warehouse."""
+    """Always-run analog of the Glue MW-4 / MW-10 leg. Same helper, local warehouse.
+
+    pins: mw-10-s3tables-mor/C-003, C-004
+    """
     spark = ReparkSession.builder.appName("pytest-mw4-mor").getOrCreate()
     spark.register_memory_catalog("mem", tmp_path)
     owned = tmp_path / "owned"
@@ -585,3 +850,132 @@ def test_mor_merge_compact_expire_on_memory_catalog(tmp_path: pathlib.Path) -> N
 
     outcome = run_mor_merge_compact_expire(spark, "mem", "ns", "mw4mor")
     assert_mor_maintenance_outcome(spark, outcome)
+    assert outcome.retry_count == 0
+    assert outcome.max_call_retries == 0
+    assert outcome.max_call_retries <= COMMIT_CONFLICT_RETRY_ATTEMPTS
+    assert outcome.retry_count <= COMMIT_CONFLICT_RETRY_ATTEMPTS * wrapped_retry_call_count()
+    assert outcome.service_commits == 0
+    assert outcome.ambiguous_engine_windows == 0
+    assert outcome.current_snapshot_matches_engine is True
+    assert outcome.snapshot_log_before_expire
+    assert outcome.snapshot_log_after_expire
+    before_ids = {snapshot_id for snapshot_id, _op in outcome.snapshot_log_before_expire}
+    after_ids = {snapshot_id for snapshot_id, _op in outcome.snapshot_log_after_expire}
+    assert outcome.first_snapshot_id in before_ids
+    assert outcome.first_snapshot_id not in after_ids
+
+
+def _retry_outcome(retry_count: int, max_call_retries: int) -> MorMaintenanceOutcome:
+    """Minimal outcome for retry-budget pins (rows unused)."""
+    import pyarrow as pa
+
+    names = [
+        f"m{index}" if index <= MOR_UPDATED_ID_COUNT else f"n{index}"
+        for index in range(1, MOR_SEED_ROW_COUNT + 1)
+    ]
+    return MorMaintenanceOutcome(
+        table="mem.ns.t",
+        rows=pa.table({"id": list(range(1, MOR_SEED_ROW_COUNT + 1)), "name": names}),
+        position_deletes_before=5,
+        position_deletes_after=1,
+        first_snapshot_id=1,
+        retry_count=retry_count,
+        max_call_retries=max_call_retries,
+        service_commits=0,
+        snapshot_log_before_expire=[(1, "append"), (2, "overwrite")],
+        snapshot_log_after_expire=[(2, "overwrite")],
+        current_snapshot_matches_engine=True,
+        ambiguous_engine_windows=0,
+    )
+
+
+def test_retry_sum_may_exceed_attempts_when_each_call_stays_in_budget() -> None:
+    """Two calls retrying twice: sum 4 > attempts 3, max 2 <= 3. The per-call cap holds.
+
+    pins: mw-10-s3tables-mor/C-003
+    """
+    assert_retry_counts(_retry_outcome(retry_count=4, max_call_retries=2), attempts=3)
+    with pytest.raises(AssertionError, match="max_call_retries"):
+        assert_retry_counts(_retry_outcome(retry_count=4, max_call_retries=4), attempts=3)
+
+
+def test_service_commit_count_keeps_a_pre_expire_id_that_vanishes() -> None:
+    """A service snapshot in the before-expire log that is gone after still counts.
+
+    pins: mw-10-s3tables-mor/C-003, C-004
+    """
+    engine = {10, 11}
+    before = [(10, "append"), (99, "overwrite"), (11, "append")]
+    after = [(11, "append")]
+    assert service_commit_count(engine, before, after) == 1
+
+
+def test_engine_window_extra_new_id_is_ambiguous_not_guessed() -> None:
+    """Two new ids in one engine step: extras are service; neither is credited as engine.
+
+    pins: mw-10-s3tables-mor/C-003, C-004
+    """
+    tracker = EngineSnapshotTracker()
+    tracker.credit_window({1}, {1, 2, 3})
+    assert tracker.ambiguous_engine_windows == 1
+    assert tracker.engine_snapshot_ids == set()
+    before = [(1, "append"), (2, "overwrite"), (3, "append")]
+    after = [(3, "append")]
+    assert service_commit_count(tracker.engine_snapshot_ids, before, after) == 3
+
+
+def test_storage_delete_denial_wins_over_commit_conflict_signature() -> None:
+    """AccessDenied plus CommitFailed requirement is a denial, not a retry.
+
+    pins: mw-10-s3tables-mor/C-001
+    """
+    error = RuntimeError("AccessDenied: not authorized (403) CommitFailed: requirement mismatch")
+    assert is_storage_delete_denial(error) is True
+    assert is_commit_conflict_error(error) is False
+    scripted = _ScriptedCall([error])
+    with pytest.raises(RuntimeError):
+        retry_on_commit_conflict(scripted)
+    assert scripted.calls == 1
+    assert "AccessDenied" in format_denial_failure(error)
+
+
+def test_ctas_missing_from_before_expire_log_names_auto_expiry() -> None:
+    """If the CTAS id is gone before engine expire, the probe fails naming auto-expiry.
+
+    pins: mw-10-s3tables-mor/C-001, C-004
+    """
+    outcome = _retry_outcome(0, 0)._replace(
+        first_snapshot_id=1,
+        snapshot_log_before_expire=[(2, "overwrite")],
+        snapshot_log_after_expire=[(2, "overwrite")],
+    )
+    with pytest.raises(AssertionError, match="automatic snapshot expiry"):
+        assert_engine_expire_removed_ctas(outcome)
+
+
+def test_run_mor_retries_first_merge_and_first_maintenance_call(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """First MERGE and first CALL each conflict once: retry_count 2, max_call_retries 1.
+
+    pins: mw-10-s3tables-mor/C-003
+    """
+    import _acceptance
+
+    wrapping_sql = _ConflictOnceSql(_acceptance._sql, prefix="MERGE")
+    wrapping_sql_arrow = _ConflictOnceSql(
+        _acceptance._sql_arrow, token="rewrite_position_delete_files"
+    )
+    monkeypatch.setattr(_acceptance, "_sql", wrapping_sql)
+    monkeypatch.setattr(_acceptance, "_sql_arrow", wrapping_sql_arrow)
+
+    spark = ReparkSession.builder.appName("pytest-mw10-retry-inject").getOrCreate()
+    spark.register_memory_catalog("mem", tmp_path)
+    owned = tmp_path / "owned"
+    spark.sql(f"CREATE NAMESPACE mem.ns LOCATION '{owned}'")
+    outcome = run_mor_merge_compact_expire(spark, "mem", "ns", "mw10retry")
+    assert_mor_maintenance_outcome(spark, outcome)
+    assert wrapping_sql.conflicts == 1
+    assert wrapping_sql_arrow.conflicts == 1
+    assert outcome.retry_count == 2
+    assert outcome.max_call_retries == 1

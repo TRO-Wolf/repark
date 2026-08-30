@@ -69,7 +69,8 @@ repo.
 - [tier2-aws.md](tier2-aws.md) — operator runbook for the tier-2 live-AWS workflow: environment,
   the repo+branch+environment-scoped OIDC trust policy, the scratch-only IAM posture
   (§2 — Glue still no-delete; **OD-3 `s3:DeleteObject` on the warehouse scratch prefix**;
-  OD-3b's S3 Tables statements applied 2026-08-28, measured by MW-10;
+  OD-3b's S3 Tables statements applied 2026-08-28, measured by MW-10 on format v2 —
+  PutTableData slot pending the first owner dispatch;
   including the **separate catalog-wide read-only `glue:GetDatabases`/`glue:GetTables`
   statement** that registration's provider walk requires, which cannot be scratch-scoped),
   the S3 lifecycle expiry, variable/secret names (§4 — **environment scope preferred**,

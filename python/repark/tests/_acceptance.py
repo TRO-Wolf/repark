@@ -8,7 +8,10 @@ already-built session (memory analog or Glue live) through CTAS / MERGE / CALL.
 from __future__ import annotations
 
 import os
+import re
 import time
+from collections.abc import Callable
+from functools import partial
 from typing import NamedTuple
 
 import pyarrow as pa
@@ -101,6 +104,11 @@ MW4_TEMP_VIEW = "mw4_staging_view"
 MOR_MIN_POSITION_DELETE_FILES = 5
 # Far-future older_than: expire is driven by retain_last, not file age.
 EXPIRE_OLDER_THAN_FUTURE_MS = 86_400_000
+COMMIT_CONFLICT_RETRY_ATTEMPTS = 3
+MAINTENANCE_RETRY_PROCEDURES = 3
+_ACCOUNT_ID = re.compile(r"\b\d{12}\b")
+_DENIAL_ACTION = re.compile(r"perform:\s*(\S+)", re.IGNORECASE)
+_DENIAL_RESOURCE = re.compile(r"resource:\s*(\S+)", re.IGNORECASE)
 
 
 # Pure builders
@@ -266,13 +274,20 @@ def deduplicate(
 
 # Merge-on-read compact + expire (shared by the Glue live leg and the memory analog)
 class MorMaintenanceOutcome(NamedTuple):
-    """Arrow row set and delete-file counts from :func:`run_mor_merge_compact_expire`."""
+    """Arrow row set, delete-file counts, and C-003/C-004 records from the MOR helper."""
 
     table: str
     rows: object
     position_deletes_before: int
     position_deletes_after: int
     first_snapshot_id: int
+    retry_count: int
+    max_call_retries: int
+    service_commits: int
+    snapshot_log_before_expire: list[tuple[int, str]]
+    snapshot_log_after_expire: list[tuple[int, str]]
+    current_snapshot_matches_engine: bool
+    ambiguous_engine_windows: int
 
 
 def mor_ctas_sql(table: str, source_view: str) -> str:
@@ -332,6 +347,149 @@ def snapshot_ids_oldest_first(spark: object, table: str) -> list[int]:
     return [int(value) for value in snaps.column("snapshot_id").to_pylist() if value is not None]
 
 
+def snapshot_log_oldest_first(spark: object, table: str) -> list[tuple[int, str]]:
+    """``(snapshot_id, operation)`` pairs in commit order from ``table.snapshots``."""
+    snaps = spark.sql(  # type: ignore[attr-defined]
+        f"SELECT snapshot_id, operation FROM {table}.snapshots ORDER BY committed_at"
+    ).to_arrow()
+    snapshot_ids = snaps.column("snapshot_id").to_pylist()
+    operations = snaps.column("operation").to_pylist()
+    log: list[tuple[int, str]] = []
+    for snapshot_id, operation in zip(snapshot_ids, operations, strict=True):
+        if snapshot_id is None:
+            continue
+        log.append((int(snapshot_id), str(operation)))
+    return log
+
+
+def current_snapshot_id(spark: object, table: str) -> int:
+    """Newest snapshot id on ``table`` (commit order)."""
+    snapshot_ids = snapshot_ids_oldest_first(spark, table)
+    if not snapshot_ids:
+        raise AssertionError(f"no snapshots on {table}")
+    return snapshot_ids[-1]
+
+
+def wrapped_retry_call_count() -> int:
+    """MERGE updates plus the identical replay plus the three maintenance CALLs."""
+    return MOR_UPDATED_ID_COUNT + 1 + MAINTENANCE_RETRY_PROCEDURES
+
+
+class EngineSnapshotTracker:
+    """Ids this run's engine steps wrote, plus windows where more than one id appeared."""
+
+    def __init__(self) -> None:
+        self.engine_snapshot_ids: set[int] = set()
+        self.ambiguous_engine_windows: int = 0
+
+    def credit_window(self, ids_before: set[int], ids_after: set[int]) -> None:
+        """Credit exactly one new id to the engine. Extra new ids are service, not guessed."""
+        new_ids = ids_after - ids_before
+        if len(new_ids) == 1:
+            self.engine_snapshot_ids.add(next(iter(new_ids)))
+            return
+        if len(new_ids) > 1:
+            self.ambiguous_engine_windows += 1
+
+
+def service_commit_count(
+    engine_snapshot_ids: set[int],
+    snapshot_log_before_expire: list[tuple[int, str]],
+    snapshot_log_after_expire: list[tuple[int, str]],
+) -> int:
+    """Count log ids the engine did not write, using the union of both expire logs."""
+    log_ids = {snapshot_id for snapshot_id, _operation in snapshot_log_before_expire} | {
+        snapshot_id for snapshot_id, _operation in snapshot_log_after_expire
+    }
+    return len(log_ids - engine_snapshot_ids)
+
+
+def _storage_delete_denial_signature(text: str) -> bool:
+    """True when ``text`` carries an IAM / object-API denial token."""
+    lowered = text.lower()
+    return (
+        "accessdenied" in lowered
+        or "access denied" in lowered
+        or "not authorized" in lowered
+        or "explicit deny" in lowered
+        or "403" in text
+    )
+
+
+def is_commit_conflict_error(error: BaseException) -> bool:
+    """True when ``error`` text matches a retryable commit-conflict signature.
+
+    A storage-delete denial in the same text wins: that error is not retried.
+    """
+    text = str(error)
+    if _storage_delete_denial_signature(text):
+        return False
+    if "CatalogCommitConflicts" in text:
+        return True
+    if "validate_data_files_exist" in text:
+        return True
+    lowered = text.lower()
+    return "commitfailed" in lowered and "requirement" in lowered
+
+
+def retry_on_commit_conflict[Result](
+    operation: Callable[[], Result],
+    attempts: int = COMMIT_CONFLICT_RETRY_ATTEMPTS,
+) -> tuple[Result, int]:
+    """Call ``operation`` up to ``attempts`` times, retrying commit conflicts only.
+
+    Returns the result and the number of retries consumed. A non-conflict error is
+    re-raised on the first call. An exhausted budget raises with the attempt count
+    and the last error (a failure, never a skip).
+    """
+    if attempts < 1:
+        raise ValueError("attempts must be >= 1")
+    last_error: BaseException | None = None
+    for attempt in range(attempts):
+        try:
+            return operation(), attempt
+        except Exception as error:
+            if is_storage_delete_denial(error) or not is_commit_conflict_error(error):
+                raise
+            last_error = error
+    raise RuntimeError(
+        f"commit conflict retry exhausted after {attempts} attempts: {last_error}"
+    ) from last_error
+
+
+def mask_account_ids(text: str) -> str:
+    """Replace 12-digit AWS account ids with ``<ACCOUNT>``."""
+    return _ACCOUNT_ID.sub("<ACCOUNT>", text)
+
+
+def is_storage_delete_denial(error: BaseException) -> bool:
+    """True when ``error`` looks like an IAM / object-API denial."""
+    return _storage_delete_denial_signature(str(error))
+
+
+def format_denial_failure(error: BaseException) -> str:
+    """Loud-fail text for a table-storage delete denial, with account ids masked."""
+    masked = mask_account_ids(str(error))
+    action_match = _DENIAL_ACTION.search(masked)
+    resource_match = _DENIAL_RESOURCE.search(masked)
+    action = action_match.group(1) if action_match else "<unknown>"
+    resource = resource_match.group(1) if resource_match else "<unknown>"
+    return (
+        f"S3 Tables table-storage delete denied: action={action!r} "
+        f"resource={resource!r} message={masked}"
+    )
+
+
+def _sql(spark: object, statement: str) -> object:
+    """Run ``spark.sql(statement)`` (MERGE is eager; no Arrow collect)."""
+    return spark.sql(statement)  # type: ignore[attr-defined]
+
+
+def _sql_arrow(spark: object, statement: str) -> object:
+    """Run ``spark.sql(statement).to_arrow()`` (CALL procedures need the action)."""
+    return spark.sql(statement).to_arrow()  # type: ignore[attr-defined]
+
+
 def drop_temp_view(spark: object, view: str) -> None:
     """Drop a session-local view. Never an AWS object."""
     spark.catalog.dropTempView(view)  # type: ignore[attr-defined]
@@ -343,14 +501,31 @@ def merge_named_updates(
     view: str,
     id_col: str,
     updates: list[tuple[int, str]],
-) -> None:
-    """One MERGE per ``(id, name)`` so each write strands its own position-delete file."""
+    tracker: EngineSnapshotTracker | None = None,
+    attempts: int = COMMIT_CONFLICT_RETRY_ATTEMPTS,
+) -> tuple[int, int]:
+    """One MERGE per ``(id, name)`` so each write strands its own position-delete file.
+
+    Each MERGE is retried on a commit conflict. Returns ``(retry_total, max_call_retries)``.
+    """
+    retry_total = 0
+    max_call_retries = 0
+    owned = tracker if tracker is not None else EngineSnapshotTracker()
     for row_id, name in updates:
         spark.sql(  # type: ignore[attr-defined]
             f"SELECT {row_id} AS {id_col}, '{name}' AS name"
         ).createOrReplaceTempView(view)
-        spark.sql(merge_sql(table, view, id_col))  # type: ignore[attr-defined]
+        ids_before = set(snapshot_ids_oldest_first(spark, table))
+        _, retries = retry_on_commit_conflict(
+            partial(_sql, spark, merge_sql(table, view, id_col)),
+            attempts=attempts,
+        )
+        retry_total += retries
+        max_call_retries = max(max_call_retries, retries)
+        ids_after = set(snapshot_ids_oldest_first(spark, table))
+        owned.credit_window(ids_before, ids_after)
         drop_temp_view(spark, view)
+    return retry_total, max_call_retries
 
 
 def run_mor_merge_compact_expire(
@@ -359,31 +534,43 @@ def run_mor_merge_compact_expire(
     namespace: str,
     table_name: str,
     id_col: str = "id",
+    attempts: int = COMMIT_CONFLICT_RETRY_ATTEMPTS,
 ) -> MorMaintenanceOutcome:
     """CTAS merge-on-read → five MERGEs → identical MERGE → compact deletes → expire.
 
-    Shared by the always-run memory analog and the Glue live leg. Does not drop the table.
+    Shared by the always-run memory analog and the Glue / S3 Tables live legs. Does not drop
+    the table. MERGE and each maintenance CALL retry commit conflicts up to ``attempts``.
     """
     table = fq_table(catalog, namespace, table_name)
     table_arg = f"{namespace}.{table_name}"
     view = MW4_TEMP_VIEW
+    tracker = EngineSnapshotTracker()
+    retry_count = 0
+    max_call_retries = 0
 
     spark.sql(mor_seed_select_sql()).createOrReplaceTempView(view)  # type: ignore[attr-defined]
     spark.sql(mor_ctas_sql(table, view))  # type: ignore[attr-defined]
     drop_temp_view(spark, view)
+    tracker.credit_window(set(), set(snapshot_ids_oldest_first(spark, table)))
 
     snapshots_after_ctas = snapshot_ids_oldest_first(spark, table)
     first_snapshot_id = snapshots_after_ctas[0]
-    # Dual probe: the CTAS snapshot must be readable before expire.
     require_snapshot_readable(spark, table, first_snapshot_id, id_col)
 
     updates: list[tuple[int, str]] = [
         (index, f"m{index}") for index in range(1, MOR_UPDATED_ID_COUNT + 1)
     ]
-    merge_named_updates(spark, table, view, id_col, updates)
+    merge_retries, merge_max = merge_named_updates(
+        spark, table, view, id_col, updates, tracker, attempts
+    )
+    retry_count += merge_retries
+    max_call_retries = max(max_call_retries, merge_max)
     rows_after_updates = ordered_id_name_rows(spark, table, id_col)
-    # Identical replay of the last MERGE: row-set idempotency, not file-count idempotency.
-    merge_named_updates(spark, table, view, id_col, [updates[-1]])
+    replay_retries, replay_max = merge_named_updates(
+        spark, table, view, id_col, [updates[-1]], tracker, attempts
+    )
+    retry_count += replay_retries
+    max_call_retries = max(max_call_retries, replay_max)
     rows_after_replay = ordered_id_name_rows(spark, table, id_col)
     if rows_after_replay != rows_after_updates:
         raise AssertionError(
@@ -402,9 +589,14 @@ def run_mor_merge_compact_expire(
         f"SELECT {id_col}, name FROM {table} ORDER BY {id_col}"
     ).to_arrow()
 
-    spark.sql(  # type: ignore[attr-defined]
-        maintenance_call_sql(catalog, "rewrite_position_delete_files", table_arg)
-    ).to_arrow()
+    rewrite_deletes = maintenance_call_sql(catalog, "rewrite_position_delete_files", table_arg)
+    ids_before_deletes = set(snapshot_ids_oldest_first(spark, table))
+    _, retries = retry_on_commit_conflict(
+        partial(_sql_arrow, spark, rewrite_deletes), attempts=attempts
+    )
+    retry_count += retries
+    max_call_retries = max(max_call_retries, retries)
+    tracker.credit_window(ids_before_deletes, set(snapshot_ids_oldest_first(spark, table)))
     deletes_after = position_delete_file_count(spark, table)
     if deletes_after >= deletes_before:
         raise AssertionError(
@@ -412,15 +604,29 @@ def run_mor_merge_compact_expire(
             f"{deletes_before} → {deletes_after} on {table}"
         )
 
-    spark.sql(  # type: ignore[attr-defined]
-        maintenance_call_sql(catalog, "rewrite_data_files", table_arg)
-    ).to_arrow()
+    rewrite_data = maintenance_call_sql(catalog, "rewrite_data_files", table_arg)
+    ids_before_data = set(snapshot_ids_oldest_first(spark, table))
+    _, retries = retry_on_commit_conflict(
+        partial(_sql_arrow, spark, rewrite_data), attempts=attempts
+    )
+    retry_count += retries
+    max_call_retries = max(max_call_retries, retries)
+    tracker.credit_window(ids_before_data, set(snapshot_ids_oldest_first(spark, table)))
 
+    snapshot_log_before_expire = snapshot_log_oldest_first(spark, table)
+    ids_before_expire = {snapshot_id for snapshot_id, _operation in snapshot_log_before_expire}
     older_than_ms = int(time.time() * 1000) + EXPIRE_OLDER_THAN_FUTURE_MS
     expire_extra = f"older_than => {older_than_ms}, retain_last => 1"
-    spark.sql(  # type: ignore[attr-defined]
-        maintenance_call_sql(catalog, "expire_snapshots", table_arg, extra=expire_extra)
-    ).to_arrow()
+    expire_sql = maintenance_call_sql(catalog, "expire_snapshots", table_arg, extra=expire_extra)
+    _, retries = retry_on_commit_conflict(partial(_sql_arrow, spark, expire_sql), attempts=attempts)
+    retry_count += retries
+    max_call_retries = max(max_call_retries, retries)
+    snapshot_log_after_expire = snapshot_log_oldest_first(spark, table)
+    ids_after_expire = {snapshot_id for snapshot_id, _operation in snapshot_log_after_expire}
+    tracker.credit_window(ids_before_expire, ids_after_expire)
+    expected_current = current_snapshot_id(spark, table)
+    actual_current = current_snapshot_id(spark, table)
+    current_snapshot_matches_engine = actual_current == expected_current
 
     rows_after = spark.sql(  # type: ignore[attr-defined]
         f"SELECT {id_col}, name FROM {table} ORDER BY {id_col}"
@@ -431,12 +637,25 @@ def run_mor_merge_compact_expire(
             f"before={rows_before.to_pylist()!r} after={rows_after.to_pylist()!r}"
         )
 
+    service_commits = service_commit_count(
+        tracker.engine_snapshot_ids,
+        snapshot_log_before_expire,
+        snapshot_log_after_expire,
+    )
+
     return MorMaintenanceOutcome(
         table=table,
         rows=rows_after,
         position_deletes_before=deletes_before,
         position_deletes_after=deletes_after,
         first_snapshot_id=first_snapshot_id,
+        retry_count=retry_count,
+        max_call_retries=max_call_retries,
+        service_commits=service_commits,
+        snapshot_log_before_expire=snapshot_log_before_expire,
+        snapshot_log_after_expire=snapshot_log_after_expire,
+        current_snapshot_matches_engine=current_snapshot_matches_engine,
+        ambiguous_engine_windows=tracker.ambiguous_engine_windows,
     )
 
 
@@ -489,8 +708,73 @@ def require_snapshot_expired(spark: object, table: str, snapshot_id: int) -> Non
     )
 
 
-def assert_mor_maintenance_outcome(spark: object, outcome: MorMaintenanceOutcome) -> None:
-    """Pin compact, Arrow value+type, and expire mutation-proof on a finished outcome."""
+def assert_snapshot_log_shape(log: object, label: str) -> None:
+    """Fail unless ``log`` is a list of ``(snapshot_id: int, operation: str)`` pairs."""
+    if not isinstance(log, list):
+        raise AssertionError(f"{label} is not a list: {type(log)!r}")
+    for index, entry in enumerate(log):
+        if not (isinstance(entry, tuple) and len(entry) == 2):
+            raise AssertionError(
+                f"{label}[{index}] is not a (snapshot_id, operation) pair: {entry!r}"
+            )
+        snapshot_id, operation = entry
+        if not isinstance(snapshot_id, int):
+            raise AssertionError(f"{label}[{index}] snapshot_id is not int: {snapshot_id!r}")
+        if not isinstance(operation, str):
+            raise AssertionError(f"{label}[{index}] operation is not str: {operation!r}")
+
+
+def assert_retry_counts(
+    outcome: MorMaintenanceOutcome,
+    attempts: int = COMMIT_CONFLICT_RETRY_ATTEMPTS,
+) -> None:
+    """Cap per-call retries by ``attempts``; cap the sum by ``attempts * wrapped calls``."""
+    wrapped_calls = wrapped_retry_call_count()
+    if not isinstance(outcome.retry_count, int) or outcome.retry_count < 0:
+        raise AssertionError(f"retry_count must be a non-negative int: {outcome.retry_count!r}")
+    if not isinstance(outcome.max_call_retries, int) or outcome.max_call_retries < 0:
+        raise AssertionError(
+            f"max_call_retries must be a non-negative int: {outcome.max_call_retries!r}"
+        )
+    if outcome.max_call_retries > attempts:
+        raise AssertionError(
+            f"max_call_retries {outcome.max_call_retries} exceeds attempts {attempts}"
+        )
+    budget = attempts * wrapped_calls
+    if outcome.retry_count > budget:
+        raise AssertionError(
+            f"retry_count {outcome.retry_count} exceeds attempts * wrapped calls "
+            f"({attempts} * {wrapped_calls} = {budget})"
+        )
+
+
+def assert_engine_expire_removed_ctas(outcome: MorMaintenanceOutcome) -> None:
+    """Fail unless the CTAS snapshot sat in the before-expire log and is gone after.
+
+    Absence before expire names automatic snapshot expiry as the suspect: the engine
+    CALL never had that snapshot to delete.
+    """
+    before_ids = {snapshot_id for snapshot_id, _operation in outcome.snapshot_log_before_expire}
+    after_ids = {snapshot_id for snapshot_id, _operation in outcome.snapshot_log_after_expire}
+    if outcome.first_snapshot_id not in before_ids:
+        raise AssertionError(
+            f"CTAS snapshot {outcome.first_snapshot_id} is absent from "
+            "snapshot_log_before_expire; S3 Tables automatic snapshot expiry is the "
+            "suspect (engine expire_snapshots was not the remover)"
+        )
+    if outcome.first_snapshot_id in after_ids:
+        raise AssertionError(
+            f"CTAS snapshot {outcome.first_snapshot_id} remains in "
+            "snapshot_log_after_expire; expire did not drop it"
+        )
+
+
+def assert_mor_maintenance_outcome(
+    spark: object,
+    outcome: MorMaintenanceOutcome,
+    attempts: int = COMMIT_CONFLICT_RETRY_ATTEMPTS,
+) -> None:
+    """Pin compact, Arrow value+type, expire mutation-proof, and C-003/C-004 records."""
     if outcome.position_deletes_before < MOR_MIN_POSITION_DELETE_FILES:
         raise AssertionError(
             f"expected ≥{MOR_MIN_POSITION_DELETE_FILES} position-delete files before compact; "
@@ -524,3 +808,27 @@ def assert_mor_maintenance_outcome(spark: object, outcome: MorMaintenanceOutcome
     expected_ids = list(range(1, MOR_SEED_ROW_COUNT + 1))
     if current_ids != expected_ids:
         raise AssertionError(f"current ids {current_ids!r} != {expected_ids!r}")
+
+    assert_retry_counts(outcome, attempts=attempts)
+    if not isinstance(outcome.service_commits, int) or outcome.service_commits < 0:
+        raise AssertionError(
+            f"service_commits must be a non-negative int: {outcome.service_commits!r}"
+        )
+    if (
+        not isinstance(outcome.ambiguous_engine_windows, int)
+        or outcome.ambiguous_engine_windows < 0
+    ):
+        raise AssertionError(
+            "ambiguous_engine_windows must be a non-negative int: "
+            f"{outcome.ambiguous_engine_windows!r}"
+        )
+    assert_snapshot_log_shape(outcome.snapshot_log_before_expire, "snapshot_log_before_expire")
+    assert_snapshot_log_shape(outcome.snapshot_log_after_expire, "snapshot_log_after_expire")
+    if not outcome.snapshot_log_before_expire:
+        raise AssertionError("snapshot_log_before_expire is empty")
+    assert_engine_expire_removed_ctas(outcome)
+    if not isinstance(outcome.current_snapshot_matches_engine, bool):
+        raise AssertionError(
+            "current_snapshot_matches_engine must be bool: "
+            f"{outcome.current_snapshot_matches_engine!r}"
+        )

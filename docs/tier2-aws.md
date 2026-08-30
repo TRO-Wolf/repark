@@ -82,7 +82,9 @@ the OD-3 exception on the warehouse scratch prefix only (MW-4 compact + expire):
   AWS's published object-API mapping lists `PutObject` + the multipart operations under
   `PutTableData` and names no action for `DeleteObject` on table storage: whether
   `expire_snapshots` can remove files there is measured by the first S3 Tables maintenance
-  unit — a denial is a stop, not a design; do not widen pre-emptively. S3 Tables' automatic
+  unit — a denial is a stop, not a design; do not widen pre-emptively.
+  Measured result: pending the first owner dispatch after merge (the orchestrator fills this).
+  S3 Tables' automatic
   snapshot management (keep 1 / 120 h, then permanent removal of noncurrent objects) fails for
   a whole table that carries any user-defined branch or tag or a `history.expire.*` property —
   the refs leg disables it on its scratch tables or expects that failure.

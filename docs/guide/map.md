@@ -66,6 +66,9 @@ illustrative. A claim with no verified basis does not go in.
   costs in time travel, the cadence, the load-bearing order, the day of latency on the orphan
   net, how to retry a step (the S3 Tables conflict and step 4's idle-cycle refusal), the six
   edits a migrating Spark DAG needs, and the limit the cycle cannot cross (registry `RDF-1`).
+  **MW-10** adds the S3 Tables paragraph: automatic snapshot management stays on for scratch
+  tables (no branch/tag/`history.expire.*`), engine expire and the service may run together,
+  conflicts retry a bounded number of times, and the measured interplay slot.
   MW-7's numbers are cited to
   [../../task/ledgers/completed/mw-7-scale-measurement-ledger.md](../../task/ledgers/archive/2026-08/2026-08-24-mw-7-scale-measurement-ledger.md)
   §6, never restated.

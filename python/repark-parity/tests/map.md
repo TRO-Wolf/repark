@@ -21,7 +21,9 @@ JVM, no repark required). See [../map.md](../map.md).
 - `test_plan_1_northstar_fnp_sequence.py` — **PLAN-1 (2026-08-28; tree pins):** the guarded
   North Star sequence, F-17's measured shared-Puffin closure request, the live slate (FNP-15/16
   then MW-10 since RP-3's departure on 2026-08-30), the per-unit FNP order and delivery boundary,
-  FNP-Z retirement, fork independence, and map lockstep. `pins: plan-1-northstar-fnp-sequence/C-001, C-002, C-003, C-004, C-005, C-006`
+  FNP-Z retirement, fork independence, and map lockstep. MW-10 pickup archived RP-3, so the
+  C-006 navigation pin reads `**RP-3 (2026-08-28)` / `opt-in for callers` from
+  `task/ledgers/archive/2026-08/map.md`. `pins: plan-1-northstar-fnp-sequence/C-001, C-002, C-003, C-004, C-005, C-006`
 - `test_pr_247_owner_ruling.py` — **PR #247 revalidation (2026-08-27):** the owner-ruling blocks
   in `AGENTS.md` and `CLAUDE.md` stay byte-exact, unique, at the document start, and in regular
   files; one-byte drift, malformed or missing files, relocation, duplication, and symlink

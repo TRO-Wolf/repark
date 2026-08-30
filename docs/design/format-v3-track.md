@@ -217,7 +217,7 @@ container closure is a public call its own DataFusion `delete.rs` makes
 (`close_touched_dv_containers`), and the engine's MOR DML path
 (`crates/repark-iceberg/src/write/merge/mod.rs`, `plan_and_commit_mor` → `commit_row_delta`)
 commits through `RowDelta` directly — RP-3 wires that call in first, then measures. Charter:
-[task/ledgers/completed/rp-3-fork-repin-ledger.md](../../task/ledgers/completed/rp-3-fork-repin-ledger.md).
+[task/ledgers/completed/rp-3-fork-repin-ledger.md](../../task/ledgers/archive/2026-08/2026-08-30-rp-3-fork-repin-ledger.md).
 The repin re-runs every standing duty in `AGENTS.md` and measures these cells:
 
 | Input state | Operation | Required result |
