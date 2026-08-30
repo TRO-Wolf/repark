@@ -1,7 +1,4 @@
 //! Spark `str_to_map` — both delimiters are regular expressions.
-//!
-//! Spark treats `pairDelim` and `keyValueDelim` as Java regex, unlike the upstream literal split.
-//! This shim binds delimiter classes to Spark's ASCII regex semantics.
 
 use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
@@ -21,17 +18,13 @@ use regex::Regex;
 const DEFAULT_PAIR_DELIM: &str = ",";
 const DEFAULT_KV_DELIM: &str = ":";
 
-/// ===========================================================================================
 /// UDF constructor.
-/// ===========================================================================================
 #[must_use]
 pub fn str_to_map_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkStrToMapRegex::new()))
 }
 
-/// ===========================================================================================
 /// Spark `str_to_map(text[, pairDelim[, keyValueDelim]])` with regex delimiters.
-/// ===========================================================================================
 #[derive(Debug)]
 struct SparkStrToMapRegex {
     signature: Signature,
@@ -73,11 +66,7 @@ fn map_utf8_type() -> DataType {
     )
 }
 
-/// ===========================================================================================
 /// Bind Java's ASCII `\s`, `\d`, and `\w` classes to equivalent POSIX classes.
-///
-/// Splicing preserves class context and negation without disabling Unicode matching for other regex constructs.
-/// ===========================================================================================
 pub(crate) fn bind_ascii_perl_classes(pattern: &str) -> String {
     let mut out = String::with_capacity(pattern.len());
     let mut chars = pattern.chars().peekable();

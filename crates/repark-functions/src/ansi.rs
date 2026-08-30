@@ -1,7 +1,4 @@
 //! Spark-door `spark.sql.ansi.enabled` carrier and ANSI `/0` / `% 0` raise kernel.
-//!
-//! The separate non-`SET`-able extension keeps this key out of `repark.sql.*`; invalid values fail
-//! with configuration errors and the default is `true`.
 
 use std::any::Any;
 use std::collections::HashMap;
@@ -18,18 +15,16 @@ use datafusion::logical_expr::{
 };
 use datafusion::prelude::SessionConfig;
 
-/// Canonical Spark `SQLConf` key. Parsed from the session builder map in `configure()`.
+/// Canonical Spark `SQLConf` key.
 pub const SPARK_SQL_ANSI_ENABLED_KEY: &str = "spark.sql.ansi.enabled";
 
 /// Spark 4 / owner Q10=A default.
 pub const DEFAULT_SPARK_SQL_ANSI_ENABLED: bool = true;
 
-/// Embedded UDF name. The analyzer matches on this so a second analyze is a fixpoint.
+/// Embedded UDF name.
 pub(crate) const ANSI_NONZERO_DIVISOR_NAME: &str = "__repark_ansi_nonzero_divisor__";
 
-/// ===========================================================================================
 /// Session-scoped ANSI flag the Spark analyzer reads out of [`ConfigOptions`].
-/// ===========================================================================================
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SparkAnsiConfig {
     /// `true` → `/0` and `% 0` raise; `false` → NULL (legacy `nullif` wrap).
@@ -77,10 +72,7 @@ impl ExtensionOptions for SparkAnsiConfig {
     }
 }
 
-/// ===========================================================================================
-/// Parse `spark.sql.ansi.enabled`. Spark's needle: `should be boolean, but was {raw}`.
-/// ===========================================================================================
-///
+/// Parse `spark.sql.ansi.enabled`.
 /// # Errors
 /// A present value that is not a boolean token.
 pub fn parse_spark_sql_ansi_enabled(raw: &str) -> Result<bool> {
@@ -94,10 +86,7 @@ pub fn parse_spark_sql_ansi_enabled(raw: &str) -> Result<bool> {
     }
 }
 
-/// ===========================================================================================
-/// Read the builder conf map. Missing key → [`DEFAULT_SPARK_SQL_ANSI_ENABLED`].
-/// ===========================================================================================
-///
+/// Read the builder conf map.
 /// # Errors
 /// Present but unparsable value (the `notabool` fail-loud).
 pub fn spark_ansi_from_config_map<S>(config: &HashMap<String, String, S>) -> Result<bool>
@@ -110,17 +99,13 @@ where
     }
 }
 
-/// ===========================================================================================
 /// Attach the ANSI flag to a [`SessionConfig`] (Spark door `configure` hook).
-/// ===========================================================================================
 #[must_use]
 pub fn with_spark_ansi_config(config: SessionConfig, enabled: bool) -> SessionConfig {
     config.with_option_extension(SparkAnsiConfig { enabled })
 }
 
-/// ===========================================================================================
-/// Analyzer accessor. Missing carrier → default TRUE (Spark-door semantics layer).
-/// ===========================================================================================
+/// Analyzer accessor.
 #[must_use]
 pub fn spark_ansi_enabled_from_options(options: &ConfigOptions) -> bool {
     options
@@ -131,9 +116,7 @@ pub fn spark_ansi_enabled_from_options(options: &ConfigOptions) -> bool {
         })
 }
 
-/// ===========================================================================================
 /// Wrap `divisor` in the embedded raise-on-zero UDF (ANSI ON path of `guard_zero_divisor`).
-/// ===========================================================================================
 #[must_use]
 pub fn guard_nonzero_divisor(divisor: Expr) -> Expr {
     Expr::ScalarFunction(ScalarFunction::new_udf(
@@ -142,15 +125,13 @@ pub fn guard_nonzero_divisor(divisor: Expr) -> Expr {
     ))
 }
 
-/// The embedded UDF instance. Never registered — the analyzer embeds it by value.
+/// The embedded UDF instance.
 #[must_use]
 pub fn ansi_nonzero_divisor_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(AnsiNonzeroDivisor::new()))
 }
 
-/// ===========================================================================================
 /// Pass-through numeric kernel: zero → Spark-shaped `DIVIDE_BY_ZERO`; NULL / nonzero pass.
-/// ===========================================================================================
 #[derive(Debug)]
 struct AnsiNonzeroDivisor {
     signature: Signature,

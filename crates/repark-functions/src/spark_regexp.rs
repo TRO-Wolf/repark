@@ -1,9 +1,4 @@
 //! Spark `regexp_count` / `regexp_instr` — NULL-in NULL-out, INT, ignore-idx (G6 / P1).
-//!
-//! Spark regexp shims with Spark's NULL, integer, UTF-16, and capture-group semantics.
-//!
-//! The overwrite supplies `regexp_count`, `regexp_instr`, `regexp_extract_all`, and
-//! `regexp_substr` to SQL and facade builders.
 
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
@@ -21,37 +16,25 @@ use datafusion::logical_expr::{
 };
 use regex::Regex;
 
-/// ===========================================================================================
 /// Spark `regexp_count` UDF (overwrites DataFusion's NULL→0 / int64 kernel).
-/// ===========================================================================================
 #[must_use]
 pub fn regexp_count_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkRegexpCount::new()))
 }
 
-/// ===========================================================================================
 /// Spark `regexp_instr` UDF (overwrites DataFusion's start-position 3rd arg).
-/// ===========================================================================================
 #[must_use]
 pub fn regexp_instr_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkRegexpInstr::new()))
 }
 
-/// ===========================================================================================
 /// Spark `regexp_extract_all(str, regexp[, idx])` UDF.
-/// ===========================================================================================
-///
-/// Return each match's capture group as an array; `idx` defaults to 1 and no match returns `[]`.
 #[must_use]
 pub fn regexp_extract_all_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkRegexpExtractAll::new()))
 }
 
-/// ===========================================================================================
 /// Spark `regexp_substr(str, regexp)` UDF.
-/// ===========================================================================================
-///
-/// Return the first match, or NULL when no match exists.
 #[must_use]
 pub fn regexp_substr_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkRegexpSubstr::new()))
@@ -358,9 +341,7 @@ fn invoke_regexp(args: &ScalarFunctionArgs, kind: RegexpKind) -> Result<Columnar
     Ok(ColumnarValue::Array(Arc::new(Int32Array::from(values))))
 }
 
-/// Shared row walk for the two collecting kernels: NULL-in NULL-out, one compiled regex per
-/// distinct pattern, and the group index passed through RAW.
-///
+/// Shared row walk: NULL-in NULL-out, one compiled regex per pattern, group index passed RAW.
 fn extract_rows<T>(
     args: &ScalarFunctionArgs,
     name: &str,
@@ -475,8 +456,7 @@ fn bump_count(count: i32) -> Result<i32> {
     count.checked_add(1).ok_or_else(count_overflow)
 }
 
-/// Two U+FFFD (3 UTF-8 bytes each). Offset 3 sits between them: a non-start,
-/// non-line-terminator position that reproduces the mid-surrogate context.
+/// Two U+FFFD (3 UTF-8 bytes each).
 const MID_SURROGATE_PROBE: &str = "\u{FFFD}\u{FFFD}";
 const MID_SURROGATE_PROBE_OFFSET: usize = 3;
 
@@ -487,10 +467,7 @@ fn matches_at_mid_surrogate_index(pattern: &Regex) -> bool {
         .is_some_and(|found| found.start() == MID_SURROGATE_PROBE_OFFSET)
 }
 
-/// ===========================================================================================
 /// Collect matches with Java's empty-after-non-empty stepping.
-/// Astral mid-surrogate starts remain a counting-only residual.
-/// ===========================================================================================
 fn collect_matches<'text>(text: &'text str, pattern: &Regex) -> Result<Vec<regex::Match<'text>>> {
     let mut found_all = Vec::new();
     if pattern.as_str().is_empty() {
@@ -581,8 +558,7 @@ fn first_match_utf16_start(text: &str, pattern: &Regex) -> Result<i32> {
     let Some(found) = pattern.find(text) else {
         return Ok(0);
     };
-    // Spark / Java `Matcher.start()` is a UTF-16 code-unit index (🐈 is 2), not
-    // a Unicode scalar count (🐈 is 1). `caféx`/`x` is 5 either way.
+    // Spark / Java `Matcher.start()` is a UTF-16 code-unit index, not a Unicode scalar count.
     let units_before = text[..found.start()].encode_utf16().count();
     let start = units_before.saturating_add(1);
     i32::try_from(start)
@@ -750,7 +726,7 @@ mod tests {
         assert_eq!(count_non_overlapping("abc", &stars).expect("c"), 4);
         let a_star = compile_spark_regex("a*").expect("a*");
         assert_eq!(count_non_overlapping("🐈", &a_star).expect("c"), 3);
-        // R4-1: `is_match("")` overcounts start-anchored patterns at a
+        // R4-1: empty `is_match` overcounts start-anchored patterns at a mid-surrogate index.
         let caret = compile_spark_regex("^").expect("caret");
         assert!(!matches_at_mid_surrogate_index(&caret));
         assert_eq!(count_non_overlapping("🐈", &caret).expect("c"), 1);

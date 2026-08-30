@@ -1,7 +1,4 @@
 //! Spark-door `spark.sql.timestampType` carrier for bare `TIMESTAMP` resolution.
-//!
-//! `TIMESTAMP_LTZ` is the default instant type; `TIMESTAMP_NTZ` opts into wall-clock values.
-//! The carrier is parsed and installed at session build and is not settable through SQL.
 
 use std::any::Any;
 use std::collections::HashMap;
@@ -11,7 +8,7 @@ use datafusion::common::config::{ConfigEntry, ConfigExtension, ConfigOptions, Ex
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::SessionConfig;
 
-/// Canonical Spark `SQLConf` key. Parsed from the session builder map in `configure()`.
+/// Canonical Spark `SQLConf` key.
 pub const SPARK_SQL_TIMESTAMP_TYPE_KEY: &str = "spark.sql.timestampType";
 
 /// Spark / TZ-4 default: bare `TIMESTAMP` is an instant (LTZ).
@@ -23,12 +20,10 @@ pub const TIMESTAMP_LTZ_VALUE: &str = "TIMESTAMP_LTZ";
 /// Opt-in: bare `TIMESTAMP` is a wall clock (NTZ).
 pub const TIMESTAMP_NTZ_VALUE: &str = "TIMESTAMP_NTZ";
 
-/// ===========================================================================================
 /// The session default for a bare SQL `TIMESTAMP`.
-/// ===========================================================================================
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SparkTimestampType {
-    /// Instant — Arrow `timestamp[us, tz=UTC]`, Iceberg `timestamptz`. The default.
+    /// Instant — Arrow `timestamp[us, tz=UTC]`, Iceberg `timestamptz`.
     Ltz,
     /// Wall clock — Arrow `timestamp[us]` naive, Iceberg `timestamp`.
     Ntz,
@@ -57,10 +52,7 @@ impl Default for SparkTimestampType {
     }
 }
 
-/// ===========================================================================================
-/// Session-scoped default the CAST / literal analyzer and Spark DDL read out of
-/// [`ConfigOptions`].
-/// ===========================================================================================
+/// Session-scoped default the CAST / literal analyzer and Spark DDL read out of [`ConfigOptions`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SparkTimestampTypeConfig {
     /// The resolved default.
@@ -108,10 +100,7 @@ impl ExtensionOptions for SparkTimestampTypeConfig {
     }
 }
 
-/// ===========================================================================================
-/// Parse `spark.sql.timestampType`. Exact tokens after trim; the error names both legal values.
-/// ===========================================================================================
-///
+/// Parse `spark.sql.timestampType`.
 /// # Errors
 /// A present value that is not `TIMESTAMP_LTZ` or `TIMESTAMP_NTZ`.
 pub fn parse_spark_sql_timestamp_type(raw: &str) -> Result<SparkTimestampType> {
@@ -126,10 +115,7 @@ pub fn parse_spark_sql_timestamp_type(raw: &str) -> Result<SparkTimestampType> {
     }
 }
 
-/// ===========================================================================================
-/// Read the builder conf map. Missing key → [`DEFAULT_SPARK_SQL_TIMESTAMP_TYPE`].
-/// ===========================================================================================
-///
+/// Read the builder conf map.
 /// # Errors
 /// Present but unparsable value.
 pub fn spark_timestamp_type_from_config_map<S>(
@@ -144,9 +130,7 @@ where
     }
 }
 
-/// ===========================================================================================
 /// Attach the default to a [`SessionConfig`] (Spark door `configure` hook).
-/// ===========================================================================================
 #[must_use]
 pub fn with_spark_timestamp_type(
     config: SessionConfig,
@@ -155,9 +139,7 @@ pub fn with_spark_timestamp_type(
     config.with_option_extension(SparkTimestampTypeConfig { timestamp_type })
 }
 
-/// ===========================================================================================
-/// Analyzer / DDL accessor. Missing carrier defaults to LTZ.
-/// ===========================================================================================
+/// Analyzer / DDL accessor.
 #[must_use]
 pub fn spark_timestamp_type_from_options(options: &ConfigOptions) -> SparkTimestampType {
     options

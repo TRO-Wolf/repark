@@ -1,7 +1,4 @@
 //! Spark LTZ instant producers — Arrow `Timestamp(µs, UTC)`.
-//!
-//! `now`, `current_timestamp`, and LTZ `to_timestamp` produce microsecond UTC timestamps.
-//! Zoneless inputs localize in the session zone; zone-suffixed inputs and NTZ remain unchanged.
 
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
@@ -37,17 +34,13 @@ pub(crate) fn ntz_timestamp_type() -> DataType {
     DataType::Timestamp(TimeUnit::Microsecond, None)
 }
 
-/// ===========================================================================================
 /// The instant-typed SQL producers this crate overwrites after `datafusion-spark`.
-/// ===========================================================================================
 #[must_use]
 pub fn functions() -> Vec<Arc<ScalarUDF>> {
     vec![now_udf(), current_timestamp_udf(), to_timestamp_udf()]
 }
 
-/// ===========================================================================================
 /// Analyzer rule: `CAST(<integer|NULL> AS TIMESTAMP)` yields the LTZ wire type.
-/// ===========================================================================================
 #[must_use]
 pub fn ltz_timestamp_cast_rule() -> Arc<dyn AnalyzerRule + Send + Sync> {
     Arc::new(SparkLtzTimestampCast)
@@ -81,10 +74,7 @@ fn cast_columnar_to_ltz(value: ColumnarValue) -> Result<ColumnarValue> {
     }
 }
 
-/// ===========================================================================================
-/// `now()` / `current_timestamp()` — statement-stable µs+UTC, copying DataFusion's simplify
-/// contract (one timestamp per statement) and the `F.current_timestamp` binding cast.
-/// ===========================================================================================
+/// `now()` / `current_timestamp()` are statement-stable microseconds in UTC.
 #[derive(Debug)]
 struct SparkNow {
     name: &'static str,
@@ -154,9 +144,7 @@ impl ScalarUDFImpl for SparkNow {
     }
 }
 
-/// ===========================================================================================
 /// `to_timestamp` parses strings, localizes zoneless values in the session zone, and emits µs+UTC.
-/// ===========================================================================================
 #[derive(Debug)]
 struct SparkToTimestamp {
     signature: Signature,
@@ -391,9 +379,7 @@ fn localize_zoneless_string_ticks(
     )))
 }
 
-/// `CAST(<integer|NULL> AS TIMESTAMP)` → `Timestamp(µs, UTC)`. String / date / NTZ
-/// sources rewrite onto [`SparkToTimestamp`] so zoneless walls localize in the session
-/// zone. Idempotent: an already-LTZ target is left alone.
+/// `CAST(<integer|NULL> AS TIMESTAMP)` → `Timestamp(µs, UTC)`.
 #[derive(Debug)]
 struct SparkLtzTimestampCast;
 
@@ -486,9 +472,7 @@ fn rewrite_cast(
     peel_naive_cast_of_ltz_producer(rewritten.data, schema)
 }
 
-/// `TypeCoercion` may wrap a `TIMESTAMP '…'` literal in `CAST(… AS Timestamp(µs))`
-/// (naive) *before* this rule rewrites the literal to `to_timestamp`. That CAST
-/// then strips the UTC annotation. Peel it when the child is already LTZ.
+/// `TypeCoercion` may wrap a `TIMESTAMP` literal in a naive µs `CAST` before this rule rewrites it.
 fn peel_naive_cast_of_ltz_producer(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
     let Expr::Cast(cast) = &expr else {
         return Transformed::no(expr);
@@ -531,7 +515,6 @@ fn is_ltz_timestamp(data_type: &DataType) -> bool {
 }
 
 /// A zoneless UTF-8 timestamp literal, localized in `zone` as a non-null LTZ literal.
-/// `None` when the expr is not a zoneless string literal (columns stay on `to_timestamp`).
 fn localized_zoneless_utf8_literal(expr: &Expr, zone: &str) -> Option<Expr> {
     let Expr::Literal(scalar, _) = expr else {
         return None;
@@ -565,7 +548,7 @@ fn wrap_as_ltz(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
     Transformed::yes(Expr::Cast(Cast::new_from_field(Box::new(expr), field)))
 }
 
-/// Localize zoneless nanosecond timestamp literals in the session zone; annotated literals are already instants.
+/// Localize zoneless nanosecond timestamp literals in the session zone.
 fn wrap_ns_literal(expr: Expr, schema: &DFSchema, zone: &str) -> Transformed<Expr> {
     let Expr::Literal(scalar, _) = &expr else {
         return Transformed::no(expr);
@@ -593,7 +576,6 @@ fn wrap_ns_literal(expr: Expr, schema: &DFSchema, zone: &str) -> Transformed<Exp
 }
 
 /// `spark.sql.timestampType=TIMESTAMP_NTZ`: bare `TIMESTAMP` literals / casts become naive µs.
-/// `to_timestamp` / `now` / `current_timestamp` stay LTZ (they are not the SQL type name).
 fn rewrite_cast_as_ntz(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
     if let Expr::Cast(cast) = &expr {
         let targeting_naive_us = matches!(
@@ -651,8 +633,7 @@ fn wrap_as_ntz(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
     Transformed::yes(Expr::Cast(Cast::new_from_field(Box::new(expr), field)))
 }
 
-/// DataFusion folds `TIMESTAMP '…'` to `Timestamp(ns, None)` literals. Under NTZ keep the
-/// spelled wall as naive µs — do **not** localize in the session zone.
+/// DataFusion folds `TIMESTAMP '…'` to `Timestamp(ns, None)` literals.
 fn wrap_ns_literal_as_ntz(expr: Expr) -> Transformed<Expr> {
     let Expr::Literal(scalar, _) = &expr else {
         return Transformed::no(expr);

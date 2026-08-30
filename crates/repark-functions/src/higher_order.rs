@@ -1,7 +1,4 @@
 //! Spark higher-order function registry for both SQL and facade doors.
-//!
-//! SQL registration and standalone facade builders share [`functions`]. Aliases are added only
-//! where upstream semantics match; arity-deficient kernels are left unaliased.
 
 use std::sync::Arc;
 
@@ -10,16 +7,12 @@ use datafusion::logical_expr::HigherOrderUDF;
 use datafusion::prelude::SessionContext;
 
 /// Spark spellings attached to an upstream kernel whose semantics already match.
-///
 const SPARK_ALIASES: &[(&str, &[&str])] = &[
     // Spark `exists` preserves three-valued null logic, empty-array false, and null-array null.
-    // `array_any_match` matches these under DataFusion's default.
     ("array_any_match", &["exists"]),
 ];
 
-/// ===========================================================================================
 /// Every higher-order function a repark session resolves, Spark spellings included.
-/// ===========================================================================================
 #[must_use]
 pub fn functions() -> Vec<Arc<HigherOrderUDF>> {
     all_default_higher_order_functions()
@@ -42,9 +35,7 @@ pub fn functions() -> Vec<Arc<HigherOrderUDF>> {
         .collect()
 }
 
-/// ===========================================================================================
 /// Resolve a canonical or aliased spelling from the shared function table.
-/// ===========================================================================================
 #[must_use]
 pub fn by_name(name: &str) -> Option<Arc<HigherOrderUDF>> {
     let lowered = name.to_ascii_lowercase();
@@ -57,9 +48,7 @@ pub fn by_name(name: &str) -> Option<Arc<HigherOrderUDF>> {
     })
 }
 
-/// ===========================================================================================
-/// Install the table on a session. Called by [`crate::register_all`].
-/// ===========================================================================================
+/// Install the table on a session.
 pub(crate) fn register(ctx: &SessionContext) {
     for function in functions() {
         ctx.register_higher_order_function(function);

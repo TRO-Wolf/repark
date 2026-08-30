@@ -1,7 +1,4 @@
 //! Aggregate UDF shims over `datafusion-spark` gaps.
-//!
-//! The `avg` overwrite preserves Spark's null and count semantics, supports Float64 and decimal
-//! retraction for sliding frames, and retains Spark's decimal result type.
 
 use std::sync::Arc;
 
@@ -23,9 +20,7 @@ use datafusion::logical_expr::{
     TypeSignatureClass, Volatility,
 };
 
-/// ===========================================================================================
-/// The repark `avg` [`AggregateUDF`] instances to register after `datafusion-spark` (name overwrite).
-/// ===========================================================================================
+/// Register repark `avg` [`AggregateUDF`] instances after `datafusion-spark` (name overwrite).
 #[must_use]
 pub fn functions() -> Vec<Arc<AggregateUDF>> {
     vec![avg_udaf(), approx_count_distinct_udaf()]
@@ -48,7 +43,7 @@ pub fn avg_udaf() -> Arc<AggregateUDF> {
     Arc::new(AggregateUDF::new_from_impl(SparkAvgWithRetract::new()))
 }
 
-/// Spark-compatible AVG: Float64 retract plus exact decimal retract; integers and floats coerce to `Float64`.
+/// Spark AVG keeps Float64 retract and exact decimal retract; integers and floats become `Float64`.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct SparkAvgWithRetract {
     signature: Signature,
@@ -205,7 +200,6 @@ impl AggregateUDFImpl for SparkAvgWithRetract {
 }
 
 /// Small copy of DF `DecimalAverager` (`datafusion-functions-aggregate-common` 54.1 `utils.rs`).
-/// Rescales `sum` (at `sum_scale`) into `target_scale` then divides by `count`.
 struct DecimalAverager<T: DecimalType> {
     sum_mul: T::Native,
     target_mul: T::Native,
@@ -410,8 +404,7 @@ impl Accumulator for AvgAccumulatorWithRetract {
         std::mem::size_of_val(self)
     }
 
-    /// Core DF Float64 avg retract (subtract sum/count) — reference:
-    /// `datafusion-functions-aggregate` 52.5 `average.rs` `AvgAccumulator::retract_batch`.
+    /// Retract Float64 avg by subtracting sum and count, matching DataFusion `AvgAccumulator`.
     fn retract_batch(&mut self, values: &[ArrayRef]) -> Result<()> {
         let values = cast(&values[0], &DataType::Float64)?;
         let values = values.as_primitive::<Float64Type>();
@@ -640,8 +633,7 @@ mod tests {
             .expect("register decimal avg fixture");
     }
 
-    /// Z-3 S3 residual: Decimal32 accumulator arm. Mutation-red if the match arm is dropped
-    /// (`not_impl` at plan/exec, or a silent coerce to Float64).
+    /// Z-3 S3 residual: Decimal32 accumulator arm.
     #[tokio::test]
     async fn group_avg_decimal32_stays_decimal_9_6_i32() {
         let ctx = SessionContext::new();

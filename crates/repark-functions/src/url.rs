@@ -1,8 +1,4 @@
 //! Spark `parse_url` / `try_parse_url` over raw `java.net.URI`-style components.
-//!
-//! Components use Spark's raw getters and `QUERY` keys use a regular expression. URL syntax
-//! errors are NULL only for `try_parse_url`; invalid key patterns raise for both. The Java-regex
-//! versus Rust-regex dialect gap is a recorded residual.
 
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
@@ -22,9 +18,7 @@ mod java_uri;
 
 use java_uri::JavaUri;
 
-/// ===========================================================================================
 /// The URL shims to register (after `datafusion-spark`'s defaults, so these names win).
-/// ===========================================================================================
 #[must_use]
 pub fn functions() -> Vec<Arc<ScalarUDF>> {
     vec![parse_url_udf(), try_parse_url_udf()]
@@ -46,9 +40,7 @@ pub fn try_parse_url_udf() -> Arc<ScalarUDF> {
     }))
 }
 
-/// ===========================================================================================
 /// `parse_url` / `try_parse_url`; the only difference is what an unparsable URL does.
-/// ===========================================================================================
 #[derive(Debug)]
 struct SparkParseUrl {
     fail_on_error: bool,
@@ -77,8 +69,7 @@ impl Hash for SparkParseUrl {
     }
 }
 
-/// Spark's `INVALID_URL` message (byte-identical to the upstream kernel's, so the existing
-/// `url is invalid` pins keep matching).
+/// Spark `INVALID_URL` text matches the upstream kernel so existing pins keep matching.
 fn invalid_url(value: &str) -> datafusion::error::DataFusionError {
     datafusion::error::DataFusionError::Execution(format!(
         "The url is invalid: {value}. Use `try_parse_url` to tolerate invalid URL and return \
@@ -95,7 +86,7 @@ fn query_key_pattern(key: &str) -> std::result::Result<Regex, datafusion::error:
     })
 }
 
-/// Distinguish URL failures, which `try_parse_url` tolerates, from key-pattern failures, which it does not.
+/// URL parse failures `try_parse_url` tolerates; key-pattern failures it does not.
 enum ExtractError {
     /// Spark `INVALID_URL` — NULL under `try_parse_url`.
     InvalidUrl(datafusion::error::DataFusionError),
@@ -103,7 +94,7 @@ enum ExtractError {
     KeyPattern(datafusion::error::DataFusionError),
 }
 
-/// Extract one part. `Ok(None)` is Spark's NULL.
+/// Extract one part.
 fn extract(
     value: &str,
     part: &str,
@@ -124,7 +115,7 @@ fn extract(
             (Some(query), None) => Some(query.to_string()),
             (Some(query), Some(key)) => {
                 if !patterns.contains_key(key) {
-                    // Compile after the part check and URL parse so `try_parse_url` can NULL invalid URLs first.
+                    // Compile after the part check so `try_parse_url` can NULL invalid URLs first.
                     let compiled = query_key_pattern(key).map_err(ExtractError::KeyPattern)?;
                     patterns.insert(key.to_string(), compiled);
                 }

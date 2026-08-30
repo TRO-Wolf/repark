@@ -1,7 +1,4 @@
 //! Spark collection shims for `element_at`, `[]`, `shuffle`, `str_to_map`, and map construction.
-//!
-//! `element_at` uses Spark's 1-based array and map-by-key semantics; `[]` is separately rewritten
-//! to 0-based access by [`crate::analyzer`].
 
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
@@ -17,7 +14,6 @@ use datafusion::logical_expr::{
 };
 
 /// Regex `str_to_map` (Spark treats both delimiters as regular expressions).
-/// Child module of `collection` so `lib.rs` stays at its crate-root ceiling.
 mod str_to_map;
 pub(crate) use str_to_map::bind_ascii_perl_classes;
 
@@ -27,9 +23,7 @@ mod shuffle;
 /// `map_from_entries` with Spark's `EXCEPTION` map-key dedup policy (X7).
 mod map_from_entries;
 
-/// ===========================================================================================
 /// The collection shims registered after DataFusion's defaults.
-/// ===========================================================================================
 #[must_use]
 pub fn functions() -> Vec<Arc<ScalarUDF>> {
     vec![
@@ -64,25 +58,19 @@ pub fn element_at_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkElementAt::new()))
 }
 
-/// ===========================================================================================
 /// Embedded `[]` UDF: 0-based access with NULL for invalid indices.
-/// ===========================================================================================
 #[must_use]
 pub fn spark_array_get_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkArrayGet::new()))
 }
 
-/// ===========================================================================================
 /// Embedded `Column[key]` UDF for 0-based arrays or map keys.
-/// ===========================================================================================
 #[must_use]
 pub fn spark_get_item_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkGetItem::new()))
 }
 
-/// ===========================================================================================
 /// `SparkArrayGet` — Spark `GetArrayItem` (`arr[i]`): 0-based; negative or out-of-range → NULL.
-/// ===========================================================================================
 #[derive(Debug)]
 struct SparkArrayGet {
     signature: Signature,
@@ -147,9 +135,7 @@ impl ScalarUDFImpl for SparkArrayGet {
     }
 }
 
-/// ===========================================================================================
 /// `SparkGetItem` — Spark `[]` / `GetItem`: array 0-based **or** map-by-key.
-/// ===========================================================================================
 #[derive(Debug)]
 struct SparkGetItem {
     signature: Signature,
@@ -231,9 +217,7 @@ impl ScalarUDFImpl for SparkGetItem {
     }
 }
 
-/// ===========================================================================================
 /// `SparkElementAt` — Spark `element_at(array, index) | element_at(map, key)`.
-/// ===========================================================================================
 #[derive(Debug)]
 struct SparkElementAt {
     signature: Signature,
@@ -356,8 +340,7 @@ fn delegate(
     })
 }
 
-/// Array path: reject index 0 (Spark `INVALID_INDEX_OF_ZERO`), then the `array_element` kernel
-/// is Spark's `element_at` exactly (1-based, negative-from-end, out-of-range → NULL).
+/// Reject index 0, then run Spark `element_at` (1-based, negative-from-end, out-of-range NULL).
 fn invoke_array(args: &ScalarFunctionArgs) -> Result<ColumnarValue> {
     let arrays = ColumnarValue::values_to_arrays(&args.args)?;
     let indices = cast(arrays[1].as_ref(), &DataType::Int64)?;

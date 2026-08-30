@@ -57,12 +57,12 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split by ordering source while preserving public-entry coverage.",
     ),
     "crates/repark-functions/src/analyzer.rs": (
-        1194,
+        1161,
         "Spark analyzer rewrites remain grouped in one rule implementation.",
         "Extract a cohesive rewrite family when that family next changes.",
     ),
     "crates/repark-functions/src/datetime.rs": (
-        1783,
+        1709,
         "Calendar and timestamp Spark-semantics functions share one module.",
         "Split calendar extractors from timezone-aware timestamp functions.",
     ),

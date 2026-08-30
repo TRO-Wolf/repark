@@ -1,7 +1,4 @@
 //! Plan-time cardinality ceilings for planner-visible expansion functions (SEC-01).
-//!
-//! Arrow expression buffers bypass the `FairSpillPool`; planner-visible literal expansions therefore
-//! fail early with a catchable error naming [`MAX_ARRAY_ELEMENTS_KEY`]. Non-literal counts remain residuals.
 
 use std::sync::Arc;
 
@@ -18,7 +15,7 @@ use datafusion::prelude::SessionConfig;
 /// Max recursion depth when folding planner-visible const integer trees (`Cast` / `BinaryExpr`).
 const CONST_FOLD_MAX_DEPTH: u32 = 32;
 
-/// Canonical conf key (Spark-style camelCase). Default: [`DEFAULT_MAX_ARRAY_ELEMENTS`].
+/// Canonical conf key (Spark-style camelCase).
 pub const MAX_ARRAY_ELEMENTS_KEY: &str = "repark.sql.maxArrayElements";
 
 /// Underscore alias for [`MAX_ARRAY_ELEMENTS_KEY`].
@@ -27,13 +24,13 @@ pub const MAX_ARRAY_ELEMENTS_KEY_ALT: &str = "repark.sql.max_array_elements";
 /// Default plan-time expansion ceiling (Q23 / greylight).
 pub const DEFAULT_MAX_ARRAY_ELEMENTS: u64 = 10_000_000;
 
-/// Canonical conf key for local-filesystem DDL (SEC-02). Default **false**.
+/// Canonical conf key for local-filesystem DDL (SEC-02).
 pub const ALLOW_LOCAL_FILESYSTEM_DDL_KEY: &str = "repark.sql.allowLocalFilesystemDDL";
 
 /// Underscore alias for [`ALLOW_LOCAL_FILESYSTEM_DDL_KEY`].
 pub const ALLOW_LOCAL_FILESYSTEM_DDL_KEY_ALT: &str = "repark.sql.allow_local_filesystem_ddl";
 
-/// Canonical conf key for CREATE/CTAS `format-version = 3` (V3-2). Default **false**.
+/// Canonical conf key for CREATE/CTAS `format-version = 3` (V3-2).
 pub const ALLOW_CREATE_FORMAT_VERSION_3_KEY: &str = "repark.sql.allowCreateFormatVersion3";
 
 /// Underscore alias for [`ALLOW_CREATE_FORMAT_VERSION_3_KEY`].
@@ -46,8 +43,7 @@ pub struct ReparkSqlSettings {
     pub max_array_elements: u64,
     /// When true, allow `CREATE EXTERNAL` / `COPY TO` local paths outside warehouse roots.
     pub allow_local_filesystem_ddl: bool,
-    /// When true, CREATE/CTAS may request Iceberg format v3. Default false: v3 tables cannot
-    /// yet do merge-on-read / deletion-vector writes (V3-3), so accidental create is a trap.
+    /// When true, CREATE/CTAS may request Iceberg format v3.
     pub allow_create_format_version_3: bool,
 }
 
@@ -63,7 +59,6 @@ impl Default for ReparkSqlSettings {
 
 impl ReparkSqlSettings {
     /// Parse `repark.sql.maxArrayElements` (positive integer; `0` refused).
-    ///
     /// # Errors
     /// Non-integer or zero values fail loud naming the conf key.
     pub fn parse_max_array_elements(raw: &str) -> Result<u64> {
@@ -81,7 +76,6 @@ impl ReparkSqlSettings {
     }
 
     /// Parse `repark.sql.allowLocalFilesystemDDL` (`true`/`false`, case-insensitive).
-    ///
     /// # Errors
     /// Unknown values fail loud naming the conf key.
     pub fn parse_allow_local_filesystem_ddl(raw: &str) -> Result<bool> {
@@ -95,7 +89,6 @@ impl ReparkSqlSettings {
     }
 
     /// Parse `repark.sql.allowCreateFormatVersion3` (`true`/`false`, case-insensitive).
-    ///
     /// # Errors
     /// Unknown values fail loud naming the conf key.
     pub fn parse_allow_create_format_version_3(raw: &str) -> Result<bool> {
@@ -109,10 +102,7 @@ impl ReparkSqlSettings {
     }
 }
 
-/// ===========================================================================================
-/// Pull SQL safety knobs from a builder conf map. Missing keys → defaults.
-/// ===========================================================================================
-///
+/// Pull SQL safety knobs from a builder conf map.
 /// # Errors
 /// Present but unparsable values.
 pub fn repark_sql_settings_from_config_map<S>(
@@ -165,9 +155,7 @@ impl ConfigExtension for ReparkSqlConfig {
     const PREFIX: &'static str = "repark.sql";
 }
 
-/// ===========================================================================================
 /// Attach [`ReparkSqlSettings`] to a [`SessionConfig`] (called from session build).
-/// ===========================================================================================
 #[must_use]
 pub fn with_repark_sql_config(config: SessionConfig, settings: ReparkSqlSettings) -> SessionConfig {
     config.with_option_extension(ReparkSqlConfig {
@@ -177,9 +165,7 @@ pub fn with_repark_sql_config(config: SessionConfig, settings: ReparkSqlSettings
     })
 }
 
-/// ===========================================================================================
 /// Resolve settings from a live config options map (analyzer / SQL gate).
-/// ===========================================================================================
 #[must_use]
 pub fn repark_sql_settings_from_options(options: &ConfigOptions) -> ReparkSqlSettings {
     options
@@ -197,13 +183,9 @@ pub fn repark_sql_settings_from_options(options: &ConfigOptions) -> ReparkSqlSet
         .unwrap_or_default()
 }
 
-/// ===========================================================================================
-/// Resolve CREATE/CTAS Iceberg format version; v3 requires [`ALLOW_CREATE_FORMAT_VERSION_3_KEY`].
 /// pins: v3-2-create-v3-opt-in/C-001, C-003, C-004
-/// ===========================================================================================
-///
 /// Model: Grok 4.6 xHigh
-///
+/// Resolve CREATE/CTAS Iceberg format version; v3 requires [`ALLOW_CREATE_FORMAT_VERSION_3_KEY`].
 /// # Errors
 /// Unsupported version, or v3 requested while the session opt-in is off.
 pub fn resolve_create_format_version(
@@ -230,10 +212,7 @@ pub fn resolve_create_format_version(
     }
 }
 
-/// ===========================================================================================
 /// Refuse when a planner-visible expansion exceeds `max` — names the conf to raise.
-/// ===========================================================================================
-///
 /// # Errors
 /// [`DataFusionError::Plan`] when `cardinality > max`.
 pub fn refuse_if_over_ceiling(function_name: &str, cardinality: u64, max: u64) -> Result<()> {
@@ -496,9 +475,7 @@ fn const_bool(expr: &Expr, depth: u32) -> Option<bool> {
     }
 }
 
-/// Evaluate constant `CASE` trees:
-/// - searched: `CASE WHEN const-bool THEN const … [ELSE const]`
-/// - simple: `CASE const WHEN const THEN const …` via integer equality
+/// Evaluate constant searched and simple `CASE` trees to a constant via integer equality.
 fn const_i128_case(case: &datafusion::logical_expr::expr::Case, depth: u32) -> Option<i128> {
     if depth == 0 {
         return None;
@@ -534,8 +511,6 @@ pub fn literal_i64(expr: &Expr) -> Option<i64> {
 }
 
 /// Cardinality of an inclusive numeric sequence `start..=stop` by `stride` (Spark `sequence`).
-///
-/// Returns `None` when `stride == 0` or the direction cannot produce values (empty series → `Some(0)`).
 #[must_use]
 pub fn sequence_cardinality(start: i64, stop: i64, stride: i64) -> Option<u64> {
     if stride == 0 {
@@ -558,9 +533,7 @@ pub fn sequence_cardinality(start: i64, stop: i64, stride: i64) -> Option<u64> {
     }
 }
 
-/// Check facade-built `array_repeat` / `repeat` / `sequence` args against the default ceiling;
-/// the analyzer variant reads the session-specific ceiling.
-///
+/// Check facade-built `array_repeat` / `repeat` / `sequence` args against the default ceiling.
 /// # Errors
 /// Plan error when a literal expansion exceeds [`DEFAULT_MAX_ARRAY_ELEMENTS`].
 pub fn refuse_facade_literal_expansion(function_name: &str, args: &[Expr]) -> Result<()> {
@@ -568,7 +541,6 @@ pub fn refuse_facade_literal_expansion(function_name: &str, args: &[Expr]) -> Re
 }
 
 /// Shared literal expansion check (facade + analyzer).
-///
 /// # Errors
 /// Plan error when a literal expansion exceeds `max`.
 pub fn refuse_literal_expansion(function_name: &str, args: &[Expr], max: u64) -> Result<()> {
@@ -599,9 +571,7 @@ pub fn refuse_literal_expansion(function_name: &str, args: &[Expr], max: u64) ->
     Ok(())
 }
 
-/// ===========================================================================================
 /// Analyzer rule: refuse planner-visible `array_repeat` / `repeat` / `sequence` expansions.
-/// ===========================================================================================
 #[derive(Debug, Default)]
 pub struct ArrayCardinalityCeiling;
 

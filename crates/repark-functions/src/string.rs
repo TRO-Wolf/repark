@@ -1,7 +1,4 @@
 //! Spark string shims for `substring`/`substr` and `concat`.
-//!
-//! `substring` follows Spark's character-based positions, clipping, and NULL rules. `concat`
-//! stringifies arguments, returns NULL for any NULL, and always emits `Utf8`.
 
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
@@ -16,9 +13,7 @@ use datafusion::logical_expr::{
     TypeSignature, Volatility,
 };
 
-/// ===========================================================================================
 /// The string shims to register (after `datafusion-spark`, so they win the name clash).
-/// ===========================================================================================
 #[must_use]
 pub fn functions() -> Vec<Arc<ScalarUDF>> {
     vec![
@@ -40,17 +35,13 @@ pub fn substring_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkSubstring::new()))
 }
 
-/// ===========================================================================================
 /// The Spark `concat` UDF instance (overwrites `datafusion-spark`'s `SparkConcat`).
-/// ===========================================================================================
 #[must_use]
 pub fn concat_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkConcat::new()))
 }
 
-/// ===========================================================================================
 /// `SparkConcat` — zero arguments return `''`, NULL propagates, and output is always `Utf8`.
-/// ===========================================================================================
 #[derive(Debug)]
 struct SparkConcat {
     signature: Signature,
@@ -109,9 +100,7 @@ enum NullMaskResolution {
     Apply(NullBuffer),
 }
 
-/// ===========================================================================================
 /// Spark `concat`: any-NULL → NULL, always `Utf8` (never `Utf8View`).
-/// ===========================================================================================
 fn spark_concat_utf8(args: ScalarFunctionArgs) -> Result<ColumnarValue> {
     let ScalarFunctionArgs {
         args: arg_values,
@@ -249,9 +238,7 @@ fn apply_null_mask(result: ColumnarValue, null_mask: NullMaskResolution) -> Resu
     }
 }
 
-/// ===========================================================================================
 /// `SparkSubstring` — Spark `substring(str, pos[, len]) -> STRING` (alias `substr`).
-/// ===========================================================================================
 #[derive(Debug)]
 struct SparkSubstring {
     signature: Signature,
@@ -362,10 +349,7 @@ impl ScalarUDFImpl for SparkSubstring {
     }
 }
 
-/// Spark's `UTF8String.substringSQL`, character-based: resolve `pos` to a 0-based start (0 acts
-/// as 1, negatives count from the end), form the window `[start, start + len)` (to the end when
-/// `len` is absent), and intersect it with `[0, chars)` — clipping, never erroring.
-///
+/// Spark `substringSQL` clips a character window resolved from `pos`; it never errors.
 fn spark_substring(value: &str, position: i64, length: Option<i64>) -> String {
     let total = i64::try_from(value.chars().count()).unwrap_or(i64::MAX);
     let start = match position.cmp(&0) {
@@ -399,7 +383,6 @@ fn spark_substring(value: &str, position: i64, length: Option<i64>) -> String {
     // When `upper == total`, the loop ends without setting `end_byte` from an index — keep len().
     if char_index < upper {
         // `lower` past the end should have returned already (lower >= upper after clamp).
-        // If lower was never hit, start_byte stays value.len() → empty.
     }
     let mut output = String::with_capacity(end_byte.saturating_sub(start_byte));
     output.push_str(&value[start_byte..end_byte]);

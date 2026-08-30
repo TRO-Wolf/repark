@@ -1,7 +1,4 @@
 //! Spark decimal division, DEC-8 planning, and DEC-6 overflow checks.
-//!
-//! Embedded UDFs handle decimal division and overflow. The expression planner handles products
-//! rejected by Arrow before analysis; analyzer ordering keeps decimal division type-correct.
 
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
@@ -34,19 +31,13 @@ pub(crate) const DECIMAL_ADD_NAME: &str = "__repark_spark_decimal_add__";
 pub(crate) const DECIMAL_SUB_NAME: &str = "__repark_spark_decimal_sub__";
 pub(crate) const DECIMAL_MUL_NAME: &str = "__repark_spark_decimal_mul__";
 
-/// ===========================================================================================
-/// Install the DEC-8 `ExprPlanner`. Called from [`crate::register_all`] so `SparkExtension`
-/// picks it up without editing the closed `extension.rs`.
-/// ===========================================================================================
+/// Install the DEC-8 `ExprPlanner`.
 pub fn register_spark_decimal_planner(ctx: &SessionContext) {
     let planner: Arc<dyn ExprPlanner> = Arc::new(SparkDecimalExprPlanner);
     let _ = ctx.state_ref().write().register_expr_planner(planner);
 }
 
-/// ===========================================================================================
-/// U4b + DEC-6 analyzer slot: rewrite clean `decimal / decimal` and overflow-capable
-/// same-type `(38, ·)` `+ − *` onto embedded UDFs. Stateless.
-/// ===========================================================================================
+/// Rewrite clean decimal division and overflow-capable `(38, ·)` add/sub/mul onto UDFs.
 #[derive(Debug, Default)]
 pub struct SparkDecimalRewrite;
 
@@ -61,9 +52,7 @@ impl AnalyzerRule for SparkDecimalRewrite {
     }
 }
 
-/// ===========================================================================================
 /// DEC-8: replace Arrow-refusing decimal `*` at SQL plan construction.
-/// ===========================================================================================
 #[derive(Debug)]
 pub struct SparkDecimalExprPlanner;
 

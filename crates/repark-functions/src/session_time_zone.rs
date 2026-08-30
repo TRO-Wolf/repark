@@ -1,8 +1,4 @@
 //! Session-timezone carrier for calendar extractors, never a second knob.
-//!
-//! `repark-core` owns validation and the Spark door installs the resolved zone. Extractors read it
-//! at invoke time so standalone facade expressions and SQL use the same session setting; the
-//! carrier is not settable and `spark.sql.session.timeZone` remains the only spelling.
 
 use std::any::Any;
 
@@ -11,20 +7,12 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::SessionConfig;
 
 /// The zone the extractors use when no [`SessionTimeZoneConfig`] is installed.
-///
-/// It matches `repark_core::DEFAULT_SESSION_TIME_ZONE`; the cross-crate agreement is pinned by
-/// `crates/repark-spark/tests/session_timezone.rs::default_session_extracts_in_the_core_default_zone`.
 pub const DEFAULT_EXTRACTION_TIME_ZONE: &str = "UTC";
 
 /// The authoritative key name used in the carrier refusal message.
 const AUTHORITATIVE_KEY: &str = "spark.sql.session.timeZone";
 
-/// ===========================================================================================
-/// The resolved session zone, riding on a session's [`ConfigOptions`] so the extractors can
-/// read it at invoke time.
-///
-/// Constructed from a zone already validated by `repark-core`; this type does not revalidate it.
-/// ===========================================================================================
+/// The resolved session zone on [`ConfigOptions`] so extractors can read it at invoke time.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SessionTimeZoneConfig {
     zone: String,
@@ -79,10 +67,7 @@ impl ExtensionOptions for SessionTimeZoneConfig {
     }
 }
 
-/// ===========================================================================================
-/// Attach the resolved session zone to a [`SessionConfig`] (called from the Spark door's
-/// `configure` hook, with the zone `repark-core` resolved once at session build).
-/// ===========================================================================================
+/// Attach the resolved session zone to a [`SessionConfig`] from the Spark door's `configure` hook.
 #[must_use]
 pub fn with_session_time_zone(config: SessionConfig, zone: &str) -> SessionConfig {
     config.with_option_extension(SessionTimeZoneConfig {
@@ -90,12 +75,7 @@ pub fn with_session_time_zone(config: SessionConfig, zone: &str) -> SessionConfi
     })
 }
 
-/// ===========================================================================================
 /// Read the session zone back out of live config options — the extractors' one accessor.
-///
-/// Falls back to [`DEFAULT_EXTRACTION_TIME_ZONE`] when no carrier is installed (a bare
-/// DataFusion context), so an extension-less session keeps stored-zone behavior rather than failing.
-/// ===========================================================================================
 #[must_use]
 pub fn session_time_zone_from_options(options: &ConfigOptions) -> &str {
     options

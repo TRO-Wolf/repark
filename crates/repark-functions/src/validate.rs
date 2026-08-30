@@ -1,8 +1,4 @@
 //! Spark `validate_utf8` / `try_validate_utf8` / `assert_true` — the refuse-or-pass-through trio.
-//!
-//! Accept valid UTF-8, raise on invalid bytes, or return NULL according to the function variant.
-//! Arrow `Utf8` values are valid by construction, so binary input is the meaningful validation path;
-//! Spark can represent invalid string bytes, which remains a representation residual.
 
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
@@ -15,9 +11,7 @@ use datafusion::logical_expr::{
     TypeSignature, Volatility,
 };
 
-/// ===========================================================================================
 /// The kernels this module registers.
-/// ===========================================================================================
 #[must_use]
 pub fn functions() -> Vec<Arc<ScalarUDF>> {
     vec![
@@ -27,8 +21,7 @@ pub fn functions() -> Vec<Arc<ScalarUDF>> {
     ]
 }
 
-/// Install them on a session. Called by [`crate::register_all`]; kept here rather than as a loop
-/// in the crate root, which sits against its `check_lib_rs` ceiling.
+/// Install them on a session.
 pub(crate) fn register(ctx: &datafusion::prelude::SessionContext) {
     for udf in functions() {
         ctx.register_udf(udf.as_ref().clone());

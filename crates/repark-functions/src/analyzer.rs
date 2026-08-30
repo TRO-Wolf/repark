@@ -1,20 +1,4 @@
 //! Spark expression-semantics analyzer rule.
-//!
-//! Rewrite analyzed logical plans to Spark's operator and cast semantics.
-//!
-//! - Integer `/` promotes integer operands to `Float64`.
-//! - Division and modulo by zero raise under ANSI mode and return NULL otherwise.
-//! - `[]` uses 0-based array access with NULL for invalid indices; map subscripts are unchanged.
-//! - `overlay(..., -1)` uses Spark's three-argument replacement-length behavior.
-//! - Timestamp-to-numeric casts use epoch seconds, with exact floor for integer targets.
-//! - Timestamp-to-string casts use session-zone, space-separated `Utf8`.
-//! - Timestamp-to-date casts use the session zone for LTZ and the stored wall for NTZ.
-//!
-//! The session installs this rule after built-in coercion; rewrites must emit exactly-typed
-//! expressions — no re-coercion runs afterwards.
-//!
-//! A type-resolution miss leaves the expression unchanged. Set-operation schemas may require a
-//! second analysis after a rewrite changes a child type.
 
 use datafusion::arrow::datatypes::DataType;
 use datafusion::common::config::ConfigOptions;
@@ -29,9 +13,7 @@ use datafusion::optimizer::AnalyzerRule;
 /// G6-3 / G6-5 cast-legality deny matrix and refusal.
 mod cast_legality;
 
-/// ===========================================================================================
 /// Spark operator semantics over type-coerced logical plans; the rule is stateless.
-/// ===========================================================================================
 #[derive(Debug, Default)]
 pub struct SparkExprSemantics;
 
@@ -112,7 +94,6 @@ fn rewrite_expr(expr: Expr, schema: &DFSchema, ansi_enabled: bool) -> Result<Tra
 }
 
 /// Dispatch a `CAST` through legality, numeric, string, and date rewrites.
-///
 /// # Errors
 /// Returns a plan error for Spark-illegal DATE↔integer pairs.
 fn rewrite_timestamp_casts(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
@@ -138,8 +119,6 @@ fn rewrite_timestamp_casts(expr: Expr, schema: &DFSchema) -> Result<Transformed<
 }
 
 /// `CAST(<timestamp> AS STRING)` → Spark's session-zone space-separated `Utf8` (B-TZ-4).
-///
-/// Replace the cast with an embedded UDF so the output is `Utf8` and analysis is idempotent.
 fn rewrite_timestamp_to_string_cast(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
     let Expr::Cast(cast) = expr else {
         return Transformed::no(expr);
@@ -163,8 +142,6 @@ fn rewrite_timestamp_to_string_cast(expr: Expr, schema: &DFSchema) -> Transforme
 }
 
 /// `CAST(<timestamp> AS DATE)` → Spark's session-zone `Date32` (TZ-8).
-///
-/// Replace the cast with an embedded UDF so the output is session-zone `Date32`.
 fn rewrite_timestamp_to_date_cast(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
     let Expr::Cast(cast) = expr else {
         return Transformed::no(expr);
@@ -185,9 +162,6 @@ fn rewrite_timestamp_to_date_cast(expr: Expr, schema: &DFSchema) -> Transformed<
 }
 
 /// `CAST(<timestamp> AS <numeric>)` → Spark's epoch SECONDS (registry row TZ-5).
-///
-/// Push exact epoch-second scaling below the user's cast. Integer targets floor; real targets keep
-/// fractions. TIMESTAMP identity and integer-to-timestamp casts remain unchanged.
 fn rewrite_timestamp_to_numeric_cast(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
     let Expr::Cast(cast) = expr else {
         return Transformed::no(expr);
@@ -286,7 +260,6 @@ fn rewrite_modulo(expr: Expr, schema: &DFSchema, ansi_enabled: bool) -> Result<T
 }
 
 /// Guard a numeric divisor for `/` and `%` (shared DEC-7 / A2 path).
-/// Apply the ANSI raise or non-ANSI NULL guard to a numeric divisor.
 fn guard_zero_divisor(divisor: Expr, divisor_type: &DataType, ansi_enabled: bool) -> Result<Expr> {
     if !divisor_type.is_numeric() {
         return Ok(divisor);
@@ -1038,8 +1011,7 @@ mod tests {
         }
     }
 
-    /// G6-3: the two silently-wrong pairs, plus the two that already refused with a DataFusion
-    /// needle — all four now carry Spark's class and Spark's named remedy.
+    /// G6-3: all four pairs now refuse with Spark's class and Spark's named remedy.
     #[tokio::test]
     async fn date_to_integer_casts_refuse_with_sparks_class() {
         let ctx = ctx();
@@ -1063,8 +1035,7 @@ mod tests {
         }
     }
 
-    /// The gate is a check on the type PAIR, so it does not consult `spark.sql.ansi.enabled` —
-    /// Spark's `Cast.checkInputDataTypes` runs in both modes.
+    /// The gate checks the type pair and ignores `spark.sql.ansi.enabled`, matching Spark.
     #[tokio::test]
     async fn the_legality_gate_fires_in_both_ansi_modes() {
         for ctx in [ctx(), ctx_legacy()] {
@@ -1102,8 +1073,7 @@ mod tests {
     #[tokio::test]
     async fn int_to_date_casts_refuse_with_the_reverse_remedy() {
         let ctx = ctx();
-        // A bare integer literal is `Int64` in DataFusion, so the message names BIGINT; the
-        // narrowed spelling gives Spark's INT.
+        // A bare integer literal is `Int64`, so the message names BIGINT.
         for (sql, spark_name) in [
             ("SELECT CAST(18262 AS DATE) AS d", "BIGINT"),
             ("SELECT CAST(CAST(18262 AS INT) AS DATE) AS d", "INT"),
@@ -1120,8 +1090,7 @@ mod tests {
         }
     }
 
-    /// The blast-radius assertion the design demands be explicit: TZ-5 shares the function the
-    /// gate now heads, and `1577836800` is the value G6-4 pins.
+    /// TZ-5 shares the function the gate now heads, and `1577836800` is the value G6-4 pins.
     #[tokio::test]
     async fn a_timestamp_source_never_reaches_the_legality_gate() {
         let ctx = ctx();
@@ -1135,12 +1104,10 @@ mod tests {
         );
     }
 
-    /// `unix_date` is the remedy the refusal names — and `simplify_expressions` lowers it to a
-    /// textually identical `CAST(a AS Int32)` one stage later. It must still answer.
+    /// `unix_date` is the named remedy; simplify later lowers it to `CAST(a AS Int32)`.
     #[tokio::test]
     async fn the_remedy_the_error_names_still_works() {
-        // The Spark function registry, not the bare rule-only harness: `unix_date` / `datediff`
-        // are `datafusion-spark` UDFs and only `register_all` puts them on a context.
+        // `unix_date`/`datediff` are `datafusion-spark` UDFs; only `register_all` installs them.
         let ctx = ctx();
         crate::register_all(&ctx);
         assert_eq!(

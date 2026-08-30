@@ -1,5 +1,4 @@
-//! Spark `bit_length` and `octet_length` shims stringify non-binary inputs before UTF-8 byte
-//! counting; binary inputs retain their byte values.
+//! Spark `bit_length` and `octet_length` stringify non-binary inputs, then count UTF-8 bytes.
 
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
@@ -15,17 +14,13 @@ use datafusion::logical_expr::{
     TypeSignature, Volatility,
 };
 
-/// ===========================================================================================
 /// Spark `bit_length` UDF (overwrites DataFusion's Utf8/Binary-exact kernel).
-/// ===========================================================================================
 #[must_use]
 pub fn bit_length_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkBitLength::new()))
 }
 
-/// ===========================================================================================
 /// Spark `octet_length` UDF (overwrites DataFusion's Utf8/Binary-exact kernel).
-/// ===========================================================================================
 #[must_use]
 pub fn octet_length_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkOctetLength::new()))

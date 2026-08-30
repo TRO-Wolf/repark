@@ -1,7 +1,4 @@
 //! Spark-compatible function registry.
-//!
-//! Wires `datafusion-spark` functions, Spark semantic shims, and analyzer rules into a session.
-//! The crate is DataFusion-native; conversion to `repark-core` errors happens one layer up.
 
 mod shim_macros;
 /// Re-exported at the crate root so call sites keep saying `crate::shim_udf_boilerplate!`.
@@ -36,22 +33,13 @@ use datafusion::logical_expr::{LogicalPlan, ScalarUDF};
 use datafusion::optimizer::AnalyzerRule;
 use datafusion::prelude::SessionContext;
 
-/// ===========================================================================================
 /// Return this crate's Spark date-function shims for inspection or registration.
-/// ===========================================================================================
 #[must_use]
 pub fn spark_date_shim_functions() -> Vec<Arc<ScalarUDF>> {
     datetime::functions()
 }
 
-/// ===========================================================================================
 /// Register the full Spark-compatible scalar/aggregate/window function set into `ctx`.
-///
-/// Order matters: `datafusion-spark`'s defaults are installed first, then repark shims
-/// (date + string + collection + aggregate overwrite), so that on a name clash the repark
-/// implementation wins (DataFusion's registry overwrites by name). D2: string `concat`
-/// must follow datafusion-spark so `SparkConcat` sticks.
-/// ===========================================================================================
 pub fn register_all(ctx: &SessionContext) {
     for udf in datafusion_spark::all_default_scalar_functions() {
         ctx.register_udf(udf.as_ref().clone());
@@ -95,9 +83,7 @@ pub fn register_all(ctx: &SessionContext) {
     decimal_spark::register_spark_decimal_planner(ctx);
 }
 
-/// ===========================================================================================
-/// Return analyzer rules in dependency order: decimal precision, decimal rewrite, semantics, safety, then LTZ casts.
-/// ===========================================================================================
+/// Return analyzer rules: decimal precision, decimal rewrite, semantics, safety, then LTZ casts.
 #[must_use]
 pub fn analyzer_rules() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
     let mut rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>> = vec![
@@ -110,10 +96,7 @@ pub fn analyzer_rules() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
     rules
 }
 
-/// ===========================================================================================
-/// Analyze a plan through the Spark rules; repeat until schema changes reach the `TypeCoercion` fixpoint.
-/// ===========================================================================================
-///
+/// Run Spark analyzer rules until schema changes reach the `TypeCoercion` fixpoint.
 /// # Errors
 /// Propagates analyzer-rule failures as [`datafusion::error::DataFusionError`].
 pub fn analyze_eagerly(

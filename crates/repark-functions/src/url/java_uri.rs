@@ -1,10 +1,6 @@
 //! Raw RFC-2396 component splitting matching `java.net.URI` without normalization.
-//!
-//! Accessors preserve raw escapes, case, ports, and dot segments. Opaque and registry-based URIs
-//! follow Java's NULL component behavior; parse failures become `INVALID_URL` or NULL at the caller.
 
-/// A split URI. Every field holds the **raw** span, and every accessor hands it back verbatim —
-/// the accessors are the `Raw` getters, which is what Spark calls.
+/// A split URI.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub(crate) struct JavaUri {
     scheme: Option<String>,
@@ -18,7 +14,6 @@ pub(crate) struct JavaUri {
 
 impl JavaUri {
     /// Split `input` the way `new java.net.URI(input)` does.
-    ///
     /// # Errors
     /// Returns the `URISyntaxException` reason when `input` is not a legal RFC-2396 URI.
     pub(crate) fn parse(input: &str) -> Result<Self, String> {
@@ -31,12 +26,12 @@ impl JavaUri {
         .run()
     }
 
-    /// `getScheme()` — raw (a scheme cannot contain an escape). **Not** lowercased.
+    /// `getScheme()` — raw (a scheme cannot contain an escape).
     pub(crate) fn scheme(&self) -> Option<&str> {
         self.scheme.as_deref()
     }
 
-    /// `getHost()` — raw, and NULL for a registry-based authority (e.g. an IDN host).
+    /// `getHost()` — raw, and NULL for a registry-based authority (e.g.
     pub(crate) fn host(&self) -> Option<&str> {
         self.host.as_deref()
     }
@@ -67,12 +62,7 @@ impl JavaUri {
     }
 }
 
-/// ===========================================================================================
 /// Character classes (RFC 2396 as `java.net.URI` spells them).
-///
-/// `escaped` mirrors Java's `L_ESCAPED` bit: where it is set, `%XX` pairs **and** visible
-/// non-US-ASCII characters are legal, and a bare `%` is a hard error.
-/// ===========================================================================================
 #[derive(Clone, Copy)]
 struct CharClass {
     matches: fn(char) -> bool,
@@ -181,10 +171,7 @@ fn is_unicode_space(c: char) -> bool {
     )
 }
 
-/// ===========================================================================================
-/// The parser. Index arithmetic is over `char`s (Java's is over UTF-16 units); the two agree
-/// on every position that matters here because every delimiter is ASCII.
-/// ===========================================================================================
+/// The parser.
 struct Parser {
     input: Vec<char>,
     n: usize,
@@ -436,7 +423,7 @@ impl Parser {
         Ok(p)
     }
 
-    /// A dotted-quad host. `None` when `start` does not begin one (the hostname path then runs).
+    /// A dotted-quad host.
     fn parse_ipv4(&self, start: usize, n: usize) -> Option<usize> {
         let mut p = start;
         for group in 0..4 {
@@ -464,8 +451,7 @@ impl Parser {
         Some(p)
     }
 
-    /// Java `parseHostname`: dot-separated alphanumeric labels, no leading/trailing dash, and a
-    /// multi-label name's last label must start with a letter (so `1.2.3.4x` is not a hostname).
+    /// Java `parseHostname`: alphanumeric labels; a multi-label last label starts with a letter.
     fn parse_hostname(&mut self, start: usize, n: usize) -> Result<usize, String> {
         let mut p = start;
         let mut last_label: Option<usize> = None;

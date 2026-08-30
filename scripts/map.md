@@ -1,5 +1,8 @@
 # map — scripts/
 
+CC-4 (2026-08-30): remaining banner files; size-gate rows ratchet down only
+(pins: cc-3-comment-condensation/C-009). analyzer.rs 1194→1161; datetime.rs 1783→1709.
+
 CC-3 (2026-08-30): comments condensed to one line; banners removed. Size-gate rows ratcheted with each slice, including the Python binding files. D-001 catalog.rs 1845→1843; TA kernels 2284→2098 / 1676→1578 / 1873→1821. Spark size-gate rows ratcheted; session_timezone.rs retired at 891. AGENTS.md compaction ceiling restored to 32000 (pins: cc-3-comment-condensation/C-006).
 
 CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
