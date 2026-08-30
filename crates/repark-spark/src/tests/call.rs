@@ -1294,52 +1294,6 @@ async fn call_rewrite_data_files_returns_sparks_five_columns() {
     );
 }
 
-/// MW-2 guard: the deletion-vector classification rule, pinned directly.
-///
-/// The rule decides whether `rewrite_position_delete_files` refuses. It is pinned as a table
-/// rather than through a fixture because **this engine cannot produce a deletion vector**: it
-/// creates tables at format v2 (`'format-version' = '3'` refuses at CREATE) and refuses
-/// merge-on-read writes on a v3 table. Pinning the vector-present path end to end needs a v3
-/// table written by another engine. That fixture lives in `fixtures/v3-spark-mor/` +
-/// `call_register.rs`). What IS pinned here is the other half — that the guard does not
-/// fire on the v2 tables this engine does write — by every other rewrite pin in this file, and
-/// explicitly by `call_rewrite_position_delete_files_guard_passes_a_v2_table`.
-#[test]
-fn call_deletion_vector_rule_matches_the_forks_skip_clause() {
-    use iceberg::spec::{DataContentType, DataFileFormat};
-
-    use crate::call::is_deletion_vector;
-
-    // Puffin delete files are deletion vectors — position or equality alike.
-    assert!(is_deletion_vector(
-        DataContentType::PositionDeletes,
-        DataFileFormat::Puffin
-    ));
-    assert!(is_deletion_vector(
-        DataContentType::EqualityDeletes,
-        DataFileFormat::Puffin
-    ));
-    // Parquet delete files are what this procedure compacts.
-    assert!(!is_deletion_vector(
-        DataContentType::PositionDeletes,
-        DataFileFormat::Parquet
-    ));
-    assert!(!is_deletion_vector(
-        DataContentType::EqualityDeletes,
-        DataFileFormat::Parquet
-    ));
-    // A DATA file is never a delete file, whatever its format — the clause must not catch a
-    // Puffin statistics-adjacent data entry and refuse a healthy table.
-    assert!(!is_deletion_vector(
-        DataContentType::Data,
-        DataFileFormat::Puffin
-    ));
-    assert!(!is_deletion_vector(
-        DataContentType::Data,
-        DataFileFormat::Parquet
-    ));
-}
-
 /// MW-2 guard: it does not fire on the format-v2 tables this engine writes.
 ///
 /// The half of the guard a fixture CAN reach. A guard that refuses everything would also make

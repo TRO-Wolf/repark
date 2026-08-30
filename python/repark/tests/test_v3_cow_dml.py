@@ -9,6 +9,7 @@ pins: rp-3-fork-repin/C-004
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 
@@ -46,6 +47,19 @@ def _latest_version_uuid_metadata(namespace_location: Path, table: str) -> str:
     ]
     assert matches, f"no version-uuid metadata for {table} under {table_metadata}"
     return str(max(matches, key=_metadata_file_version))
+
+
+def _current_lineage(metadata_file: str) -> tuple[int, int, int]:
+    metadata = json.loads(Path(metadata_file).read_text(encoding="utf-8"))
+    current_snapshot_id = metadata["current-snapshot-id"]
+    snapshot = next(
+        item for item in metadata["snapshots"] if item["snapshot-id"] == current_snapshot_id
+    )
+    return (
+        int(metadata["next-row-id"]),
+        int(snapshot["first-row-id"]),
+        int(snapshot["added-rows"]),
+    )
 
 
 def _id_name_rows(table: pa.Table) -> list[tuple[int, str]]:
@@ -112,6 +126,44 @@ def test_facade_adopted_v3_cow_dml_refuses_and_leaves_the_table_untouched(
         assert _id_name_rows(deleted) == [(1, "a"), (3, "c")]
         with pytest.raises(UnsupportedOperationException, match="V3-COW-1"):
             spark.sql("UPDATE ice.sales.adopt_del SET name = 'x' WHERE id = 2").collect()
+    finally:
+        spark.stop()
+
+
+def test_facade_adopted_v3_cow_second_delete_refuses_before_lineage_diverges(
+    tmp_path: Path,
+) -> None:
+    """The second COW DELETE refuses before it can diverge from Spark lineage."""
+    from repark import ReparkSession
+
+    spark = (
+        ReparkSession.builder.appName("rp-3-cow-sequential")
+        .config(_ALLOW_CREATE_V3_KEY, "true")
+        .getOrCreate()
+    )
+    try:
+        spark.register_memory_catalog("ice", tmp_path)
+        sales = tmp_path / "sales"
+        spark.sql(f"CREATE NAMESPACE ice.sales LOCATION '{sales}'")
+        spark.sql(
+            "CREATE TABLE ice.sales.seed_seq (id INT, name STRING) USING iceberg "
+            f"TBLPROPERTIES ({_COW_V3})"
+        )
+        spark.sql("INSERT INTO ice.sales.seed_seq VALUES (1, 'a'), (2, 'b'), (3, 'c')")
+        metadata_file = _latest_version_uuid_metadata(sales, "seed_seq")
+        spark.sql(
+            "CALL ice.system.register_table("
+            f"table => 'sales.adopt_seq', metadata_file => '{metadata_file}')"
+        )
+        spark.sql("DELETE FROM ice.sales.adopt_seq WHERE id = 2").collect()
+        latest = _latest_version_uuid_metadata(sales, "seed_seq")
+        before_lineage = _current_lineage(latest)
+        assert before_lineage == (5, 3, 2)
+        with pytest.raises(UnsupportedOperationException, match="V3-COW-1"):
+            spark.sql("DELETE FROM ice.sales.adopt_seq WHERE id = 3").collect()
+        live = spark.sql("SELECT id, name FROM ice.sales.adopt_seq").to_arrow()
+        assert _id_name_rows(live) == [(1, "a"), (3, "c")]
+        assert _current_lineage(_latest_version_uuid_metadata(sales, "seed_seq")) == before_lineage
     finally:
         spark.stop()
 

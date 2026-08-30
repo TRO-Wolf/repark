@@ -3,10 +3,11 @@
 //! table (`V3-COW-1`); plain-`WHERE` DELETE
 //! pins: v3r-1-rulings/C-001, C-002, C-003, C-004, C-005
 //! pins: rp-2-fork-repin/C-003, C-005
-//! pins: rp-3-fork-repin/C-004
+//! pins: rp-3-fork-repin/C-004, C-008
 
 use std::collections::HashSet;
-use std::path::Path;
+use std::fs;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use datafusion::arrow::array::{Int32Array, StringArray};
@@ -273,6 +274,26 @@ async fn adopted_v3_cow_delete_carries_survivor_row_lineage() {
         5,
         "next_row_id matches Spark's own v3 COW DELETE exactly (live oracle 2026-08-27: \\
          Spark allocates then suppresses, #226); every survivor's _row_id reads unchanged"
+    );
+}
+
+#[tokio::test]
+async fn ansi_adopted_v3_cow_second_delete_refuses_before_lineage_diverges() {
+    let door = door_with_v3_opt_in().await;
+    adopt_cow_v3(&door, "seed_seq", "adopt_seq").await;
+    door.ok("DELETE FROM ice.sales.adopt_seq WHERE id = 2")
+        .await;
+    assert_eq!(door.lineage("adopt_seq").await, (5, Some(3), Some(2)));
+    assert_cow_refused_untouched(
+        &door,
+        "adopt_seq",
+        "DELETE FROM ice.sales.adopt_seq WHERE id = 3",
+        "DELETE",
+    )
+    .await;
+    assert_eq!(
+        door.live_pairs("adopt_seq").await,
+        vec![(1, "a".into()), (3, "c".into())]
     );
 }
 
@@ -588,5 +609,73 @@ async fn adopted_v3_mor_first_delete_commits_a_deletion_vector_and_a_second_merg
         after_kinds,
         vec!["Puffin".to_string()],
         "exactly one live DV after the second DELETE"
+    );
+}
+
+#[tokio::test]
+async fn ansi_hadoop_named_metadata_write_bumps_to_the_next_hadoop_pointer() {
+    let door = door_with_v3_opt_in().await;
+    door.ok("CREATE TABLE ice.sales.hadoop (id INT, name VARCHAR)")
+        .await;
+    door.ok("INSERT INTO ice.sales.hadoop VALUES (1, 'a'), (2, 'b'), (3, 'c')")
+        .await;
+    let ident = TableIdent::new(
+        NamespaceIdent::new("sales".to_string()),
+        "hadoop".to_string(),
+    );
+    let original = PathBuf::from(
+        door.table("hadoop")
+            .await
+            .metadata_location()
+            .expect("pointer"),
+    );
+    let hadoop = original
+        .parent()
+        .expect("metadata dir")
+        .join("v1.metadata.json");
+    fs::copy(&original, &hadoop).expect("copy to Hadoop name");
+    door.catalog.drop_table(&ident).await.expect("drop pointer");
+    door.catalog
+        .register_table(&ident, hadoop.to_string_lossy().into_owned())
+        .await
+        .expect("Hadoop-named metadata must register");
+    repark_iceberg::catalog::invalidate_catalog_namespaces(
+        &door.ctx,
+        Arc::clone(&door.catalog),
+        "ice",
+        &["sales"],
+    )
+    .await
+    .expect("invalidate after register_table");
+    assert_eq!(
+        door.live_pairs("hadoop").await,
+        vec![
+            (1, "a".to_string()),
+            (2, "b".to_string()),
+            (3, "c".to_string())
+        ]
+    );
+    door.ok("INSERT INTO ice.sales.hadoop VALUES (4, 'd')")
+        .await;
+    assert_eq!(
+        door.live_pairs("hadoop").await,
+        vec![
+            (1, "a".to_string()),
+            (2, "b".to_string()),
+            (3, "c".to_string()),
+            (4, "d".to_string())
+        ]
+    );
+    let pointer = PathBuf::from(
+        door.table("hadoop")
+            .await
+            .metadata_location()
+            .expect("pointer after write"),
+    );
+    assert_eq!(
+        pointer.file_name().and_then(|name| name.to_str()),
+        Some("v2.metadata.json"),
+        "fork #235 bumps Hadoop vN to uncompressed v(N+1): {}",
+        pointer.display()
     );
 }

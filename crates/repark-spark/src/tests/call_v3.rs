@@ -75,6 +75,7 @@ async fn v3_fixture_really_is_format_v3() {
 /// reassigns both values, so the router refuses v3 lineage rewrites rather than report false row
 /// history to an unattended operator.
 /// pins: rp-2-fork-repin/C-004
+/// pins: rp-3-fork-repin/C-005
 #[tokio::test]
 async fn call_rewrite_data_files_refuses_a_v3_table_rather_than_reassigning_row_lineage() {
     let wh = TempDir::new().unwrap();

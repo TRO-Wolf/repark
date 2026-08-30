@@ -157,8 +157,9 @@ write failed with `Invalid metadata file name format: v3.metadata.json`, because
 Copying the identical file to a name of that shape made `INSERT` and `expire_snapshots` both
 succeed, which is how the cause was isolated from anything to do with v3. Catalogs that write
 version-uuid pointers, Glue among them, are unaffected. **Admitted as registry row
-`V3-ADOPT-1` by V3-1 (2026-08-21):** the CALL write now names the Hadoop convention and the
-version-uuid shape; the fork still cannot compute the next pointer from `vN.metadata.json`.
+`V3-ADOPT-1` by V3-1 (2026-08-21).** **Errata 2026-08-30 (RP-3 / fork #235):** Hadoop `vN`
+parses and a write commits uncompressed `v(N+1).metadata.json`; `V3-ADOPT-1` is FIXED. S3 Tables
+`register_table` remains a dated service gap (fork R126 / #233; registry `S3T-1`).
 
 ## 5. The delivery sequence, revised 2026-08-28
 

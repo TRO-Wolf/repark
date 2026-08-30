@@ -223,6 +223,40 @@ async fn adopted_v3_cow_delete_carries_survivor_row_lineage() {
     assert_still_v3(&load_sales(&catalogs, "adopt_del").await);
 }
 
+#[tokio::test]
+async fn adopted_v3_cow_second_delete_refuses_before_lineage_diverges() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    adopt_cow_v3(&ctx, &catalogs, "seed_seq", "adopt_seq").await;
+    run(
+        &ctx,
+        &catalogs,
+        "DELETE FROM ice.sales.adopt_seq WHERE id = 2",
+    )
+    .await;
+    assert_eq!(
+        lineage(&catalogs, "adopt_seq").await,
+        Lineage {
+            next_row_id: 5,
+            snapshot_first_row_id: Some(3),
+            snapshot_added_rows: Some(2),
+        }
+    );
+    assert_cow_refused_untouched(
+        &ctx,
+        &catalogs,
+        "adopt_seq",
+        "DELETE FROM ice.sales.adopt_seq WHERE id = 3",
+        "DELETE",
+    )
+    .await;
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.adopt_seq").await,
+        vec![(1, "a".into()), (3, "c".into())]
+    );
+    assert_still_v3(&load_sales(&catalogs, "adopt_seq").await);
+}
+
 /// pins: v3r-1-rulings/C-002
 #[tokio::test]
 async fn adopted_v3_cow_update_refuses_rather_than_reassign_row_lineage() {

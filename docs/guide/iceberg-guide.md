@@ -393,9 +393,11 @@ Puffin vectors apply is 37 rows.
 
 That is how a table another engine already wrote — including a format-v3 table with Puffin
 deletion vectors — becomes visible here. The engine still cannot *create* a v3 table. Hadoop
-catalog pointers named `vN.metadata.json` register and read; a later write names that
-convention rather than only the filename (registry `V3-ADOPT-1`). S3 Tables refuses
-registration in the fork; Glue implements it.
+catalog pointers named `vN.metadata.json` register, read, and take a write: the next pointer
+is `v(N+1).metadata.json` (registry `V3-ADOPT-1`, FIXED 2026-08-30, fork #235). S3 Tables
+`register_table` refuses as a dated service gap (fork GAP_MATRIX row R126, #233; registry
+`S3T-1`): the Iceberg REST register endpoint is not in the service mapping. Glue implements
+it.
 
 Six maintenance procedures return Spark's full column list:
 

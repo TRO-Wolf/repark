@@ -41,8 +41,9 @@ repark-core's error map.
   two seats — the write-mode resolvers (`predicate_dml.rs`, `merge/mod.rs`) and the passthrough
   valve both doors call beside the BUG-001 valve. The resolvers refuse every v3 table. The
   passthrough valve lifts the plain-`WHERE` DELETE on v3, including on a table that already
-  carries deletion vectors (RP-3 / F-17 at `d408da42`), and still refuses every v3 UPDATE
-  (V3-3). pins: rp-3-fork-repin/C-004
+  carries deletion vectors (RP-3 / F-17 at `d408da42`), but refuses a copy-on-write DELETE after
+  an overwrite snapshot before fork `iceberg-datafusion` can reassign lineage (C-004 C7).
+  Every v3 UPDATE remains refused (V3-3). pins: rp-3-fork-repin/C-004
 - `predicate_dml.rs` — **G3-E8 A1-identity** (`execute_predicate_dml`): evaluate the original
   `WHERE` as a SELECT over the pinned `(_file, _pos)` streaming target, then commit through the
   MERGE COW/MoR write arms honoring `write.delete.mode` / `write.update.mode` / isolation —
@@ -64,8 +65,9 @@ repark-core's error map.
   overflow never NULLs) → identity-partition fanout write → ONE stamped `fast_append` commit
   (append×append commutes via the fork's refresh-and-re-apply retry; empty input commits an
   empty stamped snapshot). Also `write_partitioned_data_files(_from_stream)` — the partitioned
-  staged-write core. **V3-1:** `iceberg_err` now goes through `catalog::iceberg_to_datafusion`
-  so a Hadoop `vN.metadata.json` pointer names the convention (registry `V3-ADOPT-1`).
+  staged-write core. **V3-1 / RP-3 C-008:** `iceberg_err` goes through
+  `catalog::iceberg_to_datafusion`; Hadoop `vN.metadata.json` writes bump to `v(N+1)`
+  (registry `V3-ADOPT-1` FIXED).
 - `overwrite.rs` — exclusive full-table `INSERT OVERWRITE` stage-then-swap:
   `write_overwrite_staged_files_from_stream` (positional map + **WI-1** store-assignment gate +
   stream stage) + `commit_overwrite_replace_all` + `parse_overwrite_isolation`

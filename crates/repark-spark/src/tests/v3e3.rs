@@ -20,6 +20,7 @@ use super::super::*;
 use super::common::*;
 
 use datafusion::arrow::array::{Int32Array, Int64Array, ListArray, StringArray};
+use iceberg::spec::Literal;
 
 /// Table location baked into the partitioned-DV fixture.
 const PART_DV_TABLE: &str = "/tmp/repark-v3e3-partdv/ns/v3part";
@@ -474,6 +475,61 @@ async fn partitioned_v3_dv_delete_id_1_keeps_the_untouched_sibling() {
     assert_eq!(deletes.len(), 2, "untouched sibling stays live");
 }
 
+#[tokio::test]
+async fn partitioned_v3_dv_delete_across_files_keeps_per_file_partitions() {
+    let fixture = materialize_part_dv();
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    register_adopted(&ctx, &catalogs, "sales.partdv", &fixture.metadata_file).await;
+    execute(
+        &ctx,
+        &catalogs,
+        "DELETE FROM ice.sales.partdv WHERE id IN (1, 4)",
+    )
+    .await
+    .expect("DELETE one row from each partition")
+    .collect()
+    .await
+    .expect("collect partition-spanning DELETE");
+    assert_eq!(
+        live_triples(&ctx, &catalogs, "ice.sales.partdv").await,
+        vec![(3, "c".to_string(), 0), (6, "f".to_string(), 1)]
+    );
+    let deletes = delete_file_rows(&ctx, &catalogs, "ice.sales.partdv").await;
+    assert_eq!(deletes.len(), 2, "one live DV for each data file");
+    assert!(
+        deletes.iter().all(|file| {
+            file.content == 1
+                && file.file_format.eq_ignore_ascii_case("PUFFIN")
+                && file.record_count == 2
+        }),
+        "each replacement DV carries two deleted positions: {deletes:?}"
+    );
+    let table = catalogs["ice"]
+        .load_table(&TableIdent::new(
+            NamespaceIdent::new("sales".into()),
+            "partdv".into(),
+        ))
+        .await
+        .expect("load partitioned DV table");
+    let vectors = iceberg::live_deletion_vectors_by_data_file(&table)
+        .await
+        .expect("discover live DVs by referenced data file");
+    assert_eq!(vectors.len(), 2, "R114 maps one DV to each data file");
+    let mut partitions: Vec<_> = vectors
+        .values()
+        .map(|file| {
+            assert_eq!(file.partition_spec_id(), 0, "the fixture uses spec 0");
+            file.partition().fields().to_vec()
+        })
+        .collect();
+    partitions.sort_by_key(|partition| format!("{partition:?}"));
+    assert_eq!(
+        partitions,
+        vec![vec![Some(Literal::int(0))], vec![Some(Literal::int(1))],]
+    );
+}
+
 // =================================================================================================
 // Equality-delete + DV fixture
 // =================================================================================================
@@ -541,6 +597,43 @@ async fn equality_delete_alongside_dv_delete_files_name_both_kinds() {
         equality.file_format.eq_ignore_ascii_case("PARQUET"),
         "content=2 is PARQUET: {equality:?}"
     );
+    assert_eq!(equality.record_count, 1);
+    assert_eq!(equality.equality_ids.as_deref(), Some(&[1][..]));
+}
+
+#[tokio::test]
+async fn equality_delete_and_dv_keep_both_delete_classes_after_delete() {
+    let fixture = materialize_eq_dv();
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    register_adopted(&ctx, &catalogs, "sales.eqdv", &fixture.metadata_file).await;
+    execute(&ctx, &catalogs, "DELETE FROM ice.sales.eqdv WHERE id = 2")
+        .await
+        .expect("DELETE against the data file with the live DV")
+        .collect()
+        .await
+        .expect("collect equality-delete plus DV DELETE");
+    assert_eq!(
+        live_triples(&ctx, &catalogs, "ice.sales.eqdv").await,
+        vec![(3, "c".to_string(), 1)]
+    );
+    let deletes = delete_file_rows(&ctx, &catalogs, "ice.sales.eqdv").await;
+    assert_eq!(
+        deletes.len(),
+        2,
+        "the DV and equality delete both stay live"
+    );
+    let vector = deletes
+        .iter()
+        .find(|file| file.content == 1)
+        .expect("Puffin DV remains live");
+    assert!(vector.file_format.eq_ignore_ascii_case("PUFFIN"));
+    assert_eq!(vector.record_count, 2);
+    let equality = deletes
+        .iter()
+        .find(|file| file.content == 2)
+        .expect("Parquet equality delete remains live");
+    assert!(equality.file_format.eq_ignore_ascii_case("PARQUET"));
     assert_eq!(equality.record_count, 1);
     assert_eq!(equality.equality_ids.as_deref(), Some(&[1][..]));
 }

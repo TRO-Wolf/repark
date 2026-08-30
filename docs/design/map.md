@@ -17,8 +17,9 @@ changing a decision here means a new dated design pass, not an in-place edit.
   which is why the audit ships a guard. Carries the `system.register_table` signature read from
   the Iceberg jar (§4), the revised six-unit slate (§5), the two fork items the track needs (§6),
   and §7 — what was measured and what is not claimed. **V3-1 (2026-08-21):** §4's
-  `V3-ADOPT-1` is an admitted registry row, not queued; the CALL write names the Hadoop
-  convention. §5 and §7 name the Spark-written fixture as landed.
+  `V3-ADOPT-1` is FIXED (RP-3 / fork #235, 2026-08-30): Hadoop `vN` writes bump to `v(N+1)`.
+  S3 Tables `register_table` is registry `S3T-1` (fork R126). §5 and §7 name the Spark-written
+  fixture as landed.
   **Errata 2026-08-24 (MW-7):** §3b's v2 sentence ("Spark … leaving all six position deletes in
   place") holds for that 9 %-deleted fixture and is not general — on delete-heavy v2 shapes Spark
   ends at zero delete files. Registry `RDF-1`.

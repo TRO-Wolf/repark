@@ -1,9 +1,10 @@
 //! Format-v3 row-DML guard — registry `V3-COW-1`. Plain-`WHERE` DELETE on v3, including on a
-//! table that already carries deletion vectors, runs at fork `d408da42` (RP-3 / F-17). UPDATE
-//! on v3 still refuses and waits for V3-3.
+//! table that already carries deletion vectors, runs at fork `d408da42` (RP-3 / F-17). A COW
+//! DELETE after an overwrite snapshot refuses before the fork can reassign lineage. UPDATE on v3
+//! still refuses and waits for V3-3.
 
 use datafusion::error::{DataFusionError, Result};
-use iceberg::spec::FormatVersion;
+use iceberg::spec::{FormatVersion, Operation};
 use iceberg::table::Table;
 use iceberg::{Catalog, TableIdent};
 
@@ -33,8 +34,9 @@ pub(crate) fn refuse_v3_cow_dml_that_would_reassign_row_lineage(
 
 /// Passthrough seat for the plain-`WHERE` DELETE / UPDATE both doors delegate to the fork's
 /// `TableProvider` (never reaching `predicate_dml`). A missing table passes. `DELETE` on v3
-/// passes, including when live deletion vectors are present (RP-3 / F-17 at `d408da42`).
-/// `UPDATE` on v3 refuses (V3-3) — without consulting `write.<verb>.mode` (SEC-002).
+/// passes, including when live deletion vectors are present (RP-3 / F-17 at `d408da42`). A COW
+/// DELETE after an overwrite snapshot refuses before it can reassign survivor lineage. `UPDATE`
+/// on v3 refuses (V3-3) — without consulting `write.<verb>.mode` (SEC-002).
 ///
 /// # Errors
 /// [`DataFusionError::NotImplemented`].
@@ -61,5 +63,27 @@ pub async fn refuse_v3_cow_dml(
              (registry row V3-COW-1)",
         )));
     }
+    if v3_cow_delete_after_overwrite_snapshot(&table, kind) {
+        let table_ident = table.identifier();
+        return Err(DataFusionError::NotImplemented(format!(
+            "DELETE will not run on `{table_ident}`: its current v3 snapshot is an overwrite, and \
+             the fork's next copy-on-write DELETE reassigns row lineage. Spark keeps next-row-id \
+             unchanged and writes zero added rows after the same second DELETE. This guard refuses \
+             before a write until iceberg-datafusion preserves that lineage (V3-COW-1)",
+        )));
+    }
     Ok(())
+}
+
+fn v3_cow_delete_after_overwrite_snapshot(table: &Table, kind: MorDmlKind) -> bool {
+    matches!(kind, MorDmlKind::Delete)
+        && !table
+            .metadata()
+            .properties()
+            .get("write.delete.mode")
+            .is_some_and(|mode| mode.trim().eq_ignore_ascii_case("merge-on-read"))
+        && table
+            .metadata()
+            .current_snapshot()
+            .is_some_and(|snapshot| snapshot.summary().operation == Operation::Overwrite)
 }

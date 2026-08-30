@@ -28,12 +28,11 @@ Source comments retain only API and safety contracts; implementation narration i
   warehouse), `glue_catalog(props)` (primary; `warehouse` required), `s3tables_catalog(props)`
   (secondary; `table_bucket_arn` required) — both AWS builders validate the required prop
   fail-loud (naming the key) before construction, then pass every other prop through to Iceberg
-  `FileIO`; prop helpers + the `iceberg_to_datafusion` error map (**V3-1:** Hadoop
-  `vN.metadata.json` pointer errors name the convention, not only the filename — registry
-  `V3-ADOPT-1`; now `pub` so the Spark CALL router shares the wrap; the wrap stays
-  `External(iceberg::Error)` (message rewritten, `with_source` the original) so
-  `classify_datafusion_error` still peels Iceberg). Catalog-edge spans record
-  **prop key names only**, never values.
+  `FileIO`; prop helpers + the `iceberg_to_datafusion` error map (`External(iceberg::Error)`
+  so `classify_datafusion_error` still peels Iceberg). Hadoop `vN.metadata.json` writes now
+  bump to `v(N+1).metadata.json` (registry `V3-ADOPT-1` FIXED, RP-3 / fork #235). S3 Tables
+  `register_table` still refuses naming fork row R126 (pins: rp-3-fork-repin/C-008).
+  Catalog-edge spans record **prop key names only**, never values.
 - `location.rs` — namespace-location key identity (`NAMESPACE_LOCATION_PROPERTY` `"location"` /
   `NAMESPACE_LOCATION_URI_PROPERTY` `"location_uri"`; `resolve_namespace_location` read
   precedence + `mirror_namespace_location_keys` unidirectional non-clobbering dual-write) and

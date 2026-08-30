@@ -81,6 +81,21 @@ fn copy_dir_all(from: &Path, to: &Path) {
     }
 }
 
+fn files_with_bytes(root: &Path) -> Vec<(PathBuf, Vec<u8>)> {
+    let mut files = Vec::new();
+    for entry in fs::read_dir(root).expect("read fixture tree") {
+        let entry = entry.expect("fixture dirent");
+        let path = entry.path();
+        if entry.file_type().expect("fixture file type").is_dir() {
+            files.extend(files_with_bytes(&path));
+        } else {
+            files.push((path.clone(), fs::read(path).expect("read fixture file")));
+        }
+    }
+    files.sort_by(|left, right| left.0.cmp(&right.0));
+    files
+}
+
 fn materialize_part_dv() -> SparkFixture {
     let held = PART_DV_LOCK
         .lock()
@@ -94,9 +109,7 @@ fn materialize_part_dv() -> SparkFixture {
     copy_dir_all(&src, &dest_path);
     let hadoop = dest_path.join("metadata").join("v3.metadata.json");
     assert!(hadoop.is_file(), "partitioned-DV fixture metadata");
-    // V3-ADOPT-1: Hadoop `vN.metadata.json` registers and reads; the next write cannot
-    // compute a pointer. V3-0 copied the same bytes onto a version-uuid name and writes
-    // worked. This unit needs INSERT + expire, so adopt the rewritten pointer.
+    // Keep a version-uuid pointer so this fixture's writes do not depend on Hadoop vN bump math.
     let metadata_file = dest_path
         .join("metadata")
         .join("3-aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee.metadata.json");
@@ -584,6 +597,15 @@ async fn update_and_merge_still_refuse_on_the_appended_v3_table() {
     let (ctx, catalogs) = setup(&warehouse).await;
     adopt_and_append(&ctx, &catalogs, &fixture.metadata_file).await;
 
+    let before_snapshot = snapshot_id(&catalogs).await;
+    let before_rows = live_triples(
+        &ctx,
+        &catalogs,
+        "SELECT id, name, part FROM ice.sales.partdv ORDER BY id",
+    )
+    .await;
+    let before_files = files_with_bytes(Path::new(PART_DV_TABLE));
+
     let err = execute(
         &ctx,
         &catalogs,
@@ -596,6 +618,17 @@ async fn update_and_merge_still_refuse_on_the_appended_v3_table() {
         message.contains("V3-COW-1") && message.contains("row lineage"),
         "copy-on-write UPDATE must still name V3-COW-1, got: {message}"
     );
+    assert_eq!(snapshot_id(&catalogs).await, before_snapshot);
+    assert_eq!(
+        live_triples(
+            &ctx,
+            &catalogs,
+            "SELECT id, name, part FROM ice.sales.partdv ORDER BY id",
+        )
+        .await,
+        before_rows
+    );
+    assert_eq!(files_with_bytes(Path::new(PART_DV_TABLE)), before_files);
 
     let err = execute(
         &ctx,

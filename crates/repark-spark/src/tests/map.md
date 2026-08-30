@@ -21,17 +21,18 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   leaves a `BINARY` DDL column untouched; `TRY_CAST(<int>)` refuses without the ANSI-off suggestion.
 - `v3_cow.rs` — v3 UPDATE / MERGE
   refuse (`V3-COW-1`, both seats), the plain-`WHERE` DELETE commits on a DV-free table (COW
-  keeps survivor lineage, MOR commits a Puffin DV) and a second MOR DELETE merges into the
+  keeps first-snapshot lineage then refuses the unsafe COW second DELETE, MOR commits a Puffin DV) and a second MOR DELETE merges into the
   live vector (pins: rp-2-fork-repin/C-003, C-005; rp-3-fork-repin/C-004); short-name,
   padded merge-on-read, and v2-control cases keep `V3_MAINTENANCE_ORACLE` and ENC-1's pin.
 - `create_table.rs` — also the V3R-1 type pin: `GEOMETRY` / `GEOGRAPHY` / `VARIANT` refuse at
   CREATE (`V3-GEO-1`).
 - `v3e4.rs` — **V3E-4:** snapshot refs, `VERSION AS OF` over DVs, expire with
   real work, orphan 24h floor on the partitioned-DV fixture after a RePark
-  append; rustdoc cites C-001..C-016 (`Model: Grok 4.6 xHigh`).
+  append, and the live-DV UPDATE pre-write refusal with snapshot, rows, and fixture bytes unchanged;
+  rustdoc cites C-001..C-016 (`Model: Grok 4.6 xHigh`; rp-3-fork-repin/C-004).
 - `v3e3.rs` — **V3E-3:** Spark-written partitioned v3 DV fixture and equality-delete
   + DV fixture (`fixtures/v3-spark-part-dv/`, `fixtures/v3-spark-eq-dv/`); live
-  rows, partition prune, `.delete_files` content 1/2, B-MOR-3 refuse, RP-3 cells 3–4
+  rows, partition prune, `.delete_files` content 1/2, B-MOR-3 refuse, RP-3 cells 3–6
   MOR DELETE on the partitioned DV (pins: rp-3-fork-repin/C-004)
   (`Model: Grok 4.6 xHigh`; rustdoc cites C-013).
 - `delete_granularity.rs` — **MW-9:** Spark-door `write.delete.granularity` (explicit
@@ -61,10 +62,14 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   pin Spark's full schemas, typed count sources, deletion-vector refusal, and file-granularity rules.
   `call_v3` (**V3-0**): v3 row-lineage refusal, v2 control, and the
   `opt_in_create_produces_v3_and_rewrite_still_refuses` guard (`V3-LINEAGE-1`; `Model: Grok 4.6 xHigh`).
+  RP-3 C-005 remeasured the fork action directly; its Spark-door guard pin remains in
+  `call_rewrite_data_files_refuses_a_v3_table_rather_than_reassigning_row_lineage`
+  (`pins: rp-3-fork-repin/C-005`).
   `call_manifests` (**MW-6**) pins the two non-nullable `int` columns, no-op zero result, current
   spec filter, delete-manifest refusal, and `MANIFEST-3` count divergence.
-  `call_register` (**V3-1**): `CALL system.register_table` arguments, three nullable BIGINT columns,
-  adoption/read-back, occupied-ident refusal, and the Spark-written `fixtures/v3-spark-mor/`
+  `call_register` (**V3-1 / RP-3 C-008**): `CALL system.register_table` arguments, three nullable BIGINT columns,
+  adoption/read-back, occupied-ident refusal, Hadoop `vN.metadata.json` write bumps to `v(N+1)`,
+  S3 Tables register names R126, and the Spark-written `fixtures/v3-spark-mor/`
   fixture (`B-MOR-3`),
   `fixtures/` (Spark-written on-disk Iceberg tables CI can adopt with no JVM),
   `call_orphan` (**MW-3**): full-directory before/after orphan safety and 24-hour cutoff fixtures,

@@ -1952,25 +1952,48 @@ the pin rather than obeying it.
   happened. A deletion vector is file-scoped and is never bin-packed, so this procedure cannot
   compact one. Format-v3 deletion-vector maintenance is V3-3/V3-5, not this row.
 
-### V3-ADOPT-1 — Hadoop `vN.metadata.json` pointers register and read, but cannot be written
+### V3-ADOPT-1 — Hadoop `vN.metadata.json` pointers register, read, and write `v(N+1)`
+
+> **FIXED 2026-08-30 (RP-3 / fork #235 F-14).** A table registered from a Hadoop
+> `vN.metadata.json` pointer now takes a write; the next pointer is uncompressed
+> `v(N+1).metadata.json`. The pin flipped from "the refusal names the convention" to
+> "the write succeeds". Residue on fork row R167: no `version-hint.text` writer, no
+> exists-fail rename.
 
 - **repark** — `CALL system.register_table` of a metadata file named `vN.metadata.json` (the
   Hadoop catalog convention) succeeds and subsequent reads return the adopted rows. A later
-  write that has to compute the next metadata pointer — `CALL expire_snapshots` is the CALL
-  write this engine owns — fails and names **both** the Hadoop convention and the
-  version-uuid shape (`<version>-<uuid>.metadata.json`) that works. Glue is unaffected: it
-  already writes version-uuid pointers.
-- **Apache Spark** — registers the Hadoop-named pointer the same way; reads work; writes also
-  work, because Spark's Hadoop catalog writes the next `v(N+1).metadata.json` itself.
+  write — Spark-door `INSERT` and the ANSI-door `INSERT` after `Catalog::register_table` —
+  commits `v(N+1).metadata.json` and serves the new rows. Glue is unaffected: it already
+  writes version-uuid pointers.
+- **Apache Spark** — registers the Hadoop-named pointer the same way; reads work; writes
+  also work, because Spark's Hadoop catalog writes the next `v(N+1).metadata.json` itself.
   *(oracle: recorded — V3-0 isolated the cause by copying the identical file to a version-uuid
-  name, after which `INSERT` and `expire_snapshots` both succeeded on this engine.)*
+  name, after which `INSERT` and `expire_snapshots` both succeeded on this engine. RP-3
+  remeasured the Hadoop name itself at fork `d408da42`.)*
 - **Pin** —
   `crates/repark-spark/src/tests/call_register.rs::call_register_table_of_hadoop_named_metadata_writes_name_the_convention`
-- **Rationale** — DELIBERATE error-quality, not a write-path fix. The fork's
-  `MetadataLocation` parser requires `<version>-<uuid>.metadata.json` to compute the next
-  pointer (fork work, format-v3-track §6). This row exists so the operator is told the
-  convention, not only the filename. Catalogs that already write version-uuid pointers never
-  hit it.
+  (Spark door),
+  `crates/repark-sql/src/v3_cow.rs::ansi_hadoop_named_metadata_write_bumps_to_the_next_hadoop_pointer`
+  (ANSI door)
+- **Rationale** — retired. The owned fork closed Hadoop pointer math; this engine consumed
+  it at `d408da42`.
+
+### S3T-1 — S3 Tables `register_table` is a dated service gap (fork R126)
+
+- **repark** — `CALL <catalog>.system.register_table` against an S3 Tables catalog refuses
+  before any AWS call, naming the missing register-by-metadata-location operation, the
+  Iceberg REST register endpoint, `UpdateTableMetadataLocation`, and fork GAP_MATRIX row
+  **R126**. Glue implements the same CALL.
+- **Apache Spark** — S3 Tables has no register-by-metadata-location API either; Spark cannot
+  adopt an existing metadata file into a table bucket. The service mapping does not include
+  the Iceberg REST `register` endpoint.
+  *(oracle: documented — Iceberg REST register vs S3 Tables `UpdateTableMetadataLocation`;
+  fork #233 dated the gap as R126.)*
+- **Pin** —
+  `crates/repark-spark/src/tests/call_register.rs::call_register_table_on_s3_tables_names_the_dated_service_gap`
+- **Rationale** — DECLARED, dated service gap, not an engine stub. The fork returns
+  `FeatureUnsupported` before any AWS call so the engine can cite R126 instead of "not
+  supported yet". Pins: rp-3-fork-repin/C-008.
 
 ### V3-COW-1 — v3 row-DML: one measured DELETE lifts; every other form refuses
 
