@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Next Two PRs</title>
+</head>
+<body>
+<style>
+  :root{
+    --ground:#F2F5F7; --card:#FFFFFF; --ink:#16232B; --ink-2:#4A5D68; --line:#D8E2E8;
+    --teal:#0E6C88; --teal-2:#0B5065; --chip-green-bg:#E3F2E8; --chip-green-ink:#1E6B3A;
+    --chip-amber-bg:#FBF0DC; --chip-amber-ink:#8A5E0C; --chip-hold-bg:#E8E3F2; --chip-hold-ink:#4A3A8A;
+    --chip-guard-bg:#F2E3E3; --chip-guard-ink:#8A2E2E; --mono-bg:#EAF1F5;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ground:#0E1418; --card:#162027; --ink:#E4ECF1; --ink-2:#9AB0BC; --line:#243440;
+      --teal:#4DB1CF; --teal-2:#7CC7DD; --chip-green-bg:#173324; --chip-green-ink:#7CD9A0;
+      --chip-amber-bg:#332A14; --chip-amber-ink:#E5C071; --chip-hold-bg:#221D38; --chip-hold-ink:#B0A2E8;
+      --chip-guard-bg:#331B1B; --chip-guard-ink:#E89B9B; --mono-bg:#1B2830;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0E1418; --card:#162027; --ink:#E4ECF1; --ink-2:#9AB0BC; --line:#243440;
+    --teal:#4DB1CF; --teal-2:#7CC7DD; --chip-green-bg:#173324; --chip-green-ink:#7CD9A0;
+    --chip-amber-bg:#332A14; --chip-amber-ink:#E5C071; --chip-hold-bg:#221D38; --chip-hold-ink:#B0A2E8;
+    --chip-guard-bg:#331B1B; --chip-guard-ink:#E89B9B; --mono-bg:#1B2830;
+  }
+  body{background:var(--ground);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;
+       font-size:15px;line-height:1.55;margin:0;padding:0 16px 64px;}
+  .wrap{max-width:960px;margin:0 auto;}
+  h1,h2,h3{font-family:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;
+           text-wrap:balance;line-height:1.15;}
+  h1{font-size:34px;margin:40px 0 4px;}
+  h2{font-size:22px;margin:36px 0 12px;color:var(--teal-2);}
+  h3{font-size:17px;margin:20px 0 8px;}
+  .kicker{font-family:"IBM Plex Sans Condensed",sans-serif;text-transform:uppercase;
+          letter-spacing:.12em;font-size:12px;color:var(--teal);margin-top:36px;}
+  .sub{color:var(--ink-2);margin:0 0 8px;max-width:70ch;}
+  code,.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.88em;
+             background:var(--mono-bg);border-radius:4px;padding:1px 5px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;
+        padding:20px 24px;margin:14px 0;}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media (max-width:760px){.cols{grid-template-columns:1fr;}}
+  .chip{display:inline-block;font-family:"IBM Plex Sans Condensed",sans-serif;font-size:12px;
+        font-weight:600;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;
+        padding:2px 10px;vertical-align:middle;}
+  .green{background:var(--chip-green-bg);color:var(--chip-green-ink);}
+  .amber{background:var(--chip-amber-bg);color:var(--chip-amber-ink);}
+  .hold{background:var(--chip-hold-bg);color:var(--chip-hold-ink);}
+  .guard{background:var(--chip-guard-bg);color:var(--chip-guard-ink);}
+  table{border-collapse:collapse;width:100%;font-size:14px;}
+  .tablewrap{overflow-x:auto;}
+  th{font-family:"IBM Plex Sans Condensed",sans-serif;text-transform:uppercase;font-size:11.5px;
+     letter-spacing:.08em;color:var(--ink-2);text-align:left;padding:6px 10px;
+     border-bottom:2px solid var(--line);}
+  td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top;}
+  td:first-child{white-space:nowrap;}
+  ul{margin:6px 0;padding-left:22px;}
+  li{margin:4px 0;}
+  a{color:var(--teal);text-decoration-thickness:1px;}
+  .num{font-variant-numeric:tabular-nums;}
+  .prhead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;}
+  .prhead .badge{font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:700;font-size:15px;
+        color:var(--card);background:var(--teal);border-radius:6px;padding:2px 10px;}
+  .foot{color:var(--ink-2);font-size:13px;margin-top:40px;border-top:1px solid var(--line);
+        padding-top:12px;}
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<div class="wrap">
+  <p class="kicker">RePark · work plan · 2026-08-30</p>
+  <h1>The Next Two PRs</h1>
+  <p class="sub">MW-10 closed the AWS evidence lane (OD-3b measured <strong>allow</strong>, close-out
+  PR #265 in flight). The board is clear, and the queue's own documents name what comes next: the
+  chartered v3 DML unit and the slate's #1 honesty unit. Both are large; they touch disjoint
+  surfaces and can run as parallel worker lanes.</p>
+
+  <h2>Where the board stands</h2>
+  <div class="card tablewrap"><table>
+    <tr><th>Item</th><th>State</th><th>Fact</th></tr>
+    <tr><td><span class="mono">main</span></td><td><span class="chip green">current</span></td>
+        <td>The #264 merge commit — #262 (CC-3/4), #263 (artifacts), #264 (MW-10) all merged.</td></tr>
+    <tr><td>MW-10 / OD-3b</td><td><span class="chip green">measured</span></td>
+        <td>Dispatch run <span class="mono num">33333274383</span>: <span class="mono">4 passed in 145.15s</span> — <code>s3tables:PutTableData</code> authorizes expire file removal. No denial row.</td></tr>
+    <tr><td>PR #265</td><td><span class="chip amber">open</span></td>
+        <td>MW-10 close-out (slots filled, ledger to completed) + the PLAN-1 slate-pin repoint. CI re-running after the pin fix.</td></tr>
+    <tr><td>Sub-agent tiers</td><td><span class="chip green">ready</span></td>
+        <td>Grok 4.6 (<span class="mono">grok-worker</span>) = implementation tier, proven on CC-3/4 + MW-10 ($12.55 + $4.61). GLM 5.3 Flash (<span class="mono">oc-worker</span>, built today) = mechanical tier, smoked at $0.002–0.006/round.</td></tr>
+  </table></div>
+
+  <h2>PR 1 — V3-3: v3 UPDATE and MERGE</h2>
+  <div class="card">
+    <div class="prhead"><span class="badge">PRIORITY LANE</span>
+      <span class="chip hold">owner gate: confirm charter</span>
+      <span>branch <span class="mono">feat/v3-3-dml</span> · Grok Actor + Grok Critic</span></div>
+    <p class="sub" style="margin-top:10px">The v1.0 spine. RP-3 measured the DV input-state matrix and left UPDATE
+    and MERGE refusing (<span class="mono">V3-COW-1</span> / write-mode resolver). The charter
+    (<span class="mono">task/ledgers/staging/v3-3-dml-ledger.md</span>, 3 clauses) is honest in both directions:
+    each statement either becomes Spark-equal or <em>stays refused with the measured reason</em>.</p>
+    <div class="tablewrap"><table>
+      <tr><th>Clause</th><th>Claim</th></tr>
+      <tr><td>C-001</td><td><code>UPDATE</code> on DV-free v3: Spark-equal on values, Arrow types, and lineage through all three doors — or a pre-write <span class="mono">V3-COW-1</span> refusal with the measured reason.</td></tr>
+      <tr><td>C-002</td><td><code>MERGE INTO</code> on v3: same bar, same doors. Never lifted by routing through a lineage-reassigning writer.</td></tr>
+      <tr><td>C-003</td><td>Documents match the pins: registry, north-star MOR/COW rows, STATUS. F-rp3-c7 stays a fork finding.</td></tr>
+    </table></div>
+    <h3>Shape of the work</h3>
+    <ul>
+      <li>Rust engine work in the write path (repark-sql / repark-iceberg), pinned against the live PySpark 4.1.2 + Iceberg 1.11.0 oracle on this box — measure first, red-first pins, three doors.</li>
+      <li>Out of scope, per charter: sequential-COW lineage (fork F-rp3-c7), <code>rewrite_data_files</code> lineage (V3-5), DV compaction (V3-5), v3 types (V3-6).</li>
+      <li>Real risk is a partial outcome — e.g. UPDATE lands, MERGE stays refused. The charter counts that as delivery; the registry wording carries the measured reason.</li>
+    </ul>
+    <p class="sub">Worker plan: Grok Actor on a fresh scratch clone (implementation tier — engine + oracle work is above GLM's posture), Grok Critic on a second clone, orchestrator audits every commit, runs <span class="mono">verify</span>/<span class="mono">preflight</span>/<span class="mono">py-test</span>, pushes, one PR, one Slack message. Estimated spend from unit history: <span class="num">$10–20</span>.</p>
+  </div>
+
+  <h2>PR 2 — FNP-15/16: register the 62 missing names</h2>
+  <div class="card">
+    <div class="prhead"><span class="badge">SECOND LANE</span>
+      <span class="chip green">slate #1 — pre-sequenced</span>
+      <span>branch <span class="mono">feat/fnp-15-16</span> · Grok pattern + GLM fan-out</span></div>
+    <p class="sub" style="margin-top:10px">The largest honesty gain per unit of work left: 62 names that today
+    die as <span class="mono">AttributeError</span> ("repark is broken") become loud refusing surfaces with
+    exact registry reasons ("repark states its limit"). Fork-independent; does not gate v1.0; yields to V3-3
+    if the lanes ever contend.</p>
+    <div class="tablewrap"><table>
+      <tr><th>Half</th><th>Names</th><th>Claim the registry must make</th></tr>
+      <tr><td>FNP-15</td><td class="num">6</td><td><strong>Unreachable</strong> — <code>java_method</code>, <code>reflect</code>, <code>try_reflect</code>, <code>unwrap_udt</code>, <code>input_file_block_start/length</code>. A registry section each with the specific mechanism, plus a loud-refusal pin.</td></tr>
+      <tr><td>FNP-16</td><td class="num">56</td><td><strong>Deferred by cost, reachable</strong> — sketches (32), CSV/XML/XPath (11), VARIANT (8), geospatial (5). Refusing stub + one registry section per family. The wording must not say "unsupported" for both halves — that would misreport the engine's limits.</td></tr>
+    </table></div>
+    <h3>Shape of the work</h3>
+    <ul>
+      <li>Grok Actor designs the refusal mechanism, writes FNP-15's six (each needs specific mechanism prose) and one FNP-16 family end-to-end as the template — stub, red-first pin, registry section, map lockstep.</li>
+      <li>GLM 5.3 Flash (<span class="mono">oc-worker</span>) replicates the template across the remaining families — 50-odd highly repetitive stubs and pins are exactly the mechanical tier's posture, and this is the skill's first real unit. Grok Critic + orchestrator audit every slice, as the grok lessons require.</li>
+      <li>This unit explicitly owns its divergence-registry edits (briefs/spark-function-parity.md) — the usual "lanes never touch the registry" fence does not apply here.</li>
+    </ul>
+    <p class="sub">Estimated spend: <span class="num">$6–12</span> Grok + under <span class="num">$1</span> GLM.</p>
+  </div>
+
+  <h2>Running them together</h2>
+  <div class="card">
+    <ul>
+      <li><strong>Disjoint code surfaces.</strong> V3-3 lives in the Rust write path; FNP-15/16 lives in function dispatch, stubs, and python facade. Separate scratch clones, separate branches off main once #265 lands.</li>
+      <li><strong>One shared file:</strong> both touch <span class="mono">docs/spark-sql-iceberg-parity.md</span> (V3-3 updates <span class="mono">V3-COW-1</span>; FNP-15/16 adds ~10 new sections). Different regions; whichever merges second rebases — a small, known cost.</li>
+      <li><strong>Merge order:</strong> land whichever is ready first; neither blocks the other. STATUS/slate departure edits are per-unit and serialized by the pickup ritual.</li>
+      <li><strong>Process:</strong> both under SEPMO, manual PRs, owner merges, one Slack message each. <span class="mono">py-test</span> runs before every push — today's CI failure on #265 was that exact skipped step.</li>
+    </ul>
+  </div>
+
+  <h2>Decisions that are yours</h2>
+  <div class="card">
+    <ul>
+      <li><span class="chip hold">gate</span> Confirm the V3-3 charter so its branch opens (the charter's own condition — RP-3 merged, so it is unblocked the moment you say go).</li>
+      <li><span class="chip amber">call</span> Parallel lanes as proposed, or strictly serial (V3-3 first)? Parallel is recommended: disjoint surfaces, and the fleet handles two lanes.</li>
+      <li><span class="chip amber">call</span> Bless GLM 5.3 Flash's first real unit being FNP-16's fan-out (Grok remains the template author and the Critic).</li>
+    </ul>
+  </div>
+
+  <h2>Deliberately not in these two PRs</h2>
+  <div class="card">
+    <ul>
+      <li><strong>F-Y10-1</strong> (integer overflow) — next after FNP-15/16 in the parity order; gates FNP-7b.</li>
+      <li><strong>Fork lane</strong> — F-rp3-c7 (sequential-COW lineage), F-7 U1, F-6, fork QC #242: fork-repo work, separately sequenced.</li>
+      <li><strong>v0.6 Track B</strong> (DML-B → DML-C → DML-A → MAINT) and Track A W-0 — owner-sequenced, not in the slate.</li>
+      <li><strong>Housekeeping</strong> — dependabot #229/#186; scratch-clone reclaim (<span class="mono">/tmp/grok-cc3</span>, <span class="mono">/tmp/cc3-critic</span>, <span class="mono">/tmp/mw10-critic</span>) after #265 merges.</li>
+    </ul>
+  </div>
+
+  <p class="foot">Sources: briefs/next-sequence.md · task/ledgers/staging/v3-3-dml-ledger.md ·
+  docs/design/spark-function-parity.md §7/§7.1 · briefs/spark-function-parity.md · STATUS.md ·
+  gh PR/run state, 2026-08-30. Series: RePark status boards.</p>
+</div>
+
+</body>
+</html>
