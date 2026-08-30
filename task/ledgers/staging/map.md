@@ -20,8 +20,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   remove files; a denial is a stop. Six clauses, all OPEN.
 - [cc-3-comment-condensation-ledger.md](cc-3-comment-condensation-ledger.md) — **CC-3
   (2026-08-30):** round-3 one-line comment condensation on a named Rust roster, plus the
-  test-module layout move. Test-pinned router comment bytes restored (D-004). Eight clauses;
-  C-008 stays OPEN for the closing Critic.
+  test-module layout move. Test-pinned router comment bytes restored (D-004). Round-3
+  gates recorded on C-007; C-008 stays OPEN for the closing Critic.
 - [v3-3-dml-ledger.md](v3-3-dml-ledger.md) — **V3-3 (2026-08-30), chartered from RP-3 C-004
   red cells:** v3 `UPDATE` and `MERGE`. Sequential COW DELETE lineage (F-rp3-c7) is fork work,
   not this unit. Three OPEN clauses.
