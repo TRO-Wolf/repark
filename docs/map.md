@@ -13,6 +13,10 @@ repo.
   doors. Nothing there is authoritative — each guide links the document that owns the fact (the
   divergence registry, [../STATUS.md](../STATUS.md), the ADRs) and every snippet it shows was
   executed against a built module.
+- [artifacts/](artifacts/map.md) — **published report pages**: dated, standalone HTML copies of the
+  status and roadmap pages the orchestrating session publishes as Claude artifacts (first:
+  the 2026-08-30 roadmap status). Renderings only — every page cites the documents that own
+  its facts, and a filed page is never edited; a later report is a new file.
 - [testing.md](testing.md) — the mandatory testing contract (tests-with-code hard block,
   test-per-change, divergence-class claims, calibration-per-domain, the entry-point matrix,
   relocation discipline, the forbidden list). Read before any code change.
