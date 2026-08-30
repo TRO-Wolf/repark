@@ -34,7 +34,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   + DV fixture (`fixtures/v3-spark-part-dv/`, `fixtures/v3-spark-eq-dv/`); live
   rows, partition prune, `.delete_files` content 1/2, B-MOR-3 refuse, RP-3 cells 3–6
   MOR DELETE on the partitioned DV (pins: rp-3-fork-repin/C-004);
-  C-007 keeps `B-MOR-3` after measuring fork R136 as a parquet-to-DV conversion no-op
+  C-007 keeps `B-MOR-3` after measuring fork R136 as a parquet-to-DV conversion no-op;
+  the measurement pin does not write outside the crate
   (pins: rp-3-fork-repin/C-007, C-011)
   (`Model: Grok 4.6 xHigh`; rustdoc cites C-013).
 - `delete_granularity.rs` — **MW-9:** Spark-door `write.delete.granularity` (explicit

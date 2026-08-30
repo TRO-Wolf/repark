@@ -484,11 +484,6 @@ async fn partitioned_v3_dv_fork_rewrite_position_delete_files_measurement() {
         second.rewritten_delete_files_count,
         second.added_delete_files_count,
     );
-    std::fs::write(
-        "/tmp/grok-goal-fbdf05425f31/implementer/c007-counts.txt",
-        &summary,
-    )
-    .expect("write C-007 counts");
     assert_eq!(first_result.rewritten_delete_files_count, 0, "{summary}");
     assert_eq!(first_result.added_delete_files_count, 0, "{summary}");
     assert_eq!(second.rewritten_delete_files_count, 0, "{summary}");
