@@ -141,6 +141,14 @@ def test_sketch_sql_functions_reexport_refuses(name: str) -> None:
 
 
 @pytest.mark.parametrize("name", SKETCH_NAMES)
+def test_sketch_expr_fragment_refuses(name: str) -> None:
+    """``F.expr`` shares ``refuse_sql_fragment``; pin every family, not only FNP-15."""
+    with pytest.raises(UnsupportedOperationException) as caught:
+        F.expr(f"{name}(1)")
+    _assert_deferred_cost(caught.value, name, "DataSketches")
+
+
+@pytest.mark.parametrize("name", SKETCH_NAMES)
 def test_sketch_spark_sql_door_refuses(name: str, spark: ReparkSession) -> None:
     with pytest.raises(UnsupportedOperationException) as caught:
         spark.sql(_sql_call(name)).collect()
@@ -161,6 +169,26 @@ def test_csv_xml_xpath_facade_refuses_deferred_by_cost(name: str) -> None:
     fn: Callable[..., Any] = getattr(F, name)
     with pytest.raises(UnsupportedOperationException) as caught:
         fn("x")
+    _assert_deferred_cost(caught.value, name, "XPath")
+
+
+@pytest.mark.parametrize("name", CSV_XML_XPATH_NAMES)
+def test_csv_xml_xpath_sql_functions_reexport_refuses(name: str) -> None:
+    """sed-swap path ``repark.spark.sql.functions`` carries the same stub."""
+    from repark.spark.sql import functions as sql_functions
+
+    fn: Callable[..., Any] = getattr(sql_functions, name)
+    with pytest.raises(UnsupportedOperationException) as caught:
+        fn("x")
+    _assert_deferred_cost(caught.value, name, "XPath")
+    assert getattr(sql_functions, name) is getattr(F, name)
+
+
+@pytest.mark.parametrize("name", CSV_XML_XPATH_NAMES)
+def test_csv_xml_xpath_expr_fragment_refuses(name: str) -> None:
+    """``F.expr`` shares ``refuse_sql_fragment``; pin every family, not only FNP-15."""
+    with pytest.raises(UnsupportedOperationException) as caught:
+        F.expr(f"{name}(1)")
     _assert_deferred_cost(caught.value, name, "XPath")
 
 
@@ -189,6 +217,26 @@ def test_variant_facade_refuses_deferred_by_cost(name: str) -> None:
 
 
 @pytest.mark.parametrize("name", VARIANT_NAMES)
+def test_variant_sql_functions_reexport_refuses(name: str) -> None:
+    """sed-swap path ``repark.spark.sql.functions`` carries the same stub."""
+    from repark.spark.sql import functions as sql_functions
+
+    fn: Callable[..., Any] = getattr(sql_functions, name)
+    with pytest.raises(UnsupportedOperationException) as caught:
+        fn("x")
+    _assert_deferred_cost(caught.value, name, "VARIANT")
+    assert getattr(sql_functions, name) is getattr(F, name)
+
+
+@pytest.mark.parametrize("name", VARIANT_NAMES)
+def test_variant_expr_fragment_refuses(name: str) -> None:
+    """``F.expr`` shares ``refuse_sql_fragment``; pin every family, not only FNP-15."""
+    with pytest.raises(UnsupportedOperationException) as caught:
+        F.expr(f"{name}(1)")
+    _assert_deferred_cost(caught.value, name, "VARIANT")
+
+
+@pytest.mark.parametrize("name", VARIANT_NAMES)
 def test_variant_spark_sql_door_refuses(name: str, spark: ReparkSession) -> None:
     with pytest.raises(UnsupportedOperationException) as caught:
         spark.sql(_sql_call(name)).collect()
@@ -209,6 +257,26 @@ def test_geospatial_facade_refuses_deferred_by_cost(name: str) -> None:
     fn: Callable[..., Any] = getattr(F, name)
     with pytest.raises(UnsupportedOperationException) as caught:
         fn("x")
+    _assert_deferred_cost(caught.value, name, "WKB")
+
+
+@pytest.mark.parametrize("name", GEOSPATIAL_NAMES)
+def test_geospatial_sql_functions_reexport_refuses(name: str) -> None:
+    """sed-swap path ``repark.spark.sql.functions`` carries the same stub."""
+    from repark.spark.sql import functions as sql_functions
+
+    fn: Callable[..., Any] = getattr(sql_functions, name)
+    with pytest.raises(UnsupportedOperationException) as caught:
+        fn("x")
+    _assert_deferred_cost(caught.value, name, "WKB")
+    assert getattr(sql_functions, name) is getattr(F, name)
+
+
+@pytest.mark.parametrize("name", GEOSPATIAL_NAMES)
+def test_geospatial_expr_fragment_refuses(name: str) -> None:
+    """``F.expr`` shares ``refuse_sql_fragment``; pin every family, not only FNP-15."""
+    with pytest.raises(UnsupportedOperationException) as caught:
+        F.expr(f"{name}(1)")
     _assert_deferred_cost(caught.value, name, "WKB")
 
 
