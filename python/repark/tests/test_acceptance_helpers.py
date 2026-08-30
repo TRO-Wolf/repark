@@ -13,6 +13,7 @@ import pytest
 from _acceptance import (
     ACCEPTANCE_NAMESPACE,
     ACCEPTANCE_TABLE_PREFIX,
+    COMMIT_CONFLICT_RETRY_ATTEMPTS,
     GLUE_WAREHOUSE,
     ICEBERG_TABLE_PROPERTIES,
     MOR_ICEBERG_TABLE_PROPERTIES,
@@ -35,6 +36,7 @@ from _acceptance import (
     mor_ctas_sql,
     normalize_location_uri,
     require_snapshot_expired,
+    retry_on_commit_conflict,
     run_mor_merge_compact_expire,
     s3tables_catalog_config,
 )
@@ -533,6 +535,90 @@ def test_maintenance_call_sql_is_catalog_dot_system() -> None:
     assert "retain_last => 1" in sql
 
 
+class _ScriptedCall:
+    """Callable that raises or returns from a scripted list of outcomes."""
+
+    def __init__(self, outcomes: list[object]) -> None:
+        self._outcomes = list(outcomes)
+        self.calls = 0
+
+    def __call__(self) -> object:
+        self.calls += 1
+        if not self._outcomes:
+            raise AssertionError("scripted callable invoked past its outcomes")
+        outcome = self._outcomes.pop(0)
+        if isinstance(outcome, BaseException):
+            raise outcome
+        return outcome
+
+
+def test_retry_on_commit_conflict_returns_after_two_conflicts() -> None:
+    """Conflict twice then success returns the result and retry_count == 2.
+
+    pins: mw-10-s3tables-mor/C-003
+    """
+    scripted = _ScriptedCall(
+        [
+            RuntimeError("CatalogCommitConflicts => metadata changed concurrently"),
+            RuntimeError("CatalogCommitConflicts => metadata changed concurrently"),
+            "merged",
+        ]
+    )
+    result, retry_count = retry_on_commit_conflict(scripted)
+    assert result == "merged"
+    assert retry_count == 2
+    assert scripted.calls == 3
+
+
+def test_retry_on_commit_conflict_exhausted_raises_with_attempt_count() -> None:
+    """A perpetual conflict raises after exactly attempts calls, count in the message.
+
+    pins: mw-10-s3tables-mor/C-003
+    """
+    attempts = COMMIT_CONFLICT_RETRY_ATTEMPTS
+    scripted = _ScriptedCall(
+        [
+            RuntimeError("CatalogCommitConflicts => metadata changed concurrently")
+            for _ in range(attempts + 2)
+        ]
+    )
+    with pytest.raises(RuntimeError, match=rf"{attempts}") as excinfo:
+        retry_on_commit_conflict(scripted, attempts=attempts)
+    assert scripted.calls == attempts
+    assert "CatalogCommitConflicts" in str(excinfo.value)
+
+
+def test_retry_on_commit_conflict_non_conflict_is_not_retried() -> None:
+    """A non-conflict error is re-raised on the first call with no retry.
+
+    pins: mw-10-s3tables-mor/C-003
+    """
+    scripted = _ScriptedCall([ValueError("not a commit conflict")])
+    with pytest.raises(ValueError, match="not a commit conflict"):
+        retry_on_commit_conflict(scripted)
+    assert scripted.calls == 1
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        "CatalogCommitConflicts => metadata changed concurrently",
+        "CommitFailed: requirement mismatch on snapshot",
+        "validate_data_files_exist failed for referenced data file",
+    ],
+)
+def test_retry_on_commit_conflict_signatures_are_retried(message: str) -> None:
+    """Each named conflict signature retries and then returns.
+
+    pins: mw-10-s3tables-mor/C-003
+    """
+    scripted = _ScriptedCall([RuntimeError(message), "ok"])
+    result, retry_count = retry_on_commit_conflict(scripted)
+    assert result == "ok"
+    assert retry_count == 1
+    assert scripted.calls == 2
+
+
 class _RaisingSql:
     """Session stub whose ``sql`` always raises ``AnalysisException``."""
 
@@ -577,7 +663,10 @@ def test_require_snapshot_expired_still_resolves_is_a_no_op() -> None:
 
 
 def test_mor_merge_compact_expire_on_memory_catalog(tmp_path: pathlib.Path) -> None:
-    """Always-run analog of the Glue MW-4 leg. Same helper, local warehouse."""
+    """Always-run analog of the Glue MW-4 / MW-10 leg. Same helper, local warehouse.
+
+    pins: mw-10-s3tables-mor/C-003, C-004
+    """
     spark = ReparkSession.builder.appName("pytest-mw4-mor").getOrCreate()
     spark.register_memory_catalog("mem", tmp_path)
     owned = tmp_path / "owned"
@@ -585,3 +674,9 @@ def test_mor_merge_compact_expire_on_memory_catalog(tmp_path: pathlib.Path) -> N
 
     outcome = run_mor_merge_compact_expire(spark, "mem", "ns", "mw4mor")
     assert_mor_maintenance_outcome(spark, outcome)
+    assert outcome.retry_count == 0
+    assert outcome.retry_count <= COMMIT_CONFLICT_RETRY_ATTEMPTS
+    assert outcome.service_commits == 0
+    assert outcome.current_snapshot_matches_engine is True
+    assert outcome.snapshot_log_before_expire
+    assert outcome.snapshot_log_after_expire

@@ -2067,6 +2067,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   five MERGEs plus the idempotent replay; expected-row pin follows `MOR_UPDATED_ID_COUNT`.
   **MW-5:** `require_snapshot_readable` takes `expected_rows`
   (default `MOR_SEED_ROW_COUNT`; the 1,000-row demo passes 1000).
+  **MW-10:** `retry_on_commit_conflict` (default 3; `CatalogCommitConflicts` /
+  `CommitFailed` requirement mismatch / `validate_data_files_exist`); MERGE and each
+  maintenance CALL are wrapped; `MorMaintenanceOutcome` records `retry_count`,
+  `service_commits`, snapshot log before/after expire, and whether current after expire
+  matches the engine (pins: mw-10-s3tables-mor/C-003, C-004).
 - `test_acceptance_helpers.py` — WG4 AWS-free unit tests for `_acceptance` that run **everywhere**
   (no gate): the builder outputs (s3a bronze path, the measured glue config block, CTAS/MERGE SQL
   shape keyed on the id column, the real TBLPROPERTIES block, and `acceptance_namespace_location`
@@ -2085,6 +2090,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   call the asserter with `table_name` as the helper's fourth argument. Fake-session pins:
   id-echo / generic `snapshot` AnalysisException is not expire; the engine needle is;
   a successful VERSION AS OF is expire-no-op.
+  **MW-10:** memory-analog retry pins — conflict twice then success (`retry_count == 2`);
+  exhausted budget raises after exactly `attempts` with the count in the message; a
+  non-conflict error is re-raised on the first call; each named conflict signature
+  retries. The local-catalog analog asserts `retry_count == 0`, `service_commits == 0`,
+  and snapshot-log shape (pins: mw-10-s3tables-mor/C-003, C-004).
 - `test_aws_acceptance.py` — WG4 the env-gated real-AWS acceptance harness: a **module-level**
   `pytest.mark.skipif` on `REPARK_AWS_ACCEPTANCE != "1"` skips the whole module by default (CI
   stays AWS-free; the single sanctioned real-AWS run is the Fable audit's). Gated in, it mirrors
