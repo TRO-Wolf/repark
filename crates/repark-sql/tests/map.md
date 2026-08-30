@@ -48,6 +48,9 @@ holds behavior observed from outside the crate.
   `WindowAggExec`; an intervening filter between two live windows stacks two. Same SQL
   shapes as `../../repark-spark/tests/ta_window.rs`.
 
+- `cross_door_int_overflow.rs` — **F-Y10-1 C-003:** INT add overflow raises on both
+  doors at default ANSI; Spark `ansi=false` wraps while ANSI still raises.
+  pins: f-y10-1-int-overflow/C-003
 - `cross_door.rs` (Q13) — the **two-session** cross-door protocol: a native
   `AnsiDialect` session and a Spark-extended `SparkDialect` session, each over its OWN in-memory
   catalog, compared on the Arrow path (value AND type). Rows: CTAS, INSERT, ALTER (schema
@@ -77,7 +80,7 @@ holds behavior observed from outside the crate.
   (NULLS FIRST vs LAST). Each row asserts both doors' actual Arrow outputs side by side; the
   one-sentence reason is the test's doc comment. Needs the `repark-spark` dev-dep — the only
   place either door may name the other, and legal because the crate-DAG guard scopes layering
-  to normal edges.
+  to normal edges. pins: f-y10-1-int-overflow/C-003
 
   Its case-folding row (`cross_door_identifier_case_folding_agrees_unquoted_and_diverges_quoted`)
   is a **declared-divergence test**: it names the registry row it defends
@@ -107,13 +110,15 @@ holds behavior observed from outside the crate.
   (`-1800000000000`), which is correct for that profile.
 
 - `ansi_door_values.rs` — ANSI-door-only value pins. Standard SQL
-  is the oracle (ruling: correctness, not Spark parity). Six rows on a native `AnsiDialect`
+  is the oracle (ruling: correctness, not Spark parity). Rows on a native `AnsiDialect`
   session, Arrow path, value AND type: CAST overflow raises, integer `/` truncates, integer
   `/ 0` raises, `SUM` skips NULLs, default `ORDER BY ASC` is `NULLS LAST`, implicit
-  string→number coercion refuses. Does **not** edit `timestamp_cast_ansi_door.rs` or
+  string→number coercion refuses, **F-Y10-1** INT `+` overflow raises
+  (`ansi_door_int32_add_overflow_raises`). Does **not** edit `timestamp_cast_ansi_door.rs` or
   `session_timezone_ansi_door.rs`. Identifier case folding is registry ID-1 (cited, not
   duplicated). Cargo wires this file as its
   own integration-test binary — this crate has no `tests/mod.rs`.
+  pins: f-y10-1-int-overflow/C-003
 
 - `ansi_door_join_null_keys.rs` — Native-profile NULL-key join
   pin (INNER / LEFT / LEFT SEMI / LEFT ANTI). G11: standard-SQL 3VL (`NULL = NULL` is

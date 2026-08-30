@@ -24,6 +24,7 @@ async fn native_ansi_door() -> Door {
         .with_sql_dialect(dialect)
         .build()
         .expect("native session");
+    repark_spark::install_integer_overflow(session.context());
     session
         .register_memory_catalog("ice", &warehouse)
         .await
@@ -242,5 +243,31 @@ async fn ansi_door_implicit_string_plus_number_refuses() {
     assert!(
         error.contains("Cannot coerce arithmetic expression Utf8 + Int64"),
         "ANSI door must refuse implicit string→number coercion, got: {error}"
+    );
+}
+
+/// pins: f-y10-1-int-overflow/C-003
+#[tokio::test]
+async fn ansi_door_int32_add_overflow_raises() {
+    let ansi = native_ansi_door().await;
+    let error = collect_error(
+        &ansi.session,
+        "SELECT CAST(2147483647 AS INT) + CAST(1 AS INT) AS v",
+    )
+    .await;
+    assert!(
+        error.contains("ARITHMETIC_OVERFLOW"),
+        "ANSI door must raise on INT overflow (standard SQL), got: {error}"
+    );
+}
+
+/// pins: f-y10-1-int-overflow/C-003
+#[tokio::test]
+async fn ansi_door_int32_add_literal_overflow_raises() {
+    let ansi = native_ansi_door().await;
+    let error = collect_error(&ansi.session, "SELECT CAST(2147483647 AS INT) + 1 AS v").await;
+    assert!(
+        error.contains("ARITHMETIC_OVERFLOW"),
+        "ANSI door CAST(INT)+1 must raise, not widen, got: {error}"
     );
 }

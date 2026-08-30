@@ -62,6 +62,9 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   + 38-clamp), `SparkDecimalRewrite` analyzer slot (A5, before `SparkExprSemantics`; UDF
   owns `/0`), `SparkDecimalExprPlanner` for `(38,20)*(38,20)`, checked `+`/`−` UDF reading
   the landed ANSI knob. Ledger: `task/r2-dec-close-ledger.md`.
+- `src/integer_spark.rs` — **F-Y10-1:** checked integer `+` / `-` / `*` UDFs, `ExprPlanner`,
+  and analyzer rule. `ansi=true` raises `ARITHMETIC_OVERFLOW`; `ansi=false` wraps.
+  `install_integer_overflow` is the ANSI-door hook. pins: f-y10-1-int-overflow/C-002, C-003
 - `src/cardinality.rs` — **r24 SB1 / SEC-01:** plan-time `array_repeat`/`repeat`/`sequence` ceilings
   (`repark.sql.maxArrayElements` default 10_000_000) + `ReparkSqlConfig` extension
   (`allowLocalFilesystemDDL` for SEC-02); analyzer rule `ArrayCardinalityCeiling`.

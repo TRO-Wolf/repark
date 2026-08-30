@@ -22,6 +22,8 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
 ## Contracts
 
 - `literal` distinguishes Python `bool` from `int` and accepts only supported scalar types.
+  A Python `int` that fits in Int32 is an Int32 literal (Spark `IntegerType`), so
+  `col(int32) + 1` stays Int32. pins: f-y10-1-int-overflow/C-002
 - `sql` analyzes standalone expressions before handoff; parse errors map to `ParseException` and
   unresolved names map to `AnalysisException`. This path bypasses the Spark SQL router, so
   FNP-15/16 declared-function names refuse through `refuse_sql_fragment` (collation +

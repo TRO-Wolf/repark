@@ -24,6 +24,7 @@ and hand execution, SQL, and ML semantics to the engine crates.
 | [`session.rs`](session.rs) | Shared runtime, session doors, readers, catalogs, and temp views.
   `PyReparkSession.sql` runs the FNP-15/16 declared-function valve so the native
   `repark.sql()` callable (DataFusionDialect) refuses with the registry reason.
+  Native and Spark Python sessions install F-Y10-1 integer overflow checks.
   pins: fnp-15-16/C-001 |
 | [`dataframe.rs`](dataframe.rs) | Lazy plans, actions, transforms, schema, and Arrow C Stream export.
   `filter_sql` bypasses the statement router, so it applies parse-altitude valves itself. |

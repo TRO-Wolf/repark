@@ -215,11 +215,10 @@ bypass this error. (ArithmeticException)
 ```
 
 Two honest caveats on that message. `try_divide` is Spark's own suggestion text and is **not**
-implemented here yet (`Invalid function 'try_divide'`). And ANSI mode does **not** currently make
-arithmetic *overflow* raise — `CAST(2147483647 AS INT) + CAST(1 AS INT)` wraps to
-`-2147483648` on both doors, and decimal overflow has its own registry rows in
-[§7](../spark-sql-iceberg-parity.md#7-known-spark-parity-divergences-backlog) (`DEC-6`…`DEC-9`).
-Do not read "ANSI on" as "every arithmetic fault raises".
+implemented here yet (`Invalid function 'try_divide'`). Integer `+` / `-` / `*` overflow **does**
+raise under ANSI (`ARITHMETIC_OVERFLOW`; F-Y10-1, 2026-08-30); `ansi=false` wraps at the source
+type. Decimal overflow is DEC-6 (FIXED). Do not read "ANSI on" as "every arithmetic fault
+raises" — float `/ 0` on the ANSI door is still IEEE Inf (F-Y10-2).
 
 It is a **build-time carrier**: set it on the builder, not at runtime.
 

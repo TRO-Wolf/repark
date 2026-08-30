@@ -13,10 +13,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   appends a compatibility note that points its dated file-size premise at the live guards; slate:
   [../briefs/spark-function-parity.md](../../../briefs/spark-function-parity.md).
 - [f-y10-1-int-overflow-ledger.md](f-y10-1-int-overflow-ledger.md) — **F-Y10-1 (2026-08-30),
-  in flight:** integer arithmetic overflow raises where Spark raises (the integer analog
-  of the FIXED DEC-6, on the DEC U5 checked-kernel pattern). C-001 matrix is measured
-  (both wrap and widen records are live and path-specific). C-002..C-005 OPEN.
-  Unblocks FNP-7b's four `try_*` names.
+  in flight:** integer arithmetic overflow raises where Spark raises. C-001..C-004 PROVEN;
+  C-005 waits on `make verify` / `preflight` / `py-test`. Unblocks FNP-7b.
 - [sem-0-charter-ledger.md](sem-0-charter-ledger.md) — **SEM-0 (2026-08-21), queued and HELD at
   its approval gate:** the scope audit for closing the two silently wrong answers the low-risk
   sweep registered rather than fixed — `RE-1` (`regexp_extract_all` defaults to capture group 0,

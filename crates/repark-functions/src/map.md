@@ -106,21 +106,25 @@ Child modules use Rust's default layout: `str_to_map`, `shuffle`, and `map_from_
   before `SparkExprSemantics`; UDF owns `/0`) + `SparkDecimalExprPlanner` (DEC-8
   compute-with-clamp) + checked `+`/`−` (DEC-6, reads `SparkAnsiConfig`). Registered
   from `lib.rs` (`analyzer_rules` + `register_all`). Ledger: `task/r2-dec-close-ledger.md`.
-- Integer `+ − *` overflow (**F-Y10-1 C-001**, measured 2026-08-30, no kernel
-  yet): same-width Int32/Int64 `BinaryExpr` wraps via Arrow `arrow-arith`;
-  `CAST(INT) + 1` and facade `col(int32) + lit(i64)` widen to Int64 because
-  DataFusion types a bare integer literal as Int64. `SparkAnsiConfig` is unread
-  for these ops (`SparkDecimalRewrite` is DECIMAL-only; `SparkExprSemantics`
-  rewrites `/` and `%` only). Live Spark 4.1.2 raises `ARITHMETIC_OVERFLOW`
-  under ANSI and wraps at the source type when `ansi=false`. Ledger:
-  `task/ledgers/staging/f-y10-1-int-overflow-ledger.md` §4.
+- Integer `+ − *` overflow (**F-Y10-1 C-001**, measured 2026-08-30): same-width
+  Int32/Int64 `BinaryExpr` wrapped via Arrow `arrow-arith`; `CAST(INT) + 1`
+  widened to Int64 because DataFusion types a bare integer literal as Int64.
   pins: f-y10-1-int-overflow/C-001
+- `integer_spark.rs` — **F-Y10-1:** checked integer `+` / `-` / `*` UDFs that
+  read `SparkAnsiConfig` (DEC U5 shape). `ansi=true` raises Spark's
+  `ARITHMETIC_OVERFLOW`; `ansi=false` wraps at the source Arrow type. An
+  `ExprPlanner` keeps `CAST(INT) + 1` as Int32 so TypeCoercion cannot widen it.
+  `install_integer_overflow` is the ANSI-door hook. Ledger:
+  `task/ledgers/staging/f-y10-1-int-overflow-ledger.md`.
+  pins: f-y10-1-int-overflow/C-002, C-003, C-004, C-005
 - `lib.rs` — `register_all(ctx)` (datafusion-spark's full set, then the date + string + collection
   + **r20 G2** `random` (Spark XORShift `rand`/`randn`/`random`) shims — later registration wins a
   name clash) + Q1 percentile aliases + `spark_date_shim_functions()` +
-  `analyzer_rules()` (`SparkDecimalPrecision` → `SparkDecimalRewrite` → Spark semantics +
+  `analyzer_rules()` (`SparkDecimalPrecision` → `SparkDecimalRewrite` →
+  `SparkIntegerOverflow` → Spark semantics +
   cardinality + instant_ts; the session installs them via the Spark door's `SessionExtension`;
   error conversion one layer up is `repark-core`) + `register_spark_decimal_planner` +
+  `register_spark_integer_planner` +
   `analyze_eagerly(state, plan)` — the ONE blessed way to run the analyzer before a plan's
   schema or expressions cross a boundary (`ctx.sql` plans are PRE-analysis; an un-analyzed
   schema over analyzed buffers bit-reinterprets at the Arrow export — consumed by

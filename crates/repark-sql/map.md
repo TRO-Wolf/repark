@@ -35,7 +35,8 @@ matrix. Stock DataFusion handles delegated reads and DML.
   forbidden door→door edge. Nothing in `src/` may name them.
 - [src/map.md](src/map.md) — module-by-module navigation.
 - [tests/map.md](tests/map.md) — integration tests: the R1 parser-production pins, the
-  two-session `cross_door.rs` rows (incl. G11 intended divergences), Q8 `introspection.rs`,
+  two-session `cross_door.rs` rows (incl. G11 intended divergences), F-Y10-1
+  `cross_door_int_overflow.rs`, Q8 `introspection.rs`,
   the Q11 `ta_toll.rs`, the G11 ANSI-door value pins (`ansi_door_values.rs`), the
   Native-profile pins (`ansi_door_join_null_keys.rs`, `ansi_door_window_frames.rs`,
   `ansi_door_float_agg.rs`).

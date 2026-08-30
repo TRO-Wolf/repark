@@ -60,6 +60,7 @@ fn apply_session_knobs(
 /// Build the engine session, register catalogs, wrap in the Python handle.
 fn finish_session(py: Python<'_>, builder: ReparkSessionBuilder) -> PyResult<PyReparkSession> {
     let session = builder.build().map_err(to_py_err)?;
+    repark_functions::integer_spark::install_integer_overflow(session.context());
     let runtime = shared_runtime()?;
     py.detach(|| runtime.block_on(session.register_configured_catalogs()))
         .map_err(to_py_err)?;
@@ -120,7 +121,6 @@ impl PyReparkSession {
         fenced_span!("py.session", "PyReparkSession.__new__", {
             let builder =
                 apply_session_knobs(memory_limit_gb, batch_size, target_partitions, config)?;
-            // Install both Spark components before building the session.
             let builder = builder
                 .with_sql_dialect(Arc::new(repark_spark::SparkDialect))
                 .with_extension(Arc::new(repark_spark::SparkExtension));

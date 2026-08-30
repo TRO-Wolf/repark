@@ -55,7 +55,7 @@ adds the per-unit execution contract.
 The remaining order is:
 
 ```
-FNP-15/16 honesty  →  F-Y10-1 integer overflow  →  FNP-4c higher-order kernels
+FNP-15/16 honesty  →  FNP-4c higher-order kernels
 FNP-7a/7b try_*    →  FNP-9/10 collections + JSON  →  FNP-8 repatriation
 FNP-11/12 time + numeric/aggregate families       →  FNP-Z close-out
 ```
@@ -122,11 +122,9 @@ Every unit, without exception:
 - **FNP-16** registers 56 names as deferred-by-cost, which is **not** the same claim as FNP-15's
   unreachable. The registry language must distinguish them; writing "unsupported" for both would
   misreport what the engine can do.
-- **FNP-7b must not ship before F-Y10-1.** repark's `int + int` widens to int64 instead of
-  overflowing, so `try_add`/`try_subtract`/`try_multiply`/`try_avg` have no raising path to
-  invert. Implementing them anyway produces functions that never return NULL and therefore look
-  correct while diverging from Spark on every overflow. The dependency is on a tracked open item
-  (F-Y10-1 / DEC U5 / G13), not on this campaign.
+- **FNP-7b is unblocked (F-Y10-1 FIXED 2026-08-30).** Integer `+` / `-` / `*` raise
+  `ARITHMETIC_OVERFLOW` under ANSI, so `try_add` / `try_subtract` / `try_multiply` / `try_avg`
+  have a raising path to invert.
 - **FNP-6d** (the three `bitmap_*_agg`) is sequenced AFTER FNP-7a deliberately: they are UDAFs
   needing Spark's exact 4096-bit bitmap layout, which cannot be verified without a live Spark, and
   they are among the least-used names in the gap. Effort high, confidence low, value low.

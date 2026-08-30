@@ -421,7 +421,7 @@ census rows flip out of the gap bucket, and does the work reuse a seam RePark al
 | **FNP-5** | **Wire-only aggregates.** The nine `regr_*`, `grouping`, `approx_count_distinct`, `listagg`, `string_agg`. | 13 | All already in `all_default_aggregate_functions()` and registered on every session. *Corrected 2026-08-20:* `sum_distinct`, `listagg_distinct` and `string_agg_distinct` are **not** kernels — DataFusion spells them as a `DISTINCT` modifier on the aggregate call, so they need the facade's DISTINCT path, not a dispatch arm. |
 | **FNP-6** | **Reuse RePark's own kernels.** `regexp_extract_all`, `regexp_substr`, `randstr`, `uniform`, `validate_utf8`, `try_validate_utf8`, the three `bitmap_*_agg`, `assert_true`. | 10 | The hard semantics — Java regex dialect, Spark's PRNG, the bitmap layout — were already paid for. |
 | **FNP-7a** | **The `try_*` names whose raising path exists.** `try_divide`, `try_mod` (divide-by-zero raises today), `try_element_at`, `try_to_date`, `try_to_number`, `try_to_binary`, `try_to_time` (parse raises), `try_sum` (a `datafusion-spark` kernel). | 8 | Each is genuinely the inversion the design described: a path that raises, made to yield NULL. |
-| **FNP-7b** | **BLOCKED on F-Y10-1.** `try_add`, `try_subtract`, `try_multiply`, `try_avg`. | 4 | *Measured 2026-08-20:* repark's integer arithmetic **widens rather than overflowing** — `CAST(2147483647 AS INT) + 1` returns `2147483648` as int64, where Spark under ANSI raises `ARITHMETIC_OVERFLOW`. Spark's `try_add` returns NULL exactly where `+` would raise, so with no raising path these would be no-op wrappers **asserting a parity that does not exist**. The gap is the already-tracked **F-Y10-1 integer wrap (DEC U5 / G13)**, open from the V2 Engine Hardening campaign and named in STATUS. Ship these after it closes, not before. |
+| **FNP-7b** | **Unblocked (F-Y10-1 FIXED 2026-08-30).** `try_add`, `try_subtract`, `try_multiply`, `try_avg`. | 4 | Integer `+` / `-` / `*` now raise `ARITHMETIC_OVERFLOW` under ANSI, so Spark's `try_*` NULL-on-overflow path has a raising path to invert. Ship next after FNP-4c (or paired with FNP-7a). |
 | **FNP-8** | **Repatriation.** The 55 non-compliant functions of §4. | 55 | The owner's "own the semantics" decision. Sized against the ~287-line median kernel. |
 | **FNP-9** | **Collections, generators, dispatch.** `create_map`, `map_concat`, `array_insert`, `inline`, `inline_outer`, `stack`, `call_udf`, `call_function`. | 8 | `inline` is `dynamicFlatten` machinery that already shipped in v0.5.0. |
 | **FNP-10** | **JSON.** `from_json`, `to_json`, `get_json_object`, `json_array_length`, `json_object_keys`, plus the stubbed `schema_of_json`. | 6 | `serde_json` is already a workspace dep and `types.py` already parses DDL schemas. A real build, high user value. |
@@ -446,10 +446,8 @@ nothing. That is exactly why they should be early: 62 names for stubs and regist
 they convert `AttributeError` — which reads as "repark is broken" — into a stated limit. It is the
 largest honesty gain per unit of work left, and it is what closes C-009.
 
-**The overflow fix became the gating dependency.** `CAST(2147483647 AS INT) + 1` returns
-`2147483648` where Spark raises `ARITHMETIC_OVERFLOW` — the already-tracked **F-Y10-1 / DEC U5 /
-G13**. A wrong answer on ordinary addition outranks any missing function, and four `try_*` names
-cannot be built honestly until it closes (§7's FNP-7b row).
+**The overflow fix closed (F-Y10-1, 2026-08-30).** Integer `+` / `-` / `*` raise
+`ARITHMETIC_OVERFLOW` under ANSI. FNP-7b's four `try_*` names are unblocked.
 
 **Repatriation moved later.** FNP-8 is the campaign's strategic goal, and no user sees a
 difference the day it lands: it prevents future defects rather than fixing current ones. It earns
@@ -457,11 +455,11 @@ its place after the visible gaps close, not before.
 
 The remaining order is:
 
-`FNP-15/16 → F-Y10-1 → FNP-4c → FNP-7a/7b → FNP-9/10 → FNP-8 → FNP-11/12 → FNP-Z`.
+`FNP-15/16 → FNP-4c → FNP-7a/7b → FNP-9/10 → FNP-8 → FNP-11/12 → FNP-Z`.
 
-Each slash joins work that may share one tightly coupled PR. FNP-7b still cannot land before
-F-Y10-1. The campaign may use a fork-wait window because none of these units consumes F-17, but
-it does not gate v1.0 and yields when the format-v3 critical path becomes ready.
+Each slash joins work that may share one tightly coupled PR. The campaign may use a fork-wait
+window because none of these units consumes F-17, but it does not gate v1.0 and yields when the
+format-v3 critical path becomes ready.
 
 Four units are deferred **with reasons rather than dropped** — FNP-6d (bitmap aggregates: UDAFs
 needing Spark's exact 4096-bit layout, unverifiable without a live Spark, least-used names in the
