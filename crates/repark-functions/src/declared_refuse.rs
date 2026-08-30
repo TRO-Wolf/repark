@@ -90,6 +90,24 @@ const SKETCH_REASON: &str = "is reachable without a JVM and is deferred by cost:
      different format that cannot serve the blob. See docs/spark-sql-iceberg-parity.md \
      (FNP-16 sketches).";
 
+const CSV_XML_XPATH: &[&str] = &[
+    "to_csv",
+    "to_xml",
+    "xpath",
+    "xpath_boolean",
+    "xpath_double",
+    "xpath_float",
+    "xpath_int",
+    "xpath_long",
+    "xpath_number",
+    "xpath_short",
+    "xpath_string",
+];
+
+const CSV_XML_XPATH_REASON: &str = "is reachable without a JVM and is deferred by cost: the \
+     xpath family needs an XPath 1.0 engine matching javax.xml.xpath, and datafusion-spark's \
+     csv and xml modules are empty. See docs/spark-sql-iceberg-parity.md (FNP-16 CSV/XML/XPath).";
+
 /// Message for a declared-absent Spark function, if this unit currently owns the name.
 #[must_use]
 pub fn refusal_message(name: &str) -> Option<String> {
@@ -100,6 +118,9 @@ pub fn refusal_message(name: &str) -> Option<String> {
     if SKETCHES.binary_search(&key.as_str()).is_ok() {
         return Some(format!("{key} {SKETCH_REASON}"));
     }
+    if CSV_XML_XPATH.binary_search(&key.as_str()).is_ok() {
+        return Some(format!("{key} {CSV_XML_XPATH_REASON}"));
+    }
     None
 }
 
@@ -108,6 +129,7 @@ pub fn refusal_message(name: &str) -> Option<String> {
 pub fn armed_names() -> Vec<&'static str> {
     let mut names: Vec<&'static str> = FNP15.iter().map(|(name, _)| *name).collect();
     names.extend(SKETCHES.iter().copied());
+    names.extend(CSV_XML_XPATH.iter().copied());
     names
 }
 
@@ -174,7 +196,7 @@ fn object_name_last(name: &ObjectName) -> String {
 
 #[cfg(test)]
 mod tests {
-    // pins: fnp-15-16/C-001, C-002, C-008, C-017
+    // pins: fnp-15-16/C-001, C-002, C-008, C-009, C-017
     use super::*;
 
     #[test]
@@ -202,6 +224,23 @@ mod tests {
             let error = refuse_in_sql(&format!("SELECT {name}(1)")).expect_err(*name);
             assert!(matches!(error, DataFusionError::NotImplemented(_)));
             assert!(error.to_string().contains("deferred by cost"));
+        }
+    }
+
+    #[test]
+    fn csv_xml_xpath_are_deferred_by_cost_and_sorted() {
+        assert!(CSV_XML_XPATH.is_sorted());
+        assert_eq!(CSV_XML_XPATH.len(), 11);
+        for name in CSV_XML_XPATH {
+            let message = refusal_message(name).expect("csv/xml/xpath name has a message");
+            assert!(message.contains("deferred by cost"), "{name}: {message}");
+            assert!(
+                message.contains("reachable without a JVM"),
+                "{name}: {message}"
+            );
+            assert!(!message.contains("unreachable"), "{name}: {message}");
+            let error = refuse_in_sql(&format!("SELECT {name}(1)")).expect_err(*name);
+            assert!(matches!(error, DataFusionError::NotImplemented(_)));
         }
     }
 

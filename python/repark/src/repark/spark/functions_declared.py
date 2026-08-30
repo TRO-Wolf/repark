@@ -141,12 +141,35 @@ _SKETCH_REASON = (
     "(FNP-16 sketches)."
 )
 
-for _sketch_name in SKETCH_NAMES:
-    globals()[_sketch_name] = _DeferredFamilyRefusal(
-        _sketch_name, f"{_sketch_name} {_SKETCH_REASON}"
-    )
 
-DECLARED_REFUSE_NAMES: tuple[str, ...] = tuple(FNP15_MESSAGES) + SKETCH_NAMES
+def _bind_family(names: tuple[str, ...], reason: str) -> None:
+    for name in names:
+        globals()[name] = _DeferredFamilyRefusal(name, f"{name} {reason}")
+
+
+_bind_family(SKETCH_NAMES, _SKETCH_REASON)
+
+CSV_XML_XPATH_NAMES: tuple[str, ...] = (
+    "to_csv",
+    "to_xml",
+    "xpath",
+    "xpath_boolean",
+    "xpath_double",
+    "xpath_float",
+    "xpath_int",
+    "xpath_long",
+    "xpath_number",
+    "xpath_short",
+    "xpath_string",
+)
+_CSV_XML_XPATH_REASON = (
+    "is reachable without a JVM and is deferred by cost: the xpath family needs an "
+    "XPath 1.0 engine matching javax.xml.xpath, and datafusion-spark's csv and xml "
+    "modules are empty. See docs/spark-sql-iceberg-parity.md (FNP-16 CSV/XML/XPath)."
+)
+_bind_family(CSV_XML_XPATH_NAMES, _CSV_XML_XPATH_REASON)
+
+DECLARED_REFUSE_NAMES: tuple[str, ...] = tuple(FNP15_MESSAGES) + SKETCH_NAMES + CSV_XML_XPATH_NAMES
 
 
 def install_into(namespace: dict[str, Any], exported: list[str]) -> None:

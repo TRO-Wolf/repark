@@ -2288,3 +2288,18 @@ oracle is involved.
   `crates/repark-functions/src/declared_refuse.rs::sketches_are_deferred_by_cost_and_sorted`.
 - **Rationale** — DECLARED deferred-by-cost (design D-7 / §8). This is a cost deferral, not a
   JVM-only gap. A DataSketches port is a sub-project; do not silently alias DataFusion HLL.
+
+### FNP-16-csv-xml-xpath — CSV / XML / XPath are reachable, deferred by cost
+
+- **repark** — `to_csv`, `to_xml`, and the nine `xpath_*` names are exported and refuse as
+  **reachable without a JVM and deferred by cost**. The nine `xpath_*` functions need an XPath
+  1.0 engine matching `javax.xml.xpath`. `datafusion-spark`'s `csv` and `xml` modules are
+  empty. (`from_csv` / `from_xml` / `schema_of_*` already refuse as E1 stubs.)
+- **Apache Spark** — parses CSV/XML and evaluates XPath 1.0 over XML strings.
+  *(oracle: documented.)*
+- **Pin** — `python/repark/tests/test_fnp15_16_declared_refuse.py::test_csv_xml_xpath_facade_refuses_deferred_by_cost`,
+  `…::test_csv_xml_xpath_spark_sql_door_refuses`,
+  `…::test_csv_xml_xpath_ansi_sql_door_refuses`;
+  `crates/repark-functions/src/declared_refuse.rs::csv_xml_xpath_are_deferred_by_cost_and_sorted`.
+- **Rationale** — DECLARED deferred-by-cost (design D-7 / §8). This is a cost deferral, not a
+  JVM-only gap. An XPath 1.0 dependency is a sub-project.

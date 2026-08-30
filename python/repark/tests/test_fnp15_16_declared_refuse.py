@@ -1,7 +1,7 @@
 """FNP-15/16 — declared-absent Spark functions refuse loudly.
 
-pins: fnp-15-16/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-012,
-C-013, C-016, C-017
+pins: fnp-15-16/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
+C-012, C-013, C-016, C-017
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ import pytest
 
 from repark.errors import UnsupportedOperationException
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
-from repark.spark.functions_declared import SKETCH_NAMES
+from repark.spark.functions_declared import CSV_XML_XPATH_NAMES, SKETCH_NAMES
 from repark.spark.session import ReparkSession
 
 FNP15_NAMES: tuple[str, ...] = (
@@ -105,14 +105,15 @@ def test_expr_fragment_refuses(name: str) -> None:
     _assert_declared_refusal(caught.value, name)
 
 
-def _assert_deferred_cost(exc: BaseException, name: str) -> None:
+def _assert_deferred_cost(exc: BaseException, name: str, *needles: str) -> None:
     text = str(exc)
     assert isinstance(exc, UnsupportedOperationException), type(exc)
     assert name in text, text
     assert "reachable without a JVM" in text, text
     assert "deferred by cost" in text, text
     assert "unreachable" not in text, text
-    assert "DataSketches" in text, text
+    for needle in needles:
+        assert needle in text, f"missing {needle!r} in {text}"
 
 
 @pytest.mark.parametrize("name", SKETCH_NAMES)
@@ -121,7 +122,7 @@ def test_sketch_facade_refuses_deferred_by_cost(name: str) -> None:
     fn: Callable[..., Any] = getattr(F, name)
     with pytest.raises(UnsupportedOperationException) as caught:
         fn("x")
-    _assert_deferred_cost(caught.value, name)
+    _assert_deferred_cost(caught.value, name, "DataSketches")
 
 
 @pytest.mark.parametrize("name", SKETCH_NAMES)
@@ -131,14 +132,14 @@ def test_sketch_sql_functions_reexport_refuses(name: str) -> None:
     fn: Callable[..., Any] = getattr(sql_functions, name)
     with pytest.raises(UnsupportedOperationException) as caught:
         fn("x")
-    _assert_deferred_cost(caught.value, name)
+    _assert_deferred_cost(caught.value, name, "DataSketches")
 
 
 @pytest.mark.parametrize("name", SKETCH_NAMES)
 def test_sketch_spark_sql_door_refuses(name: str, spark: ReparkSession) -> None:
     with pytest.raises(UnsupportedOperationException) as caught:
         spark.sql(_sql_call(name)).collect()
-    _assert_deferred_cost(caught.value, name)
+    _assert_deferred_cost(caught.value, name, "DataSketches")
 
 
 @pytest.mark.parametrize("name", SKETCH_NAMES)
@@ -147,7 +148,31 @@ def test_sketch_ansi_sql_door_refuses(name: str) -> None:
 
     with pytest.raises(UnsupportedOperationException) as caught:
         repark.sql(_sql_call(name))
-    _assert_deferred_cost(caught.value, name)
+    _assert_deferred_cost(caught.value, name, "DataSketches")
+
+
+@pytest.mark.parametrize("name", CSV_XML_XPATH_NAMES)
+def test_csv_xml_xpath_facade_refuses_deferred_by_cost(name: str) -> None:
+    fn: Callable[..., Any] = getattr(F, name)
+    with pytest.raises(UnsupportedOperationException) as caught:
+        fn("x")
+    _assert_deferred_cost(caught.value, name, "XPath")
+
+
+@pytest.mark.parametrize("name", CSV_XML_XPATH_NAMES)
+def test_csv_xml_xpath_spark_sql_door_refuses(name: str, spark: ReparkSession) -> None:
+    with pytest.raises(UnsupportedOperationException) as caught:
+        spark.sql(_sql_call(name)).collect()
+    _assert_deferred_cost(caught.value, name, "XPath")
+
+
+@pytest.mark.parametrize("name", CSV_XML_XPATH_NAMES)
+def test_csv_xml_xpath_ansi_sql_door_refuses(name: str) -> None:
+    import repark
+
+    with pytest.raises(UnsupportedOperationException) as caught:
+        repark.sql(_sql_call(name))
+    _assert_deferred_cost(caught.value, name, "XPath")
 
 
 def test_still_missing_name_stays_attribute_error() -> None:
@@ -201,6 +226,15 @@ def test_registry_wording_distinguishes_unreachable_from_deferred_cost() -> None
     assert "unreachable" not in chunk
     classification = chunk.lower().replace("unsupportedoperationexception", "")
     assert "unsupported" not in classification
+    csv_heading = "### FNP-16-csv-xml-xpath"
+    assert csv_heading in section
+    chunk_start = section.index(csv_heading)
+    rest = section[chunk_start + len(csv_heading) :]
+    next_chunk = rest.find("\n### ")
+    chunk = rest if next_chunk < 0 else rest[:next_chunk]
+    assert "deferred by cost" in chunk
+    assert "reachable" in chunk
+    assert "unreachable" not in chunk
 
 
 def test_roster_counts_fnp15_six() -> None:
@@ -213,3 +247,9 @@ def test_roster_counts_sketches_thirty_two() -> None:
     """FNP-16 sketches family is 32 names."""
     assert len(SKETCH_NAMES) == 32
     assert len(set(SKETCH_NAMES)) == 32
+
+
+def test_roster_counts_csv_xml_xpath_eleven() -> None:
+    """FNP-16 CSV/XML/XPath family is 11 names."""
+    assert len(CSV_XML_XPATH_NAMES) == 11
+    assert len(set(CSV_XML_XPATH_NAMES)) == 11

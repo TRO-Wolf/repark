@@ -85,6 +85,9 @@ fn refusal_message(name: &str) -> Option<String> {
                 .to_string(),
         ),
         other if SKETCHES.binary_search(&other).is_ok() => Some(format!("{other} {SKETCH_REASON}")),
+        other if CSV_XML_XPATH.binary_search(&other).is_ok() => {
+            Some(format!("{other} {CSV_XML_XPATH_REASON}"))
+        }
         _ => None,
     }
 }
@@ -129,9 +132,27 @@ const SKETCHES: &[&str] = &[
     "theta_union_agg",
 ];
 
+const CSV_XML_XPATH_REASON: &str = "is reachable without a JVM and is deferred by cost: the \
+     xpath family needs an XPath 1.0 engine matching javax.xml.xpath, and datafusion-spark's \
+     csv and xml modules are empty. See docs/spark-sql-iceberg-parity.md (FNP-16 CSV/XML/XPath).";
+
+const CSV_XML_XPATH: &[&str] = &[
+    "to_csv",
+    "to_xml",
+    "xpath",
+    "xpath_boolean",
+    "xpath_double",
+    "xpath_float",
+    "xpath_int",
+    "xpath_long",
+    "xpath_number",
+    "xpath_short",
+    "xpath_string",
+];
+
 #[cfg(test)]
 mod tests {
-    // pins: fnp-15-16/C-001, C-002, C-008, C-017
+    // pins: fnp-15-16/C-001, C-002, C-008, C-009, C-017
     use datafusion::error::DataFusionError;
     use datafusion::sql::sqlparser::dialect::GenericDialect;
     use datafusion::sql::sqlparser::parser::Parser;
