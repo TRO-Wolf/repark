@@ -948,6 +948,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **octo C3:** empty-list field then list-of-dict keeps array<struct>; string+struct
   CANNOT_MERGE pin.
 - `test_select_naming.py` — **Group H** select/projection display naming vs live PySpark 4.1.2:
+  mutation leak accepts `Int32(1)` as well as `Int64(1)` (F-Y10-1 Python lit width);
   full matrix (`(x + 1)`, cast-of-attr → child name, cast-of-compound → `CAST(...)`,
   cast-into-binary dual-slot, `negative(x)`, CASE/coalesce/concat/lit/date fns, alias wins,
   `<=`/`>=`/`isNotNull`, withColumn unaffected); value+Arrow pins (arith/cast/neg/when/

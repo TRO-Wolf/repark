@@ -176,7 +176,7 @@ def test_mutation_drop_select_alias_application(
     monkeypatch.setattr(DataFrame, "select", broken_select)
     leaked = frame.select(frame.x + 1).columns[0]  # type: ignore[attr-defined]
     # Positive engine-leak signal only (no catch-all inequality — Critic-1 Q-003).
-    assert "Int64" in leaked or leaked.startswith("t.")
+    assert "Int64" in leaked or "Int32" in leaked or leaked.startswith("t.")
 
 
 def test_mutation_cast_stable_name_loss(frame: object) -> None:
