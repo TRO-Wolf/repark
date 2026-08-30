@@ -23,7 +23,8 @@ JVM, no repark required). See [../map.md](../map.md).
   leads and delivered mw-10 is absent, since MW-10's 2026-08-30 close-out), the per-unit FNP order and delivery boundary,
   FNP-Z retirement, fork independence, and map lockstep. MW-10 pickup archived RP-3, so the
   C-006 navigation pin reads `**RP-3 (2026-08-28)` / `opt-in for callers` from
-  `task/ledgers/archive/2026-08/map.md`. STATUS `**Next:**` is V3-4 after V3-3's keep-refusal
+  `task/ledgers/archive/2026-08/map.md`, and V3-3's row from `task/ledgers/completed/map.md`
+  since its 2026-08-30 keep-refusal departure. STATUS `**Next:**` is V3-4 after V3-3's keep-refusal
   (pins: plan-1-northstar-fnp-sequence/C-001, C-002, C-003, C-004, C-005, C-006; v3-3-dml/C-003).
 - `test_pr_247_owner_ruling.py` — **PR #247 revalidation (2026-08-27):** the owner-ruling blocks
   in `AGENTS.md` and `CLAUDE.md` stay byte-exact, unique, at the document start, and in regular

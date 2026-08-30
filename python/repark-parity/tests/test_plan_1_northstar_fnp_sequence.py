@@ -61,7 +61,8 @@ def test_live_slate_retires_v3e_5_and_queues_the_safe_work() -> None:
     assert "<!-- unit id=rp-3" not in slate
     flat = _normalize_whitespace(slate)
     assert "It does not gate v1.0" in flat
-    assert "V3-3 (chartered" in flat
+    assert "V3-4 and the engine units after it" in flat
+    assert "V3-3 delivered 2026-08-30" in flat
     status = _read("STATUS.md")
     assert "V3E-5 added the nightly v3 live-oracle leg" in status
     assert "**Next:** V3-4" in status
@@ -133,7 +134,7 @@ def test_navigation_describes_the_revised_authoritative_documents() -> None:
         "docs/design/map.md": ("2026-08-28 per-unit delivery order",),
         "task/roadmap/epic-term/map.md": ("F-17 shared-Puffin closure",),
         "task/roadmap/mid-term/map.md": ("**F-17 added 2026-08-28 from RP-2:**",),
-        "task/ledgers/staging/map.md": ("**V3-3 (2026-08-30)", "F-rp3-c7"),
+        "task/ledgers/completed/map.md": ("**V3-3 (2026-08-30)", "F-rp3-c7"),
         "task/ledgers/archive/2026-08/map.md": (
             "salvaged 2026-08-28",
             "became fork F-17",

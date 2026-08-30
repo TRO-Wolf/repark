@@ -36,10 +36,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   good: v3 reads and v3 appends are already correct, round-tripped through Spark, including the
   row lineage the format mandates. §4 answers A12's stated first question — adoption, through
   `register_table`, whose Spark signature is measured there.
-- [v3-3-dml-ledger.md](v3-3-dml-ledger.md) — **V3-3 (2026-08-30), chartered from RP-3 C-004
-  red cells:** v3 `UPDATE` and `MERGE` stay a pre-write `V3-COW-1` keep-refusal (Spark
-  preserves `_row_id`; the engine rewrite reassigns). Sequential COW DELETE lineage
-  (F-rp3-c7) stays a fork finding. Three PROVEN clauses.
 
 ## Pointers
 - Up: [../map.md](../map.md)

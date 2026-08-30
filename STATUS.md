@@ -166,7 +166,7 @@ published history — an exposure **accepted by explicit decision**; provenance:
     Spark 4.1.2 + Iceberg 1.11.0 preserves `_row_id`; the engine rewrite reassigns
     (registry `V3-COW-1`). `V3-LINEAGE-1` and `B-MOR-3` stay.
   - **Next:** V3-4 — serve `_row_id` / `_last_updated_sequence_number`; V3-3 charter
-    [task/ledgers/staging/v3-3-dml-ledger.md](task/ledgers/staging/v3-3-dml-ledger.md)
+    [task/ledgers/completed/v3-3-dml-ledger.md](task/ledgers/completed/v3-3-dml-ledger.md)
     (keep-refusal, F-rp3-c7 stays a fork finding).
     Sequence: [docs/design/format-v3-track.md §5](docs/design/format-v3-track.md).
 <!-- /ws -->
