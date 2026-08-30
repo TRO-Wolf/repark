@@ -50,7 +50,7 @@ F12/F13/F14/F16, not copied from the design's headline counts.
 | C-005 | `unwrap_udt` is **unreachable** — Spark `UserDefinedType` unwrap walks the JVM UDT registry; with no JVM there is no UDT system to unwrap from. Register, do not build. | Same three-door pin as C-002, distinct name. | **PROVEN** |
 | C-006 | `input_file_block_start` is **unreachable** until `input_file_name` is destubbed — it reads Spark's `InputFileBlockHolder` thread-local, populated by `HadoopRDD`/`FileScanRDD`. DataFusion has no equivalent surface. | Same three-door pin; message names `InputFileBlockHolder` and the `input_file_name` stub. | **PROVEN** |
 | C-007 | `input_file_block_length` is **unreachable** by the same `InputFileBlockHolder` mechanism as C-006. | Same three-door pin, distinct name. | **PROVEN** |
-| C-008 | FNP-16 sketches family: the 32 HLL/theta/KLL names are **reachable, deferred by cost** (Apache DataSketches byte format; DataFusion `hyperloglog.rs` is a different format). One refusing stub per name; one registry section for the family. | Parametrized pin over all 32 names × three entry points; roster test counts 32. | OPEN |
+| C-008 | FNP-16 sketches family: the 32 HLL/theta/KLL names are **reachable, deferred by cost** (Apache DataSketches byte format; DataFusion `hyperloglog.rs` is a different format). One refusing stub per name; one registry section for the family. | Parametrized pin over all 32 names × three entry points; roster test counts 32. | **PROVEN** |
 | C-009 | FNP-16 CSV/XML/XPath family: the 11 names (`to_csv`, `to_xml`, nine `xpath_*`) are **reachable, deferred by cost** (XPath 1.0 matching `javax.xml.xpath`; `datafusion-spark` csv/xml modules are empty). | Parametrized pin over all 11 names × three entry points; roster test counts 11. | OPEN |
 | C-010 | FNP-16 VARIANT family: the 8 names are **reachable, deferred by cost** (Spark VARIANT value/metadata encoding; RePark `VariantType` is a shell). | Parametrized pin over all 8 names × three entry points; roster test counts 8. | OPEN |
 | C-011 | FNP-16 geospatial family: the 5 names are **reachable, deferred by cost** (GEOGRAPHY/GEOMETRY have no Arrow representation and no vendored WKB codec). | Parametrized pin over all 5 names × three entry points; roster test counts 5. | OPEN |
@@ -61,8 +61,8 @@ F12/F13/F14/F16, not copied from the design's headline counts.
 | C-016 | This unit exports its 62 names on the facade so `AttributeError` ends for them, including the `repark.spark.sql.functions` re-export path. It does **not** close campaign C-009 for names outside the 62 (`__all__` completion is FNP-Z). | Pins that each of the 62 is a public attribute of `repark.spark.functions` and of `repark.spark.sql.functions`; a control that a still-missing name (outside the 62) remains `AttributeError`. | **PROVEN** (FNP-15 six exported; remaining 56 with FNP-16 commits) |
 | C-017 | Native/ANSI existing behaviour is unchanged: a default `SELECT 1` and a live Spark function still plan. The new names refuse; they do not change dialect, arithmetic, or any previously valid query. | Control pins on both doors (default select + one live function). | **PROVEN** |
 
-VERDICT: OPEN — 17 clauses, 11 PROVEN (C-001..C-007, C-012, C-014, C-016, C-017),
-6 OPEN (C-008..C-011, C-013, C-015), 0 REJECTED. A clause flips `PROVEN` only with a
+VERDICT: OPEN — 17 clauses, 12 PROVEN (C-001..C-008, C-012, C-014, C-016, C-017),
+5 OPEN (C-009..C-011, C-013, C-015), 0 REJECTED. A clause flips `PROVEN` only with a
 `pins: fnp-15-16/C-NNN` citation from a tracked test docstring or a `map.md` under
 `crates/`, `python/`, or `scripts/`.
 

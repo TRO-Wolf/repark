@@ -1,7 +1,8 @@
 """Declared-absent Spark function refusals (FNP-15 / FNP-16).
 
 Each public name raises ``UnsupportedOperationException`` with the registry
-reason. pins: fnp-15-16/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-016
+reason. pins: fnp-15-16/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
+C-016
 """
 
 from __future__ import annotations
@@ -48,8 +49,6 @@ FNP15_MESSAGES: dict[str, str] = {
     ),
 }
 
-DECLARED_REFUSE_NAMES: tuple[str, ...] = tuple(FNP15_MESSAGES)
-
 
 def _refuse(name: str) -> NoReturn:
     raise UnsupportedOperationException(FNP15_MESSAGES[name])
@@ -83,6 +82,71 @@ def input_file_block_start(*args: object, **kwargs: object) -> Column:
 def input_file_block_length(*args: object, **kwargs: object) -> Column:
     """Unreachable InputFileBlockHolder length. pins: fnp-15-16/C-007"""
     _refuse("input_file_block_length")
+
+
+class _DeferredFamilyRefusal:
+    """Callable stub for an FNP-16 deferred-by-cost name."""
+
+    def __init__(self, name: str, message: str) -> None:
+        """Bind the Spark function name and its registry refusal message."""
+        self.__name__ = name
+        self.__qualname__ = name
+        self.__doc__ = message
+        self._message = message
+
+    def __call__(self, *args: object, **kwargs: object) -> Column:
+        """Raise the deferred-by-cost refusal for this name."""
+        raise UnsupportedOperationException(self._message)
+
+
+SKETCH_NAMES: tuple[str, ...] = (
+    "hll_sketch_agg",
+    "hll_sketch_estimate",
+    "hll_union",
+    "hll_union_agg",
+    "kll_merge_agg_bigint",
+    "kll_merge_agg_double",
+    "kll_merge_agg_float",
+    "kll_sketch_agg_bigint",
+    "kll_sketch_agg_double",
+    "kll_sketch_agg_float",
+    "kll_sketch_get_n_bigint",
+    "kll_sketch_get_n_double",
+    "kll_sketch_get_n_float",
+    "kll_sketch_get_quantile_bigint",
+    "kll_sketch_get_quantile_double",
+    "kll_sketch_get_quantile_float",
+    "kll_sketch_get_rank_bigint",
+    "kll_sketch_get_rank_double",
+    "kll_sketch_get_rank_float",
+    "kll_sketch_merge_bigint",
+    "kll_sketch_merge_double",
+    "kll_sketch_merge_float",
+    "kll_sketch_to_string_bigint",
+    "kll_sketch_to_string_double",
+    "kll_sketch_to_string_float",
+    "theta_difference",
+    "theta_intersection",
+    "theta_intersection_agg",
+    "theta_sketch_agg",
+    "theta_sketch_estimate",
+    "theta_union",
+    "theta_union_agg",
+)
+
+_SKETCH_REASON = (
+    "is reachable without a JVM and is deferred by cost: Spark sketch columns are "
+    "Apache DataSketches binary blobs, and DataFusion's hyperloglog.rs is a different "
+    "format that cannot serve the blob. See docs/spark-sql-iceberg-parity.md "
+    "(FNP-16 sketches)."
+)
+
+for _sketch_name in SKETCH_NAMES:
+    globals()[_sketch_name] = _DeferredFamilyRefusal(
+        _sketch_name, f"{_sketch_name} {_SKETCH_REASON}"
+    )
+
+DECLARED_REFUSE_NAMES: tuple[str, ...] = tuple(FNP15_MESSAGES) + SKETCH_NAMES
 
 
 def install_into(namespace: dict[str, Any], exported: list[str]) -> None:

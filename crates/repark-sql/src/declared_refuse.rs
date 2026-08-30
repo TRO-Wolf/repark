@@ -84,13 +84,54 @@ fn refusal_message(name: &str) -> Option<String> {
              (FNP-15 input_file_block_length)."
                 .to_string(),
         ),
+        other if SKETCHES.binary_search(&other).is_ok() => Some(format!("{other} {SKETCH_REASON}")),
         _ => None,
     }
 }
 
+const SKETCH_REASON: &str = "is reachable without a JVM and is deferred by cost: Spark sketch \
+     columns are Apache DataSketches binary blobs, and DataFusion's hyperloglog.rs is a \
+     different format that cannot serve the blob. See docs/spark-sql-iceberg-parity.md \
+     (FNP-16 sketches).";
+
+const SKETCHES: &[&str] = &[
+    "hll_sketch_agg",
+    "hll_sketch_estimate",
+    "hll_union",
+    "hll_union_agg",
+    "kll_merge_agg_bigint",
+    "kll_merge_agg_double",
+    "kll_merge_agg_float",
+    "kll_sketch_agg_bigint",
+    "kll_sketch_agg_double",
+    "kll_sketch_agg_float",
+    "kll_sketch_get_n_bigint",
+    "kll_sketch_get_n_double",
+    "kll_sketch_get_n_float",
+    "kll_sketch_get_quantile_bigint",
+    "kll_sketch_get_quantile_double",
+    "kll_sketch_get_quantile_float",
+    "kll_sketch_get_rank_bigint",
+    "kll_sketch_get_rank_double",
+    "kll_sketch_get_rank_float",
+    "kll_sketch_merge_bigint",
+    "kll_sketch_merge_double",
+    "kll_sketch_merge_float",
+    "kll_sketch_to_string_bigint",
+    "kll_sketch_to_string_double",
+    "kll_sketch_to_string_float",
+    "theta_difference",
+    "theta_intersection",
+    "theta_intersection_agg",
+    "theta_sketch_agg",
+    "theta_sketch_estimate",
+    "theta_union",
+    "theta_union_agg",
+];
+
 #[cfg(test)]
 mod tests {
-    // pins: fnp-15-16/C-001, C-002, C-017
+    // pins: fnp-15-16/C-001, C-002, C-008, C-017
     use datafusion::error::DataFusionError;
     use datafusion::sql::sqlparser::dialect::GenericDialect;
     use datafusion::sql::sqlparser::parser::Parser;
@@ -114,5 +155,15 @@ mod tests {
     #[test]
     fn abs_is_untouched() {
         refuse_in_statement(&parsed("SELECT abs(1)")).expect("abs stays");
+    }
+
+    #[test]
+    fn hll_sketch_agg_is_deferred_by_cost() {
+        let error = refuse_in_statement(&parsed("SELECT hll_sketch_agg(1)")).expect_err("refuse");
+        let text = error.to_string();
+        assert!(matches!(error, DataFusionError::NotImplemented(_)));
+        assert!(text.contains("deferred by cost"));
+        assert!(text.contains("reachable without a JVM"));
+        assert!(!text.contains("unreachable"));
     }
 }

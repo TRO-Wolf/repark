@@ -2190,7 +2190,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 
 - `test_fnp15_16_declared_refuse.py` — **FNP-15/16 (2026-08-30):** unreachable and deferred-by-cost
   Spark function refusals. Facade, Spark SQL, ANSI SQL, and `F.expr`. pins: fnp-15-16/C-001,
-  C-002, C-003, C-004, C-005, C-006, C-007, C-012, C-013, C-016, C-017
+  C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-012, C-013, C-016, C-017
 - `test_fnp_critic_remediation.py` — **Critic round 1 (2026-08-20):** regression pins for the
   findings two independent adversarial passes raised on this branch, including the S0 (nested
   higher-order functions returned an inverted boolean), the `ascending=` override matrix, the

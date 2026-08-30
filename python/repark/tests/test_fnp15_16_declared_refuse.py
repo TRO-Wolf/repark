@@ -1,7 +1,7 @@
 """FNP-15/16 — declared-absent Spark functions refuse loudly.
 
-pins: fnp-15-16/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-012, C-013,
-C-016, C-017
+pins: fnp-15-16/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-012,
+C-013, C-016, C-017
 """
 
 from __future__ import annotations
@@ -13,6 +13,7 @@ import pytest
 
 from repark.errors import UnsupportedOperationException
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
+from repark.spark.functions_declared import SKETCH_NAMES
 from repark.spark.session import ReparkSession
 
 FNP15_NAMES: tuple[str, ...] = (
@@ -104,6 +105,51 @@ def test_expr_fragment_refuses(name: str) -> None:
     _assert_declared_refusal(caught.value, name)
 
 
+def _assert_deferred_cost(exc: BaseException, name: str) -> None:
+    text = str(exc)
+    assert isinstance(exc, UnsupportedOperationException), type(exc)
+    assert name in text, text
+    assert "reachable without a JVM" in text, text
+    assert "deferred by cost" in text, text
+    assert "unreachable" not in text, text
+    assert "DataSketches" in text, text
+
+
+@pytest.mark.parametrize("name", SKETCH_NAMES)
+def test_sketch_facade_refuses_deferred_by_cost(name: str) -> None:
+    """Each sketch name is reachable and deferred by cost, not unreachable."""
+    fn: Callable[..., Any] = getattr(F, name)
+    with pytest.raises(UnsupportedOperationException) as caught:
+        fn("x")
+    _assert_deferred_cost(caught.value, name)
+
+
+@pytest.mark.parametrize("name", SKETCH_NAMES)
+def test_sketch_sql_functions_reexport_refuses(name: str) -> None:
+    from repark.spark.sql import functions as sql_functions
+
+    fn: Callable[..., Any] = getattr(sql_functions, name)
+    with pytest.raises(UnsupportedOperationException) as caught:
+        fn("x")
+    _assert_deferred_cost(caught.value, name)
+
+
+@pytest.mark.parametrize("name", SKETCH_NAMES)
+def test_sketch_spark_sql_door_refuses(name: str, spark: ReparkSession) -> None:
+    with pytest.raises(UnsupportedOperationException) as caught:
+        spark.sql(_sql_call(name)).collect()
+    _assert_deferred_cost(caught.value, name)
+
+
+@pytest.mark.parametrize("name", SKETCH_NAMES)
+def test_sketch_ansi_sql_door_refuses(name: str) -> None:
+    import repark
+
+    with pytest.raises(UnsupportedOperationException) as caught:
+        repark.sql(_sql_call(name))
+    _assert_deferred_cost(caught.value, name)
+
+
 def test_still_missing_name_stays_attribute_error() -> None:
     """FNP-Z owns wholesale __all__ completion; names outside the 62 stay absent."""
     with pytest.raises(AttributeError):
@@ -144,9 +190,26 @@ def test_registry_wording_distinguishes_unreachable_from_deferred_cost() -> None
         assert "deferred by cost" not in chunk, heading
         classification = chunk.lower().replace("unsupportedoperationexception", "")
         assert "unsupported" not in classification, heading
+    sketch_heading = "### FNP-16-sketches"
+    assert sketch_heading in section
+    chunk_start = section.index(sketch_heading)
+    rest = section[chunk_start + len(sketch_heading) :]
+    next_chunk = rest.find("\n### ")
+    chunk = rest if next_chunk < 0 else rest[:next_chunk]
+    assert "deferred by cost" in chunk
+    assert "reachable" in chunk
+    assert "unreachable" not in chunk
+    classification = chunk.lower().replace("unsupportedoperationexception", "")
+    assert "unsupported" not in classification
 
 
 def test_roster_counts_fnp15_six() -> None:
     """FNP-15 is exactly the six unreachable names."""
     assert len(FNP15_NAMES) == 6
     assert len(set(FNP15_NAMES)) == 6
+
+
+def test_roster_counts_sketches_thirty_two() -> None:
+    """FNP-16 sketches family is 32 names."""
+    assert len(SKETCH_NAMES) == 32
+    assert len(set(SKETCH_NAMES)) == 32

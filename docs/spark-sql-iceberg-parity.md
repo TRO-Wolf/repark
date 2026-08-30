@@ -2273,3 +2273,18 @@ oracle is involved.
   `crates/repark-spark/src/tests/declared_refuse.rs::input_file_block_length_refuses`.
 - **Rationale** — DECLARED unreachable until `input_file_name` is destubbed. Register, do not
   invent a different mechanism here.
+
+### FNP-16-sketches — HLL / theta / KLL are reachable, deferred by cost
+
+- **repark** — the 32 sketch names (`hll_*` 4, `theta_*` 7, `kll_*` 21) are exported and refuse
+  as **reachable without a JVM and deferred by cost**. Spark sketch columns are Apache
+  DataSketches binary blobs. DataFusion's internal `hyperloglog.rs` is a different format and
+  cannot serve the blob even for the HLL subset.
+- **Apache Spark** — evaluates the DataSketches-backed aggregates and scalars.
+  *(oracle: documented — Spark 4.1.2 `pyspark.sql.functions` sketch family.)*
+- **Pin** — `python/repark/tests/test_fnp15_16_declared_refuse.py::test_sketch_facade_refuses_deferred_by_cost`,
+  `…::test_sketch_spark_sql_door_refuses`,
+  `…::test_sketch_ansi_sql_door_refuses`;
+  `crates/repark-functions/src/declared_refuse.rs::sketches_are_deferred_by_cost_and_sorted`.
+- **Rationale** — DECLARED deferred-by-cost (design D-7 / §8). This is a cost deferral, not a
+  JVM-only gap. A DataSketches port is a sub-project; do not silently alias DataFusion HLL.

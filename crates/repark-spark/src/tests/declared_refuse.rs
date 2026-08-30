@@ -1,8 +1,9 @@
 //! FNP-15 — Spark-door declared-absent function refusals.
 //!
-//! pins: fnp-15-16/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-017
+//! pins: fnp-15-16/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-017
 
 use super::super::*;
+#[allow(unused_imports)]
 use super::common::*;
 
 fn assert_fnp15_refusal(error: &DataFusionError, name: &str, needle: &str) {
@@ -101,6 +102,19 @@ fn spark_ast_source_attaches_declared_refuse_valve() {
 fn abs_sql_is_not_a_declared_refusal() {
     crate::refuse_declared_function_in_sql("SELECT abs(-1)")
         .expect("abs must not trip the declared-refuse valve");
+}
+
+#[tokio::test]
+async fn hll_sketch_agg_is_deferred_by_cost() {
+    let (ctx, catalogs) = ctx_passthrough();
+    let error = execute(&ctx, &catalogs, "SELECT hll_sketch_agg(1)")
+        .await
+        .expect_err("hll_sketch_agg must refuse");
+    let text = error.to_string();
+    assert!(matches!(error, DataFusionError::NotImplemented(_)));
+    assert!(text.contains("deferred by cost"));
+    assert!(text.contains("reachable without a JVM"));
+    assert!(!text.contains("unreachable"));
 }
 
 fn ctx_passthrough() -> (SessionContext, CatalogRegistry) {

@@ -50,20 +50,65 @@ const FNP15: &[(&str, &str)] = &[
     ),
 ];
 
+const SKETCHES: &[&str] = &[
+    "hll_sketch_agg",
+    "hll_sketch_estimate",
+    "hll_union",
+    "hll_union_agg",
+    "kll_merge_agg_bigint",
+    "kll_merge_agg_double",
+    "kll_merge_agg_float",
+    "kll_sketch_agg_bigint",
+    "kll_sketch_agg_double",
+    "kll_sketch_agg_float",
+    "kll_sketch_get_n_bigint",
+    "kll_sketch_get_n_double",
+    "kll_sketch_get_n_float",
+    "kll_sketch_get_quantile_bigint",
+    "kll_sketch_get_quantile_double",
+    "kll_sketch_get_quantile_float",
+    "kll_sketch_get_rank_bigint",
+    "kll_sketch_get_rank_double",
+    "kll_sketch_get_rank_float",
+    "kll_sketch_merge_bigint",
+    "kll_sketch_merge_double",
+    "kll_sketch_merge_float",
+    "kll_sketch_to_string_bigint",
+    "kll_sketch_to_string_double",
+    "kll_sketch_to_string_float",
+    "theta_difference",
+    "theta_intersection",
+    "theta_intersection_agg",
+    "theta_sketch_agg",
+    "theta_sketch_estimate",
+    "theta_union",
+    "theta_union_agg",
+];
+
+const SKETCH_REASON: &str = "is reachable without a JVM and is deferred by cost: Spark sketch \
+     columns are Apache DataSketches binary blobs, and DataFusion's hyperloglog.rs is a \
+     different format that cannot serve the blob. See docs/spark-sql-iceberg-parity.md \
+     (FNP-16 sketches).";
+
 /// Message for a declared-absent Spark function, if this unit currently owns the name.
 #[must_use]
-pub fn refusal_message(name: &str) -> Option<&'static str> {
+pub fn refusal_message(name: &str) -> Option<String> {
     let key = name.to_ascii_lowercase();
-    FNP15
-        .iter()
-        .find(|(owned, _)| *owned == key)
-        .map(|(_, message)| *message)
+    if let Some((_, message)) = FNP15.iter().find(|(owned, _)| *owned == key) {
+        return Some((*message).to_string());
+    }
+    if SKETCHES.binary_search(&key.as_str()).is_ok() {
+        return Some(format!("{key} {SKETCH_REASON}"));
+    }
+    None
 }
 
 /// Names this unit currently refuses at parse altitude.
 #[must_use]
 pub fn armed_names() -> Vec<&'static str> {
-    FNP15.iter().map(|(name, _)| *name).collect()
+    let mut names: Vec<&'static str> = FNP15.iter().map(|(name, _)| *name).collect();
+    names.extend(SKETCHES.iter().copied());
+    names
 }
 
 /// Refuse a declared-absent function on a parsed statement.
@@ -74,7 +119,7 @@ pub fn refuse_in_statement(statement: &Statement) -> Result<()> {
     if statement.visit(&mut probe).is_break()
         && let Some(message) = probe.message
     {
-        return Err(DataFusionError::NotImplemented(message.to_string()));
+        return Err(DataFusionError::NotImplemented(message));
     }
     Ok(())
 }
@@ -101,7 +146,7 @@ fn refuse_parsed(statements: &[Statement]) -> Result<()> {
 }
 
 struct FunctionProbe {
-    message: Option<&'static str>,
+    message: Option<String>,
 }
 
 impl Visitor for FunctionProbe {
@@ -129,16 +174,34 @@ fn object_name_last(name: &ObjectName) -> String {
 
 #[cfg(test)]
 mod tests {
-    // pins: fnp-15-16/C-001, C-002, C-017
+    // pins: fnp-15-16/C-001, C-002, C-008, C-017
     use super::*;
 
     #[test]
     fn fnp15_six_are_unreachable_and_armed() {
-        assert_eq!(armed_names().len(), 6);
+        assert_eq!(FNP15.len(), 6);
         for (name, _) in FNP15 {
             let message = refusal_message(name).expect("FNP-15 name has a message");
             assert!(message.contains("unreachable"), "{name}: {message}");
             assert!(!message.contains("deferred by cost"), "{name}: {message}");
+        }
+    }
+
+    #[test]
+    fn sketches_are_deferred_by_cost_and_sorted() {
+        assert!(SKETCHES.is_sorted());
+        assert_eq!(SKETCHES.len(), 32);
+        for name in SKETCHES {
+            let message = refusal_message(name).expect("sketch name has a message");
+            assert!(message.contains("deferred by cost"), "{name}: {message}");
+            assert!(
+                message.contains("reachable without a JVM"),
+                "{name}: {message}"
+            );
+            assert!(!message.contains("unreachable"), "{name}: {message}");
+            let error = refuse_in_sql(&format!("SELECT {name}(1)")).expect_err(*name);
+            assert!(matches!(error, DataFusionError::NotImplemented(_)));
+            assert!(error.to_string().contains("deferred by cost"));
         }
     }
 
