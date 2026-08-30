@@ -256,7 +256,7 @@ mod tests {
                 "{name}: {message}"
             );
             assert!(!message.contains("unreachable"), "{name}: {message}");
-            let error = refuse_in_sql(&format!("SELECT {name}(1)")).expect_err(*name);
+            let error = refuse_in_sql(&format!("SELECT {name}(1)")).expect_err(name);
             assert!(matches!(error, DataFusionError::NotImplemented(_)));
             assert!(error.to_string().contains("deferred by cost"));
         }
@@ -274,7 +274,7 @@ mod tests {
                 "{name}: {message}"
             );
             assert!(!message.contains("unreachable"), "{name}: {message}");
-            let error = refuse_in_sql(&format!("SELECT {name}(1)")).expect_err(*name);
+            let error = refuse_in_sql(&format!("SELECT {name}(1)")).expect_err(name);
             assert!(matches!(error, DataFusionError::NotImplemented(_)));
         }
     }
@@ -291,7 +291,7 @@ mod tests {
                 "{name}: {message}"
             );
             assert!(!message.contains("unreachable"), "{name}: {message}");
-            let error = refuse_in_sql(&format!("SELECT {name}(1)")).expect_err(*name);
+            let error = refuse_in_sql(&format!("SELECT {name}(1)")).expect_err(name);
             assert!(matches!(error, DataFusionError::NotImplemented(_)));
         }
     }
@@ -309,7 +309,7 @@ mod tests {
                 "{name}: {message}"
             );
             assert!(!message.contains("unreachable"), "{name}: {message}");
-            let error = refuse_in_sql(&format!("SELECT {name}(1)")).expect_err(*name);
+            let error = refuse_in_sql(&format!("SELECT {name}(1)")).expect_err(name);
             assert!(matches!(error, DataFusionError::NotImplemented(_)));
         }
     }
