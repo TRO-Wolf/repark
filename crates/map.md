@@ -11,7 +11,7 @@ pins: comment-condensation-2/C-002, C-003, C-004, C-005, C-007, C-008, C-009, C-
 
 CC-3 (2026-08-30) continues one level deeper on a named roster and moves test modules under
 `tests/` plus `repark-sql` v3 modules under `v3/`. Ledger:
-[cc-3-comment-condensation-ledger.md](../task/ledgers/staging/cc-3-comment-condensation-ledger.md).
+[cc-3-comment-condensation-ledger.md](../task/ledgers/completed/cc-3-comment-condensation-ledger.md).
 
 | Clause | What changed |
 |---|---|

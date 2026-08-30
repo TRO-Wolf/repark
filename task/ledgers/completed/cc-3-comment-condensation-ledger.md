@@ -80,7 +80,7 @@ or un-restored byte pins.
 | C-005 | Size gates ratchet in both homes (`scripts/check_rust_file_size.py` and `test_cap_1_source_file_line_cap.py`) to the exact new line counts. A file that drops to ≤ 1000 lines loses its row. | Both tables equal the measured lengths; `make check-rust-file-size` exit 0. | **PROVEN** | Dual-home ratchets with each slice. Retired iceberg occ.rs/position_delete.rs and spark session_timezone.rs (891) at ≤1000. EXCEPTIONS 41→38. Pre-commit rust-file-size clean. |
 | C-006 | Maps, ledger links, and doc links stay in lockstep with moves and condensation. | `make check-map-sync`, `make check-ledgers`; path-only repairs on archived-ledger links and `docs/spark-sql-iceberg-parity.md`. | **PROVEN** | Per-directory `map.md` CC-3 notes. AGENTS.md house-style clause is one-line comments; `// === name ===` stay. rustfmt.toml leading comment no longer claims hand-authored banners. D-003 restored the AGENTS.md compaction ceiling to 32000 (file is 32000 B); removed the 32000→32100 sentence from scripts/map.md. `make check-docs-compaction` exit 0. |
 | C-007 | One PR. `make verify` and `make preflight` exit 0. | Recorded commands and exit codes. | **OPEN** | Round-3 HEAD `8a1a94a` (2026-08-30): `make ci` exit 0; `make verify` exit 0; `make preflight` exit 0 (facade 3764 passed, 74 skipped); `make py-test` exit 0 (459 passed). PR stays with the orchestrator. |
-| C-008 | Closing Critic attestation. | Orchestrator Critic. | **OPEN** | Actor does not close this clause. |
+| C-008 | Closing Critic attestation. | Orchestrator Critic. | **PROVEN** | Orchestrator Critic 2026-08-30 over a fresh clone at `42d1bba` (context break: artifacts, not the Actor's summary): comment-stripped token equivalence base→HEAD for all 161 changed Rust files — every difference is a `mod` declaration or module path; every moved test index declared under `#[cfg(test)]`; size-gate table: 41→38 rows, no key ratcheted upward, retired rows at 908/919/891 lines; whole-tree inventory `Model:` 28/28, `pins:` 152/152, `MUTATION:` 31/31; byte-frozen family hashes unchanged; forbidden-literal scan 0 hits over added lines and messages; orchestrator-run `make ci` and `make verify` exit 0; 88 remaining banner lines are all in non-rostered files. Four findings filed and remediated during the run (D-001 width-cut fragments S1, D-002 wrapped-line residue S2, D-003 upward compaction ceiling S2, D-004 test-pinned comment reworded S1); no open S0/S1. |
 
 VERDICT: OPEN (PROVEN=6, OPEN=2, REJECTED=0).
 
@@ -97,4 +97,66 @@ PROPORTIONALITY_RUBRIC:
     clarity: PASS (8/8 clauses written; C-001 has Q-001)
   path: STANDARD
   recorded_by: Actor
+```
+
+## Closing Critic (orchestrator, 2026-08-30)
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: cc-3-comment-condensation
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: >
+        Walked C-001..C-008 against the brief and the two rulings. C-004 was attacked with an
+        independent comment-stripped token comparison of every changed Rust file, not the
+        Actor's equiv.py. C-003 was widened to test-pinned comment bytes after D-004.
+      artifacts: [task/ledgers/completed/cc-3-comment-condensation-ledger.md:C-001..C-008]
+    - id: AT-2
+      status: ATTACKED
+      evidence: >
+        Edge inputs for the condensation: protected lines, clippy-forced # Errors shape,
+        wrapped original lines, byte-pinned comments, files crossing the 1000-line ceiling.
+        D-001 and D-002 were found by exactly these probes.
+      artifacts: [scripts/check_rust_file_size.py, python/repark-parity/tests/test_pr_245_revalidation_record.py]
+    - id: AT-3
+      status: N/A
+      justification: comment-only and rename-only change; no state is written by the diff.
+    - id: AT-4
+      status: N/A
+      justification: no concurrency surface changes; token streams are identical.
+    - id: AT-5
+      status: ATTACKED
+      evidence: >
+        Rename purity checked with git -M similarity and cfg(test) placement of every new
+        index; pub(crate) visibility on tests::tracing is the minimum that keeps the callers
+        compiling and is test-only.
+      artifacts: [crates/repark-iceberg/src/tests/mod.rs, crates/repark-core/src/session/tests/mod.rs]
+    - id: AT-6
+      status: ATTACKED
+      evidence: >
+        Full gate roster re-run by the orchestrator (make ci, make verify) on the delivered
+        HEAD in addition to the Actor's make preflight and make py-test; fast gates re-run on
+        the fresh Critic clone.
+      artifacts: [scripts/check_ledger_grammar.py, scripts/check_docs_compaction.py]
+    - id: AT-7
+      status: N/A
+      justification: no dependency, lockfile, or workflow change.
+    - id: AT-8
+      status: ATTACKED
+      evidence: >
+        Forbidden-literal scan over every added line and commit message on the branch: 0
+        hits. Identity byte-exact and the Grok trailer present on all 17 Actor commits.
+      artifacts: [task/ledgers/completed/cc-3-comment-condensation-ledger.md]
+    - id: AT-9
+      status: N/A
+      justification: no Spark-visible behavior, error text, or default changes.
+    - id: AT-10
+      status: ATTACKED
+      evidence: >
+        Quantified claims remeasured: comment lines per crate, banner census, inventory
+        counts, size-gate rows, frozen hashes. Residual banners (88) are outside the roster
+        and are recorded as CC-4 candidates, not claimed done.
+      artifacts: [crates/map.md]
+  complete: true
 ```
