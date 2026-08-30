@@ -181,9 +181,29 @@ const GEOSPATIAL_REASON: &str = "is reachable without a JVM and is deferred by c
      GEOGRAPHY/GEOMETRY have no Arrow representation and no vendored WKB codec. See \
      docs/spark-sql-iceberg-parity.md (FNP-16 geospatial).";
 
+const FNP15: &[&str] = &[
+    "input_file_block_length",
+    "input_file_block_start",
+    "java_method",
+    "reflect",
+    "try_reflect",
+    "unwrap_udt",
+];
+
+/// Names this door currently refuses at parse altitude.
+#[must_use]
+pub(crate) fn armed_names() -> Vec<&'static str> {
+    let mut names: Vec<&'static str> = FNP15.to_vec();
+    names.extend(SKETCHES.iter().copied());
+    names.extend(CSV_XML_XPATH.iter().copied());
+    names.extend(VARIANT.iter().copied());
+    names.extend(GEOSPATIAL.iter().copied());
+    names
+}
+
 #[cfg(test)]
 mod tests {
-    // pins: fnp-15-16/C-001, C-002, C-008, C-009, C-010, C-011, C-017
+    // pins: fnp-15-16/C-001, C-002, C-008, C-009, C-010, C-011, C-013, C-017
     use datafusion::error::DataFusionError;
     use datafusion::sql::sqlparser::dialect::GenericDialect;
     use datafusion::sql::sqlparser::parser::Parser;

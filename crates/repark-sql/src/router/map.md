@@ -8,6 +8,9 @@ order the guards run — as distinct from what each handler then does.
 ## Contents
 
 - `tests.rs` — the `#[cfg(test)] mod tests;` declared in `../router.rs`.
+  FNP-15/16: `execute_refuses_every_armed_declared_name` walks `declared_refuse::armed_names()`
+  through `execute` and asserts `NotImplemented` plus the registry-section reason.
+  pins: fnp-15-16/C-001, C-008, C-009, C-010, C-011
 
 ## Pointers
 
