@@ -35,19 +35,15 @@ pub(crate) struct Ctas {
     query_sql: String,
     if_not_exists: bool,
     or_replace: bool,
-    /// `TBLPROPERTIES (...)` (e.g. `format-version`), applied at table creation.
+    /// `TBLPROPERTIES (...)` (e.g.
     properties: HashMap<String, String>,
     /// Requested `TBLPROPERTIES ('format-version' = …)`, consumed at execute (session opt-in).
     format_version: Option<String>,
-    /// The `PARTITIONED BY` fields, in clause order (empty = unpartitioned) — identity columns
-    /// and non-identity transforms (`bucket`/`truncate`/`year[s]`/`month[s]`/`day[s]`/`hour[s]`).
-    /// Extracted by the token pre-pass and validated in [`build_ctas`] (arity + width `> 0`);
-    /// resolved against the derived iceberg schema in [`build_partition_spec`].
+    /// The `PARTITIONED BY` fields, in clause order — identity columns and non-identity transforms.
     partition_fields: Vec<PartitionFieldSpec>,
 }
 
-/// Build a [`Ctas`] from a parsed statement and token-extracted partitioning. Validate target
-/// shape, transforms, typed partition columns, and nested references before execution.
+/// Build a [`Ctas`] from a parsed statement and token-extracted partitioning.
 pub(crate) fn build_ctas(
     create: &CreateTable,
     partitioning: &[PartitionedByElement],
@@ -55,8 +51,7 @@ pub(crate) fn build_ctas(
     let query = create.query.as_ref().ok_or_else(|| {
         DataFusionError::Plan("build_ctas requires a CTAS (query must be Some)".into())
     })?;
-    // TEMPORARY / EXTERNAL / TRANSIENT / VOLATILE must not silently create durable Iceberg
-    // tables via CTAS (column-def path refused).
+    // TEMPORARY, EXTERNAL, TRANSIENT, and VOLATILE CTAS must not silently create durable tables.
     if create.temporary {
         return Err(DataFusionError::NotImplemented(
             "CREATE TEMPORARY TABLE … AS SELECT is not supported for Iceberg tables yet — omit \
@@ -75,7 +70,7 @@ pub(crate) fn build_ctas(
                 .into(),
         ));
     }
-    // LOCATION / Hive ROW FORMAT etc. must not be silently dropped.
+    // LOCATION / Hive ROW FORMAT etc.
     refuse_unsupported_create_table_clauses(create, "CTAS")?;
     // Explicit CTAS column lists fail before partition validation, matching Spark's parse contract.
     if !create.columns.is_empty() {
@@ -128,8 +123,7 @@ pub(crate) fn build_ctas(
             }
         }
     }
-    // Reserved Iceberg key — consumed here, applied as `TableCreation.format_version` at execute
-    // (V3-2: v3 needs `repark.sql.allowCreateFormatVersion3`).
+    // Reserved Iceberg key — consumed here, applied as `TableCreation.format_version` at execute.
     let format_version = properties.remove("format-version");
 
     Ok(Ctas {
@@ -146,8 +140,7 @@ pub(crate) fn build_ctas(
     })
 }
 
-/// Resolve and validate the target before the query, derive its schema, stream rows into a staged
-/// transaction, and publish once. A source or commit failure leaves the prior catalog pointer.
+/// Resolve the target, derive schema, stream rows into a staged transaction, and publish once.
 pub(crate) async fn execute_ctas(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -172,8 +165,7 @@ pub(crate) async fn execute_ctas(
         }
     }
 
-    // Resolve locations before the SELECT. Service-managed catalogs create first because the
-    // service assigns the table location and cannot stage it.
+    // Resolve locations before the SELECT.
     let mode = if existed {
         CtasMode::Replace
     } else if catalogs.location_policy(&ctas.catalog)
@@ -187,8 +179,7 @@ pub(crate) async fn execute_ctas(
 
     // Analyze the SELECT before writing so schema, partitioning, and rows share Spark semantics.
     let query = spark_ast::execute_passthrough(ctx, catalogs, &ctas.query_sql).await?;
-    // Re-analyze to a fixpoint so rewritten expression types propagate through set operations and
-    // the writer receives the same schema as the executed batches.
+    // Re-analyze to a fixpoint.
     let analyzed_plan =
         repark_functions::analyze_eagerly(&ctx.state(), query.logical_plan().clone())?;
     let query = ctx.execute_logical_plan(analyzed_plan).await?;
@@ -217,11 +208,7 @@ pub(crate) async fn execute_ctas(
         .await;
     }
     let staged = if let CtasMode::StagedCreate(plan) = mode {
-        // Create: location + FileIO were resolved above the SELECT (ADV-3). The FileIO's backend
-        // matches the location scheme (LocalFs for a local warehouse, S3 for an `s3://`/`s3a://`
-        // warehouse) so `publish_create_table` reloads the metadata the stage wrote from the same
-        // storage. The partition spec (`None` = unpartitioned) binds inside
-        // `from_table_creation` (fork pin `fe30d7d4`, `table_metadata_builder.rs:167-197`).
+        // Create: location + FileIO were resolved above the SELECT (ADV-3).
         let creation = TableCreation::builder()
             .name(ctas.table.clone())
             .location(plan.location)
@@ -234,11 +221,7 @@ pub(crate) async fn execute_ctas(
             .await
             .map_err(iceberg_err)?
     } else {
-        // Replace: stage against the existing table (its own location + FileIO). The NEW
-        // definition is authoritative, Spark/Java `buildReplacement` semantics: a clause sets
-        // the new default spec, no clause (`None`) resets the table to unpartitioned (the
-        // fork's replace arm destructures `TableCreation.partition_spec` into
-        // `add_default_partition_spec` — design record D4).
+        // Replace: stage against the existing table (its own location + FileIO).
         let existing = catalog
             .load_table(&table_ident)
             .await
@@ -261,8 +244,7 @@ pub(crate) async fn execute_ctas(
             .map_err(iceberg_err)?
     };
 
-    // STREAM the SELECT into the staged table (WG-2 bounded memory). Mid-stream error drops the
-    // staged transaction unpublished.
+    // STREAM the SELECT into the staged table (WG-2 bounded memory).
     let stream = query.execute_stream().await?;
     let data_files = write_ctas_stream(ctx, staged.table(), stream).await?;
     staged
@@ -276,10 +258,7 @@ pub(crate) async fn execute_ctas(
     ctx.read_empty()
 }
 
-/// ===========================================================================================
 /// Stream a CTAS SELECT into Iceberg data files, honouring session write concurrency.
-/// ===========================================================================================
-///
 /// # Errors
 /// Propagates stream, conform, or writer errors from `repark-write`.
 pub(crate) async fn write_ctas_stream(
@@ -305,24 +284,15 @@ pub(crate) async fn write_ctas_stream(
     }
 }
 
-/// The table location + scheme-selected `FileIO` for a staged CTAS / column-def **create**,
-/// resolved *before* any data write (ADV-3) so a misconfigured target fails loud early.
+/// Resolve table location and `FileIO` for staged CTAS before any data write.
 pub(crate) struct CreatePlan {
     pub(crate) location: String,
     pub(crate) file_io: FileIO,
 }
 
-/// Resolve the [`CreatePlan`] for a staged CTAS create: the table location (the namespace `location`
-/// property, or the [`LocationPolicy`] fallback) and a `FileIO` whose backend matches that location's
-/// scheme — `LocalFs` for a local warehouse, the fork's OpenDAL S3 storage for an `s3://`/`s3a://`
-/// (Glue) warehouse — so the create arm can write to and reload from the intended storage. The
-/// `Catalog` does not expose its own `FileIO`, so the scheme is derived here from the resolved
-/// location via [`repark_iceberg::catalog::file_io_for_location`] (threading the catalog's load-time
-/// properties for S3 region/credentials).
-///
+/// Resolve the [`CreatePlan`] for a staged CTAS create.
 /// # Errors
-/// Returns a plan error if the location cannot be resolved (fail-loud policy) or carries an
-/// unsupported storage scheme.
+/// Returns a plan error if the location cannot be resolved or uses an unsupported scheme.
 pub(crate) async fn resolve_create_plan(
     catalog: &dyn Catalog,
     catalogs: &CatalogRegistry,
@@ -340,7 +310,6 @@ pub(crate) async fn resolve_create_plan(
 }
 
 /// Shared staged-create location + `FileIO` resolution for CTAS and column-def CREATE.
-///
 /// # Errors
 /// Location-policy / `FileIO` failures as [`DataFusionError`].
 pub(crate) async fn resolve_create_plan_for(
@@ -351,8 +320,7 @@ pub(crate) async fn resolve_create_plan_for(
     table: &str,
     full_name: &str,
 ) -> Result<CreatePlan> {
-    // The policy is registered alongside the handle; default to the strict (fail-loud) policy if it
-    // is somehow absent, never the silent temp fallback.
+    // The policy is registered alongside the handle.
     let location_policy = catalogs
         .location_policy(catalog_name)
         .unwrap_or(LocationPolicy::RequireExplicitLocation);
@@ -369,8 +337,7 @@ pub(crate) async fn resolve_create_plan_for(
     Ok(CreatePlan { location, file_io })
 }
 
-/// Resolve a table location for staged create, preferring `location` then `location_uri`. Strict
-/// catalogs refuse when neither exists; local catalogs may use their registration root.
+/// Resolve a table location for staged create, preferring `location` then `location_uri`.
 pub(crate) async fn resolve_table_create_location(
     catalog: &dyn Catalog,
     catalog_name: &str,
@@ -397,9 +364,7 @@ pub(crate) async fn resolve_table_create_location(
         return Ok(format!("{prefix}/{table}"));
     }
     match policy {
-        // The fallback root is resolved once at catalog registration and carried on the policy — no
-        // `std::env::temp_dir()` must not be read at query time. The root is
-        // the warehouse argument, not the process temp dir.
+        // The fallback root is resolved once at catalog registration and carried on the policy.
         LocationPolicy::TempFallbackAllowed { root } => {
             let mut path = root;
             path.push("repark_ctas");
@@ -431,22 +396,15 @@ pub(crate) async fn resolve_table_create_location(
 
 /// How this CTAS reaches its target, resolved BEFORE the SELECT runs (ADV-3).
 pub(crate) enum CtasMode {
-    /// Create on a catalog whose locations `RePark` chooses: stage at the resolved location, write,
-    /// publish the catalog pointer last (full catalog-pointer atomicity).
+    /// Create on a catalog whose locations `RePark` chooses.
     StagedCreate(CreatePlan),
-    /// Create on a [`LocationPolicy::ServiceManagedLocation`] catalog (S3 Tables): the service
-    /// assigns the location at create, so staging is impossible — create-first + append +
-    /// drop-on-abort ([`execute_ctas_service_managed`]).
+    /// Create on a [`LocationPolicy::ServiceManagedLocation`] catalog.
     ServiceManagedCreate,
     /// OR REPLACE of an existing table: stage against the existing table's own location.
     Replace,
 }
 
-/// Pre-SELECT validation for a service-managed CTAS create (the ADV-3 fail-early half that is
-/// still possible when no location can be resolved up front): the target namespace must exist,
-/// and the identifier-hygiene checks the staged path runs are applied for consistency (the
-/// service composes its own paths, but a hostile identifier should fail here, not at AWS).
-///
+/// Pre-SELECT validation for a service-managed CTAS create.
 /// # Errors
 /// Returns a plan error if the namespace cannot be loaded or an identifier fails hygiene.
 pub(crate) async fn validate_service_managed_target(
@@ -464,11 +422,7 @@ pub(crate) async fn validate_service_managed_target(
     reject_path_escape_ident(ctas.table.as_str(), "table")
 }
 
-/// ===========================================================================================
-/// Execute CTAS on a service-managed catalog with create-first, streamed append, one publish, and
-/// drop-on-abort. An empty source leaves the new table without an empty snapshot.
-/// ===========================================================================================
-///
+/// Execute service-managed CTAS: create-first, streamed append, one publish, drop-on-abort.
 /// # Errors
 /// Returns create errors and names both the source failure and any abort failure.
 #[allow(clippy::too_many_arguments)]
@@ -482,8 +436,7 @@ pub(crate) async fn execute_ctas_service_managed(
     format_version: iceberg::spec::FormatVersion,
     query: DataFrame,
 ) -> Result<DataFrame> {
-    // Location deliberately not set: the service assigns it (a user-supplied one is rejected by
-    // the fork's S3 Tables catalog).
+    // Location deliberately not set: the service assigns it.
     let creation = TableCreation::builder()
         .name(ctas.table.clone())
         .schema(iceberg_schema)
@@ -529,9 +482,7 @@ pub(crate) async fn execute_ctas_service_managed(
     ctx.read_empty()
 }
 
-/// Refuse LOCATION / Hive ROW FORMAT / SERDE / STORED AS clauses that sqlparser accepts but
-/// `RePark` does not apply — silent drop would mis-place tables or imply Hive storage semantics
-/// Used by column-def CREATE and CTAS.
+/// Refuse LOCATION / Hive ROW FORMAT / SERDE / STORED AS clauses.
 pub(crate) fn refuse_unsupported_create_table_clauses(
     create: &CreateTable,
     form: &str,
@@ -569,9 +520,7 @@ pub(crate) fn refuse_unsupported_create_table_clauses(
              TBLPROPERTIES ('write.format.default' = 'parquet') when needed"
         )));
     }
-    // Table COMMENT is not mapped to Iceberg properties yet — refuse rather than silent drop
-    // sqlparser parks `COMMENT '…'` in `table_options: Plain([Comment(…)])`
-    // (and sometimes `create.comment`).
+    // Table COMMENT is not mapped to Iceberg properties yet.
     if create.comment.is_some() {
         return Err(DataFusionError::NotImplemented(format!(
             "CREATE TABLE … COMMENT is not supported for Iceberg {form} yet — use TBLPROPERTIES \

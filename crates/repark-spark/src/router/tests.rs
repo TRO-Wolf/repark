@@ -55,8 +55,7 @@ async fn select_passthrough_still_executes() {
 
 #[tokio::test]
 async fn read_only_set_reaches_p11_refusal() {
-    // The positional `read_only_catalogs` argument (the seam's `EngineContext::read_only`
-    // field) drives the P11 direction-note on the INSERT passthrough path.
+    // read_only_catalogs drives the P11 direction-note on the INSERT passthrough path.
     let (ctx, catalogs) = ctx();
     let read_only: std::collections::HashSet<String> = ["pg".to_string()].into_iter().collect();
     let error = crate::execute_with_read_only(

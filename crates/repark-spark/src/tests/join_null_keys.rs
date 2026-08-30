@@ -1,7 +1,4 @@
 //! Pins Spark SQL three-valued JOIN behavior for NULL keys on the Arrow path.
-//!
-//! `NULL = NULL` is unknown, so NULL keys do not match. Values, types, and nullability are
-//! checked against the Spark 4.1.2 corpus.
 
 use super::super::*;
 use super::common::*;
@@ -130,12 +127,7 @@ fn string_at(array: &dyn Array, row: usize) -> Option<String> {
     );
 }
 
-/// ===========================================================================================
 /// Spark-door NULL join keys never match on INNER / LEFT / SEMI / ANTI.
-///
-/// Goldens: live Spark 4.1.2 (G4 corpus + this unit's lock re-verify). `ORDER BY
-/// … NULLS LAST` pins row order so the assertion is not a multiset compare.
-/// ===========================================================================================
 #[tokio::test]
 async fn spark_door_null_keys_never_match_inner_left_semi_anti() {
     let warehouse = TempDir::new().unwrap();

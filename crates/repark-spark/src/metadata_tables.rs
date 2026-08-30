@@ -1,10 +1,4 @@
 //! Spark Iceberg metadata-table name resolution.
-//!
-//! Spark uses `cat.ns.tbl.snapshots`; the fork uses `cat.ns.tbl$snapshots`. Rewrite only when the
-//! full path is not a real table and the parent is an Iceberg base table. Real tables win; unknown
-//! suffixes remain ordinary resolution. Time-travel composition and metadata-table DML/DDL refuse.
-//! Fork residues remain documented in the metadata-table oracle: unpartitioned `partition` and
-//! `readable_metrics` field-id order differ from Java.
 
 use datafusion::error::{DataFusionError, Result};
 use datafusion::sql::sqlparser::dialect::DatabricksDialect;
@@ -17,14 +11,7 @@ use repark_core::CatalogRegistry;
 
 use crate::catalog_ops::iceberg_err;
 
-/// ===========================================================================================
 /// Whether `name` is a known Iceberg metadata-table suffix (case-insensitive).
-///
-/// Mirrors fork `MetadataTableType::try_from` (`inspect/metadata_table.rs`, pin
-/// `5e7b2e4`). Names: `snapshots`, `manifests`, `files`, `data_files`, `delete_files`,
-/// `entries`, `all_files`, `all_data_files`, `all_delete_files`, `all_entries`, `history`,
-/// `refs`, `metadata_log_entries`, `partitions`, `all_manifests`, `position_deletes`.
-/// ===========================================================================================
 #[must_use]
 pub fn is_metadata_table_name(name: &str) -> bool {
     MetadataTableType::try_from(name.to_ascii_lowercase().as_str()).is_ok()
@@ -51,9 +38,6 @@ const METADATA_TABLE_NAMES: &[&str] = &[
 ];
 
 /// Canonical lowercase metadata-table suffix, if `name` is a known type.
-///
-/// Recognition uses fork `MetadataTableType::try_from`; the returned `&'static str` is the
-/// matching entry of [`METADATA_TABLE_NAMES`] (must equal `metadata_type.as_str()`).
 #[must_use]
 pub fn canonical_metadata_table_name(name: &str) -> Option<&'static str> {
     let lowered = name.to_ascii_lowercase();
@@ -64,12 +48,7 @@ pub fn canonical_metadata_table_name(name: &str) -> Option<&'static str> {
         .find(|candidate| *candidate == metadata_type.as_str())
 }
 
-/// ===========================================================================================
 /// Fast token sniff: SQL may contain a Spark-style multipart metadata-table path.
-///
-/// Cheap gate before the async resolve/rewrite pass. False positives are fine (resolved away);
-/// false negatives would skip a real rewrite.
-/// ===========================================================================================
 #[must_use]
 pub fn sql_may_have_metadata_table_path(sql: &str) -> bool {
     let Ok(tokens) = Tokenizer::new(&DatabricksDialect {}, sql).tokenize() else {
@@ -90,8 +69,6 @@ struct MetadataPathSpan {
     /// Canonical lowercase metadata suffix.
     suffix: &'static str,
     /// Whether this identifier sits in a relation position (FROM/JOIN/INTO/UPDATE/TABLE…).
-    /// Column references (`SELECT cat.ns.tbl.files`) are **not** relation positions and must not
-    /// rewrite.
     is_table_reference: bool,
     /// Whether this identifier is a DML/DDL write target (INSERT/UPDATE/DELETE/MERGE/CTAS…).
     is_write_target: bool,
@@ -113,14 +90,9 @@ fn display_path(parts: &[String], suffix: &str) -> String {
     }
 }
 
-/// ===========================================================================================
-/// Resolve Spark-style metadata-table paths, refuse DML + AS OF composition, rewrite reads to
-/// the fork's `table$meta` form. Returns `Ok(None)` when nothing rewrites (and no error).
-/// ===========================================================================================
-///
+/// Resolve Spark metadata-table paths, refuse DML plus AS OF, and rewrite reads to `table$meta`.
 /// # Errors
 /// - DML/DDL targeting a resolved metadata table → plan error naming the table.
-/// - AS OF composition with a metadata table → plan error.
 pub async fn prepare_metadata_table_sql(
     catalogs: &CatalogRegistry,
     sql: &str,
@@ -173,8 +145,7 @@ pub async fn prepare_metadata_table_sql(
     let mut tokens = tokens;
     rewrites.sort_by_key(|(span, _)| span.start);
     for (span, dollar) in rewrites.into_iter().rev() {
-        // Replace only the last two name parts (`table` `.` `suffix`) with `table$suffix`,
-        // leaving catalog/namespace prefixes intact.
+        // Replace only the last two name parts.
         let last_part_token = span.end - 1;
         let mut table_token = last_part_token;
         while table_token > span.start {
@@ -211,12 +182,10 @@ struct DollarRewrite {
 }
 
 /// Emit `table$suffix` as a Word, preserving quoting when the base name is not a bare ident.
-/// Quote styles `Word::Display` accepts without panicking (sqlparser tokenizer).
 fn safe_ident_quote(prefer_quote: Option<char>) -> Option<char> {
     match prefer_quote {
         Some('"' | '`' | '[') => prefer_quote,
         // Single-quoted / unknown styles must not reach Word Display.
-        // sqlparser only accepts ", `, [ — normalize everything else to ANSI double quotes.
         Some(_) => Some('"'),
         None => None,
     }
@@ -263,8 +232,6 @@ async fn resolve_candidate(
     }
 
     // Parent is a real Iceberg table; suffix is a known metadata type → `$` form.
-    // DataFusion GenericDialect accepts `$` as an identifier part; the catalog schema
-    // provider resolves `table$suffix` (fork schema.rs:151-171).
     let Some(table_name) = parent.last().cloned() else {
         return Ok(ResolveDecision::Skip);
     };
@@ -280,19 +247,6 @@ async fn resolve_candidate(
 }
 
 /// Whether `parts` names an existing iceberg table under a registered catalog.
-///
-/// `parts[0]` is the catalog when registered; remaining segments form
-/// `NamespaceIdent` (all but last) + table name (last). Single-level and multi-level
-/// namespaces are both accepted via [`NamespaceIdent::from_vec`].
-///
-/// Missing namespace / missing table → `false` (not an error): multi-level probes for the
-/// "real table wins" check routinely ask about namespaces that do not exist.
-///
-/// Glue and HMS `validate_namespace` return [`ErrorKind::DataInvalid`] when the namespace
-/// is not exactly one level (`Invalid database name: … hierarchical namespaces are not
-/// supported`). A Spark 4-part metadata path (`cat.ns.tbl.snapshots`) probes exactly that
-/// shape, so the probe must treat it as "not a real table" and fall through to the `$`
-/// rewrite. Single-level `DataInvalid` and any other kind stay fatal.
 fn table_exists_probe_from_error(ident: &TableIdent, error: iceberg::Error) -> Result<bool> {
     match error.kind() {
         ErrorKind::NamespaceNotFound | ErrorKind::TableNotFound => Ok(false),
@@ -381,14 +335,9 @@ fn find_candidate_spans(tokens: &[Token]) -> Vec<MetadataPathSpan> {
         while end_sig + 1 < significant.len() && is_period(end_sig) && is_ident(end_sig + 1) {
             end_sig += 2;
         }
-        // end_sig is exclusive; parts sit at start, start+2, … → count = (end-start)/2 + 0?
-        // start=0,end=7 for a.b.c.d → (7-0)/2 = 3 … need +0 for half-open over Period-linked:
-        // number of idents = 1 + number of (Period Ident) pairs = 1 + (end_sig-start_sig-1)/2
-        // = (end_sig - start_sig + 1) / 2  with half-open [start, end).
+        // end_sig is exclusive.
         let part_count = (end_sig - start_sig).div_ceil(2);
-        // Need ≥ 3 dotted parts so parent can be catalog.ns.table (or ns.table under a catalog
-        // prefix of length ≥ 2 once catalog is stripped — minimum path is cat.ns.suffix for a
-        // real-table-named-suffix pin, or cat.ns.tbl.suffix for metadata).
+        // Need ≥ 3 dotted parts so parent can be catalog.ns.table.
         if part_count >= 3 {
             let parts = collect_parts(&significant[start_sig..end_sig]);
             if let Some(suffix) = parts
@@ -418,9 +367,6 @@ fn find_candidate_spans(tokens: &[Token]) -> Vec<MetadataPathSpan> {
 }
 
 /// Whether the identifier at `name_sig_start` is a relation (table) position, not a column ref.
-///
-/// Relation positions: FROM / JOIN / USING / INTO / UPDATE / OVERWRITE / CREATE|TRUNCATE TABLE /
-/// comma-separated FROM-list entries. SELECT/WHERE/ON/GROUP BY column paths are excluded.
 fn is_table_reference_context(significant: &[(usize, &Token)], name_sig_start: usize) -> bool {
     if is_write_target_context(significant, name_sig_start) {
         return true;
@@ -475,8 +421,7 @@ fn is_table_reference_context(significant: &[(usize, &Token)], name_sig_start: u
     }
 }
 
-/// Heuristic: a comma-separated item is a FROM-list table when a FROM appears to the left
-/// before a SELECT/WHERE/SET/HAVING/GROUP/ORDER/UNION boundary.
+/// Heuristic: a comma-separated item is a FROM-list table.
 fn in_from_item_list(significant: &[(usize, &Token)], comma_sig: usize) -> bool {
     let word = |index: usize| -> Option<String> {
         match significant.get(index).map(|(_, token)| *token) {
@@ -524,8 +469,7 @@ fn is_write_target_context(significant: &[(usize, &Token)], name_sig_start: usiz
         }
     };
 
-    // CREATE [OR REPLACE] TABLE t | TRUNCATE TABLE t | INSERT OVERWRITE TABLE t
-    // Must inspect left of TABLE *before* peeling it (peel-first made CREATE dead).
+    // Inspect left of TABLE before peeling it; peel-first made CREATE TABLE intercepts dead.
     if cursor > 0 && word(cursor - 1).as_deref() == Some("TABLE") {
         let mut index = cursor - 1;
         while index > 0 {
@@ -539,8 +483,7 @@ fn is_write_target_context(significant: &[(usize, &Token)], name_sig_start: usiz
                 Some(_) | None => break,
             }
         }
-        // Not a DDL TABLE target — still peel TABLE so INTO/OVERWRITE paths below can match
-        // e.g. rare `INSERT INTO TABLE t` forms.
+        // Not a DDL TABLE target — still peel TABLE so INTO/OVERWRITE paths below can match e.g.
         cursor -= 1;
     }
     // CREATE [OR REPLACE] VIEW t — metadata is read-only.
@@ -556,14 +499,14 @@ fn is_write_target_context(significant: &[(usize, &Token)], name_sig_start: usiz
         }
     }
 
-    // INSERT … [OVERWRITE] [INTO] t  /  DELETE FROM t  /  UPDATE t  /  MERGE INTO t
+    // INSERT … [OVERWRITE] [INTO] t / DELETE FROM t / UPDATE t / MERGE INTO t
     if cursor == 0 {
         return false;
     }
     let prev = word(cursor - 1);
     match prev.as_deref() {
         Some("INTO") => {
-            // MERGE INTO | INSERT INTO | INSERT OVERWRITE INTO
+            // MERGE INTO | INSERT INTO | INSERT OVERWRITE INTO.
             let mut index = cursor - 1;
             while index > 0 {
                 index -= 1;
@@ -613,11 +556,7 @@ fn has_trailing_as_of(significant: &[(usize, &Token)], name_end_sig: usize) -> b
     ) {
         i += 1;
     }
-    // Optional alias: AS alias / bare alias — skip one optional AS+ident or bare ident that is
-    // not a time-travel keyword, then look for AS OF within the next
-    // few tokens without consuming a FROM/WHERE/JOIN boundary.
-    // Forms: [FOR] VERSION|TIMESTAMP|SYSTEM_VERSION|SYSTEM_TIME AS OF
-    // Optional FOR
+    // Optional alias: AS alias / bare alias.
     if word_at(i).is_some_and(|w| w.eq_ignore_ascii_case("FOR")) {
         i += 1;
     }
@@ -627,8 +566,7 @@ fn has_trailing_as_of(significant: &[(usize, &Token)], name_end_sig: usize) -> b
         Some("VERSION" | "TIMESTAMP" | "SYSTEM_VERSION" | "SYSTEM_TIME")
     );
     if !is_travel_kind {
-        // Bare alias then travel? e.g. `t.snapshots s VERSION AS OF` — rare; also
-        // `t.snapshots VERSION AS OF` handled above. Try skip one non-keyword ident.
+        // Bare alias then travel? e.g.
         if kind.is_some()
             && !matches!(
                 kind.as_deref(),
@@ -813,7 +751,6 @@ mod tests {
             .expect("tokenize column ref");
         let spans = find_candidate_spans(&tokens);
         // Two candidates may appear: SELECT-list files (column) + none on bare table.
-        // Only FROM relation would be 3-part without meta suffix for events itself.
         let select_list = spans
             .iter()
             .find(|span| span.parts.last().map(String::as_str) == Some("files"));

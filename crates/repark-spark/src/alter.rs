@@ -1,8 +1,4 @@
 //! `ALTER TABLE` routing and token rewrites for Spark forms sqlparser cannot model.
-//!
-//! Schema and partition changes use one Iceberg transaction per contiguous operation group. The
-//! provider is re-registered after mutations so renamed and evolved tables remain queryable.
-//! `GenericDialect` parsing preserves Spark `ADD COLUMN … FIRST|AFTER` positions.
 
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
@@ -24,18 +20,10 @@ use crate::{
 };
 use repark_functions::timestamp_type::{SparkTimestampType, spark_timestamp_type_from_options};
 
-/// The value an `UNSET TBLPROPERTIES` key carries after the token rewrite, so the parsed
-/// `SetTblProperties` op can be decoded back into a removal. Namespaced + unguessable so it cannot
-/// collide with a value a user would actually `SET`.
+/// The value an `UNSET TBLPROPERTIES` key carries after the token rewrite.
 const UNSET_SENTINEL: &str = "__repark_unset_tblproperty_sentinel__";
 
-/// ===========================================================================================
 /// Execute an `ALTER TABLE catalog.namespace.table <op>…` against the iceberg catalog.
-///
-/// Resolves the target, groups contiguous schema changes into one transaction, refreshes the
-/// provider after mutations, and refuses unsupported operations.
-/// ===========================================================================================
-///
 /// # Errors
 /// Propagates name-resolution, iceberg, and re-registration errors as [`DataFusionError`].
 pub(crate) async fn execute_alter_table(
@@ -54,9 +42,7 @@ pub(crate) async fn execute_alter_table(
         match operation {
             AlterTableOperation::SetTblProperties { table_properties } => {
                 flush_schema_batch(handle.as_ref(), &ident, &mut schema_batch).await?;
-                // A `SET TBLPROPERTIES` op may carry both real sets and sentinel-flagged removals
-                // (from a token-rewritten `UNSET`). Commit them as ONE transaction so a mid-failure
-                // can never leave half-applied property state (BUG-012).
+                // A `SET TBLPROPERTIES` op may carry both real sets and sentinel-flagged removals.
                 let (sets, unsets) = partition_tblproperties(table_properties);
                 repark_iceberg::write::alter::alter_table_properties(
                     handle.as_ref(),
@@ -87,7 +73,7 @@ pub(crate) async fn execute_alter_table(
                     timestamp_type,
                 )?;
                 if *if_not_exists {
-                    // Iceberg has no IF NOT EXISTS on ADD; soft-skip when the name is already present.
+                    // Iceberg has no IF NOT EXISTS on ADD.
                     if column_exists(handle.as_ref(), &ident, &column_def.name.value).await? {
                         continue;
                     }
@@ -216,7 +202,6 @@ fn schema_change_from_add_column(
     }
     if required {
         // Iceberg rejects required ADD without a default unless allow_incompatible_changes.
-        // Refuse loud rather than silently enabling incompatible evolution.
         return Err(DataFusionError::NotImplemented(format!(
             "ALTER TABLE ADD COLUMN `{}` NOT NULL is not supported yet — Iceberg treats a \
              required add without a default as an incompatible change; add the column as \
@@ -262,9 +247,7 @@ fn schema_change_from_alter_column(
                     column_name.value
                 )));
             };
-            // Only promotion-shaped targets are accepted at the SQL boundary too (stretch rule:
-            // any widen that lands ships with a narrow-refuse twin; non-promotion pairs refuse
-            // loud here with a stable message before the fork gate).
+            // Only promotion-shaped targets are accepted at the SQL boundary too.
             if !is_iceberg_promotion_target(&new_type) {
                 return Err(DataFusionError::Plan(format!(
                     "ALTER COLUMN `{}` TYPE `{data_type}` is not an Iceberg type promotion \
@@ -299,16 +282,14 @@ fn schema_change_from_alter_column(
     }
 }
 
-/// Targets that *can* appear on the right-hand side of an Iceberg promotion (not a full from→to
-/// check — the fork still validates the source column's current type at commit).
+/// Targets that *can* appear on the right-hand side of an Iceberg promotion.
 fn is_iceberg_promotion_target(new_type: &PrimitiveType) -> bool {
     matches!(
         new_type,
         PrimitiveType::Long
             | PrimitiveType::Double
             | PrimitiveType::Decimal { .. }
-            // Identity promotions (same type) are allowed by the fork; listing common primitives
-            // keeps `ALTER COLUMN c TYPE INT` on an int column a no-op rather than a Plan refuse.
+            // Identity promotions are allowed by the fork.
             | PrimitiveType::Int
             | PrimitiveType::Float
             | PrimitiveType::Boolean
@@ -357,8 +338,7 @@ async fn column_exists(
         .any(|field| field.name.to_ascii_lowercase() == needle))
 }
 
-/// Split a parsed `SET TBLPROPERTIES` option list into real sets vs. sentinel-flagged removals (the
-/// latter originating from a token-rewritten `UNSET TBLPROPERTIES`).
+/// Split a parsed `SET TBLPROPERTIES` option list into real sets vs.
 fn partition_tblproperties(
     table_properties: &[datafusion::sql::sqlparser::ast::SqlOption],
 ) -> (std::collections::HashMap<String, String>, Vec<String>) {
@@ -392,15 +372,9 @@ fn resolve_table(name: &ObjectName) -> Result<(String, TableIdent)> {
     ))
 }
 
-/// ===========================================================================================
-/// Rewrite `ALTER TABLE … UNSET TBLPROPERTIES ('k', …)` (which sqlparser 0.59 cannot parse) into a
-/// `SET TBLPROPERTIES ('k' = '<sentinel>', …)` the parser accepts; [`execute_alter_table`] decodes
-/// the sentinel back into removals. Any non-`ALTER … UNSET TBLPROPERTIES` token stream is returned
-/// unchanged, so this is safe to run on every statement (mirroring the other token normalisers).
-/// ===========================================================================================
+/// Rewrite `UNSET TBLPROPERTIES` into a sentinel `SET TBLPROPERTIES` form sqlparser can parse.
 pub(crate) fn rewrite_unset_tblproperties(tokens: &[Token]) -> Vec<Token> {
-    // Match only UNSET immediately before TBLPROPERTIES. A table named `unset` must remain a
-    // table name, not become a SET operation.
+    // Match only UNSET immediately before TBLPROPERTIES.
     let keyword_at = |kw: Keyword| {
         tokens
             .iter()
@@ -434,9 +408,7 @@ pub(crate) fn rewrite_unset_tblproperties(tokens: &[Token]) -> Vec<Token> {
         return tokens.to_vec();
     }
 
-    // Locate the property-list parens that follow `TBLPROPERTIES` and track depth, so we only touch
-    // key tokens inside them. A key is any string-literal / identifier whose next non-whitespace
-    // token is `,` or `)` (i.e. it has no `= value`); we inject `= '<sentinel>'` after it.
+    // Locate the property-list parens that follow `TBLPROPERTIES` and track depth.
     let mut out = Vec::with_capacity(tokens.len() + 8);
     let mut depth: i32 = 0;
     let mut seen_open = false;
@@ -471,18 +443,14 @@ pub(crate) fn rewrite_unset_tblproperties(tokens: &[Token]) -> Vec<Token> {
     out
 }
 
-/// True if the next non-whitespace token closes a bare property key (a `,` or `)`), i.e. the key
-/// carries no `= value` and is therefore an `UNSET` removal target.
+/// True if the next non-whitespace token closes a bare property key (a `,` or `)`), i.e.
 fn next_terminates_key(rest: &[Token]) -> bool {
     rest.iter()
         .find(|t| !matches!(t, Token::Whitespace(_)))
         .is_some_and(|t| matches!(t, Token::Comma | Token::RParen))
 }
 
-/// ===========================================================================================
-/// Rewrite Spark `ADD COLUMNS (c1 TYPE, c2 TYPE, …)` into `ADD COLUMN c1 TYPE, ADD COLUMN c2 TYPE`
-/// so stock sqlparser accepts the plural parenthesised form.
-/// ===========================================================================================
+/// Rewrite Spark `ADD COLUMNS (...)` into repeated `ADD COLUMN` so stock sqlparser accepts it.
 pub(crate) fn rewrite_add_columns_plural(tokens: &[Token]) -> Vec<Token> {
     // Locate ADD + COLUMNS (not COLUMN) with a following `(`.
     let mut index = 0;
@@ -561,9 +529,7 @@ fn rewrite_add_columns_at(tokens: &[Token], add_index: usize, open_index: usize)
     out
 }
 
-/// ===========================================================================================
 /// Rewrite Spark `DROP COLUMNS (a, b)` / `DROP COLUMNS a, b` into `DROP COLUMN a, DROP COLUMN b`.
-/// ===========================================================================================
 pub(crate) fn rewrite_drop_columns_plural(tokens: &[Token]) -> Vec<Token> {
     let mut index = 0;
     while index + 1 < tokens.len() {
@@ -664,8 +630,7 @@ fn rewrite_drop_columns_at(
     out
 }
 
-/// Split `tokens` on top-level (depth-0) commas; each segment is trimmed of leading/trailing
-/// whitespace tokens.
+/// Split `tokens` on top-level commas.
 fn split_top_level_comma_segments(tokens: &[Token]) -> Vec<Vec<Token>> {
     let mut segments = Vec::new();
     let mut current = Vec::new();
@@ -745,11 +710,6 @@ pub(crate) fn tokens_are_alter_table(tokens: &[Token]) -> bool {
 }
 
 /// Loud refuse for Spark forms stock sqlparser still cannot parse and I7 does not own.
-///
-/// Returns `Some(Err)` when the SQL is one of those shapes; `None` otherwise.
-///
-/// **Not refused here (handled by dedicated parsers):** `ADD|DROP|REPLACE PARTITION FIELD`,
-/// `REPLACE COLUMNS` (I7 stretch with identity-trap).
 pub(crate) fn refuse_unsupported_alter_sql(sql: &str) -> Option<Result<DataFrame>> {
     let upper = sql.to_ascii_uppercase();
     // Cheap head check — only ALTER TABLE.
@@ -778,11 +738,9 @@ pub(crate) fn refuse_unsupported_alter_sql(sql: &str) -> Option<Result<DataFrame
                 .into(),
         )));
     }
-    // ALTER COLUMN COMMENT — sqlparser cannot model it; refuse with a clear path until stretch
-    // lands a rewrite (doc update via UpdateColumnDoc is available from the write primitive).
+    // ALTER COLUMN COMMENT.
     if trimmed.contains("ALTER COLUMN") && trimmed.contains("COMMENT") {
-        // Allow through only if we later add a rewrite; for now surface a targeted message
-        // rather than an opaque parse fallthrough.
+        // Allow through only if we later add a rewrite.
         return Some(Err(DataFusionError::NotImplemented(
             "ALTER COLUMN … COMMENT is not supported yet via SQL — column COMMENT is accepted \
              on ADD COLUMN; UpdateColumnDoc is available on the write primitive (I6 stretch)"
@@ -792,9 +750,7 @@ pub(crate) fn refuse_unsupported_alter_sql(sql: &str) -> Option<Result<DataFrame
     None
 }
 
-// ===========================================================================================
 // I7 — PARTITION FIELD + REPLACE COLUMNS (stock sqlparser cannot model these Spark forms)
-// ===========================================================================================
 
 /// A parsed I7 ALTER form that bypasses stock sqlparser.
 #[derive(Debug, Clone)]
@@ -842,11 +798,7 @@ enum Sig {
     Other,
 }
 
-/// ===========================================================================================
 /// Try to parse Spark Iceberg `ADD|DROP|REPLACE PARTITION FIELD` or `REPLACE COLUMNS`.
-///
-/// Returns `None` for other statements and `Some(Err)` for recognized forms that fail validation.
-/// ===========================================================================================
 pub(crate) fn try_parse_iceberg_alter_ddl(sql: &str) -> Option<Result<IcebergAlterDdl>> {
     let significant = tokenize_significant(sql)?;
     if significant.len() < 4 {
@@ -909,9 +861,7 @@ pub(crate) fn try_parse_iceberg_alter_ddl(sql: &str) -> Option<Result<IcebergAlt
     None
 }
 
-/// ===========================================================================================
 /// Execute a parsed I7 Iceberg ALTER form (partition-spec evolution or REPLACE COLUMNS).
-/// ===========================================================================================
 pub(crate) async fn execute_iceberg_alter_ddl(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -1045,8 +995,7 @@ fn parse_replace_partition_field(
     start: usize,
     table_parts: Vec<String>,
 ) -> Result<IcebergAlterDdl> {
-    // REPLACE PARTITION FIELD <old> WITH <term> [AS name]
-    // old may be a bare name (READY) or transform(…) (stretch — refuse if not bare for simplicity).
+    // REPLACE PARTITION FIELD <old> WITH <term> [AS name] old may be a bare name or transform.
     let old_name = word_at(significant, start).ok_or_else(|| {
         DataFusionError::Plan(
             "ALTER TABLE REPLACE PARTITION FIELD expects the existing partition field name".into(),
@@ -1096,8 +1045,7 @@ fn parse_replace_partition_field(
     })
 }
 
-/// Parse `identity` / `col` / `bucket(n, col)` / `truncate(w, col)` / `year(col)` … optionally
-/// parenthesised as `(term AS name)`.
+/// Parse identity, column, bucket, truncate, and year transforms, optionally parenthesised.
 fn parse_partition_field_term(
     significant: &[Sig],
     start: usize,
@@ -1312,7 +1260,7 @@ fn split_sig_comma_segments(tokens: &[Sig]) -> Vec<&[Sig]> {
 }
 
 fn parse_replace_column_segment(segment: &[Sig]) -> Result<ReplaceColumnDef> {
-    // name TYPE [NOT NULL] [COMMENT '…']  (order of options flexible)
+    // name TYPE [NOT NULL] [COMMENT '…'] (order of options flexible)
     let name = word_at(segment, 0).ok_or_else(|| {
         DataFusionError::Plan("REPLACE COLUMNS column entry must start with a name".into())
     })?;
@@ -1843,8 +1791,7 @@ mod tests {
             .collect()
     }
 
-    /// Table named `unset` must not trigger the UNSET→SET rewrite (sqlparser tags bare
-    /// `unset` as `Keyword::UNSET`). Mutation: first-UNSET-anywhere locator → table name becomes SET.
+    /// Table named `unset` must not trigger the UNSET→SET rewrite.
     #[test]
     fn rewrite_unset_leaves_set_on_table_named_unset() {
         let sql = "ALTER TABLE ice.ns.unset SET TBLPROPERTIES('k'='v')";
@@ -1856,7 +1803,6 @@ mod tests {
             "table name `unset` must survive SET rewrite, got: {rendered}"
         );
         // The table-name token is `unset` (not rewritten to SET); operation is still SET.
-        // Reject the corruption shape `ice.ns.SET SET TBLPROPERTIES`.
         assert!(
             !rendered.to_ascii_uppercase().contains("NS.SET SET"),
             "must not rewrite table name into SET, got: {rendered}"

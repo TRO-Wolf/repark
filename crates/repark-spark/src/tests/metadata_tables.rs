@@ -1,5 +1,4 @@
-/// I2 / R-METADATA-TABLES: Spark `cat.ns.tbl.snapshots` → fork `$` provider; real table wins;
-/// DML + AS OF composition refuse loud.
+/// I2 / R-METADATA-TABLES: Spark `cat.ns.tbl.snapshots` → fork `$` provider.
 use super::super::*;
 use super::common::*;
 
@@ -58,9 +57,7 @@ async fn metadata_tables_spark_dot_form_and_guards() {
         vec!["snapshot_id", "operation"],
         "partial SELECT must project (not full metadata schema)"
     );
-    // Full-schema drift guard: SELECT * still pins the fork's
-    // snapshots column set (fork inspect/snapshots.rs:49-73) so a fork-side schema change
-    // goes red here, not in production.
+    // Full-schema drift guard: SELECT * still pins the fork's snapshots column set.
     let snap_star = execute(&ctx, &catalogs, "SELECT * FROM ice.sales.mt.snapshots")
         .await
         .expect("SELECT * .snapshots")
@@ -187,7 +184,7 @@ async fn metadata_tables_spark_dot_form_and_guards() {
         .await
         .unwrap();
     assert_eq!(real[0].num_rows(), 1);
-    // CTAS-inferred integer literals are Int64 on the Iceberg/Arrow path (same as time-travel pins).
+    // CTAS-inferred integer literals are Int64 on the Iceberg/Arrow path.
     let x_col = real[0]
         .column(0)
         .as_primitive::<datafusion::arrow::datatypes::Int64Type>();
@@ -326,12 +323,7 @@ async fn metadata_tables_spark_dot_form_and_guards() {
         "CREATE OR REPLACE error must name metadata read-only, got: {cor_msg}"
     );
 
-    // H-1d: registry §2.1 row MT-2 enumerates TEN statement forms as refusing with a read-only
-    // error. Four of them are pinned above (INSERT / UPDATE / TRUNCATE / CREATE OR REPLACE); the
-    // remaining six were prose until this loop existed. A row may not assert more than its pin
-    // proves, so every form the row names is exercised here — all ten reach the same
-    // `is_write_target_context` guard, and the refusal is what keeps a write to a metadata table
-    // from falling through to the planner.
+    // H-1d: registry §2.1 row MT-2 enumerates TEN statement forms as refusing.
     for sql in [
         "DELETE FROM ice.sales.mt.snapshots WHERE snapshot_id = 1",
         "MERGE INTO ice.sales.mt.snapshots t USING ice.sales.mt s ON true \
@@ -381,8 +373,6 @@ async fn metadata_tables_spark_dot_form_and_guards() {
     }
 
     // C3-L-002: metadata join + base table VERSION AS OF (meta first, then TT).
-    // Snapshot id 1 is almost certainly invalid — pin only that the error is NOT the
-    // metadata-composition refuse (wrong guard would fire before TT resolves the base).
     let mixed_err = execute(
         &ctx,
         &catalogs,
@@ -409,19 +399,13 @@ async fn metadata_tables_spark_dot_form_and_guards() {
     );
 }
 
-/// Synthesized `$` metadata names stay hidden from enumeration while remaining directly queryable.
-/// Both `SHOW TABLES` and `information_schema.tables` must apply the same filter.
-///
-/// Mutation: drop the `.filter(…)` in `MetadataProjectionSchemaProvider::table_names` → the two
-/// emptiness assertions red.
-///
 /// pins: rp-1-fork-repin/C-005
+/// Synthesized `$` metadata names stay hidden from enumeration while remaining directly queryable.
 #[tokio::test]
 async fn metadata_tables_are_hidden_from_enumeration_but_stay_queryable_through_the_spark_door() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
-    // `information_schema` is off by default (repark-core's builder key is the product way to
-    // turn it on); the door tests run on a raw context, so arm it here.
+    // `information_schema` is off by default; the door tests run on a raw context, so arm it here.
     ctx.sql("SET datafusion.catalog.information_schema = true")
         .await
         .unwrap()
@@ -435,7 +419,7 @@ async fn metadata_tables_are_hidden_from_enumeration_but_stay_queryable_through_
     )
     .await;
 
-    // 1. information_schema.tables — the real table only.
+    // 1.
     let listed = execute(
         &ctx,
         &catalogs,
@@ -465,7 +449,7 @@ async fn metadata_tables_are_hidden_from_enumeration_but_stay_queryable_through_
         "the Spark door must enumerate the catalog's tables, not the fork's synthesized names"
     );
 
-    // 2. The twin path.
+    // 2.
     let shown = execute(&ctx, &catalogs, "SHOW TABLES")
         .await
         .expect("SHOW TABLES must plan through the Spark door")
@@ -490,8 +474,7 @@ async fn metadata_tables_are_hidden_from_enumeration_but_stay_queryable_through_
         "SHOW TABLES must not list metadata tables through this door either: {dollar_names:?}"
     );
 
-    // 3. Hidden, not removed — through the door's OWN spelling (`t.snapshots`, which the door
-    //    rewrites onto the hidden `t$snapshots`) and through the `$` form directly.
+    // 3.
     let dotted = execute(
         &ctx,
         &catalogs,
@@ -524,10 +507,8 @@ async fn metadata_tables_are_hidden_from_enumeration_but_stay_queryable_through_
     );
 }
 
-/// Metadata-table projection honors empty, partial, and full `SELECT *` projections for every
-/// supported metadata table name.
-///
 /// pins: rp-1-fork-repin/C-012 — `position_deletes` is schema-only at this pin; scan refuses.
+/// Metadata-table projection honors empty, partial.
 #[tokio::test]
 #[allow(clippy::too_many_lines)] // one flat battery over the full MetadataTableType set
 async fn metadata_table_projection_honor_all_types() {
@@ -609,9 +590,7 @@ async fn metadata_table_projection_honor_all_types() {
             1,
             "{suffix}: count(*) returns one aggregate column"
         );
-        // Value pin: count(*) must equal the SELECT * row total — a
-        // zero-column projection that lost `num_rows` would return 0 and stay green on
-        // shape alone. snapshots/history are additionally pinned exact (CTAS + INSERT = 2).
+        // Value pin: count must equal the SELECT * row total.
         let counted = count_batches[0]
             .column(0)
             .as_any()
@@ -669,9 +648,7 @@ async fn metadata_table_projection_honor_all_types() {
     }
 }
 
-/// Glue/HMS `validate_namespace`: a namespace that is not exactly one level is
-/// `ErrorKind::DataInvalid`, not `NamespaceNotFound`. MW-4 live Glue failed here:
-/// `cat.ns.tbl.snapshots` probes ident `{ns:[ns, tbl], table: snapshots}`.
+/// Glue/HMS `validate_namespace`: a namespace.
 fn glue_hierarchical_namespace_error(namespace: &NamespaceIdent) -> iceberg::Error {
     iceberg::Error::new(
         iceberg::ErrorKind::DataInvalid,
@@ -679,7 +656,7 @@ fn glue_hierarchical_namespace_error(namespace: &NamespaceIdent) -> iceberg::Err
     )
 }
 
-/// How `table_exists` fails on a two-level namespace. `Glue` is the live AWS shape.
+/// How `table_exists` fails on a two-level namespace.
 #[derive(Debug, Clone, Copy)]
 enum HierarchicalExistsProbe {
     Glue,
@@ -811,8 +788,7 @@ fn glue_shaped_registry(
     catalogs
 }
 
-/// MW-4 live Glue: `SELECT … FROM glue_catalog.ns.tbl.snapshots` must rewrite to `$`
-/// even though Glue `table_exists` on the 4-part path is `DataInvalid`, not not-found.
+/// MW-4: Glue `table.snapshots` must rewrite to `$` even when Glue `table_exists` is `DataInvalid`.
 #[tokio::test]
 async fn glue_shaped_catalog_rewrites_four_part_snapshots_and_files() {
     let warehouse = TempDir::new().unwrap();

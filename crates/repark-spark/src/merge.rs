@@ -1,7 +1,4 @@
 //! `MERGE INTO` lowering from sqlparser AST to [`repark_iceberg::write::merge::MergeSpec`].
-//!
-//! This module owns Spark dialect concerns: star sentinels, target and alias resolution, verbatim
-//! expression rendering, and clause order. Execution semantics live in `repark-iceberg`.
 
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
@@ -20,20 +17,14 @@ use repark_core::CatalogRegistry;
 
 use crate::{catalog_handle, name_parts};
 
-/// The identifier [`rewrite_merge_stars`] substitutes for the `*` in `UPDATE SET *` /
-/// `INSERT *` so stock sqlparser can parse the statement; [`lower_clause`] maps it back to the
-/// star markers. Namespaced + unguessable (the `UNSET_SENTINEL` pattern in [`crate::alter`]);
-/// hand-writing the exact substituted shape is indistinguishable from the star and behaves as
-/// one, and any other use surfaces as an unknown-column error downstream.
+/// The identifier [`rewrite_merge_stars`] substitutes for the `*` in `UPDATE SET *` / `INSERT *`.
 const STAR_SENTINEL: &str = "__repark_merge_star_sentinel__";
 
-/// Oracle-style action sub-predicates (`UPDATE SET … WHERE` / `DELETE WHERE` /
-/// `INSERT … WHERE`) are not Spark MERGE grammar. Copied into both doors.
+/// Oracle-style action sub-predicates are not Spark MERGE grammar.
 const ORACLE_STYLE_SUB_PREDICATE_REFUSAL: &str = "Oracle-style `UPDATE SET … WHERE` / `DELETE WHERE` / `INSERT … WHERE` is not Spark MERGE \
      grammar; move the predicate into `WHEN MATCHED AND <cond>` / `WHEN NOT MATCHED AND <cond>`";
 
-/// Verbatim ANSI-door needle (A8): Spark `INSERT VALUES` without a column list is refused
-/// the same way. `INSERT *` is rewritten to a sentinel list before this check runs.
+/// Verbatim ANSI-door needle: Spark `INSERT VALUES` without a column list is refused the same way.
 const MERGE_INSERT_COLUMN_LIST_REQUIRED: &str =
     "MERGE INSERT requires an explicit column list: INSERT (a, b) VALUES (…)";
 
@@ -45,15 +36,9 @@ const NON_LAST_MATCHED_CLAUSE_OMIT_CONDITION: &str = "NON_LAST_MATCHED_CLAUSE_OM
 const NON_LAST_NOT_MATCHED_CLAUSE_OMIT_CONDITION: &str = "NON_LAST_NOT_MATCHED_CLAUSE_OMIT_CONDITION: When there are more than one NOT MATCHED \
      clauses in a MERGE statement, only the last NOT MATCHED clause can omit the condition";
 
-/// ===========================================================================================
-/// Route a parsed `MERGE INTO` statement: lower the AST to a [`MergeSpec`], resolve the target's
-/// iceberg catalog handle, and hand off to the copy-on-write executor in `repark-write`.
-/// ===========================================================================================
-///
+/// Route MERGE INTO: lower the AST to `MergeSpec`, resolve the Iceberg handle, and execute COW.
 /// # Errors
-/// Planning errors for malformed statements (non-three-part target, subquery source without an
-/// alias, invalid clause/action combinations), `NotImplemented` for the documented v1 limits,
-/// and anything the executor surfaces (including `MERGE_CARDINALITY_VIOLATION`).
+/// Returns planning errors for malformed MERGE statements and `NotImplemented` for residual forms.
 pub(crate) async fn execute_merge(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -68,16 +53,7 @@ pub(crate) async fn execute_merge(
     ctx.read_empty()
 }
 
-/// ===========================================================================================
-/// Rewrite the MERGE star forms stock sqlparser cannot parse — `THEN UPDATE SET *` and
-/// `THEN INSERT *` — into sentinel forms it can (`SET <sentinel> = <sentinel>` /
-/// `INSERT (<sentinel>) VALUES (<sentinel>)`); [`lower_clause`] maps the sentinel back to the
-/// typed star markers. Two guards keep a multiplication `*` untouched: the star must FOLLOW the
-/// `THEN [UPDATE] …` keyword run, and it must be able to END a clause there
-/// ([`star_can_end_here`]) — the tokenizer tags any bare identifier SPELLED like a keyword
-/// (`… CASE WHEN c THEN insert * 2 …` — `insert` carries `Keyword::INSERT`), so the anchor
-/// alone is not position-proof.
-/// ===========================================================================================
+/// Rewrite `UPDATE SET *` and `INSERT *` into sentinel forms stock sqlparser can parse.
 pub(crate) fn rewrite_merge_stars(tokens: &[Token]) -> Vec<Token> {
     let mut out = Vec::with_capacity(tokens.len());
     for (index, token) in tokens.iter().enumerate() {
@@ -109,12 +85,7 @@ pub(crate) fn rewrite_merge_stars(tokens: &[Token]) -> Vec<Token> {
     out
 }
 
-/// True when whatever follows position `after` (skipping whitespace) can legally FOLLOW a real
-/// star form: the next `WHEN` clause, an `OUTPUT`/`RETURNING` clause, a statement terminator,
-/// or end of input — plus, for the SET form only, the comma of Spark's forbidden
-/// `SET *, col = …` mix (rewritten so [`star_update`] can reject it with a targeted error).
-/// Anything else (`2` in `CASE WHEN c THEN insert * 2`) marks the `*` as multiplication whose
-/// left operand merely spells like a keyword.
+/// True when whatever follows position `after` can legally FOLLOW a real star form.
 fn star_can_end_here(tokens: &[Token], after: usize, allow_comma: bool) -> bool {
     for token in &tokens[after..] {
         match token {
@@ -133,9 +104,7 @@ fn star_can_end_here(tokens: &[Token], after: usize, allow_comma: bool) -> bool 
     true
 }
 
-/// The last (up to) `n` keyword tokens strictly before `index`, in statement order. Collection
-/// stops at any non-word, non-whitespace token, so a `.`/`)`/operator boundary breaks the
-/// pattern (quoted identifiers carry no keyword and break it too).
+/// The last (up to) `n` keyword tokens strictly before `index`, in statement order.
 fn keywords_before(tokens: &[Token], index: usize, n: usize) -> Vec<Keyword> {
     let mut found = Vec::with_capacity(n);
     for token in tokens[..index].iter().rev() {
@@ -304,10 +273,7 @@ fn lower_clause(
     Ok(())
 }
 
-/// Detect the sentinel shape [`rewrite_merge_stars`] substitutes for `UPDATE SET *`: exactly
-/// one `<sentinel> = <sentinel>` assignment maps to [`MatchedAction::UpdateAll`]. A sentinel
-/// target alongside other assignments is Spark's forbidden `SET *, col = expr` mix — rejected
-/// with a targeted error instead of the unknown-column error it would hit downstream.
+/// Detect the sentinel shape [`rewrite_merge_stars`] substitutes for `UPDATE SET *`.
 fn star_update(assignments: &[Assignment]) -> Result<Option<MatchedAction>> {
     let targets_sentinel = |assignment: &Assignment| {
         matches!(&assignment.target, AssignmentTarget::ColumnName(name)
@@ -327,12 +293,7 @@ fn star_update(assignments: &[Assignment]) -> Result<Option<MatchedAction>> {
     ))
 }
 
-/// Detect the sentinel shape [`rewrite_merge_stars`] substitutes for `INSERT *`: the exact
-/// `(<sentinel>) VALUES (<sentinel>)` single-column form. Anything else — including a sentinel
-/// mixed into a real column list, which only hand-written SQL can produce — falls through to
-/// the explicit-clause path and its unknown-column validation.
-///
-/// sqlparser 0.62: `ObjectName` is a newtype over `Vec<ObjectNamePart>` (no `.value`).
+/// Detect the sentinel shape [`rewrite_merge_stars`] substitutes for `INSERT *`.
 fn object_name_column(name: &ObjectName) -> String {
     name.0
         .last()
@@ -358,8 +319,7 @@ fn expr_is_sentinel(expr: &Expr) -> bool {
     matches!(expr, Expr::Identifier(ident) if ident.value == STAR_SENTINEL)
 }
 
-/// `SET col = expr` pairs. Accepts a bare column or `<target-alias>.column`; any other
-/// qualifier or a three-or-more-part (nested) name is refused.
+/// `SET col = expr` pairs.
 fn lower_assignments(
     assignments: &[Assignment],
     target_alias: &str,
@@ -414,8 +374,7 @@ fn refuse_non_last_unconditional_clause(
     Ok(())
 }
 
-/// Bare column, or `<target-alias>.column` (qualifier compared case-insensitively to the
-/// statement's target alias). Three-or-more-part names are nested-field assignment.
+/// Bare column, or `<target-alias>.column`.
 fn resolve_merge_column(name: &ObjectName, target_alias: &str, construct: &str) -> Result<String> {
     let parts = name_parts(name);
     match parts.as_slice() {
@@ -438,8 +397,7 @@ fn resolve_merge_column(name: &ObjectName, target_alias: &str, construct: &str) 
     }
 }
 
-/// Strip a matching pair of `"` or `` ` `` from a rendered identifier so alias comparison
-/// uses the ident value, not the quote style.
+/// Strip a matching pair of double quotes or backticks from a rendered identifier.
 fn unquoted_ident(rendered: &str) -> &str {
     let trimmed = rendered.trim();
     let bytes = trimmed.as_bytes();
@@ -452,10 +410,7 @@ fn unquoted_ident(rendered: &str) -> &str {
     trimmed
 }
 
-/// The MERGE target: a plain table factor with an optional alias. The alias is rendered with
-/// [`ToString`] — NOT `Ident.value` — so a quoted alias (`AS "MyAlias"`) keeps its quoting and
-/// matches the quoted references the user's ON/SET expressions re-render with; an unquoted
-/// alias round-trips unchanged.
+/// The MERGE target: a plain table factor with an optional alias.
 fn target_table(
     factor: &TableFactor,
 ) -> Result<(datafusion::sql::sqlparser::ast::ObjectName, Option<String>)> {
@@ -467,8 +422,7 @@ fn target_table(
     Ok((name.clone(), alias.as_ref().map(|a| a.name.to_string())))
 }
 
-/// The default alias for an unaliased table: its last name part rendered WITH any quoting
-/// (Spark scoping — an unaliased table is referenced by its bare name).
+/// The default alias for an unaliased table: its last name part rendered WITH any quoting.
 fn bare_name_alias(name: &datafusion::sql::sqlparser::ast::ObjectName) -> Result<String> {
     name.0
         .last()
@@ -476,9 +430,7 @@ fn bare_name_alias(name: &datafusion::sql::sqlparser::ast::ObjectName) -> Result
         .ok_or_else(|| DataFusionError::Plan(format!("cannot resolve MERGE name `{name}`")))
 }
 
-/// The `USING` source: a table (aliased or referenced by its bare name, Spark-style) or an
-/// aliased subquery. Returns the `FROM`-ready SQL plus the alias user expressions resolve with
-/// (quote style preserved — see [`target_table`]).
+/// The `USING` source: a table or an aliased subquery.
 fn source_table(factor: &TableFactor) -> Result<(String, String)> {
     match factor {
         TableFactor::Table { name, alias, .. } => {
@@ -524,8 +476,7 @@ mod tests {
         (merge.table, merge.source, *merge.on, merge.clauses)
     }
 
-    /// The source publish job's shape: aliased target + source, one UPDATE, one INSERT — lowers
-    /// with aliases, ON text, ordered clauses, and rendered expressions intact.
+    /// The source publish job's shape: aliased target + source, one UPDATE, one INSERT.
     #[test]
     fn lowers_classic_upsert() {
         let (table, source, on, clauses) = parse_merge(
@@ -557,8 +508,7 @@ mod tests {
         assert_eq!(values_sql, &["s.id", "s.name"]);
     }
 
-    /// Unaliased target and source fall back to their bare names (Spark scoping), and a
-    /// qualified `SET t.name = …` keeps only the column.
+    /// Unaliased target and source fall back to their bare names.
     #[test]
     fn defaults_aliases_to_bare_names() {
         let (table, source, on, clauses) = parse_merge(
@@ -580,8 +530,7 @@ mod tests {
         assert_eq!(assignments[0].0, "name");
     }
 
-    /// Quoted aliases keep their quote style through lowering, so the generated FROM alias
-    /// declaration matches the user's quoted (case-sensitive) references in ON/SET.
+    /// Quoted aliases keep their quote style through lowering.
     #[test]
     fn quoted_aliases_preserve_quoting() {
         let (table, source, on, clauses) = parse_merge(
@@ -616,8 +565,7 @@ mod tests {
         assert!(err.to_string().contains("NOT MATCHED BY SOURCE"));
     }
 
-    /// The star forms (`UPDATE SET *` / `INSERT *` — the source publish job's upsert shape) are
-    /// token-rewritten into a parseable sentinel and lowered to the typed star markers.
+    /// Star forms are token-rewritten into a parseable sentinel and lowered to typed star markers.
     #[test]
     fn star_forms_lower_to_markers() {
         let (table, source, on, clauses) = parse_merge(
@@ -630,8 +578,7 @@ mod tests {
         assert!(matches!(spec.not_matched[0].action, InsertAction::All));
     }
 
-    /// A `*` used as multiplication is never rewritten: assignments and VALUES expressions keep
-    /// their arithmetic, including inside a subquery source.
+    /// A `*` used as multiplication is never rewritten.
     #[test]
     fn multiplication_star_untouched() {
         let (table, source, on, clauses) = parse_merge(
@@ -655,9 +602,7 @@ mod tests {
         assert_eq!(values_sql[1], "s.qty * 3");
     }
 
-    /// A bare column that merely SPELLS like a keyword after a CASE-expression `THEN` must not
-    /// trigger the star rewrite (the tokenizer tags `insert` with `Keyword::INSERT` even as an
-    /// identifier — the look-ahead guard is what disambiguates). Review-caught repro.
+    /// A CASE THEN identifier that merely spells like a keyword must not trigger star rewrite.
     #[test]
     fn keyword_named_column_after_case_then_untouched() {
         let (table, source, on, clauses) = parse_merge(
@@ -672,8 +617,7 @@ mod tests {
         assert!(assignments[0].1.contains("insert * 2"));
     }
 
-    /// Spark forbids mixing `SET *` with explicit assignments — targeted error, not the
-    /// downstream unknown-column error the sentinel would otherwise hit.
+    /// Spark forbids mixing `SET *` with explicit assignments.
     #[test]
     fn star_mixed_with_assignments_rejected() {
         let (table, source, on, clauses) = parse_merge(

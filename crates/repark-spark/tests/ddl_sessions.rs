@@ -1,5 +1,4 @@
 //! End-to-end Spark-door DDL tests for CTAS, namespace locations, and catalog metadata.
-//! Sessions use both [`SparkExtension`] and [`SparkDialect`].
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -41,10 +40,7 @@ fn spark_session() -> ReparkSession {
         .unwrap()
 }
 
-/// End-to-end through the Python-facing `ReparkSession`: register an in-memory Iceberg catalog
-/// (via the `register_memory_catalog` convenience), create a namespace + temp view, then run
-/// CTAS and read back via `spark.sql` — exercising session → repark-spark → catalog → iceberg,
-/// and the date-function shim on Iceberg-read data.
+/// End-to-end through the Python-facing `ReparkSession`.
 #[tokio::test]
 async fn ctas_end_to_end_through_spark_sql() {
     let wh = TempDir::new().unwrap();
@@ -89,20 +85,14 @@ async fn ctas_end_to_end_through_spark_sql() {
     assert_eq!((years.value(0), years.value(1)), (2024, 2021));
 }
 
-/// ADV-1: a namespace created programmatically WITH a `location` property lets a CTAS succeed on
-/// a `RequireExplicitLocation` catalog (Glue / S3 Tables), where SQL `CREATE NAMESPACE` (which
-/// drops properties) would leave it location-less and the N5 fail-loud would reject the CTAS.
-/// This is the path the AWS acceptance harness switched to; the location property is load-bearing
-/// (dropping it makes the CTAS fail loud — mutation-proved).
+/// ADV-1: a namespace created with location lets CTAS succeed on a strict catalog.
 #[tokio::test]
 async fn create_namespace_with_location_lets_ctas_succeed_on_strict_catalog() {
     let wh = TempDir::new().unwrap();
     let warehouse = wh.path().to_str().unwrap().to_string();
 
     let spark = spark_session();
-    // `register_iceberg_catalog` tags the handle `RequireExplicitLocation` (a real warehouse) —
-    // the strict policy Glue / S3 Tables carry, distinct from `register_memory_catalog`'s temp
-    // fallback. So a location-less namespace here would make CTAS fail loud (N5).
+    // `register_iceberg_catalog` tags the handle `RequireExplicitLocation`.
     let catalog = repark_iceberg::catalog::memory_catalog(&warehouse)
         .await
         .unwrap();
@@ -111,8 +101,7 @@ async fn create_namespace_with_location_lets_ctas_succeed_on_strict_catalog() {
         .await
         .unwrap();
 
-    // The programmatic path the harness uses: create the namespace WITH its warehouse location
-    // (settable via SQL `CREATE NAMESPACE … LOCATION` since WG-5, or programmatically).
+    // The programmatic path the harness uses: create the namespace WITH its warehouse location.
     spark
         .create_namespace(
             "glue_like",
@@ -141,8 +130,7 @@ async fn create_namespace_with_location_lets_ctas_succeed_on_strict_catalog() {
     );
 }
 
-/// Both namespace-create routes store equal `location` and `location_uri` keys. The CTAS then
-/// proves the dual-keyed namespace resolves end to end.
+/// Both namespace-create routes store equal `location` and `location_uri` keys.
 #[tokio::test]
 async fn create_namespace_with_location_stores_both_location_keys() {
     let wh = TempDir::new().unwrap();
@@ -167,8 +155,7 @@ async fn create_namespace_with_location_stores_both_location_keys() {
         .await
         .unwrap();
 
-    // The stored property map, read back through the catalog handle: BOTH keys, equal, and
-    // nothing invented beyond them.
+    // The stored property map, read back through the catalog handle.
     let namespace = catalog
         .get_namespace(&NamespaceIdent::new("silver".to_string()))
         .await
@@ -199,10 +186,7 @@ async fn create_namespace_with_location_stores_both_location_keys() {
     assert_eq!(total, 1);
 }
 
-/// The `spark.catalog` metadata surface the source publish job uses:
-/// `tableExists` on a three-part name flips false → true across CTAS (and is false for an
-/// absent namespace), a plan registers as a lazy temp view (`createOrReplaceTempView`),
-/// one-part `tableExists` sees it, and `dropTempView` reports existence.
+/// The `spark.catalog` metadata surface the source publish job uses.
 #[tokio::test]
 async fn catalog_surface_table_exists_and_temp_views() {
     let wh = TempDir::new().unwrap();
@@ -251,8 +235,7 @@ async fn catalog_surface_table_exists_and_temp_views() {
     );
     assert!(spark.drop_temp_view("tv_list_pin").unwrap());
 
-    // Re-registering an in-memory catalog under a taken name is a targeted error, never a
-    // silent handle replacement that orphans the old catalog's tables.
+    // Re-registering an in-memory catalog under a taken name is a targeted error, never silent.
     let err = spark
         .register_memory_catalog("glue_catalog", wh.path().to_str().unwrap())
         .await
@@ -260,18 +243,13 @@ async fn catalog_surface_table_exists_and_temp_views() {
     assert!(err.to_string().contains("already registered"));
 }
 
-/// `.config(...)` collects into the builder and drives catalog registration: a
-/// source-publish-job-shaped block with `type = memory` (the AWS-free `RePark` form) builds the
-/// session, and `register_configured_catalogs` wires the catalog so a CTAS round-trips —
-/// proving the config path (not just an explicit `register_memory_catalog` call) drives a real
-/// catalog. AWS-free by construction (`memory` kind only).
+/// `.config` collects into the builder and drives catalog registration.
 #[tokio::test]
 async fn config_driven_memory_catalog_registers_and_runs() {
     let wh = TempDir::new().unwrap();
     let warehouse = wh.path().to_str().unwrap().to_string();
 
-    // The measured block shape, but with `type = memory` swapped in for AWS-free use, and the
-    // Spark `io-impl` still present (it must be dropped, not choke the parse).
+    // The measured block shape, but.
     let dialect: Arc<dyn SqlDialect> = Arc::new(SparkDialect);
     let spark = ReparkSession::builder()
         .with_extension(Arc::new(SparkExtension))

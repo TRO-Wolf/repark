@@ -63,32 +63,16 @@ pub(crate) async fn execute_drop_namespace(
     ctx.read_empty()
 }
 
-/// A parsed Spark `CREATE {NAMESPACE|SCHEMA|DATABASE}` with its resolved target and the properties
-/// (`location`, `comment`, and any `DBPROPERTIES`/`PROPERTIES` keys) SQL `CREATE NAMESPACE` carries.
+/// A parsed Spark `CREATE {NAMESPACE|SCHEMA|DATABASE}`.
 pub(crate) struct CreateNamespace {
     catalog: String,
     namespace: String,
     if_not_exists: bool,
-    /// The namespace properties to create with — `location`/`comment`/user keys threaded into the
-    /// same programmatic `create_namespace` path (`resolve_ctas_table_location` reads `location`
-    /// with a `location_uri` fallback; the create arm mirrors `location` onto `location_uri`, U2).
+    /// The namespace properties to create with.
     properties: HashMap<String, String>,
 }
 
-/// `CREATE {NAMESPACE|SCHEMA|DATABASE} [IF NOT EXISTS] catalog.namespace [COMMENT …] [LOCATION …]`
-/// `[WITH [DBPROPERTIES|PROPERTIES] (…)]` → `catalog.create_namespace(ident, properties)`.
-///
-/// The properties (`location` in particular) are threaded through the SAME programmatic create path
-/// `spark.create_namespace(..., location=…)` uses, so a subsequent CTAS resolves the warehouse path
-/// from the namespace location property (`resolve_ctas_table_location`). A SQL-set `location`
-/// (either the `LOCATION` clause or `DBPROPERTIES ('location' = …)`) is mirrored onto
-/// `location_uri` by `repark_iceberg::catalog::mirror_namespace_location_keys` — unidirectional,
-/// never overwriting an explicit key — so the canonical Glue `locationUri` field is set whichever
-/// key that the catalog implementation maps.
-///
-/// `IF NOT EXISTS` is idempotent when the request carries no location or the resolved location
-/// matches. A contradictory `LOCATION` fails loud (both paths named) rather than silently
-/// adopting the existing namespace (G-6 Q1).
+/// CREATE NAMESPACE with COMMENT, LOCATION, and WITH properties maps to `create_namespace`.
 pub(crate) async fn execute_create_namespace(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -117,22 +101,7 @@ pub(crate) async fn execute_create_namespace(
     ctx.read_empty()
 }
 
-/// Recognise and parse a Spark `CREATE {NAMESPACE|SCHEMA|DATABASE} [IF NOT EXISTS] catalog.namespace`
-/// `[COMMENT '…'] [LOCATION '…'] [WITH [DBPROPERTIES|PROPERTIES] ('k' = 'v', …)]`.
-///
-/// sqlparser 0.59's `parse_create_schema` models only `WITH (…)` (Trino) / `OPTIONS (…)` — none of
-/// Spark's `LOCATION` / `COMMENT` / `DBPROPERTIES` / `PROPERTIES` clauses (and a `LOCATION '…'` tail
-/// even makes `parse_statements` error). So we drive sqlparser's public `Parser` ourselves and route
-/// the whole form through the same programmatic `create_namespace` path, threading the location and
-/// other properties SQL `CREATE NAMESPACE` would otherwise drop (the ADV-2 residual).
-///
-/// Returns `None` when `sql` is not a create-namespace statement — the caller then continues its
-/// normal routing, so `CREATE TABLE` / CTAS / `CREATE VIEW` / everything else passes straight
-/// through (the recogniser commits only after `CREATE` followed by `SCHEMA` / `DATABASE` /
-/// `NAMESPACE`). `Some(Err(..))` means it IS a create-namespace but malformed — a loud error.
-///
-/// `NAMESPACE`, `DBPROPERTIES`, and `PROPERTIES` are not sqlparser keywords (they tokenize as plain
-/// words), so they are matched by value; `SCHEMA` / `DATABASE` are keywords.
+/// Parse Spark CREATE NAMESPACE|SCHEMA|DATABASE with COMMENT, LOCATION, and WITH properties.
 pub(crate) fn try_parse_create_namespace(sql: &str) -> Option<Result<CreateNamespace>> {
     let dialect = DatabricksDialect {};
     let tokens = Tokenizer::new(&dialect, sql).tokenize().ok()?;
@@ -149,10 +118,7 @@ pub(crate) fn try_parse_create_namespace(sql: &str) -> Option<Result<CreateNames
     Some(parse_create_namespace_body(&mut parser))
 }
 
-/// Parse the body after `CREATE {NAMESPACE|SCHEMA|DATABASE}`: `[IF NOT EXISTS] name` then the
-/// optional `COMMENT` / `LOCATION` / `WITH […] (…)` clauses (any order), erroring on any other
-/// trailing token. The `location`/`comment` clauses and the `WITH` key/value pairs all land in one
-/// properties map.
+/// Parse the body after `CREATE {NAMESPACE|SCHEMA|DATABASE}`.
 pub(crate) fn parse_create_namespace_body(parser: &mut Parser) -> Result<CreateNamespace> {
     let if_not_exists = parser.parse_keywords(&[Keyword::IF, Keyword::NOT, Keyword::EXISTS]);
     let name = parser.parse_object_name(false).map_err(sqlparser_err)?;
@@ -171,8 +137,7 @@ pub(crate) fn parse_create_namespace_body(parser: &mut Parser) -> Result<CreateN
                 parse_namespace_property_string(parser)?,
             );
         } else if parser.parse_keyword(Keyword::WITH) {
-            // `WITH DBPROPERTIES (…)` / `WITH PROPERTIES (…)` (Spark) and bare `WITH (…)` (Trino) all
-            // carry the same key/value list; the `DBPROPERTIES`/`PROPERTIES` word is optional.
+            // Spark WITH DBPROPERTIES and Trino bare WITH carry the same key/value list.
             let _consumed_kind =
                 consume_word(parser, "DBPROPERTIES") || consume_word(parser, "PROPERTIES");
             parse_namespace_property_list(parser, &mut properties)?;
@@ -197,9 +162,7 @@ pub(crate) fn parse_create_namespace_body(parser: &mut Parser) -> Result<CreateN
     })
 }
 
-/// Consume the next token iff it is a `Word` whose value equals `word` (case-insensitive) — used for
-/// the `NAMESPACE` / `DBPROPERTIES` / `PROPERTIES` spellings sqlparser 0.59 does not model as
-/// keywords. Returns whether it was consumed.
+/// Consume the next token iff it is a `Word` whose value equals `word`.
 pub(crate) fn consume_word(parser: &mut Parser, word: &str) -> bool {
     if let Token::Word(peeked) = &parser.peek_token().token
         && peeked.value.eq_ignore_ascii_case(word)
@@ -210,8 +173,7 @@ pub(crate) fn consume_word(parser: &mut Parser, word: &str) -> bool {
     false
 }
 
-/// Read one property key or value token — a quoted string (`'x'` / `"x"`), a bare word (`location`,
-/// including a word that spells a keyword), or a number literal — as its string value.
+/// Read one property key or value token.
 pub(crate) fn parse_namespace_property_string(parser: &mut Parser) -> Result<String> {
     match parser.next_token().token {
         Token::Word(word) => Ok(word.value),

@@ -1,5 +1,5 @@
-//! Pins `CALL system.register_table` and adoption of the Spark-written format-v3 fixture.
 //! pins: rp-3-fork-repin/C-007, C-008
+//! Pins `CALL system.register_table` and adoption of the Spark-written format-v3 fixture.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -10,8 +10,7 @@ use super::common::*;
 
 use datafusion::arrow::array::Int64Array;
 
-/// Warehouse prefix baked into the checked-in Spark fixture (same length as the original
-/// `/tmp/mw2-v3-atl_i0w4/ns/v3` so Avro length-prefixed paths stay valid).
+/// Warehouse prefix baked into the checked-in Spark fixture.
 const SPARK_V3_WAREHOUSE: &str = "/tmp/repark-v3-1-spark-mor";
 
 /// Serializes tests that materialize the Spark fixture at a fixed `/tmp` path.
@@ -36,11 +35,6 @@ fn copy_dir_all(from: &Path, to: &Path) {
 }
 
 /// Copy the checked-in Spark-written v3 table onto the warehouse path its metadata names.
-///
-/// The fixture's Avro/Puffin/JSON all point at [`SPARK_V3_WAREHOUSE`]. Tests hold the lock for
-/// the whole case so parallel `cargo test` threads do not clobber each other. The path is under
-/// `/tmp` because that is where Spark wrote it; rewriting every Avro block to a `TempDir` of a
-/// different length would corrupt length-prefixed paths.
 fn materialize_spark_v3_fixture() -> SparkV3Fixture {
     let lock = SPARK_V3_LOCK.lock().expect("spark v3 fixture lock");
     let dest = PathBuf::from(SPARK_V3_WAREHOUSE);

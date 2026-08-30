@@ -1,5 +1,7 @@
 # map — repark-spark
 
+CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated comments rewritten as complete sentences (D-001).
+
 ## Purpose
 
 The **Spark SQL door** (tier 3): a statement

@@ -1,7 +1,4 @@
 //! Spark token normalizers, statement sniffers, DML valves, and partition classification.
-//!
-//! The valves refuse unsafe multi-spec merge-on-read DML and subquery predicates before DataFusion
-//! can lose the predicate at its planning boundary.
 
 use std::ops::ControlFlow;
 
@@ -24,9 +21,7 @@ use crate::alter;
 use crate::catalog_ops::{iceberg_err, name_parts};
 use crate::merge;
 
-/// True when the statement's first keyword token is `MERGE` — tokenizer-based (the same pattern
-/// as `is_create_table`), so leading whitespace/comments and multi-byte text are handled without
-/// byte-offset slicing.
+/// True when the statement's first keyword token is `MERGE`.
 pub(crate) fn starts_with_merge(sql: &str) -> bool {
     let Ok(tokens) = Tokenizer::new(&DatabricksDialect {}, sql).tokenize() else {
         return false;
@@ -34,14 +29,12 @@ pub(crate) fn starts_with_merge(sql: &str) -> bool {
     is_merge(&tokens)
 }
 
-/// Detect Iceberg snapshot-ref DDL that stock sqlparser cannot model, while skipping the
-/// multipart table identifier before matching the clause.
+/// Detect Iceberg snapshot-ref DDL.
 pub(crate) fn starts_with_branch_or_tag_ddl(sql: &str) -> bool {
     let Ok(tokens) = Tokenizer::new(&DatabricksDialect {}, sql).tokenize() else {
         return false;
     };
-    // Significant tokens only — whitespace (incl. comments) and EOF out; Period retained so
-    // multipart table names stay structured (O4-C1-L-001).
+    // Significant tokens only — whitespace (incl.
     let significant: Vec<&Token> = tokens
         .iter()
         .filter(|token| !matches!(token, Token::Whitespace(_) | Token::EOF))
@@ -75,7 +68,7 @@ pub(crate) fn starts_with_branch_or_tag_ddl(sql: &str) -> bool {
         return false;
     }
 
-    // CREATE BRANCH|TAG …  /  CREATE OR REPLACE BRANCH|TAG …
+    // CREATE BRANCH|TAG … / CREATE OR REPLACE BRANCH|TAG …
     if word_at(0).is_some_and(|w| w.eq_ignore_ascii_case("CREATE")) {
         if word_at(1).is_some_and(is_branch_or_tag) {
             return true;
@@ -114,8 +107,7 @@ pub(crate) fn starts_with_branch_or_tag_ddl(sql: &str) -> bool {
     false
 }
 
-/// Token-level MERGE check for the normalizer pipeline (first significant token is the `MERGE`
-/// keyword).
+/// Token-level MERGE check for the normalizer pipeline.
 pub(crate) fn is_merge(tokens: &[Token]) -> bool {
     tokens
         .iter()
@@ -127,13 +119,9 @@ pub(crate) fn is_merge(tokens: &[Token]) -> bool {
         .unwrap_or(false)
 }
 
-/// Parse one statement with Spark-isms normalized. Unsupported or unrecognized forms fall through
-/// to DataFusion passthrough.
-///
+/// Parse one statement with Spark-isms normalized.
 /// # Errors
-/// A `CREATE TABLE` whose `PARTITIONED BY` clause is malformed (unbalanced parens, empty list,
-/// duplicate clause, an unrecognisable element) errors loudly — Spark parse-rejects those forms
-/// too, and falling through to the passthrough would only produce an opaque parse error.
+/// # Errors A `CREATE TABLE` whose `PARTITIONED BY` clause is malformed errors loudly.
 pub(crate) fn parse_single_normalized(
     sql: &str,
 ) -> Result<Option<(Statement, Vec<PartitionedByElement>)>> {
@@ -154,8 +142,7 @@ pub(crate) fn parse_single_normalized(
     if is_merge(&tokens) {
         tokens = merge::rewrite_merge_stars(&tokens);
     }
-    // ALTER TABLE uses GenericDialect so Spark `ADD COLUMN … FIRST|AFTER x` fills
-    // `MySQLColumnPosition` (Databricks dialect leaves those tokens unparsed — I6).
+    // ALTER TABLE uses GenericDialect.
     let generic = GenericDialect {};
     let parse_dialect: &dyn datafusion::sql::sqlparser::dialect::Dialect =
         if alter::tokens_are_alter_table(&tokens) {
@@ -170,7 +157,6 @@ pub(crate) fn parse_single_normalized(
         return Ok(None);
     };
     // BUG-010 defense-in-depth: multi-statement after normalisers still refuse as Parse.
-    // (Primary gate is `refuse_multi_statement_sql` at the top of `execute_inner`.)
     if statements.len() > 1 {
         return Err(multi_statement_parse_error());
     }
@@ -181,16 +167,11 @@ pub(crate) fn parse_single_normalized(
     }
 }
 
-// === Multi-statement and merge-on-read DML safety gates ================================
+// === Multi-statement and merge-on-read DML safety gates ================================.
 
-/// Refuse multiple statements. Spark raises
-/// `ParseException` / `[PARSE_SYNTAX_ERROR]` for `SELECT 1; SELECT 2` while allowing a single
-/// statement with trailing `;`, whitespace, or line/block comments.
-///
+/// Refuse multiple statements.
 /// # Errors
-/// [`DataFusionError::SQL`] (→ session `Error::Parse` → Python `ParseException`) when more than
-/// one non-empty statement is present, or when a semicolon is followed by non-trailing content
-/// even if the second statement fails to parse (fail-closed).
+/// Returns SQL parse error when more than one non-empty statement is present.
 pub(crate) fn refuse_multi_statement_sql(sql: &str) -> Result<()> {
     let dialect = DatabricksDialect {};
     let Ok(tokens) = Tokenizer::new(&dialect, sql).tokenize() else {
@@ -204,8 +185,7 @@ pub(crate) fn refuse_multi_statement_sql(sql: &str) -> Result<()> {
         Ok(statements) if statements.len() > 1 => Err(multi_statement_parse_error()),
         Ok(_) => Ok(()),
         Err(_) => {
-            // Fail-closed: `;` + non-ws/comment/extra-`;` content → multi-statement class refuse
-            // (covers `SELECT 1; XYZZY 2` where parse_statements errors after the first stmt).
+            // Fail-closed: `;` + non-ws/comment/extra-`;` content → multi-statement class refuse.
             if tokens_have_nontrailing_content_after_semicolon(&tokens) {
                 Err(multi_statement_parse_error())
             } else {
@@ -216,7 +196,6 @@ pub(crate) fn refuse_multi_statement_sql(sql: &str) -> Result<()> {
 }
 
 /// True when a `;` token is followed later by any non-whitespace, non-`;`, non-EOF token.
-/// Comments are `Token::Whitespace` in sqlparser, so trailing `; -- c` / `; /*c*/` stay allowed.
 pub(crate) fn tokens_have_nontrailing_content_after_semicolon(tokens: &[Token]) -> bool {
     let mut saw_semicolon = false;
     for token in tokens {
@@ -247,10 +226,9 @@ pub(crate) fn multi_statement_parse_error() -> DataFusionError {
 }
 
 // The valve verb enum is owned by repark-iceberg beside the position-delete path it gates.
-// Re-export it so sibling callers keep one local type name.
 pub(crate) use repark_iceberg::write::MorDmlKind;
 
-/// [`ObjectName`] from a `TableWithJoins` primary relation (strips aliases — BUG-001 under-refuse fix).
+/// [`ObjectName`] from a `TableWithJoins` primary relation.
 pub(crate) fn object_name_from_table_with_joins(table: &TableWithJoins) -> Option<&ObjectName> {
     match &table.relation {
         TableFactor::Table { name, .. } => Some(name),
@@ -258,7 +236,7 @@ pub(crate) fn object_name_from_table_with_joins(table: &TableWithJoins) -> Optio
     }
 }
 
-/// Target table [`ObjectName`] from a parsed DELETE (`tables` multi-delete form, else FROM relation).
+/// Target table [`ObjectName`] from a parsed DELETE.
 pub(crate) fn delete_target_object_name(
     delete: &datafusion::sql::sqlparser::ast::Delete,
 ) -> Option<&ObjectName> {
@@ -273,15 +251,9 @@ pub(crate) fn delete_target_object_name(
         .and_then(object_name_from_table_with_joins)
 }
 
-/// ===========================================================================================
 /// Resolve the DML target and delegate the merge-on-read hazard predicate to the fork safety valve.
-///
-/// Use [`ObjectName`] parts so aliases cannot bypass the hazard gate. Nested namespaces resolve via
-/// [`NamespaceIdent::from_vec`].
-///
 /// # Errors
 /// [`DataFusionError::Plan`] naming the fork hazard and copy-on-write / `MERGE` workarounds.
-/// ===========================================================================================
 pub(crate) async fn refuse_mor_unpartitioned_multi_spec_dml(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -326,8 +298,7 @@ pub(crate) async fn refuse_v3_cow_dml(
     repark_iceberg::write::refuse_v3_cow_dml(catalog.as_ref(), &ident, kind).await
 }
 
-/// Resolve a DML target as DataFusion will: short names complete from the session defaults
-/// (SEC-001); `None` when empty or the namespace cannot be built.
+/// Resolve a DML target as DataFusion will: short names complete from the session defaults.
 fn dml_target_ident(ctx: &SessionContext, table_name: &ObjectName) -> Option<(String, TableIdent)> {
     let mut parts = name_parts(table_name);
     if parts.is_empty() {
@@ -380,17 +351,9 @@ impl DmlSubqueryVerb {
     }
 }
 
-/// ===========================================================================================
 /// G3-E8 valve — refuse `DELETE` or `UPDATE` predicates containing subqueries.
-///
-/// DataFusion can decorrelate such predicates before the provider receives them, leaving an empty
-/// filter that means match-all. The fail-safe guard is syntactic and slightly wide; the executing
-/// parse in [`crate::spark_ast::execute_passthrough`] is authoritative.
-/// ===========================================================================================
-///
 /// # Errors
-/// [`DataFusionError::Plan`] naming the defect class, the `MERGE INTO` workaround, and that
-/// support returns with the fix.
+/// Returns Plan naming the defect class and the MERGE INTO workaround until support returns.
 pub(crate) fn refuse_dml_subquery_predicate(
     verb: DmlSubqueryVerb,
     selection: Option<&Expr>,
@@ -407,16 +370,11 @@ pub(crate) fn refuse_dml_subquery_predicate(
     )))
 }
 
-/// ===========================================================================================
-/// Apply the G3-E8 valve to the statement parsed for execution. The target comes from the parsed
-/// object name, and the allow-list must match the complete statement shape.
-/// ===========================================================================================
-///
+/// Apply the G3-E8 valve to the statement parsed for execution.
 /// # Errors
 /// [`DataFusionError::Plan`] — the same G3-E8 refusal [`refuse_dml_subquery_predicate`] renders.
 pub(crate) fn refuse_dml_subquery_predicate_in_statement(statement: &Statement) -> Result<()> {
-    // Full-statement allow-list only — never skip on the selection shape alone (USING /
-    // RETURNING / 1-part names must stay fail-closed, never DataFusion DML).
+    // Full-statement allow-list only — never skip on the selection shape alone.
     if repark_iceberg::write::predicate_dml::try_allowed_delete_in(statement)?.is_some()
         || repark_iceberg::write::predicate_dml::try_allowed_update_in(statement)?.is_some()
     {
@@ -439,9 +397,7 @@ pub(crate) fn refuse_dml_subquery_predicate_in_statement(statement: &Statement) 
     }
 }
 
-/// True when a `Query` node appears anywhere inside `expr` — i.e. the expression carries a
-/// subquery at any depth (`IN (…)`, `NOT IN`, `EXISTS`, `ANY`/`ALL`, a scalar `(SELECT …)`,
-/// nested under `NOT` / `OR` / a function argument, or inside another subquery).
+/// True when a `Query` node appears anywhere inside `expr` — i.e.
 fn expression_contains_subquery(expr: &Expr) -> bool {
     struct SawSubquery;
     struct SubqueryProbe;
@@ -455,8 +411,7 @@ fn expression_contains_subquery(expr: &Expr) -> bool {
     expr.visit(&mut SubqueryProbe).is_break()
 }
 
-/// The G3-E8 refusal text (pinned by tests in BOTH doors — the needle the parity corpus asserts
-/// is `subquery predicates are silently mis-executed`).
+/// The G3-E8 refusal text.
 fn dml_subquery_refusal_message(verb: DmlSubqueryVerb, table: &str) -> String {
     format!(
         "{verb_name} with a subquery in its WHERE clause is refused on `{table}`: subquery \
@@ -488,9 +443,6 @@ pub(crate) fn is_create_table(tokens: &[Token]) -> bool {
 }
 
 /// The CTAS `AS` boundary — the position of the first `AS` keyword (or the end of the stream).
-/// Clause normalisers (`strip_create_table_using`, `extract_partitioned_by`) only act BEFORE it,
-/// so `JOIN … USING` / window `PARTITION BY` shapes inside the SELECT are structurally out of
-/// reach.
 pub(crate) fn ctas_as_boundary(tokens: &[Token]) -> usize {
     tokens
         .iter()
@@ -498,9 +450,7 @@ pub(crate) fn ctas_as_boundary(tokens: &[Token]) -> usize {
         .unwrap_or(tokens.len())
 }
 
-/// Strip the Spark `USING <provider>` data-source clause (which stock sqlparser cannot parse) from a
-/// CREATE TABLE statement. Only the occurrence before the CTAS `AS` is removed, so a `JOIN … USING`
-/// inside the SELECT is left intact. We always create Iceberg tables, so the provider is advisory.
+/// Strip the Spark `USING <provider>` data-source clause from a CREATE TABLE statement.
 pub(crate) fn strip_create_table_using(tokens: &[Token]) -> Vec<Token> {
     let boundary = ctas_as_boundary(tokens);
     let mut out = Vec::with_capacity(tokens.len());
@@ -525,30 +475,19 @@ pub(crate) fn strip_create_table_using(tokens: &[Token]) -> Vec<Token> {
 }
 
 /// One element of a Spark `CREATE TABLE … PARTITIONED BY (…)` clause, classified by token shape.
-/// Bare names are identity transforms, call forms are named transforms, and typed definitions are
-/// rejected by CTAS. Classification keeps unsupported shapes fail-closed in [`build_ctas`].
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum PartitionedByElement {
     /// A bare top-level column reference — an identity partition field.
     Identity(String),
     /// A transform call `name(args…)` (`bucket(4, c)` / `days(ts)` / `truncate(10, c)` / …).
-    /// The transform NAME and its rendered arguments are carried through so [`build_ctas`] can
-    /// map them onto a real Iceberg `Transform` (validating bucket/truncate width `> 0`).
     Transform { name: String, args: Vec<String> },
-    /// A Hive-style typed column def (`name TYPE …`) — carried so the reject can mirror Spark's
-    /// "Partition column types may not be specified in Create Table As Select (CTAS)".
+    /// A Hive-style typed column def.
     Typed(String),
     /// A multipart reference (`a.b`) — nested-field partitioning, gated `NotImplemented` in v1.
     Nested(String),
 }
 
-/// A validated CTAS partition field: the source column plus the transform to apply. Built by
-/// [`build_ctas`] from the classified [`PartitionedByElement`]s (transform arguments parsed and
-/// validated — bucket/truncate width `> 0`, arity checked) and consumed by
-/// [`build_partition_spec`], which resolves the column against the derived schema and builds the
-/// real `Transform` + Java-parity partition-field name (`col` / `col_bucket` / `col_trunc` /
-/// `col_year` / `col_month` / `col_day` / `col_hour`; apache-iceberg-1.10.0 `PartitionSpec.java`
-/// `Builder.{identity,bucket,truncate,year,month,day,hour}`).
+/// A validated CTAS partition field: the source column plus the transform to apply.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum PartitionFieldSpec {
     Identity(String),
@@ -587,10 +526,7 @@ impl PartitionFieldSpec {
         }
     }
 
-    /// The partition-field NAME Java/Spark generate for this transform: the source column for an
-    /// identity field, else `<col>_<suffix>` (apache-iceberg-1.10.0 `PartitionSpec.java`
-    /// `Builder.bucket`→`_bucket`, `truncate`→`_trunc`, `year`→`_year`, …; `Spark3Util`
-    /// routes Spark's transform expressions there). Read back by the schema-equality pins.
+    /// The partition-field NAME Java/Spark generate for this transform.
     fn field_name(&self) -> String {
         let column = self.column();
         match self {
@@ -605,13 +541,7 @@ impl PartitionFieldSpec {
     }
 }
 
-/// Map one classified transform call onto a validated [`PartitionFieldSpec`], mirroring Spark's
-/// `AstBuilder`/`Spark3Util.toPartitionSpec` transform surface. `bucket`/`truncate` take
-/// `(width, column)` with a width parsed as a positive integer (Spark + Java `Bucket.get` /
-/// `Truncate.get` reject `<= 0` as an ANALYSIS error — the engine rejects it LOUD here, before any
-/// table is created, never a panic); the temporal transforms (`year[s]`/`month[s]`/`day[s]`/
-/// `hour[s]`) and `identity` take a single column. An unknown transform name, a wrong argument
-/// count, or a non-numeric/`<= 0` width is a loud typed error naming the offending form.
+/// Map one classified transform call onto a validated `PartitionFieldSpec`.
 pub(crate) fn build_transform_field(name: &str, args: &[String]) -> Result<PartitionFieldSpec> {
     let lower = name.to_ascii_lowercase();
     let arity_err = |want: &str| {
@@ -679,19 +609,9 @@ pub(crate) fn build_transform_field(name: &str, args: &[String]) -> Result<Parti
     }
 }
 
-/// Extract the Spark `PARTITIONED BY ( … )` clause from a `CREATE TABLE` token stream — stock
-/// sqlparser cannot parse the Spark CTAS forms at all (bare references and transform calls fail
-/// `parse_column_def`'s mandatory data type), and typed columns land in `hive_distribution`, which
-/// CTAS does not consume. The clause is located before the CTAS `AS` boundary (the
-/// same rule `strip_create_table_using` uses), removed from the stream, and its elements
-/// classified by token shape for [`build_ctas`] to validate.
-///
-/// Returns the remaining tokens and the classified elements (empty when no clause is present).
-///
+/// Extract the Spark `PARTITIONED BY` clause from a `CREATE TABLE` token stream.
 /// # Errors
-/// Unbalanced parentheses, an empty field list / empty element, an unrecognisable element shape,
-/// or a DUPLICATE `PARTITIONED BY` clause (Spark `checkDuplicateClauses` parity) error loudly —
-/// Spark parse-rejects all of these forms too.
+/// Refuse unbalanced parens, empty elements, unknown shapes, or a duplicate PARTITIONED BY clause.
 pub(crate) fn extract_partitioned_by(
     tokens: &[Token],
 ) -> Result<(Vec<Token>, Vec<PartitionedByElement>)> {
@@ -733,10 +653,7 @@ pub(crate) fn extract_partitioned_by(
     Ok((remaining, elements))
 }
 
-/// Locate a well-formed `PARTITIONED BY (` run before `boundary`: returns the index of the
-/// unquoted `PARTITIONED` keyword and of the opening paren. Quoted identifiers and a
-/// `PARTITIONED` word not followed by `BY (` (e.g. an OPTIONS key named `partitioned`) are
-/// skipped, never misread as the clause.
+/// Locate a well-formed `PARTITIONED BY (` run before `boundary`.
 pub(crate) fn find_partitioned_by_run(tokens: &[Token], boundary: usize) -> Option<(usize, usize)> {
     for index in 0..boundary.min(tokens.len()) {
         let Token::Word(word) = &tokens[index] else {
@@ -767,14 +684,9 @@ pub(crate) fn find_partitioned_by_run(tokens: &[Token], boundary: usize) -> Opti
     None
 }
 
-/// Split the tokens INSIDE the `PARTITIONED BY (…)` parens on top-level commas and classify each
-/// element by shape — [`PartitionedByElement::Identity`] for a single bare/quoted word,
-/// [`PartitionedByElement::Transform`] for a call, [`PartitionedByElement::Nested`] for a dotted
-/// path, [`PartitionedByElement::Typed`] for a Hive-style column def.
-///
+/// Split PARTITIONED BY tokens on top-level commas and classify each element by shape.
 /// # Errors
-/// An empty element (empty parens, a trailing comma) or an unrecognisable shape errors loudly
-/// naming the element.
+/// # Errors An empty element or an unrecognisable shape errors loudly naming the element.
 pub(crate) fn parse_partitioned_by_elements(inner: &[Token]) -> Result<Vec<PartitionedByElement>> {
     let mut elements = Vec::new();
     let mut depth = 0usize;
@@ -798,8 +710,7 @@ pub(crate) fn parse_partitioned_by_elements(inner: &[Token]) -> Result<Vec<Parti
     Ok(elements)
 }
 
-/// Classify one comma-separated `PARTITIONED BY` element from its significant tokens (shapes in
-/// [`PartitionedByElement`]).
+/// Classify one comma-separated `PARTITIONED BY` element from its significant tokens.
 pub(crate) fn classify_partitioned_by_element(tokens: &[&Token]) -> Result<PartitionedByElement> {
     match tokens {
         [] => Err(DataFusionError::Plan(
@@ -809,9 +720,7 @@ pub(crate) fn classify_partitioned_by_element(tokens: &[&Token]) -> Result<Parti
         )),
         // Bare / backtick-quoted / dialect Word identifiers.
         [Token::Word(word)] => Ok(PartitionedByElement::Identity(word.value.clone())),
-        // ANSI double-quoted identifiers: DatabricksDialect tokenizes `"` as a string literal
-        // rather than a Word-with-quote, so the facade's `_quote_ident` form lands here
-        // (C1-SEC-001 partition-column quoting). The string *value* is the column name.
+        // ANSI double-quoted identifiers: DatabricksDialect tokenizes `"` as a string literal.
         [Token::DoubleQuotedString(name)] => Ok(PartitionedByElement::Identity(name.clone())),
         [Token::Word(word), Token::LParen, inner @ .., Token::RParen] => {
             Ok(PartitionedByElement::Transform {
@@ -833,13 +742,7 @@ pub(crate) fn classify_partitioned_by_element(tokens: &[&Token]) -> Result<Parti
     }
 }
 
-/// Split the tokens INSIDE a transform call's parens (`bucket(4, id)` → `4`, `id`) on top-level
-/// commas and render each argument to its semantic string: a bare/quoted identifier to its name
-/// (the facade double-quotes the column arg, C3-SEC-001, so it tokenizes as a string literal),
-/// an integer literal to its digits, a `-N` pair to `-N` (so a negative width still reaches the
-/// loud `> 0` reject rather than a tokenizer error). A multi-token argument that is none of these
-/// is concatenated verbatim — [`build_transform_field`] rejects it when it fails to parse.
-///
+/// Split transform-call arguments on top-level commas and render each to its semantic string.
 /// # Errors
 /// An empty argument (`bucket(4, )`, a leading/trailing comma) errors loudly.
 pub(crate) fn parse_transform_call_args(inner: &[&Token]) -> Result<Vec<String>> {
@@ -873,7 +776,7 @@ pub(crate) fn parse_transform_call_args(inner: &[&Token]) -> Result<Vec<String>>
     Ok(args)
 }
 
-/// Render one transform argument's tokens to its semantic string (see [`parse_transform_call_args`]).
+/// Render one transform argument's tokens to its semantic string.
 pub(crate) fn render_transform_arg(tokens: &[&Token]) -> String {
     match tokens {
         [Token::Word(word)] => word.value.clone(),
@@ -882,10 +785,7 @@ pub(crate) fn render_transform_arg(tokens: &[&Token]) -> String {
     }
 }
 
-/// Rewrite Spark's `NAMESPACE` object type to `SCHEMA` in a `CREATE`/`DROP` statement, so stock
-/// sqlparser (which knows `SCHEMA`/`DATABASE` but not `NAMESPACE`) can parse it. Only the object-type
-/// word — the first word after `CREATE`/`DROP` that isn't `OR`/`REPLACE` — is rewritten, so an
-/// identifier named `namespace` elsewhere is untouched.
+/// Rewrite Spark's `NAMESPACE` object type to `SCHEMA` in a `CREATE`/`DROP` statement.
 pub(crate) fn rewrite_namespace_to_schema(tokens: &[Token]) -> Vec<Token> {
     let mut words = tokens
         .iter()
@@ -923,14 +823,9 @@ pub(crate) fn property_value(value: &Expr) -> String {
     }
 }
 
-/// Build the partition spec from top-level output fields in clause order. Resolution is exact-case;
-/// transform values are computed by the fork from the source column.
-///
+/// Build the partition spec from top-level output fields in clause order.
 /// # Errors
-/// A source column not in the SELECT output errors loudly naming it AND the available columns
-/// (Java's "Cannot find source column" class); a duplicate partition-field name is rejected by
-/// the fork's builder ("Cannot use partition name more than once"). Bucket/truncate width `<= 0`
-/// is rejected EARLIER, at parse time in [`build_transform_field`], so no table is ever created.
+/// A source column missing from SELECT output errors loudly, naming it and the available columns.
 pub(crate) fn build_partition_spec(
     schema: &iceberg::spec::Schema,
     partition_fields: &[PartitionFieldSpec],

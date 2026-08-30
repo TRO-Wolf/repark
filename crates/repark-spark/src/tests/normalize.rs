@@ -1,16 +1,4 @@
 /// Node-kind matrix for the empty-OW cast walk.
-///
-/// The end-to-end pins above cover `Aggregate`, `Window`, `Join.on`, `Filter` and
-/// scalar-subquery hosts. The remaining hosts (`Values`, `DISTINCT ON`, `EXISTS`/`IN`
-/// subqueries) are unreachable end-to-end — the optimizer const-folds a literal
-/// `CAST('x' AS INT)` and the emptiness probe fails there first — so they are pinned here, on
-/// the same analyzed plan the guard inspects.
-///
-/// The walk is position-AGNOSTIC (`LogicalPlan::apply_expressions`): "empty" is a runtime
-/// property, so a fallible cast in a predicate is exactly as dangerous as one in a projection
-/// — the probe reads zero rows and evaluates neither. What separates fire from no-fire is
-/// [`cast_may_fail_at_runtime`] alone. Every host below flips the answer on that axis; none
-/// of these branches is dead.
 use super::super::*;
 use super::common::*;
 
@@ -89,8 +77,7 @@ async fn unsafe_cast_walk_fires_on_fallible_casts_in_every_position() {
     // Not a wipe hazard — the cast cannot raise, so empty and non-empty forms agree.
     for (why, source) in [
         (
-            // DF54: `id > '99'` is Utf8→Int coercion (fallible) — moved to fallible list above if needed.
-            // Keep a total comparison-coercion pin: same-type Utf8 comparison inserts no cast.
+            // DF54: `id > '99'` is Utf8→Int coercion — moved to fallible list above if needed.
             "Filter predicate: same-type comparison is total (Utf8)",
             "SELECT id, name FROM src WHERE name > 'a'",
         ),
@@ -128,7 +115,7 @@ fn reject_path_escape_ident_blocks_dotdot_and_separators() {
     assert!(reject_path_escape_ident("foo..bar", "catalog").is_err());
 }
 
-// === Shared identifier probes ==========================================================
+// === Shared identifier probes ==========================================================.
 /// Shared probe table (`repark_iceberg::write::idents::probes`) drives CTAS path-escape refuse.
 #[test]
 fn qi1_path_escape_shared_probes_refuse() {
@@ -157,12 +144,7 @@ fn qi1_path_escape_shared_probes_refuse() {
     assert!(reject_path_escape_ident("", "table").is_err());
 }
 
-/// G3-E8 detector: the valve reads the parsed `WHERE` expression and fires on **any** subquery,
-/// at any depth, in any spelling — and on nothing else.
-///
-/// The detection rule is "a `Query` node under the predicate", not an enumeration of
-/// subquery-bearing `Expr` variants, so this pin is what proves the rule reaches the shapes an
-/// enumeration would have to list one by one (and would silently miss after a sqlparser bump).
+/// G3-E8: the valve fires on any subquery in WHERE, at any depth, and on nothing else.
 #[test]
 fn g3e8_subquery_detector_fires_on_every_spelling_and_no_other() {
     use datafusion::sql::sqlparser::ast::Expr;
@@ -180,8 +162,7 @@ fn g3e8_subquery_detector_fires_on_every_spelling_and_no_other() {
         }
     };
 
-    // Every WHERE spelling that carries a subquery must refuse at the *expression* valve …
-    // (the product hole is statement-shaped only — see `g3e8_statement_valve`.)
+    // Every WHERE spelling that carries a subquery must refuse at the *expression* valve ….
     for sql in [
         "DELETE FROM t WHERE id IN (SELECT id FROM k)",
         "DELETE FROM t WHERE id NOT IN (SELECT id FROM k)",
@@ -193,17 +174,14 @@ fn g3e8_subquery_detector_fires_on_every_spelling_and_no_other() {
         "DELETE FROM t WHERE id = (SELECT max(id) FROM k)",
         "DELETE FROM t WHERE id = 1 OR id IN (SELECT id FROM k)",
         "DELETE FROM t WHERE id > 1 AND id IN (SELECT id FROM k)",
-        // buried under a function argument and inside a CASE — positions an Expr-variant
-        // enumeration would have to walk into anyway
+        // buried under a function argument and inside a CASE.
         "DELETE FROM t WHERE abs(id - (SELECT max(id) FROM k)) > 1",
         "DELETE FROM t WHERE CASE WHEN id IN (SELECT id FROM k) THEN true ELSE false END",
-        // subquery nested inside another subquery's FROM
+        // subquery nested inside another subquery's FROM.
         "DELETE FROM t WHERE id IN (SELECT id FROM (SELECT id FROM k) AS x)",
-        // UPDATE IN stays refused at the statement valve (verb is Update). The expression-level
-        // helper is verb-aware and would allow the same selection on DELETE; pin it with EXISTS.
+        // UPDATE IN stays refused at the statement valve (verb is Update).
         "UPDATE t SET name = 'z' WHERE id IN (SELECT id FROM k)",
-        // These spellings cover the parser-bypass family (L1 M-4): none of them is
-        // safe-because-uncorrelated — the safe/unsafe boundary is per-shape.
+        // These spellings cover the parser-bypass family.
         "DELETE FROM t WHERE NOT EXISTS (SELECT 1 FROM k)",
         "DELETE FROM t WHERE EXISTS (SELECT 1 FROM k WHERE 1 = 0)",
         "DELETE FROM t WHERE id IN (SELECT max(id) FROM k)",
@@ -217,8 +195,7 @@ fn g3e8_subquery_detector_fires_on_every_spelling_and_no_other() {
         );
     }
 
-    // … and every subquery-free predicate must pass, including the shapes that *look* like a
-    // subquery (`IN` over a value list, a derived-table-free EXISTS-ish name).
+    // … and every subquery-free predicate must pass, including the shapes.
     for sql in [
         "DELETE FROM t WHERE id = 2",
         "DELETE FROM t WHERE id IN (1, 2, 3)",
@@ -227,8 +204,7 @@ fn g3e8_subquery_detector_fires_on_every_spelling_and_no_other() {
         "DELETE FROM t WHERE abs(id) > 1 AND name IS NOT NULL",
         "DELETE FROM t WHERE CASE WHEN id > 1 THEN true ELSE false END",
         "UPDATE t SET name = 'z' WHERE id = 2",
-        // the assignment subquery is deliberately NOT the detector's business — only `selection`
-        // is passed in, and this statement's WHERE is subquery-free
+        // the assignment subquery is deliberately NOT the detector's business.
         "UPDATE t SET name = (SELECT max(name) FROM k) WHERE id = 2",
     ] {
         let statement = parse(sql);
@@ -252,15 +228,7 @@ fn g3e8_subquery_detector_fires_on_every_spelling_and_no_other() {
     );
 }
 
-/// ===========================================================================================
 /// The valve's AUTHORITATIVE entry point — the statement-shaped one the passthrough calls (F-A).
-///
-/// [`refuse_dml_subquery_predicate_in_statement`] is what runs at the EXECUTING parse, so it owns
-/// two things the expression-level function does not: which statements it applies to (only
-/// `DELETE`/`UPDATE` — everything else passes through untouched, which the passthrough relies on
-/// for every SELECT in the engine), and the rendered target, which it reads off the parse tree so
-/// that FROM-less and quoted spellings still name a usable table.
-/// ===========================================================================================
 #[test]
 fn g3e8_statement_valve_covers_both_verbs_and_renders_the_parsed_target() {
     let parse = |sql: &str| -> Statement {
@@ -269,8 +237,7 @@ fn g3e8_statement_valve_covers_both_verbs_and_renders_the_parsed_target() {
             .remove(0)
     };
 
-    // Fires, and names the parsed target — including the FROM-less spelling the router's own
-    // parse rejects and the quoted form the text scan cannot read.
+    // Fires, and names the parsed target.
     for (sql, expected_target, verb) in [
         (
             "DELETE FROM ice.sales.t WHERE id = (SELECT max(id) FROM k)",
@@ -306,8 +273,7 @@ fn g3e8_statement_valve_covers_both_verbs_and_renders_the_parsed_target() {
         );
     }
 
-    // Passes everything it must not gate: subquery-free DML, and every non-DML statement (a
-    // SELECT with a subquery is not this valve's business — the passthrough plans it).
+    // Passes everything it must not gate: subquery-free DML, and every non-DML statement.
     for sql in [
         "DELETE FROM ice.sales.t WHERE id = 2",
         "DELETE FROM ice.sales.t WHERE id IN (SELECT id FROM k)",

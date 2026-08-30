@@ -1,13 +1,4 @@
 //! Iceberg snapshot-ref DDL: `CREATE|DROP|REPLACE BRANCH|TAG`.
-//!
-//! Stock sqlparser does not model these forms. The router sniffs them and routes here. Supported:
-//! - `ALTER TABLE t CREATE [OR REPLACE] BRANCH|TAG b [AS OF VERSION n] [RETAIN …] [WITH SNAPSHOT RETENTION …]`
-//! - `ALTER TABLE t REPLACE BRANCH|TAG b [AS OF VERSION n] [RETAIN …] [WITH SNAPSHOT RETENTION …]`
-//! - `ALTER TABLE t DROP BRANCH b` / `DROP TAG tag`
-//! - Top-level `CREATE [OR REPLACE] BRANCH|TAG b IN t` / `DROP … IN t`
-//!
-//! Retention maps to the fork's snapshot-management actions. Write-to-branch inserts refuse
-//! because the fork has no branch-target commit operation.
 
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
@@ -64,12 +55,7 @@ enum Sig {
     Other,
 }
 
-/// ===========================================================================================
 /// Try to parse `sql` as CREATE/DROP/REPLACE BRANCH|TAG (including ALTER TABLE forms).
-///
-/// Returns `None` when the statement is not ref DDL. Unsupported trailing clauses return
-/// `Some(Err(…))` so the router does not fall through to an opaque parser error.
-/// ===========================================================================================
 pub(crate) fn try_parse_ref_ddl(sql: &str) -> Option<Result<RefDdl>> {
     let significant = tokenize_significant(sql)?;
     if significant.len() < 2 {
@@ -293,8 +279,6 @@ fn parse_drop_with_in(
 }
 
 /// Fail loud when significant tokens remain after a fully-parsed ref DDL form.
-///
-/// Reject trailing tokens and known-but-unsupported `IF EXISTS` spellings instead of dropping them.
 fn reject_trailing_tokens(significant: &[Sig], end_index: usize, form: &str) -> Result<()> {
     if end_index < significant.len() {
         let leftover = match significant.get(end_index) {
@@ -316,14 +300,6 @@ fn reject_trailing_tokens(significant: &[Sig], end_index: usize, form: &str) -> 
 }
 
 /// Parse optional retention clauses starting at `index`.
-///
-/// Grammar (Spark Iceberg branch/tag docs):
-/// ```text
-/// [RETAIN <n> DAYS|HOURS|MINUTES]
-/// [WITH SNAPSHOT RETENTION <n> SNAPSHOTS|DAYS|HOURS|MINUTES]
-/// ```
-/// Either clause may appear; order is RETAIN then WITH SNAPSHOT RETENTION when both present.
-///
 /// # Errors
 /// Malformed numbers/units, tag + branch-only snapshot retention, non-positive counts.
 fn parse_retention_clauses(
@@ -508,9 +484,6 @@ fn collect_name_parts(significant: &[Sig], start: usize, end: usize) -> Option<V
 }
 
 /// Parse optional `AS OF VERSION <n>` starting at `index`.
-///
-/// Returns `(None, index)` when absent (caller must still end-of-statement check), or
-/// `(Some(id), index_after_version)` when present.
 fn parse_as_of_version(significant: &[Sig], index: usize) -> Result<(Option<i64>, usize)> {
     if index >= significant.len() {
         return Ok((None, index));
@@ -576,10 +549,7 @@ fn resolve_snapshot_id(
     })
 }
 
-/// ===========================================================================================
 /// Execute a parsed ref DDL statement against the Iceberg catalog.
-/// ===========================================================================================
-///
 /// # Errors
 /// Unknown catalog/table, missing current snapshot (CREATE without AS OF), or fork validation.
 pub(crate) async fn execute_ref_ddl(
@@ -684,18 +654,12 @@ Fork-workstream seed (not a RePark hack). Read-side VERSION AS OF 'branch' works
 CREATE|REPLACE BRANCH re-pin is the product write path for refs today \
 (docs/spark-sql-iceberg-parity.md §2.2 / r25 T2 ledger).";
 
-/// ===========================================================================================
-/// A sniffed write-to-branch candidate. `MultiPart` (≥4 dotted parts) is unambiguous — no
-/// 4-part name can be a real table. `TwoPart` is AMBIGUOUS with a genuine
-/// `schema.branch_daily` table under the default catalog; the caller must disambiguate by
-/// resolution before refusing.
-/// ===========================================================================================
+/// A sniffed write-to-branch candidate.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum WriteToBranchSniff {
     /// `cat.ns.table.ref` — always refuse (last segment is not a metadata suffix).
     MultiPart,
-    /// `identifier.branch_xxx` — refuse only when the PREFIX resolves as a table and the
-    /// full two-part name does not.
+    /// `identifier.branch_xxx`.
     TwoPart { parts: [String; 2] },
 }
 
@@ -712,7 +676,7 @@ pub(crate) fn sniff_write_to_branch(sql: &str) -> Option<WriteToBranchSniff> {
     if significant.len() < 4 {
         return None;
     }
-    // INSERT [INTO|OVERWRITE] / UPDATE / DELETE FROM / MERGE INTO
+    // INSERT [INTO|OVERWRITE] / UPDATE / DELETE FROM / MERGE INTO.
     let is_write_head = match significant.first() {
         Some(Token::Word(word)) => {
             let upper = word.value.to_ascii_uppercase();
@@ -723,10 +687,7 @@ pub(crate) fn sniff_write_to_branch(sql: &str) -> Option<WriteToBranchSniff> {
     if !is_write_head {
         return None;
     }
-    // Look for a four-part (or more) dotted name after the verb keywords: … t . branch_name
-    // Heuristic: last segment of a multipart table ref is not a known metadata suffix AND
-    // looks like a branch/tag name used as write target. Spark's product form is
-    // `table.branch_<name>` or the branch name as a trailing segment after a real table.
+    // Look for a four-part (or more) dotted name after the verb keywords: … t .
     find_write_target_branch_span(&significant)
 }
 
@@ -752,19 +713,14 @@ fn find_write_target_branch_span(significant: &[&Token]) -> Option<WriteToBranch
         if is_target_kw || at_update_name {
             let name_start = if is_target_kw { index + 1 } else { index };
             if let Some(parts) = collect_ident_parts(significant, name_start) {
-                // Four-or-more parts: `catalog.namespace.table.ref` — last segment is the
-                // branch/tag write target when it is not a metadata-table suffix.
-                // Three-part names stay alone: a table literally named `branch_exp` is valid
-                // (`mem.ns.branch_exp` must not false-positive — expire CALL pin).
+                // Four-or-more parts: `catalog.namespace.table.ref`.
                 if parts.len() >= 4 {
                     let last = parts.last()?.as_str();
                     if !crate::metadata_tables::is_metadata_table_name(last) {
                         return Some(WriteToBranchSniff::MultiPart);
                     }
                 }
-                // Two-part `table.branch_foo` under session default catalog — Spark WAP-adjacent
-                // spelling; only when the trailing segment starts with `branch_`. Ambiguous with
-                // a real `schema.branch_foo` table — caller disambiguates by resolution.
+                // Two-part `table.branch_foo` under session default catalog.
                 if parts.len() == 2 {
                     let last = parts.last()?.as_str();
                     if last.to_ascii_lowercase().starts_with("branch_")
@@ -805,10 +761,7 @@ fn collect_ident_parts(significant: &[&Token], start: usize) -> Option<Vec<Strin
     if parts.is_empty() { None } else { Some(parts) }
 }
 
-/// ===========================================================================================
 /// Refuse write-to-branch with the precise fork gap (product STOP).
-/// ===========================================================================================
-///
 /// # Errors
 /// Always returns [`DataFusionError::NotImplemented`] with [`WRITE_TO_BRANCH_NOT_SUPPORTED`].
 pub(crate) fn refuse_write_to_branch() -> DataFusionError {
@@ -1049,8 +1002,7 @@ mod tests {
         assert!(sniff_write_to_branch("INSERT INTO ice.sales.t.snapshots SELECT 1").is_none());
     }
 
-    /// The sniff separates the unambiguous ≥4-part form from the
-    /// resolution-ambiguous two-part form so the router can disambiguate the latter.
+    /// The sniff separates unambiguous four-part names from resolution-ambiguous two-part names.
     #[test]
     fn write_to_branch_sniff_kinds() {
         assert_eq!(
@@ -1063,8 +1015,7 @@ mod tests {
                 parts: ["t".to_string(), "branch_audit".to_string()]
             })
         );
-        // A genuine `schema.branch_daily` sniffs TwoPart — the ROUTER must not refuse it
-        // when the full name resolves (integration pin in lib.rs).
+        // A genuine `schema.branch_daily` sniffs TwoPart.
         assert_eq!(
             sniff_write_to_branch("INSERT INTO public.branch_daily SELECT 1"),
             Some(WriteToBranchSniff::TwoPart {

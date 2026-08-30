@@ -44,8 +44,7 @@ fn configure_installs_repark_sql_config_from_conf_map() {
     assert!(!installed.allow_local_filesystem_ddl);
 }
 
-/// `configure` carries the resolved session zone to the extractor layer instead of re-parsing
-/// the raw configuration.
+/// `configure` carries the resolved session zone to the extractor layer.
 #[test]
 fn configure_installs_the_resolved_session_time_zone_carrier() {
     let mut conf = HashMap::new();
@@ -72,8 +71,7 @@ fn configure_installs_the_resolved_session_time_zone_carrier() {
     );
 }
 
-/// The carrier is installed on EVERY Spark session, including one that never set the key — so
-/// the extractor layer never falls back to its own default in a real session.
+/// The carrier is installed on EVERY Spark session, including one that never set the key.
 #[test]
 fn configure_installs_the_carrier_even_for_the_default_zone() {
     let conf = HashMap::new();
@@ -230,8 +228,7 @@ fn configure_refuses_invalid_timestamp_type() {
     );
 }
 
-/// DEC-1 / U2: `configure` turns on DataFusion's `parse_float_as_decimal` so the Spark door
-/// matches Spark's DECIMAL inference for bare floating-point SQL literals.
+/// DEC-1 / U2: `configure` turns on DataFusion's `parse_float_as_decimal`.
 #[test]
 fn configure_defaults_parse_float_as_decimal() {
     let conf = HashMap::new();
@@ -245,8 +242,7 @@ fn configure_defaults_parse_float_as_decimal() {
     );
 }
 
-/// Mutation-red for the same default on the collect path: `SELECT 1.23` is decimal128(3,2),
-/// not Float64. Stock DataFusion (flag off) would answer Float64 here.
+/// Mutation-red for the same default on the collect path: `SELECT 1.23` is decimal128, not Float64.
 #[tokio::test]
 async fn configure_makes_bare_1_23_decimal128_3_2() {
     let conf = HashMap::new();
@@ -278,8 +274,7 @@ async fn configure_makes_bare_1_23_decimal128_3_2() {
     assert_eq!(values.value(0), 123, "i128 scaled 1.23 at scale 2");
 }
 
-/// `register` installs the Spark function registry: `weekofyear` (a date-shim function stock
-/// DataFusion does not ship) is callable from SQL after the hook runs.
+/// `register` installs the Spark function registry.
 #[tokio::test]
 async fn register_makes_spark_shim_functions_callable() {
     let ctx = SessionContext::new();
@@ -305,8 +300,7 @@ async fn register_makes_spark_shim_functions_callable() {
     assert_eq!(weeks.value(0), 11);
 }
 
-/// `register` appends the Spark expression-semantics analyzer rules: integer `/` yields a
-/// DOUBLE (Spark), not integer division (DataFusion).
+/// `register` appends the Spark expression-semantics analyzer rules.
 #[tokio::test]
 async fn register_installs_spark_integer_division_semantics() {
     let ctx = SessionContext::new();
@@ -327,7 +321,6 @@ async fn register_installs_spark_integer_division_semantics() {
 }
 
 /// `register` composes [`repark_ta::TaExtension`] so a Spark session has the TA window UDFs.
-/// Results are bit-exact against the repark-ta kernel.
 #[tokio::test]
 async fn register_composes_the_ta_extension_window_udfs() {
     let close: Vec<f64> = vec![

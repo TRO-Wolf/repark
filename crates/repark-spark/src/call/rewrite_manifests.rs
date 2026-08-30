@@ -1,5 +1,4 @@
 //! `CALL <catalog>.system.rewrite_manifests(…)` over the fork's `RewriteManifestsAction`.
-//! The live file set stays identical; only manifest grouping changes.
 
 use std::sync::Arc;
 
@@ -24,16 +23,9 @@ struct MatchingManifests {
     delete_count: usize,
 }
 
-/// ===========================================================================================
 /// Execute `CALL <catalog>.system.rewrite_manifests(table => …)`.
-///
-/// Return `rewritten_manifests_count` and `added_manifests_count` from the new snapshot summary
-/// because the fork action returns no counts. Delete manifests remain unchanged; refusing a
-/// zero-result case avoids a false clean signal when Spark would rewrite them.
-///
 /// # Errors
 /// Plan / `NotImplemented` / iceberg commit failures as [`DataFusionError`].
-/// ===========================================================================================
 pub(super) async fn execute_rewrite_manifests(
     ctx: &SessionContext,
     catalog: Arc<dyn Catalog>,
@@ -43,10 +35,7 @@ pub(super) async fn execute_rewrite_manifests(
     args.reject_unknown_named(&["table", "use_caching", "spec_id"])?;
     // Spark positional order: table, use_caching, spec_id (jar `PARAMETERS`).
     args.reject_excess_positional(3)?;
-    // Parse and drop. Spark's `use-caching` option caches its manifest DataFrame between the two
-    // legs of its own action. This engine reads manifests directly, so the value changes nothing.
-    // The type check is STRICTER than Spark, which casts a string literal and runs (registry
-    // `MANIFEST-2`): a quoted argument on a procedure this small is more likely a typo than intent.
+    // Parse and drop.
     args.optional_bool("use_caching", Some(1))?;
     if args.optional_i32("spec_id", Some(2))?.is_some() {
         return Err(DataFusionError::NotImplemented(
@@ -62,8 +51,7 @@ pub(super) async fn execute_rewrite_manifests(
     let table = catalog.load_table(&ident).await.map_err(iceberg_err)?;
 
     let Some(snapshot) = table.metadata().current_snapshot() else {
-        // Spark finds no manifests on a table with no snapshot and answers zeros. The fork action
-        // fails `DataInvalid` instead, so this returns before the action runs.
+        // Spark finds no manifests on a table with no snapshot and answers zeros.
         return zero_result(ctx);
     };
     let spec_id = table.metadata().default_partition_spec_id();
@@ -77,14 +65,9 @@ pub(super) async fn execute_rewrite_manifests(
     let tx = Transaction::new(&table);
     let action = tx
         .rewrite_manifests()
-        // One cluster key, so every matching entry lands in one manifest per spec. Both engines
-        // read `commit.manifest.target-size-bytes`, but they size differently above it: Java
-        // repartitions into `ceil(total / target)` groups, and the fork rolls on a running
-        // estimate. Below the target — the 8 MB default — both write one manifest and the counts
-        // agree; above it `added_manifests_count` diverges (registry `MANIFEST-3`).
+        // One cluster key, so every matching entry lands in one manifest per spec.
         .cluster_by(|_| String::new())
         // Java's default filter — `RewriteManifestsSparkAction` rewrites the current spec only.
-        // Without it a table whose spec evolved rewrites manifests Spark keeps.
         .rewrite_if(move |manifest| manifest.partition_spec_id == spec_id);
     let tx = action.apply(tx).map_err(iceberg_err)?;
     let committed = tx.commit(catalog.as_ref()).await.map_err(iceberg_err)?;
@@ -132,8 +115,7 @@ async fn match_manifests(
     Ok(matching)
 }
 
-/// A manifest length is a signed field in the spec. A negative one is corrupt metadata, and it
-/// must not shrink the total that decides whether the rewrite runs.
+/// A manifest length is a signed field in the spec.
 fn manifest_bytes(manifest: &ManifestFile) -> u64 {
     u64::try_from(manifest.manifest_length).unwrap_or(0)
 }
@@ -148,19 +130,12 @@ fn target_manifest_size_bytes(table: &Table) -> u64 {
         .unwrap_or(TableProperties::PROPERTY_COMMIT_MANIFEST_TARGET_SIZE_BYTES_DEFAULT)
 }
 
-/// Spark's no-op rule: one matching manifest that already fits one target manifest is left alone
-/// (`targetNumManifests == 1 && matching.size() == 1`), and no snapshot is committed. Measured on
-/// the live oracle 2026-08-23: a second call on a freshly rewritten table answers `0, 0` and adds
-/// no snapshot. Without this the fork would rewrite that manifest into itself and answer `1, 1`.
+/// Spark's no-op rule: one matching manifest.
 fn is_data_leg_noop(matching: &MatchingManifests, target_bytes: u64) -> bool {
     matching.data_count <= 1 && matching.data_bytes <= target_bytes
 }
 
 /// Refuse rather than answer zeros a caller reads as "nothing to compact".
-///
-/// Spark rewrites delete manifests in a second leg of the same procedure; the fork's action keeps
-/// every delete manifest byte-identical. Two or more of them is work Spark would do, so zeros
-/// here would be false. Below two, Spark's own delete leg is a no-op and the zeros are honest.
 fn refuse_uncompactable_delete_manifests(
     matching: &MatchingManifests,
     table_arg: &str,
@@ -180,9 +155,6 @@ fn refuse_uncompactable_delete_manifests(
 }
 
 /// A summary count Spark reads as one of its two columns.
-///
-/// The fork writes both keys on every rewrite commit. A missing or unparsable one means the
-/// action changed shape, and this refuses rather than reporting a fabricated zero.
 fn summary_count(snapshot: &Snapshot, key: &str) -> Result<i32> {
     let raw = snapshot
         .summary()

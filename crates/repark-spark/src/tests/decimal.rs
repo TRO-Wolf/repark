@@ -1,20 +1,13 @@
 //! Pins Spark-door decimal inference, precision/scale, nullability, overflow, and division.
-//!
-//! Assertions use the Arrow path and raw `Decimal128` `i128` values. The Python corpus is the
-//! oracle source; this file does not edit it.
 
 use super::super::*;
 use super::common::*;
 
 use datafusion::arrow::array::Decimal128Array;
 
-// =================================================================================================
 // Collect helpers — one-column scalar pins on the Arrow path (value AND type AND nullability)
-// =================================================================================================
 
 /// One-column Decimal128 result: `(precision, scale, nullable, value_or_null)`.
-///
-/// `value` is the raw Arrow `i128` (scaled integer). `None` means the cell is null.
 async fn collect_decimal128(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -52,12 +45,9 @@ async fn collect_decimal128(
     (precision, scale, nullable, value)
 }
 
-// =================================================================================================
 // Equality-class money controls (repark == Spark; corpus `repark is None`)
-// =================================================================================================
 
 /// Corpus row `add_same_precision_scale` — `(10,2)+(10,2)` → decimal128(11,2) = 5.79.
-/// Scaled i128: 579. Equality control for the bit-exact idiom.
 #[tokio::test]
 async fn pin_add_same_precision_scale_i128() {
     let warehouse = TempDir::new().unwrap();
@@ -74,7 +64,6 @@ async fn pin_add_same_precision_scale_i128() {
 }
 
 /// Corpus row `mul_money_by_quantity` — money × qty → decimal128(21,2) = 59.97.
-/// Scaled i128: 5997. Shopping-cart control.
 #[tokio::test]
 async fn pin_mul_money_by_quantity_i128() {
     let warehouse = TempDir::new().unwrap();
@@ -90,13 +79,9 @@ async fn pin_mul_money_by_quantity_i128() {
     assert_eq!(value, Some(5997), "i128 scaled 59.97 at scale 2");
 }
 
-// =================================================================================================
 // Literal inference (DEC-1 / U2 — Spark-door `parse_float_as_decimal=true`)
-// =================================================================================================
 
 /// Corpus row `literal_1_23_infers_decimal_in_spark_double_in_repark`.
-/// After U2 both doors' Spark half is decimal128(3,2) i128=123. Name kept on the Python
-/// corpus row; this Rust pin follows the new type.
 #[tokio::test]
 async fn pin_literal_1_23_infers_decimal128_3_2_i128() {
     let warehouse = TempDir::new().unwrap();
@@ -112,12 +97,9 @@ async fn pin_literal_1_23_infers_decimal128_3_2_i128() {
     assert_eq!(value, Some(123), "i128 scaled 1.23 at scale 2");
 }
 
-// =================================================================================================
 // Division result (p,s) (disclosure — repark lands narrower than Spark)
-// =================================================================================================
 
 /// Corpus row `div_same_precision_scale`.
-/// U4b: Spark (23,13) 0.2697368421053. i128 = 2697368421053.
 #[tokio::test]
 async fn pin_div_same_precision_scale_repark_i128() {
     let warehouse = TempDir::new().unwrap();
@@ -137,12 +119,9 @@ async fn pin_div_same_precision_scale_repark_i128() {
     );
 }
 
-// =================================================================================================
 // 38-digit clamp family (disclosure — repark keeps more scale than Spark)
-// =================================================================================================
 
 /// Corpus row `mul_38_10_clamps_scale_in_spark`.
-/// U4a: Spark `adjustPrecisionScale` → (38,6). i128 = 10^6 (1.0 at s=6).
 #[tokio::test]
 async fn pin_mul_38_10_clamps_to_38_6_i128() {
     let warehouse = TempDir::new().unwrap();
@@ -159,7 +138,6 @@ async fn pin_mul_38_10_clamps_to_38_6_i128() {
 }
 
 /// Corpus row `add_38_18_clamps_scale_in_spark`.
-/// U4a: Spark add clamp → (38,17). i128 = 2 * 10^17.
 #[tokio::test]
 async fn pin_add_38_18_clamps_to_38_17_i128() {
     let warehouse = TempDir::new().unwrap();
@@ -194,15 +172,9 @@ async fn pin_mul_38_20_still_refuses_at_plan() {
     assert_eq!(value, Some(1_000_000), "i128 for 1.0 at scale 6");
 }
 
-// =================================================================================================
 // avg type + int×decimal promotion (disclosures)
-// =================================================================================================
 
 /// Corpus row `avg_money_stays_decimal_in_spark_double_in_repark`.
-///
-/// Python facade half discloses float64; the **Rust Spark door** already lands Spark's
-/// decimal128(14,6) exact 1.650000 (i128 = `1_650_000`). Pin the Rust-door fact bit-exact —
-/// the facade gap is a separate entry-point cell, not re-litigated here.
 #[tokio::test]
 async fn pin_avg_money_stays_decimal128_14_6_i128() {
     let warehouse = TempDir::new().unwrap();
@@ -220,8 +192,6 @@ async fn pin_avg_money_stays_decimal128_14_6_i128() {
 }
 
 /// Corpus row `int_times_decimal_promotes_wider_in_repark`.
-/// U3: integer literal `5` is `DECIMAL(1,0)` → product (12,2). Value 7.50 → i128 = 750.
-/// Nullability still non-null (DEC-9 / U5); Spark marks nullable.
 #[tokio::test]
 async fn pin_int_times_decimal_is_12_2_i128() {
     let warehouse = TempDir::new().unwrap();
@@ -237,7 +207,7 @@ async fn pin_int_times_decimal_is_12_2_i128() {
     assert_eq!(value, Some(750), "i128 scaled 7.50 at scale 2");
 }
 
-/// Typed INT is `forType(INT)=(10,0)`, not min-precision. Must not shrink to (12,2).
+/// Typed INT is `forType(INT)=(10,0)`, not min-precision.
 #[tokio::test]
 async fn pin_cast_int_times_decimal_stays_21_2_i128() {
     let warehouse = TempDir::new().unwrap();
@@ -253,9 +223,7 @@ async fn pin_cast_int_times_decimal_stays_21_2_i128() {
     assert_eq!(value, Some(750), "i128 scaled 7.50 at scale 2");
 }
 
-// =================================================================================================
 // ANSI overflow + divide-by-zero (G13 raise-class disclosures on the repark half)
-// =================================================================================================
 
 /// Corpus row `overflow_max_decimal38_plus_one_raises_in_spark` after DEC-6: ANSI ON raises.
 #[tokio::test]
@@ -278,8 +246,7 @@ async fn pin_overflow_max_decimal38_plus_one_wrong_value_i128() {
     );
 }
 
-/// ANSI OFF: photographed wrap becomes NULL at (38,0). Nullability may stay non-null
-/// (DEC-9 residue) — pin the value only.
+/// ANSI OFF: photographed wrap becomes NULL at (38,0).
 #[tokio::test]
 async fn pin_overflow_max_decimal38_plus_one_null_when_ansi_false() {
     let warehouse = TempDir::new().unwrap();
@@ -298,8 +265,7 @@ async fn pin_overflow_max_decimal38_plus_one_null_when_ansi_false() {
     );
 }
 
-/// Corpus row `div_by_zero_decimal38_raises_in_spark_null_in_repark` after U5: default ANSI
-/// ON raises `DIVIDE_BY_ZERO` (shared-raise with Spark). Name kept on the Python row.
+/// Corpus row `div_by_zero_decimal38_raises_in_spark_null_in_repark` after U5.
 #[tokio::test]
 async fn pin_div_by_zero_decimal38_raises_under_default_ansi() {
     let warehouse = TempDir::new().unwrap();
@@ -339,12 +305,9 @@ async fn pin_div_by_zero_decimal38_returns_null_at_38_4_when_ansi_false() {
     assert_eq!(value, None, "ansi=false /0 yields NULL, not a raise");
 }
 
-// =================================================================================================
 // Nullability marking (value+type agree with Spark; nullability diverges)
-// =================================================================================================
 
 /// Corpus row `mul_single_digit_nullability_differs`.
-/// Value 81 and type (3,0) agree with Spark; repark marks non-null, Spark nullable.
 #[tokio::test]
 async fn pin_mul_single_digit_nullability_non_null_i128() {
     let warehouse = TempDir::new().unwrap();

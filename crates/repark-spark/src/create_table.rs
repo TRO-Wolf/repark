@@ -1,10 +1,4 @@
 //! Column-def `CREATE TABLE … (cols) USING iceberg [PARTITIONED BY …] [TBLPROPERTIES …]`.
-//!
-//! Schema-only create via the **same staged path as CTAS** (`StagedTableTransaction::begin_create`
-//! / `begin_replace` → commit with **no data files**). No SELECT is planned or executed.
-//!
-//! CTAS with an explicit column list stays OUT — that reject lives in [`crate::build_ctas`]
-//! This module handles non-CTAS `Statement::CreateTable` only.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -43,11 +37,7 @@ struct SchemaCreate {
     format_version: Option<String>,
 }
 
-/// ===========================================================================================
-/// Execute `CREATE TABLE catalog.namespace.table (cols) [USING iceberg] [PARTITIONED BY …]
-/// [TBLPROPERTIES …]` as a schema-only staged create (or replace).
-/// ===========================================================================================
-///
+/// Execute schema-only staged `CREATE TABLE` with optional partition spec and table properties.
 /// # Errors
 /// Name resolution, type mapping, partition resolution, location, or catalog publish failures.
 pub(crate) async fn execute_create_table(
@@ -73,8 +63,7 @@ fn build_schema_create(
             "build_schema_create requires a non-CTAS CREATE TABLE".into(),
         ));
     }
-    // TEMPORARY / EXTERNAL / TRANSIENT / VOLATILE must not silently create durable Iceberg
-    // tables.
+    // TEMPORARY / EXTERNAL / TRANSIENT / VOLATILE must not silently create durable Iceberg tables.
     if create.temporary {
         return Err(DataFusionError::NotImplemented(
             "CREATE TEMPORARY TABLE is not supported for Iceberg tables yet — omit TEMPORARY \
@@ -93,10 +82,9 @@ fn build_schema_create(
                 .into(),
         ));
     }
-    // LOCATION / Hive ROW FORMAT etc. must not be silently dropped.
+    // LOCATION / Hive ROW FORMAT etc.
     crate::refuse_unsupported_create_table_clauses(create, "column-def CREATE")?;
-    // LIKE / CLONE before empty-column check so the honest NotImplemented surfaces
-    // (empty-column message must not mask LIKE/CLONE).
+    // LIKE / CLONE before empty-column check so the honest NotImplemented surfaces.
     if create.like.is_some() || create.clone.is_some() {
         return Err(DataFusionError::NotImplemented(
             "CREATE TABLE … LIKE / CLONE is not supported yet".into(),
@@ -157,8 +145,7 @@ fn build_schema_create(
             }
         }
     }
-    // Reserved Iceberg key — consumed here, applied as `TableCreation.format_version` at execute
-    // (V3-2: v3 needs `repark.sql.allowCreateFormatVersion3`).
+    // Reserved Iceberg key — consumed here, applied as `TableCreation.format_version` at execute.
     let format_version = properties.remove("format-version");
 
     let schema = schema_from_column_defs(&create.columns, timestamp_type)?;
@@ -192,7 +179,7 @@ fn schema_from_column_defs(
         })?;
         let iceberg_type =
             sql_type_to_iceberg_with_timestamp_type(&column.data_type, timestamp_type)?;
-        // Only NULL and NOT NULL are supported. Reject other options instead of dropping them.
+        // Only NULL and NOT NULL are supported.
         let mut required = false;
         for option in &column.options {
             match &option.option {
@@ -222,10 +209,6 @@ fn schema_from_column_defs(
 }
 
 /// Map a Spark/SQL column type to an Iceberg primitive (loud on nested / unsupported).
-///
-/// Shared with `ALTER TABLE ADD/ALTER COLUMN` (I6) so CREATE and ALTER cannot drift.
-/// Bare `TIMESTAMP` (`TimezoneInfo::None`) follows [`SparkTimestampType`] — default
-/// LTZ → `timestamptz`. The no-arg wrapper keeps existing call sites on that default.
 pub(crate) fn sql_type_to_iceberg(data_type: &SqlDataType) -> Result<Type> {
     sql_type_to_iceberg_with_timestamp_type(data_type, SparkTimestampType::Ltz)
 }
@@ -267,13 +250,11 @@ pub(crate) fn sql_type_to_iceberg_with_timestamp_type(
         | SqlDataType::CharacterVarying(_)
         | SqlDataType::CharVarying(_) => PrimitiveType::String,
         SqlDataType::Date => PrimitiveType::Date,
-        // TIMESTAMP_NTZ / TIMESTAMP WITHOUT TIME ZONE stay naive Iceberg timestamp,
-        // independent of the session default.
+        // TIMESTAMP_NTZ stays a naive Iceberg timestamp, independent of the session default.
         SqlDataType::TimestampNtz(_) | SqlDataType::Timestamp(_, TimezoneInfo::WithoutTimeZone) => {
             PrimitiveType::Timestamp
         }
-        // Bare TIMESTAMP follows spark.sql.timestampType. Default LTZ → timestamptz
-        // (live Spark 4.1.2 + iceberg-spark-runtime CREATE probe, Z-2 A7).
+        // Bare TIMESTAMP follows spark.sql.timestampType.
         SqlDataType::Timestamp(_, TimezoneInfo::None) => match timestamp_type {
             SparkTimestampType::Ltz => PrimitiveType::Timestamptz,
             SparkTimestampType::Ntz => PrimitiveType::Timestamp,
@@ -354,8 +335,6 @@ async fn execute_schema_create(
     let format_version = iceberg_create_format_version(ctx, create.format_version.as_deref())?;
     if existed {
         // OR REPLACE: stage against the existing table (same path as CTAS replace).
-        // The fork upgrades format version from the reserved property, not
-        // `TableCreation.format_version` — stamp only on replace (create rejects reserved keys).
         let existing = catalog
             .load_table(&table_ident)
             .await
@@ -424,10 +403,9 @@ async fn execute_schema_create(
     ctx.read_empty()
 }
 
-/// Resolve CREATE/CTAS `TBLPROPERTIES ('format-version')` against the session opt-in.
 /// pins: v3-2-create-v3-opt-in/C-001, C-005
-///
 /// Model: Grok 4.6 xHigh
+/// Resolve CREATE/CTAS `TBLPROPERTIES ('format-version')` against the session opt-in.
 pub(crate) fn iceberg_create_format_version(
     ctx: &SessionContext,
     requested: Option<&str>,
@@ -447,9 +425,7 @@ pub(crate) fn iceberg_create_format_version(
     })
 }
 
-/// The fork's replace path upgrades format version from the reserved `format-version`
-/// property, not `TableCreation.format_version`. Stamp only when SQL requested a version
-/// so an unspecified OR REPLACE of a v3 table cannot force v2.
+/// The fork replace path upgrades format version from `format-version`, not `TableCreation`.
 pub(crate) fn stamp_requested_format_version(
     properties: &mut HashMap<String, String>,
     requested: Option<&str>,
@@ -503,8 +479,7 @@ async fn commit_staged_schema_only(
     let staged = StagedTableTransaction::begin_create(plan.file_io, table_ident.clone(), creation)
         .await
         .map_err(iceberg_err)?;
-    // Schema-only: no data write — empty pending files publish metadata only (fork
-    // `StagedTableTransaction::materialize_pending` short-circuits on empty).
+    // Schema-only: no data write — empty pending files publish metadata only.
     staged
         .add_data_files(Vec::new())
         .commit(catalog)

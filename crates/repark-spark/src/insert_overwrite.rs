@@ -23,23 +23,14 @@ use crate::catalog_ops::{
 };
 use crate::spark_ast;
 
-// A non-empty source is staged before the table is replaced. A source that becomes empty during
-// staging refuses the wipe so a race cannot erase existing rows.
+// A non-empty source is staged before the table is replaced.
 
 /// Monotonic counter for ephemeral `INSERT OVERWRITE` MemTable-fallback temp views.
 pub(crate) static OW_MATERIALIZE_SEQ: AtomicU64 = AtomicU64::new(1);
 
-/// ===========================================================================================
 /// `INSERT OVERWRITE` / `INSERT OVERWRITE TABLE` with a zero-row source must wipe the target.
-///
-/// Validate schema and assignment types before an empty-source wipe. Use a self-scan source so the
-/// wipe cannot re-run a changing caller query. Stage non-empty rows before one replace-all publish;
-/// refuse if the source becomes empty between probe and staged write.
-/// ===========================================================================================
-///
 /// # Errors
-/// Propagates source planning/execution, schema-validation, and wipe/passthrough errors as
-/// [`DataFusionError`].
+/// Propagates planning, schema-validation, and wipe errors as `DataFusionError`.
 pub(crate) async fn execute_insert_overwrite(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -48,7 +39,7 @@ pub(crate) async fn execute_insert_overwrite(
 ) -> Result<DataFrame> {
     let table_name = match &insert.table {
         TableObject::TableName(name) => name,
-        // Table-function / table-query targets are not an Iceberg table wipe surface — leave to DataFusion.
+        // Table-function / table-query targets are not an Iceberg table wipe surface.
         TableObject::TableFunction(_) | TableObject::TableQuery(_) => {
             return spark_ast::execute_passthrough(ctx, catalogs, sql).await;
         }
@@ -58,10 +49,7 @@ pub(crate) async fn execute_insert_overwrite(
         return Err(DataFusionError::Plan(message));
     }
 
-    // Hive/Spark `INSERT OVERWRITE … PARTITION (…)` is partition-scoped; we implement neither
-    // static nor dynamic partition overwrite. An empty source must not full-table wipe sibling
-    // partitions, and a non-empty source must not silently whole-table replace — so all PARTITION
-    // forms refuse loud until a partition-scoped path exists.
+    // Hive/Spark `INSERT OVERWRITE … PARTITION` is partition-scoped.
     if insert.partitioned.is_some() {
         return Err(DataFusionError::NotImplemented(
             "INSERT OVERWRITE … PARTITION (…) is not supported yet (static and dynamic \
@@ -79,11 +67,7 @@ pub(crate) async fn execute_insert_overwrite(
         let batches = probe.collect().await?;
         let empty = batches.iter().all(|batch| batch.num_rows() == 0);
         if empty {
-            // Validate the original INSERT OVERWRITE plan (column count / schema) **before**
-            // wiping: an empty incompatible source must fail loud and leave prior rows. Plan-only
-            // via `ctx.sql` (no collect) so the wipe is not committed before assignment checks.
-            // Plan-only validation does not run cast kernels — an empty Utf8→Int32 plans OK while
-            // the non-empty INSERT fails at cast — so the assignment check below refuses the wipe.
+            // Validate the original INSERT OVERWRITE plan **before** wiping.
             let _validated = ctx.sql(sql).await?;
             assert_empty_overwrite_types_assignment_compatible(
                 ctx,
@@ -93,26 +77,19 @@ pub(crate) async fn execute_insert_overwrite(
                 &insert.columns,
             )
             .await?;
-            // Re-probe immediately before the wipe: validation work widens the TOCTOU window
-            // where a concurrent or non-deterministic source can grow rows. If the source is
-            // non-empty now, fall through to the guarded non-empty path — never provider-insert
-            // unguarded.
+            // Re-probe immediately before the wipe.
             let reprobe = spark_ast::execute_passthrough(ctx, catalogs, &probe_sql).await?;
             let reprobe_batches = reprobe.collect().await?;
             let still_empty = reprobe_batches.iter().all(|batch| batch.num_rows() == 0);
             if still_empty {
-                // Wipe via a **self-scan empty** statement, not a re-exec of the caller's source:
-                // re-running it after emptiness classification can still yield rows and would
-                // hit the provider without the partition guard. `SELECT * FROM <target> WHERE
-                // false` is always empty, schema-identical, and a positional-identity passthrough
-                // — so it is guard-safe even if a residual race ever made it non-empty.
+                // Wipe via a **self-scan empty** statement, not a re-exec of the caller's source.
                 let wipe_sql =
                     format!("INSERT OVERWRITE {table_sql} SELECT * FROM {table_sql} WHERE false");
                 return spark_ast::execute_passthrough(ctx, catalogs, &wipe_sql).await;
             }
             // Fall through: re-probe saw rows → treat as non-empty (stage-then-swap path).
         }
-        // Stage non-empty rows before replace-all. A source that becomes empty must not wipe.
+        // Stage non-empty rows before replace-all.
         return insert_overwrite_from_staged_source(
             ctx,
             catalogs,
@@ -127,17 +104,9 @@ pub(crate) async fn execute_insert_overwrite(
     spark_ast::execute_passthrough(ctx, catalogs, sql).await
 }
 
-/// ===========================================================================================
 /// Non-empty `INSERT OVERWRITE` — stage-then-swap (OV1 / OTH-004).
-///
-/// Resolve the Iceberg target, stream positional assignments into staged files, and publish one
-/// replace-all commit. A zero-row staged result refuses the wipe. Non-resolvable targets use the
-/// existing fallback path; a registered catalog that cannot load the table fails loudly.
-/// ===========================================================================================
-///
 /// # Errors
 /// Source stream, positional map/cast, write, or commit failures as [`DataFusionError`].
-/// Zero-row stream after non-empty probe → [`DataFusionError::Execution`] (no wipe).
 pub(crate) async fn insert_overwrite_from_staged_source(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -169,8 +138,7 @@ pub(crate) async fn insert_overwrite_from_staged_source(
     }
 }
 
-/// Resolve `catalog.namespace….table` against the registry. `< 3` parts → `None` (`MemTable`
-/// fallback). Catalog present but `load_table` fails → loud Plan (D7).
+/// Resolve `catalog.namespace….table` against the registry.
 pub(crate) async fn try_resolve_iceberg_overwrite_target(
     catalogs: &CatalogRegistry,
     table_name: &ObjectName,
@@ -200,9 +168,6 @@ pub(crate) async fn try_resolve_iceberg_overwrite_target(
 }
 
 /// Stream → repark-write positional stage → row-count refuse → `commit_overwrite_replace_all`.
-///
-/// Stream map/write lives in `repark_iceberg::write::write_overwrite_staged_files_from_stream` so this
-/// crate stays free of a production `futures` dep (Cargo.toml FROZEN).
 #[allow(clippy::too_many_arguments)] // catalogs threaded for SEC-02 passthrough gate only
 pub(crate) async fn insert_overwrite_iceberg_stage_then_swap(
     ctx: &SessionContext,
@@ -216,8 +181,7 @@ pub(crate) async fn insert_overwrite_iceberg_stage_then_swap(
 ) -> Result<DataFrame> {
     use iceberg::spec::DataFile;
 
-    // Fail isolation parse before staging — invalid property must not pay a full
-    // stream write + orphan objects. Same parse as commit_overwrite_replace_all (D10).
+    // Fail isolation parse before staging.
     let _isolation = repark_iceberg::write::parse_overwrite_isolation(table)?;
     let column_names: Vec<String> = columns.iter().map(object_name_last).collect();
     let materialize_sql = format!("SELECT * FROM ({source}) AS _repark_ow_src");
@@ -269,9 +233,7 @@ pub(crate) async fn insert_overwrite_from_materialized_source_fallback(
         ));
     }
 
-    // VALUES / literal materializations often widen every field to nullable; Iceberg required
-    // columns (common on partitioned tables) reject that with "Input schema does not match".
-    // Tighten nullability for the residual MemTable path only (Iceberg staged path skips this).
+    // VALUES / literal materializations often widen every field to nullable.
     let batches = tighten_batch_nullability(batches)?;
     let schema = batches[0].schema();
     let mem_table = MemTable::try_new(schema, vec![batches]).map_err(|error| {
@@ -303,14 +265,7 @@ pub(crate) async fn insert_overwrite_from_materialized_source_fallback(
     result
 }
 
-/// ===========================================================================================
 /// Rebuild batches so columns with zero nulls across all batches are non-nullable.
-///
-/// Needed so materialised VALUES/`SELECT` literals keep Iceberg required-field compatibility
-/// (partitioned targets reject nullable→required schema drift — BUG-001 materialize path).
-/// Preserves per-field and schema metadata (field ids / comments) — only nullability flips.
-/// ===========================================================================================
-///
 /// # Errors
 /// [`DataFusionError::Internal`] if a rebuilt batch fails schema validation.
 pub(crate) fn tighten_batch_nullability(batches: Vec<RecordBatch>) -> Result<Vec<RecordBatch>> {
@@ -329,7 +284,6 @@ pub(crate) fn tighten_batch_nullability(batches: Vec<RecordBatch>) -> Result<Vec
         }
     }
     // Zero-null columns → non-nullable (required), matching direct VALUES passthrough shape.
-    // `with_nullable` keeps name/type/metadata; `new_with_metadata` keeps schema-level keys.
     let fields: Vec<Field> = schema
         .fields()
         .iter()
@@ -351,16 +305,7 @@ pub(crate) fn tighten_batch_nullability(batches: Vec<RecordBatch>) -> Result<Vec
         .collect()
 }
 
-/// ===========================================================================================
-/// Empty `INSERT OVERWRITE` wipe must not run when source column types are not assignment-
-/// compatible with the target.
-///
-/// `ctx.sql(INSERT…)` plan-only accepts many casts that only fail when values are evaluated.
-/// Zero-row sources never evaluate casts, so a type-mismatch empty OW would provider-wipe while
-/// the identical non-empty statement errors — refuse the wipe instead.
-/// ===========================================================================================
-///
-/// sqlparser 0.62: insert column list is `ObjectName` (not bare `Ident`).
+/// Empty INSERT OVERWRITE wipe must not run when source types are not assignment-compatible.
 pub(crate) fn object_name_last(name: &datafusion::sql::sqlparser::ast::ObjectName) -> String {
     name.0
         .last()
@@ -381,12 +326,7 @@ pub(crate) async fn assert_empty_overwrite_types_assignment_compatible(
         &format!("SELECT * FROM ({source}) AS _repark_ow_types LIMIT 0"),
     )
     .await?;
-    // Plan-time CAST rewrites Utf8→Int32 (etc.) so the projected schema *looks*
-    // assignment-compatible while zero rows never run the cast kernel. Non-empty of the same
-    // statement fails at cast and keeps rows — empty would wipe. Refuse when ANY expression of
-    // the source plan (projection, aggregate, predicate, join key, …) carries a cast that can
-    // raise at value level — see [`logical_plan_has_unsafe_cast`] for why position is not a safe
-    // axis to filter on.
+    // Plan-time CAST rewrites Utf8→Int32.
     if logical_plan_has_unsafe_cast(source_df.logical_plan()) {
         return Err(DataFusionError::Plan(
             "INSERT OVERWRITE empty source evaluates a CAST that can fail at value level — \
@@ -411,9 +351,7 @@ pub(crate) async fn assert_empty_overwrite_types_assignment_compatible(
             .map(|field| field.data_type().clone())
             .collect()
     } else {
-        // Case-insensitive name resolve (Spark `caseSensitive=false`; L-004) —
-        // MERGE SET already resolves this way; exact-case here made empty OW refuse
-        // `INSERT OVERWRITE t (ID) … WHERE false` while non-empty could succeed.
+        // Case-insensitive name resolve.
         let mut types = Vec::with_capacity(columns.len());
         for column in columns {
             types.push(field_type_case_insensitive(
@@ -446,12 +384,7 @@ pub(crate) async fn assert_empty_overwrite_types_assignment_compatible(
     Ok(())
 }
 
-/// ===========================================================================================
-/// True when a **value-producing** expression anywhere in `plan` carries a cast that can raise
-/// at value level. Walk every expression position and inspect analyzed casts for runtime
-/// fallibility. Analyzer coercions that cannot raise remain allowed. Subquery expressions require
-/// explicit recursion because they are not logical-plan children.
-/// ===========================================================================================
+/// True when any value-producing expression in `plan` carries a cast that can raise at value level.
 pub(crate) fn logical_plan_has_unsafe_cast(plan: &LogicalPlan) -> bool {
     let mut found = false;
     let _ = plan.apply(|node| {
@@ -472,11 +405,6 @@ pub(crate) fn logical_plan_has_unsafe_cast(plan: &LogicalPlan) -> bool {
 }
 
 /// The schema `node`'s own expressions are typed against.
-///
-/// A node's expressions reference its **inputs'** columns, so one input contributes its schema
-/// directly and a multi-input node (a `Join`, whose `on` keys straddle both sides) contributes
-/// the merged schema. Leaves (`TableScan`, `Values`, `EmptyRelation`) have no input, so their
-/// expressions — `TableScan.filters`, literal `Values` rows — type against the node's own schema.
 pub(crate) fn expr_typing_schema(node: &LogicalPlan) -> DFSchemaRef {
     match node.inputs().as_slice() {
         [] => Arc::clone(node.schema()),
@@ -491,19 +419,13 @@ pub(crate) fn expr_typing_schema(node: &LogicalPlan) -> DFSchemaRef {
     }
 }
 
-/// True when `expr` (or a subquery plan hanging off it) computes a value through a cast that can
-/// raise — see [`logical_plan_has_unsafe_cast`].
-///
-/// `TRY_CAST` is deliberately absent: it is total (unparsable input yields NULL, never an
-/// error), so the empty and non-empty forms of the same statement agree and there is no
-/// asymmetric wipe to refuse.
+/// True when `expr` computes a value through a cast that can raise.
 pub(crate) fn expr_has_unsafe_cast(expr: &DataFusionExpr, schema: &DFSchema) -> bool {
     let mut found = false;
     let _ = expr.apply(|node| {
         match node {
             DataFusionExpr::Cast(cast) => {
-                // An unresolvable input type (a correlated outer reference) is left to the
-                // schema/arity checks rather than guessed at — see the residual note in `map.md`.
+                // An unresolvable input type is left to the schema/arity checks.
                 if let Ok(from_type) = cast.expr.get_type(schema)
                     && cast_may_fail_at_runtime(&from_type, cast.field.data_type())
                 {
@@ -527,23 +449,16 @@ pub(crate) fn expr_has_unsafe_cast(expr: &DataFusionExpr, schema: &DFSchema) -> 
 }
 
 /// True when casting a value from `from` to `to` can raise for *some* input value.
-///
-/// This is the empty-OW asymmetry oracle: a cast that cannot raise behaves identically with and
-/// without rows, so it must never block a wipe. Unknown pairs fail closed (treated as fallible)
-/// — refusing is a loud, recoverable error, wiping is not.
 pub(crate) fn cast_may_fail_at_runtime(from: &DataType, to: &DataType) -> bool {
     // Identity, UTF-8 family aliasing, and the safe integer/float widenings are total.
     if assignment_types_compatible(from, to) {
         return false;
     }
-    // `NULL -> anything` is total: the only value of `DataType::Null` is NULL, and casting NULL
-    // yields NULL for every target. This is the `SELECT …, CAST(NULL AS STRING) AS col` widening
-    // idiom, whose non-empty form SUCCEEDS — so refusing the empty form would be arbitrary.
+    // `NULL -> anything` is total.
     if matches!(from, DataType::Null) {
         return false;
     }
-    // Rendering a scalar as text is total. This is the shape TypeCoercion inserts for
-    // `concat(name, id)` and `id > '99'`; treating it as unsafe refused legitimate wipes.
+    // Rendering a scalar as text is total.
     !(utf8_family(to) && renders_as_text_infallibly(from))
 }
 
@@ -601,9 +516,6 @@ pub(crate) fn field_type_case_insensitive(
 }
 
 /// Types that may land via empty-OW provider wipe without a value-level cast check.
-///
-/// Exact match, UTF-8 family aliases, and safe integer/float widenings. Parsing casts
-/// (Utf8→numeric/temporal) are refused — those only fail when rows are present.
 pub(crate) fn assignment_types_compatible(source: &DataType, target: &DataType) -> bool {
     use DataType::{Float32, Float64, Int8, Int16, Int32, Int64, UInt8, UInt16, UInt32, UInt64};
     if source == target {
@@ -636,8 +548,7 @@ mod assignment_type_unit_tests {
     use super::{assignment_types_compatible, utf8_family};
     use datafusion::arrow::datatypes::DataType;
 
-    /// Pure unit pins for the empty-OW assignment matrix (mutation-proof without
-    /// spinning a catalog). Shipping path covered by `empty_insert_overwrite_type_mismatch_*`.
+    /// Pure unit pins for the empty-OW assignment matrix.
     #[test]
     fn assignment_types_compatible_matrix() {
         assert!(assignment_types_compatible(
@@ -671,7 +582,7 @@ mod assignment_type_unit_tests {
         ));
     }
 
-    /// Analyzer-inserted infallible casts remain safe; user or analyzer casts that can raise refuse.
+    /// Analyzer-inserted infallible casts remain safe.
     #[test]
     fn cast_may_fail_at_runtime_matrix() {
         use super::cast_may_fail_at_runtime;
@@ -717,9 +628,7 @@ mod assignment_type_unit_tests {
                 "{from} → Utf8 is total and must not block a wipe"
             );
         }
-        // Total: `NULL -> anything` (audit G1-H-003). The only value of `DataType::Null` is NULL
-        // and casting NULL yields NULL for every target, so the schema-widening idiom
-        // `SELECT …, CAST(NULL AS <type>)` must never block a wipe — its non-empty form succeeds.
+        // Total: `NULL -> anything` (audit G1-H-003).
         for to in [
             DataType::Utf8,
             DataType::Int32,

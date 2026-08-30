@@ -23,8 +23,7 @@ async fn table_props(catalogs: &CatalogRegistry, table: &str) -> HashMap<String,
         .clone()
 }
 
-/// `ALTER TABLE … SET TBLPROPERTIES (…)` routes through `execute` to the write path and lands the
-/// properties in the table metadata.
+/// SET TBLPROPERTIES routes through execute and lands the properties in table metadata.
 #[tokio::test]
 async fn alter_set_tblproperties() {
     let wh = TempDir::new().unwrap();
@@ -44,8 +43,7 @@ async fn alter_set_tblproperties() {
     assert_eq!(props.get("pii").map(String::as_str), Some("false"));
 }
 
-/// `ALTER TABLE … UNSET TBLPROPERTIES (…)` — exercises the token rewrite (sqlparser 0.59 cannot
-/// parse `UNSET`) and removes only the named keys.
+/// `ALTER TABLE … UNSET TBLPROPERTIES`.
 #[tokio::test]
 async fn alter_unset_tblproperties() {
     let wh = TempDir::new().unwrap();
@@ -73,8 +71,7 @@ async fn alter_unset_tblproperties() {
     assert!(!props.contains_key("pii"));
 }
 
-/// `ALTER TABLE … RENAME TO …` moves the table: the new ident loads, the old one is gone, and the
-/// renamed table is queryable through the re-registered provider.
+/// `ALTER TABLE … RENAME TO …` moves the table.
 #[tokio::test]
 async fn alter_rename_table() {
     let wh = TempDir::new().unwrap();
@@ -106,8 +103,7 @@ async fn alter_rename_table() {
     );
 }
 
-/// I6 READY — ADD COLUMN (with COMMENT + AFTER), RENAME COLUMN (field-id stable), DROP COLUMN;
-/// schema-equality pin + read-after (added → NULL, rename keeps data).
+/// I6 READY — ADD COLUMN, RENAME COLUMN, DROP COLUMN; schema-equality pin + read-after.
 #[tokio::test]
 #[allow(clippy::too_many_lines)] // flat pin battery: schema + read-after + field-id + drop
 async fn alter_add_rename_drop_column_schema_and_read_after() {
@@ -398,8 +394,7 @@ async fn alter_column_drop_not_null() {
     assert!(!id.required, "DROP NOT NULL must make the column optional");
 }
 
-/// I6 residual + I7 identity-trap — ADD NOT NULL / SET NOT NULL refuse; REPLACE COLUMNS
-/// identity trap (same-name incompatible type) refuses; WRITE ORDERED BY still loud.
+/// I6 residual + I7 identity-trap.
 #[tokio::test]
 #[allow(clippy::too_many_lines)] // flat refuse battery: ORDERED/DISTRIBUTED/LHS/width=0 (octo C2)
 async fn alter_unsupported_forms_refuse_loud() {
@@ -535,8 +530,7 @@ async fn alter_unsupported_forms_refuse_loud() {
     );
 }
 
-/// I7 READY — ADD/DROP PARTITION FIELD; write-after-evolution pins (new writes NEW spec;
-/// old files keep prior spec-id; mixed-spec read correct).
+/// I7 READY — ADD/DROP PARTITION FIELD; write-after-evolution pins.
 #[tokio::test]
 async fn alter_add_drop_partition_field_and_write_after_evolution() {
     let wh = TempDir::new().unwrap();
@@ -750,8 +744,7 @@ async fn alter_replace_columns_promote_and_identity_trap() {
         "got: {trap}"
     );
 
-    // Field-id stability on promote (identity trap exists so field-ids are not recycled
-    // under an incompatible type; the happy path must keep the id field-id).
+    // Field-id stability on promote.
     let table = load_sales_table(&catalogs, "rcols").await;
     let id_field = table
         .metadata()
@@ -776,8 +769,7 @@ async fn alter_replace_columns_promote_and_identity_trap() {
     );
 }
 
-/// Cover truncate and temporal partition fields, transform drops, required-column refusal, and
-/// case-insensitive column drops.
+/// Cover truncate and temporal partition fields, transform drops, required-column refusal.
 #[tokio::test]
 #[allow(clippy::too_many_lines)] // flat pin battery: truncate/year/drop-by-transform/required
 async fn alter_partition_transforms_drop_by_transform_and_replace_required_refuse() {
@@ -1300,8 +1292,7 @@ async fn alter_drop_columns_bare_plural_form() {
     assert!(names.iter().any(|name| name == "id"));
 }
 
-/// ADD COLUMN IF NOT EXISTS skips existing columns; AFTER sibling is
-/// case-insensitive; multi-op SET TBLPROPERTIES after RENAME TO targets new ident.
+/// ADD COLUMN IF NOT EXISTS skips existing columns.
 #[tokio::test]
 async fn alter_if_not_exists_after_case_and_rename_then_set_props() {
     let wh = TempDir::new().unwrap();

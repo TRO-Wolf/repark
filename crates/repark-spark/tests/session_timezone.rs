@@ -1,7 +1,4 @@
 //! Pins Spark timestamp extraction in the session timezone, including DST boundaries.
-//!
-//! Timestamp calendar fields use `spark.sql.session.timeZone`; `DATE` and `TIME` controls remain
-//! zone-independent. Assertions cover values and Arrow types through a real Spark-door session.
 
 use std::sync::Arc;
 
@@ -23,10 +20,6 @@ const TOKYO: &str = "Asia/Tokyo";
 const KOLKATA: &str = "Asia/Kolkata";
 
 /// The instants under test, as RFC-3339 strings so an expectation is checkable by eye.
-///
-/// They are converted with arrow's own string→timestamp cast rather than a date library: the
-/// fixture then cannot disagree with the engine about what `2024-06-15T12:00:00Z` means, and this
-/// test binary needs no clock dependency of its own.
 fn utc_instants(rfc3339: &[&str]) -> ArrayRef {
     let text = StringArray::from(rfc3339.to_vec());
     cast(
@@ -54,9 +47,7 @@ fn session_at(zone: &str) -> ReparkSession {
         .expect("a session at a real zone")
 }
 
-/// Register `instants` as a tz-AWARE `timestamp[us, tz=UTC]` column named `ts` on table `t` —
-/// the Arrow type PySpark's own export produces for a `TIMESTAMP`, so the Rust and the Python
-/// halves of this class are measuring the same shape.
+/// Register `instants` as a tz-AWARE `timestamp[us, tz=UTC]` column named `ts` on table `t`.
 fn register_instants(session: &ReparkSession, rfc3339: &[&str]) {
     let column = utc_instants(rfc3339);
     let schema = Arc::new(Schema::new(vec![Field::new(
@@ -98,8 +89,7 @@ async fn int_columns(session: &ReparkSession, sql: &str) -> (Vec<DataType>, Vec<
     (types, columns)
 }
 
-/// The single-column `i32` shortcut over [`int_columns`], with its Arrow type asserted to be
-/// `Int32` — every Spark calendar extractor returns `INT`, so the type half is uniform.
+/// The single-column `i32` shortcut over [`int_columns`].
 async fn ints(session: &ReparkSession, sql: &str) -> Vec<i32> {
     let (types, columns) = int_columns(session, sql).await;
     assert_eq!(
@@ -135,8 +125,7 @@ async fn strings(session: &ReparkSession, sql: &str) -> Vec<String> {
         .collect()
 }
 
-/// One `DATE` column as day offsets, with its Arrow type asserted — `trunc` / `add_months` /
-/// `to_date`'s shape.
+/// One `DATE` column as day offsets, with its Arrow type asserted.
 async fn dates(session: &ReparkSession, sql: &str) -> Vec<i32> {
     let batches = session
         .sql(sql)
@@ -155,8 +144,7 @@ async fn dates(session: &ReparkSession, sql: &str) -> Vec<i32> {
     (0..values.len()).map(|row| values.value(row)).collect()
 }
 
-/// Day offsets for one `'yyyy-MM-dd'` date — the same arrow cast the fixtures use for instants, so
-/// an expectation is checkable by eye and the test binary owns no calendar of its own.
+/// Day offsets for one `'yyyy-MM-dd'` date.
 fn date32(text: &str) -> i32 {
     let source = StringArray::from(vec![text]);
     cast(&source, &DataType::Date32)
@@ -183,13 +171,9 @@ async fn timestamps(session: &ReparkSession, sql: &str) -> (DataType, Vec<i64>) 
     )
 }
 
-// ==================================================================================================
 // The extractor families — one pin per family, on the coercion path, under two non-UTC zones
-// ==================================================================================================
 
-/// FAMILY 1 — `year`. The instant `2024-01-01T04:30Z` is 2023-12-31 23:30 in New York, so the
-/// calendar YEAR itself moves; the same instant is already 2024 in Tokyo. A partitioned write
-/// keyed on `year(ts)` lands in a different partition on the two engines until this holds.
+/// FAMILY 1 — `year`.
 #[tokio::test]
 async fn year_extractor_resolves_in_the_session_zone() {
     let new_york = session_at(NEW_YORK);
@@ -205,8 +189,7 @@ async fn year_extractor_resolves_in_the_session_zone() {
     );
 }
 
-/// FAMILY 2 — `month` / `dayofmonth` / `dayofyear`, including the leap day. `2024-02-29T02:00Z`
-/// is 2024-02-28 in New York: a leap-day filter selects different rows until this holds.
+/// FAMILY 2 — `month` / `dayofmonth` / `dayofyear`, including the leap day.
 #[tokio::test]
 async fn month_and_day_extractors_resolve_in_the_session_zone() {
     let new_york = session_at(NEW_YORK);
@@ -236,8 +219,7 @@ async fn month_and_day_extractors_resolve_in_the_session_zone() {
     );
 }
 
-/// FAMILY 3 — `hour` / `minute` / `second`. `Asia/Kolkata` is +05:30, so the MINUTE moves too:
-/// a fix that only ever shifts whole hours reds here and nowhere else.
+/// FAMILY 3 — `hour` / `minute` / `second`.
 #[tokio::test]
 async fn hour_minute_second_extractors_resolve_in_the_session_zone() {
     let new_york = session_at(NEW_YORK);
@@ -261,9 +243,7 @@ async fn hour_minute_second_extractors_resolve_in_the_session_zone() {
     );
 }
 
-/// FAMILY 4 — the week/quarter family (`dayofweek` 1=Sunday, `weekday` 0=Monday, ISO
-/// `weekofyear` / `yearofweek`, `quarter`). These ride on the resolved DAY, so they move with it
-/// — and the ISO pair is the one that moves a whole YEAR at a New Year boundary.
+/// FAMILY 4 — the week/quarter family.
 #[tokio::test]
 async fn week_and_quarter_extractors_resolve_in_the_session_zone() {
     let new_york = session_at(NEW_YORK);
@@ -306,11 +286,7 @@ async fn week_and_quarter_extractors_resolve_in_the_session_zone() {
     );
 }
 
-/// FAMILY 5 — `date_trunc`. Spark truncates to LOCAL midnight and returns the instant that
-/// denotes, which is the daily-rollup boundary a migrated aggregate depends on.
-///
-/// The return is `timestamp[us, tz=UTC]`. The ticks were already Spark's
-/// instant; the type pin here is the representation half.
+/// FAMILY 5 — `date_trunc`.
 #[tokio::test]
 async fn date_trunc_truncates_on_the_session_zone_calendar() {
     let new_york = session_at(NEW_YORK);
@@ -338,8 +314,7 @@ async fn date_trunc_truncates_on_the_session_zone_calendar() {
     );
 }
 
-/// FAMILY 6 — `date_format`. Rendering and extraction must move TOGETHER: a formatted partition
-/// path and an extracted partition key that disagree is worse than either being wrong alone.
+/// FAMILY 6 — `date_format`.
 #[tokio::test]
 async fn date_format_renders_in_the_session_zone() {
     let new_york = session_at(NEW_YORK);
@@ -366,9 +341,7 @@ async fn date_format_renders_in_the_session_zone() {
     );
 }
 
-/// FAMILY 7 — the DST boundaries, which is where a zone-aware engine differs from a fixed-offset
-/// one. Spring forward: 02:00–03:00 local does not exist on 2024-03-10 in New York. Fall back:
-/// two DISTINCT instants share local hour 1 (EDT then EST) — the row a dedup-by-hour job needs.
+/// FAMILY 7.
 #[tokio::test]
 async fn dst_boundaries_resolve_like_spark() {
     let new_york = session_at(NEW_YORK);
@@ -386,8 +359,7 @@ async fn dst_boundaries_resolve_like_spark() {
         "spring-forward lands at 3 (EDT); fall-back collapses two instants onto local hour 1"
     );
 
-    // The instants themselves are untouched — the repeated local hour is a CALENDAR collapse,
-    // never a value collapse. A fix that shifted ticks instead of re-annotating would red here.
+    // The instants themselves are untouched.
     let (kind, values) = timestamps(&new_york, "SELECT ts FROM t").await;
     assert_eq!(
         kind,
@@ -403,8 +375,7 @@ async fn dst_boundaries_resolve_like_spark() {
     );
 }
 
-/// FAMILY 8 — negative-epoch instants (gap G16). Sign handling and zone handling are independent
-/// bugs; this pins that fixing the zone did not break the pre-1970 arithmetic.
+/// FAMILY 8 — negative-epoch instants (gap G16).
 #[tokio::test]
 async fn pre_1970_instants_resolve_in_the_session_zone() {
     let new_york = session_at(NEW_YORK);
@@ -435,16 +406,9 @@ async fn pre_1970_instants_resolve_in_the_session_zone() {
     );
 }
 
-// ==================================================================================================
 // The entry-point matrix: the native `DataFrame` API cell beside the Spark-door cell above
-// ==================================================================================================
 
 /// MATRIX — the **native `DataFrame` API** cell, and the reason the zone is read at INVOKE time.
-///
-/// `repark_functions::expr_fn` builds a standalone `Expr` that embeds the UDF instance directly
-/// (the shape `repark-python` gives `F.year(col("ts"))`, which has no `SessionContext` to resolve
-/// against). A zone baked into the UDF at REGISTRATION would reach the SQL doors and miss this
-/// path entirely, so this test is the one that fails if the seam is built the easy way.
 #[tokio::test]
 async fn native_dataframe_api_extracts_in_the_session_zone() {
     let new_york = session_at(NEW_YORK);
@@ -468,8 +432,7 @@ async fn native_dataframe_api_extracts_in_the_session_zone() {
     assert_eq!((years.value(0), hours.value(0)), (2023, 23));
     assert_eq!((years.value(1), hours.value(1)), (2024, 8));
 
-    // The SAME class through the Spark door on the SAME session, so the two cells are pinned to
-    // each other and not merely to two hand-written expectations.
+    // The SAME class through the Spark door on the SAME session.
     let (_, columns) = int_columns(&new_york, "SELECT year(ts), hour(ts) FROM t").await;
     assert_eq!(
         (columns[0].clone(), columns[1].clone()),
@@ -478,20 +441,9 @@ async fn native_dataframe_api_extracts_in_the_session_zone() {
     );
 }
 
-// ==================================================================================================
 // The negatives — what must NOT move
-// ==================================================================================================
 
-/// A `DATE`'s OWN calendar carries no instant, so nothing that reads it may move with the session
-/// zone — extraction and `date_format` alike. This is the over-reach guard: the cheapest wrong fix
-/// (push the zone into every temporal coercion) reds here.
-///
-/// The claim is deliberately narrower than it was. It used to say "nothing derived from one may
-/// move … `date_trunc` alike", which is **false in Spark**: `date_trunc(fmt, DATE)` promotes the
-/// `DATE` to a `TIMESTAMP` first, and that promotion is a session-zone localization. The promotion
-/// is pinned next door, composed, in
-/// [`date_trunc_of_a_date_or_string_lands_on_the_session_zone_timeline`] — this test now only
-/// claims what it actually covers.
+/// A `DATE`'s OWN calendar carries no instant.
 #[tokio::test]
 async fn date_arguments_never_move_with_the_session_zone() {
     for zone in [NEW_YORK, TOKYO, KOLKATA, "UTC"] {
@@ -529,22 +481,7 @@ async fn date_arguments_never_move_with_the_session_zone() {
     }
 }
 
-/// `date_trunc(fmt, DATE)` / `date_trunc(fmt, STRING)` — the composed claim, which is where the
-/// The result is an instant; a session-zone mistake produces a whole-day shift in this case.
-///
-/// Spark promotes the `DATE` (or string) to a `TIMESTAMP` before truncating, and that promotion is
-/// a **session-zone localization**, so the result is the INSTANT of local midnight. Every value
-/// below is live Spark 4.1.2 measured on 2026-08-10 under the same session zone:
-///
-/// ```text
-/// date_trunc('day', DATE '2024-01-01')                     NY 2024-01-01T05:00Z   Tokyo 2023-12-31T15:00Z
-/// year|month|dayofmonth|hour(date_trunc('day', DATE …))    2024, 1, 1, 0          identical in both zones
-/// date_format(date_trunc('day', DATE …),'yyyy-MM-dd HH:mm') '2024-01-01 00:00'    identical in both zones
-/// ```
-///
-/// The composition legs are the point. `date_trunc` returns an instant (`timestamp[us, tz=UTC]`).
-/// Extractors resolve that instant in the session zone; these legs hold that the DATE-argument
-/// promotion wrote local midnight's instant, not a wall-clock tick under a naive type.
+/// `date_trunc` / `date_trunc`.
 #[tokio::test]
 async fn date_trunc_of_a_date_or_string_lands_on_the_session_zone_timeline() {
     for (zone, midnight, leap_midnight) in [
@@ -626,22 +563,6 @@ async fn date_trunc_of_a_date_or_string_lands_on_the_session_zone_timeline() {
 }
 
 /// `date_trunc` across the DST **fall-back**, where the truncated local time is AMBIGUOUS.
-///
-/// Spark truncates with `ZonedDateTime.truncatedTo`, whose `resolveLocal` passes the SOURCE
-/// instant's offset as the preferred one — so the offset is PRESERVED and the two distinct instants
-/// of the repeated hour stay distinct. Live Spark 4.1.2, `America/New_York`, 2026-08-10:
-///
-/// ```text
-/// date_trunc('minute', to_timestamp('2024-11-03T06:30:40Z'))  ->  2024-11-03T06:30:00Z
-/// date_trunc('hour',   to_timestamp('2024-11-03T05:30:00Z'))  ->  2024-11-03T05:00:00Z
-/// date_trunc('hour',   to_timestamp('2024-11-03T06:30:00Z'))  ->  2024-11-03T06:00:00Z
-/// ```
-///
-/// An implementation that re-resolves the truncated local time to the EARLIEST valid offset —
-/// which would incorrectly apply a session zone to a value
-/// `java.time` does — collapses the pair onto `05:00Z` and puts the `'minute'` row an hour early.
-/// Every instant in every repeated hour, in every DST-observing zone, at hour/minute/second
-/// granularity, is behind this one pin.
 #[tokio::test]
 async fn date_trunc_preserves_the_source_offset_across_a_fall_back() {
     let new_york = session_at(NEW_YORK);
@@ -672,9 +593,7 @@ async fn date_trunc_preserves_the_source_offset_across_a_fall_back() {
         "two distinct instants in the repeated hour truncate to two DISTINCT instants"
     );
 
-    // The DAY anchor of the same fall-back day is UNambiguous (local midnight is before the
-    // transition), so the preferred offset must NOT be forced there: Spark answers 04:00Z (EDT),
-    // not 05:00Z (the source instant's EST offset).
+    // The DAY anchor of the same fall-back day is UNambiguous.
     let (_, values) = timestamps(&new_york, "SELECT date_trunc('day', ts) FROM t").await;
     assert_eq!(
         values,
@@ -686,19 +605,7 @@ async fn date_trunc_preserves_the_source_offset_across_a_fall_back() {
     );
 }
 
-/// `date_trunc` whose truncated local anchor falls inside a DST **gap** — the arm whose old
-/// justification ("gaps are an hour in every zone in the IANA database") was factually false.
-///
-/// Both zones below were measured against live Spark 4.1.2 on 2026-08-10 and are the two
-/// realistically reachable shapes: a 30-minute gap and a midnight gap.
-///
-/// ```text
-/// Australia/Lord_Howe  date_trunc('hour', to_timestamp('2024-10-05T15:40:00Z'))  ->  2024-10-05T15:30:00Z
-/// America/Santiago     date_trunc('day',  to_timestamp('2024-09-08T04:30:00Z'))  ->  2024-09-08T04:00:00Z
-/// ```
-///
-/// Lord Howe is the 30-minute case (its DST step is half an hour, not an hour); Santiago's
-/// transition is at local midnight, so the `'day'` anchor itself does not exist.
+/// `date_trunc` whose truncated local anchor falls inside a DST **gap**.
 #[tokio::test]
 async fn dst_gap_zones_resolve_like_spark() {
     let lord_howe = session_at("Australia/Lord_Howe");
@@ -720,18 +627,7 @@ async fn dst_gap_zones_resolve_like_spark() {
     );
 }
 
-/// The date-valued calendar shims this crate owns (`trunc`, `add_months`) take a TIMESTAMP
-/// argument's date in the SESSION zone, exactly as Spark does — the sibling half of the extraction
-/// class. Live Spark 4.1.2, `America/New_York`, 2026-08-10:
-///
-/// ```text
-/// trunc(to_timestamp('2024-06-01T03:00:00Z'), 'MM')   ->  2024-05-01   (the instant is 2024-05-31 23:00 EDT)
-/// add_months(to_timestamp('2024-06-01T03:00:00Z'), 1) ->  2024-06-30   (end-of-month preserving, from 05-31)
-/// ```
-///
-/// Both reach the date through [`repark_functions`]' own `coerce_to_date32` + invoke, which is why
-/// they were fixable here; `CAST(ts AS DATE)` / `to_date` now share that kernel
-/// (`timestamp_to_date_paths_read_the_session_zone`). `datediff` stays residual.
+/// Date-valued calendar shims take a TIMESTAMP argument's date in the session zone, as Spark does.
 #[tokio::test]
 async fn date_valued_shims_take_the_date_in_the_session_zone() {
     let new_york = session_at(NEW_YORK);
@@ -767,9 +663,7 @@ async fn date_valued_shims_take_the_date_in_the_session_zone() {
     }
 }
 
-/// TZ-8 CAST / `to_date`: an LTZ timestamp's date is the session-zone calendar. Live Spark
-/// 4.1.2, `America/New_York`, `2024-06-15T03:00:00Z` → `2024-06-14` (23:00 EDT on the 14th).
-/// The UTC control and the Tokyo forward-crossing pin the sign; NTZ stays the stored wall.
+/// TZ-8 CAST / `to_date`: an LTZ timestamp's date is the session-zone calendar.
 #[tokio::test]
 async fn timestamp_to_date_paths_read_the_session_zone() {
     let new_york = session_at(NEW_YORK);
@@ -801,8 +695,7 @@ async fn timestamp_to_date_paths_read_the_session_zone() {
         "east of UTC the same class crosses the year boundary FORWARD"
     );
 
-    // datediff simplifies to Date32 subtraction of CAST(ts AS DATE) (datafusion-spark
-    // SparkDateDiff::simplify). It therefore rides the TZ-8 CAST rewrite — Spark 13, not 14.
+    // datediff simplifies to Date32 subtraction of CAST.
     assert_eq!(
         ints(&new_york, "SELECT datediff(ts, DATE '2024-06-01') FROM t").await,
         vec![13],
@@ -810,8 +703,7 @@ async fn timestamp_to_date_paths_read_the_session_zone() {
     );
 }
 
-/// Native `DataFrame` API cell: a standalone `Expr::Cast` (the shape `Column.cast("date")`
-/// crosses PyO3 as) must hit the same rewrite as SQL `CAST(ts AS DATE)`.
+/// Native `DataFrame` API cell: a standalone `Expr::Cast` must hit the same rewrite as SQL `CAST`.
 #[tokio::test]
 async fn native_dataframe_api_cast_to_date_reads_the_session_zone() {
     let new_york = session_at(NEW_YORK);
@@ -832,16 +724,13 @@ async fn native_dataframe_api_cast_to_date_reads_the_session_zone() {
     assert_eq!(values.value(0), date32("2024-06-14"));
 }
 
-/// TZ-8 residue: `last_day` / `date_add` over a TIMESTAMP still fail to plan (Spark accepts
-/// them). Named residual — not datediff, which rides CAST. Do not silently absorb.
+/// TZ-8 residue: `last_day` / `date_add` over a TIMESTAMP still fail to plan (Spark accepts them).
 #[tokio::test]
 async fn last_day_and_date_add_over_a_timestamp_still_refuse() {
     let new_york = session_at(NEW_YORK);
     register_instants(&new_york, &["2024-06-15T03:00:00Z"]);
 
-    // `last_day` / `date_add` over a TIMESTAMP do not even PLAN here, where Spark accepts
-    // them. Live Spark 4.1.2 for this instant under NY: last_day → 2024-06-30,
-    // date_add(..., 1) → 2024-06-15 (session-zone date 2024-06-14 ± calendar).
+    // `last_day` / `date_add` over a TIMESTAMP do not even PLAN here, where Spark accepts them.
     for sql in [
         "SELECT last_day(ts) FROM t",
         "SELECT date_add(ts, 1) FROM t",
@@ -858,8 +747,7 @@ async fn last_day_and_date_add_over_a_timestamp_still_refuse() {
     }
 }
 
-/// A `TIME` carries no date and no instant either — `hour`/`minute`/`second` over one are pure
-/// clock arithmetic and must be identical in every session zone.
+/// A `TIME` carries no date and no instant either.
 #[tokio::test]
 async fn time_arguments_never_move_with_the_session_zone() {
     for zone in [NEW_YORK, TOKYO, "UTC"] {
@@ -877,11 +765,7 @@ async fn time_arguments_never_move_with_the_session_zone() {
     }
 }
 
-/// The seam's default, pinned ACROSS the crate boundary. `repark-functions` cannot name
-/// `repark-core` (a capability leaf with no engine edge), so its fallback zone is a second
-/// constant by necessity — and a second constant that nothing checks is a latent split-brain.
-/// A session that never set the key must extract exactly as `repark_core`'s documented default
-/// says it will.
+/// The seam's default, pinned ACROSS the crate boundary.
 #[tokio::test]
 async fn default_session_extracts_in_the_core_default_zone() {
     assert_eq!(
@@ -911,10 +795,7 @@ async fn default_session_extracts_in_the_core_default_zone() {
     );
 }
 
-/// The one-spelling gate, checked ACROSS the crate boundary. `repark-functions` must name the
-/// authoritative conf key in its refusal message and cannot import `repark-core` to get it, so
-/// the literal it carries is a mirror — and an unchecked mirror is how a second spelling is born.
-/// This test is the check: it runs from the one crate that can see both constants.
+/// The one-spelling gate, checked ACROSS the crate boundary.
 #[test]
 fn the_carrier_refusal_names_the_engines_own_key() {
     use datafusion::common::config::ExtensionOptions;
@@ -930,15 +811,7 @@ fn the_carrier_refusal_names_the_engines_own_key() {
     );
 }
 
-/// A tz-NAIVE timestamp is an instant in UTC here, not a Spark `TIMESTAMP_NTZ`: repark has no
-/// NTZ type, and `to_timestamp('…Z')` demonstrably stores UTC ticks under a tz-naive Arrow type
-/// (registry row TZ-4 — the missing annotation is a TYPE gap). Extraction therefore treats it as
-/// an instant, which is what makes the facade corpus's scalar-literal rows converge with Spark.
-/// Pinned explicitly so the interpretation is a decision on the record, not an accident.
-///
-/// This pin exercises the case where the interpretation is RIGHT. The case where the same
-/// interpretation is WRONG has its own pin next door — a pin that only exists because this one
-/// alone could be read as evidence the whole family converged, which it is not.
+/// A tz-NAIVE timestamp is an instant in UTC here, not a Spark `TIMESTAMP_NTZ`.
 #[tokio::test]
 async fn a_tz_naive_timestamp_is_read_as_a_utc_instant() {
     let new_york = session_at(NEW_YORK);

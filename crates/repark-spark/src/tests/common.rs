@@ -37,9 +37,7 @@ pub(super) use repark_core::{CatalogRegistry, LocationPolicy};
 #[allow(unused_imports)]
 pub(super) use tempfile::TempDir;
 
-/// A `SessionContext` with an in-memory Iceberg catalog `ice` (namespace `sales`) registered,
-/// a source temp view `src` of three rows, and the matching `CatalogRegistry`.
-/// U5: ANSI ON (Spark-door default) so `/0` pins match production `SparkExtension`.
+/// A `SessionContext` with in-memory Iceberg catalog `ice`, temp view `src`, and `CatalogRegistry`.
 pub(super) async fn setup(wh: &TempDir) -> (SessionContext, CatalogRegistry) {
     setup_with_ansi(wh, true).await
 }
@@ -85,8 +83,7 @@ pub(super) async fn setup_with_sql_settings(
     );
     let config = repark_functions::ansi::with_spark_ansi_config(config, ansi_enabled);
     let ctx = SessionContext::new_with_config(config);
-    // Production wiring: repark-session installs the Spark analyzer rules on every context,
-    // so the router tests must run under them too (CTAS schema derivation depends on it).
+    // Production wiring: repark-session installs the Spark analyzer rules on every context.
     repark_functions::decimal_spark::register_spark_decimal_planner(&ctx);
     for rule in repark_functions::analyzer_rules() {
         ctx.add_analyzer_rule(rule);
@@ -103,7 +100,6 @@ pub(super) async fn setup_with_sql_settings(
 }
 
 /// pins: v3-2-create-v3-opt-in/C-005
-///
 /// Model: Grok 4.6 xHigh
 pub(super) async fn setup_allow_create_format_version_3(
     wh: &TempDir,
@@ -131,10 +127,7 @@ pub(super) async fn rows(ctx: &SessionContext, catalogs: &CatalogRegistry, sql: 
         .sum()
 }
 
-/// A `SessionContext` + `CatalogRegistry` with a **strict** `RequireExplicitLocation` catalog
-/// `glue_like` (the Glue / S3 Tables policy — memory-backed `LocalFs` so it runs offline) and a
-/// source view `src`, but NO namespace: the WG-5 tests create it via SQL. Returns the warehouse
-/// path so a test can point a `LOCATION` at a subdirectory under it.
+/// A `SessionContext` + `CatalogRegistry`.
 pub(super) async fn setup_strict_catalog(
     wh: &TempDir,
 ) -> (SessionContext, CatalogRegistry, String) {
@@ -169,9 +162,7 @@ pub(super) async fn setup_strict_catalog(
     (ctx, catalogs, warehouse)
 }
 
-/// Count `.parquet` files anywhere under `dir` — the CTAS data-placement value check (a table's
-/// data lands under `<namespace-location>/<table>/data/…`). Recursion is bounded by the shallow,
-/// fixed Iceberg directory layout; a missing directory counts as zero.
+/// Count `.parquet` files anywhere under `dir` — the CTAS data-placement value check.
 pub(super) fn count_parquet_files(dir: &std::path::Path) -> usize {
     let Ok(entries) = std::fs::read_dir(dir) else {
         return 0;
@@ -306,8 +297,7 @@ pub(super) fn walk_parquet(dir: &std::path::Path, count: &mut usize) {
     }
 }
 
-/// Like [`setup`] but with `repark.sql.allowLocalFilesystemDDL=true` for COPY TO pins that
-/// deliberately write outside the warehouse (SEC-02 default is false).
+/// Like [`setup`] but with `repark.sql.allowLocalFilesystemDDL=true` for COPY TO pins.
 pub(super) async fn setup_allow_local_fs_ddl(wh: &TempDir) -> (SessionContext, CatalogRegistry) {
     setup_with_sql_settings(
         wh,
@@ -341,10 +331,7 @@ pub(super) fn register_source(ctx: &SessionContext, name: &str, rows: &[(i32, &s
     ctx.register_batch(name, batch).unwrap();
 }
 
-/// Register an `(a string, b string)` source whose `a` values are **not** parseable as
-/// integers, so `CAST(a AS INT)` succeeds at plan time and fails at value time. This is the
-/// oracle the empty-`INSERT OVERWRITE` cast guard is built against: the empty
-/// form must refuse the wipe, the non-empty form must fail at cast and keep prior rows.
+/// Register a string-pair source whose `a` values are not parseable as integers.
 pub(super) fn register_unparsable_utf8_source(
     ctx: &SessionContext,
     name: &str,
@@ -369,9 +356,7 @@ pub(super) fn register_unparsable_utf8_source(
     ctx.register_batch(name, batch).unwrap();
 }
 
-/// Register a `(id int, name string)` source that yields MULTIPLE record batches — one per
-/// inner slice — so a CTAS over it exercises the streaming write across batch boundaries
-/// (WG-2). A single-batch `register_batch` cannot prove multi-batch handling.
+/// Register an int-string source that yields multiple record batches.
 pub(super) fn register_multi_batch_source(
     ctx: &SessionContext,
     name: &str,
@@ -402,9 +387,7 @@ pub(super) fn register_multi_batch_source(
     ctx.register_table(name, Arc::new(table)).unwrap();
 }
 
-/// Read `id, name` back through the Arrow collect path, asserting the exact Arrow types
-/// (Int32 / Utf8 — value AND type, never a display path) and returning the rows sorted by id
-/// for order-insensitive comparison (the fanout regroups partitioned rows).
+/// Read `id, name` back on the Arrow path, asserting Int32/Utf8 types, sorted by id.
 pub(super) async fn read_back_typed(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -501,10 +484,7 @@ pub(super) async fn id_file_pairs(catalogs: &CatalogRegistry, table: &str) -> Ve
     pairs
 }
 
-/// The number of live position/equality DELETE files in a table's current snapshot — the
-/// manifest-level oracle for "this commit really was merge-on-read". Without it, a
-/// merge-on-read pin that only checked rows would stay green if the executor silently fell back
-/// to the copy-on-write arm.
+/// The number of live position/equality DELETE files in a table's current snapshot.
 pub(super) async fn delete_file_count(catalogs: &CatalogRegistry, table: &str) -> usize {
     use iceberg::spec::ManifestContentType;
     let ident = TableIdent::new(NamespaceIdent::new("sales".to_string()), table.to_string());
@@ -528,14 +508,7 @@ pub(super) async fn delete_file_count(catalogs: &CatalogRegistry, table: &str) -
     count
 }
 
-/// The live (Added/Existing) DATA-file paths in a table's current snapshot, read off the
-/// manifests — the "were the data files touched?" oracle for merge-on-read.
-///
-/// **Not** the `_file` column of a scan: a scan only reports files that still have a VISIBLE
-/// row, so a data file whose every row was position-deleted vanishes from `_file` while
-/// remaining perfectly live in the manifests. On a bucket-partitioned target a single MERGE
-/// easily empties a whole bucket's file, so the scan-based oracle would report a correct
-/// merge-on-read commit as a copy-on-write rewrite. Physical claims read the manifests.
+/// The live DATA-file paths in a table's current snapshot, read off the manifests.
 pub(super) async fn live_data_file_paths(
     catalogs: &CatalogRegistry,
     table: &str,
@@ -628,8 +601,7 @@ pub(super) async fn time_travel_id_multiset(
     ids
 }
 
-/// A plan-only `SessionContext` (analyzer rules + `src`/`src2`, no catalog) for pinning
-/// [`logical_plan_has_unsafe_cast`] directly on the shape it actually sees.
+/// A plan-only `SessionContext` for pinning `logical_plan_has_unsafe_cast` on the shape it sees.
 pub(super) fn cast_walk_ctx() -> SessionContext {
     let ctx = SessionContext::new();
     for rule in repark_functions::analyzer_rules() {
@@ -640,8 +612,7 @@ pub(super) fn cast_walk_ctx() -> SessionContext {
     ctx
 }
 
-/// Classify `source` exactly as `assert_empty_overwrite_types_assignment_compatible` does —
-/// same `LIMIT 0` wrapper, same analyzed (not optimized) plan.
+/// Classify `source` exactly as `assert_empty_overwrite_types_assignment_compatible` does.
 pub(super) async fn source_has_unsafe_cast(ctx: &SessionContext, source: &str) -> bool {
     let catalogs = CatalogRegistry::new();
     let df = spark_ast::execute_passthrough(
@@ -654,8 +625,7 @@ pub(super) async fn source_has_unsafe_cast(ctx: &SessionContext, source: &str) -
     logical_plan_has_unsafe_cast(df.logical_plan())
 }
 
-/// Execute a statement and drop its returned `DataFrame` without collecting it. This models a
-/// bare `spark.sql("<DML>")`; eager DML is applied before `execute` returns.
+/// Execute a statement and drop its returned `DataFrame` without collecting it.
 pub(super) async fn execute_without_collecting(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,

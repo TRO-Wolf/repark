@@ -1,6 +1,4 @@
-//! [`SparkDialect`] seam-adaptation tests: installed on a [`ReparkSession`] via
-//! `with_sql_dialect`, the dialect routes every `sql()` call through the Spark router. The Spark
-//! ORDER BY defaults, targeted refusals, and P11 read-only adaptation are observable end to end.
+//! `SparkDialect` seam tests: `with_sql_dialect` routes every `sql()` call through the Spark router.
 
 use std::sync::Arc;
 
@@ -17,8 +15,7 @@ fn spark_session() -> ReparkSession {
         .expect("session build")
 }
 
-/// The dialect routes through the Spark router: ASC → NULLS FIRST applies,
-/// which a plain `SessionContext::sql` path would invert.
+/// The dialect routes through the Spark router.
 #[tokio::test]
 async fn dialect_execute_runs_the_spark_router() {
     let session = spark_session();
@@ -47,8 +44,7 @@ async fn dialect_execute_runs_the_spark_router() {
     assert!(column.is_null(0), "Spark ASC default is NULLS FIRST");
 }
 
-/// The dialect passes targeted router refusals through the seam and preserves the session error
-/// fold.
+/// The dialect passes router refusals through the seam and preserves the session error fold.
 #[tokio::test]
 async fn dialect_surfaces_router_refusals() {
     let session = spark_session();

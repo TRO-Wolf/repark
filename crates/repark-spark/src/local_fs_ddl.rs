@@ -1,7 +1,4 @@
 //! Local-filesystem DDL gate.
-//!
-//! The default `repark.sql.allowLocalFilesystemDDL = false` refuses local and `file://` targets
-//! outside a registered session warehouse root. Remote schemes are outside this gate.
 
 use std::path::{Component, Path, PathBuf};
 
@@ -14,11 +11,7 @@ use repark_functions::cardinality::{
 
 use repark_core::CatalogRegistry;
 
-/// ===========================================================================================
-/// Refuse local-filesystem `CREATE EXTERNAL TABLE` / `COPY TO` when conf is false and the path
-/// is not under a registered warehouse root. No-op for non-DDL / remote locations.
-/// ===========================================================================================
-///
+/// Refuse local-fs CREATE EXTERNAL TABLE / COPY TO when conf is false and the path is off-root.
 /// # Errors
 /// [`DataFusionError::Plan`] naming [`ALLOW_LOCAL_FILESYSTEM_DDL_KEY`] when blocked.
 pub fn refuse_local_filesystem_plan(
@@ -54,7 +47,7 @@ fn refuse_local_path(catalogs: &CatalogRegistry, surface: &str, raw_location: &s
     )))
 }
 
-/// Case-insensitive strip of an ASCII scheme prefix (`file://`, `file:`). Returns the remainder.
+/// Case-insensitive strip of an ASCII scheme prefix (`file://`, `file:`).
 fn strip_ascii_prefix_ci<'a>(value: &'a str, prefix: &str) -> Option<&'a str> {
     let prefix_len = prefix.len();
     if value.len() >= prefix_len && value[..prefix_len].eq_ignore_ascii_case(prefix) {
@@ -65,9 +58,6 @@ fn strip_ascii_prefix_ci<'a>(value: &'a str, prefix: &str) -> Option<&'a str> {
 }
 
 /// Map a location string to a local [`PathBuf`] when it is bare or `file://`; `None` for remote.
-///
-/// Scheme matching is **case-insensitive** for both the remote allowlist and `file:` / `file://`
-/// (`FILE:///etc/passwd` must not classify as remote and skip the gate).
 #[must_use]
 pub fn local_filesystem_path(location: &str) -> Option<PathBuf> {
     let trimmed = location.trim();

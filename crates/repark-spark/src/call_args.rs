@@ -8,12 +8,9 @@ use datafusion::sql::sqlparser::ast::{
 };
 use repark_core::parse_timestamp_to_ms;
 
-// ===========================================================================================
 // Argument bag
-// ===========================================================================================
 
-/// Parsed CALL arguments — named map + ordered positional list (Spark allows either form,
-/// not mixed).
+/// Parsed CALL arguments — named map + ordered positional list.
 #[derive(Debug, Default)]
 pub(crate) struct CallArgs {
     pub(crate) named: HashMap<String, Expr>,
@@ -188,9 +185,6 @@ impl CallArgs {
     }
 
     /// Reject more positional arguments than the procedure arity (C1-L-001 / C1-L-002).
-    ///
-    /// Spark accepts trailing optional positionals omitted; extra *beyond* the max arity must
-    /// not be silently dropped (otherwise positional `strategy` on rewrite binpacks silently).
     pub(crate) fn reject_excess_positional(&self, max_arity: usize) -> Result<()> {
         if self.positional.len() > max_arity {
             return Err(DataFusionError::Plan(format!(
@@ -289,9 +283,7 @@ pub(crate) fn expr_as_timestamp_ms(expr: &Expr, arg_name: &str) -> Result<i64> {
     }
 }
 
-/// A boolean CALL argument. Spark's procedure layer accepts the SQL boolean literals only, so a
-/// quoted `'true'` is refused rather than coerced — on a procedure that deletes files, guessing
-/// what a caller meant by a string is not a service.
+/// A boolean CALL argument.
 pub(crate) fn expr_as_bool(expr: &Expr, name: &str) -> Result<bool> {
     match expr {
         Expr::Value(ValueWithSpan {

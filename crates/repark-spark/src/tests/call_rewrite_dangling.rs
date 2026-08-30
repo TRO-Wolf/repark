@@ -1,6 +1,5 @@
-//! RP-2 / C-006: the composed `remove-dangling-deletes` sub-action through the CALL.
-//!
 //! pins: rp-2-fork-repin/C-006
+//! RP-2 / C-006: the composed `remove-dangling-deletes` sub-action through the CALL.
 
 use super::super::*;
 use super::call::call_count;

@@ -31,10 +31,7 @@ async fn create_and_drop_namespace() {
         .unwrap();
 }
 
-/// WG-5 C-1: SQL `CREATE NAMESPACE … LOCATION '/x'` on a **strict** `RequireExplicitLocation`
-/// catalog lets a subsequent CTAS succeed with its data landing under `/x` — the ADV-2 residual
-/// available through SQL as well as the programmatic `create_namespace(..., location=…)` path.
-/// Value-checked on both the read-back rows and the physical `.parquet` placement.
+/// WG-5 C-1: CREATE NAMESPACE LOCATION on a strict catalog lets a later CTAS land under that path.
 #[tokio::test]
 async fn sql_create_namespace_location_lets_ctas_land_under_it() {
     let wh = TempDir::new().unwrap();
@@ -66,8 +63,7 @@ async fn sql_create_namespace_location_lets_ctas_land_under_it() {
     );
 }
 
-/// SQL `CREATE NAMESPACE … LOCATION '/x'` stores equal `location` and `location_uri` keys. The
-/// CTAS proves the dual-keyed namespace resolves through the catalog.
+/// SQL `CREATE NAMESPACE … LOCATION '/x'` stores equal `location` and `location_uri` keys.
 #[tokio::test]
 async fn sql_create_namespace_location_stores_both_location_keys() {
     let wh = TempDir::new().unwrap();
@@ -104,12 +100,7 @@ async fn sql_create_namespace_location_stores_both_location_keys() {
     assert!(count_parquet_files(std::path::Path::new(&location)) > 0);
 }
 
-/// U2-P7 (non-clobbering + unidirectional, the D-U2-4 write contract): an explicitly-set
-/// `location_uri` is NEVER overwritten by the mirror (`LOCATION 'a' WITH DBPROPERTIES
-/// ('location_uri' = 'b')` keeps b — and the CTAS still lands under a, the read precedence);
-/// and a `location_uri`-only DBPROPERTIES create stays single-key (no synthesized
-/// `location`). Risk pinned: a clobbering mirror destroys explicit user input; a
-/// bidirectional mirror fabricates a key the user never set.
+/// U2-P7: an explicitly-set `location_uri` is NEVER overwritten by the mirror.
 #[tokio::test]
 async fn sql_create_namespace_explicit_location_uri_is_never_overwritten() {
     let wh = TempDir::new().unwrap();
@@ -171,8 +162,7 @@ async fn sql_create_namespace_explicit_location_uri_is_never_overwritten() {
     );
 }
 
-/// WG-5 C-2: `WITH DBPROPERTIES ('location' = '/x', …)` round-trips into the namespace metadata,
-/// and the `location` key is load-bearing (it drives the CTAS placement). Strict catalog.
+/// WG-5 C-2: `WITH DBPROPERTIES` round-trips into the namespace metadata.
 #[tokio::test]
 async fn sql_create_namespace_with_dbproperties_round_trips() {
     let wh = TempDir::new().unwrap();
@@ -211,8 +201,7 @@ async fn sql_create_namespace_with_dbproperties_round_trips() {
     assert!(count_parquet_files(std::path::Path::new(&location)) > 0);
 }
 
-/// WG-5 C-2 (PROPERTIES synonym): Spark accepts `WITH PROPERTIES (…)` as well as
-/// `WITH DBPROPERTIES (…)`; the `location` round-trips and drives the CTAS placement.
+/// WG-5 C-2: Spark accepts `WITH PROPERTIES` as well as `WITH DBPROPERTIES`.
 #[tokio::test]
 async fn sql_create_namespace_with_properties_round_trips() {
     let wh = TempDir::new().unwrap();
@@ -248,9 +237,7 @@ async fn sql_create_namespace_with_properties_round_trips() {
     assert!(count_parquet_files(std::path::Path::new(&location)) > 0);
 }
 
-/// WG-5 C-3 + G-6 Q1: `IF NOT EXISTS` with the SAME location is idempotent — a second create
-/// does NOT error and does NOT overwrite the existing `location`. A contradictory LOCATION
-/// is the fail-loud twin (`sql_create_namespace_if_not_exists_conflicting_location_fails_loud`).
+/// WG-5 C-3 + G-6 Q1: `IF NOT EXISTS` with the SAME location is idempotent.
 #[tokio::test]
 async fn sql_create_namespace_if_not_exists_is_idempotent() {
     let wh = TempDir::new().unwrap();
@@ -349,8 +336,7 @@ async fn sql_create_namespace_if_not_exists_same_location_is_idempotent() {
     );
 }
 
-/// G-6 Q1 re-create-conflicting: `IF NOT EXISTS … LOCATION` that contradicts the stored
-/// path fails loud, naming both paths, and does not rewrite the stored location.
+/// G-6 Q1 re-create-conflicting: `IF NOT EXISTS … LOCATION`.
 #[tokio::test]
 async fn sql_create_namespace_if_not_exists_conflicting_location_fails_loud() {
     let wh = TempDir::new().unwrap();
@@ -467,9 +453,7 @@ async fn sql_create_schema_synonym_with_location_round_trips() {
     assert!(count_parquet_files(std::path::Path::new(&location)) > 0);
 }
 
-/// WG-5 C-7: an unsupported trailing clause (here the SQL-standard `AUTHORIZATION`, which
-/// sqlparser's `CREATE SCHEMA` models but Spark's namespace surface does not) is a LOUD error
-/// naming the supported forms — never a silent drop — and leaves no namespace behind.
+/// WG-5 C-7: an unsupported trailing clause is a LOUD error naming the supported forms.
 #[tokio::test]
 async fn sql_create_namespace_unsupported_clause_fails_loud() {
     let wh = TempDir::new().unwrap();
@@ -497,9 +481,7 @@ async fn sql_create_namespace_unsupported_clause_fails_loud() {
     );
 }
 
-/// F-WG5-1 (W51-1): `CREATE NAMESPACE … COMMENT '…'` round-trips the comment into the namespace
-/// `comment` property (Spark's namespace comment clause). Mutation: drop the `COMMENT` arm in
-/// `parse_create_namespace_body` → the comment is never stored → RED.
+/// F-WG5-1: CREATE NAMESPACE COMMENT round-trips into the namespace comment property.
 #[tokio::test]
 async fn sql_create_namespace_comment_round_trips() {
     let wh = TempDir::new().unwrap();
@@ -523,9 +505,7 @@ async fn sql_create_namespace_comment_round_trips() {
     );
 }
 
-/// F-WG5-1 (W51-2): a non-string (bare number) property value parses and stores as its string
-/// form — Spark accepts unquoted numeric property values. Mutation: drop the `Token::Number` arm
-/// in `parse_namespace_property_string` → the number no longer parses → RED (parse error).
+/// F-WG5-1: a non-string property value parses and stores as its string form.
 #[tokio::test]
 async fn sql_create_namespace_number_property_value_round_trips() {
     let wh = TempDir::new().unwrap();
@@ -549,10 +529,7 @@ async fn sql_create_namespace_number_property_value_round_trips() {
     );
 }
 
-/// F-WG5-1 (W51-3): a malformed property value (a token that is neither a word, a quoted
-/// string, nor a number) fails loud naming the parse expectation — never a silent drop — and no
-/// namespace is created. Mutation: relax the `other =>` arm in `parse_namespace_property_string`
-/// → RED. (Distinct error path from the trailing-clause `unsupported CREATE NAMESPACE clause`.)
+/// F-WG5-1: a malformed property value fails loud naming the parse expectation.
 #[tokio::test]
 async fn sql_create_namespace_bad_property_value_fails_loud() {
     let wh = TempDir::new().unwrap();

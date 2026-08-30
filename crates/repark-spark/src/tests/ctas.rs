@@ -31,8 +31,7 @@ async fn ctas_from_temp_view_into_iceberg_round_trips() {
     );
 }
 
-/// A location-less namespace on a non-memory catalog fails loudly instead of writing under a
-/// temporary root. The error names the namespace and points to SQL and programmatic remedies.
+/// A location-less namespace on a non-memory catalog fails loudly.
 #[tokio::test]
 async fn ctas_location_less_namespace_fails_loud_for_non_memory_catalog() {
     let wh = TempDir::new().unwrap();
@@ -89,8 +88,7 @@ async fn ctas_location_less_namespace_fails_loud_for_non_memory_catalog() {
         message.contains("location"),
         "error must tell the user to set the `location` property, got: {message}"
     );
-    // The error names both supported fixes: SQL `LOCATION`/`WITH DBPROPERTIES` and
-    // programmatic `create_namespace`.
+    // The error names both supported fixes.
     assert!(
         message.contains("LOCATION"),
         "error must name the SQL `CREATE NAMESPACE … LOCATION` path (WG-5), got: {message}"
@@ -311,10 +309,8 @@ async fn ctas_plain_source_failure_leaves_no_orphan() {
     );
 }
 
-/// An explicit CTAS column list is rejected before a table is created. The error matches Spark's
-/// schema-validation class.
-/// MUTATION: delete the `build_ctas`
-/// column-list guard → this pin REDs (a table named `cl` is created and no error is raised).
+/// MUTATION: delete the `build_ctas` column-list guard → this pin REDs (a table named `cl` is created and no error is raised).
+/// An explicit CTAS column list is rejected before a table is created.
 #[tokio::test]
 async fn ctas_explicit_column_list_rejected_spark_parity() {
     let wh = TempDir::new().unwrap();
@@ -345,8 +341,7 @@ async fn ctas_explicit_column_list_rejected_spark_parity() {
     );
 }
 
-/// An explicit RTAS column list returns Spark's schema error before replacement, leaving existing
-/// rows intact.
+/// An explicit RTAS column list returns Spark's schema error before replacement.
 #[tokio::test]
 async fn rtas_explicit_column_list_rejected_and_preserves_existing() {
     let wh = TempDir::new().unwrap();
@@ -520,8 +515,7 @@ async fn ctas_or_replace_failed_publish_leaves_original_current() {
             || err.kind() == iceberg::ErrorKind::CatalogCommitConflicts,
         "expected concurrent-modification conflict, got: {err}"
     );
-    // Winner remains current — original three-row snapshot is gone (replaced by winner),
-    // and the stale stage did not clobber it further.
+    // Winner remains current.
     assert_eq!(
         rows(&ctx, &catalogs, "SELECT * FROM ice.sales.orders").await,
         1
@@ -560,11 +554,8 @@ async fn ctas_parses_using_and_threads_tblproperties() {
     );
 }
 
-/// The reserved `format-version` TBLPROPERTY (the source publish job's CTAS carries
-/// `'format-version' = 2`): '2' is consumed — iceberg-rust rejects reserved keys as plain
-/// properties and the engine's created tables are format v2 already — while any other
-/// version is rejected up front, never silently ignored.
 /// pins: v3-2-create-v3-opt-in/C-003, C-004, C-007
+/// The reserved `format-version` TBLPROPERTY: '2' is consumed.
 #[tokio::test]
 async fn ctas_format_version_two_consumed_others_rejected() {
     use iceberg::spec::FormatVersion;
@@ -704,8 +695,7 @@ async fn non_ctas_passes_through() {
     assert_eq!(rows(&ctx, &catalogs, "SELECT * FROM src").await, 3);
 }
 
-/// CTAS derives its schema through the Spark passthrough. Integer division lands as DOUBLE with
-/// its fractional value intact.
+/// CTAS derives its schema through the Spark passthrough.
 #[tokio::test]
 async fn ctas_integer_division_lands_as_double() {
     use datafusion::arrow::array::Float64Array;
@@ -744,10 +734,7 @@ async fn ctas_integer_division_lands_as_double() {
     assert!((halves.value(0) - 0.5).abs() < f64::EPSILON);
 }
 
-/// Read the single column of `table` back from the written Iceberg table as `Option<f64>`,
-/// sorted ascending (NULLs first) — the CTAS write-path round-trip oracle for a Float64 result
-/// column. Panics (with the actual Arrow type) if the stored column is not Float64, so a
-/// mis-derived write schema fails the *type* half of the pin, not only the value half.
+/// Read the written Iceberg column back as Option<f64>, sorted, NULLs first.
 async fn ctas_f64_column_sorted(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -801,9 +788,7 @@ async fn ctas_stored_type(
     batches[0].schema().field(0).data_type().clone()
 }
 
-/// A CTAS union of integer divisions must derive its write schema to a fixpoint so the stored
-/// column is `Float64` and retains fractional values.
-/// Oracle: live Spark 4.1.2 `SELECT 5/2 AS q UNION ALL SELECT 7/2` → `double {2.5, 3.5}`.
+/// A CTAS union of integer divisions must derive its write schema to a fixpoint.
 #[tokio::test]
 async fn ctas_union_of_integer_division_lands_as_double() {
     let wh = TempDir::new().unwrap();
@@ -826,8 +811,7 @@ async fn ctas_union_of_integer_division_lands_as_double() {
     );
 }
 
-/// A non-union CTAS of bare integer division lands as Spark `double 3.5`. Oracle: live Spark 4.1.2
-/// `SELECT 7/2 AS q`.
+/// A non-union CTAS of bare integer division lands as Spark `double 3.5`.
 #[tokio::test]
 async fn ctas_bare_integer_division_lands_as_double() {
     let wh = TempDir::new().unwrap();
@@ -849,10 +833,7 @@ async fn ctas_bare_integer_division_lands_as_double() {
     );
 }
 
-/// A zero-divisor CTAS yields NULL with the PROMOTED (double) result type, written and read
-/// back — Spark non-ANSI `/0` is NULL, and the column is still double even in the UNION where
-/// the fix reconciles the parent type. Oracle: live Spark 4.1.2
-/// `SELECT 5/0 AS q UNION ALL SELECT 7/2` → `double {NULL, 3.5}`.
+/// A zero-divisor CTAS yields NULL with the PROMOTED result type, written and read back.
 #[tokio::test]
 async fn ctas_union_zero_divisor_is_null_double() {
     let wh = TempDir::new().unwrap();
@@ -875,14 +856,7 @@ async fn ctas_union_zero_divisor_is_null_double() {
     );
 }
 
-/// The fix must not OVER-promote: a CTAS of a union where both branches are already `DOUBLE`
-/// stays double (no error, no double-casting), and a union of `%` stays integer — Spark keeps
-/// the operand type for `%`. This is the "prove the fix doesn't widen what Spark leaves alone"
-/// pin. Oracle (live Spark 4.1.2): `CAST(5 AS DOUBLE)/CAST(2 AS DOUBLE) UNION ALL …` → double
-/// `{2.5, 4.5}`; `5 % 2 UNION ALL SELECT 7 % 3` → integer `{1, 1}` (Spark's integer-LITERAL
-/// width is `int`/int32; repark keeps its `Int64` literal width — a documented, pre-existing
-/// width divergence — so the CROSS-engine claim pinned here is "stays INTEGER class, never
-/// widened to double", asserted via repark's actual stored `Int64`).
+/// The fix must not OVER-promote.
 #[tokio::test]
 async fn ctas_union_double_stays_double_and_modulo_stays_integer() {
     use datafusion::arrow::array::{Array, Int64Array};
@@ -941,11 +915,7 @@ async fn ctas_union_double_stays_double_and_modulo_stays_integer() {
     assert_eq!(values, vec![1, 1]);
 }
 
-/// A CTAS of a union of DECIMAL divisions stays decimal — the fix reconciles the UNION parent
-/// type without widening decimal to double (Spark keeps decimal `/` in decimal). Reading the
-/// column back proves the stored type class is `Decimal128`, not the over-promoted `Float64`.
-/// (The exact decimal precision is a documented DataFusion-vs-Spark divergence — see
-/// `repark_functions::analyzer` — so only the type CLASS + round-trip success is pinned.)
+/// A CTAS of a union of DECIMAL divisions stays decimal.
 #[tokio::test]
 async fn ctas_union_decimal_division_stays_decimal() {
     let wh = TempDir::new().unwrap();
@@ -972,11 +942,7 @@ async fn ctas_union_decimal_division_stays_decimal() {
     );
 }
 
-/// A THREE-branch union mixing an integer division, an already-double division, and a zero
-/// divisor. All reconcile to a single `Float64` column in storage. The fixpoint re-analysis
-/// propagates `Float64` through the wider `UNION` without changing the parent. Oracle: live Spark
-/// 4.1.2 (non-ANSI) `SELECT 5/2 UNION ALL SELECT
-/// CAST(9 AS DOUBLE)/CAST(2 AS DOUBLE) UNION ALL SELECT 1/0` → `double {NULL, 2.5, 4.5}`.
+/// A THREE-branch union mixing an integer division, an already-double division, and a zero divisor.
 #[tokio::test]
 async fn ctas_three_branch_mixed_union_reconciles_to_double() {
     let wh = TempDir::new().unwrap();
@@ -1000,10 +966,7 @@ async fn ctas_three_branch_mixed_union_reconciles_to_double() {
     );
 }
 
-/// The SELECT (non-write) path is structurally untouched by the write-path fix and must still
-/// return the union-of-division as double with the right values — the no-regression guard the
-/// charter requires. Oracle: live Spark 4.1.2 `SELECT 5/2 AS q UNION ALL SELECT 7/2` →
-/// `double {2.5, 3.5}`.
+/// The SELECT path still returns union-of-division as double with the right values.
 #[tokio::test]
 async fn select_union_of_integer_division_still_double() {
     use datafusion::arrow::array::{Array, Float64Array};
@@ -1035,8 +998,7 @@ async fn select_union_of_integer_division_still_double() {
     assert_eq!(values, vec![Some(2.5), Some(3.5)]);
 }
 
-/// A strict catalog with only `location_uri` must resolve CTAS using the existing Glue namespace
-/// shape. This protects reads of pre-existing namespaces that lack the `location` alias.
+/// A strict catalog with only `location_uri` must resolve CTAS using the Glue namespace shape.
 #[tokio::test]
 async fn ctas_resolves_location_uri_only_namespace_the_glue_db_shape() {
     let wh = TempDir::new().unwrap();
@@ -1069,11 +1031,7 @@ async fn ctas_resolves_location_uri_only_namespace_the_glue_db_shape() {
     );
 }
 
-/// U2-P3: BOTH location keys set. Equal (the post-U2 dual-write shape) → resolves; different
-/// (an out-of-band edit) → DETERMINISTIC precedence: `location` (the Java-canonical key) wins
-/// — data lands under it and NOT under `location_uri`. Risk pinned: an iteration-order or
-/// fallback-first pick would place a real warehouse's data at the wrong root. Resolution must not
-/// depend on map iteration order.
+/// U2-P3: BOTH location keys set.
 #[tokio::test]
 async fn ctas_prefers_location_over_location_uri_when_both_set() {
     let wh = TempDir::new().unwrap();
@@ -1212,9 +1170,7 @@ async fn ctas_path_escape_namespace_ident_refuses_on_shipping_path() {
     );
 }
 
-/// WG-2 P1 (unpartitioned) — a CTAS whose SELECT is a MULTI-batch source streams every row into
-/// the staged write and reads back identical, value AND Arrow type. Risk: streaming drops or
-/// duplicates a batch across the boundary.
+/// WG-2 P1.
 #[tokio::test]
 async fn ctas_multi_batch_source_streams_all_values_and_types() {
     let wh = TempDir::new().unwrap();
@@ -1244,9 +1200,7 @@ async fn ctas_multi_batch_source_streams_all_values_and_types() {
     );
 }
 
-/// WG-2 P1 (partitioned — WG-1 interplay) — a PARTITIONED CTAS over a multi-batch source streams
-/// every row through the identity fanout and reads back identical. Risk: streaming + per-batch
-/// conform/fanout drops a partition or a batch.
+/// WG-2 P1.
 #[tokio::test]
 async fn ctas_partitioned_multi_batch_source_streams_all_rows() {
     let wh = TempDir::new().unwrap();
@@ -1276,9 +1230,7 @@ async fn ctas_partitioned_multi_batch_source_streams_all_rows() {
     );
 }
 
-/// WG-2 P4 (unpartitioned empty) — a CTAS whose SELECT yields zero rows still creates the table
-/// with the right schema and reads back empty. Risk: the streaming write mishandles a
-/// zero-batch source still creates the schema without data.
+/// WG-2 P4.
 #[tokio::test]
 async fn ctas_empty_select_creates_empty_unpartitioned_table() {
     let wh = TempDir::new().unwrap();
@@ -1309,10 +1261,7 @@ async fn ctas_empty_select_creates_empty_unpartitioned_table() {
     );
 }
 
-/// WG-2 P3 (multi-batch, end-to-end) — a mid-stream failure on a LATER source batch aborts the
-/// streaming CTAS and leaves NO orphan table (the staged transaction is never published). This
-/// extends the single-batch `ctas_plain_source_failure_leaves_no_orphan` to a true mid-stream
-/// error. Risk: streaming publishes a partially-written table when the source fails partway.
+/// WG-2 P3.
 #[tokio::test]
 async fn ctas_multi_batch_midstream_failure_leaves_no_orphan() {
     let wh = TempDir::new().unwrap();
@@ -1338,8 +1287,7 @@ async fn ctas_multi_batch_midstream_failure_leaves_no_orphan() {
     );
 }
 
-/// `build_ctas` on a non-CTAS `CREATE TABLE` (no `AS SELECT`, so `query` is `None`) returns a
-/// planning error instead of panicking — pins the invariant that replaced the old `.expect()`.
+/// `build_ctas` on a non-CTAS `CREATE TABLE` returns a planning error instead of panicking.
 #[test]
 fn build_ctas_rejects_missing_query_without_panicking() {
     let sql = "CREATE TABLE ice.sales.t (id INT)";
@@ -1359,8 +1307,7 @@ fn build_ctas_rejects_missing_query_without_panicking() {
     );
 }
 
-/// A13 product path: `register_memory_catalog` + location-less Spark CTAS lands under the
-/// warehouse, not `<temp>/repark_ctas`.
+/// A13: `register_memory_catalog` plus location-less Spark CTAS lands under the warehouse.
 #[tokio::test]
 async fn register_memory_catalog_location_less_ctas_lands_under_warehouse() {
     use std::sync::Arc;

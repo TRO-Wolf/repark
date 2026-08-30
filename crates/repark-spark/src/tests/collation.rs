@@ -1,10 +1,4 @@
 //! G15 — Spark-door collation refuse pins (parse altitude).
-//!
-//! Each live SQL spelling (expression COLLATE, ORDER BY COLLATE, CREATE TABLE
-//! column COLLATE, CAST type-position COLLATE, SQL SET/RESET) has class + needle
-//! pins. A default (non-COLLATE) path stays executable so the valve does not
-//! refuse everything. `execute_passthrough` is pinned directly so deleting the
-//! `spark_ast` executing-parse attach cannot stay green behind the router valve.
 
 use super::super::*;
 use super::common::*;
@@ -174,8 +168,7 @@ async fn set_collation_session_key_refuses_via_execute() {
     assert_g15_refusal(&error, "spark.sql.collation.objectLevel.enabled");
 }
 
-/// Parenthesized SET is not `_ => None` (SEC-003). Built as AST because dotted
-/// names inside `SET (…)` are not a Generic/Databricks production.
+/// Parenthesized SET is not `_ => None` (SEC-003).
 #[test]
 fn parenthesized_set_collation_key_is_detected() {
     let statement = Statement::Set(Set::ParenthesizedAssignments {
@@ -207,10 +200,7 @@ async fn reset_collation_session_key_refuses_via_execute() {
     assert_g15_refusal(&error, "spark.sql.collation.objectLevel.enabled");
 }
 
-/// Q-001: the executing-parse attach in `spark_ast::execute_passthrough` is pinned
-/// directly. Deleting `refuse_collation_in_statement` there (and keeping the
-/// router) must turn this red. Router is the agreed Databricks parse for
-/// intercepted SQL; `spark_ast` is G3-E8 defense-in-depth for session-dialect reparse.
+/// Q-001: the executing-parse attach in `spark_ast::execute_passthrough` is pinned directly.
 #[tokio::test]
 async fn execute_passthrough_attaches_collation_valve() {
     let (ctx, catalogs) = ctx_passthrough();

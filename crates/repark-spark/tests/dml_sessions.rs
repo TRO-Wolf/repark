@@ -1,5 +1,4 @@
-//! End-to-end Spark-door DML tests. A bare `INSERT` applies even when its returned `DataFrame`
-//! is dropped without collection, preserving eager execution through the session seam.
+//! End-to-end Spark-door DML tests.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -37,9 +36,7 @@ fn spark_session() -> ReparkSession {
         .unwrap()
 }
 
-/// F-BR-2: a bare `INSERT` through `session.sql` applies eagerly even when the returned
-/// `DataFrame` is dropped uncollected; a later SELECT sees the new row with its Int32
-/// type intact (the downcast proves the column type survived the insert).
+/// F-BR-2: a bare `INSERT` through `session.sql` applies eagerly even.
 #[tokio::test]
 async fn session_sql_bare_dml_applies_eagerly() {
     let wh = TempDir::new().unwrap();
@@ -72,8 +69,7 @@ async fn session_sql_bare_dml_applies_eagerly() {
         .await
         .unwrap();
 
-    // The write applied eagerly: a subsequent SELECT (collected) sees all three ids, value and
-    // Int32 type — the downcast also proves the column type survived the insert.
+    // The write applied eagerly: a subsequent SELECT sees all three ids, value and Int32 type.
     let batches = spark
         .sql("SELECT id FROM ice.sales.t ORDER BY id")
         .await

@@ -1,8 +1,4 @@
-/// =======================================================================================
 /// Service-managed CTAS pins (S3 Tables create-first flow, `ServiceManagedLocation`).
-/// The test catalog mirrors service-assigned locations and exposes a commit fault for the
-/// drop-on-abort seam.
-/// =======================================================================================
 use super::super::*;
 use super::common::*;
 use std::future::Future;
@@ -241,11 +237,7 @@ impl Catalog for ServiceManagedTestCatalog {
         })
     }
 
-    // The staged-publish seams have DEFAULT trait impls (`publish_replace_table` errors
-    // `FeatureUnsupported`); delegate so the inner memory catalog's overrides stay
-    // reachable through the wrapper. NOTE the real fork `S3TablesCatalog` does NOT
-    // override `publish_replace_table` at pin `14921e78` — CTAS OR REPLACE on real
-    // S3 Tables fails loudly at publish.
+    // The staged-publish seams have DEFAULT trait impls.
     fn publish_create_table<'life0, 'async_trait>(
         &'life0 self,
         table: iceberg::table::Table,
@@ -271,9 +263,7 @@ impl Catalog for ServiceManagedTestCatalog {
     }
 }
 
-/// A context + registry with the service-managed catalog `svc` whose `sales` namespace
-/// deliberately carries NO `location` property (the S3 Tables shape that fails the staged
-/// path), plus the standard 3-row `src` source.
+/// A context + registry.
 async fn setup_service_managed(
     wh: &TempDir,
     fail_update_table: bool,
@@ -326,11 +316,7 @@ fn sales_ident(table: &str) -> TableIdent {
     TableIdent::new(NamespaceIdent::new("sales".to_string()), table.to_string())
 }
 
-/// P1 — the create-first happy path: a location-less namespace on a service-managed
-/// catalog CTASes successfully (the staged path errors on exactly this shape — the A2
-/// S3 Tables acceptance failure), the location is the SERVICE-assigned one, exactly one
-/// `create_table` call carries NO caller location (the wrapper rejects one outright, so
-/// success is itself the proof), and the data commits as ONE snapshot.
+/// P1.
 #[tokio::test]
 async fn ctas_service_managed_creates_first_appends_and_reads_back() {
     let wh = TempDir::new().unwrap();
@@ -367,8 +353,7 @@ async fn ctas_service_managed_creates_first_appends_and_reads_back() {
     );
 }
 
-/// P2 — partitioned create-first: the `PARTITIONED BY` spec rides the location-less
-/// `TableCreation` and the data routes through the partitioned fanout arm.
+/// P2.
 #[tokio::test]
 async fn ctas_service_managed_partitioned_fans_out_and_reads_back() {
     let wh = TempDir::new().unwrap();
@@ -397,8 +382,7 @@ async fn ctas_service_managed_partitioned_fans_out_and_reads_back() {
     );
 }
 
-/// P3 — empty SELECT: the created empty table IS the result; NO snapshot is stamped
-/// (a zero-file fast-append would stamp a pointless empty snapshot).
+/// P3 — empty SELECT: the created empty table IS the result; NO snapshot is stamped.
 #[tokio::test]
 async fn ctas_service_managed_empty_select_creates_table_without_snapshot() {
     let wh = TempDir::new().unwrap();
@@ -419,10 +403,7 @@ async fn ctas_service_managed_empty_select_creates_table_without_snapshot() {
     );
 }
 
-/// P4 — drop-on-abort: create succeeds, the append COMMIT fails (injected), and the
-/// just-created table is dropped — no half-created table survives, and the error names
-/// both the failure and the abort. Mutation direction: disable the abort `drop_table`
-/// call in `execute_ctas_service_managed` → the `table_exists` assert goes RED.
+/// P4.
 #[tokio::test]
 async fn ctas_service_managed_commit_failure_drops_the_created_table() {
     let wh = TempDir::new().unwrap();
@@ -450,9 +431,7 @@ async fn ctas_service_managed_commit_failure_drops_the_created_table() {
     );
 }
 
-/// P5 — OR REPLACE of an EXISTING service-managed table stays on the staged-replace path
-/// (the existing table's own service location is reused; `create_table` is NOT called
-/// again — the service would reject it) and the new definition's rows win.
+/// P5.
 #[tokio::test]
 async fn ctas_or_replace_on_service_managed_existing_table_stays_staged_replace() {
     let wh = TempDir::new().unwrap();

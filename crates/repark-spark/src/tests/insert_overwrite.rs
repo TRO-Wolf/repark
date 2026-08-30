@@ -1,5 +1,4 @@
-/// `INSERT OVERWRITE` maps to `InsertOp::Overwrite` → the provider's full-table replace:
-/// exactly the new rows remain, not old + new (the silent-append failure mode).
+/// `INSERT OVERWRITE` maps to `InsertOp::Overwrite` → the provider's full-table replace.
 use super::super::*;
 use super::common::*;
 
@@ -59,8 +58,7 @@ async fn insert_overwrite_column_list_nonempty_replaces_via_materialize() {
     );
 }
 
-/// A volatile source yields one row for the probe and zero rows for materialization. The second
-/// result must refuse the wipe; the test avoids timing-based race injection.
+/// A volatile source yields one row for the probe and zero rows for materialization.
 #[tokio::test]
 async fn insert_overwrite_source_becomes_empty_between_probe_and_exec_does_not_wipe() {
     use datafusion::logical_expr::{
@@ -125,7 +123,6 @@ async fn insert_overwrite_source_becomes_empty_between_probe_and_exec_does_not_w
     assert_eq!(prior, 3, "fixture must start with three rows");
 
     // First invoke pass: return true for every row (probe LIMIT 1 sees a match).
-    // Subsequent invokes: return false (materialize WHERE filter yields zero rows).
     let invoke_count = Arc::new(AtomicUsize::new(0));
     let invoke_count_for_udf = Arc::clone(&invoke_count);
     ctx.register_udf(ScalarUDF::from(ProbeThenEmpty {
@@ -157,8 +154,7 @@ async fn insert_overwrite_source_becomes_empty_between_probe_and_exec_does_not_w
     );
 }
 
-/// BUG-001 companion: honest empty overwrite still wipes (materialize path must not break
-/// the contracted empty-wipe semantics).
+/// BUG-001 companion: honest empty overwrite still wipes.
 #[tokio::test]
 async fn empty_insert_overwrite_still_wipes_after_bug001_materialize() {
     let wh = TempDir::new().unwrap();
@@ -182,8 +178,7 @@ async fn empty_insert_overwrite_still_wipes_after_bug001_materialize() {
     );
 }
 
-/// Nullability tighten must only flip nullability — field + schema metadata
-/// (e.g. parquet field ids / iceberg schema keys) must survive the `MemTable` rebuild.
+/// Nullability tighten must only flip nullability — field + schema metadata (e.g.
 #[test]
 fn tighten_batch_nullability_preserves_field_and_schema_metadata() {
     let field_meta = HashMap::from([("PARQUET:field_id".to_string(), "1".to_string())]);
@@ -225,8 +220,7 @@ fn tighten_batch_nullability_preserves_field_and_schema_metadata() {
     assert_eq!(out_null[0].schema().field(0).metadata(), &field_meta);
 }
 
-/// Spark's `INSERT OVERWRITE TABLE t …` keyword form (what legacy publish jobs emit)
-/// works identically to the bare form.
+/// Spark's `INSERT OVERWRITE TABLE t …` keyword form works identically to the bare form.
 #[tokio::test]
 async fn insert_overwrite_table_keyword_form() {
     let wh = TempDir::new().unwrap();
@@ -249,7 +243,6 @@ async fn insert_overwrite_table_keyword_form() {
 }
 
 /// Empty `INSERT OVERWRITE … SELECT … WHERE false` must replace the table.
-/// A provider must not short-circuit empty staged files and leave prior rows behind.
 #[tokio::test]
 async fn empty_insert_overwrite_select_where_false_wipes_table() {
     let wh = TempDir::new().unwrap();
@@ -276,10 +269,7 @@ async fn empty_insert_overwrite_select_where_false_wipes_table() {
     );
 }
 
-/// BUG-003: empty OW must use the **provider overwrite** wipe, not a
-/// `DELETE FROM` rewrite. On a merge-on-read table, `DELETE` leaves data files live + position
-/// deletes; overwrite removes data files and must not commit delete files. Rowcount-only pins
-/// stay green under either path — this pin discriminates the mechanism.
+/// BUG-003: empty OW must use the **provider overwrite** wipe, not a `DELETE FROM` rewrite.
 #[tokio::test]
 async fn empty_insert_overwrite_mor_table_uses_overwrite_not_delete_shape() {
     let wh = TempDir::new().unwrap();
@@ -318,13 +308,10 @@ async fn empty_insert_overwrite_mor_table_uses_overwrite_not_delete_shape() {
         0,
         "provider overwrite wipe must not commit position-delete files (DELETE MoR would)"
     );
-    // Note: Iceberg may still stamp summary.operation = Delete for a full-file
-    // remove with zero adds. The discriminating oracle vs a MoR `DELETE FROM` rewrite is
-    // delete_file_count == 0 (above) + empty live data files — not the Operation enum alone.
+    // Note: Iceberg may still stamp summary.operation = Delete for a full-file remove.
 }
 
-/// Empty OW must not wipe when the source launders types via CAST (zero rows
-/// never run the cast kernel; non-empty fails at cast and keeps prior rows).
+/// Empty OW must not wipe when the source launders types via CAST.
 #[tokio::test]
 async fn empty_insert_overwrite_cast_launder_does_not_wipe() {
     let wh = TempDir::new().unwrap();
@@ -354,8 +341,7 @@ async fn empty_insert_overwrite_cast_launder_does_not_wipe() {
     );
 }
 
-/// Aggregate casts live in `Aggregate.aggr_expr`, not the wrapping projection; the guard must find
-/// this value-producing cast and refuse a fallible empty overwrite.
+/// Aggregate casts live in `Aggregate.aggr_expr`, not the wrapping projection.
 #[tokio::test]
 async fn empty_insert_overwrite_aggregate_cast_launder_does_not_wipe() {
     let wh = TempDir::new().unwrap();
@@ -386,8 +372,7 @@ async fn empty_insert_overwrite_aggregate_cast_launder_does_not_wipe() {
         "Aggregate-hosted CAST launder must leave prior rows"
     );
 
-    // Control: the identical statement WITH rows fails at cast and keeps prior rows — that
-    // asymmetry is what makes the refusal above correct rather than arbitrary.
+    // Control: the identical statement WITH rows fails at cast and keeps prior rows.
     let control = execute(
         &ctx,
         &catalogs,
@@ -458,8 +443,7 @@ async fn empty_insert_overwrite_window_cast_launder_does_not_wipe() {
     );
 }
 
-/// Scalar-subquery expressions are not logical-plan children, so explicit recursion must inspect
-/// their casts before an empty overwrite.
+/// Scalar-subquery expressions are not logical-plan children.
 #[tokio::test]
 async fn empty_insert_overwrite_scalar_subquery_cast_launder_does_not_wipe() {
     let wh = TempDir::new().unwrap();
@@ -509,8 +493,7 @@ async fn empty_insert_overwrite_scalar_subquery_cast_launder_does_not_wipe() {
     );
 }
 
-/// Join-key casts can be skipped when the source is empty; the guard must inspect `Join.on` and
-/// refuse a fallible cast that could turn an empty overwrite into a wipe.
+/// Join-key casts can be skipped when the source is empty.
 #[tokio::test]
 async fn empty_insert_overwrite_join_key_cast_launder_does_not_wipe() {
     let wh = TempDir::new().unwrap();
@@ -560,8 +543,7 @@ async fn empty_insert_overwrite_join_key_cast_launder_does_not_wipe() {
     );
 }
 
-/// A runtime-empty source does not evaluate its `Filter` predicate. Inspect predicate casts so a
-/// fallible cast cannot be skipped before an empty overwrite.
+/// A runtime-empty source does not evaluate its `Filter` predicate.
 #[tokio::test]
 async fn empty_insert_overwrite_runtime_empty_predicate_cast_does_not_wipe() {
     let wh = TempDir::new().unwrap();
@@ -592,8 +574,7 @@ async fn empty_insert_overwrite_runtime_empty_predicate_cast_does_not_wipe() {
         "runtime-empty predicate CAST must leave prior rows"
     );
 
-    // Control: the same statement over a source that HAS a row fails at cast and keeps the
-    // prior rows — the asymmetry that makes the refusal above correct rather than arbitrary.
+    // Control: the same statement over a source.
     let control = execute(
         &ctx,
         &catalogs,
@@ -613,8 +594,7 @@ async fn empty_insert_overwrite_runtime_empty_predicate_cast_does_not_wipe() {
     );
 }
 
-/// `CAST(NULL AS <type>)` is total because NULL casts to NULL for every target; it must not block
-/// an empty overwrite.
+/// `CAST` is total because NULL casts to NULL for every target.
 #[tokio::test]
 async fn empty_insert_overwrite_null_literal_cast_still_wipes() {
     let wh = TempDir::new().unwrap();
@@ -668,9 +648,7 @@ async fn empty_insert_overwrite_predicate_coercion_cast_still_wipes() {
     run(
         &ctx,
         &catalogs,
-        // DF54: string/numeric comparisons coerce the string side to numeric (Utf8→Int),
-        // which is fallible for arbitrary strings — not the total Int→Utf8 path DF52 used.
-        // Pin still covers analyzer-inserted WHERE comparison coercion that remains total.
+        // DF54: string/numeric comparisons coerce the string side to numeric.
         "INSERT OVERWRITE ice.sales.t SELECT id, name FROM src WHERE id > 99",
     )
     .await;
@@ -682,7 +660,7 @@ async fn empty_insert_overwrite_predicate_coercion_cast_still_wipes() {
     );
 }
 
-/// Analyzer-inserted `CAST(id AS Utf8)` inside a `Projection` is infallible and must remain allowed.
+/// Analyzer-inserted `CAST` inside a `Projection` is infallible and must remain allowed.
 #[tokio::test]
 async fn empty_insert_overwrite_projection_coercion_cast_still_wipes() {
     let wh = TempDir::new().unwrap();
@@ -706,8 +684,7 @@ async fn empty_insert_overwrite_projection_coercion_cast_still_wipes() {
         "infallible coercion CAST in a Projection must not block the wipe"
     );
 
-    // Control: the same statement WITH rows succeeds — so refusing the empty form would have
-    // been a pure false positive, not a symmetry repair.
+    // Control: the same statement WITH rows succeeds.
     run(
         &ctx,
         &catalogs,
@@ -759,9 +736,7 @@ async fn empty_insert_overwrite_stringify_cast_still_wipes() {
     );
 }
 
-/// `TRY_CAST` is total (unparsable input → NULL, never an error), so the empty and non-empty
-/// forms agree: no asymmetry, no refusal. The control runs the non-empty form and asserts it
-/// SUCCEEDS — that is the evidence that refusing the empty form would be arbitrary.
+/// `TRY_CAST` is total, so the empty and non-empty forms agree: no asymmetry, no refusal.
 #[tokio::test]
 async fn empty_insert_overwrite_try_cast_still_wipes() {
     let wh = TempDir::new().unwrap();
@@ -800,12 +775,7 @@ async fn empty_insert_overwrite_try_cast_still_wipes() {
     );
 }
 
-/// Ambiguity branch: an `INSERT OVERWRITE` column list that matches two target
-/// fields case-insensitively must fail loud, not silently pick one and wipe.
-///
-/// Iceberg targets cannot reach this (`iceberg::spec::Schema` refuses to build a lower-case
-/// name index when `id`/`ID` collide — "Cannot build lower case index"), so the pin uses a
-/// plain DataFusion target, which `execute_insert_overwrite` also routes.
+/// Ambiguity branch: an `INSERT OVERWRITE` column list.
 #[tokio::test]
 async fn empty_insert_overwrite_case_ambiguous_column_refuses() {
     let wh = TempDir::new().unwrap();
@@ -866,8 +836,7 @@ async fn empty_insert_overwrite_column_list_case_insensitive_wipes() {
     );
 }
 
-/// Hollow-pin close: empty computed source into a partitioned target still wipes
-/// (guard must not sit on the empty path; re-probe must still classify as empty).
+/// Hollow-pin close: empty computed source into a partitioned target still wipes.
 #[tokio::test]
 async fn empty_computed_insert_overwrite_into_partitioned_still_wipes() {
     let wh = TempDir::new().unwrap();
@@ -878,8 +847,7 @@ async fn empty_computed_insert_overwrite_into_partitioned_still_wipes() {
         "CREATE TABLE ice.sales.t USING iceberg PARTITIONED BY (id) AS SELECT * FROM src",
     )
     .await;
-    // A computed non-partition column is refused for a non-empty partitioned target; an empty
-    // source still follows the wipe path.
+    // A computed non-partition column is refused for a non-empty partitioned target.
     run(
         &ctx,
         &catalogs,
@@ -917,7 +885,6 @@ async fn empty_insert_overwrite_table_keyword_wipes() {
 }
 
 /// Empty `INSERT INTO` must not wipe — zero rows appended, prior rows remain.
-/// (Documented engine behaviour for this cycle; wipe is overwrite-only.)
 #[tokio::test]
 async fn empty_insert_into_does_not_wipe() {
     let wh = TempDir::new().unwrap();
@@ -944,7 +911,6 @@ async fn empty_insert_into_does_not_wipe() {
 }
 
 /// Empty `INSERT OVERWRITE … PARTITION (…)` must NOT full-table DELETE.
-/// Loud refuse until partition-scoped wipe exists.
 #[tokio::test]
 async fn empty_insert_overwrite_partition_refuses_full_wipe() {
     let wh = TempDir::new().unwrap();
@@ -1037,8 +1003,7 @@ async fn insert_overwrite_partition_nonempty_refuses_whole_table_replace() {
     );
 }
 
-/// Empty INSERT OVERWRITE with incompatible source schema must fail loud and
-/// leave prior rows — never wipe on a plan that would have been rejected.
+/// Empty INSERT OVERWRITE with incompatible source schema must fail loud and leave prior rows.
 #[tokio::test]
 async fn empty_insert_overwrite_incompatible_schema_does_not_wipe() {
     let wh = TempDir::new().unwrap();
@@ -1074,9 +1039,6 @@ async fn empty_insert_overwrite_incompatible_schema_does_not_wipe() {
 }
 
 /// Same-arity type mismatch empty OW must not wipe.
-///
-/// Cast evaluation errors must preserve existing rows during empty `INSERT OVERWRITE`.
-/// A provider must not short-circuit the empty form into a silent full-table wipe.
 #[tokio::test]
 async fn empty_insert_overwrite_type_mismatch_same_arity_does_not_wipe() {
     let wh = TempDir::new().unwrap();
@@ -1155,8 +1117,7 @@ async fn empty_insert_overwrite_with_cte_wipes_table() {
     );
 }
 
-/// `INSERT OVERWRITE INTO` (explicit INTO) empty source must wipe — same class
-/// as bare `INSERT OVERWRITE` (Spark often emits the INTO keyword).
+/// `INSERT OVERWRITE INTO` empty source must wipe — same class as bare `INSERT OVERWRITE`.
 #[tokio::test]
 async fn empty_insert_overwrite_into_keyword_wipes_table() {
     let wh = TempDir::new().unwrap();

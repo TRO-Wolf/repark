@@ -1,5 +1,4 @@
-/// I1 / R-TIME-TRAVEL: multi-snapshot table + VERSION AS OF / TIMESTAMP AS OF / branch / tag,
-/// plus unknown-id loud error and current-read unaffected after time-travel reads.
+/// I1: VERSION/TIMESTAMP AS OF, branch, and tag pins, plus unknown-id loud error.
 use super::super::*;
 use super::common::*;
 
@@ -96,8 +95,7 @@ async fn time_travel_version_timestamp_branch_tag_and_errors() {
         .await,
         vec![1, 2, 3]
     );
-    // Latest-match pin: as-of s2_ts must be s2 multiset,
-    // not s1 — distinguishes first-history-match from last-matching `<=` walk.
+    // Latest-match pin: as-of s2_ts must be s2 multiset, not s1.
     let table = catalogs["ice"].load_table(&ident).await.unwrap();
     let s2_ts = table.metadata().snapshot_by_id(s2).unwrap().timestamp_ms();
     let s3_ts = table.metadata().snapshot_by_id(s3).unwrap().timestamp_ms();
@@ -209,12 +207,7 @@ async fn time_travel_version_timestamp_branch_tag_and_errors() {
     );
 }
 
-/// The ephemeral `__repark_tt_*` names the time-travel rewrite registers, still visible on the
-/// session's default schema (the introspection surface `SHOW TABLES` /
-/// `information_schema.tables` enumerate).
-///
-/// Read off the catalog directly rather than through `information_schema`: the same proof with
-/// one fewer precondition (this door's harness does not turn the conf on).
+/// Ephemeral `__repark_tt_*` names stay visible on the session default schema until taken down.
 fn leftover_time_travel_views(ctx: &SessionContext) -> Vec<String> {
     let state = ctx.state();
     let catalog_options = &state.config_options().catalog;
@@ -270,12 +263,6 @@ async fn setup_time_travel_leak_table(
 }
 
 /// I1 leak pin (H-1b): the rewrite's ephemeral views must NOT survive the statement.
-///
-/// Statement-scoped `PinnedViews` releases every temporary provider while the returned plan keeps
-/// its pinned rows readable after `execute` returns.
-///
-/// Mutation: drop the `pinned.release(ctx)` in `execute_with_read_only` → the leftover assertions
-/// red.
 #[tokio::test]
 async fn time_travel_temp_views_do_not_survive_a_successful_statement() {
     let wh = TempDir::new().unwrap();
@@ -292,7 +279,7 @@ async fn time_travel_temp_views_do_not_survive_a_successful_statement() {
         )
         .await
         .expect("pinned read must plan");
-        // Collected after `execute` returned — i.e. after the ephemeral name was released.
+        // Collected after `execute` returned — i.e.
         let rows: usize = frame
             .collect()
             .await
@@ -329,24 +316,14 @@ async fn time_travel_temp_views_do_not_survive_a_successful_statement() {
     );
 }
 
-/// I1 leak pin, ERROR half (H-1b): a statement that FAILS must not leave the ephemeral views it
-/// already registered behind. This is the case a naive fix misses — releasing only after a
-/// successful rewrite (or only on the router's `Ok` path) still leaks here.
-///
-/// Two distinct failure shapes, because they leak at different depths:
-/// 1. mid-rewrite — the rightmost relation is registered (the splice runs right-to-left), then the
-///    leftmost pin fails to resolve, so `prepare_time_travel_sql` itself returns `Err`;
-/// 2. post-rewrite — every pin registers, and PLANNING then fails on an unknown column.
-///
-/// Mutation: drop the `pinned.release(ctx)` in `execute_with_read_only`, or move the release to
-/// the `Ok` arm only → both assertions red.
+/// I1 leak pin, ERROR half.
 #[tokio::test]
 async fn time_travel_temp_views_do_not_survive_a_failed_statement() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     let (first, _second) = setup_time_travel_leak_table(&ctx, &catalogs).await;
 
-    // 1. Mid-rewrite failure: the good (right-hand) pin registers first, then the bad one errors.
+    // 1.
     let mid_rewrite = execute(
         &ctx,
         &catalogs,
@@ -367,7 +344,7 @@ async fn time_travel_temp_views_do_not_survive_a_failed_statement() {
         leftover_time_travel_views(&ctx)
     );
 
-    // 2. Post-rewrite planning failure: the pin registered, the plan then failed.
+    // 2.
     let planning = execute(
         &ctx,
         &catalogs,
@@ -393,16 +370,7 @@ fn temp_view_sequence(name: &str) -> u64 {
         .unwrap_or_else(|| panic!("not an engine-minted temp-view name: {name}"))
 }
 
-/// I1 collision pin: a Spark-door time-travel statement must not disturb a
-/// reader-options registration, even though both live in the same `__repark_tt_` namespace on the
-/// same session.
-///
-/// The defect this fences: two process-global counters used to mint that prefix — one in
-/// `repark_core::time_travel`, one in this crate's `time_travel` — both starting at 1, so they
-/// Reader-option views must survive a statement rewrite, and both paths must use the shared
-/// `repark_core::next_temp_view_name` counter so exact-once cleanup cannot delete a live view.
-///
-/// Mutation: give `crate::time_travel` its own `static TEMP_VIEW_SEQ` + local minter again → red.
+/// I1 collision: Spark-door time travel must not disturb a reader-options registration.
 #[tokio::test]
 async fn time_travel_statement_pins_never_collide_with_a_reader_options_view() {
     let wh = TempDir::new().unwrap();
@@ -410,8 +378,7 @@ async fn time_travel_statement_pins_never_collide_with_a_reader_options_view() {
     let (first, _second) = setup_time_travel_leak_table(&ctx, &catalogs).await;
     assert!(leftover_time_travel_views(&ctx).is_empty());
 
-    // The reader-options shape: `spark.read.option("snapshot-id", …)` reaches exactly this call,
-    // and its registration must SURVIVE — it backs the frame handed to the user.
+    // The reader-options shape: `spark.read.option` reaches exactly this call.
     let table_parts = ["ice".to_string(), "sales".to_string(), "leak".to_string()];
     let reader_frame = repark_core::read_table_at(
         &ctx,
@@ -444,17 +411,14 @@ async fn time_travel_statement_pins_never_collide_with_a_reader_options_view() {
     .sum();
     assert_eq!(rows, 3, "the statement still sees only the CTAS rows");
 
-    // 1. The reader's registration survives, and the statement's own pins are gone — one
-    //    assertion for both halves, because equality with the pre-statement set says exactly
-    //    "nothing added, nothing taken away".
+    // 1.
     assert_eq!(
         leftover_time_travel_views(&ctx),
         reader_views,
         "a time-travel STATEMENT must release every name it minted and leave the reader-options \
          registration alone"
     );
-    // The reader's frame still executes. (Weaker than the assertion above — a resolved plan owns
-    // its provider — but it is the user-visible consequence, so it is worth stating.)
+    // The reader's frame still executes.
     let reader_rows: usize = reader_frame
         .collect()
         .await
@@ -467,8 +431,7 @@ async fn time_travel_statement_pins_never_collide_with_a_reader_options_view() {
         "the reader-options frame is still the pinned snapshot"
     );
 
-    // 2. The door draws from the SAME sequence: two mints straddling a one-relation statement
-    //    must be more than 1 apart. With a second counter the gap is exactly 1, always.
+    // 2.
     let before_mint = temp_view_sequence(&repark_core::next_temp_view_name());
     let _ = execute(
         &ctx,

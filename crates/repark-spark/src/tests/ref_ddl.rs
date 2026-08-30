@@ -244,25 +244,7 @@ async fn write_to_branch_refuses_loud_naming_fork_gap() {
     );
 }
 
-/// DECLARED-DIVERGENCE pin for **`docs/spark-sql-iceberg-parity.md` §2.2 row REF-2** — the
-/// idempotent `IF EXISTS` / `IF NOT EXISTS` spellings, and every other trailing clause, stay out
-/// of the snapshot-ref DDL surface and refuse LOUD.
-///
-/// The divergence: Apache Spark's Iceberg extension accepts `CREATE BRANCH IF NOT EXISTS` and
-/// `DROP BRANCH IF EXISTS`; this door refuses them. What the row exists to prevent is the
-/// fail-open alternative — silently DROPPING the trailing clause, which inverts the statement's
-/// meaning in both directions (an ignored `IF NOT EXISTS` turns a no-op into a hard failure; an
-/// ignored `IF EXISTS` turns a tolerated miss into one).
-///
-/// This pin reds if the divergence silently disappears: every spelling below must still be an
-/// error, and the three `ALTER TABLE` forms must still name the registry section in the message, so
-/// implementing the forms (or dropping the doc pointer) forces this test and the registry row to
-/// move together.
-///
-/// The leftover-token assertion binds the **dynamic** `(got word "…")` span, never the bare word:
-/// the message's constant tail already contains `NOT` and `EXISTS`, so a bare `contains(leftover)`
-/// would be satisfied by the static grammar text and would stay green if the interpolation were
-/// deleted. Asserting the rendered span means redacting the interpolation reds every case.
+/// DECLARED-DIVERGENCE pin for **`docs/spark-sql-iceberg-parity.md` §2.2 row REF-2**.
 #[tokio::test]
 async fn ref_ddl_if_exists_spellings_and_trailing_clauses_refuse_loud() {
     let wh = TempDir::new().unwrap();
@@ -274,8 +256,7 @@ async fn ref_ddl_if_exists_spellings_and_trailing_clauses_refuse_loud() {
     )
     .await;
 
-    // The ALTER TABLE forms reach the ref-DDL parser's trailing-token rejection, so their message
-    // carries the supported grammar AND the registry pointer.
+    // The ALTER TABLE forms reach the ref-DDL parser's trailing-token rejection.
     for (sql, leftover) in [
         (
             "ALTER TABLE ice.sales.refdecl CREATE BRANCH IF NOT EXISTS b1",
@@ -314,8 +295,7 @@ async fn ref_ddl_if_exists_spellings_and_trailing_clauses_refuse_loud() {
         );
     }
 
-    // The top-level `… IN t` spellings break on the same clause earlier, in the `IN` requirement —
-    // still a loud refusal naming the supported shape, never a silent create/drop.
+    // The top-level `… IN t` spellings break on the same clause earlier, in the `IN` requirement.
     for sql in [
         "CREATE BRANCH IF NOT EXISTS b2 IN ice.sales.refdecl",
         "DROP TAG IF EXISTS t2 IN ice.sales.refdecl",
@@ -340,9 +320,7 @@ async fn ref_ddl_if_exists_spellings_and_trailing_clauses_refuse_loud() {
     assert_eq!(refs, 0, "a refused ref DDL must not create or drop a ref");
 }
 
-/// A real two-part table literally named `branch_*` must not
-/// false-refuse as write-to-branch; the `t.branch_x` form with a resolvable bare prefix
-/// still STOPs loud (disambiguation by resolution, not raw-SQL shape).
+/// A real two-part table literally named `branch_*` must not false-refuse as write-to-branch.
 #[tokio::test]
 async fn two_part_branch_named_table_write_disambiguates_by_resolution() {
     let wh = TempDir::new().unwrap();
@@ -409,7 +387,6 @@ async fn two_part_branch_named_table_write_disambiguates_by_resolution() {
 }
 
 /// CREATE/DROP BRANCH|TAG via DDL, then time-travel read through the DDL-created ref.
-/// Fork: `manage_snapshots.rs:90-145` (`create_branch` / `create_tag` / `remove_*`).
 #[tokio::test]
 async fn branch_tag_ddl_create_drop_round_trip() {
     let wh = TempDir::new().unwrap();
@@ -505,8 +482,7 @@ async fn branch_tag_ddl_create_drop_round_trip() {
     assert_eq!(rows(&ctx, &catalogs, "SELECT * FROM ice.sales.t").await, 4);
 }
 
-/// Ref DDL edge matrix — default AS OF = current, empty needs AS OF,
-/// unknown snapshot / DROP main / kind mismatch refuse loud (wrong-target / wrong-snapshot).
+/// Ref DDL edge matrix.
 #[tokio::test]
 #[allow(clippy::too_many_lines)] // one flat edge matrix of AS OF / DROP-target pins
 async fn branch_tag_ddl_edge_matrix_as_of_and_drop_targets() {
@@ -725,8 +701,6 @@ async fn branch_tag_ddl_edge_matrix_as_of_and_drop_targets() {
 }
 
 /// BRANCH sniff must not treat multipart table-name segments as DDL verbs.
-///
-/// Skip multipart table-name segments while matching true branch or tag DDL verbs.
 #[test]
 fn branch_sniff_skips_table_name_segments() {
     assert!(

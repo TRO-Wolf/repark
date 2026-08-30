@@ -2,10 +2,7 @@
 use super::super::*;
 use super::common::*;
 
-/// MW-1: Spark's live 4.0.1 + Iceberg 1.10.0 oracle defines the six-column `expire_snapshots`
-/// schema and nullability. Spark 4.1.2 cannot execute this procedure because of a
-/// `DataSourceV2Relation.create` signature break. The shipping jar's `OUTPUT_TYPE` uses
-/// `iconst_1` for each `StructField`.
+/// MW-1: Spark 4.0.1 plus Iceberg 1.10.0 defines the six-column `expire_snapshots` schema.
 fn assert_expire_schema_is_sparks(batch: &datafusion::arrow::array::RecordBatch) {
     assert_eq!(batch.num_columns(), 6, "expire result schema is Spark's");
     let names: Vec<_> = batch
@@ -190,10 +187,7 @@ async fn call_expire_snapshots_keeps_tag_reachable() {
         .await
         .expect("commit tag");
 
-    // older_than = far future so age would expire every snapshot; retain_last(1) keeps
-    // only main head by count; the tag alone keeps s1 reachable (R133 safety).
-    // C1-Q-001 dual probe: s2 has no ref and is not in retain_last head → must expire
-    // (proves expire ran; no-op success would leave s2).
+    // older_than = far future so age would expire every snapshot.
     let older_than_ms = chrono::Utc::now().timestamp_millis() + 86_400_000;
     let result = execute(
         &ctx,
@@ -443,7 +437,6 @@ async fn call_expire_older_than_timestamp_string() {
     )
     .await;
     // Far-future timestamp string — age would expire everything; retain_last=1 keeps head.
-    // Pins TypedString / string parse path (not only epoch-ms integers).
     execute(
         &ctx,
         &catalogs,
@@ -648,9 +641,7 @@ fn expire_result_i64(batches: &[RecordBatch], name: &str) -> i64 {
 }
 
 /// pins: rp-1-fork-repin/C-009
-///
 /// The expire result splits content files into Spark's typed columns.
-///
 #[tokio::test]
 async fn call_expire_splits_content_files_like_spark() {
     let wh = TempDir::new().unwrap();
@@ -691,8 +682,7 @@ async fn call_expire_splits_content_files_like_spark() {
         )
         .await;
     }
-    // Append-only files after the MERGEs so expired *data* count ≠ expired *position-delete*
-    // count. A swap of the two typed views then reds (both would otherwise be 2).
+    // Append-only files after the MERGEs so expired *data* count ≠ expired *position-delete* count.
     for id in 10..=11 {
         run(
             &ctx,
@@ -751,9 +741,8 @@ async fn call_expire_splits_content_files_like_spark() {
         equality, 0,
         "nothing here writes equality deletes — a measured control, not a placeholder"
     );
-    // Two MERGEs strand two data files plus two post-MERGE appends (no extra deletes).
-    // data (4) ≠ position (2), so swapping the typed views reds. Union-len data would be 6.
     // pins: rp-1-fork-repin/C-009
+    // Two MERGEs strand two data files plus two post-MERGE appends (no extra deletes).
     assert_eq!(
         data, 4,
         "two MERGE data files + two post-MERGE appends; got {data}"
@@ -764,8 +753,7 @@ async fn call_expire_splits_content_files_like_spark() {
     );
 }
 
-/// Maintenance procedures execute under both remote catalog policies; unknown catalogs still
-/// refuse.
+/// Maintenance procedures execute under both remote catalog policies.
 #[tokio::test]
 async fn call_runs_against_both_remote_catalog_policies() {
     for policy in [
@@ -802,8 +790,7 @@ async fn call_runs_against_both_remote_catalog_policies() {
     }
 }
 
-/// MW-1 refusal preservation: an unknown catalog still refuses, on every policy. Lifting the
-/// fence must not turn a typo into a silent no-op.
+/// MW-1 refusal preservation: an unknown catalog still refuses, on every policy.
 #[tokio::test]
 async fn call_still_refuses_an_unknown_catalog() {
     let wh = TempDir::new().unwrap();
@@ -822,13 +809,7 @@ async fn call_still_refuses_an_unknown_catalog() {
     );
 }
 
-/// MW-2: Spark's four-column `rewrite_position_delete_files` result, in Spark's order,
-/// types and nullability.
-///
-/// Every value here was measured by EXECUTING the procedure on a live Spark 4.0.1 +
-/// Iceberg 1.10.0 oracle. The schema needed no choosing — the fork's
-/// `RewritePositionDeleteFilesResult` mirrors Java's `RewritePositionDeleteFiles$Result` one
-/// accessor at a time.
+/// MW-2: Spark's four-column `rewrite_position_delete_files` schema, types, and nullability.
 fn assert_rpdf_schema_is_sparks(batch: &datafusion::arrow::array::RecordBatch) {
     let names: Vec<_> = batch
         .schema()
@@ -872,8 +853,7 @@ fn assert_rpdf_schema_is_sparks(batch: &datafusion::arrow::array::RecordBatch) {
     );
 }
 
-/// Read an `Int32` or `Int64` result column as `i64`, so one helper serves both rewrite
-/// procedures' mixed int/bigint schemas.
+/// Read an `Int32` or `Int64` result column as `i64`.
 pub(super) fn call_count(batch: &datafusion::arrow::array::RecordBatch, name: &str) -> i64 {
     let index = batch.schema().index_of(name).expect("column present");
     let column = batch.column(index);
@@ -892,9 +872,7 @@ pub(super) fn call_count(batch: &datafusion::arrow::array::RecordBatch, name: &s
         )
 }
 
-/// Build a merge-on-read table with `data_files` single-row data files, then run `merges`
-/// separate MOR MERGEs, each rewriting one row in a distinct data file. Returns the number of
-/// live position-delete files.
+/// Build a merge-on-read table.
 async fn seed_mor_delete_files(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -939,21 +917,8 @@ async fn seed_mor_delete_files(
     .await
 }
 
-/// MW-2: `rewrite_position_delete_files` compacts position deletes and reports Spark's counts.
-///
-/// Oracle — live Spark 4.0.1 + Iceberg 1.10.0, on a table at
-/// `write.delete.granularity = 'partition'` (explicit; MW-9's unset default is `file`).
-/// Seeded by eight separate MERGEs of one row each, so file vs partition counts match:
-///
-/// ```text
-/// 8 delete files → rewritten_delete_files_count=8  added_delete_files_count=1
-///                  delete files 8 → 1              rows 72 → 72
-/// ```
-///
-/// The two counts match exactly. The two BYTE columns are asserted as an ordering rather than as
-/// values: they are real parquet sizes, and this engine's writer does not produce byte-identical
-/// files to Spark's. Pinning Spark's 11429/1454 here would be pinning Spark's parquet encoder.
 /// pins: rp-1-fork-repin/C-008
+/// MW-2: `rewrite_position_delete_files` compacts position deletes and reports Spark's counts.
 #[tokio::test]
 async fn call_rewrite_position_delete_files_compacts_like_spark() {
     let wh = TempDir::new().unwrap();
@@ -1001,8 +966,7 @@ async fn call_rewrite_position_delete_files_compacts_like_spark() {
     )
     .await;
     assert_eq!(after, 1, "8 live position-delete files became 1");
-    // The correctness half. Compaction rewrites which FILES mask the rows, never WHICH rows are
-    // masked, so the live row set is identical across the call.
+    // The correctness half.
     assert_eq!(
         rows(&ctx, &catalogs, "SELECT * FROM ice.sales.mor").await,
         live_before,
@@ -1011,9 +975,6 @@ async fn call_rewrite_position_delete_files_compacts_like_spark() {
 }
 
 /// MW-2: nothing to compact is a zero result, not an error.
-///
-/// Oracle — live Spark 4.0.1: on a table with no delete files at all, and on a table with exactly
-/// one, all four columns are `0` and the table is untouched.
 #[tokio::test]
 async fn call_rewrite_position_delete_files_is_a_zero_result_when_there_is_nothing_to_do() {
     for (table, merges) in [("clean", 0), ("single", 1)] {
@@ -1057,8 +1018,8 @@ async fn call_rewrite_position_delete_files_is_a_zero_result_when_there_is_nothi
     }
 }
 
-/// The position-delete planner follows Spark's `min-input-files = 5` floor.
 /// pins: rp-1-fork-repin/C-007
+/// The position-delete planner follows Spark's `min-input-files = 5` floor.
 #[tokio::test]
 async fn call_mor1_compacts_below_sparks_min_input_files_floor() {
     let wh = TempDir::new().unwrap();
@@ -1104,10 +1065,8 @@ async fn call_mor1_compacts_below_sparks_min_input_files_floor() {
     );
 }
 
-/// Exact Spark floor: five files is the smallest group that compact. A gate of 6 would leave
-/// the 4-zero and 8-compact pins green.
-///
 /// pins: rp-1-fork-repin/C-007, C-008
+/// Exact Spark floor: five files is the smallest group that compact.
 #[tokio::test]
 async fn call_rpdf_compacts_at_sparks_min_input_files_floor() {
     let wh = TempDir::new().unwrap();
@@ -1137,12 +1096,8 @@ async fn call_rpdf_compacts_at_sparks_min_input_files_floor() {
     );
 }
 
-/// Spark-default `write.delete.granularity = 'file'`.
-///
-/// One MERGE touching six distinct data files writes SIX position-delete files. The MW-2 pin
-/// recorded the old implicit-partition layout (one file). MW-9 matches `SparkWriteConf`.
-///
 /// pins: mw-9-delete-granularity/C-001, C-006, C-009
+/// Spark-default `write.delete.granularity = 'file'`.
 #[tokio::test]
 async fn call_mor2_merge_writes_one_position_delete_per_data_file_by_default() {
     let wh = TempDir::new().unwrap();
@@ -1199,8 +1154,7 @@ async fn call_mor2_merge_writes_one_position_delete_per_data_file_by_default() {
     );
 }
 
-/// MW-2 keeps the austerity `rewrite_data_files` already has: the `options` map and the `where`
-/// filter refuse loudly rather than being silently ignored.
+/// MW-2 keeps the austerity `rewrite_data_files` already has.
 #[tokio::test]
 async fn call_rewrite_position_delete_files_refuses_options_and_where() {
     let wh = TempDir::new().unwrap();
@@ -1229,8 +1183,6 @@ async fn call_rewrite_position_delete_files_refuses_options_and_where() {
 }
 
 /// `rewrite_data_files` returns Spark's five-column schema, including `removed_delete_files_count`.
-/// Oracle: live Spark 4.0.1 + Iceberg 1.10.0; the options-map form refuses, so the default path is
-/// the supported case.
 #[tokio::test]
 async fn call_rewrite_data_files_returns_sparks_five_columns() {
     let wh = TempDir::new().unwrap();
@@ -1295,9 +1247,6 @@ async fn call_rewrite_data_files_returns_sparks_five_columns() {
 }
 
 /// MW-2 guard: it does not fire on the format-v2 tables this engine writes.
-///
-/// The half of the guard a fixture CAN reach. A guard that refuses everything would also make
-/// the silent-zeros bug impossible, so this pin is what distinguishes a fix from a wrecking ball.
 #[tokio::test]
 async fn call_rewrite_position_delete_files_guard_passes_a_v2_table() {
     use crate::call::count_live_deletion_vectors;
@@ -1325,9 +1274,6 @@ async fn call_rewrite_position_delete_files_guard_passes_a_v2_table() {
 }
 
 /// MW-2 guard: a table with NO current snapshot is not a vector table.
-///
-/// The empty-table path returns before the manifest walk, so it is pinned separately — an
-/// early return that got the sense backwards would refuse every freshly created table.
 #[tokio::test]
 async fn call_deletion_vector_guard_handles_a_table_with_no_snapshot() {
     use crate::call::count_live_deletion_vectors;

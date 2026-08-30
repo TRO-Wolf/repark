@@ -1,14 +1,4 @@
 //! The Spark SQL statement router.
-//!
-//! It intercepts Iceberg DDL, maintenance, metadata, time-travel, and write forms that DataFusion
-//! cannot execute directly. Other statements use the passthrough with Spark defaults and guards.
-//!
-//! **This module's parse is NOT the executing parse.** [`parse_single_normalized`] uses
-//! `DatabricksDialect`; [`spark_ast::execute_passthrough`] re-parses under the session dialect
-//! and plans THAT. Any statement the first parse rejects reaches the second one through
-//! [`execute_unparsable_fallthrough`] — Spark's FROM-less `DELETE <table> WHERE …` is the live
-//! example. A DML data-loss guard must therefore attach at the executing parse (G3-E8 does; the
-//! arms below keep an early call only for valve ORDER), or it is fail-open by construction.
 
 use std::collections::HashSet;
 
@@ -28,14 +18,7 @@ use crate::{
     try_parse_create_namespace,
 };
 
-/// ===========================================================================================
-/// Execute one Spark-SQL statement against `ctx`, routing the Iceberg DDL/write forms to their
-/// handlers and passing everything else (reads, `INSERT INTO`, …) to DataFusion.
-///
-/// The router owns Iceberg DDL, MERGE, overwrite, CALL, reference, namespace, and introspection
-/// forms. It passes supported reads and provider DML through the Spark execution path.
-/// ===========================================================================================
-///
+/// Execute one Spark-SQL statement, routing Iceberg DDL and writes and passing reads to DataFusion.
 /// # Errors
 /// Propagates parse, planning, iceberg, and execution errors as [`DataFusionError`].
 pub async fn execute(
@@ -47,28 +30,21 @@ pub async fn execute(
 }
 
 /// Execute with a set of read-only (postgres) catalog names for P11 DML routing.
-///
 /// # Errors
-/// Any planning/execution error from the underlying statement, plus the P11 refusal when a
-/// DML statement targets a read-only (postgres) catalog.
+/// # Errors Any planning/execution error from the underlying statement, plus the P11 refusal.
 pub async fn execute_with_read_only<S: std::hash::BuildHasher>(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     sql: &str,
     read_only_catalogs: &HashSet<String, S>,
 ) -> Result<DataFrame> {
-    // Canonicalize once at the Spark SQL front door so later tokenizers cannot process escapes again.
-    // Translate downstream parser locations back to the caller's SQL before returning an error.
+    // Canonicalize once at the Spark SQL front door.
     let canonical = crate::spark_literals::canonicalize(sql)?;
     let canonical_sql = canonical.as_ref();
     // Clone the registry snapshot so P11 survives `.await` thread hops.
     let mut catalogs = catalogs.clone();
     catalogs.set_read_only_catalogs(read_only_catalogs.iter().cloned().collect());
-    // Refuse write-to-branch forms before metadata rewrite because the fork commits only MAIN_BRANCH.
-    // Two-part `a.branch_x` is ambiguous with a real `schema.branch_x` table.
-    // refuse only when the full name does not resolve but the prefix does (Spark's
-    // `t.branch_<name>` spelling); neither resolving falls through to planning's own
-    // "table not found", which is the more informative error.
+    // Refuse write-to-branch forms before metadata rewrite.
     if let Some(sniff) = ref_ddl::sniff_write_to_branch(canonical_sql) {
         let refuse = match &sniff {
             ref_ddl::WriteToBranchSniff::MultiPart => true,
@@ -83,9 +59,7 @@ pub async fn execute_with_read_only<S: std::hash::BuildHasher>(
             return Err(ref_ddl::refuse_write_to_branch());
         }
     }
-    // I2 / R-METADATA-TABLES — Spark `cat.ns.tbl.snapshots` → fork `cat.ns.tbl$snapshots`
-    // (iceberg-datafusion schema provider). Real tables named e.g. `files` win; DML + AS OF
-    // composition refuse loud. Kept out of `execute_inner` (clippy `too_many_lines`).
+    // I2 / R-METADATA-TABLES — Spark `cat.ns.tbl.snapshots` → fork `cat.ns.tbl$snapshots`.
     let sql_after_meta: std::borrow::Cow<'_, str> =
         if metadata_tables::sql_may_have_metadata_table_path(canonical_sql) {
             match metadata_tables::prepare_metadata_table_sql(&catalogs, canonical_sql).await? {
@@ -95,8 +69,7 @@ pub async fn execute_with_read_only<S: std::hash::BuildHasher>(
         } else {
             std::borrow::Cow::Borrowed(canonical_sql)
         };
-    // Release pinned relations after planning so long-lived sessions do not accumulate temporary
-    // names. The plan owns its provider after release; future-drop remains unsupported.
+    // Release pinned relations after planning.
     let mut pinned = time_travel::PinnedViews::default();
     let original_for_locations =
         original_sql_for_locations(sql, canonical_sql, sql_after_meta.as_ref());
@@ -120,9 +93,7 @@ async fn execute_time_travelled(
     original_for_locations: Option<&str>,
     pinned: &mut time_travel::PinnedViews,
 ) -> Result<DataFrame> {
-    // Iceberg time travel (`VERSION AS OF` / `TIMESTAMP AS OF` / `FOR SYSTEM_* AS OF`) is not
-    // modelled by Databricks-dialect sqlparser. Rewrite to snapshot-pinned static providers
-    // (fork `IcebergStaticTableProvider::try_new_from_table_snapshot`) before normal routing.
+    // Iceberg time travel is not modelled by Databricks-dialect sqlparser.
     let sql_storage: std::borrow::Cow<'_, str> = if time_travel::sql_has_time_travel(sql) {
         match time_travel::prepare_time_travel_sql(ctx, catalogs, sql, pinned).await? {
             Some(rewritten) => std::borrow::Cow::Owned(rewritten),
@@ -153,27 +124,22 @@ async fn execute_inner(
     sql: &str,
 ) -> Result<DataFrame> {
     // Refuse genuine multi-statement scripts before any intercept or passthrough.
-    // Trailing `;` / whitespace / comments after a single statement remain allowed (Spark oracle).
     refuse_multi_statement_sql(sql)?;
     // Pre-parse recognizers for forms stock sqlparser cannot model (or would drop clauses from).
     if let Some(frame) = try_preparse_intercepts(ctx, catalogs, sql).await {
         return frame;
     }
-    // If we can't parse it to a single statement we recognise, let DataFusion have it (passthrough)
-    // — except MERGE / residual BRANCH|TAG, which get targeted errors instead of parse fails.
+    // If we can't parse it to a single statement we recognise, let DataFusion have it.
     let Some((statement, partitioning)) = parse_single_normalized(sql)? else {
         return execute_unparsable_fallthrough(ctx, catalogs, sql).await;
     };
-    // G15 — intercepted CREATE / ALTER never reach execute_passthrough; refuse
-    // collation on this parse too so column-def COLLATE cannot be a generic
-    // "column option not supported" or a silent Iceberg string.
+    // G15.
     crate::refuse_collation_in_statement(&statement)?;
     match &statement {
         Statement::CreateTable(create) if create.query.is_some() => {
             execute_ctas(ctx, catalogs, build_ctas(create, &partitioning)?).await
         }
-        // Column-def CREATE TABLE (schema-only staged create — I5). Postgres targets still refuse
-        // via catalog_handle/P11 inside execute_create_table.
+        // Column-def CREATE TABLE (schema-only staged create — I5).
         Statement::CreateTable(create) => {
             if let Some(message) =
                 refuse_read_only_dml_table_sql(catalogs, &create.name.to_string())
@@ -214,8 +180,7 @@ async fn execute_inner(
             )
             .await
         }
-        // INSERT OVERWRITE: probe and validate before an empty-source wipe; stage non-empty rows
-        // before the replace-all commit.
+        // INSERT OVERWRITE: probe and validate before an empty-source wipe.
         Statement::Insert(insert) if insert.overwrite => {
             execute_insert_overwrite(ctx, catalogs, sql, insert).await
         }
@@ -229,17 +194,12 @@ async fn execute_inner(
             };
             passthrough_after_p11(ctx, catalogs, sql, refusal).await
         }
-        // DELETE/UPDATE — the guarded passthrough; the valve chain lives in `execute_delete` /
-        // `execute_update` (kept out of this fn for clippy `too_many_lines`).
+        // DELETE/UPDATE.
         Statement::Delete(delete) => execute_delete(ctx, catalogs, sql, delete).await,
         Statement::Update(update) => execute_update(ctx, catalogs, sql, update).await,
         // Iceberg `CALL catalog.system.<proc>(…)` — I3 / R-MAINTENANCE-CALL.
-        // Seven procedures (six maintenance + `register_table`); unknown names refuse listing
-        // the supported set.
         Statement::Call(function) => call::execute_call(ctx, catalogs, function).await,
-        // `TRUNCATE TABLE` is planned (parity §2.3) but not wired — fail loud with a targeted
-        // message rather than DF's opaque Unsupported (C4-L-001). Prefer empty INSERT OVERWRITE
-        // (provider wipe) until a dedicated truncate action lands.
+        // `TRUNCATE TABLE` is planned but not wired.
         Statement::Truncate { .. } => Err(DataFusionError::NotImplemented(
             "TRUNCATE TABLE is not supported yet — use INSERT OVERWRITE … SELECT … WHERE false \
              (empty overwrite wipe) or DELETE FROM <table> without a predicate \
@@ -250,12 +210,7 @@ async fn execute_inner(
     }
 }
 
-/// ===========================================================================================
-/// `DELETE FROM …` applies the write-safety valves before provider execution. Read-only targets,
-/// subquery predicates, and unsafe merge-on-read layouts fail before a destructive write. The
-/// syntactic subquery valve runs before metadata-dependent checks; the executing parse remains
-/// authoritative in [`spark_ast::execute_passthrough`].
-/// ===========================================================================================
+/// `DELETE FROM …` applies the write-safety valves before provider execution.
 async fn execute_delete(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -283,10 +238,7 @@ async fn execute_delete(
     spark_ast::execute_passthrough(ctx, catalogs, sql).await
 }
 
-/// `UPDATE … SET …` — the same three valves in the same order as [`execute_delete`], reading the
-/// target from the `TableWithJoins` primary relation and the predicate from `Update::selection`.
-/// A subquery in a `SET` assignment is deliberately NOT gated (correct today, or a loud plan
-/// error — never silently wrong; see the G3-E8 valve's doc and `task/g3e8-guard-ledger.md`).
+/// `UPDATE … SET …`.
 async fn execute_update(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -314,8 +266,7 @@ async fn execute_update(
     spark_ast::execute_passthrough(ctx, catalogs, sql).await
 }
 
-/// Pre-`parse_single_normalized` intercepts: ALTER (I6 residual + I7), CREATE/DESCRIBE/SHOW
-/// namespace, and snapshot-ref DDL (I5).
+/// Pre-`parse_single_normalized` intercepts: ALTER, CREATE/DESCRIBE/SHOW namespace.
 async fn try_preparse_intercepts(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -328,14 +279,11 @@ async fn try_preparse_intercepts(
             Err(error) => Err(error),
         });
     }
-    // I6 residual — forms stock sqlparser still cannot model (WRITE ORDERED BY, ALTER COLUMN
-    // COMMENT / MOVE). Loud NotImplemented rather than opaque parse fallthrough.
+    // I6 residual — forms stock sqlparser still cannot model.
     if let Some(refused) = alter::refuse_unsupported_alter_sql(sql) {
         return Some(refused);
     }
-    // `CREATE {NAMESPACE|SCHEMA|DATABASE}` with Spark's `LOCATION` / `COMMENT` /
-    // `WITH DBPROPERTIES` / `WITH PROPERTIES` clauses — which sqlparser cannot model on
-    // `CREATE SCHEMA`.
+    // CREATE NAMESPACE LOCATION/COMMENT/WITH properties: sqlparser cannot model those clauses.
     if let Some(parsed) = try_parse_create_namespace(sql) {
         return Some(match parsed {
             Ok(create_namespace) => execute_create_namespace(ctx, catalogs, create_namespace).await,
