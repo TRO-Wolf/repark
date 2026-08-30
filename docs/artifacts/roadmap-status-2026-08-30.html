@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RePark Roadmap Status</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --ground: #F2F5F7;
+    --paper: #FFFFFF;
+    --ink: #1A2430;
+    --ink-2: #4A5A6A;
+    --ink-3: #7A8894;
+    --line: #D6DEE5;
+    --accent: #0E6C88;
+    --accent-ink: #FFFFFF;
+    --accent-soft: #DCEBF1;
+    --good: #2A7A4B;
+    --good-soft: #DDEFE3;
+    --warn: #A86A10;
+    --warn-soft: #F6E8CF;
+    --bad: #B0372A;
+    --bad-soft: #F5DCD8;
+    --hold: #5A6470;
+    --hold-soft: #E4E8EC;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0E1418;
+      --paper: #151D23;
+      --ink: #E4EAEF;
+      --ink-2: #A8B4BE;
+      --ink-3: #77848F;
+      --line: #27333C;
+      --accent: #4DB1CF;
+      --accent-ink: #0B1519;
+      --accent-soft: #163541;
+      --good: #63C48A;
+      --good-soft: #163425;
+      --warn: #E0A64A;
+      --warn-soft: #3A2C12;
+      --bad: #EE7A6C;
+      --bad-soft: #3E1D19;
+      --hold: #9AA6B1;
+      --hold-soft: #242E36;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0E1418;
+    --paper: #151D23;
+    --ink: #E4EAEF;
+    --ink-2: #A8B4BE;
+    --ink-3: #77848F;
+    --line: #27333C;
+    --accent: #4DB1CF;
+    --accent-ink: #0B1519;
+    --accent-soft: #163541;
+    --good: #63C48A;
+    --good-soft: #163425;
+    --warn: #E0A64A;
+    --warn-soft: #3A2C12;
+    --bad: #EE7A6C;
+    --bad-soft: #3E1D19;
+    --hold: #9AA6B1;
+    --hold-soft: #242E36;
+    color-scheme: dark;
+  }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 1080px; margin: 0 auto; padding: 40px 28px 72px; }
+  h1, h2, h3 {
+    font-family: "IBM Plex Sans Condensed", "Arial Narrow", "IBM Plex Sans", sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+    margin: 0;
+  }
+  h1 { font-size: 34px; line-height: 1.1; }
+  h2 { font-size: 21px; line-height: 1.2; margin-bottom: 14px; }
+  h3 { font-size: 16px; line-height: 1.25; }
+  p { margin: 0 0 10px; max-width: 68ch; }
+  code, .mono {
+    font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+    font-size: 0.92em;
+  }
+  code { background: var(--hold-soft); padding: 1px 5px; border-radius: 3px; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px solid var(--accent-soft); }
+  a:hover, a:focus-visible { border-bottom-color: var(--accent); outline: none; }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .eyebrow {
+    font-size: 12px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--ink-3); margin-bottom: 8px;
+  }
+  header { display: grid; gap: 10px; margin-bottom: 26px; }
+  header p { color: var(--ink-2); max-width: 70ch; }
+
+  .strip {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1px;
+    background: var(--line); border: 1px solid var(--line); border-radius: 6px; overflow: hidden;
+    margin-bottom: 36px;
+  }
+  .strip > div { background: var(--paper); padding: 14px 16px; }
+  .strip .k { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); }
+  .strip .v { font-size: 20px; font-weight: 600; font-family: "IBM Plex Sans Condensed", "IBM Plex Sans", sans-serif; margin-top: 4px; }
+  .strip .s { font-size: 13px; color: var(--ink-2); margin-top: 3px; }
+
+  section { margin-bottom: 40px; }
+  .two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 32px; align-items: start; }
+  @media (max-width: 860px) { .two { grid-template-columns: 1fr; } }
+
+  .chip {
+    display: inline-block; font-size: 11.5px; font-weight: 600; letter-spacing: 0.05em;
+    text-transform: uppercase; padding: 2px 8px; border-radius: 3px; white-space: nowrap;
+    font-family: "IBM Plex Sans", sans-serif;
+  }
+  .chip.good { background: var(--good-soft); color: var(--good); }
+  .chip.warn { background: var(--warn-soft); color: var(--warn); }
+  .chip.bad  { background: var(--bad-soft);  color: var(--bad); }
+  .chip.hold { background: var(--hold-soft); color: var(--hold); }
+  .chip.live { background: var(--accent-soft); color: var(--accent); }
+
+  .ladder { display: grid; gap: 0; border-left: 2px solid var(--line); }
+  .rung { display: grid; grid-template-columns: 58px 1fr; gap: 12px; padding: 10px 0 10px 16px; position: relative; }
+  .rung::before {
+    content: ""; position: absolute; left: -6px; top: 17px; width: 10px; height: 10px; border-radius: 50%;
+    background: var(--line); border: 2px solid var(--ground);
+  }
+  .rung.now::before { background: var(--accent); }
+  .rung.done::before { background: var(--good); }
+  .rung .ver { font-family: "IBM Plex Mono", monospace; font-weight: 500; font-size: 14px; color: var(--ink-2); padding-top: 2px; }
+  .rung h3 { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .rung p { font-size: 13.5px; color: var(--ink-2); margin: 4px 0 0; }
+  .rung ul { margin: 6px 0 0; padding-left: 18px; font-size: 13.5px; color: var(--ink-2); }
+  .rung li { margin: 2px 0; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  .tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 11.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); font-weight: 500; }
+  tr:last-child td { border-bottom: 0; }
+  td.state { width: 96px; }
+  td .why { color: var(--ink-2); }
+  .tally { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--ink-2); margin: 10px 0 0; font-variant-numeric: tabular-nums; }
+  .tally b { color: var(--ink); font-weight: 600; }
+
+  ol.steps { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; counter-reset: step; }
+  ol.steps li {
+    display: grid; grid-template-columns: 34px 1fr; gap: 12px; background: var(--paper);
+    border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; counter-increment: step;
+  }
+  ol.steps li::before {
+    content: counter(step); font-family: "IBM Plex Mono", monospace; font-weight: 500;
+    color: var(--accent); font-size: 18px; line-height: 1.2;
+  }
+  ol.steps h3 { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  ol.steps p { font-size: 13.5px; color: var(--ink-2); margin: 4px 0 0; max-width: none; }
+
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
+  .cols ul { margin: 0; padding-left: 18px; font-size: 13.5px; color: var(--ink-2); }
+  .cols li { margin: 4px 0; }
+  .cols li b { color: var(--ink); font-weight: 500; }
+  footer { margin-top: 44px; font-size: 12.5px; color: var(--ink-3); border-top: 1px solid var(--line); padding-top: 12px; }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <header>
+    <div class="eyebrow">Roadmap status · 30 August 2026 · after PR #262</div>
+    <h1>RePark: where every lane stands, and what runs next</h1>
+    <p>Sources: <code>STATUS.md</code>, <code>release-roadmap-2026-08-29.md</code>, <code>roadmap-design-plan-2026-08-29.md</code>, <code>format-v3-track.md</code> §5, the v1.0 north-star gate, <code>briefs/next-sequence.md</code>, the live ledgers, and GitHub state — all read from <code>main</code> at <code>798af91</code>.</p>
+  </header>
+
+  <div class="strip">
+    <div><div class="k">Released</div><div class="v">v0.5.0</div><div class="s">PyPI, 20 Aug · no release blockers · pre-alpha API</div></div>
+    <div><div class="k">main</div><div class="v mono">798af91</div><div class="s">#255–#262 merged this week; #261 RP-3 and #262 CC-3/4 today</div></div>
+    <div><div class="k">Fork pin</div><div class="v mono">d408da42</div><div class="s">fork main <span class="mono">d4f55e1</span> (#241) — a parity pin, does not widen a unit</div></div>
+    <div><div class="k">Open PRs</div><div class="v">2</div><div class="s">both dependabot (#229 cargo, #186 actions)</div></div>
+    <div><div class="k">Live ledgers</div><div class="v">5</div><div class="s">V3-3, MW-10, FNP-0, SEM-0, V3-0 charters · CC-3 to archive at next pickup</div></div>
+  </div>
+
+  <section class="two">
+    <div>
+      <h2>The version ladder</h2>
+      <div class="ladder">
+        <div class="rung done"><div class="ver">v0.5</div><div><h3>Native <code>dynamicFlatten</code> <span class="chip good">shipped</span></h3><p>Seventh tag on proven release machinery; wheel-only, trusted publishing.</p></div></div>
+        <div class="rung now"><div class="ver">v0.6</div><div><h3>Iceberg DML remainder (Track B) <span class="chip live">next tag</span></h3>
+          <ul>
+            <li><b>DML-B</b> <code>INSERT OVERWRITE … PARTITION</code> — unblocked (fork F-5 is in the pin), recipe written, two acceptance pins waiting to flip</li>
+            <li><b>DML-A</b> <code>WHEN NOT MATCHED BY SOURCE</code>, <b>DML-C</b> <code>TRUNCATE</code>, <b>MAINT</b> rewrite options — can start now</li>
+            <li><b>REF</b> branch/tag ops + WAP — needs fork F-6</li>
+          </ul><p>None started. All four startable units are fork-independent.</p></div></div>
+        <div class="rung"><div class="ver">v0.7</div><div><h3>Examples + drift gate <span class="chip hold">not started</span></h3><p>An executable example for every public name, and CI that fails when one is missing.</p></div></div>
+        <div class="rung"><div class="ver">v0.8</div><div><h3>Torture-test datasets <span class="chip hold">not started</span></h3><p>≥1M-row generators: nested reading, inference conflicts, extreme types, opt-in secrets flagging.</p></div></div>
+        <div class="rung"><div class="ver">v0.9</div><div><h3>Never-OOM truth <span class="chip hold">not started</span></h3><p>The spill-coverage matrix PROJECT.md still marks pending; documentation and pins only.</p></div></div>
+        <div class="rung"><div class="ver">v0.10</div><div><h3><code>repark.toml</code> <span class="chip warn">designed</span></h3><p>Decisions agreed 29 Aug (Rust loader, profile-scoped sections, precedence, discovery); D-1 rules it a module family in <code>repark-core</code>. No code yet.</p></div></div>
+        <div class="rung now"><div class="ver">v1.0</div><div><h3>Production-grade format-v3 <span class="chip live">in progress</span></h3><p>The north star. RP-3 done today; V3-3 chartered and open; V3-4/V3-5 wait on the fork; V3-6 can run in parallel. Gate matrix at right.</p></div></div>
+        <div class="rung"><div class="ver">1.x</div><div><h3>Parity, connectors, first server <span class="chip hold">planned</span></h3><p>1.1 FNP + TA continues now (FNP-15/16 is slated #1); 1.7 dbt has M0–M2a merged on the sibling repo with AWS gates owner-scheduled; 1.3–1.6, 1.8, 1.9 are cards only.</p></div></div>
+        <div class="rung"><div class="ver">2.x · 3.0</div><div><h3>Server release, API promise, trust promise <span class="chip hold">planned</span></h3><p>Cards 2.0-A…2.9 and 3.0-A…E filed; D-1–D-6 ruled (2.2 change-data reads are a RePark-side snapshot diff, never the fork's changelog scan).</p></div></div>
+      </div>
+    </div>
+
+    <div>
+      <h2>The v1.0 gate, row by row</h2>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Row</th><th>State</th><th>Why / what closes it</th></tr></thead>
+        <tbody>
+          <tr><td>Read: data + deletion vectors, partitioned</td><td class="state"><span class="chip good">green</span></td><td class="why">Spark-exact (V3E-3)</td></tr>
+          <tr><td>Read: equality deletes alongside DVs</td><td class="state"><span class="chip good">green</span></td><td class="why">Spark-exact (V3E-3)</td></tr>
+          <tr><td>Write: append with row lineage</td><td class="state"><span class="chip good">green</span></td><td class="why">Spark-verified</td></tr>
+          <tr><td>Write: MOR DML via DVs</td><td class="state"><span class="chip warn">partial</span></td><td class="why">RP-3: DELETE commits and merges DVs on DV-free, live-DV and shared-Puffin tables, all three doors. UPDATE and MERGE still refuse → <b>V3-3</b></td></tr>
+          <tr><td>Write: COW DML on adopted v3</td><td class="state"><span class="chip warn">partial</span></td><td class="why">First DELETE Spark-equal; a second after overwrite refuses (<code>V3-COW-1</code>) — fork finding F-rp3-c7</td></tr>
+          <tr><td>Upgrade v2 → v3 in place</td><td class="state"><span class="chip bad">refuses</span></td><td class="why">Pinned refusal; owner ruled: build it after V3-3 proves safe mutation</td></tr>
+          <tr><td>Maintain: <code>rewrite_data_files</code></td><td class="state"><span class="chip bad">guarded</span></td><td class="why"><code>V3-LINEAGE-1</code> re-measured at <span class="mono">d408da42</span>: still reassigns lineage → fork F-7 U1, then <b>V3-5</b></td></tr>
+          <tr><td>Maintain: DV / delete-file maintenance</td><td class="state"><span class="chip bad">guarded</span></td><td class="why"><code>B-MOR-3</code>: R136 converts parquet position deletes only → <b>V3-5</b></td></tr>
+          <tr><td>Maintain: expiry / orphans on v3</td><td class="state"><span class="chip good">green</span></td><td class="why">V3E-4</td></tr>
+          <tr><td>Maintain: <code>rewrite_manifests</code></td><td class="state"><span class="chip good">green</span></td><td class="why">Wired on v2 (MW-6); exercise on v3 in the gate run</td></tr>
+          <tr><td>Adopt: <code>register_table</code></td><td class="state"><span class="chip good">green</span></td><td class="why">Hadoop <code>vN</code> writes FIXED by RP-3 (F-14)</td></tr>
+          <tr><td>v3 types + default values</td><td class="state"><span class="chip bad">absent</span></td><td class="why">Fork <code>write_default</code> surface exists (RP-3 C-009); engine surface is <b>V3-6</b>; geometry/geography DECLARED out</td></tr>
+          <tr><td>Table encryption keys</td><td class="state"><span class="chip hold">declared out</span></td><td class="why">Owner ruling 24 Aug (<code>ENC-1</code>)</td></tr>
+          <tr><td>Live: Glue + S3 Tables v3 legs</td><td class="state"><span class="chip bad">unmeasured</span></td><td class="why">Nothing measured live yet; <b>MW-10</b>'s first dispatch is the first data point</td></tr>
+          <tr><td>Nightly oracle: v3 leg</td><td class="state"><span class="chip good">green</span></td><td class="why">V3E-5: live triple repark == Spark 4.1.2 / Iceberg 1.11.0</td></tr>
+          <tr><td>Scale (10⁷ × 50)</td><td class="state"><span class="chip warn">v2 only</span></td><td class="why">MW-7 driver and census exist; same run on a v3 table pending</td></tr>
+        </tbody>
+      </table></div>
+      <div class="tally"><span><b>7</b> green</span><span><b>3</b> partial</span><span><b>4</b> guarded / absent</span><span><b>1</b> declared out</span><span><b>1</b> unmeasured live</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>What runs next, in order</h2>
+    <ol class="steps">
+      <li><div><h3>Pickup ritual after #262 <span class="chip live">zero tokens</span></h3><p>Fetch, <code>make ledger-archive</code> (files the CC-3 ledger from <code>completed/</code>), drift checks, compact context docs against the merged delta only. First act of whichever unit starts.</p></div></li>
+      <li><div><h3>V3-3 — v3 UPDATE and MERGE <span class="chip live">chartered, opens now</span></h3><p>Three clauses OPEN. Pure engine unit at the current pin: lift MoR UPDATE/MERGE through the C-003 DV-close seam or keep them refused with the measured reason; documents match pins. Critical path to v1.0. Needs one owner "go" on the charter.</p></div></li>
+      <li><div><h3>FNP-15/16 — register every unreachable family <span class="chip good">slate #1, unattended</span></h3><p>62 missing or ambiguous names become explicit refusals with registry reasons. Fork-independent, no decisions; ideal while V3-3 is under review.</p></div></li>
+      <li><div><h3>v0.6 Track B: DML-B → DML-C → DML-A → MAINT <span class="chip good">startable</span></h3><p>The next tag. DML-B's recipe and acceptance pins already exist; DML-C is mechanical once B lands. Then <code>publish-pypi</code> v0.6.0.</p></div></li>
+      <li><div><h3>MW-10 — S3 Tables merge-on-read leg <span class="chip warn">owner-dispatched</span></h3><p>Every measurement is an <code>aws-acceptance</code> dispatch; a denial on <code>s3tables:PutTableData</code> is a stop. Fits an evening the owner is present, and lights the first live v3 row.</p></div></li>
+      <li><div><h3>Fork lane <span class="chip warn">unblocks V3-4 / V3-5 / REF</span></h3><p><b>F-7 U1</b> lineage through compaction (the one v1.0 item engine time cannot buy), <b>F-rp3-c7</b> second COW DELETE lineage, <b>F-6</b> branch commit target for REF/WAP; housekeeping: QC #242 never reached fork main, stale remote <code>parity/h7-p1-r114-dml-prune</code>.</p></div></li>
+    </ol>
+  </section>
+
+  <section class="cols">
+    <div>
+      <h2>Campaigns</h2>
+      <ul>
+        <li><b>Format-v3 track</b> — active; RP-3 landed today at <span class="mono">d408da42</span>: DV matrix cells 1–6 green on three doors, Hadoop writes fixed, two guards re-measured red and kept.</li>
+        <li><b>Spark function parity (FNP)</b> — active; four PRs merged; FNP-15/16 next.</li>
+        <li><b>V2 engine hardening (H-2)</b> — active; design and slate landed.</li>
+        <li><b>TA performance</b> — gated on the Phase-0 benchmark baseline; no implementation until measured.</li>
+        <li><b>SEM</b> — held; SEM-2 / <code>F.log</code> two-argument form tabled by owner ruling.</li>
+        <li><b>dbt-repark</b> — unparked; M0–M2a merged on the sibling repo, AWS gates owner-scheduled.</li>
+        <li><b>Comment condensation (CC-2, CC-3, CC-4)</b> — done; <code>====</code> banners are 0 tree-wide, one-line comments are the house style (AGENTS.md updated).</li>
+        <li><b>Closed:</b> front door, PYC, LRS, maintenance wave, document lifecycle.</li>
+      </ul>
+    </div>
+    <div>
+      <h2>Risks and open questions</h2>
+      <ul>
+        <li><b>Lineage through compaction</b> is fork work (F-7 U1) and gates two v1.0 rows; no engine unit can close it.</li>
+        <li><b>Live AWS v3 evidence is zero</b> until MW-10 dispatches; the gate wants every green row re-proven live.</li>
+        <li><b>Second COW DELETE after overwrite</b> refuses (F-rp3-c7) — a fork lineage defect, out of V3-3's scope by ruling.</li>
+        <li><b>Correctness backlog</b> — G5b-R4 temporal-RANGE frame, TZ-8, decimal DEC-1/3/4/5, regexp match-count residuals, numeric implicit-cast breadth: registered, not scheduled.</li>
+        <li><b>Architecture</b> — <code>ExecutionBackend</code> exposes a concrete DataFusion context; <code>ReparkSession</code> keeps accreting policy (decomposition is driver-gated).</li>
+        <li><b>Housekeeping</b> — two dependabot PRs open; CC-3 ledger to archive; scratch clones <code>/tmp/grok-cc3</code>, <code>/tmp/cc3-critic</code> reclaimable.</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>Compiled by the orchestrating session on 2026-08-30 from <code>main</code> at <code>798af91</code>. Row states are the north-star gate's own words; nothing here is inferred from memory.</footer>
+</div>
+
+</body>
+</html>
