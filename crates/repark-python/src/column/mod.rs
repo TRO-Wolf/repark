@@ -215,10 +215,10 @@ impl PyColumn {
     ///
     /// # Errors
     /// Returns `ParseException` for invalid SQL and `AnalysisException` for unresolved columns.
+    /// This path bypasses the Spark SQL router, so it applies the parse-altitude valves here.
     #[staticmethod]
     pub fn sql(sql: &str) -> PyResult<Self> {
         fenced!("Column.sql", {
-            // This path bypasses the Spark SQL router, so apply its parse-altitude valves here.
             repark_spark::refuse_sql_fragment(sql).map_err(crate::datafusion_to_py_err)?;
             let context = SessionContext::new();
             repark_functions::register_all(&context);

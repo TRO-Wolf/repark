@@ -25,7 +25,8 @@ and hand execution, SQL, and ML semantics to the engine crates.
   `PyReparkSession.sql` runs the FNP-15/16 declared-function valve so the native
   `repark.sql()` callable (DataFusionDialect) refuses with the registry reason.
   pins: fnp-15-16/C-001 |
-| [`dataframe.rs`](dataframe.rs) | Lazy plans, actions, transforms, schema, and Arrow C Stream export. |
+| [`dataframe.rs`](dataframe.rs) | Lazy plans, actions, transforms, schema, and Arrow C Stream export.
+  `filter_sql` bypasses the statement router, so it applies parse-altitude valves itself. |
 | [`column/`](column/map.md) | Immutable expressions, scalar functions, aggregates, and windows.
   `PyColumn.sql` also runs the FNP-15/16 declared-function valve (`refuse_declared_function_in_sql`). |
 | [`ml.rs`](ml.rs) | Batch-streaming binders for linear, logistic, and KMeans fits. |
