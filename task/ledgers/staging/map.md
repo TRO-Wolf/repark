@@ -31,6 +31,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   good: v3 reads and v3 appends are already correct, round-tripped through Spark, including the
   row lineage the format mandates. §4 answers A12's stated first question — adoption, through
   `register_table`, whose Spark signature is measured there.
+- [dml-b-insert-overwrite-ledger.md](dml-b-insert-overwrite-ledger.md) — **DML-B (2026-08-30),
+  v0.6 merge-order 1 of 4:** static `INSERT OVERWRITE … PARTITION (k=v)` via
+  `overwrite_files` / `overwrite_by_row_filter`, dynamic and
+  `writeTo().overwritePartitions()` via `replace_partitions`, empty-input dynamic
+  guard, the two named acceptance pins flipped. Six OPEN clauses.
 
 ## Pointers
 - Up: [../map.md](../map.md)
