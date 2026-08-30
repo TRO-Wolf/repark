@@ -15,7 +15,7 @@ use crate::dataframe::{PyDataFrame, with_stream_poll_no_detach};
 use crate::fence::{fenced, fenced_span};
 use crate::{UnsupportedOperationException, to_py_err};
 
-/// Arrow C Stream `PyCapsule` name — same constant as `dataframe.rs` export path
+/// Arrow C Stream `PyCapsule` name — same constant as `dataframe.rs` export path.
 const ARROW_STREAM_CAPSULE_NAME: &CStr = c"arrow_array_stream";
 
 /// Apply the shared builder knobs used by both the Spark-door constructor and the native door.
@@ -109,7 +109,7 @@ pub struct PyReparkSession {
 impl PyReparkSession {
     /// Build a session, applying the builder knobs the facade's `ReparkSession.Builder` collected.
     /// # Errors
-    /// Returns `RuntimeError` if the DataFusion session or the Tokio runtime fails to build, if a
+    /// Returns `RuntimeError` if the DataFusion session or the Tokio runtime fails to build.
     #[new]
     #[pyo3(signature = (memory_limit_gb=None, batch_size=None, target_partitions=None, config=None))]
     pub fn new(
@@ -292,7 +292,7 @@ impl PyReparkSession {
         })
     }
 
-    /// Register `frame` as a replaceable lazy temp view named `name` (the engine side of PySpark
+    /// Register `frame` as a replaceable lazy temp view named `name`.
     /// # Errors
     /// Returns `RuntimeError` if registration fails.
     pub fn create_or_replace_temp_view(&self, name: &str, frame: &PyDataFrame) -> PyResult<()> {
@@ -303,7 +303,7 @@ impl PyReparkSession {
         })
     }
 
-    /// Declare the in-memory temp view `name` pre-sorted by `keys` (engine field names) so
+    /// Declare in-memory temp view `name` pre-sorted by `keys` so DataFusion elides window sorts.
     /// # Errors
     /// `AnalysisException` for unknown view/key, non-in-memory frames, unsorted data, or a NULL
     #[pyo3(signature = (name, keys, tighten_nulls=false))]
@@ -345,9 +345,9 @@ impl PyReparkSession {
         })
     }
 
-    /// Cache-path materialize with an optional ``repark.cache.max_bytes`` guard.
+    /// Cache-path materialize with an optional `repark.cache.max_bytes` guard.
     /// # Errors
-    /// Returns a PySpark-shaped error if collect/registration fails or ``max_bytes`` is exceeded.
+    /// Returns a PySpark-shaped error if collect/registration fails or `max_bytes` is exceeded.
     #[pyo3(signature = (name, frame, max_bytes=None))]
     pub fn materialize_as_cache_view(
         &self,
@@ -426,7 +426,7 @@ impl PyReparkSession {
             "py.action",
             "PyReparkSession.register_arrow_stream_as_temp_view",
             {
-                // A re-entrant repark `__arrow_c_stream__` must not attach+detach here or the
+                // Do not attach+detach on re-entrant `__arrow_c_stream__` or the process aborts.
                 let (schema, batches) = with_stream_poll_no_detach(|| drain_arrow_c_stream(obj))?;
                 self.session
                     .register_record_batches_as_temp_view(name, schema, batches)
@@ -444,7 +444,7 @@ impl PyReparkSession {
         })
     }
 
-    /// Whether a table exists (PySpark `spark.catalog.tableExists`): three-part
+    /// Whether a table exists: three-part names ask Iceberg; one-part names check temp views.
     /// # Errors
     /// Returns `RuntimeError` for a two-part name, an unregistered catalog, or a probe failure.
     pub fn table_exists(&self, py: Python<'_>, name: &str) -> PyResult<bool> {
@@ -454,7 +454,7 @@ impl PyReparkSession {
         })
     }
 
-    /// This session's temp-view home as `[catalog, schema]` — the prefix the facade puts on the
+    /// This session's temp-view home as `[catalog, schema]`.
     /// # Errors
     /// Returns `RuntimeError` when the session's temp-view home was taken over by a registered
     pub fn temp_view_home(&self) -> PyResult<Vec<String>> {
@@ -463,7 +463,7 @@ impl PyReparkSession {
         })
     }
 
-    /// The home-qualified `[catalog, schema, table]` segments a one-part temp-view `name` resolves
+    /// Home-qualified `[catalog, schema, table]` for a one-part temp-view name, or `None`.
     /// # Errors
     /// Returns `RuntimeError` when the session's temp-view home was taken over by a registered
     pub fn resolve_temp_view_home_ref(&self, name: &str) -> PyResult<Option<Vec<String>>> {
@@ -478,7 +478,7 @@ impl PyReparkSession {
         )
     }
 
-    /// Register the AWS-free in-memory Iceberg catalog (local-filesystem `warehouse`) under `name`
+    /// Register the AWS-free in-memory Iceberg catalog under `name` — local development and tests.
     /// # Errors
     /// Returns `RuntimeError` if the catalog cannot be built or registered.
     pub fn register_memory_catalog(
@@ -684,9 +684,9 @@ impl PyReparkSession {
         })
     }
 
-    /// Register catalogs from a LATE builder config onto this LIVE session (the facade
+    /// Register catalogs from a LATE builder config onto this LIVE session.
     /// # Errors
-    /// Raises when the `spark.sql.catalog.*` block is malformed or a NEW catalog fails to
+    /// Raises when the `spark.sql.catalog.*` block is malformed or a new catalog fails to register.
     pub fn register_late_catalogs(
         &self,
         py: Python<'_>,
@@ -761,7 +761,7 @@ fn deferred_reader_error(surface: &str) -> PyErr {
 fn drain_arrow_c_stream(
     obj: &Bound<'_, PyAny>,
 ) -> PyResult<(arrow::datatypes::SchemaRef, Vec<RecordBatch>)> {
-    // Keep the resolved capsule object alive for the whole import: `from_raw` moves the FFI stream
+    // Keep the capsule alive for the import: `from_raw` moves the FFI stream and nulls release.
     let capsule_obj: Bound<'_, PyAny> = if obj.is_instance_of::<PyCapsule>() {
         obj.clone()
     } else {
@@ -803,7 +803,7 @@ fn drain_arrow_c_stream(
 
     let schema = reader.schema();
     let mut batches = Vec::new();
-    // Python-backed streams re-enter the interpreter on every `get_next`; releasing the GIL here
+    // Python-backed streams re-enter the interpreter on every `get_next`.
     for batch_result in &mut reader {
         let batch = batch_result
             .map_err(|error| {
@@ -830,7 +830,7 @@ mod tests {
         Python::attach(|py| {
             let session = PyReparkSession::new(py, None, None, None, None).expect("session builds");
 
-            // (1) The Spark function registry is installed: a Spark-only name resolves AND
+            // (1) Spark function registry is installed: a Spark-only name resolves and evaluates.
             let frame = session
                 .sql(py, "SELECT weekofyear(DATE '2021-01-01') AS w")
                 .expect("a Spark-only function resolves — SparkExtension installed the registry");
@@ -850,7 +850,7 @@ mod tests {
                 "weekofyear must carry SPARK's ISO week-year semantics, not a DataFusion default"
             );
 
-            // (2) The Spark statement router is installed: a Spark-only statement reaches the
+            // (2) Spark statement router is installed: a Spark-only statement reaches its refusal.
             let Err(routed) = session.sql(py, "TRUNCATE TABLE any_table") else {
                 panic!("TRUNCATE is a loud router refusal (C4-L-001), not a plan")
             };
@@ -961,7 +961,7 @@ mod tests {
         });
     }
 
-    /// The nine-argument JDBC surface refuses with its own name, and the refusal must NOT echo
+    /// The nine-argument JDBC refusal must not echo the connection URL or the properties map.
     #[test]
     fn read_postgres_refuses_with_named_unsupported_operation() {
         Python::attach(|py| {
@@ -1008,7 +1008,7 @@ mod tests {
         });
     }
 
-    /// A Rust panic through a fenced Python method surfaces as the base `PySparkException` (a
+    /// A Rust panic through a fenced Python method surfaces as base `PySparkException`.
     #[test]
     fn fenced_panic_surfaces_as_pyspark_exception_and_leaves_session_usable() {
         Python::attach(|py| {
@@ -1018,7 +1018,7 @@ mod tests {
             )
             .expect("pyclass instantiates");
 
-            // Drive the panic through the REAL Python dispatch (`call_method0`), so PyO3's
+            // Drive the panic through real Python dispatch so PyO3's trampoline is in the loop.
             let error = session
                 .call_method0(py, "panic_probe")
                 .expect_err("the probe deterministically panics through the fence");

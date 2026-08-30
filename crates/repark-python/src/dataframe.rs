@@ -300,7 +300,7 @@ impl RecordBatchReader for StreamingBatchReader {
     }
 }
 
-// The transform methods return a fresh `PyDataFrame` the Python caller always consumes, and their
+// Transform methods return a fresh `PyDataFrame`; pyclass args arrive by value from Python.
 #[allow(
     clippy::must_use_candidate,
     clippy::return_self_not_must_use,
@@ -424,8 +424,8 @@ impl PyDataFrame {
 
     /// Export the rows through the **Arrow `PyCapsule` interface** (zero-copy, **streaming**).
     /// # Errors
-    /// Returns a classified engine exception for physical-plan failures or `RuntimeError` if the
-    // `requested_schema` is part of the Arrow PyCapsule protocol signature; we accept but ignore
+    /// Returns a classified engine exception for physical-plan failures or `RuntimeError`.
+    // `requested_schema` is part of the Arrow PyCapsule protocol signature.
     #[allow(clippy::needless_pass_by_value)]
     #[pyo3(signature = (requested_schema=None))]
     pub fn __arrow_c_stream__<'py>(
@@ -435,7 +435,7 @@ impl PyDataFrame {
     ) -> PyResult<Bound<'py, PyCapsule>> {
         fenced_span!("py.action", "PyDataFrame.__arrow_c_stream__", {
             let _ = requested_schema;
-            // Use analyzed logical types with Spark nullability; physical batches retain these
+            // Use analyzed logical types with Spark nullability.
             let schema: SchemaRef = self.analyzed_arrow_schema_native()?;
             // Open a lazy batch stream — the physical plan build runs with the GIL released.
             let stream = py
@@ -448,7 +448,7 @@ impl PyDataFrame {
             });
             let ffi_stream = FFI_ArrowArrayStream::new(reader);
 
-            // pyo3 0.29 renamed `new_with_destructor` → `new_with_value_and_destructor` and the
+            // pyo3 0.29 renamed the destructor helper; pass a static `CStr` name.
             PyCapsule::new_with_value_and_destructor(
                 py,
                 ffi_stream,
@@ -472,7 +472,7 @@ impl PyDataFrame {
         })
     }
 
-    /// Keep rows matching a [`PyColumn`] predicate (PySpark `DataFrame.filter` / `where` with a
+    /// Keep rows matching a [`PyColumn`] predicate.
     /// # Errors
     /// Returns `RuntimeError` if the predicate cannot be planned.
     pub fn filter(&self, predicate: PyColumn) -> PyResult<Self> {
@@ -698,7 +698,7 @@ impl PyDataFrame {
 
     /// Recursively flatten nested structs (and optionally explode lists) — repark extra.
     /// # Errors
-    /// `AnalysisException` on name collision, empty-struct schema, max-depth exhaustion, or
+    /// Returns `AnalysisException` on name collision, empty-struct schema, or max-depth exhaustion.
     pub fn dynamic_flatten(
         &self,
         separator: String,
@@ -830,19 +830,19 @@ mod tests {
         }
     }
 
-    /// Move the `FFI_ArrowArrayStream` out of a capsule and wrap it as a reader, the consumer half
+    /// Move the `FFI_ArrowArrayStream` out of a capsule and wrap it as a reader.
     fn import_capsule_stream(capsule: &Bound<'_, PyCapsule>) -> ArrowArrayStreamReader {
         let pointer = capsule
             .pointer_checked(Some(ARROW_STREAM_CAPSULE_NAME))
             .expect("capsule pointer is valid for the arrow stream name")
             .as_ptr()
             .cast::<FFI_ArrowArrayStream>();
-        // SAFETY: `__arrow_c_stream__` placed a valid, initialized `FFI_ArrowArrayStream` here;
+        // SAFETY: `__arrow_c_stream__` placed a valid, initialized `FFI_ArrowArrayStream` here.
         let stream = unsafe { FFI_ArrowArrayStream::from_raw(pointer) };
         ArrowArrayStreamReader::try_new(stream).expect("stream is a valid Arrow C stream")
     }
 
-    /// Analyzed schema is cached per plan handle (`OnceLock`); repeated opens share one
+    /// Analyzed schema is cached per plan handle.
     #[test]
     fn analyzed_arrow_schema_native_caches_schema_ref_per_handle() {
         let context =
@@ -907,7 +907,7 @@ mod tests {
                  __arrow_c_stream__ would have drained all {batch_count} batches before returning"
             );
 
-            // The exported stream is lazy and functional: draining it yields every batch, in
+            // The exported stream is lazy: drain yields every batch, then the source is consumed.
             let reader = import_capsule_stream(&capsule);
             let drained: Vec<RecordBatch> =
                 reader.map(|batch| batch.expect("batch decodes")).collect();
@@ -927,7 +927,7 @@ mod tests {
 
     #[test]
     fn streaming_reader_yields_first_batch_before_a_later_error() {
-        // Laziness (the load-bearing streaming pin): a stream that ERRORS on its second poll must
+        // Laziness: a stream that ERRORS on its second poll must still deliver batch 1.
         Python::attach(|_python| {
             let stream = scripted_stream(
                 int64_schema(),
@@ -965,7 +965,7 @@ mod tests {
 
     #[test]
     fn streaming_reader_preserves_multi_batch_values_and_schema() {
-        // Correctness (value AND type, MULTI-batch): three batches stream out in order and
+        // Correctness: three batches stream in order and concatenate to expected values and types.
         Python::attach(|_python| {
             let stream = scripted_stream(
                 int64_schema(),
@@ -1013,7 +1013,7 @@ mod tests {
 
     #[test]
     fn streaming_reader_surfaces_stream_error_with_message_preserved() {
-        // Error surfacing: a DataFusion error becomes an `Err(ArrowError)` item (never swallowed
+        // A DataFusion error becomes an `Err(ArrowError)` item, never swallowed and never a panic.
         Python::attach(|_python| {
             let stream = scripted_stream(
                 int64_schema(),
