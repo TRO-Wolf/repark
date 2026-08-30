@@ -1,6 +1,4 @@
 //! Name → DataFusion-expr match tables for [`super::PyColumn`].
-//!
-//! Dispatch tables extracted from `mod.rs`; this module is not `#[pymethods]`.
 
 use std::sync::Arc;
 
@@ -29,12 +27,7 @@ use pyo3::prelude::*;
 
 use super::expr_build::reciprocal_trig_or_inf;
 
-/// ===========================================================================================
 /// Lower a facade `call_scalar` name + already-built argument [`Expr`]s.
-/// ===========================================================================================
-///
-/// Unknown names and arity mismatches return `ValueError`; cardinality errors use the shared
-/// mapper.
 #[allow(clippy::too_many_lines)] // large match table of expr_fn bindings
 #[allow(clippy::needless_pass_by_value)] // owned Vec is the pre-extract table shape
 pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
@@ -866,9 +859,7 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
     Ok(expr)
 }
 
-/// ===========================================================================================
 /// Unary aggregate UDAF for [`super::PyColumn::aggregate`].
-/// ===========================================================================================
 pub(super) fn unary_aggregate_udaf(kind: &str) -> PyResult<Arc<AggregateUDF>> {
     let udaf = match kind {
         "sum" => sum_udaf(),
@@ -896,12 +887,7 @@ pub(super) fn unary_aggregate_udaf(kind: &str) -> PyResult<Arc<AggregateUDF>> {
     Ok(udaf)
 }
 
-/// ===========================================================================================
 /// Cast an aggregate whose declared return type is unsigned to `Int64`.
-///
-/// Cast unsigned aggregate results to Spark's signed `Int64` representation.
-/// Inspect the declared UDAF type so every count-like aggregate follows the same rule.
-/// ===========================================================================================
 pub(super) fn cast_unsigned_count_to_signed(udaf: &AggregateUDF, arity: usize, expr: Expr) -> Expr {
     match udaf.return_type(&vec![DataType::Int64; arity]) {
         Ok(returned) if returned.is_unsigned_integer() => {
@@ -911,9 +897,7 @@ pub(super) fn cast_unsigned_count_to_signed(udaf: &AggregateUDF, arity: usize, e
     }
 }
 
-/// ===========================================================================================
 /// Binary aggregate UDAF for [`super::PyColumn::aggregate_binary`].
-/// ===========================================================================================
 pub(super) fn binary_aggregate_udaf(kind: &str) -> PyResult<Arc<AggregateUDF>> {
     let udaf = match kind {
         "corr" => corr_udaf(),

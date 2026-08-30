@@ -1,6 +1,4 @@
 //! Window-UDF constructors and Spark `rowsBetween` / `rangeBetween` frame translation.
-//!
-//! Crate-internal helpers for [`super::PyColumn`]; these are not `#[pymethods]`.
 
 use datafusion::arrow::datatypes::DataType;
 use datafusion::logical_expr::expr::WindowFunction;
@@ -36,10 +34,7 @@ impl PyColumn {
     }
 }
 
-/// ===========================================================================================
 /// Build a DataFusion [`WindowFrame`] from Spark-relative offsets.
-/// `i64::MIN`/`MAX` are unbounded; zero is the current row; signs select preceding/following.
-/// ===========================================================================================
 pub(super) fn spark_window_frame(
     units_text: &str,
     start: i64,
@@ -60,8 +55,6 @@ pub(super) fn spark_window_frame(
 }
 
 /// Return Spark's unordered-window frame or refuse an unordered window UDF.
-/// Aggregates use an unbounded `ROWS` frame; ranking and offset UDFs require `ORDER BY`.
-///
 /// # Errors
 /// The refusal names the function and requests `ORDER BY`.
 pub(super) fn unordered_window_frame(window_expr: &Expr) -> Result<WindowFrame, String> {

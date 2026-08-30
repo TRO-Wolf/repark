@@ -1,5 +1,8 @@
 # map — repark-python/src
 
+CC-4 (2026-08-30): remaining banner files condensed to the one-line rule
+(pins: cc-3-comment-condensation/C-009).
+
 CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated comments rewritten as complete sentences (D-001). Wrapped-line fragments rewritten as complete sentences (D-002).
 
 CC-2 closing-critic remediation: review-round label narration swept from prose; safety and

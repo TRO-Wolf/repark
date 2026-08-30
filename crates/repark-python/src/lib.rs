@@ -1,6 +1,4 @@
 //! PyO3 bindings expose the repark engine as `repark._native`.
-//! The Python facade imports this module; computation stays in Rust and data crosses as
-//! zero-copy Arrow C streams. This is the only crate permitted to use `unsafe` for PyO3 FFI.
 
 #[cfg(feature = "allocator-mimalloc")]
 mod allocator;
@@ -18,19 +16,14 @@ pub use column::PyColumn;
 pub use dataframe::PyDataFrame;
 pub use session::PyReparkSession;
 
-/// The exception taxonomy lives in [`exceptions`] (file-backed; see its module doc for the
-/// module-scoped `disallowed_methods` expectation).
+/// The exception taxonomy lives in [`exceptions`]; see that module for the lint expectation.
 mod exceptions;
 pub use exceptions::{
     AnalysisException, IllegalArgumentException, ParseException, PySparkException,
     UnsupportedOperationException,
 };
 
-/// ===========================================================================================
 /// Convert a crate error to its PySpark-shaped Python exception.
-/// The exhaustive class mapping preserves the engine message and rejects unhandled variants at
-/// compile time.
-/// ===========================================================================================
 #[allow(clippy::needless_pass_by_value)]
 fn to_py_err(err: repark_core::Error) -> PyErr {
     let message = err.to_string();
@@ -43,18 +36,13 @@ fn to_py_err(err: repark_core::Error) -> PyErr {
     }
 }
 
-/// ===========================================================================================
 /// Convert a [`DataFusionError`] through the shared engine classifier.
-/// ===========================================================================================
 #[allow(clippy::needless_pass_by_value)]
 pub(crate) fn datafusion_to_py_err(err: DataFusionError) -> PyErr {
     to_py_err(repark_core::engine_err(err))
 }
 
-/// ===========================================================================================
 /// Install the optional environment-gated tracing subscriber once at module import.
-/// `REPARK_LOG` takes precedence over `RUST_LOG`; an existing subscriber is not an error.
-/// ===========================================================================================
 fn try_init_repark_tracing() {
     use std::sync::Once;
 
@@ -80,11 +68,7 @@ fn try_init_repark_tracing() {
     });
 }
 
-/// ===========================================================================================
 /// The native module entry point.
-///
-/// Register the native classes and exception taxonomy for `repark._native`.
-/// ===========================================================================================
 #[pymodule]
 fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     try_init_repark_tracing();
