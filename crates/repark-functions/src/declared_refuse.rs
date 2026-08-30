@@ -108,6 +108,21 @@ const CSV_XML_XPATH_REASON: &str = "is reachable without a JVM and is deferred b
      xpath family needs an XPath 1.0 engine matching javax.xml.xpath, and datafusion-spark's \
      csv and xml modules are empty. See docs/spark-sql-iceberg-parity.md (FNP-16 CSV/XML/XPath).";
 
+const VARIANT: &[&str] = &[
+    "is_variant_null",
+    "parse_json",
+    "schema_of_variant",
+    "schema_of_variant_agg",
+    "to_variant_object",
+    "try_parse_json",
+    "try_variant_get",
+    "variant_get",
+];
+
+const VARIANT_REASON: &str = "is reachable without a JVM and is deferred by cost: Spark VARIANT \
+     is a specific value/metadata binary encoding; repark's VariantType is a shell with \
+     nothing behind it. See docs/spark-sql-iceberg-parity.md (FNP-16 VARIANT).";
+
 /// Message for a declared-absent Spark function, if this unit currently owns the name.
 #[must_use]
 pub fn refusal_message(name: &str) -> Option<String> {
@@ -121,6 +136,9 @@ pub fn refusal_message(name: &str) -> Option<String> {
     if CSV_XML_XPATH.binary_search(&key.as_str()).is_ok() {
         return Some(format!("{key} {CSV_XML_XPATH_REASON}"));
     }
+    if VARIANT.binary_search(&key.as_str()).is_ok() {
+        return Some(format!("{key} {VARIANT_REASON}"));
+    }
     None
 }
 
@@ -130,6 +148,7 @@ pub fn armed_names() -> Vec<&'static str> {
     let mut names: Vec<&'static str> = FNP15.iter().map(|(name, _)| *name).collect();
     names.extend(SKETCHES.iter().copied());
     names.extend(CSV_XML_XPATH.iter().copied());
+    names.extend(VARIANT.iter().copied());
     names
 }
 
@@ -196,7 +215,7 @@ fn object_name_last(name: &ObjectName) -> String {
 
 #[cfg(test)]
 mod tests {
-    // pins: fnp-15-16/C-001, C-002, C-008, C-009, C-017
+    // pins: fnp-15-16/C-001, C-002, C-008, C-009, C-010, C-017
     use super::*;
 
     #[test]
@@ -233,6 +252,23 @@ mod tests {
         assert_eq!(CSV_XML_XPATH.len(), 11);
         for name in CSV_XML_XPATH {
             let message = refusal_message(name).expect("csv/xml/xpath name has a message");
+            assert!(message.contains("deferred by cost"), "{name}: {message}");
+            assert!(
+                message.contains("reachable without a JVM"),
+                "{name}: {message}"
+            );
+            assert!(!message.contains("unreachable"), "{name}: {message}");
+            let error = refuse_in_sql(&format!("SELECT {name}(1)")).expect_err(*name);
+            assert!(matches!(error, DataFusionError::NotImplemented(_)));
+        }
+    }
+
+    #[test]
+    fn variant_is_deferred_by_cost_and_sorted() {
+        assert!(VARIANT.is_sorted());
+        assert_eq!(VARIANT.len(), 8);
+        for name in VARIANT {
+            let message = refusal_message(name).expect("variant name has a message");
             assert!(message.contains("deferred by cost"), "{name}: {message}");
             assert!(
                 message.contains("reachable without a JVM"),

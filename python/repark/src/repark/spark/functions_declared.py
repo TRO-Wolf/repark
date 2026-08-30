@@ -169,7 +169,26 @@ _CSV_XML_XPATH_REASON = (
 )
 _bind_family(CSV_XML_XPATH_NAMES, _CSV_XML_XPATH_REASON)
 
-DECLARED_REFUSE_NAMES: tuple[str, ...] = tuple(FNP15_MESSAGES) + SKETCH_NAMES + CSV_XML_XPATH_NAMES
+VARIANT_NAMES: tuple[str, ...] = (
+    "is_variant_null",
+    "parse_json",
+    "schema_of_variant",
+    "schema_of_variant_agg",
+    "to_variant_object",
+    "try_parse_json",
+    "try_variant_get",
+    "variant_get",
+)
+_VARIANT_REASON = (
+    "is reachable without a JVM and is deferred by cost: Spark VARIANT is a specific "
+    "value/metadata binary encoding; repark's VariantType is a shell with nothing behind "
+    "it. See docs/spark-sql-iceberg-parity.md (FNP-16 VARIANT)."
+)
+_bind_family(VARIANT_NAMES, _VARIANT_REASON)
+
+DECLARED_REFUSE_NAMES: tuple[str, ...] = (
+    tuple(FNP15_MESSAGES) + SKETCH_NAMES + CSV_XML_XPATH_NAMES + VARIANT_NAMES
+)
 
 
 def install_into(namespace: dict[str, Any], exported: list[str]) -> None:

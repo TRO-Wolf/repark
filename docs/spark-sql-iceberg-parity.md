@@ -2303,3 +2303,19 @@ oracle is involved.
   `crates/repark-functions/src/declared_refuse.rs::csv_xml_xpath_are_deferred_by_cost_and_sorted`.
 - **Rationale** — DECLARED deferred-by-cost (design D-7 / §8). This is a cost deferral, not a
   JVM-only gap. An XPath 1.0 dependency is a sub-project.
+
+### FNP-16-variant — Spark VARIANT is reachable, deferred by cost
+
+- **repark** — the eight VARIANT names (`parse_json`, `try_parse_json`, `is_variant_null`,
+  `variant_get`, `try_variant_get`, `schema_of_variant`, `schema_of_variant_agg`,
+  `to_variant_object`) are exported and refuse as **reachable without a JVM and deferred by
+  cost**. Spark VARIANT is a specific value/metadata binary encoding. RePark's `VariantType` is
+  a shell with nothing behind it.
+- **Apache Spark** — parses and extracts Spark VARIANT values.
+  *(oracle: documented.)*
+- **Pin** — `python/repark/tests/test_fnp15_16_declared_refuse.py::test_variant_facade_refuses_deferred_by_cost`,
+  `…::test_variant_spark_sql_door_refuses`,
+  `…::test_variant_ansi_sql_door_refuses`;
+  `crates/repark-functions/src/declared_refuse.rs::variant_is_deferred_by_cost_and_sorted`.
+- **Rationale** — DECLARED deferred-by-cost (design D-7 / §8). This is a cost deferral, not a
+  JVM-only gap. Implementing the binary encoding is a sub-project.

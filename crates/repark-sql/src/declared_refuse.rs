@@ -88,6 +88,7 @@ fn refusal_message(name: &str) -> Option<String> {
         other if CSV_XML_XPATH.binary_search(&other).is_ok() => {
             Some(format!("{other} {CSV_XML_XPATH_REASON}"))
         }
+        other if VARIANT.binary_search(&other).is_ok() => Some(format!("{other} {VARIANT_REASON}")),
         _ => None,
     }
 }
@@ -150,9 +151,24 @@ const CSV_XML_XPATH: &[&str] = &[
     "xpath_string",
 ];
 
+const VARIANT: &[&str] = &[
+    "is_variant_null",
+    "parse_json",
+    "schema_of_variant",
+    "schema_of_variant_agg",
+    "to_variant_object",
+    "try_parse_json",
+    "try_variant_get",
+    "variant_get",
+];
+
+const VARIANT_REASON: &str = "is reachable without a JVM and is deferred by cost: Spark VARIANT \
+     is a specific value/metadata binary encoding; repark's VariantType is a shell with \
+     nothing behind it. See docs/spark-sql-iceberg-parity.md (FNP-16 VARIANT).";
+
 #[cfg(test)]
 mod tests {
-    // pins: fnp-15-16/C-001, C-002, C-008, C-009, C-017
+    // pins: fnp-15-16/C-001, C-002, C-008, C-009, C-010, C-017
     use datafusion::error::DataFusionError;
     use datafusion::sql::sqlparser::dialect::GenericDialect;
     use datafusion::sql::sqlparser::parser::Parser;

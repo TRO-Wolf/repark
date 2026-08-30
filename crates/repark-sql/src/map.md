@@ -21,8 +21,8 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
 
 - `lib.rs` — manifest: module list, `pub use dialect::AnsiDialect`, `pub use router::execute`.
 - `declared_refuse.rs` — FNP-15/16 ANSI-door parse valve (G15 dual-wire: Spark's copy lives in
-  `repark-functions`). Sketches (32) and CSV/XML/XPath (11) are deferred-by-cost.
-  pins: fnp-15-16/C-001, C-008, C-009
+  `repark-functions`). Sketches (32), CSV/XML/XPath (11), and VARIANT (8) are deferred-by-cost.
+  pins: fnp-15-16/C-001, C-008, C-009, C-010
 - [v3/](v3/map.md) — format-v3 test modules (`#[cfg(test)] mod v3`).
 - `delete_granularity.rs` — **test-only:** ANSI `write.delete.granularity`
   (`file` default / explicit `partition` / refuse unknown / SET PROPERTIES then MERGE)

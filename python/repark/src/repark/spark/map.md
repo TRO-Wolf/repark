@@ -40,8 +40,8 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
 - `functions_datetime.py` — date/time and timestamp wrappers.
 - `functions_declared.py` — FNP-15/16 declared-absent refusals (unreachable / deferred-by-cost).
   Installed onto `functions.py` after `__all__` so the sql.functions re-export sees them.
-  Sketches (32) and CSV/XML/XPath (11) are deferred-by-cost.
-  pins: fnp-15-16/C-001, C-008, C-009, C-014, C-016
+  Sketches (32), CSV/XML/XPath (11), and VARIANT (8) are deferred-by-cost.
+  pins: fnp-15-16/C-001, C-008, C-009, C-010, C-014, C-016
 - `functions_expr.py` — shared expression builders and scalar lowering.
 - `functions_lambda.py` — higher-order function and lambda builders.
 - `functions_math.py` — mathematical and trigonometric wrappers.
