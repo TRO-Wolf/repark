@@ -1,5 +1,7 @@
 # map — repark-python
 
+CC-3 (2026-08-30): comments condensed to one line; banners removed.
+
 ## Purpose
 
 PyO3 adapter crate for `repark._native` (crate-DAG **tier 4**, bindings). It exposes session,
