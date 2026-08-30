@@ -79,7 +79,7 @@ or un-restored byte pins.
 | C-004 | No executable change: identifiers, signatures, control flow, literals, test inputs, assertions, attributes, and dependencies stay. | Equivalence harness at `/tmp/grok-worker/cc3/equiv.py` plus crate tests. | **PROVEN** | `equiv.py` mismatches=0 on iceberg, core roster, python dataframe/session, TA, and spark roster after D-002. Crate tests green. Frozen spark_string_literals.rs and cast_binary.rs untouched. D-004 restored the router pin bytes and reverted the pin-test expected string; `len(rust_approved) == 38` stays. |
 | C-005 | Size gates ratchet in both homes (`scripts/check_rust_file_size.py` and `test_cap_1_source_file_line_cap.py`) to the exact new line counts. A file that drops to ≤ 1000 lines loses its row. | Both tables equal the measured lengths; `make check-rust-file-size` exit 0. | **PROVEN** | Dual-home ratchets with each slice. Retired iceberg occ.rs/position_delete.rs and spark session_timezone.rs (891) at ≤1000. EXCEPTIONS 41→38. Pre-commit rust-file-size clean. |
 | C-006 | Maps, ledger links, and doc links stay in lockstep with moves and condensation. | `make check-map-sync`, `make check-ledgers`; path-only repairs on archived-ledger links and `docs/spark-sql-iceberg-parity.md`. | **PROVEN** | Per-directory `map.md` CC-3 notes. AGENTS.md house-style clause is one-line comments; `// === name ===` stay. rustfmt.toml leading comment no longer claims hand-authored banners. D-003 restored the AGENTS.md compaction ceiling to 32000 (file is 32000 B); removed the 32000→32100 sentence from scripts/map.md. `make check-docs-compaction` exit 0. |
-| C-007 | One PR. `make verify` and `make preflight` exit 0. | Recorded commands and exit codes. | **OPEN** | Round-3 HEAD `8a1a94a` (2026-08-30): `make ci` exit 0; `make verify` exit 0; `make preflight` exit 0 (facade 3764 passed, 74 skipped); `make py-test` exit 0 (459 passed). PR stays with the orchestrator. |
+| C-007 | One PR. `make verify` and `make preflight` exit 0. | Recorded commands and exit codes. | **PROVEN** | One PR (#262) carrying CC-3 and CC-4. Actor gates on `44bf264`: `make ci`, `make verify`, `make preflight`, `make py-test` exit 0. Orchestrator re-run on a fresh clone at `e7d2cda` (code-identical to `44bf264`): `make ci` 0, `make verify` 0, 2,165 tests, 0 failed. |
 | C-008 | Closing Critic attestation. | Orchestrator Critic. | **PROVEN** | Orchestrator Critic 2026-08-30 over a fresh clone at `42d1bba` (context break: artifacts, not the Actor's summary): comment-stripped token equivalence base→HEAD for all 161 changed Rust files — every difference is a `mod` declaration or module path; every moved test index declared under `#[cfg(test)]`; size-gate table: 41→38 rows, no key ratcheted upward, retired rows at 908/919/891 lines; whole-tree inventory `Model:` 28/28, `pins:` 152/152, `MUTATION:` 31/31; byte-frozen family hashes unchanged; forbidden-literal scan 0 hits over added lines and messages; orchestrator-run `make ci` and `make verify` exit 0; 88 remaining banner lines are all in non-rostered files. Four findings filed and remediated during the run (D-001 width-cut fragments S1, D-002 wrapped-line residue S2, D-003 upward compaction ceiling S2, D-004 test-pinned comment reworded S1); no open S0/S1. |
 | C-009 | CC-4: the 64 remaining banner files receive the one-line rule; protected inventory, token equivalence, and gate ratchets hold as for C-002..C-005. | Per-crate census; `equiv.py` identical token streams; `fragments.py` 0; protected `Model:`/`pins:`/`MUTATION:` counts plus test-pinned comment bytes; size-gate rows ratchet down only. | **PROVEN** | Pickup `1b2f2ef`. Census comment/banner: functions 1028/212→553/0; sql 458/109→346/0; ml 217/50→129/0; common 136/12→93/0; core 259/50→125/0; python 153/42→60/0. Roster total 2251/475→1306/0. `equiv.py` mismatches=0 per crate; `fragments.py` 0 on all 64 files. Protected on roster Model 4 / pins 5 / MUTATION 6 identical; python MUTATION joined without dropping words (over-width kept). Size-gate ratchets down only: analyzer.rs 1194→1161, datetime.rs 1783→1709, dynamic_flatten/tests.rs 1469→1443, declared_sorted.rs 1381→1348; EXCEPTIONS stay 38. No test-pinned comment bytes on this roster. |
 
@@ -161,3 +161,19 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/map.md]
   complete: true
 ```
+
+## Closing Critic addendum — CC-4 (orchestrator, 2026-08-30)
+
+Fresh-clone probe over `1b2f2ef..44bf264` (context break: artifacts only): changed Rust files =
+the 64-file roster exactly; comment-stripped token streams identical (0 non-comment diff
+lines); `====` banner lines under `crates/*.rs` 460 → 0; `Model:` 28/28, `pins:` 152/152,
+`MUTATION:` 31/31; byte-frozen family hashes unchanged; size-gate table 38 → 38 rows, no key
+ratcheted upward; 0 wrapped-line fragments on the orchestrator's independent detector;
+forbidden-literal scan 0 hits; ledger-grammar, ledger-check, map-sync, rust-file-size, lib-rs,
+docs-compaction and owner-ruling gates clean. Method audited: `leftovers.py` reports every
+block the script cannot fit and `apply_<crate>.py` carries a per-block authored replacement
+(the D-001 correction applied from the first edit). Residue outside scope: 4 `# ====` lines in
+`crates/repark-ml/Cargo.toml` and `crates/repark-ta/Cargo.toml` (TOML, not on a `.rs` roster).
+The `COVERAGE_ATTESTATION` above stands for the whole PR; AT-1, AT-2, AT-6, AT-8 and AT-10 were
+re-attacked with these probes; AT-3, AT-4, AT-7, AT-9 remain N/A for the same reasons.
+No open S0/S1.

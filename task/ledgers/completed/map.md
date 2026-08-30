@@ -9,6 +9,10 @@ else. The next pickup's `make ledger-archive` files everything here under
 
 ## Contents
 - [v3e-3-partitioned-eqdel-fixtures-ledger.md](../archive/2026-08/2026-08-25-v3e-3-partitioned-eqdel-fixtures-ledger.md) — V3E-3 — partitioned + equality-delete v3 fixtures
+- [cc-3-comment-condensation-ledger.md](cc-3-comment-condensation-ledger.md) — **CC-3
+  (2026-08-30):** round-3 one-line comment condensation on a named Rust roster, plus the
+  test-module layout move. CC-4 pickup (2026-08-30) reopened it for the 64 remaining
+  banner files (C-009 OPEN). C-007 stays OPEN for the orchestrator.
 - [rp-3-fork-repin-ledger.md](rp-3-fork-repin-ledger.md) — **RP-3 (2026-08-28), on
   `feat/rp-3-fork-repin`:** one frozen fork repin at `d408da42` (F-17, F-14,
   F-7 U3, F-16, F-9, F-15, the public R114 DV API), the engine-side wiring of the fork's DV

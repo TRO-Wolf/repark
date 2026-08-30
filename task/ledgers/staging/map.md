@@ -5,10 +5,6 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
-- [cc-3-comment-condensation-ledger.md](cc-3-comment-condensation-ledger.md) — **CC-3
-  (2026-08-30):** round-3 one-line comment condensation on a named Rust roster, plus the
-  test-module layout move. CC-4 pickup (2026-08-30) reopened it for the 64 remaining
-  banner files (C-009 OPEN). C-007 stays OPEN for the orchestrator.
 - [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's
   scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike
   evidence behind it; C-007 (the four sub-project families) was closed by ruling D-7 on
