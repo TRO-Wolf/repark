@@ -4,6 +4,7 @@ plain-`WHERE` DELETE is Spark-clean and commits; `rewrite_data_files` still refu
 
 pins: v3r-1-rulings/C-006
 pins: rp-2-fork-repin/C-003, C-005
+pins: rp-3-fork-repin/C-004
 """
 
 from __future__ import annotations
@@ -119,9 +120,10 @@ def _objects_under(root: Path) -> list[str]:
     return sorted(str(path) for path in root.rglob("*") if path.is_file())
 
 
-def test_facade_v3_mor_first_delete_commits_a_deletion_vector_and_a_second_refuses(
+def test_facade_v3_mor_first_delete_commits_a_deletion_vector_and_a_second_merges(
     tmp_path: Path,
 ) -> None:
+    """First MOR DELETE commits a Puffin DV; the second merges into that live vector."""
     from repark import ReparkSession
 
     spark = (
@@ -150,13 +152,15 @@ def test_facade_v3_mor_first_delete_commits_a_deletion_vector_and_a_second_refus
         ).to_arrow()
         kinds = [str(kind).upper() for kind in delete_files.column("file_format").to_pylist()]
         assert kinds == ["PUFFIN"], kinds
-        pointer = _latest_version_uuid_metadata(sales, "seed_mor")
-        objects = _objects_under(sales / "seed_mor")
-        with pytest.raises(UnsupportedOperationException, match="1 live deletion vector"):
-            spark.sql("DELETE FROM ice.sales.adopt_mor WHERE id = 3").collect()
-        assert _latest_version_uuid_metadata(sales, "seed_mor") == pointer
-        assert _objects_under(sales / "seed_mor") == objects
+        spark.sql("DELETE FROM ice.sales.adopt_mor WHERE id = 3").collect()
         second = spark.sql("SELECT id, name FROM ice.sales.adopt_mor").to_arrow()
-        assert _id_name_rows(second) == survivors
+        assert _id_name_rows(second) == [(1, "a")]
+        delete_files_after = spark.sql(
+            "SELECT file_format FROM ice.sales.adopt_mor.delete_files"
+        ).to_arrow()
+        kinds_after = [
+            str(kind).upper() for kind in delete_files_after.column("file_format").to_pylist()
+        ]
+        assert kinds_after == ["PUFFIN"], kinds_after
     finally:
         spark.stop()

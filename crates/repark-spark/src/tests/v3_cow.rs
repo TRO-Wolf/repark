@@ -10,11 +10,10 @@
 //! pins: v3e-1-2-cow-oracle/C-009, C-010
 //! pins: rp-2-fork-repin/C-002, C-003, C-005
 //! pins: rp-2-fork-repin/C-001, C-004, C-007, C-008
+//! pins: rp-3-fork-repin/C-004
 
 use super::super::*;
 use super::common::*;
-
-use std::path::PathBuf;
 
 use iceberg::spec::FormatVersion;
 
@@ -409,6 +408,7 @@ async fn v3_create_with_encryption_key_id_still_scans_without_a_kms() {
 
 /// RP-2: merge-on-read plain-`WHERE` DELETE on v3 commits a Puffin deletion vector.
 /// pins: rp-2-fork-repin/C-003
+/// pins: rp-3-fork-repin/C-004
 #[tokio::test]
 async fn adopted_v3_mor_delete_commits_a_puffin_deletion_vector() {
     let warehouse = TempDir::new().unwrap();
@@ -449,8 +449,9 @@ async fn adopted_v3_mor_delete_commits_a_puffin_deletion_vector() {
     );
 }
 
+/// pins: rp-3-fork-repin/C-004
 #[tokio::test]
-async fn adopted_v3_mor_second_delete_refuses_while_a_deletion_vector_is_live() {
+async fn adopted_v3_mor_second_delete_merges_into_the_live_deletion_vector() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
     adopt_v3(
@@ -474,47 +475,28 @@ async fn adopted_v3_mor_second_delete_refuses_while_a_deletion_vector_is_live() 
         vec!["Puffin".to_string()],
         "one live deletion vector after the first DELETE"
     );
-    let location = PathBuf::from(first.metadata().location());
-    let objects = count_objects(&location);
-    let before = lineage(&catalogs, "adopt_mor2").await;
-    let survivors = vec![(1, "a".to_string()), (3, "c".to_string())];
-    assert_eq!(
-        table_rows(&ctx, &catalogs, "ice.sales.adopt_mor2").await,
-        survivors
-    );
-    let err = execute(
+    run(
         &ctx,
         &catalogs,
         "DELETE FROM ice.sales.adopt_mor2 WHERE id = 3",
     )
-    .await
-    .expect_err("a second DELETE must refuse while a deletion vector is live")
-    .to_string();
-    assert!(
-        err.contains("V3-COW-1") && err.contains("1 live deletion vector"),
-        "the refusal must name the live vector: {err}"
-    );
+    .await;
     let second = load_sales(&catalogs, "adopt_mor2").await;
-    assert_eq!(
+    assert_ne!(
         second.metadata().current_snapshot_id(),
         first.metadata().current_snapshot_id(),
-        "a refused DELETE must not commit"
+        "the second DELETE commits"
     );
-    assert_eq!(
-        second.metadata_location(),
-        first.metadata_location(),
-        "the metadata pointer is unchanged"
-    );
-    assert_eq!(lineage(&catalogs, "adopt_mor2").await, before);
     assert_eq!(
         table_rows(&ctx, &catalogs, "ice.sales.adopt_mor2").await,
-        survivors
+        vec![(1, "a".to_string())],
+        "positions merge; only id 1 remains"
     );
-    assert_eq!(live_delete_file_kinds(&catalogs, "adopt_mor2").await, kinds);
+    let after_kinds = live_delete_file_kinds(&catalogs, "adopt_mor2").await;
     assert_eq!(
-        count_objects(&location),
-        objects,
-        "no object was written under the table location"
+        after_kinds,
+        vec!["Puffin".to_string()],
+        "exactly one live DV after the second DELETE"
     );
     assert_still_v3(&second);
 }

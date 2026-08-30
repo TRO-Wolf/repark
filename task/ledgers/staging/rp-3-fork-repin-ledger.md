@@ -287,7 +287,7 @@ SELF_LOGIC_REVIEW:
   charter_trace: C-003
   preconditions:
     - C-001/C-002 committed: SATISFIED (6667905, 087d778)
-    - WP-1 writer API absorbed: SATISFIED (#239 unpartitioned(); V2 occ pin green)
+    - WP-1 writer API absorbed: SATISFIED (#239 unpartitioned(); V2 occ pin still green)
     - merge/mod.rs size: SATISFIED (2565 after size-neutral arm)
   success_condition: shared_puffin_row_delta_keeps_the_untouched_sibling green; sabotage red recorded; V2 occ pin still green
   step_risks:
@@ -300,3 +300,42 @@ SELF_LOGIC_REVIEW:
   verdict: PROCEED
   escalation: —
 ```
+
+```yaml
+SELF_LOGIC_REVIEW:
+  id: SLR-C-004-CELLS-1-4
+  agent: actor
+  action: lift the live-DV DELETE refusal and pin cells 1-4 on Spark and ANSI doors
+  charter_trace: C-004
+  preconditions:
+    - C-003 seam green: SATISFIED (81c34a8)
+    - cell 2/4 watched red: SATISFIED (Spark second-delete expect_err; ANSI refuse panics)
+  success_condition: Spark and ANSI cells 1-4 green; UPDATE/MERGE still refuse
+  step_risks:
+    - facade unmeasured: HANDLED(C-004 stays OPEN until the facade pins run)
+    - cells 5-8 unmeasured: HANDLED(C-004 stays OPEN)
+  contingencies:
+    - a cell red on one door: EXECUTABLE(additive — narrow the guard; hand back)
+  tripwire_scan: CLEAN
+  uncertainty: NONE
+  verdict: PROCEED
+  escalation: —
+```
+
+## 8. C-004 cells 1–4 (Rust doors, 2026-08-29)
+
+Watched red at the pre-lift guard, then green after the lift:
+
+- Cell 1 Spark `adopted_v3_mor_delete_commits_a_puffin_deletion_vector` stayed green.
+- Cell 2 Spark refuse pin red (`expect_err` got a DataFrame). Flipped to
+  `adopted_v3_mor_second_delete_merges_into_the_live_deletion_vector` — rows `{1}`, one Puffin.
+- Cell 2 ANSI twin red (`must fail`). Flipped to `…second_merges`.
+- Cell 3 Spark `partitioned_v3_dv_delete_id_3_merges_into_the_touched_file` green:
+  live `{1,4,6}`, two DVs, record_count sum 3.
+- Cell 3 ANSI `ansi_mor_delete_on_a_spark_written_dv_merges_into_that_file` green.
+- Cell 4 ANSI refuse pin red (`DELETE must refuse`). Flipped to
+  `ansi_mor_delete_on_a_shared_puffin_keeps_the_untouched_sibling` — live `{3,4,6}`.
+- Cell 4 Spark `partitioned_v3_dv_delete_id_1_keeps_the_untouched_sibling` green.
+
+UPDATE/MERGE refusal pins still green. Facade cell-2 pin flipped in tree; not yet
+executed (needs maturin). Cells 5–8 not yet measured. C-004 remains OPEN.

@@ -40,11 +40,9 @@ repark-core's error map.
   (2026-08-25, `V3-COW-1`); RP-2 (2026-08-27, fork `ce92a7bf`):** the format-v3 row-DML guard,
   two seats — the write-mode resolvers (`predicate_dml.rs`, `merge/mod.rs`) and the passthrough
   valve both doors call beside the BUG-001 valve. The resolvers refuse every v3 table. The
-  passthrough valve lifts the plain-`WHERE` DELETE on a v3 table with **no live deletion
-  vectors** (measured Spark-clean in both modes) and refuses it on DV-carrying tables
-  (measured resurrection) plus every v3 UPDATE. RP-2 salvage (2026-08-28): the refusal names
-  the live count and points at RP-3 (fork F-17 landed the shared-Puffin closure); a second
-  DELETE on a table whose first DELETE wrote a vector refuses — pinned on all three doors.
+  passthrough valve lifts the plain-`WHERE` DELETE on v3, including on a table that already
+  carries deletion vectors (RP-3 / F-17 at `d408da42`), and still refuses every v3 UPDATE
+  (V3-3). pins: rp-3-fork-repin/C-004
 - `predicate_dml.rs` — **G3-E8 A1-identity** (`execute_predicate_dml`): evaluate the original
   `WHERE` as a SELECT over the pinned `(_file, _pos)` streaming target, then commit through the
   MERGE COW/MoR write arms honoring `write.delete.mode` / `write.update.mode` / isolation —

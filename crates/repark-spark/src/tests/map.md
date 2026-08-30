@@ -21,8 +21,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   leaves a `BINARY` DDL column untouched; `TRY_CAST(<int>)` refuses without the ANSI-off suggestion.
 - `v3_cow.rs` — v3 UPDATE / MERGE
   refuse (`V3-COW-1`, both seats), the plain-`WHERE` DELETE commits on a DV-free table (COW
-  keeps survivor lineage, MOR commits a Puffin DV) and a second MOR DELETE refuses while the
-  vector is live with the object set untouched (pins: rp-2-fork-repin/C-003, C-005); short-name,
+  keeps survivor lineage, MOR commits a Puffin DV) and a second MOR DELETE merges into the
+  live vector (pins: rp-2-fork-repin/C-003, C-005; rp-3-fork-repin/C-004); short-name,
   padded merge-on-read, and v2-control cases keep `V3_MAINTENANCE_ORACLE` and ENC-1's pin.
 - `create_table.rs` — also the V3R-1 type pin: `GEOMETRY` / `GEOGRAPHY` / `VARIANT` refuse at
   CREATE (`V3-GEO-1`).
@@ -31,7 +31,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   append; rustdoc cites C-001..C-016 (`Model: Grok 4.6 xHigh`).
 - `v3e3.rs` — **V3E-3:** Spark-written partitioned v3 DV fixture and equality-delete
   + DV fixture (`fixtures/v3-spark-part-dv/`, `fixtures/v3-spark-eq-dv/`); live
-  rows, partition prune, `.delete_files` content 1/2, B-MOR-3 refuse
+  rows, partition prune, `.delete_files` content 1/2, B-MOR-3 refuse, RP-3 cells 3–4
+  MOR DELETE on the partitioned DV (pins: rp-3-fork-repin/C-004)
   (`Model: Grok 4.6 xHigh`; rustdoc cites C-013).
 - `delete_granularity.rs` — **MW-9:** Spark-door `write.delete.granularity` (explicit
   file/partition, unknown refuse on MERGE and identity UPDATE, fork DELETE/UPDATE

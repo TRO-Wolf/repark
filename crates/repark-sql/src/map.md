@@ -20,11 +20,13 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
 - `v3_create.rs` — **V3-2 (test-only):** ANSI CREATE/CTAS `format_version = 3` opt-in pins
   (`Model: Grok 4.6 xHigh` on the module's functions).
 - `v3_cow.rs` — **V3-COW-1 (test-only):** adopted-v3 UPDATE/MERGE refusal, plain-`WHERE` DELETE
-  behavior, v2 control, and object-cleanup checks.
+  behavior including a second MOR DELETE that merges into the live vector
+  (pins: rp-3-fork-repin/C-004), v2 control, and object-cleanup checks.
 - `v3_types.rs` — **test-only:** `GEOMETRY` / `GEOGRAPHY` / `VARIANT` refuse at CREATE
   (`V3-GEO-1`); reuses `v3_cow.rs`'s `Door`.
 - `v3_branch_tag_time_travel.rs` — **test-only:** ANSI branch/tag +
-  `FOR VERSION AS OF` over the partitioned v3 DV fixture (`Model: Grok 4.6 xHigh`).
+  `FOR VERSION AS OF` over the partitioned v3 DV fixture; RP-3 shared-Puffin DELETE
+  keeps the untouched sibling (pins: rp-3-fork-repin/C-004).
 - `v3_partitioned_equality_deletes.rs` — **test-only:** ANSI live-row twins
   of the Spark-written partitioned DV and equality-delete + DV fixtures, plus
   `$delete_files` content 1/2 (`Model: Grok 4.6 xHigh`).

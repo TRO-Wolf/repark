@@ -42,8 +42,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   MERGE / UPDATE on an adopted v3 table raise `UnsupportedOperationException` naming
   `V3-COW-1`; the plain-`WHERE` DELETE commits the right rows (RP-2 lift) with Spark-equal
   survivor lineage — `next_row_id` = 5 on the 3-row recipe, Spark's own allocate-then-suppress
-  counter (live oracle 2026-08-27); a MOR first DELETE commits a Puffin DV and the second refuses
-  naming the live vector (`1 live deletion vector`), pointer and object set untouched (pins: rp-2-fork-repin/C-003, C-005).
+  counter (live oracle 2026-08-27); a MOR first DELETE commits a Puffin DV and the second merges
+  into that live vector (pins: rp-2-fork-repin/C-003, C-005; rp-3-fork-repin/C-004).
 - [test_v3e4_refs_time_travel.py](test_v3e4_refs_time_travel.py) — **V3E-4:** facade
   branch/tag, `VERSION AS OF` over DVs, rollback, expire dual-probe, orphan
   24h floor on the partitioned-DV fixture after a RePark append.
