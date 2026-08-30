@@ -1,8 +1,4 @@
 //! BBANDS three-sibling cost versus one kernel run.
-//!
-//! Run: `cargo test -p repark-ta --release --test p1c_microbench -- --nocapture`
-//! This is a wall-time measurement, not a correctness gate. It models the kernel-level
-//! multi-output cache: one run, three independent runs, and one run plus clones.
 
 use std::time::Instant;
 

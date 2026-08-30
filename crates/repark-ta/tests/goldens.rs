@@ -1,7 +1,4 @@
 //! Bit-exactness gate against C TA-Lib 0.4.0 goldens.
-//!
-//! Compare each element by `f64::to_bits`; NaN payloads may differ. The walk and flat-plateau
-//! fixtures cover normal and `TA_IS_ZERO` branches. `manifest.json` must match test coverage.
 
 use std::collections::BTreeSet;
 use std::fs;
@@ -17,8 +14,7 @@ use repark_ta::{
     ultosc, var, wclprice, willr, wma,
 };
 
-/// Every golden series the tests below consume — checked against `manifest.json` so a series
-/// recorded-but-untested (or tested-but-unrecorded) fails loudly.
+/// Every golden series the tests below consume.
 const CONSUMED: &[&str] = &[
     "fixture_open",
     "fixture_high",
@@ -181,8 +177,7 @@ const CONSUMED: &[&str] = &[
 ];
 
 fn goldens_dir() -> PathBuf {
-    // Runtime `CARGO_MANIFEST_DIR` avoids stale fixture paths when a shared target is reused by
-    // another worktree. Fall back to the compile-time value outside Cargo.
+    // Runtime `CARGO_MANIFEST_DIR` avoids stale fixture paths when a shared target is reused.
     let manifest_dir =
         std::env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| env!("CARGO_MANIFEST_DIR").into());
     PathBuf::from(manifest_dir).join("tests/goldens")

@@ -5,13 +5,7 @@ use crate::{
     mama, nan_vec, sma, t3, tema, trima, true_range, wma,
 };
 
-/// ===========================================================================================
 /// `RSI` — relative strength index (`ta_RSI.c`, Classic compatibility, unstable period 0).
-///
-/// Seed with average gains and losses, then apply Wilder smoothing in C's statement order.
-/// The zero guard returns `0.0`; lookback is `period`.
-/// ===========================================================================================
-///
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if `period < 2`.
 pub fn rsi(input: &[f64], period: usize) -> Result<Vec<f64>> {
@@ -165,16 +159,9 @@ fn directional_prime(
     (state, today)
 }
 
-/// ===========================================================================================
 /// `DX` — directional movement index (`ta_DX.c`, unstable period 0, `round_pos` disabled).
-///
-/// Emit one DX per bar after raw seeding and one Wilder-decayed bar.
-/// A zero guard re-emits the previous DX; lookback is `period`.
-/// ===========================================================================================
-///
 /// # Errors
-/// [`crate::TaError::InvalidPeriod`] if `period < 2`; [`crate::TaError::LengthMismatch`] if the
-/// series differ in length.
+/// `InvalidPeriod` if `period < 2`; `LengthMismatch` if the input series lengths differ.
 pub fn dx(high: &[f64], low: &[f64], close: &[f64], period: usize) -> Result<Vec<f64>> {
     check_period("optInTimePeriod", period, 2)?;
     check_lengths(high.len(), &[low.len(), close.len()])?;
@@ -198,16 +185,9 @@ pub fn dx(high: &[f64], low: &[f64], close: &[f64], period: usize) -> Result<Vec
     Ok(out)
 }
 
-/// ===========================================================================================
 /// `ADXR` — average directional movement rating (`ta_ADXR.c`).
-///
-/// Average today's [`adx`] with the value `period − 1` bars earlier; lookback is
-/// `3·period − 2`; the literal divide preserves C rounding.
-/// ===========================================================================================
-///
 /// # Errors
-/// [`crate::TaError::InvalidPeriod`] if `period < 2`; [`crate::TaError::LengthMismatch`] if the
-/// series differ in length.
+/// `InvalidPeriod` if `period < 2`; `LengthMismatch` if the input series lengths differ.
 // Preserve C's literal addition and division; `f64::midpoint` rounds differently.
 #[allow(clippy::manual_midpoint)]
 pub fn adxr(high: &[f64], low: &[f64], close: &[f64], period: usize) -> Result<Vec<f64>> {
@@ -268,28 +248,16 @@ fn directional_period_one(
     out
 }
 
-/// ===========================================================================================
 /// `PLUS_DI` — plus directional indicator (`ta_PLUS_DI.c`, `round_pos` disabled).
-///
-/// Emit Wilder-smoothed `+DI`, or the period-one `+DM1 / TR1` fast path.
-/// ===========================================================================================
-///
 /// # Errors
-/// [`crate::TaError::InvalidPeriod`] if `period < 1`; [`crate::TaError::LengthMismatch`] if the
-/// series differ in length.
+/// `InvalidPeriod` if `period < 1`; `LengthMismatch` if the input series lengths differ.
 pub fn plus_di(high: &[f64], low: &[f64], close: &[f64], period: usize) -> Result<Vec<f64>> {
     directional_di(high, low, close, period, true)
 }
 
-/// ===========================================================================================
 /// `MINUS_DI` — minus directional indicator (`ta_MINUS_DI.c`).
-///
-/// Emit the `−DM` twin of [`plus_di`].
-/// ===========================================================================================
-///
 /// # Errors
-/// [`crate::TaError::InvalidPeriod`] if `period < 1`; [`crate::TaError::LengthMismatch`] if the
-/// series differ in length.
+/// `InvalidPeriod` if `period < 1`; `LengthMismatch` if the input series lengths differ.
 pub fn minus_di(high: &[f64], low: &[f64], close: &[f64], period: usize) -> Result<Vec<f64>> {
     directional_di(high, low, close, period, false)
 }
@@ -327,29 +295,16 @@ fn directional_di(
     Ok(out)
 }
 
-/// ===========================================================================================
 /// `PLUS_DM` — plus directional movement (`ta_PLUS_DM.c`).
-///
-/// Emit Wilder-smoothed `+DM` without dividing by true range.
-/// Period one returns raw `+DM1`; lookback is `period − 1` (or one for period one).
-/// ===========================================================================================
-///
 /// # Errors
-/// [`crate::TaError::InvalidPeriod`] if `period < 1`; [`crate::TaError::LengthMismatch`] if the
-/// two series differ in length.
+/// `InvalidPeriod` if `period < 1`; `LengthMismatch` if the input series lengths differ.
 pub fn plus_dm(high: &[f64], low: &[f64], period: usize) -> Result<Vec<f64>> {
     directional_dm(high, low, period, true)
 }
 
-/// ===========================================================================================
 /// `MINUS_DM` — minus directional movement (`ta_MINUS_DM.c`).
-///
-/// Emit the `−DM` twin of [`plus_dm`].
-/// ===========================================================================================
-///
 /// # Errors
-/// [`crate::TaError::InvalidPeriod`] if `period < 1`; [`crate::TaError::LengthMismatch`] if the
-/// two series differ in length.
+/// `InvalidPeriod` if `period < 1`; `LengthMismatch` if the input series lengths differ.
 pub fn minus_dm(high: &[f64], low: &[f64], period: usize) -> Result<Vec<f64>> {
     directional_dm(high, low, period, false)
 }
@@ -386,23 +341,14 @@ fn directional_dm(high: &[f64], low: &[f64], period: usize, plus: bool) -> Resul
     Ok(out)
 }
 
-/// ===========================================================================================
-/// `ADX` — average directional movement index (`ta_ADX.c`, unstable period 0, `round_pos`
-/// disabled — the C default build).
-///
-/// Seed raw state, average `period` Wilder-decayed DX values, then smooth ADX; a zero guard
-/// re-emits the previous ADX; lookback is `2 * period − 1`.
-/// ===========================================================================================
-///
+/// `ADX` — average directional movement index (`ta_ADX.c`, unstable period 0, `round_pos` disabled
 /// # Errors
-/// [`crate::TaError::InvalidPeriod`] if `period < 2`;
-/// [`crate::TaError::LengthMismatch`] if the series differ in length.
+/// `InvalidPeriod` if `period < 2`; `LengthMismatch` if the input series lengths differ.
 pub fn adx(high: &[f64], low: &[f64], close: &[f64], period: usize) -> Result<Vec<f64>> {
     check_period("optInTimePeriod", period, 2)?;
     check_lengths(high.len(), &[low.len(), close.len()])?;
     let len = high.len();
-    // Keeps `nan_vec`: the `ema` single-write extend form measured +42% at n=1e6 (the
-    // `DirectionalState` closure defeats it; same shape for `dx`). Do not "modernize".
+    // Keeps `nan_vec`: the `ema` single-write extend form measured +42% at n=1e6.
     let mut out = nan_vec(len);
     let lookback = 2 * period - 1;
     if len < lookback + 1 {
@@ -439,12 +385,7 @@ pub fn adx(high: &[f64], low: &[f64], close: &[f64], period: usize) -> Result<Ve
     Ok(out)
 }
 
-/// ===========================================================================================
 /// `MOM` — momentum, `price − prevPrice` (`ta_MOM.c`).
-///
-/// Return today's value minus the value `period` bars earlier.
-/// ===========================================================================================
-///
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if `period < 1`.
 pub fn mom(input: &[f64], period: usize) -> Result<Vec<f64>> {
@@ -488,54 +429,37 @@ fn roc_family(input: &[f64], period: usize, f: impl Fn(f64, f64) -> f64) -> Resu
     Ok(out)
 }
 
-/// ===========================================================================================
 /// `ROC` — rate of change, `((price / prevPrice) − 1) · 100` (`ta_ROC.c`).
-/// ===========================================================================================
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if `period < 1`.
 pub fn roc(input: &[f64], period: usize) -> Result<Vec<f64>> {
     roc_family(input, period, |price, prev| ((price / prev) - 1.0) * 100.0)
 }
 
-/// ===========================================================================================
 /// `ROCP` — rate of change percentage, `(price − prevPrice) / prevPrice` (`ta_ROCP.c`).
-/// ===========================================================================================
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if `period < 1`.
 pub fn rocp(input: &[f64], period: usize) -> Result<Vec<f64>> {
     roc_family(input, period, |price, prev| (price - prev) / prev)
 }
 
-/// ===========================================================================================
 /// `ROCR` — rate of change ratio, `price / prevPrice` (`ta_ROCR.c`).
-/// ===========================================================================================
-///
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if `period < 1`.
 pub fn rocr(input: &[f64], period: usize) -> Result<Vec<f64>> {
     roc_family(input, period, |price, prev| price / prev)
 }
 
-/// ===========================================================================================
 /// `ROCR100` — rate of change ratio ×100, `(price / prevPrice) · 100` (`ta_ROCR100.c`).
-/// ===========================================================================================
-///
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if `period < 1`.
 pub fn rocr100(input: &[f64], period: usize) -> Result<Vec<f64>> {
     roc_family(input, period, |price, prev| (price / prev) * 100.0)
 }
 
-/// ===========================================================================================
 /// `WILLR` — Williams %R (`ta_WILLR.c`).
-///
-/// Return Williams %R using C's trailing extrema and exact-zero flat-window guard.
-/// Lookback is `period − 1` and output lies in `[−100, 0]`.
-/// ===========================================================================================
-///
 /// # Errors
-/// [`crate::TaError::InvalidPeriod`] if `period < 2`; [`crate::TaError::LengthMismatch`] if the
-/// series differ in length.
+/// `InvalidPeriod` if `period < 2`; `LengthMismatch` if the input series lengths differ.
 #[allow(clippy::float_cmp, clippy::if_not_else)] // C's output guard is an exact `diff != 0.0`.
 pub fn willr(high: &[f64], low: &[f64], close: &[f64], period: usize) -> Result<Vec<f64>> {
     check_period("optInTimePeriod", period, 2)?;
@@ -599,16 +523,9 @@ pub fn willr(high: &[f64], low: &[f64], close: &[f64], period: usize) -> Result<
     Ok(out)
 }
 
-/// ===========================================================================================
 /// `CCI` — commodity channel index (`ta_CCI.c`).
-///
-/// Compute CCI from a circular-buffer window and full MAD re-sum.
-/// The exact-zero guards return `0.0`; lookback is `period − 1`.
-/// ===========================================================================================
-///
 /// # Errors
-/// [`crate::TaError::InvalidPeriod`] if `period < 2`; [`crate::TaError::LengthMismatch`] if the
-/// series differ in length.
+/// `InvalidPeriod` if `period < 2`; `LengthMismatch` if the input series lengths differ.
 #[allow(clippy::float_cmp)] // C guards with exact `!= 0.0` on both the deviation and the MAD.
 pub fn cci(high: &[f64], low: &[f64], close: &[f64], period: usize) -> Result<Vec<f64>> {
     check_period("optInTimePeriod", period, 2)?;
@@ -659,13 +576,7 @@ pub fn cci(high: &[f64], low: &[f64], close: &[f64], period: usize) -> Result<Ve
     Ok(out)
 }
 
-/// ===========================================================================================
 /// `CMO` — Chande momentum oscillator (`ta_CMO.c`, Classic compatibility, unstable period 0).
-///
-/// Apply RSI's gain/loss recurrence with `100 · (gain − loss) / (gain + loss)`.
-/// The zero guard returns `0.0`; lookback is `period`.
-/// ===========================================================================================
-///
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if `period < 2`.
 pub fn cmo(input: &[f64], period: usize) -> Result<Vec<f64>> {
@@ -717,12 +628,7 @@ pub fn cmo(input: &[f64], period: usize) -> Result<Vec<f64>> {
     Ok(out)
 }
 
-/// ===========================================================================================
 /// `BOP` — balance of power, `(close − open) / (high − low)` (`ta_BOP.c`).
-///
-/// Return `(close − open) / (high − low)` for every bar with C's range guard.
-/// ===========================================================================================
-///
 /// # Errors
 /// [`crate::TaError::LengthMismatch`] if the series differ in length.
 pub fn bop(open: &[f64], high: &[f64], low: &[f64], close: &[f64]) -> Result<Vec<f64>> {
@@ -741,7 +647,6 @@ pub fn bop(open: &[f64], high: &[f64], low: &[f64], close: &[f64]) -> Result<Vec
 }
 
 /// Select TA-Lib's moving-average type `0..=8`; period one is identity.
-/// Type 7 returns MAMA's MAMA leg with fixed limits and ignores period.
 pub(crate) fn ma_dispatch(input: &[f64], period: usize, matype: usize) -> Result<Vec<f64>> {
     if period <= 1 {
         if matype > 8 {
@@ -770,7 +675,6 @@ pub(crate) fn ma_dispatch(input: &[f64], period: usize, matype: usize) -> Result
 }
 
 /// Return the first non-NaN index for a selected moving average.
-/// Period one has lookback zero; MAMA has fixed lookback 32 otherwise.
 pub(crate) fn ma_lookback(period: usize, matype: usize) -> Result<usize> {
     if period <= 1 {
         if matype > 8 {
@@ -798,9 +702,7 @@ pub(crate) fn ma_lookback(period: usize, matype: usize) -> Result<usize> {
     Ok(lookback)
 }
 
-/// Compute a shifted MA range with C's buffer indexing. Windowed MAs can run on a lookback-prefixed
-/// slice. MAMA must run on the full prefix because Hilbert state uses absolute bar parity; slicing
-/// and reseeding after its fixed lookback would diverge.
+/// Compute a shifted MA range with C's buffer indexing.
 pub(crate) fn ma_range(
     input: &[f64],
     period: usize,
@@ -827,7 +729,6 @@ fn per_to_k(period: usize) -> f64 {
 }
 
 /// Compute C's shifted EMA with an explicit smoothing constant.
-/// Separate multiply and add operations preserve bit parity.
 fn int_ema_dense(
     input: &[f64],
     period: usize,
@@ -854,7 +755,6 @@ fn int_ema_dense(
 }
 
 /// Compute MACD, signal, and histogram with C's seed and trim ordering.
-/// `fix` selects MACDFIX's fixed fast and slow constants.
 fn int_macd(
     input: &[f64],
     fast_period: usize,
@@ -908,15 +808,7 @@ fn int_macd(
     (macd_out, signal_out, hist_out)
 }
 
-/// ===========================================================================================
 /// `MACD` — moving-average convergence/divergence (`ta_MACD.c`, split into three outputs).
-///
-/// `macd = EMA(fast) − EMA(slow)`; `signal = EMA(macd, signalPeriod)`; `hist = macd − signal`.
-/// All three EMAs use `PER_TO_K`. Returns `(macd, signal, hist)` — TA-Lib's output order; the
-/// public entry points [`crate::udf`] exposes are `ta_macd` / `ta_macd_signal` / `ta_macd_hist`.
-/// Lookback = `(slow − 1) + (signal − 1)`.
-/// ===========================================================================================
-///
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if `fast < 2`, `slow < 2`, or `signal < 1`.
 pub fn macd(
@@ -937,15 +829,7 @@ pub fn macd(
     ))
 }
 
-/// ===========================================================================================
 /// `MACDFIX` — MACD with the periods pinned at 12/26 (`ta_MACDFIX.c`, split into three outputs).
-///
-/// Identical to [`macd`] except the fast/slow EMAs use TA-Lib's **fixed** constants `0.15` (12)
-/// and `0.075` (26) instead of `PER_TO_K(12)`/`PER_TO_K(26)` — so the output differs from
-/// `macd(_, 12, 26, signal)`. Only `signalPeriod` is a parameter. Returns `(macd, signal, hist)`.
-/// Lookback = `25 + (signal − 1)`.
-/// ===========================================================================================
-///
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if `signal < 1`.
 pub fn macdfix(input: &[f64], signal_period: usize) -> Result<(Vec<f64>, Vec<f64>, Vec<f64>)> {
@@ -953,16 +837,9 @@ pub fn macdfix(input: &[f64], signal_period: usize) -> Result<(Vec<f64>, Vec<f64
     Ok(int_macd(input, 12, 26, signal_period, true))
 }
 
-/// ===========================================================================================
 /// `MACDEXT` — MACD with configurable MA types (`ta_MACDEXT.c`, split into three outputs).
-///
-/// Compute MACD with configurable moving-average types.
-/// C aligns the two legs by their larger lookback and then smooths the MACD line.
-/// ===========================================================================================
-///
 /// # Errors
-/// [`crate::TaError::InvalidPeriod`] if `fast < 2`, `slow < 2`, or `signal < 1`;
-/// [`crate::TaError::UnsupportedMaType`] for any `matype` out of range (`> 8`).
+/// `InvalidPeriod` if `fast < 2`, `slow < 2`, or `signal < 1`.
 pub fn macdext(
     input: &[f64],
     fast_period: usize,
@@ -1018,15 +895,9 @@ pub fn macdext(
     Ok((macd_out, signal_out, hist_out))
 }
 
-/// ===========================================================================================
 /// `APO` — absolute price oscillator, `MA(fast) − MA(slow)` (`ta_APO.c` / `TA_INT_PO`).
-///
-/// Subtract the selected slow moving average from the selected fast moving average.
-/// ===========================================================================================
-///
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if either period `< 2`; [`crate::TaError::UnsupportedMaType`]
-/// for a `matype` out of range (`> 8`). Matype 7 (MAMA) is supported via [`ma_dispatch`].
 pub fn apo(
     input: &[f64],
     fast_period: usize,
@@ -1051,16 +922,9 @@ pub fn apo(
     Ok(out)
 }
 
-/// ===========================================================================================
-/// `PPO` — percentage price oscillator, `(MA(fast) − MA(slow)) / MA(slow) · 100`
-/// (`ta_PPO.c` / `TA_INT_PO` with the percentage flag).
-///
-/// Return [`apo`] as a percentage, using C's zero guard on the slow average.
-/// ===========================================================================================
-///
+/// `PPO` — percentage price oscillator, `(MA(fast) − MA(slow)) / MA(slow) · 100` (`ta_PPO.c` /
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if either period `< 2`; [`crate::TaError::UnsupportedMaType`]
-/// for a `matype` out of range (`> 8`). Matype 7 (MAMA) is supported via [`ma_dispatch`].
 pub fn ppo(
     input: &[f64],
     fast_period: usize,
@@ -1089,16 +953,9 @@ pub fn ppo(
     Ok(out)
 }
 
-/// ===========================================================================================
 /// `AROON` — Aroon up / down (`ta_AROON.c`).
-///
-/// Return Aroon down and up values over a trailing `period + 1` window.
-/// C prefers the most recent equal extreme; output order is `(down, up)`.
-/// ===========================================================================================
-///
 /// # Errors
-/// [`crate::TaError::InvalidPeriod`] if `period < 2`; [`crate::TaError::LengthMismatch`] if the
-/// two series differ in length.
+/// `InvalidPeriod` if `period < 2`; `LengthMismatch` if the input series lengths differ.
 // Checked signed-index conversions prevent wraparound in C-style sentinel bookkeeping.
 #[allow(clippy::cast_precision_loss)]
 pub fn aroon(high: &[f64], low: &[f64], period: usize) -> Result<(Vec<f64>, Vec<f64>)> {
@@ -1185,15 +1042,9 @@ fn aroon_usize(index: i64, len: usize, name: &'static str) -> Result<usize> {
     Ok(index)
 }
 
-/// ===========================================================================================
 /// `AROONOSC` — Aroon oscillator, `AroonUp − AroonDown` (`ta_AROONOSC.c`).
-///
-/// Return Aroon up minus down using C's simplified index expression.
-/// ===========================================================================================
-///
 /// # Errors
-/// [`crate::TaError::InvalidPeriod`] if `period < 2`; [`crate::TaError::LengthMismatch`] if the
-/// two series differ in length; [`crate::TaError::InputTooLong`] if length exceeds `i64` range.
+/// `InvalidPeriod` if `period < 2`; `LengthMismatch` if the input series lengths differ.
 #[allow(clippy::cast_precision_loss)]
 pub fn aroonosc(high: &[f64], low: &[f64], period: usize) -> Result<Vec<f64>> {
     check_period("optInTimePeriod", period, 2)?;
@@ -1258,13 +1109,7 @@ pub fn aroonosc(high: &[f64], low: &[f64], period: usize) -> Result<Vec<f64>> {
     Ok(out)
 }
 
-/// ===========================================================================================
 /// `TRIX` — 1-day rate of change of a triple-smoothed EMA (`ta_TRIX.c`).
-///
-/// Return the one-day rate of change of a triple-smoothed EMA.
-/// Lookback is `3·(period − 1) + 1`.
-/// ===========================================================================================
-///
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if `period < 2`.
 #[allow(clippy::float_cmp, clippy::if_not_else)] // the trailing ROC guard is C's exact `!= 0.0`.
@@ -1315,16 +1160,9 @@ fn ultosc_terms(high: &[f64], low: &[f64], close: &[f64], day: usize) -> (f64, f
     (close_minus_true_low, true_range)
 }
 
-/// ===========================================================================================
 /// `ULTOSC` — ultimate oscillator (`ta_ULTOSC.c`).
-///
-/// Return the weighted three-period buying-pressure oscillator.
-/// Running totals and zero guards follow C; lookback is the largest period.
-/// ===========================================================================================
-///
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if any period `< 1`; [`crate::TaError::LengthMismatch`] if
-/// the series differ in length.
 pub fn ultosc(
     high: &[f64],
     low: &[f64],
@@ -1404,7 +1242,6 @@ pub fn ultosc(
 }
 
 /// Return the moving-average lookback for stochastic smoothing.
-/// Period one is identity for every valid type, including MAMA; other MAMA windows look back 32.
 fn ma_selector_lookback(period: usize, matype: usize) -> Result<usize> {
     if period == 1 {
         if matype > 8 {
@@ -1481,17 +1318,9 @@ fn raw_stoch_k(high: &[f64], low: &[f64], close: &[f64], fastk_period: usize) ->
     out
 }
 
-/// ===========================================================================================
 /// `STOCHF` — fast stochastic (`ta_STOCHF.c`, split into fast-%K / fast-%D).
-///
-/// Return fast %K and fast %D from raw %K and selected smoothing.
-/// Lookback is `(fastK_period − 1) + MA_Lookback(fastD_period, matype)`.
-/// ===========================================================================================
-///
 /// # Errors
-/// [`crate::TaError::InvalidPeriod`] if `fastk_period < 1` or `fastd_period < 1`;
-/// [`crate::TaError::LengthMismatch`] if the series differ in length;
-/// [`crate::TaError::UnsupportedMaType`] for a `matype` outside 0..=8.
+/// `InvalidPeriod` if `fastk_period < 1` or `fastd_period < 1`.
 #[allow(clippy::similar_names)] // fastk/fastd mirror TA-Lib's own output names.
 pub fn stochf(
     high: &[f64],
@@ -1523,17 +1352,9 @@ pub fn stochf(
     Ok((fastk, fastd))
 }
 
-/// ===========================================================================================
 /// `STOCH` — slow stochastic (`ta_STOCH.c`, split into slow-%K / slow-%D).
-///
-/// Return slow %K and slow %D by applying two selected moving averages to raw %K.
-/// Lookback is the raw %K lookback plus both smoothing lookbacks.
-/// ===========================================================================================
-///
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if any period `< 1`; [`crate::TaError::LengthMismatch`] if
-/// the series differ in length; [`crate::TaError::UnsupportedMaType`] for a `matype` outside
-/// 0..=8.
 #[allow(clippy::similar_names, clippy::too_many_arguments)]
 pub fn stoch(
     high: &[f64],
@@ -1571,16 +1392,9 @@ pub fn stoch(
     Ok((slowk, slowd))
 }
 
-/// ===========================================================================================
 /// `STOCHRSI` — stochastic RSI (`ta_STOCHRSI.c`, split into fast-%K / fast-%D).
-///
-/// Apply [`rsi`] and then fast stochastic smoothing to the dense RSI values.
-/// Lookback is the RSI lookback plus both stochastic stages.
-/// ===========================================================================================
-///
 /// # Errors
-/// [`crate::TaError::InvalidPeriod`] if `timeperiod < 2`, `fastk_period < 1`, or
-/// `fastd_period < 1`; [`crate::TaError::UnsupportedMaType`] for a `matype` outside 0..=8.
+/// [`crate::TaError::InvalidPeriod`] if `timeperiod < 2`, `fastk_period < 1`, or `fastd_period < 1`
 #[allow(clippy::similar_names)] // fastk/fastd mirror TA-Lib's own output names.
 pub fn stochrsi(
     input: &[f64],

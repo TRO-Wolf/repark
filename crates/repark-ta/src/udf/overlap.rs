@@ -1,4 +1,4 @@
-//! Overlap-family window-UDF dispatch. Kernel math stays in `crate::overlap`.
+//! Overlap-family window-UDF dispatch.
 
 use crate::{
     bbands, dema, ema, kama, ma, mama, mavp, midpoint, midprice, sar, sarext, sma, t3, tema, trima,
@@ -7,9 +7,7 @@ use crate::{
 
 use super::{MultiFamily, TaFn, family_dispatch_miss, family_dispatch_miss_multi, period};
 
-/// ===========================================================================================
 /// Overlap-family single-output dispatch.
-/// ===========================================================================================
 pub(super) fn compute(func: TaFn, series: &[&[f64]], params: &[f64]) -> crate::Result<Vec<f64>> {
     match func {
         TaFn::Sma => sma(series[0], period(params[0])?),
@@ -51,9 +49,7 @@ pub(super) fn compute(func: TaFn, series: &[&[f64]], params: &[f64]) -> crate::R
     }
 }
 
-/// ===========================================================================================
 /// Compute all bands for an overlap multi-output family in one kernel run.
-/// ===========================================================================================
 pub(super) fn compute_all(
     family: MultiFamily,
     series: &[&[f64]],

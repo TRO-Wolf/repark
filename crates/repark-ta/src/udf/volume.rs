@@ -1,12 +1,10 @@
-//! Volume-family window-UDF dispatch. Kernel math stays in `crate::volume`.
+//! Volume-family window-UDF dispatch.
 
 use crate::{ad, adosc, mfi, obv};
 
 use super::{TaFn, family_dispatch_miss, period};
 
-/// ===========================================================================================
 /// Dispatch the volume kernels.
-/// ===========================================================================================
 pub(super) fn compute(func: TaFn, series: &[&[f64]], params: &[f64]) -> crate::Result<Vec<f64>> {
     match func {
         TaFn::Ad => ad(series[0], series[1], series[2], series[3]),

@@ -57,9 +57,9 @@ _RUST_BASELINES: tuple[tuple[str, int], ...] = (
     ("crates/repark-sql/src/guards/tests.rs", 1207),
     ("crates/repark-sql/src/tests.rs", 1523),
     ("crates/repark-sql/tests/cross_door.rs", 1259),
-    ("crates/repark-ta/src/momentum.rs", 2284),
-    ("crates/repark-ta/src/overlap.rs", 1676),
-    ("crates/repark-ta/src/udf/mod.rs", 1873),
+    ("crates/repark-ta/src/momentum.rs", 2098),
+    ("crates/repark-ta/src/overlap.rs", 1578),
+    ("crates/repark-ta/src/udf/mod.rs", 1821),
 )
 _PYTHON_BASELINES: tuple[tuple[str, int], ...] = (
     ("python/repark-parity/bench/tpcds/runner.py", 1252),

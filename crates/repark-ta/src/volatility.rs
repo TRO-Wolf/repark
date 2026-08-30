@@ -1,14 +1,8 @@
-//! Volatility — `TRANGE`, `ATR` (TA-Lib C 0.4.0 ports; see the crate docs for the numerics
-//! contract).
+//! Volatility — `TRANGE`, `ATR`.
 
 use crate::{Result, as_f64, check_lengths, check_period, is_zero, true_range};
 
-/// ===========================================================================================
 /// `TRANGE` — true range (`ta_TRANGE.c`).
-///
-/// Return the greatest high-low or previous-close range; the first bar is NaN.
-/// ===========================================================================================
-///
 /// # Errors
 /// [`crate::TaError::LengthMismatch`] if the series differ in length.
 pub fn trange(high: &[f64], low: &[f64], close: &[f64]) -> Result<Vec<f64>> {
@@ -28,16 +22,9 @@ pub fn trange(high: &[f64], low: &[f64], close: &[f64]) -> Result<Vec<f64>> {
     Ok(out)
 }
 
-/// ===========================================================================================
 /// `ATR` — average true range (`ta_ATR.c`, unstable period 0).
-///
-/// Seed with a true-range SMA, then apply Wilder's three-statement recurrence.
-/// Period one delegates to [`trange`].
-/// ===========================================================================================
-///
 /// # Errors
-/// [`crate::TaError::InvalidPeriod`] if `period < 1`;
-/// [`crate::TaError::LengthMismatch`] if the series differ in length.
+/// `InvalidPeriod` if `period < 1`; `LengthMismatch` if the input series lengths differ.
 pub fn atr(high: &[f64], low: &[f64], close: &[f64], period: usize) -> Result<Vec<f64>> {
     check_period("optInTimePeriod", period, 1)?;
     if period == 1 {
@@ -68,19 +55,9 @@ pub fn atr(high: &[f64], low: &[f64], close: &[f64], period: usize) -> Result<Ve
     Ok(out)
 }
 
-/// ===========================================================================================
 /// `NATR` — normalized average true range (`ta_NATR.c`, unstable period 0).
-///
-/// Normalize [`atr`] values by close with C's zero guard.
-/// Period one returns raw [`trange`] values, as C does.
-///
-/// For a zero close, this port writes `0.0` at the current index; upstream C writes index zero.
-/// Current goldens do not exercise this divergence.
-/// ===========================================================================================
-///
 /// # Errors
-/// [`crate::TaError::InvalidPeriod`] if `period < 1`;
-/// [`crate::TaError::LengthMismatch`] if the series differ in length.
+/// `InvalidPeriod` if `period < 1`; `LengthMismatch` if the input series lengths differ.
 pub fn natr(high: &[f64], low: &[f64], close: &[f64], period: usize) -> Result<Vec<f64>> {
     check_period("optInTimePeriod", period, 1)?;
     let mut out = atr(high, low, close, period)?;

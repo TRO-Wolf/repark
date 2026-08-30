@@ -1,5 +1,7 @@
 # map — crates/repark-ta/benches
 
+CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated comments rewritten as complete sentences (D-001).
+
 ## Purpose
 
 Criterion **kernel** micro-benches for public `repark_ta` entry points. They are measure-only:

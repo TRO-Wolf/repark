@@ -1,5 +1,7 @@
 # map — repark-ta
 
+CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated comments rewritten as complete sentences (D-001).
+
 ## Purpose
 
 RePark's own pure-Rust technical-analysis kernels (crate-DAG tier 3, a door-neutral capability

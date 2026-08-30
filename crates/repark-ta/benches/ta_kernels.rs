@@ -1,8 +1,4 @@
-//! Criterion kernel measurements. This bench reports ns/row at one million null-free,
-//! pre-sorted rows. Multi-output BBANDS measures one run, three runs, and one run plus clones.
-//!
-//! Run: `cargo bench -p repark-ta --bench ta_kernels -- --quick`
-//! Machine-readable lines: `TA_KERNEL …` and `TA_KERNEL_RATIO …` on stderr.
+//! Criterion kernel measurements.
 
 use std::hint::black_box;
 use std::sync::OnceLock;
@@ -128,9 +124,7 @@ fn report_ratio(subject: &str, baseline: &str, subject_wall: Duration, baseline_
     eprintln!("TA_KERNEL_RATIO subject={subject} baseline={baseline} ratio={ratio:.3}");
 }
 
-/// ===========================================================================================
 /// Overlap + momentum kernels (`sma` / `ema` / `rsi`) plus `sma` as the ratio baseline.
-/// ===========================================================================================
 fn bench_overlap_momentum(criterion: &mut Criterion) {
     let data = fixture();
     let close = data.close.as_slice();
@@ -170,9 +164,7 @@ fn bench_overlap_momentum(criterion: &mut Criterion) {
     report_ratio("rsi", "sma", rsi_wall, sma_wall);
 }
 
-/// ===========================================================================================
 /// Volume-family kernels (`ad` / `adosc` / `obv` / `mfi`) on the same pre-sorted walk.
-/// ===========================================================================================
 fn bench_volume(criterion: &mut Criterion) {
     let data = fixture();
     let high = data.high.as_slice();
@@ -251,10 +243,7 @@ fn bench_volume(criterion: &mut Criterion) {
     report_ratio("mfi", "sma", mfi_wall, sma_wall);
 }
 
-/// ===========================================================================================
 /// BBANDS one-run, three-run, and one-run-plus-clones shapes.
-///
-/// ===========================================================================================
 fn bench_bbands_cache_path(criterion: &mut Criterion) {
     let data = fixture();
     let close = data.close.as_slice();
@@ -331,9 +320,7 @@ fn bench_bbands_cache_path(criterion: &mut Criterion) {
     report_ratio("bbands_cache_hit_shape", "bbands_cold", cache_hit, cold);
 }
 
-/// ===========================================================================================
 /// Wilder and true-range family measurements.
-/// ===========================================================================================
 fn bench_wilder(criterion: &mut Criterion) {
     let data = fixture();
     let high = data.high.as_slice();
@@ -391,9 +378,7 @@ fn bench_wilder(criterion: &mut Criterion) {
     report_ratio("adx", "sma", adx_wall, sma_wall);
 }
 
-/// ===========================================================================================
 /// MACD and statistic-family measurements.
-/// ===========================================================================================
 fn bench_macd_statistic(criterion: &mut Criterion) {
     let data = fixture();
     let close = data.close.as_slice();

@@ -212,17 +212,17 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split syntax-equivalence from deliberate-divergence cases.",
     ),
     "crates/repark-ta/src/momentum.rs": (
-        2284,
+        2098,
         "TA-Lib momentum indicators share one verbatim-port module.",
         "Split by indicator family only with an identity-diff proof.",
     ),
     "crates/repark-ta/src/overlap.rs": (
-        1676,
+        1578,
         "TA-Lib overlap indicators share one verbatim-port module.",
         "Split moving-average and band families only with identity proof.",
     ),
     "crates/repark-ta/src/udf/mod.rs": (
-        1873,
+        1821,
         "Window UDF cache, densification, specs, and dispatch share one module.",
         "Extract statistic and math dispatch from shared evaluation mechanics.",
     ),

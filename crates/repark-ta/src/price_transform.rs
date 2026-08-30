@@ -1,18 +1,8 @@
-//! Price transforms from TA-Lib C 0.4.0. Each has lookback 0 and emits one value per bar.
-//! Addition order and divisors are bit-exactness contracts.
-//!
-//! **Oracle note.** The recorded `polars_talib` 0.1.5 bits define the association. `TYPPRICE`
-//! uses `high + (low + close)`, and all four transforms are golden-pinned bit-exactly. Keep that
-//! wrapper when re-recording, or re-verify all four series against C 0.4.0 first.
+//! Price transforms from TA-Lib C 0.4.0.
 
 use crate::{Result, check_lengths};
 
-/// ===========================================================================================
 /// `AVGPRICE` — average price, `(open + high + low + close) / 4` (`ta_AVGPRICE.c`).
-///
-/// Sums in C order `high + low + close + open`, then divides by `4`.
-/// ===========================================================================================
-///
 /// # Errors
 /// [`crate::TaError::LengthMismatch`] if the series differ in length.
 pub fn avgprice(open: &[f64], high: &[f64], low: &[f64], close: &[f64]) -> Result<Vec<f64>> {
@@ -22,10 +12,7 @@ pub fn avgprice(open: &[f64], high: &[f64], low: &[f64], close: &[f64]) -> Resul
         .collect())
 }
 
-/// ===========================================================================================
-/// `MEDPRICE` — median price, `(high + low) / 2` (`ta_MEDPRICE.c`). Lookback 0.
-/// ===========================================================================================
-///
+/// `MEDPRICE` — median price, `(high + low) / 2` (`ta_MEDPRICE.c`).
 /// # Errors
 /// [`crate::TaError::LengthMismatch`] if the series differ in length.
 pub fn medprice(high: &[f64], low: &[f64]) -> Result<Vec<f64>> {
@@ -35,12 +22,7 @@ pub fn medprice(high: &[f64], low: &[f64]) -> Result<Vec<f64>> {
     Ok((0..high.len()).map(|i| (high[i] + low[i]) / 2.0).collect())
 }
 
-/// ===========================================================================================
-/// `TYPPRICE` — typical price, `(high + low + close) / 3` (`ta_TYPPRICE.c`). Lookback 0.
-///
-/// The oracle folds `low + close` first. Preserve `high + (low + close)` for its rounding.
-/// ===========================================================================================
-///
+/// `TYPPRICE` — typical price, `(high + low + close) / 3` (`ta_TYPPRICE.c`).
 /// # Errors
 /// [`crate::TaError::LengthMismatch`] if the series differ in length.
 pub fn typprice(high: &[f64], low: &[f64], close: &[f64]) -> Result<Vec<f64>> {
@@ -50,10 +32,7 @@ pub fn typprice(high: &[f64], low: &[f64], close: &[f64]) -> Result<Vec<f64>> {
         .collect())
 }
 
-/// ===========================================================================================
-/// `WCLPRICE` — weighted close price, `(high + low + close·2) / 4` (`ta_WCLPRICE.c`). Lookback 0.
-/// ===========================================================================================
-///
+/// `WCLPRICE` — weighted close price, `(high + low + close·2) / 4` (`ta_WCLPRICE.c`).
 /// # Errors
 /// [`crate::TaError::LengthMismatch`] if the series differ in length.
 pub fn wclprice(high: &[f64], low: &[f64], close: &[f64]) -> Result<Vec<f64>> {

@@ -1,9 +1,4 @@
 //! DataFusion window-UDF wrappers for the stateful TA kernels.
-//!
-//! `evaluate_all` receives the entire ordered partition, which matches each kernel's
-//! `&[f64]`-in/`Vec<f64>`-out shape. Ordering is the caller's responsibility; scalar parameters
-//! must be literal arguments. Wrappers return `Float64` with kernel-identical `NaN` lookbacks,
-//! and split multi-output families into one UDF per band.
 
 use std::cell::RefCell;
 use std::sync::Arc;
@@ -30,14 +25,9 @@ mod price;
 mod volatility;
 mod volume;
 
-// ===========================================================================================
-// Multi-output families use one thread-local single-slot cache keyed by family, parameter bits,
-// and series-buffer identity. The slot pins input arrays to prevent ABA false hits. Any key
-// mismatch replaces the entry; misses recompute the full kernel. `to_bits` preserves NaN identity,
-// and thread-local storage avoids locks and cross-thread sharing.
-// ===========================================================================================
+// Multi-output families use one thread-local cache keyed by family, params, and series identity.
 
-/// Multi-output kernel family. Sibling band UDFs share one cached kernel run.
+/// Multi-output kernel family.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum MultiFamily {
     Bbands,
@@ -79,9 +69,7 @@ thread_local! {
     static MULTI_OUT_CACHE: RefCell<Option<MultiOutEntry>> = const { RefCell::new(None) };
 }
 
-/// ===========================================================================================
 /// Build a [`SeriesId`] from the values-buffer identity and shape.
-/// ===========================================================================================
 fn series_id(array: &ArrayRef) -> SeriesId {
     if let Some(floats) = array.as_any().downcast_ref::<Float64Array>() {
         return SeriesId {
@@ -90,7 +78,7 @@ fn series_id(array: &ArrayRef) -> SeriesId {
             null_count: floats.null_count(),
         };
     }
-    // Non-Float64 arrays use the first data-buffer address and shape. Casts that allocate miss.
+    // Non-Float64 arrays use the first data-buffer address and shape.
     let data = array.to_data();
     let values_ptr = data
         .buffers()
@@ -103,9 +91,7 @@ fn series_id(array: &ArrayRef) -> SeriesId {
     }
 }
 
-/// ===========================================================================================
-/// Look up a band in the thread-local multi-output cache. `None` on miss.
-/// ===========================================================================================
+/// Look up a band in the thread-local multi-output cache.
 fn multi_out_lookup(
     family: MultiFamily,
     series_ids: &[SeriesId],
@@ -137,11 +123,7 @@ fn multi_out_lookup(
     })
 }
 
-/// ===========================================================================================
 /// Store a full multi-output result (replaces any previous single-slot entry).
-///
-/// `series_pin` must contain the live arrays whose identities are in `series_ids`.
-/// ===========================================================================================
 fn multi_out_store(
     family: MultiFamily,
     series_ids: &[SeriesId],
@@ -176,9 +158,7 @@ fn multi_out_store(
     });
 }
 
-/// ===========================================================================================
 /// Drop the thread-local multi-output cache entry.
-/// ===========================================================================================
 #[cfg(test)]
 fn multi_out_clear() {
     MULTI_OUT_CACHE.with(|cell| {
@@ -186,8 +166,7 @@ fn multi_out_clear() {
     });
 }
 
-/// The 81 window-UDF names in registration order. This table is the single source of truth for
-/// name-to-kernel routing; [`register_all`] and [`window_udf`] both read it.
+/// The 81 window-UDF names in registration order.
 const SPECS: &[(&str, TaFn)] = &[
     ("ta_sma", TaFn::Sma),
     ("ta_ema", TaFn::Ema),
@@ -583,10 +562,7 @@ impl TaFn {
     }
 }
 
-/// ===========================================================================================
 /// Loud error when a family `compute` table dropped a variant the router still sends there.
-/// Never a kernel-math path.
-/// ===========================================================================================
 fn family_dispatch_miss(func: TaFn) -> crate::TaError {
     crate::TaError::InvalidRealParam {
         name: "udf family dispatch",
@@ -595,9 +571,7 @@ fn family_dispatch_miss(func: TaFn) -> crate::TaError {
     }
 }
 
-/// ===========================================================================================
 /// Same miss shape as [`family_dispatch_miss`], keyed by [`MultiFamily`].
-/// ===========================================================================================
 fn family_dispatch_miss_multi(family: MultiFamily) -> crate::TaError {
     crate::TaError::InvalidRealParam {
         name: "udf family dispatch",
@@ -607,9 +581,6 @@ fn family_dispatch_miss_multi(family: MultiFamily) -> crate::TaError {
 }
 
 /// Coerce a scalar parameter to a kernel period without silent truncation.
-///
-/// Non-integral finite values fail. Other invalid values saturate to a value rejected by
-/// `check_period`.
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 fn period(value: f64) -> crate::Result<usize> {
     if value.is_finite() && value.fract() != 0.0 {
@@ -621,9 +592,7 @@ fn period(value: f64) -> crate::Result<usize> {
     Ok(value as usize)
 }
 
-/// ===========================================================================================
 /// Window-UDF wrapper that extracts literal parameters and evaluates one full partition.
-/// ===========================================================================================
 #[derive(Debug, PartialEq, Eq, Hash)]
 struct TaWindowUdf {
     name: &'static str,
@@ -669,12 +638,7 @@ impl WindowUDFImpl for TaWindowUdf {
     }
 }
 
-/// ===========================================================================================
 /// Per-partition evaluator for the full ordered series.
-///
-/// Null-free `Float64` inputs borrow their values. Nullable or other types densify NULL to `NaN`
-/// in reusable scratch buffers. Kernel output is always dense `Float64`.
-/// ===========================================================================================
 #[derive(Debug)]
 struct TaEvaluator {
     func: TaFn,
@@ -758,9 +722,7 @@ impl PartitionEvaluator for TaEvaluator {
     }
 }
 
-/// ===========================================================================================
-/// Borrow a null-free `Float64` values buffer. Return `None` when densification is required.
-/// ===========================================================================================
+/// Borrow a null-free `Float64` values buffer.
 fn try_borrow_null_free_f64(array: &ArrayRef) -> Option<&[f64]> {
     let floats = array.as_any().downcast_ref::<Float64Array>()?;
     if floats.null_count() == 0 {
@@ -770,9 +732,7 @@ fn try_borrow_null_free_f64(array: &ArrayRef) -> Option<&[f64]> {
     }
 }
 
-/// ===========================================================================================
 /// Densify every series column into its reusable scratch buffer.
-/// ===========================================================================================
 fn densify_series_into(arrays: &[ArrayRef], scratches: &mut [Vec<f64>]) -> Result<()> {
     debug_assert_eq!(arrays.len(), scratches.len());
     for (array, scratch) in arrays.iter().zip(scratches.iter_mut()) {
@@ -781,9 +741,7 @@ fn densify_series_into(arrays: &[ArrayRef], scratches: &mut [Vec<f64>]) -> Resul
     Ok(())
 }
 
-/// ===========================================================================================
 /// Densify one column into a reusable scratch buffer.
-/// ===========================================================================================
 fn densify_one_into(array: &ArrayRef, scratch: &mut Vec<f64>) -> Result<()> {
     if let Some(floats) = array.as_any().downcast_ref::<Float64Array>() {
         densify_float64_into(floats, scratch);
@@ -800,9 +758,7 @@ fn densify_one_into(array: &ArrayRef, scratch: &mut Vec<f64>) -> Result<()> {
     Ok(())
 }
 
-/// ===========================================================================================
 /// Copy null-free values; convert nulls to `NaN`.
-/// ===========================================================================================
 fn densify_float64_into(floats: &Float64Array, scratch: &mut Vec<f64>) {
     let len = floats.len();
     scratch.clear();
@@ -821,9 +777,7 @@ fn densify_float64_into(floats: &Float64Array, scratch: &mut Vec<f64>) {
     }
 }
 
-/// ===========================================================================================
 /// Build a dense `Float64Array` from kernel output.
-/// ===========================================================================================
 fn float64_array_from_values(values: &[f64]) -> ArrayRef {
     let mut builder = Float64Builder::with_capacity(values.len());
     builder.append_slice(values);
@@ -849,9 +803,7 @@ fn make_udf(name: &'static str, func: TaFn) -> WindowUDF {
     })
 }
 
-/// ===========================================================================================
 /// Return every TA window UDF for registration or inspection.
-/// ===========================================================================================
 #[must_use]
 pub fn window_udfs() -> Vec<WindowUDF> {
     SPECS
@@ -860,9 +812,7 @@ pub fn window_udfs() -> Vec<WindowUDF> {
         .collect()
 }
 
-/// ===========================================================================================
 /// Return the TA window UDF for `name`, or `None` when unknown.
-/// ===========================================================================================
 #[must_use]
 pub fn window_udf(name: &str) -> Option<Arc<WindowUDF>> {
     SPECS
@@ -871,9 +821,7 @@ pub fn window_udf(name: &str) -> Option<Arc<WindowUDF>> {
         .map(|&(spec_name, func)| Arc::new(make_udf(spec_name, func)))
 }
 
-/// ===========================================================================================
 /// Register every TA window UDF on `ctx`.
-/// ===========================================================================================
 pub fn register_all(ctx: &SessionContext) {
     for udf in window_udfs() {
         ctx.register_udwf(udf);

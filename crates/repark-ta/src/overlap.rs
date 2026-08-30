@@ -5,11 +5,7 @@ use crate::{
     is_zero_or_neg, nan_vec,
 };
 
-/// ===========================================================================================
 /// `SMA` — simple moving average (`ta_SMA.c`, `TA_INT_SMA`).
-///
-/// Compute an incremental moving average in C's add, snapshot, subtract, divide order.
-/// ===========================================================================================
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if `period < 2`.
 pub fn sma(input: &[f64], period: usize) -> Result<Vec<f64>> {
@@ -39,19 +35,13 @@ pub fn sma(input: &[f64], period: usize) -> Result<Vec<f64>> {
     Ok(out)
 }
 
-/// ===========================================================================================
 /// `EMA` — exponential moving average (`ta_EMA.c`, `TA_INT_EMA`, Classic compatibility).
-///
-/// Seed with an SMA, then apply `prev = (x − prev) * k + prev` without fused multiply-add.
-/// ===========================================================================================
-///
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if `period < 2`.
 pub fn ema(input: &[f64], period: usize) -> Result<Vec<f64>> {
     check_period("optInTimePeriod", period, 2)?;
     let len = input.len();
-    // Single-write construction (measured −11% vs `nan_vec`); the push-per-element form is
-    // +61% slower — do not "simplify" to it.
+    // Single-write construction; the push-per-element form is +61% slower.
     let mut out = Vec::with_capacity(len);
     if len < period {
         out.resize(len, f64::NAN);
@@ -73,12 +63,7 @@ pub fn ema(input: &[f64], period: usize) -> Result<Vec<f64>> {
     Ok(out)
 }
 
-/// ===========================================================================================
 /// `BBANDS` — Bollinger Bands, SMA flavor (`ta_BBANDS.c` + `TA_INT_stddev_using_precalc_ma`).
-///
-/// Return SMA-centered Bollinger bands with C's running square sums and branch order.
-/// ===========================================================================================
-///
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if `period < 2`.
 #[allow(clippy::float_cmp)] // C selects band branches with exact `==` on nbdev; so do we.
@@ -171,12 +156,7 @@ fn stddev_using_precalc_ma(input: &[f64], ma: &[f64], period: usize) -> Vec<f64>
     out
 }
 
-/// ===========================================================================================
 /// `WMA` — weighted moving average (`ta_WMA.c`).
-///
-/// Compute C's weighted moving average with its incremental `periodSum`/`periodSub` state.
-/// ===========================================================================================
-///
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if `period < 2`.
 #[allow(clippy::similar_names)]
@@ -218,12 +198,7 @@ pub fn wma(input: &[f64], period: usize) -> Result<Vec<f64>> {
     Ok(out)
 }
 
-/// ===========================================================================================
 /// `DEMA` — double exponential moving average (`ta_DEMA.c`).
-///
-/// Compute DEMA from two [`ema`] passes and C's aligned tail; lookback is `2·(period−1)`.
-/// ===========================================================================================
-///
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if `period < 2`.
 pub fn dema(input: &[f64], period: usize) -> Result<Vec<f64>> {
@@ -245,13 +220,7 @@ pub fn dema(input: &[f64], period: usize) -> Result<Vec<f64>> {
     Ok(out)
 }
 
-/// ===========================================================================================
 /// `TEMA` — triple exponential moving average (`ta_TEMA.c`).
-///
-/// Compute TEMA from three [`ema`] passes using C's grouped arithmetic.
-/// Lookback is `3·(period−1)`.
-/// ===========================================================================================
-///
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if `period < 2`.
 pub fn tema(input: &[f64], period: usize) -> Result<Vec<f64>> {
@@ -276,12 +245,7 @@ pub fn tema(input: &[f64], period: usize) -> Result<Vec<f64>> {
     Ok(out)
 }
 
-/// ===========================================================================================
 /// `TRIMA` — triangular moving average (`ta_TRIMA.c`).
-///
-/// Compute C's triangular average with separate odd/even accumulators and statement order.
-/// ===========================================================================================
-///
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if `period < 2`.
 pub fn trima(input: &[f64], period: usize) -> Result<Vec<f64>> {
@@ -381,13 +345,7 @@ pub fn trima(input: &[f64], period: usize) -> Result<Vec<f64>> {
     Ok(out)
 }
 
-/// ===========================================================================================
 /// `KAMA` — Kaufman adaptive moving average (`ta_KAMA.c`).
-///
-/// Compute Kaufman's adaptive moving average with C's incremental efficiency ratio.
-/// Zero and saturated ratios produce efficiency `1.0`; lookback is `period`.
-/// ===========================================================================================
-///
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if `period < 2`.
 pub fn kama(input: &[f64], period: usize) -> Result<Vec<f64>> {
@@ -453,13 +411,7 @@ pub fn kama(input: &[f64], period: usize) -> Result<Vec<f64>> {
     Ok(out)
 }
 
-/// ===========================================================================================
 /// `T3` — Tillson T3 moving average (`ta_T3.c`).
-///
-/// Compute Tillson T3 from six chained EMAs and its volume-factor constants.
-/// Lookback is `6·(period−1)`.
-/// ===========================================================================================
-///
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if `period < 2`.
 pub fn t3(input: &[f64], period: usize, vfactor: f64) -> Result<Vec<f64>> {
@@ -555,12 +507,7 @@ pub fn t3(input: &[f64], period: usize, vfactor: f64) -> Result<Vec<f64>> {
     Ok(out)
 }
 
-/// ===========================================================================================
 /// `MIDPOINT` — `(highest + lowest) / 2` over the trailing window of one series (`ta_MIDPOINT.c`).
-///
-/// Rescan each trailing window for its midpoint; lookback is `period − 1`.
-/// ===========================================================================================
-///
 /// # Errors
 /// [`crate::TaError::InvalidPeriod`] if `period < 2`.
 // Preserve C's literal addition and division; `f64::midpoint` rounds differently.
@@ -592,15 +539,9 @@ pub fn midpoint(input: &[f64], period: usize) -> Result<Vec<f64>> {
     Ok(out)
 }
 
-/// ===========================================================================================
 /// `MIDPRICE` — `(highest high + lowest low) / 2` over the trailing window (`ta_MIDPRICE.c`).
-///
-/// Rescan high and low independently for each midpoint; lookback is `period − 1`.
-/// ===========================================================================================
-///
 /// # Errors
-/// [`crate::TaError::InvalidPeriod`] if `period < 2`; [`crate::TaError::LengthMismatch`] if the
-/// two inputs differ in length.
+/// `InvalidPeriod` if `period < 2`; `LengthMismatch` if the input series lengths differ.
 // Preserve C's literal addition and division.
 #[allow(clippy::manual_midpoint)]
 pub fn midprice(high: &[f64], low: &[f64], period: usize) -> Result<Vec<f64>> {
@@ -634,16 +575,9 @@ pub fn midprice(high: &[f64], low: &[f64], period: usize) -> Result<Vec<f64>> {
     Ok(out)
 }
 
-/// ===========================================================================================
 /// `MA` — the moving-average selector (`ta_MA.c`).
-///
-/// Dispatch to the selected moving-average kernel, including MAMA type 7.
-/// Period one is identity for every valid type; otherwise lookback follows the selected kernel.
-/// ===========================================================================================
-///
 /// # Errors
-/// [`crate::TaError::InvalidPeriod`] if `period < 1`; [`crate::TaError::UnsupportedMaType`] for a
-/// `matype` outside 0..=8.
+/// `InvalidPeriod` if `period < 1`; `UnsupportedMaType` for an unknown MA type.
 pub fn ma(input: &[f64], period: usize, matype: usize) -> Result<Vec<f64>> {
     check_period("optInTimePeriod", period, 1)?;
     crate::momentum::ma_dispatch(input, period, matype)
@@ -713,13 +647,7 @@ fn do_price_wma(
     smoothed
 }
 
-/// ===========================================================================================
-/// `MAMA` — MESA Adaptive Moving Average, with FAMA (`ta_MAMA.c`). Returns `(mama, fama)`.
-///
-/// Compute Ehlers' adaptive MAMA and FAMA from the Hilbert state machine.
-/// Limits are in `[0.01, 0.99]`; lookback is 32. C's zero guards and clamps are preserved.
-/// ===========================================================================================
-///
+/// `MAMA` — MESA Adaptive Moving Average, with FAMA (`ta_MAMA.c`).
 /// # Errors
 /// [`crate::TaError::InvalidRealParam`] if either limit is outside `[0.01, 0.99]`.
 #[allow(clippy::similar_names)] // prev_i2/prev_q2, i1_for_odd/even mirror ta_MAMA.c's names.
@@ -889,17 +817,9 @@ pub fn mama(input: &[f64], fast_limit: f64, slow_limit: f64) -> Result<(Vec<f64>
     Ok((out_mama, out_fama))
 }
 
-/// ===========================================================================================
 /// `SAR` — Parabolic SAR (`ta_SAR.c`; `SAR_ROUNDING` is a no-op in the default build — TA-Lib does
-/// not round).
-///
-/// Compute Wilder's stop-and-reverse SAR with C's period-one direction bootstrap.
-/// Lookback is one; parameters are in `[0, 3e37]`.
-/// ===========================================================================================
-///
 /// # Errors
-/// [`crate::TaError::InvalidRealParam`] if `acceleration` or `maximum` is outside `[0, 3e37]`;
-/// [`crate::TaError::LengthMismatch`] if the two series differ in length.
+/// `InvalidRealParam` if `acceleration` or `maximum` is outside `[0, 3e37]`.
 #[allow(clippy::too_many_lines)] // one op-for-op port of ta_SAR.c's single function.
 pub fn sar(high: &[f64], low: &[f64], acceleration: f64, maximum: f64) -> Result<Vec<f64>> {
     check_real_param(
@@ -1020,19 +940,9 @@ pub fn sar(high: &[f64], low: &[f64], acceleration: f64, maximum: f64) -> Result
     Ok(out)
 }
 
-/// ===========================================================================================
-/// `SAREXT` — Parabolic SAR, extended (`ta_SAREXT.c`). Same engine as [`sar`] with per-direction
-/// acceleration control, an optional forced start direction/value, an offset applied on reversal,
-/// and — the load-bearing difference — a **negative** output while the position is short
-/// (`outReal = −sar`; `ta_SAREXT.c:375-377,578,668`), so a sign flip in the output marks a reversal.
-///
-/// Compute extended SAR with forced starts, offsets, and direction-specific accelerations.
-/// Short-side output is negative; `start_value` may be negative.
-/// ===========================================================================================
-///
+/// `SAREXT` — Parabolic SAR, extended (`ta_SAREXT.c`).
 /// # Errors
-/// [`crate::TaError::InvalidRealParam`] if any parameter is outside its documented range;
-/// [`crate::TaError::LengthMismatch`] if the two series differ in length.
+/// `InvalidRealParam` if any parameter is outside its documented range.
 #[allow(clippy::too_many_arguments)] // eight optional parameters, exactly TA-Lib's SAREXT signature.
 #[allow(clippy::float_cmp)] // C compares start_value / offset with exact `== 0.0` / `!= 0.0`.
 #[allow(clippy::too_many_lines)] // one op-for-op port of ta_SAREXT.c's single function.
@@ -1261,17 +1171,9 @@ fn clamp_period(raw: f64, min_period: usize, max_period: usize) -> usize {
     }
 }
 
-/// ===========================================================================================
 /// `MAVP` — Moving Average with Variable Period (`ta_MAVP.c`).
-///
-/// Compute moving averages with a truncated, clamped period per row.
-/// C's shifted range and MAMA full-prefix behavior are preserved.
-/// ===========================================================================================
-///
 /// # Errors
-/// [`crate::TaError::InvalidPeriod`] if `min_period`/`max_period` is outside `2..=MAX_PERIOD`;
-/// [`crate::TaError::UnsupportedMaType`] for a `matype` outside `0..=8`;
-/// [`crate::TaError::LengthMismatch`] if `periods` differs in length from `input`.
+/// `InvalidPeriod` if `min_period`/`max_period` is outside `2..=MAX_PERIOD`.
 pub fn mavp(
     input: &[f64],
     periods: &[f64],
