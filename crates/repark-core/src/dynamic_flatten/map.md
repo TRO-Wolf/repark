@@ -1,5 +1,8 @@
 # map — repark-core/src/dynamic_flatten
 
+CC-4 (2026-08-30): remaining banner files condensed to the one-line rule
+(pins: cc-3-comment-condensation/C-009).
+
 ## Purpose
 
 File-backed tests for the `dynamic_flatten` plan-rewrite kernel

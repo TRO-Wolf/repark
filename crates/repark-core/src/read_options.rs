@@ -5,11 +5,7 @@ use std::collections::HashMap;
 use datafusion::prelude::{CsvReadOptions, JsonReadOptions};
 use repark_common::{Error, Result};
 
-/// ===========================================================================================
-/// Build [`CsvReadOptions`] from a lowercased Spark option map. Recognized keys are header,
-/// delimiter, quote, escape, comment, nullvalue, multiline, and compression.
-/// ===========================================================================================
-///
+/// Build [`CsvReadOptions`] from a lowercased Spark option map.
 /// # Errors
 /// Malformed single-byte options or unknown compression → [`Error::Analysis`].
 pub(crate) fn csv_read_options_from_map(
@@ -54,18 +50,13 @@ pub(crate) fn csv_read_options_from_map(
             ))
         })?;
         opts = opts.file_compression_type(compression_type);
-        // DataFusion matches listing files by `file_extension` only. Compressed COPY TO emits
-        // `*.csv.gz` (etc.); the default extension `.csv` finds zero files.
+        // DataFusion matches listing files by `file_extension` only.
         opts = opts.file_extension(csv_extension_for_compression(compression_type));
     }
     Ok(opts)
 }
 
-/// ===========================================================================================
-/// Build [`JsonReadOptions`] from a Spark option map. `multiline` inverts `newline_delimited`;
-/// `compression` is also recognized.
-/// ===========================================================================================
-///
+/// Build [`JsonReadOptions`] from a Spark option map.
 /// # Errors
 /// Unknown compression → [`Error::Analysis`].
 pub(crate) fn json_read_options_from_map(
@@ -95,9 +86,7 @@ pub(crate) fn json_read_options_from_map(
     Ok(opts)
 }
 
-/// ===========================================================================================
 /// Listing extension DataFusion expects for a compressed CSV (matches DF's own compression tests).
-/// ===========================================================================================
 pub(crate) fn csv_extension_for_compression(
     compression: datafusion::datasource::file_format::file_compression_type::FileCompressionType,
 ) -> &'static str {
@@ -115,9 +104,7 @@ pub(crate) fn csv_extension_for_compression(
     }
 }
 
-/// ===========================================================================================
 /// Listing extension DataFusion expects for a compressed JSON file.
-/// ===========================================================================================
 pub(crate) fn json_extension_for_compression(
     compression: datafusion::datasource::file_format::file_compression_type::FileCompressionType,
 ) -> &'static str {
@@ -135,9 +122,7 @@ pub(crate) fn json_extension_for_compression(
     }
 }
 
-/// ===========================================================================================
 /// True when a file name is a CSV listing candidate (plain or compressed compound suffix).
-/// ===========================================================================================
 #[allow(clippy::case_sensitive_file_extension_comparisons)]
 pub(crate) fn csv_listing_name(name: &str) -> bool {
     let lower = name.to_ascii_lowercase();
@@ -148,9 +133,7 @@ pub(crate) fn csv_listing_name(name: &str) -> bool {
         || lower.ends_with(".csv.zst")
 }
 
-/// ===========================================================================================
 /// True when the name ends with a known compression suffix (gz/bz2/xz/zst).
-/// ===========================================================================================
 pub(crate) fn name_looks_compressed(name: &str) -> bool {
     matches!(
         name.rsplit('.')
@@ -161,10 +144,7 @@ pub(crate) fn name_looks_compressed(name: &str) -> bool {
     )
 }
 
-/// ===========================================================================================
-/// Build an all-Utf8 schema from the first local CSV record when `nullValue` is set. Object-store
-/// paths retain DataFusion's typed inference.
-/// ===========================================================================================
+/// Build an all-Utf8 schema from the first local CSV record when `nullValue` is set.
 pub(crate) fn csv_utf8_schema_from_path(
     path: &str,
     has_header: bool,
@@ -202,8 +182,7 @@ pub(crate) fn csv_utf8_schema_from_path(
         return Ok(None);
     };
 
-    // Compressed parts: skip local pre-scan (would need a decompress stream); DF utf8 force
-    // residual for gzip+nullValue — round-trip still works when values are clean strings.
+    // Skip local pre-scan on compressed parts; gzip plus nullValue still round-trips clean strings.
     if file_path
         .file_name()
         .and_then(|name| name.to_str())
@@ -239,7 +218,6 @@ pub(crate) fn csv_utf8_schema_from_path(
     }
 
     // Minimal CSV split: honor delimiter; strip one layer of surrounding quotes per field.
-    // Enough for header/name discovery; full CSV quoting is handled by the engine scan.
     let fields: Vec<Field> = split_csv_header_line(&line, delimiter)
         .into_iter()
         .enumerate()
@@ -264,9 +242,7 @@ pub(crate) fn csv_utf8_schema_from_path(
     Ok(Some(Schema::new(fields)))
 }
 
-/// ===========================================================================================
 /// Split a single CSV header/data line on `delimiter`, stripping optional surrounding quotes.
-/// ===========================================================================================
 pub(crate) fn split_csv_header_line(line: &str, delimiter: u8) -> Vec<String> {
     let delim = delimiter as char;
     let mut fields = Vec::new();
@@ -291,9 +267,7 @@ pub(crate) fn split_csv_header_line(line: &str, delimiter: u8) -> Vec<String> {
     fields
 }
 
-/// ===========================================================================================
 /// Parse a Spark-style boolean option (`true`/`false`/`1`/`0`, case-insensitive).
-/// ===========================================================================================
 pub(crate) fn parse_bool_option(key: &str, raw: &str) -> Result<bool> {
     match raw.trim().to_ascii_lowercase().as_str() {
         "true" | "1" | "yes" | "t" | "y" => Ok(true),
@@ -304,9 +278,7 @@ pub(crate) fn parse_bool_option(key: &str, raw: &str) -> Result<bool> {
     }
 }
 
-/// ===========================================================================================
 /// Parse a single-byte CSV option (sep/quote/escape/comment).
-/// ===========================================================================================
 pub(crate) fn parse_single_byte_option(key: &str, raw: &str) -> Result<u8> {
     let bytes = raw.as_bytes();
     if bytes.len() == 1 {
@@ -324,9 +296,7 @@ pub(crate) fn parse_single_byte_option(key: &str, raw: &str) -> Result<u8> {
     )))
 }
 
-/// ===========================================================================================
 /// Escape a literal string for use as a full-match regex (nullValue token).
-/// ===========================================================================================
 pub(crate) fn regex_escape_literal(value: &str) -> String {
     let mut out = String::with_capacity(value.len());
     for ch in value.chars() {
@@ -342,9 +312,7 @@ pub(crate) fn regex_escape_literal(value: &str) -> String {
     out
 }
 
-/// ===========================================================================================
 /// Normalize Spark compression names to DataFusion `FileCompressionType` tokens.
-/// ===========================================================================================
 pub(crate) fn normalize_compression_name(raw: &str) -> String {
     match raw.trim().to_ascii_lowercase().as_str() {
         "" | "none" | "uncompressed" => "UNCOMPRESSED".to_string(),

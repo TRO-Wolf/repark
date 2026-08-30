@@ -1,9 +1,4 @@
-//! SE-1 declared-sorted temp views: plan-shape elision pins + the verification refusal
-//! battery, all through the public [`ReparkSession`] API.
-//!
-//! Plan pins assert the CONTRACT (`SortExec` count 0 with a declaration, ≥1 without);
-//! whether DataFusion also plans a `RepartitionExec` is size/config-dependent and
-//! deliberately not pinned because its presence depends on size and configuration.
+//! SE-1 declared-sorted temp views: plan-shape elision pins and the verification refusal battery.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -786,8 +781,7 @@ async fn export_strip_drops_tighten_tags_and_keeps_non_nullability() {
 
 #[tokio::test]
 async fn filtered_scan_of_a_view_source_exercises_the_get_logical_plan_recurse() {
-    // Y-2. Kills deleting the `TableSource::get_logical_plan` recurse. A filtered `TableScan`
-    // retains the source plan, so this public shape keeps that branch live.
+    // Y-2.
     use std::borrow::Cow;
 
     use datafusion::catalog::TableProvider;
@@ -815,8 +809,7 @@ async fn filtered_scan_of_a_view_source_exercises_the_get_logical_plan_recurse()
     );
     let source: Arc<dyn TableSource> =
         datafusion::datasource::provider_as_source(Arc::clone(&view) as Arc<dyn TableProvider>);
-    // A non-empty filter list is exactly what makes `scan` keep the `TableScan` node instead of
-    // inlining the view — assert the shape before asserting the behavior.
+    // A non-empty filter list makes `scan` keep the `TableScan` node instead of inlining the view.
     let plan = LogicalPlanBuilder::scan_with_filters("v", source, None, vec![lit(true)])
         .unwrap()
         .build()
@@ -847,8 +840,7 @@ async fn filtered_scan_of_a_view_source_exercises_the_get_logical_plan_recurse()
 
 #[test]
 fn list_and_map_child_requiredness_is_seen_by_the_r_d_output_walk() {
-    // Y-8 / P-5. Kills dropping List/LargeList/FixedSizeList or Map handling in
-    // `field_or_child_is_non_nullable`; required children refuse, nullable values remain allowed.
+    // Y-8 / P-5.
     fn tighten_derived(field: Field) -> Schema {
         Schema::new_with_metadata(
             vec![field],
@@ -911,8 +903,7 @@ fn list_and_map_child_requiredness_is_seen_by_the_r_d_output_walk() {
 
 #[tokio::test]
 async fn wide_lazy_view_union_without_tighten_is_not_refused() {
-    // Kills: a 64-visit "depth" cap treating width as depth and refusing an
-    // innocent CREATE with a tightenNulls message (C1-Q-001).
+    // Kills: a 64-visit cap treating width as depth and refusing CREATE with tightenNulls.
     let session = ReparkSession::new().unwrap();
     let rows = batch(&["AAA"], &[Some(1)], true);
     let mut parts: Vec<String> = Vec::new();
@@ -944,9 +935,7 @@ async fn wide_lazy_view_union_without_tighten_is_not_refused() {
 
 #[tokio::test]
 async fn remint_hint_unflips_name_colliding_computed_column() {
-    // Kills: skip-by-name leaving `ts + 1 AS symbol` required+untagged after
-    // hint restore so CREATE persists a tighten-propagated required column
-    // (C2-Q-001). Originally-required columns may also widen — conservative.
+    // Kills: skip-by-name leaving a derived column required after hint restore.
     let session = ReparkSession::new().unwrap();
     let rows = batch(&["AAA", "AAA"], &[Some(1), Some(2)], true);
     session
@@ -981,8 +970,7 @@ async fn remint_hint_unflips_name_colliding_computed_column() {
 
 #[tokio::test]
 async fn remint_hint_restore_unflips_nested_required_child() {
-    // Kills: remint tagging only top-level fields so hint restore leaves a
-    // nested required child untagged and CREATE persists it (C1-L-001).
+    // Kills: remint tagging only top-level fields so a nested required child stays untagged.
     let session = ReparkSession::new().unwrap();
     let rows = batch(&["AAA", "AAA"], &[Some(1), Some(2)], true);
     session
@@ -1042,12 +1030,9 @@ fn export_strip_does_not_stack_overflow_on_deep_struct() {
     );
 }
 
-// ===========================================================================================
 // Native-door pins cover resolved-catalog refusal, visit budgets, and nested export stripping.
-// ===========================================================================================
 
-/// An Iceberg-catalog session on the native door with a tightened temp view `tight` and an
-/// untightened `plain`, plus namespace `ice.sales`.
+/// Iceberg-catalog native session with views `tight` and `plain`, plus namespace `ice.sales`.
 async fn native_ddl_sink_session() -> (tempfile::TempDir, ReparkSession) {
     let warehouse_dir = tempfile::TempDir::new().unwrap();
     let warehouse = warehouse_dir.path().to_str().unwrap().to_string();
@@ -1080,8 +1065,7 @@ async fn native_ddl_sink_session() -> (tempfile::TempDir, ReparkSession) {
 
 #[tokio::test]
 async fn native_door_ddl_sink_over_tightened_source_refuses() {
-    // Z-2. Kills bypassing `PreExecute::guard` in the native door; tightened Iceberg DDL must
-    // refuse before publication.
+    // Z-2.
     let (_dir, session) = native_ddl_sink_session().await;
     for (sql, target) in [
         (
@@ -1119,9 +1103,7 @@ async fn native_door_ddl_sink_over_tightened_source_refuses() {
 
 #[tokio::test]
 async fn native_door_session_scoped_and_untightened_ddl_stay_allowed() {
-    // Z-2 allowed side. Kills: the belt turning into a blanket DDL refuse — a session-scoped
-    // name persists nothing, and an untightened source into the Iceberg catalog is not this
-    // rule's business. Both halves must stay green with the guard installed.
+    // Z-2 allowed side.
     let (_dir, session) = native_ddl_sink_session().await;
     // Iceberg-catalog fixtures use `LIMIT 0` so registration remains a valid test fixture.
     for sql in [
@@ -1142,8 +1124,7 @@ async fn native_door_session_scoped_and_untightened_ddl_stay_allowed() {
 
 #[tokio::test]
 async fn native_door_default_catalog_bare_name_ddl_over_tightened_source_refuses() {
-    // Z-1. Kills gating DDL refusal on `TableReference::Full` spelling; bare and partial names
-    // resolve through the configured catalog and must refuse with no published table.
+    // Z-1.
     let (_dir, session) = native_ddl_sink_session().await;
     session
         .sql("SET datafusion.catalog.default_catalog = 'ice'")
@@ -1195,9 +1176,7 @@ async fn native_door_default_catalog_bare_name_ddl_over_tightened_source_refuses
 
 #[tokio::test]
 async fn default_catalog_pointing_away_from_iceberg_keeps_session_ddl_allowed() {
-    // Z-1 allowed side. Kills: "any Bare name refuses" — the gate is the RESOLVED catalog, so
-    // with the default catalog left at `datafusion` (not a registered Iceberg catalog) the
-    // session-scoped DDL that the lazy-view pins depend on must keep working.
+    // Z-1 allowed side.
     let (_dir, session) = native_ddl_sink_session().await;
     session
         .sql("CREATE VIEW still_session_v AS SELECT * FROM tight")
@@ -1208,10 +1187,7 @@ async fn default_catalog_pointing_away_from_iceberg_keeps_session_ddl_allowed() 
         .expect("collect");
 }
 
-/// Build a chain of `hops` retained `TableScan`s, each over a `ViewTable` wrapping the previous
-/// plan (Z-6 helper). A plain filter is what keeps DataFusion 54.1's `scan` from inlining the
-/// view — the same shape the Y-2 recurse pin above uses — so each hop costs the walk exactly
-/// one inner-plan visit.
+/// Build a chain of retained `TableScan`s, each over a `ViewTable` wrapping the previous plan.
 fn view_hop_chain(
     base: datafusion::logical_expr::LogicalPlan,
     hops: usize,
@@ -1240,8 +1216,7 @@ fn view_hop_chain(
 
 #[tokio::test]
 async fn view_visit_budget_overflow_is_a_generic_error_not_a_tighten_refusal() {
-    // Z-6. Kills an unpinned `MAX_VIEW_VISITS` overflow arm and wrong blame for a non-tighten
-    // plan. The retained filtered `TableScan` shape reaches the bounded walk.
+    // Z-6.
     let session = ReparkSession::new().unwrap();
     let rows = batch(&["AAA", "AAA"], &[Some(1), Some(2)], true);
     session
@@ -1270,9 +1245,7 @@ async fn view_visit_budget_overflow_is_a_generic_error_not_a_tighten_refusal() {
 
 #[tokio::test]
 async fn view_hop_chain_under_the_visit_budget_still_walks_clean() {
-    // Z-6 allowed side. Kills: a budget so tight that an ordinary retained-scan view chain
-    // overflows (the overflow arm is a safety net for cyclic/hostile graphs, not a feature),
-    // and a budget counted so loosely that 64 hops already trip it.
+    // Z-6 allowed side.
     let session = ReparkSession::new().unwrap();
     let rows = batch(&["AAA", "AAA"], &[Some(1), Some(2)], true);
     session
@@ -1292,12 +1265,7 @@ async fn view_hop_chain_under_the_visit_budget_still_walks_clean() {
 
 #[test]
 fn nested_export_strip_covers_every_container_the_tagger_walks() {
-    // Z-7. Kills: the export strip missing a nested Arrow container the DETECTOR still sees —
-    // that asymmetry leaks the internal `repark.tighten_nulls` key to a user-visible schema.
-    // Measured scope: the tagger, the detector, and the strip walk exactly Struct, List,
-    // LargeList, FixedSizeList, and the Map VALUE; every other container (Union, Dictionary,
-    // RunEndEncoded, the *View list types) is walked by NONE of the three, so nothing can be
-    // tagged inside one — recorded, not silently assumed.
+    // Z-7.
     let tagged = |name: &str, nullable: bool| {
         Field::new(name, DataType::Int64, nullable).with_metadata(HashMap::from([(
             TIGHTEN_NULLS_METADATA_KEY.to_string(),
@@ -1355,8 +1323,7 @@ fn nested_export_strip_covers_every_container_the_tagger_walks() {
     }
 }
 
-/// Count non-nullable leaves under a schema's nested containers (Z-7 helper): the strip must
-/// change metadata only, never requiredness.
+/// Count non-nullable leaves under nested containers: the strip must not change requiredness.
 fn nested_required_leaf_count(schema: &Schema) -> usize {
     fn count(data_type: &DataType) -> usize {
         match data_type {

@@ -37,7 +37,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split backend-specific option parsing from shared session installation.",
     ),
     "crates/repark-core/src/dynamic_flatten/tests.rs": (
-        1469,
+        1443,
         "Dynamic-flatten behavior and refusal scenarios share one test module.",
         "Split structural cases from list and refusal cases with an identity check.",
     ),
@@ -52,7 +52,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split by configuration, planning, and execution scenario families.",
     ),
     "crates/repark-core/tests/declared_sorted.rs": (
-        1381,
+        1348,
         "Declared-order integration cases share one end-to-end battery.",
         "Split by ordering source while preserving public-entry coverage.",
     ),

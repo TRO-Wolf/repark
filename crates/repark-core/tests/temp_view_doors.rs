@@ -60,9 +60,7 @@ async fn native_ddl_sink_session() -> (tempfile::TempDir, ReparkSession) {
     (warehouse_dir, session)
 }
 
-// ===========================================================================================
 // Temp-view API, raw-context escape hatch, and PREPARE behavior pins.
-// ===========================================================================================
 
 #[tokio::test]
 async fn qualified_temp_view_name_refuses_and_persists_nothing() {
@@ -129,7 +127,7 @@ async fn qualified_temp_view_name_refuses_and_persists_nothing() {
 
 #[tokio::test]
 async fn set_default_catalog_cannot_move_a_temp_view_into_a_catalog() {
-    // R6-1. Kills resolving a one-part temp-view name against the live default catalog.
+    // R6-1.
     let (_dir, session) = native_ddl_sink_session().await;
     session
         .sql("SET datafusion.catalog.default_catalog = 'ice'")
@@ -171,7 +169,7 @@ async fn set_default_catalog_cannot_move_a_temp_view_into_a_catalog() {
 
 #[tokio::test]
 async fn context_sql_is_a_known_unguarded_hatch() {
-    // R6-2. `context().sql` is the documented unguarded hatch and may persist tightened DDL.
+    // R6-2.
     let (_dir, session) = native_ddl_sink_session().await;
     session
         .context()
@@ -196,7 +194,7 @@ async fn context_sql_is_a_known_unguarded_hatch() {
 
 #[tokio::test]
 async fn prepare_of_a_tightened_ddl_sink_is_inert_today() {
-    // DataFusion 54.1 cannot execute prepared DDL. This pin fails if that compatibility floor moves.
+    // DataFusion 54.1 cannot execute prepared DDL.
     let (_dir, session) = native_ddl_sink_session().await;
     session
         .sql("PREPARE p_sink AS CREATE VIEW ice.sales.v_prepared AS SELECT * FROM tight LIMIT 0")
@@ -234,8 +232,7 @@ async fn prepare_of_a_tightened_ddl_sink_is_inert_today() {
 
 #[tokio::test]
 async fn a_catalog_over_the_build_time_default_is_not_a_temp_view_home() {
-    // A catalog can replace the configured home provider. Identity checks must then refuse every
-    // temp-view entry point before the required-schema payload reaches that catalog.
+    // A catalog can replace the configured home provider.
     let warehouse_dir = tempfile::TempDir::new().unwrap();
     let warehouse = warehouse_dir.path().to_str().unwrap().to_string();
     let session = ReparkSession::builder()
@@ -305,8 +302,7 @@ async fn a_catalog_over_the_build_time_default_is_not_a_temp_view_home() {
 
 #[tokio::test]
 async fn a_quoted_dotted_temp_view_name_round_trips_through_table_exists() {
-    // Re-parsing a quoted dotted segment makes one identifier look qualified. Use the parsed segment.
-    // Unquoted segments still use the existing case fold.
+    // Re-parsing a quoted dotted segment makes one identifier look qualified.
     let session = ReparkSession::new().unwrap();
     session
         .create_or_replace_temp_view("\"a.b\"", vec![rows()])
@@ -330,8 +326,7 @@ async fn a_quoted_dotted_temp_view_name_round_trips_through_table_exists() {
 
 #[tokio::test]
 async fn set_to_a_plain_catalog_keeps_the_write_home_and_moves_only_the_read() {
-    // Raw SQL reads follow the live default catalog. Product APIs keep the pinned temp-view home.
-    // The write path must never follow `SET datafusion.catalog.default_catalog` into a catalog.
+    // Raw SQL reads follow the live default catalog.
     let session = ReparkSession::new().unwrap();
     session.context().register_catalog(
         "mem",
@@ -375,7 +370,7 @@ async fn set_to_a_plain_catalog_keeps_the_write_home_and_moves_only_the_read() {
         .await
         .expect("naming the home reads it back");
 
-    // R7-1. Raw SQL follows the live default; product reads use the build-time home spelling.
+    // R7-1.
     assert_eq!(
         session.temp_view_home().unwrap(),
         vec!["datafusion".to_string(), "public".to_string()],
@@ -411,7 +406,7 @@ async fn set_to_a_plain_catalog_keeps_the_write_home_and_moves_only_the_read() {
 
 #[tokio::test]
 async fn a_catalog_over_the_home_refuses_the_read_spelling_too() {
-    // R7-1 + R6-1. The read-side seam must refuse when a catalog takes the session-local home.
+    // R7-1 + R6-1.
     let warehouse_dir = tempfile::TempDir::new().unwrap();
     let warehouse = warehouse_dir.path().to_str().unwrap().to_string();
     let session = ReparkSession::builder()
