@@ -8,6 +8,7 @@ already-built session (memory analog or Glue live) through CTAS / MERGE / CALL.
 from __future__ import annotations
 
 import os
+import re
 import time
 from collections.abc import Callable
 from functools import partial
@@ -104,6 +105,9 @@ MOR_MIN_POSITION_DELETE_FILES = 5
 # Far-future older_than: expire is driven by retain_last, not file age.
 EXPIRE_OLDER_THAN_FUTURE_MS = 86_400_000
 COMMIT_CONFLICT_RETRY_ATTEMPTS = 3
+_ACCOUNT_ID = re.compile(r"\b\d{12}\b")
+_DENIAL_ACTION = re.compile(r"perform:\s*(\S+)", re.IGNORECASE)
+_DENIAL_RESOURCE = re.compile(r"resource:\s*(\S+)", re.IGNORECASE)
 
 
 # Pure builders
@@ -404,6 +408,37 @@ def retry_on_commit_conflict[Result](
     raise RuntimeError(
         f"commit conflict retry exhausted after {attempts} attempts: {last_error}"
     ) from last_error
+
+
+def mask_account_ids(text: str) -> str:
+    """Replace 12-digit AWS account ids with ``<ACCOUNT>``."""
+    return _ACCOUNT_ID.sub("<ACCOUNT>", text)
+
+
+def is_storage_delete_denial(error: BaseException) -> bool:
+    """True when ``error`` looks like an IAM / object-API denial, not a commit conflict."""
+    if is_commit_conflict_error(error):
+        return False
+    lowered = str(error).lower()
+    return (
+        "accessdenied" in lowered
+        or "access denied" in lowered
+        or "not authorized" in lowered
+        or "explicit deny" in lowered
+    )
+
+
+def format_denial_failure(error: BaseException) -> str:
+    """Loud-fail text for a table-storage delete denial, with account ids masked."""
+    masked = mask_account_ids(str(error))
+    action_match = _DENIAL_ACTION.search(masked)
+    resource_match = _DENIAL_RESOURCE.search(masked)
+    action = action_match.group(1) if action_match else "<unknown>"
+    resource = resource_match.group(1) if resource_match else "<unknown>"
+    return (
+        f"S3 Tables table-storage delete denied: action={action!r} "
+        f"resource={resource!r} message={masked}"
+    )
 
 
 def _sql(spark: object, statement: str) -> object:

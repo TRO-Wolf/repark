@@ -27,10 +27,12 @@ from _acceptance import (
     bronze_path,
     ctas_sql,
     deduplicate,
+    format_denial_failure,
     fq_table,
     glue_catalog_config,
     location_from_describe_rows,
     maintenance_call_sql,
+    mask_account_ids,
     merge_sql,
     mor_acceptance_expected_rows,
     mor_ctas_sql,
@@ -410,6 +412,56 @@ def test_glue_harness_calls_location_guard_and_s3tables_does_not() -> None:
         table_name_bound_to_uuid = has_uuid4 and has_mw4_prefix
     assert table_name_bound_to_uuid, "table_name must be mw4_mor_ plus uuid4, not a docstring"
 
+    mor_s3 = _function("test_mor_merge_compact_expire_against_s3tables")
+    mor_s3_calls = _call_names(mor_s3)
+    mor_s3_names = {name for name, _ in mor_s3_calls}
+    assert "create_namespace" in mor_s3_names
+    assert "assert_glue_scratch_namespace_location" not in mor_s3_names
+    assert "run_mor_merge_compact_expire" in mor_s3_names
+    assert "assert_mor_maintenance_outcome" in mor_s3_names
+    assert "s3tables_catalog_config" in mor_s3_names
+    mor_s3_source = ast.get_source_segment(source, mor_s3) or ""
+    assert "TABLE_BUCKET_ARN" in mor_s3_source
+    assert "pytest.skip" in mor_s3_source or "skip(" in mor_s3_source
+    assert "location=" not in mor_s3_source
+    assert "mw10_mor_" in mor_s3_source
+    helper_call_s3 = None
+    for node in ast.walk(mor_s3):
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "run_mor_merge_compact_expire"
+        ):
+            helper_call_s3 = node
+    assert helper_call_s3 is not None
+    assert len(helper_call_s3.args) >= 4
+    fourth_s3 = helper_call_s3.args[3]
+    assert isinstance(fourth_s3, ast.Name) and fourth_s3.id == "table_name"
+    table_name_mw10 = False
+    for node in ast.walk(mor_s3):
+        if not isinstance(node, ast.Assign):
+            continue
+        targets = [t.id for t in node.targets if isinstance(t, ast.Name)]
+        if "table_name" not in targets:
+            continue
+        has_uuid4 = False
+        has_mw10_prefix = False
+        for child in ast.walk(node.value):
+            if (
+                isinstance(child, ast.Call)
+                and isinstance(child.func, ast.Attribute)
+                and child.func.attr == "uuid4"
+            ):
+                has_uuid4 = True
+            if (
+                isinstance(child, ast.Constant)
+                and isinstance(child.value, str)
+                and "mw10_mor_" in child.value
+            ):
+                has_mw10_prefix = True
+        table_name_mw10 = has_uuid4 and has_mw10_prefix
+    assert table_name_mw10, "table_name must be mw10_mor_ plus uuid4, not a docstring"
+
 
 def test_glue_location_guard_calls_get_database() -> None:
     """The Glue wrapper's live read is ``catalog.getDatabase``, not DESCRIBE."""
@@ -617,6 +669,49 @@ def test_retry_on_commit_conflict_signatures_are_retried(message: str) -> None:
     assert result == "ok"
     assert retry_count == 1
     assert scripted.calls == 2
+
+
+def test_mask_account_ids_replaces_twelve_digit_account() -> None:
+    """A 12-digit account id in a denial message is replaced with ``<ACCOUNT>``.
+
+    pins: mw-10-s3tables-mor/C-001
+    """
+    raw = (
+        "User: arn:aws:sts::123456789012:assumed-role/acceptance/job "
+        "is not authorized to perform: s3tables:PutTableData on resource: "
+        "arn:aws:s3tables:us-east-2:123456789012:bucket/dummy/table/t"
+    )
+    masked = mask_account_ids(raw)
+    assert "123456789012" not in masked
+    assert masked.count("<ACCOUNT>") == 2
+    assert "s3tables:PutTableData" in masked
+
+
+def test_mask_account_ids_leaves_non_account_numbers() -> None:
+    """11-digit and 13-digit numbers are not account ids and stay unchanged.
+
+    pins: mw-10-s3tables-mor/C-001
+    """
+    raw = "snapshot 12345678901 and file 1234567890123"
+    assert mask_account_ids(raw) == raw
+
+
+def test_format_denial_failure_names_action_resource_and_masks_account() -> None:
+    """The loud-fail text carries action, resource, and a masked account.
+
+    pins: mw-10-s3tables-mor/C-001
+    """
+    error = RuntimeError(
+        "User: arn:aws:sts::123456789012:assumed-role/acceptance/job "
+        "is not authorized to perform: s3tables:PutTableData on resource: "
+        "arn:aws:s3tables:us-east-2:123456789012:bucket/dummy/table/t "
+        "(AccessDenied)"
+    )
+    message = format_denial_failure(error)
+    assert "123456789012" not in message
+    assert "action='s3tables:PutTableData'" in message
+    assert "resource='arn:aws:s3tables:us-east-2:<ACCOUNT>:bucket/dummy/table/t'" in message
+    assert "AccessDenied" in message
 
 
 class _RaisingSql:

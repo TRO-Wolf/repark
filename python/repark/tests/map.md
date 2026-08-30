@@ -2071,7 +2071,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `CommitFailed` requirement mismatch / `validate_data_files_exist`); MERGE and each
   maintenance CALL are wrapped; `MorMaintenanceOutcome` records `retry_count`,
   `service_commits`, snapshot log before/after expire, and whether current after expire
-  matches the engine (pins: mw-10-s3tables-mor/C-003, C-004).
+  matches the engine (pins: mw-10-s3tables-mor/C-003, C-004). `mask_account_ids` /
+  `format_denial_failure` (pins: mw-10-s3tables-mor/C-001).
 - `test_acceptance_helpers.py` — WG4 AWS-free unit tests for `_acceptance` that run **everywhere**
   (no gate): the builder outputs (s3a bronze path, the measured glue config block, CTAS/MERGE SQL
   shape keyed on the id column, the real TBLPROPERTIES block, and `acceptance_namespace_location`
@@ -2094,7 +2095,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   exhausted budget raises after exactly `attempts` with the count in the message; a
   non-conflict error is re-raised on the first call; each named conflict signature
   retries. The local-catalog analog asserts `retry_count == 0`, `service_commits == 0`,
-  and snapshot-log shape (pins: mw-10-s3tables-mor/C-003, C-004).
+  and snapshot-log shape (pins: mw-10-s3tables-mor/C-003, C-004). Account-id mask pin
+  (`<ACCOUNT>` for a 12-digit id; 11- and 13-digit numbers unchanged) and the loud-fail
+  denial text (action, resource, masked account) (pins: mw-10-s3tables-mor/C-001).
+  AST pin that the S3 Tables MOR leg skips on absent `TABLE_BUCKET_ARN`, creates the
+  namespace without `location`, does not call the Glue location guard, and runs the
+  shared helper on `mw10_mor_` plus uuid4.
 - `test_aws_acceptance.py` — WG4 the env-gated real-AWS acceptance harness: a **module-level**
   `pytest.mark.skipif` on `REPARK_AWS_ACCEPTANCE != "1"` skips the whole module by default (CI
   stays AWS-free; the single sanctioned real-AWS run is the Fable audit's). Gated in, it mirrors
@@ -2117,9 +2123,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **MW-4 (2026-08-23):** `test_mor_merge_compact_expire_against_glue` — a unique
   `testing_mw4_mor_*` table per run; CTAS merge-on-read → MERGEs that strand position-delete
   files → identical MERGE → `rewrite_position_delete_files` + `rewrite_data_files` +
-  `expire_snapshots` → Arrow row parity and VERSION AS OF of the CTAS snapshot fails. S3 Tables
-  MOR compact+expire is out of this unit (OD-3 is the Glue warehouse prefix, not the table
-  bucket). No DROP TABLE.
+  `expire_snapshots` → Arrow row parity and VERSION AS OF of the CTAS snapshot fails.
+  **MW-10:** `test_mor_merge_compact_expire_against_s3tables` — the Glue leg's twin against
+  `S3TABLES_CATALOG` (namespace without `location`; skip when `TABLE_BUCKET_ARN` is absent;
+  `testing_mw10_mor_*`; dual probe via the shared helper; a table-storage denial fails
+  loud with action, resource, and masked account). No DROP TABLE.
 
 - `test_two_door_kernel_parity.py` — **FNP-1 (2026-08-20):** charter clause C-012 at the facade
   layer. Pins that a name reachable from both doors returns the same Arrow **type and value**
