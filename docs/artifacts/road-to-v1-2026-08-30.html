@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Road to v1.0</title>
+</head>
+<body>
+<style>
+  :root{
+    --ground:#F2F5F7; --card:#FFFFFF; --ink:#16232B; --ink-2:#4A5D68; --line:#D8E2E8;
+    --teal:#0E6C88; --teal-2:#0B5065; --chip-green-bg:#E3F2E8; --chip-green-ink:#1E6B3A;
+    --chip-amber-bg:#FBF0DC; --chip-amber-ink:#8A5E0C; --chip-hold-bg:#E8E3F2; --chip-hold-ink:#4A3A8A;
+    --chip-guard-bg:#F2E3E3; --chip-guard-ink:#8A2E2E; --mono-bg:#EAF1F5;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ground:#0E1418; --card:#162027; --ink:#E4ECF1; --ink-2:#9AB0BC; --line:#243440;
+      --teal:#4DB1CF; --teal-2:#7CC7DD; --chip-green-bg:#173324; --chip-green-ink:#7CD9A0;
+      --chip-amber-bg:#332A14; --chip-amber-ink:#E5C071; --chip-hold-bg:#221D38; --chip-hold-ink:#B0A2E8;
+      --chip-guard-bg:#331B1B; --chip-guard-ink:#E89B9B; --mono-bg:#1B2830;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0E1418; --card:#162027; --ink:#E4ECF1; --ink-2:#9AB0BC; --line:#243440;
+    --teal:#4DB1CF; --teal-2:#7CC7DD; --chip-green-bg:#173324; --chip-green-ink:#7CD9A0;
+    --chip-amber-bg:#332A14; --chip-amber-ink:#E5C071; --chip-hold-bg:#221D38; --chip-hold-ink:#B0A2E8;
+    --chip-guard-bg:#331B1B; --chip-guard-ink:#E89B9B; --mono-bg:#1B2830;
+  }
+  body{background:var(--ground);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;
+       font-size:15px;line-height:1.55;margin:0;padding:0 16px 64px;}
+  .wrap{max-width:960px;margin:0 auto;}
+  h1,h2,h3{font-family:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;
+           text-wrap:balance;line-height:1.15;}
+  h1{font-size:34px;margin:40px 0 4px;}
+  h2{font-size:22px;margin:36px 0 12px;color:var(--teal-2);}
+  h3{font-size:17px;margin:20px 0 8px;}
+  .kicker{font-family:"IBM Plex Sans Condensed",sans-serif;text-transform:uppercase;
+          letter-spacing:.12em;font-size:12px;color:var(--teal);margin-top:36px;}
+  .sub{color:var(--ink-2);margin:0 0 8px;max-width:70ch;}
+  code,.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.88em;
+             background:var(--mono-bg);border-radius:4px;padding:1px 5px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;
+        padding:20px 24px;margin:14px 0;}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media (max-width:760px){.cols{grid-template-columns:1fr;}}
+  .chip{display:inline-block;font-family:"IBM Plex Sans Condensed",sans-serif;font-size:12px;
+        font-weight:600;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;
+        padding:2px 10px;vertical-align:middle;}
+  .green{background:var(--chip-green-bg);color:var(--chip-green-ink);}
+  .amber{background:var(--chip-amber-bg);color:var(--chip-amber-ink);}
+  .hold{background:var(--chip-hold-bg);color:var(--chip-hold-ink);}
+  .guard{background:var(--chip-guard-bg);color:var(--chip-guard-ink);}
+  table{border-collapse:collapse;width:100%;font-size:14px;}
+  .tablewrap{overflow-x:auto;}
+  th{font-family:"IBM Plex Sans Condensed",sans-serif;text-transform:uppercase;font-size:11.5px;
+     letter-spacing:.08em;color:var(--ink-2);text-align:left;padding:6px 10px;
+     border-bottom:2px solid var(--line);}
+  td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top;}
+  td:first-child{white-space:nowrap;}
+  ul{margin:6px 0;padding-left:22px;}
+  li{margin:4px 0;}
+  a{color:var(--teal);text-decoration-thickness:1px;}
+  .num{font-variant-numeric:tabular-nums;}
+  .prhead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;}
+  .prhead .badge{font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:700;font-size:15px;
+        color:var(--card);background:var(--teal);border-radius:6px;padding:2px 10px;}
+  .foot{color:var(--ink-2);font-size:13px;margin-top:40px;border-top:1px solid var(--line);
+        padding-top:12px;}
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<div class="wrap">
+  <p class="kicker">RePark · master plan · 2026-08-30</p>
+  <h1>Road to v1.0</h1>
+  <p class="sub">The exact sequence from tonight to the v1.0 tag, arranged around one operating
+  model: <strong>the fleet preps every unit to PR-ready and parks it; you return on your own
+  schedule, merge the parked PRs in their labeled order, and cut each 0.x tag with the
+  <span class="mono">publish-pypi</span> runbook.</strong> The release machinery is already wired —
+  PyPI trusted publishing, tag-triggered manylinux wheels (<span class="mono">wheels.yml</span> /
+  <span class="mono">release.yml</span>), the runbook in <span class="mono">.agents/skills/publish-pypi/</span> —
+  so your walkthrough per release is merges + one tag.</p>
+
+  <h2>The operating model</h2>
+  <div class="card">
+    <ul>
+      <li><strong>PR parking.</strong> Every unit ends as an open, green, audited PR whose body carries
+        <span class="mono">merge order N of M for v0.X</span>. As <span class="mono">main</span> moves, the orchestrator
+        continuously rebases parked PRs and re-runs the full parity harness before every push — parked never means stale.</li>
+      <li><strong>Worker tiers.</strong> <span class="chip green">Grok 4.6</span> is every Actor and Critic through the reset
+        window (maxed out, reset, maxed again — the ruling). <span class="chip green">GLM 5.3 Flash</span> ($40 z.ai budget ≈
+        thousands of rounds at $0.002–0.006) takes the mechanical fan-outs where its posture fits — flagged per release below.
+        <span class="chip hold">Fable</span> orchestrates: charters, audits, PR assembly, these boards. <span class="chip guard">No Opus 5</span>.</li>
+      <li><strong>Honesty invariants ride every unit</strong>: red-first pins, live-oracle measurement with incidental
+        controls, map lockstep, ledger grammar, the comment ban, one Slack message per unit.</li>
+      <li><strong>Owner touchpoints are only:</strong> SQM walks of parked PRs, AWS dispatches (environment approval),
+        the per-release tag, and the handful of gate confirms listed at the bottom.</li>
+    </ul>
+  </div>
+
+  <h2>In flight tonight</h2>
+  <div class="card tablewrap"><table>
+    <tr><th>Lane</th><th>State</th><th>Next</th></tr>
+    <tr><td>V3-3 (v3 UPDATE/MERGE)</td><td><span class="chip amber">handed back</span> — measured keep-refusal (Spark preserves <span class="mono">_row_id</span>; the engine lift reassigns), gates green</td><td>Critic running → remediation/assembly → parked PR. Its outcome shifts the COW-lineage burden to V3-4 ← fork F-7.</td></tr>
+    <tr><td>FNP-15/16 (62 names)</td><td><span class="chip green">actor running</span></td><td>Critic → parked PR (a v1.1 head start; does not gate v1.0)</td></tr>
+    <tr><td>F-Y10-1 (integer overflow)</td><td><span class="chip green">actor running</span> — charter merged (#267)</td><td>Critic → parked PR; unblocks FNP-7b later</td></tr>
+  </table></div>
+
+  <h2>Stream 1 — the 0.x ladder (each release parks PR-ready, then you tag)</h2>
+
+  <div class="card">
+    <div class="prhead"><span class="badge">v0.6</span><span>Iceberg DML remainder (Track B) · all-Grok · starts as lanes free tonight</span></div>
+    <div class="tablewrap"><table>
+      <tr><th>Order</th><th>Unit</th><th>Scope</th><th>Notes</th></tr>
+      <tr><td class="num">1</td><td>DML-B</td><td><code>INSERT OVERWRITE … PARTITION</code> static + dynamic, <code>overwritePartitions()</code></td><td>Unblocked; the build recipe is already written in the roadmap (fork F-5 landed as #217). Two acceptance pins flip.</td></tr>
+      <tr><td class="num">2</td><td>DML-C</td><td><code>TRUNCATE</code> as a first-class statement</td><td>Replaces the empty-overwrite substitute.</td></tr>
+      <tr><td class="num">3</td><td>DML-A</td><td><code>MERGE … WHEN NOT MATCHED BY SOURCE</code>, COW + MOR</td><td>Reuses cardinality / store-assignment gates.</td></tr>
+      <tr><td class="num">4</td><td>MAINT</td><td><code>rewrite_data_files</code> <span class="mono">where</span> / <span class="mono">sort_order</span> / strategy</td><td>v2 surface; the v3 lineage half stays V3-5's.</td></tr>
+      <tr><td class="num">—</td><td>REF</td><td>branch/tag ops + write-audit-publish</td><td><span class="chip amber">decision</span> Needs fork F-6. Either the fork lane lands F-6 in time, or v0.6 ships without REF and it rides v0.10's window. Your call, flagged below.</td></tr>
+    </table></div>
+    <p class="sub">Your walkthrough: merge 4–5 parked PRs in order, tag <span class="mono">v0.6.0</span>, wheels + PyPI run themselves.</p>
+  </div>
+
+  <div class="card">
+    <div class="prhead"><span class="badge">v0.7</span><span>Full example documentation · <strong>GLM's flagship release</strong></span></div>
+    <ul>
+      <li><strong>Backfill</strong> — an executable worked example for every public name (every <code>F.*</code>, DataFrame method, TA kernel, reader/writer). Grok designs the example pattern, harness, and one exemplar per surface class; <strong>GLM 5.3 Flash fans out the hundreds of remaining examples</strong> — precisely its posture, and at flash prices the whole backfill costs single-digit dollars. Grok Critic + orchestrator audit every slice.</li>
+      <li><strong>The drift gate</strong> — CI fails when a public name has no executable example (Grok builds the gate; it is what keeps 0.7 from rotting before 1.3–1.5 triple the surface).</li>
+    </ul>
+    <p class="sub">Walkthrough: merge backfill PRs (batched per surface class) + the gate PR, tag <span class="mono">v0.7.0</span>.</p>
+  </div>
+
+  <div class="card">
+    <div class="prhead"><span class="badge">v0.8</span><span>Torture-test dataset suite · Grok design, GLM generator fan-out</span></div>
+    <ul>
+      <li>Generators checked in (≥1M rows each, no blobs): nested/<span class="mono">dynamicFlatten</span> beds, the schema-inference conflict battery, extreme types, smartCsv expansion — Grok writes the generator framework and one exemplar per family; GLM replicates the variants.</li>
+      <li><strong>Opt-in secrets flagging</strong> (data columns; fixture + mechanism, disabled by default, one bool conf) — Grok, it is product surface.</li>
+    </ul>
+    <p class="sub">Walkthrough: merge, tag <span class="mono">v0.8.0</span>. These beds are what v1.2 and v0.9 measure against.</p>
+  </div>
+
+  <div class="card">
+    <div class="prhead"><span class="badge">v0.9</span><span>Never-OOM truth · Grok measurement unit</span></div>
+    <ul><li>The spill-coverage matrix: which operators spill, which do not, how each fails past the pool, including the W-3 window row. Documentation + pins, no product change. Pairs naturally with <strong>Track A W-0</strong> (below) since both are measurement campaigns over the same machinery.</li></ul>
+    <p class="sub">Walkthrough: merge, tag <span class="mono">v0.9.0</span>.</p>
+  </div>
+
+  <div class="card">
+    <div class="prhead"><span class="badge">v0.10</span><span>repark.toml · Grok, design-heavy — the decisions are already ruled</span></div>
+    <ul>
+      <li>Rust loader (<span class="mono">serde</span>+<span class="mono">toml</span>, ADR-0004), Pydantic v2 mirror, profile overlay, <span class="mono">${ENV_VAR}</span> interpolation, secret redaction through <span class="mono">prop_key_is_secret</span>, discovery order, named sources auto-registering into the one SQL namespace — all ruled 2026-08-29; the unit implements, it does not design.</li>
+      <li>Dependency of v1.6/v1.7, so its charter gets a Critic pass on the schema before code.</li>
+    </ul>
+    <p class="sub">Walkthrough: merge, tag <span class="mono">v0.10.0</span>. The 0.x ladder is done; whatever v3 rows remain decide the v1.0 date.</p>
+  </div>
+
+  <h2>Stream 2 — the v3 spine to the v1.0 tag (runs in parallel with the ladder)</h2>
+  <div class="card tablewrap"><table>
+    <tr><th>Seq</th><th>Unit</th><th>What it closes on the gate</th><th>Depends on</th></tr>
+    <tr><td class="num">1</td><td><strong>Fork F-7 U1</strong> (+ F-rp3-c7)</td><td>Lineage through rewrite (<span class="mono">FirstRowIdPolicy</span>): the root cause behind V3-3's keep-refusal, <span class="mono">V3-LINEAGE-1</span>, and the sequential-COW defect</td><td>fork repo; Grok lane, charter first</td></tr>
+    <tr><td class="num">2</td><td><strong>V3-4</strong></td><td><span class="mono">_row_id</span> / <span class="mono">_last_updated_sequence_number</span> served as columns Spark-equal (<span class="mono">V3-ROWID-1</span>); COW UPDATE/MERGE lineage lift once F-7 lands a lineage-preserving writer</td><td>fork F-7 for the lift half; read half can start now</td></tr>
+    <tr><td class="num">3</td><td><strong>V3-5</strong></td><td>Compaction on v3: lineage through <code>rewrite_data_files</code>, DV-aware maintenance (<span class="mono">B-MOR-3</span>), partitioned + spec-evolved compaction, strands no DVs</td><td>fork F-7</td></tr>
+    <tr><td class="num">4</td><td><strong>V3-6</strong></td><td>v3 types: binary variant, <span class="mono">timestamp_ns</span>, <span class="mono">unknown</span>, default values (geometry/geography + shredded variant stay DECLARED out)</td><td>fork F-15 support pinned; may run beside V3-4/5</td></tr>
+    <tr><td class="num">5</td><td><strong>Live v3 legs + scale</strong></td><td>Glue + S3 Tables v3 rows measured live (the MW-10 permission answer already banked); the 1e7×50 scale run on a v3 table</td><td>V3-4/V3-5 merged; one owner dispatch per measurement</td></tr>
+    <tr><td class="num">6</td><td><strong>Gate review</strong></td><td>Every north-star row ✅ or dated DECLARED with a pin → tag <span class="mono">v1.0.0</span>; API review rides the same gate</td><td>owner</td></tr>
+  </table></div>
+  <div class="card">
+    <p class="sub" style="margin:0"><strong>Also queued, fork-independent, any window:</strong> Track A <strong>W-0</strong> — the window-shape bench (sliding frames per aggregate class, constant frame, unpartitioned ORDER BY at 1e7, lead/lag over unsorted scan, window past the memory limit; oracles = pinned PySpark and DuckDB; output = numbers + the registry rows for aggregates that refuse). Measurement only, retires Track A, and 1.2 starts from its facts. Fork housekeeping (QC #242 re-PR, stale remote delete) rides any fork-lane pickup.</p>
+  </div>
+
+  <h2>Your walkthrough ritual, per release</h2>
+  <div class="card">
+    <ul>
+      <li>1 · <span class="mono">gh pr list --label v0.X</span> (or the board's list) — SQM each parked PR in its labeled order; every body states what it is and its order.</li>
+      <li>2 · Say "released?" — the orchestrator confirms main green, gates green, and hands you the exact tag command.</li>
+      <li>3 · Cut the tag per <span class="mono">.agents/skills/publish-pypi/SKILL.md</span> — wheels build and PyPI publishes on the tag; the orchestrator verifies the artifacts and files the release-notes page.</li>
+      <li>AWS-touching units add one <span class="mono">aws-acceptance</span> dispatch (environment approval) — same motion as MW-10.</li>
+    </ul>
+  </div>
+
+  <h2>Budget and cadence</h2>
+  <div class="card tablewrap"><table>
+    <tr><th>Resource</th><th>Plan</th></tr>
+    <tr><td>Grok (reset window 1, this week)</td><td>Finish the three in-flight units; v0.6's DML-B/C/A + MAINT; fork F-7 charter + unit; V3-4 read half; W-0. Unit history says $3–13 each — comfortably inside a maxed window.</td></tr>
+    <tr><td>Grok (window 2, after your reset)</td><td>V3-4 lift half, V3-5, v0.8 design units, v0.9, v0.10, V3-6.</td></tr>
+    <tr><td>GLM 5.3 Flash ($40)</td><td>v0.7 backfill fan-out (the big one), v0.8 generator variants, doc-lockstep sweeps. At $0.002–0.006/round, $40 is effectively unlimited for this class — expect single-digit dollars actually spent per release.</td></tr>
+    <tr><td>Anthropic</td><td>Fable orchestration only (audits, charters, assembly, boards). No Opus 5 anywhere.</td></tr>
+    <tr><td>Walltime shape</td><td>v0.6 parks within days; v0.7/v0.8 park behind it (GLM fan-outs are fast; audits are the pacing item); v0.9/v0.10 and the v3 spine converge over the following weeks — the v1.0 date is set by fork F-7 + the live-leg dispatches, not by the ladder.</td></tr>
+  </table></div>
+
+  <h2>Decisions that are yours (now or at the next visit)</h2>
+  <div class="card">
+    <ul>
+      <li><span class="chip amber">call</span> <strong>REF in v0.6?</strong> Ships only if fork F-6 lands in time; otherwise v0.6 tags without it and REF rides later. Recommendation: don't hold the tag — REF joins the next release once F-6 lands.</li>
+      <li><span class="chip amber">call</span> <strong>Charter confirms as they arrive</strong> — each unit above gets a charter ledger PR first (same motion as #267); pre-authorize per release if you want zero mid-week asks: "v0.6 units pre-authorized" is enough.</li>
+      <li><span class="chip amber">call</span> <strong>Release tag authority stays yours</strong> — the runbook is scripted, but only you cut tags. (Alternative: pre-authorize tags too, and your visit shrinks to SQM walks.)</li>
+      <li><span class="chip hold">dispatch</span> The live v3 legs and scale run need one <span class="mono">aws-acceptance</span>-style dispatch each, environment-approved by you.</li>
+    </ul>
+  </div>
+
+  <p class="foot">Sources: task/roadmap/epic-term/release-roadmap-2026-08-29.md ·
+  v1-0-iceberg-v3-northstar.md (gate table + §4/§5) · roadmap-intake-2026-08-23.md (Track A/B) ·
+  docs/design/spark-function-parity.md §7.1 · docs/release.md + .agents/skills/publish-pypi/ ·
+  live lane state 2026-08-30 night. Series: RePark status boards.</p>
+</div>
+
+</body>
+</html>
