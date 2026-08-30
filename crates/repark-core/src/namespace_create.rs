@@ -1,9 +1,4 @@
 //! Namespace-create location guard (G-6 Q1).
-//!
-//! Shared by [`crate::ReparkSession::create_namespace`] and both SQL doors' `IF NOT EXISTS`
-//! paths. Matching location and no-request-location are idempotent; a request location that
-//! contradicts the stored one fails loud, naming both paths. This is a data-loss guard
-//! (stale namespace, wrong warehouse path), not a Spark-parity surface.
 
 use std::collections::HashMap;
 use std::hash::BuildHasher;
@@ -11,15 +6,8 @@ use std::hash::BuildHasher;
 use repark_iceberg::catalog::resolve_namespace_location;
 
 /// Refuse a re-create whose explicit location contradicts the stored one.
-///
-/// - No explicit request location (`location` / `location_uri`) → `Ok(())` (idempotent adopt).
-/// - Existing namespace has no stored location → `Ok(())` (nothing stored to contradict).
-/// - Resolved locations match (trailing slashes stripped) → `Ok(())`.
-/// - Both resolve and differ → `Err` with a message naming both paths and the namespace.
-///
 /// # Errors
-/// Returns a message naming the namespace and both warehouse paths when the
-/// request carries an explicit location that differs from the stored one.
+/// Returns a message naming the namespace and both warehouse paths when the request carries an
 pub fn refuse_contradictory_namespace_location<ExistingHasher, RequestedHasher>(
     namespace: &str,
     existing_properties: &HashMap<String, String, ExistingHasher>,

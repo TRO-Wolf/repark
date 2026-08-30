@@ -1,5 +1,7 @@
 # map — repark-core
 
+CC-3 (2026-08-30): comments condensed to one line; banners removed.
+
 ## Purpose
 
 The Session-centric engine API (crate-DAG **tier 2**, the engine session both doors and the

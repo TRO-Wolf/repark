@@ -1,7 +1,4 @@
 //! Iceberg time-travel parsing, snapshot resolution, and reader-option support.
-//!
-//! SQL-text rewriting remains with the phase-2 statement router. The reader path registers a
-//! snapshot-pinned static provider and preserves its plan shape and name prefix for cleanup.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -16,8 +13,6 @@ use iceberg_datafusion::IcebergStaticTableProvider;
 use crate::catalog_state::CatalogRegistry;
 
 /// Process-wide counter so ephemeral temp-view names never collide across concurrent sessions.
-/// The ONE counter behind [`next_temp_view_name`] — see that function for why there must not be
-/// a second.
 static TEMP_VIEW_SEQ: AtomicU64 = AtomicU64::new(1);
 
 /// Fold an Iceberg error into the DataFusion error type used by this module.
@@ -26,9 +21,7 @@ fn iceberg_err(err: iceberg::Error) -> DataFusionError {
     DataFusionError::External(Box::new(err))
 }
 
-/// ===========================================================================================
 /// A time-travel pin: snapshot id, named ref (branch/tag), or as-of timestamp (epoch ms).
-/// ===========================================================================================
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TimeTravelSpec {
     /// Pin to a concrete snapshot id.
@@ -39,17 +32,9 @@ pub enum TimeTravelSpec {
     TimestampMs(i64),
 }
 
-/// ===========================================================================================
 /// Resolve `spec` against `metadata` to a concrete snapshot id.
-///
-/// Snapshot id uses `snapshot_by_id` (unknown → loud, naming the id). Ref uses
-/// `snapshot_for_ref` for branch/tag (unknown → loud, naming the ref). Timestamp walks
-/// history with `timestamp_ms <= ts` (fork `snapshot_id_as_of_time`); earlier than the first
-/// snapshot → loud error.
-///
 /// # Errors
 /// Returns [`DataFusionError::Plan`] when the pin cannot be resolved.
-/// ===========================================================================================
 pub fn resolve_snapshot_id(metadata: &TableMetadata, spec: &TimeTravelSpec) -> Result<i64> {
     match spec {
         TimeTravelSpec::SnapshotId(snapshot_id) => metadata
@@ -80,9 +65,6 @@ pub fn resolve_snapshot_id(metadata: &TableMetadata, spec: &TimeTravelSpec) -> R
 }
 
 /// Latest snapshot in `metadata.history()` with `timestamp_ms <= as_of_ms`.
-///
-/// Mirrors fork `snapshot_id_as_of_time`
-/// (`crates/iceberg/src/inspect/metadata_log_entries.rs:129-138`, pin `4723104b`).
 #[must_use]
 pub fn snapshot_id_as_of_time(metadata: &TableMetadata, as_of_ms: i64) -> Option<i64> {
     let mut snapshot_id = None;
@@ -94,16 +76,9 @@ pub fn snapshot_id_as_of_time(metadata: &TableMetadata, as_of_ms: i64) -> Option
     snapshot_id
 }
 
-/// ===========================================================================================
 /// Parse a Spark Iceberg `VERSION AS OF` value into a [`TimeTravelSpec`].
-///
-/// Integer (or integer-shaped string) → snapshot id; otherwise → branch/tag ref name.
-/// Decision (Spark Iceberg docs — "Time travel" / `VERSION AS OF`): a string that is not an
-/// integer is treated as a branch or tag name.
-///
 /// # Errors
 /// Empty string → plan error.
-/// ===========================================================================================
 pub fn parse_version_value(raw: &str) -> Result<TimeTravelSpec> {
     let trimmed = raw.trim();
     if trimmed.is_empty() {
@@ -117,16 +92,9 @@ pub fn parse_version_value(raw: &str) -> Result<TimeTravelSpec> {
     Ok(TimeTravelSpec::VersionRef(trimmed.to_string()))
 }
 
-/// ===========================================================================================
 /// Parse a Spark Iceberg `TIMESTAMP AS OF` / `as-of-timestamp` value into epoch milliseconds.
-///
-/// Accepts a bare integer (already epoch ms) or a UTC wall-clock string
-/// (`YYYY-MM-DD`, `YYYY-MM-DD HH:MM:SS`, `YYYY-MM-DDTHH:MM:SS`, optional fractional seconds).
-/// Session timezone is UTC in repark.
-///
 /// # Errors
 /// Unparsable string → plan error naming the input.
-/// ===========================================================================================
 pub fn parse_timestamp_to_ms(raw: &str) -> Result<i64> {
     let trimmed = raw.trim();
     if trimmed.is_empty() {
@@ -138,8 +106,6 @@ pub fn parse_timestamp_to_ms(raw: &str) -> Result<i64> {
         return Ok(ms);
     }
     // RFC 3339 / ISO-8601 with offset or `Z` (Spark jobs and JSON often emit these).
-    // Without this arm, `…T00:00:00Z` failed loud while epoch-ms and naive UTC worked —
-    // a shipping-path compatibility hole.
     if let Ok(offset_dt) = chrono::DateTime::parse_from_rfc3339(trimmed) {
         return Ok(offset_dt.timestamp_millis());
     }
@@ -148,8 +114,7 @@ pub fn parse_timestamp_to_ms(raw: &str) -> Result<i64> {
         .strip_suffix('Z')
         .or_else(|| trimmed.strip_suffix('z'))
         .unwrap_or(trimmed);
-    // Strip optional surrounding SQL TIMESTAMP keyword residue is handled at the token layer;
-    // here we only see the string payload.
+    // Strip optional surrounding SQL TIMESTAMP keyword residue is handled at the token layer; here
     let formats = [
         "%Y-%m-%d %H:%M:%S%.f",
         "%Y-%m-%d %H:%M:%S",
@@ -175,14 +140,7 @@ pub fn parse_timestamp_to_ms(raw: &str) -> Result<i64> {
     )))
 }
 
-/// ===========================================================================================
 /// Build a snapshot-pinned [`DataFrame`] for a three-part Iceberg table and specification.
-///
-/// The reader-options caller keeps the registered provider; SQL callers recover its name from
-/// the bare `TableScan` plan and release it after planning. The `__repark_tt_` prefix and shape
-/// are therefore part of the cross-crate cleanup contract.
-/// ===========================================================================================
-///
 /// # Errors
 /// Catalog / snapshot / provider errors as [`DataFusionError`].
 pub async fn read_table_at(
@@ -211,12 +169,7 @@ pub async fn read_table_at(
     })
 }
 
-/// ===========================================================================================
 /// Mint the next ephemeral `__repark_tt_<n>` temp-view name.
-///
-/// All crates share this process-wide counter. A second counter could reuse a live name and
-/// unregister another caller's provider.
-/// ===========================================================================================
 #[must_use]
 pub fn next_temp_view_name() -> String {
     let sequence = TEMP_VIEW_SEQ.fetch_add(1, Ordering::Relaxed);

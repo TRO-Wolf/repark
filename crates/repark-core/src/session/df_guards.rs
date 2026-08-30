@@ -1,10 +1,4 @@
 //! DataFusion 54.1 guards carried by every core session, including extension-less sessions.
-//!
-//! Guard 1 disables the unsafe scalar-subquery physical path by default; explicit DataFusion
-//! configuration may re-enable it. Guard 2 wraps `push_down_leaf_projections`, swallowing failures
-//! only on an `Unnest` path while leaving successful rewrites and unrelated failures unchanged.
-//!
-//! Pins: `session/df_guard_tests.rs` (the whole file — seven tests, one per guarantee).
 
 use std::sync::Arc;
 
@@ -17,16 +11,9 @@ use datafusion::optimizer::{ApplyOrder, Optimizer, OptimizerConfig, OptimizerRul
 use datafusion::prelude::{SessionConfig, SessionContext};
 
 /// DataFusion's own name for the pass-2 leaf-projection rule — the wrapper matches on it so a
-/// rename upstream degrades to "the guard silently stops applying", which the pins catch, rather
-/// than to a wrong rule being wrapped.
 const LEAF_PUSHDOWN_RULE_NAME: &str = "push_down_leaf_projections";
 
-/// ===========================================================================================
 /// DF 54.1 regression guard 1 of 2 — applied as a CORE `SessionConfig` default.
-/// ===========================================================================================
-///
-/// Disable the unsafe physical uncorrelated-scalar-subquery path by default. Callers may override
-/// the flag, but every core session, including extension-less sessions, carries this default.
 pub(super) fn apply_df_54_1_config_guards(config: &mut SessionConfig) {
     config
         .options_mut()
@@ -34,14 +21,7 @@ pub(super) fn apply_df_54_1_config_guards(config: &mut SessionConfig) {
         .enable_physical_uncorrelated_scalar_subquery = false;
 }
 
-/// ===========================================================================================
 /// The session context, built with DF 54.1 regression guard 2 of 2 installed.
-/// ===========================================================================================
-///
-/// Exactly what [`SessionContext::new_with_config_rt`] does — `SessionStateBuilder` with the
-/// config, the runtime and `with_default_features` — plus one replaced optimizer rule. The state
-/// is built ONCE and handed to the context, so the context's `session_id` is the state's (a
-/// post-hoc state swap would leave the two disagreeing).
 pub(super) fn context_with_df_54_1_rule_guards(
     config: SessionConfig,
     runtime: Arc<RuntimeEnv>,
@@ -55,13 +35,7 @@ pub(super) fn context_with_df_54_1_rule_guards(
     SessionContext::new_with_state(state)
 }
 
-/// ===========================================================================================
 /// DataFusion's recommended rule list with `push_down_leaf_projections` wrapped.
-/// ===========================================================================================
-///
-/// This is the list `SessionStateBuilder::build` would install by itself (`Optimizer::default()`
-/// is `Optimizer::new()`), with exactly one element replaced. Every other rule, and the rule
-/// order the optimizer depends on, is DataFusion's.
 fn unnest_safe_optimizer_rules() -> Vec<Arc<dyn OptimizerRule + Send + Sync>> {
     Optimizer::new()
         .rules
@@ -77,13 +51,7 @@ fn unnest_safe_optimizer_rules() -> Vec<Arc<dyn OptimizerRule + Send + Sync>> {
         .collect()
 }
 
-/// ===========================================================================================
 /// `push_down_leaf_projections`, scoped away from the plan shape it cannot rewrite.
-/// ===========================================================================================
-///
-/// The wrapper swallows inner-rule errors only on the `Unnest` path, including nested subtrees;
-/// unrelated siblings remain loud. Successful rewrites stay enabled, and failed rewrites retain
-/// the logical plan. The bounded walk includes subqueries so nested paths cannot bypass the check.
 #[derive(Debug)]
 struct UnnestSafeLeafProjectionPushdown {
     /// DataFusion's own `PushDownLeafProjections`, taken from its recommended rule list.
@@ -92,18 +60,11 @@ struct UnnestSafeLeafProjectionPushdown {
 
 impl OptimizerRule for UnnestSafeLeafProjectionPushdown {
     /// The wrapped rule's name verbatim: `EXPLAIN VERBOSE` output, the `skip_failed_rules`
-    /// reporting and any name-keyed lookup must not be able to tell the wrapper apart.
     fn name(&self) -> &str {
         self.inner.name()
     }
 
-    /// `None`: this wrapper owns recursion. Delegating `Some(TopDown)` lets the
-    /// optimizer reconstruct `Unnest` children *outside* [`Self::rewrite`], so a
-    /// schema error on a `Projection` *under* `Unnest` (DEFECT-2 mixed-qualifier
-    /// `MemTable` scans) bypasses the decline. The owned walk still applies the inner
-    /// rule `TopDown` per node; swallow is scoped to the current Unnest *path*
-    /// (this node is `Unnest`, an `Unnest` ancestor, or `Unnest` in this subtree) —
-    /// a mixed plan's non-`Unnest` sibling still fails loud (C2-Q-001).
+    /// `None`: this wrapper owns recursion.
     fn apply_order(&self) -> Option<ApplyOrder> {
         None
     }
@@ -132,8 +93,7 @@ fn walk_inner_rule(
     })
 }
 
-/// `TreeNodeRewriter` that applies one optimizer rule at `apply_order`, matching
-/// DataFusion's private `Rewriter`, and declines only on the Unnest *path*.
+/// `TreeNodeRewriter` that applies one optimizer rule at `apply_order`, matching DataFusion's
 struct InnerRuleWalk<'a> {
     inner: &'a dyn OptimizerRule,
     config: &'a dyn OptimizerConfig,
@@ -192,12 +152,7 @@ pub(super) fn wrap_leaf_rule_for_test(
     Arc::new(UnnestSafeLeafProjectionPushdown { inner })
 }
 
-/// ===========================================================================================
 /// Detect `Unnest` in this subtree, including expression subqueries.
-/// ===========================================================================================
-///
-/// Stop at the first hit, but scan every visited node and subquery so rule-shape changes cannot
-/// bypass the scope check. The iterative walk is bounded by the plan structure.
 fn carries_unnest(plan: &LogicalPlan) -> DataFusionResult<bool> {
     let mut found = false;
     plan.apply_with_subqueries(|node| {

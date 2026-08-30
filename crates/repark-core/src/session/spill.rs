@@ -1,7 +1,4 @@
 //! Install `FairSpillPool` and intercept runtime memory and temporary-directory settings.
-//!
-//! DataFusion 54.1 cannot resize a `FairSpillPool` in place, so runtime memory settings swap a
-//! new pool and leave in-flight reservations on the old pool.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -18,26 +15,17 @@ use crate::engine_err;
 pub(crate) const BYTES_PER_GB: usize = 1024 * 1024 * 1024;
 
 /// Smallest non-zero `memory_limit_bytes` accepted by [`crate::ReparkSessionBuilder::build`].
-/// Explicit `0` still opts out (unbounded). Pathological 1-byte budgets thrash the spill pool
-/// without a clean config error (audit SAF-007 / 2026-07-25).
 pub(crate) const MIN_MEMORY_LIMIT_BYTES: usize = 1024 * 1024;
 
 /// Cap of the RAM-relative default `FairSpillPool` (and the historical 8 GiB constant).
-///
-/// The live default clamps 60% of cgroup or host memory to the configured minimum and maximum.
-/// It resolves only at build; explicit builder or runtime values win, and zero is unbounded.
 pub(crate) const DEFAULT_MEMORY_LIMIT_BYTES: usize = 8 * BYTES_PER_GB;
 
-/// ===========================================================================================
-/// RAM-relative default pool: `clamp(0.6 × detected, MIN, 8 GiB)`. Host read at `build()` only.
-/// ===========================================================================================
+/// RAM-relative default pool: `clamp(0.6 × detected, MIN, 8 GiB)`.
 pub(crate) fn default_memory_limit_bytes() -> usize {
     clamp_default_memory_limit_bytes(detect_host_memory_bytes())
 }
 
-/// ===========================================================================================
 /// Pure clamp used by [`default_memory_limit_bytes`] (and tests with fixture detections).
-/// ===========================================================================================
 pub(crate) fn clamp_default_memory_limit_bytes(detected: Option<usize>) -> usize {
     let Some(detected) = detected else {
         return DEFAULT_MEMORY_LIMIT_BYTES;
@@ -46,9 +34,7 @@ pub(crate) fn clamp_default_memory_limit_bytes(detected: Option<usize>) -> usize
     sixty_percent.clamp(MIN_MEMORY_LIMIT_BYTES, DEFAULT_MEMORY_LIMIT_BYTES)
 }
 
-/// ===========================================================================================
 /// Parse cgroup v2 `memory.max` (`max` / empty → `None`).
-/// ===========================================================================================
 pub(crate) fn parse_cgroup_memory_max(text: &str) -> Option<usize> {
     let trimmed = text.trim();
     if trimmed.is_empty() || trimmed.eq_ignore_ascii_case("max") {
@@ -60,9 +46,7 @@ pub(crate) fn parse_cgroup_memory_max(text: &str) -> Option<usize> {
         .and_then(|bytes| usize::try_from(bytes).ok())
 }
 
-/// ===========================================================================================
 /// Parse `/proc/meminfo` `MemTotal` (kB) into bytes.
-/// ===========================================================================================
 pub(crate) fn parse_meminfo_mem_total(text: &str) -> Option<usize> {
     for line in text.lines() {
         let line = line.trim();
@@ -91,10 +75,10 @@ fn detect_host_memory_bytes() -> Option<usize> {
 /// Canonical runtime / builder pseudo-key for the live `FairSpillPool` size.
 pub(crate) const MEMORY_LIMIT_KEY: &str = "datafusion.runtime.memory_limit";
 
-/// Build-time spill directory (`RuntimeEnvBuilder::with_temp_file_path`). Runtime SET refuses.
+/// Build-time spill directory (`RuntimeEnvBuilder::with_temp_file_path`).
 pub(crate) const TEMP_DIRECTORY_KEY: &str = "datafusion.runtime.temp_directory";
 
-/// Loud runtime refusal: `DiskManager` is fixed after `RuntimeEnv` build. Names `TMPDIR`.
+/// Loud runtime refusal: `DiskManager` is fixed after `RuntimeEnv` build.
 pub(crate) const TEMP_DIRECTORY_RUNTIME_REFUSAL: &str = "datafusion.runtime.temp_directory cannot be changed at runtime \
      (the DiskManager is fixed when the RuntimeEnv is built). \
      Set TMPDIR in the process environment before start, or \
@@ -105,13 +89,10 @@ pub(crate) const TEMP_DIRECTORY_RUNTIME_REFUSAL: &str = "datafusion.runtime.temp
 const REPARK_MEMORY_LIMIT_KEYS: &[&str] =
     &["repark.memory.limit.gb", "spark.repark.memory.limit.gb"];
 
-/// Repark-owned `datafusion.` pseudo-keys excluded from DataFusion option parsing. Memory applies
-/// to `FairSpillPool`; temporary-directory applies only at build and runtime SET refuses loudly.
+/// Repark-owned `datafusion.` pseudo-keys excluded from DataFusion option parsing.
 pub const REPARK_OWNED_DATAFUSION_PSEUDO_KEYS: &[&str] = &[MEMORY_LIMIT_KEY, TEMP_DIRECTORY_KEY];
 
-/// ===========================================================================================
 /// Install `pool_bytes` as a [`FairSpillPool`], or leave DataFusion's unbounded default.
-/// ===========================================================================================
 pub(crate) fn with_memory_pool(
     runtime: RuntimeEnvBuilder,
     pool_bytes: Option<usize>,
@@ -122,10 +103,7 @@ pub(crate) fn with_memory_pool(
     }
 }
 
-/// ===========================================================================================
 /// Apply builder `datafusion.runtime.temp_directory` via `with_temp_file_path` (build time only).
-/// ===========================================================================================
-///
 /// # Errors
 /// [`Error::Config`] when the key is present and empty.
 pub(crate) fn with_temp_directory(
@@ -146,14 +124,7 @@ pub(crate) fn with_temp_directory(
     }
 }
 
-/// ===========================================================================================
 /// Resolve the build-time pool: typed setter, else the `memory_limit` pseudo-key, else default.
-///
-/// `Some(0)` / `'0'` opts out (unbounded). Dual typed/`repark.memory.limit.gb` +
-/// `datafusion.runtime.memory_limit` refuses. Non-zero budgets below
-/// [`MIN_MEMORY_LIMIT_BYTES`] refuse (SAF-007).
-/// ===========================================================================================
-///
 /// # Errors
 /// [`Error::Config`] on dual-set, a tiny non-zero budget, or an unparsable capacity string.
 pub(crate) fn resolve_build_time_pool_bytes(
@@ -183,10 +154,7 @@ pub(crate) fn resolve_build_time_pool_bytes(
     Ok(resolved)
 }
 
-/// ===========================================================================================
 /// Refuse a builder that names both `FairSpillPool` knobs (same pool, ambiguous initial size).
-/// ===========================================================================================
-///
 /// # Errors
 /// [`Error::Config`] naming both knobs.
 pub(crate) fn refuse_dual_memory_knobs(
@@ -211,16 +179,7 @@ pub(crate) fn refuse_dual_memory_knobs(
     Ok(())
 }
 
-/// ===========================================================================================
 /// Intercept runtime `SET datafusion.runtime.memory_limit` before the dialect reaches DataFusion.
-///
-/// Other statements (including other `SET` keys) return `Ok(None)` so the dialect runs unchanged.
-/// A handled `SET` returns an empty [`DataFrame`], matching DataFusion's own SET result.
-///
-/// DataFusion 54.1 has no [`FairSpillPool`] resize: this **swaps** a new pool. In-flight
-/// reservations stay on the old pool.
-/// ===========================================================================================
-///
 /// # Errors
 /// Capacity-parse failures and `RuntimeEnv` rebuild failures fold through [`engine_err`].
 pub(crate) fn maybe_apply_runtime_set(
@@ -241,10 +200,7 @@ pub(crate) fn maybe_apply_runtime_set(
     context.read_empty().map_err(engine_err).map(Some)
 }
 
-/// ===========================================================================================
-/// Swap the live `RuntimeEnv`'s memory pool. `None` installs DataFusion's unbounded default.
-/// ===========================================================================================
-///
+/// Swap the live `RuntimeEnv`'s memory pool.
 /// # Errors
 /// [`Error::DataFusion`] if the `RuntimeEnv` rebuild fails.
 fn swap_fair_spill_pool(context: &SessionContext, pool_bytes: Option<usize>) -> Result<()> {
@@ -262,10 +218,7 @@ fn swap_fair_spill_pool(context: &SessionContext, pool_bytes: Option<usize>) -> 
     Ok(())
 }
 
-/// ===========================================================================================
 /// Parse a DataFusion K/M/G capacity (`'256M'`, `'1.5G'`, `'0'`).
-/// ===========================================================================================
-///
 /// # Errors
 /// [`Error::Config`] naming the key when the string is not a DF capacity.
 fn parse_memory_limit_value(value: &str) -> Result<usize> {
@@ -273,9 +226,7 @@ fn parse_memory_limit_value(value: &str) -> Result<usize> {
         .map_err(|error| Error::Config(format!("invalid {MEMORY_LIMIT_KEY} = '{value}': {error}")))
 }
 
-/// ===========================================================================================
-/// Parse `SET [VARIABLE] <key> = <value>` (quoted or bare). `None` if this is not a SET.
-/// ===========================================================================================
+/// Parse `SET [VARIABLE] <key> = <value>` (quoted or bare).
 fn parse_set_assignment(sql: &str) -> Option<(String, String)> {
     let stripped = strip_leading_sql_comments(sql);
     let after_set = strip_keyword(stripped, "set")?;
@@ -574,8 +525,7 @@ mod spill_session_tests {
 
     #[tokio::test]
     async fn runtime_set_memory_limit_oom_is_fair_not_greedy() {
-        // 8 partitions × 2 MiB non-spillable reservation > 4 MiB pool, plus enough rows
-        // that ExternalSorter actually claims those reservations.
+        // 8 partitions × 2 MiB non-spillable reservation > 4 MiB pool, plus enough rows that
         let session = ReparkSession::builder()
             .memory_limit_bytes(64 * 1024 * 1024)
             .target_partitions(8)

@@ -32,7 +32,7 @@ EXEMPT_PATHS: tuple[tuple[str, ...], ...] = (("tests", "goldens"), ("tests", "fi
 # requires explicit owner approval; ordinary edits only ratchet rows down.
 EXCEPTIONS: dict[str, tuple[int, str, str]] = {
     "crates/repark-core/src/catalog_config.rs": (
-        1105,
+        1044,
         "Session catalog configuration still owns every backend shape.",
         "Split backend-specific option parsing from shared session installation.",
     ),
@@ -42,7 +42,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split structural cases from list and refusal cases with an identity check.",
     ),
     "crates/repark-core/src/session.rs": (
-        1249,
+        1040,
         "The session root still combines construction, planning, and execution entry points.",
         "Extract one existing responsibility when a charter already changes that region.",
     ),

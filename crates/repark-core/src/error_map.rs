@@ -8,27 +8,22 @@ use repark_common::{Error, Result};
 
 use crate::object_store_s3;
 
-/// DataFusion error partition used before conversion to [`Error`]. Iceberg errors remain borrowed
-/// so their structured [`ErrorKind`] survives classification.
+/// DataFusion error partition used before conversion to [`Error`].
 #[derive(Debug)]
 pub(crate) enum EngineErrorKind<'a> {
     Parse,
     Analysis,
-    /// `DataFusionError::NotImplemented` — the deterministic scope gates ride this variant
-    /// (audit CQ-002); folded to `Error::NotImplemented` → `UnsupportedOperationException`.
+    /// `DataFusionError::NotImplemented` — the deterministic scope gates ride this variant (audit
     Unsupported,
     /// A peeled `External` wrapping a live [`iceberg::Error`], classified by its `kind()`.
     Iceberg(&'a iceberg::Error),
     Other,
 }
 
-/// Cap wrapper peeling; exceeding this limit returns [`EngineErrorKind::Other`] and guarantees termination.
+/// Cap wrapper peeling; exceeding this limit returns [`EngineErrorKind::Other`] and guarantees
 pub(crate) const MAX_ERROR_PEEL_DEPTH: usize = 32;
 
-/// ===========================================================================================
-/// Classify a DataFusion error after peeling wrapper variants up to
-/// [`MAX_ERROR_PEEL_DEPTH`]. Structured Iceberg errors reach [`classify_iceberg_error`].
-/// ===========================================================================================
+/// Classify a DataFusion error after peeling wrapper variants up to [`MAX_ERROR_PEEL_DEPTH`].
 pub(crate) fn classify_datafusion_error(error: &DataFusionError) -> EngineErrorKind<'_> {
     let mut current = error;
     for _ in 0..MAX_ERROR_PEEL_DEPTH {
@@ -58,9 +53,7 @@ pub(crate) fn classify_datafusion_error(error: &DataFusionError) -> EngineErrorK
     EngineErrorKind::Other
 }
 
-/// ===========================================================================================
 /// Convert one DataFusion error into the crate-wide [`Error`] taxonomy.
-/// ===========================================================================================
 #[allow(clippy::needless_pass_by_value)]
 #[must_use]
 pub fn engine_err(err: DataFusionError) -> Error {
@@ -74,9 +67,6 @@ pub fn engine_err(err: DataFusionError) -> Error {
 }
 
 /// Resolve the optional S3 region override from the two accepted config spellings.
-///
-/// Identical values under both keys collapse; different values fail loud naming both keys
-/// (never a silent prefer-one-spelling pick).
 pub(crate) fn resolve_s3_region_override(
     config: &HashMap<String, String>,
 ) -> Result<Option<String>> {
@@ -93,12 +83,7 @@ pub(crate) fn resolve_s3_region_override(
     }
 }
 
-/// ===========================================================================================
-/// Classify a live [`iceberg::Error`] by structured [`iceberg::ErrorKind`] before choosing [`Error`].
-/// Both direct and peeled external routes use this mapping: `FeatureUnsupported` is
-/// [`Error::NotImplemented`], not-found and already-exists kinds are [`Error::Analysis`], and all
-/// other current or future kinds are [`Error::Iceberg`]. Preserve Iceberg's own display message.
-/// ===========================================================================================
+/// Classify a live [`iceberg::Error`] by structured [`iceberg::ErrorKind`] before choosing
 pub(crate) fn classify_iceberg_error(error: &iceberg::Error) -> Error {
     let message = error.to_string();
     match error.kind() {
@@ -110,10 +95,6 @@ pub(crate) fn classify_iceberg_error(error: &iceberg::Error) -> Error {
         | ErrorKind::NamespaceAlreadyExists
         | ErrorKind::ViewAlreadyExists => Error::Analysis(message),
         // The identical-body split is deliberate (allow below): the named arm documents the 12
-        // CURRENT kinds' routing; the `_` arm exists only because `ErrorKind` is
-        // #[non_exhaustive] upstream, so a FUTURE kind cannot be named here without a fork bump —
-        // it lands in the iceberg base bucket, kind text still leading the message. (The
-        // repark-core `exception_class` match stays no-`_`.)
         #[allow(clippy::match_same_arms)]
         ErrorKind::PreconditionFailed
         | ErrorKind::Unexpected
@@ -124,8 +105,7 @@ pub(crate) fn classify_iceberg_error(error: &iceberg::Error) -> Error {
     }
 }
 
-/// Convert an iceberg error into the crate-wide [`Error`], classified by its structured kind
-/// (see [`classify_iceberg_error`] — this is the direct-fold route; the External route peels).
+/// Convert an iceberg error into the crate-wide [`Error`], classified by its structured kind (see
 #[allow(clippy::needless_pass_by_value)]
 pub(crate) fn iceberg_err(err: iceberg::Error) -> Error {
     classify_iceberg_error(&err)

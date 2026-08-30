@@ -1,7 +1,4 @@
 //! Temp-view name resolution is centralized here because DataFusion has no session-local namespace.
-//! The build-time home name and provider identity are snapshotted; qualified names and a replaced
-//! provider refuse, preventing writes into catalogs. Every temp-view entry point uses this choke
-//! point, while product reads emit the pinned home spelling rather than a live-default bare name.
 
 use std::sync::Arc;
 
@@ -11,20 +8,15 @@ use datafusion::sql::TableReference;
 use repark_common::{Error, Result};
 
 /// Where a session's temp views live: snapshotted ONCE at `ReparkSessionBuilder::build` from the
-/// final config, never re-read at registration time.
 #[derive(Debug, Clone)]
 pub(crate) struct TempViewHome {
     pub(crate) catalog: String,
     pub(crate) schema: String,
     /// The schema provider that sat under `catalog.schema` at build time — the session-local
-    /// in-memory schema DataFusion creates with the context. `None` when the build-time config
-    /// left no such schema (`create_default_catalog_and_schema = false`), which is itself a
-    /// refusal: there is nowhere session-local to put a temp view.
     pub(crate) provider: Option<Arc<dyn SchemaProvider>>,
 }
 
 /// Refuse when a catalog has replaced the provider captured as the session's temp-view home.
-///
 /// # Errors
 /// [`Error::Analysis`] when the home schema is absent or is not the build-time provider.
 pub(crate) fn assert_home_intact(context: &SessionContext, home: &TempViewHome) -> Result<()> {
@@ -45,8 +37,7 @@ pub(crate) fn assert_home_intact(context: &SessionContext, home: &TempViewHome) 
     }
 }
 
-/// Resolve an already-parsed segment without re-parsing quoted dots. Unquoted segments are folded
-/// to match DataFusion's `TableReference::parse_str`; quoted segments retain their spelling.
+/// Resolve an already-parsed segment without re-parsing quoted dots.
 pub(crate) fn temp_view_ref_from_segment(
     home: &TempViewHome,
     segment: &str,
@@ -61,13 +52,8 @@ pub(crate) fn temp_view_ref_from_segment(
 }
 
 /// Resolve a caller's temp-view `name` against `home`.
-///
-/// Single-part names and the session's own home-qualified spelling resolve to the build-time home;
-/// other qualified names refuse.
-///
 /// # Errors
 /// [`Error::Analysis`] when `name` is neither a single-part identifier nor the session's own
-/// home-qualified spelling.
 pub(crate) fn temp_view_ref(home: &TempViewHome, name: &str) -> Result<TableReference> {
     let quoted = name.starts_with('"') || name.starts_with('`');
     match TableReference::parse_str(name) {

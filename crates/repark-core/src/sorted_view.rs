@@ -1,12 +1,4 @@
-//! Declared-sorted temp views (SE-1): verify a claimed row ordering, then let the
-//! `MemTable` advertise it so DataFusion's `EnforceSorting` elides redundant `SortExec`s.
-//!
-//! Trust model: **declare + always-verify, refuse loud.** A wrong sortedness claim would
-//! silently corrupt every window result, so the O(n) adjacent-pair verification pass has
-//! no skip switch — it runs once per declaration and costs milliseconds against the
-//! O(n log n) sort it removes from every subsequent query. Ordering spelling is
-//! ASC NULLS LAST per key, matching DataFusion's `ORDER BY` defaults so a window over
-//! the same keys is satisfied exactly.
+//! Declared-sorted temp views (SE-1): verify a claimed row ordering, then let the `MemTable`
 
 use std::sync::Arc;
 
@@ -24,22 +16,12 @@ use crate::error_map::engine_err;
 use repark_common::{Error, Result};
 
 /// Arrow field metadata key written onto a key that `tightenNulls` flipped from nullable to
-/// non-nullable, and onto reminted non-nullable computed columns (R-A). D1 CREATE refuse
-/// is source-walk based (not "exactly this key"); D2 relaxes via the same walk. Already
-/// non-nullable keys are not field-tagged at declare time; the schema-level stamp still
-/// marks the provider as tighten-derived.
 pub const TIGHTEN_NULLS_METADATA_KEY: &str = "repark.tighten_nulls";
 
 /// Value stored under [`TIGHTEN_NULLS_METADATA_KEY`].
 pub const TIGHTEN_NULLS_METADATA_VALUE: &str = "1";
 
-/// ===========================================================================================
 /// The declared sort order handed to `MemTable::with_sort_order` (one partition).
-///
-/// Keys are ENGINE field names, referenced via `Column::from_name` — never through the
-/// ident-parsing `col()` constructor, which folds unquoted mixed-case names to lowercase
-/// (the U-DF-1 defect class).
-/// ===========================================================================================
 pub(crate) fn declared_sort_order(keys: &[String]) -> Vec<Vec<SortExpr>> {
     let order = keys
         .iter()
@@ -48,15 +30,9 @@ pub(crate) fn declared_sort_order(keys: &[String]) -> Vec<Vec<SortExpr>> {
     vec![order]
 }
 
-/// ===========================================================================================
-/// Verify `batches` are lexicographically sorted by `keys` (ASC NULLS LAST), including
-/// across batch boundaries.
-///
+/// Verify `batches` are lexicographically sorted by `keys` (ASC NULLS LAST), including across
 /// # Errors
-/// [`Error::Analysis`] naming the unknown key, or the first out-of-order row pair (global
-/// row indices), so the caller can find the offending data. [`Error::DataFusion`] only for
-/// engine-level comparator failures (an unsupported key type surfaces here loudly).
-/// ===========================================================================================
+/// [`Error::Analysis`] naming the unknown key, or the first out-of-order row pair (global row
 pub(crate) fn verify_batches_sorted(
     schema: &SchemaRef,
     batches: &[RecordBatch],
@@ -85,8 +61,7 @@ pub(crate) fn verify_batches_sorted(
             .map(|&index| ArrayRef::clone(batch.column(index)))
             .collect();
 
-        // Boundary pair: previous batch's last row vs this batch's first row, compared
-        // through the same lexicographic machinery over a stitched two-row column set.
+        // Boundary pair: previous batch's last row vs this batch's first row, compared through the
         if let Some(tail) = previous_tail.take() {
             let stitched: Vec<SortColumn> = tail
                 .iter()
@@ -142,19 +117,9 @@ fn out_of_order(first: usize, second: usize, keys: &[String]) -> Error {
     ))
 }
 
-/// ===========================================================================================
 /// Apply this declare's nullability mode to the verified batches.
-///
-/// Always restores any previous tighten first (so a later hint-mode call is a full reset),
-/// then — when `tighten_nulls` is set — refuses a NULL in any declared key and flips only
-/// the keys that are still nullable, tagging exactly those with
-/// [`TIGHTEN_NULLS_METADATA_KEY`].
-/// ===========================================================================================
-///
 /// # Errors
-/// [`Error::Analysis`] naming a key that is missing from the schema or that contains a NULL
-/// under tighten (drop `tightenNulls` or clean the data). [`Error::DataFusion`] if a rebuilt
-/// batch cannot be constructed.
+/// [`Error::Analysis`] naming a key that is missing from the schema or that contains a NULL under
 pub(crate) fn apply_declare_nullability(
     schema: SchemaRef,
     batches: Vec<RecordBatch>,
@@ -169,9 +134,7 @@ pub(crate) fn apply_declare_nullability(
     }
 }
 
-/// ===========================================================================================
 /// Names of fields this declare (or a prior one) flipped, in schema order.
-/// ===========================================================================================
 #[must_use]
 pub fn tightened_field_names(schema: &Schema) -> Vec<String> {
     schema
@@ -182,10 +145,7 @@ pub fn tightened_field_names(schema: &Schema) -> Vec<String> {
         .collect()
 }
 
-/// ===========================================================================================
-/// True when this registered provider is tighten-derived: a field tag and/or the
-/// schema-level provenance stamp written by cache/persist/checkpoint materialize.
-/// ===========================================================================================
+/// True when this registered provider is tighten-derived: a field tag and/or the schema-level
 #[must_use]
 pub fn schema_is_tighten_derived(schema: &Schema) -> bool {
     schema_has_tighten_provenance(schema)
@@ -195,17 +155,9 @@ pub fn schema_is_tighten_derived(schema: &Schema) -> bool {
             .any(|field| field_or_descendant_is_tagged(field, 0))
 }
 
-/// ===========================================================================================
-/// D1 Iceberg-CREATE refuse: a tightened frame must not derive a table schema until D2
-/// relaxes via the same source walk. INSERT into an existing table is not this path.
-///
-/// R-D: refuse only when the schema is tighten-derived AND at least one output field is
-/// non-nullable (a CREATE that would persist no required column is allowed).
-/// ===========================================================================================
-///
+/// D1 Iceberg-CREATE refuse: a tightened frame must not derive a table schema until D2 relaxes via
 /// # Errors
-/// [`Error::Analysis`] naming `tightenNulls` when a tighten-derived schema would persist
-/// a non-nullable column.
+/// [`Error::Analysis`] naming `tightenNulls` when a tighten-derived schema would persist a
 pub fn refuse_iceberg_create_of_tightened_schema(schema: &Schema) -> Result<()> {
     if !schema_is_tighten_derived(schema) {
         return Ok(());
@@ -220,15 +172,9 @@ pub fn refuse_iceberg_create_of_tightened_schema(schema: &Schema) -> Result<()> 
     refuse_tightened_create(&tightened_field_names(schema))
 }
 
-/// ===========================================================================================
 /// Walk every `TableScan`, including expression subqueries and lazy view plans, and refuse an
-/// Iceberg CREATE when a tightened source yields a non-nullable output. Output tags alone are
-/// insufficient because computed expressions can drop field metadata.
-/// ===========================================================================================
-///
 /// # Errors
 /// [`Error::Analysis`] when a tightened source would persist a required column;
-/// [`Error::DataFusion`] if the plan walk fails.
 pub fn refuse_iceberg_create_of_tightened_plan(plan: &LogicalPlan) -> Result<()> {
     let (has_tightened_source, tagged) = collect_tighten_sources(plan)?;
     if !has_tightened_source || !plan_has_non_nullable_output(plan) {
@@ -237,14 +183,9 @@ pub fn refuse_iceberg_create_of_tightened_plan(plan: &LogicalPlan) -> Result<()>
     refuse_tightened_create(&tagged)
 }
 
-/// ===========================================================================================
-/// Refuse DDL sinks that resolve to an Iceberg catalog when their tightened source would persist
-/// a required column. Session-scoped sinks remain allowed. Resolution uses DataFusion's configured
-/// default catalog and schema, never the target spelling.
-///
+/// Refuse DDL sinks that resolve to an Iceberg catalog when their tightened source would persist a
 /// # Errors
-/// [`Error::Analysis`] when the DDL body would persist a required column from a tightened
-/// source; [`Error::DataFusion`] if the plan walk fails.
+/// [`Error::Analysis`] when the DDL body would persist a required column from a tightened source;
 pub fn refuse_iceberg_create_of_tightened_ddl(
     plan: &LogicalPlan,
     ctx: &SessionContext,
@@ -269,13 +210,7 @@ pub fn refuse_iceberg_create_of_tightened_ddl(
     refuse_iceberg_create_of_tightened_plan(input)
 }
 
-/// ===========================================================================================
 /// R-A: after cache/persist/checkpoint collect, re-stamp tighten provenance onto the new
-/// `MemTable` when any plan source (including subqueries) is tighten-derived. DataFusion
-/// keeps propagated `nullable: false` on computed columns but drops field metadata, so
-/// the reminted provider would otherwise be untagged and both doors would go blind.
-/// ===========================================================================================
-///
 /// # Errors
 /// [`Error::DataFusion`] if the plan walk or a batch rebuild fails.
 pub(crate) fn apply_tighten_provenance_on_materialize(
@@ -292,11 +227,7 @@ pub(crate) fn apply_tighten_provenance_on_materialize(
         TIGHTEN_NULLS_METADATA_KEY.to_string(),
         TIGHTEN_NULLS_METADATA_VALUE.to_string(),
     );
-    // Tag every reminted required field (top-level and nested). Do not skip
-    // by source-column name: `ts + 1 AS symbol` would then stay required and
-    // untagged after hint restore, and CREATE would persist it (C2-Q-001).
-    // Originally-required columns may widen to nullable on remint+hint — that
-    // is conservative for the Iceberg "writes stay nullable" contract.
+    // Tag every reminted required field (top-level and nested).
     let fields: Vec<Field> = schema
         .fields()
         .iter()
@@ -318,14 +249,6 @@ fn collect_tighten_sources(plan: &LogicalPlan) -> Result<(bool, Vec<String>)> {
 }
 
 /// Walk `TableScan`s, expression subqueries, and lazy view/`into_view` inner plans
-/// (`TableSource::get_logical_plan`). A `ViewTable` schema is the *output* of the
-/// stored plan, so computed columns drop field tags unless this recurse happens.
-///
-/// Iterative (no extra Rust stack per hop). A visit budget bounds cyclic
-/// `createOrReplaceTempView` graphs. The budget counts inner-plan *visits*
-/// (width + depth), not nesting depth. Overflow is a generic walk error — never
-/// a `tightenNulls` CREATE refusal — so a wide non-tighten UNION/CTAS/cache
-/// cannot be mis-blamed on `declareSorted` (C1-Q-001).
 fn walk_tighten_sources(plan: &LogicalPlan) -> Result<TightenSourceWalk> {
     const MAX_VIEW_VISITS: usize = 4096;
     let mut walked = TightenSourceWalk {
@@ -375,10 +298,7 @@ fn visit_tighten_sources(
     .map(|_| ())
 }
 
-/// ===========================================================================================
 /// Drop internal `repark.tighten_nulls` tags from a user-visible export schema.
-/// Nullability is kept — only the provenance key is removed (field + schema metadata).
-/// ===========================================================================================
 #[must_use]
 pub fn strip_tighten_export_metadata(schema: SchemaRef) -> SchemaRef {
     let has_schema_tag = schema_has_tighten_provenance(schema.as_ref());
@@ -414,8 +334,7 @@ const MAX_NESTED_TYPE_DEPTH: usize = 32;
 
 fn field_or_child_is_non_nullable_at(field: &Field, depth: usize) -> bool {
     if depth > MAX_NESTED_TYPE_DEPTH {
-        // Fail closed: treat as required so CREATE refuses rather than
-        // stack-overflow on a hostile nested type (C1-CRATE-001).
+        // Fail closed: treat as required so CREATE refuses rather than stack-overflow on a hostile
         return true;
     }
     if !field.is_nullable() {
@@ -429,9 +348,7 @@ fn field_or_child_is_non_nullable_at(field: &Field, depth: usize) -> bool {
             field_or_child_is_non_nullable_at(inner, depth + 1)
         }
         DataType::Map(entries, _) => match entries.data_type() {
-            // Arrow map entries are a non-null struct; Iceberg requiredness of the
-            // map column is the map field itself. Only a required *value* persists
-            // a nested required Iceberg field (keys are spec-required).
+            // Arrow map entries are a non-null struct; Iceberg requiredness of the map column is
             DataType::Struct(fields) if fields.len() >= 2 => {
                 field_or_child_is_non_nullable_at(fields[1].as_ref(), depth + 1)
             }
@@ -502,9 +419,7 @@ fn field_or_descendant_is_tagged(field: &Field, depth: usize) -> bool {
     }
 }
 
-/// Tag reminted required fields (including nested struct children / list items /
-/// map values) so hint restore can unflip them. Depth-capped: a hostile nest
-/// must not stack-overflow remint/restore/export (C2-SAF-001).
+/// Tag reminted required fields (including nested struct children / list items / map values) so
 fn remint_annotate_field(field: &Field) -> Field {
     remint_annotate_field_at(field, 0)
 }

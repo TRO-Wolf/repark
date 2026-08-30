@@ -1,19 +1,4 @@
 //! repark-core — the Session-centric engine API.
-//!
-//! [`ReparkSession`] constructs the DataFusion `SessionContext` (memory pool, batch size,
-//! partitions, write knobs as `ConfigExtension`s), holds the iceberg `Catalog` handles
-//! ([`CatalogRegistry`]) with their [`LocationPolicy`], and exposes the near-drop-in PySpark
-//! entrypoints: `sql`, catalog/namespace registration, the reader family
-//! (`read_parquet`/`read_csv`/`read_json`/`read_iceberg_table`), the temp-view family, and the
-//! listing helpers. All execution routes through the [`ExecutionBackend`] seam — today a local
-//! execution-context holder over in-process DataFusion, whose minimal surface is a future
-//! extension point rather than a distribution abstraction (`backend.rs` doc / `ARCHITECTURE.md`).
-//!
-//! The two phase-cut seams are the crate's only inversions of v1 (design §3): [`SqlDialect`]
-//! (how a statement front end plugs into `sql` — [`DataFusionDialect`] is the phase-1 default)
-//! and [`SessionExtension`] (what a door installs at `build()` time). Bindings import THIS
-//! crate only; doors import repark-core + repark-iceberg. The frame handle is DataFusion's
-//! [`DataFrame`], re-exported — no wrapper (omissions ledger O-6).
 
 mod backend;
 mod catalog_config;
@@ -34,50 +19,42 @@ mod sorted_view;
 mod temp_view;
 mod time_travel;
 
-// --- The Session surface (v1 names, courtesy `Session` alias). ---
+// --- The Session surface (v1 names, courtesy `Session` alias).
 pub use session::ReparkSession as Session;
 pub use session::{DATAFUSION_CONFIG_PREFIX, ReparkSession, ReparkSessionBuilder, TimeTravelOpts};
 
-// --- Session timezone (`spark.sql.session.timeZone`): the ONE key spelling, its validated
-// value type, and the build-time resolver. Resolved once at construction; carried on the
-// session (`ReparkSession::session_time_zone`).
+// --- Session timezone (`spark.sql.session.timeZone`): the ONE key spelling, its validated value
 pub use session_time_zone::{
     DEFAULT_SESSION_TIME_ZONE, SESSION_TIME_ZONE_KEY, SessionTimeZone, resolve_session_time_zone,
 };
 
-// --- Seams. ---
+// --- Seams.
 pub use backend::{ExecutionBackend, SingleNodeBackend};
 pub use dialect::{DataFusionDialect, EngineContext, SqlDialect};
 
 // --- The shared pre-execute belt: plan → guard → execute, the ONE choke point every door's
-// planned statement passes through before it runs. ---
 pub use extension::{SessionBuildConf, SessionExtension};
 pub use pre_execute::PreExecute;
 
-// --- The embedding's executor handle (EC-5 / design §4 Q7). Additive: the TYPE is named here;
-// core never constructs one and never blocks — the INSTANCE lives in the embedding.
+// --- The embedding's executor handle (EC-5 / design §4 Q7).
 pub use runtime::EngineRuntime;
 
-// --- Catalog configuration + engine-side registry (hoisted). ---
+// --- Catalog configuration + engine-side registry (hoisted).
 pub use catalog_config::{CatalogKind, CatalogSpec, parse_catalog_specs};
 pub use catalog_state::{CatalogRegistry, LocationPolicy, memory_warehouse_fallback_root};
 pub use namespace_create::refuse_contradictory_namespace_location;
 
-// --- Time travel (hoisted): spec + parsers + the reader-options path, plus the ONE minter of
-// the shared `__repark_tt_` ephemeral-name namespace (`next_temp_view_name` — public because both
-// SQL doors register into that namespace on the same session, and a second counter would collide;
-// H-1b).
+// --- Time travel (hoisted): spec + parsers + the reader-options path, plus the ONE minter of the
 pub use time_travel::{
     TimeTravelSpec, next_temp_view_name, parse_timestamp_to_ms, parse_version_value, read_table_at,
     resolve_snapshot_id, snapshot_id_as_of_time,
 };
 
-// --- Error surface: the classifier fold + the seed re-export (bindings import one crate). ---
+// --- Error surface: the classifier fold + the seed re-export (bindings import one crate).
 pub use error_map::engine_err;
 pub use repark_common::{Error, ErrorClass, Result};
 
-// --- SE-1 tightenNulls (PR-D1): the metadata key + the Iceberg-CREATE refuse both doors
-// call at CTAS schema derivation. The flip itself stays crate-private in `sorted_view`. ---
+// --- SE-1 tightenNulls (PR-D1): the metadata key + the Iceberg-CREATE refuse both doors call at
 pub use sorted_view::{
     TIGHTEN_NULLS_METADATA_KEY, TIGHTEN_NULLS_METADATA_VALUE,
     refuse_iceberg_create_of_tightened_ddl, refuse_iceberg_create_of_tightened_plan,
@@ -85,10 +62,10 @@ pub use sorted_view::{
     strip_tighten_export_metadata, tightened_field_names,
 };
 
-// --- Frame handle: DataFusion `DataFrame` re-exported — no wrapper (design §3 / O-6). ---
+// --- Frame handle: DataFusion `DataFrame` re-exported — no wrapper (design §3 / O-6).
 pub use datafusion::prelude::DataFrame;
 
-// --- Plan-rewrite kernels (no DataFrame newtype). ---
+// --- Plan-rewrite kernels (no DataFrame newtype).
 pub use dynamic_flatten::{DynamicFlattenOptions, dynamic_flatten};
 
 // v1's two `#[cfg(test)] pub(crate) use` companions live in `session.rs` — the module split
