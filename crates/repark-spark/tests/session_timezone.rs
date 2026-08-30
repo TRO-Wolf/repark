@@ -171,7 +171,7 @@ async fn timestamps(session: &ReparkSession, sql: &str) -> (DataType, Vec<i64>) 
     )
 }
 
-// The extractor families — one pin per family, on the coercion path, under two non-UTC zones
+// === Extractor families ===
 
 /// FAMILY 1 — `year`.
 #[tokio::test]
@@ -406,7 +406,7 @@ async fn pre_1970_instants_resolve_in_the_session_zone() {
     );
 }
 
-// The entry-point matrix: the native `DataFrame` API cell beside the Spark-door cell above
+// === Entry-point matrix ===
 
 /// MATRIX — the **native `DataFrame` API** cell, and the reason the zone is read at INVOKE time.
 #[tokio::test]
@@ -441,7 +441,7 @@ async fn native_dataframe_api_extracts_in_the_session_zone() {
     );
 }
 
-// The negatives — what must NOT move
+// === Negatives ===
 
 /// A `DATE`'s OWN calendar carries no instant.
 #[tokio::test]

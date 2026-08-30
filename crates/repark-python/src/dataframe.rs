@@ -354,7 +354,7 @@ impl PyDataFrame {
 
     /// Post-analysis Arrow schema as an Arrow C Data Interface `PyCapsule`.
     /// # Errors
-    /// Returns a classified engine exception if analysis fails, or `ValueError` if the schema
+    /// Returns an engine exception on analysis failure, or `ValueError` if schema export fails.
     pub fn analyzed_arrow_schema<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyCapsule>> {
         fenced!("PyDataFrame.analyzed_arrow_schema", {
             let schema = self.analyzed_arrow_schema_native()?;
@@ -537,7 +537,7 @@ impl PyDataFrame {
 
     /// Order rows by the given columns (PySpark `DataFrame.orderBy` / `sort`).
     /// # Errors
-    /// Returns `ValueError` for vector length mismatch; planning failures use the engine
+    /// Returns `ValueError` on vector length mismatch; plan failures use the engine classifier.
     pub fn sort(
         &self,
         columns: Vec<PyColumn>,
@@ -569,7 +569,7 @@ impl PyDataFrame {
 
     /// Equi-join on shared column names (PySpark `df.join(other, on=<name|list>, how=…)`).
     /// # Errors
-    /// Returns `ValueError` for unsupported `how`; join and projection failures use the engine
+    /// Returns `ValueError` for unsupported `how`; join failures use the engine classifier.
     pub fn join_on_names(
         &self,
         right: PyRef<'_, PyDataFrame>,
@@ -596,7 +596,7 @@ impl PyDataFrame {
 
     /// Join on a boolean [`PyColumn`] condition (PySpark `df.join(other, on=<Column>, how=…)`).
     /// # Errors
-    /// Returns `ValueError` for unsupported `how`; join and binding failures use the engine
+    /// Returns `ValueError` for unsupported `how`; binding failures use the engine classifier.
     pub fn join_on_condition(
         &self,
         right: PyRef<'_, PyDataFrame>,

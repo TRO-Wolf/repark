@@ -415,7 +415,7 @@ impl PyReparkSession {
 
     /// Register any Arrow C Stream exporter as a `MemTable` temp view.
     /// # Errors
-    /// Missing exporters and non-capsule exporter results return `TypeError`; exporter errors are
+    /// Missing exporters and non-capsule results return `TypeError`; exporter errors are preserved.
     pub fn register_arrow_stream_as_temp_view(
         &self,
         _py: Python<'_>,
@@ -456,7 +456,7 @@ impl PyReparkSession {
 
     /// This session's temp-view home as `[catalog, schema]`.
     /// # Errors
-    /// Returns `RuntimeError` when the session's temp-view home was taken over by a registered
+    /// Returns `RuntimeError` when a catalog took over the temp-view home, or engine lookup fails.
     pub fn temp_view_home(&self) -> PyResult<Vec<String>> {
         fenced!("PyReparkSession.temp_view_home", {
             self.session.temp_view_home().map_err(to_py_err)
@@ -465,7 +465,7 @@ impl PyReparkSession {
 
     /// Home-qualified `[catalog, schema, table]` for a one-part temp-view name, or `None`.
     /// # Errors
-    /// Returns `RuntimeError` when the session's temp-view home was taken over by a registered
+    /// Returns `RuntimeError` when a catalog took over the temp-view home, or engine lookup fails.
     pub fn resolve_temp_view_home_ref(&self, name: &str) -> PyResult<Option<Vec<String>>> {
         fenced_span!(
             "py.catalog",

@@ -53,7 +53,7 @@ pub(crate) fn temp_view_ref_from_segment(
 
 /// Resolve a caller's temp-view `name` against `home`.
 /// # Errors
-/// [`Error::Analysis`] when `name` is neither a single-part identifier nor the session's own
+/// Fails with [`Error::Analysis`] when `name` is not a single-part or home-qualified ident.
 pub(crate) fn temp_view_ref(home: &TempViewHome, name: &str) -> Result<TableReference> {
     let quoted = name.starts_with('"') || name.starts_with('`');
     match TableReference::parse_str(name) {

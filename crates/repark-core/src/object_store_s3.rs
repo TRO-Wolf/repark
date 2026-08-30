@@ -60,7 +60,7 @@ impl CredentialProvider for AwsConfigCredentialProvider {
 
     /// Resolve the current AWS credentials from the wrapped chain and adapt them to `object_store`.
     /// # Errors
-    /// Returns an `object_store` `Generic` error if the underlying provider fails to supply
+    /// Returns an `object_store` `Generic` error if the provider cannot supply credentials.
     async fn get_credential(&self) -> object_store::Result<Arc<AwsCredential>> {
         let credentials = self.inner.provide_credentials().await.map_err(|source| {
             object_store::Error::Generic {
@@ -76,9 +76,9 @@ impl CredentialProvider for AwsConfigCredentialProvider {
     }
 }
 
-/// Build an authenticated Amazon S3 store from the finalized SDK configuration and optional region
+/// Build an authenticated Amazon S3 store from the SDK config and an optional region.
 /// # Errors
-/// Returns [`Error::DataFusion`] if no region can be resolved, the resolved config carries no
+/// Returns [`Error::DataFusion`] if region, credentials, or the store builder fail.
 pub(crate) fn build_amazon_s3_store(
     bucket: &str,
     region_override: Option<&str>,
@@ -122,7 +122,7 @@ pub(crate) fn build_amazon_s3_store(
 
 /// Register one object store for `bucket` under both `s3://` and `s3a://` in the `RuntimeEnv`.
 /// # Errors
-/// Returns [`Error::DataFusion`] if a `scheme://bucket` URL cannot be constructed (an invalid
+/// Returns [`Error::DataFusion`] if a `scheme://bucket` URL cannot be built (bad bucket name).
 pub(crate) fn register_bucket_store(
     context: &SessionContext,
     bucket: &str,

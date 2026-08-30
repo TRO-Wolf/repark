@@ -14,7 +14,7 @@ use crate::engine_err;
 impl ReparkSession {
     /// Register `batches` as a replaceable in-memory view named `name`.
     /// # Errors
-    /// Returns [`Error::DataFusion`] if `batches` is empty (no schema to infer) or registration
+    /// Returns [`Error::DataFusion`] on empty batches or register fail; Analysis if qualified.
     pub fn create_or_replace_temp_view(&self, name: &str, batches: Vec<RecordBatch>) -> Result<()> {
         let schema = batches
             .first()
@@ -30,7 +30,7 @@ impl ReparkSession {
 
     /// Register a planned [`DataFrame`] as a replaceable temp view named `name`.
     /// # Errors
-    /// Returns [`Error::DataFusion`] if registration fails; [`Error::Analysis`] for a qualified
+    /// Returns [`Error::DataFusion`] if register fails; [`Error::Analysis`] if `name` is qualified.
     pub fn create_or_replace_temp_view_from(&self, name: &str, frame: &DataFrame) -> Result<()> {
         self.replace_view(name, frame.clone().into_view())
     }
@@ -199,7 +199,7 @@ impl ReparkSession {
 
     /// Resolve a one-part name to the home-qualified `[catalog, schema, table]` reference.
     /// # Errors
-    /// [`Error::Analysis`] when this session has no session-local temp-view home left (a catalog
+    /// Fails with [`Error::Analysis`] when a catalog has replaced this session's temp-view home.
     pub fn resolve_temp_view_home_ref(&self, name: &str) -> Result<Option<Vec<String>>> {
         let Ok(parts) = crate::parse_table_identifier_segments(name) else {
             return Ok(None);

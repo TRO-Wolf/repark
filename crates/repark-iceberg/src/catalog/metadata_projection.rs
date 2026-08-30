@@ -62,7 +62,7 @@ impl TableProvider for ProjectingMetadataTableProvider {
     }
 }
 
-/// Build a [`ProjectionExec`] (or return `input` unchanged) so the plan schema matches
+/// Build a [`ProjectionExec`] (or keep `input`) so the plan schema matches `projection`.
 fn apply_projection_exec(
     input: Arc<dyn ExecutionPlan>,
     projection: Option<&Vec<usize>>,
@@ -111,7 +111,7 @@ fn apply_projection_exec(
     Ok(Arc::new(ProjectionExec::try_new(exprs, input)?))
 }
 
-/// Whether `name` is a metadata-table name the fork's `IcebergSchemaProvider::table_names`
+/// Whether `name` is a metadata-table name the fork synthesized rather than listed.
 fn is_synthesized_metadata_table_name(inner: &dyn SchemaProvider, name: &str) -> bool {
     let Some((base, metadata_table_type)) = name.rsplit_once('$') else {
         return false;

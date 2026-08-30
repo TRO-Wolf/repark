@@ -13,7 +13,7 @@ pub const SESSION_TIME_ZONE_KEY: &str = "spark.sql.session.timeZone";
 /// The session timezone when [`SESSION_TIME_ZONE_KEY`] is unset.
 pub const DEFAULT_SESSION_TIME_ZONE: &str = "UTC";
 
-/// A **validated** session timezone: an IANA zone id (`America/New_York`) or a fixed offset
+/// A validated session timezone: an IANA zone id (`America/New_York`) or a fixed offset (`+05:00`).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SessionTimeZone {
     /// The zone id exactly as the user wrote it, minus surrounding whitespace.

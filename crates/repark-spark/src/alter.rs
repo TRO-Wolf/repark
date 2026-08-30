@@ -750,7 +750,7 @@ pub(crate) fn refuse_unsupported_alter_sql(sql: &str) -> Option<Result<DataFrame
     None
 }
 
-// I7 — PARTITION FIELD + REPLACE COLUMNS (stock sqlparser cannot model these Spark forms)
+// === I7 PARTITION FIELD + REPLACE COLUMNS ===
 
 /// A parsed I7 ALTER form that bypasses stock sqlparser.
 #[derive(Debug, Clone)]

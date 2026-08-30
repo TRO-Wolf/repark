@@ -51,7 +51,7 @@ enum PositionDeleteGroupKey {
 /// One deleted row's identity: the data file it lives in, and its 0-based ordinal within that file.
 pub(crate) type PositionDeletePair = (Arc<str>, i64);
 
-/// Sort `(file_path, pos)` pairs into the ascending order the Iceberg spec requires of every
+/// Sort `(file_path, pos)` pairs into the ascending order the Iceberg spec requires.
 pub(crate) fn sort_position_delete_pairs(pairs: &mut [PositionDeletePair]) {
     pairs.sort();
 }
@@ -79,7 +79,7 @@ pub(crate) fn parse_delete_granularity(raw: Option<&str>) -> Result<DeleteGranul
 
 /// Write real Parquet position-delete file(s) for `pairs`, each stamped with the `(spec_id, partition)`
 /// # Errors
-/// Returns a DataFusion error if the writer config/stack cannot be built, a manifest cannot be
+/// Returns a DataFusion error if the writer cannot be built or a pair is not live in the snapshot.
 pub(crate) async fn write_position_deletes(
     table: &Table,
     pairs: &[PositionDeletePair],
@@ -135,7 +135,7 @@ pub(crate) async fn write_position_deletes(
     Ok(delete_files)
 }
 
-/// Map every LIVE data file path in the current snapshot to the `(spec_id, partition)` it was
+/// Map every live data-file path to the `(spec_id, partition)` it was written under.
 async fn data_file_partitions(table: &Table) -> Result<HashMap<String, (i32, Struct)>> {
     let metadata = table.metadata();
     let mut partitions = HashMap::new();

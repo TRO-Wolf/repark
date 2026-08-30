@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use iceberg::Catalog;
 
-/// How a registered catalog resolves a table location for a **staged CTAS create** whose target
+/// How a registered catalog resolves a staged-CTAS location when the target namespace has none.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum LocationPolicy {
     /// Glue: a table location must be resolvable from the namespace `location` property.

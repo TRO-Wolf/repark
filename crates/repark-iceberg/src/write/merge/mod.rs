@@ -406,7 +406,7 @@ fn resolve_schema_field_name<'a>(schema: &'a ArrowSchema, name: &str) -> Option<
     found
 }
 
-/// Expand `UPDATE SET *` / `INSERT *` markers into explicit per-column clauses — Spark's star
+/// Expand `UPDATE SET *` / `INSERT *` into explicit per-column clauses (Spark star resolution).
 async fn expand_star_clauses<'a>(
     ctx: &SessionContext,
     spec: &'a MergeSpec,
@@ -698,7 +698,7 @@ async fn plan_and_commit(
     }
 }
 
-/// The copy-on-write arm: affected-file discovery → whole-file rewrite + insert queries → Parquet
+/// The copy-on-write arm: discover affected files, rewrite plus insert, then Parquet write.
 async fn plan_and_commit_cow(
     ctx: &SessionContext,
     catalog: &Arc<dyn Catalog>,
@@ -847,7 +847,7 @@ async fn plan_and_commit_mor(
     commit_row_delta(catalog, table, snapshot_id, pairs, data_files, concurrency).await
 }
 
-/// R-MERGE-STREAM-OUT: cast each batch to the write schema and pipe into the same streaming
+/// R-MERGE-STREAM-OUT: cast each batch to the write schema and pipe into the streaming writers.
 pub(super) async fn write_new_data_files_from_stream<S>(
     table: &Table,
     write_schema: &SchemaRef,
@@ -891,7 +891,7 @@ async fn stream_sql(
     dataframe.execute_stream().await
 }
 
-/// Resolve affected `_file` paths back to their full [`DataFile`] entries by walking the pinned
+/// Resolve affected `_file` paths to [`DataFile`] entries by walking the pinned snapshot.
 pub(super) async fn resolve_affected_data_files(
     table: &Table,
     affected: &[String],
@@ -960,7 +960,7 @@ fn skip_cardinality(spec: &MergeSpec) -> bool {
     )
 }
 
-/// R-MERGE-ONEPASS Stage A + PERF-01: stream match discovery and fold to **distinct affected
+/// R-MERGE-ONEPASS Stage A: stream match discovery and fold to distinct affected `_file` paths.
 async fn affected_files(
     ctx: &SessionContext,
     sql: &MergeSql<'_>,
@@ -1219,7 +1219,7 @@ fn require_non_null_i64(array: &Int64Array, row: usize, label: &str) -> Result<i
 /// Column name for the scout-#18 affected-path `MemTable` (semi-join key).
 const AFFECTED_PATHS_COL: &str = "path";
 
-/// RAII guard for MERGE scratch tables registered during COW rewrite (file-scoped target and/or
+/// RAII guard for MERGE scratch tables registered during COW rewrite.
 struct MergeScratchGuard<'a> {
     ctx: &'a SessionContext,
     names: Vec<String>,
@@ -1633,7 +1633,7 @@ pub async fn write_data_files(table: &Table, batches: Vec<RecordBatch>) -> Resul
     write_data_files_with_concurrency(table, batches, WriteConcurrency::default()).await
 }
 
-/// [`write_data_files`] with an explicit [`WriteConcurrency`] (session conf
+/// [`write_data_files`] with explicit [`WriteConcurrency`] (`repark.write.max-concurrent-files`).
 /// # Errors
 /// Same as [`write_data_files`].
 pub async fn write_data_files_with_concurrency(
@@ -1649,9 +1649,9 @@ pub async fn write_data_files_with_concurrency(
     .await
 }
 
-/// Stream batches into unpartitioned Parquet `DataFileWriter`(s), writing each batch the instant
+/// Stream batches into unpartitioned Parquet writers as the source produces each batch.
 /// # Errors
-/// Returns a DataFusion error if the table is not Parquet-default, writer setup fails, the source
+/// Returns a DataFusion error if the table is not Parquet-default or the writer/source fails.
 pub async fn write_data_files_from_stream<S>(table: &Table, stream: S) -> Result<Vec<DataFile>>
 where
     S: Stream<Item = Result<RecordBatch>> + Unpin,
@@ -1752,7 +1752,7 @@ impl<W: IcebergWriter> BatchWriter for ForkBatchWriter<W> {
     }
 }
 
-/// Drive a record-batch stream into a **single** [`BatchWriter`], writing each batch the instant
+/// Drive a record-batch stream into one [`BatchWriter`], writing each batch as it arrives.
 async fn write_stream_into<K, S>(mut sink: K, mut stream: S) -> Result<Vec<DataFile>>
 where
     K: BatchWriter,

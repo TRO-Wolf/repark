@@ -31,7 +31,7 @@ pub trait SessionExtension: Send + Sync {
 
     /// Register runtime objects on the freshly built [`SessionContext`].
     /// # Errors
-    /// A registration failure → [`datafusion::error::DataFusionError`]; `build()` folds it via
+    /// A registration failure is a DataFusion error; `build()` folds it via [`engine_err`].
     fn register(&self, ctx: &SessionContext) -> datafusion::error::Result<()> {
         let _ = ctx;
         Ok(())

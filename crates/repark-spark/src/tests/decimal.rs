@@ -5,7 +5,7 @@ use super::common::*;
 
 use datafusion::arrow::array::Decimal128Array;
 
-// Collect helpers — one-column scalar pins on the Arrow path (value AND type AND nullability)
+// === Collect helpers ===
 
 /// One-column Decimal128 result: `(precision, scale, nullable, value_or_null)`.
 async fn collect_decimal128(
@@ -45,7 +45,7 @@ async fn collect_decimal128(
     (precision, scale, nullable, value)
 }
 
-// Equality-class money controls (repark == Spark; corpus `repark is None`)
+// === Equality-class money controls ===
 
 /// Corpus row `add_same_precision_scale` — `(10,2)+(10,2)` → decimal128(11,2) = 5.79.
 #[tokio::test]
@@ -79,7 +79,7 @@ async fn pin_mul_money_by_quantity_i128() {
     assert_eq!(value, Some(5997), "i128 scaled 59.97 at scale 2");
 }
 
-// Literal inference (DEC-1 / U2 — Spark-door `parse_float_as_decimal=true`)
+// === Literal inference ===
 
 /// Corpus row `literal_1_23_infers_decimal_in_spark_double_in_repark`.
 #[tokio::test]
@@ -97,7 +97,7 @@ async fn pin_literal_1_23_infers_decimal128_3_2_i128() {
     assert_eq!(value, Some(123), "i128 scaled 1.23 at scale 2");
 }
 
-// Division result (p,s) (disclosure — repark lands narrower than Spark)
+// === Division result ===
 
 /// Corpus row `div_same_precision_scale`.
 #[tokio::test]
@@ -119,7 +119,7 @@ async fn pin_div_same_precision_scale_repark_i128() {
     );
 }
 
-// 38-digit clamp family (disclosure — repark keeps more scale than Spark)
+// === 38-digit clamp family ===
 
 /// Corpus row `mul_38_10_clamps_scale_in_spark`.
 #[tokio::test]
@@ -172,7 +172,7 @@ async fn pin_mul_38_20_still_refuses_at_plan() {
     assert_eq!(value, Some(1_000_000), "i128 for 1.0 at scale 6");
 }
 
-// avg type + int×decimal promotion (disclosures)
+// === avg type + int×decimal promotion ===
 
 /// Corpus row `avg_money_stays_decimal_in_spark_double_in_repark`.
 #[tokio::test]
@@ -223,7 +223,7 @@ async fn pin_cast_int_times_decimal_stays_21_2_i128() {
     assert_eq!(value, Some(750), "i128 scaled 7.50 at scale 2");
 }
 
-// ANSI overflow + divide-by-zero (G13 raise-class disclosures on the repark half)
+// === ANSI overflow + divide-by-zero ===
 
 /// Corpus row `overflow_max_decimal38_plus_one_raises_in_spark` after DEC-6: ANSI ON raises.
 #[tokio::test]
@@ -305,7 +305,7 @@ async fn pin_div_by_zero_decimal38_returns_null_at_38_4_when_ansi_false() {
     assert_eq!(value, None, "ansi=false /0 yields NULL, not a raise");
 }
 
-// Nullability marking (value+type agree with Spark; nullability diverges)
+// === Nullability marking ===
 
 /// Corpus row `mul_single_digit_nullability_differs`.
 #[tokio::test]

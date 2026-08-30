@@ -1154,7 +1154,7 @@ async fn merge_empty_target_streams_all_inserts() {
     );
 }
 
-// Group R — MERGE INTO a NON-identity transform-partitioned table (the gate `reject_unsupported`
+// Group R: MERGE INTO a non-identity transform-partitioned table (`reject_unsupported` gate).
 
 /// Create `sales.<name>` with `id int` + `v string`, partitioned by `bucket`.
 async fn create_bucket_target(

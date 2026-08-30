@@ -42,7 +42,7 @@ impl ReparkCatalogProvider {
         })
     }
 
-    /// Rebuild the name directory for a single namespace — O(1) `list_tables` (plus at most one
+    /// Rebuild one namespace name directory via `list_tables` (and at most one `namespace_exists`).
     /// # Errors
     /// Propagates Iceberg / provider-build failures.
     pub async fn refresh_namespace(&self, namespace: &str) -> Result<()> {
@@ -329,7 +329,7 @@ fn namespace_schema_name(namespace: &NamespaceIdent) -> String {
         .unwrap_or_else(|| namespace.to_url_string())
 }
 
-/// Catalog view that reports a single namespace from `list_namespaces` so
+/// Catalog view that reports one namespace from `list_namespaces` for `try_new`.
 #[derive(Debug)]
 pub(crate) struct NamespaceScopedCatalog {
     inner: Arc<dyn Catalog>,

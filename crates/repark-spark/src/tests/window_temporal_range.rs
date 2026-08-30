@@ -6,7 +6,7 @@ use super::common::*;
 use datafusion::arrow::array::{Date32Array, TimestampMicrosecondArray};
 use datafusion::arrow::datatypes::TimeUnit;
 
-// Fixtures — the §0 recon seed rows, registered as plain temp views (leaf-private)
+// === Fixtures ===
 
 /// `(id, ts, v)` with a same-day pair, a next-day row, and a tied pair three days later.
 const TIMESTAMP_SEED: &[(i64, &str, i64)] = &[
@@ -169,7 +169,7 @@ fn present(values: &[i64]) -> Vec<Option<i64>> {
     values.iter().copied().map(Some).collect()
 }
 
-// Pin 1 — the refuse arm: a unit-less RANGE offset over a TIMESTAMP order key
+// === Pin 1 refuse arm ===
 
 /// Spark 4.1.2 refuses `RANGE BETWEEN <n> PRECEDING` over a `TIMESTAMP` order key.
 #[tokio::test]
@@ -217,7 +217,7 @@ async fn temporal_range_bare_offset_over_timestamp_key_refuses_like_spark() {
     }
 }
 
-// Pin 2 — the restate arm: a unit-less RANGE offset over a DATE order key means DAYS
+// === Pin 2 restate arm ===
 
 /// Spark reads RANGE BETWEEN 1 PRECEDING over DATE as one day; the seed answers [10, 30, 30].
 #[tokio::test]
@@ -266,7 +266,7 @@ async fn temporal_range_bare_offset_over_date_key_means_days() {
     );
 }
 
-// Pin 3 — the already-correct interval path is undisturbed (asc, desc, ties, NULL keys)
+// === Pin 3 interval path ===
 
 /// Interval-bounded temporal `RANGE` matches Spark.
 #[tokio::test]
@@ -378,7 +378,7 @@ async fn temporal_range_null_order_keys_match_spark() {
     );
 }
 
-// Pin 4 — the fix is scoped: numeric order keys and mixed statements are left alone
+// === Pin 4 scoped fix ===
 
 /// A unit-less RANGE offset over a numeric order key is an ordinary value-offset frame.
 #[tokio::test]

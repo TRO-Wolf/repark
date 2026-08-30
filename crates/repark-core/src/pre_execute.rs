@@ -31,7 +31,7 @@ impl<'a> PreExecute<'a> {
 
     /// Plan a SQL string **without executing it**.
     /// # Errors
-    /// Any parse/plan failure, verbatim — callers that upgrade planner errors (the ANSI door's
+    /// Any parse/plan failure, verbatim; the ANSI door upgrades planner errors itself.
     pub async fn plan(&self, sql: &str) -> DfResult<LogicalPlan> {
         self.ctx.state().create_logical_plan(sql).await
     }

@@ -81,7 +81,7 @@ pub async fn list_namespace_names(catalog: &dyn Catalog) -> Result<Vec<String>> 
         .collect())
 }
 
-/// Build a DataFusion [`CatalogProvider`] by snapshotting the live Iceberg catalog once
+/// Build a DataFusion [`CatalogProvider`] by snapshotting the live Iceberg catalog once.
 /// # Errors
 /// Returns an error if namespaces / table-name listings cannot be loaded.
 #[tracing::instrument(name = "catalog.build_iceberg_catalog_provider", skip(catalog))]

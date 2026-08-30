@@ -210,7 +210,7 @@ pub fn refuse_iceberg_create_of_tightened_ddl(
     refuse_iceberg_create_of_tightened_plan(input)
 }
 
-/// R-A: after cache/persist/checkpoint collect, re-stamp tighten provenance onto the new
+/// R-A: after cache/persist/checkpoint collect, re-stamp tighten provenance on the new MemTable.
 /// # Errors
 /// [`Error::DataFusion`] if the plan walk or a batch rebuild fails.
 pub(crate) fn apply_tighten_provenance_on_materialize(

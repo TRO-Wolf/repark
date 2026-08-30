@@ -897,7 +897,7 @@ pub fn macdext(
 
 /// `APO` — absolute price oscillator, `MA(fast) − MA(slow)` (`ta_APO.c` / `TA_INT_PO`).
 /// # Errors
-/// [`crate::TaError::InvalidPeriod`] if either period `< 2`; [`crate::TaError::UnsupportedMaType`]
+/// Fails if a period is `< 2` or `matype` is out of range (`> 8`); MAMA (7) is supported.
 pub fn apo(
     input: &[f64],
     fast_period: usize,
@@ -924,7 +924,7 @@ pub fn apo(
 
 /// `PPO` — percentage price oscillator, `(MA(fast) − MA(slow)) / MA(slow) · 100` (`ta_PPO.c` /
 /// # Errors
-/// [`crate::TaError::InvalidPeriod`] if either period `< 2`; [`crate::TaError::UnsupportedMaType`]
+/// Fails if a period is `< 2` or `matype` is out of range (`> 8`); MAMA (7) is supported.
 pub fn ppo(
     input: &[f64],
     fast_period: usize,
@@ -1162,7 +1162,7 @@ fn ultosc_terms(high: &[f64], low: &[f64], close: &[f64], day: usize) -> (f64, f
 
 /// `ULTOSC` — ultimate oscillator (`ta_ULTOSC.c`).
 /// # Errors
-/// [`crate::TaError::InvalidPeriod`] if any period `< 1`; [`crate::TaError::LengthMismatch`] if
+/// Fails if any period `< 1`, series lengths differ, or `matype` is outside the supported range.
 pub fn ultosc(
     high: &[f64],
     low: &[f64],
@@ -1354,7 +1354,7 @@ pub fn stochf(
 
 /// `STOCH` — slow stochastic (`ta_STOCH.c`, split into slow-%K / slow-%D).
 /// # Errors
-/// [`crate::TaError::InvalidPeriod`] if any period `< 1`; [`crate::TaError::LengthMismatch`] if
+/// Fails if any period `< 1`, series lengths differ, or `matype` is outside the supported range.
 #[allow(clippy::similar_names, clippy::too_many_arguments)]
 pub fn stoch(
     high: &[f64],

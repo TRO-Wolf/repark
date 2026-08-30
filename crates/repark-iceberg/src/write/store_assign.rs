@@ -87,7 +87,7 @@ pub(crate) fn refuse_unless_ansi_store_assignable(
     Ok(())
 }
 
-/// The non-MERGE write-path gate (WI-1): same matrix, [`WRITE_SPARK_CLASS`] citation, and one
+/// The non-MERGE write-path gate (WI-1): same matrix, with nested pairs not judged.
 /// # Errors
 /// Same as [`refuse_unless_ansi_store_assignable`], for flat `(source, target)` pairs.
 pub(crate) fn refuse_unless_write_store_assignable(

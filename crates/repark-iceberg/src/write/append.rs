@@ -34,7 +34,7 @@ use crate::write::writer_props::writer_properties_for;
 
 /// Append record batches to an Iceberg table — the sanctioned add-only commit path.
 /// # Errors
-/// A missing table surfaces the catalog's load error; a non-Parquet `write.format.default` is
+/// A missing table surfaces the catalog load error; a non-Parquet default is `NotImplemented`.
 pub async fn append(
     catalog: &Arc<dyn Catalog>,
     table_ident: &TableIdent,
@@ -72,7 +72,7 @@ fn reject_unsupported_append(table: &Table) -> Result<()> {
     Ok(())
 }
 
-/// Conform consumer batches to the Iceberg write schema: every target column takes the source
+/// Conform batches to the Iceberg write schema: every target column takes its source column.
 fn conform_batches(write_schema: &SchemaRef, batches: &[RecordBatch]) -> Result<Vec<RecordBatch>> {
     let mut conformed = Vec::with_capacity(batches.len());
     for batch in batches {
@@ -361,7 +361,7 @@ where
     fanout.close().await.map_err(iceberg_err)
 }
 
-/// One stamped `fast_append` commit — `ENGINE_CONTRACT` §4's INSERT/append action, with the same
+/// One stamped `fast_append` commit: ENGINE_CONTRACT §4 INSERT/append with MERGE's stamp class.
 /// # Errors
 /// Returns the fork's transaction/commit error (folded to this crate's error type) when the append
 pub async fn commit_append(

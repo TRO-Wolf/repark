@@ -390,7 +390,7 @@ impl ReparkSession {
 
     /// Run a SQL string through the session-default [`SqlDialect`].
     /// # Errors
-    /// Returns the classified [`Error`]: [`Error::Parse`] on a syntax error, [`Error::Analysis`]
+    /// Returns [`Error::Parse`] on a syntax error or [`Error::Analysis`] on a planning failure.
     pub async fn sql(&self, query: &str) -> Result<DataFrame> {
         let dialect = Arc::clone(&self.dialect);
         self.sql_with(&dialect, query).await
@@ -398,7 +398,7 @@ impl ReparkSession {
 
     /// Run a SQL string under an explicit dialect without changing the session default.
     /// # Errors
-    /// Identical classification to [`Self::sql`] — the [`engine_err`] fold is session-side, so
+    /// Identical classification to [`Self::sql`]: every dialect gets the same error taxonomy.
     pub async fn sql_with(&self, dialect: &Arc<dyn SqlDialect>, query: &str) -> Result<DataFrame> {
         // Intercept SET of `datafusion.runtime.memory_limit` and refuse SET of `temp_directory`.
         if let Some(frame) = spill::maybe_apply_runtime_set(self.context(), query)? {
@@ -422,7 +422,7 @@ impl ReparkSession {
 
     /// Register an Iceberg [`Catalog`] as both a DataFusion provider and session write handle.
     /// # Errors
-    /// Returns [`Error::DataFusion`] if the name is already registered or the catalog's
+    /// Returns [`Error::DataFusion`] if the name is registered or namespaces cannot load.
     pub async fn register_iceberg_catalog(
         &self,
         name: &str,
@@ -631,7 +631,7 @@ impl ReparkSession {
 
     // === catalog-staleness ============================================================.
 
-    /// Return live table names from an Iceberg catalog handle, without consulting its DataFusion
+    /// Return live table names from an Iceberg catalog handle, not its DataFusion snapshot.
     /// # Errors
     /// Unknown catalog → [`Error::DataFusion`]; list failure → classified iceberg error.
     pub async fn list_iceberg_table_names(
@@ -656,7 +656,7 @@ impl ReparkSession {
             .map_err(engine_err)
     }
 
-    /// Test-support only: create a table via the Catalog API **without** re-registering the DF
+    /// Test-support only: Catalog create without re-registering the DF provider (out-of-band).
     /// # Errors
     /// Unknown catalog, create failure, or invalid warehouse path → classified [`Error`].
     #[doc(hidden)]
@@ -691,7 +691,7 @@ impl ReparkSession {
         Ok(())
     }
 
-    /// Test-support only: drop a table via the Catalog API **without** re-registering the DF
+    /// Test-support only: Catalog drop without re-registering the DF provider (out-of-band).
     /// # Errors
     /// Unknown catalog or drop failure → classified [`Error`].
     #[doc(hidden)]
@@ -738,7 +738,7 @@ impl ReparkSession {
 
     /// Whether a table exists (PySpark `spark.catalog.tableExists`).
     /// # Errors
-    /// Returns [`Error::DataFusion`] for a two-part name or an unregistered catalog; a catalog
+    /// Returns [`Error::DataFusion`] for a two-part name or unregistered catalog.
     pub async fn table_exists(&self, name: &str) -> Result<bool> {
         // Quote-aware split (C2-L-006): match Python `_sql_table_ref` for dotted quoted names.
         let parts = parse_table_identifier_segments(name).map_err(|message| {
@@ -776,7 +776,7 @@ impl ReparkSession {
 
     /// Register the AWS-free in-memory Iceberg catalog under `name` — local development and tests.
     /// # Errors
-    /// Returns [`Error::DataFusion`] if `name` is already registered or the catalog cannot be
+    /// Returns [`Error::DataFusion`] if `name` is registered or the catalog cannot be built.
     pub async fn register_memory_catalog(&self, name: &str, warehouse: &str) -> Result<()> {
         if self.catalog_handle(name).is_ok() {
             return Err(Error::DataFusion(format!(

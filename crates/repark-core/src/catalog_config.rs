@@ -30,7 +30,7 @@ pub enum CatalogKind {
     Postgres,
 }
 
-/// A single configured catalog, parsed from a `spark.sql.catalog.<name>.*` block: its registered
+/// A catalog parsed from a `spark.sql.catalog.<name>.*` block: name, kind, and builder props.
 #[derive(Clone, PartialEq, Eq)]
 pub struct CatalogSpec {
     /// The catalog name (the `<name>` in `spark.sql.catalog.<name>`), used as the registration key.

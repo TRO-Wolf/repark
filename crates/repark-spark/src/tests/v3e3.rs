@@ -308,7 +308,7 @@ async fn delete_file_rows(
     rows
 }
 
-// Partitioned DV fixture
+// === Partitioned DV fixture ===
 
 #[tokio::test]
 async fn partitioned_v3_dv_fixture_adopts_and_matches_spark_live_rows() {
@@ -587,7 +587,7 @@ async fn partitioned_v3_dv_delete_across_files_keeps_per_file_partitions() {
     );
 }
 
-// Equality-delete + DV fixture
+// === Equality-delete + DV fixture ===
 
 #[tokio::test]
 async fn equality_delete_alongside_dv_adopts_and_matches_spark_live_rows() {

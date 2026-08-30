@@ -35,7 +35,7 @@ pub enum OverwriteIsolation {
     Serializable,
 }
 
-/// Parse `write.overwrite.isolation-level` exactly as the fork provider
+/// Parse `write.overwrite.isolation-level` exactly as the fork provider does.
 /// # Errors
 /// [`DataFusionError::Plan`] when the property is present but not a recognized name.
 pub fn parse_overwrite_isolation(table: &Table) -> Result<Option<OverwriteIsolation>> {
@@ -56,7 +56,7 @@ pub fn parse_overwrite_isolation(table: &Table) -> Result<Option<OverwriteIsolat
     }
 }
 
-/// Stream source batches → positional map (D9) → staged data files **without** catalog mutation
+/// Stream source batches to staged data files without catalog mutation (OV1 exclusive).
 /// # Errors
 /// Schema convert, arity/cast/required-omit, or stream write failures as [`DataFusionError`].
 pub async fn write_overwrite_staged_files_from_stream<S>(
@@ -115,7 +115,7 @@ pub async fn commit_overwrite_replace_all(
 
 /// SQL INSERT OVERWRITE positional assignment onto the Iceberg write schema (D9).
 /// # Errors
-/// Arity mismatch, unknown/ambiguous column list name, required-omit, a pair that is not
+/// Fails on arity mismatch, unknown/ambiguous name, required-omit, or a non-assignable pair.
 pub fn positional_map_overwrite_batch(
     batch: &RecordBatch,
     table_schema: &SchemaRef,

@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-/// The outcome of resolving one target column name against a set of source column names, mirroring
+/// Outcome of resolving one target column name against source names (Spark `reorderColumnsByName`).
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) enum SourceMatch {
     /// No source column resolves to the target (Spark's `matched.isEmpty`).

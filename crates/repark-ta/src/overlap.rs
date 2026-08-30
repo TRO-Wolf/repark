@@ -817,7 +817,7 @@ pub fn mama(input: &[f64], fast_limit: f64, slow_limit: f64) -> Result<(Vec<f64>
     Ok((out_mama, out_fama))
 }
 
-/// `SAR` — Parabolic SAR (`ta_SAR.c`; `SAR_ROUNDING` is a no-op in the default build — TA-Lib does
+/// `SAR` is Parabolic SAR (`ta_SAR.c`); `SAR_ROUNDING` is a no-op — TA-Lib does not round.
 /// # Errors
 /// `InvalidRealParam` if `acceleration` or `maximum` is outside `[0, 3e37]`.
 #[allow(clippy::too_many_lines)] // one op-for-op port of ta_SAR.c's single function.

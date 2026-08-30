@@ -8,7 +8,7 @@ use datafusion::sql::sqlparser::ast::{
 };
 use repark_core::parse_timestamp_to_ms;
 
-// Argument bag
+// === Argument bag ===
 
 /// Parsed CALL arguments — named map + ordered positional list.
 #[derive(Debug, Default)]

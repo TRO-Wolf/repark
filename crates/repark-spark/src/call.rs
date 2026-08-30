@@ -94,7 +94,7 @@ fn resolve_call_target(
     }
 }
 
-// Table identity resolution
+// === Table identity resolution ===
 
 /// Resolve the Spark `table` string against the CALL catalog.
 fn resolve_table_ident(catalog_name: &str, table_arg: &str) -> Result<TableIdent> {
@@ -157,7 +157,7 @@ fn bytes_as_i64(bytes: u64) -> Result<i64> {
     })
 }
 
-// expire_snapshots
+// === expire_snapshots ===
 
 /// Spark's six-column output, all of it (MW-1).
 async fn execute_expire_snapshots(
@@ -262,7 +262,7 @@ fn expire_result_dataframe(ctx: &SessionContext, report: &CleanupReport) -> Resu
     ctx.read_batches(vec![batch])
 }
 
-// rewrite_data_files
+// === rewrite_data_files ===
 
 /// pins: v3-2-create-v3-opt-in/C-011, C-014
 /// Refuse `rewrite_data_files` on a format-v3 table rather than silently reassign row lineage.
@@ -387,7 +387,7 @@ async fn execute_rewrite_data_files(
     ctx.read_batches(vec![batch])
 }
 
-// rewrite_position_delete_files
+// === rewrite_position_delete_files ===
 
 /// Count the live Puffin deletion vectors in the table's CURRENT snapshot.
 pub(crate) async fn count_live_deletion_vectors(table: &iceberg::table::Table) -> Result<usize> {
@@ -472,7 +472,7 @@ async fn execute_rewrite_position_delete_files(
     ctx.read_batches(vec![batch])
 }
 
-// remove_orphan_files
+// === remove_orphan_files ===
 
 /// Java enforces a 24-hour orphan sweep floor at the procedure layer; the fork action does not.
 const ORPHAN_OLDER_THAN_FLOOR_MS: i64 = 24 * 60 * 60 * 1000;
@@ -665,7 +665,7 @@ async fn execute_remove_orphan_files(
     orphan_result_dataframe(ctx, &result.orphan_file_locations)
 }
 
-// rollback_to_snapshot
+// === rollback_to_snapshot ===
 
 async fn execute_rollback_to_snapshot(
     ctx: &SessionContext,
@@ -717,7 +717,7 @@ async fn execute_rollback_to_snapshot(
     ctx.read_batches(vec![batch])
 }
 
-// register_table
+// === register_table ===
 
 /// Spark Iceberg `CALL system.register_table(table, metadata_file)`.
 /// # Errors

@@ -80,7 +80,7 @@ pub fn is_allowed_uncorrelated_in_selection(selection: &Expr) -> bool {
     is_column_expr(expr) && is_simple_uncorrelated_in_subquery(subquery)
 }
 
-/// True when `selection` is `col [NOT] IN (SELECT …)` whose compound refs are only the subquery
+/// True when `selection` is `col [NOT] IN (SELECT …)` whose refs are only the subquery source.
 #[must_use]
 pub fn is_allowed_in_selection(
     selection: &Expr,
@@ -98,7 +98,7 @@ pub fn is_allowed_in_selection(
     is_column_expr(expr) && is_simple_in_subquery(subquery, target_parts, target_alias)
 }
 
-/// True when `selection` is exactly `[NOT] EXISTS (SELECT … FROM <table> [WHERE …])` whose
+/// True when `selection` is `[NOT] EXISTS (SELECT …)` whose refs are only the subquery source.
 #[must_use]
 pub fn is_allowed_exists_selection(
     selection: &Expr,
@@ -115,9 +115,9 @@ pub fn is_allowed_exists_selection(
     is_simple_exists_subquery(subquery, target_parts, target_alias)
 }
 
-/// If `statement` is an allow-listed IN / NOT IN / `[NOT] EXISTS` DELETE, return the catalog +
+/// If `statement` is an allow-listed IN / EXISTS DELETE, return catalog plus spec; else `None`.
 /// # Errors
-/// [`DataFusionError::Plan`] when the spelling is allowed but the target is not
+/// Fails with [`DataFusionError::Plan`] when the allowed spelling's target is not three-part.
 pub fn try_allowed_delete_in(statement: &Statement) -> Result<Option<AllowedDeleteIn>> {
     let Statement::Delete(delete) = statement else {
         return Ok(None);
@@ -171,7 +171,7 @@ pub fn try_allowed_delete_in(statement: &Statement) -> Result<Option<AllowedDele
 
 /// Return catalog plus spec for allow-listed uncorrelated `UPDATE … SET` with `WHERE col IN`.
 /// # Errors
-/// [`DataFusionError::Plan`] when the spelling is allowed but the target is not
+/// Fails with [`DataFusionError::Plan`] when the allowed spelling's target is not three-part.
 pub fn try_allowed_update_in(statement: &Statement) -> Result<Option<AllowedDeleteIn>> {
     let Statement::Update(update) = statement else {
         return Ok(None);
@@ -227,7 +227,7 @@ pub fn try_allowed_update_in(statement: &Statement) -> Result<Option<AllowedDele
 
 /// Execute an identity DELETE or UPDATE: SELECT over the pinned scratch, then COW-rewrite or `MoR`
 /// # Errors
-/// Planning / execution / write / commit errors, plus `NotImplemented` for a non-Parquet default
+/// Planning, write, or commit errors, plus `NotImplemented` for non-Parquet or non-V2 MoR.
 pub async fn execute_predicate_dml(
     ctx: &SessionContext,
     catalog: &Arc<dyn Catalog>,
