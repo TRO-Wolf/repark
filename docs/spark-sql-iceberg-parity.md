@@ -2012,17 +2012,24 @@ the pin rather than obeying it.
   Spark-clean, including COW lineage (`next_row_id` = 5 on the 3-row recipe). A **second COW
   DELETE after that overwrite snapshot** refuses `V3-COW-1` before write — fork
   `iceberg-datafusion` `FirstRowIdPolicy::Suppress` would reassign `_row_id` / `next-row-id`
-  (measured next-row-id 6; Spark stays 5). Filed as F-rp3-c7, not V3-3. Live-DV `UPDATE`
-  refuses pre-write. `MERGE INTO` and subquery-`WHERE` DML still refuse at the write-mode
-  resolver (V3E-1: the engine-owned COW writer reassigns every survivor's `_row_id`). A v2
-  control commits unchanged.
+  (measured next-row-id 6; Spark stays 5). Filed as F-rp3-c7, not V3-3. V3-3 (2026-08-30)
+  measured `UPDATE` and `MERGE INTO` on a DV-free v3 table: values and Arrow types match
+  Spark, but Spark read-back of `_row_id` reassigns (COW UPDATE
+  `(1,0,1),(2,1,2),(3,2,1)` → engine `(1,3,2),(2,4,2),(3,5,2)`; MOR UPDATE keeps unchanged
+  rows and reassigns the updated row `1→3`; COW MERGE reassigns every row). The guard
+  therefore stays a pre-write `V3-COW-1` refusal on all three doors. A v2 control commits
+  unchanged.
 - **Apache Spark** — COW `DELETE` on v3 **preserves** `_row_id` /
   `_last_updated_sequence_number`. Seed `(id,_row_id,seq) = (1,0,1), (2,1,1), (3,2,1)`;
   after `DELETE WHERE id = 2` the survivors are still `(1,0,1), (3,2,1)`; Spark's own
   `next-row-id` after the same delete is `5`. A second COW DELETE does not bump
-  `next-row-id` again.
+  `next-row-id` again. The same seed after `UPDATE SET name='x' WHERE id=2` is
+  `(1,a,0,1),(2,x,1,2),(3,c,2,1)` on both COW and MOR (MOR writes one Puffin DV).
+  `MERGE` matching id 2 and inserting id 4 keeps `(1,0,1),(2,1,2),(3,2,1)` and assigns
+  a new id only to the insert.
   *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, Hadoop catalog, 2026-08-24 V3E-2 session,
-  the 2026-08-27 RP-2 counter check, and the 2026-08-30 RP-3 C7 transcript)*.
+  the 2026-08-27 RP-2 counter check, the 2026-08-30 RP-3 C7 transcript, and the 2026-08-30
+  V3-3 UPDATE/MERGE transcript)*.
 - **Pin** —
   `crates/repark-spark/src/tests/v3_cow.rs::adopted_v3_cow_delete_carries_survivor_row_lineage`
   (`adopted_v3_cow_second_delete_refuses_before_lineage_diverges`,
@@ -2032,10 +2039,12 @@ the pin rather than obeying it.
   including `adopted_v3_mor_first_delete_commits_a_deletion_vector_and_a_second_merges`;
   partitioned cells in `crates/repark-spark/src/tests/v3e3.rs`; facade
   `python/repark/tests/test_v3_cow_dml.py`; live-DV UPDATE refuse in
-  `python/repark/tests/test_v3e4_refs_time_travel.py`). Pins: rp-3-fork-repin/C-004.
+  `python/repark/tests/test_v3e4_refs_time_travel.py`). Pins: rp-3-fork-repin/C-004;
+  v3-3-dml/C-001, C-002, C-003.
 - **Rationale** — remaining refusals keep the **owner ruling 2026-08-25** (guard COW DML on v3)
   where the write is still unsafe, and stay BACKLOG. Live-DV DELETE is measured green.
-  Sequential COW lineage is a fork defect (F-rp3-c7). `UPDATE` / `MERGE` ride V3-3. V3-4 still
+  Sequential COW lineage is a fork defect (F-rp3-c7). V3-3 measured `UPDATE` / `MERGE`
+  keep-refusal: lifting the guard routes through a lineage-reassigning writer. V3-4 still
   owns row lineage as a whole (`V3-ROWID-1`).
 
 ### BL-9 — a double-quoted string literal is an identifier on the SQL door

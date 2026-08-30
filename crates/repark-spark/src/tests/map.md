@@ -22,9 +22,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   B15), refuses illegal sources (`DATATYPE_MISMATCH`, B2–B7), keeps `VARBINARY` refusing (B12),
   leaves a `BINARY` DDL column untouched; `TRY_CAST(<int>)` refuses without the ANSI-off suggestion.
 - `v3_cow.rs` — v3 UPDATE / MERGE
-  refuse (`V3-COW-1`, both seats), the plain-`WHERE` DELETE commits on a DV-free table (COW
+  refuse (`V3-COW-1`, both seats; V3-3 measured keep-refusal: Spark preserves `_row_id`,
+  the engine rewrite reassigns), the plain-`WHERE` DELETE commits on a DV-free table (COW
   keeps first-snapshot lineage then refuses the unsafe COW second DELETE, MOR commits a Puffin DV) and a second MOR DELETE merges into the
-  live vector (pins: rp-2-fork-repin/C-003, C-005; rp-3-fork-repin/C-004); short-name,
+  live vector (pins: rp-2-fork-repin/C-003, C-005; rp-3-fork-repin/C-004; v3-3-dml/C-001, C-002); short-name,
   padded merge-on-read, and v2-control cases keep `V3_MAINTENANCE_ORACLE` and ENC-1's pin.
 - `create_table.rs` — also the V3R-1 type pin: `GEOMETRY` / `GEOGRAPHY` / `VARIANT` refuse at
   CREATE (`V3-GEO-1`).

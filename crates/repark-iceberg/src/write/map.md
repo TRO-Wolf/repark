@@ -45,7 +45,8 @@ repark-core's error map.
   passthrough valve lifts the plain-`WHERE` DELETE on v3, including on a table that already
   carries deletion vectors (RP-3 / F-17 at `d408da42`), but refuses a copy-on-write DELETE after
   an overwrite snapshot before fork `iceberg-datafusion` can reassign lineage (C-004 C7).
-  Every v3 UPDATE remains refused (V3-3). pins: rp-3-fork-repin/C-004
+  Every v3 UPDATE remains refused (V3-3 measured keep-refusal: Spark preserves `_row_id`;
+  the engine rewrite reassigns). pins: rp-3-fork-repin/C-004; v3-3-dml/C-001
 - `predicate_dml.rs` — **G3-E8 A1-identity** (`execute_predicate_dml`): evaluate the original
   `WHERE` as a SELECT over the pinned `(_file, _pos)` streaming target, then commit through the
   MERGE COW/MoR write arms honoring `write.delete.mode` / `write.update.mode` / isolation —

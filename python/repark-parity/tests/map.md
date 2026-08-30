@@ -79,6 +79,8 @@ JVM, no repark required). See [../map.md](../map.md).
   rule for the unit itself. RP-2 salvage (2026-08-28) retargeted the `V3-COW-1` assertions to
   the narrowed row. RP-3 (2026-08-30) retargeted again: live-DV DELETE merge lifts; UPDATE,
   MERGE, and sequential COW after overwrite stay refused (BACKLOG, 2026-08-25 ruling kept).
+  V3-3 (2026-08-30) records the measured keep-refusal: Spark preserves `_row_id`; the engine
+  rewrite reassigns (pins: v3-3-dml/C-003).
 - `test_dl_2_ledger_grammar.py` — **DL-2 (2026-08-23):** the ledger grammar gate on a scratch
   tree seeded with the script's own `EXCEPTIONS` rows at their ceilings: a clean ledger counts;
   a bad verdict cell, a duplicate id and a row without evidence go red; an unpinned `PROVEN`

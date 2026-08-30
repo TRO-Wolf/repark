@@ -4,6 +4,7 @@
 //! pins: v3r-1-rulings/C-001, C-002, C-003, C-004, C-005
 //! pins: rp-2-fork-repin/C-003, C-005
 //! pins: rp-3-fork-repin/C-004, C-008
+//! pins: v3-3-dml/C-001, C-002
 
 use std::collections::HashSet;
 use std::fs;
@@ -237,8 +238,11 @@ async fn assert_cow_refused_untouched(door: &Door, table: &str, sql: &str, verb:
     let before_rows = door.live_pairs(table).await;
     let err = door.err(sql).await;
     assert!(
-        err.contains("V3-COW-1") && err.contains("row lineage") && err.contains(verb),
-        "refusal must name the row, row lineage and `{verb}`: {err}"
+        err.contains("V3-COW-1")
+            && err.contains("row lineage")
+            && err.contains(verb)
+            && err.contains("reassigns"),
+        "refusal must name the row, row lineage, `{verb}`, and the measured reassignment: {err}"
     );
     let after_table = door.table(table).await;
     assert_eq!(
@@ -298,6 +302,7 @@ async fn ansi_adopted_v3_cow_second_delete_refuses_before_lineage_diverges() {
 }
 
 /// pins: v3r-1-rulings/C-002
+/// pins: v3-3-dml/C-001
 #[tokio::test]
 async fn adopted_v3_cow_update_refuses_rather_than_reassign_row_lineage() {
     let door = door_with_v3_opt_in().await;
@@ -312,6 +317,7 @@ async fn adopted_v3_cow_update_refuses_rather_than_reassign_row_lineage() {
 }
 
 /// pins: v3r-1-rulings/C-003
+/// pins: v3-3-dml/C-002
 #[tokio::test]
 async fn adopted_v3_cow_merge_refuses_with_unset_and_explicit_mode() {
     let door = door_with_v3_opt_in().await;
@@ -365,6 +371,7 @@ async fn v2_cow_delete_still_commits_control() {
 }
 
 /// pins: v3r-1-rulings/C-004
+/// pins: v3-3-dml/C-002
 #[tokio::test]
 async fn adopted_v3_mor_merge_still_refuses() {
     let door = door_with_v3_opt_in().await;
@@ -501,7 +508,7 @@ async fn adopted_v3_padded_merge_on_read_spelling_still_refuses_update() {
         .err("UPDATE ice.sales.adopt_pad SET name = 'x' WHERE id = 2")
         .await;
     assert!(
-        err.contains("V3-COW-1") && err.contains("row lineage"),
+        err.contains("V3-COW-1") && err.contains("row lineage") && err.contains("reassigns"),
         "the copy-on-write arm's reason: {err}"
     );
     assert_eq!(door.lineage("adopt_pad").await, before, "no commit");

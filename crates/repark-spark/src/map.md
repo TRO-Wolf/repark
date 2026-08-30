@@ -104,6 +104,8 @@ pins: rp-3-fork-repin/C-010
   plain-`WHERE` DELETE on DV-free v3 tables); `dml_target_ident` (shared
   with the BUG-001 valve) completes short names from the session defaults (SEC-001). A v3 COW
   DELETE after an overwrite snapshot stays a pre-write V3-COW-1 refusal (RP-3 C-004 C7).
+  V3-3 measured UPDATE/MERGE keep-refusal: Spark preserves `_row_id`; the engine rewrite
+  reassigns (pins: v3-3-dml/C-001, C-002).
 - `call_args.rs` — CALL argument bag, scalar coercions, and quoted-name keys for dashed options.
 - `collation.rs` — **G15:** parse-altitude collation refuse. Walks
   `Expr::Collate`, column-def `COLLATE`, `CREATE`/`ALTER COLLATION`, `SET NAMES COLLATE`,
