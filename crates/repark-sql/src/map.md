@@ -22,7 +22,7 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
 - `lib.rs` — manifest: module list, `pub use dialect::AnsiDialect`, `pub use router::execute`.
 - `declared_refuse.rs` — FNP-15/16 ANSI-door parse valve (G15 dual-wire: Spark's copy lives in
   `repark-functions`). Sketches (32), CSV/XML/XPath (11), VARIANT (8), and geospatial (5) are
-  deferred-by-cost. `armed_names()` is the 62-name roster. The crate door pin is
+  deferred-by-cost. `armed_names()` (test-only) is the 62-name roster. The crate door pin is
   `router/tests.rs::execute_refuses_every_armed_declared_name` (`execute`, not the helper).
   pins: fnp-15-16/C-001, C-008, C-009, C-010, C-011, C-013
 - [v3/](v3/map.md) — format-v3 test modules (`#[cfg(test)] mod v3`).

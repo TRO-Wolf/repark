@@ -181,6 +181,7 @@ const GEOSPATIAL_REASON: &str = "is reachable without a JVM and is deferred by c
      GEOGRAPHY/GEOMETRY have no Arrow representation and no vendored WKB codec. See \
      docs/spark-sql-iceberg-parity.md (FNP-16 geospatial).";
 
+#[cfg(test)]
 const FNP15: &[&str] = &[
     "input_file_block_length",
     "input_file_block_start",
@@ -191,6 +192,7 @@ const FNP15: &[&str] = &[
 ];
 
 /// Names this door currently refuses at parse altitude.
+#[cfg(test)]
 #[must_use]
 pub(crate) fn armed_names() -> Vec<&'static str> {
     let mut names: Vec<&'static str> = FNP15.to_vec();
