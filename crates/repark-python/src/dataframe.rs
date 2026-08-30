@@ -491,8 +491,8 @@ impl PyDataFrame {
     /// Returns `RuntimeError` if the predicate does not parse or cannot be planned.
     pub fn filter_sql(&self, predicate: &str) -> PyResult<Self> {
         fenced!("PyDataFrame.filter_sql", {
-            // This path bypasses the statement router, so apply its COLLATE refusal here.
-            repark_spark::refuse_collation_in_sql(predicate).map_err(datafusion_to_py_err)?;
+            // This path bypasses the statement router, so apply its parse-altitude valves here.
+            repark_spark::refuse_sql_fragment(predicate).map_err(datafusion_to_py_err)?;
             let expr = self
                 .df
                 .parse_sql_expr(predicate)

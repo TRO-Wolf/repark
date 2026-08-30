@@ -29,9 +29,7 @@ fn apply_session_knobs(
     // Zero explicitly opts out of the bounded pool; other values select the requested limit.
     match memory_limit_gb {
         None => {}
-        Some(0) => {
-            builder = builder.memory_limit_bytes(0);
-        }
+        Some(0) => builder = builder.memory_limit_bytes(0),
         Some(gb) => {
             builder = builder.memory_limit_gb(gb);
         }
@@ -154,6 +152,8 @@ impl PyReparkSession {
     /// Returns `RuntimeError` on parse, planning, iceberg, or execution failure.
     pub fn sql(&self, py: Python<'_>, query: &str) -> PyResult<PyDataFrame> {
         fenced_span!("py.sql", "PyReparkSession.sql", {
+            repark_spark::refuse_declared_function_in_sql(query)
+                .map_err(crate::datafusion_to_py_err)?;
             let df = py
                 .detach(|| self.runtime.block_on(self.session.sql(query)))
                 .map_err(to_py_err)?;

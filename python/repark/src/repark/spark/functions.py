@@ -199,8 +199,7 @@ def _coerce_lit_list_mixed_to_string(values: list[Any]) -> list[Any]:
     return [None if item is None else str(item) for item in values]
 
 
-# numpy dtype name → Spark array element simpleString (Apache test_ndarray_input / empty).
-# object / |S (bytes) are intentionally absent — Spark 4.1.2 raises
+# numpy dtype → Spark array element; object/|S absent (Apache test_ndarray_input).
 _NUMPY_DTYPE_TO_SPARK_ELEMENT: dict[str, str] = {
     "int8": "tinyint",
     "int16": "smallint",
@@ -476,8 +475,7 @@ def current_timestamp() -> Column:
     )
 
 
-# PySpark also exposes the camelCase spelling ``currentTimestamp``; keep both so the import swap
-# just works either way.
+# PySpark camelCase spelling ``currentTimestamp``; keep both for the import swap.
 currentTimestamp = current_timestamp  # noqa: N816 — deliberate PySpark-compatible camelCase alias
 
 
@@ -1268,8 +1266,7 @@ def _scalar(
     )
 
 
-# Re-export wrappers; public names stay on this module.
-# Late imports break the functions ↔ functions_expr / functions_udf cycle (helpers first).
+# Re-export wrappers; late imports break the functions ↔ functions_expr cycle.
 from repark.spark.functions_agg import (  # noqa: E402
     bool_and,
     bool_or,
@@ -1983,3 +1980,6 @@ __all__ = [
     "years",
     "zeroifnull",
 ]
+from repark.spark.functions_declared import install_into as _install_declared_refuse  # noqa: E402
+
+_install_declared_refuse(globals(), __all__)

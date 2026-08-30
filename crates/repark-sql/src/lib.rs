@@ -2,6 +2,7 @@
 
 mod alter;
 mod create_table;
+mod declared_refuse;
 mod dialect;
 mod guards;
 mod merge;

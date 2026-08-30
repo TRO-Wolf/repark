@@ -136,6 +136,7 @@ async fn execute_inner(
     };
     // G15.
     crate::refuse_collation_in_statement(&statement)?;
+    crate::refuse_declared_function_in_statement(&statement)?;
     match &statement {
         Statement::CreateTable(create) if create.query.is_some() => {
             execute_ctas(ctx, catalogs, build_ctas(create, &partitioning)?).await

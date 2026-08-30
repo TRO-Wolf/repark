@@ -38,6 +38,7 @@ pub(crate) async fn execute_passthrough(
         DfStatement::Statement(inner) => {
             // G15 — collation at the EXECUTING parse (G3-E8 altitude).
             crate::refuse_collation_in_statement(inner)?;
+            crate::refuse_declared_function_in_statement(inner)?;
             // G3-E8 identity path.
             if let Some(allowed) =
                 repark_iceberg::write::predicate_dml::try_allowed_delete_in(inner)?

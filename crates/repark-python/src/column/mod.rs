@@ -218,8 +218,8 @@ impl PyColumn {
     #[staticmethod]
     pub fn sql(sql: &str) -> PyResult<Self> {
         fenced!("Column.sql", {
-            // This path bypasses the Spark SQL router, so apply its COLLATE refusal here.
-            repark_spark::refuse_collation_in_sql(sql).map_err(crate::datafusion_to_py_err)?;
+            // This path bypasses the Spark SQL router, so apply its parse-altitude valves here.
+            repark_spark::refuse_sql_fragment(sql).map_err(crate::datafusion_to_py_err)?;
             let context = SessionContext::new();
             repark_functions::register_all(&context);
             for rule in repark_functions::analyzer_rules() {

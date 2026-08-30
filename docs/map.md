@@ -31,7 +31,9 @@ repo.
   and value semantics, §5 facade drop-in semantics) and BACKLOG (§7 "Known Spark-parity
   divergences"; `MOR-1` retired 2026-08-23 / RP-1). §6 is the lifecycle: how a row is added, mirrored and retired, and the boundary
   with [../STATUS.md](../STATUS.md) — STATUS holds issue *state*, this file holds *semantics*, and
-  neither restates the other. §8 is the drop-in disclosure rationale table. Cited by name from
+  neither restates the other. §8 is the drop-in disclosure rationale table. §9 is FNP-15/16
+  declared-absent Spark functions (unreachable vs deferred-by-cost). pins: fnp-15-16/C-014
+  Cited by name from
   ~16 live sites (Rust refusal messages, facade docstrings, facade tests), and indexed in
   [../repo-manifest.toml](../repo-manifest.toml) so a move is a red gate. A row without a live pin
   is not admitted.

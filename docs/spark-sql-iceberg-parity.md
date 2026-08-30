@@ -2183,3 +2183,93 @@ Two of these rows describe surfaces that have **converged** (`clearCache`, `show
 They stay in the table with their pins because the pins now hold the convergence in place: each
 asserts the absence of the old disclosure, so a regression to the no-op behavior reds here rather
 than quietly restoring a divergence this table once documented.
+
+## 9. Declared-absent Spark functions (FNP-15 / FNP-16)
+
+These names are exported and refuse. FNP-15 names are **unreachable** in a no-JVM engine.
+FNP-16 families are **reachable without a JVM and deferred by cost**. The two claims are not
+the same. Each row is DECLARED. FNP-16 family sections land in the commit that arms that
+family.
+
+Oracle basis for this section: *documented* — Spark 4.1.2 `pyspark.sql.functions` exports
+the name; the divergence is that repark refuses the call Spark would evaluate. No value
+oracle is involved.
+
+### FNP-15-java_method — JVM class-load reflection is unreachable
+
+- **repark** — `F.java_method`, Spark SQL `java_method(...)`, and ANSI SQL `java_method(...)`
+  raise `UnsupportedOperationException` / `NotImplemented` stating the name is **unreachable**:
+  it loads a Java class by name and invokes a static method by reflection, which needs a live
+  JVM. repark has no JVM.
+- **Apache Spark** — loads the named class and invokes the static method.
+  *(oracle: documented — Spark `CallMethodViaReflection` / `java_method`.)*
+- **Pin** — `python/repark/tests/test_fnp15_16_declared_refuse.py::test_facade_attribute_refuses_with_registry_reason[java_method]`,
+  `…::test_spark_sql_door_refuses[java_method]`,
+  `…::test_ansi_sql_door_refuses[java_method]`;
+  `crates/repark-spark/src/tests/declared_refuse.rs::java_method_refuses`.
+- **Rationale** — DECLARED unreachable. Register, do not build.
+
+### FNP-15-reflect — CallMethodViaReflection is unreachable
+
+- **repark** — `reflect` is the other spelling of `java_method` and refuses as **unreachable**
+  (`CallMethodViaReflection`).
+- **Apache Spark** — same JVM reflection as `java_method`.
+  *(oracle: documented.)*
+- **Pin** — `python/repark/tests/test_fnp15_16_declared_refuse.py::test_facade_attribute_refuses_with_registry_reason[reflect]`,
+  `…::test_spark_sql_door_refuses[reflect]`,
+  `…::test_ansi_sql_door_refuses[reflect]`;
+  `crates/repark-spark/src/tests/declared_refuse.rs::reflect_refuses`.
+- **Rationale** — DECLARED unreachable. Register, do not build.
+
+### FNP-15-try_reflect — exception-to-NULL reflection is unreachable
+
+- **repark** — `try_reflect` is `reflect` with exception-to-NULL and still **unreachable**;
+  it needs a live JVM.
+- **Apache Spark** — JVM reflection; exceptions become NULL.
+  *(oracle: documented.)*
+- **Pin** — `python/repark/tests/test_fnp15_16_declared_refuse.py::test_facade_attribute_refuses_with_registry_reason[try_reflect]`,
+  `…::test_spark_sql_door_refuses[try_reflect]`,
+  `…::test_ansi_sql_door_refuses[try_reflect]`;
+  `crates/repark-spark/src/tests/declared_refuse.rs::try_reflect_refuses`.
+- **Rationale** — DECLARED unreachable. Register, do not build.
+
+### FNP-15-unwrap_udt — Spark UDT unwrap is unreachable
+
+- **repark** — `unwrap_udt` is **unreachable**: Spark `UserDefinedType` unwrap walks the JVM
+  UDT registry; with no JVM there is no UDT system to unwrap from.
+- **Apache Spark** — unwraps a `UserDefinedType` to its SQL type.
+  *(oracle: documented.)*
+- **Pin** — `python/repark/tests/test_fnp15_16_declared_refuse.py::test_facade_attribute_refuses_with_registry_reason[unwrap_udt]`,
+  `…::test_spark_sql_door_refuses[unwrap_udt]`,
+  `…::test_ansi_sql_door_refuses[unwrap_udt]`;
+  `crates/repark-spark/src/tests/declared_refuse.rs::unwrap_udt_refuses`.
+- **Rationale** — DECLARED unreachable. Register, do not build.
+
+### FNP-15-input_file_block_start — InputFileBlockHolder start is unreachable
+
+- **repark** — `input_file_block_start` is **unreachable**: it reads Spark's
+  `InputFileBlockHolder` thread-local, populated by `HadoopRDD`/`FileScanRDD` as a split is
+  handed to a task. DataFusion has no equivalent surface, and repark's `input_file_name` is
+  itself still a stub.
+- **Apache Spark** — returns the start offset of the current file split.
+  *(oracle: documented.)*
+- **Pin** — `python/repark/tests/test_fnp15_16_declared_refuse.py::test_facade_attribute_refuses_with_registry_reason[input_file_block_start]`,
+  `…::test_spark_sql_door_refuses[input_file_block_start]`,
+  `…::test_ansi_sql_door_refuses[input_file_block_start]`;
+  `crates/repark-spark/src/tests/declared_refuse.rs::input_file_block_start_refuses`.
+- **Rationale** — DECLARED unreachable until `input_file_name` is destubbed. Register, do not
+  invent a different mechanism here.
+
+### FNP-15-input_file_block_length — InputFileBlockHolder length is unreachable
+
+- **repark** — `input_file_block_length` is **unreachable** by the same `InputFileBlockHolder`
+  thread-local mechanism as `input_file_block_start`. DataFusion has no equivalent surface, and
+  repark's `input_file_name` is itself still a stub.
+- **Apache Spark** — returns the length of the current file split.
+  *(oracle: documented.)*
+- **Pin** — `python/repark/tests/test_fnp15_16_declared_refuse.py::test_facade_attribute_refuses_with_registry_reason[input_file_block_length]`,
+  `…::test_spark_sql_door_refuses[input_file_block_length]`,
+  `…::test_ansi_sql_door_refuses[input_file_block_length]`;
+  `crates/repark-spark/src/tests/declared_refuse.rs::input_file_block_length_refuses`.
+- **Rationale** — DECLARED unreachable until `input_file_name` is destubbed. Register, do not
+  invent a different mechanism here.
