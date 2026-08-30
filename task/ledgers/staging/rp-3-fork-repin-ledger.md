@@ -240,5 +240,41 @@ Charter C-002 named **#230. It is not in this range.** Recorded; not invented. L
 | #233 F-9 / F-15 | S3 Tables `register_table` refuses naming R126; `DataFileWriter::write` fills `write_default` | docs + registry citation (C-008); no engine caller sets `write_default` (C-009) |
 | #235 F-14 | `MetadataLocation` Hadoop `vN.metadata.json` → `v(N+1)` pointer math | `crates/repark-spark/src/tests/call_register.rs` pin retargets (C-008) |
 | #237 F-17 | `close_touched_dv_containers`, `DvContainerClose`, `RowDelta::add_delete_file_with_sequence_number` / `remove_deletes_many`; fork DataFusion DELETE + UPDATE arms call it | guard lift (C-004); engine seam wiring (C-003) |
-| #239 H7-P1 / R114 | `with_file_prune_only` on scan builders; `iceberg::live_deletion_vectors_by_data_file` (`lib.rs:107`); `iceberg::spec::is_deletion_vector` (`spec/mod.rs:67`) | guard's `count_live_deletion_vectors` replacement decision (C-004); no prune call site required |
+| #239 H7-P1 / R114 | `with_file_prune_only` on scan builders; `iceberg::live_deletion_vectors_by_data_file` (`lib.rs:107`); `iceberg::spec::is_deletion_vector` (`spec/mod.rs:67`); **BREAKING:** `DataFileWriter` / `PositionDeleteFileWriter` `build(None)` with no spec now errors — callers must `unpartitioned()` or `with_partition_spec` | engine `position_delete.rs::write_position_deletes_for_partition` chains `.unpartitioned()` on the spec-0 path (C-002 addendum). Guard's `count_live_deletion_vectors` replacement decision (C-004); no prune call site required |
 | #228, #231, #234, #236, #238, #240 | docs / SEPMO move | none |
+
+## 7. WP-1 baseline at `d408da42` (2026-08-29)
+
+`cargo test -p repark-iceberg --lib -- write::` — **261 passed, 35 failed**, all one
+assertion: `DataInvalid => writer was built with neither a PartitionSpec nor a PartitionKey`.
+Fork #239 (`resolve_partition_spec_id`): `build(None)` with no spec is now an error.
+The engine's spec-0 unpartitioned position-delete path still passed `None`/`None`.
+Absorbed in `position_delete.rs` (size-neutral; C-002 addendum). Not a C-003 patch.
+
+`cargo test -p repark-spark -- tests::v3_cow tests::v3e3 tests::v3e4 tests::call_v3 tests::call_register`
+— 40 passed, **1 failed**: `call_register_table_of_hadoop_named_metadata_writes_name_the_convention`
+still expects `expire_snapshots` to refuse a Hadoop `vN.metadata.json` pointer. That is
+C-008's F-14 pin, expected red until the retarget. Not a halt.
+
+`cargo test -p repark-sql -- v3_cow` — 14 passed, 0 failed.
+
+```yaml
+SELF_LOGIC_REVIEW:
+  id: SLR-C-002-ADDENDUM
+  agent: actor
+  action: absorb fork #239 PositionDeleteFileWriter unpartitioned() requirement
+  charter_trace: C-002
+  preconditions:
+    - WP-1 reds diagnosed: SATISFIED (35 tests, one DataInvalid; git log -S names #239)
+    - F-14 spark pin is C-008: SATISFIED (expected red; not this commit)
+  success_condition: the 35 write:: tests pass; position_delete.rs stays 1033 lines
+  step_risks:
+    - mixed into C-003 F-17 wiring: HANDLED(separate commit before any DV close)
+    - file-size exception grows: HANDLED(comment shortened by 2; builder match adds 2)
+  contingencies:
+    - a second writer site still red: EXECUTABLE(additive — find DataFileWriterBuilder::new without spec/key)
+  tripwire_scan: CLEAN
+  uncertainty: NONE
+  verdict: PROCEED
+  escalation: —
+```

@@ -132,9 +132,11 @@ repark-core's error map.
   `'partition'` → one file per `(spec_id, partition)`), and partition stamping (each delete
   file carries the `(spec_id, partition)` of the data file it deletes from, resolved from the
   snapshot's DATA manifests — never the table's current default spec). Unpartitioned groups keep `partition_key = None`;
-  an evolved unpartitioned spec whose id is not 0 also chains `.with_partition_spec(spec)`
+  fork #239 (`d408da42`) errors on `build(None)` with no spec, so that path chains `.unpartitioned()`.
+  An evolved unpartitioned spec whose id is not 0 also chains `.with_partition_spec(spec)`
   so the fork does not fall back to stamping spec 0 (**M16**,
   [`../../../../task/m16-posdelete-specid-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-15-m16-posdelete-specid-ledger.md)).
+  pins: rp-3-fork-repin/C-002
   `#182` `PartitionKey::new` is fallible (`validate_partition_data`); this module maps
   `iceberg::Error` through `iceberg_err`. Also hosts the BUG-001 P0 valve
   (`MorDmlKind` + `refuse_mor_unpartitioned_multi_spec_dml`, hoisted from the v1 SQL crate in
