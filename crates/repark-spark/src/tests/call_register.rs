@@ -1,5 +1,5 @@
 //! Pins `CALL system.register_table` and adoption of the Spark-written format-v3 fixture.
-//! pins: rp-3-fork-repin/C-008
+//! pins: rp-3-fork-repin/C-007, C-008
 
 use std::fs;
 use std::path::{Path, PathBuf};

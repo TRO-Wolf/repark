@@ -8,7 +8,7 @@
 //! is not a read entry point for these adopted tables (C-010).
 //!
 //! pins: v3e-3-partitioned-eqdel-fixtures/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-010, C-011, C-012, C-013
-//! pins: rp-3-fork-repin/C-004
+//! pins: rp-3-fork-repin/C-004, C-007
 
 use std::fs;
 use std::io::ErrorKind;
@@ -422,6 +422,80 @@ async fn partitioned_v3_dv_rewrite_position_delete_files_still_refuses() {
         err.contains("live Puffin deletion vector"),
         "refusal must name Puffin vectors: {err}"
     );
+}
+
+#[tokio::test]
+async fn partitioned_v3_dv_fork_rewrite_position_delete_files_measurement() {
+    let fixture = materialize_part_dv();
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    register_adopted(&ctx, &catalogs, "sales.partdv", &fixture.metadata_file).await;
+    let before_rows = live_triples(&ctx, &catalogs, "ice.sales.partdv").await;
+    let before_sum: i32 = before_rows.iter().map(|row| row.0).sum();
+    let before_deletes = delete_file_rows(&ctx, &catalogs, "ice.sales.partdv").await;
+    let ident = TableIdent::from_strs(["sales", "partdv"]).expect("ident");
+    let catalog = Arc::clone(catalogs.get("ice").expect("ice catalog"));
+    let table = catalog
+        .load_table(&ident)
+        .await
+        .expect("load adopted partitioned DV table");
+    let first = iceberg::maintenance::RewritePositionDeleteFiles::new(table)
+        .execute(catalog.as_ref())
+        .await;
+    let Ok(first_result) = first else {
+        let err = first.err().expect("error");
+        panic!("fork v3 RewritePositionDeleteFiles: {err}");
+    };
+    reregister(&ctx, Arc::clone(&catalog), "ice", "sales")
+        .await
+        .expect("invalidate after first rewrite");
+    let after_first = live_triples(&ctx, &catalogs, "ice.sales.partdv").await;
+    let after_first_sum: i32 = after_first.iter().map(|row| row.0).sum();
+    let after_first_deletes = delete_file_rows(&ctx, &catalogs, "ice.sales.partdv").await;
+    assert_eq!(
+        after_first, before_rows,
+        "first rewrite must keep live rows"
+    );
+    assert_eq!(
+        after_first_sum, before_sum,
+        "first rewrite must keep sum(id)"
+    );
+    let table = catalog
+        .load_table(&ident)
+        .await
+        .expect("reload after first rewrite");
+    let second = iceberg::maintenance::RewritePositionDeleteFiles::new(table)
+        .execute(catalog.as_ref())
+        .await
+        .expect("second rewrite");
+    reregister(&ctx, Arc::clone(&catalog), "ice", "sales")
+        .await
+        .expect("invalidate after second rewrite");
+    let after_second = live_triples(&ctx, &catalogs, "ice.sales.partdv").await;
+    assert_eq!(
+        after_second, after_first,
+        "second rewrite must converge on the same live rows"
+    );
+    let summary = format!(
+        "C-007 first rewritten={} added={} bytes_in={} bytes_out={} deletes {} -> {}; second rewritten={} added={}",
+        first_result.rewritten_delete_files_count,
+        first_result.added_delete_files_count,
+        first_result.rewritten_bytes_count,
+        first_result.added_bytes_count,
+        before_deletes.len(),
+        after_first_deletes.len(),
+        second.rewritten_delete_files_count,
+        second.added_delete_files_count,
+    );
+    std::fs::write(
+        "/tmp/grok-goal-fbdf05425f31/implementer/c007-counts.txt",
+        &summary,
+    )
+    .expect("write C-007 counts");
+    assert_eq!(first_result.rewritten_delete_files_count, 0, "{summary}");
+    assert_eq!(first_result.added_delete_files_count, 0, "{summary}");
+    assert_eq!(second.rewritten_delete_files_count, 0, "{summary}");
+    assert_eq!(after_first_deletes.len(), before_deletes.len(), "{summary}");
 }
 
 #[tokio::test]

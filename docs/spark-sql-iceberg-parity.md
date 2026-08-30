@@ -1763,6 +1763,10 @@ the pin rather than obeying it.
   `expire_snapshots` → `remove_orphan_files`) the file is still live with 2,500 dead rows, and
   one 8,240 B delete file still names it. At 1e7 rows × 50 MERGEs the same shape ended the
   sequence with **8 delete files holding 10,000,000 delete records** (MW-7 §4.4).
+  **RP-3 C-006 (2026-08-30, fork `d408da42` / F-16):** the same 1e7×50 MOR driver still ends
+  at **8 delete files / 10,000,000 delete records** after the full maintenance sequence
+  (`rewrite_position_delete_files` folds 400 → 8; `rewrite_data_files` leaves those 8). The
+  2,500-row pin still holds. F-16 did not close this shape.
 - **Apache Spark** — the same sequence on the same shape ends with **zero** delete files and
   **zero** delete records, at **both** `write.delete.granularity` settings, with
   `removed_delete_files_count` reported as 0 and `remove-dangling-deletes` OFF (jar default
@@ -1945,12 +1949,16 @@ the pin rather than obeying it.
 - **Pin** —
   `crates/repark-spark/src/tests/call_register.rs::call_rewrite_position_delete_files_refuses_spark_written_puffin_vectors`
   (CI-runnable Spark-written fixture; 37 live rows after the vectors apply, pinned beside it by
-  `call_register_table_adopts_a_spark_written_v3_table_with_puffin_vectors`).
-- **Rationale** — DELIBERATE, stricter than Spark on purpose, same reasoning as the orphan-files
-  dry-run default (owner decision OD-2): on a maintenance surface a silent zero is
-  indistinguishable from "already clean", and the operator never learns the reclaim never
-  happened. A deletion vector is file-scoped and is never bin-packed, so this procedure cannot
-  compact one. Format-v3 deletion-vector maintenance is V3-3/V3-5, not this row.
+  `call_register_table_adopts_a_spark_written_v3_table_with_puffin_vectors`);
+  `crates/repark-spark/src/tests/v3e3.rs::partitioned_v3_dv_rewrite_position_delete_files_still_refuses`
+  and `partitioned_v3_dv_fork_rewrite_position_delete_files_measurement` (RP-3 C-007);
+  facade `python/repark/tests/test_v3e3_fixtures.py::test_facade_partitioned_v3_dv_matches_spark_live_rows`.
+- **Rationale** — DELIBERATE, stricter than Spark on purpose (owner decision OD-2). **RP-3
+  C-007 (2026-08-30, fork `d408da42` / R136 F-7 U3):** the v3 arm *runs* and is read-identity
+  on the V3E-3 partitioned-DV fixture, but it **converts parquet position deletes into DVs**.
+  On a DV-only table it returns four zeros (`rewritten=0 added=0`, two DVs stay two) and a
+  second run converges. Zeros still read as already-clean, so `B-MOR-3` stays. DV compaction
+  remains V3-5.
 
 ### V3-ADOPT-1 — Hadoop `vN.metadata.json` pointers register, read, and write `v(N+1)`
 

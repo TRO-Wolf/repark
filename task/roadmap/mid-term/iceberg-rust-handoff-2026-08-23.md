@@ -220,6 +220,10 @@ every `_row_id` (0..11 → 12..23, seq → 13) — V3-LINEAGE-1 stays; the lift 
 a fork rev that carries it. U3 (`RewritePositionDeleteFiles` on v3, fork #227) is RP-3's C-007;
 RP-3 also re-measures U1 at its frozen SHA (C-005).
 
+*RP-3 at `d408da42` (2026-08-30):* U1 still reassigns (`V3-LINEAGE-1` stays). U3's v3 arm
+converts parquet position deletes to DVs; on a DV-only fixture it is a zero-result no-op and
+`B-MOR-3` stays.
+
 Listed so the fork plans it; as of 2026-08-21 the engine's V3-2+ units deliberately waited
 for the MW campaign to close (that wait is over — the addendum below), and the engine refuses
 these paths today.

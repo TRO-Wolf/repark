@@ -252,7 +252,9 @@ V3-3 proves the engine can safely mutate an upgraded table.
   maintenance suite.
 - **V3-6:** finish binary variant, nanosecond timestamps, unknown, and column defaults. V3-6 may
   run in parallel with V3-3 or V3-4 after its fork type support is pinned; it does not wait for
-  V3-5 merely because its unit number is higher.
+  V3-5 merely because its unit number is higher. **RP-3 C-009 (2026-08-30):** fork #233 fills
+  `write_default` inside `DataFileWriter::write`; no engine surface sets a `write_default`.
+  The fork surface exists; V3-6 consumes it.
 
 ### Step 6 — close the v1.0 gate
 

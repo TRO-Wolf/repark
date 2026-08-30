@@ -30,8 +30,9 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   keeps the untouched sibling (pins: rp-3-fork-repin/C-004).
 - `v3_partitioned_equality_deletes.rs` — **test-only:** ANSI live-row twins
   of the Spark-written partitioned DV and equality-delete + DV fixtures, plus
-  `$delete_files` content 1/2, cross-partition DV DELETE, and live-DV UPDATE pre-write refusal
-  with snapshot, rows, and fixture bytes unchanged (`Model: Grok 4.6 xHigh`; rp-3-fork-repin/C-004).
+  `$delete_files` content 1/2, cross-partition DV DELETE, live-DV UPDATE pre-write refusal
+  with snapshot, rows, and fixture bytes unchanged (`Model: Grok 4.6 xHigh`; rp-3-fork-repin/C-004),
+  and C-007 ANSI CALL / fork no-op of `rewrite_position_delete_files` (pins: rp-3-fork-repin/C-007).
 - `delete_granularity.rs` — **test-only:** ANSI `write.delete.granularity`
   (`file` default / explicit `partition` / refuse unknown / SET PROPERTIES then MERGE)
   on MERGE (`Model: Grok 4.6 xHigh`).

@@ -1,6 +1,7 @@
 //! Model: Grok 4.6 xHigh
 //! ANSI-door pins for Spark-written partitioned v3 DV and equality-delete
 //! pins: v3e-3-partitioned-eqdel-fixtures/C-007, C-008, C-010
+//! pins: rp-3-fork-repin/C-007
 
 use std::collections::HashSet;
 use std::fs;
@@ -442,4 +443,66 @@ async fn ansi_partitioned_dv_update_refuses_before_writing() {
     );
     assert_eq!(door.live_triples("partdv").await, before_rows);
     assert_eq!(files_with_bytes(Path::new(PART_DV_TABLE)), before_files);
+}
+
+#[tokio::test]
+async fn ansi_partitioned_dv_rewrite_position_delete_files_call_is_spark_only() {
+    let door = door().await;
+    let error = door
+        .sql("CALL ice.system.rewrite_position_delete_files(table => 'sales.partdv')")
+        .await
+        .expect_err("ANSI CALL is Q7")
+        .to_string();
+    assert!(
+        error.contains("CALLABLE OPERATION") || error.contains("not supported"),
+        "ANSI must refuse CALL, not run B-MOR-3: {error}"
+    );
+}
+
+#[tokio::test]
+async fn ansi_partitioned_dv_fork_rewrite_position_delete_files_is_a_conversion_noop() {
+    let fixture = materialize(
+        &PART_DV_LOCK,
+        "v3-spark-part-dv",
+        PART_DV_TABLE,
+        "v3.metadata.json",
+    );
+    let door = door().await;
+    adopt(&door, "partdv", &fixture.metadata_file).await;
+    let before = door.live_triples("partdv").await;
+    let before_sum: i32 = before.iter().map(|row| row.0).sum();
+    let ident = TableIdent::new(NamespaceIdent::new("sales".into()), "partdv".into());
+    let table = door
+        .catalog
+        .load_table(&ident)
+        .await
+        .expect("load adopted partitioned DV");
+    let first = iceberg::maintenance::RewritePositionDeleteFiles::new(table)
+        .execute(door.catalog.as_ref())
+        .await
+        .expect("fork v3 arm must run");
+    repark_iceberg::catalog::invalidate_catalog_namespaces(
+        &door.ctx,
+        std::sync::Arc::clone(&door.catalog),
+        "ice",
+        &["sales"],
+    )
+    .await
+    .expect("invalidate after first rewrite");
+    let after = door.live_triples("partdv").await;
+    assert_eq!(after, before, "read identity");
+    assert_eq!(
+        after.iter().map(|row| row.0).sum::<i32>(),
+        before_sum,
+        "sum(id)"
+    );
+    assert_eq!(first.rewritten_delete_files_count, 0);
+    assert_eq!(first.added_delete_files_count, 0);
+    let table = door.catalog.load_table(&ident).await.expect("reload");
+    let second = iceberg::maintenance::RewritePositionDeleteFiles::new(table)
+        .execute(door.catalog.as_ref())
+        .await
+        .expect("second rewrite");
+    assert_eq!(second.rewritten_delete_files_count, 0);
+    assert_eq!(door.live_triples("partdv").await, after);
 }

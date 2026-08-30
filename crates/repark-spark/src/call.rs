@@ -512,12 +512,10 @@ async fn execute_rewrite_position_delete_files(
     if vectors > 0 {
         return Err(DataFusionError::NotImplemented(format!(
             "CALL rewrite_position_delete_files found {vectors} live Puffin deletion vector(s) on \
-             `{table_arg}` and will not report a partial result. A deletion vector is file-scoped \
-             and is never bin-packed, so this procedure cannot compact one; running anyway would \
-             return counts that silently exclude every vector. Format-v3 deletion-vector \
-             maintenance is not ported (fork R136 scope is V2 Parquet position deletes). This \
-             engine writes neither: it creates tables at format v2 and refuses merge-on-read \
-             writes on v3."
+             `{table_arg}` and will not report a partial result. Fork R136's v3 arm converts \
+             parquet position deletes into Puffin DVs; it does not compact live DVs. Running \
+             anyway returns four zeros on a DV-only table, which reads as already-clean. \
+             B-MOR-3 stays."
         )));
     }
 
