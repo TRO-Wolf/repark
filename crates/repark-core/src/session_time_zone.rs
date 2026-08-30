@@ -7,7 +7,7 @@ use std::str::FromStr;
 use arrow::array::timezone::Tz;
 use repark_common::{Error, Result};
 
-/// The ONE conf key the engine reads for the session timezone (PySpark's own spelling, so a
+/// The ONE conf key the engine reads for the session timezone.
 pub const SESSION_TIME_ZONE_KEY: &str = "spark.sql.session.timeZone";
 
 /// The session timezone when [`SESSION_TIME_ZONE_KEY`] is unset.

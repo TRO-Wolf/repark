@@ -7,7 +7,7 @@ use repark_iceberg::catalog::resolve_namespace_location;
 
 /// Refuse a re-create whose explicit location contradicts the stored one.
 /// # Errors
-/// Returns a message naming the namespace and both warehouse paths when the request carries an
+/// Returns a message naming the namespace and both warehouse paths on a location conflict.
 pub fn refuse_contradictory_namespace_location<ExistingHasher, RequestedHasher>(
     namespace: &str,
     existing_properties: &HashMap<String, String, ExistingHasher>,

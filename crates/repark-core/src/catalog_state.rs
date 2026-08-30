@@ -9,7 +9,7 @@ use iceberg::Catalog;
 /// How a registered catalog resolves a table location for a **staged CTAS create** whose target
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum LocationPolicy {
-    /// Glue (or any externally-supplied catalog): a table location must be resolvable from the
+    /// Glue: a table location must be resolvable from the namespace `location` property.
     RequireExplicitLocation,
     /// AWS S3 Tables assigns each table location.
     ServiceManagedLocation,
@@ -20,7 +20,7 @@ pub enum LocationPolicy {
     },
 }
 
-/// Filesystem root a memory-catalog warehouse string contributes to
+/// Filesystem root a memory-catalog warehouse string contributes to temp-fallback policy.
 #[must_use]
 pub fn memory_warehouse_fallback_root(warehouse: &str) -> PathBuf {
     let trimmed = warehouse.trim();
@@ -34,7 +34,7 @@ pub fn memory_warehouse_fallback_root(warehouse: &str) -> PathBuf {
     PathBuf::from(trimmed)
 }
 
-/// Iceberg `LocalFsStorage::normalize_path` treats `file://path` and `file:/path` as absolute
+/// Iceberg `LocalFsStorage::normalize_path` treats `file://path` and `file:/path` as `/path`.
 fn absolute_local_from_file_rest(rest: &str) -> PathBuf {
     if rest.starts_with('/') {
         PathBuf::from(rest)
@@ -57,14 +57,14 @@ fn strip_ascii_prefix_ci<'a>(value: &'a str, prefix: &str) -> Option<&'a str> {
     }
 }
 
-/// One registered catalog: the iceberg handle plus the [`LocationPolicy`] that governs staged-CTAS
+/// One registered catalog: the iceberg handle plus the location policy for staged CTAS.
 #[derive(Clone)]
 struct CatalogEntry {
     catalog: Arc<dyn Catalog>,
     location_policy: LocationPolicy,
 }
 
-/// iceberg `Catalog` handles keyed by their registered DataFusion catalog name, each tagged with
+/// Iceberg catalog handles keyed by DataFusion catalog name, each tagged with a location policy.
 #[derive(Clone, Default)]
 pub struct CatalogRegistry {
     entries: HashMap<String, CatalogEntry>,
@@ -92,7 +92,7 @@ impl CatalogRegistry {
         );
     }
 
-    /// Record a local warehouse root for SEC-02 grandfather (`COPY TO` / `CREATE EXTERNAL` under
+    /// Record a local warehouse root for SEC-02 grandfather.
     pub fn note_local_warehouse_root(&mut self, path: impl Into<String>) {
         let path = path.into();
         if path.is_empty() {
@@ -148,7 +148,7 @@ impl std::ops::Index<&str> for CatalogRegistry {
 }
 
 impl<const N: usize> From<[(String, Arc<dyn Catalog>); N]> for CatalogRegistry {
-    /// Test/local convenience: register in-memory catalogs, each tagged
+    /// Test/local convenience: register in-memory catalogs tagged `TempFallbackAllowed`.
     fn from(items: [(String, Arc<dyn Catalog>); N]) -> Self {
         let mut registry = Self::new();
         for (name, catalog) in items {

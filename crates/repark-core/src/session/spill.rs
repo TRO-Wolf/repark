@@ -525,7 +525,7 @@ mod spill_session_tests {
 
     #[tokio::test]
     async fn runtime_set_memory_limit_oom_is_fair_not_greedy() {
-        // 8 partitions × 2 MiB non-spillable reservation > 4 MiB pool, plus enough rows that
+        // Eight partitions times 2 MiB reservation exceed the 4 MiB pool, forcing a spill.
         let session = ReparkSession::builder()
             .memory_limit_bytes(64 * 1024 * 1024)
             .target_partitions(8)

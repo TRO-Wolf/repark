@@ -16,10 +16,10 @@ use repark_common::{Error, Result};
 /// The URL schemes `RePark` treats as S3: `s3` (Iceberg warehouses) and `s3a` (Spark bronze reads).
 pub(crate) const S3_SCHEMES: [&str; 2] = ["s3", "s3a"];
 
-/// The Spark/Hadoop config key that overrides the S3 read region (`spark.hadoop.` prefix + the
+/// The Spark/Hadoop config key that overrides the S3 read region.
 pub(crate) const S3A_REGION_CONFIG_KEY: &str = "spark.hadoop.fs.s3a.endpoint.region";
 
-/// The repark-native spelling of the same override, accepted as a synonym (2026-07-12 naming
+/// The repark-native spelling of the same override, accepted as a synonym.
 pub(crate) const REPARK_S3A_REGION_CONFIG_KEY: &str = "repark.hadoop.fs.s3a.endpoint.region";
 
 /// Whether `scheme` is one `RePark` routes to an S3 object store.
@@ -27,7 +27,7 @@ pub(crate) fn is_s3_scheme(scheme: &str) -> bool {
     S3_SCHEMES.contains(&scheme)
 }
 
-/// The `(scheme, bucket)` of an `s3`/`s3a` URL, or `None` for any other path (local, relative, a
+/// The `(scheme, bucket)` of an `s3`/`s3a` URL, or `None` for any other path.
 pub(crate) fn parse_s3_bucket(path: &str) -> Option<(String, String)> {
     let url = Url::parse(path).ok()?;
     let scheme = url.scheme();
@@ -48,7 +48,7 @@ pub(crate) struct AwsConfigCredentialProvider {
 }
 
 impl AwsConfigCredentialProvider {
-    /// Wrap an already-resolved SDK credentials provider (the aws-config default chain, or a
+    /// Wrap an already-resolved SDK credentials provider.
     pub(crate) fn new(inner: SharedCredentialsProvider) -> Self {
         Self { inner }
     }
@@ -120,7 +120,7 @@ pub(crate) fn build_amazon_s3_store(
     Ok(Arc::new(store))
 }
 
-/// Register one object store for `bucket` under BOTH `s3://bucket` and `s3a://bucket` in the
+/// Register one object store for `bucket` under both `s3://` and `s3a://` in the `RuntimeEnv`.
 /// # Errors
 /// Returns [`Error::DataFusion`] if a `scheme://bucket` URL cannot be constructed (an invalid
 pub(crate) fn register_bucket_store(
@@ -145,7 +145,7 @@ mod tests {
     use super::*;
     use aws_credential_types::Credentials;
 
-    /// A static credentials provider (no network) for the adapter unit test — the aws-config chain
+    /// A static credentials provider for the adapter unit test.
     fn static_provider() -> SharedCredentialsProvider {
         SharedCredentialsProvider::new(Credentials::new(
             "AKIAIOSFODNN7EXAMPLE",
@@ -193,7 +193,7 @@ mod tests {
 
     #[tokio::test]
     async fn credential_bridge_maps_static_credentials() {
-        // The adapter must surface the wrapped provider's key/secret/token as an `AwsCredential` —
+        // The adapter must surface the wrapped provider's key/secret/token as an `AwsCredential`.
         let bridge = AwsConfigCredentialProvider::new(static_provider());
         let credential = bridge
             .get_credential()

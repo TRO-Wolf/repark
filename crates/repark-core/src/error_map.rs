@@ -13,14 +13,14 @@ use crate::object_store_s3;
 pub(crate) enum EngineErrorKind<'a> {
     Parse,
     Analysis,
-    /// `DataFusionError::NotImplemented` — the deterministic scope gates ride this variant (audit
+    /// `DataFusionError::NotImplemented`.
     Unsupported,
     /// A peeled `External` wrapping a live [`iceberg::Error`], classified by its `kind()`.
     Iceberg(&'a iceberg::Error),
     Other,
 }
 
-/// Cap wrapper peeling; exceeding this limit returns [`EngineErrorKind::Other`] and guarantees
+/// Cap wrapper peeling.
 pub(crate) const MAX_ERROR_PEEL_DEPTH: usize = 32;
 
 /// Classify a DataFusion error after peeling wrapper variants up to [`MAX_ERROR_PEEL_DEPTH`].
@@ -94,7 +94,6 @@ pub(crate) fn classify_iceberg_error(error: &iceberg::Error) -> Error {
         | ErrorKind::TableAlreadyExists
         | ErrorKind::NamespaceAlreadyExists
         | ErrorKind::ViewAlreadyExists => Error::Analysis(message),
-        // The identical-body split is deliberate (allow below): the named arm documents the 12
         #[allow(clippy::match_same_arms)]
         ErrorKind::PreconditionFailed
         | ErrorKind::Unexpected
@@ -105,7 +104,7 @@ pub(crate) fn classify_iceberg_error(error: &iceberg::Error) -> Error {
     }
 }
 
-/// Convert an iceberg error into the crate-wide [`Error`], classified by its structured kind (see
+/// Convert an iceberg error into the crate-wide [`Error`], classified by its structured kind.
 #[allow(clippy::needless_pass_by_value)]
 pub(crate) fn iceberg_err(err: iceberg::Error) -> Error {
     classify_iceberg_error(&err)

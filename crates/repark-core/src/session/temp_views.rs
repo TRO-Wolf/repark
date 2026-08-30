@@ -12,7 +12,7 @@ use super::ReparkSession;
 use crate::engine_err;
 
 impl ReparkSession {
-    /// Register `batches` as a replaceable in-memory view named `name` (PySpark
+    /// Register `batches` as a replaceable in-memory view named `name`.
     /// # Errors
     /// Returns [`Error::DataFusion`] if `batches` is empty (no schema to infer) or registration
     pub fn create_or_replace_temp_view(&self, name: &str, batches: Vec<RecordBatch>) -> Result<()> {
@@ -28,7 +28,7 @@ impl ReparkSession {
         self.replace_view(name, Arc::new(table))
     }
 
-    /// Register a planned [`DataFrame`] as a replaceable temp view named `name` (PySpark
+    /// Register a planned [`DataFrame`] as a replaceable temp view named `name`.
     /// # Errors
     /// Returns [`Error::DataFusion`] if registration fails; [`Error::Analysis`] for a qualified
     pub fn create_or_replace_temp_view_from(&self, name: &str, frame: &DataFrame) -> Result<()> {
@@ -37,7 +37,7 @@ impl ReparkSession {
 
     /// Collect `frame` once and register a [`MemTable`] temp view.
     /// # Errors
-    /// Returns [`Error::DataFusion`] if collect or registration fails; [`Error::Analysis`] for a
+    /// # Errors Returns [`Error::DataFusion`] if collect or registration fails.
     pub async fn materialize_dataframe_as_temp_view(
         &self,
         name: &str,
@@ -49,7 +49,7 @@ impl ReparkSession {
     // === cache-honesty ===
     /// Collect once into a [`MemTable`] with an optional post-collect `max_bytes` guard.
     /// # Errors
-    /// Returns [`Error::DataFusion`] if collect or registration fails; [`Error::Config`] when
+    /// # Errors Returns [`Error::DataFusion`] if collect or registration fails.
     pub async fn materialize_dataframe_as_cache_view(
         &self,
         name: &str,
@@ -62,7 +62,7 @@ impl ReparkSession {
 
     /// Register pre-built Arrow [`RecordBatch`]es as a [`MemTable`] temp view.
     /// # Errors
-    /// Returns [`Error::DataFusion`] if `MemTable` construction or registration fails;
+    /// # Errors Returns [`Error::DataFusion`] if `MemTable` construction or registration fails.
     pub fn register_record_batches_as_temp_view(
         &self,
         name: &str,
@@ -80,7 +80,7 @@ impl ReparkSession {
 
     /// Declare a temp view sorted by `keys` after verifying ASC NULLS LAST ordering.
     /// # Errors
-    /// [`Error::Analysis`] for a qualified `name`, an unknown view, a non-in-memory provider, an
+    /// Returns `Error::Analysis` for a qualified name, unknown view, or non-in-memory provider.
     pub async fn declare_temp_view_sorted(
         &self,
         name: &str,
@@ -92,7 +92,7 @@ impl ReparkSession {
                 "declared-sorted view: at least one key column is required".to_string(),
             ));
         }
-        // R6-1: resolve through the temp-view choke point so the declare path reads the SAME
+        // R6-1: resolve through the temp-view choke point so declare reads the same registration.
         let reference = self.temp_view_ref(name)?;
         let provider = self
             .context()
@@ -131,7 +131,7 @@ impl ReparkSession {
         self.replace_view(name, Arc::new(table))
     }
 
-    /// Collect `frame` once, re-stamp tighten provenance when any plan source is tighten-derived
+    /// Collect `frame` once, re-stamp tighten provenance, then register a `MemTable`.
     async fn register_collected_memtable(
         &self,
         name: &str,
@@ -186,7 +186,7 @@ impl ReparkSession {
         ))
     }
 
-    /// The session's temp-view home as `[catalog, schema]` — the spelling a product read path
+    /// The session's temp-view home as `[catalog, schema]`.
     /// # Errors
     /// [`Error::Analysis`] when this session has no session-local temp-view home left.
     pub fn temp_view_home(&self) -> Result<Vec<String>> {
@@ -242,7 +242,7 @@ impl ReparkSession {
 
     /// Drop a temp view (PySpark `spark.catalog.dropTempView`).
     /// # Errors
-    /// Returns [`Error::DataFusion`] if the name cannot be resolved as a table reference, or
+    /// Returns `Error::DataFusion` if the name cannot be resolved as a table reference.
     pub fn drop_temp_view(&self, name: &str) -> Result<bool> {
         let reference = self.temp_view_ref(name)?;
         Ok(self

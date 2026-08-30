@@ -7,12 +7,12 @@ use datafusion::prelude::SessionContext;
 use datafusion::sql::TableReference;
 use repark_common::{Error, Result};
 
-/// Where a session's temp views live: snapshotted ONCE at `ReparkSessionBuilder::build` from the
+/// Where a session's temp views live: snapshotted once at builder `build` from the final config.
 #[derive(Debug, Clone)]
 pub(crate) struct TempViewHome {
     pub(crate) catalog: String,
     pub(crate) schema: String,
-    /// The schema provider that sat under `catalog.schema` at build time — the session-local
+    /// The schema provider that sat under `catalog.schema` at build time.
     pub(crate) provider: Option<Arc<dyn SchemaProvider>>,
 }
 

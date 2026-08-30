@@ -1,4 +1,4 @@
-//! Declared-sorted temp views (SE-1): verify a claimed row ordering, then let the `MemTable`
+//! Declared-sorted temp views (SE-1): verify claimed order, then let `MemTable` advertise it.
 
 use std::sync::Arc;
 
@@ -15,7 +15,7 @@ use datafusion::prelude::SessionContext;
 use crate::error_map::engine_err;
 use repark_common::{Error, Result};
 
-/// Arrow field metadata key written onto a key that `tightenNulls` flipped from nullable to
+/// Arrow field metadata key written onto a column `tightenNulls` flipped from nullable.
 pub const TIGHTEN_NULLS_METADATA_KEY: &str = "repark.tighten_nulls";
 
 /// Value stored under [`TIGHTEN_NULLS_METADATA_KEY`].
@@ -61,7 +61,7 @@ pub(crate) fn verify_batches_sorted(
             .map(|&index| ArrayRef::clone(batch.column(index)))
             .collect();
 
-        // Boundary pair: previous batch's last row vs this batch's first row, compared through the
+        // Boundary pair: previous last row vs this first row, compared lexicographically.
         if let Some(tail) = previous_tail.take() {
             let stitched: Vec<SortColumn> = tail
                 .iter()
@@ -119,7 +119,7 @@ fn out_of_order(first: usize, second: usize, keys: &[String]) -> Error {
 
 /// Apply this declare's nullability mode to the verified batches.
 /// # Errors
-/// [`Error::Analysis`] naming a key that is missing from the schema or that contains a NULL under
+/// Returns `Error::Analysis` naming a missing key or a NULL under a required key.
 pub(crate) fn apply_declare_nullability(
     schema: SchemaRef,
     batches: Vec<RecordBatch>,
@@ -157,7 +157,7 @@ pub fn schema_is_tighten_derived(schema: &Schema) -> bool {
 
 /// D1 Iceberg-CREATE refuse: a tightened frame must not derive a table schema until D2 relaxes via
 /// # Errors
-/// [`Error::Analysis`] naming `tightenNulls` when a tighten-derived schema would persist a
+/// Returns `Error::Analysis` naming `tightenNulls` when a tightened schema would persist required.
 pub fn refuse_iceberg_create_of_tightened_schema(schema: &Schema) -> Result<()> {
     if !schema_is_tighten_derived(schema) {
         return Ok(());
@@ -172,9 +172,9 @@ pub fn refuse_iceberg_create_of_tightened_schema(schema: &Schema) -> Result<()> 
     refuse_tightened_create(&tightened_field_names(schema))
 }
 
-/// Walk every `TableScan`, including expression subqueries and lazy view plans, and refuse an
+/// Walk every `TableScan`, including subqueries and lazy views, and refuse Iceberg CREATE.
 /// # Errors
-/// [`Error::Analysis`] when a tightened source would persist a required column;
+/// Returns `Error::Analysis` when a tightened source would persist a required column.
 pub fn refuse_iceberg_create_of_tightened_plan(plan: &LogicalPlan) -> Result<()> {
     let (has_tightened_source, tagged) = collect_tighten_sources(plan)?;
     if !has_tightened_source || !plan_has_non_nullable_output(plan) {
@@ -183,9 +183,9 @@ pub fn refuse_iceberg_create_of_tightened_plan(plan: &LogicalPlan) -> Result<()>
     refuse_tightened_create(&tagged)
 }
 
-/// Refuse DDL sinks that resolve to an Iceberg catalog when their tightened source would persist a
+/// Refuse Iceberg DDL sinks when a tightened source would persist a required column.
 /// # Errors
-/// [`Error::Analysis`] when the DDL body would persist a required column from a tightened source;
+/// Returns `Error::Analysis` when the DDL body would persist a required tightened column.
 pub fn refuse_iceberg_create_of_tightened_ddl(
     plan: &LogicalPlan,
     ctx: &SessionContext,
@@ -248,7 +248,7 @@ fn collect_tighten_sources(plan: &LogicalPlan) -> Result<(bool, Vec<String>)> {
     walk_tighten_sources(plan).map(|walked| (walked.has_tightened_source, walked.tagged))
 }
 
-/// Walk `TableScan`s, expression subqueries, and lazy view/`into_view` inner plans
+/// Walk `TableScan`s, expression subqueries, and lazy view/`into_view` inner plans.
 fn walk_tighten_sources(plan: &LogicalPlan) -> Result<TightenSourceWalk> {
     const MAX_VIEW_VISITS: usize = 4096;
     let mut walked = TightenSourceWalk {
@@ -334,7 +334,7 @@ const MAX_NESTED_TYPE_DEPTH: usize = 32;
 
 fn field_or_child_is_non_nullable_at(field: &Field, depth: usize) -> bool {
     if depth > MAX_NESTED_TYPE_DEPTH {
-        // Fail closed: treat as required so CREATE refuses rather than stack-overflow on a hostile
+        // Fail closed: treat as required so CREATE refuses rather than overflow on a nested type.
         return true;
     }
     if !field.is_nullable() {
@@ -348,7 +348,7 @@ fn field_or_child_is_non_nullable_at(field: &Field, depth: usize) -> bool {
             field_or_child_is_non_nullable_at(inner, depth + 1)
         }
         DataType::Map(entries, _) => match entries.data_type() {
-            // Arrow map entries are a non-null struct; Iceberg requiredness of the map column is
+            // Arrow map entries are a non-null struct.
             DataType::Struct(fields) if fields.len() >= 2 => {
                 field_or_child_is_non_nullable_at(fields[1].as_ref(), depth + 1)
             }
@@ -419,7 +419,7 @@ fn field_or_descendant_is_tagged(field: &Field, depth: usize) -> bool {
     }
 }
 
-/// Tag reminted required fields (including nested struct children / list items / map values) so
+/// Tag reminted required fields so hint restore can unflip them.
 fn remint_annotate_field(field: &Field) -> Field {
     remint_annotate_field_at(field, 0)
 }

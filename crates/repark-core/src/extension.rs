@@ -17,9 +17,9 @@ pub struct SessionBuildConf<'a> {
 
 /// Build-time extension with configure-then-register hooks.
 pub trait SessionExtension: Send + Sync {
-    /// Amend the [`SessionConfig`] before the runtime and context are assembled (v1 position: the
+    /// Amend the [`SessionConfig`] before the runtime and context are assembled.
     /// # Errors
-    /// A malformed conf value → [`datafusion::error::DataFusionError`]; `build()` folds it into
+    /// # Errors A malformed conf value → [`datafusion::error::DataFusionError`].
     fn configure(
         &self,
         session: SessionBuildConf<'_>,
@@ -29,7 +29,7 @@ pub trait SessionExtension: Send + Sync {
         Ok(config)
     }
 
-    /// Register runtime objects on the freshly built [`SessionContext`] (v1 position: the Spark
+    /// Register runtime objects on the freshly built [`SessionContext`].
     /// # Errors
     /// A registration failure → [`datafusion::error::DataFusionError`]; `build()` folds it via
     fn register(&self, ctx: &SessionContext) -> datafusion::error::Result<()> {
@@ -38,7 +38,7 @@ pub trait SessionExtension: Send + Sync {
     }
 }
 
-/// The defaulted no-op extension `build()` runs when no [`SessionExtension`] was supplied — both
+/// The defaulted no-op extension `build` runs when no [`SessionExtension`] was supplied.
 #[derive(Debug, Clone, Copy, Default)]
 pub(crate) struct NoopSessionExtension;
 

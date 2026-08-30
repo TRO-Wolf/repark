@@ -10,7 +10,7 @@ use datafusion::logical_expr::LogicalPlan;
 use datafusion::optimizer::{ApplyOrder, Optimizer, OptimizerConfig, OptimizerRule};
 use datafusion::prelude::{SessionConfig, SessionContext};
 
-/// DataFusion's own name for the pass-2 leaf-projection rule — the wrapper matches on it so a
+/// DataFusion's own name for the pass-2 leaf-projection rule.
 const LEAF_PUSHDOWN_RULE_NAME: &str = "push_down_leaf_projections";
 
 /// DF 54.1 regression guard 1 of 2 — applied as a CORE `SessionConfig` default.
@@ -59,7 +59,7 @@ struct UnnestSafeLeafProjectionPushdown {
 }
 
 impl OptimizerRule for UnnestSafeLeafProjectionPushdown {
-    /// The wrapped rule's name verbatim: `EXPLAIN VERBOSE` output, the `skip_failed_rules`
+    /// The wrapped rule's name verbatim so EXPLAIN cannot tell the wrapper apart.
     fn name(&self) -> &str {
         self.inner.name()
     }
@@ -93,7 +93,7 @@ fn walk_inner_rule(
     })
 }
 
-/// `TreeNodeRewriter` that applies one optimizer rule at `apply_order`, matching DataFusion's
+/// `TreeNodeRewriter` that applies one optimizer rule at `apply_order`, matching DataFusion.
 struct InnerRuleWalk<'a> {
     inner: &'a dyn OptimizerRule,
     config: &'a dyn OptimizerConfig,

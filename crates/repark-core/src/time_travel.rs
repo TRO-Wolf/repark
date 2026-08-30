@@ -114,7 +114,7 @@ pub fn parse_timestamp_to_ms(raw: &str) -> Result<i64> {
         .strip_suffix('Z')
         .or_else(|| trimmed.strip_suffix('z'))
         .unwrap_or(trimmed);
-    // Strip optional surrounding SQL TIMESTAMP keyword residue is handled at the token layer; here
+    // Strip optional surrounding SQL TIMESTAMP keyword residue is handled at the token layer.
     let formats = [
         "%Y-%m-%d %H:%M:%S%.f",
         "%Y-%m-%d %H:%M:%S",

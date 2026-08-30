@@ -1,6 +1,6 @@
 # map — repark-core/src
 
-CC-3 (2026-08-30): comments condensed to one line; banners removed.
+CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated comments rewritten as complete sentences (D-001).
 
 CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
 accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).

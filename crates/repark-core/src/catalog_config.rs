@@ -8,10 +8,10 @@ use repark_common::{Error, Result};
 /// The config-key prefix Spark uses for a per-catalog configuration block.
 const CATALOG_PREFIX: &str = "spark.sql.catalog.";
 
-/// The repark-native spelling of the same block, accepted as a synonym for new code (2026-07-12
+/// The repark-native spelling of the same block, accepted as a synonym for new code.
 const REPARK_CATALOG_PREFIX: &str = "repark.sql.catalog.";
 
-/// The property carrying the catalog warehouse location (an `s3://` path for Glue, a local
+/// The property carrying the catalog warehouse location.
 pub(crate) const WAREHOUSE_PROP: &str = "warehouse";
 
 /// The property the `repark-catalog` S3 Tables builder requires: the table-bucket ARN.
@@ -24,9 +24,9 @@ pub enum CatalogKind {
     Glue,
     /// AWS S3 Tables catalog (the secondary product surface).
     S3Tables,
-    /// The AWS-free in-memory catalog over a local-filesystem warehouse (`RePark` extension —
+    /// The AWS-free in-memory catalog over a local-filesystem warehouse.
     Memory,
-    /// PostgreSQL read catalog (DataFusion `CatalogProvider` of `TableProvider`s — **not** an
+    /// PostgreSQL read catalog.
     Postgres,
 }
 
@@ -67,9 +67,9 @@ impl std::fmt::Debug for CatalogSpec {
 
 /// Whether a catalog property key's **value** should be redacted in Debug output (C1-SEC-002).
 fn prop_key_is_secret(key: &str) -> bool {
-    // Hyphens and dots → underscore so `basic.auth.user.info` / `s3.access-key-id` share needles
+    // Hyphens and dots become underscores so dotted and hyphenated keys share secret needles.
     let lower = key.to_ascii_lowercase().replace(['-', '.'], "_");
-    // Underscores stripped so camelCase `accessKey` / `privateKey` / one-word `apikey` share
+    // Underscores are stripped so camelCase and one-word keys share secret needles with snake_case.
     let compact = lower.replace('_', "");
     // Substring match covers `aws_secret_access_key`, `s3.access-key-id`, `session_token`, etc.
     lower.contains("aws_secret")
@@ -89,7 +89,7 @@ fn prop_key_is_secret(key: &str) -> bool {
         || lower.contains("user_info")
         || compact.contains("userinfo")
         || lower == "key"
-        // `.key` needle is unreachable after the dot→underscore fold above; `foo.key` → `foo_key`
+        // `.key` needle is unreachable after the dot→underscore fold above.
         || lower.ends_with("_key") && !lower.contains("bucket") && !lower.contains("arn")
 }
 
@@ -112,7 +112,7 @@ pub fn parse_catalog_specs<S: BuildHasher>(
 ) -> Result<Vec<CatalogSpec>> {
     let mut blocks: BTreeMap<String, Block> = BTreeMap::new();
 
-    // Normalize the two accepted spellings (`spark.sql.catalog.*` — the drop-in contract — and
+    // Normalize `spark.sql.catalog.*` and `repark.sql.catalog.*` into one keyspace before building.
     let mut normalized: BTreeMap<&str, (&String, &String)> = BTreeMap::new();
     for (key, value) in config {
         let Some(rest) = key
@@ -180,7 +180,7 @@ fn is_s3tables_arn_shape(value: &str) -> bool {
     value.trim().starts_with("arn:aws:s3tables:")
 }
 
-/// Fold one `<name>.<prop> = value` pair into `block`, resolving kind indicators, dropping
+/// Fold one `<name>.<prop> = value` pair into `block`, dropping `io-impl` and keeping passthrough.
 fn apply_prop(block: &mut Block, name: &str, prop: &str, value: &str) -> Result<()> {
     match prop {
         "catalog-impl" => {
@@ -242,7 +242,7 @@ fn kind_from_bare_catalog_value(value: &str) -> Option<CatalogKind> {
 }
 
 impl Block {
-    /// Finalize the accumulated block into a [`CatalogSpec`], resolving the kind and enforcing the
+    /// Finalize the block into a `CatalogSpec`, resolving kind and enforcing per-kind requirements.
     fn into_spec(self, name: String) -> Result<CatalogSpec> {
         let kind = match (self.kind_from_impl, self.kind_from_type) {
             (Some(from_impl), Some(from_type)) if from_impl != from_type => {
@@ -297,7 +297,7 @@ impl Block {
     }
 }
 
-/// Fill an S3 Tables catalog's required `table_bucket_arn` from its `warehouse` when the ARN is
+/// Fill S3 Tables `table_bucket_arn` from `warehouse` when the ARN is absent.
 fn translate_s3tables_arn(name: &str, props: &mut HashMap<String, String>) -> Result<()> {
     let arn_key = dual_catalog_key(name, TABLE_BUCKET_ARN_PROP);
     let warehouse_key = dual_catalog_key(name, WAREHOUSE_PROP);
@@ -362,7 +362,7 @@ mod tests {
         ])
     }
 
-    /// The measured block parses to one Glue catalog: `warehouse` passes through, `io-impl` and
+    /// The measured Glue block: `warehouse` passes through; `io-impl` and `catalog-impl` do not.
     #[test]
     fn parses_the_measured_glue_block() {
         let specs = parse_catalog_specs(&measured_glue_block()).unwrap();
@@ -385,7 +385,7 @@ mod tests {
         );
     }
 
-    /// The repark-native prefix parses identically to the Spark spelling (2026-07-12 naming
+    /// The repark-native prefix parses identically to the Spark spelling on the measured block.
     #[test]
     fn repark_prefix_parses_identically() {
         let repark_block: HashMap<String, String> = measured_glue_block()
@@ -402,7 +402,7 @@ mod tests {
         );
     }
 
-    /// The two spellings share one keyspace: consistent duplicates collapse; a cross-spelling
+    /// The two spellings share one keyspace: consistent duplicates collapse.
     #[test]
     fn cross_prefix_duplicates_merge_or_fail_loud() {
         let consistent = HashMap::from([
@@ -443,7 +443,7 @@ mod tests {
         );
     }
 
-    /// Empty catalog names (`spark.sql.catalog.` / `spark.sql.catalog..prop`) fail loud naming the
+    /// Empty catalog names fail loud naming the malformed key — never silently discarded.
     #[test]
     fn empty_catalog_name_fails_loud() {
         let bare = HashMap::from([("spark.sql.catalog.".to_string(), "x".to_string())]);
@@ -464,7 +464,7 @@ mod tests {
         );
     }
 
-    /// Spark's short-form `type` resolves each kind; `memory` requires a warehouse; `s3tables`
+    /// Spark's short-form `type` resolves each kind.
     #[test]
     fn type_short_forms_resolve_each_kind() {
         let glue = HashMap::from([
@@ -530,7 +530,7 @@ mod tests {
         );
     }
 
-    /// S3 Tables convention: the ARN passed as `warehouse` is carried into `table_bucket_arn` (the
+    /// S3 Tables: an ARN passed as `warehouse` is copied into required `table_bucket_arn`.
     #[test]
     fn s3tables_warehouse_arn_is_carried_into_table_bucket_arn() {
         let arn = "arn:aws:s3tables:us-east-1:123456789012:bucket/example-team";
@@ -590,7 +590,7 @@ mod tests {
         );
     }
 
-    /// An S3 Tables catalog with neither `table_bucket_arn` nor `warehouse` fails loud, naming
+    /// S3 Tables with neither `table_bucket_arn` nor `warehouse` fails, naming both keys.
     #[test]
     fn s3tables_without_any_arn_source_errors() {
         let config = HashMap::from([(
@@ -794,7 +794,7 @@ mod tests {
         assert_eq!(names, ["aaa", "glue_alt"]);
     }
 
-    /// C1-SEC-002: Debug of a `CatalogSpec` redacts secret-like prop **values** while still naming
+    /// C1-SEC-002: Debug of a `CatalogSpec` redacts secret-like values while still naming the keys.
     #[test]
     fn catalog_spec_debug_redacts_secret_prop_values() {
         let secret = "SUPER_SECRET_VALUE_do_not_leak";

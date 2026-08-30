@@ -23,7 +23,7 @@ mod time_travel;
 pub use session::ReparkSession as Session;
 pub use session::{DATAFUSION_CONFIG_PREFIX, ReparkSession, ReparkSessionBuilder, TimeTravelOpts};
 
-// --- Session timezone (`spark.sql.session.timeZone`): the ONE key spelling, its validated value
+// === Session timezone ===
 pub use session_time_zone::{
     DEFAULT_SESSION_TIME_ZONE, SESSION_TIME_ZONE_KEY, SessionTimeZone, resolve_session_time_zone,
 };
@@ -32,7 +32,7 @@ pub use session_time_zone::{
 pub use backend::{ExecutionBackend, SingleNodeBackend};
 pub use dialect::{DataFusionDialect, EngineContext, SqlDialect};
 
-// --- The shared pre-execute belt: plan → guard → execute, the ONE choke point every door's
+// === Pre-execute belt ===
 pub use extension::{SessionBuildConf, SessionExtension};
 pub use pre_execute::PreExecute;
 
@@ -44,7 +44,7 @@ pub use catalog_config::{CatalogKind, CatalogSpec, parse_catalog_specs};
 pub use catalog_state::{CatalogRegistry, LocationPolicy, memory_warehouse_fallback_root};
 pub use namespace_create::refuse_contradictory_namespace_location;
 
-// --- Time travel (hoisted): spec + parsers + the reader-options path, plus the ONE minter of the
+// === Time travel ===
 pub use time_travel::{
     TimeTravelSpec, next_temp_view_name, parse_timestamp_to_ms, parse_version_value, read_table_at,
     resolve_snapshot_id, snapshot_id_as_of_time,
@@ -54,7 +54,7 @@ pub use time_travel::{
 pub use error_map::engine_err;
 pub use repark_common::{Error, ErrorClass, Result};
 
-// --- SE-1 tightenNulls (PR-D1): the metadata key + the Iceberg-CREATE refuse both doors call at
+// === SE-1 tightenNulls ===
 pub use sorted_view::{
     TIGHTEN_NULLS_METADATA_KEY, TIGHTEN_NULLS_METADATA_VALUE,
     refuse_iceberg_create_of_tightened_ddl, refuse_iceberg_create_of_tightened_plan,

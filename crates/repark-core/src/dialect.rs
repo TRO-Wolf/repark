@@ -12,7 +12,7 @@ use crate::catalog_state::CatalogRegistry;
 pub struct EngineContext<'a> {
     /// The DataFusion context this statement plans and executes against.
     pub ctx: &'a SessionContext,
-    /// Per-query snapshot of the session's Iceberg catalog registry (the session takes a cheap
+    /// Per-query snapshot of the session's Iceberg catalog registry.
     pub catalogs: &'a CatalogRegistry,
     /// Read-only (postgres) catalog names for the P11 DML direction-notes.
     pub read_only: &'a HashSet<String>,
@@ -35,12 +35,12 @@ impl<'a> EngineContext<'a> {
 }
 
 /// A statement front end that parses, routes, and executes one SQL string.
-// ?Send: rustc 1.96 HRTB rejects the default Send future once the iceberg Catalog object (inside
+// ?Send: rustc 1.96 HRTB rejects the default Send future once CatalogRegistry is in the graph.
 #[async_trait(?Send)]
 pub trait SqlDialect: Send + Sync {
     /// Execute one SQL statement against the engine context.
     /// # Errors
-    /// Any parse / plan / execution failure as a [`datafusion::error::DataFusionError`]; the
+    /// # Errors Any parse / plan / execution failure as a [`datafusion::error::DataFusionError`].
     async fn execute(
         &self,
         cx: EngineContext<'_>,
