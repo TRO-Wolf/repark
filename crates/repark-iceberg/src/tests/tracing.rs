@@ -1,7 +1,4 @@
 //! Shared test-only tracing harness with one global subscriber per test binary.
-//!
-//! One subscriber carries both capture layers. This avoids callsite-interest caching and keeps
-//! merge events visible when futures are polled on worker threads.
 
 use std::cell::RefCell;
 use std::sync::{Arc, Mutex, Once, OnceLock};
@@ -72,9 +69,6 @@ thread_local! {
 }
 
 /// Begin capturing `catalog.*` spans on this thread; installs the shared subscriber if needed.
-///
-/// `#[tokio::test]` is current-thread, so the captured spans are always created on the
-/// capturing thread; routing through a thread-local slot keeps each test's capture private.
 pub(crate) fn begin_catalog_capture() -> Arc<SpanFieldCapture> {
     install();
     let capture = SpanFieldCapture::new();
@@ -116,10 +110,6 @@ where
 }
 
 // -------------------------------------------------------------------------------------------
-// Merge half — v1 repark-write `SpanNameRecorder` (root-descended `merge.*` spans), semantics
-// verbatim. Spans from parallel tests are excluded by requiring the unique
-// `merge.trace_test_root` ancestor the owning test wraps its merge in.
-// -------------------------------------------------------------------------------------------
 
 const TEST_ROOT: &str = "merge.trace_test_root";
 
@@ -137,8 +127,7 @@ where
         if !name.starts_with("merge.") || name == TEST_ROOT {
             return;
         }
-        // Contextual parent (the common case) or an explicit one — either way the span
-        // must sit under this test's unique root to be recorded.
+        // Contextual parent (the common case) or an explicit one — either way the span must sit
         let under_root = |id: &Id| {
             ctx.span(id)
                 .is_some_and(|span| span.scope().any(|s| s.name() == TEST_ROOT))
@@ -165,20 +154,15 @@ fn merge_span_names_slot() -> &'static Arc<Mutex<Vec<String>>> {
     MERGE_SPAN_NAMES.get_or_init(|| Arc::new(Mutex::new(Vec::new())))
 }
 
-/// The shared record of root-descended `merge.*` span names; installs the subscriber if
-/// needed. The owning test clears it before running.
+/// The shared record of root-descended `merge.*` span names; installs the subscriber if needed.
 pub(crate) fn merge_span_names() -> Arc<Mutex<Vec<String>>> {
     install();
     Arc::clone(merge_span_names_slot())
 }
 
-// -------------------------------------------------------------------------------------------
-// The single install point.
-// -------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------- The
 
-/// Install the shared global subscriber (both layers) exactly once; repeat calls are no-ops,
-/// and a foreign already-installed default is tolerated (`let _ =`) exactly as v1's catalog
-/// harness tolerated it.
+/// Install the shared global subscriber (both layers) exactly once; repeat calls are no-ops, and a
 pub(crate) fn install() {
     static INIT: Once = Once::new();
     INIT.call_once(|| {

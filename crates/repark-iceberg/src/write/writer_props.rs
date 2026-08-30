@@ -1,10 +1,4 @@
 //! Parquet [`WriterProperties`] from Iceberg table properties.
-//!
-//! Java Iceberg (1.4+) defaults `write.parquet.compression-codec` to **zstd**. Historically
-//! `RePark` passed [`WriterProperties::default()`] at every write site, and `parquet-rs` defaults
-//! to **UNCOMPRESSED** — every data file was raw-size. This module is the single home for honoring
-//! the table property (and defaulting to zstd when absent) so append, MERGE data files, and
-//! position deletes share one codec path.
 
 use datafusion::error::{DataFusionError, Result};
 use iceberg::table::Table;
@@ -20,15 +14,7 @@ pub const COMPRESSION_LEVEL_PROP: &str = "write.parquet.compression-level";
 /// Accepted codec spellings (case-insensitive), shown in loud-error messages.
 pub const ACCEPTED_CODECS: &str = "zstd, snappy, gzip, lz4, uncompressed";
 
-/// ===========================================================================================
 /// Build [`WriterProperties`] for `table` from `write.parquet.compression-codec` (+ level).
-///
-/// When the codec property is **absent**, defaults to **zstd** — Java Iceberg 1.4+ default
-/// (`TableProperties.PARQUET_COMPRESSION_DEFAULT` = `zstd`). `uncompressed` remains the explicit
-/// escape hatch (old `RePark` / `parquet-rs` default). Unknown codec values fail loud naming the
-/// property and accepted set — never silent fallback.
-/// ===========================================================================================
-///
 /// # Errors
 /// Unknown codec, unparsable level, or level out of range for gzip/zstd.
 pub fn writer_properties_for(table: &Table) -> Result<WriterProperties> {
@@ -41,13 +27,7 @@ pub fn writer_properties_for(table: &Table) -> Result<WriterProperties> {
         .build())
 }
 
-/// ===========================================================================================
 /// Parse codec (+ optional level) into parquet-rs [`Compression`].
-///
-/// `None` codec → zstd at default level. Level applies only to `gzip` and `zstd`; other codecs
-/// ignore a present level (Java also only applies level where the codec supports it).
-/// ===========================================================================================
-///
 /// # Errors
 /// Unknown codec name, non-integer level, or level outside the codec's accepted range.
 pub fn parse_compression(codec_raw: Option<&str>, level_raw: Option<&str>) -> Result<Compression> {
@@ -58,7 +38,6 @@ pub fn parse_compression(codec_raw: Option<&str>, level_raw: Option<&str>) -> Re
         "snappy" => Ok(Compression::SNAPPY),
         "gzip" => Ok(Compression::GZIP(gzip_level(level_raw)?)),
         // Modern Parquet "lz4" is LZ4_RAW (PARQUET-2032 deprecates the non-standard LZ4 block).
-        // `lz4_raw` is accepted as a synonym of `lz4` (PARQUET-2032 modern form).
         "lz4" | "lz4_raw" => Ok(Compression::LZ4_RAW),
         "uncompressed" => Ok(Compression::UNCOMPRESSED),
         _ => Err(DataFusionError::Plan(format!(
@@ -128,9 +107,7 @@ mod tests {
     use crate::write::concurrency::WriteConcurrency;
     use crate::write::merge::write_data_files;
 
-    // ---------------------------------------------------------------------------------------
-    // Pure parse pins
-    // ---------------------------------------------------------------------------------------
+    // --------------------------------------------------------------------------------------- Pure
 
     #[test]
     fn absent_codec_defaults_to_zstd() {
@@ -202,8 +179,6 @@ mod tests {
         );
     }
 
-    // ---------------------------------------------------------------------------------------
-    // Integration: real Parquet footers on append / data-file / position-delete paths
     // ---------------------------------------------------------------------------------------
 
     async fn memory_catalog(warehouse: &TempDir) -> Arc<dyn Catalog> {

@@ -1,5 +1,7 @@
 # map — repark-iceberg/src/catalog/tests
 
+CC-3 (2026-08-30): comments condensed to one line; banners removed.
+
 ## Purpose
 
 Catalog adapter tests. `catalog/mod.rs` declares `#[cfg(test)] mod tests;`.

@@ -1,10 +1,4 @@
 //! Position-delete file writing for merge-on-read operations.
-//!
-//! The module converts streamed `(_file, _pos)` pairs into fork
-//! `PositionDeleteFileWriter` data files. It sorts pairs by `(file_path, pos)` and groups them by
-//! the configured granularity. Every group uses the owning data file's `(spec_id, partition)`;
-//! unpartitioned non-zero specs pass the resolved spec to avoid the fork's spec-0 default.
-//! Commit coordination remains in [`crate::write::merge`].
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -36,11 +30,10 @@ use crate::write::writer_props::writer_properties_for;
 /// Iceberg default partition-spec id used by the fork when no spec is supplied.
 const DEFAULT_PARTITION_SPEC_ID: i32 = 0;
 
-/// Iceberg table property for position-delete grouping. The Spark default is `file`.
+/// Iceberg table property for position-delete grouping.
 pub const DELETE_GRANULARITY_PROP: &str = "write.delete.granularity";
 
-/// How position-delete pairs are grouped into files. The fork writer has no knob — grouping
-/// is the engine's (`ENGINE_CONTRACT` §7).
+/// How position-delete pairs are grouped into files.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum DeleteGranularity {
     /// One delete file per referenced data file (Spark default).
@@ -56,33 +49,16 @@ enum PositionDeleteGroupKey {
 }
 
 /// One deleted row's identity: the data file it lives in, and its 0-based ordinal within that file.
-/// Exactly the `(_file, _pos)` pair the pinned core scan surfaces (fork `metadata_columns.rs`).
-///
-/// `Arc<str>` lets the path be shared across the seen-pair set, delete list, and writer.
 pub(crate) type PositionDeletePair = (Arc<str>, i64);
 
-/// ===========================================================================================
 /// Sort `(file_path, pos)` pairs into the ascending order the Iceberg spec requires of every
-/// position-delete file.
-///
-/// The fork's `PositionDeleteFileWriter` writes rows AS GIVEN (row R113 — "sorting is the caller's
-/// job, matching Java"), and the pairs reach us in scan order, which a concurrent scan interleaves
-/// across data files arbitrarily. Tuple ordering on `(String, i64)` is lexicographic-then-numeric —
-/// exactly the spec's `(file_path, pos)` ordering. A named seam so the ordering guarantee can be
-/// pinned by a deterministic unit test, independent of any scan's interleaving.
-/// ===========================================================================================
 pub(crate) fn sort_position_delete_pairs(pairs: &mut [PositionDeletePair]) {
     pairs.sort();
 }
 
-/// ===========================================================================================
-/// Parse `write.delete.granularity`. Absent → [`DeleteGranularity::File`] (Spark). `'file'` /
-/// `'partition'` accepted case-insensitively. Anything else refuses loud.
-///
 /// Model: Grok 4.6 xHigh
 /// pins: mw-9-delete-granularity/C-001, C-004
-/// ===========================================================================================
-///
+/// Parse `write.delete.granularity`.
 /// # Errors
 /// Present-but-unrecognised value.
 pub(crate) fn parse_delete_granularity(raw: Option<&str>) -> Result<DeleteGranularity> {
@@ -101,40 +77,9 @@ pub(crate) fn parse_delete_granularity(raw: Option<&str>) -> Result<DeleteGranul
     )))
 }
 
-/// ===========================================================================================
-/// Write real Parquet position-delete file(s) for `pairs`, each stamped with the
-/// `(spec_id, partition)` of the DATA file it deletes from.
-///
-/// Returns EVERY file the (rolling) writer produced: a large delete set may roll into more than one
-/// file and ALL of them must be committed, or the deletes in a dropped file would be silently lost
-/// (rows resurrected on the next scan).
-///
-/// **Every** pair is grouped by [`parse_delete_granularity`]: `file` (Spark default) keys on the
-/// data-file path; `partition` keys on the data file's `(spec_id, partition)`. There is
-/// deliberately NO "the table is unpartitioned, so skip the lookup" fast path. Keying that
-/// shortcut off the table's DEFAULT spec is the wrong predicate: under partition-spec evolution a
-/// table whose *current* default is unpartitioned can still hold live data files written under an
-/// earlier PARTITIONED spec, and those files' deletes must carry that spec's partition, not an empty
-/// one. (`RePark`'s own DDL can produce that state via [`crate::write::alter::apply_partition_spec_changes`]
-/// — drop the last partition field — and a Glue table evolved by Spark/Java reaches it too.) A
-/// group whose resolved spec IS unpartitioned still gets a `None` partition key (empty-tuple
-/// semantics). That `None` is a *result* of the lookup, not an assumption keyed off the table's
-/// current default. It is not enough on its own: the fork's writer, given no key and no
-/// `.with_partition_spec`, stamps `DEFAULT_PARTITION_SPEC_ID` (0). When spec 0 is still the
-/// original *partitioned* spec, the commit then fails loud (`Partition value is not compatible`);
-/// when spec 0 happens to be unpartitioned too, the delete commits and never applies. So an
-/// unpartitioned group whose resolved spec id is not 0 also chains `.with_partition_spec(spec)`.
-/// The spec-0 unpartitioned path stays `None` + no configured spec — the fork default is correct
-/// only there. The manifest walk is the same one the copy-on-write arm already does per MERGE.
-///
-/// The caller need not pre-sort: every group is sorted here immediately before it is written.
-///
+/// Write real Parquet position-delete file(s) for `pairs`, each stamped with the `(spec_id, partition)`
 /// # Errors
 /// Returns a DataFusion error if the writer config/stack cannot be built, a manifest cannot be
-/// loaded, a pair references a data file that is not live in the pinned snapshot or whose partition
-/// spec is not registered on the table, or a non-empty group somehow produced no delete file (an
-/// internal invariant — silently losing deletes is never acceptable).
-/// ===========================================================================================
 pub(crate) async fn write_position_deletes(
     table: &Table,
     pairs: &[PositionDeletePair],
@@ -164,7 +109,7 @@ pub(crate) async fn write_position_deletes(
         return Ok(delete_files);
     }
 
-    // Parallelize ACROSS delete-file groups only (each group is already sorted). Bound by K.
+    // Parallelize ACROSS delete-file groups only (each group is already sorted).
     let results: Vec<Result<Vec<DataFile>>> = stream::iter(prepared)
         .map(|(group, partition_key, builder_spec)| {
             let config = config.clone();
@@ -190,14 +135,7 @@ pub(crate) async fn write_position_deletes(
     Ok(delete_files)
 }
 
-/// ===========================================================================================
 /// Map every LIVE data file path in the current snapshot to the `(spec_id, partition)` it was
-/// written under, by walking that snapshot's DATA manifests.
-///
-/// The same manifest walk [`crate::write::merge::resolve_affected_data_files`] does for the copy-on-write
-/// arm, projected to just what the position-delete stamp needs. A table with no snapshot yields an
-/// empty map — there is nothing to delete from.
-/// ===========================================================================================
 async fn data_file_partitions(table: &Table) -> Result<HashMap<String, (i32, Struct)>> {
     let metadata = table.metadata();
     let mut partitions = HashMap::new();
@@ -228,11 +166,8 @@ async fn data_file_partitions(table: &Table) -> Result<HashMap<String, (i32, Str
     Ok(partitions)
 }
 
-/// ===========================================================================================
-/// Group pairs by [`parse_delete_granularity`], sort each group, and stamp the data-file partition.
-///
 /// Model: Grok 4.6 xHigh
-/// ===========================================================================================
+/// Group pairs by [`parse_delete_granularity`], sort each group, and stamp the data-file partition.
 async fn prepare_position_delete_groups(
     table: &Table,
     pairs: &[PositionDeletePair],
@@ -314,17 +249,7 @@ async fn prepare_position_delete_groups(
     Ok(prepared)
 }
 
-/// ===========================================================================================
 /// Write ONE `(spec_id, partition)` group's pairs through the fork's `PositionDeleteFileWriter`.
-///
-/// `pairs` must already be in spec `(file_path, pos)` order (the callers sort each group).
-/// `builder_spec` is the resolved unpartitioned-but-not-spec-0 spec, if any (M16). Fork #239
-/// errors on `build(None)` with no spec; the spec-0 unpartitioned path calls `.unpartitioned()`.
-/// The Parquet metrics config is `for_position_delete` — Java's choice, which keeps the
-/// `file_path` / `pos` bounds FULL so delete-file path pruning stays precise. A non-empty
-/// group that produced no file is an internal error, never a silent success: the deletes
-/// would be lost and the rows resurrected.
-/// ===========================================================================================
 async fn write_position_deletes_for_partition(
     table: &Table,
     config: &PositionDeleteWriterConfig,
@@ -409,26 +334,9 @@ impl MorDmlKind {
     }
 }
 
-/// ===========================================================================================
-/// BUG-001 P0 valve: SQL `DELETE`/`UPDATE` via iceberg-datafusion merge-on-read stamps
-/// every position delete with `partition_key = None` when the **current default** partition
-/// spec is unpartitioned — after partition-spec evolution that leaves older data files under
-/// prior specs, deletes can commit while rows remain visible (fork
-/// `physical_plan/delete.rs` unpartitioned fast path; `ENGINE_CONTRACT` §7a).
-///
-/// Refuse when **all** of: (1) `write.{delete,update}.mode = merge-on-read`, (2) current default
-/// spec is unpartitioned, (3) table metadata carries more than one partition spec in history.
-/// Over-refuse is OK; under-refuse is not. **`MERGE` is never gated here** (repark-owned
-/// merge-on-read writer is fixed).
-///
-/// Hoisted from the v1 SQL crate's `normalize` module (phase-2 PR-3b declared rename): this is
-/// the catalog-handle half of the valve — it lives beside the position-delete path whose fork
-/// hazard it gates. The SQL door keeps the [`ObjectName`]-resolution wrapper and calls here;
-/// `table_sql` is the caller's display form of the target for the refuse message.
-///
+/// BUG-001 P0 valve: SQL `DELETE`/`UPDATE` via iceberg-datafusion merge-on-read stamps every
 /// # Errors
 /// [`DataFusionError::Plan`] naming the fork hazard and copy-on-write / `MERGE` workarounds.
-/// ===========================================================================================
 pub async fn refuse_mor_unpartitioned_multi_spec_dml(
     catalog: &dyn Catalog,
     ident: &TableIdent,
@@ -440,8 +348,7 @@ pub async fn refuse_mor_unpartitioned_multi_spec_dml(
         return Ok(());
     };
     let metadata = table.metadata();
-    // Case/trim tolerant: under-refuse on `Merge-on-Read` / padded values would re-open the
-    // silent under-delete path. Over-refuse of odd spellings is OK.
+    // Case/trim tolerant: under-refuse on `Merge-on-Read` / padded values would re-open the silent
     let is_merge_on_read = metadata
         .properties()
         .get(kind.mode_property())
@@ -512,10 +419,6 @@ mod tests {
     }
 
     /// PIN T-SORT — [`sort_position_delete_pairs`] restores the Iceberg spec's ascending
-    /// `(file_path, pos)` order from scan-interleaved input. The fork's writer is write-as-given
-    /// (R113), so THIS is the only thing standing between an interleaved scan and a spec-violating
-    /// delete file. Deterministic: fixed input, no scan involved. Mutation: making the sort a no-op
-    /// leaves the interleaved order and turns this RED.
     #[test]
     fn sorts_pairs_by_file_then_position() {
         // Scan-interleaved: files out of order, and positions out of order within a file.
@@ -537,7 +440,6 @@ mod tests {
                 ("f1", 0),
                 ("f1", 5),
                 // Lexicographic on the PATH — "f10" < "f2" as strings, which is what the spec's
-                // byte-ordering means (paths are compared as strings, never as numbers).
                 ("f10", 3),
                 ("f2", 0),
                 ("f2", 1),
@@ -546,7 +448,6 @@ mod tests {
     }
 
     /// PIN P2a — `PositionDeletePair` path is `Arc<str>` so sort/group clone does not re-allocate
-    /// the path bytes (strong count rises; pointer identity shared).
     #[test]
     fn position_delete_pair_path_is_arc_shared() {
         let path: Arc<str> = Arc::from("s3://bucket/data/file-0001.parquet");
@@ -561,16 +462,7 @@ mod tests {
         assert_eq!(group[1].1, 1);
     }
 
-    /// PIN M16 — a spec-evolved unpartitioned table (spec 0 partitioned → spec 1
-    /// unpartitioned) writes data under spec 1. The position-delete writer must stamp
-    /// that resolved spec id, not the fork's `DEFAULT_PARTITION_SPEC_ID` (0) fallback
-    /// that applies when `partition_key = None` and `.with_partition_spec` is omitted.
-    ///
-    /// Spec 0 is still the original *partitioned* spec, so a spec-0 empty-tuple delete
-    /// is a loud `Partition value is not compatible` `RowDelta` commit (fork
-    /// `ENGINE_CONTRACT` §7a), not a silently inapplicable delete. Mutation: drop
-    /// `.with_partition_spec` on the unpartitioned-but-not-spec-0 branch → this
-    /// asserts `partition_spec_id() == evolved` and turns RED.
+    /// PIN M16 — a spec-evolved unpartitioned table (spec 0 partitioned → spec 1 unpartitioned)
     #[tokio::test]
     async fn evolved_unpartitioned_spec_position_delete_claims_resolved_spec_id() {
         let warehouse = tempfile::TempDir::new().expect("temp warehouse");
@@ -631,10 +523,7 @@ mod tests {
         );
     }
 
-    /// PIN M16 control — an unpartitioned-from-birth table is spec 0. The writer must keep
-    /// stamping 0 there (the fork default is correct only for this path). Guards the
-    /// unpartitioned-spec-0 branch against a blanket `.with_partition_spec` that would still
-    /// happen to emit 0 today but would couple this path to the evolved-spec fix.
+    /// PIN M16 control — an unpartitioned-from-birth table is spec 0.
     #[tokio::test]
     async fn unpartitioned_spec_zero_position_delete_still_claims_spec_zero() {
         let warehouse = tempfile::TempDir::new().expect("temp warehouse");
@@ -988,9 +877,6 @@ mod tests {
     }
 
     /// PIN — fork #182 made `PartitionKey::new` fallible (`validate_partition_data`).
-    /// The write path maps `iceberg::Error` through [`iceberg_err`]. Unpartitioned +
-    /// empty struct is the merge/mod.rs unpartitioned-writer shape; an identity spec
-    /// with an empty struct must refuse (the adapter must not swallow that Err).
     #[test]
     fn partition_key_new_is_fallible_and_maps_through_iceberg_err() {
         use iceberg::spec::{

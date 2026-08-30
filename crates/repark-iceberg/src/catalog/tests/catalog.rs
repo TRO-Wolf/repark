@@ -16,7 +16,6 @@ fn sample_schema() -> Schema {
 }
 
 /// Build a catalog with one namespace `sales` and register it in a fresh `SessionContext`.
-/// Returns the context and the catalog handle (so a test can create tables on it directly).
 async fn ctx_with_sales_namespace(wh: &TempDir) -> (SessionContext, Arc<dyn Catalog>) {
     let catalog = memory_catalog(wh.path().to_str().unwrap()).await.unwrap();
     catalog
@@ -31,10 +30,6 @@ async fn ctx_with_sales_namespace(wh: &TempDir) -> (SessionContext, Arc<dyn Cata
 }
 
 /// U2-P9 (+ the U2-P2 helper arm): `resolve_namespace_location` over every key shape — the
-/// property-map partition of audit BUG-001. Risk pinned: a reader that only knows `location`
-/// fails every pre-existing real Glue database (whose fork-loaded map carries ONLY
-/// `location_uri`), and a both-set map must resolve by DETERMINISTIC precedence
-/// (`location` wins), never an iteration-order pick.
 #[test]
 fn resolve_namespace_location_covers_all_key_shapes() {
     // Legacy RePark shape: only `location`.
@@ -67,11 +62,7 @@ fn resolve_namespace_location_covers_all_key_shapes() {
     assert_eq!(resolve_namespace_location(&neither), None);
 }
 
-/// U2-P9: `mirror_namespace_location_keys` is unidirectional and non-clobbering. Risk pinned:
-/// a mirror that overwrites an explicit `location_uri` destroys user input; one that
-/// synthesizes `location` from `location_uri` fabricates state the caller never set (and
-/// makes the real-Glue-DB single-key shape unconstructible); one that invents keys on a
-/// location-less map turns a property-less namespace into a propertied one.
+/// U2-P9: `mirror_namespace_location_keys` is unidirectional and non-clobbering.
 #[test]
 fn mirror_namespace_location_keys_is_unidirectional_and_non_clobbering() {
     // `location` only → the twin is added (the U2 dual-write).
@@ -163,8 +154,6 @@ async fn insert_into_precreated_table_round_trips() {
 }
 
 /// Locks the corrected understanding: DataFusion's `CREATE TABLE … AS SELECT` hands the schema
-/// provider a table WITH data, which iceberg-datafusion rejects. CTAS-from-SELECT therefore
-/// cannot be a passthrough — `repark-sql` must decompose it into CREATE + INSERT.
 #[tokio::test]
 async fn datafusion_ctas_with_data_is_rejected_by_iceberg() {
     let wh = TempDir::new().unwrap();
@@ -216,26 +205,13 @@ async fn create_empty_then_insert_is_the_working_ctas_path() {
 }
 
 /// Proves the `[patch.crates-io]` rewire to the owned fork is in effect — **at compile time**:
-/// `iceberg::arrow::DeleteFilter` is public only in the fork (its engine-facing merge-on-read
-/// surface — see the fork's `docs/ENGINE_CONTRACT.md` §2), not in crates.io iceberg 0.9.1, so
-/// this function cannot compile against the registry crate. Compilation IS the assertion; the
-/// body only instantiates a generic with the fork-only type (any runtime check on a
-/// hard-coded type parameter would be tautological). If this fails to build, the patch
-/// wiring in the workspace `Cargo.toml` has regressed. See ADR-0003.
 #[test]
 fn fork_patch_in_effect_deletefilter_is_public() {
     fn nameable<T: ?Sized>() {}
     nameable::<iceberg::arrow::DeleteFilter>();
 }
 
-// ---------------------------------------------------------------------------------------
-// AWS builder tests — AWS-FREE. Construction of the fork's Glue / S3 Tables catalogs builds
-// the AWS SDK client config but performs NO network call (verified against the fork's own
-// offline constructor tests, and against `create_sdk_config`, which resolves credentials
-// lazily on first request, not at build time). So the passthrough tests construct with dummy
-// static credentials + a fake endpoint and never touch AWS. The required-prop validation
-// tests never reach the fork builder at all.
-// ---------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------- AWS
 
 /// A missing `warehouse` fails loud and names the key, before the fork builder runs.
 #[tokio::test]
@@ -247,7 +223,6 @@ async fn glue_catalog_missing_warehouse_names_the_key() {
 }
 
 /// A present-but-blank `warehouse` is rejected the same way (guards the empty-string hole the
-/// fork's own non-empty check would otherwise surface only as a vaguer downstream error).
 #[tokio::test]
 async fn glue_catalog_blank_warehouse_names_the_key() {
     let props = HashMap::from([(GLUE_CATALOG_PROP_WAREHOUSE.to_string(), "   ".to_string())]);
@@ -258,15 +233,7 @@ async fn glue_catalog_blank_warehouse_names_the_key() {
     );
 }
 
-/// With `warehouse` set, the Glue catalog constructs offline and forwards unrecognized props
-/// (here a `FileIO`-bound `s3.region`) through to the catalog's properties, while the
-/// recognized `warehouse` key is consumed (not left in the passthrough map).
-///
-/// `region_name` is pinned so the fork's `create_sdk_config` sets the region explicitly
-/// (glue/src/utils.rs `AWS_REGION_NAME`); without it, `aws_config`'s default region chain
-/// runs to its last link — the IMDS provider — and the test would open a real connection to
-/// the EC2 metadata endpoint (169.254.169.254) on any region-less runner. Note `s3.region`
-/// is a `FileIO`/`OpenDAL` key the SDK region resolver does not read, so it cannot substitute.
+/// With `warehouse` set, the Glue catalog constructs offline and forwards unrecognized props (here
 #[tokio::test]
 async fn glue_catalog_constructs_and_passes_props_through() {
     let props = HashMap::from([
@@ -328,8 +295,7 @@ async fn s3tables_catalog_blank_arn_names_the_key() {
     );
 }
 
-/// With `table_bucket_arn` set, the S3 Tables catalog constructs offline and forwards
-/// unrecognized props (here `region_name`) through to the catalog's properties.
+/// With `table_bucket_arn` set, the S3 Tables catalog constructs offline and forwards unrecognized
 #[tokio::test]
 async fn s3tables_catalog_constructs_and_passes_props_through() {
     let props = HashMap::from([
@@ -357,13 +323,8 @@ async fn s3tables_catalog_constructs_and_passes_props_through() {
 }
 
 // ---------------------------------------------------------------------------------------
-// Scheme-based FileIO selection — OFFLINE. Classification is a pure string→backend mapping;
-// building the factory / FileIO performs no network call (S3 is contacted lazily on first
-// use), so these pin "the right backend is chosen" structurally without ever touching AWS.
-// ---------------------------------------------------------------------------------------
 
 /// `s3://` selects the OpenDAL S3 backend, carrying the exact scheme so returned object paths
-/// round-trip as `s3://`.
 #[test]
 fn classify_s3_scheme_selects_object_store() {
     assert_eq!(
@@ -403,11 +364,7 @@ fn classify_bare_path_selects_local_fs() {
     );
 }
 
-/// F-WG3C-1 / G-CI: a `:` AFTER the first `/` on an absolute path is a legal POSIX path
-/// character (`/data/ns:v2/t`) and must stay [`LocationBackend::LocalFs`] — not be
-/// misclassified as a mistyped scheme. The sole pre-existing bare-absolute pin used a
-/// colon-free path; a future simplification of `has_colon_before_first_slash` (e.g. "any `:`
-/// ⇒ mistyped") would silently break legit colon-in-path warehouses without this pin.
+/// F-WG3C-1 / G-CI: a `:` AFTER the first `/` on an absolute path is a legal POSIX path character
 #[test]
 fn classify_absolute_path_with_colon_after_slash_stays_local_fs() {
     assert_eq!(
@@ -422,7 +379,6 @@ fn classify_absolute_path_with_colon_after_slash_stays_local_fs() {
 }
 
 /// An unsupported scheme fails loud — naming the offending scheme AND the supported set — so a
-/// misconfigured warehouse never silently mis-places data.
 #[test]
 fn classify_unknown_scheme_fails_loud() {
     let error = classify_location_backend("gs://some-bucket/warehouse")
@@ -439,9 +395,6 @@ fn classify_unknown_scheme_fails_loud() {
 }
 
 /// F-BR-3: `s3:/bucket/wh` — an `s3://` typed with a single slash — carries no `://`, so the
-/// pre-fix bare-path arm silently classified it `LocalFs` and a strict-catalog CTAS wrote a
-/// broken table under a CWD-relative `s3:` directory. It must now fail loud, naming the location
-/// and steering the user at `scheme://`.
 #[test]
 fn classify_single_slash_s3_scheme_fails_loud() {
     let error = classify_location_backend("s3:/bucket/wh")
@@ -474,8 +427,6 @@ fn classify_single_slash_s3a_scheme_fails_loud() {
 }
 
 /// F-BR-3: a relative path (no leading `/`) would resolve against the process CWD, so a bare
-/// warehouse path must be absolute — a relative one now fails loud instead of silently becoming
-/// `LocalFs`.
 #[test]
 fn classify_relative_path_fails_loud() {
     let error = classify_location_backend("relative/path")
@@ -492,7 +443,6 @@ fn classify_relative_path_fails_loud() {
 }
 
 /// F-BR-3: the empty string is not an absolute path — a common misconfiguration (an unset
-/// warehouse variable resolving to `""`) must fail loud, not silently classify as `LocalFs`.
 #[test]
 fn classify_empty_location_fails_loud() {
     let error = classify_location_backend("")
@@ -509,7 +459,6 @@ fn classify_empty_location_fails_loud() {
 }
 
 /// Structural: an `s3://` location selects the OpenDAL S3 factory (not local) — proven by the
-/// factory's `Debug` shape, with no S3 contact (the factory builds without connecting).
 #[test]
 fn factory_for_s3_is_opendal_s3() {
     let factory =
@@ -549,9 +498,7 @@ fn arrow_rows(b: &datafusion::arrow::array::RecordBatch) -> usize {
     b.num_rows()
 }
 
-// ---------------------------------------------------------------------------------------
-// catalog listing staleness (CQ-008 / BUG-007). AWS-free MemoryCatalog only.
-// ---------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------- catalog
 
 /// Documented strategy pin: facade uses list-on-access (not TTL).
 #[test]
@@ -559,9 +506,7 @@ fn catalog_listing_strategy_is_list_on_access() {
     assert_eq!(CATALOG_LISTING_STRATEGY, "list-on-access");
 }
 
-/// Measure-first: single-namespace `list_tables` is cheaper than a full provider rebuild
-/// (which lists every namespace + every table). Pins the T6 choice of list-on-access for
-/// the facade rather than TTL-wrapping `IcebergCatalogProvider::try_new`.
+/// Measure-first: single-namespace `list_tables` is cheaper than a full provider rebuild (which
 #[tokio::test]
 async fn listing_cost_list_tables_cheaper_than_provider_rebuild() {
     use std::time::Instant;
@@ -574,8 +519,7 @@ async fn listing_cost_list_tables_cheaper_than_provider_rebuild() {
         .create_namespace(&sales, HashMap::new())
         .await
         .unwrap();
-    // A handful of tables so the provider rebuild has real list work; MemoryCatalog is
-    // in-process so walls stay low — we only need relative cost, not absolute ms.
+    // A handful of tables so the provider rebuild has real list work; MemoryCatalog is in-process
     for index in 0..8 {
         let name = format!("orders_{index}");
         let creation = TableCreation::builder()
@@ -609,20 +553,16 @@ async fn listing_cost_list_tables_cheaper_than_provider_rebuild() {
     let rebuild_elapsed = rebuild_start.elapsed();
 
     // list-on-access must not be slower than a full provider rebuild on the same catalog.
-    // (Equality is allowed on an unloaded box; the structural point is we never pick TTL
-    // rebuild-as-list when the cheap primitive exists.)
     assert!(
         list_elapsed <= rebuild_elapsed * 2,
         "list_table_names ({list_elapsed:?}) should be ≤ ~2× build_iceberg_catalog_provider \
              ({rebuild_elapsed:?}) over {iterations} iterations — re-measure if this regresses"
     );
-    // Soft preference pin: listing is typically strictly cheaper; the 2x bound above is
-    // the accept gate on a noisy box. Document the strategy constant with the measurement.
+    // Soft preference pin: listing is typically strictly cheaper; the 2x bound above is the accept
     assert_eq!(CATALOG_LISTING_STRATEGY, "list-on-access");
 }
 
-/// Out-of-band create/drop on the same Catalog handle: live list sees create and drops
-/// phantoms; the DF provider snapshot stays stale until rebuild (residual pin).
+/// Out-of-band create/drop on the same Catalog handle: live list sees create and drops phantoms;
 #[tokio::test]
 async fn live_list_sees_oob_create_and_drop_while_provider_snapshot_stale() {
     let wh = TempDir::new().unwrap();
@@ -852,9 +792,7 @@ async fn oob_namespace_drop_phantoms_until_full_rebuild() {
     );
 }
 
-// ---------------------------------------------------------------------------------------
-// PERF-07 — incremental namespace invalidation (counting catalog, no AWS).
-// ---------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------- PERF-07
 
 /// Boxed future for desugared [`Catalog`] methods (no `async-trait` dep in this crate).
 type BoxedCatalogFuture<'a, T> =
@@ -1073,8 +1011,7 @@ impl Catalog for CountingCatalog {
     }
 }
 
-/// PERF-07 bar: after a warm multi-namespace register, one namespace invalidation must not
-/// re-list every database (O(databases) → O(1)).
+/// PERF-07 bar: after a warm multi-namespace register, one namespace invalidation must not re-list
 #[tokio::test]
 async fn invalidate_one_namespace_is_o1_not_o_databases() {
     let wh = TempDir::new().unwrap();
@@ -1114,7 +1051,6 @@ async fn invalidate_one_namespace_is_o1_not_o_databases() {
     let list_namespaces = counting.list_namespaces_count();
     let list_tables = counting.list_tables_count();
     // Scoped rebuild: zero root list_namespaces (namespace_exists only) + one list_tables.
-    // Allow a tiny constant; must NOT scale with namespace_count.
     assert!(
         list_namespaces <= 1,
         "namespace invalidation must not list all databases: list_namespaces={list_namespaces} \
@@ -1171,8 +1107,8 @@ async fn invalidate_one_namespace_is_o1_not_o_databases() {
     );
 }
 
-/// Baseline contrast: a full rebuild lists every namespace's tables (O(databases)).
 /// pins: rp-1-fork-repin/C-011
+/// Baseline contrast: a full rebuild lists every namespace's tables (O(databases)).
 #[tokio::test]
 async fn full_rebuild_lists_every_namespace() {
     let wh = TempDir::new().unwrap();
@@ -1203,9 +1139,8 @@ async fn full_rebuild_lists_every_namespace() {
     );
 }
 
-/// Product-style invalidation keeps T6 residual honesty: OOB create without invalidate stays
-/// invisible to the DF provider; live list still sees it.
 /// pins: rp-1-fork-repin/C-011
+/// Product-style invalidation keeps T6 residual honesty: OOB create without invalidate stays
 #[tokio::test]
 async fn incremental_provider_preserves_oob_staleness_residual() {
     let wh = TempDir::new().unwrap();
@@ -1261,8 +1196,7 @@ async fn incremental_provider_preserves_oob_staleness_residual() {
     );
 }
 
-/// PERF-07: live table drop + namespace invalidate must clear DF phantoms
-/// (product DROP TABLE shape — no silent drop cache after invalidate).
+/// PERF-07: live table drop + namespace invalidate must clear DF phantoms (product DROP TABLE
 #[tokio::test]
 async fn invalidate_after_live_table_drop_removes_df_name() {
     let wh = TempDir::new().expect("tempdir");
@@ -1377,8 +1311,8 @@ async fn drop_namespace_from_provider_is_zero_list() {
     );
 }
 
-/// PERF-07: empty invalidate is a no-op (does not silently full-rebuild / heal OOB).
 /// pins: rp-1-fork-repin/C-011
+/// PERF-07: empty invalidate is a no-op (does not silently full-rebuild / heal OOB).
 #[tokio::test]
 async fn empty_invalidate_is_noop_not_full_rebuild() {
     let wh = TempDir::new().expect("tempdir");
@@ -1544,8 +1478,8 @@ async fn invalidate_preserves_sibling_schema_arc_identity() {
     );
 }
 
-/// PERF-07: same-Arc rebuild is the ADR-0004 escape hatch (in-place heal).
 /// pins: rp-1-fork-repin/C-011
+/// PERF-07: same-Arc rebuild is the ADR-0004 escape hatch (in-place heal).
 #[tokio::test]
 async fn rebuild_same_catalog_heals_oob_and_stays_repark_provider() {
     let wh = TempDir::new().expect("tempdir");
@@ -1611,8 +1545,7 @@ async fn rebuild_same_catalog_heals_oob_and_stays_repark_provider() {
     );
 }
 
-/// PERF-07: invalidate/drop on an unregistered catalog name fail-loud
-/// (must not silently register a new DF catalog under a typo).
+/// PERF-07: invalidate/drop on an unregistered catalog name fail-loud (must not silently register
 #[tokio::test]
 async fn invalidate_unregistered_catalog_fails_loud() {
     let wh = TempDir::new().expect("tempdir");
@@ -1647,8 +1580,7 @@ async fn invalidate_unregistered_catalog_fails_loud() {
     );
 }
 
-/// PERF-07: rebuild with a different catalog Arc replaces the provider
-/// (does not silently `refresh_all` from the old interior handle).
+/// PERF-07: rebuild with a different catalog Arc replaces the provider (does not silently
 #[tokio::test]
 async fn rebuild_with_different_catalog_arc_rebinds_provider() {
     let wh_a = TempDir::new().expect("tempdir a");
@@ -1693,12 +1625,9 @@ async fn rebuild_with_different_catalog_arc_rebinds_provider() {
     );
 }
 
-// ---------------------------------------------------------------------------------------
-// QUAL-05 / OBS1: catalog-edge spans fire; span fields never carry secret prop values.
-// ---------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------- QUAL-05
 
-/// Snapshot handle for one test's `catalog.*` span capture; clears the thread's capture
-/// slot on drop so one test cannot leak into another.
+/// Snapshot handle for one test's `catalog.*` span capture; clears the thread's capture slot on
 struct CaptureGuard(std::sync::Arc<crate::tests::tracing::SpanFieldCapture>);
 
 impl Drop for CaptureGuard {
@@ -1715,19 +1644,7 @@ impl CaptureGuard {
 
 use crate::tests::tracing::SpanEvent;
 
-/// ===========================================================================================
 /// Begin capturing `catalog.*` spans on this thread (process-global subscriber, installed once).
-/// ===========================================================================================
-///
-/// v1 installed THIS file's own process-global subscriber here. Merged with the write cohort
-/// into one test binary, that install collides with the merge span recorder's — forced-edit
-/// class 6 (docs/design/session-api.md §5) — so the install and the capture layer now live in
-/// [`crate::test_tracing`]: one shared global subscriber carrying both layers. The capture
-/// semantics are v1's, unchanged (global subscriber — never `set_default` per test, because
-/// `tracing` caches callsite interest globally and a subscriber-less thread poisons it; see
-/// the harness docs for the measured v1 flake — with a thread-local slot keeping each test's
-/// capture private; `#[tokio::test]` is current-thread, so the span is always created on the
-/// capturing thread). Every assertion below is byte-unchanged from v1.
 fn capture_catalog_spans() -> CaptureGuard {
     CaptureGuard(crate::tests::tracing::begin_catalog_capture())
 }
@@ -1833,9 +1750,7 @@ fn assert_catalog_events_forbid_prop_values(events: &[SpanEvent]) {
     }
 }
 
-/// Glue/S3 Tables builders emit spans whose fields never contain prop **values**
-/// (keys may appear in `prop_keys`; presence bools only). Mutation-proof for accidental
-/// `?props` dumps **and** for recording non-secret values (warehouse path / ARN).
+/// Glue/S3 Tables builders emit spans whose fields never contain prop **values** (keys may appear
 #[tokio::test]
 async fn glue_and_s3tables_spans_never_record_secret_values() {
     const SECRET: &str = "SUPER_SECRET_VALUE_do_not_leak_obs1";

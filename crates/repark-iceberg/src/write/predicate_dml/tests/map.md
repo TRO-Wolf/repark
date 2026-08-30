@@ -1,5 +1,7 @@
 # map — repark-iceberg/src/write/predicate_dml/tests
 
+CC-3 (2026-08-30): comments condensed to one line; banners removed.
+
 ## Purpose
 
 Identity DELETE/UPDATE tests. `predicate_dml.rs` declares `#[cfg(test)] mod tests;`.

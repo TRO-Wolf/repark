@@ -71,7 +71,7 @@ or un-restored byte pins.
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
 | C-001 | Scope A is one commit of `git mv` plus the minimal `mod` path edits that keep the tree compiling. No comment edits and no other content edits in that commit. | Rename detection; diff of non-path tokens empty except `mod` / `use` path lines. | **PROVEN** | Q-001 alternative: thin `tests/mod.rs` indexes; batteries `git mv` with unchanged line counts. rustfmt alphabetizes `mod` lines. |
-| C-002 | Every comment block in the five-slice roster receives the one-line rule. | Per-slice file coverage; before/after comment census. | **OPEN** | Slices run after Scope A. |
+| C-002 | Every comment block in the five-slice roster receives the one-line rule. | Per-slice file coverage; before/after comment census. | **OPEN** | Slice 1 iceberg 3762 → 1378 comment lines; 45 files, equiv mismatches 0. |
 | C-003 | Protected inventory is preserved: `grep -c` of `Model:`, `pins:`, `MUTATION:` per rostered file is identical before and after each slice. | Per-slice inventory tables. | **OPEN** | Pickup repo-wide counts: Model 28, MUTATION 31. |
 | C-004 | No executable change: identifiers, signatures, control flow, literals, test inputs, assertions, attributes, and dependencies stay. | Equivalence harness at `/tmp/grok-worker/cc3/equiv.py` plus crate tests. | **OPEN** | Harness not yet run. |
 | C-005 | Size gates ratchet in both homes (`scripts/check_rust_file_size.py` and `test_cap_1_source_file_line_cap.py`) to the exact new line counts. A file that drops to ≤ 1000 lines loses its row. | Both tables equal the measured lengths; `make check-rust-file-size` exit 0. | **OPEN** | Scope A also renames moved EXCEPTIONS keys. |

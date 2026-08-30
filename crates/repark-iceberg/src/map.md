@@ -1,5 +1,7 @@
 # map — repark-iceberg/src
 
+CC-3 (2026-08-30): comments condensed to one line; banners removed.
+
 ## Purpose
 
 Source for `repark-iceberg` — two independent module trees ported from v1 crates. See

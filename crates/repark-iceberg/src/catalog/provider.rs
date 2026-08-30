@@ -1,8 +1,4 @@
 //! Incremental DataFusion catalog provider for Iceberg.
-//!
-//! The provider eagerly freezes each namespace's fork name directory at snapshot and refresh,
-//! preserving out-of-band staleness until explicit invalidation. Product DDL refreshes only the
-//! touched namespace; facade listing remains live against the catalog handle.
 
 use std::collections::HashMap;
 use std::fmt::Debug;
@@ -25,12 +21,7 @@ use crate::catalog::metadata_projection::MetadataProjectionSchemaProvider;
 /// Boxed future returned by desugared [`Catalog`] methods (no `async-trait` dep).
 type BoxedCatalogFuture<'a, T> = Pin<Box<dyn Future<Output = iceberg::Result<T>> + Send + 'a>>;
 
-/// ===========================================================================================
 /// DataFusion [`CatalogProvider`] that can refresh one namespace without re-listing the rest.
-///
-/// Interior mutability: product DDL invalidates in place on the `Arc` already registered with
-/// the session — no full `register_catalog` swap for the incremental path.
-/// ===========================================================================================
 #[derive(Debug)]
 pub struct ReparkCatalogProvider {
     /// Live Iceberg catalog handle (same object the session registry holds).
@@ -40,11 +31,7 @@ pub struct ReparkCatalogProvider {
 }
 
 impl ReparkCatalogProvider {
-    /// ===========================================================================================
-    /// Full snapshot build — same cost class as `IcebergCatalogProvider::try_new` (initial register
-    /// / explicit refresh). Prefer [`Self::refresh_namespace`] after product DDL.
-    /// ===========================================================================================
-    ///
+    /// Full snapshot build — same cost class as `IcebergCatalogProvider::try_new` (initial
     /// # Errors
     /// Propagates Iceberg listing failures as DataFusion plan errors.
     pub async fn try_new(catalog: Arc<dyn Catalog>) -> Result<Self> {
@@ -55,11 +42,7 @@ impl ReparkCatalogProvider {
         })
     }
 
-    /// ===========================================================================================
     /// Rebuild the name directory for a single namespace — O(1) `list_tables` (plus at most one
-    /// `namespace_exists`). Missing namespace removes the schema entry (DROP NAMESPACE path).
-    /// ===========================================================================================
-    ///
     /// # Errors
     /// Propagates Iceberg / provider-build failures.
     pub async fn refresh_namespace(&self, namespace: &str) -> Result<()> {
@@ -68,10 +51,7 @@ impl ReparkCatalogProvider {
         Ok(())
     }
 
-    /// ===========================================================================================
-    /// Drop a namespace entry from the DF name directory without listing (after product
-    /// `DROP NAMESPACE` already removed it from the live catalog).
-    /// ===========================================================================================
+    /// Drop a namespace entry from the DF name directory without listing (after product `DROP NAMESPACE`
     pub fn drop_namespace_entry(&self, namespace: &str) {
         let mut guard = self
             .schemas
@@ -80,11 +60,7 @@ impl ReparkCatalogProvider {
         guard.remove(namespace);
     }
 
-    /// ===========================================================================================
-    /// Full rebuild of every namespace — O(databases); used by explicit
-    /// `refresh_catalog_provider` / free-SQL OOB recovery (ADR-0004 escape hatch).
-    /// ===========================================================================================
-    ///
+    /// Full rebuild of every namespace — O(databases); used by explicit `refresh_catalog_provider`
     /// # Errors
     /// Propagates Iceberg listing failures.
     pub async fn refresh_all(&self) -> Result<()> {
@@ -165,10 +141,7 @@ impl CatalogProvider for ReparkCatalogProvider {
     }
 }
 
-/// ===========================================================================================
 /// Full O(databases) rebuild and `register_catalog` — initial register + explicit refresh.
-/// ===========================================================================================
-///
 /// # Errors
 /// Provider build / registration failures.
 pub async fn rebuild_catalog_provider(
@@ -177,8 +150,6 @@ pub async fn rebuild_catalog_provider(
     name: &str,
 ) -> Result<()> {
     // Prefer in-place full refresh when our provider is already registered **and** still bound to
-    // the same Iceberg handle (keeps the DF Arc stable). A different `catalog` Arc means rebind —
-    // replace the provider so we never silently refresh from a stale handle.
     if let Some(existing) = ctx.catalog(name)
         && let Some(repark) = existing.as_ref().downcast_ref::<ReparkCatalogProvider>()
         && Arc::ptr_eq(&repark.catalog_handle(), &catalog)
@@ -191,17 +162,7 @@ pub async fn rebuild_catalog_provider(
     Ok(())
 }
 
-/// ===========================================================================================
 /// Invalidate one or more namespaces in the registered provider — O(1) list work per namespace.
-///
-/// Empty `namespaces` is a **no-op** (not a full rebuild): callers that want every namespace
-/// refreshed must call [`rebuild_catalog_provider`] explicitly so free-SQL OOB residual is not
-/// silently healed by an empty invalidate.
-///
-/// Falls back to a full rebuild when the session still holds a non-[`ReparkCatalogProvider`]
-/// (should not happen after register via this crate).
-/// ===========================================================================================
-///
 /// # Errors
 /// Provider build / refresh failures.
 pub async fn invalidate_catalog_namespaces(
@@ -222,7 +183,6 @@ pub async fn invalidate_catalog_namespaces(
     };
     if let Some(repark) = existing.as_ref().downcast_ref::<ReparkCatalogProvider>() {
         // Prepare every namespace off the map lock first; apply under one write so a mid-loop
-        // failure cannot leave a cross-ns RENAME half-updated.
         let mut prepared: Vec<(String, Option<Arc<dyn SchemaProvider>>)> =
             Vec::with_capacity(namespaces.len());
         for namespace in namespaces {
@@ -243,10 +203,7 @@ pub async fn invalidate_catalog_namespaces(
     rebuild_catalog_provider(ctx, catalog, catalog_name).await
 }
 
-/// ===========================================================================================
 /// Remove a dropped namespace from the DF name directory without listing.
-/// ===========================================================================================
-///
 /// # Errors
 /// Unregistered catalog name, or full-rebuild fallback failures (foreign provider type).
 pub async fn drop_catalog_namespace_from_provider(
@@ -288,7 +245,6 @@ async fn snapshot_all_schemas(
 }
 
 /// Prepare one namespace schema (or `None` if the live namespace is gone) — shared by
-/// [`ReparkCatalogProvider::refresh_namespace`] and multi-ns invalidate.
 async fn prepare_namespace_schema(
     catalog: Arc<dyn Catalog>,
     namespace: &str,
@@ -332,7 +288,6 @@ fn apply_namespace_schema_locked(
 }
 
 /// Build one write-capable schema provider by running `IcebergCatalogProvider::try_new` against a
-/// catalog view that exposes only `namespace` (avoids listing sibling databases).
 async fn build_namespace_schema(
     catalog: Arc<dyn Catalog>,
     namespace: &NamespaceIdent,
@@ -355,24 +310,11 @@ async fn build_namespace_schema(
     Ok(wrapped)
 }
 
-/// Name used only to drive [`SchemaProvider::table`] through the fork's
-/// `ensure_tables_listed`. Not a user-facing table. A collision would load that
-/// table's metadata at snapshot time (wasteful, still correct).
+/// Name used only to drive [`SchemaProvider::table`] through the fork's `ensure_tables_listed`.
 const FORK_NAME_DIRECTORY_PROBE: &str = "__repark_snapshot_probe";
 
-/// ===========================================================================================
-/// Capture the fork schema-provider's table-name directory at snapshot time.
-///
-/// At pin `5e7b2e4`, `IcebergSchemaProvider::try_new` no longer calls `list_tables`.
-/// The first `table` / `table_names` / `table_exist` lists live and then freezes.
-/// If that first access is after an out-of-band create, ADR-0004's T6 residual
-/// disappears. Snapshot and namespace-refresh therefore probe here so the
-/// directory is captured at refresh time (the previous pin's construction
-/// semantics) and listing errors stay loud — unlike the sync `table_names`
-/// best-effort swallow.
-///
 /// pins: rp-1-fork-repin/C-011
-/// ===========================================================================================
+/// Capture the fork schema-provider's table-name directory at snapshot time.
 async fn freeze_fork_name_directory(schema: &dyn SchemaProvider) -> Result<()> {
     let _ = schema.table(FORK_NAME_DIRECTORY_PROBE).await?;
     Ok(())
@@ -387,16 +329,7 @@ fn namespace_schema_name(namespace: &NamespaceIdent) -> String {
         .unwrap_or_else(|| namespace.to_url_string())
 }
 
-/// ===========================================================================================
 /// Catalog view that reports a single namespace from `list_namespaces` so
-/// `IcebergCatalogProvider::try_new` only builds one `IcebergSchemaProvider`.
-///
-/// Required methods and every defaulted method that an inner catalog may override are
-/// **explicit forwards** to `inner` (so a trait default cannot swallow a real override —
-/// G17 / both-sides trait-wrapping audit). Three composition defaults are **stated omissions**
-/// (see the block comment in the `impl Catalog` body): they deliberately fall through because
-/// they only call methods this wrapper already forwards.
-/// ===========================================================================================
 #[derive(Debug)]
 pub(crate) struct NamespaceScopedCatalog {
     inner: Arc<dyn Catalog>,
@@ -404,18 +337,13 @@ pub(crate) struct NamespaceScopedCatalog {
 }
 
 impl NamespaceScopedCatalog {
-    /// ===========================================================================================
     /// Wrap `inner` so root `list_namespaces` reports only `only` (if it exists).
-    /// ===========================================================================================
     pub(crate) fn new(inner: Arc<dyn Catalog>, only: NamespaceIdent) -> Self {
         Self { inner, only }
     }
 }
 
 impl Catalog for NamespaceScopedCatalog {
-    // -------------------------------------------------------------------------------------------
-    // Required Catalog methods (14). `list_namespaces` is the only intentional filter; the rest
-    // fully delegate so the schema provider remains write-capable.
     // -------------------------------------------------------------------------------------------
 
     fn list_namespaces<'life0, 'life1, 'async_trait>(
@@ -604,25 +532,7 @@ impl Catalog for NamespaceScopedCatalog {
     }
 
     // -------------------------------------------------------------------------------------------
-    // Stated omissions (3 of 16 defaulted methods at fork pin 5e7b2e4).
-    //
-    // These trait defaults compose only from methods already forwarded above — they do not
-    // call an overridable default that an inner catalog might replace with real work, so leaving
-    // them as the trait default is correct *and* observable (see namespace_scoped_tests).
-    //
-    //   update_namespace_properties — get_namespace + update_namespace (both forwarded)
-    //   set_namespace_properties    — update_namespace_properties(empty removals, updates)
-    //   remove_namespace_properties — update_namespace_properties(removals, empty updates)
-    //
-    // Never silent: if a future fork rev makes one of these a real primitive (not a composition),
-    // re-audit and convert that method to an explicit forward.
-    // -------------------------------------------------------------------------------------------
 
-    // -------------------------------------------------------------------------------------------
-    // Explicit forwards (13 of 16 defaulted methods). A silent fall-through would return the
-    // trait default and swallow an inner catalog's override — HIGH for publish_replace_table
-    // (default FeatureUnsupported masks MemoryCatalog's CAS replace) and the views family
-    // (MemoryCatalog implements views; default is FeatureUnsupported).
     // -------------------------------------------------------------------------------------------
 
     fn publish_create_table<'life0, 'async_trait>(

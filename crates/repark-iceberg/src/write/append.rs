@@ -1,12 +1,4 @@
 //! Public bulk append through the fork's `fast_append` transaction path.
-//!
-//! Appends are blind writes, so the fork's refresh-and-retry commit semantics apply without row
-//! validation; each commit receives the MERGE operation-id snapshot property. Partitioned writes
-//! use the fork's computed partition fanout; non-Parquet formats remain a loud `NotImplemented`
-//! scope gate. Empty appends commit with the stamp, matching Java's empty-snapshot behavior.
-//! Known divergence: Java URL-encodes every partition path segment (`PartitionSpec.escape`),
-//! the fork emits the raw human string — a string key needing escaping gets a divergent layout;
-//! manifest partition values, pruning, and read-back stay correct (filed fork parity follow-up).
 
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -40,22 +32,9 @@ use crate::write::name_resolution::{CaseInsensitiveColumnIndex, SourceMatch};
 use crate::write::store_assign::refuse_unless_write_store_assignable;
 use crate::write::writer_props::writer_properties_for;
 
-/// ===========================================================================================
 /// Append record batches to an Iceberg table — the sanctioned add-only commit path.
-///
-/// Loads the table, conforms every batch to the table's write schema (exact column-name set,
-/// strict casts), writes Parquet data files (identity-partition fanout when the table is
-/// partitioned), and commits ONE stamped `fast_append` through the fork's refresh-and-re-apply
-/// OCC retry loop. Returns the refreshed [`Table`] at the committed snapshot. Empty input
-/// commits an empty stamped `append` snapshot (Java `AppendFiles`/`BatchAppend` parity).
-/// ===========================================================================================
 /// # Errors
 /// A missing table surfaces the catalog's load error; a non-Parquet `write.format.default` is
-/// `NotImplemented`; a batch with a missing, extra, ambiguous (case-colliding), or DUPLICATE
-/// column (names resolve **case-insensitively**, Spark default — WG-4/BUG-007), an
-/// uncastable/overflowing value, or a NULL in a required column errors loudly before anything
-/// is written; otherwise any write or commit error. Partition transforms (identity AND
-/// non-identity — bucket/truncate/temporal) are all handled by the computed-mode fanout.
 pub async fn append(
     catalog: &Arc<dyn Catalog>,
     table_ident: &TableIdent,
@@ -68,9 +47,7 @@ pub async fn append(
         Arc::new(schema_to_arrow_schema(table.metadata().current_schema()).map_err(iceberg_err)?);
     let conformed = conform_batches(&write_schema, &batches)?;
 
-    // Public `append` has no session handle — use the engine default concurrency (4). Callers that
-    // need K=1 or a custom K should go through MERGE/CTAS session conf, or the
-    // `*_with_concurrency` write helpers.
+    // Public `append` has no session handle — use the engine default concurrency (4).
     let concurrency = WriteConcurrency::default();
     let new_files = if conformed.is_empty() {
         Vec::new()
@@ -82,12 +59,7 @@ pub async fn append(
     commit_append(catalog, &table, new_files).await
 }
 
-/// The one remaining append scope gate, checked before any IO: only Parquet data files are
-/// written — a non-Parquet `write.format.default` is a deterministic `NotImplemented`, never a
-/// wrong answer (tracked in `task/todo.md`). Partition transforms (identity AND non-identity —
-/// bucket/truncate/temporal) are ALL supported: the fanout splitter runs in computed mode, so the
-/// fork's `PartitionValueCalculator` derives each partition value from the raw source columns
-/// (Group P). The former non-identity partition gate is retired.
+/// The one remaining append scope gate, checked before any IO: only Parquet data files are written
 fn reject_unsupported_append(table: &Table) -> Result<()> {
     let table_props = table.metadata().table_properties().map_err(iceberg_err)?;
     let file_format =
@@ -100,21 +72,7 @@ fn reject_unsupported_append(table: &Table) -> Result<()> {
     Ok(())
 }
 
-/// ===========================================================================================
 /// Conform consumer batches to the Iceberg write schema: every target column takes the source
-/// column that resolves to it BY NAME, case-insensitively — Spark's default write conform
-/// (`spark.sql.caseSensitive=false`; `TableOutputResolver.reorderColumnsByName`). A target with
-/// no source column, an extra source column matching no target, OR two source columns colliding
-/// on one target (case-differing or an exact duplicate) is a loud error naming the column(s);
-/// every resolved `(source, target)` pair is gated through the ANSI store-assignment matrix
-/// ([`crate::write::store_assign`], WI-1) BEFORE any cast runs, so a Spark-illegal pair
-/// (`date→int`, `boolean→int`, `timestamp→bigint`, `string→numeric`) refuses instead of
-/// committing a reinterpreted value; the legal ones are strictly cast to the target Arrow types
-/// (overflow errors instead of silent NULLs),
-/// and batch construction enforces nullability (a NULL in a required column fails loudly).
-/// Validation runs on EVERY batch — including zero-row ones — before the zero-row batches are
-/// dropped, so an empty-but-malformed batch cannot slip through.
-/// ===========================================================================================
 fn conform_batches(write_schema: &SchemaRef, batches: &[RecordBatch]) -> Result<Vec<RecordBatch>> {
     let mut conformed = Vec::with_capacity(batches.len());
     for batch in batches {
@@ -125,12 +83,6 @@ fn conform_batches(write_schema: &SchemaRef, batches: &[RecordBatch]) -> Result<
 }
 
 /// Conform ONE consumer batch to the write schema (the per-batch body of [`conform_batches`],
-/// extracted so the streaming partitioned write can conform each batch as it arrives instead of
-/// after a full collect). Same contract: case-insensitive by-name resolution
-/// (missing/extra/ambiguous = loud error), ANSI store-assignment gate then strict casts
-/// (overflow errors, never NULLs),
-/// nullability enforced by construction. Zero-row batches are conformed and validated too (an
-/// empty-but-malformed batch cannot slip through); the caller drops empties after conforming.
 fn conform_batch(write_schema: &SchemaRef, batch: &RecordBatch) -> Result<RecordBatch> {
     let source_names: Vec<&str> = batch
         .schema_ref()
@@ -146,10 +98,7 @@ fn conform_batch(write_schema: &SchemaRef, batch: &RecordBatch) -> Result<Record
         .map(|field| match source_index.resolve(field.name()) {
             SourceMatch::Unique(index) => {
                 consumed[index] = true;
-                // WI-1: ANSI store assignment BEFORE the kernel. `cast_with_options` happily
-                // reinterprets a Date32 as days-since-epoch into an Int32 column — a durable
-                // silently-wrong value in a committed data file. Spark refuses the same pair at
-                // analysis (`INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST`).
+                // WI-1: ANSI store assignment BEFORE the kernel.
                 refuse_unless_write_store_assignable(
                     "append",
                     field.name(),
@@ -186,22 +135,9 @@ fn conform_batch(write_schema: &SchemaRef, batch: &RecordBatch) -> Result<Record
     Ok(RecordBatch::try_new(write_schema.clone(), columns)?)
 }
 
-/// ===========================================================================================
-/// Conform + write batches as identity-partitioned Parquet data files — the partitioned
-/// sibling of [`write_data_files`], public for the staged CTAS write (`repark-sql`) so a
-/// partitioned CTAS stages its files through the SAME fanout machinery `append` uses (one
-/// fanout in the engine, never a second). Batches are conformed to the table's write schema
-/// first — the splitter projects source columns positionally against
-/// `schema_to_arrow_schema(current_schema)` and its value conversion accepts only the
-/// canonical Arrow types (e.g. a `Utf8View` partition column from a DataFusion plan must be
-/// cast to `Utf8` or the split fails loudly) — then fanned out per distinct partition key.
-/// The table must carry a partition spec; on an unpartitioned table the fork's splitter
-/// construction fails loudly (use [`write_data_files`] there).
-/// ===========================================================================================
+/// Conform + write batches as identity-partitioned Parquet data files — the partitioned sibling of
 /// # Errors
-/// A batch with a missing, extra, or duplicate column, an uncastable/overflowing value, or a
-/// NULL in a required column errors loudly before anything is written (the same conform
-/// contract as [`append`]); otherwise any splitter or writer error.
+/// A batch with a missing, extra, or duplicate column, an uncastable/overflowing value, or a NULL
 pub async fn write_partitioned_data_files(
     table: &Table,
     batches: Vec<RecordBatch>,
@@ -209,10 +145,7 @@ pub async fn write_partitioned_data_files(
     write_partitioned_data_files_with_concurrency(table, batches, WriteConcurrency::default()).await
 }
 
-/// ===========================================================================================
 /// [`write_partitioned_data_files`] with explicit [`WriteConcurrency`].
-/// ===========================================================================================
-///
 /// # Errors
 /// Same as [`write_partitioned_data_files`].
 pub async fn write_partitioned_data_files_with_concurrency(
@@ -229,21 +162,9 @@ pub async fn write_partitioned_data_files_with_concurrency(
     fanout_data_files_with_concurrency(table, conformed, concurrency).await
 }
 
-/// ===========================================================================================
 /// The streaming sibling of [`write_partitioned_data_files`] — conform + fan out each batch the
-/// instant the source produces it, so a partitioned CTAS streams the SELECT into the fanout
-/// writers with bounded memory (WG-2) instead of collecting the whole result first. Each batch is
-/// conformed to the table's write schema as it arrives (the same per-batch contract
-/// [`write_partitioned_data_files`] applies to the whole `Vec`), then split + fanned out through
-/// the SAME `fanout_conformed_stream` core the `Vec` path uses (one fanout in the engine). A
-/// mid-stream source (or conform) error propagates via `?` WITHOUT closing — no partial data file
-/// is returned.
-/// ===========================================================================================
-///
 /// # Errors
-/// A batch with a missing, extra, or duplicate column, an uncastable/overflowing value, or a
-/// NULL in a required column errors loudly; a source-stream error aborts the write; otherwise any
-/// splitter or writer error.
+/// A batch with a missing, extra, or duplicate column, an uncastable/overflowing value, or a NULL
 pub async fn write_partitioned_data_files_from_stream<S>(
     table: &Table,
     stream: S,
@@ -259,10 +180,7 @@ where
     .await
 }
 
-/// ===========================================================================================
 /// [`write_partitioned_data_files_from_stream`] with explicit [`WriteConcurrency`].
-/// ===========================================================================================
-///
 /// # Errors
 /// Same as [`write_partitioned_data_files_from_stream`].
 pub async fn write_partitioned_data_files_from_stream_with_concurrency<S>(
@@ -279,16 +197,7 @@ where
     fanout_conformed_stream_with_concurrency(table, conformed, concurrency).await
 }
 
-/// ===========================================================================================
-/// The identity-partition fanout core over ALREADY-CONFORMED batches (callers:
-/// [`append`] after its own conform pass, and [`write_partitioned_data_files`]). The fork's
-/// `RecordBatchPartitionSplitter` (computed mode — partition values are computed from the
-/// source columns, which line up positionally because the batches are conformed to
-/// `schema_to_arrow_schema(current_schema)`) groups each batch by partition value; the
-/// `FanoutWriter` keeps one writer per distinct partition key over the same Parquet →
-/// rolling → `DataFileWriter` stack `write_data_files` uses, so every produced [`DataFile`]
-/// carries its partition value and partitioned file paths.
-/// ===========================================================================================
+/// The identity-partition fanout core over ALREADY-CONFORMED batches (callers: [`append`] after
 async fn fanout_data_files_with_concurrency(
     table: &Table,
     batches: Vec<RecordBatch>,
@@ -302,14 +211,7 @@ async fn fanout_data_files_with_concurrency(
     .await
 }
 
-/// ===========================================================================================
 /// Identity-partition fanout with optional concurrent batch workers.
-///
-/// `K = 1`: one `FanoutWriter` (historical serial path). `K > 1`: round-robin batches across
-/// K independent `FanoutWriter` stacks so file flushes/uploads can overlap. The same partition
-/// may land in multiple workers (multiple data files per partition) — Iceberg allows that.
-/// Global concurrent open writers is capped at K (not K × partitions).
-/// ===========================================================================================
 async fn fanout_conformed_stream_with_concurrency<S>(
     table: &Table,
     mut conformed: S,
@@ -323,8 +225,7 @@ where
         return fanout_conformed_stream_serial(table, &mut conformed).await;
     }
 
-    // P1-R1: abort flag so workers do not close fanouts after a source/sibling failure
-    // (closing would finish partial data files that will never be committed).
+    // P1-R1: abort flag so workers do not close fanouts after a source/sibling failure (closing
     let aborted = Arc::new(AtomicBool::new(false));
     let mut senders = Vec::with_capacity(max_concurrent);
     let mut worker_futures = Vec::with_capacity(max_concurrent);
@@ -404,7 +305,6 @@ where
 }
 
 /// Serial fanout that checks `aborted` between batches and after the stream ends.
-/// When aborted, drops the fanout WITHOUT `close()` so partial files are not finished (P1-R1).
 async fn fanout_conformed_stream_serial_with_abort<S>(
     table: &Table,
     conformed: &mut S,
@@ -461,23 +361,9 @@ where
     fanout.close().await.map_err(iceberg_err)
 }
 
-/// ===========================================================================================
 /// One stamped `fast_append` commit — `ENGINE_CONTRACT` §4's INSERT/append action, with the same
-/// `engine.operation-id` snapshot-summary stamp class the MERGE executor commits under (§8).
-/// No §5 validations: a blind append has no read dependency, so appends commute — a commit
-/// conflict is resolved by the fork's refresh-and-re-apply retry (Java `AppendFiles` semantics).
-/// Zero files still commit (the stamp satisfies the fork's empty-commit precondition), matching
-/// Java `BatchAppend`'s unconditional commit — an empty append produces an empty snapshot.
-///
-/// Public since the CTAS-on-S3-Tables create-first flow (`repark-sql`
-/// `execute_ctas_service_managed`): the ONE sanctioned way to commit already-written data files
-/// onto an existing table as an append. Callers that do not want an empty snapshot must skip the
-/// call for an empty file set (the CTAS flow does).
-/// ===========================================================================================
-///
 /// # Errors
-/// Returns the fork's transaction/commit error (folded to this crate's error type) when the
-/// append action cannot be applied or the catalog commit fails.
+/// Returns the fork's transaction/commit error (folded to this crate's error type) when the append
 pub async fn commit_append(
     catalog: &Arc<dyn Catalog>,
     table: &Table,
@@ -506,14 +392,7 @@ fn iceberg_err(err: iceberg::Error) -> DataFusionError {
     crate::catalog::iceberg_to_datafusion(err)
 }
 
-/// ===============================================================================================
-/// Append pins (downstream ask A1). Every enumerated charter element gets one named pin, on the
-/// A1 acceptance substrate: iceberg-rust's in-memory `MemoryCatalog` + a `file://` (local FS)
-/// warehouse, REAL Parquet writes and scans — no AWS, no network. Partition values are asserted
-/// at the committed MANIFEST level (`DataFile.partition`), pruning at PLAN level
-/// (`plan_files` → planned data-file paths), and round-trips assert value AND Arrow type on the
-/// scan read-back path (never a display path).
-/// ===============================================================================================
+/// Append pins (downstream ask A1).
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;
@@ -537,7 +416,6 @@ mod tests {
     use super::*;
 
     /// An in-memory Iceberg catalog over a local-FS (`file://`-class) warehouse with a `sales`
-    /// namespace — the A1 acceptance substrate. No AWS, no network.
     async fn memory_catalog(warehouse: &TempDir) -> Arc<dyn Catalog> {
         let path = warehouse
             .path()
@@ -579,7 +457,6 @@ mod tests {
     }
 
     /// Create `sales.<name>`; identity-partitioned on `key` (partition field `key_part`) when
-    /// `partitioned`, with optional extra table properties.
     async fn create_table(
         catalog: &Arc<dyn Catalog>,
         name: &str,
@@ -612,8 +489,7 @@ mod tests {
         TableIdent::new(NamespaceIdent::new("sales".to_string()), name.to_string())
     }
 
-    /// A consumer-shaped batch: plain Arrow fields (nullable, NO field-id metadata) — proving
-    /// the public API needs no Iceberg-annotated schemas from callers.
+    /// A consumer-shaped batch: plain Arrow fields (nullable, NO field-id metadata) — proving the
     fn consumer_batch(keys: &[Option<i32>], payloads: &[Option<&str>]) -> RecordBatch {
         let schema = Arc::new(ArrowSchema::new(vec![
             Field::new("key", DataType::Int32, true),
@@ -630,8 +506,6 @@ mod tests {
     }
 
     /// Scan read-back on the Arrow path: asserts the exact Arrow types (Int32 / Utf8) via
-    /// downcast, then returns `(key, payload)` rows sorted for order-insensitive comparison
-    /// (fanout regroups rows by partition, so row order is not preserved).
     async fn read_back_sorted(
         catalog: &Arc<dyn Catalog>,
         ident: &TableIdent,
@@ -682,7 +556,6 @@ mod tests {
     }
 
     /// The live (Added/Existing) DATA-file entries in the current snapshot's manifests — the
-    /// committed `DataFile` records, partition values included.
     async fn live_data_files(catalog: &Arc<dyn Catalog>, ident: &TableIdent) -> Vec<DataFile> {
         let table = catalog.load_table(ident).await.expect("load table");
         let metadata = table.metadata();
@@ -712,7 +585,6 @@ mod tests {
     }
 
     /// The data-file paths a filtered scan PLANS (fork `plan_files`) — the plan-level pruning
-    /// observation: no file outside the returned set is opened by the scan.
     async fn planned_paths(table: &Table, predicate: Predicate) -> HashSet<String> {
         let scan = table
             .scan()
@@ -739,19 +611,10 @@ mod tests {
         table.metadata().snapshots().count()
     }
 
-    /// The boxed-future return type of an `#[async_trait]` `Catalog` method — spelled out once
-    /// so the fully-delegating [`ConflictInjector`] impl below stays readable. `async-trait` is
-    /// not a dependency of this crate, so the trait surface is implemented in its desugared
-    /// form (every method forwards the inner catalog's already-boxed future).
+    /// The boxed-future return type of an `#[async_trait]` `Catalog` method — spelled out once so
     type BoxedCatalogFuture<'a, T> = Pin<Box<dyn Future<Output = iceberg::Result<T>> + Send + 'a>>;
 
-    /// A fully-delegating `Catalog` wrapper that lands a competing PUBLIC append against the
-    /// inner catalog INSIDE the victim's FIRST `update_table` call — i.e. after the fork's
-    /// `do_commit` refresh and before its catalog CAS — so the victim's first attempt is
-    /// rejected with the retryable `CatalogCommitConflicts` a real mid-flight race produces.
-    /// Deterministic: the injection is keyed on the attempt counter, no timing involved
-    /// (lessons rule 12). F-A1-5 — occupies the in-flight window disclosure #3
-    /// called untestable.
+    /// A fully-delegating `Catalog` wrapper that lands a competing PUBLIC append against the inner
     #[derive(Debug)]
     struct ConflictInjector {
         inner: Arc<dyn Catalog>,
@@ -933,10 +796,7 @@ mod tests {
             Box::pin(async move {
                 let attempt = self.update_table_attempts.fetch_add(1, Ordering::SeqCst) + 1;
                 if attempt == 1 {
-                    // The victim's `do_commit` has already refreshed its base; landing a
-                    // competing PUBLIC append NOW (against the inner catalog — no recursion)
-                    // guarantees the delegated CAS below rejects with the retryable
-                    // `CatalogCommitConflicts`.
+                    // The victim's `do_commit` has already refreshed its base; landing a competing
                     append(
                         &self.inner,
                         &self.victim_ident,
@@ -950,10 +810,7 @@ mod tests {
         }
     }
 
-    /// PIN P1 — unpartitioned append via the NEW public API round-trips value AND type
-    /// (regression class: the same `write_data_files` path CTAS/MERGE already commit through,
-    /// now reached by `append`). Risk: the new entry point wires schema conformance or the
-    /// commit differently and silently drops/reinterprets rows.
+    /// PIN P1 — unpartitioned append via the NEW public API round-trips value AND type (regression
     #[tokio::test]
     async fn append_unpartitioned_roundtrip_value_and_type() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -987,9 +844,6 @@ mod tests {
     }
 
     /// PIN P2 — single partition value: every committed manifest `DataFile` entry carries the
-    /// correct partition value (inspected at the MANIFEST level, not via read-back). Risk: files
-    /// land with an empty/wrong partition struct — readable today, unprunable and
-    /// spec-corrupting forever.
     #[tokio::test]
     async fn append_partitioned_single_value_stamps_datafile_partition() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -1034,12 +888,6 @@ mod tests {
     }
 
     /// PIN U1-P12 (CTAS `PARTITIONED BY`) — the PUBLIC `write_partitioned_data_files` conforms
-    /// view-typed batches BEFORE the fanout: a `Utf8View` partition column (a real DataFusion
-    /// plan-output class) is cast to the write schema's `Utf8`, so the split succeeds and every
-    /// returned `DataFile` is stamped with its own partition value. Risk: without the conform
-    /// pass the fork's `arrow_struct_to_literal` String arm rejects the view array ("The
-    /// partner is not a string array") — the M-U1-C mutation (bypass the conform) turns this
-    /// pin RED.
     #[tokio::test]
     async fn write_partitioned_data_files_conforms_view_typed_batches() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -1110,10 +958,7 @@ mod tests {
         );
     }
 
-    /// PIN P3 — MULTI-partition UNSORTED interleaved batches: the fanout splits rows per
-    /// partition (one file set per partition value, each stamped with ITS value), and the full
-    /// read-back equals the input, value AND type. Risk: a broken fanout routes all rows to one
-    /// partition writer (one file, one value) or drops the regrouped rows.
+    /// PIN P3 — MULTI-partition UNSORTED interleaved batches: the fanout splits rows per partition
     #[tokio::test]
     async fn append_partitioned_multi_value_fanout_splits_files_and_roundtrips() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -1161,10 +1006,6 @@ mod tests {
     }
 
     /// PIN P4 — partition PRUNING proven at PLAN level: a scan with a partition predicate plans
-    /// tasks touching ONLY the matching partition's file paths (cross-checked against the
-    /// committed manifests), and returns exactly the matching rows. Risk: partition values that
-    /// read back fine but don't prune (wrong/empty manifest values) silently turn every
-    /// partitioned query into a full scan — or worse, prune WRONG.
     #[tokio::test]
     async fn append_partitioned_scan_prunes_planned_files_to_matching_partition() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -1242,11 +1083,7 @@ mod tests {
         );
     }
 
-    /// PIN P5 — NULL identity key (nullable partition source column): Java-parity null
-    /// partition slot — the `DataFile` carries a null partition field (rendered `key_part=null`
-    /// in the file path, as Java's `toHumanString(null)` does) and both rows read back. Risk:
-    /// the splitter/writer chain rejects or mangles the null group and null-keyed appends
-    /// silently diverge from Java.
+    /// PIN P5 — NULL identity key (nullable partition source column): Java-parity null partition
     #[tokio::test]
     async fn append_partitioned_null_key_lands_null_partition_slot() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -1290,7 +1127,6 @@ mod tests {
     }
 
     /// PIN P6a — append to a missing table is a loud error naming the table; nothing lands.
-    /// Risk: a silently-created table or a swallowed load error.
     #[tokio::test]
     async fn append_missing_table_errors_loud() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -1311,9 +1147,6 @@ mod tests {
     }
 
     /// PIN P6b — schema-mismatched batches are loud errors naming the offending column, and
-    /// NOTHING commits (no partial append, no snapshot). Covers: missing column (on a ZERO-ROW
-    /// batch — validation runs before empties are dropped), extra column, and NULL in a
-    /// required column. Risk: a silent NULL-fill / column drop, or a half-landed append.
     #[tokio::test]
     async fn append_schema_mismatch_errors_and_commits_nothing() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -1380,10 +1213,6 @@ mod tests {
     }
 
     /// PIN P7 — EMPTY input (zero batches, then a zero-row batch) is Java parity:
-    /// `SparkWrite.BatchAppend.commit` (1.10.0 L292-305) commits unconditionally, so an empty
-    /// append produces an EMPTY stamped `append` snapshot — no files, rows unchanged, never an
-    /// error and never a silent no-op. Risk: surprise snapshot semantics on either side (a
-    /// skipped commit breaks Java parity; a failed commit breaks empty-frame appends).
     #[tokio::test]
     async fn append_empty_input_commits_empty_append_snapshot_java_parity() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -1417,11 +1246,6 @@ mod tests {
     }
 
     /// PIN P8a (commit seam) — append×append from ONE stale base both land: the second commit's
-    /// base table was loaded BEFORE the first commit landed, and the fork's commit loop
-    /// refreshes the base and re-applies the fast-append (Java `AppendFiles`: "commit conflicts
-    /// will be resolved by applying the changes to the new latest snapshot and reattempting").
-    /// Deterministic per lessons rule 12: staleness is constructed, not raced. Risk: a lost
-    /// update — the stale-based commit either fails or overwrites the concurrent append.
     #[tokio::test]
     async fn append_commit_seam_racing_append_both_land() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -1471,9 +1295,7 @@ mod tests {
         assert_eq!(snapshot_count(&catalog, &ident).await, 3);
     }
 
-    /// PIN P8a (public API) — two sequential public appends both land with distinct snapshots;
-    /// the end-to-end reachability of the commit seam above. Risk: the public path caches or
-    /// clobbers table state across calls.
+    /// PIN P8a (public API) — two sequential public appends both land with distinct snapshots; the
     #[tokio::test]
     async fn append_racing_append_both_land() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -1505,14 +1327,7 @@ mod tests {
         );
     }
 
-    /// PIN P8b — a PUBLIC append's committed files are visible to the §5 SERIALIZABLE
-    /// validation MERGE commits under: an add-only `OverwriteFiles` carrying
-    /// `validate_no_conflicting_data` pinned to a pre-append snapshot (the exact recipe of
-    /// `merge::commit`'s insert-only arm) must REJECT after the public append lands — loud,
-    /// non-retryable. Together with the untouched `occ_tests` (whose concurrent-add helper is
-    /// the same `fast_append` action class this append commits through), this keeps MERGE's OCC
-    /// intact against the real API. Risk: appends that bypass conflict visibility would let a
-    /// racing MERGE commit silent duplicates.
+    /// PIN P8b — a PUBLIC append's committed files are visible to the §5 SERIALIZABLE validation
     #[tokio::test]
     async fn public_append_files_trip_serializable_validation_pinned_before_append() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -1578,10 +1393,6 @@ mod tests {
     }
 
     /// PIN P9 — every append snapshot carries the SAME operation-stamp property class the MERGE
-    /// commit path stamps (`engine.operation-id`, merge.rs — the fork §8 ambiguous-commit
-    /// mitigation): present, a valid UUID, unique per commit, on an `append`-operation
-    /// snapshot. Risk: an unstamped append breaks the ambiguous-commit reconciliation recipe
-    /// for exactly the op the consumer runs in bulk.
     #[tokio::test]
     async fn append_snapshot_stamps_engine_operation_id() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -1627,9 +1438,6 @@ mod tests {
     }
 
     /// PIN P11 — the A1 acceptance shape END-TO-END, the downstream ask's literal acceptance:
-    /// memory catalog + `file://`-class warehouse, identity-partitioned table, bulk append of
-    /// unsorted multi-batch input → read-back verifying rows AND plan-level partition pruning.
-    /// Risk: any wiring gap between the pieces the elements above pin individually.
     #[tokio::test]
     async fn append_a1_acceptance_identity_partitioned_end_to_end() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -1689,17 +1497,6 @@ mod tests {
     }
 
     /// PIN P7 (Group P) — `partitioned_write_routes_by_transform_value`: an append into a
-    /// `bucket(4, key)`-partitioned table routes rows through the computed-mode splitter, so each
-    /// committed `DataFile.partition` carries the FORK's Iceberg bucket ordinal for its rows — NOT
-    /// the identity key, NOT a single silent partition. Expected buckets are derived from the
-    /// fork's OWN `Transform::Bucket(4)` transform function (self-oracle: the engine must drive
-    /// the same hash the fork computes), the manifest slots are checked against them, and the full
-    /// round-trip is asserted value AND type.
-    ///
-    /// Mutation coverage: revert `build_partition_spec`/append gate to identity → the slots become
-    /// the raw keys (out of `0..4`) and the expected-map assert goes RED; drive the splitter in
-    /// projection (pre-computed) mode → `split` errors on the missing `_partition` column and the
-    /// append fails, RED.
     #[tokio::test]
     async fn append_bucket_partition_routes_by_fork_hash() {
         use datafusion::arrow::array::AsArray;
@@ -1728,7 +1525,6 @@ mod tests {
         );
 
         // Distinct keys chosen large/spread so an IDENTITY fallthrough (partition == key) is
-        // unmistakably distinguishable from the bucket ordinal (partition ∈ 0..4).
         let keys: Vec<i32> = vec![1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233];
         let payloads: Vec<String> = keys.iter().map(|k| format!("p{k}")).collect();
         let key_opts: Vec<Option<i32>> = keys.iter().map(|k| Some(*k)).collect();
@@ -1786,9 +1582,7 @@ mod tests {
         assert_eq!(read_back_sorted(&catalog, &ident).await, expected);
     }
 
-    /// PIN P13 — a non-Parquet `write.format.default` is a deterministic `NotImplemented` on
-    /// the append path (checked before any IO, partitioned tables included). Risk: appends
-    /// writing Parquet bytes into a table whose readers expect another format.
+    /// PIN P13 — a non-Parquet `write.format.default` is a deterministic `NotImplemented` on the
     #[tokio::test]
     async fn append_non_parquet_default_rejected() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -1816,12 +1610,7 @@ mod tests {
         assert_eq!(snapshot_count(&catalog, &ident).await, 0, "nothing lands");
     }
 
-    /// PIN P14 (F-A1-1; WG-4 rewording) — a batch carrying DUPLICATE column names is a
-    /// loud error naming BOTH copies, and nothing commits. An exact duplicate is the degenerate
-    /// case of the case-insensitive ambiguity Spark rejects (`matched.length > 1` in
-    /// `TableOutputResolver.reorderColumnsByName`): the by-name rebuild would otherwise take the
-    /// FIRST match and COMMIT silently with every copy after the first discarded. Probe:
-    /// `[key, key, payload]` with values `[1] / [999] / ["dup"]`.
+    /// PIN P14 (F-A1-1; WG-4 rewording) — a batch carrying DUPLICATE column names is a loud error
     #[tokio::test]
     async fn append_duplicate_column_batch_rejected_and_commits_nothing() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -1873,11 +1662,7 @@ mod tests {
         );
     }
 
-    /// PIN P15 (F-A1-2) — an OVERFLOWING cast is a loud error naming the offending
-    /// value, and nothing commits. The key is NULLABLE here on purpose: under a `safe: true`
-    /// cast the overflow becomes a silent NULL that would COMMIT into the null partition (the
-    /// silent-misroute class) — a required key would mask that mutation behind the nullability
-    /// backstop, so this pin, not the backstop, carries the strictness contract.
+    /// PIN P15 (F-A1-2) — an OVERFLOWING cast is a loud error naming the offending value, and
     #[tokio::test]
     async fn append_overflowing_cast_rejected_and_commits_nothing() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -1908,11 +1693,7 @@ mod tests {
         assert!(read_back_sorted(&catalog, &ident).await.is_empty());
     }
 
-    /// PIN P16 (F-A1-2) — a batch with its columns REORDERED versus the write schema
-    /// and an in-range WIDENING-cast key (Int64 → Int32) conforms BY NAME: values land under
-    /// the right columns, the manifest partition values match the cast keys, and the full
-    /// round-trip is value- AND type-exact. Risk: a positional rebuild would cast `payload`
-    /// into `key` (or misroute rows), and a lossy conform would corrupt the widened keys.
+    /// PIN P16 (F-A1-2) — a batch with its columns REORDERED versus the write schema and an
     #[tokio::test]
     async fn append_reordered_widening_batch_conforms_by_name_and_roundtrips() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -1958,11 +1739,6 @@ mod tests {
     }
 
     /// PIN PL-1 (WG-4, BUG-007) — a source batch whose column names differ ONLY BY CASE from the
-    /// target (`KEY`/`PAYLOAD` vs the table's `key`/`payload`) conforms BY NAME case-insensitively
-    /// (Spark default `spark.sql.caseSensitive=false`; `caseInsensitiveResolution = equalsIgnoreCase`)
-    /// and round-trips value AND Arrow type; the manifest partition values match. Risk: the prior
-    /// exact-case conform rejected this loudly, blocking a Spark pipeline whose source frame simply
-    /// spells its columns in a different case — a real drop-in divergence.
     #[tokio::test]
     async fn append_case_insensitive_column_match_conforms_and_roundtrips() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -2008,10 +1784,7 @@ mod tests {
         );
     }
 
-    /// PIN PL-2 (WG-4, BUG-007) — a source batch with two columns colliding on one target
-    /// (`key` AND `KEY`) is AMBIGUOUS: a loud error naming BOTH, and nothing commits. Spark's
-    /// `TableOutputResolver.reorderColumnsByName` rejects `matched.length > 1`; a first-match
-    /// rebuild would silently drop the second copy's data.
+    /// PIN PL-2 (WG-4, BUG-007) — a source batch with two columns colliding on one target (`key`
     #[tokio::test]
     async fn append_case_ambiguous_columns_rejected_naming_both() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -2064,9 +1837,6 @@ mod tests {
     }
 
     /// PIN PL-3 (WG-4, BUG-007 regression) — a source batch MISSING a target column is still a
-    /// loud error naming it (now under the case-insensitive framing), and nothing commits. Risk:
-    /// the case-insensitive rewrite must not turn a genuinely-absent column into a silent NULL or
-    /// a misrouted positional column.
     #[tokio::test]
     async fn append_missing_target_column_rejected_and_commits_nothing() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -2094,21 +1864,12 @@ mod tests {
         assert!(read_back_sorted(&catalog, &ident).await.is_empty());
     }
 
-    /// PIN P17 (F-A1-5) — a TRUE mid-flight CAS rejection is resolved by the fork's
-    /// commit retry: a competing public append lands INSIDE the victim's first `update_table`
-    /// call (after `do_commit`'s refresh, before the catalog CAS — the window the
-    /// disclosure called untestable), the first attempt is rejected with the retryable
-    /// `CatalogCommitConflicts`, and the retry refreshes + re-applies so BOTH appends land in
-    /// exactly two `update_table` attempts. Risk: the append path stops committing through the
-    /// fork's retrying `Transaction::commit` (e.g. gains a §5 validation that turns the
-    /// retryable conflict into a hard error) and a real concurrent append starts failing bulk
-    /// loads.
+    /// PIN P17 (F-A1-5) — a TRUE mid-flight CAS rejection is resolved by the fork's commit retry:
     #[tokio::test]
     async fn append_midflight_commit_conflict_retries_and_both_appends_land() {
         let warehouse = TempDir::new().expect("temp warehouse");
         let inner = memory_catalog(&warehouse).await;
-        // Fast, still-deterministic retry backoff: the conflict is injected by call count,
-        // never by timing; the properties only shrink the between-attempt sleep.
+        // Fast, still-deterministic retry backoff: the conflict is injected by call count, never
         let ident = create_table(
             &inner,
             "t",
@@ -2157,10 +1918,6 @@ mod tests {
     }
 
     /// WG-2 P3 (seam) — a mid-stream source error in the STREAMING partitioned write aborts loudly
-    /// and returns NO data files, so the CTAS caller's staged transaction is dropped unpublished. A
-    /// three-item source yields two good batches then an error; the streaming seam propagates the
-    /// error via `?` without closing/committing the fanout writers. Risk: the seam swallows a
-    /// mid-stream error (or partial-commits), so a failed SELECT could land a half-written table.
     #[tokio::test]
     async fn write_partitioned_data_files_from_stream_aborts_on_midstream_error() {
         let warehouse = TempDir::new().expect("temp warehouse");

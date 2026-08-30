@@ -396,7 +396,7 @@ async fn identity_delete_null_column_row_is_still_deleted() {
     let warehouse = TempDir::new().expect("temp warehouse");
     let catalog = memory_catalog(&warehouse).await;
     let ident = create_target(&catalog, "nullcol", HashMap::new()).await;
-    // (1, NULL) must be deleted by id IN (1). All-column 3VL identity would miss it.
+    // (1, NULL) must be deleted by id IN (1).
     append_file(
         &catalog,
         &ident,
@@ -506,9 +506,7 @@ async fn identity_delete_honors_write_delete_mode_not_merge_mode() {
     );
 }
 
-/// A4: the identity path is this SELECT. DataFusion must reproduce Spark 4.1.2 3VL here —
-/// empty subquery matches every row; ANY NULL in the subquery matches none; NULL LHS is
-/// UNKNOWN. A hand-rolled "match none" shortcut is not this pin.
+/// A4: the identity path is this SELECT.
 #[tokio::test]
 async fn identity_select_not_in_matches_spark_three_valued_logic() {
     let ctx = SessionContext::new();
@@ -689,7 +687,7 @@ async fn identity_delete_not_in_null_target_column_survives() {
     )
     .await
     .expect("NOT IN NULL-target");
-    // NULL NOT IN {1} is UNKNOWN — the NULL-id row survives. id=2 is deleted.
+    // NULL NOT IN {1} is UNKNOWN — the NULL-id row survives.
     assert_eq!(
         read_back(&catalog, &ident).await,
         vec![(None, Some("n".into())), (Some(1), Some("a".into()))]
@@ -977,9 +975,7 @@ fn exists_spark_cases() -> Vec<ExistsSparkCase> {
     ]
 }
 
-/// A4: the identity path is this SELECT. DataFusion must reproduce live Spark 4.1.2
-/// `[NOT] EXISTS` row-sets (recorded 2026-08-13 under `/tmp/grok-jvm-record.lock`).
-/// No hand-rolled empty/all shortcut — the executed SELECT is the pin.
+/// A4: the identity path is this SELECT.
 #[tokio::test]
 async fn identity_select_exists_matches_spark_412_row_sets() {
     for case in exists_spark_cases() {
@@ -1002,7 +998,7 @@ async fn identity_select_exists_matches_spark_412_row_sets() {
         )
         .expect("register tgt");
         register_keys(&ctx, &case.key_ids);
-        // Exact identity-path SELECT: rows the DELETE would remove. Remaining = seed − that set.
+        // Exact identity-path SELECT: rows the DELETE would remove.
         let delete_sql = format!("SELECT id, name FROM tgt WHERE {}", case.selection);
         let batches = ctx
             .sql(&delete_sql)
@@ -1394,9 +1390,7 @@ async fn table_with_delete_isolation(
     catalog.load_table(&ident).await.expect("load")
 }
 
-/// Isolation-property cases (M19) for `write.delete.isolation-level`. Live resolver
-/// semantics (conductor-13 A10): no trim, `to_ascii_lowercase`, default serializable,
-/// garbage ⇒ `DataFusionError::Plan` `Invalid isolation level: {name}`.
+/// Isolation-property cases (M19) for `write.delete.isolation-level`.
 #[tokio::test]
 async fn delete_isolation_property_a10_no_trim_lowercase_default_garbage() {
     use datafusion::error::DataFusionError;

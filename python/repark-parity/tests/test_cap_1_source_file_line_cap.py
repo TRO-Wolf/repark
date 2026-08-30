@@ -28,18 +28,16 @@ _RUST_BASELINES: tuple[tuple[str, int], ...] = (
     ("crates/repark-core/tests/declared_sorted.rs", 1381),
     ("crates/repark-functions/src/analyzer.rs", 1194),
     ("crates/repark-functions/src/datetime.rs", 1783),
-    ("crates/repark-iceberg/src/catalog/tests/catalog.rs", 1930),
-    ("crates/repark-iceberg/src/write/alter.rs", 1725),
-    ("crates/repark-iceberg/src/write/append.rs", 2193),
-    ("crates/repark-iceberg/src/write/merge/mod.rs", 2555),
-    ("crates/repark-iceberg/src/write/merge/tests/merge.rs", 1139),
-    ("crates/repark-iceberg/src/write/merge/tests/occ.rs", 1009),
-    ("crates/repark-iceberg/src/write/merge/tests/occ_conflict.rs", 1085),
-    ("crates/repark-iceberg/src/write/merge/tests/streaming_scan.rs", 3365),
-    ("crates/repark-iceberg/src/write/overwrite.rs", 1148),
-    ("crates/repark-iceberg/src/write/position_delete.rs", 1033),
-    ("crates/repark-iceberg/src/write/predicate_dml.rs", 1282),
-    ("crates/repark-iceberg/src/write/predicate_dml/tests/predicate_dml.rs", 1448),
+    ("crates/repark-iceberg/src/catalog/tests/catalog.rs", 1845),
+    ("crates/repark-iceberg/src/write/alter.rs", 1641),
+    ("crates/repark-iceberg/src/write/append.rs", 1950),
+    ("crates/repark-iceberg/src/write/merge/mod.rs", 2131),
+    ("crates/repark-iceberg/src/write/merge/tests/merge.rs", 1091),
+    ("crates/repark-iceberg/src/write/merge/tests/occ_conflict.rs", 1023),
+    ("crates/repark-iceberg/src/write/merge/tests/streaming_scan.rs", 3028),
+    ("crates/repark-iceberg/src/write/overwrite.rs", 1070),
+    ("crates/repark-iceberg/src/write/predicate_dml.rs", 1227),
+    ("crates/repark-iceberg/src/write/predicate_dml/tests/predicate_dml.rs", 1442),
     ("crates/repark-python/src/column/mod.rs", 1105),
     ("crates/repark-python/src/dataframe.rs", 1321),
     ("crates/repark-python/src/session.rs", 1331),
@@ -183,7 +181,7 @@ def test_cap_1_exception_tables_equal_the_measured_debt() -> None:
     assert _baselines(python_gate) == python_approved
     assert rust_debt == rust_approved
     assert python_debt == python_approved
-    assert len(rust_approved) == 41
+    assert len(rust_approved) == 39
     assert len(python_approved) == 32
 
 

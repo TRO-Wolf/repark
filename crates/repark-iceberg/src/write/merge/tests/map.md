@@ -1,5 +1,7 @@
 # map — repark-iceberg/src/write/merge/tests
 
+CC-3 (2026-08-30): comments condensed to one line; banners removed.
+
 ## Purpose
 
 MERGE unit tests. `merge/mod.rs` declares `#[cfg(test)] mod tests;`.

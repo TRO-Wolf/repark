@@ -1,5 +1,7 @@
 # map — repark-iceberg/src/tests
 
+CC-3 (2026-08-30): comments condensed to one line; banners removed.
+
 ## Purpose
 
 Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.

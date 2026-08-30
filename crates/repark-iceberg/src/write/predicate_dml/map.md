@@ -1,5 +1,7 @@
 # map — repark-iceberg/src/write/predicate_dml
 
+CC-3 (2026-08-30): comments condensed to one line; banners removed.
+
 ## Purpose
 
 Test modules for [`predicate_dml.rs`](../predicate_dml.rs) (`execute_predicate_dml` — identity

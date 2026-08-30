@@ -1,7 +1,4 @@
 //! `ALTER TABLE` table-level mutations on the iceberg-rust 0.9.1 **public** API.
-//!
-//! Property, table-name, schema, and partition-spec changes commit through public fork actions.
-//! Errors remain [`iceberg::Error`] for the SQL layer's existing fold.
 
 use std::collections::HashMap;
 use std::hash::BuildHasher;
@@ -20,9 +17,6 @@ pub enum ColumnPosition {
 }
 
 /// One schema-evolution op to fold into a single [`apply_schema_changes`] transaction.
-///
-/// Multiple ops in one call commit as ONE `UpdateSchema` (one catalog CAS) — Spark's
-/// `ALTER TABLE t ADD COLUMN a …, ADD COLUMN b …` semantics.
 #[derive(Debug, Clone)]
 pub enum SchemaChange {
     /// `ADD COLUMN name type [COMMENT …] [FIRST|AFTER x]` — optional by default.
@@ -34,7 +28,6 @@ pub enum SchemaChange {
         /// Optional column doc (Spark `COMMENT '…'`).
         doc: Option<String>,
         /// When true the add is required (incompatible without a default — the SQL layer refuses
-        /// `NOT NULL` ADD without a default before calling here).
         required: bool,
         /// Optional Spark column position after the add.
         position: Option<ColumnPosition>,
@@ -52,7 +45,6 @@ pub enum SchemaChange {
         to: String,
     },
     /// `ALTER COLUMN name TYPE <primitive>` — Iceberg type promotion only (int→long, float→double,
-    /// decimal same-scale non-decreasing precision). Narrowing is rejected by the fork.
     UpdateColumnType {
         /// Column to promote.
         name: String,
@@ -73,15 +65,10 @@ pub enum SchemaChange {
     },
 }
 
-/// One partition-spec evolution op to fold into a single [`apply_partition_spec_changes`] transaction.
-///
-/// Multiple ops in one call commit as ONE `UpdatePartitionSpec` (one catalog CAS) — Spark's
-/// multi-clause partition evolution semantics.
+/// One partition-spec evolution op to fold into a single [`apply_partition_spec_changes`]
 #[derive(Debug, Clone)]
 pub enum PartitionSpecChange {
     /// `ADD PARTITION FIELD <transform>(source) [AS name]` — identity when transform is
-    /// [`Transform::Identity`]. When `name` is `None` the fork auto-names (Java
-    /// `PartitionNameGenerator`).
     AddField {
         /// Source column name (schema field).
         source_name: String,
@@ -102,8 +89,7 @@ pub enum PartitionSpecChange {
         /// Transform that identifies the field.
         transform: Transform,
     },
-    /// `REPLACE PARTITION FIELD old WITH <transform>(source) [AS name]` — remove then add in
-    /// one transaction (fork replays ops in order; Java rewrite path).
+    /// `REPLACE PARTITION FIELD old WITH <transform>(source) [AS name]` — remove then add in one
     ReplaceField {
         /// Existing partition field name to drop.
         old_name: String,
@@ -115,7 +101,6 @@ pub enum PartitionSpecChange {
         new_name: Option<String>,
     },
     /// Rename an existing partition field (not a Spark DDL surface in I7 READY; available for
-    /// programmatic use / future stretch).
     RenameField {
         /// Current partition field name.
         name: String,
@@ -124,16 +109,7 @@ pub enum PartitionSpecChange {
     },
 }
 
-/// ===========================================================================================
 /// `ALTER TABLE … SET TBLPROPERTIES (…)` — set/overwrite table properties.
-///
-/// Loads the table, applies an `UpdatePropertiesAction` with one `.set(k, v)` per entry, and
-/// commits. An empty `properties` map still loads + applies + commits a property-update
-/// transaction with no set ops (a no-op catalog CAS — not a short-circuit skip; unreachable via
-/// SQL, which always has at least one key). Returns after the commit lands; the caller re-reads
-/// via `load_table` to observe the new metadata.
-/// ===========================================================================================
-///
 /// # Errors
 /// Propagates any [`iceberg::Error`] from loading the table or committing the transaction.
 pub async fn set_table_properties<S: BuildHasher>(
@@ -152,15 +128,7 @@ pub async fn set_table_properties<S: BuildHasher>(
     Ok(())
 }
 
-/// ===========================================================================================
 /// `ALTER TABLE … UNSET TBLPROPERTIES (…)` — remove table properties by key.
-///
-/// Loads the table, applies an `UpdatePropertiesAction` with one `.remove(k)` per key, and commits.
-/// Removing an absent key is a no-op (iceberg's `RemoveProperties` ignores keys that are not set),
-/// matching Spark's idempotent `UNSET`. An empty `keys` slice still loads + applies + commits a
-/// property-update transaction with no remove ops (a no-op catalog CAS — not a short-circuit skip).
-/// ===========================================================================================
-///
 /// # Errors
 /// Propagates any [`iceberg::Error`] from loading the table or committing the transaction.
 pub async fn unset_table_properties(
@@ -179,13 +147,7 @@ pub async fn unset_table_properties(
     Ok(())
 }
 
-/// ===========================================================================================
 /// Apply all property changes in one atomic transaction (BUG-012).
-///
-/// SET and UNSET operations share one catalog CAS, so a mid-operation failure cannot leave half
-/// the requested state. The fork rejects a key present in both collections before commit.
-/// ===========================================================================================
-///
 /// # Errors
 /// Propagates any [`iceberg::Error`] from loading the table or committing the transaction.
 pub async fn alter_table_properties<S: BuildHasher>(
@@ -208,14 +170,9 @@ pub async fn alter_table_properties<S: BuildHasher>(
     Ok(())
 }
 
-/// ===========================================================================================
 /// `ALTER TABLE … RENAME TO …` — rename a table within (or across namespaces of) a catalog.
-///
-/// Delegates to [`Catalog::rename_table`]; after it returns, `src` no longer exists and `dest` does.
-/// ===========================================================================================
-///
 /// # Errors
-/// Propagates any [`iceberg::Error`] (e.g. `src` missing or `dest` already taken).
+/// Propagates any [`iceberg::Error`] (e.g.
 pub async fn rename_table(
     catalog: &dyn Catalog,
     src: &TableIdent,
@@ -224,20 +181,7 @@ pub async fn rename_table(
     catalog.rename_table(src, dest).await
 }
 
-/// ===========================================================================================
 /// Apply a batch of schema-evolution ops as ONE `UpdateSchema` transaction (I6).
-///
-/// Builds a single [`UpdateSchemaAction`](iceberg::transaction::Transaction::update_schema) with
-/// Spark-default **case-insensitive** name resolution (`case_sensitive(false)`), folds every
-/// [`SchemaChange`] in order (add → optional move FIRST/AFTER; drop; rename; type promote;
-/// make-optional; doc), `apply`s it, and `commit`s once. An empty `changes` slice is a no-op
-/// (no catalog CAS).
-///
-/// Type promotion is the fork's Java-parity gate (`int→long`, `float→double`, decimal same-scale
-/// non-decreasing precision) — narrowing fails loud at commit. Required ADD without a default is
-/// an incompatible change; the SQL layer must refuse that shape before calling here.
-/// ===========================================================================================
-///
 /// # Errors
 /// Propagates any [`iceberg::Error`] from load, action apply (validation), or commit.
 pub async fn apply_schema_changes(
@@ -288,14 +232,7 @@ pub async fn apply_schema_changes(
     Ok(())
 }
 
-/// ===========================================================================================
 /// Apply partition-spec changes in one transaction (I7).
-///
-/// Changes fold in declaration order with Spark's case-insensitive field resolution. An empty
-/// batch does nothing. Existing files retain their recorded spec IDs; the resulting spec is the
-/// table default. Unsupported transforms are rejected by the SQL boundary.
-/// ===========================================================================================
-///
 /// # Errors
 /// Propagates any [`iceberg::Error`] from load, action apply (validation), or commit.
 pub async fn apply_partition_spec_changes(
@@ -308,7 +245,6 @@ pub async fn apply_partition_spec_changes(
     }
     let table = catalog.load_table(ident).await?;
     // Seed known partition-field names from the current default spec; track explicit names added
-    // in this batch so multi-op remove/rename after add still case-folds correctly.
     let mut known_field_names: Vec<String> = table
         .metadata()
         .default_partition_spec()
@@ -401,7 +337,6 @@ mod tests {
     use tempfile::TempDir;
 
     /// An in-memory Iceberg catalog (local-FS warehouse) with a `sales` namespace and one table
-    /// `t`. No AWS, no network — fully deterministic.
     async fn setup(wh: &TempDir) -> (Arc<dyn Catalog>, TableIdent) {
         let warehouse = wh.path().to_str().unwrap().to_string();
         let catalog: Arc<dyn Catalog> = Arc::new(
@@ -491,14 +426,9 @@ mod tests {
     }
 
     /// The boxed-future return type of an `#[async_trait]` `Catalog` method — spelled out once so
-    /// the fully-delegating [`CommitFaultCatalog`] impl below stays readable (mirrors the
-    /// `ConflictInjector` pattern in `append.rs`; `async-trait` is not a dep of this crate, so the
-    /// trait is implemented in desugared form).
     type BoxedCatalogFuture<'a, T> = Pin<Box<dyn Future<Output = iceberg::Result<T>> + Send + 'a>>;
 
     /// A fully-delegating `Catalog` wrapper that COUNTS every `update_table` (commit) CAS and can
-    /// deterministically FAIL the `fail_on_call`-th one — the fault-injection seam for BUG-012's
-    /// atomicity pins. No timing: the injection is keyed on the call counter (lessons rule 12).
     #[derive(Debug)]
     struct CommitFaultCatalog {
         inner: Arc<dyn Catalog>,
@@ -718,9 +648,6 @@ mod tests {
     }
 
     /// B12-1 — a mixed (disjoint-key) SET+UNSET commits in EXACTLY ONE catalog `update_table`
-    /// transaction, and both changes land. Risk: the old two-call `set` then `unset` shape is two
-    /// commits, so a mid-operation failure leaves half-applied state. Mutation: revert
-    /// `alter_table_properties` to two sequential commits → the counter reads 2 → RED.
     #[tokio::test]
     async fn alter_mixed_disjoint_set_unset_commits_exactly_once() {
         let wh = TempDir::new().unwrap();
@@ -749,10 +676,6 @@ mod tests {
     }
 
     /// B12-2 — a fault armed at the SECOND catalog commit (the exact gap the old two-commit path
-    /// exposed) cannot leave partial property state: because the mixed change now commits once, the
-    /// fault never trips and the operation completes with no half-applied state. Mutation: revert to
-    /// two commits → the 2nd commit (the UNSET) fails → Err AND `drop` is still present (partial)
-    /// → both asserts RED.
     #[tokio::test]
     async fn alter_mixed_injected_second_commit_failure_leaves_no_partial_state() {
         let wh = TempDir::new().unwrap();
@@ -777,10 +700,7 @@ mod tests {
         );
     }
 
-    /// A key present in BOTH the set and unset lists is rejected by the single action's precondition
-    /// — the whole transaction fails and NOTHING lands (atomic-loud), rather than the old two-commit
-    /// shape's silent set-then-remove. (The SQL router never passes overlapping keys; this pins the
-    /// primitive's contract.)
+    /// A key present in BOTH the set and unset lists is rejected by the single action's
     #[tokio::test]
     async fn alter_same_key_set_and_unset_is_atomic_loud() {
         let wh = TempDir::new().unwrap();
@@ -1152,8 +1072,6 @@ mod tests {
     }
 
     /// Multi schema-op batch commits as exactly ONE catalog `update_table` CAS.
-    /// (Rename targets a *pre-existing* column — same-batch add-then-rename of the new
-    /// column is refused by the fork as "missing column"; residual F-I6-C4-R1.)
     #[tokio::test]
     async fn schema_multi_change_commits_exactly_once() {
         let warehouse = TempDir::new().unwrap();
@@ -1230,8 +1148,7 @@ mod tests {
         );
     }
 
-    /// Residual F-I6-C4-R1 — same-batch add-then-rename of the *new* column is refused
-    /// loud by the fork (not a silent partial). Documented so a future silent absorption is RED.
+    /// Residual F-I6-C4-R1 — same-batch add-then-rename of the *new* column is refused loud by the
     #[tokio::test]
     async fn schema_same_batch_add_then_rename_new_column_refuses_loud() {
         let warehouse = TempDir::new().unwrap();
@@ -1644,7 +1561,6 @@ mod tests {
     }
 
     /// DROP/REPLACE partition field names are case-insensitive (Spark default).
-    /// Mutation: pass-through `remove_field("CATEGORY")` against stored `category` → `DataInvalid`.
     #[tokio::test]
     async fn partition_spec_drop_replace_field_name_case_insensitive() {
         let wh = TempDir::new().unwrap();

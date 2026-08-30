@@ -1,7 +1,4 @@
 //! Snapshot-ref helpers over the fork's `ManageSnapshots` transaction API.
-//!
-//! Public SQL supports create, replace, and drop for branches and tags. Writes to a branch remain
-//! refused because the fork's append action targets `MAIN_BRANCH` only.
 
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
 use iceberg::{Catalog, Result, TableIdent};
@@ -16,18 +13,13 @@ pub enum SnapshotRefKind {
 }
 
 /// Optional retention fields mapped onto fork `SnapshotRetention` setters.
-///
-/// Spark grammar (Iceberg Spark Procedures / branch-tag docs):
-/// - `RETAIN n DAYS|HOURS|MINUTES` → `max_ref_age_ms`
-/// - `WITH SNAPSHOT RETENTION n SNAPSHOTS` → `min_snapshots_to_keep` (branch only)
-/// - `WITH SNAPSHOT RETENTION n DAYS|HOURS|MINUTES` → `max_snapshot_age_ms` (branch only)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct SnapshotRefRetention {
-    /// Max age of the ref itself (ms). Spark `RETAIN n <unit>`.
+    /// Max age of the ref itself (ms).
     pub max_ref_age_ms: Option<i64>,
-    /// Branch only: min snapshots to keep while expiring. Spark `WITH SNAPSHOT RETENTION n SNAPSHOTS`.
+    /// Branch only: min snapshots to keep while expiring.
     pub min_snapshots_to_keep: Option<i32>,
-    /// Branch only: max age of snapshots in the branch (ms). Spark `WITH SNAPSHOT RETENTION n DAYS|…`.
+    /// Branch only: max age of snapshots in the branch (ms).
     pub max_snapshot_age_ms: Option<i64>,
 }
 
@@ -41,15 +33,7 @@ impl SnapshotRefRetention {
     }
 }
 
-/// ===========================================================================================
 /// Create a branch or tag ref pointing at `snapshot_id` on `ident`.
-///
-/// Thin seam over fork `ManageSnapshotsAction::create_branch` / `create_tag`. Fails if the ref
-/// already exists or the snapshot id is unknown (fork validation). Optional retention is applied
-/// in the same transaction via `set_max_ref_age_ms` / `set_min_snapshots_to_keep` /
-/// `set_max_snapshot_age_ms`.
-/// ===========================================================================================
-///
 /// # Errors
 /// Propagates any [`iceberg::Error`] from load / apply / commit.
 pub async fn create_snapshot_ref(
@@ -70,13 +54,9 @@ pub async fn create_snapshot_ref(
     .await
 }
 
-/// ===========================================================================================
 /// Create a branch or tag with optional retention (same transaction as create).
-/// ===========================================================================================
-///
 /// # Errors
-/// Propagates any [`iceberg::Error`] from load / apply / commit. Tag + branch-only retention
-/// fields (`min_snapshots_to_keep` / `max_snapshot_age_ms`) fail at fork validation.
+/// Propagates any [`iceberg::Error`] from load / apply / commit.
 pub async fn create_snapshot_ref_with_retention(
     catalog: &dyn Catalog,
     ident: &TableIdent,
@@ -97,13 +77,7 @@ pub async fn create_snapshot_ref_with_retention(
     Ok(())
 }
 
-/// ===========================================================================================
 /// Replace (re-pin) an existing branch or tag at `snapshot_id`.
-///
-/// Thin seam over fork `replace_branch` / `replace_tag`. Fails if the ref does not exist or the
-/// kind does not match. Optional retention updates ride the same transaction.
-/// ===========================================================================================
-///
 /// # Errors
 /// Propagates any [`iceberg::Error`] from load / apply / commit.
 pub async fn replace_snapshot_ref(
@@ -126,11 +100,7 @@ pub async fn replace_snapshot_ref(
     Ok(())
 }
 
-/// ===========================================================================================
-/// CREATE OR REPLACE: replace when the named ref already exists as the requested kind; else
-/// create. Snapshot id is always the pin target.
-/// ===========================================================================================
-///
+/// CREATE OR REPLACE: replace when the named ref already exists as the requested kind; else create.
 /// # Errors
 /// Propagates any [`iceberg::Error`] from load / apply / commit.
 pub async fn create_or_replace_snapshot_ref(
@@ -150,13 +120,7 @@ pub async fn create_or_replace_snapshot_ref(
     }
 }
 
-/// ===========================================================================================
 /// Drop a branch or tag ref on `ident`.
-///
-/// Thin seam over fork `ManageSnapshotsAction::remove_branch` / `remove_tag`. Fails if the ref
-/// does not exist or the kind does not match (fork validation).
-/// ===========================================================================================
-///
 /// # Errors
 /// Propagates any [`iceberg::Error`] from load / apply / commit.
 pub async fn drop_snapshot_ref(
@@ -176,7 +140,7 @@ pub async fn drop_snapshot_ref(
     Ok(())
 }
 
-/// Chain fork retention setters onto a manage-snapshots action (same transaction as create/replace).
+/// Chain fork retention setters onto a manage-snapshots action (same transaction as
 fn apply_retention(
     mut action: iceberg::transaction::ManageSnapshotsAction,
     name: &str,

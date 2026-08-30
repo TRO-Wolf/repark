@@ -1,10 +1,4 @@
-//! M19/M20 OCC conflict batteries B/C/E/F/G/H/I (M14 abort-path cleanup lives in the
-//! commit functions; this battery flips the orphan characterization).
-//!
-//! House style matches [`super::occ_tests`]: `MemoryCatalog` + local-FS warehouse + synthetic
-//! `DataFile`s. Two-handle races are sequential (the MERGE executor serializes under
-//! `cfg(test)`); they are not threaded. Each battery names its audit letter in the test
-//! doc comment. No `#[ignore]`. Pins name M14/M15/M20 rather than xfail.
+//! M19/M20 OCC conflict batteries B/C/E/F/G/H/I (M14 abort-path cleanup lives in the commit
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -28,8 +22,7 @@ use super::super::{
     commit_row_delta_kind, write_data_files,
 };
 
-/// An in-memory Iceberg catalog (local-FS warehouse, format-version 2 by default) with a
-/// `sales` namespace and one UNPARTITIONED table `t (id int)`. No AWS, no network.
+/// An in-memory Iceberg catalog (local-FS warehouse, format-version 2 by default) with a `sales`
 async fn setup(warehouse: &TempDir) -> (Arc<dyn Catalog>, TableIdent) {
     let path = warehouse
         .path()
@@ -71,7 +64,6 @@ async fn setup(warehouse: &TempDir) -> (Arc<dyn Catalog>, TableIdent) {
 }
 
 /// Partitioned twin of [`setup`]: identity on `part`, so two files can live in different
-/// partitions without a real Parquet payload.
 async fn setup_partitioned(warehouse: &TempDir) -> (Arc<dyn Catalog>, TableIdent) {
     let path = warehouse
         .path()
@@ -251,15 +243,9 @@ async fn path_exists(table: &Table, path: &str) -> bool {
     table.file_io().exists(path).await.expect("FileIO exists")
 }
 
-// ===================================================================================
 // BATTERY B — `RowDeltaKind::Delete` vs Merge-kind on a concurrent DELETE-op removal.
-// ===================================================================================
 
 /// Battery B — `commit_row_delta_kind` with `RowDeltaKind::Delete` at snapshot isolation.
-/// Concurrent DELETE-op file removal is TOLERATED (`validate_deleted_files` is NOT armed;
-/// `validate_data_files_exist` without that flag inspects only `{OVERWRITE}`). Risk: a
-/// kind-blind recipe that always arms the UPDATE/MERGE guards would reject a legal
-/// snapshot-isolation DELETE.
 #[tokio::test]
 async fn commit_row_delta_kind_delete_snapshot_tolerates_concurrent_delete_op_removal() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -294,8 +280,7 @@ async fn commit_row_delta_kind_delete_snapshot_tolerates_concurrent_delete_op_re
     );
 }
 
-/// Battery B — same race as the snapshot pin, Delete-kind + serializable. Isolation only
-/// arms `validate_no_conflicting_data_files`; it must not secretly arm `validate_deleted_files`.
+/// Battery B — same race as the snapshot pin, Delete-kind + serializable.
 #[tokio::test]
 async fn commit_row_delta_kind_delete_serializable_tolerates_concurrent_delete_op_removal() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -328,9 +313,7 @@ async fn commit_row_delta_kind_delete_serializable_tolerates_concurrent_delete_o
     );
 }
 
-/// Battery B — Merge-kind at the SAME snapshot isolation rejects the identical DELETE-op
-/// removal. Isolates `RowDeltaKind` from `IsolationLevel`: only Merge arms
-/// `validate_deleted_files` (widens the exist-check op set to `{OVERWRITE, DELETE}`).
+/// Battery B — Merge-kind at the SAME snapshot isolation rejects the identical DELETE-op removal.
 #[tokio::test]
 async fn commit_row_delta_kind_merge_snapshot_rejects_concurrent_delete_op_removal() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -373,9 +356,7 @@ async fn commit_row_delta_kind_merge_snapshot_rejects_concurrent_delete_op_remov
     );
 }
 
-// ===================================================================================
 // BATTERY C — MERGE↔MERGE race, both orders, through the real MERGE commit arms.
-// ===================================================================================
 
 async fn cow_rewrite_merge_merge_race(winner_path: &str, loser_path: &str) {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -421,8 +402,7 @@ async fn cow_rewrite_merge_merge_race(winner_path: &str, loser_path: &str) {
     );
 }
 
-/// Battery C — MERGE↔MERGE copy-on-write, order winner-then-loser. Two rewrite commits
-/// through the real [`commit`] arm, same pin. Loser rejects; winner is the only live file.
+/// Battery C — MERGE↔MERGE copy-on-write, order winner-then-loser.
 #[tokio::test]
 async fn commit_cow_merge_merge_race_first_rewrite_wins() {
     cow_rewrite_merge_merge_race("test/winner.parquet", "test/loser.parquet").await;
@@ -478,8 +458,7 @@ async fn mor_merge_merge_race(winner_insert: &str, loser_insert: &str) {
     );
 }
 
-/// Battery C — MERGE↔MERGE merge-on-read, both commits through the real [`commit_row_delta`]
-/// arm (Merge + serializable). First writer wins.
+/// Battery C — MERGE↔MERGE merge-on-read, both commits through the real [`commit_row_delta`] arm
 #[tokio::test]
 async fn commit_row_delta_merge_merge_race_first_wins() {
     mor_merge_merge_race("test/mor-winner.parquet", "test/mor-loser.parquet").await;
@@ -495,15 +474,9 @@ async fn commit_row_delta_merge_merge_race_second_wins() {
     .await;
 }
 
-// ===================================================================================
 // BATTERY E — retry-through-benign-commit / validate_from_snapshot precedence.
-// ===================================================================================
 
-/// Battery E — a non-conflicting concurrent commit forces a re-base. The retry is modeled
-/// as a REFRESHED table handle (what `do_commit` loads after the concurrent snapshot
-/// lands) plus the ORIGINAL pin. The rewrite must succeed and parent the concurrent
-/// snapshot — the fork's `validate_from_snapshot(pin).or(tx_start)` must walk S0→S1
-/// and still accept the benign delete.
+/// Battery E — a non-conflicting concurrent commit forces a re-base.
 #[tokio::test]
 async fn commit_retry_through_benign_commit_revalidates_from_original_pin_and_succeeds() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -552,10 +525,7 @@ async fn commit_retry_through_benign_commit_revalidates_from_original_pin_and_su
     );
 }
 
-/// Battery E — pin-precedence mutation. A refreshed handle's tx-captured start is S1;
-/// a conflicting append between S0 and S1 must still be rejected because
-/// `validate_from_snapshot(S0)` WINS over that start. Dropping the from-snapshot call
-/// empties the walk (start=S1) and this pin goes red.
+/// Battery E — pin-precedence mutation.
 #[tokio::test]
 async fn commit_refreshed_handle_still_validates_from_original_pin() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -595,14 +565,9 @@ async fn commit_refreshed_handle_still_validates_from_original_pin() {
     );
 }
 
-// ===================================================================================
 // BATTERY F — empty-table `snapshot_id == None` under concurrency.
-// ===================================================================================
 
-/// Battery F — empty-table `snapshot_id == None`. `validate_from_snapshot` is not armed
-/// (Java runs no from-snapshot check on an empty-at-read table). The fork's
-/// `effective_start = None` walk is from-root, so a concurrent insert-only append
-/// between the empty read and this commit is still a serializable data conflict.
+/// Battery F — empty-table `snapshot_id == None`.
 #[tokio::test]
 async fn commit_empty_table_none_pin_from_root_walk_rejects_concurrent_insert() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -641,15 +606,9 @@ async fn commit_empty_table_none_pin_from_root_walk_rejects_concurrent_insert() 
     );
 }
 
-// ===================================================================================
-// BATTERY G — partitioned target + AlwaysTrue (M15 over-rejection). Not an xfail.
-// ===================================================================================
+// BATTERY G — partitioned target + AlwaysTrue (M15 over-rejection).
 
-/// Battery G / M15 — serializable MERGE + `AlwaysTrue` DOES trip on a concurrent append
-/// in a DIFFERENT partition. Current behavior (over-rejection). A future residual-narrow
-/// of the conflict filter would be WRONG (audit M15: residual is source-key min/max, not
-/// the ON condition); a future *partition-aware* narrowing flips this pin from reject
-/// to commit. Not an xfail — the red-to-green flip is the future fix's proof.
+/// Battery G / M15 — serializable MERGE + `AlwaysTrue` DOES trip on a concurrent append in a
 #[tokio::test]
 async fn commit_serializable_merge_rejects_concurrent_append_in_a_different_partition_m15() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -694,9 +653,7 @@ async fn commit_serializable_merge_rejects_concurrent_append_in_a_different_part
     );
 }
 
-/// Battery G control — a concurrent DELETE in a different partition is NOT a data
-/// conflict. If G's reject were "any concurrent commit on a partitioned table", this
-/// control would also fail. Stays green when M15 is later narrowed.
+/// Battery G control — a concurrent DELETE in a different partition is NOT a data conflict.
 #[tokio::test]
 async fn commit_serializable_merge_allows_concurrent_delete_in_a_different_partition() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -733,15 +690,9 @@ async fn commit_serializable_merge_allows_concurrent_delete_in_a_different_parti
     );
 }
 
-// ===================================================================================
 // BATTERY H / M20 — operation-stamp pins + CDC mode-flip hazard.
-// ===================================================================================
 
 /// Battery H / M20 — insert-only copy-on-write stamps `append`.
-///
-/// CDC / `IncrementalAppendScan` mode-flip hazard: consumers that filter
-/// `operation == append` see this shape and silently lose the insert-only
-/// merge-on-read twin (stamped `overwrite`) after a `write.merge.mode` flip.
 #[tokio::test]
 async fn merge_insert_only_cow_stamps_append_m20() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -764,9 +715,6 @@ async fn merge_insert_only_cow_stamps_append_m20() {
 }
 
 /// Battery H / M20 — insert-only merge-on-read stamps `overwrite` (Java 1.10.0
-/// `BaseRowDelta.operation()` else-OVERWRITE). Pair with the COW `append` pin:
-/// a `write.merge.mode` flip changes the stamp `IncrementalAppendScan` consumers
-/// filter on.
 #[tokio::test]
 async fn merge_insert_only_mor_stamps_overwrite_m20() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -812,8 +760,7 @@ async fn merge_mixed_cow_stamps_overwrite_m20() {
     );
 }
 
-/// Battery H / M20 — mixed merge-on-read (position deletes + new data) stamps
-/// `overwrite` and still carries the §8 `engine.operation-id`.
+/// Battery H / M20 — mixed merge-on-read (position deletes + new data) stamps `overwrite` and
 #[tokio::test]
 async fn merge_mixed_mor_stamps_overwrite_m20() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -867,12 +814,9 @@ async fn merge_delete_only_mor_stamps_delete_m20() {
     );
 }
 
-// ===================================================================================
 // BATTERY I / M14 — rejected commit abort-deletes written files (design A).
-// ===================================================================================
 
-/// Battery I / M14 — after a rejected copy-on-write commit the staged data files are
-/// gone from the warehouse and the original OCC error still surfaces.
+/// Battery I / M14 — after a rejected copy-on-write commit the staged data files are gone from the
 #[tokio::test]
 async fn rejected_cow_commit_files_are_removed_m14() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -920,8 +864,7 @@ async fn rejected_cow_commit_files_are_removed_m14() {
     }
 }
 
-/// Battery I / M14 — merge-on-read writes position-delete files BEFORE `tx.commit`; a
-/// rejected row delta abort-deletes those files and still surfaces the OCC error.
+/// Battery I / M14 — merge-on-read writes position-delete files BEFORE `tx.commit`; a rejected row
 #[tokio::test]
 async fn rejected_row_delta_files_are_removed_m14() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -953,8 +896,7 @@ async fn rejected_row_delta_files_are_removed_m14() {
     );
 }
 
-/// Battery I / M14 success path — a successful copy-on-write overwrite commit leaves
-/// the newly written data files in the warehouse (cleanup must not fire after Ok).
+/// Battery I / M14 success path — a successful copy-on-write overwrite commit leaves the newly
 #[tokio::test]
 async fn successful_cow_overwrite_commit_leaves_written_data_files_m14() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -990,8 +932,7 @@ async fn successful_cow_overwrite_commit_leaves_written_data_files_m14() {
     }
 }
 
-/// Battery I / M14 success path — a successful row-delta commit leaves the newly
-/// written position-delete files in the warehouse.
+/// Battery I / M14 success path — a successful row-delta commit leaves the newly written
 #[tokio::test]
 async fn successful_row_delta_leaves_written_delete_files_m14() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -1025,10 +966,7 @@ async fn successful_row_delta_leaves_written_delete_files_m14() {
     }
 }
 
-/// Battery I / M14 — a failing `FileIO::delete` must not replace the original OCC
-/// `DataInvalid`. A custom `Storage` wrapper is not injected (typetag + lockfile).
-/// The scripted failure is a real directory path: `LocalFs` `delete` uses `remove_file`,
-/// which errors with "Is a directory".
+/// Battery I / M14 — a failing `FileIO::delete` must not replace the original OCC `DataInvalid`.
 #[tokio::test]
 async fn delete_failure_does_not_mask_cow_commit_error_m14() {
     let warehouse = TempDir::new().expect("temp warehouse");

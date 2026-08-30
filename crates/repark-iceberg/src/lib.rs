@@ -1,12 +1,4 @@
 //! repark-iceberg — the Iceberg surface: catalog wiring + the Spark-semantics write adapter.
-//!
-//! Two independent module trees merged from the v1 crates (declared-rename unit):
-//! [`catalog`] (v1 `repark-catalog` — Glue primary + S3 Tables secondary + memory builders,
-//! `CatalogProvider` registration, scheme-based `FileIO` selection) and [`write`] (v1
-//! `repark-write` — MERGE INTO, append, overwrite, ALTER, snapshot refs over the owned
-//! iceberg-rust fork). Public names are unchanged: v1 `repark_catalog::X` is
-//! `repark_iceberg::catalog::X`, v1 `repark_write::Y` is `repark_iceberg::write::Y`. The crate
-//! root additionally re-exports the union of the two v1 crate-root re-export lists.
 
 pub mod catalog;
 pub mod write;

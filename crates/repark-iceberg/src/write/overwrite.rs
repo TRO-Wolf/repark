@@ -1,8 +1,4 @@
 //! OV1 full-table overwrite using stage-then-swap.
-//!
-//! Staging writes data files without catalog mutation. The commit atomically replaces all rows
-//! with those files using `AlwaysTrue`, matching the fork provider's overwrite semantics and
-//! isolation parsing.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -27,13 +23,10 @@ use crate::write::concurrency::WriteConcurrency;
 use crate::write::merge::{OPERATION_ID_PROP, write_data_files_from_stream_with_concurrency};
 use crate::write::store_assign::refuse_unless_write_store_assignable;
 
-/// Table property key for `INSERT OVERWRITE` isolation (engine-defined, same string as the
-/// fork provider). Values: `serializable` / `snapshot` / `none`; **absent → snapshot**
-/// (documented `RePark` divergence from Spark's unvalidated default).
+/// Table property key for `INSERT OVERWRITE` isolation (engine-defined, same string as the fork
 pub const WRITE_OVERWRITE_ISOLATION_LEVEL: &str = "write.overwrite.isolation-level";
 
-/// Isolation level for full-table overwrite §5 validations (public reimplementation of the
-/// fork's `pub(crate)` `IsolationLevel` — do not depend on the private enum).
+/// Isolation level for full-table overwrite §5 validations (public reimplementation of the fork's
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OverwriteIsolation {
     /// Reject concurrent conflicting deletes only (default when property is absent).
@@ -42,21 +35,7 @@ pub enum OverwriteIsolation {
     Serializable,
 }
 
-/// ===========================================================================================
 /// Parse `write.overwrite.isolation-level` exactly as the fork provider
-/// (`overwrite_isolation_level` on pin `b009ac15` commit.rs:67–76 + `IsolationLevel::parse`).
-///
-/// | property value | result |
-/// |---|---|
-/// | **absent** | `Some(Snapshot)` |
-/// | `"snapshot"` (ASCII case-insensitive) | `Some(Snapshot)` |
-/// | `"serializable"` (ASCII case-insensitive) | `Some(Serializable)` |
-/// | `"none"` (ASCII case-insensitive) | `None` (no §5 validates) |
-/// | **any other** | loud `Plan("Invalid isolation level: {name}")` — never silent default |
-///
-/// **Absent ≠ `"none"`.** Collapsing them is a BUG-004 posture bug.
-/// ===========================================================================================
-///
 /// # Errors
 /// [`DataFusionError::Plan`] when the property is present but not a recognized name.
 pub fn parse_overwrite_isolation(table: &Table) -> Result<Option<OverwriteIsolation>> {
@@ -77,21 +56,7 @@ pub fn parse_overwrite_isolation(table: &Table) -> Result<Option<OverwriteIsolat
     }
 }
 
-/// ===========================================================================================
 /// Stream source batches → positional map (D9) → staged data files **without** catalog mutation
-/// (OV1 exclusive — Q9; Cargo.toml freeze: keeps `futures` stream map out of `repark-sql`).
-///
-/// - Empty `column_names`: source col `i` → table field `i` (arity must match); field names become
-///   the table schema (values keep SELECT order — **not** append by-name).
-/// - Non-empty `column_names`: source col `i` → listed field; unmentioned table fields null-filled
-///   (required omit → refuse).
-/// - Zero-row batches are mapped/validated then dropped (malformed empty cannot slip through).
-/// - Partitioned vs unpartitioned write path matches CTAS (`write_*_from_stream_with_concurrency`).
-///
-/// Caller (repark-sql) must refuse commit when `sum(record_count) == 0` after a non-empty probe
-/// (BUG-001). This function does **not** commit.
-/// ===========================================================================================
-///
 /// # Errors
 /// Schema convert, arity/cast/required-omit, or stream write failures as [`DataFusionError`].
 pub async fn write_overwrite_staged_files_from_stream<S>(
@@ -118,34 +83,9 @@ where
     }
 }
 
-/// ===========================================================================================
-/// Commit a full-table overwrite that replaces **all** live data with `staged_files`
-/// (OV1 exclusive — Q9).
-///
-/// Recipe (provider Overwrite arm, pin `b009ac15` commit.rs:338–357):
-/// ```text
-/// tx.overwrite_files()
-///   .overwrite_by_row_filter(AlwaysTrue)
-///   .add_files(staged_files)
-///   .set_snapshot_properties({ engine.operation-id: uuid })
-///   + if isolation is Some(level):
-///         .validate_no_conflicting_deletes()
-///         + if level == serializable: .validate_no_conflicting_data()
-///         + if table.current_snapshot_id() Some: .validate_from_snapshot(id)
-///   .apply(tx).commit(catalog)
-/// ```
-///
-/// Empty `staged_files` still wipes (primitive mirrors provider empty Overwrite). The **SQL**
-/// non-empty arm must not call this with zero written rows (BUG-001 refuse lives in repark-sql).
-///
-/// Isolation is resolved at the start of this function (invalid property fails before commit).
-/// `Transaction::new` captures `starting_snapshot_id` from the handle passed in — load the table
-/// before staging so the stream-start anchor matches the provider plan-handle anchor.
-/// ===========================================================================================
-///
+/// Commit a full-table overwrite that replaces **all** live data with `staged_files` (OV1
 /// # Errors
-/// Invalid isolation property → [`DataFusionError::Plan`]. Apply/commit failures →
-/// [`DataFusionError::External`] (iceberg error).
+/// Invalid isolation property → [`DataFusionError::Plan`].
 pub async fn commit_overwrite_replace_all(
     catalog: &Arc<dyn Catalog>,
     table: &Table,
@@ -173,20 +113,9 @@ pub async fn commit_overwrite_replace_all(
     tx.commit(catalog.as_ref()).await.map_err(iceberg_err)
 }
 
-/// ===========================================================================================
 /// SQL INSERT OVERWRITE positional assignment onto the Iceberg write schema (D9).
-///
-/// Empty column list: source col `i` → table field `i`. Non-empty list: source col `i` → listed
-/// field + null-fill unmentioned (required omit → refuse). Every positional `(source, target)`
-/// pair passes the ANSI store-assignment matrix ([`crate::write::store_assign`], WI-1) BEFORE its
-/// strict cast — Spark refuses `date→int` / `boolean→int` / `timestamp→bigint` / `string→numeric`
-/// at analysis (`INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST`), and the arrow kernel would
-/// otherwise reinterpret them into the staged data files. **Not** append by-name.
-/// ===========================================================================================
-///
 /// # Errors
 /// Arity mismatch, unknown/ambiguous column list name, required-omit, a pair that is not
-/// ANSI-store-assignable, or cast failure.
 pub fn positional_map_overwrite_batch(
     batch: &RecordBatch,
     table_schema: &SchemaRef,
@@ -205,8 +134,7 @@ pub fn positional_map_overwrite_batch(
     } else {
         positional_map_column_list(batch, table_schema, column_names, field_count, &strict)?
     };
-    // Table field names + types (positional D9). Nullability: keep table required when the
-    // column has no nulls; when source produces nulls, mark nullable so the batch constructs.
+    // Table field names + types (positional D9).
     let fields: Vec<Field> = table_schema
         .fields()
         .iter()
@@ -252,7 +180,6 @@ fn positional_map_all_columns(
         .enumerate()
         .map(|(index, field)| {
             // WI-1: ANSI store assignment BEFORE the kernel — `date→int` and friends must refuse,
-            // not commit a reinterpreted value into the staged data files.
             refuse_unless_write_store_assignable(
                 "INSERT OVERWRITE",
                 field.name(),
@@ -302,7 +229,6 @@ fn positional_map_column_list(
         let field = table_schema.field(target_index);
         if columns[target_index].is_some() {
             // Duplicate list entry (same target twice, possibly different case spellings).
-            // Refuse — silent last-wins would drop the earlier source column.
             return Err(DataFusionError::Plan(format!(
                 "INSERT OVERWRITE column list names `{name}` more than once (duplicate target \
                  field `{}`)",
@@ -376,9 +302,7 @@ fn iceberg_err(err: iceberg::Error) -> DataFusionError {
     DataFusionError::External(Box::new(err))
 }
 
-// ===============================================================================================
 // OV1 unit pins — isolation parse matrix + replace-all commit (same commit as code).
-// ===============================================================================================
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
@@ -707,7 +631,6 @@ mod tests {
     }
 
     /// Invalid isolation fails at helper entry — no catalog pointer move.
-    /// (SQL path also fails pre-stage via `parse_overwrite_isolation`.)
     #[tokio::test]
     async fn commit_overwrite_invalid_isolation_refuses_before_commit() {
         let warehouse = TempDir::new().expect("temp");
@@ -942,7 +865,6 @@ mod tests {
     }
 
     /// D9 mutation proof: reordered source columns keep SELECT order values under table names
-    /// (by-name conform would un-permute — RED if this map is swapped for append conform).
     #[test]
     fn positional_map_reordered_columns_keep_permuted_values() {
         use datafusion::arrow::array::{Array, StringArray};

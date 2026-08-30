@@ -18,8 +18,7 @@ use super::super::{
     resolve_merge_isolation,
 };
 
-/// An in-memory Iceberg catalog (local-FS warehouse, format-version 2 by default) with a
-/// `sales` namespace and one UNPARTITIONED table `t (id int)`. No AWS, no network.
+/// An in-memory Iceberg catalog (local-FS warehouse, format-version 2 by default) with a `sales`
 async fn setup(warehouse: &TempDir) -> (Arc<dyn Catalog>, TableIdent) {
     setup_with_properties(warehouse, HashMap::new()).await
 }
@@ -235,11 +234,7 @@ fn iceberg_error(error: &DataFusionError) -> &iceberg::Error {
         .expect("the crate's iceberg_err fold wraps an iceberg::Error")
 }
 
-/// PIN — conflicting-commit-detected × INSERT-ONLY MERGE (the S0 bug). An insert-only MERGE
-/// pinned snapshot S to compute its NOT-MATCHED set; a concurrent commit that ADDED a matching
-/// row between S and the commit must be caught, or the append is a silent duplicate. Risk: the
-/// pre-fix `fast_append` path carried no validation and committed the duplicate blindly. The
-/// failure must be loud — a NON-retryable serializable data conflict.
+/// PIN — conflicting-commit-detected × INSERT-ONLY MERGE (the S0 bug).
 #[tokio::test]
 async fn commit_insert_only_rejects_conflicting_concurrent_append() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -286,11 +281,7 @@ async fn commit_insert_only_rejects_conflicting_concurrent_append() {
     );
 }
 
-/// PIN — conflicting-commit-detected × MIXED MERGE (regression: the rewrite arm stays
-/// validated). The rewrite arm removes affected file A via `delete_data_files` and carries
-/// `validate_no_conflicting_deletes`; a concurrent merge-on-read delete applying to A must be
-/// caught (you cannot drop A out from under a concurrent row-level delete). This proves the
-/// insert-only-arm fix left the rewrite arm's OCC intact.
+/// PIN — conflicting-commit-detected × MIXED MERGE (regression: the rewrite arm stays validated).
 #[tokio::test]
 async fn commit_rewrite_path_rejects_conflicting_concurrent_delete() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -344,10 +335,7 @@ async fn commit_rewrite_path_rejects_conflicting_concurrent_delete() {
     );
 }
 
-/// PIN — non-conflicting concurrent commit succeeds (no false positive). A concurrent
-/// DELETE-only commit adds NO data files, so it cannot create a duplicate for an insert-only
-/// MERGE; `validate_no_conflicting_data` (added-data only) must NOT flag it. Risk: an
-/// over-broad guard that rejects ANY concurrent commit would break legitimate MERGEs.
+/// PIN — non-conflicting concurrent commit succeeds (no false positive).
 #[tokio::test]
 async fn commit_insert_only_allows_nonconflicting_concurrent_delete() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -377,8 +365,7 @@ async fn commit_insert_only_allows_nonconflicting_concurrent_delete() {
     );
 }
 
-/// PIN — no-concurrency baseline unchanged. With no concurrent commit, an insert-only MERGE
-/// appends cleanly and raises no spurious conflict — the fix does not regress the normal path.
+/// PIN — no-concurrency baseline unchanged.
 #[tokio::test]
 async fn commit_insert_only_no_concurrency_appends_both_rows() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -407,13 +394,7 @@ async fn commit_insert_only_no_concurrency_appends_both_rows() {
     );
 }
 
-/// PIN — conflicting-commit-detected × MIXED MERGE, concurrent ADD (the F-BR-1 S1). A mixed
-/// MERGE (a WHEN MATCHED clause rewrote a file) pinned snapshot S to compute its NOT-MATCHED
-/// set; a concurrent commit that ADDED a matching row between S and the rewrite commit must be
-/// caught, or the not-matched INSERT is a silent duplicate (the audit's `[0,1,999,999]`). Risk:
-/// the rewrite arm carried only `validate_no_conflicting_deletes` (snapshot isolation), so it
-/// committed the concurrent-add duplicate blindly; the serializable `validate_no_conflicting_data`
-/// guard must reject it — loud, non-retryable. Exact-scope mutation target for this unit.
+/// PIN — conflicting-commit-detected × MIXED MERGE, concurrent ADD (the F-BR-1 S1).
 #[tokio::test]
 async fn commit_rewrite_path_rejects_conflicting_concurrent_append() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -462,11 +443,6 @@ async fn commit_rewrite_path_rejects_conflicting_concurrent_append() {
 }
 
 /// PIN — non-conflicting concurrent commit succeeds on the rewrite path (no false positive from
-/// the new serializable guard). A concurrent DELETE-only overwrite of an UNTOUCHED file adds NO
-/// data (so `validate_no_conflicting_data` must not flag it) and NO delete file applying to the
-/// rewritten file (so `validate_no_conflicting_deletes` must not flag it). Risk: an over-broad
-/// guard that rejects ANY concurrent commit would break legitimate mixed MERGEs. Stays GREEN
-/// when the new `validate_no_conflicting_data` is dropped — the other half of the mutation proof.
 #[tokio::test]
 async fn commit_rewrite_path_allows_nonconflicting_concurrent_delete() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -480,7 +456,7 @@ async fn commit_rewrite_path_allows_nonconflicting_concurrent_delete() {
     // Concurrent DELETE removes the UNTOUCHED B — adds no data, adds no delete file for A.
     concurrent_delete(&catalog, &ident, vec![b]).await;
 
-    // Rewrite path: affected = [A], survivor A'. Neither validation should fire.
+    // Rewrite path: affected = [A], survivor A'.
     commit(
         &catalog,
         &table_at_pin,
@@ -499,9 +475,7 @@ async fn commit_rewrite_path_allows_nonconflicting_concurrent_delete() {
     );
 }
 
-/// PIN — no-concurrency mixed-MERGE baseline unchanged. With no concurrent commit the rewrite
-/// path commits cleanly (survivor added, affected file removed) and the new serializable guard
-/// raises no spurious conflict — the fix does not regress the normal mixed-MERGE path.
+/// PIN — no-concurrency mixed-MERGE baseline unchanged.
 #[tokio::test]
 async fn commit_rewrite_path_no_concurrency_commits() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -535,21 +509,9 @@ async fn commit_rewrite_path_no_concurrency_commits() {
     );
 }
 
-// ===================================================================================
 // GROUP T — merge-on-read `commit_row_delta` OCC pins (T5, T6).
-//
-// Same two-handle race as the copy-on-write pins above, against the NEW `RowDelta` commit seam.
-// These write REAL position-delete parquet files (through the warehouse `FileIO`) from synthetic
-// `(path, pos)` pairs: the delete file records the referenced path, it never reads the data file,
-// so a manifest-only data file is faithful input here exactly as it is for the overwrite arm.
-// ===================================================================================
 
-/// PIN T5 — SERIALIZABLE isolation is ARMED on the merge-on-read commit. A MERGE pinned snapshot
-/// S to decide its matched/not-matched split; a concurrent commit that ADDED a data file between
-/// S and the commit could contain a row the MERGE would have matched (or would have refused to
-/// insert), so the row delta must be rejected — the F-BR-1 silent-duplicate class, on the
-/// merge-on-read arm. Mutation M-T-OCC: delete `.validate_no_conflicting_data_files()` from
-/// `commit_row_delta` → the conflicting add slips through and this pin goes RED.
+/// PIN T5 — SERIALIZABLE isolation is ARMED on the merge-on-read commit.
 #[tokio::test]
 async fn commit_row_delta_rejects_conflicting_concurrent_append() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -589,15 +551,7 @@ async fn commit_row_delta_rejects_conflicting_concurrent_append() {
     );
 }
 
-/// PIN T6 — the REFERENCED-DATA-FILE validation is ARMED. A position delete names a
-/// `(data file path, ordinal)`; if a concurrent commit compacted or rewrote that data file away
-/// between the pin and this commit, the delete has nothing to apply to and committing it would
-/// SILENTLY lose the deletion (the row stays visible forever). Because the concurrent removal
-/// here is recorded as a DELETE-op snapshot, this pin is load-bearing for BOTH
-/// `validate_data_files_exist` (which supplies the referenced set) and `validate_deleted_files`
-/// (which widens the checked op set from `{OVERWRITE}` to `{OVERWRITE, DELETE}` — Java arms it
-/// for UPDATE/MERGE). Mutation M-T-REF: delete EITHER call from `commit_row_delta` → the
-/// dangling position delete commits and this pin goes RED.
+/// PIN T6 — the REFERENCED-DATA-FILE validation is ARMED.
 #[tokio::test]
 async fn commit_row_delta_rejects_position_delete_on_a_removed_data_file() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -643,28 +597,7 @@ async fn commit_row_delta_rejects_position_delete_on_a_removed_data_file() {
     );
 }
 
-/// PIN AB7 (Group AB rider, closing Group Y's open C-Y-3) — the CONFLICTING-DELETE-FILE
-/// validation is ARMED on the merge-on-read commit. This is the row-delta twin of the
-/// copy-on-write `commit_rewrite_path_rejects_conflicting_concurrent_delete` above, and the last
-/// unpinned arm of `commit_row_delta`'s four validations (T5 pinned
-/// `validate_no_conflicting_data_files`, T6 pinned `validate_data_files_exist` +
-/// `validate_deleted_files`).
-///
-/// The class: a MERGE READ the rows it is about to delete/update, deciding its matched split
-/// from snapshot S. If a concurrent merge-on-read DELETE lands its OWN position-delete file
-/// against the same data file between S and this commit, those two row-level decisions were made
-/// against different views of the same rows — Java arms `validateNoConflictingDeleteFiles` for
-/// exactly this (`SparkPositionDeltaWrite.commit`, `command == UPDATE || MERGE`, L251-254), and
-/// it must be a NON-retryable `DataInvalid` so the retry loop stops rather than re-racing.
-///
-/// Group Y's Critic EXECUTED this arm and confirmed it fires, but left no committed pin (C-Y-3).
-/// Committed here.
-///
-/// MUTATION M-AB-DELFILES: delete `.validate_no_conflicting_delete_files()` from
-/// `commit_row_delta` → the conflicting concurrent delete file slips through and this pin goes
-/// RED (the commit succeeds). The sibling
-/// `commit_row_delta_commits_deletes_and_data_without_concurrency` is the no-false-positive
-/// control that keeps the claim non-vacuous.
+/// PIN AB7 (Group AB rider, closing Group Y's open C-Y-3) — the CONFLICTING-DELETE-FILE validation
 #[tokio::test]
 async fn commit_row_delta_rejects_conflicting_concurrent_delete_file() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -673,9 +606,7 @@ async fn commit_row_delta_rejects_conflicting_concurrent_delete_file() {
     // Base: data file A at snapshot S0; the merge-on-read MERGE pins S0 and deletes A's row 0.
     let (table_at_pin, pin) = append(&catalog, &ident, vec![data_file("test/a.parquet")]).await;
 
-    // A concurrent merge-on-read DELETE lands its own position delete (seq > S0). No data file
-    // is added or removed, so neither `validate_no_conflicting_data_files` nor
-    // `validate_data_files_exist` can flag it — only the delete-file validation can.
+    // A concurrent merge-on-read DELETE lands its own position delete (seq > S0).
     concurrent_add_deletes(
         &catalog,
         &ident,
@@ -711,7 +642,6 @@ async fn commit_row_delta_rejects_conflicting_concurrent_delete_file() {
     );
 
     // The rejected row delta committed nothing: A is still the only live data file, and no new
-    // snapshot carries this MERGE's operation id.
     let live = live_data_file_paths(&catalog, &ident).await;
     assert_eq!(
         live,
@@ -721,9 +651,6 @@ async fn commit_row_delta_rejects_conflicting_concurrent_delete_file() {
 }
 
 /// PIN T5/T6 NO-FALSE-POSITIVE baseline — with NO concurrent commit, the identical merge-on-read
-/// row delta COMMITS. Without this, both pins above would still pass if `commit_row_delta`
-/// rejected everything unconditionally, and the "armed OCC" claim would be vacuous. Also the
-/// happy-path proof that a position-delete file plus a data file land in ONE snapshot.
 #[tokio::test]
 async fn commit_row_delta_commits_deletes_and_data_without_concurrency() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -772,16 +699,9 @@ async fn commit_row_delta_commits_deletes_and_data_without_concurrency() {
     );
 }
 
-// ===================================================================================
-// GROUP M13 — `write.merge.isolation-level` parse + M19-A serializable-vs-snapshot
-// split. The resolver copies DML `resolve_isolation_property` BYTE-FOR-BYTE: no trim,
-// `to_ascii_lowercase`, default serializable, garbage ⇒ Plan
-// `Invalid isolation level: {name}`. Padded `  snapshot  ` is therefore GARBAGE.
-// ===================================================================================
+// GROUP M13 — `write.merge.isolation-level` parse + M19-A serializable-vs-snapshot split.
 
 /// PIN M13 parse — upper `SNAPSHOT` / `SERIALIZABLE` honor the DML case fold.
-/// Risk: a byte-exact match would silently ignore Spark/Java's case-insensitive
-/// property values and keep MERGE serializable.
 #[tokio::test]
 async fn merge_isolation_property_parses_upper_snapshot_and_serializable() {
     assert_eq!(
@@ -804,9 +724,7 @@ async fn merge_isolation_property_parses_upper_snapshot_and_serializable() {
     );
 }
 
-/// PIN M13 parse — NO trim. A padded value is garbage, not snapshot.
-/// Risk: "improving" the DML copy with `.trim()` would honor `  snapshot  `
-/// and diverge from DELETE/UPDATE isolation parse.
+/// PIN M13 parse — NO trim.
 #[tokio::test]
 async fn merge_isolation_property_padded_snapshot_is_garbage() {
     let error = resolve_isolation_of(Some("  snapshot  "))
@@ -816,7 +734,6 @@ async fn merge_isolation_property_padded_snapshot_is_garbage() {
 }
 
 /// PIN M13 parse — unknown token is a loud Plan error naming the raw value.
-/// Risk: silent default-to-serializable would hide a typo'd table property.
 #[tokio::test]
 async fn merge_isolation_property_garbage_is_plan_error() {
     let error = resolve_isolation_of(Some("read-committed"))
@@ -826,7 +743,6 @@ async fn merge_isolation_property_garbage_is_plan_error() {
 }
 
 /// PIN M13 thread-through — `commit` surfaces the Plan needle (not only the helper).
-/// Uses a non-empty add so an empty-commit short-circuit cannot skip the resolve.
 #[tokio::test]
 async fn commit_rejects_invalid_merge_isolation_level() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -844,11 +760,7 @@ async fn commit_rejects_invalid_merge_isolation_level() {
     assert_invalid_isolation(error, "read-committed");
 }
 
-/// PIN M19-A (Spark S5) — SERIALIZABLE half of the same-race split. Explicit
-/// `write.merge.isolation-level=serializable` (not merely the unset default)
-/// must reject a concurrent append on an insert-only MERGE — the F-BR-1 class.
-/// Control for
-/// [`commit_insert_only_snapshot_isolation_commits_through_conflicting_concurrent_append`].
+/// PIN M19-A (Spark S5) — SERIALIZABLE half of the same-race split.
 #[tokio::test]
 async fn commit_insert_only_serializable_isolation_rejects_conflicting_concurrent_append() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -882,12 +794,7 @@ async fn commit_insert_only_serializable_isolation_rejects_conflicting_concurren
     );
 }
 
-/// PIN M19-A (Spark S5) — SNAPSHOT half of the same-race split. RED-THEN-GREEN:
-/// without reading `write.merge.isolation-level`, `commit` hard-wires
-/// `IsolationLevel::Serializable` and this case rejects the concurrent append
-/// (same as the serializable sibling). With the resolver threaded through,
-/// snapshot drops `validate_no_conflicting_data` and the insert commits —
-/// Spark S5: snapshot MERGE allows a concurrent unrelated append.
+/// PIN M19-A (Spark S5) — SNAPSHOT half of the same-race split.
 #[tokio::test]
 async fn commit_insert_only_snapshot_isolation_commits_through_conflicting_concurrent_append() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -918,10 +825,7 @@ async fn commit_insert_only_snapshot_isolation_commits_through_conflicting_concu
     );
 }
 
-/// PIN M19-A merge-on-read twin — `commit_row_delta` must honor snapshot the same way
-/// (drop `validate_no_conflicting_data_files`). Same race as T5; T5 is the
-/// serializable reject. RED-THEN-GREEN without threading isolation through
-/// `commit_row_delta`.
+/// PIN M19-A merge-on-read twin — `commit_row_delta` must honor snapshot the same way (drop
 #[tokio::test]
 async fn commit_row_delta_snapshot_isolation_commits_through_conflicting_concurrent_append() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -953,12 +857,7 @@ async fn commit_row_delta_snapshot_isolation_commits_through_conflicting_concurr
 }
 
 /// pins: rp-1-fork-repin/C-010
-///
-/// F-0 engine follow-up. Snapshot isolation is a supported opt-down (drops
-/// `validate_no_conflicting_data_files`) but still arms `validate_data_files_exist`. After
-/// fork `#214` that walk includes `Operation::Replace`. A concurrent compaction that
-/// REPLACES the referenced data file must reject the snapshot-arm row delta rather than
-/// committing a dangling position delete (silent resurrection).
+/// F-0 engine follow-up.
 #[tokio::test]
 async fn commit_row_delta_snapshot_rejects_concurrent_replace_compaction_of_referenced_file() {
     let warehouse = TempDir::new().expect("temp warehouse");

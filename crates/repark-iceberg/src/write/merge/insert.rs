@@ -1,8 +1,4 @@
 //! MERGE `WHEN NOT MATCHED` lowering and write validation.
-//!
-//! Insert expressions resolve against the source plan only, so target references fail loudly.
-//! Synthesized casts use the shared Spark ANSI store-assignment matrix before any batch streams;
-//! explicit casts remain the user's intent.
 
 use std::collections::{HashMap, HashSet};
 
@@ -16,9 +12,6 @@ use super::{InsertAction, InsertClause, MatchedAction, quote_ident, resolve_sche
 use crate::write::store_assign::{self, MERGE_SPARK_CLASS};
 
 /// Project an INSERT clause onto the target schema: named columns take their VALUES expression,
-/// everything else becomes NULL. Rejects unknown columns, arity mismatches, and NULL-filling a
-/// required column — before anything is written. Only explicit clauses reach this point:
-/// `INSERT *` is expanded by [`super::expand_star_clauses`] first.
 pub(super) fn insert_projection(
     clause: &InsertClause,
     write_schema: &ArrowSchema,
@@ -49,7 +42,6 @@ pub(super) fn insert_projection(
         )));
     }
     // Case-insensitive resolution (Spark `caseSensitive=false`); project under canonical schema
-    // field names so values land on the right columns (audit BUG-006).
     let mut seen = HashSet::with_capacity(columns.len());
     let mut canonical_columns: Vec<String> = Vec::with_capacity(columns.len());
     for column in &columns {
@@ -90,8 +82,6 @@ pub(super) fn insert_projection(
 }
 
 /// Plan one insert-clause query, gate its PLANNED schema through ANSI store assignment, then
-/// stream. Counts as one logical SQL pass (PERF-19), same as the [`super::stream_sql`] seam it
-/// replaces on the insert path — validation adds no extra plan.
 pub(super) async fn insert_stream_checked(
     ctx: &SessionContext,
     sql: &str,
@@ -104,8 +94,6 @@ pub(super) async fn insert_stream_checked(
 }
 
 /// The M9 gate: every planned insert column must be ANSI-store-assignable to its target column.
-/// The insert projection aliases columns to the canonical target names in write-schema order, so
-/// the zip is positional with a name assert (a mismatch is an executor bug, not user error).
 fn validate_insert_store_assignment(
     planned: &datafusion::arrow::datatypes::Fields,
     write_schema: &ArrowSchema,
@@ -135,16 +123,7 @@ fn validate_insert_store_assignment(
     Ok(())
 }
 
-/// ===========================================================================================
 /// UPDATE twin of [`insert_stream_checked`]: gate `SET` assignment types, then stream rewrite.
-///
-/// The probe plans each assignment expression against the same source⋈target join **without**
-/// wrapping it in the rewrite `CASE` (THEN assignment ELSE `t.col`). DataFusion CASE-arm
-/// unification refuses bool→int at plan time, which would hide this gate behind an incidental
-/// coercion error. Illegal pairs therefore fail with the ANSI needle; the CASE rewrite is
-/// planned only after every `SET` pair is store-assignable. The probe is analysis-only (not a
-/// PERF-19 logical target pass).
-/// ===========================================================================================
 pub(super) async fn update_stream_checked(
     ctx: &SessionContext,
     sql: &super::MergeSql<'_>,
@@ -194,9 +173,6 @@ pub(super) async fn validate_update_store_assignment(
 }
 
 /// `SELECT (expr) AS aN, … FROM source JOIN target ON on` — one column per SET pair.
-///
-/// `None` when no UPDATE assignments exist (DELETE-only / empty matched). Aliases are
-/// synthetic so two clauses can assign the same target column independently.
 fn update_assignment_probe_sql(
     sql: &super::MergeSql<'_>,
     write_schema: &ArrowSchema,
@@ -234,20 +210,13 @@ fn update_assignment_probe_sql(
     )))
 }
 
-/// CAST a validated SET expression to the target Arrow type so the rewrite `CASE`
-/// (THEN assignment ELSE `t.col`) unifies. Must run **after** the ANSI gate: wrapping
-/// first would make bool→int look like Int32→Int32 and silently write `1`.
+/// CAST a validated SET expression to the target Arrow type so the rewrite `CASE` (THEN assignment
 pub(super) fn store_assignment_then_sql(expr: &str, target_type: &DataType) -> String {
     let type_name = target_type.to_string().replace('\'', "''");
     format!("arrow_cast(({expr}), '{type_name}')")
 }
 
 /// Shared refusal — path label is `INSERT` or `UPDATE SET`; the matrix is not forked.
-///
-/// The matrix itself moved to [`crate::write::store_assign`] (WI-1) so the non-MERGE write
-/// lowerings share it instead of forking a second copy. This wrapper keeps the `MERGE `-prefixed
-/// path label and the [`MERGE_SPARK_CLASS`] citation, so the shipped #111 / #135 message text is
-/// byte-identical to before the hoist.
 fn refuse_unless_ansi_store_assignable(
     path: &str,
     column: &str,
