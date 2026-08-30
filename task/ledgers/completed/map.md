@@ -9,6 +9,10 @@ else. The next pickup's `make ledger-archive` files everything here under
 
 ## Contents
 - [v3e-3-partitioned-eqdel-fixtures-ledger.md](../archive/2026-08/2026-08-25-v3e-3-partitioned-eqdel-fixtures-ledger.md) — V3E-3 — partitioned + equality-delete v3 fixtures
+- [mw-10-s3tables-mor-ledger.md](mw-10-s3tables-mor-ledger.md) — **MW-10 (2026-08-28 →
+  2026-08-30), PROVEN 6/6:** the S3 Tables merge-on-read leg the intake called "MW-4b",
+  measure-first on OD-3b. The first owner dispatch (run 33333274383, on merged `main`) answered
+  `PutTableData` **allow**; no denial registry row; docs and roadmap slots filled.
 
 ## Pointers
 - Up: [../map.md](../map.md)

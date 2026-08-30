@@ -602,7 +602,7 @@ bounded number of times (three) and records the retry count.
 or a `history.expire.*` property on those tables. The engine's `expire_snapshots` and the
 service's expiry may run at the same time. MW-10 records the snapshot log before and after
 the engine's expire, and whether the two disagree on the table's current snapshot.
-Measured result: pending the first owner dispatch after merge (the orchestrator fills this).
+Measured 2026-08-30 ([run 33333274383](https://github.com/TRO-Wolf/repark/actions/runs/33333274383), green): with automatic snapshot management left on, the engine's expire removed the CTAS snapshot — present in the before-expire log, absent after — the live row set was unchanged, and no retry budget was exhausted.
 
 Anything else refuses and lists what is supported, rather than pretending:
 
