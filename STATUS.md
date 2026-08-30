@@ -7,7 +7,7 @@
 > [.agents/](.agents/map.md) as thin tool adapters that carry no authoritative facts). When a current-state
 > fact changes, it changes **here** — other files point at this file, they do not restate it.
 
-_Last updated: 2026-08-28._
+_Last updated: 2026-08-30._
 
 ## Release state
 
@@ -159,18 +159,13 @@ published history — an exposure **accepted by explicit decision**; provenance:
     [task/ledgers/archive/2026-08/](task/ledgers/archive/2026-08/map.md).
     V3E-4 measured refs, `VERSION AS OF` over DVs, expire dual-probe, and the
     orphan 24h floor on adopted v3. V3E-5 added the nightly v3 live-oracle leg
-    ([#253](https://github.com/TRO-Wolf/repark/pull/253)). RP-2 (2026-08-28, fork
-    `ce92a7bf`) landed the guarded increment: a first plain-`WHERE` DELETE on a DV-free v3
-    table runs on both modes Spark-clean (`V3-COW-1` rewritten); any table carrying a live DV
-    refuses DELETE before a write — a second engine DELETE and the Spark shared-Puffin fixture
-    are pinned; UPDATE / MERGE refuse; `rewrite_data_files` still reassigns lineage
-    (`V3-LINEAGE-1` stays, re-measured); F-3's `'remove-dangling-deletes' => true` taken.
-  - **Next:** RP-3 — one frozen repin at fork `d408da42` (F-7 U3, F-16, F-9, F-15, F-14,
-    F-17, H7-P1/R114), wiring the fork's `close_touched_dv_containers` into the engine's MOR
-    DML path, and the full DV input-state matrix; charter
-    [task/ledgers/staging/rp-3-fork-repin-ledger.md](task/ledgers/staging/rp-3-fork-repin-ledger.md).
-    V3-3 follows. The ordered contract is
-    [docs/design/format-v3-track.md §5](docs/design/format-v3-track.md).
+    ([#253](https://github.com/TRO-Wolf/repark/pull/253)). RP-2 (2026-08-28, fork `ce92a7bf`) the DV-free first DELETE. RP-3 (2026-08-30,
+    fork `d408da42`) wired container closure; live-DV DELETE merge is Spark-equal on three
+    doors; sequential COW after overwrite refuses (`V3-COW-1`, F-rp3-c7); UPDATE / MERGE
+    refuse; `V3-LINEAGE-1` and `B-MOR-3` stay; Hadoop writes FIXED (`V3-ADOPT-1`).
+  - **Next:** V3-3 — v3 UPDATE and MERGE; charter
+    [task/ledgers/staging/v3-3-dml-ledger.md](task/ledgers/staging/v3-3-dml-ledger.md).
+    Sequence: [docs/design/format-v3-track.md §5](docs/design/format-v3-track.md).
 <!-- /ws -->
 
 <!-- ws id=perf ledgers=perf- state=open -->

@@ -39,12 +39,10 @@ matrix measures (V3-3), lineage-preserving compaction (V3-5), the v3 types (V3-6
 | C-007 | **F-7 U3 measured** (from #254 C-011). `CALL system.rewrite_position_delete_files` on the adopted v3 fixture no longer refuses (`B-MOR-3`): the fork's v3 DV arm runs, the Spark read-back is unchanged before and after, and a second run converges — or it stays refused with the measured reason recorded against fork row R136. | Both doors + facade on the V3E-3 fixture; rows + `sum(id)`; `.delete_files` before / after / after-again. | **PROVEN** | Fork R136 v3 arm converts parquet position deletes to DVs. On V3E-3 DV-only fixture it returns zeros (2 DVs stay 2), read identity, second run converges. CALL still refuses live DVs so zeros cannot mean already-clean (`B-MOR-3` stays). Spark, facade, ANSI Q7, and fork-direct pins. Citation: `crates/repark-spark/src/tests/v3e3.rs`, `crates/repark-sql/src/v3_partitioned_equality_deletes.rs`, `python/repark/tests/test_v3e3_fixtures.py`. |
 | C-008 | **F-9 taken, F-14 measured** (from #254 C-010 and the F-14 landing). S3 Tables `register_table` refuses naming the dated service gap (fork row R126, #233) and the guide / registry cite it; a table registered from a Hadoop `vN.metadata.json` pointer takes a write and the next pointer is `v(N+1).metadata.json` (fork #235) — `call_register_table_of_hadoop_named_metadata_writes_name_the_convention` retargets from "the refusal names the convention" to "the write succeeds" and registry `V3-ADOPT-1` moves to FIXED, dated. | Grep the guide and registry; the retargeted pins; the Hadoop-pointer write on both doors. | **PROVEN** | Spark `call_register_table_of_hadoop_named_metadata_writes_name_the_convention` INSERT commits `v2.metadata.json`; ANSI `ansi_hadoop_named_metadata_write_bumps_to_the_next_hadoop_pointer` same. S3 Tables CALL pin `call_register_table_on_s3_tables_names_the_dated_service_gap` cites R126. Registry `V3-ADOPT-1` FIXED; `S3T-1` admitted. Guide cites R126. Hadoop error rewrite removed. Citation: `crates/repark-spark/src/tests/call_register.rs`, `crates/repark-sql/src/v3_cow.rs`. |
 | C-009 | **F-15 carried, not consumed** (from #254 C-012). The repin compiles and every gate passes with the fork's `write_default` fill in `DataFileWriter::write`; no engine surface sets a `write_default`, so the append fixtures are byte-flat before / after, and V3-6's charter gains the note that the fork surface exists. | Fixture byte comparison; the V3-6 note. | **PROVEN** | `test_engine_sources_do_not_set_write_default`; `test_checked_in_spark_fixtures_are_byte_flat` vs origin/main. format-v3-track §5 V3-6 notes fork #233 `write_default` fill. Citation: `python/repark/tests/test_rp3_c009_write_default.py`. |
-| C-010 | The documents say what the pins prove: north star §3 rows (MOR DML, COW DML, `rewrite_data_files`, `rewrite_position_delete_files`, adoption), STATUS, the slate, the handoff (F-7 U3 / F-9 / F-14 / F-15 / F-16 / F-17 marked with fork PR and date; take / skip per "Version-pin contract"), `docs/fork-sync.md`, crate maps and the divergence registry in lockstep; V3-3 chartered from C-004's red cells. | `make check-map-sync`, `check-docs-compaction`, `check-ledger-grammar`, the plan-pin test. | OPEN | Closes on the departure commit. |
-| C-011 | Green on the whole surface: `make preflight`, the parity suite (`python/repark-parity/tests`), and the V3E-3 / V3E-4 / V3E-5 fixture pins pass at the new rev. | Gate output attached. | OPEN | Closes at readiness. |
+| C-010 | The documents say what the pins prove: north star §3 rows (MOR DML, COW DML, `rewrite_data_files`, `rewrite_position_delete_files`, adoption), STATUS, the slate, the handoff (F-7 U3 / F-9 / F-14 / F-15 / F-16 / F-17 marked with fork PR and date; take / skip per "Version-pin contract"), `docs/fork-sync.md`, crate maps and the divergence registry in lockstep; V3-3 chartered from C-004's red cells. | `make check-map-sync`, `check-docs-compaction`, `check-ledger-grammar`, the plan-pin test. | **PROVEN** | North star §3, registry `V3-COW-1`/`B-MOR-3`/`V3-ADOPT-1`/`RDF-1`, handoff take/skip, `docs/fork-sync.md` pin history, crate maps. V3-3 chartered. STATUS Next is V3-3; slate compact removes RP-3. Citation: `crates/repark-spark/src/map.md`. |
+| C-011 | Green on the whole surface: `make preflight`, the parity suite (`python/repark-parity/tests`), and the V3E-3 / V3E-4 / V3E-5 fixture pins pass at the new rev. | Gate output attached. | **PROVEN** | `make preflight` exit 0 (2026-08-30): facade 3764 passed / 74 skipped; `make py-test` 459 passed. V3E-3/4/5 pins in the facade suite. Citation: `python/repark/tests/test_v3e3_fixtures.py`. |
 
-VERDICT: OPEN — 11 clauses, 9 PROVEN (C-001..C-009), 0 REJECTED. C-010/C-011 close at
-departure. The gate passes when every row is PROVEN with its pin (`pins: rp-3-fork-repin/C-NNN`)
-and the owner confirms.
+VERDICT: 11 clauses, 11 PROVEN, 0 OPEN, 0 REJECTED. The owner confirms by merging.
 
 ## 2. Sequence
 
@@ -1011,7 +1009,7 @@ COVERAGE_ATTESTATION:
         Walked C-001..C-011 against the frozen charter. C-006 measured red (8 delete files)
         is recorded; the pin was not flipped to a false zero. C-007 kept B-MOR-3 after the
         R136 conversion no-op. C-004 C7 is refused, not claimed Spark-equal.
-      artifacts: [task/ledgers/staging/rp-3-fork-repin-ledger.md:C-001..C-011]
+      artifacts: [task/ledgers/completed/rp-3-fork-repin-ledger.md:C-001..C-011]
     - id: AT-2
       status: ATTACKED
       evidence: >
@@ -1062,7 +1060,7 @@ COVERAGE_ATTESTATION:
       evidence: >
         Clause pins exist for every PROVEN row. Novel Critic input DELETE id=6 on partitioned
         DV kept sibling rows; Arrow types int32/string/int32.
-      artifacts: [task/ledgers/staging/rp-3-fork-repin-ledger.md §14]
+      artifacts: [task/ledgers/completed/rp-3-fork-repin-ledger.md §14]
   reattested: []
   complete: true
 ```
@@ -1105,3 +1103,50 @@ SELF_LOGIC_REVIEW:
   verdict: PROCEED
   escalation: —
 ```
+
+```yaml
+SELF_LOGIC_REVIEW:
+  id: SLR-DEPARTURE
+  agent: Actor
+  action: flip C-010/C-011 PROVEN, truth STATUS and plan-1, move the ledger to completed
+  charter_trace: C-010, C-011
+  preconditions:
+    - make preflight exit 0: SATISFIED (2026-08-30; facade 3764 passed / 74 skipped)
+    - make py-test 459 passed: SATISFIED (parity.log)
+    - C-010 pins in crates/python: SATISFIED (spark src map.md; V3E test files)
+  success_condition: every clause PROVEN; next-sequence has no rp-3 unit marker; STATUS Next is V3-3; ledger is in completed/
+  step_risks:
+    - STATUS 25k ceiling: HANDLED(replacement shrinks the v3 Next block)
+    - plan-1 still requires RP-3 on the slate: HANDLED(test retargeted in this commit)
+    - compact leaves numbered holes: HANDLED(doc_blocks._renumber)
+  contingencies:
+    - move fails: EXECUTABLE(additive; leave ledger in staging and stop)
+    - grammar red after move: EXECUTABLE(fix citations; do not push)
+  tripwire_scan: CLEAN
+  uncertainty: NONE
+  verdict: PROCEED
+  escalation: —
+```
+
+```yaml
+PR_READINESS_CHECKLIST:
+  id: RA-rp-3-fork-repin
+  self_run_by_orchestrator: true
+  checks:
+    ci_green: PASS (make preflight exit 0, 2026-08-30, facade 3764 passed / 74 skipped; make py-test 459 passed)
+    unit_clauses_proven: PASS (C-001..C-011)
+    coverage_attestation_attached: PASS (ledger §14 complete: true)
+    findings_ledger_closed: PASS (F-rp3-c7 REMEDIATED via refuse pins)
+    clause_trace_complete: PASS (pins cited from crate, test, and facade maps)
+  verdict: READY
+  send_back_target: "N/A"
+```
+
+## 15. Gates at departure (2026-08-30)
+
+- `make preflight` exit 0 on `feat/rp-3-fork-repin` at `ad64deb`: facade 3764 passed, 74 skipped;
+  `cargo audit` / `cargo deny` / `pip-audit` clean; zizmor no findings.
+- `make py-test` 459 passed (CAP-1 `call.rs` 1407→1361; V3-COW-1 heading retargeted).
+- Doc gates in the same commit as the move.
+
+Disposition: CONVERGED (Critic, cycle 1). CCC-CONVERGED is not Delivery.

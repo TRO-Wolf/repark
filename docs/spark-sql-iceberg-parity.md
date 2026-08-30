@@ -2034,9 +2034,9 @@ the pin rather than obeying it.
   `python/repark/tests/test_v3_cow_dml.py`; live-DV UPDATE refuse in
   `python/repark/tests/test_v3e4_refs_time_travel.py`). Pins: rp-3-fork-repin/C-004.
 - **Rationale** — remaining refusals keep the **owner ruling 2026-08-25** (guard COW DML on v3)
-  where the write is still unsafe. Live-DV DELETE is measured green. Sequential COW lineage is
-  a fork defect (F-rp3-c7). `UPDATE` / `MERGE` ride V3-3. V3-4 still owns row lineage as a
-  whole (`V3-ROWID-1`).
+  where the write is still unsafe, and stay BACKLOG. Live-DV DELETE is measured green.
+  Sequential COW lineage is a fork defect (F-rp3-c7). `UPDATE` / `MERGE` ride V3-3. V3-4 still
+  owns row lineage as a whole (`V3-ROWID-1`).
 
 ### BL-9 — a double-quoted string literal is an identifier on the SQL door
 

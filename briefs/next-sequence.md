@@ -37,19 +37,8 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 
 | # | Unit | Track | Blocked by | Size |
 |---|---|---|---|---|
-| 1 | **RP-3** — one frozen fork repin at `d408da42`, the F-17 wiring, the DV input-state matrix | North Star | the owner's gate on its charter | STANDARD <!-- unit id=rp-3 --> |
-| 2 | **FNP-15/16** — register every unreachable and declared-deferred family | Function parity | RP-3 departure, or a fork-wait window | STANDARD <!-- unit id=fnp-15-16 --> |
-| 3 | **MW-10** — the S3 Tables merge-on-read leg, measure-first on OD-3b | Maintenance / AWS evidence | the owner's gate; an owner dispatch per measurement | STANDARD <!-- unit id=mw-10 --> |
-
-<!-- unit id=rp-3 ledger=rp-3- -->
-**Why RP-3 is first.** Fork F-17 (#237), F-14 (#235), F-7 U3, F-16, F-9, F-15 and the public
-R114 DV discovery API are all on fork `main` at `d408da42`; nothing v3 moves until the engine
-consumes them. The unit is more than a rev bump: the fork's container closure is opt-in for
-callers, so the engine's MOR DML path wires `close_touched_dv_containers` in first, then the
-eight-cell DV input-state matrix runs on all three doors and only the cells green everywhere
-lift the `V3-COW-1` live-DV refusal. Charter:
-[../task/ledgers/staging/rp-3-fork-repin-ledger.md](../task/ledgers/staging/rp-3-fork-repin-ledger.md).
-<!-- /unit -->
+| 1 | **FNP-15/16** — register every unreachable and declared-deferred family | Function parity | RP-3 departure, or a fork-wait window | STANDARD <!-- unit id=fnp-15-16 --> |
+| 2 | **MW-10** — the S3 Tables merge-on-read leg, measure-first on OD-3b | Maintenance / AWS evidence | the owner's gate; an owner dispatch per measurement | STANDARD <!-- unit id=mw-10 --> |
 
 <!-- unit id=fnp-15-16 ledger=fnp-15-16- -->
 **Why FNP-15/16 follows.** This is the highest-value fork-independent honesty unit: it turns 62
@@ -66,7 +55,7 @@ runs in any window and serves the v1.0 gate's S3 Tables rows. Charter:
 [../task/ledgers/staging/mw-10-s3tables-mor-ledger.md](../task/ledgers/staging/mw-10-s3tables-mor-ledger.md).
 <!-- /unit -->
 
-**Not in this queue (owner-sequenced or owner-gated):** V3-3 and the engine units after it wait
-for RP-3's matrix; DML-A/B/C and Track A W-0. A merged unit leaves this file with no record
+**Not in this queue (owner-sequenced or owner-gated):** V3-3 (chartered; opens after RP-3
+merges) and the engine units after it; DML-A/B/C and Track A W-0. A merged unit leaves this file with no record
 here — its ledger is in
 [../task/ledgers/archive/](../task/ledgers/archive/map.md) and its PR on `main`.

@@ -13,8 +13,8 @@ JVM, no repark required). See [../map.md](../map.md).
 ## Contents
 
 - `test_plan_1_northstar_fnp_sequence.py` — **PLAN-1 (2026-08-28; tree pins):** the guarded
-  North Star sequence, F-17's measured shared-Puffin closure request, the live slate (RP-3 then
-  FNP-15/16 since RP-2's departure on 2026-08-28), the per-unit FNP order and delivery boundary,
+  North Star sequence, F-17's measured shared-Puffin closure request, the live slate (FNP-15/16
+  then MW-10 since RP-3's departure on 2026-08-30), the per-unit FNP order and delivery boundary,
   FNP-Z retirement, fork independence, and map lockstep. `pins: plan-1-northstar-fnp-sequence/C-001, C-002, C-003, C-004, C-005, C-006`
 - `test_pr_247_owner_ruling.py` — **PR #247 revalidation (2026-08-27):** the owner-ruling blocks
   in `AGENTS.md` and `CLAUDE.md` stay byte-exact, unique, at the document start, and in regular
@@ -30,7 +30,7 @@ JVM, no repark required). See [../map.md](../map.md).
   bounded parser guards, exact literal-helper inventory, and lifecycle-aware navigation.
 - `test_cap_1_source_file_line_cap.py` — **CAP-1 (2026-08-26):** exact Rust and Python source-size
   exception sets and baselines mirrored from the live guard tables (`call.rs` 1404 → 1111 after
-  RP-2's `call_args.rs` split); blank-line boundaries;
+  RP-2's `call_args.rs` split; RP-3 1407 → 1361); blank-line boundaries;
   growth, shrink, retirement,
   missing-path, unreadable-path, and empty-scan provocations; fixture exclusions; unchanged
   facade no-stub scope; existing Makefile/CI wiring and contract/navigation carriers. The
@@ -69,8 +69,8 @@ JVM, no repark required). See [../map.md](../map.md).
   (DECLARED), the queued `V3-VARIANT-SHRED-1`, the north-star matrix rows (COW, types,
   upgrade) and OD-3b, the tier-2 runbook's scoped S3 Tables statement, and the no-obituary
   rule for the unit itself. RP-2 salvage (2026-08-28) retargeted the `V3-COW-1` assertions to
-  the narrowed row: one measured DELETE lifts, every live-DV state refuses, the 2026-08-25
-  refusals kept.
+  the narrowed row. RP-3 (2026-08-30) retargeted again: live-DV DELETE merge lifts; UPDATE,
+  MERGE, and sequential COW after overwrite stay refused (BACKLOG, 2026-08-25 ruling kept).
 - `test_dl_2_ledger_grammar.py` — **DL-2 (2026-08-23):** the ledger grammar gate on a scratch
   tree seeded with the script's own `EXCEPTIONS` rows at their ceilings: a clean ledger counts;
   a bad verdict cell, a duplicate id and a row without evidence go red; an unpinned `PROVEN`
