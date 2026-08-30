@@ -81,9 +81,7 @@ def test_int64_add_max_plus_one_raises_under_default_ansi() -> None:
     """BIGINT MAX + 1 raises long ARITHMETIC_OVERFLOW."""
     spark = _spark()
     with pytest.raises(Exception, match="ARITHMETIC_OVERFLOW"):
-        spark.sql(
-            "SELECT CAST(9223372036854775807 AS BIGINT) + CAST(1 AS BIGINT) AS v"
-        ).to_arrow()
+        spark.sql("SELECT CAST(9223372036854775807 AS BIGINT) + CAST(1 AS BIGINT) AS v").to_arrow()
 
 
 def test_int64_add_max_plus_one_wraps_when_ansi_false() -> None:
