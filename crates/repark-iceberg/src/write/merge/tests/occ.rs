@@ -18,7 +18,7 @@ use super::super::{
     resolve_merge_isolation,
 };
 
-/// An in-memory Iceberg catalog (local-FS warehouse, format-version 2 by default) with a `sales`
+/// An in-memory Iceberg catalog with a `sales` namespace and one UNPARTITIONED table `t`.
 async fn setup(warehouse: &TempDir) -> (Arc<dyn Catalog>, TableIdent) {
     setup_with_properties(warehouse, HashMap::new()).await
 }
@@ -442,7 +442,7 @@ async fn commit_rewrite_path_rejects_conflicting_concurrent_append() {
     );
 }
 
-/// PIN — non-conflicting concurrent commit succeeds on the rewrite path (no false positive from
+/// PIN — non-conflicting concurrent commit succeeds on the rewrite path.
 #[tokio::test]
 async fn commit_rewrite_path_allows_nonconflicting_concurrent_delete() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -597,7 +597,7 @@ async fn commit_row_delta_rejects_position_delete_on_a_removed_data_file() {
     );
 }
 
-/// PIN AB7 (Group AB rider, closing Group Y's open C-Y-3) — the CONFLICTING-DELETE-FILE validation
+/// PIN AB7 — the CONFLICTING-DELETE-FILE validation is ARMED on the merge-on-read commit.
 #[tokio::test]
 async fn commit_row_delta_rejects_conflicting_concurrent_delete_file() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -641,7 +641,7 @@ async fn commit_row_delta_rejects_conflicting_concurrent_delete_file() {
         ice.message()
     );
 
-    // The rejected row delta committed nothing: A is still the only live data file, and no new
+    // The rejected row delta committed nothing: A is still the only live data file.
     let live = live_data_file_paths(&catalog, &ident).await;
     assert_eq!(
         live,
@@ -650,7 +650,7 @@ async fn commit_row_delta_rejects_conflicting_concurrent_delete_file() {
     );
 }
 
-/// PIN T5/T6 NO-FALSE-POSITIVE baseline — with NO concurrent commit, the identical merge-on-read
+/// PIN T5/T6 NO-FALSE-POSITIVE baseline.
 #[tokio::test]
 async fn commit_row_delta_commits_deletes_and_data_without_concurrency() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -825,7 +825,7 @@ async fn commit_insert_only_snapshot_isolation_commits_through_conflicting_concu
     );
 }
 
-/// PIN M19-A merge-on-read twin — `commit_row_delta` must honor snapshot the same way (drop
+/// PIN M19-A merge-on-read twin — `commit_row_delta` must honor snapshot the same way.
 #[tokio::test]
 async fn commit_row_delta_snapshot_isolation_commits_through_conflicting_concurrent_append() {
     let warehouse = TempDir::new().expect("temp warehouse");

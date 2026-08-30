@@ -69,7 +69,7 @@ pub(crate) fn classify_location_backend(location: &str) -> Result<LocationBacken
 
 /// Classify a scheme-less location.
 /// # Errors
-/// Returns a plan error for either malformed shape, naming the offending location and the
+/// Returns a plan error naming the malformed location and the supported location forms.
 pub(crate) fn classify_bare_location(location: &str) -> Result<LocationBackend> {
     if has_colon_before_first_slash(location) {
         return Err(DataFusionError::Plan(format!(
@@ -97,7 +97,7 @@ pub(crate) fn has_colon_before_first_slash(location: &str) -> bool {
     }
 }
 
-/// The [`StorageFactory`] a table `location`'s scheme selects — the one place a concrete storage
+/// The [`StorageFactory`] a table `location`'s scheme selects.
 /// # Errors
 /// Propagates [`classify_location_backend`]'s error for an unsupported scheme.
 pub fn storage_factory_for_location(location: &str) -> Result<Arc<dyn StorageFactory>> {
@@ -112,7 +112,7 @@ pub fn storage_factory_for_location(location: &str) -> Result<Arc<dyn StorageFac
     }
 }
 
-/// A [`FileIO`] for `location`, built from the scheme-selected [`storage_factory_for_location`]
+/// A [`FileIO`] for `location`, built from the scheme-selected factory and catalog `props`.
 /// # Errors
 /// Propagates [`classify_location_backend`]'s error for an unsupported scheme.
 pub fn file_io_for_location<S: BuildHasher>(

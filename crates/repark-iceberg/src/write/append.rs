@@ -59,7 +59,7 @@ pub async fn append(
     commit_append(catalog, &table, new_files).await
 }
 
-/// The one remaining append scope gate, checked before any IO: only Parquet data files are written
+/// The one remaining append scope gate, checked before any IO: only Parquet data files are written.
 fn reject_unsupported_append(table: &Table) -> Result<()> {
     let table_props = table.metadata().table_properties().map_err(iceberg_err)?;
     let file_format =
@@ -82,7 +82,7 @@ fn conform_batches(write_schema: &SchemaRef, batches: &[RecordBatch]) -> Result<
     Ok(conformed)
 }
 
-/// Conform ONE consumer batch to the write schema (the per-batch body of [`conform_batches`],
+/// Conform ONE consumer batch to the write schema.
 fn conform_batch(write_schema: &SchemaRef, batch: &RecordBatch) -> Result<RecordBatch> {
     let source_names: Vec<&str> = batch
         .schema_ref()
@@ -135,7 +135,7 @@ fn conform_batch(write_schema: &SchemaRef, batch: &RecordBatch) -> Result<Record
     Ok(RecordBatch::try_new(write_schema.clone(), columns)?)
 }
 
-/// Conform + write batches as identity-partitioned Parquet data files — the partitioned sibling of
+/// Write batches as identity-partitioned Parquet files, sibling of `write_data_files`.
 /// # Errors
 /// A batch with a missing, extra, or duplicate column, an uncastable/overflowing value, or a NULL
 pub async fn write_partitioned_data_files(
@@ -162,7 +162,7 @@ pub async fn write_partitioned_data_files_with_concurrency(
     fanout_data_files_with_concurrency(table, conformed, concurrency).await
 }
 
-/// The streaming sibling of [`write_partitioned_data_files`] — conform + fan out each batch the
+/// Streaming sibling of `write_partitioned_data_files`: fan out each batch as it arrives.
 /// # Errors
 /// A batch with a missing, extra, or duplicate column, an uncastable/overflowing value, or a NULL
 pub async fn write_partitioned_data_files_from_stream<S>(
@@ -225,7 +225,7 @@ where
         return fanout_conformed_stream_serial(table, &mut conformed).await;
     }
 
-    // P1-R1: abort flag so workers do not close fanouts after a source/sibling failure (closing
+    // P1-R1: abort flag so workers do not close fanouts after a source/sibling failure.
     let aborted = Arc::new(AtomicBool::new(false));
     let mut senders = Vec::with_capacity(max_concurrent);
     let mut worker_futures = Vec::with_capacity(max_concurrent);
@@ -415,7 +415,7 @@ mod tests {
 
     use super::*;
 
-    /// An in-memory Iceberg catalog over a local-FS (`file://`-class) warehouse with a `sales`
+    /// An in-memory Iceberg catalog over a local-FS warehouse with a `sales` namespace.
     async fn memory_catalog(warehouse: &TempDir) -> Arc<dyn Catalog> {
         let path = warehouse
             .path()
@@ -456,7 +456,7 @@ mod tests {
             .expect("build schema")
     }
 
-    /// Create `sales.<name>`; identity-partitioned on `key` (partition field `key_part`) when
+    /// Create `sales.<name>`.
     async fn create_table(
         catalog: &Arc<dyn Catalog>,
         name: &str,
@@ -489,7 +489,7 @@ mod tests {
         TableIdent::new(NamespaceIdent::new("sales".to_string()), name.to_string())
     }
 
-    /// A consumer-shaped batch: plain Arrow fields (nullable, NO field-id metadata) — proving the
+    /// A consumer-shaped batch: plain Arrow fields.
     fn consumer_batch(keys: &[Option<i32>], payloads: &[Option<&str>]) -> RecordBatch {
         let schema = Arc::new(ArrowSchema::new(vec![
             Field::new("key", DataType::Int32, true),
@@ -505,7 +505,7 @@ mod tests {
         .expect("build consumer batch")
     }
 
-    /// Scan read-back on the Arrow path: asserts the exact Arrow types (Int32 / Utf8) via
+    /// Scan read-back asserts Int32/Utf8 types, then returns sorted `(key, payload)` rows.
     async fn read_back_sorted(
         catalog: &Arc<dyn Catalog>,
         ident: &TableIdent,
@@ -555,7 +555,7 @@ mod tests {
         rows
     }
 
-    /// The live (Added/Existing) DATA-file entries in the current snapshot's manifests — the
+    /// The live DATA-file entries in the current snapshot's manifests.
     async fn live_data_files(catalog: &Arc<dyn Catalog>, ident: &TableIdent) -> Vec<DataFile> {
         let table = catalog.load_table(ident).await.expect("load table");
         let metadata = table.metadata();
@@ -584,7 +584,7 @@ mod tests {
         files
     }
 
-    /// The data-file paths a filtered scan PLANS (fork `plan_files`) — the plan-level pruning
+    /// The data-file paths a filtered scan PLANS.
     async fn planned_paths(table: &Table, predicate: Predicate) -> HashSet<String> {
         let scan = table
             .scan()
@@ -611,10 +611,10 @@ mod tests {
         table.metadata().snapshots().count()
     }
 
-    /// The boxed-future return type of an `#[async_trait]` `Catalog` method — spelled out once so
+    /// The boxed-future return type of an `#[async_trait]` `Catalog` method.
     type BoxedCatalogFuture<'a, T> = Pin<Box<dyn Future<Output = iceberg::Result<T>> + Send + 'a>>;
 
-    /// A fully-delegating `Catalog` wrapper that lands a competing PUBLIC append against the inner
+    /// Catalog wrapper that lands a competing PUBLIC append in the victim's first `update_table`.
     #[derive(Debug)]
     struct ConflictInjector {
         inner: Arc<dyn Catalog>,
@@ -796,7 +796,7 @@ mod tests {
             Box::pin(async move {
                 let attempt = self.update_table_attempts.fetch_add(1, Ordering::SeqCst) + 1;
                 if attempt == 1 {
-                    // The victim's `do_commit` has already refreshed its base; landing a competing
+                    // The victim's `do_commit` has already refreshed its base.
                     append(
                         &self.inner,
                         &self.victim_ident,
@@ -810,7 +810,7 @@ mod tests {
         }
     }
 
-    /// PIN P1 — unpartitioned append via the NEW public API round-trips value AND type (regression
+    /// PIN P1 — unpartitioned append via the NEW public API round-trips value AND type.
     #[tokio::test]
     async fn append_unpartitioned_roundtrip_value_and_type() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -843,7 +843,7 @@ mod tests {
         );
     }
 
-    /// PIN P2 — single partition value: every committed manifest `DataFile` entry carries the
+    /// PIN P2.
     #[tokio::test]
     async fn append_partitioned_single_value_stamps_datafile_partition() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -887,7 +887,7 @@ mod tests {
         );
     }
 
-    /// PIN U1-P12 (CTAS `PARTITIONED BY`) — the PUBLIC `write_partitioned_data_files` conforms
+    /// PIN U1-P12.
     #[tokio::test]
     async fn write_partitioned_data_files_conforms_view_typed_batches() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -958,7 +958,7 @@ mod tests {
         );
     }
 
-    /// PIN P3 — MULTI-partition UNSORTED interleaved batches: the fanout splits rows per partition
+    /// PIN P3.
     #[tokio::test]
     async fn append_partitioned_multi_value_fanout_splits_files_and_roundtrips() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -1005,7 +1005,7 @@ mod tests {
         );
     }
 
-    /// PIN P4 — partition PRUNING proven at PLAN level: a scan with a partition predicate plans
+    /// PIN P4.
     #[tokio::test]
     async fn append_partitioned_scan_prunes_planned_files_to_matching_partition() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -1083,7 +1083,7 @@ mod tests {
         );
     }
 
-    /// PIN P5 — NULL identity key (nullable partition source column): Java-parity null partition
+    /// PIN P5.
     #[tokio::test]
     async fn append_partitioned_null_key_lands_null_partition_slot() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -1146,7 +1146,7 @@ mod tests {
         );
     }
 
-    /// PIN P6b — schema-mismatched batches are loud errors naming the offending column, and
+    /// PIN P6b.
     #[tokio::test]
     async fn append_schema_mismatch_errors_and_commits_nothing() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -1212,7 +1212,7 @@ mod tests {
         assert!(read_back_sorted(&catalog, &ident).await.is_empty());
     }
 
-    /// PIN P7 — EMPTY input (zero batches, then a zero-row batch) is Java parity:
+    /// PIN P7.
     #[tokio::test]
     async fn append_empty_input_commits_empty_append_snapshot_java_parity() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -1245,7 +1245,7 @@ mod tests {
         assert!(read_back_sorted(&catalog, &ident).await.is_empty());
     }
 
-    /// PIN P8a (commit seam) — append×append from ONE stale base both land: the second commit's
+    /// PIN P8a.
     #[tokio::test]
     async fn append_commit_seam_racing_append_both_land() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -1295,7 +1295,7 @@ mod tests {
         assert_eq!(snapshot_count(&catalog, &ident).await, 3);
     }
 
-    /// PIN P8a (public API) — two sequential public appends both land with distinct snapshots; the
+    /// PIN P8a.
     #[tokio::test]
     async fn append_racing_append_both_land() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -1327,7 +1327,7 @@ mod tests {
         );
     }
 
-    /// PIN P8b — a PUBLIC append's committed files are visible to the §5 SERIALIZABLE validation
+    /// PIN P8b.
     #[tokio::test]
     async fn public_append_files_trip_serializable_validation_pinned_before_append() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -1392,7 +1392,7 @@ mod tests {
         );
     }
 
-    /// PIN P9 — every append snapshot carries the SAME operation-stamp property class the MERGE
+    /// PIN P9.
     #[tokio::test]
     async fn append_snapshot_stamps_engine_operation_id() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -1437,7 +1437,7 @@ mod tests {
         );
     }
 
-    /// PIN P11 — the A1 acceptance shape END-TO-END, the downstream ask's literal acceptance:
+    /// PIN P11.
     #[tokio::test]
     async fn append_a1_acceptance_identity_partitioned_end_to_end() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -1496,7 +1496,7 @@ mod tests {
         );
     }
 
-    /// PIN P7 (Group P) — `partitioned_write_routes_by_transform_value`: an append into a
+    /// PIN P7.
     #[tokio::test]
     async fn append_bucket_partition_routes_by_fork_hash() {
         use datafusion::arrow::array::AsArray;
@@ -1524,7 +1524,7 @@ mod tests {
             "bucketed".to_string(),
         );
 
-        // Distinct keys chosen large/spread so an IDENTITY fallthrough (partition == key) is
+        // Distinct keys are spread so IDENTITY fallthrough cannot look like a bucket ordinal.
         let keys: Vec<i32> = vec![1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233];
         let payloads: Vec<String> = keys.iter().map(|k| format!("p{k}")).collect();
         let key_opts: Vec<Option<i32>> = keys.iter().map(|k| Some(*k)).collect();
@@ -1582,7 +1582,7 @@ mod tests {
         assert_eq!(read_back_sorted(&catalog, &ident).await, expected);
     }
 
-    /// PIN P13 — a non-Parquet `write.format.default` is a deterministic `NotImplemented` on the
+    /// PIN P13.
     #[tokio::test]
     async fn append_non_parquet_default_rejected() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -1610,7 +1610,7 @@ mod tests {
         assert_eq!(snapshot_count(&catalog, &ident).await, 0, "nothing lands");
     }
 
-    /// PIN P14 (F-A1-1; WG-4 rewording) — a batch carrying DUPLICATE column names is a loud error
+    /// PIN P14.
     #[tokio::test]
     async fn append_duplicate_column_batch_rejected_and_commits_nothing() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -1662,7 +1662,7 @@ mod tests {
         );
     }
 
-    /// PIN P15 (F-A1-2) — an OVERFLOWING cast is a loud error naming the offending value, and
+    /// PIN P15.
     #[tokio::test]
     async fn append_overflowing_cast_rejected_and_commits_nothing() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -1693,7 +1693,7 @@ mod tests {
         assert!(read_back_sorted(&catalog, &ident).await.is_empty());
     }
 
-    /// PIN P16 (F-A1-2) — a batch with its columns REORDERED versus the write schema and an
+    /// PIN P16.
     #[tokio::test]
     async fn append_reordered_widening_batch_conforms_by_name_and_roundtrips() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -1738,7 +1738,7 @@ mod tests {
         );
     }
 
-    /// PIN PL-1 (WG-4, BUG-007) — a source batch whose column names differ ONLY BY CASE from the
+    /// PIN PL-1.
     #[tokio::test]
     async fn append_case_insensitive_column_match_conforms_and_roundtrips() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -1784,7 +1784,7 @@ mod tests {
         );
     }
 
-    /// PIN PL-2 (WG-4, BUG-007) — a source batch with two columns colliding on one target (`key`
+    /// PIN PL-2.
     #[tokio::test]
     async fn append_case_ambiguous_columns_rejected_naming_both() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -1836,7 +1836,7 @@ mod tests {
         );
     }
 
-    /// PIN PL-3 (WG-4, BUG-007 regression) — a source batch MISSING a target column is still a
+    /// PIN PL-3.
     #[tokio::test]
     async fn append_missing_target_column_rejected_and_commits_nothing() {
         let warehouse = TempDir::new().expect("temp warehouse");
@@ -1864,12 +1864,12 @@ mod tests {
         assert!(read_back_sorted(&catalog, &ident).await.is_empty());
     }
 
-    /// PIN P17 (F-A1-5) — a TRUE mid-flight CAS rejection is resolved by the fork's commit retry:
+    /// PIN P17.
     #[tokio::test]
     async fn append_midflight_commit_conflict_retries_and_both_appends_land() {
         let warehouse = TempDir::new().expect("temp warehouse");
         let inner = memory_catalog(&warehouse).await;
-        // Fast, still-deterministic retry backoff: the conflict is injected by call count, never
+        // Retry backoff is deterministic: the conflict is injected by call count, never by timing.
         let ident = create_table(
             &inner,
             "t",
@@ -1917,7 +1917,7 @@ mod tests {
         );
     }
 
-    /// WG-2 P3 (seam) — a mid-stream source error in the STREAMING partitioned write aborts loudly
+    /// WG-2 P3.
     #[tokio::test]
     async fn write_partitioned_data_files_from_stream_aborts_on_midstream_error() {
         let warehouse = TempDir::new().expect("temp warehouse");

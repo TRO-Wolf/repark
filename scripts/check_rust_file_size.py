@@ -67,7 +67,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split calendar extractors from timezone-aware timestamp functions.",
     ),
     "crates/repark-iceberg/src/catalog/tests/catalog.rs": (
-        1845,
+        1843,
         "Memory, Glue, and S3 Tables catalog adapter tests share one battery.",
         "Split tests by catalog backend with shared helpers kept local.",
     ),

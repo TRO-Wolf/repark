@@ -11,7 +11,7 @@ use futures::Stream;
 use super::{InsertAction, InsertClause, MatchedAction, quote_ident, resolve_schema_field_name};
 use crate::write::store_assign::{self, MERGE_SPARK_CLASS};
 
-/// Project an INSERT clause onto the target schema: named columns take their VALUES expression,
+/// Project an INSERT clause onto the target schema: named columns take VALUES, others become NULL.
 pub(super) fn insert_projection(
     clause: &InsertClause,
     write_schema: &ArrowSchema,
@@ -41,7 +41,7 @@ pub(super) fn insert_projection(
             values_sql.len()
         )));
     }
-    // Case-insensitive resolution (Spark `caseSensitive=false`); project under canonical schema
+    // Case-insensitive resolution.
     let mut seen = HashSet::with_capacity(columns.len());
     let mut canonical_columns: Vec<String> = Vec::with_capacity(columns.len());
     for column in &columns {
@@ -81,7 +81,7 @@ pub(super) fn insert_projection(
     Ok(projection.join(", "))
 }
 
-/// Plan one insert-clause query, gate its PLANNED schema through ANSI store assignment, then
+/// Plan one insert-clause query, gate its schema through ANSI store assignment, then stream.
 pub(super) async fn insert_stream_checked(
     ctx: &SessionContext,
     sql: &str,
@@ -210,7 +210,7 @@ fn update_assignment_probe_sql(
     )))
 }
 
-/// CAST a validated SET expression to the target Arrow type so the rewrite `CASE` (THEN assignment
+/// CAST a validated SET expression to the target Arrow type so the rewrite `CASE` unifies.
 pub(super) fn store_assignment_then_sql(expr: &str, target_type: &DataType) -> String {
     let type_name = target_type.to_string().replace('\'', "''");
     format!("arrow_cast(({expr}), '{type_name}')")

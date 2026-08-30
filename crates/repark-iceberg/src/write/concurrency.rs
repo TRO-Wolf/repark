@@ -57,7 +57,7 @@ impl WriteConcurrency {
     }
 }
 
-// DataFusion extension: SET / options key is `repark.write.max_concurrent_files` (underscore
+// DataFusion extension: SET / options key is `repark.write.max_concurrent_files`.
 extensions_options! {
     /// RePark write-path execution knobs (session-scoped, not table properties).
     pub struct ReparkWriteConfig {

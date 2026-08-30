@@ -109,7 +109,7 @@ where
     }
 }
 
-// -------------------------------------------------------------------------------------------
+// === Merge span names ===
 
 const TEST_ROOT: &str = "merge.trace_test_root";
 
@@ -127,7 +127,7 @@ where
         if !name.starts_with("merge.") || name == TEST_ROOT {
             return;
         }
-        // Contextual parent (the common case) or an explicit one — either way the span must sit
+        // Contextual parent or an explicit one.
         let under_root = |id: &Id| {
             ctx.span(id)
                 .is_some_and(|span| span.scope().any(|s| s.name() == TEST_ROOT))
@@ -160,9 +160,9 @@ pub(crate) fn merge_span_names() -> Arc<Mutex<Vec<String>>> {
     Arc::clone(merge_span_names_slot())
 }
 
-// ------------------------------------------------------------------------------------------- The
+// === The single install point ===
 
-/// Install the shared global subscriber (both layers) exactly once; repeat calls are no-ops, and a
+/// Install the shared global subscriber exactly once.
 pub(crate) fn install() {
     static INIT: Once = Once::new();
     INIT.call_once(|| {

@@ -40,7 +40,7 @@ const fn insert_label(op: InsertOp) -> &'static str {
 
 /// Check one plan node.
 /// # Errors
-/// [`datafusion::error::DataFusionError::Plan`] from [`refuse_unless_write_store_assignable`] when
+/// Returns `Plan` from `refuse_unless_write_store_assignable` when INSERT is not assignable.
 fn refuse_unassignable_insert(plan: &LogicalPlan) -> Result<()> {
     let LogicalPlan::Dml(dml) = plan else {
         return Ok(());
@@ -90,7 +90,7 @@ mod tests {
 
     use super::InsertStoreAssignment;
 
-    /// A context with the rule installed and two empty tables: `t` (the target) and `s` (the
+    /// A context with the rule installed and two empty tables: `t` and `s`.
     fn ctx(target: DataType, source: DataType) -> SessionContext {
         let ctx = SessionContext::new();
         ctx.add_analyzer_rule(Arc::new(InsertStoreAssignment));
@@ -105,7 +105,7 @@ mod tests {
         ctx
     }
 
-    /// Plan AND execute — the analyzer runs at physical planning, so a rule that only fires on
+    /// Plan AND execute.
     async fn run(ctx: &SessionContext, sql: &str) -> Result<(), String> {
         match ctx.sql(sql).await {
             Err(error) => Err(error.to_string()),
@@ -155,7 +155,7 @@ mod tests {
         }
     }
 
-    /// **The correctness constraint.** A user-written explicit `CAST` is the user's stated intent
+    /// An explicit user `CAST` is stated intent, not a synthesized conform cast.
     #[tokio::test]
     async fn an_explicit_user_cast_in_the_select_is_not_gated() {
         let ctx = ctx(DataType::Int32, DataType::Boolean);
@@ -180,7 +180,7 @@ mod tests {
         }
     }
 
-    /// The NAMED residual, pinned so it cannot rot into a surprise: a literal `VALUES` row is
+    /// A literal `VALUES` row is conformed inside `Values`, where both casts are byte-identical.
     #[tokio::test]
     async fn a_literal_values_row_is_the_named_residual_and_is_not_gated() {
         let ctx = ctx(DataType::Int32, DataType::Boolean);

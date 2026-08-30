@@ -348,7 +348,7 @@ pub async fn refuse_mor_unpartitioned_multi_spec_dml(
         return Ok(());
     };
     let metadata = table.metadata();
-    // Case/trim tolerant: under-refuse on `Merge-on-Read` / padded values would re-open the silent
+    // Case/trim tolerant: refusing `Merge-on-Read` or padded values would reopen under-delete.
     let is_merge_on_read = metadata
         .properties()
         .get(kind.mode_property())
@@ -418,7 +418,7 @@ mod tests {
         );
     }
 
-    /// PIN T-SORT — [`sort_position_delete_pairs`] restores the Iceberg spec's ascending
+    /// PIN T-SORT.
     #[test]
     fn sorts_pairs_by_file_then_position() {
         // Scan-interleaved: files out of order, and positions out of order within a file.
@@ -439,7 +439,7 @@ mod tests {
             vec![
                 ("f1", 0),
                 ("f1", 5),
-                // Lexicographic on the PATH — "f10" < "f2" as strings, which is what the spec's
+                // Lexicographic on the PATH.
                 ("f10", 3),
                 ("f2", 0),
                 ("f2", 1),
@@ -447,7 +447,7 @@ mod tests {
         );
     }
 
-    /// PIN P2a — `PositionDeletePair` path is `Arc<str>` so sort/group clone does not re-allocate
+    /// PIN P2a.
     #[test]
     fn position_delete_pair_path_is_arc_shared() {
         let path: Arc<str> = Arc::from("s3://bucket/data/file-0001.parquet");
@@ -462,7 +462,7 @@ mod tests {
         assert_eq!(group[1].1, 1);
     }
 
-    /// PIN M16 — a spec-evolved unpartitioned table (spec 0 partitioned → spec 1 unpartitioned)
+    /// PIN M16 — a spec-evolved unpartitioned table writes data under spec 1.
     #[tokio::test]
     async fn evolved_unpartitioned_spec_position_delete_claims_resolved_spec_id() {
         let warehouse = tempfile::TempDir::new().expect("temp warehouse");

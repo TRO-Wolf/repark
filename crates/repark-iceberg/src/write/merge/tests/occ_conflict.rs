@@ -1,4 +1,4 @@
-//! M19/M20 OCC conflict batteries B/C/E/F/G/H/I (M14 abort-path cleanup lives in the commit
+//! M19/M20 OCC conflict batteries B/C/E/F/G/H/I.
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -22,7 +22,7 @@ use super::super::{
     commit_row_delta_kind, write_data_files,
 };
 
-/// An in-memory Iceberg catalog (local-FS warehouse, format-version 2 by default) with a `sales`
+/// An in-memory Iceberg catalog with a `sales` namespace and one UNPARTITIONED table `t`.
 async fn setup(warehouse: &TempDir) -> (Arc<dyn Catalog>, TableIdent) {
     let path = warehouse
         .path()
@@ -63,7 +63,7 @@ async fn setup(warehouse: &TempDir) -> (Arc<dyn Catalog>, TableIdent) {
     (catalog, TableIdent::new(namespace, "t".to_string()))
 }
 
-/// Partitioned twin of [`setup`]: identity on `part`, so two files can live in different
+/// Partitioned twin of `setup`: identity on `part`, so two files can live in different partitions.
 async fn setup_partitioned(warehouse: &TempDir) -> (Arc<dyn Catalog>, TableIdent) {
     let path = warehouse
         .path()
@@ -458,7 +458,7 @@ async fn mor_merge_merge_race(winner_insert: &str, loser_insert: &str) {
     );
 }
 
-/// Battery C — MERGE↔MERGE merge-on-read, both commits through the real [`commit_row_delta`] arm
+/// Battery C — MERGE↔MERGE merge-on-read, both commits through the real [`commit_row_delta`] arm.
 #[tokio::test]
 async fn commit_row_delta_merge_merge_race_first_wins() {
     mor_merge_merge_race("test/mor-winner.parquet", "test/mor-loser.parquet").await;
@@ -608,7 +608,7 @@ async fn commit_empty_table_none_pin_from_root_walk_rejects_concurrent_insert() 
 
 // BATTERY G — partitioned target + AlwaysTrue (M15 over-rejection).
 
-/// Battery G / M15 — serializable MERGE + `AlwaysTrue` DOES trip on a concurrent append in a
+/// Battery G / M15.
 #[tokio::test]
 async fn commit_serializable_merge_rejects_concurrent_append_in_a_different_partition_m15() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -714,7 +714,7 @@ async fn merge_insert_only_cow_stamps_append_m20() {
     );
 }
 
-/// Battery H / M20 — insert-only merge-on-read stamps `overwrite` (Java 1.10.0
+/// Battery H / M20 — insert-only merge-on-read stamps `overwrite`.
 #[tokio::test]
 async fn merge_insert_only_mor_stamps_overwrite_m20() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -760,7 +760,7 @@ async fn merge_mixed_cow_stamps_overwrite_m20() {
     );
 }
 
-/// Battery H / M20 — mixed merge-on-read (position deletes + new data) stamps `overwrite` and
+/// Battery H / M20.
 #[tokio::test]
 async fn merge_mixed_mor_stamps_overwrite_m20() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -816,7 +816,7 @@ async fn merge_delete_only_mor_stamps_delete_m20() {
 
 // BATTERY I / M14 — rejected commit abort-deletes written files (design A).
 
-/// Battery I / M14 — after a rejected copy-on-write commit the staged data files are gone from the
+/// Battery I / M14.
 #[tokio::test]
 async fn rejected_cow_commit_files_are_removed_m14() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -864,7 +864,7 @@ async fn rejected_cow_commit_files_are_removed_m14() {
     }
 }
 
-/// Battery I / M14 — merge-on-read writes position-delete files BEFORE `tx.commit`; a rejected row
+/// Battery I / M14.
 #[tokio::test]
 async fn rejected_row_delta_files_are_removed_m14() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -896,7 +896,7 @@ async fn rejected_row_delta_files_are_removed_m14() {
     );
 }
 
-/// Battery I / M14 success path — a successful copy-on-write overwrite commit leaves the newly
+/// Battery I / M14 success path.
 #[tokio::test]
 async fn successful_cow_overwrite_commit_leaves_written_data_files_m14() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -932,7 +932,7 @@ async fn successful_cow_overwrite_commit_leaves_written_data_files_m14() {
     }
 }
 
-/// Battery I / M14 success path — a successful row-delta commit leaves the newly written
+/// Battery I / M14 success path.
 #[tokio::test]
 async fn successful_row_delta_leaves_written_delete_files_m14() {
     let warehouse = TempDir::new().expect("temp warehouse");

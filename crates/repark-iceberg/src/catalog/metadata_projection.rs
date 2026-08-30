@@ -129,7 +129,7 @@ pub struct MetadataProjectionSchemaProvider {
 }
 
 impl MetadataProjectionSchemaProvider {
-    /// Wrap `inner` so metadata-table lookups return [`ProjectingMetadataTableProvider`] and
+    /// Wrap `inner` so metadata lookups project and synthesized names stay out of `table_names`.
     #[must_use]
     pub fn wrap(inner: Arc<dyn SchemaProvider>) -> Arc<dyn SchemaProvider> {
         Arc::new(Self { inner })
@@ -149,7 +149,7 @@ impl SchemaProvider for MetadataProjectionSchemaProvider {
 
     async fn table(&self, name: &str) -> Result<Option<Arc<dyn TableProvider>>> {
         let resolved = self.inner.table(name).await?;
-        // `'$' in name` is a NAME heuristic, not a provider-type check (the fork's metadata form
+        // `'$' in name` is a NAME heuristic, not a provider-type check.
         Ok(match resolved {
             Some(provider) if name.contains('$') => {
                 Some(Arc::new(ProjectingMetadataTableProvider::new(provider)))
@@ -230,7 +230,7 @@ mod tests {
         }
     }
 
-    /// ADR-0006's whole claim, at the decorator: a namespace of two base tables enumerates as
+    /// ADR-0006: two base tables enumerate as those two names, not a metadata cross-product.
     #[test]
     fn table_names_hides_the_forks_synthesized_metadata_names() {
         let inner: Arc<dyn SchemaProvider> =
@@ -251,7 +251,7 @@ mod tests {
         );
     }
 
-    /// The other half of the Trino shape, and the reason this is a listing decision rather than a
+    /// A hidden metadata-table name is still addressable; listing hides it, lookup does not.
     #[tokio::test]
     async fn a_hidden_metadata_table_is_still_resolvable_by_name() {
         let wrapped =
@@ -317,7 +317,7 @@ mod tests {
         );
     }
 
-    /// Vocabulary liveness: the filter must cover **every** type the fork synthesizes, including
+    /// The filter must cover every metadata-table type the fork synthesizes, including new ones.
     #[test]
     fn every_fork_metadata_table_type_is_filtered() {
         let inner: Arc<dyn SchemaProvider> = Arc::new(ForkShapedSchemaProvider::new(&["orders"]));
@@ -389,7 +389,7 @@ mod tests {
         assert!(err.to_string().contains("out of range"), "got: {err}");
     }
 
-    /// An EMPTY projection over real batches preserves `num_rows` on the zero-column output — the
+    /// An EMPTY projection over real batches preserves `num_rows` on the zero-column output.
     #[tokio::test]
     async fn empty_projection_preserves_row_count_over_real_batches() {
         use datafusion::arrow::array::{Int64Array, RecordBatch, StringArray};
@@ -424,7 +424,7 @@ mod tests {
         );
     }
 
-    /// Projection indices are logical-schema-relative but bind by NAME into the scan's physical
+    /// Projection indices bind by name into the scan schema so reorder still yields the right data.
     #[tokio::test]
     async fn reordered_scan_schema_still_binds_projected_columns_by_name() {
         use datafusion::arrow::array::{Array, Int64Array, RecordBatch, StringArray};

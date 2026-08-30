@@ -12,12 +12,12 @@ use tempfile::TempDir;
 use super::super::builders::memory_catalog;
 use super::super::provider::NamespaceScopedCatalog;
 
-// === Boxed future alias matching provider.rs (desugared Catalog methods)
+// === Boxed future alias matching provider.rs (desugared Catalog methods) =====================.
 
 type BoxedCatalogFuture<'a, T> =
     std::pin::Pin<Box<dyn std::future::Future<Output = iceberg::Result<T>> + Send + 'a>>;
 
-// === Spy catalog
+// === Spy catalog =============================================================================.
 
 /// Counts selected `Catalog` methods while fully forwarding to `inner`.
 #[derive(Debug)]
@@ -269,7 +269,7 @@ impl Catalog for SpyCatalog {
     }
 }
 
-// === Fixtures
+// === Fixtures =================================================================================.
 
 fn sample_schema() -> Schema {
     Schema::builder()
@@ -352,7 +352,7 @@ async fn name_forwards_inner_value_unchanged() {
     );
 }
 
-/// Stated omission: `update_namespace_properties` composes from forwarded `get_namespace` +
+/// `update_namespace_properties` composes from forwarded `get_namespace` plus `update_namespace`.
 #[tokio::test]
 async fn update_namespace_properties_composes_via_forwarded_methods() {
     let warehouse = TempDir::new().expect("temp warehouse");

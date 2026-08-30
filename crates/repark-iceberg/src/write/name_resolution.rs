@@ -9,7 +9,7 @@ pub(crate) enum SourceMatch {
     Missing,
     /// Exactly one source column resolves to the target — its index into the source name list.
     Unique(usize),
-    /// More than one source column resolves to the target (Spark's `matched.length > 1`); carries
+    /// More than one source column resolves to the target.
     Ambiguous(Vec<String>),
 }
 
@@ -37,7 +37,7 @@ impl<'a> CaseInsensitiveColumnIndex<'a> {
         }
     }
 
-    /// Resolve one target column name against the indexed source columns (Spark's per-target
+    /// Resolve one target column name against the indexed source columns.
     pub(crate) fn resolve(&self, target_name: &str) -> SourceMatch {
         match self
             .indices_by_lowercase
@@ -60,7 +60,7 @@ impl<'a> CaseInsensitiveColumnIndex<'a> {
     }
 }
 
-/// Shared resolver pins — the case/collision decision that both by-name conform surfaces depend on
+/// Shared resolver pins for the case/collision decision both by-name conform surfaces depend on.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -74,7 +74,7 @@ mod tests {
         assert_eq!(index.source_name(0), "key");
     }
 
-    /// PIN PL-8b — a differently-cased source name resolves to the target (Spark
+    /// PIN PL-8b.
     #[test]
     fn differently_cased_name_resolves_case_insensitively() {
         let index = CaseInsensitiveColumnIndex::new(["KEY", "Payload"]);
@@ -83,7 +83,7 @@ mod tests {
         assert_eq!(index.source_name(0), "KEY");
     }
 
-    /// PIN PL-8c — two source columns colliding on one target (case-differing OR exact duplicate)
+    /// PIN PL-8c.
     #[test]
     fn colliding_source_columns_are_ambiguous_naming_all() {
         let case_collision = CaseInsensitiveColumnIndex::new(["id", "ID"]);

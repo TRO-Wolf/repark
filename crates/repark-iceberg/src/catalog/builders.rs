@@ -22,7 +22,7 @@ use crate::catalog::location::storage_factory_for_location;
     fields(warehouse = %warehouse)
 )]
 pub async fn memory_catalog(warehouse: &str) -> Result<Arc<dyn Catalog>> {
-    // Use the shared scheme selector so local and object-store warehouses choose the correct
+    // Use the shared scheme selector so warehouses pick the correct FileIO backend.
     let catalog = MemoryCatalogBuilder::default()
         .with_storage_factory(storage_factory_for_location(warehouse)?)
         .load(
@@ -94,7 +94,7 @@ pub(crate) fn prop_key_names<S: BuildHasher>(props: &HashMap<String, String, S>)
     keys.join(",")
 }
 
-/// Reject a missing or blank required catalog property with a clear plan error that names the key,
+/// Reject a missing or blank required catalog property with a plan error that names the key.
 pub(crate) fn require_non_empty_prop<S: BuildHasher>(
     props: &HashMap<String, String, S>,
     key: &str,
@@ -108,14 +108,14 @@ pub(crate) fn require_non_empty_prop<S: BuildHasher>(
     }
 }
 
-/// Copy a caller's property map (any hasher) into the default-hasher `HashMap` the fork's
+/// Copy a caller's property map into the default-hasher `HashMap` `CatalogBuilder::load` consumes.
 pub(crate) fn clone_props<S: BuildHasher>(
     props: &HashMap<String, String, S>,
 ) -> HashMap<String, String> {
     props.iter().map(|(k, v)| (k.clone(), v.clone())).collect()
 }
 
-/// Fold an iceberg error into a DataFusion error so the session layer can carry it as one engine
+/// Fold an iceberg error into a DataFusion error so the session carries one engine error type.
 pub fn iceberg_to_datafusion(err: iceberg::Error) -> DataFusionError {
     DataFusionError::External(Box::new(err))
 }

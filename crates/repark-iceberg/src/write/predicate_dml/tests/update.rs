@@ -632,7 +632,7 @@ async fn collect_sorted_ids(ctx: &SessionContext, sql: &str) -> Vec<Option<i32>>
     ids
 }
 
-/// A4: identity SELECT remaining set for correlated IN equals correlated EXISTS, matching live
+/// A4: identity SELECT remaining set for correlated IN equals correlated EXISTS on live Spark.
 #[tokio::test]
 async fn identity_select_correlated_in_matches_exists_and_spark_412() {
     let cases = [
@@ -848,7 +848,7 @@ async fn fast_append_files(
     (table, snapshot_id)
 }
 
-/// Isolation policy thread (M19): `write.update.isolation-level = serializable` (default) rejects
+/// Isolation M19: serializable (default) rejects a concurrent append on identity-UPDATE COW.
 #[tokio::test]
 async fn update_isolation_serializable_rejects_concurrent_append() {
     use datafusion::error::DataFusionError;
@@ -900,7 +900,7 @@ async fn update_isolation_serializable_rejects_concurrent_append() {
     );
 }
 
-/// Isolation policy thread (M19): `write.update.isolation-level = SNAPSHOT` (case-folded) commits
+/// Isolation M19: SNAPSHOT isolation (case-folded) commits through the same concurrent append.
 #[tokio::test]
 async fn update_isolation_snapshot_commits_through_concurrent_append() {
     let warehouse = TempDir::new().expect("temp warehouse");

@@ -6,7 +6,7 @@ pub mod concurrency;
 pub mod file_scoped_rewrite;
 /// Shared Spark/DF `quote_ident` + path-escape needles (CQ-006/007).
 pub mod idents;
-/// WI-2: the plain-INSERT store-assignment gate, as an `AnalyzerRule` over
+/// WI-2: the plain-INSERT store-assignment gate, as an `AnalyzerRule` over `LogicalPlan::Dml`.
 pub mod insert_gate;
 pub mod merge;
 mod name_resolution;
@@ -20,7 +20,7 @@ pub mod scan_concurrency;
 pub mod scan_prune;
 /// Product snapshot-ref helpers (CREATE/DROP BRANCH|TAG) + test-support seam.
 pub mod snapshot_refs;
-/// The ANSI store-assignment matrix (`Cast.canANSIStoreAssign`) — ONE home for MERGE and the
+/// The ANSI store-assignment matrix — ONE home for MERGE and the non-MERGE insert/append lowerings.
 pub(crate) mod store_assign;
 /// Test-support-only snapshot-ref helpers (`_testing_create_ref`).
 pub mod testing_support;

@@ -15,7 +15,7 @@ use iceberg::spec::Datum;
 use crate::write::idents::quote_ident_spark;
 use crate::write::name_resolution::{CaseInsensitiveColumnIndex, SourceMatch};
 
-/// Session conf: `repark.merge.scan-pruning` — `true` (default) enables residual scan bounds;
+/// Session conf: `repark.merge.scan-pruning`.
 pub const SCAN_PRUNING_KEY: &str = "repark.merge.scan-pruning";
 
 /// One bare-column equality extracted from ON: target column name (unqualified).
@@ -46,7 +46,7 @@ pub fn bare_equalities_from_on(
         if trimmed.is_empty() {
             continue;
         }
-        // A non-bare conjunct contributes no bounds but does not invalidate the others (slate
+        // A non-bare conjunct contributes no bounds but does not invalidate the others.
         if let Some(equality) = parse_bare_equality(trimmed, target_alias, source_alias) {
             out.push(equality);
         }
@@ -206,7 +206,7 @@ fn parse_column_ref(raw: &str, target_alias: &str, source_alias: &str) -> Option
                 None
             }
         }
-        // Bare name (ambiguous — not a proven bare equality under both aliases) or deeper
+        // Bare name or deeper qualification: skip.
         _ => None,
     }
 }

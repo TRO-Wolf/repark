@@ -13,7 +13,7 @@ use tempfile::TempDir;
 
 use super::super::*;
 
-/// A [`PartitionStream`] over a scripted batch list that counts how many batches it has PRODUCED
+/// A [`PartitionStream`] over a scripted batch list that counts how many batches it has PRODUCED.
 #[derive(Debug)]
 struct ScriptedTargetStream {
     schema: SchemaRef,
@@ -68,7 +68,7 @@ fn count_value(rows: &[RecordBatch]) -> i64 {
         .sum()
 }
 
-/// PIN K-MEM (OTH-001/SAF-001) — `register_streaming_target` wires a LAZY, re-scannable
+/// PIN K-MEM.
 #[tokio::test]
 async fn register_streaming_target_is_lazy_and_rescannable() {
     let produced = Arc::new(AtomicUsize::new(0));
@@ -90,7 +90,7 @@ async fn register_streaming_target_is_lazy_and_rescannable() {
         produced: Arc::clone(&produced),
     });
     let name = register_streaming_target(&ctx, Arc::clone(&schema), source).unwrap();
-    // Structural bind (review 2026-07-23, K-S2): the registered provider MUST be a StreamingTable,
+    // Structural bind: the registered provider MUST be a StreamingTable, never a MemTable.
     let provider = ctx.table_provider(name.as_str()).await.unwrap();
     assert!(
         provider.as_ref().is::<StreamingTable>(),
@@ -164,7 +164,7 @@ async fn create_target(catalog: &Arc<dyn Catalog>, name: &str) -> TableIdent {
     create_target_with(catalog, name, HashMap::new()).await
 }
 
-/// [`create_target`] with table properties — the seam the merge-on-read pins use to set
+/// [`create_target`] with table properties.
 async fn create_target_with(
     catalog: &Arc<dyn Catalog>,
     name: &str,
@@ -206,7 +206,7 @@ fn consumer_batch(ids: &[i32], vs: &[Option<&str>]) -> RecordBatch {
     .expect("consumer batch builds")
 }
 
-/// Append `batch` as its OWN data file (one `fast_append` commit) — separate appends produce
+/// Append `batch` as its OWN data file.
 async fn append_file(catalog: &Arc<dyn Catalog>, ident: &TableIdent, batch: RecordBatch) {
     crate::write::append::append(catalog, ident, vec![batch])
         .await
@@ -295,7 +295,7 @@ fn insert_values(cols: &[&str], vals: &[&str]) -> InsertClause {
     }
 }
 
-/// PIN K-IDENTITY (NOVEL target≫source, multi-file) — a streamed, RE-SCANNED target keeps `(_file, _pos)`
+/// PIN K-IDENTITY: a streamed re-scanned target keeps `(_file, _pos)` identity across data files.
 #[tokio::test]
 async fn merge_streams_multi_file_target_identity_holds_across_files() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -342,7 +342,7 @@ async fn merge_streams_multi_file_target_identity_holds_across_files() {
 /// PERF-01 pin: COW Stage A discovery retains **O(files)** path strings, not O(matched rows).
 #[tokio::test]
 async fn cow_discovery_path_allocs_scale_with_files_not_matched_rows() {
-    // --- n matched rows, 1 file ----------------------------------------------------------
+    // --- n matched rows, 1 file ----------------------------------------------------------.
     let counter_small = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
     let warehouse = TempDir::new().expect("temp warehouse");
     let catalog = memory_catalog(&warehouse).await;
@@ -373,7 +373,7 @@ async fn cow_discovery_path_allocs_scale_with_files_not_matched_rows() {
         "one data file → exactly one path String retained (got {allocs_small})"
     );
 
-    // --- 10× rows, still 1 file ----------------------------------------------------------
+    // --- 10× rows, still 1 file ----------------------------------------------------------.
     let counter_large = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
     let warehouse2 = TempDir::new().expect("temp warehouse 2");
     let catalog2 = memory_catalog(&warehouse2).await;
@@ -420,7 +420,7 @@ async fn cow_discovery_path_allocs_scale_with_files_not_matched_rows() {
     assert_eq!(rows[ids_large.len() - 1], (n_large, Some("A".to_string())));
 }
 
-/// R-MERGE-ONEPASS Stage B + PERF-19 pin: `MoR` upsert (MATCHED UPDATE + NOT MATCHED INSERT)
+/// `MoR` upsert issues two logical target-SQL consumptions: `matched_work` plus insert anti-join.
 #[tokio::test]
 async fn mor_upsert_target_scan_pass_count_is_two() {
     let counter = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
@@ -468,7 +468,7 @@ async fn mor_upsert_target_scan_pass_count_is_two() {
     );
 }
 
-/// PERF-04 pin: COW equi-key upsert with default scan-pruning (residual on) + default file-scoped
+/// PERF-04: COW equi-key upsert with default pruning and file-scoped rewrite keeps survivors.
 #[tokio::test]
 async fn cow_equi_key_residual_keeps_colocated_survivors() {
     let push_counter = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
@@ -519,7 +519,7 @@ async fn cow_equi_key_residual_keeps_colocated_survivors() {
     );
 }
 
-/// PERF-04 pin: `MoR` equi-key upsert under residual still updates + inserts correctly (unmatched
+/// PERF-04 pin: `MoR` equi-key upsert under residual still updates + inserts correctly.
 #[tokio::test]
 async fn mor_equi_key_residual_upsert_correct() {
     let push_counter = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
@@ -566,7 +566,7 @@ async fn mor_equi_key_residual_upsert_correct() {
     );
 }
 
-/// PERF-04 mode-gate pin: COW + `file-scoped-rewrite=false` must **not** push residual
+/// PERF-04: COW with `file-scoped-rewrite=false` must not push residual.
 #[tokio::test]
 async fn cow_file_scoped_off_does_not_push_residual() {
     let push_counter = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
@@ -605,7 +605,7 @@ async fn cow_file_scoped_off_does_not_push_residual() {
     );
 }
 
-/// PERF-04 conf pin: `repark.merge.scan-pruning=false` must not push residual even for equi Int32
+/// PERF-04: `repark.merge.scan-pruning=false` must not push residual even for an equi Int32 ON.
 #[tokio::test]
 async fn scan_pruning_false_does_not_push_residual() {
     let push_counter = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
@@ -644,7 +644,7 @@ async fn scan_pruning_false_does_not_push_residual() {
     );
 }
 
-/// M1 scan-level pin: Utf8 source keys vs Int32 target must **not** push residual (lexicographic
+/// M1 scan-level pin: Utf8 source keys vs Int32 target must **not** push residual.
 #[tokio::test]
 async fn utf8_source_int32_target_does_not_push_residual() {
     let push_counter = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
@@ -697,7 +697,7 @@ async fn utf8_source_int32_target_does_not_push_residual() {
     );
 }
 
-/// R-MERGE-FILE-SCAN pin: multi-file COW where only file B is affected — survivors co-located in B
+/// R-MERGE-FILE-SCAN pin: multi-file COW where only file B is affected.
 #[tokio::test]
 async fn cow_file_scoped_rewrite_opens_only_affected_files_and_keeps_survivors() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -718,7 +718,7 @@ async fn cow_file_scoped_rewrite_opens_only_affected_files_and_keeps_survivors()
     .await;
     append_file(&catalog, &ident, consumer_batch(&[20], &[Some("z")])).await;
 
-    // --- file-scoped path (default conf true) -------------------------------------------
+    // --- file-scoped path (default conf true) -------------------------------------------.
     let ctx = SessionContext::new();
     register_source(&ctx, &[10], &[Some("X")]);
     let spec = merge_spec("scoped", vec![update_set("v", "s.v")], vec![]);
@@ -737,7 +737,7 @@ async fn cow_file_scoped_rewrite_opens_only_affected_files_and_keeps_survivors()
         ],
     );
 
-    // --- escape hatch: conf false still correct -----------------------------------------
+    // --- escape hatch: conf false still correct -----------------------------------------.
     let warehouse2 = TempDir::new().expect("temp warehouse 2");
     let catalog2 = memory_catalog(&warehouse2).await;
     let ident2 = create_target(&catalog2, "scoped2").await;
@@ -787,7 +787,7 @@ async fn multi_clause_first_match_survivors_cow_and_mor() {
         (3, Some("old".to_string())),    // unmatched survivor in same file
     ];
 
-    // --- COW -----------------------------------------------------------------------------
+    // --- COW -----------------------------------------------------------------------------.
     let warehouse_cow = TempDir::new().expect("temp warehouse cow");
     let catalog_cow = memory_catalog(&warehouse_cow).await;
     let ident_cow = create_target_with(&catalog_cow, "fm_cow", cow_props()).await;
@@ -828,7 +828,7 @@ async fn multi_clause_first_match_survivors_cow_and_mor() {
         "COW first-match + survivor rows"
     );
 
-    // --- MoR twin ------------------------------------------------------------------------
+    // --- MoR twin ------------------------------------------------------------------------.
     let warehouse_mor = TempDir::new().expect("temp warehouse mor");
     let catalog_mor = memory_catalog(&warehouse_mor).await;
     let ident_mor = create_target_with(&catalog_mor, "fm_mor", mor_props()).await;
@@ -886,7 +886,7 @@ async fn multi_clause_null_predicate_first_match_3vl_cow_and_mor() {
             },
         },
     ];
-    // id=1 flag=NULL → clause0 UNKNOWN → clause1 'second' id=2 flag=1 → clause0 'first' id=3
+    // id=1 flag=NULL takes clause1; id=2 flag=1 takes clause0; id=3 is an unmatched survivor.
     let expected = vec![
         (1, Some("second".to_string())),
         (2, Some("first".to_string())),
@@ -1053,7 +1053,7 @@ async fn multi_not_matched_with_partial_target_match() {
     );
 }
 
-/// Two sequential COW MERGEs on one `SessionContext` with file-scoped off (path `MemTable`
+/// Two sequential COW MERGEs on one `SessionContext` with file-scoped off.
 #[tokio::test]
 async fn sequential_cow_path_semijoin_same_session_ctx() {
     let warehouse = TempDir::new().expect("temp warehouse seq cow");
@@ -1093,7 +1093,7 @@ fn repark_write_scan_prune_file_scoped_off() -> datafusion::prelude::SessionConf
     )
 }
 
-/// PIN K-CARDINALITY (row-identity mutation target M-K-ID) — the cardinality check groups on
+/// PIN K-CARDINALITY: the cardinality check groups on `(_file, _pos)`, not `_file` alone.
 #[tokio::test]
 async fn merge_cardinality_uses_file_and_pos_not_file_alone() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -1131,7 +1131,7 @@ async fn merge_cardinality_uses_file_and_pos_not_file_alone() {
     );
 }
 
-/// PIN K-EMPTY — a target with NO snapshot streams as an empty relation: every source row is NOT
+/// PIN K-EMPTY.
 #[tokio::test]
 async fn merge_empty_target_streams_all_inserts() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -1156,7 +1156,7 @@ async fn merge_empty_target_streams_all_inserts() {
 
 // Group R — MERGE INTO a NON-identity transform-partitioned table (the gate `reject_unsupported`
 
-/// Create `sales.<name>` with `id int` (required) + `v string` (optional), partitioned by
+/// Create `sales.<name>` with `id int` + `v string`, partitioned by `bucket`.
 async fn create_bucket_target(
     catalog: &Arc<dyn Catalog>,
     name: &str,
@@ -1165,7 +1165,7 @@ async fn create_bucket_target(
     create_bucket_target_with(catalog, name, num_buckets, HashMap::new()).await
 }
 
-/// [`create_bucket_target`] with table properties — the seam the Group Y merge-on-read × transform
+/// [`create_bucket_target`] with table properties.
 async fn create_bucket_target_with(
     catalog: &Arc<dyn Catalog>,
     name: &str,
@@ -1198,7 +1198,7 @@ async fn create_bucket_target_with(
     TableIdent::new(NamespaceIdent::new("sales".to_string()), name.to_string())
 }
 
-/// The live (Added/Existing) DATA-file entries in the current snapshot's manifests — the
+/// The live DATA-file entries in the current snapshot's manifests.
 async fn live_data_files(catalog: &Arc<dyn Catalog>, ident: &TableIdent) -> Vec<DataFile> {
     let table = catalog.load_table(ident).await.expect("load table");
     let metadata = table.metadata();
@@ -1227,7 +1227,7 @@ async fn live_data_files(catalog: &Arc<dyn Catalog>, ident: &TableIdent) -> Vec<
     files
 }
 
-/// The single bucket-ordinal partition slot of a `DataFile` (the tables here partition by one
+/// The single bucket-ordinal partition slot of a `DataFile`.
 fn bucket_slot(file: &DataFile) -> i32 {
     use iceberg::spec::{Literal, PrimitiveLiteral};
     match file.partition().fields().first().cloned().flatten() {
@@ -1236,7 +1236,7 @@ fn bucket_slot(file: &DataFile) -> i32 {
     }
 }
 
-/// The fork's OWN `Transform::Bucket(n)` ordinal for a key — the self-oracle: the engine must
+/// The fork's OWN `Transform::Bucket` ordinal for a key.
 fn fork_bucket(n: u32, key: i32) -> i32 {
     use datafusion::arrow::array::AsArray;
     use datafusion::arrow::datatypes::Int32Type;
@@ -1249,7 +1249,7 @@ fn fork_bucket(n: u32, key: i32) -> i32 {
     out.as_primitive::<Int32Type>().value(0)
 }
 
-/// PIN R1 — MERGE into a `bucket(4, id)` table: a matched UPDATE (rewrite arm) and a not-matched
+/// PIN R1.
 #[tokio::test]
 async fn merge_bucket_partitioned_routes_by_fork_hash() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -1285,7 +1285,7 @@ async fn merge_bucket_partitioned_routes_by_fork_hash() {
         ],
     );
 
-    // Manifest-level: total records per bucket slot equal the fork's own Bucket(4) routing of the
+    // Manifest totals per bucket equal the fork's Bucket(4) routing of the final key set {1,2,3,8}.
     let mut expected: HashMap<i32, u64> = HashMap::new();
     for key in [1, 2, 3, 8] {
         *expected.entry(fork_bucket(4, key)).or_insert(0) += 1;
@@ -1305,7 +1305,7 @@ async fn merge_bucket_partitioned_routes_by_fork_hash() {
     );
 }
 
-/// PIN R2 (the load-bearing partition-move pin) — a matched UPDATE that CHANGES the partition
+/// PIN R2.
 #[tokio::test]
 async fn merge_bucket_partition_key_changing_update_reroutes_survivor() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -1375,12 +1375,12 @@ fn mor_props() -> HashMap<String, String> {
     ])
 }
 
-/// Table properties selecting copy-on-write EXPLICITLY (the T4 differential's control arm — stated
+/// Table properties selecting copy-on-write EXPLICITLY.
 fn cow_props() -> HashMap<String, String> {
     HashMap::from([(MERGE_MODE_PROP.to_string(), "copy-on-write".to_string())])
 }
 
-/// The live (Added/Existing) DELETE-file entries in the current snapshot's DELETE manifests — the
+/// The live DELETE-file entries in the current snapshot's DELETE manifests.
 async fn live_delete_files(catalog: &Arc<dyn Catalog>, ident: &TableIdent) -> Vec<DataFile> {
     let table = catalog.load_table(ident).await.expect("load table");
     let metadata = table.metadata();
@@ -1420,7 +1420,7 @@ async fn live_data_file_paths(catalog: &Arc<dyn Catalog>, ident: &TableIdent) ->
     paths
 }
 
-/// The Arrow SCHEMA the read-back scan produces — the TYPE half of the T4 differential (rule: a
+/// The Arrow SCHEMA the read-back scan produces — the TYPE half of the T4 differential.
 async fn read_back_schema(catalog: &Arc<dyn Catalog>, ident: &TableIdent) -> SchemaRef {
     let table = catalog.load_table(ident).await.expect("load table");
     let batches: Vec<RecordBatch> = table
@@ -1448,12 +1448,12 @@ fn delete_matched() -> MatchedClause {
     }
 }
 
-/// R-MERGE-TRACING pin: on a local merge-on-read MERGE, all five phase spans fire and
+/// R-MERGE-TRACING: on a local `MoR` MERGE, all five phase spans fire and `merge.commit` is last.
 #[tokio::test]
 async fn mor_merge_emits_five_phase_spans_with_commit_last() {
     use tracing::Instrument;
 
-    // v1 installed THIS test's own process-global subscriber (a per-binary invariant its `expect`
+    // v1 installed THIS test's own process-global subscriber.
     let recorded = crate::tests::tracing::merge_span_names();
     recorded.lock().expect("span name lock").clear();
 
@@ -1502,7 +1502,7 @@ async fn mor_merge_emits_five_phase_spans_with_commit_last() {
     );
 }
 
-/// PIN T1 (matched DELETE, merge-on-read) — the deleted row vanishes from the next scan, a
+/// PIN T1.
 #[tokio::test]
 async fn mor_matched_delete_position_deletes_row_and_leaves_data_files() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -1553,7 +1553,7 @@ async fn mor_matched_delete_position_deletes_row_and_leaves_data_files() {
     );
 }
 
-/// PIN QA-176 (fork #176 rider, repin `14921e78`) — position deletes scope to the data file they
+/// PIN QA-176 — position deletes scope to the data file they name, across a MULTI-file scan.
 #[tokio::test]
 async fn mor_deletes_scope_to_their_own_data_file_across_a_multi_file_scan() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -1577,7 +1577,7 @@ async fn mor_deletes_scope_to_their_own_data_file_across_a_multi_file_scan() {
         "two data files with aligned ordinal positions"
     );
 
-    // ONE MERGE deleting the pos-1 row of BOTH files: the committed position-delete file(s) carry
+    // One MERGE deleting pos-1 of both files commits position-deletes that span two data files.
     let ctx = SessionContext::new();
     register_source(&ctx, &[20, 50], &[Some("ignored"), Some("ignored")]);
     execute_merge(
@@ -1606,7 +1606,7 @@ async fn mor_deletes_scope_to_their_own_data_file_across_a_multi_file_scan() {
     );
 }
 
-/// PIN T2 (matched UPDATE, merge-on-read) — an update is delete-old + insert-new: the OLD row's
+/// PIN T2.
 #[tokio::test]
 async fn mor_matched_update_deletes_old_row_and_writes_new_values() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -1647,7 +1647,7 @@ async fn mor_matched_update_deletes_old_row_and_writes_new_values() {
     assert_eq!(deletes[0].record_count(), 1, "exactly the one updated row");
 }
 
-/// PIN T3 (not-matched INSERT, merge-on-read) — a pure insert writes a new data file and NO delete
+/// PIN T3 — a pure insert writes a new data file and NO delete file at all.
 #[tokio::test]
 async fn mor_not_matched_insert_writes_data_file_and_no_delete_file() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -1691,7 +1691,7 @@ async fn mor_and_cow_merges_are_scan_equivalent_but_physically_different() {
     let mor = create_target_with(&catalog, "diff_mor", mor_props()).await;
     let cow = create_target_with(&catalog, "diff_cow", cow_props()).await;
 
-    // Same two data files in each target: id=1 is deleted, id=2 updated, id=3 untouched (and lives
+    // Same two data files: id=1 deleted, id=2 updated, id=3 untouched, id=9 inserted.
     for ident in [&mor, &cow] {
         append_file(
             &catalog,
@@ -1726,7 +1726,7 @@ async fn mor_and_cow_merges_are_scan_equivalent_but_physically_different() {
             .unwrap_or_else(|error| panic!("{name} MERGE commits: {error}"));
     }
 
-    // --- scan-equivalence: value AND type ---
+    // --- scan-equivalence: value AND type ---.
     let expected = vec![
         (2, Some("NEW".to_string())), // first-match-wins: clause 2 (UPDATE) applied
         (3, Some("keep".to_string())), // untouched sibling of the deleted row
@@ -1745,7 +1745,7 @@ async fn mor_and_cow_merges_are_scan_equivalent_but_physically_different() {
         "scan-equivalence is value AND type — the Arrow schemas must match too"
     );
 
-    // --- physical divergence ---
+    // --- physical divergence ---.
     let mor_data_after = live_data_file_paths(&catalog, &mor).await;
     assert!(
         mor_data_before
@@ -1771,7 +1771,7 @@ async fn mor_and_cow_merges_are_scan_equivalent_but_physically_different() {
     );
 }
 
-/// Create `sales.<name>` with `id int` + `v string`, IDENTITY-partitioned on `id`, with the given
+/// Create `sales.<name>` with `id int` plus `v string`, IDENTITY-partitioned on `id`.
 async fn create_identity_target(
     catalog: &Arc<dyn Catalog>,
     name: &str,
@@ -1814,7 +1814,7 @@ fn identity_slot(file: &DataFile) -> i32 {
     }
 }
 
-/// PIN T7 (identity-partitioned merge-on-read) — a position-delete file is stamped with the
+/// PIN T7.
 #[tokio::test]
 async fn mor_identity_partitioned_stamps_deletes_with_the_owning_partition() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -1881,12 +1881,12 @@ async fn mor_identity_partitioned_stamps_deletes_with_the_owning_partition() {
 
 // GROUP Y — merge-on-read MERGE × NON-IDENTITY TRANSFORM partitioning (Y1, Y2, Y4, Y5, Y7, Y8a).
 
-/// The single bucket-ordinal slot of a committed DELETE file (same shape as [`bucket_slot`]; named
+/// The single bucket-ordinal slot of a committed DELETE file.
 fn delete_bucket_slot(file: &DataFile) -> i32 {
     bucket_slot(file)
 }
 
-/// The live data file whose bucket slot is `slot` — the "owning file" a delete stamped with `slot`
+/// The live data file whose bucket slot is `slot`.
 fn only_file_in_bucket(files: &[DataFile], slot: i32) -> &DataFile {
     let mut matching = files.iter().filter(|file| bucket_slot(file) == slot);
     let file = matching.next().unwrap_or_else(|| {
@@ -1899,7 +1899,7 @@ fn only_file_in_bucket(files: &[DataFile], slot: i32) -> &DataFile {
     file
 }
 
-/// PIN Y1 (THE Group Y crux — matched DELETE on a `bucket(4, id)` merge-on-read table) — every
+/// PIN Y1.
 #[tokio::test]
 async fn mor_bucket_partitioned_stamps_deletes_with_the_owning_transformed_partition() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -1915,7 +1915,7 @@ async fn mor_bucket_partitioned_stamps_deletes_with_the_owning_transformed_parti
     let data_before = live_data_file_paths(&catalog, &ident).await;
     assert_eq!(data_before.len(), 2, "two buckets ⇒ two data files");
 
-    // The discriminating facts: each deleted row's TRANSFORMED partition differs from its key; the
+    // The discriminating facts: each deleted row's TRANSFORMED partition differs from its key.
     let (bucket_of_1, bucket_of_7) = (fork_bucket(4, 1), fork_bucket(4, 7));
     assert_ne!(
         bucket_of_1, 1,
@@ -1991,7 +1991,7 @@ async fn mor_bucket_partitioned_stamps_deletes_with_the_owning_transformed_parti
     );
 }
 
-/// PIN Y2 (partition-MOVING matched UPDATE, merge-on-read × transform) — the load-bearing
+/// PIN Y2 — the load-bearing composition pin.
 #[tokio::test]
 async fn mor_bucket_partition_key_changing_update_splits_across_old_and_new_buckets() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -2076,7 +2076,7 @@ async fn mor_bucket_partition_key_changing_update_splits_across_old_and_new_buck
     );
 }
 
-/// PIN Y4 — the merge-on-read/copy-on-write DIFFERENTIAL, run on a TRANSFORM-partitioned table
+/// PIN Y4 — the merge-on-read/copy-on-write DIFFERENTIAL, run on a TRANSFORM-partitioned table.
 #[tokio::test]
 async fn mor_and_cow_transform_partitioned_merges_are_scan_equivalent_but_divergent() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -2115,7 +2115,7 @@ async fn mor_and_cow_transform_partitioned_merges_are_scan_equivalent_but_diverg
             .unwrap_or_else(|error| panic!("{name} transform MERGE commits: {error}"));
     }
 
-    // --- scan-equivalence: value AND type ---
+    // --- scan-equivalence: value AND type ---.
     let expected = vec![
         (2, Some("NEW".to_string())),
         (3, Some("keep".to_string())),
@@ -2134,7 +2134,7 @@ async fn mor_and_cow_transform_partitioned_merges_are_scan_equivalent_but_diverg
         "scan-equivalence is value AND type"
     );
 
-    // --- physical divergence ---
+    // --- physical divergence ---.
     let mor_after = live_data_file_paths(&catalog, &mor).await;
     assert!(
         mor_before.iter().all(|path| mor_after.contains(path)),
@@ -2155,7 +2155,7 @@ async fn mor_and_cow_transform_partitioned_merges_are_scan_equivalent_but_diverg
     );
 }
 
-/// PIN Y5 (ORDINAL VALIDITY across SEQUENTIAL merge-on-read MERGEs on a TRANSFORM table) — T9's
+/// PIN Y5.
 #[tokio::test]
 async fn sequential_mor_merges_on_a_transform_table_keep_original_ordinals_and_stamps() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -2249,7 +2249,7 @@ async fn sequential_mor_merges_on_a_transform_table_keep_original_ordinals_and_s
     );
 }
 
-/// Create `sales.<name>` with `id int` (required) + `k int` (OPTIONAL, the partition source) + `v string`
+/// Create `sales.<name>` with `id int` + `k int` + `v string`, partitioned by `bucket`.
 async fn create_nullable_bucket_target(
     catalog: &Arc<dyn Catalog>,
     name: &str,
@@ -2352,7 +2352,7 @@ async fn read_back_with_key(
     rows
 }
 
-/// The single partition slot of a file as an `Option<i32>` — `None` is the NULL-partition slot,
+/// The single partition slot of a file as an `Option<i32>`.
 fn optional_bucket_slot(file: &DataFile) -> Option<i32> {
     use iceberg::spec::{Literal, PrimitiveLiteral};
     match file.partition().fields().first().cloned().flatten() {
@@ -2362,7 +2362,7 @@ fn optional_bucket_slot(file: &DataFile) -> Option<i32> {
     }
 }
 
-/// PIN Y7 (NULL partition source through a merge-on-read MERGE — the FORK-O7-class CONTROL) — a
+/// PIN Y7.
 #[tokio::test]
 #[allow(clippy::too_many_lines)] // one linear end-to-end fixture: append → MERGE → three stamps.
 async fn mor_null_partition_source_row_routes_to_the_none_slot() {
@@ -2483,7 +2483,7 @@ async fn mor_null_partition_source_row_routes_to_the_none_slot() {
     }
 }
 
-/// PIN Y8a (gate-retirement guard) — Group Y removed the transform gate from `resolve_merge_mode`
+/// PIN Y8a.
 #[tokio::test]
 async fn mor_on_v1_transform_partitioned_table_is_still_rejected() {
     use iceberg::spec::{FormatVersion, Transform, UnboundPartitionSpec};
@@ -2559,7 +2559,7 @@ async fn mor_on_v1_table_is_rejected_before_any_write() {
     );
 }
 
-/// PIN T8c — mode RESOLUTION itself: unset and `copy-on-write` both resolve to the copy-on-write
+/// PIN T8c.
 #[tokio::test]
 async fn merge_mode_resolves_from_the_table_property() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -2568,7 +2568,7 @@ async fn merge_mode_resolves_from_the_table_property() {
         ("mode_unset", HashMap::new(), Some(MergeMode::CopyOnWrite)),
         ("mode_cow", cow_props(), Some(MergeMode::CopyOnWrite)),
         ("mode_mor", mor_props(), Some(MergeMode::MergeOnRead)),
-        // Audit M12: Iceberg-Java `RowLevelOperationMode.fromName` is equalsIgnoreCase and the
+        // Iceberg-Java mode names are case-insensitive; mixed-case or padded values must resolve.
         (
             "mode_mor_upper",
             HashMap::from([(MERGE_MODE_PROP.to_string(), "MERGE-ON-READ".to_string())]),
@@ -2613,7 +2613,7 @@ async fn snapshot_id(catalog: &Arc<dyn Catalog>, ident: &TableIdent) -> Option<i
         .map(|snapshot| snapshot.snapshot_id())
 }
 
-/// PIN T9 (ORDINAL VALIDITY across sequential merge-on-read MERGEs) — the deep correctness
+/// PIN T9.
 #[tokio::test]
 async fn sequential_mor_merges_use_original_physical_ordinals() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -2630,7 +2630,7 @@ async fn sequential_mor_merges_use_original_physical_ordinals() {
     )
     .await;
 
-    // --- MERGE #1: delete id=2 (physical _pos 1) ---
+    // --- MERGE #1: delete id=2 (physical _pos 1) ---.
     let ctx = SessionContext::new();
     register_source(&ctx, &[2], &[Some("x")]);
     execute_merge(
@@ -2651,7 +2651,7 @@ async fn sequential_mor_merges_use_original_physical_ordinals() {
         "MERGE #1 removes exactly id=2"
     );
 
-    // --- MERGE #2: delete id=4 — ORIGINAL _pos 3, SURVIVOR ordinal 2 ---
+    // --- MERGE #2: delete id=4 — ORIGINAL _pos 3, SURVIVOR ordinal 2 ---.
     let ctx = SessionContext::new();
     register_source(&ctx, &[4], &[Some("x")]);
     execute_merge(
@@ -2683,7 +2683,7 @@ async fn sequential_mor_merges_use_original_physical_ordinals() {
         "one position-delete file per committed MERGE"
     );
 
-    // --- MERGE #3: target the ALREADY-deleted id=2 ⇒ a pure no-op ---
+    // --- MERGE #3: target the ALREADY-deleted id=2 ⇒ a pure no-op ---.
     let before = snapshot_id(&catalog, &ident).await;
     let ctx = SessionContext::new();
     register_source(&ctx, &[2], &[Some("x")]);
@@ -2715,7 +2715,7 @@ async fn sequential_mor_merges_use_original_physical_ordinals() {
     );
 }
 
-/// Decode a committed position-delete Parquet file into its `(file_path, pos)` rows, in FILE ORDER
+/// Decode a committed position-delete Parquet file into `(file_path, pos)` rows, in file order.
 async fn decode_position_delete_file(
     catalog: &Arc<dyn Catalog>,
     ident: &TableIdent,
@@ -2760,7 +2760,7 @@ async fn decode_position_delete_file(
     rows
 }
 
-/// PIN T-SORT-ONDISK — the Iceberg spec's ascending `(file_path, pos)` ordering survives all the
+/// PIN T-SORT-ONDISK.
 #[tokio::test]
 async fn position_delete_file_is_sorted_on_disk_and_coalesced() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -2808,7 +2808,7 @@ async fn position_delete_file_is_sorted_on_disk_and_coalesced() {
         ],
     );
 
-    // ONE delete file for all three deletes: the table is unpartitioned, so every pair resolves to
+    // One delete file for all three deletes: unpartitioned pairs share the same partition group.
     let deletes = live_delete_files(&catalog, &ident).await;
     assert_eq!(
         deletes.len(),
@@ -2831,9 +2831,9 @@ async fn position_delete_file_is_sorted_on_disk_and_coalesced() {
         "the Iceberg spec requires position-delete rows ascending by (file_path, pos), and the \
          scan produces them interleaved — the sort must survive onto disk, got: {rows:?}"
     );
-    // HONESTY (measured, not assumed): this sortedness assertion is a real guard but only a
+    // HONESTY: this sortedness assertion is a real guard but only a PROBABILISTIC mutation carrier.
 
-    // The exact rows: one referenced file at _pos 0 and 1 (ids 1,2), the other at _pos 0 (id 5),
+    // Exact rows: one file at _pos 0,1 (ids 1,2), the other at _pos 0 (id 5); third is untouched.
     let mut referenced: Vec<String> = rows
         .iter()
         .map(|(path, _)| path.as_ref().to_string())
@@ -2870,7 +2870,7 @@ async fn position_delete_file_is_sorted_on_disk_and_coalesced() {
     );
 }
 
-/// PIN T-SORT-ONDISK-DET — the DETERMINISTIC companion to
+/// PIN T-SORT-ONDISK-DET.
 #[tokio::test]
 async fn write_position_deletes_sorts_reverse_ordered_pairs_onto_disk() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -2929,7 +2929,7 @@ async fn write_position_deletes_sorts_reverse_ordered_pairs_onto_disk() {
     );
 }
 
-/// P2a hour-0 evidence for scout #6: serial `resolve_affected_data_files` share of a same-process
+/// P2a hour-0: serial `resolve_affected_data_files` share of a multi-file COW MERGE wall.
 #[tokio::test]
 async fn resolve_affected_data_files_local_fs_is_sub_10pct_of_merge_budget() {
     use std::time::Instant;
@@ -2937,7 +2937,7 @@ async fn resolve_affected_data_files_local_fs_is_sub_10pct_of_merge_budget() {
     let warehouse = TempDir::new().expect("temp warehouse");
     let catalog = memory_catalog(&warehouse).await;
 
-    // --- resolve absolute (8 files, warm) ---
+    // --- resolve absolute (8 files, warm) ---.
     let ident_resolve = create_target(&catalog, "p2a_resolve").await;
     for file_index in 0..8_i32 {
         let base = file_index * 100;
@@ -2967,7 +2967,7 @@ async fn resolve_affected_data_files_local_fs_is_sub_10pct_of_merge_budget() {
     }
     let resolve_ms = t_resolve.elapsed().as_secs_f64() * 1000.0 / f64::from(resolve_rounds);
 
-    // --- full COW MERGE wall (same 8-file shape, update a row in every file) ---
+    // --- full COW MERGE wall (same 8-file shape, update a row in every file) ---.
     let ident_merge = create_target(&catalog, "p2a_merge_wall").await;
     for file_index in 0..8_i32 {
         let base = file_index * 100;
@@ -2998,7 +2998,7 @@ async fn resolve_affected_data_files_local_fs_is_sub_10pct_of_merge_budget() {
         ],
     );
     let spec = merge_spec("p2a_merge_wall", vec![update_set("v", "s.v")], Vec::new());
-    // Warm plan path once, then time a second MERGE is not free (table already mutated); time the
+    // Warm plan path once, then time a second MERGE is not free.
     let t_merge = Instant::now();
     execute_merge(&ctx, &catalog, &spec)
         .await

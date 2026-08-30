@@ -6,7 +6,7 @@ use datafusion::arrow::datatypes::{DataType, Field, Schema as ArrowSchema};
 
 use super::super::*;
 
-/// A one-column `Int32` batch (`id`) — a trivial payload; the interleaving pin's writer discards
+/// A one-column `Int32` batch.
 fn id_batch(values: &[i32]) -> RecordBatch {
     let schema = Arc::new(ArrowSchema::new(vec![Field::new(
         "id",
@@ -17,7 +17,7 @@ fn id_batch(values: &[i32]) -> RecordBatch {
         .expect("id batch builds")
 }
 
-/// A [`BatchWriter`] that only COUNTS the batches written into it (no IO) — the sink half of the
+/// A [`BatchWriter`] that only COUNTS the batches written into it.
 struct CountingWriter {
     written: Arc<AtomicUsize>,
 }
@@ -78,7 +78,7 @@ async fn write_stream_into_interleaves_writes_with_source_production() {
     );
 }
 
-/// A [`BatchWriter`] that sleeps `latency` on every `finish` — models per-file close/upload
+/// A [`BatchWriter`] that sleeps `latency` on every `finish`.
 struct LatencyFinishWriter {
     latency: std::time::Duration,
     files_to_emit: usize,
@@ -222,7 +222,7 @@ async fn parallel_source_error_does_not_finish_sinks() {
     );
 }
 
-/// A sink that fails on its first write — used to pin worker-error preference over the
+/// A sink that fails on its first write.
 struct FailingWriter {
     finishes: Arc<AtomicUsize>,
 }
@@ -238,7 +238,7 @@ impl BatchWriter for FailingWriter {
     }
 }
 
-/// P1-R1: when a worker dies first, the surfaced error is the worker's root cause — not the
+/// P1-R1: when a worker dies first, the surfaced error is the worker's root cause.
 #[tokio::test]
 async fn parallel_worker_error_preferred_over_channel_closed() {
     const K: usize = 2;

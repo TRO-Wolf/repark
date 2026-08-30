@@ -107,7 +107,7 @@ mod tests {
     use crate::write::concurrency::WriteConcurrency;
     use crate::write::merge::write_data_files;
 
-    // --------------------------------------------------------------------------------------- Pure
+    // === Pure parse pins ===
 
     #[test]
     fn absent_codec_defaults_to_zstd() {
@@ -178,8 +178,6 @@ mod tests {
             error
         );
     }
-
-    // ---------------------------------------------------------------------------------------
 
     async fn memory_catalog(warehouse: &TempDir) -> Arc<dyn Catalog> {
         let path = warehouse

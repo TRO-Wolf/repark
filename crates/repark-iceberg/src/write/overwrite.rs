@@ -23,10 +23,10 @@ use crate::write::concurrency::WriteConcurrency;
 use crate::write::merge::{OPERATION_ID_PROP, write_data_files_from_stream_with_concurrency};
 use crate::write::store_assign::refuse_unless_write_store_assignable;
 
-/// Table property key for `INSERT OVERWRITE` isolation (engine-defined, same string as the fork
+/// Table property key for `INSERT OVERWRITE` isolation.
 pub const WRITE_OVERWRITE_ISOLATION_LEVEL: &str = "write.overwrite.isolation-level";
 
-/// Isolation level for full-table overwrite §5 validations (public reimplementation of the fork's
+/// Isolation level for full-table overwrite §5 validations.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OverwriteIsolation {
     /// Reject concurrent conflicting deletes only (default when property is absent).
@@ -179,7 +179,7 @@ fn positional_map_all_columns(
         .iter()
         .enumerate()
         .map(|(index, field)| {
-            // WI-1: ANSI store assignment BEFORE the kernel — `date→int` and friends must refuse,
+            // WI-1: ANSI store assignment BEFORE the kernel.
             refuse_unless_write_store_assignable(
                 "INSERT OVERWRITE",
                 field.name(),
@@ -864,7 +864,7 @@ mod tests {
         );
     }
 
-    /// D9 mutation proof: reordered source columns keep SELECT order values under table names
+    /// D9 mutation proof: reordered source columns keep SELECT order values under table names.
     #[test]
     fn positional_map_reordered_columns_keep_permuted_values() {
         use datafusion::arrow::array::{Array, StringArray};

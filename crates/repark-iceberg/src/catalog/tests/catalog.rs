@@ -29,7 +29,7 @@ async fn ctx_with_sales_namespace(wh: &TempDir) -> (SessionContext, Arc<dyn Cata
     (ctx, catalog)
 }
 
-/// U2-P9 (+ the U2-P2 helper arm): `resolve_namespace_location` over every key shape — the
+/// U2-P9: `resolve_namespace_location` over every key shape.
 #[test]
 fn resolve_namespace_location_covers_all_key_shapes() {
     // Legacy RePark shape: only `location`.
@@ -153,7 +153,7 @@ async fn insert_into_precreated_table_round_trips() {
     assert_eq!(rows, 2);
 }
 
-/// Locks the corrected understanding: DataFusion's `CREATE TABLE … AS SELECT` hands the schema
+/// DataFusion CTAS hands the schema provider a table with data, which iceberg-datafusion rejects.
 #[tokio::test]
 async fn datafusion_ctas_with_data_is_rejected_by_iceberg() {
     let wh = TempDir::new().unwrap();
@@ -204,14 +204,14 @@ async fn create_empty_then_insert_is_the_working_ctas_path() {
     assert_eq!(n.value(0), 3);
 }
 
-/// Proves the `[patch.crates-io]` rewire to the owned fork is in effect — **at compile time**:
+/// Proves the `[patch.crates-io]` rewire to the owned fork is in effect.
 #[test]
 fn fork_patch_in_effect_deletefilter_is_public() {
     fn nameable<T: ?Sized>() {}
     nameable::<iceberg::arrow::DeleteFilter>();
 }
 
-// --------------------------------------------------------------------------------------- AWS
+// === AWS builder tests ===
 
 /// A missing `warehouse` fails loud and names the key, before the fork builder runs.
 #[tokio::test]
@@ -222,7 +222,7 @@ async fn glue_catalog_missing_warehouse_names_the_key() {
     assert!(msg.contains("Glue"), "error must name the surface: {msg}");
 }
 
-/// A present-but-blank `warehouse` is rejected the same way (guards the empty-string hole the
+/// A present-but-blank `warehouse` is rejected the same way.
 #[tokio::test]
 async fn glue_catalog_blank_warehouse_names_the_key() {
     let props = HashMap::from([(GLUE_CATALOG_PROP_WAREHOUSE.to_string(), "   ".to_string())]);
@@ -233,7 +233,7 @@ async fn glue_catalog_blank_warehouse_names_the_key() {
     );
 }
 
-/// With `warehouse` set, the Glue catalog constructs offline and forwards unrecognized props (here
+/// Glue constructs offline with `warehouse` set and forwards unrecognized props through.
 #[tokio::test]
 async fn glue_catalog_constructs_and_passes_props_through() {
     let props = HashMap::from([
@@ -295,7 +295,7 @@ async fn s3tables_catalog_blank_arn_names_the_key() {
     );
 }
 
-/// With `table_bucket_arn` set, the S3 Tables catalog constructs offline and forwards unrecognized
+/// S3 Tables constructs offline with `table_bucket_arn` set and forwards unrecognized props.
 #[tokio::test]
 async fn s3tables_catalog_constructs_and_passes_props_through() {
     let props = HashMap::from([
@@ -322,9 +322,7 @@ async fn s3tables_catalog_constructs_and_passes_props_through() {
     );
 }
 
-// ---------------------------------------------------------------------------------------
-
-/// `s3://` selects the OpenDAL S3 backend, carrying the exact scheme so returned object paths
+/// `s3://` selects the OpenDAL S3 backend so returned object paths round-trip as `s3://`.
 #[test]
 fn classify_s3_scheme_selects_object_store() {
     assert_eq!(
@@ -364,7 +362,7 @@ fn classify_bare_path_selects_local_fs() {
     );
 }
 
-/// F-WG3C-1 / G-CI: a `:` AFTER the first `/` on an absolute path is a legal POSIX path character
+/// F-WG3C-1: a `:` after the first `/` on an absolute path stays `LocalFs`, not a mistyped scheme.
 #[test]
 fn classify_absolute_path_with_colon_after_slash_stays_local_fs() {
     assert_eq!(
@@ -378,7 +376,7 @@ fn classify_absolute_path_with_colon_after_slash_stays_local_fs() {
     );
 }
 
-/// An unsupported scheme fails loud — naming the offending scheme AND the supported set — so a
+/// An unsupported scheme fails loud.
 #[test]
 fn classify_unknown_scheme_fails_loud() {
     let error = classify_location_backend("gs://some-bucket/warehouse")
@@ -394,7 +392,7 @@ fn classify_unknown_scheme_fails_loud() {
     );
 }
 
-/// F-BR-3: `s3:/bucket/wh` — an `s3://` typed with a single slash — carries no `://`, so the
+/// F-BR-3: `s3:/bucket/wh`.
 #[test]
 fn classify_single_slash_s3_scheme_fails_loud() {
     let error = classify_location_backend("s3:/bucket/wh")
@@ -426,7 +424,7 @@ fn classify_single_slash_s3a_scheme_fails_loud() {
     );
 }
 
-/// F-BR-3: a relative path (no leading `/`) would resolve against the process CWD, so a bare
+/// F-BR-3: a relative warehouse path fails loud instead of silently using the process CWD.
 #[test]
 fn classify_relative_path_fails_loud() {
     let error = classify_location_backend("relative/path")
@@ -442,7 +440,7 @@ fn classify_relative_path_fails_loud() {
     );
 }
 
-/// F-BR-3: the empty string is not an absolute path — a common misconfiguration (an unset
+/// F-BR-3: the empty string is not an absolute path.
 #[test]
 fn classify_empty_location_fails_loud() {
     let error = classify_location_backend("")
@@ -458,7 +456,7 @@ fn classify_empty_location_fails_loud() {
     );
 }
 
-/// Structural: an `s3://` location selects the OpenDAL S3 factory (not local) — proven by the
+/// Structural: an `s3://` location selects the OpenDAL S3 factory.
 #[test]
 fn factory_for_s3_is_opendal_s3() {
     let factory =
@@ -498,7 +496,7 @@ fn arrow_rows(b: &datafusion::arrow::array::RecordBatch) -> usize {
     b.num_rows()
 }
 
-// --------------------------------------------------------------------------------------- catalog
+// === catalog listing staleness ===
 
 /// Documented strategy pin: facade uses list-on-access (not TTL).
 #[test]
@@ -506,7 +504,7 @@ fn catalog_listing_strategy_is_list_on_access() {
     assert_eq!(CATALOG_LISTING_STRATEGY, "list-on-access");
 }
 
-/// Measure-first: single-namespace `list_tables` is cheaper than a full provider rebuild (which
+/// Measure-first: single-namespace `list_tables` is cheaper than a full provider rebuild.
 #[tokio::test]
 async fn listing_cost_list_tables_cheaper_than_provider_rebuild() {
     use std::time::Instant;
@@ -519,7 +517,7 @@ async fn listing_cost_list_tables_cheaper_than_provider_rebuild() {
         .create_namespace(&sales, HashMap::new())
         .await
         .unwrap();
-    // A handful of tables so the provider rebuild has real list work; MemoryCatalog is in-process
+    // A handful of tables so the provider rebuild has real list work.
     for index in 0..8 {
         let name = format!("orders_{index}");
         let creation = TableCreation::builder()
@@ -558,11 +556,11 @@ async fn listing_cost_list_tables_cheaper_than_provider_rebuild() {
         "list_table_names ({list_elapsed:?}) should be ≤ ~2× build_iceberg_catalog_provider \
              ({rebuild_elapsed:?}) over {iterations} iterations — re-measure if this regresses"
     );
-    // Soft preference pin: listing is typically strictly cheaper; the 2x bound above is the accept
+    // Soft preference pin: listing is typically strictly cheaper.
     assert_eq!(CATALOG_LISTING_STRATEGY, "list-on-access");
 }
 
-/// Out-of-band create/drop on the same Catalog handle: live list sees create and drops phantoms;
+/// Out-of-band create/drop on the same Catalog handle: live list sees create and drops phantoms.
 #[tokio::test]
 async fn live_list_sees_oob_create_and_drop_while_provider_snapshot_stale() {
     let wh = TempDir::new().unwrap();
@@ -792,7 +790,7 @@ async fn oob_namespace_drop_phantoms_until_full_rebuild() {
     );
 }
 
-// --------------------------------------------------------------------------------------- PERF-07
+// --------------------------------------------------------------------------------------- PERF-07.
 
 /// Boxed future for desugared [`Catalog`] methods (no `async-trait` dep in this crate).
 type BoxedCatalogFuture<'a, T> =
@@ -1011,7 +1009,7 @@ impl Catalog for CountingCatalog {
     }
 }
 
-/// PERF-07 bar: after a warm multi-namespace register, one namespace invalidation must not re-list
+/// PERF-07: one namespace invalidation after a warm register must not re-list every database.
 #[tokio::test]
 async fn invalidate_one_namespace_is_o1_not_o_databases() {
     let wh = TempDir::new().unwrap();
@@ -1140,7 +1138,7 @@ async fn full_rebuild_lists_every_namespace() {
 }
 
 /// pins: rp-1-fork-repin/C-011
-/// Product-style invalidation keeps T6 residual honesty: OOB create without invalidate stays
+/// OOB create without invalidate stays invisible to the DataFusion provider; live list sees it.
 #[tokio::test]
 async fn incremental_provider_preserves_oob_staleness_residual() {
     let wh = TempDir::new().unwrap();
@@ -1196,7 +1194,7 @@ async fn incremental_provider_preserves_oob_staleness_residual() {
     );
 }
 
-/// PERF-07: live table drop + namespace invalidate must clear DF phantoms (product DROP TABLE
+/// PERF-07: live table drop + namespace invalidate must clear DF phantoms.
 #[tokio::test]
 async fn invalidate_after_live_table_drop_removes_df_name() {
     let wh = TempDir::new().expect("tempdir");
@@ -1545,7 +1543,7 @@ async fn rebuild_same_catalog_heals_oob_and_stays_repark_provider() {
     );
 }
 
-/// PERF-07: invalidate/drop on an unregistered catalog name fail-loud (must not silently register
+/// PERF-07: invalidate/drop on an unregistered catalog name fail-loud.
 #[tokio::test]
 async fn invalidate_unregistered_catalog_fails_loud() {
     let wh = TempDir::new().expect("tempdir");
@@ -1580,7 +1578,7 @@ async fn invalidate_unregistered_catalog_fails_loud() {
     );
 }
 
-/// PERF-07: rebuild with a different catalog Arc replaces the provider (does not silently
+/// PERF-07: rebuild with a different catalog Arc replaces the provider.
 #[tokio::test]
 async fn rebuild_with_different_catalog_arc_rebinds_provider() {
     let wh_a = TempDir::new().expect("tempdir a");
@@ -1625,9 +1623,9 @@ async fn rebuild_with_different_catalog_arc_rebinds_provider() {
     );
 }
 
-// --------------------------------------------------------------------------------------- QUAL-05
+// === QUAL-05 catalog-edge spans ===
 
-/// Snapshot handle for one test's `catalog.*` span capture; clears the thread's capture slot on
+/// Snapshot handle for one test's `catalog.*` span capture.
 struct CaptureGuard(std::sync::Arc<crate::tests::tracing::SpanFieldCapture>);
 
 impl Drop for CaptureGuard {
@@ -1750,7 +1748,7 @@ fn assert_catalog_events_forbid_prop_values(events: &[SpanEvent]) {
     }
 }
 
-/// Glue/S3 Tables builders emit spans whose fields never contain prop **values** (keys may appear
+/// Glue/S3 Tables builders emit spans whose fields never contain prop **values**.
 #[tokio::test]
 async fn glue_and_s3tables_spans_never_record_secret_values() {
     const SECRET: &str = "SUPER_SECRET_VALUE_do_not_leak_obs1";

@@ -27,7 +27,7 @@ pub enum SchemaChange {
         field_type: Type,
         /// Optional column doc (Spark `COMMENT '…'`).
         doc: Option<String>,
-        /// When true the add is required (incompatible without a default — the SQL layer refuses
+        /// When true the add is required.
         required: bool,
         /// Optional Spark column position after the add.
         position: Option<ColumnPosition>,
@@ -44,7 +44,7 @@ pub enum SchemaChange {
         /// New column name (field-id preserved).
         to: String,
     },
-    /// `ALTER COLUMN name TYPE <primitive>` — Iceberg type promotion only (int→long, float→double,
+    /// `ALTER COLUMN name TYPE <primitive>` — Iceberg type promotion only.
     UpdateColumnType {
         /// Column to promote.
         name: String,
@@ -65,10 +65,10 @@ pub enum SchemaChange {
     },
 }
 
-/// One partition-spec evolution op to fold into a single [`apply_partition_spec_changes`]
+/// One partition-spec evolution op folded into a single `apply_partition_spec_changes` transaction.
 #[derive(Debug, Clone)]
 pub enum PartitionSpecChange {
-    /// `ADD PARTITION FIELD <transform>(source) [AS name]` — identity when transform is
+    /// `ADD PARTITION FIELD <transform> [AS name]`.
     AddField {
         /// Source column name (schema field).
         source_name: String,
@@ -89,7 +89,7 @@ pub enum PartitionSpecChange {
         /// Transform that identifies the field.
         transform: Transform,
     },
-    /// `REPLACE PARTITION FIELD old WITH <transform>(source) [AS name]` — remove then add in one
+    /// `REPLACE PARTITION FIELD old WITH <transform> [AS name]`.
     ReplaceField {
         /// Existing partition field name to drop.
         old_name: String,
@@ -100,7 +100,7 @@ pub enum PartitionSpecChange {
         /// Optional new partition field name.
         new_name: Option<String>,
     },
-    /// Rename an existing partition field (not a Spark DDL surface in I7 READY; available for
+    /// Rename an existing partition field.
     RenameField {
         /// Current partition field name.
         name: String,
@@ -244,7 +244,7 @@ pub async fn apply_partition_spec_changes(
         return Ok(());
     }
     let table = catalog.load_table(ident).await?;
-    // Seed known partition-field names from the current default spec; track explicit names added
+    // Seed known partition-field names from the current default spec.
     let mut known_field_names: Vec<String> = table
         .metadata()
         .default_partition_spec()
@@ -336,7 +336,7 @@ mod tests {
     };
     use tempfile::TempDir;
 
-    /// An in-memory Iceberg catalog (local-FS warehouse) with a `sales` namespace and one table
+    /// An in-memory Iceberg catalog with a `sales` namespace and one table `t`.
     async fn setup(wh: &TempDir) -> (Arc<dyn Catalog>, TableIdent) {
         let warehouse = wh.path().to_str().unwrap().to_string();
         let catalog: Arc<dyn Catalog> = Arc::new(
@@ -425,10 +425,10 @@ mod tests {
         catalog.load_table(&dest).await.unwrap();
     }
 
-    /// The boxed-future return type of an `#[async_trait]` `Catalog` method — spelled out once so
+    /// The boxed-future return type of an `#[async_trait]` `Catalog` method.
     type BoxedCatalogFuture<'a, T> = Pin<Box<dyn Future<Output = iceberg::Result<T>> + Send + 'a>>;
 
-    /// A fully-delegating `Catalog` wrapper that COUNTS every `update_table` (commit) CAS and can
+    /// Catalog wrapper that counts every `update_table` CAS and can fail the `fail_on_call`-th one.
     #[derive(Debug)]
     struct CommitFaultCatalog {
         inner: Arc<dyn Catalog>,
@@ -647,7 +647,7 @@ mod tests {
             .unwrap();
     }
 
-    /// B12-1 — a mixed (disjoint-key) SET+UNSET commits in EXACTLY ONE catalog `update_table`
+    /// B12-1.
     #[tokio::test]
     async fn alter_mixed_disjoint_set_unset_commits_exactly_once() {
         let wh = TempDir::new().unwrap();
@@ -675,7 +675,7 @@ mod tests {
         );
     }
 
-    /// B12-2 — a fault armed at the SECOND catalog commit (the exact gap the old two-commit path
+    /// B12-2.
     #[tokio::test]
     async fn alter_mixed_injected_second_commit_failure_leaves_no_partial_state() {
         let wh = TempDir::new().unwrap();
@@ -700,7 +700,7 @@ mod tests {
         );
     }
 
-    /// A key present in BOTH the set and unset lists is rejected by the single action's
+    /// A key in both the set and unset lists fails the action precondition, so nothing lands.
     #[tokio::test]
     async fn alter_same_key_set_and_unset_is_atomic_loud() {
         let wh = TempDir::new().unwrap();
@@ -1148,7 +1148,7 @@ mod tests {
         );
     }
 
-    /// Residual F-I6-C4-R1 — same-batch add-then-rename of the *new* column is refused loud by the
+    /// Residual F-I6-C4-R1.
     #[tokio::test]
     async fn schema_same_batch_add_then_rename_new_column_refuses_loud() {
         let warehouse = TempDir::new().unwrap();

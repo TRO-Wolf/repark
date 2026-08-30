@@ -29,7 +29,7 @@ pub(crate) fn refuse_v3_cow_dml_that_would_reassign_row_lineage(
     )))
 }
 
-/// Passthrough seat for the plain-`WHERE` DELETE / UPDATE both doors delegate to the fork's
+/// Passthrough seat for plain-WHERE DELETE/UPDATE both doors delegate to the fork provider.
 /// # Errors
 /// [`DataFusionError::NotImplemented`].
 pub async fn refuse_v3_cow_dml(

@@ -140,7 +140,7 @@ pub async fn drop_snapshot_ref(
     Ok(())
 }
 
-/// Chain fork retention setters onto a manage-snapshots action (same transaction as
+/// Chain fork retention setters onto a manage-snapshots action.
 fn apply_retention(
     mut action: iceberg::transaction::ManageSnapshotsAction,
     name: &str,

@@ -3,7 +3,7 @@
 use datafusion::arrow::datatypes::DataType;
 use datafusion::error::{DataFusionError, Result};
 
-/// Spark's error class for the MERGE store-assignment refusals (#111 / #135 text — byte-stable;
+/// Spark's error class for the MERGE store-assignment refusals.
 pub(crate) const MERGE_SPARK_CLASS: &str = "INCOMPATIBLE_DATA_FOR_TABLE";
 
 /// Spark's sub-class for the plain INSERT / append store-assignment refusals.
@@ -17,7 +17,7 @@ pub(crate) fn normalize_for_assignment(data_type: &DataType) -> &DataType {
     }
 }
 
-/// Spark `Cast.canANSIStoreAssign`, translated to Arrow types (v1: nested types must be identical
+/// Spark `Cast.canANSIStoreAssign`, translated to Arrow types.
 pub(crate) fn ansi_store_assignable(src: &DataType, dst: &DataType) -> bool {
     use DataType::{
         Binary, Boolean, Date32, Date64, LargeBinary, LargeUtf8, Null, Timestamp, Utf8, Utf8View,
@@ -29,7 +29,7 @@ pub(crate) fn ansi_store_assignable(src: &DataType, dst: &DataType) -> bool {
     if matches!(src, Null) {
         return true;
     }
-    // NumericType → NumericType (widening AND narrowing — overflow is the strict runtime cast's
+    // NumericType → NumericType.
     if src.is_numeric() && dst.is_numeric() {
         return true;
     }
@@ -67,7 +67,7 @@ pub(crate) fn ansi_store_assignable(src: &DataType, dst: &DataType) -> bool {
 
 /// The shared refusal.
 /// # Errors
-/// [`DataFusionError::Plan`] carrying the `not ANSI-store-assignable` needle, the column name and
+/// Returns `Plan` with the `not ANSI-store-assignable` needle, the column name, and both types.
 pub(crate) fn refuse_unless_ansi_store_assignable(
     op: &str,
     spark_class: &str,
@@ -104,7 +104,7 @@ pub(crate) fn refuse_unless_write_store_assignable(
     refuse_unless_ansi_store_assignable(op, WRITE_SPARK_CLASS, column, source_type, target_type)
 }
 
-/// Whether `data_type` is a leaf Arrow type the v1 matrix can judge (see
+/// Whether `data_type` is a leaf Arrow type the v1 matrix can judge.
 fn is_flat(data_type: &DataType) -> bool {
     !matches!(
         data_type,
@@ -130,7 +130,7 @@ mod tests {
         refuse_unless_ansi_store_assignable, refuse_unless_write_store_assignable,
     };
 
-    /// The WI-1 row the hoist exists for: `Date32 → Int32|Int64` is the silently-wrong pair every
+    /// WI-1: `Date32 → Int32|Int64` is the silently-wrong pair every plain INSERT persisted before.
     #[test]
     fn date_and_int_are_not_store_assignable_in_either_direction() {
         use DataType::{Date32, Date64, Int32, Int64};
@@ -207,7 +207,7 @@ mod tests {
         );
     }
 
-    /// Nested pairs fall through to the strict arrow cast rather than gaining a NEW refusal (the
+    /// Nested pairs fall through to the strict arrow cast rather than gaining a NEW refusal.
     #[test]
     fn nested_pairs_are_excused_by_the_write_gate() {
         let list_view = DataType::List(Arc::new(Field::new("item", DataType::Utf8View, true)));

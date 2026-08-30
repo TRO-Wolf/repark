@@ -57,7 +57,7 @@ pub struct PredicateDmlSpec {
     pub assignments: Option<Vec<(String, String)>>,
 }
 
-/// Catalog name + identity spec extracted from an allow-listed `DELETE … IN` / `NOT IN` / `[NOT] EXISTS`
+/// Catalog name and identity spec from an allow-listed `DELETE … IN` / `NOT IN` / `[NOT] EXISTS`.
 #[derive(Debug, Clone)]
 pub struct AllowedDeleteIn {
     /// Leading catalog identifier (`ice` in `ice.sales.tgt`).
@@ -169,7 +169,7 @@ pub fn try_allowed_delete_in(statement: &Statement) -> Result<Option<AllowedDele
     }))
 }
 
-/// If `statement` is an allow-listed uncorrelated `UPDATE … SET <scalar> WHERE col IN (SELECT …)`,
+/// Return catalog plus spec for allow-listed uncorrelated `UPDATE … SET` with `WHERE col IN`.
 /// # Errors
 /// [`DataFusionError::Plan`] when the spelling is allowed but the target is not
 pub fn try_allowed_update_in(statement: &Statement) -> Result<Option<AllowedDeleteIn>> {
@@ -300,7 +300,7 @@ pub async fn execute_predicate_dml(
     result
 }
 
-/// Identity UPDATE: SELECT `(_file, _pos, <SET-projected data>)` then `MoR` delete+append or COW
+/// Identity UPDATE selects `(_file, _pos)` then applies `MoR` delete+append or COW rewrite.
 async fn execute_identity_update(
     ctx: &SessionContext,
     catalog: &Arc<dyn Catalog>,
@@ -1034,7 +1034,7 @@ fn subquery_has_nested_query(query: &Query) -> bool {
     query.visit(&mut Nested { seen: 0 }).is_break()
 }
 
-/// Compound identifiers that do not prefix-match the subquery's own table name or alias are
+/// Compound identifiers that do not prefix-match the subquery table or alias are outer refs.
 fn subquery_has_outer_ref(query: &Query, source_parts: &[String], aliases: &[String]) -> bool {
     struct Outer<'a> {
         source_parts: &'a [String],
@@ -1062,7 +1062,7 @@ fn subquery_has_outer_ref(query: &Query, source_parts: &[String], aliases: &[Str
     query.visit(&mut visitor).is_break() || visitor.found
 }
 
-/// Compound identifiers that are neither the subquery source nor the DELETE target are a
+/// Compound identifiers that are neither subquery source nor DELETE target fail closed.
 fn subquery_has_disallowed_ref(
     query: &Query,
     source_parts: &[String],
@@ -1125,7 +1125,7 @@ fn compound_refers_to_target(
             .all(|(part, ident)| part.eq_ignore_ascii_case(&ident.value))
 }
 
-/// Rewrite `catalog.ns.tgt.col` (and only that prefix) to `alias.col` so the identity SELECT
+/// Rewrite `catalog.ns.tgt.col` to `alias.col` so identity SELECT correlates against scratch.
 fn rewrite_target_refs_in_expr(expr: &mut Expr, target_parts: &[String], alias: &str) {
     struct Rewrite<'a> {
         target_parts: &'a [String],

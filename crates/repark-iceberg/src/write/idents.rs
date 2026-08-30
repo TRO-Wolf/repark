@@ -74,7 +74,7 @@ mod tests {
     fn spark_injection_probes_are_single_quoted_tokens() {
         for probe in probes::SPARK_INJECTION_PROBES {
             let quoted = quote_ident_spark(probe);
-            // Independent oracle: undouble round-trip alone false-passes under-escape (forgetting
+            // Independent oracle: undouble round-trip alone false-passes under-escape.
             let expected = format!("\"{}\"", probe.replace('"', "\"\""));
             assert_eq!(quoted, expected, "under-quote residual for {probe:?}");
             let inner = &quoted[1..quoted.len() - 1];

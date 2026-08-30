@@ -149,7 +149,7 @@ pub async fn rebuild_catalog_provider(
     catalog: Arc<dyn Catalog>,
     name: &str,
 ) -> Result<()> {
-    // Prefer in-place full refresh when our provider is already registered **and** still bound to
+    // Prefer in-place full refresh when this provider is registered and bound to the same handle.
     if let Some(existing) = ctx.catalog(name)
         && let Some(repark) = existing.as_ref().downcast_ref::<ReparkCatalogProvider>()
         && Arc::ptr_eq(&repark.catalog_handle(), &catalog)
@@ -182,7 +182,7 @@ pub async fn invalidate_catalog_namespaces(
         )));
     };
     if let Some(repark) = existing.as_ref().downcast_ref::<ReparkCatalogProvider>() {
-        // Prepare every namespace off the map lock first; apply under one write so a mid-loop
+        // Prepare every namespace off the map lock first.
         let mut prepared: Vec<(String, Option<Arc<dyn SchemaProvider>>)> =
             Vec::with_capacity(namespaces.len());
         for namespace in namespaces {
@@ -244,7 +244,7 @@ async fn snapshot_all_schemas(
     Ok(schemas)
 }
 
-/// Prepare one namespace schema (or `None` if the live namespace is gone) — shared by
+/// Prepare one namespace schema.
 async fn prepare_namespace_schema(
     catalog: Arc<dyn Catalog>,
     namespace: &str,
@@ -287,7 +287,7 @@ fn apply_namespace_schema_locked(
     }
 }
 
-/// Build one write-capable schema provider by running `IcebergCatalogProvider::try_new` against a
+/// Build a write-capable schema provider for one namespace so sibling databases are not listed.
 async fn build_namespace_schema(
     catalog: Arc<dyn Catalog>,
     namespace: &NamespaceIdent,
@@ -344,7 +344,7 @@ impl NamespaceScopedCatalog {
 }
 
 impl Catalog for NamespaceScopedCatalog {
-    // -------------------------------------------------------------------------------------------
+    // === Catalog methods ===
 
     fn list_namespaces<'life0, 'life1, 'async_trait>(
         &'life0 self,
@@ -530,10 +530,6 @@ impl Catalog for NamespaceScopedCatalog {
     {
         self.inner.update_table(commit)
     }
-
-    // -------------------------------------------------------------------------------------------
-
-    // -------------------------------------------------------------------------------------------
 
     fn publish_create_table<'life0, 'async_trait>(
         &'life0 self,

@@ -55,19 +55,19 @@ use crate::write::scan_prune::{
     scan_pruning_from_ctx,
 };
 
-/// The reserved `_file` metadata column the core scan projects (fork `metadata_columns.rs`
+/// The reserved `_file` metadata column the core scan projects.
 pub(super) const FILE_PATH_COL: &str = "_file";
 
-/// The reserved `_pos` metadata column the core scan projects (fork `metadata_columns.rs`
+/// The reserved `_pos` metadata column the core scan projects.
 pub(super) const POS_COL: &str = "_pos";
 
-/// Prefix of the sentinel column added to the source side so `LEFT JOIN` match-detection never
+/// Prefix of the sentinel column added so `LEFT JOIN` match-detection ignores user-key nullability.
 const MATCH_FLAG_PREFIX: &str = "__repark_matched_";
 
-/// Snapshot-summary key stamping every MERGE commit with a unique id — the fork `ENGINE_CONTRACT`
+/// Snapshot-summary key stamping every MERGE commit with a unique id.
 pub const OPERATION_ID_PROP: &str = "engine.operation-id";
 
-/// A lowered `MERGE INTO` statement — plain strings, no sqlparser types, so the SQL front end owns
+/// A lowered `MERGE INTO` statement.
 #[derive(Debug, Clone)]
 pub struct MergeSpec {
     /// The Iceberg target table.
@@ -140,7 +140,7 @@ pub async fn execute_merge(
     catalog: &Arc<dyn Catalog>,
     spec: &MergeSpec,
 ) -> Result<()> {
-    // Serialize merge execution under `cfg(test)` so concurrent MERGEs do not interleave on shared
+    // Serialize merge under `cfg(test)` so concurrent MERGEs do not interleave on shared fixtures.
     #[cfg(test)]
     let _merge_serialize = {
         static LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
@@ -164,7 +164,7 @@ pub async fn execute_merge(
         .map(|snapshot| snapshot.snapshot_id());
 
     let scratch = scratch_schema(&write_schema);
-    // PERF-04 bounded residual (2026-08-04): join-key min/max bounds may be pushed onto the
+    // PERF-04: join-key min/max bounds may be pushed onto the primary target scan when safe.
     let file_scoped = file_scoped_rewrite_from_ctx(ctx);
     let residual = residual_join_key_filter(ctx, spec, &write_schema, mode, file_scoped).await?;
     let scan_concurrency = scan_concurrency_from_ctx(ctx);
@@ -200,7 +200,7 @@ async fn residual_join_key_filter(
     if !scan_pruning_from_ctx(ctx) {
         return Ok(None);
     }
-    // COW + full-target rewrite path: residual on the primary would drop unmatched survivors in
+    // COW full-target rewrite must not residual-filter the primary, or unmatched survivors drop.
     if matches!(mode, MergeMode::CopyOnWrite) && !file_scoped_rewrite {
         return Ok(None);
     }
@@ -256,7 +256,7 @@ pub(super) fn deregister_merge_scratch(
     match ctx.deregister_table(target_name) {
         Ok(Some(_)) => Ok(()),
         Ok(None) => {
-            // Unexpected after we registered the scratch — MemTable may still be held if this was
+            // Unexpected after we registered the scratch.
             tracing::warn!(
                 target = "repark_write::merge",
                 scratch = %target_name,
@@ -278,15 +278,15 @@ pub(super) fn deregister_merge_scratch(
     }
 }
 
-/// The table property selecting how a `MERGE INTO` materialises its row-level changes (Iceberg
+/// The table property selecting how a `MERGE INTO` materialises its row-level changes.
 const MERGE_MODE_PROP: &str = "write.merge.mode";
 
-/// How a `MERGE INTO` writes its row-level changes — the `write.merge.mode` table property,
+/// How a `MERGE INTO` writes its row-level changes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MergeMode {
     /// `copy-on-write` (the Iceberg default when the property is unset): rewrite whole data files.
     CopyOnWrite,
-    /// `merge-on-read`: leave data files intact, write position-delete files for the mutated rows
+    /// `merge-on-read` leaves data files intact; deletes and new rows commit in one `RowDelta`.
     MergeOnRead,
 }
 
@@ -346,7 +346,7 @@ fn resolve_merge_mode(table: &Table) -> Result<MergeMode> {
     Ok(MergeMode::MergeOnRead)
 }
 
-/// The scratch target adds `_file` + `_pos` to the TARGET's columns; a target column with one of
+/// The scratch target adds `_file` + `_pos` to the TARGET's columns.
 pub(super) fn reserved_name_guard(write_schema: &ArrowSchema) -> Result<()> {
     for reserved in [FILE_PATH_COL, POS_COL] {
         if write_schema.field_with_name(reserved).is_ok() {
@@ -359,7 +359,7 @@ pub(super) fn reserved_name_guard(write_schema: &ArrowSchema) -> Result<()> {
     Ok(())
 }
 
-/// Every `UPDATE SET` target column must exist in the target schema — a typo'd column would
+/// Every `UPDATE SET` target column must exist in the target schema.
 fn validate_update_columns(spec: &MergeSpec, write_schema: &ArrowSchema) -> Result<()> {
     for clause in &spec.matched {
         let assignments = match &clause.action {
@@ -372,7 +372,7 @@ fn validate_update_columns(spec: &MergeSpec, write_schema: &ArrowSchema) -> Resu
                 ));
             }
         };
-        // Case-insensitive duplicates would silent first-win in `rewrite_column` (Critic-1 Q-003 /
+        // Case-insensitive duplicates would silent first-win in `rewrite_column`.
         let mut seen = HashSet::with_capacity(assignments.len());
         for (column, _) in assignments {
             let Some(canonical) = resolve_schema_field_name(write_schema, column) else {
@@ -487,7 +487,7 @@ async fn expand_star_clauses<'a>(
     Ok(Cow::Owned(expanded))
 }
 
-/// The source's column names in schema order, from planning (not executing) `SELECT * FROM <source> LIMIT 0`
+/// Source column names in schema order, from planning `SELECT * FROM <source> LIMIT 0`.
 async fn source_column_names(ctx: &SessionContext, spec: &MergeSpec) -> Result<Vec<String>> {
     let probe = format!(
         "SELECT * FROM {} AS {} LIMIT 0",
@@ -502,7 +502,7 @@ async fn source_column_names(ctx: &SessionContext, spec: &MergeSpec) -> Result<V
         .collect())
 }
 
-/// The scratch-target schema: every target data column, then `_file` (Utf8) and `_pos` (Int64) —
+/// Scratch-target schema: every target data column, then `_file` (Utf8) and `_pos` (Int64).
 pub(super) fn scratch_schema(write_schema: &SchemaRef) -> SchemaRef {
     let mut fields: Vec<Field> = write_schema
         .fields()
@@ -514,7 +514,7 @@ pub(super) fn scratch_schema(write_schema: &SchemaRef) -> SchemaRef {
     Arc::new(ArrowSchema::new(fields))
 }
 
-/// A re-scannable partition stream over the pinned target snapshot — the streaming replacement for
+/// Re-scannable partition stream over the pinned snapshot, replacing the full-target `MemTable`.
 #[derive(Debug)]
 pub(super) struct TargetScanStream {
     table: Table,
@@ -525,7 +525,7 @@ pub(super) struct TargetScanStream {
     filter: Option<Predicate>,
     /// When set, passed to `TableScanBuilder::with_concurrency_limit`.
     concurrency_limit: Option<usize>,
-    /// R-MERGE-FILE-SCAN: when set, only open data files whose path is in this set (whole-file
+    /// R-MERGE-FILE-SCAN: when set, only open data files whose path is in this set.
     file_path_allowlist: Option<std::sync::Arc<std::collections::HashSet<String>>>,
     /// Span current at CONSTRUCTION (inside the merge's instrumented body).
     trace_parent: tracing::Span,
@@ -583,7 +583,7 @@ impl PartitionStream for TargetScanStream {
         let concurrency_limit = self.concurrency_limit;
         let file_path_allowlist = self.file_path_allowlist.clone();
         let trace_parent = self.trace_parent.clone();
-        // Open the pinned scan lazily (its future runs on first poll), then flatten its batch
+        // Open the pinned scan lazily and conform each arriving batch onto the scratch schema.
         let opened =
             async move {
                 let mut builder = table.scan().snapshot_id(pin).select(select_columns);
@@ -595,7 +595,7 @@ impl PartitionStream for TargetScanStream {
                 }
                 let scan = builder.build().map_err(iceberg_err)?;
                 let arrow = if let Some(allowlist) = file_path_allowlist {
-                    // File-scoped path: plan all tasks, keep only allowlisted data_file_path, read
+                    // File-scoped path: keep allowlisted tasks and read via ArrowReader.
                     let planned: Vec<_> = scan
                         .plan_files()
                         .await
@@ -640,7 +640,7 @@ fn note_logical_target_sql_pass() {
 #[cfg(not(test))]
 fn note_logical_target_sql_pass() {}
 
-/// Map one pinned-scan batch onto the scratch schema: reorder columns by name, cast `_file` (a
+/// Map one pinned-scan batch onto the scratch schema: reorder by name and cast `_file` and `_pos`.
 fn conform_scan_batch(scratch: &SchemaRef, batch: &RecordBatch) -> Result<RecordBatch> {
     let mut columns: Vec<ArrayRef> = Vec::with_capacity(scratch.fields().len());
     for field in scratch.fields() {
@@ -655,7 +655,7 @@ fn conform_scan_batch(scratch: &SchemaRef, batch: &RecordBatch) -> Result<Record
     Ok(RecordBatch::try_new(scratch.clone(), columns)?)
 }
 
-/// Register the pinned target as a re-scannable STREAMING relation under a collision-proof scratch
+/// Register the pinned target as a streaming relation under a collision-proof scratch name.
 pub(super) fn register_streaming_target(
     ctx: &SessionContext,
     scratch_schema: SchemaRef,
@@ -691,7 +691,7 @@ async fn plan_and_commit(
         target_name,
         match_flag: &match_flag,
     };
-    // R-MERGE-ONEPASS Stage A: cardinality is folded into match discovery (affected_files /
+    // R-MERGE-ONEPASS Stage A: cardinality is folded into match discovery.
     match mode {
         MergeMode::CopyOnWrite => plan_and_commit_cow(ctx, catalog, spec, target, &sql).await,
         MergeMode::MergeOnRead => plan_and_commit_mor(ctx, catalog, spec, target, &sql).await,
@@ -717,7 +717,7 @@ async fn plan_and_commit_cow(
         } else {
             affected_files(ctx, sql, skip_cardinality(spec)).await?
         };
-        // R-MERGE-STREAM-OUT: pipe rewrite + insert SQL streams into concurrent file writers
+        // R-MERGE-STREAM-OUT: pipe rewrite and insert SQL streams into concurrent file writers.
         let mut streams: Vec<std::pin::Pin<Box<dyn Stream<Item = Result<RecordBatch>> + Send>>> =
             Vec::new();
         // Scratches to drop on every exit of this block (file-scoped target and/or path table).
@@ -753,7 +753,7 @@ async fn plan_and_commit_cow(
         let chained = futures::stream::iter(streams).flatten();
         let write_result =
             write_new_data_files_from_stream(table, write_schema, chained, concurrency).await;
-        // Explicit drop before Ok so cleanup is ordered before the join span ends (Drop also runs
+        // Explicit drop before Ok so cleanup is ordered before the join span ends.
         drop(rewrite_scratches);
         Ok::<_, DataFusionError>((affected, write_result?))
     }
@@ -762,14 +762,14 @@ async fn plan_and_commit_cow(
 
     let file_count = new_files.len() as u64;
     let affected_entries = resolve_affected_data_files(table, &affected).await?;
-    // write_data span wraps only the file count after streaming write (join span covers SQL+write
+    // write_data span wraps only the file count after streaming write.
     tracing::info_span!("merge.write_data", files = file_count).in_scope(|| ());
     commit(catalog, table, snapshot_id, affected_entries, new_files)
         .instrument(tracing::info_span!("merge.commit", files = file_count))
         .await
 }
 
-/// Register a file-scoped streaming target for COW rewrite when conf allows and `affected` is a
+/// Register a file-scoped streaming COW target when `affected` is a non-empty proper subset.
 fn maybe_register_file_scoped_rewrite_target(
     ctx: &SessionContext,
     table: &Table,
@@ -780,7 +780,7 @@ fn maybe_register_file_scoped_rewrite_target(
     if !file_scoped_rewrite_from_ctx(ctx) || affected.is_empty() {
         return Ok(None);
     }
-    // When every live data file is affected, file-scoping is a no-op — keep the full path (avoids
+    // When every live data file is affected, file-scoping is a no-op — keep the full path.
     let allowlist = allowlist_from_paths(affected);
     let scratch = scratch_schema(write_schema);
     let scan_concurrency = scan_concurrency_from_ctx(ctx);
@@ -810,7 +810,7 @@ async fn plan_and_commit_mor(
         write_schema,
         snapshot_id,
     } = *target;
-    // R-MERGE-ONEPASS Stage B (MoR): one INNER JOIN pass yields cardinality + position-delete
+    // R-MERGE-ONEPASS Stage B (MoR): one INNER JOIN yields cardinality, deletes, and UPDATE values.
     let (pairs, data_files) = async {
         let mut streams: Vec<std::pin::Pin<Box<dyn Stream<Item = Result<RecordBatch>> + Send>>> =
             Vec::new();
@@ -913,7 +913,7 @@ pub(super) async fn resolve_affected_data_files(
             .map_err(iceberg_err)?;
         let wanted: HashSet<&str> = affected.iter().map(String::as_str).collect();
         let mut files = Vec::with_capacity(affected.len());
-        // Serial walk retained: P2a hour-0 on local-fs attributes ≪10% of MERGE wall to this
+        // Serial walk retained: P2a hour-0 local-fs attributes were well under 10% of MERGE wall.
         for manifest_file in manifest_list.entries() {
             if manifest_file.content != ManifestContentType::Data {
                 continue;
@@ -944,7 +944,7 @@ pub(super) async fn resolve_affected_data_files(
     .await
 }
 
-/// Spark's `MERGE_CARDINALITY_VIOLATION` message — shared by Stage A discovery and any residual
+/// Spark's `MERGE_CARDINALITY_VIOLATION` message.
 const CARDINALITY_VIOLATION_MSG: &str = "MERGE_CARDINALITY_VIOLATION: a target row matched more \
     than one source row; deduplicate the source or tighten the ON condition";
 
@@ -1096,7 +1096,7 @@ async fn matched_work_mor(
     Ok((pairs, update_batches))
 }
 
-/// Process one Stage B `matched_work` batch: cardinality check, path intern, pos-delete pairs, and
+/// Process one Stage B `matched_work` batch: cardinality, intern, pos-deletes, and UPDATE slices.
 #[allow(clippy::too_many_arguments)]
 fn consume_matched_work_batch(
     batch: &RecordBatch,
@@ -1305,7 +1305,7 @@ impl MergeSql<'_> {
         predicate_sql.map_or_else(|| "TRUE".to_string(), |p| format!("COALESCE(({p}), FALSE)"))
     }
 
-    /// First-match clause id over an ordered predicate list — O(C) CASE, not O(C²) AND-chains
+    /// First-match clause id over an ordered predicate list — O CASE, not O AND-chains.
     fn clause_id_case(predicates: &[Option<&str>]) -> String {
         if predicates.is_empty() {
             return "CAST(NULL AS BIGINT)".to_string();
@@ -1328,7 +1328,7 @@ impl MergeSql<'_> {
         format!("(({clause_id}) IS NULL OR ({clause_id}) >= {index})")
     }
 
-    /// Pre-#18 O(C²) AND-chain of `NOT applies(j)` — kept only so the generation microbench can
+    /// Pre-#18 O AND-chain of `NOT applies`.
     #[cfg(test)]
     fn prior_clauses_do_not_apply_legacy(predicates: &[Option<&str>], index: usize) -> String {
         let negations: Vec<String> = predicates[..index]
@@ -1351,7 +1351,7 @@ impl MergeSql<'_> {
             .collect()
     }
 
-    /// Matched-side first-match clause id (scout #18): `NULL` when the row is not matched or no
+    /// Matched-side first-match clause id: `NULL` when unmatched or no WHEN MATCHED clause applies.
     fn matched_clause_id_expr(&self) -> String {
         let predicates = self.matched_predicates();
         if predicates.is_empty() {
@@ -1396,7 +1396,7 @@ impl MergeSql<'_> {
             .join(", ")
     }
 
-    /// R-MERGE-ONEPASS Stage A: one grouped join pass — `match_count` (cardinality) + `is_mutated`
+    /// R-MERGE-ONEPASS Stage A: one grouped join pass — `match_count` + `is_mutated`.
     fn match_discovery_sql(&self) -> String {
         let ta = &self.spec.target_alias;
         format!(
@@ -1412,7 +1412,7 @@ impl MergeSql<'_> {
         )
     }
 
-    /// The disjunction "some WHEN MATCHED clause mutates this row" — shared by the copy-on-write
+    /// The disjunction "some WHEN MATCHED clause mutates this row".
     fn mutated(&self) -> String {
         self.spec
             .matched
@@ -1442,7 +1442,7 @@ impl MergeSql<'_> {
         )
     }
 
-    /// True when the row's FIRST applicable clause is an UPDATE (`clause_id` ∈ update indices) —
+    /// True when the row's FIRST applicable clause is an UPDATE.
     fn update_applies(&self) -> String {
         let update_ids: Vec<String> = self
             .spec
@@ -1469,7 +1469,7 @@ impl MergeSql<'_> {
         }
     }
 
-    /// Rewrite SQL against a file-scoped target whose task allowlist already restricts `_file`
+    /// Rewrite SQL against a file-scoped target whose task allowlist already restricts `_file`.
     fn rewrite_sql_allowlisted(
         &self,
         target_table_name: &str,
@@ -1487,7 +1487,7 @@ impl MergeSql<'_> {
         )
     }
 
-    /// Rewrite SQL against the full snapshot target, semi-joined to a registered path `MemTable`
+    /// Rewrite SQL against the full snapshot target, semi-joined to a registered path `MemTable`.
     fn rewrite_sql_path_semijoin(
         &self,
         target_table_name: &str,
@@ -1528,7 +1528,7 @@ impl MergeSql<'_> {
         let quoted = quote_ident(column);
         let original = format!("{ta}.{quoted}");
         let key = column.to_ascii_lowercase();
-        // DELETE rows never reach this projection (filtered in the WHERE); a clause that does not
+        // DELETE rows never reach this projection.
         let branches: Vec<String> = maps
             .iter()
             .enumerate()
@@ -1579,7 +1579,7 @@ impl MergeSql<'_> {
         }
     }
 
-    /// The rows insert clause `index` adds: source rows with no target match — a `LEFT JOIN`
+    /// The rows insert clause `index` adds: source rows with no target match.
     fn insert_sql(&self, index: usize, write_schema: &ArrowSchema) -> Result<String> {
         let clause = &self.spec.not_matched[index];
         let projection = insert_projection(clause, write_schema)?;
@@ -1603,7 +1603,7 @@ impl MergeSql<'_> {
     }
 }
 
-/// Sentinel alias carrying the target `_pos` through the source-only insert scope: named so no
+/// Sentinel alias carrying target `_pos` through source-only insert, named to avoid collisions.
 const NOT_MATCHED_POS_SENTINEL: &str = "__repark_not_matched_pos";
 
 /// Cast one batch onto the Iceberg write schema (strict casts, field order by name).
@@ -1737,7 +1737,7 @@ trait BatchWriter {
     async fn finish(&mut self) -> Result<Vec<DataFile>>;
 }
 
-/// Production [`BatchWriter`] over the fork's `DataFileWriter` (any [`IcebergWriter`]); the
+/// Production [`BatchWriter`] over the fork's `DataFileWriter`.
 struct ForkBatchWriter<W: IcebergWriter> {
     inner: W,
 }
@@ -1866,7 +1866,7 @@ where
     let (dispatch_result, worker_results) =
         futures::future::join(dispatcher, futures::future::join_all(worker_futures)).await;
 
-    // Prefer the first worker root-cause over the dispatcher's secondary channel-closed error
+    // Prefer the first worker root-cause over the dispatcher's secondary channel-closed error.
     let mut files = Vec::new();
     let mut first_worker_error: Option<DataFusionError> = None;
     for result in worker_results {
@@ -1914,7 +1914,7 @@ pub(super) struct RowDeltaPolicy {
     pub isolation: IsolationLevel,
 }
 
-/// Copy of `predicate_dml::resolve_isolation_property` onto `write.merge.isolation-level` (no
+/// Copy of `predicate_dml::resolve_isolation_property` onto `write.merge.isolation-level`.
 fn resolve_merge_isolation(table: &Table) -> Result<IsolationLevel> {
     match table
         .metadata()
@@ -1960,7 +1960,7 @@ pub(super) async fn commit_overwrite(
     let summary = HashMap::from([(OPERATION_ID_PROP.to_string(), Uuid::new_v4().to_string())]);
     let tx = Transaction::new(table);
     let tx = if affected.is_empty() {
-        // Insert-only MERGE (no rewrites) STILL pinned snapshot S to compute its NOT-MATCHED set,
+        // Insert-only MERGE still pins snapshot S so a concurrent add cannot duplicate rows.
         let mut action = tx
             .overwrite_files()
             .add_files(new_files)
@@ -1975,7 +1975,7 @@ pub(super) async fn commit_overwrite(
         }
         action.apply(tx).map_err(iceberg_err)?
     } else {
-        // A MIXED MERGE (a WHEN MATCHED clause rewrote files) commits the COW `OverwriteFiles`
+        // A MIXED MERGE commits the COW `OverwriteFiles` under SERIALIZABLE isolation.
         let mut action = tx
             .overwrite_files()
             .delete_data_files(affected)

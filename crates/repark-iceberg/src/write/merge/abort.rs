@@ -3,7 +3,7 @@
 use iceberg::spec::DataFile;
 use iceberg::table::Table;
 
-/// Collect `file_path`s from writer-result [`DataFile`]s before the `Vec` moves into `add_files` /
+/// Collect `file_path`s from writer-result `DataFile`s before the `Vec` moves into `add_files`.
 pub(super) fn written_file_paths(files: &[DataFile]) -> Vec<String> {
     files
         .iter()

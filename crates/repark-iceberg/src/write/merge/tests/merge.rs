@@ -3,7 +3,7 @@ use super::super::*;
 use datafusion::datasource::MemTable;
 use iceberg::NamespaceIdent;
 
-/// An empty [`PartitionStream`] (yields no batches) — a trivial registerable source for the
+/// An empty [`PartitionStream`].
 #[derive(Debug)]
 struct EmptyTargetStream(SchemaRef);
 
@@ -195,7 +195,7 @@ fn deregister_merge_scratch_succeeds_when_registered_then_warns_on_second() {
     );
 }
 
-/// SAF-010 / WU-5: when DataFusion returns a hard `Err` from `deregister_table`, the `Err` arm
+/// SAF-010: a hard `deregister_table` `Err` emits WARN with the scratch name.
 #[test]
 fn deregister_merge_scratch_warns_when_deregister_returns_err() {
     let capture = std::sync::Arc::new(WarnCapture::new());
@@ -220,7 +220,7 @@ fn deregister_merge_scratch_warns_when_deregister_returns_err() {
     );
 }
 
-/// Clause predicates are 3VL-hardened: every applies-test is COALESCE-wrapped so a NULL predicate
+/// Clause predicates are 3VL-hardened: a NULL predicate means it does not apply.
 #[test]
 fn applies_wraps_predicates_in_coalesce() {
     assert_eq!(MergeSql::applies(None), "TRUE");
@@ -292,7 +292,7 @@ fn rewrite_case_encodes_clause_order() {
     );
 }
 
-/// DELETE clauses contribute no CASE branch (their rows are filtered out) but DO claim a
+/// DELETE clauses claim a `clause_id` slot so later UPDATE branches fire only for their own id.
 #[test]
 fn delete_clause_shapes_filter_not_projection() {
     let spec = spec(
@@ -471,7 +471,7 @@ fn require_non_null_i64_rejects_null() {
     assert!(err.to_string().contains("NULL match_count"), "got: {err}");
 }
 
-/// [`MergeSql::insert_sql`] encodes NOT MATCHED first-match via `clause_id`, not O(C²) `NOT applies`
+/// `insert_sql` encodes NOT MATCHED first-match via `clause_id`, not O(C²) `NOT applies` chains.
 #[test]
 fn insert_sql_uses_clause_id_not_oc2_prior_chain() {
     let merge_spec = spec(
@@ -587,7 +587,7 @@ fn rewrite_projection_20_clauses_100_cols_generation_time() {
         .collect();
     let schema = ArrowSchema::new(fields);
 
-    // --- residual O(C²) generator (pre-#18 shape) for before numbers -----------------------
+    // --- residual O(C²) generator (pre-#18 shape) for before numbers -----------------------.
     let before_started = std::time::Instant::now();
     let before_projection = legacy_oc2_rewrite_projection(&sql, &schema);
     let before_elapsed = before_started.elapsed();
@@ -596,7 +596,7 @@ fn rewrite_projection_20_clauses_100_cols_generation_time() {
         "legacy generator must emit O(C²) NOT-applies chains"
     );
 
-    // --- scout #18 O(C) path --------------------------------------------------------------
+    // --- scout #18 O(C) path --------------------------------------------------------------.
     let started = std::time::Instant::now();
     let projection = sql.rewrite_projection(&schema);
     let elapsed = started.elapsed();
@@ -685,7 +685,7 @@ fn legacy_oc2_rewrite_projection(sql: &MergeSql<'_>, write_schema: &ArrowSchema)
         .join(", ")
 }
 
-/// PIN (K1 row-identity SQL) — the generated MERGE SQL keys row identity on `(_file, _pos)`, never
+/// PIN.
 #[test]
 fn merge_sql_keys_identity_on_file_and_pos() {
     let spec = spec(
@@ -704,13 +704,13 @@ fn merge_sql_keys_identity_on_file_and_pos() {
         discovery.contains("GROUP BY t.\"_file\", t.\"_pos\""),
         "match discovery must group on the (_file, _pos) identity, got: {discovery}"
     );
-    // INNER-join puts the SOURCE first so it is the hash build side and the streamed target is the
+    // INNER JOIN puts SOURCE first so it is the hash build side and the target is the probe.
     assert!(
         discovery.contains(") AS s JOIN \"scratch\" AS t"),
         "must build the join on the source (source JOIN target), got: {discovery}"
     );
     let insert = sql.insert_sql(0, &arrow_schema()).unwrap();
-    // Audit M4: the anti-join `_pos` rides through the source-only scope as a sentinel alias — the
+    // Audit M4: the anti-join `_pos` rides through the source-only scope as a sentinel alias.
     assert!(
         insert.contains("t.\"_pos\" AS \"__repark_not_matched_pos\"")
             && insert.contains("WHERE \"__repark_not_matched_pos\" IS NULL"),
@@ -735,7 +735,7 @@ fn insert(columns: &[&str], values: &[&str]) -> InsertClause {
     }
 }
 
-/// Insert projection: named columns take their VALUES expression, nullable unnamed columns become
+/// Insert projection: named columns take VALUES; unnamed nullable become NULL, required reject.
 #[test]
 fn insert_projection_validates_columns() {
     let schema = arrow_schema();
@@ -759,7 +759,7 @@ fn insert_projection_validates_columns() {
     assert!(err.to_string().contains("2 columns but 1 VALUES"));
 }
 
-/// A column named twice in the INSERT list is an error (Spark rejects it), never a silent
+/// A column named twice in the INSERT list is an error, never a silent last-value-wins.
 #[test]
 fn insert_projection_rejects_duplicate_columns() {
     let schema = arrow_schema();
@@ -777,7 +777,7 @@ fn insert_projection_positional() {
     );
 }
 
-/// An unexpanded `INSERT *` marker reaching SQL generation is an executor bug, never a silent
+/// An unexpanded `INSERT *` marker reaching SQL generation is an executor bug.
 #[test]
 fn insert_projection_rejects_unexpanded_star() {
     let schema = arrow_schema();
@@ -789,7 +789,7 @@ fn insert_projection_rejects_unexpanded_star() {
     assert!(err.to_string().contains("unexpanded"));
 }
 
-/// The same guard on the UPDATE side: `validate_update_columns` runs on the expanded spec, so a
+/// UPDATE validation runs on the expanded spec, so a leftover `UpdateAll` is an internal error.
 #[test]
 fn validate_update_columns_rejects_unexpanded_star() {
     let schema = arrow_schema();
@@ -804,7 +804,7 @@ fn validate_update_columns_rejects_unexpanded_star() {
     assert!(err.to_string().contains("unexpanded"));
 }
 
-/// Audit BUG-006: `UPDATE SET` / `INSERT` column names resolve case-insensitively (Spark
+/// Audit BUG-006: `UPDATE SET` / `INSERT` column names resolve case-insensitively.
 #[test]
 fn validate_update_columns_case_insensitive() {
     let schema = arrow_schema();
@@ -894,7 +894,7 @@ fn insert_projection_case_insensitive_columns() {
     );
 }
 
-/// Star expansion — Spark's star resolution: every TARGET column takes the same-named source
+/// Star expansion.
 #[tokio::test]
 async fn expand_star_clauses_resolves_by_name() {
     let ctx = SessionContext::new();
@@ -947,7 +947,7 @@ async fn expand_star_clauses_resolves_by_name() {
     assert!(matches!(untouched, Cow::Borrowed(_)));
 }
 
-/// A target column the source cannot provide is an up-front error naming the column — a star must
+/// A target column the source cannot provide is an up-front error naming the column.
 #[tokio::test]
 async fn expand_star_clauses_errors_on_missing_source_column() {
     let ctx = SessionContext::new();
@@ -972,7 +972,7 @@ async fn expand_star_clauses_errors_on_missing_source_column() {
     assert!(err.to_string().contains("missing from the source: `name`"));
 }
 
-/// PIN PL-5 (WG-4, BUG-007) — star expansion resolves each target column to a differently-cased
+/// PIN PL-5.
 #[tokio::test]
 async fn expand_star_clauses_resolves_source_case_insensitively() {
     let ctx = SessionContext::new();
@@ -1019,7 +1019,7 @@ async fn expand_star_clauses_resolves_source_case_insensitively() {
     assert_eq!(values_sql, &["s.\"ID\"", "s.\"NAME\""]);
 }
 
-/// PIN PL-6 (WG-4, BUG-007) — two source columns colliding on one target (`id` AND `ID`) is a loud
+/// PIN PL-6 — two source columns colliding on one target is a loud AMBIGUOUS error naming both.
 #[tokio::test]
 async fn expand_star_clauses_rejects_case_ambiguous_source() {
     let ctx = SessionContext::new();
@@ -1054,7 +1054,7 @@ fn sql_literal_escapes_quotes() {
     assert_eq!(sql_literal("plain"), "'plain'");
 }
 
-/// Schema-derived column names survive embedded double quotes in every generated-SQL interpolation
+/// Schema-derived names keep embedded double quotes from breaking generated-SQL identifiers.
 #[test]
 fn generated_sql_quotes_identifiers() {
     assert_eq!(quote_ident("plain"), "\"plain\"");

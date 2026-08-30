@@ -19,7 +19,7 @@ pub use provider::{
     ReparkCatalogProvider, drop_catalog_namespace_from_provider, invalidate_catalog_namespaces,
     rebuild_catalog_provider,
 };
-// Hoisted from v1 repark-sql/catalog_ops.rs (phase-1 PR-B, move-only): the session
+// Engine-side adapter for session `refresh_catalog_provider`, hoisted from v1 catalog_ops.
 pub use catalog_ops::reregister_catalog_provider;
 // Projection wrap for fork metadata-table providers (registered via provider).
 pub use builders::{glue_catalog, iceberg_to_datafusion, memory_catalog, s3tables_catalog};
@@ -43,7 +43,7 @@ pub(crate) use std::collections::HashMap;
 
 // Free SQL uses a frozen provider snapshot; facade listings read live catalog names.
 
-/// Spark Catalog listings read live names; full provider rebuilds are reserved for explicit
+/// Spark Catalog listings read live names.
 pub const CATALOG_LISTING_STRATEGY: &str = "list-on-access";
 
 /// Live table names in `namespace` from the Iceberg [`Catalog`] — no DataFusion snapshot.
