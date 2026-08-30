@@ -23,6 +23,12 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   take a precomputed `skip_cardinality` (lone unconditional MATCHED DELETE);
   `match_count > 1` still folds mutations / pos-deletes (double-delete is
   idempotent). V3R-1: both copy-on-write arms run the v3 guard (`V3-COW-1`) before any write.
+- `dv_close.rs` — v3 `RowDelta` DV-container close. `prepare_row_delta_deletes` writes
+  V2 parquet position deletes or calls `close_touched_dv_containers` on V3, then
+  `apply` stamps sibling sequences. C-003 pin
+  `shared_puffin_row_delta_keeps_the_untouched_sibling` calls `commit_row_delta_kind`
+  on the Spark shared-Puffin fixture (id 5 must stay deleted).
+  pins: rp-3-fork-repin/C-003
 - `abort.rs` — `delete_written_files_best_effort` + `written_file_paths`. Delete
   set is threaded from writer results in hand; never re-derived from the table
   or manifests. `CommitStateUnknown` errors SKIP cleanup (the commit may have

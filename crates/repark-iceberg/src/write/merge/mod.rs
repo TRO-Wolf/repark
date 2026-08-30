@@ -54,6 +54,7 @@ use tracing::Instrument;
 use uuid::Uuid;
 
 mod abort;
+mod dv_close;
 mod insert;
 use insert::{
     insert_projection, insert_stream_checked, store_assignment_then_sql, update_stream_checked,
@@ -2454,39 +2455,39 @@ pub(super) async fn commit_row_delta_kind(
         return Ok(());
     }
     let data_file_paths = abort::written_file_paths(&data_files);
-    // The DATA files these position deletes reference — the `validate_data_files_exist` set. Built
-    // BEFORE the write so it is derived from the pairs themselves, never from the delete files.
-    let referenced: HashSet<String> = pairs
-        .iter()
-        .map(|(path, _)| path.as_ref().to_string())
-        .collect();
     let pair_count = pairs.len() as u64;
     let data_file_count = data_files.len() as u64;
-    let delete_files =
-        crate::write::position_delete::write_position_deletes(table, &pairs, concurrency)
-            .instrument(tracing::info_span!(
-                "merge.write_deletes",
-                pairs = pair_count
-            ))
-            .await?;
-    let delete_file_paths = abort::written_file_paths(&delete_files);
-    let delete_file_count = delete_files.len() as u64;
+    let prepared = dv_close::prepare_row_delta_deletes(table, &pairs, concurrency)
+        .instrument(tracing::info_span!(
+            "merge.write_deletes",
+            pairs = pair_count
+        ))
+        .await?;
+    let referenced = prepared.referenced.clone();
+    let delete_file_paths = prepared.abort_paths.clone();
+    let delete_file_count = delete_file_paths.len() as u64;
+    let arm_deleted_on_delete = prepared.arm_validate_deleted_files_on_delete;
 
     let summary = HashMap::from([(OPERATION_ID_PROP.to_string(), Uuid::new_v4().to_string())]);
     let tx = Transaction::new(table);
-    let mut action = tx
-        .row_delta()
-        .add_data_files(data_files)
-        .add_deletes(delete_files)
+    let mut action = tx.row_delta().add_data_files(data_files);
+    action = prepared.apply(action);
+    action = action
         .conflict_detection_filter(Predicate::AlwaysTrue)
         .validate_data_files_exist(referenced)
         .case_sensitive(true)
         .set_snapshot_properties(summary);
-    // Java `SparkPositionDeltaWrite.commit` L251-254: UPDATE/MERGE only, not DELETE.
+    // V2: parquet position deletes + Java skip-delete on DELETE.
+    // V3: close_touched_dv_containers; DELETE arms validate_deleted_files like the fork.
+    // MERGE always arms validate_deleted_files + validate_no_conflicting_delete_files.
+    // Abort paths include every newly written DV Puffin so a failed commit cannot leave
+    // orphaned containers.
     if matches!(policy.kind, RowDeltaKind::Merge) {
         action = action
             .validate_deleted_files()
             .validate_no_conflicting_delete_files();
+    } else if arm_deleted_on_delete {
+        action = action.validate_deleted_files();
     }
     if policy.isolation == IsolationLevel::Serializable {
         action = action.validate_no_conflicting_data_files();
@@ -2560,6 +2561,5 @@ mod parallel_write_tests;
 mod streaming_scan_tests;
 #[cfg(test)]
 mod streaming_tests;
-#[cfg(test)]
 #[cfg(test)]
 mod tests;
