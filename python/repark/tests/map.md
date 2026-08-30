@@ -39,8 +39,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_mw9_delete_granularity.py](test_mw9_delete_granularity.py) — **MW-9:** facade Spark
   `.sql()` unset `write.delete.granularity` writes one position-delete file per data file.
 - [test_rp3_c009_write_default.py](test_rp3_c009_write_default.py) — **RP-3 C-009:** no engine
-  caller sets `write_default`; checked-in Spark fixtures stay byte-flat vs `origin/main`.
-  pins: rp-3-fork-repin/C-009, C-010, C-011
+  caller sets `write_default`; Iceberg fixture bytes stay flat vs `origin/main` when that
+  ref exists (skips on a shallow checkout). pins: rp-3-fork-repin/C-009, C-010, C-011
 - [test_v3_cow_dml.py](test_v3_cow_dml.py) — **V3R-1 (2026-08-25); RP-2 2026-08-27 retarget:** facade Spark `.sql()`
   MERGE / UPDATE on an adopted v3 table raise `UnsupportedOperationException` naming
   `V3-COW-1`; the plain-`WHERE` DELETE commits the right rows (RP-2 lift) with Spark-equal
