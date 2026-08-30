@@ -2,9 +2,7 @@
 
 use thiserror::Error;
 
-/// ===========================================================================================
 /// Estimator and solver failures; singular systems never receive silent regularization.
-/// ===========================================================================================
 #[derive(Debug, Error, Clone, PartialEq)]
 #[non_exhaustive]
 pub enum MlError {

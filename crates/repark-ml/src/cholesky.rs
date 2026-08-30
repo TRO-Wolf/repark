@@ -1,5 +1,4 @@
 //! Hand-rolled Cholesky factorization and triangular solves for row-major dense matrices.
-//! OLS and IRLS use it; non-positive or near-singular pivots fail without pseudoinversion.
 
 use crate::error::{MlError, Result};
 
@@ -7,13 +6,9 @@ const PIVOT_REL_EPS: f64 = 1e-12;
 
 const PIVOT_ABS_EPS: f64 = 1e-14;
 
-/// ===========================================================================================
 /// Factor row-major `matrix` in place as `A = L Lᵀ`; only the lower triangle is defined.
-///
 /// # Errors
-/// [`MlError::EmptyDesign`] for zero dimension; [`MlError::IllegalArgument`] for overflow or a
-/// buffer mismatch; [`MlError::Singular`] for a non-positive or near-singular pivot.
-/// ===========================================================================================
+/// Returns [`MlError::EmptyDesign`], [`MlError::IllegalArgument`], or [`MlError::Singular`].
 pub fn cholesky_decompose_inplace(matrix: &mut [f64], dimension: usize) -> Result<()> {
     if dimension == 0 {
         return Err(MlError::EmptyDesign(
@@ -70,9 +65,7 @@ pub fn cholesky_decompose_inplace(matrix: &mut [f64], dimension: usize) -> Resul
     Ok(())
 }
 
-/// ===========================================================================================
 /// Validate triangular-solve buffers without panics.
-/// ===========================================================================================
 fn validate_solve_buffers(
     lower: &[f64],
     dimension: usize,
@@ -110,13 +103,9 @@ fn validate_solve_buffers(
     Ok(())
 }
 
-/// ===========================================================================================
 /// Solve `L y = b` using the row-major factor from [`cholesky_decompose_inplace`].
-///
 /// # Errors
-/// [`MlError::EmptyDesign`] for zero dimension; [`MlError::IllegalArgument`] for overflow or a
-/// buffer mismatch.
-/// ===========================================================================================
+/// Returns [`MlError::EmptyDesign`] or [`MlError::IllegalArgument`].
 pub fn forward_solve(
     lower: &[f64],
     dimension: usize,
@@ -134,13 +123,9 @@ pub fn forward_solve(
     Ok(())
 }
 
-/// ===========================================================================================
 /// Solve `Lᵀ x = y` using the row-major factor.
-///
 /// # Errors
-/// [`MlError::EmptyDesign`] for zero dimension; [`MlError::IllegalArgument`] for overflow or a
-/// buffer mismatch.
-/// ===========================================================================================
+/// Returns [`MlError::EmptyDesign`] or [`MlError::IllegalArgument`].
 pub fn backward_solve(lower: &[f64], dimension: usize, y: &[f64], x: &mut [f64]) -> Result<()> {
     validate_solve_buffers(lower, dimension, y, x, "x")?;
     for row in (0..dimension).rev() {
@@ -153,13 +138,9 @@ pub fn backward_solve(lower: &[f64], dimension: usize, y: &[f64], x: &mut [f64])
     Ok(())
 }
 
-/// ===========================================================================================
 /// Solve `A x = b` from a factor produced by [`cholesky_decompose_inplace`].
-///
 /// # Errors
-/// [`MlError::EmptyDesign`] for zero dimension; [`MlError::IllegalArgument`] for overflow or a
-/// buffer mismatch.
-/// ===========================================================================================
+/// Returns [`MlError::EmptyDesign`] or [`MlError::IllegalArgument`].
 pub fn cholesky_solve(
     lower: &[f64],
     dimension: usize,
@@ -172,12 +153,9 @@ pub fn cholesky_solve(
     Ok(x)
 }
 
-/// ===========================================================================================
 /// Factor and solve `A x = b`; overwrite `matrix` with `L`.
-///
 /// # Errors
 /// Propagates [`MlError::EmptyDesign`], [`MlError::IllegalArgument`], or [`MlError::Singular`].
-/// ===========================================================================================
 pub fn cholesky_factor_and_solve(
     matrix: &mut [f64],
     dimension: usize,
