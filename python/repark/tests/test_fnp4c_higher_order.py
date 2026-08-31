@@ -2,7 +2,7 @@
 
 Oracle: live PySpark 4.1.2 (c26-oracle, 2026-08-31). Pins are value AND Arrow
 type on ``toArrow()``. Nested higher-order remains the FNP-4a loud refusal.
-pins: fnp-4c-higher-order-kernels/C-014
+pins: fnp-4c-higher-order-kernels/C-014, C-015
 """
 
 from __future__ import annotations

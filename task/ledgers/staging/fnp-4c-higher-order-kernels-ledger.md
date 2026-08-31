@@ -74,7 +74,7 @@ the dialect on the production Spark door.
 | C-012 | Per-name lambda arity is refused at the facade with Spark's class (`PySparkValueError`) before a plan error. A lambda that does not return a `Column` is refused. Kernel-side extra lambda params vs declared params remain a plan error. Measured Spark error text is the oracle; incidental controls are measured too. | Facade pins per name; at least one kernel-side arity/type pin. | **PROVEN** |
 | C-013 | The FNP-4a seam is the only seam: no second `call_higher_order`, no alias of Spark `transform`/`filter` onto unary `array_transform`/`array_filter`. `exists` remains the `array_any_match` alias. | The FNP-4a registry tests, updated so `transform`/`filter` resolve RePark kernels whose `name()` is not `array_transform`/`array_filter`. | **PROVEN** |
 | C-014 | Docs and maps stay in lockstep. File-size ceilings ratchet down only. `functions.py` does not raise its 1985 baseline. New Rust files stay at or under the 1000-line default. | `make check-map-sync`; `check_lib_py` / `check_rust_file_size` green. | **PROVEN** |
-| C-015 | Gates before done: `make verify`, `make check-map-sync check-ledger-grammar`, `python3 scripts/ledger_lifecycle.py check --base 60225cc427673cbc2e4bf23e90db376e602773dd`, full `make py-test`, `make py-test-facade` for facade tests added. Real exit codes. | Recorded at close. | **OPEN** |
+| C-015 | Gates before done: `make verify`, `make check-map-sync check-ledger-grammar`, `python3 scripts/ledger_lifecycle.py check --base 60225cc427673cbc2e4bf23e90db376e602773dd`, full `make py-test`, `make py-test-facade` for facade tests added. Real exit codes. | Recorded at close. | **PROVEN** |
 
 ## Sequence
 
@@ -133,6 +133,26 @@ SELF_LOGIC_REVIEW:
   escalation: —
 ```
 
+```yaml
+SELF_LOGIC_REVIEW:
+  id: SLR-fnp-4c-gates
+  agent: Actor
+  action: Record C-015 exits and file the coverage attestation
+  charter_trace: FNP-4c C-015
+  preconditions:
+    - Kernel commit 56805e4: SATISFIED
+    - make verify / map-sync / ledger-grammar / lifecycle / py-test / py-test-facade: SATISFIED
+  success_condition: C-015 PROVEN with recorded exits; grammar accepts the attestation
+  step_risks:
+    - Attestation required once no OPEN remains: HANDLED(COVERAGE_ATTESTATION complete true)
+  contingencies:
+    - Revert this docs commit: EXECUTABLE
+  tripwire_scan: CLEAN
+  uncertainty: NONE
+  verdict: PROCEED
+  escalation: —
+```
+
 ## Disk (AGENTS.md "Resource discipline")
 
 Checked 2026-08-31 at pickup: `/` 306 G free of 1.8 T (83% used). No worktree.
@@ -141,6 +161,79 @@ Incremental `target/` reuse. No `cargo clean`. Spark oracle at
 
 ## Oracle
 
-Live PySpark **4.1.2** via `/home/john/grok-trees/c26-oracle`. Cells recorded
-in the execution record as they are measured. Hand-computed expectations are
-not an oracle.
+Live PySpark **4.1.2** via `/home/john/grok-trees/c26-oracle` (2026-08-31).
+Fixture: `array(1,2,3)` / `array(1,NULL,3)` / empty `ARRAY<INT>` / NULL array.
+Maps: `{foo:1, bar:2}` zip `{foo:10, baz:3}`. Hand-computed expectations are
+not an oracle. Spark SQL / ANSI `x -> y` parse stays FNP-4b.
+
+| Name | Cell | Spark 4.1.2 |
+|---|---|---|
+| `transform` unary | `x + 1` | `[[2,3,4],[2,None,4],[],None]` list |
+| `transform` index | `x + i`; `i` alone | `[[1,3,5],[1,None,5],[],None]`; `[0,1,2]` |
+| `filter` | `x > 1`; even `i` | `[[2,3],[3],[],None]`; `[[1,3],[1,3],[],None]` |
+| `forall` | `x > 0`; `x > 1` | `[True,None,True,None]` bool; `[False,False,True,None]` |
+| `aggregate` | `acc+coalesce(x,0)`; raw `acc+x`; finish `*10` | `[6,4,0,None]`; `[6,None,0,None]`; `[60,40,0,None]` |
+| `reduce` | same merge as aggregate | `[6,4,0,None]` |
+| `zip_with` | add with coalesce; `concat_ws` | max-len pad; missing side null |
+| `transform_keys` | `upper(k)` | `{BAR:2,FOO:1}` / `{}` / None |
+| `transform_values` | `v + 1` | `{bar:3,foo:2}` |
+| `map_filter` | `v > 1` | `{bar:2}` |
+| `map_zip_with` | coalesce add; `v1` | union map1 then map2-only; missing side null |
+| errors | extra lambda arity; non-bool filter; null key; dup key | `INVALID_LAMBDA_FUNCTION_CALL`; `DATATYPE_MISMATCH`; `NULL_MAP_KEY`; `DUPLICATED_MAP_KEY` |
+
+## Execution record (2026-08-31)
+
+| Command | Exit |
+|---|---|
+| `make verify` | 0 |
+| `make check-map-sync check-ledger-grammar` | 0 (161 maps; 8 live ledgers) |
+| `python3 scripts/ledger_lifecycle.py check --base 60225cc427673cbc2e4bf23e90db376e602773dd` | 0 |
+| `make py-test` | 0 (459 passed) |
+| `make py-test-facade` | 0 (4107 passed, 75 skipped) |
+
+pins: fnp-4c-higher-order-kernels/C-015
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: FNP-4c
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Ten Spark names resolve on the FNP-4a table; facade Column API matches the 2026-08-31 PySpark 4.1.2 cells for values, Arrow types, and the named error classes.
+      artifacts: [python/repark/tests/test_fnp4c_higher_order.py, crates/repark-functions/src/higher_order/mod.rs]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Null array, empty array, null element, unequal zip lengths, empty maps, null map, and extra-arity lambdas are pinned.
+      artifacts: [python/repark/tests/test_fnp4c_higher_order.py]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Spark error classes on arity and non-boolean filter; NULL_MAP_KEY and DUPLICATED_MAP_KEY; nested higher-order stays UnsupportedOperationException.
+      artifacts: [python/repark/tests/test_fnp4c_higher_order.py]
+    - id: AT-4
+      status: N/A
+      justification: Kernels are batch-pure; lambda depth is a ContextVar per thread; no shared mutable engine state.
+    - id: AT-5
+      status: N/A
+      justification: No AWS, IAM, secrets, or SQL built from user text; lambdas are Column trees, not eval.
+    - id: AT-6
+      status: ATTACKED
+      evidence: reduce is an alias of aggregate; exists stays array_any_match; transform/filter are RePark kernels, not unary DataFusion aliases.
+      artifacts: [crates/repark-functions/src/higher_order/mod.rs, python/repark/tests/test_functions_split_identity.py]
+    - id: AT-7
+      status: N/A
+      justification: Index arrays are lazy when unused; no system-breaking resource claim.
+    - id: AT-8
+      status: ATTACKED
+      evidence: Facade arity uses Spark INVALID_LAMBDA_FUNCTION_CALL; filter/forall require BOOLEAN; map rebuild uses Arrow entries field name.
+      artifacts: [python/repark/src/repark/spark/functions_lambda.py, crates/repark-functions/src/higher_order/map_common.rs]
+    - id: AT-9
+      status: ATTACKED
+      evidence: Failures name the Spark error class; nested HOF names the function.
+      artifacts: [python/repark/tests/test_fnp4c_higher_order.py]
+    - id: AT-10
+      status: ATTACKED
+      evidence: One pin per clause C-001..C-014; split-identity appends the ten names after the 62 refusals; functions.py stays 1985.
+      artifacts: [python/repark/tests/test_fnp4c_higher_order.py, python/repark/tests/test_functions_split_identity.py]
+  reattested: []
+  complete: true
+```
