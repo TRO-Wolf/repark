@@ -408,29 +408,34 @@ fn cow_keep_refusal_files_are_byte_untouched() {
         .parent()
         .expect("repo")
         .to_path_buf();
-    let paths = [
-        "crates/repark-iceberg/src/write/row_lineage_guard.rs",
-        "crates/repark-spark/src/tests/v3_cow.rs",
-        "crates/repark-sql/src/v3/cow.rs",
-        "python/repark/tests/test_v3_cow_dml.py",
+    let pinned: [(&str, u64); 4] = [
+        (
+            "crates/repark-iceberg/src/write/row_lineage_guard.rs",
+            0x276f_b586_043d_cfc9,
+        ),
+        (
+            "crates/repark-spark/src/tests/v3_cow.rs",
+            0xd6a2_5d40_13bc_3374,
+        ),
+        ("crates/repark-sql/src/v3/cow.rs", 0x7dae_1067_fc44_04e7),
+        (
+            "python/repark/tests/test_v3_cow_dml.py",
+            0x8178_5d1e_9f6f_5e38,
+        ),
     ];
-    let output = std::process::Command::new("git")
-        .args([
-            "-C",
-            repo.to_str().expect("utf8"),
-            "diff",
-            "--exit-code",
-            "60225cc427673cbc2e4bf23e90db376e602773dd",
-            "--",
-        ])
-        .args(paths)
-        .output()
-        .expect("git diff");
-    assert!(
-        output.status.success(),
-        "V3-COW-1 keep-refusal files must stay byte-untouched:\n{}",
-        String::from_utf8_lossy(&output.stdout)
-    );
+    for (path, expected) in pinned {
+        let bytes = std::fs::read(repo.join(path)).expect(path);
+        let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
+        for byte in bytes {
+            hash ^= u64::from(byte);
+            hash = hash.wrapping_mul(0x0100_0000_01b3);
+        }
+        assert_eq!(
+            hash, expected,
+            "V3-COW-1 keep-refusal file {path} changed; this unit must not touch it \
+             (re-record the pinned hash only for a change another merged unit made)"
+        );
+    }
 }
 
 fn assert_v3_rowid2(message: &str, kind: &str) {
