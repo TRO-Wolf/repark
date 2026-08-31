@@ -29,6 +29,19 @@ pub use collation::{
     COLLATION_REFUSAL_NEEDLE, collation_refusal_message, is_collation_session_key,
     refuse_collation_in_sql, refuse_collation_in_statement,
 };
+pub use repark_functions::declared_refuse::{
+    refuse_in_sql as refuse_declared_function_in_sql,
+    refuse_in_statement as refuse_declared_function_in_statement,
+};
+
+/// Parse-altitude valves for SQL fragments that bypass the statement router.
+/// # Errors
+/// Collation or declared-function refusal.
+pub fn refuse_sql_fragment(sql: &str) -> datafusion::error::Result<()> {
+    refuse_collation_in_sql(sql)?;
+    refuse_declared_function_in_sql(sql)?;
+    Ok(())
+}
 
 // --- Session seam adapter.
 pub use dialect::SparkDialect;

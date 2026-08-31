@@ -71,6 +71,7 @@ async fn execute_time_travelled(
 
     // G15 runs at parse altitude before statement-specific handling.
     guards::refuse_collation_in_statement(statement.as_ref())?;
+    crate::declared_refuse::refuse_in_statement(statement.as_ref())?;
 
     match statement.as_ref() {
         Statement::CreateTable(create) => create_table::execute_create_table(cx, create).await,

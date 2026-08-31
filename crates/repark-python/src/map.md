@@ -21,9 +21,14 @@ and hand execution, SQL, and ML semantics to the engine crates.
 | [`allocator.rs`](allocator.rs) | Optional mimalloc allocator for wheel builds. |
 | [`exceptions.rs`](exceptions.rs) | PySpark-shaped exception types. |
 | [`fence.rs`](fence.rs) | Panic fences for PyO3 methods and Arrow stream polls. |
-| [`session.rs`](session.rs) | Shared runtime, session doors, readers, catalogs, and temp views. |
-| [`dataframe.rs`](dataframe.rs) | Lazy plans, actions, transforms, schema, and Arrow C Stream export. |
-| [`column/`](column/map.md) | Immutable expressions, scalar functions, aggregates, and windows. |
+| [`session.rs`](session.rs) | Shared runtime, session doors, readers, catalogs, and temp views.
+  `PyReparkSession.sql` runs the FNP-15/16 declared-function valve so the native
+  `repark.sql()` callable (DataFusionDialect) refuses with the registry reason.
+  pins: fnp-15-16/C-001 |
+| [`dataframe.rs`](dataframe.rs) | Lazy plans, actions, transforms, schema, and Arrow C Stream export.
+  `filter_sql` bypasses the statement router, so it applies parse-altitude valves itself. |
+| [`column/`](column/map.md) | Immutable expressions, scalar functions, aggregates, and windows.
+  `PyColumn.sql` also runs the FNP-15/16 declared-function valve (`refuse_declared_function_in_sql`). |
 | [`ml.rs`](ml.rs) | Batch-streaming binders for linear, logistic, and KMeans fits. |
 | [`tests.rs`](tests.rs) | Unit pins for module registration and exception/type identity. |
 

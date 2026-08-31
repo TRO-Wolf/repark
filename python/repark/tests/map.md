@@ -146,7 +146,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   names (253 after FN-A + FN-B + 8 aggregate additions) + every name resolves.
   (2026-08-15): `__all__` before==after pin. **FN-D moved the pin** 253→264
   (11 datetime additions on the freeze inventory; independent of FN-C) + every
-  name resolves.
+  name resolves. **FNP-15/16:** the pre-split 360 names stay the prefix; 62
+  declared-absent names append. pins: fnp-15-16/C-016
   (2026-08-15): `__all__` before==after pin. **FN-E moved the pin** to 262 names
   (freeze 253 + 9 collection additions) + every name resolves.
   (2026-08-15): `__all__` before==after pin. **FN-F moved the pin** to 263
@@ -2188,6 +2189,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   UTF-8, while Spark's `UTF8String` can); plus `assert_true` raising on NULL as well as false,
   and honouring a caller-supplied message.
 
+- `test_fnp15_16_declared_refuse.py` — **FNP-15/16 (2026-08-30):** unreachable and deferred-by-cost
+  Spark function refusals. Facade, Spark SQL, ANSI SQL, `sql.functions` re-export, and
+  `F.expr` over every family. The C-012 "unsupported" strip-check covers all four
+  FNP-16 family sections. C-013 member sets are asserted against an independent
+  census literal in the test, not against `functions_declared` tuples. pins: fnp-15-16/C-001,
+  C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-016, C-017
+- FNP-15/16 C-015 — gates live in the execution-record table of
+  [fnp-15-16-ledger.md](../../../task/ledgers/completed/fnp-15-16-ledger.md), not in the
+  refuse tests. pins: fnp-15-16/C-015
 - `test_fnp_critic_remediation.py` — **Critic round 1 (2026-08-20):** regression pins for the
   findings two independent adversarial passes raised on this branch, including the S0 (nested
   higher-order functions returned an inverted boolean), the `ascending=` override matrix, the

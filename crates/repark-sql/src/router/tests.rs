@@ -179,3 +179,35 @@ async fn temp_views_delegate() {
         .expect("Int64");
     assert_eq!(column.value(0), 7);
 }
+
+/// Crate ANSI door: `execute` refuses every armed name with the registry reason.
+///
+/// `repark.sql()` does not take this path; it is a bind-level pre-valve on
+/// `PyReparkSession.sql`. pins: fnp-15-16/C-001, C-008, C-009, C-010, C-011
+#[tokio::test]
+async fn execute_refuses_every_armed_declared_name() {
+    let ctx = native_ctx();
+    let names = crate::declared_refuse::armed_names();
+    assert_eq!(names.len(), 62, "roster is 6 unreachable plus 56 deferred");
+    for name in names {
+        let error = run(&ctx, &format!("SELECT {name}(1)"))
+            .await
+            .expect_err(name);
+        assert!(
+            matches!(error, DataFusionError::NotImplemented(_)),
+            "{name} must be NotImplemented, got {error:?}"
+        );
+        let text = error.to_string();
+        assert!(text.contains(name), "must name {name}: {text}");
+        assert!(
+            text.contains("docs/spark-sql-iceberg-parity.md"),
+            "{name} must cite the registry: {text}"
+        );
+        let unreachable = text.contains("unreachable");
+        let deferred = text.contains("deferred by cost");
+        assert!(
+            unreachable ^ deferred,
+            "{name} must be unreachable xor deferred by cost: {text}"
+        );
+    }
+}

@@ -372,8 +372,16 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
 
 
 def test_functions_all_matches_pre_split_inventory() -> None:
-    assert tuple(F.__all__) == _PRE_SPLIT_ALL
-    assert len(F.__all__) == 360
+    """Pre-split 360 names stay the prefix; FNP-15/16 appends 62 declared refusals.
+
+    pins: fnp-15-16/C-016
+    """
+    from repark.spark.functions_declared import DECLARED_REFUSE_NAMES
+
+    exported = tuple(F.__all__)
+    assert exported[: len(_PRE_SPLIT_ALL)] == _PRE_SPLIT_ALL
+    assert exported[len(_PRE_SPLIT_ALL) :] == DECLARED_REFUSE_NAMES
+    assert len(exported) == 360 + 62
 
 
 def test_every_all_name_resolves() -> None:

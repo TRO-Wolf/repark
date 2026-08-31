@@ -17,6 +17,12 @@ Child modules use Rust's default layout: `str_to_map`, `shuffle`, and `map_from_
 
 ## Contents
 
+- `declared_refuse.rs` — FNP-15/16 parse-altitude refusals for Spark function names this
+  engine will not build. Spark door and `F.expr` / `filter_sql` call `refuse_in_statement` /
+  `refuse_in_sql`. FNP-15 names are unreachable; FNP-16 sketches (32) are armed as
+  deferred-by-cost; CSV/XML/XPath (11), VARIANT (8), and geospatial (5) likewise.
+  `armed_names()` is 62.
+  pins: fnp-15-16/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-013
 - `spark_length.rs` — **GT1-FIX G5 / A3 / R3-1:** Spark `bit_length` /
   `octet_length`. Stringifies non-binary; BINARY pass-through (including
   Dictionary(_, Binary)); refuses ARRAY/STRUCT/MAP; decimal scale-padded

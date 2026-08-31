@@ -23,7 +23,9 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
 
 - `literal` distinguishes Python `bool` from `int` and accepts only supported scalar types.
 - `sql` analyzes standalone expressions before handoff; parse errors map to `ParseException` and
-  unresolved names map to `AnalysisException`.
+  unresolved names map to `AnalysisException`. This path bypasses the Spark SQL router, so
+  FNP-15/16 declared-function names refuse through `refuse_sql_fragment` (collation +
+  declared-absent). pins: fnp-15-16/C-001
 - Higher-order lambda variables are resolved against the consuming DataFrame schema.
 - Nested higher-order functions refuse loudly rather than producing an invalid plan.
 - `concat` propagates NULL and returns Spark-compatible UTF-8 output.

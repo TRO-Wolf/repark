@@ -16,6 +16,9 @@ pins: rp-3-fork-repin/C-010
 
 ## Contents
 
+- `lib.rs` — re-exports G15 collation valves and FNP-15/16 `refuse_declared_function_in_*`
+  from `repark-functions`, plus `refuse_sql_fragment` for `F.expr` / `filter_sql`.
+  pins: fnp-15-16/C-001
 - `router.rs` — `execute` / `execute_with_read_only` / `execute_time_travelled` / `execute_inner`
   + pre-parse intercepts (alter I6/I7, create-namespace, describe/show, ref DDL) + the
   write-to-branch sniff; full router arm set ([router/map.md](router/map.md) for the tests).

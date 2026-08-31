@@ -14,6 +14,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 ## Contents
 
 - `mod.rs` — pure module manifest (`mod common;` + one `mod` per leaf).
+- `declared_refuse.rs` — **FNP-15/16:** Spark-door parse-altitude refusals for the six
+  unreachable names and the sketch family; passthrough attach pin.
+  pins: fnp-15-16/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - `spark_string_literals.rs` — **SQP-1:** the string-literal escape pins (C-001..C-008, C-010,
   C-012): the escape domain, `\'`/unpaired-backslash lexing, adjacency + the DataFusion-native
   `OPTIONS` carve-out, quote-runs-are-not-triple-quotes, raw strings, LIKE/RLIKE/backtick controls,

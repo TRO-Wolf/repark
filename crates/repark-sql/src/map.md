@@ -12,7 +12,7 @@ Source for the ANSI SQL door. `lib.rs` is a manifest and `router.rs` owns routin
 including each refusal, has a test in the same change.
 Source documentation may retain model provenance; code-quality grade tags stay outside code.
 
-The router order is load-bearing: text guards first; pre-parse; parse; G15 and statement match;
+The router order is load-bearing: text guards first; pre-parse; parse; G15, FNP-15/16 declared-function refuse, and statement match;
 parsed DML G3-E8, then async MoR/V3 valves; delegation applies SEC-02 after planning and before
 execution. Multi-statement refusal precedes every rewrite. The wrong-door sniff runs on errors only.
 There is no `$` pre-parse bypass; stock parsing handles metadata references.
@@ -20,6 +20,11 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
 ## Contents
 
 - `lib.rs` — manifest: module list, `pub use dialect::AnsiDialect`, `pub use router::execute`.
+- `declared_refuse.rs` — FNP-15/16 ANSI-door parse valve (G15 dual-wire: Spark's copy lives in
+  `repark-functions`). Sketches (32), CSV/XML/XPath (11), VARIANT (8), and geospatial (5) are
+  deferred-by-cost. `armed_names()` (test-only) is the 62-name roster. The crate door pin is
+  `router/tests.rs::execute_refuses_every_armed_declared_name` (`execute`, not the helper).
+  pins: fnp-15-16/C-001, C-008, C-009, C-010, C-011, C-013
 - [v3/](v3/map.md) — format-v3 test modules (`#[cfg(test)] mod v3`).
 - `delete_granularity.rs` — **test-only:** ANSI `write.delete.granularity`
   (`file` default / explicit `partition` / refuse unknown / SET PROPERTIES then MERGE)
