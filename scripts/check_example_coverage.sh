@@ -3,7 +3,9 @@
 # Example-coverage drift guard — public names vs docs/examples COVERS vs backlog ratchet.
 #
 # SSOT is check_example_coverage.py (enumerator, coverage rules, backlog baseline).
-# This wrapper only invokes it. Wired: make check-example-coverage (in make ci).
+# This wrapper only invokes it.
+# Wired: make check-example-coverage (in make ci); ci.yml python job (static half);
+# wheels.yml smoke (`python -I … --require-execute` against the packaged wheel).
 # ===========================================================================================
 set -euo pipefail
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"

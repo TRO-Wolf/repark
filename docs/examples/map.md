@@ -9,8 +9,9 @@ neither covered nor listed in the backlog ratchet or the cloud exceptions file.
 
 Examples run against local filesystem and a memory catalog only. They are not a
 substitute for pins in `python/repark/tests/` — they teach the public name.
-Each `COVERS` name must appear as a real use in that script (an `F.*` / `ta.*`
-call or attribute, or a method/property access). `exceptions.txt` is an exact
+Each `COVERS` name must appear as a real use in that script: `F.*` / `ta.*` on
+their door, `repark.sql` on the module alias, class-surface names on a
+repark-rooted local (assignment dataflow). `exceptions.txt` is an exact
 count ratchet (`EXCEPTIONS_BASELINE`); a new row is a visible baseline bump.
 
 This file closes when the v0.7 example backfill is complete and the backlog

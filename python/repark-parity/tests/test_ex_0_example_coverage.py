@@ -6,9 +6,14 @@ pins: ex-0-example-drift-gate/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C
 from __future__ import annotations
 
 import ast
+import contextlib
 import importlib.util
+import io
+import shutil
 from pathlib import Path
 from types import ModuleType
+
+from pytest import MonkeyPatch
 
 _REPO = Path(__file__).resolve().parents[3]
 _GATE = _REPO / "scripts" / "check_example_coverage.py"
@@ -136,6 +141,67 @@ def test_ex_0_covers_without_body_use_is_red() -> None:
     assert not gate.cover_is_used("DataFrame.agg", tree)
 
 
+def test_ex_0_object_agg_does_not_bind_class_covers() -> None:
+    """C-002 / L-001: object().agg does not cover DataFrame.agg or GroupedData.agg."""
+    gate = _load_gate()
+    tree = ast.parse(
+        "from repark.spark import SparkSession\n"
+        'COVERS: list[str] = ["DataFrame.agg", "GroupedData.agg"]\n'
+        "def main() -> None:\n"
+        "    object().agg\n"
+        "    None.agg\n"
+    )
+    assert not gate.cover_is_used("DataFrame.agg", tree)
+    assert not gate.cover_is_used("GroupedData.agg", tree)
+
+
+def test_ex_0_repark_sql_does_not_bind_spark_session_sql() -> None:
+    """C-002 / L-001: repark.sql() does not cover SparkSession.sql."""
+    gate = _load_gate()
+    tree = ast.parse((_REPO / "docs" / "examples" / "session" / "sql.py").read_text())
+    assert gate.cover_is_used("repark.sql", tree)
+    assert not gate.cover_is_used("SparkSession.sql", tree)
+
+
+def test_ex_0_run_gate_rejects_stuffed_covers(tmp_path: Path) -> None:
+    """C-002 / Q-001: run_gate on a scratch tree reports unused COVERS and exits 1."""
+    gate = _load_gate()
+    scratch = tmp_path / "repo"
+    (scratch / "docs").mkdir(parents=True)
+    shutil.copytree(_REPO / "docs" / "examples", scratch / "docs" / "examples")
+    (scratch / "python").symlink_to(_REPO / "python", target_is_directory=True)
+    abs_script = scratch / "docs" / "examples" / "functions" / "abs.py"
+    abs_script.write_text(
+        abs_script.read_text(encoding="utf-8").replace(
+            'COVERS: list[str] = ["F.abs", "F.col", "F.lit"]',
+            'COVERS: list[str] = ["F.abs", "F.col", "F.lit", "DataFrame.agg"]',
+        ),
+        encoding="utf-8",
+    )
+    backlog = scratch / "docs" / "examples" / "backlog.txt"
+    backlog.write_text(
+        "".join(
+            line
+            for line in backlog.read_text(encoding="utf-8").splitlines(True)
+            if line.strip() != "DataFrame.agg"
+        ),
+        encoding="utf-8",
+    )
+    captured = io.StringIO()
+    with contextlib.redirect_stderr(captured):
+        exit_code = gate.run_gate(
+            scratch,
+            write_snapshot=False,
+            skip_execute=True,
+            require_execute=False,
+            backlog_baseline=gate.BACKLOG_BASELINE - 1,
+        )
+    assert exit_code == 1
+    text = captured.getvalue()
+    assert "never uses" in text
+    assert "DataFrame.agg" in text
+
+
 def test_ex_0_exceptions_baseline_mismatch_is_red() -> None:
     """C-006: exceptions length must equal EXCEPTIONS_BASELINE."""
     gate = _load_gate()
@@ -172,6 +238,19 @@ def test_ex_0_makefile_wires_the_target_into_ci() -> None:
     assert "check_example_coverage.sh" in workflow
     wheels = (_REPO / ".github" / "workflows" / "wheels.yml").read_text(encoding="utf-8")
     assert "--require-execute" in wheels
+    assert "python -I scripts/check_example_coverage.py --require-execute" in wheels
+
+
+def test_ex_0_execute_child_drops_python_path_overrides(monkeypatch: MonkeyPatch) -> None:
+    """C-007 / SEC-001: example children cannot inherit PYTHONPATH/PYTHONHOME."""
+    gate = _load_gate()
+    monkeypatch.setenv("PYTHONPATH", "/tmp/bogus-repark")
+    monkeypatch.setenv("PYTHONSTARTUP", "/tmp/startup")
+    monkeypatch.setenv("PYTHONHOME", "/tmp/home")
+    env = gate.execution_environment()
+    assert "PYTHONPATH" not in env
+    assert "PYTHONSTARTUP" not in env
+    assert "PYTHONHOME" not in env
 
 
 def test_ex_0_no_product_code_in_the_gate_script() -> None:

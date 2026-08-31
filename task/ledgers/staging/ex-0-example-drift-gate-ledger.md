@@ -17,8 +17,11 @@ Deliverable 1 (the per-name backfill) is sibling-lane work; this unit defines
 target `check-example-coverage` in `make ci`; `docs/examples/`; this ledger;
 lockstep `map.md` files; DEVELOPMENT.md pointer; python/repark-parity tests that
 pin the gate. Closed: `crates/`, `python/repark/src/` product code, the
-divergence registry, `.github/`, `Cargo.toml [patch]`, `briefs/next-sequence.md`,
+divergence registry, `Cargo.toml [patch]`, `briefs/next-sequence.md`,
 v3/maintenance surfaces, archival bins (`completed/`, `archive/`).
+`.github/` is writable only for the F-3 dual-wire (ci.yml static half +
+wheels.yml `--require-execute`) and SEC-001 (`python -I` on that execute
+leg).
 
 ## Scope
 
@@ -148,6 +151,15 @@ Seed plus backlog restore made the static gate green.
 | F-3 S1 no CI execute | REMEDIATED: ci.yml python job dual-wires the static half; wheels.yml smoke `--require-execute` is the native execute leg on the real 679-name set. | Workflow files + pin. |
 | F-4 overclaim | ACCEPTED_FLAGGED: closed set documented in this ledger and the gate docstring; inventory unchanged. | — |
 
+## Critic round 2 (2026-08-31)
+
+| Finding | Disposition | Red-first |
+|---|---|---|
+| L-001 S1 last-component class bind | REMEDIATED: assignment dataflow; class-surface covers need a repark-rooted local; `repark.sql` is module-alias only. | `object().agg` plus COVERS DataFrame.agg and GroupedData.agg: exit **1**, both `never uses`. Adding SparkSession.sql to sql.py COVERS: exit **1**, `COVERS names SparkSession.sql which the script body never uses`. F-1 stuffing stays unused. Reverted from copies. |
+| Q-001 S2 C-002 pin bypass | REMEDIATED: `run_gate` on a scratch tree with stuffed abs.py exits 1 and prints `never uses`. | Pin `test_ex_0_run_gate_rejects_stuffed_covers`. |
+| SEC-001 S2 wheel-not-source | REMEDIATED: wheels.yml `python -I`; `execution_environment` drops PYTHONPATH/PYTHONSTARTUP/PYTHONHOME. | Pin + workflows map note. |
+| CL-001 S3 record staleness | REMEDIATED: writable-paths fence names the lifted `.github/` F-3/SEC-001 wires; wrapper header lists both CI legs. | — |
+
 ## Disk
 
 Pickup: 520 GB free of 1.8 TB (71% used). No worktree. `target/` reused if a
@@ -158,7 +170,7 @@ the static gate.
 
 Static half: `make check-example-coverage` and ci.yml python job
 `./scripts/check_example_coverage.sh`. Execute half: wheels.yml smoke
-`/tmp/wheeltest/bin/python scripts/check_example_coverage.py --require-execute`
+`/tmp/wheeltest/bin/python -I scripts/check_example_coverage.py --require-execute`
 after the packaged wheel is installed. Pattern-keeper for wiring claims:
 `scripts/check_parity_live_dual_wire.py` (this gate is not a load-bearing-flag
 comparator; it is Makefile + workflow step agreement).

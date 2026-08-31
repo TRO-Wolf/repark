@@ -17,8 +17,12 @@ public), types.__all__ (28), ml.__all__ (28), RuntimeConfig (5), SparkContext
 (3), UDFRegistration (3), StorageLevel (0 public). Widening is an owner
 decision (on the order of 120+ names). Measured 2026-08-31.
 
-A ``COVERS`` entry must be used in that script's body. ``exceptions.txt`` has
-the same exact-count ratchet as the backlog.
+A ``COVERS`` entry must be used in that script's body. Class-surface names
+bind only on a repark-rooted local (assignment dataflow from a door or session
+builder). Module covers such as ``repark.sql`` bind only on the module alias.
+A repark-rooted receiver can still list a method it calls only trivially —
+review holds that honesty. ``exceptions.txt`` has the same exact-count ratchet
+as the backlog.
 
 pins: ex-0-example-drift-gate/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 """
@@ -50,6 +54,19 @@ FUNCTIONS_MODULES: frozenset[str] = frozenset({"repark.functions", "repark.spark
 TA_MODULES: frozenset[str] = frozenset({"repark.spark.ta", "repark.ta"})
 FUNCTIONS_ALIAS_HINTS: frozenset[str] = frozenset({"F", "functions"})
 TA_ALIAS_HINTS: frozenset[str] = frozenset({"ta"})
+SESSION_BUILDER_HINTS: frozenset[str] = frozenset(
+    {"SparkSession", "ReparkSession", "ReParkSession"}
+)
+KIND_FUNCTIONS = "functions"
+KIND_TA = "ta"
+KIND_REPARK = "repark"
+KIND_SESSION = "session"
+KIND_LOCAL = "local"
+KIND_OTHER = "other"
+REPARK_ROOTED_KINDS: frozenset[str] = frozenset(
+    {KIND_FUNCTIONS, KIND_TA, KIND_REPARK, KIND_SESSION, KIND_LOCAL}
+)
+CHILD_ENV_DROP: frozenset[str] = frozenset({"PYTHONPATH", "PYTHONSTARTUP", "PYTHONHOME"})
 
 CLASS_SURFACES: tuple[tuple[str, str, str, str, str | None], ...] = (
     (
@@ -355,14 +372,18 @@ def is_covers_assignment(node: ast.AST) -> bool:
     return False
 
 
-def attribute_root_id(node: ast.Attribute) -> str | None:
-    """Return the leftmost Name id of an attribute chain, if any."""
-    current: ast.AST = node.value
-    while isinstance(current, ast.Attribute):
-        current = current.value
-    if isinstance(current, ast.Name):
-        return current.id
-    return None
+def expression_root_id(node: ast.AST) -> str | None:
+    """Return the leftmost Name id of an attribute or call chain, if any."""
+    current: ast.AST = node
+    while True:
+        if isinstance(current, ast.Attribute):
+            current = current.value
+        elif isinstance(current, ast.Call):
+            current = current.func
+        elif isinstance(current, ast.Name):
+            return current.id
+        else:
+            return None
 
 
 def door_aliases(tree: ast.Module) -> tuple[dict[str, set[str]], dict[str, set[str] | None]]:
@@ -413,38 +434,123 @@ def door_aliases(tree: ast.Module) -> tuple[dict[str, set[str]], dict[str, set[s
     return aliases, imported
 
 
+def classify_expression(node: ast.AST, kinds: dict[str, str]) -> str:
+    """Return the kind of an expression from its leftmost Name."""
+    root = expression_root_id(node)
+    if root is None:
+        return KIND_OTHER
+    return kinds.get(root, KIND_OTHER)
+
+
+def record_assignment(target: ast.AST, value: ast.AST, kinds: dict[str, str]) -> None:
+    """Classify a local from a simple assignment's right-hand side."""
+    if not isinstance(target, ast.Name):
+        return
+    kind = classify_expression(value, kinds)
+    kinds[target.id] = KIND_LOCAL if kind in REPARK_ROOTED_KINDS else KIND_OTHER
+
+
+def walk_statements(statements: list[ast.stmt], kinds: dict[str, str]) -> None:
+    """Walk statements in source order and classify simple assignments."""
+    for node in statements:
+        if is_covers_assignment(node):
+            continue
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                record_assignment(target, node.value, kinds)
+        elif isinstance(node, ast.AnnAssign) and node.value is not None:
+            record_assignment(node.target, node.value, kinds)
+        elif isinstance(node, ast.FunctionDef):
+            walk_statements(list(node.body), kinds)
+        elif isinstance(node, ast.If):
+            walk_statements(list(node.body) + list(node.orelse), kinds)
+        elif isinstance(node, ast.Try):
+            nested: list[ast.stmt] = list(node.body)
+            for handler in node.handlers:
+                nested.extend(handler.body)
+            nested.extend(node.orelse)
+            nested.extend(node.finalbody)
+            walk_statements(nested, kinds)
+        elif isinstance(node, ast.With):
+            walk_statements(list(node.body), kinds)
+        elif isinstance(node, (ast.For, ast.While)):
+            walk_statements(list(node.body) + list(node.orelse), kinds)
+
+
+def name_kinds(
+    tree: ast.Module,
+) -> tuple[dict[str, str], dict[str, set[str]], dict[str, set[str] | None]]:
+    """Return name kinds, door aliases, and imported call names."""
+    aliases, imported = door_aliases(tree)
+    kinds: dict[str, str] = {}
+    for name in aliases["functions"]:
+        kinds[name] = KIND_FUNCTIONS
+    for name in aliases["ta"]:
+        kinds[name] = KIND_TA
+    for name in aliases["repark"]:
+        kinds[name] = KIND_REPARK
+    for node in tree.body:
+        if isinstance(node, ast.ImportFrom):
+            for alias in node.names:
+                bound = alias.asname or alias.name
+                if alias.name in SESSION_BUILDER_HINTS or bound in SESSION_BUILDER_HINTS:
+                    kinds[bound] = KIND_SESSION
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                bound = alias.asname or alias.name.rsplit(".", 1)[-1]
+                if bound in SESSION_BUILDER_HINTS:
+                    kinds[bound] = KIND_SESSION
+    walk_statements(list(tree.body), kinds)
+    return kinds, aliases, imported
+
+
+def class_cover_is_used(cover: str, receiver_kind: str) -> bool:
+    """Return True when a class-surface cover matches this receiver kind."""
+    if cover.startswith("SparkSession.Builder."):
+        return receiver_kind in {KIND_SESSION, KIND_LOCAL}
+    if cover == "SparkSession.builder":
+        return receiver_kind == KIND_SESSION
+    if cover.startswith("SparkSession."):
+        return receiver_kind == KIND_LOCAL
+    return receiver_kind == KIND_LOCAL
+
+
 def cover_is_used(cover: str, tree: ast.Module) -> bool:
     """Return True when ``cover`` is referenced in the script body.
 
-    Family-aware: ``F.*`` is an attribute of the functions door or an imported
-    call; ``ta.*`` is an attribute of the TA door or an imported call;
-    ``repark.sql`` is ``repark.sql`` or an imported ``sql()`` call; a
-    DataFrame / session / reader / writer name is an attribute access of the
-    last path component.
+    Family-aware. ``F.*`` / ``ta.*`` bind on their door alias or an imported
+    call. ``repark.sql`` binds on the ``repark`` module alias only.
+    Class-surface names bind when the Attribute receiver's root is a
+    repark-rooted local (assignment dataflow). Session builder names
+    (``SparkSession.builder``, ``SparkSession.Builder.*``) also bind on the
+    session-builder class root. ``object().agg`` and ``repark.sql`` do not
+    bind ``DataFrame.agg`` or ``SparkSession.sql``.
 
     pins: ex-0-example-drift-gate/C-002
     """
     local = cover.rsplit(".", 1)[-1]
-    aliases, imported = door_aliases(tree)
+    kinds, _aliases, imported = name_kinds(tree)
     for node in tree.body:
         if is_covers_assignment(node):
             continue
         for child in ast.walk(node):
             if isinstance(child, ast.Attribute) and child.attr == local:
-                root = attribute_root_id(child)
+                receiver_kind = classify_expression(child.value, kinds)
                 if cover.startswith("F."):
-                    if root in aliases["functions"]:
+                    if receiver_kind == KIND_FUNCTIONS:
                         return True
                     continue
                 if cover.startswith("ta."):
-                    if root in aliases["ta"]:
+                    if receiver_kind == KIND_TA:
                         return True
                     continue
                 if cover == "repark.sql":
-                    if root in aliases["repark"]:
+                    if receiver_kind == KIND_REPARK:
                         return True
                     continue
-                return True
+                if class_cover_is_used(cover, receiver_kind):
+                    return True
+                continue
             if (
                 isinstance(child, ast.Call)
                 and isinstance(child.func, ast.Name)
@@ -581,10 +687,10 @@ def live_all_findings(enumerated: list[tuple[str, str]]) -> list[str]:
 
 
 def execution_environment() -> dict[str, str]:
-    """Copy the process environment without cloud credential keys."""
+    """Copy the process environment without cloud keys or Python path overrides."""
     env = dict(os.environ)
     for key in list(env):
-        if key.startswith(CLOUD_ENV_PREFIXES):
+        if key.startswith(CLOUD_ENV_PREFIXES) or key in CHILD_ENV_DROP:
             del env[key]
     return env
 
