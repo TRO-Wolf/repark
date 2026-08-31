@@ -58,6 +58,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 - [w-0-window-bench-ledger.md](w-0-window-bench-ledger.md) — **W-0 (2026-08-31),
   PROVEN 11/11:** window-shape measurement (Track A opener). Bench plus filed
   numbers and thirteen `WIN-SLIDE-*` registry rows. No product change.
+- [v3-4-serve-lineage-columns-ledger.md](v3-4-serve-lineage-columns-ledger.md) —
+  **V3-4 (2026-08-31), read half:** serve `_row_id` and `_last_updated_sequence_number` on
+  v3 reads, Spark-equal, on all three doors. Preserve-half (COW DML lineage) stays behind
+  fork F-7; V3-COW-1 keep-refusal pins stay byte-untouched. Measure-first (C-001) before
+  any engine edit.
 
 ## Pointers
 - Up: [../map.md](../map.md)
