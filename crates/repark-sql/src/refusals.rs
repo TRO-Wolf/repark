@@ -1,4 +1,4 @@
-//! The completed refuse set (design §2 Q7 / Q9, plus `TRUNCATE`).
+//! The completed refuse set (design §2 Q7 / Q9).
 
 use datafusion::error::DataFusionError;
 
@@ -37,16 +37,6 @@ pub(crate) fn alter_table_execute(procedure: &str) -> DataFusionError {
          that would suggest the syntax is wrong rather than unimplemented. Maintenance runs \
          today as a callable operation on the session. TRIGGER: dbt-repark post-hooks \
          demonstrating a statement-shaped need."
-    ))
-}
-
-/// `TRUNCATE TABLE` — no Iceberg primitive, and the two plausible meanings differ.
-pub(crate) fn truncate(target: &str) -> DataFusionError {
-    DataFusionError::NotImplemented(format!(
-        "TRUNCATE TABLE {target} is not supported: Iceberg has no truncate primitive, and the \
-         two things it could mean commit differently — DELETE FROM {target} removes every row \
-         and keeps the table's history, while CREATE OR REPLACE TABLE {target} AS SELECT … \
-         WHERE false replaces the table. Write the one you mean."
     ))
 }
 

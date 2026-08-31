@@ -87,10 +87,9 @@ What happens next, in order:
    [w5](task/ledgers/archive/2026-08/2026-08-13-w5-z-landing-ledger.md),
    [v5](task/ledgers/archive/2026-08/2026-08-13-v5-w-landing-ledger.md),
    [s5](task/ledgers/archive/2026-08/2026-08-13-s5-v-landing-ledger.md).
-3. **Production-pipeline cutover inventory** — enumerate which production workloads move, in what
-   order, under **single-writer-per-table** (an Iceberg table is written by v1 or by V2, never
-   both), with the rollback story for each. Carried from the port
-   ([docs/port/PLAN.md](docs/port/PLAN.md) "Open item: cutover").
+3. **Production-pipeline cutover inventory** — which workloads move, in what order, under
+   **single-writer-per-table**, with each rollback story. Carried from
+   [docs/port/PLAN.md](docs/port/PLAN.md) "Open item: cutover".
 4. **The first tagged release** — **DONE**: see [Release state](#release-state). Pre-alpha still
    means the API can move between tags (the design ruling that the API-forever clock starts at the
    first tag — [docs/design/python-facade.md](docs/design/python-facade.md) §4 — is enforced at
@@ -216,8 +215,9 @@ published history — an exposure **accepted by explicit decision**; provenance:
 
 <!-- ws id=dml ledgers=dml- state=open -->
 - **Iceberg DML remainder (v0.6)** — DML-B → DML-C → DML-A → MAINT; REF waits on fork
-  F-6. **DML-B delivered 2026-08-30:** `INSERT OVERWRITE … PARTITION` and
-  `writeTo().overwritePartitions()`; empty dynamic refuses loud.
+  F-6. **Delivered 2026-08-30:** DML-B `INSERT OVERWRITE … PARTITION` and
+  `writeTo().overwritePartitions()` (empty dynamic refuses loud); DML-C `TRUNCATE TABLE`
+  first-class on all three doors, registry DML-2 FIXED.
   [DML-1](docs/spark-sql-iceberg-parity.md).
 <!-- /ws -->
 

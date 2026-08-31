@@ -9,7 +9,7 @@ use datafusion::sql::sqlparser::ast::{ObjectType, Statement};
 use repark_core::EngineContext;
 
 use crate::{
-    alter, create_table, guards, merge, ref_ddl, refusals, schema_ddl, sniff, time_travel,
+    alter, create_table, guards, merge, ref_ddl, refusals, schema_ddl, sniff, time_travel, truncate,
 };
 
 /// The dialect handed to DataFusion's parser.
@@ -109,12 +109,7 @@ async fn execute_time_travelled(
             crate::insert_overwrite::execute_insert_overwrite(cx, insert).await
         }
         Statement::Call(function) => Err(refusals::maintenance_call(&function.name.to_string())),
-        Statement::Truncate(truncate) => Err(refusals::truncate(
-            &truncate
-                .table_names
-                .first()
-                .map_or_else(|| "<table>".to_string(), |target| target.name.to_string()),
-        )),
+        Statement::Truncate(truncate) => truncate::execute_truncate(cx, truncate).await,
         // --- Delegated DML: allow-list first, then G3-E8 and async MoR/V3 valves.
         Statement::Delete(_) | Statement::Update(_) => {
             if let Some(allowed) =

@@ -25,7 +25,8 @@ and hand execution, SQL, and ML semantics to the engine crates.
   `PyReparkSession.sql` runs the FNP-15/16 declared-function valve so the native
   `repark.sql()` callable (DataFusionDialect) refuses with the registry reason.
   Native and Spark Python sessions install F-Y10-1 integer overflow checks.
-  pins: fnp-15-16/C-001 |
+  The Spark-door routing probe is `MERGE … OUTPUT` (TRUNCATE and `INSERT OVERWRITE … PARTITION` are live).
+  pins: fnp-15-16/C-001; dml-c-truncate/C-004 |
 | [`dataframe.rs`](dataframe.rs) | Lazy plans, actions, transforms, schema, and Arrow C Stream export.
   `filter_sql` bypasses the statement router, so it applies parse-altitude valves itself. |
 | [`column/`](column/map.md) | Immutable expressions, scalar functions, aggregates, and windows.

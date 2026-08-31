@@ -1515,9 +1515,6 @@ async fn the_refuse_set_refuses_loud_through_the_door() {
         .await;
     assert!(execute.contains("reserved"), "{execute}");
 
-    let truncate = door.err("TRUNCATE TABLE ice.sales.refset").await;
-    assert!(truncate.contains("no truncate primitive"), "{truncate}");
-
     let batches = door.ok("SELECT id FROM ice.sales.refset").await;
     assert_eq!(batches.iter().map(RecordBatch::num_rows).sum::<usize>(), 1);
 }

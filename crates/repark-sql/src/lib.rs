@@ -16,6 +16,7 @@ mod scan;
 mod schema_ddl;
 mod sniff;
 mod time_travel;
+mod truncate;
 
 // --- The seam adapter: this crate's product surface. ---
 pub use dialect::AnsiDialect;
@@ -36,5 +37,7 @@ mod delete_granularity;
 mod partition_overwrite;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod truncate_tests;
 #[cfg(test)]
 mod v3;

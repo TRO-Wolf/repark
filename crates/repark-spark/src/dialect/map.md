@@ -6,7 +6,8 @@ CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated co
 
 File-backed tests for `SparkDialect` (`../dialect.rs`): installed on a `ReparkSession` via
 `with_sql_dialect`, the seam adapter routes `sql()` through the router. Spark ORDER BY defaults
-and targeted refusals survive the session error fold; the refusal probe pins TRUNCATE (C4-L-001).
+and targeted refusals survive the session error fold; the TRUNCATE probe pins
+`TABLE_OR_VIEW_NOT_FOUND` for a missing table (DML-C).
 
 ## Contents
 

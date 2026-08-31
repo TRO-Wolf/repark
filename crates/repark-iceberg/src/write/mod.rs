@@ -26,6 +26,8 @@ pub mod snapshot_refs;
 pub(crate) mod store_assign;
 /// Test-support-only snapshot-ref helpers (`_testing_create_ref`).
 pub mod testing_support;
+/// Whole-table `TRUNCATE TABLE` (delete-only empty overwrite).
+pub mod truncate;
 pub mod writer_props;
 
 pub use snapshot_refs::{
@@ -73,6 +75,7 @@ pub use partition_overwrite::{
 pub use position_delete::{MorDmlKind, refuse_mor_unpartitioned_multi_spec_dml};
 pub use repark_common::{Error, Result};
 pub use row_lineage_guard::refuse_v3_cow_dml;
+pub use truncate::commit_truncate;
 pub use writer_props::{
     ACCEPTED_CODECS, COMPRESSION_CODEC_PROP, COMPRESSION_LEVEL_PROP, parse_compression,
     writer_properties_for,

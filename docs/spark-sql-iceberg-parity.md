@@ -238,13 +238,21 @@ Supported surface, for reference:
 
 #### DML-2 — `TRUNCATE TABLE`
 
-- **repark** — refuses with a targeted message naming the substitutes
-  (`INSERT OVERWRITE … SELECT … WHERE false`, or `DELETE FROM <table>` with no predicate).
-- **Apache Spark** — truncates the table. *(oracle: documented.)*
-- **Pin** — `crates/repark-spark/src/tests/router.rs::truncate_table_refuses_loud_naming_gap`
-- **Rationale** — DECLARED until a dedicated truncate action lands. The refusal exists so the
-  statement does not fall through to the planner's opaque "unsupported" diagnostic, which tells a
-  migrating user nothing about what to write instead.
+- **repark** — **FIXED (2026-08-30, DML-C).** Whole-table `TRUNCATE TABLE` is a first-class
+  statement on both SQL doors and the facade. It commits a delete-only overwrite (`AlwaysTrue`
+  filter, no added files). Live PySpark 4.1.2 + Iceberg 1.11.0 stamps `summary.operation =
+  delete`, snapshot count +1, zero live data files; time travel to the prior snapshot still
+  reads the old rows. Empty `INSERT OVERWRITE … WHERE false` remains its own statement and
+  stamps the same operation class. `TRUNCATE TABLE … PARTITION (…)` refuses loud.
+- **Apache Spark** — same snapshot shape (measured 2026-08-30). Error classes:
+  `TABLE_OR_VIEW_NOT_FOUND`, `EXPECT_TABLE_NOT_VIEW.NO_ALTERNATIVE`,
+  `INVALID_PARTITION_OPERATION.PARTITION_MANAGEMENT_IS_UNSUPPORTED`.
+- **Pin** — `crates/repark-spark/src/tests/truncate.rs::truncate_table_wipes_rows_stamps_delete_and_preserves_history`
+  (Spark door); `crates/repark-sql/src/truncate_tests.rs::truncate_table_wipes_rows_stamps_delete_and_preserves_history`
+  (ANSI door); `python/repark/tests/test_dml_c_truncate.py` (facade).
+- **Rationale** — Iceberg has no separate truncate action; Spark's statement is delete-only
+  overwrite. The product spelling is `TRUNCATE TABLE`, not a documented empty-overwrite
+  substitute. pins: dml-c-truncate/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 
 #### DML-3 — `MERGE INTO` forms outside the supported surface
 

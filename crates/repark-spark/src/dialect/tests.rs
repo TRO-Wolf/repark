@@ -51,10 +51,7 @@ async fn dialect_surfaces_router_refusals() {
     let error = session
         .sql("TRUNCATE TABLE ice.ns.t")
         .await
-        .expect_err("TRUNCATE refuses loud (C4-L-001)")
+        .expect_err("TRUNCATE of a missing table must fail")
         .to_string();
-    assert!(
-        error.contains("TRUNCATE TABLE is not supported yet"),
-        "{error}"
-    );
+    assert!(error.contains("TABLE_OR_VIEW_NOT_FOUND"), "{error}");
 }

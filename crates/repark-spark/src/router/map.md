@@ -4,8 +4,9 @@ CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated co
 
 ## Purpose
 
-File-backed tests for the statement router (`../router.rs`): the TRUNCATE targeted-refuse
-pin, passthrough sanity, the BUG-010 ordering pin, and the P11 read-only threading pin.
+File-backed tests for the statement router (`../router.rs`): the TRUNCATE missing-table
+class pin (`TABLE_OR_VIEW_NOT_FOUND`; DML-C), passthrough sanity, the BUG-010 ordering pin,
+and the P11 read-only threading pin.
 Location translation follows byte equality across owned and borrowed buffers.
 The lib-root battery lives in `../tests/`
 (`crate::tests`; see [../tests/map.md](../tests/map.md)).

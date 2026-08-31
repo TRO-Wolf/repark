@@ -2,7 +2,7 @@
 
 ## Purpose
 
-File-backed tests for `../refusals.rs` (the refuse set).
+File-backed tests for `../refusals.rs` (the Q7/Q9 refuse set).
 
 Every refusal is a behavior. Each message class is pinned by the property that makes it useful —
 it names the shape, and it names what to do instead — not by its exact wording.

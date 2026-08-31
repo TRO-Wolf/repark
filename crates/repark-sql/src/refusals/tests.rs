@@ -43,20 +43,6 @@ fn alter_execute_refusal_declares_itself_the_future_spelling() {
     assert!(message.contains("TRIGGER"), "{message}");
 }
 
-/// TRUNCATE names both plausible meanings, because picking one silently is the failure mode.
-#[test]
-fn truncate_refusal_names_both_meanings() {
-    let message = truncate("ice.sales.orders").to_string();
-    assert!(
-        message.contains("DELETE FROM ice.sales.orders"),
-        "{message}"
-    );
-    assert!(
-        message.contains("CREATE OR REPLACE TABLE ice.sales.orders"),
-        "{message}"
-    );
-}
-
 /// The `ALTER TABLE … EXECUTE` recognizer fires on the real shape and names the procedure.
 #[test]
 fn alter_execute_recognizer_fires_on_the_statement_shape() {

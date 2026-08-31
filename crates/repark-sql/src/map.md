@@ -133,13 +133,16 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
 - `ref_ddl.rs` — the ALTER-scoped branch/tag grammar (Q6/G6, copied from the Spark door's
   precedent) over the tier-1 `ManageSnapshots` seams. The top-level `CREATE BRANCH b IN t`
   spelling stays Spark-only. Tests: [ref_ddl/map.md](ref_ddl/map.md).
-- `refusals.rs` — the completed refuse set (Q7/Q9 + TRUNCATE): `INSERT OVERWRITE`, `CALL`,
-  `ALTER TABLE … EXECUTE` (pre-parse recognizer), `TRUNCATE TABLE`. Every message names a
+- `truncate.rs` — whole-table `TRUNCATE TABLE` (DML-C). Pins: `truncate_tests.rs`
+  (wipe summary keys, `INVALID_PARTITION_OPERATION` class token, IF EXISTS parse refuse).
+  pins: dml-c-truncate/C-003, C-006, C-007
+- `refusals.rs` — the completed refuse set (Q7/Q9): `INSERT OVERWRITE`, `CALL`,
+  `ALTER TABLE … EXECUTE` (pre-parse recognizer). Every message names a
   replacement and, where the design gives one, a trigger. Tests: [refusals/map.md](refusals/map.md).
 - `matrix.rs` (`#[cfg(test)]`) — this door's disposition of every `repark_common::surfaces` ID,
-  with the compile-run audit that fails on an unmapped surface (Q13/G2). **46 tested / 4
+  with the compile-run audit that fails on an unmapped surface (Q13/G2). **47 tested / 3
   deliberately absent** (Q3 partitioning, Q9
-  `INSERT OVERWRITE`, `TRUNCATE`, Q7 maintenance). The three semantic pin absences are tested
+  `INSERT OVERWRITE`, Q7 maintenance). The three semantic pin absences are tested
   (window frames, JOIN NULL keys, float determinism). Each row also carries its
   session profile, and a test forbids this door from ever claiming `SparkExtended` evidence.
 - `tests.rs` (`#[cfg(test)]`) — the end-to-end door battery on a native session, asserted on the
@@ -158,6 +161,7 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
 | Add a `SET PROPERTIES` key | `alter.rs` `parse_set_properties` (curated only — dotted keys go through `extra_properties`) |
 | Change what MERGE lowers to | `merge.rs` — the target type is shared with the Spark door, so a change there is a cross-door contract change |
 | Change the time-travel grammar | `time_travel.rs` `clause_kind_at` / `parse_as_of_value`, then the pin set in `time_travel/tests.rs` |
+| Change `TRUNCATE TABLE` | `truncate.rs` + `truncate_tests.rs` |
 | Add a refusal | `refusals.rs` + `refusals/tests.rs` + a `DeliberatelyAbsent` matrix row citing the ruling |
 | Record a surface this door will not have | `matrix.rs` (`DeliberatelyAbsent` with reason + ADR) |
 
