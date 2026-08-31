@@ -328,6 +328,19 @@ def test_try_add_date_plus_hour_promotes_to_timestamp() -> None:
     assert day.column("v").to_pylist() == [datetime.date(2024, 1, 2)]
     assert "date" in str(day.schema.field("v").type).lower()
     assert "timestamp" not in str(day.schema.field("v").type).lower()
+    twenty_four = _sql_arrow("SELECT try_add(DATE '2024-01-01', INTERVAL 24 HOUR) AS v")
+    assert "timestamp" in str(twenty_four.schema.field("v").type).lower()
+    stamp_24 = twenty_four.column("v").to_pylist()[0]
+    assert isinstance(stamp_24, datetime.datetime)
+    assert stamp_24.date() == datetime.date(2024, 1, 2)
+    assert stamp_24.hour == 0
+
+
+def test_try_add_date_plus_zero_hour_stays_date_bl14() -> None:
+    """pins: fnp-7-try-inversions/C-015"""
+    zero_hour = _sql_arrow("SELECT try_add(DATE '2024-01-01', INTERVAL 0 HOUR) AS v")
+    assert zero_hour.column("v").to_pylist() == [datetime.date(2024, 1, 1)]
+    assert "date" in str(zero_hour.schema.field("v").type).lower()
 
 
 def test_try_add_interval_duration_max_overflow_is_null() -> None:
@@ -338,6 +351,12 @@ def test_try_add_interval_duration_max_overflow_is_null() -> None:
     values = inside.column("v").to_pylist()
     assert len(values) == 1
     assert _interval_days(values[0]) == 106751991
+    negative = _sql_arrow("SELECT try_add(INTERVAL -106751991 DAY, INTERVAL -1 DAY) AS v")
+    assert negative.column("v").to_pylist() == [None]
+    negative_inside = _sql_arrow("SELECT try_add(INTERVAL -106751990 DAY, INTERVAL -1 DAY) AS v")
+    negative_values = negative_inside.column("v").to_pylist()
+    assert len(negative_values) == 1
+    assert _interval_days(negative_values[0]) == -106751991
 
 
 def test_try_divide_interval_by_numeric() -> None:

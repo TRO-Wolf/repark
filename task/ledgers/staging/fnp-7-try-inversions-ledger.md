@@ -320,3 +320,33 @@ Logs: `/tmp/fnp7-sabotage-C-015-hour.log`, `/tmp/fnp7-sabotage-C-019-overflow.lo
 
 DATE+1 HOUR timestamp 01:00; DATE+25 HOUR timestamp 2024-01-02 01:00; DATE+24 HOUR timestamp 2024-01-02 00:00 (unit is HOUR, not value-normalized to DATE); DATE+1 DAY stays date; DATE+1 MONTH stays date. INTERVAL 106751991+1 DAY NULL; 106751990+1 = 106751991 days; 106751991+1 HOUR still fits (remainder micros). Log: `/tmp/fnp7-l006-oracle.log`.
 
+## 12. Final Critic pass (recritic2) — below-floor residuals into the record
+
+The final fresh Critic pass at `73deca8` CONVERGED (no S0/S1; report
+`/tmp/grok-worker/fnp7/recritic2-report.md`). Its three below-floor residuals land here:
+
+| Finding | Disposition |
+|---|---|
+| L-008 (S2) DATE + INTERVAL 0 HOUR stays Date32; Spark types it timestamp midnight | **RECORDED**, not fixed: registry row **BL-14** (the `{0,0,0}` MonthDayNano value is unit-blind; a fix needs literal-unit retention upstream). Pin `test_try_add_date_plus_zero_hour_stays_date_bl14` asserts the current Date32 so a silent change is loud. Calendar day equal on both engines; the divergence is type + midnight clock. |
+| Q-005 (S2) DATE + 24 HOUR promotion unpinned | **FIXED.** The 24 HOUR cell (timestamp 2024-01-02 00:00, type-asserted) joins `test_try_add_date_plus_hour_promotes_to_timestamp`. |
+| CL-003 (S3) C-019 "both sides" pinned only positive | **FIXED** by making the claim true: negative-bound cells pinned in `test_try_add_interval_duration_max_overflow_is_null` (−106751991 + −1 DAY → NULL; −106751990 + −1 → −106751991 days), measured before pinning. |
+
+### Red-first (final pass)
+
+| Pin | Mutant | Exit | Needle |
+|---|---|---|---|
+| Q-005 24 HOUR cell | `hour == 0` → `hour == 1` | 1 | `test_try_add_date_plus_hour_promotes_to_timestamp` FAILED |
+| C-019 negative half | `[None]` → `[0]` | 1 | `test_try_add_interval_duration_max_overflow_is_null` FAILED |
+| BL-14 type assert | `date` → `timestamp` | 1 | `test_try_add_date_plus_zero_hour_stays_date_bl14` FAILED |
+
+Logs: `/tmp/fnp7-sabotage-Q005-24hour.log`, `/tmp/fnp7-sabotage-C019-negative.log`,
+`/tmp/fnp7-sabotage-BL14-zerohour.log`. All three restored; file suite 31 passed.
+
+### Oracle (final pass, engine probe 2026-08-31)
+
+`try_add(DATE, INTERVAL 24 HOUR)` → timestamp[us, UTC] 2024-01-02 00:00;
+`try_add(INTERVAL −106751991 DAY, INTERVAL −1 DAY)` → NULL;
+`try_add(INTERVAL −106751990 DAY, INTERVAL −1 DAY)` → −106751991 days;
+`try_add(DATE, INTERVAL 0 HOUR)` → date32 2024-01-01 (BL-14; Spark: timestamp midnight per
+the recritic2 live-oracle cell).
+
