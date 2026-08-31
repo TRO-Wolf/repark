@@ -13,6 +13,11 @@ else. The next pickup's `make ledger-archive` files everything here under
   unreachable names and the four D-7 families (56 names, independently re-counted) are loud
   refusing surfaces on every door; registry §9 keeps unreachable vs deferred-by-cost distinct.
   Critic F-1..F-6 + O-1 all remediated (crate ANSI-door roster pin, per-family strip-check).
+- [f-y10-1-int-overflow-ledger.md](f-y10-1-int-overflow-ledger.md) — **F-Y10-1 (2026-08-30), PROVEN 5/5:**
+  checked integer arithmetic raises where Spark raises on typed INT/BIGINT operands (ANSI knob,
+  DEC U5 shape); untyped literal arithmetic keeps the intended Int64 literal-width split
+  (Critic F-1, Option A). Names preserved, AnsiDialect installs at session build, matrix cells
+  pinned; SMALLINT wrap is a dated residue. Unblocks FNP-7b.
 - [mw-10-s3tables-mor-ledger.md](mw-10-s3tables-mor-ledger.md) — **MW-10 (2026-08-28 →
   2026-08-30), PROVEN 6/6:** the S3 Tables merge-on-read leg the intake called "MW-4b",
   measure-first on OD-3b. The first owner dispatch (run 33333274383, on merged `main`) answered
