@@ -49,16 +49,16 @@ pub(crate) async fn execute_insert_overwrite(
         return Err(DataFusionError::Plan(message));
     }
 
-    // Hive/Spark `INSERT OVERWRITE … PARTITION` is partition-scoped.
-    if insert.partitioned.is_some() {
-        return Err(DataFusionError::NotImplemented(
-            "INSERT OVERWRITE … PARTITION (…) is not supported yet (static and dynamic \
-             partition overwrite). Empty sources must not full-table wipe sibling partitions; \
-             non-empty sources must not silently whole-table replace. Use static whole-table \
-             INSERT OVERWRITE, or DELETE with a partition predicate + INSERT INTO (tracked: \
-             C2-Q-001 / C4-Q-001 / docs/spark-sql-iceberg-parity.md §2.3)"
-                .to_string(),
-        ));
+    if let Some(partition_exprs) = &insert.partitioned {
+        return execute_partition_overwrite(
+            ctx,
+            catalogs,
+            table_name,
+            &table_sql,
+            insert,
+            partition_exprs,
+        )
+        .await;
     }
 
     if let Some(source) = &insert.source {
@@ -102,6 +102,68 @@ pub(crate) async fn execute_insert_overwrite(
     }
 
     spark_ast::execute_passthrough(ctx, catalogs, sql).await
+}
+
+/// Static or dynamic `INSERT OVERWRITE … PARTITION (…)`.
+/// # Errors
+/// Parse, empty-dynamic guard, staging, or commit failures as [`DataFusionError`].
+async fn execute_partition_overwrite(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    table_name: &ObjectName,
+    table_sql: &str,
+    insert: &Insert,
+    partition_exprs: &[datafusion::sql::sqlparser::ast::Expr],
+) -> Result<DataFrame> {
+    use repark_iceberg::write::{
+        PartitionOverwritePlan, commit_overwrite_by_row_filter, commit_replace_partitions,
+        partition_overwrite_request_from_exprs, plan_partition_overwrite,
+        refuse_empty_dynamic_overwrite, stage_static_partition_overwrite_files,
+        write_overwrite_staged_files_from_stream,
+    };
+
+    let Some((catalog_name, catalog, table)) =
+        try_resolve_iceberg_overwrite_target(catalogs, table_name).await?
+    else {
+        return Err(DataFusionError::Plan(format!(
+            "INSERT OVERWRITE … PARTITION requires a 3-part Iceberg table name, got `{table_sql}`"
+        )));
+    };
+    let request = partition_overwrite_request_from_exprs(partition_exprs)?;
+    let plan = plan_partition_overwrite(&table, &request)?;
+    let source = insert.source.as_ref().ok_or_else(|| {
+        DataFusionError::Plan(
+            "INSERT OVERWRITE … PARTITION requires a SELECT or VALUES source".to_string(),
+        )
+    })?;
+    let column_names: Vec<String> = insert.columns.iter().map(object_name_last).collect();
+    let materialize_sql = format!("SELECT * FROM ({source}) AS _repark_ow_src");
+    let source_df = spark_ast::execute_passthrough(ctx, catalogs, &materialize_sql).await?;
+    let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
+    match plan {
+        PartitionOverwritePlan::Static(spec) => {
+            let batches = source_df.collect().await?;
+            let staged_files = stage_static_partition_overwrite_files(
+                &table,
+                batches,
+                &spec.equalities,
+                concurrency,
+            )
+            .await?;
+            commit_overwrite_by_row_filter(&catalog, &table, staged_files, spec.predicate).await?;
+        }
+        PartitionOverwritePlan::Dynamic => {
+            let stream = source_df.execute_stream().await?;
+            let staged_files =
+                write_overwrite_staged_files_from_stream(&table, stream, column_names, concurrency)
+                    .await?;
+            refuse_empty_dynamic_overwrite(&staged_files)?;
+            commit_replace_partitions(&catalog, &table, staged_files).await?;
+        }
+    }
+    let namespace = namespace_schema_name(table.identifier().namespace());
+    reregister(ctx, Arc::clone(&catalog), &catalog_name, &namespace).await?;
+    ctx.read_empty()
 }
 
 /// Non-empty `INSERT OVERWRITE` — stage-then-swap (OV1 / OTH-004).

@@ -31,6 +31,10 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   on MERGE (`Model: Grok 4.6 xHigh`).
 - `a13_fallback.rs` — **A13 (test-only):** `register_memory_catalog` + location-less ANSI
   CREATE lands under `{warehouse}/repark_ansi_ctas/…`, not the process temp dir.
+- `insert_overwrite.rs` — **DML-B:** `INSERT OVERWRITE … PARTITION (…)` static/dynamic;
+  whole-table stays Q9. pins: dml-b-insert-overwrite/C-001, C-002, C-004, C-006
+- `partition_overwrite.rs` — **test-only DML-B pins** for the ANSI PARTITION forms and the
+  remaining Q9 whole-table refuse.
 - `router.rs` — the statement router (text guards → pre-parse stage → parse → G15 collation
   valve → match → the two DML valves → delegate) and the delegation path that carries the SEC-02
   guard. Delegation

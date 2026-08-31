@@ -18,7 +18,8 @@ Source comments are condensed to API and safety contracts; executable behavior i
 - `catalog/` — Glue + S3 Tables + memory catalog builders, DataFusion `CatalogProvider`
   registration, scheme-based `FileIO` selection, and the hoisted `reregister_catalog_provider`
   session-refresh adapter (`catalog_ops.rs`). See [catalog/map.md](catalog/map.md).
-- `write/` — MERGE INTO / identity DELETE+UPDATE (`predicate_dml`) / append / overwrite / ALTER /
+- `write/` — MERGE INTO / identity DELETE+UPDATE (`predicate_dml`) / append / overwrite /
+  partition overwrite (DML-B) / ALTER /
   snapshot refs over the owned fork. See [write/map.md](write/map.md).
 - [tests/](tests/map.md) — crate-root test modules: fork-pin proof and shared tracing harness.
 

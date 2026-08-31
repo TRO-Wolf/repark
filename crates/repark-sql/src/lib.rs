@@ -5,6 +5,7 @@ mod create_table;
 mod declared_refuse;
 mod dialect;
 mod guards;
+mod insert_overwrite;
 mod merge;
 mod partitioning;
 mod properties;
@@ -31,6 +32,8 @@ mod matrix;
 mod a13_fallback;
 #[cfg(test)]
 mod delete_granularity;
+#[cfg(test)]
+mod partition_overwrite;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]

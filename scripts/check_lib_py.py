@@ -75,7 +75,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split transform families along their existing plan-node boundaries.",
     ),
     "python/repark/src/repark/spark/dataframe/writer_readwriter.py": (
-        1117,
+        1114,
         "DataFrameWriter and DataFrameReader facade methods share one region.",
         "Split writer and reader bindings into separate cohesive modules.",
     ),

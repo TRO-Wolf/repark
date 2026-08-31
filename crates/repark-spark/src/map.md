@@ -35,7 +35,9 @@ pins: rp-3-fork-repin/C-010
   assignment-target qualification, M8 INSERT column list, M10 non-last
   unconditional clause).
 - `insert_overwrite.rs` — INSERT OVERWRITE: empty probe/validate/provider-wipe (C1-Q-001) +
-  non-empty stage-then-swap; 2 in-module tests (`assignment_type_unit_tests`).
+  non-empty stage-then-swap; **DML-B** `PARTITION (…)` static/dynamic via
+  `repark_iceberg::write::partition_overwrite`; 2 in-module tests (`assignment_type_unit_tests`).
+  pins: dml-b-insert-overwrite/C-001, C-002, C-004
 - `ref_ddl.rs` — I5 snapshot-ref DDL (CREATE/DROP/REPLACE BRANCH|TAG, retention) + the
   write-to-branch sniff; 14 in-module tests.
 - `call.rs` — seven maintenance procedures: six maintenance calls plus `register_table`. Each

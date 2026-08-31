@@ -1,5 +1,8 @@
 # map — scripts/
 
+DML-B (2026-08-30): `check_rust_file_size.py` `insert_overwrite.rs` tests 1249→1233;
+`check_lib_py.py` `writer_readwriter.py` 1117→1114.
+
 CC-4 (2026-08-30): remaining banner files; size-gate rows ratchet down only
 (pins: cc-3-comment-condensation/C-009). analyzer.rs 1194→1161; datetime.rs 1783→1709;
 dynamic_flatten/tests.rs 1469→1443; declared_sorted.rs 1381→1348.

@@ -22,7 +22,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
 - `udf_bridge.py` owns action-time pandas, classic, and Arrow UDF callbacks without importing
   `DataFrame` at module scope.
 - `writer_readwriter.py` owns `DataFrameWriter`, `DataFrameWriterV2`, statistics, and write
-  helpers.
+  helpers. **DML-B:** `overwritePartitions()` emits dynamic `INSERT OVERWRITE … PARTITION`.
+  pins: dml-b-insert-overwrite/C-003, C-004
 - `__init__.py` preserves the package import surface, including private compatibility names.
 
 ## Durable contracts

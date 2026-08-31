@@ -167,7 +167,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split DELETE, UPDATE, and shared refusal families.",
     ),
     "crates/repark-spark/src/tests/insert_overwrite.rs": (
-        1249,
+        1233,
         "INSERT OVERWRITE modes share one scenario battery.",
         "Split partitioned from unpartitioned overwrite cases.",
     ),
