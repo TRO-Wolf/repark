@@ -92,11 +92,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `call`, and `call_orphan`. `call_remove_orphan_files_refuses_a_location_arg_under_the_fallback_root`
   and `call_orphan_shared_ctas_root_rule` pin the fallback-root safety contract. Maintenance tests
   pin Spark's full schemas, typed count sources, deletion-vector refusal, and file-granularity rules.
-  `call_v3` (**V3-0**): v3 row-lineage refusal, v2 control, and the
-  `opt_in_create_produces_v3_and_rewrite_still_refuses` guard (`V3-LINEAGE-1`; `Model: Grok 4.6 xHigh`).
-  RP-3 C-005 remeasured the fork action directly; its Spark-door guard pin remains in
-  `call_rewrite_data_files_refuses_a_v3_table_rather_than_reassigning_row_lineage`
-  (`pins: rp-3-fork-repin/C-005`).
+  `call_v3` (**V3-0 / RP-4**): v3 rewrite preserves lineage, v2 control, and
+  `opt_in_create_produces_v3_and_rewrite_runs` (`V3-LINEAGE-1` FIXED; `Model: Grok 4.6 xHigh`).
+  Pin `call_rewrite_data_files_on_v3_preserves_row_lineage`
+  (`pins: rp-3-fork-repin/C-005; rp-4-fork-repin/C-003`).
   `call_manifests` (**MW-6**) pins the two non-nullable `int` columns, no-op zero result, current
   spec filter, delete-manifest refusal, and `MANIFEST-3` count divergence.
   `call_register` (**V3-1 / RP-3 C-008**): `CALL system.register_table` arguments, three nullable BIGINT columns,

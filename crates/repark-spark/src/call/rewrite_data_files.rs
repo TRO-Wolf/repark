@@ -8,32 +8,11 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
 use iceberg::Catalog;
 use iceberg::maintenance::RewriteDataFiles;
-use iceberg::spec::FormatVersion;
 
 use super::rewrite_where::parse_rewrite_where;
 use super::{CallArgs, bytes_as_i64, count_as_i32, resolve_table_ident};
 use crate::call_args::expr_as_string;
 use crate::{iceberg_err, reregister};
-
-/// pins: v3-2-create-v3-opt-in/C-011, C-014
-/// pins: maint-rewrite-data-files-options/C-008
-/// Refuse `rewrite_data_files` on a format-v3 table rather than silently reassign row lineage.
-pub(crate) fn refuse_v3_rewrite_that_would_lose_row_lineage(
-    format_version: FormatVersion,
-    table_arg: &str,
-) -> Result<()> {
-    if format_version < FormatVersion::V3 {
-        return Ok(());
-    }
-    Err(DataFusionError::NotImplemented(format!(
-        "CALL rewrite_data_files will not compact `{table_arg}`: it is a {format_version:?} \
-         table, and V3 onward mandates row lineage (`_row_id`, \
-         `_last_updated_sequence_number`) which this engine's rewrite does not carry through. \
-         The row data would be correct and every row's lineage would be reassigned, telling \
-         downstream consumers that all of them changed. Spark preserves lineage across the same \
-         rewrite — compact this table there until the fork does the same"
-    )))
-}
 
 /// Execute `CALL <catalog>.system.rewrite_data_files(table => …)`.
 ///
@@ -73,7 +52,6 @@ pub(super) async fn execute_rewrite_data_files(
     let table_arg = args.require_string("table", 0)?;
     let ident = resolve_table_ident(catalog_name, &table_arg)?;
     let table = catalog.load_table(&ident).await.map_err(iceberg_err)?;
-    refuse_v3_rewrite_that_would_lose_row_lineage(table.metadata().format_version(), &table_arg)?;
 
     let remove_dangling_deletes = args
         .optional_bool("remove-dangling-deletes", None)?

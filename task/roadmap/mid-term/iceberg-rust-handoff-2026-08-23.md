@@ -208,6 +208,9 @@ guarded (V3-LINEAGE-1).
 - **Ask.** A `to_branch(name)` on the snapshot producer, threaded through each action builder,
   with validation and retry resolved against the named ref. WAP (`write.wap.enabled` /
   `stage_only`) is **not** requested.
+- **Landed (RP-4, 2026-08-31, fork #244).** `SnapshotUpdate.to_branch` exists
+  (`crates/iceberg/src/transaction/to_branch.rs`). The engine does not call it yet; REF
+  consumes the surface. The refuse pin stays until REF routes branch-targeted DML.
 - **Acceptance.** Engine pin `crates/repark-spark/src/tests/ref_ddl.rs::write_to_branch_refuses_loud_naming_fork_gap`
   is written to go red when a commit target exists; the engine then routes branch-targeted DML.
 
@@ -223,6 +226,11 @@ RP-3 also re-measures U1 at its frozen SHA (C-005).
 *RP-3 at `d408da42` (2026-08-30):* U1 still reassigns (`V3-LINEAGE-1` stays). U3's v3 arm
 converts parquet position deletes to DVs; on a DV-only fixture it is a zero-result no-op and
 `B-MOR-3` stays.
+
+*RP-4 at `33be9a0` (2026-08-31):* U1 / F-7 slice 1 (`#243`) carries lineage through
+`rewrite_data_files`. Engine CALL + PySpark 4.1.2 + Iceberg 1.11.0 read-back is Spark-equal
+(`V3-LINEAGE-1` FIXED). F-6 `#244` `to_branch` exists on the fork; no engine caller this unit
+(REF consumes it).
 
 Listed so the fork plans it; as of 2026-08-21 the engine's V3-2+ units deliberately waited
 for the MW campaign to close (that wait is over — the addendum below), and the engine refuses

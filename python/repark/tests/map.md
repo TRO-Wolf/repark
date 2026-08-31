@@ -55,6 +55,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_rp3_c009_write_default.py](test_rp3_c009_write_default.py) — **RP-3 C-009:** no engine
   caller sets `write_default`; Iceberg fixture bytes stay flat vs `origin/main` when that
   ref exists (skips on a shallow checkout). pins: rp-3-fork-repin/C-009, C-010, C-011
+- [test_rp4_c004_to_branch.py](test_rp4_c004_to_branch.py) — **RP-4 C-004:** no engine caller
+  invokes `to_branch`; Iceberg fixture bytes stay flat vs `origin/main`. pins: rp-4-fork-repin/C-004
 - [test_v3_cow_dml.py](test_v3_cow_dml.py) — **V3R-1 (2026-08-25); RP-2 2026-08-27 retarget:** facade Spark `.sql()`
   MERGE / UPDATE on an adopted v3 table raise `UnsupportedOperationException` naming
   `V3-COW-1` and the measured reassignment (V3-3 keep-refusal); the plain-`WHERE` DELETE commits the right rows (RP-2 lift) with Spark-equal
@@ -78,7 +80,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_v3_live_oracle.py](test_v3_live_oracle.py) — **V3E-5 (2026-08-27):** nightly live oracle for the two V3E-3 fixtures — `REPARK_PARITY_LIVE=1` repark == Spark on partitioned-DV prune and equality-delete alongside DV, plus `.delete_files` kinds; live-DV UPDATE and rewrite controls refuse with rows and fixture bytes unchanged. JVM-free twins stay in `test_v3e3_fixtures.py`. Critic remediation (2026-08-27): prune1 on Spark, combined DirLock, exact content sets, mirrored format, GAV full equality, version sort, COW, `py-format` single-line, meta-pin now asserts archive/dual-wire/diff allowlist. Formal CCC + cargo-deny/wheel remediation (2026-08-28): `chacha20` yanked and `thiserror` duplicate `skip`. PLAN-1 makes the ledger lookup lifecycle-aware across staging, completed, and archive, and checks the landed #253 commit instead of the current branch.
 - [test_v3_create_opt_in.py](test_v3_create_opt_in.py) — **V3-2 (2026-08-24):** facade CREATE/CTAS
   `format-version = 3` refuses unless `repark.sql.allowCreateFormatVersion3` is true; opt-in
-  CREATE is readable and still hits `V3-LINEAGE-1` on `rewrite_data_files`. Also the V3R-1
+  CREATE is readable and `rewrite_data_files` preserves lineage (`V3-LINEAGE-1` FIXED). Also the V3R-1
   (2026-08-25) type pin `test_v3_geometry_geography_variant_columns_refuse_naming_the_type`:
   `GEOMETRY` / `GEOGRAPHY` / `VARIANT` columns refuse at CREATE, no table left (registry
   `V3-GEO-1`).

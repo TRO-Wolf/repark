@@ -1,11 +1,12 @@
 """V3R-1 facade `.sql()` v3 DML pins: UPDATE / MERGE refuse (V3-COW-1); the RP-2-repinned
-plain-`WHERE` DELETE is Spark-clean and commits; `rewrite_data_files` still refuses v3
-(`V3-LINEAGE-1`).
+plain-`WHERE` DELETE is Spark-clean and commits; `rewrite_data_files` on v3 preserves
+lineage (`V3-LINEAGE-1` FIXED).
 
 pins: v3r-1-rulings/C-006
 pins: rp-2-fork-repin/C-003, C-005
 pins: rp-3-fork-repin/C-004
 pins: v3-3-dml/C-001, C-002
+pins: rp-4-fork-repin/C-003
 """
 
 from __future__ import annotations
@@ -110,8 +111,7 @@ def test_facade_adopted_v3_cow_dml_refuses_and_leaves_the_table_untouched(
         assert "reassigns" in str(merge_error.value)
         merged = spark.sql("SELECT id, name FROM ice.sales.adopt_mrg").to_arrow()
         assert _id_name_rows(merged) == seeded
-        with pytest.raises(UnsupportedOperationException, match="row lineage"):
-            spark.sql("CALL ice.system.rewrite_data_files(table => 'sales.adopt_mrg')").collect()
+        spark.sql("CALL ice.system.rewrite_data_files(table => 'sales.adopt_mrg')").collect()
 
         spark.sql(
             "CREATE TABLE ice.sales.seed_del (id INT, name STRING) USING iceberg "

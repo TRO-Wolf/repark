@@ -181,11 +181,12 @@ Supported surface, for reference:
 - **Apache Spark** — the Iceberg extension writes to the named ref.
   *(oracle: documented.)*
 - **Pin** — `crates/repark-spark/src/tests/ref_ddl.rs::write_to_branch_refuses_loud_naming_fork_gap`
-- **Rationale** — DECLARED, and it is not RePark's fix to make: the pinned iceberg-rust fork's
-  snapshot-producing actions always emit the ref update on the main branch, with no commit-target
-  API to aim them elsewhere. The alternative to refusing is writing to `main` while the statement
-  says otherwise — a silent wrong-target write. Closing it is fork work; capability status lives
-  in the fork's own gap matrix, never here.
+- **Rationale** — DECLARED, and it is not RePark's fix to make: until fork #244 the snapshot
+  producers always stamped `main`, with no commit-target API. **RP-4 (2026-08-31) carries F-6
+  `#244`:** `SnapshotUpdate.to_branch` exists on the fork; no engine surface calls it yet.
+  REF consumes that surface later. The alternative to refusing today is still writing to
+  `main` while the statement names a branch. Capability status lives in the fork's own gap
+  matrix, never here.
 
 #### REF-2 — `IF EXISTS` / `IF NOT EXISTS`, and any other trailing clause
 
@@ -1957,14 +1958,18 @@ the pin rather than obeying it.
   would have written a string. Not closed here for the same reason as `LOG-1`: it changes what a
   working query returns.
 
-### V3-LINEAGE-1 — `rewrite_data_files` refuses a format-v3 table rather than reassign row lineage
+### V3-LINEAGE-1 — `rewrite_data_files` carries row lineage through format-v3 compaction
 
-- **repark** — `CALL <catalog>.system.rewrite_data_files(table => …)` refuses outright when the
-  table is format-v3, naming row lineage and pointing the operator at Spark. Before the refusal
-  landed the procedure compacted the table and produced the **correct rows** while reassigning
-  every row's lineage: on a six-file v3 table with deletion vectors, `id=5099` moved from
-  `_row_id = 599, _last_updated_sequence_number = 6` to `_row_id = 691, seq = 9`, and the whole
-  546-row result carried the rewrite's sequence number.
+> **FIXED 2026-08-31 (RP-4 / fork #243 F-7 slice 1).** `CALL system.rewrite_data_files` on a
+> twelve-file v3 table rewrites 12→1 and PySpark 4.1.2 + Iceberg 1.11.0 reads the same
+> `(id, _row_id, _last_updated_sequence_number)` and Arrow types (`int64`) before and after.
+> Residue: `V3-DANGLE-1` (DV removal on compact) and `B-MOR-3`. V3-5 is charterable.
+
+- **repark** — `CALL <catalog>.system.rewrite_data_files(table => …)` compacts a format-v3
+  table and carries `_row_id` / `_last_updated_sequence_number` through unchanged. The 2026-08-21
+  pre-guard measurement reassigned lineage (`id=5099` moved `_row_id` 599→691); RP-2/RP-3
+  re-measures at `ce92a7bf` / `d408da42` still reassigned 0..11 → 12..23, seq → 13. Fork #243
+  closed that.
 - **Apache Spark** — performs the rewrite and carries lineage through unchanged: the same row
   reads `_row_id = 599, seq = 6` on both sides of the CALL, and the result is
   `rewritten_data_files_count = 6`, `added_data_files_count = 1`,
@@ -1975,29 +1980,13 @@ the pin rather than obeying it.
   4.1.2 oracle cannot execute Iceberg maintenance procedures at all — same `DataSourceV2Relation`
   break recorded under [MOR-1](#mor-1--rewrite_position_delete_files-compacts-below-sparks-min-input-files-floor).)*
 - **Pin** —
-  `crates/repark-spark/src/tests/call_v3.rs::call_rewrite_data_files_refuses_a_v3_table_rather_than_reassigning_row_lineage`
-- **Rationale** — DELIBERATE, and stricter than Spark on purpose. V3 makes row lineage mandatory
-  precisely so that moving a row between files does not look like changing it; a rewrite that
-  regenerates `_row_id` tells every downstream incremental consumer that all rows changed when
-  none did. The rows themselves are never wrong, which is what makes the failure quiet — the
-  result reads as a clean compaction. The fix is fork work: `maintenance/rewrite_data_files.rs`
-  has no row-lineage handling at all, while the spec layer around it does. Refusing follows the
-  same trade as
-  [B-MOR-3](#b-mor-3--rewrite_position_delete_files-refuses-live-puffin-deletion-vectors) — an unattended procedure gets a loud stop
-  rather than a plausible wrong answer. **Re-measured at the RP-2 repin (2026-08-27, fork
-  `ce92a7bf`, live PySpark 4.1.2 + Iceberg 1.11.0 reading the engine's commits): a 12-file v3
-  table compacted by this engine still reassigned every row — `_row_id` 0..11 became 12..23
-  and `_last_updated_sequence_number` collapsed to the rewrite's 13, where the pre-rewrite
-  Spark-readable lineage was 0..11 with per-append seqs.** The guard stays; the fork row it
-  waits on is F-7 U1. **Not reachable on anything this engine wrote by
-  default**: `CREATE TABLE` and CTAS refuse `format-version = 3` unless the session sets
-  `repark.sql.allowCreateFormatVersion3` (V3-2), and `ALTER TABLE … SET TBLPROPERTIES` is
-  refused a layer down by the fork rejecting reserved properties — default-session doors
-  pinned together by
-  `crates/repark-spark/src/tests/call_v3.rs::the_engine_still_cannot_produce_a_v3_table`.
-  Opt-in CREATE is pinned to still hit this guard
-  (`opt_in_create_produces_v3_and_rewrite_still_refuses`). A v3 table without the opt-in
-  only exists here if it was already in the catalog.
+  `crates/repark-spark/src/tests/call_v3.rs::call_rewrite_data_files_on_v3_preserves_row_lineage`
+- **Rationale** — FIXED. The refusal was stricter than Spark on purpose while the fork
+  reassigned lineage. Fork #243 carries `_row_id` / seq through `RewriteDataFiles`; the public
+  CALL is Spark-equal on values and Arrow types (RP-4, 2026-08-31). Default `CREATE` is still
+  v2 (`the_engine_still_cannot_produce_a_v3_table`). Opt-in CREATE now reaches the CALL
+  (`opt_in_create_produces_v3_and_rewrite_runs`). `V3-DANGLE-1` remains: this fixture had no
+  live DVs (`removed_delete_files_count = 0`).
 
 ### B-MOR-3 — `rewrite_position_delete_files` refuses live Puffin deletion vectors
 
@@ -2295,21 +2284,14 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   (`Could not find config namespace "spark"`) — pre-existing for every `spark.*` key and wider
   than the session zone; it wants its own decision rather than a fold into the extraction unit.
 
-- **V3-DANGLE-1** — a v3 compaction leaves its deletion vectors behind. Before
-  [V3-LINEAGE-1](#v3-lineage-1--rewrite_data_files-refuses-a-format-v3-table-rather-than-reassign-row-lineage)
-  refused the rewrite, this engine compacted six v3 data files into one and left all six Puffin
-  vectors live in the manifest, where Spark removed them and reported
-  `removed_delete_files_count = 6`. The vectors were dangling — the data files they were scoped
-  to no longer existed — and nothing in this engine can reclaim them, since
-  `rewrite_position_delete_files` refuses deletion vectors (B-MOR-3) and `expire_snapshots` does
-  not touch live manifest entries. **RP-2 (2026-08-27) took the F-3 half**: the fork composes
-  `remove-dangling-deletes` into `RewriteDataFiles` and the CALL now accepts
-  `'remove-dangling-deletes' => true` (quoted-name CALL grammar), reporting the fork's true
-  `removed_delete_files_count` — pinned on a partitioned v2 fixture at
-  `crates/repark-spark/src/tests/call.rs::call_rewrite_data_files_remove_dangling_deletes_reports_a_true_count`,
-  with the Java-faithful unpartitioned-single-spec early return and the false default measured
-  in the same unit (RP-2 ledger §2). The v3 half stays **unreachable** while V3-LINEAGE-1
-  refuses every v3 rewrite, so the row stays queued for V3-3+.
+- **V3-DANGLE-1** — a v3 compaction must drop DVs scoped to rewritten files (Spark reported
+  `removed_delete_files_count = 6`). **RP-4 (2026-08-31)** lifted
+  [V3-LINEAGE-1](#v3-lineage-1--rewrite_data_files-carries-row-lineage-through-format-v3-compaction);
+  the RP-4 twelve-file fixture had no live DVs (`removed_delete_files_count = 0`). The v3 DV
+  half stays queued for V3-5. `rewrite_position_delete_files` still refuses live DVs
+  (B-MOR-3). **RP-2 (2026-08-27) took the F-3 half** on v2: the CALL accepts
+  `'remove-dangling-deletes' => true`, pinned at
+  `crates/repark-spark/src/tests/call.rs::call_rewrite_data_files_remove_dangling_deletes_reports_a_true_count`.
 
 - **V3-ROWID-1** — **FIXED (V3-4, 2026-08-31).** `_row_id` and
   `_last_updated_sequence_number` are served on **single-table** v3 reads, Spark-equal

@@ -17,9 +17,10 @@ and measured-parity contract would grow `call.rs` beyond its exact
 - `rewrite_data_files.rs` — **rewrite_data_files options (2026-08-31):** v2 `where` is wired
   through the fork's `RewriteDataFiles::filter` (file-selection, no residual). `strategy`
   `binpack` runs; `sort` and `sort_order` refuse (fork R135 / registry `RDF-SORT-1`). Unknown
-  strategy and bad `where` use Spark 4.1.2 + Iceberg 1.11.0 text. v3 still hits
-  `V3-LINEAGE-1`. `options` stays refused.
+  strategy and bad `where` use Spark 4.1.2 + Iceberg 1.11.0 text. v3 rewrite
+  preserves lineage (`V3-LINEAGE-1` FIXED, RP-4 / fork #243). `options` stays refused.
   pins: maint-rewrite-data-files-options/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
+  pins: rp-4-fork-repin/C-003
 - `rewrite_where.rs` — SQL `where` string → Iceberg `Predicate` (eq/cmp/AND/OR/NOT/IS NULL/IN/
   BETWEEN on primitives). Failures wrap as Spark's `Cannot parse predicates in where option`.
   In-module unit tests pin each convertible operator's Predicate shape.

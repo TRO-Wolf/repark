@@ -2,6 +2,7 @@
 
 pins: v3-2-create-v3-opt-in/C-010, C-011
 pins: v3r-1-rulings/C-008, C-009
+pins: rp-4-fork-repin/C-003
 """
 
 from __future__ import annotations
@@ -38,10 +39,10 @@ def test_format_version_three_refuses_without_opt_in(tmp_path: Path) -> None:
         spark.stop()
 
 
-def test_format_version_three_create_with_opt_in_is_v3_and_rewrite_refuses(
+def test_format_version_three_create_with_opt_in_is_v3_and_rewrite_runs(
     tmp_path: Path,
 ) -> None:
-    """Opt-in CREATE lands format v3; rewrite_data_files still names row lineage."""
+    """Opt-in CREATE lands format v3; rewrite_data_files runs (V3-LINEAGE-1 FIXED)."""
     spark = (
         ReparkSession.builder.appName("v3-2-opt-in")
         .config(_ALLOW_CREATE_V3_KEY, "true")
@@ -64,8 +65,7 @@ def test_format_version_three_create_with_opt_in_is_v3_and_rewrite_refuses(
         assert spark.sql("SELECT id FROM ice.sales.v3ctas").to_arrow().column("id").to_pylist() == [
             1
         ]
-        with pytest.raises(UnsupportedOperationException, match="row lineage"):
-            spark.sql("CALL ice.system.rewrite_data_files(table => 'sales.v3')").collect()
+        spark.sql("CALL ice.system.rewrite_data_files(table => 'sales.v3')").collect()
     finally:
         spark.stop()
 

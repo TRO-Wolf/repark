@@ -67,7 +67,7 @@ Every row means **both SQL doors plus the facade** unless the cell says otherwis
 | Write: MOR DML via deletion vectors | ⚠ RP-3 (2026-08-30, fork `d408da42`): plain-`WHERE` DELETE commits and merges DVs on DV-free and live-DV tables, including shared-Puffin sibling keep; 🚫 UPDATE / MERGE stay refused (V3-3 2026-08-30: Spark preserves `_row_id`; engine MOR UPDATE reassigns the updated row) | full DML including UPDATE/MERGE, round-tripped | V3-4 ← fork F-7 |
 | Write: COW DML on an adopted v3 table | ⚠ RP-3 (2026-08-30): first DELETE Spark-equal lineage; a second DELETE after overwrite is refused (`V3-COW-1`, fork F-rp3-c7); 🚫 UPDATE / MERGE stay refused (V3-3 2026-08-30: Spark preserves `_row_id`; engine rewrite reassigns every survivor; owner ruling 2026-08-25; registry `V3-COW-1`) | lineage carried per spec | V3-4 ← fork F-7 |
 | Write/maintain: partitioned v3 | ✅ V3E-3 + RP-3 cells 3–6: partitioned DV DELETE Spark-equal on three doors | compaction proven on partitioned and spec-evolved tables | V3-5 |
-| Maintain: `rewrite_data_files` | 🚫 V3-LINEAGE-1 guard — re-measured at `d408da42` (RP-3 C-005): still reassigns; the F-3 option half is taken (true `removed_delete_files_count`) | lineage through rewrite; strands no DVs (V3-DANGLE-1); true `removed_delete_files_count` | V3-5 ← fork F-7 |
+| Maintain: `rewrite_data_files` | ✅ RP-4 (2026-08-31, fork #243): lineage Spark-equal through compaction (`V3-LINEAGE-1` FIXED); F-3 option half taken; `V3-DANGLE-1` still queued | lineage through rewrite; strands no DVs (V3-DANGLE-1); true `removed_delete_files_count` | V3-5 ← remaining F-7 |
 | Maintain: DV / delete-file maintenance | 🚫 B-MOR-3 stays (RP-3 C-007): R136 converts parquet position deletes to DVs; a DV-only table is a zero-result no-op | DV-aware compact, Spark-compared | V3-5 ← fork F-7 |
 | Maintain: expiry / orphans on v3 | ✅ V3E-4 (2026-08-25): expire with expirable snapshots (tag-reachable DV snapshot kept, untagged intermediate gone, MW-1 six-column schema); `remove_orphan_files` 24h floor still refuses and leaves a planted orphan. Engine-compared; live Spark triple is V3E-5 | stays + live leg | evidence (intake) |
 | Maintain: `rewrite_manifests` | ✅ wired on v2 (MW-6, [#230](https://github.com/TRO-Wolf/repark/pull/230); rows MANIFEST-1/2/3) | exercised on v3 | evidence (intake) |
@@ -91,7 +91,8 @@ the production gate. V3-6 may run beside V3-3 or V3-4 once its fork type support
 
 **Engine lane.** RP-2 kept the DV-free first DELETE. RP-3 (2026-08-30) consumed F-17 and
 measured the DV matrix: live-DV DELETE merge is green on three doors; a second COW DELETE after
-overwrite stays refused (F-rp3-c7); `rewrite_data_files` still reassigns (`V3-LINEAGE-1`).
+overwrite stays refused (F-rp3-c7). RP-4 (2026-08-31) consumed F-7 slice 1: `rewrite_data_files`
+lineage is Spark-equal (`V3-LINEAGE-1` FIXED).
 
 **Fork lane.** F-17 — path-keyed removal of one blob from a shared Puffin must carry every
 still-live sibling blob — landed as fork #237 on 2026-08-28, F-14 (Hadoop pointer writes) as

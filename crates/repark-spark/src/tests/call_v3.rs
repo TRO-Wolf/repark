@@ -62,35 +62,56 @@ async fn v3_fixture_really_is_format_v3() {
 
 /// pins: rp-2-fork-repin/C-004
 /// pins: rp-3-fork-repin/C-005
-/// **The guard.** `rewrite_data_files` refuses a v3 table instead of compacting it.
+/// pins: rp-4-fork-repin/C-003
+/// Public CALL on a 12-file v3 table keeps `_row_id` / seq Spark-equal.
 #[tokio::test]
-async fn call_rewrite_data_files_refuses_a_v3_table_rather_than_reassigning_row_lineage() {
+async fn call_rewrite_data_files_on_v3_preserves_row_lineage() {
     let wh = TempDir::new().unwrap();
-    let (ctx, catalogs) = setup(&wh).await;
-    seed_six_files(&ctx, &catalogs, "v3_rewrite").await;
-    let catalog = catalogs.get("ice").expect("ice catalog");
-    upgrade_to_v3(
-        catalog,
-        &TableIdent::from_strs(["sales", "v3_rewrite"]).unwrap(),
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.v3_rewrite (id BIGINT, name STRING) USING iceberg \
+         TBLPROPERTIES ('format-version' = '3')",
     )
     .await;
+    for index in 1..=12 {
+        run(
+            &ctx,
+            &catalogs,
+            &format!("INSERT INTO ice.sales.v3_rewrite SELECT {index} AS id, 'x' AS name"),
+        )
+        .await;
+    }
+    let catalog = catalogs.get("ice").expect("ice catalog");
+    let ident = TableIdent::from_strs(["sales", "v3_rewrite"]).unwrap();
+    let table = catalog.load_table(&ident).await.expect("load v3");
+    assert_eq!(table.metadata().format_version(), FormatVersion::V3);
+    let before = scan_lineage_triples(&table).await;
 
-    let err = execute(
+    let batches = execute(
         &ctx,
         &catalogs,
         "CALL ice.system.rewrite_data_files(table => 'sales.v3_rewrite')",
     )
     .await
-    .expect_err("rewrite_data_files must refuse a v3 table, not silently reassign row lineage")
-    .to_string();
+    .expect("v3 rewrite must run now that fork #243 carries lineage")
+    .collect()
+    .await
+    .expect("collect v3 rewrite");
+    let rewritten = batches[0]
+        .column(0)
+        .as_any()
+        .downcast_ref::<Int32Array>()
+        .expect("rewritten_data_files_count is Int32")
+        .value(0);
+    assert_eq!(rewritten, 12, "twelve single-row files must compact");
 
-    assert!(
-        err.contains("row lineage"),
-        "the refusal has to name row lineage, or an operator cannot tell why it fired: {err}"
-    );
-    assert!(
-        err.contains("V3"),
-        "the refusal has to name the format version that triggered it: {err}"
+    let after_table = catalog.load_table(&ident).await.expect("reload");
+    let after = scan_lineage_triples(&after_table).await;
+    assert_eq!(
+        after, before,
+        "CALL rewrite_data_files must keep _row_id and last_updated_seq"
     );
 }
 
@@ -172,9 +193,10 @@ async fn the_engine_still_cannot_produce_a_v3_table() {
 }
 
 /// pins: v3-2-create-v3-opt-in/C-005, C-011, C-015
+/// pins: rp-4-fork-repin/C-003
 /// Model: Grok 4.6 xHigh
 #[tokio::test]
-async fn opt_in_create_produces_v3_and_rewrite_still_refuses() {
+async fn opt_in_create_produces_v3_and_rewrite_runs() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup_allow_create_format_version_3(&wh).await;
 
@@ -204,18 +226,16 @@ async fn opt_in_create_produces_v3_and_rewrite_still_refuses() {
         FormatVersion::V3
     );
 
-    let rewrite = execute(
+    execute(
         &ctx,
         &catalogs,
         "CALL ice.system.rewrite_data_files(table => 'sales.v3opt')",
     )
     .await
-    .expect_err("rewrite_data_files must still refuse an engine-created v3 table")
-    .to_string();
-    assert!(
-        rewrite.contains("row lineage") && rewrite.contains("V3"),
-        "V3-LINEAGE-1 must still fire on opt-in CREATE: {rewrite}"
-    );
+    .expect("opt-in v3 rewrite must run")
+    .collect()
+    .await
+    .expect("collect opt-in v3 rewrite");
 
     run(
         &ctx,
@@ -247,4 +267,55 @@ async fn opt_in_create_produces_v3_and_rewrite_still_refuses() {
         merge.contains("V3"),
         "non-v2 MoR MERGE guard must still fire: {merge}"
     );
+}
+
+async fn scan_lineage_triples(table: &iceberg::table::Table) -> Vec<(i64, i64, i64)> {
+    use futures::TryStreamExt;
+    use iceberg::metadata_columns::{
+        RESERVED_COL_NAME_LAST_UPDATED_SEQUENCE_NUMBER, RESERVED_COL_NAME_ROW_ID,
+    };
+
+    let stream = table
+        .scan()
+        .select([
+            "id",
+            RESERVED_COL_NAME_ROW_ID,
+            RESERVED_COL_NAME_LAST_UPDATED_SEQUENCE_NUMBER,
+        ])
+        .build()
+        .expect("scan")
+        .to_arrow()
+        .await
+        .expect("to_arrow");
+    let batches: Vec<_> = stream.try_collect().await.expect("collect");
+    let mut rows = Vec::new();
+    for batch in batches {
+        let ids = batch.column_by_name("id").expect("id");
+        let row_ids = batch
+            .column_by_name(RESERVED_COL_NAME_ROW_ID)
+            .expect("_row_id")
+            .as_any()
+            .downcast_ref::<Int64Array>()
+            .expect("_row_id Int64");
+        let seqs = batch
+            .column_by_name(RESERVED_COL_NAME_LAST_UPDATED_SEQUENCE_NUMBER)
+            .expect("seq")
+            .as_any()
+            .downcast_ref::<Int64Array>()
+            .expect("seq Int64");
+        for index in 0..batch.num_rows() {
+            let id = if let Some(array) = ids.as_any().downcast_ref::<Int64Array>() {
+                array.value(index)
+            } else if let Some(array) = ids.as_any().downcast_ref::<Int32Array>() {
+                i64::from(array.value(index))
+            } else {
+                panic!("id type {:?}", ids.data_type());
+            };
+            assert!(!row_ids.is_null(index), "missing _row_id at {index}");
+            assert!(!seqs.is_null(index), "missing seq at {index}");
+            rows.push((id, row_ids.value(index), seqs.value(index)));
+        }
+    }
+    rows.sort_unstable();
+    rows
 }
