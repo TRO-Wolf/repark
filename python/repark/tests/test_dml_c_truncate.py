@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from repark.errors import AnalysisException, UnsupportedOperationException
+from repark.errors import AnalysisException
 
 
 def test_facade_truncate_table_wipes_rows_stamps_delete_and_time_travel(tmp_path: Path) -> None:
@@ -86,11 +86,12 @@ def test_facade_truncate_view_is_expect_table_not_view(tmp_path: Path) -> None:
 
 
 def test_ansi_callable_truncate_no_longer_uses_the_refuse_substitute() -> None:
-    """Native `repark.sql()` routes TRUNCATE; it does not steer at empty overwrite."""
+    """Native `repark.sql()` plans TRUNCATE; a missing table is a planning miss."""
     import repark
 
-    with pytest.raises((AnalysisException, UnsupportedOperationException)) as raised:
+    with pytest.raises(AnalysisException) as raised:
         repark.sql("TRUNCATE TABLE ice.sales.does_not_exist")
     message = str(raised.value)
+    assert "table 'ice.sales.does_not_exist' not found" in message
     assert "no truncate primitive" not in message
-    assert "INSERT OVERWRITE" not in message or "TABLE_OR_VIEW_NOT_FOUND" in message
+    assert "INSERT OVERWRITE" not in message

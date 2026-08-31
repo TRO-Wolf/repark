@@ -59,6 +59,78 @@ impl Door {
             .await
             .unwrap_or_else(|err| panic!("load {table}: {err}"))
     }
+
+    async fn live_data_files(&self, table: &str) -> usize {
+        use iceberg::spec::ManifestContentType;
+        let loaded = self.load(table).await;
+        let metadata = loaded.metadata();
+        let Some(snapshot) = metadata.current_snapshot() else {
+            return 0;
+        };
+        let manifest_list = snapshot
+            .load_manifest_list(loaded.file_io(), metadata)
+            .await
+            .unwrap_or_else(|err| panic!("manifest list: {err}"));
+        let mut count = 0;
+        for manifest_file in manifest_list.entries() {
+            if manifest_file.content != ManifestContentType::Data {
+                continue;
+            }
+            let manifest = manifest_file
+                .load_manifest(loaded.file_io())
+                .await
+                .unwrap_or_else(|err| panic!("manifest: {err}"));
+            count += manifest
+                .entries()
+                .iter()
+                .filter(|entry| entry.is_alive())
+                .count();
+        }
+        count
+    }
+
+    fn wipe_summary(table: &iceberg::table::Table) -> std::collections::HashMap<String, String> {
+        table
+            .metadata()
+            .current_snapshot()
+            .expect("current snapshot")
+            .summary()
+            .additional_properties
+            .clone()
+    }
+}
+
+fn assert_wipe_summary(
+    summary: &std::collections::HashMap<String, String>,
+    deleted_files: usize,
+    deleted_records: usize,
+) {
+    let files = deleted_files.to_string();
+    let records = deleted_records.to_string();
+    assert_eq!(
+        summary.get("deleted-data-files").map(String::as_str),
+        Some(files.as_str()),
+        "deleted-data-files: {summary:?}"
+    );
+    assert_eq!(
+        summary.get("deleted-records").map(String::as_str),
+        Some(records.as_str()),
+        "deleted-records: {summary:?}"
+    );
+    assert_eq!(
+        summary.get("total-records").map(String::as_str),
+        Some("0"),
+        "total-records: {summary:?}"
+    );
+    assert_eq!(
+        summary.get("total-data-files").map(String::as_str),
+        Some("0"),
+        "total-data-files: {summary:?}"
+    );
+    assert!(
+        !summary.contains_key("added-data-files"),
+        "wipe must not stamp added-data-files, got {summary:?}"
+    );
 }
 
 async fn door_with_schema() -> Door {
@@ -109,11 +181,14 @@ async fn truncate_table_wipes_rows_stamps_delete_and_preserves_history() {
         .current_snapshot_id()
         .expect("pre-truncate snapshot");
     let pre_count = before.metadata().snapshots().len();
-    assert_eq!(door.live_rows("t").await, 3);
+    let pre_files = door.live_data_files("t").await;
+    let pre_rows = door.live_rows("t").await;
+    assert_eq!(pre_rows, 3);
 
     door.ok("TRUNCATE TABLE ice.sales.t").await;
 
     assert_eq!(door.live_rows("t").await, 0);
+    assert_eq!(door.live_data_files("t").await, 0);
     let after = door.load("t").await;
     assert_eq!(after.metadata().snapshots().len(), pre_count + 1);
     assert_eq!(
@@ -126,6 +201,7 @@ async fn truncate_table_wipes_rows_stamps_delete_and_preserves_history() {
             .clone(),
         Operation::Delete,
     );
+    assert_wipe_summary(&Door::wipe_summary(&after), pre_files, pre_rows);
     let travelled = door
         .sql(&format!(
             "SELECT id FROM ice.sales.t FOR VERSION AS OF {pre_id}"
@@ -168,8 +244,32 @@ async fn truncate_partition_form_refuses_without_wiping() {
         .err("TRUNCATE TABLE ice.sales.t PARTITION (id = 1)")
         .await;
     assert!(
-        error.contains("INVALID_PARTITION_OPERATION") || error.contains("PARTITION"),
-        "partition refuse: {error}"
+        error.contains("INVALID_PARTITION_OPERATION"),
+        "partition refuse must carry the Spark class token, got: {error}"
+    );
+    assert_eq!(door.live_rows("t").await, 1);
+}
+
+#[tokio::test]
+async fn truncate_if_exists_before_name_is_parse_syntax_error_and_does_not_wipe() {
+    let door = door_with_schema().await;
+    door.ok("CREATE TABLE ice.sales.t AS SELECT 1 AS id").await;
+    let error = door.err("TRUNCATE TABLE IF EXISTS ice.sales.t").await;
+    assert!(
+        error.contains("PARSE_SYNTAX_ERROR"),
+        "leading IF EXISTS must surface Spark's parse class, got: {error}"
+    );
+    assert_eq!(door.live_rows("t").await, 1);
+}
+
+#[tokio::test]
+async fn truncate_if_exists_after_name_parse_fails_and_does_not_wipe() {
+    let door = door_with_schema().await;
+    door.ok("CREATE TABLE ice.sales.t AS SELECT 1 AS id").await;
+    let error = door.err("TRUNCATE TABLE ice.sales.t IF EXISTS").await;
+    assert!(
+        error.contains("IF"),
+        "trailing IF EXISTS must parse-fail naming IF, got: {error}"
     );
     assert_eq!(door.live_rows("t").await, 1);
 }

@@ -133,7 +133,8 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
 - `ref_ddl.rs` — the ALTER-scoped branch/tag grammar (Q6/G6, copied from the Spark door's
   precedent) over the tier-1 `ManageSnapshots` seams. The top-level `CREATE BRANCH b IN t`
   spelling stays Spark-only. Tests: [ref_ddl/map.md](ref_ddl/map.md).
-- `truncate.rs` — whole-table `TRUNCATE TABLE` (DML-C). Pins: `truncate_tests.rs`.
+- `truncate.rs` — whole-table `TRUNCATE TABLE` (DML-C). Pins: `truncate_tests.rs`
+  (wipe summary keys, `INVALID_PARTITION_OPERATION` class token, IF EXISTS parse refuse).
   pins: dml-c-truncate/C-003, C-006, C-007
 - `refusals.rs` — the completed refuse set (Q7/Q9): `INSERT OVERWRITE`, `CALL`,
   `ALTER TABLE … EXECUTE` (pre-parse recognizer). Every message names a

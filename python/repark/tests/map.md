@@ -48,7 +48,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_dml_c_truncate.py](test_dml_c_truncate.py) — **DML-C:** facade `.sql()` TRUNCATE
   wipes rows, stamps `operation=delete`, time-travels to the pre-truncate snapshot;
   missing table is `TABLE_OR_VIEW_NOT_FOUND`; a view is `EXPECT_TABLE_NOT_VIEW`;
-  `repark.sql()` no longer steers at the empty-overwrite substitute.
+  native `repark.sql()` plans a missing table as `table '…' not found`.
   pins: dml-c-truncate/C-004, C-006, C-007
 - [test_mw9_delete_granularity.py](test_mw9_delete_granularity.py) — **MW-9:** facade Spark
   `.sql()` unset `write.delete.granularity` writes one position-delete file per data file.

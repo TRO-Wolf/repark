@@ -23,10 +23,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   answer, so the gate wants a dated owner ruling before either writes code.
 - [dml-c-truncate-ledger.md](dml-c-truncate-ledger.md) — **DML-C (2026-08-30),
   chartered on `feat/dml-c-truncate`:** `TRUNCATE TABLE` as a first-class statement on
-  both SQL doors and the facade. `risk_tier: high` (irreversible table wipe). Eight OPEN
-  clauses; C-001 is the live PySpark 4.1.2 + Iceberg 1.11.0 oracle table (operation stamp,
-  summary properties, snapshot count, time travel) before any engine edit. Owner-pre-authorized
-  with the v0.6 plan. Card:
+  both SQL doors and the facade. `risk_tier: high` (irreversible table wipe). Eight
+  PROVEN clauses. Critic residual (2026-08-30): class-token error pins, full wipe
+  summary keys, native missing-table `AnalysisException`, IF EXISTS parse refuse.
+  Owner-pre-authorized with the v0.6 plan. Card:
   [../../../task/roadmap/epic-term/roadmap-design-plan-2026-08-29.md](../../../task/roadmap/epic-term/roadmap-design-plan-2026-08-29.md)
   DML-C. Registry today: [DML-2](../../../docs/spark-sql-iceberg-parity.md).
 - [v3-0-charter-ledger.md](v3-0-charter-ledger.md) —

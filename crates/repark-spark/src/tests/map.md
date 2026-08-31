@@ -70,8 +70,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   sibling file-path stability, two-key AND + incomplete-static, string/NULL partitions,
   Hive too-many-columns refuse, empty-dynamic guard;
   pins: dml-b-insert-overwrite/C-001, C-002, C-004, C-005),
-  `truncate` (DML-C: wipe, `operation=delete`, time travel, missing-table / view / PARTITION
-  refuse; pins: dml-c-truncate/C-001, C-002, C-005, C-006, C-007),
+  `truncate` (DML-C: wipe summary keys, equal empty-overwrite keys, time travel,
+  missing-table / view / `INVALID_PARTITION_OPERATION` / IF EXISTS parse refuse;
+  pins: dml-c-truncate/C-001, C-002, C-005, C-006, C-007),
   `merge`, `call`, and `call_orphan`. `call_remove_orphan_files_refuses_a_location_arg_under_the_fallback_root`
   and `call_orphan_shared_ctas_root_rule` pin the fallback-root safety contract. Maintenance tests
   pin Spark's full schemas, typed count sources, deletion-vector refusal, and file-granularity rules.
@@ -94,7 +95,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   **MW-4b:** Glue-shaped `table_exists` — 4-part
   `.snapshots`/`.files` rewrites to `$` despite hierarchical `DataInvalid`; Unexpected
   and single-level DataInvalid stay fatal), `normalize`, `local_fs_ddl`,
-  `router` (multi-statement, F-BR-2 eager DML, TRUNCATE refuse), `decimal` (G-7b bit-exact
+  `router` (multi-statement, F-BR-2 eager DML), `decimal` (G-7b bit-exact
   `Decimal128` i128 pins — literal / division / 38-clamp / avg+promotion / overflow+div-zero /
   nullability; cites Python corpus row names.
   `pin_literal_1_23_infers_decimal128_3_2_i128` and overflow wrap `10^38` at (38,0).
