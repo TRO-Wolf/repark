@@ -7,7 +7,7 @@ the owner closes the slate row.
 **Unit:** FNP-4c · **Date:** 2026-08-31 · **Executor:** Grok (grok-4.6), Actor ·
 **Branch:** `feat/fnp-4c-higher-order-kernels` · **Base:** `60225cc427673cbc2e4bf23e90db376e602773dd`
 (FNP-15/16).
-**Charter:** [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) C-003 (Column
+**Charter:** [fnp-0-charter-ledger.md](../staging/fnp-0-charter-ledger.md) C-003 (Column
 entry point) and the FNP-4c slice of C-004 (kernels registered for both doors;
 SQL `x -> y` parse remains FNP-4b).
 **Design:** [docs/design/spark-function-parity.md](../../../docs/design/spark-function-parity.md)
