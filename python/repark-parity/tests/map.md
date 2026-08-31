@@ -23,7 +23,9 @@ JVM, no repark required). See [../map.md](../map.md).
   leads and delivered mw-10 is absent, since MW-10's 2026-08-30 close-out), the per-unit FNP order and delivery boundary,
   FNP-Z retirement, fork independence, and map lockstep. MW-10 pickup archived RP-3, so the
   C-006 navigation pin reads `**RP-3 (2026-08-28)` / `opt-in for callers` from
-  `task/ledgers/archive/2026-08/map.md`. `pins: plan-1-northstar-fnp-sequence/C-001, C-002, C-003, C-004, C-005, C-006`
+  `task/ledgers/archive/2026-08/map.md`, and V3-3's row from `task/ledgers/completed/map.md`
+  since its 2026-08-30 keep-refusal departure. STATUS `**Next:**` is V3-4 after V3-3's keep-refusal
+  (pins: plan-1-northstar-fnp-sequence/C-001, C-002, C-003, C-004, C-005, C-006; v3-3-dml/C-003).
 - `test_pr_247_owner_ruling.py` — **PR #247 revalidation (2026-08-27):** the owner-ruling blocks
   in `AGENTS.md` and `CLAUDE.md` stay byte-exact, unique, at the document start, and in regular
   files; one-byte drift, malformed or missing files, relocation, duplication, and symlink
@@ -79,6 +81,8 @@ JVM, no repark required). See [../map.md](../map.md).
   rule for the unit itself. RP-2 salvage (2026-08-28) retargeted the `V3-COW-1` assertions to
   the narrowed row. RP-3 (2026-08-30) retargeted again: live-DV DELETE merge lifts; UPDATE,
   MERGE, and sequential COW after overwrite stay refused (BACKLOG, 2026-08-25 ruling kept).
+  V3-3 (2026-08-30) records the measured keep-refusal: Spark preserves `_row_id`; the engine
+  rewrite reassigns (pins: v3-3-dml/C-003).
 - `test_dl_2_ledger_grammar.py` — **DL-2 (2026-08-23):** the ledger grammar gate on a scratch
   tree seeded with the script's own `EXCEPTIONS` rows at their ceilings: a clean ledger counts;
   a bad verdict cell, a duplicate id and a row without evidence go red; an unpinned `PROVEN`

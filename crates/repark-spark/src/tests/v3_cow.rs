@@ -4,6 +4,7 @@
 //! pins: rp-2-fork-repin/C-002, C-003, C-005
 //! pins: rp-2-fork-repin/C-001, C-004, C-007, C-008
 //! pins: rp-3-fork-repin/C-004
+//! pins: v3-3-dml/C-001, C-002
 //! Pins format-v3 copy-on-write DML refusal and the resolver safety seat.
 
 use super::super::*;
@@ -160,8 +161,11 @@ async fn assert_cow_refused_untouched(
         .expect_err("copy-on-write DML on a v3 table must refuse")
         .to_string();
     assert!(
-        err.contains("V3-COW-1") && err.contains("row lineage") && err.contains(verb),
-        "refusal must name the row, row lineage and `{verb}`: {err}"
+        err.contains("V3-COW-1")
+            && err.contains("row lineage")
+            && err.contains(verb)
+            && err.contains("reassigns"),
+        "refusal must name the row, row lineage, `{verb}`, and the measured reassignment: {err}"
     );
     assert_eq!(
         current_snapshot_id(catalogs, table).await,
@@ -249,6 +253,7 @@ async fn adopted_v3_cow_second_delete_refuses_before_lineage_diverges() {
 }
 
 /// pins: v3r-1-rulings/C-002
+/// pins: v3-3-dml/C-001
 #[tokio::test]
 async fn adopted_v3_cow_update_refuses_rather_than_reassign_row_lineage() {
     let warehouse = TempDir::new().unwrap();
@@ -265,6 +270,7 @@ async fn adopted_v3_cow_update_refuses_rather_than_reassign_row_lineage() {
 }
 
 /// pins: v3r-1-rulings/C-003
+/// pins: v3-3-dml/C-002
 #[tokio::test]
 async fn adopted_v3_cow_merge_refuses_with_unset_and_explicit_mode() {
     let warehouse = TempDir::new().unwrap();
@@ -332,6 +338,7 @@ async fn v2_cow_delete_still_commits_control() {
 }
 
 /// pins: v3r-1-rulings/C-004
+/// pins: v3-3-dml/C-002
 #[tokio::test]
 async fn adopted_v3_mor_merge_still_refuses() {
     let warehouse = TempDir::new().unwrap();
@@ -612,7 +619,7 @@ async fn adopted_v3_padded_merge_on_read_spelling_still_refuses_update() {
     .expect_err("a padded merge-on-read spelling must not slip past the UPDATE refusal")
     .to_string();
     assert!(
-        err.contains("V3-COW-1") && err.contains("row lineage"),
+        err.contains("V3-COW-1") && err.contains("row lineage") && err.contains("reassigns"),
         "the copy-on-write arm's reason: {err}"
     );
     assert_eq!(lineage(&catalogs, "adopt_pad").await, before, "no commit");

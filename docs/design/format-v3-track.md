@@ -244,10 +244,11 @@ UPDATE refuses. `rewrite_data_files` still reassigns (`V3-LINEAGE-1`, C-005).
 
 ### Step 4 — deliver V3-3 and the guarded upgrade
 
-V3-3 completes MOR DELETE, UPDATE, and MERGE across partitioned and spec-evolved tables. It
-merges existing DVs, preserves Puffin siblings, pins concurrency and pre-write failures, and
-round-trips each supported action through Spark. The opt-in v2-to-v3 upgrade lands only after
-V3-3 proves the engine can safely mutate an upgraded table.
+V3-3 (2026-08-30) measured UPDATE and MERGE on a DV-free v3 table. Spark 4.1.2 + Iceberg 1.11.0
+preserves `_row_id`; the engine rewrite reassigns. The unit therefore keeps the pre-write
+`V3-COW-1` refusal with that measured reason. The lineage-preserving lift moves to V3-4 behind
+fork F-7. The opt-in v2-to-v3 upgrade still lands only after the engine can safely mutate an
+upgraded table.
 
 ### Step 5 — run the remaining product units on their real dependencies
 
