@@ -133,8 +133,8 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
   design: [docs/design/format-v3-track.md](docs/design/format-v3-track.md); audit:
   [task/ledgers/staging/v3-0-charter-ledger.md](task/ledgers/staging/v3-0-charter-ledger.md).
   - **Measured true (V3-0, [#199](https://github.com/TRO-Wolf/repark/pull/199)):** v3 DV reads
-    and lineage appends round-trip through Spark. **Guarded:** `rewrite_data_files` reassigned `_row_id` on v3 —
-    registry `V3-LINEAGE-1`; the fix is fork work (F-7). Queued: `V3-DANGLE-1`.
+    and lineage appends round-trip through Spark. **RP-4 (2026-08-31):** `V3-LINEAGE-1` FIXED
+    (fork #243). Queued: `V3-DANGLE-1`.
   - **Delivered:** V3-1 `register_table` + the checked-in v3 fixture
     ([#203](https://github.com/TRO-Wolf/repark/pull/203)); V3-2 CREATE/CTAS `format-version = 3`
     behind `repark.sql.allowCreateFormatVersion3` (default false), ALTER refused
@@ -155,9 +155,10 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
     ([#253](https://github.com/TRO-Wolf/repark/pull/253)). RP-2 (2026-08-28, fork `ce92a7bf`) the DV-free first DELETE. RP-3 (2026-08-30,
     fork `d408da42`) wired container closure; live-DV DELETE merge is Spark-equal on three
     doors; sequential COW after overwrite refuses (`V3-COW-1`, F-rp3-c7); Hadoop writes
-    FIXED (`V3-ADOPT-1`). V3-3 (2026-08-30) measured `UPDATE` / `MERGE` keep-refusal:
+    FIXED (`V3-ADOPT-1`). RP-4 (2026-08-31, fork `33be9a0`) F-7 slice 1: rewrite lineage
+    Spark-equal (`V3-LINEAGE-1` FIXED); F-6 `to_branch` carried. V3-3 (2026-08-30) measured `UPDATE` / `MERGE` keep-refusal:
     Spark 4.1.2 + Iceberg 1.11.0 preserves `_row_id`; the engine rewrite reassigns
-    (registry `V3-COW-1`). `V3-LINEAGE-1` and `B-MOR-3` stay.
+    (registry `V3-COW-1`). `B-MOR-3` stays.
     **V3-4 read (2026-08-31):** `_row_id` / `_last_updated_sequence_number` Spark-equal on
     single-table v3 reads (three doors); v1/v2 engine Schema `No field named _row_id`;
     JOIN/CTE/subquery/time-travel refuse `V3-ROWID-2`. `V3-ROWID-1` FIXED. Preserve-half stays F-7.
