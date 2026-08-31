@@ -47,6 +47,17 @@ def test_unaliased_typed_add_columns_preserve_binary_name() -> None:
     assert all("__repark_spark_int_" not in name for name in columns)
 
 
+def test_native_sql_int32_add_overflow_raises() -> None:
+    """Native ``repark.sql()`` raises on INT overflow without a Spark session.
+
+    pins: f-y10-1-int-overflow/C-003
+    """
+    import repark
+
+    with pytest.raises(Exception, match="ARITHMETIC_OVERFLOW"):
+        repark.sql("SELECT CAST(2147483647 AS INT) + CAST(1 AS INT) AS v").to_arrow()
+
+
 def test_native_unaliased_typed_add_columns_preserve_binary_name() -> None:
     """ANSI-door ``repark.sql()`` unaliased planner-hit name is not the UDF.
 

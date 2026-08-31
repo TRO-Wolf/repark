@@ -8,7 +8,8 @@ accuracy contracts restored in condensed form (see the unit ledger's findings di
 ## Purpose
 
 Source for the Spark SQL door. `lib.rs` is a manifest (check_lib_rs) and re-exports
-`install_integer_overflow` for ANSI-door tests (F-Y10-1). The router body lives in
+`install_integer_overflow` (F-Y10-1; AnsiDialect now installs it at session build).
+The router body lives in
 `router.rs`. DDL, DML, reference, maintenance, metadata, time-travel, and passthrough handlers
 share the session and catalog seams. The MoR valve predicate is owned by
 `repark_iceberg::write`; `normalize.rs` keeps the resolution wrapper.

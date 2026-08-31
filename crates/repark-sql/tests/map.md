@@ -116,6 +116,7 @@ holds behavior observed from outside the crate.
   string→number coercion refuses, **F-Y10-1** INT `+` overflow raises
   (`ansi_door_int32_add_overflow_raises`) and untyped `1 + 1` /
   `2147483647 + 1` stay Int64; unaliased `x + 1` keeps the BinaryExpr name.
+  Helpers do **not** call `install_integer_overflow` (session build must).
   Does **not** edit `timestamp_cast_ansi_door.rs` or
   `session_timezone_ansi_door.rs`. Identifier case folding is registry ID-1 (cited, not
   duplicated). Cargo wires this file as its

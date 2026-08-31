@@ -1,7 +1,7 @@
 //! [`AnsiDialect`] — the ANSI door's [`SqlDialect`] implementation.
 
 use async_trait::async_trait;
-use datafusion::prelude::DataFrame;
+use datafusion::prelude::{DataFrame, SessionContext};
 use repark_core::{EngineContext, SqlDialect};
 
 /// The ANSI/Trino-flavoured statement front end.
@@ -10,6 +10,10 @@ pub struct AnsiDialect;
 
 #[async_trait(?Send)]
 impl SqlDialect for AnsiDialect {
+    fn on_session_built(&self, ctx: &SessionContext) {
+        repark_functions::integer_spark::install_integer_overflow(ctx);
+    }
+
     async fn execute(
         &self,
         cx: EngineContext<'_>,

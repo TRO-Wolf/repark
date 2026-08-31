@@ -24,7 +24,6 @@ async fn native_ansi_door() -> Door {
         .with_sql_dialect(dialect)
         .build()
         .expect("native session");
-    repark_spark::install_integer_overflow(session.context());
     session
         .register_memory_catalog("ice", &warehouse)
         .await

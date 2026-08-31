@@ -40,6 +40,8 @@ changing a decision here means a new dated design pass, not an in-place edit.
   delegate-first architecture (verbatim Spark-door port, NEW ANSI door), the four tier-3
   crates + three hoists (§1), the Q1–Q15 ANSI rulings (§2), the seam freeze (§3), census +
   matrix testing discipline (§4), the sequencing fidelity gate (§5), and top risks (§6).
+  F-Y10-1 (2026-08-30): `repark-sql` also depends on `repark-functions` for AnsiDialect
+  session-build integer overflow; still no `datafusion-spark`.
 - [python-facade.md](python-facade.md) — the phase-3 Python binding + facade + census design
   (settled 2026-08-08, competition-synthesized): census-first verbatim port, the ten edit
   classes (§3), the Q1–Q10 rulings incl. the deferred `repark.sql` re-home with its

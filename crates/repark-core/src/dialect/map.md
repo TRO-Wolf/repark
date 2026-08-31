@@ -9,6 +9,9 @@ and the `EngineContext` construction contract.
 
 - `tests.rs` — passthrough + explicit-field-construction pins (`#[cfg(test)] mod tests;` in
   `../dialect.rs`).
+- `../dialect.rs` — `SqlDialect::on_session_built` (default no-op) runs from
+  `ReparkSessionBuilder::build` after extension `register`. AnsiDialect installs
+  F-Y10-1 integer overflow there. pins: f-y10-1-int-overflow/C-003
 
 ## Pointers
 

@@ -40,7 +40,10 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   correlation, correlated IN, and identity `UPDATE … IN` call `execute_predicate_dml`; every other
   subquery `WHERE` still hits G3-E8 then BUG-001 (cheap-first). Tests: [router/map.md](router/map.md).
 - `dialect.rs` — `AnsiDialect: repark_core::SqlDialect` (the frozen seam adapter; a one-liner
-  onto the router, deliberately; `#[async_trait(?Send)]` matches the core trait). In-module tests.
+  onto the router, deliberately; `#[async_trait(?Send)]` matches the core trait).
+  `on_session_built` installs integer overflow so a bare `ReparkSession` + this
+  dialect raises without Python. In-module tests.
+  pins: f-y10-1-int-overflow/C-003
 - `guards.rs` — the guard set: multi-statement refuse (quote-aware, FIRST), P11 read-only
   catalog DML (generic message), write-to-branch, the BUG-001 MoR valve (async wrapper over the
   tier-1 predicate, gating delegated DELETE/UPDATE), the SEC-02 local-filesystem plan gate, and

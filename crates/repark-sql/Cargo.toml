@@ -26,6 +26,10 @@ repark-core.workspace = true
 repark-iceberg.workspace = true
 # The error seed (kept explicit so a handler can name `repark_common::Error` at a seam).
 repark-common.workspace = true
+# F-Y10-1 C-003: AnsiDialect installs checked integer + - * at session build so a
+# bare ReparkSession + AnsiDialect raises without Python. Not datafusion-spark;
+# the Spark door still owns SparkExprSemantics via SparkExtension.
+repark-functions.workspace = true
 # DEVIATION (recorded in the ledger): the design's dep list names the four workspace crates
 # above. Two mechanically-required deps are added:
 #  * `iceberg` — the staged create/replace transaction (`StagedTableTransaction`,
