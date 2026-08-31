@@ -87,3 +87,16 @@ def test_sliding_refuse_set_matches_the_frozen_roster(gate_run: Any) -> None:
         assert row.outcome == "refuse"
         assert row.message is not None
         assert "retract_batch" in row.message or "sliding accumulator" in row.message.lower()
+
+
+def test_remaining_absents_fail_at_planning(gate_run: Any) -> None:
+    """C-009 recount: remaining absents are planning misses, not sliding refuses."""
+    roster = _load_roster()
+    live_absent = tuple(sorted(row.name for row in gate_run.probe if row.outcome == "absent"))
+    assert live_absent == roster.ABSENT_PLANNING_NAMES
+    for name in roster.ABSENT_PLANNING_NAMES:
+        row = next(item for item in gate_run.probe if item.name == name)
+        text = row.message or ""
+        assert "Error during planning" in text or "Invalid function" in text
+        assert "retract_batch" not in text
+        assert "sliding accumulator" not in text.lower()

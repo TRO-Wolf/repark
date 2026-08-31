@@ -30,6 +30,7 @@ from windows.hardware import hardware_fields  # noqa: E402
 from windows.models import RunResult  # noqa: E402
 from windows.report import render_markdown  # noqa: E402
 from windows.roster import (  # noqa: E402
+    ABSENT_PLANNING_NAMES,
     FULL_UNPARTITIONED_ROWS,
     PROBE_NAMES,
     REFUSING_SLIDING_NAMES,
@@ -110,9 +111,10 @@ def test_probe_roster_matches_the_charter_enumeration() -> None:
     assert set(RETRACT_NAMES) <= set(PROBE_NAMES)
 
 
-def test_frozen_refuse_set_is_the_measured_twelve() -> None:
+def test_frozen_refuse_set_is_the_measured_thirteen() -> None:
     """C-009: the refuse subset is a frozen finite list, not a moving guess."""
     assert REFUSING_SLIDING_NAMES == (
+        "approx_count_distinct",
         "approx_percentile",
         "bit_and",
         "bit_or",
@@ -127,6 +129,28 @@ def test_frozen_refuse_set_is_the_measured_twelve() -> None:
         "try_sum",
     )
     assert set(REFUSING_SLIDING_NAMES) <= set(PROBE_NAMES)
+    assert spec_by_name("approx_count_distinct").sql_expr == "approx_count_distinct(vi)"
+    assert ABSENT_PLANNING_NAMES == (
+        "any",
+        "any_value",
+        "count_if",
+        "every",
+        "first",
+        "kurtosis",
+        "last",
+        "max_by",
+        "min_by",
+        "mode",
+        "percentile",
+        "skewness",
+        "some",
+        "std",
+        "try_avg",
+        "variance",
+    )
+    assert not (set(REFUSING_SLIDING_NAMES) & set(ABSENT_PLANNING_NAMES))
+    classified = set(REFUSING_SLIDING_NAMES) | set(ABSENT_PLANNING_NAMES)
+    assert classified <= set(PROBE_NAMES)
 
 
 def test_registry_has_a_heading_per_sliding_refuse() -> None:
@@ -239,6 +263,12 @@ def test_run_result_requires_version_and_machine_fields() -> None:
     assert "4.1.2" in markdown
     assert "schedutil" in markdown
     assert "seed.parquet" in markdown
+    assert "process_hwm_rss_bytes" in markdown
+    assert "UNMEASURED" in markdown
+    cell_headers = [line for line in markdown.splitlines() if line.startswith("| engine |")]
+    for header in cell_headers:
+        assert "peak_rss" not in header
+        assert "rss" not in header.lower()
     probe_with_newline = RunResult(
         scale="gate",
         seed=42,
@@ -309,3 +339,23 @@ def test_run_repark_sql_does_not_retry_a_different_query() -> None:
     assert calls == []
     returns = [node for node in ast.walk(function) if isinstance(node, ast.Return)]
     assert len(returns) >= 2
+
+
+def test_run_window_measurement_cleans_scratch_in_finally() -> None:
+    """C-011: Spark-start abort still deletes generated datasets."""
+    source = (_WINDOWS_DIR / "measure.py").read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    function = _function_named(tree, "run_window_measurement")
+    cleaned = False
+    for node in ast.walk(function):
+        if not isinstance(node, ast.Try):
+            continue
+        for statement in node.finalbody:
+            for child in ast.walk(statement):
+                if (
+                    isinstance(child, ast.Call)
+                    and isinstance(child.func, ast.Name)
+                    and child.func.id == "cleanup_scratch"
+                ):
+                    cleaned = True
+    assert cleaned is True

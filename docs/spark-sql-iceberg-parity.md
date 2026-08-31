@@ -2174,13 +2174,21 @@ Spark evaluates an aggregate over `ROWS BETWEEN n PRECEDING AND CURRENT ROW` eve
 aggregate has no inverse (it re-scans the frame). DataFusion 54.1 refuses at execution:
 `Aggregate can not be used as a sliding accumulator because retract_batch is not implemented`.
 W-0 measured the Spark 4.1.2 built-in aggregate roster; names that do not plan at all are
-**absent** (not these rows). Names that plan and then refuse are the twelve headings below.
+**absent** (not these rows). Names that plan and then refuse are the thirteen headings below.
+`approx_count_distinct` is probed on int64; on Float64 it fails earlier with a type gap.
 W-1 picks the fallback (Spark re-scan vs segment tree). *(oracle: live RePark probe, 2026-08-31;
 Spark half is documented SlidingWindowFunctionFrame plus the W-0 PySpark 4.1.2 cell.)*
 
 Shared pin for every heading:
 `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
 and `python/repark-parity/tests/test_w0_window_bench.py::test_registry_has_a_heading_per_sliding_refuse`.
+
+### WIN-SLIDE-approx_count_distinct — `approx_count_distinct` over a sliding frame refuses
+
+- **repark** — `approx_count_distinct(vi)` over `ORDER BY id ROWS BETWEEN 10 PRECEDING AND CURRENT ROW` plans, then raises the sliding-accumulator `retract_batch` refusal. On Float64 the same name fails earlier (`approx_distinct` not implemented for that type) and is not this row.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
+- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
+- **Rationale** — BACKLOG. W-1.
 
 ### WIN-SLIDE-approx_percentile — `approx_percentile` over a sliding frame refuses
 

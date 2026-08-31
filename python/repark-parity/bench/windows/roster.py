@@ -71,7 +71,7 @@ def _unary(name: str, expr: str) -> ProbeSpec:
 PROBE_SPECS: Final[tuple[ProbeSpec, ...]] = (
     _unary("any", "any(vi <> 0)"),
     _unary("any_value", "any_value(v)"),
-    _unary("approx_count_distinct", "approx_count_distinct(v)"),
+    _unary("approx_count_distinct", "approx_count_distinct(vi)"),
     _unary("approx_percentile", "approx_percentile(v, 0.5)"),
     _unary("array_agg", "array_agg(v)"),
     _unary("avg", "avg(v)"),
@@ -130,6 +130,7 @@ PROBE_NAMES: Final[tuple[str, ...]] = tuple(spec.name for spec in PROBE_SPECS)
 TIMED_SLIDING_NAMES: Final[tuple[str, ...]] = ("sum", "avg", "min", "max", "count")
 
 REFUSING_SLIDING_NAMES: Final[tuple[str, ...]] = (
+    "approx_count_distinct",
     "approx_percentile",
     "bit_and",
     "bit_or",
@@ -142,6 +143,25 @@ REFUSING_SLIDING_NAMES: Final[tuple[str, ...]] = (
     "covar_samp",
     "percentile_approx",
     "try_sum",
+)
+
+ABSENT_PLANNING_NAMES: Final[tuple[str, ...]] = (
+    "any",
+    "any_value",
+    "count_if",
+    "every",
+    "first",
+    "kurtosis",
+    "last",
+    "max_by",
+    "min_by",
+    "mode",
+    "percentile",
+    "skewness",
+    "some",
+    "std",
+    "try_avg",
+    "variance",
 )
 
 

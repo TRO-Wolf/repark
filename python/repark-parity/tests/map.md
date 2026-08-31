@@ -245,8 +245,9 @@ JVM, no repark required). See [../map.md](../map.md).
   No engine / numpy / native module.
 - `test_w0_window_bench.py` — **W-0:** engine-free pins for the window-shape
   bench (roster equals the charter enumeration, 1e7 unpartitioned constant,
-  seeded generator, DuckDB/PySpark pins, sliding-refuse classifier, result
-  model fields, scratch delete, no retry on the error path, WIN-SLIDE registry headings).
+  seeded generator, DuckDB/PySpark pins, thirteen sliding refuses including
+  int64 `approx_count_distinct`, result model fields, scratch delete in
+  `finally`, no retry on the error path, WIN-SLIDE registry headings).
   pins: w-0-window-bench/C-001, C-002, C-003, C-004, C-007, C-008, C-009, C-010, C-011.
 - `test_redact.py` — the battery for `compat/redact.py`, the recorded path-redaction transform.
   Its one hard property is that the artifact still parses afterwards, so the two regressions are

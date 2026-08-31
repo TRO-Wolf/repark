@@ -8,12 +8,16 @@ Iceberg scan, and a window over `memory_limit`. Two oracles: DuckDB 1.5.5 and
 PySpark 4.1.2. Measurement only: nothing here changes engine behaviour.
 
 Local filesystem and a memory catalog. Never AWS. The generator is checked in;
-the data it makes never is. Scratch is deleted after a run unless `--keep-scratch`.
+the data it makes never is. Scratch is deleted in ``finally`` (including Spark-start
+abort) unless `--keep-scratch`. `approx_count_distinct` is probed on int64. RSS is a
+process high-water mark, once per run. Over-limit oom is the upstream sort;
+window-exec spill is UNMEASURED.
 
 ## Contents
 
 - `roster.py` — Spark 4.1.2 probe roster (the C-002 / C-009 finite domain), SQL
-  shapes, retractable-class names, scale constants (`FULL_UNPARTITIONED_ROWS = 1e7`).
+  shapes, thirteen sliding-refuse names, sixteen planning-absent names, scale
+  constants (`FULL_UNPARTITIONED_ROWS = 1e7`).
 - `datagen.py` — seeded Arrow/parquet generator (`id`, `ts`, `v`, `vi`, `v2`, `part`).
 - `hardware.py` — machine-profile snapshot (cpu, cores, governor, ram).
 - `models.py` — pydantic `ProbeRow` / `CellTiming` / `CellResult` / `RunResult`.

@@ -49,12 +49,12 @@ plans is the non-retractable class.
 | C-003 | A constant-frame cell runs `UNBOUNDED PRECEDING` / `UNBOUNDED FOLLOWING` (or `OVER ()`) on a retractable aggregate. | Smoke asserts the cell SQL and that the result record carries the constant-frame label. | PROVEN | `constant_select` + full-run cell `constant_sum` (WindowAggExec, no SortExec). pins: w-0-window-bench/C-003 |
 | C-004 | An unpartitioned `ORDER BY` cell exists whose full-scale default is 10_000_000 rows. Gate scale is smaller and does not assert wall clock. | Constant `FULL_UNPARTITIONED_ROWS == 10_000_000`; smoke runs the cell at gate scale. | PROVEN | `test_full_unpartitioned_rows_is_ten_million`; full run cell `unpartitioned_order_by` 10_000_000 rows. pins: w-0-window-bench/C-004 |
 | C-005 | A `lead` / `lag` cell reads an unsorted Iceberg table (memory catalog, no sort order) and times both functions. | Smoke writes the table, runs `lead`/`lag` `OVER (ORDER BY ts)`, records plan-shape tokens including whether a sort ran. | PROVEN | `test_iceberg_lead_lag_runs_over_an_unsorted_table`; full run plan tokens `SortExec` + `Iceberg`. pins: w-0-window-bench/C-005 |
-| C-006 | A window cell runs with a session `memory_limit` below the working set and records one outcome class: `ok`, `spill`, `oom`, `error`, or `crash`. The driver never retries a different query to hide the class. | Smoke with a 1 MiB floor and a working set above it; the recorded class is one of the five; an injected raise becomes `error`, not a rewritten query. | PROVEN | Full run `memory_limit_16M` at 2e6 rows: outcome `oom` (FairSpillPool / ExternalSorter). pins: w-0-window-bench/C-006 |
+| C-006 | A window cell runs with a session `memory_limit` below the working set and records one outcome class: `ok`, `spill`, `oom`, `error`, or `crash`. The driver never retries a different query to hide the class. | Smoke with a 1 MiB floor and a working set above it; the recorded class is one of the five; an injected raise becomes `error`, not a rewritten query. | PROVEN | Full run `memory_limit_16M` at 2e6 rows: outcome `oom` on the upstream `SortExec` / FairSpillPool `ExternalSorter`. Window-exec spill is UNMEASURED. pins: w-0-window-bench/C-006 |
 | C-007 | Two oracle adapters exist: DuckDB at the workspace pin `duckdb==1.5.5`, and PySpark `4.1.2`. A missing extra or JVM is skip-loud and named in the results, never a silent omit. | Adapter constructors; DuckDB version pin in the bench requirements; PySpark skip records `oracle=pyspark reason=...`. | PROVEN | `requirements.txt`; full run DuckDB 1.5.5 and PySpark 4.1.2 both `ok` on timed cells. pins: w-0-window-bench/C-007 |
 | C-008 | A dated results document under `task/` carries engine version, DuckDB version, PySpark version-or-skip, machine profile, raw cell numbers, and generated-dataset byte sizes. | The result model requires those fields; the filed markdown exists and names them. | PROVEN | [../../window-bench-report-2026-08-31.md](../../window-bench-report-2026-08-31.md). pins: w-0-window-bench/C-008 |
-| C-009 | Every probe-roster name whose live class is **refuse** (plans as a window aggregate, then DataFusion sliding-accumulator `not_impl`) is a registry BACKLOG row `WIN-SLIDE-<name>` with repark / Spark / pin / rationale. Absent names are not W-0 rows. | Gate test: the refuse set equals the `WIN-SLIDE-` headings; each pin asserts the sliding query raises. | PROVEN | Twelve names, twelve headings. `test_sliding_refuse_set_matches_the_frozen_roster`; `test_registry_has_a_heading_per_sliding_refuse`. pins: w-0-window-bench/C-009 |
+| C-009 | Every probe-roster name whose live class is **refuse** (plans as a window aggregate, then DataFusion sliding-accumulator `not_impl`) is a registry BACKLOG row `WIN-SLIDE-<name>` with repark / Spark / pin / rationale. Absent names are not W-0 rows. | Gate test: the refuse set equals the `WIN-SLIDE-` headings; each pin asserts the sliding query raises. | PROVEN | Thirteen names, thirteen headings. `test_sliding_refuse_set_matches_the_frozen_roster`; `test_registry_has_a_heading_per_sliding_refuse`; `test_remaining_absents_fail_at_planning`. pins: w-0-window-bench/C-009 |
 | C-010 | This unit does not modify `crates/`. An engine crash or loud refuse is recorded as an outcome (and C-009 row when it is a sliding refuse), never patched around. | `git diff` against base has no `crates/` path; the crash/error path has a pin. | PROVEN | `test_run_repark_sql_does_not_retry_a_different_query`; no `crates/` in the unit diff. pins: w-0-window-bench/C-010 |
-| C-011 | Generated datasets land under the caller scratch directory and are deleted after the measurement run; the results document records the sizes taken before delete. `--keep-scratch` is the only opt-out. | Smoke writes, records `dataset_bytes`, deletes; a second listing of the scratch is empty. | PROVEN | `test_cleanup_scratch_deletes_unless_keep`; full run `scratch_deleted: True`; sizes in the report. pins: w-0-window-bench/C-011 |
+| C-011 | Generated datasets land under the caller scratch directory and are deleted after the measurement run; the results document records the sizes taken before delete. `--keep-scratch` is the only opt-out. | Smoke writes, records `dataset_bytes`, deletes; a second listing of the scratch is empty. | PROVEN | `test_cleanup_scratch_deletes_unless_keep`; `test_run_window_measurement_cleans_scratch_in_finally`; full run `scratch_deleted: True`. pins: w-0-window-bench/C-011 |
 
 VERDICT: PROVEN — 11 clauses, 11 PROVEN, 0 OPEN, 0 REJECTED.
 
@@ -91,20 +91,23 @@ the plan is `WindowAggExec` without `SortExec` — the DataFusion constant-aggre
 path is taken. Unpartitioned `ORDER BY` at 1e7 still sorts (`SortExec` +
 `BoundedWindowAggExec`). Iceberg lead/lag plan tokens include `Iceberg` and
 `SortExec` (scan advertises no order). Over-limit: `datafusion.runtime.memory_limit=16M`
-on 2e6 rows fails as **`oom`** on `ExternalSorter` / FairSpillPool — the window
-exec itself does not spill. That is the W-3 row, recorded, not patched.
+on 2e6 rows fails as **`oom`** in the upstream `SortExec` / FairSpillPool
+`ExternalSorter`. The window exec was not reached at that limit; window-exec
+spill behavior is **UNMEASURED**. That is the W-3 remainder, recorded, not patched.
 
 Scratch sizes before delete: unpartitioned parquet **108,701,433 B**; iceberg
 warehouse **7,147,598 B**; memory seed **21,740,637 B**. Directory `/tmp/w0-full`
 was empty after the run.
 
 Sliding-frame **refuse** (plans, then `retract_batch` not implemented), each a
-registry `WIN-SLIDE-<name>` row: `approx_percentile`, `bit_and`, `bit_or`,
-`bool_and`, `bool_or`, `collect_list`, `collect_set`, `corr`, `covar_pop`,
-`covar_samp`, `percentile_approx`, `try_sum`. Names that do not plan are
-**absent**, not W-0 rows. `array_agg` / `bit_xor` / `first_value` / `last_value`
-/ `median` / the regr family **succeed** on the sliding frame (they have a
-sliding accumulator).
+registry `WIN-SLIDE-<name>` row (thirteen): `approx_count_distinct` (probed on
+int64), `approx_percentile`, `bit_and`, `bit_or`, `bool_and`, `bool_or`,
+`collect_list`, `collect_set`, `corr`, `covar_pop`, `covar_samp`,
+`percentile_approx`, `try_sum`. Names that fail at planning (`Invalid function`)
+are **absent**, not W-0 rows — recounted 2026-08-31 after the int64 probe.
+`array_agg` / `bit_xor` / `first_value` / `last_value` / `median` / the regr
+family **succeed** on the sliding frame (they have a sliding accumulator).
+RSS in the report is a process high-water mark, once per run.
 
 ## 2. Out of scope (unchanged)
 
@@ -127,7 +130,7 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: >
-        Walked C-001..C-011 against the bench, the 54-name roster, the twelve
+        Walked C-001..C-011 against the bench, the 54-name roster, the thirteen
         WIN-SLIDE registry headings, and the dated full-scale report.
       artifacts: [python/repark-parity/tests/test_w0_window_bench.py, python/repark/tests/test_w0_window_bench_smoke.py, task/window-bench-report-2026-08-31.md]
     - id: AT-2
@@ -158,7 +161,7 @@ COVERAGE_ATTESTATION:
       status: ATTACKED
       evidence: >
         1e7 unpartitioned cell and 16M memory_limit cell were executed; oom
-        is recorded rather than left as a hang. Not a performance review.
+        is a sort-path ExternalSorter death. Window-exec spill is UNMEASURED.
       artifacts: [task/window-bench-report-2026-08-31.md]
     - id: AT-8
       status: ATTACKED
@@ -176,7 +179,7 @@ COVERAGE_ATTESTATION:
       status: ATTACKED
       evidence: >
         Engine-free pins on make py-test; native smoke on the facade tree;
-        live refuse set equals the frozen twelve.
+        live refuse set equals the frozen thirteen.
       artifacts: [python/repark-parity/tests/test_w0_window_bench.py, python/repark/tests/test_w0_window_bench_smoke.py]
   reattested: []
 ```
@@ -192,7 +195,7 @@ SELF_LOGIC_REVIEW:
   preconditions:
     - full-scale run completed with scratch deleted: SATISFIED (report wall_seconds 139.9, scratch_deleted True)
     - no crates/ edit: SATISFIED (unit diff)
-    - twelve WIN-SLIDE headings match the live refuse set: SATISFIED (smoke pin)
+    - thirteen WIN-SLIDE headings match the live refuse set: SATISFIED (smoke pin)
   success_condition: every clause PROVEN with a pins citation; make py-test, check-map-sync, check-ledger-grammar, ledger_lifecycle check exit 0
   step_risks:
     - count(*) wrap silent false-ok on sliding refuse: HANDLED (bare SELECT + sum(w) sink)

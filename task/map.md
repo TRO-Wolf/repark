@@ -27,7 +27,7 @@ not this directory.
   spec, and the kernel ownership map.
 - [window-bench-report-2026-08-31.md](window-bench-report-2026-08-31.md) — **W-0 (2026-08-31):**
   dated window-shape measurements (sliding / constant / 1e7 unpartitioned / Iceberg
-  lead-lag / over `memory_limit`) plus the twelve sliding-frame refusals. Ledger:
+  lead-lag / over `memory_limit`) plus the thirteen sliding-frame refusals. Ledger:
   [ledgers/staging/w-0-window-bench-ledger.md](ledgers/staging/w-0-window-bench-ledger.md).
 - [todo.md](todo.md) — a **pointer only**: the live backlog is [../STATUS.md](../STATUS.md), and a
   unit's working plan is its own ledger. The file keeps its name because live code, docs and one

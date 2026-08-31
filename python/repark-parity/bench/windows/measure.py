@@ -211,7 +211,6 @@ def run_repark_sql(
             iterations=iterations,
             samples_ms=samples,
             median_ms=_median(samples),
-            peak_rss_bytes=peak_rss_bytes(),
             plan_tokens=tokens,
             answer=answer,
             version=str(repark_version),
@@ -231,7 +230,6 @@ def run_repark_sql(
             plan_tokens=tokens,
             message=text,
             version=str(repark_version),
-            peak_rss_bytes=peak_rss_bytes(),
         )
 
 
@@ -335,9 +333,9 @@ def run_window_measurement(
 ) -> RunResult:
     """Run the W-0 battery into ``scratch`` and return a :class:`RunResult`.
 
-    Generated files are deleted unless ``keep_scratch`` is true. A crash on the
-    over-limit cell is recorded as outcome ``crash`` when the interpreter
-    survives; an abort that kills the process is the caller's to notice.
+    Generated files are deleted in ``finally`` unless ``keep_scratch`` is true,
+    including Spark-start abort. A crash on the over-limit cell is recorded as
+    outcome ``crash`` when the interpreter survives.
 
     Args:
         scratch: working directory (created).
@@ -359,7 +357,15 @@ def run_window_measurement(
     iterations = QUICK_ITERATIONS if scale != "full" else DEFAULT_ITERATIONS
     dataset_bytes: dict[str, int] = {}
     cells: list[CellResult] = []
-
+    probe: list[ProbeRow] = []
+    pyspark_session: Any | None = None
+    session: Any | None = None
+    memory_session: Any | None = None
+    scratch_deleted = False
+    duck_version, duck_skip = duckdb_version()
+    spark_version, spark_skip = pyspark_version()
+    skip_duckdb = skip_duckdb or duck_version is None
+    skip_pyspark = skip_pyspark or spark_skip is not None
     seed_probe = scratch / "seed_probe.parquet"
     seed_sliding = scratch / "seed_sliding.parquet"
     seed_unpartitioned = scratch / "seed_unpartitioned.parquet"
@@ -377,163 +383,151 @@ def run_window_measurement(
         seed_iceberg, counts["iceberg"], seed=seed
     )
     dataset_bytes[str(seed_memory)] = write_seed_parquet(seed_memory, counts["memory"], seed=seed)
+    try:
+        if not skip_pyspark:
+            from pyspark.sql import SparkSession
 
-    duck_version, duck_skip = duckdb_version()
-    spark_version, spark_skip = pyspark_version()
-    skip_duckdb = skip_duckdb or duck_version is None
-    skip_pyspark = skip_pyspark or spark_skip is not None
-
-    pyspark_session: Any | None = None
-    if not skip_pyspark:
-        from pyspark.sql import SparkSession
-
-        pyspark_session = (
-            SparkSession.builder.master("local[1]")
-            .appName("w0-oracle")
-            .config("spark.ui.enabled", "false")
-            .getOrCreate()
-        )
-
-    session = make_session("w0-window-bench")
-    probe = probe_sliding(session, seed_probe)
-
-    register_seed(session, seed_sliding)
-    for name in TIMED_SLIDING_NAMES:
-        sql = sliding_sum_select(spec_by_name(name).sql_expr, frame=TIMED_SLIDING_FRAME)
-        repark_timing = run_repark_sql(
-            session, sql, warmup=warmup, iterations=iterations, collect_plan=True
-        )
-        extras = oracle_timings(
-            seed_sliding,
-            sql,
-            warmup=warmup,
-            iterations=iterations,
-            skip_duckdb=skip_duckdb,
-            skip_pyspark=skip_pyspark,
-            pyspark_session=pyspark_session,
+            pyspark_session = (
+                SparkSession.builder.master("local[1]")
+                .appName("w0-oracle")
+                .config("spark.ui.enabled", "false")
+                .getOrCreate()
+            )
+        session = make_session("w0-window-bench")
+        probe = probe_sliding(session, seed_probe)
+        register_seed(session, seed_sliding)
+        for name in TIMED_SLIDING_NAMES:
+            sql = sliding_sum_select(spec_by_name(name).sql_expr, frame=TIMED_SLIDING_FRAME)
+            repark_timing = run_repark_sql(
+                session, sql, warmup=warmup, iterations=iterations, collect_plan=True
+            )
+            extras = oracle_timings(
+                seed_sliding,
+                sql,
+                warmup=warmup,
+                iterations=iterations,
+                skip_duckdb=skip_duckdb,
+                skip_pyspark=skip_pyspark,
+                pyspark_session=pyspark_session,
+            )
+            cells.append(
+                CellResult(
+                    label=f"sliding_{name}",
+                    sql=sql,
+                    rows=counts["sliding"],
+                    timings=[repark_timing, *extras],
+                )
+            )
+        constant_sql = constant_select("sum(v)")
+        register_seed(session, seed_sliding)
+        constant_timing = run_repark_sql(
+            session, constant_sql, warmup=warmup, iterations=iterations, collect_plan=True
         )
         cells.append(
             CellResult(
-                label=f"sliding_{name}",
-                sql=sql,
-                rows=counts["sliding"],
-                timings=[repark_timing, *extras],
+                label="constant_sum",
+                sql=constant_sql,
+                rows=counts["constant"],
+                timings=[
+                    constant_timing,
+                    *oracle_timings(
+                        seed_sliding,
+                        constant_sql,
+                        warmup=warmup,
+                        iterations=iterations,
+                        skip_duckdb=skip_duckdb,
+                        skip_pyspark=skip_pyspark,
+                        pyspark_session=pyspark_session,
+                    ),
+                ],
             )
         )
-
-    constant_sql = constant_select("sum(v)")
-    register_seed(session, seed_sliding)
-    constant_timing = run_repark_sql(
-        session, constant_sql, warmup=warmup, iterations=iterations, collect_plan=True
-    )
-    cells.append(
-        CellResult(
-            label="constant_sum",
-            sql=constant_sql,
-            rows=counts["constant"],
-            timings=[
-                constant_timing,
-                *oracle_timings(
-                    seed_sliding,
-                    constant_sql,
-                    warmup=warmup,
-                    iterations=iterations,
-                    skip_duckdb=skip_duckdb,
-                    skip_pyspark=skip_pyspark,
-                    pyspark_session=pyspark_session,
-                ),
-            ],
+        unpart_sql = unpartitioned_select("sum(v)")
+        register_seed(session, seed_unpartitioned)
+        unpart_timing = run_repark_sql(
+            session, unpart_sql, warmup=warmup, iterations=iterations, collect_plan=True
         )
-    )
-
-    unpart_sql = unpartitioned_select("sum(v)")
-    register_seed(session, seed_unpartitioned)
-    unpart_timing = run_repark_sql(
-        session, unpart_sql, warmup=warmup, iterations=iterations, collect_plan=True
-    )
-    cells.append(
-        CellResult(
-            label="unpartitioned_order_by",
-            sql=unpart_sql,
-            rows=counts["unpartitioned"],
-            timings=[
-                unpart_timing,
-                *oracle_timings(
-                    seed_unpartitioned,
-                    unpart_sql,
-                    warmup=warmup,
-                    iterations=iterations,
-                    skip_duckdb=skip_duckdb,
-                    skip_pyspark=skip_pyspark,
-                    pyspark_session=pyspark_session,
-                ),
-            ],
+        cells.append(
+            CellResult(
+                label="unpartitioned_order_by",
+                sql=unpart_sql,
+                rows=counts["unpartitioned"],
+                timings=[
+                    unpart_timing,
+                    *oracle_timings(
+                        seed_unpartitioned,
+                        unpart_sql,
+                        warmup=warmup,
+                        iterations=iterations,
+                        skip_duckdb=skip_duckdb,
+                        skip_pyspark=skip_pyspark,
+                        pyspark_session=pyspark_session,
+                    ),
+                ],
+            )
         )
-    )
-
-    iceberg_sql = lead_lag_select()
-    warehouse_bytes = create_iceberg_scan(session, warehouse, seed_iceberg)
-    dataset_bytes[str(warehouse)] = warehouse_bytes
-    iceberg_timing = run_repark_sql(
-        session, iceberg_sql, warmup=warmup, iterations=iterations, collect_plan=True
-    )
-    cells.append(
-        CellResult(
-            label="iceberg_lead_lag",
-            sql=iceberg_sql,
-            rows=counts["iceberg"],
-            timings=[
-                iceberg_timing,
-                *oracle_timings(
-                    seed_iceberg,
-                    iceberg_sql,
-                    warmup=warmup,
-                    iterations=iterations,
-                    skip_duckdb=skip_duckdb,
-                    skip_pyspark=skip_pyspark,
-                    pyspark_session=pyspark_session,
-                ),
-            ],
+        iceberg_sql = lead_lag_select()
+        warehouse_bytes = create_iceberg_scan(session, warehouse, seed_iceberg)
+        dataset_bytes[str(warehouse)] = warehouse_bytes
+        iceberg_timing = run_repark_sql(
+            session, iceberg_sql, warmup=warmup, iterations=iterations, collect_plan=True
         )
-    )
-
-    stop_session(session)
-    memory_sql = unpartitioned_select("sum(v)")
-    memory_session = make_session("w0-memory-limit", memory_limit=MEMORY_LIMIT_SETTING)
-    register_seed(memory_session, seed_memory)
-    try:
-        memory_timing = run_repark_sql(
-            memory_session,
-            memory_sql,
-            warmup=0,
-            iterations=1,
-            collect_plan=True,
+        cells.append(
+            CellResult(
+                label="iceberg_lead_lag",
+                sql=iceberg_sql,
+                rows=counts["iceberg"],
+                timings=[
+                    iceberg_timing,
+                    *oracle_timings(
+                        seed_iceberg,
+                        iceberg_sql,
+                        warmup=warmup,
+                        iterations=iterations,
+                        skip_duckdb=skip_duckdb,
+                        skip_pyspark=skip_pyspark,
+                        pyspark_session=pyspark_session,
+                    ),
+                ],
+            )
         )
-    except BaseException as error:
-        if isinstance(error, (KeyboardInterrupt, SystemExit)):
-            raise
-        memory_timing = CellTiming(
-            engine="repark",
-            outcome=OUTCOME_CRASH,
-            warmup=0,
-            iterations=0,
-            message=f"{type(error).__name__}: {error}",
-            peak_rss_bytes=peak_rss_bytes(),
+        stop_session(session)
+        session = None
+        memory_sql = unpartitioned_select("sum(v)")
+        memory_session = make_session("w0-memory-limit", memory_limit=MEMORY_LIMIT_SETTING)
+        register_seed(memory_session, seed_memory)
+        try:
+            memory_timing = run_repark_sql(
+                memory_session,
+                memory_sql,
+                warmup=0,
+                iterations=1,
+                collect_plan=True,
+            )
+        except BaseException as error:
+            if isinstance(error, (KeyboardInterrupt, SystemExit)):
+                raise
+            memory_timing = CellTiming(
+                engine="repark",
+                outcome=OUTCOME_CRASH,
+                warmup=0,
+                iterations=0,
+                message=f"{type(error).__name__}: {error}",
+            )
+        cells.append(
+            CellResult(
+                label=f"memory_limit_{MEMORY_LIMIT_SETTING}",
+                sql=memory_sql,
+                rows=counts["memory"],
+                timings=[memory_timing],
+            )
         )
-    stop_session(memory_session)
-    cells.append(
-        CellResult(
-            label=f"memory_limit_{MEMORY_LIMIT_SETTING}",
-            sql=memory_sql,
-            rows=counts["memory"],
-            timings=[memory_timing],
-        )
-    )
-
-    if pyspark_session is not None:
-        pyspark_session.stop()
-
-    scratch_deleted = cleanup_scratch(scratch, keep=keep_scratch)
+    finally:
+        stop_session(memory_session)
+        stop_session(session)
+        if pyspark_session is not None:
+            pyspark_session.stop()
+        scratch_deleted = cleanup_scratch(scratch, keep=keep_scratch)
 
     return RunResult(
         scale=scale,

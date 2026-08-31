@@ -25,17 +25,15 @@ def one_line(text: str, *, limit: int = 180) -> str:
 def _timing_line(cell: CellResult) -> list[str]:
     """Format one cell's per-engine timings."""
     lines = [f"### `{cell.label}` — {cell.rows} rows", "", "```sql", cell.sql, "```", ""]
-    lines.append("| engine | outcome | median_ms | samples_ms | peak_rss_bytes | plan | message |")
-    lines.append("|---|---|---:|---|---:|---|---|")
+    lines.append("| engine | outcome | median_ms | samples_ms | plan | message |")
+    lines.append("|---|---|---:|---|---|---|")
     for timing in cell.timings:
         samples = ",".join(f"{sample:.1f}" for sample in timing.samples_ms)
         median = "" if timing.median_ms is None else f"{timing.median_ms:.1f}"
-        rss = "" if timing.peak_rss_bytes is None else str(timing.peak_rss_bytes)
         plan = " ".join(timing.plan_tokens)
         message = one_line(timing.message or "")
         lines.append(
-            f"| {timing.engine} | {timing.outcome} | {median} | {samples} | {rss} | "
-            f"{plan} | {message} |"
+            f"| {timing.engine} | {timing.outcome} | {median} | {samples} | {plan} | {message} |"
         )
     lines.append("")
     return lines
@@ -69,7 +67,7 @@ def render_markdown(result: RunResult) -> str:
         f"- cores: `{result.machine.get('cores', 'unknown')}`",
         f"- governor: `{result.machine.get('governor', 'unknown')}`",
         f"- ram_gib: `{result.machine.get('ram_gib', 'unknown')}`",
-        f"- peak_rss_bytes: `{result.peak_rss_bytes}`",
+        f"- process_hwm_rss_bytes: `{result.peak_rss_bytes}`",
         f"- wall_seconds: `{result.wall_seconds:.1f}`",
         f"- scratch_deleted: `{result.scratch_deleted}`",
         "",
@@ -92,6 +90,20 @@ def render_markdown(result: RunResult) -> str:
             f"Refuse count: **{len(refuse)}**. Each refuse name is a registry row "
             "`WIN-SLIDE-<name>`.",
             "",
+            "## Method",
+            "",
+            "- `approx_count_distinct` is probed on int64 (`vi`). Float64 fails earlier",
+            "  (`approx_distinct` not implemented for Float64) and is not a sliding refuse.",
+            "- RSS is a process high-water mark (`ru_maxrss`), reported once per run as",
+            "  `process_hwm_rss_bytes`. It is not a per-cell figure.",
+            "- Over-`memory_limit` cells that sort before the window die in the upstream",
+            "  `SortExec` / FairSpillPool `ExternalSorter`. Window-exec spill behavior is",
+            "  **UNMEASURED**.",
+            "- Generated scratch is deleted in a `finally` block, including Spark-start abort.",
+            "- Unpartitioned `ORDER BY` at full scale is 10_000_000 rows (C-004).",
+            "- Iceberg lead/lag is the RePark shape; DuckDB and PySpark run the same SQL",
+            "  on in-memory tables.",
+            "",
             "## Cells",
             "",
         ]
@@ -102,9 +114,6 @@ def render_markdown(result: RunResult) -> str:
         [
             "## Notes",
             "",
-            "- Unpartitioned `ORDER BY` at full scale is 10_000_000 rows (C-004).",
-            "- Iceberg lead/lag is the RePark shape; DuckDB and PySpark run the same SQL",
-            "  on in-memory tables.",
             "- Over-`memory_limit` records the outcome class; it does not retry a different",
             "  query (C-006 / C-010).",
             "",
