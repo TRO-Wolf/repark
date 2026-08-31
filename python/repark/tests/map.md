@@ -845,8 +845,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   object-identity only; type error on bad level.
 - `test_merge_into.py` — **R-MERGEINTO**: builder upsert equals SQL-MERGE (COW + MoR); delete /
   partial update / insert dict; Column condition; temp-view cleanup (success + failure);
-  no-clause `[NO_MERGE_ACTION_SPECIFIED]`; `whenNotMatchedBySource().delete()` executes;
-  type errors;
+  no-clause `[NO_MERGE_ACTION_SPECIFIED]`; `whenNotMatchedBySource().delete()` and
+  `.update()` execute (Arrow types); type errors;
   `withSchemaEvolution` refuses loud; equi-join sugar unit pin. Arrow path for row sets.
 - `test_merge_scan_prune_semantics.py` — **MG-1 (2026-08-15):** MERGE residual-probe
   hardening pins (r1/M1 Utf8→INT 2-row upsert; r2/M6 BIGINT 3e9 vs INT no-abort;

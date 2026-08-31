@@ -1,4 +1,4 @@
-//! pins: dml-a-merge-not-matched-by-source/C-002, C-003, C-005
+//! pins: dml-a-merge-not-matched-by-source/C-002, C-003, C-004, C-005
 //! SQL-fragment pins for the unmatched-by-source arm.
 
 use super::super::*;
@@ -63,7 +63,23 @@ fn nmbs_update_projects_else_branch() {
     };
     let name_case = sql.rewrite_column("name");
     assert!(
-        name_case.contains("'gone'") || name_case.contains("gone"),
+        name_case.contains("'gone'"),
         "NMBS UPDATE must appear in the rewrite ELSE, got {name_case}"
     );
+}
+
+#[test]
+fn skip_cardinality_ignores_nmbs_clauses() {
+    assert!(skip_cardinality(&spec_nmbs(
+        vec![delete(None)],
+        vec![nmbs_delete(None)]
+    )));
+    assert!(!skip_cardinality(&spec_nmbs(
+        vec![],
+        vec![nmbs_delete(None)]
+    )));
+    assert!(!skip_cardinality(&spec_nmbs(
+        vec![update(None, &[("name", "s.name")])],
+        vec![nmbs_delete(None)]
+    )));
 }

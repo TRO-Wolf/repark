@@ -73,7 +73,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `truncate` (DML-C: wipe summary keys, equal empty-overwrite keys, time travel,
   missing-table / view / `INVALID_PARTITION_OPERATION` / IF EXISTS parse refuse;
   pins: dml-c-truncate/C-001, C-002, C-005, C-006, C-007),
-  `merge`, `merge_nmbs` (DML-A NMBS COW+MOR;
+  `merge`, `merge_nmbs` (DML-A NMBS COW+MOR, Arrow types, hunt cells: NULL keys,
+  MATCHED-predicate miss, extra file, source-empty UPDATE, NMBS-only dup source;
   pins: dml-a-merge-not-matched-by-source/C-001, C-002, C-003, C-004, C-005, C-006, C-007),
   `call`, and `call_orphan`. `call_remove_orphan_files_refuses_a_location_arg_under_the_fallback_root`
   and `call_orphan_shared_ctas_root_rule` pin the fallback-root safety contract. Maintenance tests

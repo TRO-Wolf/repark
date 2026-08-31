@@ -60,9 +60,11 @@ async fn ansi_nmbs_update_and_three_arms() {
          WHEN NOT MATCHED BY SOURCE THEN UPDATE SET name = 'gone'",
     )
     .await;
-    let (_, batches) = door
+    let (schema, batches) = door
         .ok_typed("SELECT id, name FROM ice.sales.nmbs_upd ORDER BY id")
         .await;
+    assert_eq!(schema.field(0).data_type(), &DataType::Int64, "upd id");
+    assert_eq!(schema.field(1).data_type(), &DataType::Utf8, "upd name");
     assert_eq!(
         id_name_rows(&batches),
         vec![(1, "a".to_string()), (2, "gone".to_string())]
@@ -85,9 +87,19 @@ async fn ansi_nmbs_update_and_three_arms() {
          WHEN NOT MATCHED BY SOURCE THEN DELETE",
     )
     .await;
-    let (_, batches) = door
+    let (schema, batches) = door
         .ok_typed("SELECT id, name FROM ice.sales.nmbs_3 ORDER BY id")
         .await;
+    assert_eq!(
+        schema.field(0).data_type(),
+        &DataType::Int64,
+        "three-arm id"
+    );
+    assert_eq!(
+        schema.field(1).data_type(),
+        &DataType::Utf8,
+        "three-arm name"
+    );
     assert_eq!(
         id_name_rows(&batches),
         vec![(1, "aa".to_string()), (4, "dd".to_string())]
@@ -112,9 +124,11 @@ async fn ansi_source_empty_wipe_and_cardinality() {
          WHEN NOT MATCHED BY SOURCE THEN DELETE",
     )
     .await;
-    let (_, batches) = door
+    let (schema, batches) = door
         .ok_typed("SELECT id, name FROM ice.sales.nmbs_wipe ORDER BY id")
         .await;
+    assert_eq!(schema.field(0).data_type(), &DataType::Int64, "wipe id");
+    assert_eq!(schema.field(1).data_type(), &DataType::Utf8, "wipe name");
     assert!(id_name_rows(&batches).is_empty());
 
     door.ok(&format!(
@@ -135,4 +149,58 @@ async fn ansi_source_empty_wipe_and_cardinality() {
         )
         .await;
     assert!(err.contains("MERGE_CARDINALITY_VIOLATION"), "{err}");
+}
+
+#[tokio::test]
+async fn ansi_matched_predicate_miss_is_not_nmbs() {
+    let door = door_with_schema().await;
+    door.ok(&format!(
+        "CREATE TABLE ice.sales.nmbs_miss (id BIGINT, name VARCHAR) WITH ({COW})"
+    ))
+    .await;
+    door.ok("INSERT INTO ice.sales.nmbs_miss VALUES (1, 'a'), (2, 'b')")
+        .await;
+    door.ok("CREATE TABLE ice.sales.nmbs_miss_src AS SELECT CAST(1 AS BIGINT) AS id, 'aa' AS name")
+        .await;
+    door.ok(
+        "MERGE INTO ice.sales.nmbs_miss AS t USING ice.sales.nmbs_miss_src AS s ON t.id = s.id \
+         WHEN MATCHED AND t.name = 'NOPE' THEN UPDATE SET name = s.name \
+         WHEN NOT MATCHED BY SOURCE THEN DELETE",
+    )
+    .await;
+    let (schema, batches) = door
+        .ok_typed("SELECT id, name FROM ice.sales.nmbs_miss ORDER BY id")
+        .await;
+    assert_eq!(schema.field(0).data_type(), &DataType::Int64);
+    assert_eq!(schema.field(1).data_type(), &DataType::Utf8);
+    assert_eq!(id_name_rows(&batches), vec![(1, "a".to_string())]);
+}
+
+#[tokio::test]
+async fn ansi_source_empty_nmbs_update() {
+    let door = door_with_schema().await;
+    door.ok(&format!(
+        "CREATE TABLE ice.sales.nmbs_eu (id BIGINT, name VARCHAR) WITH ({COW})"
+    ))
+    .await;
+    door.ok("INSERT INTO ice.sales.nmbs_eu VALUES (1, 'a'), (2, 'b')")
+        .await;
+    door.ok(&format!(
+        "CREATE TABLE ice.sales.nmbs_eu_src (id BIGINT, name VARCHAR) WITH ({COW})"
+    ))
+    .await;
+    door.ok(
+        "MERGE INTO ice.sales.nmbs_eu AS t USING ice.sales.nmbs_eu_src AS s ON t.id = s.id \
+         WHEN NOT MATCHED BY SOURCE THEN UPDATE SET name = 'x'",
+    )
+    .await;
+    let (schema, batches) = door
+        .ok_typed("SELECT id, name FROM ice.sales.nmbs_eu ORDER BY id")
+        .await;
+    assert_eq!(schema.field(0).data_type(), &DataType::Int64);
+    assert_eq!(schema.field(1).data_type(), &DataType::Utf8);
+    assert_eq!(
+        id_name_rows(&batches),
+        vec![(1, "x".to_string()), (2, "x".to_string())]
+    );
 }

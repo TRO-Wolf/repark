@@ -134,18 +134,17 @@ fn invalid_clause_action_pairings_refuse() {
          WHEN MATCHED THEN INSERT (id) VALUES (s.id)",
         "MERGE INTO ice.sales.orders AS t USING s ON t.id = s.id \
          WHEN NOT MATCHED THEN UPDATE SET a = 1",
-        "MERGE INTO ice.sales.orders AS t USING s ON t.id = s.id \
-         WHEN NOT MATCHED BY SOURCE THEN INSERT (id) VALUES (s.id)",
     ] {
-        let parsed = Parser::parse_sql(&GenericDialect {}, sql);
-        if parsed.is_err() {
-            continue;
-        }
-        let err = lower_error(sql);
         assert!(
-            err.contains("only UPDATE or DELETE") || err.contains("NOT MATCHED BY SOURCE"),
-            "{err}"
+            Parser::parse_sql(&GenericDialect {}, sql).is_err(),
+            "the pairing is rejected at parse time: `{sql}`"
         );
+    }
+    let nmbs_insert = "MERGE INTO ice.sales.orders AS t USING s ON t.id = s.id \
+         WHEN NOT MATCHED BY SOURCE THEN INSERT (id) VALUES (s.id)";
+    if Parser::parse_sql(&GenericDialect {}, nmbs_insert).is_ok() {
+        let err = lower_error(nmbs_insert);
+        assert!(err.contains("only UPDATE or DELETE"), "{err}");
     }
 
     let (_, spec) = lower_sql(

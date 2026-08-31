@@ -52,6 +52,48 @@ async fn merge_nmbs(ctx: &SessionContext, catalogs: &CatalogRegistry, table: &st
     .await;
 }
 
+async fn read_id_name(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    table: &str,
+) -> Vec<(i32, String)> {
+    let frame = execute(
+        ctx,
+        catalogs,
+        &format!("SELECT id, name FROM {table} ORDER BY id"),
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        frame.schema().field(0).data_type(),
+        &DataType::Int32,
+        "id type"
+    );
+    assert_eq!(
+        frame.schema().field(1).data_type(),
+        &DataType::Utf8,
+        "name type"
+    );
+    let batches = frame.collect().await.unwrap();
+    let mut rows = Vec::new();
+    for batch in &batches {
+        let ids = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<Int32Array>()
+            .unwrap();
+        let names = batch
+            .column(1)
+            .as_any()
+            .downcast_ref::<StringArray>()
+            .unwrap();
+        for index in 0..batch.num_rows() {
+            rows.push((ids.value(index), names.value(index).to_string()));
+        }
+    }
+    rows
+}
+
 #[tokio::test]
 async fn cow_nmbs_delete_only_keeps_matched_target() {
     let wh = TempDir::new().unwrap();
@@ -73,7 +115,7 @@ async fn cow_nmbs_delete_only_keeps_matched_target() {
     )
     .await;
     assert_eq!(
-        table_rows(&ctx, &catalogs, "ice.sales.nmbs_del").await,
+        read_id_name(&ctx, &catalogs, "ice.sales.nmbs_del").await,
         vec![(1, "a".to_string())]
     );
 }
@@ -99,7 +141,7 @@ async fn mor_nmbs_delete_only_writes_position_deletes() {
     )
     .await;
     assert_eq!(
-        table_rows(&ctx, &catalogs, "ice.sales.nmbs_del_mor").await,
+        read_id_name(&ctx, &catalogs, "ice.sales.nmbs_del_mor").await,
         vec![(1, "a".to_string())]
     );
     let table = load_sales_table(&catalogs, "nmbs_del_mor").await;
@@ -132,7 +174,7 @@ async fn cow_and_mor_nmbs_update_rewrites_unmatched() {
         )
         .await;
         assert_eq!(
-            table_rows(&ctx, &catalogs, &format!("ice.sales.{name}")).await,
+            read_id_name(&ctx, &catalogs, &format!("ice.sales.{name}")).await,
             vec![(1, "a".to_string()), (2, "gone".to_string())],
             "{name}"
         );
@@ -156,7 +198,7 @@ async fn three_arms_cow_and_mor_match_spark() {
         )
         .await;
         assert_eq!(
-            table_rows(&ctx, &catalogs, &format!("ice.sales.{name}")).await,
+            read_id_name(&ctx, &catalogs, &format!("ice.sales.{name}")).await,
             vec![(1, "aa".to_string()), (4, "dd".to_string())],
             "{name}"
         );
@@ -185,7 +227,7 @@ async fn source_empty_nmbs_delete_wipes_cow_and_mor() {
         )
         .await;
         assert_eq!(
-            table_rows(&ctx, &catalogs, &format!("ice.sales.{name}")).await,
+            read_id_name(&ctx, &catalogs, &format!("ice.sales.{name}")).await,
             Vec::<(i32, String)>::new(),
             "{name}"
         );
@@ -214,7 +256,7 @@ async fn nmbs_first_match_update_then_delete() {
     )
     .await;
     assert_eq!(
-        table_rows(&ctx, &catalogs, "ice.sales.nmbs_fm").await,
+        read_id_name(&ctx, &catalogs, "ice.sales.nmbs_fm").await,
         vec![(1, "a".to_string()), (2, "x".to_string())]
     );
 }
@@ -275,10 +317,7 @@ async fn nmbs_update_store_assignment_reuses_merge_gate() {
     .await
     .unwrap_err()
     .to_string();
-    assert!(
-        err.contains("INCOMPATIBLE_DATA_FOR_TABLE") || err.contains("not ANSI-store-assignable"),
-        "{err}"
-    );
+    assert!(err.contains("INCOMPATIBLE_DATA_FOR_TABLE"), "{err}");
 }
 
 #[tokio::test]
@@ -308,8 +347,150 @@ async fn adopted_v3_nmbs_merge_stays_refused() {
     .await
     .unwrap_err()
     .to_string();
-    assert!(
-        err.contains("V3-COW-1") || err.contains("row lineage"),
-        "{err}"
+    assert!(err.contains("V3-COW-1"), "{err}");
+}
+
+#[tokio::test]
+async fn nmbs_null_join_keys_are_not_matched_by_source() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.nmbs_null (id INT, name STRING) USING iceberg \
+         TBLPROPERTIES('format-version' = '2', 'write.merge.mode' = 'copy-on-write')",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.nmbs_null VALUES (CAST(NULL AS INT), 'n'), (1, 'a')",
+    )
+    .await;
+    register_source(&ctx, "nmbs_src", &[(1, "aa")]);
+    merge_nmbs(
+        &ctx,
+        &catalogs,
+        "nmbs_null",
+        "WHEN NOT MATCHED BY SOURCE THEN DELETE",
+    )
+    .await;
+    assert_eq!(
+        read_id_name(&ctx, &catalogs, "ice.sales.nmbs_null").await,
+        vec![(1, "a".to_string())]
+    );
+}
+
+#[tokio::test]
+async fn matched_predicate_miss_is_not_nmbs() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed_table(&ctx, &catalogs, "nmbs_miss", COW, &[(1, "a"), (2, "b")]).await;
+    register_source(&ctx, "nmbs_src", &[(1, "aa")]);
+    merge_nmbs(
+        &ctx,
+        &catalogs,
+        "nmbs_miss",
+        "WHEN MATCHED AND t.name = 'NOPE' THEN UPDATE SET name = s.name \
+         WHEN NOT MATCHED BY SOURCE THEN DELETE",
+    )
+    .await;
+    assert_eq!(
+        read_id_name(&ctx, &catalogs, "ice.sales.nmbs_miss").await,
+        vec![(1, "a".to_string())]
+    );
+}
+
+#[tokio::test]
+async fn unmatched_only_extra_file_is_deleted() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.nmbs_xf (id INT, name STRING) USING iceberg \
+         TBLPROPERTIES('format-version' = '2', 'write.merge.mode' = 'copy-on-write')",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.nmbs_xf VALUES (1, 'a')",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.nmbs_xf VALUES (2, 'b'), (3, 'c')",
+    )
+    .await;
+    register_source(&ctx, "nmbs_src", &[(1, "aa")]);
+    merge_nmbs(
+        &ctx,
+        &catalogs,
+        "nmbs_xf",
+        "WHEN NOT MATCHED BY SOURCE THEN DELETE",
+    )
+    .await;
+    assert_eq!(
+        read_id_name(&ctx, &catalogs, "ice.sales.nmbs_xf").await,
+        vec![(1, "a".to_string())]
+    );
+}
+
+#[tokio::test]
+async fn source_empty_nmbs_update_rewrites_every_target_row() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed_table(&ctx, &catalogs, "nmbs_eu", COW, &[(1, "a"), (2, "b")]).await;
+    register_source(&ctx, "nmbs_src", &[]);
+    merge_nmbs(
+        &ctx,
+        &catalogs,
+        "nmbs_eu",
+        "WHEN NOT MATCHED BY SOURCE THEN UPDATE SET name = 'x'",
+    )
+    .await;
+    assert_eq!(
+        read_id_name(&ctx, &catalogs, "ice.sales.nmbs_eu").await,
+        vec![(1, "x".to_string()), (2, "x".to_string())]
+    );
+}
+
+#[tokio::test]
+async fn nmbs_only_dup_source_does_not_raise_cardinality() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed_table(&ctx, &catalogs, "nmbs_dup", COW, &[(1, "a"), (2, "b")]).await;
+    register_source(&ctx, "nmbs_src", &[(1, "x"), (1, "y")]);
+    merge_nmbs(
+        &ctx,
+        &catalogs,
+        "nmbs_dup",
+        "WHEN NOT MATCHED BY SOURCE THEN DELETE",
+    )
+    .await;
+    assert_eq!(
+        read_id_name(&ctx, &catalogs, "ice.sales.nmbs_dup").await,
+        vec![(1, "a".to_string()), (1, "a".to_string())]
+    );
+}
+
+#[tokio::test]
+async fn matched_delete_plus_nmbs_dup_source_skips_cardinality() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed_table(&ctx, &catalogs, "nmbs_md", COW, &[(1, "a"), (2, "b")]).await;
+    register_source(&ctx, "nmbs_src", &[(1, "x"), (1, "y")]);
+    merge_nmbs(
+        &ctx,
+        &catalogs,
+        "nmbs_md",
+        "WHEN MATCHED THEN DELETE WHEN NOT MATCHED BY SOURCE THEN DELETE",
+    )
+    .await;
+    assert_eq!(
+        read_id_name(&ctx, &catalogs, "ice.sales.nmbs_md").await,
+        Vec::<(i32, String)>::new()
     );
 }

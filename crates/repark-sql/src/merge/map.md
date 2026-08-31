@@ -17,7 +17,8 @@ mapping of the SAME target type (design §6 R3).
 - `cardinality_tests.rs` — native-door execute pins for the lone-unconditional-DELETE
   cardinality exemption (refuse-gone + still-raises on UPDATE and conditional DELETE).
 - `nmbs_tests.rs` — DML-A ANSI-door `WHEN NOT MATCHED BY SOURCE` execute pins (COW+MOR
-  DELETE, UPDATE, three arms, source-empty wipe, cardinality).
+  DELETE, UPDATE, three arms, source-empty wipe/UPDATE, MATCHED-predicate miss, cardinality;
+  Arrow types on every content pin).
   pins: dml-a-merge-not-matched-by-source/C-002, C-003, C-004, C-005, C-006
 
 ## Pointers

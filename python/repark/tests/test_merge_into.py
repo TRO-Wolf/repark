@@ -212,7 +212,32 @@ def test_merge_into_not_matched_by_source_deletes_unmatched(spark: ReparkSession
         .delete()
         .merge()
     )
-    assert _rows(spark) == [{"id": 1, "name": "aa"}]
+    table = spark.sql(f"SELECT id, name FROM {FQ} ORDER BY id").to_arrow()
+    assert table.schema.field("id").type == pa.int64()
+    assert table.schema.field("name").type == pa.string()
+    assert table.to_pylist() == [{"id": 1, "name": "aa"}]
+
+
+def test_merge_into_not_matched_by_source_update(spark: ReparkSession) -> None:
+    """whenNotMatchedBySource().update() rewrites unmatched target rows.
+
+    pins: dml-a-merge-not-matched-by-source/C-003
+    """
+    _seed(spark)
+    (
+        spark.sql("SELECT 1 AS id, 'aa' AS name")
+        .mergeInto(FQ, "id")
+        .whenNotMatchedBySource()
+        .update({"name": lit("gone")})
+        .merge()
+    )
+    table = spark.sql(f"SELECT id, name FROM {FQ} ORDER BY id").to_arrow()
+    assert table.schema.field("id").type == pa.int64()
+    assert table.schema.field("name").type == pa.string()
+    assert table.to_pylist() == [
+        {"id": 1, "name": "a"},
+        {"id": 2, "name": "gone"},
+    ]
 
 
 def test_merge_into_type_errors(spark: ReparkSession) -> None:
