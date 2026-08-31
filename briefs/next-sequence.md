@@ -37,17 +37,10 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 
 | # | Unit | Track | Blocked by | Size |
 |---|---|---|---|---|
-| 1 | **FNP-15/16** — register every unreachable and declared-deferred family | Function parity | RP-3 departure, or a fork-wait window | STANDARD <!-- unit id=fnp-15-16 --> |
-| 2 | **F-Y10-1** — integer overflow raises where Spark raises | Function parity / hardening | the owner's charter gate | STANDARD <!-- unit id=f-y10-1 --> |
-
-<!-- unit id=fnp-15-16 ledger=fnp-15-16- -->
-**Why FNP-15/16 follows.** This is the highest-value fork-independent honesty unit: it turns 62
-missing or ambiguous names into explicit refusing surfaces with exact registry reasons. It does
-not gate v1.0 and yields to a ready v3 unit.
-<!-- /unit -->
+| 1 | **F-Y10-1** — integer overflow raises where Spark raises | Function parity / hardening | the owner's charter gate | STANDARD <!-- unit id=f-y10-1 --> |
 
 <!-- unit id=f-y10-1 ledger=f-y10-1- -->
-**Why F-Y10-1 is second.** A wrong answer on ordinary addition outranks any missing function,
+**Why F-Y10-1 leads.** A wrong answer on ordinary addition outranks any missing function,
 and FNP-7b's `try_*` family is blocked on it (§7.1 of the parity design). Chartered 2026-08-30
 at [../task/ledgers/staging/f-y10-1-int-overflow-ledger.md](../task/ledgers/staging/f-y10-1-int-overflow-ledger.md);
 opens on the owner's confirm, fork-independent, any window.

@@ -19,8 +19,8 @@ JVM, no repark required). See [../map.md](../map.md).
 ## Contents
 
 - `test_plan_1_northstar_fnp_sequence.py` — **PLAN-1 (2026-08-28; tree pins):** the guarded
-  North Star sequence, F-17's measured shared-Puffin closure request, the live slate (FNP-15/16
-  leads and delivered mw-10 is absent, since MW-10's 2026-08-30 close-out), the per-unit FNP order and delivery boundary,
+  North Star sequence, F-17's measured shared-Puffin closure request, the live slate (F-Y10-1
+  leads; delivered fnp-15-16 and mw-10 are absent after their 2026-08-30 departures), the per-unit FNP order and delivery boundary,
   FNP-Z retirement, fork independence, and map lockstep. MW-10 pickup archived RP-3, so the
   C-006 navigation pin reads `**RP-3 (2026-08-28)` / `opt-in for callers` from
   `task/ledgers/archive/2026-08/map.md`, and V3-3's row from `task/ledgers/completed/map.md`

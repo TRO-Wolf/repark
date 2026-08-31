@@ -54,13 +54,14 @@ def test_live_slate_retires_v3e_5_and_queues_the_safe_work() -> None:
     pins: v3-3-dml/C-003
     """
     slate = _read("briefs/next-sequence.md")
-    _assert_in_order(slate, ("| 1 | **FNP-15/16**",))
+    _assert_in_order(slate, ("| 1 | **F-Y10-1**",))
+    assert "<!-- unit id=fnp-15-16" not in slate
     assert "<!-- unit id=mw-10" not in slate
     assert "<!-- unit id=v3e-5" not in slate
     assert "<!-- unit id=rp-2" not in slate
     assert "<!-- unit id=rp-3" not in slate
     flat = _normalize_whitespace(slate)
-    assert "It does not gate v1.0" in flat
+    assert "fork-independent, any window" in flat
     assert "V3-4 and the engine units after it" in flat
     assert "V3-3 delivered 2026-08-30" in flat
     status = _read("STATUS.md")

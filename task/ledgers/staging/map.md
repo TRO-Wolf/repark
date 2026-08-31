@@ -17,9 +17,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   raises (the integer analog of the FIXED DEC-6, on the DEC U5 checked-kernel pattern). Five
   OPEN clauses; C-001 is the measurement that reconciles the recorded wrap-vs-widen
   contradiction before any edit. Unblocks FNP-7b's four `try_*` names.
-- [fnp-15-16-ledger.md](fnp-15-16-ledger.md) — **FNP-15/16 (2026-08-30), in flight:** register
-  the six unreachable names and the four D-7 families (56 names, re-counted) as loud refusing
-  surfaces. Builds no kernel. Wording: FNP-15 unreachable; FNP-16 reachable, deferred by cost.
 - [sem-0-charter-ledger.md](sem-0-charter-ledger.md) — **SEM-0 (2026-08-21), queued and HELD at
   its approval gate:** the scope audit for closing the two silently wrong answers the low-risk
   sweep registered rather than fixed — `RE-1` (`regexp_extract_all` defaults to capture group 0,

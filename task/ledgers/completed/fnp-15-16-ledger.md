@@ -7,7 +7,7 @@ the owner closes the slate row.
 **Unit:** FNP-15/16 (honesty: 62 names, no kernels) · **Date:** 2026-08-30 ·
 **Executor:** Grok (grok-4.6), Actor · **Branch:** `feat/fnp-15-16` ·
 **Base:** `origin/main` at pickup.
-**Charter:** [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) C-007, C-008
+**Charter:** [fnp-0-charter-ledger.md](../staging/fnp-0-charter-ledger.md) C-007, C-008
 (the unreachable partition and the four D-7 families).
 **Design:** [docs/design/spark-function-parity.md](../../../docs/design/spark-function-parity.md)
 §7 rows FNP-15 and FNP-16, §7.1, §8.
