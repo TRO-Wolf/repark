@@ -170,11 +170,6 @@ published history — an exposure **accepted by explicit decision**; provenance:
     Sequence: [docs/design/format-v3-track.md §5](docs/design/format-v3-track.md).
 <!-- /ws -->
 
-<!-- ws id=dml ledgers=dml-a- state=open -->
-- **v0.6 DML remainder** — DML-A `MERGE … WHEN NOT MATCHED BY SOURCE` (DELETE/UPDATE, COW+MOR)
-  on `feat/dml-a-merge-not-matched-by-source`. DML-B/C parked.
-<!-- /ws -->
-
 <!-- ws id=perf ledgers=perf- state=open -->
 - **Performance campaign — TA parity with `polars_talib` (chartered 2026-08-15; measure-first).**
   Goal added to [PROJECT.md](PROJECT.md) Goals. Phase 0 is the recorded benchmark baseline (the
@@ -222,7 +217,7 @@ published history — an exposure **accepted by explicit decision**; provenance:
 - **Iceberg DML remainder (v0.6)** — DML-B → DML-C → DML-A → MAINT; REF waits on fork
   F-6. **Delivered 2026-08-30:** DML-B `INSERT OVERWRITE … PARTITION` and
   `writeTo().overwritePartitions()` (empty dynamic refuses loud); DML-C `TRUNCATE TABLE`
-  first-class on all three doors, registry DML-2 FIXED.
+  first-class (DML-2 FIXED); DML-A `MERGE … WHEN NOT MATCHED BY SOURCE`, COW and MOR.
   [DML-1](docs/spark-sql-iceberg-parity.md).
 <!-- /ws -->
 
