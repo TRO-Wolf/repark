@@ -116,7 +116,8 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   literal-split kernel; it depends on workspace `regex` and lives in the canonical module tree
   beside `shuffle.rs`, `map_from_entries.rs`, and `url/java_uri.rs`.
 - `src/try_invert/` — FNP-7a/7b scalar `try_*` kernels. `try_element_at` aliases `element_at`.
-  pins: fnp-7-try-inversions/C-001, C-013
+  `try_avg` is a distinct UDAF (not an `avg` alias). INTERVAL `try_avg` refuses `[FNP-11]`.
+  pins: fnp-7-try-inversions/C-001, C-013, C-018
 - `src/collection.rs` — Spark `element_at` (arrays + maps) + the embedded `__repark_array_get__`
   subscript UDF + **`spark_get_item_udf` / `__repark_get_item__`** (polymorphic array 0-based or
   map-by-key for facade `Column.__getitem__` non-int/non-str keys).

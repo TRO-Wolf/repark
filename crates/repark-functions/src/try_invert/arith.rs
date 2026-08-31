@@ -6,9 +6,8 @@ use std::sync::Arc;
 use datafusion::arrow::array::{Array, Float64Array, PrimitiveArray};
 use datafusion::arrow::datatypes::{
     ArrowPrimitiveType, DataType, Field, FieldRef, Int8Type, Int16Type, Int32Type, Int64Type,
-    IntervalDayTimeType, IntervalMonthDayNanoType, IntervalUnit,
+    IntervalUnit,
 };
-use datafusion::arrow::datatypes::{IntervalDayTime, IntervalMonthDayNano};
 use datafusion::common::{Result, exec_err};
 use datafusion::error::DataFusionError;
 use datafusion::logical_expr::{
@@ -76,7 +75,7 @@ macro_rules! try_arith_udf {
 }
 
 #[derive(Clone, Copy)]
-enum TryKind {
+pub(crate) enum TryKind {
     Divide,
     Mod,
     Add,
@@ -137,6 +136,12 @@ fn two_args<'a>(arg_types: &'a [DataType], name: &str) -> Result<(&'a DataType, 
 fn result_type(kind: TryKind, arg_types: &[DataType]) -> Result<DataType> {
     let name = kind_name(kind);
     let (left, right) = two_args(arg_types, name)?;
+    if matches!(kind, TryKind::Divide)
+        && let DataType::Interval(unit) = left
+        && is_interval_divisor(right)
+    {
+        return Ok(DataType::Interval(*unit));
+    }
     if matches!(kind, TryKind::Divide) {
         if let (Some(left_meta), Some(right_meta)) =
             (decimal128_parts(left), decimal128_parts(right))
@@ -179,6 +184,27 @@ fn result_type(kind: TryKind, arg_types: &[DataType]) -> Result<DataType> {
         ) if matches!(kind, TryKind::Add | TryKind::Sub) => {
             Ok(DataType::Interval(IntervalUnit::MonthDayNano))
         }
+        (DataType::Date32, DataType::Interval(_))
+            if matches!(kind, TryKind::Add | TryKind::Sub) =>
+        {
+            Ok(DataType::Date32)
+        }
+        (DataType::Interval(_), DataType::Date32) if matches!(kind, TryKind::Add) => {
+            Ok(DataType::Date32)
+        }
+        (DataType::Timestamp(unit, tz), DataType::Interval(_))
+            if matches!(kind, TryKind::Add | TryKind::Sub) =>
+        {
+            Ok(DataType::Timestamp(*unit, tz.clone()))
+        }
+        (DataType::Interval(_), DataType::Timestamp(unit, tz)) if matches!(kind, TryKind::Add) => {
+            Ok(DataType::Timestamp(*unit, tz.clone()))
+        }
+        (DataType::Interval(unit), right)
+            if matches!(kind, TryKind::Divide) && is_interval_divisor(right) =>
+        {
+            Ok(DataType::Interval(*unit))
+        }
         _ => exec_err!("'{name}' does not support types {left} and {right}"),
     }
 }
@@ -211,6 +237,19 @@ fn coerce_pair(kind: TryKind, arg_types: &[DataType]) -> Result<Vec<DataType>> {
     {
         return Ok(vec![left.clone(), right.clone()]);
     }
+    if matches!(kind, TryKind::Add | TryKind::Sub)
+        && let Some(coerced) = coerce_temporal_interval(kind, left, right)
+    {
+        return Ok(coerced);
+    }
+    if matches!(kind, TryKind::Divide) && is_interval(left) && is_interval_divisor(right) {
+        let divisor = if right.is_floating() {
+            DataType::Float64
+        } else {
+            DataType::Int64
+        };
+        return Ok(vec![left.clone(), divisor]);
+    }
     if left.is_floating() || right.is_floating() {
         return Ok(vec![DataType::Float64, DataType::Float64]);
     }
@@ -222,6 +261,38 @@ fn coerce_pair(kind: TryKind, arg_types: &[DataType]) -> Result<Vec<DataType>> {
             ))
         })?;
     Ok(vec![width.clone(), width])
+}
+
+fn is_interval(data_type: &DataType) -> bool {
+    matches!(data_type, DataType::Interval(_))
+}
+
+fn is_interval_divisor(data_type: &DataType) -> bool {
+    data_type.is_numeric() && decimal128_parts(data_type).is_none()
+}
+
+fn coerce_temporal_interval(
+    kind: TryKind,
+    left: &DataType,
+    right: &DataType,
+) -> Option<Vec<DataType>> {
+    match (left, right) {
+        (DataType::Date32 | DataType::Date64, DataType::Interval(_)) => {
+            Some(vec![DataType::Date32, right.clone()])
+        }
+        (DataType::Interval(_), DataType::Date32 | DataType::Date64)
+            if matches!(kind, TryKind::Add) =>
+        {
+            Some(vec![left.clone(), DataType::Date32])
+        }
+        (DataType::Timestamp(_, _), DataType::Interval(_)) => {
+            Some(vec![left.clone(), right.clone()])
+        }
+        (DataType::Interval(_), DataType::Timestamp(_, _)) if matches!(kind, TryKind::Add) => {
+            Some(vec![left.clone(), right.clone()])
+        }
+        _ => None,
+    }
 }
 
 fn integer_width(data_type: &DataType) -> Option<DataType> {
@@ -238,7 +309,7 @@ fn integer_width(data_type: &DataType) -> Option<DataType> {
     }
 }
 
-fn kind_name(kind: TryKind) -> &'static str {
+pub(crate) fn kind_name(kind: TryKind) -> &'static str {
     match kind {
         TryKind::Divide => "try_divide",
         TryKind::Mod => "try_mod",
@@ -256,10 +327,9 @@ fn invoke_try(kind: TryKind, args: &ScalarFunctionArgs) -> Result<ColumnarValue>
         DataType::Int32 => invoke_int::<Int32Type>(kind, args, eval_i32),
         DataType::Int16 => invoke_int::<Int16Type>(kind, args, eval_i16),
         DataType::Int8 => invoke_int::<Int8Type>(kind, args, eval_i8),
-        DataType::Interval(IntervalUnit::DayTime) => invoke_interval_day_time(kind, args),
-        DataType::Interval(IntervalUnit::MonthDayNano) => {
-            invoke_interval_month_day_nano(kind, args)
-        }
+        DataType::Date32 => super::temporal::invoke_date_interval(kind, args),
+        DataType::Timestamp(_, _) => super::temporal::invoke_timestamp_interval(kind, args),
+        DataType::Interval(unit) => super::temporal::invoke_interval_result(kind, *unit, args),
         other => exec_err!(
             "'{}' promised {other} but cannot invoke it",
             kind_name(kind)
@@ -339,7 +409,7 @@ where
     ))))
 }
 
-fn primitive<T: ArrowPrimitiveType>(array: &dyn Array) -> Result<PrimitiveArray<T>> {
+pub(crate) fn primitive<T: ArrowPrimitiveType>(array: &dyn Array) -> Result<PrimitiveArray<T>> {
     array
         .as_any()
         .downcast_ref::<PrimitiveArray<T>>()
@@ -405,117 +475,11 @@ fn eval_i8(kind: TryKind, left: i8, right: i8) -> Option<i8> {
     }
 }
 
-fn invoke_interval_day_time(kind: TryKind, args: &ScalarFunctionArgs) -> Result<ColumnarValue> {
-    let arrays = ColumnarValue::values_to_arrays(&args.args)?;
-    let left = primitive::<IntervalDayTimeType>(arrays[0].as_ref())?;
-    let right = primitive::<IntervalDayTimeType>(arrays[1].as_ref())?;
-    if left.len() != right.len() {
-        return exec_err!("'{}' argument lengths differ", kind_name(kind));
-    }
-    let mut values: Vec<Option<IntervalDayTime>> = Vec::with_capacity(left.len());
-    for row in 0..left.len() {
-        if !left.is_valid(row) || !right.is_valid(row) {
-            values.push(None);
-            continue;
-        }
-        values.push(eval_interval_day_time(
-            kind,
-            left.value(row),
-            right.value(row),
-        ));
-    }
-    Ok(ColumnarValue::Array(Arc::new(PrimitiveArray::<
-        IntervalDayTimeType,
-    >::from(values))))
-}
-
-const MICROS_PER_DAY: i64 = 86_400_000_000;
-const MICROS_PER_MILLI: i64 = 1_000;
-
-fn interval_to_micros(value: IntervalDayTime) -> Option<i64> {
-    let days = i64::from(value.days);
-    let millis = i64::from(value.milliseconds);
-    days.checked_mul(MICROS_PER_DAY)?
-        .checked_add(millis.checked_mul(MICROS_PER_MILLI)?)
-}
-
-fn micros_to_interval(micros: i64) -> Option<IntervalDayTime> {
-    let days = i32::try_from(micros.div_euclid(MICROS_PER_DAY)).ok()?;
-    let rem = micros.rem_euclid(MICROS_PER_DAY);
-    let milliseconds = i32::try_from(rem / MICROS_PER_MILLI).ok()?;
-    Some(IntervalDayTime { days, milliseconds })
-}
-
-fn invoke_interval_month_day_nano(
-    kind: TryKind,
-    args: &ScalarFunctionArgs,
-) -> Result<ColumnarValue> {
-    let arrays = ColumnarValue::values_to_arrays(&args.args)?;
-    let left = primitive::<IntervalMonthDayNanoType>(arrays[0].as_ref())?;
-    let right = primitive::<IntervalMonthDayNanoType>(arrays[1].as_ref())?;
-    if left.len() != right.len() {
-        return exec_err!("'{}' argument lengths differ", kind_name(kind));
-    }
-    let mut values: Vec<Option<IntervalMonthDayNano>> = Vec::with_capacity(left.len());
-    for row in 0..left.len() {
-        if !left.is_valid(row) || !right.is_valid(row) {
-            values.push(None);
-            continue;
-        }
-        values.push(eval_interval_month_day_nano(
-            kind,
-            left.value(row),
-            right.value(row),
-        ));
-    }
-    Ok(ColumnarValue::Array(Arc::new(PrimitiveArray::<
-        IntervalMonthDayNanoType,
-    >::from(values))))
-}
-
-fn eval_interval_month_day_nano(
-    kind: TryKind,
-    left: IntervalMonthDayNano,
-    right: IntervalMonthDayNano,
-) -> Option<IntervalMonthDayNano> {
-    let (months, days, nanos) = match kind {
-        TryKind::Add => (
-            left.months.checked_add(right.months)?,
-            left.days.checked_add(right.days)?,
-            left.nanoseconds.checked_add(right.nanoseconds)?,
-        ),
-        TryKind::Sub => (
-            left.months.checked_sub(right.months)?,
-            left.days.checked_sub(right.days)?,
-            left.nanoseconds.checked_sub(right.nanoseconds)?,
-        ),
-        _ => return None,
-    };
-    Some(IntervalMonthDayNano {
-        months,
-        days,
-        nanoseconds: nanos,
-    })
-}
-
-fn eval_interval_day_time(
-    kind: TryKind,
-    left: IntervalDayTime,
-    right: IntervalDayTime,
-) -> Option<IntervalDayTime> {
-    let left_micros = interval_to_micros(left)?;
-    let right_micros = interval_to_micros(right)?;
-    let result = match kind {
-        TryKind::Add => left_micros.checked_add(right_micros)?,
-        TryKind::Sub => left_micros.checked_sub(right_micros)?,
-        _ => return None,
-    };
-    micros_to_interval(result)
-}
-
 #[cfg(test)]
 mod tests {
-    use datafusion::arrow::array::{Array, Float64Array, Int16Array, Int32Array};
+    use chrono::NaiveDate;
+    use datafusion::arrow::array::{Array, Date32Array, Float64Array, Int16Array, Int32Array};
+    use datafusion::arrow::datatypes::Date32Type;
     use datafusion::prelude::SessionContext;
 
     use crate::analyzer_rules;
@@ -622,5 +586,85 @@ mod tests {
             .downcast_ref::<Int16Array>()
             .unwrap();
         assert!(!array.is_valid(0));
+    }
+
+    #[tokio::test]
+    async fn try_add_date_plus_interval_day() {
+        let (data_type, _) = cell("SELECT try_add(DATE '2024-01-01', INTERVAL 1 DAY) AS v").await;
+        assert_eq!(data_type, "Date32");
+        let batches = ctx()
+            .sql("SELECT try_add(DATE '2024-01-01', INTERVAL 1 DAY) AS v")
+            .await
+            .unwrap()
+            .collect()
+            .await
+            .unwrap();
+        let array = batches[0]
+            .column(0)
+            .as_any()
+            .downcast_ref::<Date32Array>()
+            .unwrap();
+        assert_eq!(
+            Date32Type::to_naive_date_opt(array.value(0)).unwrap(),
+            NaiveDate::from_ymd_opt(2024, 1, 2).unwrap()
+        );
+    }
+
+    #[tokio::test]
+    async fn try_add_date_plus_interval_month_end() {
+        let batches = ctx()
+            .sql("SELECT try_add(DATE '2024-01-31', INTERVAL 1 MONTH) AS v")
+            .await
+            .unwrap()
+            .collect()
+            .await
+            .unwrap();
+        let array = batches[0]
+            .column(0)
+            .as_any()
+            .downcast_ref::<Date32Array>()
+            .unwrap();
+        assert_eq!(
+            Date32Type::to_naive_date_opt(array.value(0)).unwrap(),
+            NaiveDate::from_ymd_opt(2024, 2, 29).unwrap()
+        );
+    }
+
+    #[tokio::test]
+    async fn try_add_timestamp_plus_interval_hour() {
+        let batches = ctx()
+            .sql("SELECT try_add(TIMESTAMP '2024-01-01 00:00:00', INTERVAL 1 HOUR) AS v")
+            .await
+            .unwrap()
+            .collect()
+            .await
+            .unwrap();
+        let array = batches[0].column(0);
+        let formatted = format!("{:?}", array.slice(0, 1));
+        assert!(
+            formatted.contains("01:00:00") || formatted.contains("T01:00:00"),
+            "{formatted}"
+        );
+    }
+
+    #[tokio::test]
+    async fn try_divide_interval_by_two_and_zero() {
+        let batches = ctx()
+            .sql("SELECT try_divide(INTERVAL 2 DAYS, 2) AS v")
+            .await
+            .unwrap()
+            .collect()
+            .await
+            .unwrap();
+        let array = batches[0].column(0);
+        assert!(array.is_valid(0), "2 days / 2 should compute");
+        let zero = ctx()
+            .sql("SELECT try_divide(INTERVAL 1 DAY, 0) AS v")
+            .await
+            .unwrap()
+            .collect()
+            .await
+            .unwrap();
+        assert!(!zero[0].column(0).is_valid(0), "interval / 0 is NULL");
     }
 }

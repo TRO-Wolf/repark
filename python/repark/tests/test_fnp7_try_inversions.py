@@ -1,8 +1,9 @@
 """FNP-7a/7b — twelve ``try_*`` inversions.
 
 Oracle: live PySpark 4.1.2 (c26-oracle, 2026-08-31). Pins are value AND Arrow
-type on ``toArrow()``. Three doors: Spark SQL, native ANSI ``repark.sql()``,
-facade Column API.
+type on ``toArrow()``. Reachable doors: Spark SQL and the facade Column API.
+Native ANSI ``repark.sql()`` does not load SparkExtension, so the twelve names
+are unresolved there (C-013).
 """
 
 from __future__ import annotations
@@ -14,6 +15,21 @@ import pytest
 
 from repark.errors import PySparkException
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
+
+TRY_NAMES: tuple[str, ...] = (
+    "try_add",
+    "try_avg",
+    "try_divide",
+    "try_element_at",
+    "try_mod",
+    "try_multiply",
+    "try_subtract",
+    "try_sum",
+    "try_to_binary",
+    "try_to_date",
+    "try_to_number",
+    "try_to_time",
+)
 
 
 def _spark():
@@ -118,6 +134,23 @@ def test_try_to_date_illegal_pattern_raises() -> None:
         _sql_arrow("SELECT try_to_date('2024-01-15', 'not-a-format') AS v")
 
 
+def test_try_to_date_java_formats_match_spark() -> None:
+    """pins: fnp-7-try-inversions/C-004"""
+    cells = (
+        ("2024", "yyyy", datetime.date(2024, 1, 1)),
+        ("2024-01", "yyyy-MM", datetime.date(2024, 1, 1)),
+        ("Jan 15 2024", "MMM dd yyyy", datetime.date(2024, 1, 15)),
+        ("January 15 2024", "MMMM dd yyyy", datetime.date(2024, 1, 15)),
+        ("24", "yy", datetime.date(2024, 1, 1)),
+        ("5/1/2024", "d/M/yyyy", datetime.date(2024, 1, 5)),
+        ("20240115", "yyyyMMdd", datetime.date(2024, 1, 15)),
+    )
+    for text, pattern, expected in cells:
+        table = _sql_arrow(f"SELECT try_to_date('{text}', '{pattern}') AS v")
+        assert table.column("v").to_pylist() == [expected], (text, pattern)
+        assert "date" in str(table.schema.field("v").type).lower()
+
+
 def test_try_to_number_match_and_mismatch() -> None:
     """pins: fnp-7-try-inversions/C-005"""
     spark = _spark()
@@ -212,28 +245,96 @@ def test_try_avg_mean_and_type() -> None:
     assert door.column("v").to_pylist() == [2.0]
 
 
+def test_try_avg_long_overflow_is_double_mean() -> None:
+    """pins: fnp-7-try-inversions/C-012"""
+    table = _sql_arrow(
+        "SELECT try_avg(v) AS v FROM VALUES "
+        "(CAST(9223372036854775807 AS BIGINT)), "
+        "(CAST(9223372036854775807 AS BIGINT)) AS t(v)"
+    )
+    values = table.column("v").to_pylist()
+    assert values[0] is not None
+    assert values[0] == pytest.approx(9.223372036854776e18)
+    assert str(table.schema.field("v").type) == "double"
+
+
+def test_try_avg_decimal_overflow_is_null() -> None:
+    """pins: fnp-7-try-inversions/C-012"""
+    table = _sql_arrow(
+        "SELECT try_avg(v) AS v FROM VALUES "
+        "(CAST(99999999999999999999999999999999999999 AS DECIMAL(38, 0))), "
+        "(CAST(99999999999999999999999999999999999999 AS DECIMAL(38, 0))) AS t(v)"
+    )
+    assert table.column("v").to_pylist() == [None]
+    field_type = str(table.schema.field("v").type)
+    assert "decimal" in field_type.lower()
+    assert "38" in field_type
+    assert "4" in field_type
+
+
+def _interval_days(value: object) -> int:
+    if isinstance(value, datetime.timedelta):
+        return value.days
+    months = getattr(value, "months", None)
+    days = getattr(value, "days", None)
+    if months is None and isinstance(value, (tuple, list)):
+        months, days = value[0], value[1]
+    assert months == 0, value
+    assert days is not None, value
+    return int(days)
+
+
 def test_try_add_interval_day() -> None:
     """pins: fnp-7-try-inversions/C-015"""
     table = _sql_arrow("SELECT try_add(INTERVAL 1 DAY, INTERVAL 1 DAY) AS v")
     values = table.column("v").to_pylist()
     assert len(values) == 1
-    assert values[0] is not None
+    assert _interval_days(values[0]) == 2
+
+
+def test_try_add_date_and_timestamp_interval() -> None:
+    """pins: fnp-7-try-inversions/C-015"""
+    date_next = _sql_arrow("SELECT try_add(DATE '2024-01-01', INTERVAL 1 DAY) AS v")
+    assert date_next.column("v").to_pylist() == [datetime.date(2024, 1, 2)]
+    month_end = _sql_arrow("SELECT try_add(DATE '2024-01-31', INTERVAL 1 MONTH) AS v")
+    assert month_end.column("v").to_pylist() == [datetime.date(2024, 2, 29)]
+    shifted = _sql_arrow("SELECT try_add(TIMESTAMP '2024-01-01 00:00:00', INTERVAL 1 HOUR) AS v")
+    values = shifted.column("v").to_pylist()
+    assert len(values) == 1
+    stamp = values[0]
+    assert stamp is not None
+    if isinstance(stamp, datetime.datetime):
+        assert stamp.hour == 1
+        assert stamp.date() == datetime.date(2024, 1, 1)
+    else:
+        raise AssertionError(stamp)
+
+
+def test_try_divide_interval_by_numeric() -> None:
+    """pins: fnp-7-try-inversions/C-015"""
+    half = _sql_arrow("SELECT try_divide(INTERVAL 2 DAYS, 2) AS v")
+    assert _interval_days(half.column("v").to_pylist()[0]) == 1
+    zero = _sql_arrow("SELECT try_divide(INTERVAL 1 DAY, 0) AS v")
+    assert zero.column("v").to_pylist() == [None]
+
+
+def test_try_avg_interval_refuses_fnp11() -> None:
+    """pins: fnp-7-try-inversions/C-018"""
+    with pytest.raises(PySparkException, match=r"\[FNP-11\] try_avg\(INTERVAL\).*2026-08-31"):
+        _sql_arrow("SELECT try_avg(INTERVAL 1 DAY) AS v")
 
 
 def test_try_names_are_present() -> None:
     """pins: fnp-7-try-inversions/C-013"""
-    for name in (
-        "try_add",
-        "try_avg",
-        "try_divide",
-        "try_element_at",
-        "try_mod",
-        "try_multiply",
-        "try_subtract",
-        "try_sum",
-        "try_to_binary",
-        "try_to_date",
-        "try_to_number",
-        "try_to_time",
-    ):
+    for name in TRY_NAMES:
         assert hasattr(F, name)
+
+
+def test_try_names_unresolved_on_ansi_sql_door() -> None:
+    """pins: fnp-7-try-inversions/C-013"""
+    import repark
+
+    for name in TRY_NAMES:
+        with pytest.raises(Exception, match="Invalid function") as caught:
+            repark.sql(f"SELECT {name}(1)").to_arrow()
+        assert name in str(caught.value)

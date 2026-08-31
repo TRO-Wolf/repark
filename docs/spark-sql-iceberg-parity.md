@@ -2173,6 +2173,21 @@ the pin rather than obeying it.
   lands with its own pin if a job ever depends on it. This is the single home of the divergence
   the `spark_literals` module doc previously only mentioned.
 
+### BL-13 — `try_avg(INTERVAL)` refuses pending FNP-11
+
+- **repark** — `try_avg(INTERVAL 1 DAY)` is a plan error naming `[FNP-11]` and the date
+  2026-08-31. The function is registered (not an absent name) and the refuse is loud. `avg`
+  of an interval stays the pre-existing Decimal/Float64 signature miss. DATE/TIMESTAMP ±
+  INTERVAL and INTERVAL / numeric on `try_add` / `try_divide` compute.
+- **Apache Spark** — `try_avg(INTERVAL)` returns interval day to second. A huge interval
+  overflows `INTERVAL_ARITHMETIC_OVERFLOW` on both `avg` and `try_avg` (2026-08-31 oracle
+  4.1.2; `try_avg` is not NULL-on-interval-overflow).
+  *(oracle: live PySpark 4.1.2, 2026-08-31.)*
+- **Pin** — `python/repark/tests/test_fnp7_try_inversions.py::test_try_avg_interval_refuses_fnp11`
+- **Rationale** — BACKLOG, intent to FIX with **FNP-11**. Averaging intervals is temporal
+  entanglement (month vs day-time fields, overflow class), not a try_* inversion. Silent NULL
+  is not acceptable; the dated message is the holding contract until FNP-11 lands.
+
 ### WIN-SLIDE — non-retractable aggregates over a sliding frame (W-0, 2026-08-31)
 
 Spark evaluates an aggregate over `ROWS BETWEEN n PRECEDING AND CURRENT ROW` even when the

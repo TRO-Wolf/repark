@@ -2,6 +2,7 @@
 
 mod arith;
 mod convert;
+mod temporal;
 
 use std::sync::Arc;
 

@@ -52,10 +52,13 @@ live oracle.
 | `try_multiply` | 7b | int32/int64 `*` raises `ARITHMETIC_OVERFLOW` under ANSI |
 | `try_avg` | 7b | accumulator overflow of `avg` |
 
-Acceptance bar per name: three-door Spark-equal (Spark SQL door, ANSI door
-where reachable, facade Column API) on values, Arrow types, and the named
-nasty edges versus live PySpark 4.1.2. Measure every cell first. Where Spark
-still raises (for example a malformed format string), match the error class.
+Acceptance bar per name: Spark-equal on the two reachable doors (Spark SQL +
+facade Column API) on values, Arrow types, and the named nasty edges versus
+live PySpark 4.1.2. Native ANSI `repark.sql()` does not load SparkExtension —
+the twelve names are unresolved there (C-013). Measure every cell first. Where
+Spark still raises (for example a malformed format string), match the error
+class. `try_avg(INTERVAL)` is a dated FNP-11 loud refuse (C-018 / registry
+BL-13), not a silent NULL.
 
 ## Proposition ledger
 
@@ -64,7 +67,7 @@ still raises (for example a malformed format string), match the error class.
 | C-001 | `try_divide` is the NULL-yielding inversion of `/`. Divide-by-zero yields NULL (including float 1.0/0.0). Happy-path values and Arrow type are Float64. Spark SQL + facade. ANSI-door SQL does not load the Spark UDF registry (SparkExtension). | Facade + Spark SQL pins. | **PROVEN** |
 | C-002 | `try_mod` is the NULL-yielding inversion of `%`. Modulo-by-zero yields NULL. INT stays Int32. | Facade + Spark SQL pins. | **PROVEN** |
 | C-003 | `try_element_at`: 1-based; negative from end; OOB NULL; map miss NULL; index 0 raises `INVALID_INDEX_OF_ZERO` (ANSI off too). | Facade + SQL pins. | **PROVEN** |
-| C-004 | `try_to_date` yields NULL on parse failure and NULL input. Well-formed ISO and `dd/MM/yyyy` match. Illegal pattern raises `INVALID_DATETIME_PATTERN`. | Facade + SQL pins. | **PROVEN** |
+| C-004 | `try_to_date` yields NULL on parse failure and NULL input. Well-formed ISO, `dd/MM/yyyy`, `yyyy` (defaults 01-01), `yyyy-MM`, `MMM dd yyyy`, `MMMM dd yyyy`, `yy`, `d/M/yyyy`, `yyyyMMdd` match Spark. Illegal pattern raises `INVALID_DATETIME_PATTERN`. | Facade + SQL pins including the format sweep. | **PROVEN** |
 | C-005 | `try_to_number` yields NULL on value/format mismatch. Malformed format raises `INVALID_FORMAT`. `'123'+'999'` is decimal(3,0); money format is decimal(8,2). | Facade + SQL pins. | **PROVEN** |
 | C-006 | `try_to_binary` default format is hex (odd length left-pads 0). `utf-8`/`utf8`/`base64`/`hex` match. Invalid hex/base64/unknown format → NULL (Spark does not raise on a bad format token). | Facade + SQL pins. | **PROVEN** |
 | C-007 | Live Spark 4.1.2 `try_to_time` raises `UNSUPPORTED_TIME_TYPE` (TIME is not enabled on this oracle). RePark matches that class, not a parse-to-TIME kernel. | Facade + SQL pins. | **PROVEN** |
@@ -72,12 +75,13 @@ still raises (for example a malformed format string), match the error class.
 | C-009 | `try_add` yields NULL on int32 overflow. Always NULL-on-overflow (independent of ANSI). | Facade + SQL pins. | **PROVEN** |
 | C-010 | `try_subtract` yields NULL on int32 `INT_MIN - 1`. | SQL pin. | **PROVEN** |
 | C-011 | `try_multiply` yields NULL on int32 `INT_MAX * 2`. | SQL pin. | **PROVEN** |
-| C-012 | `try_avg` aliases RePark `avg`. Mean of 1,2,3 is double 2.0. Long overflow of avg is a double mean (Spark-equal; not NULL). | Facade + SQL pins. | **PROVEN** |
-| C-013 | One kernel per Spark name on the Spark door and facade. Python does not compute rows. `armed_names()` stays 62. Facade `F.try_*` lands for the twelve names. Native ANSI `repark.sql()` does not install SparkExtension, so Spark `try_*` names are not reachable there. | Identity test; hasattr pin. | **PROVEN** |
+| C-012 | `try_avg` is a distinct UDAF (`avg` still raises on decimal overflow). Mean of 1,2,3 is double 2.0. Long overflow of avg is a double mean (Spark-equal; not NULL). Decimal(38,0) max+max overflow is NULL decimal(38,4). | Facade + SQL pins including overflow cells. | **PROVEN** |
+| C-013 | One kernel per Spark name on the Spark door and facade. Python does not compute rows. `armed_names()` stays 62. Facade `F.try_*` lands for the twelve names. Native ANSI `repark.sql()` does not install SparkExtension, so each of the twelve names is `Invalid function`. | hasattr pin + `repark.sql` unreachability pin. | **PROVEN** |
 | C-014 | Spark `try_add(SMALLINT 32767, 1)` is NULL smallint. RePark matches Int16 NULL. F-Y10-1 wrap residue of `+` is untouched. | SQL pin. | **PROVEN** |
-| C-015 | Spark `try_add(INTERVAL 1 DAY, INTERVAL 1 DAY)` is 2 days. RePark IntervalMonthDayNano add matches the non-null happy path. | SQL pin. | **PROVEN** |
+| C-015 | Spark `try_add(INTERVAL 1 DAY, INTERVAL 1 DAY)` is 2 days. DATE + INTERVAL 1 DAY is 2024-01-02; TIMESTAMP + 1 HOUR is 01:00; DATE 2024-01-31 + 1 MONTH is 2024-02-29. `try_divide(INTERVAL 2 DAYS, 2)` is 1 day; `/0` is NULL. | SQL pins with exact values. | **PROVEN** |
 | C-016 | Docs and maps stay in lockstep. `functions.py` stays 1985. New Rust files under 1000. | `check-map-sync`; `check_lib_py` / `check_rust_file_size`. | **PROVEN** |
 | C-017 | Gates before done: `make verify`, `make check-map-sync check-ledger-grammar`, `python3 scripts/ledger_lifecycle.py check --base bb7fa54af48632c52d28aa8f7f446fac1dbf3742`, full `make py-test`, `make py-test-facade` for facade tests added. Real exit codes. | Recorded at close. | **PROVEN** |
+| C-018 | `try_avg(INTERVAL)` refuses loud with `[FNP-11]` dated 2026-08-31. Spark 4.1.2 returns interval day to second. Deferred to FNP-11; registry BL-13. Silent NULL is not this cell. | SQL pin of the refusal wording. | **PROVEN** |
 
 ## Sequence
 
@@ -143,12 +147,19 @@ Hand-computed expectations are not an oracle.
 | `try_to_time` | any | `UNSUPPORTED_TIME_TYPE` |
 | `try_sum` | 1+2+3 / empty / long overflow | bigint 6 / NULL / NULL |
 | `try_avg` | 1+2+3 / long overflow | double 2.0 / double mean (not NULL) |
+| `try_avg` | DECIMAL(38,0) max+max | NULL decimal(38,4). `avg` of the same RAISES `ARITHMETIC_OVERFLOW` (2026-08-31 re-measure) |
+| `try_to_date` | `'2024','yyyy'` / `'Jan 15 2024','MMM dd yyyy'` / `'yyyy-MM'` / `'yy'` / `'d/M/yyyy'` / `'yyyyMMdd'` / `'MMMM dd yyyy'` | 2024-01-01 / 2024-01-15 / 2024-01-01 / 2024-01-01 / 2024-01-05 / 2024-01-15 / 2024-01-15 |
+| `try_add` | DATE '2024-01-01' + INTERVAL 1 DAY | date 2024-01-02 |
+| `try_add` | TIMESTAMP '2024-01-01 00:00:00' + INTERVAL 1 HOUR | timestamp 01:00 |
+| `try_add` | DATE '2024-01-31' + INTERVAL 1 MONTH | date 2024-02-29 |
+| `try_divide` | INTERVAL 2 DAYS / 2 ; / 0 | 1 day ; NULL interval |
+| `try_avg` | INTERVAL 1 DAY | Spark: interval 1 day. RePark: loud `[FNP-11]` refuse (C-018 / BL-13) |
 | `try_add` | INT_MAX+1 / SMALLINT 32767+1 | NULL int / NULL smallint |
 | `try_add` | INTERVAL 1 DAY + 1 DAY | interval day, 2 days |
 | ANSI off | `try_*` | still NULL; `+` wraps; `/0` NULL |
 
 `try_sum` reuse: datafusion-spark kernel already registered; facade `F.try_sum` now dispatches it.
-`try_avg` reuse: alias of RePark `avg` (integer/float mean is Float64).
+`try_avg` is a distinct UDAF (integer/float mean is Float64; decimal overflow NULL; INTERVAL refuses `[FNP-11]`).
 
 ## Execution record (2026-08-31)
 
@@ -159,6 +170,17 @@ Hand-computed expectations are not an oracle.
 | `python3 scripts/ledger_lifecycle.py check --base bb7fa54af48632c52d28aa8f7f446fac1dbf3742` | 0 |
 | `make py-test` | 0 (472 passed) |
 | `make py-test-facade` | 0 (4187 passed, 75 skipped) |
+
+### Critic remediation gates (2026-08-31)
+
+| Command | Exit |
+|---|---|
+| `make verify` | 0 |
+| `make check-map-sync` | 0 (163 maps) |
+| `python3 scripts/ledger_lifecycle.py check --base bb7fa54af48632c52d28aa8f7f446fac1dbf3742` | 0 |
+| `make py-test` | 0 (472 passed) |
+| `make py-test-facade` | 0 (4194 passed, 75 skipped) |
+| targeted `test_fnp7_try_inversions.py` | 0 (28 passed) |
 
 pins: fnp-7-try-inversions/C-017
 
@@ -206,7 +228,7 @@ COVERAGE_ATTESTATION:
       justification: No AWS, IAM, secrets, or SQL built from user text.
     - id: AT-6
       status: ATTACKED
-      evidence: try_sum reuses datafusion-spark; try_avg aliases RePark avg; try_element_at aliases element_at; both doors share register_all.
+      evidence: try_sum reuses datafusion-spark; try_avg is a distinct UDAF (null_on_overflow); try_element_at aliases element_at; Spark door register_all.
       artifacts: [crates/repark-functions/src/lib.rs, crates/repark-functions/src/aggregate.rs, crates/repark-functions/src/collection.rs]
     - id: AT-7
       status: N/A
@@ -221,9 +243,42 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/test_fnp7_try_inversions.py]
     - id: AT-10
       status: ATTACKED
-      evidence: One pin per clause C-001..C-016; functions.py stays 1985; armed_names stays 62; try_avg leaves the W-0 absent roster.
+      evidence: One pin per clause C-001..C-018; functions.py stays 1985; armed_names stays 62; try_avg leaves the W-0 absent roster.
       artifacts: [python/repark/tests/test_fnp7_try_inversions.py, python/repark-parity/bench/windows/roster.py]
   reattested: []
   complete: true
 ```
+
+## Critic remediation (2026-08-31)
+
+Five S1 + three S2 from `/tmp/grok-worker/fnp7/critic-report.md`.
+
+| Finding | Disposition |
+|---|---|
+| L-001 `try_avg` decimal overflow RAISES | **FIXED.** Distinct `try_avg` UDAF; `null_on_overflow` on the decimal accumulator. `avg` still raises. Pin `test_try_avg_decimal_overflow_is_null`. |
+| L-002 DATE/TIMESTAMP ± INTERVAL PLAN_ERR | **FIXED.** Existing Arrow interval fields + chrono month/day/nanos. No new interval engine. |
+| L-003 INTERVAL / numeric PLAN_ERR | **FIXED.** Divide days+nanos; `/0` is NULL. |
+| L-004 `yyyy` / `MMM dd yyyy` silent NULL | **FIXED.** Java pattern scanner defaults missing month/day to 01; `MMM`/`MMMM` English months. Sweep: `yyyy-MM`, `yy`, `d/M/yyyy`, `yyyyMMdd`, `MMMM`. |
+| L-005 `try_avg(INTERVAL)` PLAN_ERR | **LOUD REFUSE (doctrine b).** Exact message `[FNP-11] try_avg(INTERVAL) is deferred to the FNP-11 temporal family (2026-08-31). …` Registry BL-13. Pin C-018. Spark computes interval day to second; averaging intervals is FNP-11. Silent NULL rejected. |
+| Q-001 hollow pins | **FIXED.** C-012 overflow + long-mean pins; C-015 exact 2 days + date/ts/interval-div; C-013 `repark.sql` `Invalid function` for all twelve names. |
+| Q-002 red-first transcript | **Recorded below.** |
+| CL-001 three-door overclaim | **FIXED.** tests/map.md names the two reachable doors + ANSI unreachability. |
+
+### Red-first (sabotage → red → restore, 2026-08-31)
+
+Each new assert was mutated, the named node run, then the file restored from a backup (not `git checkout`). File compared equal after the last restore; 28 pins green.
+
+| Pin | Mutant | Exit | Needle |
+|---|---|---|---|
+| C-012 `test_try_avg_decimal_overflow_is_null` | `[None]` → `[0]` | 1 | `None != 0` |
+| C-004 `test_try_to_date_java_formats_match_spark` | `yyyy` expected 2024-01-01 → 1999-01-01 | 1 | `2024` vs `1999` |
+| C-013 `test_try_names_unresolved_on_ansi_sql_door` | match `Invalid function` → `definitely-not-this` | 1 | `Invalid function 'try_add'` |
+| C-015 `test_try_add_interval_day` | days `2` → `99` | 1 | `MonthDayNano(months=0, days=2, …)` `2 == 99` |
+| C-018 `test_try_avg_interval_refuses_fnp11` | match `[FNP-11]…2026-08-31` → `definitely-not-this` | 1 | `[FNP-11] try_avg(INTERVAL) is deferred to the FNP-11 temporal family (2026-08-31)` |
+
+Logs: `/tmp/fnp7-sabotage-C-012.log` … `C-018.log`.
+
+### Oracle re-measure (live PySpark 4.1.2, Zulu 17, 2026-08-31)
+
+All L-001..L-004 and C-015 cells match Spark. L-005 Spark still returns `timedelta(days=1)` interval; RePark refuses `[FNP-11]` by design. `avg` decimal overflow still `ARITHMETIC_OVERFLOW`. Log: `/tmp/fnp7-oracle-remeasure.log`.
 

@@ -50,9 +50,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   read. pins: fnp-4c-higher-order-kernels/C-001, C-002, C-003, C-004, C-005, C-006, C-007,
   C-008, C-009, C-010, C-011, C-013, C-014
 - `try_invert/` — FNP-7a/7b scalar `try_*` kernels (NULL instead of raise). `try_element_at`
-  aliases `element_at`. `try_sum` reuses datafusion-spark; `try_avg` aliases RePark `avg`.
+  aliases `element_at`. `try_sum` reuses datafusion-spark; `try_avg` is its own UDAF
+  (decimal overflow NULL; INTERVAL input is the FNP-11 loud refuse).
   pins: fnp-7-try-inversions/C-001, C-002, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
-  C-011, C-012, C-014, C-015
+  C-011, C-012, C-014, C-015, C-018
 - `lib.rs` — crate-root stays at **175** under `check_lib_rs` with `pub mod timestamp_type`.
 - `timestamp_type.rs` — **Q10:** Spark-door `spark.sql.timestampType` carrier
   (`SparkTimestampTypeConfig`, `PREFIX = repark.timestamp`, default

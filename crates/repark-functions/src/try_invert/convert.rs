@@ -167,54 +167,165 @@ fn refuse_illegal_datetime_pattern(pattern: &str) -> Result<()> {
 }
 
 fn parse_with_java_pattern(text: &str, pattern: &str) -> Option<NaiveDate> {
-    let chrono_pattern = java_date_pattern_to_chrono(pattern)?;
-    NaiveDate::parse_from_str(text, &chrono_pattern).ok()
+    let tokens = tokenize_java_date_pattern(pattern)?;
+    let mut rest = text;
+    let mut year: Option<i32> = None;
+    let mut month: Option<u32> = None;
+    let mut day: Option<u32> = None;
+    for token in tokens {
+        match token {
+            DateToken::Year { width } => {
+                let (value, consumed) = take_digits(rest, width, width)?;
+                let parsed = i32::try_from(value).ok()?;
+                year = Some(if width <= 2 { 2000 + parsed } else { parsed });
+                rest = &rest[consumed..];
+            }
+            DateToken::MonthNumeric { width } => {
+                let min_width = if width == 1 { 1 } else { 2 };
+                let (value, consumed) = take_digits(rest, min_width, 2)?;
+                if !(1..=12).contains(&value) {
+                    return None;
+                }
+                month = Some(value);
+                rest = &rest[consumed..];
+            }
+            DateToken::MonthAbbrev => {
+                let (value, consumed) = take_english_month(rest, false)?;
+                month = Some(value);
+                rest = &rest[consumed..];
+            }
+            DateToken::MonthFull => {
+                let (value, consumed) = take_english_month(rest, true)?;
+                month = Some(value);
+                rest = &rest[consumed..];
+            }
+            DateToken::Day { width } => {
+                let min_width = if width == 1 { 1 } else { 2 };
+                let (value, consumed) = take_digits(rest, min_width, 2)?;
+                if !(1..=31).contains(&value) {
+                    return None;
+                }
+                day = Some(value);
+                rest = &rest[consumed..];
+            }
+            DateToken::Literal(expected) => {
+                if !rest.starts_with(expected) {
+                    return None;
+                }
+                rest = &rest[expected.len_utf8()..];
+            }
+        }
+    }
+    if !rest.is_empty() {
+        return None;
+    }
+    NaiveDate::from_ymd_opt(year?, month.unwrap_or(1), day.unwrap_or(1))
 }
 
-fn java_date_pattern_to_chrono(pattern: &str) -> Option<String> {
-    let mut out = String::new();
-    let bytes = pattern.as_bytes();
+enum DateToken {
+    Year { width: usize },
+    MonthNumeric { width: usize },
+    MonthAbbrev,
+    MonthFull,
+    Day { width: usize },
+    Literal(char),
+}
+
+fn tokenize_java_date_pattern(pattern: &str) -> Option<Vec<DateToken>> {
+    let chars: Vec<char> = pattern.chars().collect();
+    let mut tokens = Vec::new();
     let mut index = 0;
     let mut in_quote = false;
-    while index < bytes.len() {
-        let byte = bytes[index];
-        if byte == b'\'' {
+    while index < chars.len() {
+        let current = chars[index];
+        if current == '\'' {
             in_quote = !in_quote;
             index += 1;
             continue;
         }
         if in_quote {
-            out.push(byte as char);
+            tokens.push(DateToken::Literal(current));
             index += 1;
             continue;
         }
-        if !byte.is_ascii_alphabetic() {
-            out.push(byte as char);
-            index += 1;
+        if current == 'E' || current == 'e' {
+            return None;
+        }
+        if matches!(current, 'y' | 'u' | 'M' | 'd') {
+            let start = index;
+            while index < chars.len() && chars[index] == current {
+                index += 1;
+            }
+            let width = index - start;
+            let token = match (current, width) {
+                ('y' | 'u', 2) => DateToken::Year { width: 2 },
+                ('y' | 'u', n) => DateToken::Year { width: n.max(4) },
+                ('M', 1 | 2) => DateToken::MonthNumeric { width },
+                ('M', 3) => DateToken::MonthAbbrev,
+                ('M', 4) => DateToken::MonthFull,
+                ('d', 1 | 2) => DateToken::Day { width },
+                _ => return None,
+            };
+            tokens.push(token);
             continue;
         }
-        let mut run = 1;
-        while index + run < bytes.len() && bytes[index + run] == byte {
-            run += 1;
+        if current.is_ascii_alphabetic() {
+            return None;
         }
-        match (byte, run) {
-            (b'y' | b'u', 2) => out.push_str("%y"),
-            (b'y' | b'u', _) => out.push_str("%Y"),
-            (b'M', 2) => out.push_str("%m"),
-            (b'M', 1) => out.push_str("%-m"),
-            (b'd', 2) => out.push_str("%d"),
-            (b'd', 1) => out.push_str("%-d"),
-            (b'H', 2) => out.push_str("%H"),
-            (b'H', 1) => out.push_str("%-H"),
-            (b'm', 2) => out.push_str("%M"),
-            (b'm', 1) => out.push_str("%-M"),
-            (b's', 2) => out.push_str("%S"),
-            (b's', 1) => out.push_str("%-S"),
-            _ => return None,
-        }
-        index += run;
+        tokens.push(DateToken::Literal(current));
+        index += 1;
     }
-    Some(out)
+    if in_quote {
+        return None;
+    }
+    Some(tokens)
+}
+
+fn take_digits(text: &str, min_width: usize, max_width: usize) -> Option<(u32, usize)> {
+    let mut count = 0usize;
+    for byte in text.bytes() {
+        if !byte.is_ascii_digit() || count == max_width {
+            break;
+        }
+        count += 1;
+    }
+    if count < min_width {
+        return None;
+    }
+    Some((text[..count].parse().ok()?, count))
+}
+
+const MONTH_ABBREV: [&str; 12] = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+const MONTH_FULL: [&str; 12] = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+];
+
+fn take_english_month(text: &str, full: bool) -> Option<(u32, usize)> {
+    let names: &[&str] = if full { &MONTH_FULL } else { &MONTH_ABBREV };
+    let mut best: Option<(u32, usize)> = None;
+    for (index, name) in names.iter().enumerate() {
+        if text.len() >= name.len() && text[..name.len()].eq_ignore_ascii_case(name) {
+            let month = u32::try_from(index + 1).ok()?;
+            let consumed = name.len();
+            if best.is_none_or(|(_, prior)| consumed > prior) {
+                best = Some((month, consumed));
+            }
+        }
+    }
+    best
 }
 
 impl ScalarUDFImpl for SparkTryToNumber {
@@ -666,5 +777,71 @@ mod tests {
             .downcast_ref::<datafusion::arrow::array::BinaryArray>()
             .unwrap();
         assert_eq!(binary.value(0), b"a");
+    }
+
+    #[tokio::test]
+    async fn try_to_date_yyyy_defaults_month_day() {
+        let batches = ctx()
+            .sql("SELECT try_to_date('2024', 'yyyy') AS v")
+            .await
+            .unwrap()
+            .collect()
+            .await
+            .unwrap();
+        let array = batches[0]
+            .column(0)
+            .as_any()
+            .downcast_ref::<Date32Array>()
+            .unwrap();
+        assert_eq!(
+            Date32Type::to_naive_date_opt(array.value(0)).unwrap(),
+            NaiveDate::from_ymd_opt(2024, 1, 1).unwrap()
+        );
+    }
+
+    #[tokio::test]
+    async fn try_to_date_mmm_dd_yyyy() {
+        let batches = ctx()
+            .sql("SELECT try_to_date('Jan 15 2024', 'MMM dd yyyy') AS v")
+            .await
+            .unwrap()
+            .collect()
+            .await
+            .unwrap();
+        let array = batches[0]
+            .column(0)
+            .as_any()
+            .downcast_ref::<Date32Array>()
+            .unwrap();
+        assert_eq!(
+            Date32Type::to_naive_date_opt(array.value(0)).unwrap(),
+            NaiveDate::from_ymd_opt(2024, 1, 15).unwrap()
+        );
+    }
+
+    #[tokio::test]
+    async fn try_to_date_format_sweep() {
+        let cases = [
+            ("2024-01", "yyyy-MM", 2024, 1, 1),
+            ("24", "yy", 2024, 1, 1),
+            ("5/1/2024", "d/M/yyyy", 2024, 1, 5),
+            ("20240115", "yyyyMMdd", 2024, 1, 15),
+            ("January 15 2024", "MMMM dd yyyy", 2024, 1, 15),
+        ];
+        for (text, pattern, year, month, day) in cases {
+            let sql = format!("SELECT try_to_date('{text}', '{pattern}') AS v");
+            let batches = ctx().sql(&sql).await.unwrap().collect().await.unwrap();
+            let array = batches[0]
+                .column(0)
+                .as_any()
+                .downcast_ref::<Date32Array>()
+                .unwrap();
+            assert!(array.is_valid(0), "{text} / {pattern} was NULL");
+            assert_eq!(
+                Date32Type::to_naive_date_opt(array.value(0)).unwrap(),
+                NaiveDate::from_ymd_opt(year, month, day).unwrap(),
+                "{text} / {pattern}"
+            );
+        }
     }
 }
