@@ -134,11 +134,9 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
   [task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md](task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md);
   design: [docs/design/format-v3-track.md](docs/design/format-v3-track.md); audit:
   [task/ledgers/staging/v3-0-charter-ledger.md](task/ledgers/staging/v3-0-charter-ledger.md).
-  - **Measured true (V3-0, [#199](https://github.com/TRO-Wolf/repark/pull/199)):** reading
-    Spark-written v3 with Puffin deletion vectors and appending with row lineage are correct,
-    round-tripped through Spark. **Guarded:** `rewrite_data_files` reassigned `_row_id` on v3 —
-    registry `V3-LINEAGE-1`, stricter than Spark on purpose, reversible in one line; the fix is
-    fork work (F-7). Queued: `V3-DANGLE-1`, `V3-ROWID-1` (V3-4).
+  - **Measured true (V3-0, [#199](https://github.com/TRO-Wolf/repark/pull/199)):** v3 DV reads
+    and lineage appends round-trip through Spark. **Guarded:** `rewrite_data_files` reassigned `_row_id` on v3 —
+    registry `V3-LINEAGE-1`; the fix is fork work (F-7). Queued: `V3-DANGLE-1`.
   - **Delivered:** V3-1 `register_table` + the checked-in v3 fixture
     ([#203](https://github.com/TRO-Wolf/repark/pull/203)); V3-2 CREATE/CTAS `format-version = 3`
     behind `repark.sql.allowCreateFormatVersion3` (default false), ALTER refused
@@ -162,7 +160,10 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
     FIXED (`V3-ADOPT-1`). V3-3 (2026-08-30) measured `UPDATE` / `MERGE` keep-refusal:
     Spark 4.1.2 + Iceberg 1.11.0 preserves `_row_id`; the engine rewrite reassigns
     (registry `V3-COW-1`). `V3-LINEAGE-1` and `B-MOR-3` stay.
-  - **Next:** V3-4 — serve `_row_id` / `_last_updated_sequence_number`; V3-3 charter
+    **V3-4 read (2026-08-31):** `_row_id` / `_last_updated_sequence_number` Spark-equal on
+    single-table v3 reads (three doors); v1/v2 engine Schema `No field named _row_id`;
+    JOIN/CTE/subquery/time-travel refuse `V3-ROWID-2`. `V3-ROWID-1` FIXED. Preserve-half stays F-7.
+  - **Next:** V3-5 / F-7 COW lineage lift. V3-3 charter
     [task/ledgers/completed/v3-3-dml-ledger.md](task/ledgers/completed/v3-3-dml-ledger.md)
     (keep-refusal, F-rp3-c7 stays a fork finding).
     Sequence: [docs/design/format-v3-track.md §5](docs/design/format-v3-track.md).
@@ -220,9 +221,8 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
   [DML-1](docs/spark-sql-iceberg-parity.md).
 <!-- /ws -->
 
-Parked lanes: **none.** The `repark.sql` re-home lane closed 2026-08-14 (#95 —
-[docs/release.md](docs/release.md) "RESOLVED"; design ruling
-[docs/design/python-facade.md](docs/design/python-facade.md) §4).
+Parked lanes: **none** (the `repark.sql` re-home lane closed 2026-08-14, #95 —
+[docs/release.md](docs/release.md) "RESOLVED").
 
 <!-- ws id=dbt ledgers=dbt- state=open -->
 - **dbt-repark is no longer parked.** M0–M2a merged on the sibling repo (append, delete+insert,

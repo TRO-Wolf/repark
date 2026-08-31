@@ -36,6 +36,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   real work, orphan 24h floor on the partitioned-DV fixture after a RePark
   append, and the live-DV UPDATE pre-write refusal with snapshot, rows, and fixture bytes unchanged;
   rustdoc cites C-001..C-016 (`Model: Grok 4.6 xHigh`; rp-3-fork-repin/C-004).
+- `v3_lineage.rs` — **V3-4:** Spark-door `_row_id` / `_last_updated_sequence_number` on the
+  V3E-3 fixtures (MOR+DV surviving rows), created v3 derivation, v2/v1 unresolved (`No field
+  named _row_id`), `SELECT *, _row_id` expands user columns only, qualified/aliased forms,
+  unquoted case-fold, JOIN/CTE/subquery/`VERSION AS OF` refuse `V3-ROWID-2`, V3-COW-1 files
+  byte-untouched (content-hash pin; runs on CI's shallow checkout).
+  pins: v3-4-serve-lineage-columns/C-001, C-002, C-005, C-006, C-007, C-008, C-009, C-010,
+  C-011, C-012, C-013, C-014, C-015, C-016, C-018, C-020
 - `v3e3.rs` — **V3E-3:** Spark-written partitioned v3 DV fixture and equality-delete
   + DV fixture (`fixtures/v3-spark-part-dv/`, `fixtures/v3-spark-eq-dv/`); live
   rows, partition prune, `.delete_files` content 1/2, B-MOR-3 refuse, RP-3 cells 3–6

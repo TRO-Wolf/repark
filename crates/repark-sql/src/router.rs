@@ -34,9 +34,32 @@ pub async fn execute(cx: EngineContext<'_>, sql: &str) -> Result<DataFrame> {
     };
     // Release every relation registered by the rewrite after planning.
     let mut pinned = time_travel::PinnedViews::default();
-    let result = execute_time_travelled(&cx, &sql, &mut pinned).await;
+    let mut lineage_pins = repark_core::LineagePins::default();
+    let result = execute_time_travelled(&cx, &sql, &mut pinned, &mut lineage_pins).await;
+    lineage_pins.release(cx.ctx);
     pinned.release(cx.ctx);
     result
+}
+
+/// Pin v3 lineage columns onto a temp provider when the statement names them.
+async fn rewrite_lineage_sql<'a>(
+    cx: &EngineContext<'_>,
+    sql: Cow<'a, str>,
+    lineage_pins: &mut repark_core::LineagePins,
+) -> Result<Cow<'a, str>> {
+    let dialect = datafusion::sql::sqlparser::dialect::GenericDialect {};
+    match repark_core::prepare_lineage_sql(
+        cx.ctx,
+        cx.catalogs,
+        sql.as_ref(),
+        &dialect,
+        lineage_pins,
+    )
+    .await?
+    {
+        Some(rewritten) => Ok(Cow::Owned(rewritten)),
+        None => Ok(sql),
+    }
 }
 
 /// Run the pipeline after the `FOR … AS OF` rewrite.
@@ -44,11 +67,13 @@ async fn execute_time_travelled(
     cx: &EngineContext<'_>,
     sql: &str,
     pinned: &mut time_travel::PinnedViews,
+    lineage_pins: &mut repark_core::LineagePins,
 ) -> Result<DataFrame> {
     let sql = match time_travel::prepare_time_travel_sql(cx, sql, pinned).await? {
         Some(rewritten) => Cow::Owned(rewritten),
         None => Cow::Borrowed(sql),
     };
+    let sql = rewrite_lineage_sql(cx, sql, lineage_pins).await?;
     let sql: &str = &sql;
 
     let statement = match cx.ctx.state().sql_to_statement(sql, &PARSER_DIALECT) {

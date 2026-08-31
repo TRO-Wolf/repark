@@ -174,6 +174,13 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   warehouse (`memory_warehouse_fallback_root`, also used to normalize CALL `location`
   strings); `CatalogRegistry::from` still uses `std::env::temp_dir()`. Hoisted MOVE-ONLY
   from the v1 SQL crate.
+- `lineage_columns.rs` — **V3-4:** `prepare_lineage_sql` rewrites **single-table** queries
+  that name `_row_id` / `_last_updated_sequence_number` onto a v3
+  `LineageColumnsTableProvider` temp view (qualified/aliased FROM, unquoted case-fold,
+  schema-order `*` expand). JOIN / CTE / subquery / time-travel naming a lineage column
+  refuse `[V3-ROWID-2]`. v1/v2 stay unresolved (`No field named _row_id`). Both SQL doors
+  call it.
+  pins: v3-4-serve-lineage-columns/C-002, C-003, C-011, C-012, C-013, C-014, C-015, C-016
 - `time_travel.rs` (+ `time_travel/tests.rs`) — `TimeTravelSpec` + parsers
   (`parse_version_value`, `parse_timestamp_to_ms`), snapshot resolution, `read_table_at`
   (snapshot-pinned static provider via `iceberg-datafusion`), and **`next_temp_view_name` — the
@@ -309,6 +316,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 | `spark.sql.session.timeZone` seems to have no effect on `year`/`hour`/`date_trunc` | Since H-1a split B it DOES, on a Spark-extended session. On a session built without `SparkExtension` it does not, because stock DataFusion's `date_part` reads the array's own zone — the zone reaches the extractors through `SparkExtension::configure`. Pins: `crates/repark-spark/tests/session_timezone.rs`, `crates/repark-sql/tests/session_timezone_ansi_door.rs`. |
 | A session refuses to build naming `spark.sql.session.timeZone` | The zone is validated at construction (`session_time_zone.rs`): it must be an IANA id (`America/New_York`) or a fixed offset (`+05:00`). A differently-cased lookalike key is not this knob — there is exactly one spelling. |
 | `$`-suffixed metadata tables do NOT show up in `SHOW TABLES` | Intended since 2026-08-10 — `repark_iceberg::catalog::MetadataProjectionSchemaProvider::table_names` filters the fork's synthesized names ([ADR-0006](../../../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md)); they stay queryable as `ns."t$snapshots"`. Pins: `information_schema_hides_the_dollar_metadata_tables_on_the_bare_session` + `a_hidden_metadata_table_is_still_queryable_on_the_bare_session`. |
+| `SELECT * … JOIN … _row_id` returns shuffled user columns | Intended refuse `[V3-ROWID-2]` — the rewrite is single-table only (`lineage_columns.rs`). A successful HashMap-ordered projection is the L-001 defect. |
 
 First checks: `cargo test -p repark-core`. Escalate to: [../map.md#debug](../map.md).
 
