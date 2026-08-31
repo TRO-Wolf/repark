@@ -845,7 +845,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   object-identity only; type error on bad level.
 - `test_merge_into.py` — **R-MERGEINTO**: builder upsert equals SQL-MERGE (COW + MoR); delete /
   partial update / insert dict; Column condition; temp-view cleanup (success + failure);
-  no-clause `[NO_MERGE_ACTION_SPECIFIED]`; `whenNotMatchedBySource` engine reject; type errors;
+  no-clause `[NO_MERGE_ACTION_SPECIFIED]`; `whenNotMatchedBySource().delete()` executes;
+  type errors;
   `withSchemaEvolution` refuses loud; equi-join sugar unit pin. Arrow path for row sets.
 - `test_merge_scan_prune_semantics.py` — **MG-1 (2026-08-15):** MERGE residual-probe
   hardening pins (r1/M1 Utf8→INT 2-row upsert; r2/M6 BIGINT 3e9 vs INT no-abort;
@@ -1711,7 +1712,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `MERGE_CARDINALITY_VIOLATION` on both engines + insert-only that commits both rows),
   `WHEN MATCHED AND` arm ordering / threshold first-match-wins, NULL merge keys (NULL=NULL does
   not match), insert-only and delete arms, conditional matched update by target predicate, and
-  the `WHEN NOT MATCHED BY SOURCE` refuse disclosure (repark `NotImplemented`; Spark deletes
+  the `WHEN NOT MATCHED BY SOURCE` content row (DML-A; engines agree on values and types)
   unmatched target), and — **audit M11 (2026-08-15)** — `dup_source_keys_unconditional_delete`, now
   a **content** equality row: the M11 exemption landed, so repark matches the recorded Spark
   survivor table (id=1 / name='a') for duplicate source keys against a SINGLE unconditional

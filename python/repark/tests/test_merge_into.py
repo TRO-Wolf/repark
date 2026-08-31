@@ -197,17 +197,22 @@ def test_merge_into_no_clauses_raises(spark: ReparkSession) -> None:
         writer.merge()
 
 
-def test_merge_into_not_matched_by_source_engine_rejects(spark: ReparkSession) -> None:
-    """Surface accepts whenNotMatchedBySource; engine rejects (not_matched_by_source_rejected)."""
+def test_merge_into_not_matched_by_source_deletes_unmatched(spark: ReparkSession) -> None:
+    """whenNotMatchedBySource().delete() drops unmatched target rows.
+
+    pins: dml-a-merge-not-matched-by-source/C-002
+    """
     _seed(spark)
-    with pytest.raises(PySparkException, match=r"NOT MATCHED BY SOURCE|not supported"):
-        (
-            spark.sql("SELECT 1 AS id, 'a' AS name")
-            .mergeInto(FQ, "id")
-            .whenNotMatchedBySource()
-            .delete()
-            .merge()
-        )
+    (
+        spark.sql("SELECT 1 AS id, 'aa' AS name")
+        .mergeInto(FQ, "id")
+        .whenMatched()
+        .updateAll()
+        .whenNotMatchedBySource()
+        .delete()
+        .merge()
+    )
+    assert _rows(spark) == [{"id": 1, "name": "aa"}]
 
 
 def test_merge_into_type_errors(spark: ReparkSession) -> None:

@@ -3,9 +3,9 @@
 Oracle: live PySpark 4.1.2 ``pyspark.sql.merge.MergeIntoWriter`` (surface shapes). Execution
 delegates to the existing ``spark.sql("MERGE INTO …")`` path (zero engine code in this unit).
 
-``whenNotMatchedBySource`` is accepted on the builder and rendered into SQL; the engine rejects
-``WHEN NOT MATCHED BY SOURCE`` today (``not_matched_by_source_rejected`` pin); the engine
-returns a loud refusal.
+``whenNotMatchedBySource`` is accepted on the builder and rendered into SQL. The engine runs
+``WHEN NOT MATCHED BY SOURCE`` DELETE and UPDATE (not ``UPDATE SET *`` — Spark parse-fails that
+form). pins: dml-a-merge-not-matched-by-source/C-002, C-003
 """
 
 from __future__ import annotations
@@ -125,8 +125,8 @@ class MergeIntoWriter:
     ) -> MergeIntoWriter.WhenNotMatchedBySource:
         """Open a ``WHEN NOT MATCHED BY SOURCE`` action.
 
-        The clause is rendered into SQL. The engine rejects this form today — callers see the
-        engine's loud error (not a silent no-op).
+        The clause is rendered into SQL and executed (DELETE / UPDATE). ``updateAll`` still
+        emits ``UPDATE SET *``, which Spark parse-fails on this arm.
         """
         return MergeIntoWriter.WhenNotMatchedBySource(self, condition)
 
@@ -298,7 +298,7 @@ class MergeIntoWriter:
             return self._writer
 
     class WhenNotMatchedBySource:
-        """``WHEN NOT MATCHED BY SOURCE`` terminals (engine rejects at execute today)."""
+        """``WHEN NOT MATCHED BY SOURCE`` terminals (DELETE / UPDATE)."""
 
         def __init__(self, writer: MergeIntoWriter, condition: Column | str | None) -> None:
             self._writer = writer

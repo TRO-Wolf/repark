@@ -39,6 +39,12 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   persisted — Java's `CommitStateUnknownException` rethrow-before-cleanup rule);
   reclaim is orphan-file maintenance. Per-file `FileIO::delete` failures
   `tracing::warn` and never mask the original commit error.
+- `not_matched_by_source.rs` — **DML-A:** `WHEN NOT MATCHED BY SOURCE` types, SQL
+  fragments, full-snapshot path listing, MOR work SQL. COW rewrite applies the arm
+  through `rewrite_column` ELSE / combined DELETE.
+  pins: dml-a-merge-not-matched-by-source/C-001, C-002, C-003, C-008
+- `cow_scratch.rs` — COW rewrite scratch tables (file-scoped target, affected-path
+  MemTable, drop guard) extracted so `mod.rs` ratchets down.
 - `insert.rs` — NOT MATCHED INSERT machinery: `insert_projection` (clause→projection lowering,
   moved from `mod.rs` 2026-08-15), the source-only execution seam (`insert_stream_checked`),
   and the ANSI store-assignment gate (audit M4/M9). **BL-4 (2026-08-15):**

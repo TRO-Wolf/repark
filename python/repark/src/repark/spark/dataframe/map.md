@@ -14,6 +14,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
 
 - `core.py` owns `DataFrame`, plan construction, joins, actions, schema/type conversion, cache,
   checkpoint, temp-view registration, declared sorting, `dynamicFlatten`, and public re-exports.
+  DML-A: `mergeInto` `whenNotMatchedBySource` DELETE/UPDATE execute.
 - `actions_export.py` owns `DataFrameNaFunctions.fill` and `drop`; `DataFrame.replace` stays in
   `core.py`.
 - `joins_columns.py` owns `GroupedData`, grouping sets, pivot, and pandas UDF grouping bridges.

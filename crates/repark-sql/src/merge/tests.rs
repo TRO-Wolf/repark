@@ -134,22 +134,29 @@ fn invalid_clause_action_pairings_refuse() {
          WHEN MATCHED THEN INSERT (id) VALUES (s.id)",
         "MERGE INTO ice.sales.orders AS t USING s ON t.id = s.id \
          WHEN NOT MATCHED THEN UPDATE SET a = 1",
+        "MERGE INTO ice.sales.orders AS t USING s ON t.id = s.id \
+         WHEN NOT MATCHED BY SOURCE THEN INSERT (id) VALUES (s.id)",
     ] {
+        let parsed = Parser::parse_sql(&GenericDialect {}, sql);
+        if parsed.is_err() {
+            continue;
+        }
+        let err = lower_error(sql);
         assert!(
-            Parser::parse_sql(&GenericDialect {}, sql).is_err(),
-            "the pairing is rejected at parse time: `{sql}`"
+            err.contains("only UPDATE or DELETE") || err.contains("NOT MATCHED BY SOURCE"),
+            "{err}"
         );
     }
 
-    let by_source = lower_error(
+    let (_, spec) = lower_sql(
         "MERGE INTO ice.sales.orders AS t USING s ON t.id = s.id \
          WHEN NOT MATCHED BY SOURCE THEN DELETE",
     );
-    assert!(by_source.contains("NOT MATCHED BY SOURCE"), "{by_source}");
-    assert!(
-        by_source.contains("separate DELETE"),
-        "names the workaround: {by_source}"
-    );
+    assert_eq!(spec.not_matched_by_source.len(), 1);
+    assert!(matches!(
+        spec.not_matched_by_source[0].action,
+        NotMatchedBySourceAction::Delete
+    ));
 }
 
 /// An UPDATE with no assignments and an INSERT with no column list are refused.

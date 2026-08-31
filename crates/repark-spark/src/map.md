@@ -31,9 +31,10 @@ pins: rp-3-fork-repin/C-010
   before fork lineage divergence. SQP-1: the front door canonicalizes escapes once and
   translates downstream parser locations back to the caller's SQL.
 - `merge.rs` — MERGE INTO lowering (sqlparser AST → `repark_iceberg::write::merge::MergeSpec`,
-  star-sentinel rewrite); 24 in-module tests (MG-2: M2 Oracle sub-predicates, M3
+  star-sentinel rewrite); MATCHED / NOT MATCHED / NOT MATCHED BY SOURCE (DML-A);
+  in-module tests (MG-2: M2 Oracle sub-predicates, M3
   assignment-target qualification, M8 INSERT column list, M10 non-last
-  unconditional clause).
+  unconditional clause). pins: dml-a-merge-not-matched-by-source/C-005
 - `insert_overwrite.rs` — INSERT OVERWRITE: empty probe/validate/provider-wipe (C1-Q-001) +
   non-empty stage-then-swap; **DML-B** `PARTITION (…)` static/dynamic via
   `repark_iceberg::write::partition_overwrite`; 2 in-module tests (`assignment_type_unit_tests`).

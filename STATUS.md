@@ -170,6 +170,11 @@ published history — an exposure **accepted by explicit decision**; provenance:
     Sequence: [docs/design/format-v3-track.md §5](docs/design/format-v3-track.md).
 <!-- /ws -->
 
+<!-- ws id=dml ledgers=dml-a- state=open -->
+- **v0.6 DML remainder** — DML-A `MERGE … WHEN NOT MATCHED BY SOURCE` (DELETE/UPDATE, COW+MOR)
+  on `feat/dml-a-merge-not-matched-by-source`. DML-B/C parked.
+<!-- /ws -->
+
 <!-- ws id=perf ledgers=perf- state=open -->
 - **Performance campaign — TA parity with `polars_talib` (chartered 2026-08-15; measure-first).**
   Goal added to [PROJECT.md](PROJECT.md) Goals. Phase 0 is the recorded benchmark baseline (the

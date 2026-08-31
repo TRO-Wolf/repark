@@ -271,6 +271,7 @@ fn merge_spec(
         on_sql: "t.id = s.id".to_string(),
         matched,
         not_matched,
+        not_matched_by_source: vec![],
     }
 }
 
@@ -3014,7 +3015,6 @@ async fn resolve_affected_data_files_local_fs_is_sub_10pct_of_merge_budget() {
         resolve_ms < 500.0,
         "resolve_affected avg {resolve_ms:.3} ms looks hung on local-fs"
     );
-    // Scout #6 gate is profile-sensitive: debug inflates both sides and the ratio on tiny fixtures.
     #[cfg(not(debug_assertions))]
     assert!(
         share_pct < 10.0,

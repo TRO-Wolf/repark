@@ -50,7 +50,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   contracts. Execution uses the DataFrame Arrow bridge.
 - `functions_url.py` — URL parsing and encoding wrappers.
 - `functions_window.py` — window function wrappers.
-- `merge.py` — `mergeInto` builder and SQL MERGE source registration.
+- `merge.py` — `mergeInto` builder and SQL MERGE source registration. DML-A:
+  `whenNotMatchedBySource` DELETE/UPDATE execute.
+  pins: dml-a-merge-not-matched-by-source/C-002, C-003
 - `polars.py` — optional Polars-style facade. Imports Polars lazily and keeps join,
   sort, and null-placement semantics explicit.
 - `row.py` — Spark-compatible Row construction, indexing, equality, nested conversion,

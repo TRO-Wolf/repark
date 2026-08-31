@@ -10,7 +10,6 @@ use datafusion::arrow::array::{Array, ArrayRef, Int64Array, RecordBatch, StringA
 use datafusion::arrow::compute::{CastOptions, cast_with_options};
 use datafusion::arrow::datatypes::{DataType, Field, Schema as ArrowSchema, SchemaRef};
 use datafusion::catalog::streaming::StreamingTable;
-use datafusion::datasource::MemTable;
 use datafusion::error::{DataFusionError, Result};
 use datafusion::execution::TaskContext;
 use datafusion::physical_plan::SendableRecordBatchStream;
@@ -40,14 +39,17 @@ use tracing::Instrument;
 use uuid::Uuid;
 
 mod abort;
+mod cow_scratch;
 mod dv_close;
 mod insert;
+mod not_matched_by_source;
 use insert::{
     insert_projection, insert_stream_checked, store_assignment_then_sql, update_stream_checked,
 };
+pub use not_matched_by_source::{NotMatchedBySourceAction, NotMatchedBySourceClause};
 
 use crate::write::concurrency::{WriteConcurrency, concurrency_from_ctx};
-use crate::write::file_scoped_rewrite::{allowlist_from_paths, filter_tasks_to_allowlist_nonempty};
+use crate::write::file_scoped_rewrite::filter_tasks_to_allowlist_nonempty;
 use crate::write::name_resolution::{CaseInsensitiveColumnIndex, SourceMatch};
 use crate::write::scan_concurrency::scan_concurrency_from_ctx;
 use crate::write::scan_prune::{
@@ -84,6 +86,8 @@ pub struct MergeSpec {
     pub matched: Vec<MatchedClause>,
     /// `WHEN NOT MATCHED [BY TARGET]` clauses, in declaration order.
     pub not_matched: Vec<InsertClause>,
+    /// `WHEN NOT MATCHED BY SOURCE` clauses, in declaration order.
+    pub not_matched_by_source: Vec<NotMatchedBySourceClause>,
 }
 
 /// One `WHEN MATCHED [AND …] THEN UPDATE/DELETE` clause.
@@ -198,6 +202,9 @@ async fn residual_join_key_filter(
     file_scoped_rewrite: bool,
 ) -> Result<Option<Predicate>> {
     if !scan_pruning_from_ctx(ctx) {
+        return Ok(None);
+    }
+    if not_matched_by_source::is_present(spec) {
         return Ok(None);
     }
     // COW full-target rewrite must not residual-filter the primary, or unmatched survivors drop.
@@ -388,7 +395,7 @@ fn validate_update_columns(spec: &MergeSpec, write_schema: &ArrowSchema) -> Resu
             }
         }
     }
-    Ok(())
+    not_matched_by_source::validate_update_columns(spec, write_schema)
 }
 
 /// Resolve `name` against `schema` case-insensitively (Spark `caseSensitive=false`).
@@ -712,7 +719,12 @@ async fn plan_and_commit_cow(
         snapshot_id,
     } = *target;
     let (affected, new_files) = async {
-        let affected = if spec.matched.is_empty() {
+        let affected = if not_matched_by_source::is_present(spec) {
+            if !spec.matched.is_empty() {
+                let _ = affected_files(ctx, sql, skip_cardinality(spec)).await?;
+            }
+            not_matched_by_source::all_current_data_file_paths(table).await?
+        } else if spec.matched.is_empty() {
             Vec::new()
         } else {
             affected_files(ctx, sql, skip_cardinality(spec)).await?
@@ -721,10 +733,9 @@ async fn plan_and_commit_cow(
         let mut streams: Vec<std::pin::Pin<Box<dyn Stream<Item = Result<RecordBatch>> + Send>>> =
             Vec::new();
         // Scratches to drop on every exit of this block (file-scoped target and/or path table).
-        let mut rewrite_scratches = MergeScratchGuard::new(ctx);
+        let mut rewrite_scratches = cow_scratch::MergeScratchGuard::new(ctx);
         if !affected.is_empty() {
-            // R-MERGE-FILE-SCAN: rewrite against a file-scoped target scan when enabled.
-            let rewrite_scratch = maybe_register_file_scoped_rewrite_target(
+            let rewrite_scratch = cow_scratch::maybe_register_file_scoped_rewrite_target(
                 ctx,
                 table,
                 snapshot_id,
@@ -735,7 +746,7 @@ async fn plan_and_commit_cow(
                 rewrite_scratches.push(rewrite_name.clone());
                 sql.rewrite_sql_allowlisted(rewrite_name, write_schema)
             } else {
-                let path_table = register_affected_paths_table(ctx, &affected)?;
+                let path_table = cow_scratch::register_affected_paths_table(ctx, &affected)?;
                 rewrite_scratches.push(path_table.clone());
                 sql.rewrite_sql_path_semijoin(sql.target_name, &path_table, write_schema)
             };
@@ -769,34 +780,6 @@ async fn plan_and_commit_cow(
         .await
 }
 
-/// Register a file-scoped streaming COW target when `affected` is a non-empty proper subset.
-fn maybe_register_file_scoped_rewrite_target(
-    ctx: &SessionContext,
-    table: &Table,
-    snapshot_id: Option<i64>,
-    write_schema: &SchemaRef,
-    affected: &[String],
-) -> Result<Option<String>> {
-    if !file_scoped_rewrite_from_ctx(ctx) || affected.is_empty() {
-        return Ok(None);
-    }
-    // When every live data file is affected, file-scoping is a no-op — keep the full path.
-    let allowlist = allowlist_from_paths(affected);
-    let scratch = scratch_schema(write_schema);
-    let scan_concurrency = scan_concurrency_from_ctx(ctx);
-    let source: Arc<dyn PartitionStream> = Arc::new(TargetScanStream::new(
-        table.clone(),
-        snapshot_id,
-        Arc::clone(&scratch),
-        write_schema,
-        None,
-        scan_concurrency.concurrency_limit,
-        Some(allowlist),
-    ));
-    let name = register_streaming_target(ctx, scratch, source)?;
-    Ok(Some(name))
-}
-
 /// The merge-on-read arm (Group T): data files are left COMPLETELY untouched.
 async fn plan_and_commit_mor(
     ctx: &SessionContext,
@@ -814,11 +797,17 @@ async fn plan_and_commit_mor(
     let (pairs, data_files) = async {
         let mut streams: Vec<std::pin::Pin<Box<dyn Stream<Item = Result<RecordBatch>> + Send>>> =
             Vec::new();
-        let pairs = if spec.matched.is_empty() {
+        let mut pairs = if spec.matched.is_empty() {
             Vec::new()
         } else {
-            let (pairs, update_batches) =
-                matched_work_mor(ctx, sql, write_schema, skip_cardinality(spec)).await?;
+            let (pairs, update_batches) = matched_work_mor(
+                ctx,
+                sql,
+                write_schema,
+                skip_cardinality(spec),
+                &sql.matched_work_sql(write_schema),
+            )
+            .await?;
             if !update_batches.is_empty() {
                 streams.push(Box::pin(futures::stream::iter(
                     update_batches.into_iter().map(Ok),
@@ -826,6 +815,22 @@ async fn plan_and_commit_mor(
             }
             pairs
         };
+        if not_matched_by_source::is_present(spec) {
+            let (nmbs_pairs, nmbs_updates) = matched_work_mor(
+                ctx,
+                sql,
+                write_schema,
+                true,
+                &not_matched_by_source::mor_work_sql(sql, write_schema),
+            )
+            .await?;
+            pairs.extend(nmbs_pairs);
+            if !nmbs_updates.is_empty() {
+                streams.push(Box::pin(futures::stream::iter(
+                    nmbs_updates.into_iter().map(Ok),
+                )));
+            }
+        }
         for index in 0..spec.not_matched.len() {
             let insert_sql = sql.insert_sql(index, write_schema)?;
             streams.push(Box::pin(
@@ -1061,13 +1066,12 @@ async fn matched_work_mor(
     sql: &MergeSql<'_>,
     write_schema: &SchemaRef,
     skip_cardinality: bool,
+    work_sql: &str,
 ) -> Result<(
     Vec<crate::write::position_delete::PositionDeletePair>,
     Vec<RecordBatch>,
 )> {
-    // === merge ===
-    let mut stream =
-        update_stream_checked(ctx, sql, &sql.matched_work_sql(write_schema), write_schema).await?;
+    let mut stream = update_stream_checked(ctx, sql, work_sql, write_schema).await?;
     let mut path_intern: HashMap<String, usize> = HashMap::new();
     let mut unique_paths: Vec<std::sync::Arc<str>> = Vec::new();
     let mut seen_pair: HashSet<(usize, i64)> = HashSet::new();
@@ -1214,58 +1218,6 @@ fn require_non_null_i64(array: &Int64Array, row: usize, label: &str) -> Result<i
         )));
     }
     Ok(array.value(row))
-}
-
-/// Column name for the scout-#18 affected-path `MemTable` (semi-join key).
-const AFFECTED_PATHS_COL: &str = "path";
-
-/// RAII guard for MERGE scratch tables registered during COW rewrite.
-struct MergeScratchGuard<'a> {
-    ctx: &'a SessionContext,
-    names: Vec<String>,
-}
-
-impl<'a> MergeScratchGuard<'a> {
-    fn new(ctx: &'a SessionContext) -> Self {
-        Self {
-            ctx,
-            names: Vec::new(),
-        }
-    }
-
-    fn push(&mut self, name: String) {
-        self.names.push(name);
-    }
-}
-
-impl Drop for MergeScratchGuard<'_> {
-    fn drop(&mut self) {
-        for name in &self.names {
-            let _ = deregister_merge_scratch(self.ctx, name);
-        }
-    }
-}
-
-/// Register a one-column `MemTable` of affected `_file` paths for the COW rewrite semi-join (scout
-fn register_affected_paths_table(ctx: &SessionContext, affected: &[String]) -> Result<String> {
-    let name = format!("__repark_merge_aff_paths_{}", Uuid::new_v4().simple());
-    let schema = Arc::new(ArrowSchema::new(vec![Field::new(
-        AFFECTED_PATHS_COL,
-        DataType::Utf8,
-        false,
-    )]));
-    let path_array = StringArray::from(
-        affected
-            .iter()
-            .map(std::string::String::as_str)
-            .collect::<Vec<_>>(),
-    );
-    let batch = RecordBatch::try_new(Arc::clone(&schema), vec![Arc::new(path_array)])?;
-    let table = MemTable::try_new(schema, vec![vec![batch]]).map_err(|error| {
-        DataFusionError::Internal(format!("affected-path MemTable build failed: {error}"))
-    })?;
-    ctx.register_table(name.as_str(), Arc::new(table))?;
-    Ok(name)
 }
 
 /// Builds the SQL the merge runs.
@@ -1502,11 +1454,12 @@ impl MergeSql<'_> {
         format!(
             "SELECT {projection} FROM {quoted_target} AS {ta} \
              INNER JOIN {quoted_paths} AS __repark_aff \
-               ON {ta}.\"{FILE_PATH_COL}\" = __repark_aff.\"{AFFECTED_PATHS_COL}\" \
+               ON {ta}.\"{FILE_PATH_COL}\" = __repark_aff.\"{path_col}\" \
              LEFT JOIN {source} ON {on} \
              WHERE NOT ({deleted})",
             source = self.source_from(),
             on = self.spec.on_sql,
+            path_col = cow_scratch::AFFECTED_PATHS_COL,
         )
     }
 
@@ -1541,11 +1494,12 @@ impl MergeSql<'_> {
                 Some(format!("WHEN {index} THEN ({then_expr})"))
             })
             .collect();
+        let else_expr = not_matched_by_source::rewrite_else(self, column, &original, store_type);
         if branches.is_empty() {
-            format!("{original} AS {quoted}")
+            format!("{else_expr} AS {quoted}")
         } else {
             format!(
-                "CASE ({clause_id}) {} ELSE {original} END AS {quoted}",
+                "CASE ({clause_id}) {} ELSE {else_expr} END AS {quoted}",
                 branches.join(" "),
                 clause_id = self.matched_clause_id_expr(),
             )
@@ -1553,7 +1507,7 @@ impl MergeSql<'_> {
     }
 
     /// True when the row's first applicable clause is a DELETE.
-    fn delete_applies(&self) -> String {
+    pub(super) fn delete_applies(&self) -> String {
         let delete_ids: Vec<String> = self
             .spec
             .matched
@@ -1562,7 +1516,7 @@ impl MergeSql<'_> {
             .filter(|(_, clause)| matches!(clause.action, MatchedAction::Delete))
             .map(|(index, _)| index.to_string())
             .collect();
-        if delete_ids.is_empty() {
+        let matched_delete = if delete_ids.is_empty() {
             "FALSE".to_string()
         } else if delete_ids.len() == 1 {
             format!(
@@ -1576,7 +1530,8 @@ impl MergeSql<'_> {
                 self.matched_clause_id_expr(),
                 delete_ids.join(", ")
             )
-        }
+        };
+        not_matched_by_source::combined_delete_applies(&matched_delete, self)
     }
 
     /// The rows insert clause `index` adds: source rows with no target match.
