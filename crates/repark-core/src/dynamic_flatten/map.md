@@ -28,8 +28,8 @@ operator.
 - Up: [../map.md](../map.md)
 - Facade contract: `python/repark/tests/test_dynamic_flatten.py`
 - Ledger: [../../../../task/df1-rust-flatten-ledger.md](../../../../task/ledgers/archive/2026-08/2026-08-20-df1-rust-flatten-ledger.md)
-- DFP-1: [../../../../task/ledgers/staging/dfp-1-preserve-null-unnest-ledger.md](../../../../task/ledgers/staging/dfp-1-preserve-null-unnest-ledger.md)
-  pins: dfp-1-preserve-null-unnest/C-007, C-008, C-009, C-010, C-012
+- DFP-1: [../../../../task/ledgers/completed/dfp-1-preserve-null-unnest-ledger.md](../../../../task/ledgers/completed/dfp-1-preserve-null-unnest-ledger.md)
+  pins: dfp-1-preserve-null-unnest/C-007, C-008, C-009, C-010, C-011, C-012
 
 ## Debug
 

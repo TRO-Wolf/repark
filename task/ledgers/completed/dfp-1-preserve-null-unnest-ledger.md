@@ -34,11 +34,11 @@ compute, the optimizer guard, struct extraction, custom physical operators, and 
 | C-008 | The implementation adds no dependency, unsafe code, panic path, or new public interface. | Diff review plus clippy and panic-ban gates. | **PROVEN** | Rust candidate scans: 0; `make verify` clippy and panic-ban: 0. |
 | C-009 | Code comments do not grow; names and tests carry the implementation detail. | Comment-density gate and final diff review. | **PROVEN** | New Rust test file has zero comments; one existing module comment removed; comment-density gate green. |
 | C-010 | Every touched directory map and live planning document stays in lockstep. | Map, ledger, and docs-compaction gates. | **PROVEN** | `make verify`: map, ledger, grammar, and docs-compaction checks green. |
-| C-011 | The implementation branch passes the unit and pre-merge gates, followed by a procedural context-break Critic pass with fresh public execution. | `make verify`, `make preflight`, complete AT-1..AT-10 attestation, closed findings ledger, and one novel collect/to-arrow input. | **OPEN** | Record real exits and Critic evidence. |
+| C-011 | The implementation branch passes the unit and pre-merge gates, followed by a procedural context-break Critic pass with fresh public execution. | `make verify`, `make preflight`, complete AT-1..AT-10 attestation, closed findings ledger, and one novel collect/to-arrow input. | **PROVEN** | `make preflight`: 0; CA-DFP-1-1 complete; no findings; novel facade `to_arrow` returned four expected rows with Int64 output. |
 | C-012 | Follow-up work remains measure-gated and outside DFP-1. | The hardening slate records: optimizer-wrapper traversal, struct null-mask extraction, and a custom Cartesian multi-list operator as separate candidates; no candidate is scheduled without evidence. | **PROVEN** | Planning parent `8879934`; `briefs/v2-engine-hardening.md` dated intake. |
 
-VERDICT: OPEN (1 clause: C-011). The owner's 2026-08-31 direction approves this finite charter;
-delivery closes after the Critic and pre-merge gate.
+VERDICT: PROVEN (12 clauses). DFP-1 is ready for owner review; merge, push, and PR creation remain
+owner actions.
 
 ## Sequence
 
@@ -72,6 +72,105 @@ SELF_LOGIC_REVIEW:
   verdict: PROCEED
   escalation: —
 ```
+
+## Critic record
+
+```yaml
+CONTEXT_BREAK:
+  id: CB-DFP-1-1
+  mechanism: PROCEDURAL_IN_SESSION
+  manifest_binding: context_break_mechanics
+  handed_to_critic: [C-001..C-012, child-branch diff, test results, CCC attack taxonomy]
+  withheld_until_initial_findings_filed: [actor_build_summary, SLR-DFP-1-actor]
+  declaration_logged: "Context break executed; attacking artifacts, not memory."
+  honesty_note: The break changed roles and restricted inputs in one session; it did not provide amnesia.
+```
+
+```yaml
+COVERAGE_ATTESTATION:
+  id: CA-DFP-1-1
+  pr_unit: DFP-1
+  cycle: 1
+  risk_tier: standard
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: C-001..C-012 were checked against the child diff, plans, tests, and gates.
+      artifacts: [ordinary_lists_without_empty_rewrite_have_no_case_projection, empty_as_null_rewrite_only_checks_length, make preflight]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Null, empty, populated, fixed-width, dictionary-wrapped, and two-list inputs were executed.
+      artifacts: [preserve_nulls test module, novel facade to_arrow execution]
+    - id: AT-3
+      status: N/A
+      justification: The pure lazy plan rewrite adds no write, retry, cleanup, or partial-commit path.
+    - id: AT-4
+      status: N/A
+      justification: The diff adds no shared state, lock, task, or ordering mechanism.
+    - id: AT-5
+      status: N/A
+      justification: The diff adds no input parser, I/O, credential, path, command, or authorization surface.
+    - id: AT-6
+      status: ATTACKED
+      evidence: The finite container partition asserts row values and Int64 Arrow output types under both modes.
+      artifacts: [null_and_empty_array_values, preserve_nulls test module, novel facade to_arrow execution]
+    - id: AT-7
+      status: N/A
+      justification: The unit removes plan nodes and makes no wall-clock, allocation, or system-breaking performance claim.
+    - id: AT-8
+      status: ATTACKED
+      evidence: DataFusion preserve-null Unnest, dictionary cast-only preparation, public options, and error contracts were checked.
+      artifacts: [dictionary_list_preserves_null_and_controls_empty_rows, cargo test -p repark-core dynamic_flatten, make preflight]
+    - id: AT-9
+      status: N/A
+      justification: The optimized branch adds no failure path or operability surface.
+    - id: AT-10
+      status: ATTACKED
+      evidence: The two structural pins failed before implementation; the fixed-size refinement pin failed before its guard; focused and full gates pass.
+      artifacts: [Actor evidence table, cargo test -p repark-core preserve_nulls, make preflight]
+  reattested: [AT-1]
+  complete: true
+```
+
+Critic-1: CLEAN. It attacked the crate contract, structural branches, test assertions, maps, and the
+downward size ratchet. Critic-2: CLEAN. It found no safety, security, resource, or gate-weakening
+surface. Critic-3: CLEAN. It attacked null/empty asymmetry, fixed width, dictionary wrapping, and
+Cartesian composition. Critic-4: CLEAN. It replayed claims, citations, counts, ancestry, and `%ae`.
+
+```yaml
+FINDINGS_LEDGER:
+  cycle: 2
+  findings:
+    - id: CL-DFP1-001
+      severity: S1
+      category: CL-STALE
+      clause: [C-010, C-011]
+      claim: The departure move left STATUS calling DFP-1 next and the completed map calling it queued.
+      evidence: STATUS.md and task/ledgers/completed/map.md after ledger_lifecycle.py move
+      disposition: REMEDIATED (both records now say implementation complete)
+  open_at_or_above_floor: 0
+  disposition: CONVERGED
+  convergence_label: CCC-CONVERGED
+```
+
+Critic-4 re-attested the moved ledger, STATUS state, completed-bin map, and link targets after
+CL-DFP1-001 remediation. No stale DFP-1 active-slate claim remains.
+
+Fresh public execution used `ReparkSession.createDataFrame(...).dynamicFlatten(
+empty_as_null=False).orderBy(...).to_arrow()` on three rows absent from committed tests:
+`(NULL, [10,20])`, `([], [30])`, and `([1,2], NULL)`. It returned
+`[(NULL,10), (NULL,20), (1,NULL), (2,NULL)]`; the empty row disappeared and both flattened fields
+were Arrow Int64.
+
+## Pre-merge evidence
+
+`make preflight` exited 0 after `make verify`, 4,199 facade tests passed with 75 skipped, and the
+audit and workflow gates passed. The phase-boundary disk check showed 476 GiB free. No task-owned
+artifact needs cleanup; the shared incremental target and editable wheel remain useful. The final
+post-departure `make ci` exited 0 with `STATUS.md` at 24,979 bytes.
+
+Formal PR readiness and Delivery are not claimed because the owner did not request a PR or push.
+The implementation branch is ready for owner review.
 
 ## Disk
 
