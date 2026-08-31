@@ -84,6 +84,11 @@ those releases ships its own examples as part of its done gate rather than re-do
 - **FNP-15/16 lands inside the v0.7 window** (sequencing, not scope): the ~62 unregistered
   `F.*` names register before the backfill closes, so "every public name" means the intended
   surface rather than today's minus the known gap.
+- **The class surfaces are in** (owner ruling, 2026-08-31). "Every public name" includes
+  `Column`, `Window` / `WindowSpec`, `Catalog`, `types`, `Row`, `ml`, and the other class
+  surfaces the EX-0 inventory measured but excluded — roughly 120 further names. The
+  inventory widens in a follow-up unit after EX-0 merges and before the backfill roster
+  freezes, so per-family counts include them from the start.
 
 ### v0.8 — Torture-test dataset suite
 
