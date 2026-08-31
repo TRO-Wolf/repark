@@ -2,18 +2,18 @@
 
 **Date:** 2026-08-31 · **Branch:** `feat/w-0-window-bench` · **Base:**
 `60225cc427673cbc2e4bf23e90db376e602773dd` · **Policy:**
-[../../../AGENTS.md](../../../AGENTS.md) "Verify before done" and
-[../../../docs/testing.md](../../../docs/testing.md) · **Path:** STANDARD ·
+[../../../AGENTS.md](../../../../AGENTS.md) "Verify before done" and
+[../../../docs/testing.md](../../../../docs/testing.md) · **Path:** STANDARD ·
 **risk_tier:** standard · **Measure-only.**
 
 **Charter:** intake Track A row W-0 in
-[../../roadmap/mid-term/roadmap-intake-2026-08-23.md](../../roadmap/mid-term/roadmap-intake-2026-08-23.md)
+[../../roadmap/mid-term/roadmap-intake-2026-08-23.md](../../../roadmap/mid-term/roadmap-intake-2026-08-23.md)
 (read-only). **Retires:** moved to `completed/` in this unit's departure commit.
 
 **Closed homes:** `crates/**`, engine behaviour, `[patch.crates-io]`, `.github/`,
 `briefs/next-sequence.md`, ledger `completed/` / archive.
 
-Results: [../../window-bench-report-2026-08-31.md](../../window-bench-report-2026-08-31.md).
+Results: [../../window-bench-report-2026-08-31.md](../../../window-bench-report-2026-08-31.md).
 
 ## PROPOSITION LEDGER — W-0 — 2026-08-31
 
@@ -51,7 +51,7 @@ plans is the non-retractable class.
 | C-005 | A `lead` / `lag` cell reads an unsorted Iceberg table (memory catalog, no sort order) and times both functions. | Smoke writes the table, runs `lead`/`lag` `OVER (ORDER BY ts)`, records plan-shape tokens including whether a sort ran. | PROVEN | `test_iceberg_lead_lag_runs_over_an_unsorted_table`; full run plan tokens `SortExec` + `Iceberg`. pins: w-0-window-bench/C-005 |
 | C-006 | A window cell runs with a session `memory_limit` below the working set and records one outcome class: `ok`, `spill`, `oom`, `error`, or `crash`. The driver never retries a different query to hide the class. | Smoke with a 1 MiB floor and a working set above it; the recorded class is one of the five; an injected raise becomes `error`, not a rewritten query. | PROVEN | Full run `memory_limit_16M` at 2e6 rows: outcome `oom` on the upstream `SortExec` / FairSpillPool `ExternalSorter`. Window-exec spill is UNMEASURED. pins: w-0-window-bench/C-006 |
 | C-007 | Two oracle adapters exist: DuckDB at the workspace pin `duckdb==1.5.5`, and PySpark `4.1.2`. A missing extra or JVM is skip-loud and named in the results, never a silent omit. | Adapter constructors; DuckDB version pin in the bench requirements; PySpark skip records `oracle=pyspark reason=...`. | PROVEN | `requirements.txt`; full run DuckDB 1.5.5 and PySpark 4.1.2 both `ok` on timed cells. pins: w-0-window-bench/C-007 |
-| C-008 | A dated results document under `task/` carries engine version, DuckDB version, PySpark version-or-skip, machine profile, raw cell numbers, and generated-dataset byte sizes. | The result model requires those fields; the filed markdown exists and names them. | PROVEN | [../../window-bench-report-2026-08-31.md](../../window-bench-report-2026-08-31.md). pins: w-0-window-bench/C-008 |
+| C-008 | A dated results document under `task/` carries engine version, DuckDB version, PySpark version-or-skip, machine profile, raw cell numbers, and generated-dataset byte sizes. | The result model requires those fields; the filed markdown exists and names them. | PROVEN | [../../window-bench-report-2026-08-31.md](../../../window-bench-report-2026-08-31.md). pins: w-0-window-bench/C-008 |
 | C-009 | Every probe-roster name whose live class is **refuse** (plans as a window aggregate, then DataFusion sliding-accumulator `not_impl`) is a registry BACKLOG row `WIN-SLIDE-<name>` with repark / Spark / pin / rationale. Absent names are not W-0 rows. | Gate test: the refuse set equals the `WIN-SLIDE-` headings; each pin asserts the sliding query raises. | PROVEN | Thirteen names, thirteen headings. `test_sliding_refuse_set_matches_the_frozen_roster`; `test_registry_has_a_heading_per_sliding_refuse`; `test_remaining_absents_fail_at_planning`. pins: w-0-window-bench/C-009 |
 | C-010 | This unit does not modify `crates/`. An engine crash or loud refuse is recorded as an outcome (and C-009 row when it is a sliding refuse), never patched around. | `git diff` against base has no `crates/` path; the crash/error path has a pin. | PROVEN | `test_run_repark_sql_does_not_retry_a_different_query`; no `crates/` in the unit diff. pins: w-0-window-bench/C-010 |
 | C-011 | Generated datasets land under the caller scratch directory and are deleted after the measurement run; the results document records the sizes taken before delete. `--keep-scratch` is the only opt-out. | Smoke writes, records `dataset_bytes`, deletes; a second listing of the scratch is empty. | PROVEN | `test_cleanup_scratch_deletes_unless_keep`; `test_run_window_measurement_cleans_scratch_in_finally`; full run `scratch_deleted: True`. pins: w-0-window-bench/C-011 |
@@ -72,7 +72,7 @@ One host (`schedutil`, Ryzen Threadripper 3970X, 64 threads, 125.7 GiB). Release
 native `size_bytes=159402864`. Engine `repark-0.5.0`, DuckDB `1.5.5`, PySpark
 `4.1.2` (zulu-17). Wall **139.9 s**. Peak RSS **2,859,900,928 B** (process-wide,
 includes the in-process PySpark driver). Ratios over absolutes. Raw cells:
-[../../window-bench-report-2026-08-31.md](../../window-bench-report-2026-08-31.md).
+[../../window-bench-report-2026-08-31.md](../../../window-bench-report-2026-08-31.md).
 
 | cell | rows | repark median_ms | DuckDB | PySpark | repark/DuckDB | repark/PySpark |
 |---|---:|---:|---:|---:|---:|---:|

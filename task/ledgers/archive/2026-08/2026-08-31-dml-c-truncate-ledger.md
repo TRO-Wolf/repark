@@ -2,11 +2,11 @@
 
 **Date:** 2026-08-30 · **Branch:** `feat/dml-c-truncate` · **Base:** `main` `60225cc`
 (`feat(fnp-15-16)` #271) · **Path:** HIGH (`risk_tier: high` — irreversible table wipe) ·
-**Policy:** [../../../AGENTS.md](../../../AGENTS.md) "Verify before done" and
-[../../../docs/testing.md](../../../docs/testing.md). **Owner-pre-authorized** 2026-08-30
+**Policy:** [../../../AGENTS.md](../../../../AGENTS.md) "Verify before done" and
+[../../../docs/testing.md](../../../../docs/testing.md). **Owner-pre-authorized** 2026-08-30
 (v0.6 plan). **Retires:** moved to `completed/` in this unit's departure commit.
 
-**Why now.** v0.6 Track B merge order 2 of 4. Registry [DML-2](../../../docs/spark-sql-iceberg-parity.md)
+**Why now.** v0.6 Track B merge order 2 of 4. Registry [DML-2](../../../../docs/spark-sql-iceberg-parity.md)
 was a targeted refuse that steered to empty `INSERT OVERWRITE … WHERE false` or `DELETE FROM`
 with no predicate. C-001 measured those three statements stamp the same snapshot keys
 (`operation=delete`). The card is a first-class `TRUNCATE TABLE` on both SQL doors and the

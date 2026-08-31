@@ -131,12 +131,13 @@ def test_navigation_describes_the_revised_authoritative_documents() -> None:
         "docs/design/map.md": ("2026-08-28 per-unit delivery order",),
         "task/roadmap/epic-term/map.md": ("F-17 shared-Puffin closure",),
         "task/roadmap/mid-term/map.md": ("**F-17 added 2026-08-28 from RP-2:**",),
-        "task/ledgers/completed/map.md": ("**V3-3 (2026-08-30)", "F-rp3-c7"),
         "task/ledgers/archive/2026-08/map.md": (
             "salvaged 2026-08-28",
             "became fork F-17",
             "**RP-3 (2026-08-28)",
             "opt-in for callers",
+            "**V3-3 (2026-08-30)",
+            "F-rp3-c7",
         ),
     }
     for relative_path, tokens in assertions.items():

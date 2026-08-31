@@ -1,8 +1,8 @@
 # Charter ledger — MW-10 · the S3 Tables merge-on-read leg (the intake's "MW-4b"), measure-first on OD-3b
 
 **Date:** 2026-08-28 · **Branch:** `feat/mw-10-s3tables-mor` (opens when the owner confirms this
-gate) · **Base:** `main` after #256 · **Policy:** [../../../AGENTS.md](../../../AGENTS.md)
-"Verify before done" and the tier-2 runbook [../../../docs/tier2-aws.md](../../../docs/tier2-aws.md)
+gate) · **Base:** `main` after #256 · **Policy:** [../../../AGENTS.md](../../../../AGENTS.md)
+"Verify before done" and the tier-2 runbook [../../../docs/tier2-aws.md](../../../../docs/tier2-aws.md)
 · **Path:** STANDARD (one new acceptance test plus a bounded retry around the maintenance calls;
 the measurement runs only on the owner's `aws-acceptance` dispatch or the nightly after merge).
 **Named MW-10** because the ledger id `mw-4b` is taken by the archived Glue metadata-rewrite unit

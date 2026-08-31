@@ -7,7 +7,7 @@
 fork F-5" premise is stale: F-5 landed as fork PR #217 and is an ancestor of the engine pin.
 Java routes static `PARTITION (k=v)` through `OverwriteFiles.overwriteByRowFilter`, not
 `ReplacePartitions`. Recipe:
-[release-roadmap-2026-08-29.md](../../roadmap/epic-term/release-roadmap-2026-08-29.md) §v0.6.
+[release-roadmap-2026-08-29.md](../../../roadmap/epic-term/release-roadmap-2026-08-29.md) §v0.6.
 
 ## PROPOSITION LEDGER — DML-B — 2026-08-30
 

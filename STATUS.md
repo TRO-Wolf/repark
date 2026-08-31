@@ -163,7 +163,7 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
     single-table v3 reads (three doors); v1/v2 engine Schema `No field named _row_id`;
     JOIN/CTE/subquery/time-travel refuse `V3-ROWID-2`. `V3-ROWID-1` FIXED. Preserve-half stays F-7.
   - **Next:** V3-5 / F-7 COW lineage lift. V3-3 charter
-    [task/ledgers/completed/v3-3-dml-ledger.md](task/ledgers/completed/v3-3-dml-ledger.md)
+    [task/ledgers/completed/v3-3-dml-ledger.md](task/ledgers/archive/2026-08/2026-08-30-v3-3-dml-ledger.md)
     (keep-refusal, F-rp3-c7 stays a fork finding).
     Sequence: [docs/design/format-v3-track.md §5](docs/design/format-v3-track.md).
 <!-- /ws -->
@@ -210,7 +210,8 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
   [docs/design/v2-engine-hardening.md](docs/design/v2-engine-hardening.md) (goal, the six phases
   H-0…H-5, the dated decisions) and its execution slate is
   [briefs/v2-engine-hardening.md](briefs/v2-engine-hardening.md) (the per-unit definitions and
-  acceptance gates). #30 (the dead doc-pointer sweep) merged ahead of it.
+  acceptance gates). **DFP-1 (2026-08-31) is next:** a preserve-null Unnest plan reduction;
+  adjacent candidates stay measurement-gated. #30 (the dead doc-pointer sweep) merged ahead of it.
 <!-- /ws -->
 
 <!-- ws id=dml ledgers=dml-,maint- state=open -->

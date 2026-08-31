@@ -2,8 +2,8 @@
 
 **Date:** 2026-08-30 · **Branch:** `feat/f-y10-1-int-overflow` (opens when the owner confirms
 this gate; may run in a fork-wait window) · **Base:** `main` at charter time · **Policy:**
-[../../../AGENTS.md](../../../AGENTS.md) "Verify before done" and
-[../../../docs/testing.md](../../../docs/testing.md) · **Path:** STANDARD (kernel work in
+[../../../AGENTS.md](../../../../AGENTS.md) "Verify before done" and
+[../../../docs/testing.md](../../../../docs/testing.md) · **Path:** STANDARD (kernel work in
 `crates/repark-functions` on the DEC U5 pattern; the live Spark 4.1.2 oracle is on this box).
 
 **Retires:** moved to `completed/` in this unit's departure commit.
