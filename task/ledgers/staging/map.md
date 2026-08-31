@@ -53,8 +53,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   and `strategy` on v2 tables. Fork `d408da42` honors `filter(Predicate)` and binpack only;
   sort is a loud fork-ceiling refusal. v3 lineage pins stay. risk_tier: high.
 - [w-0-window-bench-ledger.md](w-0-window-bench-ledger.md) — **W-0 (2026-08-31),
-  chartered:** window-shape measurement (Track A opener). Bench plus filed numbers and
-  registry rows for sliding-frame refusals. No product change. Eleven OPEN clauses.
+  PROVEN 11/11:** window-shape measurement (Track A opener). Bench plus filed
+  numbers and twelve `WIN-SLIDE-*` registry rows. No product change.
 
 ## Pointers
 - Up: [../map.md](../map.md)

@@ -19,7 +19,7 @@ pins: comment-condensation-2/C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-
 - [repark-parity/](repark-parity/map.md) — the Spark-parity differential harness (pure-pyarrow
   comparison core, no Spark and no JVM), the `compat/` PySpark-suite census machinery **including
   the report comparator that is the port's acceptance gate**, `bench/` (TPC-H / TPC-DS / write
-  / fuzz measurement scripts), and `datasets/` (torture-dataset generators; cache-root
+  / fuzz / W-0 window-shape measurement scripts), and `datasets/` (torture-dataset generators; cache-root
   outputs). Landed in phase-3 PR-4; datasets arrive with conductor-18.
 
 ## I want to...

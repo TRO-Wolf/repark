@@ -29,6 +29,10 @@ no AWS. Outputs feed `task/perf-report-*.md`.
   scans again. Measurement only; see [mw7/map.md](mw7/map.md).
 - `ta/` — **P-2 (perf-wave-14)** Python TA pipeline baseline battery (§8.1–8.5,
   §8.7); measurement only; §8.6 is #116 (do not rebuild); see [ta/map.md](ta/map.md).
+- `windows/` — **W-0** window-shape measurement: sliding frames per aggregate
+  class, constant frame, unpartitioned `ORDER BY` at 1e7, `lead`/`lag` over an
+  unsorted Iceberg scan, window over `memory_limit`; DuckDB 1.5.5 and PySpark
+  4.1.2 oracles; see [windows/map.md](windows/map.md).
 - `map.md` — this file.
 
 ## I want to…
@@ -47,6 +51,8 @@ no AWS. Outputs feed `task/perf-report-*.md`.
 | Long fuzz pass | `REPARK_FUZZ_N=5000 python …/fuzz/run_fuzz.py --out …` |
 | Run write-path K×file-size bench (SF1) | `write/run_write_bench.py --mode ctas --sf 1 --report task/write-bench-report-….md` |
 | Run the P-2 TA pipeline battery | `ta/bench_kernel_race.py` (and siblings); `--quick` for n=1e5 |
+| Run the W-0 window-shape bench | `windows/run_w0.py --scale quick\|full --scratch <dir> --out <json>` |
+| Read W-0 numbers | [../../../task/window-bench-report-2026-08-31.md](../../../task/window-bench-report-2026-08-31.md) |
 | Run the MW-7 scale measurement | `mw7/run_mw7.py --rows N --merges M --scratch <dir>` |
 | Read MW-7's numbers | [../../../task/ledgers/completed/mw-7-scale-measurement-ledger.md](../../../task/ledgers/archive/2026-08/2026-08-24-mw-7-scale-measurement-ledger.md) |
 | Run r22 MERGE+OVERWRITE extension | `write/run_write_bench.py --mode extension --assert-release --report task/write-bench-report-r22-extension.md` |

@@ -2168,6 +2168,104 @@ the pin rather than obeying it.
   lands with its own pin if a job ever depends on it. This is the single home of the divergence
   the `spark_literals` module doc previously only mentioned.
 
+### WIN-SLIDE — non-retractable aggregates over a sliding frame (W-0, 2026-08-31)
+
+Spark evaluates an aggregate over `ROWS BETWEEN n PRECEDING AND CURRENT ROW` even when the
+aggregate has no inverse (it re-scans the frame). DataFusion 54.1 refuses at execution:
+`Aggregate can not be used as a sliding accumulator because retract_batch is not implemented`.
+W-0 measured the Spark 4.1.2 built-in aggregate roster; names that do not plan at all are
+**absent** (not these rows). Names that plan and then refuse are the twelve headings below.
+W-1 picks the fallback (Spark re-scan vs segment tree). *(oracle: live RePark probe, 2026-08-31;
+Spark half is documented SlidingWindowFunctionFrame plus the W-0 PySpark 4.1.2 cell.)*
+
+Shared pin for every heading:
+`python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
+and `python/repark-parity/tests/test_w0_window_bench.py::test_registry_has_a_heading_per_sliding_refuse`.
+
+### WIN-SLIDE-approx_percentile — `approx_percentile` over a sliding frame refuses
+
+- **repark** — `approx_percentile(v, 0.5) OVER (ORDER BY id ROWS BETWEEN 10 PRECEDING AND CURRENT ROW)` raises the sliding-accumulator `retract_batch` refusal.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
+- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
+- **Rationale** — BACKLOG. Functional parity gap, not a perf gap. W-1.
+
+### WIN-SLIDE-bit_and — `bit_and` over a sliding frame refuses
+
+- **repark** — `bit_and(vi)` over the same sliding frame raises the sliding-accumulator refusal.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
+- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
+- **Rationale** — BACKLOG. W-1.
+
+### WIN-SLIDE-bit_or — `bit_or` over a sliding frame refuses
+
+- **repark** — `bit_or(vi)` over the same sliding frame raises the sliding-accumulator refusal.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
+- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
+- **Rationale** — BACKLOG. W-1.
+
+### WIN-SLIDE-bool_and — `bool_and` over a sliding frame refuses
+
+- **repark** — `bool_and(vi <> 0)` over the same sliding frame raises the sliding-accumulator refusal.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
+- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
+- **Rationale** — BACKLOG. W-1.
+
+### WIN-SLIDE-bool_or — `bool_or` over a sliding frame refuses
+
+- **repark** — `bool_or(vi <> 0)` over the same sliding frame raises the sliding-accumulator refusal.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
+- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
+- **Rationale** — BACKLOG. W-1.
+
+### WIN-SLIDE-collect_list — `collect_list` over a sliding frame refuses
+
+- **repark** — `collect_list(v)` over the same sliding frame raises the sliding-accumulator refusal.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
+- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
+- **Rationale** — BACKLOG. W-1. The intake named this class first.
+
+### WIN-SLIDE-collect_set — `collect_set` over a sliding frame refuses
+
+- **repark** — `collect_set(v)` over the same sliding frame raises the sliding-accumulator refusal.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
+- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
+- **Rationale** — BACKLOG. W-1.
+
+### WIN-SLIDE-corr — `corr` over a sliding frame refuses
+
+- **repark** — `corr(v, v2)` over the same sliding frame raises the sliding-accumulator refusal.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
+- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
+- **Rationale** — BACKLOG. W-1.
+
+### WIN-SLIDE-covar_pop — `covar_pop` over a sliding frame refuses
+
+- **repark** — `covar_pop(v, v2)` over the same sliding frame raises the sliding-accumulator refusal.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
+- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
+- **Rationale** — BACKLOG. W-1.
+
+### WIN-SLIDE-covar_samp — `covar_samp` over a sliding frame refuses
+
+- **repark** — `covar_samp(v, v2)` over the same sliding frame raises the sliding-accumulator refusal.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
+- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
+- **Rationale** — BACKLOG. W-1.
+
+### WIN-SLIDE-percentile_approx — `percentile_approx` over a sliding frame refuses
+
+- **repark** — `percentile_approx(v, 0.5)` over the same sliding frame raises the sliding-accumulator refusal.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
+- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
+- **Rationale** — BACKLOG. W-1. The intake named this class.
+
+### WIN-SLIDE-try_sum — `try_sum` over a sliding frame refuses
+
+- **repark** — `try_sum(v)` over the same sliding frame raises the sliding-accumulator refusal (group `try_sum` plans; sliding does not).
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
+- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
+- **Rationale** — BACKLOG. W-1.
+
 ### Surfaced, awaiting pins — not yet rows
 
 Candidates that carry **no pin yet**, so under §6 they are not admitted as rows; they are queued

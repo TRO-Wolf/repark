@@ -25,6 +25,10 @@ not this directory.
 - [fnp-0-census/](fnp-0-census/map.md) — the measured evidence that gate rests on: the facade
   classification of all 345 functions, the PySpark 4.1.2 gap partition, the higher-order-function
   spec, and the kernel ownership map.
+- [window-bench-report-2026-08-31.md](window-bench-report-2026-08-31.md) — **W-0 (2026-08-31):**
+  dated window-shape measurements (sliding / constant / 1e7 unpartitioned / Iceberg
+  lead-lag / over `memory_limit`) plus the twelve sliding-frame refusals. Ledger:
+  [ledgers/staging/w-0-window-bench-ledger.md](ledgers/staging/w-0-window-bench-ledger.md).
 - [todo.md](todo.md) — a **pointer only**: the live backlog is [../STATUS.md](../STATUS.md), and a
   unit's working plan is its own ledger. The file keeps its name because live code, docs and one
   runtime error message cite this path.
