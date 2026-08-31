@@ -52,6 +52,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   **rewrite_data_files options (2026-08-31), v0.6 merge order 4 of 4:** `where`, `sort_order`,
   and `strategy` on v2 tables. Fork `d408da42` honors `filter(Predicate)` and binpack only;
   sort is a loud fork-ceiling refusal. v3 lineage pins stay. risk_tier: high.
+- [w-0-window-bench-ledger.md](w-0-window-bench-ledger.md) — **W-0 (2026-08-31),
+  chartered:** window-shape measurement (Track A opener). Bench plus filed numbers and
+  registry rows for sliding-frame refusals. No product change. Eleven OPEN clauses.
 
 ## Pointers
 - Up: [../map.md](../map.md)
