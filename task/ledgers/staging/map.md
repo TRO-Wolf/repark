@@ -5,9 +5,6 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
-- [rp-4-fork-repin-ledger.md](rp-4-fork-repin-ledger.md) — **RP-4 (2026-08-31), in
-  flight:** fork repin `d408da42` → `33be9a0` (F-7 slice 1 consume, F-6 carry).
-  Family frozen. Ledger born on `feat/rp-4-fork-repin`.
 - [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's
   scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike
   evidence behind it; C-007 (the four sub-project families) was closed by ruling D-7 on
@@ -34,9 +31,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   good: v3 reads and v3 appends are already correct, round-tripped through Spark, including the
   row lineage the format mandates. §4 answers A12's stated first question — adoption, through
   `register_table`, whose Spark signature is measured there.
-- [fnp-7-try-inversions-ledger.md](fnp-7-try-inversions-ledger.md) — **FNP-7a/7b (2026-08-31):**
-  the twelve `try_*` NULL-yielding inversions. Design §7 rows FNP-7a (8) and FNP-7b (4,
-  unblocked by F-Y10-1). `risk_tier: standard`. Branch `feat/fnp-7-try-inversions`.
 
 ## Pointers
 - Up: [../map.md](../map.md)
