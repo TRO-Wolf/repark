@@ -183,14 +183,33 @@ async fn select_lineage(
     lineage_triples(&batches)
 }
 
+fn find_ledger(dir: &Path, suffix: &str) -> Option<PathBuf> {
+    for entry in fs::read_dir(dir).ok()?.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            if let Some(found) = find_ledger(&path, suffix) {
+                return Some(found);
+            }
+        } else if path
+            .file_name()
+            .is_some_and(|name| name.to_string_lossy().ends_with(suffix))
+        {
+            return Some(path);
+        }
+    }
+    None
+}
+
 #[tokio::test]
 async fn v3_lineage_oracle_matrix_is_the_c001_record() {
-    let ledger = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+    let ledgers = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .expect("crates/")
         .parent()
         .expect("repo")
-        .join("task/ledgers/staging/v3-4-serve-lineage-columns-ledger.md");
+        .join("task/ledgers");
+    let ledger = find_ledger(&ledgers, "v3-4-serve-lineage-columns-ledger.md")
+        .expect("the V3-4 ledger lives somewhere under task/ledgers/");
     let text = fs::read_to_string(&ledger).expect("C-001 ledger");
     assert!(
         text.contains("UNRESOLVED_COLUMN.WITH_SUGGESTION")

@@ -40,7 +40,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   V3E-3 fixtures (MOR+DV surviving rows), created v3 derivation, v2/v1 unresolved (`No field
   named _row_id`), `SELECT *, _row_id` expands user columns only, qualified/aliased forms,
   unquoted case-fold, JOIN/CTE/subquery/`VERSION AS OF` refuse `V3-ROWID-2`, V3-COW-1 files
-  byte-untouched (content-hash pin; runs on CI's shallow checkout).
+  byte-untouched (content-hash pin; runs on CI's shallow checkout); the C-001 matrix pin
+  finds the ledger anywhere under `task/ledgers/` so lifecycle moves keep it green.
   pins: v3-4-serve-lineage-columns/C-001, C-002, C-005, C-006, C-007, C-008, C-009, C-010,
   C-011, C-012, C-013, C-014, C-015, C-016, C-018, C-020
 - `v3e3.rs` — **V3E-3:** Spark-written partitioned v3 DV fixture and equality-delete
