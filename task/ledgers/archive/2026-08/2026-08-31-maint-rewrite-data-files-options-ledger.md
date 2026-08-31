@@ -1,8 +1,8 @@
 # Charter ledger — rewrite_data_files `where` / `sort_order` / `strategy` (v0.6 merge order 4 of 4)
 
 **Date:** 2026-08-31 · **Branch:** `feat/maint-rewrite-data-files-options` · **Base:**
-`60225cc427673cbc2e4bf23e90db376e602773dd` · **Policy:** [../../../AGENTS.md](../../../AGENTS.md)
-"Verify before done" and [../../../docs/testing.md](../../../docs/testing.md) · **Path:**
+`60225cc427673cbc2e4bf23e90db376e602773dd` · **Policy:** [../../../AGENTS.md](../../../../AGENTS.md)
+"Verify before done" and [../../../docs/testing.md](../../../../docs/testing.md) · **Path:**
 STANDARD · **risk_tier:** high (compaction rewrites live data). Owner-pre-authorized
 2026-08-30 v0.6 plan.
 

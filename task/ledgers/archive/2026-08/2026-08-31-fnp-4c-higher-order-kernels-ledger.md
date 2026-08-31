@@ -7,14 +7,14 @@ the owner closes the slate row.
 **Unit:** FNP-4c · **Date:** 2026-08-31 · **Executor:** Grok (grok-4.6), Actor ·
 **Branch:** `feat/fnp-4c-higher-order-kernels` · **Base:** `60225cc427673cbc2e4bf23e90db376e602773dd`
 (FNP-15/16).
-**Charter:** [fnp-0-charter-ledger.md](../staging/fnp-0-charter-ledger.md) C-003 (Column
+**Charter:** [fnp-0-charter-ledger.md](../../staging/fnp-0-charter-ledger.md) C-003 (Column
 entry point) and the FNP-4c slice of C-004 (kernels registered for both doors;
 SQL `x -> y` parse remains FNP-4b).
-**Design:** [docs/design/spark-function-parity.md](../../../docs/design/spark-function-parity.md)
+**Design:** [docs/design/spark-function-parity.md](../../../../docs/design/spark-function-parity.md)
 §3.5 and §7 row FNP-4c.
-**Proven seam:** [fnp-4a-lambda-seam-ledger.md](../archive/2026-08/2026-08-21-fnp-4a-lambda-seam-ledger.md).
-**Spec:** [task/fnp-0-census/lambda-spec.md](../../fnp-0-census/lambda-spec.md).
-**Slate:** [briefs/spark-function-parity.md](../../../briefs/spark-function-parity.md).
+**Proven seam:** [fnp-4a-lambda-seam-ledger.md](2026-08-21-fnp-4a-lambda-seam-ledger.md).
+**Spec:** [task/fnp-0-census/lambda-spec.md](../../../fnp-0-census/lambda-spec.md).
+**Slate:** [briefs/spark-function-parity.md](../../../../briefs/spark-function-parity.md).
 
 **Rubric:** STANDARD (public facade interface; new kernels; quantified
 three-door claim). Floor S1. `risk_tier: standard`.
