@@ -22,7 +22,8 @@ JVM, no repark required). See [../map.md](../map.md).
   North Star sequence, F-17's measured shared-Puffin closure request, the live slate, the
   per-unit FNP remaining order (FNP-7a/7b delivered 2026-08-31; remaining FNP-9/10 → FNP-8
   → FNP-11/12 → FNP-Z) and delivery boundary, FNP-Z retirement, fork independence, and map
-  lockstep. STATUS C-004 start marker is `**Next, in order (revised 2026-08-31):**`.
+  lockstep, including the archived V3-3 and F-rp3-c7 record. STATUS C-004 start marker is
+  `**Next, in order (revised 2026-08-31):**`.
   (pins: plan-1-northstar-fnp-sequence/C-001, C-002, C-003, C-004, C-005, C-006;
   v3-3-dml/C-003; v3-4-serve-lineage-columns/C-010; fnp-7-try-inversions/C-016).
 - `test_pr_247_owner_ruling.py` — **PR #247 revalidation (2026-08-27):** the owner-ruling blocks
