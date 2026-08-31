@@ -17,7 +17,8 @@ Source comments are condensed to API and safety contracts; executable behavior i
   crate-root re-export lists (public names unchanged except that one added mapper).
 - `catalog/` — Glue + S3 Tables + memory catalog builders, DataFusion `CatalogProvider`
   registration, scheme-based `FileIO` selection, the hoisted `reregister_catalog_provider`
-  session-refresh adapter (`catalog_ops.rs`), and V3-4 `lineage_columns.rs`. See
+  session-refresh adapter (`catalog_ops.rs`), and V3-4 current-snapshot
+  `lineage_columns.rs` (filters through; `V3-ROWID-2` for time-travel). See
   [catalog/map.md](catalog/map.md).
 - `write/` — MERGE INTO / identity DELETE+UPDATE (`predicate_dml`) / append / overwrite /
   partition overwrite (DML-B) / ALTER /

@@ -1,4 +1,5 @@
 //! pins: v3-4-serve-lineage-columns/C-001, C-002, C-005, C-006, C-007, C-008, C-009, C-010
+//! pins: v3-4-serve-lineage-columns/C-011, C-012, C-013, C-014, C-015, C-016, C-018, C-020
 //! Spark-door lineage metadata columns on v3 reads.
 
 use std::fs;
@@ -328,12 +329,8 @@ async fn v2_table_lineage_columns_are_unresolved() {
     .expect_err("v2 must not plan lineage columns");
     let message = err.to_string();
     assert!(
-        message.contains("_row_id")
-            && (message.contains("UNRESOLVED_COLUMN")
-                || message.contains("No field named")
-                || message.contains("not found")
-                || message.contains("Schema error")),
-        "pre-v3 must fail closed, got: {message}"
+        message.contains("No field named") && message.contains("_row_id"),
+        "pre-v3 must fail as the engine Schema class, got: {message}"
     );
 }
 
@@ -378,8 +375,8 @@ async fn v1_table_lineage_columns_are_unresolved() {
         .expect_err("v1 must not plan lineage columns");
     let message = err.to_string();
     assert!(
-        message.contains("_row_id"),
-        "v1 must fail closed naming _row_id, got: {message}"
+        message.contains("No field named") && message.contains("_row_id"),
+        "v1 must fail as the engine Schema class, got: {message}"
     );
 }
 
@@ -395,6 +392,11 @@ fn v3_rowid_1_is_fixed_in_the_registry() {
     assert!(
         text.contains("**V3-ROWID-1** — **FIXED (V3-4, 2026-08-31).**"),
         "V3-ROWID-1 must close as FIXED"
+    );
+    assert!(
+        text.contains("**V3-ROWID-2** — **DECLARED (V3-4, 2026-08-31).**")
+            && text.contains("No field named _row_id"),
+        "V3-ROWID-2 must document the composed refuse; v1/v2 class is the engine Schema error"
     );
 }
 
@@ -429,4 +431,286 @@ fn cow_keep_refusal_files_are_byte_untouched() {
         "V3-COW-1 keep-refusal files must stay byte-untouched:\n{}",
         String::from_utf8_lossy(&output.stdout)
     );
+}
+
+fn assert_v3_rowid2(message: &str, kind: &str) {
+    assert!(
+        message.contains("[V3-ROWID-2]")
+            && message.contains(kind)
+            && message.contains("single-table reads are"),
+        "expected V3-ROWID-2 over {kind}, got: {message}"
+    );
+}
+
+async fn row_id_values(ctx: &SessionContext, catalogs: &CatalogRegistry, sql: &str) -> Vec<i64> {
+    let batches = execute(ctx, catalogs, sql)
+        .await
+        .unwrap_or_else(|err| panic!("{sql}: {err}"))
+        .collect()
+        .await
+        .unwrap_or_else(|err| panic!("{sql} collect: {err}"));
+    let mut values = Vec::new();
+    for batch in &batches {
+        let column = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<Int64Array>()
+            .unwrap_or_else(|| panic!("_row_id Int64, got {:?}", batch.schema()));
+        for index in 0..batch.num_rows() {
+            assert!(!column.is_null(index), "derived _row_id is present");
+            values.push(column.value(index));
+        }
+    }
+    values
+}
+
+#[tokio::test]
+async fn join_naming_lineage_refuses_v3_rowid2() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.lin3 (id INT, name STRING) USING iceberg \
+         TBLPROPERTIES ('format-version'='3')",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.lin3 SELECT * FROM src",
+    )
+    .await;
+    let err = execute(
+        &ctx,
+        &catalogs,
+        "SELECT * FROM ice.sales.lin3 a JOIN ice.sales.lin3 b ON a.id = b.id \
+         WHERE a._row_id IS NOT NULL",
+    )
+    .await
+    .expect_err("join plus lineage must refuse, not emit HashMap-ordered columns");
+    assert_v3_rowid2(&err.to_string(), "joins");
+}
+
+#[tokio::test]
+async fn qualified_and_aliased_single_table_lineage_selects() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.lin3 (id INT, name STRING) USING iceberg \
+         TBLPROPERTIES ('format-version'='3')",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.lin3 SELECT * FROM src",
+    )
+    .await;
+    assert_eq!(
+        row_id_values(
+            &ctx,
+            &catalogs,
+            "SELECT t._row_id FROM ice.sales.lin3 t ORDER BY t._row_id"
+        )
+        .await,
+        vec![0, 1, 2]
+    );
+    assert_eq!(
+        row_id_values(
+            &ctx,
+            &catalogs,
+            "SELECT lin3._row_id FROM ice.sales.lin3 ORDER BY lin3._row_id"
+        )
+        .await,
+        vec![0, 1, 2]
+    );
+    assert_eq!(
+        row_id_values(
+            &ctx,
+            &catalogs,
+            "SELECT ice.sales.lin3._row_id FROM ice.sales.lin3 ORDER BY 1"
+        )
+        .await,
+        vec![0, 1, 2]
+    );
+}
+
+#[tokio::test]
+async fn cte_and_subquery_naming_lineage_refuse_v3_rowid2() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.lin3 (id INT, name STRING) USING iceberg \
+         TBLPROPERTIES ('format-version'='3')",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.lin3 SELECT * FROM src",
+    )
+    .await;
+    let cte = execute(
+        &ctx,
+        &catalogs,
+        "WITH x AS (SELECT _row_id FROM ice.sales.lin3) SELECT * FROM x",
+    )
+    .await
+    .expect_err("CTE plus lineage must refuse");
+    assert_v3_rowid2(&cte.to_string(), "CTEs");
+    let subquery = execute(
+        &ctx,
+        &catalogs,
+        "SELECT _row_id FROM (SELECT _row_id FROM ice.sales.lin3) s",
+    )
+    .await
+    .expect_err("subquery plus lineage must refuse");
+    assert_v3_rowid2(&subquery.to_string(), "subqueries");
+}
+
+#[tokio::test]
+async fn version_as_of_naming_lineage_refuses_v3_rowid2() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.lin3 (id INT, name STRING) USING iceberg \
+         TBLPROPERTIES ('format-version'='3')",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.lin3 SELECT * FROM src",
+    )
+    .await;
+    let snapshot = load_sales_table(&catalogs, "lin3")
+        .await
+        .metadata()
+        .current_snapshot()
+        .expect("snapshot")
+        .snapshot_id();
+    let err = execute(
+        &ctx,
+        &catalogs,
+        &format!("SELECT _row_id FROM ice.sales.lin3 VERSION AS OF {snapshot}"),
+    )
+    .await
+    .expect_err("time-travel plus lineage must refuse");
+    assert_v3_rowid2(&err.to_string(), "time-travel");
+}
+
+#[tokio::test]
+async fn unquoted_row_id_folds_quoted_mixed_case_stays_exact() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.lin3 (id INT, name STRING) USING iceberg \
+         TBLPROPERTIES ('format-version'='3')",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.lin3 SELECT * FROM src",
+    )
+    .await;
+    assert_eq!(
+        row_id_values(
+            &ctx,
+            &catalogs,
+            "SELECT _ROW_ID FROM ice.sales.lin3 ORDER BY 1"
+        )
+        .await,
+        vec![0, 1, 2]
+    );
+    let quoted = execute(&ctx, &catalogs, "SELECT `_Row_Id` FROM ice.sales.lin3")
+        .await
+        .expect_err("quoted mixed-case must stay exact");
+    let message = quoted.to_string();
+    assert!(
+        message.contains("_Row_Id") || message.contains("No field named"),
+        "quoted mixed-case must not fold, got: {message}"
+    );
+}
+
+#[tokio::test]
+async fn select_star_plus_row_id_expands_user_columns_only() {
+    let fixture = materialize(
+        &PART_DV_LOCK,
+        "v3-spark-part-dv",
+        PART_DV_TABLE,
+        "v3.metadata.json",
+    );
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    register_adopted(&ctx, &catalogs, "sales.partdv", &fixture.metadata_file).await;
+    let batches = execute(
+        &ctx,
+        &catalogs,
+        "SELECT *, _row_id FROM ice.sales.partdv ORDER BY id",
+    )
+    .await
+    .expect("select *, _row_id")
+    .collect()
+    .await
+    .expect("collect");
+    let names: Vec<_> = batches[0]
+        .schema()
+        .fields()
+        .iter()
+        .map(|field| field.name().clone())
+        .collect();
+    assert_eq!(
+        names,
+        vec!["id", "name", "part", "_row_id"],
+        "star must expand to user columns only; leaking lineage into * must red"
+    );
+    assert!(!names.contains(&"_last_updated_sequence_number".to_string()));
+}
+
+#[tokio::test]
+async fn filtered_lineage_select_returns_matching_rows() {
+    let fixture = materialize(
+        &PART_DV_LOCK,
+        "v3-spark-part-dv",
+        PART_DV_TABLE,
+        "v3.metadata.json",
+    );
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    register_adopted(&ctx, &catalogs, "sales.partdv", &fixture.metadata_file).await;
+    assert_eq!(
+        row_id_values(
+            &ctx,
+            &catalogs,
+            "SELECT _row_id FROM ice.sales.partdv WHERE id = 1"
+        )
+        .await,
+        vec![0]
+    );
+    let batches = execute(
+        &ctx,
+        &catalogs,
+        "SELECT id FROM ice.sales.partdv WHERE id = 1",
+    )
+    .await
+    .expect("filtered id")
+    .collect()
+    .await
+    .expect("collect");
+    let ids = batches[0]
+        .column(0)
+        .as_any()
+        .downcast_ref::<Int32Array>()
+        .expect("id");
+    assert_eq!(ids.values(), &[1]);
 }

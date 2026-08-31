@@ -2312,13 +2312,24 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   refuses every v3 rewrite, so the row stays queued for V3-3+.
 
 - **V3-ROWID-1** — **FIXED (V3-4, 2026-08-31).** `_row_id` and
-  `_last_updated_sequence_number` are served on v3 reads, Spark-equal (nullable int64;
-  stored value else `first_row_id +` position / file sequence; `SELECT *` hides them).
-  v1/v2 raise unresolved (Spark `UNRESOLVED_COLUMN.WITH_SUGGESTION`, not NULL). Preserve
-  across COW DML stays F-7 / `V3-COW-1`. Pins:
+  `_last_updated_sequence_number` are served on **single-table** v3 reads, Spark-equal
+  (nullable int64; stored value else `first_row_id +` position / file sequence; `SELECT *`
+  hides them; unquoted identifiers fold). v1/v2 raise the engine Schema error
+  `No field named _row_id` (Spark raises `UNRESOLVED_COLUMN.WITH_SUGGESTION` / SQLSTATE
+  `42703`; mapping Spark's class is residual). Preserve across COW DML stays F-7 /
+  `V3-COW-1`. Pins:
   `crates/repark-spark/src/tests/v3_lineage.rs`,
   `crates/repark-sql/src/v3/partitioned_equality_deletes.rs` ANSI lineage tests,
   `python/repark/tests/test_v3_lineage_columns.py`.
+
+- **V3-ROWID-2** — **DECLARED (V3-4, 2026-08-31).** Lineage projection over joins, CTEs,
+  subqueries, and `VERSION AS OF` / time-travel refuses loud:
+  `[V3-ROWID-2] lineage projection over {joins|CTEs|subqueries|time-travel} is not yet
+  served; single-table reads are`. Spark serves those forms. Follow-up: snapshot-pinned
+  lineage scan (`table.scan().snapshot_id`) for time-travel; join/CTE serving. The
+  unused `try_new_with_snapshot` constructor was removed rather than left as an unwired
+  promise. Pins: join / CTE / subquery / `VERSION AS OF` tests in the three V3-ROWID-1
+  files.
 
 - **V3-COW-1** — measured 2026-08-24 and admitted as a BACKLOG row (see §7). Left this queue.
 

@@ -1,6 +1,7 @@
 """V3-4: facade serves `_row_id` and `_last_updated_sequence_number` on v3 reads.
 
 pins: v3-4-serve-lineage-columns/C-004, C-005, C-007, C-008
+pins: v3-4-serve-lineage-columns/C-011, C-012, C-013, C-014, C-015, C-016, C-018, C-020
 """
 
 from __future__ import annotations
@@ -140,6 +141,148 @@ def test_facade_v2_table_lineage_columns_are_unresolved(tmp_path: Path) -> None:
         session.sql("INSERT INTO ice.sales.lin2 VALUES (1, 'a')")
         with pytest.raises(Exception, match="_row_id") as raised:
             session.sql("SELECT id, _row_id FROM ice.sales.lin2").collect()
-        assert "_row_id" in str(raised.value)
+        message = str(raised.value)
+        assert "No field named" in message and "_row_id" in message
+    finally:
+        session.stop()
+
+
+def _assert_v3_rowid2(message: str, kind: str) -> None:
+    """Require the composed-statement refuse class."""
+    assert "[V3-ROWID-2]" in message, message
+    assert kind in message, message
+    assert "single-table reads are" in message, message
+
+
+def test_facade_join_naming_lineage_refuses_v3_rowid2(tmp_path: Path) -> None:
+    """JOIN plus a lineage identifier must refuse, not emit HashMap-ordered columns."""
+    from repark import ReparkSession
+
+    session = ReparkSession.builder.appName("v3-4-join-lineage").getOrCreate()
+    try:
+        session.register_memory_catalog("ice", tmp_path)
+        session.sql("CREATE NAMESPACE ice.sales")
+        with _materialize(_PART_DV_SRC, _PART_DV_DEST) as metadata_file:
+            session.sql(
+                "CALL ice.system.register_table("
+                f"table => 'sales.partdv', metadata_file => '{metadata_file}')"
+            )
+            with pytest.raises(Exception, match="V3-ROWID-2") as raised:
+                session.sql(
+                    "SELECT * FROM ice.sales.partdv a JOIN ice.sales.partdv b "
+                    "ON a.id = b.id WHERE a._row_id IS NOT NULL"
+                ).collect()
+            _assert_v3_rowid2(str(raised.value), "joins")
+    finally:
+        session.stop()
+
+
+def test_facade_qualified_and_aliased_single_table_lineage(tmp_path: Path) -> None:
+    """Spark-accepted qualified and aliased single-table lineage forms must work."""
+    from repark import ReparkSession
+
+    session = ReparkSession.builder.appName("v3-4-qualified-lineage").getOrCreate()
+    try:
+        session.register_memory_catalog("ice", tmp_path)
+        session.sql("CREATE NAMESPACE ice.sales")
+        with _materialize(_PART_DV_SRC, _PART_DV_DEST) as metadata_file:
+            session.sql(
+                "CALL ice.system.register_table("
+                f"table => 'sales.partdv', metadata_file => '{metadata_file}')"
+            )
+            expected = [0, 2, 3, 5]
+            aliased = session.sql(
+                "SELECT t._row_id FROM ice.sales.partdv t ORDER BY t._row_id"
+            ).to_arrow()
+            assert aliased.column(0).to_pylist() == expected
+            leaf = session.sql(
+                "SELECT partdv._row_id FROM ice.sales.partdv ORDER BY partdv._row_id"
+            ).to_arrow()
+            assert leaf.column(0).to_pylist() == expected
+            full = session.sql(
+                "SELECT ice.sales.partdv._row_id FROM ice.sales.partdv ORDER BY 1"
+            ).to_arrow()
+            assert full.column(0).to_pylist() == expected
+    finally:
+        session.stop()
+
+
+def test_facade_cte_subquery_and_time_travel_refuse_v3_rowid2(tmp_path: Path) -> None:
+    """CTE, subquery, and VERSION AS OF forms naming lineage refuse V3-ROWID-2."""
+    from repark import ReparkSession
+
+    session = ReparkSession.builder.appName("v3-4-composed-lineage").getOrCreate()
+    try:
+        session.register_memory_catalog("ice", tmp_path)
+        session.sql("CREATE NAMESPACE ice.sales")
+        with _materialize(_PART_DV_SRC, _PART_DV_DEST) as metadata_file:
+            session.sql(
+                "CALL ice.system.register_table("
+                f"table => 'sales.partdv', metadata_file => '{metadata_file}')"
+            )
+            with pytest.raises(Exception, match="V3-ROWID-2") as cte:
+                session.sql(
+                    "WITH x AS (SELECT _row_id FROM ice.sales.partdv) SELECT * FROM x"
+                ).collect()
+            _assert_v3_rowid2(str(cte.value), "CTEs")
+            with pytest.raises(Exception, match="V3-ROWID-2") as subquery:
+                session.sql(
+                    "SELECT _row_id FROM (SELECT _row_id FROM ice.sales.partdv) s"
+                ).collect()
+            _assert_v3_rowid2(str(subquery.value), "subqueries")
+            snaps = session.sql("SELECT snapshot_id FROM ice.sales.partdv.snapshots").to_arrow()
+            snapshot = snaps.column(0).to_pylist()[-1]
+            with pytest.raises(Exception, match="V3-ROWID-2") as travel:
+                session.sql(
+                    f"SELECT _row_id FROM ice.sales.partdv VERSION AS OF {snapshot}"
+                ).collect()
+            _assert_v3_rowid2(str(travel.value), "time-travel")
+    finally:
+        session.stop()
+
+
+def test_facade_unquoted_row_id_folds_quoted_stays_exact(tmp_path: Path) -> None:
+    """Unquoted `_ROW_ID` folds; quoted mixed-case stays exact."""
+    from repark import ReparkSession
+
+    session = ReparkSession.builder.appName("v3-4-case-lineage").getOrCreate()
+    try:
+        session.register_memory_catalog("ice", tmp_path)
+        session.sql("CREATE NAMESPACE ice.sales")
+        with _materialize(_PART_DV_SRC, _PART_DV_DEST) as metadata_file:
+            session.sql(
+                "CALL ice.system.register_table("
+                f"table => 'sales.partdv', metadata_file => '{metadata_file}')"
+            )
+            folded = session.sql("SELECT _ROW_ID FROM ice.sales.partdv ORDER BY 1").to_arrow()
+            assert folded.column(0).to_pylist() == [0, 2, 3, 5]
+            with pytest.raises(Exception) as raised:
+                session.sql("SELECT `_Row_Id` FROM ice.sales.partdv").collect()
+            message = str(raised.value)
+            assert "_Row_Id" in message or "No field named" in message
+    finally:
+        session.stop()
+
+
+def test_facade_select_star_plus_row_id_expands_user_columns_only(tmp_path: Path) -> None:
+    """`SELECT *, _row_id` expands * to user columns only."""
+    from repark import ReparkSession
+
+    session = ReparkSession.builder.appName("v3-4-star-lineage").getOrCreate()
+    try:
+        session.register_memory_catalog("ice", tmp_path)
+        session.sql("CREATE NAMESPACE ice.sales")
+        with _materialize(_PART_DV_SRC, _PART_DV_DEST) as metadata_file:
+            session.sql(
+                "CALL ice.system.register_table("
+                f"table => 'sales.partdv', metadata_file => '{metadata_file}')"
+            )
+            table = session.sql("SELECT *, _row_id FROM ice.sales.partdv ORDER BY id").to_arrow()
+            assert table.column_names == ["id", "name", "part", "_row_id"]
+            filtered = session.sql(
+                "SELECT id, _row_id FROM ice.sales.partdv WHERE id = 1"
+            ).to_arrow()
+            assert filtered.column("id").to_pylist() == [1]
+            assert filtered.column("_row_id").to_pylist() == [0]
     finally:
         session.stop()

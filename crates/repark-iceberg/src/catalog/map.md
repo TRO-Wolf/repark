@@ -43,10 +43,13 @@ Source comments retain only API and safety contracts; implementation narration i
   anything else — unknown scheme, single-slash typo `s3:/…`, relative/empty path — fails loud,
   never a silent LocalFs).
 - `lineage_columns.rs` — **V3-4:** `LineageColumnsTableProvider` serves `_row_id` and
-  `_last_updated_sequence_number` on format-v3 reads (stored value else
-  `first_row_id +` position / file sequence). `SELECT *` stays user columns because the
-  SQL doors only register this provider when a query names the columns.
-  pins: v3-4-serve-lineage-columns/C-002
+  `_last_updated_sequence_number` on format-v3 **current-snapshot** reads (stored value
+  else `first_row_id +` position / file sequence). Simple `col = lit` filters pass through
+  to `table.scan().with_filter` (`TableProviderFilterPushDown::Inexact` residual still
+  applies). Time-travel plus lineage is `V3-ROWID-2` at the SQL rewrite; snapshot-pinned
+  scan is the follow-up. `SELECT *` stays user columns because the SQL doors only register
+  this provider when a query names the columns.
+  pins: v3-4-serve-lineage-columns/C-002, C-017, C-019, C-020
 - `metadata_projection.rs` — the two RePark-side policies over the fork's `table$meta` tables.
   (1) `ProjectingMetadataTableProvider` wraps a fork metadata provider so `scan` honors DF
   projection via `ProjectionExec` (never collect-then-project). (2)
@@ -112,6 +115,7 @@ SQL interception layer (phase-2 door). Locked down by tests here.
 | `SHOW TABLES` does not list `t$snapshots` | expected since ADR-0006 — hidden from enumeration on purpose, still queryable as `ns."t$snapshots"` (or the Spark door's `ns.t.snapshots`) |
 | A `$`-metadata name reappears in `SHOW TABLES` after a fork repin | the fork changed the synthesized spelling; the filter matches `<base>$<MetadataTableType::as_str()>` exactly. See `crates/repark-iceberg/map.md` "Known limitations" (the repin duty) |
 | `SHOW TABLES` lists `a$b$snapshots` (a `$` in the BASE table's name) | closed at RP-1: last-`$` + vocabulary hides it; `a$b` still lists. Inherent residue is a base literally named `foo$files`. Pin: `the_filter_keeps_names_the_fork_did_not_synthesize` |
+| `VERSION AS OF` plus `_row_id` is a Schema error | Intended `V3-ROWID-2` at the SQL rewrite (`repark_core::prepare_lineage_sql`). Snapshot-pinned lineage scan is the follow-up, not `try_new_with_snapshot`. |
 
 First checks: `cargo test -p repark-iceberg catalog::`. Escalate to: [../../map.md#debug](../../map.md).
 

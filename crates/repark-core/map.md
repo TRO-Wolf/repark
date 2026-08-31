@@ -78,9 +78,10 @@ honestly"). SQL routing and session-build registration are seam-inverted
 - `src/catalog_state.rs` — the hoisted `CatalogRegistry` + `LocationPolicy` (E-4 temp-root
   resolution at registration).
 - `src/lineage_columns.rs` — **V3-4:** rewrite `SELECT _row_id` / `_last_updated_sequence_number`
-  onto a `LineageColumnsTableProvider` temp view for format-v3 Iceberg tables; v1/v2 stay
-  unresolved. Both SQL doors call `prepare_lineage_sql`.
-  pins: v3-4-serve-lineage-columns/C-002, C-003
+  onto a `LineageColumnsTableProvider` temp view for format-v3 Iceberg tables (single-table
+  only; JOIN/CTE/subquery/time-travel refuse `V3-ROWID-2`); v1/v2 stay unresolved. Both SQL
+  doors call `prepare_lineage_sql`.
+  pins: v3-4-serve-lineage-columns/C-002, C-003, C-011, C-012, C-013, C-014, C-015, C-016
 - `src/time_travel.rs` — the hoisted `TimeTravelSpec` parsers + `read_table_at`
   (snapshot-pinned static provider).
 - `src/map.md` — the per-file source inventory (authoritative detail for everything above, plus

@@ -163,7 +163,8 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
     Spark 4.1.2 + Iceberg 1.11.0 preserves `_row_id`; the engine rewrite reassigns
     (registry `V3-COW-1`). `V3-LINEAGE-1` and `B-MOR-3` stay.
     **V3-4 read (2026-08-31):** `_row_id` / `_last_updated_sequence_number` Spark-equal on
-    v3 reads (three doors); v1/v2 unresolved; `V3-ROWID-1` FIXED. Preserve-half stays F-7.
+    single-table v3 reads (three doors); v1/v2 engine Schema `No field named _row_id`;
+    JOIN/CTE/subquery/time-travel refuse `V3-ROWID-2`. `V3-ROWID-1` FIXED. Preserve-half stays F-7.
   - **Next:** V3-5 / F-7 COW lineage lift. V3-3 charter
     [task/ledgers/completed/v3-3-dml-ledger.md](task/ledgers/completed/v3-3-dml-ledger.md)
     (keep-refusal, F-rp3-c7 stays a fork finding).

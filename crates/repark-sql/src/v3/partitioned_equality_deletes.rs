@@ -3,6 +3,7 @@
 //! pins: v3e-3-partitioned-eqdel-fixtures/C-007, C-008, C-010
 //! pins: rp-3-fork-repin/C-007
 //! pins: v3-4-serve-lineage-columns/C-003, C-005, C-007, C-008
+//! pins: v3-4-serve-lineage-columns/C-011, C-012, C-013, C-014, C-015, C-016, C-018, C-020
 
 use std::collections::HashSet;
 use std::fs;
@@ -623,7 +624,208 @@ async fn ansi_v2_table_lineage_columns_are_unresolved() {
         .expect_err("v2 must not plan lineage columns")
         .to_string();
     assert!(
-        error.contains("_row_id"),
-        "pre-v3 must fail closed, got: {error}"
+        error.contains("No field named") && error.contains("_row_id"),
+        "pre-v3 must fail as the engine Schema class, got: {error}"
+    );
+}
+
+fn assert_v3_rowid2(message: &str, kind: &str) {
+    assert!(
+        message.contains("[V3-ROWID-2]")
+            && message.contains(kind)
+            && message.contains("single-table reads are"),
+        "expected V3-ROWID-2 over {kind}, got: {message}"
+    );
+}
+
+async fn row_id_values(door: &Door, sql: &str) -> Vec<i64> {
+    let batches = door
+        .sql(sql)
+        .await
+        .unwrap_or_else(|err| panic!("{sql}: {err}"));
+    let mut values = Vec::new();
+    for batch in &batches {
+        let column = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<Int64Array>()
+            .expect("_row_id Int64");
+        for index in 0..batch.num_rows() {
+            assert!(!column.is_null(index));
+            values.push(column.value(index));
+        }
+    }
+    values
+}
+
+#[tokio::test]
+async fn ansi_join_naming_lineage_refuses_v3_rowid2() {
+    let fixture = materialize(
+        &PART_DV_LOCK,
+        "v3-spark-part-dv",
+        PART_DV_TABLE,
+        "v3.metadata.json",
+    );
+    let door = door().await;
+    adopt(&door, "partdv", &fixture.metadata_file).await;
+    let error = door
+        .sql(
+            "SELECT * FROM ice.sales.partdv a JOIN ice.sales.partdv b ON a.id = b.id \
+             WHERE a._row_id IS NOT NULL",
+        )
+        .await
+        .expect_err("join plus lineage must refuse");
+    assert_v3_rowid2(&error.to_string(), "joins");
+}
+
+#[tokio::test]
+async fn ansi_qualified_and_aliased_single_table_lineage_selects() {
+    let fixture = materialize(
+        &PART_DV_LOCK,
+        "v3-spark-part-dv",
+        PART_DV_TABLE,
+        "v3.metadata.json",
+    );
+    let door = door().await;
+    adopt(&door, "partdv", &fixture.metadata_file).await;
+    let expected = vec![0, 2, 3, 5];
+    assert_eq!(
+        row_id_values(
+            &door,
+            "SELECT t._row_id FROM ice.sales.partdv t ORDER BY t._row_id"
+        )
+        .await,
+        expected
+    );
+    assert_eq!(
+        row_id_values(
+            &door,
+            "SELECT partdv._row_id FROM ice.sales.partdv ORDER BY partdv._row_id"
+        )
+        .await,
+        expected
+    );
+    assert_eq!(
+        row_id_values(
+            &door,
+            "SELECT ice.sales.partdv._row_id FROM ice.sales.partdv ORDER BY 1"
+        )
+        .await,
+        expected
+    );
+}
+
+#[tokio::test]
+async fn ansi_cte_and_subquery_naming_lineage_refuse_v3_rowid2() {
+    let fixture = materialize(
+        &PART_DV_LOCK,
+        "v3-spark-part-dv",
+        PART_DV_TABLE,
+        "v3.metadata.json",
+    );
+    let door = door().await;
+    adopt(&door, "partdv", &fixture.metadata_file).await;
+    let cte = door
+        .sql("WITH x AS (SELECT _row_id FROM ice.sales.partdv) SELECT * FROM x")
+        .await
+        .expect_err("CTE plus lineage must refuse");
+    assert_v3_rowid2(&cte.to_string(), "CTEs");
+    let subquery = door
+        .sql("SELECT _row_id FROM (SELECT _row_id FROM ice.sales.partdv) s")
+        .await
+        .expect_err("subquery plus lineage must refuse");
+    assert_v3_rowid2(&subquery.to_string(), "subqueries");
+}
+
+#[tokio::test]
+async fn ansi_version_as_of_naming_lineage_refuses_v3_rowid2() {
+    let fixture = materialize(
+        &PART_DV_LOCK,
+        "v3-spark-part-dv",
+        PART_DV_TABLE,
+        "v3.metadata.json",
+    );
+    let door = door().await;
+    adopt(&door, "partdv", &fixture.metadata_file).await;
+    let ident = TableIdent::new(NamespaceIdent::new("sales".into()), "partdv".into());
+    let snapshot = door
+        .catalog
+        .load_table(&ident)
+        .await
+        .expect("load")
+        .metadata()
+        .current_snapshot()
+        .expect("snapshot")
+        .snapshot_id();
+    let error = door
+        .sql(&format!(
+            "SELECT _row_id FROM ice.sales.partdv FOR VERSION AS OF {snapshot}"
+        ))
+        .await
+        .expect_err("time-travel plus lineage must refuse");
+    assert_v3_rowid2(&error.to_string(), "time-travel");
+}
+
+#[tokio::test]
+async fn ansi_unquoted_row_id_folds_quoted_mixed_case_stays_exact() {
+    let fixture = materialize(
+        &PART_DV_LOCK,
+        "v3-spark-part-dv",
+        PART_DV_TABLE,
+        "v3.metadata.json",
+    );
+    let door = door().await;
+    adopt(&door, "partdv", &fixture.metadata_file).await;
+    assert_eq!(
+        row_id_values(&door, "SELECT _ROW_ID FROM ice.sales.partdv ORDER BY 1").await,
+        vec![0, 2, 3, 5]
+    );
+    let quoted = door
+        .sql(r#"SELECT "_Row_Id" FROM ice.sales.partdv"#)
+        .await
+        .expect_err("quoted mixed-case must stay exact");
+    let message = quoted.to_string();
+    assert!(
+        message.contains("_Row_Id") || message.contains("No field named"),
+        "quoted mixed-case must not fold, got: {message}"
+    );
+}
+
+#[tokio::test]
+async fn ansi_select_star_plus_row_id_expands_user_columns_only() {
+    let fixture = materialize(
+        &PART_DV_LOCK,
+        "v3-spark-part-dv",
+        PART_DV_TABLE,
+        "v3.metadata.json",
+    );
+    let door = door().await;
+    adopt(&door, "partdv", &fixture.metadata_file).await;
+    let batches = door
+        .sql("SELECT *, _row_id FROM ice.sales.partdv ORDER BY id")
+        .await
+        .expect("select *, _row_id");
+    let names: Vec<_> = batches[0]
+        .schema()
+        .fields()
+        .iter()
+        .map(|field| field.name().clone())
+        .collect();
+    assert_eq!(names, vec!["id", "name", "part", "_row_id"]);
+}
+
+#[tokio::test]
+async fn ansi_filtered_lineage_select_returns_matching_rows() {
+    let fixture = materialize(
+        &PART_DV_LOCK,
+        "v3-spark-part-dv",
+        PART_DV_TABLE,
+        "v3.metadata.json",
+    );
+    let door = door().await;
+    adopt(&door, "partdv", &fixture.metadata_file).await;
+    assert_eq!(
+        row_id_values(&door, "SELECT _row_id FROM ice.sales.partdv WHERE id = 1").await,
+        vec![0]
     );
 }

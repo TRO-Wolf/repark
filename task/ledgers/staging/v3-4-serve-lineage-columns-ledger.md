@@ -32,8 +32,18 @@ Every V3-COW-1 / v3 DML keep-refusal pin stays byte-untouched.
 | C-008 | MOR read of the V3E-3 **equality-delete + DV** fixture serves lineage for surviving rows Spark-equal. Three doors. | Pins on `fixtures/v3-spark-eq-dv/` vs C-001 eq-dv cell. | **PROVEN** | `(2,1,1),(3,2,1)` on Spark, ANSI, facade. Pins: `equality_delete_v3_serves_spark_equal_lineage_for_surviving_rows`, `ansi_equality_delete_v3_serves_spark_equal_lineage`, `test_facade_equality_delete_v3_serves_spark_equal_lineage`. |
 | C-009 | Preserve-half fence: every V3-COW-1 / v3 DML keep-refusal pin is byte-untouched. This unit does not lift UPDATE / MERGE / sequential COW DELETE, does not call OverwriteFiles `FirstRowIdPolicy::Suppress`, and does not retarget F-7. | Identity check against `origin/main` on the named keep-refusal files. | **PROVEN** | Pin: `cow_keep_refusal_files_are_byte_untouched` vs base `60225cc`. |
 | C-010 | Documents match the pins: `V3-ROWID-1` closes or narrows to the measured residue; STATUS Next; north-star read row; maps lockstep. | Registry, STATUS (≤25000 B), north star, `check-map-sync`. | **PROVEN** | `V3-ROWID-1` FIXED; STATUS Next is V3-5 / F-7; north-star read row ✅. |
+| C-011 | JOIN naming a lineage column refuses `[V3-ROWID-2]` (joins); never returns HashMap-ordered user columns. Three doors. | Red-first pins of the Critic probe shape. | **PROVEN** | `join_naming_lineage_refuses_v3_rowid2`, `ansi_join_naming_lineage_refuses_v3_rowid2`, `test_facade_join_naming_lineage_refuses_v3_rowid2`. |
+| C-012 | Qualified and aliased single-table forms work (`SELECT t._row_id FROM ice.sales.t`, fully-qualified). Spark accepts them. Three doors. | Red-first pins. | **PROVEN** | `qualified_and_aliased_single_table_lineage_selects` and ANSI/facade twins. |
+| C-013 | CTE and subquery forms naming lineage refuse `[V3-ROWID-2]` (CTEs / subqueries), not a raw Schema error. Three doors. | Red-first pins. | **PROVEN** | `cte_and_subquery_naming_lineage_refuse_v3_rowid2` and ANSI/facade twins. |
+| C-014 | `VERSION AS OF` / time-travel naming lineage refuse `[V3-ROWID-2]` (time-travel). Residue: snapshot-pinned scan via `table.scan().snapshot_id` (constructor `try_new_with_snapshot` removed, not left dead). Three doors. | Red-first pins + dated residue. | **PROVEN** | `version_as_of_naming_lineage_refuses_v3_rowid2` and ANSI/facade twins. Registry `V3-ROWID-2`. |
+| C-015 | Unquoted `_ROW_ID` folds like Spark; quoted mixed-case stays exact. Three doors. | Red-first pins of both cells. | **PROVEN** | `unquoted_row_id_folds_quoted_mixed_case_stays_exact` and ANSI/facade twins. |
+| C-016 | `SELECT *, _row_id FROM t` expands `*` to user columns only; leaking lineage into expand reds the pin. Three doors. | Re-pin of the vacuous `SELECT *` hide. | **PROVEN** | `select_star_plus_row_id_expands_user_columns_only` and ANSI/facade twins. |
+| C-017 | Stored `_row_id` wins over `first_row_id +` position on at least one row of a v3 fixture that materializes the reserved column. | Iceberg provider pin vs fork writer shape (stored 777/NULL/999). | **PROVEN** | `stored_row_id_wins_over_first_row_id_plus_position`. |
+| C-018 | v1/v2 unresolved pin is the measured engine class `No field named _row_id` — no both-accepting disjunct with Spark `UNRESOLVED_COLUMN`. Registry wording matches. | Three-door pins + registry. | **PROVEN** | `v2_table_lineage_columns_are_unresolved`, `v1_table_lineage_columns_are_unresolved`, ANSI/facade v2 twins; registry V3-ROWID-1. |
+| C-019 | `try_new_with_snapshot` is removed; the provider scans the current snapshot only. | Source pin. | **PROVEN** | `try_new_with_snapshot_is_removed`. |
+| C-020 | Filters reach `table.scan().with_filter` for simple `col = lit` (Inexact residual remains). Filtered lineage results stay correct. | Provider pin + three-door `WHERE id = 1`. | **PROVEN** | `filter_on_id_keeps_matching_lineage_row`, `filtered_lineage_select_returns_matching_rows` and ANSI/facade twins. |
 
-VERDICT: 10 clauses, 10 PROVEN, 0 OPEN, 0 REJECTED.
+VERDICT: 20 clauses, 20 PROVEN, 0 OPEN, 0 REJECTED.
 
 ## Actor coverage attestation
 
@@ -79,6 +89,7 @@ COVERAGE_ATTESTATION:
       status: ATTACKED
       evidence: >
         Scan streams via iceberg TableScan::to_arrow and StreamingTableExec.
+        Simple col=lit filters pass through; Inexact residual remains.
         Rewrite is identifier-gated so SELECT * does not pay the extra columns.
       artifacts: [crates/repark-iceberg/src/catalog/lineage_columns.rs]
     - id: AT-8
@@ -90,16 +101,28 @@ COVERAGE_ATTESTATION:
     - id: AT-9
       status: ATTACKED
       evidence: >
-        v1/v2 errors name _row_id. v3 reads return the two columns with Spark
-        names, int64, nullable true.
+        v1/v2 errors are the engine Schema class `No field named _row_id`.
+        v3 reads return the two columns with Spark names, int64, nullable true.
       artifacts: [crates/repark-spark/src/tests/v3_lineage.rs]
     - id: AT-10
       status: ATTACKED
       evidence: >
-        V3-ROWID-1 FIXED. STATUS Next is V3-5 / F-7. North-star read row is green.
-        Maps lockstep.
+        V3-ROWID-1 FIXED. V3-ROWID-2 DECLARED for composed statements. STATUS Next
+        is V3-5 / F-7. North-star read row is green. Maps lockstep.
       artifacts: [docs/spark-sql-iceberg-parity.md, STATUS.md, task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md]
 ```
+
+## 6. Critic remediation (2026-08-31)
+
+Rewrite fires only for a single-table v3 statement. JOIN / CTE / subquery / time-travel
+that name a lineage column refuse `[V3-ROWID-2]`. Qualified/aliased single-table forms
+and unquoted case-fold are served. `try_new_with_snapshot` is removed; time-travel plus
+lineage stays refused until a snapshot-pinned `table.scan().snapshot_id` follow-up.
+`LineageColumnsTableProvider::scan` passes simple `col = lit` filters through
+(`TableProviderFilterPushDown::Inexact` residual remains; filtered results are pinned).
+
+Dated residue (L-003 / L-004): CTE/subquery and `VERSION AS OF` plus lineage are
+fail-loud this unit. Spark serves them. Follow-up named on registry `V3-ROWID-2`.
 
 ## 1. Out of scope
 
