@@ -50,8 +50,9 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   registration wins) + **Q1** `approx_percentile_cont` re-registered with aliases
   `percentile_approx` / `approx_percentile` via `AggregateUDF::with_aliases` +
   `spark_date_shim_functions()` + `analyzer_rules()` (`SparkDecimalPrecision` first, then
-  `SparkDecimalRewrite` (U4b `/` + DEC-6), then `SparkExprSemantics` + cardinality +
-  instant_ts; installed by the session on every context via the Spark door's
+  `SparkDecimalRewrite` (U4b `/` + DEC-6), then `SparkIntegerOverflow` (F-Y10-1), then
+  `SparkExprSemantics` + cardinality + instant_ts; installed by the session on every
+  context via the Spark door's
   `SessionExtension` in `repark-spark`) + DEC-8 `register_spark_decimal_planner` from
   `register_all` + the shared `shim_udf_boilerplate!` macro. Error conversion from
   `DataFusionError` happens one layer up in `repark-core` (this crate stays DataFusion-native).
