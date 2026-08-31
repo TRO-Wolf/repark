@@ -31,9 +31,9 @@ re-measure; F-6 is carried, not consumed (REF later).
 | C-003 | **F-7 slice 1 re-measured at the frozen SHA.** Engine `CALL system.rewrite_data_files` (direct fork action below the public guard, as RP-3 C-005) on the v3 fixture, then PySpark 4.1.2 + Iceberg 1.11.0 read-back of `_row_id` / `_last_updated_sequence_number`. If lineage now carries Spark-equal, registry `V3-LINEAGE-1` moves to FIXED (dated 2026-08-31, fork #243) and the public guard lifts; STATUS / north-star / the handoff truth up; V3-5 becomes charterable. If it still reassigns, the guard stays and the measured divergence is filed against the fork row. A green fork row is not evidence. | RP-3 §11 driver re-run; Spark read-back of both state copies; red-first on any pin that flips. | **PROVEN** | Native v3 12-file fixture: rewritten=12 added=1. Engine scan before=after `(1,0,1)…(12,11,12)`. PySpark 4.1.2 + Iceberg 1.11.0 `toArrow` schemas `id:int64, _row_id:int64, _last_updated_sequence_number:int64`; `LINEAGE_EQUAL=True`. Guard lifted. Pin `call_rewrite_data_files_on_v3_preserves_row_lineage` (5/5 `tests::call_v3` 2026-08-31). Registry `V3-LINEAGE-1` FIXED. Citation: `crates/repark-spark/src/tests/call_v3.rs`. |
 | C-004 | **F-6 carried, not consumed.** No engine surface calls `to_branch` in this unit. Compile is green at the new transaction shape; checked-in Spark fixtures are byte-flat vs `origin/main`; the REF / F-6 handoff row notes that the fork surface now exists. | Grep engine sources for `to_branch`; fixture byte comparison; the REF row note. | **PROVEN** | `cargo check --locked` green at `33be9a0` (F-6 compile). `test_engine_sources_do_not_call_to_branch` + fixture byte-flat. Handoff F-6 row and registry REF-1 note the fork surface. Citation: `python/repark/tests/test_rp4_c004_to_branch.py`. |
 | C-005 | The documents say what the pins prove: north star `rewrite_data_files` row, STATUS, the handoff F-7 / F-6 take-or-carry, `docs/fork-sync.md` pin history, crate maps and the divergence registry in lockstep. | `make check-map-sync`, `check-docs-compaction`, `check-ledger-grammar`. | **PROVEN** | North star rewrite row ✅; STATUS RP-4; handoff F-7/F-6; `docs/fork-sync.md` pin history; registry FIXED + REF-1 carry note. STATUS 24841 B / 25000. Citation: `crates/repark-spark/src/map.md`. |
-| C-006 | Green on the bound gates: `make verify`, `make check-map-sync check-ledger-grammar`, `python3 scripts/ledger_lifecycle.py check --base bb7fa54af48632c52d28aa8f7f446fac1dbf3742`, `make py-test`. | Gate output attached. Real exit codes. | **OPEN** | Full `make verify` + `make py-test` once before CONCLUDED. |
+| C-006 | Green on the bound gates: `make verify`, `make check-map-sync check-ledger-grammar`, `python3 scripts/ledger_lifecycle.py check --base bb7fa54af48632c52d28aa8f7f446fac1dbf3742`, `make py-test`. | Gate output attached. Real exit codes. | **PROVEN** | 2026-08-31: `make verify` exit 0; `make check-map-sync check-ledger-grammar` exit 0 (162 maps; 15 live ledgers); `python3 scripts/ledger_lifecycle.py check --base bb7fa54af48632c52d28aa8f7f446fac1dbf3742` exit 0; `make py-test` exit 0 (472 passed). Citation: `crates/repark-spark/src/map.md`. |
 
-VERDICT: 6 clauses, 5 PROVEN, 1 OPEN, 0 REJECTED. C-006 waits on the bound gates.
+VERDICT: 6 clauses, 6 PROVEN, 0 OPEN, 0 REJECTED.
 
 ## 2. Sequence
 
@@ -148,4 +148,59 @@ SELF_LOGIC_REVIEW:
   verdict: PROCEED
   escalation: —
 ```
+
+## 7. Gates (C-006)
+
+| Command | Exit |
+|---|---|
+| `make verify` | 0 |
+| `make check-map-sync check-ledger-grammar` | 0 (162 maps; 15 live ledgers) |
+| `python3 scripts/ledger_lifecycle.py check --base bb7fa54af48632c52d28aa8f7f446fac1dbf3742` | 0 |
+| `make py-test` | 0 (472 passed) |
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: rp-4-fork-repin
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: CALL rewrite_data_files on a 12-file v3 table keeps _row_id/seq Spark-equal; PySpark 4.1.2 + Iceberg 1.11.0 Arrow int64.
+      artifacts: [crates/repark-spark/src/tests/call_v3.rs, python/repark/tests/test_v3_create_opt_in.py]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Twelve-file compaction; opt-in single-file CALL no longer refuses; v2 rewrite control still compacts.
+      artifacts: [crates/repark-spark/src/tests/call_v3.rs]
+    - id: AT-3
+      status: ATTACKED
+      evidence: V3-COW-1 MERGE/UPDATE keep-refusal still fires on opt-in CREATE; write-to-branch still refuses.
+      artifacts: [crates/repark-spark/src/tests/call_v3.rs, crates/repark-spark/src/tests/ref_ddl.rs]
+    - id: AT-4
+      status: N/A
+      justification: Repin and CALL rewrite are sequential table commits; no new shared mutable engine state.
+    - id: AT-5
+      status: N/A
+      justification: No AWS, IAM, or secret handling. Fixture bytes stay flat vs origin/main.
+    - id: AT-6
+      status: ATTACKED
+      evidence: NamespaceScopedCatalog still forwards 14 required Catalog methods; metadata-projection shim stays; IcebergSchemaProvider try_new stays lazy.
+      artifacts: [crates/repark-iceberg/map.md, crates/repark-iceberg/src/catalog/tests/namespace_scoped.rs]
+    - id: AT-7
+      status: N/A
+      justification: No new recursion or unbounded allocation; fork pin only.
+    - id: AT-8
+      status: ATTACKED
+      evidence: Five iceberg* revs and six lock sources are 33be9a0; family freeze holds; no engine to_branch caller.
+      artifacts: [Cargo.toml, python/repark/tests/test_rp4_c004_to_branch.py]
+    - id: AT-9
+      status: ATTACKED
+      evidence: V3-LINEAGE-1 FIXED names fork #243 and the Spark-equal transcript; REF-1 notes to_branch exists unconsumed.
+      artifacts: [docs/spark-sql-iceberg-parity.md]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Six clauses pinned; maps lockstep; STATUS under 25000 B; gates recorded.
+      artifacts: [task/ledgers/staging/rp-4-fork-repin-ledger.md, crates/repark-spark/src/map.md]
+  reattested: []
+  complete: true
+```
+
 
