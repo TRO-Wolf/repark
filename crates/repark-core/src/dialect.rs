@@ -46,6 +46,11 @@ pub trait SqlDialect: Send + Sync {
         cx: EngineContext<'_>,
         query: &str,
     ) -> datafusion::error::Result<DataFrame>;
+
+    /// Install dialect-owned hooks on the freshly built [`SessionContext`].
+    fn on_session_built(&self, ctx: &SessionContext) {
+        let _ = ctx;
+    }
 }
 
 /// The default dialect, using plain `SessionContext::sql`.

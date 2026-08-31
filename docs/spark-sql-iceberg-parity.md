@@ -365,14 +365,23 @@ them, and the document is ordered by surface, never by date.
 > this section's [ID-1](#id-1--a-quoted-identifier-resolves-case-sensitively) (cited, not
 > duplicated).
 >
-> **F-Y10-1 / F-Y10-2 — routed, not invented as DEC rows (2026-08-13, Z-5).** F-Y10-1
-> (`CAST(2147483647 AS INT) + CAST(1 AS INT)` wraps on **both** doors) is the integer analog
-> of DEC-6 (a decimal overflow, since FIXED — #99). The 2026-08-13
-> DEC addendum (Q11 = A) puts ANSI overflow on campaign U5 / G13; wrap is not pinned as
-> intended and is not a new DEC row. F-Y10-2 (ANSI float `/ 0` is IEEE `+Inf` rather than a
-> standard-SQL raise) is residual; the door-vs-door Inf-vs-NULL split is already an INTENDED
-> pin (`cross_door_float_div_by_zero_is_infinity_on_ansi_null_on_spark`). It is not
-> DEC-7 (decimal `/0`, since FIXED — #99).
+> **F-Y10-1 — integer arithmetic overflow raises where Spark raises — FIXED (2026-08-30).**
+> Checked integer `+` / `-` / `*` (`crates/repark-functions/src/integer_spark.rs`) read
+> `spark.sql.ansi.enabled` (default TRUE, DEC U5 shape). `CAST(2147483647 AS INT) + CAST(1 AS INT)`
+> and `CAST(INT) + 1` raise `[ARITHMETIC_OVERFLOW]` under ANSI; `ansi=false` wraps at Int32
+> `-2147483648`. BIGINT is the same with `long overflow`. The ANSI door raises per standard SQL
+> (owner Option A). Spark `ansi=false` wrap vs ANSI raise is an INTENDED pin
+> (`cross_door_int32_add_overflow_wraps_on_spark_ansi_false_raises_on_ansi`). Pins:
+> `crates/repark-functions/src/integer_spark.rs` tests; `ansi_door_int32_add_overflow_raises`;
+> `python/repark/tests/test_integer_overflow_parity.py`. G13's integer half is closed.
+> Residue of that campaign body: G5b-R3-ANSI (window RANGE wrap), F-Y10-2, and
+> SMALLINT/Int16 overflow (2026-08-30: `CAST(32767 AS SMALLINT) + CAST(1 AS SMALLINT)`
+> still Arrow-wraps to Int16 `-32768` under default ANSI; charter partition was int32/int64).
+>
+> **F-Y10-2 — routed, not invented as a DEC row (2026-08-13, Z-5).** ANSI float `/ 0` is IEEE
+> `+Inf` rather than a standard-SQL raise. Residual. The door-vs-door Inf-vs-NULL split is
+> already an INTENDED pin (`cross_door_float_div_by_zero_is_infinity_on_ansi_null_on_spark`).
+> It is not DEC-7 (decimal `/0`, since FIXED — #99).
 
 ### ID-2 — the case-collision refusal covers the SQL-string form only
 
@@ -1009,6 +1018,11 @@ the pin rather than obeying it.
 > + `…[tz8_to_date_ts_identity_new_york_ctas]` (flipped to equality — flip evidence). A fixed
 > defect gets this dated note, never a live divergence row.
 
+> **G13 integer overflow (F-Y10-1) — FIXED 2026-08-30.** The integer half of gap G13
+> (`INT`/`BIGINT` `+` `-` `*` at the boundary) now raises under ANSI and wraps when
+> `ansi=false`. Residue named on the F-Y10-1 FIXED note above: G5b-R3-ANSI window RANGE wrap,
+> F-Y10-2 float `/0`, DEC-9 nullability, and SMALLINT/Int16 wrap (2026-08-30).
+>
 > **The DEC family (DEC-1 … DEC-9)** landed on 2026-08-11 from the G-7 decimal128 differential
 > corpus (hardening gaps **G2** and **G13**; unit ledger
 > [history/hardening-h1/g7-decimal-ledger.md](history/hardening-h1/g7-decimal-ledger.md)). Oracle basis for every Spark half:

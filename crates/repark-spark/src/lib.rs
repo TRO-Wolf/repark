@@ -45,6 +45,7 @@ pub fn refuse_sql_fragment(sql: &str) -> datafusion::error::Result<()> {
 
 // --- Session seam adapter.
 pub use dialect::SparkDialect;
+pub use repark_functions::integer_spark::install_integer_overflow;
 
 // --- Crate-root public surface.
 pub use catalog_ops::postgres_read_only_dml_message;

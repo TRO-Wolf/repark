@@ -244,3 +244,69 @@ async fn ansi_door_implicit_string_plus_number_refuses() {
         "ANSI door must refuse implicit string→number coercion, got: {error}"
     );
 }
+
+/// pins: f-y10-1-int-overflow/C-002, C-003
+#[tokio::test]
+async fn ansi_door_unaliased_typed_add_preserves_binary_expr_name() {
+    let ansi = native_ansi_door().await;
+    let frame = ansi
+        .session
+        .sql("SELECT x + 1 FROM (SELECT CAST(1 AS INT) AS x)")
+        .await
+        .expect("unaliased typed add");
+    let name = frame.schema().as_arrow().field(0).name();
+    assert_eq!(
+        name, "x + Int64(1)",
+        "ANSI unaliased planner-hit name must not leak the UDF, got {name}"
+    );
+}
+
+/// pins: f-y10-1-int-overflow/C-001, C-002, C-003
+#[tokio::test]
+async fn ansi_door_untyped_one_plus_one_stays_int64() {
+    let ansi = native_ansi_door().await;
+    let pin = int64_scalar(&ansi.session, "SELECT 1 + 1 AS v").await;
+    assert_eq!(
+        pin,
+        (DataType::Int64, false, Some(2)),
+        "untyped 1+1 stays Int64 on the ANSI door"
+    );
+}
+
+/// pins: f-y10-1-int-overflow/C-001, C-002, C-003
+#[tokio::test]
+async fn ansi_door_untyped_overflow_widens_to_int64() {
+    let ansi = native_ansi_door().await;
+    let pin = int64_scalar(&ansi.session, "SELECT 2147483647 + 1 AS v").await;
+    assert_eq!(
+        pin,
+        (DataType::Int64, false, Some(2_147_483_648)),
+        "untyped INT-boundary add stays the Int64 widen on the ANSI door"
+    );
+}
+
+/// pins: f-y10-1-int-overflow/C-003
+#[tokio::test]
+async fn ansi_door_int32_add_overflow_raises() {
+    let ansi = native_ansi_door().await;
+    let error = collect_error(
+        &ansi.session,
+        "SELECT CAST(2147483647 AS INT) + CAST(1 AS INT) AS v",
+    )
+    .await;
+    assert!(
+        error.contains("ARITHMETIC_OVERFLOW"),
+        "ANSI door must raise on INT overflow (standard SQL), got: {error}"
+    );
+}
+
+/// pins: f-y10-1-int-overflow/C-003
+#[tokio::test]
+async fn ansi_door_int32_add_literal_overflow_raises() {
+    let ansi = native_ansi_door().await;
+    let error = collect_error(&ansi.session, "SELECT CAST(2147483647 AS INT) + 1 AS v").await;
+    assert!(
+        error.contains("ARITHMETIC_OVERFLOW"),
+        "ANSI door CAST(INT)+1 must raise, not widen, got: {error}"
+    );
+}

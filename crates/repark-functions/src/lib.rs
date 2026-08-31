@@ -16,6 +16,7 @@ pub mod declared_refuse;
 pub mod expr_fn;
 pub mod higher_order;
 pub mod instant_ts;
+pub mod integer_spark;
 pub mod random;
 pub mod session_time_zone;
 pub mod spark_length;
@@ -82,6 +83,7 @@ pub fn register_all(ctx: &SessionContext) {
     validate::register(ctx);
     higher_order::register(ctx);
     decimal_spark::register_spark_decimal_planner(ctx);
+    integer_spark::register_spark_integer_planner(ctx);
 }
 
 /// Return analyzer rules: decimal precision, decimal rewrite, semantics, safety, then LTZ casts.
@@ -90,6 +92,7 @@ pub fn analyzer_rules() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
     let mut rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>> = vec![
         Arc::new(decimal_precision::SparkDecimalPrecision),
         Arc::new(decimal_spark::SparkDecimalRewrite),
+        Arc::new(integer_spark::SparkIntegerOverflow),
         Arc::new(analyzer::SparkExprSemantics),
     ];
     rules.extend(cardinality::analyzer_rules());

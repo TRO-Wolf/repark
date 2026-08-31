@@ -76,9 +76,8 @@ impl PyColumn {
 
     /// A literal from a Python scalar (PySpark `lit(value)`).
     ///
-    /// Supports `None` (SQL NULL), `bool`, `int` (i64), `float` (f64), and `str`. `bool` is checked
-    /// **before** `int` because Python's `bool` is a subclass of `int` — `lit(True)` must be a
-    /// boolean literal, not the integer `1`.
+    /// Supports `None`, `bool`, `int` (Int32 if it fits, else Int64), `float`, and `str`.
+    /// Python `bool` is checked before `int` because it is an `int` subclass.
     ///
     /// # Errors
     /// Returns `ValueError` for a Python type with no scalar literal mapping.
@@ -88,14 +87,15 @@ impl PyColumn {
             if value.is_none() {
                 return Ok(Self::from_expr(lit(ScalarValue::Null)));
             }
-            // Python bool is an int subclass, so test it before extracting integers.
             if value.is_instance_of::<PyBool>() {
                 let boolean: bool = value.extract()?;
                 return Ok(Self::from_expr(lit(boolean)));
             }
             if value.is_instance_of::<PyInt>() {
                 let integer: i64 = value.extract()?;
-                return Ok(Self::from_expr(lit(integer)));
+                return Ok(Self::from_expr(
+                    i32::try_from(integer).map_or_else(|_| lit(integer), lit),
+                ));
             }
             if value.is_instance_of::<PyFloat>() {
                 let float: f64 = value.extract()?;

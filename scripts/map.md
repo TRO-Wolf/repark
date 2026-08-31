@@ -157,7 +157,8 @@ repark-parity slice.
   holds three tables and is the **SSOT** for all three: the **tier map** (`TIERS`), the crate
   **roles** (`ROLES` — foundation / table service / engine / capability / door / bindings), and
   the explicit **allowed-edge table** (`ALLOWED_EDGES`: every internal edge, the dependency
-  KINDS it may take, and why it exists). Prose points here and never restates them. Four rules,
+  KINDS it may take, and why it exists; F-Y10-1 added `repark-sql → repark-functions` `normal`).
+  Prose points here and never restates them. Four rules,
   in order: (1) the declared policy must itself obey the structural rules — a forbidden edge
   cannot be legalized by writing it down; (2) every observed `repark-*` edge must be DECLARED,
   with its kind (`normal` / `optional` / `dev` / `build`) permitted for that pair — a new

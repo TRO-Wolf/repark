@@ -40,6 +40,8 @@ changing a decision here means a new dated design pass, not an in-place edit.
   delegate-first architecture (verbatim Spark-door port, NEW ANSI door), the four tier-3
   crates + three hoists (§1), the Q1–Q15 ANSI rulings (§2), the seam freeze (§3), census +
   matrix testing discipline (§4), the sequencing fidelity gate (§5), and top risks (§6).
+  F-Y10-1 (2026-08-30): `repark-sql` also depends on `repark-functions` for AnsiDialect
+  session-build integer overflow; still no `datafusion-spark`.
 - [python-facade.md](python-facade.md) — the phase-3 Python binding + facade + census design
   (settled 2026-08-08, competition-synthesized): census-first verbatim port, the ten edit
   classes (§3), the Q1–Q10 rulings incl. the deferred `repark.sql` re-home with its
@@ -47,7 +49,9 @@ changing a decision here means a new dated design pass, not an in-place edit.
   acceptance procedure with the stability run and the report comparator (§6), the CI delta
   incl. the net-new tier-2 live-AWS design (§7), and the seven-PR slate (§9).
   **PYC-3 (2026-08-22):** dated footnote — pydantic v2 is a second wheel hard dep.
-- [spark-function-parity.md](spark-function-parity.md) — the **Spark function parity** campaign
+- [spark-function-parity.md](spark-function-parity.md) — the **Spark function parity** campaign.
+  F-Y10-1 closed 2026-08-30; FNP-7b is unblocked. SMALLINT/Int16 wrap is a dated
+  residue (2026-08-30). Remaining order starts at FNP-15/16.
   design (settled 2026-08-20): close the `pyspark.sql.functions` gap and move the semantics behind
   every name out of Python into Rust. Goal and the three done-criteria (§1), the measured ground
   truth — surface, classification, kernel ownership, and the two-door asymmetry that became clause

@@ -54,14 +54,13 @@ def test_live_slate_retires_v3e_5_and_queues_the_safe_work() -> None:
     pins: v3-3-dml/C-003
     """
     slate = _read("briefs/next-sequence.md")
-    _assert_in_order(slate, ("| 1 | **F-Y10-1**",))
+    assert "<!-- unit id=f-y10-1" not in slate
     assert "<!-- unit id=fnp-15-16" not in slate
     assert "<!-- unit id=mw-10" not in slate
     assert "<!-- unit id=v3e-5" not in slate
     assert "<!-- unit id=rp-2" not in slate
     assert "<!-- unit id=rp-3" not in slate
     flat = _normalize_whitespace(slate)
-    assert "fork-independent, any window" in flat
     assert "V3-4 and the engine units after it" in flat
     assert "V3-3 delivered 2026-08-30" in flat
     status = _read("STATUS.md")
@@ -94,7 +93,6 @@ def test_fnp_documents_share_one_remaining_order_and_delivery_shape() -> None:
     """C-004: the design, brief, and status use per-unit PRs and the same remaining order."""
     order = (
         "FNP-15/16",
-        "F-Y10-1",
         "FNP-4c",
         "FNP-7a/7b",
         "FNP-9/10",
@@ -108,7 +106,7 @@ def test_fnp_documents_share_one_remaining_order_and_delivery_shape() -> None:
             "Four units are deferred",
         ),
         "briefs/spark-function-parity.md": ("The remaining order is:", "FNP-4b, FNP-6d"),
-        "STATUS.md": ("**Next, in order (revised 2026-08-28):**", "<!-- /ws -->"),
+        "STATUS.md": ("**Next, in order (revised 2026-08-30):**", "<!-- /ws -->"),
     }
     for relative_path, (start_marker, end_marker) in sections.items():
         text = _read(relative_path)

@@ -50,8 +50,9 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   registration wins) + **Q1** `approx_percentile_cont` re-registered with aliases
   `percentile_approx` / `approx_percentile` via `AggregateUDF::with_aliases` +
   `spark_date_shim_functions()` + `analyzer_rules()` (`SparkDecimalPrecision` first, then
-  `SparkDecimalRewrite` (U4b `/` + DEC-6), then `SparkExprSemantics` + cardinality +
-  instant_ts; installed by the session on every context via the Spark door's
+  `SparkDecimalRewrite` (U4b `/` + DEC-6), then `SparkIntegerOverflow` (F-Y10-1), then
+  `SparkExprSemantics` + cardinality + instant_ts; installed by the session on every
+  context via the Spark door's
   `SessionExtension` in `repark-spark`) + DEC-8 `register_spark_decimal_planner` from
   `register_all` + the shared `shim_udf_boilerplate!` macro. Error conversion from
   `DataFusionError` happens one layer up in `repark-core` (this crate stays DataFusion-native).
@@ -62,6 +63,12 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   + 38-clamp), `SparkDecimalRewrite` analyzer slot (A5, before `SparkExprSemantics`; UDF
   owns `/0`), `SparkDecimalExprPlanner` for `(38,20)*(38,20)`, checked `+`/`−` UDF reading
   the landed ANSI knob. Ledger: `task/r2-dec-close-ledger.md`.
+- `src/integer_spark.rs` — **F-Y10-1:** checked integer `+` / `-` / `*` UDFs, `ExprPlanner`,
+  and analyzer rule. `ansi=true` raises `ARITHMETIC_OVERFLOW`; `ansi=false` wraps.
+  Planner rewrite requires a typed Int32/Int64 operand (column or CAST); pure-literal
+  arithmetic stays Int64. Planned UDF calls alias to the original BinaryExpr name.
+  `install_integer_overflow` is the ANSI-door hook.
+  pins: f-y10-1-int-overflow/C-001, C-002, C-003
 - `src/cardinality.rs` — **r24 SB1 / SEC-01:** plan-time `array_repeat`/`repeat`/`sequence` ceilings
   (`repark.sql.maxArrayElements` default 10_000_000) + `ReparkSqlConfig` extension
   (`allowLocalFilesystemDDL` for SEC-02); analyzer rule `ArrayCardinalityCeiling`.

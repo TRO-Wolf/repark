@@ -23,11 +23,11 @@ matrix. Stock DataFusion handles delegated reads and DML.
 
 ## Contents
 
-- `Cargo.toml` — deps: `repark-core`, `repark-iceberg`, `repark-common`, `datafusion`, plus
+- `Cargo.toml` — deps: `repark-core`, `repark-iceberg`, `repark-common`, `repark-functions`
+  (F-Y10-1: `AnsiDialect.on_session_built` installs checked integer overflow), `datafusion`, plus
   `iceberg` (staged create/replace types) and `async-trait` (the seam is an async trait).
   **No direct `sqlparser`** (types come only through `datafusion::sql::sqlparser`) and **no
-  `datafusion-spark`** — the design's hard constraint, so this door cannot reach Spark semantics
-  through a crate edge. **Dev-dependencies only:** `repark-spark` (the two-session cross-door
+  `datafusion-spark`** — SparkExprSemantics stays on SparkExtension. **Dev-dependencies only:** `repark-spark` (the two-session cross-door
   protocol needs both doors in one test binary) and `repark-ta` (the Q11 toll). Both are
   **declared in the dependency policy as `dev` edges** (`scripts/check_crate_dag.py`
   `ALLOWED_EDGES`): visible and reasoned about, exempt from the layering rule, and RED the moment
@@ -35,7 +35,8 @@ matrix. Stock DataFusion handles delegated reads and DML.
   forbidden door→door edge. Nothing in `src/` may name them.
 - [src/map.md](src/map.md) — module-by-module navigation.
 - [tests/map.md](tests/map.md) — integration tests: the R1 parser-production pins, the
-  two-session `cross_door.rs` rows (incl. G11 intended divergences), Q8 `introspection.rs`,
+  two-session `cross_door.rs` rows (incl. G11 intended divergences), F-Y10-1
+  `cross_door_int_overflow.rs`, Q8 `introspection.rs`,
   the Q11 `ta_toll.rs`, the G11 ANSI-door value pins (`ansi_door_values.rs`), the
   Native-profile pins (`ansi_door_join_null_keys.rs`, `ansi_door_window_frames.rs`,
   `ansi_door_float_agg.rs`).

@@ -315,14 +315,14 @@ impl ReparkSessionBuilder {
                 provider,
             }
         };
-        // Register runs immediately after context creation.
         ext.register(&context).map_err(engine_err)?;
-
+        let dialect = self
+            .sql_dialect
+            .unwrap_or_else(|| Arc::new(DataFusionDialect));
+        dialect.on_session_built(&context);
         Ok(ReparkSession {
             backend: Arc::new(SingleNodeBackend::new(context)),
-            dialect: self
-                .sql_dialect
-                .unwrap_or_else(|| Arc::new(DataFusionDialect)),
+            dialect,
             catalogs: Arc::new(RwLock::new(CatalogRegistry::new())),
             catalog_specs: Arc::new(catalog_specs),
             registered_s3_buckets: Arc::new(Mutex::new(HashSet::new())),

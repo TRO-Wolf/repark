@@ -165,6 +165,12 @@ ALLOWED_EDGES: dict[tuple[str, str], tuple[frozenset[str], str]] = {
         frozenset({"normal"}),
         "kept explicit so a handler can name `repark_common::Error` at a seam",
     ),
+    ("repark-sql", "repark-functions"): (
+        frozenset({"normal"}),
+        "F-Y10-1 C-003: AnsiDialect.on_session_built installs checked integer overflow "
+        "so a bare ReparkSession + AnsiDialect raises without Python. Same-tier door → "
+        "capability; SparkExprSemantics stays session-scoped on SparkExtension",
+    ),
     ("repark-sql", "repark-spark"): (
         frozenset({"dev"}),
         "DEV-ONLY, and the reason this table carries kinds at all: the cross-door two-session "

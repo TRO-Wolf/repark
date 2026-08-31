@@ -48,7 +48,7 @@ design in [session-api.md](session-api.md); deferred-test obligations live in
 | `repark-functions` | 3 | repark-common | v1 repark-functions ported VERBATIM (name kept — zero census rename) |
 | `repark-ta` | 3 | repark-common | v1 kernels + goldens; NEW thin `TaExtension: SessionExtension` |
 | `repark-spark` | 3 | repark-core, repark-iceberg, repark-common, repark-functions, repark-ta (same-tier edges) | v1 repark-sql ported: router + all handlers; `SparkDialect: SqlDialect` + `SparkExtension: SessionExtension` |
-| `repark-sql` | 3 | repark-core, repark-iceberg, repark-common | NEW ANSI door: `AnsiDialect: SqlDialect`; no extension; no datafusion-spark; sqlparser types ONLY via `datafusion::sql::sqlparser` re-export |
+| `repark-sql` | 3 | repark-core, repark-iceberg, repark-common, repark-functions (F-Y10-1, 2026-08-30: AnsiDialect session-build integer overflow; still no datafusion-spark) | NEW ANSI door: `AnsiDialect: SqlDialect`; no extension; no datafusion-spark; sqlparser types ONLY via `datafusion::sql::sqlparser` re-export |
 
 No door→door edge, ever. Small hoists (tier-legal, declared-rename units): the
 MoR-unpartitioned-multi-spec valve predicate → repark-iceberg (metadata-shaped, both doors

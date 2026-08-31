@@ -45,7 +45,8 @@ DAG: `repark-core → {repark-iceberg, repark-common}`, `repark-iceberg → repa
 `repark-ta → repark-core` **only under the `datafusion` feature** (the `TaExtension` wrapper — the
 kernel core stays dependency-light); `repark-spark → {repark-core, repark-iceberg,
 repark-functions, repark-ta}` (tier-3 door; same-tier edges to repark-functions and repark-ta are
-legal); `repark-sql → {repark-core, repark-iceberg, repark-common}` (the other tier-3 door);
+legal); `repark-sql → {repark-core, repark-iceberg, repark-common, repark-functions}` (the other
+tier-3 door; `repark-functions` is F-Y10-1 C-003 integer overflow at AnsiDialect session build);
 `repark-ml` is a tier-3 leaf with no internal deps at all (pure math + accumulators — the PyO3
 binding is what streams rows into it); `repark-python → {repark-core, repark-functions, repark-ta
 (feature `datafusion`), repark-spark, repark-ml}` — five edges, tier 4 reaching down, plus the two

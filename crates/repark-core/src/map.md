@@ -145,7 +145,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   is the sanctioned downstream constructor, added phase-2 PR-2) + `SqlDialect` +
   `DataFusionDialect` (the phase-1 default: DataFusion semantics — round 5 Z-2 routes its
   `execute` through `PreExecute::run` instead of a bare `SessionContext::sql`, so the native
-  door is guarded like the two SQL doors). `#[async_trait(?Send)]`
+  door is guarded like the two SQL doors). `SqlDialect::on_session_built` (default no-op)
+  runs from `ReparkSessionBuilder::build` after extension `register` (F-Y10-1).
+  `#[async_trait(?Send)]`
   — rustc 1.96 HRTB + iceberg `Catalog` in `CatalogRegistry`; session awaits in place.
 - `runtime.rs` (+ `runtime/tests.rs`) — **`EngineRuntime`** (phase-3 PR-3, EC-5 / design §4 Q7):
   the name the engine gives the **embedding's** Tokio runtime — a cloneable `Arc<Runtime>` handle

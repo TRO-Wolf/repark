@@ -31,6 +31,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 
 - `test_pr_245_revalidation.py` — PR #245 public-door revalidation for Spark string literals,
   binary casts, parser limits, and facade controls.
+- [test_integer_overflow_parity.py](test_integer_overflow_parity.py) — **F-Y10-1:** integer
+  `+` / `-` / `*` overflow shared-raise under default ANSI and Int32/Int64 wrap when
+  `ansi=false`, SQL and facade expression (`F` import uses the PySpark N812 noqa).
+  Untyped `1 + 1` / `2147483647 + 1` stay int64 (literal-width split).
+  Unaliased planner-hit SQL keeps BinaryExpr column names.
+  Native ``repark.sql()`` overflow raise is pinned. Facade i32 sub/mul wrap and
+  i64 CAST+lit wrap cells are pinned (ASCII docstring operators for RUF002;
+  ruff format on long CAST SQL).
+  pins: f-y10-1-int-overflow/C-001, C-002, C-003.
 - `test_production_file_size.py` — frozen parent-symbol inventory, integrated AST body hashes,
   responsibility ownership, `_funcs` compatibility namespace, isolated source/wheel import-cycle
   smoke, default source ceiling, and retired exception pins for the production/file-size refactor.
@@ -944,6 +953,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **octo C3:** empty-list field then list-of-dict keeps array<struct>; string+struct
   CANNOT_MERGE pin.
 - `test_select_naming.py` — **Group H** select/projection display naming vs live PySpark 4.1.2:
+  mutation leak accepts `Int32(1)` as well as `Int64(1)` (F-Y10-1 Python lit width);
   full matrix (`(x + 1)`, cast-of-attr → child name, cast-of-compound → `CAST(...)`,
   cast-into-binary dual-slot, `negative(x)`, CASE/coalesce/concat/lit/date fns, alias wins,
   `<=`/`>=`/`isNotNull`, withColumn unaffected); value+Arrow pins (arith/cast/neg/when/
