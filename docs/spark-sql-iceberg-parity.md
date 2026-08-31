@@ -406,6 +406,11 @@ them, and the document is ordered by surface, never by date.
 > Residue of that campaign body: G5b-R3-ANSI (window RANGE wrap), F-Y10-2, and
 > SMALLINT/Int16 overflow (2026-08-30: `CAST(32767 AS SMALLINT) + CAST(1 AS SMALLINT)`
 > still Arrow-wraps to Int16 `-32768` under default ANSI; charter partition was int32/int64).
+> **Lambda bodies are unarmed (2026-08-31, FNP-4c interaction):** an operand containing a
+> higher-order lambda variable keeps its provisional type, so `+`/`-`/`*` inside lambda
+> bodies stay on DataFusion coercion (no overflow raise there yet — arming desynchronized
+> the declared `LambdaVariable` field from the re-derived merge type). Pin:
+> `lambda_variable_operands_do_not_arm`.
 >
 > **F-Y10-2 — routed, not invented as a DEC row (2026-08-13, Z-5).** ANSI float `/ 0` is IEEE
 > `+Inf` rather than a standard-SQL raise. Residual. The door-vs-door Inf-vs-NULL split is

@@ -12,6 +12,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   [../docs/design/spark-function-parity.md](../../../docs/design/spark-function-parity.md); CAP-1
   appends a compatibility note that points its dated file-size premise at the live guards; slate:
   [../briefs/spark-function-parity.md](../../../briefs/spark-function-parity.md).
+- [fnp-4c-higher-order-kernels-ledger.md](fnp-4c-higher-order-kernels-ledger.md) — **FNP-4c
+  (2026-08-31):** the eight new higher-order kernels plus `forall` and `reduce`. Builds on
+  the FNP-4a seam. Design §3.5 / §7 row FNP-4c.
 - [sem-0-charter-ledger.md](sem-0-charter-ledger.md) — **SEM-0 (2026-08-21), queued and HELD at
   its approval gate:** the scope audit for closing the two silently wrong answers the low-risk
   sweep registered rather than fixed — `RE-1` (`regexp_extract_all` defaults to capture group 0,

@@ -1,21 +1,32 @@
 //! Spark higher-order function registry for both SQL and facade doors.
 
+mod aggregate;
+mod filter;
+mod forall;
+mod lambda_utils;
+mod map_common;
+mod map_filter;
+mod map_zip_with;
+mod transform;
+mod transform_keys;
+mod transform_values;
+mod zip_with;
+
+#[cfg(test)]
+mod kernel_eval;
+
 use std::sync::Arc;
 
 use datafusion::functions_nested::all_default_higher_order_functions;
 use datafusion::logical_expr::HigherOrderUDF;
 use datafusion::prelude::SessionContext;
 
-/// Spark spellings attached to an upstream kernel whose semantics already match.
-const SPARK_ALIASES: &[(&str, &[&str])] = &[
-    // Spark `exists` preserves three-valued null logic, empty-array false, and null-array null.
-    ("array_any_match", &["exists"]),
-];
+const SPARK_ALIASES: &[(&str, &[&str])] = &[("array_any_match", &["exists"])];
 
 /// Every higher-order function a repark session resolves, Spark spellings included.
 #[must_use]
 pub fn functions() -> Vec<Arc<HigherOrderUDF>> {
-    all_default_higher_order_functions()
+    let mut functions: Vec<Arc<HigherOrderUDF>> = all_default_higher_order_functions()
         .into_iter()
         .map(|function| {
             let aliases = SPARK_ALIASES
@@ -32,7 +43,19 @@ pub fn functions() -> Vec<Arc<HigherOrderUDF>> {
                 ),
             }
         })
-        .collect()
+        .collect();
+    functions.extend([
+        transform::transform_udf(),
+        filter::filter_udf(),
+        forall::forall_udf(),
+        aggregate::aggregate_udf(),
+        zip_with::zip_with_udf(),
+        transform_keys::transform_keys_udf(),
+        transform_values::transform_values_udf(),
+        map_filter::map_filter_udf(),
+        map_zip_with::map_zip_with_udf(),
+    ]);
+    functions
 }
 
 /// Resolve a canonical or aliased spelling from the shared function table.
@@ -65,10 +88,37 @@ mod tests {
         assert_eq!(function.name(), "array_any_match");
     }
 
+    /// pins: fnp-4c-higher-order-kernels/C-013
     #[test]
-    fn transform_and_filter_are_not_aliased_to_the_arity_deficient_kernels() {
-        assert!(by_name("transform").is_none());
-        assert!(by_name("filter").is_none());
+    fn transform_and_filter_are_repark_kernels_not_arity_deficient_aliases() {
+        let transform = by_name("transform").expect("transform is registered");
+        assert_eq!(transform.name(), "transform");
+        let filter = by_name("filter").expect("filter is registered");
+        assert_eq!(filter.name(), "filter");
+    }
+
+    /// pins: fnp-4c-higher-order-kernels/C-004
+    #[test]
+    fn reduce_is_an_alias_of_aggregate() {
+        let reduce = by_name("reduce").expect("reduce is registered");
+        assert_eq!(reduce.name(), "aggregate");
+        assert!(reduce.aliases().iter().any(|alias| alias == "reduce"));
+    }
+
+    /// pins: fnp-4c-higher-order-kernels/C-011
+    #[test]
+    fn forall_and_the_map_family_resolve() {
+        for name in [
+            "forall",
+            "zip_with",
+            "transform_keys",
+            "transform_values",
+            "map_filter",
+            "map_zip_with",
+            "aggregate",
+        ] {
+            assert!(by_name(name).is_some(), "{name} must resolve");
+        }
     }
 
     #[test]

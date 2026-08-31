@@ -13,7 +13,8 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
 Source documentation may retain model provenance; code-quality grade tags stay outside code.
 
 Child modules use Rust's default layout: `str_to_map`, `shuffle`, and `map_from_entries` live under
-[`collection/`](collection/map.md), while `java_uri` lives under [`url/`](url/map.md).
+[`collection/`](collection/map.md), `java_uri` lives under [`url/`](url/map.md), and Spark
+higher-order kernels live under [`higher_order/`](higher_order/map.md).
 
 ## Contents
 
@@ -42,6 +43,11 @@ Child modules use Rust's default layout: `str_to_map`, `shuffle`, and `map_from_
   Ledger: `task/sem-6-substr-zero-width-null-ledger.md`.
 - `spark_split_part.rs` — **GT1-FIX F-6c / R3-1:** STRING `partNum` +
   Dictionary(_, Utf8); partNum 0 fail-loud.
+- `higher_order/` — FNP-4c Spark higher-order kernels (`transform`, `filter`, `forall`,
+  `aggregate`/`reduce`, `zip_with`, `transform_keys`, `transform_values`, `map_filter`,
+  `map_zip_with`) plus the FNP-4a `exists` alias of `array_any_match`. Registry both doors
+  read. pins: fnp-4c-higher-order-kernels/C-001, C-002, C-003, C-004, C-005, C-006, C-007,
+  C-008, C-009, C-010, C-011, C-013, C-014
 - `lib.rs` — crate-root stays at **175** under `check_lib_rs` with `pub mod timestamp_type`.
 - `timestamp_type.rs` — **Q10:** Spark-door `spark.sql.timestampType` carrier
   (`SparkTimestampTypeConfig`, `PREFIX = repark.timestamp`, default
@@ -116,6 +122,8 @@ Child modules use Rust's default layout: `str_to_map`, `shuffle`, and `map_from_
   `ExprPlanner` keeps `CAST(INT) + 1` as Int32 so TypeCoercion cannot widen it.
   Pure-literal `1 + 1` / `2147483647 + 1` stay Int64 (the intended literal-width
   split). SMALLINT/Int16 still Arrow-wraps (residue 2026-08-30; not this partition).
+  Lambda-variable operands never arm (FNP-4c interaction; pin
+  `lambda_variable_operands_do_not_arm`).
   Planner `Planned` results alias to the original BinaryExpr name so
   unaliased SQL does not leak `__repark_spark_int_*`. Post-remediation corpus
   pins i64 sub/mul raise, i32 MIN×−1 wrap, i64 CAST+lit wrap. `install_integer_overflow`

@@ -9,9 +9,10 @@ from __future__ import annotations
 import contextvars
 import inspect
 from collections.abc import Callable
+from typing import Any
 
 from repark import _native
-from repark.errors import PySparkValueError
+from repark.errors import AnalysisException, PySparkValueError
 from repark.spark.column import Column
 from repark.spark.functions import _as_column_arg
 
@@ -42,7 +43,12 @@ _LAMBDA_PARAMETER_KINDS = (
 )
 
 
-def _lambda_arity(function: Callable[..., Column], *, allowed: tuple[int, ...]) -> int:
+def _lambda_arity(
+    function: Callable[..., Column],
+    *,
+    allowed: tuple[int, ...],
+    spark_arity_error: bool = True,
+) -> int:
     """How many parameters the callable takes, refused loudly if Spark does not accept that many."""
     parameters = inspect.signature(function).parameters
     if any(parameter.kind not in _LAMBDA_PARAMETER_KINDS for parameter in parameters.values()):
@@ -53,11 +59,32 @@ def _lambda_arity(function: Callable[..., Column], *, allowed: tuple[int, ...]) 
         )
     arity = len(parameters)
     if arity not in allowed:
-        expected = " or ".join(str(count) for count in allowed)
-        raise PySparkValueError(
-            f"lambda takes {arity} parameters, but this function expects {expected}"
+        if not spark_arity_error:
+            expected = " or ".join(str(count) for count in allowed)
+            raise PySparkValueError(
+                f"lambda takes {arity} parameters, but this function expects {expected}"
+            )
+        raise AnalysisException(
+            "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. "
+            f"A higher order function expects {arity} arguments, but got {allowed[0]}."
         )
     return arity
+
+
+def _keep_lambda_params(body: Column, placeholders: list[Column]) -> Column:
+    """Keep every minted parameter in the body tree so DataFusion cannot drop it.
+
+    A two-parameter lambda that only mentions ``i`` still has to occupy both
+    slots the kernel declared as ``[element, index]``.
+    """
+    from repark.spark.functions_expr import struct
+
+    named_body = body.alias("__hof_body")
+    named_placeholders = [
+        placeholder.alias(f"__hof_p{index}") for index, placeholder in enumerate(placeholders)
+    ]
+    packed = struct(named_body, *named_placeholders)
+    return packed.getField("__hof_body")
 
 
 def _build_lambda(
@@ -86,6 +113,8 @@ def _build_lambda(
         raise PySparkValueError(
             f"a higher-order function lambda must return a Column, got {type(body).__name__}"
         )
+    if arity >= 2:
+        body = _keep_lambda_params(body, placeholders)
     return plan_names, display_names, body
 
 
@@ -93,6 +122,8 @@ def _higher_order(
     name: str,
     values: list[Column | str],
     functions: list[tuple[Callable[..., Column], tuple[int, ...]]],
+    *,
+    spark_arity_error: bool = True,
 ) -> Column:
     """Build a higher-order call: value arguments first, then one lambda per callable.
 
@@ -101,7 +132,10 @@ def _higher_order(
     """
     value_columns = [_as_column_arg(value, as_lit=False) for value in values]
     built = [
-        _build_lambda(function, _lambda_arity(function, allowed=allowed))
+        _build_lambda(
+            function,
+            _lambda_arity(function, allowed=allowed, spark_arity_error=spark_arity_error),
+        )
         for function, allowed in functions
     ]
 
@@ -138,4 +172,129 @@ def exists(col: Column | str, f: Callable[[Column], Column]) -> Column:
     Three-valued: an element that makes ``f`` NULL neither confirms nor denies, so a NULL among
     otherwise-false elements yields NULL rather than false.
     """
-    return _higher_order("exists", [col], [(f, (1,))])
+    return _higher_order("exists", [col], [(f, (1,))], spark_arity_error=False)
+
+
+def transform(
+    col: Column | str,
+    f: Callable[..., Column],
+) -> Column:
+    """Apply ``f`` to every array element (PySpark ``functions.transform``).
+
+    ``f`` is unary ``(x)`` or binary ``(x, i)`` with a 0-based index.
+    """
+    return _higher_order("transform", [col], [(f, (1, 2))])
+
+
+def filter(
+    col: Column | str,
+    f: Callable[..., Column],
+) -> Column:
+    """Keep array elements for which ``f`` is true (PySpark ``functions.filter``).
+
+    ``f`` is unary ``(x)`` or binary ``(x, i)`` with a 0-based index. A null
+    predicate drops the element.
+    """
+    return _higher_order("filter", [col], [(f, (1, 2))])
+
+
+def forall(col: Column | str, f: Callable[[Column], Column]) -> Column:
+    """True when every element satisfies ``f`` (PySpark ``functions.forall``).
+
+    Empty array is true. A null predicate among otherwise-true elements yields
+    null. Any false element yields false.
+    """
+    return _higher_order("forall", [col], [(f, (1,))])
+
+
+def aggregate(
+    col: Column | str,
+    initialValue: Column | str,  # noqa: N803 — PySpark parameter name
+    merge: Callable[[Column, Column], Column],
+    finish: Callable[[Column], Column] | None = None,
+) -> Column:
+    """Fold an array from ``initialValue`` with ``merge`` (PySpark ``functions.aggregate``).
+
+    ``finish`` is optional. An empty array yields ``initialValue`` then ``finish``.
+    """
+    if finish is not None:
+        return _higher_order(
+            "aggregate",
+            [col, initialValue],
+            [(merge, (2,)), (finish, (1,))],
+        )
+    return _higher_order("aggregate", [col, initialValue], [(merge, (2,))])
+
+
+def reduce(
+    col: Column | str,
+    initialValue: Column | str,  # noqa: N803 — PySpark parameter name
+    merge: Callable[[Column, Column], Column],
+    finish: Callable[[Column], Column] | None = None,
+) -> Column:
+    """Alias of :func:`aggregate` (PySpark ``functions.reduce``)."""
+    if finish is not None:
+        return _higher_order(
+            "reduce",
+            [col, initialValue],
+            [(merge, (2,)), (finish, (1,))],
+        )
+    return _higher_order("reduce", [col, initialValue], [(merge, (2,))])
+
+
+def zip_with(
+    left: Column | str,
+    right: Column | str,
+    f: Callable[[Column, Column], Column],
+) -> Column:
+    """Pair two arrays with ``f``, null-padding the shorter (PySpark ``functions.zip_with``)."""
+    return _higher_order("zip_with", [left, right], [(f, (2,))])
+
+
+def transform_keys(col: Column | str, f: Callable[[Column, Column], Column]) -> Column:
+    """Rewrite map keys with ``(k, v) -> new_key`` (PySpark ``functions.transform_keys``)."""
+    return _higher_order("transform_keys", [col], [(f, (2,))])
+
+
+def transform_values(col: Column | str, f: Callable[[Column, Column], Column]) -> Column:
+    """Rewrite map values with ``(k, v) -> new_value`` (PySpark ``functions.transform_values``)."""
+    return _higher_order("transform_values", [col], [(f, (2,))])
+
+
+def map_filter(col: Column | str, f: Callable[[Column, Column], Column]) -> Column:
+    """Keep map entries whose ``(k, v)`` predicate is true (PySpark ``functions.map_filter``)."""
+    return _higher_order("map_filter", [col], [(f, (2,))])
+
+
+def map_zip_with(
+    col1: Column | str,
+    col2: Column | str,
+    f: Callable[[Column, Column, Column], Column],
+) -> Column:
+    """Merge two maps with ``(k, v1, v2)`` (PySpark ``functions.map_zip_with``).
+
+    Key order is map1 keys, then map2-only keys. A missing side is null.
+    """
+    return _higher_order("map_zip_with", [col1, col2], [(f, (3,))])
+
+
+HIGHER_ORDER_EXPORTS: tuple[str, ...] = (
+    "aggregate",
+    "filter",
+    "forall",
+    "map_filter",
+    "map_zip_with",
+    "reduce",
+    "transform",
+    "transform_keys",
+    "transform_values",
+    "zip_with",
+)
+
+
+def install_into(namespace: dict[str, Any], exported: list[str]) -> None:
+    """Copy the FNP-4c higher-order names onto the canonical functions module."""
+    for name in HIGHER_ORDER_EXPORTS:
+        namespace[name] = globals()[name]
+        if name not in exported:
+            exported.append(name)
