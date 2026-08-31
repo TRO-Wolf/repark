@@ -134,11 +134,9 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
   [task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md](task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md);
   design: [docs/design/format-v3-track.md](docs/design/format-v3-track.md); audit:
   [task/ledgers/staging/v3-0-charter-ledger.md](task/ledgers/staging/v3-0-charter-ledger.md).
-  - **Measured true (V3-0, [#199](https://github.com/TRO-Wolf/repark/pull/199)):** reading
-    Spark-written v3 with Puffin deletion vectors and appending with row lineage are correct,
-    round-tripped through Spark. **Guarded:** `rewrite_data_files` reassigned `_row_id` on v3 —
-    registry `V3-LINEAGE-1`, stricter than Spark on purpose, reversible in one line; the fix is
-    fork work (F-7). Queued: `V3-DANGLE-1`.
+  - **Measured true (V3-0, [#199](https://github.com/TRO-Wolf/repark/pull/199)):** v3 DV reads
+    and lineage appends round-trip through Spark. **Guarded:** `rewrite_data_files` reassigned `_row_id` on v3 —
+    registry `V3-LINEAGE-1`; the fix is fork work (F-7). Queued: `V3-DANGLE-1`.
   - **Delivered:** V3-1 `register_table` + the checked-in v3 fixture
     ([#203](https://github.com/TRO-Wolf/repark/pull/203)); V3-2 CREATE/CTAS `format-version = 3`
     behind `repark.sql.allowCreateFormatVersion3` (default false), ALTER refused
@@ -223,9 +221,8 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
   [DML-1](docs/spark-sql-iceberg-parity.md).
 <!-- /ws -->
 
-Parked lanes: **none.** The `repark.sql` re-home lane closed 2026-08-14 (#95 —
-[docs/release.md](docs/release.md) "RESOLVED"; design ruling
-[docs/design/python-facade.md](docs/design/python-facade.md) §4).
+Parked lanes: **none** (the `repark.sql` re-home lane closed 2026-08-14, #95 —
+[docs/release.md](docs/release.md) "RESOLVED").
 
 <!-- ws id=dbt ledgers=dbt- state=open -->
 - **dbt-repark is no longer parked.** M0–M2a merged on the sibling repo (append, delete+insert,
