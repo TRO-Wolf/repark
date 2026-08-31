@@ -1,5 +1,3 @@
-//! Engine pins for [`crate::dynamic_flatten`] — value AND Arrow type.
-
 use std::sync::Arc;
 
 use arrow::array::{
@@ -1441,3 +1439,4 @@ async fn multi_pass_flatten_then_project_survives_leaf_pushdown() {
 }
 
 mod octo;
+mod preserve_nulls;
