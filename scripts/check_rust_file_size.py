@@ -37,7 +37,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split backend-specific option parsing from shared session installation.",
     ),
     "crates/repark-core/src/dynamic_flatten/tests.rs": (
-        1443,
+        1442,
         "Dynamic-flatten behavior and refusal scenarios share one test module.",
         "Split structural cases from list and refusal cases with an identity check.",
     ),

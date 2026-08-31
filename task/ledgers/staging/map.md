@@ -5,10 +5,6 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
-- [dfp-1-preserve-null-unnest-ledger.md](dfp-1-preserve-null-unnest-ledger.md) — **DFP-1
-  (2026-08-31), owner-approved and queued:** remove redundant null-replacement projections from
-  `dynamic_flatten` by using preserve-null Unnest. The finite List/LargeList/FixedSizeList/
-  Dictionary<List> matrix and plan-shape proof are the delivery gate.
 - [rp-4-fork-repin-ledger.md](rp-4-fork-repin-ledger.md) — **RP-4 (2026-08-31), in
   flight:** fork repin `d408da42` → `33be9a0` (F-7 slice 1 consume, F-6 carry).
   Family frozen. Ledger born on `feat/rp-4-fork-repin`.

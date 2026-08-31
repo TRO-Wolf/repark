@@ -5,7 +5,7 @@ use std::fmt::Write;
 
 use arrow::datatypes::{DataType, Fields};
 use datafusion::common::{Column, ScalarValue, UnnestOptions};
-use datafusion::logical_expr::{Expr, LogicalPlanBuilder, cast, or, when};
+use datafusion::logical_expr::{Expr, LogicalPlanBuilder, cast, when};
 use datafusion::prelude::{DataFrame, array_length, get_field, lit, make_array};
 
 use crate::{Error, Result, engine_err};
@@ -233,7 +233,7 @@ fn explode_lists_in_schema_order(
     Ok(frame)
 }
 
-/// Rewrite one list column, then unnest it in place with unqualified binding.
+/// Prepare one list column, then unnest it in place with unqualified binding.
 fn explode_one_list(
     frame: DataFrame,
     name: &str,
@@ -243,33 +243,43 @@ fn explode_one_list(
 ) -> Result<DataFrame> {
     // Dictionary<_, List> is a list for the walk, but DataFusion Unnest rejects Dictionary.
     let column = list_column_as_list(name, column_type);
-    let singleton_null_list = make_array(vec![typed_null_literal(element_type)?]);
-    let rewritten = if empty_as_null {
+    let can_be_empty = match unwrap_dictionary_one_level(column_type) {
+        DataType::List(_) | DataType::LargeList(_) => true,
+        DataType::FixedSizeList(_, size) => *size == 0,
+        _ => false,
+    };
+    let rewritten = if empty_as_null && can_be_empty {
+        let singleton_null_list = make_array(vec![typed_null_literal(element_type)?]);
         let is_empty = array_length(column.clone()).eq(lit(0_u64));
-        when(or(column.clone().is_null(), is_empty), singleton_null_list)
-            .otherwise(column)
-            .map_err(engine_err)?
-            .alias(name)
+        Some(
+            when(is_empty, singleton_null_list)
+                .otherwise(column)
+                .map_err(engine_err)?
+                .alias(name),
+        )
+    } else if matches!(column_type, DataType::Dictionary(_, _)) {
+        Some(column.alias(name))
     } else {
-        when(column.clone().is_null(), singleton_null_list)
-            .otherwise(column)
-            .map_err(engine_err)?
-            .alias(name)
+        None
     };
 
-    let projection: Vec<Expr> = frame
-        .schema()
-        .fields()
-        .iter()
-        .map(|field| {
-            if field.name() == name {
-                rewritten.clone()
-            } else {
-                project_as(field.name())
-            }
-        })
-        .collect();
-    let frame = frame.select(projection).map_err(engine_err)?;
+    let frame = if let Some(rewritten) = rewritten {
+        let projection: Vec<Expr> = frame
+            .schema()
+            .fields()
+            .iter()
+            .map(|field| {
+                if field.name() == name {
+                    rewritten.clone()
+                } else {
+                    project_as(field.name())
+                }
+            })
+            .collect();
+        frame.select(projection).map_err(engine_err)?
+    } else {
+        frame
+    };
     unnest_list_column(frame, name)
 }
 
@@ -277,7 +287,7 @@ fn explode_one_list(
 fn unnest_list_column(frame: DataFrame, name: &str) -> Result<DataFrame> {
     let (session_state, plan) = frame.into_parts();
     let options = UnnestOptions {
-        preserve_nulls: false,
+        preserve_nulls: true,
         recursions: Vec::new(),
     };
     let plan = LogicalPlanBuilder::from(plan)

@@ -80,7 +80,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 - `dynamic_flatten.rs` (+ `dynamic_flatten/`) — **DF1 native `dynamic_flatten`:** free
   function over a DataFusion `DataFrame` (no frame newtype). Structs first (null-safe
   `get_field` Project, never DF struct `unnest_columns`), then lists one-at-a-time in
-  schema order via `unnest_columns_with_options` + `Column::new_unqualified`.
+  schema order via preserve-null `unnest_columns_with_options` + `Column::new_unqualified`;
+  empty lists are rewritten only when `empty_as_null=true` and the list type can be empty.
   `List` / `LargeList` / `FixedSizeList` explode; Dictionary unwraps one level so
   Parquet dict-structs / dict-lists are not skipped (dict-lists are cast to List
   before Unnest); maps are not unnested and list-of-map refuses LOUD; ListView /
@@ -88,9 +89,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `Error::Analysis` with `[DYNAMIC_FLATTEN_NAME_COLLISION]` /
   `[DYNAMIC_FLATTEN_MAX_DEPTH]` / `[DYNAMIC_FLATTEN_EMPTY_STRUCT]` /
   `[DYNAMIC_FLATTEN_UNSUPPORTED_ELEMENT]`. `max_depth` bounds rewrite passes, not
-  row cartesian. File-backed pins: `dynamic_flatten/tests.rs` and
-  `dynamic_flatten/tests/octo.rs` (cycle-2/3 kernel pins split for the file-size
-  ceiling). Kernel harness uses
+  row cartesian. File-backed pins: `dynamic_flatten/tests.rs`,
+  `dynamic_flatten/tests/octo.rs`, and `dynamic_flatten/tests/preserve_nulls.rs`. Kernel harness uses
   `ReparkSession` (Unnest-safe leaf-pushdown wrapper), not a blanket
   `enable_leaf_expression_pushdown=false`.
 - `error_map.rs` — `engine_err` (pub — the single `DataFusionError → repark_common::Error`

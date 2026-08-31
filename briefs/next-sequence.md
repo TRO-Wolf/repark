@@ -37,15 +37,6 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 
 | # | Unit | Track | Blocked by | Size |
 |---|---|---|---|---|
-| 1 | **DFP-1** — preserve-null Unnest fast path for `dynamic_flatten` | Engine hardening | none | STANDARD <!-- unit id=dfp-1 --> |
-
-<!-- unit id=dfp-1 ledger=dfp-1- -->
-**Why DFP-1 is next.** The 2026-08-31 review found one redundant CASE projection per exploded
-list. DFP-1 records the unchanged plan, removes only that work, and pins the finite null/empty/
-populated matrix without changing sequential Cartesian semantics. Broader candidates remain
-measurement-gated in the hardening slate. Charter:
-[../task/ledgers/staging/dfp-1-preserve-null-unnest-ledger.md](../task/ledgers/staging/dfp-1-preserve-null-unnest-ledger.md).
-<!-- /unit -->
 
 **Not in this queue (owner-sequenced or owner-gated):** V3-4 and the engine units after it
 (V3-3 delivered 2026-08-30 as a measured keep-refusal; its ledger is in `completed/`); DML-A/B/C and Track A W-0. A merged unit leaves this file with no record

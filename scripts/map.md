@@ -1,5 +1,8 @@
 # map — scripts/
 
+DFP-1 (2026-08-31): `dynamic_flatten/tests.rs` 1443→1442 after preserve-null pins moved to a
+file-backed module.
+
 DML-B (2026-08-30): `check_rust_file_size.py` `insert_overwrite.rs` tests 1249→1233;
 `check_lib_py.py` `writer_readwriter.py` 1117→1113.
 
