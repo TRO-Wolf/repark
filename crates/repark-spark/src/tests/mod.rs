@@ -10,6 +10,7 @@ mod call_register;
 mod call_rewrite_dangling;
 mod call_rewrite_options;
 mod call_v3;
+mod call_v3_dv;
 mod cast_binary;
 mod catalog_ops;
 mod collation;

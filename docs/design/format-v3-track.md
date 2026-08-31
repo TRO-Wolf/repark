@@ -255,9 +255,12 @@ upgraded table.
 
 - **V3-4:** serve `_row_id` and `_last_updated_sequence_number`; preserve lineage across COW
   DELETE, UPDATE, and MERGE.
-- **V3-5:** make maintenance production-grade: lineage-preserving compaction, DV removal and
-  sibling closure, v3 position-delete conversion, true result counts, and the existing
-  maintenance suite.
+- **V3-5:** *Done 2026-08-31.* `rewrite_data_files` on v3 with live Puffin DVs drops
+  in-scope vectors (`removed_delete_files_count = 6` on the six-file fixture; `2` on
+  V3E-3 partitioned; `where => 'part = 0'` keeps the sibling). `V3-DANGLE-1` FIXED.
+  `B-MOR-3` stays: `rewrite_position_delete_files` still refuses live DVs (zeros would
+  read as already-clean; DV compact is `rewrite_data_files`). F-17 sibling-close pins
+  re-ran green.
 - **V3-6:** finish binary variant, nanosecond timestamps, unknown, and column defaults. V3-6 may
   run in parallel with V3-3 or V3-4 after its fork type support is pinned; it does not wait for
   V3-5 merely because its unit number is higher. **RP-3 C-009 (2026-08-30):** fork #233 fills
@@ -279,8 +282,8 @@ blocked. They do not replace or delay a ready v3 unit.
 1. **Shared-Puffin DV sibling closure (F-17)** — landed fork #237 (2026-08-28); RP-3 (2026-08-30)
    wired `close_touched_dv_containers` on the engine MOR path; matrix cell (4) is green.
 2. **Row lineage through `RewriteDataFiles`** — landed fork #243 (2026-08-31); RP-4 measured
-   Spark-equal lineage (`V3-LINEAGE-1` FIXED). V3-5 still owns DV-aware compact (`V3-DANGLE-1`,
-   `B-MOR-3`).
+   Spark-equal lineage (`V3-LINEAGE-1` FIXED). V3-5 measured DV-aware compact
+   (`V3-DANGLE-1` FIXED). `B-MOR-3` stays.
 3. **`MetadataLocation` Hadoop pointer math (F-14)** — landed fork #235 (2026-08-28): Hadoop
    `vN` parses and bumps to `v(N+1).metadata.json`; RP-3 retargeted the engine pin (`V3-ADOPT-1` FIXED).
 4. **V3 schema and IO support (F-15)** gates each V3-6 type independently.

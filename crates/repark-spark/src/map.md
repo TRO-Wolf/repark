@@ -51,10 +51,13 @@ pins: rp-4-fork-repin/C-005, C-006
 - `call.rs` — seven maintenance procedures: six maintenance calls plus `register_table`. Each
   preserves Spark's result schema and count sources. Orphan removal requires `older_than`, defaults
   `dry_run` to true, and refuses shared fallback roots; rewrite-position-delete still refuses
-  live Puffin DVs (`B-MOR-3`; RP-3 C-007 measured R136 as a parquet-to-DV conversion no-op);
-  rewrite-data-files refuses v3 lineage loss, honors v2 `where` file-selection, and refuses
-  sort/`sort_order` (`RDF-SORT-1`). Details and test pointers:
+  live Puffin DVs (`B-MOR-3`; RP-3 C-007 measured R136 as a parquet-to-DV conversion no-op;
+  V3-5: DV compaction is `rewrite_data_files`, so the refuse stays);
+  rewrite-data-files honors v2 `where` file-selection, refuses
+  sort/`sort_order` (`RDF-SORT-1`), and on v3 drops in-scope DVs (`V3-DANGLE-1`
+  FIXED). Details and test pointers:
   [call/map.md](call/map.md).
+  pins: v3-5-dv-compaction/C-002, C-003, C-006
   pins: maint-rewrite-data-files-options/C-003, C-004, C-008
 - `ctas.rs` — CTAS staged create/replace (fork `StagedTableTransaction`, one catalog publish),
   service-managed (S3 Tables) create-first path, create-clause refuse helpers.
