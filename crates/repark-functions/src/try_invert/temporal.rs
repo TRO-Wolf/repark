@@ -101,11 +101,18 @@ fn eval_interval_month_day_nano(
         ),
         _ => return None,
     };
+    duration_micros(days, nanos)?;
     Some(IntervalMonthDayNano {
         months,
         days,
         nanoseconds: nanos,
     })
+}
+
+fn duration_micros(days: i32, nanos: i64) -> Option<i64> {
+    i64::from(days)
+        .checked_mul(MICROS_PER_DAY)?
+        .checked_add(nanos.div_euclid(1_000))
 }
 
 fn eval_interval_day_time(

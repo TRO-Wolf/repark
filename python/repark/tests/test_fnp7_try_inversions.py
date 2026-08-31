@@ -296,6 +296,7 @@ def test_try_add_date_and_timestamp_interval() -> None:
     """pins: fnp-7-try-inversions/C-015"""
     date_next = _sql_arrow("SELECT try_add(DATE '2024-01-01', INTERVAL 1 DAY) AS v")
     assert date_next.column("v").to_pylist() == [datetime.date(2024, 1, 2)]
+    assert "date" in str(date_next.schema.field("v").type).lower()
     month_end = _sql_arrow("SELECT try_add(DATE '2024-01-31', INTERVAL 1 MONTH) AS v")
     assert month_end.column("v").to_pylist() == [datetime.date(2024, 2, 29)]
     shifted = _sql_arrow("SELECT try_add(TIMESTAMP '2024-01-01 00:00:00', INTERVAL 1 HOUR) AS v")
@@ -308,6 +309,35 @@ def test_try_add_date_and_timestamp_interval() -> None:
         assert stamp.date() == datetime.date(2024, 1, 1)
     else:
         raise AssertionError(stamp)
+
+
+def test_try_add_date_plus_hour_promotes_to_timestamp() -> None:
+    """pins: fnp-7-try-inversions/C-015, C-019"""
+    hour = _sql_arrow("SELECT try_add(DATE '2024-01-01', INTERVAL 1 HOUR) AS v")
+    assert "timestamp" in str(hour.schema.field("v").type).lower()
+    stamp = hour.column("v").to_pylist()[0]
+    assert isinstance(stamp, datetime.datetime)
+    assert stamp.date() == datetime.date(2024, 1, 1)
+    assert stamp.hour == 1
+    twenty_five = _sql_arrow("SELECT try_add(DATE '2024-01-01', INTERVAL 25 HOUR) AS v")
+    stamp_25 = twenty_five.column("v").to_pylist()[0]
+    assert isinstance(stamp_25, datetime.datetime)
+    assert stamp_25.date() == datetime.date(2024, 1, 2)
+    assert stamp_25.hour == 1
+    day = _sql_arrow("SELECT try_add(DATE '2024-01-01', INTERVAL 1 DAY) AS v")
+    assert day.column("v").to_pylist() == [datetime.date(2024, 1, 2)]
+    assert "date" in str(day.schema.field("v").type).lower()
+    assert "timestamp" not in str(day.schema.field("v").type).lower()
+
+
+def test_try_add_interval_duration_max_overflow_is_null() -> None:
+    """pins: fnp-7-try-inversions/C-019"""
+    overflow = _sql_arrow("SELECT try_add(INTERVAL 106751991 DAY, INTERVAL 1 DAY) AS v")
+    assert overflow.column("v").to_pylist() == [None]
+    inside = _sql_arrow("SELECT try_add(INTERVAL 106751990 DAY, INTERVAL 1 DAY) AS v")
+    values = inside.column("v").to_pylist()
+    assert len(values) == 1
+    assert _interval_days(values[0]) == 106751991
 
 
 def test_try_divide_interval_by_numeric() -> None:

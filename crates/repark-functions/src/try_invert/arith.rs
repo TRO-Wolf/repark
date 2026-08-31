@@ -6,9 +6,9 @@ use std::sync::Arc;
 use datafusion::arrow::array::{Array, Float64Array, PrimitiveArray};
 use datafusion::arrow::datatypes::{
     ArrowPrimitiveType, DataType, Field, FieldRef, Int8Type, Int16Type, Int32Type, Int64Type,
-    IntervalUnit,
+    IntervalUnit, TimeUnit,
 };
-use datafusion::common::{Result, exec_err};
+use datafusion::common::{Result, ScalarValue, exec_err};
 use datafusion::error::DataFusionError;
 use datafusion::logical_expr::{
     ColumnarValue, Operator, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl,
@@ -54,12 +54,7 @@ macro_rules! try_arith_udf {
             }
 
             fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
-                let arg_types: Vec<DataType> = args
-                    .arg_fields
-                    .iter()
-                    .map(|f| f.data_type().clone())
-                    .collect();
-                let data_type = self.return_type(&arg_types)?;
+                let data_type = result_type_from_args($kind, &args)?;
                 Ok(Arc::new(Field::new($name_literal, data_type, true)))
             }
 
@@ -131,6 +126,62 @@ fn two_args<'a>(arg_types: &'a [DataType], name: &str) -> Result<(&'a DataType, 
         return exec_err!("'{name}' expects two arguments, got {}", arg_types.len());
     };
     Ok((left, right))
+}
+
+fn result_type_from_args(kind: TryKind, args: &ReturnFieldArgs<'_>) -> Result<DataType> {
+    let arg_types: Vec<DataType> = args
+        .arg_fields
+        .iter()
+        .map(|field| field.data_type().clone())
+        .collect();
+    if matches!(kind, TryKind::Add | TryKind::Sub)
+        && let Some(data_type) = date_plus_interval_type(kind, &arg_types, args.scalar_arguments)
+    {
+        return Ok(data_type);
+    }
+    result_type(kind, &arg_types)
+}
+
+fn date_plus_interval_type(
+    kind: TryKind,
+    arg_types: &[DataType],
+    scalars: &[Option<&ScalarValue>],
+) -> Option<DataType> {
+    let (left, right) = (arg_types.first()?, arg_types.get(1)?);
+    let (interval_type, interval_scalar) = match (left, right) {
+        (DataType::Date32 | DataType::Date64, DataType::Interval(_)) => {
+            (right, scalars.get(1).and_then(|value| *value))
+        }
+        (DataType::Interval(_), DataType::Date32 | DataType::Date64)
+            if matches!(kind, TryKind::Add) =>
+        {
+            (left, scalars.first().and_then(|value| *value))
+        }
+        _ => return None,
+    };
+    if interval_forces_timestamp(interval_type, interval_scalar) {
+        Some(DataType::Timestamp(
+            TimeUnit::Microsecond,
+            Some("UTC".into()),
+        ))
+    } else {
+        Some(DataType::Date32)
+    }
+}
+
+fn interval_forces_timestamp(interval_type: &DataType, scalar: Option<&ScalarValue>) -> bool {
+    match (interval_type, scalar) {
+        (DataType::Interval(IntervalUnit::YearMonth), _) => false,
+        (
+            DataType::Interval(IntervalUnit::DayTime),
+            Some(ScalarValue::IntervalDayTime(Some(value))),
+        ) => value.milliseconds != 0,
+        (
+            DataType::Interval(IntervalUnit::MonthDayNano),
+            Some(ScalarValue::IntervalMonthDayNano(Some(value))),
+        ) => value.nanoseconds != 0,
+        _ => true,
+    }
 }
 
 fn result_type(kind: TryKind, arg_types: &[DataType]) -> Result<DataType> {
@@ -666,5 +717,63 @@ mod tests {
             .await
             .unwrap();
         assert!(!zero[0].column(0).is_valid(0), "interval / 0 is NULL");
+    }
+
+    #[tokio::test]
+    async fn try_add_date_plus_interval_hour_is_timestamp() {
+        let (data_type, _) = cell("SELECT try_add(DATE '2024-01-01', INTERVAL 1 HOUR) AS v").await;
+        assert!(
+            data_type.contains("Timestamp"),
+            "DATE + HOUR promotes, got {data_type}"
+        );
+        let batches = ctx()
+            .sql("SELECT try_add(DATE '2024-01-01', INTERVAL 1 HOUR) AS v")
+            .await
+            .unwrap()
+            .collect()
+            .await
+            .unwrap();
+        let formatted = format!("{:?}", batches[0].column(0).slice(0, 1));
+        assert!(
+            formatted.contains("01:00:00") || formatted.contains("T01:00:00"),
+            "{formatted}"
+        );
+    }
+
+    #[tokio::test]
+    async fn try_add_date_plus_interval_25_hour_is_next_day_timestamp() {
+        let batches = ctx()
+            .sql("SELECT try_add(DATE '2024-01-01', INTERVAL 25 HOUR) AS v")
+            .await
+            .unwrap()
+            .collect()
+            .await
+            .unwrap();
+        let formatted = format!("{:?}", batches[0].column(0).slice(0, 1));
+        assert!(
+            formatted.contains("2024-01-02")
+                && (formatted.contains("01:00:00") || formatted.contains("T01:00:00")),
+            "{formatted}"
+        );
+    }
+
+    #[tokio::test]
+    async fn try_add_interval_duration_max_overflow_is_null() {
+        let overflow = ctx()
+            .sql("SELECT try_add(INTERVAL 106751991 DAY, INTERVAL 1 DAY) AS v")
+            .await
+            .unwrap()
+            .collect()
+            .await
+            .unwrap();
+        assert!(!overflow[0].column(0).is_valid(0));
+        let inside = ctx()
+            .sql("SELECT try_add(INTERVAL 106751990 DAY, INTERVAL 1 DAY) AS v")
+            .await
+            .unwrap()
+            .collect()
+            .await
+            .unwrap();
+        assert!(inside[0].column(0).is_valid(0));
     }
 }

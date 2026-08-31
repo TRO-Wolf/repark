@@ -196,7 +196,7 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
   **FNP-4c (2026-08-31):** ten higher-order names on the FNP-4a seam. **FNP-7a/7b (2026-08-31):**
   twelve `try_*` inversions (NULL instead of raise). Remaining work ships as one coherent
   PR per unit or tightly coupled pair.
-  **Next, in order (revised 2026-08-30):** FNP-9/10 → FNP-8 → FNP-11/12 → FNP-Z.
+  **Next, in order (revised 2026-08-31):** FNP-9/10 → FNP-8 → FNP-11/12 → FNP-Z.
   Deferred with reasons in the design: FNP-4b, FNP-6d, FNP-13, FNP-14. This campaign and TA
   performance consume no F-17 surface and may use fork-wait windows; neither gates v1.0.
 <!-- /ws -->

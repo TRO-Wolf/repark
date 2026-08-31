@@ -35,8 +35,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   inversions. Spark 4.1.2 cells (value and Arrow type) on the two reachable doors (Spark SQL
   + facade Column API). Native ANSI `repark.sql()` does not load SparkExtension: the twelve
   names are unresolved (`Invalid function`). Interval `try_avg` refuses `[FNP-11]` (2026-08-31).
+  DATE + HOUR promotes to timestamp; INTERVAL day-time Duration-max overflow is NULL.
   pins: fnp-7-try-inversions/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
-  C-010, C-011, C-012, C-013, C-014, C-015, C-017, C-018
+  C-010, C-011, C-012, C-013, C-014, C-015, C-017, C-018, C-019
 - [test_integer_overflow_parity.py](test_integer_overflow_parity.py) — **F-Y10-1:** integer
   `+` / `-` / `*` overflow shared-raise under default ANSI and Int32/Int64 wrap when
   `ansi=false`, SQL and facade expression (`F` import uses the PySpark N812 noqa).

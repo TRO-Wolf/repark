@@ -78,10 +78,11 @@ BL-13), not a silent NULL.
 | C-012 | `try_avg` is a distinct UDAF (`avg` still raises on decimal overflow). Mean of 1,2,3 is double 2.0. Long overflow of avg is a double mean (Spark-equal; not NULL). Decimal(38,0) max+max overflow is NULL decimal(38,4). | Facade + SQL pins including overflow cells. | **PROVEN** |
 | C-013 | One kernel per Spark name on the Spark door and facade. Python does not compute rows. `armed_names()` stays 62. Facade `F.try_*` lands for the twelve names. Native ANSI `repark.sql()` does not install SparkExtension, so each of the twelve names is `Invalid function`. | hasattr pin + `repark.sql` unreachability pin. | **PROVEN** |
 | C-014 | Spark `try_add(SMALLINT 32767, 1)` is NULL smallint. RePark matches Int16 NULL. F-Y10-1 wrap residue of `+` is untouched. | SQL pin. | **PROVEN** |
-| C-015 | Spark `try_add(INTERVAL 1 DAY, INTERVAL 1 DAY)` is 2 days. DATE + INTERVAL 1 DAY is 2024-01-02; TIMESTAMP + 1 HOUR is 01:00; DATE 2024-01-31 + 1 MONTH is 2024-02-29. `try_divide(INTERVAL 2 DAYS, 2)` is 1 day; `/0` is NULL. | SQL pins with exact values. | **PROVEN** |
+| C-015 | Spark `try_add(INTERVAL 1 DAY, INTERVAL 1 DAY)` is 2 days. DATE + INTERVAL 1 DAY is date 2024-01-02; TIMESTAMP + 1 HOUR is 01:00; DATE 2024-01-31 + 1 MONTH is 2024-02-29. DATE + INTERVAL 1 HOUR is timestamp 01:00; DATE + 25 HOUR is timestamp 2024-01-02 01:00. `try_divide(INTERVAL 2 DAYS, 2)` is 1 day; `/0` is NULL. | SQL pins with exact values and types. | **PROVEN** |
 | C-016 | Docs and maps stay in lockstep. `functions.py` stays 1985. New Rust files under 1000. | `check-map-sync`; `check_lib_py` / `check_rust_file_size`. | **PROVEN** |
 | C-017 | Gates before done: `make verify`, `make check-map-sync check-ledger-grammar`, `python3 scripts/ledger_lifecycle.py check --base bb7fa54af48632c52d28aa8f7f446fac1dbf3742`, full `make py-test`, `make py-test-facade` for facade tests added. Real exit codes. | Recorded at close. | **PROVEN** |
 | C-018 | `try_avg(INTERVAL)` refuses loud with `[FNP-11]` dated 2026-08-31. Spark 4.1.2 returns interval day to second. Deferred to FNP-11; registry BL-13. Silent NULL is not this cell. | SQL pin of the refusal wording. | **PROVEN** |
+| C-019 | Spark `try_add` overflows the ANSI day-time Duration (i64 microseconds; max whole days 106751991) to NULL. 106751990+1 is 106751991 days; 106751991+1 is NULL. Same bound for the negative side. | SQL pins both sides of the bound. | **PROVEN** |
 
 ## Sequence
 
@@ -182,6 +183,17 @@ Hand-computed expectations are not an oracle.
 | `make py-test-facade` | 0 (4194 passed, 75 skipped) |
 | targeted `test_fnp7_try_inversions.py` | 0 (28 passed) |
 
+### Recritic 2 gates (2026-08-31)
+
+| Command | Exit |
+|---|---|
+| `make verify` | 0 |
+| `make check-map-sync` | 0 (163 maps) |
+| `python3 scripts/ledger_lifecycle.py check --base bb7fa54af48632c52d28aa8f7f446fac1dbf3742` | 0 |
+| `make py-test` | 0 (472 passed) |
+| `make py-test-facade` | 0 (4196 passed, 75 skipped) |
+| targeted `test_fnp7_try_inversions.py` | 0 (30 passed) |
+
 pins: fnp-7-try-inversions/C-017
 
 ```yaml
@@ -243,7 +255,7 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/test_fnp7_try_inversions.py]
     - id: AT-10
       status: ATTACKED
-      evidence: One pin per clause C-001..C-018; functions.py stays 1985; armed_names stays 62; try_avg leaves the W-0 absent roster.
+      evidence: One pin per clause C-001..C-019; functions.py stays 1985; armed_names stays 62; try_avg leaves the W-0 absent roster.
       artifacts: [python/repark/tests/test_fnp7_try_inversions.py, python/repark-parity/bench/windows/roster.py]
   reattested: []
   complete: true
@@ -281,4 +293,30 @@ Logs: `/tmp/fnp7-sabotage-C-012.log` … `C-018.log`.
 ### Oracle re-measure (live PySpark 4.1.2, Zulu 17, 2026-08-31)
 
 All L-001..L-004 and C-015 cells match Spark. L-005 Spark still returns `timedelta(days=1)` interval; RePark refuses `[FNP-11]` by design. `avg` decimal overflow still `ARITHMETIC_OVERFLOW`. Log: `/tmp/fnp7-oracle-remeasure.log`.
+
+## Recritic 2 (2026-08-31)
+
+Prior L-001..L-005 and Q-001/Q-002/CL-001 closed. New findings from
+`/tmp/grok-worker/fnp7/recritic-report.md` at `942ad43`.
+
+| Finding | Disposition |
+|---|---|
+| L-006 DATE + INTERVAL 1 HOUR stays Date32 | **FIXED.** Spark promotes DATE + HOUR/MINUTE/SECOND (MonthDayNano nanos ≠ 0, including 24 HOUR kept in nanos) to timestamp; DATE + DAY/MONTH (nanos = 0) stays date. 25 HOUR → 2024-01-02 01:00. Pin `test_try_add_date_plus_hour_promotes_to_timestamp`. |
+| L-007 INTERVAL 106751991 DAY + 1 DAY computes | **FIXED.** Spark Duration is i64 microseconds; max whole days 106751991. `duration_micros` NULLs past that bound. 106751990+1 is 106751991. Pin `test_try_add_interval_duration_max_overflow_is_null`. |
+| Q-004 hollow L-006/L-007 | **FIXED.** The two pins above. Red-first below. |
+| CL-002 STATUS remaining-order date | **FIXED.** `Next, in order (revised 2026-08-31)` and the PLAN-1 start marker. Order tokens unchanged. |
+
+### Red-first (L-006 / L-007)
+
+| Pin | Mutant | Exit | Needle |
+|---|---|---|---|
+| C-015 `test_try_add_date_plus_hour_promotes_to_timestamp` | type `timestamp` → `date32` | 1 | `'date32' in 'timestamp[us, tz=utc]'` (value `2024-01-01 01:00:00`) |
+| C-019 overflow half | `[None]` → `[0]` | 1 | `None != 0` |
+| C-019 inside half | days `106751991` → `0` | 1 | `106751991 == 0` |
+
+Logs: `/tmp/fnp7-sabotage-C-015-hour.log`, `/tmp/fnp7-sabotage-C-019-overflow.log`, `/tmp/fnp7-sabotage-C-019-inside.log`.
+
+### Oracle (L-006 / L-007, live 4.1.2)
+
+DATE+1 HOUR timestamp 01:00; DATE+25 HOUR timestamp 2024-01-02 01:00; DATE+24 HOUR timestamp 2024-01-02 00:00 (unit is HOUR, not value-normalized to DATE); DATE+1 DAY stays date; DATE+1 MONTH stays date. INTERVAL 106751991+1 DAY NULL; 106751990+1 = 106751991 days; 106751991+1 HOUR still fits (remainder micros). Log: `/tmp/fnp7-l006-oracle.log`.
 
