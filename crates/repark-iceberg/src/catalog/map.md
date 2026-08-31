@@ -42,6 +42,11 @@ Source comments retain only API and safety contracts; implementation narration i
   `s3://`/`s3a://` → the fork's OpenDAL S3 factory; `file://`/bare **absolute** path → LocalFs;
   anything else — unknown scheme, single-slash typo `s3:/…`, relative/empty path — fails loud,
   never a silent LocalFs).
+- `lineage_columns.rs` — **V3-4:** `LineageColumnsTableProvider` serves `_row_id` and
+  `_last_updated_sequence_number` on format-v3 reads (stored value else
+  `first_row_id +` position / file sequence). `SELECT *` stays user columns because the
+  SQL doors only register this provider when a query names the columns.
+  pins: v3-4-serve-lineage-columns/C-002
 - `metadata_projection.rs` — the two RePark-side policies over the fork's `table$meta` tables.
   (1) `ProjectingMetadataTableProvider` wraps a fork metadata provider so `scan` honors DF
   projection via `ProjectionExec` (never collect-then-project). (2)
@@ -86,6 +91,7 @@ SQL interception layer (phase-2 door). Locked down by tests here.
 | AWS-free catalog for local dev / tests | `memory_catalog(warehouse)` in `builders.rs` |
 | Pick a FileIO backend by location scheme | `file_io_for_location` / `storage_factory_for_location` in `location.rs` |
 | Read / write a namespace's warehouse location | `resolve_namespace_location` / `mirror_namespace_location_keys` in `location.rs` |
+| Serve `_row_id` / `_last_updated_sequence_number` on a v3 read | `lineage_columns.rs` (`LineageColumnsTableProvider`); SQL doors call `repark_core::prepare_lineage_sql` |
 | Change what `SHOW TABLES` / `information_schema` enumerates | `MetadataProjectionSchemaProvider::table_names` in `metadata_projection.rs` — one place, all four entry points (both doors, the facade, the bare session); read [ADR-0006](../../../../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md) first |
 | Change credential handling | not here — AWS SDK default chain *inside the fork* |
 

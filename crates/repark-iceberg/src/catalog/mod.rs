@@ -10,6 +10,7 @@ use iceberg::{Catalog, NamespaceIdent};
 // === incremental catalog provider PERF-07 hook API (invalidate / rebuild).
 mod builders;
 mod catalog_ops;
+mod lineage_columns;
 mod location;
 mod metadata_projection;
 mod provider;
@@ -23,6 +24,9 @@ pub use provider::{
 pub use catalog_ops::reregister_catalog_provider;
 // Projection wrap for fork metadata-table providers (registered via provider).
 pub use builders::{glue_catalog, iceberg_to_datafusion, memory_catalog, s3tables_catalog};
+pub use lineage_columns::{
+    LineageColumnsTableProvider, table_serves_row_lineage, user_field_names,
+};
 pub use location::{
     NAMESPACE_LOCATION_PROPERTY, NAMESPACE_LOCATION_URI_PROPERTY, file_io_for_location,
     mirror_namespace_location_keys, resolve_namespace_location, storage_factory_for_location,

@@ -2311,11 +2311,14 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   in the same unit (RP-2 ledger §2). The v3 half stays **unreachable** while V3-LINEAGE-1
   refuses every v3 rewrite, so the row stays queued for V3-3+.
 
-- **V3-ROWID-1** — `_row_id` and `_last_updated_sequence_number` are not readable. On a v3 table
-  Spark serves both as ordinary columns; this engine plans neither
-  (`Schema error: No field named _row_id`), so a consumer cannot see the lineage the format
-  guarantees. Queued for the **V3-4** unit, which owns row lineage as a whole; pinning it here
-  would pin half a decision.
+- **V3-ROWID-1** — **FIXED (V3-4, 2026-08-31).** `_row_id` and
+  `_last_updated_sequence_number` are served on v3 reads, Spark-equal (nullable int64;
+  stored value else `first_row_id +` position / file sequence; `SELECT *` hides them).
+  v1/v2 raise unresolved (Spark `UNRESOLVED_COLUMN.WITH_SUGGESTION`, not NULL). Preserve
+  across COW DML stays F-7 / `V3-COW-1`. Pins:
+  `crates/repark-spark/src/tests/v3_lineage.rs`,
+  `crates/repark-sql/src/v3/partitioned_equality_deletes.rs` ANSI lineage tests,
+  `python/repark/tests/test_v3_lineage_columns.py`.
 
 - **V3-COW-1** — measured 2026-08-24 and admitted as a BACKLOG row (see §7). Left this queue.
 

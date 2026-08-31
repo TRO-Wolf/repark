@@ -72,6 +72,7 @@ pub async fn execute_with_read_only<S: std::hash::BuildHasher>(
         };
     // Release pinned relations after planning.
     let mut pinned = time_travel::PinnedViews::default();
+    let mut lineage_pins = repark_core::LineagePins::default();
     let original_for_locations =
         original_sql_for_locations(sql, canonical_sql, sql_after_meta.as_ref());
     let result = execute_time_travelled(
@@ -80,8 +81,10 @@ pub async fn execute_with_read_only<S: std::hash::BuildHasher>(
         sql_after_meta.as_ref(),
         original_for_locations,
         &mut pinned,
+        &mut lineage_pins,
     )
     .await;
+    lineage_pins.release(ctx);
     pinned.release(ctx);
     result
 }
@@ -93,15 +96,29 @@ async fn execute_time_travelled(
     sql: &str,
     original_for_locations: Option<&str>,
     pinned: &mut time_travel::PinnedViews,
+    lineage_pins: &mut repark_core::LineagePins,
 ) -> Result<DataFrame> {
     // Iceberg time travel is not modelled by Databricks-dialect sqlparser.
-    let sql_storage: std::borrow::Cow<'_, str> = if time_travel::sql_has_time_travel(sql) {
+    let sql_after_tt: std::borrow::Cow<'_, str> = if time_travel::sql_has_time_travel(sql) {
         match time_travel::prepare_time_travel_sql(ctx, catalogs, sql, pinned).await? {
             Some(rewritten) => std::borrow::Cow::Owned(rewritten),
             None => std::borrow::Cow::Borrowed(sql),
         }
     } else {
         std::borrow::Cow::Borrowed(sql)
+    };
+    let dialect = datafusion::sql::sqlparser::dialect::DatabricksDialect {};
+    let sql_storage: std::borrow::Cow<'_, str> = match repark_core::prepare_lineage_sql(
+        ctx,
+        catalogs,
+        sql_after_tt.as_ref(),
+        &dialect,
+        lineage_pins,
+    )
+    .await?
+    {
+        Some(rewritten) => std::borrow::Cow::Owned(rewritten),
+        None => sql_after_tt,
     };
     let result = execute_inner(ctx, catalogs, sql_storage.as_ref()).await;
     if let Some(original) = original_for_locations

@@ -138,7 +138,7 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
     Spark-written v3 with Puffin deletion vectors and appending with row lineage are correct,
     round-tripped through Spark. **Guarded:** `rewrite_data_files` reassigned `_row_id` on v3 —
     registry `V3-LINEAGE-1`, stricter than Spark on purpose, reversible in one line; the fix is
-    fork work (F-7). Queued: `V3-DANGLE-1`, `V3-ROWID-1` (V3-4).
+    fork work (F-7). Queued: `V3-DANGLE-1`.
   - **Delivered:** V3-1 `register_table` + the checked-in v3 fixture
     ([#203](https://github.com/TRO-Wolf/repark/pull/203)); V3-2 CREATE/CTAS `format-version = 3`
     behind `repark.sql.allowCreateFormatVersion3` (default false), ALTER refused
@@ -162,7 +162,9 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
     FIXED (`V3-ADOPT-1`). V3-3 (2026-08-30) measured `UPDATE` / `MERGE` keep-refusal:
     Spark 4.1.2 + Iceberg 1.11.0 preserves `_row_id`; the engine rewrite reassigns
     (registry `V3-COW-1`). `V3-LINEAGE-1` and `B-MOR-3` stay.
-  - **Next:** V3-4 — serve `_row_id` / `_last_updated_sequence_number`; V3-3 charter
+    **V3-4 read (2026-08-31):** `_row_id` / `_last_updated_sequence_number` Spark-equal on
+    v3 reads (three doors); v1/v2 unresolved; `V3-ROWID-1` FIXED. Preserve-half stays F-7.
+  - **Next:** V3-5 / F-7 COW lineage lift. V3-3 charter
     [task/ledgers/completed/v3-3-dml-ledger.md](task/ledgers/completed/v3-3-dml-ledger.md)
     (keep-refusal, F-rp3-c7 stays a fork finding).
     Sequence: [docs/design/format-v3-track.md §5](docs/design/format-v3-track.md).

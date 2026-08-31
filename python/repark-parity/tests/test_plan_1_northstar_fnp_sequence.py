@@ -52,6 +52,7 @@ def test_live_slate_retires_v3e_5_and_queues_the_safe_work() -> None:
     """C-002: the rolling slate starts with fork-independent work; FNP fills the gaps.
 
     pins: v3-3-dml/C-003
+    pins: v3-4-serve-lineage-columns/C-010
     """
     slate = _read("briefs/next-sequence.md")
     assert "<!-- unit id=f-y10-1" not in slate
@@ -65,7 +66,7 @@ def test_live_slate_retires_v3e_5_and_queues_the_safe_work() -> None:
     assert "V3-3 delivered 2026-08-30" in flat
     status = _read("STATUS.md")
     assert "V3E-5 added the nightly v3 live-oracle leg" in status
-    assert "**Next:** V3-4" in status
+    assert "**Next:** V3-5 / F-7" in status
 
 
 def test_fork_handoff_records_the_shared_puffin_failure_and_acceptance() -> None:

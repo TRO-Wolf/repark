@@ -65,6 +65,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   branch/tag, `VERSION AS OF` over DVs, rollback, expire dual-probe, orphan
   24h floor on the partitioned-DV fixture after a RePark append; live-DV UPDATE
   still refuses `V3-COW-1` (RP-3 C-004; DELETE on live DVs is lifted).
+- [test_v3_lineage_columns.py](test_v3_lineage_columns.py) — **V3-4:** facade SQL serves
+  Spark-equal `_row_id` / `_last_updated_sequence_number` on the V3E-3 fixtures; `SELECT *`
+  hides them; v2 is unresolved.
+  pins: v3-4-serve-lineage-columns/C-004, C-005, C-007, C-008
 - [test_v3e3_fixtures.py](test_v3e3_fixtures.py) — **V3E-3 (2026-08-24):** facade adopt of
   the Spark-written partitioned v3 DV fixture and the equality-delete + DV fixture;
   live rows, partition prune, `.delete_files` content 1/2; RP-3 C-007 CALL still refuses

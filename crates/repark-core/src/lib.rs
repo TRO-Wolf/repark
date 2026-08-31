@@ -8,6 +8,7 @@ mod dynamic_flatten;
 mod error_map;
 mod extension;
 mod idents;
+mod lineage_columns;
 mod namespace_create;
 mod object_store_s3;
 mod pre_execute;
@@ -49,6 +50,8 @@ pub use time_travel::{
     TimeTravelSpec, next_temp_view_name, parse_timestamp_to_ms, parse_version_value, read_table_at,
     resolve_snapshot_id, snapshot_id_as_of_time,
 };
+
+pub use lineage_columns::{LineagePins, prepare_lineage_sql, sql_mentions_lineage_columns};
 
 // --- Error surface: the classifier fold + the seed re-export (bindings import one crate).
 pub use error_map::engine_err;

@@ -25,7 +25,9 @@ ANSI-door format-v3 test modules. `lib.rs` declares `#[cfg(test)] mod v3;`.
   DV and equality-delete + DV fixtures, plus `$delete_files` content 1/2, cross-partition DV
   DELETE, live-DV UPDATE pre-write refusal (`Model: Grok 4.6 xHigh`; rp-3-fork-repin/C-004),
   and C-007 ANSI CALL / fork no-op of `rewrite_position_delete_files`
-  (pins: rp-3-fork-repin/C-007).
+  (pins: rp-3-fork-repin/C-007). **V3-4:** ANSI `_row_id` / `_last_updated_sequence_number`
+  on both fixtures, `SELECT *` hides them, v2 unresolved.
+  pins: v3-4-serve-lineage-columns/C-003, C-005, C-007, C-008
 
 ## Pointers
 

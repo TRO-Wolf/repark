@@ -2,6 +2,7 @@
 //! ANSI-door pins for Spark-written partitioned v3 DV and equality-delete
 //! pins: v3e-3-partitioned-eqdel-fixtures/C-007, C-008, C-010
 //! pins: rp-3-fork-repin/C-007
+//! pins: v3-4-serve-lineage-columns/C-003, C-005, C-007, C-008
 
 use std::collections::HashSet;
 use std::fs;
@@ -10,7 +11,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard};
 use std::time::{Duration, Instant};
 
-use datafusion::arrow::array::{Int32Array, Int64Array, StringArray};
+use datafusion::arrow::array::{Array, Int32Array, Int64Array, StringArray};
 use datafusion::prelude::{SessionConfig, SessionContext};
 use iceberg::spec::{FormatVersion, Literal};
 use iceberg::{Catalog, NamespaceIdent, TableIdent};
@@ -505,4 +506,124 @@ async fn ansi_partitioned_dv_fork_rewrite_position_delete_files_is_a_conversion_
         .expect("second rewrite");
     assert_eq!(second.rewritten_delete_files_count, 0);
     assert_eq!(door.live_triples("partdv").await, after);
+}
+
+async fn lineage_triples(door: &Door, table: &str) -> Vec<(i32, Option<i64>, Option<i64>)> {
+    let batches = door
+        .sql(&format!(
+            "SELECT id, _row_id, _last_updated_sequence_number FROM ice.sales.{table} ORDER BY id"
+        ))
+        .await
+        .unwrap_or_else(|err| panic!("lineage select: {err}"));
+    let schema = batches[0].schema();
+    assert_eq!(schema.field(1).name(), "_row_id");
+    assert!(schema.field(1).is_nullable());
+    assert_eq!(schema.field(2).name(), "_last_updated_sequence_number");
+    assert!(schema.field(2).is_nullable());
+    let mut rows = Vec::new();
+    for batch in &batches {
+        let ids = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<Int32Array>()
+            .expect("id Int32");
+        let row_ids = batch
+            .column(1)
+            .as_any()
+            .downcast_ref::<Int64Array>()
+            .expect("_row_id Int64");
+        let seqs = batch
+            .column(2)
+            .as_any()
+            .downcast_ref::<Int64Array>()
+            .expect("seq Int64");
+        for index in 0..batch.num_rows() {
+            rows.push((
+                ids.value(index),
+                (!row_ids.is_null(index)).then(|| row_ids.value(index)),
+                (!seqs.is_null(index)).then(|| seqs.value(index)),
+            ));
+        }
+    }
+    rows
+}
+
+#[tokio::test]
+async fn ansi_partitioned_v3_dv_serves_spark_equal_lineage() {
+    let fixture = materialize(
+        &PART_DV_LOCK,
+        "v3-spark-part-dv",
+        PART_DV_TABLE,
+        "v3.metadata.json",
+    );
+    let door = door().await;
+    adopt(&door, "partdv", &fixture.metadata_file).await;
+    assert_eq!(
+        lineage_triples(&door, "partdv").await,
+        vec![
+            (1, Some(0), Some(1)),
+            (3, Some(2), Some(1)),
+            (4, Some(3), Some(1)),
+            (6, Some(5), Some(1)),
+        ]
+    );
+}
+
+#[tokio::test]
+async fn ansi_equality_delete_v3_serves_spark_equal_lineage() {
+    let fixture = materialize(
+        &EQ_DV_LOCK,
+        "v3-spark-eq-dv",
+        EQ_DV_TABLE,
+        "v4.metadata.json",
+    );
+    let door = door().await;
+    adopt(&door, "eqdv", &fixture.metadata_file).await;
+    assert_eq!(
+        lineage_triples(&door, "eqdv").await,
+        vec![(2, Some(1), Some(1)), (3, Some(2), Some(1))]
+    );
+}
+
+#[tokio::test]
+async fn ansi_partitioned_v3_select_star_hides_lineage_columns() {
+    let fixture = materialize(
+        &PART_DV_LOCK,
+        "v3-spark-part-dv",
+        PART_DV_TABLE,
+        "v3.metadata.json",
+    );
+    let door = door().await;
+    adopt(&door, "partdv", &fixture.metadata_file).await;
+    let batches = door
+        .sql("SELECT * FROM ice.sales.partdv ORDER BY id")
+        .await
+        .expect("select *");
+    let names: Vec<_> = batches[0]
+        .schema()
+        .fields()
+        .iter()
+        .map(|field| field.name().clone())
+        .collect();
+    assert_eq!(names, vec!["id", "name", "part"]);
+}
+
+#[tokio::test]
+async fn ansi_v2_table_lineage_columns_are_unresolved() {
+    let door = door().await;
+    door.sql("CREATE TABLE ice.sales.lin2 (id INT, name VARCHAR)")
+        .await
+        .expect("create v2");
+    door.sql("INSERT INTO ice.sales.lin2 VALUES (1, 'a'), (2, 'b'), (3, 'c')")
+        .await
+        .expect("insert v2");
+    let error = door
+        .sql("SELECT id, _row_id FROM ice.sales.lin2")
+        .await
+        .expect_err("v2 must not plan lineage columns")
+        .to_string();
+    assert!(
+        error.contains("_row_id"),
+        "pre-v3 must fail closed, got: {error}"
+    );
 }

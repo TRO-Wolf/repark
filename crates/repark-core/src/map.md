@@ -174,6 +174,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   warehouse (`memory_warehouse_fallback_root`, also used to normalize CALL `location`
   strings); `CatalogRegistry::from` still uses `std::env::temp_dir()`. Hoisted MOVE-ONLY
   from the v1 SQL crate.
+- `lineage_columns.rs` — **V3-4:** `prepare_lineage_sql` rewrites queries that name
+  `_row_id` / `_last_updated_sequence_number` onto a v3 `LineageColumnsTableProvider`
+  temp view. v1/v2 stay unresolved. Both SQL doors call it.
+  pins: v3-4-serve-lineage-columns/C-002, C-003
 - `time_travel.rs` (+ `time_travel/tests.rs`) — `TimeTravelSpec` + parsers
   (`parse_version_value`, `parse_timestamp_to_ms`), snapshot resolution, `read_table_at`
   (snapshot-pinned static provider via `iceberg-datafusion`), and **`next_temp_view_name` — the
