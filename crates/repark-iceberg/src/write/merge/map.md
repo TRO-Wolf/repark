@@ -33,6 +33,7 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   `shared_puffin_row_delta_keeps_the_untouched_sibling` calls `commit_row_delta_kind`
   on the Spark shared-Puffin fixture (id 5 must stay deleted).
   pins: rp-3-fork-repin/C-003
+  pins: v3-5-dv-compaction/C-005
 - `abort.rs` — `delete_written_files_best_effort` + `written_file_paths`. Delete
   set is threaded from writer results in hand; never re-derived from the table
   or manifests. `CommitStateUnknown` errors SKIP cleanup (the commit may have

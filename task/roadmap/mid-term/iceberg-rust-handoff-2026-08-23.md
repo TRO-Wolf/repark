@@ -133,14 +133,17 @@ unblocks a chartered or proposed engine unit; **P3** = real, not urgent.
 *Taken by RP-2 (2026-08-27):* the CALL accepts `'remove-dangling-deletes' => true` (quoted-name
 CALL grammar) and reports the fork's true count; default stays false; the Java-faithful
 unpartitioned-single-spec early return measured. Pin:
-`call_rewrite_data_files_remove_dangling_deletes_reports_a_true_count`. The v3 half stays
-guarded (V3-LINEAGE-1).
+`call_rewrite_data_files_remove_dangling_deletes_reports_a_true_count`.
 
-- **Engine observation.** The engine's `rewrite_data_files` result reports
-  `removed_delete_files_count` as a constant `0` by construction, because the fork's action
-  does not compose dangling-delete removal and the engine refuses the `options` map. On **v3**
-  the oracle reported `6` with no option set (a DV dies with the file it is scoped to) — that
-  path is engine-guarded today (V3-LINEAGE-1) and belongs to F-7.
+*V3-5 (2026-08-31):* RP-4 lifted V3-LINEAGE-1. A v3 compact drops in-scope Puffin DVs
+without the option and reports a true `removed_delete_files_count` (six-file fixture
+= 6, Arrow Int32; V3E-3 partitioned = 2). Registry `V3-DANGLE-1` FIXED. The v2 option
+half is unchanged.
+
+- **Engine observation.** *Was (RP-2):* `removed_delete_files_count` hard-coded `0` and
+  the v3 path guarded by V3-LINEAGE-1. *Now (V3-5):* the CALL forwards the fork count;
+  v3 apply-path DV drop is `6` on the six-file fixture with `'remove-dangling-deletes'`
+  off. On **v2**, the option-off default is still `0` (Java's).
 - **Fork location.** `crates/iceberg/src/maintenance/rewrite_data_files.rs` (the action) and
   `maintenance/remove_dangling_delete_files.rs` (the sub-action already exists, ✅ R153).
 - **Java reference.** `RewriteDataFilesSparkAction` option `remove-dangling-deletes`
@@ -239,12 +242,11 @@ for the MW campaign to close (that wait is over — the addendum below).
   `_row_id` / `_last_updated_sequence_number` through compaction Spark-equal; the public
   CALL is lifted. The same carry still does **not** apply to COW DML (`OverwriteFiles`);
   registry `V3-COW-1` keeps that path refused.
-- **B-MOR-3** — `RewritePositionDeleteFiles` refuses live Puffin deletion vectors; a DV-aware
-  rewrite (or a DV-specific action) is the fork's call.
-- **V3-DANGLE-1** — a v3 compaction must drop the DVs scoped to the files it rewrote (Spark
-  reported `removed_delete_files_count = 6` there with no option set). **Reachable** now that
-  V3-LINEAGE-1 is lifted: RP-4's twelve-file fixture had no live DVs
-  (`removed_delete_files_count = 0`). Residue for V3-5.
+- **B-MOR-3** — `RewritePositionDeleteFiles` still refuses live Puffin deletion vectors
+  (OD-2). V3-5 measured that DV compaction is `rewrite_data_files`, not this action.
+- **V3-DANGLE-1** — **FIXED 2026-08-31 (V3-5).** `RewriteDataFiles` at `33be9a0` drops
+  in-scope DVs; engine CALL reports `removed_delete_files_count = 6` on the six-file
+  v3 MOR fixture. `where => 'part = 0'` keeps the sibling vector.
 
 *Addendum 2026-08-23:* the owner set v1.0's north star as **full production-grade format-v3**
 (engine charter: `task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md`), and the MW campaign
@@ -267,9 +269,10 @@ B-MOR-3 refusal pin
 retires at the repin, replaced by a Spark-compared pin. **Sequenced after F-13** — the DV write
 path is its prerequisite.
 
-On **V3-DANGLE-1:** fork **R137** ships dangling-DV removal; the engine seat stays unreachable
-until F-7's lineage half lifts **V3-LINEAGE-1**. Open question to the fork: does R137 also drop DVs
-on the `OverwriteFiles` (COW DML) path?
+On **V3-DANGLE-1:** *V3-5 (2026-08-31):* RP-4 lifted V3-LINEAGE-1; the engine CALL drops
+in-scope DVs and reports the true count (`removed_delete_files_count = 6` on the
+six-file fixture). Registry FIXED. Open question to the fork: does apply-path DV drop
+also run on the `OverwriteFiles` (COW DML) path?
 
 ### F-8 (P2) — metadata-table `TableProvider` projection and name synthesis — **half corrected**
 

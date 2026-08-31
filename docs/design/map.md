@@ -12,7 +12,7 @@ changing a decision here means a new dated design pass, not an in-place edit.
 
 - [format-v3-track.md](format-v3-track.md) — **the format-v3 track's scope audit
   (2026-08-21; §5 the delivery sequence, Steps 1–3 done 2026-08-30, RP-3 consumed at `d408da42`;
-  Step 4 V3-3 keep-refusal dated 2026-08-30):** what roadmap item A12 got wrong once the surfaces were actually run. The engine
+  Step 4 V3-3 keep-refusal dated 2026-08-30; Step 5 V3-5 `V3-DANGLE-1` FIXED 2026-08-31):** what roadmap item A12 got wrong once the surfaces were actually run. The engine
   already reads Spark-written deletion vectors and appends to a v3 table with correct row
   lineage, both verified by round trip; `rewrite_data_files` silently reassigned that lineage,
   which is why the audit ships a guard. Carries the `system.register_table` signature read from
@@ -71,6 +71,19 @@ changing a decision here means a new dated design pass, not an in-place edit.
   the delegated external lanes (§6), the one held owner gate and the one discharged before kickoff
   (§7), non-goals (§8). Executed by the
   slate in [../../briefs/v2-engine-hardening.md](../../briefs/v2-engine-hardening.md).
+- [torture-suite.md](torture-suite.md) — the **v0.8 torture-test dataset suite** design (settled
+  2026-08-31). What the roadmap section costs once the existing suite is run at the roadmap's own
+  scale: four of the five families already ship as checked-in generators from DS-1…DS-4
+  (2026-08-16) and have only ever run at 64 rows. §1 is the measured ground truth — a full 1M
+  generation is 171.6 s and 2.5 GB, and five DS-4 findings are still open, three of them
+  consequences of the 10 000-row `samplingRows` cap that 64 rows cannot see. §2 names the four real
+  gaps (scale, dataset identity, baselines, the absent secrets mechanism), §3 the five units
+  TT-1…TT-5 with checkable acceptance and the reason the cut is not one-per-bullet, §4 the dated
+  decisions D-1…D-6 (Python generators stay where they are; table identity over file bytes; ≥ 1M
+  floor, 10M ceiling; data never enters git; two CI scales in two places), §5 the measurement-bed
+  contract v1.2's W-0…W-2 and the v0.9 spill matrix consume, §6 risks, §7 what is not claimed.
+  TT-5 (opt-in secrets flagging) is the only unit with product surface and is risk tier **high**.
+
 - [product-contract.md](product-contract.md) — **product-honesty contracts** (settled 2026-08-11)
   for three consumer-facing statements (G3-E3 / G3-E4 / G3-E7): Catalog-API-only table
   introspection (`list_tables` supported; `SHOW TABLES IN` pinned-unimplemented ST-1; bare
@@ -99,6 +112,9 @@ write-path maintenance wave (settled 2026-08-21, MW-0…MW-5) moved to
 | Understand the V2 Engine Hardening campaign (running) | [v2-engine-hardening.md](v2-engine-hardening.md) |
 | See what a hardening unit must do and how it is accepted | [../../briefs/v2-engine-hardening.md](../../briefs/v2-engine-hardening.md) |
 | See the product contracts for list_tables / sql() boundaries / post-DDL visibility | [product-contract.md](product-contract.md) |
+| Understand the v0.8 torture-test dataset suite (units, generators, CI) | [torture-suite.md](torture-suite.md) |
+| See what a 1M-row generation of every family costs | [torture-suite.md](torture-suite.md) §1.1 |
+| See what v0.8 deliberately does not claim | [torture-suite.md](torture-suite.md) §7 |
 | Understand the Agent-Agnostic Front-Door campaign | [../history/frontdoor/README.md](../history/frontdoor/README.md) (archived 2026-08-10) |
 | Understand the Iceberg maintenance wave | [../history/iceberg-maintenance-wave/README.md](../history/iceberg-maintenance-wave/README.md) (archived 2026-08-23) |
 | Read the brief that executed the phase-1 design | [docs/history/port-v2/phase-1-engine-core.md](../history/port-v2/phase-1-engine-core.md) |

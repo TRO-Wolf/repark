@@ -401,8 +401,10 @@ spark.sql("CALL local.system.rewrite_data_files(table => 'sales.orders')").show(
 +----------------------------+------------------------+-----------------------+-------------------------+----------------------------+
 ```
 
-On a **format-v3** table this CALL now runs and keeps `_row_id` /
-`_last_updated_sequence_number` unchanged (RP-4 / fork #243; registry `V3-LINEAGE-1` FIXED).
+On a **format-v3** table this CALL now runs, keeps `_row_id` /
+`_last_updated_sequence_number` unchanged (RP-4 / fork #243; registry `V3-LINEAGE-1` FIXED),
+and drops deletion vectors scoped to rewritten files with a true
+`removed_delete_files_count` (V3-5; registry `V3-DANGLE-1` FIXED).
 Default CREATE is still format v2 unless the session sets
 `repark.sql.allowCreateFormatVersion3`.
 

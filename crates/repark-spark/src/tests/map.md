@@ -54,6 +54,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   the measurement pin does not write outside the crate
   (pins: rp-3-fork-repin/C-007, C-011)
   (`Model: Grok 4.6 xHigh`; rustdoc cites C-013).
+  **V3-5:** `rewrite_data_files` on the partitioned DV fixture drops both
+  vectors (delete-ratio admits each one-file group);
+  `where => 'part = 0'` drops only that vector and keeps the sibling live.
+  pins: v3-5-dv-compaction/C-002, C-003, C-005
 - `delete_granularity.rs` — **MW-9:** Spark-door `write.delete.granularity` (explicit
   file/partition, unknown refuse on MERGE and identity UPDATE, fork DELETE/UPDATE
   residual, ALTER-then-MERGE).
@@ -99,6 +103,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `V3-LINEAGE-1` FIXED; `Model: Grok 4.6 xHigh`).
   Pin `call_rewrite_data_files_on_v3_preserves_row_lineage`
   (`pins: rp-3-fork-repin/C-005; rp-4-fork-repin/C-003`).
+  `call_v3_dv` (**V3-5**): six-file v3 MOR with live Puffin DVs;
+  `rewrite_data_files` drops all six (`removed_delete_files_count = 6`,
+  count columns Arrow Int32); `rewrite_position_delete_files` still refuses
+  (`B-MOR-3`).
+  pins: v3-5-dv-compaction/C-001, C-002, C-003, C-004, C-007
   `call_manifests` (**MW-6**) pins the two non-nullable `int` columns, no-op zero result, current
   spec filter, delete-manifest refusal, and `MANIFEST-3` count divergence.
   `call_register` (**V3-1 / RP-3 C-008**): `CALL system.register_table` arguments, three nullable BIGINT columns,
