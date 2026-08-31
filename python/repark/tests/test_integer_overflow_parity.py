@@ -213,6 +213,88 @@ def test_facade_int32_add_python_lit_wraps_when_ansi_false() -> None:
     assert table.column("v").to_pylist() == [-2147483648]
 
 
+def test_facade_int32_sub_cols_wraps_when_ansi_false() -> None:
+    """Facade int32 MIN − 1 wraps under ansi=false.
+
+    pins: f-y10-1-int-overflow/C-002
+    """
+    spark = _spark_legacy()
+    schema = StructType(
+        [
+            StructField("a", IntegerType(), False),
+            StructField("b", IntegerType(), False),
+        ]
+    )
+    frame = spark.createDataFrame([(-2147483648, 1)], schema)
+    table = frame.select((F.col("a") - F.col("b")).alias("v")).to_arrow()
+    assert str(table.schema.field("v").type) == "int32"
+    assert table.column("v").to_pylist() == [2147483647]
+
+
+def test_facade_int32_mul_cols_wraps_when_ansi_false() -> None:
+    """Facade int32 MAX × 2 wraps under ansi=false.
+
+    pins: f-y10-1-int-overflow/C-002
+    """
+    spark = _spark_legacy()
+    schema = StructType(
+        [
+            StructField("a", IntegerType(), False),
+            StructField("b", IntegerType(), False),
+        ]
+    )
+    frame = spark.createDataFrame([(2147483647, 2)], schema)
+    table = frame.select((F.col("a") * F.col("b")).alias("v")).to_arrow()
+    assert str(table.schema.field("v").type) == "int32"
+    assert table.column("v").to_pylist() == [-2]
+
+
+def test_int32_mul_min_times_neg_one_wraps_when_ansi_false() -> None:
+    """INT MIN × −1 wraps to INT MIN under ansi=false.
+
+    pins: f-y10-1-int-overflow/C-002
+    """
+    spark = _spark_legacy()
+    table = spark.sql("SELECT CAST(-2147483648 AS INT) * CAST(-1 AS INT) AS v").to_arrow()
+    assert str(table.schema.field("v").type) == "int32"
+    assert table.column("v").to_pylist() == [-2147483648]
+
+
+def test_int64_sub_min_minus_one_raises_under_default_ansi() -> None:
+    """BIGINT MIN − 1 raises long ARITHMETIC_OVERFLOW.
+
+    pins: f-y10-1-int-overflow/C-002
+    """
+    spark = _spark()
+    with pytest.raises(Exception, match="ARITHMETIC_OVERFLOW"):
+        spark.sql(
+            "SELECT CAST(-9223372036854775808 AS BIGINT) - CAST(1 AS BIGINT) AS v"
+        ).to_arrow()
+
+
+def test_int64_mul_max_times_two_raises_under_default_ansi() -> None:
+    """BIGINT MAX × 2 raises long ARITHMETIC_OVERFLOW.
+
+    pins: f-y10-1-int-overflow/C-002
+    """
+    spark = _spark()
+    with pytest.raises(Exception, match="ARITHMETIC_OVERFLOW"):
+        spark.sql(
+            "SELECT CAST(9223372036854775807 AS BIGINT) * CAST(2 AS BIGINT) AS v"
+        ).to_arrow()
+
+
+def test_int64_add_cast_plus_literal_wraps_when_ansi_false() -> None:
+    """BIGINT CAST+lit wraps at Int64 under ansi=false.
+
+    pins: f-y10-1-int-overflow/C-002
+    """
+    spark = _spark_legacy()
+    table = spark.sql("SELECT CAST(9223372036854775807 AS BIGINT) + 1 AS v").to_arrow()
+    assert str(table.schema.field("v").type) == "int64"
+    assert table.column("v").to_pylist() == [-9223372036854775808]
+
+
 def test_facade_int64_add_cols_raises_under_default_ansi() -> None:
     """Facade col(int64)+col(int64) at the boundary raises."""
     spark = _spark()

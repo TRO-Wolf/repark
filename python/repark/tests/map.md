@@ -36,7 +36,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `ansi=false`, SQL and facade expression (`F` import uses the PySpark N812 noqa).
   Untyped `1 + 1` / `2147483647 + 1` stay int64 (literal-width split).
   Unaliased planner-hit SQL keeps BinaryExpr column names.
-  Native ``repark.sql()`` overflow raise is pinned.
+  Native ``repark.sql()`` overflow raise is pinned. Facade i32 sub/mul wrap and
+  i64 CAST+lit wrap cells are pinned.
   pins: f-y10-1-int-overflow/C-001, C-002, C-003.
 - `test_production_file_size.py` — frozen parent-symbol inventory, integrated AST body hashes,
   responsibility ownership, `_funcs` compatibility namespace, isolated source/wheel import-cycle

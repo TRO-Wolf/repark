@@ -733,6 +733,18 @@ mod tests {
 
     /// pins: f-y10-1-int-overflow/C-002
     #[tokio::test]
+    async fn int32_mul_min_times_neg_one_wraps_when_ansi_false() {
+        let ctx = ctx_legacy();
+        let batch = batch(
+            &ctx,
+            "SELECT CAST(-2147483648 AS INT) * CAST(-1 AS INT) AS v",
+        )
+        .await;
+        assert_eq!(int32_cell(&batch), Some(-2_147_483_648));
+    }
+
+    /// pins: f-y10-1-int-overflow/C-002
+    #[tokio::test]
     async fn int64_add_max_plus_one_raises_under_default_ansi() {
         let ctx = ctx();
         let error = collect_error(
@@ -760,6 +772,29 @@ mod tests {
 
     /// pins: f-y10-1-int-overflow/C-002
     #[tokio::test]
+    async fn int64_add_cast_plus_literal_wraps_when_ansi_false() {
+        let ctx = ctx_legacy();
+        let batch = batch(&ctx, "SELECT CAST(9223372036854775807 AS BIGINT) + 1 AS v").await;
+        assert_eq!(int64_cell(&batch), Some(i64::MIN));
+    }
+
+    /// pins: f-y10-1-int-overflow/C-002
+    #[tokio::test]
+    async fn int64_sub_min_minus_one_raises_under_default_ansi() {
+        let ctx = ctx();
+        let error = collect_error(
+            &ctx,
+            "SELECT CAST(-9223372036854775808 AS BIGINT) - CAST(1 AS BIGINT) AS v",
+        )
+        .await;
+        assert!(
+            error.contains("ARITHMETIC_OVERFLOW") && error.contains("long overflow"),
+            "BIGINT subtract overflow names long, got {error}"
+        );
+    }
+
+    /// pins: f-y10-1-int-overflow/C-002
+    #[tokio::test]
     async fn int64_sub_min_minus_one_wraps_when_ansi_false() {
         let ctx = ctx_legacy();
         let batch = batch(
@@ -772,6 +807,21 @@ mod tests {
 
     /// pins: f-y10-1-int-overflow/C-002
     #[tokio::test]
+    async fn int64_mul_max_times_two_raises_under_default_ansi() {
+        let ctx = ctx();
+        let error = collect_error(
+            &ctx,
+            "SELECT CAST(9223372036854775807 AS BIGINT) * CAST(2 AS BIGINT) AS v",
+        )
+        .await;
+        assert!(
+            error.contains("ARITHMETIC_OVERFLOW") && error.contains("try_multiply"),
+            "BIGINT multiply overflow, got {error}"
+        );
+    }
+
+    /// pins: f-y10-1-int-overflow/C-002
+    #[tokio::test]
     async fn int64_mul_max_times_two_wraps_when_ansi_false() {
         let ctx = ctx_legacy();
         let batch = batch(
@@ -780,6 +830,33 @@ mod tests {
         )
         .await;
         assert_eq!(int64_cell(&batch), Some(-2));
+    }
+
+    /// pins: f-y10-1-int-overflow/C-002
+    #[tokio::test]
+    async fn int64_mul_min_times_neg_one_raises_under_default_ansi() {
+        let ctx = ctx();
+        let error = collect_error(
+            &ctx,
+            "SELECT CAST(-9223372036854775808 AS BIGINT) * CAST(-1 AS BIGINT) AS v",
+        )
+        .await;
+        assert!(
+            error.contains("ARITHMETIC_OVERFLOW") && error.contains("long overflow"),
+            "BIGINT MIN * -1 overflows, got {error}"
+        );
+    }
+
+    /// pins: f-y10-1-int-overflow/C-002
+    #[tokio::test]
+    async fn int64_mul_min_times_neg_one_wraps_when_ansi_false() {
+        let ctx = ctx_legacy();
+        let batch = batch(
+            &ctx,
+            "SELECT CAST(-9223372036854775808 AS BIGINT) * CAST(-1 AS BIGINT) AS v",
+        )
+        .await;
+        assert_eq!(int64_cell(&batch), Some(i64::MIN));
     }
 
     /// pins: f-y10-1-int-overflow/C-002

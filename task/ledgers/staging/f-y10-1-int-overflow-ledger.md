@@ -148,17 +148,30 @@ the op stays Int64 and Arrow wraps.
 Pre-edit §4.1 cells were wrap/widen. Shipped repark cells (planner-equipped
 sessions; value and Arrow type):
 
-| Cell | SQL | R-A / R-ST | R-SF | Pin |
+| Cell | SQL / expr | R-A / R-ST | R-SF | Pin or why-not |
 |---|---|---|---|---|
 | untyped `1 + 1` | `SELECT 1 + 1` | Int64 `2` | Int64 `2` | `untyped_one_plus_one_stays_int64_on_planner_session`; `ansi_door_untyped_one_plus_one_stays_int64`; `test_untyped_one_plus_one_type_is_int64` |
 | untyped add | `2147483647 + 1` | Int64 `2147483648` | Int64 `2147483648` | `untyped_int_max_plus_one_widens_to_int64`; `ansi_door_untyped_overflow_widens_to_int64`; `test_untyped_overflow_widens_to_int64` |
 | i32 add CAST+CAST | `CAST(INT MAX) + CAST(1 AS INT)` | raise | wrap Int32 MIN | `int32_add_max_plus_one_raises_*`; wrap sibling |
 | i32 add CAST+lit | `CAST(INT MAX) + 1` | raise | wrap Int32 MIN | `int32_add_cast_plus_literal_*` |
 | i32 sub CAST+CAST | `CAST(INT MIN) - CAST(1 AS INT)` | raise | wrap Int32 MAX | `int32_sub_min_minus_one_*` |
+| i32 sub CAST+lit | `CAST(INT MIN) - 1` | raise | wrap Int32 MAX | why-not: same width arm as CAST+lit add; sub kernel pinned CAST+CAST |
 | i32 mul CAST+CAST | `CAST(INT MAX) * CAST(2 AS INT)` | raise | wrap Int32 `-2` | `int32_mul_max_times_two_*` |
-| i32 mul MIN×−1 | `CAST(INT MIN) * CAST(-1 AS INT)` | raise | wrap Int32 MIN | raise pin; wrap pin in F-4 |
+| i32 mul CAST+lit | `CAST(INT MAX) * 2` | raise | wrap Int32 `-2` | why-not: same width arm as CAST+lit add; mul kernel pinned CAST+CAST |
+| i32 mul MIN×−1 | `CAST(INT MIN) * CAST(-1 AS INT)` | raise | wrap Int32 MIN | `int32_mul_min_times_neg_one_*` |
 | i64 add CAST+CAST | `CAST(BIGINT MAX) + CAST(1 AS BIGINT)` | raise long | wrap Int64 MIN | `int64_add_max_plus_one_*` |
+| i64 add CAST+lit | `CAST(BIGINT MAX) + 1` | raise long | wrap Int64 MIN | wrap: `int64_add_cast_plus_literal_wraps_when_ansi_false`; raise: CAST+CAST add kernel |
+| i64 sub CAST+CAST | `CAST(BIGINT MIN) - CAST(1 AS BIGINT)` | raise long | wrap Int64 MAX | `int64_sub_min_minus_one_*` |
+| i64 mul CAST+CAST | `CAST(BIGINT MAX) * CAST(2 AS BIGINT)` | raise long | wrap Int64 `-2` | `int64_mul_max_times_two_*` |
+| i64 mul MIN×−1 | `CAST(BIGINT MIN) * CAST(-1 AS BIGINT)` | raise long | wrap Int64 MIN | `int64_mul_min_times_neg_one_*` |
 | i32 add control | `CAST(2147483646 AS INT) + CAST(1 AS INT)` | Int32 MAX | Int32 MAX | `int32_add_control_stays_int32` |
+| i32 mul control | `CAST(46340 AS INT) * CAST(46340 AS INT)` | Int32 `2147395600` | same | why-not: non-overflow keep-type is the add control |
+| facade i32 add cols | int32+int32 | raise | wrap | `facade_int32_add_cols_raises_*`; wrap: `test_facade_int32_add_python_lit_wraps_when_ansi_false` (lit is Int32) |
+| facade i32 sub cols | int32 MIN−1 | raise | wrap Int32 MAX | `test_facade_int32_sub_cols_wraps_when_ansi_false`; raise: SQL sub kernel |
+| facade i32 mul cols | int32 MAX×2 | raise | wrap Int32 `-2` | `test_facade_int32_mul_cols_wraps_when_ansi_false`; raise: SQL mul kernel |
+| facade i64 add cols | int64 MAX+1 | raise | wrap | `test_facade_int64_add_cols_raises_under_default_ansi` |
+| facade i64 sub/mul | int64 MIN−1 / MAX×2 | raise | wrap | why-not: SQL i64 sub/mul pins cover the kernel; facade BinaryExpr uses the same analyzer rewrite |
+| facade i32/i64 MIN×−1 | cols | raise | wrap MIN | why-not: SQL `*_mul_min_times_neg_one_*` pins the kernel |
 
 Deleting `is_typed_integer_expr` (the F-1 narrowing gate) reds the untyped
 `1 + 1` / `2147483647 + 1` pins. Deleting the `i32::try_from` literal-width

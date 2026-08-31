@@ -116,7 +116,8 @@ Child modules use Rust's default layout: `str_to_map`, `shuffle`, and `map_from_
   `ExprPlanner` keeps `CAST(INT) + 1` as Int32 so TypeCoercion cannot widen it.
   Pure-literal `1 + 1` / `2147483647 + 1` stay Int64 (the intended literal-width
   split). Planner `Planned` results alias to the original BinaryExpr name so
-  unaliased SQL does not leak `__repark_spark_int_*`. `install_integer_overflow`
+  unaliased SQL does not leak `__repark_spark_int_*`. Post-remediation corpus
+  pins i64 sub/mul raise, i32 MIN×−1 wrap, i64 CAST+lit wrap. `install_integer_overflow`
   is the ANSI-door hook. Ledger:
   `task/ledgers/staging/f-y10-1-int-overflow-ledger.md`.
   pins: f-y10-1-int-overflow/C-001, C-002, C-003, C-004, C-005
