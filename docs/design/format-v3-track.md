@@ -238,9 +238,10 @@ is never treated as closed because fork row R166 is green.
 
 *Done 2026-08-30 — RP-3 at `d408da42`:* cells 1–6 green on all three doors. Cell 7: first COW
 DELETE is Spark-equal; a second after overwrite refuses (`V3-COW-1`, F-rp3-c7). Cell 8: live-DV
-UPDATE refuses. `rewrite_data_files` still reassigns (`V3-LINEAGE-1`, C-005).
-`rewrite_position_delete_files` stays refused (`B-MOR-3`, C-007). Hadoop writes FIXED
-(`V3-ADOPT-1`).
+UPDATE refuses. Hadoop writes FIXED (`V3-ADOPT-1`).
+`rewrite_position_delete_files` stays refused (`B-MOR-3`, C-007).
+
+*RP-4 2026-08-31 at `33be9a0`:* `rewrite_data_files` lineage Spark-equal (`V3-LINEAGE-1` FIXED).
 
 ### Step 4 — deliver V3-3 and the guarded upgrade
 
@@ -277,8 +278,9 @@ blocked. They do not replace or delay a ready v3 unit.
 
 1. **Shared-Puffin DV sibling closure (F-17)** — landed fork #237 (2026-08-28); RP-3 (2026-08-30)
    wired `close_touched_dv_containers` on the engine MOR path; matrix cell (4) is green.
-2. **Row lineage through `RewriteDataFiles`** remains open. RP-3 re-measured at `d408da42`
-   (C-005): still reassigns; `V3-LINEAGE-1` stays. The lift belongs to V3-5.
+2. **Row lineage through `RewriteDataFiles`** — landed fork #243 (2026-08-31); RP-4 measured
+   Spark-equal lineage (`V3-LINEAGE-1` FIXED). V3-5 still owns DV-aware compact (`V3-DANGLE-1`,
+   `B-MOR-3`).
 3. **`MetadataLocation` Hadoop pointer math (F-14)** — landed fork #235 (2026-08-28): Hadoop
    `vN` parses and bumps to `v(N+1).metadata.json`; RP-3 retargeted the engine pin (`V3-ADOPT-1` FIXED).
 4. **V3 schema and IO support (F-15)** gates each V3-6 type independently.

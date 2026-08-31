@@ -43,6 +43,7 @@ This table is append-only: one row per dedicated pin-bump PR (rule 1). Started 2
 
 | Date | Old pin | New pin | Notes |
 |---|---|---|---|
+| 2026-08-31 | `d408da42fb91db2010662fe1da3783b82fa6e1ed` | `33be9a0f411c37cd8d7b38c4db81eec30c1344cc` | RP-4: `#241` test pin, `#243` F-7 slice 1 (v3 rewrite lineage), `#244` F-6 `to_branch` (carried). Family frozen. Take/skip in the RP-4 ledger. |
 | 2026-08-30 | `ce92a7bfe2c1be569ed0de1178ed410e8ec3a117` | `d408da42fb91db2010662fe1da3783b82fa6e1ed` | RP-3: F-17 `#237` (DV container close), F-14 `#235` (Hadoop `vN` pointer math), F-7 U3 `#227`, F-16 `#232`, F-9/F-15 `#233`, H7-P1/R114 `#239`. Family frozen. Take/skip in the RP-3 ledger. |
 | 2026-08-27 | `5e7b2e4f8fcb0ff65943cdbc10cdd8f4132fe0b6` | `ce92a7bfe2c1be569ed0de1178ed410e8ec3a117` | RP-2: consume fork F-3 `#216` (remove-dangling-deletes compose), F-5 `#217` (ReplacePartitions scope, BEHAVIOR), F-13 `#219`/`#221`/`#222` (V3 MOR DV writes, BREAKING), F-7 U1+U2 `#225`/`#226` (lineage, BEHAVIOR). Family frozen; the fork's variant type adds `parquet-variant*` 58.4.0. |
 | 2026-08-23 | `0c5fd58d4ab73a0113a8b28b717cf5d002b0f8f2` | `5e7b2e4f8fcb0ff65943cdbc10cdd8f4132fe0b6` | RP-1: consume fork F-0 `#214`, F-1 (RPDF floor 5), F-2 `#215`. Family frozen. F-8a last-`$` filter. |

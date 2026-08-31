@@ -1,11 +1,12 @@
 """V3R-1 facade `.sql()` v3 DML pins: UPDATE / MERGE refuse (V3-COW-1); the RP-2-repinned
-plain-`WHERE` DELETE is Spark-clean and commits; `rewrite_data_files` still refuses v3
-(`V3-LINEAGE-1`).
+plain-`WHERE` DELETE is Spark-clean and commits; `rewrite_data_files` on v3 preserves
+lineage (`V3-LINEAGE-1` FIXED).
 
 pins: v3r-1-rulings/C-006
 pins: rp-2-fork-repin/C-003, C-005
 pins: rp-3-fork-repin/C-004
 pins: v3-3-dml/C-001, C-002
+pins: rp-4-fork-repin/C-003
 """
 
 from __future__ import annotations
@@ -110,8 +111,40 @@ def test_facade_adopted_v3_cow_dml_refuses_and_leaves_the_table_untouched(
         assert "reassigns" in str(merge_error.value)
         merged = spark.sql("SELECT id, name FROM ice.sales.adopt_mrg").to_arrow()
         assert _id_name_rows(merged) == seeded
-        with pytest.raises(UnsupportedOperationException, match="row lineage"):
-            spark.sql("CALL ice.system.rewrite_data_files(table => 'sales.adopt_mrg')").collect()
+        spark.sql(
+            "CREATE TABLE ice.sales.rw_lin (id INT) USING iceberg "
+            f"TBLPROPERTIES ({_FORMAT_V3_ONLY})"
+        )
+        for index in range(1, 7):
+            spark.sql(f"INSERT INTO ice.sales.rw_lin SELECT {index} AS id")
+        before = spark.sql(
+            "SELECT id, _row_id, _last_updated_sequence_number FROM ice.sales.rw_lin ORDER BY id"
+        ).to_arrow()
+        assert before.schema.field("_row_id").type == pa.int64()
+        assert before.schema.field("_last_updated_sequence_number").type == pa.int64()
+        before_rows = list(
+            zip(
+                before.column("id").to_pylist(),
+                before.column("_row_id").to_pylist(),
+                before.column("_last_updated_sequence_number").to_pylist(),
+                strict=True,
+            )
+        )
+        result = spark.sql("CALL ice.system.rewrite_data_files(table => 'sales.rw_lin')").to_arrow()
+        assert result.column("rewritten_data_files_count")[0].as_py() == 6
+        after = spark.sql(
+            "SELECT id, _row_id, _last_updated_sequence_number FROM ice.sales.rw_lin ORDER BY id"
+        ).to_arrow()
+        after_rows = list(
+            zip(
+                after.column("id").to_pylist(),
+                after.column("_row_id").to_pylist(),
+                after.column("_last_updated_sequence_number").to_pylist(),
+                strict=True,
+            )
+        )
+        assert after.schema.field("_row_id").type == pa.int64()
+        assert after_rows == before_rows
 
         spark.sql(
             "CREATE TABLE ice.sales.seed_del (id INT, name STRING) USING iceberg "

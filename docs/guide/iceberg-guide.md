@@ -401,20 +401,10 @@ spark.sql("CALL local.system.rewrite_data_files(table => 'sales.orders')").show(
 +----------------------------+------------------------+-----------------------+-------------------------+----------------------------+
 ```
 
-On a **format-v3** table this one refuses rather than running:
-
-```text
-CALL rewrite_data_files will not compact `sales.orders`: it is a V3 table, and V3 mandates row
-lineage (`_row_id`, `_last_updated_sequence_number`) which this engine's rewrite does not carry
-through...
-```
-
-RePark creates tables at format v2 unless the session opts in with
-`repark.sql.allowCreateFormatVersion3` and the SQL asks for format v3, so without that this
-only reaches a v3 table that was already in your catalog. The rewrite would return the right rows and give every one of them a new `_row_id`,
-which tells anything reading the table incrementally that all of them changed. Spark carries
-lineage through the same compaction unchanged, so compact v3 tables there for now. Registry row
-`V3-LINEAGE-1`.
+On a **format-v3** table this CALL now runs and keeps `_row_id` /
+`_last_updated_sequence_number` unchanged (RP-4 / fork #243; registry `V3-LINEAGE-1` FIXED).
+Default CREATE is still format v2 unless the session sets
+`repark.sql.allowCreateFormatVersion3`.
 
 ### Compacting position deletes
 

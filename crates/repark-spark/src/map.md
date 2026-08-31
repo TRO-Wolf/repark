@@ -15,6 +15,7 @@ share the session and catalog seams. The MoR valve predicate is owned by
 `repark_iceberg::write`; `normalize.rs` keeps the resolution wrapper.
 Source documentation may retain model provenance; code-quality grade tags stay outside code.
 pins: rp-3-fork-repin/C-010
+pins: rp-4-fork-repin/C-005, C-006
 
 ## Contents
 

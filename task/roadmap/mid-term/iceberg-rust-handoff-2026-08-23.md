@@ -208,6 +208,9 @@ guarded (V3-LINEAGE-1).
 - **Ask.** A `to_branch(name)` on the snapshot producer, threaded through each action builder,
   with validation and retry resolved against the named ref. WAP (`write.wap.enabled` /
   `stage_only`) is **not** requested.
+- **Landed (RP-4, 2026-08-31, fork #244).** `SnapshotUpdate.to_branch` exists
+  (`crates/iceberg/src/transaction/to_branch.rs`). The engine does not call it yet; REF
+  consumes the surface. The refuse pin stays until REF routes branch-targeted DML.
 - **Acceptance.** Engine pin `crates/repark-spark/src/tests/ref_ddl.rs::write_to_branch_refuses_loud_naming_fork_gap`
   is written to go red when a commit target exists; the engine then routes branch-targeted DML.
 
@@ -224,20 +227,24 @@ RP-3 also re-measures U1 at its frozen SHA (C-005).
 converts parquet position deletes to DVs; on a DV-only fixture it is a zero-result no-op and
 `B-MOR-3` stays.
 
-Listed so the fork plans it; as of 2026-08-21 the engine's V3-2+ units deliberately waited
-for the MW campaign to close (that wait is over — the addendum below), and the engine refuses
-these paths today.
+*RP-4 at `33be9a0` (2026-08-31):* U1 / F-7 slice 1 (`#243`) carries lineage through
+`rewrite_data_files`. Engine CALL + PySpark 4.1.2 + Iceberg 1.11.0 read-back is Spark-equal
+(`V3-LINEAGE-1` FIXED). F-6 `#244` `to_branch` exists on the fork; no engine caller this unit
+(REF consumes it).
 
-- **V3-LINEAGE-1** — `RewriteFiles` / `RewriteDataFiles` must carry row lineage (`_row_id`,
-  `_last_updated_sequence_number`) through compaction unchanged, as Spark does; the engine
-  refuses v3 rewrite until it does. The same carry applies to **any action that rewrites an
-  existing row** — the COW DML path (`OverwriteFiles`) included; engine registry queue
-  `V3-COW-1` (2026-08-23) records that path as reachable and unmeasured engine-side.
+Listed so the fork plans it; as of 2026-08-21 the engine's V3-2+ units deliberately waited
+for the MW campaign to close (that wait is over — the addendum below).
+
+- **V3-LINEAGE-1** — **FIXED 2026-08-31 (RP-4 / fork #243).** `RewriteDataFiles` carries
+  `_row_id` / `_last_updated_sequence_number` through compaction Spark-equal; the public
+  CALL is lifted. The same carry still does **not** apply to COW DML (`OverwriteFiles`);
+  registry `V3-COW-1` keeps that path refused.
 - **B-MOR-3** — `RewritePositionDeleteFiles` refuses live Puffin deletion vectors; a DV-aware
   rewrite (or a DV-specific action) is the fork's call.
 - **V3-DANGLE-1** — a v3 compaction must drop the DVs scoped to the files it rewrote (Spark
-  reported `removed_delete_files_count = 6` there with no option set). Unreachable on the engine
-  side while V3-LINEAGE-1 holds; whoever lifts that guard owns this.
+  reported `removed_delete_files_count = 6` there with no option set). **Reachable** now that
+  V3-LINEAGE-1 is lifted: RP-4's twelve-file fixture had no live DVs
+  (`removed_delete_files_count = 0`). Residue for V3-5.
 
 *Addendum 2026-08-23:* the owner set v1.0's north star as **full production-grade format-v3**
 (engine charter: `task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md`), and the MW campaign
