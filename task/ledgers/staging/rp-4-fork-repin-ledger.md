@@ -26,14 +26,14 @@ re-measure; F-6 is carried, not consumed (REF later).
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | Every `iceberg*` `[patch.crates-io]` rev is `33be9a0f411c37cd8d7b38c4db81eec30c1344cc` and `Cargo.lock` resolves to it; `datafusion`, `datafusion-spark`, `arrow*`, `parquet` and `rust-toolchain.toml` are byte-identical to `main`. | `rg` on the workspace `Cargo.toml` + lock source entries; `git diff origin/main -- rust-toolchain.toml` empty; Cargo.toml vs origin/main is only the five revs plus citation lockstep. | **OPEN** | Repin commit. Compile is the first measurement. |
-| C-002 | The two standing repin duties hold at the new rev (`NamespaceScopedCatalog` forwards every required `Catalog` method; the metadata-projection shim is kept iff the fork's metadata-table `scan` still ignores `projection`), and the what-changed note lists every commit in `d408da42..33be9a0` (`d4f55e1` #241, `4f6fa4e` #243 F-7 slice 1, `33be9a0` #244 F-6) with the engine site that absorbs each. | Trait diff; fork `metadata_table.rs`; the two metadata-table pins; the note in §6. | **OPEN** | RP-3 C-002 pattern. |
+| C-001 | Every `iceberg*` `[patch.crates-io]` rev is `33be9a0f411c37cd8d7b38c4db81eec30c1344cc` and `Cargo.lock` resolves to it; `datafusion`, `datafusion-spark`, `arrow*`, `parquet` and `rust-toolchain.toml` are byte-identical to `main`. | `rg` on the workspace `Cargo.toml` + lock source entries; `git diff origin/main -- rust-toolchain.toml` empty; Cargo.toml vs origin/main is only the five revs plus citation lockstep. | **PROVEN** | Five `[patch.crates-io]` revs and six lock sources (`iceberg`, `iceberg-catalog-glue`, `iceberg-catalog-s3tables`, `iceberg-datafusion`, `iceberg-sketches`, `iceberg-storage-opendal`) are `33be9a0f411c37cd8d7b38c4db81eec30c1344cc`; zero `d408da42` remain. `cargo check --locked --workspace` exit 0 (1m 42s, 2026-08-31). `git diff origin/main -- rust-toolchain.toml` empty. Cargo.toml vs origin/main is the five revs. Lock vs origin/main is 12 lines (the six iceberg* sources). Family freeze: datafusion 54.1.0, datafusion-spark 54.1.0, arrow*/parquet 58.4.0, rust-toolchain 1.96.0. Citation: `crates/repark-iceberg/map.md`. |
+| C-002 | The two standing repin duties hold at the new rev (`NamespaceScopedCatalog` forwards every required `Catalog` method; the metadata-projection shim is kept iff the fork's metadata-table `scan` still ignores `projection`), and the what-changed note lists every commit in `d408da42..33be9a0` (`d4f55e1` #241, `4f6fa4e` #243 F-7 slice 1, `33be9a0` #244 F-6) with the engine site that absorbs each. | Trait diff; fork `metadata_table.rs`; the two metadata-table pins; the note in §6. | **PROVEN** | Range is 3 commits (listed in §6). `Catalog` trait still 14 required + 16 defaulted; no method added or removed. Three `NamespaceScopedCatalog` omissions still compose. `cargo test -p repark-iceberg --lib catalog::tests::namespace_scoped` → 4 passed. Shim stays: `iceberg-datafusion` `table/metadata_table.rs` `scan` still takes `_projection` and ignores it. `IcebergSchemaProvider::try_new` is still lazy. F-6 `to_branch` exists on snapshot producers; engine does not call it (C-004). Compile green is the F-6 absorption. Citation: `crates/repark-iceberg/map.md`. |
 | C-003 | **F-7 slice 1 re-measured at the frozen SHA.** Engine `CALL system.rewrite_data_files` (direct fork action below the public guard, as RP-3 C-005) on the v3 fixture, then PySpark 4.1.2 + Iceberg 1.11.0 read-back of `_row_id` / `_last_updated_sequence_number`. If lineage now carries Spark-equal, registry `V3-LINEAGE-1` moves to FIXED (dated 2026-08-31, fork #243) and the public guard lifts; STATUS / north-star / the handoff truth up; V3-5 becomes charterable. If it still reassigns, the guard stays and the measured divergence is filed against the fork row. A green fork row is not evidence. | RP-3 §11 driver re-run; Spark read-back of both state copies; red-first on any pin that flips. | **OPEN** | MEASURE. |
 | C-004 | **F-6 carried, not consumed.** No engine surface calls `to_branch` in this unit. Compile is green at the new transaction shape; checked-in Spark fixtures are byte-flat vs `origin/main`; the REF / F-6 handoff row notes that the fork surface now exists. | Grep engine sources for `to_branch`; fixture byte comparison; the REF row note. | **OPEN** | If the F-6 restructure forces engine rework beyond mechanical absorption, HALT. |
 | C-005 | The documents say what the pins prove: north star `rewrite_data_files` row, STATUS, the handoff F-7 / F-6 take-or-carry, `docs/fork-sync.md` pin history, crate maps and the divergence registry in lockstep. | `make check-map-sync`, `check-docs-compaction`, `check-ledger-grammar`. | **OPEN** | STATUS stays under its 25_000 B ceiling. |
 | C-006 | Green on the bound gates: `make verify`, `make check-map-sync check-ledger-grammar`, `python3 scripts/ledger_lifecycle.py check --base bb7fa54af48632c52d28aa8f7f446fac1dbf3742`, `make py-test`. | Gate output attached. Real exit codes. | **OPEN** | Full `make verify` + `make py-test` once before CONCLUDED. |
 
-VERDICT: 6 clauses, 0 PROVEN, 6 OPEN, 0 REJECTED.
+VERDICT: 6 clauses, 2 PROVEN, 4 OPEN, 0 REJECTED.
 
 ## 2. Sequence
 
@@ -118,8 +118,34 @@ is **3 commits**. Compare:
 
 | Fork commit | Change | Engine site that absorbs it |
 |---|---|---|
-| `d4f55e1` (#241) | fork-side parity test pin only | none expected; verify at compile |
-| `4f6fa4e` (#243, F-7 slice 1, BEHAVIOR) | v3 row-lineage carry through `rewrite_data_files` (`maintenance/rewrite_data_files_write.rs`, `metadata_columns.rs`, datafusion `physical_plan/row_lineage.rs`) | C-003 re-measure; `call.rs` `V3-LINEAGE-1` guard lift iff Spark-equal |
-| `33be9a0` (#244, F-6, potentially BREAKING) | `SnapshotUpdate.to_branch` commit target; `transaction/snapshot.rs` restructured | compile against `RowDelta` / transaction actions; REF row note; no engine caller this unit |
+| `d4f55e1` (#241) | fork-side parity test pin only (`CurrentFileStatus` never-started) | none; `cargo check --locked --workspace` exit 0 |
+| `4f6fa4e` (#243, F-7 slice 1, BEHAVIOR) | v3 row-lineage carry through `rewrite_data_files` (`maintenance/rewrite_data_files_write.rs`, `metadata_columns.rs`, datafusion `physical_plan/row_lineage.rs`) | C-003 re-measure; public `V3-LINEAGE-1` guard lift iff Spark-equal |
+| `33be9a0` (#244, F-6, potentially BREAKING) | `SnapshotUpdate.to_branch` commit target (`crates/iceberg/src/transaction/to_branch.rs`); `transaction/snapshot.rs` restructured | compile against `RowDelta` / transaction actions (green, 2026-08-31); REF row note (C-004); no engine caller this unit |
 
-The table is filled at the C-001/C-002 commit after the range is listed from the fork.
+Listed from the cargo git checkout at `33be9a0f411c37cd8d7b38c4db81eec30c1344cc`:
+`d4f55e1d`, `4f6fa4e4`, `33be9a0f`.
+
+```yaml
+SELF_LOGIC_REVIEW:
+  id: SLR-C-001
+  agent: Actor
+  action: commit the repin (C-001) and the what-changed note (C-002)
+  charter_trace: C-001, C-002
+  preconditions:
+    - charter committed: SATISFIED (ae29e04)
+    - target SHA named: SATISFIED (33be9a0f411c37cd8d7b38c4db81eec30c1344cc)
+    - family freeze target: SATISFIED (datafusion 54.1.0, arrow/parquet 58.4.0, rust-toolchain 1.96.0 on origin/main)
+    - disk: SATISFIED (571 G free)
+  success_condition: cargo check --locked --workspace exit 0; five iceberg* revs and lock sources are 33be9a0; rust-toolchain.toml identical to origin/main
+  step_risks:
+    - family pin moves: HANDLED(diff origin/main; halt if datafusion/arrow/toolchain change)
+    - F-6 compile break beyond mechanical absorption: HANDLED(HALT with questions)
+    - grammar does not count root Cargo.toml: HANDLED(citation lives in crates/repark-iceberg/map.md)
+  contingencies:
+    - cargo update fails: EXECUTABLE(record the error; do not hand-edit the lock)
+  tripwire_scan: CLEAN
+  uncertainty: NONE
+  verdict: PROCEED
+  escalation: —
+```
+
