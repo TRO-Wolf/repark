@@ -32,6 +32,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   padded merge-on-read, and v2-control cases keep `V3_MAINTENANCE_ORACLE` and ENC-1's pin.
 - `create_table.rs` — also the V3R-1 type pin: `GEOMETRY` / `GEOGRAPHY` / `VARIANT` refuse at
   CREATE (`V3-GEO-1`).
+- `v3_types.rs` — **V3-6 C-001:** ledger matrix pin plus today's Spark-door CREATE/ALTER
+  refuse of `timestamp_ns` / `UNKNOWN` / `VARIANT` / ADD COLUMN DEFAULT.
+  pins: v3-6-v3-types/C-001
 - `v3e4.rs` — **V3E-4:** snapshot refs, `VERSION AS OF` over DVs, expire with
   real work, orphan 24h floor on the partitioned-DV fixture after a RePark
   append, and the live-DV UPDATE pre-write refusal with snapshot, rows, and fixture bytes unchanged;

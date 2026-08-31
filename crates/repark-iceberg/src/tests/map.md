@@ -14,6 +14,11 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
   `write/merge/tests/streaming_scan.rs`.
 - `fork_pin.rs` — ADR-0001 fork-pin proof: names and exercises fork-only public API
   (`iceberg::plan_commit_base_load` / `CommitBaseLoadPlan`).
+- `v3_types.rs` — **V3-6 C-001:** fork pin `33be9a0` read/write measurement for
+  `timestamp_ns` / `timestamptz_ns` (parquet round-trip), `unknown` (Arrow Null;
+  write commits; scan `DataInvalid` Null), binary `variant` (parquet builder
+  refuse), and `write_default` (schema stores it; engine `append` still refuses a
+  missing column). pins: v3-6-v3-types/C-001
 
 ## Pointers
 

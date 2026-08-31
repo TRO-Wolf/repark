@@ -41,6 +41,7 @@ mod transform_overwrite;
 mod truncate;
 mod v3_cow;
 mod v3_lineage;
+mod v3_types;
 mod v3e3;
 mod v3e4;
 mod window_temporal_range;
