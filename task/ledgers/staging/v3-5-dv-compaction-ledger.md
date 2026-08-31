@@ -1,0 +1,146 @@
+# Charter ledger — V3-5 · DV-aware v3 compaction
+
+**Date:** 2026-08-31 · **Branch:** `feat/v3-5-dv-compaction` · **Base:** `main`
+`749eff4166abbbb6c590bcd4af5a9d929b1c6319` · **Path:** STANDARD
+(`risk_tier: standard`; one Actor cycle). **Policy:**
+[../../../AGENTS.md](../../../AGENTS.md) · **Design home:**
+[docs/design/format-v3-track.md](../../../docs/design/format-v3-track.md) §5
+Step 5 / §6 item 2. **Registry:** `V3-DANGLE-1`, `B-MOR-3`, `V3-LINEAGE-1`
+([docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md)).
+**Proven drivers:** RP-3 C-005 / C-007
+([2026-08-30-rp-3-fork-repin-ledger.md](../archive/2026-08/2026-08-30-rp-3-fork-repin-ledger.md)),
+RP-4 C-003
+([rp-4-fork-repin-ledger.md](rp-4-fork-repin-ledger.md)).
+
+**Retires:** this ledger moves to `../completed/` in this unit's last commit.
+This file closes when V3-5 merges, or when the owner closes the slate row.
+
+**Why now.** RP-4 (2026-08-31, fork `33be9a0` / #243) lifted
+`V3-LINEAGE-1`: `CALL system.rewrite_data_files` on v3 carries `_row_id` /
+seq Spark-equal. Residue is the DV half: a v3 compact must drop deletion
+vectors scoped to rewritten files and report a true
+`removed_delete_files_count` (Spark measured `6` on the six-file Hadoop
+fixture; RP-4's twelve-file fixture had no live DVs, so the count was `0`).
+`B-MOR-3` stayed because `rewrite_position_delete_files` on a DV-only table
+returns four zeros. F-17 `close_touched_dv_containers` (RP-3 C-003) must
+survive every change.
+
+**Not in this unit:** a fork pin bump; `Cargo.toml [patch]`; COW DML lineage
+(`V3-COW-1` / F-rp3-c7); engine `to_branch` (REF); archive / completed
+ledger moves; `briefs/next-sequence.md`; `docs/examples/`; public
+`python/repark` function surfaces; Makefile example targets.
+
+**Oracle.** The pinned PySpark 4.1.2 session cannot execute Iceberg
+maintenance procedures (`DataSourceV2Relation` break, MOR-1). The measured
+pattern is the live PySpark 4.0.1 + Iceberg 1.10.0 Hadoop-catalog fixture
+(V3-0 / V3-LINEAGE-1 / B-MOR-3). RP-4 used PySpark 4.1.2 + Iceberg 1.11.0
+for *read-back* of lineage, not for running the CALL. Never write a path
+that starts with the home-directory prefix into committed content; name
+oracle trees in words ("the local live-oracle tree").
+
+**Source-read, not evidence.** Fork `33be9a0` contains
+`maintenance/rewrite_data_files_dv.rs` (`plan_dv_removal` →
+`rewrite_siblings_for_dropped_references`) and `rewrite_group` folds
+`dv_plan.removed_count` into `removed_delete_files_count` without the
+`remove-dangling-deletes` option. A green compile and a green fork row
+are not this unit's evidence. C-001 measures the public CALL on a v3
+table with live Puffin DVs. If that surface is absent or a no-op, the
+unit files a fork finding and HALTs rather than inventing engine-side DV
+drop.
+
+## PROPOSITION LEDGER — V3-5 — 2026-08-31
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-001 | **Audit first.** On a format-v3 table with live Puffin DVs, `CALL system.rewrite_data_files` at fork `33be9a0` is measured: whether DVs scoped to rewritten files are dropped, the numeric `removed_delete_files_count`, and the live rows after the CALL. A green compile is not this clause. | Engine-created six-file v3 MOR fixture (V3-0 six-file / V3E-3 DV pattern) plus the public CALL; `.delete_files` before/after; live rows; result columns. Recorded in this ledger before any product edit. | **OPEN** | Not yet measured. Source-read of `plan_dv_removal` is not the measurement. |
+| C-002 | **V3-DANGLE-1.** A v3 `CALL system.rewrite_data_files` drops the deletion vectors scoped to rewritten files. `removed_delete_files_count` is the true fork count, not a constant `0`. Spark measured `6` on the six-file Hadoop fixture with no option set. Lineage stay (RP-4 C-003) remains green. | Spark-door pin (red-first) plus facade twin; incidental v2 control still reports `0` when no deletes dangle. If C-001 shows the fork is a no-op, this clause is REJECTED and becomes a fork finding. | **OPEN** | Waits on C-001. |
+| C-003 | **B-MOR-3 residue.** `rewrite_position_delete_files` on a DV-only v3 table still returns four zeros (RP-3 C-007 / fork R136). If C-002 is green, DV compaction lands through `rewrite_data_files` and the registry rationale updates; the CALL refuse stays (OD-2) unless a later ruling lifts it. If the procedure itself should compact DVs, this unit files the measured gap rather than inventing a compact. | Re-run `partitioned_v3_dv_rewrite_position_delete_files_still_refuses` and the fork-direct zeros pin; registry `B-MOR-3` rationale names the C-002 disposition. | **OPEN** | Waits on C-001 / C-002. |
+| C-004 | **True result counts** on the touched v3 procedures match the live-oracle numbers for this fixture class, not the fork's return values alone. `rewrite_data_files` reports rewritten / added / `removed_delete_files_count`; `rewrite_position_delete_files` on DV-only remains four zeros (or the measured Spark numbers if the refuse lifts). | Result-column pin on the Spark door + facade; oracle note names the 4.0.1 + 1.10.0 six-file counts and any 4.1.2 read-back. | **OPEN** | Waits on C-001. |
+| C-005 | **F-17 sibling closure survives.** `close_touched_dv_containers` pins stay green: shared-Puffin RowDelta keeps the untouched sibling; partitioned V3E-3 `DELETE id = 1` keeps `{3,4,6}`. No engine rewrite of that seam. | Re-run `shared_puffin_row_delta_keeps_the_untouched_sibling` and `partitioned_v3_dv_delete_id_1_keeps_the_untouched_sibling`. | **OPEN** | Re-run after C-002 lands. |
+| C-006 | The documents say what the pins prove: registry `V3-DANGLE-1` / `B-MOR-3`, STATUS v3 stream, north-star maintain rows, handoff F-7 residue, crate maps, format-v3-track §5/§6. | `make check-map-sync`, `check-docs-compaction`, `check-ledger-grammar`. STATUS stays under 25_000 B. | **OPEN** | After C-002..C-005. |
+| C-007 | Green on the bound gates: `make verify`, `make check-map-sync check-ledger-grammar`, `python3 scripts/ledger_lifecycle.py check --base 749eff4166abbbb6c590bcd4af5a9d929b1c6319`, `make py-test`. | Gate output attached. Real exit codes. | **OPEN** | Slice-end. |
+
+VERDICT: 7 clauses, 0 PROVEN, 7 OPEN, 0 REJECTED.
+
+## 2. Sequence
+
+1. This ledger (grammar-gate clean, verdicts OPEN) — this commit.
+2. C-001 measurement: v3 fixture with live Puffin DVs, public CALL, record
+   counts / remaining DVs / live rows. No product edit in that commit.
+3. Smallest product change that flips a red C-002 pin — or, if C-001 is
+   already Spark-equal, the red-first pin that documents it. HALT if the
+   fork lacks the drop.
+4. C-003 / C-004 counts and B-MOR-3 rationale.
+5. C-005 F-17 re-run, C-006 truth-up, C-007 gates.
+
+## 3. Pickup — what the next agent needs to know
+
+- Public `CALL system.rewrite_data_files` is already lifted (`V3-LINEAGE-1`
+  FIXED). Do not re-install the lineage guard.
+- Engine CALL already forwards `result.removed_delete_files_count` from the
+  fork (`crates/repark-spark/src/call/rewrite_data_files.rs`). The question
+  is whether the fork *drops* in-scope DVs on a live-DV v3 table and whether
+  that count is the Spark number.
+- `rewrite_position_delete_files` still refuses live Puffin DVs in
+  `call.rs` (B-MOR-3). The fork-direct measurement pin in `v3e3.rs` is the
+  R136 zeros probe.
+- F-17 seam: `crates/repark-iceberg/src/write/merge/dv_close.rs`.
+- Disk at charter: `/` had 520 G free of 1.8 T (2026-08-31).
+
+```yaml
+PROPORTIONALITY_RUBRIC:
+  id: RUBRIC-v3-5-dv-compaction
+  pr_unit: v3-5-dv-compaction
+  criteria:
+    blast_radius: FAIL (v3 maintenance result; Spark-visible counts)
+    reversibility: PASS (one revert commit; no migration)
+    size: PASS (pins + registry + possible CALL count path; no pin bump)
+    novelty: PASS (consume a fork surface already at 33be9a0; no new dep)
+    sensitivity: FAIL (rewrite/commit path on v3 DVs)
+    clarity: PASS (charter frozen 2026-08-31; seven clauses; RP-3/RP-4 drivers)
+  path: STANDARD
+  recorded_by: Actor
+```
+
+```yaml
+SELF_LOGIC_REVIEW:
+  id: SLR-V35-CHARTER
+  agent: Actor
+  action: File the V3-5 staging ledger and lockstep staging map, no product edit
+  charter_trace: C-001..C-007
+  preconditions:
+    - AGENTS.md, engineering-method, format-v3-track §5–§6, registry rows, RP-3/RP-4 ledgers read: SATISFIED
+    - Branch is feat/v3-5-dv-compaction at 749eff4: SATISFIED (git)
+    - Disk headroom: SATISFIED (/ has 520 G free of 1.8 T, 2026-08-31)
+    - Pickup archive: SATISFIED as SKIP (unit fence: do not archive ledgers)
+  success_condition: staging ledger exists, staging/map.md links it, check-ledger-grammar accepts OPEN clauses
+  step_risks:
+    - Inventing engine-side DV drop when the fork is a no-op: HANDLED(C-001 measure first; HALT on missing surface)
+    - Treating a green fork row as evidence: HANDLED(C-001 requires the public CALL)
+    - Lifting B-MOR-3 refuse without a ruling: HANDLED(C-003 keeps OD-2 refuse; rationale updates only)
+    - Breaking F-17 sibling closure: HANDLED(C-005 re-runs the pins)
+  contingencies:
+    - Grammar red: EXECUTABLE(fix citation / clause table and recommit)
+    - C-001 shows no DV drop: EXECUTABLE(file fork finding; HALT with a RULING question)
+  tripwire_scan: CLEAN
+  uncertainty: NONE
+  verdict: PROCEED
+  escalation: —
+```
+
+```yaml
+PRE_EXECUTION_REVIEW:
+  id: PER-v3-5-dv-compaction
+  slr: SLR-V35-CHARTER
+  plan_checklist:
+    charter_frozen: SATISFIED (this file, dated 2026-08-31)
+    carving_clause_complete:
+      forward:  SATISFIED (C-001..C-007 → one PR unit)
+      backward: SATISFIED (the unit traces to all seven)
+    rubric_recorded: SATISFIED (1/1 STANDARD)
+    bindings_resolved: SATISFIED (green = make verify + make py-test + ledger checks)
+    contingencies_executable: SATISFIED (fork no-op HALT; B-MOR-3 refuse stays)
+  verdict: PROCEED
+  gap_route: "—"
+  gap_detail: "—"
+```

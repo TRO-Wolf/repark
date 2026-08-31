@@ -5,6 +5,10 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [v3-5-dv-compaction-ledger.md](v3-5-dv-compaction-ledger.md) — **V3-5 (2026-08-31),
+  in flight:** DV-aware v3 compaction (`V3-DANGLE-1`, B-MOR-3 residue, true
+  result counts). Measure `rewrite_data_files` on live Puffin DVs at fork
+  `33be9a0` before any product edit. Ledger born on `feat/v3-5-dv-compaction`.
 - [rp-4-fork-repin-ledger.md](rp-4-fork-repin-ledger.md) — **RP-4 (2026-08-31), in
   flight:** fork repin `d408da42` → `33be9a0` (F-7 slice 1 consume, F-6 carry).
   Family frozen. Ledger born on `feat/rp-4-fork-repin`.
