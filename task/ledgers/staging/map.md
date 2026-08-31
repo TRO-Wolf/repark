@@ -44,6 +44,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `overwrite_files` / `overwrite_by_row_filter`, dynamic and
   `writeTo().overwritePartitions()` via `replace_partitions`, empty-input dynamic
   guard, the two named acceptance pins flipped. Six PROVEN clauses.
+- [dml-a-merge-not-matched-by-source-ledger.md](dml-a-merge-not-matched-by-source-ledger.md) —
+  **DML-A (2026-08-30):** `MERGE … WHEN NOT MATCHED BY SOURCE` (DELETE and UPDATE, COW and
+  MOR). HIGH / `risk_tier: high`. Owner-pre-authorized v0.6. Eight OPEN clauses; C-001 is
+  the live PySpark 4.1.2 oracle matrix and must land before any engine edit.
 
 ## Pointers
 - Up: [../map.md](../map.md)
