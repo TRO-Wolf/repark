@@ -174,7 +174,7 @@ pub fn plan_partition_overwrite(
 /// Refuse an empty-input dynamic overwrite before any catalog mutation.
 /// # Errors
 /// [`DataFusionError::Plan`] naming the three empty-dynamic surfaces (Spark SQL STATIC wipe,
-/// Spark writeTo no-op, RePark loud refuse).
+/// Spark writeTo no-op, `RePark` loud refuse).
 pub fn refuse_empty_dynamic_overwrite(staged_files: &[DataFile]) -> Result<()> {
     let total_rows: u64 = staged_files.iter().map(DataFile::record_count).sum();
     if staged_files.is_empty() || total_rows == 0 {

@@ -80,7 +80,8 @@ repark-core's error map.
   `overwrite_files` / `overwrite_by_row_filter` + `validate_added_files_match_overwrite_filter`
   (pin `commit_rejects_added_file_outside_overwrite_filter`);
   dynamic `PARTITION (k)` / empty `PARTITION ()` via `replace_partitions`; empty-input
-  dynamic guard names the three empty-dynamic surfaces. pins: dml-b-insert-overwrite/C-001, C-002, C-004
+  dynamic guard names the three empty-dynamic surfaces (STATIC wipe, writeTo no-op, RePark
+  refuse) in its rustdoc and error. pins: dml-b-insert-overwrite/C-001, C-002, C-004
 - `insert_gate.rs` — **WI-2 (2026-08-15):** `InsertStoreAssignment`, an `AnalyzerRule` over
   `LogicalPlan::Dml(WriteOp::Insert(_))` that runs `store_assign.rs`'s matrix — imported, never
   duplicated — against the pre-cast types in the synthesized projection's INPUT schema. Registered

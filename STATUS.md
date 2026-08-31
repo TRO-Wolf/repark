@@ -206,23 +206,19 @@ published history — an exposure **accepted by explicit decision**; provenance:
 <!-- ws id=h2 ledgers=h-,h2- state=open -->
 - **V2 Engine Hardening** (active; recon complete, design and slate landed; **H-1 phase archived
   mid-campaign 2026-08-11** at [docs/history/hardening-h1/](docs/history/hardening-h1/README.md);
-  campaign continues into H-2) — the first campaign to touch engine code since the port:
-  optimization across the native door, the Spark facade and the write path, together with the
-  verification that proves each improvement. Its design is
+  campaign continues into H-2) — optimization across the native door, the Spark facade and
+  the write path, with the verification that proves each improvement. Its design is
   [docs/design/v2-engine-hardening.md](docs/design/v2-engine-hardening.md) (goal, the six phases
   H-0…H-5, the dated decisions) and its execution slate is
   [briefs/v2-engine-hardening.md](briefs/v2-engine-hardening.md) (the per-unit definitions and
-  acceptance gates). One unit has already merged ahead of it
-  (#30, the dead doc-pointer sweep in ported sources).
+  acceptance gates). #30 (the dead doc-pointer sweep) merged ahead of it.
 <!-- /ws -->
 
 <!-- ws id=dml ledgers=dml- state=open -->
-- **Iceberg DML remainder (v0.6)** (chartered 2026-08-29; owner-authorized 2026-08-30).
-  Merge order DML-B → DML-A → DML-C → MAINT (REF waits on fork F-6). **DML-B delivered
-  2026-08-30:** identity-field `INSERT OVERWRITE … PARTITION` static (`OverwriteFiles`)
-  and dynamic (`ReplacePartitions`) plus `writeTo().overwritePartitions()`; empty dynamic
-  refuses loud. Registry
-  [DML-1](docs/spark-sql-iceberg-parity.md#dml-1--insert-overwrite--partition-).
+- **Iceberg DML remainder (v0.6)** — DML-B → DML-C → DML-A → MAINT; REF waits on fork
+  F-6. **DML-B delivered 2026-08-30:** `INSERT OVERWRITE … PARTITION` and
+  `writeTo().overwritePartitions()`; empty dynamic refuses loud.
+  [DML-1](docs/spark-sql-iceberg-parity.md).
 <!-- /ws -->
 
 Parked lanes: **none.** The `repark.sql` re-home lane closed 2026-08-14 (#95 —
