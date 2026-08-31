@@ -77,8 +77,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `GEOMETRY` / `GEOGRAPHY` / `VARIANT` columns refuse at CREATE, no table left (registry
   `V3-GEO-1`).
 - [test_rewrite_data_files_options.py](test_rewrite_data_files_options.py) —
-  **rewrite_data_files options:** facade `where` keeps out-of-scope files byte-identical;
-  unknown strategy and bad where use Spark's text; `sort_order` refuses.
+  **rewrite_data_files options:** facade `where` keeps the **part=1** pre-image byte-identical
+  and rewrites part=0 away; unknown strategy and bad where use Spark's text; `sort` and
+  `sort_order` refuse.
   pins: maint-rewrite-data-files-options/C-003, C-004, C-005, C-006, C-007
 - [test_mw8_runbook.py](test_mw8_runbook.py) — **MW-8 (2026-08-24):** the maintenance cycle
   `docs/guide/iceberg-guide.md` "The maintenance runbook" documents, run end to end on a local

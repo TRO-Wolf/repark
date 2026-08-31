@@ -8,6 +8,7 @@ use super::super::*;
 use super::call::call_count;
 use super::common::*;
 use iceberg::scan::FileScanTask;
+use iceberg::spec::{Literal, PrimitiveLiteral};
 
 async fn planned_data_files(catalog: &dyn Catalog, ident: &TableIdent) -> Vec<FileScanTask> {
     use futures::TryStreamExt;
@@ -31,6 +32,62 @@ fn local_file_path(uri: &str) -> PathBuf {
 
 fn file_bytes(uri: &str) -> Vec<u8> {
     std::fs::read(local_file_path(uri)).expect("read data file")
+}
+
+fn identity_partition_int(task: &FileScanTask) -> i32 {
+    let partition = task
+        .partition
+        .as_ref()
+        .expect("partitioned rewrite fixture must stamp a partition struct");
+    match partition.fields().first().and_then(|field| field.as_ref()) {
+        Some(Literal::Primitive(PrimitiveLiteral::Int(value))) => *value,
+        other => panic!("expected Int partition field, got {other:?}"),
+    }
+}
+
+fn assert_kept_paths_are_exactly_part(
+    before: &[FileScanTask],
+    after: &[FileScanTask],
+    before_bytes: &HashMap<String, Vec<u8>>,
+    kept_part: i32,
+) {
+    let kept_before: Vec<String> = before
+        .iter()
+        .filter(|task| identity_partition_int(task) == kept_part)
+        .map(|task| task.data_file_path.to_string())
+        .collect();
+    assert_eq!(
+        kept_before.len(),
+        5,
+        "fixture must have five files in part={kept_part}"
+    );
+    let rewritten_before: Vec<String> = before
+        .iter()
+        .filter(|task| identity_partition_int(task) != kept_part)
+        .map(|task| task.data_file_path.to_string())
+        .collect();
+    assert_eq!(rewritten_before.len(), 5);
+    let after_paths: std::collections::HashSet<String> = after
+        .iter()
+        .map(|task| task.data_file_path.to_string())
+        .collect();
+    for path in &kept_before {
+        assert!(
+            after_paths.contains(path),
+            "part={kept_part} file must keep its path: {path}"
+        );
+        assert_eq!(
+            file_bytes(path),
+            before_bytes[path],
+            "part={kept_part} file {path} must stay byte-identical"
+        );
+    }
+    for path in &rewritten_before {
+        assert!(
+            !after_paths.contains(path),
+            "in-scope file must be rewritten away: {path}"
+        );
+    }
 }
 
 async fn seed_two_partition_groups(ctx: &SessionContext, catalogs: &CatalogRegistry, table: &str) {
@@ -98,25 +155,7 @@ async fn call_rewrite_where_keeps_out_of_scope_files_byte_identical() {
 
     let after = planned_data_files(catalogs["ice"].as_ref(), &ident).await;
     assert_eq!(after.len(), 6, "5 rewritten into 1, plus 5 untouched");
-    let after_paths: Vec<String> = after
-        .iter()
-        .map(|task| task.data_file_path.to_string())
-        .collect();
-    let mut identical = 0usize;
-    for (path, bytes) in &before_bytes {
-        if after_paths.iter().any(|after_path| after_path == path) {
-            assert_eq!(
-                file_bytes(path),
-                *bytes,
-                "out-of-scope file {path} must stay byte-identical"
-            );
-            identical += 1;
-        }
-    }
-    assert_eq!(
-        identical, 5,
-        "all five part=1 files must keep their paths and bytes"
-    );
+    assert_kept_paths_are_exactly_part(&before, &after, &before_bytes, 1);
     let after_ids = time_travel_id_multiset(
         &ctx,
         &catalogs,
@@ -124,6 +163,35 @@ async fn call_rewrite_where_keeps_out_of_scope_files_byte_identical() {
     )
     .await;
     assert_eq!(after_ids, vec![1, 2, 3, 4, 5, 101, 102, 103, 104, 105]);
+}
+
+#[tokio::test]
+async fn call_rewrite_where_in_keeps_out_of_scope_files_byte_identical() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    seed_two_partition_groups(&ctx, &catalogs, "filt_in").await;
+    let ident = TableIdent::new(NamespaceIdent::new("sales".into()), "filt_in".into());
+    let before = planned_data_files(catalogs["ice"].as_ref(), &ident).await;
+    let before_bytes: HashMap<String, Vec<u8>> = before
+        .iter()
+        .map(|task| {
+            let path = task.data_file_path.to_string();
+            (path.clone(), file_bytes(&path))
+        })
+        .collect();
+    let result = execute(
+        &ctx,
+        &catalogs,
+        "CALL ice.system.rewrite_data_files(table => 'sales.filt_in', where => 'part IN (0)')",
+    )
+    .await
+    .expect("IN rewrite");
+    let batches = result.collect().await.expect("collect");
+    assert_eq!(call_count(&batches[0], "rewritten_data_files_count"), 5);
+    assert_eq!(call_count(&batches[0], "added_data_files_count"), 1);
+    let after = planned_data_files(catalogs["ice"].as_ref(), &ident).await;
+    assert_eq!(after.len(), 6);
+    assert_kept_paths_are_exactly_part(&before, &after, &before_bytes, 1);
 }
 
 #[tokio::test]

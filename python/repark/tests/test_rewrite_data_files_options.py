@@ -42,6 +42,23 @@ def _read_bytes(path: str) -> bytes:
     return Path(local).read_bytes()
 
 
+def _paths_for_part(spark: ReparkSession, table: str, part_value: int) -> set[str]:
+    """Return live data-file paths whose identity partition equals ``part_value``."""
+    files = spark.sql(f"SELECT file_path, partition FROM {table}.files").to_arrow()
+    kept: set[str] = set()
+    for index in range(files.num_rows):
+        path = str(files.column("file_path")[index].as_py())
+        partition = files.column("partition")[index].as_py()
+        if isinstance(partition, dict):
+            value = partition.get("part")
+        else:
+            value = getattr(partition, "part", None)
+        assert value is not None, f"files.partition must expose part on {path}: {partition!r}"
+        if int(value) == part_value:
+            kept.add(path)
+    return kept
+
+
 def test_rewrite_where_keeps_out_of_scope_files_byte_identical(spark: ReparkSession) -> None:
     """Filtered rewrite leaves the excluded partition's files byte-identical."""
     table = "mem.ns.filt"
@@ -56,6 +73,10 @@ def test_rewrite_where_keeps_out_of_scope_files_byte_identical(spark: ReparkSess
     before_paths = _file_paths(spark, table)
     assert len(before_paths) == 10
     before_bytes = {path: _read_bytes(path) for path in before_paths}
+    part1_before = _paths_for_part(spark, table, 1)
+    part0_before = _paths_for_part(spark, table, 0)
+    assert len(part1_before) == 5
+    assert len(part0_before) == 5
     result = spark.sql(
         "CALL mem.system.rewrite_data_files(table => 'ns.filt', where => 'part = 0')"
     ).to_arrow()
@@ -65,12 +86,10 @@ def test_rewrite_where_keeps_out_of_scope_files_byte_identical(spark: ReparkSess
     assert result.column("rewritten_data_files_count")[0].as_py() == 5
     assert result.column("added_data_files_count")[0].as_py() == 1
     after_paths = set(_file_paths(spark, table))
-    identical = 0
-    for path, payload in before_bytes.items():
-        if path in after_paths:
-            assert _read_bytes(path) == payload
-            identical += 1
-    assert identical == 5
+    assert part1_before <= after_paths
+    assert part0_before.isdisjoint(after_paths)
+    for path in part1_before:
+        assert _read_bytes(path) == before_bytes[path]
 
 
 def test_rewrite_unknown_strategy_matches_spark_message(spark: ReparkSession) -> None:
@@ -93,6 +112,16 @@ def test_rewrite_sort_order_refuses_loud(spark: ReparkSession) -> None:
         spark.sql(
             "CALL mem.system.rewrite_data_files(table => 'ns.events', sort_order => 'id ASC')"
         )
+
+
+def test_rewrite_sort_strategy_refuses_loud(spark: ReparkSession) -> None:
+    """Named strategy sort refuses; it is never a silent binpack."""
+    spark.sql(f"CREATE TABLE mem.ns.events USING iceberg TBLPROPERTIES ({COW}) AS SELECT 1 AS id")
+    with pytest.raises(
+        (UnsupportedOperationException, PySparkException),
+        match=r"sort.*not supported",
+    ):
+        spark.sql("CALL mem.system.rewrite_data_files(table => 'ns.events', strategy => 'sort')")
 
 
 def test_rewrite_bad_where_matches_spark_message(spark: ReparkSession) -> None:

@@ -1,4 +1,5 @@
 //! Convert a Spark `rewrite_data_files` `where` string to an Iceberg file-selection predicate.
+//! pins: maint-rewrite-data-files-options/C-007
 
 use datafusion::error::{DataFusionError, Result};
 use datafusion::sql::sqlparser::ast::{BinaryOperator, Expr, UnaryOperator, Value, ValueWithSpan};
@@ -295,5 +296,93 @@ fn number_to_datum(raw: &str, field_type: &PrimitiveType) -> Result<Datum> {
         _ => Err(DataFusionError::Plan(
             "where numeric literal does not match column type".to_string(),
         )),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use iceberg::expr::PredicateOperator;
+    use iceberg::spec::NestedField;
+
+    fn test_schema() -> Schema {
+        Schema::builder()
+            .with_fields(vec![
+                NestedField::optional(1, "id", Type::Primitive(PrimitiveType::Int)).into(),
+                NestedField::optional(2, "part", Type::Primitive(PrimitiveType::Int)).into(),
+                NestedField::optional(3, "name", Type::Primitive(PrimitiveType::String)).into(),
+            ])
+            .build()
+            .expect("test schema")
+    }
+
+    fn parse_ok(sql: &str) -> Predicate {
+        parse_rewrite_where(sql, &test_schema()).unwrap_or_else(|error| {
+            panic!("parse {sql:?} should succeed, got {error}");
+        })
+    }
+
+    #[test]
+    fn parses_eq() {
+        assert_eq!(format!("{}", parse_ok("part = 0")), "part = 0");
+    }
+
+    #[test]
+    fn parses_comparisons() {
+        assert_eq!(format!("{}", parse_ok("id < 10")), "id < 10");
+        assert_eq!(format!("{}", parse_ok("id <= 10")), "id <= 10");
+        assert_eq!(format!("{}", parse_ok("id > 10")), "id > 10");
+        assert_eq!(format!("{}", parse_ok("id >= 10")), "id >= 10");
+        assert_eq!(format!("{}", parse_ok("id != 10")), "id != 10");
+        assert_eq!(format!("{}", parse_ok("id <> 10")), "id != 10");
+    }
+
+    #[test]
+    fn parses_and_or_not() {
+        assert_eq!(
+            format!("{}", parse_ok("part = 0 AND id > 1")),
+            "(part = 0) AND (id > 1)"
+        );
+        assert_eq!(
+            format!("{}", parse_ok("part = 0 OR part = 1")),
+            "(part = 0) OR (part = 1)"
+        );
+        assert_eq!(format!("{}", parse_ok("NOT part = 0")), "NOT (part = 0)");
+    }
+
+    #[test]
+    fn parses_is_null() {
+        assert_eq!(format!("{}", parse_ok("name IS NULL")), "name IS NULL");
+        assert_eq!(
+            format!("{}", parse_ok("name IS NOT NULL")),
+            "name IS NOT NULL"
+        );
+    }
+
+    #[test]
+    fn parses_in_list() {
+        let Predicate::Set(expression) = parse_ok("id IN (1, 2, 3)") else {
+            panic!("IN must produce a set predicate");
+        };
+        assert_eq!(expression.op(), PredicateOperator::In);
+        let values: Vec<i32> = expression
+            .literals()
+            .iter()
+            .map(|datum| match format!("{datum}").parse::<i32>() {
+                Ok(value) => value,
+                Err(error) => panic!("IN literal {datum} is not i32: {error}"),
+            })
+            .collect();
+        let mut sorted = values;
+        sorted.sort_unstable();
+        assert_eq!(sorted, vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn parses_between() {
+        assert_eq!(
+            format!("{}", parse_ok("id BETWEEN 1 AND 5")),
+            "(id >= 1) AND (id <= 5)"
+        );
     }
 }

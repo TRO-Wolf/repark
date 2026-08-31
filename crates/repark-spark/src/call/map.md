@@ -22,6 +22,7 @@ and measured-parity contract would grow `call.rs` beyond its exact
   pins: maint-rewrite-data-files-options/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - `rewrite_where.rs` — SQL `where` string → Iceberg `Predicate` (eq/cmp/AND/OR/NOT/IS NULL/IN/
   BETWEEN on primitives). Failures wrap as Spark's `Cannot parse predicates in where option`.
+  In-module unit tests pin each convertible operator's Predicate shape.
   pins: maint-rewrite-data-files-options/C-007
 - `rewrite_manifests.rs` — **MW-6**: `CALL <catalog>.system.rewrite_manifests(table => …)` over
   the fork's `RewriteManifestsAction` (`transaction/rewrite_manifests.rs`). The action returns no
