@@ -45,11 +45,10 @@ seam. It does not invent a second one. `exists` already ships as an alias of
 | `map_filter` | New kernel |
 | `map_zip_with` | New kernel: ternary lambda, Spark key-union order |
 
-These ten names are **absent** today (`AttributeError`), not members of the
-FNP-15/16 `armed_names()` roster of 62. That roster stays 62. The FNP-4a pin
-`transform_and_filter_are_not_aliased_to_the_arity_deficient_kernels` flips from
-`by_name` is none to `by_name` resolving RePark kernels (still not the unary
-DataFusion kernels).
+These ten names were **absent** (`AttributeError`) at charter; they are not
+members of the FNP-15/16 `armed_names()` roster of 62. That roster stays 62.
+The FNP-4a pin now asserts RePark kernels named `transform`/`filter`, not the
+unary DataFusion kernels.
 
 SQL `x -> y` parse is FNP-4b (Databricks dialect vs engine-internal ANSI
 quotes). FNP-4c registers the kernels both doors read and pins them on the
@@ -61,20 +60,20 @@ the dialect on the production Spark door.
 
 | ID | Clause | Proof obligation | Verdict |
 |---|---|---|---|
-| C-001 | `transform` is a RePark `HigherOrderUDFImpl` declaring `[element, index]`. Unary and `(element, index)` Spark arities both evaluate. Index is 0-based Int32. Index is not materialized when the lambda is unary. Values, Arrow type, null-array, empty-array, and null-element cells match Spark 4.1.2. | Facade Column API + Rust kernel pins, red-first against the FNP-4a `by_name("transform").is_none()` fixture. | **OPEN** |
-| C-002 | `filter` is a RePark kernel declaring `[element, index]`, same arity and index contract as C-001. Null predicate drops the element (false). Return type equals the input array type. | Facade + Rust pins, red-first vs `by_name("filter").is_none()`. | **OPEN** |
-| C-003 | `aggregate` is a RePark kernel: two value args (array, initial), 2-ary merge, optional 1-ary finish, sequential left-to-right fold. Empty array yields initial (then finish). Null array yields null. Merge/finish null handling matches the oracle. | Facade + Rust pins including finish-present and finish-absent. | **OPEN** |
-| C-004 | `reduce` is an alias of the `aggregate` kernel. PySpark signatures are byte-identical. No second kernel. | `by_name("reduce")` resolves the aggregate kernel; facade `F.reduce` matches `F.aggregate` on a shared fixture. | **OPEN** |
-| C-005 | `forall` is the De Morgan rewrite of `exists` / `array_any_match`: false if any element is false; else null if any predicate is null; else true. Empty array → true. Null array → null. Not a nested higher-order call. | Facade + Rust pins on the five census cases. | **OPEN** |
-| C-006 | `zip_with` pairs two arrays with a 2-ary lambda. The shorter array is null-padded to the longer length before the lambda runs. Result length is `max(len(left), len(right))`. Null either array → null. | Facade + Rust pins including unequal lengths. | **OPEN** |
-| C-007 | `transform_keys` applies a 2-ary `(k, v)` lambda to produce new keys. A null produced key is a runtime error. Duplicate produced keys raise Spark's `DUPLICATED_MAP_KEY` / `mapKeyDedupPolicy` EXCEPTION text (RePark's existing default). | Facade + Rust pins: happy path, null key, duplicate key. | **OPEN** |
-| C-008 | `transform_values` applies a 2-ary `(k, v)` lambda to produce new values. Keys are unchanged. Null values are allowed. | Facade + Rust pins. | **OPEN** |
-| C-009 | `map_filter` keeps entries whose 2-ary predicate is true. Null predicate drops the entry. Return type equals the input map type. | Facade + Rust pins. | **OPEN** |
-| C-010 | `map_zip_with` takes two maps and a ternary `(k, v1, v2)` lambda. Key set is the union: map1 keys in order, then map2-only keys. A key absent from one map yields a null value argument. | Facade + Rust pins including map2-only keys. | **OPEN** |
-| C-011 | One kernel per Spark name (except `reduce` as alias). Both doors resolve the same table (`higher_order::functions` / `by_name`). Python does not compute rows. Nested higher-order remains the FNP-4a loud refusal. | Registry tests; facade builds through `call_higher_order`; the FNP-4a nested-HOF pin still reds. | **OPEN** |
-| C-012 | Per-name lambda arity is refused at the facade with Spark's class (`PySparkValueError`) before a plan error. A lambda that does not return a `Column` is refused. Kernel-side extra lambda params vs declared params remain a plan error. Measured Spark error text is the oracle; incidental controls are measured too. | Facade pins per name; at least one kernel-side arity/type pin. | **OPEN** |
-| C-013 | The FNP-4a seam is the only seam: no second `call_higher_order`, no alias of Spark `transform`/`filter` onto unary `array_transform`/`array_filter`. `exists` remains the `array_any_match` alias. | The FNP-4a registry tests, updated so `transform`/`filter` resolve RePark kernels whose `name()` is not `array_transform`/`array_filter`. | **OPEN** |
-| C-014 | Docs and maps stay in lockstep. File-size ceilings ratchet down only. `functions.py` does not raise its 1985 baseline. New Rust files stay at or under the 1000-line default. | `make check-map-sync`; `check_lib_py` / `check_rust_file_size` green. | **OPEN** |
+| C-001 | `transform` is a RePark `HigherOrderUDFImpl` declaring `[element, index]`. Unary and `(element, index)` Spark arities both evaluate. Index is 0-based Int32. Index is not materialized when the lambda is unary. Values, Arrow type, null-array, empty-array, and null-element cells match Spark 4.1.2. | Facade Column API + Rust kernel pins, red-first against the FNP-4a `by_name("transform").is_none()` fixture. | **PROVEN** |
+| C-002 | `filter` is a RePark kernel declaring `[element, index]`, same arity and index contract as C-001. Null predicate drops the element (false). Return type equals the input array type. | Facade + Rust pins, red-first vs `by_name("filter").is_none()`. | **PROVEN** |
+| C-003 | `aggregate` is a RePark kernel: two value args (array, initial), 2-ary merge, optional 1-ary finish, sequential left-to-right fold. Empty array yields initial (then finish). Null array yields null. Merge/finish null handling matches the oracle. | Facade + Rust pins including finish-present and finish-absent. | **PROVEN** |
+| C-004 | `reduce` is an alias of the `aggregate` kernel. PySpark signatures are byte-identical. No second kernel. | `by_name("reduce")` resolves the aggregate kernel; facade `F.reduce` matches `F.aggregate` on a shared fixture. | **PROVEN** |
+| C-005 | `forall` is the De Morgan rewrite of `exists` / `array_any_match`: false if any element is false; else null if any predicate is null; else true. Empty array → true. Null array → null. Not a nested higher-order call. | Facade + Rust pins on the five census cases. | **PROVEN** |
+| C-006 | `zip_with` pairs two arrays with a 2-ary lambda. The shorter array is null-padded to the longer length before the lambda runs. Result length is `max(len(left), len(right))`. Null either array → null. | Facade + Rust pins including unequal lengths. | **PROVEN** |
+| C-007 | `transform_keys` applies a 2-ary `(k, v)` lambda to produce new keys. A null produced key is a runtime error. Duplicate produced keys raise Spark's `DUPLICATED_MAP_KEY` / `mapKeyDedupPolicy` EXCEPTION text (RePark's existing default). | Facade + Rust pins: happy path, null key, duplicate key. | **PROVEN** |
+| C-008 | `transform_values` applies a 2-ary `(k, v)` lambda to produce new values. Keys are unchanged. Null values are allowed. | Facade + Rust pins. | **PROVEN** |
+| C-009 | `map_filter` keeps entries whose 2-ary predicate is true. Null predicate drops the entry. Return type equals the input map type. | Facade + Rust pins. | **PROVEN** |
+| C-010 | `map_zip_with` takes two maps and a ternary `(k, v1, v2)` lambda. Key set is the union: map1 keys in order, then map2-only keys. A key absent from one map yields a null value argument. | Facade + Rust pins including map2-only keys. | **PROVEN** |
+| C-011 | One kernel per Spark name (except `reduce` as alias). Both doors resolve the same table (`higher_order::functions` / `by_name`). Python does not compute rows. Nested higher-order remains the FNP-4a loud refusal. | Registry tests; facade builds through `call_higher_order`; the FNP-4a nested-HOF pin still reds. | **PROVEN** |
+| C-012 | Per-name lambda arity is refused at the facade with Spark's class (`PySparkValueError`) before a plan error. A lambda that does not return a `Column` is refused. Kernel-side extra lambda params vs declared params remain a plan error. Measured Spark error text is the oracle; incidental controls are measured too. | Facade pins per name; at least one kernel-side arity/type pin. | **PROVEN** |
+| C-013 | The FNP-4a seam is the only seam: no second `call_higher_order`, no alias of Spark `transform`/`filter` onto unary `array_transform`/`array_filter`. `exists` remains the `array_any_match` alias. | The FNP-4a registry tests, updated so `transform`/`filter` resolve RePark kernels whose `name()` is not `array_transform`/`array_filter`. | **PROVEN** |
+| C-014 | Docs and maps stay in lockstep. File-size ceilings ratchet down only. `functions.py` does not raise its 1985 baseline. New Rust files stay at or under the 1000-line default. | `make check-map-sync`; `check_lib_py` / `check_rust_file_size` green. | **PROVEN** |
 | C-015 | Gates before done: `make verify`, `make check-map-sync check-ledger-grammar`, `python3 scripts/ledger_lifecycle.py check --base 60225cc427673cbc2e4bf23e90db376e602773dd`, full `make py-test`, `make py-test-facade` for facade tests added. Real exit codes. | Recorded at close. | **OPEN** |
 
 ## Sequence
@@ -105,6 +104,29 @@ SELF_LOGIC_REVIEW:
     - Growing functions.py ceiling: HANDLED(C-014; install_into pattern, ratchet down only)
   contingencies:
     - Revert this commit if grammar-red: EXECUTABLE(additive git revert)
+  tripwire_scan: CLEAN
+  uncertainty: NONE
+  verdict: PROCEED
+  escalation: —
+```
+
+```yaml
+SELF_LOGIC_REVIEW:
+  id: SLR-fnp-4c-kernels
+  agent: Actor
+  action: Land the ten Spark names on the FNP-4a table and the facade Column API
+  charter_trace: FNP-4c C-001..C-014
+  preconditions:
+    - Charter commit 6e9e6c8: SATISFIED
+    - Live PySpark 4.1.2 cells measured 2026-08-31: SATISFIED (c26-oracle)
+    - functions.py stays 1985: SATISFIED (install_into; extra import; two docstring lines dropped)
+  success_condition: registry resolves ten names; facade pins match the oracle; nested HOF still refused
+  step_risks:
+    - Second seam: HANDLED(call_higher_order + by_name only; exists stays array_any_match)
+    - DataFusion drops unused lambda params: HANDLED(_keep_lambda_params struct wrap)
+    - SQL x->y parse: HANDLED(FNP-4b; this unit registers kernels both doors read)
+  contingencies:
+    - Revert the kernel commit: EXECUTABLE
   tripwire_scan: CLEAN
   uncertainty: NONE
   verdict: PROCEED

@@ -43,7 +43,11 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   Sketches (32), CSV/XML/XPath (11), VARIANT (8), and geospatial (5) are deferred-by-cost.
   pins: fnp-15-16/C-001, C-008, C-009, C-010, C-011, C-014, C-016
 - `functions_expr.py` — shared expression builders and scalar lowering.
-- `functions_lambda.py` — higher-order function and lambda builders.
+- `functions_lambda.py` — higher-order function and lambda builders. FNP-4c adds
+  `transform`, `filter`, `forall`, `aggregate`, `reduce`, `zip_with`, `transform_keys`,
+  `transform_values`, `map_filter`, `map_zip_with` (installed onto `functions.py` `__all__`).
+  pins: fnp-4c-higher-order-kernels/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
+  C-009, C-010, C-011, C-012
 - `functions_math.py` — mathematical and trigonometric wrappers.
 - `functions_session.py` — session-bound function helpers.
 - `functions_udf.py` — Python UDF and pandas UDF markers, validation, and return-type
