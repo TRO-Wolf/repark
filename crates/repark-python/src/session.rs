@@ -851,14 +851,14 @@ mod tests {
             );
 
             // (2) Spark statement router is installed: a Spark-only statement reaches its refusal.
-            let Err(routed) = session.sql(py, "INSERT OVERWRITE t PARTITION (p=1) SELECT 1") else {
-                panic!("INSERT OVERWRITE PARTITION is a loud router refusal, not a plan")
+            let sql = "MERGE INTO t USING s ON t.id = s.id WHEN MATCHED THEN DELETE OUTPUT d.*";
+            let Err(routed) = session.sql(py, sql) else {
+                panic!("MERGE OUTPUT is a loud router refusal, not a plan")
             };
             let message = routed.to_string();
             assert!(
-                message.contains("INSERT OVERWRITE") && message.contains("PARTITION"),
-                "the statement must be routed through repark-spark, whose refusal names the \
-                 PARTITION gap; got: {message}"
+                message.contains("MERGE OUTPUT/RETURNING"),
+                "the routed refusal names the MERGE OUTPUT gap; got: {message}"
             );
             assert!(
                 routed.is_instance_of::<crate::UnsupportedOperationException>(py),
