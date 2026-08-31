@@ -5,6 +5,7 @@ plain-`WHERE` DELETE is Spark-clean and commits; `rewrite_data_files` still refu
 pins: v3r-1-rulings/C-006
 pins: rp-2-fork-repin/C-003, C-005
 pins: rp-3-fork-repin/C-004
+pins: v3-3-dml/C-001, C-002
 """
 
 from __future__ import annotations
@@ -75,7 +76,7 @@ def _id_name_rows(table: pa.Table) -> list[tuple[int, str]]:
 def test_facade_adopted_v3_cow_dml_refuses_and_leaves_the_table_untouched(
     tmp_path: Path,
 ) -> None:
-    """Adopted v3 MERGE and UPDATE raise naming V3-COW-1; the RP-2 DELETE commits."""
+    """Adopted v3 MERGE and UPDATE raise naming V3-COW-1 and reassigns; DELETE commits."""
     from repark import ReparkSession
 
     spark = (
@@ -98,7 +99,7 @@ def test_facade_adopted_v3_cow_dml_refuses_and_leaves_the_table_untouched(
             f"table => 'sales.adopt_mrg', metadata_file => '{metadata_file}')"
         )
         seeded = [(1, "a"), (2, "b"), (3, "c")]
-        with pytest.raises(UnsupportedOperationException, match="V3-COW-1"):
+        with pytest.raises(UnsupportedOperationException, match="V3-COW-1") as merge_error:
             spark.sql(
                 "MERGE INTO ice.sales.adopt_mrg AS t USING "
                 "(SELECT 2 AS id, 'm' AS name UNION ALL SELECT 4 AS id, 'n' AS name) AS s "
@@ -106,6 +107,7 @@ def test_facade_adopted_v3_cow_dml_refuses_and_leaves_the_table_untouched(
                 "WHEN MATCHED THEN UPDATE SET t.name = s.name "
                 "WHEN NOT MATCHED THEN INSERT (id, name) VALUES (s.id, s.name)"
             ).collect()
+        assert "reassigns" in str(merge_error.value)
         merged = spark.sql("SELECT id, name FROM ice.sales.adopt_mrg").to_arrow()
         assert _id_name_rows(merged) == seeded
         with pytest.raises(UnsupportedOperationException, match="row lineage"):
@@ -124,8 +126,9 @@ def test_facade_adopted_v3_cow_dml_refuses_and_leaves_the_table_untouched(
         spark.sql("DELETE FROM ice.sales.adopt_del WHERE id = 2").collect()
         deleted = spark.sql("SELECT id, name FROM ice.sales.adopt_del").to_arrow()
         assert _id_name_rows(deleted) == [(1, "a"), (3, "c")]
-        with pytest.raises(UnsupportedOperationException, match="V3-COW-1"):
+        with pytest.raises(UnsupportedOperationException, match="V3-COW-1") as update_error:
             spark.sql("UPDATE ice.sales.adopt_del SET name = 'x' WHERE id = 2").collect()
+        assert "reassigns" in str(update_error.value)
     finally:
         spark.stop()
 

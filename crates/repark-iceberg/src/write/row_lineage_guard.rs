@@ -17,15 +17,16 @@ pub(crate) fn refuse_v3_cow_dml_that_would_reassign_row_lineage(
         return Ok(());
     }
     let ident = table.identifier();
+    let spark_lineage = if verb.eq_ignore_ascii_case("UPDATE") {
+        "every existing row keeps its `_row_id` and only the changed row bumps \
+         `_last_updated_sequence_number`"
+    } else {
+        "matched rows keep their ids and only inserts take a new id"
+    };
     Err(DataFusionError::NotImplemented(format!(
-        "copy-on-write {verb} will not run on `{ident}`: it is a {format_version:?} table, and \
-         V3 onward mandates row lineage (`_row_id`, `_last_updated_sequence_number`) which this \
-         engine's row rewrite does not carry through. The rows would be correct and every \
-         surviving row in a rewritten file would take a new `_row_id`, telling downstream \
-         consumers that all of them changed. Spark preserves lineage across the same statement \
-         — run it there until the fork carries lineage through a rewrite (registry row \
-         V3-COW-1; the plain-`WHERE` DELETE on a v3 table with no live deletion vectors runs \
-         since RP-2, every other row-DML form refuses)"
+        "copy-on-write {verb} will not run on `{ident}`: it is a {format_version:?} table. Spark \
+         4.1.2 + Iceberg 1.11.0 preserves row lineage (`_row_id`) across {verb}: {spark_lineage}. \
+         This engine's row rewrite reassigns every row in a rewritten file. Registry V3-COW-1"
     )))
 }
 
@@ -47,12 +48,11 @@ pub async fn refuse_v3_cow_dml(
     if matches!(kind, MorDmlKind::Update) {
         let table_ident = table.identifier();
         return Err(DataFusionError::NotImplemented(format!(
-            "UPDATE will not run on `{table_ident}`: it is a {format_version:?} table, and V3 \
-             onward mandates row lineage (`_row_id`, `_last_updated_sequence_number`) which \
-             this engine's row rewrite has not been measured to carry through on UPDATE. The \
-             plain-`WHERE` DELETE on v3, including on a table that already carries deletion \
-             vectors, runs at fork `d408da42` (RP-3 / F-17). UPDATE waits for V3-3 \
-             (registry row V3-COW-1)",
+            "UPDATE will not run on `{table_ident}`: it is a {format_version:?} table. Spark \
+             4.1.2 + Iceberg 1.11.0 preserves row lineage (`_row_id`) across UPDATE (the 3-row \
+             recipe keeps 0/1/2 and only bumps sequence on the changed row). This engine's \
+             copy-on-write rewrite reassigns every survivor; merge-on-read reassigns the \
+             updated row. Registry V3-COW-1",
         )));
     }
     if v3_cow_delete_after_overwrite_snapshot(&table, kind) {

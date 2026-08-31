@@ -13,6 +13,10 @@ else. The next pickup's `make ledger-archive` files everything here under
   2026-08-30), PROVEN 6/6:** the S3 Tables merge-on-read leg the intake called "MW-4b",
   measure-first on OD-3b. The first owner dispatch (run 33333274383, on merged `main`) answered
   `PutTableData` **allow**; no denial registry row; docs and roadmap slots filled.
+- [v3-3-dml-ledger.md](v3-3-dml-ledger.md) — **V3-3 (2026-08-30), chartered from RP-3 C-004
+  red cells:** v3 `UPDATE` and `MERGE` stay a pre-write `V3-COW-1` keep-refusal (Spark
+  preserves `_row_id`; the engine rewrite reassigns). Sequential COW DELETE lineage
+  (F-rp3-c7) stays a fork finding. Three PROVEN clauses.
 
 ## Pointers
 - Up: [../map.md](../map.md)

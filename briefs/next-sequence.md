@@ -53,7 +53,7 @@ at [../task/ledgers/staging/f-y10-1-int-overflow-ledger.md](../task/ledgers/stag
 opens on the owner's confirm, fork-independent, any window.
 <!-- /unit -->
 
-**Not in this queue (owner-sequenced or owner-gated):** V3-3 (chartered; opens after RP-3
-merges) and the engine units after it; DML-A/B/C and Track A W-0. A merged unit leaves this file with no record
+**Not in this queue (owner-sequenced or owner-gated):** V3-4 and the engine units after it
+(V3-3 delivered 2026-08-30 as a measured keep-refusal; its ledger is in `completed/`); DML-A/B/C and Track A W-0. A merged unit leaves this file with no record
 here — its ledger is in
 [../task/ledgers/archive/](../task/ledgers/archive/map.md) and its PR on `main`.

@@ -1,6 +1,7 @@
 """V3R-1: the 2026-08-25 owner rulings are recorded where the gate reads them.
 
 pins: v3r-1-rulings/C-007, C-009, C-010, C-011, C-013
+pins: v3-3-dml/C-003
 """
 
 from __future__ import annotations
@@ -51,6 +52,10 @@ def test_v3_cow_1_is_a_refusal_row_dated_by_the_ruling() -> None:
     assert "adopted_v3_cow_second_delete_refuses_before_lineage_diverges" in row
     assert "live-DV" in row
     assert "commits and reassigns row lineage" not in registry.split("## 7.")[1].split(heading)[0]
+    assert "V3-3 (2026-08-30)" in row
+    assert "reassigns" in row
+    assert "F-rp3-c7" in row
+    assert "ride V3-3" not in row
 
 
 def test_v3_geo_1_is_declared_and_shredded_variant_is_queued_not_rowed() -> None:
@@ -70,6 +75,12 @@ def test_north_star_matrix_carries_the_three_engine_rulings() -> None:
     north_star = _north_star()
     cow = _matrix_row(north_star, "Write: COW DML on an adopted v3 table")
     assert "V3-COW-1" in cow and _RULING_DATE in cow and cow.count("🚫") == 1
+    assert "V3-3 2026-08-30" in cow and "F-rp3-c7" in cow
+    mor = _matrix_row(north_star, "Write: MOR DML via deletion vectors")
+    assert "V3-3 2026-08-30" in mor and "reassigns" in mor
+    status = _read("STATUS.md")
+    assert "V3-3 (2026-08-30) measured" in status
+    assert "F-rp3-c7 stays a fork finding" in status
     types = _matrix_row(north_star, "Read/write: v3 types + default values")
     assert "V3-GEO-1" in types and "V3-VARIANT-SHRED-1" in types and _RULING_DATE in types
     upgrade = _matrix_row(north_star, "Upgrade: v2 → v3 in place")

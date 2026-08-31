@@ -43,10 +43,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   ref exists (skips on a shallow checkout). pins: rp-3-fork-repin/C-009, C-010, C-011
 - [test_v3_cow_dml.py](test_v3_cow_dml.py) — **V3R-1 (2026-08-25); RP-2 2026-08-27 retarget:** facade Spark `.sql()`
   MERGE / UPDATE on an adopted v3 table raise `UnsupportedOperationException` naming
-  `V3-COW-1`; the plain-`WHERE` DELETE commits the right rows (RP-2 lift) with Spark-equal
+  `V3-COW-1` and the measured reassignment (V3-3 keep-refusal); the plain-`WHERE` DELETE commits the right rows (RP-2 lift) with Spark-equal
   survivor lineage — `next_row_id` = 5 on the 3-row recipe; a second COW DELETE after that
   overwrite snapshot refuses before lineage diverges. A MOR first DELETE commits a Puffin DV and the second merges
-  into that live vector (pins: rp-2-fork-repin/C-003, C-005; rp-3-fork-repin/C-004).
+  into that live vector (pins: rp-2-fork-repin/C-003, C-005; rp-3-fork-repin/C-004; v3-3-dml/C-001, C-002).
 - [test_v3e4_refs_time_travel.py](test_v3e4_refs_time_travel.py) — **V3E-4:** facade
   branch/tag, `VERSION AS OF` over DVs, rollback, expire dual-probe, orphan
   24h floor on the partitioned-DV fixture after a RePark append; live-DV UPDATE
