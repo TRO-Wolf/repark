@@ -93,9 +93,6 @@ def test_fork_handoff_records_the_shared_puffin_failure_and_acceptance() -> None
 def test_fnp_documents_share_one_remaining_order_and_delivery_shape() -> None:
     """C-004: the design, brief, and status use per-unit PRs and the same remaining order."""
     order = (
-        "FNP-15/16",
-        "FNP-4c",
-        "FNP-7a/7b",
         "FNP-9/10",
         "FNP-8",
         "FNP-11/12",
@@ -107,7 +104,7 @@ def test_fnp_documents_share_one_remaining_order_and_delivery_shape() -> None:
             "Four units are deferred",
         ),
         "briefs/spark-function-parity.md": ("The remaining order is:", "FNP-4b, FNP-6d"),
-        "STATUS.md": ("**Next, in order (revised 2026-08-30):**", "<!-- /ws -->"),
+        "STATUS.md": ("**Next, in order (revised 2026-08-31):**", "<!-- /ws -->"),
     }
     for relative_path, (start_marker, end_marker) in sections.items():
         text = _read(relative_path)

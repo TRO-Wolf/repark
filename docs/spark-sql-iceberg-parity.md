@@ -2162,6 +2162,38 @@ the pin rather than obeying it.
   lands with its own pin if a job ever depends on it. This is the single home of the divergence
   the `spark_literals` module doc previously only mentioned.
 
+### BL-13 — `try_avg(INTERVAL)` refuses pending FNP-11
+
+- **repark** — `try_avg(INTERVAL 1 DAY)` is a plan error naming `[FNP-11]` and the date
+  2026-08-31. The function is registered (not an absent name) and the refuse is loud. `avg`
+  of an interval stays the pre-existing Decimal/Float64 signature miss. DATE/TIMESTAMP ±
+  INTERVAL and INTERVAL / numeric on `try_add` / `try_divide` compute.
+- **Apache Spark** — `try_avg(INTERVAL)` returns interval day to second. A huge interval
+  overflows `INTERVAL_ARITHMETIC_OVERFLOW` on both `avg` and `try_avg` (2026-08-31 oracle
+  4.1.2; `try_avg` is not NULL-on-interval-overflow).
+  *(oracle: live PySpark 4.1.2, 2026-08-31.)*
+- **Pin** — `python/repark/tests/test_fnp7_try_inversions.py::test_try_avg_interval_refuses_fnp11`
+- **Rationale** — BACKLOG, intent to FIX with **FNP-11**. Averaging intervals is temporal
+  entanglement (month vs day-time fields, overflow class), not a try_* inversion. Silent NULL
+  is not acceptable; the dated message is the holding contract until FNP-11 lands.
+
+### BL-14 — `DATE + INTERVAL 0 HOUR` stays date (a zero sub-day interval loses its unit)
+
+- **repark** — `try_add(DATE '2024-01-01', INTERVAL 0 HOUR)` returns Date32 `2024-01-01`. The
+  FNP-7 promotion rule inspects the MonthDayNano value (nanos ≠ 0 promotes to timestamp), and
+  `INTERVAL 0 HOUR` arrives as `{0,0,0}` — indistinguishable from `0 DAY` — so the sub-day
+  unit is lost before the kernel can see it.
+- **Apache Spark** — types the same cell `timestamp` (midnight `2024-01-01 00:00:00`): the
+  literal's HOUR unit forces the promotion even at zero. The calendar day is equal on both
+  engines; the divergence is the result type and a midnight clock, never a wrong instant.
+  *(oracle: live PySpark 4.1.2, 2026-08-31.)*
+- **Pin** — `python/repark/tests/test_fnp7_try_inversions.py::test_try_add_date_plus_zero_hour_stays_date_bl14`
+  (asserts the current Date32 behavior so a silent change is loud).
+- **Rationale** — BACKLOG, filed 2026-08-31 from the FNP-7 final Critic pass (finding L-008).
+  A fix needs the literal's unit to survive planning — upstream of the MonthDayNano
+  representation — which is out of proportion for a `try_*` unit. Recorded so the promotion
+  lands with its own pin when the unit information is retained.
+
 ### WIN-SLIDE — non-retractable aggregates over a sliding frame (W-0, 2026-08-31)
 
 Spark evaluates an aggregate over `ROWS BETWEEN n PRECEDING AND CURRENT ROW` even when the

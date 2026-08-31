@@ -8,7 +8,7 @@ use arrow::datatypes::{
     ArrowNativeType, DECIMAL32_MAX_PRECISION, DECIMAL32_MAX_SCALE, DECIMAL64_MAX_PRECISION,
     DECIMAL64_MAX_SCALE, DECIMAL128_MAX_PRECISION, DECIMAL128_MAX_SCALE, DECIMAL256_MAX_PRECISION,
     DECIMAL256_MAX_SCALE, DataType, Decimal32Type, Decimal64Type, Decimal128Type, Decimal256Type,
-    DecimalType, Field, FieldRef, Float64Type, Int64Type,
+    DecimalType, Field, FieldRef, Float64Type, Int64Type, IntervalUnit,
 };
 use datafusion::common::types::{NativeType, logical_float64};
 use datafusion::common::{Result, ScalarValue, exec_err, not_impl_err};
@@ -23,7 +23,19 @@ use datafusion::logical_expr::{
 /// Register repark `avg` [`AggregateUDF`] instances after `datafusion-spark` (name overwrite).
 #[must_use]
 pub fn functions() -> Vec<Arc<AggregateUDF>> {
-    vec![avg_udaf(), approx_count_distinct_udaf()]
+    vec![avg_udaf(), try_avg_udaf(), approx_count_distinct_udaf()]
+}
+
+/// Spark `try_sum` — overflow yields NULL. Reuses the datafusion-spark kernel.
+#[must_use]
+pub fn try_sum_udaf() -> Arc<AggregateUDF> {
+    datafusion_spark::function::aggregate::try_sum()
+}
+
+/// Spark `try_avg` — decimal overflow yields NULL; interval input refuses (FNP-11).
+#[must_use]
+pub fn try_avg_udaf() -> Arc<AggregateUDF> {
+    Arc::new(AggregateUDF::new_from_impl(SparkAvgWithRetract::try_avg()))
 }
 
 /// Expose DataFusion's `approx_distinct` under Spark's `approx_count_distinct` spelling as well.
@@ -47,24 +59,38 @@ pub fn avg_udaf() -> Arc<AggregateUDF> {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct SparkAvgWithRetract {
     signature: Signature,
+    null_on_overflow: bool,
+}
+
+fn numeric_avg_signatures() -> Vec<TypeSignature> {
+    vec![
+        TypeSignature::Coercible(vec![Coercion::new_exact(TypeSignatureClass::Decimal)]),
+        TypeSignature::Coercible(vec![Coercion::new_implicit(
+            TypeSignatureClass::Native(logical_float64()),
+            vec![TypeSignatureClass::Integer, TypeSignatureClass::Float],
+            NativeType::Float64,
+        )]),
+    ]
 }
 
 impl SparkAvgWithRetract {
     fn new() -> Self {
         Self {
-            signature: Signature::one_of(
-                vec![
-                    TypeSignature::Coercible(vec![Coercion::new_exact(
-                        TypeSignatureClass::Decimal,
-                    )]),
-                    TypeSignature::Coercible(vec![Coercion::new_implicit(
-                        TypeSignatureClass::Native(logical_float64()),
-                        vec![TypeSignatureClass::Integer, TypeSignatureClass::Float],
-                        NativeType::Float64,
-                    )]),
-                ],
-                Volatility::Immutable,
-            ),
+            signature: Signature::one_of(numeric_avg_signatures(), Volatility::Immutable),
+            null_on_overflow: false,
+        }
+    }
+
+    fn try_avg() -> Self {
+        let mut signatures = numeric_avg_signatures();
+        signatures.extend([
+            TypeSignature::Exact(vec![DataType::Interval(IntervalUnit::YearMonth)]),
+            TypeSignature::Exact(vec![DataType::Interval(IntervalUnit::DayTime)]),
+            TypeSignature::Exact(vec![DataType::Interval(IntervalUnit::MonthDayNano)]),
+        ]);
+        Self {
+            signature: Signature::one_of(signatures, Volatility::Immutable),
+            null_on_overflow: true,
         }
     }
 }
@@ -72,7 +98,11 @@ impl SparkAvgWithRetract {
 impl AggregateUDFImpl for SparkAvgWithRetract {
     #[allow(clippy::unnecessary_literal_bound)]
     fn name(&self) -> &str {
-        "avg"
+        if self.null_on_overflow {
+            "try_avg"
+        } else {
+            "avg"
+        }
     }
 
     fn signature(&self) -> &Signature {
@@ -80,6 +110,13 @@ impl AggregateUDFImpl for SparkAvgWithRetract {
     }
 
     fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
+        if matches!(arg_types.first(), Some(DataType::Interval(_))) {
+            return Err(datafusion::common::DataFusionError::Plan(
+                "[FNP-11] try_avg(INTERVAL) is deferred to the FNP-11 temporal family (2026-08-31). \
+                 Spark 4.1.2 returns interval day to second; RePark does not average intervals."
+                    .to_string(),
+            ));
+        }
         match arg_types.first() {
             Some(DataType::Decimal32(precision, scale)) => Ok(DataType::Decimal32(
                 DECIMAL32_MAX_PRECISION.min(*precision + 4),
@@ -120,6 +157,7 @@ impl AggregateUDFImpl for SparkAvgWithRetract {
                 sum_precision: *sum_precision,
                 target_precision: *target_precision,
                 target_scale: *target_scale,
+                null_on_overflow: self.null_on_overflow,
             })),
             (
                 DataType::Decimal64(sum_precision, sum_scale),
@@ -131,6 +169,7 @@ impl AggregateUDFImpl for SparkAvgWithRetract {
                 sum_precision: *sum_precision,
                 target_precision: *target_precision,
                 target_scale: *target_scale,
+                null_on_overflow: self.null_on_overflow,
             })),
             (
                 DataType::Decimal128(sum_precision, sum_scale),
@@ -142,6 +181,7 @@ impl AggregateUDFImpl for SparkAvgWithRetract {
                 sum_precision: *sum_precision,
                 target_precision: *target_precision,
                 target_scale: *target_scale,
+                null_on_overflow: self.null_on_overflow,
             })),
             (
                 DataType::Decimal256(sum_precision, sum_scale),
@@ -153,7 +193,13 @@ impl AggregateUDFImpl for SparkAvgWithRetract {
                 sum_precision: *sum_precision,
                 target_precision: *target_precision,
                 target_scale: *target_scale,
+                null_on_overflow: self.null_on_overflow,
             })),
+            (DataType::Interval(_), _) => Err(datafusion::common::DataFusionError::Plan(
+                "[FNP-11] try_avg(INTERVAL) is deferred to the FNP-11 temporal family (2026-08-31). \
+                 Spark 4.1.2 returns interval day to second; RePark does not average intervals."
+                    .to_string(),
+            )),
             (data_type, return_type) => {
                 not_impl_err!("AvgAccumulator for ({data_type} --> {return_type})")
             }
@@ -230,15 +276,25 @@ impl<T: DecimalType> DecimalAverager<T> {
         }
     }
 
-    fn avg(&self, sum: T::Native, count: T::Native) -> Result<T::Native> {
+    fn avg(
+        &self,
+        sum: T::Native,
+        count: T::Native,
+        null_on_overflow: bool,
+    ) -> Result<Option<T::Native>> {
         let Ok(value) = sum.mul_checked(self.target_mul.div_wrapping(self.sum_mul)) else {
+            if null_on_overflow {
+                return Ok(None);
+            }
             return exec_err!("Arithmetic Overflow in AvgAccumulator");
         };
         let new_value = value.div_wrapping(count);
         if T::validate_decimal_precision(new_value, self.target_precision, self.target_scale)
             .is_ok()
         {
-            Ok(new_value)
+            Ok(Some(new_value))
+        } else if null_on_overflow {
+            Ok(None)
         } else {
             exec_err!("Arithmetic Overflow in AvgAccumulator")
         }
@@ -254,6 +310,7 @@ struct DecimalAvgAccumulator<T: DecimalType + ArrowNumericType + std::fmt::Debug
     sum_precision: u8,
     target_precision: u8,
     target_scale: i8,
+    null_on_overflow: bool,
 }
 
 impl<T> Accumulator for DecimalAvgAccumulator<T>
@@ -288,14 +345,18 @@ where
                                 "avg count does not fit the decimal native type".to_string(),
                             )
                         })?;
-                    DecimalAverager::<T>::try_new(
+                    match DecimalAverager::<T>::try_new(
                         self.sum_scale,
                         self.target_precision,
                         self.target_scale,
-                    )?
-                    .avg(total, count_native)
+                    ) {
+                        Ok(averager) => averager.avg(total, count_native, self.null_on_overflow),
+                        Err(_) if self.null_on_overflow => Ok(None),
+                        Err(error) => Err(error),
+                    }
                 })
                 .transpose()?
+                .flatten()
         };
         ScalarValue::new_primitive::<T>(
             value,
@@ -612,6 +673,7 @@ mod tests {
             sum_precision: 10,
             target_precision: 14,
             target_scale: 6,
+            null_on_overflow: false,
         };
         let batch = Arc::new(
             arrow::array::Decimal128Array::from(vec![Some(110), Some(220), None])
@@ -766,5 +828,70 @@ mod tests {
                 "{name}={value} outside exact-quantile neighbor window"
             );
         }
+    }
+
+    #[tokio::test]
+    async fn try_avg_decimal_overflow_is_null() {
+        let ctx = SessionContext::new();
+        crate::register_all(&ctx);
+        let sql = "SELECT try_avg(v) AS a FROM (\
+             SELECT CAST(99999999999999999999999999999999999999 AS DECIMAL(38, 0)) AS v \
+             UNION ALL \
+             SELECT CAST(99999999999999999999999999999999999999 AS DECIMAL(38, 0))\
+           ) t";
+        let batches = ctx
+            .sql(sql)
+            .await
+            .expect("plan try_avg decimal overflow")
+            .collect()
+            .await
+            .expect("execute try_avg decimal overflow");
+        let column = batches[0]
+            .column(0)
+            .as_any()
+            .downcast_ref::<arrow::array::Decimal128Array>()
+            .expect("decimal128 try_avg");
+        assert!(column.is_null(0), "try_avg overflow is NULL");
+        assert_eq!(column.precision(), 38);
+        assert_eq!(column.scale(), 4);
+    }
+
+    #[tokio::test]
+    async fn avg_decimal_overflow_still_raises() {
+        let ctx = SessionContext::new();
+        crate::register_all(&ctx);
+        let sql = "SELECT avg(v) AS a FROM (\
+             SELECT CAST(99999999999999999999999999999999999999 AS DECIMAL(38, 0)) AS v \
+             UNION ALL \
+             SELECT CAST(99999999999999999999999999999999999999 AS DECIMAL(38, 0))\
+           ) t";
+        let error = match ctx.sql(sql).await {
+            Ok(frame) => match frame.collect().await {
+                Ok(_) => "executed".to_string(),
+                Err(error) => error.to_string(),
+            },
+            Err(error) => error.to_string(),
+        };
+        assert!(
+            error.contains("Arithmetic Overflow") || error.contains("ARITHMETIC_OVERFLOW"),
+            "{error}"
+        );
+    }
+
+    #[tokio::test]
+    async fn try_avg_interval_refuses_fnp11() {
+        let ctx = SessionContext::new();
+        crate::register_all(&ctx);
+        let error = match ctx.sql("SELECT try_avg(INTERVAL 1 DAY) AS a").await {
+            Err(error) => error.to_string(),
+            Ok(frame) => match frame.collect().await {
+                Ok(_) => "executed".to_string(),
+                Err(error) => error.to_string(),
+            },
+        };
+        assert!(
+            error.contains("[FNP-11] try_avg(INTERVAL)") && error.contains("2026-08-31"),
+            "{error}"
+        );
     }
 }

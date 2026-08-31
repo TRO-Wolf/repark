@@ -36,6 +36,9 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
 
 ## Change locations
 
+FNP-7 try_* scalar and aggregate names dispatch here (`try_divide` … `try_to_time`,
+`try_sum`, `try_avg`). pins: fnp-7-try-inversions/C-013
+
 Add a Column method in `mod.rs`, a scalar or aggregate dispatch arm in `function_dispatch.rs`, a
 builder rule in `expr_build.rs`, or a frame rule in `window.rs`. Add the matching parity test.
 

@@ -319,8 +319,23 @@ fn two_decimal_parts(arg_types: &[DataType], name: &str) -> Result<((u8, i8), (u
     Ok((left, right))
 }
 
+pub(crate) fn try_decimal_op(
+    operator: Operator,
+    args: &ScalarFunctionArgs,
+) -> Result<ColumnarValue> {
+    invoke_decimal_op_with_ansi(operator, args, false)
+}
+
 fn invoke_decimal_op(operator: Operator, args: &ScalarFunctionArgs) -> Result<ColumnarValue> {
     let ansi_enabled = spark_ansi_enabled_from_options(args.config_options.as_ref());
+    invoke_decimal_op_with_ansi(operator, args, ansi_enabled)
+}
+
+fn invoke_decimal_op_with_ansi(
+    operator: Operator,
+    args: &ScalarFunctionArgs,
+    ansi_enabled: bool,
+) -> Result<ColumnarValue> {
     let DataType::Decimal128(precision, scale) = *args.return_field.data_type() else {
         return exec_err!(
             "spark decimal UDF promised Decimal128, got {}",

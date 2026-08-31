@@ -728,6 +728,42 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             need(1)?;
             repark_functions::expr_fn::try_validate_utf8(exprs[0].clone())
         }
+        "try_divide" | "try_mod" | "try_add" | "try_subtract" | "try_multiply" => {
+            need(2)?;
+            match name {
+                "try_divide" => {
+                    repark_functions::expr_fn::try_divide(exprs[0].clone(), exprs[1].clone())
+                }
+                "try_mod" => repark_functions::expr_fn::try_mod(exprs[0].clone(), exprs[1].clone()),
+                "try_add" => repark_functions::expr_fn::try_add(exprs[0].clone(), exprs[1].clone()),
+                "try_subtract" => {
+                    repark_functions::expr_fn::try_subtract(exprs[0].clone(), exprs[1].clone())
+                }
+                _ => repark_functions::expr_fn::try_multiply(exprs[0].clone(), exprs[1].clone()),
+            }
+        }
+        "try_element_at" => {
+            need(2)?;
+            repark_functions::expr_fn::try_element_at(exprs[0].clone(), exprs[1].clone())
+        }
+        "try_to_date" | "try_to_binary" | "try_to_time" => {
+            need_at_least(1)?;
+            if exprs.len() > 2 {
+                return Err(PyValueError::new_err(format!(
+                    "call_scalar({name}) expects 1 or 2 args, got {}",
+                    exprs.len()
+                )));
+            }
+            match name {
+                "try_to_date" => repark_functions::expr_fn::try_to_date(exprs.clone()),
+                "try_to_binary" => repark_functions::expr_fn::try_to_binary(exprs.clone()),
+                _ => repark_functions::expr_fn::try_to_time(exprs.clone()),
+            }
+        }
+        "try_to_number" => {
+            need(2)?;
+            repark_functions::expr_fn::try_to_number(exprs[0].clone(), exprs[1].clone())
+        }
         "assert_true" => {
             need_at_least(1)?;
             repark_functions::expr_fn::assert_true(exprs.clone())
@@ -863,7 +899,9 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
 pub(super) fn unary_aggregate_udaf(kind: &str) -> PyResult<Arc<AggregateUDF>> {
     let udaf = match kind {
         "sum" => sum_udaf(),
+        "try_sum" => repark_functions::aggregate::try_sum_udaf(),
         "avg" => repark_functions::aggregate::avg_udaf(),
+        "try_avg" => repark_functions::aggregate::try_avg_udaf(),
         "min" => min_udaf(),
         "max" => max_udaf(),
         "first" => first_value_udaf(),

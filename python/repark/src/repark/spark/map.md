@@ -49,6 +49,8 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   Spark 4.1.2 `NUM_ARGS_MISMATCH` puts the user arity in expects and the declared arity in got.
   pins: fnp-4c-higher-order-kernels/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
   C-009, C-010, C-011, C-012
+- `functions_try.py` — FNP-7a/7b `try_*` wrappers installed onto `functions.py` `__all__`.
+  pins: fnp-7-try-inversions/C-013, C-016
 - `functions_math.py` — mathematical and trigonometric wrappers.
 - `functions_session.py` — session-bound function helpers.
 - `functions_udf.py` — Python UDF and pandas UDF markers, validation, and return-type

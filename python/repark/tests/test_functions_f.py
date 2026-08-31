@@ -154,12 +154,9 @@ def test_uuid_type_and_uniqueness(spark: ReparkSession) -> None:
         "shiftLeft",
         "shiftRight",
         "shiftRightUnsigned",
-        # The try_* family: only try_sum has a kernel in datafusion-spark; the rest are the
-        # ANSI-seam sweep (FNP-7), not eleven independent builds.
-        "try_sum",
-        "try_add",
         # Numeric FORMAT-string conversions. DataFusion's to_char is a false friend — its own doc
         # says numeric formatting is unsupported — so these need real kernels (FNP-12).
+        # try_* inversions of to_number / to_binary shipped in FNP-7; the raising names stay here.
         "to_number",
         "to_binary",
     ],

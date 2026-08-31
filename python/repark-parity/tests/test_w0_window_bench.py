@@ -145,7 +145,6 @@ def test_frozen_refuse_set_is_the_measured_thirteen() -> None:
         "skewness",
         "some",
         "std",
-        "try_avg",
         "variance",
     )
     assert not (set(REFUSING_SLIDING_NAMES) & set(ABSENT_PLANNING_NAMES))
