@@ -28,7 +28,7 @@ the measurement that settles it.
 | C-002 | **Spark door raises where Spark raises.** With `ansi=true` (the landed default), integer `+`, `-`, `*` at the boundary raise `ARITHMETIC_OVERFLOW` exactly where live Spark raises, as shared-raise equality pins on the DEC-6 pattern; with `ansi=false`, the result equals live Spark's non-ANSI result (two's-complement wrap) cell for cell, value and Arrow type. No silent widening remains on any Spark-door path the matrix touched. Untyped literal arithmetic is the intended literal-width split (Int64), not a global retype. | Checked kernels in `crates/repark-functions` reading the ANSI knob (DEC U5 shape); red-first corpus pins per cell; oracle read-back. | **PROVEN** | `integer_spark.rs` tests; `test_integer_overflow_parity.py`. F-1 Option A (2026-08-30): planner rewrite only when a typed Int32/Int64 operand is present. |
 | C-003 | **The ANSI door serves standard SQL.** Overflow on the ANSI door raises per the standard (its own oracle, owner ruling 2026-08-12 Option A) — it does not silently wrap once the Spark-door kernels are checked. Any INTENDED door-vs-door split this creates is pinned in `cross_door.rs` like the six existing ones, not left implicit. | ANSI-door value pins; a cross-door pin per intended split. | **PROVEN** | `AnsiDialect.on_session_built` installs the hook; tests do not self-install. `ansi_door_int32_add_overflow_raises`; `test_native_sql_int32_add_overflow_raises`; `cross_door_int32_add_overflow_wraps_on_spark_ansi_false_raises_on_ansi`. |
 | C-004 | **Documents match the pins.** The registry's routed note (F-Y10-1 under "routed, not invented as DEC rows") moves to a dated FIXED row or an updated finding; gap G13's integer half is closed or narrowed with the residue named; the FNP-7b row in `docs/design/spark-function-parity.md` flips from BLOCKED to unblocked; STATUS; maps in lockstep. | `check-map-sync`, `check-ledger-grammar`, registry diff. | **PROVEN** | Registry F-Y10-1 FIXED 2026-08-30; G13 integer half closed; residue G5b-R3-ANSI and F-Y10-2 named; FNP-7b unblocked. |
-| C-005 | **Green on the whole surface, and the hot path is not quietly slower.** `make verify`, `make preflight`, full `make py-test`; the checked kernels' cost on non-overflowing arithmetic is measured (a micro-benchmark or the existing perf harness) and recorded — an order-of-magnitude regression is a finding, not a silent tax. | Gate output; the recorded measurement. | **PROVEN** | `make verify` exit 0; facade 3793 passed / 75 skipped; `make py-test` 459 passed; `make audit` + `workflows-lint` exit 0. Non-overflow Int32 add ratio **1.25** (523 ms / 419 ms, 200 collects). |
+| C-005 | **Green on the whole surface, and the hot path is not quietly slower.** `make verify`, `make preflight`, full `make py-test`; the checked kernels' cost on non-overflowing arithmetic is measured (a micro-benchmark or the existing perf harness) and recorded — an order-of-magnitude regression is a finding, not a silent tax. | Gate output; the recorded measurement. | **PROVEN** | `make verify` exit 0; facade 3793 passed / 75 skipped; `make py-test` 459 passed; `make audit` + `workflows-lint` exit 0. Non-overflow Int32 add ratio **1.25** (523 ms / 419 ms, 200 collects) is measured on demand with `REPARK_PERF_MEASURE=1` (critic re-ran **1.248**); default `cargo test` skips the timing assert so CI is not a flaky gate. |
 
 VERDICT: PROVEN — 5 clauses, 5 PROVEN, 0 REJECTED. Critic CCC attestation may replace the
 Actor-phase coverage block below. The owner confirms.
@@ -42,6 +42,9 @@ Actor-phase coverage block below. The owner confirms.
 - F-Y10-2: ANSI float `/ 0` = IEEE `+Inf` (a recorded residual with an INTENDED cross-door pin).
 - Decimal arithmetic — DEC-6 closed it; nothing here reopens `decimal_spark.rs` beyond reading
   the same knob.
+- **SMALLINT / Int16 overflow (residue, 2026-08-30).** Charter partition is int32/int64.
+  `CAST(32767 AS SMALLINT) + CAST(1 AS SMALLINT)` still Arrow-wraps to Int16 `-32768` under
+  default ANSI. Named, not a C-002 miss. Do not widen this unit to Int16.
 
 ## 2. Sequence
 
@@ -186,7 +189,10 @@ arm of `operand_width` reds `int32_add_cast_plus_literal_raises_*`.
 
 `REPARK_PERF_MEASURE=1 cargo test -p repark-functions --lib perf_measure_non_overflow_int32_add`:
 checked integer add 522.8 ms vs DataFusion baseline 419.4 ms over 200 scalar collects
-(ratio **1.25**). Not an order-of-magnitude regression.
+(ratio **1.25**; critic re-ran 1.248). Not an order-of-magnitude regression. The pin is
+**measured on demand** — without `REPARK_PERF_MEASURE=1` the test returns immediately and
+default `cargo test` / CI do not assert the ratio. That is intentional: a wall-clock
+bound in the default suite would be a flaky gate.
 
 `make verify` exit 0. Facade suite 3793 passed, 75 skipped. `make py-test` 459 passed.
 `make audit` and `make workflows-lint` exit 0.
