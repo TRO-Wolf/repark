@@ -246,6 +246,30 @@ async fn ansi_door_implicit_string_plus_number_refuses() {
     );
 }
 
+/// pins: f-y10-1-int-overflow/C-001, C-002, C-003
+#[tokio::test]
+async fn ansi_door_untyped_one_plus_one_stays_int64() {
+    let ansi = native_ansi_door().await;
+    let pin = int64_scalar(&ansi.session, "SELECT 1 + 1 AS v").await;
+    assert_eq!(
+        pin,
+        (DataType::Int64, false, Some(2)),
+        "untyped 1+1 stays Int64 on the ANSI door"
+    );
+}
+
+/// pins: f-y10-1-int-overflow/C-001, C-002, C-003
+#[tokio::test]
+async fn ansi_door_untyped_overflow_widens_to_int64() {
+    let ansi = native_ansi_door().await;
+    let pin = int64_scalar(&ansi.session, "SELECT 2147483647 + 1 AS v").await;
+    assert_eq!(
+        pin,
+        (DataType::Int64, false, Some(2_147_483_648)),
+        "untyped INT-boundary add stays the Int64 widen on the ANSI door"
+    );
+}
+
 /// pins: f-y10-1-int-overflow/C-003
 #[tokio::test]
 async fn ansi_door_int32_add_overflow_raises() {

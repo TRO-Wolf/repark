@@ -25,6 +25,39 @@ def _spark_legacy() -> ReparkSession:
     return ReparkSession.builder.config("spark.sql.ansi.enabled", "false").getOrCreate()
 
 
+def test_untyped_one_plus_one_type_is_int64() -> None:
+    """Bare ``SELECT 1 + 1`` stays int64 on a planner-equipped Spark session.
+
+    pins: f-y10-1-int-overflow/C-001, C-002
+    """
+    spark = _spark()
+    table = spark.sql("SELECT 1 + 1 AS v").to_arrow()
+    assert str(table.schema.field("v").type) == "int64"
+    assert table.column("v").to_pylist() == [2]
+
+
+def test_untyped_overflow_widens_to_int64() -> None:
+    """Untyped ``2147483647 + 1`` widens to int64; it must not raise or wrap as INT.
+
+    pins: f-y10-1-int-overflow/C-001, C-002
+    """
+    spark = _spark()
+    table = spark.sql("SELECT 2147483647 + 1 AS v").to_arrow()
+    assert str(table.schema.field("v").type) == "int64"
+    assert table.column("v").to_pylist() == [2147483648]
+
+
+def test_untyped_overflow_widens_when_ansi_false() -> None:
+    """Untyped overflow stays the Int64 widen under ``ansi=false`` too.
+
+    pins: f-y10-1-int-overflow/C-001, C-002
+    """
+    spark = _spark_legacy()
+    table = spark.sql("SELECT 2147483647 + 1 AS v").to_arrow()
+    assert str(table.schema.field("v").type) == "int64"
+    assert table.column("v").to_pylist() == [2147483648]
+
+
 def test_int32_add_max_plus_one_raises_under_default_ansi() -> None:
     """CAST INT MAX + 1 raises ARITHMETIC_OVERFLOW (shared-raise with Spark)."""
     spark = _spark()

@@ -25,7 +25,7 @@ the measurement that settles it.
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
 | C-001 | **The behavior matrix is measured before any edit.** For `+`, `-`, `*` on int32 and int64 at the overflow boundary, on all three doors (Spark SQL door, ANSI door, facade expression), with `spark.sql.ansi.enabled` TRUE and FALSE: the current repark result (wrap / widen / raise / NULL) and the live Spark 4.1.2 result are recorded side by side, and the Y-10-vs-FNP-7b wrap-vs-widen contradiction is resolved with the mechanism named (which path widens, which wraps, and why). | The matrix in this ledger, each cell from an executed probe; the contradiction's resolution names the code path. | **PROVEN** | §4 matrix. Both records are live and path-specific. pins: `crates/repark-functions/src/map.md`. |
-| C-002 | **Spark door raises where Spark raises.** With `ansi=true` (the landed default), integer `+`, `-`, `*` at the boundary raise `ARITHMETIC_OVERFLOW` exactly where live Spark raises, as shared-raise equality pins on the DEC-6 pattern; with `ansi=false`, the result equals live Spark's non-ANSI result (two's-complement wrap) cell for cell, value and Arrow type. No silent widening remains on any Spark-door path the matrix touched. | Checked kernels in `crates/repark-functions` reading the ANSI knob (DEC U5 shape); red-first corpus pins per cell; oracle read-back. | **PROVEN** | `integer_spark.rs` tests; `test_integer_overflow_parity.py`. C-001 matrix was the red. |
+| C-002 | **Spark door raises where Spark raises.** With `ansi=true` (the landed default), integer `+`, `-`, `*` at the boundary raise `ARITHMETIC_OVERFLOW` exactly where live Spark raises, as shared-raise equality pins on the DEC-6 pattern; with `ansi=false`, the result equals live Spark's non-ANSI result (two's-complement wrap) cell for cell, value and Arrow type. No silent widening remains on any Spark-door path the matrix touched. Untyped literal arithmetic is the intended literal-width split (Int64), not a global retype. | Checked kernels in `crates/repark-functions` reading the ANSI knob (DEC U5 shape); red-first corpus pins per cell; oracle read-back. | **PROVEN** | `integer_spark.rs` tests; `test_integer_overflow_parity.py`. F-1 Option A (2026-08-30): planner rewrite only when a typed Int32/Int64 operand is present. |
 | C-003 | **The ANSI door serves standard SQL.** Overflow on the ANSI door raises per the standard (its own oracle, owner ruling 2026-08-12 Option A) — it does not silently wrap once the Spark-door kernels are checked. Any INTENDED door-vs-door split this creates is pinned in `cross_door.rs` like the six existing ones, not left implicit. | ANSI-door value pins; a cross-door pin per intended split. | **PROVEN** | `ansi_door_int32_add_overflow_raises`; `cross_door_int32_add_overflow_wraps_on_spark_ansi_false_raises_on_ansi`. |
 | C-004 | **Documents match the pins.** The registry's routed note (F-Y10-1 under "routed, not invented as DEC rows") moves to a dated FIXED row or an updated finding; gap G13's integer half is closed or narrowed with the residue named; the FNP-7b row in `docs/design/spark-function-parity.md` flips from BLOCKED to unblocked; STATUS; maps in lockstep. | `check-map-sync`, `check-ledger-grammar`, registry diff. | **PROVEN** | Registry F-Y10-1 FIXED 2026-08-30; G13 integer half closed; residue G5b-R3-ANSI and F-Y10-2 named; FNP-7b unblocked. |
 | C-005 | **Green on the whole surface, and the hot path is not quietly slower.** `make verify`, `make preflight`, full `make py-test`; the checked kernels' cost on non-overflowing arithmetic is measured (a micro-benchmark or the existing perf harness) and recorded — an order-of-magnitude regression is a finding, not a silent tax. | Gate output; the recorded measurement. | **PROVEN** | `make verify` exit 0; facade 3793 passed / 75 skipped; `make py-test` 459 passed; `make audit` + `workflows-lint` exit 0. Non-overflow Int32 add ratio **1.25** (523 ms / 419 ms, 200 collects). |
@@ -135,9 +135,34 @@ the op stays Int64 and Arrow wraps.
   that fits in `INT` beside an `Int32` operand must stay `Int32`, matching
   Spark's `fromLiteral`.
 - Untyped `2147483647 + 1` is a **literal-width** split (repark Int64 vs Spark
-  INT), named in Y-10 as "literals infer Int64". It is recorded here. C-002's
-  "no silent widening" targets a typed INT column plus a Spark-INT literal,
-  not a global retype of every SQL integer literal.
+  INT), named in Y-10 as "literals infer Int64". It is recorded here and it
+  **ships** (F-1 Option A, 2026-08-30): the planner rewrites checked arithmetic
+  only when at least one operand is a typed Int32/Int64 expression (column or
+  CAST). Pure-literal `SELECT 1 + 1` stays Int64. C-002's "no silent widening"
+  targets a typed INT column plus a Spark-INT literal, not a global retype of
+  every SQL integer literal. This split is intended cross-behavior, not a
+  defect.
+
+### 4.4 What ships after C-002 + F-1 Option A (2026-08-30)
+
+Pre-edit §4.1 cells were wrap/widen. Shipped repark cells (planner-equipped
+sessions; value and Arrow type):
+
+| Cell | SQL | R-A / R-ST | R-SF | Pin |
+|---|---|---|---|---|
+| untyped `1 + 1` | `SELECT 1 + 1` | Int64 `2` | Int64 `2` | `untyped_one_plus_one_stays_int64_on_planner_session`; `ansi_door_untyped_one_plus_one_stays_int64`; `test_untyped_one_plus_one_type_is_int64` |
+| untyped add | `2147483647 + 1` | Int64 `2147483648` | Int64 `2147483648` | `untyped_int_max_plus_one_widens_to_int64`; `ansi_door_untyped_overflow_widens_to_int64`; `test_untyped_overflow_widens_to_int64` |
+| i32 add CAST+CAST | `CAST(INT MAX) + CAST(1 AS INT)` | raise | wrap Int32 MIN | `int32_add_max_plus_one_raises_*`; wrap sibling |
+| i32 add CAST+lit | `CAST(INT MAX) + 1` | raise | wrap Int32 MIN | `int32_add_cast_plus_literal_*` |
+| i32 sub CAST+CAST | `CAST(INT MIN) - CAST(1 AS INT)` | raise | wrap Int32 MAX | `int32_sub_min_minus_one_*` |
+| i32 mul CAST+CAST | `CAST(INT MAX) * CAST(2 AS INT)` | raise | wrap Int32 `-2` | `int32_mul_max_times_two_*` |
+| i32 mul MIN×−1 | `CAST(INT MIN) * CAST(-1 AS INT)` | raise | wrap Int32 MIN | raise pin; wrap pin in F-4 |
+| i64 add CAST+CAST | `CAST(BIGINT MAX) + CAST(1 AS BIGINT)` | raise long | wrap Int64 MIN | `int64_add_max_plus_one_*` |
+| i32 add control | `CAST(2147483646 AS INT) + CAST(1 AS INT)` | Int32 MAX | Int32 MAX | `int32_add_control_stays_int32` |
+
+Deleting `is_typed_integer_expr` (the F-1 narrowing gate) reds the untyped
+`1 + 1` / `2147483647 + 1` pins. Deleting the `i32::try_from` literal-width
+arm of `operand_width` reds `int32_add_cast_plus_literal_raises_*`.
 - The two doors share DataFusion `BinaryExpr` today, so they wrap together.
   A Spark-only rewrite would leave the ANSI door wrapping. C-003 requires the
   ANSI door to raise (standard SQL; knob absent defaults raise). Spark

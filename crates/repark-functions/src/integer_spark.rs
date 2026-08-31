@@ -175,6 +175,11 @@ fn spark_integer_result_type(
 ) -> Option<DataType> {
     let left_width = operand_width(left_expr, left_type)?;
     let right_width = operand_width(right_expr, right_type)?;
+    if !is_typed_integer_expr(left_expr, left_type)
+        && !is_typed_integer_expr(right_expr, right_type)
+    {
+        return None;
+    }
     Some(left_width.wider(right_width).data_type())
 }
 
@@ -215,8 +220,16 @@ fn operand_width(expr: &Expr, data_type: &DataType) -> Option<IntegerWidth> {
     }
 }
 
+fn is_typed_integer_expr(expr: &Expr, data_type: &DataType) -> bool {
+    if integer_literal_i64(expr).is_some() {
+        return false;
+    }
+    matches!(data_type, DataType::Int32 | DataType::Int64)
+}
+
 fn integer_literal_i64(expr: &Expr) -> Option<i64> {
     match expr {
+        Expr::Alias(alias) => integer_literal_i64(alias.expr.as_ref()),
         Expr::Literal(ScalarValue::Int64(Some(value)), _) => Some(*value),
         Expr::Literal(ScalarValue::Int32(Some(value)), _) => Some(i64::from(*value)),
         Expr::Literal(ScalarValue::Int16(Some(value)), _) => Some(i64::from(*value)),
@@ -545,6 +558,30 @@ mod tests {
             .downcast_ref::<Int64Array>()
             .expect("Int64Array");
         array.is_valid(0).then(|| array.value(0))
+    }
+
+    /// pins: f-y10-1-int-overflow/C-001, C-002
+    #[tokio::test]
+    async fn untyped_one_plus_one_stays_int64_on_planner_session() {
+        let ctx = ctx();
+        let batch = batch(&ctx, "SELECT 1 + 1 AS v").await;
+        assert_eq!(int64_cell(&batch), Some(2));
+    }
+
+    /// pins: f-y10-1-int-overflow/C-001, C-002
+    #[tokio::test]
+    async fn untyped_int_max_plus_one_widens_to_int64() {
+        let ctx = ctx();
+        let batch = batch(&ctx, "SELECT 2147483647 + 1 AS v").await;
+        assert_eq!(int64_cell(&batch), Some(2_147_483_648));
+    }
+
+    /// pins: f-y10-1-int-overflow/C-001, C-002
+    #[tokio::test]
+    async fn untyped_int_max_plus_one_widens_when_ansi_false() {
+        let ctx = ctx_legacy();
+        let batch = batch(&ctx, "SELECT 2147483647 + 1 AS v").await;
+        assert_eq!(int64_cell(&batch), Some(2_147_483_648));
     }
 
     /// pins: f-y10-1-int-overflow/C-002

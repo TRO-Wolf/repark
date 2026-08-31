@@ -34,7 +34,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_integer_overflow_parity.py](test_integer_overflow_parity.py) — **F-Y10-1:** integer
   `+` / `-` / `*` overflow shared-raise under default ANSI and Int32/Int64 wrap when
   `ansi=false`, SQL and facade expression (`F` import uses the PySpark N812 noqa).
-  pins: f-y10-1-int-overflow/C-002.
+  Untyped `1 + 1` / `2147483647 + 1` stay int64 (literal-width split).
+  pins: f-y10-1-int-overflow/C-001, C-002.
 - `test_production_file_size.py` — frozen parent-symbol inventory, integrated AST body hashes,
   responsibility ownership, `_funcs` compatibility namespace, isolated source/wheel import-cycle
   smoke, default source ceiling, and retired exception pins for the production/file-size refactor.
