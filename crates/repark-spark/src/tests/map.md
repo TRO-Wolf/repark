@@ -66,8 +66,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `namespace_ddl` (`IF NOT EXISTS` create-new / same / conflicting / no-location behavior),
   `catalog_ops`, `describe_show`, `alter`, `dml`
   (DELETE/UPDATE + BUG-001 valve; no production `delete`/`update` module), `insert_overwrite`,
-  `partition_overwrite` (DML-B dynamic/static snapshot stamps + empty-dynamic guard;
-  pins: dml-b-insert-overwrite/C-001, C-002, C-004),
+  `partition_overwrite` (DML-B dynamic/static snapshot stamps, empty-static `delete`,
+  Hive too-many-columns refuse, empty-dynamic guard;
+  pins: dml-b-insert-overwrite/C-001, C-002, C-004, C-005),
   `merge`, `call`, and `call_orphan`. `call_remove_orphan_files_refuses_a_location_arg_under_the_fallback_root`
   and `call_orphan_shared_ctas_root_rule` pin the fallback-root safety contract. Maintenance tests
   pin Spark's full schemas, typed count sources, deletion-vector refusal, and file-granularity rules.

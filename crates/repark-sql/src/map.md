@@ -33,8 +33,10 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   CREATE lands under `{warehouse}/repark_ansi_ctas/…`, not the process temp dir.
 - `insert_overwrite.rs` — **DML-B:** `INSERT OVERWRITE … PARTITION (…)` static/dynamic;
   whole-table stays Q9. pins: dml-b-insert-overwrite/C-001, C-002, C-004, C-006
-- `partition_overwrite.rs` — **test-only DML-B pins** for the ANSI PARTITION forms and the
-  remaining Q9 whole-table refuse.
+- `partition_overwrite.rs` — **test-only DML-B pins** for the ANSI PARTITION forms
+  (static overwrite/delete, dynamic `replace-partitions=true`, empty-dynamic refuse)
+  and the remaining Q9 whole-table refuse. pins: dml-b-insert-overwrite/C-001, C-002,
+  C-004, C-005, C-006
 - `router.rs` — the statement router (text guards → pre-parse stage → parse → G15 collation
   valve → match → the two DML valves → delegate) and the delegation path that carries the SEC-02
   guard. Delegation

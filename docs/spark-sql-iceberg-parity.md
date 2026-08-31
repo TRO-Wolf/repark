@@ -205,22 +205,33 @@ Supported surface, for reference:
 #### DML-1 — `INSERT OVERWRITE … PARTITION (…)`
 
 - **repark** — **FIXED 2026-08-30 (DML-B).** Identity-field static `PARTITION (k=v, …)` commits
-  through `OverwriteFiles.overwrite_by_row_filter` (sibling partitions stay). Dynamic
-  `PARTITION (k, …)` and `writeTo().overwritePartitions()` commit through `ReplacePartitions`
-  (source partitions only; empty input refuses loud). Whole-table `INSERT OVERWRITE` (no
-  `PARTITION` clause) is unchanged. Transform-field static `PARTITION (id = 1)` on a bucket
-  table still refuses (PIN O5). Mixed static/dynamic `PARTITION (p1=1, p2)` refuses.
-  ANSI whole-table `INSERT OVERWRITE` stays Q9-omitted; PARTITION forms run on both SQL doors.
-- **Apache Spark** — static `PARTITION (k=v)` is `OverwriteByExpression`; dynamic /
-  `overwritePartitions()` is `OverwritePartitionsDynamic`; empty dynamic refuses engine-side.
-  *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0.)*
+  through `OverwriteFiles.overwrite_by_row_filter` (sibling partitions stay; nonempty stamps
+  `overwrite`, empty stamps `delete`). Dynamic `PARTITION (k, …)` and
+  `writeTo().overwritePartitions()` commit through `ReplacePartitions` (source partitions
+  only; `replace-partitions=true`). Empty dynamic input refuses loud — never a wipe. Whole-table
+  `INSERT OVERWRITE` (no `PARTITION` clause) is unchanged. Transform-field static
+  `PARTITION (id = 1)` on a bucket table still refuses (PIN O5). Mixed static/dynamic
+  `PARTITION (p1=1, p2)` refuses. ANSI whole-table `INSERT OVERWRITE` stays Q9-omitted;
+  PARTITION forms run on both SQL doors.
+- **Apache Spark** — static `PARTITION (k=v)` is `OverwriteByExpression` (sibling files stay;
+  empty stamps `delete`; Hive injects the partition columns). `writeTo().overwritePartitions()`
+  and `spark.sql.sources.partitionOverwriteMode=dynamic` are `OverwritePartitionsDynamic`
+  (`replace-partitions=true`; empty input is a no-op). Default STATIC
+  `INSERT OVERWRITE t PARTITION (k)` (names, no values) wipes the table. *(oracle: live
+  PySpark 4.1.2 + Iceberg 1.11.0, 2026-08-30.)*
 - **Pin** — `crates/repark-spark/src/tests/insert_overwrite.rs::empty_insert_overwrite_partition_refuses_full_wipe`
   and `crates/repark-spark/src/tests/insert_overwrite.rs::insert_overwrite_partition_nonempty_refuses_whole_table_replace`
   (flipped to partition-scoped success); `crates/repark-spark/src/tests/partition_overwrite.rs`;
+  `crates/repark-sql/src/partition_overwrite.rs`;
+  `python/repark/tests/test_dml_b_partition_overwrite.py`;
   `python/repark/tests/test_writer_v2.py::test_write_to_overwrite_partitions_replaces_source_partitions_only`;
   PIN O5 remains the transform-static refuse.
 - **Rationale** — identity static/dynamic closed. Remaining DECLARED residue: transform-field
-  static assignments and mixed static/dynamic PARTITION lists.
+  static assignments; mixed static/dynamic PARTITION lists; Spark default-STATIC
+  `PARTITION (k)` (names) full-table wipe (repark always takes the dynamic path, matching
+  `writeTo` / `partitionOverwriteMode=dynamic`); empty-dynamic loud refuse (stricter than
+  Spark writeTo no-op, safer than Spark SQL STATIC wipe). `partitionOverwriteMode=dynamic`
+  on a PARTITION-less `INSERT OVERWRITE` stays out of this unit.
 
 #### DML-2 — `TRUNCATE TABLE`
 

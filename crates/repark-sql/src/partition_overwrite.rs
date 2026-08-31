@@ -158,6 +158,78 @@ async fn static_partition_overwrite_keeps_siblings() {
         .expect("snapshot")
         .clone();
     assert_eq!(snapshot.summary().operation, Operation::Overwrite);
+    assert!(
+        !snapshot
+            .summary()
+            .additional_properties
+            .contains_key("replace-partitions"),
+        "static overwrite must not stamp replace-partitions"
+    );
+}
+
+/// pins: dml-b-insert-overwrite/C-001, C-004, C-005
+#[tokio::test]
+async fn empty_static_partition_overwrite_stamps_delete() {
+    let door = door_with_schema().await;
+    door.ok(
+        "CREATE TABLE ice.sales.t WITH (partitioning = ARRAY['id']) AS \
+         SELECT 1 AS id, 'a' AS name UNION ALL SELECT 2 AS id, 'b' AS name \
+         UNION ALL SELECT 3 AS id, 'c' AS name",
+    )
+    .await;
+    door.ok(
+        "INSERT OVERWRITE ice.sales.t PARTITION (id = 1) SELECT name FROM ice.sales.t WHERE false",
+    )
+    .await;
+    let batches = door
+        .ok("SELECT id, name FROM ice.sales.t ORDER BY id")
+        .await;
+    assert_eq!(id_name(&batches), vec![(2, "b".into()), (3, "c".into())]);
+    let snapshot = door
+        .table("sales", "t")
+        .await
+        .metadata()
+        .current_snapshot()
+        .expect("snapshot")
+        .clone();
+    assert_eq!(snapshot.summary().operation, Operation::Delete);
+}
+
+/// pins: dml-b-insert-overwrite/C-002
+#[tokio::test]
+async fn dynamic_partition_overwrite_keeps_absent_partitions() {
+    let door = door_with_schema().await;
+    door.ok(
+        "CREATE TABLE ice.sales.t WITH (partitioning = ARRAY['id']) AS \
+         SELECT 1 AS id, 'a' AS name UNION ALL SELECT 2 AS id, 'b' AS name \
+         UNION ALL SELECT 3 AS id, 'c' AS name",
+    )
+    .await;
+    door.ok("INSERT OVERWRITE ice.sales.t PARTITION (id) SELECT 1 AS id, 'z' AS name")
+        .await;
+    let batches = door
+        .ok("SELECT id, name FROM ice.sales.t ORDER BY id")
+        .await;
+    assert_eq!(
+        id_name(&batches),
+        vec![(1, "z".into()), (2, "b".into()), (3, "c".into())]
+    );
+    let snapshot = door
+        .table("sales", "t")
+        .await
+        .metadata()
+        .current_snapshot()
+        .expect("snapshot")
+        .clone();
+    assert_eq!(snapshot.summary().operation, Operation::Overwrite);
+    assert_eq!(
+        snapshot
+            .summary()
+            .additional_properties
+            .get("replace-partitions")
+            .map(String::as_str),
+        Some("true")
+    );
 }
 
 /// pins: dml-b-insert-overwrite/C-002, C-004

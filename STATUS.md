@@ -216,6 +216,15 @@ published history — an exposure **accepted by explicit decision**; provenance:
   (#30, the dead doc-pointer sweep in ported sources).
 <!-- /ws -->
 
+<!-- ws id=dml ledgers=dml- state=open -->
+- **Iceberg DML remainder (v0.6)** (chartered 2026-08-29; owner-authorized 2026-08-30).
+  Merge order DML-B → DML-A → DML-C → MAINT (REF waits on fork F-6). **DML-B delivered
+  2026-08-30:** identity-field `INSERT OVERWRITE … PARTITION` static (`OverwriteFiles`)
+  and dynamic (`ReplacePartitions`) plus `writeTo().overwritePartitions()`; empty dynamic
+  refuses loud. Registry
+  [DML-1](docs/spark-sql-iceberg-parity.md#dml-1--insert-overwrite--partition-).
+<!-- /ws -->
+
 Parked lanes: **none.** The `repark.sql` re-home lane closed 2026-08-14 (#95 —
 [docs/release.md](docs/release.md) "RESOLVED"; design ruling
 [docs/design/python-facade.md](docs/design/python-facade.md) §4).

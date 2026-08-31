@@ -271,6 +271,8 @@ def test_write_to_overwrite_partitions_replaces_source_partitions_only(
     assert got.schema.field("id").type in (pa.int32(), pa.int64())
     assert got.schema.field("cat").type in (pa.string(), pa.large_string())
     assert got.to_pylist() == [{"id": 2, "cat": "b"}, {"id": 9, "cat": "a"}]
+    ops = spark.sql(f"SELECT operation FROM {table}.snapshots ORDER BY committed_at").to_arrow()
+    assert ops.column("operation").to_pylist()[-1] == "overwrite"
     empty = spark.sql("SELECT * FROM (VALUES (1,'a')) AS t(id, cat) WHERE false")
     with pytest.raises(AnalysisException, match="Cannot dynamically overwrite partitions"):
         empty.writeTo(table).overwrite_partitions()
