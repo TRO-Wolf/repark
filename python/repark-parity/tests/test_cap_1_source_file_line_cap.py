@@ -69,7 +69,7 @@ _PYTHON_BASELINES: tuple[tuple[str, int], ...] = (
     ("python/repark/src/repark/spark/dataframe/core.py", 6371),
     ("python/repark/src/repark/spark/dataframe/joins_columns.py", 1239),
     ("python/repark/src/repark/spark/dataframe/plan_collapse.py", 1168),
-    ("python/repark/src/repark/spark/dataframe/writer_readwriter.py", 1114),
+    ("python/repark/src/repark/spark/dataframe/writer_readwriter.py", 1113),
     ("python/repark/src/repark/spark/functions.py", 1985),
     ("python/repark/src/repark/spark/functions_expr.py", 2265),
     ("python/repark/src/repark/spark/functions_udf.py", 1300),

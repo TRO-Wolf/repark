@@ -832,14 +832,13 @@ def _merge_path_write_tree(staging: Any, destination: Any) -> None:
 
 def _dynamic_partition_sql(dataframe: DataFrame, table_ref: str) -> str:
     """Return `` PARTITION (a, b)`` from ``{table}.partitions``, or `` PARTITION ()``."""
-    from repark.spark._idents import quote_ident as _quote_ident
     native = dataframe._session.sql(f"SELECT * FROM {table_ref}.partitions LIMIT 0")
     schema = DataFrame(native, dataframe._session, dataframe._alive_token).schema
     dtype = schema["partition"].dataType if "partition" in schema.names else None
     names = list(dtype.names) if isinstance(dtype, StructType) else []
     if not names:
         return " PARTITION ()"
-    return " PARTITION (" + ", ".join(_quote_ident(name) for name in names) + ")"
+    return " PARTITION (" + ", ".join(_quote_ident_sql(name) for name in names) + ")"
 
 
 class DataFrameWriterV2:
