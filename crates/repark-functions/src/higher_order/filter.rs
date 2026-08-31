@@ -16,8 +16,8 @@ use datafusion::logical_expr::{
 
 use super::lambda_utils::{
     ListValuesResult, coerce_single_list_arg, element_and_index_parameters, empty_filtered_list,
-    extract_list_values, filter_list_values, list_element_index_array, list_field_from_return,
-    require_boolean_lambda, value_lambda_pair,
+    extract_list_values, filter_list_values, list_field_from_return, require_boolean_lambda,
+    value_lambda_pair,
 };
 
 #[derive(Debug, PartialEq, Eq, Hash)]
@@ -81,11 +81,10 @@ impl HigherOrderUDFImpl for SparkFilter {
             ListValuesResult::Values(values) => values,
         };
         let field = list_field_from_return(self.name(), args.return_field.as_ref())?;
-        let index_array = list_element_index_array(list_array.as_ref())?;
         let predicate_output = super::lambda_utils::evaluate_element_and_index(
             lambda,
             &list_values,
-            &index_array,
+            list_array.as_ref(),
             |arrays| {
                 let indices = list_values_row_number(&list_array)?;
                 Ok(take_arrays(arrays, &indices, None)?)

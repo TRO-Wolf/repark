@@ -47,7 +47,7 @@ def _lambda_arity(
     function: Callable[..., Column],
     *,
     allowed: tuple[int, ...],
-    provided: int | None = None,
+    spark_arity_error: bool = True,
 ) -> int:
     """How many parameters the callable takes, refused loudly if Spark does not accept that many."""
     parameters = inspect.signature(function).parameters
@@ -59,14 +59,14 @@ def _lambda_arity(
         )
     arity = len(parameters)
     if arity not in allowed:
-        if provided is None:
+        if not spark_arity_error:
             expected = " or ".join(str(count) for count in allowed)
             raise PySparkValueError(
                 f"lambda takes {arity} parameters, but this function expects {expected}"
             )
         raise AnalysisException(
             "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. "
-            f"A higher order function expects {arity} arguments, but got {provided}."
+            f"A higher order function expects {arity} arguments, but got {allowed[0]}."
         )
     return arity
 
@@ -131,11 +131,10 @@ def _higher_order(
     convention invented here.
     """
     value_columns = [_as_column_arg(value, as_lit=False) for value in values]
-    provided = len(values) if spark_arity_error else None
     built = [
         _build_lambda(
             function,
-            _lambda_arity(function, allowed=allowed, provided=provided),
+            _lambda_arity(function, allowed=allowed, spark_arity_error=spark_arity_error),
         )
         for function, allowed in functions
     ]

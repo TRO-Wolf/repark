@@ -97,11 +97,11 @@ pub(crate) fn extract_list_values(
 pub(crate) fn evaluate_element_and_index(
     lambda: &datafusion::logical_expr::LambdaArgument,
     element: &ArrayRef,
-    index: &ArrayRef,
+    list_array: &dyn Array,
     spread: impl Fn(&[ArrayRef]) -> Result<Vec<ArrayRef>>,
 ) -> Result<ColumnarValue> {
     let element_param = || Ok(Arc::clone(element));
-    let index_param = || Ok(Arc::clone(index));
+    let index_param = || list_element_index_array(list_array);
     lambda.evaluate(&[&element_param, &index_param], spread)
 }
 

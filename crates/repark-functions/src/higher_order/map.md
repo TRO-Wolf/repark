@@ -11,7 +11,10 @@ pins: fnp-4c-higher-order-kernels/C-007, C-008, C-009, C-010, C-011, C-013, C-01
 ## Contents
 
 - `mod.rs` — registry both doors read.
+- `kernel_eval.rs` — Databricks-dialect SQL value pins (test-only).
 - `lambda_utils.rs` — list coerce, `[element, index]` params, extract/assemble.
+  Unary lambdas do not materialize the index array (`LambdaArgument::evaluate`
+  only invokes `variables[..params.len()]`).
 - `transform.rs` — Spark `transform`.
 - `filter.rs` — Spark `filter` (null predicate drops).
 - `forall.rs` — all-match rewrite of `exists`.

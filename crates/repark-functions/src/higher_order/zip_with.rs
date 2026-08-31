@@ -98,8 +98,13 @@ impl HigherOrderUDFImpl for SparkZipWith {
     }
 
     fn return_field_from_args(&self, args: HigherOrderReturnFieldArgs) -> Result<Arc<Field>> {
-        let [left, _right, lambda] = take_function_args(self.name(), args.arg_fields)?;
-        let (ValueOrLambda::Value(left), ValueOrLambda::Lambda(lambda)) = (left, lambda) else {
+        let [left, right, lambda] = take_function_args(self.name(), args.arg_fields)?;
+        let (
+            ValueOrLambda::Value(left),
+            ValueOrLambda::Value(right),
+            ValueOrLambda::Lambda(lambda),
+        ) = (left, right, lambda)
+        else {
             return plan_err!("{} expects two lists followed by a lambda", self.name());
         };
         let field = Arc::new(Field::new(
@@ -108,7 +113,11 @@ impl HigherOrderUDFImpl for SparkZipWith {
             lambda.is_nullable(),
         ));
         let return_type = DataType::List(field);
-        Ok(Arc::new(Field::new("", return_type, left.is_nullable())))
+        Ok(Arc::new(Field::new(
+            "",
+            return_type,
+            left.is_nullable() || right.is_nullable(),
+        )))
     }
 
     fn invoke_with_args(&self, args: HigherOrderFunctionArgs) -> Result<ColumnarValue> {
@@ -272,4 +281,44 @@ pub fn zip_with_udf() -> Arc<HigherOrderUDF> {
     static INSTANCE: LazyLock<Arc<HigherOrderUDF>> =
         LazyLock::new(|| Arc::new(HigherOrderUDF::new_from_impl(SparkZipWith::new())));
     Arc::clone(&INSTANCE)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use datafusion::arrow::datatypes::{DataType, Field};
+    use datafusion::common::ScalarValue;
+
+    use super::{HigherOrderReturnFieldArgs, HigherOrderUDFImpl, SparkZipWith, ValueOrLambda};
+
+    /// pins: fnp-4c-higher-order-kernels/C-006
+    #[test]
+    fn return_field_is_nullable_when_only_the_right_array_is_nullable() {
+        let kernel = SparkZipWith::new();
+        let left = Arc::new(Field::new(
+            "left",
+            DataType::new_list(DataType::Int32, true),
+            false,
+        ));
+        let right = Arc::new(Field::new(
+            "right",
+            DataType::new_list(DataType::Int32, true),
+            true,
+        ));
+        let lambda = Arc::new(Field::new("", DataType::Int32, true));
+        let arg_fields = [
+            ValueOrLambda::Value(left),
+            ValueOrLambda::Value(right),
+            ValueOrLambda::Lambda(lambda),
+        ];
+        let scalar_arguments: [Option<&ScalarValue>; 3] = [None, None, None];
+        let field = kernel
+            .return_field_from_args(HigherOrderReturnFieldArgs {
+                arg_fields: &arg_fields,
+                scalar_arguments: &scalar_arguments,
+            })
+            .expect("return field");
+        assert!(field.is_nullable());
+    }
 }

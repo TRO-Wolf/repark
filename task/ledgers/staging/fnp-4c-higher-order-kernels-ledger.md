@@ -65,13 +65,13 @@ the dialect on the production Spark door.
 | C-003 | `aggregate` is a RePark kernel: two value args (array, initial), 2-ary merge, optional 1-ary finish, sequential left-to-right fold. Empty array yields initial (then finish). Null array yields null. Merge/finish null handling matches the oracle. | Facade + Rust pins including finish-present and finish-absent. | **PROVEN** |
 | C-004 | `reduce` is an alias of the `aggregate` kernel. PySpark signatures are byte-identical. No second kernel. | `by_name("reduce")` resolves the aggregate kernel; facade `F.reduce` matches `F.aggregate` on a shared fixture. | **PROVEN** |
 | C-005 | `forall` is the De Morgan rewrite of `exists` / `array_any_match`: false if any element is false; else null if any predicate is null; else true. Empty array → true. Null array → null. Not a nested higher-order call. | Facade + Rust pins on the five census cases. | **PROVEN** |
-| C-006 | `zip_with` pairs two arrays with a 2-ary lambda. The shorter array is null-padded to the longer length before the lambda runs. Result length is `max(len(left), len(right))`. Null either array → null. | Facade + Rust pins including unequal lengths. | **PROVEN** |
+| C-006 | `zip_with` pairs two arrays with a 2-ary lambda. The shorter array is null-padded to the longer length before the lambda runs. Result length is `max(len(left), len(right))`. Null either array → null. Return field is nullable if either input is. | Facade + Rust pins including unequal lengths and left-not-null/right-null. | **PROVEN** |
 | C-007 | `transform_keys` applies a 2-ary `(k, v)` lambda to produce new keys. A null produced key is a runtime error. Duplicate produced keys raise Spark's `DUPLICATED_MAP_KEY` / `mapKeyDedupPolicy` EXCEPTION text (RePark's existing default). | Facade + Rust pins: happy path, null key, duplicate key. | **PROVEN** |
 | C-008 | `transform_values` applies a 2-ary `(k, v)` lambda to produce new values. Keys are unchanged. Null values are allowed. | Facade + Rust pins. | **PROVEN** |
 | C-009 | `map_filter` keeps entries whose 2-ary predicate is true. Null predicate drops the entry. Return type equals the input map type. | Facade + Rust pins. | **PROVEN** |
 | C-010 | `map_zip_with` takes two maps and a ternary `(k, v1, v2)` lambda. Key set is the union: map1 keys in order, then map2-only keys. A key absent from one map yields a null value argument. | Facade + Rust pins including map2-only keys. | **PROVEN** |
 | C-011 | One kernel per Spark name (except `reduce` as alias). Both doors resolve the same table (`higher_order::functions` / `by_name`). Python does not compute rows. Nested higher-order remains the FNP-4a loud refusal. | Registry tests; facade builds through `call_higher_order`; the FNP-4a nested-HOF pin still reds. | **PROVEN** |
-| C-012 | Per-name lambda arity is refused at the facade with Spark's class (`PySparkValueError`) before a plan error. A lambda that does not return a `Column` is refused. Kernel-side extra lambda params vs declared params remain a plan error. Measured Spark error text is the oracle; incidental controls are measured too. | Facade pins per name; at least one kernel-side arity/type pin. | **PROVEN** |
+| C-012 | Per-name lambda arity is refused at the facade with Spark's `INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH` body (user arity in expects, declared arity in got). A lambda that does not return a `Column` is refused. Measured Spark error text is the oracle; incidental controls are measured too. | Facade pins for every one of the ten names; DATATYPE_MISMATCH on non-boolean filter. | **PROVEN** |
 | C-013 | The FNP-4a seam is the only seam: no second `call_higher_order`, no alias of Spark `transform`/`filter` onto unary `array_transform`/`array_filter`. `exists` remains the `array_any_match` alias. | The FNP-4a registry tests, updated so `transform`/`filter` resolve RePark kernels whose `name()` is not `array_transform`/`array_filter`. | **PROVEN** |
 | C-014 | Docs and maps stay in lockstep. File-size ceilings ratchet down only. `functions.py` does not raise its 1985 baseline. New Rust files stay at or under the 1000-line default. | `make check-map-sync`; `check_lib_py` / `check_rust_file_size` green. | **PROVEN** |
 | C-015 | Gates before done: `make verify`, `make check-map-sync check-ledger-grammar`, `python3 scripts/ledger_lifecycle.py check --base 60225cc427673cbc2e4bf23e90db376e602773dd`, full `make py-test`, `make py-test-facade` for facade tests added. Real exit codes. | Recorded at close. | **PROVEN** |
@@ -153,6 +153,26 @@ SELF_LOGIC_REVIEW:
   escalation: —
 ```
 
+```yaml
+SELF_LOGIC_REVIEW:
+  id: SLR-fnp-4c-critic-residual
+  agent: Actor
+  action: Close Critic S2/S3 residuals (arity body, Rust value pins, map order, nullability, lazy index)
+  charter_trace: FNP-4c C-001, C-006, C-007, C-009, C-010, C-012
+  preconditions:
+    - Live Spark 4.1.2 NUM_ARGS_MISMATCH measured 2026-08-31: SATISFIED
+    - LambdaArgument only invokes variables[..params.len()]: SATISFIED (datafusion-expr 54.1)
+  success_condition: Spark expects/got text pinned per name; cargo test -p repark-functions reds a broken kernel
+  step_risks:
+    - Session-wide Databricks dialect: HANDLED(test-only SessionConfig in kernel_eval.rs)
+  contingencies:
+    - Revert this commit: EXECUTABLE
+  tripwire_scan: CLEAN
+  uncertainty: NONE
+  verdict: PROCEED
+  escalation: —
+```
+
 ## Disk (AGENTS.md "Resource discipline")
 
 Checked 2026-08-31 at pickup: `/` 306 G free of 1.8 T (83% used). No worktree.
@@ -190,6 +210,18 @@ not an oracle. Spark SQL / ANSI `x -> y` parse stays FNP-4b.
 | `python3 scripts/ledger_lifecycle.py check --base 60225cc427673cbc2e4bf23e90db376e602773dd` | 0 |
 | `make py-test` | 0 (459 passed) |
 | `make py-test-facade` | 0 (4107 passed, 75 skipped) |
+
+## Critic residual execution record (2026-08-31)
+
+Q-001/L-001/CL-001, Q-002/CL-003, Q-003, Q-004, L-002, L-003/CL-002.
+
+| Command | Exit |
+|---|---|
+| `make verify` | 0 |
+| `make check-map-sync check-ledger-grammar` | 0 |
+| `python3 scripts/ledger_lifecycle.py check --base 60225cc427673cbc2e4bf23e90db376e602773dd` | 0 |
+| `make py-test` | 0 (459 passed) |
+| `make py-test-facade` | 0 (4109 passed, 75 skipped) |
 
 pins: fnp-4c-higher-order-kernels/C-015
 

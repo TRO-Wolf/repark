@@ -75,8 +75,13 @@ impl HigherOrderUDFImpl for SparkMapZipWith {
     }
 
     fn return_field_from_args(&self, args: HigherOrderReturnFieldArgs) -> Result<Arc<Field>> {
-        let [left, _right, lambda] = take_function_args(self.name(), args.arg_fields)?;
-        let (ValueOrLambda::Value(left), ValueOrLambda::Lambda(lambda)) = (left, lambda) else {
+        let [left, right, lambda] = take_function_args(self.name(), args.arg_fields)?;
+        let (
+            ValueOrLambda::Value(left),
+            ValueOrLambda::Value(right),
+            ValueOrLambda::Lambda(lambda),
+        ) = (left, right, lambda)
+        else {
             return plan_err!("{} expects two maps followed by a lambda", self.name());
         };
         let (key, _value) = map_key_value_fields(self.name(), left)?;
@@ -96,7 +101,7 @@ impl HigherOrderUDFImpl for SparkMapZipWith {
         Ok(Arc::new(Field::new(
             "",
             DataType::Map(entries, *ordered),
-            left.is_nullable(),
+            left.is_nullable() || right.is_nullable(),
         )))
     }
 
@@ -258,4 +263,51 @@ pub fn map_zip_with_udf() -> Arc<HigherOrderUDF> {
     static INSTANCE: LazyLock<Arc<HigherOrderUDF>> =
         LazyLock::new(|| Arc::new(HigherOrderUDF::new_from_impl(SparkMapZipWith::new())));
     Arc::clone(&INSTANCE)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use datafusion::arrow::datatypes::{DataType, Field};
+    use datafusion::common::ScalarValue;
+
+    use super::{HigherOrderReturnFieldArgs, HigherOrderUDFImpl, SparkMapZipWith, ValueOrLambda};
+
+    fn map_field(name: &str, nullable: bool) -> Arc<Field> {
+        let entries = Arc::new(Field::new(
+            "entries",
+            DataType::Struct(
+                vec![
+                    Arc::new(Field::new("key", DataType::Utf8, false)),
+                    Arc::new(Field::new("value", DataType::Int32, true)),
+                ]
+                .into(),
+            ),
+            false,
+        ));
+        Arc::new(Field::new(name, DataType::Map(entries, false), nullable))
+    }
+
+    /// pins: fnp-4c-higher-order-kernels/C-010
+    #[test]
+    fn return_field_is_nullable_when_only_the_right_map_is_nullable() {
+        let kernel = SparkMapZipWith::new();
+        let left = map_field("left", false);
+        let right = map_field("right", true);
+        let lambda = Arc::new(Field::new("", DataType::Int32, true));
+        let arg_fields = [
+            ValueOrLambda::Value(left),
+            ValueOrLambda::Value(right),
+            ValueOrLambda::Lambda(lambda),
+        ];
+        let scalar_arguments: [Option<&ScalarValue>; 3] = [None, None, None];
+        let field = kernel
+            .return_field_from_args(HigherOrderReturnFieldArgs {
+                arg_fields: &arg_fields,
+                scalar_arguments: &scalar_arguments,
+            })
+            .expect("return field");
+        assert!(field.is_nullable());
+    }
 }

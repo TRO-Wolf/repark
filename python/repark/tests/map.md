@@ -2182,7 +2182,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 
 - `test_fnp4c_higher_order.py` — **FNP-4c (2026-08-31):** ten Spark higher-order names on
   the facade Column API, values and Arrow types vs the live PySpark 4.1.2 oracle, plus
-  Spark error-class pins. pins: fnp-4c-higher-order-kernels/C-001, C-002, C-003, C-004,
+  per-name `NUM_ARGS_MISMATCH` expects/got text, raw Arrow map-entry order, and zip_with
+  right-side nullability. pins: fnp-4c-higher-order-kernels/C-001, C-002, C-003, C-004,
   C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-015
 - `test_fnp4_lambda_seam.py` — **FNP-4a (2026-08-20):** a Python lambda reaching the engine.
   `exists` through the Column API, Spark's three-valued null semantics, the empty-array and

@@ -12,6 +12,9 @@ mod transform_keys;
 mod transform_values;
 mod zip_with;
 
+#[cfg(test)]
+mod kernel_eval;
+
 use std::sync::Arc;
 
 use datafusion::functions_nested::all_default_higher_order_functions;

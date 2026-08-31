@@ -28,6 +28,18 @@ def _as_map(value: object) -> dict[object, object] | None:
     return dict(value)
 
 
+def _arrow_map_entries(column: object, row: int) -> list[tuple[object, object]] | None:
+    """Raw Arrow map entries in stored order (dict equality hides reverse)."""
+    combined = column.combine_chunks() if hasattr(column, "combine_chunks") else column
+    if combined[row].as_py() is None:
+        return None
+    offsets = combined.offsets.to_pylist()
+    keys = combined.keys.to_pylist()
+    values = combined.items.to_pylist()
+    start, end = offsets[row], offsets[row + 1]
+    return list(zip(keys[start:end], values[start:end], strict=True))
+
+
 def _arrays():
     spark = _session()
     return spark.sql(
@@ -183,6 +195,8 @@ def test_map_kernels_match_spark_union_and_errors() -> None:
         {},
         None,
     ]
+    zipped_entries = _arrow_map_entries(zipped.column("r"), 0)
+    assert zipped_entries == [("foo", 11), ("bar", 2), ("baz", 3)]
 
     with pytest.raises(PySparkException, match="NULL_MAP_KEY"):
         maps.select(F.transform_keys("m1", lambda k, v: F.lit(None).cast("string"))).toArrow()
@@ -193,12 +207,89 @@ def test_map_kernels_match_spark_union_and_errors() -> None:
 def test_lambda_arity_uses_spark_error_class() -> None:
     """pins: fnp-4c-higher-order-kernels/C-012"""
     frame = _arrays()
-    with pytest.raises(AnalysisException, match="INVALID_LAMBDA_FUNCTION_CALL"):
-        frame.select(F.transform("a", lambda x, i, z: x)).toArrow()
-    with pytest.raises(AnalysisException, match="INVALID_LAMBDA_FUNCTION_CALL"):
-        frame.select(F.forall("a", lambda x, i: x > 0)).toArrow()
     with pytest.raises(AnalysisException, match="DATATYPE_MISMATCH"):
         frame.select(F.filter("a", lambda x: x + 1)).toArrow()
+
+
+def test_each_name_refuses_wrong_lambda_arity_like_spark() -> None:
+    """Spark puts the user arity in expects and the declared arity in got.
+
+    pins: fnp-4c-higher-order-kernels/C-012
+    """
+    frame = _arrays()
+    spark = _session()
+    from repark.spark.types import IntegerType, MapType, StringType, StructField, StructType
+
+    maps = spark.createDataFrame(
+        [({"foo": 1}, {"bar": 2})],
+        schema=StructType(
+            [
+                StructField("m1", MapType(StringType(), IntegerType()), True),
+                StructField("m2", MapType(StringType(), IntegerType()), True),
+            ]
+        ),
+    )
+    cases = [
+        (
+            lambda: frame.select(F.transform("a", lambda x, i, z: x)),
+            "expects 3 arguments, but got 1",
+        ),
+        (
+            lambda: frame.select(F.filter("a", lambda x, i, z: x > 0)),
+            "expects 3 arguments, but got 1",
+        ),
+        (lambda: frame.select(F.forall("a", lambda x, i: x > 0)), "expects 2 arguments, but got 1"),
+        (
+            lambda: frame.select(F.aggregate("a", F.lit(0), lambda acc: acc)),
+            "expects 1 arguments, but got 2",
+        ),
+        (
+            lambda: frame.select(F.reduce("a", F.lit(0), lambda acc: acc)),
+            "expects 1 arguments, but got 2",
+        ),
+        (
+            lambda: frame.select(F.zip_with("a", "a", lambda x: x)),
+            "expects 1 arguments, but got 2",
+        ),
+        (
+            lambda: maps.select(F.transform_keys("m1", lambda k: k)),
+            "expects 1 arguments, but got 2",
+        ),
+        (
+            lambda: maps.select(F.transform_values("m1", lambda k: k)),
+            "expects 1 arguments, but got 2",
+        ),
+        (
+            lambda: maps.select(F.map_filter("m1", lambda k: F.lit(True))),
+            "expects 1 arguments, but got 2",
+        ),
+        (
+            lambda: maps.select(F.map_zip_with("m1", "m2", lambda k, v1: k)),
+            "expects 2 arguments, but got 3",
+        ),
+    ]
+    for build, needle in cases:
+        with pytest.raises(AnalysisException, match=needle):
+            build().toArrow()
+
+
+def test_zip_with_result_is_nullable_when_the_right_array_is() -> None:
+    """pins: fnp-4c-higher-order-kernels/C-006"""
+    spark = _session()
+    from repark.spark.types import ArrayType, IntegerType, StructField, StructType
+
+    frame = spark.createDataFrame(
+        [([1, 2], None)],
+        schema=StructType(
+            [
+                StructField("xs", ArrayType(IntegerType()), False),
+                StructField("ys", ArrayType(IntegerType()), True),
+            ]
+        ),
+    )
+    out = frame.select(F.zip_with("xs", "ys", lambda x, y: x).alias("r")).toArrow()
+    assert out.schema.field("r").nullable
+    assert out.column("r").to_pylist() == [None]
 
 
 def test_nested_higher_order_stays_refused() -> None:

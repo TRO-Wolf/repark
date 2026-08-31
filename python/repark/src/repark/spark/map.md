@@ -46,6 +46,7 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
 - `functions_lambda.py` — higher-order function and lambda builders. FNP-4c adds
   `transform`, `filter`, `forall`, `aggregate`, `reduce`, `zip_with`, `transform_keys`,
   `transform_values`, `map_filter`, `map_zip_with` (installed onto `functions.py` `__all__`).
+  Spark 4.1.2 `NUM_ARGS_MISMATCH` puts the user arity in expects and the declared arity in got.
   pins: fnp-4c-higher-order-kernels/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
   C-009, C-010, C-011, C-012
 - `functions_math.py` — mathematical and trigonometric wrappers.
