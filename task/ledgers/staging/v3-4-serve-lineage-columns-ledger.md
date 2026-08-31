@@ -22,7 +22,7 @@ Every V3-COW-1 / v3 DML keep-refusal pin stays byte-untouched.
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | **Measure first.** Live PySpark 4.1.2 + `iceberg-spark-runtime-4.1_2.13:1.11.0` records, for `_row_id` and `_last_updated_sequence_number`: column names, Arrow types, nullability, `SELECT *` vs explicit projection, stored-value-wins vs `first_row_id +` position / file sequence derivation, v3 vs v2 vs v1 request behavior (error class or NULL — measured, not guessed), and MOR+DV surviving-row cells on the V3E-3 partitioned-DV and equality-delete fixtures. Every cell is in this ledger before any engine edit. | Executed oracle probe; matrix table in this ledger. | OPEN | Charter question: does Spark error or NULL when the columns are requested on v1/v2? Does `SELECT *` include them? |
+| C-001 | **Measure first.** Live PySpark 4.1.2 + `iceberg-spark-runtime-4.1_2.13:1.11.0` records, for `_row_id` and `_last_updated_sequence_number`: column names, Arrow types, nullability, `SELECT *` vs explicit projection, stored-value-wins vs `first_row_id +` position / file sequence derivation, v3 vs v2 vs v1 request behavior (error class or NULL — measured, not guessed), and MOR+DV surviving-row cells on the V3E-3 partitioned-DV and equality-delete fixtures. Every cell is in this ledger before any engine edit. | Executed oracle probe; matrix table in this ledger. | OPEN | Matrix §4 recorded 2026-08-31. Pin lands with the serve tests. |
 | C-002 | Spark SQL door serves both columns on a v3 read Spark-equal (value AND Arrow type AND nullability on `collect` / `to_arrow`). Stored column value wins when present; NULL `_row_id` derives `first_row_id +` row position within the file; NULL `_last_updated_sequence_number` derives the data file's sequence number. | Spark-door pin(s) against the C-001 matrix; red-first. | OPEN | Fork scan materialization exists (R166). The engine currently fails at plan (`V3-ROWID-1`). |
 | C-003 | ANSI SQL door (`repark.sql()`) matches C-002 on the same cells. | ANSI-door pin(s); two-doors rule. | OPEN | Same fork scan; different SQL door. |
 | C-004 | Facade door (`repark.spark` SQL + DataFrame) matches C-002 on the same cells. | Facade pin(s) on `to_arrow`. | OPEN | `spark.table()` is `SELECT * FROM t` in this engine; the matrix records whether that blocks `df.select("_row_id")`. |
@@ -54,7 +54,35 @@ with its pin (`pins: v3-4-serve-lineage-columns/C-NNN`).
 4. C-005/C-006 v2/v1 cells as measured.
 5. C-009 identity check, C-010 docs, gates.
 
-## 3. Self Logic Review — charter
+## 4. C-001 oracle matrix (2026-08-31)
+
+Live PySpark 4.1.2 + Iceberg 1.11.0, zulu-17, Hadoop catalog, ANSI on, UTC. Session
+probe against the V3E-3 fixtures and Spark-created v3/v2/v1 tables.
+
+Both lineage columns: name `_row_id` / `_last_updated_sequence_number`, Spark type `bigint`,
+Arrow `int64`, **nullable true**. `SELECT *` and `DESCRIBE` do **not** include them.
+`spark.table(t).select("_row_id", …)` works (DSv2 metadata columns).
+
+| Cell | Spark result |
+|---|---|
+| V3E-3 partitioned-DV `SELECT *` | columns `id,name,part`; live `(1,a,0),(3,c,0),(4,d,1),(6,f,1)` |
+| V3E-3 partitioned-DV explicit lineage | `(1,0,1),(3,2,1),(4,3,1),(6,5,1)` — `_row_id = first_row_id + _pos`; seq=1 (append snapshot); deleted pos 1 in each file |
+| V3E-3 eq-dv + DV explicit lineage | `(2,1,1),(3,2,1)` |
+| Created v3 (3 rows) explicit lineage | `(1,0,1),(2,1,1),(3,2,1)` |
+| Created v2 explicit lineage | **error** `[UNRESOLVED_COLUMN.WITH_SUGGESTION]` SQLSTATE `42703` |
+| Created v1 explicit lineage | **error** same `UNRESOLVED_COLUMN.WITH_SUGGESTION` / `42703` |
+
+Derivation check on partitioned-DV: `_file`/`_pos` show row 1 at pos 0 of part=0 (`_row_id=0`),
+row 3 at pos 2 of the same file (`_row_id=2`), row 4 at pos 0 of part=1 (`_row_id=3`),
+row 6 at pos 2 (`_row_id=5`). File sequence number 1 is the last-updated value for every
+survivor (the DELETE snapshot does not rewrite data files).
+
+v1/v2 are **errors**, not NULL. The engine must not advertise the columns on format < 3.
+
+This engine's `spark.table()` is `SELECT * FROM t`, so after a Spark-equal `SELECT *` the
+DataFrame no longer carries metadata columns. Facade pins use `spark.sql("SELECT _row_id …")`.
+
+## 5. Self Logic Review — charter
 
 ```yaml
 SELF_LOGIC_REVIEW:
