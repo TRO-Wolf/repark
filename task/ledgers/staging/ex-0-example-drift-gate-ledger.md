@@ -160,6 +160,19 @@ Seed plus backlog restore made the static gate green.
 | SEC-001 S2 wheel-not-source | REMEDIATED: wheels.yml `python -I`; `execution_environment` drops PYTHONPATH/PYTHONSTARTUP/PYTHONHOME. | Pin + workflows map note. |
 | CL-001 S3 record staleness | REMEDIATED: writable-paths fence names the lifted `.github/` F-3/SEC-001 wires; wrapper header lists both CI legs. | — |
 
+## Critic round 3 (2026-08-31) — final pass, verdict PASS (no S1)
+
+A third fresh Critic attacked the round-2 diff only. Q-001 pins go red on both scratch
+mutations (deleting the `run_gate` wiring and the receiver-classification branch); SEC-001
+`-I` plus the PYTHONPATH/PYTHONHOME/PYTHONSTARTUP drop holds; the happy path stays
+679/19/658/2/5 exit 0. Below-floor residuals, recorded rather than fixed: the assignment
+dataflow does not track tuple/starred/augmented assignment or loop-target rebinding, and a
+module object assigned to a local can carry repark-rootedness — each a contrived corner a
+reviewer reading the example would catch, none the cheap `object().agg`-class stuffing the
+S1 floor guards. The standing residual stays as documented in the gate docstring: a
+genuinely repark-rooted receiver can list a method it only calls trivially; review holds
+that honesty.
+
 ## Disk
 
 Pickup: 520 GB free of 1.8 TB (71% used). No worktree. `target/` reused if a
