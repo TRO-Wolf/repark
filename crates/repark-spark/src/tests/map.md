@@ -50,6 +50,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 - `call_rewrite_dangling.rs` — the CALL's
   `'remove-dangling-deletes' => true` reaches the fork's composed GC and reports a true
   `removed_delete_files_count` on a partitioned v2 fixture (C-006).
+- `call_rewrite_options.rs` — **rewrite_data_files options:** `where => 'part = 0'` (and `IN (0)`)
+  keeps the **part=1** pre-image paths byte-identical and rewrites part=0 away; unknown strategy
+  and bad where use Spark's text; `sort_order` refuses without compacting; named `BINPACK` still
+  compacts v2.
+  pins: maint-rewrite-data-files-options/C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - `common.rs` — shared fixtures (`setup`, `rows`, `run`, `register_source`, `table_rows`, …)
   and the cross-cutting helpers that more than one leaf needs (`time_travel_id_multiset`,
   `execute_without_collecting`, unsafe-cast walk helpers). **V3-2:**

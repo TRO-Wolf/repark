@@ -213,11 +213,11 @@ published history — an exposure **accepted by explicit decision**; provenance:
   acceptance gates). #30 (the dead doc-pointer sweep) merged ahead of it.
 <!-- /ws -->
 
-<!-- ws id=dml ledgers=dml- state=open -->
-- **Iceberg DML remainder (v0.6)** — DML-B → DML-C → DML-A → MAINT; REF waits on fork
-  F-6. **Delivered 2026-08-30:** DML-B `INSERT OVERWRITE … PARTITION` and
-  `writeTo().overwritePartitions()` (empty dynamic refuses loud); DML-C `TRUNCATE TABLE`
-  first-class (DML-2 FIXED); DML-A `MERGE … WHEN NOT MATCHED BY SOURCE`, COW and MOR.
+<!-- ws id=dml ledgers=dml-,maint- state=open -->
+- **Iceberg DML remainder (v0.6)** — REF waits on fork F-6. **Delivered 2026-08-30/31:**
+  DML-B `INSERT OVERWRITE … PARTITION` + `writeTo().overwritePartitions()`; DML-C
+  `TRUNCATE TABLE` (DML-2 FIXED); DML-A `MERGE … WHEN NOT MATCHED BY SOURCE`; MAINT
+  `rewrite_data_files` `where` + binpack, sort refuses loud (RDF-SORT-1).
   [DML-1](docs/spark-sql-iceberg-parity.md).
 <!-- /ws -->
 

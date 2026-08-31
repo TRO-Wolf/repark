@@ -8,8 +8,7 @@ use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::ast::Function;
-use iceberg::maintenance::{DeleteOrphanFiles, RewriteDataFiles, RewritePositionDeleteFiles};
-use iceberg::spec::FormatVersion;
+use iceberg::maintenance::{DeleteOrphanFiles, RewritePositionDeleteFiles};
 use iceberg::transaction::{
     ApplyTransactionAction, CleanupReport, ExpireSnapshotsCleanup, Transaction,
 };
@@ -17,10 +16,12 @@ use iceberg::{Catalog, NamespaceIdent, TableIdent};
 
 use repark_core::{CatalogRegistry, LocationPolicy, memory_warehouse_fallback_root};
 
-use crate::call_args::{CallArgs, expr_as_string};
+use crate::call_args::CallArgs;
 use crate::{catalog_handle, iceberg_err, name_parts, reject_path_escape_ident, reregister};
 
+mod rewrite_data_files;
 mod rewrite_manifests;
+mod rewrite_where;
 
 /// Procedures supported by this router (listed in unknown-proc errors).
 const SUPPORTED_PROCEDURES: &[&str] = &[
@@ -48,7 +49,7 @@ pub async fn execute_call(
     match procedure.as_str() {
         "expire_snapshots" => execute_expire_snapshots(ctx, catalog, &catalog_name, &args).await,
         "rewrite_data_files" => {
-            execute_rewrite_data_files(ctx, catalog, &catalog_name, &args).await
+            rewrite_data_files::execute_rewrite_data_files(ctx, catalog, &catalog_name, &args).await
         }
         "rewrite_position_delete_files" => {
             execute_rewrite_position_delete_files(ctx, catalog, &catalog_name, &args).await
@@ -256,131 +257,6 @@ fn expire_result_dataframe(ctx: &SessionContext, report: &CleanupReport) -> Resu
             )?])),
             Arc::new(Int64Array::from(vec![count_as_i64(
                 report.deleted_statistics_files.len(),
-            )?])),
-        ],
-    )?;
-    ctx.read_batches(vec![batch])
-}
-
-// === rewrite_data_files ===
-
-/// pins: v3-2-create-v3-opt-in/C-011, C-014
-/// Refuse `rewrite_data_files` on a format-v3 table rather than silently reassign row lineage.
-pub(crate) fn refuse_v3_rewrite_that_would_lose_row_lineage(
-    format_version: FormatVersion,
-    table_arg: &str,
-) -> Result<()> {
-    if format_version < FormatVersion::V3 {
-        return Ok(());
-    }
-    Err(DataFusionError::NotImplemented(format!(
-        "CALL rewrite_data_files will not compact `{table_arg}`: it is a {format_version:?} \
-         table, and V3 onward mandates row lineage (`_row_id`, \
-         `_last_updated_sequence_number`) which this engine's rewrite does not carry through. \
-         The row data would be correct and every row's lineage would be reassigned, telling \
-         downstream consumers that all of them changed. Spark preserves lineage across the same \
-         rewrite — compact this table there until the fork does the same"
-    )))
-}
-
-async fn execute_rewrite_data_files(
-    ctx: &SessionContext,
-    catalog: Arc<dyn Catalog>,
-    catalog_name: &str,
-    args: &CallArgs,
-) -> Result<DataFrame> {
-    args.reject_unknown_named(&[
-        "table",
-        "strategy",
-        "sort_order",
-        "options",
-        "where",
-        "remove-dangling-deletes",
-    ])?;
-    // Supported positional arity v1: table + optional strategy only (C2-Q-002).
-    args.reject_excess_positional(2)?;
-    // strategy: named OR positional #1 (Spark rewrite_data_files positional order).
-    let strategy = if let Some(named) = args.optional_string("strategy")? {
-        Some(named)
-    } else if args.positional.len() > 1 {
-        Some(expr_as_string(&args.positional[1], "strategy")?)
-    } else {
-        None
-    };
-    if let Some(strategy) = strategy {
-        // Trim so `' binpack '` matches Spark-ish whitespace tolerance (C3-L-001).
-        let normalized = strategy.trim().to_ascii_lowercase();
-        if normalized != "binpack" {
-            return Err(DataFusionError::NotImplemented(format!(
-                "CALL rewrite_data_files strategy `{strategy}` is not supported — only \
-                 binpack is ported (fork R135 deferred: sort / zOrder strategies)"
-            )));
-        }
-    }
-    if args.has_named("sort_order") {
-        return Err(DataFusionError::NotImplemented(
-            "CALL rewrite_data_files sort_order is not supported — fork R135 deferred \
-             (sort / zOrder strategies); only default binpack is available"
-                .to_string(),
-        ));
-    }
-    if args.has_named("options") {
-        return Err(DataFusionError::NotImplemented(
-            "CALL rewrite_data_files options map is not supported in v1 — use table \
-             properties / defaults (fork R135 binpack defaults: min_input_files=5, …)"
-                .to_string(),
-        ));
-    }
-    if args.has_named("where") {
-        return Err(DataFusionError::NotImplemented(
-            "CALL rewrite_data_files where filter is not supported in v1 (fork filter \
-             builder exists but is not wired through CALL yet)"
-                .to_string(),
-        ));
-    }
-
-    let table_arg = args.require_string("table", 0)?;
-    let ident = resolve_table_ident(catalog_name, &table_arg)?;
-    let table = catalog.load_table(&ident).await.map_err(iceberg_err)?;
-    refuse_v3_rewrite_that_would_lose_row_lineage(table.metadata().format_version(), &table_arg)?;
-
-    let remove_dangling_deletes = args
-        .optional_bool("remove-dangling-deletes", None)?
-        .unwrap_or(false);
-
-    // Under Spark's default min_input_files=5, a few small inserts are always treated as small.
-    let result = RewriteDataFiles::new(table)
-        .remove_dangling_deletes(remove_dangling_deletes)
-        .execute(catalog.as_ref())
-        .await
-        .map_err(iceberg_err)?;
-
-    let namespace = crate::namespace_schema_name(ident.namespace());
-    reregister(ctx, Arc::clone(&catalog), catalog_name, &namespace).await?;
-
-    // Spark's five columns are non-nullable.
-    let schema = Arc::new(Schema::new(vec![
-        Field::new("rewritten_data_files_count", DataType::Int32, false),
-        Field::new("added_data_files_count", DataType::Int32, false),
-        Field::new("rewritten_bytes_count", DataType::Int64, false),
-        Field::new("failed_data_files_count", DataType::Int32, false),
-        Field::new("removed_delete_files_count", DataType::Int32, false),
-    ]));
-    let batch = RecordBatch::try_new(
-        schema,
-        vec![
-            Arc::new(Int32Array::from(vec![count_as_i32(
-                result.rewritten_data_files_count,
-            )?])),
-            Arc::new(Int32Array::from(vec![count_as_i32(
-                result.added_data_files_count,
-            )?])),
-            Arc::new(Int64Array::from(vec![bytes_as_i64(
-                result.rewritten_bytes_count,
-            )?])),
-            Arc::new(Int32Array::from(vec![0])),
-            Arc::new(Int32Array::from(vec![count_as_i32(
-                result.removed_delete_files_count,
             )?])),
         ],
     )?;
