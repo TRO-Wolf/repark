@@ -313,9 +313,11 @@ repark-parity slice.
   are exact and ratchet down only (additions to exceptions must bump the
   baseline in the same commit). A `COVERS` name must be used in that script's
   body (class-surface names on a repark-rooted local; `repark.sql` on the
-  module alias). Dual-wired: `make check-example-coverage` in `make ci` and
-  ci.yml's python job (static half). wheels.yml smoke runs
-  `python -I … --require-execute`. Example children drop PYTHONPATH.
+  module alias). `F.*` unions `functions.py` `__all__` with the installer
+  export tables `install_into` appends. Dual-wired: `make check-example-coverage`
+  in `make ci` and ci.yml's python job (static half). wheels.yml smoke runs
+  `python -I … --require-execute`. The `.sh` wrapper forwards `"$@"`.
+  Example children drop PYTHONPATH.
   Proofs: `python/repark-parity/tests/test_ex_0_example_coverage.py`.
   pins: ex-0-example-drift-gate/C-001, C-003, C-004, C-005, C-007, C-009
 

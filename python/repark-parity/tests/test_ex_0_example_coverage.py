@@ -10,6 +10,7 @@ import contextlib
 import importlib.util
 import io
 import shutil
+import subprocess
 from pathlib import Path
 from types import ModuleType
 
@@ -44,7 +45,11 @@ def test_ex_0_enumerator_emits_five_families_and_repark_sql() -> None:
     assert any(name.startswith("ta.") for name in names)
     assert any(name.startswith("DataFrameReader.") for name in names)
     assert any(name.startswith("SparkSession.") for name in names)
-    assert len(rows) == 679
+    assert "F.try_divide" in names
+    assert "F.zip_with" in names
+    assert "F.xpath" in names
+    assert "F.unwrap_udt" in names
+    assert len(rows) == 763
 
 
 def test_ex_0_uncovered_name_is_red() -> None:
@@ -100,7 +105,7 @@ def test_ex_0_seed_examples_declare_covers_and_leave_the_backlog() -> None:
     backlog = set(gate.parse_named_lines(_REPO / gate.BACKLOG_RELATIVE, kind="backlog"))
     assert covered.isdisjoint(backlog)
     assert len(backlog) == gate.BACKLOG_BASELINE
-    assert gate.BACKLOG_BASELINE == 658
+    assert gate.BACKLOG_BASELINE == 742
 
 
 def test_ex_0_exceptions_file_names_only_inventory_rows() -> None:
@@ -231,7 +236,15 @@ def test_ex_0_makefile_wires_the_target_into_ci() -> None:
     ci_line = next(line for line in makefile.splitlines() if line.startswith("ci:"))
     assert "check-example-coverage" in ci_line
     wrapper = _WRAPPER.read_text(encoding="utf-8")
-    assert 'exec python3 -I "$repo_root/scripts/check_example_coverage.py"' in wrapper
+    assert 'exec python3 -I "$repo_root/scripts/check_example_coverage.py" "$@"' in wrapper
+    help_run = subprocess.run(
+        [str(_WRAPPER), "--help"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert help_run.returncode == 0
+    assert "--require-execute" in help_run.stdout + help_run.stderr
     gate_source = _GATE.read_text(encoding="utf-8")
     assert "skipping example execution" in gate_source
     workflow = (_REPO / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")

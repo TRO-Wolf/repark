@@ -74,7 +74,7 @@ each name must be used in that script body. Backlog ratchet. Exceptions
 ratchet (`EXCEPTIONS_BASELINE`). Local-only execution. `make ci` and ci.yml's
 python job run the static half. wheels.yml smoke runs `--require-execute`
 against the packaged wheel (the CI leg that instantiates C-007 on the real
-679-name set).
+763-name set).
 
 ```yaml
 SELF_LOGIC_REVIEW:
@@ -98,7 +98,7 @@ SELF_LOGIC_REVIEW:
 
 | ID | Clause | Proof obligation | Verdict |
 |---|---|---|---|
-| C-001 | The enumerator emits a deterministic sorted list of public names with a family tag, covering the five families in the policy table, from an AST walk of the facade sources. | Inventory file + family counts in this ledger. Pin in the parity test. | **PROVEN** |
+| C-001 | The enumerator emits a deterministic sorted list of public names with a family tag, covering the five families in the policy table. `F.*` is the union of `functions.py` `__all__`, the installer export tables `install_into` appends at import, and public defs on that canonical module. | Inventory file + family counts in this ledger. Pin includes `F.try_divide` / `F.zip_with` / `F.xpath`. | **PROVEN** |
 | C-002 | Examples live under `docs/examples/<family>/` as runnable Python. The module docstring states what is demonstrated. Each file declares `COVERS: list[str]`. Every `COVERS` name is used in that script body (family-aware AST). | Seed examples + unused-COVERS pin; stuffing `DataFrame.agg` into `abs.py` is red. | **PROVEN** |
 | C-003 | The gate fails when an enumerated public name is neither in some example's `COVERS` nor in the backlog nor in the exceptions file. | Provocation: uncovered name, captured in this ledger, then reverted. | **PROVEN** |
 | C-004 | The gate fails when the backlog names a public name that no longer exists, or that an example now covers. | Provocation: stale backlog row; covered-but-listed row. | **PROVEN** |
@@ -118,15 +118,15 @@ docs/scripts (no product-code change). This is the size of the v0.7 backfill.
 
 | Family | Count | As-of |
 |---|---|---|
-| functions | 360 | 2026-08-31 |
+| functions | 444 | 2026-08-31 (was 360; +84 installer `__all__` mutations) |
 | dataframe | 150 | 2026-08-31 |
 | ta | 86 | 2026-08-31 |
 | io | 42 | 2026-08-31 |
 | session | 41 | 2026-08-31 |
-| **total** | **679** | 2026-08-31 |
+| **total** | **763** | 2026-08-31 (was 679) |
 | covered by seed examples | 19 | 2026-08-31 |
 | exceptions | 2 | 2026-08-31 |
-| backlog after seeds | 658 | 2026-08-31 |
+| backlog after seeds | 742 | 2026-08-31 (was 658) |
 
 ## Provocation proofs (docs/testing.md "Gate provocation proofs")
 
@@ -173,6 +173,29 @@ S1 floor guards. The standing residual stays as documented in the gate docstring
 genuinely repark-rooted receiver can list a method it only calls trivially; review holds
 that honesty.
 
+## Critic round 3 CI execute-leg (PR #292 wheels.yml smoke)
+
+The packaged-wheel job ran `--require-execute` and failed: live `F.__all__` contained
+names the AST walk omitted. Cause: `functions.py` `__all__` is a static list that
+`install_into` mutates at import from `functions_try` / `functions_lambda` /
+`functions_declared` (the twelve `try_*`, `zip_with` and the other higher-order
+exports, xpath/variant/sketch/geospatial refusals, `unwrap_udt`, …). The wrapper
+did not forward `"$@"`, so `./scripts/check_example_coverage.sh --require-execute`
+ran the static half locally and never saw the drift.
+
+Disposition:
+
+| Finding | Fix | Red-first |
+|---|---|---|
+| Live vs AST `F.*` drift | Enumerator unions `functions.py` `__all__`, installer export tables, and public defs on that module. 84 names added. `F.PandasUDFType` / `PythonUDFColumn` / `UserDefinedFunction` / `UserDefinedTableFunction` stay: they are members of `__all__`, public types not skipped. | After the union, inventory 763 / functions 444 / backlog 742. |
+| Wrapper swallowed flags | `"$@"` on the `exec` line. | Without `"$@"`, `sh … --help` ran the gate (`example-coverage: 763 public names…`). With `"$@"`, `--help` prints `usage:` and `--require-execute`. |
+
+`BACKLOG_BASELINE` 658 → **742**. Live execute-leg proof: `.venv/bin/python -I
+scripts/check_example_coverage.py --require-execute` after `make develop`,
+`repark._native` imported, no skip line, exit **0**,
+`example-coverage: 763 public names (dataframe=150, functions=444, io=42, session=41, ta=86); 19 covered; 742 backlog; 2 exceptions; 5 examples`.
+Live `F.__all__` / `ta.__all__` cross-check ran and passed.
+
 ## Disk
 
 Pickup: 520 GB free of 1.8 TB (71% used). No worktree. `target/` reused if a
@@ -194,7 +217,7 @@ COVERAGE_ATTESTATION:
   categories:
     - id: AT-1
       status: ATTACKED
-      evidence: AST enumerator emits 679 names across five families; inventory snapshot must match.
+      evidence: AST enumerator emits 763 names across five families (F.* includes installer __all__ mutations); inventory snapshot must match.
       artifacts: [scripts/check_example_coverage.py, docs/examples/inventory.txt, python/repark-parity/tests/test_ex_0_example_coverage.py]
     - id: AT-2
       status: ATTACKED

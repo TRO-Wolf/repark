@@ -9,4 +9,4 @@
 # ===========================================================================================
 set -euo pipefail
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-exec python3 -I "$repo_root/scripts/check_example_coverage.py"
+exec python3 -I "$repo_root/scripts/check_example_coverage.py" "$@"

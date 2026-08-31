@@ -3,6 +3,9 @@
 
 SSOT for the v0.7 example-drift gate. Prose points here and never restates the
 baselines. Walks facade sources by AST so ``make ci`` stays native-build-free.
+``F.*`` is the union of ``functions.py`` ``__all__``, the installer export
+tables that ``install_into`` appends at import, and public defs on that
+canonical module.
 When ``repark._native`` imports, every example script is executed and
 ``F.__all__`` / ``ta.__all__`` are cross-checked against the walk.
 
@@ -44,8 +47,24 @@ EXCEPTIONS_RELATIVE = "docs/examples/exceptions.txt"
 EXAMPLES_ROOT_RELATIVE = "docs/examples"
 FUNCTIONS_SOURCE = "python/repark/src/repark/spark/functions.py"
 TA_SOURCE = "python/repark/src/repark/spark/ta.py"
+FUNCTIONS_INSTALLER_SOURCES: tuple[str, ...] = (
+    "python/repark/src/repark/spark/functions_try.py",
+    "python/repark/src/repark/spark/functions_lambda.py",
+    "python/repark/src/repark/spark/functions_declared.py",
+)
+FUNCTION_EXPORT_BINDINGS: frozenset[str] = frozenset(
+    {
+        "TRY_EXPORTS",
+        "HIGHER_ORDER_EXPORTS",
+        "SKETCH_NAMES",
+        "CSV_XML_XPATH_NAMES",
+        "VARIANT_NAMES",
+        "GEOSPATIAL_NAMES",
+    }
+)
+FUNCTION_EXPORT_DICT_KEYS: frozenset[str] = frozenset({"FNP15_MESSAGES"})
 FAMILIES: tuple[str, ...] = ("dataframe", "functions", "io", "session", "ta")
-BACKLOG_BASELINE = 658
+BACKLOG_BASELINE = 742
 EXCEPTIONS_BASELINE = 2
 EXAMPLE_TIMEOUT_SECONDS = 120
 NATIVE_MODULE = "repark._native"
@@ -162,6 +181,67 @@ def parse_source(path: Path) -> ast.Module:
     return ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
 
 
+def assigned_value(node: ast.AST) -> tuple[str | None, ast.AST | None]:
+    """Return ``(name, value)`` for a module-level assignment, if any."""
+    if isinstance(node, ast.Assign) and len(node.targets) == 1:
+        target = node.targets[0]
+        if isinstance(target, ast.Name):
+            return target.id, node.value
+    if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+        return node.target.id, node.value
+    return None, None
+
+
+def dict_string_keys(value: ast.AST, *, where: str) -> list[str]:
+    """Read string keys from a dict literal."""
+    if not isinstance(value, ast.Dict):
+        raise RuntimeError(f"{where}: expected a dict literal")
+    keys: list[str] = []
+    for key in value.keys:
+        if key is None or not isinstance(key, ast.Constant) or not isinstance(key.value, str):
+            raise RuntimeError(f"{where}: every dict key must be a string constant")
+        keys.append(key.value)
+    return keys
+
+
+def public_module_defs(tree: ast.Module) -> list[str]:
+    """Return public FunctionDef and ClassDef names at module level."""
+    names: list[str] = []
+    for node in tree.body:
+        if isinstance(
+            node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+        ) and is_public_name(node.name):
+            names.append(node.name)
+    return names
+
+
+def collect_function_export_names(root: Path) -> list[str]:
+    """Return the F.* public names: ``__all__`` plus installer exports plus defs.
+
+    ``functions.py`` ``__all__`` is mutated at import by ``install_into`` from
+    the try / lambda / declared-absent modules. The AST reads those export
+    tables as well as the static ``__all__`` literal and public defs on the
+    canonical module.
+
+    pins: ex-0-example-drift-gate/C-001
+    """
+    names: set[str] = set()
+    functions_tree = parse_source(root / FUNCTIONS_SOURCE)
+    names.update(dunder_all(functions_tree, where=FUNCTIONS_SOURCE))
+    names.update(public_module_defs(functions_tree))
+    for relative in FUNCTIONS_INSTALLER_SOURCES:
+        tree = parse_source(root / relative)
+        for node in tree.body:
+            bound, value = assigned_value(node)
+            if bound is None or value is None:
+                continue
+            if bound in FUNCTION_EXPORT_BINDINGS:
+                names.update(string_list(value, where=f"{relative}:{bound}"))
+            elif bound in FUNCTION_EXPORT_DICT_KEYS:
+                names.update(dict_string_keys(value, where=f"{relative}:{bound}"))
+    return sorted(names)
+
+
 def dunder_all(tree: ast.Module, *, where: str) -> list[str]:
     """Return the module-level ``__all__`` list."""
     for node in tree.body:
@@ -243,13 +323,9 @@ def enumerate_public_surface(root: Path) -> list[tuple[str, str]]:
         Deterministic rows: family tag then the public name spelling.
     """
     rows: list[tuple[str, str]] = []
-    functions_path = root / FUNCTIONS_SOURCE
-    for function_name in dunder_all(
-        parse_source(functions_path),
-        where=FUNCTIONS_SOURCE,
-    ):
+    for function_name in collect_function_export_names(root):
         if not is_public_name(function_name):
-            raise RuntimeError(f"{FUNCTIONS_SOURCE}: private name in __all__: {function_name}")
+            raise RuntimeError(f"private F.* export name: {function_name}")
         rows.append(("functions", f"F.{function_name}"))
     ta_path = root / TA_SOURCE
     for kernel_name in dunder_all(parse_source(ta_path), where=TA_SOURCE):
