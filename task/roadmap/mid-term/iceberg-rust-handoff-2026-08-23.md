@@ -239,12 +239,11 @@ for the MW campaign to close (that wait is over — the addendum below).
   `_row_id` / `_last_updated_sequence_number` through compaction Spark-equal; the public
   CALL is lifted. The same carry still does **not** apply to COW DML (`OverwriteFiles`);
   registry `V3-COW-1` keeps that path refused.
-- **B-MOR-3** — `RewritePositionDeleteFiles` refuses live Puffin deletion vectors; a DV-aware
-  rewrite (or a DV-specific action) is the fork's call.
-- **V3-DANGLE-1** — a v3 compaction must drop the DVs scoped to the files it rewrote (Spark
-  reported `removed_delete_files_count = 6` there with no option set). **Reachable** now that
-  V3-LINEAGE-1 is lifted: RP-4's twelve-file fixture had no live DVs
-  (`removed_delete_files_count = 0`). Residue for V3-5.
+- **B-MOR-3** — `RewritePositionDeleteFiles` still refuses live Puffin deletion vectors
+  (OD-2). V3-5 measured that DV compaction is `rewrite_data_files`, not this action.
+- **V3-DANGLE-1** — **FIXED 2026-08-31 (V3-5).** `RewriteDataFiles` at `33be9a0` drops
+  in-scope DVs; engine CALL reports `removed_delete_files_count = 6` on the six-file
+  v3 MOR fixture. `where => 'part = 0'` keeps the sibling vector.
 
 *Addendum 2026-08-23:* the owner set v1.0's north star as **full production-grade format-v3**
 (engine charter: `task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md`), and the MW campaign

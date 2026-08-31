@@ -25,7 +25,8 @@ JVM, no repark required). See [../map.md](../map.md).
   lockstep, including the archived V3-3 and F-rp3-c7 record. STATUS C-004 start marker is
   `**Next, in order (revised 2026-08-31):**`.
   (pins: plan-1-northstar-fnp-sequence/C-001, C-002, C-003, C-004, C-005, C-006;
-  v3-3-dml/C-003; v3-4-serve-lineage-columns/C-010; fnp-7-try-inversions/C-016).
+  v3-3-dml/C-003; v3-4-serve-lineage-columns/C-010; fnp-7-try-inversions/C-016;
+  v3-5-dv-compaction/C-006).
 - `test_pr_247_owner_ruling.py` — **PR #247 revalidation (2026-08-27):** the owner-ruling blocks
   in `AGENTS.md` and `CLAUDE.md` stay byte-exact, unique, at the document start, and in regular
   files; one-byte drift, malformed or missing files, relocation, duplication, and symlink
