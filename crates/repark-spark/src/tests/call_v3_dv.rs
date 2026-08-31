@@ -9,6 +9,31 @@ use super::common::*;
 
 use iceberg::spec::FormatVersion;
 
+fn assert_rewrite_count_columns_are_int32(batch: &RecordBatch) {
+    let schema = batch.schema();
+    for name in [
+        "rewritten_data_files_count",
+        "added_data_files_count",
+        "failed_data_files_count",
+        "removed_delete_files_count",
+    ] {
+        let index = schema.index_of(name).expect(name);
+        let field = schema.field(index);
+        assert_eq!(
+            field.data_type(),
+            &DataType::Int32,
+            "{name} must be Arrow Int32 (C-004)"
+        );
+        assert!(!field.is_nullable(), "{name} is non-nullable");
+    }
+    let bytes_index = schema
+        .index_of("rewritten_bytes_count")
+        .expect("rewritten_bytes_count");
+    let bytes = schema.field(bytes_index);
+    assert_eq!(bytes.data_type(), &DataType::Int64);
+    assert!(!bytes.is_nullable());
+}
+
 async fn live_ids(ctx: &SessionContext, catalogs: &CatalogRegistry, table: &str) -> Vec<i32> {
     let batches = execute(
         ctx,
@@ -115,6 +140,7 @@ async fn call_rewrite_data_files_on_v3_drops_scoped_deletion_vectors() {
     .await
     .expect("collect rewrite result");
     let batch = &batches[0];
+    assert_rewrite_count_columns_are_int32(batch);
     let rewritten = call_count(batch, "rewritten_data_files_count");
     let added = call_count(batch, "added_data_files_count");
     let removed = call_count(batch, "removed_delete_files_count");

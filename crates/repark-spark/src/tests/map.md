@@ -104,8 +104,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   Pin `call_rewrite_data_files_on_v3_preserves_row_lineage`
   (`pins: rp-3-fork-repin/C-005; rp-4-fork-repin/C-003`).
   `call_v3_dv` (**V3-5**): six-file v3 MOR with live Puffin DVs;
-  `rewrite_data_files` drops all six (`removed_delete_files_count = 6`);
-  `rewrite_position_delete_files` still refuses (`B-MOR-3`).
+  `rewrite_data_files` drops all six (`removed_delete_files_count = 6`,
+  count columns Arrow Int32); `rewrite_position_delete_files` still refuses
+  (`B-MOR-3`).
   pins: v3-5-dv-compaction/C-001, C-002, C-003, C-004, C-007
   `call_manifests` (**MW-6**) pins the two non-nullable `int` columns, no-op zero result, current
   spec filter, delete-manifest refusal, and `MANIFEST-3` count divergence.
