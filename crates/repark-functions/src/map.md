@@ -122,6 +122,8 @@ higher-order kernels live under [`higher_order/`](higher_order/map.md).
   `ExprPlanner` keeps `CAST(INT) + 1` as Int32 so TypeCoercion cannot widen it.
   Pure-literal `1 + 1` / `2147483647 + 1` stay Int64 (the intended literal-width
   split). SMALLINT/Int16 still Arrow-wraps (residue 2026-08-30; not this partition).
+  Lambda-variable operands never arm (FNP-4c interaction; pin
+  `lambda_variable_operands_do_not_arm`).
   Planner `Planned` results alias to the original BinaryExpr name so
   unaliased SQL does not leak `__repark_spark_int_*`. Post-remediation corpus
   pins i64 sub/mul raise, i32 MIN×−1 wrap, i64 CAST+lit wrap. `install_integer_overflow`

@@ -188,7 +188,15 @@ fn spark_integer_result_type(
     {
         return None;
     }
+    if contains_lambda_variable(left_expr) || contains_lambda_variable(right_expr) {
+        return None;
+    }
     Some(left_width.wider(right_width).data_type())
+}
+
+fn contains_lambda_variable(expr: &Expr) -> bool {
+    expr.exists(|node| Ok(matches!(node, Expr::Lambda(_) | Expr::LambdaVariable(_))))
+        .unwrap_or(true)
 }
 
 #[derive(Clone, Copy)]
@@ -493,6 +501,25 @@ fn arithmetic_overflow_error(operator: Operator, is_long: bool) -> DataFusionErr
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn lambda_variable_operands_do_not_arm() {
+        let acc = Expr::LambdaVariable(datafusion::logical_expr::expr::LambdaVariable::new(
+            "x_0".to_string(),
+            Some(Arc::new(Field::new("x_0", DataType::Int32, true))),
+        ));
+        let one = Expr::Literal(ScalarValue::Int64(Some(1)), None);
+        assert!(
+            spark_integer_result_type(&acc, &DataType::Int32, &one, &DataType::Int64).is_none(),
+            "a lambda-variable operand keeps a provisional type; arming rewrites the merge \
+             output under the higher-order coercion loop and desynchronizes the declared \
+             LambdaVariable field"
+        );
+        let plain = Expr::Literal(ScalarValue::Int32(Some(1)), None);
+        assert!(
+            spark_integer_result_type(&acc, &DataType::Int32, &plain, &DataType::Int32).is_none()
+        );
+    }
 
     use datafusion::arrow::array::Array;
     use datafusion::arrow::record_batch::RecordBatch;

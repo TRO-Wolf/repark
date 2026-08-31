@@ -68,6 +68,24 @@ async fn transform_index_is_zero_based() {
 
 /// pins: fnp-4c-higher-order-kernels/C-003
 #[tokio::test]
+async fn aggregate_mixed_width_init_and_element_reaches_a_type_fixpoint() {
+    let ctx = hof_context();
+    let batch = collect(
+        &ctx,
+        "SELECT aggregate(make_array(1, 2, 3), CAST(0 AS INT), \
+         (acc, x) -> acc + coalesce(x, 0))",
+    )
+    .await;
+    let values = int_values(batch.column(0).as_ref());
+    assert_eq!(values, vec![Some(6)]);
+    assert_eq!(
+        batch.column(0).data_type(),
+        &datafusion::arrow::datatypes::DataType::Int64
+    );
+}
+
+/// pins: fnp-4c-higher-order-kernels/C-003
+#[tokio::test]
 async fn aggregate_applies_the_finish_lambda() {
     let ctx = hof_context();
     let batch = collect(

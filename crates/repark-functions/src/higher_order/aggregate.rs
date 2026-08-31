@@ -125,20 +125,23 @@ impl HigherOrderUDFImpl for SparkAggregate {
             },
         );
         let merge_params = vec![Arc::clone(&acc), element];
-        if lambdas.len() == 1 {
-            return Ok(LambdaParametersProgress::Complete(vec![merge_params]));
-        }
-        match &lambdas[1] {
-            ValueOrLambda::Lambda(_) => {}
-            ValueOrLambda::Value(_) => {
-                return plan_err!("{} expected a finish lambda", self.name());
+        if lambdas.len() == 2 {
+            match &lambdas[1] {
+                ValueOrLambda::Lambda(_) => {}
+                ValueOrLambda::Value(_) => {
+                    return plan_err!("{} expected a finish lambda", self.name());
+                }
             }
         }
         if step == 0 && merge_output.is_none() {
-            return Ok(LambdaParametersProgress::Partial(vec![
-                Some(merge_params),
-                None,
-            ]));
+            let mut items = vec![Some(merge_params)];
+            if lambdas.len() == 2 {
+                items.push(None);
+            }
+            return Ok(LambdaParametersProgress::Partial(items));
+        }
+        if lambdas.len() == 1 {
+            return Ok(LambdaParametersProgress::Complete(vec![merge_params]));
         }
         Ok(LambdaParametersProgress::Complete(vec![
             merge_params,

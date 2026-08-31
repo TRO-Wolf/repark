@@ -62,7 +62,7 @@ the dialect on the production Spark door.
 |---|---|---|---|
 | C-001 | `transform` is a RePark `HigherOrderUDFImpl` declaring `[element, index]`. Unary and `(element, index)` Spark arities both evaluate. Index is 0-based Int32. Index is not materialized when the lambda is unary. Values, Arrow type, null-array, empty-array, and null-element cells match Spark 4.1.2. | Facade Column API + Rust kernel pins, red-first against the FNP-4a `by_name("transform").is_none()` fixture. | **PROVEN** |
 | C-002 | `filter` is a RePark kernel declaring `[element, index]`, same arity and index contract as C-001. Null predicate drops the element (false). Return type equals the input array type. | Facade + Rust pins, red-first vs `by_name("filter").is_none()`. | **PROVEN** |
-| C-003 | `aggregate` is a RePark kernel: two value args (array, initial), 2-ary merge, optional 1-ary finish, sequential left-to-right fold. Empty array yields initial (then finish). Null array yields null. Merge/finish null handling matches the oracle. | Facade + Rust pins including finish-present and finish-absent. | **PROVEN** |
+| C-003 | `aggregate` is a RePark kernel: two value args (array, initial), 2-ary merge, optional 1-ary finish, sequential left-to-right fold. Empty array yields initial (then finish). Null array yields null. Merge/finish null handling matches the oracle. When merge output widens the accumulator, `lambda_parameters` returns Partial then Complete so the body is re-resolved at the widened type. | Facade + Rust pins including finish-present, finish-absent, and mixed-width init/element. | **PROVEN** |
 | C-004 | `reduce` is an alias of the `aggregate` kernel. PySpark signatures are byte-identical. No second kernel. | `by_name("reduce")` resolves the aggregate kernel; facade `F.reduce` matches `F.aggregate` on a shared fixture. | **PROVEN** |
 | C-005 | `forall` is the De Morgan rewrite of `exists` / `array_any_match`: false if any element is false; else null if any predicate is null; else true. Empty array → true. Null array → null. Not a nested higher-order call. | Facade + Rust pins on the five census cases. | **PROVEN** |
 | C-006 | `zip_with` pairs two arrays with a 2-ary lambda. The shorter array is null-padded to the longer length before the lambda runs. Result length is `max(len(left), len(right))`. Null either array → null. Return field is nullable if either input is. | Facade + Rust pins including unequal lengths and left-not-null/right-null. | **PROVEN** |
@@ -173,6 +173,26 @@ SELF_LOGIC_REVIEW:
   escalation: —
 ```
 
+```yaml
+SELF_LOGIC_REVIEW:
+  id: SLR-fnp-4c-aggregate-fixpoint
+  agent: Actor
+  action: Re-resolve the merge lambda at the widened accumulator type
+  charter_trace: FNP-4c C-003
+  preconditions:
+    - Live Spark 4.1.2 VALUES ARRAY<INT> + F.lit(0) is integer; long init is long: SATISFIED
+    - Failing facade cell LambdaVariable Int32 vs schema Int64: SATISFIED (reproduced)
+  success_condition: no-finish aggregate returns Partial then Complete; mixed-width rust pin green
+  step_risks:
+    - integer_spark arming inside lambdas: HANDLED(lambda_variable_operands_do_not_arm)
+  contingencies:
+    - Revert this commit: EXECUTABLE
+  tripwire_scan: CLEAN
+  uncertainty: NONE
+  verdict: PROCEED
+  escalation: —
+```
+
 ## Disk (AGENTS.md "Resource discipline")
 
 Checked 2026-08-31 at pickup: `/` 306 G free of 1.8 T (83% used). No worktree.
@@ -193,6 +213,7 @@ not an oracle. Spark SQL / ANSI `x -> y` parse stays FNP-4b.
 | `filter` | `x > 1`; even `i` | `[[2,3],[3],[],None]`; `[[1,3],[1,3],[],None]` |
 | `forall` | `x > 0`; `x > 1` | `[True,None,True,None]` bool; `[False,False,True,None]` |
 | `aggregate` | `acc+coalesce(x,0)`; raw `acc+x`; finish `*10` | `[6,4,0,None]`; `[6,None,0,None]`; `[60,40,0,None]` |
+| `aggregate` type (2026-08-31, post F-Y10-1) | same SQL-door VALUES `ARRAY<INT>` mix + `F.lit(0)` | Spark: `integer` (`F.lit(0)` is Int32; VALUES stay INT). Spark `cast("long")` init: `long`. RePark: `int64` (SQL `array(1,2,3)` / merge-output widen). Values match. |
 | `reduce` | same merge as aggregate | `[6,4,0,None]` |
 | `zip_with` | add with coalesce; `concat_ws` | max-len pad; missing side null |
 | `transform_keys` | `upper(k)` | `{BAR:2,FOO:1}` / `{}` / None |
@@ -224,6 +245,24 @@ Q-001/L-001/CL-001, Q-002/CL-003, Q-003, Q-004, L-002, L-003/CL-002.
 | `make py-test-facade` | 0 (4109 passed, 75 skipped) |
 
 pins: fnp-4c-higher-order-kernels/C-015
+
+## Aggregate coercion-fixpoint execution record (2026-08-31)
+
+CI wheels red after F-Y10-1 rebase: `LambdaVariable` Int32 vs schema Int64 on
+`F.aggregate` of the SQL-door VALUES mix with `F.lit(0)` and an inner
+`coalesce` literal. Spark on that Python is `integer` (Spark `lit(0)` is Int32
+and VALUES stay INT); Spark `cast("long")` init is `long`. RePark merge-output
+is Int64. Values `[6, 4, 0, None]`.
+
+| Command | Exit |
+|---|---|
+| `make verify` | 0 |
+| `make check-map-sync check-ledger-grammar` | 0 |
+| `python3 scripts/ledger_lifecycle.py check --base 60225cc427673cbc2e4bf23e90db376e602773dd` | 0 |
+| `make py-test` | 0 (472 passed) |
+| `make py-test-facade` | 0 (4160 passed, 75 skipped) |
+
+pins: fnp-4c-higher-order-kernels/C-003, C-015
 
 ```yaml
 COVERAGE_ATTESTATION:

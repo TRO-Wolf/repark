@@ -98,6 +98,7 @@ def test_aggregate_and_reduce_match_spark_null_and_empty() -> None:
         F.aggregate("a", F.lit(0), lambda acc, x: acc + F.coalesce(x, F.lit(0))).alias("r")
     ).toArrow()
     assert coalesced.column("r").to_pylist() == [6, 4, 0, None]
+    assert "int64" in str(coalesced.schema.field("r").type).lower()
     raw = frame.select(F.aggregate("a", F.lit(0), lambda acc, x: acc + x).alias("r")).toArrow()
     assert raw.column("r").to_pylist() == [6, None, 0, None]
     finished = frame.select(

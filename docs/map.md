@@ -26,7 +26,8 @@ repo.
   table (one row per dedicated bump PR; started 2026-08-15; RP-1 `5e7b2e4` on 2026-08-23).
 - [spark-sql-iceberg-parity.md](spark-sql-iceberg-parity.md) — the **divergence registry**: the
   single home for how repark differs from Apache Spark. F-Y10-1 (2026-08-30) names SMALLINT/Int16
-  overflow wrap as a dated residue of the int32/int64 partition. Four fields per row (repark's behavior,
+  overflow wrap as a dated residue of the int32/int64 partition. Lambda-variable operands of
+  integer `+`/`−`/`*` stay unarmed (2026-08-31, FNP-4c). Four fields per row (repark's behavior,
   Spark's behavior with its oracle basis, the `path::test_name` that pins it, the rationale) and
   two classes — DECLARED (§2 statement-surface gaps by surface, §3 identifier resolution, §4 type
   and value semantics, §5 facade drop-in semantics) and BACKLOG (§7 "Known Spark-parity
