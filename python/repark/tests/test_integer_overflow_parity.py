@@ -214,7 +214,7 @@ def test_facade_int32_add_python_lit_wraps_when_ansi_false() -> None:
 
 
 def test_facade_int32_sub_cols_wraps_when_ansi_false() -> None:
-    """Facade int32 MIN − 1 wraps under ansi=false.
+    """Facade int32 MIN - 1 wraps under ansi=false.
 
     pins: f-y10-1-int-overflow/C-002
     """
@@ -232,7 +232,7 @@ def test_facade_int32_sub_cols_wraps_when_ansi_false() -> None:
 
 
 def test_facade_int32_mul_cols_wraps_when_ansi_false() -> None:
-    """Facade int32 MAX × 2 wraps under ansi=false.
+    """Facade int32 MAX * 2 wraps under ansi=false.
 
     pins: f-y10-1-int-overflow/C-002
     """
@@ -250,7 +250,7 @@ def test_facade_int32_mul_cols_wraps_when_ansi_false() -> None:
 
 
 def test_int32_mul_min_times_neg_one_wraps_when_ansi_false() -> None:
-    """INT MIN × −1 wraps to INT MIN under ansi=false.
+    """INT MIN * -1 wraps to INT MIN under ansi=false.
 
     pins: f-y10-1-int-overflow/C-002
     """
@@ -261,7 +261,7 @@ def test_int32_mul_min_times_neg_one_wraps_when_ansi_false() -> None:
 
 
 def test_int64_sub_min_minus_one_raises_under_default_ansi() -> None:
-    """BIGINT MIN − 1 raises long ARITHMETIC_OVERFLOW.
+    """BIGINT MIN - 1 raises long ARITHMETIC_OVERFLOW.
 
     pins: f-y10-1-int-overflow/C-002
     """
@@ -273,7 +273,7 @@ def test_int64_sub_min_minus_one_raises_under_default_ansi() -> None:
 
 
 def test_int64_mul_max_times_two_raises_under_default_ansi() -> None:
-    """BIGINT MAX × 2 raises long ARITHMETIC_OVERFLOW.
+    """BIGINT MAX * 2 raises long ARITHMETIC_OVERFLOW.
 
     pins: f-y10-1-int-overflow/C-002
     """
