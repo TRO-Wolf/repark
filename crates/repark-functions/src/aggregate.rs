@@ -26,6 +26,18 @@ pub fn functions() -> Vec<Arc<AggregateUDF>> {
     vec![avg_udaf(), approx_count_distinct_udaf()]
 }
 
+/// Spark `try_sum` — overflow yields NULL. Reuses the datafusion-spark kernel.
+#[must_use]
+pub fn try_sum_udaf() -> Arc<AggregateUDF> {
+    datafusion_spark::function::aggregate::try_sum()
+}
+
+/// Spark `try_avg` — same kernel as `avg` (integer/float mean is Float64).
+#[must_use]
+pub fn try_avg_udaf() -> Arc<AggregateUDF> {
+    avg_udaf()
+}
+
 /// Expose DataFusion's `approx_distinct` under Spark's `approx_count_distinct` spelling as well.
 #[must_use]
 pub fn approx_count_distinct_udaf() -> Arc<AggregateUDF> {
@@ -40,7 +52,7 @@ pub fn approx_count_distinct_udaf() -> Arc<AggregateUDF> {
 /// Return Spark-compatible `avg` with Spark's null/count and argument contracts.
 #[must_use]
 pub fn avg_udaf() -> Arc<AggregateUDF> {
-    Arc::new(AggregateUDF::new_from_impl(SparkAvgWithRetract::new()))
+    Arc::new(AggregateUDF::new_from_impl(SparkAvgWithRetract::new()).with_aliases(["try_avg"]))
 }
 
 /// Spark AVG keeps Float64 retract and exact decimal retract; integers and floats become `Float64`.

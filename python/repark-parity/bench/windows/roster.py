@@ -160,7 +160,6 @@ ABSENT_PLANNING_NAMES: Final[tuple[str, ...]] = (
     "skewness",
     "some",
     "std",
-    "try_avg",
     "variance",
 )
 

@@ -456,7 +456,7 @@ its place after the visible gaps close, not before.
 
 The remaining order is:
 
-`FNP-15/16 → FNP-4c → FNP-7a/7b → FNP-9/10 → FNP-8 → FNP-11/12 → FNP-Z`.
+`FNP-9/10 → FNP-8 → FNP-11/12 → FNP-Z`.
 
 Each slash joins work that may share one tightly coupled PR. The campaign may use a fork-wait
 window because none of these units consumes F-17, but it does not gate v1.0 and yields when the

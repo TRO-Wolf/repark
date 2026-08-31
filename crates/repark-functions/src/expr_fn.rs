@@ -454,6 +454,66 @@ pub fn try_url_decode(arg: Expr) -> Expr {
     spark_url_udfs::try_url_decode().call(vec![arg])
 }
 
+/// Spark `try_divide(left, right)` — NULL on divide-by-zero or overflow.
+#[must_use]
+pub fn try_divide(left: Expr, right: Expr) -> Expr {
+    call(crate::try_invert::try_divide_udf(), vec![left, right])
+}
+
+/// Spark `try_mod(left, right)` — NULL on remainder-by-zero.
+#[must_use]
+pub fn try_mod(left: Expr, right: Expr) -> Expr {
+    call(crate::try_invert::try_mod_udf(), vec![left, right])
+}
+
+/// Spark `try_add(left, right)` — NULL on overflow.
+#[must_use]
+pub fn try_add(left: Expr, right: Expr) -> Expr {
+    call(crate::try_invert::try_add_udf(), vec![left, right])
+}
+
+/// Spark `try_subtract(left, right)` — NULL on overflow.
+#[must_use]
+pub fn try_subtract(left: Expr, right: Expr) -> Expr {
+    call(crate::try_invert::try_subtract_udf(), vec![left, right])
+}
+
+/// Spark `try_multiply(left, right)` — NULL on overflow.
+#[must_use]
+pub fn try_multiply(left: Expr, right: Expr) -> Expr {
+    call(crate::try_invert::try_multiply_udf(), vec![left, right])
+}
+
+/// Spark `try_element_at(container, key)` — alias of `element_at` (NULL on OOB / missing key).
+#[must_use]
+pub fn try_element_at(container: Expr, key: Expr) -> Expr {
+    element_at(container, key)
+}
+
+/// Spark `try_to_date(expr[, format])` — NULL on parse failure.
+#[must_use]
+pub fn try_to_date(args: Vec<Expr>) -> Expr {
+    call(crate::try_invert::try_to_date_udf(), args)
+}
+
+/// Spark `try_to_number(expr, format)` — NULL on value/format mismatch.
+#[must_use]
+pub fn try_to_number(expr: Expr, format: Expr) -> Expr {
+    call(crate::try_invert::try_to_number_udf(), vec![expr, format])
+}
+
+/// Spark `try_to_binary(expr[, format])` — NULL on decode failure. Default format is hex.
+#[must_use]
+pub fn try_to_binary(args: Vec<Expr>) -> Expr {
+    call(crate::try_invert::try_to_binary_udf(), args)
+}
+
+/// Spark `try_to_time` — matches Spark 4.1.2 `UNSUPPORTED_TIME_TYPE`.
+#[must_use]
+pub fn try_to_time(args: Vec<Expr>) -> Expr {
+    call(crate::try_invert::try_to_time_udf(), args)
+}
+
 /// Spark `bitmap_bit_position(n)` (from `datafusion-spark`).
 #[must_use]
 pub fn bitmap_bit_position(arg: Expr) -> Expr {

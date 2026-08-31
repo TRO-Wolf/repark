@@ -55,8 +55,7 @@ adds the per-unit execution contract.
 The remaining order is:
 
 ```
-FNP-15/16 honesty  →  FNP-4c higher-order kernels
-FNP-7a/7b try_*    →  FNP-9/10 collections + JSON  →  FNP-8 repatriation
+FNP-9/10 collections + JSON  →  FNP-8 repatriation
 FNP-11/12 time + numeric/aggregate families       →  FNP-Z close-out
 ```
 

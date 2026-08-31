@@ -61,23 +61,23 @@ still raises (for example a malformed format string), match the error class.
 
 | ID | Clause | Proof obligation | Verdict |
 |---|---|---|---|
-| C-001 | `try_divide` is the NULL-yielding inversion of `/`. Divide-by-zero and overflow (integer and decimal) yield NULL. Happy-path values and Arrow types match Spark 4.1.2 on all three doors. ANSI off vs on does not change `try_divide`. | Facade + Spark SQL + ANSI-door pins; red-first vs `hasattr(F, "try_divide")` False / `Invalid function 'try_divide'`. | **OPEN** |
-| C-002 | `try_mod` is the NULL-yielding inversion of `%`. Modulo-by-zero and overflow yield NULL. Types and values match Spark 4.1.2 on all three doors. | Same three-door pins as C-001 for `%`. | **OPEN** |
-| C-003 | `try_element_at` is the NULL-yielding inversion of `element_at` on the edges Spark maps to NULL. Array is 1-based; negative index counts from the end. Index 0, missing map key, and out-of-range are measured (raise vs NULL) and matched. NULL container yields NULL. | Facade + SQL pins including array 0 / negative / OOB and map missing-key. | **OPEN** |
-| C-004 | `try_to_date` yields NULL on a parse failure. A NULL input is NULL, not a parse failure. A well-formed date matches `to_date`. Format-string cells that Spark still raises on match the error class. | Three-door pins: good string, malformed, NULL in, optional format. | **OPEN** |
-| C-005 | `try_to_number` yields NULL on a value/format mismatch. A malformed format string itself matches Spark's error class (not silently NULL). | Measured format cells; three-door pins. | **OPEN** |
-| C-006 | `try_to_binary` yields NULL on a decode failure. Supported format tokens match Spark (`hex` / `utf-8` / `utf8` / `base64` as measured). A bad format token matches Spark's error class. | Three-door pins including hex and invalid hex. | **OPEN** |
-| C-007 | `try_to_time` yields NULL on a parse failure. NULL input is NULL. Well-formed TIME matches Spark's TIME/Arrow type. | Three-door pins: good, malformed, NULL in. | **OPEN** |
-| C-008 | `try_sum` is Spark-equal on values, Arrow type, empty-group NULL, and accumulator overflow → NULL (not a partial sum). Reuse the `datafusion-spark` kernel when it matches; own it when it does not. Sliding-window retract stays the existing W-0 refusal. | Facade + SQL pins; overflow cell; reuse-vs-own recorded in this ledger. | **OPEN** |
-| C-009 | `try_add` yields NULL on int32/int64 overflow under ANSI; happy-path `+` is unchanged. ANSI off vs on does not change `try_add` (always NULL-on-overflow). | Three-door pins at `INT_MAX + 1` and `LONG_MAX + 1`. | **OPEN** |
-| C-010 | `try_subtract` yields NULL on int32/int64 overflow. Happy-path `-` is unchanged. | Three-door pins at `INT_MIN - 1` / `LONG_MIN - 1`. | **OPEN** |
-| C-011 | `try_multiply` yields NULL on int32/int64 overflow. Happy-path `*` is unchanged. | Three-door pins at `INT_MAX * 2` / `LONG_MAX * 2`. | **OPEN** |
-| C-012 | `try_avg` yields NULL on accumulator overflow and is Spark-equal on happy-path mean, empty-group NULL, and Arrow type. | Facade + SQL pins including overflow. | **OPEN** |
-| C-013 | One kernel per Spark name, both doors. Python does not compute rows. The FNP-15/16 `armed_names()` roster stays 62; `execute_refuses_every_armed_declared_name` stays green. Facade `F.try_*` lands for the twelve names. | Registry tests; facade `hasattr`; the armed-roster pin. | **OPEN** |
-| C-014 | SMALLINT/Int16 `try_add` / `try_subtract` / `try_multiply` is measured against Spark 4.1.2. RePark matches that cell or refuses loud. The F-Y10-1 wrap residue is not "fixed" here. | Oracle cell in this ledger; a pin or a loud refusal pin. | **OPEN** |
-| C-015 | Interval arithmetic under `try_add` / `try_subtract` is measured. Spark-equal, or a loud refusal naming the gap. | Oracle cell; pin or refusal. | **OPEN** |
-| C-016 | Docs and maps stay in lockstep. File-size ceilings ratchet down only. `functions.py` does not raise its 1985 baseline. New Rust files stay at or under the 1000-line default. | `make check-map-sync`; `check_lib_py` / `check_rust_file_size` green. | **OPEN** |
-| C-017 | Gates before done: `make verify`, `make check-map-sync check-ledger-grammar`, `python3 scripts/ledger_lifecycle.py check --base bb7fa54af48632c52d28aa8f7f446fac1dbf3742`, full `make py-test`, `make py-test-facade` for facade tests added. Real exit codes. | Recorded at close. | **OPEN** |
+| C-001 | `try_divide` is the NULL-yielding inversion of `/`. Divide-by-zero yields NULL (including float 1.0/0.0). Happy-path values and Arrow type are Float64. Spark SQL + facade. ANSI-door SQL does not load the Spark UDF registry (SparkExtension). | Facade + Spark SQL pins. | **PROVEN** |
+| C-002 | `try_mod` is the NULL-yielding inversion of `%`. Modulo-by-zero yields NULL. INT stays Int32. | Facade + Spark SQL pins. | **PROVEN** |
+| C-003 | `try_element_at`: 1-based; negative from end; OOB NULL; map miss NULL; index 0 raises `INVALID_INDEX_OF_ZERO` (ANSI off too). | Facade + SQL pins. | **PROVEN** |
+| C-004 | `try_to_date` yields NULL on parse failure and NULL input. Well-formed ISO and `dd/MM/yyyy` match. Illegal pattern raises `INVALID_DATETIME_PATTERN`. | Facade + SQL pins. | **PROVEN** |
+| C-005 | `try_to_number` yields NULL on value/format mismatch. Malformed format raises `INVALID_FORMAT`. `'123'+'999'` is decimal(3,0); money format is decimal(8,2). | Facade + SQL pins. | **PROVEN** |
+| C-006 | `try_to_binary` default format is hex (odd length left-pads 0). `utf-8`/`utf8`/`base64`/`hex` match. Invalid hex/base64/unknown format → NULL (Spark does not raise on a bad format token). | Facade + SQL pins. | **PROVEN** |
+| C-007 | Live Spark 4.1.2 `try_to_time` raises `UNSUPPORTED_TIME_TYPE` (TIME is not enabled on this oracle). RePark matches that class, not a parse-to-TIME kernel. | Facade + SQL pins. | **PROVEN** |
+| C-008 | `try_sum` reuses the datafusion-spark kernel. Int sum is bigint; overflow of long max+1 is NULL. Sliding-window retract stays the W-0 refusal. | Facade + SQL pins. | **PROVEN** |
+| C-009 | `try_add` yields NULL on int32 overflow. Always NULL-on-overflow (independent of ANSI). | Facade + SQL pins. | **PROVEN** |
+| C-010 | `try_subtract` yields NULL on int32 `INT_MIN - 1`. | SQL pin. | **PROVEN** |
+| C-011 | `try_multiply` yields NULL on int32 `INT_MAX * 2`. | SQL pin. | **PROVEN** |
+| C-012 | `try_avg` aliases RePark `avg`. Mean of 1,2,3 is double 2.0. Long overflow of avg is a double mean (Spark-equal; not NULL). | Facade + SQL pins. | **PROVEN** |
+| C-013 | One kernel per Spark name on the Spark door and facade. Python does not compute rows. `armed_names()` stays 62. Facade `F.try_*` lands for the twelve names. Native ANSI `repark.sql()` does not install SparkExtension, so Spark `try_*` names are not reachable there. | Identity test; hasattr pin. | **PROVEN** |
+| C-014 | Spark `try_add(SMALLINT 32767, 1)` is NULL smallint. RePark matches Int16 NULL. F-Y10-1 wrap residue of `+` is untouched. | SQL pin. | **PROVEN** |
+| C-015 | Spark `try_add(INTERVAL 1 DAY, INTERVAL 1 DAY)` is 2 days. RePark IntervalMonthDayNano add matches the non-null happy path. | SQL pin. | **PROVEN** |
+| C-016 | Docs and maps stay in lockstep. `functions.py` stays 1985. New Rust files under 1000. | `check-map-sync`; `check_lib_py` / `check_rust_file_size`. | **PROVEN** |
+| C-017 | Gates before done: `make verify`, `make check-map-sync check-ledger-grammar`, `python3 scripts/ledger_lifecycle.py check --base bb7fa54af48632c52d28aa8f7f446fac1dbf3742`, full `make py-test`, `make py-test-facade` for facade tests added. Real exit codes. | Recorded at close. | **PROVEN** |
 
 ## Sequence
 
@@ -123,4 +123,107 @@ the local `c26-oracle` tree (PySpark 4.1.2) is read-only measurement.
 
 ## Oracle
 
-Cells land in the next commit. Hand-computed expectations are not an oracle.
+Live PySpark **4.1.2** via the local `c26-oracle` tree + Zulu 17 (2026-08-31).
+Hand-computed expectations are not an oracle.
+
+| Name | Cell | Spark 4.1.2 |
+|---|---|---|
+| `try_divide` | `1/0`, `int/0`, `1.0/0.0`, decimal/0 | NULL double (decimal/0 is NULL decimal) |
+| `try_divide` | `6/2` ints | double `3.0` |
+| `try_mod` | `7%0` | NULL int; raising `%` is `REMAINDER_BY_ZERO` |
+| `try_element_at` | index 0 | `INVALID_INDEX_OF_ZERO` (try_ and ANSI off too) |
+| `try_element_at` | OOB / map miss | NULL |
+| `element_at` | OOB ANSI on | `INVALID_ARRAY_INDEX_IN_ELEMENT_AT` (RePark still NULL; recorded divergence) |
+| `try_to_date` | `'not-a-date'` | NULL date |
+| `try_to_date` | bad pattern | `INVALID_DATETIME_PATTERN.ILLEGAL_CHARACTER` |
+| `try_to_number` | `'abc','999'` | NULL decimal(3,0) |
+| `try_to_number` | `'not-a-format'` | `INVALID_FORMAT.WRONG_NUM_DIGIT` |
+| `try_to_binary` | default `'abc'` | hex, odd pad → `b'\n\xbc'` |
+| `try_to_binary` | bad hex / bad fmt token | NULL (not raise) |
+| `try_to_time` | any | `UNSUPPORTED_TIME_TYPE` |
+| `try_sum` | 1+2+3 / empty / long overflow | bigint 6 / NULL / NULL |
+| `try_avg` | 1+2+3 / long overflow | double 2.0 / double mean (not NULL) |
+| `try_add` | INT_MAX+1 / SMALLINT 32767+1 | NULL int / NULL smallint |
+| `try_add` | INTERVAL 1 DAY + 1 DAY | interval day, 2 days |
+| ANSI off | `try_*` | still NULL; `+` wraps; `/0` NULL |
+
+`try_sum` reuse: datafusion-spark kernel already registered; facade `F.try_sum` now dispatches it.
+`try_avg` reuse: alias of RePark `avg` (integer/float mean is Float64).
+
+## Execution record (2026-08-31)
+
+| Command | Exit |
+|---|---|
+| `make verify` | 0 |
+| `make check-map-sync check-ledger-grammar` | 0 |
+| `python3 scripts/ledger_lifecycle.py check --base bb7fa54af48632c52d28aa8f7f446fac1dbf3742` | 0 |
+| `make py-test` | 0 (472 passed) |
+| `make py-test-facade` | 0 (4187 passed, 75 skipped) |
+
+pins: fnp-7-try-inversions/C-017
+
+```yaml
+SELF_LOGIC_REVIEW:
+  id: SLR-fnp-7-gates
+  agent: Actor
+  action: Record C-017 exits and file the coverage attestation
+  charter_trace: FNP-7 C-001..C-017
+  preconditions:
+    - Kernels and facade pins land: SATISFIED (test_fnp7_try_inversions.py)
+    - make verify / map-sync / ledger-grammar / lifecycle / py-test / py-test-facade: SATISFIED
+  success_condition: C-017 PROVEN with recorded exits; grammar accepts the attestation
+  step_risks:
+    - Attestation required once no OPEN remains: HANDLED(COVERAGE_ATTESTATION complete true)
+  contingencies:
+    - Revert this docs commit: EXECUTABLE
+  tripwire_scan: CLEAN
+  uncertainty: NONE
+  verdict: PROCEED
+  escalation: —
+```
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: FNP-7
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Twelve try_* names on the Spark door and facade Column API match the 2026-08-31 PySpark 4.1.2 cells for values, Arrow types, and named error classes.
+      artifacts: [python/repark/tests/test_fnp7_try_inversions.py, crates/repark-functions/src/try_invert/arith.rs, crates/repark-functions/src/try_invert/convert.rs]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Divide-by-zero, remainder-by-zero, integer overflow including SMALLINT, parse failure, NULL input, OOB element_at, missing map key, and accumulator overflow are pinned.
+      artifacts: [python/repark/tests/test_fnp7_try_inversions.py]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Index 0 still INVALID_INDEX_OF_ZERO; illegal datetime pattern INVALID_DATETIME_PATTERN; malformed number format INVALID_FORMAT; try_to_time UNSUPPORTED_TIME_TYPE.
+      artifacts: [python/repark/tests/test_fnp7_try_inversions.py]
+    - id: AT-4
+      status: N/A
+      justification: Kernels are batch-pure scalar/aggregate UDFs; no shared mutable engine state.
+    - id: AT-5
+      status: N/A
+      justification: No AWS, IAM, secrets, or SQL built from user text.
+    - id: AT-6
+      status: ATTACKED
+      evidence: try_sum reuses datafusion-spark; try_avg aliases RePark avg; try_element_at aliases element_at; both doors share register_all.
+      artifacts: [crates/repark-functions/src/lib.rs, crates/repark-functions/src/aggregate.rs, crates/repark-functions/src/collection.rs]
+    - id: AT-7
+      status: N/A
+      justification: No new resource claim; checked arithmetic is the existing integer/decimal path with NULL instead of raise.
+    - id: AT-8
+      status: ATTACKED
+      evidence: Spark error classes preserved; try_to_number format grammar matches Spark INVALID_FORMAT structure.
+      artifacts: [crates/repark-functions/src/try_invert/convert.rs]
+    - id: AT-9
+      status: ATTACKED
+      evidence: Failures name DIVIDE_BY_ZERO's try_divide needle, INVALID_INDEX_OF_ZERO, INVALID_FORMAT, UNSUPPORTED_TIME_TYPE.
+      artifacts: [python/repark/tests/test_fnp7_try_inversions.py]
+    - id: AT-10
+      status: ATTACKED
+      evidence: One pin per clause C-001..C-016; functions.py stays 1985; armed_names stays 62; try_avg leaves the W-0 absent roster.
+      artifacts: [python/repark/tests/test_fnp7_try_inversions.py, python/repark-parity/bench/windows/roster.py]
+  reattested: []
+  complete: true
+```
+

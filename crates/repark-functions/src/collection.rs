@@ -55,7 +55,7 @@ pub fn str_to_map_udf() -> Arc<ScalarUDF> {
 /// Spark `element_at` UDF instance (1-based array / map-by-key).
 #[must_use]
 pub fn element_at_udf() -> Arc<ScalarUDF> {
-    Arc::new(ScalarUDF::from(SparkElementAt::new()))
+    Arc::new(ScalarUDF::from(SparkElementAt::new()).with_aliases(["try_element_at"]))
 }
 
 /// Embedded `[]` UDF: 0-based access with NULL for invalid indices.

@@ -16,8 +16,10 @@ window-exec spill is UNMEASURED.
 ## Contents
 
 - `roster.py` — Spark 4.1.2 probe roster (the C-002 / C-009 finite domain), SQL
-  shapes, thirteen sliding-refuse names, sixteen planning-absent names, scale
-  constants (`FULL_UNPARTITIONED_ROWS = 1e7`).
+  shapes, thirteen sliding-refuse names, fifteen planning-absent names (`try_avg`
+  left the absent set when FNP-7 landed), scale constants
+  (`FULL_UNPARTITIONED_ROWS = 1e7`).
+  pins: fnp-7-try-inversions/C-012
 - `datagen.py` — seeded Arrow/parquet generator (`id`, `ts`, `v`, `vi`, `v2`, `part`).
 - `hardware.py` — machine-profile snapshot (cpu, cores, governor, ram).
 - `models.py` — pydantic `ProbeRow` / `CellTiming` / `CellResult` / `RunResult`.

@@ -13,8 +13,9 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
 Source documentation may retain model provenance; code-quality grade tags stay outside code.
 
 Child modules use Rust's default layout: `str_to_map`, `shuffle`, and `map_from_entries` live under
-[`collection/`](collection/map.md), `java_uri` lives under [`url/`](url/map.md), and Spark
-higher-order kernels live under [`higher_order/`](higher_order/map.md).
+[`collection/`](collection/map.md), `java_uri` lives under [`url/`](url/map.md), Spark
+higher-order kernels live under [`higher_order/`](higher_order/map.md), and FNP-7 `try_*`
+scalars live under [`try_invert/`](try_invert/map.md).
 
 ## Contents
 
@@ -48,6 +49,10 @@ higher-order kernels live under [`higher_order/`](higher_order/map.md).
   `map_zip_with`) plus the FNP-4a `exists` alias of `array_any_match`. Registry both doors
   read. pins: fnp-4c-higher-order-kernels/C-001, C-002, C-003, C-004, C-005, C-006, C-007,
   C-008, C-009, C-010, C-011, C-013, C-014
+- `try_invert/` — FNP-7a/7b scalar `try_*` kernels (NULL instead of raise). `try_element_at`
+  aliases `element_at`. `try_sum` reuses datafusion-spark; `try_avg` aliases RePark `avg`.
+  pins: fnp-7-try-inversions/C-001, C-002, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
+  C-011, C-012, C-014, C-015
 - `lib.rs` — crate-root stays at **175** under `check_lib_rs` with `pub mod timestamp_type`.
 - `timestamp_type.rs` — **Q10:** Spark-door `spark.sql.timestampType` carrier
   (`SparkTimestampTypeConfig`, `PREFIX = repark.timestamp`, default

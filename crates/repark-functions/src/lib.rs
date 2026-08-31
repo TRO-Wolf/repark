@@ -25,6 +25,7 @@ pub mod spark_split_part;
 pub mod string;
 pub mod timestamp_cast;
 pub mod timestamp_type;
+pub mod try_invert;
 pub mod url;
 pub mod validate;
 
@@ -81,6 +82,7 @@ pub fn register_all(ctx: &SessionContext) {
         ctx.register_udf(udf.as_ref().clone());
     }
     validate::register(ctx);
+    try_invert::register(ctx);
     higher_order::register(ctx);
     decimal_spark::register_spark_decimal_planner(ctx);
     integer_spark::register_spark_integer_planner(ctx);
