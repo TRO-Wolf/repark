@@ -223,31 +223,23 @@ spark.sql("SELECT count(*) AS n FROM local.sales.orders").show()
 
 Writes into an existing table resolve columns **by name**, not by position.
 
+### Partition overwrite
+
+Static `INSERT OVERWRITE t PARTITION (k=v) SELECT …` replaces only the named identity
+partitions (Iceberg `OverwriteFiles`). Dynamic `INSERT OVERWRITE t PARTITION (k) SELECT …`
+and `writeTo(...).overwritePartitions()` replace only the partitions present in the source
+(Iceberg `ReplacePartitions`). An empty dynamic overwrite refuses. Spark SQL default-STATIC
+empty `PARTITION (k)` wipes; Spark `writeTo().overwritePartitions()` empty is a no-op;
+RePark refuses. See registry
+[DML-1](../spark-sql-iceberg-parity.md#dml-1--insert-overwrite--partition-).
+
 ### The write forms that refuse
 
-Three, and each refuses because the alternative would be silent data loss:
+Each refuses because the alternative would be silent data loss:
 
-- **`writeTo(...).overwritePartitions()`** — Spark's dynamic partition overwrite:
-
-  ```text
-  UnsupportedOperationException: overwritePartitions: Spark's dynamic partition overwrite
-  (partition-scoped replace) is not supported by the repark engine yet — a static INSERT OVERWRITE
-  would silently replace ALL rows, not just the source's partitions. Use createOrReplace() for a
-  deliberate full rebuild, or append(). (Engine path: iceberg-rust fork ReplacePartitions, not yet
-  wired.)
-  ```
-
-  `writeTo(...).overwrite(condition)` refuses for the same reason.
-
-- **`INSERT OVERWRITE … PARTITION (…)`** — registry row
-  [DML-1](../spark-sql-iceberg-parity.md#dml-1--insert-overwrite--partition-):
-
-  ```text
-  UnsupportedOperationException: This feature is not implemented: INSERT OVERWRITE … PARTITION (…)
-  is not supported yet (static and dynamic partition overwrite). Empty sources must not full-table
-  wipe sibling partitions; non-empty sources must not silently whole-table replace. Use static
-  whole-table INSERT OVERWRITE, or DELETE with a partition predicate + INSERT INTO …
-  ```
+- **`writeTo(...).overwrite(condition)`** — no engine path for a caller-supplied overwrite
+  filter. Use `overwritePartitions()` for Spark's dynamic partition overwrite, or
+  `DELETE` + `append`.
 
 - **`TRUNCATE TABLE`** — registry row
   [DML-2](../spark-sql-iceberg-parity.md#dml-2--truncate-table), because Iceberg has no truncate

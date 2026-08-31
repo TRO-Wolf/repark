@@ -251,18 +251,13 @@ def test_write_to_append_vs_v1_insert_into_discriminator(spark: ReparkSession) -
     assert v2_row != v1_row
 
 
-def test_write_to_overwrite_partitions_refuses_loud_and_leaves_data(
+def test_write_to_overwrite_partitions_replaces_source_partitions_only(
     spark: ReparkSession,
 ) -> None:
-    """overwritePartitions raises UnsupportedOperationException; target untouched.
+    """overwritePartitions replaces only source partitions; empty input refuses.
 
-    Spark Iceberg semantics are DYNAMIC partition overwrite (source partitions only; empty
-    source = no-op), but the engine has only static whole-table INSERT OVERWRITE — honoring the
-    call silently replaced ALL rows. Refuse loud until the fork's ReplacePartitions is wired;
-    both spellings gate and the target's rows survive the raise bit-for-bit.
+    pins: dml-b-insert-overwrite/C-002, C-003, C-004
     """
-    from repark.errors import UnsupportedOperationException
-
     table = f"{CATALOG}.{NS}.ow_gate"
     (
         spark.sql("SELECT * FROM (VALUES (1,'a'),(2,'b')) AS t(id, cat)")
@@ -271,13 +266,18 @@ def test_write_to_overwrite_partitions_refuses_loud_and_leaves_data(
         .create()
     )
     src = spark.sql("SELECT * FROM (VALUES (9,'a')) AS t(id, cat)")
-    with pytest.raises(UnsupportedOperationException, match="dynamic partition overwrite"):
-        src.writeTo(table).overwritePartitions()
+    src.writeTo(table).overwritePartitions()
+    got = spark.sql(f"SELECT id, cat FROM {table} ORDER BY id").to_arrow()
+    assert got.schema.field("id").type in (pa.int32(), pa.int64())
+    assert got.schema.field("cat").type in (pa.string(), pa.large_string())
+    assert got.to_pylist() == [{"id": 2, "cat": "b"}, {"id": 9, "cat": "a"}]
+    ops = spark.sql(f"SELECT operation FROM {table}.snapshots ORDER BY committed_at").to_arrow()
+    assert ops.column("operation").to_pylist()[-1] == "overwrite"
     empty = spark.sql("SELECT * FROM (VALUES (1,'a')) AS t(id, cat) WHERE false")
-    with pytest.raises(UnsupportedOperationException, match="dynamic partition overwrite"):
+    with pytest.raises(AnalysisException, match="Cannot dynamically overwrite partitions"):
         empty.writeTo(table).overwrite_partitions()
-    got = spark.sql(f"SELECT id, cat FROM {table} ORDER BY id").to_arrow().to_pylist()
-    assert got == [{"id": 1, "cat": "a"}, {"id": 2, "cat": "b"}], "target must be untouched"
+    still = spark.sql(f"SELECT id, cat FROM {table} ORDER BY id").to_arrow().to_pylist()
+    assert still == [{"id": 2, "cat": "b"}, {"id": 9, "cat": "a"}]
 
 
 def test_save_as_table_empty_overwrite_wipes_all(spark: ReparkSession) -> None:
@@ -524,8 +524,7 @@ def test_write_orc_loud(spark: ReparkSession, tmp_path: Path) -> None:
 def test_mini_dogfood_write_to_production_snippet(spark: ReparkSession) -> None:
     """Reproduce the production writeTo / sortWithinPartitions / createOrReplace shape.
 
-    overwritePartitions is refused loud (dynamic partition overwrite unavailable), exactly what
-    the production write_roll_schedule would hit on repark today.
+    pins: dml-b-insert-overwrite/C-003
     """
     fq_table = f"{CATALOG}.{NS}.spliced_futures_1m"
     schedule_table = f"{CATALOG}.{NS}.schedule"
@@ -556,17 +555,15 @@ def test_mini_dogfood_write_to_production_snippet(spark: ReparkSession) -> None:
     assert rows == [{"id": 1}, {"id": 2}, {"id": 3}]
 
     schedule_df = spark.sql("SELECT * FROM (VALUES (10, 'a'),(20, 'b')) AS t(id, cat)")
-    schedule_df.writeTo(schedule_table).partitionedBy(F.col("cat"), F.col("id")).create()
-    # The production job fails here, visibly, not silently.
-    with pytest.raises(UnsupportedOperationException, match="dynamic partition overwrite"):
-        spark.sql("SELECT * FROM (VALUES (99, 'a')) AS t(id, cat)").writeTo(
-            schedule_table
-        ).overwritePartitions()
+    schedule_df.writeTo(schedule_table).partitionedBy(F.col("cat")).create()
+    spark.sql("SELECT * FROM (VALUES (99, 'a')) AS t(id, cat)").writeTo(
+        schedule_table
+    ).overwritePartitions()
     assert spark.sql(
         f"SELECT id, cat FROM {schedule_table} ORDER BY id"
     ).to_arrow().to_pylist() == [
-        {"id": 10, "cat": "a"},
         {"id": 20, "cat": "b"},
+        {"id": 99, "cat": "a"},
     ]
 
     spliced.writeTo(f"{CATALOG}.{NS}.years_prod").partitionedBy(

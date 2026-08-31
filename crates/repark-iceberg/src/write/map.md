@@ -76,6 +76,12 @@ repark-core's error map.
   `write_overwrite_staged_files_from_stream` (positional map + **WI-1** store-assignment gate +
   stream stage) + `commit_overwrite_replace_all` + `parse_overwrite_isolation`
   (absent→snapshot | snapshot | serializable | none | invalid-loud).
+- `partition_overwrite.rs` — **DML-B:** static `PARTITION (k=v)` via
+  `overwrite_files` / `overwrite_by_row_filter` + `validate_added_files_match_overwrite_filter`
+  (pin `commit_rejects_added_file_outside_overwrite_filter`);
+  dynamic `PARTITION (k)` / empty `PARTITION ()` via `replace_partitions`; empty-input
+  dynamic guard names the three empty-dynamic surfaces (STATIC wipe, writeTo no-op, RePark
+  refuse) in its rustdoc and error. pins: dml-b-insert-overwrite/C-001, C-002, C-004
 - `insert_gate.rs` — **WI-2 (2026-08-15):** `InsertStoreAssignment`, an `AnalyzerRule` over
   `LogicalPlan::Dml(WriteOp::Insert(_))` that runs `store_assign.rs`'s matrix — imported, never
   duplicated — against the pre-cast types in the synthesized projection's INPUT schema. Registered
@@ -163,6 +169,7 @@ repark-core's error map.
 | Bulk-append batches through the sanctioned commit path | `append.rs` (`append`) |
 | Stream a SELECT into a staged (CTAS) write with bounded memory | `write_data_files_from_stream` (`merge/mod.rs`) / `write_partitioned_data_files_from_stream` (`append.rs`) |
 | Stage + commit full-table INSERT OVERWRITE | `overwrite.rs` |
+| Stage + commit partition-scoped INSERT OVERWRITE | `partition_overwrite.rs` |
 | Cap concurrent Iceberg file writers (session conf) | `repark.write.max-concurrent-files` via `concurrency.rs` |
 | Parquet compression codec (table property) | `writer_props.rs` |
 | Change MERGE INTO semantics | [merge/map.md](merge/map.md) |

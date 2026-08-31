@@ -1348,6 +1348,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   [ST-1](../../../docs/spark-sql-iceberg-parity.md#st-1--show-tables-in-is-unimplemented) /
   [FA-2](../../../docs/spark-sql-iceberg-parity.md#fa-2--listdatabases-leaves-description-and-locationuri-as-none).
   SQL sibling smoke: `SHOW NAMESPACES IN` (full pin in `test_show_namespaces.py`).
+- `test_dml_b_partition_overwrite.py` — **DML-B:** facade `spark.sql` `INSERT OVERWRITE …
+  PARTITION` static/dynamic pins (values, Arrow types, snapshot operation, empty-dynamic
+  refuse). pins: dml-b-insert-overwrite/C-001, C-002, C-004, C-005
 - `test_sql_dml_eager.py` — WG-1 (F-BR-2): bare `spark.sql` DML executes **eagerly**, PySpark
   parity. A bare `INSERT`/`DELETE`/`UPDATE` whose returned DataFrame is never collected still
   applies the write (pre-fix: a silent no-op); collecting the returned DataFrame does not re-apply
@@ -2319,7 +2322,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 | Add a withColumnRenamed / na (fillna/dropna) test | `test_na_rename.py` |
 | Add a `DataFrame.write` (saveAsTable/insertInto) test | `test_writer.py` |
 | Add a CTAS write-path type-derivation test (division/write-schema) | `test_ctas_division_writeback.py` |
-| Add a Group I `writeTo` / path parquet / `sortWithinPartitions` / `F.weekday` test | `test_writer_v2.py` (octo r1–r4 + 2026-07-22 review: empty stage-swap, sticky transforms incl. Window.partitionBy, same-session path read after overwrite; overwritePartitions now a LOUD gate — raise + target untouched, both spellings (the empty-wipe pin replaced); C1-Q-005 option warn-once; C3-SEC-001 transform identity quoting pin (now incl. `bucket`); O3-C1-Q-003 `insertInto` empty overwrite wipe pin; Group P: `test_bucket_partitioned_by_round_trips_e2e` + `test_years_partitioned_by_round_trips_e2e` — non-identity transform CTAS works end-to-end (replaced the old transform-gate rejects)) |
+| Add a Group I `writeTo` / path parquet / `sortWithinPartitions` / `F.weekday` test | `test_writer_v2.py` (octo r1–r4 + 2026-07-22 review: empty stage-swap, sticky transforms incl. Window.partitionBy, same-session path read after overwrite; **DML-B** `overwritePartitions` replaces source partitions, empty input refuses, snapshot `overwrite` (pins: dml-b-insert-overwrite/C-003, C-004); C1-Q-005 option warn-once; C3-SEC-001 transform identity quoting pin (now incl. `bucket`); O3-C1-Q-003 `insertInto` empty overwrite wipe pin; Group P: `test_bucket_partitioned_by_round_trips_e2e` + `test_years_partitioned_by_round_trips_e2e` — non-identity transform CTAS works end-to-end (replaced the old transform-gate rejects)) |
+| Add a facade SQL `INSERT OVERWRITE … PARTITION` pin (DML-B) | `test_dml_b_partition_overwrite.py` — static nonempty/empty + Hive arity + two-key AND/incomplete + string/NULL + dynamic keep-siblings + empty-dynamic refuse (pins: dml-b-insert-overwrite/C-001, C-002, C-004, C-005) |
 | Add a Window / date-function / row_number test | `test_functions_dates.py` |
 | Add a `declareSorted` / sort-elimination plan or refusal test | `test_declare_sorted.py` |
 | Add a `tightenNulls` facade pin | `test_declare_sorted_tighten.py` |

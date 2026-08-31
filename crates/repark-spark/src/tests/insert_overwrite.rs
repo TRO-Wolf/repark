@@ -910,34 +910,28 @@ async fn empty_insert_into_does_not_wipe() {
     );
 }
 
-/// Empty `INSERT OVERWRITE … PARTITION (…)` must NOT full-table DELETE.
+/// Empty static `INSERT OVERWRITE … PARTITION` drops only that partition.
+/// pins: dml-b-insert-overwrite/C-001, C-004, C-005
 #[tokio::test]
-async fn empty_insert_overwrite_partition_refuses_full_wipe() {
+async fn empty_insert_overwrite_partition_drops_only_named_partition() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     run(
         &ctx,
         &catalogs,
-        "CREATE TABLE ice.sales.t AS SELECT * FROM src",
+        "CREATE TABLE ice.sales.t USING iceberg PARTITIONED BY (id) AS SELECT * FROM src",
     )
     .await;
-
-    let error = execute(
+    run(
         &ctx,
         &catalogs,
-        "INSERT OVERWRITE ice.sales.t PARTITION (id = 1) SELECT * FROM src WHERE false",
+        "INSERT OVERWRITE ice.sales.t PARTITION (id = 1) SELECT name FROM src WHERE false",
     )
-    .await
-    .expect_err("partitioned empty overwrite must fail loud, not wipe siblings");
-    let message = error.to_string();
-    assert!(
-        message.contains("PARTITION") || message.contains("partition"),
-        "error must name PARTITION gap, got: {message}"
-    );
+    .await;
     assert_eq!(
-        rows(&ctx, &catalogs, "SELECT * FROM ice.sales.t").await,
-        3,
-        "partitioned empty overwrite must leave all rows (no full-table DELETE)"
+        table_rows(&ctx, &catalogs, "ice.sales.t").await,
+        vec![(2, "b".into()), (3, "c".into())],
+        "empty static partition overwrite must drop only id=1"
     );
 }
 
@@ -968,38 +962,28 @@ async fn empty_insert_overwrite_limit_zero_wipes_table() {
     );
 }
 
-/// Non-empty `INSERT OVERWRITE … PARTITION` also refuses (not only empty).
+/// Non-empty static `INSERT OVERWRITE … PARTITION` replaces only that partition.
+/// pins: dml-b-insert-overwrite/C-001, C-005
 #[tokio::test]
-async fn insert_overwrite_partition_nonempty_refuses_whole_table_replace() {
+async fn insert_overwrite_partition_nonempty_replaces_only_named_partition() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     run(
         &ctx,
         &catalogs,
-        "CREATE TABLE ice.sales.t AS SELECT * FROM src",
+        "CREATE TABLE ice.sales.t USING iceberg PARTITIONED BY (id) AS SELECT * FROM src",
     )
     .await;
-
-    let error = execute(
+    run(
         &ctx,
         &catalogs,
-        "INSERT OVERWRITE ice.sales.t PARTITION (id = 1) SELECT * FROM src WHERE id = 1",
+        "INSERT OVERWRITE ice.sales.t PARTITION (id = 1) SELECT 'z' AS name",
     )
-    .await
-    .expect_err("partitioned overwrite must fail loud for non-empty sources too");
-    let message = error.to_string();
-    assert!(
-        message.contains("PARTITION") || message.contains("partition"),
-        "error must name PARTITION gap, got: {message}"
-    );
-    assert!(
-        message.contains("not supported"),
-        "error must be a support gap, got: {message}"
-    );
+    .await;
     assert_eq!(
-        rows(&ctx, &catalogs, "SELECT * FROM ice.sales.t").await,
-        3,
-        "refused PARTITION overwrite must leave all rows"
+        table_rows(&ctx, &catalogs, "ice.sales.t").await,
+        vec![(1, "z".into()), (2, "b".into()), (3, "c".into())],
+        "static partition overwrite must not whole-table replace"
     );
 }
 

@@ -27,6 +27,7 @@ mod merge;
 mod metadata_tables;
 mod namespace_ddl;
 mod normalize;
+mod partition_overwrite;
 mod partitioned_ctas;
 mod partitioned_merge;
 mod ref_ddl;

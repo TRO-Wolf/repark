@@ -104,9 +104,9 @@ async fn execute_time_travelled(
         } => schema_ddl::execute_drop_schema(cx, names, *if_exists, *cascade).await,
         Statement::AlterTable(alter) => alter::execute_alter_table(cx, alter).await,
         Statement::Merge(merge) => merge::execute_merge(cx, merge).await,
-        // --- The refuse set (design §2 Q7 / Q9).
+        // --- INSERT OVERWRITE: PARTITION forms execute; whole-table stays Q9.
         Statement::Insert(insert) if insert.overwrite => {
-            Err(refusals::insert_overwrite(&insert.table.to_string()))
+            crate::insert_overwrite::execute_insert_overwrite(cx, insert).await
         }
         Statement::Call(function) => Err(refusals::maintenance_call(&function.name.to_string())),
         Statement::Truncate(truncate) => Err(refusals::truncate(

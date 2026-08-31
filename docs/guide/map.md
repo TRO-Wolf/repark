@@ -56,7 +56,8 @@ illustrative. A claim with no verified basis does not go in.
 - [iceberg-guide.md](iceberg-guide.md) — catalogs (Glue primary, S3 Tables secondary, the local
   in-memory one), the `spark.sql.catalog.<name>.*` keys, accepted warehouse locations
   (`s3://` / `s3a://` / `file://` / bare absolute path) and their refusals, reading and writing
-  through the facade, the write forms that refuse (DML-1 / DML-2 / `overwritePartitions`), time
+  through the facade, partition overwrite (DML-1 FIXED), the write forms that refuse
+  (DML-2 / `overwrite(condition)`), time
   travel both spellings plus the reader options, the sixteen metadata tables, maintenance `CALL`
   plus `register_table` adoption (V3-1, including the Spark-written v3 fixture numbers),
   and the registry sections that govern each. **MW-6** added "Compacting manifests"

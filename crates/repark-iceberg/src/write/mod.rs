@@ -12,6 +12,8 @@ pub mod merge;
 mod name_resolution;
 /// OV1 exclusive full-table overwrite commit (stage-then-swap).
 pub mod overwrite;
+/// Partition-scoped INSERT OVERWRITE (static row-filter + dynamic replace-partitions).
+pub mod partition_overwrite;
 pub(crate) mod position_delete;
 /// Identity DELETE/UPDATE (G3-E8 A1): SELECT over pinned `(_file, _pos)`, MERGE write arms.
 pub mod predicate_dml;
@@ -60,6 +62,13 @@ pub use overwrite::{
     OverwriteIsolation, WRITE_OVERWRITE_ISOLATION_LEVEL, commit_overwrite_replace_all,
     parse_overwrite_isolation, positional_map_overwrite_batch,
     write_overwrite_staged_files_from_stream,
+};
+pub use partition_overwrite::{
+    EMPTY_DYNAMIC_OVERWRITE_NEEDLE, PartitionEquality, PartitionLiteral, PartitionOverwritePlan,
+    PartitionOverwriteRequest, StaticPartitionOverwrite, commit_overwrite_by_row_filter,
+    commit_replace_partitions, inject_static_partition_columns,
+    partition_overwrite_request_from_exprs, plan_partition_overwrite,
+    refuse_empty_dynamic_overwrite, stage_static_partition_overwrite_files,
 };
 pub use position_delete::{MorDmlKind, refuse_mor_unpartitioned_multi_spec_dml};
 pub use repark_common::{Error, Result};

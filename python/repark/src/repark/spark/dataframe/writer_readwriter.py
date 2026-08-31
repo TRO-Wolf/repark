@@ -830,19 +830,21 @@ def _merge_path_write_tree(staging: Any, destination: Any) -> None:
         shutil.move(str(item), str(target))
 
 
+def _dynamic_partition_sql(dataframe: DataFrame, table_ref: str) -> str:
+    """Return `` PARTITION (a, b)`` from ``{table}.partitions``, or `` PARTITION ()``."""
+    native = dataframe._session.sql(f"SELECT * FROM {table_ref}.partitions LIMIT 0")
+    schema = DataFrame(native, dataframe._session, dataframe._alive_token).schema
+    dtype = schema["partition"].dataType if "partition" in schema.names else None
+    names = list(dtype.names) if isinstance(dtype, StructType) else []
+    if not names:
+        return " PARTITION ()"
+    return " PARTITION (" + ", ".join(_quote_ident_sql(name) for name in names) + ")"
+
+
 class DataFrameWriterV2:
-    """Build V2 Iceberg CTAS, append, and partition-transform writes.
+    """Build V2 Iceberg CTAS, append, partition overwrite, and partition-transform writes."""
 
-    V2 append is by name. Dynamic and conditional overwrite are loud unsupported errors.
-    """
-
-    __slots__ = (
-        "_dataframe",
-        "_partition_exprs",
-        "_properties",
-        "_provider",
-        "_table",
-    )
+    __slots__ = ("_dataframe", "_partition_exprs", "_properties", "_provider", "_table")
 
     def __init__(self, dataframe: DataFrame, table: str) -> None:
         """Bind a source DataFrame and validate its target name; resolution occurs per action."""
@@ -868,11 +870,7 @@ class DataFrameWriterV2:
         self._provider = provider.lower()
         return self
 
-    def tableProperty(  # noqa: N802 — PySpark method name
-        self,
-        property: str,
-        value: str,
-    ) -> DataFrameWriterV2:
+    def tableProperty(self, property: str, value: str) -> DataFrameWriterV2:  # noqa: N802
         """Set a table property used by V2 create and replace operations."""
         if not isinstance(property, str) or not isinstance(value, str):
             raise PySparkTypeError("tableProperty expects (str, str) key and value")
@@ -881,11 +879,7 @@ class DataFrameWriterV2:
 
     table_property = tableProperty
 
-    def partitionedBy(  # noqa: N802 — PySpark method name
-        self,
-        col: Column | str,
-        *cols: Column | str,
-    ) -> DataFrameWriterV2:
+    def partitionedBy(self, col: Column | str, *cols: Column | str) -> DataFrameWriterV2:  # noqa: N802
         """Set identity columns or supported partition transforms for CTAS."""
         for item in (col, *cols):
             self._partition_exprs.append(self._partition_sql_fragment(item))
@@ -928,38 +922,40 @@ class DataFrameWriterV2:
         self._dataframe._refuse_tightened_iceberg_create()
         self._run_ctas(or_replace=True)
 
-    def append(self) -> None:
-        """Append rows to an existing table by column name."""
+    def _existing_table_ref(self) -> tuple[Any, str]:
+        """Return session and quoted name after checking the target exists."""
         self._dataframe._ensure_alive()
         session = self._dataframe._session
         qualified, table_ref = self._resolved_table()
         if not session.table_exists(qualified):
             raise AnalysisException(
-                f"Cannot append into table {self._table!r} because it does not exist. "
+                f"Cannot write to table {self._table!r} because it does not exist. "
                 "Use create() or createOrReplace() first."
             )
+        return session, table_ref
+
+    def append(self) -> None:
+        """Append rows to an existing table by column name."""
+        session, table_ref = self._existing_table_ref()
         projection = self._by_name_projection(session, table_ref=table_ref)
         self._run_through_temp_view(
             lambda view: f"INSERT INTO {table_ref} SELECT {projection} FROM {view}"
         )
 
     def overwritePartitions(self) -> None:  # noqa: N802 — PySpark method name
-        """Reject dynamic partition overwrite because static overwrite could lose unrelated rows."""
-
-        raise UnsupportedOperationException(
-            "overwritePartitions: Spark's dynamic partition overwrite (partition-scoped "
-            "replace) is not supported by the repark engine yet — a static INSERT OVERWRITE "
-            "would silently replace ALL rows, not just the source's partitions. Use "
-            "createOrReplace() for a deliberate full rebuild, or append(). "
-            "(Engine path: iceberg-rust fork ReplacePartitions, not yet wired.)"
+        """Replace only the partitions present in this DataFrame (Spark dynamic overwrite)."""
+        session, table_ref = self._existing_table_ref()
+        projection = self._by_name_projection(session, table_ref=table_ref)
+        clause = _dynamic_partition_sql(self._dataframe, table_ref)
+        self._run_through_temp_view(
+            lambda view: f"INSERT OVERWRITE {table_ref}{clause} SELECT {projection} FROM {view}"
         )
 
     overwrite_partitions = overwritePartitions
 
     def overwrite(self, condition: Column | str) -> None:
         """Reject conditional overwrite because no engine path supports it."""
-        _ = condition  # signature parity
-
+        _ = condition
         raise UnsupportedOperationException(
             "DataFrameWriterV2.overwrite(condition) is not supported — no engine path for "
             "conditional overwrite (Group I disclosure). Use createOrReplace() for a "
