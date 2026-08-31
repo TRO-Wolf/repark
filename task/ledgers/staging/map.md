@@ -12,6 +12,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   [../docs/design/spark-function-parity.md](../../../docs/design/spark-function-parity.md); CAP-1
   appends a compatibility note that points its dated file-size premise at the live guards; slate:
   [../briefs/spark-function-parity.md](../../../briefs/spark-function-parity.md).
+- [fnp-4c-higher-order-kernels-ledger.md](fnp-4c-higher-order-kernels-ledger.md) — **FNP-4c
+  (2026-08-31):** the eight new higher-order kernels plus `forall` and `reduce`. Builds on
+  the FNP-4a seam. Design §3.5 / §7 row FNP-4c.
+- [f-y10-1-int-overflow-ledger.md](f-y10-1-int-overflow-ledger.md) — **F-Y10-1 (2026-08-30),
+  chartered and HELD at its approval gate:** integer arithmetic overflow raises where Spark
+  raises (the integer analog of the FIXED DEC-6, on the DEC U5 checked-kernel pattern). Five
+  OPEN clauses; C-001 is the measurement that reconciles the recorded wrap-vs-widen
+  contradiction before any edit. Unblocks FNP-7b's four `try_*` names.
 - [sem-0-charter-ledger.md](sem-0-charter-ledger.md) — **SEM-0 (2026-08-21), queued and HELD at
   its approval gate:** the scope audit for closing the two silently wrong answers the low-risk
   sweep registered rather than fixed — `RE-1` (`regexp_extract_all` defaults to capture group 0,
