@@ -374,7 +374,9 @@ them, and the document is ordered by surface, never by date.
 > (`cross_door_int32_add_overflow_wraps_on_spark_ansi_false_raises_on_ansi`). Pins:
 > `crates/repark-functions/src/integer_spark.rs` tests; `ansi_door_int32_add_overflow_raises`;
 > `python/repark/tests/test_integer_overflow_parity.py`. G13's integer half is closed.
-> Residue of that campaign body: G5b-R3-ANSI (window RANGE wrap) and F-Y10-2.
+> Residue of that campaign body: G5b-R3-ANSI (window RANGE wrap), F-Y10-2, and
+> SMALLINT/Int16 overflow (2026-08-30: `CAST(32767 AS SMALLINT) + CAST(1 AS SMALLINT)`
+> still Arrow-wraps to Int16 `-32768` under default ANSI; charter partition was int32/int64).
 >
 > **F-Y10-2 — routed, not invented as a DEC row (2026-08-13, Z-5).** ANSI float `/ 0` is IEEE
 > `+Inf` rather than a standard-SQL raise. Residual. The door-vs-door Inf-vs-NULL split is
@@ -1019,7 +1021,7 @@ the pin rather than obeying it.
 > **G13 integer overflow (F-Y10-1) — FIXED 2026-08-30.** The integer half of gap G13
 > (`INT`/`BIGINT` `+` `-` `*` at the boundary) now raises under ANSI and wraps when
 > `ansi=false`. Residue named on the F-Y10-1 FIXED note above: G5b-R3-ANSI window RANGE wrap,
-> F-Y10-2 float `/0`, and DEC-9 nullability.
+> F-Y10-2 float `/0`, DEC-9 nullability, and SMALLINT/Int16 wrap (2026-08-30).
 >
 > **The DEC family (DEC-1 … DEC-9)** landed on 2026-08-11 from the G-7 decimal128 differential
 > corpus (hardening gaps **G2** and **G13**; unit ledger

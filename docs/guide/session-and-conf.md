@@ -216,8 +216,9 @@ bypass this error. (ArithmeticException)
 
 Two honest caveats on that message. `try_divide` is Spark's own suggestion text and is **not**
 implemented here yet (`Invalid function 'try_divide'`). Integer `+` / `-` / `*` overflow **does**
-raise under ANSI (`ARITHMETIC_OVERFLOW`; F-Y10-1, 2026-08-30); `ansi=false` wraps at the source
-type. Decimal overflow is DEC-6 (FIXED). Do not read "ANSI on" as "every arithmetic fault
+raise under ANSI (`ARITHMETIC_OVERFLOW`; F-Y10-1, 2026-08-30) for INT/BIGINT;
+`ansi=false` wraps at the source type. SMALLINT/Int16 still wraps (residue 2026-08-30).
+Decimal overflow is DEC-6 (FIXED). Do not read "ANSI on" as "every arithmetic fault
 raises" — float `/ 0` on the ANSI door is still IEEE Inf (F-Y10-2).
 
 It is a **build-time carrier**: set it on the builder, not at runtime.

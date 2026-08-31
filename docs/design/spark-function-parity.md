@@ -447,7 +447,8 @@ they convert `AttributeError` — which reads as "repark is broken" — into a s
 largest honesty gain per unit of work left, and it is what closes C-009.
 
 **The overflow fix closed (F-Y10-1, 2026-08-30).** Integer `+` / `-` / `*` raise
-`ARITHMETIC_OVERFLOW` under ANSI. FNP-7b's four `try_*` names are unblocked.
+`ARITHMETIC_OVERFLOW` under ANSI for int32/int64. SMALLINT/Int16 still wraps
+(dated residue 2026-08-30; not this partition). FNP-7b's four `try_*` names are unblocked.
 
 **Repatriation moved later.** FNP-8 is the campaign's strategic goal, and no user sees a
 difference the day it lands: it prevents future defects rather than fixing current ones. It earns

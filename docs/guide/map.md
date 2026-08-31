@@ -24,7 +24,7 @@ illustrative. A claim with no verified basis does not go in.
   abi3 wheel, the optional extras), the one-line import swap, the first session, `createDataFrame`,
   parquet / CSV / JSON round trips, a first `dynamicFlatten`, and the pointer to the tour notebook.
 - [session-and-conf.md](session-and-conf.md) — the `ReparkSession` builder; `getOrCreate` reuse
-  semantics; how `conf.get` / `conf.set` behave (unset keys raise; three tiers of key: build-time
+  semantics; F-Y10-1 notes SMALLINT wrap residue (2026-08-30); how `conf.get` / `conf.set` behave (unset keys raise; three tiers of key: build-time
   engine knob / live `datafusion.*` / facade-local); where the defaults live (`_SQLCONF_DEFAULTS`);
   and the keys users actually set — `spark.sql.pyspark.inferNestedDictAsStruct.enabled` (FA-4),
   `spark.sql.session.timeZone` (TZ-2 / TZ-3), `spark.sql.ansi.enabled`, target partitions, batch
