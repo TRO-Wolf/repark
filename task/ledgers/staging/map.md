@@ -12,6 +12,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   [../docs/design/spark-function-parity.md](../../../docs/design/spark-function-parity.md); CAP-1
   appends a compatibility note that points its dated file-size premise at the live guards; slate:
   [../briefs/spark-function-parity.md](../../../briefs/spark-function-parity.md).
+- [fnp-4c-higher-order-kernels-ledger.md](fnp-4c-higher-order-kernels-ledger.md) — **FNP-4c
+  (2026-08-31):** the eight new higher-order kernels plus `forall` and `reduce`. Builds on
+  the FNP-4a seam. Design §3.5 / §7 row FNP-4c.
 - [sem-0-charter-ledger.md](sem-0-charter-ledger.md) — **SEM-0 (2026-08-21), queued and HELD at
   its approval gate:** the scope audit for closing the two silently wrong answers the low-risk
   sweep registered rather than fixed — `RE-1` (`regexp_extract_all` defaults to capture group 0,
@@ -48,6 +51,18 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   **DML-A (2026-08-30):** `MERGE … WHEN NOT MATCHED BY SOURCE` (DELETE and UPDATE, COW and
   MOR). HIGH / `risk_tier: high`. Eight clauses, 8× **PROVEN**. Live PySpark 4.1.2 oracle
   matrix is in the ledger §4.
+- [maint-rewrite-data-files-options-ledger.md](maint-rewrite-data-files-options-ledger.md) —
+  **rewrite_data_files options (2026-08-31), v0.6 merge order 4 of 4:** `where`, `sort_order`,
+  and `strategy` on v2 tables. Fork `d408da42` honors `filter(Predicate)` and binpack only;
+  sort is a loud fork-ceiling refusal. v3 lineage pins stay. risk_tier: high.
+- [w-0-window-bench-ledger.md](w-0-window-bench-ledger.md) — **W-0 (2026-08-31),
+  PROVEN 11/11:** window-shape measurement (Track A opener). Bench plus filed
+  numbers and thirteen `WIN-SLIDE-*` registry rows. No product change.
+- [v3-4-serve-lineage-columns-ledger.md](v3-4-serve-lineage-columns-ledger.md) —
+  **V3-4 (2026-08-31), read half:** serve `_row_id` and `_last_updated_sequence_number` on
+  v3 reads, Spark-equal, on all three doors. Preserve-half (COW DML lineage) stays behind
+  fork F-7; V3-COW-1 keep-refusal pins stay byte-untouched. Measure-first (C-001) before
+  any engine edit.
 
 ## Pointers
 - Up: [../map.md](../map.md)

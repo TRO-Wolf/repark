@@ -372,16 +372,21 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
 
 
 def test_functions_all_matches_pre_split_inventory() -> None:
-    """Pre-split 360 names stay the prefix; FNP-15/16 appends 62 declared refusals.
+    """Pre-split 360 names stay the prefix; FNP-15/16 then FNP-4c append.
 
     pins: fnp-15-16/C-016
+    pins: fnp-4c-higher-order-kernels/C-011
     """
     from repark.spark.functions_declared import DECLARED_REFUSE_NAMES
+    from repark.spark.functions_lambda import HIGHER_ORDER_EXPORTS
 
     exported = tuple(F.__all__)
-    assert exported[: len(_PRE_SPLIT_ALL)] == _PRE_SPLIT_ALL
-    assert exported[len(_PRE_SPLIT_ALL) :] == DECLARED_REFUSE_NAMES
-    assert len(exported) == 360 + 62
+    prefix = len(_PRE_SPLIT_ALL)
+    declared = len(DECLARED_REFUSE_NAMES)
+    assert exported[:prefix] == _PRE_SPLIT_ALL
+    assert exported[prefix : prefix + declared] == DECLARED_REFUSE_NAMES
+    assert exported[prefix + declared :] == HIGHER_ORDER_EXPORTS
+    assert len(exported) == 360 + 62 + 10
 
 
 def test_every_all_name_resolves() -> None:

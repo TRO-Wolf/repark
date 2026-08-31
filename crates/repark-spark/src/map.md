@@ -26,7 +26,10 @@ pins: rp-3-fork-repin/C-010
   write-to-branch sniff; full router arm set ([router/map.md](router/map.md) for the tests).
   `execute_time_travelled` is a **release seam, not a routing step** (H-1b): it exists so
   `execute_with_read_only` can own a `time_travel::PinnedViews` and release it on every `?` /
-  `return` path of the rewrite — see the `time_travel.rs` row below. V3R-1: DELETE / UPDATE call
+  `return` path of the rewrite — see the `time_travel.rs` row below. **V3-4:** after time
+  travel, `prepare_lineage_sql` pins v3 `_row_id` / `_last_updated_sequence_number` onto a
+  temp provider for single-table reads (`LineagePins` released with the time-travel views);
+  JOIN/CTE/subquery/time-travel naming lineage refuse `V3-ROWID-2`. V3R-1: DELETE / UPDATE call
   `refuse_v3_cow_dml` after the BUG-001 valve; a v3 COW DELETE after an overwrite snapshot refuses
   before fork lineage divergence. SQP-1: the front door canonicalizes escapes once and
   translates downstream parser locations back to the caller's SQL.
@@ -48,8 +51,10 @@ pins: rp-3-fork-repin/C-010
   preserves Spark's result schema and count sources. Orphan removal requires `older_than`, defaults
   `dry_run` to true, and refuses shared fallback roots; rewrite-position-delete still refuses
   live Puffin DVs (`B-MOR-3`; RP-3 C-007 measured R136 as a parquet-to-DV conversion no-op);
-  rewrite-data-files refuses v3 lineage loss. Details and test pointers:
+  rewrite-data-files refuses v3 lineage loss, honors v2 `where` file-selection, and refuses
+  sort/`sort_order` (`RDF-SORT-1`). Details and test pointers:
   [call/map.md](call/map.md).
+  pins: maint-rewrite-data-files-options/C-003, C-004, C-008
 - `ctas.rs` — CTAS staged create/replace (fork `StagedTableTransaction`, one catalog publish),
   service-managed (S3 Tables) create-first path, create-clause refuse helpers.
   **V3-2:** `format-version` is consumed at parse and resolved at execute against

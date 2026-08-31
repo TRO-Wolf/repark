@@ -46,6 +46,8 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   `string::functions()` + `expr_fn`.
 - `src/spark_split_part.rs` — **GT1-FIX F-6c / R3-1:** Spark `split_part`
   STRING `partNum` implicit-cast; partNum 0 fail-loud; Dictionary(_, Utf8).
+- `src/higher_order/` — FNP-4c kernels on the FNP-4a shared table. See
+  [src/higher_order/map.md](src/higher_order/map.md).
 - `src/lib.rs` — `register_all(ctx)` (datafusion-spark's full set, then the shims — later
   registration wins) + **Q1** `approx_percentile_cont` re-registered with aliases
   `percentile_approx` / `approx_percentile` via `AggregateUDF::with_aliases` +

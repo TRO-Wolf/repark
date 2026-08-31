@@ -2,8 +2,7 @@
 
 Each function returns a :class:`repark.column.Column` backed by a native DataFusion expression.
 PySpark scripts import these as ``from repark.functions import col, lit, coalesce`` or,
-idiomatically, ``import repark.functions as F`` then ``F.col(...)`` — the one-line import swap from
-``pyspark.sql.functions``. Date and window helpers remain in dedicated modules.
+idiomatically, ``import repark.functions as F`` then ``F.col(...)``.
 """
 
 from __future__ import annotations
@@ -1980,6 +1979,7 @@ __all__ = [
     "years",
     "zeroifnull",
 ]
+from repark.spark import functions_lambda as _functions_lambda  # noqa: E402
 from repark.spark.functions_declared import install_into as _install_declared_refuse  # noqa: E402
 
-_install_declared_refuse(globals(), __all__)
+_install_declared_refuse(globals(), __all__) or _functions_lambda.install_into(globals(), __all__)

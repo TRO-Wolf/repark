@@ -65,6 +65,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   branch/tag, `VERSION AS OF` over DVs, rollback, expire dual-probe, orphan
   24h floor on the partitioned-DV fixture after a RePark append; live-DV UPDATE
   still refuses `V3-COW-1` (RP-3 C-004; DELETE on live DVs is lifted).
+- [test_v3_lineage_columns.py](test_v3_lineage_columns.py) — **V3-4:** facade SQL serves
+  Spark-equal `_row_id` / `_last_updated_sequence_number` on the V3E-3 fixtures; `SELECT *,
+  _row_id` expands user columns only; qualified/aliased forms; unquoted case-fold;
+  JOIN/CTE/subquery/`VERSION AS OF` refuse `V3-ROWID-2`; v2 is `No field named _row_id`.
+  pins: v3-4-serve-lineage-columns/C-004, C-005, C-007, C-008, C-011, C-012, C-013, C-014,
+  C-015, C-016, C-018, C-020
 - [test_v3e3_fixtures.py](test_v3e3_fixtures.py) — **V3E-3 (2026-08-24):** facade adopt of
   the Spark-written partitioned v3 DV fixture and the equality-delete + DV fixture;
   live rows, partition prune, `.delete_files` content 1/2; RP-3 C-007 CALL still refuses
@@ -76,6 +82,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (2026-08-25) type pin `test_v3_geometry_geography_variant_columns_refuse_naming_the_type`:
   `GEOMETRY` / `GEOGRAPHY` / `VARIANT` columns refuse at CREATE, no table left (registry
   `V3-GEO-1`).
+- [test_rewrite_data_files_options.py](test_rewrite_data_files_options.py) —
+  **rewrite_data_files options:** facade `where` keeps the **part=1** pre-image byte-identical
+  and rewrites part=0 away; unknown strategy and bad where use Spark's text; `sort` and
+  `sort_order` refuse.
+  pins: maint-rewrite-data-files-options/C-003, C-004, C-005, C-006, C-007
 - [test_mw8_runbook.py](test_mw8_runbook.py) — **MW-8 (2026-08-24):** the maintenance cycle
   `docs/guide/iceberg-guide.md` "The maintenance runbook" documents, run end to end on a local
   catalog at gate scale (6,000 rows, 2 partitions, six MERGEs, 4.4 s). One documented cycle,
@@ -2175,6 +2186,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   than against RePark's own output; `xxhash64` has no oracle available and pins determinism,
   distinctness and return type only, and says so.
 
+- `test_fnp4c_higher_order.py` — **FNP-4c (2026-08-31):** ten Spark higher-order names on
+  the facade Column API, values and Arrow types vs the live PySpark 4.1.2 oracle, plus
+  per-name `NUM_ARGS_MISMATCH` expects/got text, raw Arrow map-entry order, zip_with
+  right-side nullability, and mixed-width `aggregate` Int64 merge-output (SQL-door
+  VALUES + `F.lit(0)`). pins: fnp-4c-higher-order-kernels/C-001, C-002, C-003, C-004,
+  C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-015
 - `test_fnp4_lambda_seam.py` — **FNP-4a (2026-08-20):** a Python lambda reaching the engine.
   `exists` through the Column API, Spark's three-valued null semantics, the empty-array and
   null-array edges, an outer column captured in the body, loud refusals for wrong arity and a
@@ -2315,8 +2332,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 | Add a `DESCRIBE NAMESPACE` / namespace-metadata-readback test | `test_describe_namespace.py` |
 | Add a `SHOW NAMESPACES` / namespace-listing / `LIKE`-pattern test | `test_show_namespaces.py` |
 | Add a bare-`spark.sql` eager-DML (INSERT/DELETE/UPDATE/empty OW wipe/CALL refuse) test | `test_sql_dml_eager.py` (C3-Q-002 empty OW facade pin; C3-L-001 residual unknown-CALL refuse; C5-Q-001 incompatible empty OW must not wipe; r25 T2 CREATE OR REPLACE / REPLACE BRANCH|TAG round-trip pin) |
+| Pin rewrite_data_files `where` / strategy / sort_order | `test_rewrite_data_files_options.py` — filtered rewrite byte-identity, Spark unknown-strategy and bad-where text, `sort_order` refuse (`RDF-SORT-1`) |
 | Add a maintenance `CALL system.*` oracle (I3) | `test_maintenance_call.py` — expire/rewrite/rollback + tag **and** branch dual probe (s1 kept, s2 expired) + positional sort refuse + previous_snapshot_id + unknown/orphan refuse. **MW-1:** expire pins Spark's full six-column result, all bigint and all nullable, after the content-file funnel was split into data / position-delete / equality-delete. **MW-2:** rewrite pins Spark's fifth column `removed_delete_files_count`, non-nullable and 0 — Java's `remove-dangling-deletes` defaults off and the options map refuses, so the zero is a real count. *(MW-7, 2026-08-24: the zero is real, but do not read it as "delete files therefore survive compaction" — on Spark they do not, because its planner rewrites delete-laden files outright. Registry `RDF-1`.)* **MW-3:** the pre-MW-3 orphan refuse pin is retired and replaced by three — `older_than` required (`ORPHAN-1`), dry-run default with Spark's one-column result shape (`ORPHAN-2`), the 24-hour floor measured across its boundary (parity, not strictness), and the shared-CTAS-root refusal pinned on the very fixture that surfaced it — a dry run there listed 139,179 leftover files. **V3-1:** `register_table` adopts an engine-written table and returns Spark's three nullable BIGINT columns (`pa.int64()`); unknown-proc pin is fail-closed on `register_table`. **MW-6:** `rewrite_manifests` pins Spark's two non-nullable `int32` columns and its counts (5 manifests → 1, `5, 1`), the no-op zeros with no new snapshot, and the argument surface — `spec_id` refuses, `use_caching` is accepted and changes nothing (`MANIFEST-2`) |
 | Pin the MW-7 scale-measurement machinery | `test_mw7_scale_smoke.py` — the bench driver at gate scale: census vs an independent count, delete files `partitions x merges` then folded to one per partition, COW zero-delete control (a control, not a clean delete-cost isolate — MOR-minus-COW bundles delete reads with MOR's data-file fan-out), manifest drop across `rewrite_manifests`, the five-procedure order, timings that carry their answer |
+| Pin the W-0 window-shape bench at gate scale | `test_w0_window_bench_smoke.py` — Iceberg lead/lag cell, memory_limit outcome class, thirteen sliding refuses (int64 `approx_count_distinct`), remaining absents fail at planning. pins: w-0-window-bench/C-002, C-005, C-006, C-009 |
 | Characterize `RDF-1` (a 100 %-dead in-band data file is never compacted) | `test_mw7_scale_smoke.py::test_delete_laden_in_band_file_survives_the_runbook` — flips RED when fork ask F-16 lands |
 | Re-measure the MW-0 MOR growth demo (MW-5) | `test_mw5_baseline_delta.py` — 1,000 rows, ten MERGEs of 200 ids, delete files 1→10 then compact+expire 10→1, Arrow `COUNT(*)` 1,000 `int64`, expire mutation-proof. Wall-clock logged, not asserted |
 | Add a case-insensitive column-conform (MERGE star) facade test | `test_case_insensitive_conform.py` |

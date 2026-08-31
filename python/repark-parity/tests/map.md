@@ -24,8 +24,9 @@ JVM, no repark required). See [../map.md](../map.md).
   FNP-Z retirement, fork independence, and map lockstep. MW-10 pickup archived RP-3, so the
   C-006 navigation pin reads `**RP-3 (2026-08-28)` / `opt-in for callers` from
   `task/ledgers/archive/2026-08/map.md`, and V3-3's row from `task/ledgers/completed/map.md`
-  since its 2026-08-30 keep-refusal departure. STATUS `**Next:**` is V3-4 after V3-3's keep-refusal
-  (pins: plan-1-northstar-fnp-sequence/C-001, C-002, C-003, C-004, C-005, C-006; v3-3-dml/C-003).
+  since its 2026-08-30 keep-refusal departure. STATUS `**Next:**` is V3-5 / F-7 after V3-4's
+  read-half (pins: plan-1-northstar-fnp-sequence/C-001, C-002, C-003, C-004, C-005, C-006;
+  v3-3-dml/C-003; v3-4-serve-lineage-columns/C-010).
 - `test_pr_247_owner_ruling.py` — **PR #247 revalidation (2026-08-27):** the owner-ruling blocks
   in `AGENTS.md` and `CLAUDE.md` stay byte-exact, unique, at the document start, and in regular
   files; one-byte drift, malformed or missing files, relocation, duplication, and symlink
@@ -243,6 +244,12 @@ JVM, no repark required). See [../map.md](../map.md).
   contract for `bench/ta` (omit knob + emit `default`; isolation emits `1` +
   `isolation=single_core`). Helper unit pins + AST scan of the six scripts.
   No engine / numpy / native module.
+- `test_w0_window_bench.py` — **W-0:** engine-free pins for the window-shape
+  bench (roster equals the charter enumeration, 1e7 unpartitioned constant,
+  seeded generator, DuckDB/PySpark pins, thirteen sliding refuses including
+  int64 `approx_count_distinct`, result model fields, scratch delete in
+  `finally`, no retry on the error path, WIN-SLIDE registry headings).
+  pins: w-0-window-bench/C-001, C-002, C-003, C-004, C-007, C-008, C-009, C-010, C-011.
 - `test_redact.py` — the battery for `compat/redact.py`, the recorded path-redaction transform.
   Its one hard property is that the artifact still parses afterwards, so the two regressions are
   explicit contrasts: a naive text substitution over a traceback-bearing census report emits an

@@ -93,13 +93,11 @@ What happens next, in order:
    first tag — [docs/design/python-facade.md](docs/design/python-facade.md) §4 — is enforced at
    the v1.0 north-star API review).
 
-Owner-side actions that rode this sequence rather than gating it are **DISCHARGED — no owner-side
-tier-2 action remains.** The aws-acceptance (tier-2, live-AWS) first dispatch ran **green on
-2026-08-10** (Glue and S3 Tables). The parity-live half was **discharged** on first-run evidence
-(green on merged `main` 2026-08-09/10). Three stale always-PASS Apache smoke pins are now
-known-FAIL meta pins; the nightly is a live signal again. Pre-scrub content remains reachable in
-published history — an exposure **accepted by explicit decision**; provenance:
-[docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e-facade-ledger.md)
+Owner-side actions that rode this sequence are **DISCHARGED — no owner-side tier-2 action
+remains.** aws-acceptance ran green 2026-08-10 (Glue and S3 Tables); the parity-live half
+discharged on first-run evidence; three stale always-PASS Apache smoke pins are known-FAIL meta
+pins. Pre-scrub content stays reachable in published history — accepted by explicit decision;
+provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e-facade-ledger.md)
 ("the B-2 literal is already published").
 
 ## Active workstreams
@@ -134,11 +132,9 @@ published history — an exposure **accepted by explicit decision**; provenance:
   [task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md](task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md);
   design: [docs/design/format-v3-track.md](docs/design/format-v3-track.md); audit:
   [task/ledgers/staging/v3-0-charter-ledger.md](task/ledgers/staging/v3-0-charter-ledger.md).
-  - **Measured true (V3-0, [#199](https://github.com/TRO-Wolf/repark/pull/199)):** reading
-    Spark-written v3 with Puffin deletion vectors and appending with row lineage are correct,
-    round-tripped through Spark. **Guarded:** `rewrite_data_files` reassigned `_row_id` on v3 —
-    registry `V3-LINEAGE-1`, stricter than Spark on purpose, reversible in one line; the fix is
-    fork work (F-7). Queued: `V3-DANGLE-1`, `V3-ROWID-1` (V3-4).
+  - **Measured true (V3-0, [#199](https://github.com/TRO-Wolf/repark/pull/199)):** v3 DV reads
+    and lineage appends round-trip through Spark. **Guarded:** `rewrite_data_files` reassigned `_row_id` on v3 —
+    registry `V3-LINEAGE-1`; the fix is fork work (F-7). Queued: `V3-DANGLE-1`.
   - **Delivered:** V3-1 `register_table` + the checked-in v3 fixture
     ([#203](https://github.com/TRO-Wolf/repark/pull/203)); V3-2 CREATE/CTAS `format-version = 3`
     behind `repark.sql.allowCreateFormatVersion3` (default false), ALTER refused
@@ -162,7 +158,10 @@ published history — an exposure **accepted by explicit decision**; provenance:
     FIXED (`V3-ADOPT-1`). V3-3 (2026-08-30) measured `UPDATE` / `MERGE` keep-refusal:
     Spark 4.1.2 + Iceberg 1.11.0 preserves `_row_id`; the engine rewrite reassigns
     (registry `V3-COW-1`). `V3-LINEAGE-1` and `B-MOR-3` stay.
-  - **Next:** V3-4 — serve `_row_id` / `_last_updated_sequence_number`; V3-3 charter
+    **V3-4 read (2026-08-31):** `_row_id` / `_last_updated_sequence_number` Spark-equal on
+    single-table v3 reads (three doors); v1/v2 engine Schema `No field named _row_id`;
+    JOIN/CTE/subquery/time-travel refuse `V3-ROWID-2`. `V3-ROWID-1` FIXED. Preserve-half stays F-7.
+  - **Next:** V3-5 / F-7 COW lineage lift. V3-3 charter
     [task/ledgers/completed/v3-3-dml-ledger.md](task/ledgers/completed/v3-3-dml-ledger.md)
     (keep-refusal, F-rp3-c7 stays a fork finding).
     Sequence: [docs/design/format-v3-track.md §5](docs/design/format-v3-track.md).
@@ -194,7 +193,8 @@ published history — an exposure **accepted by explicit decision**; provenance:
   **Delivered:** `__all__` 333 → 360, 41 names from refusing-or-absent to working (FNP-1..6c);
   thirty-six needed no new kernel — that seam is exhausted. **F-Y10-1 (2026-08-30):** integer
   `+` / `-` / `*` raise `ARITHMETIC_OVERFLOW` where Spark raises; FNP-7b is unblocked.
-  Remaining work ships as one coherent PR per unit or tightly coupled pair.
+  **FNP-4c (2026-08-31):** the ten higher-order names land on the FNP-4a seam (SQL `x -> y`
+  parse stays FNP-4b). Remaining work ships as one coherent PR per unit or tightly coupled pair.
   **Next, in order (revised 2026-08-30):** FNP-15/16 → FNP-4c → FNP-7a/7b → FNP-9/10 → FNP-8 → FNP-11/12 → FNP-Z.
   Deferred with reasons in the design: FNP-4b, FNP-6d, FNP-13, FNP-14. This campaign and TA
   performance consume no F-17 surface and may use fork-wait windows; neither gates v1.0.
@@ -211,17 +211,16 @@ published history — an exposure **accepted by explicit decision**; provenance:
   acceptance gates). #30 (the dead doc-pointer sweep) merged ahead of it.
 <!-- /ws -->
 
-<!-- ws id=dml ledgers=dml- state=open -->
-- **Iceberg DML remainder (v0.6)** — DML-B → DML-C → DML-A → MAINT; REF waits on fork
-  F-6. **Delivered 2026-08-30:** DML-B `INSERT OVERWRITE … PARTITION` and
-  `writeTo().overwritePartitions()` (empty dynamic refuses loud); DML-C `TRUNCATE TABLE`
-  first-class (DML-2 FIXED); DML-A `MERGE … WHEN NOT MATCHED BY SOURCE`, COW and MOR.
+<!-- ws id=dml ledgers=dml-,maint- state=open -->
+- **Iceberg DML remainder (v0.6)** — REF waits on fork F-6. **Delivered 2026-08-30/31:**
+  DML-B `INSERT OVERWRITE … PARTITION` + `writeTo().overwritePartitions()`; DML-C
+  `TRUNCATE TABLE` (DML-2 FIXED); DML-A `MERGE … WHEN NOT MATCHED BY SOURCE`; MAINT
+  `rewrite_data_files` `where` + binpack, sort refuses loud (RDF-SORT-1).
   [DML-1](docs/spark-sql-iceberg-parity.md).
 <!-- /ws -->
 
-Parked lanes: **none.** The `repark.sql` re-home lane closed 2026-08-14 (#95 —
-[docs/release.md](docs/release.md) "RESOLVED"; design ruling
-[docs/design/python-facade.md](docs/design/python-facade.md) §4).
+Parked lanes: **none** (the `repark.sql` re-home lane closed 2026-08-14, #95 —
+[docs/release.md](docs/release.md) "RESOLVED").
 
 <!-- ws id=dbt ledgers=dbt- state=open -->
 - **dbt-repark is no longer parked.** M0–M2a merged on the sibling repo (append, delete+insert,

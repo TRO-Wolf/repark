@@ -406,6 +406,11 @@ them, and the document is ordered by surface, never by date.
 > Residue of that campaign body: G5b-R3-ANSI (window RANGE wrap), F-Y10-2, and
 > SMALLINT/Int16 overflow (2026-08-30: `CAST(32767 AS SMALLINT) + CAST(1 AS SMALLINT)`
 > still Arrow-wraps to Int16 `-32768` under default ANSI; charter partition was int32/int64).
+> **Lambda bodies are unarmed (2026-08-31, FNP-4c interaction):** an operand containing a
+> higher-order lambda variable keeps its provisional type, so `+`/`-`/`*` inside lambda
+> bodies stay on DataFusion coercion (no overflow raise there yet — arming desynchronized
+> the declared `LambdaVariable` field from the re-derived merge type). Pin:
+> `lambda_variable_operands_do_not_arm`.
 >
 > **F-Y10-2 — routed, not invented as a DEC row (2026-08-13, Z-5).** ANSI float `/ 0` is IEEE
 > `+Inf` rather than a standard-SQL raise. Residual. The door-vs-door Inf-vs-NULL split is
@@ -1833,6 +1838,24 @@ the pin rather than obeying it.
   scan opens, without bound, and the maintenance runbook as documented cannot reclaim either.
   Closing the row means porting Java's ratio clause into the fork's planner.
 
+### RDF-SORT-1 — `rewrite_data_files` refuses `sort` / `sort_order`; Spark runs a sort rewrite
+
+- **repark** — `CALL … rewrite_data_files(strategy => 'sort')` and a named `sort_order` refuse
+  loud. The fork at `d408da42` ports bin-pack only (GAP_MATRIX R135: sort and z-order deferred).
+  A requested option that cannot be honored is never a silent binpack.
+- **Apache Spark** — `strategy => 'sort'` with `sort_order => 'id ASC'` rewrites; a six-file v2
+  table compacted to one with id min/max `{1..6}`. `sort_order` without `strategy` still
+  binpacks (warns that rewritten files are not marked sorted). Missing sort column is
+  `ValidationException: Cannot find field '…' in struct`. Unknown strategy is
+  `unsupported strategy: {name}. Only binpack or sort is supported`.
+  *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, 2026-08-31.)*
+- **Pin** —
+  `crates/repark-spark/src/tests/call.rs::call_rewrite_sort_strategy_refuses_loud`
+  and
+  `crates/repark-spark/src/tests/call_rewrite_options.rs::call_rewrite_sort_order_refuses_and_does_not_compact`
+- **Rationale** — DECLARED fork ceiling until a later iceberg-rust rev ports sort rewrite.
+  `where` and `binpack` are honerable on this rev and are not this row.
+
 ### MANIFEST-1 — `rewrite_manifests` rewrites data manifests only; Spark rewrites delete manifests too
 
 - **repark** — `CALL <catalog>.system.rewrite_manifests(table => …)` re-groups the **data**
@@ -2150,6 +2173,112 @@ the pin rather than obeying it.
   lands with its own pin if a job ever depends on it. This is the single home of the divergence
   the `spark_literals` module doc previously only mentioned.
 
+### WIN-SLIDE — non-retractable aggregates over a sliding frame (W-0, 2026-08-31)
+
+Spark evaluates an aggregate over `ROWS BETWEEN n PRECEDING AND CURRENT ROW` even when the
+aggregate has no inverse (it re-scans the frame). DataFusion 54.1 refuses at execution:
+`Aggregate can not be used as a sliding accumulator because retract_batch is not implemented`.
+W-0 measured the Spark 4.1.2 built-in aggregate roster; names that do not plan at all are
+**absent** (not these rows). Names that plan and then refuse are the thirteen headings below.
+`approx_count_distinct` is probed on int64; on Float64 it fails earlier with a type gap.
+W-1 picks the fallback (Spark re-scan vs segment tree). *(oracle: live RePark probe, 2026-08-31;
+Spark half is documented SlidingWindowFunctionFrame plus the W-0 PySpark 4.1.2 cell.)*
+
+Shared pin for every heading:
+`python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
+and `python/repark-parity/tests/test_w0_window_bench.py::test_registry_has_a_heading_per_sliding_refuse`.
+
+### WIN-SLIDE-approx_count_distinct — `approx_count_distinct` over a sliding frame refuses
+
+- **repark** — `approx_count_distinct(vi)` over `ORDER BY id ROWS BETWEEN 10 PRECEDING AND CURRENT ROW` plans, then raises the sliding-accumulator `retract_batch` refusal. On Float64 the same name fails earlier (`approx_distinct` not implemented for that type) and is not this row.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
+- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
+- **Rationale** — BACKLOG. W-1.
+
+### WIN-SLIDE-approx_percentile — `approx_percentile` over a sliding frame refuses
+
+- **repark** — `approx_percentile(v, 0.5) OVER (ORDER BY id ROWS BETWEEN 10 PRECEDING AND CURRENT ROW)` raises the sliding-accumulator `retract_batch` refusal.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
+- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
+- **Rationale** — BACKLOG. Functional parity gap, not a perf gap. W-1.
+
+### WIN-SLIDE-bit_and — `bit_and` over a sliding frame refuses
+
+- **repark** — `bit_and(vi)` over the same sliding frame raises the sliding-accumulator refusal.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
+- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
+- **Rationale** — BACKLOG. W-1.
+
+### WIN-SLIDE-bit_or — `bit_or` over a sliding frame refuses
+
+- **repark** — `bit_or(vi)` over the same sliding frame raises the sliding-accumulator refusal.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
+- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
+- **Rationale** — BACKLOG. W-1.
+
+### WIN-SLIDE-bool_and — `bool_and` over a sliding frame refuses
+
+- **repark** — `bool_and(vi <> 0)` over the same sliding frame raises the sliding-accumulator refusal.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
+- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
+- **Rationale** — BACKLOG. W-1.
+
+### WIN-SLIDE-bool_or — `bool_or` over a sliding frame refuses
+
+- **repark** — `bool_or(vi <> 0)` over the same sliding frame raises the sliding-accumulator refusal.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
+- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
+- **Rationale** — BACKLOG. W-1.
+
+### WIN-SLIDE-collect_list — `collect_list` over a sliding frame refuses
+
+- **repark** — `collect_list(v)` over the same sliding frame raises the sliding-accumulator refusal.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
+- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
+- **Rationale** — BACKLOG. W-1. The intake named this class first.
+
+### WIN-SLIDE-collect_set — `collect_set` over a sliding frame refuses
+
+- **repark** — `collect_set(v)` over the same sliding frame raises the sliding-accumulator refusal.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
+- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
+- **Rationale** — BACKLOG. W-1.
+
+### WIN-SLIDE-corr — `corr` over a sliding frame refuses
+
+- **repark** — `corr(v, v2)` over the same sliding frame raises the sliding-accumulator refusal.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
+- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
+- **Rationale** — BACKLOG. W-1.
+
+### WIN-SLIDE-covar_pop — `covar_pop` over a sliding frame refuses
+
+- **repark** — `covar_pop(v, v2)` over the same sliding frame raises the sliding-accumulator refusal.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
+- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
+- **Rationale** — BACKLOG. W-1.
+
+### WIN-SLIDE-covar_samp — `covar_samp` over a sliding frame refuses
+
+- **repark** — `covar_samp(v, v2)` over the same sliding frame raises the sliding-accumulator refusal.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
+- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
+- **Rationale** — BACKLOG. W-1.
+
+### WIN-SLIDE-percentile_approx — `percentile_approx` over a sliding frame refuses
+
+- **repark** — `percentile_approx(v, 0.5)` over the same sliding frame raises the sliding-accumulator refusal.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
+- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
+- **Rationale** — BACKLOG. W-1. The intake named this class.
+
+### WIN-SLIDE-try_sum — `try_sum` over a sliding frame refuses
+
+- **repark** — `try_sum(v)` over the same sliding frame raises the sliding-accumulator refusal (group `try_sum` plans; sliding does not).
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
+- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
+- **Rationale** — BACKLOG. W-1.
+
 ### Surfaced, awaiting pins — not yet rows
 
 Candidates that carry **no pin yet**, so under §6 they are not admitted as rows; they are queued
@@ -2182,11 +2311,25 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   in the same unit (RP-2 ledger §2). The v3 half stays **unreachable** while V3-LINEAGE-1
   refuses every v3 rewrite, so the row stays queued for V3-3+.
 
-- **V3-ROWID-1** — `_row_id` and `_last_updated_sequence_number` are not readable. On a v3 table
-  Spark serves both as ordinary columns; this engine plans neither
-  (`Schema error: No field named _row_id`), so a consumer cannot see the lineage the format
-  guarantees. Queued for the **V3-4** unit, which owns row lineage as a whole; pinning it here
-  would pin half a decision.
+- **V3-ROWID-1** — **FIXED (V3-4, 2026-08-31).** `_row_id` and
+  `_last_updated_sequence_number` are served on **single-table** v3 reads, Spark-equal
+  (nullable int64; stored value else `first_row_id +` position / file sequence; `SELECT *`
+  hides them; unquoted identifiers fold). v1/v2 raise the engine Schema error
+  `No field named _row_id` (Spark raises `UNRESOLVED_COLUMN.WITH_SUGGESTION` / SQLSTATE
+  `42703`; mapping Spark's class is residual). Preserve across COW DML stays F-7 /
+  `V3-COW-1`. Pins:
+  `crates/repark-spark/src/tests/v3_lineage.rs`,
+  `crates/repark-sql/src/v3/partitioned_equality_deletes.rs` ANSI lineage tests,
+  `python/repark/tests/test_v3_lineage_columns.py`.
+
+- **V3-ROWID-2** — **DECLARED (V3-4, 2026-08-31).** Lineage projection over joins, CTEs,
+  subqueries, and `VERSION AS OF` / time-travel refuses loud:
+  `[V3-ROWID-2] lineage projection over {joins|CTEs|subqueries|time-travel} is not yet
+  served; single-table reads are`. Spark serves those forms. Follow-up: snapshot-pinned
+  lineage scan (`table.scan().snapshot_id`) for time-travel; join/CTE serving. The
+  unused `try_new_with_snapshot` constructor was removed rather than left as an unwired
+  promise. Pins: join / CTE / subquery / `VERSION AS OF` tests in the three V3-ROWID-1
+  files.
 
 - **V3-COW-1** — measured 2026-08-24 and admitted as a BACKLOG row (see §7). Left this queue.
 

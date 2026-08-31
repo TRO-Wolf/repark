@@ -4,6 +4,13 @@ DO / DO-NOT rules in force. Append date-stamped entries; supersede, don't delete
 2026-08-06 with sanitized lessons carried from the private v1 repository — these were learned
 there the hard way and bind here from day one.
 
+## 2026-08-31 — rewrite_data_files where-scope pin
+
+- **DO bind a filtered rewrite's surviving files to the excluded partition's pre-image paths.**
+  Counting N byte-identical survivors is partition-symmetric: flipping `=` to `!=` still leaves
+  five files and stays green. Assert the kept paths **are** the recorded part=1 set and the
+  rewritten-away paths **are** the part=0 set.
+
 ## 2026-08-27 — PR-247 ledger pins
 
 - **DO run the ledger-grammar gate before claiming a completed ledger is pinned.** Evidence prose
