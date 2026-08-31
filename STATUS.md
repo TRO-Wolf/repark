@@ -210,7 +210,8 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
   [docs/design/v2-engine-hardening.md](docs/design/v2-engine-hardening.md) (goal, the six phases
   H-0…H-5, the dated decisions) and its execution slate is
   [briefs/v2-engine-hardening.md](briefs/v2-engine-hardening.md) (the per-unit definitions and
-  acceptance gates). #30 (the dead doc-pointer sweep) merged ahead of it.
+  acceptance gates). **DFP-1 (2026-08-31) is next:** a preserve-null Unnest plan reduction;
+  adjacent candidates stay measurement-gated. #30 (the dead doc-pointer sweep) merged ahead of it.
 <!-- /ws -->
 
 <!-- ws id=dml ledgers=dml-,maint- state=open -->

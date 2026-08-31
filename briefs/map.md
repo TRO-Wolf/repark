@@ -47,6 +47,9 @@ branch. (Same contract as the private v1 repository's `briefs/` directory.)
   **Amended again 2026-08-12 (L-1):** the G5 seed-table cell's "temporal RANGE is rejected
   outright" is dated-corrected (untested, not rejected; real defect was the unit-less offset
   envelope, #62). A brief is amended in place, dated and traceable, never silently rewritten.
+  **Amended 2026-08-31 (DFP-1):** records the owner-directed preserve-null Unnest plan reduction
+  and keeps optimizer traversal, struct extraction, and a Cartesian multi-list operator behind
+  H-3/H-4 evidence.
 
 A slate lands here when its campaign starts and leaves when the campaign closes; between
 campaigns this directory holds only its map.

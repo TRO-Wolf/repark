@@ -465,6 +465,17 @@ regression pin that reds if the improvement is lost.
 meets the declared threshold on the reference host; the regression pin fails when the change is
 reverted; the baseline refresh (if any) names its cause; no unrelated behavior change rides along.
 
+## 2026-08-31 dynamic-flatten intake
+
+DFP-1 is an owner-directed plan-complexity unit, not an H-4 wall-clock claim. It records the
+unchanged plan, removes redundant null-replacement projections through preserve-null Unnest, and
+pins the full affected container/state/mode partition. It does not advance H-3 or H-4.
+
+Three adjacent ideas remain H-3/H-4 candidates: measure the optimizer wrapper's repeated subtree
+walks; measure a specialized null-mask struct extractor; measure a Cartesian multi-list operator.
+The last candidate must preserve sequential Cartesian expansion—DataFusion's multi-column Unnest
+zip/pad behavior is not a substitute. None becomes an implementation unit without evidence.
+
 ---
 
 # H-5 — Verification close · panel: FULL (definition-of-done + honesty lenses)
