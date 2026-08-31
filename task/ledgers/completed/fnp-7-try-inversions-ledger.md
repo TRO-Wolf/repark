@@ -6,7 +6,7 @@ the owner closes the slate row.
 
 **Unit:** FNP-7a + FNP-7b · **Date:** 2026-08-31 · **Executor:** Grok (grok-4.6), Actor ·
 **Branch:** `feat/fnp-7-try-inversions` · **Base:** `bb7fa54af48632c52d28aa8f7f446fac1dbf3742`
-**Charter:** [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) C-004 (kernels both
+**Charter:** [fnp-0-charter-ledger.md](../staging/fnp-0-charter-ledger.md) C-004 (kernels both
 doors) and design §3.5 / §7 rows FNP-7a and FNP-7b.
 **Design:** [docs/design/spark-function-parity.md](../../../docs/design/spark-function-parity.md)
 §7 FNP-7a (8 names) and FNP-7b (4 names, unblocked by F-Y10-1 2026-08-30).
