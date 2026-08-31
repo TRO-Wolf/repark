@@ -66,10 +66,10 @@
 <div class="wrap">
   <p class="kicker">RePark · release + roadmap · 2026-08-31</p>
   <h1>v0.6.0 Ships</h1>
-  <p class="sub">The nine-PR merge walk is complete, the release PR is squash-merged, and the
-  annotated <code>v0.6.0</code> tag is pushed. The eighth tag delivers the Iceberg DML
-  remainder — every unit Critic-passed and green through the full gate roster. One owner
-  action stands between the wheel and PyPI.</p>
+  <p class="sub">The nine-PR merge walk is complete and <strong>v0.6.0 is live on PyPI</strong> —
+  the eighth tag, delivering the Iceberg DML remainder, every unit Critic-passed and green
+  through the full gate roster. Housekeeping is merged, the board is clear, and the approved
+  next sequence is ready to dispatch.</p>
 
   <h2>Release state</h2>
   <div class="card">
@@ -79,10 +79,11 @@
     byte-for-byte (<code>453e3d7</code>). The delta over main is exactly the four release files
     (<code>Cargo.toml</code> version SSOT, <code>Cargo.lock</code> nine member lines,
     <code>STATUS.md</code> release block, root <code>map.md</code>).</p>
-    <p><span class="chip amber">Waiting on owner</span>&nbsp; <code>release.yml</code> run
-    <span class="num">33397190331</span> is building the cp312-abi3 manylinux wheel, then pauses
-    at the <code>release</code> environment. <strong>Approving that deployment is the one owner
-    action left</strong>; the wheel then lands on PyPI and I verify it there.</p>
+    <p><span class="chip green">Live on PyPI</span>&nbsp; <code>release.yml</code> run
+    <span class="num">33397190331</span> completed after your <code>release</code>-environment
+    approval. PyPI lists <code>0.6.0</code> as latest with the
+    <code>cp312-abi3-manylinux_2_17_x86_64</code> wheel — verified against
+    <code>pypi.org/pypi/repark/json</code>.</p>
   </div>
 
   <h2>What v0.6.0 delivers</h2>
@@ -103,10 +104,12 @@
   <h2>Board after the walk</h2>
   <div class="card">
     <ul>
-      <li><span class="chip amber">Open</span> <strong>#281</strong> — ledger archival: the seven
-      merged-unit ledgers leave <code>staging/</code> for <code>completed/</code>
-      (<code>ledger_lifecycle.py</code>; 472 py-tests and both ledger gates green). Merge at
-      leisure; no product change.</li>
+      <li><span class="chip green">Merged</span> <strong>#281</strong> — ledger archival: the
+      seven merged-unit ledgers left <code>staging/</code> for <code>completed/</code>. The one
+      Rust pin that read a staged ledger by path (the V3-4 C-001 matrix test) now finds it
+      anywhere under <code>task/ledgers/</code>, so lifecycle moves keep it green.</li>
+      <li><span class="chip green">Merged</span> <strong>#282</strong> — this report filed under
+      <code>docs/artifacts/</code>. Main is <code>bb7fa54</code>.</li>
       <li><span class="chip green">Merged</span> Fork PRs <strong>#243</strong> (F-7 slice 1,
       lineage carry through rewrites) and <strong>#244</strong> (F-6 <code>to_branch</code>) —
       fork main is <code>33be9a0</code>. RePark still pins <code>d408da42</code>, so these land
@@ -116,19 +119,20 @@
     </ul>
   </div>
 
-  <h2>Next work — the queue is empty, sequencing is yours</h2>
-  <p class="sub">Everything below is ready to charter; nothing is in flight. My recommendation
-  is the repin first — it is the only unit that unblocks two other lanes.</p>
+  <h2>Next work — sequence approved, awaiting dispatch</h2>
+  <p class="sub">You approved the repin-first sequence with FNP-7a/7b beside it, conditioned on
+  the #281 fix — which is now merged. Both lanes are ready to charter; on your go I dispatch
+  the Grok actors.</p>
 
   <div class="card">
-    <h3>1 · RP-4 fork repin <span class="chip green">Recommended first</span></h3>
+    <h3>1 · RP-4 fork repin <span class="chip green">Approved · first</span></h3>
     <p>Consume fork <code>33be9a0</code> (F-6 + F-7 slice 1). Unblocks <strong>REF</strong>
     (waiting on F-6 per STATUS) and the v3 track's pinned next step, <strong>V3-5 — the F-7 COW
     lineage lift</strong>: the preserve-half of lineage that V3-4's read-half deliberately left
     behind the fork boundary, and the path to retiring the V3-COW-1 keep-refusals.</p>
   </div>
   <div class="card">
-    <h3>2 · FNP-7a/7b <span class="chip green">Ready</span></h3>
+    <h3>2 · FNP-7a/7b <span class="chip green">Approved · parallel</span></h3>
     <p>Next in the campaign's pinned order (15/16 and 4c are delivered). 7b was explicitly
     unblocked by F-Y10-1 (#272). Disjoint surface from the repin — a natural parallel lane.</p>
   </div>
@@ -151,14 +155,17 @@
   <h2>Owner actions, in order</h2>
   <div class="card">
     <ol class="steps">
-      <li>Approve the <code>release</code> environment on run <span class="num">33397190331</span>
-      when the wheel finishes — I verify on PyPI after.</li>
-      <li>Merge <strong>#281</strong> (ledger archival, docs-only).</li>
-      <li>Rule the next lane(s): repin first is my recommendation, with FNP-7a/7b beside it.</li>
+      <li>Say the word and I dispatch the two approved lanes — RP-4 repin and FNP-7a/7b — as
+      parallel Grok actor units under SEPMO.</li>
+      <li>When convenient: rule the v0.7 slate, and date a ruling on SEM-0's RE-1/LOG-1 answer
+      changes so that charter can leave the gate.</li>
     </ol>
   </div>
 
   <p class="foot">Verification stamps: squash tree <code>453e3d7</code> equality checked against
-  reviewed content; tag pushed via local git so pre-push hooks ran; #281 gates — map-sync 162
-  clean, ledger-grammar 14 live ledgers, py-test 472 passed.</p>
+  reviewed content; tag pushed via local git so pre-push hooks ran; release run
+  <span class="num">33397190331</span> success and PyPI JSON lists 0.6.0 latest; #281 merged at
+  <code>4aaa667</code> with the ledger-pin fix green through full CI; fork main
+  <code>33be9a0</code> confirmed by <code>ls-remote</code> against the pinned
+  <code>d408da42</code>.</p>
 </div>
