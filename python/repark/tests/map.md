@@ -37,7 +37,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Untyped `1 + 1` / `2147483647 + 1` stay int64 (literal-width split).
   Unaliased planner-hit SQL keeps BinaryExpr column names.
   Native ``repark.sql()`` overflow raise is pinned. Facade i32 sub/mul wrap and
-  i64 CAST+lit wrap cells are pinned (ASCII docstring operators for RUF002).
+  i64 CAST+lit wrap cells are pinned (ASCII docstring operators for RUF002;
+  ruff format on long CAST SQL).
   pins: f-y10-1-int-overflow/C-001, C-002, C-003.
 - `test_production_file_size.py` — frozen parent-symbol inventory, integrated AST body hashes,
   responsibility ownership, `_funcs` compatibility namespace, isolated source/wheel import-cycle

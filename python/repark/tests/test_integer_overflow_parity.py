@@ -267,9 +267,7 @@ def test_int64_sub_min_minus_one_raises_under_default_ansi() -> None:
     """
     spark = _spark()
     with pytest.raises(Exception, match="ARITHMETIC_OVERFLOW"):
-        spark.sql(
-            "SELECT CAST(-9223372036854775808 AS BIGINT) - CAST(1 AS BIGINT) AS v"
-        ).to_arrow()
+        spark.sql("SELECT CAST(-9223372036854775808 AS BIGINT) - CAST(1 AS BIGINT) AS v").to_arrow()
 
 
 def test_int64_mul_max_times_two_raises_under_default_ansi() -> None:
@@ -279,9 +277,7 @@ def test_int64_mul_max_times_two_raises_under_default_ansi() -> None:
     """
     spark = _spark()
     with pytest.raises(Exception, match="ARITHMETIC_OVERFLOW"):
-        spark.sql(
-            "SELECT CAST(9223372036854775807 AS BIGINT) * CAST(2 AS BIGINT) AS v"
-        ).to_arrow()
+        spark.sql("SELECT CAST(9223372036854775807 AS BIGINT) * CAST(2 AS BIGINT) AS v").to_arrow()
 
 
 def test_int64_add_cast_plus_literal_wraps_when_ansi_false() -> None:
