@@ -569,7 +569,7 @@ mod tests {
     }
 
     fn projection_name(batch: &RecordBatch) -> String {
-        batch.schema().field(0).name().to_string()
+        batch.schema().field(0).name().clone()
     }
 
     /// pins: f-y10-1-int-overflow/C-002

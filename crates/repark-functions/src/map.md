@@ -122,6 +122,7 @@ Child modules use Rust's default layout: `str_to_map`, `shuffle`, and `map_from_
   is the ANSI-door hook. Ledger:
   `task/ledgers/staging/f-y10-1-int-overflow-ledger.md`.
   pins: f-y10-1-int-overflow/C-001, C-002, C-003, C-004, C-005
+  (clippy implicit_clone: projection name uses `clone` on the field name)
 - `lib.rs` — `register_all(ctx)` (datafusion-spark's full set, then the date + string + collection
   + **r20 G2** `random` (Spark XORShift `rand`/`randn`/`random`) shims — later registration wins a
   name clash) + Q1 percentile aliases + `spark_date_shim_functions()` +
