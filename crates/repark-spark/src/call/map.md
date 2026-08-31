@@ -8,12 +8,21 @@ Per-procedure bodies for the maintenance `CALL` router (`../call.rs`). The route
 parsing, table-ident resolution, and the other procedures; a procedure moves here when its body
 and measured-parity contract would grow `call.rs` beyond its exact
 `check_rust_file_size` baseline. This directory contains
-`rewrite_manifests`; `call.rs` keeps `expire_snapshots`, `rewrite_data_files`,
-`rewrite_position_delete_files`, `remove_orphan_files`, `rollback_to_snapshot`,
-`register_table`).
+`rewrite_manifests`, `rewrite_data_files`, and `rewrite_where`; `call.rs` keeps
+`expire_snapshots`, `rewrite_position_delete_files`, `remove_orphan_files`,
+`rollback_to_snapshot`, `register_table`).
 
 ## Contents
 
+- `rewrite_data_files.rs` — **rewrite_data_files options (2026-08-31):** v2 `where` is wired
+  through the fork's `RewriteDataFiles::filter` (file-selection, no residual). `strategy`
+  `binpack` runs; `sort` and `sort_order` refuse (fork R135 / registry `RDF-SORT-1`). Unknown
+  strategy and bad `where` use Spark 4.1.2 + Iceberg 1.11.0 text. v3 still hits
+  `V3-LINEAGE-1`. `options` stays refused.
+  pins: maint-rewrite-data-files-options/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
+- `rewrite_where.rs` — SQL `where` string → Iceberg `Predicate` (eq/cmp/AND/OR/NOT/IS NULL/IN/
+  BETWEEN on primitives). Failures wrap as Spark's `Cannot parse predicates in where option`.
+  pins: maint-rewrite-data-files-options/C-007
 - `rewrite_manifests.rs` — **MW-6**: `CALL <catalog>.system.rewrite_manifests(table => …)` over
   the fork's `RewriteManifestsAction` (`transaction/rewrite_manifests.rs`). The action returns no
   counts, so Spark's two columns are read from the new snapshot's summary
@@ -31,10 +40,12 @@ and measured-parity contract would grow `call.rs` beyond its exact
 ## Pointers
 
 - Up: [../map.md](../map.md)
-- Pins: [../tests/call_manifests.rs](../tests/call_manifests.rs) and
-  `python/repark/tests/test_maintenance_call.py`
+- Pins: [../tests/call_manifests.rs](../tests/call_manifests.rs),
+  [../tests/call_rewrite_options.rs](../tests/call_rewrite_options.rs),
+  `python/repark/tests/test_maintenance_call.py`,
+  `python/repark/tests/test_rewrite_data_files_options.py`
 - Divergences: [../../../../docs/spark-sql-iceberg-parity.md](../../../../docs/spark-sql-iceberg-parity.md)
-  rows `MANIFEST-1`, `MANIFEST-2`
+  rows `MANIFEST-1`, `MANIFEST-2`, `RDF-SORT-1`
 
 ## Debug
 

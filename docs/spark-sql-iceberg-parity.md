@@ -1833,6 +1833,24 @@ the pin rather than obeying it.
   scan opens, without bound, and the maintenance runbook as documented cannot reclaim either.
   Closing the row means porting Java's ratio clause into the fork's planner.
 
+### RDF-SORT-1 — `rewrite_data_files` refuses `sort` / `sort_order`; Spark runs a sort rewrite
+
+- **repark** — `CALL … rewrite_data_files(strategy => 'sort')` and a named `sort_order` refuse
+  loud. The fork at `d408da42` ports bin-pack only (GAP_MATRIX R135: sort and z-order deferred).
+  A requested option that cannot be honored is never a silent binpack.
+- **Apache Spark** — `strategy => 'sort'` with `sort_order => 'id ASC'` rewrites; a six-file v2
+  table compacted to one with id min/max `{1..6}`. `sort_order` without `strategy` still
+  binpacks (warns that rewritten files are not marked sorted). Missing sort column is
+  `ValidationException: Cannot find field '…' in struct`. Unknown strategy is
+  `unsupported strategy: {name}. Only binpack or sort is supported`.
+  *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, 2026-08-31.)*
+- **Pin** —
+  `crates/repark-spark/src/tests/call.rs::call_rewrite_sort_strategy_refuses_loud`
+  and
+  `crates/repark-spark/src/tests/call_rewrite_options.rs::call_rewrite_sort_order_refuses_and_does_not_compact`
+- **Rationale** — DECLARED fork ceiling until a later iceberg-rust rev ports sort rewrite.
+  `where` and `binpack` are honerable on this rev and are not this row.
+
 ### MANIFEST-1 — `rewrite_manifests` rewrites data manifests only; Spark rewrites delete manifests too
 
 - **repark** — `CALL <catalog>.system.rewrite_manifests(table => …)` re-groups the **data**
