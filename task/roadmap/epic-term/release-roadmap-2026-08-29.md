@@ -71,6 +71,20 @@ Two deliverables, not one:
 The gate is what keeps 0.7 from rotting: v1.3–v1.5 triple the public surface, and each of
 those releases ships its own examples as part of its done gate rather than re-doing 0.7.
 
+**Additions (proposed 2026-08-31; the ruling is this change's merge).**
+
+- **SQL-door examples.** This file names the SQL door the primary interface, yet the backfill
+  list above enumerates only the Python surface. Add an example family for the SQL door: one
+  runnable example per statement family and per `CALL system.*` procedure, roster hand-curated
+  from the parity registry's §2 taxonomy — introspection cannot enumerate SQL statements, so
+  the roster is a checked-in list held by the same drift gate.
+- **Notebooks are generated, not written.** The notebook deliverable ships as a mechanical
+  conversion of the example scripts, with a lockstep check; a notebook that can drift from its
+  script would re-create the rot the gate exists to prevent.
+- **FNP-15/16 lands inside the v0.7 window** (sequencing, not scope): the ~62 unregistered
+  `F.*` names register before the backfill closes, so "every public name" means the intended
+  surface rather than today's minus the known gap.
+
 ### v0.8 — Torture-test dataset suite
 
 Every dataset ≥ 1M rows; generators checked in, data never committed as blobs.
@@ -84,6 +98,21 @@ Every dataset ≥ 1M rows; generators checked in, data never committed as blobs.
 - **Opt-in secrets flagging** — the fixture (credential-shaped column names carrying fake
   plaintext) *and* the mechanism: disabled by default, one bool conf enables read-time
   flagging/refusal. This is about **data columns**; secrets in *configuration* are v0.10.
+
+**Additions (proposed 2026-08-31; the ruling is this change's merge).**
+
+- **Temporal-extremes family.** None of the five existing dataset families carries a temporal
+  or interval class. The FNP-7 measured edges become a reusable battery: Duration values at
+  the ±i64-microsecond bound (whole-day edge 106751991), MonthDayNano mixed and zero-unit
+  shapes (the BL-14 class), `DATE` ± interval promotion boundaries, epoch extremes.
+- **Aggregate-overflow decimals.** `decimal(38)` sums and averages that overflow at the
+  aggregate boundary (the `try_avg` class beside BL-13) — a different claim from
+  extreme-types' storage-side decimals, which all fit their declared width.
+- **v3-DV-at-scale family.** Many-file format-v3 tables carrying live Puffin deletion
+  vectors — the bed V3-5's true result counts and the v1.0 `10^7 x 50` gate reuse; today's
+  DV fixtures are dozens of rows. Constraint stated up front: live DVs are Spark-written, so
+  generation needs the local live oracle — CI keeps a small pre-generated fixture and the
+  ≥1M tier generates only where Spark exists.
 
 ### v0.9 — Never-OOM truth
 
