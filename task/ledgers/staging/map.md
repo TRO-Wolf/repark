@@ -5,6 +5,11 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [ex-0-example-drift-gate-ledger.md](ex-0-example-drift-gate-ledger.md) —
+  **EX-0 (2026-08-31), in flight:** v0.7 example drift gate + public-surface
+  inventory. `risk_tier: standard`. Branch `feat/ex-0-example-drift-gate`.
+  Ruling: [release-roadmap-2026-08-29.md](../../roadmap/epic-term/release-roadmap-2026-08-29.md)
+  §v0.7 deliverable 2.
 - [rp-4-fork-repin-ledger.md](rp-4-fork-repin-ledger.md) — **RP-4 (2026-08-31), in
   flight:** fork repin `d408da42` → `33be9a0` (F-7 slice 1 consume, F-6 carry).
   Family frozen. Ledger born on `feat/rp-4-fork-repin`.
