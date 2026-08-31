@@ -67,6 +67,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `catalog_ops`, `describe_show`, `alter`, `dml`
   (DELETE/UPDATE + BUG-001 valve; no production `delete`/`update` module), `insert_overwrite`,
   `partition_overwrite` (DML-B dynamic/static snapshot stamps, empty-static `delete`,
+  sibling file-path stability, two-key AND + incomplete-static, string/NULL partitions,
   Hive too-many-columns refuse, empty-dynamic guard;
   pins: dml-b-insert-overwrite/C-001, C-002, C-004, C-005),
   `merge`, `call`, and `call_orphan`. `call_remove_orphan_files_refuses_a_location_arg_under_the_fallback_root`

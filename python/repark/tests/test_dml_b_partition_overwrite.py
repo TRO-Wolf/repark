@@ -163,3 +163,82 @@ def test_sql_empty_dynamic_partition_overwrite_refuses(spark: ReparkSession) -> 
         {"id": 2, "name": "b"},
         {"id": 3, "name": "c"},
     ]
+
+
+def test_sql_two_key_static_partition_overwrite_replaces_only_the_tuple(
+    spark: ReparkSession,
+) -> None:
+    """Two-key PARTITION (k1=v1, k2=v2) replaces only that tuple.
+
+    pins: dml-b-insert-overwrite/C-001
+    """
+    table = f"{CATALOG}.{NS}.two_key"
+    spark.sql(
+        f"CREATE TABLE {table} USING iceberg PARTITIONED BY (id, cat) AS "
+        "SELECT * FROM (VALUES (1, 'west', 'a'), (1, 'east', 'b'), (2, 'west', 'c')) "
+        "AS t(id, cat, payload)"
+    )
+    spark.sql(f"INSERT OVERWRITE {table} PARTITION (id = 1, cat = 'west') SELECT 'z'")
+    got = spark.sql(f"SELECT id, cat, payload FROM {table} ORDER BY id, cat").to_arrow()
+    assert got.to_pylist() == [
+        {"id": 1, "cat": "east", "payload": "b"},
+        {"id": 1, "cat": "west", "payload": "z"},
+        {"id": 2, "cat": "west", "payload": "c"},
+    ]
+
+
+def test_sql_incomplete_two_key_replaces_all_under_named_key(spark: ReparkSession) -> None:
+    """PARTITION (id=1) on a two-key spec replaces every cat under id=1.
+
+    pins: dml-b-insert-overwrite/C-001
+    """
+    table = f"{CATALOG}.{NS}.two_key_partial"
+    spark.sql(
+        f"CREATE TABLE {table} USING iceberg PARTITIONED BY (id, cat) AS "
+        "SELECT * FROM (VALUES (1, 'west', 'a'), (1, 'east', 'b'), (2, 'west', 'c')) "
+        "AS t(id, cat, payload)"
+    )
+    spark.sql(f"INSERT OVERWRITE {table} PARTITION (id = 1) SELECT 'north' AS cat, 'z' AS payload")
+    got = spark.sql(f"SELECT id, cat, payload FROM {table} ORDER BY id, cat").to_arrow()
+    assert got.to_pylist() == [
+        {"id": 1, "cat": "north", "payload": "z"},
+        {"id": 2, "cat": "west", "payload": "c"},
+    ]
+
+
+def test_sql_string_partition_overwrite_keeps_siblings(spark: ReparkSession) -> None:
+    """Static PARTITION (cat='west') replaces only that string partition.
+
+    pins: dml-b-insert-overwrite/C-001
+    """
+    table = f"{CATALOG}.{NS}.string_part"
+    spark.sql(
+        f"CREATE TABLE {table} USING iceberg PARTITIONED BY (cat) AS "
+        "SELECT * FROM (VALUES (1, 'west'), (2, 'east'), (3, 'north')) AS t(id, cat)"
+    )
+    spark.sql(f"INSERT OVERWRITE {table} PARTITION (cat = 'west') SELECT 9")
+    got = spark.sql(f"SELECT id, cat FROM {table} ORDER BY id").to_arrow()
+    assert got.to_pylist() == [
+        {"id": 2, "cat": "east"},
+        {"id": 3, "cat": "north"},
+        {"id": 9, "cat": "west"},
+    ]
+
+
+def test_sql_null_partition_overwrite_keeps_siblings(spark: ReparkSession) -> None:
+    """Static PARTITION (id = NULL) replaces only the null-id partition.
+
+    pins: dml-b-insert-overwrite/C-001
+    """
+    table = f"{CATALOG}.{NS}.null_part"
+    spark.sql(
+        f"CREATE TABLE {table} USING iceberg PARTITIONED BY (id) AS "
+        "SELECT * FROM (VALUES (CAST(NULL AS INT), 'n'), (1, 'a'), (2, 'b')) AS t(id, name)"
+    )
+    spark.sql(f"INSERT OVERWRITE {table} PARTITION (id = NULL) SELECT 'z'")
+    got = spark.sql(f"SELECT id, name FROM {table} ORDER BY id NULLS FIRST").to_arrow()
+    assert got.to_pylist() == [
+        {"id": None, "name": "z"},
+        {"id": 1, "name": "a"},
+        {"id": 2, "name": "b"},
+    ]

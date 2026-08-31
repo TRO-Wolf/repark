@@ -3,7 +3,7 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use datafusion::arrow::array::{Int64Array, StringArray};
+use datafusion::arrow::array::{Array, Int64Array, StringArray};
 use datafusion::arrow::datatypes::DataType;
 use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::prelude::{SessionConfig, SessionContext};
@@ -252,4 +252,153 @@ async fn empty_dynamic_partition_overwrite_refuses() {
         .ok("SELECT id, name FROM ice.sales.t ORDER BY id")
         .await;
     assert_eq!(id_name(&batches), vec![(1, "a".into()), (2, "b".into())]);
+}
+
+fn id_cat_payload(batches: &[RecordBatch]) -> Vec<(i64, String, String)> {
+    let mut rows = Vec::new();
+    for batch in batches {
+        let ids = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<Int64Array>()
+            .expect("id");
+        let cats = batch
+            .column(1)
+            .as_any()
+            .downcast_ref::<StringArray>()
+            .expect("cat");
+        let payloads = batch
+            .column(2)
+            .as_any()
+            .downcast_ref::<StringArray>()
+            .expect("payload");
+        for index in 0..batch.num_rows() {
+            rows.push((
+                ids.value(index),
+                cats.value(index).to_string(),
+                payloads.value(index).to_string(),
+            ));
+        }
+    }
+    rows.sort();
+    rows
+}
+
+/// pins: dml-b-insert-overwrite/C-001
+#[tokio::test]
+async fn static_two_key_partition_overwrite_replaces_only_the_tuple() {
+    let door = door_with_schema().await;
+    door.ok(
+        "CREATE TABLE ice.sales.two WITH (partitioning = ARRAY['id', 'cat']) AS \
+         SELECT 1 AS id, 'west' AS cat, 'a' AS payload \
+         UNION ALL SELECT 1, 'east', 'b' UNION ALL SELECT 2, 'west', 'c'",
+    )
+    .await;
+    door.ok("INSERT OVERWRITE ice.sales.two PARTITION (id = 1, cat = 'west') SELECT 'z'")
+        .await;
+    let batches = door
+        .ok("SELECT id, cat, payload FROM ice.sales.two ORDER BY id, cat")
+        .await;
+    assert_eq!(
+        id_cat_payload(&batches),
+        vec![
+            (1, "east".into(), "b".into()),
+            (1, "west".into(), "z".into()),
+            (2, "west".into(), "c".into()),
+        ]
+    );
+}
+
+/// pins: dml-b-insert-overwrite/C-001
+#[tokio::test]
+async fn static_incomplete_two_key_partition_replaces_all_k2_under_k1() {
+    let door = door_with_schema().await;
+    door.ok(
+        "CREATE TABLE ice.sales.two WITH (partitioning = ARRAY['id', 'cat']) AS \
+         SELECT 1 AS id, 'west' AS cat, 'a' AS payload \
+         UNION ALL SELECT 1, 'east', 'b' UNION ALL SELECT 2, 'west', 'c'",
+    )
+    .await;
+    door.ok(
+        "INSERT OVERWRITE ice.sales.two PARTITION (id = 1) SELECT 'north' AS cat, 'z' AS payload",
+    )
+    .await;
+    let batches = door
+        .ok("SELECT id, cat, payload FROM ice.sales.two ORDER BY id, cat")
+        .await;
+    assert_eq!(
+        id_cat_payload(&batches),
+        vec![
+            (1, "north".into(), "z".into()),
+            (2, "west".into(), "c".into()),
+        ]
+    );
+}
+
+/// pins: dml-b-insert-overwrite/C-001
+#[tokio::test]
+async fn static_string_partition_overwrite_keeps_siblings() {
+    let door = door_with_schema().await;
+    door.ok(
+        "CREATE TABLE ice.sales.s WITH (partitioning = ARRAY['name']) AS \
+         SELECT 1 AS id, 'a' AS name UNION ALL SELECT 2 AS id, 'b' AS name \
+         UNION ALL SELECT 3 AS id, 'c' AS name",
+    )
+    .await;
+    door.ok("INSERT OVERWRITE ice.sales.s PARTITION (name = 'a') SELECT 9")
+        .await;
+    let batches = door
+        .ok("SELECT id, name FROM ice.sales.s ORDER BY id")
+        .await;
+    assert_eq!(
+        id_name(&batches),
+        vec![(2, "b".into()), (3, "c".into()), (9, "a".into())]
+    );
+}
+
+/// pins: dml-b-insert-overwrite/C-001
+#[tokio::test]
+async fn static_null_partition_overwrite_keeps_siblings() {
+    let door = door_with_schema().await;
+    door.ok(
+        "CREATE TABLE ice.sales.n WITH (partitioning = ARRAY['id']) AS \
+         SELECT CAST(NULL AS BIGINT) AS id, 'n' AS name UNION ALL SELECT 1, 'a' \
+         UNION ALL SELECT 2, 'b'",
+    )
+    .await;
+    door.ok("INSERT OVERWRITE ice.sales.n PARTITION (id = NULL) SELECT 'z'")
+        .await;
+    let batches = door
+        .ok("SELECT id, name FROM ice.sales.n ORDER BY id NULLS FIRST")
+        .await;
+    let mut rows = Vec::new();
+    for batch in &batches {
+        let ids = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<Int64Array>()
+            .expect("id");
+        let names = batch
+            .column(1)
+            .as_any()
+            .downcast_ref::<StringArray>()
+            .expect("name");
+        for index in 0..batch.num_rows() {
+            let id = if ids.is_null(index) {
+                None
+            } else {
+                Some(ids.value(index))
+            };
+            rows.push((id, names.value(index).to_string()));
+        }
+    }
+    rows.sort_by_key(|row| row.0);
+    assert_eq!(
+        rows,
+        vec![
+            (None, "z".into()),
+            (Some(1), "a".into()),
+            (Some(2), "b".into()),
+        ]
+    );
 }

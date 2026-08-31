@@ -228,8 +228,10 @@ Writes into an existing table resolve columns **by name**, not by position.
 Static `INSERT OVERWRITE t PARTITION (k=v) SELECT …` replaces only the named identity
 partitions (Iceberg `OverwriteFiles`). Dynamic `INSERT OVERWRITE t PARTITION (k) SELECT …`
 and `writeTo(...).overwritePartitions()` replace only the partitions present in the source
-(Iceberg `ReplacePartitions`). An empty dynamic overwrite refuses; it does not wipe the
-table. See registry [DML-1](../spark-sql-iceberg-parity.md#dml-1--insert-overwrite--partition-).
+(Iceberg `ReplacePartitions`). An empty dynamic overwrite refuses. Spark SQL default-STATIC
+empty `PARTITION (k)` wipes; Spark `writeTo().overwritePartitions()` empty is a no-op;
+RePark refuses. See registry
+[DML-1](../spark-sql-iceberg-parity.md#dml-1--insert-overwrite--partition-).
 
 ### The write forms that refuse
 

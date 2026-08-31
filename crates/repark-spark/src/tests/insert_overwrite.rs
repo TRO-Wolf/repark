@@ -913,7 +913,7 @@ async fn empty_insert_into_does_not_wipe() {
 /// Empty static `INSERT OVERWRITE … PARTITION` drops only that partition.
 /// pins: dml-b-insert-overwrite/C-001, C-004, C-005
 #[tokio::test]
-async fn empty_insert_overwrite_partition_refuses_full_wipe() {
+async fn empty_insert_overwrite_partition_drops_only_named_partition() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     run(
@@ -965,7 +965,7 @@ async fn empty_insert_overwrite_limit_zero_wipes_table() {
 /// Non-empty static `INSERT OVERWRITE … PARTITION` replaces only that partition.
 /// pins: dml-b-insert-overwrite/C-001, C-005
 #[tokio::test]
-async fn insert_overwrite_partition_nonempty_refuses_whole_table_replace() {
+async fn insert_overwrite_partition_nonempty_replaces_only_named_partition() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     run(

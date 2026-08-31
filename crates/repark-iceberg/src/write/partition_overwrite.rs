@@ -21,7 +21,7 @@ use uuid::Uuid;
 use crate::write::merge::OPERATION_ID_PROP;
 use crate::write::overwrite::{OverwriteIsolation, parse_overwrite_isolation};
 
-/// Needle for the empty-input dynamic overwrite refusal (Spark engine-side guard).
+/// Needle for the empty-input dynamic overwrite refusal.
 pub const EMPTY_DYNAMIC_OVERWRITE_NEEDLE: &str =
     "Cannot dynamically overwrite partitions with no data";
 
@@ -173,13 +173,15 @@ pub fn plan_partition_overwrite(
 
 /// Refuse an empty-input dynamic overwrite before any catalog mutation.
 /// # Errors
-/// [`DataFusionError::Plan`] naming the Spark engine-side empty-dynamic guard.
+/// [`DataFusionError::Plan`] naming the three empty-dynamic surfaces (Spark SQL STATIC wipe,
+/// Spark writeTo no-op, RePark loud refuse).
 pub fn refuse_empty_dynamic_overwrite(staged_files: &[DataFile]) -> Result<()> {
     let total_rows: u64 = staged_files.iter().map(DataFile::record_count).sum();
     if staged_files.is_empty() || total_rows == 0 {
         return Err(DataFusionError::Plan(format!(
-            "{EMPTY_DYNAMIC_OVERWRITE_NEEDLE} — an empty dynamic overwrite would wipe every \
-             partition (Spark refuses this engine-side)"
+            "{EMPTY_DYNAMIC_OVERWRITE_NEEDLE}. Spark SQL default-STATIC empty PARTITION (k) wipes \
+             the table. Spark writeTo().overwritePartitions() empty is a no-op. RePark refuses \
+             empty PARTITION (k)."
         )));
     }
     Ok(())
@@ -612,7 +614,12 @@ fn iceberg_err(err: iceberg::Error) -> DataFusionError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use datafusion::arrow::array::{Int32Array, StringArray};
+    use datafusion::arrow::datatypes::{DataType, Field, Schema as ArrowSchema};
     use datafusion::sql::sqlparser::ast::Ident;
+    use iceberg::spec::{Schema, Transform, UnboundPartitionSpec};
+    use iceberg::{NamespaceIdent, TableCreation, TableIdent};
+    use tempfile::TempDir;
 
     fn ident(name: &str) -> Expr {
         Expr::Identifier(Ident::new(name))
@@ -695,6 +702,100 @@ mod tests {
         assert!(
             error.to_string().contains(EMPTY_DYNAMIC_OVERWRITE_NEEDLE),
             "got {error}"
+        );
+        assert!(
+            error
+                .to_string()
+                .contains("writeTo().overwritePartitions() empty is a no-op"),
+            "got {error}"
+        );
+        assert!(
+            error
+                .to_string()
+                .contains("default-STATIC empty PARTITION (k) wipes"),
+            "got {error}"
+        );
+    }
+
+    fn key_payload_batch(keys: &[i32], payloads: &[&str]) -> RecordBatch {
+        let schema = Arc::new(ArrowSchema::new(vec![
+            Field::new("key", DataType::Int32, false),
+            Field::new("payload", DataType::Utf8, true),
+        ]));
+        RecordBatch::try_new(
+            schema,
+            vec![
+                Arc::new(Int32Array::from(keys.to_vec())),
+                Arc::new(StringArray::from(payloads.to_vec())),
+            ],
+        )
+        .expect("batch")
+    }
+
+    /// pins: dml-b-insert-overwrite/C-001
+    #[tokio::test]
+    async fn commit_rejects_added_file_outside_overwrite_filter() {
+        let warehouse = TempDir::new().expect("warehouse");
+        let catalog = crate::catalog::memory_catalog(warehouse.path().to_str().expect("utf8"))
+            .await
+            .expect("catalog");
+        catalog
+            .create_namespace(&NamespaceIdent::new("sales".to_string()), HashMap::new())
+            .await
+            .expect("namespace");
+        let schema = Schema::builder()
+            .with_schema_id(0)
+            .with_fields(vec![
+                NestedField::required(1, "key", Type::Primitive(PrimitiveType::Int)).into(),
+                NestedField::optional(2, "payload", Type::Primitive(PrimitiveType::String)).into(),
+            ])
+            .build()
+            .expect("schema");
+        let spec = UnboundPartitionSpec::builder()
+            .add_partition_field(1, "key", Transform::Identity)
+            .expect("partition field")
+            .build();
+        catalog
+            .create_table(
+                &NamespaceIdent::new("sales".to_string()),
+                TableCreation::builder()
+                    .name("t".to_string())
+                    .schema(schema)
+                    .partition_spec(spec)
+                    .build(),
+            )
+            .await
+            .expect("create");
+        let ident = TableIdent::new(NamespaceIdent::new("sales".to_string()), "t".to_string());
+        crate::write::append(
+            &catalog,
+            &ident,
+            vec![key_payload_batch(&[2], &["outside"])],
+        )
+        .await
+        .expect("seed");
+        let table = catalog.load_table(&ident).await.expect("load");
+        let files = crate::write::write_partitioned_data_files(
+            &table,
+            vec![key_payload_batch(&[2], &["outside"])],
+        )
+        .await
+        .expect("stage key=2 file");
+        let request =
+            partition_overwrite_request_from_exprs(&[eq("key", number("1"))]).expect("static");
+        let PartitionOverwritePlan::Static(spec) =
+            plan_partition_overwrite(&table, &request).expect("plan")
+        else {
+            panic!("expected static plan");
+        };
+        let error = commit_overwrite_by_row_filter(&catalog, &table, files, spec.predicate)
+            .await
+            .expect_err("added file in key=2 must not commit under key=1 filter");
+        let message = error.to_string();
+        assert!(
+            message.contains("Cannot append file with rows that do not match filter")
+                || message.contains("do not match filter"),
+            "got {message}"
         );
     }
 }
