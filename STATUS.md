@@ -95,13 +95,11 @@ What happens next, in order:
    first tag — [docs/design/python-facade.md](docs/design/python-facade.md) §4 — is enforced at
    the v1.0 north-star API review).
 
-Owner-side actions that rode this sequence rather than gating it are **DISCHARGED — no owner-side
-tier-2 action remains.** The aws-acceptance (tier-2, live-AWS) first dispatch ran **green on
-2026-08-10** (Glue and S3 Tables). The parity-live half was **discharged** on first-run evidence
-(green on merged `main` 2026-08-09/10). Three stale always-PASS Apache smoke pins are now
-known-FAIL meta pins; the nightly is a live signal again. Pre-scrub content remains reachable in
-published history — an exposure **accepted by explicit decision**; provenance:
-[docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e-facade-ledger.md)
+Owner-side actions that rode this sequence are **DISCHARGED — no owner-side tier-2 action
+remains.** aws-acceptance ran green 2026-08-10 (Glue and S3 Tables); the parity-live half
+discharged on first-run evidence; three stale always-PASS Apache smoke pins are known-FAIL meta
+pins. Pre-scrub content stays reachable in published history — accepted by explicit decision;
+provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e-facade-ledger.md)
 ("the B-2 literal is already published").
 
 ## Active workstreams
