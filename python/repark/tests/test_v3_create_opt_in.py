@@ -9,12 +9,32 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
 from repark.errors import UnsupportedOperationException
 
 _ALLOW_CREATE_V3_KEY = "repark.sql.allowCreateFormatVersion3"
+
+
+def _lineage_triples(table: pa.Table) -> list[tuple[int, int, int]]:
+    """Return ordered (id, _row_id, seq) and pin Arrow types."""
+    assert table.schema.field("id").type in (pa.int32(), pa.int64()), table.schema
+    assert table.schema.field("_row_id").type == pa.int64(), table.schema
+    assert table.schema.field("_last_updated_sequence_number").type == pa.int64(), table.schema
+    rows: list[tuple[int, int, int]] = []
+    for identifier, row_id, sequence in zip(
+        table.column("id").to_pylist(),
+        table.column("_row_id").to_pylist(),
+        table.column("_last_updated_sequence_number").to_pylist(),
+        strict=True,
+    ):
+        assert row_id is not None, "missing _row_id"
+        assert sequence is not None, "missing _last_updated_sequence_number"
+        rows.append((int(identifier), int(row_id), int(sequence)))
+    rows.sort(key=lambda row: row[0])
+    return rows
 
 
 def test_format_version_three_refuses_without_opt_in(tmp_path: Path) -> None:
@@ -59,13 +79,24 @@ def test_format_version_three_create_with_opt_in_is_v3_and_rewrite_runs(
             "CREATE TABLE ice.sales.v3ctas USING iceberg "
             "TBLPROPERTIES ('format-version' = '3') AS SELECT 1 AS id"
         ).collect()
-        spark.sql("INSERT INTO ice.sales.v3 SELECT 1 AS id").collect()
-        rows = spark.sql("SELECT id FROM ice.sales.v3").to_arrow()
-        assert rows.column("id").to_pylist() == [1]
+        for index in range(1, 7):
+            spark.sql(f"INSERT INTO ice.sales.v3 SELECT {index} AS id").collect()
+        rows = spark.sql("SELECT id FROM ice.sales.v3 ORDER BY id").to_arrow()
+        assert rows.column("id").to_pylist() == [1, 2, 3, 4, 5, 6]
         assert spark.sql("SELECT id FROM ice.sales.v3ctas").to_arrow().column("id").to_pylist() == [
             1
         ]
-        spark.sql("CALL ice.system.rewrite_data_files(table => 'sales.v3')").collect()
+        before = spark.sql(
+            "SELECT id, _row_id, _last_updated_sequence_number FROM ice.sales.v3 ORDER BY id"
+        ).to_arrow()
+        before_rows = _lineage_triples(before)
+        result = spark.sql("CALL ice.system.rewrite_data_files(table => 'sales.v3')").to_arrow()
+        assert result.schema.field("rewritten_data_files_count").type == pa.int32()
+        assert result.column("rewritten_data_files_count")[0].as_py() == 6
+        after = spark.sql(
+            "SELECT id, _row_id, _last_updated_sequence_number FROM ice.sales.v3 ORDER BY id"
+        ).to_arrow()
+        assert _lineage_triples(after) == before_rows
     finally:
         spark.stop()
 

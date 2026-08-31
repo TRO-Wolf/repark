@@ -95,7 +95,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   and `call_orphan_shared_ctas_root_rule` pin the fallback-root safety contract. Maintenance tests
   pin Spark's full schemas, typed count sources, deletion-vector refusal, and file-granularity rules.
   `call_v3` (**V3-0 / RP-4**): v3 rewrite preserves lineage, v2 control, and
-  `opt_in_create_produces_v3_and_rewrite_runs` (`V3-LINEAGE-1` FIXED; `Model: Grok 4.6 xHigh`).
+  `opt_in_create_produces_v3_and_rewrite_runs` (six-file CALL, lineage equal;
+  `V3-LINEAGE-1` FIXED; `Model: Grok 4.6 xHigh`).
   Pin `call_rewrite_data_files_on_v3_preserves_row_lineage`
   (`pins: rp-3-fork-repin/C-005; rp-4-fork-repin/C-003`).
   `call_manifests` (**MW-6**) pins the two non-nullable `int` columns, no-op zero result, current

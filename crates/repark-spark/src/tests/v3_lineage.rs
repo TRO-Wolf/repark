@@ -439,7 +439,7 @@ fn cow_keep_refusal_files_are_byte_untouched() {
         ("crates/repark-sql/src/v3/cow.rs", 0x7dae_1067_fc44_04e7),
         (
             "python/repark/tests/test_v3_cow_dml.py",
-            0xa678_6cb7_77c8_f448,
+            0xbe7a_4195_453e_c792,
         ),
     ];
     for (path, expected) in pinned {

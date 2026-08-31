@@ -233,19 +233,18 @@ converts parquet position deletes to DVs; on a DV-only fixture it is a zero-resu
 (REF consumes it).
 
 Listed so the fork plans it; as of 2026-08-21 the engine's V3-2+ units deliberately waited
-for the MW campaign to close (that wait is over — the addendum below), and the engine refuses
-these paths today.
+for the MW campaign to close (that wait is over — the addendum below).
 
-- **V3-LINEAGE-1** — `RewriteFiles` / `RewriteDataFiles` must carry row lineage (`_row_id`,
-  `_last_updated_sequence_number`) through compaction unchanged, as Spark does; the engine
-  refuses v3 rewrite until it does. The same carry applies to **any action that rewrites an
-  existing row** — the COW DML path (`OverwriteFiles`) included; engine registry queue
-  `V3-COW-1` (2026-08-23) records that path as reachable and unmeasured engine-side.
+- **V3-LINEAGE-1** — **FIXED 2026-08-31 (RP-4 / fork #243).** `RewriteDataFiles` carries
+  `_row_id` / `_last_updated_sequence_number` through compaction Spark-equal; the public
+  CALL is lifted. The same carry still does **not** apply to COW DML (`OverwriteFiles`);
+  registry `V3-COW-1` keeps that path refused.
 - **B-MOR-3** — `RewritePositionDeleteFiles` refuses live Puffin deletion vectors; a DV-aware
   rewrite (or a DV-specific action) is the fork's call.
 - **V3-DANGLE-1** — a v3 compaction must drop the DVs scoped to the files it rewrote (Spark
-  reported `removed_delete_files_count = 6` there with no option set). Unreachable on the engine
-  side while V3-LINEAGE-1 holds; whoever lifts that guard owns this.
+  reported `removed_delete_files_count = 6` there with no option set). **Reachable** now that
+  V3-LINEAGE-1 is lifted: RP-4's twelve-file fixture had no live DVs
+  (`removed_delete_files_count = 0`). Residue for V3-5.
 
 *Addendum 2026-08-23:* the owner set v1.0's north star as **full production-grade format-v3**
 (engine charter: `task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md`), and the MW campaign

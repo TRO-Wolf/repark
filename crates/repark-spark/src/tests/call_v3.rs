@@ -207,26 +207,22 @@ async fn opt_in_create_produces_v3_and_rewrite_runs() {
          TBLPROPERTIES ('format-version' = '3')",
     )
     .await;
-    run(
-        &ctx,
-        &catalogs,
-        "INSERT INTO ice.sales.v3opt SELECT 1 AS id",
-    )
-    .await;
+    for index in 1..=6 {
+        run(
+            &ctx,
+            &catalogs,
+            &format!("INSERT INTO ice.sales.v3opt SELECT {index} AS id"),
+        )
+        .await;
+    }
 
     let catalog = catalogs.get("ice").expect("ice catalog");
     let ident = TableIdent::from_strs(["sales", "v3opt"]).unwrap();
-    assert_eq!(
-        catalog
-            .load_table(&ident)
-            .await
-            .unwrap()
-            .metadata()
-            .format_version(),
-        FormatVersion::V3
-    );
+    let table = catalog.load_table(&ident).await.unwrap();
+    assert_eq!(table.metadata().format_version(), FormatVersion::V3);
+    let before = scan_lineage_triples(&table).await;
 
-    execute(
+    let batches = execute(
         &ctx,
         &catalogs,
         "CALL ice.system.rewrite_data_files(table => 'sales.v3opt')",
@@ -236,6 +232,18 @@ async fn opt_in_create_produces_v3_and_rewrite_runs() {
     .collect()
     .await
     .expect("collect opt-in v3 rewrite");
+    let rewritten = batches[0]
+        .column(0)
+        .as_any()
+        .downcast_ref::<Int32Array>()
+        .expect("rewritten_data_files_count is Int32")
+        .value(0);
+    assert_eq!(rewritten, 6, "six single-row files must compact");
+    let after = scan_lineage_triples(&catalog.load_table(&ident).await.unwrap()).await;
+    assert_eq!(
+        after, before,
+        "opt-in CREATE rewrite must keep _row_id and last_updated_seq"
+    );
 
     run(
         &ctx,
