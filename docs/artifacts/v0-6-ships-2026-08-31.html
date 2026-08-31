@@ -1,0 +1,164 @@
+<title>v0.6.0 Ships</title>
+<style>
+  :root{
+    --ground:#F2F5F7; --card:#FFFFFF; --ink:#16232B; --ink-2:#4A5D68; --line:#D8E2E8;
+    --teal:#0E6C88; --teal-2:#0B5065; --chip-green-bg:#E3F2E8; --chip-green-ink:#1E6B3A;
+    --chip-amber-bg:#FBF0DC; --chip-amber-ink:#8A5E0C; --chip-hold-bg:#E8E3F2; --chip-hold-ink:#4A3A8A;
+    --chip-guard-bg:#F2E3E3; --chip-guard-ink:#8A2E2E; --mono-bg:#EAF1F5;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ground:#0E1418; --card:#162027; --ink:#E4ECF1; --ink-2:#9AB0BC; --line:#243440;
+      --teal:#4DB1CF; --teal-2:#7CC7DD; --chip-green-bg:#173324; --chip-green-ink:#7CD9A0;
+      --chip-amber-bg:#332A14; --chip-amber-ink:#E5C071; --chip-hold-bg:#221D38; --chip-hold-ink:#B0A2E8;
+      --chip-guard-bg:#331B1B; --chip-guard-ink:#E89B9B; --mono-bg:#1B2830;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0E1418; --card:#162027; --ink:#E4ECF1; --ink-2:#9AB0BC; --line:#243440;
+    --teal:#4DB1CF; --teal-2:#7CC7DD; --chip-green-bg:#173324; --chip-green-ink:#7CD9A0;
+    --chip-amber-bg:#332A14; --chip-amber-ink:#E5C071; --chip-hold-bg:#221D38; --chip-hold-ink:#B0A2E8;
+    --chip-guard-bg:#331B1B; --chip-guard-ink:#E89B9B; --mono-bg:#1B2830;
+  }
+  body{background:var(--ground);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;
+       font-size:15px;line-height:1.55;margin:0;padding:0 16px 64px;}
+  .wrap{max-width:960px;margin:0 auto;}
+  h1,h2,h3{font-family:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;
+           text-wrap:balance;line-height:1.15;}
+  h1{font-size:34px;margin:40px 0 4px;}
+  h2{font-size:22px;margin:36px 0 12px;color:var(--teal-2);}
+  h3{font-size:17px;margin:20px 0 8px;}
+  .kicker{font-family:"IBM Plex Sans Condensed",sans-serif;text-transform:uppercase;
+          letter-spacing:.12em;font-size:12px;color:var(--teal);margin-top:36px;}
+  .sub{color:var(--ink-2);margin:0 0 8px;max-width:70ch;}
+  code,.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.88em;
+             background:var(--mono-bg);border-radius:4px;padding:1px 5px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;
+        padding:20px 24px;margin:14px 0;}
+  .chip{display:inline-block;font-family:"IBM Plex Sans Condensed",sans-serif;font-size:12px;
+        font-weight:600;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;
+        padding:2px 10px;vertical-align:middle;}
+  .green{background:var(--chip-green-bg);color:var(--chip-green-ink);}
+  .amber{background:var(--chip-amber-bg);color:var(--chip-amber-ink);}
+  .hold{background:var(--chip-hold-bg);color:var(--chip-hold-ink);}
+  .guard{background:var(--chip-guard-bg);color:var(--chip-guard-ink);}
+  table{border-collapse:collapse;width:100%;font-size:14px;}
+  .tablewrap{overflow-x:auto;}
+  th{font-family:"IBM Plex Sans Condensed",sans-serif;text-transform:uppercase;font-size:11.5px;
+     letter-spacing:.08em;color:var(--ink-2);text-align:left;padding:6px 10px;
+     border-bottom:2px solid var(--line);}
+  td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top;}
+  td:first-child{white-space:nowrap;}
+  ul{margin:6px 0;padding-left:22px;}
+  li{margin:4px 0;}
+  a{color:var(--teal);text-decoration-thickness:1px;}
+  .num{font-variant-numeric:tabular-nums;}
+  ol.steps{counter-reset:s;list-style:none;padding-left:0;margin:8px 0;}
+  ol.steps li{counter-increment:s;display:flex;gap:12px;align-items:baseline;margin:8px 0;}
+  ol.steps li::before{content:counter(s);font-family:"IBM Plex Sans Condensed",sans-serif;
+        font-weight:700;color:var(--card);background:var(--teal);border-radius:6px;
+        min-width:24px;text-align:center;padding:1px 0;font-size:13px;}
+  .foot{color:var(--ink-2);font-size:13px;margin-top:40px;border-top:1px solid var(--line);
+        padding-top:12px;}
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<div class="wrap">
+  <p class="kicker">RePark · release + roadmap · 2026-08-31</p>
+  <h1>v0.6.0 Ships</h1>
+  <p class="sub">The nine-PR merge walk is complete, the release PR is squash-merged, and the
+  annotated <code>v0.6.0</code> tag is pushed. The eighth tag delivers the Iceberg DML
+  remainder — every unit Critic-passed and green through the full gate roster. One owner
+  action stands between the wheel and PyPI.</p>
+
+  <h2>Release state</h2>
+  <div class="card">
+    <p><span class="chip green">Tagged</span>&nbsp; <code>v0.6.0</code> at squash
+    <code>854954e</code>. Tree-equality verified: the owner's pre-squash "Update branch" merge
+    (<code>de03aef</code>) carried no foreign work, and its tree hash equals the squash tree
+    byte-for-byte (<code>453e3d7</code>). The delta over main is exactly the four release files
+    (<code>Cargo.toml</code> version SSOT, <code>Cargo.lock</code> nine member lines,
+    <code>STATUS.md</code> release block, root <code>map.md</code>).</p>
+    <p><span class="chip amber">Waiting on owner</span>&nbsp; <code>release.yml</code> run
+    <span class="num">33397190331</span> is building the cp312-abi3 manylinux wheel, then pauses
+    at the <code>release</code> environment. <strong>Approving that deployment is the one owner
+    action left</strong>; the wheel then lands on PyPI and I verify it there.</p>
+  </div>
+
+  <h2>What v0.6.0 delivers</h2>
+  <div class="card tablewrap">
+    <table>
+      <tr><th>PR</th><th>Unit</th><th>Delivered</th></tr>
+      <tr><td class="num">#273</td><td>DML-B</td><td>Static + dynamic <code>INSERT OVERWRITE … PARTITION</code> and <code>writeTo().overwritePartitions()</code>, empty-input dynamic guard.</td></tr>
+      <tr><td class="num">#274</td><td>DML-C</td><td><code>TRUNCATE TABLE</code> on both SQL doors and the facade — registry DML-2 flipped to FIXED.</td></tr>
+      <tr><td class="num">#275</td><td>DML-A</td><td><code>MERGE … WHEN NOT MATCHED BY SOURCE</code>, DELETE and UPDATE, COW and MOR, oracle-matrix pinned.</td></tr>
+      <tr><td class="num">#276</td><td>MAINT</td><td><code>rewrite_data_files</code> <code>where</code> + binpack; sort refuses loud (RDF-SORT-1).</td></tr>
+      <tr><td class="num">#277</td><td>W-0</td><td>Window-shape bench: thirteen <code>WIN-SLIDE-*</code> rows filed — the numbers that steer W-1.</td></tr>
+      <tr><td class="num">#278</td><td>FNP-4c</td><td>Ten higher-order names on the Column API; the lambda-width composition bug with F-Y10-1 found and fixed at the aggregate kernel.</td></tr>
+      <tr><td class="num">#279</td><td>V3-4</td><td><code>_row_id</code> + <code>_last_updated_sequence_number</code> served Spark-equal on v3 reads, all three doors.</td></tr>
+      <tr><td class="num">#280</td><td>Release</td><td>Version SSOT 0.6.0 across the four release files; preflight green.</td></tr>
+    </table>
+  </div>
+
+  <h2>Board after the walk</h2>
+  <div class="card">
+    <ul>
+      <li><span class="chip amber">Open</span> <strong>#281</strong> — ledger archival: the seven
+      merged-unit ledgers leave <code>staging/</code> for <code>completed/</code>
+      (<code>ledger_lifecycle.py</code>; 472 py-tests and both ledger gates green). Merge at
+      leisure; no product change.</li>
+      <li><span class="chip green">Merged</span> Fork PRs <strong>#243</strong> (F-7 slice 1,
+      lineage carry through rewrites) and <strong>#244</strong> (F-6 <code>to_branch</code>) —
+      fork main is <code>33be9a0</code>. RePark still pins <code>d408da42</code>, so these land
+      here at the next repin.</li>
+      <li><span class="chip green">Done</span> Disk swept: every merged unit clone removed,
+      <span class="num">581&nbsp;G</span> free.</li>
+    </ul>
+  </div>
+
+  <h2>Next work — the queue is empty, sequencing is yours</h2>
+  <p class="sub">Everything below is ready to charter; nothing is in flight. My recommendation
+  is the repin first — it is the only unit that unblocks two other lanes.</p>
+
+  <div class="card">
+    <h3>1 · RP-4 fork repin <span class="chip green">Recommended first</span></h3>
+    <p>Consume fork <code>33be9a0</code> (F-6 + F-7 slice 1). Unblocks <strong>REF</strong>
+    (waiting on F-6 per STATUS) and the v3 track's pinned next step, <strong>V3-5 — the F-7 COW
+    lineage lift</strong>: the preserve-half of lineage that V3-4's read-half deliberately left
+    behind the fork boundary, and the path to retiring the V3-COW-1 keep-refusals.</p>
+  </div>
+  <div class="card">
+    <h3>2 · FNP-7a/7b <span class="chip green">Ready</span></h3>
+    <p>Next in the campaign's pinned order (15/16 and 4c are delivered). 7b was explicitly
+    unblocked by F-Y10-1 (#272). Disjoint surface from the repin — a natural parallel lane.</p>
+  </div>
+  <div class="card">
+    <h3>3 · W-1 window design <span class="chip amber">Design first</span></h3>
+    <p>Track A's first product unit, now steerable by W-0's thirteen filed
+    <code>WIN-SLIDE-*</code> measurements. Wants a design pass before an actor lane.</p>
+  </div>
+  <div class="card">
+    <h3>4 · v0.7 slate <span class="chip hold">Owner ruling</span></h3>
+    <p>The v0.6 plan is fully discharged; the next version's slate needs your sequencing call.</p>
+  </div>
+  <div class="card">
+    <h3>5 · SEM-0 <span class="chip guard">Held at gate</span></h3>
+    <p>RE-1 (<code>regexp_extract_all</code> group default) and LOG-1 (<code>log</code> base)
+    both change a computed answer, so the charter holds for a dated owner ruling before any
+    code is written.</p>
+  </div>
+
+  <h2>Owner actions, in order</h2>
+  <div class="card">
+    <ol class="steps">
+      <li>Approve the <code>release</code> environment on run <span class="num">33397190331</span>
+      when the wheel finishes — I verify on PyPI after.</li>
+      <li>Merge <strong>#281</strong> (ledger archival, docs-only).</li>
+      <li>Rule the next lane(s): repin first is my recommendation, with FNP-7a/7b beside it.</li>
+    </ol>
+  </div>
+
+  <p class="foot">Verification stamps: squash tree <code>453e3d7</code> equality checked against
+  reviewed content; tag pushed via local git so pre-push hooks ran; #281 gates — map-sync 162
+  clean, ledger-grammar 14 live ledgers, py-test 472 passed.</p>
+</div>
