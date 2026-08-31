@@ -42,16 +42,49 @@ controls, before flipping a pin. HALT on unmeasured collateral.
 
 | ID | Clause | Proof obligation | Verdict |
 |---|---|---|---|
-| C-001 | Owner ruling 2026-08-31 authorizes both value changes to Spark semantics. | Dated ruling in this ledger and in the LOG-1 registry row. | **OPEN** |
-| C-002 | RE-1 default is capture group 1 on both Spark doors. Explicit `idx=0` still returns the whole match. A pattern with no groups raises `REGEX_GROUP_INDEX` on the two-argument form. Null input propagates. `regexp_substr` is untouched. | Live-oracle table plus facade and Spark SQL pins. | **OPEN** |
-| C-003 | The three charter collateral sites match Spark after the default. No unnamed `regexp_extract_all` call site in `python/repark/tests/` goes red. | Named tests plus a call-site grep recorded here. | **OPEN** |
-| C-004 | Spark-door `log(expr)` is the natural log. `log(base, expr)` is log at that base. Both arities return NULL on the Spark domain edges (zero, negative, null, base 1, base <= 0) measured on live PySpark 4.1.2. Not a redirect of one-arg `log` to `ln` that leaves DataFusion's two-arg formula in place. | Kernel plus Spark SQL and facade pins, value AND Arrow type. | **OPEN** |
-| C-005 | `EXPECTED_DIVERGENCES` drops its `log` row in the same commit as the kernel. `len()` moves 24 → 23 with the reason written there. | `door_parity_tests.rs`. | **OPEN** |
-| C-006 | Facade `"log"` arm embeds the same `SparkLog` instance the Spark SQL door registers. `F.log` accepts PySpark's `log(arg1, arg2=None)`. `F.ln` stays `ln`. | Kernel-identity pin plus two-arg facade pin. | **OPEN** |
-| C-007 | Native ANSI `repark.sql()` `log` stays DataFusion base-10. This unit does not register `SparkLog` on the extension-less session. | Native-door pin of `log(8)`. | **OPEN** |
-| C-008 | Registry `LOG-1` moves to FIXED with the 2026-08-31 ruling date and the measured evidence. Prior LOG-1 pins that asserted the divergent answer flip red-first to the Spark answer. `RE-1` stays retired (already gone). STATUS / docs truth-up only for what this unit changed. | Registry row + flipped pins + STATUS SEM / `F.log` lines. | **OPEN** |
+| C-001 | Owner ruling 2026-08-31 authorizes both value changes to Spark semantics. | Dated ruling in this ledger and in the LOG-1 registry row. | **PROVEN** |
+| C-002 | RE-1 default is capture group 1 on both Spark doors. Explicit `idx=0` still returns the whole match. A pattern with no groups raises `REGEX_GROUP_INDEX` on the two-argument form. Null input propagates. `regexp_substr` is untouched. | Live-oracle table plus facade and Spark SQL pins. | **PROVEN** |
+| C-003 | The three charter collateral sites match Spark after the default. No unnamed `regexp_extract_all` call site in `python/repark/tests/` goes red. | Named tests plus a call-site grep recorded here. | **PROVEN** |
+| C-004 | Spark-door `log(expr)` is the natural log. `log(base, expr)` is log at that base. Both arities return NULL on the Spark domain edges (zero, negative, null, base <= 0) measured on live PySpark 4.1.2. Base 1 is IEEE (`inf` / `nan`), not NULL. Not a redirect of one-arg `log` to `ln`. | Kernel plus Spark SQL and facade pins, value AND Arrow type. | **PROVEN** |
+| C-005 | `EXPECTED_DIVERGENCES` drops its `log` row in the same commit as the kernel. `len()` moves 24 → 23 with the reason written there. | `door_parity_tests.rs`. | **PROVEN** |
+| C-006 | Facade `"log"` arm embeds the same `SparkLog` instance the Spark SQL door registers. `F.log` accepts PySpark's `log(arg1, arg2=None)`. `F.ln` stays `ln`. | Kernel-identity pin plus two-arg facade pin. | **PROVEN** |
+| C-007 | Native ANSI `repark.sql()` `log` stays DataFusion base-10. This unit does not register `SparkLog` on the extension-less session. | Native-door pin of `log(8)`. | **PROVEN** |
+| C-008 | Registry `LOG-1` moves to FIXED with the 2026-08-31 ruling date and the measured evidence. Prior LOG-1 pins that asserted the divergent answer flip red-first to the Spark answer. `RE-1` stays retired (already gone). STATUS / docs truth-up only for what this unit changed. | Registry row + flipped pins + STATUS SEM / `F.log` lines. | **PROVEN** |
 | C-009 | Gates before done: `make verify`, `make check-map-sync check-ledger-grammar`, `python3 scripts/ledger_lifecycle.py check --base be2d754066e4ab3a5d61b4ec32418a10b8a31804`, `make py-test`, and `make py-test-facade` because the facade is touched. Real exit codes. | Recorded at close. | **OPEN** |
-| C-010 | Live PySpark 4.1.2 measurements (RE-1 edges, LOG-1 both arities, both reachable Spark doors, native-door control, incidental `log2`/`log1p`/`ln`) are transcribed here before any pin flip. | Oracle transcript in this ledger. | **OPEN** |
+| C-010 | Live PySpark 4.1.2 measurements (RE-1 edges, LOG-1 both arities, both reachable Spark doors, native-door control, incidental `log2`/`log1p`/`ln`) are transcribed here before any pin flip. | Oracle transcript in this ledger. | **PROVEN** |
+
+## Oracle (live PySpark 4.1.2, 2026-08-31, JDK 17)
+
+RE-1 — already Spark-equal on this tree (`extract_rows` `None => 1`). Measured:
+
+| Call | Spark |
+|---|---|
+| `regexp_extract_all('a1b2', '([a-z])([0-9])')` | `['a','b']` |
+| same, idx 0 / 1 / 2 | `['a1','b2']` / `['a','b']` / `['1','2']` |
+| `'[a-z]([0-9])'` two-arg | `['1','2']` |
+| `'[0-9]*'` / `''` / `'b'` two-arg | `REGEX_GROUP_INDEX` … `between 0 and 0, but got 1` |
+| null str / null pattern / null idx | NULL |
+| `regexp_substr('a1b2', pairs)` | `'a1'` |
+| `F.regexp_extract_all` two-arg | `['a','b']` |
+
+LOG-1 — Spark SQL, Arrow type `double` throughout:
+
+| Call | Spark |
+|---|---|
+| `log(8)` / `ln(8)` | `2.0794415416798357` |
+| `log10(8)` | `0.9030899869919435` |
+| `log(2, 8)` / `log(8, 8)` / `log(0.5, 8)` | `3.0` / `1.0` / `-3.0` |
+| `log(0)`, `log(-1)`, `log(null)` | NULL |
+| `log(0, 8)`, `log(-2, 8)`, `log(10, 0)`, `log(10, -1)` | NULL |
+| `log(1, 8)` | `inf` |
+| `log(1, 1)` | `nan` |
+| `-Infinity` one-arg | NULL |
+| `F.log(2.0, col)` on `[8,0,-1]` | `[3.0, None, None]` |
+| `F.log2` / `F.ln` / `F.log1p` on the same | `[3.0, None, None]` / `[2.079…, None, None]` / `[log1p(8), 0.0, None]` |
+
+`F.log(Column, Column)` is a PySpark binding miss (`Column is not iterable`); SQL two-arg columns work. RePark's `_scalar` accepts both as columns. Recorded, not a HALT: the charter scoped `F.log(2.0, col)`, which Spark runs.
+
+Composition collateral (`log2`/`log1p`/`ln` domain NULL) matches Spark after the kernel. Not unnamed divergence.
 
 ## Sequence
 

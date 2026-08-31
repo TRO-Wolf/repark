@@ -38,6 +38,8 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
 
 FNP-7 try_* scalar and aggregate names dispatch here (`try_divide` … `try_to_time`,
 `try_sum`, `try_avg`). pins: fnp-7-try-inversions/C-013
+SEM-1 `log` embeds `SparkLog` (1- or 2-arg); `ln` stays DataFusion `ln`.
+pins: sem-1-spark-answer-parity/C-005, C-006
 
 Add a Column method in `mod.rs`, a scalar or aggregate dispatch arm in `function_dispatch.rs`, a
 builder rule in `expr_build.rs`, or a frame rule in `window.rs`. Add the matching parity test.

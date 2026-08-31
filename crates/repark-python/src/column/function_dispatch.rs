@@ -255,9 +255,13 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
                 expr_fn::round(vec![exprs[0].clone(), exprs[1].clone()])
             }
         }
-        "log" | "ln" => {
+        "ln" => {
             need(1)?;
             expr_fn::ln(exprs[0].clone())
+        }
+        "log" => {
+            need_at_least(1)?;
+            repark_functions::expr_fn::log(exprs.clone())
         }
         "log10" => {
             need(1)?;
