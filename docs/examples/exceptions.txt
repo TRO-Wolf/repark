@@ -1,0 +1,5 @@
+# Public names whose only honest example needs a cloud or network service.
+# Format: name<TAB>one-line reason
+# Local filesystem and memory-catalog Iceberg are not exceptions.
+SparkSession.read_postgres	requires a live Postgres server
+DataFrameReader.jdbc	requires a live JDBC database

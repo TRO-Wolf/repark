@@ -8,6 +8,9 @@ repo.
 
 ## Contents
 
+- [examples/](examples/map.md) — **executable public-surface examples** and the
+  v0.7 drift-gate inputs (inventory, backlog ratchet, cloud exceptions). Wired
+  by `make check-example-coverage`.
 - [guide/](guide/map.md) — the **user-facing guides** (the only directory here written for a user
   rather than a contributor): install + first session, session/conf, the DataFrame API, the two SQL
   doors. Nothing there is authoritative — each guide links the document that owns the fact (the

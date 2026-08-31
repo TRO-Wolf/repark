@@ -81,15 +81,15 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
 - `CODEOWNERS` — maintainer ownership. `LICENSE`, `README.md` — repo front matter.
 - `python/` — the uv workspace members: the facade wheel (`repark`) and the parity harness
   (`repark-parity`). See [python/map.md](python/map.md).
-- `examples/` — runnable examples for humans (currently one notebook touring the torture-dataset
-  families). Illustration, never a gate: nothing in `make ci` / `verify` / `preflight` executes
-  it, and every behavior an example shows is pinned by a test it points at. Execution gating
-  arrives with the examples-harness workstream. See [examples/map.md](examples/map.md).
+- `examples/` — runnable notebooks for humans (currently one notebook touring the torture-dataset
+  families). Illustration, never a gate. The v0.7 drift-gated examples live under
+  [docs/examples/](docs/examples/map.md). See [examples/map.md](examples/map.md).
 - `docs/` — contracts, ADRs, the port plan, per-tier manuals, `docs/guide/` (the **user-facing**
   guides — install, session + conf, the DataFrame API, the two SQL doors; the only docs written
-  for a user rather than a contributor), and `docs/history/` (the archive of
-  closed campaigns — the v1 → v2 port and the Agent-Agnostic Front-Door campaign, both off the
-  normal read path; see [docs/history/map.md](docs/history/map.md)).
+  for a user rather than a contributor), `docs/examples/` (the v0.7 executable public-surface
+  examples + inventory/backlog, gated by `make check-example-coverage`), and `docs/history/`
+  (the archive of closed campaigns — the v1 → v2 port and the Agent-Agnostic Front-Door campaign,
+  both off the normal read path; see [docs/history/map.md](docs/history/map.md)).
   `task/` — the rules in force (`lessons.md`), the process metrics ledger (`metrics.md`), the
   ledgers by state (`task/ledgers/`), and the live acceptance inputs (`task/port/`, the facade
   pin under `task/census/`); the
@@ -125,6 +125,7 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
 |---|---|
 | Know the current state (release / delivery / what's next) | [STATUS.md](STATUS.md) |
 | Learn to *use* repark (install, session, DataFrame, SQL doors) | [docs/guide/map.md](docs/guide/map.md) |
+| Find or add a gated public-API example | [docs/examples/map.md](docs/examples/map.md) |
 | Understand the project intent / north star | [PROJECT.md](PROJECT.md) |
 | Follow the authoritative contributor contract | [AGENTS.md](AGENTS.md) |
 | Understand the architecture / crate DAG / runtime flows | [ARCHITECTURE.md](ARCHITECTURE.md) |

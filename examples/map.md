@@ -3,11 +3,12 @@
 ## Purpose
 
 Runnable **examples** of repark in use, for humans reading the engine for the first time.
-Examples are illustration, never a gate: every behavior an example shows is pinned by a
-test somewhere under `python/repark/tests/` or `python/repark-parity/tests/`, and the
-example points at that pin. No gate **executes** this directory today — `make ci` /
-`verify` / `preflight` lint it (Ruff covers `.ipynb`) but never run it; execution gating
-arrives with the examples-harness workstream.
+Examples in **this** directory are illustration, never a gate: every behavior an
+example shows is pinned by a test somewhere under `python/repark/tests/` or
+`python/repark-parity/tests/`, and the example points at that pin. The v0.7
+drift gate lives under [../docs/examples/](../docs/examples/map.md) and is
+wired as `make check-example-coverage` in `make ci`. This notebooks tree is
+not on that gate.
 
 Examples read and write only under a per-user cache root or a temporary directory; no
 example writes data into the checkout, and no example carries credentials, real hosts, or
@@ -44,6 +45,5 @@ anything beyond `example.com`.
 ## Constraints
 
 - Zero new Python dependencies; examples run against the built wheel plus the generators.
-- No CI wiring from this directory (no `.github/` edits) until the examples-harness
-  workstream lands.
+- The gated example tree is [../docs/examples/](../docs/examples/map.md), not this directory.
 - Generated data is never committed.
