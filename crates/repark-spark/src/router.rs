@@ -10,7 +10,7 @@ use repark_core::CatalogRegistry;
 use crate::{
     DmlSubqueryVerb, MorDmlKind, alter, build_ctas, call, create_table, delete_target_object_name,
     describe_show, execute_create_namespace, execute_ctas, execute_drop_namespace,
-    execute_drop_table, execute_insert_overwrite, merge, metadata_tables,
+    execute_drop_table, execute_insert_overwrite, execute_truncate, merge, metadata_tables,
     object_name_from_table_with_joins, parse_single_normalized, passthrough_after_p11, ref_ddl,
     refuse_dml_subquery_predicate, refuse_mor_unpartitioned_multi_spec_dml,
     refuse_multi_statement_sql, refuse_read_only_dml_from_delete, refuse_read_only_dml_table_sql,
@@ -201,13 +201,7 @@ async fn execute_inner(
         Statement::Update(update) => execute_update(ctx, catalogs, sql, update).await,
         // Iceberg `CALL catalog.system.<proc>(…)` — I3 / R-MAINTENANCE-CALL.
         Statement::Call(function) => call::execute_call(ctx, catalogs, function).await,
-        // `TRUNCATE TABLE` is planned but not wired.
-        Statement::Truncate { .. } => Err(DataFusionError::NotImplemented(
-            "TRUNCATE TABLE is not supported yet — use INSERT OVERWRITE … SELECT … WHERE false \
-             (empty overwrite wipe) or DELETE FROM <table> without a predicate \
-             (docs/spark-sql-iceberg-parity.md §2.3 / P3)"
-                .to_string(),
-        )),
+        Statement::Truncate(truncate) => execute_truncate(ctx, catalogs, truncate).await,
         _ => spark_ast::execute_passthrough(ctx, catalogs, sql).await,
     }
 }

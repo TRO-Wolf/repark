@@ -26,18 +26,13 @@ fn source_locations_depend_on_rewrite_bytes_not_buffer_ownership() {
 }
 
 #[tokio::test]
-async fn truncate_refusal_is_verbatim_v1() {
-    // TRUNCATE is a targeted refusal with documented workarounds.
+async fn truncate_missing_table_is_table_or_view_not_found() {
     let (ctx, catalogs) = ctx();
     let error = execute(&ctx, &catalogs, "TRUNCATE TABLE ice.ns.t")
         .await
-        .expect_err("TRUNCATE must refuse")
+        .expect_err("TRUNCATE of a missing table must fail")
         .to_string();
-    assert!(
-        error.contains("TRUNCATE TABLE is not supported yet"),
-        "{error}"
-    );
-    assert!(!error.contains("lands in phase-2"), "{error}");
+    assert!(error.contains("TABLE_OR_VIEW_NOT_FOUND"), "{error}");
 }
 
 #[tokio::test]

@@ -121,9 +121,9 @@ const ROWS: &[(SurfaceId, Row)] = &[
     (
         surfaces::TRUNCATE,
         t(
-            "tests::router::truncate_table_refuses_loud_naming_gap",
+            "tests::truncate::truncate_table_wipes_rows_stamps_delete_and_preserves_history",
             SparkExtended,
-        ),
+        ), // pins: dml-c-truncate/C-008
     ),
     (
         surfaces::TIME_TRAVEL,

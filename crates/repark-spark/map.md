@@ -20,7 +20,7 @@ TABLE, namespace DDL, ALTER (I6/I7), MERGE INTO, INSERT OVERWRITE (empty + stage
 (I3), branch/tag ref DDL (I5) + the write-to-branch sniff, DESCRIBE/SHOW namespace (Groups
 Z + AB), metadata tables (I2), the time-travel scanner (I1 — the pin half lives in
 `repark_core::time_travel`), the multi-statement / P11 / MoR-valve / SEC-02 guards, TRUNCATE
-targeted refuse, and the DML passthrough. The unit battery is under `src/tests/` (navigation
+TABLE, and the DML passthrough. The unit battery is under `src/tests/` (navigation
 [src/tests/map.md](src/tests/map.md)).
 
 ## Contents

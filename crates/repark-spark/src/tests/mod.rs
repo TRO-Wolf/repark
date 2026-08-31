@@ -36,6 +36,7 @@ mod service_managed_ctas;
 mod spark_string_literals;
 mod time_travel;
 mod transform_overwrite;
+mod truncate;
 mod v3_cow;
 mod v3e3;
 mod v3e4;

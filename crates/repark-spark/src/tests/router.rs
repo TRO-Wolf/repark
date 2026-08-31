@@ -56,38 +56,6 @@ async fn bug010_trailing_semicolon_whitespace_comments_allowed() {
     }
 }
 
-/// C4-L-001: truncate-table statement must fail loud with a targeted message.
-#[tokio::test]
-async fn truncate_table_refuses_loud_naming_gap() {
-    let wh = TempDir::new().unwrap();
-    let (ctx, catalogs) = setup(&wh).await;
-    run(
-        &ctx,
-        &catalogs,
-        "CREATE TABLE ice.sales.t AS SELECT * FROM src",
-    )
-    .await;
-
-    let truncate_sql = format!("{} TABLE ice.sales.t", "TRUNCATE");
-    let error = execute(&ctx, &catalogs, &truncate_sql)
-        .await
-        .expect_err("truncate must fail loud until a dedicated action lands");
-    let message = error.to_string();
-    assert!(
-        message.contains("TRUNCATE") && message.contains("not supported"),
-        "error must name TRUNCATE gap, got: {message}"
-    );
-    assert!(
-        message.contains("INSERT OVERWRITE") || message.contains("DELETE"),
-        "error must point at workarounds, got: {message}"
-    );
-    assert_eq!(
-        rows(&ctx, &catalogs, "SELECT * FROM ice.sales.t").await,
-        3,
-        "refused truncate must leave all rows"
-    );
-}
-
 /// A bare `INSERT INTO` applies its write even when the returned `DataFrame` is not collected.
 #[tokio::test]
 async fn bare_insert_applies_without_collect() {

@@ -38,6 +38,9 @@ pins: rp-3-fork-repin/C-010
   non-empty stage-then-swap; **DML-B** `PARTITION (…)` static/dynamic via
   `repark_iceberg::write::partition_overwrite`; 2 in-module tests (`assignment_type_unit_tests`).
   pins: dml-b-insert-overwrite/C-001, C-002, C-004
+- `truncate.rs` — whole-table `TRUNCATE TABLE` (DML-C): delete-only `commit_truncate`;
+  PARTITION / IF EXISTS / missing TABLE / multi-target refuse. Pins:
+  [tests/truncate.rs](tests/truncate.rs). pins: dml-c-truncate/C-002, C-005, C-006, C-007
 - `ref_ddl.rs` — I5 snapshot-ref DDL (CREATE/DROP/REPLACE BRANCH|TAG, retention) + the
   write-to-branch sniff; 14 in-module tests.
 - `call.rs` — seven maintenance procedures: six maintenance calls plus `register_table`. Each
@@ -196,7 +199,8 @@ part of that section's pin — changing either one changes both.
 | Namespace / DROP TABLE DDL | `namespace_ddl.rs` |
 | Pin a router behavior end to end | [`tests/`](tests/map.md) (lib-root battery, by production module) |
 | Find why a statement form refuses, and whether it is declared | `../../../docs/spark-sql-iceberg-parity.md` §2 |
-| Pin a door-native gate (TRUNCATE/P11/BUG-010) | `router/tests.rs` |
+| Pin a door-native gate (P11/BUG-010) | `router/tests.rs` |
+| `TRUNCATE TABLE` | `truncate.rs` (pins: `tests/truncate.rs`) |
 | ORDER BY / eager-command passthrough semantics | `spark_ast.rs` |
 | Temporal / unit-less `RANGE` window-frame semantics | `window_range.rs` |
 | Namespace introspection rendering | `describe_show.rs` |

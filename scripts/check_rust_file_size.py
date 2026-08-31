@@ -127,7 +127,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split action methods from plan-building methods without moving row work to Python.",
     ),
     "crates/repark-python/src/session.rs": (
-        1178,
+        1177,
         "PyO3 session construction and query entry points share one module.",
         "Split configuration bindings from query and catalog bindings.",
     ),
@@ -197,7 +197,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split guards by statement or expression family.",
     ),
     "crates/repark-sql/src/tests.rs": (
-        1523,
+        1520,
         "Native ANSI-door end-to-end cases remain consolidated.",
         "Split statement families into production-aligned test modules.",
     ),

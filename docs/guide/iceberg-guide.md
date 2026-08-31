@@ -241,15 +241,11 @@ Each refuses because the alternative would be silent data loss:
   filter. Use `overwritePartitions()` for Spark's dynamic partition overwrite, or
   `DELETE` + `append`.
 
-- **`TRUNCATE TABLE`** — registry row
-  [DML-2](../spark-sql-iceberg-parity.md#dml-2--truncate-table), because Iceberg has no truncate
-  primitive and the two things it could mean commit differently:
-
-  ```text
-  UnsupportedOperationException: This feature is not implemented: TRUNCATE TABLE is not supported
-  yet — use INSERT OVERWRITE … SELECT … WHERE false (empty overwrite wipe) or DELETE FROM <table>
-  without a predicate …
-  ```
+- **`TRUNCATE TABLE`** — first-class whole-table wipe (DML-C, 2026-08-30). Commits a new
+  snapshot with `operation = delete`, zero live data files; `VERSION AS OF` the prior snapshot
+  still reads the old rows. Registry row
+  [DML-2](../spark-sql-iceberg-parity.md#dml-2--truncate-table).
+  `TRUNCATE TABLE … PARTITION (…)` still refuses.
 
 Whole-table `INSERT OVERWRITE` (no `PARTITION` clause) works.
 

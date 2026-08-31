@@ -72,6 +72,9 @@ repark-core's error map.
   staged-write core. **V3-1 / RP-3 C-008:** `iceberg_err` goes through
   `catalog::iceberg_to_datafusion`; Hadoop `vN.metadata.json` writes bump to `v(N+1)`
   (registry `V3-ADOPT-1` FIXED).
+- `truncate.rs` — whole-table `TRUNCATE TABLE` (DML-C): `commit_truncate` is
+  `commit_overwrite_replace_all` with no added files (fork stamps `Operation::Delete`).
+  pins: dml-c-truncate/C-001, C-005
 - `overwrite.rs` — exclusive full-table `INSERT OVERWRITE` stage-then-swap:
   `write_overwrite_staged_files_from_stream` (positional map + **WI-1** store-assignment gate +
   stream stage) + `commit_overwrite_replace_all` + `parse_overwrite_isolation`

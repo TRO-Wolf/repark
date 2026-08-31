@@ -851,15 +851,14 @@ mod tests {
             );
 
             // (2) Spark statement router is installed: a Spark-only statement reaches its refusal.
-            let Err(routed) = session.sql(py, "TRUNCATE TABLE any_table") else {
-                panic!("TRUNCATE is a loud router refusal (C4-L-001), not a plan")
+            let Err(routed) = session.sql(py, "INSERT OVERWRITE t PARTITION (p=1) SELECT 1") else {
+                panic!("INSERT OVERWRITE PARTITION is a loud router refusal, not a plan")
             };
             let message = routed.to_string();
             assert!(
-                message.contains("TRUNCATE TABLE is not supported yet")
-                    && message.contains("INSERT OVERWRITE"),
+                message.contains("INSERT OVERWRITE") && message.contains("PARTITION"),
                 "the statement must be routed through repark-spark, whose refusal names the \
-                 supported alternatives; got: {message}"
+                 PARTITION gap; got: {message}"
             );
             assert!(
                 routed.is_instance_of::<crate::UnsupportedOperationException>(py),

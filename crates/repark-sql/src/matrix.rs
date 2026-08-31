@@ -141,14 +141,10 @@ const ROWS: &[(SurfaceId, Row)] = &[
     ),
     (
         surfaces::TRUNCATE,
-        absent(
-            "PERMANENT targeted refuse, not a deferral — the ANSI twin of the Spark door's \
-             C4-L-001 refusal. `TRUNCATE TABLE` means different things in different engines \
-             (delete-all-rows vs drop-and-recreate), so the door names BOTH meanings and steers \
-             to the unambiguous spelling for each (`DELETE FROM t` / `CREATE OR REPLACE TABLE … \
-             AS SELECT`). Pinned by `refusals::tests::truncate_refusal_names_both_meanings`.",
-            "docs/design/sql-doors.md §2 Q9 (refuse-set completion)",
-        ),
+        t(
+            "truncate_tests::truncate_table_wipes_rows_stamps_delete_and_preserves_history",
+            Native,
+        ), // pins: dml-c-truncate/C-008
     ),
     (
         surfaces::TIME_TRAVEL,
@@ -397,7 +393,7 @@ fn two_session_rows_name_surfaces_both_doors_have() {
 }
 
 /// MUTATION: flip any `Tested` row to `absent(...)` → this REDs.
-/// Four surfaces stay absent by ruling: Q3 partition-spec evolution, Q9 overwrite, TRUNCATE, Q7.
+/// Three surfaces stay absent by ruling: Q3 partition-spec evolution, Q9 overwrite, Q7.
 #[test]
 fn m2_closes_the_ansi_door() {
     let absent_ids: Vec<SurfaceId> = ROWS
@@ -410,7 +406,6 @@ fn m2_closes_the_ansi_door() {
         vec![
             surfaces::ALTER_TABLE_PARTITION_FIELDS,
             surfaces::INSERT_OVERWRITE,
-            surfaces::TRUNCATE,
             surfaces::MAINTENANCE_CALL,
         ],
         "the ANSI door's deliberate absences changed — update this pin AND \
@@ -418,7 +413,8 @@ fn m2_closes_the_ansi_door() {
     );
     assert_eq!(
         ROWS.len() - absent_ids.len(),
-        46,
-        "shipped-surface count (PR-5 shipped 29; PR-6 added 10; G8 added 4; R-3 added 3)"
+        47,
+        "shipped-surface count (PR-5 shipped 29; PR-6 added 10; G8 added 4; R-3 added 3; \
+         DML-C added TRUNCATE)"
     );
 }

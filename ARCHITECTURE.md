@@ -110,8 +110,8 @@ session.sql(text)
          │   SET PROPERTIES, FOR…AS OF time travel)                              │
          │ → parse (stock DataFusion `Generic` dialect)                          │
          │ → match: intercept Iceberg catalog DDL (CREATE/DROP TABLE,            │
-         │   CREATE/DROP SCHEMA, ALTER TABLE), lower MERGE, refuse set           │
-         │   (INSERT OVERWRITE / CALL / TRUNCATE)                                │
+         │   CREATE/DROP SCHEMA, ALTER TABLE), lower MERGE, TRUNCATE,            │
+         │   refuse set (INSERT OVERWRITE / CALL)                                │
          │ → else DELEGATE to DataFusion (SEC-02 local-fs guard between plan     │
          │   and execute); DELETE/UPDATE/INSERT ride the fork TableProvider      │
          └───────────────────────────────────────────────────────────────────────┘
@@ -122,7 +122,7 @@ session.sql(text)
          │   NAMESPACE, branch/tag DDL)                                          │
          │ → parse (Databricks dialect + Spark-ism normalizers)                  │
          │ → match: CTAS, column-def CREATE TABLE, DROP TABLE, DROP NAMESPACE,   │
-         │   ALTER, MERGE, INSERT OVERWRITE, CALL, TRUNCATE refuse               │
+         │   ALTER, MERGE, INSERT OVERWRITE, CALL, TRUNCATE                      │
          │ → INSERT/DELETE/UPDATE PASSTHROUGH behind the P11 read-only-catalog    │
          │   guard + the merge-on-read valve                                     │
          └───────────────────────────────────────────────────────────────────────┘

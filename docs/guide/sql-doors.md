@@ -174,12 +174,12 @@ and because it is what the Python callable will inherit when the re-home named a
 
 Spark-isms it recognizes include `USING`, `TBLPROPERTIES`, `PARTITIONED BY`, bare
 `VERSION`/`TIMESTAMP AS OF`, `SYSTEM_*`, `INSERT OVERWRITE`, `CALL …system…`, backticks,
-`NAMESPACE`/`DATABASE`, `LATERAL VIEW`, and a top-level `CREATE BRANCH`. Separately, four statement
+`NAMESPACE`/`DATABASE`, `LATERAL VIEW`, and a top-level `CREATE BRANCH`. Separately, three statement
 shapes are **deliberately absent** from that door and refuse with a steer rather than a parse
 error: `INSERT OVERWRITE` (express it as `MERGE INTO`, `DELETE` + `INSERT`, or
-`CREATE OR REPLACE TABLE … AS SELECT`), `CALL c.system.<proc>(…)` and `ALTER TABLE … EXECUTE`
-(maintenance runs as a callable operation on the session), and `TRUNCATE TABLE` (Iceberg has no
-truncate primitive, and the two things it could mean commit differently).
+`CREATE OR REPLACE TABLE … AS SELECT`), and `CALL c.system.<proc>(…)` / `ALTER TABLE … EXECUTE`
+(maintenance runs as a callable operation on the session). `TRUNCATE TABLE` is first-class on
+both doors (DML-C, 2026-08-30).
 
 That machinery is the Rust door's. Through the Python callable today you get the raw parser error
 instead — which is exactly the "technically correct, practically useless" message the sniff exists

@@ -64,6 +64,7 @@ ledgers, the retrospectives — is archived at
 **Milestone one is COMPLETE.** There is no in-flight *port* work; the delivered record — briefs,
 unit ledgers, retrospectives — is archived at
 [docs/history/port-v2/](docs/history/port-v2/README.md).
+v0.6 Track B is in flight: DML-C `TRUNCATE TABLE` (`feat/dml-c-truncate`).
 
 **Standing decision: the private v1 predecessor is bugfix-only, and this repository is the sole
 forward target.** New engine work happens here. v1 receives fixes only, and a defect both engines

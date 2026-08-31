@@ -18,19 +18,115 @@ stay. Pins: snapshot count +1, `table$files` empty, time travel to the prior sna
 
 ## PROPOSITION LEDGER — DML-C — 2026-08-30
 
-| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
 |---|---|---|---|---|
-| C-001 | **The live-oracle matrix is measured before any engine edit.** On a v2 Iceberg table, live PySpark 4.1.2 + Iceberg 1.11.0 records, cell by cell: (a) `TRUNCATE TABLE t`, (b) `INSERT OVERWRITE t SELECT * FROM t WHERE false`, (c) `DELETE FROM t` with no predicate. Cells: live row count, live data-file count, snapshot count, current snapshot `summary.operation`, every other summary property, whether `VERSION AS OF` the pre-statement snapshot still reads the old rows. The same cells for TRUNCATE on a view and on a missing table, including Spark's error class. | This ledger's oracle table, each cell from an executed probe; no engine edit before the table is filed. | OPEN | Charter question: does Spark stamp TRUNCATE as `overwrite`, `delete`, or something else, and which summary keys differ from empty overwrite? |
-| C-002 | **Spark SQL door executes whole-table `TRUNCATE TABLE` Spark-equal.** After TRUNCATE: zero live rows, zero live data files, snapshot count +1, operation stamp and summary properties match C-001's TRUNCATE cells (value and type on the Arrow path). The empty-overwrite SQL rewrite is not the product spelling. | Spark-door pin; red-first against the current C4-L-001 refuse. | OPEN | Today `router.rs` returns `NotImplemented` naming the empty-overwrite substitute. |
-| C-003 | **ANSI SQL door executes the same statement Spark-equal.** Same snapshot and row cells as C-002. The Q9/C4-L-001 permanent-absence row in `repark-sql` `matrix.rs` flips to tested. The old "two meanings" refuse is gone; the door commits Iceberg truncate (wipe rows, keep table and history), not drop-and-recreate. | ANSI-door pin; matrix row; red-first against `refusals::truncate`. | OPEN | `m2_closes_the_ansi_door` currently lists `TRUNCATE` among four deliberate absences. |
-| C-004 | **Facade `.sql()` is the third door.** `spark.sql("TRUNCATE TABLE …")` matches C-002 on rows, files, snapshot count, and operation stamp. Native `repark.sql()` matches C-003. | Facade pin on `collect`/`to_arrow`, value and type. | OPEN | Facade today surfaces the Spark-door C4-L-001 refuse (`repark-python` session pin). |
-| C-005 | **No second spelling silently diverges.** `INSERT OVERWRITE … SELECT … WHERE false` stays a real overwrite statement and is not deleted. TRUNCATE is not a silent rewrite onto that path when C-001 shows a snapshot-metadata split. If C-001 shows the two statements stamp equal metadata, TRUNCATE may share the overwrite commit helper and must still be a first-class statement (parse → `TruncateSpec`). Documented TRUNCATE substitutes that name empty overwrite as the product spelling are retired. | Pin that TRUNCATE and empty overwrite each keep their own statement; a snapshot-metadata pin when C-001 records a split; docs no longer steer TRUNCATE users at empty overwrite. | OPEN | The split is C-001's job; this clause binds the product consequence. |
-| C-006 | **Time travel to a pre-truncate snapshot still reads the old rows.** `VERSION AS OF` / snapshot id on both SQL doors and the facade returns the pre-truncate Arrow table (values and types). Current-snapshot reads are empty. | Three-door time-travel pin. | OPEN | Card pin: snapshot count +1 and prior snapshot readable. |
-| C-007 | **Error surface matches Spark's class.** TRUNCATE of a view, a nonexistent table, and a metadata-table path (`t.files` / `t$files`) refuse loud. Error class (or the mapped RePark class) matches C-001's Spark cells. A refused TRUNCATE leaves the target untouched. Whole-table form only: `TRUNCATE TABLE … PARTITION (…)` refuses loud and does not full-table wipe. | Error pins per target class; partition-form refuse pin; untouched-table pin. | OPEN | Metadata-path refuse already exists (`test_truncate_metadata_loud`); it must stay after TRUNCATE is live. |
-| C-008 | **Documents match the pins.** Registry DML-2 moves from DECLARED-refuse to FIXED (or a dated split if C-001 records one). ANSI matrix absence count drops TRUNCATE. Spark matrix pin retargets from `truncate_table_refuses_loud_naming_gap`. Guide pages that name the refuse are updated. STATUS stays under the 25000 B ceiling. Maps in lockstep. | Registry, both `matrix.rs`, guide pages, STATUS, `check-map-sync`, `check-ledger-grammar`. | OPEN | STATUS has ~538 B of headroom; condense what is added. |
+| C-001 | **The live-oracle matrix is measured before any engine edit.** On a v2 Iceberg table, live PySpark 4.1.2 + Iceberg 1.11.0 records, cell by cell: (a) `TRUNCATE TABLE t`, (b) `INSERT OVERWRITE t SELECT * FROM t WHERE false`, (c) `DELETE FROM t` with no predicate. Cells: live row count, live data-file count, snapshot count, current snapshot `summary.operation`, every other summary property, whether `VERSION AS OF` the pre-statement snapshot still reads the old rows. The same cells for TRUNCATE on a view and on a missing table, including Spark's error class. | This ledger's oracle table, each cell from an executed probe; no engine edit before the table is filed. | **PROVEN** | Oracle table below. All three statements stamp `operation=delete` with the same load-bearing summary keys. Probe: `/tmp/dml-c-oracle.out` (PySpark 4.1.2 + Iceberg 1.11.0, 2026-08-30). Pins: `crates/repark-spark/src/tests/truncate.rs`. |
+| C-002 | **Spark SQL door executes whole-table `TRUNCATE TABLE` Spark-equal.** After TRUNCATE: zero live rows, zero live data files, snapshot count +1, operation stamp and summary properties match C-001's TRUNCATE cells (value and type on the Arrow path). The empty-overwrite SQL rewrite is not the product spelling. | Spark-door pin; red-first against the current C4-L-001 refuse. | **PROVEN** | `commit_truncate` → empty `overwrite_files` + AlwaysTrue. Pin: `truncate_table_wipes_rows_stamps_delete_and_preserves_history`. |
+| C-003 | **ANSI SQL door executes the same statement Spark-equal.** Same snapshot and row cells as C-002. The Q9/C4-L-001 permanent-absence row in `repark-sql` `matrix.rs` flips to tested. The old "two meanings" refuse is gone; the door commits Iceberg truncate (wipe rows, keep table and history), not drop-and-recreate. | ANSI-door pin; matrix row; red-first against `refusals::truncate`. | **PROVEN** | `m2_closes_the_ansi_door` is 47 tested / 3 absent. Pin: `truncate_tests::truncate_table_wipes_rows_stamps_delete_and_preserves_history`. |
+| C-004 | **Facade `.sql()` is the third door.** `spark.sql("TRUNCATE TABLE …")` matches C-002 on rows, files, snapshot count, and operation stamp. Native `repark.sql()` matches C-003. | Facade pin on `collect`/`to_arrow`, value and type. | **PROVEN** | `python/repark/tests/test_dml_c_truncate.py`. Native callable no longer contains `no truncate primitive`. |
+| C-005 | **No second spelling silently diverges.** `INSERT OVERWRITE … SELECT … WHERE false` stays a real overwrite statement and is not deleted. TRUNCATE is not a silent rewrite onto that path when C-001 shows a snapshot-metadata split. If C-001 shows the two statements stamp equal metadata, TRUNCATE may share the overwrite commit helper and must still be a first-class statement (parse → `TruncateSpec`). Documented TRUNCATE substitutes that name empty overwrite as the product spelling are retired. | Pin that TRUNCATE and empty overwrite each keep their own statement; a snapshot-metadata pin when C-001 records a split; docs no longer steer TRUNCATE users at empty overwrite. | **PROVEN** | C-001: no metadata split (`delete` both). Shared helper, separate statement. Pin: `empty_insert_overwrite_still_wipes_and_stamps_delete`. Guides no longer steer TRUNCATE at empty overwrite. |
+| C-006 | **Time travel to a pre-truncate snapshot still reads the old rows.** `VERSION AS OF` / snapshot id on both SQL doors and the facade returns the pre-truncate Arrow table (values and types). Current-snapshot reads are empty. | Three-door time-travel pin. | **PROVEN** | Spark `VERSION AS OF`, ANSI `FOR VERSION AS OF`, facade `.sql()`. Same tests as C-002/C-003/C-004. |
+| C-007 | **Error surface matches Spark's class.** TRUNCATE of a view, a nonexistent table, and a metadata-table path (`t.files` / `t$files`) refuse loud. Error class (or the mapped RePark class) matches C-001's Spark cells. A refused TRUNCATE leaves the target untouched. Whole-table form only: `TRUNCATE TABLE … PARTITION (…)` refuses loud and does not full-table wipe. | Error pins per target class; partition-form refuse pin; untouched-table pin. | **PROVEN** | `TABLE_OR_VIEW_NOT_FOUND`, `EXPECT_TABLE_NOT_VIEW`, `INVALID_PARTITION_OPERATION`. Metadata path stays the existing read-only refuse (`test_truncate_metadata_loud`). |
+| C-008 | **Documents match the pins.** Registry DML-2 moves from DECLARED-refuse to FIXED (or a dated split if C-001 records one). ANSI matrix absence count drops TRUNCATE. Spark matrix pin retargets from `truncate_table_refuses_loud_naming_gap`. Guide pages that name the refuse are updated. STATUS stays under the 25000 B ceiling. Maps in lockstep. | Registry, both `matrix.rs`, guide pages, STATUS, `check-map-sync`, `check-ledger-grammar`. | **PROVEN** | DML-2 FIXED. STATUS 24731 B. Pins: both `matrix.rs` TRUNCATE rows. |
 
-VERDICT: OPEN — 8 clauses, 0 PROVEN, 0 REJECTED. The gate passes when every row is PROVEN
-with its pin (`pins: dml-c-truncate/C-NNN`).
+VERDICT: 8 clauses, 8 PROVEN, 0 OPEN, 0 REJECTED.
+
+## Oracle table — live PySpark 4.1.2 + Iceberg 1.11.0 (2026-08-30)
+
+v2 Hadoop catalog. Seed: three rows, two data files, one append snapshot. Probe log: `/tmp/dml-c-oracle.out`.
+
+Load-bearing summary keys after a wipe (TRUNCATE / empty overwrite / DELETE-all are equal):
+
+| Cell | TRUNCATE | empty INSERT OVERWRITE | DELETE FROM (no predicate) |
+|---|---|---|---|
+| live rows | 0 | 0 | 0 |
+| live data files | 0 | 0 | 0 |
+| snapshot count | +1 (2) | +1 (2) | +1 (2) |
+| `summary.operation` | `delete` | `delete` | `delete` |
+| `deleted-data-files` | 2 | 2 | 2 |
+| `deleted-records` | 3 | 3 | 3 |
+| `total-records` | 0 | 0 | 0 |
+| `total-data-files` | 0 | 0 | 0 |
+| `added-data-files` | absent | absent | absent |
+| VERSION AS OF prior | old 3 rows | (not re-probed) | (not re-probed) |
+
+Incidental: second TRUNCATE on empty commits another `delete` snapshot (`changed-partition-count=0`, no `deleted-data-files`). TRUNCATE of a never-written table commits snapshot 1 as `delete`. MoR v2 TRUNCATE matches COW (files gone, not position-deletes). Partitioned whole-table TRUNCATE matches unpartitioned.
+
+Error classes:
+
+| Target | class | SQLSTATE / note |
+|---|---|---|
+| temp / session view | `EXPECT_TABLE_NOT_VIEW.NO_ALTERNATIVE` | 42809 |
+| missing table | `TABLE_OR_VIEW_NOT_FOUND` | 42P01 |
+| `t.files` metadata | `UnsupportedOperationException`: Cannot delete from a metadata table | — |
+| `t$files` | `TABLE_OR_VIEW_NOT_FOUND` | Hadoop catalog has no `$` name |
+| `PARTITION (id=1)` | `INVALID_PARTITION_OPERATION.PARTITION_MANAGEMENT_IS_UNSUPPORTED` | 42601 |
+| `IF EXISTS` / missing `TABLE` | `PARSE_SYNTAX_ERROR` | 42601 |
+
+## Actor coverage attestation
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: dml-c-truncate
+  cycle: actor
+  risk_tier: high
+  complete: true
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: >
+        C-001 oracle measured before engine edit. TRUNCATE / empty overwrite / DELETE-all
+        all stamp operation=delete. Three-door pins assert rows, files, snapshot +1, Delete.
+      artifacts: [/tmp/dml-c-oracle.out, crates/repark-spark/src/tests/truncate.rs, crates/repark-sql/src/truncate_tests.rs]
+    - id: AT-2
+      status: ATTACKED
+      evidence: >
+        Happy path, never-written table, second-empty incidental on Spark oracle,
+        PARTITION refuse, missing table, view, metadata path.
+      artifacts: [crates/repark-spark/src/tests/truncate.rs, python/repark/tests/test_dml_c_truncate.py, python/repark/tests/test_metadata_tables.py]
+    - id: AT-3
+      status: ATTACKED
+      evidence: >
+        Refused PARTITION truncate leaves rows. Refused view truncate leaves the base table.
+        Missing table does not create a table.
+      artifacts: [truncate_partition_form_refuses_without_wiping, truncate_view_is_expect_table_not_view]
+    - id: AT-4
+      status: N/A
+      justification: Truncate uses the existing overwrite OCC validations; no new concurrent writer.
+    - id: AT-5
+      status: ATTACKED
+      evidence: >
+        Path-escape ident refuse; P11 read-only catalog; metadata write-target refuse stays.
+      artifacts: [crates/repark-spark/src/truncate.rs, crates/repark-spark/src/metadata_tables.rs]
+    - id: AT-6
+      status: ATTACKED
+      evidence: >
+        Time travel to the pre-truncate snapshot returns the old Arrow rows on three doors.
+      artifacts: [truncate_table_wipes_rows_stamps_delete_and_preserves_history, test_dml_c_truncate.py]
+    - id: AT-7
+      status: N/A
+      justification: Empty overwrite_files commit; no unbounded write or new hot path.
+    - id: AT-8
+      status: ATTACKED
+      evidence: >
+        Shared helper is commit_overwrite_replace_all(empty). Fork classifies delete-only
+        overwrite as Operation::Delete. No fork change.
+      artifacts: [crates/repark-iceberg/src/write/truncate.rs, iceberg overwrite_files.rs operation()]
+    - id: AT-9
+      status: ATTACKED
+      evidence: >
+        Error class tokens TABLE_OR_VIEW_NOT_FOUND, EXPECT_TABLE_NOT_VIEW,
+        INVALID_PARTITION_OPERATION match the oracle.
+      artifacts: [crates/repark-spark/src/truncate.rs, /tmp/dml-c-oracle-errors.out]
+    - id: AT-10
+      status: ATTACKED
+      evidence: >
+        Red-first: refuse tests were the C4-L-001 pins; they failed once TRUNCATE executed
+        and were retargeted. New pins assert wipe + Delete stamp.
+      artifacts: [crates/repark-spark/src/tests/truncate.rs]
+  reattested: []
+```
+
 
 ## 1. Out of scope
 

@@ -70,6 +70,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   sibling file-path stability, two-key AND + incomplete-static, string/NULL partitions,
   Hive too-many-columns refuse, empty-dynamic guard;
   pins: dml-b-insert-overwrite/C-001, C-002, C-004, C-005),
+  `truncate` (DML-C: wipe, `operation=delete`, time travel, missing-table / view / PARTITION
+  refuse; pins: dml-c-truncate/C-001, C-002, C-005, C-006, C-007),
   `merge`, `call`, and `call_orphan`. `call_remove_orphan_files_refuses_a_location_arg_under_the_fallback_root`
   and `call_orphan_shared_ctas_root_rule` pin the fallback-root safety contract. Maintenance tests
   pin Spark's full schemas, typed count sources, deletion-vector refusal, and file-granularity rules.

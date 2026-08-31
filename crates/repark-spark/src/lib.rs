@@ -20,6 +20,7 @@ mod router;
 mod spark_ast;
 mod spark_literals;
 mod time_travel;
+mod truncate;
 mod window_range;
 
 // --- Router entrypoints.
@@ -83,6 +84,7 @@ pub(crate) use normalize::{
     refuse_multi_statement_sql, refuse_v3_cow_dml, starts_with_branch_or_tag_ddl,
     starts_with_merge,
 };
+pub(crate) use truncate::execute_truncate;
 
 mod extension;
 pub use extension::SparkExtension;

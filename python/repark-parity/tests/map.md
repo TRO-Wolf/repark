@@ -48,6 +48,7 @@ JVM, no repark required). See [../map.md](../map.md).
   owner correction restores `position_delete.rs` to 1,068 lines with model provenance. The
   production file-size refactor removes `session/_funcs.py` when its exception retires. The
   catalog-registration test split ratchets `session/tests/session.rs` from 1,485 to 1,461 lines.
+  DML-C ratchets `session.rs` 1178 → 1177 and `repark-sql/src/tests.rs` 1523 → 1520.
 - `test_reg_1_registry_truth_up.py` — **REG-1 (2026-08-26; tree pins):** the divergence registry
   says what the pins prove — DEC-2 / DEC-6 / DEC-7 / DEC-8 carry dated FIXED notes naming #94 / #99
   and their equality pins (C-001); TZ-8 splits into the FIXED `CAST(ts AS DATE)` / `to_date` /

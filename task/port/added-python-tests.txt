@@ -11,3 +11,7 @@
 # placeholder buckets) lands with two always-run unit pins in test_acceptance_helpers.py.
 tests/test_acceptance_helpers.py::test_placeholder_buckets_refuse_a_real_aws_run
 tests/test_acceptance_helpers.py::test_operator_buckets_pass_the_guard
+tests/test_dml_c_truncate.py::test_facade_truncate_table_wipes_rows_stamps_delete_and_time_travel
+tests/test_dml_c_truncate.py::test_facade_truncate_missing_table_is_table_or_view_not_found
+tests/test_dml_c_truncate.py::test_facade_truncate_view_is_expect_table_not_view
+tests/test_dml_c_truncate.py::test_ansi_callable_truncate_no_longer_uses_the_refuse_substitute
