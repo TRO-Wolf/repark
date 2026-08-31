@@ -197,17 +197,47 @@ def test_merge_into_no_clauses_raises(spark: ReparkSession) -> None:
         writer.merge()
 
 
-def test_merge_into_not_matched_by_source_engine_rejects(spark: ReparkSession) -> None:
-    """Surface accepts whenNotMatchedBySource; engine rejects (not_matched_by_source_rejected)."""
+def test_merge_into_not_matched_by_source_deletes_unmatched(spark: ReparkSession) -> None:
+    """whenNotMatchedBySource().delete() drops unmatched target rows.
+
+    pins: dml-a-merge-not-matched-by-source/C-002
+    """
     _seed(spark)
-    with pytest.raises(PySparkException, match=r"NOT MATCHED BY SOURCE|not supported"):
-        (
-            spark.sql("SELECT 1 AS id, 'a' AS name")
-            .mergeInto(FQ, "id")
-            .whenNotMatchedBySource()
-            .delete()
-            .merge()
-        )
+    (
+        spark.sql("SELECT 1 AS id, 'aa' AS name")
+        .mergeInto(FQ, "id")
+        .whenMatched()
+        .updateAll()
+        .whenNotMatchedBySource()
+        .delete()
+        .merge()
+    )
+    table = spark.sql(f"SELECT id, name FROM {FQ} ORDER BY id").to_arrow()
+    assert table.schema.field("id").type == pa.int64()
+    assert table.schema.field("name").type == pa.string()
+    assert table.to_pylist() == [{"id": 1, "name": "aa"}]
+
+
+def test_merge_into_not_matched_by_source_update(spark: ReparkSession) -> None:
+    """whenNotMatchedBySource().update() rewrites unmatched target rows.
+
+    pins: dml-a-merge-not-matched-by-source/C-003
+    """
+    _seed(spark)
+    (
+        spark.sql("SELECT 1 AS id, 'aa' AS name")
+        .mergeInto(FQ, "id")
+        .whenNotMatchedBySource()
+        .update({"name": lit("gone")})
+        .merge()
+    )
+    table = spark.sql(f"SELECT id, name FROM {FQ} ORDER BY id").to_arrow()
+    assert table.schema.field("id").type == pa.int64()
+    assert table.schema.field("name").type == pa.string()
+    assert table.to_pylist() == [
+        {"id": 1, "name": "a"},
+        {"id": 2, "name": "gone"},
+    ]
 
 
 def test_merge_into_type_errors(spark: ReparkSession) -> None:

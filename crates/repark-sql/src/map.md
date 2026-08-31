@@ -112,12 +112,14 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   `SET PROPERTIES` and its ONE pre-parse recognizer (blank the word `PROPERTIES`, let the stock
   parser read `SET (…)`). Curated vocabulary; `partitioning` is the pre-designated future
   spelling and refuses citing Q3. Tests: [alter/map.md](alter/map.md).
-- `merge.rs` — `MERGE INTO` → `repark_iceberg::write::merge::MergeSpec` (~200 lines of mapping).
+- `merge.rs` — `MERGE INTO` → `repark_iceberg::write::merge::MergeSpec`.
   Execution is the shared RePark-owned executor, never the fork `TableProvider`. No star forms
   (parse-level absent here); OUTPUT/RETURNING refuses. Oracle sub-predicates,
   assignment-target qualification, non-last unconditional clauses refuse at this door.
-  Lone unconditional MATCHED DELETE cardinality exemption is execute-path (shared executor);
-  pins in [merge/cardinality_tests.rs](merge/cardinality_tests.rs).
+  DML-A: `WHEN NOT MATCHED BY SOURCE` DELETE/UPDATE. Lone unconditional MATCHED DELETE
+  cardinality exemption is execute-path (shared executor);
+  pins in [merge/cardinality_tests.rs](merge/cardinality_tests.rs) and
+  [merge/nmbs_tests.rs](merge/nmbs_tests.rs).
   Tests: [merge/map.md](merge/map.md).
 - `time_travel.rs` — the `FOR VERSION|TIMESTAMP AS OF` token-scan rewrite (Q5/G7): recognize,
   resolve through the hoisted `repark_core` half (`TimeTravelSpec` / `read_table_at`), register

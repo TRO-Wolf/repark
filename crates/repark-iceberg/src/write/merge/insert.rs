@@ -142,10 +142,24 @@ pub(super) async fn validate_update_store_assignment(
     sql: &super::MergeSql<'_>,
     write_schema: &ArrowSchema,
 ) -> Result<()> {
-    let Some((probe_sql, target_columns)) = update_assignment_probe_sql(sql, write_schema)? else {
-        return Ok(());
-    };
-    let dataframe = ctx.sql(&probe_sql).await?;
+    if let Some((probe_sql, target_columns)) = update_assignment_probe_sql(sql, write_schema)? {
+        gate_update_probe(ctx, write_schema, &probe_sql, target_columns).await?;
+    }
+    if let Some((probe_sql, target_columns)) =
+        super::not_matched_by_source::update_assignment_probe_sql(sql, write_schema)?
+    {
+        gate_update_probe(ctx, write_schema, &probe_sql, target_columns).await?;
+    }
+    Ok(())
+}
+
+async fn gate_update_probe(
+    ctx: &SessionContext,
+    write_schema: &ArrowSchema,
+    probe_sql: &str,
+    target_columns: Vec<String>,
+) -> Result<()> {
+    let dataframe = ctx.sql(probe_sql).await?;
     let planned = dataframe.schema().fields();
     if planned.len() != target_columns.len() {
         return Err(DataFusionError::Internal(format!(

@@ -5558,8 +5558,8 @@ class DataFrame:
         column-name ``str`` (equi-join sugar: ``target.<name> = source.<name>``). Prefer
         qualified names in Column form when both sides share column names.
 
-        ``whenNotMatchedBySource`` is accepted on the builder but the engine rejects that
-        SQL form today (loud error; disclosed).
+        ``whenNotMatchedBySource`` DELETE and UPDATE execute; ``updateAll`` emits
+        ``UPDATE SET *``, which Spark parse-fails on this arm.
         """
         self._ensure_alive()
         from repark.spark.merge import MergeIntoWriter

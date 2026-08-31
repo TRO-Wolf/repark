@@ -24,6 +24,7 @@ mod insert_overwrite;
 mod join_null_keys;
 mod local_fs_ddl;
 mod merge;
+mod merge_nmbs;
 mod metadata_tables;
 mod namespace_ddl;
 mod normalize;

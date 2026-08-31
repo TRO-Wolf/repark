@@ -12,7 +12,7 @@ use repark_core::{CatalogRegistry, EngineContext, LocationPolicy};
 use tempfile::TempDir;
 
 /// A native session with one registered in-memory Iceberg catalog (`ice`) over a temp warehouse.
-struct Door {
+pub(super) struct Door {
     ctx: SessionContext,
     catalogs: CatalogRegistry,
     warehouse: String,
@@ -21,7 +21,7 @@ struct Door {
 
 impl Door {
     /// Run one statement through the ANSI door.
-    async fn sql(&self, sql: &str) -> datafusion::error::Result<Vec<RecordBatch>> {
+    pub(super) async fn sql(&self, sql: &str) -> datafusion::error::Result<Vec<RecordBatch>> {
         let read_only = HashSet::new();
         let frame = crate::execute(
             EngineContext::new(&self.ctx, &self.catalogs, &read_only),
@@ -32,14 +32,14 @@ impl Door {
     }
 
     /// Run a statement that must succeed.
-    async fn ok(&self, sql: &str) -> Vec<RecordBatch> {
+    pub(super) async fn ok(&self, sql: &str) -> Vec<RecordBatch> {
         self.sql(sql)
             .await
             .unwrap_or_else(|err| panic!("`{sql}` must succeed: {err}"))
     }
 
     /// Run a statement that must succeed, returning its schema alongside the batches.
-    async fn ok_typed(
+    pub(super) async fn ok_typed(
         &self,
         sql: &str,
     ) -> (datafusion::arrow::datatypes::SchemaRef, Vec<RecordBatch>) {
@@ -59,7 +59,7 @@ impl Door {
     }
 
     /// Run a statement that must fail, returning the message.
-    async fn err(&self, sql: &str) -> String {
+    pub(super) async fn err(&self, sql: &str) -> String {
         match self.sql(sql).await {
             Ok(_) => panic!("`{sql}` must fail"),
             Err(err) => err.to_string(),
@@ -68,7 +68,7 @@ impl Door {
 }
 
 /// Build the door session with the `sales` schema at a real warehouse location.
-async fn door_with_schema() -> Door {
+pub(super) async fn door_with_schema() -> Door {
     let warehouse_dir = TempDir::new().expect("warehouse tempdir");
     let warehouse = warehouse_dir
         .path()
@@ -109,7 +109,7 @@ async fn door_with_schema() -> Door {
 }
 
 /// Read `(id, name)` pairs out of an Int64 + Utf8 result, in batch order.
-fn id_name_rows(batches: &[RecordBatch]) -> Vec<(i64, String)> {
+pub(super) fn id_name_rows(batches: &[RecordBatch]) -> Vec<(i64, String)> {
     let mut rows = Vec::new();
     for batch in batches {
         let ids = batch

@@ -1,4 +1,5 @@
 mod merge;
+mod nmbs;
 mod occ;
 mod occ_conflict;
 mod parallel_write;

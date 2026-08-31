@@ -217,7 +217,7 @@ published history — an exposure **accepted by explicit decision**; provenance:
 - **Iceberg DML remainder (v0.6)** — DML-B → DML-C → DML-A → MAINT; REF waits on fork
   F-6. **Delivered 2026-08-30:** DML-B `INSERT OVERWRITE … PARTITION` and
   `writeTo().overwritePartitions()` (empty dynamic refuses loud); DML-C `TRUNCATE TABLE`
-  first-class on all three doors, registry DML-2 FIXED.
+  first-class (DML-2 FIXED); DML-A `MERGE … WHEN NOT MATCHED BY SOURCE`, COW and MOR.
   [DML-1](docs/spark-sql-iceberg-parity.md).
 <!-- /ws -->
 

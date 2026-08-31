@@ -140,16 +140,22 @@ fn invalid_clause_action_pairings_refuse() {
             "the pairing is rejected at parse time: `{sql}`"
         );
     }
+    let nmbs_insert = "MERGE INTO ice.sales.orders AS t USING s ON t.id = s.id \
+         WHEN NOT MATCHED BY SOURCE THEN INSERT (id) VALUES (s.id)";
+    if Parser::parse_sql(&GenericDialect {}, nmbs_insert).is_ok() {
+        let err = lower_error(nmbs_insert);
+        assert!(err.contains("only UPDATE or DELETE"), "{err}");
+    }
 
-    let by_source = lower_error(
+    let (_, spec) = lower_sql(
         "MERGE INTO ice.sales.orders AS t USING s ON t.id = s.id \
          WHEN NOT MATCHED BY SOURCE THEN DELETE",
     );
-    assert!(by_source.contains("NOT MATCHED BY SOURCE"), "{by_source}");
-    assert!(
-        by_source.contains("separate DELETE"),
-        "names the workaround: {by_source}"
-    );
+    assert_eq!(spec.not_matched_by_source.len(), 1);
+    assert!(matches!(
+        spec.not_matched_by_source[0].action,
+        NotMatchedBySourceAction::Delete
+    ));
 }
 
 /// An UPDATE with no assignments and an INSERT with no column list are refused.

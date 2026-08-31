@@ -40,7 +40,8 @@ JVM, no repark required). See [../map.md](../map.md).
   bounded parser guards, exact literal-helper inventory, and lifecycle-aware navigation.
 - `test_cap_1_source_file_line_cap.py` — **CAP-1 (2026-08-26):** exact Rust and Python source-size
   (**DML-B 2026-08-30:** `insert_overwrite.rs` tests 1249→1233, `writer_readwriter.py` 1117→1113)
-  exception sets and baselines mirrored from the live guard tables (`call.rs` 1404 → 1111 after
+  exception sets and baselines mirrored from the live guard tables (DML-A:
+  `merge/mod.rs` 2131 → 2086; `call.rs` 1404 → 1111 after
   RP-2's `call_args.rs` split; RP-3 1407 → 1361); blank-line boundaries;
   growth, shrink, retirement,
   missing-path, unreadable-path, and empty-scan provocations; fixture exclusions; unchanged

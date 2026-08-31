@@ -10,6 +10,9 @@ MERGE unit tests. `merge/mod.rs` declares `#[cfg(test)] mod tests;`.
 
 - `mod.rs` — thin index (rustfmt module order).
 - `merge.rs` — primary unit battery.
+- `nmbs.rs` — DML-A `WHEN NOT MATCHED BY SOURCE` SQL-fragment pins and skip_cardinality
+  with an NMBS clause present.
+  pins: dml-a-merge-not-matched-by-source/C-002, C-003, C-004, C-005
 - `occ_conflict.rs` — OCC-2 M19/M20 batteries B/C/E/F/G/H/I.
 - `occ.rs` — OCC / commit conflict pins + M13 isolation parse + M19-A split.
 - `parallel_write.rs` — concurrent file write pins.

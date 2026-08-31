@@ -9,8 +9,7 @@ row runs on BOTH engines (create → seed → MERGE → read back), so the recip
 recipe the oracle ran are the same code path.
 
 **Why some rows are DISCLOSURES.** When the engines agree on value AND Arrow type AND nullability,
-the row is a plain equality (``repark is None``). When they honestly disagree — Spark supports
-``WHEN NOT MATCHED BY SOURCE`` while repark refuses with ``NotImplemented`` — the row pins BOTH
+the row is a plain equality (``repark is None``). When they honestly disagree the row pins BOTH
 halves and asserts the divergence still holds. A silent CONVERGENCE goes red and forces the
 disclosure to be revisited rather than laundered into "parity".
 
@@ -540,10 +539,10 @@ ROWS: list[MergeDiffRow] = [
             "it is left alone; id=2 updates to 88; id=3 inserts. Pins the AND-predicate path."
         ),
     ),
-    # ----- 11. WHEN NOT MATCHED BY SOURCE — repark refuses; Spark deletes unmatched target -------
+    # ----- 11. WHEN NOT MATCHED BY SOURCE — engines agree (DML-A) -------------------------------
     MergeDiffRow(
-        name="not_matched_by_source_repark_refuses",
-        kind="split",
+        name="not_matched_by_source",
+        kind="content",
         target_columns="id BIGINT, name STRING",
         seed_sql=(
             "SELECT CAST(1 AS BIGINT) AS id, 'a' AS name UNION ALL SELECT CAST(2 AS BIGINT), 'b'"
@@ -560,14 +559,12 @@ ROWS: list[MergeDiffRow] = [
             [("id", _I64, True), ("name", _STR, True)],
             {"id": [1], "name": ["aa"]},
         ),
-        repark=None,  # repark refuses — see repark_error_needle
+        repark=None,
         spark_error_needle=None,
-        repark_error_needle="NOT MATCHED BY SOURCE",
+        repark_error_needle=None,
         note=(
-            "DISCLOSURE: repark's surface accepts the builder spelling but the engine refuses "
-            "WHEN NOT MATCHED BY SOURCE with NotImplemented (test_merge_into.py pin). Spark + "
-            "Iceberg runs it: matched id=1 updates to 'aa', unmatched target id=2 is deleted. "
-            "Do not invent repark support; this row is the refuse disclosure."
+            "pins: dml-a-merge-not-matched-by-source/C-002. Matched id=1 updates to 'aa'; "
+            "unmatched target id=2 is deleted. Live Spark 4.1.2 + Iceberg 1.11.0 2026-08-30."
         ),
     ),
     # ----- 12. dup source keys + SINGLE unconditional MATCHED DELETE — engines agree -------------
@@ -781,10 +778,10 @@ def test_merge_differential_row_set_covers_g3_budget() -> None:
         "corpus cannot tell agreement from a broken comparator"
     )
 
-    # The NMBS refuse disclosure must stay a split (do not invent support).
     nmbs = [row for row in ROWS if "not_matched_by_source" in row.name]
-    assert len(nmbs) == 1 and nmbs[0].kind == "split"
-    assert nmbs[0].repark_error_needle is not None
+    assert len(nmbs) == 1 and nmbs[0].kind == "content"
+    assert nmbs[0].repark is None
+    assert nmbs[0].repark_error_needle is None
 
 
 def test_lifecycle_cleanup_after_failed_merge(

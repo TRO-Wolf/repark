@@ -37,7 +37,8 @@ repark-core's error map.
   snapshot-ref helpers. `store_assign` is declared `pub(crate)` — an internal predicate, never
   a public surface.
 - `merge/` — the RePark-owned `MERGE INTO` executor (copy-on-write AND merge-on-read per
-  `write.merge.mode`, fork ENGINE_CONTRACT §6). See [merge/map.md](merge/map.md).
+  `write.merge.mode`, fork ENGINE_CONTRACT §6). DML-A adds `WHEN NOT MATCHED BY SOURCE`.
+  See [merge/map.md](merge/map.md).
 - `row_lineage_guard.rs` (crate-private; `refuse_v3_cow_dml` re-exported) — **V3R-1
   (2026-08-25, `V3-COW-1`); RP-2 (2026-08-27, fork `ce92a7bf`):** the format-v3 row-DML guard,
   two seats — the write-mode resolvers (`predicate_dml.rs`, `merge/mod.rs`) and the passthrough

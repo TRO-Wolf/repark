@@ -257,19 +257,20 @@ Supported surface, for reference:
 #### DML-3 — `MERGE INTO` forms outside the supported surface
 
 - **repark** — a `MERGE INTO` shape the door cannot parse refuses with a targeted error pointing
-  at this section, rather than surfacing a raw parser error.
+  at this section, rather than surfacing a raw parser error. **DML-A (2026-08-30):**
+  `WHEN NOT MATCHED BY SOURCE` DELETE and UPDATE are in the supported surface (COW and MOR;
+  `UPDATE SET *` on that arm is Spark-parse-fail and stays refused).
 - **Apache Spark** — parses the full `MERGE INTO` grammar. *(oracle: documented.)*
-- **Pin** — `crates/repark-spark/src/tests/merge.rs::merge_unparsable_form_gets_targeted_error`
+- **Pin** — `crates/repark-spark/src/tests/merge.rs::merge_unparsable_form_gets_targeted_error`;
+  NMBS execute: `crates/repark-spark/src/tests/merge_nmbs.rs`
+  (pins: dml-a-merge-not-matched-by-source/C-002, C-003, C-008)
 - **Rationale** — DECLARED as a *boundary*, not as a permanent gap: `MERGE` is RePark-owned and
   its supported surface grows. The row exists so the boundary is a stated, tested thing instead
   of an accident of the parser.
-- **Where the boundary moves next.** The door parses Spark SQL with stock sqlparser's
-  `DatabricksDialect` plus token-level normalizers, which is why some Spark/Iceberg extension
-  grammar is recognized by hand rather than parsed. A bespoke `ReParkDialect` + Iceberg-extension
-  recognizer is the intended replacement, and it arrives with the `MERGE` / `CALL` / branch
-  increments — the same increments that widen this row's supported surface. That is the whole of
-  the "increment roadmap" `crates/repark-spark/src/normalize.rs` points here for; the schedule
-  itself lives in [../STATUS.md](../STATUS.md) and the campaign briefs, never in this registry.
+- **Where the boundary moves next.** Remaining refuse-forms (Oracle sub-predicates, `INSERT ROW`,
+  `OUTPUT`/`RETURNING`, NMBS `UPDATE SET *`) stay targeted refusals. The door parses Spark SQL
+  with stock sqlparser's `DatabricksDialect` plus token-level normalizers. Schedule lives in
+  [../STATUS.md](../STATUS.md), never in this registry.
 
 #### DML-4 — insert-only `MERGE` snapshot operation stamp
 

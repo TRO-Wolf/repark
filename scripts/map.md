@@ -302,7 +302,8 @@ repark-parity slice.
   pre-commit (n=5 median **0.13 s**, inside the sub-second hook budget).
 
 - `check_rust_file_size.sh` + `check_rust_file_size.py` — the **general Rust file-size** guard
-  (G-8 companion to `check_lib_rs`). RP-2 (2026-08-27): `call.rs` ratcheted 1404 → 1111 — the
+  (G-8 companion to `check_lib_rs`). DML-A (2026-08-30): `merge/mod.rs` 2131 → 2086.
+  RP-2 (2026-08-27): `call.rs` ratcheted 1404 → 1111 — the
   argument bag moved to `crates/repark-spark/src/call_args.rs` along the row's stated seam.
   RP-3 (2026-08-30): `crates/repark-spark/src/tests/call.rs` ratcheted 1407 → 1361 after the
   R114 public-API replacement dropped the private DV-walker tests. The scan covers every

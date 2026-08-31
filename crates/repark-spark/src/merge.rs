@@ -10,7 +10,8 @@ use datafusion::sql::sqlparser::keywords::Keyword;
 use datafusion::sql::sqlparser::tokenizer::Token;
 use iceberg::{NamespaceIdent, TableIdent};
 use repark_iceberg::write::merge::{
-    InsertAction, InsertClause, MatchedAction, MatchedClause, MergeSpec,
+    InsertAction, InsertClause, MatchedAction, MatchedClause, MergeSpec, NotMatchedBySourceAction,
+    NotMatchedBySourceClause,
 };
 
 use repark_core::CatalogRegistry;
@@ -35,6 +36,10 @@ const NON_LAST_MATCHED_CLAUSE_OMIT_CONDITION: &str = "NON_LAST_MATCHED_CLAUSE_OM
 /// Spark analysis error-class: an unconditioned NOT MATCHED clause that is not last of its kind.
 const NON_LAST_NOT_MATCHED_CLAUSE_OMIT_CONDITION: &str = "NON_LAST_NOT_MATCHED_CLAUSE_OMIT_CONDITION: When there are more than one NOT MATCHED \
      clauses in a MERGE statement, only the last NOT MATCHED clause can omit the condition";
+
+/// Spark analysis error-class: an unconditioned NOT MATCHED BY SOURCE clause that is not last of its kind.
+const NON_LAST_NOT_MATCHED_BY_SOURCE_CLAUSE_OMIT_CONDITION: &str = "NON_LAST_NOT_MATCHED_BY_SOURCE_CLAUSE_OMIT_CONDITION: When there are more than one NOT MATCHED \
+     BY SOURCE clauses in a MERGE statement, only the last NOT MATCHED BY SOURCE clause can omit the condition";
 
 /// Route MERGE INTO: lower the AST to `MergeSpec`, resolve the Iceberg handle, and execute COW.
 /// # Errors
@@ -150,15 +155,23 @@ fn lower(
 
     let mut matched = Vec::new();
     let mut not_matched = Vec::new();
+    let mut not_matched_by_source = Vec::new();
+    refuse_clause_kind_order(clauses)?;
     for clause in clauses {
-        lower_clause(clause, &target_alias, &mut matched, &mut not_matched)?;
+        lower_clause(
+            clause,
+            &target_alias,
+            &mut matched,
+            &mut not_matched,
+            &mut not_matched_by_source,
+        )?;
     }
-    if matched.is_empty() && not_matched.is_empty() {
+    if matched.is_empty() && not_matched.is_empty() && not_matched_by_source.is_empty() {
         return Err(DataFusionError::Plan(
             "MERGE INTO requires at least one WHEN clause".to_string(),
         ));
     }
-    refuse_non_last_unconditional_clause(&matched, &not_matched)?;
+    refuse_non_last_unconditional_clause(&matched, &not_matched, &not_matched_by_source)?;
 
     let spec = MergeSpec {
         target: TableIdent::new(NamespaceIdent::new(namespace.clone()), table_name.clone()),
@@ -168,6 +181,7 @@ fn lower(
         on_sql: on.to_string(),
         matched,
         not_matched,
+        not_matched_by_source,
     };
     Ok((catalog.clone(), spec))
 }
@@ -178,6 +192,7 @@ fn lower_clause(
     target_alias: &str,
     matched: &mut Vec<MatchedClause>,
     not_matched: &mut Vec<InsertClause>,
+    not_matched_by_source: &mut Vec<NotMatchedBySourceClause>,
 ) -> Result<()> {
     let predicate_sql = clause.predicate.as_ref().map(ToString::to_string);
     match (&clause.clause_kind, &clause.action) {
@@ -263,14 +278,49 @@ fn lower_clause(
                 "only INSERT is valid in a WHEN NOT MATCHED clause".to_string(),
             ));
         }
-        (MergeClauseKind::NotMatchedBySource, _) => {
-            return Err(DataFusionError::NotImplemented(
-                "WHEN NOT MATCHED BY SOURCE is not supported yet (tracked in task/todo.md)"
-                    .to_string(),
-            ));
+        (MergeClauseKind::NotMatchedBySource, action) => {
+            not_matched_by_source.push(lower_nmbs_action(action, predicate_sql, target_alias)?);
         }
     }
     Ok(())
+}
+
+fn lower_nmbs_action(
+    action: &MergeAction,
+    predicate_sql: Option<String>,
+    target_alias: &str,
+) -> Result<NotMatchedBySourceClause> {
+    match action {
+        MergeAction::Delete { .. } => Ok(NotMatchedBySourceClause {
+            predicate_sql,
+            action: NotMatchedBySourceAction::Delete,
+        }),
+        MergeAction::Update(update_expr) => {
+            let MergeUpdateExpr {
+                update_token: _,
+                assignments,
+                update_predicate,
+                delete_predicate,
+            } = update_expr;
+            refuse_oracle_style_sub_predicate(update_predicate.as_ref())?;
+            refuse_oracle_style_sub_predicate(delete_predicate.as_ref())?;
+            if star_update(assignments)?.is_some() {
+                return Err(DataFusionError::Plan(
+                    "UPDATE SET * is not Spark MERGE grammar on WHEN NOT MATCHED BY SOURCE"
+                        .to_string(),
+                ));
+            }
+            Ok(NotMatchedBySourceClause {
+                predicate_sql,
+                action: NotMatchedBySourceAction::Update {
+                    assignments: lower_assignments(assignments, target_alias)?,
+                },
+            })
+        }
+        MergeAction::Insert(_) => Err(DataFusionError::Plan(
+            "only UPDATE or DELETE is valid in a WHEN NOT MATCHED BY SOURCE clause".to_string(),
+        )),
+    }
 }
 
 /// Detect the sentinel shape [`rewrite_merge_stars`] substitutes for `UPDATE SET *`.
@@ -352,6 +402,7 @@ fn refuse_oracle_style_sub_predicate(predicate: Option<&Expr>) -> Result<()> {
 fn refuse_non_last_unconditional_clause(
     matched: &[MatchedClause],
     not_matched: &[InsertClause],
+    not_matched_by_source: &[NotMatchedBySourceClause],
 ) -> Result<()> {
     if matched
         .iter()
@@ -370,6 +421,45 @@ fn refuse_non_last_unconditional_clause(
         return Err(DataFusionError::Plan(
             NON_LAST_NOT_MATCHED_CLAUSE_OMIT_CONDITION.to_string(),
         ));
+    }
+    if not_matched_by_source
+        .iter()
+        .enumerate()
+        .any(|(index, clause)| {
+            clause.predicate_sql.is_none() && index + 1 < not_matched_by_source.len()
+        })
+    {
+        return Err(DataFusionError::Plan(
+            NON_LAST_NOT_MATCHED_BY_SOURCE_CLAUSE_OMIT_CONDITION.to_string(),
+        ));
+    }
+    Ok(())
+}
+
+/// Spark parses MATCHED*, then NOT MATCHED*, then NOT MATCHED BY SOURCE*.
+fn refuse_clause_kind_order(clauses: &[MergeClause]) -> Result<()> {
+    let mut seen_not_matched = false;
+    let mut seen_by_source = false;
+    for clause in clauses {
+        match clause.clause_kind {
+            MergeClauseKind::Matched if seen_not_matched || seen_by_source => {
+                return Err(DataFusionError::Plan(
+                    "WHEN MATCHED clauses must precede WHEN NOT MATCHED and WHEN NOT MATCHED BY \
+                     SOURCE"
+                        .to_string(),
+                ));
+            }
+            MergeClauseKind::NotMatched | MergeClauseKind::NotMatchedByTarget if seen_by_source => {
+                return Err(DataFusionError::Plan(
+                    "WHEN NOT MATCHED clauses must precede WHEN NOT MATCHED BY SOURCE".to_string(),
+                ));
+            }
+            MergeClauseKind::NotMatched | MergeClauseKind::NotMatchedByTarget => {
+                seen_not_matched = true;
+            }
+            MergeClauseKind::NotMatchedBySource => seen_by_source = true,
+            MergeClauseKind::Matched => {}
+        }
     }
     Ok(())
 }
@@ -554,15 +644,19 @@ mod tests {
         assert!(err.to_string().contains("requires an alias"));
     }
 
-    /// `WHEN NOT MATCHED BY SOURCE` is a documented v1 limit — deterministic `NotImplemented`.
+    /// `WHEN NOT MATCHED BY SOURCE THEN DELETE` lowers to the third arm.
     #[test]
-    fn not_matched_by_source_rejected() {
+    fn not_matched_by_source_delete_lowers() {
         let (table, source, on, clauses) = parse_merge(
             "MERGE INTO ice.sales.t AS t USING u AS s ON t.id = s.id \
              WHEN NOT MATCHED BY SOURCE THEN DELETE",
         );
-        let err = lower(&table, &source, &on, &clauses).unwrap_err();
-        assert!(err.to_string().contains("NOT MATCHED BY SOURCE"));
+        let (_, spec) = lower(&table, &source, &on, &clauses).unwrap();
+        assert_eq!(spec.not_matched_by_source.len(), 1);
+        assert!(matches!(
+            spec.not_matched_by_source[0].action,
+            NotMatchedBySourceAction::Delete
+        ));
     }
 
     /// Star forms are token-rewritten into a parseable sentinel and lowered to typed star markers.

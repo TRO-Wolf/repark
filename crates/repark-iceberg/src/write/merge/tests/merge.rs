@@ -20,7 +20,7 @@ impl PartitionStream for EmptyTargetStream {
     }
 }
 
-fn spec(matched: Vec<MatchedClause>, not_matched: Vec<InsertClause>) -> MergeSpec {
+pub(super) fn spec(matched: Vec<MatchedClause>, not_matched: Vec<InsertClause>) -> MergeSpec {
     MergeSpec {
         target: TableIdent::new(NamespaceIdent::new("sales".to_string()), "t".to_string()),
         target_alias: "t".to_string(),
@@ -29,10 +29,11 @@ fn spec(matched: Vec<MatchedClause>, not_matched: Vec<InsertClause>) -> MergeSpe
         on_sql: "t.id = s.id".to_string(),
         matched,
         not_matched,
+        not_matched_by_source: vec![],
     }
 }
 
-fn update(predicate: Option<&str>, sets: &[(&str, &str)]) -> MatchedClause {
+pub(super) fn update(predicate: Option<&str>, sets: &[(&str, &str)]) -> MatchedClause {
     MatchedClause {
         predicate_sql: predicate.map(ToString::to_string),
         action: MatchedAction::Update {
@@ -44,7 +45,7 @@ fn update(predicate: Option<&str>, sets: &[(&str, &str)]) -> MatchedClause {
     }
 }
 
-fn delete(predicate: Option<&str>) -> MatchedClause {
+pub(super) fn delete(predicate: Option<&str>) -> MatchedClause {
     MatchedClause {
         predicate_sql: predicate.map(ToString::to_string),
         action: MatchedAction::Delete,
@@ -1084,7 +1085,6 @@ fn qi1_merge_quote_ident_joins_spark_injection_battery() {
         let via_merge = quote_ident(probe);
         let via_ssot = crate::write::idents::quote_ident_spark(probe);
         assert_eq!(via_merge, via_ssot, "merge must delegate to idents SSOT");
-        // Independent oracle — not undouble-only.
         let expected = format!("\"{}\"", probe.replace('"', "\"\""));
         assert_eq!(via_merge, expected, "under-quote residual for {probe:?}");
     }
