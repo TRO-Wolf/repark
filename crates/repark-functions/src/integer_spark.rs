@@ -9,7 +9,7 @@ use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode, TreeNodeRecursion};
 use datafusion::common::{DFSchema, Result, ScalarValue, exec_err};
 use datafusion::error::DataFusionError;
-use datafusion::logical_expr::expr::ScalarFunction;
+use datafusion::logical_expr::expr::{BinaryExpr, ScalarFunction};
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
 use datafusion::logical_expr::planner::{ExprPlanner, PlannerResult, RawBinaryExpr};
 use datafusion::logical_expr::registry::FunctionRegistry;
@@ -80,11 +80,19 @@ impl ExprPlanner for SparkIntegerExprPlanner {
         let Some(udf) = arith_udf(operator) else {
             return Ok(PlannerResult::Original(expr));
         };
-        Ok(PlannerResult::Planned(udf_call(
-            udf,
-            cast_to(expr.left, result_type.clone()),
-            cast_to(expr.right, result_type),
-        )))
+        let original = Expr::BinaryExpr(BinaryExpr::new(
+            Box::new(expr.left.clone()),
+            operator,
+            Box::new(expr.right.clone()),
+        ));
+        Ok(PlannerResult::Planned(
+            udf_call(
+                udf,
+                cast_to(expr.left, result_type.clone()),
+                cast_to(expr.right, result_type),
+            )
+            .alias(original.schema_name().to_string()),
+        ))
     }
 }
 
@@ -558,6 +566,28 @@ mod tests {
             .downcast_ref::<Int64Array>()
             .expect("Int64Array");
         array.is_valid(0).then(|| array.value(0))
+    }
+
+    fn projection_name(batch: &RecordBatch) -> String {
+        batch.schema().field(0).name().to_string()
+    }
+
+    /// pins: f-y10-1-int-overflow/C-002
+    #[tokio::test]
+    async fn unaliased_one_plus_one_name_is_not_internal_udf() {
+        let ctx = ctx();
+        let batch = batch(&ctx, "SELECT 1 + 1").await;
+        let name = projection_name(&batch);
+        assert_eq!(name, "Int64(1) + Int64(1)", "unaliased 1+1 name: {name}");
+    }
+
+    /// pins: f-y10-1-int-overflow/C-002
+    #[tokio::test]
+    async fn unaliased_typed_add_preserves_binary_expr_name() {
+        let ctx = ctx();
+        let batch = batch(&ctx, "SELECT x + 1 FROM (SELECT CAST(1 AS INT) AS x)").await;
+        let name = projection_name(&batch);
+        assert_eq!(name, "x + Int64(1)", "unaliased x+1 name: {name}");
     }
 
     /// pins: f-y10-1-int-overflow/C-001, C-002

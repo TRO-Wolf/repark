@@ -25,6 +25,40 @@ def _spark_legacy() -> ReparkSession:
     return ReparkSession.builder.config("spark.sql.ansi.enabled", "false").getOrCreate()
 
 
+def test_unaliased_one_plus_one_columns_are_not_internal_udf() -> None:
+    """Unaliased ``SELECT 1 + 1`` keeps a binary-expr name, not the UDF.
+
+    pins: f-y10-1-int-overflow/C-002
+    """
+    spark = _spark()
+    columns = spark.sql("SELECT 1 + 1").columns
+    assert columns == ["Int64(1) + Int64(1)"]
+    assert all("__repark_spark_int_" not in name for name in columns)
+
+
+def test_unaliased_typed_add_columns_preserve_binary_name() -> None:
+    """Unaliased planner-hit ``SELECT x + 1`` names like the BinaryExpr, not the UDF.
+
+    pins: f-y10-1-int-overflow/C-002
+    """
+    spark = _spark()
+    columns = spark.sql("SELECT x + 1 FROM (SELECT CAST(1 AS INT) AS x)").columns
+    assert columns == ["x + Int64(1)"]
+    assert all("__repark_spark_int_" not in name for name in columns)
+
+
+def test_native_unaliased_typed_add_columns_preserve_binary_name() -> None:
+    """ANSI-door ``repark.sql()`` unaliased planner-hit name is not the UDF.
+
+    pins: f-y10-1-int-overflow/C-002, C-003
+    """
+    import repark
+
+    columns = repark.sql("SELECT x + 1 FROM (SELECT CAST(1 AS INT) AS x)").columns
+    assert columns == ["x + Int64(1)"]
+    assert all("__repark_spark_int_" not in name for name in columns)
+
+
 def test_untyped_one_plus_one_type_is_int64() -> None:
     """Bare ``SELECT 1 + 1`` stays int64 on a planner-equipped Spark session.
 

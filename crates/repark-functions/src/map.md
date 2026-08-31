@@ -115,7 +115,9 @@ Child modules use Rust's default layout: `str_to_map`, `shuffle`, and `map_from_
   `ARITHMETIC_OVERFLOW`; `ansi=false` wraps at the source Arrow type. An
   `ExprPlanner` keeps `CAST(INT) + 1` as Int32 so TypeCoercion cannot widen it.
   Pure-literal `1 + 1` / `2147483647 + 1` stay Int64 (the intended literal-width
-  split). `install_integer_overflow` is the ANSI-door hook. Ledger:
+  split). Planner `Planned` results alias to the original BinaryExpr name so
+  unaliased SQL does not leak `__repark_spark_int_*`. `install_integer_overflow`
+  is the ANSI-door hook. Ledger:
   `task/ledgers/staging/f-y10-1-int-overflow-ledger.md`.
   pins: f-y10-1-int-overflow/C-001, C-002, C-003, C-004, C-005
 - `lib.rs` — `register_all(ctx)` (datafusion-spark's full set, then the date + string + collection

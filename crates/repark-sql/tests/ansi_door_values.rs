@@ -246,6 +246,22 @@ async fn ansi_door_implicit_string_plus_number_refuses() {
     );
 }
 
+/// pins: f-y10-1-int-overflow/C-002, C-003
+#[tokio::test]
+async fn ansi_door_unaliased_typed_add_preserves_binary_expr_name() {
+    let ansi = native_ansi_door().await;
+    let frame = ansi
+        .session
+        .sql("SELECT x + 1 FROM (SELECT CAST(1 AS INT) AS x)")
+        .await
+        .expect("unaliased typed add");
+    let name = frame.schema().as_arrow().field(0).name();
+    assert_eq!(
+        name, "x + Int64(1)",
+        "ANSI unaliased planner-hit name must not leak the UDF, got {name}"
+    );
+}
+
 /// pins: f-y10-1-int-overflow/C-001, C-002, C-003
 #[tokio::test]
 async fn ansi_door_untyped_one_plus_one_stays_int64() {
