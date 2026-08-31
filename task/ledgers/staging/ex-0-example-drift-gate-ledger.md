@@ -47,14 +47,18 @@ cross-checks `F.__all__` / `ta.__all__` against the AST walk.
 | `io` | public members of `DataFrameReader`, `DataFrameWriter`, `DataFrameWriterV2` | `<Class>.<name>` |
 | `session` | `repark.sql` plus public members of `ReparkSession` (spelled `SparkSession`) and nested `Builder` | `repark.sql` / `SparkSession.<name>` / `SparkSession.Builder.<name>` |
 
-Skip names that start with `_` and every dunder. Keep camelCase aliases
-(`groupBy`, `createDataFrame`) as distinct names. Declared-absent `F.*` names
-stay in the inventory (they are public). SparkSession/ReparkSession/ReParkSession
-are one type; the inventory uses the Spark-door spelling `SparkSession`.
+Skip names that start with `_` and every dunder (`DataFrame.__getitem__` is
+excluded by the dunder rule). Keep camelCase aliases (`groupBy`,
+`createDataFrame`) as distinct names. Declared-absent `F.*` names stay in the
+inventory (they are public). SparkSession/ReparkSession/ReParkSession are one
+type; the inventory uses the Spark-door spelling `SparkSession`.
 
-Not in this inventory (out of the v0.7 list as written): `Column` methods,
-`Window`/`WindowSpec`, `Catalog`, `types`, `ml`, `Row`, `StorageLevel`,
-`UDFRegistration`. A later unit can widen the walk; this unit does not.
+**Closed EX-0 set (F-4, orchestrator 2026-08-31):** the roadmap colon list plus
+session. Not in this inventory (measured 2026-08-31, public members unless
+noted): Column **40**, Window **14**, WindowSpec **8**, Catalog **28**, Row **4**
+public, `types.__all__` **28**, `ml.__all__` **28**, RuntimeConfig **5**,
+SparkContext **3**, UDFRegistration **3**, StorageLevel **0** public. Widening
+is an owner decision (on the order of 120+ names). This unit does not widen.
 
 A public name whose only honest example needs a cloud service goes in
 `docs/examples/exceptions.txt` with a one-line reason. Local Iceberg (memory
@@ -62,11 +66,12 @@ catalog / local warehouse) is not a cloud exception.
 
 ## Orchestrator rulings (build-to)
 
-Location `docs/examples/<family>/`. `COVERS: list[str]` at module level.
-Backlog ratchet. Local-only execution. `make ci` runs the static half (enumerate
-+ coverage + ratchet). Example execution runs when the native module imports
-(same target; skip with a visible reason otherwise). `.github/` stays untouched
-per the standing fence; the Makefile target is the local/CI-via-`make ci` wire.
+Location `docs/examples/<family>/`. `COVERS: list[str]` at module level and
+each name must be used in that script body. Backlog ratchet. Exceptions
+ratchet (`EXCEPTIONS_BASELINE`). Local-only execution. `make ci` and ci.yml's
+python job run the static half. wheels.yml smoke runs `--require-execute`
+against the packaged wheel (the CI leg that instantiates C-007 on the real
+679-name set).
 
 ```yaml
 SELF_LOGIC_REVIEW:
@@ -91,14 +96,14 @@ SELF_LOGIC_REVIEW:
 | ID | Clause | Proof obligation | Verdict |
 |---|---|---|---|
 | C-001 | The enumerator emits a deterministic sorted list of public names with a family tag, covering the five families in the policy table, from an AST walk of the facade sources. | Inventory file + family counts in this ledger. Pin in the parity test. | **PROVEN** |
-| C-002 | Examples live under `docs/examples/<family>/` as runnable Python. The module docstring states what is demonstrated. Each file declares `COVERS: list[str]`. | Seed examples + gate parser. | **PROVEN** |
+| C-002 | Examples live under `docs/examples/<family>/` as runnable Python. The module docstring states what is demonstrated. Each file declares `COVERS: list[str]`. Every `COVERS` name is used in that script body (family-aware AST). | Seed examples + unused-COVERS pin; stuffing `DataFrame.agg` into `abs.py` is red. | **PROVEN** |
 | C-003 | The gate fails when an enumerated public name is neither in some example's `COVERS` nor in the backlog nor in the exceptions file. | Provocation: uncovered name, captured in this ledger, then reverted. | **PROVEN** |
 | C-004 | The gate fails when the backlog names a public name that no longer exists, or that an example now covers. | Provocation: stale backlog row; covered-but-listed row. | **PROVEN** |
 | C-005 | The backlog count is an exact baseline in the gate script and ratchets down only. Seed is today's uncovered set after the seed examples. | `BACKLOG_BASELINE` equals the backlog file length. Seed examples are absent from the backlog. | **PROVEN** |
-| C-006 | A public name whose only honest example needs a cloud service is listed in `docs/examples/exceptions.txt` with a one-line reason. Local filesystem / memory catalog examples are not exceptions. | Exceptions file + pin. | **PROVEN** |
-| C-007 | When `repark._native` is importable the gate executes every example script and fails on a nonzero exit. When it is not importable, execution is skipped with a visible reason so `make ci` stays native-build-free. | Dummy nonzero script in the parity test; skip path asserted. | **PROVEN** |
+| C-006 | A public name whose only honest example needs a cloud service is listed in `docs/examples/exceptions.txt` with a one-line reason. Local filesystem / memory catalog examples are not exceptions. `EXCEPTIONS_BASELINE` is exact; a covered or nonexistent exception name is red. | Exceptions file + baseline pin. | **PROVEN** |
+| C-007 | When `repark._native` is importable the gate executes every example script and fails on a nonzero exit. When it is not importable, execution is skipped with a visible reason so `make ci` stays native-build-free. CI execution of the real example set is `wheels.yml` smoke `--require-execute` after the packaged wheel is installed. | Dummy nonzero pin; wheels.yml step; skip path asserted. | **PROVEN** |
 | C-008 | Seed examples cover at least one `F.*` function, one reader/writer round trip, one DataFrame method chain, and one TA kernel, and those names are removed from the backlog in the same commit. | Seed files + backlog absence. | **PROVEN** |
-| C-009 | `make check-example-coverage` is wired into `make ci`. `.github/` is not edited (standing fence). | Makefile recipe + pin. | **PROVEN** |
+| C-009 | `make check-example-coverage` is wired into `make ci` and dual-wired into ci.yml's python job (static half). | Makefile recipe + ci.yml step + pin. | **PROVEN** |
 | C-010 | Examples and the gate touch only public API and local resources. No engine or `python/repark/src` product behaviour changes. | Diff scope + seed scripts. | **PROVEN** |
 
 `LOGIC_SCORE` = **10/10 `PROVEN`**.
@@ -134,17 +139,29 @@ Not committed. Captured 2026-08-31, then the tree restored.
 
 Seed plus backlog restore made the static gate green.
 
+## Critic round 1 (2026-08-31)
+
+| Finding | Disposition | Red-first |
+|---|---|---|
+| F-1 S1 COVERS stuffing | REMEDIATED: family-aware AST use check. | Stuffed `DataFrame.agg` into `abs.py` COVERS, dropped it from the backlog, `BACKLOG_BASELINE=657`: exit **1**, `docs/examples/functions/abs.py: COVERS names DataFrame.agg which the script body never uses`. Reverted from copies. |
+| F-2 S1 exceptions hatch | REMEDIATED: `EXCEPTIONS_BASELINE = 2`; covered or missing names red. | Moved `DataFrame.agg` into `exceptions.txt` with reason `not today`, backlog 657, baseline 2: exit **1**, `exceptions count is 3, baseline is 2`. Reverted from copies. |
+| F-3 S1 no CI execute | REMEDIATED: ci.yml python job dual-wires the static half; wheels.yml smoke `--require-execute` is the native execute leg on the real 679-name set. | Workflow files + pin. |
+| F-4 overclaim | ACCEPTED_FLAGGED: closed set documented in this ledger and the gate docstring; inventory unchanged. | — |
+
 ## Disk
 
 Pickup: 520 GB free of 1.8 TB (71% used). No worktree. `target/` reused if a
 native build is needed for live example execution; that build is optional for
 the static gate.
 
-## Dual-wire gap
+## Dual-wire
 
-House gates are dual-wired `make ci` + `ci.yml`. Standing delegated fence:
-never edit `.github/`. This unit wires the Makefile only and records the
-GitHub Actions mirror as follow-up (not this PR).
+Static half: `make check-example-coverage` and ci.yml python job
+`./scripts/check_example_coverage.sh`. Execute half: wheels.yml smoke
+`/tmp/wheeltest/bin/python scripts/check_example_coverage.py --require-execute`
+after the packaged wheel is installed. Pattern-keeper for wiring claims:
+`scripts/check_parity_live_dual_wire.py` (this gate is not a load-bearing-flag
+comparator; it is Makefile + workflow step agreement).
 
 ```yaml
 COVERAGE_ATTESTATION:
@@ -167,7 +184,7 @@ COVERAGE_ATTESTATION:
       justification: Gate is a read-only process over source and scripts; no shared mutable engine state.
     - id: AT-5
       status: ATTACKED
-      evidence: Example child env drops AWS_* keys; examples are local-only; standing fence leaves .github/ untouched.
+      evidence: Example child env drops AWS_* keys; examples are local-only; exceptions are an exact baseline.
       artifacts: [scripts/check_example_coverage.py, docs/examples/exceptions.txt]
     - id: AT-6
       status: N/A

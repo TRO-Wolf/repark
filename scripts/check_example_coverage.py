@@ -2,9 +2,23 @@
 """Enumerate the public surface and fail when an example is missing.
 
 SSOT for the v0.7 example-drift gate. Prose points here and never restates the
-backlog baseline. Walks facade sources by AST so ``make ci`` stays
-native-build-free. When ``repark._native`` imports, every example script is
-executed and ``F.__all__`` / ``ta.__all__`` are cross-checked against the walk.
+baselines. Walks facade sources by AST so ``make ci`` stays native-build-free.
+When ``repark._native`` imports, every example script is executed and
+``F.__all__`` / ``ta.__all__`` are cross-checked against the walk.
+
+Closed EX-0 set (roadmap colon list plus session): ``F.*``, DataFrame /
+GroupedData / DataFrameNaFunctions / DataFrameStatFunctions public members,
+TA ``__all__``, DataFrameReader / DataFrameWriter / DataFrameWriterV2 public
+members, ``repark.sql``, and SparkSession / SparkSession.Builder public
+members. Names starting with ``_`` and every dunder are skipped
+(``DataFrame.__getitem__`` is excluded by that dunder rule). Not in this
+inventory: Column (40), Window (14), WindowSpec (8), Catalog (28), Row (4
+public), types.__all__ (28), ml.__all__ (28), RuntimeConfig (5), SparkContext
+(3), UDFRegistration (3), StorageLevel (0 public). Widening is an owner
+decision (on the order of 120+ names). Measured 2026-08-31.
+
+A ``COVERS`` entry must be used in that script's body. ``exceptions.txt`` has
+the same exact-count ratchet as the backlog.
 
 pins: ex-0-example-drift-gate/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 """
@@ -28,9 +42,14 @@ FUNCTIONS_SOURCE = "python/repark/src/repark/spark/functions.py"
 TA_SOURCE = "python/repark/src/repark/spark/ta.py"
 FAMILIES: tuple[str, ...] = ("dataframe", "functions", "io", "session", "ta")
 BACKLOG_BASELINE = 658
+EXCEPTIONS_BASELINE = 2
 EXAMPLE_TIMEOUT_SECONDS = 120
 NATIVE_MODULE = "repark._native"
 CLOUD_ENV_PREFIXES: tuple[str, ...] = ("AWS_",)
+FUNCTIONS_MODULES: frozenset[str] = frozenset({"repark.functions", "repark.spark.functions"})
+TA_MODULES: frozenset[str] = frozenset({"repark.spark.ta", "repark.ta"})
+FUNCTIONS_ALIAS_HINTS: frozenset[str] = frozenset({"F", "functions"})
+TA_ALIAS_HINTS: frozenset[str] = frozenset({"ta"})
 
 CLASS_SURFACES: tuple[tuple[str, str, str, str, str | None], ...] = (
     (
@@ -325,16 +344,144 @@ def covers_from_script(path: Path) -> list[str]:
     raise RuntimeError(f"{path}: module-level COVERS list is missing")
 
 
+def is_covers_assignment(node: ast.AST) -> bool:
+    """Return True when ``node`` is the module-level ``COVERS`` binding."""
+    if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+        return node.target.id == "COVERS"
+    if isinstance(node, ast.Assign):
+        return any(
+            isinstance(target, ast.Name) and target.id == "COVERS" for target in node.targets
+        )
+    return False
+
+
+def attribute_root_id(node: ast.Attribute) -> str | None:
+    """Return the leftmost Name id of an attribute chain, if any."""
+    current: ast.AST = node.value
+    while isinstance(current, ast.Attribute):
+        current = current.value
+    if isinstance(current, ast.Name):
+        return current.id
+    return None
+
+
+def door_aliases(tree: ast.Module) -> tuple[dict[str, set[str]], dict[str, set[str] | None]]:
+    """Return module aliases and imported call names per door.
+
+    The second map uses ``None`` for a star-import (every name on that door).
+    """
+    aliases: dict[str, set[str]] = {
+        "functions": set(FUNCTIONS_ALIAS_HINTS),
+        "ta": set(TA_ALIAS_HINTS),
+        "repark": {"repark"},
+    }
+    imported: dict[str, set[str] | None] = {
+        "functions": set(),
+        "ta": set(),
+        "repark": set(),
+    }
+    for node in tree.body:
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                bound = alias.asname or alias.name.rsplit(".", 1)[-1]
+                if alias.name in FUNCTIONS_MODULES:
+                    aliases["functions"].add(bound)
+                if alias.name in TA_MODULES:
+                    aliases["ta"].add(bound)
+                if alias.name == "repark":
+                    aliases["repark"].add(bound)
+        elif isinstance(node, ast.ImportFrom):
+            module = node.module or ""
+            for alias in node.names:
+                bound = alias.asname or alias.name
+                if module in FUNCTIONS_MODULES:
+                    if alias.name == "*":
+                        imported["functions"] = None
+                    elif imported["functions"] is not None:
+                        imported["functions"].add(bound)
+                elif module in TA_MODULES:
+                    if alias.name == "*":
+                        imported["ta"] = None
+                    elif imported["ta"] is not None:
+                        imported["ta"].add(bound)
+                elif module in {"repark.spark", "repark"} and alias.name == "functions":
+                    aliases["functions"].add(bound)
+                elif module in {"repark.spark", "repark"} and alias.name == "ta":
+                    aliases["ta"].add(bound)
+                elif module == "repark" and alias.name == "sql" and imported["repark"] is not None:
+                    imported["repark"].add(bound)
+    return aliases, imported
+
+
+def cover_is_used(cover: str, tree: ast.Module) -> bool:
+    """Return True when ``cover`` is referenced in the script body.
+
+    Family-aware: ``F.*`` is an attribute of the functions door or an imported
+    call; ``ta.*`` is an attribute of the TA door or an imported call;
+    ``repark.sql`` is ``repark.sql`` or an imported ``sql()`` call; a
+    DataFrame / session / reader / writer name is an attribute access of the
+    last path component.
+
+    pins: ex-0-example-drift-gate/C-002
+    """
+    local = cover.rsplit(".", 1)[-1]
+    aliases, imported = door_aliases(tree)
+    for node in tree.body:
+        if is_covers_assignment(node):
+            continue
+        for child in ast.walk(node):
+            if isinstance(child, ast.Attribute) and child.attr == local:
+                root = attribute_root_id(child)
+                if cover.startswith("F."):
+                    if root in aliases["functions"]:
+                        return True
+                    continue
+                if cover.startswith("ta."):
+                    if root in aliases["ta"]:
+                        return True
+                    continue
+                if cover == "repark.sql":
+                    if root in aliases["repark"]:
+                        return True
+                    continue
+                return True
+            if (
+                isinstance(child, ast.Call)
+                and isinstance(child.func, ast.Name)
+                and child.func.id == local
+            ):
+                if cover.startswith("F."):
+                    imported_functions = imported["functions"]
+                    if imported_functions is None or local in imported_functions:
+                        return True
+                elif cover.startswith("ta."):
+                    imported_ta = imported["ta"]
+                    if imported_ta is None or local in imported_ta:
+                        return True
+                elif cover == "repark.sql":
+                    imported_sql = imported["repark"]
+                    if imported_sql is not None and local in imported_sql:
+                        return True
+    return False
+
+
+def unused_cover_names(path: Path) -> list[str]:
+    """Return COVERS entries that the script body never uses."""
+    tree = parse_source(path)
+    return [name for name in covers_from_script(path) if not cover_is_used(name, tree)]
+
+
 def coverage_findings(
     enumerated: set[str],
     covered: set[str],
     backlog: set[str],
     exceptions: set[str],
     backlog_baseline: int,
+    exceptions_baseline: int,
 ) -> list[str]:
     """Return one finding string per coverage or ratchet violation.
 
-    pins: ex-0-example-drift-gate/C-003, C-004, C-005
+    pins: ex-0-example-drift-gate/C-003, C-004, C-005, C-006
     """
     findings: list[str] = []
     unknown_covered = sorted(covered - enumerated)
@@ -352,6 +499,9 @@ def coverage_findings(
     excepted_in_backlog = sorted(backlog & exceptions)
     for name in excepted_in_backlog:
         findings.append(f"backlog still lists {name}, which is an exception")
+    covered_in_exceptions = sorted(exceptions & covered)
+    for name in covered_in_exceptions:
+        findings.append(f"exceptions still lists {name}, which an example now covers")
     uncovered = enumerated - covered - backlog - exceptions
     for name in sorted(uncovered):
         findings.append(
@@ -361,6 +511,11 @@ def coverage_findings(
         findings.append(
             f"backlog count is {len(backlog)}, baseline is {backlog_baseline} "
             "(ratchet down only; set BACKLOG_BASELINE to the new lower count)"
+        )
+    if len(exceptions) != exceptions_baseline:
+        findings.append(
+            f"exceptions count is {len(exceptions)}, baseline is {exceptions_baseline} "
+            "(additions must bump EXCEPTIONS_BASELINE in the same commit)"
         )
     return findings
 
@@ -493,9 +648,18 @@ def run_gate(
         snapshot_findings = inventory_findings(enumerated, snapshot)
         scripts = example_scripts(root)
         covered: set[str] = set()
+        unused_findings: list[str] = []
         for script in scripts:
+            try:
+                relative = script.relative_to(root).as_posix()
+            except ValueError:
+                relative = script.as_posix()
             for name in covers_from_script(script):
                 covered.add(name)
+            for name in unused_cover_names(script):
+                unused_findings.append(
+                    f"{relative}: COVERS names {name} which the script body never uses"
+                )
         backlog = set(parse_named_lines(root / BACKLOG_RELATIVE, kind="backlog"))
         exceptions = set(parse_exceptions_file(root / EXCEPTIONS_RELATIVE).keys())
         findings = coverage_findings(
@@ -504,7 +668,9 @@ def run_gate(
             backlog,
             exceptions,
             backlog_baseline,
+            EXCEPTIONS_BASELINE,
         )
+        findings.extend(unused_findings)
         live_findings: list[str] = []
         execute_findings: list[str] = []
         native = native_module_importable()

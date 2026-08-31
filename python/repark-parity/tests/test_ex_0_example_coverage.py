@@ -45,7 +45,7 @@ def test_ex_0_enumerator_emits_five_families_and_repark_sql() -> None:
 def test_ex_0_uncovered_name_is_red() -> None:
     """C-003: an enumerated name with no COVERS, backlog, or exception is red."""
     gate = _load_gate()
-    findings = gate.coverage_findings({"F.abs"}, set(), set(), set(), 0)
+    findings = gate.coverage_findings({"F.abs"}, set(), set(), set(), 0, 0)
     assert findings == [
         "public name F.abs has no example COVERS row and is not in the backlog or exceptions"
     ]
@@ -54,14 +54,14 @@ def test_ex_0_uncovered_name_is_red() -> None:
 def test_ex_0_stale_backlog_name_is_red() -> None:
     """C-004: a backlog name that is not in the inventory is red."""
     gate = _load_gate()
-    findings = gate.coverage_findings({"F.abs"}, {"F.abs"}, {"gone"}, set(), 1)
+    findings = gate.coverage_findings({"F.abs"}, {"F.abs"}, {"gone"}, set(), 1, 0)
     assert any("backlog names gone, which is not in the inventory" in item for item in findings)
 
 
 def test_ex_0_covered_name_still_in_backlog_is_red() -> None:
     """C-004: a name an example now covers cannot stay in the backlog."""
     gate = _load_gate()
-    findings = gate.coverage_findings({"F.abs"}, {"F.abs"}, {"F.abs"}, set(), 1)
+    findings = gate.coverage_findings({"F.abs"}, {"F.abs"}, {"F.abs"}, set(), 1, 0)
     needle = "backlog still lists F.abs, which an example now covers"
     assert any(needle in item for item in findings)
 
@@ -69,7 +69,7 @@ def test_ex_0_covered_name_still_in_backlog_is_red() -> None:
 def test_ex_0_backlog_count_mismatch_is_red() -> None:
     """C-005: backlog length must equal BACKLOG_BASELINE (ratchet down only)."""
     gate = _load_gate()
-    findings = gate.coverage_findings({"F.abs"}, set(), {"F.abs"}, set(), 0)
+    findings = gate.coverage_findings({"F.abs"}, set(), {"F.abs"}, set(), 0, 0)
     assert any("backlog count is 1, baseline is 0" in item for item in findings)
 
 
@@ -86,6 +86,7 @@ def test_ex_0_seed_examples_declare_covers_and_leave_the_backlog() -> None:
     for script in scripts:
         names = gate.covers_from_script(script)
         assert names
+        assert gate.unused_cover_names(script) == []
         covered.update(names)
     assert "F.abs" in covered
     assert "DataFrame.select" in covered
@@ -108,6 +109,8 @@ def test_ex_0_exceptions_file_names_only_inventory_rows() -> None:
         assert reason
     assert "SparkSession.read_postgres" in mapping
     assert "DataFrameReader.jdbc" in mapping
+    assert len(mapping) == gate.EXCEPTIONS_BASELINE
+    assert gate.EXCEPTIONS_BASELINE == 2
 
 
 def test_ex_0_execute_nonzero_is_red(tmp_path: Path) -> None:
@@ -120,6 +123,41 @@ def test_ex_0_execute_nonzero_is_red(tmp_path: Path) -> None:
     assert "exited 7" in findings[0]
 
 
+def test_ex_0_covers_without_body_use_is_red() -> None:
+    """C-002: stuffing a COVERS name the script never uses is red."""
+    gate = _load_gate()
+    source = (_REPO / "docs" / "examples" / "functions" / "abs.py").read_text(encoding="utf-8")
+    stuffed = source.replace(
+        'COVERS: list[str] = ["F.abs", "F.col", "F.lit"]',
+        'COVERS: list[str] = ["F.abs", "F.col", "F.lit", "DataFrame.agg"]',
+    )
+    tree = ast.parse(stuffed)
+    assert gate.cover_is_used("F.abs", tree)
+    assert not gate.cover_is_used("DataFrame.agg", tree)
+
+
+def test_ex_0_exceptions_baseline_mismatch_is_red() -> None:
+    """C-006: exceptions length must equal EXCEPTIONS_BASELINE."""
+    gate = _load_gate()
+    findings = gate.coverage_findings(
+        {"F.abs", "SparkSession.read_postgres"},
+        set(),
+        {"F.abs"},
+        {"SparkSession.read_postgres"},
+        1,
+        0,
+    )
+    assert any("exceptions count is 1, baseline is 0" in item for item in findings)
+
+
+def test_ex_0_exception_for_covered_name_is_red() -> None:
+    """C-006: a name an example covers cannot stay in exceptions."""
+    gate = _load_gate()
+    findings = gate.coverage_findings({"F.abs"}, {"F.abs"}, set(), {"F.abs"}, 0, 1)
+    needle = "exceptions still lists F.abs, which an example now covers"
+    assert any(needle in item for item in findings)
+
+
 def test_ex_0_makefile_wires_the_target_into_ci() -> None:
     """C-009: make ci depends on check-example-coverage; the wrapper uses isolated Python."""
     makefile = _MAKEFILE.read_text(encoding="utf-8")
@@ -130,6 +168,10 @@ def test_ex_0_makefile_wires_the_target_into_ci() -> None:
     assert 'exec python3 -I "$repo_root/scripts/check_example_coverage.py"' in wrapper
     gate_source = _GATE.read_text(encoding="utf-8")
     assert "skipping example execution" in gate_source
+    workflow = (_REPO / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    assert "check_example_coverage.sh" in workflow
+    wheels = (_REPO / ".github" / "workflows" / "wheels.yml").read_text(encoding="utf-8")
+    assert "--require-execute" in wheels
 
 
 def test_ex_0_no_product_code_in_the_gate_script() -> None:

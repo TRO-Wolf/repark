@@ -59,6 +59,8 @@ jobs:
           WHEEL=$(ls "$PWD"/python/repark/dist/repark-*.whl)
           /tmp/wheeltest/bin/pip install "repark[numpy,pandas,polars,ml-ext] @ file://$WHEEL" pytest ./python/repark-parity
           /tmp/wheeltest/bin/python -m pytest python/repark/tests -q
+      - name: example-coverage execute (require native)
+        run: /tmp/wheeltest/bin/python scripts/check_example_coverage.py --require-execute
 
   release-wheels:
     name: manylinux release wheels (tags)

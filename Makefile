@@ -147,8 +147,10 @@ check-python-conventions: ## The two Python rules Ruff cannot express (nested de
 
 .PHONY: check-example-coverage
 check-example-coverage: ## Public-surface example coverage (inventory vs COVERS vs backlog ratchet)
-	@# SSOT: scripts/check_example_coverage.py — enumerator, coverage rules, BACKLOG_BASELINE.
-	@# Native-build-free: AST walk + coverage. Example execution runs when repark._native imports.
+	@# SSOT: scripts/check_example_coverage.py — enumerator, coverage rules, BACKLOG_BASELINE
+	@# and EXCEPTIONS_BASELINE. Dual-wired with ci.yml's python job (static half; native is
+	@# absent there so execution skips). wheels.yml smoke runs --require-execute after the
+	@# packaged wheel is installed. Pattern-keeper for wiring claims: check_parity_live_dual_wire.py.
 	@./scripts/check_example_coverage.sh
 
 .PHONY: check-docstring-presence

@@ -309,10 +309,12 @@ repark-parity slice.
   facade (`F.*`, DataFrame/GroupedData/na/stat, TA kernels, reader/writer,
   SparkSession + `repark.sql`), compares it to `docs/examples/**/COVERS` plus
   the backlog ratchet and cloud exceptions file, and executes every example
-  when `repark._native` imports. `BACKLOG_BASELINE` is exact and ratchets down
-  only. Wired as `make check-example-coverage` in `make ci`. `.github/` is not
-  dual-wired (standing fence). Proofs:
-  `python/repark-parity/tests/test_ex_0_example_coverage.py`.
+  when `repark._native` imports. `BACKLOG_BASELINE` and `EXCEPTIONS_BASELINE`
+  are exact and ratchet down only (additions to exceptions must bump the
+  baseline in the same commit). A `COVERS` name must be used in that script's
+  body. Dual-wired: `make check-example-coverage` in `make ci` and ci.yml's
+  python job (static half). wheels.yml smoke runs `--require-execute`.
+  Proofs: `python/repark-parity/tests/test_ex_0_example_coverage.py`.
   pins: ex-0-example-drift-gate/C-001, C-003, C-004, C-005, C-007, C-009
 
 - `check_rust_file_size.sh` + `check_rust_file_size.py` — the **general Rust file-size** guard
