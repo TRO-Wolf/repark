@@ -10,10 +10,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   inventory. `risk_tier: standard`. Branch `feat/ex-0-example-drift-gate`.
   Ruling: [release-roadmap-2026-08-29.md](../../roadmap/epic-term/release-roadmap-2026-08-29.md)
   §v0.7 deliverable 2.
-- [v3-5-dv-compaction-ledger.md](v3-5-dv-compaction-ledger.md) — **V3-5 (2026-08-31),
-  in flight:** DV-aware v3 compaction (`V3-DANGLE-1`, B-MOR-3 residue, true
-  result counts). Measure `rewrite_data_files` on live Puffin DVs at fork
-  `33be9a0` before any product edit. Ledger born on `feat/v3-5-dv-compaction`.
 - [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's
   scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike
   evidence behind it; C-007 (the four sub-project families) was closed by ruling D-7 on
@@ -40,6 +36,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   good: v3 reads and v3 appends are already correct, round-tripped through Spark, including the
   row lineage the format mandates. §4 answers A12's stated first question — adoption, through
   `register_table`, whose Spark signature is measured there.
+- [v3-5-dv-compaction-ledger.md](v3-5-dv-compaction-ledger.md) — **V3-5 (2026-08-31),
+  in flight:** DV-aware v3 compaction (`V3-DANGLE-1`, B-MOR-3 residue, true
+  result counts). Measure `rewrite_data_files` on live Puffin DVs at fork
+  `33be9a0` before any product edit. Ledger born on `feat/v3-5-dv-compaction`.
+- [v3-6-v3-types-ledger.md](v3-6-v3-types-ledger.md) — **V3-6 (2026-08-31):** remaining v3
+  types (binary variant, nanosecond timestamps, `unknown`, column defaults). C-001
+  measurement matrix is in the ledger; product mapping follows per type.
 
 ## Pointers
 - Up: [../map.md](../map.md)
