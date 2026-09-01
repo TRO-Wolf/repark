@@ -43,7 +43,6 @@ _RUST_BASELINES: tuple[tuple[str, int], ...] = (
     ("crates/repark-python/src/session.rs", 1177),
     ("crates/repark-spark/src/alter.rs", 1831),
     ("crates/repark-spark/src/metadata_tables.rs", 1062),
-    ("crates/repark-spark/src/ref_ddl.rs", 1028),
     ("crates/repark-spark/src/tests/alter.rs", 1436),
     ("crates/repark-spark/src/tests/call.rs", 1307),
     ("crates/repark-spark/src/tests/ctas.rs", 1361),
@@ -180,7 +179,7 @@ def test_cap_1_exception_tables_equal_the_measured_debt() -> None:
     assert _baselines(python_gate) == python_approved
     assert rust_debt == rust_approved
     assert python_debt == python_approved
-    assert len(rust_approved) == 38
+    assert len(rust_approved) == 37
     assert len(python_approved) == 32
 
 

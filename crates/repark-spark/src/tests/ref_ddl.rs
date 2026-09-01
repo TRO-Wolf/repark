@@ -189,7 +189,8 @@ async fn branch_retention_clauses_round_trip() {
     assert!(min_snaps.is_null(1), "tag has no min_snapshots_to_keep");
 }
 
-/// Write-to-branch targets refuse because commits are MAIN_BRANCH-only.
+/// Write-to-branch and write-to-tag refuse, naming the write path that carries no target.
+/// pins: ref-branch-tag-wap/C-004
 #[tokio::test]
 async fn write_to_branch_refuses_loud_naming_fork_gap() {
     let wh = TempDir::new().unwrap();
@@ -206,17 +207,29 @@ async fn write_to_branch_refuses_loud_naming_fork_gap() {
         "ALTER TABLE ice.sales.t CREATE BRANCH audit",
     )
     .await;
+    run(&ctx, &catalogs, "ALTER TABLE ice.sales.t CREATE TAG v1").await;
     for sql in [
         "INSERT INTO ice.sales.t.audit SELECT 9 AS id, 'z' AS name",
         "INSERT INTO ice.sales.t.branch_audit SELECT 9 AS id, 'z' AS name",
+        "INSERT INTO ice.sales.t.tag_v1 SELECT 9 AS id, 'z' AS name",
+        "UPDATE ice.sales.t.branch_audit SET name = 'z' WHERE id = 1",
+        "DELETE FROM ice.sales.t.branch_audit WHERE id = 1",
     ] {
         let err = execute(&ctx, &catalogs, sql)
             .await
             .expect_err("write-to-branch must STOP");
         let message = err.to_string();
         assert!(
-            message.contains("MAIN_BRANCH") || message.contains("to_branch"),
-            "must name fork gap for {sql:?}, got: {message}"
+            message.contains("iceberg-datafusion"),
+            "must name the write path that carries no commit target for {sql:?}, got: {message}"
+        );
+        assert!(
+            message.contains("33be9a0f411c37cd8d7b38c4db81eec30c1344cc"),
+            "must name the measured fork pin for {sql:?}, got: {message}"
+        );
+        assert!(
+            !message.contains("b009ac158f7584a956fa9292c0e9675a411ecf0d"),
+            "must not cite the superseded fork pin for {sql:?}, got: {message}"
         );
         assert!(
             message.contains("not supported") || message.contains("NotImplemented"),

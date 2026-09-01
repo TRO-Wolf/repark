@@ -124,7 +124,20 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   fixture (`B-MOR-3`),
   `fixtures/` (Spark-written on-disk Iceberg tables CI can adopt with no JVM),
   `call_orphan` (**MW-3**): full-directory before/after orphan safety and 24-hour cutoff fixtures,
-  `ref_ddl`,
+  `ref_ddl` (**REF:** the write-to-branch/tag refusal names the `iceberg-datafusion`
+  commit-target gap at fork pin `33be9a0`, not the superseded pin; pins:
+  ref-branch-tag-wap/C-004),
+  `refs_and_wap` (**REF:** both `WITH SNAPSHOT RETENTION` halves at the oracle's values and the
+  reversed order refusing; the `branch_`/`tag_` READ selectors resolving the ref, joining
+  against the live table, refusing loud on a missing ref, and claiming neither a
+  metadata-table suffix nor a real table whose own name starts with `branch_`; and WAP
+  declared — the three publish procedures and the `spark.wap.*` confs all fail closed and leave
+  the branch where it was; and the read-vs-write boundary — a selector in a DML statement's
+  source, `USING` operand or predicate subquery reads the ref (four classes plus CTAS, each
+  asserting the ref's ids and not `main`'s), while a ref-named write TARGET still refuses even
+  when the source is another selector. Its module docstring carries the oracle stamp the registry
+  rows §2.2 `REF-1`/`REF-3`/`REF-4` cite.
+  pins: ref-branch-tag-wap/C-001, C-002, C-003, C-005, C-007),
   `time_travel`, `metadata_tables` (**RP-1:** projection battery iterates
   `MetadataTableType::all_types`; `position_deletes` rewrites then scan-refuses.
   **MW-4b:** Glue-shaped `table_exists` — 4-part

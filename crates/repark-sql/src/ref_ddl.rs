@@ -248,12 +248,33 @@ fn parse_retention(
                 DataFusionError::Plan(format!("{form}: {amount} snapshots is out of range"))
             })?;
             retention.min_snapshots_to_keep = Some(count);
+            if starts_duration_clause(tokens, next) {
+                let (age, age_unit, after_age) = amount_and_unit(tokens, next, form)?;
+                retention.max_snapshot_age_ms = Some(to_ms(age, &age_unit, form)?);
+                return Ok((retention, after_age));
+            }
         } else {
             retention.max_snapshot_age_ms = Some(to_ms(amount, &unit, form)?);
         }
         index = next;
     }
     Ok((retention, index))
+}
+
+/// Whether `index` opens a `<count> DAYS|HOURS|MINUTES` clause.
+///
+/// The snapshot-count and max-snapshot-age halves are both optional and the age half comes
+/// second, so the two are told apart by lookahead. A trailing token that is not a duration
+/// stays a trailing token, and `reject_trailing` refuses it.
+fn starts_duration_clause(tokens: &[Sig], index: usize) -> bool {
+    if !matches!(tokens.get(index), Some(Sig::Number(_))) {
+        return false;
+    }
+    let unit = tokens.get(index + 1).and_then(Sig::ident);
+    matches!(
+        unit.map(str::to_ascii_uppercase).as_deref(),
+        Some("DAY" | "DAYS" | "HOUR" | "HOURS" | "MINUTE" | "MINUTES")
+    )
 }
 
 /// `<n> <unit-word>` — returns the amount, the unit word, and the next index.

@@ -1,5 +1,9 @@
 # map — scripts/
 
+REF (2026-09-01): `check_rust_file_size.py` — the `repark-spark/src/ref_ddl.rs` EXCEPTIONS row
+is gone. The file's inline `mod tests` moved to a file-backed `ref_ddl/tests.rs` (move-only,
+identity `--list`), taking it from 1028 to 772 lines, under the default ceiling.
+
 V3-6 (2026-09-01): `check_rust_file_size.py` `write/append.rs` 1950→1886 — the conform
 step moved to a file-backed `write/conform.rs` (V3-6 C-005); one import shed in the same
 pass.
