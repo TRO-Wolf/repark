@@ -45,7 +45,7 @@ help: ## List available targets
 # ------------------------------------------------------------------------------------------------
 
 .PHONY: ci
-ci: rust-fmt-check rust-clippy rust-panic-ban check-crate-dag check-lib-rs check-rust-file-size check-lib-py check-python-conventions check-docstring-presence check-manifest check-ledgers check-ledger-grammar check-docs-compaction check-owner-ruling check-parity-live-dual-wire check-matrix-test-liveness rust-check py-lint py-format-check py-lock-check toml-check spell-check ## Fast gate (lint + format + static checks); see preflight for the full CI surface
+ci: rust-fmt-check rust-clippy rust-panic-ban check-crate-dag check-lib-rs check-rust-file-size check-lib-py check-python-conventions check-docstring-presence check-example-coverage check-manifest check-ledgers check-ledger-grammar check-docs-compaction check-owner-ruling check-parity-live-dual-wire check-matrix-test-liveness rust-check py-lint py-format-check py-lock-check toml-check spell-check ## Fast gate (lint + format + static checks); see preflight for the full CI surface
 
 # `test` is the Rust workspace suite, and that is the whole of it — deliberately, not pending.
 # The three Python suites are excluded because each needs something `cargo test` cannot give it:
@@ -144,6 +144,14 @@ check-python-conventions: ## The two Python rules Ruff cannot express (nested de
 	@# python job. Companion to check-lib-py (source size + facade thinness). Ceilings ratchet down;
 	@# prose points at the script and never restates the tables.
 	@./scripts/check_python_conventions.sh
+
+.PHONY: check-example-coverage
+check-example-coverage: ## Public-surface example coverage (inventory vs COVERS vs backlog ratchet)
+	@# SSOT: scripts/check_example_coverage.py — enumerator, coverage rules, BACKLOG_BASELINE
+	@# and EXCEPTIONS_BASELINE. Dual-wired with ci.yml's python job (static half; native is
+	@# absent there so execution skips). wheels.yml smoke runs --require-execute after the
+	@# packaged wheel is installed. Pattern-keeper for wiring claims: check_parity_live_dual_wire.py.
+	@./scripts/check_example_coverage.sh
 
 .PHONY: check-docstring-presence
 check-docstring-presence: ## Public-docstring presence (D101/D102/D103/D105/D107) with a ratchet
