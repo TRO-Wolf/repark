@@ -653,7 +653,11 @@ them, and the document is ordered by surface, never by date.
   (unshredded) type is measured: schema-level it maps to Arrow
   `struct<metadata: Binary, value: Binary>`, parquet file write refuses
   (`FeatureUnsupported`, naming `variant`), and scanning a file that projects the column
-  refuses (`reject_variant_projection`, naming `variant`). **Shredded**-Parquet variant has
+  refuses (`reject_variant_projection`, naming `variant`). The scan-refusal pin's fixture
+  parquet carries only an `id` column — the fork cannot write variant bytes — which is
+  honest here because the guard is per-file-task projection and fires before any file
+  bytes are read; the empty-table control streams cleanly, which is why the fixture is
+  non-empty. **Shredded**-Parquet variant has
   no fork surface at all. Fork gap filed against `GAP_MATRIX` R88 (file-level variant I/O).
 - **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0 writes the **unshredded** two-binary
   variant shape (`struct<value: binary, metadata: binary>` with `variant: 'true'` field

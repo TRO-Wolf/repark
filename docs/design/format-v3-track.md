@@ -261,7 +261,15 @@ upgraded table.
   `B-MOR-3` stays: `rewrite_position_delete_files` still refuses live DVs (zeros would
   read as already-clean; DV compact is `rewrite_data_files`). F-17 sibling-close pins
   re-ran green.
-- **V3-6:** finish binary variant, nanosecond timestamps, unknown, and column defaults. V3-6 may
+- **V3-6:** *Done 2026-09-01.* Opt-in v3 CREATE consumes fork `timestamp_ns` /
+  `timestamptz_ns` (value+type round-trip on the Spark and ANSI doors, facade schema
+  pin, v2 refuses). Engine append fills an omitted column from a schema-carried
+  `write_default` and `initial_default` reads into pre-column files; DEFAULT DDL
+  refuses Spark-equal on all three doors. Binary `variant` measured refusing end to
+  end (registry `V3-VARIANT-SHRED-1`, fork R88); `unknown` CREATE refuse pinned, its
+  scan gap filed (fork R91 — the parquet write commits an unreadable Null file).
+
+  The original scope note: V3-6 may
   run in parallel with V3-3 or V3-4 after its fork type support is pinned; it does not wait for
   V3-5 merely because its unit number is higher. **RP-3 C-009 (2026-08-30):** fork #233 fills
   `write_default` inside `DataFileWriter::write`; no engine surface sets a `write_default`.

@@ -40,9 +40,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   in flight:** DV-aware v3 compaction (`V3-DANGLE-1`, B-MOR-3 residue, true
   result counts). Measure `rewrite_data_files` on live Puffin DVs at fork
   `33be9a0` before any product edit. Ledger born on `feat/v3-5-dv-compaction`.
-- [v3-6-v3-types-ledger.md](v3-6-v3-types-ledger.md) — **V3-6 (2026-08-31):** remaining v3
-  types (binary variant, nanosecond timestamps, `unknown`, column defaults). C-001
-  measurement matrix is in the ledger; product mapping follows per type.
+- [v3-6-v3-types-ledger.md](v3-6-v3-types-ledger.md) — **V3-6 (2026-08-31; 2026-09-01
+  delivered, parks in staging until the owner merges):** remaining v3 types (binary
+  variant, nanosecond timestamps, `unknown`, column defaults). C-001 measurement matrix
+  in the ledger; C-002..C-007 PROVEN — ns timestamps consumed, column defaults
+  consumed on write/read with Spark-equal DEFAULT refusals, variant/unknown refusals
+  pinned, registry row landed, upgrade surface untouched.
 
 ## Pointers
 - Up: [../map.md](../map.md)
