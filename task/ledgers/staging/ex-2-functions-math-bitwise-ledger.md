@@ -193,7 +193,7 @@ examples is the four new files.
 - Sibling: [ex-0-example-drift-gate-ledger.md](ex-0-example-drift-gate-ledger.md),
   [ex-1-class-surfaces-ledger.md](ex-1-class-surfaces-ledger.md)
 
-## Open blocker — the EX-1 pins hardcode the pre-batch backlog count
+## Blocker (RESOLVED by orchestrator ruling, 2026-09-01) — the EX-1 pins hardcode the pre-batch backlog count
 
 `make py-test` exits **2** on this tree, with two failures and 494 passes:
 
@@ -217,3 +217,8 @@ per-batch edit) or `<= 892` (a ratchet-direction pin, which is what EX-1's
 clause C-006 actually claims). This ledger states the collision and stops; the
 batch itself is unaffected — `make ci`, both gate legs, and all four example
 scripts are green.
+
+**Resolution (orchestrator, 2026-09-01):** the two pins loosen to the campaign-true invariants —
+`gate.BACKLOG_BASELINE <= 892` (a down-only direction pin, which is what EX-1 C-006 claims) and
+`len(backlog) == gate.BACKLOG_BASELINE` (the lockstep the adjacent pin already asserted). The
+exact per-batch count lives in each family ledger clause, where it belongs.

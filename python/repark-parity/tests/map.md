@@ -23,7 +23,10 @@ JVM, no repark required). See [../map.md](../map.md).
   reds, backlog and exceptions baselines, COVERS-must-be-used, seed `COVERS`,
   cloud exceptions, nonzero example exit, Makefile `make ci` + ci.yml dual-wire
   + wheels.yml `python -I … --require-execute`; F.* includes installer
-  `__all__` mutations (`try_*`, `zip_with`, xpath). pins: ex-0-example-drift-gate/C-001,
+  `__all__` mutations (`try_*`, `zip_with`, xpath); backlog pins are
+  campaign-true since 2026-09-01 (baseline is a `<=` direction ratchet in
+  lockstep with the file — the ex-2 ledger's blocker section records the
+  ruling). pins: ex-0-example-drift-gate/C-001,
   C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
   **EX-1 (2026-08-31)** widens the same file: the ten-family enumerator at 913
   names, the `CLASS_SURFACES` / `MODULE_SURFACES` tables, hard-error shape

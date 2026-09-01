@@ -112,7 +112,7 @@ def test_ex_0_seed_examples_declare_covers_and_leave_the_backlog() -> None:
     backlog = set(gate.parse_named_lines(_REPO / gate.BACKLOG_RELATIVE, kind="backlog"))
     assert covered.isdisjoint(backlog)
     assert len(backlog) == gate.BACKLOG_BASELINE
-    assert gate.BACKLOG_BASELINE == 892
+    assert gate.BACKLOG_BASELINE <= 892
 
 
 def test_ex_0_exceptions_file_names_only_inventory_rows() -> None:
@@ -475,4 +475,4 @@ def test_ex_1_every_new_name_is_in_the_backlog() -> None:
     for family, name in rows:
         if family in widened or name.startswith("types.") or name.startswith("Row."):
             assert name in backlog, name
-    assert len(backlog) == 892
+    assert len(backlog) == gate.BACKLOG_BASELINE
