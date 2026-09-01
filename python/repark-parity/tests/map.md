@@ -30,8 +30,11 @@ JVM, no repark required). See [../map.md](../map.md).
   drift, the live-`__all__` door roster, `Window.*` on its class root versus
   `WindowSpec.*` / `Column.*` / `Row.*` on a repark-rooted local, a `types.*`
   cover refusing the `ml` door and the reverse, and every new name in the
-  backlog at baseline 892. pins: ex-1-class-surfaces/C-001, C-002, C-003,
-  C-004, C-005, C-006, C-007, C-008
+  backlog at baseline 892. The no-dynamic-registration assertion reads the
+  gate's own `*_SOURCE` constants, so a moved facade file reds the test instead
+  of leaving it pointed at a path that no longer exists.
+  pins: ex-1-class-surfaces/C-001, C-002, C-003, C-004, C-005, C-006, C-007,
+  C-008
 - `test_plan_1_northstar_fnp_sequence.py` — **PLAN-1 (2026-08-28; tree pins):** the guarded
   North Star sequence, F-17's measured shared-Puffin closure request, the live slate, the
   per-unit FNP remaining order (FNP-7a/7b delivered 2026-08-31; remaining FNP-9/10 → FNP-8

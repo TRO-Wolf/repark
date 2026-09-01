@@ -381,10 +381,8 @@ def test_ex_1_module_doors_are_cross_checked_against_live_all() -> None:
     assert {prefix for _family, prefix, _relative in gate.MODULE_SURFACES} <= {
         prefix.rstrip(".") for prefix in prefixes
     }
-    sources = [gate.TYPES_SOURCE, gate.ML_SOURCE]
+    sources = [gate.TYPES_SOURCE, gate.ML_SOURCE, gate.CATALOG_SOURCE, gate.ROW_SOURCE]
     sources.extend(row[2] for row in gate.CLASS_SURFACES if row[0] in {"column", "window"})
-    sources.append("python/repark/src/repark/spark/catalog.py")
-    sources.append("python/repark/src/repark/spark/row.py")
     for source in sources:
         text = (_REPO / source).read_text(encoding="utf-8")
         assert "setattr(" not in text
