@@ -531,3 +531,9 @@ pub fn bitmap_bucket_number(arg: Expr) -> Expr {
 pub fn bitmap_count(arg: Expr) -> Expr {
     spark_bitmap::bitmap_count(arg)
 }
+
+/// Spark `log(expr)` (natural) or `log(base, expr)`.
+#[must_use]
+pub fn log(args: Vec<Expr>) -> Expr {
+    call(crate::spark_log::spark_log_udf(), args)
+}

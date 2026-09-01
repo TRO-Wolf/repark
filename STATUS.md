@@ -113,17 +113,14 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
   Records: [task/ledgers/archive/2026-08/](task/ledgers/archive/2026-08/map.md).
 <!-- /ws -->
 
-<!-- ws id=sem ledgers=sem- state=held -->
-- **The Spark semantics fixes (SEM)** (chartered 2026-08-21, gate ruled the same day; **held**).
-  Delivered as [#192](https://github.com/TRO-Wolf/repark/pull/192) and
-  [#193](https://github.com/TRO-Wolf/repark/pull/193): SEM-1/3/4/5/6 — `RE-1` and `RE-3` closed
-  (both rows retired from the registry), the regexp refusals carry Spark's `REGEX_GROUP_INDEX`
-  condition, the string-`idx` regression fixed. **SEM-2 (`LOG-1`) is tabled, not dropped** —
-  owner ruling 2026-08-21 — with `F.log`'s two-argument overload tabled alongside it (the only
-  kernel available lacks Spark's null-guard). The measured scope for both stays in the charter:
-  [task/ledgers/staging/sem-0-charter-ledger.md](task/ledgers/staging/sem-0-charter-ledger.md).
-  This campaign changes what a working query returns, deliberately — the reason the LRS
-  registered `RE-1` rather than fixing it.
+<!-- ws id=sem ledgers=sem- state=open -->
+- **The Spark semantics fixes (SEM)** (chartered 2026-08-21). #192/#193 delivered SEM-1/3/4/5/6
+  (`RE-1`/`RE-3` retired, `REGEX_GROUP_INDEX`, string-`idx`). Owner ruling 2026-08-31: both
+  silently-wrong answers fix to Spark. This unit closes `LOG-1` (Spark-door natural `log`,
+  dual-arity null-guard, `F.log` two-arg) and re-measures RE-1. `F.log` is an accept-more
+  superset of PySpark's (a column base accepted, keyword names differ) — ledger C-006,
+  oracle note under C-010.
+  Ledger: [task/ledgers/staging/sem-1-spark-answer-parity-ledger.md](task/ledgers/staging/sem-1-spark-answer-parity-ledger.md).
 <!-- /ws -->
 
 <!-- ws id=v3 ledgers=v3-,v3e- state=open -->
@@ -258,8 +255,6 @@ of state plus a link. A known **defect with its fix scheduled** is not a diverge
 row: it stays described here until the fix lands, and the fixing unit deletes the entry rather than
 moving it. Nothing is described in both places.
 
-- **`F.log` two-argument form** — tabled with SEM-2 (owner ruling 2026-08-21); scope in
-  [task/ledgers/staging/sem-0-charter-ledger.md](task/ledgers/staging/sem-0-charter-ledger.md).
 - **Identifier case folding** — **DECLARED (2026-08-10)**: registry
   [ID-1](docs/spark-sql-iceberg-parity.md); revisiting it needs a new dated decision.
 - **The session-timezone family** — TZ-1 converted; TZ-6 / TZ-7 FIXED (#85); **TZ-8** partially

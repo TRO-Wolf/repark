@@ -29,6 +29,16 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `octet_length`. Stringifies non-binary; BINARY pass-through (including
   Dictionary(_, Binary)); refuses ARRAY/STRUCT/MAP; decimal scale-padded
   stringify. Ledger: `task/fn-gt1-ledger.md`.
+- `spark_log.rs` — **SEM-1 (2026-08-31):** Spark-door `log`. Owner ruling 2026-08-31
+  fixes RE-1 and LOG-1 to Spark. One-arg is the natural log;
+  two-arg is `log(base, expr)`. Both arities return NULL on Spark's domain edges (zero,
+  negative, null, base <= 0). Overwrites DataFusion's base-10 `LogFunc` from `register_all`.
+  Native ANSI `repark.sql()` does not load this kernel.
+  **Critic remediation (2026-09-01):** `null_slots_null_out_even_when_the_buffer_holds_a_live_value`
+  builds a null slot whose underlying buffer value is 5.0 (both arities) and asserts NULL —
+  SQL-door null pins cannot see the null arms because a built null slot reads back 0.0 and the
+  domain guard masks it.
+  pins: sem-1-spark-answer-parity/C-001, C-004, C-007, C-009
 - `spark_regexp.rs` — **GT1-FIX A1/A2 / R3 / R4-1:** Spark `regexp_count` /
   `regexp_instr` (Java find-loop; positional mid-surrogate probe, not
   `is_match("")`; Dictionary(_, Utf8) coerce). **SEM-4 (2026-08-21):**
@@ -138,7 +148,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   pins: f-y10-1-int-overflow/C-001, C-002, C-003, C-004, C-005
   (clippy implicit_clone: projection name uses `clone` on the field name)
 - `lib.rs` — `register_all(ctx)` (datafusion-spark's full set, then the date + string + collection
-  + **r20 G2** `random` (Spark XORShift `rand`/`randn`/`random`) shims — later registration wins a
+  + **r20 G2** `random` (Spark XORShift `rand`/`randn`/`random`) shims + **SEM-1** `spark_log`
+  (Spark-door natural `log`, dual-arity null-guard) — later registration wins a
   name clash) + Q1 percentile aliases + `spark_date_shim_functions()` +
   `analyzer_rules()` (`SparkDecimalPrecision` → `SparkDecimalRewrite` →
   `SparkIntegerOverflow` → Spark semantics +
