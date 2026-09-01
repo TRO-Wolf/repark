@@ -133,7 +133,7 @@ fn nanosecond_timestamp_columns_refuse_with_column_and_precision() {
             true,
         ),
     ]);
-    let err = refuse_nanosecond_timestamp_columns(&schema, "CREATE TABLE")
+    let err = refuse_nanosecond_timestamp_columns(&schema, "CREATE TABLE", &[])
         .expect_err("ns timestamp must refuse")
         .to_string();
     assert!(err.contains("`event_at`"), "must name the column: {err}");
@@ -159,7 +159,7 @@ fn nanosecond_timestamptz_columns_refuse() {
         DataType::Timestamp(TimeUnit::Nanosecond, Some(Arc::from("UTC"))),
         true,
     )]);
-    let err = refuse_nanosecond_timestamp_columns(&schema, "CREATE TABLE")
+    let err = refuse_nanosecond_timestamp_columns(&schema, "CREATE TABLE", &[])
         .expect_err("ns timestamptz must refuse")
         .to_string();
     assert!(err.contains("`when_tz`"), "must name the column: {err}");
@@ -182,6 +182,6 @@ fn microsecond_timestamp_columns_pass_the_ns_gate() {
             true,
         ),
     ]);
-    refuse_nanosecond_timestamp_columns(&schema, "CREATE TABLE")
+    refuse_nanosecond_timestamp_columns(&schema, "CREATE TABLE", &[])
         .unwrap_or_else(|err| panic!("µs timestamps must pass: {err}"));
 }

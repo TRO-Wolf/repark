@@ -54,6 +54,7 @@ def test_live_slate_retires_v3e_5_and_queues_the_safe_work() -> None:
     pins: v3-3-dml/C-003
     pins: v3-4-serve-lineage-columns/C-010
     pins: v3-5-dv-compaction/C-006
+    pins: v3-6-v3-types/C-007
     """
     slate = _read("briefs/next-sequence.md")
     assert "<!-- unit id=f-y10-1" not in slate
@@ -67,7 +68,8 @@ def test_live_slate_retires_v3e_5_and_queues_the_safe_work() -> None:
     assert "V3-3 delivered 2026-08-30" in flat
     status = _read("STATUS.md")
     assert "V3E-5 added the nightly v3 live-oracle leg" in status
-    assert "**Next:** V3-6 types; F-7" in status
+    assert "**V3-6 (2026-09-01):** opt-in v3 CREATE consumes fork `timestamp_ns`" in status
+    assert "**Next:** F-7 COW lineage" in status
     assert "`V3-DANGLE-1` FIXED" in status
 
 

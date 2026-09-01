@@ -65,9 +65,18 @@ repark-core's error map.
   MoR arm before identity UPDATE/DELETE writes parquet (same refuse-before-IO
   class as `resolve_merge_mode`). Ledger:
   [`../../../../task/r1-g3e8-pr4-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-14-r1-g3e8-pr4-ledger.md).
-- `append.rs` — `append(catalog, ident, batches)`: public bulk append — conform (missing /
-  extra / duplicate column = loud error; **WI-1** ANSI store-assignment gate then strict casts,
-  overflow never NULLs) → identity-partition fanout write → ONE stamped `fast_append` commit
+- `conform.rs` — batch conforming for the append write path (name resolution, WI-1 store
+  assignment, strict casts), split from `append.rs` (file-size ratchet, 2026-09-01;
+  append.rs baseline 1886). A missing
+  column whose Iceberg field carries a `write-default` builds against the reduced schema so the
+  fork's `DataFileWriter::write` fills it (**V3-6 C-005**).
+- `append.rs` — `append(catalog, ident, batches)`: public bulk append — conform
+  ([conform.rs](conform.rs): missing /
+  extra / duplicate column = loud error, except a missing column whose Iceberg field carries a
+  `write-default`: conform builds that batch against the reduced schema and the fork's
+  `DataFileWriter::write` fills it — **V3-6 C-005**; **WI-1** ANSI store-assignment gate then
+  strict casts, overflow never NULLs) → identity-partition fanout write → ONE stamped
+  `fast_append` commit
   (append×append commutes via the fork's refresh-and-re-apply retry; empty input commits an
   empty stamped snapshot). Also `write_partitioned_data_files(_from_stream)` — the partitioned
   staged-write core. **V3-1 / RP-3 C-008:** `iceberg_err` goes through

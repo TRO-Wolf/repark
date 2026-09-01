@@ -32,6 +32,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   padded merge-on-read, and v2-control cases keep `V3_MAINTENANCE_ORACLE` and ENC-1's pin.
 - `create_table.rs` — also the V3R-1 type pin: `GEOMETRY` / `GEOGRAPHY` / `VARIANT` refuse at
   CREATE (`V3-GEO-1`).
+- `v3_types.rs` — **V3-6:** C-001 ledger matrix + refuse of `UNKNOWN` / `VARIANT` /
+  ADD COLUMN DEFAULT; C-003 opt-in v3 `timestamp_ns` / `timestamptz_ns` CREATE,
+  ns Arrow round-trip, v2 refuse (asserts the fork's exact
+  "timestamp_ns is not supported until v3" phrase); C-005 `ALTER COLUMN SET DEFAULT`
+  refuse.
+  pins: v3-6-v3-types/C-001, C-003, C-005
 - `v3e4.rs` — **V3E-4:** snapshot refs, `VERSION AS OF` over DVs, expire with
   real work, orphan 24h floor on the partitioned-DV fixture after a RePark
   append, and the live-DV UPDATE pre-write refusal with snapshot, rows, and fixture bytes unchanged;
@@ -100,7 +106,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   pin Spark's full schemas, typed count sources, deletion-vector refusal, and file-granularity rules.
   `call_v3` (**V3-0 / RP-4**): v3 rewrite preserves lineage, v2 control, and
   `opt_in_create_produces_v3_and_rewrite_runs` (six-file CALL, lineage equal;
-  `V3-LINEAGE-1` FIXED; `Model: Grok 4.6 xHigh`).
+  `V3-LINEAGE-1` FIXED; `Model: Grok 4.6 xHigh`); the battery
+  `the_engine_still_cannot_produce_a_v3_table` is V3-6 C-006's identity check —
+  byte-untouched through V3-6.
   Pin `call_rewrite_data_files_on_v3_preserves_row_lineage`
   (`pins: rp-3-fork-repin/C-005; rp-4-fork-repin/C-003`).
   `call_v3_dv` (**V3-5**): six-file v3 MOR with live Puffin DVs;

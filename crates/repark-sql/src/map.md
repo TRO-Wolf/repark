@@ -87,7 +87,11 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   create-first path. Refuses Iceberg CREATE when any `TableScan`
   source (including expression subqueries) is tighten-derived AND the
   output has a non-nullable field (R-D), or the output schema still carries
-  the tag. The write boundary uses the same source walk. `router.rs::delegate` additionally calls
+  the tag. The write boundary uses the same source walk. **V3-6 C-003:**
+  declared `timestamp_ns` / `timestamptz_ns` resolve to their Arrow ns shapes
+  and the A11 gate lets those columns through (pins: v3-6-v3-types/C-003).
+  **V3-6 C-005:** column-def `DEFAULT` refuses Spark-equal naming the column
+  (pins: v3-6-v3-types/C-005). `router.rs::delegate` additionally calls
   `repark_core::refuse_iceberg_create_of_tightened_ddl` on the planned DDL, so the
   `CREATE VIEW cat.ns.v` / `SELECT … INTO cat.ns.t` sinks that fall through the `_ =>` arm
   cannot persist a required column. Both paths use the shared belt: `router.rs::delegate` is
@@ -151,6 +155,11 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
 - `tests.rs` (`#[cfg(test)]`) — the end-to-end door battery on a native session, asserted on the
   Arrow path with value and type checks. The helper uses its warehouse as the temporary fallback
   root; the memory-catalog location pin lives in `a13_fallback.rs`.
+- `column_defaults.rs` (`#[cfg(test)]`) — **V3-6 C-005:** ANSI-door DEFAULT DDL pins —
+  `create_table_column_default_refuses_naming_the_column` (red-first, no table left) and the
+  ADD COLUMN / SET DEFAULT refuse battery with the plain-ADD NULL control
+  (pins: v3-6-v3-types/C-005). Split out of `tests.rs` (file-size ratchet); harness follows
+  the `delete_granularity.rs` self-contained shape.
 
 ## I want to...
 

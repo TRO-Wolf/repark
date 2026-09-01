@@ -1,4 +1,9 @@
-"""RP-3 C-009: fork fills write_default; no engine caller sets it.
+"""RP-3 C-009: fork fills write_default; no PRODUCT engine source sets it.
+
+The V3-6 measurement fixture (crates/repark-iceberg/src/tests/v3_types.rs) is the
+measured exception (2026-09-01, pins: v3-6-v3-types/C-005) — it builds the
+fork-API schema the write_default consumption is measured against. Test files
+under a ``tests`` path component are exempt; anything else trips the guard.
 
 pins: rp-3-fork-repin/C-009
 """
@@ -14,10 +19,12 @@ _SETTER_NEEDLES = ("with_write_default", "write_default(")
 
 
 def test_engine_sources_do_not_set_write_default() -> None:
-    """Fail if an engine caller starts setting Iceberg write_default."""
+    """Fail if a PRODUCT engine source starts setting Iceberg write_default."""
     hits: list[str] = []
     for path in _CRATES.rglob("*.rs"):
         if "target" in path.parts:
+            continue
+        if "tests" in path.parts:
             continue
         text = path.read_text(encoding="utf-8")
         for line_number, line in enumerate(text.splitlines(), start=1):
@@ -26,7 +33,7 @@ def test_engine_sources_do_not_set_write_default() -> None:
                 continue
             if any(needle in stripped for needle in _SETTER_NEEDLES):
                 hits.append(f"{path.relative_to(_REPO_ROOT)}:{line_number}:{stripped}")
-    assert hits == [], "engine must not set write_default:\n" + "\n".join(hits)
+    assert hits == [], "engine product source must not set write_default:\n" + "\n".join(hits)
 
 
 def test_checked_in_spark_fixtures_are_byte_flat() -> None:

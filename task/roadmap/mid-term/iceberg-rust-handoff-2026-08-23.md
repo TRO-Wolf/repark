@@ -425,6 +425,25 @@ increments.
 - **Java reference:** `org.apache.iceberg.types` and the v3 spec's type/default-value sections,
   1.10.0 bytecode where the spec is ambiguous.
 
+*V3-6 (2026-09-01) audit addendum, measured at fork pin `33be9a0`:*
+
+- **R91 (`unknown`) divergence — the row is ✅ but the parquet path is not deferred-loud.**
+  The row's deferred-loud claim is the `arrow/value.rs` `FeatureUnsupported` synth path. The
+  measured `DataFileWriter::write` path is different: a batch with a Null `unknown` column
+  **commits silently** — no `FeatureUnsupported`, a real parquet data file lands on disk that
+  no scan can read (the reader refuses per file task: "cannot visit arrow data type: null").
+  So today's fork state is "write commits an unreadable file", which is worse than the row's
+  deferred-loud claim. Ask: make the parquet write path loud (or the reader accept Null), and
+  drop R91's ✅ until then. Engine pins:
+  `crates/repark-iceberg/src/tests/v3_types.rs::fork_unknown_write_commits_then_scan_refuses_naming_null`
+  (pins: v3-6-v3-types/C-004).
+- **R88 (variant) — verified covered.** C-002's binary-variant finding (schema maps to the
+  canonical Arrow extension type; write refuses at `ParquetWriterBuilder::build`; scan refuses
+  per file task via `reject_variant_projection`) is exactly R88's recorded remainder, so no
+  new handoff entry was filed for it. Engine pins:
+  `fork_variant_arrow_maps_and_parquet_write_refuses` / `fork_variant_scan_refuses_naming_the_type`
+  (pins: v3-6-v3-types/C-002); registry row `V3-VARIANT-SHRED-1` cites both.
+
 ### F-16 (P1, added 2026-08-24 from MW-7) — `RewriteDataFiles`: the delete-RATIO candidate clause
 
 *Landed fork #232 (2026-08-27) with v3 DV removal accounting; taken by **RP-3** (C-006).

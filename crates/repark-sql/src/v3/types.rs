@@ -31,3 +31,25 @@ async fn v3_type_columns_geometry_geography_variant_refuse_naming_the_type() {
         assert!(!exists, "a refused CREATE must leave no `{table}` behind");
     }
 }
+
+/// pins: v3-6-v3-types/C-004
+#[tokio::test]
+async fn v3_type_column_unknown_refuses_naming_the_type() {
+    let door = door_with_v3_opt_in().await;
+    let err = door
+        .err("CREATE TABLE ice.sales.t_unknown (id INT, u UNKNOWN) WITH (format_version = 3)")
+        .await;
+    assert!(
+        err.to_ascii_uppercase().contains("UNKNOWN"),
+        "CREATE with an `UNKNOWN` column must refuse naming the type: {err}"
+    );
+    let exists = door
+        .catalog
+        .table_exists(&TableIdent::new(
+            NamespaceIdent::new("sales".to_string()),
+            "t_unknown".to_string(),
+        ))
+        .await
+        .expect("table_exists");
+    assert!(!exists, "a refused CREATE must leave no table behind");
+}
