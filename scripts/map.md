@@ -322,8 +322,19 @@ repark-parity slice.
   in `make ci` and ci.yml's python job (static half). wheels.yml smoke runs
   `python -I … --require-execute`. The `.sh` wrapper forwards `"$@"`.
   Example children drop PYTHONPATH.
+  EX-1 (2026-08-31) widened the closed set with the seven surfaces the owner
+  ruled into v0.7 — Column, Window, WindowSpec, Catalog, the `types` module
+  surface, `ml`, and Row — under five new families (`column`, `window`,
+  `catalog`, `types`, `ml`): 150 names, 763 → 913, `BACKLOG_BASELINE`
+  742 → 892. Class surfaces are `CLASS_SURFACES` rows and module surfaces
+  `MODULE_SURFACES` rows; `MODULE_DOORS` holds the alias/import rules that
+  decide whether a `types.*` or `ml.*` cover binds; `Window.*` binds on the
+  `Window` class root the way `SparkSession.Builder.*` does. Every door's live
+  `__all__` is cross-checked on the execute leg, so a dynamic export table
+  cannot hide the way `install_into` did.
   Proofs: `python/repark-parity/tests/test_ex_0_example_coverage.py`.
   pins: ex-0-example-drift-gate/C-001, C-003, C-004, C-005, C-007, C-009
+  pins: ex-1-class-surfaces/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 
 - `check_rust_file_size.sh` + `check_rust_file_size.py` — the **general Rust file-size** guard
   (G-8 companion to `check_lib_rs`). DML-A (2026-08-30): `merge/mod.rs` 2131 → 2086.

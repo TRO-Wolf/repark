@@ -84,6 +84,7 @@ def test_empty_pattern_agrees_between_counting_and_collecting(text: str) -> None
     explicitly (SEM-1): the empty pattern has no capture group, and Spark's two-argument
     default (group 1) raises on such a pattern — this test is about counting and collecting
     agreeing, not about the group default.
+    pins: sem-1-spark-answer-parity/C-003
     """
     frame = _session().createDataFrame([(text,)], "t string")
     out = frame.select(

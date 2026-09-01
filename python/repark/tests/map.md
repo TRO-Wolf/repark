@@ -2324,15 +2324,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   BMP-bound test's claim that both RE-2 divergences are confined to supplementary-plane text was
   false for the substr half and is corrected.
 
-- `test_lrs4_door_domain.py` — **LRS-4 (2026-08-20):** pins for the two registry rows the widened
-  C-012 guard produced — `LOG-1` (the SQL door's `log` is base 10, Spark's is natural) and `UNIX-1`
-  (`from_unixtime` returns TIMESTAMP on the door, STRING in Spark). Both codify today's behavior.
-  **2026-08-21:** gained `test_log1_the_two_argument_form_diverges_on_non_positive_operands`. The
-  original pin asserted only `log(2, 8) == 3.0` and the row concluded from it that just the
-  one-argument form diverged — a claim drawn from one positive-operand sample. DataFusion's
-  `LogFunc` has no null-guard, so all six non-positive edges diverge too (Spark returns NULL for
-  every one), and a fix that only redirects the one-argument form to `ln` would close half the row
-  silently.
+- `test_lrs4_door_domain.py` — **LRS-4 (2026-08-20):** pins for `LOG-1` and `UNIX-1`.
+  **SEM-1 (2026-08-31):** `LOG-1` pins flip to Spark: `log(8)` is the natural log on both
+  Spark doors; both arities return NULL on the six non-positive edges. `UNIX-1` is unchanged.
+  pins: sem-1-spark-answer-parity/C-004, C-008
+- `test_sem1_spark_log.py` — **SEM-1 (2026-08-31):** Spark-door `log` kernel, `F.log` two-arg,
+  native ANSI base-10 control, `log2`/`log1p`/`ln` incidentals. Oracle live PySpark 4.1.2.
+  pins: sem-1-spark-answer-parity/C-004, C-006, C-007, C-010
 
 ## I want to...
 

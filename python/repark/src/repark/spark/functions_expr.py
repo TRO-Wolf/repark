@@ -307,9 +307,9 @@ def round(col: Column | str, scale: int = 0) -> Column:
     return _scalar("round", col, scale, lit_indices=frozenset({1}))
 
 
-def log(col: Column | str) -> Column:
-    """Natural logarithm (PySpark ``functions.log`` — base *e*, not log10)."""
-    return _scalar("log", col)
+def log(col: Column | str | float | int, extra: Column | str | float | int | None = None) -> Column:
+    """``ln(col)`` or ``log(base, expr)`` (PySpark ``functions.log``)."""
+    return _scalar("log", col) if extra is None else _scalar("log", col, extra)
 
 
 def log10(col: Column | str) -> Column:

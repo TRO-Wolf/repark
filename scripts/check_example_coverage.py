@@ -6,28 +6,33 @@ baselines. Walks facade sources by AST so ``make ci`` stays native-build-free.
 ``F.*`` is the union of ``functions.py`` ``__all__``, the installer export
 tables that ``install_into`` appends at import, and public defs on that
 canonical module.
-When ``repark._native`` imports, every example script is executed and
-``F.__all__`` / ``ta.__all__`` are cross-checked against the walk.
+When ``repark._native`` imports, every example script is executed and every
+module door's live ``__all__`` (``F``, ``ta``, ``types``, ``ml``) is
+cross-checked against the walk.
 
-Closed EX-0 set (roadmap colon list plus session): ``F.*``, DataFrame /
+Closed set after EX-1 (roadmap colon list, session, and the seven class
+surfaces the owner ruled into v0.7 on 2026-08-31): ``F.*``, DataFrame /
 GroupedData / DataFrameNaFunctions / DataFrameStatFunctions public members,
 TA ``__all__``, DataFrameReader / DataFrameWriter / DataFrameWriterV2 public
-members, ``repark.sql``, and SparkSession / SparkSession.Builder public
-members. Names starting with ``_`` and every dunder are skipped
-(``DataFrame.__getitem__`` is excluded by that dunder rule). Not in this
-inventory: Column (40), Window (14), WindowSpec (8), Catalog (28), Row (4
-public), types.__all__ (28), ml.__all__ (28), RuntimeConfig (5), SparkContext
-(3), UDFRegistration (3), StorageLevel (0 public). Widening is an owner
-decision (on the order of 120+ names). Measured 2026-08-31.
+members, ``repark.sql``, SparkSession / SparkSession.Builder public members,
+Column / Window / WindowSpec / Catalog / Row public members, and the
+``types`` / ``ml`` module ``__all__`` surfaces. Names starting with ``_`` and
+every dunder are skipped (``DataFrame.__getitem__`` is excluded by that dunder
+rule). Still outside the inventory: RuntimeConfig (5), SparkContext (3),
+UDFRegistration (3), StorageLevel (0 public). Widening again is an owner
+decision. Measured 2026-08-31.
 
 A ``COVERS`` entry must be used in that script's body. Class-surface names
 bind only on a repark-rooted local (assignment dataflow from a door or session
-builder). Module covers such as ``repark.sql`` bind only on the module alias.
+builder), except the class-root surfaces ``SparkSession.builder`` /
+``SparkSession.Builder.*`` / ``Window.*``, which bind on the class name.
+Module covers such as ``repark.sql`` bind only on the module alias.
 A repark-rooted receiver can still list a method it calls only trivially —
 review holds that honesty. ``exceptions.txt`` has the same exact-count ratchet
 as the backlog.
 
 pins: ex-0-example-drift-gate/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+pins: ex-1-class-surfaces/C-001, C-002, C-004, C-005
 """
 
 from __future__ import annotations
@@ -47,6 +52,18 @@ EXCEPTIONS_RELATIVE = "docs/examples/exceptions.txt"
 EXAMPLES_ROOT_RELATIVE = "docs/examples"
 FUNCTIONS_SOURCE = "python/repark/src/repark/spark/functions.py"
 TA_SOURCE = "python/repark/src/repark/spark/ta.py"
+TYPES_SOURCE = "python/repark/src/repark/spark/types.py"
+ML_SOURCE = "python/repark/src/repark/spark/ml/__init__.py"
+COLUMN_SOURCE = "python/repark/src/repark/spark/column.py"
+WINDOW_SOURCE = "python/repark/src/repark/spark/window.py"
+CATALOG_SOURCE = "python/repark/src/repark/spark/catalog.py"
+ROW_SOURCE = "python/repark/src/repark/spark/row.py"
+DATAFRAME_CORE_SOURCE = "python/repark/src/repark/spark/dataframe/core.py"
+DATAFRAME_JOINS_SOURCE = "python/repark/src/repark/spark/dataframe/joins_columns.py"
+DATAFRAME_ACTIONS_SOURCE = "python/repark/src/repark/spark/dataframe/actions_export.py"
+WRITER_SOURCE = "python/repark/src/repark/spark/dataframe/writer_readwriter.py"
+READER_SOURCE = "python/repark/src/repark/spark/session/reader.py"
+SESSION_CORE_SOURCE = "python/repark/src/repark/spark/session/session_core.py"
 FUNCTIONS_INSTALLER_SOURCES: tuple[str, ...] = (
     "python/repark/src/repark/spark/functions_try.py",
     "python/repark/src/repark/spark/functions_lambda.py",
@@ -63,95 +80,103 @@ FUNCTION_EXPORT_BINDINGS: frozenset[str] = frozenset(
     }
 )
 FUNCTION_EXPORT_DICT_KEYS: frozenset[str] = frozenset({"FNP15_MESSAGES"})
-FAMILIES: tuple[str, ...] = ("dataframe", "functions", "io", "session", "ta")
-BACKLOG_BASELINE = 742
+FAMILIES: tuple[str, ...] = (
+    "catalog",
+    "column",
+    "dataframe",
+    "functions",
+    "io",
+    "ml",
+    "session",
+    "ta",
+    "types",
+    "window",
+)
+BACKLOG_BASELINE = 892
 EXCEPTIONS_BASELINE = 2
 EXAMPLE_TIMEOUT_SECONDS = 120
 NATIVE_MODULE = "repark._native"
 CLOUD_ENV_PREFIXES: tuple[str, ...] = ("AWS_",)
 FUNCTIONS_MODULES: frozenset[str] = frozenset({"repark.functions", "repark.spark.functions"})
 TA_MODULES: frozenset[str] = frozenset({"repark.spark.ta", "repark.ta"})
+TYPES_MODULES: frozenset[str] = frozenset({"repark.spark.types", "repark.spark.sql.types"})
+ML_MODULES: frozenset[str] = frozenset({"repark.spark.ml"})
 FUNCTIONS_ALIAS_HINTS: frozenset[str] = frozenset({"F", "functions"})
 TA_ALIAS_HINTS: frozenset[str] = frozenset({"ta"})
+TYPES_ALIAS_HINTS: frozenset[str] = frozenset({"types", "T"})
+ML_ALIAS_HINTS: frozenset[str] = frozenset({"ml"})
+PACKAGE_DOOR_MODULES: frozenset[str] = frozenset({"repark", "repark.spark"})
 SESSION_BUILDER_HINTS: frozenset[str] = frozenset(
     {"SparkSession", "ReparkSession", "ReParkSession"}
 )
 KIND_FUNCTIONS = "functions"
 KIND_TA = "ta"
+KIND_TYPES = "types"
+KIND_ML = "ml"
 KIND_REPARK = "repark"
 KIND_SESSION = "session"
+KIND_WINDOW = "window"
 KIND_LOCAL = "local"
 KIND_OTHER = "other"
 REPARK_ROOTED_KINDS: frozenset[str] = frozenset(
-    {KIND_FUNCTIONS, KIND_TA, KIND_REPARK, KIND_SESSION, KIND_LOCAL}
+    {
+        KIND_FUNCTIONS,
+        KIND_TA,
+        KIND_TYPES,
+        KIND_ML,
+        KIND_REPARK,
+        KIND_SESSION,
+        KIND_WINDOW,
+        KIND_LOCAL,
+    }
 )
+CLASS_ROOT_KINDS: dict[str, str] = {"Window": KIND_WINDOW}
 CHILD_ENV_DROP: frozenset[str] = frozenset({"PYTHONPATH", "PYTHONSTARTUP", "PYTHONHOME"})
 
 CLASS_SURFACES: tuple[tuple[str, str, str, str, str | None], ...] = (
-    (
-        "dataframe",
-        "DataFrame",
-        "python/repark/src/repark/spark/dataframe/core.py",
-        "DataFrame",
-        None,
-    ),
-    (
-        "dataframe",
-        "GroupedData",
-        "python/repark/src/repark/spark/dataframe/joins_columns.py",
-        "GroupedData",
-        None,
-    ),
-    (
-        "dataframe",
-        "DataFrameNaFunctions",
-        "python/repark/src/repark/spark/dataframe/actions_export.py",
-        "DataFrameNaFunctions",
-        None,
-    ),
-    (
-        "dataframe",
-        "DataFrameStatFunctions",
-        "python/repark/src/repark/spark/dataframe/writer_readwriter.py",
-        "DataFrameStatFunctions",
-        None,
-    ),
-    (
-        "io",
-        "DataFrameReader",
-        "python/repark/src/repark/spark/session/reader.py",
-        "DataFrameReader",
-        None,
-    ),
-    (
-        "io",
-        "DataFrameWriter",
-        "python/repark/src/repark/spark/dataframe/writer_readwriter.py",
-        "DataFrameWriter",
-        None,
-    ),
-    (
-        "io",
-        "DataFrameWriterV2",
-        "python/repark/src/repark/spark/dataframe/writer_readwriter.py",
-        "DataFrameWriterV2",
-        None,
-    ),
-    (
-        "session",
-        "SparkSession",
-        "python/repark/src/repark/spark/session/session_core.py",
-        "ReparkSession",
-        None,
-    ),
-    (
-        "session",
-        "SparkSession.Builder",
-        "python/repark/src/repark/spark/session/session_core.py",
-        "ReparkSession",
-        "Builder",
-    ),
+    ("dataframe", "DataFrame", DATAFRAME_CORE_SOURCE, "DataFrame", None),
+    ("dataframe", "GroupedData", DATAFRAME_JOINS_SOURCE, "GroupedData", None),
+    ("dataframe", "DataFrameNaFunctions", DATAFRAME_ACTIONS_SOURCE, "DataFrameNaFunctions", None),
+    ("dataframe", "DataFrameStatFunctions", WRITER_SOURCE, "DataFrameStatFunctions", None),
+    ("io", "DataFrameReader", READER_SOURCE, "DataFrameReader", None),
+    ("io", "DataFrameWriter", WRITER_SOURCE, "DataFrameWriter", None),
+    ("io", "DataFrameWriterV2", WRITER_SOURCE, "DataFrameWriterV2", None),
+    ("session", "SparkSession", SESSION_CORE_SOURCE, "ReparkSession", None),
+    ("session", "SparkSession.Builder", SESSION_CORE_SOURCE, "ReparkSession", "Builder"),
+    ("column", "Column", COLUMN_SOURCE, "Column", None),
+    ("window", "Window", WINDOW_SOURCE, "Window", None),
+    ("window", "WindowSpec", WINDOW_SOURCE, "WindowSpec", None),
+    ("catalog", "Catalog", CATALOG_SOURCE, "Catalog", None),
+    ("types", "Row", ROW_SOURCE, "Row", None),
 )
+
+MODULE_SURFACES: tuple[tuple[str, str, str], ...] = (
+    ("ta", "ta", TA_SOURCE),
+    ("types", "types", TYPES_SOURCE),
+    ("ml", "ml", ML_SOURCE),
+)
+
+MODULE_DOORS: tuple[tuple[str, str, frozenset[str], frozenset[str], str], ...] = (
+    (KIND_FUNCTIONS, "F.", FUNCTIONS_MODULES, FUNCTIONS_ALIAS_HINTS, "functions"),
+    (KIND_TA, "ta.", TA_MODULES, TA_ALIAS_HINTS, "ta"),
+    (KIND_TYPES, "types.", TYPES_MODULES, TYPES_ALIAS_HINTS, "types"),
+    (KIND_ML, "ml.", ML_MODULES, ML_ALIAS_HINTS, "ml"),
+)
+
+LIVE_ALL_MODULES: tuple[tuple[str, str], ...] = (
+    ("F.", "repark.spark.functions"),
+    ("ta.", "repark.spark.ta"),
+    ("types.", "repark.spark.types"),
+    ("ml.", "repark.spark.ml"),
+)
+
+
+def door_for_cover(cover: str) -> tuple[str, str, frozenset[str], frozenset[str], str] | None:
+    """Return the module door a cover name belongs to, if any."""
+    for door in MODULE_DOORS:
+        if cover.startswith(door[1]):
+            return door
+    return None
 
 
 def repo_root() -> Path:
@@ -327,11 +352,11 @@ def enumerate_public_surface(root: Path) -> list[tuple[str, str]]:
         if not is_public_name(function_name):
             raise RuntimeError(f"private F.* export name: {function_name}")
         rows.append(("functions", f"F.{function_name}"))
-    ta_path = root / TA_SOURCE
-    for kernel_name in dunder_all(parse_source(ta_path), where=TA_SOURCE):
-        if not is_public_name(kernel_name):
-            raise RuntimeError(f"{TA_SOURCE}: private name in __all__: {kernel_name}")
-        rows.append(("ta", f"ta.{kernel_name}"))
+    for family, prefix, relative in MODULE_SURFACES:
+        for exported in dunder_all(parse_source(root / relative), where=relative):
+            if not is_public_name(exported):
+                raise RuntimeError(f"{relative}: private name in __all__: {exported}")
+            rows.append((family, f"{prefix}.{exported}"))
     for family, prefix, relative, class_name, nested in CLASS_SURFACES:
         source_path = root / relative
         tree = parse_source(source_path)
@@ -456,6 +481,8 @@ def expression_root_id(node: ast.AST) -> str | None:
             current = current.value
         elif isinstance(current, ast.Call):
             current = current.func
+        elif isinstance(current, ast.Subscript):
+            current = current.value
         elif isinstance(current, ast.Name):
             return current.id
         else:
@@ -466,47 +493,41 @@ def door_aliases(tree: ast.Module) -> tuple[dict[str, set[str]], dict[str, set[s
     """Return module aliases and imported call names per door.
 
     The second map uses ``None`` for a star-import (every name on that door).
+    Doors are the rows of ``MODULE_DOORS`` plus the ``repark`` module itself.
     """
-    aliases: dict[str, set[str]] = {
-        "functions": set(FUNCTIONS_ALIAS_HINTS),
-        "ta": set(TA_ALIAS_HINTS),
-        "repark": {"repark"},
-    }
-    imported: dict[str, set[str] | None] = {
-        "functions": set(),
-        "ta": set(),
-        "repark": set(),
-    }
+    aliases: dict[str, set[str]] = {kind: set(hints) for kind, _p, _m, hints, _a in MODULE_DOORS}
+    aliases[KIND_REPARK] = {"repark"}
+    imported: dict[str, set[str] | None] = {kind: set() for kind, *_rest in MODULE_DOORS}
+    imported[KIND_REPARK] = set()
     for node in tree.body:
         if isinstance(node, ast.Import):
             for alias in node.names:
                 bound = alias.asname or alias.name.rsplit(".", 1)[-1]
-                if alias.name in FUNCTIONS_MODULES:
-                    aliases["functions"].add(bound)
-                if alias.name in TA_MODULES:
-                    aliases["ta"].add(bound)
+                for kind, _prefix, modules, _hints, _attribute in MODULE_DOORS:
+                    if alias.name in modules:
+                        aliases[kind].add(bound)
                 if alias.name == "repark":
-                    aliases["repark"].add(bound)
+                    aliases[KIND_REPARK].add(bound)
         elif isinstance(node, ast.ImportFrom):
             module = node.module or ""
+            door = next((row for row in MODULE_DOORS if module in row[2]), None)
             for alias in node.names:
                 bound = alias.asname or alias.name
-                if module in FUNCTIONS_MODULES:
+                if door is not None:
                     if alias.name == "*":
-                        imported["functions"] = None
-                    elif imported["functions"] is not None:
-                        imported["functions"].add(bound)
-                elif module in TA_MODULES:
-                    if alias.name == "*":
-                        imported["ta"] = None
-                    elif imported["ta"] is not None:
-                        imported["ta"].add(bound)
-                elif module in {"repark.spark", "repark"} and alias.name == "functions":
-                    aliases["functions"].add(bound)
-                elif module in {"repark.spark", "repark"} and alias.name == "ta":
-                    aliases["ta"].add(bound)
-                elif module == "repark" and alias.name == "sql" and imported["repark"] is not None:
-                    imported["repark"].add(bound)
+                        imported[door[0]] = None
+                    elif imported[door[0]] is not None:
+                        imported[door[0]].add(bound)
+                elif module in PACKAGE_DOOR_MODULES:
+                    for kind, _prefix, _modules, _hints, attribute in MODULE_DOORS:
+                        if alias.name == attribute:
+                            aliases[kind].add(bound)
+                    if (
+                        module == "repark"
+                        and alias.name == "sql"
+                        and imported[KIND_REPARK] is not None
+                    ):
+                        imported[KIND_REPARK].add(bound)
     return aliases, imported
 
 
@@ -559,18 +580,17 @@ def name_kinds(
     """Return name kinds, door aliases, and imported call names."""
     aliases, imported = door_aliases(tree)
     kinds: dict[str, str] = {}
-    for name in aliases["functions"]:
-        kinds[name] = KIND_FUNCTIONS
-    for name in aliases["ta"]:
-        kinds[name] = KIND_TA
-    for name in aliases["repark"]:
-        kinds[name] = KIND_REPARK
+    for kind, names in aliases.items():
+        for name in names:
+            kinds[name] = kind
     for node in tree.body:
         if isinstance(node, ast.ImportFrom):
             for alias in node.names:
                 bound = alias.asname or alias.name
                 if alias.name in SESSION_BUILDER_HINTS or bound in SESSION_BUILDER_HINTS:
                     kinds[bound] = KIND_SESSION
+                elif alias.name in CLASS_ROOT_KINDS:
+                    kinds[bound] = CLASS_ROOT_KINDS[alias.name]
         elif isinstance(node, ast.Import):
             for alias in node.names:
                 bound = alias.asname or alias.name.rsplit(".", 1)[-1]
@@ -588,23 +608,27 @@ def class_cover_is_used(cover: str, receiver_kind: str) -> bool:
         return receiver_kind == KIND_SESSION
     if cover.startswith("SparkSession."):
         return receiver_kind == KIND_LOCAL
+    if cover.startswith("Window."):
+        return receiver_kind == KIND_WINDOW
     return receiver_kind == KIND_LOCAL
 
 
 def cover_is_used(cover: str, tree: ast.Module) -> bool:
     """Return True when ``cover`` is referenced in the script body.
 
-    Family-aware. ``F.*`` / ``ta.*`` bind on their door alias or an imported
-    call. ``repark.sql`` binds on the ``repark`` module alias only.
-    Class-surface names bind when the Attribute receiver's root is a
-    repark-rooted local (assignment dataflow). Session builder names
-    (``SparkSession.builder``, ``SparkSession.Builder.*``) also bind on the
-    session-builder class root. ``object().agg`` and ``repark.sql`` do not
-    bind ``DataFrame.agg`` or ``SparkSession.sql``.
+    Family-aware. A module-door name (``F.*``, ``ta.*``, ``types.*``, ``ml.*``)
+    binds on that door's alias or on a name imported from it. ``repark.sql``
+    binds on the ``repark`` module alias only. Class-surface names bind when the
+    Attribute receiver's root is a repark-rooted local (assignment dataflow).
+    Session builder names (``SparkSession.builder``, ``SparkSession.Builder.*``)
+    bind on the session-builder class root, and ``Window.*`` on the ``Window``
+    class root. ``object().agg`` and ``repark.sql`` do not bind
+    ``DataFrame.agg`` or ``SparkSession.sql``.
 
-    pins: ex-0-example-drift-gate/C-002
+    pins: ex-0-example-drift-gate/C-002 · ex-1-class-surfaces/C-004, C-005
     """
     local = cover.rsplit(".", 1)[-1]
+    door = door_for_cover(cover)
     kinds, _aliases, imported = name_kinds(tree)
     for node in tree.body:
         if is_covers_assignment(node):
@@ -612,12 +636,8 @@ def cover_is_used(cover: str, tree: ast.Module) -> bool:
         for child in ast.walk(node):
             if isinstance(child, ast.Attribute) and child.attr == local:
                 receiver_kind = classify_expression(child.value, kinds)
-                if cover.startswith("F."):
-                    if receiver_kind == KIND_FUNCTIONS:
-                        return True
-                    continue
-                if cover.startswith("ta."):
-                    if receiver_kind == KIND_TA:
+                if door is not None:
+                    if receiver_kind == door[0]:
                         return True
                     continue
                 if cover == "repark.sql":
@@ -632,13 +652,9 @@ def cover_is_used(cover: str, tree: ast.Module) -> bool:
                 and isinstance(child.func, ast.Name)
                 and child.func.id == local
             ):
-                if cover.startswith("F."):
-                    imported_functions = imported["functions"]
-                    if imported_functions is None or local in imported_functions:
-                        return True
-                elif cover.startswith("ta."):
-                    imported_ta = imported["ta"]
-                    if imported_ta is None or local in imported_ta:
+                if door is not None:
+                    imported_names = imported[door[0]]
+                    if imported_names is None or local in imported_names:
                         return True
                 elif cover == "repark.sql":
                     imported_sql = imported["repark"]
@@ -745,20 +761,21 @@ def live_all_names(module_path: str) -> set[str]:
 
 
 def live_all_findings(enumerated: list[tuple[str, str]]) -> list[str]:
-    """Cross-check AST ``F.*`` / ``ta.*`` names against a live import."""
-    functions_live = {f"F.{name}" for name in live_all_names("repark.spark.functions")}
-    ta_live = {f"ta.{name}" for name in live_all_names("repark.spark.ta")}
-    functions_ast = {name for family, name in enumerated if family == "functions"}
-    ta_ast = {name for family, name in enumerated if family == "ta"}
+    """Cross-check every module-door ``__all__`` against a live import.
+
+    A door that grows names at import, the way ``install_into`` grows
+    ``functions.py`` ``__all__``, reds here instead of hiding.
+
+    pins: ex-1-class-surfaces/C-003
+    """
     findings: list[str] = []
-    for name in sorted(functions_live - functions_ast):
-        findings.append(f"live F.__all__ has {name} missing from the AST walk")
-    for name in sorted(functions_ast - functions_live):
-        findings.append(f"AST walk has {name} missing from live F.__all__")
-    for name in sorted(ta_live - ta_ast):
-        findings.append(f"live ta.__all__ has {name} missing from the AST walk")
-    for name in sorted(ta_ast - ta_live):
-        findings.append(f"AST walk has {name} missing from live ta.__all__")
+    for prefix, module_path in LIVE_ALL_MODULES:
+        live = {f"{prefix}{name}" for name in live_all_names(module_path)}
+        walked = {name for _family, name in enumerated if name.startswith(prefix)}
+        for name in sorted(live - walked):
+            findings.append(f"live {prefix}__all__ has {name} missing from the AST walk")
+        for name in sorted(walked - live):
+            findings.append(f"AST walk has {name} missing from live {prefix}__all__")
     return findings
 
 

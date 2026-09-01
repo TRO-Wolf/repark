@@ -97,12 +97,6 @@ const EXPECTED_DIVERGENCES: &[(&str, FacadeShape, &str)] = &[
     ),
     ("datepart", FacadeShape::Kernel(2), "alias of date_part"),
     (
-        "log",
-        FacadeShape::Kernel(1),
-        "SQL door `log` is DataFusion's base-10, Spark's is natural — registry row LOG-1. The \
-         facade is right (`ln`); the door answers 0.903 for log(8) where Spark answers 2.079",
-    ),
-    (
         "from_unixtime",
         FacadeShape::Kernel(1),
         "SQL door returns TIMESTAMP, the facade and Spark return STRING — registry row UNIX-1",
@@ -197,12 +191,13 @@ fn facade_avg_is_the_repark_retracting_kernel_not_datafusion_core() {
 }
 
 /// Confirm every sanctioned divergence remains real.
+/// pins: sem-1-spark-answer-parity/C-005
 #[test]
 fn expected_divergences_are_all_still_real() {
     assert_eq!(
         EXPECTED_DIVERGENCES.len(),
-        24,
-        "the sanctioned-out table changed size — ratchet DOWN, or justify the new row"
+        23,
+        "SEM-1 closed LOG-1: Spark-door log is SparkLog, same kernel as the facade; ratchet 24 → 23"
     );
     let ctx = registered_session();
     let mut already_fixed = Vec::new();

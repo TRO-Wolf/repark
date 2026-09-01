@@ -10,6 +10,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   inventory. `risk_tier: standard`. Branch `feat/ex-0-example-drift-gate`.
   Ruling: [release-roadmap-2026-08-29.md](../../roadmap/epic-term/release-roadmap-2026-08-29.md)
   §v0.7 deliverable 2.
+- [ex-1-class-surfaces-ledger.md](ex-1-class-surfaces-ledger.md) —
+  **EX-1 (2026-08-31), in flight:** widens the EX-0 example-coverage inventory
+  with the class surfaces the owner ruled into v0.7 — Column, Window,
+  WindowSpec, Catalog, the `types` module surface, `ml`, and Row (150 names,
+  763 → 913). `risk_tier: standard`. Branch `feat/ex-1-class-surfaces`, stacked
+  on `feat/ex-0-example-drift-gate`.
 - [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's
   scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike
   evidence behind it; C-007 (the four sub-project families) was closed by ruling D-7 on
@@ -26,6 +32,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   for a new dual-arity null-guarded kernel rather than a redirect to `ln`, the ratchet move that
   comes with it, and the two adjacent defects that should ride along. Both units change a computed
   answer, so the gate wants a dated owner ruling before either writes code.
+  **Owner ruling 2026-08-31:** both rows fix to Spark. Delivery:
+  [sem-1-spark-answer-parity-ledger.md](sem-1-spark-answer-parity-ledger.md).
+- [sem-1-spark-answer-parity-ledger.md](sem-1-spark-answer-parity-ledger.md) — **SEM-1 (2026-08-31):**
+  close RE-1 and LOG-1 to Spark semantics under the dated owner ruling. RE-1's default is already
+  group 1 on this tree (prior SEM-1, PR #193); this unit re-measures it and builds the dual-arity
+  null-guarded Spark `log` kernel (charter SEM-2), the `EXPECTED_DIVERGENCES` ratchet, and `F.log`'s
+  two-argument form.
 - [v3-0-charter-ledger.md](v3-0-charter-ledger.md) —
   **V3-0 (2026-08-21):** the format-v3 scope audit, and the defect it found. Intended as a
   charter with no product change and it does not close that way. **Read §3 first**:
