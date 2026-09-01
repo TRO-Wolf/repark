@@ -185,6 +185,12 @@ async fn branch_and_tag_read_selectors_resolve_the_ref() {
         "ALTER TABLE ice.sales.t CREATE BRANCH audit",
     )
     .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.t SELECT 8 AS id, 'y' AS name",
+    )
+    .await;
     run(&ctx, &catalogs, "ALTER TABLE ice.sales.t CREATE TAG v1").await;
     run(
         &ctx,
@@ -200,12 +206,12 @@ async fn branch_and_tag_read_selectors_resolve_the_ref() {
     );
     assert_eq!(
         time_travel_id_multiset(&ctx, &catalogs, "SELECT id FROM ice.sales.t.tag_v1").await,
-        vec![1, 2, 3],
-        "the tag selector reads the tag snapshot"
+        vec![1, 2, 3, 8],
+        "the tag selector reads the tag snapshot, which is ahead of the branch"
     );
     assert_eq!(
         time_travel_id_multiset(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await,
-        vec![1, 2, 3, 9],
+        vec![1, 2, 3, 8, 9],
         "the plain name still reads main"
     );
     assert_eq!(
@@ -220,18 +226,23 @@ async fn branch_and_tag_read_selectors_resolve_the_ref() {
         "a selector joins against the live table"
     );
 
-    let error = execute(&ctx, &catalogs, "SELECT id FROM ice.sales.t.branch_nope")
-        .await
-        .expect_err("a missing ref must refuse");
-    let message = error.to_string();
-    assert!(
-        message.contains("nope"),
-        "the refusal must name the missing ref: {message}"
-    );
-    assert!(
-        !message.contains("compound identifier"),
-        "the refusal must not be the opaque 4-part planning error: {message}"
-    );
+    for (sql, ref_name) in [
+        ("SELECT id FROM ice.sales.t.branch_nope", "nope"),
+        ("SELECT id FROM ice.sales.t.tag_missing", "missing"),
+    ] {
+        let error = execute(&ctx, &catalogs, sql)
+            .await
+            .expect_err("a missing ref must refuse");
+        let message = error.to_string();
+        assert!(
+            message.contains(ref_name),
+            "the refusal must name the missing ref for {sql:?}: {message}"
+        );
+        assert!(
+            !message.contains("compound identifier"),
+            "the refusal must not be the opaque 4-part planning error for {sql:?}: {message}"
+        );
+    }
 }
 
 /// A metadata-table suffix stays a metadata table, and a real table can be named `branch_x`.
@@ -261,5 +272,187 @@ async fn ref_selector_does_not_claim_metadata_tables_or_real_table_names() {
         time_travel_id_multiset(&ctx, &catalogs, "SELECT id FROM ice.sales.branch_exp").await,
         vec![1, 2, 3],
         "a table whose own name starts with branch_ is not a selector"
+    );
+}
+
+/// A ref selector on the READ side of a DML statement is a read, on every reachable door.
+///
+/// One fixture separates tag, branch and `main`, then five statement classes each read a ref
+/// while writing somewhere else. The length is the class count, not a missing seam.
+///
+/// pins: ref-branch-tag-wap/C-002, C-007
+#[tokio::test]
+#[allow(clippy::too_many_lines)]
+async fn ref_selector_on_the_read_side_of_dml_is_a_read() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.t AS SELECT * FROM src",
+    )
+    .await;
+    run(&ctx, &catalogs, "ALTER TABLE ice.sales.t CREATE TAG v1").await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.t SELECT 4 AS id, 'd' AS name",
+    )
+    .await;
+    run(&ctx, &catalogs, "ALTER TABLE ice.sales.t CREATE BRANCH b").await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.t SELECT 5 AS id, 'e' AS name",
+    )
+    .await;
+    assert_eq!(
+        time_travel_id_multiset(&ctx, &catalogs, "SELECT id FROM ice.sales.t.tag_v1").await,
+        vec![1, 2, 3],
+        "fixture: the tag sits behind the branch"
+    );
+    assert_eq!(
+        time_travel_id_multiset(&ctx, &catalogs, "SELECT id FROM ice.sales.t.branch_b").await,
+        vec![1, 2, 3, 4],
+        "fixture: the branch sits behind main"
+    );
+    assert_eq!(
+        time_travel_id_multiset(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await,
+        vec![1, 2, 3, 4, 5],
+        "fixture: main is ahead of both refs"
+    );
+
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.into_dst AS SELECT * FROM src WHERE 1 = 0",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.into_dst SELECT id, name FROM ice.sales.t.branch_b",
+    )
+    .await;
+    assert_eq!(
+        time_travel_id_multiset(&ctx, &catalogs, "SELECT id FROM ice.sales.into_dst").await,
+        vec![1, 2, 3, 4],
+        "INSERT … SELECT reads the branch, not main"
+    );
+
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.del_dst AS SELECT * FROM ice.sales.t",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "DELETE FROM ice.sales.del_dst WHERE id IN (SELECT id FROM ice.sales.t.tag_v1)",
+    )
+    .await;
+    assert_eq!(
+        time_travel_id_multiset(&ctx, &catalogs, "SELECT id FROM ice.sales.del_dst").await,
+        vec![4, 5],
+        "the subquery reads the tag, so only the tag's ids are deleted"
+    );
+
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.upd_dst AS SELECT * FROM ice.sales.t",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "UPDATE ice.sales.upd_dst SET name = 'hit' \
+             WHERE id IN (SELECT id FROM ice.sales.t.tag_v1)",
+    )
+    .await;
+    assert_eq!(
+        rows(
+            &ctx,
+            &catalogs,
+            "SELECT id FROM ice.sales.upd_dst WHERE name = 'hit'",
+        )
+        .await,
+        3,
+        "the subquery reads the tag, so only the tag's three rows are updated"
+    );
+
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.mrg_dst AS SELECT * FROM src WHERE 1 = 0",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "MERGE INTO ice.sales.mrg_dst d USING ice.sales.t.branch_b s ON d.id = s.id \
+             WHEN NOT MATCHED THEN INSERT (id, name) VALUES (s.id, s.name)",
+    )
+    .await;
+    assert_eq!(
+        time_travel_id_multiset(&ctx, &catalogs, "SELECT id FROM ice.sales.mrg_dst").await,
+        vec![1, 2, 3, 4],
+        "MERGE's USING operand is a read of the branch"
+    );
+
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.ctas_dst AS SELECT id, name FROM ice.sales.t.tag_v1",
+    )
+    .await;
+    assert_eq!(
+        time_travel_id_multiset(&ctx, &catalogs, "SELECT id FROM ice.sales.ctas_dst").await,
+        vec![1, 2, 3],
+        "CTAS reads the tag"
+    );
+}
+
+/// The write TARGET is what the write-to-branch refusal claims, and only that.
+/// pins: ref-branch-tag-wap/C-007
+#[tokio::test]
+async fn write_to_branch_refusal_claims_the_target_only() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.t AS SELECT * FROM src",
+    )
+    .await;
+    run(&ctx, &catalogs, "ALTER TABLE ice.sales.t CREATE BRANCH b").await;
+    run(&ctx, &catalogs, "ALTER TABLE ice.sales.t CREATE TAG v1").await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.dst AS SELECT * FROM src WHERE 1 = 0",
+    )
+    .await;
+
+    for sql in [
+        "INSERT INTO ice.sales.t.branch_b SELECT id, name FROM ice.sales.t.tag_v1",
+        "MERGE INTO ice.sales.t.branch_b d USING ice.sales.dst s ON d.id = s.id \
+             WHEN MATCHED THEN UPDATE SET d.name = s.name",
+        "DELETE FROM ice.sales.t.branch_b WHERE id IN (SELECT id FROM ice.sales.dst)",
+    ] {
+        let error = execute(&ctx, &catalogs, sql)
+            .await
+            .expect_err("a ref-named write TARGET must still refuse");
+        assert!(
+            error.to_string().contains("iceberg-datafusion"),
+            "must be the write-to-branch refusal for {sql:?}, got: {error}"
+        );
+    }
+
+    assert_eq!(
+        time_travel_id_multiset(&ctx, &catalogs, "SELECT id FROM ice.sales.t.branch_b").await,
+        vec![1, 2, 3],
+        "every refused write leaves the branch where it was"
     );
 }

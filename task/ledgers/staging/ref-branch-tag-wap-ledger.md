@@ -1,7 +1,8 @@
 # Charter ledger — REF · branch / tag operations + write-audit-publish (WAP)
 
-**Date:** 2026-09-01 · **Branch:** `feat/ref-branch-tag-wap` · **Base:** `482c64d`
-(integration branch `feat/v1-close-and-v07-open`) · **Roadmap:**
+**Date:** 2026-09-01 · **Branch:** `feat/ref-branch-tag-wap` · **Base:** `dc74a40`
+(`git merge-base HEAD origin/feat/v1-close-and-v07-open`; the brief named its parent `482c64d`,
+and the lifecycle gate resolves against either) · **Roadmap:**
 [release-roadmap-2026-08-29.md](../../roadmap/epic-term/release-roadmap-2026-08-29.md) REF row
 ("branch / tag operations + write-audit-publish (WAP), needs fork F-6") · **Path:** STANDARD.
 **risk_tier:** standard.
@@ -25,7 +26,7 @@ SELF_LOGIC_REVIEW:
   action: ACTOR_BUILD charter + ref/WAP surface audit (no product edit yet)
   charter_trace: C-001
   preconditions:
-    - base 482c64d on feat/ref-branch-tag-wap: SATISFIED
+    - base dc74a40 on feat/ref-branch-tag-wap: SATISFIED (one docs commit past the brief's 482c64d)
     - fork pin 33be9a0: SATISFIED
     - live oracle PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, Java 17: SATISFIED
   success_condition: C-001 matrix in this ledger; every product edit below traces to a cell
@@ -67,6 +68,28 @@ assertions.
 | `df.writeTo("cat.ns.t").option("branch","b").append()` | **committed onto `main`, not `b`** (incidental control) | n/a | recorded so no pin claims the option |
 | `CREATE BRANCH b RETAIN 5 DAYS WITH SNAPSHOT RETENTION 3 SNAPSHOTS 7 DAYS` | accepted; refs row `max_reference_age_in_ms=432000000`, `min_snapshots_to_keep=3`, `max_snapshot_age_in_ms=604800000` | **refuses** — the parser takes `n SNAPSHOTS` and then chokes on the trailing `7` | **gap — real grammar half missing** |
 | `t.refs` metadata table | name / type / snapshot_id / the three retention columns | present and queryable | equal |
+
+### A ref selector on the READ side of a DML statement (added 2026-09-01, Critic S2-1)
+
+Reading FROM a ref name and writing TO one are different statements. The first audit matrixed
+only the standalone `SELECT`, so this table was measured after the fact, each cell against a
+working `VERSION AS OF '<ref>'` baseline in the same session. "Engine before" is the tree at
+`99a0d38`.
+
+| Cell | Apache Spark 4.1.2 + Iceberg 1.11.0 | Engine before | Engine after | Verdict |
+|---|---|---|---|---|
+| `INSERT INTO dst SELECT … FROM cat.ns.t.branch_b` | commits the branch's rows into `dst` | **falsely refused** with the write-to-branch message, which named a write target the statement did not have | reads the branch, writes `dst` | **was a wrong-diagnosis refusal** |
+| `DELETE FROM dst WHERE id IN (SELECT … FROM cat.ns.t.tag_v)` | deletes the ref's ids | the same false refusal | deletes the ref's ids | same |
+| `UPDATE dst SET … WHERE id IN (SELECT … FROM cat.ns.t.branch_b)` | updates the ref's ids | the same false refusal | updates the ref's ids | same |
+| `MERGE INTO dst d USING cat.ns.t.branch_b s ON …` | merges the branch's rows | the opaque 4-part planning error — the selector pass opened relations on `FROM`/`JOIN` only, never `USING` | merges the branch's rows | **was an unreachable read door** |
+| `CREATE TABLE dst AS SELECT … FROM cat.ns.t.branch_b` | creates from the branch | already worked (CTAS is not a write head in the sniff) | unchanged | equal, incidental control |
+| `INSERT INTO cat.ns.t.branch_b SELECT … FROM cat.ns.t.tag_v` (target IS a ref) | commits onto `b` | refused | still refused, and the refusal is now about the target only | DECLARED, REF-1 |
+| ANSI door, `INSERT INTO dst SELECT … FROM t.branch_b` | n/a — Spark-dialect sugar | the generic DataFusion 4-part error | unchanged | ANSI has no selector spelling; its door is `FOR VERSION AS OF '<ref>'`. Its write guard was measured and is **already target-scoped**, so it never had the false refusal. |
+
+Root causes, both in the engine and both contained: `time_travel::find_ref_selector_spans` opened
+relations on `FROM`/`JOIN` only; `ref_ddl::find_write_target_branch_span` walked *every*
+`INTO`/`FROM`/`UPDATE`/`TABLE` keyword instead of the statement's one write target, so any
+read-side selector tripped it. Disposition: **fix**, C-007.
 
 ### Tag doors
 
@@ -131,14 +154,17 @@ refuse the whole write leg, correct the reason, file the gap.** Never invent the
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
 | C-001 | **Measure first.** Every reachable branch, tag and WAP door is measured at fork pin `33be9a0` against the live oracle — including incidental controls — and recorded above before any product edit. | The matrix above; every later clause cites a cell. | **PROVEN** | The matrix landed in the charter commit, before any product edit. Three oracle scripts against live PySpark 4.1.2 + `iceberg-spark-runtime-4.1_2.13:1.11.0` (Hadoop catalog, Java 17): the branch/tag/writeTo surface, the WAP stage-then-publish flow, and the retention-grammar edges. Engine cells measured through a scratch probe on this tree and then deleted; each product edit below traces to a cell. Incidental controls recorded even where they contradicted the obvious expectation — `writeTo(t).option("branch", b)` wrote to `main`, `spark.wap.branch` without `write.wap.enabled` was ignored, and Spark parse-fails the top-level `CREATE BRANCH b IN t` spelling this door accepts. |
-| C-002 | Spark-door `cat.ns.t.branch_<name>` and `cat.ns.t.tag_<name>` **reads** resolve the ref and return the ref's rows, value and type, instead of the opaque 4-part planning error; a missing ref refuses loud naming the ref. | Red-first pins. | **PROVEN** | `time_travel::find_ref_selector_spans` pins the selector onto the provider `VERSION AS OF '<ref>'` already builds. Pins: `crates/repark-spark/src/tests/refs_and_wap.rs::branch_and_tag_read_selectors_resolve_the_ref` (branch head, tag snapshot, plain name still `main`, a JOIN against the live table, and a missing ref refusing by name and not as `compound identifier`) and `…::ref_selector_does_not_claim_metadata_tables_or_real_table_names`; facade rows in `python/repark/tests/test_ref_branch_tag_wap.py`. Red-first replayed by reverting `time_travel.rs` alone: the pin failed with `Unsupported compound identifier 'ice.sales.t.branch_audit'. Expected 1, 2 or 3 parts, got 4`. The ANSI door needs no change — its spelling is `FOR VERSION AS OF '<ref>'`, already delivered and pinned in `crates/repark-sql/src/tests.rs`. |
+| C-002 | In a **standalone query** (`SELECT`, including a JOIN), Spark-door `cat.ns.t.branch_<name>` and `cat.ns.t.tag_<name>` resolve the ref and return the ref's rows, value and type, instead of the opaque 4-part planning error; a missing **branch or tag** refuses loud naming the ref. | Red-first pins. | **PROVEN** | Scope narrowed 2026-09-01 after Critic S2-1: this clause covers the standalone read door only, and the DML read side is C-007. `time_travel::find_ref_selector_spans` pins the selector onto the provider `VERSION AS OF '<ref>'` already builds. Pins: `crates/repark-spark/src/tests/refs_and_wap.rs::branch_and_tag_read_selectors_resolve_the_ref` and `…::ref_selector_does_not_claim_metadata_tables_or_real_table_names`; facade rows in `python/repark/tests/test_ref_branch_tag_wap.py`. The fixture now separates all three positions — tag at `[1,2,3,8]`, branch at `[1,2,3]`, `main` at `[1,2,3,8,9]` — so the tag assertion is load-bearing on its own and not only by contrast with `main` (S3-3); the missing-ref negative runs for a branch **and** a tag. Red-first replayed by reverting `time_travel.rs` alone: `Unsupported compound identifier 'ice.sales.t.branch_audit'. Expected 1, 2 or 3 parts, got 4`. The ANSI door needs no change — its spelling is `FOR VERSION AS OF '<ref>'`, already delivered and pinned in `crates/repark-sql/src/tests.rs`. |
 | C-003 | `CREATE BRANCH b RETAIN n <unit> WITH SNAPSHOT RETENTION m SNAPSHOTS k <unit>` parses **both** snapshot-retention halves and writes the oracle-measured `min_snapshots_to_keep` and `max_snapshot_age_ms`; the tag form still refuses (Spark parse-fails it). | Red-first pin asserting the three retention values. | **PROVEN** | Both doors take the optional age half by lookahead — a count followed by a duration unit — so the reversed order stays a refused trailing clause, matching Spark's own parse error. Values are the oracle's `refs` rows, not arithmetic: `432000000 / 3 / 604800000` and `2 / 43200000`. Pins: `refs_and_wap.rs::branch_snapshot_retention_takes_both_count_and_age_halves` + `…_reversed_order_refuses_loud`, `crates/repark-sql/src/ref_ddl/tests.rs::parses_both_snapshot_retention_halves` + `reversed_snapshot_retention_order_refuses`, and the two facade rows. Red-first: the Spark-door pin failed before the parser change; the reversed-order sibling was green before and after, which is the real risk this pair covers. `tag_with_snapshot_retention_refuses` and `snapshot_retention_on_a_tag_refuses` stay green. |
 | C-004 | The write-to-branch refusal names the **true** gap at `33be9a0` — F-6 delivered `to_branch` on the transaction actions; the `iceberg-datafusion` write path the engine's `INSERT`/`UPDATE`/`DELETE` execute through carries no commit target — and the gap is filed against the fork row. Write-to-tag stays refused, which is Spark-equal. | Refusal-text pin; fork filing. | **PROVEN** | `WRITE_TO_BRANCH_NOT_SUPPORTED` rewritten. Its pin (`ref_ddl.rs::write_to_branch_refuses_loud_naming_fork_gap`) now covers five statements — the two branch spellings, a tag, an `UPDATE` and a `DELETE` — and asserts the message names `iceberg-datafusion`, carries pin `33be9a0f411c37cd8d7b38c4db81eec30c1344cc`, and does **not** carry `b009ac158f7584a956fa9292c0e9675a411ecf0d`, so a stale reason cannot survive a repin. Facade row asserts the same three conditions. Filed: the F-6 entry in `task/roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md` gains a dated REF addendum and the restated ask **F-6b** (a commit target on `IcebergTableProvider`). Registry REF-1 re-measured, with the Spark tag refusal (`Cannot write to table with time travel`) recorded as outcome-equal. **Open (owner):** whether RePark should later route the half it owns — `MERGE`, `INSERT OVERWRITE`, `TRUNCATE`, CTAS can call `to_branch` today. REF declined it because it splits one statement family across two answers on a Spark-visible surface. |
 | C-005 | WAP is DECLARED with measured evidence: the three publish procedures and the `spark.wap.*` session confs refuse loud (fail-closed, no silent write to `main`), and the registry says so. | Pins for the three `CALL` refusals and the conf refusal; registry row. | **PROVEN** | `refs_and_wap.rs::wap_publish_procedures_and_session_conf_refuse_loud`: each procedure refuses naming the supported set, each conf key is rejected, and a following `INSERT` leaves the branch at its old three rows — the fail-open shape this clause exists to exclude. Facade rows parametrise the same six doors. Registry row **REF-3** landed with the full oracle flow, including the two incidental controls. The fork is not the blocker here (`ManageSnapshots::fast_forward`, `Transaction::cherry_pick`, `GAP_MATRIX` R98); the row says so. |
 | C-006 | Documents match the pins: registry rows for everything this unit changed, STATUS truth-up for the F-6 wait only, maps in lockstep. | Registry, STATUS, `make check-map-sync`. | **PROVEN** | §2.2 supported-surface note rewritten (both retention halves, the selector read door, the Spark top-level parse-fail control); REF-1 re-measured; **REF-3** (WAP, DECLARED) and **REF-4** (selector reads, FIXED) added. STATUS's DML block drops "REF waits on fork F-6" and states what actually moved. Maps updated in the same commit as their directory's content: `repark-spark/src`, `repark-spark/src/ref_ddl` (new), `repark-spark/src/tests`, `repark-sql/src`, `repark-sql/src/ref_ddl`, `python/repark/tests`, `scripts`, `task/ledgers/staging`. |
 
-VERDICT: 6 PROVEN, 0 OPEN, 0 REJECTED. The ref READ surface is Spark-equal on every reachable
-door; the write leg and WAP stay DECLARED with re-measured reasons and a filed fork ask.
+| C-007 | A ref selector on the **read side of a DML statement** — a source relation, a `MERGE` `USING` operand, or a predicate subquery — is treated as a read and returns the ref's rows; the write-to-branch refusal claims the statement's ONE write target and nothing else. | Oracle rows for all four classes; red-first pins; a sabotage proof that the target-scoped sniff still catches a ref-named target. | **PROVEN** | Added 2026-09-01 under Critic S2-1. Oracle first (`/tmp/ref-oracle/audit4.py`): Spark commits all four classes, and CTAS from a selector too. Two contained engine fixes — `USING` joins `FROM`/`JOIN` as a relation opener, and the write sniff locates the target from the statement's own head keywords (`UPDATE x`, `DELETE FROM x`, `INSERT [INTO\|OVERWRITE] [TABLE] x`, `MERGE INTO x`) instead of scanning every keyword. Pins: `refs_and_wap.rs::ref_selector_on_the_read_side_of_dml_is_a_read` (four classes plus CTAS, each asserting the ref's ids and not `main`'s) and `…::write_to_branch_refusal_claims_the_target_only`; facade rows for both. Red-first: with both fixes reverted the read-side pin fails; with only the sniff fix restored it **still** fails on the `MERGE … USING` leg, so both halves are load-bearing. The target-only pin is green before and after — it guards against over-narrowing, so it was proved non-vacuous by sabotage: dropping `MERGE` from the target locator reds it (`MERGE INTO target must be a three-part … name`). |
+
+VERDICT: 7 PROVEN, 0 OPEN, 0 REJECTED. The ref READ surface is Spark-equal on every reachable
+door, standalone and inside DML; the write leg and WAP stay DECLARED with re-measured reasons and
+a filed fork ask.
 
 ```yaml
 COVERAGE_ATTESTATION:
@@ -150,7 +176,7 @@ COVERAGE_ATTESTATION:
       artifacts: [task/ledgers/staging/ref-branch-tag-wap-ledger.md]
     - id: AT-2
       status: ATTACKED
-      evidence: Selector edges — a metadata-table suffix, a real table whose own name starts with branch_, a missing ref, a JOIN mixing a selector with the live table, and a selector overlapping an AS OF span. Retention edges — count only, age only, both, hours, and the reversed order Spark parse-fails. Write edges — both branch spellings, a tag, UPDATE and DELETE.
+      evidence: Selector edges — a metadata-table suffix, a real table whose own name starts with branch_, a missing branch AND a missing tag, a JOIN mixing a selector with the live table, a selector overlapping an AS OF span, and the four DML read-side positions plus CTAS. Retention edges — count only, age only, both, hours, and the reversed order Spark parse-fails. Write edges — both branch spellings, a tag, UPDATE, DELETE, and a MERGE whose target is a ref while its USING operand is another ref.
       artifacts: [crates/repark-spark/src/tests/refs_and_wap.rs, crates/repark-sql/src/ref_ddl/tests.rs]
     - id: AT-3
       status: ATTACKED
@@ -180,7 +206,7 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-spark/src/ref_ddl.rs, crates/repark-spark/src/tests/ref_ddl.rs]
     - id: AT-10
       status: ATTACKED
-      evidence: One pin per clause per reachable door — Spark door, ANSI door where it has a spelling, and the facade. Both flips replayed red-first (the selector by reverting time_travel.rs, the retention half before the parser change). The test relocation that made room is move-only with a byte-identical sorted `cargo test -p repark-spark -- --list`.
+      evidence: One pin per clause per reachable door — Spark door, ANSI door where it has a spelling, and the facade. Every flip replayed red-first (the standalone selector by reverting time_travel.rs; the retention half before the parser change; the DML read side with both fixes reverted and again with only the sniff fix restored). The one pin that could not flip — the target-only refusal — was proved non-vacuous by sabotage instead. The test relocation that made room is move-only with a byte-identical sorted `cargo test -p repark-spark -- --list`.
       artifacts: [crates/repark-spark/src/tests/refs_and_wap.rs, python/repark/tests/test_ref_branch_tag_wap.py, crates/repark-sql/src/ref_ddl/tests.rs]
   complete: true
 ```
@@ -192,6 +218,22 @@ COVERAGE_ATTESTATION:
 3. C-003 retention grammar, C-004 re-measured refusal, C-005 WAP declaration.
 4. C-002 the `branch_` / `tag_` read selectors.
 5. C-006 registry rows, the fork filing, STATUS truth-up, gates.
+6. Critic remediation: C-007 (the DML read side), the C-001 rows behind it, and the S3 fixes.
+
+## Lessons
+
+- **A green HEAD is not a green history.** `e46a483` (the move-only relocation) retired the
+  `ref_ddl.rs` size-exception row but left CAP-1's mirror of that table stale, so `make py-test`
+  was red from `e46a483` until `263149d` fixed it — three commits later. `make verify` does not
+  run `py-test`, and the mirror is invisible to the size gate itself. History is not rewritten;
+  the miss is recorded here. Next time a size-gate EXCEPTIONS row moves, run `make py-test` in
+  the same commit, because CAP-1 mirrors both size tables.
+- **"Read from" and "write to" are different statements, and a sniff that scans keywords cannot
+  tell them apart.** The first pass matrixed only the standalone `SELECT` and shipped a clause
+  that read as if the whole read door were covered. Two doors were in fact unreachable, and one
+  of them refused with a message that named a write target the statement did not have — a
+  factually false refusal is worse than an opaque one. When a surface has a read side and a write
+  side, matrix them as separate rows before writing the clause.
 
 ## What this unit deliberately did not build
 

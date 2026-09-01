@@ -72,11 +72,55 @@ def test_branch_and_tag_read_selectors_resolve_the_ref(spark: ReparkSession) -> 
     assert sorted(main_ids.column("id").to_pylist()) == [1, 2]
 
 
-def test_missing_ref_selector_refuses_naming_the_ref(spark: ReparkSession) -> None:
-    """A selector for a ref that does not exist refuses and names it."""
+@pytest.mark.parametrize(
+    ("suffix", "ref_name"),
+    [("branch_nope", "nope"), ("tag_missing", "missing")],
+)
+def test_missing_ref_selector_refuses_naming_the_ref(
+    spark: ReparkSession, suffix: str, ref_name: str
+) -> None:
+    """A selector for a ref that does not exist refuses and names it, branch or tag."""
     with pytest.raises(PySparkException) as caught:
-        spark.sql(f"SELECT id FROM {TABLE}.branch_nope").to_arrow()
-    assert "nope" in str(caught.value)
+        spark.sql(f"SELECT id FROM {TABLE}.{suffix}").to_arrow()
+    assert ref_name in str(caught.value)
+    assert "compound identifier" not in str(caught.value)
+
+
+def test_ref_selector_on_the_read_side_of_dml_is_a_read(spark: ReparkSession) -> None:
+    """A selector in a source relation, a USING operand or a predicate subquery is a read."""
+    spark.sql(f"ALTER TABLE {TABLE} CREATE TAG v1")
+    spark.sql(f"INSERT INTO {TABLE} SELECT 2 AS id, 'b' AS name")
+    spark.sql(f"ALTER TABLE {TABLE} CREATE BRANCH b")
+    spark.sql(f"INSERT INTO {TABLE} SELECT 3 AS id, 'c' AS name")
+
+    spark.sql("CREATE TABLE mem.ns.into_dst (id INT, name STRING) USING iceberg")
+    spark.sql(f"INSERT INTO mem.ns.into_dst SELECT id, name FROM {TABLE}.branch_b")
+    into_rows = spark.sql("SELECT id FROM mem.ns.into_dst").to_arrow()
+    assert sorted(into_rows.column("id").to_pylist()) == [1, 2]
+
+    spark.sql("CREATE TABLE mem.ns.mrg_dst (id INT, name STRING) USING iceberg")
+    spark.sql(
+        f"MERGE INTO mem.ns.mrg_dst d USING {TABLE}.tag_v1 s ON d.id = s.id "
+        "WHEN NOT MATCHED THEN INSERT (id, name) VALUES (s.id, s.name)"
+    )
+    merged = spark.sql("SELECT id FROM mem.ns.mrg_dst").to_arrow()
+    assert sorted(merged.column("id").to_pylist()) == [1]
+
+    spark.sql(f"CREATE TABLE mem.ns.del_dst AS SELECT id, name FROM {TABLE}")
+    spark.sql(f"DELETE FROM mem.ns.del_dst WHERE id IN (SELECT id FROM {TABLE}.tag_v1)")
+    remaining = spark.sql("SELECT id FROM mem.ns.del_dst").to_arrow()
+    assert sorted(remaining.column("id").to_pylist()) == [2, 3]
+
+
+def test_write_to_branch_refusal_claims_the_target_only(spark: ReparkSession) -> None:
+    """A ref-named write TARGET still refuses, even when the source is also a selector."""
+    spark.sql(f"ALTER TABLE {TABLE} CREATE BRANCH b")
+    spark.sql(f"ALTER TABLE {TABLE} CREATE TAG v1")
+    with pytest.raises(UnsupportedOperationException) as caught:
+        spark.sql(f"INSERT INTO {TABLE}.branch_b SELECT id, name FROM {TABLE}.tag_v1")
+    assert "iceberg-datafusion" in str(caught.value)
+    branch_rows = spark.sql(f"SELECT id FROM {TABLE}.branch_b").to_arrow()
+    assert branch_rows.column("id").to_pylist() == [1]
 
 
 def test_write_to_branch_refuses_naming_the_fork_write_path(spark: ReparkSession) -> None:

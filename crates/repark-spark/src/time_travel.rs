@@ -271,8 +271,10 @@ fn find_time_travel_spans(tokens: &[Token]) -> Vec<TimeTravelSpan> {
 
 /// Scan tokens for Spark's dotted ref selectors — `cat.ns.t.branch_b` / `cat.ns.t.tag_v`.
 ///
-/// The suffix is a READ selector only. A write naming one of these is refused earlier, by the
-/// router's write-to-branch sniff, so this pass never rewrites a statement that would commit.
+/// The suffix is a READ selector only. A write whose TARGET is one of these is refused earlier,
+/// by the router's write-to-branch sniff, so this pass never rewrites the relation a statement
+/// commits to. Every other position is a read, including a DML statement's source: `FROM`,
+/// `JOIN`, and `MERGE`'s `USING`.
 fn find_ref_selector_spans(tokens: &[Token]) -> Vec<TimeTravelSpan> {
     let significant: Vec<(usize, &Token)> = tokens
         .iter()
@@ -287,6 +289,7 @@ fn find_ref_selector_spans(tokens: &[Token]) -> Vec<TimeTravelSpan> {
             Some(Token::Word(word))
                 if word.value.eq_ignore_ascii_case("FROM")
                     || word.value.eq_ignore_ascii_case("JOIN")
+                    || word.value.eq_ignore_ascii_case("USING")
         );
         if !opens_relation {
             sig_index += 1;

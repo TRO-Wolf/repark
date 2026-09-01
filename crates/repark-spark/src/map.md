@@ -56,8 +56,11 @@ pins: rp-4-fork-repin/C-005, C-006
   `iceberg-datafusion`'s provider commit path (which `INSERT` / `UPDATE` / `DELETE` execute
   through) carries no commit target. Re-measure that sentence on every repin. The registry
   rows this module answers to are `REF-1` (write, DECLARED), `REF-3` (WAP, DECLARED) and
-  `REF-4` (selector reads, FIXED) in `docs/spark-sql-iceberg-parity.md` §2.2.
-  pins: ref-branch-tag-wap/C-003, C-004, C-006
+  `REF-4` (selector reads, FIXED) in `docs/spark-sql-iceberg-parity.md` §2.2. The sniff examines
+  the statement's ONE write target, located from its own head keywords — a ref name in a source
+  relation, a `USING` operand or a predicate subquery is a READ, and claiming it here produced a
+  refusal that named a target the statement did not have.
+  pins: ref-branch-tag-wap/C-003, C-004, C-006, C-007
 - `call.rs` — seven maintenance procedures: six maintenance calls plus `register_table`. Each
   preserves Spark's result schema and count sources. Orphan removal requires `older_than`, defaults
   `dry_run` to true, and refuses shared fallback roots; rewrite-position-delete still refuses
@@ -186,9 +189,11 @@ pins: rp-4-fork-repin/C-005, C-006
   `…::time_travel_statement_pins_never_collide_with_a_reader_options_view`.
   It also resolves Spark's dotted READ selectors, `cat.ns.t.branch_b` and `cat.ns.t.tag_v`, onto
   the same pinned providers — a four-or-more-part name whose last segment carries the prefix and
-  is not a metadata table. A selector overlapping an `AS OF` span is dropped, because Spark does
-  not accept that combination. Writes never reach this pass: the router's write-to-branch sniff
-  refuses them first. pins: ref-branch-tag-wap/C-002
+  is not a metadata table, in any READ position — `FROM`, `JOIN`, and `MERGE`'s `USING`. A
+  selector overlapping an `AS OF` span is dropped, because Spark does not accept that
+  combination. Only the relation a statement WRITES to is out of reach: the router's
+  write-to-branch sniff refuses that one first.
+  pins: ref-branch-tag-wap/C-002, C-007
 - `local_fs_ddl.rs` — SEC-02 local-filesystem DDL gate; 9 in-module tests.
 - `catalog_ops.rs` — catalog lookup, P11 refusals, `iceberg_err`, path-escape rejection, and
   `reregister*` provider invalidation.

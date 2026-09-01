@@ -731,54 +731,70 @@ pub(crate) fn sniff_write_to_branch(sql: &str) -> Option<WriteToBranchSniff> {
     find_write_target_branch_span(&significant)
 }
 
-/// Find a write-target span that ends with a non-metadata trailing segment after a real table path.
+/// Classify the statement's ONE write target when it names a snapshot ref.
+///
+/// Only the target is examined. A ref selector anywhere else in the statement — a source
+/// relation, a `USING` operand, a subquery in the predicate — is a READ, and claiming it here
+/// produced a refusal that named a write target the statement did not have.
 fn find_write_target_branch_span(significant: &[&Token]) -> Option<WriteToBranchSniff> {
-    // Locate INTO / FROM / UPDATE (for UPDATE t SET) keyword then parse dotted name.
-    let mut index = 0usize;
-    while index < significant.len() {
-        let is_target_kw = matches!(
-            significant.get(index),
-            Some(Token::Word(word))
-                if {
-                    let upper = word.value.to_ascii_uppercase();
-                    matches!(upper.as_str(), "INTO" | "FROM" | "UPDATE" | "TABLE")
-                }
-        );
-        // Also: `UPDATE cat.ns.t.branch SET` — word at 0 is UPDATE, next is name.
-        let at_update_name = index == 1
-            && matches!(
-                significant.first(),
-                Some(Token::Word(word)) if word.value.eq_ignore_ascii_case("UPDATE")
-            );
-        if is_target_kw || at_update_name {
-            let name_start = if is_target_kw { index + 1 } else { index };
-            if let Some(parts) = collect_ident_parts(significant, name_start) {
-                // Four-or-more parts: `catalog.namespace.table.ref`.
-                if parts.len() >= 4 {
-                    let last = parts.last()?.as_str();
-                    if !crate::metadata_tables::is_metadata_table_name(last) {
-                        return Some(WriteToBranchSniff::MultiPart);
-                    }
-                }
-                // Two-part `table.branch_foo` under session default catalog.
-                if parts.len() == 2 {
-                    let last = parts.last()?.as_str();
-                    if last.to_ascii_lowercase().starts_with("branch_")
-                        && !crate::metadata_tables::is_metadata_table_name(last)
-                    {
-                        let mut iter = parts.into_iter();
-                        let first = iter.next()?;
-                        let second = iter.next()?;
-                        return Some(WriteToBranchSniff::TwoPart {
-                            parts: [first, second],
-                        });
-                    }
-                }
-            }
+    let parts = collect_ident_parts(significant, write_target_name_start(significant)?)?;
+    if parts.len() >= 4 {
+        let last = parts.last()?.as_str();
+        if !crate::metadata_tables::is_metadata_table_name(last) {
+            return Some(WriteToBranchSniff::MultiPart);
         }
-        index += 1;
+    }
+    if parts.len() == 2 {
+        let last = parts.last()?.as_str();
+        if last.to_ascii_lowercase().starts_with("branch_")
+            && !crate::metadata_tables::is_metadata_table_name(last)
+        {
+            let mut iter = parts.into_iter();
+            let first = iter.next()?;
+            let second = iter.next()?;
+            return Some(WriteToBranchSniff::TwoPart {
+                parts: [first, second],
+            });
+        }
     }
     None
+}
+
+/// Index of the first token of the write target, per the statement's own head keywords.
+fn write_target_name_start(significant: &[&Token]) -> Option<usize> {
+    let head = word_upper(significant, 0)?;
+    let mut index = match head.as_str() {
+        "UPDATE" => 1,
+        "DELETE" => {
+            if word_upper(significant, 1).as_deref() == Some("FROM") {
+                2
+            } else {
+                1
+            }
+        }
+        "INSERT" | "MERGE" => {
+            let mut cursor = 1;
+            if matches!(
+                word_upper(significant, cursor).as_deref(),
+                Some("INTO" | "OVERWRITE")
+            ) {
+                cursor += 1;
+            }
+            cursor
+        }
+        _ => return None,
+    };
+    if word_upper(significant, index).as_deref() == Some("TABLE") {
+        index += 1;
+    }
+    Some(index)
+}
+
+fn word_upper(significant: &[&Token], index: usize) -> Option<String> {
+    match significant.get(index) {
+        Some(Token::Word(word)) => Some(word.value.to_ascii_uppercase()),
+        _ => None,
+    }
 }
 
 fn collect_ident_parts(significant: &[&Token], start: usize) -> Option<Vec<String>> {

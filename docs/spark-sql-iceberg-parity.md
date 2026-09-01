@@ -192,9 +192,11 @@ Supported surface, for reference:
 
 #### REF-1 — writing to a branch or tag
 
-- **repark** — `INSERT` / `UPDATE` / `DELETE` / `MERGE` targeting `t.branch_<name>` (or the
-  `t.branch_name` two-part spelling) refuses loud and names the upstream gap. Reads work
-  (`VERSION AS OF '<ref>'` on both doors, the dotted selector on the Spark door — REF-4), and
+- **repark** — `INSERT` / `UPDATE` / `DELETE` / `MERGE` whose **write target** is
+  `t.branch_<name>` (or the `t.branch_name` two-part spelling) refuses loud and names the
+  upstream gap. Only the target is examined: the same name in a source relation, a `USING`
+  operand or a predicate subquery is a read and runs (REF-4). Reads work generally
+  (`VERSION AS OF '<ref>'` on both doors, the dotted selector on the Spark door), and
   `CREATE|REPLACE BRANCH` re-pinning is the supported write path for refs.
 - **Apache Spark** — the Iceberg extension writes to the named **branch**: `INSERT INTO
   t.branch_b`, `UPDATE`/`DELETE` on the same name, and `df.writeTo("t.branch_b").append()` all
@@ -259,25 +261,40 @@ Supported surface, for reference:
 
 #### REF-4 — reading a ref through the dotted selector — **FIXED 2026-09-01**
 
-- **repark** — `SELECT … FROM cat.ns.t.branch_<name>` and `cat.ns.t.tag_<name>` read the ref on
-  the Spark door, including in a JOIN against the live table; a missing ref refuses naming it.
-  The ANSI door's spelling for the same read is `FOR VERSION AS OF '<ref>'`, which is delivered
-  and pinned — the dotted selector is Spark-dialect sugar and stays Spark-only, like
-  `t.snapshots` (§2.1) whose ANSI spelling is the fork's `t$snapshots`.
-- **Apache Spark** — the same rows; a missing ref raises
+**The boundary is read-vs-write, not query-vs-DML.** `cat.ns.t.branch_b` is a ref selector
+wherever the statement *reads* it — a standalone `SELECT`, a JOIN, a DML statement's source
+relation, a `MERGE`'s `USING` operand, a predicate subquery, or a CTAS body — and all of those
+work. It is REF-1's refusal only where the statement *writes* to it, which is the one relation
+named as the statement's target (`INSERT INTO x`, `INSERT OVERWRITE [TABLE] x`, `UPDATE x`,
+`DELETE FROM x`, `MERGE INTO x`). One statement can do both: `INSERT INTO t.branch_b SELECT …
+FROM t.tag_v` refuses on its target while the selector in its source is a perfectly good read.
+
+- **repark** — the selector reads the ref on the Spark door in every read position above; a
+  missing branch **or** tag refuses naming it. The ANSI door's spelling for the same read is
+  `FOR VERSION AS OF '<ref>'`, which is delivered and pinned — the dotted selector is
+  Spark-dialect sugar and stays Spark-only, like `t.snapshots` (§2.1) whose ANSI spelling is the
+  fork's `t$snapshots`. On that door a dotted selector still answers DataFusion's generic 4-part
+  planning error; its write guard is target-scoped and never claimed a read-side hit.
+- **Apache Spark** — the same rows in every one of those positions, `MERGE … USING` and CTAS
+  included; a missing ref raises
   `ValidationException: Cannot use branch (does not exist): nope`.
   *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-01.)*
-- **Pin** — `crates/repark-spark/src/tests/refs_and_wap.rs::branch_and_tag_read_selectors_resolve_the_ref`
-  and `…::ref_selector_does_not_claim_metadata_tables_or_real_table_names`;
+- **Pin** — `crates/repark-spark/src/tests/refs_and_wap.rs::branch_and_tag_read_selectors_resolve_the_ref`,
+  `…::ref_selector_on_the_read_side_of_dml_is_a_read`,
+  `…::write_to_branch_refusal_claims_the_target_only`, and
+  `…::ref_selector_does_not_claim_metadata_tables_or_real_table_names`;
   `python/repark/tests/test_ref_branch_tag_wap.py`
-- **Rationale** — the row is kept after the fix because the *boundary* is the interesting part.
-  Before REF the selector answered DataFusion's opaque `Unsupported compound identifier …
-  Expected 1, 2 or 3 parts, got 4`, which named neither the ref nor the door. The rewrite claims
-  a four-or-more-part name whose last segment carries the `branch_`/`tag_` prefix and is not a
-  metadata-table name, so a table literally named `branch_exp` still resolves as itself, and a
-  selector overlapping an `AS OF` clause is left alone because Spark rejects that combination.
-  Writes to the same names are REF-1's refusal, which fires first.
-  pins: ref-branch-tag-wap/C-002
+- **Rationale** — the row is kept after the fix because the boundary above is the interesting
+  part. Before REF the selector answered DataFusion's opaque `Unsupported compound identifier …
+  Expected 1, 2 or 3 parts, got 4`, which named neither the ref nor the door; worse, a selector
+  on a DML statement's read side tripped the write-to-branch sniff and refused with a message
+  that claimed a write target the statement did not have. A factually false refusal is worse than
+  an opaque one, so the sniff now locates the target from the statement's own head keywords and
+  examines only that. The read rewrite claims a four-or-more-part name whose last segment carries
+  the `branch_`/`tag_` prefix and is not a metadata-table name, so a table literally named
+  `branch_exp` still resolves as itself, and a selector overlapping an `AS OF` clause is left
+  alone because Spark rejects that combination.
+  pins: ref-branch-tag-wap/C-002, C-007
 
 ### 2.3 DML statement forms
 
