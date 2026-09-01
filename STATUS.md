@@ -117,7 +117,9 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
 - **The Spark semantics fixes (SEM)** (chartered 2026-08-21). #192/#193 delivered SEM-1/3/4/5/6
   (`RE-1`/`RE-3` retired, `REGEX_GROUP_INDEX`, string-`idx`). Owner ruling 2026-08-31: both
   silently-wrong answers fix to Spark. This unit closes `LOG-1` (Spark-door natural `log`,
-  dual-arity null-guard, `F.log` two-arg) and re-measures RE-1.
+  dual-arity null-guard, `F.log` two-arg) and re-measures RE-1. `F.log` is an accept-more
+  superset of PySpark's (a column base accepted, keyword names differ) — ledger C-006,
+  oracle note under C-010.
   Ledger: [task/ledgers/staging/sem-1-spark-answer-parity-ledger.md](task/ledgers/staging/sem-1-spark-answer-parity-ledger.md).
 <!-- /ws -->
 

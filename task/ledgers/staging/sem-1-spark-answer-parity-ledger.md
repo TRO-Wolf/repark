@@ -165,7 +165,63 @@ COVERAGE_ATTESTATION:
       justification: A scalar function whose refusals are plan-time errors naming the argument — no log or metrics surface exists on this path to instrument.
     - id: AT-10
       status: ATTACKED
-      evidence: All ten clauses carry pins citations; values asserted on toArrow/collect with Arrow type checks, never show; branch liveness — every guard arm (value or base <= 0, null, arity) has a nameable input that changes the output (log(0), log(1, 1), log(NULL, 8), a three-arg call); a mutation flipping natural_log's guard to positive-only would red the domain-edge pins.
-      artifacts: [python/repark/tests/test_sem1_spark_log.py, python/repark/tests/test_sem1_extract_all_group_default.py, crates/repark-python/src/column/door_parity_tests.rs::expected_divergences_are_all_still_real]
-  reattested: []
+      evidence: All ten clauses carry pins citations; values asserted on toArrow/collect with Arrow type checks, never show; branch liveness — the domain guard arms have nameable inputs (log(0), log(1, 1), a three-arg call), and the null arms are held by the array-level pin null_slots_null_out_even_when_the_buffer_holds_a_live_value, which builds a null slot whose underlying buffer value is 5.0 on both arities and asserts NULL out; removing the arms reds that pin (measured 2026-09-01 — one-arg leaked ln(5) = 1.6094379124341003) while the SQL-door null pins stay green, because a built null slot reads back 0.0 and the domain guard masks the null arm. Corrected 2026-09-01 (critic F-1): the earlier claim cited log(NULL, 8) as null-arm liveness, which the masking defeats.
+      artifacts: [crates/repark-functions/src/spark_log.rs::tests::null_slots_null_out_even_when_the_buffer_holds_a_live_value, python/repark/tests/test_sem1_spark_log.py, python/repark/tests/test_sem1_extract_all_group_default.py, crates/repark-python/src/column/door_parity_tests.rs::expected_divergences_are_all_still_real]
+  reattested: [AT-10]
+```
+
+## Critic disposition (2026-09-01, verdict PASS — no S1)
+
+The critic measured every Spark answer in the unit against the live PySpark 4.1.2 oracle and
+reported **45/45 cells matching**; its oracle table of record is this ledger's Oracle section
+(C-010). The critic's full report text was not filed in the clone; this section is transcribed
+from the verdict summary delivered with the closure brief.
+
+**Ruling-record gap, recorded per the critic:** no gate validates parity-ruling records —
+`scripts/check_owner_ruling.py` binds only the 2026-08-26 no-comments ruling byte-for-byte. The
+2026-08-31 ruling record (ledger C-001, the LOG-1 registry row, the charter gate-pass note,
+STATUS) is therefore **review-held**, not gate-held.
+
+```yaml
+FINDING:
+  id: F-sem-1-spark-answer-parity-1
+  severity: S2
+  category: AT-10
+  clause: [C-004]
+  claim: The null-guard arms in spark_log.rs were load-bearing but unpinned — after cast an Arrow null slot reads back 0.0, so the domain guard masks the null arm and no SQL-level pin fails when the arms are removed.
+  evidence: Critic probe — a Float64Array null slot carrying live value 5.0 returned 1.2920296742201791 (log(5, 8)) with the arms removed; re-measured 2026-09-01, one-arg leaked ln(5) = 1.6094379124341003.
+  disposition: REMEDIATED (crates/repark-functions/src/spark_log.rs::tests::null_slots_null_out_even_when_the_buffer_holds_a_live_value — red with the arms removed, green restored; AT-10 re-attested with the pin as the null-arm liveness evidence)
+```
+
+```yaml
+FINDING:
+  id: F-sem-1-spark-answer-parity-2
+  severity: S3
+  category: AT-1
+  clause: [C-001]
+  claim: The charter roster row and APPROVAL_GATE items 1-2 still read TABLED/refused with no pointer to the supersession, so a roster-only reader cannot recover the delivery.
+  evidence: task/ledgers/staging/sem-0-charter-ledger.md, roster and APPROVAL_GATE.
+  disposition: REMEDIATED (three dated 2026-09-01 annotations appended in place — none rewritten)
+```
+
+```yaml
+FINDING:
+  id: F-sem-1-spark-answer-parity-3
+  severity: S3
+  category: AT-6
+  clause: [C-006]
+  claim: STATUS lost the F.log divergence bullet with no replacement, leaving the facade's accept-more superset unrecorded at the status source of truth.
+  evidence: STATUS.md SEM workstream block before 2026-09-01.
+  disposition: REMEDIATED (one line added to the SEM block citing C-006 with the oracle note under C-010)
+```
+
+```yaml
+FINDING:
+  id: F-sem-1-spark-answer-parity-4
+  severity: S3
+  category: AT-8
+  clause: [C-001]
+  claim: No gate validates parity-ruling records; check_owner_ruling.py binds only the 2026-08-26 comments ruling, so the 2026-08-31 ruling record is review-held.
+  evidence: scripts/check_owner_ruling.py EXPECTED_RULING covers only the AGENTS.md no-comments ruling.
+  disposition: ACCEPTED_FLAGGED (ledger-disposition only per the critic; below the severity floor — the ruling lives in ledger C-001, the LOG-1 registry row, the charter gate-pass note and STATUS, and review holds it)
 ```

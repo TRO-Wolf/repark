@@ -34,6 +34,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   two-arg is `log(base, expr)`. Both arities return NULL on Spark's domain edges (zero,
   negative, null, base <= 0). Overwrites DataFusion's base-10 `LogFunc` from `register_all`.
   Native ANSI `repark.sql()` does not load this kernel.
+  **Critic remediation (2026-09-01):** `null_slots_null_out_even_when_the_buffer_holds_a_live_value`
+  builds a null slot whose underlying buffer value is 5.0 (both arities) and asserts NULL —
+  SQL-door null pins cannot see the null arms because a built null slot reads back 0.0 and the
+  domain guard masks it.
   pins: sem-1-spark-answer-parity/C-001, C-004, C-007, C-009
 - `spark_regexp.rs` — **GT1-FIX A1/A2 / R3 / R4-1:** Spark `regexp_count` /
   `regexp_instr` (Java find-loop; positional mid-surrogate probe, not

@@ -140,7 +140,9 @@ impl ScalarUDFImpl for SparkLog {
 
 #[cfg(test)]
 mod tests {
-    use datafusion::arrow::array::Array;
+    use datafusion::arrow::array::{Array, ArrayData};
+    use datafusion::arrow::buffer::Buffer;
+    use datafusion::config::ConfigOptions;
     use datafusion::prelude::SessionContext;
 
     use super::*;
@@ -149,6 +151,44 @@ mod tests {
         let ctx = SessionContext::new();
         crate::register_all(&ctx);
         ctx
+    }
+
+    fn null_slot_with_live_buffer_value(values: Vec<f64>, null_row: usize) -> Float64Array {
+        let mut validity = vec![0u8; values.len().div_ceil(8)];
+        for row in 0..values.len() {
+            if row != null_row {
+                validity[row / 8] |= 1 << (row % 8);
+            }
+        }
+        let data = ArrayData::builder(DataType::Float64)
+            .len(values.len())
+            .add_buffer(Buffer::from_vec(values))
+            .null_bit_buffer(Some(Buffer::from_vec(validity)))
+            .build()
+            .unwrap_or_else(|error| panic!("build probe array: {error}"));
+        Float64Array::from(data)
+    }
+
+    fn invoke_log(ctx: &SessionContext, arrays: Vec<Arc<dyn Array>>) -> Arc<dyn Array> {
+        let udf = Arc::clone(
+            ctx.state()
+                .scalar_functions()
+                .get("log")
+                .unwrap_or_else(|| panic!("`log` is registered")),
+        );
+        let value = udf
+            .invoke_with_args(ScalarFunctionArgs {
+                args: arrays.into_iter().map(ColumnarValue::Array).collect(),
+                arg_fields: vec![],
+                number_rows: 1,
+                return_field: Arc::new(Field::new("log", DataType::Float64, true)),
+                config_options: Arc::new(ConfigOptions::default()),
+            })
+            .unwrap_or_else(|error| panic!("invoke `log`: {error}"));
+        match value {
+            ColumnarValue::Array(array) => array,
+            ColumnarValue::Scalar(_) => panic!("expected an array result"),
+        }
     }
 
     async fn first_f64(ctx: &SessionContext, sql: &str) -> Option<f64> {
@@ -220,5 +260,40 @@ mod tests {
         assert!((bare_value - 8.0_f64.log10()).abs() < 1e-12);
         assert!((spark_value - 8.0_f64.ln()).abs() < 1e-15);
         assert!((bare_value - spark_value).abs() > 0.1);
+    }
+
+    #[test]
+    fn null_slots_null_out_even_when_the_buffer_holds_a_live_value() {
+        let ctx = spark_ctx();
+        let probe = null_slot_with_live_buffer_value(vec![5.0], 0);
+        assert!(probe.is_null(0));
+        assert_eq!(probe.value(0).to_bits(), 5.0_f64.to_bits());
+        let probe = Arc::new(probe) as Arc<dyn Array>;
+        let cases: Vec<(&str, Vec<Arc<dyn Array>>)> = vec![
+            ("one-arg", vec![Arc::clone(&probe)]),
+            (
+                "base slot",
+                vec![
+                    Arc::new(null_slot_with_live_buffer_value(vec![5.0], 0)),
+                    Arc::new(Float64Array::from(vec![8.0])),
+                ],
+            ),
+            (
+                "value slot",
+                vec![
+                    Arc::new(Float64Array::from(vec![2.0])),
+                    Arc::new(null_slot_with_live_buffer_value(vec![5.0], 0)),
+                ],
+            ),
+        ];
+        for (label, arrays) in cases {
+            let result = invoke_log(&ctx, arrays);
+            let floats = result.as_primitive::<Float64Type>();
+            assert!(
+                floats.is_null(0),
+                "{label}: expected NULL, got {}",
+                floats.value(0)
+            );
+        }
     }
 }
