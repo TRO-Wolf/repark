@@ -127,16 +127,25 @@ Read against the three questions below:
 1. **The value change is authorized for `RE-1` and refused for `LOG-1`.** `RE-1` closes and its row
    leaves the registry; `LOG-1` stays a BACKLOG row with its pins intact, and SEM-2 is **tabled,
    not dropped** — the scope in §SEM-2 above stands as written for whenever it is untabled.
+   *Superseded (2026-09-01 annotation): superseded by the 2026-08-31 owner ruling; delivered by
+   SEM-1.*
 2. **The adjacent defects go ahead**, minus one. The string-`idx` regression is SEM-3. The missing
    `F.log` two-argument overload is **tabled with SEM-2**: the only kernel available for it today
    is DataFusion's, the one without Spark's null-guard, so shipping the overload alone would trade
    a crash for an answer that is silently wrong on six edges — the exact failure mode this campaign
    exists to remove. Raised with the owner before starting.
+   *Superseded (2026-09-01 annotation): superseded by the 2026-08-31 owner ruling; delivered by
+   SEM-1.*
 3. **The `REGEX_GROUP_INDEX` message is its own unit**, SEM-4, and was sequenced FIRST rather than
    last: SEM-1 makes that refusal reachable from an ordinary two-argument call, so its pins had to
    assert the final wording rather than one about to change.
 
 Delivery is one branch, one PR, matching the last two campaigns.
+
+**Owner ruling 2026-08-31 (gate pass):** both RE-1 and LOG-1 are fixed to Spark
+semantics. The 2026-08-21 tabling of LOG-1 is lifted. Delivery is
+[sem-1-spark-answer-parity-ledger.md](sem-1-spark-answer-parity-ledger.md). The
+measured scope in §SEM-1 and §SEM-2 above stands.
 
 ## Unit roster, as ruled
 
@@ -145,7 +154,7 @@ Delivery is one branch, one PR, matching the last two campaigns.
 | **SEM-4** | The regexp refusals say Spark's words; the four kernels name themselves | Delivered |
 | **SEM-1** | `RE-1` — the two-argument `regexp_extract_all` defaults to group 1 | Delivered |
 | **SEM-3** | The string-`idx` regression from F-FNP6A-1 | Queued |
-| **SEM-2** | `LOG-1` + the `F.log` overload | **TABLED** by the owner |
+| **SEM-2** | `LOG-1` + the `F.log` overload | **TABLED** by the owner — superseded by the 2026-08-31 owner ruling; delivered by SEM-1 (annotated 2026-09-01) |
 
 The three questions the gate was held on, kept for the record:
 

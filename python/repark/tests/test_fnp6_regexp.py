@@ -131,6 +131,7 @@ def test_extract_all_reuses_the_java_matcher_stepping() -> None:
     ``idx=0`` is named explicitly (SEM-1): ``[0-9]*`` has no capture group, and the two-argument
     default is Spark's group 1, which RAISES on such a pattern — this test is about the stepping
     walk, not the group default.
+    pins: sem-1-spark-answer-parity/C-003
     """
     frame = _session().createDataFrame([("2026",)], "s string")
     out = frame.select(

@@ -1690,31 +1690,14 @@ the pin rather than obeying it.
 
 ### LOG-1 — SQL-door `log` is base 10, Spark's is natural
 
-- **repark** — on the **Spark facade's SQL door** (`SparkSession.sql`; the native ANSI door is a
-  separate contract per [ADR-0002](adr/0002-two-sql-doors.md) and is not in this row). The facade's
-  `F.log(8.0)` is right at `2.0794415416798357` — it lowers straight to `ln`, bypassing the registry
-  entirely — while `SELECT log(8)` returns `0.9030899869919434`, DataFusion's base-10 `LogFunc`.
-  **Corrected 2026-08-21:** this row first said "`log(2, 8)` gives `3.0` on both, so only the
-  one-argument form diverges". That is **false**. The two-argument form agrees only on positive
-  operands; on any non-positive one it diverges too, because DataFusion's `LogFunc` has no
-  null-guard — `log(0, 8)` → `-0.0`, `log(-2, 8)` → `NaN`, `log(10, 0)` → `-inf`,
-  `log(10, -1)` → `NaN`, and the one-argument `log(0)` → `-inf`, `log(-1)` → `NaN`.
-- **Apache Spark** — `log(8)` → `2.0794415416798357`, `log(2, 8)` → `3.0`, and **NULL** for every
-  one of the six non-positive cases above (`Logarithm.nullSafeEval`). `log(1, 8)` → `inf` on both.
-  *(oracle: live — PySpark 4.1.2.)*
-- **Pin** — `python/repark/tests/test_lrs4_door_domain.py::test_log1_sql_door_log_is_base_ten`
-  and `::test_log1_the_two_argument_form_diverges_on_non_positive_operands`
-- **Rationale** — BACKLOG, and it is a **silently wrong answer on a common function**: a query
-  that reads `log(x)` through `spark.sql` gets a number that is off by a constant factor and looks
-  perfectly plausible. Not closed here because it needs a Spark-semantics `log` kernel registered
-  over DataFusion's — a new kernel and a changed answer, which is outside this campaign's
-  invariant. The kernel must carry Spark's null-guard at **both** arities; redirecting the
-  one-argument form to `ln` and leaving DataFusion's two-argument formula in place would close half
-  the row and leave the other half silently open, which is the failure mode the correction above
-  records. Found the day the C-012 guard's domain grew from 20 hand-listed names to the session's
-  own 341, which is the argument for that change on its own. **Scope for closing it** (the kernel
-  shape, the ratchet move it forces, and the adjacent missing `F.log` overload) is
-  [task/sem-0-charter-ledger.md](../task/ledgers/staging/sem-0-charter-ledger.md), SEM-2 — queued, gate held.
+> **FIXED (2026-08-31, SEM-1).** Owner ruling 2026-08-31: fix to Spark semantics. Spark-door
+> `log(expr)` is the natural log (`log(8)` → `2.0794415416798357`); `log(base, expr)` is log at
+> that base (`log(2, 8)` → `3.0`). Both arities return NULL on zero, negative, and null operands;
+> `log(1, 8)` stays `inf`. Native ANSI `repark.sql()` is unchanged (base 10, ADR-0002). `F.log`
+> accepts `log(arg1, arg2=None)`. Kernel: `crates/repark-functions/src/spark_log.rs`. Pins:
+> `python/repark/tests/test_lrs4_door_domain.py::test_log1_sql_door_log_is_natural`,
+> `::test_log1_both_arities_null_on_non_positive_operands`,
+> `python/repark/tests/test_sem1_spark_log.py`. Oracle: live PySpark 4.1.2, 2026-08-31.
 
 ### ORPHAN-1 — `remove_orphan_files` requires `older_than`; Spark defaults it
 
@@ -1955,8 +1938,8 @@ the pin rather than obeying it.
 - **Pin** — `python/repark/tests/test_lrs4_door_domain.py::test_unix1_sql_door_from_unixtime_is_a_timestamp`
 - **Rationale** — BACKLOG. The **type** is the divergence, and it is the facade that matches Spark.
   A consumer that writes `SELECT from_unixtime(t)` to Parquet gets a timestamp column where Spark
-  would have written a string. Not closed here for the same reason as `LOG-1`: it changes what a
-  working query returns.
+  would have written a string. Not closed here because it changes what a working query
+  returns (the same class of break `LOG-1` needed a dated ruling to take).
 
 ### V3-LINEAGE-1 — `rewrite_data_files` carries row lineage through format-v3 compaction
 

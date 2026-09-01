@@ -43,6 +43,8 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   Sketches (32), CSV/XML/XPath (11), VARIANT (8), and geospatial (5) are deferred-by-cost.
   pins: fnp-15-16/C-001, C-008, C-009, C-010, C-011, C-014, C-016
 - `functions_expr.py` — shared expression builders and scalar lowering.
+  SEM-1: `log(col)` or `log(base, expr)` (PySpark `log(arg1, arg2=None)`).
+  pins: sem-1-spark-answer-parity/C-006
 - `functions_lambda.py` — higher-order function and lambda builders. FNP-4c adds
   `transform`, `filter`, `forall`, `aggregate`, `reduce`, `zip_with`, `transform_keys`,
   `transform_values`, `map_filter`, `map_zip_with` (installed onto `functions.py` `__all__`).
