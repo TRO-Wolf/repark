@@ -66,7 +66,9 @@ def test_v3_geo_1_is_declared_and_shredded_variant_is_rowed_with_v3_6_pins() -> 
     geo = registry[registry.index("### V3-GEO-1") : registry.index("## 5. Facade drop-in")]
     assert "DECLARED" in geo and _RULING_DATE in geo
     assert "v3_type_columns_geometry_geography_variant_refuse_naming_the_type" in geo
-    shred = registry[registry.index("### V3-VARIANT-SHRED-1") : registry.index("## 5. Facade drop-in")]
+    shred = registry[
+        registry.index("### V3-VARIANT-SHRED-1") : registry.index("## 5. Facade drop-in")
+    ]
     assert "DECLARED" in shred and _RULING_DATE in shred
     assert "fork_variant_arrow_maps_and_parquet_write_refuses" in shred
     assert "fork_variant_scan_refuses_naming_the_type" in shred
