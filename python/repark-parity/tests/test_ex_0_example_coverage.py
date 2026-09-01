@@ -1,6 +1,7 @@
 """Pins for the v0.7 example-drift gate.
 
 pins: ex-0-example-drift-gate/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
+pins: ex-1-class-surfaces/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 """
 
 from __future__ import annotations
@@ -32,7 +33,10 @@ def _load_gate() -> ModuleType:
 
 
 def test_ex_0_enumerator_emits_five_families_and_repark_sql() -> None:
-    """C-001: the AST walk names every family and the native SQL door."""
+    """C-001: the AST walk names every family and the native SQL door.
+
+    pins: ex-1-class-surfaces/C-001
+    """
     gate = _load_gate()
     rows = gate.enumerate_public_surface(_REPO)
     families = {family for family, _name in rows}
@@ -49,7 +53,7 @@ def test_ex_0_enumerator_emits_five_families_and_repark_sql() -> None:
     assert "F.zip_with" in names
     assert "F.xpath" in names
     assert "F.unwrap_udt" in names
-    assert len(rows) == 763
+    assert len(rows) == 913
 
 
 def test_ex_0_uncovered_name_is_red() -> None:
@@ -84,7 +88,10 @@ def test_ex_0_backlog_count_mismatch_is_red() -> None:
 
 
 def test_ex_0_seed_examples_declare_covers_and_leave_the_backlog() -> None:
-    """C-002 / C-008: seed scripts exist, declare COVERS, and those names are not backlogged."""
+    """C-002 / C-008: seed scripts exist, declare COVERS, and those names are not backlogged.
+
+    pins: ex-1-class-surfaces/C-006
+    """
     gate = _load_gate()
     scripts = gate.example_scripts(_REPO)
     relatives = {path.relative_to(_REPO).as_posix() for path in scripts}
@@ -105,7 +112,7 @@ def test_ex_0_seed_examples_declare_covers_and_leave_the_backlog() -> None:
     backlog = set(gate.parse_named_lines(_REPO / gate.BACKLOG_RELATIVE, kind="backlog"))
     assert covered.isdisjoint(backlog)
     assert len(backlog) == gate.BACKLOG_BASELINE
-    assert gate.BACKLOG_BASELINE == 742
+    assert gate.BACKLOG_BASELINE == 892
 
 
 def test_ex_0_exceptions_file_names_only_inventory_rows() -> None:
@@ -230,7 +237,10 @@ def test_ex_0_exception_for_covered_name_is_red() -> None:
 
 
 def test_ex_0_makefile_wires_the_target_into_ci() -> None:
-    """C-009: make ci depends on check-example-coverage; the wrapper uses isolated Python."""
+    """C-009: make ci depends on check-example-coverage; the wrapper uses isolated Python.
+
+    pins: ex-1-class-surfaces/C-007
+    """
     makefile = _MAKEFILE.read_text(encoding="utf-8")
     assert "check-example-coverage" in makefile
     ci_line = next(line for line in makefile.splitlines() if line.startswith("ci:"))
@@ -267,7 +277,10 @@ def test_ex_0_execute_child_drops_python_path_overrides(monkeypatch: MonkeyPatch
 
 
 def test_ex_0_no_product_code_in_the_gate_script() -> None:
-    """C-010: the gate does not import engine crates or edit product modules."""
+    """C-010: the gate does not import engine crates or edit product modules.
+
+    pins: ex-1-class-surfaces/C-008
+    """
     source = _GATE.read_text(encoding="utf-8")
     tree = ast.parse(source)
     imported: set[str] = set()
@@ -278,3 +291,188 @@ def test_ex_0_no_product_code_in_the_gate_script() -> None:
             imported.add(node.module.split(".", 1)[0])
     assert "repark" not in imported
     assert "crates" not in source
+
+
+def test_ex_1_class_surfaces_are_enumerated_with_their_counts() -> None:
+    """EX-1 C-001: the seven ruled surfaces are in the inventory with their measured counts.
+
+    pins: ex-1-class-surfaces/C-001
+    """
+    gate = _load_gate()
+    rows = gate.enumerate_public_surface(_REPO)
+    families: dict[str, int] = {}
+    for family, _name in rows:
+        families[family] = families.get(family, 0) + 1
+    assert families["column"] == 40
+    assert families["window"] == 22
+    assert families["catalog"] == 28
+    assert families["types"] == 32
+    assert families["ml"] == 28
+    names = {name for _family, name in rows}
+    assert "Column.alias" in names
+    assert "Window.partitionBy" in names
+    assert "WindowSpec.rowsBetween" in names
+    assert "Catalog.listTables" in names
+    assert "Row.asDict" in names
+    assert "types.StringType" in names
+    assert "ml.Pipeline" in names
+    assert "Column.__add__" not in names
+    assert "Column._native" not in names
+
+
+def test_ex_1_new_surfaces_reuse_the_existing_tables() -> None:
+    """EX-1 C-002: class surfaces are CLASS_SURFACES rows, module surfaces MODULE_SURFACES rows.
+
+    pins: ex-1-class-surfaces/C-002
+    """
+    gate = _load_gate()
+    class_rows = {(row[0], row[1]) for row in gate.CLASS_SURFACES}
+    assert ("column", "Column") in class_rows
+    assert ("window", "Window") in class_rows
+    assert ("window", "WindowSpec") in class_rows
+    assert ("catalog", "Catalog") in class_rows
+    assert ("types", "Row") in class_rows
+    module_rows = {(row[0], row[1]) for row in gate.MODULE_SURFACES}
+    assert module_rows == {("ta", "ta"), ("types", "types"), ("ml", "ml")}
+    for _family, _prefix, relative in gate.MODULE_SURFACES:
+        assert (_REPO / relative).is_file()
+    for _family, _prefix, relative, class_name, _nested in gate.CLASS_SURFACES:
+        assert (_REPO / relative).is_file()
+        assert class_name
+
+
+def test_ex_1_missing_class_or_all_is_a_hard_error(tmp_path: Path) -> None:
+    """EX-1 C-002: shape drift on a surface raises, it never silently skips.
+
+    pins: ex-1-class-surfaces/C-002
+    """
+    gate = _load_gate()
+    empty = tmp_path / "empty.py"
+    empty.write_text("x = 1\n", encoding="utf-8")
+    tree = gate.parse_source(empty)
+    try:
+        gate.class_def(tree, "Column", where="empty.py")
+    except RuntimeError as error:
+        assert "class Column is missing" in str(error)
+    else:
+        raise AssertionError("a missing class must raise")
+    try:
+        gate.dunder_all(tree, where="empty.py")
+    except RuntimeError as error:
+        assert "no module-level __all__" in str(error)
+    else:
+        raise AssertionError("a missing __all__ must raise")
+
+
+def test_ex_1_module_doors_are_cross_checked_against_live_all() -> None:
+    """EX-1 C-003: every module door is live-cross-checked, so a dynamic table cannot hide.
+
+    pins: ex-1-class-surfaces/C-003
+    """
+    gate = _load_gate()
+    checked = {module for _prefix, module in gate.LIVE_ALL_MODULES}
+    assert checked == {
+        "repark.spark.functions",
+        "repark.spark.ta",
+        "repark.spark.types",
+        "repark.spark.ml",
+    }
+    prefixes = {prefix for prefix, _module in gate.LIVE_ALL_MODULES}
+    assert {prefix for _family, prefix, _relative in gate.MODULE_SURFACES} <= {
+        prefix.rstrip(".") for prefix in prefixes
+    }
+    sources = [gate.TYPES_SOURCE, gate.ML_SOURCE, gate.CATALOG_SOURCE, gate.ROW_SOURCE]
+    sources.extend(row[2] for row in gate.CLASS_SURFACES if row[0] in {"column", "window"})
+    for source in sources:
+        text = (_REPO / source).read_text(encoding="utf-8")
+        assert "setattr(" not in text
+        assert "install_into" not in text
+        assert "globals()[" not in text
+
+
+def test_ex_1_class_surface_binds_only_on_a_classified_receiver() -> None:
+    """EX-1 C-004: Window binds on its class root, WindowSpec / Column / Row on a local.
+
+    pins: ex-1-class-surfaces/C-004
+    """
+    gate = _load_gate()
+    window = ast.parse(
+        "from repark.spark.window import Window\n"
+        'COVERS: list[str] = ["Window.partitionBy", "WindowSpec.rowsBetween"]\n'
+        'spec = Window.partitionBy("g")\n'
+        "print(spec.rowsBetween(-1, 1))\n"
+    )
+    assert gate.cover_is_used("Window.partitionBy", window)
+    assert gate.cover_is_used("WindowSpec.rowsBetween", window)
+    assert not gate.cover_is_used("Window.orderBy", window)
+    row = ast.parse(
+        "from repark.spark import SparkSession\n"
+        'COVERS: list[str] = ["Row.asDict"]\n'
+        "spark = SparkSession.builder.getOrCreate()\n"
+        "frame = spark.range(1)\n"
+        "print(frame.collect()[0].asDict())\n"
+    )
+    assert gate.cover_is_used("Row.asDict", row)
+    unrooted = ast.parse(
+        'COVERS: list[str] = ["Column.alias"]\n'
+        "def main() -> None:\n"
+        "    object().alias\n"
+        "    object().partitionBy\n"
+        "    object().asDict\n"
+    )
+    assert not gate.cover_is_used("Column.alias", unrooted)
+    assert not gate.cover_is_used("Window.partitionBy", unrooted)
+    assert not gate.cover_is_used("Row.asDict", unrooted)
+
+
+def test_ex_1_module_surface_binds_only_on_its_own_door() -> None:
+    """EX-1 C-005: a types cover does not bind on the ml door, and the reverse.
+
+    pins: ex-1-class-surfaces/C-005
+    """
+    gate = _load_gate()
+    types_alias = ast.parse(
+        "from repark.spark import types as T\n"
+        'COVERS: list[str] = ["types.StringType"]\n'
+        "print(T.StringType())\n"
+    )
+    assert gate.cover_is_used("types.StringType", types_alias)
+    types_import = ast.parse(
+        "from repark.spark.types import StringType\n"
+        'COVERS: list[str] = ["types.StringType"]\n'
+        "print(StringType())\n"
+    )
+    assert gate.cover_is_used("types.StringType", types_import)
+    ml_alias = ast.parse(
+        "from repark.spark import ml\n"
+        'COVERS: list[str] = ["ml.Pipeline"]\n'
+        "print(ml.Pipeline(stages=[]))\n"
+    )
+    assert gate.cover_is_used("ml.Pipeline", ml_alias)
+    crossed = ast.parse(
+        "from repark.spark import ml\n"
+        'COVERS: list[str] = ["types.StringType"]\n'
+        "print(ml.StringType())\n"
+    )
+    assert not gate.cover_is_used("types.StringType", crossed)
+    reversed_cross = ast.parse(
+        "from repark.spark import types as T\n"
+        'COVERS: list[str] = ["ml.Pipeline"]\n'
+        "print(T.Pipeline())\n"
+    )
+    assert not gate.cover_is_used("ml.Pipeline", reversed_cross)
+
+
+def test_ex_1_every_new_name_is_in_the_backlog() -> None:
+    """EX-1 C-006: the widening covers nothing; every new name is a backlog row.
+
+    pins: ex-1-class-surfaces/C-006
+    """
+    gate = _load_gate()
+    rows = gate.enumerate_public_surface(_REPO)
+    backlog = set(gate.parse_named_lines(_REPO / gate.BACKLOG_RELATIVE, kind="backlog"))
+    widened = {"column", "window", "catalog", "ml"}
+    for family, name in rows:
+        if family in widened or name.startswith("types.") or name.startswith("Row."):
+            assert name in backlog, name
+    assert len(backlog) == 892
