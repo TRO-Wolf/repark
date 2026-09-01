@@ -194,6 +194,30 @@ tuple / starred / augmented assignment and loop-target rebinding are still not
 tracked, and a repark-rooted receiver can still list a method it calls only
 trivially. Review holds that honesty, as before.
 
+## Gates (2026-08-31, on `edc74c2`)
+
+| Command | Exit |
+|---|---|
+| `make ci` | **0** |
+| `make py-test` | **0** (496 passed) |
+| `make check-map-sync check-ledger-grammar` | **0** (169 maps; 9 live ledgers, 84 clauses) |
+| `python3 scripts/ledger_lifecycle.py check --base e2e8187` | **0** |
+| `./scripts/check_example_coverage.sh` (static half) | **0** |
+| `.venv/bin/python -I scripts/check_example_coverage.py --require-execute` | **0** |
+
+Execute-leg counts line, after `make develop` (native module imported, no skip
+line, every example executed, every module door's live `__all__` matched):
+
+`example-coverage: 913 public names (catalog=28, column=40, dataframe=150, functions=444, io=42, ml=28, session=41, ta=86, types=32, window=22); 19 covered; 892 backlog; 2 exceptions; 5 examples`
+
+**Line-cap collateral.** Adding the tables took
+`scripts/check_example_coverage.py` from 929 to 1,016 lines, over the 1,000-line
+`check_lib_py` ceiling. The fix is a shrink, not an exception row: the nine
+`CLASS_SURFACES` paths became named `*_SOURCE` constants (the convention
+`FUNCTIONS_SOURCE` / `TA_SOURCE` already used), which collapses each row from
+seven lines to one. The file is **942** lines with fourteen surfaces where it
+was 929 with nine, and it needs no `EXCEPTIONS` row.
+
 ## Disk
 
 Pickup: 526 GB free of 1.8 TB (70% used). No worktree; the unit works in a
