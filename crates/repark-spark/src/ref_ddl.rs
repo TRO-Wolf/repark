@@ -348,6 +348,19 @@ fn parse_retention_clauses(
                         "WITH SNAPSHOT RETENTION n SNAPSHOTS count does not fit i32".into(),
                     )
                 })?);
+                if starts_duration_clause(significant, after) {
+                    let (age_amount, age_unit, age_after) =
+                        parse_amount_unit(significant, after, "WITH SNAPSHOT RETENTION")?;
+                    let max_snapshot_age_ms =
+                        duration_to_ms(age_amount, age_unit, "WITH SNAPSHOT RETENTION")?;
+                    if max_snapshot_age_ms <= 0 {
+                        return Err(DataFusionError::Plan(
+                            "WITH SNAPSHOT RETENTION duration must be greater than 0".into(),
+                        ));
+                    }
+                    retention.max_snapshot_age_ms = Some(max_snapshot_age_ms);
+                    return Ok((retention, age_after));
+                }
             }
             other => {
                 let max_snapshot_age_ms = duration_to_ms(amount, other, "WITH SNAPSHOT RETENTION")?;
@@ -363,6 +376,30 @@ fn parse_retention_clauses(
     }
 
     Ok((retention, cursor))
+}
+
+/// Whether `index` opens a `<count> DAYS|HOURS|MINUTES` clause.
+///
+/// Spark's grammar puts the optional max-snapshot-age after the snapshot count, so the two
+/// halves are told apart by lookahead. A trailing token that is not a duration stays a
+/// trailing token, and the caller's residual-token check refuses it.
+fn starts_duration_clause(significant: &[Sig], index: usize) -> bool {
+    let is_count = matches!(
+        significant.get(index),
+        Some(Sig::Number(raw)) if raw.parse::<i64>().is_ok()
+    ) || matches!(
+        significant.get(index),
+        Some(Sig::Word(word)) if word.parse::<i64>().is_ok()
+    );
+    if !is_count {
+        return false;
+    }
+    matches!(
+        word_at(significant, index + 1)
+            .map(str::to_ascii_uppercase)
+            .as_deref(),
+        Some("DAYS" | "DAY" | "HOURS" | "HOUR" | "MINUTES" | "MINUTE")
+    )
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -642,17 +679,20 @@ pub(crate) async fn execute_ref_ddl(
     ctx.read_empty()
 }
 
-// Write-to-branch targets must refuse because the fork commits only to MAIN_BRANCH.
-
 /// Loud refuse message for write-to-branch (fork gap seed).
+///
+/// The gap moved with fork F-6 (#244) and this text moved with it. Re-measure it on the next
+/// fork repin: the day `IcebergTableProvider` takes a commit target, this refusal is wrong.
 pub(crate) const WRITE_TO_BRANCH_NOT_SUPPORTED: &str = "\
 write-to-branch (INSERT/UPDATE/DELETE/MERGE targeting `table.branch_<name>` or \
-`table.branch_name`) is not supported: fork pin b009ac158f7584a956fa9292c0e9675a411ecf0d \
-FastAppendAction / SnapshotProduce always emit SetSnapshotRef on MAIN_BRANCH only \
-(transaction/append.rs + snapshot.rs) — no to_branch / with_branch commit-target API. \
-Fork-workstream seed (not a RePark hack). Read-side VERSION AS OF 'branch' works; \
-CREATE|REPLACE BRANCH re-pin is the product write path for refs today \
-(docs/spark-sql-iceberg-parity.md §2.2 / r25 T2 ledger).";
+`table.branch_name`) is not supported at fork pin 33be9a0f411c37cd8d7b38c4db81eec30c1344cc. \
+F-6 (#244) added SnapshotUpdate.to_branch to the seven transaction actions, but INSERT, \
+UPDATE and DELETE execute through iceberg-datafusion's IcebergTableProvider and its commit \
+exec, which commit with no branch target — so the statement would still write to main. \
+Closing this needs a commit target on that provider, which is fork surface: do not work \
+around it here. A write naming a TAG refuses on Apache Spark too. Read-side \
+VERSION AS OF 'branch-or-tag' works; CREATE|REPLACE BRANCH re-pin is the product write path \
+for refs today (docs/spark-sql-iceberg-parity.md §2.2).";
 
 /// A sniffed write-to-branch candidate.
 #[derive(Debug, Clone, PartialEq, Eq)]

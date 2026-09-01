@@ -49,6 +49,13 @@ pins: rp-4-fork-repin/C-005, C-006
 - `ref_ddl.rs` — I5 snapshot-ref DDL (CREATE/DROP/REPLACE BRANCH|TAG, retention) + the
   write-to-branch sniff. Its 14 in-module tests are file-backed in
   [ref_ddl/map.md](ref_ddl/map.md); the module path, and so every pin name, is unchanged.
+  `WITH SNAPSHOT RETENTION` takes BOTH halves — `n SNAPSHOTS` then an optional
+  `k DAYS|HOURS|MINUTES` — because Spark's grammar does; the reversed order is a Spark parse
+  error and refuses here too. The write-to-branch refusal names the surface that is still
+  missing at fork pin `33be9a0`: `to_branch` reached the transaction actions in F-6, but
+  `iceberg-datafusion`'s provider commit path (which `INSERT` / `UPDATE` / `DELETE` execute
+  through) carries no commit target. Re-measure that sentence on every repin.
+  pins: ref-branch-tag-wap/C-003, C-004
 - `call.rs` — seven maintenance procedures: six maintenance calls plus `register_table`. Each
   preserves Spark's result schema and count sources. Orphan removal requires `older_than`, defaults
   `dry_run` to true, and refuses shared fallback roots; rewrite-position-delete still refuses

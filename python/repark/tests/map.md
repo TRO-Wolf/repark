@@ -73,6 +73,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   into that live vector. RP-4: six-file `rewrite_data_files` keeps `_row_id` / seq on `to_arrow`
   (pins: rp-2-fork-repin/C-003, C-005; rp-3-fork-repin/C-004; v3-3-dml/C-001, C-002;
   rp-4-fork-repin/C-003).
+- [test_ref_branch_tag_wap.py](test_ref_branch_tag_wap.py) — **REF:** the facade rows for
+  branch/tag retention and the refused doors — both `WITH SNAPSHOT RETENTION` halves at the
+  oracle's values, the reversed order refusing, write-to-branch and write-to-tag refusing while
+  naming the `iceberg-datafusion` gap rather than a superseded fork pin, and WAP declared
+  (`fast_forward` / `publish_changes` / `cherrypick_snapshot` and the `spark.wap.*` confs all
+  fail closed).
+  pins: ref-branch-tag-wap/C-003, C-004, C-005
 - [test_v3e4_refs_time_travel.py](test_v3e4_refs_time_travel.py) — **V3E-4:** facade
   branch/tag, `VERSION AS OF` over DVs, rollback, expire dual-probe, orphan
   24h floor on the partitioned-DV fixture after a RePark append; live-DV UPDATE

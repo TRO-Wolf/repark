@@ -124,7 +124,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   fixture (`B-MOR-3`),
   `fixtures/` (Spark-written on-disk Iceberg tables CI can adopt with no JVM),
   `call_orphan` (**MW-3**): full-directory before/after orphan safety and 24-hour cutoff fixtures,
-  `ref_ddl`,
+  `ref_ddl` (**REF:** both `WITH SNAPSHOT RETENTION` halves at the oracle's values, the
+  reversed order refusing, the write-to-branch/tag refusal naming the `iceberg-datafusion`
+  commit-target gap at fork pin `33be9a0` and not the superseded pin, and WAP declared — the
+  three publish procedures and the `spark.wap.*` confs all fail closed and leave the branch
+  where it was; pins: ref-branch-tag-wap/C-003, C-004, C-005),
   `time_travel`, `metadata_tables` (**RP-1:** projection battery iterates
   `MetadataTableType::all_types`; `position_deletes` rewrites then scan-refuses.
   **MW-4b:** Glue-shaped `table_exists` — 4-part
