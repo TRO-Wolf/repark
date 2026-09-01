@@ -1,6 +1,6 @@
 //! Model: Grok 4.6
-//! Engine CREATE/ALTER surface measurement for V3-6 types (pre-product).
-//! pins: v3-6-v3-types/C-001
+//! V3-6 type CREATE/ALTER pins.
+//! pins: v3-6-v3-types/C-001, C-003
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -50,12 +50,7 @@ async fn v3_types_oracle_matrix_is_the_c001_record() {
 async fn engine_create_timestamp_ns_unknown_variant_and_default_today() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
-    for (table, type_sql) in [
-        ("t_tsns", "timestamp_ns"),
-        ("t_tstzns", "timestamptz_ns"),
-        ("t_unknown", "UNKNOWN"),
-        ("t_variant", "VARIANT"),
-    ] {
+    for (table, type_sql) in [("t_unknown", "UNKNOWN"), ("t_variant", "VARIANT")] {
         let err = execute(
             &ctx,
             &catalogs,
@@ -102,5 +97,120 @@ async fn engine_create_timestamp_ns_unknown_variant_and_default_today() {
             || text.to_ascii_lowercase().contains("option")
             || text.to_ascii_lowercase().contains("not supported"),
         "ADD COLUMN DEFAULT must refuse naming the option: {text}"
+    );
+}
+
+#[tokio::test]
+async fn opt_in_v3_create_stores_timestamp_ns_and_round_trips() {
+    use datafusion::arrow::array::TimestampNanosecondArray;
+    use datafusion::arrow::datatypes::{DataType, TimeUnit};
+    use iceberg::spec::{PrimitiveType, Type};
+
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    execute(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.tsns (id INT, ts timestamp_ns) USING iceberg \
+         TBLPROPERTIES ('format-version' = '3')",
+    )
+    .await
+    .expect("CREATE timestamp_ns");
+    let table = catalogs["ice"]
+        .load_table(&TableIdent::new(
+            NamespaceIdent::new("sales".to_string()),
+            "tsns".to_string(),
+        ))
+        .await
+        .expect("load");
+    assert_eq!(
+        table.metadata().current_schema().as_struct().fields()[1]
+            .field_type
+            .as_ref(),
+        &Type::Primitive(PrimitiveType::TimestampNs)
+    );
+    let nanos: i64 = 1_704_164_645_123_456_789;
+    let ident = TableIdent::new(NamespaceIdent::new("sales".to_string()), "tsns".to_string());
+    let batch = RecordBatch::try_new(
+        Arc::new(Schema::new(vec![
+            Field::new("id", DataType::Int32, true),
+            Field::new("ts", DataType::Timestamp(TimeUnit::Nanosecond, None), true),
+        ])),
+        vec![
+            Arc::new(Int32Array::from(vec![Some(1)])),
+            Arc::new(TimestampNanosecondArray::from(vec![Some(nanos)])),
+        ],
+    )
+    .expect("ns batch");
+    repark_iceberg::append(&catalogs["ice"], &ident, vec![batch])
+        .await
+        .expect("append timestamp_ns");
+    let batches = execute(
+        &ctx,
+        &catalogs,
+        "SELECT id, ts FROM ice.sales.tsns ORDER BY id",
+    )
+    .await
+    .expect("SELECT timestamp_ns")
+    .collect()
+    .await
+    .expect("collect");
+    assert_eq!(
+        batches[0].schema().field(1).data_type(),
+        &DataType::Timestamp(TimeUnit::Nanosecond, None)
+    );
+    let ts = batches[0]
+        .column(1)
+        .as_any()
+        .downcast_ref::<TimestampNanosecondArray>()
+        .expect("ns array");
+    assert_eq!(ts.value(0), nanos);
+}
+
+#[tokio::test]
+async fn opt_in_v3_create_stores_timestamptz_ns() {
+    use iceberg::spec::{PrimitiveType, Type};
+
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    execute(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.tstzns (id INT, ts timestamptz_ns) USING iceberg \
+         TBLPROPERTIES ('format-version' = '3')",
+    )
+    .await
+    .expect("CREATE timestamptz_ns");
+    let table = catalogs["ice"]
+        .load_table(&TableIdent::new(
+            NamespaceIdent::new("sales".to_string()),
+            "tstzns".to_string(),
+        ))
+        .await
+        .expect("load");
+    assert_eq!(
+        table.metadata().current_schema().as_struct().fields()[1]
+            .field_type
+            .as_ref(),
+        &Type::Primitive(PrimitiveType::TimestamptzNs)
+    );
+}
+
+#[tokio::test]
+async fn timestamp_ns_on_v2_create_refuses() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    let err = execute(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.tsns_v2 (id INT, ts timestamp_ns) USING iceberg \
+         TBLPROPERTIES ('format-version' = '2')",
+    )
+    .await
+    .expect_err("v2 timestamp_ns must refuse");
+    let text = err.to_string().to_ascii_lowercase();
+    assert!(
+        text.contains("timestamp_ns") || text.contains("v3") || text.contains("not supported"),
+        "v2 timestamp_ns refusal must name the type or v3: {text}"
     );
 }

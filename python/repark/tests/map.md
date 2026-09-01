@@ -94,7 +94,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (`V3-LINEAGE-1` FIXED). Also the V3R-1
   (2026-08-25) type pin `test_v3_geometry_geography_variant_columns_refuse_naming_the_type`:
   `GEOMETRY` / `GEOGRAPHY` / `VARIANT` columns refuse at CREATE, no table left (registry
-  `V3-GEO-1`).
+  `V3-GEO-1`). **V3-6:** `test_opt_in_v3_create_timestamp_ns_round_trips` facade
+  CREATE+INSERT+`to_arrow` ns. pins: v3-6-v3-types/C-003
 - [test_rewrite_data_files_options.py](test_rewrite_data_files_options.py) —
   **rewrite_data_files options:** facade `where` keeps the **part=1** pre-image byte-identical
   and rewrites part=0 away; unknown strategy and bad where use Spark's text; `sort` and

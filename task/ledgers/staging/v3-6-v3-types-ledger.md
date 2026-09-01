@@ -111,13 +111,13 @@ Spark's `UpdateColumnDefaultValue` table change.
 |---|---|---|---|---|
 | C-001 | **Measure first.** Per-type fork read/write at `33be9a0`, engine CREATE/ALTER today, and live Spark 4.1.2 + Iceberg 1.11.0 (incidental controls) are recorded in this ledger before any product SQL mapping. | Matrix above; pin tests. | **PROVEN** | Fork I/O pins in `crates/repark-iceberg/src/tests/v3_types.rs`; ledger-token pin in `crates/repark-spark/src/tests/v3_types.rs`. |
 | C-002 | Binary variant: CREATE/read/write refuse loud naming `VARIANT` on all three doors; shredded stays DECLARED (`V3-VARIANT-SHRED-1` lands as a registry row citing a pin that distinguishes binary vs shredded). Gap filed against fork R88. | Three-door pins; registry row. | **OPEN** | Spark writes unshredded parquet variant; fork parquet I/O refuses. Product mapping waits on this pin + registry. |
-| C-003 | `timestamp_ns` / `timestamptz_ns`: opt-in v3 CREATE stores the Iceberg primitive; append+scan round-trip Arrow ns types and values on all three doors. `TIMESTAMP_NTZ` stays µs. Spark parser cannot spell the Iceberg names (oracle note). | Three-door pins; red-first vs C-001 refuse. | **OPEN** | Fork I/O green (C-001). SQL mapping not landed. |
+| C-003 | `timestamp_ns` / `timestamptz_ns`: opt-in v3 CREATE stores the Iceberg primitive; append+scan round-trip Arrow ns types and values on all three doors. `TIMESTAMP_NTZ` stays µs. Spark parser cannot spell the Iceberg names (oracle note). | Three-door pins; red-first vs C-001 refuse. | **PROVEN** | Spark CREATE+append+SELECT ns (value+type); ANSI CREATE both names + ns value round-trip; facade CREATE+`to_arrow` ns schema — the facade has no ns write surface (SQL TIMESTAMP insert is µs and does not coerce), so its reachable assertion is the schema pin. v2 CREATE refuses. |
 | C-004 | `unknown`: SQL CREATE refuses naming the type on all three doors; no table left behind. Scan gap filed against fork R91. Do not CREATE a table the scan cannot read. | Three-door refuse pins. | **OPEN** | Write commits, scan `cannot visit arrow data type: null`. |
 | C-005 | Column defaults: Spark-equal refuse of ADD COLUMN / CREATE DEFAULT DDL; engine write consumes fork `write_default` when the schema already has one (omitted column fills, supplied column kept); `initial_default` applied on read of files missing the column. | Refuse pins + fill/read pins. | **OPEN** | Fork fill exists; engine `append` currently refuses missing columns first. |
 | C-006 | v2-to-v3 in-place upgrade surface is byte-untouched. Ns/unknown/variant types land only behind CREATE opt-in. | Identity check of ALTER format-version refuse pins. | **OPEN** | HALT if a finding requires moving the upgrade surface. |
 | C-007 | Documents match the pins: registry rows, STATUS Next, maps lockstep. Geometry/geography stay `V3-GEO-1`. | Registry, STATUS, `check-map-sync`. | **OPEN** | After per-type landings. |
 
-VERDICT: 1 PROVEN, 6 OPEN, 0 REJECTED. Product edits start at C-003 (fork I/O green), then C-005, then C-002/C-004 pins.
+VERDICT: 2 PROVEN, 5 OPEN, 0 REJECTED. C-003 ns mapping landed. Next: C-005 write_default consume, then C-002/C-004 pins.
 
 ## Sequence
 

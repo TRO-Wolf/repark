@@ -36,7 +36,7 @@ pub(crate) struct Door {
 }
 
 impl Door {
-    async fn sql(
+    pub(crate) async fn sql(
         &self,
         sql: &str,
     ) -> datafusion::error::Result<Vec<datafusion::arrow::record_batch::RecordBatch>> {
@@ -49,7 +49,7 @@ impl Door {
         frame.collect().await
     }
 
-    async fn ok(&self, sql: &str) {
+    pub(crate) async fn ok(&self, sql: &str) {
         self.sql(sql)
             .await
             .unwrap_or_else(|err| panic!("`{sql}` must succeed: {err}"));

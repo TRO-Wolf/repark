@@ -17,7 +17,10 @@ ANSI-door format-v3 test modules. `lib.rs` declares `#[cfg(test)] mod v3;`.
   checks, and the ANSI Hadoop `vN.metadata.json` write that bumps to `v(N+1)`
   (pins: rp-3-fork-repin/C-008).
 - `types.rs` — `GEOMETRY` / `GEOGRAPHY` / `VARIANT` refuse at CREATE (`V3-GEO-1`);
-  reuses `cow.rs`'s `Door`.
+  reuses `cow.rs`'s `Door`. **V3-6 C-003:** ANSI opt-in CREATE `timestamp_ns` /
+  `timestamptz_ns` stores the Iceberg primitives; `timestamp_ns` SELECT round-trips
+  ns values and Arrow types.
+  pins: v3-6-v3-types/C-003
 - `branch_tag_time_travel.rs` — ANSI branch/tag + `FOR VERSION AS OF` over the partitioned
   v3 DV fixture; RP-3 shared-Puffin DELETE keeps the untouched sibling
   (pins: rp-3-fork-repin/C-004).

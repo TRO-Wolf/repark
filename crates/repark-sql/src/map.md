@@ -87,7 +87,9 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   create-first path. Refuses Iceberg CREATE when any `TableScan`
   source (including expression subqueries) is tighten-derived AND the
   output has a non-nullable field (R-D), or the output schema still carries
-  the tag. The write boundary uses the same source walk. `router.rs::delegate` additionally calls
+  the tag. The write boundary uses the same source walk. **V3-6 C-003:**
+  declared `timestamp_ns` / `timestamptz_ns` resolve to their Arrow ns shapes
+  and the A11 gate lets those columns through (pins: v3-6-v3-types/C-003). `router.rs::delegate` additionally calls
   `repark_core::refuse_iceberg_create_of_tightened_ddl` on the planned DDL, so the
   `CREATE VIEW cat.ns.v` / `SELECT … INTO cat.ns.t` sinks that fall through the `_ =>` arm
   cannot persist a required column. Both paths use the shared belt: `router.rs::delegate` is

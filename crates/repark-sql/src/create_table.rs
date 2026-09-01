@@ -11,7 +11,7 @@ use datafusion::sql::sqlparser::ast::{
 };
 use iceberg::arrow::arrow_schema_to_schema_auto_assign_ids;
 use iceberg::io::FileIO;
-use iceberg::spec::{FormatVersion, UnboundPartitionSpec};
+use iceberg::spec::{FormatVersion, PrimitiveType, Type, UnboundPartitionSpec};
 use iceberg::transaction::StagedTableTransaction;
 use iceberg::{Catalog, NamespaceIdent, TableCreation, TableIdent};
 use repark_core::{CatalogRegistry, EngineContext, LocationPolicy};
@@ -97,7 +97,13 @@ pub(crate) async fn execute_create_table(
         (schema, Some(frame))
     } else {
         let schema = column_def_schema(cx.ctx, create, form).await?;
-        refuse_nanosecond_timestamp_columns(&schema, form)?;
+        let allowed_ns: Vec<String> = create
+            .columns
+            .iter()
+            .filter(|column| iceberg_v3_named_primitive(&column.data_type).is_some())
+            .map(|column| column.name.value.clone())
+            .collect();
+        refuse_nanosecond_timestamp_columns(&schema, form, &allowed_ns)?;
         (schema, None)
     };
     repark_core::refuse_iceberg_create_of_tightened_schema(arrow_schema.as_ref())
@@ -660,41 +666,28 @@ async fn column_def_schema(
     create: &CreateTable,
     form: &str,
 ) -> Result<Arc<ArrowSchema>> {
-    let projection = create
-        .columns
-        .iter()
-        .map(|column| {
-            format!(
-                "CAST(NULL AS {}) AS \"{}\"",
-                column.data_type,
-                column.name.value.replace('"', "\"\"")
-            )
-        })
-        .collect::<Vec<_>>()
-        .join(", ");
-    let plan = ctx
-        .state()
-        .create_logical_plan(&format!("SELECT {projection}"))
-        .await
-        .map_err(|err| {
-            DataFusionError::Plan(format!(
-                "{form}: could not resolve the declared column types ({err})"
-            ))
-        })?;
-
-    let fields = plan
-        .schema()
-        .fields()
-        .iter()
-        .zip(&create.columns)
-        .map(|(field, column)| {
-            let nullable = !column
-                .options
-                .iter()
-                .any(|option| matches!(option.option, ColumnOption::NotNull));
-            Field::new(field.name(), field.data_type().clone(), nullable)
-        })
-        .collect::<Vec<_>>();
+    let mut fields = Vec::with_capacity(create.columns.len());
+    for column in &create.columns {
+        let nullable = !column
+            .options
+            .iter()
+            .any(|option| matches!(option.option, ColumnOption::NotNull));
+        let data_type = if let Some(arrow) = iceberg_v3_named_arrow_type(&column.data_type) {
+            arrow
+        } else {
+            let plan = ctx
+                .state()
+                .create_logical_plan(&format!("SELECT CAST(NULL AS {}) AS c", column.data_type))
+                .await
+                .map_err(|err| {
+                    DataFusionError::Plan(format!(
+                        "{form}: could not resolve the declared column types ({err})"
+                    ))
+                })?;
+            plan.schema().field(0).data_type().clone()
+        };
+        fields.push(Field::new(&column.name.value, data_type, nullable));
+    }
     Ok(Arc::new(ArrowSchema::new(fields)))
 }
 
@@ -705,8 +698,15 @@ const SUPPORTED_TIMESTAMP_PRECISION: u8 = 6;
 const NANOSECOND_TIMESTAMP_PRECISION: u8 = 9;
 
 /// Refuse column-def timestamps the write path cannot honor (Arrow nanoseconds).
-fn refuse_nanosecond_timestamp_columns(schema: &ArrowSchema, form: &str) -> Result<()> {
+fn refuse_nanosecond_timestamp_columns(
+    schema: &ArrowSchema,
+    form: &str,
+    allowed_names: &[String],
+) -> Result<()> {
     for field in schema.fields() {
+        if allowed_names.iter().any(|name| name == field.name()) {
+            continue;
+        }
         if matches!(
             field.data_type(),
             DataType::Timestamp(TimeUnit::Nanosecond, _)
@@ -714,7 +714,8 @@ fn refuse_nanosecond_timestamp_columns(schema: &ArrowSchema, form: &str) -> Resu
             return Err(DataFusionError::Plan(format!(
                 "{form}: column `{}` is TIMESTAMP with nanosecond precision ({ns}), which this \
                  engine cannot honor (`timestamp_ns` is not a supported write type). Supported \
-                 precisions: {us} (microseconds). Declare TIMESTAMP({us}).",
+                 precisions: {us} (microseconds). Declare TIMESTAMP({us}) or Iceberg \
+                 timestamp_ns.",
                 field.name(),
                 ns = NANOSECOND_TIMESTAMP_PRECISION,
                 us = SUPPORTED_TIMESTAMP_PRECISION,
@@ -724,12 +725,28 @@ fn refuse_nanosecond_timestamp_columns(schema: &ArrowSchema, form: &str) -> Resu
     Ok(())
 }
 
+fn iceberg_v3_named_arrow_type(
+    data_type: &datafusion::sql::sqlparser::ast::DataType,
+) -> Option<DataType> {
+    match data_type.to_string().to_ascii_lowercase().as_str() {
+        "timestamp_ns" => Some(DataType::Timestamp(TimeUnit::Nanosecond, None)),
+        "timestamptz_ns" => Some(DataType::Timestamp(
+            TimeUnit::Nanosecond,
+            Some("+00:00".into()),
+        )),
+        _ => None,
+    }
+}
+
 /// Resolve one declared SQL type to its Iceberg type through the shared planner.
 pub(crate) async fn sql_type_to_iceberg(
     ctx: &SessionContext,
     data_type: &datafusion::sql::sqlparser::ast::DataType,
     form: &str,
 ) -> Result<iceberg::spec::Type> {
+    if let Some(primitive) = iceberg_v3_named_primitive(data_type) {
+        return Ok(Type::Primitive(primitive));
+    }
     let plan = ctx
         .state()
         .create_logical_plan(&format!("SELECT CAST(NULL AS {data_type}) AS c"))
@@ -748,6 +765,16 @@ pub(crate) async fn sql_type_to_iceberg(
         .first()
         .ok_or_else(|| DataFusionError::Plan(format!("{form}: type `{data_type}` is empty")))?;
     Ok(field.field_type.as_ref().clone())
+}
+
+fn iceberg_v3_named_primitive(
+    data_type: &datafusion::sql::sqlparser::ast::DataType,
+) -> Option<PrimitiveType> {
+    match data_type.to_string().to_ascii_lowercase().as_str() {
+        "timestamp_ns" => Some(PrimitiveType::TimestampNs),
+        "timestamptz_ns" => Some(PrimitiveType::TimestamptzNs),
+        _ => None,
+    }
 }
 
 #[cfg(test)]

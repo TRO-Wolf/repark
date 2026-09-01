@@ -89,6 +89,9 @@ pins: rp-4-fork-repin/C-005, C-006
   `TIMESTAMP_NTZ` stays `timestamp` (live Spark 4.1.2 CREATE probe). **Q10:** bare
   `TIMESTAMP` follows `spark.sql.timestampType` (`TIMESTAMP_NTZ` → Iceberg `timestamp`);
   existing `sql_type_to_iceberg` wrapper stays LTZ so default-mode pins are untouched.
+  **V3-6 C-003:** Iceberg type names `timestamp_ns` / `timestamptz_ns` map to the V3
+  primitives behind the same opt-in (pins: v3-6-v3-types/C-003); v2 CREATE refuses via
+  the fork's `check_compatibility`.
   4 in-module tests (`type_mapping_tests`) + `tests/create_table.rs` pin + CTAS type smoke.
 - `alter.rs` — ALTER TABLE handlers (SET/UNSET TBLPROPERTIES, RENAME TO, schema evolution I6,
   I7 partition-field DDL, residual refusals) + the ALTER token rewrites the normalizer runs;

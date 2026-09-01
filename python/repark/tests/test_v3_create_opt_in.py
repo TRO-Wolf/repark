@@ -121,3 +121,26 @@ def test_v3_geometry_geography_variant_columns_refuse_naming_the_type(tmp_path: 
             assert not spark.catalog.tableExists(table)
     finally:
         spark.stop()
+
+
+def test_opt_in_v3_create_timestamp_ns_round_trips(tmp_path: Path) -> None:
+    """V3-6: facade CREATE timestamp_ns stores ns and SELECT returns Arrow ns.
+
+    pins: v3-6-v3-types/C-003
+    """
+    spark = (
+        ReparkSession.builder.appName("v3-6-tsns")
+        .config(_ALLOW_CREATE_V3_KEY, "true")
+        .getOrCreate()
+    )
+    try:
+        spark.register_memory_catalog("ice", tmp_path)
+        spark.sql("CREATE NAMESPACE ice.sales")
+        spark.sql(
+            "CREATE TABLE ice.sales.tsns (id INT, ts timestamp_ns) USING iceberg "
+            "TBLPROPERTIES ('format-version' = '3')"
+        ).collect()
+        table = spark.sql("SELECT id, ts FROM ice.sales.tsns").to_arrow()
+        assert str(table.schema.field("ts").type) == "timestamp[ns]"
+    finally:
+        spark.stop()

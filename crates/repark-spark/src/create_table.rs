@@ -262,13 +262,24 @@ pub(crate) fn sql_type_to_iceberg_with_timestamp_type(
         // WITH TIME ZONE / TIMESTAMPTZ stay instants.
         SqlDataType::Timestamp(_, _) => PrimitiveType::Timestamptz,
         SqlDataType::Binary(_) | SqlDataType::Varbinary(_) => PrimitiveType::Binary,
-        other => {
-            return Err(DataFusionError::NotImplemented(format!(
-                "column type `{other}` is not supported yet for Iceberg tables"
-            )));
-        }
+        other => match iceberg_v3_named_primitive(other) {
+            Some(primitive) => primitive,
+            None => {
+                return Err(DataFusionError::NotImplemented(format!(
+                    "column type `{other}` is not supported yet for Iceberg tables"
+                )));
+            }
+        },
     };
     Ok(Type::Primitive(primitive))
+}
+
+fn iceberg_v3_named_primitive(data_type: &SqlDataType) -> Option<PrimitiveType> {
+    match data_type.to_string().to_ascii_lowercase().as_str() {
+        "timestamp_ns" => Some(PrimitiveType::TimestampNs),
+        "timestamptz_ns" => Some(PrimitiveType::TimestamptzNs),
+        _ => None,
+    }
 }
 
 fn decimal_from_info(info: &ExactNumberInfo) -> Result<PrimitiveType> {
@@ -572,6 +583,27 @@ mod type_mapping_tests {
                 SparkTimestampType::Ltz,
             )
             .unwrap(),
+            Type::Primitive(PrimitiveType::Timestamp)
+        ));
+    }
+
+    #[test]
+    fn maps_iceberg_v3_nanosecond_timestamp_names() {
+        use datafusion::sql::sqlparser::ast::{Ident, ObjectName};
+        let timestamp_ns =
+            SqlDataType::Custom(ObjectName::from(Ident::new("timestamp_ns")), Vec::new());
+        let timestamptz_ns =
+            SqlDataType::Custom(ObjectName::from(Ident::new("timestamptz_ns")), Vec::new());
+        assert!(matches!(
+            sql_type_to_iceberg(&timestamp_ns).unwrap(),
+            Type::Primitive(PrimitiveType::TimestampNs)
+        ));
+        assert!(matches!(
+            sql_type_to_iceberg(&timestamptz_ns).unwrap(),
+            Type::Primitive(PrimitiveType::TimestamptzNs)
+        ));
+        assert!(matches!(
+            sql_type_to_iceberg(&SqlDataType::TimestampNtz(None)).unwrap(),
             Type::Primitive(PrimitiveType::Timestamp)
         ));
         assert!(matches!(
