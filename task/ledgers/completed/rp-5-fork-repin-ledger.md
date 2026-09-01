@@ -1,5 +1,25 @@
 # Charter ledger — RP-5 · fork repin 33be9a0 → 00cdde0 (consume F-6b/F-6c, F-8, F-16r; close REF-1 and RDF-1)
 
+**Errata 2026-09-01 (critic remediation on `feat/rp-5-fork-repin`).** S1: V3-COW-1 / MOR
+valves run on the Iceberg ident before the temp rewrite; pin
+`v3_cow_update_and_delete_on_branch_refuse_like_unqualified`. S2-1: two-part `t.branch_b`
+qualifies through session defaults; pin `two_part_branch_selector_uses_session_defaults`
+(INSERT VALUES/SELECT, UPDATE, DELETE, INSERT OVERWRITE, MERGE, TRUNCATE). MERGE scratch
+registers on `datafusion.public` so `SET default_catalog=ice` cannot refuse a MemTable
+with rows. S2-2: `truncate_on_diverged_branch_leaves_main_unmoved`; TRUNCATE in tag/missing
+loops. S2-3: empty INSERT OVERWRITE uses `commit_overwrite_replace_all_to`; pin
+`empty_overwrite_on_diverged_branch_wipes_branch_only`. S2-4: OCC-on-branch pins in
+`occ_branch.rs`. S2-5 / C-005: RDF-1 names F-16 residue 2 — MW-7 C-011 writes
+`write.delete.granularity = 'partition'`; F-16r's ratio clause counts only file-scoped
+deletes (`referenced_data_file` present or equal file-path bounds), so partition-granularity
+/ absent-bounds position deletes are invisible. MW-7 pin kept; RDF-1 stays BACKLOG. S3-1:
+REF-4 example is a tag write. Mutations (restored): temp-name valve lookup
+`v3_cow_update_and_delete_on_branch_refuse_like_unqualified` 0 / 1 red; TRUNCATE Branch→None
+`truncate_on_diverged_branch_leaves_main_unmoved` 0 / 1 red (main snapshot moved); skip
+iceberg empty-overwrite arm `empty_overwrite_on_diverged_branch_wipes_branch_only` 0 / 1 red
+(`Unsupported compound identifier 'ice.sales.t.branch_b'`); `maybe_to_branch` ignore
+`occ_branch` 1 / 2 red (`commit_on_branch_ignores_concurrent_main_append`).
+
 **Date:** 2026-09-01 · **Branch:** `feat/rp-5-fork-repin` · **Base:** `main`
 `75f5ee35f4355f8a9a3d03ccc77cc751a9610f7a` · **Policy:**
 [../../../AGENTS.md](../../../AGENTS.md) "Version-pin contract" · **Handoff:**

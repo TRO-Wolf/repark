@@ -724,7 +724,8 @@ fn find_write_target_branch_span(significant: &[&Token]) -> Option<WriteToBranch
     }
     if parts.len() == 2 {
         let last = parts.last()?.as_str();
-        if last.to_ascii_lowercase().starts_with("branch_")
+        let lowered = last.to_ascii_lowercase();
+        if (lowered.starts_with("branch_") || lowered.starts_with("tag_"))
             && !crate::metadata_tables::is_metadata_table_name(last)
         {
             let mut iter = parts.into_iter();

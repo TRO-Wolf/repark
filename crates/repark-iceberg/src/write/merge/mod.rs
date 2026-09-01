@@ -668,10 +668,8 @@ pub(super) fn register_streaming_target(
     scratch_schema: SchemaRef,
     source: Arc<dyn PartitionStream>,
 ) -> Result<String> {
-    let name = format!("__repark_merge_target_{}", Uuid::new_v4().simple());
     let provider = StreamingTable::try_new(scratch_schema, vec![source])?;
-    ctx.register_table(name.as_str(), Arc::new(provider))?;
-    Ok(name)
+    cow_scratch::register_scratch_provider(ctx, Arc::new(provider), "merge_target")
 }
 
 /// The merge pipeline over the registered scratch target.
@@ -1255,7 +1253,7 @@ impl MergeSql<'_> {
         // Engine UUID names today; still route through quote_ident.
         format!(
             "{} AS {}",
-            quote_ident(self.target_name),
+            cow_scratch::quote_scratch_name(self.target_name),
             self.spec.target_alias
         )
     }
@@ -1451,9 +1449,9 @@ impl MergeSql<'_> {
         let ta = &self.spec.target_alias;
         let projection = self.rewrite_projection(write_schema);
         let deleted = self.delete_applies();
-        let target = format!("{} AS {ta}", quote_ident(target_table_name));
+        let quoted_target = cow_scratch::quote_scratch_name(target_table_name);
         format!(
-            "SELECT {projection} FROM {target} LEFT JOIN {source} ON {on} \
+            "SELECT {projection} FROM {quoted_target} AS {ta} LEFT JOIN {source} ON {on} \
              WHERE NOT ({deleted})",
             source = self.source_from(),
             on = self.spec.on_sql,
@@ -1470,8 +1468,8 @@ impl MergeSql<'_> {
         let ta = &self.spec.target_alias;
         let projection = self.rewrite_projection(write_schema);
         let deleted = self.delete_applies();
-        let quoted_target = quote_ident(target_table_name);
-        let quoted_paths = quote_ident(path_table_name);
+        let quoted_target = cow_scratch::quote_scratch_name(target_table_name);
+        let quoted_paths = cow_scratch::quote_scratch_name(path_table_name);
         format!(
             "SELECT {projection} FROM {quoted_target} AS {ta} \
              INNER JOIN {quoted_paths} AS __repark_aff \

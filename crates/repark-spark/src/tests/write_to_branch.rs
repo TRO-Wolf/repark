@@ -256,6 +256,10 @@ async fn write_to_tag_refuses_spark_shaped() {
             "INSERT OVERWRITE ice.sales.t.tag_v1 VALUES (77, 'ow')",
             "Cannot write to table with time travel",
         ),
+        (
+            "TRUNCATE TABLE ice.sales.t.tag_v1",
+            "Cannot write to table with time travel",
+        ),
     ] {
         let error = execute(&ctx, &catalogs, sql)
             .await
@@ -285,6 +289,7 @@ async fn write_to_missing_branch_refuses_spark_shaped() {
         "MERGE INTO ice.sales.t.branch_nope t USING (SELECT 1 AS id, 'm' AS name) s \
          ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.name = s.name",
         "INSERT OVERWRITE ice.sales.t.branch_nope VALUES (77, 'ow')",
+        "TRUNCATE TABLE ice.sales.t.branch_nope",
     ] {
         let error = execute(&ctx, &catalogs, sql)
             .await
@@ -301,4 +306,106 @@ async fn write_to_missing_branch_refuses_spark_shaped() {
         table.metadata().snapshot_for_ref("nope").is_none(),
         "missing-branch write must not create the branch"
     );
+}
+
+async fn set_ice_sales_defaults(ctx: &SessionContext) {
+    ctx.sql("SET datafusion.catalog.default_catalog = 'ice'")
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    ctx.sql("SET datafusion.catalog.default_schema = 'sales'")
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn truncate_on_diverged_branch_leaves_main_unmoved() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed_diverged(&ctx, &catalogs, "ice.sales.t", "b").await;
+    let before = load_sales_table(&catalogs, "t").await;
+    let (main_before, branch_before, _) = snaps(&before, "b");
+    run(&ctx, &catalogs, "TRUNCATE TABLE ice.sales.t.branch_b").await;
+    let after = load_sales_table(&catalogs, "t").await;
+    let (main_after, branch_after, parent) = snaps(&after, "b");
+    assert_eq!(main_after, main_before);
+    assert_ne!(branch_after, branch_before);
+    assert_eq!(parent, Some(branch_before));
+    assert_eq!(
+        time_travel_id_multiset(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await,
+        vec![1, 2]
+    );
+    assert_eq!(
+        time_travel_id_multiset(&ctx, &catalogs, "SELECT id FROM ice.sales.t.branch_b").await,
+        Vec::<i32>::new()
+    );
+}
+
+#[tokio::test]
+async fn empty_overwrite_on_diverged_branch_wipes_branch_only() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed_diverged(&ctx, &catalogs, "ice.sales.t", "b").await;
+    let before = load_sales_table(&catalogs, "t").await;
+    let (main_before, branch_before, _) = snaps(&before, "b");
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT OVERWRITE ice.sales.t.branch_b SELECT * FROM ice.sales.t.branch_b WHERE false",
+    )
+    .await;
+    let after = load_sales_table(&catalogs, "t").await;
+    let (main_after, branch_after, parent) = snaps(&after, "b");
+    assert_eq!(main_after, main_before);
+    assert_ne!(branch_after, branch_before);
+    assert_eq!(parent, Some(branch_before));
+    assert_eq!(
+        time_travel_id_multiset(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await,
+        vec![1, 2]
+    );
+    assert_eq!(
+        time_travel_id_multiset(&ctx, &catalogs, "SELECT id FROM ice.sales.t.branch_b").await,
+        Vec::<i32>::new()
+    );
+}
+
+#[tokio::test]
+async fn two_part_branch_selector_uses_session_defaults() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed_diverged(&ctx, &catalogs, "ice.sales.t", "b").await;
+    set_ice_sales_defaults(&ctx).await;
+    let before = load_sales_table(&catalogs, "t").await;
+    let (main_before, _, _) = snaps(&before, "b");
+    for sql in [
+        "INSERT INTO t.branch_b VALUES (88, 'two')",
+        "INSERT INTO t.branch_b SELECT 89 AS id, 'two' AS name",
+        "UPDATE t.branch_b SET name = 'u' WHERE id = 10",
+        "DELETE FROM t.branch_b WHERE id = 1",
+        "INSERT OVERWRITE t.branch_b VALUES (77, 'ow')",
+        "MERGE INTO t.branch_b t USING (SELECT 10 AS id, 'm' AS name) s \
+         ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.name = s.name \
+         WHEN NOT MATCHED THEN INSERT (id, name) VALUES (s.id, s.name)",
+        "TRUNCATE TABLE t.branch_b",
+    ] {
+        let before_loop = load_sales_table(&catalogs, "t").await;
+        let (main_loop, _, _) = snaps(&before_loop, "b");
+        if let Err(error) = execute(&ctx, &catalogs, sql).await {
+            panic!("two-part {sql} failed: {error}");
+        }
+        let after_loop = load_sales_table(&catalogs, "t").await;
+        let (main_after, _, _) = snaps(&after_loop, "b");
+        assert_eq!(
+            main_after, main_loop,
+            "two-part {sql} must leave main unmoved"
+        );
+    }
+    let after = load_sales_table(&catalogs, "t").await;
+    let (main_after, _, _) = snaps(&after, "b");
+    assert_eq!(main_after, main_before);
 }

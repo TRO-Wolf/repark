@@ -513,6 +513,13 @@ RP-3 C-006 (2026-08-30, `d408da42`): the 1e7×50 MOR driver still ends at 8 dele
   data file is GONE. This item is the other half: delete files whose data file is still there
   and never gets selected. Landing F-3 alone does not close RDF-1, and the oracle shows why —
   Spark reaches zero with that option off.
+- **Residue 2 (RP-5, 2026-09-01, after F-16r `#248`).** The ratio clause counts only
+  file-scoped position deletes (`referenced_data_file` present or equal file-path bounds).
+  Partition-granularity deletes and bounds-absent position deletes do not raise it. The MW-7
+  2,500-row pin sets `write.delete.granularity = 'partition'`, so F-16r left that pin GREEN.
+  The MW-8 partitioned runbook's in-band seeds were rewritten. Ask: count partition-scoped
+  deletes in `tooHighDeleteRatio` the way Java does. Registry RDF-1 stays BACKLOG on the MW-7
+  pin.
 
 ### F-17 (north-star blocker, added 2026-08-28) — shared-Puffin DV sibling closure
 

@@ -43,6 +43,8 @@ pins: rp-4-fork-repin/C-005, C-006
   non-empty stage-then-swap; **DML-B** `PARTITION (…)` static/dynamic via
   `repark_iceberg::write::partition_overwrite`; 2 in-module tests (`assignment_type_unit_tests`).
   Named-ref targets go through `commit_overwrite_replace_all_to` / partition `_to`.
+  Empty overwrite onto a branch wipes via `commit_overwrite_replace_all_to`, not a 4-part
+  self-scan.
   pins: dml-b-insert-overwrite/C-001, C-002, C-004
   pins: rp-5-fork-repin/C-004
 - `truncate.rs` — whole-table `TRUNCATE TABLE` (DML-C): delete-only `commit_truncate_to`;
@@ -50,8 +52,10 @@ pins: rp-4-fork-repin/C-005, C-006
   [tests/truncate.rs](tests/truncate.rs). pins: dml-c-truncate/C-002, C-005, C-006, C-007
   pins: rp-5-fork-repin/C-004
 - `write_to_branch.rs` — Spark-door write-to-branch routing: tag/missing-branch Spark-shaped
-  refuse; fork-executed INSERT/UPDATE/DELETE via `IcebergTableProvider::with_commit_branch`;
-  MERGE / INSERT OVERWRITE / TRUNCATE keep the selector for RePark-owned `.to_branch`.
+  refuse; two-part names qualify through session defaults; V3-COW-1 / MOR valves run on the
+  Iceberg ident before the temp rewrite; fork-executed INSERT/UPDATE/DELETE via
+  `IcebergTableProvider::with_commit_branch` registered on `datafusion.public`;
+  MERGE / INSERT OVERWRITE / TRUNCATE rewrite short names to four-part then `.to_branch`.
   pins: rp-5-fork-repin/C-004
 - `ref_ddl.rs` — I5 snapshot-ref DDL (CREATE/DROP/REPLACE BRANCH|TAG, retention) + the
   write-to-branch sniff. Its 14 in-module tests are file-backed in

@@ -12,6 +12,7 @@ use repark_core::{CatalogRegistry, next_temp_view_name};
 use crate::catalog_ops::{catalog_handle, iceberg_err};
 use crate::ref_ddl::{WriteToBranchSniff, sniff_write_to_branch};
 use crate::time_travel::PinnedViews;
+use repark_iceberg::write::MorDmlKind;
 
 pub(crate) enum RefSelectorKind {
     Branch(String),
@@ -46,7 +47,7 @@ pub(crate) fn split_write_ref_parts(parts: &[String]) -> Option<(Vec<String>, Re
     }
     let selector = if parts.len() >= 4 {
         parse_ref_selector(last)?
-    } else if parts.len() == 2 {
+    } else if parts.len() == 3 || parts.len() == 2 {
         let lowered = last.to_ascii_lowercase();
         if lowered.starts_with("branch_") || lowered.starts_with("tag_") {
             parse_ref_selector(last)?
@@ -218,6 +219,27 @@ fn tokens_to_sql(tokens: &[Token]) -> String {
     tokens.iter().map(ToString::to_string).collect()
 }
 
+fn session_defaults(ctx: &SessionContext) -> (String, String) {
+    let state = ctx.state();
+    let catalog = &state.config().options().catalog;
+    (
+        catalog.default_catalog.clone(),
+        catalog.default_schema.clone(),
+    )
+}
+
+pub(crate) fn qualify_table_parts(ctx: &SessionContext, parts: Vec<String>) -> Vec<String> {
+    if parts.len() >= 3 {
+        return parts;
+    }
+    let (catalog, schema) = session_defaults(ctx);
+    match parts.as_slice() {
+        [table] => vec![catalog, schema, table.clone()],
+        [namespace, table] => vec![catalog, namespace.clone(), table.clone()],
+        _ => parts,
+    }
+}
+
 fn load_target_table(
     catalogs: &CatalogRegistry,
     table_parts: &[String],
@@ -235,6 +257,32 @@ fn load_target_table(
     let ident = TableIdent::new(namespace, table_name);
     let catalog = Arc::clone(catalog_handle(catalogs, &catalog_name)?);
     Ok((catalog_name, ident, catalog))
+}
+
+fn write_dml_kind(sql: &str) -> Option<MorDmlKind> {
+    let trimmed = sql.trim_start();
+    if trimmed.len() >= 6 && trimmed[..6].eq_ignore_ascii_case("UPDATE") {
+        Some(MorDmlKind::Update)
+    } else if trimmed.len() >= 6 && trimmed[..6].eq_ignore_ascii_case("DELETE") {
+        Some(MorDmlKind::Delete)
+    } else {
+        None
+    }
+}
+
+fn dotted_name_tokens(parts: &[String]) -> Vec<Token> {
+    let mut tokens = Vec::new();
+    for (index, part) in parts.iter().enumerate() {
+        if index > 0 {
+            tokens.push(Token::Period);
+        }
+        tokens.push(Token::Word(Word {
+            value: part.clone(),
+            quote_style: None,
+            keyword: datafusion::sql::sqlparser::keywords::Keyword::NoKeyword,
+        }));
+    }
+    tokens
 }
 
 pub(crate) async fn apply_write_to_branch<'a>(
@@ -262,16 +310,36 @@ pub(crate) async fn apply_write_to_branch<'a>(
     match selector {
         RefSelectorKind::Tag => Err(tag_write_error(sql)),
         RefSelectorKind::Branch(branch) => {
-            if table_parts.len() < 3 {
-                return Ok(Cow::Borrowed(sql));
-            }
-            let (_catalog_name, ident, catalog) = load_target_table(catalogs, &table_parts)?;
+            let qualified = qualify_table_parts(ctx, table_parts);
+            let (_catalog_name, ident, catalog) = load_target_table(catalogs, &qualified)?;
             let table = catalog.load_table(&ident).await.map_err(iceberg_err)?;
             if table.metadata().snapshot_for_ref(&branch).is_none() {
                 return Err(missing_branch_error(&branch));
             }
+            if let Some(kind) = write_dml_kind(sql) {
+                repark_iceberg::write::refuse_v3_cow_dml(catalog.as_ref(), &ident, kind).await?;
+                repark_iceberg::write::refuse_mor_unpartitioned_multi_spec_dml(
+                    catalog.as_ref(),
+                    &ident,
+                    &ident.to_string(),
+                    kind,
+                )
+                .await?;
+            }
             if is_owned_write_head(sql) {
-                return Ok(Cow::Borrowed(sql));
+                if span.parts.len() >= 4 {
+                    return Ok(Cow::Borrowed(sql));
+                }
+                let mut rewritten = qualified;
+                rewritten.push(
+                    span.parts
+                        .last()
+                        .cloned()
+                        .unwrap_or_else(|| format!("branch_{branch}")),
+                );
+                let mut tokens = tokens;
+                tokens.splice(span.start..span.end, dotted_name_tokens(&rewritten));
+                return Ok(Cow::Owned(tokens_to_sql(&tokens)));
             }
             let provider = IcebergTableProvider::try_new(
                 catalog,
@@ -282,21 +350,31 @@ pub(crate) async fn apply_write_to_branch<'a>(
             .map_err(iceberg_err)?
             .with_commit_branch(branch);
             let temp_name = next_temp_view_name();
-            let _ = ctx.deregister_table(temp_name.as_str());
-            pinned.record(temp_name.clone());
-            ctx.register_table(temp_name.as_str(), Arc::new(provider))
+            let home_catalog = "datafusion".to_string();
+            let home_schema = "public".to_string();
+            let df_catalog = ctx.catalog(&home_catalog).ok_or_else(|| {
+                DataFusionError::Plan(format!(
+                    "no session catalog `{home_catalog}` for branch-commit temp view (have {:?})",
+                    ctx.catalog_names()
+                ))
+            })?;
+            let schema = df_catalog.schema(&home_schema).ok_or_else(|| {
+                DataFusionError::Plan(format!(
+                    "no schema `{home_catalog}.{home_schema}` for branch-commit temp view"
+                ))
+            })?;
+            let _ = schema.deregister_table(&temp_name);
+            schema
+                .register_table(temp_name.clone(), Arc::new(provider))
                 .map_err(|error| {
                     DataFusionError::Plan(format!(
-                        "failed to register branch-commit temp view {temp_name}: {error}"
+                        "failed to register branch-commit temp view {home_catalog}.{home_schema}.{temp_name}: {error}"
                     ))
                 })?;
-            let replacement = Token::Word(Word {
-                value: temp_name,
-                quote_style: None,
-                keyword: datafusion::sql::sqlparser::keywords::Keyword::NoKeyword,
-            });
+            pinned.record(format!("{home_catalog}.{home_schema}.{temp_name}"));
+            let temp_parts = vec![home_catalog, home_schema, temp_name];
             let mut tokens = tokens;
-            tokens.splice(span.start..span.end, std::iter::once(replacement));
+            tokens.splice(span.start..span.end, dotted_name_tokens(&temp_parts));
             Ok(Cow::Owned(tokens_to_sql(&tokens)))
         }
     }

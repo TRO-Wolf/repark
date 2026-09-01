@@ -45,7 +45,7 @@ pub(crate) async fn execute_truncate(
              CTAS/TRUNCATE/CREATE VIEW/DROP/ALTER targeting a metadata table is not supported"
         )));
     }
-    match resolve_iceberg_truncate_target(catalogs, table_name).await? {
+    match resolve_iceberg_truncate_target(ctx, catalogs, table_name).await? {
         Some((catalog_name, catalog, table, branch)) => {
             repark_iceberg::write::commit_truncate_to(&catalog, &table, branch.as_deref()).await?;
             let namespace = namespace_schema_name(table.identifier().namespace());
@@ -99,6 +99,7 @@ fn single_truncate_target(truncate: &Truncate) -> Result<&ObjectName> {
 }
 
 async fn resolve_iceberg_truncate_target(
+    ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     table_name: &ObjectName,
 ) -> Result<Option<(String, Arc<dyn Catalog>, Table, Option<String>)>> {
@@ -113,6 +114,7 @@ async fn resolve_iceberg_truncate_target(
         }
         None => None,
     };
+    parts = crate::write_to_branch::qualify_table_parts(ctx, parts);
     if parts.len() < 3 {
         return Ok(None);
     }

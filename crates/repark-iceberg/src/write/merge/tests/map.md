@@ -17,6 +17,8 @@ MERGE unit tests. `merge/mod.rs` declares `#[cfg(test)] mod tests;`.
 - `occ.rs` — OCC / commit conflict pins + M13 isolation parse + M19-A split.
   RP-5 C-007: snapshot isolation still commits through a concurrent append.
   pins: rp-5-fork-repin/C-007
+- `occ_branch.rs` — RP-5 critic OCC-on-branch: concurrent branch append vs concurrent main.
+  pins: rp-5-fork-repin/C-004
 - `parallel_write.rs` — concurrent file write pins.
 - `streaming_scan.rs` — streaming target-scan pins + PERF-04 residual-push + MG-1.
 - `streaming.rs` — stream write interleaving pins.

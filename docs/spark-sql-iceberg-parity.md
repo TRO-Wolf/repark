@@ -262,8 +262,9 @@ wherever the statement *reads* it — a standalone `SELECT`, a JOIN, a DML state
 relation, a `MERGE`'s `USING` operand, a predicate subquery, or a CTAS body — and all of those
 work. It is REF-1's refusal only where the statement *writes* to it, which is the one relation
 named as the statement's target (`INSERT INTO x`, `INSERT OVERWRITE [TABLE] x`, `UPDATE x`,
-`DELETE FROM x`, `MERGE INTO x`). One statement can do both: `INSERT INTO t.branch_b SELECT …
-FROM t.tag_v` refuses on its target while the selector in its source is a perfectly good read.
+`DELETE FROM x`, `MERGE INTO x`). One statement can do both: `INSERT INTO t.tag_v SELECT …
+FROM t.branch_b` refuses on its tag write-target while the branch selector in its source is a
+perfectly good read.
 
 - **repark** — the selector reads the ref on the Spark door in every read position above; a
   missing branch **or** tag refuses naming it. The ANSI door's spelling for the same read is
@@ -1896,14 +1897,16 @@ the pin rather than obeying it.
 
 ### RDF-1 — `rewrite_data_files` never selects a delete-laden file, so its dead rows are retained forever
 
-- **repark** — at fork pin `5e7b2e4` a data file is a rewrite candidate only when it is outside
-  the size band (`length < min_file_size || length > max_file_size`) or carries at least
-  `delete_file_threshold` delete files. That threshold defaults to `usize::MAX`
-  (`DELETE_FILE_THRESHOLD_DEFAULT`, `crates/iceberg/src/maintenance/rewrite_data_files.rs:177`),
-  and Java's THIRD candidate clause, `tooHighDeleteRatio`, is **deferred** in the fork — the
-  module doc says so in as many words: "the delete-RATIO candidate clause is not exposed … The
-  ratio clause never fires here" (same file, `:66-67` and `:138-140`). So a **correctly sized**
-  data file whose rows are 100 % deleted is invisible to compaction. It is kept, its dead rows
+- **repark** — F-16r (`#248`, pin `00cdde0`) wired `tooHighDeleteRatio`, but the ratio
+  clause counts only **file-scoped** position deletes (`referenced_data_file` present, or
+  equal file-path bounds). Partition-granularity deletes and bounds-absent position deletes
+  are invisible to it (F-16 residue 2). The MW-7 2,500-row pin writes with
+  `write.delete.granularity = 'partition'` (`python/repark-parity/bench/mw7/measure.py`), so
+  those deletes never raise the ratio and a correctly sized 100 %-dead file stays unselected.
+  A data file is otherwise a rewrite candidate only when it is outside the size band or
+  carries at least `delete_file_threshold` delete files (`usize::MAX` by default). So a
+  **correctly sized** file whose rows are 100 % deleted under partition granularity is
+  invisible to compaction. It is kept, its dead rows
   with it, and the position-delete file covering it survives too, **still naming a LIVE data
   file** — it survives because its data file was never selected, not because of the
   `removed_delete_files_count` constant (that counter and fork ask F-3 belong to the other
@@ -1933,17 +1936,13 @@ the pin rather than obeying it.
   fixtures, tiling and 30 %-deleted shapes; measured 2026-08-24 during MW-7's Critic pass.)*
 - **Pin** —
   `python/repark/tests/test_mw7_scale_smoke.py::test_delete_laden_in_band_file_survives_the_runbook`
-- **Rationale** — BACKLOG, and it is **fork** work (ask **F-16** in
+- **Rationale** — BACKLOG, and it is **fork** work (F-16 residue 2 in
   [../task/roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md](../task/roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md)).
-  Three things this is **not**, each ruled out by measurement rather than assumed: it is not
-  format-v2 being v2 (Spark reaches zero on v2), not `write.delete.granularity` (Spark reaches
-  zero at both settings, so it is not `MOR-2` wearing a different hat), and not the missing
-  `remove-dangling-deletes` option (that option is OFF on the Spark side too, and the surviving
-  delete files here are not dangling — they name live files). **Contents are unaffected:** the
-  answers are correct at every point, which is exactly why this needs a registry row rather than
-  a refusal — nothing goes wrong loudly. What is retained is dead bytes and a delete file every
-  scan opens, without bound, and the maintenance runbook as documented cannot reclaim either.
-  Closing the row means porting Java's ratio clause into the fork's planner.
+  F-16r counted file-scoped deletes only. Spark reaches zero at both granularities; RePark's
+  remaining miss is partition-granularity / bounds-absent position deletes that never raise
+  the ratio. It is not format-v2 being v2, and not `remove-dangling-deletes` (OFF on Spark
+  too; the surviving deletes name live files). **Contents are unaffected.** Closing the row
+  means the ratio clause must count partition-scoped deletes the way Java does.
 
 ### RDF-SORT-1 — `rewrite_data_files` refuses `sort` / `sort_order`; Spark runs a sort rewrite
 
