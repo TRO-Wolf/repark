@@ -182,6 +182,11 @@ pins: rp-4-fork-repin/C-005, C-006
   `tests/time_travel.rs::time_travel_temp_views_do_not_survive_a_successful_statement`,
   `…::time_travel_temp_views_do_not_survive_a_failed_statement`, and
   `…::time_travel_statement_pins_never_collide_with_a_reader_options_view`.
+  It also resolves Spark's dotted READ selectors, `cat.ns.t.branch_b` and `cat.ns.t.tag_v`, onto
+  the same pinned providers — a four-or-more-part name whose last segment carries the prefix and
+  is not a metadata table. A selector overlapping an `AS OF` span is dropped, because Spark does
+  not accept that combination. Writes never reach this pass: the router's write-to-branch sniff
+  refuses them first. pins: ref-branch-tag-wap/C-002
 - `local_fs_ddl.rs` — SEC-02 local-filesystem DDL gate; 9 in-module tests.
 - `catalog_ops.rs` — catalog lookup, P11 refusals, `iceberg_err`, path-escape rejection, and
   `reregister*` provider invalidation.

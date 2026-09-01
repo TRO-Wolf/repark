@@ -78,8 +78,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   oracle's values, the reversed order refusing, write-to-branch and write-to-tag refusing while
   naming the `iceberg-datafusion` gap rather than a superseded fork pin, and WAP declared
   (`fast_forward` / `publish_changes` / `cherrypick_snapshot` and the `spark.wap.*` confs all
-  fail closed).
-  pins: ref-branch-tag-wap/C-003, C-004, C-005
+  fail closed). The `branch_`/`tag_` READ selectors resolve the ref here too, and a missing ref
+  refuses naming it.
+  pins: ref-branch-tag-wap/C-002, C-003, C-004, C-005
 - [test_v3e4_refs_time_travel.py](test_v3e4_refs_time_travel.py) — **V3E-4:** facade
   branch/tag, `VERSION AS OF` over DVs, rollback, expire dual-probe, orphan
   24h floor on the partitioned-DV fixture after a RePark append; live-DV UPDATE

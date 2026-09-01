@@ -21,7 +21,29 @@ pub fn sql_has_time_travel(sql: &str) -> bool {
     let Ok(tokens) = Tokenizer::new(&DatabricksDialect {}, sql).tokenize() else {
         return false;
     };
-    !find_time_travel_spans(&tokens).is_empty()
+    !find_pinned_spans(&tokens).is_empty()
+}
+
+/// Every relation this statement pins: the `AS OF` clauses and the dotted ref selectors.
+///
+/// A selector that overlaps an `AS OF` span is dropped. The `AS OF` pass already claims that
+/// relation, and `cat.ns.t.branch_b VERSION AS OF n` is not a shape Apache Spark accepts.
+fn find_pinned_spans(tokens: &[Token]) -> Vec<TimeTravelSpan> {
+    let mut spans = find_time_travel_spans(tokens);
+    let claimed: Vec<(usize, usize)> = spans
+        .iter()
+        .map(|span| (span.table_start, span.clause_end))
+        .collect();
+    for span in find_ref_selector_spans(tokens) {
+        let overlaps = claimed
+            .iter()
+            .any(|(start, end)| span.table_start < *end && *start < span.clause_end);
+        if !overlaps {
+            spans.push(span);
+        }
+    }
+    spans.sort_by_key(|span| span.table_start);
+    spans
 }
 
 /// One FROM/JOIN relation carrying an AS OF pin, with token indices for rewrite.
@@ -63,7 +85,7 @@ pub async fn prepare_time_travel_sql(
     let Ok(tokens) = Tokenizer::new(&dialect, sql).tokenize() else {
         return Ok(None);
     };
-    let spans = find_time_travel_spans(&tokens);
+    let spans = find_pinned_spans(&tokens);
     if spans.is_empty() {
         return Ok(None);
     }
@@ -245,6 +267,86 @@ fn find_time_travel_spans(tokens: &[Token]) -> Vec<TimeTravelSpan> {
     }
 
     spans
+}
+
+/// Scan tokens for Spark's dotted ref selectors — `cat.ns.t.branch_b` / `cat.ns.t.tag_v`.
+///
+/// The suffix is a READ selector only. A write naming one of these is refused earlier, by the
+/// router's write-to-branch sniff, so this pass never rewrites a statement that would commit.
+fn find_ref_selector_spans(tokens: &[Token]) -> Vec<TimeTravelSpan> {
+    let significant: Vec<(usize, &Token)> = tokens
+        .iter()
+        .enumerate()
+        .filter(|(_, token)| !matches!(token, Token::Whitespace(_) | Token::EOF))
+        .collect();
+    let mut spans = Vec::new();
+    let mut sig_index = 0usize;
+    while sig_index < significant.len() {
+        let opens_relation = matches!(
+            significant.get(sig_index).map(|(_, token)| *token),
+            Some(Token::Word(word))
+                if word.value.eq_ignore_ascii_case("FROM")
+                    || word.value.eq_ignore_ascii_case("JOIN")
+        );
+        if !opens_relation {
+            sig_index += 1;
+            continue;
+        }
+        let name_start = sig_index + 1;
+        let Some(name_end) = dotted_name_end(&significant, name_start) else {
+            sig_index += 1;
+            continue;
+        };
+        let parts = collect_table_parts(&significant[name_start..name_end]);
+        let Some(ref_name) = ref_selector_name(&parts) else {
+            sig_index = name_end;
+            continue;
+        };
+        spans.push(TimeTravelSpan {
+            table_start: significant[name_start].0,
+            clause_end: significant[name_end - 1].0 + 1,
+            table_parts: parts[..parts.len() - 1].to_vec(),
+            spec: TimeTravelSpec::VersionRef(ref_name),
+        });
+        sig_index = name_end;
+    }
+    spans
+}
+
+/// One past the last significant token of the dotted identifier starting at `start`.
+fn dotted_name_end(significant: &[(usize, &Token)], start: usize) -> Option<usize> {
+    if !is_ident_token(significant.get(start)?.1) {
+        return None;
+    }
+    let mut end = start + 1;
+    while matches!(significant.get(end).map(|(_, t)| *t), Some(Token::Period))
+        && significant
+            .get(end + 1)
+            .is_some_and(|(_, t)| is_ident_token(t))
+    {
+        end += 2;
+    }
+    Some(end)
+}
+
+/// The ref a `branch_`/`tag_`-suffixed four-or-more-part name selects, if it is one.
+fn ref_selector_name(parts: &[String]) -> Option<String> {
+    if parts.len() < 4 {
+        return None;
+    }
+    let last = parts.last()?;
+    if crate::metadata_tables::is_metadata_table_name(last) {
+        return None;
+    }
+    let lowered = last.to_ascii_lowercase();
+    let rest = lowered
+        .strip_prefix("branch_")
+        .or_else(|| lowered.strip_prefix("tag_"))?;
+    if rest.is_empty() {
+        return None;
+    }
+    let prefix_len = last.len() - rest.len();
+    Some(last[prefix_len..].to_string())
 }
 
 #[derive(Clone, Copy)]

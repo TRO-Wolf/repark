@@ -58,6 +58,27 @@ def test_reversed_snapshot_retention_order_refuses(spark: ReparkSession) -> None
     assert "SNAPSHOT RETENTION" in str(caught.value)
 
 
+def test_branch_and_tag_read_selectors_resolve_the_ref(spark: ReparkSession) -> None:
+    """``t.branch_b`` and ``t.tag_v`` read the ref, and the plain name still reads main."""
+    spark.sql(f"ALTER TABLE {TABLE} CREATE BRANCH audit")
+    spark.sql(f"ALTER TABLE {TABLE} CREATE TAG v1")
+    spark.sql(f"INSERT INTO {TABLE} SELECT 2 AS id, 'b' AS name")
+
+    branch_ids = spark.sql(f"SELECT id FROM {TABLE}.branch_audit").to_arrow()
+    tag_ids = spark.sql(f"SELECT id FROM {TABLE}.tag_v1").to_arrow()
+    main_ids = spark.sql(f"SELECT id FROM {TABLE}").to_arrow()
+    assert branch_ids.column("id").to_pylist() == [1]
+    assert tag_ids.column("id").to_pylist() == [1]
+    assert sorted(main_ids.column("id").to_pylist()) == [1, 2]
+
+
+def test_missing_ref_selector_refuses_naming_the_ref(spark: ReparkSession) -> None:
+    """A selector for a ref that does not exist refuses and names it."""
+    with pytest.raises(PySparkException) as caught:
+        spark.sql(f"SELECT id FROM {TABLE}.branch_nope").to_arrow()
+    assert "nope" in str(caught.value)
+
+
 def test_write_to_branch_refuses_naming_the_fork_write_path(spark: ReparkSession) -> None:
     """The refusal names the surface that is still missing, not a stale fork pin."""
     spark.sql(f"ALTER TABLE {TABLE} CREATE BRANCH audit")

@@ -34,6 +34,7 @@ mod partition_overwrite;
 mod partitioned_ctas;
 mod partitioned_merge;
 mod ref_ddl;
+mod refs_and_wap;
 mod router;
 mod service_managed_ctas;
 mod spark_string_literals;
