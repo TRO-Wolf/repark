@@ -219,7 +219,7 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
   [the registry](docs/spark-sql-iceberg-parity.md).
   **REF (2026-09-01, RP-5):** writes to `t.branch_<name>` land (`REF-1` FIXED). WAP publish
   procedures and `spark.wap.*` stay BACKLOG (`REF-3`). Reads were already Spark-equal (`REF-4`).
-  Ledger: [task/ledgers/staging/rp-5-fork-repin-ledger.md](task/ledgers/staging/rp-5-fork-repin-ledger.md).
+  Ledger: [task/ledgers/completed/rp-5-fork-repin-ledger.md](task/ledgers/completed/rp-5-fork-repin-ledger.md).
 <!-- /ws -->
 
 Parked lanes: **none** (the `repark.sql` re-home lane closed 2026-08-14, #95 —

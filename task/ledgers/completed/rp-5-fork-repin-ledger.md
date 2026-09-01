@@ -8,7 +8,7 @@ asks F-0, F-6, F-8, F-16 · **Path:** STANDARD (`risk_tier: standard`; one Actor
 **Proven pattern:**
 [2026-08-31-rp-4-fork-repin-ledger.md](../archive/2026-08/2026-08-31-rp-4-fork-repin-ledger.md).
 **REF oracle transcript (write leg):**
-[ref-branch-tag-wap-ledger.md](ref-branch-tag-wap-ledger.md).
+[ref-branch-tag-wap-ledger.md](../staging/ref-branch-tag-wap-ledger.md).
 
 **Retires:** this ledger moves to `../completed/` in this unit's last commit.
 
@@ -195,6 +195,7 @@ Recorded 2026-09-01, before departure `move`.
 | facade pytest (ref/wap + to_branch + RDF-1 + time-travel writeTo option) | 0 (18 passed) |
 | `python3 scripts/check_ledger_grammar.py` | 0 |
 | `python3 scripts/sync_map_md.py --check` | 0 |
+| `make py-test-facade` | 0 (4229 passed, 75 skipped) |
 
 ## 8. Oracle transcript (C-004 / C-007)
 

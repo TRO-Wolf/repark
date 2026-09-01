@@ -5,12 +5,6 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
-- [rp-5-fork-repin-ledger.md](rp-5-fork-repin-ledger.md) —
-  **RP-5 (2026-09-01), in flight:** fork repin `33be9a0` → `00cdde0`. Consume
-  F-6b/F-6c (branch DML), F-8 (delete the metadata-projection shim), F-16r
-  (RDF-1 re-measure); close REF-1 and RDF-1. WAP stays BACKLOG (REF-3).
-  Pin bump to `00cdde0` is in flight on this branch.
-  `risk_tier: standard`. Branch `feat/rp-5-fork-repin`.
 - [ex-0-example-drift-gate-ledger.md](ex-0-example-drift-gate-ledger.md) —
   **EX-0 (2026-08-31), in flight:** v0.7 example drift gate + public-surface
   inventory. `risk_tier: standard`. Branch `feat/ex-0-example-drift-gate`.
