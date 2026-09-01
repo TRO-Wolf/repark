@@ -145,13 +145,14 @@ def _assert_partitioned_dv_live_against_spark(
     import _live_parity as live_parity
     from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
 
+    catalog = live_parity.LIFECYCLE_SPARK_CATALOG
     warehouse = Path(tempfile.mkdtemp(prefix="repark-v3e-5-live-part-"))
     try:
         engine = live_parity.build_spark_iceberg_engine(warehouse)
         try:
             engine.session.sql("CREATE NAMESPACE IF NOT EXISTS local.sales")
             engine.session.sql(
-                f"CALL system.register_table(table => 'sales.partdv', "
+                f"CALL {catalog}.system.register_table(table => 'sales.partdv', "
                 f"metadata_file => '{metadata_file}')"
             )
             spark_rows = engine.session.sql(
@@ -211,13 +212,14 @@ def _assert_equality_delete_live_against_spark(
     import _live_parity as live_parity
     from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
 
+    catalog = live_parity.LIFECYCLE_SPARK_CATALOG
     warehouse = Path(tempfile.mkdtemp(prefix="repark-v3e-5-live-eq-"))
     try:
         engine = live_parity.build_spark_iceberg_engine(warehouse)
         try:
             engine.session.sql("CREATE NAMESPACE IF NOT EXISTS local.sales")
             engine.session.sql(
-                f"CALL system.register_table(table => 'sales.eqdv', "
+                f"CALL {catalog}.system.register_table(table => 'sales.eqdv', "
                 f"metadata_file => '{metadata_file}')"
             )
             spark_rows = engine.session.sql(
@@ -295,13 +297,14 @@ def _assert_delete_files_live_against_spark(part_meta: str, eq_meta: str) -> Non
     import _live_parity as live_parity
     from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
 
+    catalog = live_parity.LIFECYCLE_SPARK_CATALOG
     warehouse = Path(tempfile.mkdtemp(prefix="repark-v3e-5-live-del-"))
     try:
         engine = live_parity.build_spark_iceberg_engine(warehouse)
         try:
             engine.session.sql("CREATE NAMESPACE IF NOT EXISTS local.sales")
             engine.session.sql(
-                f"CALL system.register_table(table => 'sales.partdv', "
+                f"CALL {catalog}.system.register_table(table => 'sales.partdv', "
                 f"metadata_file => '{part_meta}')"
             )
             part = engine.session.sql(
@@ -315,7 +318,8 @@ def _assert_delete_files_live_against_spark(part_meta: str, eq_meta: str) -> Non
                 part.column("equality_ids").to_pylist()
             )
             engine.session.sql(
-                f"CALL system.register_table(table => 'sales.eqdv2', metadata_file => '{eq_meta}')"
+                f"CALL {catalog}.system.register_table(table => 'sales.eqdv2', "
+                f"metadata_file => '{eq_meta}')"
             )
             eq_del = engine.session.sql(
                 "SELECT content, file_format, equality_ids FROM local.sales.eqdv2.delete_files"
