@@ -18,6 +18,9 @@ else. The next pickup's `make ledger-archive` files everything here under
 - [rp-4-fork-repin-ledger.md](rp-4-fork-repin-ledger.md) — **RP-4 (2026-08-31), merged
   #284:** fork repin `d408da42` → `33be9a0` (F-7 slice 1 consume, F-6 carry).
   Family frozen. Ledger born on `feat/rp-4-fork-repin`.
+- [v3-6-v3-types-ledger.md](v3-6-v3-types-ledger.md) — **V3-6 (2026-08-31):** remaining v3
+  types (binary variant, nanosecond timestamps, `unknown`, column defaults). C-001
+  measurement matrix is in the ledger; product mapping follows per type.
 
 ## Pointers
 - Up: [../map.md](../map.md)

@@ -40,9 +40,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   good: v3 reads and v3 appends are already correct, round-tripped through Spark, including the
   row lineage the format mandates. §4 answers A12's stated first question — adoption, through
   `register_table`, whose Spark signature is measured there.
-- [v3-6-v3-types-ledger.md](v3-6-v3-types-ledger.md) — **V3-6 (2026-08-31):** remaining v3
-  types (binary variant, nanosecond timestamps, `unknown`, column defaults). C-001
-  measurement matrix is in the ledger; product mapping follows per type.
 
 ## Pointers
 - Up: [../map.md](../map.md)
