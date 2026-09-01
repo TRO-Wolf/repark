@@ -19,8 +19,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 - [ex-2-functions-math-bitwise-ledger.md](ex-2-functions-math-bitwise-ledger.md) —
   **EX-2 (2026-09-01), in flight:** the v0.7 example backfill's `F.*` math +
   bitwise family — the campaign pilot. One clause per batch; batch 1 covers
-  twelve roots / exponential / power / sign / rounding names and moves the
-  backlog ratchet 892 → 880. `risk_tier: standard`. Branch
+  eleven roots / exponential / power / sign / rounding names and moves the
+  backlog ratchet 892 → 881; the twelfth, `F.expm1`, is measured, reported and
+  left on the backlog rather than taught by an example that omits its reason
+  for existing. `risk_tier: standard`. Branch
   `feat/ex-2-functions-math-bitwise`. Slate:
   [../briefs/example-backfill.md](../../../briefs/example-backfill.md).
 - [v3-5-dv-compaction-ledger.md](v3-5-dv-compaction-ledger.md) — **V3-5 (2026-08-31),
