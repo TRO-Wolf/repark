@@ -400,7 +400,6 @@ async fn metadata_tables_spark_dot_form_and_guards() {
 }
 
 /// pins: rp-1-fork-repin/C-005
-/// pins: rp-5-fork-repin/C-003
 /// Synthesized `$` metadata names stay hidden from enumeration while remaining directly queryable.
 #[tokio::test]
 async fn metadata_tables_are_hidden_from_enumeration_but_stay_queryable_through_the_spark_door() {
@@ -509,7 +508,6 @@ async fn metadata_tables_are_hidden_from_enumeration_but_stay_queryable_through_
 }
 
 /// pins: rp-1-fork-repin/C-012 — `position_deletes` is schema-only at this pin; scan refuses.
-/// pins: rp-5-fork-repin/C-003
 /// Metadata-table projection honors empty, partial.
 #[tokio::test]
 #[allow(clippy::too_many_lines)] // one flat battery over the full MetadataTableType set

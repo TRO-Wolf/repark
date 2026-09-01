@@ -6,7 +6,7 @@ identity `--list`), taking it from 1028 to 772 lines, under the default ceiling.
 
 RP-5 (2026-09-01): `check_rust_file_size.py` `write/merge/mod.rs` 2086→1896 (commit path
 extracted to `snapshot_commit.rs`); `overwrite.rs` 1070→1053; `session/tests/session.rs`
-1415→1414.
+1415→1414. The comment re-home ratchets `session/tests/session.rs` 1414 → 1412.
 pins: rp-5-fork-repin/C-004
 
 V3-6 (2026-09-01): `check_rust_file_size.py` `write/append.rs` 1950→1886 — the conform

@@ -142,7 +142,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `REF-1`/`REF-3`/`REF-4` cite lives in the REF ledger C-001 (2026-09-01, live PySpark
   4.1.2 + Iceberg 1.11.0; retention values are the oracle's own `refs` rows).
   pins: ref-branch-tag-wap/C-001, C-002, C-003, C-005, C-007),
-  `time_travel`, `metadata_tables` (**RP-1:** projection battery iterates
+  `time_travel`, `metadata_tables` (**RP-5:** the two pins guard the fork behavior with the engine shim gone, pins: rp-5-fork-repin/C-003; **RP-1:** projection battery iterates
   `MetadataTableType::all_types`; `position_deletes` rewrites then scan-refuses.
   **MW-4b:** Glue-shaped `table_exists` — 4-part
   `.snapshots`/`.files` rewrites to `$` despite hierarchical `DataInvalid`; Unexpected
@@ -297,3 +297,4 @@ above.
 | Nested partition pin fails | `partitioned_ctas` / `partitioned_merge` / `transform_overwrite` — manifest-level `DataFile.partition` oracles |
 
 First checks: `cargo test -p repark-spark tests::<module>::`. Escalate to: [../map.md#debug](../map.md).
+
