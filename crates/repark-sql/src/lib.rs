@@ -32,6 +32,8 @@ mod matrix;
 #[cfg(test)]
 mod a13_fallback;
 #[cfg(test)]
+mod column_defaults;
+#[cfg(test)]
 mod delete_granularity;
 #[cfg(test)]
 mod partition_overwrite;

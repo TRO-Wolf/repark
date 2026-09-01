@@ -12,7 +12,9 @@ opt-in; end-to-end pins live in [`../v3/create.rs`](../v3/create.rs).
 - `tests.rs` — the `#[cfg(test)] mod tests;` declared in `../create_table.rs`. Clause
   refusals plus A11: `nanosecond_timestamp_columns_refuse_with_column_and_precision`,
   `nanosecond_timestamptz_columns_refuse`, `microsecond_timestamp_columns_pass_the_ns_gate`.
-  The tightened-CTAS refusal is pinned in
+  **V3-6 C-003** (2026-09-01): the A11 gate admits declared v3 `timestamp_ns` /
+  `timestamptz_ns` columns — the end-to-end pins live in
+  [`../v3/types.rs`](../v3/types.rs) (pins: v3-6-v3-types/C-003). The tightened-CTAS refusal is pinned in
   [`../../tests/declared_sorted_tighten.rs`](../../tests/declared_sorted_tighten.rs).
 
 ## Pointers

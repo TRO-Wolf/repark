@@ -6,8 +6,6 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use datafusion::arrow::array::RecordBatch;
-use datafusion::arrow::compute::{CastOptions, cast_with_options};
-use datafusion::arrow::datatypes::SchemaRef;
 use datafusion::error::{DataFusionError, Result};
 use futures::channel::mpsc;
 use futures::{SinkExt, Stream, StreamExt, TryStreamExt};
@@ -27,9 +25,8 @@ use iceberg::{Catalog, TableIdent};
 use uuid::Uuid;
 
 use crate::write::concurrency::WriteConcurrency;
+use crate::write::conform::{conform_batch, conform_batches, write_default_column_names};
 use crate::write::merge::{OPERATION_ID_PROP, write_data_files_with_concurrency};
-use crate::write::name_resolution::{CaseInsensitiveColumnIndex, SourceMatch};
-use crate::write::store_assign::refuse_unless_write_store_assignable;
 use crate::write::writer_props::writer_properties_for;
 
 /// Append record batches to an Iceberg table — the sanctioned add-only commit path.
@@ -43,9 +40,10 @@ pub async fn append(
     let table = catalog.load_table(table_ident).await.map_err(iceberg_err)?;
     reject_unsupported_append(&table)?;
 
-    let write_schema =
-        Arc::new(schema_to_arrow_schema(table.metadata().current_schema()).map_err(iceberg_err)?);
-    let conformed = conform_batches(&write_schema, &batches)?;
+    let current_schema = table.metadata().current_schema();
+    let write_schema = Arc::new(schema_to_arrow_schema(current_schema).map_err(iceberg_err)?);
+    let write_default_columns = write_default_column_names(current_schema);
+    let conformed = conform_batches(&write_schema, &write_default_columns, &batches)?;
 
     // Public `append` has no session handle — use the engine default concurrency (4).
     let concurrency = WriteConcurrency::default();
@@ -72,72 +70,10 @@ fn reject_unsupported_append(table: &Table) -> Result<()> {
     Ok(())
 }
 
-/// Conform batches to the Iceberg write schema: every target column takes its source column.
-fn conform_batches(write_schema: &SchemaRef, batches: &[RecordBatch]) -> Result<Vec<RecordBatch>> {
-    let mut conformed = Vec::with_capacity(batches.len());
-    for batch in batches {
-        conformed.push(conform_batch(write_schema, batch)?);
-    }
-    conformed.retain(|batch| batch.num_rows() > 0);
-    Ok(conformed)
-}
-
-/// Conform ONE consumer batch to the write schema.
-fn conform_batch(write_schema: &SchemaRef, batch: &RecordBatch) -> Result<RecordBatch> {
-    let source_names: Vec<&str> = batch
-        .schema_ref()
-        .fields()
-        .iter()
-        .map(|field| field.name().as_str())
-        .collect();
-    let source_index = CaseInsensitiveColumnIndex::new(source_names.iter().copied());
-    let mut consumed = vec![false; source_names.len()];
-    let columns = write_schema
-        .fields()
-        .iter()
-        .map(|field| match source_index.resolve(field.name()) {
-            SourceMatch::Unique(index) => {
-                consumed[index] = true;
-                // WI-1: ANSI store assignment BEFORE the kernel.
-                refuse_unless_write_store_assignable(
-                    "append",
-                    field.name(),
-                    batch.column(index).data_type(),
-                    field.data_type(),
-                )?;
-                Ok(cast_with_options(
-                    batch.column(index),
-                    field.data_type(),
-                    &strict_cast(),
-                )?)
-            }
-            SourceMatch::Missing => Err(DataFusionError::Plan(format!(
-                "append batch is missing column `{}` required by the target table \
-                 (columns resolve by name, case-insensitively — Spark default)",
-                field.name()
-            ))),
-            SourceMatch::Ambiguous(colliding) => Err(DataFusionError::Plan(format!(
-                "append batch column `{}` is ambiguous — source columns `{}` all resolve to it \
-                 (Spark case-insensitive resolution rejects the collision; a first-match rebuild \
-                 would silently drop every copy after the first)",
-                field.name(),
-                colliding.join("`, `")
-            ))),
-        })
-        .collect::<Result<Vec<_>>>()?;
-    if let Some(extra) = consumed.iter().position(|matched| !matched) {
-        return Err(DataFusionError::Plan(format!(
-            "append batch contains column `{}` that does not exist in the target table \
-             (columns resolve by name, case-insensitively — Spark default)",
-            source_names[extra]
-        )));
-    }
-    Ok(RecordBatch::try_new(write_schema.clone(), columns)?)
-}
-
 /// Write batches as identity-partitioned Parquet files, sibling of `write_data_files`.
 /// # Errors
-/// A batch with a missing, extra, or duplicate column, an uncastable/overflowing value, or a NULL
+/// A batch with a missing, extra, or duplicate column (unless the missing column carries an
+/// Iceberg `write-default`), an uncastable/overflowing value, or a NULL
 pub async fn write_partitioned_data_files(
     table: &Table,
     batches: Vec<RecordBatch>,
@@ -153,9 +89,10 @@ pub async fn write_partitioned_data_files_with_concurrency(
     batches: Vec<RecordBatch>,
     concurrency: WriteConcurrency,
 ) -> Result<Vec<DataFile>> {
-    let write_schema =
-        Arc::new(schema_to_arrow_schema(table.metadata().current_schema()).map_err(iceberg_err)?);
-    let conformed = conform_batches(&write_schema, &batches)?;
+    let current_schema = table.metadata().current_schema();
+    let write_schema = Arc::new(schema_to_arrow_schema(current_schema).map_err(iceberg_err)?);
+    let write_default_columns = write_default_column_names(current_schema);
+    let conformed = conform_batches(&write_schema, &write_default_columns, &batches)?;
     if conformed.is_empty() {
         return Ok(Vec::new());
     }
@@ -164,7 +101,8 @@ pub async fn write_partitioned_data_files_with_concurrency(
 
 /// Streaming sibling of `write_partitioned_data_files`: fan out each batch as it arrives.
 /// # Errors
-/// A batch with a missing, extra, or duplicate column, an uncastable/overflowing value, or a NULL
+/// A batch with a missing, extra, or duplicate column (unless the missing column carries an
+/// Iceberg `write-default`), an uncastable/overflowing value, or a NULL
 pub async fn write_partitioned_data_files_from_stream<S>(
     table: &Table,
     stream: S,
@@ -191,9 +129,11 @@ pub async fn write_partitioned_data_files_from_stream_with_concurrency<S>(
 where
     S: Stream<Item = Result<RecordBatch>> + Unpin,
 {
-    let write_schema =
-        Arc::new(schema_to_arrow_schema(table.metadata().current_schema()).map_err(iceberg_err)?);
-    let conformed = stream.map(move |item| conform_batch(&write_schema, &item?));
+    let current_schema = table.metadata().current_schema();
+    let write_schema = Arc::new(schema_to_arrow_schema(current_schema).map_err(iceberg_err)?);
+    let write_default_columns = write_default_column_names(current_schema);
+    let conformed =
+        stream.map(move |item| conform_batch(&write_schema, &write_default_columns, &item?));
     fanout_conformed_stream_with_concurrency(table, conformed, concurrency).await
 }
 
@@ -377,14 +317,6 @@ pub async fn commit_append(
         .set_snapshot_properties(summary);
     let tx = action.apply(tx).map_err(iceberg_err)?;
     tx.commit(catalog.as_ref()).await.map_err(iceberg_err)
-}
-
-/// Strict cast options: an overflowing cast is an error, never a silent NULL.
-fn strict_cast() -> CastOptions<'static> {
-    CastOptions {
-        safe: false,
-        ..CastOptions::default()
-    }
 }
 
 /// Fold an iceberg error into the DataFusion error this crate's callers carry.
@@ -1274,8 +1206,12 @@ mod tests {
         let write_schema = Arc::new(
             schema_to_arrow_schema(stale.metadata().current_schema()).expect("arrow schema"),
         );
-        let conformed = conform_batches(&write_schema, &[consumer_batch(&[Some(3)], &[Some("c")])])
-            .expect("conform batch");
+        let conformed = conform_batches(
+            &write_schema,
+            &HashSet::new(),
+            &[consumer_batch(&[Some(3)], &[Some("c")])],
+        )
+        .expect("conform batch");
         let files = crate::write::write_data_files(&stale, conformed)
             .await
             .expect("write files");
