@@ -10,6 +10,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   inventory. `risk_tier: standard`. Branch `feat/ex-0-example-drift-gate`.
   Ruling: [release-roadmap-2026-08-29.md](../../roadmap/epic-term/release-roadmap-2026-08-29.md)
   §v0.7 deliverable 2.
+- [ex-1-class-surfaces-ledger.md](ex-1-class-surfaces-ledger.md) —
+  **EX-1 (2026-08-31), in flight:** widens the EX-0 example-coverage inventory
+  with the class surfaces the owner ruled into v0.7 — Column, Window,
+  WindowSpec, Catalog, the `types` module surface, `ml`, and Row (150 names,
+  763 → 913). `risk_tier: standard`. Branch `feat/ex-1-class-surfaces`, stacked
+  on `feat/ex-0-example-drift-gate`.
 - [v3-5-dv-compaction-ledger.md](v3-5-dv-compaction-ledger.md) — **V3-5 (2026-08-31),
   in flight:** DV-aware v3 compaction (`V3-DANGLE-1`, B-MOR-3 residue, true
   result counts). Measure `rewrite_data_files` on live Puffin DVs at fork
