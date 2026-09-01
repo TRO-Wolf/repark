@@ -20,6 +20,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   in flight:** DV-aware v3 compaction (`V3-DANGLE-1`, B-MOR-3 residue, true
   result counts). Measure `rewrite_data_files` on live Puffin DVs at fork
   `33be9a0` before any product edit. Ledger born on `feat/v3-5-dv-compaction`.
+- [ref-branch-tag-wap-ledger.md](ref-branch-tag-wap-ledger.md) — **REF (2026-09-01), in flight:**
+  Iceberg branch / tag operations + write-audit-publish. The C-001 matrix measures every
+  reachable ref door at fork pin `33be9a0` against live PySpark 4.1.2 + Iceberg 1.11.0 and
+  moves the write-to-branch gap: F-6 gave `to_branch` to the transaction actions, not to the
+  `iceberg-datafusion` write path `INSERT`/`UPDATE`/`DELETE` execute through.
+  `risk_tier: standard`. Branch `feat/ref-branch-tag-wap`.
 - [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's
   scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike
   evidence behind it; C-007 (the four sub-project families) was closed by ruling D-7 on
