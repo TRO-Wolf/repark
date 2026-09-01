@@ -115,9 +115,53 @@ Spark's `UpdateColumnDefaultValue` table change.
 | C-004 | `unknown`: SQL CREATE refuses naming the type on all three doors; no table left behind. Scan gap filed against fork R91. Do not CREATE a table the scan cannot read. | Three-door refuse pins. | **PROVEN** | Spark-door pin (C-001 battery); ANSI pin `v3_type_column_unknown_refuses_naming_the_type` (refusal already names the type — green as measured); facade pin `test_v3_unknown_column_refuses_naming_the_type`. Fork scan gap filed against `GAP_MATRIX` R91: write commits, the reader guard (`reject_variant_projection`-class) refuses per file task, so the write-then-scan hole stands until fork I/O lands. Queued fork work. |
 | C-005 | Column defaults: Spark-equal refuse of ADD COLUMN / CREATE / ALTER SET DEFAULT DDL; engine write consumes fork `write_default` when the schema already has one (omitted column fills, supplied column kept); `initial_default` applied on read of files missing the column. | Refuse pins + fill/read pins. | **PROVEN** | Refuse pins on all three doors (ANSI CREATE DEFAULT red-first; ADD COLUMN/SET DEFAULT green pins; facade + Spark-door battery). Fill pin red-first vs the old "missing column" refuse; supplied-column-kept pin; `initial_default` read pin (fork reader `ColumnSource::Add`). No engine surface sets a default — the SQL refusals keep it that way. |
 | C-006 | v2-to-v3 in-place upgrade surface is byte-untouched. Ns/unknown/variant types land only behind CREATE opt-in. | Identity check of ALTER format-version refuse pins. | **PROVEN** | `call_v3.rs::the_engine_still_cannot_produce_a_v3_table` green; `call_v3.rs`, `repark-spark/src/alter.rs`, `repark-sql/src/alter.rs` byte-identical to `be2d754`. Ns mapping sits in the CREATE column-type mapping behind `iceberg_create_format_version` opt-in; v2 refuses via the fork's `check_compatibility`. |
-| C-007 | Documents match the pins: registry rows, STATUS Next, maps lockstep. Geometry/geography stay `V3-GEO-1`. | Registry, STATUS, `check-map-sync`. | **OPEN** | Registry row landed; STATUS truth-up pending. |
+| C-007 | Documents match the pins: registry rows, STATUS Next, maps lockstep. Geometry/geography stay `V3-GEO-1`. | Registry, STATUS, `check-map-sync`. | **PROVEN** | `V3-VARIANT-SHRED-1` row landed (§4, 2026-09-01); STATUS v3 block truth-up within its compaction ceiling; per-directory maps updated in each landing commit. Geometry/geography untouched in `V3-GEO-1`. |
 
-VERDICT: 6 PROVEN, 1 OPEN, 0 REJECTED. C-002/C-004 pins + registry row landed; C-006 identity verified. Remaining: C-007 STATUS truth-up + full gates, then departure.
+VERDICT: 7 PROVEN, 0 OPEN, 0 REJECTED. All clauses delivered: ns timestamps consumed (C-003), column-default write/read consumption + Spark-equal DEFAULT refusals (C-005), variant/unknown refusals pinned and filed (C-002/C-004), upgrade surface untouched (C-006), documents truth-up (C-007).
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: v3-6-v3-types
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Every charter clause C-001..C-007 is PROVEN against the C-001 matrix cells, not a paraphrase; the ns mapping, the default fill, and every refusal match a measured cell.
+      artifacts: [task/ledgers/staging/v3-6-v3-types-ledger.md]
+    - id: AT-2
+      status: ATTACKED
+      evidence: v2 CREATE with a ns column refuses; an empty variant table streams cleanly while a file-carrying one refuses at the reader guard; a batch missing a column without write_default still refuses; id-only and full batches both exercised.
+      artifacts: [crates/repark-iceberg/src/tests/v3_types.rs, crates/repark-spark/src/tests/v3_types.rs]
+    - id: AT-3
+      status: ATTACKED
+      evidence: DEFAULT DDL refusals leave no table behind; the flipped fill pin commits and reads back the filled value; ADD COLUMN without default reads NULL on old and new rows.
+      artifacts: [crates/repark-sql/src/column_defaults.rs, crates/repark-iceberg/src/tests/v3_types.rs]
+    - id: AT-4
+      status: N/A
+      justification: The conform change is per-batch and pre-commit; no shared mutable state or ordering assumption added; the append concurrency paths are untouched.
+    - id: AT-5
+      status: N/A
+      justification: No AWS, IAM, secrets, or SQL built from user text.
+    - id: AT-6
+      status: ATTACKED
+      evidence: The reduced-schema batch is rebuilt by the fork's own apply_write_defaults against the writer's schema; v2 refusal rides the fork check_compatibility; TIMESTAMP_NTZ stays microseconds and the upgrade surface is byte-untouched.
+      artifacts: [crates/repark-iceberg/src/write/conform.rs, crates/repark-spark/src/tests/call_v3.rs]
+    - id: AT-7
+      status: N/A
+      justification: No new resource claim; the fill reuses the fork's existing per-batch default repeat.
+    - id: AT-8
+      status: ATTACKED
+      evidence: The fork's DataFileWriter::write / apply_write_defaults contract (RP-3 C-009) is consumed, not reimplemented; timestamp_ns / timestamptz_ns are the Iceberg spec type names, not a dialect invention.
+      artifacts: [crates/repark-iceberg/src/write/conform.rs, crates/repark-spark/src/create_table.rs]
+    - id: AT-9
+      status: ATTACKED
+      evidence: Refusals name the type or the option (UNKNOWN, VARIANT, DEFAULT, missing column); the fill failure path keeps the fork's DataInvalid wording.
+      artifacts: [crates/repark-sql/src/create_table.rs, crates/repark-sql/src/column_defaults.rs]
+    - id: AT-10
+      status: ATTACKED
+      evidence: One pin per clause across the three doors (C-002..C-005 cited from crates and python); flips verified red-first (ANSI CREATE DEFAULT, write_default fill, C-003 refuse battery); the registry row and STATUS truth-up match the pins.
+      artifacts: [crates/repark-sql/src/v3/create.rs, crates/repark-iceberg/src/tests/v3_types.rs, python/repark/tests/test_v3_create_opt_in.py]
+  complete: true
+```
 
 ## Sequence
 

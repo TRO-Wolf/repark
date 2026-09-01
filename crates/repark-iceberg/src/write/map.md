@@ -66,7 +66,8 @@ repark-core's error map.
   class as `resolve_merge_mode`). Ledger:
   [`../../../../task/r1-g3e8-pr4-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-14-r1-g3e8-pr4-ledger.md).
 - `conform.rs` — batch conforming for the append write path (name resolution, WI-1 store
-  assignment, strict casts), split from `append.rs` (file-size ratchet, 2026-09-01). A missing
+  assignment, strict casts), split from `append.rs` (file-size ratchet, 2026-09-01;
+  append.rs baseline 1886). A missing
   column whose Iceberg field carries a `write-default` builds against the reduced schema so the
   fork's `DataFileWriter::write` fills it (**V3-6 C-005**).
 - `append.rs` — `append(catalog, ident, batches)`: public bulk append — conform

@@ -6,7 +6,6 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use datafusion::arrow::array::RecordBatch;
-use datafusion::arrow::datatypes::SchemaRef;
 use datafusion::error::{DataFusionError, Result};
 use futures::channel::mpsc;
 use futures::{SinkExt, Stream, StreamExt, TryStreamExt};

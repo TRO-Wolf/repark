@@ -1,4 +1,5 @@
 //! Pins format-v3 maintenance behavior, including lineage and dangling-delete guards.
+//! pins: v3-6-v3-types/C-006
 
 use super::super::*;
 use super::common::*;

@@ -20,7 +20,8 @@ ANSI-door format-v3 test modules. `lib.rs` declares `#[cfg(test)] mod v3;`.
   (pins: rp-3-fork-repin/C-008). Keep-refusal hash-pinned by
   `v3_lineage.rs::cow_keep_refusal_files_are_byte_untouched` — byte-untouched since V3-COW-1.
 - `types.rs` — `GEOMETRY` / `GEOGRAPHY` / `VARIANT` refuse at CREATE (`V3-GEO-1`);
-  reuses `cow.rs`'s `Door`.
+  reuses `cow.rs`'s `Door`. **V3-6 C-004:** the `UNKNOWN` column refuses naming the
+  type, no table left (pins: v3-6-v3-types/C-004).
 - `branch_tag_time_travel.rs` — ANSI branch/tag + `FOR VERSION AS OF` over the partitioned
   v3 DV fixture; RP-3 shared-Puffin DELETE keeps the untouched sibling
   (pins: rp-3-fork-repin/C-004).

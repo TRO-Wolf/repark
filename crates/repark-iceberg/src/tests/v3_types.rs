@@ -293,15 +293,14 @@ async fn fork_variant_arrow_maps_and_parquet_write_refuses() {
     let output = FileIO::new_with_fs()
         .new_output(&path)
         .expect("output file");
-    let error = match ParquetWriterBuilder::new(
+    let Err(error) = ParquetWriterBuilder::new(
         WriterProperties::builder().build(),
         Arc::new(variant_schema()),
     )
     .build(output)
     .await
-    {
-        Ok(_) => panic!("variant parquet write must refuse at builder"),
-        Err(error) => error,
+    else {
+        panic!("variant parquet write must refuse at builder")
     };
     assert_eq!(error.kind(), ErrorKind::FeatureUnsupported);
     assert!(
