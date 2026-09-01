@@ -63,9 +63,7 @@ def test_v3_geo_1_is_declared_and_shredded_variant_is_rowed_with_v3_6_pins() -> 
     citing the binary-vs-shredded pins V3-6 measured."""
     registry = _registry()
     assert "### V3-GEO-1 — the v3 `geometry` / `geography` types are not supported" in registry
-    geo = registry[
-        registry.index("### V3-GEO-1") : registry.index("### V3-VARIANT-SHRED-1")
-    ]
+    geo = registry[registry.index("### V3-GEO-1") : registry.index("### V3-VARIANT-SHRED-1")]
     assert "DECLARED" in geo and _RULING_DATE in geo
     assert "v3_type_columns_geometry_geography_variant_refuse_naming_the_type" in geo
     shred = registry[
