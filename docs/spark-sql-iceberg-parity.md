@@ -1946,7 +1946,7 @@ the pin rather than obeying it.
 > **FIXED 2026-08-31 (RP-4 / fork #243 F-7 slice 1).** `CALL system.rewrite_data_files` on a
 > twelve-file v3 table rewrites 12→1 and PySpark 4.1.2 + Iceberg 1.11.0 reads the same
 > `(id, _row_id, _last_updated_sequence_number)` and Arrow types (`int64`) before and after.
-> Residue: `V3-DANGLE-1` (DV removal on compact) and `B-MOR-3`. V3-5 is charterable.
+> Residue: `B-MOR-3` (position-delete rewrite still refuses live DVs). `V3-DANGLE-1` FIXED by V3-5.
 
 - **repark** — `CALL <catalog>.system.rewrite_data_files(table => …)` compacts a format-v3
   table and carries `_row_id` / `_last_updated_sequence_number` through unchanged. The 2026-08-21
@@ -1968,8 +1968,39 @@ the pin rather than obeying it.
   reassigned lineage. Fork #243 carries `_row_id` / seq through `RewriteDataFiles`; the public
   CALL is Spark-equal on values and Arrow types (RP-4, 2026-08-31). Default `CREATE` is still
   v2 (`the_engine_still_cannot_produce_a_v3_table`). Opt-in CREATE now reaches the CALL
-  (`opt_in_create_produces_v3_and_rewrite_runs`). `V3-DANGLE-1` remains: this fixture had no
-  live DVs (`removed_delete_files_count = 0`).
+  (`opt_in_create_produces_v3_and_rewrite_runs`). The RP-4 twelve-file fixture had no
+  live DVs (`removed_delete_files_count = 0`); V3-5 pinned the DV-drop half.
+
+### V3-DANGLE-1 — v3 `rewrite_data_files` drops deletion vectors scoped to rewritten files
+
+> **FIXED 2026-08-31 (V3-5 / fork `33be9a0`).** `CALL system.rewrite_data_files` on a
+> six-file v3 MOR table with one Puffin DV per data file rewrites 6→1, reports
+> `removed_delete_files_count = 6`, leaves zero live DVs, and keeps live rows plus
+> `_row_id` / seq. The RP-4 twelve-file fixture had no live DVs so this count was
+> unmeasured there. Spark's six-file Hadoop fixture reported `6` with no option set
+> (V3-0, PySpark 4.0.1 + Iceberg 1.10.0).
+
+- **repark** — a v3 compact drops every deletion vector whose `referenced_data_file`
+  was rewritten, in the same commit, without `'remove-dangling-deletes'`. The
+  result column is the fork's true count. A `where => 'part = 0'` compact drops
+  only that partition's vector and keeps the sibling live (shared-Puffin rewrite).
+  The V3E-3 partitioned fixture rewrites both delete-laden files (Java delete-ratio
+  0.3) and reports `removed_delete_files_count = 2`.
+- **Apache Spark** — the same compact removes the file-scoped vectors and reports
+  `removed_delete_files_count = 6` on the six-file fixture, with no option set.
+  Removal is an ordinary consequence of v3 compaction, not an opt-in sub-action.
+  *(oracle: live — PySpark 4.0.1 + Iceberg 1.10.0, format-v3 Hadoop-catalog
+  six-file fixture. The pinned 4.1.2 oracle cannot execute Iceberg maintenance
+  procedures — same `DataSourceV2Relation` break as MOR-1.)*
+- **Pin** —
+  `crates/repark-spark/src/tests/call_v3_dv.rs::call_rewrite_data_files_on_v3_drops_scoped_deletion_vectors`;
+  `crates/repark-spark/src/tests/v3e3.rs::partitioned_v3_dv_rewrite_data_files_drops_both_vectors`
+  and `partitioned_v3_dv_rewrite_where_part0_keeps_the_sibling_vector`;
+  facade `python/repark/tests/test_v3_dv_compaction.py::test_facade_rewrite_data_files_drops_scoped_v3_deletion_vectors`.
+  Pins: v3-5-dv-compaction/C-001, C-002, C-004.
+- **Rationale** — FIXED. Fork `plan_dv_removal` / `rewrite_siblings_for_dropped_references`
+  is wired in `RewriteDataFiles::rewrite_group` at `33be9a0`. The engine CALL already
+  forwarded `removed_delete_files_count`; V3-5 measured the public path on live DVs.
 
 ### B-MOR-3 — `rewrite_position_delete_files` refuses live Puffin deletion vectors
 
@@ -1990,13 +2021,17 @@ the pin rather than obeying it.
   `call_register_table_adopts_a_spark_written_v3_table_with_puffin_vectors`);
   `crates/repark-spark/src/tests/v3e3.rs::partitioned_v3_dv_rewrite_position_delete_files_still_refuses`
   and `partitioned_v3_dv_fork_rewrite_position_delete_files_measurement` (RP-3 C-007);
-  facade `python/repark/tests/test_v3e3_fixtures.py::test_facade_partitioned_v3_dv_matches_spark_live_rows`.
+  facade `python/repark/tests/test_v3e3_fixtures.py::test_facade_partitioned_v3_dv_matches_spark_live_rows`;
+  V3-5 `call_v3_dv.rs::call_rewrite_position_delete_files_still_refuses_engine_written_v3_dvs`
+  and `test_v3_dv_compaction.py` (engine-written six-DV refuse). Pins: v3-5-dv-compaction/C-003.
 - **Rationale** — DELIBERATE, stricter than Spark on purpose (owner decision OD-2). **RP-3
   C-007 (2026-08-30, fork `d408da42` / R136 F-7 U3):** the v3 arm *runs* and is read-identity
   on the V3E-3 partitioned-DV fixture, but it **converts parquet position deletes into DVs**.
   On a DV-only table it returns four zeros (`rewritten=0 added=0`, two DVs stay two) and a
-  second run converges. Zeros still read as already-clean, so `B-MOR-3` stays. DV compaction
-  remains V3-5.
+  second run converges. Zeros still read as already-clean, so `B-MOR-3` stays (OD-2).
+  **V3-5 (2026-08-31):** DV compaction lands through `rewrite_data_files` (`V3-DANGLE-1`
+  FIXED). This procedure does not compact live DVs; Spark also returns four zeros on a
+  DV-only table. The CALL refuse remains so those zeros cannot mean already-clean.
 
 ### V3-ADOPT-1 — Hadoop `vN.metadata.json` pointers register, read, and write `v(N+1)`
 
@@ -2299,14 +2334,8 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   (`Could not find config namespace "spark"`) — pre-existing for every `spark.*` key and wider
   than the session zone; it wants its own decision rather than a fold into the extraction unit.
 
-- **V3-DANGLE-1** — a v3 compaction must drop DVs scoped to rewritten files (Spark reported
-  `removed_delete_files_count = 6`). **RP-4 (2026-08-31)** lifted
-  [V3-LINEAGE-1](#v3-lineage-1--rewrite_data_files-carries-row-lineage-through-format-v3-compaction);
-  the RP-4 twelve-file fixture had no live DVs (`removed_delete_files_count = 0`). The v3 DV
-  half stays queued for V3-5. `rewrite_position_delete_files` still refuses live DVs
-  (B-MOR-3). **RP-2 (2026-08-27) took the F-3 half** on v2: the CALL accepts
-  `'remove-dangling-deletes' => true`, pinned at
-  `crates/repark-spark/src/tests/call.rs::call_rewrite_data_files_remove_dangling_deletes_reports_a_true_count`.
+- **V3-DANGLE-1** — **FIXED (V3-5, 2026-08-31).** See the row above. RP-2 took the v2
+  F-3 `'remove-dangling-deletes'` half; v3 file-scoped DV drop is this row.
 
 - **V3-ROWID-1** — **FIXED (V3-4, 2026-08-31).** `_row_id` and
   `_last_updated_sequence_number` are served on **single-table** v3 reads, Spark-equal

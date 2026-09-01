@@ -18,6 +18,13 @@ JVM, no repark required). See [../map.md](../map.md).
 
 ## Contents
 
+- `test_ex_0_example_coverage.py` — **EX-0 (2026-08-31):** the v0.7 example-drift
+  gate: five-family enumerator, uncovered / stale-backlog / covered-in-backlog
+  reds, backlog and exceptions baselines, COVERS-must-be-used, seed `COVERS`,
+  cloud exceptions, nonzero example exit, Makefile `make ci` + ci.yml dual-wire
+  + wheels.yml `python -I … --require-execute`; F.* includes installer
+  `__all__` mutations (`try_*`, `zip_with`, xpath). pins: ex-0-example-drift-gate/C-001,
+  C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - `test_plan_1_northstar_fnp_sequence.py` — **PLAN-1 (2026-08-28; tree pins):** the guarded
   North Star sequence, F-17's measured shared-Puffin closure request, the live slate, the
   per-unit FNP remaining order (FNP-7a/7b delivered 2026-08-31; remaining FNP-9/10 → FNP-8
@@ -25,7 +32,8 @@ JVM, no repark required). See [../map.md](../map.md).
   lockstep, including the archived V3-3 and F-rp3-c7 record. STATUS C-004 start marker is
   `**Next, in order (revised 2026-08-31):**`.
   (pins: plan-1-northstar-fnp-sequence/C-001, C-002, C-003, C-004, C-005, C-006;
-  v3-3-dml/C-003; v3-4-serve-lineage-columns/C-010; fnp-7-try-inversions/C-016).
+  v3-3-dml/C-003; v3-4-serve-lineage-columns/C-010; fnp-7-try-inversions/C-016;
+  v3-5-dv-compaction/C-006).
 - `test_pr_247_owner_ruling.py` — **PR #247 revalidation (2026-08-27):** the owner-ruling blocks
   in `AGENTS.md` and `CLAUDE.md` stay byte-exact, unique, at the document start, and in regular
   files; one-byte drift, malformed or missing files, relocation, duplication, and symlink

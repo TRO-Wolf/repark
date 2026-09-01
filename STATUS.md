@@ -130,8 +130,8 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
   design: [docs/design/format-v3-track.md](docs/design/format-v3-track.md); audit:
   [task/ledgers/staging/v3-0-charter-ledger.md](task/ledgers/staging/v3-0-charter-ledger.md).
   - **Measured true (V3-0, [#199](https://github.com/TRO-Wolf/repark/pull/199)):** v3 DV reads
-    and lineage appends round-trip through Spark. **RP-4 (2026-08-31):** `V3-LINEAGE-1` FIXED
-    (fork #243). Queued: `V3-DANGLE-1`.
+    and lineage appends round-trip through Spark. **RP-4:** `V3-LINEAGE-1` FIXED
+    (fork #243). **V3-5:** `V3-DANGLE-1` FIXED.
   - **Delivered:** V3-1 `register_table` + the checked-in v3 fixture
     ([#203](https://github.com/TRO-Wolf/repark/pull/203)); V3-2 CREATE/CTAS `format-version = 3`
     behind `repark.sql.allowCreateFormatVersion3` (default false), ALTER refused
@@ -159,7 +159,7 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
     **V3-4 read (2026-08-31):** `_row_id` / `_last_updated_sequence_number` Spark-equal on
     single-table v3 reads (three doors); v1/v2 engine Schema `No field named _row_id`;
     JOIN/CTE/subquery/time-travel refuse `V3-ROWID-2`. `V3-ROWID-1` FIXED. Preserve-half stays F-7.
-  - **Next:** V3-5 / F-7 COW lineage lift. V3-3 charter
+  - **Next:** V3-6 types; F-7 COW lineage. V3-3 charter
     [task/ledgers/completed/v3-3-dml-ledger.md](task/ledgers/archive/2026-08/2026-08-30-v3-3-dml-ledger.md)
     (keep-refusal, F-rp3-c7 stays a fork finding).
     Sequence: [docs/design/format-v3-track.md §5](docs/design/format-v3-track.md).

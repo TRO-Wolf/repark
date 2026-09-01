@@ -363,6 +363,8 @@ mod tests {
         out
     }
 
+    /// pins: rp-3-fork-repin/C-003
+    /// pins: v3-5-dv-compaction/C-005
     #[tokio::test]
     async fn shared_puffin_row_delta_keeps_the_untouched_sibling() {
         let fixture = materialize_part_dv();
