@@ -78,10 +78,10 @@ v1 crate-root re-export lists.
   deliberately, and **both are re-verified at every fork repin**
   ([../../AGENTS.md](../../AGENTS.md) "Version-pin contract"):
   - **`NamespaceScopedCatalog` (in `src/catalog/provider.rs`) both-sides trait-wrapping audit
-    (G17) is CLOSED.** At fork pin `33be9a0` (RP-4, 2026-08-31; unchanged from RP-3's
-    `d408da42`, RP-2's `ce92a7bf`, and RP-1's `5e7b2e4`) the `Catalog` trait has 14
-    required + **16 defaulted** methods; no method was added or removed in
-    `d408da42..33be9a0`. The wrapper explicitly forwards all 14 required methods
+    (G17) is CLOSED.** At fork pin `00cdde0` (RP-5, 2026-09-01; unchanged from RP-4's
+    `33be9a0`, RP-3's `d408da42`, RP-2's `ce92a7bf`, and RP-1's `5e7b2e4`) the
+    `Catalog` trait has 14 required + **16 defaulted** methods; no method was added
+    or removed in `33be9a0..00cdde0`. The wrapper explicitly forwards all 14 required methods
     (with `list_namespaces` filtered to one namespace) and **13 of 16** defaulted
     methods — including the HIGH `publish_replace_table` (whose trait default is
     `FeatureUnsupported` and would swallow `MemoryCatalog`'s CAS replace). The
@@ -94,11 +94,12 @@ v1 crate-root re-export lists.
     pins: rp-1-fork-repin/C-001, C-002, C-003
     pins: rp-3-fork-repin/C-001, C-002
     pins: rp-4-fork-repin/C-001, C-002
-  - **The metadata-projection shim (`src/catalog/metadata_projection.rs`) is still required.** The
-    fork's metadata-table `scan` still takes `_projection` and ignores it at `33be9a0`; the
-    shim goes only when a fork rev honors it, empty-projection case included. The gap is not
-    yet filed in the fork's own `docs/parity/GAP_MATRIX.md` — filing it there is the fork-side
-    follow-up (capability status lives ONLY in the fork).
+    pins: rp-5-fork-repin/C-001, C-002
+  - **The metadata-projection shim (`src/catalog/metadata_projection.rs`) is still required until
+    the F-8 consume commit in this unit.** At the pin `00cdde0` the fork's metadata-table
+    `scan` honors `projection` (F-8 `#247`) and `table_names` lists catalog entries only.
+    The shim is deleted in the same unit (C-003). The gap is not restated from the fork's
+    `docs/parity/GAP_MATRIX.md`.
   - **The metadata-table enumeration filter (same module) is coupled to the fork's synthesis.**
     The fork's `IcebergSchemaProvider::table_names` invents `<base>$<MetadataTableType::as_str()>`
     for every listed table; `MetadataProjectionSchemaProvider::table_names` drops exactly that
@@ -111,8 +112,8 @@ v1 crate-root re-export lists.
     silently re-exposes them — re-run the two emptiness pins
     (`crates/repark-sql/tests/introspection.rs`, `crates/repark-spark/src/tests/metadata_tables.rs`)
     at every repin, not just the compile.
-  - **`IcebergSchemaProvider` name-directory population is still lazy at pin `33be9a0`
-    (RP-4 re-verified 2026-08-31; first measured at `5e7b2e4`).** `try_new`
+  - **`IcebergSchemaProvider` name-directory population is still lazy at pin `00cdde0`
+    (RP-5 re-verified 2026-09-01; first measured at `5e7b2e4`).** `try_new`
     no longer `list_tables`; first `table` / `table_names` / `table_exist` lists live and
     then freezes. `ReparkCatalogProvider` eager-lists at snapshot and namespace-refresh
     (`freeze_fork_name_directory` in `src/catalog/provider.rs`) so an out-of-band create

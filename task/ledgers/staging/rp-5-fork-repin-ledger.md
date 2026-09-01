@@ -31,8 +31,8 @@ family bumps (HALT).
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | Every `iceberg*` `[patch.crates-io]` rev is `00cdde00685bbc94552b29fcf8ed6767fe051ce6` and `Cargo.lock` resolves to it; `datafusion`, `datafusion-spark`, `arrow*`, `parquet` and `rust-toolchain.toml` are byte-identical to `main`. | `rg` on the workspace `Cargo.toml` + lock source entries; `git diff origin/main -- rust-toolchain.toml` empty; family freeze vs `origin/main`. | **OPEN** | Target SHA named. Bump not yet run. |
-| C-002 | The standing `NamespaceScopedCatalog` duty holds at the new rev (forwards every required `Catalog` method; trait diff old vs new), and the what-changed note lists every commit in `33be9a0..00cdde0` with the engine site that absorbs each. The metadata-projection duty retires under C-003. | Trait diff; namespace-scoped pins; the note in §6. | **OPEN** | Range is the five fork PRs in the brief table. |
+| C-001 | Every `iceberg*` `[patch.crates-io]` rev is `00cdde00685bbc94552b29fcf8ed6767fe051ce6` and `Cargo.lock` resolves to it; `datafusion`, `datafusion-spark`, `arrow*`, `parquet` and `rust-toolchain.toml` are byte-identical to `main`. | `rg` on the workspace `Cargo.toml` + lock source entries; `git diff origin/main -- rust-toolchain.toml` empty; family freeze vs `origin/main`. | **OPEN** | Five `[patch.crates-io]` revs and six lock sources are `00cdde0`. `cargo check --locked --workspace` exit 0 (1m 42s, 2026-09-01). `git diff origin/main -- rust-toolchain.toml` empty. Family freeze: datafusion 54.1.0, datafusion-spark 54.1.0, arrow*/parquet 58.4.0, rust-toolchain 1.96.0. Citation: `crates/repark-iceberg/map.md`. |
+| C-002 | The standing `NamespaceScopedCatalog` duty holds at the new rev (forwards every required `Catalog` method; trait diff old vs new), and the what-changed note lists every commit in `33be9a0..00cdde0` with the engine site that absorbs each. The metadata-projection duty retires under C-003. | Trait diff; namespace-scoped pins; the note in §6. | **OPEN** | Range is 5 commits (listed in §6). `Catalog` trait still 14 required + 16 defaulted; no method added or removed. Citation: `crates/repark-iceberg/map.md`. |
 | C-003 | F-8 is consumed: `catalog/metadata_projection.rs` (`ProjectingMetadataTableProvider` and `MetadataProjectionSchemaProvider`) and the wrap at `catalog/provider.rs` plus the `pub use` are deleted. The two existing metadata-table pins stay green without the shim, and each reds if the property it guards is broken. | Green before delete; green after; one cheap mutation per pin then restore. | **OPEN** | Pins: `crates/repark-spark/src/tests/metadata_tables.rs`. |
 | C-004 | The write leg of REF lands. Spark-door `INSERT`/`UPDATE`/`DELETE`/`MERGE`/`INSERT OVERWRITE` onto a diverged branch commit onto that branch, parented off the branch head, and leave `main` unmoved. A write naming a tag refuses with a Spark-shaped message. Missing-branch outcome matches the live oracle, not the fork's INSERT-VALUES create. Both execution halves land: fork-executed families through `IcebergTableProvider::with_commit_branch`; RePark-owned families through `.to_branch(b)` plus a branch-head scan. | Per-family pins on Spark door and facade; mutation-proof by forcing the branch to `main`; oracle transcript. | **OPEN** | Oracle not yet run this unit. REF ledger's measured Spark tables are the write-leg starting transcript. |
 | C-005 | F-16r is consumed: `test_delete_laden_in_band_file_survives_the_runbook` is re-measured at the new pin. If red, rewrite as the Spark-equal assertion (zero delete files and zero delete records after the runbook on the 2,500-row shape) and mark registry `RDF-1` FIXED with the measured counts. If green, keep the pin and report the measured counts as a finding. | Pin red/green at the new rev; registry row. | **OPEN** | 1e7 × 50 MW-7 driver is optional. |
@@ -129,11 +129,13 @@ is **5 commits** (to be listed from the cargo git checkout after the bump). Comp
 
 | Fork PR | Change | Engine site that absorbs it |
 |---|---|---|
-| `#245` F-6b | `IcebergTableProvider::with_commit_branch` | C-004 fork-executed families |
-| `#246` R91 | `unknown`-typed column refused on parquet write | C-006 carry; correct only what the rev falsifies |
-| `#247` F-8 (`f80372db5`) | metadata-table `scan` honors `projection`; `table_names` lists catalog entries only | C-003 shim delete |
-| `#248` F-16r (`6801659bf`) | delete-ratio counts bounds-only parquet position deletes | C-005 RDF-1 re-measure |
-| `#249` F-6c (`00cdde00685bbc94552b29fcf8ed6767fe051ce6`) | every DataFusion scan site resolves the branch head | C-004 read-of-branch for INSERT/UPDATE/DELETE |
+| `a5f6baa6` `#245` F-6b | `IcebergTableProvider::with_commit_branch` | C-004 fork-executed families |
+| `33c20da3` `#246` R91 | `unknown`-typed column refused on parquet write | C-006 carry; correct only what the rev falsifies |
+| `f80372db` `#247` F-8 | metadata-table `scan` honors `projection`; `table_names` lists catalog entries only | C-003 shim delete |
+| `6801659b` `#248` F-16r | delete-ratio counts bounds-only parquet position deletes | C-005 RDF-1 re-measure |
+| `00cdde00` `#249` F-6c | every DataFusion scan site resolves the branch head | C-004 read-of-branch for INSERT/UPDATE/DELETE |
+
+Listed from the cargo git checkout at `00cdde00685bbc94552b29fcf8ed6767fe051ce6`.
 
 ## 7. Gates (C-008)
 
