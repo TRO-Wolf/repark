@@ -2,7 +2,8 @@
 
 ## Purpose
 
-Worked examples for `repark.spark.ta` kernels.
+Worked examples for `repark.spark.ta` kernels. Examples construct the session
+as `repark = ReparkSession.builder…`; see [../map.md](../map.md).
 
 ## Contents
 

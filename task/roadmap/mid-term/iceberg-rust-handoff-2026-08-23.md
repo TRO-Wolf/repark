@@ -214,8 +214,26 @@ half is unchanged.
 - **Landed (RP-4, 2026-08-31, fork #244).** `SnapshotUpdate.to_branch` exists
   (`crates/iceberg/src/transaction/to_branch.rs`). The engine does not call it yet; REF
   consumes the surface. The refuse pin stays until REF routes branch-targeted DML.
-- **Acceptance.** Engine pin `crates/repark-spark/src/tests/ref_ddl.rs::write_to_branch_refuses_loud_naming_fork_gap`
-  is written to go red when a commit target exists; the engine then routes branch-targeted DML.
+- **REF addendum (2026-09-01) — the gap moved; F-6 did not close it.** Measured at pin
+  `33be9a0`, `to_branch` reached the seven snapshot-producing *transaction actions*
+  (`FastAppendAction`, `MergeAppendAction`, `OverwriteFilesAction`, `ReplacePartitionsAction`,
+  `RewriteFilesAction`, `RowDeltaAction`, `DeleteFilesAction`). It did **not** reach the surface
+  the engine's statements execute through. `INSERT`, `UPDATE` and `DELETE` fall through the Spark
+  door to DataFusion and commit inside `iceberg-datafusion`'s `IcebergTableProvider` and its
+  commit exec, which build `tx.fast_append()` with no commit target — `grep -n branch
+  crates/integrations/datafusion/src/table/mod.rs` at the pin returns nothing.
+- **Ask, restated (F-6b).** A commit target on `IcebergTableProvider` (or on its write / delete /
+  update physical plans) that is handed to the action's `to_branch`. Until then REF cannot route
+  branch-targeted DML: RePark owns commit construction for `MERGE`, `INSERT OVERWRITE`, `TRUNCATE`
+  and CTAS, but not for `INSERT INTO` / `UPDATE` / `DELETE`, so building only the RePark-owned
+  half would make one statement family write to a branch while its sibling refuses. REF declined
+  that split and kept the whole write leg refused. WAP is still **not** requested here; RePark's
+  own WAP surface is DECLARED (registry REF-3).
+- **Acceptance.** Engine pin
+  `crates/repark-spark/src/tests/ref_ddl.rs::write_to_branch_refuses_loud_naming_fork_gap`
+  is written to go red when a commit target exists on that provider; the engine then routes
+  branch-targeted DML. Since REF (2026-09-01) the pin also asserts the refusal cites pin
+  `33be9a0` and not the superseded `b009ac1`, so a stale reason cannot survive a repin.
 
 ### F-7 (A12-owned; unblocked 2026-08-23 — see the addendum below) — format v3 compaction
 

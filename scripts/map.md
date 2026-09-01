@@ -1,5 +1,9 @@
 # map — scripts/
 
+REF (2026-09-01): `check_rust_file_size.py` — the `repark-spark/src/ref_ddl.rs` EXCEPTIONS row
+is gone. The file's inline `mod tests` moved to a file-backed `ref_ddl/tests.rs` (move-only,
+identity `--list`), taking it from 1028 to 772 lines, under the default ceiling.
+
 V3-6 (2026-09-01): `check_rust_file_size.py` `write/append.rs` 1950→1886 — the conform
 step moved to a file-backed `write/conform.rs` (V3-6 C-005); one import shed in the same
 pass.
@@ -326,7 +330,10 @@ repark-parity slice.
   ruled into v0.7 — Column, Window, WindowSpec, Catalog, the `types` module
   surface, `ml`, and Row — under five new families (`column`, `window`,
   `catalog`, `types`, `ml`): 150 names, 763 → 913, `BACKLOG_BASELINE`
-  742 → 892. Class surfaces are `CLASS_SURFACES` rows and module surfaces
+  742 → 892. EX-2 batch 1 (2026-09-01) is the first backfill to move the
+  ratchet the other way: eleven `F.*` math names covered, `BACKLOG_BASELINE`
+  892 → 881. Its ledger records why the twelfth, `F.expm1`, stayed a backlog
+  row. Class surfaces are `CLASS_SURFACES` rows and module surfaces
   `MODULE_SURFACES` rows; `MODULE_DOORS` holds the alias/import rules that
   decide whether a `types.*` or `ml.*` cover binds; `Window.*` binds on the
   `Window` class root the way `SparkSession.Builder.*` does. Every door's live

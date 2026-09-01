@@ -348,6 +348,19 @@ fn parse_retention_clauses(
                         "WITH SNAPSHOT RETENTION n SNAPSHOTS count does not fit i32".into(),
                     )
                 })?);
+                if starts_duration_clause(significant, after) {
+                    let (age_amount, age_unit, age_after) =
+                        parse_amount_unit(significant, after, "WITH SNAPSHOT RETENTION")?;
+                    let max_snapshot_age_ms =
+                        duration_to_ms(age_amount, age_unit, "WITH SNAPSHOT RETENTION")?;
+                    if max_snapshot_age_ms <= 0 {
+                        return Err(DataFusionError::Plan(
+                            "WITH SNAPSHOT RETENTION duration must be greater than 0".into(),
+                        ));
+                    }
+                    retention.max_snapshot_age_ms = Some(max_snapshot_age_ms);
+                    return Ok((retention, age_after));
+                }
             }
             other => {
                 let max_snapshot_age_ms = duration_to_ms(amount, other, "WITH SNAPSHOT RETENTION")?;
@@ -363,6 +376,25 @@ fn parse_retention_clauses(
     }
 
     Ok((retention, cursor))
+}
+
+fn starts_duration_clause(significant: &[Sig], index: usize) -> bool {
+    let is_count = matches!(
+        significant.get(index),
+        Some(Sig::Number(raw)) if raw.parse::<i64>().is_ok()
+    ) || matches!(
+        significant.get(index),
+        Some(Sig::Word(word)) if word.parse::<i64>().is_ok()
+    );
+    if !is_count {
+        return false;
+    }
+    matches!(
+        word_at(significant, index + 1)
+            .map(str::to_ascii_uppercase)
+            .as_deref(),
+        Some("DAYS" | "DAY" | "HOURS" | "HOUR" | "MINUTES" | "MINUTE")
+    )
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -642,17 +674,17 @@ pub(crate) async fn execute_ref_ddl(
     ctx.read_empty()
 }
 
-// Write-to-branch targets must refuse because the fork commits only to MAIN_BRANCH.
-
 /// Loud refuse message for write-to-branch (fork gap seed).
 pub(crate) const WRITE_TO_BRANCH_NOT_SUPPORTED: &str = "\
 write-to-branch (INSERT/UPDATE/DELETE/MERGE targeting `table.branch_<name>` or \
-`table.branch_name`) is not supported: fork pin b009ac158f7584a956fa9292c0e9675a411ecf0d \
-FastAppendAction / SnapshotProduce always emit SetSnapshotRef on MAIN_BRANCH only \
-(transaction/append.rs + snapshot.rs) — no to_branch / with_branch commit-target API. \
-Fork-workstream seed (not a RePark hack). Read-side VERSION AS OF 'branch' works; \
-CREATE|REPLACE BRANCH re-pin is the product write path for refs today \
-(docs/spark-sql-iceberg-parity.md §2.2 / r25 T2 ledger).";
+`table.branch_name`) is not supported at fork pin 33be9a0f411c37cd8d7b38c4db81eec30c1344cc. \
+F-6 (#244) added SnapshotUpdate.to_branch to the seven transaction actions, but INSERT, \
+UPDATE and DELETE execute through iceberg-datafusion's IcebergTableProvider and its commit \
+exec, which commit with no branch target — so the statement would still write to main. \
+Closing this needs a commit target on that provider, which is fork surface: do not work \
+around it here. A write naming a TAG refuses on Apache Spark too. Read-side \
+VERSION AS OF 'branch-or-tag' works; CREATE|REPLACE BRANCH re-pin is the product write path \
+for refs today (docs/spark-sql-iceberg-parity.md §2.2).";
 
 /// A sniffed write-to-branch candidate.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -691,54 +723,64 @@ pub(crate) fn sniff_write_to_branch(sql: &str) -> Option<WriteToBranchSniff> {
     find_write_target_branch_span(&significant)
 }
 
-/// Find a write-target span that ends with a non-metadata trailing segment after a real table path.
 fn find_write_target_branch_span(significant: &[&Token]) -> Option<WriteToBranchSniff> {
-    // Locate INTO / FROM / UPDATE (for UPDATE t SET) keyword then parse dotted name.
-    let mut index = 0usize;
-    while index < significant.len() {
-        let is_target_kw = matches!(
-            significant.get(index),
-            Some(Token::Word(word))
-                if {
-                    let upper = word.value.to_ascii_uppercase();
-                    matches!(upper.as_str(), "INTO" | "FROM" | "UPDATE" | "TABLE")
-                }
-        );
-        // Also: `UPDATE cat.ns.t.branch SET` — word at 0 is UPDATE, next is name.
-        let at_update_name = index == 1
-            && matches!(
-                significant.first(),
-                Some(Token::Word(word)) if word.value.eq_ignore_ascii_case("UPDATE")
-            );
-        if is_target_kw || at_update_name {
-            let name_start = if is_target_kw { index + 1 } else { index };
-            if let Some(parts) = collect_ident_parts(significant, name_start) {
-                // Four-or-more parts: `catalog.namespace.table.ref`.
-                if parts.len() >= 4 {
-                    let last = parts.last()?.as_str();
-                    if !crate::metadata_tables::is_metadata_table_name(last) {
-                        return Some(WriteToBranchSniff::MultiPart);
-                    }
-                }
-                // Two-part `table.branch_foo` under session default catalog.
-                if parts.len() == 2 {
-                    let last = parts.last()?.as_str();
-                    if last.to_ascii_lowercase().starts_with("branch_")
-                        && !crate::metadata_tables::is_metadata_table_name(last)
-                    {
-                        let mut iter = parts.into_iter();
-                        let first = iter.next()?;
-                        let second = iter.next()?;
-                        return Some(WriteToBranchSniff::TwoPart {
-                            parts: [first, second],
-                        });
-                    }
-                }
-            }
+    let parts = collect_ident_parts(significant, write_target_name_start(significant)?)?;
+    if parts.len() >= 4 {
+        let last = parts.last()?.as_str();
+        if !crate::metadata_tables::is_metadata_table_name(last) {
+            return Some(WriteToBranchSniff::MultiPart);
         }
-        index += 1;
+    }
+    if parts.len() == 2 {
+        let last = parts.last()?.as_str();
+        if last.to_ascii_lowercase().starts_with("branch_")
+            && !crate::metadata_tables::is_metadata_table_name(last)
+        {
+            let mut iter = parts.into_iter();
+            let first = iter.next()?;
+            let second = iter.next()?;
+            return Some(WriteToBranchSniff::TwoPart {
+                parts: [first, second],
+            });
+        }
     }
     None
+}
+
+fn write_target_name_start(significant: &[&Token]) -> Option<usize> {
+    let head = word_upper(significant, 0)?;
+    let mut index = match head.as_str() {
+        "UPDATE" => 1,
+        "DELETE" => {
+            if word_upper(significant, 1).as_deref() == Some("FROM") {
+                2
+            } else {
+                1
+            }
+        }
+        "INSERT" | "MERGE" => {
+            let mut cursor = 1;
+            if matches!(
+                word_upper(significant, cursor).as_deref(),
+                Some("INTO" | "OVERWRITE")
+            ) {
+                cursor += 1;
+            }
+            cursor
+        }
+        _ => return None,
+    };
+    if word_upper(significant, index).as_deref() == Some("TABLE") {
+        index += 1;
+    }
+    Some(index)
+}
+
+fn word_upper(significant: &[&Token], index: usize) -> Option<String> {
+    match significant.get(index) {
+        Some(Token::Word(word)) => Some(word.value.to_ascii_uppercase()),
+        _ => None,
+    }
 }
 
 fn collect_ident_parts(significant: &[&Token], start: usize) -> Option<Vec<String>> {
@@ -769,260 +811,4 @@ pub(crate) fn refuse_write_to_branch() -> DataFusionError {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn parses_alter_create_branch_as_of() {
-        let ddl = try_parse_ref_ddl("ALTER TABLE ice.sales.t CREATE BRANCH audit AS OF VERSION 42")
-            .expect("recognized")
-            .expect("ok");
-        assert_eq!(ddl.table_parts, ["ice", "sales", "t"]);
-        assert!(matches!(
-            ddl.op,
-            RefOp::Create {
-                kind: SnapshotRefKind::Branch,
-                ref name,
-                as_of_version: Some(42),
-                or_replace: false,
-                retention,
-            } if name == "audit" && retention.is_empty()
-        ));
-    }
-
-    #[test]
-    fn parses_alter_create_tag_current() {
-        let ddl = try_parse_ref_ddl("ALTER TABLE ice.sales.t CREATE TAG release")
-            .expect("recognized")
-            .expect("ok");
-        assert!(matches!(
-            ddl.op,
-            RefOp::Create {
-                kind: SnapshotRefKind::Tag,
-                ref name,
-                as_of_version: None,
-                or_replace: false,
-                ..
-            } if name == "release"
-        ));
-    }
-
-    #[test]
-    fn parses_create_or_replace_branch() {
-        let ddl = try_parse_ref_ddl(
-            "ALTER TABLE ice.sales.t CREATE OR REPLACE BRANCH audit AS OF VERSION 7",
-        )
-        .expect("recognized")
-        .expect("ok");
-        assert!(matches!(
-            ddl.op,
-            RefOp::Create {
-                kind: SnapshotRefKind::Branch,
-                ref name,
-                as_of_version: Some(7),
-                or_replace: true,
-                ..
-            } if name == "audit"
-        ));
-    }
-
-    #[test]
-    fn parses_bare_replace_branch() {
-        let ddl = try_parse_ref_ddl("ALTER TABLE ice.sales.t REPLACE BRANCH audit AS OF VERSION 9")
-            .expect("recognized")
-            .expect("ok");
-        assert!(matches!(
-            ddl.op,
-            RefOp::Replace {
-                kind: SnapshotRefKind::Branch,
-                ref name,
-                as_of_version: Some(9),
-                ..
-            } if name == "audit"
-        ));
-    }
-
-    #[test]
-    fn parses_retain_and_snapshot_retention() {
-        let ddl = try_parse_ref_ddl(
-            "ALTER TABLE ice.sales.t CREATE BRANCH audit RETAIN 7 DAYS \
-             WITH SNAPSHOT RETENTION 10 SNAPSHOTS",
-        )
-        .expect("recognized")
-        .expect("ok");
-        match ddl.op {
-            RefOp::Create { retention, .. } => {
-                assert_eq!(retention.max_ref_age_ms, Some(7 * 86_400_000));
-                assert_eq!(retention.min_snapshots_to_keep, Some(10));
-                assert!(retention.max_snapshot_age_ms.is_none());
-            }
-            other => panic!("expected Create, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn parses_snapshot_retention_days() {
-        let ddl =
-            try_parse_ref_ddl("CREATE BRANCH audit IN ice.sales.t WITH SNAPSHOT RETENTION 2 DAYS")
-                .expect("recognized")
-                .expect("ok");
-        match ddl.op {
-            RefOp::Create { retention, .. } => {
-                assert_eq!(retention.max_snapshot_age_ms, Some(2 * 86_400_000));
-            }
-            other => panic!("expected Create, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn tag_with_snapshot_retention_refuses() {
-        let err = try_parse_ref_ddl(
-            "ALTER TABLE ice.sales.t CREATE TAG t1 RETAIN 1 DAYS WITH SNAPSHOT RETENTION 2 DAYS",
-        )
-        .expect("recognized")
-        .expect_err("tag snapshot retention");
-        assert!(
-            err.to_string().contains("BRANCH") || err.to_string().contains("tag"),
-            "got: {err}"
-        );
-    }
-
-    #[test]
-    fn non_ref_returns_none() {
-        assert!(try_parse_ref_ddl("SELECT 1").is_none());
-        assert!(try_parse_ref_ddl("ALTER TABLE ice.sales.t SET TBLPROPERTIES ('a'='b')").is_none());
-        assert!(
-            try_parse_ref_ddl("ALTER TABLE ice.create.branch RENAME TO ice.sales.other").is_none()
-        );
-    }
-
-    /// Trailing junk / IF EXISTS still refuse loud (not silent drop).
-    #[test]
-    fn trailing_tokens_after_as_of_or_drop_refuse_loud() {
-        for sql in [
-            "ALTER TABLE ice.sales.t CREATE BRANCH audit AS OF VERSION 42 RETENTION 7 DAYS",
-            "CREATE BRANCH audit IN ice.sales.t AS OF VERSION 7 IF NOT EXISTS",
-            "ALTER TABLE ice.sales.t DROP BRANCH audit IF EXISTS",
-            "DROP TAG t1 IN ice.sales.t CASCADE",
-            "ALTER TABLE ice.sales.t CREATE TAG release EXTRA",
-        ] {
-            let err = try_parse_ref_ddl(sql)
-                .expect("recognized as ref DDL")
-                .expect_err("trailing must refuse");
-            let message = err.to_string();
-            assert!(
-                message.contains("not supported")
-                    || message.contains("trailing")
-                    || message.contains("unit"),
-                "sql={sql:?} message={message}"
-            );
-            assert!(
-                !message.contains("ParserError"),
-                "must not fall through to opaque parse for {sql:?}: {message}"
-            );
-        }
-    }
-
-    #[test]
-    fn empty_ref_name_refuses_loud() {
-        for sql in [
-            "ALTER TABLE ice.sales.t CREATE BRANCH ``",
-            "CREATE BRANCH `` IN ice.sales.t AS OF VERSION 1",
-        ] {
-            let err = try_parse_ref_ddl(sql)
-                .expect("recognized")
-                .expect_err("empty ref name");
-            assert!(err.to_string().contains("empty"), "sql={sql:?} got: {err}");
-        }
-    }
-
-    #[test]
-    fn qi1_unquote_ident_undoubles_embedded_quotes() {
-        assert_eq!(unquote_ident(r#""na""me""#), "na\"me");
-        assert_eq!(unquote_ident("`plain`"), "plain");
-        assert_eq!(unquote_ident("bare"), "bare");
-    }
-
-    #[test]
-    fn qi1_ref_name_path_escape_shared_needles() {
-        for (segment, kind_tag) in [
-            ("foo..bar", "traversal"),
-            ("../etc", "traversal"),
-            ("a/b", "separator"),
-            (r"a\b", "separator"),
-        ] {
-            let sql = format!("ALTER TABLE ice.sales.t CREATE BRANCH `{segment}`");
-            let err = try_parse_ref_ddl(&sql)
-                .expect("recognized as ref DDL")
-                .expect_err("path-escape ref must refuse");
-            let text = err.to_string();
-            match kind_tag {
-                "traversal" => assert!(
-                    text.contains("path traversal") || text.contains(".."),
-                    "segment {segment:?}: {text}"
-                ),
-                "separator" => assert!(
-                    text.contains("path separators") || text.contains('/') || text.contains('\\'),
-                    "segment {segment:?}: {text}"
-                ),
-                other => panic!("unknown kind tag {other}"),
-            }
-        }
-        let ok = try_parse_ref_ddl("ALTER TABLE ice.sales.t CREATE BRANCH audit")
-            .expect("recognized")
-            .expect("safe ref name");
-        assert!(matches!(
-            ok.op,
-            RefOp::Create {
-                kind: SnapshotRefKind::Branch,
-                ref name,
-                ..
-            } if name == "audit"
-        ));
-    }
-
-    #[test]
-    fn write_to_branch_sniff_detects_four_part_insert() {
-        assert!(
-            sniff_write_to_branch("INSERT INTO ice.sales.t.audit SELECT 1 AS id, 'x' AS name")
-                .is_some()
-        );
-        assert!(sniff_write_to_branch("INSERT INTO ice.sales.t.branch_audit SELECT 1").is_some());
-        // Two-part `table.branch_foo` under default catalog.
-        assert!(sniff_write_to_branch("INSERT INTO t.branch_audit SELECT 1").is_some());
-        // Normal three-part INSERT must not trip — including a table named `branch_exp`.
-        assert!(
-            sniff_write_to_branch("INSERT INTO ice.sales.t SELECT 1 AS id, 'x' AS name").is_none()
-        );
-        assert!(
-            sniff_write_to_branch("INSERT INTO mem.ns.branch_exp SELECT 4 AS id, 'd' AS name")
-                .is_none()
-        );
-        // Metadata-table DML is a different refuse path (not write-to-branch).
-        assert!(sniff_write_to_branch("INSERT INTO ice.sales.t.snapshots SELECT 1").is_none());
-    }
-
-    /// The sniff separates unambiguous four-part names from resolution-ambiguous two-part names.
-    #[test]
-    fn write_to_branch_sniff_kinds() {
-        assert_eq!(
-            sniff_write_to_branch("INSERT INTO ice.sales.t.branch_audit SELECT 1"),
-            Some(WriteToBranchSniff::MultiPart)
-        );
-        assert_eq!(
-            sniff_write_to_branch("INSERT INTO t.branch_audit SELECT 1"),
-            Some(WriteToBranchSniff::TwoPart {
-                parts: ["t".to_string(), "branch_audit".to_string()]
-            })
-        );
-        // A genuine `schema.branch_daily` sniffs TwoPart.
-        assert_eq!(
-            sniff_write_to_branch("INSERT INTO public.branch_daily SELECT 1"),
-            Some(WriteToBranchSniff::TwoPart {
-                parts: ["public".to_string(), "branch_daily".to_string()]
-            })
-        );
-        // Two-part without the `branch_` prefix is not sniffed at all.
-        assert_eq!(sniff_write_to_branch("INSERT INTO ns.daily SELECT 1"), None);
-    }
-}
+mod tests;

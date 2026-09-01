@@ -6,7 +6,7 @@ pins: ex-0-example-drift-gate/C-002, C-008, C-010
 from __future__ import annotations
 
 import repark.functions as F  # noqa: N812
-from repark.spark import SparkSession
+from repark.spark import ReparkSession
 
 COVERS: list[str] = [
     "DataFrame.select",
@@ -18,9 +18,9 @@ COVERS: list[str] = [
 
 def main() -> None:
     """Keep rows where ``n > 1`` after selecting two columns."""
-    spark = SparkSession.builder.appName("ex-select-filter").master("local[1]").getOrCreate()
+    repark = ReparkSession.builder.appName("ex-select-filter").master("local[1]").getOrCreate()
     try:
-        frame = spark.createDataFrame([(1, "a"), (2, "b"), (3, "c")], ["n", "label"])
+        frame = repark.createDataFrame([(1, "a"), (2, "b"), (3, "c")], ["n", "label"])
         selected = frame.select("n", "label")
         filtered = selected.filter(F.col("n") > 1)
         via_where = selected.where(F.col("n") > 1)
@@ -32,7 +32,7 @@ def main() -> None:
         if [row["label"] for row in where_rows] != labels:
             raise SystemExit("where and filter disagreed")
     finally:
-        spark.stop()
+        repark.stop()
 
 
 if __name__ == "__main__":

@@ -23,7 +23,10 @@ JVM, no repark required). See [../map.md](../map.md).
   reds, backlog and exceptions baselines, COVERS-must-be-used, seed `COVERS`,
   cloud exceptions, nonzero example exit, Makefile `make ci` + ci.yml dual-wire
   + wheels.yml `python -I … --require-execute`; F.* includes installer
-  `__all__` mutations (`try_*`, `zip_with`, xpath). pins: ex-0-example-drift-gate/C-001,
+  `__all__` mutations (`try_*`, `zip_with`, xpath); backlog pins are
+  campaign-true since 2026-09-01 (baseline is a `<=` direction ratchet in
+  lockstep with the file — the ex-2 ledger's blocker section records the
+  ruling). pins: ex-0-example-drift-gate/C-001,
   C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
   **EX-1 (2026-08-31)** widens the same file: the ten-family enumerator at 913
   names, the `CLASS_SURFACES` / `MODULE_SURFACES` tables, hard-error shape
@@ -33,6 +36,12 @@ JVM, no repark required). See [../map.md](../map.md).
   backlog at baseline 892. The no-dynamic-registration assertion reads the
   gate's own `*_SOURCE` constants, so a moved facade file reds the test instead
   of leaving it pointed at a path that no longer exists.
+  **EX-IDIOM (2026-09-01)** adds the session-root parity pin (`ex-idiom/C-001`,
+  cited in prose because no `ex-idiom` ledger exists and grammar rule B reds an
+  unresolvable `pins:` line): `ReparkSession` and `SparkSession` bind the
+  session covers identically. The gate's `SESSION_BUILDER_HINTS` has carried
+  both spellings since EX-0, and the examples construct sessions as
+  `repark = ReparkSession.builder…` (owner ruling, 2026-09-01).
   pins: ex-1-class-surfaces/C-001, C-002, C-003, C-004, C-005, C-006, C-007,
   C-008
 - `test_plan_1_northstar_fnp_sequence.py` — **PLAN-1 (2026-08-28; tree pins):** the guarded
@@ -60,7 +69,9 @@ JVM, no repark required). See [../map.md](../map.md).
   (**DML-B 2026-08-30:** `insert_overwrite.rs` tests 1249→1233, `writer_readwriter.py` 1117→1113)
   exception sets and baselines mirrored from the live guard tables (DML-A:
   `merge/mod.rs` 2131 → 2086; `call.rs` 1404 → 1111 after
-  RP-2's `call_args.rs` split; RP-3 1407 → 1361); blank-line boundaries;
+  RP-2's `call_args.rs` split; RP-3 1407 → 1361; **REF 2026-09-01:** the
+  `repark-spark/src/ref_ddl.rs` row is retired, 38 → 37 Rust rows, after that file's
+  in-module tests moved to a file-backed `ref_ddl/tests.rs`); blank-line boundaries;
   growth, shrink, retirement,
   missing-path, unreadable-path, and empty-scan provocations; fixture exclusions; unchanged
   facade no-stub scope; existing Makefile/CI wiring and contract/navigation carriers. The

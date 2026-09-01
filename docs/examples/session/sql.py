@@ -1,12 +1,12 @@
-"""Demonstrate the native ``repark.sql`` door and Spark session construction.
+"""Demonstrate the native ``repark.sql`` door and ``ReparkSession`` construction.
 
 pins: ex-0-example-drift-gate/C-002, C-008, C-010
 """
 
 from __future__ import annotations
 
-import repark
-from repark.spark import SparkSession
+import repark as repark_native
+from repark.spark import ReparkSession
 
 COVERS: list[str] = [
     "repark.sql",
@@ -19,17 +19,17 @@ COVERS: list[str] = [
 
 
 def main() -> None:
-    """Run one native SQL select and one Spark-session DataFrame collect."""
-    native_rows = repark.sql("SELECT 1 AS x").collect()
+    """Run one native SQL select and one ``ReparkSession`` DataFrame collect."""
+    native_rows = repark_native.sql("SELECT 1 AS x").collect()
     if native_rows[0]["x"] != 1:
         raise SystemExit(f"repark.sql row {native_rows!r} != 1")
-    spark = SparkSession.builder.appName("ex-session").master("local[1]").getOrCreate()
+    repark = ReparkSession.builder.appName("ex-session").master("local[1]").getOrCreate()
     try:
-        rows = spark.createDataFrame([(2,)], ["y"]).collect()
+        rows = repark.createDataFrame([(2,)], ["y"]).collect()
         if rows[0]["y"] != 2:
             raise SystemExit(f"createDataFrame row {rows!r} != 2")
     finally:
-        spark.stop()
+        repark.stop()
 
 
 if __name__ == "__main__":

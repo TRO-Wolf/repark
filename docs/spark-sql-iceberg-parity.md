@@ -156,8 +156,26 @@ the CTAS/INSERT succeeds. It lives here because the refuse is the Iceberg
 ### 2.2 Snapshot-ref DDL (`BRANCH` / `TAG`)
 
 Supported surface, for reference:
-`ALTER TABLE t CREATE [OR REPLACE] | REPLACE | DROP BRANCH|TAG b [AS OF VERSION n] [RETAIN …]
-[WITH SNAPSHOT RETENTION …]` and the top-level `CREATE|DROP BRANCH|TAG b IN t` forms.
+`ALTER TABLE t CREATE [OR REPLACE] | REPLACE | DROP BRANCH|TAG b [AS OF VERSION n] [RETAIN n
+<unit>] [WITH SNAPSHOT RETENTION m SNAPSHOTS [k <unit>]]` and the top-level
+`CREATE|DROP BRANCH|TAG b IN t` forms. Reads reach a ref through
+`VERSION AS OF '<ref>'` on both doors and, on the Spark door, through the dotted selectors
+`cat.ns.t.branch_<name>` / `cat.ns.t.tag_<name>` (REF-4).
+
+> **Both `WITH SNAPSHOT RETENTION` halves are taken** since REF (2026-09-01): the snapshot count
+> and the optional max-snapshot-age that follows it. Measured on live Spark 4.1.2 + Iceberg
+> 1.11.0: `CREATE BRANCH b RETAIN 5 DAYS WITH SNAPSHOT RETENTION 3 SNAPSHOTS 7 DAYS` writes
+> `max_reference_age_in_ms=432000000`, `min_snapshots_to_keep=3`,
+> `max_snapshot_age_in_ms=604800000`. The reversed order is a **Spark parse error**
+> (`mismatched input '3' expecting <EOF>`) and refuses on both doors. `WITH SNAPSHOT RETENTION`
+> on a `TAG` is also a Spark parse error, and both doors refuse it. This is not a divergence
+> row: it is the supported grammar, and the pins are
+> `crates/repark-spark/src/tests/refs_and_wap.rs::branch_snapshot_retention_takes_both_count_and_age_halves`
+> (+ its reversed-order sibling), `crates/repark-sql/src/ref_ddl/tests.rs::parses_both_snapshot_retention_halves`,
+> and `python/repark/tests/test_ref_branch_tag_wap.py`.
+> *(Incidental control, same measurement: Spark 4.1.2 **parse-fails** the top-level
+> `CREATE BRANCH b IN t` spelling that this door accepts. RePark is a superset there, not a
+> divergence, so no row — but do not cite that form as Spark-equal.)*
 
 > **A `BRANCH`/`TAG` shape the dedicated parser does not reach** is not a separate row, and this
 > note says why. `crates/repark-spark/src/router.rs` carries a residual guard that refuses such a
@@ -174,19 +192,31 @@ Supported surface, for reference:
 
 #### REF-1 — writing to a branch or tag
 
-- **repark** — `INSERT` / `UPDATE` / `DELETE` / `MERGE` targeting `t.branch_<name>` (or the
-  `t.branch_name` two-part spelling) refuses loud and names the upstream gap. The read side
-  (`VERSION AS OF '<ref>'`) works, and `CREATE|REPLACE BRANCH` re-pinning is the supported write
-  path for refs.
-- **Apache Spark** — the Iceberg extension writes to the named ref.
-  *(oracle: documented.)*
+- **repark** — `INSERT` / `UPDATE` / `DELETE` / `MERGE` whose **write target** is
+  `t.branch_<name>` (or the `t.branch_name` two-part spelling) refuses loud and names the
+  upstream gap. Only the target is examined: the same name in a source relation, a `USING`
+  operand or a predicate subquery is a read and runs (REF-4). Reads work generally
+  (`VERSION AS OF '<ref>'` on both doors, the dotted selector on the Spark door), and
+  `CREATE|REPLACE BRANCH` re-pinning is the supported write path for refs.
+- **Apache Spark** — the Iceberg extension writes to the named **branch**: `INSERT INTO
+  t.branch_b`, `UPDATE`/`DELETE` on the same name, and `df.writeTo("t.branch_b").append()` all
+  commit onto `b`, parented off `main`'s head, and leave `main` unmoved. A write naming a **tag**
+  refuses — `IllegalArgumentException: Cannot write to table with time travel` (`Cannot modify
+  table with time travel` for `UPDATE`). *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0,
+  2026-09-01. Incidental control from the same run: `df.writeTo("t").option("branch", "b")`
+  committed to **main**, so that option is not a branch door and no pin claims it.)*
 - **Pin** — `crates/repark-spark/src/tests/ref_ddl.rs::write_to_branch_refuses_loud_naming_fork_gap`
-- **Rationale** — DECLARED, and it is not RePark's fix to make: until fork #244 the snapshot
-  producers always stamped `main`, with no commit-target API. **RP-4 (2026-08-31) carries F-6
-  `#244`:** `SnapshotUpdate.to_branch` exists on the fork; no engine surface calls it yet.
-  REF consumes that surface later. The alternative to refusing today is still writing to
-  `main` while the statement names a branch. Capability status lives in the fork's own gap
-  matrix, never here.
+- **Rationale** — DECLARED, and it is not RePark's fix to make. **Re-measured 2026-09-01 at fork
+  pin `33be9a0`:** F-6 (`#244`) put `to_branch` on the seven snapshot-producing transaction
+  actions, but not on the surface these statements execute through — `INSERT` / `UPDATE` /
+  `DELETE` commit inside `iceberg-datafusion`'s `IcebergTableProvider` and its commit exec, which
+  carry no commit target. RePark owns commit construction for `MERGE`, `INSERT OVERWRITE`,
+  `TRUNCATE` and CTAS but not for those three, so routing only the RePark-owned half would let
+  one statement family write to a branch while its sibling refuses. The whole write leg stays
+  refused; the restated ask is filed as F-6b in the fork handoff. The tag half is **outcome-equal
+  to Spark** — both engines refuse — and only the diagnostic differs. The alternative to refusing
+  is still writing to `main` while the statement names a ref. Capability status lives in the
+  fork's own gap matrix, never here. pins: ref-branch-tag-wap/C-004
 
 #### REF-2 — `IF EXISTS` / `IF NOT EXISTS`, and any other trailing clause
 
@@ -200,6 +230,71 @@ Supported surface, for reference:
   this door was built to avoid — an ignored `IF NOT EXISTS` turns a no-op into a hard failure,
   and an ignored `IF EXISTS` turns a tolerated miss into one. Refusing keeps the statement's meaning
   honest until the idempotent forms are implemented; the pin reds on purpose when they are.
+
+#### REF-3 — write-audit-publish (WAP)
+
+- **repark** — there is no WAP surface, and every door into one is fail-closed. The publish
+  procedures `CALL <cat>.system.fast_forward`, `publish_changes` and `cherrypick_snapshot` refuse
+  loud, listing the seven procedures that do exist. The `spark.wap.branch` and `spark.wap.id`
+  session confs cannot be set at all (`Invalid or Unsupported Configuration: Could not find
+  config namespace "spark"`), so no write is silently redirected: a refused conf leaves both
+  `main` and the branch where they were.
+- **Apache Spark** — the full flow works. With `write.wap.enabled=true` on the table and
+  `spark.wap.branch` set, a plain `INSERT INTO t` stages onto that branch and a plain `SELECT`
+  in the same session reads the branch, while `main` stays put until publish;
+  `CALL sys.fast_forward(table, branch, to)` returns `(branch_updated, previous_ref,
+  updated_ref)` and moves `main`. `spark.wap.id` instead stamps `wap.id` into the snapshot
+  summary and leaves the snapshot in the log unreferenced by `main`, which
+  `CALL sys.publish_changes(table, wap_id)` then cherry-picks;
+  `CALL sys.cherrypick_snapshot(table, snapshot_id)` replays a branch-only snapshot onto `main`.
+  *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-01. Incidental control from the same
+  run: with `spark.wap.branch` set but `write.wap.enabled` **absent**, Spark silently ignored the
+  conf and wrote to `main`.)*
+- **Pin** — `crates/repark-spark/src/tests/refs_and_wap.rs::wap_publish_procedures_and_session_conf_refuse_loud`;
+  facade rows in `python/repark/tests/test_ref_branch_tag_wap.py`
+- **Rationale** — DECLARED, and the gap is RePark's, not the fork's: the fork carries the publish
+  primitives at the pin (`ManageSnapshots::fast_forward`, `Transaction::cherry_pick`,
+  `GAP_MATRIX` R98). It stays declared while REF-1 holds, because a publish procedure would have
+  nothing engine-written to publish, and because the failure mode a half-built WAP invites — a
+  staged write that quietly lands on `main` — is the one this row exists to keep impossible.
+  pins: ref-branch-tag-wap/C-005
+
+#### REF-4 — reading a ref through the dotted selector — **FIXED 2026-09-01**
+
+**The boundary is read-vs-write, not query-vs-DML.** `cat.ns.t.branch_b` is a ref selector
+wherever the statement *reads* it — a standalone `SELECT`, a JOIN, a DML statement's source
+relation, a `MERGE`'s `USING` operand, a predicate subquery, or a CTAS body — and all of those
+work. It is REF-1's refusal only where the statement *writes* to it, which is the one relation
+named as the statement's target (`INSERT INTO x`, `INSERT OVERWRITE [TABLE] x`, `UPDATE x`,
+`DELETE FROM x`, `MERGE INTO x`). One statement can do both: `INSERT INTO t.branch_b SELECT …
+FROM t.tag_v` refuses on its target while the selector in its source is a perfectly good read.
+
+- **repark** — the selector reads the ref on the Spark door in every read position above; a
+  missing branch **or** tag refuses naming it. The ANSI door's spelling for the same read is
+  `FOR VERSION AS OF '<ref>'`, which is delivered and pinned — the dotted selector is
+  Spark-dialect sugar and stays Spark-only, like `t.snapshots` (§2.1) whose ANSI spelling is the
+  fork's `t$snapshots`. On that door a dotted selector still answers DataFusion's generic 4-part
+  planning error; its write guard is target-scoped and never claimed a read-side hit.
+- **Apache Spark** — the same rows in every one of those positions, `MERGE … USING` and CTAS
+  included; a missing ref raises
+  `ValidationException: Cannot use branch (does not exist): nope`.
+  *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-01.)*
+- **Pin** — `crates/repark-spark/src/tests/refs_and_wap.rs::branch_and_tag_read_selectors_resolve_the_ref`,
+  `…::ref_selector_on_the_read_side_of_dml_is_a_read`,
+  `…::write_to_branch_refusal_claims_the_target_only`, and
+  `…::ref_selector_does_not_claim_metadata_tables_or_real_table_names`;
+  `python/repark/tests/test_ref_branch_tag_wap.py`
+- **Rationale** — the row is kept after the fix because the boundary above is the interesting
+  part. Before REF the selector answered DataFusion's opaque `Unsupported compound identifier …
+  Expected 1, 2 or 3 parts, got 4`, which named neither the ref nor the door; worse, a selector
+  on a DML statement's read side tripped the write-to-branch sniff and refused with a message
+  that claimed a write target the statement did not have. A factually false refusal is worse than
+  an opaque one, so the sniff now locates the target from the statement's own head keywords and
+  examines only that. The read rewrite claims a four-or-more-part name whose last segment carries
+  the `branch_`/`tag_` prefix and is not a metadata-table name, so a table literally named
+  `branch_exp` still resolves as itself, and a selector overlapping an `AS OF` clause is left
+  alone because Spark rejects that combination.
+  pins: ref-branch-tag-wap/C-002, C-007
 
 ### 2.3 DML statement forms
 
@@ -2239,6 +2334,31 @@ the pin rather than obeying it.
   A fix needs the literal's unit to survive planning — upstream of the MonthDayNano
   representation — which is out of proportion for a `try_*` unit. Recorded so the promotion
   lands with its own pin when the unit information is retained.
+
+### BL-15 — `expm1` composes `exp(x) - 1`, losing the tiny-`x` precision the name exists for
+
+- **repark** — `F.expm1(x)` is `PY_COMPOSED` as `exp(x) - 1`
+  ([docs/design/spark-function-parity.md](design/spark-function-parity.md) §4.4) and reproduces
+  the naive form bit for bit: `expm1(1e-08)` → `9.99999993922529e-09`, `expm1(1e-16)` → `0.0`.
+- **Apache Spark** — `Math.expm1`: `1.0000000050000001e-08` and `1e-16` respectively — the
+  fused form is the function's entire reason to exist. *(oracle: `math.expm1`, which mirrors
+  `java.lang.Math.expm1`; measured 2026-09-01 by the EX-2 pilot, which left the name on the
+  example backlog rather than teach the naive form.)*
+- **Pin** — `python/repark/tests/test_bl15_bl16_math_divergences.py::test_bl15_expm1_composes_exp_minus_one_today`
+  (asserts today's composed value so the fused fix is loud).
+- **Rationale** — BACKLOG, filed 2026-09-01 from the EX-2 pilot's measurement. The fix is a real
+  fused kernel (not a doc change); it rides an FNP numerics unit, and its example comes off the
+  backlog with it.
+
+### BL-16 — `hypot` squares before the root, overflowing where Spark rescales
+
+- **repark** — `F.hypot(1e200, 1e200)` → `inf` (the naive `sqrt(a*a + b*b)` overflows at
+  `a*a`). Ordinary-magnitude behavior is exact.
+- **Apache Spark** — `java.lang.Math.hypot` rescales: `1.4142135623730951e+200`.
+  *(measured 2026-09-01, EX-2 pilot; the example demonstrates ordinary input only.)*
+- **Pin** — `python/repark/tests/test_bl15_bl16_math_divergences.py::test_bl16_hypot_overflows_to_inf_today`.
+- **Rationale** — BACKLOG, filed 2026-09-01. Same FNP numerics unit as BL-15; overflow-safe
+  hypot is a standard rescale.
 
 ### WIN-SLIDE — non-retractable aggregates over a sliding frame (W-0, 2026-08-31)
 

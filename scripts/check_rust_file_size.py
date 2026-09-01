@@ -141,11 +141,6 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Metadata-table parsing and plan construction share one module.",
         "Extract identifier resolution from metadata plan assembly.",
     ),
-    "crates/repark-spark/src/ref_ddl.rs": (
-        1028,
-        "Reference DDL parsing and execution routing share one module.",
-        "Split branch and tag statement families.",
-    ),
     "crates/repark-spark/src/tests/alter.rs": (
         1436,
         "Spark ALTER behavior cases share one test module.",

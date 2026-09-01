@@ -139,7 +139,11 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   [../tests/map.md](../tests/map.md).
 - `ref_ddl.rs` — the ALTER-scoped branch/tag grammar (Q6/G6, copied from the Spark door's
   precedent) over the tier-1 `ManageSnapshots` seams. The top-level `CREATE BRANCH b IN t`
-  spelling stays Spark-only. Tests: [ref_ddl/map.md](ref_ddl/map.md).
+  spelling stays Spark-only. `WITH SNAPSHOT RETENTION` takes both halves, count then optional
+  duration, in lockstep with the Spark door. The two halves are told apart by lookahead;
+  a trailing token that is not a duration stays trailing and `reject_trailing` refuses it.
+  Tests: [ref_ddl/map.md](ref_ddl/map.md).
+  pins: ref-branch-tag-wap/C-003
 - `truncate.rs` — whole-table `TRUNCATE TABLE` (DML-C). Pins: `truncate_tests.rs`
   (wipe summary keys, `INVALID_PARTITION_OPERATION` class token, IF EXISTS parse refuse).
   pins: dml-c-truncate/C-003, C-006, C-007

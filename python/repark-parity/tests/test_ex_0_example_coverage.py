@@ -112,7 +112,7 @@ def test_ex_0_seed_examples_declare_covers_and_leave_the_backlog() -> None:
     backlog = set(gate.parse_named_lines(_REPO / gate.BACKLOG_RELATIVE, kind="backlog"))
     assert covered.isdisjoint(backlog)
     assert len(backlog) == gate.BACKLOG_BASELINE
-    assert gate.BACKLOG_BASELINE == 892
+    assert gate.BACKLOG_BASELINE <= 892
 
 
 def test_ex_0_exceptions_file_names_only_inventory_rows() -> None:
@@ -173,6 +173,39 @@ def test_ex_0_repark_sql_does_not_bind_spark_session_sql() -> None:
     tree = ast.parse((_REPO / "docs" / "examples" / "session" / "sql.py").read_text())
     assert gate.cover_is_used("repark.sql", tree)
     assert not gate.cover_is_used("SparkSession.sql", tree)
+
+
+def test_ex_0_session_roots_bind_identically() -> None:
+    """ex-idiom/C-001: ReparkSession and SparkSession bind the session covers identically."""
+    gate = _load_gate()
+    covers = (
+        "SparkSession.builder",
+        "SparkSession.Builder.appName",
+        "SparkSession.Builder.getOrCreate",
+        "SparkSession.createDataFrame",
+        "SparkSession.stop",
+    )
+    bound: dict[str, list[bool]] = {}
+    for root in ("SparkSession", "ReparkSession"):
+        tree = ast.parse(
+            f"from repark.spark import {root}\n"
+            "COVERS: list[str] = [\n"
+            '    "SparkSession.builder",\n'
+            '    "SparkSession.Builder.appName",\n'
+            '    "SparkSession.Builder.getOrCreate",\n'
+            '    "SparkSession.createDataFrame",\n'
+            '    "SparkSession.stop",\n'
+            "]\n"
+            "def main() -> None:\n"
+            f"    repark = {root}.builder.appName('ex').master('local[1]').getOrCreate()\n"
+            "    rows = repark.createDataFrame([(1,)], ['x']).collect()\n"
+            "    repark.stop()\n"
+        )
+        bound[root] = [gate.cover_is_used(cover, tree) for cover in covers]
+        bound[root].append(gate.cover_is_used("SparkSession.sql", tree))
+    assert all(bound["SparkSession"][:5])
+    assert not bound["SparkSession"][5]
+    assert bound["SparkSession"] == bound["ReparkSession"]
 
 
 def test_ex_0_run_gate_rejects_stuffed_covers(tmp_path: Path) -> None:
@@ -475,4 +508,4 @@ def test_ex_1_every_new_name_is_in_the_backlog() -> None:
     for family, name in rows:
         if family in widened or name.startswith("types.") or name.startswith("Row."):
             assert name in backlog, name
-    assert len(backlog) == 892
+    assert len(backlog) == gate.BACKLOG_BASELINE

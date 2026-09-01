@@ -20,6 +20,9 @@ branch. (Same contract as the private v1 repository's `briefs/` directory.)
   subset owner-ruled and armed as PYC-6; `PL`/`A`/`print()` measured and declined with
   reasons). Unlike the campaign slates below, it is rolling: a unit leaves when it merges.
 
+- [example-backfill.md](example-backfill.md) — the **v0.7 example backfill** campaign slate:
+  per-family lanes, batch contract, tiering, the gate as the acceptance bar. Charters live in
+  `task/ledgers/staging/ex-<n>-*`; the shared scoreboard is `docs/examples/backlog.txt`.
 - [spark-function-parity.md](spark-function-parity.md) — the **Spark function parity** slate
   (2026-08-20, delivery amended 2026-08-28): one coherent PR per remaining unit or coupled pair
   closes the `pyspark.sql.functions` gap while moving the semantics behind every name out of

@@ -97,6 +97,42 @@ fn parses_retention_clauses() {
     assert_eq!(retention.min_snapshots_to_keep, None);
 }
 
+#[test]
+fn parses_both_snapshot_retention_halves() {
+    let RefOp::Create { retention, .. } = parsed(
+        "ALTER TABLE ice.sales.orders CREATE BRANCH audit RETAIN 5 DAYS \
+         WITH SNAPSHOT RETENTION 3 SNAPSHOTS 7 DAYS",
+    )
+    .op
+    else {
+        panic!("expected a create");
+    };
+    assert_eq!(retention.max_ref_age_ms, Some(432_000_000));
+    assert_eq!(retention.min_snapshots_to_keep, Some(3));
+    assert_eq!(retention.max_snapshot_age_ms, Some(604_800_000));
+
+    let RefOp::Create { retention, .. } = parsed(
+        "ALTER TABLE ice.sales.orders CREATE BRANCH audit \
+         WITH SNAPSHOT RETENTION 2 SNAPSHOTS 12 HOURS",
+    )
+    .op
+    else {
+        panic!("expected a create");
+    };
+    assert_eq!(retention.max_ref_age_ms, None);
+    assert_eq!(retention.min_snapshots_to_keep, Some(2));
+    assert_eq!(retention.max_snapshot_age_ms, Some(43_200_000));
+}
+
+#[test]
+fn reversed_snapshot_retention_order_refuses() {
+    let err = refused(
+        "ALTER TABLE ice.sales.orders CREATE BRANCH audit \
+         WITH SNAPSHOT RETENTION 7 DAYS 3 SNAPSHOTS",
+    );
+    assert!(err.contains("trailing clause"), "{err}");
+}
+
 /// Per-branch snapshot retention on a TAG is meaningless because a tag pins one snapshot.
 #[test]
 fn snapshot_retention_on_a_tag_refuses() {

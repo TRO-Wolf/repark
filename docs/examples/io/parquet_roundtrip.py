@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from repark.spark import SparkSession
+from repark.spark import ReparkSession
 
 COVERS: list[str] = [
     "DataFrame.write",
@@ -20,17 +20,17 @@ COVERS: list[str] = [
 
 def main() -> None:
     """Write two rows to a temp directory and read them back."""
-    spark = SparkSession.builder.appName("ex-parquet").master("local[1]").getOrCreate()
+    repark = ReparkSession.builder.appName("ex-parquet").master("local[1]").getOrCreate()
     try:
-        source = spark.createDataFrame([(1, "a"), (2, "b")], ["id", "name"])
+        source = repark.createDataFrame([(1, "a"), (2, "b")], ["id", "name"])
         target = Path("parquet_out")
         source.write.mode("overwrite").parquet(str(target))
-        restored = spark.read.parquet(str(target)).collect()
+        restored = repark.read.parquet(str(target)).collect()
         pairs = sorted((row["id"], row["name"]) for row in restored)
         if pairs != [(1, "a"), (2, "b")]:
             raise SystemExit(f"round trip {pairs!r} != [(1, 'a'), (2, 'b')]")
     finally:
-        spark.stop()
+        repark.stop()
 
 
 if __name__ == "__main__":

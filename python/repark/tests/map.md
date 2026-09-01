@@ -31,6 +31,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 
 - `test_pr_245_revalidation.py` — PR #245 public-door revalidation for Spark string literals,
   binary casts, parser limits, and facade controls.
+- [test_bl15_bl16_math_divergences.py](test_bl15_bl16_math_divergences.py) — **BL-15/BL-16
+  (2026-09-01):** codifies today's `expm1` (composed `exp(x)-1`) and `hypot` (overflow to
+  `inf` at extreme magnitude) answers so the fused/rescaled fixes red them on purpose;
+  measured by the EX-2 pilot, registry §7 rows carry the Spark values. Spark
+  `Math.expm1(1e-08)` is `1.0000000050000001e-08`; `hypot(1e200, 1e200)` rescales to
+  `1.4142135623730951e+200`. Module and test docstrings are one line.
 - [test_fnp7_try_inversions.py](test_fnp7_try_inversions.py) — **FNP-7a/7b:** twelve `try_*`
   inversions. Spark 4.1.2 cells (value and Arrow type) on the two reachable doors (Spark SQL
   + facade Column API). Native ANSI `repark.sql()` does not load SparkExtension: the twelve
@@ -73,6 +79,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   into that live vector. RP-4: six-file `rewrite_data_files` keeps `_row_id` / seq on `to_arrow`
   (pins: rp-2-fork-repin/C-003, C-005; rp-3-fork-repin/C-004; v3-3-dml/C-001, C-002;
   rp-4-fork-repin/C-003).
+- [test_ref_branch_tag_wap.py](test_ref_branch_tag_wap.py) — **REF:** the facade rows for
+  branch/tag retention and the refused doors — both `WITH SNAPSHOT RETENTION` halves at the
+  oracle's values, the reversed order refusing, write-to-branch and write-to-tag refusing while
+  naming the `iceberg-datafusion` gap rather than a superseded fork pin, and WAP declared
+  (`fast_forward` / `publish_changes` / `cherrypick_snapshot` and the `spark.wap.*` confs all
+  fail closed). The `branch_`/`tag_` READ selectors resolve the ref here too — standalone and on
+  a DML statement's read side (`INSERT … SELECT`, `MERGE … USING`, a `DELETE` predicate
+  subquery) — while a ref-named write TARGET still refuses; a missing branch or tag refuses
+  naming it.
+  pins: ref-branch-tag-wap/C-002, C-003, C-004, C-005, C-007
 - [test_v3e4_refs_time_travel.py](test_v3e4_refs_time_travel.py) — **V3E-4:** facade
   branch/tag, `VERSION AS OF` over DVs, rollback, expire dual-probe, orphan
   24h floor on the partitioned-DV fixture after a RePark append; live-DV UPDATE
