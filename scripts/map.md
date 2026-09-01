@@ -1,5 +1,8 @@
 # map — scripts/
 
+V3-6 (2026-09-01): `check_rust_file_size.py` `write/append.rs` 1950→1887 — the conform
+step moved to a file-backed `write/conform.rs` (V3-6 C-005).
+
 DFP-1 (2026-08-31): `dynamic_flatten/tests.rs` 1443→1442 after preserve-null pins moved to a
 file-backed module.
 
