@@ -175,6 +175,39 @@ def test_ex_0_repark_sql_does_not_bind_spark_session_sql() -> None:
     assert not gate.cover_is_used("SparkSession.sql", tree)
 
 
+def test_ex_0_session_roots_bind_identically() -> None:
+    """ex-idiom/C-001: ReparkSession and SparkSession bind the session covers identically."""
+    gate = _load_gate()
+    covers = (
+        "SparkSession.builder",
+        "SparkSession.Builder.appName",
+        "SparkSession.Builder.getOrCreate",
+        "SparkSession.createDataFrame",
+        "SparkSession.stop",
+    )
+    bound: dict[str, list[bool]] = {}
+    for root in ("SparkSession", "ReparkSession"):
+        tree = ast.parse(
+            f"from repark.spark import {root}\n"
+            "COVERS: list[str] = [\n"
+            '    "SparkSession.builder",\n'
+            '    "SparkSession.Builder.appName",\n'
+            '    "SparkSession.Builder.getOrCreate",\n'
+            '    "SparkSession.createDataFrame",\n'
+            '    "SparkSession.stop",\n'
+            "]\n"
+            "def main() -> None:\n"
+            f"    repark = {root}.builder.appName('ex').master('local[1]').getOrCreate()\n"
+            "    rows = repark.createDataFrame([(1,)], ['x']).collect()\n"
+            "    repark.stop()\n"
+        )
+        bound[root] = [gate.cover_is_used(cover, tree) for cover in covers]
+        bound[root].append(gate.cover_is_used("SparkSession.sql", tree))
+    assert all(bound["SparkSession"][:5])
+    assert not bound["SparkSession"][5]
+    assert bound["SparkSession"] == bound["ReparkSession"]
+
+
 def test_ex_0_run_gate_rejects_stuffed_covers(tmp_path: Path) -> None:
     """C-002 / Q-001: run_gate on a scratch tree reports unused COVERS and exits 1."""
     gate = _load_gate()

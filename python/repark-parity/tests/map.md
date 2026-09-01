@@ -36,6 +36,12 @@ JVM, no repark required). See [../map.md](../map.md).
   backlog at baseline 892. The no-dynamic-registration assertion reads the
   gate's own `*_SOURCE` constants, so a moved facade file reds the test instead
   of leaving it pointed at a path that no longer exists.
+  **EX-IDIOM (2026-09-01)** adds the session-root parity pin (`ex-idiom/C-001`,
+  cited in prose because no `ex-idiom` ledger exists and grammar rule B reds an
+  unresolvable `pins:` line): `ReparkSession` and `SparkSession` bind the
+  session covers identically. The gate's `SESSION_BUILDER_HINTS` has carried
+  both spellings since EX-0, and the examples construct sessions as
+  `repark = ReparkSession.builder…` (owner ruling, 2026-09-01).
   pins: ex-1-class-surfaces/C-001, C-002, C-003, C-004, C-005, C-006, C-007,
   C-008
 - `test_plan_1_northstar_fnp_sequence.py` — **PLAN-1 (2026-08-28; tree pins):** the guarded
