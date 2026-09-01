@@ -20,6 +20,19 @@ EX-1 (2026-08-31) widened the closed set with the class surfaces the owner ruled
 into v0.7 — Column, Window, WindowSpec, Catalog, the `types` module surface,
 `ml`, and Row: 150 names, 763 → 913, all of them backlog rows.
 
+**Backfill hazard — write the example for the class you named.** The use check
+matches a `COVERS` entry on its last component plus the receiver's *kind*, not
+the owning class. Two owners that share a kind are therefore interchangeable to
+the gate, and four leaf groups conflate a new surface with an old one, all on a
+repark-rooted local: `{Column, DataFrame}.alias`, `{Column, DataFrame}.transform`,
+`{DataFrame, WindowSpec}.orderBy` / `.order_by`, and
+`{DataFrameWriter, WindowSpec}.partitionBy` / `.partition_by`. A `Column.alias`
+row is satisfied by a `DataFrame.alias` call, so review — not the gate — holds
+that an example demonstrates the name it claims. What does **not** conflate:
+`Column.*` versus the `F.*` twins (`asc`, `like`, `round`, `when`, …), split by
+door kind, and `Window.*` versus `WindowSpec.*`, split by the class root versus a
+local. Both splits are pinned.
+
 This file closes when the v0.7 example backfill is complete and the backlog
 file is empty.
 

@@ -22,6 +22,11 @@ lockstep `map.md` files. Closed: `crates/`, `python/repark/src/` product code,
 `.github/`, the divergence registry, `Cargo.toml [patch]`,
 `briefs/next-sequence.md`, archival bins (`completed/`, `archive/`).
 
+**Extension (orchestrator, 2026-09-01, Critic FIX 2):** one line of
+`DEVELOPMENT.md` — the `make check-example-coverage` row, whose seed counts
+(763 names / 742 backlog / five doors) went stale the moment this unit landed.
+The extension is that row and nothing else.
+
 ## Scope
 
 EX-0 shipped the gate over five families (763 names). It documented, but did not
@@ -77,7 +82,10 @@ static list literals. The one dynamic thing nearby is `repark/spark/__init__.py`
 objects, it never adds a name to a class or to an `__all__`. Belt and braces,
 the live cross-check that EX-0 runs for `F.__all__` / `ta.__all__` now also runs
 for `types.__all__` and `ml.__all__` (C-003), so a future dynamic export table
-reds the execute leg instead of hiding.
+on a **module door** reds the execute leg instead of hiding. The class surfaces
+have no equivalent live check — their guard is this measurement plus a
+source-text assertion in the pin file, which C-003 states honestly rather than
+claiming the door-level strength for them.
 
 ## Orchestrator rulings (build-to)
 
@@ -114,7 +122,7 @@ SELF_LOGIC_REVIEW:
 |---|---|---|---|
 | C-001 | The enumerator emits the seven ruled surfaces under four new families (`column`, `window`, `catalog`, `types`, joined by `ml`), each from the canonical source and enumeration rule in the audit table, with the counts recorded there. | Inventory snapshot + family counts + pin on the new totals. | **PROVEN** |
 | C-002 | The new surfaces reuse the existing machinery: class surfaces are rows in `CLASS_SURFACES`, module surfaces are rows in `MODULE_SURFACES` read by the same `__all__` reader `ta.*` uses. No parallel enumerator. | Diff shape + pin that each new family's names come from `enumerate_public_surface`. | **PROVEN** |
-| C-003 | Enumeration is from static export tables only. No new surface registers names dynamically; the live `__all__` cross-check covers `types` and `ml` as well as `F.*` / `ta.*`, so a future dynamic table reds the execute leg. | Audit finding above + `live_all_findings` pin + green `--require-execute`. | **PROVEN** |
+| C-003 | Enumeration is from static export tables only. No new surface registers names dynamically. For the **module doors** (`F.*`, `ta.*`, `types.*`, `ml.*`) the live `__all__` cross-check makes that mechanical: a future dynamic table reds the execute leg. For the **class surfaces** the guard is weaker and stated as such — the audit measurement plus a source-text assertion that the six files carry no `setattr` / `globals()[…] =` / `install_into`; a class that grows a member at import would not red today. | Audit finding above + `live_all_findings` pin + source-text pin + green `--require-execute`. | **PROVEN** |
 | C-004 | A class-surface name binds only on a correctly classified receiver. `Window.*` binds on the `Window` class root; `WindowSpec.*` / `Column.*` / `Catalog.*` / `Row.*` bind on a repark-rooted local. `object().alias` binds nothing. | Red-first: each name is unbound before the change and bound after; stuffing pins. | **PROVEN** |
 | C-005 | A module-surface name (`types.*`, `ml.*`) binds only on that module's door alias or on a name imported from that door — the rule `F.*` and `ta.*` already use. A `types.` cover does not bind on an `ml` alias, and neither binds on an unrelated receiver. | Red-first + door-crossing pin. | **PROVEN** |
 | C-006 | Every newly enumerated name enters `docs/examples/backlog.txt`; `BACKLOG_BASELINE` moves to the new true count 742 → 892 and stays exact. No name is covered or excepted by this unit. | Backlog length + baseline pin + no new example scripts in the diff. | **PROVEN** |
@@ -210,13 +218,34 @@ line, every example executed, every module door's live `__all__` matched):
 
 `example-coverage: 913 public names (catalog=28, column=40, dataframe=150, functions=444, io=42, ml=28, session=41, ta=86, types=32, window=22); 19 covered; 892 backlog; 2 exceptions; 5 examples`
 
-**Line-cap collateral.** Adding the tables took
-`scripts/check_example_coverage.py` from 929 to 1,016 lines, over the 1,000-line
-`check_lib_py` ceiling. The fix is a shrink, not an exception row: the nine
-`CLASS_SURFACES` paths became named `*_SOURCE` constants (the convention
-`FUNCTIONS_SOURCE` / `TA_SOURCE` already used), which collapses each row from
-seven lines to one. The file is **942** lines with fourteen surfaces where it
-was 929 with nine, and it needs no `EXCEPTIONS` row.
+**Line-cap collateral.** Adding the tables pushed
+`scripts/check_example_coverage.py` over the 1,000-line `check_lib_py` ceiling
+in the working tree, and `make py-test` caught it before the commit. The fix is
+a shrink, not an exception row: the nine `CLASS_SURFACES` paths became named
+`*_SOURCE` constants (the convention `FUNCTIONS_SOURCE` / `TA_SOURCE` already
+used), which collapses each row from seven lines to one. Committed line counts,
+which is what the record can prove: **929** at `41c6d4c`, **946** from
+`edc74c2` on — fourteen surfaces where nine cost 929 lines, still under the
+ceiling, and no `EXCEPTIONS` row.
+
+## Critic disposition (2026-08-31/09-01)
+
+Verdict **FAIL**, on record integrity only. The substance held: the enumeration
+matched the live wheel exactly, 19 of 23 sabotage probes behaved, the ratchet is
+exact, and the red-first states reproduced against the base gate. Two S1
+findings, both about what this ledger and the docs *claim*, and six sub-S1
+residuals.
+
+| ID | Finding | Disposition |
+|---|---|---|
+| S1-1 | The line-cap paragraph said 942 lines; the committed file is **946** (`wc -l` and `check_lib_py`'s splitlines metric agree; 929 at `41c6d4c`, 946 from `edc74c2`). The 1,016 intermediate was never committed, so the record cannot prove it. | **REMEDIATED**: count corrected to 946, the uncommitted figure dropped. The conclusion is unchanged — 946 < 1000, no `EXCEPTIONS` row. |
+| S1-2 | `DEVELOPMENT.md` still carried the EX-0 seed (763 names, 742 backlog, five doors). | **REMEDIATED** under the writable-path extension above: the row now reads 913 / 892 / 2 across ten doors. |
+| R1 | Cross-class leaf conflation. `cover_is_used` matches on the leaf name plus a receiver *kind*, not the owning class, so two owners that share a kind are interchangeable. Measured: 58 multi-owner leaves exist, and **four groups** conflate a new name with an old one, all on `KIND_LOCAL` — `{Column, DataFrame}.alias`, `{Column, DataFrame}.transform`, `{DataFrame, WindowSpec}.orderBy` / `.order_by`, `{DataFrameWriter, WindowSpec}.partitionBy` / `.partition_by`. | **ACCEPTED_FLAGGED**: zero impact today (nothing on these surfaces is covered — every one is a backlog row), but a live hazard for the backfill lane, which will write the first examples. Named in [docs/examples/map.md](../../../docs/examples/map.md) beside the binding rule so the lane meets it where it works. Note what does **not** conflate: the `Column` / `F` pairs (`asc`, `like`, `round`, `when`, …) are split by door kind, and `Window.*` / `WindowSpec.*` by the class root versus a local — both splits are load-bearing and pinned. |
+| R2 | `types` as a door alias could collide with the standard library's `types` module. | **ACCEPTED_FLAGGED**: the overlap between `repark.spark.types.__all__` and `dir(types)` is measured **empty**, so a false positive is impossible today. A deliberate one (importing stdlib `types` and calling a name repark also exports) dies on the execute leg, where the example must actually run. |
+| R3 | `Window` gets its class-root kind only through `ImportFrom`, not `import repark.spark.window`. | **ACCEPTED_FLAGGED**: the miss direction is safe — it under-binds, so a cover fails as unused rather than binding falsely. |
+| R4 | `ML_MODULES` holds only `repark.spark.ml`, so `from repark.spark.ml.pipeline import …` does not bind. | **ACCEPTED_FLAGGED**: identical in shape to `TA_MODULES`, which EX-0 shipped and review accepted; under-binding, same safe direction. The canonical door is the package. |
+| R5 | The C-003 test re-hardcoded `catalog.py` / `row.py` paths instead of using the gate's constants. | **REMEDIATED**: the test now reads `gate.CATALOG_SOURCE` / `gate.ROW_SOURCE`, so a moved source cannot leave the assertion pointing at a file that no longer exists. |
+| R6 | C-003 claimed "reds the execute leg" for surfaces the live cross-check does not reach. | **REMEDIATED**: C-003 and the audit paragraph now separate the two strengths — mechanical for the four module doors, a measurement plus a source-text assertion for the class surfaces, with the residual stated. |
 
 ## Disk
 
