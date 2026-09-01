@@ -18,16 +18,16 @@ from __future__ import annotations
 import math
 
 import repark.functions as F  # noqa: N812
-from repark.spark import SparkSession
+from repark.spark import ReparkSession
 
 COVERS: list[str] = ["F.rint", "F.col"]
 
 
 def main() -> None:
     """Round the halfway cases, the ordinary cases, and a NULL."""
-    spark = SparkSession.builder.appName("ex-rint").master("local[1]").getOrCreate()
+    repark = ReparkSession.builder.appName("ex-rint").master("local[1]").getOrCreate()
     try:
-        frame = spark.createDataFrame(
+        frame = repark.createDataFrame(
             [(0.5,), (1.5,), (2.5,), (-1.5,), (2.4,), (2.6,), (-0.5,), (None,)], ["v"]
         )
         rows = frame.select(F.col("v"), F.rint(F.col("v")).alias("rounded")).collect()
@@ -43,7 +43,7 @@ def main() -> None:
         if not isinstance(rounded[0], float):
             raise SystemExit(f"F.rint answers in floats, got {type(rounded[0]).__name__}")
     finally:
-        spark.stop()
+        repark.stop()
 
 
 if __name__ == "__main__":

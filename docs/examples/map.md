@@ -13,7 +13,11 @@ Each `COVERS` name must appear as a real use in that script: a module-door name
 (`F.*`, `ta.*`, `types.*`, `ml.*`) on its own door, `repark.sql` on the module
 alias, class-surface names on a repark-rooted local (assignment dataflow), and
 the class-root surfaces (`SparkSession.builder`, `SparkSession.Builder.*`,
-`Window.*`) on the class name. `exceptions.txt` is an exact count ratchet
+`Window.*`) on the class name. The session class root binds under both
+spellings — `ReparkSession`, the real class, and `SparkSession`, its exported
+alias. Examples construct the session as `repark = ReparkSession.builder…`
+(owner ruling, 2026-09-01); `SparkSession.*` stays the inventory spelling.
+`exceptions.txt` is an exact count ratchet
 (`EXCEPTIONS_BASELINE`); a new row is a visible baseline bump.
 
 EX-1 (2026-08-31) widened the closed set with the class surfaces the owner ruled
@@ -48,7 +52,7 @@ file is empty.
 - [dataframe/](dataframe/map.md) — DataFrame / GroupedData / na / stat examples.
 - [ta/](ta/map.md) — TA kernel examples.
 - [io/](io/map.md) — reader / writer examples.
-- [session/](session/map.md) — `repark.sql` and SparkSession door examples.
+- [session/](session/map.md) — `repark.sql` and `ReparkSession` construction examples.
 - `column/`, `window/`, `catalog/`, `types/`, `ml/` — the EX-1 families. They
   are inventory families with no example yet; the backfill creates each
   directory (and its `map.md`) with the first example it lands there.

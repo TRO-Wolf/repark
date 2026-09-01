@@ -16,16 +16,16 @@ Every one of the four returns NULL for a NULL row rather than inventing a zero.
 from __future__ import annotations
 
 import repark.functions as F  # noqa: N812
-from repark.spark import SparkSession
+from repark.spark import ReparkSession
 
 COVERS: list[str] = ["F.sign", "F.signum", "F.negative", "F.positive", "F.col"]
 
 
 def main() -> None:
     """Check the alias pair, the unary pair, and NULL on both."""
-    spark = SparkSession.builder.appName("ex-sign").master("local[1]").getOrCreate()
+    repark = ReparkSession.builder.appName("ex-sign").master("local[1]").getOrCreate()
     try:
-        frame = spark.createDataFrame([(2.5,), (-1.5,), (0.0,), (None,)], ["v"])
+        frame = repark.createDataFrame([(2.5,), (-1.5,), (0.0,), (None,)], ["v"])
         rows = frame.select(
             F.col("v"),
             F.signum(F.col("v")).alias("signum"),
@@ -49,7 +49,7 @@ def main() -> None:
         if [row["positive"] for row in rows] != [2.5, -1.5, 0.0, None]:
             raise SystemExit("F.positive should hand every value back unchanged")
 
-        counts = spark.createDataFrame([(-3,), (0,), (7,)], ["n"])
+        counts = repark.createDataFrame([(-3,), (0,), (7,)], ["n"])
         integral = counts.select(
             F.signum(F.col("n")).alias("signum"),
             F.negative(F.col("n")).alias("negative"),
@@ -65,7 +65,7 @@ def main() -> None:
         if [row["signum"] for row in integral] != [-1.0, 0.0, 1.0]:
             raise SystemExit("F.signum answers in floats even on an integer column")
     finally:
-        spark.stop()
+        repark.stop()
 
 
 if __name__ == "__main__":

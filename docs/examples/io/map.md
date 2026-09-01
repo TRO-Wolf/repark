@@ -3,6 +3,8 @@
 ## Purpose
 
 Worked examples for DataFrameReader, DataFrameWriter, and DataFrameWriterV2.
+Examples construct the session as `repark = ReparkSession.builder…`; see
+[../map.md](../map.md).
 
 ## Contents
 

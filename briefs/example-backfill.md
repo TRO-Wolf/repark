@@ -29,6 +29,8 @@ The gate is the whole acceptance bar and it is not negotiable in either directio
   construction — a refusal is documented as a refusal, never as an example that swallows it.
 - Examples are documentation. An example that exists to satisfy the gate rather than to teach the
   name is a review rejection, not a merge.
+- Sessions are constructed `repark = ReparkSession.builder…` (owner ruling, 2026-09-01); the
+  reference example is [../docs/examples/session/sql.py](../docs/examples/session/sql.py).
 
 ## Batch roster
 

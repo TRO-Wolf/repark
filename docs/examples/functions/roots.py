@@ -18,16 +18,16 @@ from __future__ import annotations
 import math
 
 import repark.functions as F  # noqa: N812
-from repark.spark import SparkSession
+from repark.spark import ReparkSession
 
 COVERS: list[str] = ["F.sqrt", "F.cbrt", "F.hypot", "F.col"]
 
 
 def main() -> None:
     """Contrast the two roots on signed input, then check hypot against the long form."""
-    spark = SparkSession.builder.appName("ex-roots").master("local[1]").getOrCreate()
+    repark = ReparkSession.builder.appName("ex-roots").master("local[1]").getOrCreate()
     try:
-        frame = spark.createDataFrame([(9.0,), (-8.0,), (0.0,), (None,)], ["x"])
+        frame = repark.createDataFrame([(9.0,), (-8.0,), (0.0,), (None,)], ["x"])
         rows = frame.select(
             F.col("x"),
             F.sqrt(F.col("x")).alias("root2"),
@@ -46,7 +46,7 @@ def main() -> None:
         if abs(cubes[0] - 9.0 ** (1.0 / 3.0)) > 1e-12 or cubes[1] != -2.0 or cubes[2] != 0.0:
             raise SystemExit(f"F.cbrt values {cubes!r} unexpected")
 
-        legs = spark.createDataFrame([(3.0, 4.0), (5.0, 12.0), (0.0, 0.0)], ["a", "b"])
+        legs = repark.createDataFrame([(3.0, 4.0), (5.0, 12.0), (0.0, 0.0)], ["a", "b"])
         pairs = legs.select(
             F.hypot(F.col("a"), F.col("b")).alias("hypot"),
             F.sqrt(F.col("a") * F.col("a") + F.col("b") * F.col("b")).alias("long_form"),
@@ -59,7 +59,7 @@ def main() -> None:
         if lengths != [row["long_form"] for row in pairs]:
             raise SystemExit("F.hypot and sqrt(a*a + b*b) disagreed on ordinary input")
     finally:
-        spark.stop()
+        repark.stop()
 
 
 if __name__ == "__main__":

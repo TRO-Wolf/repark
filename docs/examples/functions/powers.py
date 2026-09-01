@@ -16,16 +16,16 @@ promise that two different roads to a number arrive at the same bit pattern.
 from __future__ import annotations
 
 import repark.functions as F  # noqa: N812
-from repark.spark import SparkSession
+from repark.spark import ReparkSession
 
 COVERS: list[str] = ["F.pow", "F.power", "F.exp", "F.col", "F.lit"]
 
 
 def main() -> None:
     """Show the alias pair agreeing, then exp against pow with base e."""
-    spark = SparkSession.builder.appName("ex-powers").master("local[1]").getOrCreate()
+    repark = ReparkSession.builder.appName("ex-powers").master("local[1]").getOrCreate()
     try:
-        frame = spark.createDataFrame([(2.0,), (9.0,), (-3.0,), (None,)], ["base"])
+        frame = repark.createDataFrame([(2.0,), (9.0,), (-3.0,), (None,)], ["base"])
         rows = frame.select(
             F.col("base"),
             F.pow(F.col("base"), F.lit(2.0)).alias("squared"),
@@ -45,7 +45,7 @@ def main() -> None:
         if rows[1]["root"] != 3.0:
             raise SystemExit(f"a 0.5 exponent is a square root: {rows[1]['root']!r}")
 
-        exponents = spark.createDataFrame([(0.0,), (1.0,), (2.0,), (-3.0,)], ["x"])
+        exponents = repark.createDataFrame([(0.0,), (1.0,), (2.0,), (-3.0,)], ["x"])
         against_e = exponents.select(
             F.col("x"),
             F.exp(F.col("x")).alias("exp"),
@@ -59,7 +59,7 @@ def main() -> None:
             if abs(row["exp"] - row["e_to_the_x"]) > 1e-12 * max(1.0, abs(row["exp"])):
                 raise SystemExit(f"exp and pow(e, x) disagreed at x = {row['x']!r}")
     finally:
-        spark.stop()
+        repark.stop()
 
 
 if __name__ == "__main__":

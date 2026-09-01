@@ -2,11 +2,11 @@
 
 ## Purpose
 
-Worked examples for `repark.sql` and the SparkSession construction door.
+Worked examples for `repark.sql` and the `ReparkSession` construction door.
 
 ## Contents
 
-- [sql.py](sql.py) — native `repark.sql` plus `SparkSession.builder.getOrCreate`.
+- [sql.py](sql.py) — native `repark.sql` plus `ReparkSession.builder.getOrCreate`.
 
 ## Pointers
 
