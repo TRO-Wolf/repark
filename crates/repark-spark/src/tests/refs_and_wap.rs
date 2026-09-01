@@ -1,7 +1,10 @@
 //! REF — snapshot-ref READ selectors, the full retention grammar, and the WAP declaration.
 //!
-//! Oracle: live PySpark 4.1.2 + Iceberg 1.11.0, Hadoop catalog, Java 17, 2026-09-01. The
-//! retention values are the oracle's own `refs` rows.
+//! Oracle: live PySpark 4.1.2 + Iceberg 1.11.0, Hadoop catalog, Java 17, 2026-09-01. Every
+//! assertion here is a cell of that measurement, and the retention values are the oracle's own
+//! `refs` rows rather than arithmetic done in the test.
+//!
+//! pins: ref-branch-tag-wap/C-001
 
 use super::super::*;
 use super::common::*;

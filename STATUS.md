@@ -7,7 +7,7 @@
 > [.agents/](.agents/map.md) as thin tool adapters that carry no authoritative facts). When a current-state
 > fact changes, it changes **here** — other files point at this file, they do not restate it.
 
-_Last updated: 2026-08-31._
+_Last updated: 2026-09-01._
 
 ## Release state
 
@@ -214,11 +214,14 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
 <!-- /ws -->
 
 <!-- ws id=dml ledgers=dml-,maint- state=open -->
-- **Iceberg DML remainder (v0.6)** — REF waits on fork F-6. **Delivered 2026-08-30/31:**
-  DML-B `INSERT OVERWRITE … PARTITION` + `writeTo().overwritePartitions()`; DML-C
-  `TRUNCATE TABLE` (DML-2 FIXED); DML-A `MERGE … WHEN NOT MATCHED BY SOURCE`; MAINT
-  `rewrite_data_files` `where` + binpack, sort refuses loud (RDF-SORT-1).
-  [DML-1](docs/spark-sql-iceberg-parity.md).
+- **Iceberg DML remainder (v0.6)** — DML-B / DML-C / DML-A / MAINT delivered 2026-08-30/31; the
+  four units are described in [Release state](#release-state) above and in
+  [the registry](docs/spark-sql-iceberg-parity.md).
+  **REF (2026-09-01):** ref READS are Spark-equal — `branch_`/`tag_` selectors resolve
+  (`REF-4` FIXED), both `WITH SNAPSHOT RETENTION` halves land on both doors. Writes and WAP stay
+  DECLARED (`REF-1`, `REF-3`): F-6 gave `to_branch` to the transaction actions, not to the
+  `iceberg-datafusion` commit path `INSERT`/`UPDATE`/`DELETE` use; restated ask filed F-6b.
+  Ledger: [task/ledgers/staging/ref-branch-tag-wap-ledger.md](task/ledgers/staging/ref-branch-tag-wap-ledger.md).
 <!-- /ws -->
 
 Parked lanes: **none** (the `repark.sql` re-home lane closed 2026-08-14, #95 —

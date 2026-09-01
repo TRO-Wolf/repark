@@ -25,7 +25,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   reachable ref door at fork pin `33be9a0` against live PySpark 4.1.2 + Iceberg 1.11.0 and
   moves the write-to-branch gap: F-6 gave `to_branch` to the transaction actions, not to the
   `iceberg-datafusion` write path `INSERT`/`UPDATE`/`DELETE` execute through.
-  `risk_tier: standard`. Branch `feat/ref-branch-tag-wap`.
+  `risk_tier: standard`. Branch `feat/ref-branch-tag-wap`. **2026-09-01 delivered, parks in
+  staging until the owner merges:** C-001..C-006 PROVEN — the `branch_`/`tag_` read selectors
+  resolve (registry `REF-4` FIXED), both `WITH SNAPSHOT RETENTION` halves land on both doors,
+  the write leg and WAP stay DECLARED with re-measured reasons (`REF-1`, `REF-3`) and the
+  restated fork ask filed as F-6b.
 - [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's
   scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike
   evidence behind it; C-007 (the four sub-project families) was closed by ruling D-7 on

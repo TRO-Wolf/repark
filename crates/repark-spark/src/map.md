@@ -54,8 +54,10 @@ pins: rp-4-fork-repin/C-005, C-006
   error and refuses here too. The write-to-branch refusal names the surface that is still
   missing at fork pin `33be9a0`: `to_branch` reached the transaction actions in F-6, but
   `iceberg-datafusion`'s provider commit path (which `INSERT` / `UPDATE` / `DELETE` execute
-  through) carries no commit target. Re-measure that sentence on every repin.
-  pins: ref-branch-tag-wap/C-003, C-004
+  through) carries no commit target. Re-measure that sentence on every repin. The registry
+  rows this module answers to are `REF-1` (write, DECLARED), `REF-3` (WAP, DECLARED) and
+  `REF-4` (selector reads, FIXED) in `docs/spark-sql-iceberg-parity.md` §2.2.
+  pins: ref-branch-tag-wap/C-003, C-004, C-006
 - `call.rs` — seven maintenance procedures: six maintenance calls plus `register_table`. Each
   preserves Spark's result schema and count sources. Orphan removal requires `older_than`, defaults
   `dry_run` to true, and refuses shared fallback roots; rewrite-position-delete still refuses
