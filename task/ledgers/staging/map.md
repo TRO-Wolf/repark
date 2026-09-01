@@ -16,6 +16,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   WindowSpec, Catalog, the `types` module surface, `ml`, and Row (150 names,
   763 → 913). `risk_tier: standard`. Branch `feat/ex-1-class-surfaces`, stacked
   on `feat/ex-0-example-drift-gate`.
+- [ex-2-functions-math-bitwise-ledger.md](ex-2-functions-math-bitwise-ledger.md) —
+  **EX-2 (2026-09-01), in flight:** the v0.7 example backfill's `F.*` math +
+  bitwise family — the campaign pilot. One clause per batch; batch 1 covers
+  eleven roots / exponential / power / sign / rounding names and moves the
+  backlog ratchet 892 → 881; the twelfth, `F.expm1`, is measured, reported and
+  left on the backlog rather than taught by an example that omits its reason
+  for existing. `risk_tier: standard`. Branch
+  `feat/ex-2-functions-math-bitwise`. Slate:
+  [../briefs/example-backfill.md](../../../briefs/example-backfill.md).
 - [v3-5-dv-compaction-ledger.md](v3-5-dv-compaction-ledger.md) — **V3-5 (2026-08-31),
   in flight:** DV-aware v3 compaction (`V3-DANGLE-1`, B-MOR-3 residue, true
   result counts). Measure `rewrite_data_files` on live Puffin DVs at fork
