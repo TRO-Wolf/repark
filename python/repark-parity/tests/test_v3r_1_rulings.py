@@ -58,16 +58,19 @@ def test_v3_cow_1_is_a_refusal_row_dated_by_the_ruling() -> None:
     assert "ride V3-3" not in row
 
 
-def test_v3_geo_1_is_declared_and_shredded_variant_is_queued_not_rowed() -> None:
-    """C-009: geometry/geography is a DECLARED row; shredded variant waits for V3-6's pin."""
+def test_v3_geo_1_is_declared_and_shredded_variant_is_rowed_with_v3_6_pins() -> None:
+    """C-009 + V3-6: geometry/geography stay DECLARED; shredded variant is a DECLARED row
+    citing the binary-vs-shredded pins V3-6 measured."""
     registry = _registry()
     assert "### V3-GEO-1 — the v3 `geometry` / `geography` types are not supported" in registry
     geo = registry[registry.index("### V3-GEO-1") : registry.index("## 5. Facade drop-in")]
     assert "DECLARED" in geo and _RULING_DATE in geo
     assert "v3_type_columns_geometry_geography_variant_refuse_naming_the_type" in geo
-    queue = registry[registry.index("### Surfaced, awaiting pins") : registry.index("## 8.")]
-    assert "**V3-VARIANT-SHRED-1**" in queue and _RULING_DATE in queue
-    assert "### V3-VARIANT-SHRED-1" not in registry, "no row without a pin"
+    shred = registry[registry.index("### V3-VARIANT-SHRED-1") : registry.index("## 5. Facade drop-in")]
+    assert "DECLARED" in shred and _RULING_DATE in shred
+    assert "fork_variant_arrow_maps_and_parquet_write_refuses" in shred
+    assert "fork_variant_scan_refuses_naming_the_type" in shred
+    assert "R88" in shred
 
 
 def test_north_star_matrix_carries_the_three_engine_rulings() -> None:
