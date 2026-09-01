@@ -47,7 +47,7 @@ pub(crate) fn split_write_ref_parts(parts: &[String]) -> Option<(Vec<String>, Re
     }
     let selector = if parts.len() >= 4 {
         parse_ref_selector(last)?
-    } else if parts.len() == 3 || parts.len() == 2 {
+    } else if parts.len() == 2 {
         let lowered = last.to_ascii_lowercase();
         if lowered.starts_with("branch_") || lowered.starts_with("tag_") {
             parse_ref_selector(last)?
@@ -66,10 +66,15 @@ pub(crate) fn missing_branch_error(name: &str) -> DataFusionError {
 
 pub(crate) fn tag_write_error(sql: &str) -> DataFusionError {
     let upper = sql.trim_start();
-    let is_modify = upper.len() >= 6
-        && (upper[..6].eq_ignore_ascii_case("UPDATE")
-            || upper[..6].eq_ignore_ascii_case("DELETE")
-            || upper[..5].eq_ignore_ascii_case("MERGE"));
+    let is_modify = upper
+        .get(..6)
+        .is_some_and(|head| head.eq_ignore_ascii_case("UPDATE"))
+        || upper
+            .get(..6)
+            .is_some_and(|head| head.eq_ignore_ascii_case("DELETE"))
+        || upper
+            .get(..5)
+            .is_some_and(|head| head.eq_ignore_ascii_case("MERGE"));
     if is_modify {
         DataFusionError::Plan("Cannot modify table with time travel".to_string())
     } else {
@@ -261,9 +266,15 @@ fn load_target_table(
 
 fn write_dml_kind(sql: &str) -> Option<MorDmlKind> {
     let trimmed = sql.trim_start();
-    if trimmed.len() >= 6 && trimmed[..6].eq_ignore_ascii_case("UPDATE") {
+    if trimmed
+        .get(..6)
+        .is_some_and(|head| head.eq_ignore_ascii_case("UPDATE"))
+    {
         Some(MorDmlKind::Update)
-    } else if trimmed.len() >= 6 && trimmed[..6].eq_ignore_ascii_case("DELETE") {
+    } else if trimmed
+        .get(..6)
+        .is_some_and(|head| head.eq_ignore_ascii_case("DELETE"))
+    {
         Some(MorDmlKind::Delete)
     } else {
         None

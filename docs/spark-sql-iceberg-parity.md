@@ -260,14 +260,15 @@ Supported surface, for reference:
 **The boundary is read-vs-write, not query-vs-DML.** `cat.ns.t.branch_b` is a ref selector
 wherever the statement *reads* it — a standalone `SELECT`, a JOIN, a DML statement's source
 relation, a `MERGE`'s `USING` operand, a predicate subquery, or a CTAS body — and all of those
-work. It is REF-1's refusal only where the statement *writes* to it, which is the one relation
-named as the statement's target (`INSERT INTO x`, `INSERT OVERWRITE [TABLE] x`, `UPDATE x`,
-`DELETE FROM x`, `MERGE INTO x`). One statement can do both: `INSERT INTO t.tag_v SELECT …
+work. A branch write target (`INSERT INTO x`, `INSERT OVERWRITE [TABLE] x`, `UPDATE x`,
+`DELETE FROM x`, `MERGE INTO x`) commits onto that branch (REF-1 FIXED). A tag write target
+or a missing branch refuses. One statement can do both: `INSERT INTO t.tag_v SELECT …
 FROM t.branch_b` refuses on its tag write-target while the branch selector in its source is a
 perfectly good read.
 
 - **repark** — the selector reads the ref on the Spark door in every read position above; a
-  missing branch **or** tag refuses naming it. The ANSI door's spelling for the same read is
+  branch write target commits onto the branch; a missing branch **or** a tag write refuses
+  naming it. The ANSI door's spelling for the same read is
   `FOR VERSION AS OF '<ref>'`, which is delivered and pinned — the dotted selector is
   Spark-dialect sugar and stays Spark-only, like `t.snapshots` (§2.1) whose ANSI spelling is the
   fork's `t$snapshots`. On that door a dotted selector still answers DataFusion's generic 4-part

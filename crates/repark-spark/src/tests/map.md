@@ -82,7 +82,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 - `write_to_branch.rs` — RP-5 C-004 family pins: INSERT VALUES/SELECT, UPDATE, DELETE,
   MERGE, INSERT OVERWRITE, TRUNCATE, empty overwrite on a diverged branch; two-part
   `t.branch_b` via session defaults; tag and missing-branch Spark-shaped refuse including
-  TRUNCATE.
+  TRUNCATE; a real three-part table named `branch_<x>` is not a selector.
   pins: rp-5-fork-repin/C-004
 - `common.rs` — shared fixtures (`setup`, `rows`, `run`, `register_source`, `table_rows`, …)
   and the cross-cutting helpers that more than one leaf needs (`time_travel_id_multiset`,
@@ -143,8 +143,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   declared — the three publish procedures and the `spark.wap.*` confs all fail closed and leave
   the branch where it was; and the read-vs-write boundary — a selector in a DML statement's
   source, `USING` operand or predicate subquery reads the ref (four classes plus CTAS, each
-  asserting the ref's ids and not `main`'s), while a ref-named write TARGET still refuses even
-  when the source is another selector. The oracle stamp the registry rows §2.2
+  asserting the ref's ids and not `main`'s); a branch write target commits onto the branch
+  and a tag write target refuses. The oracle stamp the registry rows §2.2
   `REF-1`/`REF-3`/`REF-4` cite lives in the REF ledger C-001 (2026-09-01, live PySpark
   4.1.2 + Iceberg 1.11.0; retention values are the oracle's own `refs` rows).
   pins: ref-branch-tag-wap/C-001, C-002, C-003, C-005, C-007),

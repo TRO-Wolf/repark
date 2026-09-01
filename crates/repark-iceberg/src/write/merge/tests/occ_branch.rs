@@ -34,7 +34,7 @@ async fn append_to_branch(
 }
 
 #[tokio::test]
-async fn commit_on_branch_rejects_or_retries_concurrent_branch_append() {
+async fn commit_on_branch_rejects_concurrent_branch_append() {
     let warehouse = TempDir::new().expect("temp warehouse");
     let (catalog, ident) = setup_with_isolation(&warehouse, "serializable").await;
     let (_seed, snap) = append(&catalog, &ident, vec![data_file("test/a.parquet")]).await;
@@ -60,7 +60,7 @@ async fn commit_on_branch_rejects_or_retries_concurrent_branch_append() {
         vec![data_file("test/branch-concurrent.parquet")],
     )
     .await;
-    let result = commit_on_ref(
+    let error = commit_on_ref(
         &catalog,
         &table,
         Some(pin),
@@ -68,28 +68,17 @@ async fn commit_on_branch_rejects_or_retries_concurrent_branch_append() {
         vec![data_file("test/branch-insert.parquet")],
         Some("audit"),
     )
-    .await;
-    match result {
-        Ok(()) => {
-            let live = catalog.load_table(&ident).await.expect("load");
-            let branch_id = live
-                .metadata()
-                .snapshot_for_ref("audit")
-                .expect("audit after commit")
-                .snapshot_id();
-            assert_ne!(branch_id, pin, "retry must move the branch head");
-        }
-        Err(error) => {
-            let ice = iceberg_error(&error);
-            assert!(
-                ice.retryable() || ice.kind() == iceberg::ErrorKind::DataInvalid,
-                "measured branch OCC: retryable or validation, got kind={:?} retryable={} msg={}",
-                ice.kind(),
-                ice.retryable(),
-                ice.message()
-            );
-        }
-    }
+    .await
+    .expect_err("concurrent branch append must fail OCC");
+    let ice = iceberg_error(&error);
+    assert_eq!(ice.kind(), iceberg::ErrorKind::DataInvalid);
+    assert!(!ice.retryable(), "measured branch OCC is not retryable");
+    let message = ice.message();
+    assert!(
+        message.contains("Found conflicting files that can contain records matching TRUE")
+            && message.contains("test/branch-concurrent.parquet"),
+        "measured branch OCC message, got: {message}"
+    );
 }
 
 #[tokio::test]

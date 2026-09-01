@@ -56,6 +56,8 @@ pins: rp-4-fork-repin/C-005, C-006
   Iceberg ident before the temp rewrite; fork-executed INSERT/UPDATE/DELETE via
   `IcebergTableProvider::with_commit_branch` registered on `datafusion.public`;
   MERGE / INSERT OVERWRITE / TRUNCATE rewrite short names to four-part then `.to_branch`.
+  `split_write_ref_parts` sniffs four-part names and two-part `branch_`/`tag_` names;
+  a three-part table whose last segment starts with `branch_` is an ordinary table.
   pins: rp-5-fork-repin/C-004
 - `ref_ddl.rs` — I5 snapshot-ref DDL (CREATE/DROP/REPLACE BRANCH|TAG, retention) + the
   write-to-branch sniff. Its 14 in-module tests are file-backed in

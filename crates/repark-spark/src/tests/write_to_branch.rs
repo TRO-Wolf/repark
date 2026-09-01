@@ -409,3 +409,47 @@ async fn two_part_branch_selector_uses_session_defaults() {
     let (main_after, _, _) = snaps(&after, "b");
     assert_eq!(main_after, main_before);
 }
+
+#[tokio::test]
+async fn three_part_table_named_branch_is_not_a_selector() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.branch_data AS SELECT * FROM src WHERE id <= 2",
+    )
+    .await;
+    run(&ctx, &catalogs, "TRUNCATE TABLE ice.sales.branch_data").await;
+    assert_eq!(
+        time_travel_id_multiset(&ctx, &catalogs, "SELECT id FROM ice.sales.branch_data").await,
+        Vec::<i32>::new()
+    );
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT OVERWRITE ice.sales.branch_data VALUES (77, 'ow')",
+    )
+    .await;
+    assert_eq!(
+        time_travel_id_multiset(&ctx, &catalogs, "SELECT id FROM ice.sales.branch_data").await,
+        vec![77]
+    );
+    seed_diverged(&ctx, &catalogs, "ice.sales.t", "b").await;
+    let before = load_sales_table(&catalogs, "t").await;
+    let (main_before, branch_before, _) = snaps(&before, "b");
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT OVERWRITE ice.sales.t.branch_b VALUES (88, 'br')",
+    )
+    .await;
+    let after = load_sales_table(&catalogs, "t").await;
+    let (main_after, branch_after, _) = snaps(&after, "b");
+    assert_eq!(main_after, main_before);
+    assert_ne!(branch_after, branch_before);
+    assert_eq!(
+        time_travel_id_multiset(&ctx, &catalogs, "SELECT id FROM ice.sales.t.branch_b").await,
+        vec![88]
+    );
+}

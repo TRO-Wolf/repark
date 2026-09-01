@@ -1,5 +1,18 @@
 # Charter ledger — RP-5 · fork repin 33be9a0 → 00cdde0 (consume F-6b/F-6c, F-8, F-16r; close REF-1 and RDF-1)
 
+**Errata 2026-09-01 (delta critic on `f91f45c`).** S2-4: pin
+`commit_on_branch_rejects_concurrent_branch_append` asserts `ErrorKind::DataInvalid`,
+`retryable() == false`, and `Found conflicting files that can contain records matching TRUE`
+plus `test/branch-concurrent.parquet`. Knob
+`commit_overwrite_on_ref` `validate_no_conflicting_data` skipped when `branch.is_some()`:
+`occ_branch` 1 / 2 red (`commit_on_branch_rejects_concurrent_branch_append`;
+`commit_on_branch_ignores_concurrent_main_append` stayed green). NEW S2 / C-004: `split_write_ref_parts` dropped the
+unpinned 3-part arm; pin `three_part_table_named_branch_is_not_a_selector` (`ice.sales.branch_data`
+TRUNCATE and INSERT OVERWRITE; `ice.sales.t.branch_b` still routes). S3-1: REF-4 prose says
+a branch write commits (REF-1 FIXED); only a tag or missing branch refuses. S3-2:
+`write_dml_kind` and `tag_write_error` use `str::get` so a multi-byte char at the cut does
+not panic.
+
 **Errata 2026-09-01 (critic remediation on `feat/rp-5-fork-repin`).** S1: V3-COW-1 / MOR
 valves run on the Iceberg ident before the temp rewrite; pin
 `v3_cow_update_and_delete_on_branch_refuse_like_unqualified`. S2-1: two-part `t.branch_b`
