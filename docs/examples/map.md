@@ -9,10 +9,16 @@ neither covered nor listed in the backlog ratchet or the cloud exceptions file.
 
 Examples run against local filesystem and a memory catalog only. They are not a
 substitute for pins in `python/repark/tests/` — they teach the public name.
-Each `COVERS` name must appear as a real use in that script: `F.*` / `ta.*` on
-their door, `repark.sql` on the module alias, class-surface names on a
-repark-rooted local (assignment dataflow). `exceptions.txt` is an exact
-count ratchet (`EXCEPTIONS_BASELINE`); a new row is a visible baseline bump.
+Each `COVERS` name must appear as a real use in that script: a module-door name
+(`F.*`, `ta.*`, `types.*`, `ml.*`) on its own door, `repark.sql` on the module
+alias, class-surface names on a repark-rooted local (assignment dataflow), and
+the class-root surfaces (`SparkSession.builder`, `SparkSession.Builder.*`,
+`Window.*`) on the class name. `exceptions.txt` is an exact count ratchet
+(`EXCEPTIONS_BASELINE`); a new row is a visible baseline bump.
+
+EX-1 (2026-08-31) widened the closed set with the class surfaces the owner ruled
+into v0.7 — Column, Window, WindowSpec, Catalog, the `types` module surface,
+`ml`, and Row: 150 names, 763 → 913, all of them backlog rows.
 
 This file closes when the v0.7 example backfill is complete and the backlog
 file is empty.
@@ -30,6 +36,9 @@ file is empty.
 - [ta/](ta/map.md) — TA kernel examples.
 - [io/](io/map.md) — reader / writer examples.
 - [session/](session/map.md) — `repark.sql` and SparkSession door examples.
+- `column/`, `window/`, `catalog/`, `types/`, `ml/` — the EX-1 families. They
+  are inventory families with no example yet; the backfill creates each
+  directory (and its `map.md`) with the first example it lands there.
 
 ## I want to...
 
@@ -46,6 +55,7 @@ file is empty.
 - Gate: [../../scripts/check_example_coverage.py](../../scripts/check_example_coverage.py)
 - Ruling: [../../task/roadmap/epic-term/release-roadmap-2026-08-29.md](../../task/roadmap/epic-term/release-roadmap-2026-08-29.md)
 - Ledger: [../../task/ledgers/staging/ex-0-example-drift-gate-ledger.md](../../task/ledgers/staging/ex-0-example-drift-gate-ledger.md)
+- Ledger: [../../task/ledgers/staging/ex-1-class-surfaces-ledger.md](../../task/ledgers/staging/ex-1-class-surfaces-ledger.md)
 
 ## Debug
 
