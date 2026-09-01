@@ -47,7 +47,8 @@ pins: rp-4-fork-repin/C-005, C-006
   PARTITION / IF EXISTS / missing TABLE / multi-target refuse. Pins:
   [tests/truncate.rs](tests/truncate.rs). pins: dml-c-truncate/C-002, C-005, C-006, C-007
 - `ref_ddl.rs` — I5 snapshot-ref DDL (CREATE/DROP/REPLACE BRANCH|TAG, retention) + the
-  write-to-branch sniff; 14 in-module tests.
+  write-to-branch sniff. Its 14 in-module tests are file-backed in
+  [ref_ddl/map.md](ref_ddl/map.md); the module path, and so every pin name, is unchanged.
 - `call.rs` — seven maintenance procedures: six maintenance calls plus `register_table`. Each
   preserves Spark's result schema and count sources. Orphan removal requires `older_than`, defaults
   `dry_run` to true, and refuses shared fallback roots; rewrite-position-delete still refuses
