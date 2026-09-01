@@ -60,7 +60,9 @@ JVM, no repark required). See [../map.md](../map.md).
   (**DML-B 2026-08-30:** `insert_overwrite.rs` tests 1249→1233, `writer_readwriter.py` 1117→1113)
   exception sets and baselines mirrored from the live guard tables (DML-A:
   `merge/mod.rs` 2131 → 2086; `call.rs` 1404 → 1111 after
-  RP-2's `call_args.rs` split; RP-3 1407 → 1361); blank-line boundaries;
+  RP-2's `call_args.rs` split; RP-3 1407 → 1361; **REF 2026-09-01:** the
+  `repark-spark/src/ref_ddl.rs` row is retired, 38 → 37 Rust rows, after that file's
+  in-module tests moved to a file-backed `ref_ddl/tests.rs`); blank-line boundaries;
   growth, shrink, retirement,
   missing-path, unreadable-path, and empty-scan provocations; fixture exclusions; unchanged
   facade no-stub scope; existing Makefile/CI wiring and contract/navigation carriers. The
