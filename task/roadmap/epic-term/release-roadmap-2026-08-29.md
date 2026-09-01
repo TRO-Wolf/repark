@@ -81,9 +81,13 @@ those releases ships its own examples as part of its done gate rather than re-do
 - **Notebooks are generated, not written.** The notebook deliverable ships as a mechanical
   conversion of the example scripts, with a lockstep check; a notebook that can drift from its
   script would re-create the rot the gate exists to prevent.
-- **FNP-15/16 lands inside the v0.7 window** (sequencing, not scope): the ~62 unregistered
-  `F.*` names register before the backfill closes, so "every public name" means the intended
-  surface rather than today's minus the known gap.
+- **FNP-15/16 landed 2026-08-30 (#271), inside the v0.7 window as required**: all 62
+  declared-absent `F.*` names are exported and refuse loudly with registry §9 reasons
+  (archived ledger `2026-08-30-fnp-15-16-ledger.md`), so "every public name" already means
+  the intended surface. The remaining facade gap against live PySpark is a different
+  cohort (~70 names: json, time/numeric, collate, aes/mask, bitmap aggs, window/stack
+  families — FNP-9…14 territory, several deliberately deferred); registering those is
+  post-v0.7 campaign work, not this window's.
 - **The class surfaces are in** (owner ruling, 2026-08-31). "Every public name" includes
   `Column`, `Window` / `WindowSpec`, `Catalog`, `types`, `Row`, `ml`, and the other class
   surfaces the EX-0 inventory measured but excluded — roughly 120 further names. The
