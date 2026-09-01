@@ -668,6 +668,16 @@ async fn column_def_schema(
 ) -> Result<Arc<ArrowSchema>> {
     let mut fields = Vec::with_capacity(create.columns.len());
     for column in &create.columns {
+        for option in &column.options {
+            if matches!(option.option, ColumnOption::Default(_)) {
+                return Err(DataFusionError::NotImplemented(format!(
+                    "{form}: column `{}` DEFAULT is not supported — only NULL / NOT NULL are \
+                     accepted, and this engine sets no Iceberg column defaults (Spark 4.1.2 \
+                     refuses column default values too)",
+                    column.name.value
+                )));
+            }
+        }
         let nullable = !column
             .options
             .iter()

@@ -16,9 +16,10 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
   (`iceberg::plan_commit_base_load` / `CommitBaseLoadPlan`).
 - `v3_types.rs` — **V3-6 C-001:** fork pin `33be9a0` read/write measurement for
   `timestamp_ns` / `timestamptz_ns` (parquet round-trip), `unknown` (Arrow Null;
-  write commits; scan `DataInvalid` Null), binary `variant` (parquet builder
-  refuse), and `write_default` (schema stores it; engine `append` still refuses a
-  missing column). pins: v3-6-v3-types/C-001
+  write commits; scan `DataInvalid` Null), and binary `variant` (parquet builder
+  refuse). **C-005 (2026-09-01):** `write_default` fills an omitted column on append
+  (red-first vs the old refuse pin), a supplied column is kept, and `initial_default`
+  reads into files missing the column. pins: v3-6-v3-types/C-001, C-005
 
 ## Pointers
 

@@ -1,13 +1,13 @@
 //! Model: Grok 4.6
 //! Fork pin `33be9a0` read/write measurement for V3-6 types.
-//! pins: v3-6-v3-types/C-001
+//! pins: v3-6-v3-types/C-001, C-005
 
 use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::append;
 use datafusion::arrow::array::{
-    Array, Int32Array, NullArray, RecordBatch, TimestampNanosecondArray,
+    Array, Int32Array, NullArray, RecordBatch, StringArray, TimestampNanosecondArray,
 };
 use datafusion::arrow::datatypes::{DataType, Field, Schema as ArrowSchema, TimeUnit};
 use futures::TryStreamExt;
@@ -326,14 +326,9 @@ async fn fork_write_default_fills_missing_column_on_append() {
         vec![Arc::new(Int32Array::from(vec![1, 2]))],
     )
     .expect("id-only batch");
-    let err = append(&catalog, &ident, vec![batch])
+    append(&catalog, &ident, vec![batch])
         .await
-        .expect_err("engine append refuses a missing column before write_default fill");
-    let text = err.to_string();
-    assert!(
-        text.contains("missing column `name`"),
-        "engine append must name the missing column: {text}"
-    );
+        .expect("an omitted column with a write_default must fill, not refuse");
     let table = catalog.load_table(&ident).await.expect("load");
     let field = table
         .metadata()
@@ -343,6 +338,162 @@ async fn fork_write_default_fills_missing_column_on_append() {
     assert_eq!(
         field.write_default,
         Some(iceberg::spec::Literal::string("anon"))
+    );
+    let batches: Vec<RecordBatch> = table
+        .scan()
+        .select(["id", "name"])
+        .build()
+        .expect("scan")
+        .to_arrow()
+        .await
+        .expect("to_arrow")
+        .try_collect()
+        .await
+        .expect("collect");
+    let names = batches[0]
+        .column(1)
+        .as_any()
+        .downcast_ref::<StringArray>()
+        .expect("string array");
+    for index in 0..names.len() {
+        assert_eq!(
+            names.value(index),
+            "anon",
+            "the write_default must fill the omitted column"
+        );
+    }
+}
+
+#[tokio::test]
+async fn engine_append_supplied_column_kept_over_write_default() {
+    let warehouse = TempDir::new().unwrap();
+    let catalog = memory_catalog(&warehouse).await;
+    let ident = create_v3(&catalog, "supplied", write_default_schema()).await;
+    let batch = RecordBatch::try_new(
+        Arc::new(ArrowSchema::new(vec![
+            Field::new("id", DataType::Int32, false),
+            Field::new("name", DataType::Utf8, true),
+        ])),
+        vec![
+            Arc::new(Int32Array::from(vec![1])),
+            Arc::new(StringArray::from(vec![Some("bob")])),
+        ],
+    )
+    .expect("full batch");
+    append(&catalog, &ident, vec![batch])
+        .await
+        .expect("a supplied column must survive unchanged");
+    let table = catalog.load_table(&ident).await.expect("load");
+    let batches: Vec<RecordBatch> = table
+        .scan()
+        .select(["id", "name"])
+        .build()
+        .expect("scan")
+        .to_arrow()
+        .await
+        .expect("to_arrow")
+        .try_collect()
+        .await
+        .expect("collect");
+    let names = batches[0]
+        .column(1)
+        .as_any()
+        .downcast_ref::<StringArray>()
+        .expect("string array");
+    assert_eq!(
+        names.value(0),
+        "bob",
+        "a supplied value must not be replaced by the write_default"
+    );
+}
+
+#[tokio::test]
+async fn fork_initial_default_reads_into_files_missing_the_column() {
+    let warehouse = TempDir::new().unwrap();
+    let catalog = memory_catalog(&warehouse).await;
+    let ident = create_v3(
+        &catalog,
+        "initialdef",
+        Schema::builder()
+            .with_schema_id(0)
+            .with_fields(vec![
+                NestedField::required(1, "id", Type::Primitive(PrimitiveType::Int)).into(),
+            ])
+            .build()
+            .expect("id schema"),
+    )
+    .await;
+    let pre = RecordBatch::try_new(
+        Arc::new(ArrowSchema::new(vec![Field::new(
+            "id",
+            DataType::Int32,
+            false,
+        )])),
+        vec![Arc::new(Int32Array::from(vec![1]))],
+    )
+    .expect("pre-column batch");
+    append(&catalog, &ident, vec![pre])
+        .await
+        .expect("pre-column append");
+    let table = catalog.load_table(&ident).await.expect("load");
+    let tx = Transaction::new(&table);
+    let action = tx.update_schema().add_column_with_default(
+        "tag",
+        Type::Primitive(PrimitiveType::String),
+        iceberg::spec::Literal::string("x"),
+    );
+    let tx = action.apply(tx).expect("apply");
+    tx.commit(catalog.as_ref()).await.expect("commit");
+
+    let post = RecordBatch::try_new(
+        Arc::new(ArrowSchema::new(vec![Field::new(
+            "id",
+            DataType::Int32,
+            false,
+        )])),
+        vec![Arc::new(Int32Array::from(vec![2]))],
+    )
+    .expect("post-column batch");
+    append(&catalog, &ident, vec![post])
+        .await
+        .expect("post-column append fills from write_default");
+    let table = catalog.load_table(&ident).await.expect("reload");
+    let batches: Vec<RecordBatch> = table
+        .scan()
+        .select(["id", "tag"])
+        .build()
+        .expect("scan")
+        .to_arrow()
+        .await
+        .expect("to_arrow")
+        .try_collect()
+        .await
+        .expect("collect");
+    let mut tags_by_id = std::collections::HashMap::new();
+    for batch in &batches {
+        let ids = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<Int32Array>()
+            .expect("id array");
+        let tags = batch
+            .column(1)
+            .as_any()
+            .downcast_ref::<StringArray>()
+            .expect("tag array");
+        for index in 0..ids.len() {
+            tags_by_id.insert(ids.value(index), tags.value(index).to_string());
+        }
+    }
+    assert_eq!(
+        tags_by_id.get(&1).map(String::as_str),
+        Some("x"),
+        "the pre-column file must read back through initial_default"
+    );
+    assert_eq!(
+        tags_by_id.get(&2).map(String::as_str),
+        Some("x"),
+        "the post-column append must read back through write_default fill"
     );
 }
 

@@ -489,7 +489,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - `test_alter_table.py` — I6 / R-ALTER-TABLE: ADD/DROP/RENAME COLUMN schema-eq + read-after
   (added→NULL, rename data intact), ADD COLUMNS plural + FIRST, TYPE widen + narrow-refuse twin
   (int→long + float→double + decimal — octo C3), case-insensitive DROP (octo C5), DROP NOT NULL,
-  loud refuse REPLACE COLUMNS / partition evolution / ADD NOT NULL. FQ `mem.ns.table` only (no
+  loud refuse REPLACE COLUMNS / partition evolution / ADD NOT NULL, and **V3-6 C-005**
+  Spark-equal DEFAULT DDL refuse (CREATE / ADD COLUMN / SET DEFAULT)
+  (pins: v3-6-v3-types/C-005). FQ `mem.ns.table` only (no
   bare-name dependency).
 - `test_alter_table.py` — I6 / R-ALTER-TABLE + I7 partition evolution: ADD/DROP/RENAME COLUMN
   schema-eq + read-after (added→NULL, rename data intact), ADD COLUMNS plural + FIRST, TYPE

@@ -99,6 +99,26 @@ def test_alter_unsupported_forms_refuse_loud(spark: ReparkSession) -> None:
     assert "NOT NULL" in str(caught.value) or "not supported" in str(caught.value).lower()
 
 
+def test_column_default_ddl_refuses_naming_the_option(spark: ReparkSession) -> None:
+    """V3-6 C-005: Spark-equal refuse of DEFAULT DDL — CREATE, ADD COLUMN, ALTER COLUMN SET.
+
+    pins: v3-6-v3-types/C-005
+    """
+    spark.sql("CREATE TABLE mem.ns.defcol (id INT)")
+    with pytest.raises((UnsupportedOperationException, AnalysisException, Exception)) as caught:
+        spark.sql("CREATE TABLE mem.ns.defnew (id INT, tag STRING DEFAULT 'x')")
+    assert "default" in str(caught.value).lower()
+
+    with pytest.raises((UnsupportedOperationException, AnalysisException, Exception)) as caught:
+        spark.sql("ALTER TABLE mem.ns.defcol ADD COLUMN tag STRING DEFAULT 'x'")
+    assert "default" in str(caught.value).lower()
+
+    with pytest.raises((UnsupportedOperationException, AnalysisException, Exception)) as caught:
+        spark.sql("ALTER TABLE mem.ns.defcol ALTER COLUMN id SET DEFAULT 3")
+    assert "default" in str(caught.value).lower()
+    assert not spark.catalog.tableExists("mem.ns.defnew")
+
+
 def test_alter_add_drop_partition_field_and_write_after(spark: ReparkSession) -> None:
     """READY: ADD/DROP PARTITION FIELD; write-after-evo; mixed-spec read; time-travel."""
     spark.sql("CREATE TABLE mem.ns.pevo (id INT, category STRING) USING iceberg")

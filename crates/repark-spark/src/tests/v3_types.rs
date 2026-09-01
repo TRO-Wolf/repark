@@ -214,3 +214,28 @@ async fn timestamp_ns_on_v2_create_refuses() {
         "v2 timestamp_ns refusal must name the type or v3: {text}"
     );
 }
+
+#[tokio::test]
+async fn alter_column_set_default_refuses_naming_the_option() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    execute(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.setdef (id INT) USING iceberg \
+         TBLPROPERTIES ('format-version' = '3')",
+    )
+    .await
+    .expect("plain v3 CREATE");
+    let err = execute(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.setdef ALTER COLUMN id SET DEFAULT 3",
+    )
+    .await
+    .expect_err("SET DEFAULT must refuse — no engine surface sets an Iceberg column default");
+    assert!(
+        err.to_string().contains("DEFAULT"),
+        "SET DEFAULT refusal must name the option: {err}"
+    );
+}
