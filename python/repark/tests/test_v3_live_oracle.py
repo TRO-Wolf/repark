@@ -385,9 +385,10 @@ def test_northstar_nightly_v3_leg_is_v3e_5() -> None:
     """
     northstar = _REPO_ROOT / "task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md"
     text = northstar.read_text(encoding="utf-8")
-    assert "Nightly oracle: v3 leg | ✅ V3E-5 (2026-08-27):" in text
-    assert "PySpark 4.1.2 + Iceberg 1.11.0" in text
-    assert "Nightly oracle: v3 leg | ❌ none" not in text
+    row = next(line for line in text.splitlines() if line.startswith("| Nightly oracle: v3 leg |"))
+    assert "V3E-5 (2026-08-27)" in row
+    assert "PySpark 4.1.2 + Iceberg 1.11.0" in row
+    assert "❌ none" not in row
 
 
 def test_v3_live_oracle_pins_cover_all_clauses() -> None:
