@@ -1,6 +1,7 @@
 //! Model: Grok 4.6 xHigh
 //! pins: v3e-3-partitioned-eqdel-fixtures/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-010, C-011, C-012, C-013
 //! pins: rp-3-fork-repin/C-004, C-007, C-011
+//! pins: v3-5-dv-compaction/C-002, C-003, C-005
 //! Pins partitioned and equality-delete Spark-written format-v3 fixtures.
 
 use std::fs;
@@ -416,6 +417,115 @@ async fn partitioned_v3_dv_rewrite_position_delete_files_still_refuses() {
 }
 
 #[tokio::test]
+async fn partitioned_v3_dv_rewrite_data_files_drops_both_vectors() {
+    let fixture = materialize_part_dv();
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    register_adopted(&ctx, &catalogs, "sales.partdv", &fixture.metadata_file).await;
+    let ident = TableIdent::from_strs(["sales", "partdv"]).expect("ident");
+    let catalog = Arc::clone(catalogs.get("ice").expect("ice catalog"));
+    let table = catalog
+        .load_table(&ident)
+        .await
+        .expect("load partitioned DV table");
+    let before_vectors = crate::call::count_live_deletion_vectors(&table)
+        .await
+        .expect("count DVs");
+    let before_rows = live_triples(&ctx, &catalogs, "ice.sales.partdv").await;
+    let batches = execute(
+        &ctx,
+        &catalogs,
+        "CALL ice.system.rewrite_data_files(table => 'sales.partdv')",
+    )
+    .await
+    .expect("delete-ratio admits each one-file partition")
+    .collect()
+    .await
+    .expect("collect partitioned rewrite");
+    let rewritten = super::call::call_count(&batches[0], "rewritten_data_files_count");
+    let removed = super::call::call_count(&batches[0], "removed_delete_files_count");
+    let after_table = catalog.load_table(&ident).await.expect("reload");
+    let after_vectors = crate::call::count_live_deletion_vectors(&after_table)
+        .await
+        .expect("count DVs after");
+    let summary = format!(
+        "before_dvs={before_vectors} rewritten={rewritten} removed={removed} \
+         after_dvs={after_vectors}"
+    );
+    assert_eq!(
+        before_vectors, 2,
+        "fixture starts with two live DVs: {summary}"
+    );
+    assert_eq!(
+        rewritten, 2,
+        "each delete-laden partition rewrites: {summary}"
+    );
+    assert_eq!(
+        removed, 2,
+        "both file-scoped DVs drop with their data files: {summary}"
+    );
+    assert_eq!(after_vectors, 0, "no live DV remains: {summary}");
+    assert_eq!(
+        live_triples(&ctx, &catalogs, "ice.sales.partdv").await,
+        before_rows,
+        "compaction applies DVs then drops them: {summary}"
+    );
+}
+
+#[tokio::test]
+async fn partitioned_v3_dv_rewrite_where_part0_keeps_the_sibling_vector() {
+    let fixture = materialize_part_dv();
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    register_adopted(&ctx, &catalogs, "sales.partdv", &fixture.metadata_file).await;
+    let ident = TableIdent::from_strs(["sales", "partdv"]).expect("ident");
+    let catalog = Arc::clone(catalogs.get("ice").expect("ice catalog"));
+    let table = catalog
+        .load_table(&ident)
+        .await
+        .expect("load partitioned DV table");
+    let before_vectors = crate::call::count_live_deletion_vectors(&table)
+        .await
+        .expect("count DVs");
+    let before_rows = live_triples(&ctx, &catalogs, "ice.sales.partdv").await;
+    let batches = execute(
+        &ctx,
+        &catalogs,
+        "CALL ice.system.rewrite_data_files(table => 'sales.partdv', where => 'part = 0')",
+    )
+    .await
+    .expect("filtered rewrite must run")
+    .collect()
+    .await
+    .expect("collect filtered rewrite");
+    let rewritten = super::call::call_count(&batches[0], "rewritten_data_files_count");
+    let removed = super::call::call_count(&batches[0], "removed_delete_files_count");
+    let after_table = catalog.load_table(&ident).await.expect("reload");
+    let after_vectors = crate::call::count_live_deletion_vectors(&after_table)
+        .await
+        .expect("count DVs after");
+    let after_rows = live_triples(&ctx, &catalogs, "ice.sales.partdv").await;
+    let summary = format!(
+        "before_dvs={before_vectors} rewritten={rewritten} removed={removed} \
+         after_dvs={after_vectors} after_rows={after_rows:?}"
+    );
+    assert_eq!(
+        before_vectors, 2,
+        "fixture starts with two live DVs: {summary}"
+    );
+    assert_eq!(rewritten, 1, "only part=0 is rewritten: {summary}");
+    assert_eq!(removed, 1, "only the part=0 DV drops: {summary}");
+    assert_eq!(
+        after_vectors, 1,
+        "part=1 sibling DV must stay live: {summary}"
+    );
+    assert_eq!(
+        after_rows, before_rows,
+        "untouched sibling deletes stay effective: {summary}"
+    );
+}
+
+#[tokio::test]
 async fn partitioned_v3_dv_fork_rewrite_position_delete_files_measurement() {
     let fixture = materialize_part_dv();
     let warehouse = TempDir::new().unwrap();
@@ -507,6 +617,7 @@ async fn partitioned_v3_dv_delete_id_3_merges_into_the_touched_file() {
     assert_eq!(records, 3, "part=0 gained the new position");
 }
 
+/// pins: v3-5-dv-compaction/C-005
 #[tokio::test]
 async fn partitioned_v3_dv_delete_id_1_keeps_the_untouched_sibling() {
     let fixture = materialize_part_dv();

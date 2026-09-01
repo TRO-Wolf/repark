@@ -307,6 +307,23 @@ repark-parity slice.
   check-docstring-presence` (in the `make ci` chain) + ci.yml's `python` job, and on
   pre-commit (n=5 median **0.13 s**, inside the sub-second hook budget).
 
+- `check_example_coverage.sh` + `check_example_coverage.py` — the **v0.7 example-drift**
+  guard (EX-0, 2026-08-31). Enumerates the public surface from an AST walk of the
+  facade (`F.*`, DataFrame/GroupedData/na/stat, TA kernels, reader/writer,
+  SparkSession + `repark.sql`), compares it to `docs/examples/**/COVERS` plus
+  the backlog ratchet and cloud exceptions file, and executes every example
+  when `repark._native` imports. `BACKLOG_BASELINE` and `EXCEPTIONS_BASELINE`
+  are exact and ratchet down only (additions to exceptions must bump the
+  baseline in the same commit). A `COVERS` name must be used in that script's
+  body (class-surface names on a repark-rooted local; `repark.sql` on the
+  module alias). `F.*` unions `functions.py` `__all__` with the installer
+  export tables `install_into` appends. Dual-wired: `make check-example-coverage`
+  in `make ci` and ci.yml's python job (static half). wheels.yml smoke runs
+  `python -I … --require-execute`. The `.sh` wrapper forwards `"$@"`.
+  Example children drop PYTHONPATH.
+  Proofs: `python/repark-parity/tests/test_ex_0_example_coverage.py`.
+  pins: ex-0-example-drift-gate/C-001, C-003, C-004, C-005, C-007, C-009
+
 - `check_rust_file_size.sh` + `check_rust_file_size.py` — the **general Rust file-size** guard
   (G-8 companion to `check_lib_rs`). DML-A (2026-08-30): `merge/mod.rs` 2131 → 2086.
   RP-2 (2026-08-27): `call.rs` ratcheted 1404 → 1111 — the
@@ -366,6 +383,7 @@ Not re-homed (the port is complete — each returns only with a concrete driver)
 | Sanction a nested `def`, or lower a nested-def ceiling | `check_python_conventions.py` (`# nested-def: <reason>` pragma for the three allowed cases; `NESTED_DEF_EXCEPTIONS` for debt — ratchet down only) |
 | Keep a `dataclass` that cannot become a `BaseModel` | `check_python_conventions.py` (`DATACLASS_EXCEPTIONS` — reason required; no inline pragma exists on purpose) |
 | Lower a docstring-presence ceiling, or add a row | `check_docstring_presence.py` (`EXCEPTIONS` — reason required; ceilings ratchet down only; tests are out of scope) |
+| Add a public-API example | `docs/examples/<family>/` with `COVERS`, then drop the name from `docs/examples/backlog.txt` and ratchet `BACKLOG_BASELINE` in `check_example_coverage.py` |
 | Validate workflow YAML locally | `make workflows-parse` |
 | Check `make parity-live` still matches `parity-live.yml` | `make check-parity-live-dual-wire` |
 | Check a matrix.rs Tested cite still exists | `make check-matrix-test-liveness` |
@@ -414,6 +432,9 @@ Not re-homed (the port is complete — each returns only with a concrete driver)
 | `docstring-presence: … undocumented public name(s)` | Add a Google-style docstring, or add/raise an `EXCEPTIONS` row in `check_docstring_presence.py` with a reason (ratchet down only). Tests are out of scope; style `D` is declined |
 | `docstring-presence: EXCEPTIONS key … measures 0` | Delete the row rather than keep a zero — the file converted |
 | `docstring-presence: ruff … refuse to pass closed` | `uvx`/`ruff@0.15.22` missing, ruff exit other than 0/1, or JSON did not parse — environment error, not a finding |
+| `example-coverage: public name … has no example` | Add a `docs/examples/<family>/*.py` with that name in `COVERS`, or (existing names only) a backlog row |
+| `example-coverage: backlog still lists` / `backlog names` | Drop the name from `docs/examples/backlog.txt` and lower `BACKLOG_BASELINE`; a stale name is not in the inventory |
+| `example-coverage: skipping example execution` | Native module is not importable — `make develop`, then re-run |
 | `map-sync: … dead link` | The map points at a path that moved or was deleted — repoint it, or `python3 scripts/sync_map_md.py --fix` if the whole list row should go |
 | `map-sync: … unmentioned` | Only under `--strict`: the directory's map never names that file — add a row with a real description (`--fix` writes a `TODO(describe)` stub, never prose) |
 | `workflows-parse` red | Fix the named workflow's YAML — GitHub would never run it as-is |

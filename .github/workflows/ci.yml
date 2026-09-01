@@ -200,6 +200,10 @@ jobs:
         run: ./scripts/check_python_conventions.sh
       - name: Python docstring-presence guard (check_docstring_presence)
         run: ./scripts/check_docstring_presence.sh
+      # Mirror `make check-example-coverage`. This job does not build the native
+      # module, so example execution is skipped; wheels.yml smoke requires it.
+      - name: example-coverage guard (check_example_coverage)
+        run: ./scripts/check_example_coverage.sh
       # Lockfile-freshness gate (mirrors `make py-lock-check`): RED if uv.lock lags its
       # pyproject floors. Validates only — never rewrites the lock.
       - name: uv lock --locked
