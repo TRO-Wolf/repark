@@ -1,5 +1,3 @@
-//! In-module recognizer and sniff pins for `../ref_ddl.rs`.
-
 use super::*;
 
 #[test]

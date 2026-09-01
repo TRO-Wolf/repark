@@ -189,8 +189,6 @@ async fn branch_retention_clauses_round_trip() {
     assert!(min_snaps.is_null(1), "tag has no min_snapshots_to_keep");
 }
 
-/// Write-to-branch and write-to-tag refuse, naming the write path that carries no target.
-/// pins: ref-branch-tag-wap/C-004
 #[tokio::test]
 async fn write_to_branch_refuses_loud_naming_fork_gap() {
     let wh = TempDir::new().unwrap();

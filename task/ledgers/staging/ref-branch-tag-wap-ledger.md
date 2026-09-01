@@ -234,6 +234,10 @@ COVERAGE_ATTESTATION:
   of them refused with a message that named a write target the statement did not have — a
   factually false refusal is worse than an opaque one. When a surface has a read side and a write
   side, matrix them as separate rows before writing the clause.
+- **Comment homes (2026-09-01).** Branch-added rustdoc left the code. Re-measure the
+  write-to-branch refusal on every fork repin: it is wrong the day `IcebergTableProvider`
+  takes a commit target. Oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-01; retention
+  values are the oracle's own `refs` rows. `pins:` citations live in the crate `map.md` files.
 
 ## What this unit deliberately did not build
 

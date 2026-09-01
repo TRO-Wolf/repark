@@ -1,16 +1,6 @@
-//! REF — snapshot-ref READ selectors, the full retention grammar, and the WAP declaration.
-//!
-//! Oracle: live PySpark 4.1.2 + Iceberg 1.11.0, Hadoop catalog, Java 17, 2026-09-01. Every
-//! assertion here is a cell of that measurement, and the retention values are the oracle's own
-//! `refs` rows rather than arithmetic done in the test.
-//!
-//! pins: ref-branch-tag-wap/C-001
-
 use super::super::*;
 use super::common::*;
 
-/// Both `WITH SNAPSHOT RETENTION` halves in one clause, at the oracle's values.
-/// pins: ref-branch-tag-wap/C-003
 #[tokio::test]
 async fn branch_snapshot_retention_takes_both_count_and_age_halves() {
     use datafusion::arrow::array::{Array, AsArray};
@@ -69,8 +59,6 @@ async fn branch_snapshot_retention_takes_both_count_and_age_halves() {
     assert_eq!(max_snap_age.value(1), 43_200_000);
 }
 
-/// The reversed retention order is a Spark parse error, so it refuses here too.
-/// pins: ref-branch-tag-wap/C-003
 #[tokio::test]
 async fn branch_snapshot_retention_reversed_order_refuses_loud() {
     let wh = TempDir::new().unwrap();
@@ -99,8 +87,6 @@ async fn branch_snapshot_retention_reversed_order_refuses_loud() {
     );
 }
 
-/// WAP is DECLARED: no publish procedure exists and the session confs are fail-closed.
-/// pins: ref-branch-tag-wap/C-005
 #[tokio::test]
 async fn wap_publish_procedures_and_session_conf_refuse_loud() {
     let wh = TempDir::new().unwrap();
@@ -167,8 +153,6 @@ async fn wap_publish_procedures_and_session_conf_refuse_loud() {
     );
 }
 
-/// Spark's dotted ref selectors read the ref, on the branch and the tag spelling.
-/// pins: ref-branch-tag-wap/C-002
 #[tokio::test]
 async fn branch_and_tag_read_selectors_resolve_the_ref() {
     let wh = TempDir::new().unwrap();
@@ -245,8 +229,6 @@ async fn branch_and_tag_read_selectors_resolve_the_ref() {
     }
 }
 
-/// A metadata-table suffix stays a metadata table, and a real table can be named `branch_x`.
-/// pins: ref-branch-tag-wap/C-002
 #[tokio::test]
 async fn ref_selector_does_not_claim_metadata_tables_or_real_table_names() {
     let wh = TempDir::new().unwrap();
@@ -275,12 +257,6 @@ async fn ref_selector_does_not_claim_metadata_tables_or_real_table_names() {
     );
 }
 
-/// A ref selector on the READ side of a DML statement is a read, on every reachable door.
-///
-/// One fixture separates tag, branch and `main`, then five statement classes each read a ref
-/// while writing somewhere else. The length is the class count, not a missing seam.
-///
-/// pins: ref-branch-tag-wap/C-002, C-007
 #[tokio::test]
 #[allow(clippy::too_many_lines)]
 async fn ref_selector_on_the_read_side_of_dml_is_a_read() {
@@ -414,8 +390,6 @@ async fn ref_selector_on_the_read_side_of_dml_is_a_read() {
     );
 }
 
-/// The write TARGET is what the write-to-branch refusal claims, and only that.
-/// pins: ref-branch-tag-wap/C-007
 #[tokio::test]
 async fn write_to_branch_refusal_claims_the_target_only() {
     let wh = TempDir::new().unwrap();

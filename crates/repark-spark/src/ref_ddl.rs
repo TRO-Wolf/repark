@@ -378,11 +378,6 @@ fn parse_retention_clauses(
     Ok((retention, cursor))
 }
 
-/// Whether `index` opens a `<count> DAYS|HOURS|MINUTES` clause.
-///
-/// Spark's grammar puts the optional max-snapshot-age after the snapshot count, so the two
-/// halves are told apart by lookahead. A trailing token that is not a duration stays a
-/// trailing token, and the caller's residual-token check refuses it.
 fn starts_duration_clause(significant: &[Sig], index: usize) -> bool {
     let is_count = matches!(
         significant.get(index),
@@ -680,9 +675,6 @@ pub(crate) async fn execute_ref_ddl(
 }
 
 /// Loud refuse message for write-to-branch (fork gap seed).
-///
-/// The gap moved with fork F-6 (#244) and this text moved with it. Re-measure it on the next
-/// fork repin: the day `IcebergTableProvider` takes a commit target, this refusal is wrong.
 pub(crate) const WRITE_TO_BRANCH_NOT_SUPPORTED: &str = "\
 write-to-branch (INSERT/UPDATE/DELETE/MERGE targeting `table.branch_<name>` or \
 `table.branch_name`) is not supported at fork pin 33be9a0f411c37cd8d7b38c4db81eec30c1344cc. \
@@ -731,11 +723,6 @@ pub(crate) fn sniff_write_to_branch(sql: &str) -> Option<WriteToBranchSniff> {
     find_write_target_branch_span(&significant)
 }
 
-/// Classify the statement's ONE write target when it names a snapshot ref.
-///
-/// Only the target is examined. A ref selector anywhere else in the statement — a source
-/// relation, a `USING` operand, a subquery in the predicate — is a READ, and claiming it here
-/// produced a refusal that named a write target the statement did not have.
 fn find_write_target_branch_span(significant: &[&Token]) -> Option<WriteToBranchSniff> {
     let parts = collect_ident_parts(significant, write_target_name_start(significant)?)?;
     if parts.len() >= 4 {
@@ -760,7 +747,6 @@ fn find_write_target_branch_span(significant: &[&Token]) -> Option<WriteToBranch
     None
 }
 
-/// Index of the first token of the write target, per the statement's own head keywords.
 fn write_target_name_start(significant: &[&Token]) -> Option<usize> {
     let head = word_upper(significant, 0)?;
     let mut index = match head.as_str() {

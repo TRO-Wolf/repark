@@ -1,17 +1,4 @@
-"""Raise a column to a power, two spellings of it, and the natural exponential.
-
-``F.pow`` and ``F.power`` are aliases: the same operation under two names, so
-that SQL's ``power(a, b)`` and the shorter form both work. They are separate
-callable objects rather than one object bound twice, so the alias relation is
-demonstrated here the way it actually matters — identical output on identical
-input, column for column.
-
-``F.exp`` belongs with them because it is the same idea with the base fixed:
-``exp(x)`` is ``e`` raised to ``x``, and this script checks it against
-``pow(e, x)`` to the last few bits. The result is a float in every case, so the
-two routes agree to a tolerance rather than exactly — floating point does not
-promise that two different roads to a number arrive at the same bit pattern.
-"""
+"""Raise a column to a power, two spellings of it, and the natural exponential."""
 
 from __future__ import annotations
 

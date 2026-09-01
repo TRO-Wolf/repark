@@ -1,13 +1,4 @@
-"""BL-15 / BL-16 — codify today's math divergences so the fix reds them on purpose.
-
-``F.expm1`` composes ``exp(x) - 1`` (``PY_COMPOSED``), losing the tiny-``x`` precision
-``Math.expm1`` exists to keep; ``F.hypot`` squares before the root, overflowing to ``inf``
-where ``java.lang.Math.hypot`` rescales. Registry rows BL-15 and BL-16 carry the measured
-Spark answers; these pins describe repark today, and the units that fix them update the
-pins rather than obey them.
-
-pins: registry BL-15, BL-16 (docs/spark-sql-iceberg-parity.md §7)
-"""
+"""BL-15/BL-16 today: composed expm1 and overflowing hypot (registry §7)."""
 
 import math
 
@@ -22,10 +13,7 @@ def _one_double(expr, name: str) -> float:
 
 
 def test_bl15_expm1_composes_exp_minus_one_today() -> None:
-    """Today: bit-equal to ``exp(x) - 1``.
-
-    Spark's ``Math.expm1(1e-08)`` is ``1.0000000050000001e-08``.
-    """
+    """Today: bit-equal to ``exp(x) - 1``; Spark ``Math.expm1(1e-08)`` is ``1.0000000050000001e-08``."""
     got = _one_double(F.expm1(F.lit(1e-08)), "y")
     assert got == math.exp(1e-08) - 1.0
     assert got != math.expm1(1e-08)

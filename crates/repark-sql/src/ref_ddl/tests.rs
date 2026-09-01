@@ -97,8 +97,6 @@ fn parses_retention_clauses() {
     assert_eq!(retention.min_snapshots_to_keep, None);
 }
 
-/// Both snapshot-retention halves in one clause, at the live oracle's values.
-/// pins: ref-branch-tag-wap/C-003
 #[test]
 fn parses_both_snapshot_retention_halves() {
     let RefOp::Create { retention, .. } = parsed(
@@ -126,8 +124,6 @@ fn parses_both_snapshot_retention_halves() {
     assert_eq!(retention.max_snapshot_age_ms, Some(43_200_000));
 }
 
-/// The reversed retention order is a Spark parse error, so this door refuses it too.
-/// pins: ref-branch-tag-wap/C-003
 #[test]
 fn reversed_snapshot_retention_order_refuses() {
     let err = refused(

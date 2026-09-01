@@ -24,10 +24,6 @@ pub fn sql_has_time_travel(sql: &str) -> bool {
     !find_pinned_spans(&tokens).is_empty()
 }
 
-/// Every relation this statement pins: the `AS OF` clauses and the dotted ref selectors.
-///
-/// A selector that overlaps an `AS OF` span is dropped. The `AS OF` pass already claims that
-/// relation, and `cat.ns.t.branch_b VERSION AS OF n` is not a shape Apache Spark accepts.
 fn find_pinned_spans(tokens: &[Token]) -> Vec<TimeTravelSpan> {
     let mut spans = find_time_travel_spans(tokens);
     let claimed: Vec<(usize, usize)> = spans
@@ -269,12 +265,6 @@ fn find_time_travel_spans(tokens: &[Token]) -> Vec<TimeTravelSpan> {
     spans
 }
 
-/// Scan tokens for Spark's dotted ref selectors — `cat.ns.t.branch_b` / `cat.ns.t.tag_v`.
-///
-/// The suffix is a READ selector only. A write whose TARGET is one of these is refused earlier,
-/// by the router's write-to-branch sniff, so this pass never rewrites the relation a statement
-/// commits to. Every other position is a read, including a DML statement's source: `FROM`,
-/// `JOIN`, and `MERGE`'s `USING`.
 fn find_ref_selector_spans(tokens: &[Token]) -> Vec<TimeTravelSpan> {
     let significant: Vec<(usize, &Token)> = tokens
         .iter()
@@ -316,7 +306,6 @@ fn find_ref_selector_spans(tokens: &[Token]) -> Vec<TimeTravelSpan> {
     spans
 }
 
-/// One past the last significant token of the dotted identifier starting at `start`.
 fn dotted_name_end(significant: &[(usize, &Token)], start: usize) -> Option<usize> {
     if !is_ident_token(significant.get(start)?.1) {
         return None;
@@ -332,7 +321,6 @@ fn dotted_name_end(significant: &[(usize, &Token)], start: usize) -> Option<usiz
     Some(end)
 }
 
-/// The ref a `branch_`/`tag_`-suffixed four-or-more-part name selects, if it is one.
 fn ref_selector_name(parts: &[String]) -> Option<String> {
     if parts.len() < 4 {
         return None;

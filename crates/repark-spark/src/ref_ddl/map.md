@@ -11,6 +11,7 @@ end-to-end DDL execution pins live in [../tests/map.md](../tests/map.md).
 ## Contents
 
 - `tests.rs` — the `#[cfg(test)] mod tests;` declared in `../ref_ddl.rs`.
+  The five `//` sniff comments are pre-existing (moved from `../ref_ddl.rs`).
 
 ## Pointers
 

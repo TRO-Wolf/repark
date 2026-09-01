@@ -1,17 +1,4 @@
-"""Read the sign off a column, and apply or leave it alone.
-
-``F.signum`` reports the sign as a number: ``-1.0``, ``0.0`` or ``1.0``, always a
-float, even when the input column holds integers. ``F.sign`` is its alias — two
-separate callables that answer identically, which is what this script checks.
-
-``F.negative`` and ``F.positive`` are the unary operators that go with them.
-``negative(x)`` is ``-x`` and ``positive(x)`` is ``x`` unchanged; unlike
-``signum`` they keep the input's type, so an integer column stays integral. The
-pair looks lopsided until you write SQL that has to spell out a leading sign,
-where ``positive`` is the identity that makes the two branches symmetric.
-
-Every one of the four returns NULL for a NULL row rather than inventing a zero.
-"""
+"""Read the sign off a column, and apply or leave it alone."""
 
 from __future__ import annotations
 

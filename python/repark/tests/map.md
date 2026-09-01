@@ -34,7 +34,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_bl15_bl16_math_divergences.py](test_bl15_bl16_math_divergences.py) — **BL-15/BL-16
   (2026-09-01):** codifies today's `expm1` (composed `exp(x)-1`) and `hypot` (overflow to
   `inf` at extreme magnitude) answers so the fused/rescaled fixes red them on purpose;
-  measured by the EX-2 pilot, registry §7 rows carry the Spark values.
+  measured by the EX-2 pilot, registry §7 rows carry the Spark values. Spark
+  `Math.expm1(1e-08)` is `1.0000000050000001e-08`; `hypot(1e200, 1e200)` rescales to
+  `1.4142135623730951e+200`.
 - [test_fnp7_try_inversions.py](test_fnp7_try_inversions.py) — **FNP-7a/7b:** twelve `try_*`
   inversions. Spark 4.1.2 cells (value and Arrow type) on the two reachable doors (Spark SQL
   + facade Column API). Native ANSI `repark.sql()` does not load SparkExtension: the twelve

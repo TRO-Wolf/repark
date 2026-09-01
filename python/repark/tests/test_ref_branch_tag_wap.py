@@ -1,10 +1,4 @@
-"""REF — facade rows for branch / tag retention and the refused write and WAP doors.
-
-Oracle: live PySpark 4.1.2 + Iceberg 1.11.0 (Hadoop catalog), measured 2026-09-01. The
-retention values below are the oracle's own ``refs`` rows, not arithmetic done here.
-
-pins: ref-branch-tag-wap/C-003, C-004, C-005
-"""
+"""REF facade pins: ref-branch-tag-wap/C-002, C-003, C-004, C-005, C-007."""
 
 from __future__ import annotations
 

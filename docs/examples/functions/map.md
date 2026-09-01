@@ -4,7 +4,7 @@
 
 Worked examples for `F.*` names (`repark.functions` / `repark.spark.functions`).
 Examples construct the session as `repark = ReparkSession.builder…`; see
-[../map.md](../map.md).
+[../map.md](../map.md). Each script keeps a one-line module docstring.
 
 ## Contents
 

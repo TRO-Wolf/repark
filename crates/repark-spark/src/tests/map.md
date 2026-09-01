@@ -135,8 +135,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   the branch where it was; and the read-vs-write boundary — a selector in a DML statement's
   source, `USING` operand or predicate subquery reads the ref (four classes plus CTAS, each
   asserting the ref's ids and not `main`'s), while a ref-named write TARGET still refuses even
-  when the source is another selector. Its module docstring carries the oracle stamp the registry
-  rows §2.2 `REF-1`/`REF-3`/`REF-4` cite.
+  when the source is another selector. The oracle stamp the registry rows §2.2
+  `REF-1`/`REF-3`/`REF-4` cite lives in the REF ledger C-001 (2026-09-01, live PySpark
+  4.1.2 + Iceberg 1.11.0; retention values are the oracle's own `refs` rows).
   pins: ref-branch-tag-wap/C-001, C-002, C-003, C-005, C-007),
   `time_travel`, `metadata_tables` (**RP-1:** projection battery iterates
   `MetadataTableType::all_types`; `position_deletes` rewrites then scan-refuses.

@@ -261,11 +261,6 @@ fn parse_retention(
     Ok((retention, index))
 }
 
-/// Whether `index` opens a `<count> DAYS|HOURS|MINUTES` clause.
-///
-/// The snapshot-count and max-snapshot-age halves are both optional and the age half comes
-/// second, so the two are told apart by lookahead. A trailing token that is not a duration
-/// stays a trailing token, and `reject_trailing` refuses it.
 fn starts_duration_clause(tokens: &[Sig], index: usize) -> bool {
     if !matches!(tokens.get(index), Some(Sig::Number(_))) {
         return false;

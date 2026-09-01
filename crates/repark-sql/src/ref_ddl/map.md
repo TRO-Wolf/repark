@@ -11,6 +11,7 @@ half is the tier-1 `ManageSnapshots` seam, pinned end to end in `../tests.rs`.
 ## Contents
 
 - `tests.rs` — the `#[cfg(test)] mod tests;` declared in `../ref_ddl.rs`.
+  pins: ref-branch-tag-wap/C-003
 
 ## Pointers
 

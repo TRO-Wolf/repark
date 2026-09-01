@@ -1,17 +1,4 @@
-"""Take roots of a column, and measure a length without writing the squares out.
-
-``F.sqrt`` and ``F.cbrt`` are the square and cube roots, and they part company on
-negative input: a real square root of a negative number does not exist, so the
-answer is the float NaN, while a cube root is defined everywhere and keeps the
-sign of its argument. NULL input gives NULL from both, which is not the same
-thing as NaN — NULL means "no value here", NaN means "a value, and it is not a
-number".
-
-``F.hypot`` is the third name here because it is the one a reader reaches for
-next: it is the Euclidean length of the two legs it is given, the same number as
-``F.sqrt(a * a + b * b)``, spelled the way the geometry reads. This script
-asserts the two agree on the classic right triangles.
-"""
+"""Take roots of a column, and measure a length without writing the squares out."""
 
 from __future__ import annotations
 
