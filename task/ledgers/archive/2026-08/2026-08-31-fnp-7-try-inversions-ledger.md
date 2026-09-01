@@ -6,14 +6,14 @@ the owner closes the slate row.
 
 **Unit:** FNP-7a + FNP-7b · **Date:** 2026-08-31 · **Executor:** Grok (grok-4.6), Actor ·
 **Branch:** `feat/fnp-7-try-inversions` · **Base:** `bb7fa54af48632c52d28aa8f7f446fac1dbf3742`
-**Charter:** [fnp-0-charter-ledger.md](../staging/fnp-0-charter-ledger.md) C-004 (kernels both
+**Charter:** [fnp-0-charter-ledger.md](../../staging/fnp-0-charter-ledger.md) C-004 (kernels both
 doors) and design §3.5 / §7 rows FNP-7a and FNP-7b.
-**Design:** [docs/design/spark-function-parity.md](../../../docs/design/spark-function-parity.md)
+**Design:** [docs/design/spark-function-parity.md](../../../../docs/design/spark-function-parity.md)
 §7 FNP-7a (8 names) and FNP-7b (4 names, unblocked by F-Y10-1 2026-08-30).
-**Raising-path predecessor:** [f-y10-1-int-overflow-ledger.md](../archive/2026-08/2026-08-31-f-y10-1-int-overflow-ledger.md).
-**Registry / armed-name pattern:** [fnp-4c-higher-order-kernels-ledger.md](../archive/2026-08/2026-08-31-fnp-4c-higher-order-kernels-ledger.md)
-and [fnp-15-16-ledger.md](../archive/2026-08/2026-08-30-fnp-15-16-ledger.md).
-**Slate:** [briefs/spark-function-parity.md](../../../briefs/spark-function-parity.md).
+**Raising-path predecessor:** [f-y10-1-int-overflow-ledger.md](2026-08-31-f-y10-1-int-overflow-ledger.md).
+**Registry / armed-name pattern:** [fnp-4c-higher-order-kernels-ledger.md](2026-08-31-fnp-4c-higher-order-kernels-ledger.md)
+and [fnp-15-16-ledger.md](2026-08-30-fnp-15-16-ledger.md).
+**Slate:** [briefs/spark-function-parity.md](../../../../briefs/spark-function-parity.md).
 
 **Rubric:** STANDARD (public facade interface; new kernels; quantified three-door
 claim). Floor S1. `risk_tier: standard`.

@@ -2,11 +2,11 @@
 
 **Date:** 2026-08-31 · **Branch:** `feat/rp-4-fork-repin` · **Base:** `main`
 `bb7fa54af48632c52d28aa8f7f446fac1dbf3742` · **Policy:**
-[../../../AGENTS.md](../../../AGENTS.md) "Version-pin contract" · **Handoff:**
-[../../roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md](../../roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md)
+[../../../AGENTS.md](../../../../AGENTS.md) "Version-pin contract" · **Handoff:**
+[../../roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md](../../../roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md)
 §5 (the repin protocol) · **Path:** STANDARD (`risk_tier: standard`; one Actor cycle).
 **Proven pattern:**
-[2026-08-30-rp-3-fork-repin-ledger.md](../archive/2026-08/2026-08-30-rp-3-fork-repin-ledger.md).
+[2026-08-30-rp-3-fork-repin-ledger.md](2026-08-30-rp-3-fork-repin-ledger.md).
 
 **Retires:** moved to `completed/` in this unit's departure commit.
 
@@ -51,7 +51,7 @@ VERDICT: 6 clauses, 6 PROVEN, 0 OPEN, 0 REJECTED.
   original RP-3 C-005 driver (direct `RewriteDataFiles` plus Spark Hadoop read-back)
   is the measurement that opened the lift.
 - Oracle: PySpark 4.1.2 + Iceberg 1.11.0; `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64`.
-- Standing duties live in [crates/repark-iceberg/map.md](../../../crates/repark-iceberg/map.md)
+- Standing duties live in [crates/repark-iceberg/map.md](../../../../crates/repark-iceberg/map.md)
   "Known limitations".
 - Engine `RowDelta` / transaction talk is the F-6 compile measurement; `ref_ddl.rs`
   `write_to_branch_refuses_loud_naming_fork_gap` stays refused this unit.

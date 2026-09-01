@@ -10,7 +10,7 @@ Step 5 / §6 item 2. **Registry:** `V3-DANGLE-1`, `B-MOR-3`, `V3-LINEAGE-1`
 **Proven drivers:** RP-3 C-005 / C-007
 ([2026-08-30-rp-3-fork-repin-ledger.md](../archive/2026-08/2026-08-30-rp-3-fork-repin-ledger.md)),
 RP-4 C-003
-([rp-4-fork-repin-ledger.md](../completed/rp-4-fork-repin-ledger.md)).
+([rp-4-fork-repin-ledger.md](../archive/2026-08/2026-08-31-rp-4-fork-repin-ledger.md)).
 
 **Retires:** this ledger moves to `../completed/` in this unit's last commit.
 This file closes when V3-5 merges, or when the owner closes the slate row.
