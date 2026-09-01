@@ -127,20 +127,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and rewrites part=0 away; unknown strategy and bad where use Spark's text; `sort` and
   `sort_order` refuse.
   pins: maint-rewrite-data-files-options/C-003, C-004, C-005, C-006, C-007
-- [test_mw8_runbook.py](test_mw8_runbook.py) — **MW-8 (2026-08-24):** the maintenance cycle
-  `docs/guide/iceberg-guide.md` "The maintenance runbook" documents, run end to end on a local
-  catalog at gate scale (6,000 rows, 2 partitions, six MERGEs, 4.4 s). One documented cycle,
-  censused after every step: the order is the MW-7 driver's, not a second copy; position
-  deletes fold 12 → 2 (one per partition — the fixture sets `write.delete.granularity =
-  'partition'`); data files compact 50 → 6;
-  manifests drop 11 → 3 and the manifest list shrinks; `expire_snapshots` prunes 12 → 1
-  snapshots and reclaims exactly the 12 delete files step 2 folded; the orphan dry run answers
-  Spark's one column and zero rows, and the ARMED form refuses inside the 24-hour floor (the
-  cell MW-3's floor pin does not cover) and deletes nothing outside it; `COUNT(*)` holds 6,000
-  `int64` throughout. **The honest half (C-004):** both CTAS files sit inside Java's bin-pack
-  band and carry 3,600 dead rows through all seven steps — `removed_delete_files_count` is 0
-  and the delete files covering them survive, registry row `RDF-1`, mechanism pinned by MW-7
-  C-011. **C-010 (Critic remediation, F-MW8-1/F-MW8-3)** parses the guide's `MAINTENANCE_CYCLE`
+- [test_mw8_runbook.py](test_mw8_runbook.py) — **MW-8 (2026-08-24; RP-5 2026-09-01):** the
+  maintenance cycle `docs/guide/iceberg-guide.md` "The maintenance runbook" documents, run end
+  to end on a local catalog at gate scale (6,000 rows, 2 partitions, six MERGEs). F-16r
+  rewrites this fixture's in-band delete-laden seed files (`test_delete_laden_seed_files_are_rewritten_by_the_runbook`).
+  The MW-7 2,500-row pin still holds (`RDF-1` BACKLOG).
+  pins: rp-5-fork-repin/C-005
+  **C-010 (Critic remediation, F-MW8-1/F-MW8-3)** parses the guide's `MAINTENANCE_CYCLE`
   out of its python block and compares procedure, order, argument names and literal argument
   values (placeholders skipped) against `measure.maintenance_sequence`'s, so printed SQL that drifts from the measured
   cycle reds — it is what catches an `expire_snapshots` call with no `older_than`. C-009 is the

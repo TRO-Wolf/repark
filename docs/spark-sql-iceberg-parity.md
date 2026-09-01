@@ -1920,7 +1920,8 @@ the pin rather than obeying it.
   2,500-row pin still holds. F-16 did not close this shape.
   **RP-5 C-005 (2026-09-01, fork `00cdde0` / F-16r `#248`):** the 2,500-row pin
   `test_delete_laden_in_band_file_survives_the_runbook` stayed GREEN. F-16r did not close
-  this shape. The 1e7 × 50 driver was not re-run. RDF-1 stays BACKLOG.
+  that shape. The MW-8 partitioned 6,000-row runbook pin reded: those in-band seed files
+  were rewritten. The 1e7 × 50 driver was not re-run. RDF-1 stays BACKLOG.
 - **Apache Spark** — the same sequence on the same shape ends with **zero** delete files and
   **zero** delete records, at **both** `write.delete.granularity` settings, with
   `removed_delete_files_count` reported as 0 and `remove-dangling-deletes` OFF (jar default

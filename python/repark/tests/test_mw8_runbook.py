@@ -5,9 +5,10 @@ procedures in one order; this module runs that sequence on a local catalog and a
 of every step, so a guide that drifts from the engine reds here.
 
 The scale is a gate's, not production's — the guide's measured numbers live in the MW-7 ledger and
-are not re-asserted here. The fixture reproduces the 1e7 x 50 run's residue at gate scale: both
-CTAS files sit inside Java's bin-pack band, the six MERGEs delete every row in them, and the
-complete sequence still cannot reclaim them (registry row ``RDF-1``).
+are not re-asserted here. RP-5 / F-16r (fork ``00cdde0``): this partitioned 6,000-row fixture's
+in-band delete-laden seed files are rewrite candidates. The MW-7 2,500-row pin still holds
+(registry ``RDF-1`` BACKLOG).
+pins: rp-5-fork-repin/C-005
 """
 
 from __future__ import annotations
@@ -341,14 +342,10 @@ def test_data_compaction_reduces_the_data_file_count(cycle: RunbookCycle) -> Non
     assert int(step.result_first_row["failed_data_files_count"]) == 0
 
 
-def test_delete_laden_seed_files_survive_the_whole_runbook(cycle: RunbookCycle) -> None:
-    """The runbook cannot reclaim a delete-laden data file — registry row ``RDF-1``.
+def test_delete_laden_seed_files_are_rewritten_by_the_runbook(cycle: RunbookCycle) -> None:
+    """F-16r: in-band delete-laden seed files on this partitioned fixture are rewritten.
 
-    A file is a rewrite candidate only when it is outside the bin-pack band or carries at least
-    ``delete_file_threshold`` delete files; the fork defers Java's third clause,
-    ``tooHighDeleteRatio``, so the two dead files are invisible to compaction and
-    ``removed_delete_files_count`` is 0. The answers stay correct — what is retained is dead
-    bytes and a delete file every scan opens; the mechanism is pinned by the MW-7 twin.
+    pins: rp-5-fork-repin/C-005
     """
     low = BAND_LOW * RUNBOOK_TARGET_FILE_SIZE
     high = BAND_HIGH * RUNBOOK_TARGET_FILE_SIZE
@@ -357,15 +354,11 @@ def test_delete_laden_seed_files_survive_the_whole_runbook(cycle: RunbookCycle) 
             f"seeded file {size} B is outside the bin-pack band for {RUNBOOK_TARGET_FILE_SIZE}"
         )
         assert records > 0
-        assert path in cycle.live_files_after, (
-            "a 100 %-dead seeded file is still live: it was never a rewrite candidate"
+        assert path not in cycle.live_files_after, (
+            "F-16r: an in-band 100 %-dead seed file is a rewrite candidate on this shape"
         )
     rewrite = _step(cycle, "rewrite_data_files").result_first_row
-    assert int(rewrite["removed_delete_files_count"]) == 0, (
-        "RDF-1: compaction removes no delete file"
-    )
-    assert cycle.census_after.delete_files > 0, "delete files outlive the complete sequence"
-    assert cycle.census_after.delete_records == RUNBOOK_MERGES * RUNBOOK_ROWS_PER_MERGE
+    assert int(rewrite["rewritten_data_files_count"]) > 0
 
 
 def test_manifest_compaction_drops_the_manifest_count(cycle: RunbookCycle) -> None:
@@ -399,9 +392,9 @@ def test_expire_snapshots_prunes_the_snapshots_and_deletes_what_they_held(
     assert step.census_after.snapshots == EXPIRE_RETAIN_LAST
     result = step.result_first_row
     assert int(result["deleted_data_files_count"]) > 0
-    assert int(result["deleted_position_delete_files_count"]) == (
+    assert int(result["deleted_position_delete_files_count"]) >= (
         RUNBOOK_MERGES * RUNBOOK_PARTITIONS
-    ), "the delete files step 2 folded are exactly what expire reclaims"
+    ), "expire reclaims at least the delete files step 2 folded, plus F-16r extras"
     assert int(result["deleted_manifest_files_count"]) > 0
     assert int(result["deleted_manifest_lists_count"]) > 0
 
