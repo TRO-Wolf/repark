@@ -644,7 +644,31 @@ them, and the document is ordered by surface, never by date.
   Reversing it needs a new dated decision, and the landing reds the pin on purpose. `variant`
   is **not** this row: it stays V3-6 work — the same pin holds its CREATE refusal today so
   V3-6's landing reds it — with **shredded**-Parquet variant DECLARED out of the v1.0 gate by
-  the same ruling (queued as `V3-VARIANT-SHRED-1` in §7 until V3-6 gives it a pin).
+  the same ruling (row below).
+
+### V3-VARIANT-SHRED-1 — shredded-Parquet `variant` is out of the v1.0 gate; binary `variant` refuses end to end
+
+- **repark** — a `variant` column refuses at CREATE on all three doors (`V3-GEO-1`'s pin),
+  so no engine surface reaches a variant value. At the fork pin `33be9a0` the **binary**
+  (unshredded) type is measured: schema-level it maps to Arrow
+  `struct<metadata: Binary, value: Binary>`, parquet file write refuses
+  (`FeatureUnsupported`, naming `variant`), and scanning a file that projects the column
+  refuses (`reject_variant_projection`, naming `variant`). **Shredded**-Parquet variant has
+  no fork surface at all. Fork gap filed against `GAP_MATRIX` R88 (file-level variant I/O).
+- **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0 writes the **unshredded** two-binary
+  variant shape (`struct<value: binary, metadata: binary>` with `variant: 'true'` field
+  metadata) and reads it back; it cannot produce `timestamp_ns`-style SQL spellings for
+  `variant` either — the column arrives via `parse_json` / cast. *(oracle: live probe,
+  V3-6 C-001 matrix, 2026-08-31.)*
+- **Pin** —
+  `crates/repark-iceberg/src/tests/v3_types.rs::fork_variant_arrow_maps_and_parquet_write_refuses`
+  and `fork_variant_scan_refuses_naming_the_type` (the binary-vs-shredded distinction: the
+  fork models and Arrow-maps the binary type while refusing its file I/O; shredded has no
+  model at all). CREATE refusals stay on `V3-GEO-1`'s pins.
+- **Rationale** — DECLARED, owner-dated 2026-08-25 (same ruling as `V3-GEO-1`). Shredded
+  variant is fork work (F-15 → R88) with no v1.0 consumer; binary variant consumption is
+  queued fork work, not an engine invention. Reversing needs a new dated decision; the fork
+  I/O landing reds the scan/write pins on purpose.
 
 ---
 
@@ -2376,10 +2400,10 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 
 - **V3-COW-1** — measured 2026-08-24 and admitted as a BACKLOG row (see §7). Left this queue.
 
-- **V3-VARIANT-SHRED-1** — shredded-Parquet `variant` is **DECLARED out of the v1.0 gate
-  (owner ruling 2026-08-25)**; binary variant stays V3-6 scope. The row lands with V3-6, when
-  a binary-variant pin exists to tell the two apart — today every `variant` column refuses at
-  CREATE, held by `V3-GEO-1`'s pin. Not a row until then.
+- **V3-VARIANT-SHRED-1** — landed as a §4 row (2026-09-01, V3-6): shredded-Parquet `variant`
+  stays **DECLARED out of the v1.0 gate (owner ruling 2026-08-25)**; binary variant is
+  measured refusing end to end at the fork. See the row in §4 for the pins and the R88
+  filing.
 
 ---
 

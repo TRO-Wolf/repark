@@ -133,14 +133,13 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
   design: [docs/design/format-v3-track.md](docs/design/format-v3-track.md); audit:
   [task/ledgers/staging/v3-0-charter-ledger.md](task/ledgers/staging/v3-0-charter-ledger.md).
   - **Measured true (V3-0, [#199](https://github.com/TRO-Wolf/repark/pull/199)):** v3 DV reads
-    and lineage appends round-trip through Spark. **RP-4:** `V3-LINEAGE-1` FIXED
-    (fork #243). **V3-5:** `V3-DANGLE-1` FIXED.
+    and lineage appends round-trip through Spark. **V3-5:** `V3-DANGLE-1` FIXED.
   - **Delivered:** V3-1 `register_table` + the checked-in v3 fixture
     ([#203](https://github.com/TRO-Wolf/repark/pull/203)); V3-2 CREATE/CTAS `format-version = 3`
     behind `repark.sql.allowCreateFormatVersion3` (default false), ALTER refused
-    ([#232](https://github.com/TRO-Wolf/repark/pull/232)); V3E-1 + V3E-2 — measured adopted-v3
-    COW DML committing the right rows while **reassigning** lineage (Spark preserves `_row_id`),
-    `ENC-1` DECLARED, the v3 maintenance oracle is PySpark 4.1.2 + Iceberg 1.11.0
+    ([#232](https://github.com/TRO-Wolf/repark/pull/232)); V3E-1 + V3E-2 — adopted-v3
+    COW DML measured, `ENC-1` DECLARED, the v3 maintenance oracle is PySpark 4.1.2 +
+    Iceberg 1.11.0
     ([#235](https://github.com/TRO-Wolf/repark/pull/235)); V3E-3 — partitioned-DV and
     equality-delete v3 fixtures CI-runnable, live rows Spark-exact on all three doors,
     `.delete_files` content 1/2 ([#236](https://github.com/TRO-Wolf/repark/pull/236)); V3R-1 —
@@ -148,8 +147,7 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
     2026-08-27 later lifted its measured DELETE half on DV-free tables), `geometry`/`geography` DECLARED out of v1.0 (`V3-GEO-1`),
     shredded-Parquet `variant` DECLARED out (queued `V3-VARIANT-SHRED-1`), the S3 Tables live
     legs are **in** (OD-3b; the scoped IAM statement in `docs/tier2-aws.md` §2 was applied by the owner on 2026-08-28 — MW-10 measured expire on format v2: **allow**, first dispatch 2026-08-30),
-    and the v2→v3 in-place upgrade is built behind the create opt-in after V3-3. Ledgers in
-    [task/ledgers/archive/2026-08/](task/ledgers/archive/2026-08/map.md).
+    and the v2→v3 in-place upgrade is built behind the create opt-in after V3-3.
     V3E-4 measured refs, `VERSION AS OF` over DVs, expire dual-probe, and the
     orphan 24h floor on adopted v3. V3E-5 added the nightly v3 live-oracle leg
     ([#253](https://github.com/TRO-Wolf/repark/pull/253)). RP-2 (2026-08-28, fork `ce92a7bf`) the DV-free first DELETE. RP-3 (2026-08-30,
@@ -157,15 +155,19 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
     doors; sequential COW after overwrite refuses (`V3-COW-1`, F-rp3-c7); Hadoop writes
     FIXED (`V3-ADOPT-1`). RP-4 (2026-08-31, fork `33be9a0`) F-7 slice 1: rewrite lineage
     Spark-equal (`V3-LINEAGE-1` FIXED); F-6 `to_branch` carried. V3-3 (2026-08-30) measured `UPDATE` / `MERGE` keep-refusal:
-    Spark 4.1.2 + Iceberg 1.11.0 preserves `_row_id`; the engine rewrite reassigns
+    Spark preserves `_row_id`; the engine rewrite reassigns
     (registry `V3-COW-1`). `B-MOR-3` stays.
-    **V3-4 read (2026-08-31):** `_row_id` / `_last_updated_sequence_number` Spark-equal on
-    single-table v3 reads (three doors); v1/v2 engine Schema `No field named _row_id`;
+    **V3-4 (2026-08-31):** `_row_id` / `_last_updated_sequence_number` Spark-equal on
+    single-table v3 reads; v1/v2 engine Schema `No field named _row_id`;
     JOIN/CTE/subquery/time-travel refuse `V3-ROWID-2`. `V3-ROWID-1` FIXED. Preserve-half stays F-7.
-  - **Next:** V3-6 types; F-7 COW lineage. V3-3 charter
+    **V3-6 (2026-09-01):** opt-in v3 CREATE consumes fork `timestamp_ns`/`timestamptz_ns`
+    (v2 refuses); append fills an omitted column from a schema-carried `write_default`,
+    `initial_default` reads into pre-column files, DEFAULT DDL refuses Spark-equal;
+    binary `variant` refuses end to end (`V3-VARIANT-SHRED-1`, R88); `unknown` CREATE
+    refuse pinned, scan gap filed (R91).
+  - **Next:** F-7 COW lineage. V3-3 charter
     [task/ledgers/completed/v3-3-dml-ledger.md](task/ledgers/archive/2026-08/2026-08-30-v3-3-dml-ledger.md)
-    (keep-refusal, F-rp3-c7 stays a fork finding).
-    Sequence: [docs/design/format-v3-track.md §5](docs/design/format-v3-track.md).
+    (F-rp3-c7 stays a fork finding).
 <!-- /ws -->
 
 <!-- ws id=perf ledgers=perf- state=open -->

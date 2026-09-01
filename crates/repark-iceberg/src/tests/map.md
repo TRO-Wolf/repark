@@ -17,9 +17,11 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
 - `v3_types.rs` — **V3-6 C-001:** fork pin `33be9a0` read/write measurement for
   `timestamp_ns` / `timestamptz_ns` (parquet round-trip), `unknown` (Arrow Null;
   write commits; scan `DataInvalid` Null), and binary `variant` (parquet builder
-  refuse). **C-005 (2026-09-01):** `write_default` fills an omitted column on append
+  refuse). **C-002:** `fork_variant_scan_refuses_naming_the_type` — a real data file plus a
+  variant projection refuses at the fork's reader guard (empty table streams cleanly).
+  **C-005 (2026-09-01):** `write_default` fills an omitted column on append
   (red-first vs the old refuse pin), a supplied column is kept, and `initial_default`
-  reads into files missing the column. pins: v3-6-v3-types/C-001, C-005
+  reads into files missing the column. pins: v3-6-v3-types/C-001, C-002, C-005
 
 ## Pointers
 

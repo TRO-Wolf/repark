@@ -312,6 +312,102 @@ async fn fork_variant_arrow_maps_and_parquet_write_refuses() {
     assert!(!std::path::Path::new(&path).exists());
 }
 
+/// pins: v3-6-v3-types/C-002
+#[tokio::test]
+async fn fork_variant_scan_refuses_naming_the_type() {
+    use iceberg::spec::{DataContentType, DataFileBuilder, DataFileFormat, Struct};
+    use iceberg::transaction::Transaction;
+    use parquet::arrow::arrow_writer::ArrowWriter;
+    use parquet::file::properties::WriterProperties;
+    use std::collections::HashMap;
+
+    let warehouse = TempDir::new().unwrap();
+    let catalog = memory_catalog(&warehouse).await;
+    let ident = create_v3(&catalog, "variantscan", variant_schema()).await;
+    let table = catalog.load_table(&ident).await.expect("load");
+
+    let table_location =
+        std::path::Path::new(table.metadata_location().expect("metadata location"))
+            .ancestors()
+            .nth(2)
+            .expect("table location")
+            .to_path_buf();
+    let data_dir = table_location.join("data");
+    std::fs::create_dir_all(&data_dir).expect("fixture data dir");
+    let file_path = data_dir.join("variant-scan-fixture.parquet");
+    let arrow_schema = ArrowSchema::new(vec![Field::new("id", DataType::Int32, false)]);
+    let batch = RecordBatch::try_new(
+        Arc::new(arrow_schema.clone()),
+        vec![Arc::new(Int32Array::from(vec![1]))],
+    )
+    .expect("fixture batch");
+    let file = std::fs::File::create(&file_path).expect("fixture file");
+    let mut writer = ArrowWriter::try_new(
+        file,
+        Arc::new(arrow_schema),
+        Some(WriterProperties::builder().build()),
+    )
+    .expect("fixture writer");
+    writer.write(&batch).expect("fixture write");
+    writer.close().expect("fixture close");
+    let file_path = file_path.to_string_lossy().to_string();
+
+    let data_file = DataFileBuilder::default()
+        .content(DataContentType::Data)
+        .file_format(DataFileFormat::Parquet)
+        .file_path(file_path.clone())
+        .file_size_in_bytes(512)
+        .record_count(1)
+        .partition_spec_id(0)
+        .partition(Struct::empty())
+        .column_sizes(HashMap::from([(1, 128)]))
+        .value_counts(HashMap::from([(1, 1)]))
+        .null_value_counts(HashMap::from([(1, 0)]))
+        .build()
+        .expect("fixture data file");
+    let tx = Transaction::new(&table);
+    let action = tx.fast_append().add_data_files(vec![data_file]);
+    let tx = action.apply(tx).expect("apply");
+    tx.commit(catalog.as_ref()).await.expect("commit");
+
+    let table = catalog.load_table(&ident).await.expect("reload");
+    let scan = table.scan().select(["id", "v"]).build();
+    match scan {
+        Ok(scan) => match scan.to_arrow().await {
+            Ok(mut stream) => {
+                let first = futures::StreamExt::next(&mut stream).await;
+                match first {
+                    Some(Err(error)) => {
+                        let text = error.to_string().to_ascii_lowercase();
+                        assert!(
+                            text.contains("variant"),
+                            "variant scan refusal must name the type: {text}"
+                        );
+                    }
+                    Some(Ok(batch)) => {
+                        panic!("variant scan must refuse, returned a batch: {batch:?}")
+                    }
+                    None => panic!("variant scan must refuse, stream ended cleanly"),
+                }
+            }
+            Err(error) => {
+                let text = error.to_string().to_ascii_lowercase();
+                assert!(
+                    text.contains("variant"),
+                    "variant to_arrow refusal must name the type: {text}"
+                );
+            }
+        },
+        Err(error) => {
+            let text = error.to_string().to_ascii_lowercase();
+            assert!(
+                text.contains("variant"),
+                "variant scan build refusal must name the type: {text}"
+            );
+        }
+    }
+}
+
 #[tokio::test]
 async fn fork_write_default_fills_missing_column_on_append() {
     let warehouse = TempDir::new().unwrap();
