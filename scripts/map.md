@@ -4,6 +4,11 @@ REF (2026-09-01): `check_rust_file_size.py` — the `repark-spark/src/ref_ddl.rs
 is gone. The file's inline `mod tests` moved to a file-backed `ref_ddl/tests.rs` (move-only,
 identity `--list`), taking it from 1028 to 772 lines, under the default ceiling.
 
+RP-5 (2026-09-01): `check_rust_file_size.py` `write/merge/mod.rs` 2086→1896 (commit path
+extracted to `snapshot_commit.rs`); `overwrite.rs` 1070→1053; `session/tests/session.rs`
+1415→1414.
+pins: rp-5-fork-repin/C-004
+
 V3-6 (2026-09-01): `check_rust_file_size.py` `write/append.rs` 1950→1886 — the conform
 step moved to a file-backed `write/conform.rs` (V3-6 C-005); one import shed in the same
 pass.

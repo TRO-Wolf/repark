@@ -6,8 +6,6 @@ use datafusion::error::Result;
 use iceberg::Catalog;
 use iceberg::table::Table;
 
-use super::overwrite::commit_overwrite_replace_all;
-
 /// Commit a Spark-equal Iceberg truncate: `overwrite_files` with `AlwaysTrue` and no added files.
 ///
 /// The fork classifies delete-only overwrite as `Operation::Delete`. That matches live PySpark
@@ -16,5 +14,15 @@ use super::overwrite::commit_overwrite_replace_all;
 /// # Errors
 /// Isolation parse, apply, or commit failures as [`datafusion::error::DataFusionError`].
 pub async fn commit_truncate(catalog: &Arc<dyn Catalog>, table: &Table) -> Result<Table> {
-    commit_overwrite_replace_all(catalog, table, Vec::new()).await
+    commit_truncate_to(catalog, table, None).await
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub async fn commit_truncate_to(
+    catalog: &Arc<dyn Catalog>,
+    table: &Table,
+    branch: Option<&str>,
+) -> Result<Table> {
+    super::overwrite_commit::commit_overwrite_replace_all_to(catalog, table, Vec::new(), branch)
+        .await
 }

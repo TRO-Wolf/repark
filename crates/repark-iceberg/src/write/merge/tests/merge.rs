@@ -3,7 +3,6 @@ use super::super::*;
 use datafusion::datasource::MemTable;
 use iceberg::NamespaceIdent;
 
-/// An empty [`PartitionStream`].
 #[derive(Debug)]
 struct EmptyTargetStream(SchemaRef);
 
@@ -30,6 +29,7 @@ pub(super) fn spec(matched: Vec<MatchedClause>, not_matched: Vec<InsertClause>) 
         matched,
         not_matched,
         not_matched_by_source: vec![],
+        commit_branch: None,
     }
 }
 

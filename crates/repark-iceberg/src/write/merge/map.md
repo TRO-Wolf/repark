@@ -13,6 +13,8 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
 
 ## Contents
 
+- `snapshot_commit.rs` — snapshot-producing MERGE commits (`to_branch` when `MergeSpec.commit_branch` is set).
+  pins: rp-5-fork-repin/C-004
 - `mod.rs` — types, `execute_merge`, plan/SQL helpers, write/commit path.
   **MW-9:** `resolve_merge_mode` parses `write.delete.granularity` on the MoR
   arm (after the V2 gate, before any scan/write) so unknown values cannot
@@ -81,6 +83,7 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
 | Task | Go to |
 |---|---|
 | Change MERGE execute / MoR-CoW arms | `mod.rs` |
+| Change MERGE snapshot commit / `to_branch` | `snapshot_commit.rs` |
 | Change rejected-commit file cleanup | `abort.rs` + `commit_overwrite` / `commit_row_delta_kind` |
 | Add a unit pin for SQL shape | `tests/merge.rs` |
 | Touch OCC commit behavior | `tests/occ.rs` / `tests/occ_conflict.rs` |

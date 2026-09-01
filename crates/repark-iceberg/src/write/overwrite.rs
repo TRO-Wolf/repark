@@ -1,6 +1,5 @@
 //! OV1 full-table overwrite using stage-then-swap.
 
-use std::collections::HashMap;
 use std::sync::Arc;
 
 use datafusion::arrow::array::RecordBatch;
@@ -10,17 +9,13 @@ use futures::Stream;
 use futures::StreamExt;
 use futures::future::ready;
 use futures::stream::TryStreamExt;
-use iceberg::Catalog;
 use iceberg::arrow::schema_to_arrow_schema;
-use iceberg::expr::Predicate;
 use iceberg::spec::DataFile;
 use iceberg::table::Table;
-use iceberg::transaction::{ApplyTransactionAction, Transaction};
-use uuid::Uuid;
 
 use crate::write::append::write_partitioned_data_files_from_stream_with_concurrency;
 use crate::write::concurrency::WriteConcurrency;
-use crate::write::merge::{OPERATION_ID_PROP, write_data_files_from_stream_with_concurrency};
+use crate::write::merge::write_data_files_from_stream_with_concurrency;
 use crate::write::store_assign::refuse_unless_write_store_assignable;
 
 /// Table property key for `INSERT OVERWRITE` isolation.
@@ -83,34 +78,21 @@ where
     }
 }
 
-/// Commit a full-table overwrite that replaces **all** live data with `staged_files` (OV1
+/// Commit a full-table overwrite that replaces all live data with `staged_files`.
 /// # Errors
-/// Invalid isolation property → [`DataFusionError::Plan`].
+/// Invalid isolation property, apply, or catalog commit as [`DataFusionError`].
 pub async fn commit_overwrite_replace_all(
-    catalog: &Arc<dyn Catalog>,
-    table: &Table,
-    staged_files: Vec<DataFile>,
-) -> Result<Table> {
-    // Fail loud before any AlwaysTrue apply when isolation property is garbage (D10).
-    let isolation = parse_overwrite_isolation(table)?;
-    let summary = HashMap::from([(OPERATION_ID_PROP.to_string(), Uuid::new_v4().to_string())]);
-    let tx = Transaction::new(table);
-    let mut action = tx
-        .overwrite_files()
-        .overwrite_by_row_filter(Predicate::AlwaysTrue)
-        .add_files(staged_files)
-        .set_snapshot_properties(summary);
-    if let Some(level) = isolation {
-        action = action.validate_no_conflicting_deletes();
-        if level == OverwriteIsolation::Serializable {
-            action = action.validate_no_conflicting_data();
-        }
-        if let Some(snapshot_id) = table.metadata().current_snapshot_id() {
-            action = action.validate_from_snapshot(snapshot_id);
-        }
-    }
-    let tx = action.apply(tx).map_err(iceberg_err)?;
-    tx.commit(catalog.as_ref()).await.map_err(iceberg_err)
+    catalog: &std::sync::Arc<dyn iceberg::Catalog>,
+    table: &iceberg::table::Table,
+    staged_files: Vec<iceberg::spec::DataFile>,
+) -> Result<iceberg::table::Table> {
+    crate::write::overwrite_commit::commit_overwrite_replace_all_to(
+        catalog,
+        table,
+        staged_files,
+        None,
+    )
+    .await
 }
 
 /// SQL INSERT OVERWRITE positional assignment onto the Iceberg write schema (D9).
@@ -314,8 +296,9 @@ mod tests {
     use iceberg::io::LocalFsStorageFactory;
     use iceberg::memory::{MEMORY_CATALOG_WAREHOUSE, MemoryCatalogBuilder};
     use iceberg::spec::{DataFile, NestedField, Operation, PrimitiveType, Schema, Type};
-    use iceberg::{CatalogBuilder, NamespaceIdent, TableCreation, TableIdent};
+    use iceberg::{Catalog, CatalogBuilder, NamespaceIdent, TableCreation, TableIdent};
     use tempfile::TempDir;
+    use uuid::Uuid;
 
     use super::*;
     use crate::write::append::append;

@@ -12,18 +12,16 @@ mod builders;
 mod catalog_ops;
 mod lineage_columns;
 mod location;
-mod metadata_projection;
 mod provider;
 
-// Public product surface (order: provider → projection → builders → location).
+// Public product surface (order: provider → builders → location).
 pub use provider::{
     ReparkCatalogProvider, drop_catalog_namespace_from_provider, invalidate_catalog_namespaces,
     rebuild_catalog_provider,
 };
 // Engine-side adapter for session `refresh_catalog_provider`, hoisted from v1 catalog_ops.
-pub use catalog_ops::reregister_catalog_provider;
-// Projection wrap for fork metadata-table providers (registered via provider).
 pub use builders::{glue_catalog, iceberg_to_datafusion, memory_catalog, s3tables_catalog};
+pub use catalog_ops::reregister_catalog_provider;
 pub use lineage_columns::{
     LineageColumnsTableProvider, table_serves_row_lineage, user_field_names,
 };
@@ -31,8 +29,6 @@ pub use location::{
     NAMESPACE_LOCATION_PROPERTY, NAMESPACE_LOCATION_URI_PROPERTY, file_io_for_location,
     mirror_namespace_location_keys, resolve_namespace_location, storage_factory_for_location,
 };
-pub use metadata_projection::{MetadataProjectionSchemaProvider, ProjectingMetadataTableProvider};
-
 // Crate-private helpers used by listing/register still in this root and by sibling modules.
 
 // File-backed tests.rs historically resolved these via `use super::*` when co-located in lib.rs.

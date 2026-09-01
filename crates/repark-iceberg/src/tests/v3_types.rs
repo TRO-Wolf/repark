@@ -214,7 +214,9 @@ async fn fork_timestamptz_ns_parquet_write_and_scan_round_trip() {
 }
 
 #[tokio::test]
-async fn fork_unknown_write_commits_then_scan_refuses_naming_null() {
+async fn fork_unknown_write_refuses_naming_the_column() {
+    let _: &str = "pins: v3-6-v3-types/C-004";
+    let _: &str = "pins: rp-5-fork-repin/C-006";
     let mapped = schema_to_arrow_schema(&unknown_schema()).expect("unknown maps");
     assert_eq!(mapped.field(1).data_type(), &DataType::Null);
     let warehouse = TempDir::new().unwrap();
@@ -231,32 +233,14 @@ async fn fork_unknown_write_commits_then_scan_refuses_naming_null() {
         ],
     )
     .expect("batch");
-    append(&catalog, &ident, vec![batch]).await.expect(
-        "measured R91 divergence: the parquet write COMMITS an unreadable Null column \
-         instead of refusing loud",
-    );
-    let table = catalog.load_table(&ident).await.expect("load");
-    let scan =
-        table.scan().select(["id", "u"]).build().expect(
-            "scan build succeeds today; a build-time refusal is a behavior flip to re-record",
-        );
-    let mut stream = scan
-        .to_arrow()
+    let error = append(&catalog, &ident, vec![batch])
         .await
-        .expect("to_arrow succeeds today; a to_arrow refusal is a behavior flip to re-record");
-    match futures::StreamExt::next(&mut stream).await {
-        Some(Err(err)) => {
-            let text = err.to_string();
-            assert!(
-                text.contains("Cannot visit Arrow data type: Null"),
-                "the measured scan refusal is the DataInvalid Null-visit error: {text}"
-            );
-        }
-        Some(Ok(batch)) => panic!(
-            "the fork learned to read Null columns — re-record this pin as a read: {batch:?}"
-        ),
-        None => panic!("the stream ended cleanly — re-record this pin: the refusal moved"),
-    }
+        .expect_err("R91 parquet write refuses an unknown column");
+    let text = error.to_string();
+    assert!(
+        text.contains("Writing the unknown column 'u' is not supported yet"),
+        "R91 write refuse, got: {text}"
+    );
 }
 
 #[tokio::test]

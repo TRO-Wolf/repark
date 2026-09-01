@@ -95,23 +95,13 @@ v1 crate-root re-export lists.
     pins: rp-3-fork-repin/C-001, C-002
     pins: rp-4-fork-repin/C-001, C-002
     pins: rp-5-fork-repin/C-001, C-002
-  - **The metadata-projection shim (`src/catalog/metadata_projection.rs`) is still required until
-    the F-8 consume commit in this unit.** At the pin `00cdde0` the fork's metadata-table
-    `scan` honors `projection` (F-8 `#247`) and `table_names` lists catalog entries only.
-    The shim is deleted in the same unit (C-003). The gap is not restated from the fork's
-    `docs/parity/GAP_MATRIX.md`.
-  - **The metadata-table enumeration filter (same module) is coupled to the fork's synthesis.**
-    The fork's `IcebergSchemaProvider::table_names` invents `<base>$<MetadataTableType::as_str()>`
-    for every listed table; `MetadataProjectionSchemaProvider::table_names` drops exactly that
-    set using last-`$` + the same vocabulary (F-8a: a base named `a$b` lists as itself;
-    `a$b$snapshots` is hidden and still resolvable). The ADR-0006 filter **stays** — the fork
-    still synthesizes in `table_names`. Inherent residue: a base literally named `foo$files`.
-    ([ADR-0006](../../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md)). **Removal
-    criterion:** a fork rev that stops synthesizing those names in `table_names` makes the filter a
-    no-op, and it goes. **Breakage criterion:** a fork rev that changes the synthesized *spelling*
-    silently re-exposes them — re-run the two emptiness pins
-    (`crates/repark-sql/tests/introspection.rs`, `crates/repark-spark/src/tests/metadata_tables.rs`)
-    at every repin, not just the compile.
+  - **The metadata-projection shim retired at RP-5 (fork R169/R170, F-8 `#247`).** The
+    fork's metadata-table `scan` honors `projection` (empty projection included) and
+    `table_names` lists catalog entries only (`$`-twins are not enumerated). Engine
+    `catalog/metadata_projection.rs` is deleted. Pins
+    `crates/repark-spark/src/tests/metadata_tables.rs::metadata_tables_are_hidden_from_enumeration_but_stay_queryable_through_the_spark_door`
+    and `::metadata_table_projection_honor_all_types` now pin the fork.
+    pins: rp-5-fork-repin/C-003
   - **`IcebergSchemaProvider` name-directory population is still lazy at pin `00cdde0`
     (RP-5 re-verified 2026-09-01; first measured at `5e7b2e4`).** `try_new`
     no longer `list_tables`; first `table` / `table_names` / `table_exist` lists live and
@@ -125,6 +115,14 @@ v1 crate-root re-export lists.
     **Repin duty:** if a future rev lists at construction again the freeze is a no-op; if a
     rev lists on every access (never freezes) those four pins fail-closed.
     pins: rp-1-fork-repin/C-011
+  - **R91 unknown-on-write (RP-5 C-006).** Fork `#246` falsified the V3-6 pin that
+    a Null `unknown` column commits then fails at scan. The pin now asserts the
+    parquet write refuses `Writing the unknown column 'u' is not supported yet`.
+    CREATE refusal stands. No new surface.
+    pins: rp-5-fork-repin/C-006
+  - **RP-5 document lockstep (C-008).** Pin history, registry REF-1 FIXED / REF-3 BACKLOG /
+    RDF-1 BACKLOG, and handoff F-6b/F-6c/F-8/F-16r/F-0 consumed notes match the pins.
+    pins: rp-5-fork-repin/C-008
 
 ## Pointers
 

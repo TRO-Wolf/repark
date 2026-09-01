@@ -15,7 +15,7 @@ use crate::{
     refuse_dml_subquery_predicate, refuse_mor_unpartitioned_multi_spec_dml,
     refuse_multi_statement_sql, refuse_read_only_dml_from_delete, refuse_read_only_dml_table_sql,
     refuse_v3_cow_dml, spark_ast, starts_with_branch_or_tag_ddl, starts_with_merge, time_travel,
-    try_parse_create_namespace,
+    try_parse_create_namespace, write_to_branch,
 };
 
 /// Execute one Spark-SQL statement, routing Iceberg DDL and writes and passing reads to DataFusion.
@@ -45,21 +45,6 @@ pub async fn execute_with_read_only<S: std::hash::BuildHasher>(
     // Clone the registry snapshot so P11 survives `.await` thread hops.
     let mut catalogs = catalogs.clone();
     catalogs.set_read_only_catalogs(read_only_catalogs.iter().cloned().collect());
-    // Refuse write-to-branch forms before metadata rewrite.
-    if let Some(sniff) = ref_ddl::sniff_write_to_branch(canonical_sql) {
-        let refuse = match &sniff {
-            ref_ddl::WriteToBranchSniff::MultiPart => true,
-            ref_ddl::WriteToBranchSniff::TwoPart { parts } => {
-                let full =
-                    datafusion::sql::TableReference::partial(parts[0].as_str(), parts[1].as_str());
-                let prefix = datafusion::sql::TableReference::bare(parts[0].as_str());
-                !ctx.table_exist(full).unwrap_or(false) && ctx.table_exist(prefix).unwrap_or(false)
-            }
-        };
-        if refuse {
-            return Err(ref_ddl::refuse_write_to_branch());
-        }
-    }
     // I2 / R-METADATA-TABLES — Spark `cat.ns.tbl.snapshots` → fork `cat.ns.tbl$snapshots`.
     let sql_after_meta: std::borrow::Cow<'_, str> =
         if metadata_tables::sql_may_have_metadata_table_path(canonical_sql) {
@@ -72,13 +57,20 @@ pub async fn execute_with_read_only<S: std::hash::BuildHasher>(
         };
     // Release pinned relations after planning.
     let mut pinned = time_travel::PinnedViews::default();
-    let mut lineage_pins = repark_core::LineagePins::default();
-    let original_for_locations =
-        original_sql_for_locations(sql, canonical_sql, sql_after_meta.as_ref());
-    let result = execute_time_travelled(
+    let sql_after_branch = write_to_branch::apply_write_to_branch(
         ctx,
         &catalogs,
         sql_after_meta.as_ref(),
+        &mut pinned,
+    )
+    .await?;
+    let mut lineage_pins = repark_core::LineagePins::default();
+    let original_for_locations =
+        original_sql_for_locations(sql, canonical_sql, sql_after_branch.as_ref());
+    let result = execute_time_travelled(
+        ctx,
+        &catalogs,
+        sql_after_branch.as_ref(),
         original_for_locations,
         &mut pinned,
         &mut lineage_pins,

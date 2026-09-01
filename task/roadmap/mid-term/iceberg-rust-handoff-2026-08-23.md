@@ -53,7 +53,7 @@ What the engine calls, so a change to any of it is a named event. Grouped by eng
 | `write/alter.rs`, `snapshot_refs.rs` | `UpdateSchema`, `UpdatePartitionSpec`, table-property set/unset in one action, `rename_table`, `ManageSnapshots` (branch/tag CRUD, rollback, retention setters) |
 | `repark-spark/src/call.rs` (`CALL system.*`) | `maintenance::{RewriteDataFiles, RewritePositionDeleteFiles, DeleteOrphanFiles}` and their result types; `ExpireSnapshots` + `commit_and_clean` → `CleanupReport`; rollback via `ManageSnapshots`; `Catalog::register_table` |
 | `catalog/provider.rs` (`NamespaceScopedCatalog`) | the whole `Catalog` trait — **14 required + 16 defaulted methods** at the last audit; 13 of 16 defaults explicitly forwarded, 3 stated omissions. **A new defaulted method is a repin duty on the engine side; name it in the PR.** |
-| `catalog/metadata_projection.rs` | `iceberg-datafusion` metadata-table `TableProvider` (`scan` + `projection`), `IcebergSchemaProvider::table_names` |
+| `catalog/metadata_projection.rs` (retired RP-5) | `iceberg-datafusion` metadata-table `TableProvider` (`scan` + `projection`), `IcebergSchemaProvider::table_names` — fork F-8 consumed; engine shim deleted |
 | ordinary `INSERT` / `DELETE` / `UPDATE` | `iceberg-datafusion` `IcebergTableProvider` incl. `insert_into` and the DML path |
 | format v3 | reading Puffin deletion vectors (R117); `register_table` of a Spark-written v3 table; the engine **refuses** v3 compaction and MOR writes on v3 by its own guard |
 
@@ -70,6 +70,10 @@ What the engine calls, so a change to any of it is a named event. Grouped by eng
 - **Engine follow-up.** Verify whether the engine's `write.merge.isolation-level = snapshot`
   arm (which drops `validate_no_conflicting_data`) is exposed, and pin it either way; the
   DML-5 over-rejection is not a guard the engine may lean on for correctness.
+- **Consumed (RP-5, 2026-09-01).** The property is exposed: `resolve_merge_isolation` reads
+  `write.merge.isolation-level`; snapshot skips `validate_no_conflicting_data`. Pin
+  `commit_insert_only_snapshot_isolation_commits_through_conflicting_concurrent_append`.
+  pins: rp-5-fork-repin/C-007
 
 Priority is the engine side's view of workload impact; the fork orchestrator sequences against
 its own open campaigns. **P1** = on the critical path of a production MOR deployment; **P2** =
@@ -234,6 +238,9 @@ half is unchanged.
   is written to go red when a commit target exists on that provider; the engine then routes
   branch-targeted DML. Since REF (2026-09-01) the pin also asserts the refusal cites pin
   `33be9a0` and not the superseded `b009ac1`, so a stale reason cannot survive a repin.
+- **Consumed (RP-5, 2026-09-01, F-6b `#245` + F-6c `#249`).** Write-to-branch lands. Pins in
+  `crates/repark-spark/src/tests/write_to_branch.rs`. Registry REF-1 FIXED.
+  pins: rp-5-fork-repin/C-004
 
 ### F-7 (A12-owned; unblocked 2026-08-23 — see the addendum below) — format v3 compaction
 
@@ -292,7 +299,7 @@ in-scope DVs and reports the true count (`removed_delete_files_count = 6` on the
 six-file fixture). Registry FIXED. Open question to the fork: does apply-path DV drop
 also run on the `OverwriteFiles` (COW DML) path?
 
-### F-8 (P2) — metadata-table `TableProvider` projection and name synthesis — **half corrected**
+### F-8 (P2) — metadata-table `TableProvider` projection and name synthesis — **consumed RP-5**
 
 > **Corrected 2026-08-23.** (a) The synthesized `<base>$<type>` names **do resolve** at `main`
 > (`schema.rs:157–172`: last-`$` + vocabulary parse, `a$b` included) — the engine map's
@@ -317,6 +324,10 @@ also run on the `OverwriteFiles` (COW DML) path?
 - **Acceptance.** Engine deletes `metadata_projection.rs`'s shim (its stated removal criterion)
   and the enumeration filter, and re-runs the two emptiness pins
   (`crates/repark-sql/tests/introspection.rs`, `crates/repark-spark/src/tests.rs`).
+- **Consumed (RP-5, 2026-09-01, F-8 `#247`).** Shim deleted. Pins
+  `metadata_tables_are_hidden_from_enumeration_but_stay_queryable_through_the_spark_door` and
+  `metadata_table_projection_honor_all_types` pin the fork.
+  pins: rp-5-fork-repin/C-003
 
 ### F-9 (P3) — S3 Tables `register_table`
 
@@ -445,16 +456,13 @@ increments.
 
 *V3-6 (2026-09-01) audit addendum, measured at fork pin `33be9a0`:*
 
-- **R91 (`unknown`) divergence — the row is ✅ but the parquet path is not deferred-loud.**
-  The row's deferred-loud claim is the `arrow/value.rs` `FeatureUnsupported` synth path. The
-  measured `DataFileWriter::write` path is different: a batch with a Null `unknown` column
-  **commits silently** — no `FeatureUnsupported`, a real parquet data file lands on disk that
-  no scan can read (the reader refuses per file task: "cannot visit arrow data type: null").
-  So today's fork state is "write commits an unreadable file", which is worse than the row's
-  deferred-loud claim. Ask: make the parquet write path loud (or the reader accept Null), and
-  drop R91's ✅ until then. Engine pins:
-  `crates/repark-iceberg/src/tests/v3_types.rs::fork_unknown_write_commits_then_scan_refuses_naming_null`
-  (pins: v3-6-v3-types/C-004).
+- **R91 (`unknown`) divergence — consumed RP-5 (2026-09-01, fork `#246`).**
+  At `33be9a0` a Null `unknown` column committed an unreadable parquet file and the
+  scan then refused. At `00cdde0` the parquet write refuses
+  `Writing the unknown column 'u' is not supported yet`. Engine pin
+  `fork_unknown_write_refuses_naming_the_column`.
+  pins: v3-6-v3-types/C-004
+  pins: rp-5-fork-repin/C-006
 - **R88 (variant) — verified covered.** C-002's binary-variant finding (schema maps to the
   canonical Arrow extension type; write refuses at `ParquetWriterBuilder::build`; scan refuses
   per file task via `reject_variant_projection`) is exactly R88's recorded remainder, so no
@@ -463,6 +471,8 @@ increments.
   (pins: v3-6-v3-types/C-002); registry row `V3-VARIANT-SHRED-1` cites both.
 
 ### F-16 (P1, added 2026-08-24 from MW-7) — `RewriteDataFiles`: the delete-RATIO candidate clause
+
+*RP-5 (2026-09-01, F-16r `#248`): re-measured at pin `00cdde0`. The 2,500-row pin stayed GREEN; RDF-1 stays BACKLOG. The 1e7 × 50 driver was not re-run. See C-005 in the RP-5 ledger.*
 
 *Landed fork #232 (2026-08-27) with v3 DV removal accounting; taken by **RP-3** (C-006).
 RP-3 C-006 (2026-08-30, `d408da42`): the 1e7×50 MOR driver still ends at 8 delete files /

@@ -1,4 +1,6 @@
-"""REF facade pins: ref-branch-tag-wap/C-002, C-003, C-004, C-005, C-007."""
+"""REF facade pins: ref-branch-tag-wap/C-002, C-003, C-004, C-005, C-007.
+pins: rp-5-fork-repin/C-004
+"""
 
 from __future__ import annotations
 
@@ -107,31 +109,27 @@ def test_ref_selector_on_the_read_side_of_dml_is_a_read(spark: ReparkSession) ->
 
 
 def test_write_to_branch_refusal_claims_the_target_only(spark: ReparkSession) -> None:
-    """A ref-named write TARGET still refuses, even when the source is also a selector."""
     spark.sql(f"ALTER TABLE {TABLE} CREATE BRANCH b")
     spark.sql(f"ALTER TABLE {TABLE} CREATE TAG v1")
-    with pytest.raises(UnsupportedOperationException) as caught:
-        spark.sql(f"INSERT INTO {TABLE}.branch_b SELECT id, name FROM {TABLE}.tag_v1")
-    assert "iceberg-datafusion" in str(caught.value)
+    spark.sql(f"INSERT INTO {TABLE}.branch_b SELECT id, name FROM {TABLE}.tag_v1")
     branch_rows = spark.sql(f"SELECT id FROM {TABLE}.branch_b").to_arrow()
-    assert branch_rows.column("id").to_pylist() == [1]
+    assert sorted(branch_rows.column("id").to_pylist()) == [1, 1]
+    main = spark.sql(f"SELECT id FROM {TABLE}").to_arrow()
+    assert main.column("id").to_pylist() == [1]
 
 
 def test_write_to_branch_refuses_naming_the_fork_write_path(spark: ReparkSession) -> None:
-    """The refusal names the surface that is still missing, not a stale fork pin."""
     spark.sql(f"ALTER TABLE {TABLE} CREATE BRANCH audit")
-    with pytest.raises(UnsupportedOperationException) as caught:
-        spark.sql(f"INSERT INTO {TABLE}.branch_audit SELECT 2 AS id, 'b' AS name")
-    message = str(caught.value)
-    assert "iceberg-datafusion" in message
-    assert "33be9a0" in message
-    assert "b009ac1" not in message, "the superseded fork pin must not be cited"
+    spark.sql(f"INSERT INTO {TABLE}.branch_audit SELECT 2 AS id, 'b' AS name")
+    rows = spark.sql(f"SELECT id FROM {TABLE}.branch_audit").to_arrow()
+    assert sorted(rows.column("id").to_pylist()) == [1, 2]
+    main = spark.sql(f"SELECT id FROM {TABLE}").to_arrow()
+    assert sorted(main.column("id").to_pylist()) == [1]
 
 
 def test_write_to_tag_refuses_like_spark(spark: ReparkSession) -> None:
-    """Spark refuses a write through a tag; so does this door."""
     spark.sql(f"ALTER TABLE {TABLE} CREATE TAG v1")
-    with pytest.raises(UnsupportedOperationException):
+    with pytest.raises(Exception, match="Cannot write to table with time travel"):
         spark.sql(f"INSERT INTO {TABLE}.tag_v1 SELECT 2 AS id, 'b' AS name")
 
 

@@ -13,7 +13,6 @@ use tempfile::TempDir;
 
 use super::super::*;
 
-/// A [`PartitionStream`] over a scripted batch list that counts how many batches it has PRODUCED.
 #[derive(Debug)]
 struct ScriptedTargetStream {
     schema: SchemaRef,
@@ -272,6 +271,7 @@ fn merge_spec(
         matched,
         not_matched,
         not_matched_by_source: vec![],
+        commit_branch: None,
     }
 }
 
@@ -2955,13 +2955,13 @@ async fn resolve_affected_data_files_local_fs_is_sub_10pct_of_merge_budget() {
     let table = catalog.load_table(&ident_resolve).await.expect("load");
     let paths = live_data_file_paths(&catalog, &ident_resolve).await;
     assert_eq!(paths.len(), 8, "eight seed files");
-    let _ = resolve_affected_data_files(&table, &paths)
+    let _ = resolve_affected_data_files(&table, None, &paths)
         .await
         .expect("warm resolve");
     let resolve_rounds = 10_u32;
     let t_resolve = Instant::now();
     for _ in 0..resolve_rounds {
-        let resolved = resolve_affected_data_files(&table, &paths)
+        let resolved = resolve_affected_data_files(&table, None, &paths)
             .await
             .expect("resolve");
         assert_eq!(resolved.len(), paths.len());

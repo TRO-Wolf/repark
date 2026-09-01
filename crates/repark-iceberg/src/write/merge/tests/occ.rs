@@ -797,6 +797,7 @@ async fn commit_insert_only_serializable_isolation_rejects_conflicting_concurren
 /// PIN M19-A (Spark S5) — SNAPSHOT half of the same-race split.
 #[tokio::test]
 async fn commit_insert_only_snapshot_isolation_commits_through_conflicting_concurrent_append() {
+    let _: &str = "pins: rp-5-fork-repin/C-007";
     let warehouse = TempDir::new().expect("temp warehouse");
     let (catalog, ident) = setup_with_isolation(&warehouse, "SNAPSHOT").await;
 

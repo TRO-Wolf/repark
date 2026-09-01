@@ -37,8 +37,10 @@ holds behavior observed from outside the crate.
   this unit.
 
 - `introspection.rs` — `SHOW TABLES` / `DESCRIBE` / `information_schema` delegate through a
-  configured session. Metadata tables stay queryable but remain hidden from enumeration. The
+  configured session. Metadata tables stay queryable but remain hidden from enumeration (RP-5
+  F-8: fork `table_names`, no engine shim). The
   time-travel test checks cleanup of both `__repark_ansi_tt_*` and `__repark_tt_*` names.
+  pins: rp-5-fork-repin/C-003
 
 - `ta_toll.rs` (Q11) — `TaExtension` on a **native** session, one kernel driven through
   ANSI-door SQL as a window function and compared `f64::to_bits` against the recorded C TA-Lib

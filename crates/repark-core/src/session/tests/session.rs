@@ -1193,9 +1193,8 @@ async fn information_schema_enumerates_a_registered_iceberg_catalog_through_the_
     );
 }
 
-/// The bare-session half of the metadata-table enumeration contract.
-///
-/// Mutation: drop the `.filter(…)` in `MetadataProjectionSchemaProvider::table_names` → this reds.
+/// The bare-session half of the metadata-table enumeration contract (fork F-8 listing).
+/// Mutation: make `information_schema` expect a `$snapshots` twin → this reds. pins: rp-5-fork-repin/C-003
 #[tokio::test]
 async fn information_schema_hides_the_dollar_metadata_tables_on_the_bare_session() {
     use tempfile::TempDir;

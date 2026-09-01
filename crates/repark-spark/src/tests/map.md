@@ -75,6 +75,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   and bad where use Spark's text; `sort_order` refuses without compacting; named `BINPACK` still
   compacts v2.
   pins: maint-rewrite-data-files-options/C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- `write_to_branch.rs` — RP-5 C-004 family pins: INSERT VALUES/SELECT, UPDATE, DELETE,
+  MERGE, INSERT OVERWRITE on a diverged branch; tag and missing-branch Spark-shaped refuse.
+  pins: rp-5-fork-repin/C-004
 - `common.rs` — shared fixtures (`setup`, `rows`, `run`, `register_source`, `table_rows`, …)
   and the cross-cutting helpers that more than one leaf needs (`time_travel_id_multiset`,
   `execute_without_collecting`, unsafe-cast walk helpers). **V3-2:**

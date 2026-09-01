@@ -190,33 +190,29 @@ Supported surface, for reference:
 > the table-name false positives); REF-2's pin holds the parser's answer for the trailing-token
 > shapes. A row lands here the day the guard becomes reachable, with the pin that reaches it.
 
-#### REF-1 — writing to a branch or tag
+#### REF-1 — writing to a branch or tag — **FIXED 2026-09-01, RP-5**
 
-- **repark** — `INSERT` / `UPDATE` / `DELETE` / `MERGE` whose **write target** is
-  `t.branch_<name>` (or the `t.branch_name` two-part spelling) refuses loud and names the
-  upstream gap. Only the target is examined: the same name in a source relation, a `USING`
-  operand or a predicate subquery is a read and runs (REF-4). Reads work generally
-  (`VERSION AS OF '<ref>'` on both doors, the dotted selector on the Spark door), and
-  `CREATE|REPLACE BRANCH` re-pinning is the supported write path for refs.
+- **repark** — `INSERT` / `UPDATE` / `DELETE` / `MERGE` / `INSERT OVERWRITE` whose **write
+  target** is `t.branch_<name>` commit onto that branch, parented off the branch head, and
+  leave `main` unmoved. A write naming a **tag** refuses Spark-shaped (`Cannot write to table
+  with time travel` / `Cannot modify table with time travel` for UPDATE/DELETE/MERGE). A write
+  naming a missing branch refuses `Cannot use branch (does not exist): <name>` and does not
+  create the branch (Spark 4.1.2 + Iceberg 1.11.0, 2026-09-01). Fork-executed families
+  (`INSERT`/`UPDATE`/`DELETE`) use `IcebergTableProvider::with_commit_branch`; RePark-owned
+  families (`MERGE`/`INSERT OVERWRITE`/`TRUNCATE`) pass `.to_branch` and scan the branch head.
 - **Apache Spark** — the Iceberg extension writes to the named **branch**: `INSERT INTO
-  t.branch_b`, `UPDATE`/`DELETE` on the same name, and `df.writeTo("t.branch_b").append()` all
-  commit onto `b`, parented off `main`'s head, and leave `main` unmoved. A write naming a **tag**
-  refuses — `IllegalArgumentException: Cannot write to table with time travel` (`Cannot modify
-  table with time travel` for `UPDATE`). *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0,
-  2026-09-01. Incidental control from the same run: `df.writeTo("t").option("branch", "b")`
-  committed to **main**, so that option is not a branch door and no pin claims it.)*
-- **Pin** — `crates/repark-spark/src/tests/ref_ddl.rs::write_to_branch_refuses_loud_naming_fork_gap`
-- **Rationale** — DECLARED, and it is not RePark's fix to make. **Re-measured 2026-09-01 at fork
-  pin `33be9a0`:** F-6 (`#244`) put `to_branch` on the seven snapshot-producing transaction
-  actions, but not on the surface these statements execute through — `INSERT` / `UPDATE` /
-  `DELETE` commit inside `iceberg-datafusion`'s `IcebergTableProvider` and its commit exec, which
-  carry no commit target. RePark owns commit construction for `MERGE`, `INSERT OVERWRITE`,
-  `TRUNCATE` and CTAS but not for those three, so routing only the RePark-owned half would let
-  one statement family write to a branch while its sibling refuses. The whole write leg stays
-  refused; the restated ask is filed as F-6b in the fork handoff. The tag half is **outcome-equal
-  to Spark** — both engines refuse — and only the diagnostic differs. The alternative to refusing
-  is still writing to `main` while the statement names a ref. Capability status lives in the
-  fork's own gap matrix, never here. pins: ref-branch-tag-wap/C-004
+  t.branch_b`, `UPDATE`/`DELETE`/`MERGE`/`INSERT OVERWRITE` on the same name commit onto `b`,
+  parented off `b`'s head, and leave `main` unmoved. A write naming a **tag** refuses —
+  `IllegalArgumentException: Cannot write to table with time travel` (`Cannot modify table with
+  time travel` for `UPDATE`). A missing branch refuses at analysis for every family:
+  `ValidationException: Cannot use branch (does not exist): nope`. *(oracle: live PySpark 4.1.2
+  + Iceberg 1.11.0, 2026-09-01, `<pyspark-4.1.2-oracle>`.)*
+- **Pin** — `crates/repark-spark/src/tests/write_to_branch.rs` (per family on a diverged branch;
+  tag refuse; missing-branch refuse);
+  `python/repark/tests/test_ref_branch_tag_wap.py`
+- **Rationale** — FIXED (2026-09-01, RP-5). `df.writeTo("cat.ns.t.branch_b").append()` is not
+  plumbed unless `writeTo` already funnels into this SQL path; BACKLOG if still missing.
+  pins: rp-5-fork-repin/C-004
 
 #### REF-2 — `IF EXISTS` / `IF NOT EXISTS`, and any other trailing clause
 
@@ -252,11 +248,11 @@ Supported surface, for reference:
   conf and wrote to `main`.)*
 - **Pin** — `crates/repark-spark/src/tests/refs_and_wap.rs::wap_publish_procedures_and_session_conf_refuse_loud`;
   facade rows in `python/repark/tests/test_ref_branch_tag_wap.py`
-- **Rationale** — DECLARED, and the gap is RePark's, not the fork's: the fork carries the publish
-  primitives at the pin (`ManageSnapshots::fast_forward`, `Transaction::cherry_pick`,
-  `GAP_MATRIX` R98). It stays declared while REF-1 holds, because a publish procedure would have
-  nothing engine-written to publish, and because the failure mode a half-built WAP invites — a
-  staged write that quietly lands on `main` — is the one this row exists to keep impossible.
+- **Rationale** — BACKLOG (2026-09-01, RP-5). REF-1 is FIXED, so the "declared while REF-1 holds"
+  reason is gone. The remaining gap is the engine's missing publish procedures and `spark.wap.*`
+  session confs. Fork primitives exist: `ManageSnapshots::fast_forward`,
+  `Transaction::cherry_pick` (`GAP_MATRIX` R98). Do not half-build WAP: a staged write that
+  quietly lands on `main` is the failure mode this row keeps impossible.
   pins: ref-branch-tag-wap/C-005
 
 #### REF-4 — reading a ref through the dotted selector — **FIXED 2026-09-01**
@@ -1922,6 +1918,9 @@ the pin rather than obeying it.
   at **8 delete files / 10,000,000 delete records** after the full maintenance sequence
   (`rewrite_position_delete_files` folds 400 → 8; `rewrite_data_files` leaves those 8). The
   2,500-row pin still holds. F-16 did not close this shape.
+  **RP-5 C-005 (2026-09-01, fork `00cdde0` / F-16r `#248`):** the 2,500-row pin
+  `test_delete_laden_in_band_file_survives_the_runbook` stayed GREEN. F-16r did not close
+  this shape. The 1e7 × 50 driver was not re-run. RDF-1 stays BACKLOG.
 - **Apache Spark** — the same sequence on the same shape ends with **zero** delete files and
   **zero** delete records, at **both** `write.delete.granularity` settings, with
   `removed_delete_files_count` reported as 0 and `remove-dangling-deletes` OFF (jar default

@@ -161,7 +161,7 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
     (v2 refuses); append fills an omitted column from a schema-carried `write_default`,
     `initial_default` reads into pre-column files, DEFAULT DDL refuses Spark-equal;
     binary `variant` refuses end to end (`V3-VARIANT-SHRED-1`, R88); `unknown` CREATE
-    refuse pinned, scan gap filed (R91).
+    refuse pinned; parquet write refuses (R91, RP-5).
   - **Next:** F-7 COW lineage. V3-3 charter
     [task/ledgers/completed/v3-3-dml-ledger.md](task/ledgers/archive/2026-08/2026-08-30-v3-3-dml-ledger.md)
     (F-rp3-c7 stays a fork finding).
@@ -217,11 +217,9 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
 - **Iceberg DML remainder (v0.6)** — DML-B / DML-C / DML-A / MAINT delivered 2026-08-30/31; the
   four units are described in [Release state](#release-state) above and in
   [the registry](docs/spark-sql-iceberg-parity.md).
-  **REF (2026-09-01):** ref READS are Spark-equal — `branch_`/`tag_` selectors resolve
-  (`REF-4` FIXED), both `WITH SNAPSHOT RETENTION` halves land on both doors. Writes and WAP stay
-  DECLARED (`REF-1`, `REF-3`): F-6 gave `to_branch` to the transaction actions, not to the
-  `iceberg-datafusion` commit path `INSERT`/`UPDATE`/`DELETE` use; restated ask filed F-6b.
-  Ledger: [task/ledgers/staging/ref-branch-tag-wap-ledger.md](task/ledgers/staging/ref-branch-tag-wap-ledger.md).
+  **REF (2026-09-01, RP-5):** writes to `t.branch_<name>` land (`REF-1` FIXED). WAP publish
+  procedures and `spark.wap.*` stay BACKLOG (`REF-3`). Reads were already Spark-equal (`REF-4`).
+  Ledger: [task/ledgers/staging/rp-5-fork-repin-ledger.md](task/ledgers/staging/rp-5-fork-repin-ledger.md).
 <!-- /ws -->
 
 Parked lanes: **none** (the `repark.sql` re-home lane closed 2026-08-14, #95 —

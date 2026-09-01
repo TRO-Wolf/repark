@@ -25,7 +25,7 @@ use iceberg::spec::{
 };
 // scan pruning residual filters use `iceberg::expr::Predicate` via `scan_prune`
 use iceberg::table::Table;
-use iceberg::transaction::{ApplyTransactionAction, Transaction};
+
 use iceberg::writer::base_writer::data_file_writer::DataFileWriterBuilder;
 use iceberg::writer::file_writer::ParquetWriterBuilder;
 use iceberg::writer::file_writer::location_generator::{
@@ -43,6 +43,7 @@ mod cow_scratch;
 mod dv_close;
 mod insert;
 mod not_matched_by_source;
+mod snapshot_commit;
 use insert::{
     insert_projection, insert_stream_checked, store_assignment_then_sql, update_stream_checked,
 };
@@ -88,6 +89,7 @@ pub struct MergeSpec {
     pub not_matched: Vec<InsertClause>,
     /// `WHEN NOT MATCHED BY SOURCE` clauses, in declaration order.
     pub not_matched_by_source: Vec<NotMatchedBySourceClause>,
+    pub commit_branch: Option<String>,
 }
 
 /// One `WHEN MATCHED [AND …] THEN UPDATE/DELETE` clause.
@@ -162,10 +164,8 @@ pub async fn execute_merge(
     let spec = expand_star_clauses(ctx, spec, &write_schema).await?;
     let spec = spec.as_ref();
     validate_update_columns(spec, &write_schema)?;
-    let snapshot_id = table
-        .metadata()
-        .current_snapshot()
-        .map(|snapshot| snapshot.snapshot_id());
+    let snapshot_id =
+        crate::write::commit_target::snapshot_id_for_commit(&table, spec.commit_branch.as_deref());
 
     let scratch = scratch_schema(&write_schema);
     // PERF-04: join-key min/max bounds may be pushed onto the primary target scan when safe.
@@ -772,12 +772,19 @@ async fn plan_and_commit_cow(
     .await?;
 
     let file_count = new_files.len() as u64;
-    let affected_entries = resolve_affected_data_files(table, &affected).await?;
+    let affected_entries = resolve_affected_data_files(table, snapshot_id, &affected).await?;
     // write_data span wraps only the file count after streaming write.
     tracing::info_span!("merge.write_data", files = file_count).in_scope(|| ());
-    commit(catalog, table, snapshot_id, affected_entries, new_files)
-        .instrument(tracing::info_span!("merge.commit", files = file_count))
-        .await
+    commit_on_ref(
+        catalog,
+        table,
+        snapshot_id,
+        affected_entries,
+        new_files,
+        spec.commit_branch.as_deref(),
+    )
+    .instrument(tracing::info_span!("merge.commit", files = file_count))
+    .await
 }
 
 /// The merge-on-read arm (Group T): data files are left COMPLETELY untouched.
@@ -849,7 +856,16 @@ async fn plan_and_commit_mor(
     let file_count = data_files.len() as u64;
     let concurrency = concurrency_from_ctx(ctx);
     tracing::info_span!("merge.write_data", files = file_count).in_scope(|| ());
-    commit_row_delta(catalog, table, snapshot_id, pairs, data_files, concurrency).await
+    commit_row_delta_on_ref(
+        catalog,
+        table,
+        snapshot_id,
+        pairs,
+        data_files,
+        concurrency,
+        spec.commit_branch.as_deref(),
+    )
+    .await
 }
 
 /// R-MERGE-STREAM-OUT: cast each batch to the write schema and pipe into the streaming writers.
@@ -899,6 +915,7 @@ async fn stream_sql(
 /// Resolve affected `_file` paths to [`DataFile`] entries by walking the pinned snapshot.
 pub(super) async fn resolve_affected_data_files(
     table: &Table,
+    snapshot_id: Option<i64>,
     affected: &[String],
 ) -> Result<Vec<DataFile>> {
     // Span is the P2a hour-0 measurement seam for scout #6 (manifest walk share of MERGE wall).
@@ -907,7 +924,11 @@ pub(super) async fn resolve_affected_data_files(
             return Ok(Vec::new());
         }
         let metadata = table.metadata();
-        let snapshot = metadata.current_snapshot().ok_or_else(|| {
+        let snapshot = match snapshot_id {
+            Some(id) => metadata.snapshot_by_id(id),
+            None => metadata.current_snapshot(),
+        }
+        .ok_or_else(|| {
             DataFusionError::Internal(
                 "affected files exist but the table has no snapshot".to_string(),
             )
@@ -1841,224 +1862,14 @@ where
     Ok(files)
 }
 
-/// Iceberg standard table property selecting MERGE isolation (Java default: serializable).
-const WRITE_MERGE_ISOLATION_LEVEL: &str = "write.merge.isolation-level";
+pub(super) use snapshot_commit::*;
 
-/// Isolation for overwrite / row-delta commit.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum IsolationLevel {
-    /// Reject concurrent conflicting data and deletes.
-    Serializable,
-    /// Reject only concurrent conflicting deletes.
-    Snapshot,
-}
-
-/// Java row-delta recipe.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum RowDeltaKind {
-    /// MERGE — UPDATE/MERGE validations (Java L251-254 + isolation-gated data).
-    Merge,
-    /// SQL DELETE — no `validate_deleted_files` / `validate_no_conflicting_delete_files`.
-    Delete,
-}
-
-/// Verb recipe + isolation for [`commit_row_delta_kind`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) struct RowDeltaPolicy {
-    pub kind: RowDeltaKind,
-    pub isolation: IsolationLevel,
-}
-
-/// Copy of `predicate_dml::resolve_isolation_property` onto `write.merge.isolation-level`.
-fn resolve_merge_isolation(table: &Table) -> Result<IsolationLevel> {
-    match table
-        .metadata()
-        .properties()
-        .get(WRITE_MERGE_ISOLATION_LEVEL)
-    {
-        Some(name) => match name.to_ascii_lowercase().as_str() {
-            "serializable" => Ok(IsolationLevel::Serializable),
-            "snapshot" => Ok(IsolationLevel::Snapshot),
-            _ => Err(DataFusionError::Plan(format!(
-                "Invalid isolation level: {name}"
-            ))),
-        },
-        None => Ok(IsolationLevel::Serializable),
-    }
-}
-
-/// One atomic commit.
-async fn commit(
-    catalog: &Arc<dyn Catalog>,
-    table: &Table,
-    snapshot_id: Option<i64>,
-    affected: Vec<DataFile>,
-    new_files: Vec<DataFile>,
-) -> Result<()> {
-    let isolation = resolve_merge_isolation(table)?;
-    commit_overwrite(catalog, table, snapshot_id, affected, new_files, isolation).await
-}
-
-/// Copy-on-write overwrite commit.
-pub(super) async fn commit_overwrite(
-    catalog: &Arc<dyn Catalog>,
-    table: &Table,
-    snapshot_id: Option<i64>,
-    affected: Vec<DataFile>,
-    new_files: Vec<DataFile>,
-    isolation: IsolationLevel,
-) -> Result<()> {
-    if affected.is_empty() && new_files.is_empty() {
-        return Ok(());
-    }
-    let new_file_paths = abort::written_file_paths(&new_files);
-    let summary = HashMap::from([(OPERATION_ID_PROP.to_string(), Uuid::new_v4().to_string())]);
-    let tx = Transaction::new(table);
-    let tx = if affected.is_empty() {
-        // Insert-only MERGE still pins snapshot S so a concurrent add cannot duplicate rows.
-        let mut action = tx
-            .overwrite_files()
-            .add_files(new_files)
-            .conflict_detection_filter(Predicate::AlwaysTrue)
-            .case_sensitive(true)
-            .set_snapshot_properties(summary);
-        if isolation == IsolationLevel::Serializable {
-            action = action.validate_no_conflicting_data();
-        }
-        if let Some(pin) = snapshot_id {
-            action = action.validate_from_snapshot(pin);
-        }
-        action.apply(tx).map_err(iceberg_err)?
-    } else {
-        // A MIXED MERGE commits the COW `OverwriteFiles` under SERIALIZABLE isolation.
-        let mut action = tx
-            .overwrite_files()
-            .delete_data_files(affected)
-            .add_files(new_files)
-            .conflict_detection_filter(Predicate::AlwaysTrue)
-            .validate_no_conflicting_deletes()
-            .case_sensitive(true)
-            .set_snapshot_properties(summary);
-        if isolation == IsolationLevel::Serializable {
-            action = action.validate_no_conflicting_data();
-        }
-        if let Some(pin) = snapshot_id {
-            action = action.validate_from_snapshot(pin);
-        }
-        action.apply(tx).map_err(iceberg_err)?
-    };
-    match tx.commit(catalog.as_ref()).await {
-        Ok(_) => Ok(()),
-        Err(error) => {
-            abort::delete_written_files_best_effort(table, &new_file_paths, &error).await;
-            Err(iceberg_err(error))
-        }
-    }
-}
-
-/// Commit `MoR` position deletes and new rows in one `RowDelta`.
-async fn commit_row_delta(
-    catalog: &Arc<dyn Catalog>,
-    table: &Table,
-    snapshot_id: Option<i64>,
-    pairs: Vec<crate::write::position_delete::PositionDeletePair>,
-    data_files: Vec<DataFile>,
-    concurrency: WriteConcurrency,
-) -> Result<()> {
-    let isolation = resolve_merge_isolation(table)?;
-    commit_row_delta_kind(
-        catalog,
-        table,
-        snapshot_id,
-        pairs,
-        data_files,
-        concurrency,
-        RowDeltaPolicy {
-            kind: RowDeltaKind::Merge,
-            isolation,
-        },
-    )
-    .await
-}
-
-/// Position-delete `RowDelta` commit.
-pub(super) async fn commit_row_delta_kind(
-    catalog: &Arc<dyn Catalog>,
-    table: &Table,
-    snapshot_id: Option<i64>,
-    pairs: Vec<crate::write::position_delete::PositionDeletePair>,
-    data_files: Vec<DataFile>,
-    concurrency: WriteConcurrency,
-    policy: RowDeltaPolicy,
-) -> Result<()> {
-    if pairs.is_empty() && data_files.is_empty() {
-        return Ok(());
-    }
-    let data_file_paths = abort::written_file_paths(&data_files);
-    let pair_count = pairs.len() as u64;
-    let data_file_count = data_files.len() as u64;
-    let prepared = dv_close::prepare_row_delta_deletes(table, &pairs, concurrency)
-        .instrument(tracing::info_span!(
-            "merge.write_deletes",
-            pairs = pair_count
-        ))
-        .await?;
-    let referenced = prepared.referenced.clone();
-    let delete_file_paths = prepared.abort_paths.clone();
-    let delete_file_count = delete_file_paths.len() as u64;
-    let arm_deleted_on_delete = prepared.arm_validate_deleted_files_on_delete;
-
-    let summary = HashMap::from([(OPERATION_ID_PROP.to_string(), Uuid::new_v4().to_string())]);
-    let tx = Transaction::new(table);
-    let mut action = tx.row_delta().add_data_files(data_files);
-    action = prepared.apply(action);
-    action = action
-        .conflict_detection_filter(Predicate::AlwaysTrue)
-        .validate_data_files_exist(referenced)
-        .case_sensitive(true)
-        .set_snapshot_properties(summary);
-    // V2: parquet position deletes + Java skip-delete on DELETE.
-    if matches!(policy.kind, RowDeltaKind::Merge) {
-        action = action
-            .validate_deleted_files()
-            .validate_no_conflicting_delete_files();
-    } else if arm_deleted_on_delete {
-        action = action.validate_deleted_files();
-    }
-    if policy.isolation == IsolationLevel::Serializable {
-        action = action.validate_no_conflicting_data_files();
-    }
-    if let Some(pin) = snapshot_id {
-        action = action.validate_from_snapshot(pin);
-    }
-    let tx = action.apply(tx).map_err(iceberg_err)?;
-    match tx
-        .commit(catalog.as_ref())
-        .instrument(tracing::info_span!(
-            "merge.commit",
-            data_files = data_file_count,
-            delete_files = delete_file_count
-        ))
-        .await
-    {
-        Ok(_) => Ok(()),
-        Err(error) => {
-            let mut abort_paths = data_file_paths;
-            abort_paths.extend(delete_file_paths);
-            abort::delete_written_files_best_effort(table, &abort_paths, &error).await;
-            Err(iceberg_err(error))
-        }
-    }
-}
-
-/// Column lookup that names the missing column instead of panicking.
 fn named_column<'a>(batch: &'a RecordBatch, name: &str) -> Result<&'a ArrayRef> {
     batch.column_by_name(name).ok_or_else(|| {
         DataFusionError::Internal(format!("merge-internal column `{name}` missing from batch"))
     })
 }
 
-/// Strict cast options: an overflowing cast is an error, never a silent NULL.
 fn strict_cast() -> CastOptions<'static> {
     CastOptions {
         safe: false,
@@ -2066,7 +1877,6 @@ fn strict_cast() -> CastOptions<'static> {
     }
 }
 
-/// A single-quoted SQL string literal with embedded quotes doubled.
 #[cfg(test)]
 fn sql_literal(value: &str) -> String {
     format!("'{}'", value.replace('\'', "''"))

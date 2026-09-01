@@ -116,13 +116,12 @@ async fn execute_partition_overwrite(
     partition_exprs: &[datafusion::sql::sqlparser::ast::Expr],
 ) -> Result<DataFrame> {
     use repark_iceberg::write::{
-        PartitionOverwritePlan, commit_overwrite_by_row_filter, commit_replace_partitions,
-        partition_overwrite_request_from_exprs, plan_partition_overwrite,
+        PartitionOverwritePlan, partition_overwrite_request_from_exprs, plan_partition_overwrite,
         refuse_empty_dynamic_overwrite, stage_static_partition_overwrite_files,
         write_overwrite_staged_files_from_stream,
     };
 
-    let Some((catalog_name, catalog, table)) =
+    let Some((catalog_name, catalog, table, branch)) =
         try_resolve_iceberg_overwrite_target(catalogs, table_name).await?
     else {
         return Err(DataFusionError::Plan(format!(
@@ -150,7 +149,14 @@ async fn execute_partition_overwrite(
                 concurrency,
             )
             .await?;
-            commit_overwrite_by_row_filter(&catalog, &table, staged_files, spec.predicate).await?;
+            repark_iceberg::write::commit_overwrite_by_row_filter_to(
+                &catalog,
+                &table,
+                staged_files,
+                spec.predicate,
+                branch.as_deref(),
+            )
+            .await?;
         }
         PartitionOverwritePlan::Dynamic => {
             let stream = source_df.execute_stream().await?;
@@ -158,7 +164,13 @@ async fn execute_partition_overwrite(
                 write_overwrite_staged_files_from_stream(&table, stream, column_names, concurrency)
                     .await?;
             refuse_empty_dynamic_overwrite(&staged_files)?;
-            commit_replace_partitions(&catalog, &table, staged_files).await?;
+            repark_iceberg::write::commit_replace_partitions_to(
+                &catalog,
+                &table,
+                staged_files,
+                branch.as_deref(),
+            )
+            .await?;
         }
     }
     let namespace = namespace_schema_name(table.identifier().namespace());
@@ -178,7 +190,7 @@ pub(crate) async fn insert_overwrite_from_staged_source(
     columns: &[ObjectName],
 ) -> Result<DataFrame> {
     match try_resolve_iceberg_overwrite_target(catalogs, table_name).await? {
-        Some((catalog_name, catalog, table)) => {
+        Some((catalog_name, catalog, table, branch)) => {
             insert_overwrite_iceberg_stage_then_swap(
                 ctx,
                 catalogs,
@@ -188,6 +200,7 @@ pub(crate) async fn insert_overwrite_from_staged_source(
                 table_sql,
                 source,
                 columns,
+                branch.as_deref(),
             )
             .await
         }
@@ -204,8 +217,25 @@ pub(crate) async fn insert_overwrite_from_staged_source(
 pub(crate) async fn try_resolve_iceberg_overwrite_target(
     catalogs: &CatalogRegistry,
     table_name: &ObjectName,
-) -> Result<Option<(String, Arc<dyn Catalog>, iceberg::table::Table)>> {
-    let parts = name_parts(table_name);
+) -> Result<
+    Option<(
+        String,
+        Arc<dyn Catalog>,
+        iceberg::table::Table,
+        Option<String>,
+    )>,
+> {
+    let mut parts = name_parts(table_name);
+    let branch = match crate::write_to_branch::split_write_ref_parts(&parts) {
+        Some((table_parts, crate::write_to_branch::RefSelectorKind::Branch(name))) => {
+            parts = table_parts;
+            Some(name)
+        }
+        Some((_, crate::write_to_branch::RefSelectorKind::Tag)) => {
+            return Err(crate::write_to_branch::tag_write_error("INSERT OVERWRITE"));
+        }
+        None => None,
+    };
     if parts.len() < 3 {
         return Ok(None);
     }
@@ -220,7 +250,7 @@ pub(crate) async fn try_resolve_iceberg_overwrite_target(
     };
     let ident = TableIdent::new(namespace, table_leaf);
     match catalog.load_table(&ident).await {
-        Ok(table) => Ok(Some((catalog_name, Arc::clone(catalog), table))),
+        Ok(table) => Ok(Some((catalog_name, Arc::clone(catalog), table, branch))),
         Err(error) => Err(DataFusionError::Plan(format!(
             "INSERT OVERWRITE target `{table_name}` could not be loaded as an Iceberg table \
              (catalog `{catalog_name}` is registered — refusing silent MemTable fallback; D7): \
@@ -240,6 +270,7 @@ pub(crate) async fn insert_overwrite_iceberg_stage_then_swap(
     _table_sql: &str,
     source: &datafusion::sql::sqlparser::ast::Query,
     columns: &[ObjectName],
+    branch: Option<&str>,
 ) -> Result<DataFrame> {
     use iceberg::spec::DataFile;
 
@@ -268,7 +299,8 @@ pub(crate) async fn insert_overwrite_iceberg_stage_then_swap(
                 .to_string(),
         ));
     }
-    repark_iceberg::write::commit_overwrite_replace_all(catalog, table, staged_files).await?;
+    repark_iceberg::write::commit_overwrite_replace_all_to(catalog, table, staged_files, branch)
+        .await?;
     let namespace = namespace_schema_name(table.identifier().namespace());
     reregister(ctx, Arc::clone(catalog), catalog_name, &namespace).await?;
     // Command shape — same as other DML (empty result frame).

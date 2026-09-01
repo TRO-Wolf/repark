@@ -84,7 +84,13 @@ repark-core's error map.
   (registry `V3-ADOPT-1` FIXED).
 - `truncate.rs` — whole-table `TRUNCATE TABLE` (DML-C): `commit_truncate` is
   `commit_overwrite_replace_all` with no added files (fork stamps `Operation::Delete`).
+  `commit_truncate_to` commits onto a named branch.
   pins: dml-c-truncate/C-001, C-005
+  pins: rp-5-fork-repin/C-004
+- `commit_target.rs` — `maybe_to_branch` / `snapshot_id_for_commit` for named-ref commits.
+  pins: rp-5-fork-repin/C-004
+- `overwrite_commit.rs` — full-table overwrite commit, optional `to_branch`.
+  pins: rp-5-fork-repin/C-004
 - `overwrite.rs` — exclusive full-table `INSERT OVERWRITE` stage-then-swap:
   `write_overwrite_staged_files_from_stream` (positional map + **WI-1** store-assignment gate +
   stream stage) + `commit_overwrite_replace_all` + `parse_overwrite_isolation`
@@ -94,7 +100,9 @@ repark-core's error map.
   (pin `commit_rejects_added_file_outside_overwrite_filter`);
   dynamic `PARTITION (k)` / empty `PARTITION ()` via `replace_partitions`; empty-input
   dynamic guard names the three empty-dynamic surfaces (STATIC wipe, writeTo no-op, RePark
-  refuse) in its rustdoc and error. pins: dml-b-insert-overwrite/C-001, C-002, C-004
+  refuse) in its rustdoc and error. `commit_*_to` variants pass `.to_branch`.
+  pins: dml-b-insert-overwrite/C-001, C-002, C-004
+  pins: rp-5-fork-repin/C-004
 - `insert_gate.rs` — **WI-2 (2026-08-15):** `InsertStoreAssignment`, an `AnalyzerRule` over
   `LogicalPlan::Dml(WriteOp::Insert(_))` that runs `store_assign.rs`'s matrix — imported, never
   duplicated — against the pre-cast types in the synthesized projection's INPUT schema. Registered
@@ -125,8 +133,9 @@ repark-core's error map.
   `UpdateSchema`), partition-spec evolution (`apply_partition_spec_changes` /
   `PartitionSpecChange` → fork `UpdatePartitionSpec`). Return `iceberg::Result`.
 - `snapshot_refs.rs` — product CREATE/DROP/REPLACE BRANCH|TAG helpers over fork
-  `ManageSnapshots` (+ retention setters). Write-to-branch STOP documented (fork FastAppend
-  always MAIN_BRANCH).
+  `ManageSnapshots` (+ retention setters). Write-to-branch routing lives in the Spark
+  door (`repark-spark` `write_to_branch.rs`) and the `to_branch` / `with_commit_branch`
+  commit seats.
 - `testing_support.rs` — `testing_create_ref` (wraps `create_snapshot_ref`) for fixtures only;
   product SQL routes via `snapshot_refs`.
 - `concurrency.rs` — `repark.write.max-concurrent-files` (default 4, ≥1 or loud): DataFusion

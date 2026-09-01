@@ -409,24 +409,20 @@ async fn write_to_branch_refusal_claims_the_target_only() {
     )
     .await;
 
-    for sql in [
+    run(
+        &ctx,
+        &catalogs,
         "INSERT INTO ice.sales.t.branch_b SELECT id, name FROM ice.sales.t.tag_v1",
-        "MERGE INTO ice.sales.t.branch_b d USING ice.sales.dst s ON d.id = s.id \
-             WHEN MATCHED THEN UPDATE SET d.name = s.name",
-        "DELETE FROM ice.sales.t.branch_b WHERE id IN (SELECT id FROM ice.sales.dst)",
-    ] {
-        let error = execute(&ctx, &catalogs, sql)
-            .await
-            .expect_err("a ref-named write TARGET must still refuse");
-        assert!(
-            error.to_string().contains("iceberg-datafusion"),
-            "must be the write-to-branch refusal for {sql:?}, got: {error}"
-        );
-    }
-
+    )
+    .await;
     assert_eq!(
         time_travel_id_multiset(&ctx, &catalogs, "SELECT id FROM ice.sales.t.branch_b").await,
+        vec![1, 1, 2, 2, 3, 3],
+        "INSERT from a tag selector appends the tag's rows onto the branch"
+    );
+    assert_eq!(
+        time_travel_id_multiset(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await,
         vec![1, 2, 3],
-        "every refused write leaves the branch where it was"
+        "main stays at the pre-insert rows"
     );
 }

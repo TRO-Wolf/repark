@@ -16,8 +16,6 @@ use iceberg::{
 };
 use iceberg_datafusion::IcebergCatalogProvider;
 
-use crate::catalog::metadata_projection::MetadataProjectionSchemaProvider;
-
 /// Boxed future returned by desugared [`Catalog`] methods (no `async-trait` dep).
 type BoxedCatalogFuture<'a, T> = Pin<Box<dyn Future<Output = iceberg::Result<T>> + Send + 'a>>;
 
@@ -107,10 +105,7 @@ impl CatalogProvider for ReparkCatalogProvider {
             .write()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
         // Apply the metadata projection policy to schemas registered through this path too.
-        Ok(guard.insert(
-            name.to_string(),
-            crate::catalog::metadata_projection::MetadataProjectionSchemaProvider::wrap(schema),
-        ))
+        Ok(guard.insert(name.to_string(), schema))
     }
 
     fn deregister_schema(
@@ -235,10 +230,8 @@ async fn snapshot_all_schemas(
     let mut schemas = HashMap::new();
     for name in iceberg.schema_names() {
         if let Some(schema) = iceberg.schema(&name) {
-            // Honor projection on fork metadata-table providers (`table$meta`).
-            let wrapped = MetadataProjectionSchemaProvider::wrap(schema);
-            freeze_fork_name_directory(wrapped.as_ref()).await?;
-            schemas.insert(name, wrapped);
+            freeze_fork_name_directory(schema.as_ref()).await?;
+            schemas.insert(name, schema);
         }
     }
     Ok(schemas)
@@ -304,10 +297,8 @@ async fn build_namespace_schema(
              provider after scoped rebuild"
         ))
     })?;
-    // Same projection wrap as full snapshot (namespace refresh path).
-    let wrapped = MetadataProjectionSchemaProvider::wrap(schema);
-    freeze_fork_name_directory(wrapped.as_ref()).await?;
-    Ok(wrapped)
+    freeze_fork_name_directory(schema.as_ref()).await?;
+    Ok(schema)
 }
 
 /// Name used only to drive [`SchemaProvider::table`] through the fork's `ensure_tables_listed`.
