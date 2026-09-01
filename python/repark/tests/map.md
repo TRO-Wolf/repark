@@ -31,6 +31,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 
 - `test_pr_245_revalidation.py` — PR #245 public-door revalidation for Spark string literals,
   binary casts, parser limits, and facade controls.
+- [test_bl15_bl16_math_divergences.py](test_bl15_bl16_math_divergences.py) — **BL-15/BL-16
+  (2026-09-01):** codifies today's `expm1` (composed `exp(x)-1`) and `hypot` (overflow to
+  `inf` at extreme magnitude) answers so the fused/rescaled fixes red them on purpose;
+  measured by the EX-2 pilot, registry §7 rows carry the Spark values.
 - [test_fnp7_try_inversions.py](test_fnp7_try_inversions.py) — **FNP-7a/7b:** twelve `try_*`
   inversions. Spark 4.1.2 cells (value and Arrow type) on the two reachable doors (Spark SQL
   + facade Column API). Native ANSI `repark.sql()` does not load SparkExtension: the twelve

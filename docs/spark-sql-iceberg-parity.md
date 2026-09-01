@@ -2240,6 +2240,31 @@ the pin rather than obeying it.
   representation — which is out of proportion for a `try_*` unit. Recorded so the promotion
   lands with its own pin when the unit information is retained.
 
+### BL-15 — `expm1` composes `exp(x) - 1`, losing the tiny-`x` precision the name exists for
+
+- **repark** — `F.expm1(x)` is `PY_COMPOSED` as `exp(x) - 1`
+  ([docs/design/spark-function-parity.md](design/spark-function-parity.md) §4.4) and reproduces
+  the naive form bit for bit: `expm1(1e-08)` → `9.99999993922529e-09`, `expm1(1e-16)` → `0.0`.
+- **Apache Spark** — `Math.expm1`: `1.0000000050000001e-08` and `1e-16` respectively — the
+  fused form is the function's entire reason to exist. *(oracle: `math.expm1`, which mirrors
+  `java.lang.Math.expm1`; measured 2026-09-01 by the EX-2 pilot, which left the name on the
+  example backlog rather than teach the naive form.)*
+- **Pin** — `python/repark/tests/test_bl15_bl16_math_divergences.py::test_bl15_expm1_composes_exp_minus_one_today`
+  (asserts today's composed value so the fused fix is loud).
+- **Rationale** — BACKLOG, filed 2026-09-01 from the EX-2 pilot's measurement. The fix is a real
+  fused kernel (not a doc change); it rides an FNP numerics unit, and its example comes off the
+  backlog with it.
+
+### BL-16 — `hypot` squares before the root, overflowing where Spark rescales
+
+- **repark** — `F.hypot(1e200, 1e200)` → `inf` (the naive `sqrt(a*a + b*b)` overflows at
+  `a*a`). Ordinary-magnitude behavior is exact.
+- **Apache Spark** — `java.lang.Math.hypot` rescales: `1.4142135623730951e+200`.
+  *(measured 2026-09-01, EX-2 pilot; the example demonstrates ordinary input only.)*
+- **Pin** — `python/repark/tests/test_bl15_bl16_math_divergences.py::test_bl16_hypot_overflows_to_inf_today`.
+- **Rationale** — BACKLOG, filed 2026-09-01. Same FNP numerics unit as BL-15; overflow-safe
+  hypot is a standard rescale.
+
 ### WIN-SLIDE — non-retractable aggregates over a sliding frame (W-0, 2026-08-31)
 
 Spark evaluates an aggregate over `ROWS BETWEEN n PRECEDING AND CURRENT ROW` even when the
