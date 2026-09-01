@@ -94,9 +94,9 @@ JVM, no repark required). See [../map.md](../map.md).
   MERGE, and sequential COW after overwrite stay refused (BACKLOG, 2026-08-25 ruling kept).
   V3-3 (2026-08-30) records the measured keep-refusal: Spark preserves `_row_id`; the engine
   rewrite reassigns (pins: v3-3-dml/C-003). V3-6 (2026-09-01) renames the V3R-1 test to
-  `test_v3_geo_1_is_declared_and_shredded_variant_is_rowed_with_v3_6_pins` and retargets the
-  `V3-VARIANT-SHRED-1` assertion to the landed §4 row citing the binary-vs-shredded pins
-  (pins: v3-6-v3-types/C-007).
+  `test_v3_geo_1_is_declared_and_shredded_variant_is_rowed_with_v3_6_pins`, retargets the
+  `V3-VARIANT-SHRED-1` assertion to the landed §4 row citing the binary-vs-shredded pins,
+  and bounds the geo slice before the new section (pins: v3-6-v3-types/C-007).
 - `test_dl_2_ledger_grammar.py` — **DL-2 (2026-08-23):** the ledger grammar gate on a scratch
   tree seeded with the script's own `EXCEPTIONS` rows at their ceilings: a clean ledger counts;
   a bad verdict cell, a duplicate id and a row without evidence go red; an unpinned `PROVEN`

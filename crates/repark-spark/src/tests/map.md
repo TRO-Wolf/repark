@@ -34,7 +34,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   CREATE (`V3-GEO-1`).
 - `v3_types.rs` — **V3-6:** C-001 ledger matrix + refuse of `UNKNOWN` / `VARIANT` /
   ADD COLUMN DEFAULT; C-003 opt-in v3 `timestamp_ns` / `timestamptz_ns` CREATE,
-  ns Arrow round-trip, v2 refuse; C-005 `ALTER COLUMN SET DEFAULT` refuse.
+  ns Arrow round-trip, v2 refuse (asserts the fork's exact
+  "timestamp_ns is not supported until v3" phrase); C-005 `ALTER COLUMN SET DEFAULT`
+  refuse.
   pins: v3-6-v3-types/C-001, C-003, C-005
 - `v3e4.rs` — **V3E-4:** snapshot refs, `VERSION AS OF` over DVs, expire with
   real work, orphan 24h floor on the partitioned-DV fixture after a RePark

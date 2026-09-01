@@ -105,15 +105,15 @@ def test_column_default_ddl_refuses_naming_the_option(spark: ReparkSession) -> N
     pins: v3-6-v3-types/C-005
     """
     spark.sql("CREATE TABLE mem.ns.defcol (id INT)")
-    with pytest.raises((UnsupportedOperationException, AnalysisException, Exception)) as caught:
+    with pytest.raises(UnsupportedOperationException) as caught:
         spark.sql("CREATE TABLE mem.ns.defnew (id INT, tag STRING DEFAULT 'x')")
     assert "default" in str(caught.value).lower()
 
-    with pytest.raises((UnsupportedOperationException, AnalysisException, Exception)) as caught:
+    with pytest.raises(UnsupportedOperationException) as caught:
         spark.sql("ALTER TABLE mem.ns.defcol ADD COLUMN tag STRING DEFAULT 'x'")
     assert "default" in str(caught.value).lower()
 
-    with pytest.raises((UnsupportedOperationException, AnalysisException, Exception)) as caught:
+    with pytest.raises(UnsupportedOperationException) as caught:
         spark.sql("ALTER TABLE mem.ns.defcol ALTER COLUMN id SET DEFAULT 3")
     assert "default" in str(caught.value).lower()
     assert not spark.catalog.tableExists("mem.ns.defnew")

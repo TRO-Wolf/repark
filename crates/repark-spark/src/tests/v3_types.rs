@@ -210,8 +210,8 @@ async fn timestamp_ns_on_v2_create_refuses() {
     .expect_err("v2 timestamp_ns must refuse");
     let text = err.to_string().to_ascii_lowercase();
     assert!(
-        text.contains("timestamp_ns") || text.contains("v3") || text.contains("not supported"),
-        "v2 timestamp_ns refusal must name the type or v3: {text}"
+        text.contains("timestamp_ns is not supported until v3"),
+        "v2 timestamp_ns refusal must carry the fork's Java-mirrored phrase: {text}"
     );
 }
 

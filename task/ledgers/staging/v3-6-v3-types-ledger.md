@@ -5,7 +5,8 @@
 (V3-6) and §6 item 4 (F-15 gates each type independently) · **Path:** STANDARD.
 **risk_tier:** standard.
 
-**Retires:** moved to `completed/` in this unit's departure commit.
+**Retires:** parks in `staging/` while the unit runs; retired post-merge by the archival
+chore (`make ledger-archive` at pickup).
 
 **Why now.** Format-v3 types still refuse at CREATE (`V3-GEO-1` holds geometry/geography
 DECLARED and today's `VARIANT` refusal so this landing can red it). RP-3 C-009 measured
@@ -110,9 +111,9 @@ Spark's `UpdateColumnDefaultValue` table change.
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
 | C-001 | **Measure first.** Per-type fork read/write at `33be9a0`, engine CREATE/ALTER today, and live Spark 4.1.2 + Iceberg 1.11.0 (incidental controls) are recorded in this ledger before any product SQL mapping. | Matrix above; pin tests. | **PROVEN** | Fork I/O pins in `crates/repark-iceberg/src/tests/v3_types.rs`; ledger-token pin in `crates/repark-spark/src/tests/v3_types.rs`. |
-| C-002 | Binary variant: CREATE/read/write refuse loud naming `VARIANT` on all three doors; shredded stays DECLARED (`V3-VARIANT-SHRED-1` lands as a registry row citing a pin that distinguishes binary vs shredded). Gap filed against fork R88. | Three-door pins; registry row. | **PROVEN** | CREATE refusals stay pinned on the three doors (`V3-GEO-1` pins). Fork write-refuse pin (C-001) + `fork_variant_scan_refuses_naming_the_type` (real data file; guard fires per file task — an empty variant table streams cleanly). Registry row `V3-VARIANT-SHRED-1` landed in §4 (2026-09-01) citing both pins; §7 queue entry now points at it. |
+| C-002 | Binary variant: CREATE/read/write refuse loud naming `VARIANT` on all three doors; shredded stays DECLARED (`V3-VARIANT-SHRED-1` lands as a registry row citing a pin that distinguishes binary vs shredded). Gap filed against fork R88. | Three-door pins; registry row. | **PROVEN** | CREATE refusals stay pinned on the three doors (`V3-GEO-1` pins). Fork write-refuse pin (C-001) + `fork_variant_scan_refuses_naming_the_type` (real data file; guard is per-file-task projection and fires before file bytes are read, so the fixture's parquet carries only an `id` column — the fork cannot write variant bytes; the empty-table control streams cleanly, which is why the fixture is non-empty). Registry row `V3-VARIANT-SHRED-1` landed in §4 (2026-09-01) citing both pins, with that fixture disclosure; §7 queue entry now points at it. R88 filing verified: the fork's existing R88 row already records the binary-variant remainder (schema→Arrow extension type, write refused at builder, scan refused per task), so no new handoff entry was filed — the verification note is in the handoff doc's F-15 addendum (2026-09-01). |
 | C-003 | `timestamp_ns` / `timestamptz_ns`: opt-in v3 CREATE stores the Iceberg primitive; append+scan round-trip Arrow ns types and values on all three doors. `TIMESTAMP_NTZ` stays µs. Spark parser cannot spell the Iceberg names (oracle note). | Three-door pins; red-first vs C-001 refuse. | **PROVEN** | Spark CREATE+append+SELECT ns (value+type); ANSI CREATE both names + ns value round-trip (pins live in `v3/create.rs` — the 8502817 cow.rs Door widening was reverted by a51a45b to keep the V3-COW-1 hash pin); facade CREATE+`to_arrow` ns schema — the facade has no ns write surface (SQL TIMESTAMP insert is µs and does not coerce), so its reachable assertion is the schema pin. v2 CREATE refuses. |
-| C-004 | `unknown`: SQL CREATE refuses naming the type on all three doors; no table left behind. Scan gap filed against fork R91. Do not CREATE a table the scan cannot read. | Three-door refuse pins. | **PROVEN** | Spark-door pin (C-001 battery); ANSI pin `v3_type_column_unknown_refuses_naming_the_type` (refusal already names the type — green as measured); facade pin `test_v3_unknown_column_refuses_naming_the_type`. Fork scan gap filed against `GAP_MATRIX` R91: write commits, the reader guard (`reject_variant_projection`-class) refuses per file task, so the write-then-scan hole stands until fork I/O lands. Queued fork work. |
+| C-004 | `unknown`: SQL CREATE refuses naming the type on all three doors; no table left behind. Scan gap filed against fork R91. Do not CREATE a table the scan cannot read. | Three-door refuse pins. | **PROVEN** | Spark-door pin (C-001 battery); ANSI pin `v3_type_column_unknown_refuses_naming_the_type` (refusal already names the type — green as measured); facade pin `test_v3_unknown_column_refuses_naming_the_type`. Scan gap filed for real: `task/roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md` F-15 addendum (2026-09-01) records the measured R91 divergence — the fork's row claims deferred-loud, but the parquet write silently commits an unreadable Null file and the scan then refuses per file task. The engine-side pin is `fork_unknown_write_commits_then_scan_refuses_naming_null` (renamed to pin the measured behavior; either a fork fix or a regression flips it). Queued fork work. |
 | C-005 | Column defaults: Spark-equal refuse of ADD COLUMN / CREATE / ALTER SET DEFAULT DDL; engine write consumes fork `write_default` when the schema already has one (omitted column fills, supplied column kept); `initial_default` applied on read of files missing the column. | Refuse pins + fill/read pins. | **PROVEN** | Refuse pins on all three doors (ANSI CREATE DEFAULT red-first; ADD COLUMN/SET DEFAULT green pins; facade + Spark-door battery). Fill pin red-first vs the old "missing column" refuse; supplied-column-kept pin; `initial_default` read pin (fork reader `ColumnSource::Add`). No engine surface sets a default — the SQL refusals keep it that way. |
 | C-006 | v2-to-v3 in-place upgrade surface is byte-untouched. Ns/unknown/variant types land only behind CREATE opt-in. | Identity check of ALTER format-version refuse pins. | **PROVEN** | `call_v3.rs::the_engine_still_cannot_produce_a_v3_table` green; `call_v3.rs` differs from `be2d754` only by this unit's C-006 citation header, `repark-spark/src/alter.rs` and `repark-sql/src/alter.rs` are byte-identical to `be2d754`. Ns mapping sits in the CREATE column-type mapping behind `iceberg_create_format_version` opt-in; v2 refuses via the fork's `check_compatibility`. |
 | C-007 | Documents match the pins: registry rows, STATUS Next, maps lockstep. Geometry/geography stay `V3-GEO-1`. | Registry, STATUS, `check-map-sync`. | **PROVEN** | `V3-VARIANT-SHRED-1` row landed (§4, 2026-09-01); STATUS v3 block truth-up within its compaction ceiling; per-directory maps updated in each landing commit. Geometry/geography untouched in `V3-GEO-1`. |
@@ -133,7 +134,7 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-iceberg/src/tests/v3_types.rs, crates/repark-spark/src/tests/v3_types.rs]
     - id: AT-3
       status: ATTACKED
-      evidence: DEFAULT DDL refusals leave no table behind; the flipped fill pin commits and reads back the filled value; ADD COLUMN without default reads NULL on old and new rows.
+      evidence: DEFAULT DDL refusals leave no table behind; the flipped fill pin commits and reads back the filled value; ADD COLUMN without default reads NULL on old and new rows. The no-product-setter guard is retargeted to its true claim — no PRODUCT source sets write_default; the V3-6 test fixture is the dated measured exception (rp3_c009 pin red at 3 fixture hits, green after the tests-path exemption, and a sabotaged non-test crate file still reds).
       artifacts: [crates/repark-sql/src/column_defaults.rs, crates/repark-iceberg/src/tests/v3_types.rs]
     - id: AT-4
       status: N/A
@@ -150,7 +151,7 @@ COVERAGE_ATTESTATION:
       justification: No new resource claim; the fill reuses the fork's existing per-batch default repeat.
     - id: AT-8
       status: ATTACKED
-      evidence: The fork's DataFileWriter::write / apply_write_defaults contract (RP-3 C-009) is consumed, not reimplemented; timestamp_ns / timestamptz_ns are the Iceberg spec type names, not a dialect invention.
+      evidence: The fork's DataFileWriter::write / apply_write_defaults contract (RP-3 C-009) is consumed, not reimplemented; timestamp_ns / timestamptz_ns are the Iceberg spec type names, not a dialect invention. RP-3 C-009's no-setter claim is restated in its true form by the retargeted guard — no PRODUCT source sets write_default, the V3-6 measurement fixture is the dated exception.
       artifacts: [crates/repark-iceberg/src/write/conform.rs, crates/repark-spark/src/create_table.rs]
     - id: AT-9
       status: ATTACKED
@@ -170,3 +171,23 @@ COVERAGE_ATTESTATION:
 3. C-005 write_default consumption on append + Spark-equal DEFAULT refuse.
 4. C-002 / C-004 honest refusal pins + registry rows.
 5. C-006 / C-007 truth-up + gates.
+
+## Critic remediation (2026-09-01)
+
+Critic verdict **FAIL** — two S1 findings plus residuals; the substantive work held (oracle
+cells reproduce, write_default sabotage reds on the VALUE, ns precision exact through
+`i64::MAX`, red-first replays genuine). Dispositions:
+
+| Finding | Disposition |
+|---|---|
+| S1-1 red gate `test_engine_sources_do_not_set_write_default` | **FIXED (retargeted).** The guard scanned all `crates/**/*.rs` for `with_write_default` / `write_default(` and my V3-6 fixture legitimately hit it 3× (the fixture call + two test names), leaving `make py-test-facade` red — a gate this unit had never run. Retargeted like 4d66c47's other mirrors: the guard's true invariant is now "no PRODUCT source sets `write_default`; the V3-6 test fixture is the measured exception" — paths with a `tests` component are exempt, with the dated note citing v3-6-v3-types/C-005 in the module docstring. Red-first: 3 hits red before, green after, and a sabotaged non-test crate file (`repark-common/src/lib.rs`) still reds. AT-3/AT-8 wording updated to the new claim. |
+| S1-2 phantom R91 filing | **FIXED (filed for real).** C-004 claimed "filed against fork R91" but no commit touched the fork-filing surface. Now filed: the handoff doc's F-15 section gains a dated V3-6 audit addendum recording the measured R91 divergence — the fork row claims ✅ deferred-loud, but at `33be9a0` the parquet write silently commits an unreadable Null file and the scan then refuses per file task. R88 verified as already covering C-002's binary-variant finding, so no R88 entry was filed (the verification note rides the same addendum). C-004's evidence cites the filing. |
+| S2-a unknown pin cannot fail | **FIXED.** Measured at the pin: scan build + `to_arrow` succeed and the stream's first item errs `DataInvalid => Cannot visit Arrow data type: Null`. The pin (renamed `fork_unknown_write_commits_then_scan_refuses_naming_null`) now asserts exactly that: build/to_arrow deviations, a clean batch, and a clean stream end all flip it, and the error must carry the measured phrase. |
+| S2-b fixture/guard disclosure | **FIXED.** The ledger C-002 evidence and the registry row disclose that the scan-refusal fixture's parquet carries only an `id` column (the fork cannot write variant bytes), that the guard is per-file-task projection firing before file bytes, and that the clean empty-table control is why the fixture is non-empty. |
+| S2-c design-track Done note | **FIXED.** format-v3-track §5 V3-6 bullet gains the same Done-dated note style as V3-5's, dated 2026-09-01. |
+| S2-d facade test name | **FIXED.** `test_opt_in_v3_create_timestamp_ns_round_trips` → `test_opt_in_v3_create_timestamp_ns_schema_round_trips` (it asserts the `to_arrow` schema on an empty table); docstring discloses the no-ns-write-surface reason; map row updated. |
+| S3-a v2 refuse assert | **FIXED.** `timestamp_ns_on_v2_create_refuses` asserts the exact fork phrase "timestamp_ns is not supported until v3" (3-way OR dropped); verified against the live message. |
+| S3-b bare Exception | **FIXED.** The facade DEFAULT pytest.raises tuples drop the bare `Exception` — all three refusals raise `UnsupportedOperationException`, verified. |
+| S3-c author-name note | **ACCEPTED.** Orchestrator record commits carry the owner's configured name by precedent. |
+| S3-d ledger Retires line + staging map | **FIXED.** The Retires line states the true lifecycle (parks in `staging/` while the unit runs; retired post-merge by the archival chore), matching the owner's 9f6a68f move back to staging; staging/map.md's V3-6 row carries the delivered-status line like its siblings. |
+| S3-e geo slice boundary | **FIXED.** `test_v3r_1_rulings.py`'s geo slice ends before the `### V3-VARIANT-SHRED-1` section so it asserts geo-specific text only; the shred-row assertions live in their own test. |

@@ -147,8 +147,12 @@ def test_v3_unknown_column_refuses_naming_the_type(tmp_path: Path) -> None:
         spark.stop()
 
 
-def test_opt_in_v3_create_timestamp_ns_round_trips(tmp_path: Path) -> None:
-    """V3-6: facade CREATE timestamp_ns stores ns and SELECT returns Arrow ns.
+def test_opt_in_v3_create_timestamp_ns_schema_round_trips(tmp_path: Path) -> None:
+    """V3-6: facade CREATE timestamp_ns stores ns; to_arrow returns the ns schema.
+
+    The to_arrow runs on the empty table — the facade has no ns write surface
+    (SQL TIMESTAMP insert is microseconds and does not coerce), so the reachable
+    assertion is the schema, not values.
 
     pins: v3-6-v3-types/C-003
     """
