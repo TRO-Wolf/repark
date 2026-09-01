@@ -121,3 +121,51 @@ SELF_LOGIC_REVIEW:
   verdict: PROCEED
   escalation: —
 ```
+
+## Coverage attestation (filed when C-009 closed the last OPEN clause)
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: sem-1-spark-answer-parity
+  cycle: actor
+  risk_tier: standard
+  complete: true
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Charter §SEM-1/§SEM-2 walked clause by clause — the group-1 default on both doors, explicit idx 0/1/2, the REGEX_GROUP_INDEX raise on groupless patterns, null propagation, regexp_substr untouched; natural log, log(base, expr), NULL on the non-positive edges, base 1 IEEE; the 24→23 ratchet; kernel identity; native ANSI door unchanged. Every clause verdict cites a pin.
+      artifacts: [task/ledgers/staging/sem-1-spark-answer-parity-ledger.md, python/repark/tests/test_sem1_extract_all_group_default.py, python/repark/tests/test_sem1_spark_log.py, python/repark/tests/test_lrs4_door_domain.py]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Domain edges exercised on both arities through both Spark doors — 0, negative, -Infinity, NULL (one-arg, base, value), base 1 (inf, nan), base <= 0, log2/log1p/ln on the same edge frame, empty and groupless regex patterns, NULL str/pattern/idx.
+      artifacts: [python/repark/tests/test_sem1_spark_log.py::test_sql_domain_edges_are_null, python/repark/tests/test_sem1_spark_log.py::test_sql_base_one_is_ieee, crates/repark-functions/src/spark_log.rs::tests::domain_edges_are_null]
+    - id: AT-3
+      status: ATTACKED
+      evidence: The unit's failure paths are loud and pinned — two-argument regexp_extract_all on a groupless pattern raises REGEX_GROUP_INDEX (Spark's wording), and the kernel refuses non-numeric arguments and wrong arity at plan time.
+      artifacts: [python/repark/tests/test_sem1_extract_all_group_default.py::test_a_pattern_with_no_capture_group_now_raises, python/repark/tests/test_sem4_regex_group_index_message.py, crates/repark-functions/src/spark_log.rs coerce_types]
+    - id: AT-4
+      status: N/A
+      justification: SparkLog is a stateless ScalarUDFImpl over ColumnarValue arrays — no shared or mutable state, no ordering assumption, no async; registration is the setup-time overwrite SparkRand already uses.
+    - id: AT-5
+      status: N/A
+      justification: Pure arithmetic kernel plus test-only diff — no auth, network, deserialization, path, or secret surface added.
+    - id: AT-6
+      status: ATTACKED
+      evidence: The break itself is the compatibility surface and it is governed — dated owner ruling in the ledger and the registry row, EXPECTED_DIVERGENCES ratchet 24→23 with the reason in place, Arrow type double asserted on every new pin, native ANSI door explicitly unchanged per ADR-0002.
+      artifacts: [crates/repark-python/src/column/door_parity_tests.rs, docs/spark-sql-iceberg-parity.md (LOG-1 row), STATUS.md]
+    - id: AT-7
+      status: N/A
+      justification: Per-row ln/division over pre-sized f64 arrays — no allocation growth, no unbounded loop, nothing system-breaking to file.
+    - id: AT-8
+      status: ATTACKED
+      evidence: DataFusion ScalarUDFImpl contract honored (coerce_types, return_field_from_args, invoke_with_args, user-defined signature); the facade resolves the same kernel instance as the SQL door (the C-012 guard class); F.log carries PySpark's log(arg1, arg2=None) shape; the SparkRand overwrite pattern was the template.
+      artifacts: [crates/repark-functions/src/spark_log.rs, crates/repark-python/src/column/function_dispatch.rs, python/repark/src/repark/spark/functions_expr.py]
+    - id: AT-9
+      status: N/A
+      justification: A scalar function whose refusals are plan-time errors naming the argument — no log or metrics surface exists on this path to instrument.
+    - id: AT-10
+      status: ATTACKED
+      evidence: All ten clauses carry pins citations; values asserted on toArrow/collect with Arrow type checks, never show; branch liveness — every guard arm (value or base <= 0, null, arity) has a nameable input that changes the output (log(0), log(1, 1), log(NULL, 8), a three-arg call); a mutation flipping natural_log's guard to positive-only would red the domain-edge pins.
+      artifacts: [python/repark/tests/test_sem1_spark_log.py, python/repark/tests/test_sem1_extract_all_group_default.py, crates/repark-python/src/column/door_parity_tests.rs::expected_divergences_are_all_still_real]
+  reattested: []
+```
