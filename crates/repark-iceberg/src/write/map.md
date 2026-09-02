@@ -40,9 +40,10 @@ repark-core's error map.
   `write.merge.mode`, fork ENGINE_CONTRACT §6). DML-A adds `WHEN NOT MATCHED BY SOURCE`.
   See [merge/map.md](merge/map.md).
 - `row_lineage_guard.rs` (crate-private; `refuse_v3_cow_dml` re-exported) — **RP-6
-  (2026-09-01, fork `fb0cacfa`):** the format-v3 row-DML valve is a pass-through. Fork PR-3
-  keeps `_row_id` and advances seq on MoR UPDATE; COW sequential DELETE is Spark-equal on
-  the single-file layout. Call sites remain so a later refuse can land in one file.
+  (2026-09-01, fork `fb0cacfa`):** the format-v3 row-DML valve is a pass-through (`# Errors`
+  never). Fork PR-3 keeps `_row_id` and advances seq on MoR UPDATE; COW sequential DELETE
+  is Spark-equal on the single-file layout. Call sites remain so a later refuse can land
+  in one file.
   pins: rp-6-fork-repin/C-002, C-003
 - `predicate_dml.rs` — **G3-E8 A1-identity** (`execute_predicate_dml`): evaluate the original
   `WHERE` as a SELECT over the pinned `(_file, _pos)` streaming target, then commit through the

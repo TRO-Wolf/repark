@@ -28,6 +28,8 @@ pub(crate) fn refuse_v3_cow_dml_that_would_reassign_row_lineage(
     )))
 }
 
+/// # Errors
+/// Never. The passthrough valve does not fail.
 pub async fn refuse_v3_cow_dml(
     _catalog: &dyn Catalog,
     _ident: &TableIdent,

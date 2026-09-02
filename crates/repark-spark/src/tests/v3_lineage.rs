@@ -430,7 +430,7 @@ fn cow_keep_refusal_files_are_byte_untouched() {
     let pinned: [(&str, u64); 4] = [
         (
             "crates/repark-iceberg/src/write/row_lineage_guard.rs",
-            0x27a0_6551_c304_4a44,
+            0x3272_d988_d8c8_898d,
         ),
         (
             "crates/repark-spark/src/tests/v3_cow.rs",
