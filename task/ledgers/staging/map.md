@@ -5,10 +5,6 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
-- [v3-7-merge-lineage-ledger.md](v3-7-merge-lineage-ledger.md) —
-  **V3-7 (2026-09-02), in flight:** carry `_row_id` through the RePark-owned MERGE
-  writer; lift `V3-COW-1` MERGE where Spark-equal. `risk_tier: standard`. Branch
-  `feat/v3-7-merge-lineage`.
 - [ex-0-example-drift-gate-ledger.md](ex-0-example-drift-gate-ledger.md) —
   **EX-0 (2026-08-31), in flight:** v0.7 example drift gate + public-surface
   inventory. `risk_tier: standard`. Branch `feat/ex-0-example-drift-gate`.
