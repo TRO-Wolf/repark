@@ -15,7 +15,7 @@ use repark_functions::cardinality::repark_sql_settings_from_options;
 use repark_functions::format_version::resolve_alter_format_version;
 use repark_iceberg::write::alter::SchemaChange;
 use repark_iceberg::write::format_version::{
-    FORMAT_VERSION_PROPERTY, current_format_version, format_version_from_number,
+    FORMAT_VERSION_PROPERTY, format_version_from_number, format_version_number,
     set_properties_and_format_version,
 };
 
@@ -95,7 +95,7 @@ pub(crate) async fn execute_alter_table(
             }
             AlterTableOperation::SetOptionsParens { options } => {
                 flush(&target, &mut batch).await?;
-                dirty |= apply_set_properties(cx, &target, options).await?;
+                apply_set_properties(cx, &target, options).await?;
             }
             other => {
                 flush(&target, &mut batch).await?;
@@ -298,43 +298,43 @@ async fn apply_set_properties(
     cx: &EngineContext<'_>,
     target: &CreateTarget,
     options: &[SqlOption],
-) -> Result<bool> {
+) -> Result<()> {
     let form = "ALTER TABLE … SET PROPERTIES";
     let (mut sets, unsets) = parse_set_properties(options)?;
-    let upgrade = match sets.remove(FORMAT_VERSION_PROPERTY) {
+    let (loaded, upgrade) = match sets.remove(FORMAT_VERSION_PROPERTY) {
         Some(requested) => {
-            resolve_upgrade_target(cx, target, &requested, FORMAT_VERSION_PROPERTY, form).await?
+            let allow_v3 = repark_sql_settings_from_options(cx.ctx.copied_config().options())
+                .allow_create_format_version_3;
+            let table = target
+                .catalog
+                .load_table(&target.ident())
+                .await
+                .map_err(iceberg_err)?;
+            let current = format_version_number(&table);
+            let number = resolve_alter_format_version(
+                &requested,
+                current,
+                allow_v3,
+                FORMAT_VERSION_PROPERTY,
+                form,
+            )?;
+            let upgrade = number
+                .map(|value| format_version_from_number(value).map_err(iceberg_err))
+                .transpose()?;
+            (Some(table), upgrade)
         }
-        None => None,
+        None => (None, None),
     };
     set_properties_and_format_version(
         target.catalog.as_ref(),
         &target.ident(),
-        &sets,
+        loaded,
+        sets,
         &unsets,
         upgrade,
     )
     .await
-    .map_err(iceberg_err)?;
-    Ok(upgrade.is_some())
-}
-
-async fn resolve_upgrade_target(
-    cx: &EngineContext<'_>,
-    target: &CreateTarget,
-    requested: &str,
-    property_name: &str,
-    form: &str,
-) -> Result<Option<iceberg::spec::FormatVersion>> {
-    let allow_v3 = repark_sql_settings_from_options(cx.ctx.copied_config().options())
-        .allow_create_format_version_3;
-    let current = current_format_version(target.catalog.as_ref(), &target.ident())
-        .await
-        .map_err(iceberg_err)?;
-    let number = resolve_alter_format_version(requested, current, allow_v3, property_name, form)?;
-    number
-        .map(|value| format_version_from_number(value).map_err(iceberg_err))
-        .transpose()
+    .map_err(iceberg_err)
 }
 
 /// Validate the curated `SET PROPERTIES` vocabulary into (sets, unsets).

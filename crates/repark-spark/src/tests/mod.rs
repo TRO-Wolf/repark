@@ -48,6 +48,7 @@ mod v3_mor_dml;
 mod v3_subquery_dml;
 mod v3_types;
 mod v3_upgrade;
+mod v3_upgrade_calls;
 mod v3e3;
 mod v3e4;
 mod window_temporal_range;

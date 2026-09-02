@@ -180,7 +180,7 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
 | Add a guard | `guards.rs` + `guards/tests.rs` + a `surfaces` ID if it is a claimed surface (a guard needing the PARSED statement instead of scrubbed text is called from a named `router.rs` arm; unit AND end-to-end pins still live in `guards/tests.rs` — that is what G3-E8 does) |
 | Add an `ALTER TABLE` operation | `alter.rs` `execute_alter_table` + `alter/tests.rs` + an e2e row in `tests.rs` |
 | Add a `SET PROPERTIES` key | `alter.rs` `parse_set_properties` (curated only — dotted keys go through `extra_properties`) |
-| Upgrade a table's Iceberg format version | `alter.rs` `apply_set_properties` → `repark_iceberg::write::format_version` (V3-10; the `format_version` key resolves through `repark_functions::format_version`) |
+| Upgrade a table's Iceberg format version | `alter.rs` `apply_set_properties` → `repark_iceberg::write::format_version` (V3-10; the `format_version` key resolves through `repark_functions::format_version` against the table this door loads ONCE and hands to the transaction, and the upgrade does not invalidate the namespace) |
 | Change what MERGE lowers to | `merge.rs` — the target type is shared with the Spark door, so a change there is a cross-door contract change |
 | Change the time-travel grammar | `time_travel.rs` `clause_kind_at` / `parse_as_of_value`, then the pin set in `time_travel/tests.rs` |
 | Change `TRUNCATE TABLE` | `truncate.rs` + `truncate_tests.rs` |

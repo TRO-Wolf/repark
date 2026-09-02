@@ -14,6 +14,14 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 ## Contents
 
 - `mod.rs` — pure module manifest (`mod common;` + one `mod` per leaf).
+- `v3_upgrade_calls.rs` — **V3-10:** the catalog-call budget for `ALTER … SET TBLPROPERTIES`,
+  counted through a wrapper registered into BOTH the catalog registry and the DF provider: an
+  upgrading ALTER is (2 `load_table`, 0 `list_tables`, 0 `namespace_exists`) — one load for the
+  resolve and one inside the fork's commit CAS — where the namespace-re-registering version was
+  (3, 1, 2); an ordinary property ALTER is (2, 0, 0) unchanged and a same-version request is
+  (1, 0, 0). The same test then reads `_row_id` through the session, which is what makes the
+  removal safe rather than merely cheaper.
+  pins: v3-10-upgrade-v2-to-v3/C-003
 - `v3_upgrade.rs` — **V3-10:** the in-place v2 → v3 upgrade on the Spark door — opt-in gate and
   its without-opt-in twin, downgrade / `'1'` / `'-1'` / `'0'` / `'4'` / `'x'` / `''` / `'3.0'` /
   `' 3 '` refusals in Spark's own two classes, same-version no-op,

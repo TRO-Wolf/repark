@@ -133,7 +133,9 @@ repark-core's error map.
   **Not** a CAST-legality matrix — see `planning/hardening/G63-DATE-INT-DESIGN.md` §3.3.
   Ledger: [`../../../../task/wi1-insert-store-gate-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-15-wi1-insert-store-gate-ledger.md).
 - `alter.rs` — `ALTER TABLE` primitives on iceberg-rust public API: SET/UNSET TBLPROPERTIES
-  (`alter_table_properties(sets, unsets)` commits both as ONE action — no half-applied state),
+  (**V3-10:** the combined `alter_table_properties` seat moved to `format_version.rs`; the three
+  atomicity tests stay here beside the `CommitFaultCatalog` harness they need and now drive
+  `set_properties_and_format_version` — one action, no half-applied state),
   `rename_table`, schema evolution (`apply_schema_changes` / `SchemaChange` → fork
   `UpdateSchema`), partition-spec evolution (`apply_partition_spec_changes` /
   `PartitionSpecChange` → fork `UpdatePartitionSpec`). Return `iceberg::Result`.
@@ -141,13 +143,15 @@ repark-core's error map.
   `UpgradeFormatVersionAction` and `UpdatePropertiesAction` into ONE transaction, so an ALTER
   carrying `format-version` beside another key is one metadata commit as it is on Spark; nothing
   is committed when there is neither an upgrade nor a property to write, which is why requesting
-  the version a table already has writes no metadata file. `current_format_version` reads the
-  number for the resolver and `format_version_from_number` errors rather than falling back, so an
-  out-of-domain number can never be silently taken as v2.
-  `current_format_version` and `format_version_from_number` speak the resolver's SIGNED version
-  number, so a negative request reaches the downgrade branch rather than the parse branch.
-  Its three entry points carry `#[allow(clippy::missing_errors_doc)]` in place of the `# Errors`
-  doc comment the no-code-comments ruling forbids; every error they raise comes from the fork.
+  the version a table already has writes no metadata file. It takes the table the door already
+  loaded, so an upgrading ALTER loads once rather than twice, and takes `sets` by value because
+  both doors own theirs. `format_version_number` reads the resolver's SIGNED version off a loaded
+  table and `format_version_from_number` errors rather than falling back, so an out-of-domain
+  number can never be silently taken as v2 and a negative request reaches the downgrade branch
+  rather than the parse branch. It is also the seat the old `alter::alter_table_properties` folded
+  into (`target: None`); that function had no production caller left. Its entry points carry
+  `#[allow(clippy::missing_errors_doc)]` in place of the `# Errors` doc comment the
+  no-code-comments ruling forbids; every error they raise comes from the fork.
   pins: v3-10-upgrade-v2-to-v3/C-003, C-005
 - `snapshot_refs.rs` — product CREATE/DROP/REPLACE BRANCH|TAG helpers over fork
   `ManageSnapshots` (+ retention setters). Write-to-branch routing lives in the Spark

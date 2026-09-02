@@ -43,7 +43,7 @@ pub(crate) async fn execute_alter_table(
             AlterTableOperation::SetTblProperties { table_properties } => {
                 flush_schema_batch(handle.as_ref(), &ident, &mut schema_batch).await?;
                 let (sets, unsets) = partition_tblproperties(table_properties);
-                schema_dirty |= crate::format_version::alter_set_tblproperties(
+                crate::format_version::alter_set_tblproperties(
                     ctx,
                     handle.as_ref(),
                     &ident,
