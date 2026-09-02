@@ -33,18 +33,27 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   (`schema_with_row_lineage`); last-updated is nulled only on UPDATE rows.
   pins: v3-7-merge-lineage/C-001
 - `dv_close.rs` — v3 `RowDelta` DV-container close. `prepare_row_delta_deletes` writes
-  V2 parquet position deletes or calls `close_touched_dv_containers` on V3, then
+  V2 parquet position deletes or calls `close_touched_dv_containers_with_partitions` on V3, then
   `apply` stamps sibling sequences. C-003 pin
   `shared_puffin_row_delta_keeps_the_untouched_sibling` calls `commit_row_delta_kind`
   on the Spark shared-Puffin fixture (id 5 must stay deleted).
   **V3-9 (2026-09-02):** the position map takes `get_mut` before allocating a key and the V2
   `referenced` set allocates one `String` per distinct path, not one per row (600k rows:
-  41.3 → 29.3 ms and 37.3 → 23.9 ms). The fork's container close rewrites **every** blob of a
-  touched Puffin where Spark rewrites only the touched one — registry `V3-DV-1`, BACKLOG, fork
-  ask F-18 / repin RP-7; not fixable here.
+  41.3 → 29.3 ms and 37.3 → 23.9 ms).
+  **RP-7 (2026-09-02):** pin `ff4764d3` (fork F-18) closes registry `V3-DV-1` — only the touched
+  blob is rewritten and the untouched sibling entry keeps its container and `content_offset`, so
+  the C-003 pin gained that layout assertion alongside its semantic one. `free_partitions` hands
+  the fork `(default_spec_id, Struct::empty())` for every touched path when **every** spec in the
+  metadata is unpartitioned — the only `(spec_id, partition)` RePark knows without a manifest
+  read, and the guard is what makes it sound under spec evolution. The two manifest-read pins
+  hide the live data manifests and require the close to succeed anyway: covered paths resolve
+  from the delete manifests, fresh paths from the supplied map. Not yet supplied: the partition
+  of a fresh path in a partitioned table — RePark has no cheaper source than the fork's own lazy
+  walk, so it does not build one.
   pins: rp-3-fork-repin/C-003
   pins: v3-5-dv-compaction/C-005
   pins: v3-9-mor-predicate-dml-dv/C-007, C-009
+  pins: rp-7-f18-repin/C-002, C-003
 - `abort.rs` — `delete_written_files_best_effort` + `written_file_paths`. Delete
   set is threaded from writer results in hand; never re-derived from the table
   or manifests. `CommitStateUnknown` errors SKIP cleanup (the commit may have

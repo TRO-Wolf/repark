@@ -1,8 +1,10 @@
 use std::collections::{HashMap, HashSet};
 
 use datafusion::error::{DataFusionError, Result};
-use iceberg::delete_vector_container::{DvContainerClose, close_touched_dv_containers};
-use iceberg::spec::{DataFile, FormatVersion};
+use iceberg::delete_vector_container::{
+    DvContainerClose, close_touched_dv_containers_with_partitions,
+};
+use iceberg::spec::{DataFile, FormatVersion, Struct};
 use iceberg::table::Table;
 use iceberg::transaction::RowDeltaAction;
 
@@ -108,13 +110,31 @@ async fn plan_deletion_vectors(
             }
         }
     }
-    let close = close_touched_dv_containers(table, &new_positions)
+    let known = free_partitions(table, new_positions.keys());
+    let close = close_touched_dv_containers_with_partitions(table, &new_positions, None, &known)
         .await
         .map_err(iceberg_err)?;
     Ok(DvCommitPlan {
         referenced: close.referenced_data_files(),
         close,
     })
+}
+
+fn free_partitions<'a>(
+    table: &Table,
+    paths: impl Iterator<Item = &'a String>,
+) -> HashMap<String, (i32, Struct)> {
+    let metadata = table.metadata();
+    if metadata
+        .partition_specs_iter()
+        .any(|spec| !spec.is_unpartitioned())
+    {
+        return HashMap::new();
+    }
+    let spec_id = metadata.default_partition_spec_id();
+    paths
+        .map(|path| (path.clone(), (spec_id, Struct::empty())))
+        .collect()
 }
 
 fn apply_close(mut action: RowDeltaAction, close: DvContainerClose) -> RowDeltaAction {
@@ -145,8 +165,11 @@ mod tests {
     use futures::TryStreamExt;
     use iceberg::io::LocalFsStorageFactory;
     use iceberg::memory::{MEMORY_CATALOG_WAREHOUSE, MemoryCatalogBuilder};
-    use iceberg::spec::{DataContentType, DataFileFormat, ManifestContentType};
-    use iceberg::{Catalog, CatalogBuilder, NamespaceIdent, TableIdent};
+    use iceberg::spec::{
+        DataContentType, DataFileFormat, ManifestContentType, NestedField, PrimitiveType, Schema,
+        Type,
+    };
+    use iceberg::{Catalog, CatalogBuilder, NamespaceIdent, TableCreation, TableIdent};
     use tempfile::TempDir;
 
     use super::super::{IsolationLevel, RowDeltaKind, RowDeltaPolicy, commit_row_delta_kind};
@@ -325,9 +348,14 @@ mod tests {
         panic!("id {target_id} is not a live row");
     }
 
-    async fn live_dv_by_referenced(
-        table: &Table,
-    ) -> HashMap<String, (String, DataFileFormat, Option<i64>)> {
+    struct LiveDv {
+        container: String,
+        format: DataFileFormat,
+        offset: Option<i64>,
+        sequence: Option<i64>,
+    }
+
+    async fn live_dv_by_referenced(table: &Table) -> HashMap<String, LiveDv> {
         let mut out = HashMap::new();
         let metadata = table.metadata();
         let snapshot = metadata.current_snapshot().expect("current snapshot");
@@ -356,19 +384,18 @@ mod tests {
                 };
                 out.insert(
                     referenced,
-                    (
-                        data_file.file_path().to_string(),
-                        data_file.file_format(),
-                        entry.sequence_number(),
-                    ),
+                    LiveDv {
+                        container: data_file.file_path().to_string(),
+                        format: data_file.file_format(),
+                        offset: data_file.content_offset(),
+                        sequence: entry.sequence_number(),
+                    },
                 );
             }
         }
         out
     }
 
-    /// pins: rp-3-fork-repin/C-003
-    /// pins: v3-5-dv-compaction/C-005
     #[tokio::test]
     async fn shared_puffin_row_delta_keeps_the_untouched_sibling() {
         let fixture = materialize_part_dv();
@@ -393,8 +420,16 @@ mod tests {
             .find(|path| path.as_str() != pair.0.as_ref())
             .expect("sibling blob")
             .clone();
-        let sibling_seq = before.get(&sibling_referenced).expect("sibling entry").2;
-        let old_paths: HashSet<String> = before.values().map(|(path, _, _)| path.clone()).collect();
+        let sibling_before = before.get(&sibling_referenced).expect("sibling entry");
+        let sibling_seq = sibling_before.sequence;
+        let sibling_container = sibling_before.container.clone();
+        let sibling_offset = sibling_before.offset;
+        let touched_container = before
+            .get(pair.0.as_ref())
+            .expect("touched entry")
+            .container
+            .clone();
+        let pair_path = std::sync::Arc::clone(&pair.0);
         let pin = table
             .metadata()
             .current_snapshot()
@@ -417,16 +452,179 @@ mod tests {
         assert_eq!(live_ids(&table).await, vec![3, 4, 6]);
         let after = live_dv_by_referenced(&table).await;
         assert_eq!(after.len(), 2, "untouched sibling must stay live");
-        for (_, format, _) in after.values() {
-            assert_eq!(*format, DataFileFormat::Puffin);
+        for live in after.values() {
+            assert_eq!(live.format, DataFileFormat::Puffin);
         }
         let after_sibling = after.get(&sibling_referenced).expect("sibling still live");
-        assert_eq!(after_sibling.2, sibling_seq);
-        for path in &old_paths {
-            assert!(
-                after.values().all(|(live, _, _)| live != path),
-                "old container {path} must not stay live"
-            );
+        assert_eq!(after_sibling.sequence, sibling_seq);
+        assert_eq!(
+            (after_sibling.container.as_str(), after_sibling.offset),
+            (sibling_container.as_str(), sibling_offset),
+            "the untouched sibling entry keeps its container and content_offset"
+        );
+        let after_touched = after.get(pair_path.as_ref()).expect("touched still live");
+        assert_ne!(
+            after_touched.container, touched_container,
+            "the touched blob moves into a newly written container"
+        );
+        assert_eq!(
+            after
+                .values()
+                .map(|live| live.container.as_str())
+                .collect::<HashSet<_>>()
+                .len(),
+            2,
+            "Spark's layout after the second DELETE is two containers"
+        );
+    }
+
+    async fn data_manifest_paths(table: &Table) -> Vec<String> {
+        let metadata = table.metadata();
+        let snapshot = metadata.current_snapshot().expect("current snapshot");
+        let manifest_list = snapshot
+            .load_manifest_list(table.file_io(), metadata)
+            .await
+            .expect("manifest list");
+        manifest_list
+            .entries()
+            .iter()
+            .filter(|manifest_file| manifest_file.content == ManifestContentType::Data)
+            .map(|manifest_file| manifest_file.manifest_path.clone())
+            .collect()
+    }
+
+    struct HiddenManifests {
+        moved: Vec<(PathBuf, PathBuf)>,
+    }
+
+    impl HiddenManifests {
+        fn hide(paths: &[String]) -> Self {
+            assert!(!paths.is_empty(), "the fixture must have a data manifest");
+            let mut moved = Vec::new();
+            for path in paths {
+                let from = PathBuf::from(path);
+                let to = from.with_extension("avro.hidden");
+                fs::rename(&from, &to).expect("hide data manifest");
+                moved.push((from, to));
+            }
+            Self { moved }
         }
+    }
+
+    impl Drop for HiddenManifests {
+        fn drop(&mut self) {
+            for (from, to) in &self.moved {
+                let _ = fs::rename(to, from);
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn closing_a_covered_v3_delete_reads_no_data_manifest() {
+        let fixture = materialize_part_dv();
+        let warehouse = TempDir::new().expect("catalog warehouse");
+        let catalog = memory_catalog(&warehouse).await;
+        let namespace = NamespaceIdent::new("ns".to_string());
+        catalog
+            .create_namespace(&namespace, HashMap::new())
+            .await
+            .expect("namespace");
+        let ident = TableIdent::new(namespace, "v3part".to_string());
+        catalog
+            .register_table(&ident, fixture.metadata_file.clone())
+            .await
+            .expect("register shared-puffin fixture");
+        let table = catalog.load_table(&ident).await.expect("load");
+        let pair = pair_for_id(&table, 1).await;
+        let _hidden = HiddenManifests::hide(&data_manifest_paths(&table).await);
+        let prepared =
+            prepare_row_delta_deletes(&table, &[pair], WriteConcurrency::new(1).expect("K=1"))
+                .await
+                .expect("close reads no data manifest");
+        assert_eq!(prepared.referenced.len(), 2);
+        match prepared.kind {
+            PreparedKind::DeletionVectors(close) => {
+                assert_eq!(close.added.len(), 1);
+                assert_eq!(close.removed.len(), 1);
+                assert_eq!(close.retained_references.len(), 1);
+            }
+            PreparedKind::PositionDeletes(_) => panic!("v3 must plan deletion vectors"),
+        }
+    }
+
+    async fn unpartitioned_v3_table(
+        catalog: &std::sync::Arc<dyn Catalog>,
+        namespace: &NamespaceIdent,
+    ) -> (Table, TableIdent) {
+        let schema = Schema::builder()
+            .with_schema_id(0)
+            .with_fields(vec![
+                NestedField::required(1, "id", Type::Primitive(PrimitiveType::Int)).into(),
+            ])
+            .build()
+            .expect("build schema");
+        let creation = TableCreation::builder()
+            .name("flat".to_string())
+            .schema(schema)
+            .properties(HashMap::new())
+            .build();
+        catalog
+            .create_table(namespace, creation)
+            .await
+            .expect("create unpartitioned table");
+        let ident = TableIdent::new(namespace.clone(), "flat".to_string());
+        crate::write::format_version::set_properties_and_format_version(
+            catalog.as_ref(),
+            &ident,
+            None,
+            HashMap::new(),
+            &[],
+            Some(FormatVersion::V3),
+        )
+        .await
+        .expect("upgrade to v3");
+        let table = catalog.load_table(&ident).await.expect("load fresh");
+        assert_eq!(table.metadata().format_version(), FormatVersion::V3);
+        let arrow_schema = std::sync::Arc::new(datafusion::arrow::datatypes::Schema::new(vec![
+            datafusion::arrow::datatypes::Field::new("id", DataType::Int32, false),
+        ]));
+        let batch = datafusion::arrow::array::RecordBatch::try_new(
+            arrow_schema,
+            vec![std::sync::Arc::new(Int32Array::from(vec![1, 2, 3]))],
+        )
+        .expect("id batch");
+        let files = super::super::write_data_files(&table, vec![batch])
+            .await
+            .expect("write the seed data file");
+        super::super::commit(catalog, &table, None, Vec::new(), files)
+            .await
+            .expect("append the seed");
+        let table = catalog.load_table(&ident).await.expect("reload seeded");
+        (table, ident)
+    }
+
+    #[tokio::test]
+    async fn a_first_v3_delete_on_an_unpartitioned_table_reads_no_data_manifest() {
+        let warehouse = TempDir::new().expect("catalog warehouse");
+        let catalog = memory_catalog(&warehouse).await;
+        let namespace = NamespaceIdent::new("ns".to_string());
+        catalog
+            .create_namespace(&namespace, HashMap::new())
+            .await
+            .expect("namespace");
+        let (table, ident) = unpartitioned_v3_table(&catalog, &namespace).await;
+        let pair = pair_for_id(&table, 1).await;
+        let hidden = HiddenManifests::hide(&data_manifest_paths(&table).await);
+        let prepared =
+            prepare_row_delta_deletes(&table, &[pair], WriteConcurrency::new(1).expect("K=1"))
+                .await
+                .expect("a supplied partition map must not walk a data manifest");
+        match prepared.kind {
+            PreparedKind::DeletionVectors(close) => assert_eq!(close.added.len(), 1),
+            PreparedKind::PositionDeletes(_) => panic!("v3 must plan deletion vectors"),
+        }
+        drop(hidden);
+        let table = catalog.load_table(&ident).await.expect("reload");
+        assert_eq!(live_ids(&table).await, vec![1, 2, 3]);
     }
 }
