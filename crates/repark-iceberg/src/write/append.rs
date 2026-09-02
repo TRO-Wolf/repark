@@ -2,8 +2,7 @@
 
 use std::collections::HashMap;
 use std::str::FromStr;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, atomic::AtomicBool, atomic::Ordering};
 
 use datafusion::arrow::array::RecordBatch;
 use datafusion::error::{DataFusionError, Result};
@@ -24,10 +23,10 @@ use iceberg::writer::partitioning::fanout_writer::FanoutWriter;
 use iceberg::{Catalog, TableIdent};
 use uuid::Uuid;
 
-use crate::write::concurrency::WriteConcurrency;
 use crate::write::conform::{conform_batch, conform_batches, write_default_column_names};
 use crate::write::merge::{OPERATION_ID_PROP, write_data_files_with_concurrency};
 use crate::write::writer_props::writer_properties_for;
+use crate::write::{concurrency::WriteConcurrency, file_order::ascending_partition_order};
 
 /// Append record batches to an Iceberg table — the sanctioned add-only commit path.
 /// # Errors
@@ -229,7 +228,7 @@ where
         return Err(error);
     }
     dispatch_result?;
-    Ok(files)
+    Ok(ascending_partition_order(files))
 }
 
 /// Single-writer fanout loop (the historical serial body of `fanout_conformed_stream`).
@@ -298,7 +297,8 @@ where
     if aborted.load(Ordering::SeqCst) {
         return Ok(Vec::new());
     }
-    fanout.close().await.map_err(iceberg_err)
+    let written = fanout.close().await.map_err(iceberg_err)?;
+    Ok(ascending_partition_order(written))
 }
 
 /// One stamped `fast_append` commit: `ENGINE_CONTRACT` §4 INSERT/append with MERGE's stamp class.

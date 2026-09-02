@@ -29,7 +29,11 @@ ANSI-door format-v3 test modules. `lib.rs` declares `#[cfg(test)] mod v3;`.
   the live vector; v2 control; Hadoop `vN` write; **V3-9:** the MoR subquery-`WHERE` twin —
   `DELETE … IN` at next-row-id 3 / added 0 and `UPDATE … IN` at next-row-id 4 / added 1, each
   with one live `Puffin` delete file
-  (pins: v3-9-mor-predicate-dml-dv/C-003; v3-8-subquery-where-lineage/C-002;
+  **V3-11:** the ANSI twins of the same-commit file-order pins — a partitioned v3 CTAS over
+  three partition values and a MoR MERGE that updates one partition and inserts into two more
+  both take Spark's exact `_row_id` map, five runs each; dropping the sort reddens both
+  (pins: v3-11-row-id-determinism/C-004; v3-9-mor-predicate-dml-dv/C-003;
+  v3-8-subquery-where-lineage/C-002;
   v3-7-merge-lineage/C-002; rp-6-fork-repin/C-002, C-003; rp-3-fork-repin/C-008).
   Hash-pinned by `v3_lineage.rs::cow_keep_refusal_files_are_byte_untouched`.
 - `types.rs` — `GEOMETRY` / `GEOGRAPHY` / `VARIANT` refuse at CREATE (`V3-GEO-1`);

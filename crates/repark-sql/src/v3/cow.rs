@@ -810,3 +810,62 @@ async fn adopted_v3_mor_subquery_where_dml_writes_file_scoped_deletion_vectors()
         vec!["Puffin".to_string()]
     );
 }
+
+const MOR_MERGE_V3: &str = "format_version = 3, extra_properties = MAP(\
+    ARRAY['write.delete.mode', 'write.update.mode', 'write.merge.mode'], \
+    ARRAY['merge-on-read', 'merge-on-read', 'merge-on-read'])";
+
+#[tokio::test]
+async fn ansi_partitioned_ctas_numbers_same_commit_files_in_sparks_partition_order() {
+    for attempt in 0..5 {
+        let door = door_with_v3_opt_in().await;
+        let table = format!("ansi_ctas_order_{attempt}");
+        door.ok(&format!(
+            "CREATE TABLE ice.sales.{table} \
+             WITH (partitioning = ARRAY['part'], format_version = 3) AS \
+             SELECT CAST(1 AS INT) AS id, CAST(2 AS INT) AS part \
+             UNION ALL SELECT CAST(2 AS INT), CAST(0 AS INT) \
+             UNION ALL SELECT CAST(3 AS INT), CAST(1 AS INT) \
+             UNION ALL SELECT CAST(4 AS INT), CAST(0 AS INT) \
+             UNION ALL SELECT CAST(5 AS INT), CAST(2 AS INT)"
+        ))
+        .await;
+        assert_eq!(
+            door.live_triples(&table).await,
+            vec![(1, 3, 1), (2, 0, 1), (3, 2, 1), (4, 1, 1), (5, 4, 1)],
+            "run {attempt}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn ansi_mor_merge_across_three_partitions_numbers_new_files_in_sparks_order() {
+    for attempt in 0..5 {
+        let door = door_with_v3_opt_in().await;
+        let table = format!("ansi_merge_order_{attempt}");
+        door.ok(&format!(
+            "CREATE TABLE ice.sales.{table} (id INT, name VARCHAR, part INT) \
+             WITH (partitioning = ARRAY['part'], {MOR_MERGE_V3})"
+        ))
+        .await;
+        door.ok(&format!(
+            "INSERT INTO ice.sales.{table} VALUES (1, 'a', 2), (2, 'b', 2)"
+        ))
+        .await;
+        door.ok(&format!(
+            "MERGE INTO ice.sales.{table} AS t USING \
+             (SELECT CAST(2 AS INT) AS id, CAST('m' AS VARCHAR) AS name, CAST(2 AS INT) AS part \
+              UNION ALL SELECT CAST(7 AS INT), CAST('g' AS VARCHAR), CAST(1 AS INT) \
+              UNION ALL SELECT CAST(8 AS INT), CAST('h' AS VARCHAR), CAST(0 AS INT)) AS s \
+             ON t.id = s.id \
+             WHEN MATCHED THEN UPDATE SET name = s.name \
+             WHEN NOT MATCHED THEN INSERT (id, name, part) VALUES (s.id, s.name, s.part)"
+        ))
+        .await;
+        assert_eq!(
+            door.live_triples(&table).await,
+            vec![(1, 0, 1), (2, 1, 2), (7, 3, 2), (8, 2, 2)],
+            "run {attempt}"
+        );
+    }
+}

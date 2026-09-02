@@ -109,6 +109,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the Spark-written partitioned v3 DV fixture and the equality-delete + DV fixture;
   live rows, partition prune, `.delete_files` content 1/2; RP-3 C-007 CALL still refuses
   live DVs. pins: rp-3-fork-repin/C-007, C-011
+- [test_v3_live_file_order.py](test_v3_live_file_order.py) — **V3-11 (2026-09-02):** the live
+  cell for same-commit data-file order. Its repark half runs JVM-free (a partitioned v3 CTAS
+  over three partition values and a MoR MERGE that updates one partition and inserts into two
+  more, each at Spark's exact `_row_id` map); under `REPARK_PARITY_LIVE=1` it replays both
+  statements on PySpark 4.1.2 + Iceberg 1.11.0 at the matched layout and asserts the same two
+  maps. It is a file of its own rather than a section of `test_v3_live_oracle.py` because that
+  file is 977 lines against the 1,000-line source ceiling.
+  pins: v3-11-row-id-determinism/C-004
 - [test_v3_live_oracle.py](test_v3_live_oracle.py) — **V3E-5 (2026-08-27):** nightly live oracle for the two V3E-3 fixtures — `REPARK_PARITY_LIVE=1` repark == Spark on partitioned-DV prune and equality-delete alongside DV, plus `.delete_files` kinds. RP-6: `test_partitioned_dv_update_commits_and_rewrite_still_refuses` pins Spark-equal `(id, _row_id, seq)` after live-DV UPDATE; `rewrite_position_delete_files` still refuses with rows and fixture bytes unchanged after the UPDATE. JVM-free twins stay in `test_v3e3_fixtures.py`. Critic remediation (2026-08-27): prune1 on Spark, combined DirLock, exact content sets, mirrored format, GAV full equality, version sort, COW, `py-format` single-line, meta-pin now asserts archive/dual-wire/diff allowlist. Formal CCC + cargo-deny/wheel remediation (2026-08-28): `chacha20` yanked and `thiserror` duplicate `skip`. PLAN-1 makes the ledger lookup lifecycle-aware across staging, completed, and archive, and checks the landed #253 commit instead of the current branch. **Nightly fix (2026-09-01):** the three live helpers now qualify `CALL <catalog>.system.register_table` through `LIFECYCLE_SPARK_CATALOG`; unqualified, Spark resolved it against `spark_catalog` and the CI leg had been red since its first run (2026-08-28). The north-star meta-pin now checks the row cites V3E-5 and the oracle version regardless of its status glyph, so an honest ⚠ does not red it. V3-7: `test_v3_merge_matched_update_live_cow_and_mor` cites the V3-7 ledger transcript (not `/tmp`) and live-gates COW/MoR matched-UPDATE MERGE. **V3-10 (2026-09-02):** `test_v3_upgrade_v2_to_v3_live_matches_spark` skips FIRST when the tier is off — its repark half duplicates `test_v3_upgrade.py::test_alter_upgrade_with_the_opt_in_serves_v3_lineage` and cost 0.32 s of call time on every JVM-free run (test wall 0.52 s → 0.20 s). Its Spark helper reuses the default Ivy cache like `_live_parity.build_spark_iceberg_engine` instead of a per-call `mkdtemp`, and picks the newest Hadoop pointer by PARSED version like `_materialize`, not by lexicographic `sorted(glob)` (which would pick `v9` over `v10`). It is not folded into `_live_subquery_where_dml_measurement`: that helper memoizes ONE session's cells behind a module-level dict and returns early on the second call, so adding upgrade statements to it would couple two units' measurements to one session's ordering. **V3-9 (2026-09-02):** `test_v3_mor_subquery_where_dml_live` cites the V3-9 transcript, runs the repark half JVM-free and live-gates the MoR subquery-`WHERE` DELETE / UPDATE lineage and `PUFFIN` delete-file format against Spark (pins: v3-9-mor-predicate-dml-dv/C-002, C-003, C-005). The Spark leg is one session for both modes: `_live_subquery_where_dml_measurement` measures the COW and MoR cells once and each test asserts its own pinned values against that measurement, so the file's live wall clock fell from 24.07 / 24.05 s to 23.39 / 22.74 s (pins: v3-9-mor-predicate-dml-dv/C-008). **RDF-1 (2026-09-02):** it read `completed/` by absolute path and reded the moment the archive ritual moved that ledger; both ledger reads now share `_ledger_text`, the staging/completed/archive lookup PLAN-1 already used for the V3E-5 meta-pin.
   pins: rdf-1-position-delete-bounds/C-004
 - [test_v3_acceptance_local.py](test_v3_acceptance_local.py) — **LIVE-v3 (2026-09-02):** the
@@ -2209,10 +2217,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Measured local answers, 2026-09-02: a DV is `content = 1` + `file_format = 'PUFFIN'` (not
   content 2); 1 DV after DELETE, 2 after the MoR MERGE, `rewrite_data_files` 12 rewritten /
   2 added / 2 removed leaving 0 DVs, 14 snapshots before expire and 1 after. Survivor `_row_id`
-  is exact and stable across MERGE and rewrite; the NOT MATCHED insert's `_row_id` is **not**
-  deterministic — 11 six times and 10 four times over ten identical runs, sequence 12 every time,
-  against Spark 4.1.2 + Iceberg 1.11.0 deterministic at 11 in 10 of 10 (registry `V3-ROWID-3`,
-  follow-up unit V3-11) — so the asserter pins a fresh-unused-id invariant instead of a value.
+  is exact and stable across MERGE and rewrite. **V3-11 (2026-09-02):** the NOT MATCHED
+  insert's `_row_id` is deterministic now — `V3_EXPECTED_INSERTED_ROW_ID = 11`, Spark's value,
+  replaces the fresh-unused-id invariant the flapping forced (`V3-ROWID-3` FIXED). With the
+  commit's file ordering removed the leg fails 2 of 6 runs; with it, 5 of 5 green.
   Pairing the appends into five commits would cut ~46 % of the wall time and was DECLINED: it
   puts two partitions in one commit, the shape that made survivor `_row_id` order-dependent.
   `exact_commit_counts=False` relaxes sequence and snapshot counts for S3 Tables' own commits and

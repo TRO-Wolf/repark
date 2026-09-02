@@ -30,11 +30,25 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   values, plus a **v1** table upgrading straight to v3 behind the same opt-in and a
   **partitioned** v2 table whose append takes Spark's id sets and sequence numbers (the
   per-partition file ORDER differs — `F-v3-10-partition-file-order`, so the pin asserts sets,
-  not the id→row-id map). The legacy-parquet-position-delete refusal is `V3-UPGRADE-DV-1`.
+  not the id→row-id map; V3-11 re-measured that residual as fork-owned and flapping — the one
+  v3 write path repark cannot order). The legacy-parquet-position-delete refusal is
+  `V3-UPGRADE-DV-1`.
   The V3-2 control `create_table.rs::or_replace_applies_requested_v3_and_alter_upgrades_with_opt_in`
   is this unit's too: its ALTER arm flipped from refuse to upgrade, so it no longer carries
   v3-2-create-v3-opt-in/C-008 (V3-10 negates that clause) and cites C-005 alone.
   pins: v3-10-upgrade-v2-to-v3/C-001, C-003, C-004, C-005
+- `v3_row_order.rs` — **V3-11 (2026-09-02):** same-commit data-file order. The ten-run pin
+  `mor_merge_insert_takes_sparks_row_id_in_ten_consecutive_runs` replays the LIVE-v3 sequence
+  ten times and requires Spark's exact `_row_id = 11` each time (it read 10 or 11 at random
+  before — 24 red of 30 over three batteries); `mor_merge_across_three_partitions_…` and
+  `partitioned_ctas_…` pin the ascending-partition order on the MERGE and CTAS writers against
+  the live oracle. Mutations: dropping the sort reddens all three, reversing it reddens all
+  three, dropping only the `append.rs` call reddens the CTAS pin, dropping only the
+  `row_lineage.rs` call reddens the two MERGE pins.
+  The byte tripwire `v3_lineage.rs::cow_keep_refusal_files_are_byte_untouched` re-records the
+  `crates/repark-sql/src/v3/cow.rs` hash for the two ANSI twins V3-11 adds there; the other
+  three hashes are untouched.
+  pins: v3-11-row-id-determinism/C-002, C-003, C-006
 - `declared_refuse.rs` — **FNP-15/16:** Spark-door parse-altitude refusals for the six
   unreachable names and the sketch family; passthrough attach pin.
   pins: fnp-15-16/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008

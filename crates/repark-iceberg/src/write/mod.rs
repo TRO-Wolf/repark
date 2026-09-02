@@ -5,6 +5,7 @@ pub mod append;
 pub mod commit_target;
 pub mod concurrency;
 pub(crate) mod conform;
+pub(crate) mod file_order;
 pub mod file_scoped_rewrite;
 pub mod format_version;
 /// Shared Spark/DF `quote_ident` + path-escape needles (CQ-006/007).

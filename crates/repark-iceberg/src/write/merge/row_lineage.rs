@@ -191,7 +191,8 @@ where
                 .map_err(iceberg_err)?;
         }
     }
-    fanout.close().await.map_err(iceberg_err)
+    let files = fanout.close().await.map_err(iceberg_err)?;
+    Ok(crate::write::file_order::ascending_partition_order(files))
 }
 
 fn split_lineage_batch(
