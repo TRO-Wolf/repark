@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-02 · **Branch:** `feat/v3-10-upgrade-v2-to-v3` · **Base:** `origin/main`
 `cda526e` (rebased off `ca9c007` after V3-9 and LIVE-v3 merged) · **Model:** claude-opus-5 (medium) · **Policy:**
-[../../../AGENTS.md](../../../AGENTS.md) · **Path:** STANDARD.
+[../../../AGENTS.md](../../../../AGENTS.md) · **Path:** STANDARD.
 
 **Retires:** this ledger moves to `../completed/` in this unit's last commit.
 

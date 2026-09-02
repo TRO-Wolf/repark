@@ -159,14 +159,17 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
     (v2 refuses); append fills from a schema-carried `write_default`; DEFAULT DDL, `unknown`
     and binary `variant` refuse Spark-equal (`V3-VARIANT-SHRED-1`, R88/R91, RP-5).
     **V3-9 (2026-09-02):** predicate DML's V2-only gate is lifted — MoR `DELETE`/`UPDATE …
-    WHERE` on v3 write file-scoped Puffin DVs on three doors, created and adopted, Spark-equal
-    (`V3-MOR-1` FIXED); `V3-DV-1` BACKLOG is the residual. **LIVE-v3 (2026-09-02):** both live
-    v3 legs green on `aws-acceptance` run 33635288918 — S3 Tables takes `format-version = 3` at
-    CREATE, Glue reproduces the local numbers (`S3T-V3-1`).
+    WHERE` on v3 write file-scoped Puffin DVs on three doors, Spark-equal (`V3-MOR-1` FIXED);
+    `V3-DV-1` BACKLOG is the residual. **LIVE-v3 (2026-09-02):** both live
+    v3 legs green on `aws-acceptance` run 33635288918 (`S3T-V3-1`).
+    **V3-11 (2026-09-02):** the engine orders one commit's data files by ascending partition
+    value before the manifest, so the MoR MERGE insert's `_row_id` is Spark-equal and
+    deterministic (`V3-ROWID-3` FIXED); partitioned plain-`INSERT` is fork-owned
+    (`F-v3-10-partition-file-order`).
   - **Next:** lineage carry and merge-on-read are complete on every served DML shape
-    (`V3-COW-1`, `V3-MOR-1` FIXED); open v3 residuals are `V3-DV-1` (fork F-18 / repin RP-7),
-    `V3-ROWID-3` (unit **V3-11**), `V3-UPGRADE-DV-1` (unit **V3-12**: merge a legacy parquet
-    position delete into the new DV), `V3-UPGRADE-V4-1`, `G3-E8` spellings and `B-MOR-3`.
+    (`V3-COW-1`, `V3-MOR-1`, `V3-ROWID-3` FIXED); open v3 residuals are `V3-DV-1` (fork F-18 /
+    repin RP-7), `F-v3-10-partition-file-order` (fork ask), `V3-UPGRADE-DV-1` (unit **V3-12**),
+    `V3-UPGRADE-V4-1`, `G3-E8` spellings and `B-MOR-3`.
 <!-- /ws -->
 
 <!-- ws id=perf ledgers=perf- state=open -->
@@ -262,8 +265,6 @@ moving it. Nothing is described in both places.
   [ID-1](docs/spark-sql-iceberg-parity.md); revisiting it needs a new dated decision.
 - **Shared-Puffin DV packing** — **BACKLOG (2026-09-02)**: registry
   [V3-DV-1](docs/spark-sql-iceberg-parity.md); fork F-18, repin RP-7.
-- **v3 MERGE-insert `_row_id`** — **BACKLOG (2026-09-02)**: registry
-  [V3-ROWID-3](docs/spark-sql-iceberg-parity.md); nondeterministic, Spark is not. V3-11.
 - **The session-timezone family** — TZ-1 converted; TZ-6 / TZ-7 FIXED (#85); **TZ-8** partially
   FIXED (#100): `CAST(ts AS DATE)` / `to_date` / `datediff` read the session zone now; only
   `last_day` / `date_add` over a TIMESTAMP (+ B-TZ-3) stay BACKLOG; TZ-4 in progress

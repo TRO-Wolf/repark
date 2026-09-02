@@ -97,6 +97,11 @@ JVM, no repark required). See [../map.md](../map.md).
   `docs/tier2-aws.md` §6 lists one row per leg, its two v3 rows state the answer, it says the v3
   legs need no new IAM action or workflow variable, and it carries no run id because measured
   state belongs to STATUS; both legs and the local pin exist as real `def`s; STATUS's v3
+  **V3-11 (2026-09-02):** the two `V3-ROWID-3` meta-pins flip from BACKLOG to FIXED — the
+  registry row must carry the decoded `JavaHashes$StructLikeHash` order and the exact
+  `V3_EXPECTED_INSERTED_ROW_ID = 11`, and a second test holds
+  `F-v3-10-partition-file-order` open with the fork named as its owner.
+  pins: v3-11-row-id-determinism/C-005
   workstream names the run, carries the `V3-ROWID-3` line and stays under its dual-pinned
   25,000-byte ceiling; registry `V3-ROWID-3` still carries both engines' measured answers and
   names follow-up unit V3-11; and `docs/design/format-v3-track.md` §7's two "not measured" claims
