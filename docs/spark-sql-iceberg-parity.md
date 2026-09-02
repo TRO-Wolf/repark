@@ -2209,7 +2209,10 @@ the pin rather than obeying it.
   file: `DELETE … WHERE id IN (SELECT …)` and `EXISTS` leave `(1,0,1),(3,2,1)` at
   next-row-id 5 (first-row-id 3, added 2, 1 data file); `NOT IN` and `NOT EXISTS` leave
   `(2,1,1)` at next-row-id 4 (added 1, 1 data file); `UPDATE … SET name='m' WHERE id IN
-  (SELECT …)` leaves `(1,0,1),(2,1,2),(3,2,1)` at next-row-id 6 (added 3). The refusal seat
+  (SELECT …)` leaves `(1,0,1),(2,1,2),(3,2,1)` at next-row-id 6 (added 3). A
+  correlated-to-target `DELETE … AS tgt WHERE tgt.id IN (SELECT s.id FROM src s WHERE
+  s.id = tgt.id)` is served too, at the same values as the uncorrelated `IN` cell; its
+  `s.id = tgt.id + 1` variant matches nothing and leaves the table at the seed. The refusal seat
   `crates/repark-iceberg/src/write/row_lineage_guard.rs` is deleted — it has no caller left.
   RP-6 (2026-09-01) lifted plain-`WHERE` UPDATE and sequential COW DELETE; V3-7 (2026-09-02)
   lifted MERGE on COW and merge-on-read.
@@ -2217,12 +2220,19 @@ the pin rather than obeying it.
   `_last_updated_sequence_number` under a subquery `WHERE` exactly as under a plain one, on
   `IN`, `NOT IN`, `EXISTS` and `NOT EXISTS`; merge-on-read serves the same shapes with a
   deletion vector (`DELETE` next-row-id 3, added 0; `UPDATE` next-row-id 4, added 1).
-  Seed `(1,a,0,1),(2,b,1,1),(3,c,2,1)`, next-row-id 3. Spark never reassigned a stored id on
-  any of the twelve cells.
+  Seed `(1,a,0,1),(2,b,1,1),(3,c,2,1)`, next-row-id 3. Correlated-to-target `IN` behaves as
+  the uncorrelated cell on COW (next-row-id 5, added 2, 1 data file); the `+ 1` variant
+  matches nothing and commits an **empty** `overwrite` snapshot (next-row-id 3, added 0,
+  1 data file, 1 manifest). Spark never reassigned a stored id on any of the eighteen cells.
   *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, Hadoop catalog, `local[1]`, `coalesce(1)`,
   2026-09-02 V3-8 transcript)*.
 - **Pin** —
-  `crates/repark-spark/src/tests/v3_subquery_dml.rs` (five shapes × created and adopted);
+  `crates/repark-spark/src/tests/v3_subquery_dml.rs` (five shapes × created and adopted, plus
+  `created_v3_cow_correlated_subquery_delete_keeps_row_lineage` /
+  `adopted_v3_cow_correlated_subquery_delete_keeps_row_lineage`,
+  `created_v3_cow_correlated_subquery_delete_matching_nothing_leaves_the_table_unmoved` and the
+  merge-on-read residual control
+  `created_v3_merge_on_read_subquery_dml_refuses_on_the_v2_delete_file_gate`);
   Spark-door residual control
   `crates/repark-spark/src/tests/v3_cow.rs::adopted_v3_subquery_update_outside_the_hole_still_refuses`;
   ANSI twins `crates/repark-sql/src/v3/cow.rs::adopted_v3_cow_subquery_where_dml_keeps_row_lineage`
@@ -2240,14 +2250,20 @@ the pin rather than obeying it.
 - **Rationale** — FIXED; the **owner ruling 2026-08-25** that held this row BACKLOG is
   discharged. Two residual refusals remain and neither is about lineage: merge-on-read
   subquery-`WHERE` DML on a v3 table is refused by predicate DML's pre-existing V2-only
-  delete-file gate (`write.delete.mode = 'merge-on-read'` … "require a V2 table"), and
-  subquery spellings outside the allow-listed hole (`UPDATE … NOT IN` / `EXISTS`, nested,
-  correlated-to-target, aggregate) by the pre-existing `refuse_dml_subquery_predicate` guard.
+  delete-file gate ("merge-on-read DELETE writes Parquet position deletes, which require a V2
+  table" — never `G3-E8`, never this row), and subquery spellings outside the allow-listed
+  hole (`UPDATE … NOT IN` / `EXISTS`, correlated-to-target **on `UPDATE` only** — the
+  correlated `DELETE` is served — nested, aggregate) by the pre-existing
+  `refuse_dml_subquery_predicate` guard (`G3-E8`).
   F-rp3-c7 is consumed as a layout artefact. F-v3-7-mor-mixed is a layout artefact: mixed
   MERGE is lineage Spark-equal; Spark writes 1 (COW) / 2 (MoR) data files, the engine writes
   2 (COW) / 3 (MoR). **F-v3-8-update-files** is a layout artefact: subquery-`WHERE` COW
   UPDATE is lineage and next-row-id Spark-equal; Spark writes 1 data file, the engine writes
   2 (survivors and updated rows come from the two arms of a `UNION ALL`).
+  **F-v3-8-empty-delete-snapshot** is a commit-semantics artefact, pre-dating this unit: a
+  subquery-`WHERE` DELETE that matches no row commits nothing on the engine, where Spark
+  commits an empty `overwrite` snapshot. Rows, lineage, next-row-id and data-file count are
+  equal on both sides.
 
 ### BL-9 — a double-quoted string literal is an identifier on the SQL door
 

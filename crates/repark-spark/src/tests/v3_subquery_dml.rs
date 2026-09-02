@@ -18,6 +18,13 @@ const DELETE_NOT_EXISTS: &str = "DELETE FROM ice.sales.{t} AS tgt WHERE NOT EXIS
      (SELECT 1 FROM ice.sales.srcids AS s WHERE s.id = tgt.id)";
 const UPDATE_IN: &str =
     "UPDATE ice.sales.{t} SET name = 'm' WHERE id IN (SELECT id FROM ice.sales.srcids)";
+const DELETE_CORRELATED_IN: &str = "DELETE FROM ice.sales.{t} AS tgt WHERE tgt.id IN \
+     (SELECT s.id FROM ice.sales.srcids AS s WHERE s.id = tgt.id)";
+const DELETE_CORRELATED_IN_OFFSET: &str = "DELETE FROM ice.sales.{t} AS tgt WHERE tgt.id IN \
+     (SELECT s.id FROM ice.sales.srcids AS s WHERE s.id = tgt.id + 1)";
+
+const MOR_V3_DELETE: &str = "'format-version' = '3', 'write.delete.mode' = 'merge-on-read'";
+const MOR_V3_UPDATE: &str = "'format-version' = '3', 'write.update.mode' = 'merge-on-read'";
 
 async fn seed_source(ctx: &SessionContext, catalogs: &CatalogRegistry) {
     run(
@@ -28,6 +35,51 @@ async fn seed_source(ctx: &SessionContext, catalogs: &CatalogRegistry) {
     )
     .await;
     run(ctx, catalogs, "INSERT INTO ice.sales.srcids VALUES (2)").await;
+}
+
+async fn created_v3(ctx: &SessionContext, catalogs: &CatalogRegistry, table: &str, props: &str) {
+    run(
+        ctx,
+        catalogs,
+        &format!(
+            "CREATE TABLE ice.sales.{table} (id INT, name STRING) USING iceberg \
+             TBLPROPERTIES ({props})"
+        ),
+    )
+    .await;
+    run(
+        ctx,
+        catalogs,
+        &format!("INSERT INTO ice.sales.{table} SELECT * FROM src"),
+    )
+    .await;
+    let ident = TableIdent::from_strs(["sales", table]).expect("ident");
+    let loaded = catalogs
+        .get("ice")
+        .expect("ice")
+        .load_table(&ident)
+        .await
+        .expect("load");
+    assert_eq!(loaded.metadata().format_version(), FormatVersion::V3);
+}
+
+async fn snapshot_id(catalogs: &CatalogRegistry, table: &str) -> Option<i64> {
+    let ident = TableIdent::from_strs(["sales", table]).expect("ident");
+    catalogs
+        .get("ice")
+        .expect("ice")
+        .load_table(&ident)
+        .await
+        .expect("load")
+        .metadata()
+        .current_snapshot_id()
+}
+
+fn seed_rows() -> Vec<(i32, String)> {
+    SEED_ROWS
+        .iter()
+        .map(|(id, name)| (*id, (*name).to_string()))
+        .collect()
 }
 
 async fn created_cow_v3(ctx: &SessionContext, catalogs: &CatalogRegistry, table: &str) {
@@ -90,6 +142,9 @@ async fn data_file_count(catalogs: &CatalogRegistry, table: &str) -> usize {
 }
 
 const F_V3_8_UPDATE_FILES: usize = 2;
+
+const SEED_ROWS: [(i32, &str); 3] = [(1, "a"), (2, "b"), (3, "c")];
+const SEED_TRIPLES: [(i32, i64, i64); 3] = [(1, 0, 1), (2, 1, 1), (3, 2, 1)];
 
 struct Cell {
     rows: Vec<(i32, String)>,
@@ -243,4 +298,104 @@ async fn adopted_v3_cow_subquery_not_exists_delete_keeps_row_lineage() {
 async fn adopted_v3_cow_subquery_in_update_keeps_row_lineage() {
     let _: &str = "pins: v3-8-subquery-where-lineage/C-002";
     assert_adopted("seed_aupd", "adopt_aupd", UPDATE_IN, update_cell()).await;
+}
+
+#[tokio::test]
+async fn created_v3_cow_correlated_subquery_delete_keeps_row_lineage() {
+    let _: &str = "pins: v3-8-subquery-where-lineage/C-002";
+    assert_created("sub_correlated", DELETE_CORRELATED_IN, delete_hit_cell()).await;
+}
+
+#[tokio::test]
+async fn adopted_v3_cow_correlated_subquery_delete_keeps_row_lineage() {
+    let _: &str = "pins: v3-8-subquery-where-lineage/C-002";
+    assert_adopted(
+        "seed_acorrelated",
+        "adopt_acorrelated",
+        DELETE_CORRELATED_IN,
+        delete_hit_cell(),
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn created_v3_cow_correlated_subquery_delete_matching_nothing_leaves_the_table_unmoved() {
+    let _: &str = "pins: v3-8-subquery-where-lineage/C-002";
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    seed_source(&ctx, &catalogs).await;
+    created_cow_v3(&ctx, &catalogs, "sub_zero").await;
+    let before = snapshot_id(&catalogs, "sub_zero").await;
+    run(
+        &ctx,
+        &catalogs,
+        &DELETE_CORRELATED_IN_OFFSET.replace("{t}", "sub_zero"),
+    )
+    .await;
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.sub_zero").await,
+        seed_rows(),
+        "`s.id = tgt.id + 1` matches no target row"
+    );
+    assert_eq!(
+        v3_cow::lineage_triples(&ctx, &catalogs, "sub_zero").await,
+        SEED_TRIPLES.to_vec()
+    );
+    assert_eq!(
+        v3_cow::lineage(&catalogs, "sub_zero").await.next_row_id,
+        3,
+        "next-row-id stays at the seed value, as Spark's does"
+    );
+    assert_eq!(data_file_count(&catalogs, "sub_zero").await, 1);
+    assert_eq!(
+        snapshot_id(&catalogs, "sub_zero").await,
+        before,
+        "F-v3-8-empty-delete-snapshot: the engine commits nothing where Spark commits an \
+         empty overwrite"
+    );
+}
+
+#[tokio::test]
+async fn created_v3_merge_on_read_subquery_dml_refuses_on_the_v2_delete_file_gate() {
+    let _: &str = "pins: v3-8-subquery-where-lineage/C-002";
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    seed_source(&ctx, &catalogs).await;
+    created_v3(&ctx, &catalogs, "sub_mor_del", MOR_V3_DELETE).await;
+    created_v3(&ctx, &catalogs, "sub_mor_upd", MOR_V3_UPDATE).await;
+    let delete_error = execute(&ctx, &catalogs, &DELETE_IN.replace("{t}", "sub_mor_del"))
+        .await
+        .expect_err("merge-on-read subquery DELETE on v3 must refuse")
+        .to_string();
+    assert!(
+        delete_error.contains(
+            "merge-on-read DELETE writes Parquet position deletes, which require a V2 table"
+        ) && delete_error.contains("write.delete.mode")
+            && !delete_error.contains("G3-E8")
+            && !delete_error.contains("V3-COW-1"),
+        "the MoR residual is the pre-existing V2-only delete-file gate: {delete_error}"
+    );
+    let update_error = execute(&ctx, &catalogs, &UPDATE_IN.replace("{t}", "sub_mor_upd"))
+        .await
+        .expect_err("merge-on-read subquery UPDATE on v3 must refuse")
+        .to_string();
+    assert!(
+        update_error.contains(
+            "merge-on-read UPDATE writes Parquet position deletes, which require a V2 table"
+        ) && update_error.contains("write.update.mode")
+            && !update_error.contains("G3-E8")
+            && !update_error.contains("V3-COW-1"),
+        "the MoR residual is the pre-existing V2-only delete-file gate: {update_error}"
+    );
+    for table in ["sub_mor_del", "sub_mor_upd"] {
+        assert_eq!(
+            table_rows(&ctx, &catalogs, &format!("ice.sales.{table}")).await,
+            seed_rows(),
+            "the refused statement leaves {table} unmoved"
+        );
+        assert_eq!(
+            v3_cow::lineage_triples(&ctx, &catalogs, table).await,
+            SEED_TRIPLES.to_vec()
+        );
+    }
 }

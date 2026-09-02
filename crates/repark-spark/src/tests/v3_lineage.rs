@@ -431,7 +431,7 @@ fn cow_keep_refusal_files_are_byte_untouched() {
     let pinned: [(&str, u64); 4] = [
         (
             "crates/repark-spark/src/tests/v3_subquery_dml.rs",
-            0x5adc_54a2_08c4_e09e,
+            0xe1a3_4e9e_2c3c_1f6a,
         ),
         (
             "crates/repark-spark/src/tests/v3_cow.rs",

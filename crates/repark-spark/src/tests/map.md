@@ -44,6 +44,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `UPDATE … IN`, each pinning rows, `(id,_row_id,seq)`, next-row-id / first-row-id /
   added-rows and the live data-file count at the single-file seed. `F_V3_8_UPDATE_FILES` is
   the named layout artefact: the UPDATE cell writes 2 data files where Spark writes 1.
+  Also the correlated-to-target `DELETE` (served, created and adopted), its zero-row
+  `s.id = tgt.id + 1` variant (`F-v3-8-empty-delete-snapshot`: the engine commits nothing
+  where Spark commits an empty overwrite), and the merge-on-read residual control, which
+  pins the V2-only delete-file gate's exact text on both verbs and asserts it is neither
+  `G3-E8` nor `V3-COW-1`.
   pins: v3-8-subquery-where-lineage/C-002
 - `create_table.rs` — also the V3R-1 type pin: `GEOMETRY` / `GEOGRAPHY` / `VARIANT` refuse at
   CREATE (`V3-GEO-1`).

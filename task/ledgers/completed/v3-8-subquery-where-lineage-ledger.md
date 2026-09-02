@@ -18,8 +18,8 @@ delete-file gate, not a lineage refusal); subquery spellings outside the allow-l
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | Measure the live oracle (PySpark 4.1.2 + Iceberg 1.11.0, `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64`, `local[1]`, `coalesce(1)` single-file seed) on `DELETE … IN` / `NOT IN` / `EXISTS` / `NOT EXISTS` and `UPDATE … IN` / `EXISTS`, on COW and MoR v3, recording rows, `_row_id`, `_last_updated_sequence_number`, next-row-id, first-row-id, added-rows and data-file / manifest / delete-file counts beside every counter. | Oracle transcript table. | **PROVEN** | Twelve cells below. Spark reassigned no stored id on any cell. |
-| C-002 | On format v3 the subquery-`WHERE` COW rewrite carries stored `_row_id` and writes NULL `_last_updated_sequence_number` for rows UPDATE changed, matching the oracle's rows, lineage triples and next-row-id. Lift the `V3-COW-1` refusal for those shapes; `row_lineage_guard.rs` loses its last caller and is deleted. Merge-on-read on v3 and shapes outside the allow-listed hole stay refused for their own pre-existing reasons. Mutation-proof: drop the carried lineage → every lifted pin reds. | Spark-door, ANSI-door and facade pins with absolute values; mutation N red of M. | **PROVEN** | Engine table below. Ten Spark-door cells (created + adopted), ANSI and facade twins, plus outside-the-hole controls on all three doors. Mutation: 27 red (12 of them the newly lifted pins). Citation: `crates/repark-spark/src/tests/v3_subquery_dml.rs`. |
+| C-001 | Measure the live oracle (PySpark 4.1.2 + Iceberg 1.11.0, `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64`, `local[1]`, `coalesce(1)` single-file seed) on `DELETE … IN` / `NOT IN` / `EXISTS` / `NOT EXISTS`, correlated-to-target `DELETE`/`UPDATE` (`s.id = tgt.id` and the zero-row `+ 1` variant), and `UPDATE … IN` / `EXISTS`, on COW and MoR v3, recording rows, `_row_id`, `_last_updated_sequence_number`, next-row-id, first-row-id, added-rows and data-file / manifest / delete-file counts beside every counter. | Oracle transcript table. | **PROVEN** | Eighteen cells below. Spark reassigned no stored id on any cell. |
+| C-002 | On format v3 the subquery-`WHERE` COW rewrite carries stored `_row_id` and writes NULL `_last_updated_sequence_number` for rows UPDATE changed, matching the oracle's rows, lineage triples and next-row-id. Lift the `V3-COW-1` refusal for those shapes; `row_lineage_guard.rs` loses its last caller and is deleted. Merge-on-read on v3 and shapes outside the allow-listed hole stay refused for their own pre-existing reasons. Mutation-proof: drop the carried lineage → every lifted pin reds. | Spark-door, ANSI-door and facade pins with absolute values; mutation N red of M. | **PROVEN** | Engine table below. Fourteen Spark-door cells (created + adopted, correlated `DELETE`, the zero-row variant, and the merge-on-read gate control), ANSI and facade twins, plus outside-the-hole controls on all three doors. Mutation: 27 red (12 of them the newly lifted pins). Citation: `crates/repark-spark/src/tests/v3_subquery_dml.rs`. |
 | C-003 | Re-record the `V3-COW-1` byte tripwire naming this unit; registry `V3-COW-1` is FIXED and names the two residual non-lineage refusals; north star §3 COW and MoR DML rows say exactly what is proven; STATUS v3 workstream truth-up and nothing else; a `REPARK_PARITY_LIVE`-gated cell for one subquery DELETE and one UPDATE; maps in lockstep; this ledger `move`d to `completed/` last. | `make check-map-sync`, `check-ledger-grammar`, `check-ledgers`. | **PROVEN** | Tripwire drops the deleted guard and re-records the three surviving files; registry heading is FIXED; north-star COW row is ✅. Citation: `python/repark-parity/tests/test_v3r_1_rulings.py`. |
 
 VERDICT: 3 clauses, 3 PROVEN, 0 OPEN, 0 REJECTED.
@@ -30,7 +30,7 @@ COVERAGE_ATTESTATION:
   categories:
     - id: AT-1
       status: ATTACKED
-      evidence: Five subquery-WHERE COW shapes Spark-equal on rows, lineage triples, next-row-id and data files.
+      evidence: Five subquery-WHERE COW shapes plus the correlated-to-target DELETE Spark-equal on rows, lineage triples, next-row-id and data files; the zero-row correlated variant leaves the table at the seed.
       artifacts: [crates/repark-spark/src/tests/v3_subquery_dml.rs, crates/repark-sql/src/v3/cow.rs, python/repark/tests/test_v3_cow_dml.py]
     - id: AT-2
       status: ATTACKED
@@ -38,7 +38,7 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-spark/src/tests/v3_subquery_dml.rs, crates/repark-iceberg/src/write/predicate_dml/tests/update.rs]
     - id: AT-3
       status: ATTACKED
-      evidence: Outside-the-hole UPDATE still refuses G3-E8 without V3-COW-1 and leaves the table unmoved, on all three doors.
+      evidence: Outside-the-hole UPDATE still refuses G3-E8 without V3-COW-1 on all three doors; merge-on-read subquery DML on v3 refuses on the V2-only delete-file gate (its exact text, not G3-E8); every refused statement leaves the table at the seed.
       artifacts: [crates/repark-spark/src/tests/v3_cow.rs, crates/repark-sql/src/v3/cow.rs, python/repark/tests/test_v3_cow_dml.py]
     - id: AT-4
       status: N/A
@@ -88,9 +88,17 @@ Source table holds one row, `id = 2`. Interpreter `<pyspark-4.1.2-oracle>`. Tran
 | MoR DELETE … NOT EXISTS | (2,b,1,1) | 3 | 3 | 0 | 1 | 2 | 1 |
 | MoR UPDATE … IN | (1,a,0,1),(2,m,1,2),(3,c,2,1) | 4 | 3 | 1 | 2 | 3 | 1 |
 | MoR UPDATE … EXISTS | (1,a,0,1),(2,m,1,2),(3,c,2,1) | 4 | 3 | 1 | 2 | 3 | 1 |
+| COW DELETE correlated `s.id = tgt.id` | (1,a,0,1),(3,c,2,1) | 5 | 3 | 2 | 1 | 2 | 0 |
+| COW DELETE correlated `s.id = tgt.id + 1` | (1,a,0,1),(2,b,1,1),(3,c,2,1) | 3 | 3 | 0 | 1 | 1 | 0 |
+| COW UPDATE correlated `s.id = tgt.id` | (1,a,0,1),(2,m,1,2),(3,c,2,1) | 6 | 3 | 3 | 1 | 2 | 0 |
+| MoR DELETE correlated `s.id = tgt.id` | (1,a,0,1),(3,c,2,1) | 3 | 3 | 0 | 1 | 2 | 1 |
+| MoR DELETE correlated `s.id = tgt.id + 1` | (1,a,0,1),(2,b,1,1),(3,c,2,1) | 3 | 3 | 0 | 1 | 1 | 0 |
+| MoR UPDATE correlated `s.id = tgt.id` | (1,a,0,1),(2,m,1,2),(3,c,2,1) | 4 | 3 | 1 | 2 | 3 | 1 |
 
 Data-file and delete-file counts are the snapshot summary's `total-data-files` /
-`total-delete-files`; the `.files` metadata table counts both together.
+`total-delete-files`; the `.files` metadata table counts both together. The two `+ 1` cells
+match no target row: Spark still commits an empty `overwrite` snapshot (added 0), which is
+why their manifest count stays 1.
 
 ## Engine after the lift (C-002)
 
@@ -104,16 +112,31 @@ Same seed, created **and** adopted v3, `write.delete.mode` / `write.update.mode`
 | COW DELETE … EXISTS | (1,a,0,1),(3,c,2,1) | 5 / 3 / 2 | 1 | Spark-equal |
 | COW DELETE … NOT EXISTS | (2,b,1,1) | 4 / 3 / 1 | 1 | Spark-equal |
 | COW UPDATE … IN | (1,a,0,1),(2,m,1,2),(3,c,2,1) | 6 / 3 / 3 | 2 | lineage + next-row-id equal; `F-v3-8-update-files` |
-| COW UPDATE … EXISTS | refused | — | — | outside the allow-listed hole (`G3-E8`, pre-existing) |
-| MoR, every shape | refused | — | — | predicate DML's V2-only delete-file gate (pre-existing) |
+| COW DELETE correlated `s.id = tgt.id` | (1,a,0,1),(3,c,2,1) | 5 / 3 / 2 | 1 | Spark-equal |
+| COW DELETE correlated `s.id = tgt.id + 1` | seed unchanged | next 3 | 1 | rows / lineage / next-row-id equal; `F-v3-8-empty-delete-snapshot` |
+| COW UPDATE … EXISTS, COW UPDATE correlated | refused | — | — | outside the allow-listed hole (`G3-E8`, pre-existing) |
+| MoR, every shape | refused | — | — | predicate DML's V2-only delete-file gate (pre-existing), never `G3-E8` |
 
 **F-v3-8-update-files.** Layout artefact: the COW UPDATE rewrite is `survivors UNION ALL
 new values`, so the engine writes 2 data files where Spark writes 1. Lineage, next-row-id,
 first-row-id and added-rows all match.
 
+**F-v3-8-empty-delete-snapshot.** Commit-semantics artefact, pre-dating this unit: a
+subquery-`WHERE` DELETE that matches no row returns without committing on the engine
+(`execute_predicate_dml` short-circuits on empty `(_file, _pos)` pairs), where Spark commits
+an empty `overwrite` snapshot. Rows, lineage triples, next-row-id and data-file count are
+equal on both sides. Pinned by
+`created_v3_cow_correlated_subquery_delete_matching_nothing_leaves_the_table_unmoved`.
+
 **Residual refusals are not lineage.** `refuse_dml_subquery_predicate` (`G3-E8`) refuses
-subquery spellings outside the allow-listed hole; `resolve_write_mode` refuses merge-on-read
-DML on a non-V2 table. Neither mentions `V3-COW-1`, and both predate this unit. The ANSI
+subquery spellings outside the allow-listed hole — `UPDATE … NOT IN` / `EXISTS`,
+correlated-to-target **on `UPDATE` only**, nested, aggregate. The correlated-to-target
+`DELETE` **is** served and is pinned. Separately, `resolve_write_mode` refuses merge-on-read
+DML on a non-V2 table with its own text ("merge-on-read DELETE writes Parquet position
+deletes, which require a V2 table"); that refusal is **not** `G3-E8`, and
+`created_v3_merge_on_read_subquery_dml_refuses_on_the_v2_delete_file_gate` pins the exact
+message on both verbs, asserts the absence of `G3-E8` and `V3-COW-1`, and asserts the tables
+stay at the seed. Neither residual mentions `V3-COW-1`, and both predate this unit. The ANSI
 door routes allow-listed shapes through the same `execute_predicate_dml`, so it is pinned on
 the lift; its own subquery guard is the `G3-E8` one and is left alone.
 
