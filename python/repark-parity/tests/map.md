@@ -65,7 +65,7 @@ JVM, no repark required). See [../map.md](../map.md).
   disk guidance, clause pins, and ledger lifecycle.
 - `test_pr_245_revalidation_record.py` — PR #245 source-size ratchets, frozen SQP-1 artifacts,
   bounded parser guards, exact literal-helper inventory, and lifecycle-aware navigation.
-- `test_cap_1_source_file_line_cap.py` — **CAP-1 (2026-08-26):** exact Rust and Python source-size
+- `test_cap_1_source_file_line_cap.py` — **CAP-1 (2026-08-26):** exact Rust and Python source-size RP-5 ratchets three approved Rust baselines down (session tests 1415 → 1412, merge/mod.rs 2086 → 1894, overwrite.rs 1070 → 1053).
   (**DML-B 2026-08-30:** `insert_overwrite.rs` tests 1249→1233, `writer_readwriter.py` 1117→1113)
   exception sets and baselines mirrored from the live guard tables (DML-A:
   `merge/mod.rs` 2131 → 2086; `call.rs` 1404 → 1111 after
