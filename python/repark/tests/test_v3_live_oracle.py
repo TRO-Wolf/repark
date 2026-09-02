@@ -756,9 +756,9 @@ def test_v3_mor_subquery_where_dml_live(tmp_path: Path) -> None:
             kinds = session.sql(
                 f"SELECT file_format FROM ice.sales.{table}.delete_files"
             ).to_arrow()
-            assert [
-                str(kind).upper() for kind in kinds.column("file_format").to_pylist()
-            ] == ["PUFFIN"], table
+            assert [str(kind).upper() for kind in kinds.column("file_format").to_pylist()] == [
+                "PUFFIN"
+            ], table
         if not _LIVE:
             pytest.skip(_LIVE_SKIP)
         _assert_mor_subquery_where_dml_live_against_spark()
@@ -832,9 +832,9 @@ def _assert_mor_subquery_where_dml_live_against_spark() -> None:
             ).toArrow()
             assert _id_row_id_seq(spark_rows) == expected, table
             kinds = session.sql(f"SELECT file_format FROM {target}.delete_files").toArrow()
-            assert [
-                str(kind).upper() for kind in kinds.column("file_format").to_pylist()
-            ] == ["PUFFIN"], table
+            assert [str(kind).upper() for kind in kinds.column("file_format").to_pylist()] == [
+                "PUFFIN"
+            ], table
     finally:
         session.stop()
         shutil.rmtree(warehouse, ignore_errors=True)

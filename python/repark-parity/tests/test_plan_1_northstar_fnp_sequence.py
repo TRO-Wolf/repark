@@ -56,6 +56,7 @@ def test_live_slate_retires_v3e_5_and_queues_the_safe_work() -> None:
     pins: v3-5-dv-compaction/C-006
     pins: v3-8-subquery-where-lineage/C-003
     pins: v3-6-v3-types/C-007
+    pins: v3-9-mor-predicate-dml-dv/C-005
     """
     slate = _read("briefs/next-sequence.md")
     assert "<!-- unit id=f-y10-1" not in slate
@@ -70,7 +71,8 @@ def test_live_slate_retires_v3e_5_and_queues_the_safe_work() -> None:
     status = _read("STATUS.md")
     assert "V3E-5 added the nightly v3 live-oracle leg" in status
     assert "**V3-6 (2026-09-01):** opt-in v3 CREATE consumes fork `timestamp_ns`" in status
-    assert "**Next:** row-lineage carry is complete on every served DML shape" in status
+    next_row = "**Next:** lineage carry and merge-on-read are complete on every served DML shape"
+    assert next_row in status
     assert "`V3-DANGLE-1` FIXED" in status
 
 

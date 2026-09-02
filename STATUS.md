@@ -150,8 +150,8 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
     orphan 24h floor on adopted v3. V3E-5 added the nightly v3 live-oracle leg
     ([#253](https://github.com/TRO-Wolf/repark/pull/253)). RP-2 (2026-08-28, fork `ce92a7bf`)
     the DV-free first DELETE. RP-3 (2026-08-30, fork `d408da42`) wired container closure;
-    live-DV DELETE merge and sequential COW DELETE Spark-equal on three doors (F-rp3-c7
-    consumed); Hadoop writes FIXED (`V3-ADOPT-1`). RP-4 (2026-08-31, fork `33be9a0`) F-7
+    live-DV DELETE merge and sequential COW DELETE Spark-equal on three doors, F-rp3-c7
+    consumed; Hadoop writes FIXED (`V3-ADOPT-1`). RP-4 (2026-08-31, fork `33be9a0`) F-7
     slice 1: rewrite lineage Spark-equal (`V3-LINEAGE-1` FIXED); F-6 `to_branch` carried.
     RP-6 (2026-09-01, fork `fb0cacfa`) lifts UPDATE. V3-7 / V3-8 (2026-09-02) carry MERGE
     and subquery-`WHERE` COW `_row_id` and delete the refusal seat — `V3-COW-1` **FIXED**.

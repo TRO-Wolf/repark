@@ -80,7 +80,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   rows unchanged; MOR first DELETE commits a Puffin DV and the second merges. RP-4
   six-file `rewrite_data_files` keeps `_row_id` / seq on `to_arrow`. **V3-9:** the facade MoR
   subquery-`WHERE` twin — `DELETE … IN` at next-row-id 3 / added 0 and `UPDATE … IN` at
-  next-row-id 4 / added 1, each with `delete_files.file_format` = `PUFFIN`.
+  next-row-id 4 / added 1, each with `delete_files.file_format` = `PUFFIN`; the UPDATE
+  statement is split across two source lines to hold the 100-column ruff ceiling.
   pins: v3-9-mor-predicate-dml-dv/C-003; v3-8-subquery-where-lineage/C-002;
   v3-7-merge-lineage/C-002; rp-6-fork-repin/C-002, C-003; rp-4-fork-repin/C-003
 - [test_ref_branch_tag_wap.py](test_ref_branch_tag_wap.py) — **REF:** the facade rows for

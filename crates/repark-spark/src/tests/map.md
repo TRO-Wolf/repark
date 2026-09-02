@@ -81,8 +81,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   V3E-3 fixtures (MOR+DV surviving rows), created v3 derivation, v2/v1 unresolved (`No field
   named _row_id`), `SELECT *, _row_id` expands user columns only, qualified/aliased forms,
   unquoted case-fold, JOIN/CTE/subquery/`VERSION AS OF` refuse `V3-ROWID-2`, V3-COW-1 files
-  hash-pinned (V3-7 re-records after the Spark-equal MERGE lift; later units re-record
-  only for a change another merged unit made); the C-001
+  hash-pinned (V3-9 re-records after the merge-on-read lift touched three of the four files;
+  later units re-record only for a change they themselves made); the C-001
   matrix pin finds the ledger anywhere under `task/ledgers/` so
   lifecycle moves keep it green.
   pins: rp-4-fork-repin/C-003

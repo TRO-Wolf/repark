@@ -506,7 +506,8 @@ def test_facade_adopted_v3_mor_subquery_where_dml_writes_deletion_vectors(tmp_pa
         assert _current_lineage(_latest_version_uuid_metadata(sales, "seed_msd")) == (3, 3, 0)
         assert _delete_file_kinds(spark, "adopt_msd") == ["PUFFIN"]
         spark.sql(
-            "UPDATE ice.sales.adopt_msu SET name = 'm' WHERE id IN (SELECT id FROM ice.sales.srcids)"
+            "UPDATE ice.sales.adopt_msu SET name = 'm' "
+            "WHERE id IN (SELECT id FROM ice.sales.srcids)"
         ).collect()
         updated = spark.sql(
             "SELECT id, name, _row_id, _last_updated_sequence_number "
