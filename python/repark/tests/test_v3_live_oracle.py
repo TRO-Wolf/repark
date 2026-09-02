@@ -804,6 +804,8 @@ _UPGRADE_SQL = "SET TBLPROPERTIES ('format-version' = '3')"
 
 def test_v3_upgrade_v2_to_v3_live_matches_spark(tmp_path: Path) -> None:
     """The in-place v2 to v3 upgrade and the append after it land Spark's lineage."""
+    if not _LIVE:
+        pytest.skip(_LIVE_SKIP)
     from repark import ReparkSession
 
     session = (
@@ -829,8 +831,6 @@ def test_v3_upgrade_v2_to_v3_live_matches_spark(tmp_path: Path) -> None:
             "SELECT id, _row_id, _last_updated_sequence_number FROM ice.sales.up ORDER BY id"
         ).to_arrow()
         assert _id_row_id_seq(post) == _UPGRADE_POST_LINEAGE
-        if not _LIVE:
-            pytest.skip(_LIVE_SKIP)
         _assert_upgrade_live_against_spark()
     finally:
         session.stop()
@@ -846,7 +846,6 @@ def _assert_upgrade_live_against_spark() -> None:
 
     catalog = "local"
     warehouse = Path(tempfile.mkdtemp(prefix="repark-v3-10-live-upg-"))
-    ivy_home = Path(tempfile.mkdtemp(prefix="repark-v3-10-ivy-"))
     schema = spark_types.StructType(
         [
             spark_types.StructField("id", spark_types.IntegerType(), False),
@@ -860,7 +859,6 @@ def _assert_upgrade_live_against_spark() -> None:
         .config("spark.sql.shuffle.partitions", "1")
         .config("spark.default.parallelism", "1")
         .config("spark.ui.enabled", "false")
-        .config("spark.jars.ivy", str(ivy_home))
         .config(
             "spark.sql.extensions",
             "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
@@ -895,7 +893,10 @@ def _assert_upgrade_live_against_spark() -> None:
             f"SELECT id, _row_id, _last_updated_sequence_number FROM {target} ORDER BY id"
         ).toArrow()
         assert _id_row_id_seq(post) == _UPGRADE_POST_LINEAGE
-        metadata = sorted((warehouse / "sales" / "up" / "metadata").glob("*.metadata.json"))
+        metadata = sorted(
+            (warehouse / "sales" / "up" / "metadata").glob("v*.metadata.json"),
+            key=lambda path: int(path.name[1:].split(".", 1)[0]),
+        )
         latest = json.loads(metadata[-1].read_text(encoding="utf-8"))
         assert latest["format-version"] == 3
         assert latest["next-row-id"] == 5
@@ -903,7 +904,6 @@ def _assert_upgrade_live_against_spark() -> None:
     finally:
         session.stop()
         shutil.rmtree(warehouse, ignore_errors=True)
-        shutil.rmtree(ivy_home, ignore_errors=True)
     assert ICEBERG_SPARK_RUNTIME_GAV == "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0"
 
 
