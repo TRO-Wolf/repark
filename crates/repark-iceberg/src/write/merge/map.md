@@ -62,7 +62,8 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   V3-11: `write_partitioned_lineage_files` passes the fanout writer's close result through
   `crate::write::file_order::ascending_partition_order`, because the fork's `FanoutWriter` drains a
   `HashMap` and a MoR MERGE that updates one partition and inserts into another produced two
-  files in random order — registry `V3-ROWID-3`.
+  files in random order — registry `V3-ROWID-3`; the general rule and its
+  divergence from Spark are `V3-FILEORDER-1`.
   pins: v3-11-row-id-determinism/C-003
   V3-8: `table_carries_merge_lineage` and `scratch_schema_for_table` widen to `pub(crate)`
   so `write::predicate_dml` reuses the same scratch shape for its COW rewrite; the module is

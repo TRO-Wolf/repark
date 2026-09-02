@@ -133,7 +133,7 @@ async fn mor_merge_insert_takes_sparks_row_id_in_ten_consecutive_runs() {
 }
 
 #[tokio::test]
-async fn partitioned_ctas_numbers_same_commit_files_in_sparks_partition_order() {
+async fn partitioned_ctas_numbers_files_ascending_by_partition_value() {
     let _: &str = "pins: v3-11-row-id-determinism/C-003";
     for attempt in 0..5 {
         let warehouse = TempDir::new().unwrap();
@@ -164,7 +164,7 @@ async fn partitioned_ctas_numbers_same_commit_files_in_sparks_partition_order() 
 }
 
 #[tokio::test]
-async fn mor_merge_across_three_partitions_numbers_new_files_in_sparks_order() {
+async fn mor_merge_across_three_partitions_numbers_files_ascending_by_partition_value() {
     let _: &str = "pins: v3-11-row-id-determinism/C-003";
     for attempt in 0..5 {
         let warehouse = TempDir::new().unwrap();
@@ -208,4 +208,147 @@ async fn mor_merge_across_three_partitions_numbers_new_files_in_sparks_order() {
             "run {attempt}"
         );
     }
+}
+
+async fn ctas_partition_order(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    table: &str,
+    partitioning: &str,
+    columns: &str,
+    values: &str,
+) -> Vec<(i64, Option<i64>)> {
+    run(
+        ctx,
+        catalogs,
+        &format!(
+            "CREATE TABLE ice.sales.{table} USING iceberg PARTITIONED BY ({partitioning}) \
+             TBLPROPERTIES ('format-version' = '3') AS \
+             SELECT * FROM (VALUES {values}) AS t({columns})"
+        ),
+    )
+    .await;
+    lineage(ctx, catalogs, table)
+        .await
+        .into_iter()
+        .map(|(id, row_id, _)| (id, row_id))
+        .collect()
+}
+
+#[tokio::test]
+async fn a_null_partition_slot_is_numbered_first_whatever_order_it_arrives_in() {
+    let _: &str = "pins: v3-11-row-id-determinism/C-007";
+    for (attempt, values) in [
+        "(1, 0), (2, CAST(NULL AS INT)), (3, 1)",
+        "(1, CAST(NULL AS INT)), (2, 0), (3, 1)",
+        "(1, 1), (2, CAST(NULL AS INT)), (3, 0)",
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let warehouse = TempDir::new().unwrap();
+        let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+        let table = format!("nullpart_{attempt}");
+        let rows = ctas_partition_order(&ctx, &catalogs, &table, "part", "id, part", values).await;
+        let expected = match attempt {
+            0 => vec![(1, Some(1)), (2, Some(0)), (3, Some(2))],
+            1 => vec![(1, Some(0)), (2, Some(1)), (3, Some(2))],
+            _ => vec![(1, Some(2)), (2, Some(0)), (3, Some(1))],
+        };
+        assert_eq!(rows, expected, "arrival {attempt}");
+    }
+}
+
+#[tokio::test]
+async fn a_two_field_spec_orders_lexicographically_in_spec_field_order() {
+    let _: &str = "pins: v3-11-row-id-determinism/C-007";
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    let rows = ctas_partition_order(
+        &ctx,
+        &catalogs,
+        "twofield",
+        "a, b",
+        "id, a, b",
+        "(1, 0, 1), (2, 0, 0), (3, 1, 1), (4, 1, 0), (5, 2, 0)",
+    )
+    .await;
+    assert_eq!(
+        rows,
+        vec![
+            (1, Some(1)),
+            (2, Some(0)),
+            (3, Some(3)),
+            (4, Some(2)),
+            (5, Some(4)),
+        ]
+    );
+}
+
+#[tokio::test]
+async fn transform_partitions_order_by_the_transformed_value_ascending() {
+    let _: &str = "pins: v3-11-row-id-determinism/C-007";
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    assert_eq!(
+        ctas_partition_order(
+            &ctx,
+            &catalogs,
+            "trunc",
+            "truncate(1, part)",
+            "id, part",
+            "(1, 'aa'), (2, 'bb'), (3, 'cc'), (4, 'dd'), (5, 'ee')",
+        )
+        .await,
+        vec![
+            (1, Some(0)),
+            (2, Some(1)),
+            (3, Some(2)),
+            (4, Some(3)),
+            (5, Some(4)),
+        ],
+        "truncate"
+    );
+    assert_eq!(
+        ctas_partition_order(
+            &ctx,
+            &catalogs,
+            "bkt",
+            "bucket(4, part)",
+            "id, part",
+            "(1, 0), (2, 1), (3, 2), (4, 3), (5, 4), (6, 5), (7, 6), (8, 7)",
+        )
+        .await,
+        vec![
+            (1, Some(0)),
+            (2, Some(1)),
+            (3, Some(2)),
+            (4, Some(5)),
+            (5, Some(4)),
+            (6, Some(6)),
+            (7, Some(3)),
+            (8, Some(7)),
+        ],
+        "bucket"
+    );
+    assert_eq!(
+        ctas_partition_order(
+            &ctx,
+            &catalogs,
+            "dayt",
+            "days(d)",
+            "id, d",
+            "(1, DATE '2026-01-01'), (2, DATE '2026-01-02'), (3, DATE '2026-01-03'), \
+             (4, DATE '2026-01-04'), (5, DATE '2026-01-05')",
+        )
+        .await,
+        vec![
+            (1, Some(0)),
+            (2, Some(1)),
+            (3, Some(2)),
+            (4, Some(3)),
+            (5, Some(4)),
+        ],
+        "days"
+    );
 }

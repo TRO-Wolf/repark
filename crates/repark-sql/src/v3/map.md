@@ -31,7 +31,9 @@ ANSI-door format-v3 test modules. `lib.rs` declares `#[cfg(test)] mod v3;`.
   with one live `Puffin` delete file
   **V3-11:** the ANSI twins of the same-commit file-order pins — a partitioned v3 CTAS over
   three partition values and a MoR MERGE that updates one partition and inserts into two more
-  both take Spark's exact `_row_id` map, five runs each; dropping the sort reddens both
+  both take Spark's exact `_row_id` map, five runs each (these two partition sets are
+  collision-free monotonic runs, the only shape where the engine's ascending rule and Spark's
+  `HashMap` bucket order coincide — `V3-FILEORDER-1`); dropping the sort reddens both
   (pins: v3-11-row-id-determinism/C-004; v3-9-mor-predicate-dml-dv/C-003;
   v3-8-subquery-where-lineage/C-002;
   v3-7-merge-lineage/C-002; rp-6-fork-repin/C-002, C-003; rp-3-fork-repin/C-008).

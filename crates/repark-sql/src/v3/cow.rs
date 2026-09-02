@@ -816,7 +816,7 @@ const MOR_MERGE_V3: &str = "format_version = 3, extra_properties = MAP(\
     ARRAY['merge-on-read', 'merge-on-read', 'merge-on-read'])";
 
 #[tokio::test]
-async fn ansi_partitioned_ctas_numbers_same_commit_files_in_sparks_partition_order() {
+async fn ansi_partitioned_ctas_numbers_files_ascending_by_partition_value() {
     for attempt in 0..5 {
         let door = door_with_v3_opt_in().await;
         let table = format!("ansi_ctas_order_{attempt}");
@@ -839,7 +839,7 @@ async fn ansi_partitioned_ctas_numbers_same_commit_files_in_sparks_partition_ord
 }
 
 #[tokio::test]
-async fn ansi_mor_merge_across_three_partitions_numbers_new_files_in_sparks_order() {
+async fn ansi_mor_merge_across_three_partitions_numbers_files_ascending_by_partition_value() {
     for attempt in 0..5 {
         let door = door_with_v3_opt_in().await;
         let table = format!("ansi_merge_order_{attempt}");

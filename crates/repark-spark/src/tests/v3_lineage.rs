@@ -438,7 +438,7 @@ fn cow_keep_refusal_files_are_byte_untouched() {
             "crates/repark-spark/src/tests/v3_cow.rs",
             0x9339_d979_508a_32b0,
         ),
-        ("crates/repark-sql/src/v3/cow.rs", 0xf0a7_9f70_6d31_c7ad),
+        ("crates/repark-sql/src/v3/cow.rs", 0xc798_edce_d51d_a428),
         (
             "python/repark/tests/test_v3_cow_dml.py",
             0xce7c_19f9_d69d_4f7c,
@@ -455,8 +455,9 @@ fn cow_keep_refusal_files_are_byte_untouched() {
             hash, expected,
             "V3-COW-1 lift file {path} changed; V3-11 \
              (feat/v3-11-row-id-determinism) re-records the `v3/cow.rs` hash for the two ANSI \
-             same-commit file-order twins it adds there; later units re-record only for a \
-             change they themselves made"
+             same-commit file-order twins it adds there, and again in its remediation round \
+             when those two were renamed off the misleading `sparks_..._order` spelling; \
+             later units re-record only for a change they themselves made"
         );
     }
 }
