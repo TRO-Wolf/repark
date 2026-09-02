@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use datafusion::arrow::array::RecordBatch;
+use datafusion::arrow::array::{Array, Int64Array, RecordBatch, StringArray};
 use datafusion::arrow::datatypes::{DataType, Field, Schema as ArrowSchema};
 use datafusion::error::{DataFusionError, Result};
 use iceberg::metadata_columns::{
@@ -125,4 +125,33 @@ pub(super) fn project_update_data_batch(
             "identity UPDATE data batch does not match the projected schema: {error}"
         ))
     })
+}
+
+pub(super) fn push_pairs_from_batch(
+    batch: &RecordBatch,
+    pairs: &mut Vec<PositionDeletePair>,
+) -> Result<()> {
+    let files = batch
+        .column(0)
+        .as_any()
+        .downcast_ref::<StringArray>()
+        .ok_or_else(|| {
+            DataFusionError::Internal("identity SELECT `_file` column is not Utf8".to_string())
+        })?;
+    let positions = batch
+        .column(1)
+        .as_any()
+        .downcast_ref::<Int64Array>()
+        .ok_or_else(|| {
+            DataFusionError::Internal("identity SELECT `_pos` column is not Int64".to_string())
+        })?;
+    for row in 0..batch.num_rows() {
+        if files.is_null(row) || positions.is_null(row) {
+            return Err(DataFusionError::Internal(
+                "identity SELECT produced a NULL `(_file, _pos)` pair".to_string(),
+            ));
+        }
+        push_identity_pair(pairs, files.value(row), positions.value(row));
+    }
+    Ok(())
 }

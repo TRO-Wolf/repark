@@ -44,16 +44,35 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   blob is rewritten and the untouched sibling entry keeps its container and `content_offset`, so
   the C-003 pin gained that layout assertion alongside its semantic one. `free_partitions` hands
   the fork `(default_spec_id, Struct::empty())` for every touched path when **every** spec in the
-  metadata is unpartitioned — the only `(spec_id, partition)` RePark knows without a manifest
-  read, and the guard is what makes it sound under spec evolution. The two manifest-read pins
-  hide the live data manifests and require the close to succeed anyway: covered paths resolve
-  from the delete manifests, fresh paths from the supplied map. Not yet supplied: the partition
-  of a fresh path in a partitioned table — RePark has no cheaper source than the fork's own lazy
-  walk, so it does not build one.
+  metadata is unpartitioned. **Remediation (2026-09-02):** that short-circuit was measurably
+  useless — a table with any partitioned spec in its history got an empty map and paid the full
+  lazy walk (192-file partitioned fresh-path DELETE: 2,176 ms). The map now comes from the
+  statement's OWN target scan (`TargetScanStream::with_partition_sink`), which already plans
+  every `FileScanTask` and so already knows each file's `(spec_id, partition)`; entries are
+  supplied only for paths that scan produced, which keeps the fork's "not a live file of the
+  scanned snapshot" guard meaningful. `plan_deletion_vectors` retains the map down to the
+  touched paths, and `referenced_data_files` MOVES `retained_references` out instead of cloning
+  it. The two manifest-read pins hide the live data manifests and require the close to succeed
+  anyway: `closing_a_covered_v3_delete_reads_no_data_manifest` is FORK behaviour (a covered path
+  resolves from the delete manifests, no map needed), while
+  `a_supplied_partition_map_closes_a_fresh_partitioned_delete_with_no_data_manifest` is the
+  load-bearing one for the supplied map — mutation (clear the map) 1 red of 3.
   pins: rp-3-fork-repin/C-003
   pins: v3-5-dv-compaction/C-005
   pins: v3-9-mor-predicate-dml-dv/C-007, C-009
   pins: rp-7-f18-repin/C-002, C-003
+- `snapshot_commit.rs` — **RP-7 (2026-09-02):** `commit_row_delta_kind_with_partitions` /
+  `commit_row_delta_on_ref_with_partitions` carry the scan's partition map to the DV close. The
+  bare `commit_row_delta_kind` / `commit_row_delta_on_ref` wrappers have no production caller
+  left and are `#[cfg(test)]`, so the OCC batteries keep their existing spellings.
+  pins: rp-7-f18-repin/C-002
+- `target_scan.rs` — **RP-7 (2026-09-02):** `TargetScanStream` and the partition sink, extracted
+  from `mod.rs` (baseline ratcheted 1889 → 1795 in the same change). The scan takes the
+  `plan_files` route whenever an allowlist OR a sink is present and `to_arrow()` otherwise; the
+  two routes are byte-equivalent for this scan shape (the fork's `to_arrow` builds an
+  `ArrowReaderBuilder` with the same defaults, and its within-file split expansion is a no-op
+  while `_pos` is projected).
+  pins: rp-7-f18-repin/C-002
 - `abort.rs` — `delete_written_files_best_effort` + `written_file_paths`. Delete
   set is threaded from writer results in hand; never re-derived from the table
   or manifests. `CommitStateUnknown` errors SKIP cleanup (the commit may have

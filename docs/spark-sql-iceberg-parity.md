@@ -2398,13 +2398,16 @@ the pin rather than obeying it.
   on the Spark-written partitioned fixture (2 data files, 2 DVs packed in one Puffin at offsets 4
   and 46): after `DELETE … WHERE id IN (SELECT …)` touching only the `part = 0` file there are
   **two containers** — the touched file's DV in a new one at offset 4 with 2 records, and the
-  sibling entry still at its **old** container and **old** offset 46 with 1 record. Snapshot
+  sibling entry still at its **original** container and **original** offset with 1 record (which
+  of the two blobs lands at offset 4 and which at 46 follows the seed writer's ordering and is not
+  stable run to run, so the pins compare the sibling to its own before-value). Snapshot
   summary `removed-delete-files 1` / `removed-dvs 1` / `removed-position-deletes 1` /
   `added-delete-files 1` / `added-dvs 1` / `added-position-deletes 2`. Removal is keyed by Java's
   `DeleteFileSet` triple `(location, content_offset, content_size_in_bytes)`, not by path.
 - **Apache Spark** — the same statement, same layout, same summary
-  *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, Hadoop catalog, `local[2]`, ANSI on, UTC,
-  partitioned v3 merge-on-read, re-measured 2026-09-02 for RP-7)*. Both readings are now equal.
+  *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, Hadoop catalog, `local[1]`, ANSI on,
+  partitioned v3 merge-on-read, re-measured 2026-09-02 for RP-7 by the committed live cell)*.
+  Both readings are now equal.
 - **Cost** — the write amplification is closed, measured in this tree
   (`v3e4.rs::measure_later_single_row_delete_bytes`, one blob per data file, later single-row
   `DELETE`):

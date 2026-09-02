@@ -104,6 +104,15 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `measure_later_single_row_delete_bytes` is the measurement that recorded 4,830 → 377 B at 16
   blobs and 19,126 → 377 B at 64 across the repin.
   pins: rp-7-f18-repin/C-003, C-004
+- `v3_dml_scan.rs` — **RP-7 (2026-09-02):** the key-bounds residual push on the identity DML
+  scan. `subquery_delete_opens_only_the_files_the_key_bounds_admit` seeds eight one-row data
+  files, hides the seven whose manifest lower bound cannot hold the source key, and requires the
+  subquery DELETE to succeed anyway — a scan that still opened them fails closed on a missing
+  Parquet file rather than passing quietly. Mutation (return `None` from
+  `identity_scan_residual`) 1 red of 1. The `#[ignore]`d
+  `measure_v3_mor_subquery_delete_statement_wall` is the statement-wall measurement behind the
+  ledger's §10 table; it is a wall clock and deliberately not asserted.
+  pins: rp-7-f18-repin/C-005
   rustdoc cites C-001..C-016 (`Model: Grok 4.6 xHigh`; rp-3-fork-repin/C-004;
   rp-6-fork-repin/C-002, C-003; v3-7-merge-lineage/C-002; v3-9-mor-predicate-dml-dv/C-003).
 - `v3_lineage.rs` — **V3-4:** Spark-door `_row_id` / `_last_updated_sequence_number` on the RP-6 re-recorded the `repark-sql/src/v3/cow.rs` hash once more after the pins citation moved from its module doc to the map.

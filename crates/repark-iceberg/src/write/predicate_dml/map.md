@@ -22,8 +22,16 @@ works, so the attribute is gone rather than documented.
   **V3-9 (2026-09-02):** also `push_identity_pair`, which reuses the previous `Arc<str>` when
   the matched row's data-file path is unchanged — one allocation per distinct path instead of
   one per row (600k rows on one file: 31.0 → 11.5 ms, 66,000,000 → 110 B retained). It lives
-  here rather than in the parent because `predicate_dml.rs` sits at an exact 1164-line ceiling.
+  here rather than in the parent because `predicate_dml.rs` sits at an exact line ceiling (1142 since RP-7). **RP-7 (2026-09-02):** `push_pairs_from_batch` moved here for the same reason; both identity collectors now stream and call it once per arriving batch.
   pins: v3-8-subquery-where-lineage/C-002; v3-9-mor-predicate-dml-dv/C-009
+- `residual.rs` — **RP-7 (2026-09-02):** `identity_scan_residual`, the key-bounds residual the
+  identity DML scratch scan carries. Re-parses `selection_sql` (the spec carries SQL, not an AST)
+  and matches only a POSITIVE uncorrelated `IN` or a positive `EXISTS` whose correlation is one
+  bare equality; everything else, and `repark.merge.scan-pruning=false`, leaves the scan
+  unfiltered. Bounds come from `scan_prune::residual_bounds_predicate`, the same helper PERF-04
+  gave MERGE. Extracted so `predicate_dml.rs` stays under its exact size baseline, which
+  ratcheted 1164 → 1142 in the same change.
+  pins: rp-7-f18-repin/C-005
 - [tests/](tests/map.md) — DELETE and identity UPDATE batteries.
 
 ## Pointers

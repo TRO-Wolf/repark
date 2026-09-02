@@ -15,6 +15,9 @@ from test_v3_live_oracle import (
     _v37_iceberg_runtime_jar,
 )
 
+_DV_COLUMNS = (
+    "SELECT referenced_data_file, file_path, content_offset, record_count FROM {table}.delete_files"
+)
 _SHARED_PUFFIN_ROWS = [(3, "c", 0), (4, "d", 1), (6, "f", 1)]
 _SHARED_PUFFIN_SEED = [(1, "a", 0), (2, "b", 0), (3, "c", 0), (4, "d", 1), (5, "e", 1), (6, "f", 1)]
 _SHARED_PUFFIN_MOR = "'format-version' = '3', 'write.delete.mode' = 'merge-on-read'"
@@ -73,9 +76,9 @@ def test_v3_shared_puffin_container_close_live(tmp_path: Path) -> None:
         seed = ", ".join(f"({row[0]}, '{row[1]}', {row[2]})" for row in _SHARED_PUFFIN_SEED)
         session.sql(f"INSERT INTO ice.sales.partdv VALUES {seed}").collect()
         session.sql("DELETE FROM ice.sales.partdv WHERE id IN (2, 5)").collect()
-        before = _dv_entries(session.sql("SELECT * FROM ice.sales.partdv.delete_files").to_arrow())
+        before = _dv_entries(session.sql(_DV_COLUMNS.format(table="ice.sales.partdv")).to_arrow())
         session.sql("DELETE FROM ice.sales.partdv WHERE id = 1").collect()
-        after = _dv_entries(session.sql("SELECT * FROM ice.sales.partdv.delete_files").to_arrow())
+        after = _dv_entries(session.sql(_DV_COLUMNS.format(table="ice.sales.partdv")).to_arrow())
         rows = [
             (row["id"], row["name"], row["part"])
             for row in session.sql("SELECT id, name, part FROM ice.sales.partdv ORDER BY id")
@@ -136,9 +139,9 @@ def _live_shared_puffin_close_shape() -> dict:
         values = ", ".join(f"({row[0]}, '{row[1]}', {row[2]})" for row in _SHARED_PUFFIN_SEED)
         session.sql(f"INSERT INTO {target} VALUES {values}")
         session.sql(f"DELETE FROM {target} WHERE id IN (2, 5)")
-        before = _dv_entries(session.sql(f"SELECT * FROM {target}.delete_files").toArrow())
+        before = _dv_entries(session.sql(_DV_COLUMNS.format(table=target)).toArrow())
         session.sql(f"DELETE FROM {target} WHERE id = 1")
-        after = _dv_entries(session.sql(f"SELECT * FROM {target}.delete_files").toArrow())
+        after = _dv_entries(session.sql(_DV_COLUMNS.format(table=target)).toArrow())
         rows = [
             (row["id"], row["name"], row["part"])
             for row in session.sql(f"SELECT id, name, part FROM {target} ORDER BY id")

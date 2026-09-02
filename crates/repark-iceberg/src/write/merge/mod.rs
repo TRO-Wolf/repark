@@ -13,14 +13,17 @@ pub(super) use datafusion::arrow::datatypes::Field;
 use datafusion::arrow::datatypes::{DataType, Schema as ArrowSchema, SchemaRef};
 use datafusion::catalog::streaming::StreamingTable;
 use datafusion::error::{DataFusionError, Result};
+#[cfg(test)]
 use datafusion::execution::TaskContext;
+#[cfg(test)]
 use datafusion::physical_plan::SendableRecordBatchStream;
+#[cfg(test)]
 use datafusion::physical_plan::stream::RecordBatchStreamAdapter;
 use datafusion::physical_plan::streaming::PartitionStream;
 use datafusion::prelude::SessionContext;
 use futures::channel::mpsc;
 use futures::{SinkExt, Stream, StreamExt, TryStreamExt};
-use iceberg::arrow::{ArrowReaderBuilder, FieldMatchMode, schema_to_arrow_schema};
+use iceberg::arrow::{FieldMatchMode, schema_to_arrow_schema};
 use iceberg::expr::Predicate;
 use iceberg::spec::{
     DataFile, DataFileFormat, FormatVersion, ManifestContentType, PartitionKey, Struct,
@@ -47,13 +50,17 @@ mod insert;
 mod not_matched_by_source;
 pub(crate) mod row_lineage;
 mod snapshot_commit;
+mod target_scan;
+
 use insert::{
     insert_projection, insert_stream_checked, store_assignment_then_sql, update_stream_checked,
 };
 pub use not_matched_by_source::{NotMatchedBySourceAction, NotMatchedBySourceClause};
+pub(crate) use target_scan::{
+    KnownPartitions, PartitionSink, TargetScanStream, drain_partition_sink, new_partition_sink,
+};
 
 use crate::write::concurrency::{WriteConcurrency, concurrency_from_ctx};
-use crate::write::file_scoped_rewrite::filter_tasks_to_allowlist_nonempty;
 use crate::write::name_resolution::{CaseInsensitiveColumnIndex, SourceMatch};
 use crate::write::scan_concurrency::scan_concurrency_from_ctx;
 use crate::write::scan_prune::{
@@ -175,20 +182,25 @@ pub async fn execute_merge(
     let file_scoped = file_scoped_rewrite_from_ctx(ctx);
     let residual = residual_join_key_filter(ctx, spec, &write_schema, mode, file_scoped).await?;
     let scan_concurrency = scan_concurrency_from_ctx(ctx);
-    let source: Arc<dyn PartitionStream> = Arc::new(TargetScanStream::new(
-        table.clone(),
-        snapshot_id,
-        Arc::clone(&scratch),
-        &write_schema,
-        residual,
-        scan_concurrency.concurrency_limit,
-        None, // full snapshot for discovery + insert anti-join (filter may prune files/rows)
-    ));
+    let partitions = new_partition_sink();
+    let source: Arc<dyn PartitionStream> = Arc::new(
+        TargetScanStream::new(
+            table.clone(),
+            snapshot_id,
+            Arc::clone(&scratch),
+            &write_schema,
+            residual,
+            scan_concurrency.concurrency_limit,
+            None, // full snapshot for discovery + insert anti-join (filter may prune files/rows)
+        )
+        .with_partition_sink(Arc::clone(&partitions)),
+    );
     let target_name = register_streaming_target(ctx, Arc::clone(&scratch), source)?;
     let target = MergeTarget {
         table: &table,
         write_schema: &write_schema,
         snapshot_id,
+        partitions,
     };
     let result = plan_and_commit(ctx, catalog, spec, &target, &target_name, mode).await;
     // Non-fatal for the MERGE result — but never silent (resource leak under repeated MERGEs).
@@ -505,117 +517,6 @@ pub(super) fn scratch_schema(write_schema: &SchemaRef) -> SchemaRef {
     row_lineage::scratch_schema_with_lineage(write_schema, false)
 }
 
-/// Re-scannable partition stream over the pinned snapshot, replacing the full-target `MemTable`.
-#[derive(Debug)]
-pub(super) struct TargetScanStream {
-    table: Table,
-    snapshot_id: Option<i64>,
-    scratch_schema: SchemaRef,
-    select_columns: Vec<String>,
-    /// Residual Iceberg predicate (join-key min/max bounds) — `None` = unfiltered scan.
-    filter: Option<Predicate>,
-    /// When set, passed to `TableScanBuilder::with_concurrency_limit`.
-    concurrency_limit: Option<usize>,
-    /// R-MERGE-FILE-SCAN: when set, only open data files whose path is in this set.
-    file_path_allowlist: Option<std::sync::Arc<std::collections::HashSet<String>>>,
-    /// Span current at CONSTRUCTION (inside the merge's instrumented body).
-    trace_parent: tracing::Span,
-}
-
-impl TargetScanStream {
-    /// The select list is the target's data columns followed by the two identity metadata columns.
-    pub(super) fn new(
-        table: Table,
-        snapshot_id: Option<i64>,
-        scratch_schema: SchemaRef,
-        _write_schema: &SchemaRef,
-        filter: Option<Predicate>,
-        concurrency_limit: Option<usize>,
-        file_path_allowlist: Option<std::sync::Arc<std::collections::HashSet<String>>>,
-    ) -> Self {
-        let select_columns: Vec<String> = scratch_schema
-            .fields()
-            .iter()
-            .map(|field| field.name().clone())
-            .collect();
-        Self {
-            table,
-            snapshot_id,
-            scratch_schema,
-            select_columns,
-            filter,
-            concurrency_limit,
-            file_path_allowlist,
-            trace_parent: tracing::Span::current(),
-        }
-    }
-}
-
-impl PartitionStream for TargetScanStream {
-    fn schema(&self) -> &SchemaRef {
-        &self.scratch_schema
-    }
-
-    fn execute(&self, _ctx: Arc<TaskContext>) -> SendableRecordBatchStream {
-        let scratch = Arc::clone(&self.scratch_schema);
-        let Some(pin) = self.snapshot_id else {
-            // No snapshot yet ⇒ an empty target (no rows to scan, no file to open).
-            return Box::pin(RecordBatchStreamAdapter::new(
-                scratch,
-                futures::stream::empty(),
-            ));
-        };
-        let table = self.table.clone();
-        let select_columns = self.select_columns.clone();
-        let map_schema = Arc::clone(&scratch);
-        let filter = self.filter.clone();
-        let concurrency_limit = self.concurrency_limit;
-        let file_path_allowlist = self.file_path_allowlist.clone();
-        let trace_parent = self.trace_parent.clone();
-        // Open the pinned scan lazily and conform each arriving batch onto the scratch schema.
-        let opened =
-            async move {
-                let mut builder = table.scan().snapshot_id(pin).select(select_columns);
-                if let Some(predicate) = filter {
-                    builder = builder.with_filter(predicate);
-                }
-                if let Some(limit) = concurrency_limit {
-                    builder = builder.with_concurrency_limit(limit);
-                }
-                let scan = builder.build().map_err(iceberg_err)?;
-                let arrow = if let Some(allowlist) = file_path_allowlist {
-                    // File-scoped path: keep allowlisted tasks and read via ArrowReader.
-                    let planned: Vec<_> = scan
-                        .plan_files()
-                        .await
-                        .map_err(iceberg_err)?
-                        .try_collect()
-                        .await
-                        .map_err(iceberg_err)?;
-                    let filtered = filter_tasks_to_allowlist_nonempty(planned, allowlist.as_ref())?;
-                    let task_stream: iceberg::scan::FileScanTaskStream =
-                        Box::pin(futures::stream::iter(filtered.into_iter().map(Ok)));
-                    let mut reader = ArrowReaderBuilder::new(table.file_io().clone());
-                    if let Some(limit) = concurrency_limit {
-                        reader = reader.with_data_file_concurrency_limit(limit);
-                    }
-                    reader.build().read(task_stream).map_err(iceberg_err)?
-                } else {
-                    scan.to_arrow().await.map_err(iceberg_err)?
-                };
-                Ok::<_, DataFusionError>(arrow.map(move |batch| {
-                    conform_scan_batch(&map_schema, &batch.map_err(iceberg_err)?)
-                }))
-            }
-            .instrument(tracing::info_span!(
-                parent: trace_parent.id(),
-                "merge.target_scan"
-            ));
-        let stream = futures::stream::once(opened).try_flatten();
-        Box::pin(RecordBatchStreamAdapter::new(scratch, stream))
-    }
-}
-
 /// Test-only **logical** target-SQL pass counter (PERF-19 / Q16).
 #[cfg(test)]
 fn note_logical_target_sql_pass() {
@@ -630,7 +531,7 @@ fn note_logical_target_sql_pass() {
 fn note_logical_target_sql_pass() {}
 
 /// Map one pinned-scan batch onto the scratch schema: reorder by name and cast `_file` and `_pos`.
-fn conform_scan_batch(scratch: &SchemaRef, batch: &RecordBatch) -> Result<RecordBatch> {
+pub(super) fn conform_scan_batch(scratch: &SchemaRef, batch: &RecordBatch) -> Result<RecordBatch> {
     let mut columns: Vec<ArrayRef> = Vec::with_capacity(scratch.fields().len());
     for field in scratch.fields() {
         let column = named_column(batch, field.name())?;
@@ -662,6 +563,7 @@ struct MergeTarget<'a> {
     write_schema: &'a SchemaRef,
     /// The snapshot every merge query reads — the OCC `validate_from_snapshot` anchor.
     snapshot_id: Option<i64>,
+    partitions: PartitionSink,
 }
 
 async fn plan_and_commit(
@@ -698,6 +600,7 @@ async fn plan_and_commit_cow(
         table,
         write_schema,
         snapshot_id,
+        partitions: _,
     } = *target;
     let (affected, new_files) = async {
         let affected = if not_matched_by_source::is_present(spec) {
@@ -780,7 +683,9 @@ async fn plan_and_commit_mor(
         table,
         write_schema,
         snapshot_id,
-    } = *target;
+        partitions,
+    } = target;
+    let (table, write_schema, snapshot_id) = (*table, *write_schema, *snapshot_id);
     // R-MERGE-ONEPASS Stage B (MoR): one INNER JOIN yields cardinality, deletes, and UPDATE values.
     let (pairs, data_files) = async {
         let mut streams: Vec<std::pin::Pin<Box<dyn Stream<Item = Result<RecordBatch>> + Send>>> =
@@ -837,7 +742,7 @@ async fn plan_and_commit_mor(
     let file_count = data_files.len() as u64;
     let concurrency = concurrency_from_ctx(ctx);
     tracing::info_span!("merge.write_data", files = file_count).in_scope(|| ());
-    commit_row_delta_on_ref(
+    commit_row_delta_on_ref_with_partitions(
         catalog,
         table,
         snapshot_id,
@@ -845,6 +750,7 @@ async fn plan_and_commit_mor(
         data_files,
         concurrency,
         spec.commit_branch.as_deref(),
+        drain_partition_sink(partitions),
     )
     .await
 }

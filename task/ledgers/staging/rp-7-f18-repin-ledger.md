@@ -26,11 +26,13 @@ maintenance sibling copy) — the fork ruled both into F-19; any dependency chan
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
 | C-001 | Every `iceberg*` `[patch.crates-io]` rev is `ff4764d3eba037ecfa185be5de5f639cbffef80b` and `Cargo.lock` resolves to it; `datafusion`, `datafusion-spark`, `arrow*`, `parquet` and `rust-toolchain.toml` are byte-identical to `main`; the pin-history row names the consumed fork PR; every pin that reds on the BARE repin is tabled and explained by F-18. | `make bump-fork-pin`; `grep` the five revs; `cargo test --locked --workspace --no-fail-fast` with the source untouched; §6 table. | **PROVEN** | Five revs and six lock sources are `ff4764d3`. Bare repin: **1 red of 46 suites** — `dv_close::tests::shared_puffin_row_delta_keeps_the_untouched_sibling` on "old container must not stay live", exactly the F-18 sibling-retention row; `repark-spark --lib` 761 passed with the v3e4 cell GREEN because V3-9 narrowed it to the shared invariant. Citation: `docs/fork-sync.md`. |
-| C-002 | RePark consumes the new API: the v3 close routes through `close_touched_dv_containers_with_partitions`, `retained_references` reach the same `validate_data_files_exist` set through `referenced_data_files()`, and the manifest-read budget is pinned — a v3 MoR `DELETE` closes with ZERO data-manifest reads both when the touched files already carry DVs and when RePark supplies the partition map. | Two pins that HIDE the live data manifests and require the close to succeed; one mutation. | **PROVEN** | `closing_a_covered_v3_delete_reads_no_data_manifest` and `a_first_v3_delete_on_an_unpartitioned_table_reads_no_data_manifest` green with every data manifest renamed away. Mutation M1 (supply an empty map): **1 red of 3**, `No such file or directory … -m0.avro`. `free_partitions` supplies `(default_spec_id, Struct::empty())` only when EVERY spec in the metadata is unpartitioned. Open: a fresh path in a PARTITIONED table still uses the fork's lazy walk — RePark has no cheaper source (§7). Citation: `crates/repark-iceberg/src/write/merge/map.md`. |
+| C-002 | RePark consumes the new API: the v3 close routes through `close_touched_dv_containers_with_partitions` with the `(spec_id, partition)` the statement's OWN target scan already planned — partitioned and unpartitioned alike, and only for paths that scan produced — `retained_references` reach the same `validate_data_files_exist` set, and the manifest-read budget is pinned for a FRESH PARTITIONED delete. | A pin that the scan records every planned file's partition; a pin that HIDES the live data manifests and requires a fresh partitioned close to succeed; mutations. | **PROVEN** | `partition_sink.rs::the_target_scan_records_every_planned_file_partition` equals the manifest truth on a 3-partition table (mutation M4, no-op the recorder: **1 red of 1**). `a_supplied_partition_map_closes_a_fresh_partitioned_delete_with_no_data_manifest` green with every data manifest renamed away (mutation M3, clear the map: **1 red of 3**). `closing_a_covered_v3_delete_reads_no_data_manifest` is kept but is FORK behaviour — a covered path resolves from the delete manifests with no map — and is NOT load-bearing for this clause. Measurement §10. Citation: `crates/repark-iceberg/src/write/merge/map.md`. |
 | C-003 | The shared-Puffin cells assert Spark's layout, re-measured live at the matched layout: two containers after the second `DELETE`, the sibling `DeleteFile` entry unchanged in container and `content_offset`, the touched blob at offset 4 with 2 records, `removed-dvs` / `removed-delete-files` 1, rows identical. Registry `V3-DV-1` → FIXED; `V3-MOR-1` loses the residual; the north-star row → ✅; the STATUS Known-issues line goes; the handoff F-18 bullet → consumed; meta-pins re-aimed. Bytes per later single-row `DELETE` at 16 and 64 blobs measured before and after the repin. | Live oracle transcript (§7); the re-aimed Rust cells; a live cell; the byte table; the four documents; `make py-test`. | **PROVEN** | Live oracle re-measured 2026-09-02 (§7) — repark and Spark agree on the whole shape. `v3e4.rs` cell asserts two containers, the sibling tuple unchanged, offset 4 and the six summary counts; `dv_close.rs` keeps the semantic assertion and gains the layout one; `a_later_single_row_delete_writes_one_blob_not_the_whole_container` holds < 1 KiB at 16 blobs; live cell `test_v3_shared_puffin_container_close_live`. Bytes: 4,830 → 377 B at 16 blobs, 19,126 → 377 B at 64 (§8). Citation: `crates/repark-spark/src/tests/map.md`. |
 | C-004 | Everything else stays green at the new pin: every V3 pin, the RDF-1 pins, the MW-7 / MW-8 runbooks, the `v3_lineage.rs` byte tripwire (re-record only if a tripwired file changed), and the live cells. | `make verify`, `make preflight`, `make py-test`, the touched cargo suites, the live cells. | **PROVEN** | §9 gate table. The tripwire files were not touched by this unit, so no hash is re-recorded. Citation: `crates/repark-spark/src/tests/v3_lineage.rs`. |
 
-VERDICT: 4 clauses, 4 PROVEN, 0 OPEN, 0 REJECTED.
+| C-005 | The identity DML scratch scan carries the subquery's key bounds instead of reading every column of every data file, gated to positive uncorrelated `IN` / positive `EXISTS`; `NOT IN` / `NOT EXISTS` keep the unfiltered scan; every V3-8 / V3-9 pin stays green; the pair collectors stream instead of collecting. | A file-open pin that fails closed when an unadmitted file is opened; one mutation; the V3 suites; measurement. | **PROVEN** | `v3_dml_scan.rs::subquery_delete_opens_only_the_files_the_key_bounds_admit` hides the seven data files whose lower bound cannot hold the key and the DELETE still succeeds; mutation M5 (`identity_scan_residual` returns `None`): **1 red of 1**, `Failed to open file … .parquet`. `repark-spark --lib` 763 passed, `repark-sql --lib` 336 passed, `repark-iceberg --lib` 375 passed. Measurement §10. Citation: `crates/repark-iceberg/src/write/map.md`. |
+
+VERDICT: 5 clauses, 5 PROVEN, 0 OPEN, 0 REJECTED.
 
 ```yaml
 COVERAGE_ATTESTATION:
@@ -42,8 +44,8 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-spark/src/tests/v3e4.rs, crates/repark-iceberg/src/write/merge/dv_close.rs, python/repark/tests/test_v3_live_oracle.py]
     - id: AT-2
       status: ATTACKED
-      evidence: Covered path and fresh path, partitioned and unpartitioned, 16 and 64 blobs, and the manifests-hidden edge where a data-manifest read would fail closed.
-      artifacts: [crates/repark-iceberg/src/write/merge/dv_close.rs, crates/repark-spark/src/tests/v3e4.rs]
+      evidence: Covered path and fresh path, partitioned and unpartitioned, 16 and 64 blobs, positive IN and positive EXISTS against NOT IN / NOT EXISTS, and two hidden-file edges (data manifests, data files) where a stray read fails closed.
+      artifacts: [crates/repark-iceberg/src/write/merge/dv_close.rs, crates/repark-spark/src/tests/v3e4.rs, crates/repark-spark/src/tests/v3_dml_scan.rs]
     - id: AT-3
       status: ATTACKED
       evidence: The close error path is unchanged; hiding the data manifests turns a stray walk into a hard failure rather than a silent fallback.
@@ -61,8 +63,8 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-iceberg/src/write/merge/dv_close.rs, crates/repark-iceberg/src/write/merge/snapshot_commit.rs]
     - id: AT-7
       status: ATTACKED
-      evidence: free_partitions allocates one map entry per touched path and no manifest is read; the write amplification it rides on fell from 19,126 B to 377 B per later single-row DELETE at 64 blobs.
-      artifacts: [crates/repark-spark/src/tests/v3e4.rs]
+      evidence: the partition map is harvested from a scan RePark already runs and retained down to the touched paths; retained_references is moved, not cloned; the pair collectors stream per batch with a reserve; write amplification 19,126 B to 377 B at 64 blobs; partitioned fresh-path DELETE 2,176 ms to 761 ms at 192 partitions.
+      artifacts: [crates/repark-spark/src/tests/v3e4.rs, crates/repark-spark/src/tests/v3_dml_scan.rs, crates/repark-iceberg/src/write/merge/dv_close.rs]
     - id: AT-8
       status: ATTACKED
       evidence: Five iceberg* revs and six lock sources are ff4764d3. Family freeze holds; rust-toolchain.toml untouched.
@@ -73,8 +75,8 @@ COVERAGE_ATTESTATION:
       artifacts: [docs/spark-sql-iceberg-parity.md, STATUS.md, task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md, python/repark-parity/tests/test_v3r_1_rulings.py]
     - id: AT-10
       status: ATTACKED
-      evidence: Four clauses pinned; maps in lockstep; mutation M1 1 red of 3 then restored; the bare-repin red table is measured, not predicted.
-      artifacts: [crates/repark-iceberg/src/write/merge/dv_close.rs, crates/repark-spark/src/tests/v3e4.rs]
+      evidence: Five clauses pinned; maps in lockstep; mutations M3/M4/M5 each 1 red then restored; the bare-repin red table and both measurement tables are measured, not predicted.
+      artifacts: [crates/repark-iceberg/src/write/merge/dv_close.rs, crates/repark-iceberg/src/write/merge/tests/partition_sink.rs, crates/repark-spark/src/tests/v3_dml_scan.rs]
   complete: true
 ```
 
@@ -114,13 +116,13 @@ Spark's summary for that statement: `removed-delete-files 1`, `removed-dvs 1`,
 `removed-position-deletes 1`, `added-delete-files 1`, `added-dvs 1`, `added-position-deletes 2` —
 now asserted verbatim by the `v3e4.rs` cell.
 
-Open finding kept honest: RePark supplies `(spec_id, partition)` only when every partition spec in
-the metadata is unpartitioned. For a fresh path in a partitioned table the fork's lazy walk still
-runs. RePark's merge/predicate plan does not carry the partition today — the `(_file, _pos)` pairs
-come from a scratch scan projecting only those two reserved columns, `_spec_id` / `_partition` are
-declared in the fork but served nowhere, and resolving them RePark-side would mean a data-manifest
-walk RePark does not otherwise do, i.e. strictly worse than the fork's. Raised as a RULING rather
-than built.
+Ruling closed (orchestrator, 2026-09-02): the first draft supplied the map only when EVERY spec in
+the metadata was unpartitioned, which the perf reviewer measured to be useless — one partitioned
+spec anywhere in the history emptied the map and the statement paid the full lazy walk. The
+partition was already free: the `FileScanTask`s the target scan plans carry `partition_spec` and
+`partition`. `TargetScanStream::with_partition_sink` records them, and the DML and MERGE MoR
+commits hand the drained map to the close. Entries are supplied ONLY for paths that scan produced,
+so the fork's "data file is not a live file of the scanned snapshot" guard still bites.
 
 ## 8. Write amplification (C-003)
 
@@ -136,11 +138,42 @@ differ between the columns.
 `a_later_single_row_delete_writes_one_blob_not_the_whole_container` is the non-ignored budget pin
 at 16 blobs (two containers, under 1 KiB written).
 
+## 10. Remediation round (2026-09-02) — measurements
+
+Statement wall, `v3_dml_scan.rs::measure_v3_mor_subquery_delete_statement_wall`, debug profile,
+same clone, one `DELETE … WHERE id IN (SELECT id FROM keys)` after the seed. `flat` is an
+unpartitioned table of N data files each holding 200 rows the `WHERE` discards (C-005's shape);
+`partitioned fresh` is an identity-partitioned table of N partitions with no DV yet (C-002's
+shape). Before = this unit's own first tree (`34d6bff`, pin already `ff4764d3`), so only the
+remediation is in the delta.
+
+| cell | before `34d6bff` | after |
+|---|---|---|
+| flat, 64 files | 562 ms | 511 ms |
+| flat, 192 files | 1,597 ms | 1,381 ms |
+| partitioned fresh, 64 partitions | 752 ms | 302 ms |
+| partitioned fresh, 192 partitions | 2,176 ms | 761 ms |
+
+The partitioned fresh-path column is C-002: the supplied map removes the fork's data-manifest walk
+(−60 % at 64, −65 % at 192). The flat column is C-005: the residual push (−9 % / −14 %). Recorded
+honestly — the residual's payoff is bounded in this fixture because each file is one small row
+group, so the pre-`WHERE` column read it skips is cheap here; the pin, not the clock, is what holds
+it.
+
+Mutations, one knob at a time, restored after each:
+
+| id | knob | result |
+|---|---|---|
+| M3 | `plan_deletion_vectors` clears the supplied map | 1 red of 3 (`a_supplied_partition_map_closes_a_fresh_partitioned_delete_with_no_data_manifest`) |
+| M4 | `record_scanned_partitions` returns immediately | 1 red of 1 (`the_target_scan_records_every_planned_file_partition`) |
+| M5 | `identity_scan_residual` returns `None` | 1 red of 1 (`subquery_delete_opens_only_the_files_the_key_bounds_admit`) |
+
 ## 9. Gate exits
 
 | gate | exit |
 |---|---|
 | `make verify` | 0 |
+| `scripts/check_rust_file_size.py` (baselines ratcheted DOWN: `write/merge/mod.rs` 1889 → 1795 behind `merge/target_scan.rs`; `write/predicate_dml.rs` 1164 → 1142 behind `predicate_dml/residual.rs`, mirrored in `test_cap_1_source_file_line_cap.py`) | 0 |
 | `make preflight` | 0 |
 | `make py-test` | 0 |
 | `make check-map-sync check-ledger-grammar check-ledgers check-docs-compaction` | 0 |
