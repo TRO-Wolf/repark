@@ -4,7 +4,7 @@
 `ca9c007` · **Model:** claude-opus-5 (medium) · **Policy:**
 [../../../AGENTS.md](../../../../AGENTS.md) · **Path:** STANDARD.
 
-**Retires:** this ledger moves to `../completed/` in this unit's last commit.
+**Retired:** moved to `../completed/` in this unit's last commit.
 
 **Why now.** V3-7 lifted MoR MERGE onto deletion vectors and V3-8 measured the MoR
 subquery-`WHERE` cells but left them refused: `resolve_write_mode` gated merge-on-read
@@ -157,7 +157,17 @@ error no longer contains `merge-on-read`.
 **Facade interpreter.** `.venv/bin/pytest`'s shebang points elsewhere. Facade gates in this
 unit run as `.venv/bin/python -m pytest …` after `make develop`. The live cell needs the
 `record` extra, then `make develop`, then `REPARK_PARITY_LIVE=1
-JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1`.
+JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1` — **9 passed**.
+
+**Gates.** `make verify` 0, `make py-test` 0 (497 passed), `make preflight` 0,
+`make check-map-sync check-ledger-grammar check-ledgers check-docs-compaction` 0,
+`ledger_lifecycle.py check --base ca9c007` 0, `cargo test -p repark-spark --lib` 745 passed,
+`-p repark-sql --lib` 332 passed, `-p repark-iceberg --lib` 371 passed, live cells 9 passed.
+
+**Meta-pins re-aimed.** `test_v3r_1_rulings.py` asserted the MOR DML matrix row still carried
+one 🚫 and `test_plan_1_northstar_fnp_sequence.py` asserted STATUS still queued V3-9; both
+now assert the post-lift rows. No ceiling moved; `crates/repark-spark/src/tests/ctas.rs` sits
+at an exact baseline, so its C-006 assertion lives in `v3_mor_dml.rs` instead of growing it.
 
 ```yaml
 PROPORTIONALITY_RUBRIC:
