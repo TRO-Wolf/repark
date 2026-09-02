@@ -260,13 +260,18 @@ converts parquet position deletes to DVs; on a DV-only fixture it is a zero-resu
 (`V3-LINEAGE-1` FIXED). F-6 `#244` `to_branch` exists on the fork; no engine caller this unit
 (REF consumes it).
 
+*RP-6 at `fb0cacfa` (2026-09-01):* `#255` PR-3 MoR UPDATE keeps `_row_id` and advances seq
+(F-7 preserve-half Spark-equal). Sequential COW DELETE is Spark-equal on the single-file
+layout; F-rp3-c7 is consumed as a two-file-seed artefact. RePark-owned MERGE still
+reassigns and stays `V3-COW-1`. pins: rp-6-fork-repin/C-002, C-003
+
 Listed so the fork plans it; as of 2026-08-21 the engine's V3-2+ units deliberately waited
 for the MW campaign to close (that wait is over — the addendum below).
 
 - **V3-LINEAGE-1** — **FIXED 2026-08-31 (RP-4 / fork #243).** `RewriteDataFiles` carries
   `_row_id` / `_last_updated_sequence_number` through compaction Spark-equal; the public
-  CALL is lifted. The same carry still does **not** apply to COW DML (`OverwriteFiles`);
-  registry `V3-COW-1` keeps that path refused.
+  CALL is lifted. RP-6 lifts plain-`WHERE` COW/MoR UPDATE and sequential COW DELETE;
+  registry `V3-COW-1` keeps RePark-owned MERGE refused.
 - **B-MOR-3** — `RewritePositionDeleteFiles` still refuses live Puffin deletion vectors
   (OD-2). V3-5 measured that DV compaction is `rewrite_data_files`, not this action.
 - **V3-DANGLE-1** — **FIXED 2026-08-31 (V3-5).** `RewriteDataFiles` at `33be9a0` drops
@@ -520,6 +525,8 @@ RP-3 C-006 (2026-08-30, `d408da42`): the 1e7×50 MOR driver still ends at 8 dele
   The MW-8 partitioned runbook's in-band seeds were rewritten. Ask: count partition-scoped
   deletes in `tooHighDeleteRatio` the way Java does. Registry RDF-1 stays BACKLOG on the MW-7
   pin.
+  *RP-6 (2026-09-01, pin `fb0cacfa`): residue 2 is not in this range (fork F-16r ledger
+  still names partition-scoped survival). RDF-1 stays BACKLOG. pins: rp-6-fork-repin/C-004*
 
 ### F-17 (north-star blocker, added 2026-08-28) — shared-Puffin DV sibling closure
 

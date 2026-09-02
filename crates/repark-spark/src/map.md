@@ -31,8 +31,8 @@ pins: rp-4-fork-repin/C-005, C-006
   travel, `prepare_lineage_sql` pins v3 `_row_id` / `_last_updated_sequence_number` onto a
   temp provider for single-table reads (`LineagePins` released with the time-travel views);
   JOIN/CTE/subquery/time-travel naming lineage refuse `V3-ROWID-2`. V3R-1: DELETE / UPDATE call
-  `refuse_v3_cow_dml` after the BUG-001 valve; a v3 COW DELETE after an overwrite snapshot refuses
-  before fork lineage divergence. SQP-1: the front door canonicalizes escapes once and
+  `refuse_v3_cow_dml` after the BUG-001 valve; RP-6 makes that valve a pass-through (plain-`WHERE`
+  UPDATE/DELETE Spark-equal). SQP-1: the front door canonicalizes escapes once and
   translates downstream parser locations back to the caller's SQL.
 - `merge.rs` — MERGE INTO lowering (sqlparser AST → `repark_iceberg::write::merge::MergeSpec`,
   star-sentinel rewrite); MATCHED / NOT MATCHED / NOT MATCHED BY SOURCE (DML-A);
@@ -144,12 +144,10 @@ pins: rp-4-fork-repin/C-005, C-006
   opens uncorrelated `DELETE … col IN` / `NOT IN (SELECT …)`, `[NOT] EXISTS` ±
   correlation, correlated IN, and identity `UPDATE … IN` onto `execute_predicate_dml`;
   see the module doc and `task/r1-g3e8-pr4-ledger.md`), the MERGE
-  star rewrite call, partition-spec builders. V3R-1: `refuse_v3_cow_dml`, the `V3-COW-1` passthrough seat (lifted for the
-  plain-`WHERE` DELETE on DV-free v3 tables); `dml_target_ident` (shared
-  with the BUG-001 valve) completes short names from the session defaults (SEC-001). A v3 COW
-  DELETE after an overwrite snapshot stays a pre-write V3-COW-1 refusal (RP-3 C-004 C7).
-  V3-3 measured UPDATE/MERGE keep-refusal: Spark preserves `_row_id`; the engine rewrite
-  reassigns (pins: v3-3-dml/C-001, C-002).
+  star rewrite call, partition-spec builders. RP-6: `refuse_v3_cow_dml` is a pass-through;
+  `dml_target_ident` (shared with the BUG-001 valve) completes short names from the session
+  defaults (SEC-001). MERGE still refuses `V3-COW-1` (RePark-owned writer reassigns).
+  pins: rp-6-fork-repin/C-002
 - `call_args.rs` — CALL argument bag, scalar coercions, and quoted-name keys for dashed options.
 - `collation.rs` — **G15:** parse-altitude collation refuse. Walks
   `Expr::Collate`, column-def `COLLATE`, `CREATE`/`ALTER COLLATION`, `SET NAMES COLLATE`,

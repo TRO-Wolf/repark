@@ -68,8 +68,10 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   door-to-door product edge or `repark-functions` dependency. They use the same conf key and
   grandfather rule through `ConfigOptions::entries()`.
   **V3-2** reads `repark.sql.allow_create_format_version_3` the same way.
-  Tests: [guards/map.md](guards/map.md). V3-COW-1 tests cover the delegated `DELETE | UPDATE`
-  branch; `dml_target_ident` reads the AST and completes short names.
+  Tests: [guards/map.md](guards/map.md). RP-6: delegated `DELETE | UPDATE` pass the
+  V3-COW-1 valve; MERGE and subquery-WHERE DML still refuse. `dml_target_ident` reads
+  the AST and completes short names.
+  pins: rp-6-fork-repin/C-002
 - `sniff.rs` — the error-path wrong-door sniff (Q10/G3): on parse/plan FAILURE, name the token,
   the native equivalent, and the Spark door. Tests: [sniff/map.md](sniff/map.md).
 - `scan.rs` — ANSI-quoting-aware SQL text scanning: the one place the door reads raw text.

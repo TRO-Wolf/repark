@@ -357,20 +357,18 @@ def test_partitioned_dv_update_and_rewrite_refuse_pre_write(tmp_path: Path) -> N
                 "CALL ice.system.register_table("
                 f"table => 'sales.partdv', metadata_file => '{metadata_file}')"
             )
-            before = session.sql("SELECT id, name, part FROM ice.sales.partdv").to_arrow()
-            before_objects = _objects_under(_PART_DV_DEST)
-            with pytest.raises(UnsupportedOperationException, match="V3-COW-1"):
-                session.sql("UPDATE ice.sales.partdv SET name = 'x' WHERE id = 1").collect()
-            refused_update = session.sql("SELECT id, name, part FROM ice.sales.partdv").to_arrow()
-            assert _id_name_part_rows(refused_update) == _id_name_part_rows(before)
-            assert _objects_under(_PART_DV_DEST) == before_objects
+            session.sql("UPDATE ice.sales.partdv SET name = 'x' WHERE id = 1").collect()
+            after_update = session.sql("SELECT id, name, part FROM ice.sales.partdv").to_arrow()
+            updated_rows = _id_name_part_rows(after_update)
+            assert (1, "x", 0) in updated_rows
+            after_update_objects = _objects_under(_PART_DV_DEST)
             with pytest.raises(UnsupportedOperationException, match="Puffin deletion vector"):
                 session.sql(
                     "CALL ice.system.rewrite_position_delete_files(table => 'sales.partdv')"
                 ).collect()
             refused = session.sql("SELECT id, name, part FROM ice.sales.partdv").to_arrow()
-            assert _id_name_part_rows(refused) == _id_name_part_rows(before)
-            assert _objects_under(_PART_DV_DEST) == before_objects
+            assert _id_name_part_rows(refused) == updated_rows
+            assert _objects_under(_PART_DV_DEST) == after_update_objects
             session.sql("DELETE FROM ice.sales.partdv WHERE id = 1").collect()
             live = session.sql("SELECT id, name, part FROM ice.sales.partdv").to_arrow()
             assert _id_name_part_rows(live) == [(3, "c", 0), (4, "d", 1), (6, "f", 1)]

@@ -95,7 +95,7 @@ v1 crate-root re-export lists.
     pins: rp-3-fork-repin/C-001, C-002
     pins: rp-4-fork-repin/C-001, C-002
     pins: rp-5-fork-repin/C-001, C-002
-    pins: rp-6-fork-repin/C-001, C-002
+    pins: rp-6-fork-repin/C-001, C-002, C-006
   - **The metadata-projection shim retired at RP-5 (fork R169/R170, F-8 `#247`).** The
     fork's metadata-table `scan` honors `projection` (empty projection included) and
     `table_names` lists catalog entries only (`$`-twins are not enumerated). Engine

@@ -584,7 +584,8 @@ async fn remove_orphan_files_on_v3_refuses_inside_twenty_four_hours() {
 }
 
 #[tokio::test]
-async fn update_and_merge_still_refuse_on_the_appended_v3_table() {
+async fn update_on_the_appended_v3_table_commits() {
+    let _: &str = "pins: rp-6-fork-repin/C-003";
     let fixture = materialize_part_dv();
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&warehouse).await;
@@ -599,41 +600,20 @@ async fn update_and_merge_still_refuse_on_the_appended_v3_table() {
     .await;
     let before_files = files_with_bytes(Path::new(PART_DV_TABLE));
 
-    let err = execute(
+    run(
         &ctx,
         &catalogs,
         "UPDATE ice.sales.partdv SET name = 'x' WHERE id = 1",
     )
-    .await
-    .expect_err("V3-COW-1");
-    let message = err.to_string();
-    assert!(
-        message.contains("V3-COW-1") && message.contains("row lineage"),
-        "copy-on-write UPDATE must still name V3-COW-1, got: {message}"
-    );
-    assert_eq!(snapshot_id(&catalogs).await, before_snapshot);
-    assert_eq!(
-        live_triples(
-            &ctx,
-            &catalogs,
-            "SELECT id, name, part FROM ice.sales.partdv ORDER BY id",
-        )
-        .await,
-        before_rows
-    );
-    assert_eq!(files_with_bytes(Path::new(PART_DV_TABLE)), before_files);
-
-    let err = execute(
+    .await;
+    assert_ne!(snapshot_id(&catalogs).await, before_snapshot);
+    let after_update = live_triples(
         &ctx,
         &catalogs,
-        "MERGE INTO ice.sales.partdv AS t USING (SELECT 1 AS id, 'z' AS name, 0 AS part) AS s \
-         ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.name = s.name",
+        "SELECT id, name, part FROM ice.sales.partdv ORDER BY id",
     )
-    .await
-    .expect_err("V3-COW-1");
-    let message = err.to_string();
-    assert!(
-        message.contains("V3-COW-1") || message.contains("merge-on-read"),
-        "DML that this engine owns must still refuse on v3, got: {message}"
-    );
+    .await;
+    assert_eq!(after_update[0], (1, "x".into(), 0));
+    assert_eq!(&after_update[1..], &before_rows[1..]);
+    let _ = before_files;
 }

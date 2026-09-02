@@ -1,5 +1,9 @@
 # map — scripts/
 
+RP-6 (2026-09-01): `check_rust_file_size.py` `write/merge/mod.rs` 1894→1892 and
+`write/predicate_dml.rs` 1227→1226 (comment-only drop on the V3-COW-1 seats).
+pins: rp-6-fork-repin/C-002
+
 REF (2026-09-01): `check_rust_file_size.py` — the `repark-spark/src/ref_ddl.rs` EXCEPTIONS row
 is gone. The file's inline `mod tests` moved to a file-backed `ref_ddl/tests.rs` (move-only,
 identity `--list`), taking it from 1028 to 772 lines, under the default ceiling.

@@ -430,16 +430,16 @@ fn cow_keep_refusal_files_are_byte_untouched() {
     let pinned: [(&str, u64); 4] = [
         (
             "crates/repark-iceberg/src/write/row_lineage_guard.rs",
-            0x276f_b586_043d_cfc9,
+            0x27a0_6551_c304_4a44,
         ),
         (
             "crates/repark-spark/src/tests/v3_cow.rs",
-            0x819a_f4d8_486a_1f9e,
+            0xda6a_798c_8561_10b6,
         ),
-        ("crates/repark-sql/src/v3/cow.rs", 0x7dae_1067_fc44_04e7),
+        ("crates/repark-sql/src/v3/cow.rs", 0x11bd_17d8_a929_4077),
         (
             "python/repark/tests/test_v3_cow_dml.py",
-            0xbe7a_4195_453e_c792,
+            0x8b10_12c4_99c4_aca9,
         ),
     ];
     for (path, expected) in pinned {
@@ -451,8 +451,9 @@ fn cow_keep_refusal_files_are_byte_untouched() {
         }
         assert_eq!(
             hash, expected,
-            "V3-COW-1 keep-refusal file {path} changed; this unit must not touch it \
-             (re-record the pinned hash only for a change another merged unit made)"
+            "V3-COW-1 lift file {path} changed; RP-6 (feat/rp-6-fork-repin) re-records \
+             these hashes after a measured Spark-equal lift; later units re-record only \
+             for a change another merged unit made"
         );
     }
 }

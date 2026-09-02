@@ -73,14 +73,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   callers now set `to_branch` (RP-5 consumes F-6).
   pins: rp-5-fork-repin/C-004
   invokes `to_branch`; Iceberg fixture bytes stay flat vs `origin/main`. pins: rp-4-fork-repin/C-004
-- [test_v3_cow_dml.py](test_v3_cow_dml.py) — **V3R-1 (2026-08-25); RP-2 2026-08-27 retarget:** facade Spark `.sql()`
-  MERGE / UPDATE on an adopted v3 table raise `UnsupportedOperationException` naming
-  `V3-COW-1` and the measured reassignment (V3-3 keep-refusal); the plain-`WHERE` DELETE commits the right rows (RP-2 lift) with Spark-equal
-  survivor lineage — `next_row_id` = 5 on the 3-row recipe; a second COW DELETE after that
-  overwrite snapshot refuses before lineage diverges. A MOR first DELETE commits a Puffin DV and the second merges
-  into that live vector. RP-4: six-file `rewrite_data_files` keeps `_row_id` / seq on `to_arrow`
-  (pins: rp-2-fork-repin/C-003, C-005; rp-3-fork-repin/C-004; v3-3-dml/C-001, C-002;
-  rp-4-fork-repin/C-003).
+- [test_v3_cow_dml.py](test_v3_cow_dml.py) — **RP-6 lift:** facade Spark `.sql()` MERGE
+  matched-update and UPDATE keep `_row_id`; sequential COW DELETE keeps the survivor id at
+  next-row-id 6; plain-`WHERE` DELETE commits; MOR first DELETE commits a Puffin DV and the
+  second merges. RP-4 six-file `rewrite_data_files` keeps `_row_id` / seq on `to_arrow`.
+  pins: rp-6-fork-repin/C-002, C-003; rp-4-fork-repin/C-003
 - [test_ref_branch_tag_wap.py](test_ref_branch_tag_wap.py) — **REF:** the facade rows for
   branch/tag retention and the refused doors — both `WITH SNAPSHOT RETENTION` halves at the
   oracle's values, the reversed order refusing, write-to-branch landing on the named branch

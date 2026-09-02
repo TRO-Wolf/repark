@@ -27,14 +27,13 @@ const UNSET_MERGE_V3: &str = "'format-version' = '3'";
 const ENCRYPTION_KEY_ID_PROP: &str = "encryption.key-id";
 
 #[derive(Debug, PartialEq, Eq)]
-struct Lineage {
-    next_row_id: u64,
-    snapshot_first_row_id: Option<u64>,
-    snapshot_added_rows: Option<u64>,
+pub(super) struct Lineage {
+    pub(super) next_row_id: u64,
+    pub(super) snapshot_first_row_id: Option<u64>,
+    pub(super) snapshot_added_rows: Option<u64>,
 }
 
-/// CREATE v3 (opt-in) + seed + `register_table` under `adopted`.
-async fn adopt_v3(
+pub(super) async fn adopt_v3(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     seed: &str,
@@ -86,7 +85,7 @@ async fn adopt_v3(
     metadata_file
 }
 
-async fn adopt_cow_v3(
+pub(super) async fn adopt_cow_v3(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     seed: &str,
@@ -112,7 +111,7 @@ async fn current_snapshot_id(catalogs: &CatalogRegistry, table: &str) -> Option<
         .current_snapshot_id()
 }
 
-async fn lineage(catalogs: &CatalogRegistry, table: &str) -> Lineage {
+pub(super) async fn lineage(catalogs: &CatalogRegistry, table: &str) -> Lineage {
     let loaded = load_sales(catalogs, table).await;
     let metadata = loaded.metadata();
     let (snapshot_first_row_id, snapshot_added_rows) = metadata
@@ -125,6 +124,77 @@ async fn lineage(catalogs: &CatalogRegistry, table: &str) -> Lineage {
         snapshot_first_row_id,
         snapshot_added_rows,
     }
+}
+
+pub(super) async fn lineage_triples(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    table: &str,
+) -> Vec<(i32, i64, i64)> {
+    let batches = execute(
+        ctx,
+        catalogs,
+        &format!(
+            "SELECT id, _row_id, _last_updated_sequence_number FROM ice.sales.{table} ORDER BY id"
+        ),
+    )
+    .await
+    .unwrap_or_else(|err| panic!("lineage select: {err}"))
+    .collect()
+    .await
+    .unwrap_or_else(|err| panic!("lineage collect: {err}"));
+    let schema = batches[0].schema();
+    assert_eq!(schema.field(1).data_type(), &DataType::Int64);
+    assert_eq!(schema.field(2).data_type(), &DataType::Int64);
+    let mut rows = Vec::new();
+    for batch in &batches {
+        let ids = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<Int32Array>()
+            .expect("id");
+        let row_ids = batch
+            .column(1)
+            .as_any()
+            .downcast_ref::<Int64Array>()
+            .expect("_row_id");
+        let seqs = batch
+            .column(2)
+            .as_any()
+            .downcast_ref::<Int64Array>()
+            .expect("seq");
+        for index in 0..batch.num_rows() {
+            rows.push((ids.value(index), row_ids.value(index), seqs.value(index)));
+        }
+    }
+    rows
+}
+
+async fn live_data_file_count(catalogs: &CatalogRegistry, table: &str) -> usize {
+    let loaded = load_sales(catalogs, table).await;
+    let Some(snapshot) = loaded.metadata().current_snapshot() else {
+        return 0;
+    };
+    let manifest_list = snapshot
+        .load_manifest_list(loaded.file_io(), loaded.metadata())
+        .await
+        .expect("manifest list");
+    let mut count = 0usize;
+    for entry in manifest_list.entries() {
+        if entry.content != iceberg::spec::ManifestContentType::Data {
+            continue;
+        }
+        let manifest = entry
+            .load_manifest(loaded.file_io())
+            .await
+            .expect("manifest");
+        count += manifest
+            .entries()
+            .iter()
+            .filter(|item| item.is_alive())
+            .count();
+    }
+    count
 }
 
 fn assert_still_v3(table: &iceberg::table::Table) {
@@ -142,47 +212,6 @@ fn v3_maintenance_oracle_is_the_recorded_pair() {
         V3_MAINTENANCE_ORACLE, "pyspark-4.1.2+iceberg-1.11.0",
         "V3E-2 named pair must match the live transcript"
     );
-}
-
-/// The refusal names the row, the verb and row lineage; the table is untouched and still v3.
-async fn assert_cow_refused_untouched(
-    ctx: &SessionContext,
-    catalogs: &CatalogRegistry,
-    table: &str,
-    sql: &str,
-    verb: &str,
-) {
-    let before_snapshot = current_snapshot_id(catalogs, table).await;
-    let before = lineage(catalogs, table).await;
-    let qualified = format!("ice.sales.{table}");
-    let before_rows = table_rows(ctx, catalogs, &qualified).await;
-    let err = execute(ctx, catalogs, sql)
-        .await
-        .expect_err("copy-on-write DML on a v3 table must refuse")
-        .to_string();
-    assert!(
-        err.contains("V3-COW-1")
-            && err.contains("row lineage")
-            && err.contains(verb)
-            && err.contains("reassigns"),
-        "refusal must name the row, row lineage, `{verb}`, and the measured reassignment: {err}"
-    );
-    assert_eq!(
-        current_snapshot_id(catalogs, table).await,
-        before_snapshot,
-        "a refused {verb} must not commit"
-    );
-    assert_eq!(
-        lineage(catalogs, table).await,
-        before,
-        "a refused {verb} must not touch lineage counters"
-    );
-    assert_eq!(
-        table_rows(ctx, catalogs, &qualified).await,
-        before_rows,
-        "a refused {verb} must not touch rows"
-    );
-    assert_still_v3(&load_sales(catalogs, table).await);
 }
 
 /// pins: rp-2-fork-repin/C-005
@@ -219,7 +248,8 @@ async fn adopted_v3_cow_delete_carries_survivor_row_lineage() {
 }
 
 #[tokio::test]
-async fn adopted_v3_cow_second_delete_refuses_before_lineage_diverges() {
+async fn adopted_v3_cow_second_delete_keeps_survivor_row_id() {
+    let _: &str = "pins: rp-6-fork-repin/C-002";
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
     adopt_cow_v3(&ctx, &catalogs, "seed_seq", "adopt_seq").await;
@@ -237,41 +267,67 @@ async fn adopted_v3_cow_second_delete_refuses_before_lineage_diverges() {
             snapshot_added_rows: Some(2),
         }
     );
-    assert_cow_refused_untouched(
+    run(
         &ctx,
         &catalogs,
-        "adopt_seq",
         "DELETE FROM ice.sales.adopt_seq WHERE id = 3",
-        "DELETE",
     )
     .await;
     assert_eq!(
         table_rows(&ctx, &catalogs, "ice.sales.adopt_seq").await,
-        vec![(1, "a".into()), (3, "c".into())]
+        vec![(1, "a".into())]
     );
+    assert_eq!(
+        lineage_triples(&ctx, &catalogs, "adopt_seq").await,
+        vec![(1, 0, 1)]
+    );
+    assert_eq!(
+        lineage(&catalogs, "adopt_seq").await,
+        Lineage {
+            next_row_id: 6,
+            snapshot_first_row_id: Some(5),
+            snapshot_added_rows: Some(1),
+        }
+    );
+    assert_eq!(live_data_file_count(&catalogs, "adopt_seq").await, 1);
     assert_still_v3(&load_sales(&catalogs, "adopt_seq").await);
 }
 
-/// pins: v3r-1-rulings/C-002
-/// pins: v3-3-dml/C-001
 #[tokio::test]
-async fn adopted_v3_cow_update_refuses_rather_than_reassign_row_lineage() {
+async fn adopted_v3_cow_update_keeps_row_id_and_bumps_matched_seq() {
+    let _: &str = "pins: rp-6-fork-repin/C-002";
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
     adopt_cow_v3(&ctx, &catalogs, "seed_upd", "adopt_upd").await;
-    assert_cow_refused_untouched(
+    run(
         &ctx,
         &catalogs,
-        "adopt_upd",
         "UPDATE ice.sales.adopt_upd SET name = 'x' WHERE id = 2",
-        "UPDATE",
     )
     .await;
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.adopt_upd").await,
+        vec![(1, "a".into()), (2, "x".into()), (3, "c".into())]
+    );
+    assert_eq!(
+        lineage_triples(&ctx, &catalogs, "adopt_upd").await,
+        vec![(1, 0, 1), (2, 1, 2), (3, 2, 1)]
+    );
+    assert_eq!(
+        lineage(&catalogs, "adopt_upd").await,
+        Lineage {
+            next_row_id: 6,
+            snapshot_first_row_id: Some(3),
+            snapshot_added_rows: Some(3),
+        }
+    );
+    assert_eq!(live_data_file_count(&catalogs, "adopt_upd").await, 1);
+    assert_still_v3(&load_sales(&catalogs, "adopt_upd").await);
 }
 
 #[tokio::test]
-async fn v3_cow_update_and_delete_on_branch_refuse_like_unqualified() {
-    let _: &str = "pins: rp-5-fork-repin/C-004";
+async fn v3_cow_update_on_branch_keeps_row_id_and_leaves_main() {
+    let _: &str = "pins: rp-6-fork-repin/C-002";
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
     adopt_cow_v3(&ctx, &catalogs, "seed_br", "adopt_br").await;
@@ -281,34 +337,31 @@ async fn v3_cow_update_and_delete_on_branch_refuse_like_unqualified() {
         "ALTER TABLE ice.sales.adopt_br CREATE BRANCH b",
     )
     .await;
-    assert_cow_refused_untouched(
-        &ctx,
-        &catalogs,
-        "adopt_br",
-        "UPDATE ice.sales.adopt_br.branch_b SET name = 'x' WHERE id = 2",
-        "UPDATE",
-    )
-    .await;
+    let main_before = current_snapshot_id(&catalogs, "adopt_br").await;
     run(
         &ctx,
         &catalogs,
-        "DELETE FROM ice.sales.adopt_br WHERE id = 2",
+        "UPDATE ice.sales.adopt_br.branch_b SET name = 'x' WHERE id = 2",
     )
     .await;
-    assert_cow_refused_untouched(
-        &ctx,
-        &catalogs,
-        "adopt_br",
-        "DELETE FROM ice.sales.adopt_br.branch_b WHERE id = 3",
-        "DELETE",
-    )
-    .await;
+    assert_eq!(
+        current_snapshot_id(&catalogs, "adopt_br").await,
+        main_before,
+        "a branch UPDATE must leave main unmoved"
+    );
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.adopt_br").await,
+        vec![(1, "a".into()), (2, "b".into()), (3, "c".into())]
+    );
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.adopt_br.branch_b").await,
+        vec![(1, "a".into()), (2, "x".into()), (3, "c".into())]
+    );
 }
 
-/// pins: v3r-1-rulings/C-003
-/// pins: v3-3-dml/C-002
 #[tokio::test]
-async fn adopted_v3_cow_merge_refuses_with_unset_and_explicit_mode() {
+async fn adopted_v3_cow_merge_matched_update_still_refuses() {
+    let _: &str = "pins: rp-6-fork-repin/C-002";
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
     adopt_v3(&ctx, &catalogs, "seed_mrg", "adopt_mrg", UNSET_MERGE_V3).await;
@@ -323,19 +376,25 @@ async fn adopted_v3_cow_merge_refuses_with_unset_and_explicit_mode() {
     );
     adopt_cow_v3(&ctx, &catalogs, "seed_mrg2", "adopt_mrg2").await;
     for table in ["adopt_mrg", "adopt_mrg2"] {
-        assert_cow_refused_untouched(
+        let err = execute(
             &ctx,
             &catalogs,
-            table,
             &format!(
-                "MERGE INTO ice.sales.{table} AS t USING (SELECT 2 AS id, 'm' AS name \
-                 UNION ALL SELECT 4 AS id, 'n' AS name) AS s ON t.id = s.id \
-                 WHEN MATCHED THEN UPDATE SET t.name = s.name \
-                 WHEN NOT MATCHED THEN INSERT (id, name) VALUES (s.id, s.name)"
+                "MERGE INTO ice.sales.{table} AS t USING (SELECT 2 AS id, 'm' AS name) AS s \
+                 ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.name = s.name"
             ),
-            "MERGE INTO",
         )
-        .await;
+        .await
+        .expect_err("RePark-owned MERGE still reassigns v3 row ids")
+        .to_string();
+        assert!(
+            err.contains("V3-COW-1") && err.contains("reassigns"),
+            "MERGE keep-refusal, got: {err}"
+        );
+        assert_eq!(
+            table_rows(&ctx, &catalogs, &format!("ice.sales.{table}")).await,
+            vec![(1, "a".into()), (2, "b".into()), (3, "c".into())]
+        );
     }
 }
 
@@ -596,10 +655,9 @@ async fn live_delete_file_kinds(catalogs: &CatalogRegistry, table: &str) -> Vec<
     kinds
 }
 
-/// pins: rp-2-fork-repin/C-003, C-005
-/// SEC-001: two-part and bare names under the session default resolve the same guard seats.
 #[tokio::test]
-async fn adopted_v3_cow_dml_with_default_catalog_short_names_refuses() {
+async fn adopted_v3_cow_dml_with_default_catalog_short_names_commits() {
+    let _: &str = "pins: rp-6-fork-repin/C-002";
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
     adopt_cow_v3(&ctx, &catalogs, "seed_short", "adopt_short").await;
@@ -609,14 +667,16 @@ async fn adopted_v3_cow_dml_with_default_catalog_short_names_refuses() {
     ctx.sql("SET datafusion.catalog.default_schema = 'sales'")
         .await
         .expect("set default schema");
-    assert_cow_refused_untouched(
+    run(
         &ctx,
         &catalogs,
-        "adopt_short",
         "UPDATE adopt_short SET name = 'x' WHERE id = 2",
-        "UPDATE",
     )
     .await;
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.adopt_short").await,
+        vec![(1, "a".into()), (2, "x".into()), (3, "c".into())]
+    );
     run(
         &ctx,
         &catalogs,
@@ -630,11 +690,9 @@ async fn adopted_v3_cow_dml_with_default_catalog_short_names_refuses() {
     );
 }
 
-/// pins: v3r-1-rulings/C-004
-/// pins: rp-2-fork-repin/C-005
-/// SEC-002: a padded `' Merge-On-Read '` still refuses on v3.
 #[tokio::test]
-async fn adopted_v3_padded_merge_on_read_spelling_still_refuses_update() {
+async fn adopted_v3_padded_merge_on_read_update_keeps_row_id() {
+    let _: &str = "pins: rp-6-fork-repin/C-003";
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
     adopt_v3(
@@ -642,25 +700,22 @@ async fn adopted_v3_padded_merge_on_read_spelling_still_refuses_update() {
         &catalogs,
         "seed_pad",
         "adopt_pad",
-        "'format-version' = '3', 'write.delete.mode' = ' Merge-On-Read '",
+        "'format-version' = '3', 'write.delete.mode' = ' Merge-On-Read ', \
+         'write.update.mode' = ' Merge-On-Read '",
     )
     .await;
-    let before = lineage(&catalogs, "adopt_pad").await;
-    let err = execute(
+    run(
         &ctx,
         &catalogs,
         "UPDATE ice.sales.adopt_pad SET name = 'x' WHERE id = 2",
     )
-    .await
-    .expect_err("a padded merge-on-read spelling must not slip past the UPDATE refusal")
-    .to_string();
-    assert!(
-        err.contains("V3-COW-1") && err.contains("row lineage") && err.contains("reassigns"),
-        "the copy-on-write arm's reason: {err}"
-    );
-    assert_eq!(lineage(&catalogs, "adopt_pad").await, before, "no commit");
+    .await;
     assert_eq!(
         table_rows(&ctx, &catalogs, "ice.sales.adopt_pad").await,
-        vec![(1, "a".into()), (2, "b".into()), (3, "c".into())]
+        vec![(1, "a".into()), (2, "x".into()), (3, "c".into())]
+    );
+    assert_eq!(
+        lineage_triples(&ctx, &catalogs, "adopt_pad").await,
+        vec![(1, 0, 1), (2, 1, 2), (3, 2, 1)]
     );
 }

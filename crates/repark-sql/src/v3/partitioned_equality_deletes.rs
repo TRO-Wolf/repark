@@ -406,7 +406,8 @@ async fn ansi_equality_delete_and_dv_keep_both_delete_classes_after_delete() {
 }
 
 #[tokio::test]
-async fn ansi_partitioned_dv_update_refuses_before_writing() {
+async fn ansi_partitioned_dv_update_commits() {
+    let _: &str = "pins: rp-6-fork-repin/C-003";
     let fixture = materialize(
         &PART_DV_LOCK,
         "v3-spark-part-dv",
@@ -425,26 +426,22 @@ async fn ansi_partitioned_dv_update_refuses_before_writing() {
         .current_snapshot_id();
     let before_rows = door.live_triples("partdv").await;
     let before_files = files_with_bytes(Path::new(PART_DV_TABLE));
-    let error = door
-        .sql("UPDATE ice.sales.partdv SET name = 'x' WHERE id = 1")
+    door.sql("UPDATE ice.sales.partdv SET name = 'x' WHERE id = 1")
         .await
-        .expect_err("live-DV UPDATE must refuse before writing")
-        .to_string();
-    assert!(
-        error.contains("V3-COW-1"),
-        "refusal must name V3-COW-1: {error}"
-    );
-    assert_eq!(
+        .expect("live-DV UPDATE must commit");
+    assert_ne!(
         door.catalog
             .load_table(&ident)
             .await
-            .expect("load after refused update")
+            .expect("load after update")
             .metadata()
             .current_snapshot_id(),
         before_snapshot
     );
-    assert_eq!(door.live_triples("partdv").await, before_rows);
-    assert_eq!(files_with_bytes(Path::new(PART_DV_TABLE)), before_files);
+    let after = door.live_triples("partdv").await;
+    assert_eq!(after[0].1, "x");
+    assert_eq!(&after[1..], &before_rows[1..]);
+    let _ = before_files;
 }
 
 #[tokio::test]

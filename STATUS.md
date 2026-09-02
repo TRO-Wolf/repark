@@ -149,22 +149,22 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
     orphan 24h floor on adopted v3. V3E-5 added the nightly v3 live-oracle leg
     ([#253](https://github.com/TRO-Wolf/repark/pull/253)). RP-2 (2026-08-28, fork `ce92a7bf`) the DV-free first DELETE. RP-3 (2026-08-30,
     fork `d408da42`) wired container closure; live-DV DELETE merge is Spark-equal on three
-    doors; sequential COW after overwrite refuses (`V3-COW-1`, F-rp3-c7); Hadoop writes
+    doors; sequential COW DELETE Spark-equal (`V3-COW-1`, F-rp3-c7 consumed). Hadoop writes
     FIXED (`V3-ADOPT-1`). RP-4 (2026-08-31, fork `33be9a0`) F-7 slice 1: rewrite lineage
-    Spark-equal (`V3-LINEAGE-1` FIXED); F-6 `to_branch` carried. V3-3 (2026-08-30) measured `UPDATE` / `MERGE` keep-refusal:
-    Spark preserves `_row_id`; the engine rewrite reassigns
+    Spark-equal (`V3-LINEAGE-1` FIXED); F-6 `to_branch` carried.
+    RP-6 (2026-09-01, fork `fb0cacfa`) lifts UPDATE; MERGE still reassigns
     (registry `V3-COW-1`). `B-MOR-3` stays.
     **V3-4 (2026-08-31):** `_row_id` / `_last_updated_sequence_number` Spark-equal on
     single-table v3 reads; v1/v2 engine Schema `No field named _row_id`;
-    JOIN/CTE/subquery/time-travel refuse `V3-ROWID-2`. `V3-ROWID-1` FIXED. Preserve-half stays F-7.
+    JOIN/CTE/subquery/time-travel refuse `V3-ROWID-2`. `V3-ROWID-1` FIXED. MoR UPDATE preserve-half Spark-equal (RP-6).
     **V3-6 (2026-09-01):** opt-in v3 CREATE consumes fork `timestamp_ns`/`timestamptz_ns`
     (v2 refuses); append fills an omitted column from a schema-carried `write_default`,
     `initial_default` reads into pre-column files, DEFAULT DDL refuses Spark-equal;
     binary `variant` refuses end to end (`V3-VARIANT-SHRED-1`, R88); `unknown` CREATE
     refuse pinned; parquet write refuses (R91, RP-5).
-  - **Next:** F-7 COW lineage. V3-3 charter
+  - **Next:** MERGE still reassigns (`V3-COW-1`). V3-3 charter
     [task/ledgers/completed/v3-3-dml-ledger.md](task/ledgers/archive/2026-08/2026-08-30-v3-3-dml-ledger.md)
-    (F-rp3-c7 stays a fork finding).
+    (F-rp3-c7 consumed as a layout artefact).
 <!-- /ws -->
 
 <!-- ws id=perf ledgers=perf- state=open -->

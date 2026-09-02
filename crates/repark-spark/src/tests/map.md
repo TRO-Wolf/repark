@@ -24,15 +24,15 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 - `cast_binary.rs` — **SQP-1 (C-009):** `CAST … AS BINARY` plans to Arrow `Binary` (B1/B8–B10/B13/
   B15), refuses illegal sources (`DATATYPE_MISMATCH`, B2–B7), keeps `VARBINARY` refusing (B12),
   leaves a `BINARY` DDL column untouched; `TRY_CAST(<int>)` refuses without the ANSI-off suggestion.
-- `v3_cow.rs` — v3 UPDATE / MERGE
-  refuse (`V3-COW-1`, both seats; V3-3 measured keep-refusal: Spark preserves `_row_id`,
-  the engine rewrite reassigns), the plain-`WHERE` DELETE commits on a DV-free table (COW
-  keeps first-snapshot lineage then refuses the unsafe COW second DELETE, MOR commits a Puffin DV) and a second MOR DELETE merges into the
-  live vector (pins: rp-2-fork-repin/C-003, C-005; rp-3-fork-repin/C-004; v3-3-dml/C-001, C-002); short-name,
-  padded merge-on-read, and v2-control cases keep `V3_MAINTENANCE_ORACLE` and ENC-1's pin.
-  RP-5: `v3_cow_update_and_delete_on_branch_refuse_like_unqualified` keeps V3-COW-1 on
-  `table.branch_b`.
-  pins: rp-5-fork-repin/C-004
+- `v3_cow.rs` — v3 UPDATE / MERGE matched-update keep `_row_id` (RP-6 Spark-equal lift);
+  sequential COW DELETE keeps the survivor id at next-row-id 6 (single-file layout);
+  plain-`WHERE` DELETE commits; MOR DELETE commits a Puffin DV and a second merges.
+  Branch UPDATE leaves main unmoved. MOR MERGE still refuses parquet position deletes on v3.
+  pins: rp-6-fork-repin/C-002, C-003
+- `v3_cow_lift.rs` — RP-6 remaining V3-COW-1 sequences: created v3 COW/MOR UPDATE,
+  UPDATE then DELETE, DELETE then UPDATE, INSERT OVERWRITE then DELETE, DELETE each
+  position, MoR UPDATE then DELETE. Absolute Spark 4.1.2 + Iceberg 1.11.0 values.
+  pins: rp-6-fork-repin/C-002, C-003
 - `create_table.rs` — also the V3R-1 type pin: `GEOMETRY` / `GEOGRAPHY` / `VARIANT` refuse at
   CREATE (`V3-GEO-1`).
 - `v3_types.rs` — **V3-6:** C-001 ledger matrix + refuse of `UNKNOWN` / `VARIANT` /
@@ -49,9 +49,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   V3E-3 fixtures (MOR+DV surviving rows), created v3 derivation, v2/v1 unresolved (`No field
   named _row_id`), `SELECT *, _row_id` expands user columns only, qualified/aliased forms,
   unquoted case-fold, JOIN/CTE/subquery/`VERSION AS OF` refuse `V3-ROWID-2`, V3-COW-1 files
-  byte-untouched (content-hash pin; RP-5 re-records `v3_cow.rs` after the branch-target
-  V3-COW-1 pin; RP-4 re-records `test_v3_cow_dml.py` after the rewrite
-  CALL lift); the C-001 matrix pin finds the ledger anywhere under `task/ledgers/` so
+  hash-pinned (RP-6 re-records after the Spark-equal lift; later units re-record only
+  for a change another merged unit made); the C-001 matrix pin finds the ledger anywhere under `task/ledgers/` so
   lifecycle moves keep it green.
   pins: rp-4-fork-repin/C-003
   pins: v3-4-serve-lineage-columns/C-001, C-002, C-005, C-006, C-007, C-008, C-009, C-010,
@@ -120,6 +119,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   byte-untouched through V3-6.
   Pin `call_rewrite_data_files_on_v3_preserves_row_lineage`
   (`pins: rp-3-fork-repin/C-005; rp-4-fork-repin/C-003`).
+  RP-6: `rewrite_after_same_arity_spec_evolution_stamps_current_spec`
+  (pins: rp-6-fork-repin/C-005).
   `call_v3_dv` (**V3-5**): six-file v3 MOR with live Puffin DVs;
   `rewrite_data_files` drops all six (`removed_delete_files_count = 6`,
   count columns Arrow Int32); `rewrite_position_delete_files` still refuses
