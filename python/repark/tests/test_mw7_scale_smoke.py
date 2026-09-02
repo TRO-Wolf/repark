@@ -60,13 +60,15 @@ MAINTENANCE_ORDER = [
 ONE_DAY_MS = 24 * 60 * 60 * 1000
 
 # C-011's fixture. 2,500 rows of the six-column schema write ONE ~68 KB data file, which sits
-# inside the bin-pack band for a 64 KiB target — so `rewrite_data_files` never selects it as a
-# candidate, and a MERGE that deletes every one of its rows cannot get them reclaimed.
+# inside the bin-pack band for a 64 KiB target — so only the delete-RATIO clause can ever make
+# it a candidate, and a MERGE that deletes every one of its rows is what raises that ratio.
 # Java's band, from `BinPackRewriteFilePlanner`: [0.75 x target, 1.8 x target].
 C011_ROWS = 2_500
 C011_TARGET_FILE_SIZE = 64 * 1024
 C011_BAND_LOW = 0.75
 C011_BAND_HIGH = 1.8
+
+DELETE_FILE_PATH_FIELD_ID = 2147483546
 
 
 def _load_measure() -> Any:
@@ -124,21 +126,24 @@ def _data_files(spark: ReparkSession, table: str) -> list[tuple[str, int, int]]:
     ]
 
 
-def _delete_file_references(spark: ReparkSession, table: str) -> set[str]:
-    """Every data-file path the live position-delete files name.
+def _path_bound(entries: Any) -> str | None:
+    """The `file_path` bound in one manifest bounds map, or `None` when it is absent."""
+    for key, value in entries or []:
+        if int(key) == DELETE_FILE_PATH_FIELD_ID:
+            return bytes(value).decode()
+    return None
 
-    Read from the delete files themselves (`file_path`, `pos`), not from metadata: whether a
-    surviving delete file still points at something live is the whole question in C-011, and a
-    count of delete files cannot answer it.
-    """
-    arrow = spark.sql(f"SELECT content, file_path FROM {table}.files").to_arrow()
-    referenced: set[str] = set()
-    for row in arrow.to_pylist():
-        if row["content"] != 1:
-            continue
-        deletes = spark.read.parquet(str(row["file_path"]).removeprefix("file://")).to_arrow()
-        referenced |= {str(value) for value in deletes.column("file_path").to_pylist()}
-    return referenced
+
+def _position_delete_path_bounds(
+    spark: ReparkSession, table: str
+) -> list[tuple[str | None, str | None]]:
+    """Every live position-delete file's `(lower, upper)` manifest bound on `file_path`."""
+    arrow = spark.sql(f"SELECT content, lower_bounds, upper_bounds FROM {table}.files").to_arrow()
+    return [
+        (_path_bound(row["lower_bounds"]), _path_bound(row["upper_bounds"]))
+        for row in arrow.to_pylist()
+        if row["content"] == 1
+    ]
 
 
 def test_census_matches_the_metadata_tables(tmp_path: Path) -> None:
@@ -349,24 +354,8 @@ def test_generated_frames_are_deterministic() -> None:
     assert not source.equals(overlap)
 
 
-def test_delete_laden_in_band_file_survives_the_runbook(tmp_path: Path) -> None:
-    """C-011: a data file whose rows are ALL deleted is never a rewrite candidate, and its
-    position-delete file outlives the whole maintenance sequence still pointing at it.
-
-    This is the characterization behind ledger finding F-MW7-1, at a scale a gate can run.
-    The shape is the 1e7 run's, shrunk: one CTAS data file sized INSIDE Java's bin-pack band,
-    then one MERGE that deletes every row in it.
-
-    `rewrite_data_files` selects a file when it is outside the size band or carries at least
-    `delete_file_threshold` delete files. The fork at pin `5e7b2e4` defaults that threshold to
-    `usize::MAX` and DEFERS Java's third clause, `tooHighDeleteRatio`
-    (`DELETE_RATIO_THRESHOLD_DEFAULT = 0.3`) — its module doc says "the ratio clause never
-    fires here". So a file that is 100 % dead but correctly sized is invisible to compaction,
-    and `removed_delete_files_count` is 0, so nothing drops the delete file either.
-
-    The answers stay correct throughout; what is retained is dead bytes and a delete file that
-    every scan opens. Registry row `RDF-1`; fork ask F-16.
-    """
+def test_delete_laden_in_band_file_is_rewritten_and_its_delete_file_dies(tmp_path: Path) -> None:
+    """C-011: a 100 %-dead in-band file is a candidate; the runbook ends at zero deletes."""
     spark = ReparkSession.builder.appName("pytest-mw7-c011").getOrCreate()
     try:
         warehouse = tmp_path / "wh"
@@ -385,8 +374,6 @@ def test_delete_laden_in_band_file_survives_the_runbook(tmp_path: Path) -> None:
         assert len(seeded) == 1, f"fixture must seed exactly one data file, got {len(seeded)}"
         seeded_path, seeded_size, seeded_records = seeded[0]
         assert seeded_records == C011_ROWS
-        # The precondition the whole clause rests on: this file is correctly sized, so only the
-        # deferred ratio clause could ever make it a candidate.
         assert (
             C011_BAND_LOW * C011_TARGET_FILE_SIZE
             <= seeded_size
@@ -405,6 +392,12 @@ def test_delete_laden_in_band_file_survives_the_runbook(tmp_path: Path) -> None:
             "the MERGE must delete every row of the seeded file, or the file is not 100 % dead"
         )
 
+        bounds = _position_delete_path_bounds(spark, table)
+        assert bounds == [(seeded_path, seeded_path)], (
+            "the delete file must carry exact, equal `file_path` bounds, or the delete-ratio "
+            f"clause cannot see it: {bounds}"
+        )
+
         results: dict[str, dict[str, object]] = {}
         for procedure, sql in measure.maintenance_sequence("mw7d", table_arg):
             rows = spark.sql(sql).to_arrow().to_pylist()
@@ -414,29 +407,24 @@ def test_delete_laden_in_band_file_survives_the_runbook(tmp_path: Path) -> None:
         assert int(rewrite["rewritten_data_files_count"]) > 0, (
             "the fixture must give compaction real work, or the clause proves nothing"
         )
-        assert int(rewrite["removed_delete_files_count"]) == 0, (
-            "F-MW7-1: compaction removes no delete file"
+        assert int(rewrite["removed_delete_files_count"]) == 1, (
+            "the file-scoped delete file dies with the data file it covered"
         )
 
         live = {path for path, _size, _records in _data_files(spark, table)}
-        assert seeded_path in live, (
-            "the 100 %-dead seeded file is still live: it was never a rewrite candidate"
+        assert seeded_path not in live, (
+            "the 100 %-dead seeded file must be gone: the ratio clause made it a candidate"
         )
 
         census = measure.file_census(spark, table)
-        assert census.delete_files >= 1, "a delete file outlives the whole sequence"
-        assert census.delete_records == C011_ROWS
+        assert census.delete_files == 0, "the runbook ends with no delete file"
+        assert census.delete_records == 0
 
-        # Not dangling. Every path the surviving delete files name is a LIVE data file, so the
-        # deletes are still doing work — they are shadowing rows nothing can reclaim.
-        referenced = _delete_file_references(spark, table)
-        assert referenced, "the surviving delete file must name the file it covers"
-        assert referenced <= live, f"references not live: {referenced - live}"
-        assert seeded_path in referenced
+        assert not _position_delete_path_bounds(spark, table)
 
         rows_after = spark.sql(f"SELECT COUNT(*) AS n FROM {table}").to_arrow()
         assert int(rows_after.column("n")[0].as_py()) == C011_ROWS, (
-            "the answers stay correct; what is retained is dead bytes"
+            "the reclaimed rows must not resurrect: the answer is the MERGE's 2,500"
         )
     finally:
         spark.stop()

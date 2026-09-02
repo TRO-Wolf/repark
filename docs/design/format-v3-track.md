@@ -118,6 +118,10 @@ deletes in place.
 > property of a low delete ratio, not of v2. The fork defers that clause, which is why this
 > engine retains them without bound — registry row
 > [RDF-1](../spark-sql-iceberg-parity.md), fork ask F-16.
+> *(RDF-1, 2026-09-02: the ratio clause is live here and the miss was RePark's own writer —
+> truncated `file_path` statistics left the delete file with no bound to route on. A delete
+> file naming one data file is now file-scoped and dies with it; one naming several is the
+> remaining residue.)*
 
 On v3 it is wrong. Spark reported `6` with no option set, because a deletion vector is scoped to a
 single data file and dies when that file is rewritten. Removal is an ordinary consequence of

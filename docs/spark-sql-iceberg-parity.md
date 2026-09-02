@@ -1898,7 +1898,10 @@ the pin rather than obeying it.
 
 ### RDF-1 — `rewrite_data_files` never selects a delete-laden file, so its dead rows are retained forever
 
-- **repark** — F-16r (`#248`, pin `00cdde0`) wired `tooHighDeleteRatio`, but the ratio
+- **repark** — **FIXED 2026-09-02** for a position-delete file that names ONE data file; the
+  heading and the first paragraph below are the dated history this row was opened on, kept as
+  the anchor. Read the 2026-09-02 entry for the current claim.
+  F-16r (`#248`, pin `00cdde0`) wired `tooHighDeleteRatio`, but the ratio
   clause counts only **file-scoped** position deletes (`referenced_data_file` present, or
   equal file-path bounds). Partition-granularity deletes and bounds-absent position deletes
   are invisible to it (F-16 residue 2). The MW-7 2,500-row pin writes with
@@ -1927,11 +1930,30 @@ the pin rather than obeying it.
   that shape. The MW-8 partitioned 6,000-row runbook pin reded: those in-band seed files
   were rewritten. The 1e7 × 50 driver was not re-run. RDF-1 stays BACKLOG.
   **RP-6 C-004 (2026-09-01, fork `fb0cacfa`):** F-16 residue 2 is not in this pin. RDF-1
-  stays BACKLOG.
-  **Residue 2 REFUTED (2026-09-02, fork `#259`):** the fork's ratio clause is identical to
-  Java's, and Spark reclaims this shape through full `file_path` bounds on its position
-  deletes. The mechanism above is therefore RePark's own position-delete writer, not a fork
-  gap; RDF-1 is re-homed to the engine and its rewrite belongs to the in-flight RDF-1 unit.
+  stayed BACKLOG.
+  **RDF-1 (2026-09-02) — FIXED for the single-referent shape.** The cause was RePark's own
+  writer, not the fork's clause. `write_position_deletes` built its Parquet
+  `WriterProperties` from the table's compression alone, so parquet-rs's default
+  `DEFAULT_STATISTICS_TRUNCATE_LENGTH = Some(64)` truncated the `file_path` statistic. A
+  truncated statistic is not `min_is_exact` / `max_is_exact`, and the fork's
+  `MinMaxColAggregator` drops an inexact bound — so the delete file reached the manifest with
+  **no** `file_path` bound at all. `referenced_data_file_location` then returned `None`, the
+  delete was never file-scoped, and `tooHighDeleteRatio` could not see it. The writer now takes
+  the fork's `position_delete_writer_properties()` truncation setting
+  (`set_statistics_truncate_length(None)`) alongside the table's codec.
+  Measured on the 2,500-row v2 merge-on-read fixture (`write.delete.granularity = 'partition'`,
+  one 68,523 B in-band data file for a 64 KiB target, one MERGE deleting all 2,500 rows):
+
+  | | `file_path` bounds (field `2147483546`) | `rewrite_data_files` | after the full sequence |
+  |---|---|---|---|
+  | before | ABSENT (parquet stats truncated at 64 B: min `…/2dfaeaae-`, max `…/2dfaeaae.`) | rewritten 4, `removed_delete_files_count` 0 | 3 data files, 1 delete file, 2,500 delete records, the 100 %-dead seed still live |
+  | after | exact; `lower == upper ==` the full 103-byte seeded path | rewritten 5, `removed_delete_files_count` 1 | 2 data files, **0 delete files, 0 delete records**, 2,500 rows, the seed gone |
+
+  SQL `DELETE` / `UPDATE` never carried the defect: they run through iceberg-datafusion, which
+  already used the fork's properties.
+  **Residue (F-16 residue 2, still open):** a delete file naming **two or more** data files has
+  unequal `file_path` bounds, so it is still not file-scoped and the ratio clause still cannot
+  see it. That shape is pinned as the incidental control, not repaired here.
 - **Apache Spark** — the same sequence on the same shape ends with **zero** delete files and
   **zero** delete records, at **both** `write.delete.granularity` settings, with
   `removed_delete_files_count` reported as 0 and `remove-dangling-deletes` OFF (jar default
@@ -1941,15 +1963,31 @@ the pin rather than obeying it.
   the delete files covering it die in the rewrite commit.
   *(oracle: recorded — live PySpark 4.0.1 + Iceberg 1.10.0, 200,000-row v2 merge-on-read
   fixtures, tiling and 30 %-deleted shapes; measured 2026-08-24 during MW-7's Critic pass.)*
+  **Re-measured 2026-09-02 on the 2,500-row fixture above (live PySpark 4.1.2 + Iceberg 1.11.0,
+  single-file CTAS then `write.target-file-size-bytes` 64 KiB):** Spark's delete file carries
+  exact, untruncated `file_path` bounds with `lower == upper` at BOTH granularities, and
+  `rewrite_data_files` does rewrite the 100 %-dead in-band file (3 data files → 1). The delete
+  file itself **survives** all five steps with its 2,500 records and
+  `removed_delete_files_count = 0` — dangling, because `remove-dangling-deletes` is off. The
+  DATA-file reclaim reproduces; the 2026-08-24 "zero delete files" reading does not, at this
+  version. RePark now goes one step past this oracle: its rewrite attributes the file-scoped
+  delete to the data file it named and drops it.
 - **Pin** —
-  `python/repark/tests/test_mw7_scale_smoke.py::test_delete_laden_in_band_file_survives_the_runbook`
-- **Rationale** — BACKLOG, and it is **fork** work (F-16 residue 2 in
-  [../task/roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md](../task/roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md)).
-  F-16r counted file-scoped deletes only. Spark reaches zero at both granularities; RePark's
-  remaining miss is partition-granularity / bounds-absent position deletes that never raise
-  the ratio. It is not format-v2 being v2, and not `remove-dangling-deletes` (OFF on Spark
-  too; the surviving deletes name live files). **Contents are unaffected.** Closing the row
-  means the ratio clause must count partition-scoped deletes the way Java does.
+  `python/repark/tests/test_mw7_scale_smoke.py::test_delete_laden_in_band_file_is_rewritten_and_its_delete_file_dies`
+  (the flipped runbook pin), and on the Spark door
+  `crates/repark-spark/src/tests/call_rewrite_dangling.rs::call_rewrite_data_files_drops_the_merge_delete_that_names_one_data_file`
+  with its incidental control
+  `…::call_rewrite_data_files_keeps_a_partition_delete_that_names_two_data_files`.
+- **Rationale** — FIXED for a position-delete file that names ONE data file, which is every
+  `file` granularity write and every `partition` granularity write whose partition holds one
+  data file. The bounds are the routing key: the fork's `referenced_data_file_location` reads
+  `referenced_data_file` first and falls back to equal `file_path` bounds, and v2 parquet
+  deletes carry no `referenced_data_file`. The remaining miss is a delete file spanning two or
+  more data files — F-16 residue 2 in
+  [../task/roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md](../task/roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md),
+  fork work, and unchanged by this row. Heading kept as the historical anchor (MOR-2
+  precedent), so the guide's and MW-8's `#rdf-1` links keep resolving.
+  **Contents are unaffected.**
 
 ### RDF-SORT-1 — `rewrite_data_files` refuses `sort` / `sort_order`; Spark runs a sort rewrite
 

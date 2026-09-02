@@ -528,6 +528,7 @@ RP-3 C-006 (2026-08-30, `d408da42`): the 1e7×50 MOR driver still ends at 8 dele
   — a characterization pin, written to go RED when this lands. Its fixture's 100 %-dead in-band
   file must become a candidate, be rewritten, and take its delete file with it, leaving the
   table at zero delete files with the same 2,500 rows. Registry row **RDF-1** retires with it.
+  *Errata (2026-09-02, F-RDF1-1):* "zero delete files" is the 2026-08-24 Spark 4.0.1 / Iceberg 1.10.0 reading; at 1.11.0 Spark rewrites the dead file and leaves the delete file dangling (removed 0). Registry RDF-1 carries both.
 - **Relationship to F-3.** F-3 is the `remove-dangling-deletes` option for delete files whose
   data file is GONE. This item is the other half: delete files whose data file is still there
   and never gets selected. Landing F-3 alone does not close RDF-1, and the oracle shows why —
@@ -541,11 +542,19 @@ RP-3 C-006 (2026-08-30, `d408da42`): the 1e7×50 MOR driver still ends at 8 dele
   pin.
   *RP-6 (2026-09-01, pin `fb0cacfa`): residue 2 is not in this range (fork F-16r ledger
   still names partition-scoped survival). RDF-1 stays BACKLOG. pins: rp-6-fork-repin/C-004*
-  **REFUTED fork-side (2026-09-02, fork `#259`, past the pin).** The ratio clause is
-  identical to Java's; Spark reclaims the shape through full `file_path` bounds on its
-  position deletes. The gap is RePark's own position-delete writer, not the fork — F-16
-  residue 2 closes and **RDF-1 re-homes to RePark** (engine unit RDF-1, in flight on its own
-  lane; the registry row is that unit's to rewrite).
+- **Residue 2, re-homed (RDF-1, 2026-09-02).** Half of residue 2 was never the fork's. Fork
+  PR `#259` refuted the "bounds-absent" half fork-side: the fork's own writers set
+  `position_delete_writer_properties()`, and at pin `fb0cacfa` a probe of the MW-7 shape
+  reclaims. The bounds were absent because **RePark's** MERGE writer built its Parquet
+  properties from the table codec alone and inherited parquet-rs's 64-byte statistics
+  truncation, which drops the `file_path` bound. That half is fixed in RePark (registry RDF-1)
+  and is no longer an ask here. **What remains of residue 2 is one line:** a delete file that
+  names two or more data files has unequal `file_path` bounds by construction, so no bounds
+  fix can make it file-scoped. Ask, unchanged: count those deletes in `tooHighDeleteRatio`
+  the way Java does. The Acceptance bullet above is superseded — the flipped pin is
+  `test_delete_laden_in_band_file_is_rewritten_and_its_delete_file_dies`, and the shape that
+  still waits on the fork is
+  `crates/repark-spark/src/tests/call_rewrite_dangling.rs::call_rewrite_data_files_keeps_a_partition_delete_that_names_two_data_files`.
 
 ### F-17 (north-star blocker, added 2026-08-28) — shared-Puffin DV sibling closure
 

@@ -19,8 +19,11 @@ declines it (a dated ruling in the intake, then the archive).
   **F-16 added 2026-08-24 from MW-7:** the delete-RATIO candidate clause in `RewriteDataFiles`
   (`tooHighDeleteRatio`, Java `DELETE_RATIO_THRESHOLD_DEFAULT = 0.3`), deferred in the fork, so
   a correctly sized 100 %-dead data file is never compacted and its dead rows are retained
-  without bound. Registry `RDF-1`; the engine pin that flips is
-  `test_mw7_scale_smoke.py::test_delete_laden_in_band_file_survives_the_runbook`.
+  without bound. Registry `RDF-1`. **Residue 2 re-homed 2026-09-02 (RDF-1):** the
+  bounds-absent half was RePark's own truncated `file_path` statistics and is fixed here; the
+  pin flipped to
+  `test_mw7_scale_smoke.py::test_delete_laden_in_band_file_is_rewritten_and_its_delete_file_dies`.
+  What still waits on the fork is one delete file naming two or more data files.
   **F-17 added 2026-08-28 from RP-2:** DML that supersedes one blob in a shared Puffin must
   carry every still-live sibling blob. The measured engine fixture loses the untouched sibling
   delete; the fork reuses its maintenance sibling-closure primitive and proves Java read-back.

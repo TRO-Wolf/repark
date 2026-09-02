@@ -702,20 +702,27 @@ merges of debt
 
 #### What the cycle cannot reclaim
 
-**A cycle does not return the table to baseline.** `rewrite_data_files` never selects a data file
-that is correctly sized, however many of its rows are deleted. Those dead rows stay, and the
-position-delete file covering them stays too. Apache Spark reclaims both. Registry row
+**A cycle reclaims a delete-laden file only when one delete file covers it alone.** Since
+2026-09-02 a correctly sized data file whose rows are deleted IS a rewrite candidate: the
+delete file naming it carries exact, equal `file_path` bounds, the delete-ratio clause counts
+it, the rewrite drops the dead rows, and the delete file dies with the data file it named.
+Registry row
 [RDF-1](../spark-sql-iceberg-parity.md#rdf-1--rewrite_data_files-never-selects-a-delete-laden-file-so-its-dead-rows-are-retained-forever).
-The fix is fork ask F-16.
+**What still is not reclaimed:** one delete file that names TWO OR MORE data files — the shape
+`write.delete.granularity = 'partition'` produces whenever a partition holds several data
+files. Its `file_path` bounds are unequal, so it is not file-scoped, the ratio clause cannot
+see it, and neither it nor the files it covers are selected. The fix for that residue is fork
+ask F-16.
 
 Here is what you see after a cycle, so you do not go looking for a fault. A merge-on-read table
 still reads at **2.02×** the compacted copy-on-write control on a point predicate. On a partition
 predicate it reads at **2.45×**. It still holds **1.90×** the control's live bytes
 ([MW-7 §4.3](../../task/ledgers/archive/2026-08/2026-08-24-mw-7-scale-measurement-ledger.md#43-mor-against-the-cow-control--what-merge-on-read-costs-on-read),
 [§4.4](../../task/ledgers/archive/2026-08/2026-08-24-mw-7-scale-measurement-ledger.md#44-the-maintenance-sequence-at-50-merges-of-debt)).
-Delete files survive with their records. Every answer is correct at every point, and nothing
-fails. Cadence bounds how far a scan degrades between cycles. It does not bound the dead rows,
-which grow until the fork carries Java's delete-ratio clause.
+Every answer is correct at every point, and nothing fails. Cadence bounds how far a scan
+degrades between cycles. Those figures were measured before RDF-1 landed, on a
+`partition`-granularity shape whose delete files span several data files — the residue above —
+so they still stand for that shape.
 
 #### Retrying a step
 
@@ -730,7 +737,8 @@ nothing to do on the data manifests. It then raises `UnsupportedOperationExcepti
 answering two zeros while delete manifests stay uncompacted
 ([MANIFEST-1](../spark-sql-iceberg-parity.md#manifest-1--rewrite_manifests-rewrites-data-manifests-only-spark-rewrites-delete-manifests-too)).
 Apache Spark answers `0, 0` there. The refusal points at step 2. Step 2 cannot help once the
-delete files are the permanent `RDF-1` residue, because those delete manifests never go away.
+delete files are the `RDF-1` residue above — one delete file naming several data files — because
+those delete manifests never go away.
 Catch the exception, or guard step 4 on steps 2 and 3 having rewritten something. You reach this
 by running the cycle twice with no merges in between. A retry after a successful cycle does
 exactly that.

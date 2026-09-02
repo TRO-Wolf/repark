@@ -106,7 +106,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the Spark-written partitioned v3 DV fixture and the equality-delete + DV fixture;
   live rows, partition prune, `.delete_files` content 1/2; RP-3 C-007 CALL still refuses
   live DVs. pins: rp-3-fork-repin/C-007, C-011
-- [test_v3_live_oracle.py](test_v3_live_oracle.py) — **V3E-5 (2026-08-27):** nightly live oracle for the two V3E-3 fixtures — `REPARK_PARITY_LIVE=1` repark == Spark on partitioned-DV prune and equality-delete alongside DV, plus `.delete_files` kinds. RP-6: `test_partitioned_dv_update_commits_and_rewrite_still_refuses` pins Spark-equal `(id, _row_id, seq)` after live-DV UPDATE; `rewrite_position_delete_files` still refuses with rows and fixture bytes unchanged after the UPDATE. JVM-free twins stay in `test_v3e3_fixtures.py`. Critic remediation (2026-08-27): prune1 on Spark, combined DirLock, exact content sets, mirrored format, GAV full equality, version sort, COW, `py-format` single-line, meta-pin now asserts archive/dual-wire/diff allowlist. Formal CCC + cargo-deny/wheel remediation (2026-08-28): `chacha20` yanked and `thiserror` duplicate `skip`. PLAN-1 makes the ledger lookup lifecycle-aware across staging, completed, and archive, and checks the landed #253 commit instead of the current branch. **Nightly fix (2026-09-01):** the three live helpers now qualify `CALL <catalog>.system.register_table` through `LIFECYCLE_SPARK_CATALOG`; unqualified, Spark resolved it against `spark_catalog` and the CI leg had been red since its first run (2026-08-28). The north-star meta-pin now checks the row cites V3E-5 and the oracle version regardless of its status glyph, so an honest ⚠ does not red it. V3-7: `test_v3_merge_matched_update_live_cow_and_mor` cites the completed ledger transcript (not `/tmp`) and live-gates COW/MoR matched-UPDATE MERGE. **V3-8 (2026-09-02):** `_ledger_path` resolves a unit ledger across staging, completed and archive (the V3-7 pointer had gone stale on archival), and `test_v3_subquery_where_dml_live_cow` live-gates COW subquery-`WHERE` DELETE and UPDATE against the V3-8 transcript (pins: v3-8-subquery-where-lineage/C-001, C-002, C-003).
+- [test_v3_live_oracle.py](test_v3_live_oracle.py) — **V3E-5 (2026-08-27):** nightly live oracle for the two V3E-3 fixtures — `REPARK_PARITY_LIVE=1` repark == Spark on partitioned-DV prune and equality-delete alongside DV, plus `.delete_files` kinds. RP-6: `test_partitioned_dv_update_commits_and_rewrite_still_refuses` pins Spark-equal `(id, _row_id, seq)` after live-DV UPDATE; `rewrite_position_delete_files` still refuses with rows and fixture bytes unchanged after the UPDATE. JVM-free twins stay in `test_v3e3_fixtures.py`. Critic remediation (2026-08-27): prune1 on Spark, combined DirLock, exact content sets, mirrored format, GAV full equality, version sort, COW, `py-format` single-line, meta-pin now asserts archive/dual-wire/diff allowlist. Formal CCC + cargo-deny/wheel remediation (2026-08-28): `chacha20` yanked and `thiserror` duplicate `skip`. PLAN-1 makes the ledger lookup lifecycle-aware across staging, completed, and archive, and checks the landed #253 commit instead of the current branch. **Nightly fix (2026-09-01):** the three live helpers now qualify `CALL <catalog>.system.register_table` through `LIFECYCLE_SPARK_CATALOG`; unqualified, Spark resolved it against `spark_catalog` and the CI leg had been red since its first run (2026-08-28). The north-star meta-pin now checks the row cites V3E-5 and the oracle version regardless of its status glyph, so an honest ⚠ does not red it. V3-7: `test_v3_merge_matched_update_live_cow_and_mor` cites the V3-7 ledger transcript (not `/tmp`) and live-gates COW/MoR matched-UPDATE MERGE. **RDF-1 (2026-09-02):** it read `completed/` by absolute path and reded the moment the archive ritual moved that ledger; both ledger reads now share `_ledger_text`, the staging/completed/archive lookup PLAN-1 already used for the V3E-5 meta-pin.
+  pins: rdf-1-position-delete-bounds/C-004
 - [test_v3_dv_compaction.py](test_v3_dv_compaction.py) — **V3-5:** facade six-file
   v3 MOR compact drops six Puffin DVs (`removed_delete_files_count = 6`,
   Arrow int32); `rewrite_position_delete_files` still refuses (`B-MOR-3`);
@@ -131,8 +132,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   maintenance cycle `docs/guide/iceberg-guide.md` "The maintenance runbook" documents, run end
   to end on a local catalog at gate scale (6,000 rows, 2 partitions, six MERGEs). F-16r
   rewrites this fixture's in-band delete-laden seed files (`test_delete_laden_seed_files_are_rewritten_by_the_runbook`).
-  The MW-7 2,500-row pin still holds (`RDF-1` BACKLOG).
-  pins: rp-5-fork-repin/C-005
+  The MW-7 2,500-row pin still holds; it flipped to the reclaim on 2026-09-02 and this module
+  stays green either way (`RDF-1` FIXED for a delete file naming one data file).
+  pins: rp-5-fork-repin/C-005; rdf-1-position-delete-bounds/C-003
   **C-010 (Critic remediation, F-MW8-1/F-MW8-3)** parses the guide's `MAINTENANCE_CYCLE`
   out of its python block and compares procedure, order, argument names and literal argument
   values (placeholders skipped) against `measure.maintenance_sequence`'s, so printed SQL that drifts from the measured
@@ -152,15 +154,17 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   order with orphan cleanup last and dry-run; every timing carries the answer it was
   measured on and the answer does not move across maintenance; the generator is
   deterministic. Wall-clock is recorded in the ledger, never asserted.
-  **C-011 (2026-08-24, Critic remediation):**
-  `test_delete_laden_in_band_file_survives_the_runbook` characterizes registry row `RDF-1` —
-  a 2,500-row v2 merge-on-read table written as ONE data file inside Java's bin-pack band, then
-  a MERGE deleting every one of its rows. After the complete maintenance sequence the file is
-  still live with 2,500 dead rows, `removed_delete_files_count` is 0, and the surviving
-  position-delete file names a data file that is still LIVE (read out of the delete Parquet, not
-  inferred from a count). The fork at `5e7b2e4` defers Java's `tooHighDeleteRatio` clause, so a
-  correctly sized 100 %-dead file is never a rewrite candidate. Written to go RED when fork ask
-  F-16 lands.
+  **C-011 (2026-08-24, Critic remediation; flipped 2026-09-02 by RDF-1):**
+  `test_delete_laden_in_band_file_is_rewritten_and_its_delete_file_dies` pins registry row
+  `RDF-1` — a 2,500-row v2 merge-on-read table written as ONE data file inside Java's bin-pack
+  band, then a MERGE deleting every one of its rows. The pin now asserts the reclaim: the
+  delete file's `file_path` bounds are exact and equal to the seeded path (field `2147483546`,
+  read from the manifest, not inferred from a count), `rewrite_data_files` reports
+  `removed_delete_files_count = 1`, the seeded path leaves the live set, the sequence ends at
+  zero delete files and zero delete records, and `COUNT(*)` is still 2,500 — the reclaimed rows
+  do not resurrect. Its predecessor asserted the opposite (the file survives) because RePark's
+  own writer truncated those bounds away.
+  pins: rdf-1-position-delete-bounds/C-003
 - [test_mw5_baseline_delta.py](test_mw5_baseline_delta.py) — **MW-5 (2026-08-23):**
   the MW-0 growth demo re-run: 1,000-row v2 merge-on-read, ten MERGEs of the same
   200 ids, position-delete files 1→10 then compact 10→1 and data files →1
@@ -2369,7 +2373,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 | Add a maintenance `CALL system.*` oracle (I3) | `test_maintenance_call.py` — expire/rewrite/rollback + tag **and** branch dual probe (s1 kept, s2 expired) + positional sort refuse + previous_snapshot_id + unknown/orphan refuse. **MW-1:** expire pins Spark's full six-column result, all bigint and all nullable, after the content-file funnel was split into data / position-delete / equality-delete. **MW-2:** rewrite pins Spark's fifth column `removed_delete_files_count`, non-nullable and 0 — Java's `remove-dangling-deletes` defaults off and the options map refuses, so the zero is a real count. *(MW-7, 2026-08-24: the zero is real, but do not read it as "delete files therefore survive compaction" — on Spark they do not, because its planner rewrites delete-laden files outright. Registry `RDF-1`.)* **MW-3:** the pre-MW-3 orphan refuse pin is retired and replaced by three — `older_than` required (`ORPHAN-1`), dry-run default with Spark's one-column result shape (`ORPHAN-2`), the 24-hour floor measured across its boundary (parity, not strictness), and the shared-CTAS-root refusal pinned on the very fixture that surfaced it — a dry run there listed 139,179 leftover files. **V3-1:** `register_table` adopts an engine-written table and returns Spark's three nullable BIGINT columns (`pa.int64()`); unknown-proc pin is fail-closed on `register_table`. **MW-6:** `rewrite_manifests` pins Spark's two non-nullable `int32` columns and its counts (5 manifests → 1, `5, 1`), the no-op zeros with no new snapshot, and the argument surface — `spec_id` refuses, `use_caching` is accepted and changes nothing (`MANIFEST-2`) |
 | Pin the MW-7 scale-measurement machinery | `test_mw7_scale_smoke.py` — the bench driver at gate scale: census vs an independent count, delete files `partitions x merges` then folded to one per partition, COW zero-delete control (a control, not a clean delete-cost isolate — MOR-minus-COW bundles delete reads with MOR's data-file fan-out), manifest drop across `rewrite_manifests`, the five-procedure order, timings that carry their answer |
 | Pin the W-0 window-shape bench at gate scale | `test_w0_window_bench_smoke.py` — Iceberg lead/lag cell, memory_limit outcome class, thirteen sliding refuses (int64 `approx_count_distinct`), remaining absents fail at planning. pins: w-0-window-bench/C-002, C-005, C-006, C-009 |
-| Characterize `RDF-1` (a 100 %-dead in-band data file is never compacted) | `test_mw7_scale_smoke.py::test_delete_laden_in_band_file_survives_the_runbook` — RP-5 re-measured GREEN at `00cdde0` / F-16r (BACKLOG; 1e7×50 driver not re-run). pins: rp-5-fork-repin/C-005 |
+| Pin `RDF-1` (a 100 %-dead in-band data file IS compacted, and its delete file dies with it) | `test_mw7_scale_smoke.py::test_delete_laden_in_band_file_is_rewritten_and_its_delete_file_dies` — exact equal `file_path` bounds, `removed_delete_files_count` 1, zero delete files, 2,500 rows. pins: rdf-1-position-delete-bounds/C-003 |
 | Re-measure the MW-0 MOR growth demo (MW-5) | `test_mw5_baseline_delta.py` — 1,000 rows, ten MERGEs of 200 ids, delete files 1→10 then compact+expire 10→1, Arrow `COUNT(*)` 1,000 `int64`, expire mutation-proof. Wall-clock logged, not asserted |
 | Add a case-insensitive column-conform (MERGE star) facade test | `test_case_insensitive_conform.py` |
 | Add a drop-in no-op / accepted-ignored disclosure test (OTH-010) | `test_dropin_disclosure.py` |

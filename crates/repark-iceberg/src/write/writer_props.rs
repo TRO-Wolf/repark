@@ -2,6 +2,7 @@
 
 use datafusion::error::{DataFusionError, Result};
 use iceberg::table::Table;
+use iceberg::writer::base_writer::position_delete_writer::position_delete_writer_properties;
 use parquet::basic::{Compression, GzipLevel, ZstdLevel};
 use parquet::file::properties::WriterProperties;
 
@@ -18,13 +19,25 @@ pub const ACCEPTED_CODECS: &str = "zstd, snappy, gzip, lz4, uncompressed";
 /// # Errors
 /// Unknown codec, unparsable level, or level out of range for gzip/zstd.
 pub fn writer_properties_for(table: &Table) -> Result<WriterProperties> {
+    Ok(WriterProperties::builder()
+        .set_compression(compression_for(table)?)
+        .build())
+}
+
+pub(crate) fn position_delete_writer_properties_for(table: &Table) -> Result<WriterProperties> {
+    Ok(WriterProperties::builder()
+        .set_compression(compression_for(table)?)
+        .set_statistics_truncate_length(
+            position_delete_writer_properties().statistics_truncate_length(),
+        )
+        .build())
+}
+
+fn compression_for(table: &Table) -> Result<Compression> {
     let properties = table.metadata().properties();
     let codec_raw = properties.get(COMPRESSION_CODEC_PROP).map(String::as_str);
     let level_raw = properties.get(COMPRESSION_LEVEL_PROP).map(String::as_str);
-    let compression = parse_compression(codec_raw, level_raw)?;
-    Ok(WriterProperties::builder()
-        .set_compression(compression)
-        .build())
+    parse_compression(codec_raw, level_raw)
 }
 
 /// Parse codec (+ optional level) into parquet-rs [`Compression`].

@@ -93,6 +93,14 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 - `call_rewrite_dangling.rs` — the CALL's
   `'remove-dangling-deletes' => true` reaches the fork's composed GC and reports a true
   `removed_delete_files_count` on a partitioned v2 fixture (C-006).
+  **RDF-1 (2026-09-02):** the file-scoped pair, both on RePark-owned MERGE deletes. A delete
+  file naming ONE data file has exact, equal `file_path` bounds, so the rewrite that replaces
+  that data file drops it with NO `remove-dangling-deletes` option
+  (`removed_delete_files_count = 1`, zero delete files after). Its incidental control: a
+  `partition`-granularity delete file naming TWO data files has unequal bounds, is not
+  file-scoped, and outlives the rewrite (`removed_delete_files_count = 0`, one delete file
+  after) with its shadowed rows still shadowed — F-16 residue 2, unchanged. Registry `RDF-1`.
+  pins: rdf-1-position-delete-bounds/C-003
 - `call_rewrite_options.rs` — **rewrite_data_files options:** `where => 'part = 0'` (and `IN (0)`)
   keeps the **part=1** pre-image paths byte-identical and rewrites part=0 away; unknown strategy
   and bad where use Spark's text; `sort_order` refuses without compacting; named `BINPACK` still

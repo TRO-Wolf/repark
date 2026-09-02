@@ -9,6 +9,7 @@ else. The next pickup's `make ledger-archive` files everything here under
 
 ## Contents
 - [v3e-3-partitioned-eqdel-fixtures-ledger.md](../archive/2026-08/2026-08-25-v3e-3-partitioned-eqdel-fixtures-ledger.md) — V3E-3 — partitioned + equality-delete v3 fixtures
+- [rdf-1-position-delete-bounds-ledger.md](rdf-1-position-delete-bounds-ledger.md) — Charter ledger — RDF-1 · position-delete `file_path` bounds, re-homed from fork ask F-16
 - [docs-1-truth-up-ledger.md](docs-1-truth-up-ledger.md) — **DOCS-1 (2026-09-02):**
   the truth-up after the 2026-09-01/02 merges — STATUS, the v1.0 north star, the fork
   handoff and the ledger bins reconciled to what merged. `risk_tier: standard`. Branch
