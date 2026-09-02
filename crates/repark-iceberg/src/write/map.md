@@ -144,6 +144,8 @@ repark-core's error map.
   the version a table already has writes no metadata file. `current_format_version` reads the
   number for the resolver and `format_version_from_number` errors rather than falling back, so an
   out-of-domain number can never be silently taken as v2.
+  `current_format_version` and `format_version_from_number` speak the resolver's SIGNED version
+  number, so a negative request reaches the downgrade branch rather than the parse branch.
   Its three entry points carry `#[allow(clippy::missing_errors_doc)]` in place of the `# Errors`
   doc comment the no-code-comments ruling forbids; every error they raise comes from the fork.
   pins: v3-10-upgrade-v2-to-v3/C-003, C-005

@@ -131,7 +131,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   v2 → v3 upgrade — the refusal without `repark.sql.allowCreateFormatVersion3` (and the proof that
   `_row_id` stays unresolvable on the still-v2 table), the opt-in upgrade with NULL lineage on
   pre-upgrade rows and Spark's `(1,2,1),(2,3,1),(3,4,1),(4,0,2),(5,1,2)` after one append, and the
-  downgrade / `'4'` / `'x'` refusals leaving the table where the upgrade left it.
+  downgrade / `'-1'` / `'4'` / `'x'` / `'3.0'` refusals leaving the table where the upgrade left
+  it, and the proof that the opt-in refusal carries no CREATE-door phrasing.
   pins: v3-10-upgrade-v2-to-v3/C-003, C-004
 - [test_v3_create_opt_in.py](test_v3_create_opt_in.py) — **V3-2 (2026-08-24):** facade CREATE/CTAS
   `format-version = 3` refuses unless `repark.sql.allowCreateFormatVersion3` is true, and

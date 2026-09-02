@@ -15,7 +15,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 
 - `mod.rs` — pure module manifest (`mod common;` + one `mod` per leaf).
 - `v3_upgrade.rs` — **V3-10:** the in-place v2 → v3 upgrade on the Spark door — opt-in gate and
-  its without-opt-in twin, downgrade / `'1'` / `'4'` / `'x'` / `''` refusals, same-version no-op,
+  its without-opt-in twin, downgrade / `'1'` / `'-1'` / `'0'` / `'4'` / `'x'` / `''` / `'3.0'` /
+  `' 3 '` refusals in Spark's own two classes, same-version no-op,
   upgrade beside another key as ONE commit, and the post-upgrade v3 paths (append lineage, COW
   DELETE/UPDATE, MoR MERGE deletion vector, `rewrite_data_files`, `register_table`) at live-Spark
   values. The legacy-parquet-position-delete refusal is `V3-UPGRADE-DV-1`.

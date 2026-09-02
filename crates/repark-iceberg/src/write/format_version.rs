@@ -41,12 +41,14 @@ pub async fn set_properties_and_format_version<S: BuildHasher>(
 }
 
 #[allow(clippy::missing_errors_doc)]
-pub async fn current_format_version(catalog: &dyn Catalog, ident: &TableIdent) -> Result<u8> {
-    Ok(catalog.load_table(ident).await?.metadata().format_version() as u8)
+pub async fn current_format_version(catalog: &dyn Catalog, ident: &TableIdent) -> Result<i64> {
+    Ok(i64::from(
+        catalog.load_table(ident).await?.metadata().format_version() as u8,
+    ))
 }
 
 #[allow(clippy::missing_errors_doc)]
-pub fn format_version_from_number(number: u8) -> Result<FormatVersion> {
+pub fn format_version_from_number(number: i64) -> Result<FormatVersion> {
     match number {
         1 => Ok(FormatVersion::V1),
         2 => Ok(FormatVersion::V2),

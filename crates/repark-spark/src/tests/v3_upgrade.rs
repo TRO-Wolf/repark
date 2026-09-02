@@ -166,9 +166,13 @@ async fn alter_downgrade_and_unsupported_versions_refuse_naming_both_versions() 
     seed_v2(&ctx, &catalogs, "bad").await;
     for (value, needle) in [
         ("1", "v1"),
+        ("-1", "v-1"),
+        ("0", "v0"),
         ("4", "v1 through v3"),
         ("x", "not an Iceberg format version"),
         ("", "not an Iceberg format version"),
+        ("3.0", "not an Iceberg format version"),
+        (" 3 ", "not an Iceberg format version"),
     ] {
         let message = refuse(
             &ctx,

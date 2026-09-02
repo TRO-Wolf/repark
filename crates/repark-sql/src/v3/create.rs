@@ -411,8 +411,10 @@ async fn alter_set_properties_downgrade_and_unsupported_versions_refuse() {
         .await;
     for (value, needle) in [
         ("1", "v1"),
+        ("'-1'", "v-1"),
         ("4", "v1 through v3"),
         ("'x'", "not an Iceberg"),
+        ("'3.0'", "not an Iceberg"),
     ] {
         let err = door
             .err(&format!(

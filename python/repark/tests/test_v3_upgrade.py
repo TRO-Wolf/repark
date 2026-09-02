@@ -52,8 +52,9 @@ def test_alter_upgrade_refuses_without_the_opt_in(tmp_path: Path) -> None:
     try:
         session.register_memory_catalog("ice", tmp_path)
         _seed_v2(session)
-        with pytest.raises(UnsupportedOperationException, match=_ALLOW_CREATE_V3_KEY):
+        with pytest.raises(UnsupportedOperationException, match=_ALLOW_CREATE_V3_KEY) as refusal:
             session.sql(_UPGRADE).collect()
+        assert "create" not in str(refusal.value)
         with pytest.raises(Exception, match="_row_id"):
             session.sql("SELECT _row_id FROM ice.sales.up").collect()
     finally:
@@ -103,7 +104,12 @@ def test_alter_downgrade_and_unsupported_versions_refuse(tmp_path: Path) -> None
             session.sql(
                 "ALTER TABLE ice.sales.up SET TBLPROPERTIES ('format-version' = '2')"
             ).collect()
-        for value, needle in (("4", "v1 through v3"), ("x", "not an Iceberg format version")):
+        for value, needle in (
+            ("4", "v1 through v3"),
+            ("-1", "v-1"),
+            ("x", "not an Iceberg format version"),
+            ("3.0", "not an Iceberg format version"),
+        ):
             with pytest.raises(UnsupportedOperationException, match=needle):
                 session.sql(
                     f"ALTER TABLE ice.sales.up SET TBLPROPERTIES ('format-version' = '{value}')"

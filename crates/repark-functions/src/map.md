@@ -326,8 +326,13 @@ scalars live under [`try_invert/`](try_invert/map.md).
 - `format_version.rs` — **V3-10:** `resolve_alter_format_version` is the one `ALTER … format-version`
   resolver for every door: it parses the request, refuses a downgrade and anything above
   `MAX_SUPPORTED_FORMAT_VERSION` naming the key and both versions, returns `None` for the
-  same-version no-op, and delegates the v3 opt-in refusal to `cardinality::resolve_create_format_version`
-  so the CREATE and ALTER refusal texts cannot drift apart.
+  same-version no-op, and refuses `'3'` without the session opt-in naming the shared
+  `cardinality::ALLOW_CREATE_FORMAT_VERSION_3_KEY` const. It composes that last message itself
+  rather than borrowing `resolve_create_format_version`'s, because the CREATE text ends in a
+  create-only clause; the conf key is the half the pins assert and it stays a single const, so
+  the two doors cannot drift on the thing that matters. The request is parsed as a SIGNED
+  integer and is NOT trimmed, which is what makes `'-1'` a downgrade and `' 3 '` unparsable the
+  way Spark classifies them.
   The `#[allow(clippy::missing_errors_doc)]` on it (and on the three `write/format_version.rs`
   entry points) stands in for the `# Errors` doc comment the no-code-comments ruling forbids;
   the error domain is the row above.
