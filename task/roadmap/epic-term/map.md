@@ -14,6 +14,10 @@ is now the epic list from v0.6 through 3.0 — PROJECT.md points here rather tha
   the 2026-08-24 owner rulings (Lane A charter, the encryption-keys DECLARED exclusion) are
   recorded in the matrix and sequenced on [../../../briefs/next-sequence.md](../../../briefs/next-sequence.md).
   Truth-up 2026-09-02: nightly row ✅ after #300 (first green nightly 2026-09-02).
+  LIVE-v3 (2026-09-02): the "Live: Glue + S3 Tables v3 legs" row stays ❌ — both legs are
+  now wired and their statement sequence is pinned locally, but nothing has run against
+  AWS; the row names the two questions the first nightly or dispatch answers and cites
+  registry `S3T-V3-1`. pins: live-v3-aws-legs/C-004
 - [release-roadmap-2026-08-29.md](release-roadmap-2026-08-29.md) — **the release roadmap
   (owner-set 2026-08-29):** every tag from v0.6 to 3.0 with the owner's rulings folded in.
   Pre-1.0 closes the floating gaps (Track-B DML remainder with the verified F-5 correction,

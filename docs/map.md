@@ -38,6 +38,10 @@ repo.
   with [../STATUS.md](../STATUS.md) — STATUS holds issue *state*, this file holds *semantics*, and
   neither restates the other. §8 is the drop-in disclosure rationale table. §9 is FNP-15/16
   declared-absent Spark functions (unreachable vs deferred-by-cost). pins: fnp-15-16/C-014
+  LIVE-v3 (2026-09-02) added §7 `S3T-V3-1`: the two live v3 legs are wired and the statement
+  sequence's local numbers are pinned, but nothing has run against AWS — the row states the
+  pending measurement and the S3 Tables `format-version = 3` decision table, and it is updated
+  with the run id the first time the workflow runs. pins: live-v3-aws-legs/C-004
   Cited by name from
   ~16 live sites (Rust refusal messages, facade docstrings, facade tests), and indexed in
   [../repo-manifest.toml](../repo-manifest.toml) so a move is a red gate. A row without a live pin
@@ -84,7 +88,10 @@ repo.
   repository level equivalent), first-dispatch acceptance (§5 — including the stale-namespace
   pre-check: an existing scratch database is adopted idempotently and keeps its OLD
   `LocationUri`). Corrections carried back from the first green live run, 2026-08-10; the run's
-  status itself lives in [../STATUS.md](../STATUS.md).
+  status itself lives in [../STATUS.md](../STATUS.md). **§6 (LIVE-v3, 2026-09-02)** is one row per
+  leg the workflow runs — catalog, extra gate, and what the run answers — including the two new v3
+  legs, with the note that they need no new IAM action and no new workflow variable. What a leg
+  measured stays in STATUS. pins: live-v3-aws-legs/C-004
 - [release.md](release.md) — release engineering (wired and proven): PyPI trusted-publishing
   setup, bootstrap-token revocation, the structural crates.io deferral, what the first tags
   settled, and the still-open items. Which versions shipped is [../STATUS.md](../STATUS.md);
