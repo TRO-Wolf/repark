@@ -21,7 +21,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   (3, 1, 2); an ordinary property ALTER is (2, 0, 0) unchanged and a same-version request is
   (1, 0, 0). The same test then reads `_row_id` through the session, which is what makes the
   removal safe rather than merely cheaper.
-  pins: v3-10-upgrade-v2-to-v3/C-003
+  pins: v3-10-upgrade-v2-to-v3/C-003, C-006
 - `v3_upgrade.rs` — **V3-10:** the in-place v2 → v3 upgrade on the Spark door — opt-in gate and
   its without-opt-in twin, downgrade / `'1'` / `'-1'` / `'0'` / `'4'` / `'x'` / `''` / `'3.0'` /
   `' 3 '` refusals in Spark's own two classes, same-version no-op,

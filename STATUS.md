@@ -134,16 +134,16 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
   - **Delivered** (per-row detail: the north-star matrix): V3-1 `register_table` + the v3
     fixture ([#203](https://github.com/TRO-Wolf/repark/pull/203)); V3-2 opt-in CREATE/CTAS
     `format-version = 3`, ALTER refused ([#232](https://github.com/TRO-Wolf/repark/pull/232));
-    V3E-1 + V3E-2 adopted-v3 COW DML measured, `ENC-1` DECLARED, oracle PySpark 4.1.2 +
-    Iceberg 1.11.0 ([#235](https://github.com/TRO-Wolf/repark/pull/235)); V3E-3 partitioned-DV and
-    equality-delete fixtures CI-runnable ([#236](https://github.com/TRO-Wolf/repark/pull/236));
+    V3E-1 + V3E-2 adopted-v3 COW DML measured, `ENC-1` DECLARED
+    ([#235](https://github.com/TRO-Wolf/repark/pull/235)); V3E-3 partitioned-DV
+    and equality-delete fixtures ([#236](https://github.com/TRO-Wolf/repark/pull/236));
     V3R-1 —
-    **the 2026-08-25 owner rulings:** row-DML on v3 **guarded** (`V3-COW-1`, discharged by
-    V3-8), `geometry`/`geography` DECLARED out of v1.0 (`V3-GEO-1`), shredded-Parquet `variant`
+    **the 2026-08-25 owner rulings:** row-DML on v3 **guarded** (`V3-COW-1`, discharged by V3-8),
+    `geometry`/`geography` DECLARED out of v1.0 (`V3-GEO-1`), shredded-Parquet `variant`
     DECLARED out (queued `V3-VARIANT-SHRED-1`), the S3 Tables live legs **in** (OD-3b,
     `docs/tier2-aws.md` §2 — green at LIVE-v3), and the
     v2→v3 in-place upgrade built after V3-3 — **discharged by V3-10 (2026-09-02):
-    `V3-UPGRADE-1` FIXED, three doors; residuals `V3-UPGRADE-V4-1`, `V3-UPGRADE-DV-1`.**
+    `V3-UPGRADE-1` FIXED, three doors.**
     V3E-4 measured refs, `VERSION AS OF` over DVs, expire dual-probe, orphan floor.
     V3E-5 added the nightly v3 live-oracle leg
     ([#253](https://github.com/TRO-Wolf/repark/pull/253)). RP-2 (2026-08-28, `ce92a7bf`) the
@@ -165,7 +165,8 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
     CREATE, Glue reproduces the local numbers (`S3T-V3-1`).
   - **Next:** lineage carry and merge-on-read are complete on every served DML shape
     (`V3-COW-1`, `V3-MOR-1` FIXED); open v3 residuals are `V3-DV-1` (fork F-18 / repin RP-7),
-    `V3-ROWID-3` (unit **V3-11**), `G3-E8` subquery spellings and `B-MOR-3`.
+    `V3-ROWID-3` (unit **V3-11**), `V3-UPGRADE-DV-1` (unit **V3-12**: merge a legacy parquet
+    position delete into the new DV), `V3-UPGRADE-V4-1`, `G3-E8` spellings and `B-MOR-3`.
 <!-- /ws -->
 
 <!-- ws id=perf ledgers=perf- state=open -->
