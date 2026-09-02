@@ -156,3 +156,23 @@ the acceptance step the design's §11 assigns to the operator. The parity-live w
 dispatch is its own separate acceptance step (no AWS involved there). Whether that dispatch has
 happened, and how it went, is current state: it is recorded in [../STATUS.md](../STATUS.md), never
 restated here.
+
+## 6. The legs this workflow runs
+
+One row per test in `python/repark/tests/test_aws_acceptance.py`. Whether a leg has run, and how
+it went, is current state and lives in [../STATUS.md](../STATUS.md) — never here.
+
+| Leg | Catalog | Extra gate | What the run answers |
+|---|---|---|---|
+| `test_process_silver_acceptance_against_glue` | Glue | — | the source publish path: bronze `s3a` read → dedup → CTAS-or-MERGE → an idempotent second MERGE |
+| `test_process_silver_acceptance_against_s3tables` | S3 Tables | `TABLE_BUCKET_ARN` | the same publish path against a table bucket (namespace carries no `location`) |
+| `test_mor_merge_compact_expire_against_glue` | Glue | — | MW-4: v2 merge-on-read MERGEs → `rewrite_position_delete_files` + `rewrite_data_files` + `expire_snapshots`, rows unchanged, the CTAS snapshot gone |
+| `test_mor_merge_compact_expire_against_s3tables` | S3 Tables | `TABLE_BUCKET_ARN` | MW-10 / OD-3b: whether `s3tables:PutTableData` authorizes expire's file removal on table storage |
+| `test_v3_dv_dml_maintenance_against_glue` | Glue | — | LIVE-v3: whether Glue reproduces the local v3 numbers — opt-in v3 MoR CTAS partitioned by identity `part`, 1 Puffin DV after the row `DELETE`, 2 after the `MERGE`, `rewrite_data_files` 12/2/2 leaving 0 DVs, `expire_snapshots` 14 → 1, then `register_table` of the final metadata location on a second session |
+| `test_v3_dv_dml_maintenance_against_s3tables` | S3 Tables | `TABLE_BUCKET_ARN` | LIVE-v3 / `S3T-V3-1`: whether S3 Tables accepts `format-version = 3` at CREATE. Accepted → the same assertions with service-commit counts relaxed; refused → the leg proves no table was left behind, records the masked refusal text, and passes. `register_table` is not attempted (`S3T-1` / fork R126) |
+
+The two v3 legs need **no new IAM action and no new workflow variable**: they create and update
+tables in the same scratch namespace, write and remove objects under the same warehouse scratch
+prefix, and read metadata the role can already read. The Glue leg's `register_table` creates one
+extra scratch table per run (`…_adopted`) under `glue:CreateTable`, which never-teardown already
+allows.

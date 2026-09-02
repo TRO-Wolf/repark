@@ -3,14 +3,14 @@
 **Date:** 2026-08-31 · **Branch:** `feat/v3-5-dv-compaction` · **Base:** `main`
 `749eff4166abbbb6c590bcd4af5a9d929b1c6319` · **Path:** STANDARD
 (`risk_tier: standard`; one Actor cycle). **Policy:**
-[../../../AGENTS.md](../../../AGENTS.md) · **Design home:**
-[docs/design/format-v3-track.md](../../../docs/design/format-v3-track.md) §5
+[../../../AGENTS.md](../../../../AGENTS.md) · **Design home:**
+[docs/design/format-v3-track.md](../../../../docs/design/format-v3-track.md) §5
 Step 5 / §6 item 2. **Registry:** `V3-DANGLE-1`, `B-MOR-3`, `V3-LINEAGE-1`
-([docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md)).
+([docs/spark-sql-iceberg-parity.md](../../../../docs/spark-sql-iceberg-parity.md)).
 **Proven drivers:** RP-3 C-005 / C-007
-([2026-08-30-rp-3-fork-repin-ledger.md](../archive/2026-08/2026-08-30-rp-3-fork-repin-ledger.md)),
+([2026-08-30-rp-3-fork-repin-ledger.md](../2026-08/2026-08-30-rp-3-fork-repin-ledger.md)),
 RP-4 C-003
-([rp-4-fork-repin-ledger.md](../archive/2026-08/2026-08-31-rp-4-fork-repin-ledger.md)).
+([rp-4-fork-repin-ledger.md](../2026-08/2026-08-31-rp-4-fork-repin-ledger.md)).
 
 **Retires:** this ledger moves to `../completed/` in this unit's last commit.
 This file closes when V3-5 merges, or when the owner closes the slate row.

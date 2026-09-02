@@ -3,14 +3,14 @@
 **Date:** 2026-09-01 · **Branch:** `feat/ref-branch-tag-wap` · **Base:** `dc74a40`
 (`git merge-base HEAD origin/feat/v1-close-and-v07-open`; the brief named its parent `482c64d`,
 and the lifecycle gate resolves against either) · **Roadmap:**
-[release-roadmap-2026-08-29.md](../../roadmap/epic-term/release-roadmap-2026-08-29.md) REF row
+[release-roadmap-2026-08-29.md](../../../roadmap/epic-term/release-roadmap-2026-08-29.md) REF row
 ("branch / tag operations + write-audit-publish (WAP), needs fork F-6") · **Path:** STANDARD.
 **risk_tier:** standard.
 
 **Retires:** parks in `staging/` while the unit runs; retired post-merge by the archival chore
 (`make ledger-archive` at pickup).
 
-**Why now.** [STATUS.md](../../../STATUS.md) carried "REF waits on fork F-6", and F-6
+**Why now.** [STATUS.md](../../../../STATUS.md) carried "REF waits on fork F-6", and F-6
 (`SnapshotUpdate.to_branch`, fork [#244](https://github.com/TRO-Wolf/iceberg-rust/pull/244)) is
 at the pin `33be9a0`. The registry's REF-1 row and the engine's write-to-branch refusal both
 name a **stale** reason — fork pin `b009ac1`, "no `to_branch` / `with_branch` commit-target

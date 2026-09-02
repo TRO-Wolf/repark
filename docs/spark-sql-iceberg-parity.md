@@ -2243,6 +2243,37 @@ the pin rather than obeying it.
   `FeatureUnsupported` before any AWS call so the engine can cite R126 instead of "not
   supported yet". Pins: rp-3-fork-repin/C-008.
 
+### S3T-V3-1 — the live v3 legs are wired (2026-09-02); the first measurement is pending
+
+- **repark** — `test_v3_dv_dml_maintenance_against_glue` and
+  `test_v3_dv_dml_maintenance_against_s3tables` drive the shared `run_v3_acceptance` body:
+  opt-in v3 CTAS (`format-version 3`, merge-on-read delete/update/merge, identity `part`),
+  single-row appends to five files per partition, row-scoped `DELETE` (one Puffin DV),
+  `MERGE` matched-UPDATE + NOT MATCHED INSERT (two DVs), a `_row_id` /
+  `_last_updated_sequence_number` read, `rewrite_data_files` (12 rewritten, 2 added, 2 delete
+  files removed, 0 DVs left), `expire_snapshots` (14 snapshots → 1), and on Glue only a
+  `register_table` of the final metadata location on a second session. Those numbers are the
+  local engine's, pinned by `test_v3_acceptance_local.py`; **nothing has run against AWS yet.**
+  The S3 Tables leg carries the decision table: v3 accepted → the same assertions with
+  `exact_commit_counts=False` (the service commits on its own — MW-10); a classified
+  `format-version 3` refusal at CREATE → the leg asserts no table was left behind, records the
+  masked refusal text as this row's measured answer, and passes; anything else → raised.
+- **Apache Spark** — Glue is a metadata catalog and imposes no Iceberg format version, so the
+  Glue leg is expected to behave as the local engine does. AWS publishes no statement that S3
+  Tables accepts `format-version = 3` at CREATE, and `register_table` there is the dated gap
+  `S3T-1` / fork R126, so the adopt step is not attempted on that catalog.
+  *(oracle: not yet run — the first `aws-acceptance` nightly or dispatch on merged `main` is the
+  measurement.)*
+- **Pin** —
+  `python/repark/tests/test_v3_acceptance_local.py::test_v3_acceptance_leg_body_against_the_local_catalog`,
+  `python/repark/tests/test_v3_acceptance_local.py::test_v3_create_refusal_classification_is_the_s3_tables_decision_table`,
+  `python/repark/tests/test_acceptance_v3_helpers.py::test_v3_legs_are_twins_of_the_mor_legs`
+- **Rationale** — BACKLOG, open on the service question only. The leg body is pinned locally so
+  the first live run is a measurement and not a debugging session, and the refusal branch is
+  encoded so an S3 Tables "no" is recorded rather than reported as a harness failure. This row
+  is updated with the run id and the measured answer the first time the workflow runs; no green
+  claim is made before then. Pins: live-v3-aws-legs/C-001, C-002, C-003, C-004.
+
 ### V3-COW-1 — FIXED (V3-8, 2026-09-02): v3 row-DML keeps row lineage on every served shape
 
 - **repark** — V3-8 (2026-09-02) carries stored `_row_id` / `_last_updated_sequence_number`
@@ -2306,6 +2337,34 @@ the pin rather than obeying it.
   subquery-`WHERE` DELETE that matches no row commits nothing on the engine, where Spark
   commits an empty `overwrite` snapshot. Rows, lineage, next-row-id and data-file count are
   equal on both sides.
+
+### V3-ROWID-3 — the merge-on-read MERGE insert's `_row_id` is nondeterministic
+
+- **repark** — on a v3 merge-on-read table, `MERGE … WHEN NOT MATCHED THEN INSERT` gives the new
+  row a `_row_id` that varies run to run on identical input: over **10 identical runs** of the
+  LIVE-v3 sequence (one CTAS row, nine single-row appends to ids 1–10, `DELETE … WHERE id = 3`,
+  then the MERGE inserting id 11) the inserted row read `_row_id = 11` **six** times and
+  `_row_id = 10` **four** times. `_last_updated_sequence_number` was `12` in all ten, and every
+  survivor triple was identical in all ten: `(1,0,1) (2,1,12) (4,3,4) (5,4,5) (6,5,6) (7,6,7)
+  (8,7,8) (9,8,9) (10,9,10)`. Both observed values are free — no survivor holds 10 or 11 — so no
+  read returns a duplicated id; the defect is the instability, not a collision.
+- **Apache Spark** — deterministic at `_row_id = 11`, the table's `next-row-id` at that commit:
+  **10 of 10** runs (two JVMs × five fresh warehouses) on the identical statement sequence gave
+  `(11, 11, 12)`, with the same nine survivor triples and the same single Puffin deletion vector
+  after the DELETE. repark's `11` therefore matches Spark and its `10` does not.
+  *(oracle: live PySpark 4.1.2 + `iceberg-spark-runtime-4.1_2.13:1.11.0`,
+  `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64`, `local[2]`, Hadoop catalog, measured 2026-09-02 by
+  unit LIVE-v3.)*
+- **Pin** —
+  `python/repark/tests/test_v3_acceptance_local.py::test_v3_acceptance_leg_body_against_the_local_catalog`
+  via `_acceptance_v3.assert_v3_lineage`, which asserts the invariant that survives the
+  instability — the inserted row takes an id at or above the seed count that no survivor holds —
+  and pins every survivor triple exactly. A value pin would flap four times in ten.
+- **Rationale** — BACKLOG. The fix belongs to a v3 lineage unit, **V3-11**, not to a live-leg
+  unit: the leg's job was to measure, and the measurement is that repark's assignment of
+  `next-row-id` to a merge-on-read MERGE insert races while Spark's does not. When V3-11 lands,
+  the pin above tightens to the exact Spark value and this row retires.
+  Pins: live-v3-aws-legs/C-002.
 
 ### BL-9 — a double-quoted string literal is an identifier on the SQL door
 

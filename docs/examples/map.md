@@ -71,8 +71,8 @@ file is empty.
 - Up: [../map.md](../map.md)
 - Gate: [../../scripts/check_example_coverage.py](../../scripts/check_example_coverage.py)
 - Ruling: [../../task/roadmap/epic-term/release-roadmap-2026-08-29.md](../../task/roadmap/epic-term/release-roadmap-2026-08-29.md)
-- Ledger: [../../task/ledgers/completed/ex-0-example-drift-gate-ledger.md](../../task/ledgers/completed/ex-0-example-drift-gate-ledger.md)
-- Ledger: [../../task/ledgers/completed/ex-1-class-surfaces-ledger.md](../../task/ledgers/completed/ex-1-class-surfaces-ledger.md)
+- Ledger: [../../task/ledgers/completed/ex-0-example-drift-gate-ledger.md](../../task/ledgers/archive/2026-09/2026-09-02-ex-0-example-drift-gate-ledger.md)
+- Ledger: [../../task/ledgers/completed/ex-1-class-surfaces-ledger.md](../../task/ledgers/archive/2026-09/2026-09-02-ex-1-class-surfaces-ledger.md)
 
 ## Debug
 

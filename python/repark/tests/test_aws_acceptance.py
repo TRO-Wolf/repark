@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import os
 import uuid
+import warnings
 
 import pytest
 from _acceptance import (
@@ -49,6 +50,14 @@ from _acceptance import (
     merge_sql,
     run_mor_merge_compact_expire,
     s3tables_catalog_config,
+)
+from _acceptance_v3 import (
+    S3T_V3_REFUSED_AT_CREATE,
+    V3_ALLOW_CREATE_KEY,
+    assert_v3_acceptance_outcome,
+    classify_v3_create_outcome,
+    format_v3_refusal_record,
+    run_v3_acceptance,
 )
 
 from repark import ReparkSession
@@ -266,3 +275,88 @@ def test_mor_merge_compact_expire_against_s3tables() -> None:
         if is_storage_delete_denial(error):
             pytest.fail(format_denial_failure(error))
         raise
+
+
+def test_v3_dv_dml_maintenance_against_glue() -> None:
+    """LIVE-v3 Glue leg: v3 MoR CTAS → DV DELETE → MERGE → rewrite → expire → register_table.
+
+    Twin of the MW-4 leg: same scratch namespace, same never-teardown naming, a fresh
+    `testing_v3_dv_<uuid>` table each run. Glue implements `register_table`, so the adopt step
+    runs on a second session here and is skipped on S3 Tables (registry `S3T-1` / fork R126).
+
+    pins: live-v3-aws-legs/C-001, C-003
+    """
+    assert_real_buckets_configured()
+
+    builder = ReparkSession.builder.appName("live-v3-glue").config(V3_ALLOW_CREATE_KEY, "true")
+    for key, value in glue_catalog_config(SILVER_CATALOG, GLUE_WAREHOUSE).items():
+        builder = builder.config(key, value)
+    spark = builder.getOrCreate()
+
+    try:
+        spark.create_namespace(
+            SILVER_CATALOG,
+            ACCEPTANCE_NAMESPACE,
+            location=acceptance_namespace_location(GLUE_WAREHOUSE),
+        )
+    except RuntimeError as error:
+        if "exist" not in str(error).lower():
+            raise
+    assert_glue_scratch_namespace_location(spark, GLUE_WAREHOUSE)
+
+    table_name = f"{ACCEPTANCE_TABLE_PREFIX}v3_dv_{uuid.uuid4().hex[:12]}"
+    outcome = run_v3_acceptance(
+        spark,
+        SILVER_CATALOG,
+        ACCEPTANCE_NAMESPACE,
+        table_name,
+        adopt_with=spark.newSession,
+    )
+    assert_v3_acceptance_outcome(outcome)
+
+
+def test_v3_dv_dml_maintenance_against_s3tables() -> None:
+    """LIVE-v3 S3 Tables leg: the same sequence, or a recorded `S3T-V3-1` v3 CREATE refusal.
+
+    Decision table — supported ⇒ the full leg with `exact_commit_counts=False` (the service
+    commits on its own); refused at CREATE ⇒ the refusal text is recorded and the leg passes,
+    having asserted no table was left behind; any other error ⇒ raised. The adopt step is not
+    run: `register_table` on S3 Tables is the dated gap `S3T-1` / fork R126.
+
+    pins: live-v3-aws-legs/C-001, C-003
+    """
+    arn = os.environ.get("TABLE_BUCKET_ARN")
+    if not arn:
+        pytest.skip(
+            "S3 Tables acceptance needs TABLE_BUCKET_ARN (a us-east-2 table-bucket ARN); "
+            "absent → skip so the Glue bullet is unaffected"
+        )
+    assert_real_buckets_configured()
+
+    builder = ReparkSession.builder.appName("live-v3-s3tables").config(V3_ALLOW_CREATE_KEY, "true")
+    for key, value in s3tables_catalog_config(S3TABLES_CATALOG, arn).items():
+        builder = builder.config(key, value)
+    spark = builder.getOrCreate()
+
+    try:
+        spark.create_namespace(S3TABLES_CATALOG, ACCEPTANCE_NAMESPACE)
+    except RuntimeError as error:
+        if "exist" not in str(error).lower():
+            raise
+
+    table_name = f"{ACCEPTANCE_TABLE_PREFIX}v3_dv_{uuid.uuid4().hex[:12]}"
+    table = fq_table(S3TABLES_CATALOG, ACCEPTANCE_NAMESPACE, table_name)
+    try:
+        outcome = run_v3_acceptance(spark, S3TABLES_CATALOG, ACCEPTANCE_NAMESPACE, table_name)
+    except Exception as error:
+        if is_storage_delete_denial(error):
+            pytest.fail(format_denial_failure(error))
+        if classify_v3_create_outcome(error) != S3T_V3_REFUSED_AT_CREATE:
+            raise
+        assert not spark.catalog.tableExists(table), (
+            f"{S3T_V3_REFUSED_AT_CREATE} classified but {table} exists: the refusal was not "
+            "at CREATE"
+        )
+        warnings.warn(format_v3_refusal_record(error), RuntimeWarning, stacklevel=2)
+        return
+    assert_v3_acceptance_outcome(outcome, exact_commit_counts=False)

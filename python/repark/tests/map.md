@@ -108,6 +108,17 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   live DVs. pins: rp-3-fork-repin/C-007, C-011
 - [test_v3_live_oracle.py](test_v3_live_oracle.py) — **V3E-5 (2026-08-27):** nightly live oracle for the two V3E-3 fixtures — `REPARK_PARITY_LIVE=1` repark == Spark on partitioned-DV prune and equality-delete alongside DV, plus `.delete_files` kinds. RP-6: `test_partitioned_dv_update_commits_and_rewrite_still_refuses` pins Spark-equal `(id, _row_id, seq)` after live-DV UPDATE; `rewrite_position_delete_files` still refuses with rows and fixture bytes unchanged after the UPDATE. JVM-free twins stay in `test_v3e3_fixtures.py`. Critic remediation (2026-08-27): prune1 on Spark, combined DirLock, exact content sets, mirrored format, GAV full equality, version sort, COW, `py-format` single-line, meta-pin now asserts archive/dual-wire/diff allowlist. Formal CCC + cargo-deny/wheel remediation (2026-08-28): `chacha20` yanked and `thiserror` duplicate `skip`. PLAN-1 makes the ledger lookup lifecycle-aware across staging, completed, and archive, and checks the landed #253 commit instead of the current branch. **Nightly fix (2026-09-01):** the three live helpers now qualify `CALL <catalog>.system.register_table` through `LIFECYCLE_SPARK_CATALOG`; unqualified, Spark resolved it against `spark_catalog` and the CI leg had been red since its first run (2026-08-28). The north-star meta-pin now checks the row cites V3E-5 and the oracle version regardless of its status glyph, so an honest ⚠ does not red it. V3-7: `test_v3_merge_matched_update_live_cow_and_mor` cites the V3-7 ledger transcript (not `/tmp`) and live-gates COW/MoR matched-UPDATE MERGE. **RDF-1 (2026-09-02):** it read `completed/` by absolute path and reded the moment the archive ritual moved that ledger; both ledger reads now share `_ledger_text`, the staging/completed/archive lookup PLAN-1 already used for the V3E-5 meta-pin.
   pins: rdf-1-position-delete-bounds/C-004
+- [test_v3_acceptance_local.py](test_v3_acceptance_local.py) — **LIVE-v3 (2026-09-02):** the
+  local proof of the live v3 leg body. Runs `run_v3_acceptance` against the memory catalog and
+  asserts the same `assert_v3_acceptance_outcome` the Glue and S3 Tables legs assert, so the
+  first live run is a measurement and not a debugging session; also pins the `S3T-V3-1`
+  classifier edges (a service refusal classifies, the engine's own opt-in message does not, a
+  denial does not, `format-version 2` does not) and that the recorded disposition masks the
+  account id. Mutation-proof 19 red of 19 across `_acceptance_v3` expected counts (including
+  `V3_FILES_PER_PARTITION`), the DV content/format constants, the delete predicate, the
+  `adopt_with` argument, and the five structural leg mutations. `_second_session` registers the
+  memory catalog AND creates the namespace because `newSession` replays builder config only, not
+  a runtime `register_memory_catalog` — the live legs pass a bare `spark.newSession`. pins: live-v3-aws-legs/C-002
 - [test_v3_dv_compaction.py](test_v3_dv_compaction.py) — **V3-5:** facade six-file
   v3 MOR compact drops six Puffin DVs (`removed_delete_files_count = 6`,
   Arrow int32); `rewrite_position_delete_files` still refuses (`B-MOR-3`);
@@ -2145,6 +2156,47 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `ambiguous_engine_windows`. Denial signatures win over conflict signatures.
   `assert_retry_counts` caps per-call retries, not the sum. `assert_engine_expire_removed_ctas`
   requires the CTAS id in the before-expire log. (pins: mw-10-s3tables-mor/C-001, C-003, C-004).
+- `_acceptance_v3.py` — **LIVE-v3 (2026-09-02):** the format-version-3 leg body, split out of
+  `_acceptance.py` so both stay under the CAP-1 1,000-line ceiling; also a non-`test_` module.
+  `V3_ICEBERG_TABLE_PROPERTIES` (`format-version 3` + merge-on-read delete/update/merge),
+  `v3_seed_select_sql` (one CTAS row) + `v3_insert_batches` (single-row appends, so each identity
+  `part` reaches the five-file `min-input-files` floor and `_row_id` assignment stays sequential —
+  a two-row CTAS and two-row appends both shuffled survivor ids between runs), `v3_ctas_sql`
+  (`PARTITIONED BY (part)`, no IF NOT EXISTS), `v3_row_delete_sql`, `v3_merge_source_sql`,
+  `delete_file_rows`, `v3_lineage_rows`, `v3_ordered_rows`, `v3_data_files_per_partition`
+  (arms `V3_FILES_PER_PARTITION`: the appends must land 5+5, exactly AT Spark's
+  `min-input-files` floor, or step 6 is a no-op — asserted, not assumed),
+  `v3_rows_and_lineage` (ONE ordered scan for the post-MERGE and post-rewrite pairs, which used
+  to open the same snapshot twice: 45 → 22 object opens per pair, 178.8 → 92.4 ms and
+  168.6 → 70.3 ms, pinned values unchanged), `current_metadata_location`
+  (`metadata_log_entries` tail = the `register_table` argument), `run_v3_acceptance`, and
+  `assert_v3_acceptance_outcome` / `assert_v3_lineage` / `assert_v3_row_ids_are_stable` /
+  `assert_deletion_vectors`. `v3_row_delete_sql` is the ONLY `DELETE FROM` in the harness and is
+  always single-key: the DV step needs a row delete and never-teardown bans everything else.
+  Measured local answers, 2026-09-02: a DV is `content = 1` + `file_format = 'PUFFIN'` (not
+  content 2); 1 DV after DELETE, 2 after the MoR MERGE, `rewrite_data_files` 12 rewritten /
+  2 added / 2 removed leaving 0 DVs, 14 snapshots before expire and 1 after. Survivor `_row_id`
+  is exact and stable across MERGE and rewrite; the NOT MATCHED insert's `_row_id` is **not**
+  deterministic — 11 six times and 10 four times over ten identical runs, sequence 12 every time,
+  against Spark 4.1.2 + Iceberg 1.11.0 deterministic at 11 in 10 of 10 (registry `V3-ROWID-3`,
+  follow-up unit V3-11) — so the asserter pins a fresh-unused-id invariant instead of a value.
+  Pairing the appends into five commits would cut ~46 % of the wall time and was DECLINED: it
+  puts two partitions in one commit, the shape that made survivor `_row_id` order-dependent.
+  `exact_commit_counts=False` relaxes sequence and snapshot counts for S3 Tables' own commits and
+  nothing else. S3 Tables decision table: `classify_v3_create_outcome` /
+  `is_format_version_3_refusal` / `format_v3_refusal_record` (`S3T-V3-1`; the engine's own opt-in
+  message never classifies). pins: live-v3-aws-legs/C-001
+- `test_acceptance_v3_helpers.py` — **LIVE-v3 (2026-09-02):** AWS-free structural pins for
+  `_acceptance_v3` and the two live legs. The never-teardown guard over that module (no DROP,
+  exactly one `DELETE FROM`, AST-pinned inside `v3_row_delete_sql` with its `WHERE`);
+  `register_table` reachable only through the optional `adopt_with` factory; and
+  `test_v3_legs_are_twins_of_the_mor_legs` — helper + asserter called, `table_name` built from
+  `ACCEPTANCE_TABLE_PREFIX` + a `v3_dv_` stem + `uuid4` read off the AST (an earlier
+  source-substring form was satisfied by a docstring token — the vacuity this file exists to
+  avoid), `V3_ALLOW_CREATE_KEY` passed to `.config`, Glue runs the location guard and
+  `adopt_with`, S3 Tables runs neither and passes `exact_commit_counts=False`, its
+  `create_namespace` takes no `location`, and the denial path is
+  `pytest.fail(format_denial_failure(...))`. pins: live-v3-aws-legs/C-003
 - `test_acceptance_helpers.py` — WG4 AWS-free unit tests for `_acceptance` that run **everywhere**
   (no gate): the builder outputs (s3a bronze path, the measured glue config block, CTAS/MERGE SQL
   shape keyed on the id column, the real TBLPROPERTIES block, and `acceptance_namespace_location`
@@ -2205,6 +2257,17 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   north-star, and guide slots and no denial registry row was filed
   (pins: mw-10-s3tables-mor/C-005); that green dispatch on merged `main`, with preflight and
   the parity harness, is the unit's whole-surface gate (pins: mw-10-s3tables-mor/C-006).
+  **LIVE-v3 (2026-09-02):** `test_v3_dv_dml_maintenance_against_glue` and
+  `test_v3_dv_dml_maintenance_against_s3tables` — twins of the MW-4 / MW-10 legs over
+  `run_v3_acceptance`, `testing_v3_dv_<uuid4>` per run, `repark.sql.allowCreateFormatVersion3`
+  on the builder, no DROP path. Glue also adopts the final metadata location on
+  `spark.newSession()`; S3 Tables does not, because `register_table` there is the dated gap
+  `S3T-1` / fork R126. S3 Tables decision table: supported → the full leg with
+  `exact_commit_counts=False`; a classified `format-version 3` CREATE refusal → the leg asserts
+  no table was left behind, records the masked refusal text as `S3T-V3-1` through
+  `warnings.warn`, and passes; anything else → raised (a storage-delete denial still fails loud
+  first). Neither leg has run yet — the first measurement is the nightly or a dispatch on merged
+  `main` (pins: live-v3-aws-legs/C-003).
 
 - `test_two_door_kernel_parity.py` — **FNP-1 (2026-08-20):** charter clause C-012 at the facade
   layer. Pins that a name reachable from both doors returns the same Arrow **type and value**
