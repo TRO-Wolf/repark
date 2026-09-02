@@ -35,13 +35,13 @@ iceberg empty-overwrite arm `empty_overwrite_on_diverged_branch_wipes_branch_onl
 
 **Date:** 2026-09-01 · **Branch:** `feat/rp-5-fork-repin` · **Base:** `main`
 `75f5ee35f4355f8a9a3d03ccc77cc751a9610f7a` · **Policy:**
-[../../../AGENTS.md](../../../AGENTS.md) "Version-pin contract" · **Handoff:**
-[../../roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md](../../roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md)
+[../../../AGENTS.md](../../../../AGENTS.md) "Version-pin contract" · **Handoff:**
+[../../roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md](../../../roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md)
 asks F-0, F-6, F-8, F-16 · **Path:** STANDARD (`risk_tier: standard`; one Actor cycle).
 **Proven pattern:**
-[2026-08-31-rp-4-fork-repin-ledger.md](../archive/2026-08/2026-08-31-rp-4-fork-repin-ledger.md).
+[2026-08-31-rp-4-fork-repin-ledger.md](../2026-08/2026-08-31-rp-4-fork-repin-ledger.md).
 **REF oracle transcript (write leg):**
-[ref-branch-tag-wap-ledger.md](../staging/ref-branch-tag-wap-ledger.md).
+[ref-branch-tag-wap-ledger.md](../../staging/ref-branch-tag-wap-ledger.md).
 
 **Retires:** this ledger moves to `../completed/` in this unit's last commit.
 
@@ -138,7 +138,7 @@ COVERAGE_ATTESTATION:
 - Oracle: PySpark 4.1.2 + Iceberg 1.11.0; `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64`;
   interpreter `<pyspark-4.1.2-oracle>`. Measure missing-branch, tag, diverged-branch
   writes, and MERGE isolation **before** pinning C-004 / C-007.
-- Standing duties live in [crates/repark-iceberg/map.md](../../../crates/repark-iceberg/map.md)
+- Standing duties live in [crates/repark-iceberg/map.md](../../../../crates/repark-iceberg/map.md)
   "Known limitations". The metadata-projection duty retires in this unit.
 
 ```yaml
