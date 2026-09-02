@@ -9,6 +9,7 @@ else. The next pickup's `make ledger-archive` files everything here under
 
 ## Contents
 - [v3e-3-partitioned-eqdel-fixtures-ledger.md](../archive/2026-08/2026-08-25-v3e-3-partitioned-eqdel-fixtures-ledger.md) — V3E-3 — partitioned + equality-delete v3 fixtures
+- [rdf-1-position-delete-bounds-ledger.md](rdf-1-position-delete-bounds-ledger.md) — Charter ledger — RDF-1 · position-delete `file_path` bounds, re-homed from fork ask F-16
 
 ## Pointers
 - Up: [../map.md](../map.md)
