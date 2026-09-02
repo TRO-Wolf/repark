@@ -48,11 +48,11 @@ JVM, no repark required). See [../map.md](../map.md).
   North Star sequence, F-17's measured shared-Puffin closure request, the live slate, the
   per-unit FNP remaining order (FNP-7a/7b delivered 2026-08-31; remaining FNP-9/10 → FNP-8
   → FNP-11/12 → FNP-Z) and delivery boundary, FNP-Z retirement, fork independence, and map
-  lockstep, including the archived V3-3 and F-rp3-c7 record. STATUS C-004 start marker is
-  `**Next, in order (revised 2026-08-31):**`.
+  lockstep, including the archived V3-3 and F-rp3-c7 record. STATUS Next is MERGE still
+  reassigns (RP-6).
   (pins: plan-1-northstar-fnp-sequence/C-001, C-002, C-003, C-004, C-005, C-006;
   v3-3-dml/C-003; v3-4-serve-lineage-columns/C-010; fnp-7-try-inversions/C-016;
-  v3-5-dv-compaction/C-006).
+  v3-5-dv-compaction/C-006; rp-6-fork-repin/C-006).
 - `test_pr_247_owner_ruling.py` — **PR #247 revalidation (2026-08-27):** the owner-ruling blocks
   in `AGENTS.md` and `CLAUDE.md` stay byte-exact, unique, at the document start, and in regular
   files; one-byte drift, malformed or missing files, relocation, duplication, and symlink
@@ -65,7 +65,7 @@ JVM, no repark required). See [../map.md](../map.md).
   disk guidance, clause pins, and ledger lifecycle.
 - `test_pr_245_revalidation_record.py` — PR #245 source-size ratchets, frozen SQP-1 artifacts,
   bounded parser guards, exact literal-helper inventory, and lifecycle-aware navigation.
-- `test_cap_1_source_file_line_cap.py` — **CAP-1 (2026-08-26):** exact Rust and Python source-size RP-5 ratchets three approved Rust baselines down (session tests 1415 → 1412, merge/mod.rs 2086 → 1894, overwrite.rs 1070 → 1053).
+- `test_cap_1_source_file_line_cap.py` — **CAP-1 (2026-08-26):** exact Rust and Python source-size RP-6 ratchets merge/mod.rs 1894→1892 and predicate_dml.rs 1227→1226.
   (**DML-B 2026-08-30:** `insert_overwrite.rs` tests 1249→1233, `writer_readwriter.py` 1117→1113)
   exception sets and baselines mirrored from the live guard tables (DML-A:
   `merge/mod.rs` 2131 → 2086; `call.rs` 1404 → 1111 after
@@ -113,7 +113,8 @@ JVM, no repark required). See [../map.md](../map.md).
   rule for the unit itself. RP-2 salvage (2026-08-28) retargeted the `V3-COW-1` assertions to
   the narrowed row. RP-3 (2026-08-30) retargeted again: live-DV DELETE merge lifts; UPDATE,
   MERGE, and sequential COW after overwrite stay refused (BACKLOG, 2026-08-25 ruling kept).
-  V3-3 (2026-08-30) records the measured keep-refusal: Spark preserves `_row_id`; the engine
+  RP-6 (2026-09-01) lifts UPDATE and sequential COW DELETE; MERGE stays BACKLOG
+  (pins: rp-6-fork-repin/C-002, C-006). V3-3 (2026-08-30) records the measured keep-refusal: Spark preserves `_row_id`; the engine
   rewrite reassigns (pins: v3-3-dml/C-003). V3-6 (2026-09-01) renames the V3R-1 test to
   `test_v3_geo_1_is_declared_and_shredded_variant_is_rowed_with_v3_6_pins`, retargets the
   `V3-VARIANT-SHRED-1` assertion to the landed §4 row citing the binary-vs-shredded pins,

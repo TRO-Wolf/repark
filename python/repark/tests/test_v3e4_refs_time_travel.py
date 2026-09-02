@@ -15,7 +15,7 @@ from pathlib import Path
 import pyarrow as pa
 import pytest
 
-from repark.errors import AnalysisException, UnsupportedOperationException
+from repark.errors import AnalysisException
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _PART_DV_SRC = _REPO_ROOT / "crates/repark-spark/src/tests/fixtures/v3-spark-part-dv"
@@ -162,7 +162,9 @@ def test_facade_v3_refs_time_travel_expire_orphan(tmp_path: Path) -> None:
                 )
             assert planted.is_file()
 
-            with pytest.raises(UnsupportedOperationException, match="V3-COW-1"):
-                spark.sql(f"UPDATE {table} SET name = 'x' WHERE id = 3")
+            spark.sql(f"UPDATE {table} SET name = 'x' WHERE id = 3").collect()
+            updated = spark.sql(f"SELECT id, name, part FROM {table} ORDER BY id").to_arrow()
+            rows = _id_name_part_rows(updated)
+            assert any(row[0] == 3 and row[1] == "x" for row in rows)
     finally:
         spark.stop()

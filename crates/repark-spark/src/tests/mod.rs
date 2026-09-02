@@ -42,6 +42,7 @@ mod time_travel;
 mod transform_overwrite;
 mod truncate;
 mod v3_cow;
+mod v3_cow_lift;
 mod v3_lineage;
 mod v3_types;
 mod v3e3;

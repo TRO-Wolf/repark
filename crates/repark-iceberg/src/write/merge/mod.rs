@@ -307,8 +307,6 @@ fn resolve_merge_mode(table: &Table) -> Result<MergeMode> {
             "MERGE INTO writes only Parquet data files yet (table default is {file_format})"
         )));
     }
-    // pins: v3r-1-rulings/C-003 — V3-COW-1: both copy-on-write arms refuse v3 before any write.
-    // Below this point the mode is merge-on-read; both other arms return.
     match table.metadata().properties().get(MERGE_MODE_PROP) {
         None => {
             crate::write::row_lineage_guard::refuse_v3_cow_dml_that_would_reassign_row_lineage(

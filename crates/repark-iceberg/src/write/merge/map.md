@@ -26,9 +26,9 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   **M11:** `fold_discovery_batch_into_affected` / `consume_matched_work_batch`
   take a precomputed `skip_cardinality` (lone unconditional MATCHED DELETE);
   `match_count > 1` still folds mutations / pos-deletes (double-delete is
-  idempotent). V3R-1: both copy-on-write arms run the v3 guard (`V3-COW-1`) before any write.
-  V3-3 measured keep-refusal: Spark preserves `_row_id`; the engine rewrite reassigns.
-  pins: v3-3-dml/C-002
+  idempotent). RP-6: both copy-on-write arms still run the v3 MERGE guard (`V3-COW-1`)
+  because the RePark-owned MERGE rewrite reassigns `_row_id`.
+  pins: rp-6-fork-repin/C-002
 - `dv_close.rs` — v3 `RowDelta` DV-container close. `prepare_row_delta_deletes` writes
   V2 parquet position deletes or calls `close_touched_dv_containers` on V3, then
   `apply` stamps sibling sequences. C-003 pin

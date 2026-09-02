@@ -33,26 +33,20 @@ def _matrix_row(text: str, label: str) -> str:
 
 
 def test_v3_cow_1_is_a_refusal_row_dated_by_the_ruling() -> None:
-    """C-007: the row keeps the ruling's refusals, BACKLOG, dated and pinned.
+    """C-007: the row keeps the ruling's remaining refusals, BACKLOG, dated and pinned.
 
-    RP-2 lifted the DV-free first DELETE. RP-3 lifted live-DV DELETE merge. Remaining
-    refusals — UPDATE, MERGE, sequential COW after overwrite — stay BACKLOG.
+    RP-6 lifted UPDATE and sequential COW DELETE. MERGE stays BACKLOG.
     """
     registry = _registry()
-    heading = (
-        "### V3-COW-1 — v3 row-DML: measured DELETE lifts; UPDATE, MERGE, "
-        "and sequential COW after overwrite refuse"
-    )
+    heading = "### V3-COW-1 — v3 row-DML: DELETE and UPDATE Spark-equal; MERGE still refuses"
     assert heading in registry
     row = registry[registry.index(heading) : registry.index("### Surfaced, awaiting pins")]
     assert f"owner ruling {_RULING_DATE}" in row
     assert "BACKLOG" in row
     assert "adopted_v3_cow_delete_carries_survivor_row_lineage" in row
-    assert "adopted_v3_mor_second_delete_merges_into_the_live_deletion_vector" in row
-    assert "adopted_v3_cow_second_delete_refuses_before_lineage_diverges" in row
-    assert "live-DV" in row
-    assert "commits and reassigns row lineage" not in registry.split("## 7.")[1].split(heading)[0]
-    assert "V3-3 (2026-08-30)" in row
+    assert "adopted_v3_cow_second_delete_keeps_survivor_row_id" in row
+    assert "adopted_v3_cow_update_keeps_row_id_and_bumps_matched_seq" in row
+    assert "adopted_v3_cow_merge_matched_update_still_refuses" in row
     assert "reassigns" in row
     assert "F-rp3-c7" in row
     assert "ride V3-3" not in row
@@ -84,8 +78,8 @@ def test_north_star_matrix_carries_the_three_engine_rulings() -> None:
     mor = _matrix_row(north_star, "Write: MOR DML via deletion vectors")
     assert "V3-3 2026-08-30" in mor and "reassigns" in mor
     status = _read("STATUS.md")
-    assert "V3-3 (2026-08-30) measured" in status
-    assert "F-rp3-c7 stays a fork finding" in status
+    assert "RP-6 (2026-09-01" in status
+    assert "F-rp3-c7 consumed" in status
     types = _matrix_row(north_star, "Read/write: v3 types + default values")
     assert "V3-GEO-1" in types and "V3-VARIANT-SHRED-1" in types and _RULING_DATE in types
     upgrade = _matrix_row(north_star, "Upgrade: v2 → v3 in place")

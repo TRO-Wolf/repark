@@ -39,16 +39,13 @@ repark-core's error map.
 - `merge/` — the RePark-owned `MERGE INTO` executor (copy-on-write AND merge-on-read per
   `write.merge.mode`, fork ENGINE_CONTRACT §6). DML-A adds `WHEN NOT MATCHED BY SOURCE`.
   See [merge/map.md](merge/map.md).
-- `row_lineage_guard.rs` (crate-private; `refuse_v3_cow_dml` re-exported) — **V3R-1
-  (2026-08-25, `V3-COW-1`); RP-2 (2026-08-27, fork `ce92a7bf`):** the format-v3 row-DML guard,
-  two seats — the write-mode resolvers (`predicate_dml.rs`, `merge/mod.rs`) and the passthrough
-  valve both doors call beside the BUG-001 valve. The resolvers refuse every v3 table. The
-  passthrough valve lifts the plain-`WHERE` DELETE on v3, including on a table that already
-  carries deletion vectors (RP-3 / F-17 at `d408da42`), but refuses a copy-on-write DELETE after
-  an overwrite snapshot before fork `iceberg-datafusion` can reassign lineage (C-004 C7).
-  Every v3 UPDATE remains refused (V3-3 measured keep-refusal: Spark preserves `_row_id`;
-  the engine rewrite reassigns). Resolver-seat UPDATE names keep-and-bump, not MERGE inserts.
-  pins: rp-3-fork-repin/C-004; v3-3-dml/C-001
+- `row_lineage_guard.rs` (crate-private) — **RP-6 (2026-09-01, fork `fb0cacfa`):**
+  `refuse_v3_cow_dml_that_would_reassign_row_lineage` still hosts the live MERGE /
+  subquery-WHERE refusal used by `predicate_dml.rs` and `merge/mod.rs`. The dead
+  `refuse_v3_cow_dml` pass-through is gone; plain-`WHERE` UPDATE/DELETE go to the fork
+  writer. Fork PR-3 keeps `_row_id` and advances seq on MoR UPDATE; COW sequential DELETE
+  is Spark-equal on the single-file layout.
+  pins: rp-6-fork-repin/C-002, C-003
 - `predicate_dml.rs` — **G3-E8 A1-identity** (`execute_predicate_dml`): evaluate the original
   `WHERE` as a SELECT over the pinned `(_file, _pos)` streaming target, then commit through the
   MERGE COW/MoR write arms honoring `write.delete.mode` / `write.update.mode` / isolation —

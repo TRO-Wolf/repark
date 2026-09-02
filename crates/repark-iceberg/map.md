@@ -78,10 +78,10 @@ v1 crate-root re-export lists.
   deliberately, and **both are re-verified at every fork repin**
   ([../../AGENTS.md](../../AGENTS.md) "Version-pin contract"):
   - **`NamespaceScopedCatalog` (in `src/catalog/provider.rs`) both-sides trait-wrapping audit
-    (G17) is CLOSED.** At fork pin `00cdde0` (RP-5, 2026-09-01; unchanged from RP-4's
-    `33be9a0`, RP-3's `d408da42`, RP-2's `ce92a7bf`, and RP-1's `5e7b2e4`) the
-    `Catalog` trait has 14 required + **16 defaulted** methods; no method was added
-    or removed in `33be9a0..00cdde0`. The wrapper explicitly forwards all 14 required methods
+    (G17) is CLOSED.** At fork pin `fb0cacfa` (RP-6, 2026-09-01; unchanged from RP-5's
+    `00cdde0`, RP-4's `33be9a0`, RP-3's `d408da42`, RP-2's `ce92a7bf`, and RP-1's
+    `5e7b2e4`) the `Catalog` trait has 14 required + **16 defaulted** methods; no
+    method was added or removed in `00cdde0..fb0cacfa`. The wrapper explicitly forwards all 14 required methods
     (with `list_namespaces` filtered to one namespace) and **13 of 16** defaulted
     methods — including the HIGH `publish_replace_table` (whose trait default is
     `FeatureUnsupported` and would swallow `MemoryCatalog`'s CAS replace). The
@@ -95,6 +95,7 @@ v1 crate-root re-export lists.
     pins: rp-3-fork-repin/C-001, C-002
     pins: rp-4-fork-repin/C-001, C-002
     pins: rp-5-fork-repin/C-001, C-002
+    pins: rp-6-fork-repin/C-001, C-002, C-006
   - **The metadata-projection shim retired at RP-5 (fork R169/R170, F-8 `#247`).** The
     fork's metadata-table `scan` honors `projection` (empty projection included) and
     `table_names` lists catalog entries only (`$`-twins are not enumerated). Engine
@@ -102,8 +103,8 @@ v1 crate-root re-export lists.
     `crates/repark-spark/src/tests/metadata_tables.rs::metadata_tables_are_hidden_from_enumeration_but_stay_queryable_through_the_spark_door`
     and `::metadata_table_projection_honor_all_types` now pin the fork.
     pins: rp-5-fork-repin/C-003
-  - **`IcebergSchemaProvider` name-directory population is still lazy at pin `00cdde0`
-    (RP-5 re-verified 2026-09-01; first measured at `5e7b2e4`).** `try_new`
+  - **`IcebergSchemaProvider` name-directory population is still lazy at pin `fb0cacfa`
+    (RP-6 re-verified 2026-09-01; first measured at `5e7b2e4`).** `try_new`
     no longer `list_tables`; first `table` / `table_names` / `table_exist` lists live and
     then freezes. `ReparkCatalogProvider` eager-lists at snapshot and namespace-refresh
     (`freeze_fork_name_directory` in `src/catalog/provider.rs`) so an out-of-band create

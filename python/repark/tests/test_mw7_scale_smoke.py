@@ -11,6 +11,8 @@ The 1e7 wall-clock figures live in
 `task/ledgers/completed/mw-7-scale-measurement-ledger.md` as dated MEASUREMENTS — one
 machine's numbers, deliberately NOT asserted here: a timing pin on CI hardware is not the
 MW-7 claim (`test_mw5_baseline_delta.py` precedent).
+
+pins: rp-6-fork-repin/C-004
 """
 
 from __future__ import annotations

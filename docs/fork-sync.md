@@ -43,6 +43,7 @@ This table is append-only: one row per dedicated pin-bump PR (rule 1). Started 2
 
 | Date | Old pin | New pin | Notes |
 |---|---|---|---|
+| 2026-09-01 | `00cdde00685bbc94552b29fcf8ed6767fe051ce6` | `fb0cacfa8ceda87f865fb0ae53be4b46e0ef8b7a` | RP-6: `#253` PR-1 REPLACE added>deleted refuse, `#254` PR-2 evolved-spec rewrite, `#252` PR-5A Glue/S3 Tables commit seams, `#255` PR-3 V3 MoR UPDATE lineage, `#256` PR-6B branch MoR UPDATE, `#257` PR-4 V2→V3 upgrade, `#250`/`#251` docs+PR-6A. Family frozen. Take/skip in the RP-6 ledger. |
 | 2026-09-01 | `33be9a0f411c37cd8d7b38c4db81eec30c1344cc` | `00cdde00685bbc94552b29fcf8ed6767fe051ce6` | RP-5: `#245` F-6b `with_commit_branch`, `#246` R91 unknown-on-write, `#247` F-8 metadata projection/listing, `#248` F-16r delete-ratio bounds-only, `#249` F-6c branch-head scans. Family frozen. Take/skip in the RP-5 ledger. |
 | 2026-08-31 | `d408da42fb91db2010662fe1da3783b82fa6e1ed` | `33be9a0f411c37cd8d7b38c4db81eec30c1344cc` | RP-4: `#241` test pin, `#243` F-7 slice 1 (v3 rewrite lineage), `#244` F-6 `to_branch` (carried). Family frozen. Take/skip in the RP-4 ledger. |
 | 2026-08-30 | `ce92a7bfe2c1be569ed0de1178ed410e8ec3a117` | `d408da42fb91db2010662fe1da3783b82fa6e1ed` | RP-3: F-17 `#237` (DV container close), F-14 `#235` (Hadoop `vN` pointer math), F-7 U3 `#227`, F-16 `#232`, F-9/F-15 `#233`, H7-P1/R114 `#239`. Family frozen. Take/skip in the RP-3 ledger. |

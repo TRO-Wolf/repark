@@ -328,3 +328,89 @@ async fn scan_lineage_triples(table: &iceberg::table::Table) -> Vec<(i64, i64, i
     rows.sort_unstable();
     rows
 }
+
+#[tokio::test]
+async fn rewrite_after_same_arity_spec_evolution_stamps_current_spec() {
+    let _: &str = "pins: rp-6-fork-repin/C-005";
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.evo (id INT, x INT, y INT) USING iceberg \
+         PARTITIONED BY (x) TBLPROPERTIES ('format-version' = '3')",
+    )
+    .await;
+    for index in 1..=6 {
+        run(
+            &ctx,
+            &catalogs,
+            &format!("INSERT INTO ice.sales.evo VALUES ({index}, 10, {index})"),
+        )
+        .await;
+    }
+    run(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.evo REPLACE PARTITION FIELD x WITH y",
+    )
+    .await;
+    let catalog = catalogs.get("ice").expect("ice");
+    let ident = TableIdent::from_strs(["sales", "evo"]).unwrap();
+    let before = catalog
+        .load_table(&ident)
+        .await
+        .expect("load before rewrite");
+    let current_spec = before.metadata().default_partition_spec_id();
+    assert_ne!(current_spec, 0, "REPLACE must mint a new spec");
+    let batches = execute(
+        &ctx,
+        &catalogs,
+        "CALL ice.system.rewrite_data_files(table => 'sales.evo')",
+    )
+    .await
+    .expect("rewrite after evolution must run")
+    .collect()
+    .await
+    .expect("collect rewrite");
+    let rewritten = batches[0]
+        .column(0)
+        .as_any()
+        .downcast_ref::<Int32Array>()
+        .expect("rewritten_data_files_count")
+        .value(0);
+    assert!(
+        rewritten > 0,
+        "compaction must rewrite at least one file, got {rewritten}"
+    );
+    let after = catalog
+        .load_table(&ident)
+        .await
+        .expect("load after rewrite");
+    assert_eq!(after.metadata().default_partition_spec_id(), current_spec);
+    let snapshot = after.metadata().current_snapshot().expect("snapshot");
+    let manifest_list = snapshot
+        .load_manifest_list(after.file_io(), after.metadata())
+        .await
+        .expect("manifest list");
+    let mut spec_ids = Vec::new();
+    for entry in manifest_list.entries() {
+        if entry.content != iceberg::spec::ManifestContentType::Data {
+            continue;
+        }
+        let manifest = entry
+            .load_manifest(after.file_io())
+            .await
+            .expect("manifest");
+        for item in manifest.entries() {
+            if item.is_alive() {
+                spec_ids.push(item.data_file().partition_spec_id());
+            }
+        }
+    }
+    assert!(!spec_ids.is_empty(), "rewrite must leave live data files");
+    assert!(
+        spec_ids.iter().all(|spec_id| *spec_id == current_spec),
+        "every rewritten file must stamp the current spec {current_spec}, got {spec_ids:?}"
+    );
+}

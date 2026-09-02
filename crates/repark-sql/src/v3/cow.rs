@@ -1,6 +1,6 @@
 //! Model: Claude Fable 5
-//! ANSI-door pins: copy-on-write UPDATE / MERGE and the resolver seat refuse an adopted v3
-//! table (`V3-COW-1`); plain-`WHERE` DELETE
+//! ANSI-door pins: plain-`WHERE` UPDATE / DELETE keep `_row_id`; MERGE matched-update
+//! and subquery-WHERE DML still refuse `V3-COW-1`
 //! pins: v3r-1-rulings/C-001, C-002, C-003, C-004, C-005
 //! pins: rp-2-fork-repin/C-003, C-005
 //! pins: rp-3-fork-repin/C-004, C-008
@@ -11,7 +11,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use datafusion::arrow::array::{Int32Array, StringArray};
+use datafusion::arrow::array::{Int32Array, Int64Array, StringArray};
+use datafusion::arrow::datatypes::DataType;
 use datafusion::common::config::{ConfigEntry, ConfigExtension, ExtensionOptions};
 use datafusion::prelude::{SessionConfig, SessionContext};
 use iceberg::spec::{FormatVersion, ManifestContentType};
@@ -81,6 +82,38 @@ impl Door {
                 (snapshot.first_row_id(), snapshot.added_rows_count())
             });
         (metadata.next_row_id(), first_row_id, added_rows)
+    }
+
+    async fn live_triples(&self, table: &str) -> Vec<(i32, i64, i64)> {
+        let batches = self
+            .sql(&format!(
+                "SELECT id, _row_id, _last_updated_sequence_number FROM ice.sales.\"{table}\" ORDER BY id"
+            ))
+            .await
+            .unwrap_or_else(|err| panic!("lineage select: {err}"));
+        assert_eq!(batches[0].schema().field(1).data_type(), &DataType::Int64);
+        let mut rows = Vec::new();
+        for batch in &batches {
+            let ids = batch
+                .column(0)
+                .as_any()
+                .downcast_ref::<Int32Array>()
+                .expect("id");
+            let row_ids = batch
+                .column(1)
+                .as_any()
+                .downcast_ref::<Int64Array>()
+                .expect("_row_id");
+            let seqs = batch
+                .column(2)
+                .as_any()
+                .downcast_ref::<Int64Array>()
+                .expect("seq");
+            for index in 0..batch.num_rows() {
+                rows.push((ids.value(index), row_ids.value(index), seqs.value(index)));
+            }
+        }
+        rows
     }
 
     async fn live_pairs(&self, table: &str) -> Vec<(i32, String)> {
@@ -230,35 +263,6 @@ async fn adopt_cow_v3(door: &Door, seed: &str, adopted: &str) {
     adopt_v3(door, seed, adopted, COW_V3).await;
 }
 
-/// The refusal names the row, the verb and row lineage; the table is untouched.
-async fn assert_cow_refused_untouched(door: &Door, table: &str, sql: &str, verb: &str) {
-    let before_table = door.table(table).await;
-    let before_snapshot = before_table.metadata().current_snapshot_id();
-    let before = door.lineage(table).await;
-    let before_rows = door.live_pairs(table).await;
-    let err = door.err(sql).await;
-    assert!(
-        err.contains("V3-COW-1")
-            && err.contains("row lineage")
-            && err.contains(verb)
-            && err.contains("reassigns"),
-        "refusal must name the row, row lineage, `{verb}`, and the measured reassignment: {err}"
-    );
-    let after_table = door.table(table).await;
-    assert_eq!(
-        after_table.metadata().current_snapshot_id(),
-        before_snapshot,
-        "a refused {verb} must not commit"
-    );
-    assert_eq!(after_table.metadata().format_version(), FormatVersion::V3);
-    assert_eq!(
-        door.lineage(table).await,
-        before,
-        "lineage counters untouched"
-    );
-    assert_eq!(door.live_pairs(table).await, before_rows, "rows untouched");
-}
-
 /// RP-2: the plain-`WHERE` COW DELETE on v3 runs; survivors keep their lineage counters.
 /// pins: rp-2-fork-repin/C-005
 #[tokio::test]
@@ -282,44 +286,64 @@ async fn adopted_v3_cow_delete_carries_survivor_row_lineage() {
 }
 
 #[tokio::test]
-async fn ansi_adopted_v3_cow_second_delete_refuses_before_lineage_diverges() {
+async fn ansi_adopted_v3_cow_second_delete_keeps_survivor_row_id() {
+    let _: &str = "pins: rp-6-fork-repin/C-002";
     let door = door_with_v3_opt_in().await;
     adopt_cow_v3(&door, "seed_seq", "adopt_seq").await;
     door.ok("DELETE FROM ice.sales.adopt_seq WHERE id = 2")
         .await;
     assert_eq!(door.lineage("adopt_seq").await, (5, Some(3), Some(2)));
-    assert_cow_refused_untouched(
-        &door,
-        "adopt_seq",
-        "DELETE FROM ice.sales.adopt_seq WHERE id = 3",
-        "DELETE",
-    )
-    .await;
-    assert_eq!(
-        door.live_pairs("adopt_seq").await,
-        vec![(1, "a".into()), (3, "c".into())]
-    );
+    door.ok("DELETE FROM ice.sales.adopt_seq WHERE id = 3")
+        .await;
+    assert_eq!(door.live_pairs("adopt_seq").await, vec![(1, "a".into())]);
+    assert_eq!(door.live_triples("adopt_seq").await, vec![(1, 0, 1)]);
+    assert_eq!(door.lineage("adopt_seq").await, (6, Some(5), Some(1)));
 }
 
-/// pins: v3r-1-rulings/C-002
-/// pins: v3-3-dml/C-001
 #[tokio::test]
-async fn adopted_v3_cow_update_refuses_rather_than_reassign_row_lineage() {
+async fn adopted_v3_cow_update_keeps_row_id_and_bumps_matched_seq() {
+    let _: &str = "pins: rp-6-fork-repin/C-002";
     let door = door_with_v3_opt_in().await;
     adopt_cow_v3(&door, "seed_upd", "adopt_upd").await;
-    assert_cow_refused_untouched(
-        &door,
-        "adopt_upd",
-        "UPDATE ice.sales.adopt_upd SET name = 'x' WHERE id = 2",
-        "UPDATE",
-    )
-    .await;
+    door.ok("UPDATE ice.sales.adopt_upd SET name = 'x' WHERE id = 2")
+        .await;
+    assert_eq!(
+        door.live_pairs("adopt_upd").await,
+        vec![(1, "a".into()), (2, "x".into()), (3, "c".into())]
+    );
+    assert_eq!(
+        door.live_triples("adopt_upd").await,
+        vec![(1, 0, 1), (2, 1, 2), (3, 2, 1)]
+    );
+    assert_eq!(door.lineage("adopt_upd").await, (6, Some(3), Some(3)));
 }
 
-/// pins: v3r-1-rulings/C-003
-/// pins: v3-3-dml/C-002
 #[tokio::test]
-async fn adopted_v3_cow_merge_refuses_with_unset_and_explicit_mode() {
+async fn created_v3_cow_update_keeps_row_id() {
+    let _: &str = "pins: rp-6-fork-repin/C-002";
+    let door = door_with_v3_opt_in().await;
+    door.ok(&format!(
+        "CREATE TABLE ice.sales.created_upd (id INT, name VARCHAR) WITH ({COW_V3})"
+    ))
+    .await;
+    door.ok("INSERT INTO ice.sales.created_upd VALUES (1, 'a'), (2, 'b'), (3, 'c')")
+        .await;
+    door.ok("UPDATE ice.sales.created_upd SET name = 'x' WHERE id = 2")
+        .await;
+    assert_eq!(
+        door.live_pairs("created_upd").await,
+        vec![(1, "a".into()), (2, "x".into()), (3, "c".into())]
+    );
+    assert_eq!(
+        door.live_triples("created_upd").await,
+        vec![(1, 0, 1), (2, 1, 2), (3, 2, 1)]
+    );
+    assert_eq!(door.lineage("created_upd").await, (6, Some(3), Some(3)));
+}
+
+#[tokio::test]
+async fn adopted_v3_cow_merge_matched_update_still_refuses() {
+    let _: &str = "pins: rp-6-fork-repin/C-002";
     let door = door_with_v3_opt_in().await;
     adopt_v3(&door, "seed_mrg", "adopt_mrg", UNSET_MERGE_V3).await;
     assert!(
@@ -333,19 +357,21 @@ async fn adopted_v3_cow_merge_refuses_with_unset_and_explicit_mode() {
     );
     adopt_cow_v3(&door, "seed_mrg2", "adopt_mrg2").await;
     for table in ["adopt_mrg", "adopt_mrg2"] {
-        assert_cow_refused_untouched(
-            &door,
-            table,
-            &format!(
+        let err = door
+            .err(&format!(
                 "MERGE INTO ice.sales.{table} AS t USING (SELECT 2 AS id, \
-                 CAST('m' AS VARCHAR) AS name UNION ALL SELECT 4 AS id, \
-                 CAST('n' AS VARCHAR) AS name) AS s ON t.id = s.id \
-                 WHEN MATCHED THEN UPDATE SET name = s.name \
-                 WHEN NOT MATCHED THEN INSERT (id, name) VALUES (s.id, s.name)"
-            ),
-            "MERGE INTO",
-        )
-        .await;
+                 CAST('m' AS VARCHAR) AS name) AS s ON t.id = s.id \
+                 WHEN MATCHED THEN UPDATE SET name = s.name"
+            ))
+            .await;
+        assert!(
+            err.contains("V3-COW-1") && err.contains("reassigns"),
+            "MERGE keep-refusal, got: {err}"
+        );
+        assert_eq!(
+            door.live_pairs(table).await,
+            vec![(1, "a".into()), (2, "b".into()), (3, "c".into())]
+        );
     }
 }
 
@@ -419,37 +445,36 @@ async fn adopted_v3_mor_merge_still_refuses() {
     );
 }
 
-/// Resolver seat: subquery-`WHERE` DELETE / UPDATE take `predicate_dml`, not the router valve.
-/// pins: v3r-1-rulings/C-001, C-002
-/// pins: v3-3-dml/C-001
 #[tokio::test]
-async fn adopted_v3_cow_subquery_where_dml_refuses_at_the_resolver_seat() {
+async fn adopted_v3_cow_subquery_where_dml_still_refuses() {
+    let _: &str = "pins: rp-6-fork-repin/C-002";
     let door = door_with_v3_opt_in().await;
     adopt_cow_v3(&door, "seed_sub", "adopt_sub").await;
-    assert_cow_refused_untouched(
-        &door,
-        "adopt_sub",
-        "DELETE FROM ice.sales.adopt_sub WHERE id IN \
-         (SELECT id FROM ice.sales.adopt_sub WHERE id = 2)",
-        "DELETE",
-    )
-    .await;
-    let update_sql = "UPDATE ice.sales.adopt_sub SET name = 'x' WHERE id IN \
-         (SELECT id FROM ice.sales.adopt_sub WHERE id = 2)";
-    assert_cow_refused_untouched(&door, "adopt_sub", update_sql, "UPDATE").await;
-    let update_err = door.err(update_sql).await;
+    let err = door
+        .err(
+            "UPDATE ice.sales.adopt_sub SET name = 'x' WHERE id IN \
+             (SELECT id FROM ice.sales.adopt_sub WHERE id = 2)",
+        )
+        .await;
     assert!(
-        !update_err.contains("inserts")
-            && update_err.contains("existing row")
-            && update_err.contains("_last_updated_sequence_number"),
-        "resolver-seat UPDATE must name Spark's keep-and-bump, not MERGE inserts: {update_err}"
+        err.contains("V3-COW-1") && err.contains("reassigns"),
+        "subquery UPDATE uses the MERGE writer, got: {err}"
+    );
+    let err = door
+        .err(
+            "DELETE FROM ice.sales.adopt_sub WHERE id IN \
+             (SELECT id FROM ice.sales.adopt_sub WHERE id = 2)",
+        )
+        .await;
+    assert!(
+        err.contains("V3-COW-1") && err.contains("reassigns"),
+        "subquery DELETE uses the MERGE writer, got: {err}"
     );
 }
 
-/// SEC-001: two-part and bare names under session defaults resolve the same target.
-/// pins: rp-2-fork-repin/C-003, C-005
 #[tokio::test]
-async fn adopted_v3_cow_dml_with_default_catalog_short_names_refuses() {
+async fn adopted_v3_cow_dml_with_default_catalog_short_names_commits() {
+    let _: &str = "pins: rp-6-fork-repin/C-002";
     let door = door_with_v3_opt_in().await;
     adopt_cow_v3(&door, "seed_short", "adopt_short").await;
     door.ctx
@@ -460,13 +485,12 @@ async fn adopted_v3_cow_dml_with_default_catalog_short_names_refuses() {
         .sql("SET datafusion.catalog.default_schema = 'sales'")
         .await
         .expect("set default schema");
-    assert_cow_refused_untouched(
-        &door,
-        "adopt_short",
-        "UPDATE adopt_short SET name = 'x' WHERE id = 2",
-        "UPDATE",
-    )
-    .await;
+    door.ok("UPDATE adopt_short SET name = 'x' WHERE id = 2")
+        .await;
+    assert_eq!(
+        door.live_pairs("adopt_short").await,
+        vec![(1, "a".into()), (2, "x".into()), (3, "c".into())]
+    );
     door.ok("DELETE FROM sales.adopt_short WHERE id = 2").await;
     assert_eq!(
         door.live_pairs("adopt_short").await,
@@ -492,32 +516,28 @@ async fn adopted_v3_cow_delete_on_a_dotted_quoted_name_resolves() {
     );
 }
 
-/// A padded merge-on-read spelling still refuses UPDATE on v3 without changing table lineage.
-/// pins: v3r-1-rulings/C-004
-/// pins: rp-2-fork-repin/C-005
 #[tokio::test]
-async fn adopted_v3_padded_merge_on_read_spelling_still_refuses_update() {
+async fn adopted_v3_padded_merge_on_read_update_keeps_row_id() {
+    let _: &str = "pins: rp-6-fork-repin/C-003";
     let door = door_with_v3_opt_in().await;
     adopt_v3(
         &door,
         "seed_pad",
         "adopt_pad",
-        "format_version = 3, extra_properties = MAP(ARRAY['write.delete.mode'], \
-         ARRAY[' Merge-On-Read '])",
+        "format_version = 3, extra_properties = MAP(\
+         ARRAY['write.delete.mode', 'write.update.mode'], \
+         ARRAY[' Merge-On-Read ', ' Merge-On-Read '])",
     )
     .await;
-    let before = door.lineage("adopt_pad").await;
-    let err = door
-        .err("UPDATE ice.sales.adopt_pad SET name = 'x' WHERE id = 2")
+    door.ok("UPDATE ice.sales.adopt_pad SET name = 'x' WHERE id = 2")
         .await;
-    assert!(
-        err.contains("V3-COW-1") && err.contains("row lineage") && err.contains("reassigns"),
-        "the copy-on-write arm's reason: {err}"
-    );
-    assert_eq!(door.lineage("adopt_pad").await, before, "no commit");
     assert_eq!(
         door.live_pairs("adopt_pad").await,
-        vec![(1, "a".into()), (2, "b".into()), (3, "c".into())]
+        vec![(1, "a".into()), (2, "x".into()), (3, "c".into())]
+    );
+    assert_eq!(
+        door.live_triples("adopt_pad").await,
+        vec![(1, 0, 1), (2, 1, 2), (3, 2, 1)]
     );
 }
 

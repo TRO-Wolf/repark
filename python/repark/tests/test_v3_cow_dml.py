@@ -1,11 +1,9 @@
-"""V3R-1 facade `.sql()` v3 DML pins: UPDATE / MERGE refuse (V3-COW-1); the RP-2-repinned
-plain-`WHERE` DELETE is Spark-clean and commits; `rewrite_data_files` on v3 preserves
-lineage (`V3-LINEAGE-1` FIXED).
+"""V3 facade `.sql()` v3 DML pins: UPDATE and sequential COW DELETE keep `_row_id`;
+MERGE matched-update still refuses V3-COW-1 because the RePark-owned MERGE writer reassigns.
 
-pins: v3r-1-rulings/C-006
+pins: rp-6-fork-repin/C-002, C-003
 pins: rp-2-fork-repin/C-003, C-005
 pins: rp-3-fork-repin/C-004
-pins: v3-3-dml/C-001, C-002
 pins: rp-4-fork-repin/C-003
 """
 
@@ -74,10 +72,10 @@ def _id_name_rows(table: pa.Table) -> list[tuple[int, str]]:
     return pairs
 
 
-def test_facade_adopted_v3_cow_dml_refuses_and_leaves_the_table_untouched(
+def test_facade_adopted_v3_cow_dml_keeps_row_id(
     tmp_path: Path,
 ) -> None:
-    """Adopted v3 MERGE and UPDATE raise naming V3-COW-1 and reassigns; DELETE commits."""
+    """Adopted v3 MERGE matched-update still refuses V3-COW-1; UPDATE keeps `_row_id`."""
     from repark import ReparkSession
 
     spark = (
@@ -99,18 +97,16 @@ def test_facade_adopted_v3_cow_dml_refuses_and_leaves_the_table_untouched(
             "CALL ice.system.register_table("
             f"table => 'sales.adopt_mrg', metadata_file => '{metadata_file}')"
         )
-        seeded = [(1, "a"), (2, "b"), (3, "c")]
         with pytest.raises(UnsupportedOperationException, match="V3-COW-1") as merge_error:
             spark.sql(
                 "MERGE INTO ice.sales.adopt_mrg AS t USING "
-                "(SELECT 2 AS id, 'm' AS name UNION ALL SELECT 4 AS id, 'n' AS name) AS s "
+                "(SELECT 2 AS id, 'm' AS name) AS s "
                 "ON t.id = s.id "
-                "WHEN MATCHED THEN UPDATE SET t.name = s.name "
-                "WHEN NOT MATCHED THEN INSERT (id, name) VALUES (s.id, s.name)"
+                "WHEN MATCHED THEN UPDATE SET t.name = s.name"
             ).collect()
         assert "reassigns" in str(merge_error.value)
         merged = spark.sql("SELECT id, name FROM ice.sales.adopt_mrg").to_arrow()
-        assert _id_name_rows(merged) == seeded
+        assert _id_name_rows(merged) == [(1, "a"), (2, "b"), (3, "c")]
         spark.sql(
             "CREATE TABLE ice.sales.rw_lin (id INT) USING iceberg "
             f"TBLPROPERTIES ({_FORMAT_V3_ONLY})"
@@ -159,17 +155,63 @@ def test_facade_adopted_v3_cow_dml_refuses_and_leaves_the_table_untouched(
         spark.sql("DELETE FROM ice.sales.adopt_del WHERE id = 2").collect()
         deleted = spark.sql("SELECT id, name FROM ice.sales.adopt_del").to_arrow()
         assert _id_name_rows(deleted) == [(1, "a"), (3, "c")]
-        with pytest.raises(UnsupportedOperationException, match="V3-COW-1") as update_error:
-            spark.sql("UPDATE ice.sales.adopt_del SET name = 'x' WHERE id = 2").collect()
-        assert "reassigns" in str(update_error.value)
+        spark.sql("UPDATE ice.sales.adopt_del SET name = 'x' WHERE id = 3").collect()
+        updated = spark.sql(
+            "SELECT id, name, _row_id, _last_updated_sequence_number "
+            "FROM ice.sales.adopt_del ORDER BY id"
+        ).to_arrow()
+        assert _id_name_rows(updated) == [(1, "a"), (3, "x")]
+        update_lineage = list(
+            zip(
+                updated.column("id").to_pylist(),
+                updated.column("_row_id").to_pylist(),
+                updated.column("_last_updated_sequence_number").to_pylist(),
+                strict=True,
+            )
+        )
+        assert update_lineage == [(1, 0, 1), (3, 2, 3)]
     finally:
         spark.stop()
 
 
-def test_facade_adopted_v3_cow_second_delete_refuses_before_lineage_diverges(
+def test_facade_created_v3_cow_update_keeps_row_id(tmp_path: Path) -> None:
+    """Created v3 COW UPDATE keeps `_row_id` and bumps seq on the changed row."""
+    from repark import ReparkSession
+
+    spark = (
+        ReparkSession.builder.appName("rp-6-created-upd")
+        .config(_ALLOW_CREATE_V3_KEY, "true")
+        .getOrCreate()
+    )
+    try:
+        spark.register_memory_catalog("ice", tmp_path)
+        spark.sql("CREATE NAMESPACE ice.sales")
+        spark.sql(
+            "CREATE TABLE ice.sales.created_upd (id INT, name STRING) USING iceberg "
+            f"TBLPROPERTIES ({_COW_V3})"
+        )
+        spark.sql("INSERT INTO ice.sales.created_upd VALUES (1, 'a'), (2, 'b'), (3, 'c')")
+        spark.sql("UPDATE ice.sales.created_upd SET name = 'x' WHERE id = 2").collect()
+        updated = spark.sql(
+            "SELECT id, _row_id, _last_updated_sequence_number "
+            "FROM ice.sales.created_upd ORDER BY id"
+        ).to_arrow()
+        assert list(
+            zip(
+                updated.column("id").to_pylist(),
+                updated.column("_row_id").to_pylist(),
+                updated.column("_last_updated_sequence_number").to_pylist(),
+                strict=True,
+            )
+        ) == [(1, 0, 1), (2, 1, 2), (3, 2, 1)]
+    finally:
+        spark.stop()
+
+
+def test_facade_adopted_v3_cow_second_delete_keeps_survivor_row_id(
     tmp_path: Path,
 ) -> None:
-    """The second COW DELETE refuses before it can diverge from Spark lineage."""
+    """The second COW DELETE keeps the survivor `_row_id` at Spark's next-row-id 6."""
     from repark import ReparkSession
 
     spark = (
@@ -195,11 +237,21 @@ def test_facade_adopted_v3_cow_second_delete_refuses_before_lineage_diverges(
         latest = _latest_version_uuid_metadata(sales, "seed_seq")
         before_lineage = _current_lineage(latest)
         assert before_lineage == (5, 3, 2)
-        with pytest.raises(UnsupportedOperationException, match="V3-COW-1"):
-            spark.sql("DELETE FROM ice.sales.adopt_seq WHERE id = 3").collect()
-        live = spark.sql("SELECT id, name FROM ice.sales.adopt_seq").to_arrow()
-        assert _id_name_rows(live) == [(1, "a"), (3, "c")]
-        assert _current_lineage(_latest_version_uuid_metadata(sales, "seed_seq")) == before_lineage
+        spark.sql("DELETE FROM ice.sales.adopt_seq WHERE id = 3").collect()
+        live = spark.sql(
+            "SELECT id, name, _row_id, _last_updated_sequence_number "
+            "FROM ice.sales.adopt_seq ORDER BY id"
+        ).to_arrow()
+        assert _id_name_rows(live) == [(1, "a")]
+        assert list(
+            zip(
+                live.column("id").to_pylist(),
+                live.column("_row_id").to_pylist(),
+                live.column("_last_updated_sequence_number").to_pylist(),
+                strict=True,
+            )
+        ) == [(1, 0, 1)]
+        assert _current_lineage(_latest_version_uuid_metadata(sales, "seed_seq")) == (6, 5, 1)
     finally:
         spark.stop()
 

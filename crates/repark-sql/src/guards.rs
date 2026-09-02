@@ -12,10 +12,7 @@ use datafusion::sql::sqlparser::ast::{
 use datafusion::sql::sqlparser::parser::ParserError;
 use iceberg::{NamespaceIdent, TableIdent};
 use repark_core::{CatalogRegistry, EngineContext};
-use repark_iceberg::write::{
-    MorDmlKind, refuse_mor_unpartitioned_multi_spec_dml,
-    refuse_v3_cow_dml as refuse_v3_cow_dml_in_catalog,
-};
+use repark_iceberg::write::{MorDmlKind, refuse_mor_unpartitioned_multi_spec_dml};
 
 use crate::scan::{blank_out_quoted_and_comments, leading_keyword};
 
@@ -202,17 +199,6 @@ pub(crate) async fn refuse_mor_multi_spec_dml(
     };
     // Unpartitioned position deletes are unsafe after multi-spec history.
     refuse_mor_unpartitioned_multi_spec_dml(catalog.as_ref(), &ident, &target, kind).await
-}
-
-/// V3R-1 valve (`V3-COW-1`) for delegated plain-`WHERE` DELETE / UPDATE.
-pub(crate) async fn refuse_v3_cow_dml(cx: &EngineContext<'_>, statement: &Statement) -> Result<()> {
-    let Some((kind, _target, catalog_name, ident)) = dml_target_ident(cx, statement) else {
-        return Ok(());
-    };
-    let Some(catalog) = cx.catalogs.get(&catalog_name) else {
-        return Ok(());
-    };
-    refuse_v3_cow_dml_in_catalog(catalog.as_ref(), &ident, kind).await
 }
 
 /// Resolve a `DELETE` / `UPDATE` target from the AST as DataFusion will, completing short names.

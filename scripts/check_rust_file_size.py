@@ -82,7 +82,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Extract writer preparation from transaction commit assembly.",
     ),
     "crates/repark-iceberg/src/write/merge/mod.rs": (
-        1894,
+        1892,
         "The RePark-owned MERGE executor combines plan, COW, and MOR paths.",
         "Split plan preparation from COW and MOR execution modules.",
     ),
@@ -107,7 +107,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Extract predicate and file-selection logic from commit assembly.",
     ),
     "crates/repark-iceberg/src/write/predicate_dml.rs": (
-        1227,
+        1226,
         "Predicate DELETE and UPDATE planning share one adapter.",
         "Split predicate validation from operation-specific plan construction.",
     ),

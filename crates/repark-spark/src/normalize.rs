@@ -279,25 +279,6 @@ pub(crate) async fn refuse_mor_unpartitioned_multi_spec_dml(
     .await
 }
 
-/// V3R-1 valve (`V3-COW-1`) for the plain-`WHERE` DELETE / UPDATE; runs after the BUG-001 valve.
-pub(crate) async fn refuse_v3_cow_dml(
-    ctx: &SessionContext,
-    catalogs: &CatalogRegistry,
-    table_name: Option<&ObjectName>,
-    kind: MorDmlKind,
-) -> Result<()> {
-    let Some(table_name) = table_name else {
-        return Ok(());
-    };
-    let Some((catalog_name, ident)) = dml_target_ident(ctx, table_name) else {
-        return Ok(());
-    };
-    let Some(catalog) = catalogs.get(&catalog_name) else {
-        return Ok(());
-    };
-    repark_iceberg::write::refuse_v3_cow_dml(catalog.as_ref(), &ident, kind).await
-}
-
 /// Resolve a DML target as DataFusion will: short names complete from the session defaults.
 fn dml_target_ident(ctx: &SessionContext, table_name: &ObjectName) -> Option<(String, TableIdent)> {
     let mut parts = name_parts(table_name);

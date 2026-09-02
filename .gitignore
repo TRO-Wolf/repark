@@ -45,3 +45,4 @@ build/
 # Overnight-conductor local scratch if ever materialised under the worktree (canonical scratch
 # lives under /tmp/overnight-conductor/<lane>/scratch/, outside the repo).
 /scratch/
+PROGRESS.md
