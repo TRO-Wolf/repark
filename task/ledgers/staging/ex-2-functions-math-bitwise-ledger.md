@@ -89,7 +89,7 @@ SELF_LOGIC_REVIEW:
 | ID | Clause | Proof obligation | Verdict |
 |---|---|---|---|
 | C-001 | Batch 1 lands runnable local examples for the eleven roster names it can demonstrate honestly, in four files under `docs/examples/functions/`, every `COVERS` entry exercised by an assertion on the value that name produces; those eleven leave `docs/examples/backlog.txt` and `BACKLOG_BASELINE` moves down by exactly eleven, 892 → 881, with no other `scripts/` change; the twelfth, `F.expm1`, stays a backlog row with its divergence measured and reported, and no product file is touched; the gate's static half and its `--require-execute` leg both exit 0. | Red-first capture below (the twelve are uncovered before the batch, and the gate reds by name when the rows are removed without examples), the `expm1` measurement table, the green counts line, and the recorded gate exit codes. | **OPEN** |
-| C-002 | Batch 2 lands runnable local examples for the 37 roster names the live oracle confirms, in six files under `docs/examples/functions/`, every asserted value measured against live PySpark 4.1.2 before it was written and every `COVERS` entry exercised by an assertion on that measured value; those 37 leave `docs/examples/backlog.txt` and `BACKLOG_BASELINE` moves down by exactly 37, 881 → 844, with no other `scripts/` change; the 38th, `F.log1p`, stays a backlog row with its divergence measured and reported, and no product file is touched; the gate's static half and its executing `--require-execute` leg both exit 0. | Red-first capture below (the gate names exactly the 38 roster names when the rows are removed without examples), the batch 2 oracle table, the recorded divergence notes, the green counts line, and the gate exit codes. | **OPEN** |
+| C-002 | Batch 2 lands runnable local examples for the 37 roster names the live oracle confirms, in six files under `docs/examples/functions/`, every asserted value measured against live PySpark 4.1.2 before it was written and every `COVERS` entry exercised by an assertion on that measured value; those 37 leave `docs/examples/backlog.txt` and `BACKLOG_BASELINE` moves down by exactly 37, 881 → 844, with no other `scripts/` change; the 38th, `F.log1p`, stays a backlog row with its divergence measured and reported, and no product file is touched; the gate's static half and its executing `--require-execute` leg both exit 0. | Batch 2 evidence section: red-first capture (37 named findings), the Critic's oracle verification, the divergence table, the counts line, the gate exit codes. | **PROVEN** |
 
 `LOGIC_SCORE` = **0/2 `PROVEN`** — the clauses stay `OPEN` until the family lands. The
 worker's green is directional by the campaign contract; the orchestrator's independent
@@ -232,12 +232,47 @@ PySpark 4.1.2 + Iceberg 1.11.0 against the engine on the same inputs.
 |---|---|---|---|
 | `0.0` | `0.0` | `0.0` | equal |
 | `1e-10` | `9.999999999500001e-11` | `1.000000082690371e-10` | **diverges** — the engine computes `ln(1 + x)` and loses the precision `log1p` exists to keep |
+| `1e-13` | `9.9999999999995e-14` | `9.992007221625909e-14` | **diverges** (same cause) |
 | `-1.0` | `NULL` | `NULL` | equal |
 | `-2.0` | `NULL` | `NULL` | equal |
 | `NULL` | `NULL` | `NULL` | equal |
 
-Product finding, filed for the parity registry as `LOG1P-1` (accuracy, not a wrong answer
-class); the example lands when the kernel is fixed. Batch 2 wall-clock on the mechanical tier
+Product finding, reported here for the owner to file (accuracy, not a wrong-answer class);
+the example lands when the kernel is fixed. Batch 2 wall-clock on the mechanical tier
 (GLM 5.3 Flash): 2 h 1 min to a complete tree, then a stall at the commit step; the
 orchestrator committed the tree after re-running every gate.
+
+### Batch 2 evidence (recorded by the orchestrator after the worker stalled at the commit step)
+
+**Red-first capture** (scratch worktree at `73cdfa4` with the six batch-2 files removed and the
+backlog rows already gone): `check_example_coverage.py` exits 1 with **37 findings**, one per
+roster name and no others — `F.acos F.acosh F.asin F.asinh F.atan F.atan2 F.atanh F.ceil
+F.ceiling F.cos F.cosh F.cot F.csc F.degrees F.e F.factorial F.floor F.greatest F.least F.ln
+F.log F.log10 F.log2 F.pi F.pmod F.radians F.round F.sec F.sin F.sinh F.tan F.tanh F.try_add
+F.try_divide F.try_multiply F.try_subtract F.width_bucket`. With the files present the gate is
+green.
+
+**Oracle verification** (independent Critic, 2026-09-02, live PySpark 4.1.2 + Iceberg 1.11.0):
+every value each file asserts was dumped from the oracle on the file's own inputs and matched
+by repr; then each of the six files was re-run **unmodified** with `repark.functions` swapped
+for `pyspark.sql.functions` on the live session — all six exited 0, so every assertion holds
+on Spark itself. Edges confirmed on Spark: `asin(2)`/`acos(2)` NaN, `cot(0)`/`csc(0)`
+Infinity, `acosh(0.5)` NaN, `atanh(±1)` ±Infinity, `round` half-up away from zero on both
+signs, `pmod(-7,3) = 2`, `width_bucket` max one past the last bucket, `try_divide` by zero
+NULL, `factorial(21)` untaught (input set stops at 10).
+
+| Gate | Exit |
+|---|---|
+| `.venv/bin/python scripts/check_example_coverage.py` | 0 |
+| `.venv/bin/python scripts/check_example_coverage.py --require-execute` | 0 |
+| the six example scripts, each, via `.venv/bin/python` | 0 |
+| `uv run --no-sync ruff check docs/examples` / `ruff format --check docs/examples` | 0 / 0 |
+| `make check-map-sync` / `make check-ledger-grammar` | 0 / 0 |
+
+Counts line: `913 public names …; 67 covered; 844 backlog; 2 exceptions; 15 examples`
+(was `30 covered; 881 backlog; 9 examples` before batch 2).
+
+**Throughput record (the pilot this batch was):** mechanical tier (GLM 5.3 Flash), 38-name
+roster, 70 steps, $0.16, 2 h 01 min to a complete tree, then a silent stall before the commit;
+one Critic pass (Opus) found no value divergence and two ledger-record gaps, closed here.
 
