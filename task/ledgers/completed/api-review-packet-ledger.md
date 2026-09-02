@@ -71,5 +71,5 @@ COVERAGE_ATTESTATION:
 
 ## Pointers
 
-- Up: [map.md](map.md)
+- Up: [map.md](../staging/map.md)
 - Deliverable: [../../../docs/design/v1-0-api-review-2026-09-02.md](../../../docs/design/v1-0-api-review-2026-09-02.md)

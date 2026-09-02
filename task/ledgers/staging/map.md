@@ -5,14 +5,6 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
-- [api-review-packet-ledger.md](api-review-packet-ledger.md) —
-  **API-REVIEW (2026-09-02), in flight:** the v1.0 API review packet — 35 rows, one per public
-  surface, each with its pins, its measured example coverage, the divergence-registry rows inside
-  it and a freeze recommendation the owner answers `yes` / `no` / `yes except <members>`. Rows
-  A1–J9 partition the 913-name public inventory; K1–O1 carry the door surfaces, the seven `CALL`
-  procedures, the conf keys, format-v3, packaging and the error taxonomy. `risk_tier: standard`.
-  Branch `docs/v1-0-api-review`. Deliverable:
-  [../../../docs/design/v1-0-api-review-2026-09-02.md](../../../docs/design/v1-0-api-review-2026-09-02.md).
 - [ex-2-functions-math-bitwise-ledger.md](ex-2-functions-math-bitwise-ledger.md) —
   **EX-2 (2026-09-01), in flight:** the v0.7 example backfill's `F.*` math +
   bitwise family — the campaign pilot. One clause per batch; batch 1 covers
