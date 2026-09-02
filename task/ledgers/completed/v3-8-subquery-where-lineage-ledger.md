@@ -129,7 +129,10 @@ aliased. Restored.
 
 **Facade interpreter.** `.venv/bin/pytest` shebang points at the live worktree. Facade gates
 in this unit run as `.venv/bin/python -m pytest …` after `make develop` (and `make py-test` /
-`make preflight`). Never `.venv/bin/pytest`.
+`make preflight`). Never `.venv/bin/pytest`. The live cell also needs the `record` extra:
+`uv sync --locked --extra record --extra numpy --extra pandas --extra polars --extra ml-ext
+--no-install-package repark`, then `make develop`, then
+`REPARK_PARITY_LIVE=1 JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1` — green.
 
 ```yaml
 PROPORTIONALITY_RUBRIC:
