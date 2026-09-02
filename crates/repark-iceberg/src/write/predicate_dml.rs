@@ -426,7 +426,7 @@ async fn collect_identity_pairs(
                     "identity SELECT produced a NULL `(_file, _pos)` pair".to_string(),
                 ));
             }
-            pairs.push((Arc::<str>::from(files.value(row)), positions.value(row)));
+            lineage::push_identity_pair(&mut pairs, files.value(row), positions.value(row));
         }
     }
     Ok(pairs)
@@ -482,7 +482,7 @@ async fn collect_identity_update_rows(
                     "identity SELECT produced a NULL `(_file, _pos)` pair".to_string(),
                 ));
             }
-            pairs.push((Arc::<str>::from(files.value(row)), positions.value(row)));
+            lineage::push_identity_pair(&mut pairs, files.value(row), positions.value(row));
         }
         if batch.num_rows() > 0 {
             data_batches.push(project_update_data_batch(batch, values_schema)?);

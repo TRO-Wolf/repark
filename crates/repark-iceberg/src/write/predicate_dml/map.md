@@ -19,7 +19,11 @@ works, so the attribute is gone rather than documented.
   lists and the update value schema, with the format-v3 lineage pair appended when the table
   carries it (`_last_updated_sequence_number` projected NULL for a changed row, as V3-7's MERGE
   writer does). Extracted so `predicate_dml.rs` stays under its exact size baseline.
-  pins: v3-8-subquery-where-lineage/C-002
+  **V3-9 (2026-09-02):** also `push_identity_pair`, which reuses the previous `Arc<str>` when
+  the matched row's data-file path is unchanged — one allocation per distinct path instead of
+  one per row (600k rows on one file: 31.0 → 11.5 ms, 66,000,000 → 110 B retained). It lives
+  here rather than in the parent because `predicate_dml.rs` sits at an exact 1164-line ceiling.
+  pins: v3-8-subquery-where-lineage/C-002; v3-9-mor-predicate-dml-dv/C-009
 - [tests/](tests/map.md) — DELETE and identity UPDATE batteries.
 
 ## Pointers

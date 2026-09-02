@@ -937,3 +937,30 @@ async fn update_isolation_snapshot_commits_through_concurrent_append() {
     .await
     .expect("snapshot UPDATE must commit through a concurrent append");
 }
+
+#[test]
+fn identity_pairs_share_one_arc_per_data_file_path() {
+    let _: &str = "pins: v3-9-mor-predicate-dml-dv/C-009";
+    let first = "s3://bucket/warehouse/data/00000-0-aaaa-00001.parquet";
+    let second = "s3://bucket/warehouse/data/00000-0-aaaa-00002.parquet";
+    let mut pairs: Vec<crate::write::position_delete::PositionDeletePair> = Vec::new();
+    for position in 0..600_000i64 {
+        super::super::lineage::push_identity_pair(&mut pairs, first, position);
+    }
+    for position in 0..3i64 {
+        super::super::lineage::push_identity_pair(&mut pairs, second, position);
+    }
+    assert_eq!(pairs.len(), 600_003);
+    let mut allocations = 1usize;
+    for window in pairs.windows(2) {
+        if !Arc::ptr_eq(&window[0].0, &window[1].0) {
+            allocations += 1;
+        }
+    }
+    assert_eq!(
+        allocations, 2,
+        "one Arc<str> per distinct data-file path, not one per matched row"
+    );
+    assert_eq!(pairs[0].0.as_ref(), first);
+    assert_eq!(pairs[600_002].0.as_ref(), second);
+}

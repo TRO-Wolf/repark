@@ -30,10 +30,12 @@ pub(super) async fn prepare_row_delta_deletes(
 ) -> Result<PreparedDeletes> {
     match table.metadata().format_version() {
         FormatVersion::V2 => {
-            let referenced = pairs
-                .iter()
-                .map(|(path, _)| path.as_ref().to_string())
-                .collect();
+            let mut referenced: HashSet<String> = HashSet::new();
+            for (path, _) in pairs {
+                if !referenced.contains(path.as_ref()) {
+                    referenced.insert(path.as_ref().to_string());
+                }
+            }
             let delete_files =
                 crate::write::position_delete::write_position_deletes(table, pairs, concurrency)
                     .await?;
@@ -99,10 +101,12 @@ async fn plan_deletion_vectors(
                 "deletion-vector: negative row position {position} for data file `{path}`"
             ))
         })?;
-        new_positions
-            .entry(path.as_ref().to_string())
-            .or_default()
-            .push(position);
+        match new_positions.get_mut(path.as_ref()) {
+            Some(slot) => slot.push(position),
+            None => {
+                new_positions.insert(path.as_ref().to_string(), vec![position]);
+            }
+        }
     }
     let close = close_touched_dv_containers(table, &new_positions)
         .await
