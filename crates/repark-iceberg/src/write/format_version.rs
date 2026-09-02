@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::hash::BuildHasher;
 
 use iceberg::spec::FormatVersion;
 use iceberg::table::Table;
@@ -8,11 +9,11 @@ use iceberg::{Catalog, Error, ErrorKind, Result, TableIdent};
 pub const FORMAT_VERSION_PROPERTY: &str = "format-version";
 
 #[allow(clippy::missing_errors_doc)]
-pub async fn set_properties_and_format_version(
+pub async fn set_properties_and_format_version<S: BuildHasher>(
     catalog: &dyn Catalog,
     ident: &TableIdent,
     loaded: Option<Table>,
-    sets: HashMap<String, String>,
+    sets: HashMap<String, String, S>,
     unsets: &[String],
     target: Option<FormatVersion>,
 ) -> Result<()> {

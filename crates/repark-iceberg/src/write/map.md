@@ -144,8 +144,9 @@ repark-core's error map.
   carrying `format-version` beside another key is one metadata commit as it is on Spark; nothing
   is committed when there is neither an upgrade nor a property to write, which is why requesting
   the version a table already has writes no metadata file. It takes the table the door already
-  loaded, so an upgrading ALTER loads once rather than twice, and takes `sets` by value because
-  both doors own theirs. `format_version_number` reads the resolver's SIGNED version off a loaded
+  loaded, so an upgrading ALTER loads once rather than twice, and takes `sets` by value (still
+  generic over the hasher, which `clippy::implicit_hasher` requires of an exported signature)
+  because both doors own theirs. `format_version_number` reads the resolver's SIGNED version off a loaded
   table and `format_version_from_number` errors rather than falling back, so an out-of-domain
   number can never be silently taken as v2 and a negative request reaches the downgrade branch
   rather than the parse branch. It is also the seat the old `alter::alter_table_properties` folded
