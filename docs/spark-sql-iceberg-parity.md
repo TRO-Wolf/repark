@@ -1898,7 +1898,10 @@ the pin rather than obeying it.
 
 ### RDF-1 — `rewrite_data_files` never selects a delete-laden file, so its dead rows are retained forever
 
-- **repark** — F-16r (`#248`, pin `00cdde0`) wired `tooHighDeleteRatio`, but the ratio
+- **repark** — **FIXED 2026-09-02** for a position-delete file that names ONE data file; the
+  heading and the first paragraph below are the dated history this row was opened on, kept as
+  the anchor. Read the 2026-09-02 entry for the current claim.
+  F-16r (`#248`, pin `00cdde0`) wired `tooHighDeleteRatio`, but the ratio
   clause counts only **file-scoped** position deletes (`referenced_data_file` present, or
   equal file-path bounds). Partition-granularity deletes and bounds-absent position deletes
   are invisible to it (F-16 residue 2). The MW-7 2,500-row pin writes with
@@ -1982,7 +1985,9 @@ the pin rather than obeying it.
   deletes carry no `referenced_data_file`. The remaining miss is a delete file spanning two or
   more data files — F-16 residue 2 in
   [../task/roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md](../task/roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md),
-  fork work, and unchanged by this row. **Contents are unaffected.**
+  fork work, and unchanged by this row. Heading kept as the historical anchor (MOR-2
+  precedent), so the guide's and MW-8's `#rdf-1` links keep resolving.
+  **Contents are unaffected.**
 
 ### RDF-SORT-1 — `rewrite_data_files` refuses `sort` / `sort_order`; Spark runs a sort rewrite
 
