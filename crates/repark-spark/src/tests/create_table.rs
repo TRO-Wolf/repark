@@ -656,7 +656,7 @@ async fn column_def_create_format_version_three_needs_opt_in() {
     );
 }
 
-/// pins: v3-2-create-v3-opt-in/C-005, C-008
+/// pins: v3-2-create-v3-opt-in/C-005
 #[tokio::test]
 async fn or_replace_applies_requested_v3_and_alter_upgrades_with_opt_in() {
     use iceberg::spec::FormatVersion;

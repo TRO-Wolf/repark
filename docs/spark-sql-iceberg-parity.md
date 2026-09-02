@@ -2486,6 +2486,22 @@ the pin rather than obeying it.
   (live triple),
   `crates/repark-functions/src/format_version.rs` unit pins.
   Pins: v3-10-upgrade-v2-to-v3/C-002, C-003, C-004.
+- **Also measured (V3-10, 2026-09-02).** A **v1** table upgrades straight to v3 behind the same
+  opt-in: metadata-only, `next-row-id` 0, pre-upgrade rows NULL, and one 2-row append leaves
+  `(1,2,0),(2,3,0),(3,4,0),(4,0,1),(5,1,1)` at next-row-id 5 — the v1 rows carry
+  `_last_updated_sequence_number` 0 because v1 has no sequence numbers. A **partitioned** v2
+  table (identity `part`, 2+1 rows) upgrades the same way and the append leaves next-row-id 5
+  with the pre-upgrade rows on `{2,3,4}` at sequence 1 and the appended rows on `{0,1}` at
+  sequence 2.
+- **Residuals (dated 2026-09-02).** `F-v3-10-partition-file-order`: on a **partitioned** table
+  the engine hands the per-partition files their `first_row_id` in a different order than Spark
+  — Spark leaves `1→2, 2→3, 3→4, 4→0, 5→1`, the engine `1→3, 2→4, 3→2, 4→1, 5→0`. Rows,
+  `next-row-id`, the id **sets** and every sequence number are equal; only which of two
+  same-commit partition files is numbered first differs, so the pin asserts the sets. The
+  unpartitioned cell matches Spark exactly. `F-v3-10-eqdel-upgrade`: upgrading a table that
+  carries **equality deletes** is unmeasured — the engine has no equality-delete write surface,
+  so the cell could not be built from either door; the upgrade path itself is delete-file
+  agnostic and the DV interaction is `V3-UPGRADE-DV-1`.
 - **Rationale** — FIXED; the **owner ruling 2026-08-25** ("build it, behind
   `repark.sql.allowCreateFormatVersion3`, after V3-3") is discharged. Two residuals are filed
   as their own dated rows below.
@@ -2532,7 +2548,8 @@ the pin rather than obeying it.
   fork/engine capability (read the parquet position delete back through
   `delete_vector::load_delete_vector`, merge it via `DVFileWriter::with_previous_deletes`, and
   pass the superseded file to `RowDelta::remove_deletes_many` in the same commit), not part of
-  the upgrade itself. TRIGGER for lifting: that previous-deletes merge wired engine-side.
+  the upgrade itself. TRIGGER for lifting: unit **V3-12**, which wires that previous-deletes
+  merge engine-side.
 
 ### BL-9 — a double-quoted string literal is an identifier on the SQL door
 

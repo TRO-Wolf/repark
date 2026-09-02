@@ -551,3 +551,159 @@ async fn register_table_of_an_engine_upgraded_table_reads_v3() {
         ]
     );
 }
+
+async fn create_table_at(
+    catalogs: &CatalogRegistry,
+    table: &str,
+    format_version: FormatVersion,
+) -> TableIdent {
+    let catalog = catalogs.get("ice").expect("ice catalog");
+    let schema = iceberg::spec::Schema::builder()
+        .with_schema_id(0)
+        .with_fields(vec![
+            iceberg::spec::NestedField::optional(
+                1,
+                "id",
+                iceberg::spec::Type::Primitive(iceberg::spec::PrimitiveType::Int),
+            )
+            .into(),
+            iceberg::spec::NestedField::optional(
+                2,
+                "name",
+                iceberg::spec::Type::Primitive(iceberg::spec::PrimitiveType::String),
+            )
+            .into(),
+        ])
+        .build()
+        .expect("schema");
+    let creation = TableCreation::builder()
+        .name(table.to_string())
+        .schema(schema)
+        .format_version(format_version)
+        .build();
+    catalog
+        .create_table(&NamespaceIdent::new("sales".to_string()), creation)
+        .await
+        .expect("create table at the requested format version");
+    TableIdent::from_strs(["sales", table]).unwrap()
+}
+
+#[tokio::test]
+async fn alter_upgrades_a_v1_table_straight_to_v3() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&wh).await;
+    let ident = create_table_at(&catalogs, "v1", FormatVersion::V1).await;
+    let catalog = catalogs.get("ice").expect("ice catalog");
+    assert_eq!(
+        catalog
+            .load_table(&ident)
+            .await
+            .unwrap()
+            .metadata()
+            .format_version(),
+        FormatVersion::V1
+    );
+
+    upgrade(&ctx, &catalogs, "v1").await;
+
+    let after = catalog.load_table(&ident).await.unwrap();
+    assert_eq!(after.metadata().format_version(), FormatVersion::V3);
+    assert_eq!(after.metadata().next_row_id(), 0);
+    assert_eq!(
+        after.metadata().snapshots().count(),
+        0,
+        "the upgrade commits metadata only"
+    );
+
+    let mut without = TempDir::new().unwrap();
+    let (ctx2, catalogs2) = setup(&without).await;
+    let ident2 = create_table_at(&catalogs2, "v1", FormatVersion::V1).await;
+    let message = refuse(
+        &ctx2,
+        &catalogs2,
+        "ALTER TABLE ice.sales.v1 SET TBLPROPERTIES ('format-version' = '3')",
+    )
+    .await;
+    assert!(
+        message.contains("repark.sql.allowCreateFormatVersion3"),
+        "v1 to v3 is behind the same opt-in: {message}"
+    );
+    assert_eq!(
+        catalogs2
+            .get("ice")
+            .expect("ice catalog")
+            .load_table(&ident2)
+            .await
+            .unwrap()
+            .metadata()
+            .format_version(),
+        FormatVersion::V1
+    );
+    without.disable_cleanup(false);
+}
+
+#[tokio::test]
+async fn partitioned_table_upgrade_and_append_match_spark() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.part (id INT, name STRING, part INT) USING iceberg \
+         PARTITIONED BY (part) TBLPROPERTIES ('format-version' = '2')",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.part VALUES (1, 'a', 0), (2, 'b', 0), (3, 'c', 1)",
+    )
+    .await;
+
+    upgrade(&ctx, &catalogs, "part").await;
+
+    let after = load_sales_table(&catalogs, "part").await;
+    assert_eq!(after.metadata().format_version(), FormatVersion::V3);
+    assert_eq!(after.metadata().next_row_id(), 0);
+    assert_eq!(
+        lineage(&ctx, &catalogs, "part").await,
+        vec![(1, None, None), (2, None, None), (3, None, None)]
+    );
+
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.part VALUES (4, 'd', 0), (5, 'e', 1)",
+    )
+    .await;
+    let appended = load_sales_table(&catalogs, "part").await;
+    assert_eq!(appended.metadata().next_row_id(), 5);
+    let rows = lineage(&ctx, &catalogs, "part").await;
+    let ids = |kept: bool| {
+        let mut taken: Vec<i64> = rows
+            .iter()
+            .filter(|(id, _, _)| (*id <= 3) == kept)
+            .map(|(_, row_id, _)| row_id.expect("every row is assigned an id"))
+            .collect();
+        taken.sort_unstable();
+        taken
+    };
+    assert_eq!(
+        ids(true),
+        vec![2, 3, 4],
+        "the three pre-upgrade rows take the ids Spark leaves them, one each"
+    );
+    assert_eq!(
+        ids(false),
+        vec![0, 1],
+        "the two appended rows take the ids Spark leaves them, one each"
+    );
+    for (id, _, seq) in &rows {
+        let expected = if *id <= 3 { 1 } else { 2 };
+        assert_eq!(
+            *seq,
+            Some(expected),
+            "row {id} carries the sequence number Spark gives it: {rows:?}"
+        );
+    }
+}

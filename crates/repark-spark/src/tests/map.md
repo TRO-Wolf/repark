@@ -19,7 +19,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `' 3 '` refusals in Spark's own two classes, same-version no-op,
   upgrade beside another key as ONE commit, and the post-upgrade v3 paths (append lineage, COW
   DELETE/UPDATE, MoR MERGE deletion vector, `rewrite_data_files`, `register_table`) at live-Spark
-  values. The legacy-parquet-position-delete refusal is `V3-UPGRADE-DV-1`.
+  values, plus a **v1** table upgrading straight to v3 behind the same opt-in and a
+  **partitioned** v2 table whose append takes Spark's id sets and sequence numbers (the
+  per-partition file ORDER differs — `F-v3-10-partition-file-order`, so the pin asserts sets,
+  not the id→row-id map). The legacy-parquet-position-delete refusal is `V3-UPGRADE-DV-1`.
+  The V3-2 control `create_table.rs::or_replace_applies_requested_v3_and_alter_upgrades_with_opt_in`
+  is this unit's too: its ALTER arm flipped from refuse to upgrade, so it no longer carries
+  v3-2-create-v3-opt-in/C-008 (V3-10 negates that clause) and cites C-005 alone.
   pins: v3-10-upgrade-v2-to-v3/C-001, C-003, C-004, C-005
 - `declared_refuse.rs` — **FNP-15/16:** Spark-door parse-altitude refusals for the six
   unreachable names and the sketch family; passthrough attach pin.

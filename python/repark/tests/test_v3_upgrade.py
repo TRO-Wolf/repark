@@ -89,6 +89,33 @@ def test_alter_upgrade_with_the_opt_in_serves_v3_lineage(tmp_path: Path) -> None
         session.stop()
 
 
+def test_alter_to_the_current_version_is_a_no_op(tmp_path: Path) -> None:
+    """Requesting the version the table already has succeeds and writes no metadata file."""
+    session = (
+        ReparkSession.builder.appName("v3-10-noop")
+        .config(_ALLOW_CREATE_V3_KEY, "true")
+        .getOrCreate()
+    )
+    try:
+        session.register_memory_catalog("ice", tmp_path)
+        _seed_v2(session)
+        warehouse = tmp_path / "repark_ctas" / "ice" / "sales" / "up" / "metadata"
+        session.sql("ALTER TABLE ice.sales.up SET TBLPROPERTIES ('format-version' = '2')").collect()
+        before = sorted(path.name for path in warehouse.glob("*.metadata.json"))
+        session.sql(_UPGRADE).collect()
+        upgraded = sorted(path.name for path in warehouse.glob("*.metadata.json"))
+        assert len(upgraded) == len(before) + 1
+        session.sql(_UPGRADE).collect()
+        assert sorted(path.name for path in warehouse.glob("*.metadata.json")) == upgraded
+        assert _lineage(session, "ice.sales.up") == [
+            (1, None, None),
+            (2, None, None),
+            (3, None, None),
+        ]
+    finally:
+        session.stop()
+
+
 def test_alter_downgrade_and_unsupported_versions_refuse(tmp_path: Path) -> None:
     """A downgrade, v1, v4 and an unparsable value all refuse naming the key."""
     session = (

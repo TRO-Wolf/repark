@@ -367,12 +367,48 @@ async fn alter_set_properties_upgrades_v2_to_v3_with_the_opt_in() {
     assert_eq!(after.metadata().next_row_id(), 0);
     assert_eq!(after.metadata().snapshots().count(), snapshots_before);
     assert!(!after.metadata().properties().contains_key("format-version"));
+    let lineage = door
+        .sql("SELECT id, _row_id, _last_updated_sequence_number FROM ice.sales.up")
+        .await
+        .expect("v3 lineage columns resolve after the upgrade");
+    assert_eq!(lineage[0].num_rows(), 1);
+    for column in [1usize, 2] {
+        assert_eq!(
+            lineage[0].column(column).null_count(),
+            1,
+            "a pre-upgrade row carries no lineage until a later v3 commit assigns it"
+        );
+    }
 
+    let log_before = after.metadata().metadata_log().len();
     door.ok("ALTER TABLE ice.sales.up SET PROPERTIES (format_version = 3)")
         .await;
+    let repeated = door.table("sales", "up").await;
+    assert_eq!(repeated.metadata().format_version() as u8, 3);
     assert_eq!(
-        door.table("sales", "up").await.metadata().format_version() as u8,
-        3
+        repeated.metadata().metadata_log().len(),
+        log_before,
+        "a same-version request writes no metadata file, as Spark writes none"
+    );
+}
+
+#[tokio::test]
+async fn alter_set_properties_extra_properties_map_spelling_steers_to_the_curated_key() {
+    let door = door_with_session_v3_opt_in().await;
+    door.ok("CREATE TABLE ice.sales.xp AS SELECT 1 AS id").await;
+    let err = door
+        .err(
+            "ALTER TABLE ice.sales.xp SET PROPERTIES (extra_properties = \
+             MAP(ARRAY['format-version'], ARRAY['3']))",
+        )
+        .await;
+    assert!(
+        err.contains("format-version") && err.contains("reserved"),
+        "the raw hatch keeps steering to the curated key: {err}"
+    );
+    assert_eq!(
+        door.table("sales", "xp").await.metadata().format_version() as u8,
+        2
     );
 }
 
