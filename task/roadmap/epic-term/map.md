@@ -13,6 +13,7 @@ is now the epic list from v0.6 through 3.0 — PROJECT.md points here rather tha
   F-17 shared-Puffin closure — landed #237; RP-3 consumed at fork `d408da42` 2026-08-30, then V3-3+; OD-3b's IAM applied 2026-08-28, measured **allow** by MW-10 on format v2, 2026-08-30). Matrix cells carry dated updates as rows move;
   the 2026-08-24 owner rulings (Lane A charter, the encryption-keys DECLARED exclusion) are
   recorded in the matrix and sequenced on [../../../briefs/next-sequence.md](../../../briefs/next-sequence.md).
+  Truth-up 2026-09-02: nightly row ✅ after #300 (first green nightly 2026-09-02).
 - [release-roadmap-2026-08-29.md](release-roadmap-2026-08-29.md) — **the release roadmap
   (owner-set 2026-08-29):** every tag from v0.6 to 3.0 with the owner's rulings folded in.
   Pre-1.0 closes the floating gaps (Track-B DML remainder with the verified F-5 correction,

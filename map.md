@@ -97,9 +97,9 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   backlog itself lives in [STATUS.md](STATUS.md). `briefs/` — slate briefs for campaigns that are
   still running (currently the V2 Engine Hardening slate; a closed campaign's slate is archived
   with it, and between campaigns the directory holds only its `map.md`).
-  `.github/` — tier-1 CI + Dependabot. `PROJECT.md` — north-star charter. `STATUS.md` — the
+  `.github/` — tier-1 CI + Dependabot.   `PROJECT.md` — north-star charter. `STATUS.md` — the
   single source of truth for current state (release state, delivery, active workstreams, deferred
-  work). `AGENTS.md` — **the single authoritative contributor contract** (holds the precedence
+  work). Truth-up 2026-09-02: v0.6.0 shipped; RP-5 ledger pointer refiled to archive/2026-09/. `AGENTS.md` — **the single authoritative contributor contract** (holds the precedence
   chain, invariants, safety boundaries, the markdown document lifecycle — which class every
   doc belongs to and what retires it — and the version-pin duties: metadata-projection shim,
   Catalog wrap, IcebergSchemaProvider name-directory freeze; written for any human or agent,

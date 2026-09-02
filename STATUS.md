@@ -11,7 +11,7 @@ _Last updated: 2026-09-01._
 
 ## Release state
 
-Pre-alpha, **cutting v0.6.0 (2026-08-31)** — the eighth tag on proven machinery (v0.5.0:
+Pre-alpha, **v0.6.0 shipped (2026-08-31)** — the eighth tag on proven machinery (v0.5.0:
 2026-08-20; v0.4.0: 2026-08-19; v0.3.0–v0.3.2: 2026-08-16; v0.1.0 / v0.2.0: 2026-08-15):
 tag-triggered `release.yml`, PyPI trusted publishing, `cp312-abi3` manylinux wheel, wheel-only
 (crates.io publishing structurally deferred, see docs/release.md), version SSOT at the Cargo
@@ -219,7 +219,7 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
   [the registry](docs/spark-sql-iceberg-parity.md).
   **REF (2026-09-01, RP-5):** writes to `t.branch_<name>` land (`REF-1` FIXED). WAP publish
   procedures and `spark.wap.*` stay BACKLOG (`REF-3`). Reads were already Spark-equal (`REF-4`).
-  Ledger: [task/ledgers/completed/rp-5-fork-repin-ledger.md](task/ledgers/completed/rp-5-fork-repin-ledger.md).
+  Ledger: [task/ledgers/completed/rp-5-fork-repin-ledger.md](task/ledgers/archive/2026-09/2026-09-01-rp-5-fork-repin-ledger.md).
 <!-- /ws -->
 
 Parked lanes: **none** (the `repark.sql` re-home lane closed 2026-08-14, #95 —
