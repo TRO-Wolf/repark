@@ -1,5 +1,6 @@
 """V3 facade `.sql()` v3 DML pins: UPDATE, sequential COW DELETE, and MERGE keep `_row_id`.
 
+pins: v3-8-subquery-where-lineage/C-002
 pins: v3-7-merge-lineage/C-002
 pins: rp-6-fork-repin/C-002, C-003
 pins: rp-2-fork-repin/C-003, C-005
@@ -57,6 +58,17 @@ def _current_lineage(metadata_file: str) -> tuple[int, int, int]:
         int(metadata["next-row-id"]),
         int(snapshot["first-row-id"]),
         int(snapshot["added-rows"]),
+    )
+
+
+def _lineage_triples(table: pa.Table) -> list[tuple[int, int, int]]:
+    return list(
+        zip(
+            table.column("id").to_pylist(),
+            table.column("_row_id").to_pylist(),
+            table.column("_last_updated_sequence_number").to_pylist(),
+            strict=True,
+        )
     )
 
 
@@ -353,16 +365,15 @@ def test_facade_v3_mor_first_delete_commits_a_deletion_vector_and_a_second_merge
         spark.stop()
 
 
-def test_facade_adopted_v3_cow_subquery_where_dml_still_refuses(tmp_path: Path) -> None:
-    """Subquery-WHERE UPDATE/DELETE stay V3-COW-1; rows unchanged.
+def test_facade_adopted_v3_cow_subquery_where_dml_keeps_row_lineage(tmp_path: Path) -> None:
+    """Subquery-WHERE UPDATE and DELETE keep stored `_row_id` on an adopted v3 COW table.
 
-    pins: v3-7-merge-lineage/C-002
+    pins: v3-8-subquery-where-lineage/C-002
     """
     from repark import ReparkSession
-    from repark.errors import UnsupportedOperationException
 
     spark = (
-        ReparkSession.builder.appName("v3-7-subquery-where")
+        ReparkSession.builder.appName("v3-8-subquery-where")
         .config(_ALLOW_CREATE_V3_KEY, "true")
         .getOrCreate()
     )
@@ -370,30 +381,75 @@ def test_facade_adopted_v3_cow_subquery_where_dml_still_refuses(tmp_path: Path) 
         spark.register_memory_catalog("ice", tmp_path)
         sales = tmp_path / "sales"
         spark.sql(f"CREATE NAMESPACE ice.sales LOCATION '{sales}'")
+        spark.sql("CREATE TABLE ice.sales.srcids (id INT) USING iceberg")
+        spark.sql("INSERT INTO ice.sales.srcids VALUES (2)")
+        for seed, adopted in (("seed_su", "adopt_su"), ("seed_sd", "adopt_sd")):
+            spark.sql(
+                f"CREATE TABLE ice.sales.{seed} (id INT, name STRING) USING iceberg "
+                f"TBLPROPERTIES ({_COW_V3})"
+            )
+            spark.sql(f"INSERT INTO ice.sales.{seed} VALUES (1, 'a'), (2, 'b'), (3, 'c')")
+            metadata_file = _latest_version_uuid_metadata(sales, seed)
+            spark.sql(
+                "CALL ice.system.register_table("
+                f"table => 'sales.{adopted}', metadata_file => '{metadata_file}')"
+            )
         spark.sql(
-            "CREATE TABLE ice.sales.seed_sub (id INT, name STRING) USING iceberg "
+            "UPDATE ice.sales.adopt_su SET name = 'm' WHERE id IN (SELECT id FROM ice.sales.srcids)"
+        ).collect()
+        updated = spark.sql(
+            "SELECT id, name, _row_id, _last_updated_sequence_number "
+            "FROM ice.sales.adopt_su ORDER BY id"
+        ).to_arrow()
+        assert _id_name_rows(updated) == [(1, "a"), (2, "m"), (3, "c")]
+        assert _lineage_triples(updated) == [(1, 0, 1), (2, 1, 2), (3, 2, 1)]
+        assert _current_lineage(_latest_version_uuid_metadata(sales, "seed_su")) == (6, 3, 3)
+        spark.sql(
+            "DELETE FROM ice.sales.adopt_sd WHERE id IN (SELECT id FROM ice.sales.srcids)"
+        ).collect()
+        deleted = spark.sql(
+            "SELECT id, name, _row_id, _last_updated_sequence_number "
+            "FROM ice.sales.adopt_sd ORDER BY id"
+        ).to_arrow()
+        assert _id_name_rows(deleted) == [(1, "a"), (3, "c")]
+        assert _lineage_triples(deleted) == [(1, 0, 1), (3, 2, 1)]
+        assert _current_lineage(_latest_version_uuid_metadata(sales, "seed_sd")) == (5, 3, 2)
+    finally:
+        spark.stop()
+
+
+def test_facade_v3_subquery_update_outside_the_hole_still_refuses(tmp_path: Path) -> None:
+    """`UPDATE ... WHERE NOT IN` is refused by the pre-existing subquery-shape guard.
+
+    pins: v3-8-subquery-where-lineage/C-002
+    """
+    from repark import ReparkSession
+    from repark.errors import AnalysisException
+
+    spark = (
+        ReparkSession.builder.appName("v3-8-subquery-outside")
+        .config(_ALLOW_CREATE_V3_KEY, "true")
+        .getOrCreate()
+    )
+    try:
+        spark.register_memory_catalog("ice", tmp_path)
+        sales = tmp_path / "sales"
+        spark.sql(f"CREATE NAMESPACE ice.sales LOCATION '{sales}'")
+        spark.sql("CREATE TABLE ice.sales.srcids (id INT) USING iceberg")
+        spark.sql("INSERT INTO ice.sales.srcids VALUES (2)")
+        spark.sql(
+            "CREATE TABLE ice.sales.outside (id INT, name STRING) USING iceberg "
             f"TBLPROPERTIES ({_COW_V3})"
         )
-        spark.sql("INSERT INTO ice.sales.seed_sub VALUES (1, 'a'), (2, 'b'), (3, 'c')")
-        metadata_file = _latest_version_uuid_metadata(sales, "seed_sub")
-        spark.sql(
-            "CALL ice.system.register_table("
-            f"table => 'sales.adopt_sub', metadata_file => '{metadata_file}')"
-        )
-        seed_rows = [(1, "a"), (2, "b"), (3, "c")]
-        with pytest.raises(UnsupportedOperationException, match="V3-COW-1"):
+        spark.sql("INSERT INTO ice.sales.outside VALUES (1, 'a'), (2, 'b'), (3, 'c')")
+        with pytest.raises(AnalysisException) as raised:
             spark.sql(
-                "UPDATE ice.sales.adopt_sub SET name = 'x' WHERE id IN "
-                "(SELECT id FROM ice.sales.adopt_sub WHERE id = 2)"
+                "UPDATE ice.sales.outside SET name = 'm' "
+                "WHERE id NOT IN (SELECT id FROM ice.sales.srcids)"
             ).collect()
-        after_update = spark.sql("SELECT id, name FROM ice.sales.adopt_sub").to_arrow()
-        assert _id_name_rows(after_update) == seed_rows
-        with pytest.raises(UnsupportedOperationException, match="V3-COW-1"):
-            spark.sql(
-                "DELETE FROM ice.sales.adopt_sub WHERE id IN "
-                "(SELECT id FROM ice.sales.adopt_sub WHERE id = 2)"
-            ).collect()
-        after_delete = spark.sql("SELECT id, name FROM ice.sales.adopt_sub").to_arrow()
-        assert _id_name_rows(after_delete) == seed_rows
+        assert "G3-E8" in str(raised.value)
+        assert "V3-COW-1" not in str(raised.value)
+        after = spark.sql("SELECT id, name FROM ice.sales.outside").to_arrow()
+        assert _id_name_rows(after) == [(1, "a"), (2, "b"), (3, "c")]
     finally:
         spark.stop()

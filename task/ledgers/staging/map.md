@@ -25,6 +25,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   for existing. `risk_tier: standard`. Branch
   `feat/ex-2-functions-math-bitwise`. Slate:
   [../briefs/example-backfill.md](../../../briefs/example-backfill.md).
+- [v3-8-subquery-where-lineage-ledger.md](v3-8-subquery-where-lineage-ledger.md) —
+  **V3-8 (2026-09-02), in flight:** subquery-`WHERE` COW DML keeps v3 row lineage;
+  `V3-COW-1` FIXED and `row_lineage_guard.rs` deleted. `risk_tier: standard`.
+  Branch `feat/v3-8-subquery-where-lineage`.
 - [v3-5-dv-compaction-ledger.md](v3-5-dv-compaction-ledger.md) — **V3-5 (2026-08-31),
   in flight:** DV-aware v3 compaction (`V3-DANGLE-1`, B-MOR-3 residue, true
   result counts). Measure `rewrite_data_files` on live Puffin DVs at fork

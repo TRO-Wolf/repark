@@ -3,6 +3,7 @@
 pins: v3r-1-rulings/C-007, C-009, C-010, C-011, C-013
 pins: v3-3-dml/C-003
 pins: v3-7-merge-lineage/C-003
+pins: v3-8-subquery-where-lineage/C-003
 """
 
 from __future__ import annotations
@@ -33,26 +34,28 @@ def _matrix_row(text: str, label: str) -> str:
     raise AssertionError(f"north-star §3 has no row starting with `| {label}`")
 
 
-def test_v3_cow_1_is_a_refusal_row_dated_by_the_ruling() -> None:
-    """C-007: the row keeps the ruling's remaining refusals, BACKLOG, dated and pinned.
+def test_v3_cow_1_is_fixed_and_discharges_the_ruling() -> None:
+    """C-007: V3-8 closes the row; the ruling is discharged and every earlier pin is kept.
 
-    V3-7 lifted MERGE. Subquery-WHERE DML stays BACKLOG.
+    RP-6 lifted plain-WHERE, V3-7 MERGE, V3-8 subquery-WHERE.
     """
     registry = _registry()
     heading = (
-        "### V3-COW-1 — v3 row-DML: DELETE, UPDATE, and MERGE Spark-equal; "
-        "subquery-WHERE DML still refuses"
+        "### V3-COW-1 — FIXED (V3-8, 2026-09-02): v3 row-DML keeps row lineage "
+        "on every served shape"
     )
     assert heading in registry
-    row = registry[registry.index(heading) : registry.index("### Surfaced, awaiting pins")]
-    assert f"owner ruling {_RULING_DATE}" in row
-    assert "BACKLOG" in row
+    row = registry[registry.index(heading) : registry.index("### BL-9")]
+    assert f"owner ruling {_RULING_DATE}" in row and "discharged" in row
+    assert "stays BACKLOG" not in row and "BACKLOG for that shape" not in row
+    assert "FIXED (V3-8, 2026-09-02)" in row
     assert "adopted_v3_cow_delete_carries_survivor_row_lineage" in row
     assert "adopted_v3_cow_second_delete_keeps_survivor_row_id" in row
     assert "adopted_v3_cow_update_keeps_row_id_and_bumps_matched_seq" in row
     assert "adopted_v3_cow_merge_matched_update_keeps_row_id" in row
-    assert "subquery" in row
-    assert "F-rp3-c7" in row
+    assert "v3_subquery_dml.rs" in row
+    assert "F-rp3-c7" in row and "F-v3-8-update-files" in row
+    assert "row_lineage_guard.rs" in row, "the deleted refusal seat is named"
     assert "ride V3-3" not in row
 
 
@@ -77,12 +80,15 @@ def test_north_star_matrix_carries_the_three_engine_rulings() -> None:
     """C-007 / C-009 / C-010: the gate's own rows say what was ruled, and when."""
     north_star = _north_star()
     cow = _matrix_row(north_star, "Write: COW DML on an adopted v3 table")
-    assert "V3-COW-1" in cow and _RULING_DATE in cow and cow.count("🚫") == 1
-    assert "V3-7" in cow and "F-rp3-c7" in cow
+    assert "V3-COW-1" in cow and _RULING_DATE in cow and cow.count("🚫") == 0
+    assert "FIXED" in cow and "V3-8" in cow
+    assert "V3-7" in cow and "F-rp3-c7" in cow and "F-v3-8-update-files" in cow
     mor = _matrix_row(north_star, "Write: MOR DML via deletion vectors")
     assert "V3-7" in mor and "subquery" in mor
+    assert "V3-8" in mor and mor.count("🚫") == 1
     status = _read("STATUS.md")
     assert "V3-7 (2026-09-02" in status
+    assert "V3-8 (2026-09-02" in status
     assert "F-rp3-c7 consumed" in status
     types = _matrix_row(north_star, "Read/write: v3 types + default values")
     assert "V3-GEO-1" in types and "V3-VARIANT-SHRED-1" in types and _RULING_DATE in types

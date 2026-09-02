@@ -5,7 +5,7 @@
 //! pins: rp-2-fork-repin/C-001, C-004, C-007, C-008
 //! pins: rp-3-fork-repin/C-004
 //! pins: v3-3-dml/C-001, C-002
-//! Pins format-v3 UPDATE/DELETE/MERGE Spark-equal lineage; subquery-WHERE DML still refuses V3-COW-1.
+//! Pins format-v3 UPDATE/DELETE/MERGE Spark-equal lineage; subquery-WHERE lift lives in `v3_subquery_dml.rs`.
 
 use super::super::*;
 use super::common::*;
@@ -829,35 +829,34 @@ async fn adopted_v3_padded_merge_on_read_update_keeps_row_id() {
 }
 
 #[tokio::test]
-async fn adopted_v3_cow_subquery_where_dml_still_refuses() {
-    let _: &str = "pins: v3-7-merge-lineage/C-002";
+async fn adopted_v3_subquery_update_outside_the_hole_still_refuses() {
+    let _: &str = "pins: v3-8-subquery-where-lineage/C-002";
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
     adopt_cow_v3(&ctx, &catalogs, "seed_sub", "adopt_sub").await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.subkeys (id INT) USING iceberg",
+    )
+    .await;
+    run(&ctx, &catalogs, "INSERT INTO ice.sales.subkeys VALUES (2)").await;
     let err = execute(
         &ctx,
         &catalogs,
-        "UPDATE ice.sales.adopt_sub SET name = 'x' WHERE id IN \
-         (SELECT id FROM ice.sales.adopt_sub WHERE id = 2)",
+        "UPDATE ice.sales.adopt_sub SET name = 'x' WHERE id NOT IN \
+         (SELECT id FROM ice.sales.subkeys)",
     )
     .await
-    .expect_err("subquery UPDATE uses the MERGE writer")
+    .expect_err("UPDATE NOT IN is outside the allow-listed subquery hole")
     .to_string();
     assert!(
-        err.contains("V3-COW-1") && err.contains("reassigns"),
-        "subquery UPDATE keep-refusal, got: {err}"
+        err.contains("G3-E8") && !err.contains("V3-COW-1"),
+        "the residual refusal is the pre-existing subquery-shape guard, not lineage: {err}"
     );
-    let err = execute(
-        &ctx,
-        &catalogs,
-        "DELETE FROM ice.sales.adopt_sub WHERE id IN \
-         (SELECT id FROM ice.sales.adopt_sub WHERE id = 2)",
-    )
-    .await
-    .expect_err("subquery DELETE uses the MERGE writer")
-    .to_string();
-    assert!(
-        err.contains("V3-COW-1") && err.contains("reassigns"),
-        "subquery DELETE keep-refusal, got: {err}"
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.adopt_sub").await,
+        vec![(1, "a".into()), (2, "b".into()), (3, "c".into())],
+        "the refused UPDATE leaves the table unmoved"
     );
 }

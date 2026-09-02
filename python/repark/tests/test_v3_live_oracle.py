@@ -2,6 +2,7 @@
 
 pins: v3e-5-nightly-v3-oracle/C-002, C-003, C-004, C-005, C-007, C-008, C-011
 pins: v3-7-merge-lineage/C-002
+pins: v3-8-subquery-where-lineage/C-001, C-002, C-003
 """
 
 from __future__ import annotations
@@ -23,7 +24,8 @@ _PART_DV_DEST = Path("/tmp/repark-v3e3-partdv/ns/v3part")
 _EQ_DV_DEST = Path("/tmp/repark-v3e3-eqdel/ns/v3eq")
 _LIVE = os.environ.get("REPARK_PARITY_LIVE") == "1"
 _LIVE_SKIP = "REPARK_PARITY_LIVE != 1 — live v3 oracle skipped (routine CI is JVM-free)"
-_V37_LEDGER = _REPO_ROOT / "task/ledgers/completed/v3-7-merge-lineage-ledger.md"
+_V37_LEDGER_NAME = "v3-7-merge-lineage-ledger.md"
+_V38_LEDGER_NAME = "v3-8-subquery-where-lineage-ledger.md"
 _ALLOW_CREATE_V3_KEY = "repark.sql.allowCreateFormatVersion3"
 _COW_V3 = (
     "'format-version' = '3', "
@@ -81,6 +83,21 @@ def _materialize(src: Path, dest: Path) -> Iterator[str]:
         yield str(versions[-1])
     finally:
         lock.close()
+
+
+def _ledger_path(name: str) -> Path:
+    """The one bin (staging, completed, or archive) holding a unit ledger.
+
+    pins: v3-8-subquery-where-lineage/C-003
+    """
+    candidates = [
+        _REPO_ROOT / "task/ledgers/staging" / name,
+        _REPO_ROOT / "task/ledgers/completed" / name,
+        *sorted((_REPO_ROOT / "task/ledgers/archive").glob(f"*/*-{name}")),
+    ]
+    found = [path for path in candidates if path.is_file()]
+    assert len(found) == 1, found
+    return found[0]
 
 
 def _objects_under(root: Path) -> list[str]:
@@ -443,8 +460,7 @@ def test_v3_merge_matched_update_live_cow_and_mor(tmp_path: Path) -> None:
     """
     from repark import ReparkSession
 
-    ledger = _V37_LEDGER.read_text(encoding="utf-8")
-    assert _V37_LEDGER.is_file()
+    ledger = _ledger_path(_V37_LEDGER_NAME).read_text(encoding="utf-8")
     assert "/tmp/v3-7-oracle" not in ledger
     assert "| COW matched-UPDATE |" in ledger
     assert "| MoR matched-UPDATE |" in ledger
@@ -552,6 +568,145 @@ def _assert_merge_matched_update_live_against_spark() -> None:
         shutil.rmtree(warehouse, ignore_errors=True)
         shutil.rmtree(ivy_home, ignore_errors=True)
     assert ICEBERG_SPARK_RUNTIME_GAV == "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0"
+
+
+_SUBQUERY_DELETE_LINEAGE = [(1, 0, 1), (3, 2, 1)]
+_SUBQUERY_UPDATE_LINEAGE = [(1, 0, 1), (2, 1, 2), (3, 2, 1)]
+
+
+def _subquery_delete_sql(target: str, source: str) -> str:
+    """Allow-listed subquery-WHERE DELETE at the V3-8 seed.
+
+    pins: v3-8-subquery-where-lineage/C-002
+    """
+    return f"DELETE FROM {target} WHERE id IN (SELECT id FROM {source})"
+
+
+def _subquery_update_sql(target: str, source: str) -> str:
+    """Allow-listed subquery-WHERE UPDATE at the V3-8 seed.
+
+    pins: v3-8-subquery-where-lineage/C-002
+    """
+    return f"UPDATE {target} SET name = 'm' WHERE id IN (SELECT id FROM {source})"
+
+
+def test_v3_subquery_where_dml_live_cow(tmp_path: Path) -> None:
+    """COW subquery-WHERE DELETE and UPDATE lineage matches the in-repo V3-8 transcript.
+
+    pins: v3-8-subquery-where-lineage/C-001, C-002, C-003
+    """
+    from repark import ReparkSession
+
+    ledger = _ledger_path(_V38_LEDGER_NAME).read_text(encoding="utf-8")
+    assert "/tmp/v3-8-oracle" not in ledger
+    assert "| COW DELETE … IN |" in ledger
+    assert "| COW UPDATE … IN |" in ledger
+    assert "(1,a,0,1),(3,c,2,1)" in ledger
+    assert "(1,a,0,1),(2,m,1,2),(3,c,2,1)" in ledger
+    session = (
+        ReparkSession.builder.appName("v3-8-subquery-live")
+        .config(_ALLOW_CREATE_V3_KEY, "true")
+        .getOrCreate()
+    )
+    try:
+        session.register_memory_catalog("ice", tmp_path)
+        session.sql("CREATE NAMESPACE ice.sales")
+        session.sql("CREATE TABLE ice.sales.srcids (id INT) USING iceberg")
+        session.sql("INSERT INTO ice.sales.srcids VALUES (2)")
+        for table, statement, expected in (
+            ("cow_sd", _subquery_delete_sql, _SUBQUERY_DELETE_LINEAGE),
+            ("cow_su", _subquery_update_sql, _SUBQUERY_UPDATE_LINEAGE),
+        ):
+            session.sql(
+                f"CREATE TABLE ice.sales.{table} (id INT, name STRING) USING iceberg "
+                f"TBLPROPERTIES ({_COW_V3})"
+            )
+            session.sql(f"INSERT INTO ice.sales.{table} VALUES (1, 'a'), (2, 'b'), (3, 'c')")
+            session.sql(statement(f"ice.sales.{table}", "ice.sales.srcids")).collect()
+            lineage = session.sql(
+                "SELECT id, _row_id, _last_updated_sequence_number "
+                f"FROM ice.sales.{table} ORDER BY id"
+            ).to_arrow()
+            assert _id_row_id_seq(lineage) == expected, table
+        if not _LIVE:
+            pytest.skip(_LIVE_SKIP)
+        _assert_subquery_where_dml_live_against_spark()
+    finally:
+        session.stop()
+
+
+def _assert_subquery_where_dml_live_against_spark() -> None:
+    """Live Spark COW subquery-WHERE DELETE and UPDATE at the V3-8 single-file seed.
+
+    pins: v3-8-subquery-where-lineage/C-002
+    """
+    import tempfile
+
+    from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
+    from pyspark.sql import SparkSession
+    from pyspark.sql import types as spark_types
+
+    catalog = "local"
+    warehouse = Path(tempfile.mkdtemp(prefix="repark-v3-8-live-sub-"))
+    ivy_home = Path(tempfile.mkdtemp(prefix="repark-v3-8-ivy-"))
+    schema = spark_types.StructType(
+        [
+            spark_types.StructField("id", spark_types.IntegerType(), False),
+            spark_types.StructField("name", spark_types.StringType(), False),
+        ]
+    )
+    builder = (
+        SparkSession.builder.master("local[1]")
+        .appName("v3-8-subquery-live")
+        .config("spark.sql.ansi.enabled", "true")
+        .config("spark.sql.shuffle.partitions", "1")
+        .config("spark.default.parallelism", "1")
+        .config("spark.ui.enabled", "false")
+        .config("spark.jars.ivy", str(ivy_home))
+        .config(
+            "spark.sql.extensions",
+            "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
+        )
+        .config(f"spark.sql.catalog.{catalog}", "org.apache.iceberg.spark.SparkCatalog")
+        .config(f"spark.sql.catalog.{catalog}.type", "hadoop")
+        .config(f"spark.sql.catalog.{catalog}.warehouse", str(warehouse))
+    )
+    jar = _v37_iceberg_runtime_jar()
+    if jar is not None:
+        os.environ.pop("PYSPARK_SUBMIT_ARGS", None)
+        builder = builder.config("spark.jars", jar)
+    else:
+        builder = builder.config("spark.jars.packages", ICEBERG_SPARK_RUNTIME_GAV)
+    session = builder.getOrCreate()
+    session.sparkContext.setLogLevel("ERROR")
+    try:
+        session.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.sales")
+        source = f"{catalog}.sales.srcids"
+        session.sql(f"CREATE TABLE {source} (id INT) USING iceberg")
+        source_schema = spark_types.StructType(
+            [spark_types.StructField("id", spark_types.IntegerType(), False)]
+        )
+        session.createDataFrame([(2,)], source_schema).coalesce(1).writeTo(source).append()
+        for table, statement, expected in (
+            ("cow_sd", _subquery_delete_sql, _SUBQUERY_DELETE_LINEAGE),
+            ("cow_su", _subquery_update_sql, _SUBQUERY_UPDATE_LINEAGE),
+        ):
+            target = f"{catalog}.sales.{table}"
+            session.sql(
+                f"CREATE TABLE {target} (id INT, name STRING) USING iceberg "
+                f"TBLPROPERTIES ({_COW_V3})"
+            )
+            frame = session.createDataFrame([(1, "a"), (2, "b"), (3, "c")], schema)
+            frame.coalesce(1).writeTo(target).append()
+            session.sql(statement(target, source))
+            spark_rows = session.sql(
+                f"SELECT id, _row_id, _last_updated_sequence_number FROM {target} ORDER BY id"
+            ).toArrow()
+            assert _id_row_id_seq(spark_rows) == expected, table
+    finally:
+        session.stop()
+        shutil.rmtree(warehouse, ignore_errors=True)
+        shutil.rmtree(ivy_home, ignore_errors=True)
 
 
 def test_northstar_nightly_v3_leg_is_v3e_5() -> None:

@@ -1,5 +1,9 @@
 # map — scripts/
 
+V3-8 (2026-09-02): `check_rust_file_size.py` `write/predicate_dml.rs` 1226→1164 (the
+lineage projection helpers move to `write/predicate_dml/lineage.rs`).
+pins: v3-8-subquery-where-lineage/C-002
+
 V3-7 (2026-09-02): `check_rust_file_size.py` `write/merge/mod.rs` 1892→1889 and
 `write/merge/tests/merge.rs` 1091→1068 (lineage SQL extracted; test helper).
 pins: v3-7-merge-lineage/C-001
