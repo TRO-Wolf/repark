@@ -30,8 +30,11 @@ files; equality deletes; fork repin; `.github/`.
 | C-004 | The incidental controls hold: v2 MoR predicate DML still writes Parquet position deletes with no `referenced_data_file` (RDF-1's file-scoped bounds pins stay green); COW v3 unchanged; MoR MERGE pins green; a subquery DELETE matching nothing writes no delete file. Mutation-proof the lift (restore the gate) and the lineage carry. | Control pins; mutation N red of M. | **PROVEN** | Controls in `v3_mor_dml.rs`. Mutation numbers below. |
 | C-005 | Registry `docs/spark-sql-iceberg-parity.md` MoR predicate DML rows say FIXED with the measured clause; north star §3 "Write: MOR DML via deletion vectors" → ✅; `docs/design/format-v3-track.md` §5 one line; STATUS v3 bullet; the byte tripwire re-recorded citing this unit; a `REPARK_PARITY_LIVE` cell; maps in lockstep; this ledger `move`d to `completed/` last. | `make check-map-sync`, `check-ledger-grammar`, `check-ledgers`, `check-docs-compaction`. | **PROVEN** | Citation: `python/repark/tests/test_v3_live_oracle.py`, `crates/repark-spark/src/tests/v3_lineage.rs`. |
 | C-006 | The v3 create opt-in refusal stops claiming what V3-9 makes false: its parenthetical "v3 tables cannot yet do merge-on-read row-level writes" is removed on both refusal sites (`crates/repark-sql/src/create_table.rs`, `crates/repark-functions/src/cardinality.rs`), leaving only the conf name and the v2 default. No pin asserted the removed substring as a Spark-measured value, so no HALT. | Three-door pins asserting the message names the conf and no longer says `merge-on-read`. | **PROVEN** | Citations: `crates/repark-sql/src/v3/create.rs`, `crates/repark-spark/src/tests/create_table.rs`, `crates/repark-spark/src/tests/ctas.rs`, `python/repark/tests/test_v3_create_opt_in.py`. |
+| C-007 | Re-measure the shared-Puffin sibling cell on both engines and record both readings. Spark rewrites only the touched blob into a new container and leaves the untouched sibling's `DeleteFile` entry at its old container and offset (two containers after); the fork's `close_touched_dv_containers` rewrites every blob of a touched container into one new container. Rows, lineage, `referenced_data_file` and record counts agree. Narrow the pin to that shared invariant and rename it; file registry `V3-DV-1` BACKLOG with fork ask **F-18** and repin **RP-7**; the north-star MOR DML row returns to ⚠ naming the residual; STATUS carries one line. | Both readings as a table; the narrowed pin; registry, north-star, STATUS, fork-handoff rows. | **PROVEN** | Readings below. Citation: `crates/repark-spark/src/tests/v3e4.rs::subquery_delete_on_the_shared_puffin_v3_table_keeps_both_file_scoped_deletion_vectors`. |
+| C-008 | The live-oracle Spark leg runs COW and merge-on-read subquery-`WHERE` cells in **one** session: the V3-8 helper is parametrized over `((_COW_V3, _SUBQUERY_CELLS), (_MOR_V3, _MOR_SUBQUERY_CELLS))`, measures both, and each test asserts its own pinned values against that measurement. Pinned values unchanged; the duplicate MoR helper is deleted. | Both live tests green under `REPARK_PARITY_LIVE=1`; one Spark session in the run. | **PROVEN** | Measured in this clone, `REPARK_PARITY_LIVE=1` over the whole file, two runs each: **before** 24.07 / 24.05 s, **after** 23.39 / 22.74 s — one fewer Spark session, ≈ **−1.0 s** per nightly (the reviewer measured −1.45 s on their host). Citation: `python/repark/tests/test_v3_live_oracle.py`. |
+| C-009 | Four RePark-local allocation fixes on the predicate-DML write path, no behaviour change and every pin green: per-row `Arc<str>` for the matched file path reuses the previous `Arc`; the deletion-vector position map takes `get_mut` before allocating a key; the V2 `referenced` set allocates one `String` per distinct path; the row-delta commit moves `referenced` / `abort_paths` out of the prepared deletes instead of cloning them. | Before/after timings; an allocation-count pin; the full suites green. | **PROVEN** | Numbers below. Citation: `crates/repark-iceberg/src/write/predicate_dml/tests/update.rs::identity_pairs_share_one_arc_per_data_file_path`. |
 
-VERDICT: 6 clauses, 6 PROVEN, 0 OPEN, 0 REJECTED.
+VERDICT: 9 clauses, 9 PROVEN, 0 OPEN, 0 REJECTED.
 
 ```yaml
 COVERAGE_ATTESTATION:
@@ -39,7 +42,7 @@ COVERAGE_ATTESTATION:
   categories:
     - id: AT-1
       status: ATTACKED
-      evidence: Seven MoR shapes Spark-equal on rows, lineage triples, next-row-id, first-row-id, added rows, data-file count and the single file-scoped Puffin DV; UPDATE advances next-row-id by the appended count only.
+      evidence: Seven MoR shapes Spark-equal on rows, lineage triples, next-row-id, first-row-id, added rows, data-file count and the single file-scoped Puffin DV; UPDATE advances next-row-id by the appended count only; the one measured divergence (shared-Puffin container packing) is filed as V3-DV-1 rather than pinned as agreement.
       artifacts: [crates/repark-spark/src/tests/v3_mor_dml.rs, crates/repark-spark/src/tests/v3_subquery_dml.rs, crates/repark-sql/src/v3/cow.rs, python/repark/tests/test_v3_cow_dml.py]
     - id: AT-2
       status: ATTACKED
@@ -67,11 +70,11 @@ COVERAGE_ATTESTATION:
       justification: No dependency pin change.
     - id: AT-9
       status: ATTACKED
-      evidence: The registry's MoR predicate DML residual is FIXED and the north-star MOR DML row is ✅; the remaining v3 refusals named are not MoR; the v3 opt-in refusal no longer states a false MoR limitation.
+      evidence: The registry's MoR predicate DML residual is FIXED; the north-star MOR DML row is ⚠ naming its one dated residual V3-DV-1 (BACKLOG, fork F-18 / repin RP-7); the v3 opt-in refusal no longer states a false MoR limitation.
       artifacts: [docs/spark-sql-iceberg-parity.md, task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md, crates/repark-sql/src/create_table.rs]
     - id: AT-10
       status: ATTACKED
-      evidence: Five clauses pinned; maps lockstep; two mutations red then restored; the V3-COW-1 byte tripwire re-recorded.
+      evidence: Nine clauses pinned; maps lockstep; two mutations red then restored; the V3-COW-1 byte tripwire re-recorded; the allocation fixes carry a pointer-identity pin, not a timing assertion.
       artifacts: [crates/repark-spark/src/tests/v3_lineage.rs]
   complete: true
 ```
@@ -127,11 +130,63 @@ which calls `dv_close::prepare_row_delta_deletes` — V2 → `write_position_del
 (V3-8's `predicate_dml/lineage.rs`), so `_row_id` survives and `_last_updated_sequence_number`
 is written NULL and reads back as the new sequence number, exactly as Spark's does.
 
-**Shared-Puffin closure.** Closing a touched container rewrites **every** blob it holds into a
-new container, so the untouched sibling's DV changes path but keeps its positions and its
-`referenced_data_file`. Pinned by
-`subquery_delete_on_the_shared_puffin_v3_table_keeps_the_untouched_sibling` (both referenced
-data files keep a live DV, the two blobs stay in one container, the container path moves).
+## Shared-Puffin container packing (C-007) — registry `V3-DV-1`
+
+Both engines start from the same state: a partitioned v3 merge-on-read table, 2 data files,
+2 deletion vectors packed in **one** Puffin container. The statement deletes a row from the
+`part = 0` file only. Live oracle: PySpark 4.1.2 + Iceberg 1.11.0, `local[1]`, `coalesce(1)`.
+
+| Reading | Containers after | Touched file's DV | Untouched sibling's DV | Rows | Record counts |
+|---|---|---|---|---|---|
+| Apache Spark | **2** | new container, offset 4 | **old** container, **old** offset, entry untouched | `(3,c,0),(4,d,1),(6,f,1)` | 2 and 1 |
+| repark (fork `fb0cacfa`) | **1** | new container, offset 4 | **same new** container, offset 48 | `(3,c,0),(4,d,1),(6,f,1)` | 2 and 1 |
+
+Spark's snapshot summary for that statement: `removed-delete-files 1`, `removed-dvs 1`,
+`removed-position-deletes 1`, `added-delete-files 1`, `added-dvs 1`, `added-position-deletes 2`.
+Both engines keep every data file served by a live **file-scoped** DV whose
+`referenced_data_file` is correct, and both read the same rows.
+
+**Cost.** Timings are the Rust reviewer's measurement on this clone; the mechanism behind them
+is verified here by reading `delete_vector_container.rs` at fork `fb0cacfa` —
+`close_touched_dv_containers_at` computes `let affected = blobs.iter().any(…)` and then rewrites
+`for blob in &blobs`, i.e. every blob of an affected container; `collect_live_data_files` is
+called unconditionally before the loop while its result is read only in the `remaining` branch,
+which is empty whenever every touched path was already covered; and `collect_live_dvs` and
+`collect_live_data_files` each call `load_manifest_list` and walk manifests in a serial
+`for`-await.
+
+A 64-file subquery DELETE packs one 18,996 B Puffin holding 64 blobs; each later
+single-row DELETE re-reads and rewrites 18,998–19,006 B (~1,010 ms) where a fresh blob is
+373 B — 64× write amplification, 16× at 16 files. `collect_live_data_files` runs unconditionally
+although its result is read only when `remaining` is non-empty: six single-row v3 `DELETE` statements on one
+DV'd file cost 208 / 991 / 2,790 ms at 8 / 64 / 192 live data files, against 135 / ~900 /
+1,485 ms on a v2 twin. The manifest list is loaded twice per statement and manifests are read in
+a serial `for`-await.
+
+**Disposition.** The packing lives in the fork
+(`crates/iceberg/src/delete_vector_container.rs::close_touched_dv_containers_at`), not in
+RePark, so this unit does not fix it: registry `V3-DV-1` is **BACKLOG, intent to FIX**, owned by
+fork ask **F-18** and consumed by repin **RP-7**. The pin
+`subquery_delete_on_the_shared_puffin_v3_table_keeps_both_file_scoped_deletion_vectors` asserts
+only the invariant both engines share — each data file keeps one live file-scoped DV with its
+`referenced_data_file`, record counts 2 and 1, a real blob offset, and the touched file's DV in
+a newly written container — and deliberately does **not** pin the container count, which is the
+divergence RP-7 will re-aim it at.
+
+## Allocation fixes (C-009)
+
+Measured with `rustc -O` on the exact code shapes, 600,000 matched rows on one data-file path
+(warm run of two).
+
+| Fix | Site | Before | After |
+|---|---|---|---|
+| Reuse the previous `Arc<str>` for an unchanged path | `predicate_dml/lineage.rs::push_identity_pair` (called from `predicate_dml.rs` ~429, ~485) | 31.0 ms, 600,000 allocations, 66,000,000 B retained | 11.5 ms, **1** allocation, 110 B retained |
+| `get_mut` before allocating a map key | `merge/dv_close.rs::plan_deletion_vectors` | 41.3 ms | 29.3 ms (20.1 ns/row, one `String` per row saved) |
+| One `String` per distinct path in the V2 `referenced` set | `merge/dv_close.rs::prepare_row_delta_deletes` | 37.3 ms, 600,000 allocations | 23.9 ms, 1 allocation |
+| Move `referenced` / `abort_paths` instead of cloning | `merge/snapshot_commit.rs` ~263 | one `HashSet<String>` + one `Vec<String>` deep clone per row-delta commit | none |
+
+Behaviour is unchanged: `cargo test -p repark-iceberg --lib` 372 passed,
+`-p repark-spark --lib` 746 passed, `-p repark-sql --lib` 332 passed.
 
 **Mutation.** Gate restored to `!= FormatVersion::V2`: **17 red** — 12 of the 14
 `v3_mor_dml.rs` cells, the `v3e4.rs` shared-Puffin cell, the repurposed `v3_subquery_dml.rs`
@@ -159,10 +214,11 @@ unit run as `.venv/bin/python -m pytest …` after `make develop`. The live cell
 `record` extra, then `make develop`, then `REPARK_PARITY_LIVE=1
 JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1` — **9 passed**.
 
-**Gates.** `make verify` 0, `make py-test` 0 (497 passed), `make preflight` 0,
+**Gates** (remediation round, 2026-09-02). `make verify` 0, `make py-test` 0 (497 passed),
+`make preflight` 0,
 `make check-map-sync check-ledger-grammar check-ledgers check-docs-compaction` 0,
-`ledger_lifecycle.py check --base ca9c007` 0, `cargo test -p repark-spark --lib` 745 passed,
-`-p repark-sql --lib` 332 passed, `-p repark-iceberg --lib` 371 passed, live cells 9 passed.
+`ledger_lifecycle.py check --base ca9c007` 0, `cargo test -p repark-spark --lib` 746 passed,
+`-p repark-sql --lib` 332 passed, `-p repark-iceberg --lib` 372 passed, live cells 9 passed.
 
 **Meta-pins re-aimed.** `test_v3r_1_rulings.py` asserted the MOR DML matrix row still carried
 one 🚫 and `test_plan_1_northstar_fnp_sequence.py` asserted STATUS still queued V3-9; both
@@ -176,7 +232,7 @@ PROPORTIONALITY_RUBRIC:
   criteria:
     blast_radius: FAIL (predicate DML write path on every v3 MoR table)
     reversibility: PASS (one revert commit; no migration)
-    size: PASS (one comparison plus pins, registry and maps)
+    size: FAIL (one comparison plus pins, registry, maps, four allocation fixes and a fork ask)
     novelty: PASS (reuses V3-7's DV close path; no new dependency)
     sensitivity: FAIL (write/commit path)
     clarity: PASS (charter frozen 2026-09-02; five clauses)
