@@ -20,7 +20,9 @@ from __future__ import annotations
 import os
 import shutil
 import sys
+import time
 import types
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -30,6 +32,7 @@ import pytest
 pytest.importorskip("polars")
 
 from repark import ReparkSession
+from repark.errors import UnsupportedOperationException
 
 # pins: mw-7-scale-measurement/C-001, C-002, C-003, C-004, C-005
 # pins: mw-7-scale-measurement/C-006, C-007, C-008, C-009, C-010, C-011
@@ -73,6 +76,11 @@ C011_BAND_HIGH = 1.8
 DELETE_FILE_PATH_FIELD_ID = 2147483546
 
 V3_ALLOW_CREATE_KEY = "repark.sql.allowCreateFormatVersion3"
+V3_SMOKE_REPS = 1
+V3_DV_MERGES = 2
+STARTED_AT_ROWS = 2_000
+STARTED_AT_MERGES = 3
+STARTED_AT_MIN_WALL_SECONDS = 2.5
 V3_DELETE_FILE_FORMAT = "PUFFIN"
 V3_SEEDED_DATA_FILES = SMOKE_PARTITIONS
 V3_ORACLE_ROWS = 4_000
@@ -134,7 +142,7 @@ def v3_smoke_run(tmp_path_factory: pytest.TempPathFactory) -> Any:
         partitions=SMOKE_PARTITIONS,
         touch_fraction=SMOKE_TOUCH_FRACTION,
         checkpoint_every=SMOKE_CHECKPOINT_EVERY,
-        reps=SMOKE_REPS,
+        reps=V3_SMOKE_REPS,
         target_file_size_bytes=SMOKE_TARGET_FILE_SIZE,
         modes=["mor", "cow"],
         host_note="pytest smoke v3",
@@ -150,7 +158,8 @@ def _v3_session(name: str) -> ReparkSession:
 def _delete_files(spark: ReparkSession, table: str) -> list[tuple[int, str, int, str]]:
     """Live delete files as `(content, file_format, record_count, referenced_data_file)`."""
     arrow = spark.sql(
-        f"SELECT content, file_format, record_count, referenced_data_file FROM {table}.files"
+        f"SELECT content, file_format, record_count, referenced_data_file FROM {table}.files "
+        f"WHERE content = 1"
     ).to_arrow()
     return [
         (
@@ -160,7 +169,6 @@ def _delete_files(spark: ReparkSession, table: str) -> list[tuple[int, str, int,
             str(row["referenced_data_file"]),
         )
         for row in arrow.to_pylist()
-        if row["content"] == 1
     ]
 
 
@@ -527,16 +535,11 @@ def test_delete_laden_in_band_file_is_rewritten_and_its_delete_file_dies(tmp_pat
         spark.stop()
 
 
-def test_the_format_version_knob_defaults_to_two(smoke_run: Any, v3_smoke_run: Any) -> None:
-    """C-001: the driver defaults to format 2 and records the version each leg was built at."""
+def test_the_cli_defaults_to_format_version_two() -> None:
+    """C-001: `--format-version` defaults to 2, takes 3, and refuses anything else."""
     import importlib
 
     assert measure.DEFAULT_FORMAT_VERSION == 2
-    assert [leg.format_version for leg in smoke_run.legs] == [2, 2]
-    assert smoke_run.format_version == 2
-    assert [leg.format_version for leg in v3_smoke_run.legs] == [3, 3]
-    assert v3_smoke_run.format_version == 3
-
     runner = importlib.import_module("repark_mw7_bench.mw7.run_mw7")
     parsed = runner.build_parser().parse_args(["--scratch", "/dev/null"])
     assert parsed.format_version == 2
@@ -550,13 +553,18 @@ def test_the_format_version_knob_defaults_to_two(smoke_run: Any, v3_smoke_run: A
         runner.build_parser().parse_args(["--scratch", "/dev/null", "--format-version", "4"])
 
 
-def test_v3_mor_delete_files_are_one_per_seeded_data_file(v3_smoke_run: Any) -> None:
-    """C-001: v3 MERGEs fold into one deletion vector per touched data file, not one per commit.
+def test_each_leg_records_the_format_version_it_was_built_at(
+    smoke_run: Any, v3_smoke_run: Any
+) -> None:
+    """C-001: the v2 fixture reports 2 on every leg and the v3 fixture reports 3."""
+    assert [leg.format_version for leg in smoke_run.legs] == [2, 2]
+    assert smoke_run.format_version == 2
+    assert [leg.format_version for leg in v3_smoke_run.legs] == [3, 3]
+    assert v3_smoke_run.format_version == 3
 
-    The v2 twin (`test_delete_files_grow_one_per_partition_per_merge`) counts
-    `partitions x merges`; the same MERGEs on v3 hold at the seeded data-file count while
-    the delete records grow at the same rate.
-    """
+
+def test_v3_mor_delete_files_are_one_per_seeded_data_file(v3_smoke_run: Any) -> None:
+    """C-001: v3 MERGEs fold into one deletion vector per touched data file, not one per commit."""
     leg = _leg(v3_smoke_run, "mor")
     for point in leg.checkpoints:
         expected = 0 if point.merges_done == 0 else V3_SEEDED_DATA_FILES
@@ -575,7 +583,7 @@ def test_v3_mor_delete_files_are_file_scoped_deletion_vectors(tmp_path: Path) ->
     """C-001: every v3 delete file is a Puffin DV naming exactly one live data file."""
     spark = _v3_session("pytest-mw7-v3-dv")
     try:
-        table = _build_v3_leg(spark, tmp_path, "mw7v3", "mor", SMOKE_ROWS, SMOKE_MERGES, 400)
+        table = _build_v3_leg(spark, tmp_path, "mw7v3", "mor", SMOKE_ROWS, V3_DV_MERGES, 400)
         deletes = _delete_files(spark, table)
         assert len(deletes) == V3_SEEDED_DATA_FILES, deletes
         assert {content for content, _fmt, _records, _ref in deletes} == {1}
@@ -584,7 +592,7 @@ def test_v3_mor_delete_files_are_file_scoped_deletion_vectors(tmp_path: Path) ->
         assert len(referenced) == len(deletes), "a DV names exactly one data file"
         live = {path for path, _size, _records in _data_files(spark, table)}
         assert referenced <= live
-        assert sum(records for _c, _f, records, _r in deletes) == SMOKE_MERGES * 400
+        assert sum(records for _c, _f, records, _r in deletes) == V3_DV_MERGES * 400
         rows = spark.sql(f"SELECT COUNT(*) AS n FROM {table}").to_arrow()
         assert int(rows.column("n")[0].as_py()) == SMOKE_ROWS
     finally:
@@ -710,4 +718,58 @@ def test_v3_delete_file_layout_matches_live_spark(tmp_path: Path) -> None:
     assert (
         sum(records for _c, _f, records in spark_deletes)
         == V3_ORACLE_MERGES * V3_ORACLE_ROWS_PER_MERGE
+    )
+
+
+def test_a_refusal_is_recorded_only_when_the_step_is_armed(tmp_path: Path) -> None:
+    """C-001: `capture_refusal` records a refusing CALL; unarmed, the same CALL still raises."""
+    spark = ReparkSession.builder.appName("pytest-mw7-refusal").getOrCreate()
+    try:
+        warehouse = tmp_path / "wh"
+        warehouse.mkdir()
+        spark.register_memory_catalog("mw7r", str(warehouse))
+        spark.sql(f"CREATE NAMESPACE mw7r.ns LOCATION '{warehouse / 'ns'}'")
+        table = "mw7r.ns.armed"
+        measure.register_parquet_view(
+            spark, measure.seed_frame(200, 1), tmp_path / "seed.parquet", "mw7r_seed"
+        )
+        measure.create_table(spark, table, "mw7r_seed", "mor", SMOKE_TARGET_FILE_SIZE)
+        spark.catalog.dropTempView("mw7r_seed")
+
+        refusing = "CALL mw7r.system.migrate(table => 'ns.armed')"
+        with pytest.raises(UnsupportedOperationException):
+            measure.run_maintenance_step(spark, table, "migrate", refusing)
+
+        step = measure.run_maintenance_step(spark, table, "migrate", refusing, True)
+        assert step.result_rows == 0
+        assert step.result_first_row == {}
+        assert step.refusal
+        assert step.census_after.data_files > 0
+    finally:
+        spark.stop()
+
+
+def test_started_at_records_the_start_of_the_run_not_its_end(tmp_path: Path) -> None:
+    """C-002: `started_at` is stamped before the first leg, so it is not the finish time."""
+    before = time.time()
+    run = measure.run_scale_measurement(
+        root=tmp_path,
+        rows=STARTED_AT_ROWS,
+        merges=STARTED_AT_MERGES,
+        partitions=1,
+        touch_fraction=SMOKE_TOUCH_FRACTION,
+        checkpoint_every=1,
+        reps=1,
+        target_file_size_bytes=SMOKE_TARGET_FILE_SIZE,
+        modes=["cow"],
+        host_note="pytest started_at",
+    )
+    finished = time.time()
+    stamped = datetime.strptime(run.started_at, "%Y-%m-%dT%H:%M:%S%z").timestamp()
+    assert run.wall_seconds > STARTED_AT_MIN_WALL_SECONDS, (
+        "the fixture must be slow enough to tell a start stamp from an end stamp"
+    )
+    assert stamped <= before + 1.0, (
+        f"started_at {run.started_at} is not the start: the run began at {before} "
+        f"and ended at {finished}"
     )

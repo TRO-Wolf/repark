@@ -16,9 +16,9 @@
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | The driver takes a `format_version` threaded from `run_mw7.py --format-version {2,3}`, default 2 (every prior invocation unchanged); `3` arms `repark.sql.allowCreateFormatVersion3` on the session. On v3 the MoR leg writes file-scoped Puffin deletion vectors and the COW leg keeps `_row_id`; `rewrite_position_delete_files` refuses on live DVs (`B-MOR-3`) and the driver records the refusal instead of raising, so the other four procedures are still measured. | Six pins in `test_mw7_scale_smoke.py`, one of them the live oracle at matched layout; mutation N red of M. | **PROVEN** | §1, §2. Citation: `python/repark/tests/map.md`, `python/repark-parity/bench/mw7/map.md`. |
+| C-001 | The driver takes a `format_version` threaded from `run_mw7.py --format-version {2,3}`, default 2 (every prior invocation unchanged); `3` arms `repark.sql.allowCreateFormatVersion3` on the session. On v3 the MoR leg writes file-scoped Puffin deletion vectors and the COW leg keeps `_row_id`; `rewrite_position_delete_files` refuses on live DVs (`B-MOR-3`) and the driver records that one refusal instead of raising — keyed on the procedure name, so any other refusal still aborts — and the other four procedures are still measured. | Seven pins in `test_mw7_scale_smoke.py`, one of them the live oracle at matched layout; mutation N red of M. | **PROVEN** | §1, §2. Citation: `python/repark/tests/map.md`, `python/repark-parity/bench/mw7/map.md`. |
 | C-002 | The `1e7 x 50` workload runs on v3 at the v2 knobs (8 partitions, `--touch-fraction 0.02`, checkpoints every 10, 7 reps, 4 MiB target) on a quiet box, both legs, and the v3-vs-v2 ratios are recorded from counts. | The run JSON, the census and timing tables, the ratio table. | **PROVEN** | §3. `/usr/bin/time -v` exit 0, 2:42:36. Citation: `python/repark-parity/bench/mw7/map.md`. |
-| C-003 | North star §3 "Scale" carries the dated v3 numbers and the evidence path; `docs/design/format-v3-track.md` §5 Step 6, STATUS and `python/repark-parity/bench/mw7/map.md` are in lockstep; this ledger moves to `completed/` last. | `make check-map-sync check-ledger-grammar check-ledgers check-docs-compaction`. | **PROVEN** | §4. Citation: `python/repark-parity/bench/mw7/map.md`. |
+| C-003 | North star §3 "Scale" carries the dated v3 numbers, with the write-side ratios labelled cross-run and the read-side ones controlled; `docs/design/format-v3-track.md` §5 Step 6, `docs/guide/iceberg-guide.md`'s runbook section (its format version stated before any number, plus the two false v3 sentences this unit refutes) and both `map.md` files are in lockstep; this ledger moves to `completed/` last. | `make check-map-sync check-ledger-grammar check-ledgers check-docs-compaction`. | **PROVEN** | §4. Citation: `python/repark-parity/bench/mw7/map.md`. |
 
 ## 1. The knob, measured at smoke scale (20,000 rows x 6 MERGEs, 2 partitions, 256 KiB target)
 
@@ -41,8 +41,9 @@ file through `referenced_data_file`.
 > not report a partial result … B-MOR-3 stays.`
 
 That is registry row `B-MOR-3`, already dated. The driver records the refusal on the step
-(`refusal` field, armed only at `format_version >= 3`) and runs the remaining four
-procedures; on v2 the exception still propagates, because a refusal there would be a defect.
+(`refusal` field) and runs the remaining four procedures. The capture is keyed on
+`procedure == "rewrite_position_delete_files" and format_version >= 3` — the one refusal that
+is a measurement. Any other refusal, and every refusal on v2, still aborts the run.
 
 | v3 MoR maintenance step | result | data / delete / delete records after |
 |---|---|---|
@@ -70,15 +71,19 @@ Equal on every cell. Pinned as `test_v3_delete_file_layout_matches_live_spark`.
 
 ## 3. MEASUREMENTS — 1e7 rows x 50 MERGEs on format v3 — measured 2026-09-02
 
-**One host, one run.** Wall clock is not a CI pin. **Ratios are the claim** — v3 against the
-v2 run of 2026-08-24 at the same knobs, and MoR against the COW control at the same merge count.
+**One host, two runs eight days apart.** Wall clock is not a CI pin, and a v3-against-v2 ratio
+is a CROSS-RUN ratio: the two runs share knobs, not a day. **Counts and the COW-controlled read
+ratios are the claim; every write-side ratio below is labelled uncontrolled**, because the
+copy-on-write control — the same 50 MERGEs, the same knobs, no delete files — itself moved
+1.22x between the runs, and the quiet-box check sampled the box only up to the start.
 
 Run: `run_mw7.py --rows 10000000 --merges 50 --partitions 8 --touch-fraction 0.02
 --checkpoint-every 10 --reps 7 --target-file-size-bytes 4194304 --modes mor,cow
 --format-version 3`. Started 2026-09-02T13:28:38-04:00, finished 16:11:14.
 `wall_seconds` **9,755.6** (2:42:36 by `/usr/bin/time -v`, exit 0). Base `cda526e`; nothing
-under `crates/` changed. Evidence JSON `/tmp/opus-scale-scratch/full-v3.json` (one host,
-uncommitted, as MW-7 did).
+under `crates/` changed. The run JSON is a scratch artefact and was not committed, as MW-7 did
+with its own; **the tables in this section are the evidence** — every ratio published anywhere
+in the tree is recomputable from them.
 
 **Quiet-box wait:** 9 busy checks at 5-minute intervals, **2,701 s waited**, quiet at
 13:28:38. Scratch peaked at **16 G**; free disk never fell below **75 G**.
@@ -108,7 +113,8 @@ one row still climbing (80 of 96 seeded files have a DV by then). Delete BYTES h
 
 MERGE wall seconds, in order: 11 16 19 24 25 26 29 31 28 34 32 30 35 38 35 36 41 41 42 45 47
 45 41 50 43 53 44 50 51 46 49 55 77 64 41 52 33 55 53 55 63 60 42 63 26 52 30 27 56 20.
-CTAS 96.6 s; 50 merges 2,059.6 s (mean **41.19 s**, v2 25.95 s); leg wall 46.4 min.
+CTAS 96.6 s; 50 merges 2,059.6 s (mean **41.19 s**, v2 25.95 s — cross-run, uncontrolled);
+leg wall 46.4 min.
 
 ### 3.2 Copy-on-write leg (v3) — the zero-delete control
 
@@ -123,15 +129,21 @@ CTAS 96.6 s; 50 merges 2,059.6 s (mean **41.19 s**, v2 25.95 s); leg wall 46.4 m
 
 Flat, as on v2. CTAS 95.4 s; 50 merges 6,550.5 s (mean **131.01 s**, v2 107.28 s); leg wall
 116.1 min. Warehouse **16,464 MB for a 343 MB table (48x)** before `expire_snapshots`.
-COW costs **3.2x MoR per MERGE** on v3 (131.0 s against 41.2 s); on v2 the same ratio was 4.1x.
+**This leg is the control for the cross-run comparison**: it writes no delete files on either
+format, so its 1.22x is what eight days and a shared box cost, not what v3 costs. COW costs
+**3.2x MoR per MERGE** within this run (131.0 s against 41.2 s); within the v2 run it was 4.1x.
 
 ### 3.3 v3 against v2 at the same knobs
 
+Every row of this table is **cross-run and uncontrolled**. The COW row is the control: read
+each MoR figure against 1.22x, not against 1.00x.
+
 | Term | v2 (2026-08-24) | v3 (2026-09-02) | v3/v2 |
 |---|---:|---:|---:|
+| **COW 50 merges — the control** | 5,363.9 s | 6,550.5 s | **1.22x** |
 | run wall | 7,768.9 s | 9,755.6 s | 1.26x |
-| MoR CTAS / 50 merges / leg wall | 87.3 s / 1,297.7 s / 34.0 min | 96.6 s / 2,059.6 s / 46.4 min | 1.11x / **1.59x** / 1.37x |
-| COW CTAS / 50 merges / leg wall | 88.6 s / 5,363.9 s / 95.5 min | 95.4 s / 6,550.5 s / 116.1 min | 1.08x / 1.22x / 1.22x |
+| MoR CTAS / 50 merges / leg wall | 87.3 s / 1,297.7 s / 34.0 min | 96.6 s / 2,059.6 s / 46.4 min | 1.11x / 1.59x / 1.37x |
+| COW CTAS / leg wall | 88.6 s / 95.5 min | 95.4 s / 116.1 min | 1.08x / 1.22x |
 | MoR maintenance total | 142.34 s | 353.94 s | 2.49x |
 | COW maintenance total | 21.19 s | 65.74 s | 3.10x |
 | peak RSS | 4,461 MiB | 4,792 MiB | 1.07x |
@@ -149,8 +161,14 @@ MoR census and scans at each checkpoint:
 
 **Merge 10 is the one checkpoint where v3 reads worse** (partition 1.44x, point 1.32x): v2's
 416 data files parallelise better than v3's 176, and v3 already carries 80 DVs. From merge 20
-the delete-file count decides, and every probe crosses under v2 and stays there. The COW
-control moved by at most 1.11x on any cell, so the MoR gap is not a host effect.
+the delete-file count decides, and every probe crosses under v2 and stays there.
+
+**What the control does on the same cells**, which is how much of the MoR movement is the box
+rather than the format. Cross-run COW v3/v2, per checkpoint (merges 10 / 20 / 30 / 40 / 50):
+data files **1.28x / 1.29x / 1.26x / 1.21x / 1.11x**, point p50 **0.82x / 0.85x / 0.91x /
+0.93x / 1.00x**, partition p50 0.96x / 1.07x / 1.12x / 1.06x / 1.03x, `COUNT(*)` p50 0.97x /
+0.98x / 1.01x / 1.03x / 1.11x. The read cells that carry the verdict are the ones where the
+control is nearest 1.00x — point p50 at merge 50, control **1.00x**, MoR **0.64x**.
 
 ### 3.4 The maintenance sequence at 50 merges of debt (v3)
 
@@ -206,21 +224,22 @@ FINDING:
   severity: S3
   category: AT-9
   clause: C-002
-  disposition: OPEN
-  title: RunResult.started_at is stamped when the result is BUILT, so it records the end of the run
+  disposition: REMEDIATED
+  title: RunResult.started_at was stamped when the result is BUILT, so it recorded the END of the run
   evidence: >
-    run_scale_measurement fills started_at in the return statement, after every leg has run.
-    This run's JSON says 2026-09-02T16:11:14-0400; the run started 13:28:38 and the launcher
-    log and /usr/bin/time -v agree on 2:42:36 of wall clock. MW-7 quoted the same field as a
-    start time. Not fixed here: this unit is measure-only and the field's value is a recorded
-    string, not a behaviour a pin holds. Both dated ledgers now state the real start.
+    run_scale_measurement filled started_at in the return statement, after every leg had run.
+    The 1e7 run's JSON says 2026-09-02T16:11:14-0400; the run started 13:28:38 and
+    /usr/bin/time -v agrees on 2:42:36 of wall clock. MW-7 quoted the same field as a start
+    time. FIXED in this unit: the timestamp is now taken beside started_wall at the top of
+    run_scale_measurement, so the field means what its name says. The 1e7 numbers above are
+    unaffected — the run's real start is stated in the section text.
   registry_candidate: none — a driver disclosure, no engine behaviour claim is wrong
 FINDING:
   id: F-SCALE-V3-2
   severity: S3
   category: AT-6
-  clause: C-002
-  disposition: OPEN
+  clause: C-002, C-003
+  disposition: REMEDIATED
   title: the MW-8 runbook defaults were fitted to v2 and three of them do not transfer to v3
   evidence: >
     (1) Order — v2 §6.2 justifies folding delete files first so rewrite_data_files reads 8
@@ -231,6 +250,14 @@ FINDING:
     (2.69x). (3) The limit statement — v2 §6.8 says the sequence cannot reclaim delete-laden
     data files; on v3 it does, ending at zero delete files and zero delete records. An MW-8
     runbook must state its format version before it states a number.
+  remediation: >
+    Discharged in this unit, in the document that carries the runbook for users:
+    docs/guide/iceberg-guide.md "The maintenance runbook" now states its format version
+    before any number, tells a v3 reader to drop the first CALL and why, and pairs every v2
+    figure (400 -> 8, the 19.6-merge crossing, the ~157-delete-file trigger, 2.5 minutes,
+    2.02x / 2.45x / 1.90x) with the v3 measurement beside it. Two false sentences in the same
+    guide were corrected on the way: it claimed the engine cannot create a v3 table, and that
+    repark writes no v3 delete files.
   registry_candidate: disclosure only; B-MOR-3 and RDF-1 already carry the engine claims
 ```
 
@@ -242,12 +269,14 @@ FINDING:
 | `docs/design/format-v3-track.md` §5 Step 6 | one line: the scale workload is measured |
 | STATUS | **untouched, deliberately.** STATUS names no scale row — its v3 bullet points at the north-star matrix, which is the row's home and now carries the numbers. STATUS is at 24,995 B against a 25,000 B ceiling, and the only sentences in the v3 bullet long enough to make room are pinned strings owned by V3-9 (`test_plan_1_northstar_fnp_sequence.py`) and LIVE-v3. Rewriting another unit's pinned claim, or raising the ceiling, to add one line here is not worth either. |
 | `python/repark-parity/bench/mw7/map.md` | the `--format-version` section, the v3 run row, the v3 numbers row |
-| `python/repark/tests/map.md` | the six v3 pins as a table |
+| `python/repark/tests/map.md` | the v3 pins as a table |
+| `docs/guide/iceberg-guide.md` | the runbook section states its format version first, gives the v3 cycle and the v3 counterpart of every v2 figure; two false v3 sentences corrected and dated (F-SCALE-V3-2) |
+| `docs/guide/map.md` | the runbook row names the two formats |
 | this ledger | `move`d to `completed/` in the last commit |
 
-Scratch: the warehouses and Parquet trees under `/tmp/opus-scale-scratch/full` were deleted
-after the numbers were read; the result JSON and the two run logs were kept beside them.
-Nothing generated by this unit is committed.
+Scratch: the warehouses and Parquet trees the run wrote were deleted after the numbers were
+read, as MW-7 did. Nothing generated by this unit is committed, and no committed document
+cites a scratch path — §3's tables are the record.
 
 ```yaml
 COVERAGE_ATTESTATION:
@@ -262,7 +291,7 @@ COVERAGE_ATTESTATION:
         PySpark 4.1.2 at a matched layout and agrees cell for cell. Peak RSS agrees exactly
         between getrusage and /usr/bin/time -v. The cross-leg answer identity holds at every
         checkpoint and equals the v2 run's values.
-      artifacts: ["/tmp/opus-scale-scratch/full-v3.json", "sections 1, 2, 3.1-3.5"]
+      artifacts: ["sections 1, 2, 3.1-3.5"]
     - id: AT-2
       status: ATTACKED
       evidence: >
@@ -287,7 +316,8 @@ COVERAGE_ATTESTATION:
       status: N/A
       justification: >
         Local filesystem and a memory catalog; no AWS, no credential, no network, no
-        privileged action. The committed diff carries no absolute home path or session id.
+        privileged action. Re-scanned every file this unit touched for absolute home paths,
+        scratchpad paths and session ids: none.
     - id: AT-6
       status: ATTACKED
       evidence: >
@@ -323,10 +353,16 @@ COVERAGE_ATTESTATION:
     - id: AT-10
       status: ATTACKED
       evidence: >
-        17 tests in the module green (16 plus the live oracle under REPARK_PARITY_LIVE=1),
-        and five mutations run and reverted: the CTAS ignoring format_version, the session
-        skipping the create opt-in, the refusal text dropped, the default flipped to 3, and
-        the COW leg taking the merge-on-read properties. 5 red of 5.
+        20 tests in the module green (19 plus the live oracle under REPARK_PARITY_LIVE=1),
+        and nine mutations run and reverted. 8 red of 9: the CTAS ignoring format_version, the
+        session skipping the create opt-in, the refusal text dropped, the default flipped to 3,
+        the COW leg taking the merge-on-read properties, an armed step re-raising anyway,
+        capture_refusal defaulting to True, and started_at stamped at build time. The ninth —
+        arming the capture for EVERY procedure on v3 rather than only
+        rewrite_position_delete_files — stays GREEN and is reported rather than hidden: no
+        second procedure refuses on the v3 maintenance path, so the narrowing has no observable
+        behaviour at gate scale. What is pinned is the mechanism it narrows
+        (test_a_refusal_is_recorded_only_when_the_step_is_armed, both directions).
       artifacts: [python/repark/tests/test_mw7_scale_smoke.py]
   complete: true
 ```

@@ -380,7 +380,10 @@ Those three numbers are the Spark-written format-v3 fixture this engine ships fo
 Puffin vectors apply is 37 rows.
 
 That is how a table another engine already wrote — including a format-v3 table with Puffin
-deletion vectors — becomes visible here. The engine still cannot *create* a v3 table. Hadoop
+deletion vectors — becomes visible here. **Creating** one is a session opt-in
+(`repark.sql.allowCreateFormatVersion3`, V3-2); the default CREATE is still format v2.
+*(Corrected 2026-09-02, SCALE-v3: this line read "the engine still cannot create a v3 table",
+which contradicted the `rewrite_data_files` note below.)* Hadoop
 catalog pointers named `vN.metadata.json` register, read, and take a write: the next pointer
 is `v(N+1).metadata.json` (registry `V3-ADOPT-1`, FIXED 2026-08-30, fork #235). S3 Tables
 `register_table` refuses as a dated service gap (fork GAP_MATRIX row R126, #233; registry
@@ -435,9 +438,11 @@ rows are masked. When there is nothing to compact you get four zeros rather than
 On a **format-v3** table this refuses instead of running. Those tables carry Puffin deletion
 vectors rather than Parquet position deletes, and a deletion vector is file-scoped, so there is
 nothing to bin-pack. The refusal names how many it found; it does not return zeros and leave you
-thinking the table was already clean. repark writes no v3 delete files itself — it creates tables
-at format v2 and refuses merge-on-read writes on v3 — so this only comes up on a table another
-engine wrote.
+thinking the table was already clean. *(Corrected 2026-09-02, SCALE-v3: this paragraph used to
+say repark writes no v3 delete files itself. Since V3-9 it does — a merge-on-read write on a v3
+table writes one file-scoped Puffin deletion vector per touched data file, and 10 million rows
+under 50 MERGEs measured 96 of them carrying 10,000,000 delete records, where the v2 twin grew
+400 Parquet position-delete files.)*
 
 Two differences from Spark are worth knowing before you port a maintenance job, and neither
 changes what a query returns:
@@ -595,8 +600,10 @@ rollback_to_snapshot.
 
 ### The maintenance runbook
 
-Table management is one scheduled cycle, not six separate procedures. Run the whole cycle behind
-your merge workload, in this order:
+Table management is one scheduled cycle, not six separate procedures. **Every number in this
+section is format v2 unless it says v3**, because the two formats do not carry the same delete
+files: v2 writes Parquet position deletes, v3 writes Puffin deletion vectors, and the cycle
+behaves differently on each. Run the whole cycle behind your merge workload, in this order:
 
 1. Your merge workload runs: `MERGE`, `UPDATE`, `DELETE`.
 2. `rewrite_position_delete_files` folds the position deletes to one file per partition.
@@ -635,6 +642,18 @@ for statement in MAINTENANCE_CYCLE:
     spark.sql(statement).show()
 ```
 
+**On a format-v3 table, drop the first CALL.** `rewrite_position_delete_files` refuses on live
+deletion vectors rather than running
+([B-MOR-3](../spark-sql-iceberg-parity.md#b-mor-3--rewrite_position_delete_files-refuses-live-puffin-deletion-vectors)),
+so a copy-paste of the list above raises on its
+first statement. The v3 cycle is the same list without that line: `rewrite_data_files`,
+`rewrite_manifests`, `expire_snapshots`, `remove_orphan_files`. It loses nothing —
+`rewrite_data_files` reclaims the deletion vectors by itself. Measured at 10 million rows and 50
+MERGEs on v3: 496 data files and 96 deletion vectors in, `rewritten_data_files_count` 496,
+`removed_delete_files_count` **96**, and 144 data files with **zero** delete files and **zero**
+delete records out
+([SCALE-v3 §3.4](../../task/ledgers/staging/scale-v3-mw7-ledger.md)).
+
 **Always pass `older_than` to `expire_snapshots`.** Without it the engine falls back to the
 table's `history.expire.max-snapshot-age-ms`. That property defaults to **5 days**. It is a
 time-travel default, not a maintenance one. The cycle then keeps five days of every file it
@@ -656,21 +675,33 @@ one day in the future reclaimed 48 data files, 12 delete files, 39 manifests and
 lists. It left one snapshot
 ([MW-8 §3](../../task/ledgers/archive/2026-08/2026-08-24-mw-8-maintenance-runbook-ledger.md#3-measurements-the-expire-cutoff-and-the-idle-cycle-2026-08-24)).
 
-**The order is load-bearing.** Fold the delete files before you compact the data. At 50 merges
-of debt, step 2 read 400 delete files and left 8, so step 3 read 8. Reverse the two and the
-expensive step reads 50 times the delete files
+**The order is load-bearing on v2.** Fold the delete files before you compact the data. At 50
+merges of debt, step 2 read 400 delete files and left 8, so step 3 read 8. Reverse the two and
+the expensive step reads 50 times the delete files
 ([MW-7 §6.2](../../task/ledgers/archive/2026-08/2026-08-24-mw-7-scale-measurement-ledger.md#6-what-the-numbers-set-as-mw-8s-runbook-defaults)).
+**On v3 the ordering question does not arise:** step 2 refuses and step 3 does the whole reclaim
+([SCALE-v3 §3.4](../../task/ledgers/staging/scale-v3-mw7-ledger.md)).
 
-**Run the cycle every 10 merges. Treat 20 merges as the ceiling.** Scans cross 2× the compacted
-control at 19.6 merges, and merge 20 already measures 2.05×. At 10 merges every probe still sits
-at or below the control. The ceiling tolerates about 2× degradation. It does not hold you under
-it
+**Run the cycle every 10 merges. Treat 20 merges as the ceiling.** On v2, scans cross 2× the
+compacted control at 19.6 merges, and merge 20 already measures 2.05×. At 10 merges every probe
+still sits at or below the control. The ceiling tolerates about 2× degradation. It does not hold
+you under it
 ([MW-7 §6.1](../../task/ledgers/archive/2026-08/2026-08-24-mw-7-scale-measurement-ledger.md#6-what-the-numbers-set-as-mw-8s-runbook-defaults)).
+**On v3 the same crossing sits later:** the partition probe passes 2× between merge 30 (1.88×)
+and merge 40 (2.18×), the point probe between merge 40 (2.41×) and merge 50 (2.69×). A
+10-merge cadence is still the safe recommendation; on v3 it is a conservative one
+([SCALE-v3 §3.5](../../task/ledgers/staging/scale-v3-mw7-ledger.md)).
 
 **Trigger on the delete-file count where your platform reports it.** A scan opens delete files,
 so the file count is the closer proxy for what the debt costs. The same 2× crossing sits at
-about 157 delete files. That number is the `'partition'` layout MW-7 measured (8 partitions,
-one delete file per partition per MERGE). Unset `write.delete.granularity` is now `file`
+about 157 delete files **on v2**. That number is the `'partition'` layout MW-7 measured (8
+partitions, one delete file per partition per MERGE). **On v3 a delete-file count is not a debt
+trigger at all:** a deletion vector is file-scoped and rewritten in place, so the count climbs
+to the number of data files carrying deletes and then stops — 96 of them at 10 million rows and
+50 MERGEs, where the same workload on v2 reached 400. Trigger on the delete RECORDS or on the
+data-file count there
+([SCALE-v3 §3.1](../../task/ledgers/staging/scale-v3-mw7-ledger.md)).
+Unset `write.delete.granularity` is now `file`
 ([MOR-2](../spark-sql-iceberg-parity.md#mor-2--merge-on-read-delete-files-are-partition-granularity-where-sparks-default-is-per-file)),
 so an unset table grows one delete file per touched data file. Set `'partition'` to keep
 the measured arithmetic. A merge count stops meaning anything once the merge size
@@ -696,9 +727,12 @@ past, which is Apache Spark's floor too. So a cycle never sees the orphans that 
 lists nothing on a young warehouse is not a clean bill of health
 ([ORPHAN-1](../spark-sql-iceberg-parity.md#orphan-1--remove_orphan_files-requires-older_than-spark-defaults-it)).
 
-**Budget the cycle at about 2.5 minutes** for a 10-million-row merge-on-read table carrying 50
-merges of debt
+**Budget the cycle at about 2.5 minutes on v2** for a 10-million-row merge-on-read table
+carrying 50 merges of debt
 ([MW-7 §6.5](../../task/ledgers/archive/2026-08/2026-08-24-mw-7-scale-measurement-ledger.md#6-what-the-numbers-set-as-mw-8s-runbook-defaults)).
+**Budget about 6 minutes on v3** (353.9 s measured on the same shape): the reclaim that v2
+splits across two procedures happens inside `rewrite_data_files`
+([SCALE-v3 §3.4](../../task/ledgers/staging/scale-v3-mw7-ledger.md)).
 
 #### What the cycle cannot reclaim
 
@@ -714,15 +748,22 @@ files. Its `file_path` bounds are unequal, so it is not file-scoped, the ratio c
 see it, and neither it nor the files it covers are selected. The fix for that residue is fork
 ask F-16.
 
-Here is what you see after a cycle, so you do not go looking for a fault. A merge-on-read table
-still reads at **2.02×** the compacted copy-on-write control on a point predicate. On a partition
-predicate it reads at **2.45×**. It still holds **1.90×** the control's live bytes
+Here is what you see after a cycle on **v2**, so you do not go looking for a fault. A
+merge-on-read table still reads at **2.02×** the compacted copy-on-write control on a point
+predicate. On a partition predicate it reads at **2.45×**. It still holds **1.90×** the
+control's live bytes
 ([MW-7 §4.3](../../task/ledgers/archive/2026-08/2026-08-24-mw-7-scale-measurement-ledger.md#43-mor-against-the-cow-control--what-merge-on-read-costs-on-read),
 [§4.4](../../task/ledgers/archive/2026-08/2026-08-24-mw-7-scale-measurement-ledger.md#44-the-maintenance-sequence-at-50-merges-of-debt)).
 Every answer is correct at every point, and nothing fails. Cadence bounds how far a scan
 degrades between cycles. Those figures were measured before RDF-1 landed, on a
 `partition`-granularity shape whose delete files span several data files — the residue above —
 so they still stand for that shape.
+
+**On v3 there is nothing left to look for.** The same 10-million-row workload ends the cycle at
+**zero delete files and zero delete records**, and the table reads the point predicate at
+**0.61×** the copy-on-write control rather than above it. A deletion vector is file-scoped, so
+the residue this section describes cannot form
+([SCALE-v3 §3.4, §3.5](../../task/ledgers/staging/scale-v3-mw7-ledger.md)).
 
 #### Retrying a step
 

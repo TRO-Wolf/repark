@@ -57,7 +57,7 @@ the deletes at every checkpoint; this driver does not run one.
 | Reproduce the MW-7 full run | `run_mw7.py --rows 10000000 --merges 50 --partitions 8 --checkpoint-every 10 --reps 7 --target-file-size-bytes 4194304 --scratch <dir>` |
 | Project a calibration onto a bigger run | add `--project-to 10000000:100` |
 | Read the numbers | [../../../../task/ledgers/completed/mw-7-scale-measurement-ledger.md](../../../../task/ledgers/archive/2026-08/2026-08-24-mw-7-scale-measurement-ledger.md) |
-| Read the v3 numbers | [../../../../task/ledgers/staging/scale-v3-mw7-ledger.md](../../../../task/ledgers/completed/scale-v3-mw7-ledger.md) |
+| Read the v3 numbers | [../../../../task/ledgers/staging/scale-v3-mw7-ledger.md](../../../../task/ledgers/staging/scale-v3-mw7-ledger.md) |
 | Run the CI pin on this machinery | `python/repark/tests/test_mw7_scale_smoke.py` |
 | See how the runbook reclaims a delete-laden file, and the one shape it still cannot | registry row `RDF-1`; pin `test_mw7_scale_smoke.py::test_delete_laden_in_band_file_is_rewritten_and_its_delete_file_dies` (C-011, flipped 2026-09-02); the residue is a delete file naming two or more data files, fork ask F-16 |
 
@@ -99,11 +99,11 @@ Two things change on v3 and neither is tunable from here:
 | `write.delete.granularity` | inert — a DV is file-scoped by spec, so the property is carried and ignored | registry `MOR-2` is a v2 row |
 | `rewrite_position_delete_files` | REFUSES while live DVs exist, rather than reporting four zeros | registry `B-MOR-3` |
 
-`run_maintenance_step` therefore takes `capture_refusal`, armed only when
-`format_version >= 3`: the refusal text is recorded on the step and the sequence continues,
-so the remaining four procedures are still measured. On v2 the argument is false and an
-`UnsupportedOperationException` still propagates — a refusal there would be a defect, not a
-measurement.
+`run_maintenance_step` therefore takes `capture_refusal`, armed only for
+`rewrite_position_delete_files` on `format_version >= 3`: the refusal text is recorded on the
+step, `format_leg_table` prints ` REFUSED: <first line>` beside it, and the sequence continues,
+so the remaining four procedures are still measured. Any OTHER refusal, and every refusal on
+v2, still aborts the run — a refusal there would be a defect, not a measurement.
 
 pins: scale-v3-mw7/C-001
 

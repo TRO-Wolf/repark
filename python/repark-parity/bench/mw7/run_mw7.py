@@ -47,10 +47,11 @@ def format_leg_table(leg: LegResult) -> str:
         f"{'procedure':>30} {'wall_s':>9} {'data_f':>7} {'del_f':>7} {'manif':>6} {'mlist_B':>8}"
     )
     for step in leg.maintenance:
+        refused = f" REFUSED: {step.refusal.splitlines()[0]}" if step.refusal else ""
         lines.append(
             f"{step.procedure:>30} {step.wall_seconds:>9.2f} {step.census_after.data_files:>7} "
             f"{step.census_after.delete_files:>7} {step.census_after.manifests:>6} "
-            f"{step.census_after.manifest_list_bytes:>8}"
+            f"{step.census_after.manifest_list_bytes:>8}{refused}"
         )
     after = {scan.label: scan for scan in leg.after_maintenance.scans}
     lines.append(

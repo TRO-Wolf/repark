@@ -44,6 +44,7 @@ ORPHAN_OLDER_THAN_PAST_MS = 25 * 60 * 60 * 1000
 
 ALLOW_CREATE_FORMAT_VERSION_3_KEY = "repark.sql.allowCreateFormatVersion3"
 DEFAULT_FORMAT_VERSION = 2
+REFUSING_ON_V3_PROCEDURE = "rewrite_position_delete_files"
 
 # pins: mw-9-delete-granularity/C-008
 MOR_PROPERTIES = (
@@ -571,7 +572,13 @@ def run_leg(
 
     warehouse_before = directory_bytes(warehouse)
     maintenance = [
-        run_maintenance_step(spark, table, procedure, sql, format_version >= 3)
+        run_maintenance_step(
+            spark,
+            table,
+            procedure,
+            sql,
+            format_version >= 3 and procedure == REFUSING_ON_V3_PROCEDURE,
+        )
         for procedure, sql in maintenance_sequence(catalog, table_arg)
     ]
     warehouse_after = directory_bytes(warehouse)
@@ -633,6 +640,7 @@ def run_scale_measurement(
         The full result, ready to serialise to JSON.
     """
     started_wall = time.perf_counter()
+    started_at = time.strftime("%Y-%m-%dT%H:%M:%S%z")
     rows_per_merge = max(1, int(rows * touch_fraction))
     scratch = root / "parquet"
     scratch.mkdir(parents=True, exist_ok=True)
@@ -674,7 +682,7 @@ def run_scale_measurement(
             session.stop()
 
     return RunResult(
-        started_at=time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+        started_at=started_at,
         host_note=host_note,
         format_version=format_version,
         rows=rows,
