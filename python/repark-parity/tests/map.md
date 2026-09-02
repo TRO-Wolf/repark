@@ -57,6 +57,8 @@ JVM, no repark required). See [../map.md](../map.md).
   truth-up re-reads — STATUS's `Next:` sentence, the north-star §3 rows and the ledger bins
   they cite all moved in that pass and both stayed green
   (pins: docs-1-truth-up/C-001, C-002, C-003, C-004, C-005, C-006).
+  **V3-9 (2026-09-02):** the STATUS `Next:` sentence it reads now names lineage carry **and**
+  merge-on-read as complete. pins: v3-9-mor-predicate-dml-dv/C-005
 - `test_pr_247_owner_ruling.py` — **PR #247 revalidation (2026-08-27):** the owner-ruling blocks
   in `AGENTS.md` and `CLAUDE.md` stay byte-exact, unique, at the document start, and in regular
   files; one-byte drift, malformed or missing files, relocation, duplication, and symlink
@@ -132,6 +134,11 @@ JVM, no repark required). See [../map.md](../map.md).
   rule for the unit itself. RP-2 salvage (2026-08-28) retargeted the `V3-COW-1` assertions to
   the narrowed row. RP-3 (2026-08-30) retargeted again: live-DV DELETE merge lifts; UPDATE,
   MERGE, and sequential COW after overwrite stay refused (BACKLOG, 2026-08-25 ruling kept).
+  **V3-9 (2026-09-02):** the MOR DML matrix row assertion flipped from "one 🚫, V3-8 measured"
+  to "no 🚫, `V3-MOR-1` FIXED plus the dated `V3-DV-1` residual naming fork F-18 and repin
+  RP-7", and the STATUS assertions follow the compacted v3 block — including the
+  `F-rp3-c7 consumed` substring, which no longer depends on where the line wraps
+  (pins: v3-9-mor-predicate-dml-dv/C-005, C-007).
   V3-7 (2026-09-02) lifts MERGE; V3-8 (2026-09-02) lifts subquery-`WHERE` DML and the row
   becomes FIXED — the assertions now check the FIXED heading, the discharged ruling, the
   `F-v3-8-update-files` artefact and a 🚫-free north-star COW row

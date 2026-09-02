@@ -26,6 +26,11 @@ _COW_V3 = (
     "'write.merge.mode' = 'copy-on-write'"
 )
 _MOR_V3 = "'format-version' = '3', 'write.delete.mode' = 'merge-on-read'"
+_MOR_V3_BOTH = (
+    "'format-version' = '3', "
+    "'write.delete.mode' = 'merge-on-read', "
+    "'write.update.mode' = 'merge-on-read'"
+)
 _VERSION_UUID_METADATA = re.compile(r"^(\d+)-[0-9a-fA-F-]+\.metadata\.json$")
 
 
@@ -319,6 +324,11 @@ def _objects_under(root: Path) -> list[str]:
     return sorted(str(path) for path in root.rglob("*") if path.is_file())
 
 
+def _delete_file_kinds(spark: object, table: str) -> list[str]:
+    files = spark.sql(f"SELECT file_format FROM ice.sales.{table}.delete_files").to_arrow()
+    return [str(kind).upper() for kind in files.column("file_format").to_pylist()]
+
+
 def test_facade_v3_mor_first_delete_commits_a_deletion_vector_and_a_second_merges(
     tmp_path: Path,
 ) -> None:
@@ -451,5 +461,61 @@ def test_facade_v3_subquery_update_outside_the_hole_still_refuses(tmp_path: Path
         assert "V3-COW-1" not in str(raised.value)
         after = spark.sql("SELECT id, name FROM ice.sales.outside").to_arrow()
         assert _id_name_rows(after) == [(1, "a"), (2, "b"), (3, "c")]
+    finally:
+        spark.stop()
+
+
+def test_facade_adopted_v3_mor_subquery_where_dml_writes_deletion_vectors(tmp_path: Path) -> None:
+    """Subquery-WHERE MOR DELETE and UPDATE write one file-scoped Puffin DV on adopted v3.
+
+    pins: v3-9-mor-predicate-dml-dv/C-003
+    """
+    from repark import ReparkSession
+
+    spark = (
+        ReparkSession.builder.appName("v3-9-mor-subquery")
+        .config(_ALLOW_CREATE_V3_KEY, "true")
+        .getOrCreate()
+    )
+    try:
+        spark.register_memory_catalog("ice", tmp_path)
+        sales = tmp_path / "sales"
+        spark.sql(f"CREATE NAMESPACE ice.sales LOCATION '{sales}'")
+        spark.sql("CREATE TABLE ice.sales.srcids (id INT) USING iceberg")
+        spark.sql("INSERT INTO ice.sales.srcids VALUES (2)")
+        for seed, adopted in (("seed_msd", "adopt_msd"), ("seed_msu", "adopt_msu")):
+            spark.sql(
+                f"CREATE TABLE ice.sales.{seed} (id INT, name STRING) USING iceberg "
+                f"TBLPROPERTIES ({_MOR_V3_BOTH})"
+            )
+            spark.sql(f"INSERT INTO ice.sales.{seed} VALUES (1, 'a'), (2, 'b'), (3, 'c')")
+            metadata_file = _latest_version_uuid_metadata(sales, seed)
+            spark.sql(
+                "CALL ice.system.register_table("
+                f"table => 'sales.{adopted}', metadata_file => '{metadata_file}')"
+            )
+        spark.sql(
+            "DELETE FROM ice.sales.adopt_msd WHERE id IN (SELECT id FROM ice.sales.srcids)"
+        ).collect()
+        deleted = spark.sql(
+            "SELECT id, name, _row_id, _last_updated_sequence_number "
+            "FROM ice.sales.adopt_msd ORDER BY id"
+        ).to_arrow()
+        assert _id_name_rows(deleted) == [(1, "a"), (3, "c")]
+        assert _lineage_triples(deleted) == [(1, 0, 1), (3, 2, 1)]
+        assert _current_lineage(_latest_version_uuid_metadata(sales, "seed_msd")) == (3, 3, 0)
+        assert _delete_file_kinds(spark, "adopt_msd") == ["PUFFIN"]
+        spark.sql(
+            "UPDATE ice.sales.adopt_msu SET name = 'm' "
+            "WHERE id IN (SELECT id FROM ice.sales.srcids)"
+        ).collect()
+        updated = spark.sql(
+            "SELECT id, name, _row_id, _last_updated_sequence_number "
+            "FROM ice.sales.adopt_msu ORDER BY id"
+        ).to_arrow()
+        assert _id_name_rows(updated) == [(1, "a"), (2, "m"), (3, "c")]
+        assert _lineage_triples(updated) == [(1, 0, 1), (2, 1, 2), (3, 2, 1)]
+        assert _current_lineage(_latest_version_uuid_metadata(sales, "seed_msu")) == (4, 3, 1)
+        assert _delete_file_kinds(spark, "adopt_msu") == ["PUFFIN"]
     finally:
         spark.stop()

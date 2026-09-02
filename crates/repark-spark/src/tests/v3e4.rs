@@ -662,3 +662,111 @@ async fn merge_on_the_appended_v3_table_keeps_row_id() {
         vec![(1, 0, 3), (3, 2, 1), (4, 3, 1), (6, 5, 1)]
     );
 }
+
+async fn live_dv_by_referenced(catalogs: &CatalogRegistry) -> Vec<(String, String, u64, i64)> {
+    let loaded = catalogs["ice"].load_table(&ident()).await.expect("load");
+    let metadata = loaded.metadata();
+    let snapshot = metadata.current_snapshot().expect("current snapshot");
+    let manifest_list = snapshot
+        .load_manifest_list(loaded.file_io(), metadata)
+        .await
+        .expect("manifest list");
+    let mut pairs = Vec::new();
+    for manifest_file in manifest_list.entries() {
+        if manifest_file.content != iceberg::spec::ManifestContentType::Deletes {
+            continue;
+        }
+        let manifest = manifest_file
+            .load_manifest(loaded.file_io())
+            .await
+            .expect("delete manifest");
+        for entry in manifest.entries() {
+            if !entry.is_alive() {
+                continue;
+            }
+            let data_file = entry.data_file();
+            if data_file.content_type() != iceberg::spec::DataContentType::PositionDeletes {
+                continue;
+            }
+            let Some(referenced) = data_file.referenced_data_file() else {
+                continue;
+            };
+            pairs.push((
+                referenced,
+                data_file.file_path().to_string(),
+                data_file.record_count(),
+                data_file
+                    .content_offset()
+                    .expect("a v3 DV carries content_offset"),
+            ));
+        }
+    }
+    pairs.sort();
+    pairs
+}
+
+#[tokio::test]
+async fn subquery_delete_on_the_shared_puffin_v3_table_keeps_both_file_scoped_deletion_vectors() {
+    let _: &str = "pins: v3-9-mor-predicate-dml-dv/C-003, C-007";
+    let fixture = materialize_part_dv();
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    adopt_and_append(&ctx, &catalogs, &fixture.metadata_file).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.srcids (id INT) USING iceberg \
+         TBLPROPERTIES ('format-version' = '2')",
+    )
+    .await;
+    run(&ctx, &catalogs, "INSERT INTO ice.sales.srcids VALUES (1)").await;
+
+    let before = live_dv_by_referenced(&catalogs).await;
+    assert_eq!(before.len(), 2, "fixture starts with two live DVs");
+    run(
+        &ctx,
+        &catalogs,
+        "DELETE FROM ice.sales.partdv WHERE id IN (SELECT id FROM ice.sales.srcids)",
+    )
+    .await;
+    assert_eq!(
+        live_triples(
+            &ctx,
+            &catalogs,
+            "SELECT id, name, part FROM ice.sales.partdv ORDER BY id"
+        )
+        .await,
+        vec![
+            (3, "c".to_string(), 0),
+            (4, "d".to_string(), 1),
+            (6, "f".to_string(), 1)
+        ]
+    );
+    assert_eq!(
+        super::v3_cow::lineage_triples(&ctx, &catalogs, "partdv").await,
+        vec![(3, 2, 1), (4, 3, 1), (6, 5, 1)]
+    );
+    let after = live_dv_by_referenced(&catalogs).await;
+    assert_eq!(
+        after
+            .iter()
+            .map(|(file, _, records, _)| (file.clone(), *records))
+            .collect::<Vec<_>>(),
+        vec![(before[0].0.clone(), 2), (before[1].0.clone(), 1)],
+        "each data file keeps one live file-scoped DV; only the touched one gains a position"
+    );
+    for (referenced, container, _, offset) in &after {
+        assert!(
+            container.ends_with(".puffin"),
+            "{referenced} is served by a Puffin container: {container}"
+        );
+        assert!(
+            *offset >= 4,
+            "{referenced} carries a real blob offset: {offset}"
+        );
+    }
+    assert_ne!(
+        after[0].1, before[0].1,
+        "the touched file's DV moves into a newly written container"
+    );
+}

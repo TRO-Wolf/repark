@@ -100,7 +100,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   CAST / arithmetic / abs / coalesce / greatest / least / nullif / CASE /
   arrow_cast / utf8→int / float math / log*/exp/sqrt / bitwise / trivial scalar-subquery fold; depth-bounded).
   **V3-2:** `allowCreateFormatVersion3` (default false) + `resolve_create_format_version`
-  (`Model: Grok 4.6 xHigh`).
+  (`Model: Grok 4.6 xHigh`). **V3-9 (2026-09-02):** the refusal dropped its parenthetical
+  "v3 tables cannot yet do merge-on-read row-level writes" — false since the `V3-MOR-1` lift;
+  it names the conf and the v2 default only. pins: v3-9-mor-predicate-dml-dv/C-006
 
 
 - **R-FN-BATCH4** aggregate expansion.

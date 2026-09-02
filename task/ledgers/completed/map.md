@@ -27,6 +27,7 @@ else. The next pickup's `make ledger-archive` files everything here under
   meta-pin. §1 is the run evidence, §3 the document → was → now table, §4 the mutation table
   (8 red of 8), and §5 the gate table. `risk_tier: standard`. Branch
   `docs/live-v3-first-measurement`.
+- [v3-9-mor-predicate-dml-dv-ledger.md](v3-9-mor-predicate-dml-dv-ledger.md) — V3-9 — merge-on-read predicate DML on v3 writes deletion vectors (`V3-MOR-1` FIXED; residual `V3-DV-1` BACKLOG, fork F-18 / repin RP-7)
 
 ## Pointers
 - Up: [../map.md](../map.md)

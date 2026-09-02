@@ -291,6 +291,11 @@ async fn column_def_location_and_ctas_temporary_refuse() {
             && fv3.to_string().contains("format-version"),
         "opt-in refuse must name conf and property: {fv3}"
     );
+    let _: &str = "pins: v3-9-mor-predicate-dml-dv/C-006";
+    assert!(
+        !fv3.to_string().contains("merge-on-read"),
+        "V3-9 serves merge-on-read row-level writes on v3: {fv3}"
+    );
     assert!(
         !catalogs["ice"]
             .table_exists(&TableIdent::new(

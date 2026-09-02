@@ -26,6 +26,7 @@ _LIVE = os.environ.get("REPARK_PARITY_LIVE") == "1"
 _LIVE_SKIP = "REPARK_PARITY_LIVE != 1 — live v3 oracle skipped (routine CI is JVM-free)"
 _V37_LEDGER_NAME = "v3-7-merge-lineage-ledger.md"
 _V38_LEDGER_NAME = "v3-8-subquery-where-lineage-ledger.md"
+_V39_LEDGER_NAME = "v3-9-mor-predicate-dml-dv-ledger.md"
 _ALLOW_CREATE_V3_KEY = "repark.sql.allowCreateFormatVersion3"
 _COW_V3 = (
     "'format-version' = '3', "
@@ -590,6 +591,12 @@ def _subquery_update_sql(target: str, source: str) -> str:
     return f"UPDATE {target} SET name = 'm' WHERE id IN (SELECT id FROM {source})"
 
 
+_SUBQUERY_CELLS = (
+    ("cow_sd", _subquery_delete_sql, _SUBQUERY_DELETE_LINEAGE),
+    ("cow_su", _subquery_update_sql, _SUBQUERY_UPDATE_LINEAGE),
+)
+
+
 def test_v3_subquery_where_dml_live_cow(tmp_path: Path) -> None:
     """COW subquery-WHERE DELETE and UPDATE lineage matches the in-repo V3-8 transcript.
 
@@ -613,10 +620,7 @@ def test_v3_subquery_where_dml_live_cow(tmp_path: Path) -> None:
         session.sql("CREATE NAMESPACE ice.sales")
         session.sql("CREATE TABLE ice.sales.srcids (id INT) USING iceberg")
         session.sql("INSERT INTO ice.sales.srcids VALUES (2)")
-        for table, statement, expected in (
-            ("cow_sd", _subquery_delete_sql, _SUBQUERY_DELETE_LINEAGE),
-            ("cow_su", _subquery_update_sql, _SUBQUERY_UPDATE_LINEAGE),
-        ):
+        for table, statement, expected in _SUBQUERY_CELLS:
             session.sql(
                 f"CREATE TABLE ice.sales.{table} (id INT, name STRING) USING iceberg "
                 f"TBLPROPERTIES ({_COW_V3})"
@@ -630,16 +634,35 @@ def test_v3_subquery_where_dml_live_cow(tmp_path: Path) -> None:
             assert _id_row_id_seq(lineage) == expected, table
         if not _LIVE:
             pytest.skip(_LIVE_SKIP)
-        _assert_subquery_where_dml_live_against_spark()
+        _assert_subquery_where_dml_live_against_spark(_COW_V3, _SUBQUERY_CELLS)
     finally:
         session.stop()
 
 
-def _assert_subquery_where_dml_live_against_spark() -> None:
-    """Live Spark COW subquery-WHERE DELETE and UPDATE at the V3-8 single-file seed.
+def _assert_subquery_where_dml_live_against_spark(mode: str, cells: tuple) -> None:
+    """Assert one mode's cells against the shared live-Spark measurement.
 
     pins: v3-8-subquery-where-lineage/C-002
+    pins: v3-9-mor-predicate-dml-dv/C-002, C-008
     """
+    lineage, kinds = _live_subquery_where_dml_measurement()
+    for table, _statement, expected in cells:
+        assert lineage[(mode, table)] == expected, (mode, table)
+        if mode == _MOR_V3:
+            assert kinds[(mode, table)] == ["PUFFIN"], (mode, table)
+
+
+_LIVE_SUBQUERY_LINEAGE: dict[tuple[str, str], list[tuple[int, int, int]]] = {}
+_LIVE_SUBQUERY_KINDS: dict[tuple[str, str], list[str]] = {}
+
+
+def _live_subquery_where_dml_measurement() -> tuple[dict, dict]:
+    """One live Spark session measuring the COW and MoR subquery-WHERE cells.
+
+    pins: v3-9-mor-predicate-dml-dv/C-008
+    """
+    if _LIVE_SUBQUERY_LINEAGE:
+        return _LIVE_SUBQUERY_LINEAGE, _LIVE_SUBQUERY_KINDS
     import tempfile
 
     from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
@@ -647,8 +670,8 @@ def _assert_subquery_where_dml_live_against_spark() -> None:
     from pyspark.sql import types as spark_types
 
     catalog = "local"
-    warehouse = Path(tempfile.mkdtemp(prefix="repark-v3-8-live-sub-"))
-    ivy_home = Path(tempfile.mkdtemp(prefix="repark-v3-8-ivy-"))
+    warehouse = Path(tempfile.mkdtemp(prefix="repark-v3-sub-live-"))
+    ivy_home = Path(tempfile.mkdtemp(prefix="repark-v3-sub-ivy-"))
     schema = spark_types.StructType(
         [
             spark_types.StructField("id", spark_types.IntegerType(), False),
@@ -657,7 +680,7 @@ def _assert_subquery_where_dml_live_against_spark() -> None:
     )
     builder = (
         SparkSession.builder.master("local[1]")
-        .appName("v3-8-subquery-live")
+        .appName("v3-subquery-where-live")
         .config("spark.sql.ansi.enabled", "true")
         .config("spark.sql.shuffle.partitions", "1")
         .config("spark.default.parallelism", "1")
@@ -687,26 +710,87 @@ def _assert_subquery_where_dml_live_against_spark() -> None:
             [spark_types.StructField("id", spark_types.IntegerType(), False)]
         )
         session.createDataFrame([(2,)], source_schema).coalesce(1).writeTo(source).append()
-        for table, statement, expected in (
-            ("cow_sd", _subquery_delete_sql, _SUBQUERY_DELETE_LINEAGE),
-            ("cow_su", _subquery_update_sql, _SUBQUERY_UPDATE_LINEAGE),
-        ):
-            target = f"{catalog}.sales.{table}"
-            session.sql(
-                f"CREATE TABLE {target} (id INT, name STRING) USING iceberg "
-                f"TBLPROPERTIES ({_COW_V3})"
-            )
-            frame = session.createDataFrame([(1, "a"), (2, "b"), (3, "c")], schema)
-            frame.coalesce(1).writeTo(target).append()
-            session.sql(statement(target, source))
-            spark_rows = session.sql(
-                f"SELECT id, _row_id, _last_updated_sequence_number FROM {target} ORDER BY id"
-            ).toArrow()
-            assert _id_row_id_seq(spark_rows) == expected, table
+        for mode, cells in ((_COW_V3, _SUBQUERY_CELLS), (_MOR_V3, _MOR_SUBQUERY_CELLS)):
+            for table, statement, _expected in cells:
+                target = f"{catalog}.sales.{table}"
+                session.sql(
+                    f"CREATE TABLE {target} (id INT, name STRING) USING iceberg "
+                    f"TBLPROPERTIES ({mode})"
+                )
+                frame = session.createDataFrame([(1, "a"), (2, "b"), (3, "c")], schema)
+                frame.coalesce(1).writeTo(target).append()
+                session.sql(statement(target, source))
+                spark_rows = session.sql(
+                    f"SELECT id, _row_id, _last_updated_sequence_number FROM {target} ORDER BY id"
+                ).toArrow()
+                _LIVE_SUBQUERY_LINEAGE[(mode, table)] = _id_row_id_seq(spark_rows)
+                delete_files = session.sql(
+                    f"SELECT file_format FROM {target}.delete_files"
+                ).toArrow()
+                _LIVE_SUBQUERY_KINDS[(mode, table)] = [
+                    str(kind).upper() for kind in delete_files.column("file_format").to_pylist()
+                ]
     finally:
         session.stop()
         shutil.rmtree(warehouse, ignore_errors=True)
         shutil.rmtree(ivy_home, ignore_errors=True)
+    return _LIVE_SUBQUERY_LINEAGE, _LIVE_SUBQUERY_KINDS
+
+
+_MOR_SUBQUERY_DELETE_LINEAGE = [(1, 0, 1), (3, 2, 1)]
+_MOR_SUBQUERY_UPDATE_LINEAGE = [(1, 0, 1), (2, 1, 2), (3, 2, 1)]
+_MOR_SUBQUERY_CELLS = (
+    ("mor_sd", _subquery_delete_sql, _MOR_SUBQUERY_DELETE_LINEAGE),
+    ("mor_su", _subquery_update_sql, _MOR_SUBQUERY_UPDATE_LINEAGE),
+)
+
+
+def test_v3_mor_subquery_where_dml_live(tmp_path: Path) -> None:
+    """MoR subquery-WHERE DELETE and UPDATE lineage matches the in-repo V3-9 transcript.
+
+    pins: v3-9-mor-predicate-dml-dv/C-002, C-003, C-005
+    """
+    from repark import ReparkSession
+
+    ledger = _ledger_path(_V39_LEDGER_NAME).read_text(encoding="utf-8")
+    assert "/tmp/opus-v39-oracle" not in ledger
+    assert "| MoR DELETE … IN |" in ledger
+    assert "| MoR UPDATE … IN |" in ledger
+    assert "(1,a,0,1),(3,c,2,1)" in ledger
+    assert "(1,a,0,1),(2,m,1,2),(3,c,2,1)" in ledger
+    session = (
+        ReparkSession.builder.appName("v3-9-mor-subquery-live")
+        .config(_ALLOW_CREATE_V3_KEY, "true")
+        .getOrCreate()
+    )
+    try:
+        session.register_memory_catalog("ice", tmp_path)
+        session.sql("CREATE NAMESPACE ice.sales")
+        session.sql("CREATE TABLE ice.sales.srcids (id INT) USING iceberg")
+        session.sql("INSERT INTO ice.sales.srcids VALUES (2)")
+        for table, statement, expected in _MOR_SUBQUERY_CELLS:
+            session.sql(
+                f"CREATE TABLE ice.sales.{table} (id INT, name STRING) USING iceberg "
+                f"TBLPROPERTIES ({_MOR_V3})"
+            )
+            session.sql(f"INSERT INTO ice.sales.{table} VALUES (1, 'a'), (2, 'b'), (3, 'c')")
+            session.sql(statement(f"ice.sales.{table}", "ice.sales.srcids")).collect()
+            lineage = session.sql(
+                "SELECT id, _row_id, _last_updated_sequence_number "
+                f"FROM ice.sales.{table} ORDER BY id"
+            ).to_arrow()
+            assert _id_row_id_seq(lineage) == expected, table
+            kinds = session.sql(
+                f"SELECT file_format FROM ice.sales.{table}.delete_files"
+            ).to_arrow()
+            assert [str(kind).upper() for kind in kinds.column("file_format").to_pylist()] == [
+                "PUFFIN"
+            ], table
+        if not _LIVE:
+            pytest.skip(_LIVE_SKIP)
+        _assert_subquery_where_dml_live_against_spark(_MOR_V3, _MOR_SUBQUERY_CELLS)
+    finally:
+        session.stop()
 
 
 def test_northstar_nightly_v3_leg_is_v3e_5() -> None:

@@ -426,7 +426,7 @@ async fn collect_identity_pairs(
                     "identity SELECT produced a NULL `(_file, _pos)` pair".to_string(),
                 ));
             }
-            pairs.push((Arc::<str>::from(files.value(row)), positions.value(row)));
+            lineage::push_identity_pair(&mut pairs, files.value(row), positions.value(row));
         }
     }
     Ok(pairs)
@@ -482,7 +482,7 @@ async fn collect_identity_update_rows(
                     "identity SELECT produced a NULL `(_file, _pos)` pair".to_string(),
                 ));
             }
-            pairs.push((Arc::<str>::from(files.value(row)), positions.value(row)));
+            lineage::push_identity_pair(&mut pairs, files.value(row), positions.value(row));
         }
         if batch.num_rows() > 0 {
             data_batches.push(project_update_data_batch(batch, values_schema)?);
@@ -709,11 +709,11 @@ fn resolve_write_mode(table: &Table, property: &str, verb: &str) -> Result<Delet
     match mode {
         Some(value) if value.eq_ignore_ascii_case(MODE_MERGE_ON_READ) => {
             let format_version = table.metadata().format_version();
-            if format_version != FormatVersion::V2 {
+            if format_version < FormatVersion::V2 {
                 return Err(DataFusionError::NotImplemented(format!(
-                    "merge-on-read {verb} writes Parquet position deletes, which require a V2 \
-                     table (this table is {format_version:?}) — use {property} = \
-                     '{MODE_COPY_ON_WRITE}' instead"
+                    "merge-on-read {verb} writes Parquet position deletes on V2 and deletion \
+                     vectors on V3 (this table is {format_version:?}; V1 has no delete files) — \
+                     use {property} = '{MODE_COPY_ON_WRITE}' instead"
                 )));
             }
             // pins: mw-9-delete-granularity/C-004 — same class as resolve_merge_mode: refuse

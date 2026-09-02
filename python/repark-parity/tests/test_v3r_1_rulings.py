@@ -77,19 +77,24 @@ def test_v3_geo_1_is_declared_and_shredded_variant_is_rowed_with_v3_6_pins() -> 
 
 
 def test_north_star_matrix_carries_the_three_engine_rulings() -> None:
-    """C-007 / C-009 / C-010: the gate's own rows say what was ruled, and when."""
+    """C-007 / C-009 / C-010: the gate's own rows say what was ruled, and when.
+
+    pins: v3-9-mor-predicate-dml-dv/C-005
+    """
     north_star = _north_star()
     cow = _matrix_row(north_star, "Write: COW DML on an adopted v3 table")
     assert "V3-COW-1" in cow and _RULING_DATE in cow and cow.count("🚫") == 0
     assert "FIXED" in cow and "V3-8" in cow
     assert "V3-7" in cow and "F-rp3-c7" in cow and "F-v3-8-update-files" in cow
     mor = _matrix_row(north_star, "Write: MOR DML via deletion vectors")
-    assert "V3-7" in mor and "subquery" in mor
-    assert "V3-8" in mor and mor.count("🚫") == 1
+    assert "V3-9" in mor and "V3-MOR-1" in mor and mor.count("🚫") == 0
+    assert "V3-7" in mor and "RP-6" in mor
+    assert "V3-DV-1" in mor and "F-18" in mor and "RP-7" in mor
     status = _read("STATUS.md")
-    assert "V3-7 (2026-09-02" in status
-    assert "V3-8 (2026-09-02" in status
+    assert "V3-7 / V3-8 (2026-09-02" in status
+    assert "**V3-9 (2026-09-02):**" in status
     assert "F-rp3-c7 consumed" in status
+    assert "[V3-DV-1](docs/spark-sql-iceberg-parity.md)" in status
     types = _matrix_row(north_star, "Read/write: v3 types + default values")
     assert "V3-GEO-1" in types and "V3-VARIANT-SHRED-1" in types and _RULING_DATE in types
     upgrade = _matrix_row(north_star, "Upgrade: v2 → v3 in place")

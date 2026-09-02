@@ -44,6 +44,7 @@ mod truncate;
 mod v3_cow;
 mod v3_cow_lift;
 mod v3_lineage;
+mod v3_mor_dml;
 mod v3_subquery_dml;
 mod v3_types;
 mod v3e3;

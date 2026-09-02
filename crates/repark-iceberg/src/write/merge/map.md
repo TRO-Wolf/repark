@@ -14,6 +14,9 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
 ## Contents
 
 - `snapshot_commit.rs` — snapshot-producing MERGE commits (`to_branch` when `MergeSpec.commit_branch` is set).
+  **V3-9:** `referenced` / `abort_paths` are moved out of the prepared deletes with
+  `std::mem::take` instead of deep-cloned once per row-delta commit.
+  pins: v3-9-mor-predicate-dml-dv/C-009
   pins: rp-5-fork-repin/C-004
 - `mod.rs` — types, `execute_merge`, plan/SQL helpers, write/commit path.
   **MW-9:** `resolve_merge_mode` parses `write.delete.granularity` on the MoR
@@ -34,8 +37,14 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   `apply` stamps sibling sequences. C-003 pin
   `shared_puffin_row_delta_keeps_the_untouched_sibling` calls `commit_row_delta_kind`
   on the Spark shared-Puffin fixture (id 5 must stay deleted).
+  **V3-9 (2026-09-02):** the position map takes `get_mut` before allocating a key and the V2
+  `referenced` set allocates one `String` per distinct path, not one per row (600k rows:
+  41.3 → 29.3 ms and 37.3 → 23.9 ms). The fork's container close rewrites **every** blob of a
+  touched Puffin where Spark rewrites only the touched one — registry `V3-DV-1`, BACKLOG, fork
+  ask F-18 / repin RP-7; not fixable here.
   pins: rp-3-fork-repin/C-003
   pins: v3-5-dv-compaction/C-005
+  pins: v3-9-mor-predicate-dml-dv/C-007, C-009
 - `abort.rs` — `delete_written_files_best_effort` + `written_file_paths`. Delete
   set is threaded from writer results in hand; never re-derived from the table
   or manifests. `CommitStateUnknown` errors SKIP cleanup (the commit may have

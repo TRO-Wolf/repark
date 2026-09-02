@@ -13,7 +13,10 @@ Identity DELETE/UPDATE tests. `predicate_dml.rs` declares `#[cfg(test)] mod test
   `[NOT] EXISTS` with and without correlation, correlated `IN`, isolation-level pins
   (M19 / A10).
 - `update.rs` — identity `UPDATE … SET <scalar> WHERE col IN`. Unknown
-  `write.delete.granularity` refuses before any parquet write (MW-9).
+  `write.delete.granularity` refuses before any parquet write (MW-9). **V3-9:**
+  `identity_pairs_share_one_arc_per_data_file_path` counts `Arc` identities over 600,003 pairs
+  on two paths and requires exactly two allocations.
+  pins: v3-9-mor-predicate-dml-dv/C-009
 
 ## Pointers
 

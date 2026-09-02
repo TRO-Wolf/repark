@@ -202,8 +202,7 @@ pub fn resolve_create_format_version(
         "3" if allow_v3 => Ok(3),
         "3" => Err(DataFusionError::NotImplemented(format!(
             "{form} '{property_name}' = '3' is not enabled — set `{ALLOW_CREATE_FORMAT_VERSION_3_KEY}` \
-             = true (v3 tables cannot yet do merge-on-read row-level writes; default create stays \
-             format v2)"
+             = true (default create stays format v2)"
         ))),
         other => Err(DataFusionError::NotImplemented(format!(
             "{form} '{property_name}' = '{other}' is not supported (tables are created as Iceberg \

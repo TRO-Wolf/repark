@@ -356,46 +356,45 @@ async fn created_v3_cow_correlated_subquery_delete_matching_nothing_leaves_the_t
 }
 
 #[tokio::test]
-async fn created_v3_merge_on_read_subquery_dml_refuses_on_the_v2_delete_file_gate() {
-    let _: &str = "pins: v3-8-subquery-where-lineage/C-002";
+async fn created_v3_merge_on_read_subquery_dml_commits_deletion_vectors() {
+    let _: &str = "pins: v3-9-mor-predicate-dml-dv/C-001, C-003";
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
     seed_source(&ctx, &catalogs).await;
     created_v3(&ctx, &catalogs, "sub_mor_del", MOR_V3_DELETE).await;
     created_v3(&ctx, &catalogs, "sub_mor_upd", MOR_V3_UPDATE).await;
-    let delete_error = execute(&ctx, &catalogs, &DELETE_IN.replace("{t}", "sub_mor_del"))
-        .await
-        .expect_err("merge-on-read subquery DELETE on v3 must refuse")
-        .to_string();
-    assert!(
-        delete_error.contains(
-            "merge-on-read DELETE writes Parquet position deletes, which require a V2 table"
-        ) && delete_error.contains("write.delete.mode")
-            && !delete_error.contains("G3-E8")
-            && !delete_error.contains("V3-COW-1"),
-        "the MoR residual is the pre-existing V2-only delete-file gate: {delete_error}"
+    let before_delete = snapshot_id(&catalogs, "sub_mor_del").await;
+    let before_update = snapshot_id(&catalogs, "sub_mor_upd").await;
+    run(&ctx, &catalogs, &DELETE_IN.replace("{t}", "sub_mor_del")).await;
+    run(&ctx, &catalogs, &UPDATE_IN.replace("{t}", "sub_mor_upd")).await;
+    assert_ne!(snapshot_id(&catalogs, "sub_mor_del").await, before_delete);
+    assert_ne!(snapshot_id(&catalogs, "sub_mor_upd").await, before_update);
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.sub_mor_del").await,
+        vec![(1, "a".to_string()), (3, "c".to_string())]
     );
-    let update_error = execute(&ctx, &catalogs, &UPDATE_IN.replace("{t}", "sub_mor_upd"))
-        .await
-        .expect_err("merge-on-read subquery UPDATE on v3 must refuse")
-        .to_string();
-    assert!(
-        update_error.contains(
-            "merge-on-read UPDATE writes Parquet position deletes, which require a V2 table"
-        ) && update_error.contains("write.update.mode")
-            && !update_error.contains("G3-E8")
-            && !update_error.contains("V3-COW-1"),
-        "the MoR residual is the pre-existing V2-only delete-file gate: {update_error}"
+    assert_eq!(
+        v3_cow::lineage_triples(&ctx, &catalogs, "sub_mor_del").await,
+        vec![(1, 0, 1), (3, 2, 1)]
     );
-    for table in ["sub_mor_del", "sub_mor_upd"] {
-        assert_eq!(
-            table_rows(&ctx, &catalogs, &format!("ice.sales.{table}")).await,
-            seed_rows(),
-            "the refused statement leaves {table} unmoved"
-        );
-        assert_eq!(
-            v3_cow::lineage_triples(&ctx, &catalogs, table).await,
-            SEED_TRIPLES.to_vec()
-        );
-    }
+    assert_eq!(
+        v3_cow::lineage(&catalogs, "sub_mor_del").await.next_row_id,
+        3
+    );
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.sub_mor_upd").await,
+        vec![
+            (1, "a".to_string()),
+            (2, "m".to_string()),
+            (3, "c".to_string())
+        ]
+    );
+    assert_eq!(
+        v3_cow::lineage_triples(&ctx, &catalogs, "sub_mor_upd").await,
+        vec![(1, 0, 1), (2, 1, 2), (3, 2, 1)]
+    );
+    assert_eq!(
+        v3_cow::lineage(&catalogs, "sub_mor_upd").await.next_row_id,
+        4
+    );
 }

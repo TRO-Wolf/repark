@@ -182,6 +182,11 @@ async fn format_version_three_without_opt_in_refuses() {
         err.contains("repark.sql.allowCreateFormatVersion3") && err.contains("format_version"),
         "opt-in refuse must name conf and property: {err}"
     );
+    let _: &str = "pins: v3-9-mor-predicate-dml-dv/C-006";
+    assert!(
+        !err.contains("merge-on-read"),
+        "V3-9 serves merge-on-read row-level writes on v3: {err}"
+    );
     assert!(!door.table_exists("sales", "v3").await, "nothing created");
 
     let err = door

@@ -46,12 +46,22 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   the named layout artefact: the UPDATE cell writes 2 data files where Spark writes 1.
   Also the correlated-to-target `DELETE` (served, created and adopted), its zero-row
   `s.id = tgt.id + 1` variant (`F-v3-8-empty-delete-snapshot`: the engine commits nothing
-  where Spark commits an empty overwrite), and the merge-on-read residual control, which
-  pins the V2-only delete-file gate's exact text on both verbs and asserts it is neither
-  `G3-E8` nor `V3-COW-1`.
-  pins: v3-8-subquery-where-lineage/C-002
+  where Spark commits an empty overwrite), and — since **V3-9 (2026-09-02)** — the
+  merge-on-read lift control in place of that unit's refusal control: single-property
+  `write.delete.mode` / `write.update.mode` MoR tables commit and move lineage.
+  pins: v3-8-subquery-where-lineage/C-002; v3-9-mor-predicate-dml-dv/C-003
+- `v3_mor_dml.rs` — **V3-9 (2026-09-02):** the `V3-MOR-1` lift. Merge-on-read predicate DML on
+  created and adopted v3 — `DELETE` plain / `IN` / `NOT IN` / `EXISTS` / `NOT EXISTS` and
+  `UPDATE` plain / `IN` — each pinning rows, `(id,_row_id,seq)`, next-row-id / first-row-id /
+  added-rows, the live data-file count and the single delete entry's format (`Puffin`), content
+  (`PositionDeletes`), record count and `referenced_data_file` (file-scoped). Controls:
+  `write.delete.granularity = 'partition'` is inert on v3; a v2 MoR table still writes one
+  Parquet position-delete file with no `referenced_data_file`; a subquery DELETE matching
+  nothing writes no delete file and leaves the seed.
+  pins: v3-9-mor-predicate-dml-dv/C-003, C-004
 - `create_table.rs` — also the V3R-1 type pin: `GEOMETRY` / `GEOGRAPHY` / `VARIANT` refuse at
-  CREATE (`V3-GEO-1`).
+  CREATE (`V3-GEO-1`); **V3-9:** the `format-version = 3` opt-in refusal names the conf and no
+  longer claims merge-on-read is unserved. pins: v3-9-mor-predicate-dml-dv/C-006
 - `v3_types.rs` — **V3-6:** C-001 ledger matrix + refuse of `UNKNOWN` / `VARIANT` /
   ADD COLUMN DEFAULT; C-003 opt-in v3 `timestamp_ns` / `timestamptz_ns` CREATE,
   ns Arrow round-trip, v2 refuse (asserts the fork's exact
@@ -61,15 +71,21 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 - `v3e4.rs` — **V3E-4:** snapshot refs, `VERSION AS OF` over DVs, expire with
   real work, orphan 24h floor on the partitioned-DV fixture after a RePark
   append. RP-6: live-DV UPDATE commits Spark-equal lineage. V3-7: live-DV MERGE on
-  the appended fixture keeps `_row_id`.
+  the appended fixture keeps `_row_id`. **V3-9 (2026-09-02):** a MoR subquery `DELETE … IN`
+  over the shared-Puffin fixture keeps both siblings' file-scoped DVs live with their
+  `referenced_data_file`, record counts 2 and 1 and a real blob offset. The pin stops there on
+  purpose: Spark rewrites only the touched blob and leaves the sibling entry at its old
+  container and offset (two containers), where the fork rewrites every blob of the touched
+  container into one new one — registry `V3-DV-1`, BACKLOG, fork F-18 / repin RP-7 re-aims
+  this pin at Spark's two-container layout.
   rustdoc cites C-001..C-016 (`Model: Grok 4.6 xHigh`; rp-3-fork-repin/C-004;
-  rp-6-fork-repin/C-002, C-003; v3-7-merge-lineage/C-002).
+  rp-6-fork-repin/C-002, C-003; v3-7-merge-lineage/C-002; v3-9-mor-predicate-dml-dv/C-003).
 - `v3_lineage.rs` — **V3-4:** Spark-door `_row_id` / `_last_updated_sequence_number` on the RP-6 re-recorded the `repark-sql/src/v3/cow.rs` hash once more after the pins citation moved from its module doc to the map.
   V3E-3 fixtures (MOR+DV surviving rows), created v3 derivation, v2/v1 unresolved (`No field
   named _row_id`), `SELECT *, _row_id` expands user columns only, qualified/aliased forms,
   unquoted case-fold, JOIN/CTE/subquery/`VERSION AS OF` refuse `V3-ROWID-2`, V3-COW-1 files
-  hash-pinned (V3-7 re-records after the Spark-equal MERGE lift; later units re-record
-  only for a change another merged unit made); the C-001
+  hash-pinned (V3-9 re-records after the merge-on-read lift touched three of the four files;
+  later units re-record only for a change they themselves made); the C-001
   matrix pin finds the ledger anywhere under `task/ledgers/` so
   lifecycle moves keep it green.
   pins: rp-4-fork-repin/C-003

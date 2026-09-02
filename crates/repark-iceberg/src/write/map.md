@@ -42,9 +42,18 @@ repark-core's error map.
 - `predicate_dml.rs` — **V3-8 (2026-09-02):** the COW rewrite carries stored `_row_id` /
   `_last_updated_sequence_number` on format-v3 (scratch from `merge::row_lineage`, survivors and
   updated rows projected through `predicate_dml/lineage.rs`), so `row_lineage_guard.rs` lost its
-  last caller and was deleted with it — registry `V3-COW-1` FIXED. Merge-on-read subquery DML on
-  v3 stays refused by the pre-existing V2-only delete-file gate in `resolve_write_mode`.
-  pins: v3-8-subquery-where-lineage/C-002
+  last caller and was deleted with it — registry `V3-COW-1` FIXED.
+  **V3-9 (2026-09-02):** `resolve_write_mode`'s merge-on-read format gate went from
+  `!= FormatVersion::V2` to `< FormatVersion::V2` (the shape `resolve_merge_mode` already
+  used), so v3 predicate DML falls through to `commit_row_delta_kind` →
+  `merge::dv_close::prepare_row_delta_deletes`, which already branches V2 parquet position
+  deletes / V3 `close_touched_dv_containers`. No new deletion-vector code — registry
+  `V3-MOR-1` FIXED. The `write.delete.granularity` parse stays as a validation gate on both
+  versions even though a v3 deletion vector is file-scoped by construction. The per-row
+  `Arc<str>` for a matched row's data-file path is reused when the path is unchanged
+  (`predicate_dml/lineage.rs::push_identity_pair`), so a single-file DELETE allocates once
+  rather than once per row.
+  pins: v3-8-subquery-where-lineage/C-002; v3-9-mor-predicate-dml-dv/C-003, C-009
 - `predicate_dml.rs` — **G3-E8 A1-identity** (`execute_predicate_dml`): evaluate the original
   `WHERE` as a SELECT over the pinned `(_file, _pos)` streaming target, then commit through the
   MERGE COW/MoR write arms honoring `write.delete.mode` / `write.update.mode` / isolation —

@@ -421,7 +421,7 @@ fn v3_rowid_1_is_fixed_in_the_registry() {
 
 #[test]
 fn cow_keep_refusal_files_are_byte_untouched() {
-    let _: &str = "pins: v3-8-subquery-where-lineage/C-003";
+    let _: &str = "pins: v3-9-mor-predicate-dml-dv/C-005";
     let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .expect("crates/")
@@ -431,16 +431,16 @@ fn cow_keep_refusal_files_are_byte_untouched() {
     let pinned: [(&str, u64); 4] = [
         (
             "crates/repark-spark/src/tests/v3_subquery_dml.rs",
-            0xe1a3_4e9e_2c3c_1f6a,
+            0x4e89_f691_b357_c970,
         ),
         (
             "crates/repark-spark/src/tests/v3_cow.rs",
             0x9339_d979_508a_32b0,
         ),
-        ("crates/repark-sql/src/v3/cow.rs", 0xcb64_ffc0_0f11_1fad),
+        ("crates/repark-sql/src/v3/cow.rs", 0xebe6_de70_a7d5_8a82),
         (
             "python/repark/tests/test_v3_cow_dml.py",
-            0xf693_b7a8_6614_a3be,
+            0xce7c_19f9_d69d_4f7c,
         ),
     ];
     for (path, expected) in pinned {
@@ -452,9 +452,9 @@ fn cow_keep_refusal_files_are_byte_untouched() {
         }
         assert_eq!(
             hash, expected,
-            "V3-COW-1 lift file {path} changed; V3-8 (feat/v3-8-subquery-where-lineage) \
-             re-records these hashes after the measured Spark-equal subquery-WHERE lift that \
-             closed the row; later units re-record only for a change another merged unit made"
+            "V3-COW-1 lift file {path} changed; V3-9 (feat/v3-9-mor-subquery-where-dv) \
+             re-records these hashes after lifting the merge-on-read predicate-DML gate onto \
+             deletion vectors; later units re-record only for a change they themselves made"
         );
     }
 }

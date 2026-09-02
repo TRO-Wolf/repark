@@ -2314,8 +2314,8 @@ the pin rather than obeying it.
   `created_v3_cow_correlated_subquery_delete_keeps_row_lineage` /
   `adopted_v3_cow_correlated_subquery_delete_keeps_row_lineage`,
   `created_v3_cow_correlated_subquery_delete_matching_nothing_leaves_the_table_unmoved` and the
-  merge-on-read residual control
-  `created_v3_merge_on_read_subquery_dml_refuses_on_the_v2_delete_file_gate`);
+  merge-on-read lift control
+  `created_v3_merge_on_read_subquery_dml_commits_deletion_vectors`);
   Spark-door residual control
   `crates/repark-spark/src/tests/v3_cow.rs::adopted_v3_subquery_update_outside_the_hole_still_refuses`;
   ANSI twins `crates/repark-sql/src/v3/cow.rs::adopted_v3_cow_subquery_where_dml_keeps_row_lineage`
@@ -2331,13 +2331,12 @@ the pin rather than obeying it.
   `crates/repark-spark/src/tests/v3_cow_lift.rs`.
   Pins: v3-8-subquery-where-lineage/C-002; v3-7-merge-lineage/C-002; rp-6-fork-repin/C-002, C-003.
 - **Rationale** — FIXED; the **owner ruling 2026-08-25** that held this row BACKLOG is
-  discharged. Two residual refusals remain and neither is about lineage: merge-on-read
-  subquery-`WHERE` DML on a v3 table is refused by predicate DML's pre-existing V2-only
-  delete-file gate ("merge-on-read DELETE writes Parquet position deletes, which require a V2
-  table" — never `G3-E8`, never this row), and subquery spellings outside the allow-listed
-  hole (`UPDATE … NOT IN` / `EXISTS`, correlated-to-target **on `UPDATE` only** — the
-  correlated `DELETE` is served — nested, aggregate) by the pre-existing
-  `refuse_dml_subquery_predicate` guard (`G3-E8`).
+  discharged. One residual refusal remains and it is not about lineage: subquery spellings
+  outside the allow-listed hole (`UPDATE … NOT IN` / `EXISTS`, correlated-to-target **on
+  `UPDATE` only** — the correlated `DELETE` is served — nested, aggregate) refuse on the
+  pre-existing `refuse_dml_subquery_predicate` guard (`G3-E8`). V3-8's other residual, the
+  V2-only delete-file gate on merge-on-read predicate DML, is **FIXED by V3-9 (2026-09-02)** —
+  see `V3-MOR-1` below.
   F-rp3-c7 is consumed as a layout artefact. F-v3-7-mor-mixed is a layout artefact: mixed
   MERGE is lineage Spark-equal; Spark writes 1 (COW) / 2 (MoR) data files, the engine writes
   2 (COW) / 3 (MoR). **F-v3-8-update-files** is a layout artefact: subquery-`WHERE` COW
@@ -2347,6 +2346,86 @@ the pin rather than obeying it.
   subquery-`WHERE` DELETE that matches no row commits nothing on the engine, where Spark
   commits an empty `overwrite` snapshot. Rows, lineage, next-row-id and data-file count are
   equal on both sides.
+
+### V3-MOR-1 — FIXED (V3-9, 2026-09-02): merge-on-read predicate DML writes deletion vectors on v3
+
+- **repark** — `resolve_write_mode` gated merge-on-read `DELETE … WHERE` / `UPDATE … WHERE`
+  to `format_version == V2`; V3-9 lifts it to `< V2`, so v3 predicate DML reuses the DV path
+  MERGE has used since V3-7 (`prepare_row_delta_deletes` → `close_touched_dv_containers`).
+  Single-file seed `(id,name,_row_id,seq) = (1,a,0,1),(2,b,1,1),(3,c,2,1)`, next-row-id 3, 1
+  data file: `DELETE` on `IN` / `EXISTS` / plain leaves `(1,a,0,1),(3,c,2,1)` at next-row-id 3
+  (first-row-id 3, added 0, 1 data file, one file-scoped Puffin DV of 1 record); `NOT IN` /
+  `NOT EXISTS` leave `(2,b,1,1)` at the same counters with a 2-record DV; `UPDATE … SET
+  name='m'` on `IN` and plain leaves `(1,a,0,1),(2,m,1,2),(3,c,2,1)` at next-row-id 4
+  (added 1, 2 data files, one 1-record DV). `write.delete.granularity` changes nothing on v3.
+  Plain-`WHERE` merge-on-read DML never sat on this gate — only allow-listed subquery shapes
+  reach `execute_predicate_dml` — and has written DVs since RP-6; it is pinned here as a
+  control. Format v2 merge-on-read predicate DML still writes Parquet position deletes with a
+  NULL `referenced_data_file`.
+- **Apache Spark** — merge-on-read `DELETE`/`UPDATE` on v3 write one deletion vector per
+  touched data file: content `POSITION_DELETES`, format `PUFFIN`, `referenced_data_file` set,
+  `content_offset` 4; the snapshot summary carries `added-dvs 1` and `added-delete-files 1`.
+  `DELETE` adds no records (next-row-id stays 3); `UPDATE` appends the changed row as one data
+  file and advances next-row-id by that appended count only, keeping the stored `_row_id` and
+  moving `_last_updated_sequence_number` to the new sequence number. Granularity `file` and
+  `partition` produce the identical result.
+  *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, Hadoop catalog, `local[1]`, `coalesce(1)`,
+  2026-09-02 V3-9 transcript; nine cells)*.
+- **Pin** — `crates/repark-spark/src/tests/v3_mor_dml.rs` (seven shapes × created and adopted,
+  the granularity cell, the no-match cell and the v2 Parquet-position-delete control);
+  `crates/repark-spark/src/tests/v3_subquery_dml.rs::created_v3_merge_on_read_subquery_dml_commits_deletion_vectors`;
+  shared-Puffin sibling
+  `crates/repark-spark/src/tests/v3e4.rs::subquery_delete_on_the_shared_puffin_v3_table_keeps_the_untouched_sibling`;
+  ANSI twin
+  `crates/repark-sql/src/v3/cow.rs::adopted_v3_mor_subquery_where_dml_writes_file_scoped_deletion_vectors`;
+  facade
+  `python/repark/tests/test_v3_cow_dml.py::test_facade_adopted_v3_mor_subquery_where_dml_writes_deletion_vectors`;
+  live cell `python/repark/tests/test_v3_live_oracle.py::test_v3_mor_subquery_where_dml_live`.
+  Pins: v3-9-mor-predicate-dml-dv/C-002, C-003, C-004.
+- **Rationale** — FIXED for rows, lineage, next-row-id and delete-entry content. One dated
+  residual is carried and it is a Puffin **container-packing** difference, not a row or lineage
+  difference: `V3-DV-1` below. No new deletion-vector code: the lift is one format-version
+  comparison, and the write path was already V3-7's. The v3 create opt-in message dropped its
+  now-false parenthetical ("v3 tables cannot yet do merge-on-read row-level writes") in the
+  same unit; it names only the conf and the v2 default. Pins:
+  v3-9-mor-predicate-dml-dv/C-006.
+
+### V3-DV-1 — BACKLOG (V3-9, 2026-09-02): closing a shared Puffin rewrites every sibling blob
+
+- **repark** — `close_touched_dv_containers` marks a Puffin container affected when **any** blob
+  in it is touched and rewrites **all** of them into one new container. Measured on the
+  Spark-written partitioned fixture (2 data files, 2 DVs packed in one Puffin at offsets 46 and
+  4): after `DELETE … WHERE id IN (SELECT …)` touching only the `part = 0` file, both blobs sit
+  in a single **new** container (`dv-00000-….puffin`) at offsets 4 and 48; the untouched
+  sibling's `file_path` **and** `content_offset` both move. Rows, `referenced_data_file` and
+  record counts (2 and 1) are correct.
+- **Apache Spark** — the same statement removes only the touched blob: snapshot summary
+  `removed-delete-files 1`, `removed-dvs 1`, `removed-position-deletes 1`, `added-delete-files 1`,
+  `added-dvs 1`, `added-position-deletes 2`. Afterwards there are **two distinct containers** —
+  the touched file's DV in a newly written one at offset 4, and the untouched sibling's
+  `DeleteFile` entry still pointing at the **old** container at its original offset.
+  *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, Hadoop catalog, `local[1]`, `coalesce(1)`,
+  partitioned v3 merge-on-read, 2026-09-02 V3-9 transcript)*.
+- **Cost** — write amplification, measured in this tree: a 64-file subquery DELETE packs one
+  18,996 B Puffin holding 64 blobs; each later single-row DELETE re-reads and rewrites
+  18,998–19,006 B (~1,010 ms) where a fresh blob is 373 B — 64× amplification, 16× at 16 files.
+  Two neighbours ride the same fork function: `collect_live_data_files` runs unconditionally
+  although its result is read only when `remaining` is non-empty (six single-row v3 `DELETE` statements on
+  one DV'd file: 208 / 991 / 2,790 ms at 8 / 64 / 192 live data files, against 135 / ~900 /
+  1,485 ms on a v2 twin), and the manifest list is loaded twice per statement with manifests read
+  in a serial `for`-await.
+- **Pin** —
+  `crates/repark-spark/src/tests/v3e4.rs::subquery_delete_on_the_shared_puffin_v3_table_keeps_both_file_scoped_deletion_vectors`
+  holds the invariant both engines share (each data file keeps one live file-scoped DV with its
+  `referenced_data_file`, record counts 2 and 1, a real blob offset, and the touched file's DV in
+  a newly written container) and deliberately does **not** pin the container count, which is the
+  divergence. Rows are pinned by the same test's `live_triples` assertion.
+- **Rationale** — BACKLOG, intent to FIX. The packing lives in the fork, not in RePark: fork ask
+  **F-18** — `crates/iceberg/src/delete_vector_container.rs::close_touched_dv_containers_at` must
+  rewrite only the touched blob into a new container and leave untouched sibling blobs in their
+  old container, Spark-equal; make `collect_live_data_files` lazy; load the manifest list once and
+  read manifests concurrently. RePark consumes it in repin unit **RP-7**, which re-aims the pin
+  above at Spark's exact two-container layout. Pins: v3-9-mor-predicate-dml-dv/C-007.
 
 ### V3-ROWID-3 — the merge-on-read MERGE insert's `_row_id` is nondeterministic
 
@@ -2640,7 +2719,20 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   files.
 
 - **V3-COW-1** — measured 2026-08-24, admitted as a BACKLOG row (see §7), and **FIXED
-  (V3-8, 2026-09-02)** in place there. Left this queue.
+  (V3-8, 2026-09-02)** in place there. Left this queue. Its merge-on-read residual is
+  **V3-MOR-1**, FIXED (V3-9, 2026-09-02).
+
+- **V3-DV-1** — **BACKLOG (V3-9, 2026-09-02).** See the row above. Closing a shared Puffin
+  rewrites every sibling blob where Spark rewrites only the touched one; rows, lineage and
+  `referenced_data_file` agree. Owner: fork ask **F-18**, consumed by repin **RP-7**.
+
+- **V3-ROWID-3** — **BACKLOG (LIVE-v3, 2026-09-02).** See the row above. A merge-on-read
+  MERGE insert's `_row_id` is nondeterministic (6 of 10 runs `11`, 4 of 10 `10`) where Spark is
+  deterministic at `11`; no read returns a duplicated id. Owner: v3 lineage unit **V3-11**.
+
+- **S3T-V3-1** — measured and **FIXED (LIVE-v3-M, 2026-09-02)** in its §4 row: both live v3
+  acceptance legs are green and S3 Tables accepts `format-version = 3` at CREATE. Left this
+  queue.
 
 - **V3-VARIANT-SHRED-1** — landed as a §4 row (2026-09-01, V3-6): shredded-Parquet `variant`
   stays **DECLARED out of the v1.0 gate (owner ruling 2026-08-25)**; binary variant is

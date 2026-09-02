@@ -8,6 +8,15 @@ use iceberg::metadata_columns::{
 };
 
 use crate::write::merge::{FILE_PATH_COL, POS_COL, quote_ident};
+use crate::write::position_delete::PositionDeletePair;
+
+pub(super) fn push_identity_pair(pairs: &mut Vec<PositionDeletePair>, path: &str, position: i64) {
+    let reuse = pairs
+        .last()
+        .filter(|(last, _)| last.as_ref() == path)
+        .map(|(last, _)| Arc::clone(last));
+    pairs.push((reuse.unwrap_or_else(|| Arc::<str>::from(path)), position));
+}
 
 pub(super) fn survivor_sql(
     write_schema: &datafusion::arrow::datatypes::SchemaRef,
