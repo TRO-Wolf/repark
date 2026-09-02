@@ -85,6 +85,21 @@ JVM, no repark required). See [../map.md](../map.md).
   production file-size refactor removes `session/_funcs.py` when its exception retires. The
   catalog-registration test split ratchets `session/tests/session.rs` from 1,485 to 1,461 lines.
   DML-C ratchets `session.rs` 1178 → 1177 and `repark-sql/src/tests.rs` 1523 → 1520.
+- `test_live_v3_docs.py` — **LIVE-v3-M (2026-09-02; tree pins):** the live v3 legs are documented
+  as **measured green** — registry `S3T-V3-1` is FIXED by measurement and carries run
+  33635288918, its link, base `8c4bc55`, the `6 passed in 122.13s` line, the accepted branch and
+  `exact_commit_counts=False`; the north-star "Live: Glue + S3 Tables v3 legs" row is ✅, names
+  the run, both legs and the registry row, and keeps the MW-10 sentence with its links; no
+  pending wording ("unmeasured", "nothing has run against AWS", "the first measurement is
+  pending", "not yet run") survives in the registry row, the north-star row or the STATUS clause;
+  `docs/tier2-aws.md` §6 lists one row per leg, its two v3 rows state the answer, it says the v3
+  legs need no new IAM action or workflow variable, and it carries no run id because measured
+  state belongs to STATUS; both legs and the local pin exist as real `def`s; STATUS's v3
+  workstream names the run, carries the `V3-ROWID-3` line and stays under its dual-pinned
+  25,000-byte ceiling; registry `V3-ROWID-3` still carries both engines' measured answers and
+  names follow-up unit V3-11; and `docs/design/format-v3-track.md` §7's two "not measured" claims
+  each carry a dated correction. Whitespace-normalized reads, so a re-wrap does not red it.
+  pins: live-v3-aws-legs/C-004, C-005; live-v3-first-measurement/C-001, C-002, C-003
 - `test_reg_1_registry_truth_up.py` — **REG-1 (2026-08-26; tree pins):** the divergence registry
   says what the pins prove — DEC-2 / DEC-6 / DEC-7 / DEC-8 carry dated FIXED notes naming #94 / #99
   and their equality pins (C-001); TZ-8 splits into the FIXED `CAST(ts AS DATE)` / `to_date` /

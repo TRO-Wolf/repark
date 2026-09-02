@@ -21,6 +21,13 @@ changing a decision here means a new dated design pass, not an in-place edit.
   `V3-ADOPT-1` is FIXED (RP-3 / fork #235, 2026-08-30): Hadoop `vN` writes bump to `v(N+1)`.
   S3 Tables `register_table` is registry `S3T-1` (fork R126). §5 and §7 name the Spark-written
   fixture as landed.
+  **Corrected 2026-09-02 (LIVE-v3):** §7's "`expire_snapshots` … was not exercised against a
+  table with expirable snapshots" now carries its dated fix — the live v3 leg's created-table
+  sequence expires thirteen of fourteen snapshots (`14 → 1`), pinned by
+  `python/repark/tests/test_v3_acceptance_local.py`. pins: live-v3-aws-legs/C-004
+  **Corrected 2026-09-02 (LIVE-v3-M):** §7's "Nothing was measured on Glue or S3 Tables" carries
+  its dated fix too — `aws-acceptance` run 33635288918 measured both, registry `S3T-V3-1`.
+  pins: live-v3-first-measurement/C-002
   **Errata 2026-08-24 (MW-7):** §3b's v2 sentence ("Spark … leaving all six position deletes in
   place") holds for that 9 %-deleted fixture and is not general — on delete-heavy v2 shapes Spark
   ends at zero delete files (errata 2026-09-02: true at 4.0.1 / 1.10.0; at 1.11.0 Spark leaves the

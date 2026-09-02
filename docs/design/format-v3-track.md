@@ -310,9 +310,17 @@ The FNP and TA performance campaigns consume none of these fork surfaces.
 
 - **Nothing was measured on Glue or S3 Tables.** Every number here is local filesystem. §4's
   claim that Glue implements `register_table` is read from the fork's source at the pin, not run.
+  **Corrected 2026-09-02 (LIVE-v3-M):** both services are measured now — the two v3 acceptance
+  legs ran green on `aws-acceptance` run 33635288918, Glue reproducing the local numbers exactly
+  (`register_table` among them) and S3 Tables accepting `format-version = 3` at CREATE. Registry
+  `S3T-V3-1`.
 - **`expire_snapshots` on v3 returned all zeros** on a fixture with nothing to expire, which is
   the same answer it gives on v2 and is not evidence either way. It was not exercised against a
   table with expirable snapshots.
+  **Corrected 2026-09-02 (LIVE-v3):** it is now, on a partitioned v3 merge-on-read table with
+  thirteen expirable snapshots — `14 → 1`, pinned by
+  `python/repark/tests/test_v3_acceptance_local.py`. V3E-4 had already measured the dual probe
+  on adopted v3; this is the created-table half.
 - **No equality-delete or partitioned v3 fixture was built.** Both fixtures are unpartitioned and
   carry only position-style deletes.
 - **V1 is unpinned and unpinnable.** The guard admits it (correctly — v1 has no row lineage), but

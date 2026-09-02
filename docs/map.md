@@ -38,6 +38,15 @@ repo.
   with [../STATUS.md](../STATUS.md) — STATUS holds issue *state*, this file holds *semantics*, and
   neither restates the other. §8 is the drop-in disclosure rationale table. §9 is FNP-15/16
   declared-absent Spark functions (unreachable vs deferred-by-cost). pins: fnp-15-16/C-014
+  LIVE-v3 (2026-09-02) added §7 `S3T-V3-1`; LIVE-v3-M (2026-09-02) closed it — **FIXED by
+  measurement**: `aws-acceptance` run 33635288918 on merged `main` `8c4bc55` ran both live v3
+  legs green, S3 Tables accepting `format-version = 3` at CREATE (the decision table's accepted
+  branch, service commit counts relaxed) and Glue reproducing the local numbers exactly; the
+  refusal branch stays wired as history and the local pins stay green. Also §7 `V3-ROWID-3`: the merge-on-read
+  MERGE insert's `_row_id` is nondeterministic in repark (11 six times / 10 four times over
+  ten runs) and deterministic at 11 in Spark 4.1.2 + Iceberg 1.11.0 (10 of 10) — BACKLOG,
+  follow-up unit V3-11, pinned by the invariant rather than a flapping value.
+  pins: live-v3-aws-legs/C-004, C-005; live-v3-first-measurement/C-001
   Cited by name from
   ~16 live sites (Rust refusal messages, facade docstrings, facade tests), and indexed in
   [../repo-manifest.toml](../repo-manifest.toml) so a move is a red gate. A row without a live pin
@@ -84,7 +93,13 @@ repo.
   repository level equivalent), first-dispatch acceptance (§5 — including the stale-namespace
   pre-check: an existing scratch database is adopted idempotently and keeps its OLD
   `LocationUri`). Corrections carried back from the first green live run, 2026-08-10; the run's
-  status itself lives in [../STATUS.md](../STATUS.md).
+  status itself lives in [../STATUS.md](../STATUS.md). **§6 (LIVE-v3, 2026-09-02)** is one row per
+  leg the workflow runs — catalog, extra gate, and what the run answers — including the two new v3
+  legs, with the note that they need no new IAM action and no new workflow variable. What a leg
+  measured stays in STATUS. **LIVE-v3-M (2026-09-02):** the two v3 rows now state the answer
+  ("answered 2026-09-02") rather than the open question — Glue reproduces the local v3 numbers,
+  S3 Tables accepts `format-version = 3` at CREATE — and the run id itself stays out of §6.
+  pins: live-v3-aws-legs/C-004; live-v3-first-measurement/C-002
 - [release.md](release.md) — release engineering (wired and proven): PyPI trusted-publishing
   setup, bootstrap-token revocation, the structural crates.io deferral, what the first tags
   settled, and the still-open items. Which versions shipped is [../STATUS.md](../STATUS.md);
