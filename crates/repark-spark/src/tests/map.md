@@ -112,6 +112,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `identity_scan_residual`) 1 red of 1. The `#[ignore]`d
   `measure_v3_mor_subquery_delete_statement_wall` is the statement-wall measurement behind the
   ledger's §10 table; it is a wall clock and deliberately not asserted.
+  **Round 3 (2026-09-02):** `subquery_dml_matrix_matches_spark_with_the_residual_pushed` is the
+  twelve-cell owner-resolution matrix (ledger §11) — both alias-shadowing spellings delete every
+  row, the eight other executable shapes match Spark's survivors, and the two allow-list refusals
+  leave the table at the seed. Mutation (independent per-side classification) 1 red of 1.
   pins: rp-7-f18-repin/C-005
   rustdoc cites C-001..C-016 (`Model: Grok 4.6 xHigh`; rp-3-fork-repin/C-004;
   rp-6-fork-repin/C-002, C-003; v3-7-merge-lineage/C-002; v3-9-mor-predicate-dml-dv/C-003).

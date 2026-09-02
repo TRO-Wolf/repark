@@ -2417,9 +2417,10 @@ the pin rather than obeying it.
   | 16 | 1 / 4,830 B | 2 / 377 B |
   | 64 | 1 / 19,126 B | 2 / 377 B |
 
-  The data-file walk is lazy too: a v3 `DELETE` whose touched files already carry DVs reads **no**
-  data manifest, and RePark supplies `(spec_id, partition)` for an all-unpartitioned table so a
-  first `DELETE` reads none either.
+  The data-file walk is closed for ANY table, partitioned or not: RePark hands the close the
+  `(spec_id, partition)` its own target scan already planned for every file the statement
+  touched, so a v3 `DELETE` reads **no** data manifest whether or not the touched files already
+  carry DVs. Measured on a 192-partition fresh-path `DELETE`: 2,176 → 761 ms.
 - **Pin** —
   `crates/repark-spark/src/tests/v3e4.rs::subquery_delete_on_the_shared_puffin_v3_table_keeps_both_file_scoped_deletion_vectors`
   now pins Spark's layout: two containers, the sibling `(container, offset, record_count)` tuple
@@ -2428,10 +2429,12 @@ the pin rather than obeying it.
   budget at 16 blobs;
   `crates/repark-iceberg/src/write/merge/dv_close.rs::shared_puffin_row_delta_keeps_the_untouched_sibling`
   keeps the semantic assertion and gains the layout one;
-  `dv_close.rs::closing_a_covered_v3_delete_reads_no_data_manifest` and
-  `dv_close.rs::a_first_v3_delete_on_an_unpartitioned_table_reads_no_data_manifest` hold the
-  manifest-read budget. Live cell
-  `python/repark/tests/test_v3_live_oracle.py::test_v3_shared_puffin_container_close_live`.
+  `dv_close.rs::a_supplied_partition_map_closes_a_fresh_partitioned_delete_with_no_data_manifest`
+  holds the manifest-read budget for a fresh PARTITIONED delete, and
+  `merge/tests/partition_sink.rs::the_target_scan_records_every_planned_file_partition` holds the
+  scan side of it; `dv_close.rs::closing_a_covered_v3_delete_reads_no_data_manifest` records the
+  fork's own laziness for an already-covered path. Live cell
+  `python/repark/tests/test_v3_dv_container_close.py::test_v3_shared_puffin_container_close_live`.
 - **Rationale** — FIXED. The packing lived in the fork and was fixed there (F-18); RePark
   consumed it in repin **RP-7**, re-aimed the narrowed V3-9 pin at Spark's exact layout, and
   re-measured the oracle at the matched layout rather than trusting the V3-9 transcript. Pins:

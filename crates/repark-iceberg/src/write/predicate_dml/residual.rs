@@ -23,13 +23,6 @@ fn last_ident(expr: &Expr) -> Option<String> {
     }
 }
 
-fn first_ident(expr: &Expr) -> Option<String> {
-    match expr {
-        Expr::CompoundIdentifier(parts) => parts.first().map(|ident| ident.value.clone()),
-        _ => None,
-    }
-}
-
 fn plain_source_table(from: &TableWithJoins) -> Option<(String, Vec<String>)> {
     if !from.joins.is_empty() {
         return None;
@@ -47,6 +40,37 @@ fn plain_source_table(from: &TableWithJoins) -> Option<(String, Vec<String>)> {
     Some((name.to_string(), aliases))
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Side {
+    Target,
+    Source,
+}
+
+fn owner_side(expr: &Expr, target_alias: &str, source_aliases: &[String]) -> Option<Side> {
+    let Expr::CompoundIdentifier(parts) = expr else {
+        return None;
+    };
+    if parts.len() != 2 {
+        return None;
+    }
+    let owner = parts[0].value.as_str();
+    let target = owner.eq_ignore_ascii_case(target_alias);
+    let source = source_aliases
+        .iter()
+        .any(|candidate| candidate.eq_ignore_ascii_case(owner));
+    match (target, source) {
+        (true, false) => Some(Side::Target),
+        (false, true) => Some(Side::Source),
+        _ => None,
+    }
+}
+
+fn source_shadows_target(target_alias: &str, source_aliases: &[String]) -> bool {
+    source_aliases
+        .iter()
+        .any(|candidate| candidate.eq_ignore_ascii_case(target_alias))
+}
+
 fn correlated_key_columns(
     selection: &Expr,
     target_alias: &str,
@@ -60,23 +84,28 @@ fn correlated_key_columns(
     else {
         return None;
     };
-    let belongs_to_target = |expr: &Expr| {
-        first_ident(expr).is_some_and(|owner| owner.eq_ignore_ascii_case(target_alias))
-    };
-    let belongs_to_source = |expr: &Expr| {
-        first_ident(expr).is_some_and(|owner| {
-            source_aliases
-                .iter()
-                .any(|candidate| candidate.eq_ignore_ascii_case(&owner))
-        })
-    };
-    if belongs_to_target(left) && belongs_to_source(right) {
-        return Some((last_ident(left)?, last_ident(right)?));
+    let left_side = owner_side(left, target_alias, source_aliases)?;
+    let right_side = owner_side(right, target_alias, source_aliases)?;
+    match (left_side, right_side) {
+        (Side::Target, Side::Source) => Some((last_ident(left)?, last_ident(right)?)),
+        (Side::Source, Side::Target) => Some((last_ident(right)?, last_ident(left)?)),
+        _ => None,
     }
-    if belongs_to_source(left) && belongs_to_target(right) {
-        return Some((last_ident(right)?, last_ident(left)?));
+}
+
+fn projected_source_column(
+    projected: &Expr,
+    target_alias: &str,
+    source_aliases: &[String],
+) -> Option<String> {
+    match projected {
+        Expr::Identifier(ident) => Some(ident.value.clone()),
+        Expr::CompoundIdentifier(_) => match owner_side(projected, target_alias, source_aliases)? {
+            Side::Source => last_ident(projected),
+            Side::Target => None,
+        },
+        _ => None,
     }
-    None
 }
 
 fn residual_hint(selection_sql: &str, target_alias: &str) -> Option<ResidualHint> {
@@ -93,7 +122,10 @@ fn residual_hint(selection_sql: &str, target_alias: &str) -> Option<ResidualHint
         } => {
             let target_column = last_ident(expr)?;
             let select = is_simple_select_body(subquery)?;
-            let (source_from_sql, _) = plain_source_table(&select.from[0])?;
+            let (source_from_sql, source_aliases) = plain_source_table(&select.from[0])?;
+            if source_shadows_target(target_alias, &source_aliases) {
+                return None;
+            }
             let (SelectItem::UnnamedExpr(projected)
             | SelectItem::ExprWithAlias {
                 expr: projected, ..
@@ -103,8 +135,8 @@ fn residual_hint(selection_sql: &str, target_alias: &str) -> Option<ResidualHint
             };
             Some(ResidualHint {
                 target_column,
+                source_column: projected_source_column(projected, target_alias, &source_aliases)?,
                 source_from_sql,
-                source_column: last_ident(projected)?,
             })
         }
         Expr::Exists {
@@ -113,6 +145,9 @@ fn residual_hint(selection_sql: &str, target_alias: &str) -> Option<ResidualHint
         } => {
             let select = is_simple_select_body(subquery)?;
             let (source_from_sql, source_aliases) = plain_source_table(&select.from[0])?;
+            if source_shadows_target(target_alias, &source_aliases) {
+                return None;
+            }
             let (target_column, source_column) =
                 correlated_key_columns(select.selection.as_ref()?, target_alias, &source_aliases)?;
             Some(ResidualHint {

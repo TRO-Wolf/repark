@@ -4,6 +4,7 @@ mod nmbs;
 mod occ;
 mod occ_branch;
 mod occ_conflict;
+mod occ_partitions;
 mod parallel_write;
 mod partition_sink;
 mod streaming;

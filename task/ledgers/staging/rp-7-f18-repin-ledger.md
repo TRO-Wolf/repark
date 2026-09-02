@@ -30,9 +30,10 @@ maintenance sibling copy) — the fork ruled both into F-19; any dependency chan
 | C-003 | The shared-Puffin cells assert Spark's layout, re-measured live at the matched layout: two containers after the second `DELETE`, the sibling `DeleteFile` entry unchanged in container and `content_offset`, the touched blob at offset 4 with 2 records, `removed-dvs` / `removed-delete-files` 1, rows identical. Registry `V3-DV-1` → FIXED; `V3-MOR-1` loses the residual; the north-star row → ✅; the STATUS Known-issues line goes; the handoff F-18 bullet → consumed; meta-pins re-aimed. Bytes per later single-row `DELETE` at 16 and 64 blobs measured before and after the repin. | Live oracle transcript (§7); the re-aimed Rust cells; a live cell; the byte table; the four documents; `make py-test`. | **PROVEN** | Live oracle re-measured 2026-09-02 (§7) — repark and Spark agree on the whole shape. `v3e4.rs` cell asserts two containers, the sibling tuple unchanged, offset 4 and the six summary counts; `dv_close.rs` keeps the semantic assertion and gains the layout one; `a_later_single_row_delete_writes_one_blob_not_the_whole_container` holds < 1 KiB at 16 blobs; live cell `test_v3_shared_puffin_container_close_live`. Bytes: 4,830 → 377 B at 16 blobs, 19,126 → 377 B at 64 (§8). Citation: `crates/repark-spark/src/tests/map.md`. |
 | C-004 | Everything else stays green at the new pin: every V3 pin, the RDF-1 pins, the MW-7 / MW-8 runbooks, the `v3_lineage.rs` byte tripwire (re-record only if a tripwired file changed), and the live cells. | `make verify`, `make preflight`, `make py-test`, the touched cargo suites, the live cells. | **PROVEN** | §9 gate table. The tripwire files were not touched by this unit, so no hash is re-recorded. Citation: `crates/repark-spark/src/tests/v3_lineage.rs`. |
 
-| C-005 | The identity DML scratch scan carries the subquery's key bounds instead of reading every column of every data file, gated to positive uncorrelated `IN` / positive `EXISTS`; `NOT IN` / `NOT EXISTS` keep the unfiltered scan; every V3-8 / V3-9 pin stays green; the pair collectors stream instead of collecting. | A file-open pin that fails closed when an unadmitted file is opened; one mutation; the V3 suites; measurement. | **PROVEN** | `v3_dml_scan.rs::subquery_delete_opens_only_the_files_the_key_bounds_admit` hides the seven data files whose lower bound cannot hold the key and the DELETE still succeeds; mutation M5 (`identity_scan_residual` returns `None`): **1 red of 1**, `Failed to open file … .parquet`. `repark-spark --lib` 763 passed, `repark-sql --lib` 336 passed, `repark-iceberg --lib` 375 passed. Measurement §10. Citation: `crates/repark-iceberg/src/write/map.md`. |
+| C-005 | The identity DML scratch scan carries the subquery's key bounds instead of reading every column of every data file, gated to positive uncorrelated `IN` / positive `EXISTS`; `NOT IN` / `NOT EXISTS` keep the unfiltered scan; and **no residual is derived when ownership is ambiguous** — each side of the correlation is classified by ONE resolution, and a qualifier naming neither owner, or BOTH (a target alias shadowing the subquery relation's alias or bare table name), leaves the scan unfiltered. Every V3-8 / V3-9 pin stays green; the pair collectors stream instead of collecting. | A twelve-cell matrix against the live oracle on the Spark door and the facade; a file-open pin that fails closed when an unadmitted file is opened; two mutations; the V3 suites; measurement. | **PROVEN** | §11 matrix: ten executable cells and two refusals, repark == Spark on every one, live. `v3_dml_scan.rs::subquery_delete_opens_only_the_files_the_key_bounds_admit` hides the seven data files whose lower bound cannot hold the key and the DELETE still succeeds. Mutations M5 (`identity_scan_residual` returns `None`) **1 red of 1**; M6 (independent per-side classification restored) **1 red of 1**, `shadow_exists_alias` left `[1, 6]` where Spark leaves `[]`. `repark-spark --lib` 765 passed, `repark-sql --lib` 336 passed, `repark-iceberg --lib` 376 passed. Measurement §10. Citation: `crates/repark-iceberg/src/write/map.md`. |
+| C-006 | The perf review's Python items land: neither live helper creates a per-call Ivy cache, and the DV reads project only the columns they use. | `grep` the helpers; the live cells green. | **PROVEN** | Both `spark.jars.ivy` `mkdtemp` + `rmtree` pairs are gone from `test_v3_live_oracle.py`, so a jar-less nightly runner resolves the Iceberg runtime through the default Ivy cache the other helpers already share instead of re-resolving twice. The four `SELECT *` reads over `.delete_files` are one `_DV_COLUMNS` template projecting `referenced_data_file, file_path, content_offset, record_count`. Live cells 37 passed. Citation: `python/repark/tests/map.md`. |
 
-VERDICT: 5 clauses, 5 PROVEN, 0 OPEN, 0 REJECTED.
+VERDICT: 6 clauses, 6 PROVEN, 0 OPEN, 0 REJECTED.
 
 ```yaml
 COVERAGE_ATTESTATION:
@@ -40,8 +41,8 @@ COVERAGE_ATTESTATION:
   categories:
     - id: AT-1
       status: ATTACKED
-      evidence: The shared-Puffin close is pinned at Spark's exact layout on the Spark door and in the writer, plus a live cell that compares the whole shape against a running Spark.
-      artifacts: [crates/repark-spark/src/tests/v3e4.rs, crates/repark-iceberg/src/write/merge/dv_close.rs, python/repark/tests/test_v3_live_oracle.py]
+      evidence: The shared-Puffin close is pinned at Spark's exact layout on the Spark door and in the writer, plus a live cell that compares the whole shape against a running Spark, plus the twelve-cell subquery-DML matrix live on both engines.
+      artifacts: [crates/repark-spark/src/tests/v3e4.rs, crates/repark-iceberg/src/write/merge/dv_close.rs, python/repark/tests/test_v3_dv_container_close.py, crates/repark-spark/src/tests/v3_dml_scan.rs]
     - id: AT-2
       status: ATTACKED
       evidence: Covered path and fresh path, partitioned and unpartitioned, 16 and 64 blobs, positive IN and positive EXISTS against NOT IN / NOT EXISTS, and two hidden-file edges (data manifests, data files) where a stray read fails closed.
@@ -52,7 +53,7 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-iceberg/src/write/merge/dv_close.rs]
     - id: AT-4
       status: N/A
-      justification: No new shared mutable engine state. free_partitions is a pure read of table metadata.
+      justification: The partition sink is an Arc<Mutex<HashMap>> written only from the scan that owns it and drained once at commit; PartitionStream::execute may run more than once and the insert is idempotent on the path key.
     - id: AT-5
       status: ATTACKED
       evidence: No AWS, IAM or secret handling. No .github change. The one dependency change is the single [patch.crates-io] rev.
@@ -167,6 +168,51 @@ Mutations, one knob at a time, restored after each:
 | M3 | `plan_deletion_vectors` clears the supplied map | 1 red of 3 (`a_supplied_partition_map_closes_a_fresh_partitioned_delete_with_no_data_manifest`) |
 | M4 | `record_scanned_partitions` returns immediately | 1 red of 1 (`the_target_scan_records_every_planned_file_partition`) |
 | M5 | `identity_scan_residual` returns `None` | 1 red of 1 (`subquery_delete_opens_only_the_files_the_key_bounds_admit`) |
+
+## 11. Round 3 — subquery-DML owner resolution (C-005)
+
+The round-2 critic measured a WRONG ANSWER, not a slow one: a target alias that shadows the
+subquery relation. Spark binds the inner name to the subquery's own relation, so
+`DELETE FROM t s WHERE EXISTS (SELECT 1 FROM src s WHERE s.id = s.id)` is uncorrelated and true
+for every row. The first draft classified the two sides with independent predicates, read it as a
+correlation, and pruned. Fix: one resolution per side (`owner_side`), `None` when a qualifier
+names neither owner or BOTH, and the whole hint dropped when the target alias also names the
+subquery relation's alias or bare table name.
+
+Matrix, live PySpark 4.1.2 + Iceberg 1.11.0 against repark, same seed `(1..6)`, `src = {2, 5}`,
+`src2 = {6}`, `srcnull = {2, NULL}`, `srcbig = {2, 5}` BIGINT, `srcempty = {}`, `k = {2, 5}`.
+Survivors after the DELETE:
+
+| cell | Spark | repark |
+|---|---|---|
+| `shadow_exists_alias` (`t s` / `src s`, `s.id = s.id`) | `[]` | `[]` |
+| `shadow_exists_bare` (`t k` / table `k`, `k.id = k.id`) | `[]` | `[]` |
+| `filtered_in` (`IN (SELECT id FROM src WHERE id > 4)`) | `1,2,3,4,6` | same |
+| `empty_source` | `1,2,3,4,5,6` | same |
+| `null_source_keys` | `1,3,4,5,6` | same |
+| `projection_alias` (`SELECT id AS key`) | `1,3,4,6` | same |
+| `int_vs_bigint` (source BIGINT, target INT) | `1,3,4,6` | same |
+| `correlated_exists` (`s.id = t.id`) | `1,3,4,6` | same |
+| `plus_one` (`t.id = s.id + 1`) | `1,2,4,5` | same |
+| `and_filter` (`s.id = t.id AND s.id > 1`) | `1,3,4,6` | same |
+| `distinct` (`SELECT DISTINCT id`) | `1,3,4,6` | REFUSED (G3-E8 allow-list), table untouched |
+| `union` (`SELECT … UNION SELECT …`) | `1,3,4` | REFUSED (G3-E8 allow-list), table untouched |
+
+The two refusals pre-date this unit and are the subquery allow-list, not the residual: a refusal
+is not a wrong answer, and the pin asserts the table is left at the seed. Pins:
+`crates/repark-spark/src/tests/v3_dml_scan.rs::subquery_dml_matrix_matches_spark_with_the_residual_pushed`
+(Spark door, the ten executable cells plus the two refusals) and
+`python/repark/tests/test_v3_dv_container_close.py::test_v3_subquery_dml_matrix_matches_spark`
+(facade JVM-free, then repark == live Spark under `REPARK_PARITY_LIVE=1`).
+
+Mutation M6: restore the independent per-side classification. `shadow_exists_alias` leaves
+`[1, 6]` against Spark's `[]` — **1 red of 1**. Restored.
+
+`crates/repark-iceberg/src/write/merge/tests/occ_partitions.rs::the_production_partition_carrying_commit_honors_the_snapshot_pin`
+runs the production `commit_row_delta_kind_with_partitions` variant with a real partition map on a
+partitioned v3 table: the first commit lands, and a stale pin is still rejected with the table
+unmoved. The OCC batteries in `occ.rs` / `occ_conflict.rs` keep their existing spellings and
+exercise the empty-map wrappers, which are now `#[cfg(test)]`.
 
 ## 9. Gate exits
 

@@ -28,7 +28,10 @@ works, so the attribute is gone rather than documented.
   identity DML scratch scan carries. Re-parses `selection_sql` (the spec carries SQL, not an AST)
   and matches only a POSITIVE uncorrelated `IN` or a positive `EXISTS` whose correlation is one
   bare equality; everything else, and `repark.merge.scan-pruning=false`, leaves the scan
-  unfiltered. Bounds come from `scan_prune::residual_bounds_predicate`, the same helper PERF-04
+  unfiltered. `owner_side` resolves each qualifier ONCE and returns `None` when it names neither
+  owner or BOTH, and `source_shadows_target` rejects the whole hint when the target alias also
+  names the subquery relation — Spark binds the inner name to the subquery's relation, so a
+  shadowed `s.id = s.id` is uncorrelated and deletes everything. Bounds come from `scan_prune::residual_bounds_predicate`, the same helper PERF-04
   gave MERGE. Extracted so `predicate_dml.rs` stays under its exact size baseline, which
   ratcheted 1164 → 1142 in the same change.
   pins: rp-7-f18-repin/C-005

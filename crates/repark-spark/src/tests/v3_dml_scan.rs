@@ -231,3 +231,176 @@ async fn measure_v3_mor_subquery_delete_statement_wall() {
         println!("files={files} flat_ms={flat} partitioned_fresh_ms={partitioned}");
     }
 }
+
+const MATRIX_SEED: &str = "(1,'a'),(2,'b'),(3,'c'),(4,'d'),(5,'e'),(6,'f')";
+
+const MATRIX_CELLS: [(&str, &str, &[i32]); 10] = [
+    (
+        "shadow_exists_alias",
+        "DELETE FROM {t} s WHERE EXISTS (SELECT 1 FROM ice.sales.src s WHERE s.id = s.id)",
+        &[],
+    ),
+    (
+        "shadow_exists_bare",
+        "DELETE FROM {t} k WHERE EXISTS (SELECT 1 FROM ice.sales.k WHERE k.id = k.id)",
+        &[],
+    ),
+    (
+        "filtered_in",
+        "DELETE FROM {t} WHERE id IN (SELECT id FROM ice.sales.src WHERE id > 4)",
+        &[1, 2, 3, 4, 6],
+    ),
+    (
+        "empty_source",
+        "DELETE FROM {t} WHERE id IN (SELECT id FROM ice.sales.srcempty)",
+        &[1, 2, 3, 4, 5, 6],
+    ),
+    (
+        "null_source_keys",
+        "DELETE FROM {t} WHERE id IN (SELECT id FROM ice.sales.srcnull)",
+        &[1, 3, 4, 5, 6],
+    ),
+    (
+        "projection_alias",
+        "DELETE FROM {t} WHERE id IN (SELECT id AS key FROM ice.sales.src)",
+        &[1, 3, 4, 6],
+    ),
+    (
+        "int_vs_bigint",
+        "DELETE FROM {t} WHERE id IN (SELECT id FROM ice.sales.srcbig)",
+        &[1, 3, 4, 6],
+    ),
+    (
+        "correlated_exists",
+        "DELETE FROM {t} t WHERE EXISTS (SELECT 1 FROM ice.sales.src s WHERE s.id = t.id)",
+        &[1, 3, 4, 6],
+    ),
+    (
+        "plus_one",
+        "DELETE FROM {t} t WHERE EXISTS (SELECT 1 FROM ice.sales.src s WHERE t.id = s.id + 1)",
+        &[1, 2, 4, 5],
+    ),
+    (
+        "and_filter",
+        "DELETE FROM {t} t WHERE EXISTS (SELECT 1 FROM ice.sales.src s WHERE s.id = t.id AND s.id > 1)",
+        &[1, 3, 4, 6],
+    ),
+];
+
+const MATRIX_REFUSED: [(&str, &str); 2] = [
+    (
+        "distinct",
+        "DELETE FROM {t} WHERE id IN (SELECT DISTINCT id FROM ice.sales.src)",
+    ),
+    (
+        "union",
+        "DELETE FROM {t} WHERE id IN (SELECT id FROM ice.sales.src UNION SELECT id FROM ice.sales.src2)",
+    ),
+];
+
+async fn seed_matrix_sources(ctx: &SessionContext, catalogs: &CatalogRegistry) {
+    for (name, columns, values) in [
+        ("src", "id INT", "(2), (5)"),
+        ("src2", "id INT", "(6)"),
+        ("srcnull", "id INT", "(2), (CAST(NULL AS INT))"),
+        (
+            "srcbig",
+            "id BIGINT",
+            "(CAST(2 AS BIGINT)), (CAST(5 AS BIGINT))",
+        ),
+        ("k", "id INT", "(2), (5)"),
+    ] {
+        run(
+            ctx,
+            catalogs,
+            &format!("CREATE TABLE ice.sales.{name} ({columns}) USING iceberg"),
+        )
+        .await;
+        run(
+            ctx,
+            catalogs,
+            &format!("INSERT INTO ice.sales.{name} VALUES {values}"),
+        )
+        .await;
+    }
+    run(
+        ctx,
+        catalogs,
+        "CREATE TABLE ice.sales.srcempty (id INT) USING iceberg",
+    )
+    .await;
+}
+
+async fn seed_matrix_target(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    cell: &str,
+) -> String {
+    let table = format!("ice.sales.t_{cell}");
+    run(
+        ctx,
+        catalogs,
+        &format!(
+            "CREATE TABLE {table} (id INT, name STRING) USING iceberg TBLPROPERTIES ({MOR_V3})"
+        ),
+    )
+    .await;
+    run(
+        ctx,
+        catalogs,
+        &format!("INSERT INTO {table} VALUES {MATRIX_SEED}"),
+    )
+    .await;
+    table
+}
+
+async fn matrix_ids(ctx: &SessionContext, catalogs: &CatalogRegistry, table: &str) -> Vec<i32> {
+    let batches = execute(
+        ctx,
+        catalogs,
+        &format!("SELECT id FROM {table} ORDER BY id"),
+    )
+    .await
+    .expect("select ids")
+    .collect()
+    .await
+    .expect("collect ids");
+    let mut ids = Vec::new();
+    for batch in batches {
+        let column = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<datafusion::arrow::array::Int32Array>()
+            .expect("id is Int32");
+        for row in 0..batch.num_rows() {
+            ids.push(column.value(row));
+        }
+    }
+    ids
+}
+
+#[tokio::test]
+async fn subquery_dml_matrix_matches_spark_with_the_residual_pushed() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    seed_matrix_sources(&ctx, &catalogs).await;
+    for (cell, template, survivors) in MATRIX_CELLS {
+        let table = seed_matrix_target(&ctx, &catalogs, cell).await;
+        run(&ctx, &catalogs, &template.replace("{t}", &table)).await;
+        assert_eq!(
+            matrix_ids(&ctx, &catalogs, &table).await,
+            survivors.to_vec(),
+            "cell {cell}"
+        );
+    }
+    for (cell, template) in MATRIX_REFUSED {
+        let table = seed_matrix_target(&ctx, &catalogs, cell).await;
+        let refusal = execute(&ctx, &catalogs, &template.replace("{t}", &table)).await;
+        assert!(refusal.is_err(), "cell {cell} must refuse, not answer");
+        assert_eq!(
+            matrix_ids(&ctx, &catalogs, &table).await,
+            vec![1, 2, 3, 4, 5, 6],
+            "cell {cell} leaves the table untouched"
+        );
+    }
+}

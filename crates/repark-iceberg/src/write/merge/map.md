@@ -42,17 +42,17 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   41.3 → 29.3 ms and 37.3 → 23.9 ms).
   **RP-7 (2026-09-02):** pin `ff4764d3` (fork F-18) closes registry `V3-DV-1` — only the touched
   blob is rewritten and the untouched sibling entry keeps its container and `content_offset`, so
-  the C-003 pin gained that layout assertion alongside its semantic one. `free_partitions` hands
-  the fork `(default_spec_id, Struct::empty())` for every touched path when **every** spec in the
-  metadata is unpartitioned. **Remediation (2026-09-02):** that short-circuit was measurably
-  useless — a table with any partitioned spec in its history got an empty map and paid the full
-  lazy walk (192-file partitioned fresh-path DELETE: 2,176 ms). The map now comes from the
-  statement's OWN target scan (`TargetScanStream::with_partition_sink`), which already plans
-  every `FileScanTask` and so already knows each file's `(spec_id, partition)`; entries are
-  supplied only for paths that scan produced, which keeps the fork's "not a live file of the
-  scanned snapshot" guard meaningful. `plan_deletion_vectors` retains the map down to the
-  touched paths, and `referenced_data_files` MOVES `retained_references` out instead of cloning
-  it. The two manifest-read pins hide the live data manifests and require the close to succeed
+  the C-003 pin gained that layout assertion alongside its semantic one. The
+  `(spec_id, partition)` the fork needs comes from the statement's OWN target scan
+  (`TargetScanStream::with_partition_sink`), which already plans every `FileScanTask` and so
+  already knows each file's partition; entries are supplied only for paths that scan produced,
+  which keeps the fork's "not a live file of the scanned snapshot" guard meaningful, and no
+  table shape is special-cased. `plan_deletion_vectors` retains the map down to the touched
+  paths, and `referenced_data_files` MOVES `retained_references` out instead of cloning
+  it. The first draft instead short-circuited on "every spec is unpartitioned", which was
+  measurably useless — one partitioned spec anywhere in a table's history emptied the map and
+  the statement paid the full lazy walk (192-partition fresh-path DELETE 2,176 ms, now 761 ms).
+  The two manifest-read pins hide the live data manifests and require the close to succeed
   anyway: `closing_a_covered_v3_delete_reads_no_data_manifest` is FORK behaviour (a covered path
   resolves from the delete manifests, no map needed), while
   `a_supplied_partition_map_closes_a_fresh_partitioned_delete_with_no_data_manifest` is the
