@@ -88,8 +88,12 @@ JVM, no repark required). See [../map.md](../map.md).
   claim; the north-star "Live: Glue + S3 Tables v3 legs" row is still ❌ and names both legs;
   `docs/tier2-aws.md` §6 lists one row per leg, says the v3 legs need no new IAM action or
   workflow variable, and defers measured state to STATUS; both legs and the local pin exist as
-  real `def`s. Whitespace-normalized reads, so a re-wrap does not red it.
-  pins: live-v3-aws-legs/C-004
+  real `def`s; STATUS's v3 workstream names LIVE-v3 as wired-and-unmeasured, carries the
+  `V3-ROWID-3` line and stays under its dual-pinned 25,000-byte ceiling; registry `V3-ROWID-3`
+  carries both engines' measured answers and names follow-up unit V3-11; and
+  `docs/design/format-v3-track.md` §7's expirable-snapshot claim carries its dated correction.
+  Whitespace-normalized reads, so a re-wrap does not red it.
+  pins: live-v3-aws-legs/C-004, C-005
 - `test_reg_1_registry_truth_up.py` — **REG-1 (2026-08-26; tree pins):** the divergence registry
   says what the pins prove — DEC-2 / DEC-6 / DEC-7 / DEC-8 carry dated FIXED notes naming #94 / #99
   and their equality pins (C-001); TZ-8 splits into the FIXED `CAST(ts AS DATE)` / `to_date` /

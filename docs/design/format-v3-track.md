@@ -309,6 +309,10 @@ The FNP and TA performance campaigns consume none of these fork surfaces.
 - **`expire_snapshots` on v3 returned all zeros** on a fixture with nothing to expire, which is
   the same answer it gives on v2 and is not evidence either way. It was not exercised against a
   table with expirable snapshots.
+  **Corrected 2026-09-02 (LIVE-v3):** it is now, on a partitioned v3 merge-on-read table with
+  thirteen expirable snapshots — `14 → 1`, pinned by
+  `python/repark/tests/test_v3_acceptance_local.py`. V3E-4 had already measured the dual probe
+  on adopted v3; this is the created-table half.
 - **No equality-delete or partitioned v3 fixture was built.** Both fixtures are unpartitioned and
   carry only position-style deletes.
 - **V1 is unpinned and unpinnable.** The guard admits it (correctly — v1 has no row lineage), but

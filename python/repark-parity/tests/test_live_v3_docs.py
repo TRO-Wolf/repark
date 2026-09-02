@@ -1,6 +1,6 @@
 """LIVE-v3: the documents say the legs are wired and unmeasured, and nothing claims green.
 
-pins: live-v3-aws-legs/C-004
+pins: live-v3-aws-legs/C-004, C-005
 MUTATION: mark the north-star row ✅, drop the S3T-V3-1 row, or drop a tier2-aws §6 leg row
 → this REDs.
 """
@@ -83,3 +83,38 @@ def test_the_leg_tests_exist_where_the_documents_say() -> None:
     registry = _read("docs/spark-sql-iceberg-parity.md")
     assert "python/repark/tests/test_acceptance_v3_helpers.py" in registry
     assert Path(_REPO / "python/repark/tests/_acceptance_v3.py").is_file()
+
+
+def test_status_names_the_wired_but_unmeasured_legs() -> None:
+    """STATUS carries the LIVE-v3 state and the V3-ROWID-3 line, and stays under its ceiling."""
+    status = " ".join(_read("STATUS.md").split())
+    assert "**LIVE-v3 (2026-09-02):**" in status
+    assert "the two live v3 legs are wired" in status
+    assert "**unmeasured** until the nightly `aws-acceptance` run (`S3T-V3-1`)" in status
+    assert "V3-11" in status
+    assert "[V3-ROWID-3](docs/spark-sql-iceberg-parity.md)" in status
+    assert (_REPO / "STATUS.md").stat().st_size <= 25_000
+
+
+def test_v3_rowid_3_row_carries_both_readings_and_names_the_follow_up() -> None:
+    """V3-ROWID-3 is a BACKLOG row with repark's and Spark's measured answers and unit V3-11."""
+    registry = _read("docs/spark-sql-iceberg-parity.md")
+    heading = "### V3-ROWID-3 — the merge-on-read MERGE insert's `_row_id` is nondeterministic"
+    assert heading in registry
+    row = " ".join(registry[registry.index(heading) : registry.index("### BL-9")].split())
+    assert "10 identical runs" in row
+    assert "**six** times" in row and "**four** times" in row
+    assert "10 of 10" in row
+    assert "PySpark 4.1.2" in row and "1.11.0" in row
+    assert "test_v3_acceptance_local.py" in row and "assert_v3_lineage" in row
+    assert "**V3-11**" in row
+    assert "BACKLOG" in row
+
+
+def test_format_v3_track_expire_claim_is_corrected() -> None:
+    """The design note's "not exercised against expirable snapshots" carries the dated fix."""
+    track = " ".join(_read("docs/design/format-v3-track.md").split())
+    assert "It was not exercised against a table with expirable snapshots." in track
+    assert "**Corrected 2026-09-02 (LIVE-v3):**" in track
+    assert "`14 → 1`" in track
+    assert "python/repark/tests/test_v3_acceptance_local.py" in track

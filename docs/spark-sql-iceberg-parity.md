@@ -2338,6 +2338,34 @@ the pin rather than obeying it.
   commits an empty `overwrite` snapshot. Rows, lineage, next-row-id and data-file count are
   equal on both sides.
 
+### V3-ROWID-3 — the merge-on-read MERGE insert's `_row_id` is nondeterministic
+
+- **repark** — on a v3 merge-on-read table, `MERGE … WHEN NOT MATCHED THEN INSERT` gives the new
+  row a `_row_id` that varies run to run on identical input: over **10 identical runs** of the
+  LIVE-v3 sequence (one CTAS row, nine single-row appends to ids 1–10, `DELETE … WHERE id = 3`,
+  then the MERGE inserting id 11) the inserted row read `_row_id = 11` **six** times and
+  `_row_id = 10` **four** times. `_last_updated_sequence_number` was `12` in all ten, and every
+  survivor triple was identical in all ten: `(1,0,1) (2,1,12) (4,3,4) (5,4,5) (6,5,6) (7,6,7)
+  (8,7,8) (9,8,9) (10,9,10)`. Both observed values are free — no survivor holds 10 or 11 — so no
+  read returns a duplicated id; the defect is the instability, not a collision.
+- **Apache Spark** — deterministic at `_row_id = 11`, the table's `next-row-id` at that commit:
+  **10 of 10** runs (two JVMs × five fresh warehouses) on the identical statement sequence gave
+  `(11, 11, 12)`, with the same nine survivor triples and the same single Puffin deletion vector
+  after the DELETE. repark's `11` therefore matches Spark and its `10` does not.
+  *(oracle: live PySpark 4.1.2 + `iceberg-spark-runtime-4.1_2.13:1.11.0`,
+  `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64`, `local[2]`, Hadoop catalog, measured 2026-09-02 by
+  unit LIVE-v3.)*
+- **Pin** —
+  `python/repark/tests/test_v3_acceptance_local.py::test_v3_acceptance_leg_body_against_the_local_catalog`
+  via `_acceptance_v3.assert_v3_lineage`, which asserts the invariant that survives the
+  instability — the inserted row takes an id at or above the seed count that no survivor holds —
+  and pins every survivor triple exactly. A value pin would flap four times in ten.
+- **Rationale** — BACKLOG. The fix belongs to a v3 lineage unit, **V3-11**, not to a live-leg
+  unit: the leg's job was to measure, and the measurement is that repark's assignment of
+  `next-row-id` to a merge-on-read MERGE insert races while Spark's does not. When V3-11 lands,
+  the pin above tightens to the exact Spark value and this row retires.
+  Pins: live-v3-aws-legs/C-002.
+
 ### BL-9 — a double-quoted string literal is an identifier on the SQL door
 
 - **repark** — the Spark SQL door reads `"abc"` as a double-quoted **identifier**, so
