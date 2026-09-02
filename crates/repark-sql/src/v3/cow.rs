@@ -27,6 +27,10 @@ const COW_V3: &str = "format_version = 3, extra_properties = MAP(\
 
 const UNSET_MERGE_V3: &str = "format_version = 3";
 
+const MOR_V3: &str = "format_version = 3, extra_properties = MAP(\
+    ARRAY['write.delete.mode', 'write.update.mode'], \
+    ARRAY['merge-on-read', 'merge-on-read'])";
+
 pub(crate) struct Door {
     ctx: SessionContext,
     catalogs: CatalogRegistry,
@@ -763,5 +767,46 @@ async fn ansi_hadoop_named_metadata_write_bumps_to_the_next_hadoop_pointer() {
         Some("v2.metadata.json"),
         "fork #235 bumps Hadoop vN to uncompressed v(N+1): {}",
         pointer.display()
+    );
+}
+
+#[tokio::test]
+async fn adopted_v3_mor_subquery_where_dml_writes_file_scoped_deletion_vectors() {
+    let _: &str = "pins: v3-9-mor-predicate-dml-dv/C-003";
+    let door = door_with_v3_opt_in().await;
+    door.ok("CREATE TABLE ice.sales.srcids (id INT)").await;
+    door.ok("INSERT INTO ice.sales.srcids VALUES (2)").await;
+    adopt_v3(&door, "seed_msd", "adopt_msd", MOR_V3).await;
+    door.ok("DELETE FROM ice.sales.adopt_msd WHERE id IN (SELECT id FROM ice.sales.srcids)")
+        .await;
+    assert_eq!(
+        door.live_pairs("adopt_msd").await,
+        vec![(1, "a".into()), (3, "c".into())]
+    );
+    assert_eq!(
+        door.live_triples("adopt_msd").await,
+        vec![(1, 0, 1), (3, 2, 1)]
+    );
+    assert_eq!(door.lineage("adopt_msd").await, (3, Some(3), Some(0)));
+    assert_eq!(
+        live_delete_file_kinds(&door, "adopt_msd").await,
+        vec!["Puffin".to_string()]
+    );
+    adopt_v3(&door, "seed_msu", "adopt_msu", MOR_V3).await;
+    door.ok("UPDATE ice.sales.adopt_msu SET name = 'm' WHERE id IN \
+         (SELECT id FROM ice.sales.srcids)")
+        .await;
+    assert_eq!(
+        door.live_pairs("adopt_msu").await,
+        vec![(1, "a".into()), (2, "m".into()), (3, "c".into())]
+    );
+    assert_eq!(
+        door.live_triples("adopt_msu").await,
+        vec![(1, 0, 1), (2, 1, 2), (3, 2, 1)]
+    );
+    assert_eq!(door.lineage("adopt_msu").await, (4, Some(3), Some(1)));
+    assert_eq!(
+        live_delete_file_kinds(&door, "adopt_msu").await,
+        vec!["Puffin".to_string()]
     );
 }

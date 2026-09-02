@@ -78,9 +78,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   MERGE Spark-equal; **V3-8:** subquery-`WHERE` UPDATE and DELETE keep `_row_id` at
   next-row-id 6 / 5 and the outside-the-hole `NOT IN` UPDATE still refuses `G3-E8` with
   rows unchanged; MOR first DELETE commits a Puffin DV and the second merges. RP-4
-  six-file `rewrite_data_files` keeps `_row_id` / seq on `to_arrow`.
-  pins: v3-8-subquery-where-lineage/C-002; v3-7-merge-lineage/C-002;
-  rp-6-fork-repin/C-002, C-003; rp-4-fork-repin/C-003
+  six-file `rewrite_data_files` keeps `_row_id` / seq on `to_arrow`. **V3-9:** the facade MoR
+  subquery-`WHERE` twin — `DELETE … IN` at next-row-id 3 / added 0 and `UPDATE … IN` at
+  next-row-id 4 / added 1, each with `delete_files.file_format` = `PUFFIN`.
+  pins: v3-9-mor-predicate-dml-dv/C-003; v3-8-subquery-where-lineage/C-002;
+  v3-7-merge-lineage/C-002; rp-6-fork-repin/C-002, C-003; rp-4-fork-repin/C-003
 - [test_ref_branch_tag_wap.py](test_ref_branch_tag_wap.py) — **REF:** the facade rows for
   branch/tag retention and the refused doors — both `WITH SNAPSHOT RETENTION` halves at the
   oracle's values, the reversed order refusing, write-to-branch landing on the named branch
@@ -106,7 +108,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the Spark-written partitioned v3 DV fixture and the equality-delete + DV fixture;
   live rows, partition prune, `.delete_files` content 1/2; RP-3 C-007 CALL still refuses
   live DVs. pins: rp-3-fork-repin/C-007, C-011
-- [test_v3_live_oracle.py](test_v3_live_oracle.py) — **V3E-5 (2026-08-27):** nightly live oracle for the two V3E-3 fixtures — `REPARK_PARITY_LIVE=1` repark == Spark on partitioned-DV prune and equality-delete alongside DV, plus `.delete_files` kinds. RP-6: `test_partitioned_dv_update_commits_and_rewrite_still_refuses` pins Spark-equal `(id, _row_id, seq)` after live-DV UPDATE; `rewrite_position_delete_files` still refuses with rows and fixture bytes unchanged after the UPDATE. JVM-free twins stay in `test_v3e3_fixtures.py`. Critic remediation (2026-08-27): prune1 on Spark, combined DirLock, exact content sets, mirrored format, GAV full equality, version sort, COW, `py-format` single-line, meta-pin now asserts archive/dual-wire/diff allowlist. Formal CCC + cargo-deny/wheel remediation (2026-08-28): `chacha20` yanked and `thiserror` duplicate `skip`. PLAN-1 makes the ledger lookup lifecycle-aware across staging, completed, and archive, and checks the landed #253 commit instead of the current branch. **Nightly fix (2026-09-01):** the three live helpers now qualify `CALL <catalog>.system.register_table` through `LIFECYCLE_SPARK_CATALOG`; unqualified, Spark resolved it against `spark_catalog` and the CI leg had been red since its first run (2026-08-28). The north-star meta-pin now checks the row cites V3E-5 and the oracle version regardless of its status glyph, so an honest ⚠ does not red it. V3-7: `test_v3_merge_matched_update_live_cow_and_mor` cites the V3-7 ledger transcript (not `/tmp`) and live-gates COW/MoR matched-UPDATE MERGE. **RDF-1 (2026-09-02):** it read `completed/` by absolute path and reded the moment the archive ritual moved that ledger; both ledger reads now share `_ledger_text`, the staging/completed/archive lookup PLAN-1 already used for the V3E-5 meta-pin.
+- [test_v3_live_oracle.py](test_v3_live_oracle.py) — **V3E-5 (2026-08-27):** nightly live oracle for the two V3E-3 fixtures — `REPARK_PARITY_LIVE=1` repark == Spark on partitioned-DV prune and equality-delete alongside DV, plus `.delete_files` kinds. RP-6: `test_partitioned_dv_update_commits_and_rewrite_still_refuses` pins Spark-equal `(id, _row_id, seq)` after live-DV UPDATE; `rewrite_position_delete_files` still refuses with rows and fixture bytes unchanged after the UPDATE. JVM-free twins stay in `test_v3e3_fixtures.py`. Critic remediation (2026-08-27): prune1 on Spark, combined DirLock, exact content sets, mirrored format, GAV full equality, version sort, COW, `py-format` single-line, meta-pin now asserts archive/dual-wire/diff allowlist. Formal CCC + cargo-deny/wheel remediation (2026-08-28): `chacha20` yanked and `thiserror` duplicate `skip`. PLAN-1 makes the ledger lookup lifecycle-aware across staging, completed, and archive, and checks the landed #253 commit instead of the current branch. **Nightly fix (2026-09-01):** the three live helpers now qualify `CALL <catalog>.system.register_table` through `LIFECYCLE_SPARK_CATALOG`; unqualified, Spark resolved it against `spark_catalog` and the CI leg had been red since its first run (2026-08-28). The north-star meta-pin now checks the row cites V3E-5 and the oracle version regardless of its status glyph, so an honest ⚠ does not red it. V3-7: `test_v3_merge_matched_update_live_cow_and_mor` cites the V3-7 ledger transcript (not `/tmp`) and live-gates COW/MoR matched-UPDATE MERGE. **V3-9 (2026-09-02):** `test_v3_mor_subquery_where_dml_live` cites the V3-9 transcript and live-gates the MoR subquery-`WHERE` DELETE / UPDATE lineage and `PUFFIN` delete-file format (pins: v3-9-mor-predicate-dml-dv/C-002). **RDF-1 (2026-09-02):** it read `completed/` by absolute path and reded the moment the archive ritual moved that ledger; both ledger reads now share `_ledger_text`, the staging/completed/archive lookup PLAN-1 already used for the V3E-5 meta-pin.
   pins: rdf-1-position-delete-bounds/C-004
 - [test_v3_dv_compaction.py](test_v3_dv_compaction.py) — **V3-5:** facade six-file
   v3 MOR compact drops six Puffin DVs (`removed_delete_files_count = 6`,
@@ -114,7 +116,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   live ids and `_row_id` / seq stay.
   pins: v3-5-dv-compaction/C-002, C-003, C-004
 - [test_v3_create_opt_in.py](test_v3_create_opt_in.py) — **V3-2 (2026-08-24):** facade CREATE/CTAS
-  `format-version = 3` refuses unless `repark.sql.allowCreateFormatVersion3` is true; opt-in
+  `format-version = 3` refuses unless `repark.sql.allowCreateFormatVersion3` is true, and
+  **since V3-9 (2026-09-02)** the refusal no longer claims v3 cannot do merge-on-read
+  row-level writes (pins: v3-9-mor-predicate-dml-dv/C-006); opt-in
   CREATE is readable and a six-file `rewrite_data_files` keeps `_row_id` / seq on `to_arrow`
   (`V3-LINEAGE-1` FIXED). Also the V3R-1
   (2026-08-25) type pin `test_v3_geometry_geography_variant_columns_refuse_naming_the_type`:

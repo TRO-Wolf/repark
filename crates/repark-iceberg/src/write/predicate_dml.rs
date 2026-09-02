@@ -709,11 +709,11 @@ fn resolve_write_mode(table: &Table, property: &str, verb: &str) -> Result<Delet
     match mode {
         Some(value) if value.eq_ignore_ascii_case(MODE_MERGE_ON_READ) => {
             let format_version = table.metadata().format_version();
-            if format_version != FormatVersion::V2 {
+            if format_version < FormatVersion::V2 {
                 return Err(DataFusionError::NotImplemented(format!(
-                    "merge-on-read {verb} writes Parquet position deletes, which require a V2 \
-                     table (this table is {format_version:?}) — use {property} = \
-                     '{MODE_COPY_ON_WRITE}' instead"
+                    "merge-on-read {verb} writes Parquet position deletes on V2 and deletion \
+                     vectors on V3 (this table is {format_version:?}; V1 has no delete files) — \
+                     use {property} = '{MODE_COPY_ON_WRITE}' instead"
                 )));
             }
             // pins: mw-9-delete-granularity/C-004 — same class as resolve_merge_mode: refuse

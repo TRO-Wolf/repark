@@ -662,3 +662,100 @@ async fn merge_on_the_appended_v3_table_keeps_row_id() {
         vec![(1, 0, 3), (3, 2, 1), (4, 3, 1), (6, 5, 1)]
     );
 }
+
+async fn live_dv_by_referenced(catalogs: &CatalogRegistry) -> Vec<(String, String)> {
+    let loaded = catalogs["ice"].load_table(&ident()).await.expect("load");
+    let metadata = loaded.metadata();
+    let snapshot = metadata.current_snapshot().expect("current snapshot");
+    let manifest_list = snapshot
+        .load_manifest_list(loaded.file_io(), metadata)
+        .await
+        .expect("manifest list");
+    let mut pairs = Vec::new();
+    for manifest_file in manifest_list.entries() {
+        if manifest_file.content != iceberg::spec::ManifestContentType::Deletes {
+            continue;
+        }
+        let manifest = manifest_file
+            .load_manifest(loaded.file_io())
+            .await
+            .expect("delete manifest");
+        for entry in manifest.entries() {
+            if !entry.is_alive() {
+                continue;
+            }
+            let data_file = entry.data_file();
+            if data_file.content_type() != iceberg::spec::DataContentType::PositionDeletes {
+                continue;
+            }
+            let Some(referenced) = data_file.referenced_data_file() else {
+                continue;
+            };
+            pairs.push((referenced, data_file.file_path().to_string()));
+        }
+    }
+    pairs.sort();
+    pairs
+}
+
+#[tokio::test]
+async fn subquery_delete_on_the_shared_puffin_v3_table_keeps_the_untouched_sibling() {
+    let _: &str = "pins: v3-9-mor-predicate-dml-dv/C-003";
+    let fixture = materialize_part_dv();
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    adopt_and_append(&ctx, &catalogs, &fixture.metadata_file).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.srcids (id INT) USING iceberg \
+         TBLPROPERTIES ('format-version' = '2')",
+    )
+    .await;
+    run(&ctx, &catalogs, "INSERT INTO ice.sales.srcids VALUES (1)").await;
+
+    let before = live_dv_by_referenced(&catalogs).await;
+    assert_eq!(before.len(), 2, "fixture starts with two live DVs");
+    run(
+        &ctx,
+        &catalogs,
+        "DELETE FROM ice.sales.partdv WHERE id IN (SELECT id FROM ice.sales.srcids)",
+    )
+    .await;
+    assert_eq!(
+        live_triples(
+            &ctx,
+            &catalogs,
+            "SELECT id, name, part FROM ice.sales.partdv ORDER BY id"
+        )
+        .await,
+        vec![
+            (3, "c".to_string(), 0),
+            (4, "d".to_string(), 1),
+            (6, "f".to_string(), 1)
+        ]
+    );
+    assert_eq!(
+        super::v3_cow::lineage_triples(&ctx, &catalogs, "partdv").await,
+        vec![(3, 2, 1), (4, 3, 1), (6, 5, 1)]
+    );
+    let after = live_dv_by_referenced(&catalogs).await;
+    assert_eq!(
+        after.iter().map(|(file, _)| file).collect::<Vec<_>>(),
+        before.iter().map(|(file, _)| file).collect::<Vec<_>>(),
+        "both data files keep a live file-scoped DV"
+    );
+    let containers = after
+        .iter()
+        .map(|(_, blob)| blob.clone())
+        .collect::<std::collections::HashSet<_>>();
+    assert_eq!(containers.len(), 1, "the two DVs stay in one shared Puffin");
+    let old_containers = before
+        .iter()
+        .map(|(_, blob)| blob.clone())
+        .collect::<std::collections::HashSet<_>>();
+    assert_ne!(
+        containers, old_containers,
+        "closing the touched container rewrites both blobs into a new one"
+    );
+}

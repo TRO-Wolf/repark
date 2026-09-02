@@ -17,9 +17,11 @@ ANSI-door format-v3 test modules. `lib.rs` declares `#[cfg(test)] mod v3;`.
   `UPDATE … IN` / `DELETE … IN` keep `_row_id` at next-row-id 6 / 5 and the outside-the-hole
   `NOT IN` UPDATE still refuses `G3-E8` without `V3-COW-1`; padded MoR UPDATE keeps `_row_id`; MoR MERGE matched-update
   is Spark-equal; plain-`WHERE` DELETE including a second MOR DELETE that merges into
-  the live vector; v2 control; Hadoop `vN` write
-  (pins: v3-8-subquery-where-lineage/C-002; v3-7-merge-lineage/C-002;
-  rp-6-fork-repin/C-002, C-003; rp-3-fork-repin/C-008).
+  the live vector; v2 control; Hadoop `vN` write; **V3-9:** the MoR subquery-`WHERE` twin —
+  `DELETE … IN` at next-row-id 3 / added 0 and `UPDATE … IN` at next-row-id 4 / added 1, each
+  with one live `Puffin` delete file
+  (pins: v3-9-mor-predicate-dml-dv/C-003; v3-8-subquery-where-lineage/C-002;
+  v3-7-merge-lineage/C-002; rp-6-fork-repin/C-002, C-003; rp-3-fork-repin/C-008).
   Hash-pinned by `v3_lineage.rs::cow_keep_refusal_files_are_byte_untouched`.
 - `types.rs` — `GEOMETRY` / `GEOGRAPHY` / `VARIANT` refuse at CREATE (`V3-GEO-1`);
   reuses `cow.rs`'s `Door`. **V3-6 C-004:** the `UNKNOWN` column refuses naming the
