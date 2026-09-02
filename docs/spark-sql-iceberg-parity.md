@@ -1928,6 +1928,10 @@ the pin rather than obeying it.
   were rewritten. The 1e7 × 50 driver was not re-run. RDF-1 stays BACKLOG.
   **RP-6 C-004 (2026-09-01, fork `fb0cacfa`):** F-16 residue 2 is not in this pin. RDF-1
   stays BACKLOG.
+  **Residue 2 REFUTED (2026-09-02, fork `#259`):** the fork's ratio clause is identical to
+  Java's, and Spark reclaims this shape through full `file_path` bounds on its position
+  deletes. The mechanism above is therefore RePark's own position-delete writer, not a fork
+  gap; RDF-1 is re-homed to the engine and its rewrite belongs to the in-flight RDF-1 unit.
 - **Apache Spark** — the same sequence on the same shape ends with **zero** delete files and
   **zero** delete records, at **both** `write.delete.granularity` settings, with
   `removed_delete_files_count` reported as 0 and `remove-dangling-deletes` OFF (jar default

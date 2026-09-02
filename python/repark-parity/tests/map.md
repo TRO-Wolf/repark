@@ -53,6 +53,10 @@ JVM, no repark required). See [../map.md](../map.md).
   (pins: plan-1-northstar-fnp-sequence/C-001, C-002, C-003, C-004, C-005, C-006;
   v3-3-dml/C-003; v3-4-serve-lineage-columns/C-010; fnp-7-try-inversions/C-016;
   v3-5-dv-compaction/C-006; rp-6-fork-repin/C-006; v3-8-subquery-where-lineage/C-003).
+  **DOCS-1 (2026-09-02):** this pin and `test_v3r_1_rulings.py` are the gate the post-merge
+  truth-up re-reads — STATUS's `Next:` sentence, the north-star §3 rows and the ledger bins
+  they cite all moved in that pass and both stayed green
+  (pins: docs-1-truth-up/C-001, C-002, C-003, C-004, C-005, C-006).
 - `test_pr_247_owner_ruling.py` — **PR #247 revalidation (2026-08-27):** the owner-ruling blocks
   in `AGENTS.md` and `CLAUDE.md` stay byte-exact, unique, at the document start, and in regular
   files; one-byte drift, malformed or missing files, relocation, duplication, and symlink
