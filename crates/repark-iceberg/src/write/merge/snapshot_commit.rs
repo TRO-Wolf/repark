@@ -10,6 +10,7 @@ use iceberg::transaction::{ApplyTransactionAction, Transaction};
 use tracing::Instrument;
 use uuid::Uuid;
 
+use super::KnownPartitions;
 use super::OPERATION_ID_PROP;
 use super::abort;
 use super::dv_close;
@@ -189,6 +190,7 @@ pub(crate) async fn commit_row_delta(
     .await
 }
 
+#[cfg(test)]
 pub(crate) async fn commit_row_delta_on_ref(
     catalog: &Arc<dyn Catalog>,
     table: &Table,
@@ -211,10 +213,41 @@ pub(crate) async fn commit_row_delta_on_ref(
             isolation,
         },
         branch,
+        KnownPartitions::new(),
     )
     .await
 }
 
+#[allow(clippy::too_many_arguments)]
+pub(crate) async fn commit_row_delta_on_ref_with_partitions(
+    catalog: &Arc<dyn Catalog>,
+    table: &Table,
+    snapshot_id: Option<i64>,
+    pairs: Vec<crate::write::position_delete::PositionDeletePair>,
+    data_files: Vec<DataFile>,
+    concurrency: WriteConcurrency,
+    branch: Option<&str>,
+    known_partitions: KnownPartitions,
+) -> Result<()> {
+    let isolation = resolve_merge_isolation(table)?;
+    commit_row_delta_kind_on_ref(
+        catalog,
+        table,
+        snapshot_id,
+        pairs,
+        data_files,
+        concurrency,
+        RowDeltaPolicy {
+            kind: RowDeltaKind::Merge,
+            isolation,
+        },
+        branch,
+        known_partitions,
+    )
+    .await
+}
+
+#[cfg(test)]
 pub(crate) async fn commit_row_delta_kind(
     catalog: &Arc<dyn Catalog>,
     table: &Table,
@@ -233,6 +266,32 @@ pub(crate) async fn commit_row_delta_kind(
         concurrency,
         policy,
         None,
+        KnownPartitions::new(),
+    )
+    .await
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(crate) async fn commit_row_delta_kind_with_partitions(
+    catalog: &Arc<dyn Catalog>,
+    table: &Table,
+    snapshot_id: Option<i64>,
+    pairs: Vec<crate::write::position_delete::PositionDeletePair>,
+    data_files: Vec<DataFile>,
+    concurrency: WriteConcurrency,
+    policy: RowDeltaPolicy,
+    known_partitions: KnownPartitions,
+) -> Result<()> {
+    commit_row_delta_kind_on_ref(
+        catalog,
+        table,
+        snapshot_id,
+        pairs,
+        data_files,
+        concurrency,
+        policy,
+        None,
+        known_partitions,
     )
     .await
 }
@@ -247,6 +306,7 @@ pub(crate) async fn commit_row_delta_kind_on_ref(
     concurrency: WriteConcurrency,
     policy: RowDeltaPolicy,
     branch: Option<&str>,
+    known_partitions: KnownPartitions,
 ) -> Result<()> {
     if pairs.is_empty() && data_files.is_empty() {
         return Ok(());
@@ -254,12 +314,13 @@ pub(crate) async fn commit_row_delta_kind_on_ref(
     let data_file_paths = abort::written_file_paths(&data_files);
     let pair_count = pairs.len() as u64;
     let data_file_count = data_files.len() as u64;
-    let mut prepared = dv_close::prepare_row_delta_deletes(table, &pairs, concurrency)
-        .instrument(tracing::info_span!(
-            "merge.write_deletes",
-            pairs = pair_count
-        ))
-        .await?;
+    let mut prepared =
+        dv_close::prepare_row_delta_deletes(table, &pairs, concurrency, known_partitions)
+            .instrument(tracing::info_span!(
+                "merge.write_deletes",
+                pairs = pair_count
+            ))
+            .await?;
     let referenced = std::mem::take(&mut prepared.referenced);
     let delete_file_paths = std::mem::take(&mut prepared.abort_paths);
     let delete_file_count = delete_file_paths.len() as u64;

@@ -8,11 +8,8 @@ else. The next pickup's `make ledger-archive` files everything here under
 [../archive/](../archive/map.md) by the merge date.
 
 ## Contents
-- [v3-10-upgrade-v2-to-v3-ledger.md](v3-10-upgrade-v2-to-v3-ledger.md) — **V3-10 (2026-09-02):**
-  the in-place v2 → v3 upgrade behind `repark.sql.allowCreateFormatVersion3`, Spark-equal on
-  three doors; registry `V3-UPGRADE-1` FIXED, `V3-UPGRADE-V4-1` and `V3-UPGRADE-DV-1` DECLARED
-  (the latter queued as unit V3-12).
 - [v3e-3-partitioned-eqdel-fixtures-ledger.md](../archive/2026-08/2026-08-25-v3e-3-partitioned-eqdel-fixtures-ledger.md) — V3E-3 — partitioned + equality-delete v3 fixtures
+- [rp-7-f18-repin-ledger.md](rp-7-f18-repin-ledger.md) — Charter ledger — RP-7 · fork repin fb0cacfa → ff4764d3 (consume F-18; close `V3-DV-1`)
 - [scale-v3-mw7-ledger.md](scale-v3-mw7-ledger.md) — **SCALE-v3 (2026-09-02):** the MW-7
   `1e7 x 50` scale workload re-measured on format-v3 tables. The `--format-version` knob and
   nine pins (v3 MoR writes file-scoped Puffin DVs, COW keeps `_row_id`,

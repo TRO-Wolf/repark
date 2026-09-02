@@ -71,7 +71,7 @@ JVM, no repark required). See [../map.md](../map.md).
   disk guidance, clause pins, and ledger lifecycle.
 - `test_pr_245_revalidation_record.py` — PR #245 source-size ratchets, frozen SQP-1 artifacts,
   bounded parser guards, exact literal-helper inventory, and lifecycle-aware navigation.
-- `test_cap_1_source_file_line_cap.py` — V3-10 ratchets `repark-spark/src/alter.rs` 1831→1830 and
+- `test_cap_1_source_file_line_cap.py` — RP-7 (2026-09-02) mirrors the two downward ratchets `write/merge/mod.rs` 1889→1795 and `write/predicate_dml.rs` 1164→1142 (pins: rp-7-f18-repin/C-005). V3-10 ratchets `repark-spark/src/alter.rs` 1831→1830 and
   `repark-iceberg/src/write/alter.rs` 1641→1630
   (pins: v3-10-upgrade-v2-to-v3/C-003). **CAP-1 (2026-08-26):** exact Rust and Python source-size RP-6 ratchets merge/mod.rs 1894→1892 and predicate_dml.rs 1227→1226; V3-8 ratchets predicate_dml.rs 1226→1164 after the lineage helpers move to `predicate_dml/lineage.rs` (pins: v3-8-subquery-where-lineage/C-002).
   (**DML-B 2026-08-30:** `insert_overwrite.rs` tests 1249→1233, `writer_readwriter.py` 1117→1113)
@@ -140,7 +140,9 @@ JVM, no repark required). See [../map.md](../map.md).
   to "no 🚫, `V3-MOR-1` FIXED plus the dated `V3-DV-1` residual naming fork F-18 and repin
   RP-7", and the STATUS assertions follow the compacted v3 block — including the
   `F-rp3-c7 consumed` substring, which no longer depends on where the line wraps
-  (pins: v3-9-mor-predicate-dml-dv/C-005, C-007).
+  (pins: v3-9-mor-predicate-dml-dv/C-005, C-007). **RP-7 (2026-09-02):** the same row now
+  asserts `V3-DV-1` FIXED and that STATUS's Known-issues link to it is GONE, so the residual
+  cannot be re-opened silently (pins: rp-7-f18-repin/C-003).
   V3-7 (2026-09-02) lifts MERGE; V3-8 (2026-09-02) lifts subquery-`WHERE` DML and the row
   becomes FIXED — the assertions now check the FIXED heading, the discharged ruling, the
   `F-v3-8-update-files` artefact and a 🚫-free north-star COW row

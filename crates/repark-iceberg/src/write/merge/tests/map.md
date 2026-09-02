@@ -24,6 +24,17 @@ MERGE unit tests. `merge/mod.rs` declares `#[cfg(test)] mod tests;`.
   does not fail the branch commit.
   pins: rp-5-fork-repin/C-004
 - `parallel_write.rs` — concurrent file write pins.
+- `partition_sink.rs` — **RP-7 (2026-09-02):** the identity/MERGE target scan records each
+  planned `FileScanTask`'s `(spec_id, partition)`, so the v3 DV close never re-walks the data
+  manifests it just read. The pin compares the drained sink to the manifest truth on a
+  three-partition table; mutation (make `record_scanned_partitions` a no-op) 1 red of 1.
+  pins: rp-7-f18-repin/C-002
+- `occ_partitions.rs` — **RP-7 (2026-09-02):** one battery through the PRODUCTION
+  `commit_row_delta_kind_with_partitions` variant on a partitioned v3 table with a real partition
+  map: the commit lands, and a stale `validate_from_snapshot` pin is still rejected with the
+  table unmoved. `occ.rs` / `occ_conflict.rs` keep their spellings and exercise the empty-map
+  wrappers, which have no production caller left and are `#[cfg(test)]`.
+  pins: rp-7-f18-repin/C-002
 - `streaming_scan.rs` — streaming target-scan pins + PERF-04 residual-push + MG-1.
 - `streaming.rs` — stream write interleaving pins.
 

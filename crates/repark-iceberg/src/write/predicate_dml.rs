@@ -2,7 +2,9 @@
 
 use std::sync::Arc;
 
-use datafusion::arrow::array::{Array, Int64Array, RecordBatch, StringArray};
+#[cfg(test)]
+use datafusion::arrow::array::Array;
+use datafusion::arrow::array::{Int64Array, RecordBatch, StringArray};
 use datafusion::arrow::datatypes::{DataType, Field, Schema as ArrowSchema};
 use datafusion::datasource::MemTable;
 use datafusion::error::{DataFusionError, Result};
@@ -11,6 +13,7 @@ use datafusion::sql::sqlparser::ast::{
     AssignmentTarget, Expr, FromTable, GroupByExpr, Ident, ObjectName, Query, SelectItem, SetExpr,
     Statement, TableFactor, TableWithJoins, Visit, VisitMut, Visitor, VisitorMut,
 };
+use futures::StreamExt;
 use iceberg::arrow::schema_to_arrow_schema;
 use iceberg::spec::{DataFileFormat, FormatVersion};
 use iceberg::table::Table;
@@ -23,8 +26,9 @@ use crate::write::file_scoped_rewrite::allowlist_from_paths;
 use crate::write::merge::row_lineage::{scratch_schema_for_table, table_carries_merge_lineage};
 use crate::write::merge::{
     FILE_PATH_COL, IsolationLevel, POS_COL, RowDeltaKind, RowDeltaPolicy, TargetScanStream,
-    commit_overwrite, commit_row_delta_kind, deregister_merge_scratch, iceberg_err, quote_ident,
-    register_streaming_target, reserved_name_guard, resolve_affected_data_files, scratch_schema,
+    commit_overwrite, commit_row_delta_kind_with_partitions, deregister_merge_scratch,
+    drain_partition_sink, iceberg_err, new_partition_sink, quote_ident, register_streaming_target,
+    reserved_name_guard, resolve_affected_data_files, scratch_schema,
     write_new_data_files_from_stream,
 };
 use crate::write::position_delete::PositionDeletePair;
@@ -32,6 +36,7 @@ use crate::write::predicate_dml::lineage::{
     project_update_data_batch, rewrite_column_names, survivor_sql, update_projection_sql,
     update_values_schema,
 };
+use crate::write::predicate_dml::residual::identity_scan_residual;
 use crate::write::scan_concurrency::scan_concurrency_from_ctx;
 
 /// Iceberg standard table property selecting the DELETE write strategy.
@@ -257,16 +262,20 @@ pub async fn execute_predicate_dml(
 
     let scratch = scratch_schema(&write_schema);
     let scan_concurrency = scan_concurrency_from_ctx(ctx);
-    let source: Arc<dyn datafusion::physical_plan::streaming::PartitionStream> =
-        Arc::new(TargetScanStream::new(
+    let residual = identity_scan_residual(ctx, spec, write_schema.as_ref()).await;
+    let partitions = new_partition_sink();
+    let source: Arc<dyn datafusion::physical_plan::streaming::PartitionStream> = Arc::new(
+        TargetScanStream::new(
             table.clone(),
             snapshot_id,
             Arc::clone(&scratch),
             &write_schema,
-            None,
+            residual,
             scan_concurrency.concurrency_limit,
             None,
-        ));
+        )
+        .with_partition_sink(Arc::clone(&partitions)),
+    );
     let target_name = register_streaming_target(ctx, Arc::clone(&scratch), source)?;
     let result = match collect_identity_pairs(ctx, &target_name, spec).await {
         Ok(pairs) if pairs.is_empty() => Ok(()),
@@ -284,7 +293,7 @@ pub async fn execute_predicate_dml(
                 .await
             }
             DeleteWriteMode::MergeOnRead => {
-                commit_row_delta_kind(
+                commit_row_delta_kind_with_partitions(
                     catalog,
                     &table,
                     snapshot_id,
@@ -295,6 +304,7 @@ pub async fn execute_predicate_dml(
                         kind: RowDeltaKind::Delete,
                         isolation,
                     },
+                    drain_partition_sink(&partitions),
                 )
                 .await
             }
@@ -331,16 +341,20 @@ async fn execute_identity_update(
 
     let scratch = scratch_schema_for_table(&write_schema, &table);
     let scan_concurrency = scan_concurrency_from_ctx(ctx);
-    let source: Arc<dyn datafusion::physical_plan::streaming::PartitionStream> =
-        Arc::new(TargetScanStream::new(
+    let residual = identity_scan_residual(ctx, spec, write_schema.as_ref()).await;
+    let partitions = new_partition_sink();
+    let source: Arc<dyn datafusion::physical_plan::streaming::PartitionStream> = Arc::new(
+        TargetScanStream::new(
             table.clone(),
             snapshot_id,
             Arc::clone(&scratch),
             &write_schema,
-            None,
+            residual,
             scan_concurrency.concurrency_limit,
             None,
-        ));
+        )
+        .with_partition_sink(Arc::clone(&partitions)),
+    );
     let target_name = register_streaming_target(ctx, Arc::clone(&scratch), source)?;
     let values_schema = update_values_schema(&write_schema, table_carries_merge_lineage(&table));
     let result = match collect_identity_update_rows(ctx, &target_name, spec, &values_schema).await {
@@ -367,7 +381,7 @@ async fn execute_identity_update(
                     concurrency_from_ctx(ctx),
                 )
                 .await?;
-                commit_row_delta_kind(
+                commit_row_delta_kind_with_partitions(
                     catalog,
                     &table,
                     snapshot_id,
@@ -379,6 +393,7 @@ async fn execute_identity_update(
                         kind: RowDeltaKind::Merge,
                         isolation,
                     },
+                    drain_partition_sink(&partitions),
                 )
                 .await
             }
@@ -403,31 +418,12 @@ async fn collect_identity_pairs(
         alias = quote_ident(&spec.target_alias),
         selection = spec.selection_sql,
     );
-    let batches = ctx.sql(&sql).await?.collect().await?;
+    let mut stream = ctx.sql(&sql).await?.execute_stream().await?;
     let mut pairs = Vec::new();
-    for batch in &batches {
-        let files = batch
-            .column(0)
-            .as_any()
-            .downcast_ref::<StringArray>()
-            .ok_or_else(|| {
-                DataFusionError::Internal("identity SELECT `_file` column is not Utf8".to_string())
-            })?;
-        let positions = batch
-            .column(1)
-            .as_any()
-            .downcast_ref::<Int64Array>()
-            .ok_or_else(|| {
-                DataFusionError::Internal("identity SELECT `_pos` column is not Int64".to_string())
-            })?;
-        for row in 0..batch.num_rows() {
-            if files.is_null(row) || positions.is_null(row) {
-                return Err(DataFusionError::Internal(
-                    "identity SELECT produced a NULL `(_file, _pos)` pair".to_string(),
-                ));
-            }
-            lineage::push_identity_pair(&mut pairs, files.value(row), positions.value(row));
-        }
+    while let Some(batch) = stream.next().await {
+        let batch = batch?;
+        pairs.reserve(batch.num_rows());
+        lineage::push_pairs_from_batch(&batch, &mut pairs)?;
     }
     Ok(pairs)
 }
@@ -451,10 +447,11 @@ async fn collect_identity_update_rows(
         alias = quote_ident(&spec.target_alias),
         selection = spec.selection_sql,
     );
-    let batches = ctx.sql(&sql).await?.collect().await?;
+    let mut stream = ctx.sql(&sql).await?.execute_stream().await?;
     let mut pairs = Vec::new();
     let mut data_batches = Vec::new();
-    for batch in &batches {
+    while let Some(batch) = stream.next().await {
+        let batch = batch?;
         if batch.num_columns() != values_schema.fields().len() + 2 {
             return Err(DataFusionError::Internal(format!(
                 "identity UPDATE SELECT returned {} columns, expected {}",
@@ -462,30 +459,10 @@ async fn collect_identity_update_rows(
                 values_schema.fields().len() + 2
             )));
         }
-        let files = batch
-            .column(0)
-            .as_any()
-            .downcast_ref::<StringArray>()
-            .ok_or_else(|| {
-                DataFusionError::Internal("identity SELECT `_file` column is not Utf8".to_string())
-            })?;
-        let positions = batch
-            .column(1)
-            .as_any()
-            .downcast_ref::<Int64Array>()
-            .ok_or_else(|| {
-                DataFusionError::Internal("identity SELECT `_pos` column is not Int64".to_string())
-            })?;
-        for row in 0..batch.num_rows() {
-            if files.is_null(row) || positions.is_null(row) {
-                return Err(DataFusionError::Internal(
-                    "identity SELECT produced a NULL `(_file, _pos)` pair".to_string(),
-                ));
-            }
-            lineage::push_identity_pair(&mut pairs, files.value(row), positions.value(row));
-        }
+        pairs.reserve(batch.num_rows());
+        lineage::push_pairs_from_batch(&batch, &mut pairs)?;
         if batch.num_rows() > 0 {
-            data_batches.push(project_update_data_batch(batch, values_schema)?);
+            data_batches.push(project_update_data_batch(&batch, values_schema)?);
         }
     }
     Ok((pairs, data_batches))
@@ -1159,6 +1136,7 @@ fn object_name_parts(name: &ObjectName) -> Vec<String> {
 }
 
 mod lineage;
+mod residual;
 
 #[cfg(test)]
 mod tests;

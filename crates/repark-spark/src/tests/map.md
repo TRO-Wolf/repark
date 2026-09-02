@@ -94,11 +94,29 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   append. RP-6: live-DV UPDATE commits Spark-equal lineage. V3-7: live-DV MERGE on
   the appended fixture keeps `_row_id`. **V3-9 (2026-09-02):** a MoR subquery `DELETE … IN`
   over the shared-Puffin fixture keeps both siblings' file-scoped DVs live with their
-  `referenced_data_file`, record counts 2 and 1 and a real blob offset. The pin stops there on
-  purpose: Spark rewrites only the touched blob and leaves the sibling entry at its old
-  container and offset (two containers), where the fork rewrites every blob of the touched
-  container into one new one — registry `V3-DV-1`, BACKLOG, fork F-18 / repin RP-7 re-aims
-  this pin at Spark's two-container layout.
+  `referenced_data_file`, record counts 2 and 1 and a real blob offset.
+  **RP-7 (2026-09-02):** that cell is re-aimed at Spark's measured layout — two containers, the
+  touched blob at offset 4, the sibling `(container, offset, record_count)` tuple unchanged, and
+  the six snapshot-summary counts (`removed-delete-files`/`removed-dvs`/`removed-position-deletes`
+  1, `added-delete-files`/`added-dvs` 1, `added-position-deletes` 2). Registry `V3-DV-1` is
+  **FIXED**. `a_later_single_row_delete_writes_one_blob_not_the_whole_container` holds the byte
+  budget at 16 blobs (< 1 KiB), and the `#[ignore]`d
+  `measure_later_single_row_delete_bytes` is the measurement that recorded 4,830 → 377 B at 16
+  blobs and 19,126 → 377 B at 64 across the repin.
+  pins: rp-7-f18-repin/C-003, C-004
+- `v3_dml_scan.rs` — **RP-7 (2026-09-02):** the key-bounds residual push on the identity DML
+  scan. `subquery_delete_opens_only_the_files_the_key_bounds_admit` seeds eight one-row data
+  files, hides the seven whose manifest lower bound cannot hold the source key, and requires the
+  subquery DELETE to succeed anyway — a scan that still opened them fails closed on a missing
+  Parquet file rather than passing quietly. Mutation (return `None` from
+  `identity_scan_residual`) 1 red of 1. The `#[ignore]`d
+  `measure_v3_mor_subquery_delete_statement_wall` is the statement-wall measurement behind the
+  ledger's §10 table; it is a wall clock and deliberately not asserted.
+  **Round 3 (2026-09-02):** `subquery_dml_matrix_matches_spark_with_the_residual_pushed` is the
+  twelve-cell owner-resolution matrix (ledger §11) — both alias-shadowing spellings delete every
+  row, the eight other executable shapes match Spark's survivors, and the two allow-list refusals
+  leave the table at the seed. Mutation (independent per-side classification) 1 red of 1.
+  pins: rp-7-f18-repin/C-005
   rustdoc cites C-001..C-016 (`Model: Grok 4.6 xHigh`; rp-3-fork-repin/C-004;
   rp-6-fork-repin/C-002, C-003; v3-7-merge-lineage/C-002; v3-9-mor-predicate-dml-dv/C-003).
 - `v3_lineage.rs` — **V3-4:** Spark-door `_row_id` / `_last_updated_sequence_number` on the RP-6 re-recorded the `repark-sql/src/v3/cow.rs` hash once more after the pins citation moved from its module doc to the map.

@@ -43,6 +43,7 @@ This table is append-only: one row per dedicated pin-bump PR (rule 1). Started 2
 
 | Date | Old pin | New pin | Notes |
 |---|---|---|---|
+| 2026-09-02 | `fb0cacfa8ceda87f865fb0ae53be4b46e0ef8b7a` | `ff4764d3eba037ecfa185be5de5f639cbffef80b` | RP-7: `#260` F-18 deletion-vector container close — only the touched blob is rewritten, the sibling entry stays byte-identical in its old container, removal is keyed by Java's `DeleteFileSet` triple, and the data-file walk is lazy (`close_touched_dv_containers_with_partitions`). Family frozen. Take/skip in the RP-7 ledger. |
 | 2026-09-01 | `00cdde00685bbc94552b29fcf8ed6767fe051ce6` | `fb0cacfa8ceda87f865fb0ae53be4b46e0ef8b7a` | RP-6: `#253` PR-1 REPLACE added>deleted refuse, `#254` PR-2 evolved-spec rewrite, `#252` PR-5A Glue/S3 Tables commit seams, `#255` PR-3 V3 MoR UPDATE lineage, `#256` PR-6B branch MoR UPDATE, `#257` PR-4 V2→V3 upgrade, `#250`/`#251` docs+PR-6A. Family frozen. Take/skip in the RP-6 ledger. |
 | 2026-09-01 | `33be9a0f411c37cd8d7b38c4db81eec30c1344cc` | `00cdde00685bbc94552b29fcf8ed6767fe051ce6` | RP-5: `#245` F-6b `with_commit_branch`, `#246` R91 unknown-on-write, `#247` F-8 metadata projection/listing, `#248` F-16r delete-ratio bounds-only, `#249` F-6c branch-head scans. Family frozen. Take/skip in the RP-5 ledger. |
 | 2026-08-31 | `d408da42fb91db2010662fe1da3783b82fa6e1ed` | `33be9a0f411c37cd8d7b38c4db81eec30c1344cc` | RP-4: `#241` test pin, `#243` F-7 slice 1 (v3 rewrite lineage), `#244` F-6 `to_branch` (carried). Family frozen. Take/skip in the RP-4 ledger. |

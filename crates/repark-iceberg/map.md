@@ -96,6 +96,10 @@ v1 crate-root re-export lists.
     pins: rp-4-fork-repin/C-001, C-002
     pins: rp-5-fork-repin/C-001, C-002
     pins: rp-6-fork-repin/C-001, C-002, C-006
+    **RP-7 (2026-09-02):** the family is frozen at `ff4764d3` (fork PR `#260`, F-18). The one
+    public break absorbed is `DvContainerClose` — `removed` now carries only the touched blobs
+    and `retained_references` is new; RePark reads both only through `referenced_data_files()`.
+    pins: rp-7-f18-repin/C-001
   - **The metadata-projection shim retired at RP-5 (fork R169/R170, F-8 `#247`).** The
     fork's metadata-table `scan` honors `projection` (empty projection included) and
     `table_names` lists catalog entries only (`$`-twins are not enumerated). Engine

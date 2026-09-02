@@ -3,6 +3,7 @@
 //! pins: v3e-4-refs-time-travel/C-009, C-010, C-011, C-013, C-014, C-015, C-016
 //! Pins format-v3 snapshot refs, time travel over deletion vectors, and maintenance.
 
+use std::collections::HashMap;
 use std::fs;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
@@ -769,4 +770,141 @@ async fn subquery_delete_on_the_shared_puffin_v3_table_keeps_both_file_scoped_de
         after[0].1, before[0].1,
         "the touched file's DV moves into a newly written container"
     );
+    assert_eq!(after[0].3, 4, "Spark writes the touched blob at offset 4");
+    assert_eq!(
+        after[1], before[1],
+        "the untouched sibling entry keeps its container, offset and record count"
+    );
+    assert_eq!(
+        after
+            .iter()
+            .map(|(_, container, _, _)| container.as_str())
+            .collect::<std::collections::HashSet<_>>()
+            .len(),
+        2,
+        "Spark's layout after the second DELETE is two containers"
+    );
+    let summary = last_snapshot_summary(&catalogs).await;
+    for (key, value) in [
+        ("removed-delete-files", "1"),
+        ("removed-dvs", "1"),
+        ("removed-position-deletes", "1"),
+        ("added-delete-files", "1"),
+        ("added-dvs", "1"),
+        ("added-position-deletes", "2"),
+    ] {
+        assert_eq!(
+            summary.get(key).map(String::as_str),
+            Some(value),
+            "snapshot summary {key}"
+        );
+    }
+}
+
+async fn last_snapshot_summary(catalogs: &CatalogRegistry) -> HashMap<String, String> {
+    let loaded = catalogs["ice"].load_table(&ident()).await.expect("load");
+    loaded
+        .metadata()
+        .current_snapshot()
+        .expect("current snapshot")
+        .summary()
+        .additional_properties
+        .clone()
+}
+
+async fn seed_dv_blobs(ctx: &SessionContext, catalogs: &CatalogRegistry, blobs: i32) {
+    run(
+        ctx,
+        catalogs,
+        "CREATE TABLE ice.sales.amp (id INT, tag STRING) USING iceberg \
+         TBLPROPERTIES ('format-version' = '3', 'write.delete.mode' = 'merge-on-read')",
+    )
+    .await;
+    for file in 0..blobs {
+        run(
+            ctx,
+            catalogs,
+            &format!(
+                "INSERT INTO ice.sales.amp VALUES ({}, 'keep'), ({}, 'drop')",
+                file * 2,
+                file * 2 + 1
+            ),
+        )
+        .await;
+    }
+    run(
+        ctx,
+        catalogs,
+        "DELETE FROM ice.sales.amp WHERE tag = 'drop'",
+    )
+    .await;
+}
+
+async fn amp_containers(catalogs: &CatalogRegistry) -> Vec<(String, u64)> {
+    let ident = TableIdent::from_strs(["sales", "amp"]).expect("ident");
+    let loaded = catalogs["ice"].load_table(&ident).await.expect("load amp");
+    let metadata = loaded.metadata();
+    let snapshot = metadata.current_snapshot().expect("current snapshot");
+    let manifest_list = snapshot
+        .load_manifest_list(loaded.file_io(), metadata)
+        .await
+        .expect("manifest list");
+    let mut containers: Vec<(String, u64)> = Vec::new();
+    for manifest_file in manifest_list.entries() {
+        if manifest_file.content != iceberg::spec::ManifestContentType::Deletes {
+            continue;
+        }
+        let manifest = manifest_file
+            .load_manifest(loaded.file_io())
+            .await
+            .expect("delete manifest");
+        for entry in manifest.entries() {
+            if !entry.is_alive() {
+                continue;
+            }
+            let path = entry.data_file().file_path().to_string();
+            if containers.iter().any(|(known, _)| known == &path) {
+                continue;
+            }
+            let bytes = fs::metadata(&path).expect("container on disk").len();
+            containers.push((path, bytes));
+        }
+    }
+    containers.sort();
+    containers
+}
+
+async fn measure_later_delete_bytes(blobs: i32) -> (usize, u64) {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    seed_dv_blobs(&ctx, &catalogs, blobs).await;
+    let before = amp_containers(&catalogs).await;
+    assert_eq!(before.len(), 1, "the first DELETE packs one container");
+    run(&ctx, &catalogs, "DELETE FROM ice.sales.amp WHERE id = 0").await;
+    let after = amp_containers(&catalogs).await;
+    let written: u64 = after
+        .iter()
+        .filter(|(path, _)| before.iter().all(|(old, _)| old != path))
+        .map(|(_, bytes)| *bytes)
+        .sum();
+    (after.len(), written)
+}
+
+#[tokio::test]
+async fn a_later_single_row_delete_writes_one_blob_not_the_whole_container() {
+    let (containers, written) = measure_later_delete_bytes(16).await;
+    assert_eq!(containers, 2, "the sibling blobs stay in their container");
+    assert!(
+        written < 1_024,
+        "a later single-row DELETE writes one blob, not sixteen: {written} B"
+    );
+}
+
+#[tokio::test]
+#[ignore = "measurement: 64 sequential single-row appends"]
+async fn measure_later_single_row_delete_bytes() {
+    for blobs in [16, 64] {
+        let (containers, written) = measure_later_delete_bytes(blobs).await;
+        println!("blobs={blobs} containers_after={containers} bytes_written={written}");
+    }
 }
