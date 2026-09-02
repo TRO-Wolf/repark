@@ -14,6 +14,27 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 ## Contents
 
 - `mod.rs` — pure module manifest (`mod common;` + one `mod` per leaf).
+- `v3_upgrade_calls.rs` — **V3-10:** the catalog-call budget for `ALTER … SET TBLPROPERTIES`,
+  counted through a wrapper registered into BOTH the catalog registry and the DF provider: an
+  upgrading ALTER is (2 `load_table`, 0 `list_tables`, 0 `namespace_exists`) — one load for the
+  resolve and one inside the fork's commit CAS — where the namespace-re-registering version was
+  (3, 1, 2); an ordinary property ALTER is (2, 0, 0) unchanged and a same-version request is
+  (1, 0, 0). The same test then reads `_row_id` through the session, which is what makes the
+  removal safe rather than merely cheaper.
+  pins: v3-10-upgrade-v2-to-v3/C-003, C-006
+- `v3_upgrade.rs` — **V3-10:** the in-place v2 → v3 upgrade on the Spark door — opt-in gate and
+  its without-opt-in twin, downgrade / `'1'` / `'-1'` / `'0'` / `'4'` / `'x'` / `''` / `'3.0'` /
+  `' 3 '` refusals in Spark's own two classes, same-version no-op,
+  upgrade beside another key as ONE commit, and the post-upgrade v3 paths (append lineage, COW
+  DELETE/UPDATE, MoR MERGE deletion vector, `rewrite_data_files`, `register_table`) at live-Spark
+  values, plus a **v1** table upgrading straight to v3 behind the same opt-in and a
+  **partitioned** v2 table whose append takes Spark's id sets and sequence numbers (the
+  per-partition file ORDER differs — `F-v3-10-partition-file-order`, so the pin asserts sets,
+  not the id→row-id map). The legacy-parquet-position-delete refusal is `V3-UPGRADE-DV-1`.
+  The V3-2 control `create_table.rs::or_replace_applies_requested_v3_and_alter_upgrades_with_opt_in`
+  is this unit's too: its ALTER arm flipped from refuse to upgrade, so it no longer carries
+  v3-2-create-v3-opt-in/C-008 (V3-10 negates that clause) and cites C-005 alone.
+  pins: v3-10-upgrade-v2-to-v3/C-001, C-003, C-004, C-005
 - `declared_refuse.rs` — **FNP-15/16:** Spark-door parse-altitude refusals for the six
   unreachable names and the sketch family; passthrough attach pin.
   pins: fnp-15-16/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008

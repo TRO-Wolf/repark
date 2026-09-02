@@ -236,7 +236,7 @@ pub(crate) fn string_value(value: &Expr, key: &str, form: &str) -> Result<String
 }
 
 /// A property value that may be a string OR a bare number (`format_version = 2`).
-fn scalar_value(value: &Expr, key: &str, form: &str) -> Result<String> {
+pub(crate) fn scalar_value(value: &Expr, key: &str, form: &str) -> Result<String> {
     if let Some(text) = literal_string(value) {
         return Ok(text);
     }

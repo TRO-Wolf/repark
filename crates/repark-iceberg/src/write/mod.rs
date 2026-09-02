@@ -6,6 +6,7 @@ pub mod commit_target;
 pub mod concurrency;
 pub(crate) mod conform;
 pub mod file_scoped_rewrite;
+pub mod format_version;
 /// Shared Spark/DF `quote_ident` + path-escape needles (CQ-006/007).
 pub mod idents;
 /// WI-2: the plain-INSERT store-assignment gate, as an `AnalyzerRule` over `LogicalPlan::Dml`.

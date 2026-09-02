@@ -42,16 +42,15 @@ pub(crate) async fn execute_alter_table(
         match operation {
             AlterTableOperation::SetTblProperties { table_properties } => {
                 flush_schema_batch(handle.as_ref(), &ident, &mut schema_batch).await?;
-                // A `SET TBLPROPERTIES` op may carry both real sets and sentinel-flagged removals.
                 let (sets, unsets) = partition_tblproperties(table_properties);
-                repark_iceberg::write::alter::alter_table_properties(
+                crate::format_version::alter_set_tblproperties(
+                    ctx,
                     handle.as_ref(),
                     &ident,
-                    &sets,
+                    sets,
                     &unsets,
                 )
-                .await
-                .map_err(iceberg_err)?;
+                .await?;
             }
             AlterTableOperation::RenameTable {
                 table_name: RenameTableNameKind::To(dest_name),

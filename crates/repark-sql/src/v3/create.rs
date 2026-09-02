@@ -170,6 +170,23 @@ async fn door_with_v3_opt_in() -> Door {
     door
 }
 
+async fn door_with_session_v3_opt_in() -> Door {
+    let config = repark_functions::cardinality::with_repark_sql_config(
+        SessionConfig::new().with_information_schema(true),
+        repark_functions::cardinality::ReparkSqlSettings {
+            allow_create_format_version_3: true,
+            ..repark_functions::cardinality::ReparkSqlSettings::default()
+        },
+    );
+    let door = door_with_config(config).await;
+    let location = format!("{}/sales", door.warehouse);
+    door.ok(&format!(
+        "CREATE SCHEMA ice.sales WITH (location = '{location}')"
+    ))
+    .await;
+    door
+}
+
 /// pins: v3-2-create-v3-opt-in/C-004
 /// Model: Grok 4.6 xHigh
 #[tokio::test]
@@ -332,4 +349,121 @@ async fn opt_in_v3_timestamp_ns_select_round_trips_ns_values() {
         .downcast_ref::<TimestampNanosecondArray>()
         .expect("ns array");
     assert_eq!(ts.value(0), nanos);
+}
+
+#[tokio::test]
+async fn alter_set_properties_upgrades_v2_to_v3_with_the_opt_in() {
+    let door = door_with_session_v3_opt_in().await;
+    door.ok("CREATE TABLE ice.sales.up AS SELECT 1 AS id").await;
+    let before = door.table("sales", "up").await;
+    assert_eq!(before.metadata().format_version() as u8, 2);
+    let snapshots_before = before.metadata().snapshots().count();
+
+    door.ok("ALTER TABLE ice.sales.up SET PROPERTIES (format_version = 3)")
+        .await;
+
+    let after = door.table("sales", "up").await;
+    assert_eq!(after.metadata().format_version() as u8, 3);
+    assert_eq!(after.metadata().next_row_id(), 0);
+    assert_eq!(after.metadata().snapshots().count(), snapshots_before);
+    assert!(!after.metadata().properties().contains_key("format-version"));
+    let lineage = door
+        .sql("SELECT id, _row_id, _last_updated_sequence_number FROM ice.sales.up")
+        .await
+        .expect("v3 lineage columns resolve after the upgrade");
+    assert_eq!(lineage[0].num_rows(), 1);
+    for column in [1usize, 2] {
+        assert_eq!(
+            lineage[0].column(column).null_count(),
+            1,
+            "a pre-upgrade row carries no lineage until a later v3 commit assigns it"
+        );
+    }
+
+    let log_before = after.metadata().metadata_log().len();
+    door.ok("ALTER TABLE ice.sales.up SET PROPERTIES (format_version = 3)")
+        .await;
+    let repeated = door.table("sales", "up").await;
+    assert_eq!(repeated.metadata().format_version() as u8, 3);
+    assert_eq!(
+        repeated.metadata().metadata_log().len(),
+        log_before,
+        "a same-version request writes no metadata file, as Spark writes none"
+    );
+}
+
+#[tokio::test]
+async fn alter_set_properties_extra_properties_map_spelling_steers_to_the_curated_key() {
+    let door = door_with_session_v3_opt_in().await;
+    door.ok("CREATE TABLE ice.sales.xp AS SELECT 1 AS id").await;
+    let err = door
+        .err(
+            "ALTER TABLE ice.sales.xp SET PROPERTIES (extra_properties = \
+             MAP(ARRAY['format-version'], ARRAY['3']))",
+        )
+        .await;
+    assert!(
+        err.contains("format-version") && err.contains("reserved"),
+        "the raw hatch keeps steering to the curated key: {err}"
+    );
+    assert_eq!(
+        door.table("sales", "xp").await.metadata().format_version() as u8,
+        2
+    );
+}
+
+#[tokio::test]
+async fn alter_set_properties_upgrade_refuses_without_the_opt_in() {
+    let door = door_with_schema().await;
+    door.ok("CREATE TABLE ice.sales.up AS SELECT 1 AS id").await;
+    let err = door
+        .err("ALTER TABLE ice.sales.up SET PROPERTIES (format_version = 3)")
+        .await;
+    assert!(
+        err.contains("repark.sql.allowCreateFormatVersion3") && err.contains("format-version"),
+        "the refusal must name the conf and the key: {err}"
+    );
+    assert_eq!(
+        door.table("sales", "up").await.metadata().format_version() as u8,
+        2
+    );
+}
+
+#[tokio::test]
+async fn alter_set_properties_downgrade_and_unsupported_versions_refuse() {
+    let door = door_with_session_v3_opt_in().await;
+    door.ok("CREATE TABLE ice.sales.dg AS SELECT 1 AS id").await;
+    door.ok("ALTER TABLE ice.sales.dg SET PROPERTIES (format_version = 3)")
+        .await;
+    let down = door
+        .err("ALTER TABLE ice.sales.dg SET PROPERTIES (format_version = 2)")
+        .await;
+    assert!(
+        down.contains("format-version") && down.contains("v3") && down.contains("v2"),
+        "downgrade must name the key and both versions: {down}"
+    );
+
+    door.ok("CREATE TABLE ice.sales.bad AS SELECT 1 AS id")
+        .await;
+    for (value, needle) in [
+        ("1", "v1"),
+        ("'-1'", "v-1"),
+        ("4", "v1 through v3"),
+        ("'x'", "not an Iceberg"),
+        ("'3.0'", "not an Iceberg"),
+    ] {
+        let err = door
+            .err(&format!(
+                "ALTER TABLE ice.sales.bad SET PROPERTIES (format_version = {value})"
+            ))
+            .await;
+        assert!(
+            err.contains("format-version") && err.contains(needle),
+            "`{value}` must refuse naming `{needle}`: {err}"
+        );
+    }
+    assert_eq!(
+        door.table("sales", "bad").await.metadata().format_version() as u8,
+        2
+    );
 }

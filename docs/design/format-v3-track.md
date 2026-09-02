@@ -255,6 +255,10 @@ preserves `_row_id`; the engine rewrite reassigns. The unit therefore keeps the 
 fork F-7. The opt-in v2-to-v3 upgrade still lands only after the engine can safely mutate an
 upgraded table.
 
+*V3-10 2026-09-02:* the guarded upgrade lands — `ALTER … 'format-version' = '3'` behind the
+create opt-in, on three doors, Spark-equal (registry `V3-UPGRADE-1`; residuals
+`V3-UPGRADE-V4-1`, `V3-UPGRADE-DV-1`).
+
 ### Step 5 — run the remaining product units on their real dependencies
 
 - **V3-4:** serve `_row_id` and `_last_updated_sequence_number`; preserve lineage across COW

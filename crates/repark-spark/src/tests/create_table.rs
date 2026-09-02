@@ -656,9 +656,9 @@ async fn column_def_create_format_version_three_needs_opt_in() {
     );
 }
 
-/// pins: v3-2-create-v3-opt-in/C-005, C-008
+/// pins: v3-2-create-v3-opt-in/C-005
 #[tokio::test]
-async fn or_replace_applies_requested_v3_and_alter_still_refuses_with_opt_in() {
+async fn or_replace_applies_requested_v3_and_alter_upgrades_with_opt_in() {
     use iceberg::spec::FormatVersion;
 
     let wh = TempDir::new().unwrap();
@@ -711,16 +711,35 @@ async fn or_replace_applies_requested_v3_and_alter_still_refuses_with_opt_in() {
         "unspecified OR REPLACE must not force v2 onto an existing v3 table"
     );
 
-    let alter = execute(
+    run(
         &ctx,
         &catalogs,
-        "ALTER TABLE ice.sales.up SET TBLPROPERTIES ('format-version' = '3')",
+        "CREATE OR REPLACE TABLE ice.sales.v2base (id BIGINT) USING iceberg",
     )
-    .await
-    .expect_err("ALTER format-version=3 must still refuse with the opt-in on");
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.v2base SET TBLPROPERTIES ('format-version' = '3')",
+    )
+    .await;
+    let altered = catalogs["ice"]
+        .load_table(&TableIdent::new(
+            NamespaceIdent::new("sales".to_string()),
+            "v2base".to_string(),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(
+        altered.metadata().format_version(),
+        FormatVersion::V3,
+        "V3-10: ALTER format-version=3 upgrades in place with the opt-in on"
+    );
     assert!(
-        alter.to_string().contains("format-version") || alter.to_string().contains("reserved"),
-        "ALTER must name the reserved key: {alter}"
+        !altered
+            .metadata()
+            .properties()
+            .contains_key("format-version")
     );
 }
 
