@@ -23,7 +23,7 @@ _PART_DV_DEST = Path("/tmp/repark-v3e3-partdv/ns/v3part")
 _EQ_DV_DEST = Path("/tmp/repark-v3e3-eqdel/ns/v3eq")
 _LIVE = os.environ.get("REPARK_PARITY_LIVE") == "1"
 _LIVE_SKIP = "REPARK_PARITY_LIVE != 1 — live v3 oracle skipped (routine CI is JVM-free)"
-_V37_LEDGER = _REPO_ROOT / "task/ledgers/completed/v3-7-merge-lineage-ledger.md"
+_V37_LEDGER_NAME = "v3-7-merge-lineage-ledger.md"
 _ALLOW_CREATE_V3_KEY = "repark.sql.allowCreateFormatVersion3"
 _COW_V3 = (
     "'format-version' = '3', "
@@ -81,6 +81,18 @@ def _materialize(src: Path, dest: Path) -> Iterator[str]:
         yield str(versions[-1])
     finally:
         lock.close()
+
+
+def _ledger_text(ledger_name: str) -> str:
+    """The one live-or-archived copy of `ledger_name`, so a lifecycle move keeps the pin green."""
+    live = (
+        _REPO_ROOT / "task/ledgers/staging" / ledger_name,
+        _REPO_ROOT / "task/ledgers/completed" / ledger_name,
+    )
+    archived = sorted((_REPO_ROOT / "task/ledgers/archive").glob(f"*/*-{ledger_name}"))
+    found = [path for path in (*live, *archived) if path.is_file()]
+    assert len(found) == 1, found
+    return found[0].read_text(encoding="utf-8")
 
 
 def _objects_under(root: Path) -> list[str]:
@@ -443,8 +455,7 @@ def test_v3_merge_matched_update_live_cow_and_mor(tmp_path: Path) -> None:
     """
     from repark import ReparkSession
 
-    ledger = _V37_LEDGER.read_text(encoding="utf-8")
-    assert _V37_LEDGER.is_file()
+    ledger = _ledger_text(_V37_LEDGER_NAME)
     assert "/tmp/v3-7-oracle" not in ledger
     assert "| COW matched-UPDATE |" in ledger
     assert "| MoR matched-UPDATE |" in ledger
@@ -574,15 +585,7 @@ def test_v3_live_oracle_pins_cover_all_clauses() -> None:
     """
     import subprocess
 
-    ledger_name = "v3e-5-nightly-v3-oracle-ledger.md"
-    live_ledgers = (
-        _REPO_ROOT / "task/ledgers/staging" / ledger_name,
-        _REPO_ROOT / "task/ledgers/completed" / ledger_name,
-    )
-    archived_ledgers = sorted((_REPO_ROOT / "task/ledgers/archive").glob(f"*/*-{ledger_name}"))
-    ledgers = [path for path in (*live_ledgers, *archived_ledgers) if path.is_file()]
-    assert len(ledgers) == 1, ledgers
-    text = ledgers[0].read_text(encoding="utf-8")
+    text = _ledger_text("v3e-5-nightly-v3-oracle-ledger.md")
     assert "VERDICT: PASS" in text
     assert "Nightly oracle: v3 leg" in (
         _REPO_ROOT / "task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md"
