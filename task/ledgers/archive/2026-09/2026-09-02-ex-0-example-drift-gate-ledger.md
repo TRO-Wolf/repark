@@ -6,7 +6,7 @@ owner closes the slate row.
 
 **Unit:** EX-0 · **Date:** 2026-08-31 · **Executor:** Grok (grok-4.6), Actor ·
 **Branch:** `feat/ex-0-example-drift-gate` · **Base:** `749eff4166abbbb6c590bcd4af5a9d929b1c6319`
-**Ruling:** [release-roadmap-2026-08-29.md](../../roadmap/epic-term/release-roadmap-2026-08-29.md)
+**Ruling:** [release-roadmap-2026-08-29.md](../../../roadmap/epic-term/release-roadmap-2026-08-29.md)
 §"v0.7 — Full example documentation" deliverable 2 (the drift gate + inventory).
 Deliverable 1 (the per-name backfill) is sibling-lane work; this unit defines
 "done" for that backfill.

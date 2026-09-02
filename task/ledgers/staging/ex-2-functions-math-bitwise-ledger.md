@@ -190,8 +190,8 @@ examples is the four new files.
 - Up: [map.md](map.md)
 - Slate: [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md)
 - Gate: [../../../scripts/check_example_coverage.py](../../../scripts/check_example_coverage.py)
-- Sibling: [ex-0-example-drift-gate-ledger.md](../completed/ex-0-example-drift-gate-ledger.md),
-  [ex-1-class-surfaces-ledger.md](../completed/ex-1-class-surfaces-ledger.md)
+- Sibling: [ex-0-example-drift-gate-ledger.md](../archive/2026-09/2026-09-02-ex-0-example-drift-gate-ledger.md),
+  [ex-1-class-surfaces-ledger.md](../archive/2026-09/2026-09-02-ex-1-class-surfaces-ledger.md)
 
 ## Blocker (RESOLVED by orchestrator ruling, 2026-09-01) — the EX-1 pins hardcode the pre-batch backlog count
 

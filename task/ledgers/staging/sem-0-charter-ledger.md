@@ -144,7 +144,7 @@ Delivery is one branch, one PR, matching the last two campaigns.
 
 **Owner ruling 2026-08-31 (gate pass):** both RE-1 and LOG-1 are fixed to Spark
 semantics. The 2026-08-21 tabling of LOG-1 is lifted. Delivery is
-[sem-1-spark-answer-parity-ledger.md](../completed/sem-1-spark-answer-parity-ledger.md). The
+[sem-1-spark-answer-parity-ledger.md](../archive/2026-09/2026-09-02-sem-1-spark-answer-parity-ledger.md). The
 measured scope in §SEM-1 and §SEM-2 above stands.
 
 ## Unit roster, as ruled
