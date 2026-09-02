@@ -172,4 +172,4 @@ off ❌ only if Glue reproduced §6, and record the run's state in `STATUS.md`.
 | — | make the local pin adopt through a bare `spark.newSession`, as the Glue leg does | n/a | **NOT DONE, measured why.** The Glue leg can, because its catalog comes from `.config(...)` and `newSession` replays the builder config. The local catalog is registered at RUNTIME by `register_memory_catalog`, which `newSession` does not carry: a bare `spark.newSession()` read of the table raises `AnalysisException: table 'ice.sales.f' not found`, and re-registering on the new handle yields a fresh empty catalog (`NamespaceNotFound`). The local `_second_session` helper therefore registers the catalog AND creates the namespace; the live legs pass `spark.newSession` unchanged |
 
 ## Pointers
-- Up: [map.md](../staging/map.md)
+- Up: [map.md](../../staging/map.md)

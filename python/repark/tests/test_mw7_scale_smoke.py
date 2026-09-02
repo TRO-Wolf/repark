@@ -17,7 +17,10 @@ pins: rp-6-fork-repin/C-004
 
 from __future__ import annotations
 
+import os
+import shutil
 import sys
+import time
 import types
 from pathlib import Path
 from typing import Any
@@ -28,6 +31,7 @@ import pytest
 pytest.importorskip("polars")
 
 from repark import ReparkSession
+from repark.errors import UnsupportedOperationException
 
 # pins: mw-7-scale-measurement/C-001, C-002, C-003, C-004, C-005
 # pins: mw-7-scale-measurement/C-006, C-007, C-008, C-009, C-010, C-011
@@ -70,6 +74,29 @@ C011_BAND_HIGH = 1.8
 
 DELETE_FILE_PATH_FIELD_ID = 2147483546
 
+V3_ALLOW_CREATE_KEY = "repark.sql.allowCreateFormatVersion3"
+V3_SMOKE_REPS = 1
+V3_DV_MERGES = 2
+STARTED_AT_ROWS = 500
+STARTED_AT_MERGES = 1
+STARTED_AT_STEP_SECONDS = 2.0
+STARTED_AT_BACKDATE_SECONDS = 86_400.0
+V3_DELETE_FILE_FORMAT = "PUFFIN"
+V3_SEEDED_DATA_FILES = SMOKE_PARTITIONS
+V3_ORACLE_ROWS = 4_000
+V3_ORACLE_MERGES = 3
+V3_ORACLE_ROWS_PER_MERGE = int(V3_ORACLE_ROWS * SMOKE_TOUCH_FRACTION)
+V3_TABLE_PROPERTIES = (
+    "'format-version' = '3', "
+    "'write.delete.mode' = 'merge-on-read', "
+    "'write.update.mode' = 'merge-on-read', "
+    "'write.merge.mode' = 'merge-on-read', "
+    "'write.delete.granularity' = 'partition', "
+    f"'write.target-file-size-bytes' = '{SMOKE_TARGET_FILE_SIZE}'"
+)
+LIVE = os.environ.get("REPARK_PARITY_LIVE") == "1"
+LIVE_SKIP = "REPARK_PARITY_LIVE != 1 — the live v3 scale oracle is skipped (CI is JVM-free)"
+
 
 def _load_measure() -> Any:
     """Import `mw7.measure` from the bench tree as a synthetic package."""
@@ -102,6 +129,84 @@ def smoke_run(tmp_path_factory: pytest.TempPathFactory) -> Any:
         modes=["mor", "cow"],
         host_note="pytest smoke",
     )
+
+
+@pytest.fixture(scope="module")
+def v3_smoke_run(tmp_path_factory: pytest.TempPathFactory) -> Any:
+    """The same driver run at the same smoke shape, on format-version 3 tables."""
+    root = tmp_path_factory.mktemp("mw7-smoke-v3")
+    return measure.run_scale_measurement(
+        root=root,
+        rows=SMOKE_ROWS,
+        merges=SMOKE_MERGES,
+        partitions=SMOKE_PARTITIONS,
+        touch_fraction=SMOKE_TOUCH_FRACTION,
+        checkpoint_every=SMOKE_CHECKPOINT_EVERY,
+        reps=V3_SMOKE_REPS,
+        target_file_size_bytes=SMOKE_TARGET_FILE_SIZE,
+        modes=["mor", "cow"],
+        host_note="pytest smoke v3",
+        format_version=3,
+    )
+
+
+def _v3_session(name: str) -> ReparkSession:
+    """An opt-in session that may CREATE format-version 3 tables."""
+    return ReparkSession.builder.appName(name).config(V3_ALLOW_CREATE_KEY, "true").getOrCreate()
+
+
+def _delete_files(spark: ReparkSession, table: str) -> list[tuple[int, str, int, str]]:
+    """Live delete files as `(content, file_format, record_count, referenced_data_file)`."""
+    arrow = spark.sql(
+        f"SELECT content, file_format, record_count, referenced_data_file FROM {table}.files "
+        f"WHERE content = 1"
+    ).to_arrow()
+    return [
+        (
+            int(row["content"]),
+            str(row["file_format"]).upper(),
+            int(row["record_count"]),
+            str(row["referenced_data_file"]),
+        )
+        for row in arrow.to_pylist()
+    ]
+
+
+def _build_v3_leg(
+    spark: ReparkSession,
+    tmp_path: Path,
+    catalog: str,
+    mode: str,
+    rows: int,
+    merges: int,
+    rows_per_merge: int,
+) -> str:
+    """CTAS a format-3 leg of `mode` and run `merges` MERGEs over it; returns the table."""
+    warehouse = tmp_path / f"wh_{catalog}"
+    warehouse.mkdir()
+    spark.register_memory_catalog(catalog, str(warehouse))
+    spark.sql(f"CREATE NAMESPACE {catalog}.ns LOCATION '{warehouse / 'ns'}'")
+    table = f"{catalog}.ns.leg"
+    measure.register_parquet_view(
+        spark,
+        measure.seed_frame(rows, SMOKE_PARTITIONS),
+        tmp_path / f"seed_{catalog}.parquet",
+        f"seed_{catalog}",
+    )
+    measure.create_table(spark, table, f"seed_{catalog}", mode, SMOKE_TARGET_FILE_SIZE, 3)
+    spark.catalog.dropTempView(f"seed_{catalog}")
+    for generation in range(1, merges + 1):
+        measure.register_parquet_view(
+            spark,
+            measure.merge_frame(
+                (generation - 1) * rows_per_merge, rows_per_merge, SMOKE_PARTITIONS, generation
+            ),
+            tmp_path / f"src_{catalog}.parquet",
+            f"src_{catalog}",
+        )
+        spark.sql(measure.merge_sql(table, f"src_{catalog}"))
+        spark.catalog.dropTempView(f"src_{catalog}")
+    return table
 
 
 def _leg(run: Any, mode: str) -> Any:
@@ -428,3 +533,257 @@ def test_delete_laden_in_band_file_is_rewritten_and_its_delete_file_dies(tmp_pat
         )
     finally:
         spark.stop()
+
+
+def test_the_cli_defaults_to_format_version_two() -> None:
+    """C-001: `--format-version` defaults to 2, takes 3, and refuses anything else."""
+    import importlib
+
+    assert measure.DEFAULT_FORMAT_VERSION == 2
+    runner = importlib.import_module("repark_mw7_bench.mw7.run_mw7")
+    parsed = runner.build_parser().parse_args(["--scratch", "/dev/null"])
+    assert parsed.format_version == 2
+    assert (
+        runner.build_parser()
+        .parse_args(["--scratch", "/dev/null", "--format-version", "3"])
+        .format_version
+        == 3
+    )
+    with pytest.raises(SystemExit):
+        runner.build_parser().parse_args(["--scratch", "/dev/null", "--format-version", "4"])
+
+
+def test_each_leg_records_the_format_version_it_was_built_at(
+    smoke_run: Any, v3_smoke_run: Any
+) -> None:
+    """C-001: the v2 fixture reports 2 on every leg and the v3 fixture reports 3."""
+    assert [leg.format_version for leg in smoke_run.legs] == [2, 2]
+    assert smoke_run.format_version == 2
+    assert [leg.format_version for leg in v3_smoke_run.legs] == [3, 3]
+    assert v3_smoke_run.format_version == 3
+
+
+def test_v3_mor_delete_files_are_one_per_seeded_data_file(v3_smoke_run: Any) -> None:
+    """C-001: v3 MERGEs fold into one deletion vector per touched data file, not one per commit."""
+    leg = _leg(v3_smoke_run, "mor")
+    for point in leg.checkpoints:
+        expected = 0 if point.merges_done == 0 else V3_SEEDED_DATA_FILES
+        assert point.census.delete_files == expected, (
+            f"after {point.merges_done} MERGEs: {point.census.delete_files} delete files, "
+            f"expected {expected}"
+        )
+        assert point.census.delete_records == point.merges_done * leg.rows_per_merge
+        assert point.row_count == SMOKE_ROWS
+    final = leg.checkpoints[-1]
+    assert final.merges_done == SMOKE_MERGES
+    assert final.census.delete_files < SMOKE_MERGES * SMOKE_PARTITIONS
+
+
+def test_v3_mor_delete_files_are_file_scoped_deletion_vectors(tmp_path: Path) -> None:
+    """C-001: every v3 delete file is a Puffin DV naming exactly one live data file."""
+    spark = _v3_session("pytest-mw7-v3-dv")
+    try:
+        table = _build_v3_leg(spark, tmp_path, "mw7v3", "mor", SMOKE_ROWS, V3_DV_MERGES, 400)
+        deletes = _delete_files(spark, table)
+        assert len(deletes) == V3_SEEDED_DATA_FILES, deletes
+        assert {content for content, _fmt, _records, _ref in deletes} == {1}
+        assert {fmt for _content, fmt, _records, _ref in deletes} == {V3_DELETE_FILE_FORMAT}
+        referenced = {ref for _content, _fmt, _records, ref in deletes}
+        assert len(referenced) == len(deletes), "a DV names exactly one data file"
+        live = {path for path, _size, _records in _data_files(spark, table)}
+        assert referenced <= live
+        assert sum(records for _c, _f, records, _r in deletes) == V3_DV_MERGES * 400
+        rows = spark.sql(f"SELECT COUNT(*) AS n FROM {table}").to_arrow()
+        assert int(rows.column("n")[0].as_py()) == SMOKE_ROWS
+    finally:
+        spark.stop()
+
+
+def test_v3_cow_leg_keeps_row_lineage(tmp_path: Path) -> None:
+    """C-001: the v3 copy-on-write leg writes no delete file and `_row_id` stays readable."""
+    spark = _v3_session("pytest-mw7-v3-lineage")
+    try:
+        table = _build_v3_leg(spark, tmp_path, "mw7v3c", "cow", SMOKE_ROWS, 2, 400)
+        assert _delete_files(spark, table) == []
+        lineage = spark.sql(
+            f"SELECT id, _row_id, _last_updated_sequence_number FROM {table} "
+            f"WHERE id < 3 ORDER BY id"
+        ).to_arrow()
+        rows = [
+            (int(row["id"]), row["_row_id"], row["_last_updated_sequence_number"])
+            for row in lineage.to_pylist()
+        ]
+        assert len(rows) == 3
+        assert all(row_id is not None for _id, row_id, _seq in rows)
+        assert len({row_id for _id, row_id, _seq in rows}) == 3
+        untouched = spark.sql(f"SELECT _row_id FROM {table} WHERE id = {SMOKE_ROWS - 1}").to_arrow()
+        assert untouched.column("_row_id")[0].as_py() is not None
+    finally:
+        spark.stop()
+
+
+def test_v3_position_delete_compaction_refuses_and_the_sequence_continues(
+    v3_smoke_run: Any,
+) -> None:
+    """C-001: `rewrite_position_delete_files` refuses on live DVs (`B-MOR-3`), recorded."""
+    leg = _leg(v3_smoke_run, "mor")
+    assert [step.procedure for step in leg.maintenance] == MAINTENANCE_ORDER
+    refused = leg.maintenance[0]
+    assert refused.procedure == "rewrite_position_delete_files"
+    assert refused.result_rows == 0
+    assert "Puffin deletion vector" in refused.refusal, refused.refusal
+    assert [step.refusal for step in leg.maintenance[1:]] == ["", "", "", ""]
+    assert leg.maintenance[1].result_first_row["rewritten_data_files_count"] > 0
+    assert leg.after_maintenance.row_count == SMOKE_ROWS
+    cow = _leg(v3_smoke_run, "cow")
+    assert [step.refusal for step in cow.maintenance] == ["", "", "", "", ""]
+    assert [point.census.delete_files for point in cow.checkpoints] == [0] * len(cow.checkpoints)
+
+
+@pytest.mark.skipif(not LIVE, reason=LIVE_SKIP)
+def test_v3_delete_file_layout_matches_live_spark(tmp_path: Path) -> None:
+    """C-001: at a matched layout, repark and Spark agree on the v3 delete-file census."""
+    import tempfile
+
+    import _live_parity as live_parity
+
+    spark = _v3_session("pytest-mw7-v3-oracle")
+    try:
+        table = _build_v3_leg(
+            spark,
+            tmp_path,
+            "mw7v3o",
+            "mor",
+            V3_ORACLE_ROWS,
+            V3_ORACLE_MERGES,
+            V3_ORACLE_ROWS_PER_MERGE,
+        )
+        engine_deletes = sorted(
+            (content, fmt, records) for content, fmt, records, _ref in _delete_files(spark, table)
+        )
+        engine_rows = int(
+            spark.sql(f"SELECT COUNT(*) AS n FROM {table}").to_arrow().column("n")[0].as_py()
+        )
+    finally:
+        spark.stop()
+
+    warehouse = Path(tempfile.mkdtemp(prefix="repark-scale-v3-live-"))
+    try:
+        oracle = live_parity.build_spark_iceberg_engine(warehouse)
+        catalog = live_parity.LIFECYCLE_SPARK_CATALOG
+        try:
+            session = oracle.session
+            session.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.ns")
+            measure.seed_frame(V3_ORACLE_ROWS, SMOKE_PARTITIONS).write_parquet(
+                tmp_path / "oracle_seed.parquet"
+            )
+            session.read.parquet(str(tmp_path / "oracle_seed.parquet")).createOrReplaceTempView(
+                "oracle_seed"
+            )
+            session.sql(
+                f"CREATE TABLE {catalog}.ns.leg USING iceberg PARTITIONED BY (part) "
+                f"TBLPROPERTIES ({V3_TABLE_PROPERTIES}) AS SELECT * FROM oracle_seed"
+            )
+            for generation in range(1, V3_ORACLE_MERGES + 1):
+                measure.merge_frame(
+                    (generation - 1) * V3_ORACLE_ROWS_PER_MERGE,
+                    V3_ORACLE_ROWS_PER_MERGE,
+                    SMOKE_PARTITIONS,
+                    generation,
+                ).write_parquet(tmp_path / "oracle_src.parquet")
+                session.read.parquet(str(tmp_path / "oracle_src.parquet")).createOrReplaceTempView(
+                    "oracle_src"
+                )
+                session.sql(measure.merge_sql(f"{catalog}.ns.leg", "oracle_src"))
+            files = session.sql(
+                f"SELECT content, file_format, record_count FROM {catalog}.ns.leg.files "
+                f"WHERE content = 1"
+            ).toArrow()
+            spark_deletes = sorted(
+                (int(row["content"]), str(row["file_format"]).upper(), int(row["record_count"]))
+                for row in files.to_pylist()
+            )
+            spark_rows = int(
+                session.sql(f"SELECT COUNT(*) AS n FROM {catalog}.ns.leg").toArrow()["n"][0].as_py()
+            )
+        finally:
+            oracle.session.stop()
+    finally:
+        shutil.rmtree(warehouse, ignore_errors=True)
+
+    assert engine_deletes == spark_deletes, (engine_deletes, spark_deletes)
+    assert engine_rows == spark_rows == V3_ORACLE_ROWS
+    assert len(spark_deletes) == V3_SEEDED_DATA_FILES
+    assert {fmt for _content, fmt, _records in spark_deletes} == {V3_DELETE_FILE_FORMAT}
+    assert (
+        sum(records for _c, _f, records in spark_deletes)
+        == V3_ORACLE_MERGES * V3_ORACLE_ROWS_PER_MERGE
+    )
+
+
+def test_a_refusal_is_recorded_only_when_the_step_is_armed(tmp_path: Path) -> None:
+    """C-001: `capture_refusal` records a refusing CALL; unarmed, the same CALL still raises."""
+    spark = ReparkSession.builder.appName("pytest-mw7-refusal").getOrCreate()
+    try:
+        warehouse = tmp_path / "wh"
+        warehouse.mkdir()
+        spark.register_memory_catalog("mw7r", str(warehouse))
+        spark.sql(f"CREATE NAMESPACE mw7r.ns LOCATION '{warehouse / 'ns'}'")
+        table = "mw7r.ns.armed"
+        measure.register_parquet_view(
+            spark, measure.seed_frame(200, 1), tmp_path / "seed.parquet", "mw7r_seed"
+        )
+        measure.create_table(spark, table, "mw7r_seed", "mor", SMOKE_TARGET_FILE_SIZE)
+        spark.catalog.dropTempView("mw7r_seed")
+
+        refusing = "CALL mw7r.system.migrate(table => 'ns.armed')"
+        with pytest.raises(UnsupportedOperationException):
+            measure.run_maintenance_step(spark, table, "migrate", refusing)
+
+        step = measure.run_maintenance_step(spark, table, "migrate", refusing, True)
+        assert step.result_rows == 0
+        assert step.result_first_row == {}
+        assert step.refusal
+        assert step.census_after.data_files > 0
+    finally:
+        spark.stop()
+
+
+class _FakeClock:
+    """A strictly increasing clock that records every reading it hands out."""
+
+    def __init__(self, base: float, step: float) -> None:
+        self.base = base
+        self.step = step
+        self.readings: list[float] = []
+
+    def __call__(self) -> float:
+        reading = self.base + len(self.readings) * self.step
+        self.readings.append(reading)
+        return reading
+
+
+def test_started_at_records_the_start_of_the_run_not_its_end(tmp_path: Path) -> None:
+    """C-002: `started_at` formats the FIRST reading of the run's clock, never a later one."""
+    clock = _FakeClock(time.time() - STARTED_AT_BACKDATE_SECONDS, STARTED_AT_STEP_SECONDS)
+    run = measure.run_scale_measurement(
+        root=tmp_path,
+        rows=STARTED_AT_ROWS,
+        merges=STARTED_AT_MERGES,
+        partitions=1,
+        touch_fraction=SMOKE_TOUCH_FRACTION,
+        checkpoint_every=1,
+        reps=1,
+        target_file_size_bytes=SMOKE_TARGET_FILE_SIZE,
+        modes=["cow"],
+        host_note="pytest started_at",
+        clock=clock,
+    )
+    assert len(clock.readings) > 1, "the run must read its clock again after it stamps the start"
+    stamped = time.strftime(measure.STARTED_AT_FORMAT, time.localtime(clock.readings[0]))
+    latest = time.strftime(measure.STARTED_AT_FORMAT, time.localtime(clock.readings[-1]))
+    assert stamped != latest, "the fixture must separate the first reading from the last"
+    assert stamped != time.strftime(measure.STARTED_AT_FORMAT), (
+        "the fixture must separate the injected clock from the real one"
+    )
+    assert run.started_at == stamped
