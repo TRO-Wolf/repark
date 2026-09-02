@@ -280,21 +280,17 @@ carry `_row_id` through MERGE (V3-7) and through the subquery-`WHERE` COW rewrit
 left one fork ask, **F-18** (`crates/iceberg/src/delete_vector_container.rs`), consumed by
 RePark repin **RP-7**:
 
-- **F-18 — closing a shared Puffin rewrites every sibling blob (2026-09-02, registry `V3-DV-1`).**
-  `close_touched_dv_containers_at` marks a container affected when any blob in it is touched and
-  rewrites all of them. Measured against Spark 4.1.2 + Iceberg 1.11.0 (partitioned v3 MoR, 2 data
-  files, 2 DVs packed in one Puffin): after a DELETE touching one file Spark reports
-  `removed-delete-files 1` / `removed-dvs 1` / `added-delete-files 1` / `added-dvs 1` and leaves
-  **two** containers — the sibling's `DeleteFile` entry still at the old container and offset —
-  where the fork produces one new container holding both blobs at new offsets. Cost measured in
-  the RePark tree: a 64-file subquery DELETE packs one 18,996 B Puffin (64 blobs) and each later
-  single-row DELETE rewrites 18,998–19,006 B (~1,010 ms) against a 373 B fresh blob — 64×
-  amplification, 16× at 16 files. Two neighbours in the same function: `collect_live_data_files`
-  runs unconditionally although its result is read only when `remaining` is non-empty (six
-  single-row v3 `DELETE` statements: 208 / 991 / 2,790 ms at 8 / 64 / 192 live data files against
-  135 / ~900 / 1,485 ms on a v2 twin), and the manifest list is loaded twice per statement with
-  manifests read in a serial `for`-await. RePark pin to re-aim on the fix:
-  `crates/repark-spark/src/tests/v3e4.rs::subquery_delete_on_the_shared_puffin_v3_table_keeps_both_file_scoped_deletion_vectors`.
+- **F-18 — CONSUMED (RP-7, 2026-09-02, pin `ff4764d3`, fork PR `#260`).** The fork's
+  `close_touched_dv_containers_at` now rewrites only the touched blob into one new container per
+  statement and keys removal by Java's `DeleteFileSet` triple, so an untouched sibling entry keeps
+  its container, `content_offset` and data sequence. RePark re-measured the oracle at the matched
+  layout: both engines land two containers, the touched blob at offset 4 with 2 records, the
+  sibling entry unchanged, and `removed-delete-files 1` / `removed-dvs 1` /
+  `removed-position-deletes 1` / `added-delete-files 1` / `added-dvs 1` /
+  `added-position-deletes 2`. Bytes per later single-row `DELETE` in this tree: 4,830 → 377 B at
+  16 blobs, 19,126 → 377 B at 64. The data-file walk is lazy, and RePark supplies
+  `(spec_id, partition)` for an all-unpartitioned table so a first `DELETE` reads no data manifest
+  either. Registry `V3-DV-1` is **FIXED**. pins: rp-7-f18-repin/C-001, C-002, C-003
 
 Listed so the fork plans it; as of 2026-08-21 the engine's V3-2+ units deliberately waited
 for the MW campaign to close (that wait is over — the addendum below).

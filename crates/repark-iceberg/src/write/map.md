@@ -54,6 +54,27 @@ repark-core's error map.
   (`predicate_dml/lineage.rs::push_identity_pair`), so a single-file DELETE allocates once
   rather than once per row.
   pins: v3-8-subquery-where-lineage/C-002; v3-9-mor-predicate-dml-dv/C-003, C-009
+- `predicate_dml.rs` — **RP-7 (2026-09-02):** the identity scratch scan is no longer built with
+  `filter: None`. `identity_scan_residual` re-parses `selection_sql` and, for a POSITIVE
+  uncorrelated `IN` or a positive `EXISTS` whose correlation is one bare equality, derives the
+  source key's min/max through the same `residual_bounds_predicate` MERGE uses (PERF-04) and
+  pushes it onto the target scan. `NOT IN` / `NOT EXISTS` keep the unfiltered scan, and
+  `repark.merge.scan-pruning=false` turns it off.
+  **Safety.** Two conditions, and both are load-bearing. (1) Ownership must be EXACT:
+  `predicate_dml/residual.rs` classifies each side of the correlation ONCE, the way
+  `scan_prune::parse_column_ref` does, and derives NO residual when a qualifier resolves to
+  neither owner or to BOTH. A target alias that shadows the subquery relation's alias or bare
+  table name is rejected outright, because Spark resolves the inner name to the subquery's own
+  relation: `DELETE FROM t s WHERE EXISTS (SELECT 1 FROM src s WHERE s.id = s.id)` is
+  UNCORRELATED and deletes every row, and an independent per-side classification read it as a
+  correlation and pruned. That is a wrong answer, not a slow one — it was measured on Spark
+  4.1.2 and it is why the classification is one resolution per side.
+  (2) Given exact ownership the push cannot drop a matching row: the identity scan is
+  match-discovery only (the COW arm re-reads survivors through its own allowlisted scan) and a
+  min/max range is a superset of the key set.
+  `collect_identity_pairs` / `collect_identity_update_rows` consume `execute_stream()` and
+  `reserve(batch.num_rows())` per batch instead of collecting the whole result first.
+  pins: rp-7-f18-repin/C-005
 - `predicate_dml.rs` — **G3-E8 A1-identity** (`execute_predicate_dml`): evaluate the original
   `WHERE` as a SELECT over the pinned `(_file, _pos)` streaming target, then commit through the
   MERGE COW/MoR write arms honoring `write.delete.mode` / `write.update.mode` / isolation —

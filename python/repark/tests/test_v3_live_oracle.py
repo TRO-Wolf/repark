@@ -521,7 +521,6 @@ def _assert_merge_matched_update_live_against_spark() -> None:
 
     catalog = "local"
     warehouse = Path(tempfile.mkdtemp(prefix="repark-v3-7-live-mrg-"))
-    ivy_home = Path(tempfile.mkdtemp(prefix="repark-v3-7-ivy-"))
     schema = spark_types.StructType(
         [
             spark_types.StructField("id", spark_types.IntegerType(), False),
@@ -535,7 +534,6 @@ def _assert_merge_matched_update_live_against_spark() -> None:
         .config("spark.sql.shuffle.partitions", "1")
         .config("spark.default.parallelism", "1")
         .config("spark.ui.enabled", "false")
-        .config("spark.jars.ivy", str(ivy_home))
         .config(
             "spark.sql.extensions",
             "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
@@ -569,7 +567,6 @@ def _assert_merge_matched_update_live_against_spark() -> None:
     finally:
         session.stop()
         shutil.rmtree(warehouse, ignore_errors=True)
-        shutil.rmtree(ivy_home, ignore_errors=True)
     assert ICEBERG_SPARK_RUNTIME_GAV == "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0"
 
 
@@ -673,7 +670,6 @@ def _live_subquery_where_dml_measurement() -> tuple[dict, dict]:
 
     catalog = "local"
     warehouse = Path(tempfile.mkdtemp(prefix="repark-v3-sub-live-"))
-    ivy_home = Path(tempfile.mkdtemp(prefix="repark-v3-sub-ivy-"))
     schema = spark_types.StructType(
         [
             spark_types.StructField("id", spark_types.IntegerType(), False),
@@ -687,7 +683,6 @@ def _live_subquery_where_dml_measurement() -> tuple[dict, dict]:
         .config("spark.sql.shuffle.partitions", "1")
         .config("spark.default.parallelism", "1")
         .config("spark.ui.enabled", "false")
-        .config("spark.jars.ivy", str(ivy_home))
         .config(
             "spark.sql.extensions",
             "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
@@ -735,7 +730,6 @@ def _live_subquery_where_dml_measurement() -> tuple[dict, dict]:
     finally:
         session.stop()
         shutil.rmtree(warehouse, ignore_errors=True)
-        shutil.rmtree(ivy_home, ignore_errors=True)
     return _LIVE_SUBQUERY_LINEAGE, _LIVE_SUBQUERY_KINDS
 
 

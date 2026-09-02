@@ -278,8 +278,13 @@ create opt-in, on three doors, Spark-equal (registry `V3-UPGRADE-1`; residuals
   (2026-09-01, R91 `#246`) the parquet write refuses an unknown column.
 - **V3-9:** *Done 2026-09-02.* `resolve_write_mode`'s `format_version == V2` gate is lifted
   to `< V2`, so merge-on-read `DELETE … WHERE` / `UPDATE … WHERE` on v3 reuse V3-7's DV path
-  (`prepare_row_delta_deletes` → `close_touched_dv_containers`) — one file-scoped Puffin DV
-  per touched data file, Spark-equal on all three doors; `V3-MOR-1` FIXED. No new DV code.
+  (`prepare_row_delta_deletes` → `close_touched_dv_containers_with_partitions`) — one
+  file-scoped Puffin DV per touched data file, Spark-equal on all three doors; `V3-MOR-1` FIXED.
+  No new DV code.
+- **RP-7:** *Done 2026-09-02.* Pin `ff4764d3` (fork F-18) makes the shared-Puffin container close
+  Spark-equal — only the touched blob is rewritten, the sibling entry keeps its container and
+  `content_offset`, two containers after; `V3-DV-1` FIXED and the byte amplification closed
+  (19,126 → 377 B per later single-row `DELETE` at 64 blobs).
 
   The original scope note: V3-6 may
   run in parallel with V3-3 or V3-4 after its fork type support is pinned; it does not wait for

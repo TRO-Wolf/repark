@@ -33,18 +33,46 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   (`schema_with_row_lineage`); last-updated is nulled only on UPDATE rows.
   pins: v3-7-merge-lineage/C-001
 - `dv_close.rs` — v3 `RowDelta` DV-container close. `prepare_row_delta_deletes` writes
-  V2 parquet position deletes or calls `close_touched_dv_containers` on V3, then
+  V2 parquet position deletes or calls `close_touched_dv_containers_with_partitions` on V3, then
   `apply` stamps sibling sequences. C-003 pin
   `shared_puffin_row_delta_keeps_the_untouched_sibling` calls `commit_row_delta_kind`
   on the Spark shared-Puffin fixture (id 5 must stay deleted).
   **V3-9 (2026-09-02):** the position map takes `get_mut` before allocating a key and the V2
   `referenced` set allocates one `String` per distinct path, not one per row (600k rows:
-  41.3 → 29.3 ms and 37.3 → 23.9 ms). The fork's container close rewrites **every** blob of a
-  touched Puffin where Spark rewrites only the touched one — registry `V3-DV-1`, BACKLOG, fork
-  ask F-18 / repin RP-7; not fixable here.
+  41.3 → 29.3 ms and 37.3 → 23.9 ms).
+  **RP-7 (2026-09-02):** pin `ff4764d3` (fork F-18) closes registry `V3-DV-1` — only the touched
+  blob is rewritten and the untouched sibling entry keeps its container and `content_offset`, so
+  the C-003 pin gained that layout assertion alongside its semantic one. The
+  `(spec_id, partition)` the fork needs comes from the statement's OWN target scan
+  (`TargetScanStream::with_partition_sink`), which already plans every `FileScanTask` and so
+  already knows each file's partition; entries are supplied only for paths that scan produced,
+  which keeps the fork's "not a live file of the scanned snapshot" guard meaningful, and no
+  table shape is special-cased. `plan_deletion_vectors` retains the map down to the touched
+  paths, and `referenced_data_files` MOVES `retained_references` out instead of cloning
+  it. The first draft instead short-circuited on "every spec is unpartitioned", which was
+  measurably useless — one partitioned spec anywhere in a table's history emptied the map and
+  the statement paid the full lazy walk (192-partition fresh-path DELETE 2,176 ms, now 761 ms).
+  The two manifest-read pins hide the live data manifests and require the close to succeed
+  anyway: `closing_a_covered_v3_delete_reads_no_data_manifest` is FORK behaviour (a covered path
+  resolves from the delete manifests, no map needed), while
+  `a_supplied_partition_map_closes_a_fresh_partitioned_delete_with_no_data_manifest` is the
+  load-bearing one for the supplied map — mutation (clear the map) 1 red of 3.
   pins: rp-3-fork-repin/C-003
   pins: v3-5-dv-compaction/C-005
   pins: v3-9-mor-predicate-dml-dv/C-007, C-009
+  pins: rp-7-f18-repin/C-002, C-003
+- `snapshot_commit.rs` — **RP-7 (2026-09-02):** `commit_row_delta_kind_with_partitions` /
+  `commit_row_delta_on_ref_with_partitions` carry the scan's partition map to the DV close. The
+  bare `commit_row_delta_kind` / `commit_row_delta_on_ref` wrappers have no production caller
+  left and are `#[cfg(test)]`, so the OCC batteries keep their existing spellings.
+  pins: rp-7-f18-repin/C-002
+- `target_scan.rs` — **RP-7 (2026-09-02):** `TargetScanStream` and the partition sink, extracted
+  from `mod.rs` (baseline ratcheted 1889 → 1795 in the same change). The scan takes the
+  `plan_files` route whenever an allowlist OR a sink is present and `to_arrow()` otherwise; the
+  two routes are byte-equivalent for this scan shape (the fork's `to_arrow` builds an
+  `ArrowReaderBuilder` with the same defaults, and its within-file split expansion is a no-op
+  while `_pos` is projected).
+  pins: rp-7-f18-repin/C-002
 - `abort.rs` — `delete_written_files_best_effort` + `written_file_paths`. Delete
   set is threaded from writer results in hand; never re-derived from the table
   or manifests. `CommitStateUnknown` errors SKIP cleanup (the commit may have
