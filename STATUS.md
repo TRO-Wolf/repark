@@ -120,7 +120,7 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
   dual-arity null-guard, `F.log` two-arg) and re-measures RE-1. `F.log` is an accept-more
   superset of PySpark's (a column base accepted, keyword names differ) — ledger C-006,
   oracle note under C-010.
-  Ledger: [task/ledgers/staging/sem-1-spark-answer-parity-ledger.md](task/ledgers/staging/sem-1-spark-answer-parity-ledger.md).
+  Ledger: [task/ledgers/staging/sem-1-spark-answer-parity-ledger.md](task/ledgers/completed/sem-1-spark-answer-parity-ledger.md).
 <!-- /ws -->
 
 <!-- ws id=v3 ledgers=v3-,v3e- state=open -->
