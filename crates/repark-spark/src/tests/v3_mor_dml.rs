@@ -401,3 +401,27 @@ async fn v3_mor_subquery_delete_matching_nothing_leaves_the_table_at_the_seed() 
     );
     assert!(live_delete_entries(&catalogs, "mor_empty").await.is_empty());
 }
+
+#[tokio::test]
+async fn the_v3_create_opt_in_refusal_no_longer_claims_merge_on_read_is_unserved() {
+    let _: &str = "pins: v3-9-mor-predicate-dml-dv/C-006";
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    for statement in [
+        "CREATE TABLE ice.sales.v3_gate (id INT) USING iceberg \
+         TBLPROPERTIES ('format-version' = '3')",
+        "CREATE TABLE ice.sales.v3ctas_gate USING iceberg \
+         TBLPROPERTIES ('format-version' = '3') AS SELECT * FROM src",
+    ] {
+        let error = execute(&ctx, &catalogs, statement)
+            .await
+            .expect_err("format-version 3 without the opt-in must refuse")
+            .to_string();
+        assert!(
+            error.contains("repark.sql.allowCreateFormatVersion3")
+                && error.contains("format-version")
+                && !error.contains("merge-on-read"),
+            "opt-in refusal names the conf, not a false merge-on-read limit: {error}"
+        );
+    }
+}

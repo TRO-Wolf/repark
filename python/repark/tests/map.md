@@ -118,7 +118,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_v3_create_opt_in.py](test_v3_create_opt_in.py) — **V3-2 (2026-08-24):** facade CREATE/CTAS
   `format-version = 3` refuses unless `repark.sql.allowCreateFormatVersion3` is true, and
   **since V3-9 (2026-09-02)** the refusal no longer claims v3 cannot do merge-on-read
-  row-level writes (pins: v3-9-mor-predicate-dml-dv/C-006); opt-in
+  row-level writes, asserted here (pins: v3-9-mor-predicate-dml-dv/C-006); opt-in
   CREATE is readable and a six-file `rewrite_data_files` keeps `_row_id` / seq on `to_arrow`
   (`V3-LINEAGE-1` FIXED). Also the V3R-1
   (2026-08-25) type pin `test_v3_geometry_geography_variant_columns_refuse_naming_the_type`:

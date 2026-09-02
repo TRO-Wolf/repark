@@ -60,7 +60,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   nothing writes no delete file and leaves the seed.
   pins: v3-9-mor-predicate-dml-dv/C-003, C-004
 - `create_table.rs` — also the V3R-1 type pin: `GEOMETRY` / `GEOGRAPHY` / `VARIANT` refuse at
-  CREATE (`V3-GEO-1`).
+  CREATE (`V3-GEO-1`); **V3-9:** the `format-version = 3` opt-in refusal names the conf and no
+  longer claims merge-on-read is unserved. pins: v3-9-mor-predicate-dml-dv/C-006
 - `v3_types.rs` — **V3-6:** C-001 ledger matrix + refuse of `UNKNOWN` / `VARIANT` /
   ADD COLUMN DEFAULT; C-003 opt-in v3 `timestamp_ns` / `timestamptz_ns` CREATE,
   ns Arrow round-trip, v2 refuse (asserts the fork's exact

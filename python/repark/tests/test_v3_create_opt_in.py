@@ -55,6 +55,12 @@ def test_format_version_three_refuses_without_opt_in(tmp_path: Path) -> None:
             ).collect()
         assert not spark.catalog.tableExists("ice.sales.v3")
         assert not spark.catalog.tableExists("ice.sales.v3ctas")
+        with pytest.raises(UnsupportedOperationException) as opt_in:
+            spark.sql(
+                "CREATE TABLE ice.sales.v3m (id BIGINT) USING iceberg "
+                "TBLPROPERTIES ('format-version' = '3')"
+            ).collect()
+        assert "merge-on-read" not in str(opt_in.value), str(opt_in.value)
     finally:
         spark.stop()
 
