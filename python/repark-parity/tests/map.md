@@ -59,6 +59,14 @@ JVM, no repark required). See [../map.md](../map.md).
   (pins: docs-1-truth-up/C-001, C-002, C-003, C-004, C-005, C-006).
   **V3-9 (2026-09-02):** the STATUS `Next:` sentence it reads now names lineage carry **and**
   merge-on-read as complete. pins: v3-9-mor-predicate-dml-dv/C-005
+  **API-REVIEW (2026-09-02):** the north-star §3 gate paragraph this pin reads is what calls for
+  an API review, and [../../../docs/design/v1-0-api-review-2026-09-02.md](../../../docs/design/v1-0-api-review-2026-09-02.md)
+  is that packet: 35 surface rows whose inventory and coverage are `scripts/check_example_coverage.py`'s
+  own output (913 names, 67 covered), whose door rows are read from `repark_common::surfaces::ALL`
+  and both door matrices, whose residual column maps all 81 open divergence-registry rows, whose
+  recommendation follows one stated rule set, and whose §5 quotes what a `yes` would bind — the
+  gate paragraph itself is untouched by that unit
+  (pins: api-review-packet/C-001, C-002, C-003, C-004, C-005).
 - `test_pr_247_owner_ruling.py` — **PR #247 revalidation (2026-08-27):** the owner-ruling blocks
   in `AGENTS.md` and `CLAUDE.md` stay byte-exact, unique, at the document start, and in regular
   files; one-byte drift, malformed or missing files, relocation, duplication, and symlink
