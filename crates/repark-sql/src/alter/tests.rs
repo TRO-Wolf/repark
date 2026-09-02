@@ -124,9 +124,15 @@ fn reserved_and_unchangeable_keys_refuse_loud() {
     let orc = parse_error("ALTER TABLE ice.s.t SET PROPERTIES (format = 'ORC')");
     assert!(orc.contains("TRIGGER"), "{orc}");
 
-    // pins: v3-2-create-v3-opt-in/C-008
-    let version = parse_error("ALTER TABLE ice.s.t SET PROPERTIES (format_version = '3')");
-    assert!(version.contains("TRIGGER"), "{version}");
+    let version = parse_error("ALTER TABLE ice.s.t SET PROPERTIES (format_version = DEFAULT)");
+    assert!(version.contains("only moves up"), "{version}");
+
+    let (sets, unsets) = parse_set_properties(&options(
+        "ALTER TABLE ice.s.t SET PROPERTIES (format_version = 3)",
+    ))
+    .expect("format_version parses to the reserved key for the upgrade path");
+    assert_eq!(sets.get("format-version").map(String::as_str), Some("3"));
+    assert!(unsets.is_empty());
 
     let location = parse_error("ALTER TABLE ice.s.t SET PROPERTIES (location = 's3://x/y')");
     assert!(location.contains("orphan"), "names the danger: {location}");

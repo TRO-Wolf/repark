@@ -9,6 +9,7 @@ mod create_table;
 mod ctas;
 mod describe_show;
 mod dialect;
+mod format_version;
 mod insert_overwrite;
 mod local_fs_ddl;
 mod merge;

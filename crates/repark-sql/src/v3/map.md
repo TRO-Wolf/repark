@@ -13,6 +13,13 @@ ANSI-door format-v3 test modules. `lib.rs` declares `#[cfg(test)] mod v3;`.
   SELECT round-trips ns values and Arrow types (pins: v3-6-v3-types/C-003).
   **V3-9:** the opt-in refusal must not claim merge-on-read is unserved
   (pins: v3-9-mor-predicate-dml-dv/C-006).
+  **V3-10:** `alter_set_properties_*` pin the ANSI door's in-place upgrade — `SET PROPERTIES
+  (format_version = 3)` with the session opt-in installed as the real `ReparkSqlConfig`, its
+  without-opt-in twin, pre-upgrade rows reading NULL lineage, the same-version request writing
+  no new metadata file, the `extra_properties` map spelling driving the same resolver, and the
+  downgrade / `'1'` / `'-1'` / `'4'` / `'x'` / `'3.0'` refusals; the `extra_properties` map
+  spelling of the reserved key keeps steering to the curated `format_version`
+  (pins: v3-10-upgrade-v2-to-v3/C-003, C-004).
 - `cow.rs` — **V3-COW-1 (V3-7 MERGE lift):** adopted and created v3 UPDATE and MERGE
   keep `_row_id`; The module doc no longer carries a pins line; citations live here.
   sequential COW DELETE keeps the survivor id at next-row-id 6; **V3-8:** subquery-`WHERE`

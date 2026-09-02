@@ -72,7 +72,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split tests by catalog backend with shared helpers kept local.",
     ),
     "crates/repark-iceberg/src/write/alter.rs": (
-        1641,
+        1630,
         "Iceberg ALTER operations share one transaction adapter.",
         "Split property, rename, and schema-evolution operation families.",
     ),
@@ -132,7 +132,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split configuration bindings from query and catalog bindings.",
     ),
     "crates/repark-spark/src/alter.rs": (
-        1831,
+        1830,
         "Spark ALTER token rewrites and dispatch share one planner module.",
         "Split syntax normalization from Iceberg operation dispatch.",
     ),

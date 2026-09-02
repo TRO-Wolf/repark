@@ -11,7 +11,11 @@ which are pure functions.
 ## Contents
 
 - `tests.rs` — the `#[cfg(test)] mod tests;` declared in `../alter.rs`.
-  **V3-2:** `format_version = 3` on `SET PROPERTIES` still refuses (C-008).
+  **V3-10:** `format_version` is no longer a reserved refusal here — the recognizer folds it to
+  the Iceberg `format-version` key for the upgrade path (a bare number or a string literal), and
+  only `format_version = DEFAULT` refuses, because a format version only moves up. The version
+  itself is resolved against the table and the session opt-in at execute, not at parse.
+  pins: v3-10-upgrade-v2-to-v3/C-003
 
 ## Pointers
 

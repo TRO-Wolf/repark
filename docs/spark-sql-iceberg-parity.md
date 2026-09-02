@@ -2455,6 +2455,102 @@ the pin rather than obeying it.
   the pin above tightens to the exact Spark value and this row retires.
   Pins: live-v3-aws-legs/C-002.
 
+### V3-UPGRADE-1 — FIXED (V3-10, 2026-09-02): `ALTER … format-version = '3'` upgrades v2 to v3 in place
+
+- **repark** — with `repark.sql.allowCreateFormatVersion3 = true`, `ALTER TABLE … SET
+  TBLPROPERTIES ('format-version' = '3')` (Spark door, facade) and `ALTER TABLE … SET
+  PROPERTIES (format_version = 3)` (ANSI door) upgrade the table through the fork's
+  `UpgradeFormatVersionAction`: metadata-only, **no new snapshot**, `next-row-id = 0`, and the
+  reserved key is not persisted into the property map. Combined with another key it is ONE
+  metadata commit; requesting the version the table already has writes no metadata file at
+  all. Without the opt-in the ALTER refuses naming `repark.sql.allowCreateFormatVersion3`.
+  A downgrade or an unsupported version refuses naming the key and both versions. After the
+  upgrade the v3 paths are Spark-equal at a matched single-file layout: seed `(1,a),(2,b),(3,c)`
+  reads `_row_id`/`seq` NULL, one 2-row append leaves `(1,2,1),(2,3,1),(3,4,1),(4,0,2),(5,1,2)`
+  at next-row-id 5; COW `DELETE id=2` leaves `(1,0,2),(3,1,2),(4,2,2)` next-row-id 3 and the
+  following `UPDATE id=3` leaves `(1,0,2),(3,1,3),(4,2,2)` next-row-id 6; merge-on-read MERGE
+  `WHEN MATCHED THEN DELETE` writes ONE Puffin DV leaving `(1,0,1),(3,2,1),(4,3,1)` at
+  next-row-id 4; `rewrite_data_files` over six single-row files leaves six distinct row ids
+  0–5 at sequence 7, next-row-id 6, one data file; `register_table` of the upgraded table on a
+  fresh catalog reads v3 with the same lineage.
+- **Apache Spark** — identical on every cell above: the ALTER is metadata-only (snapshot count
+  unchanged, `next-row-id` 0, the reserved key filtered out of `properties`), pre-upgrade rows
+  read NULL lineage until a later v3 commit assigns `first_row_id` to their manifest, and the
+  same append / COW / MoR / rewrite / adopt values follow.
+  *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, Hadoop catalog, `local[1]`–`local[2]`,
+  `coalesce(1)`, 2026-09-02 V3-10 transcript)*.
+- **Pin** — `crates/repark-spark/src/tests/v3_upgrade.rs` (twelve cells, Spark door),
+  `crates/repark-sql/src/v3/create.rs::alter_set_properties_*` (ANSI door),
+  `python/repark/tests/test_v3_upgrade.py` (facade),
+  `python/repark/tests/test_v3_live_oracle.py::test_v3_upgrade_v2_to_v3_live_matches_spark`
+  (live triple),
+  `crates/repark-functions/src/format_version.rs` unit pins.
+  Pins: v3-10-upgrade-v2-to-v3/C-002, C-003, C-004.
+- **Also measured (V3-10, 2026-09-02).** A **v1** table upgrades straight to v3 behind the same
+  opt-in: metadata-only, `next-row-id` 0, pre-upgrade rows NULL, and one 2-row append leaves
+  `(1,2,0),(2,3,0),(3,4,0),(4,0,1),(5,1,1)` at next-row-id 5 — the v1 rows carry
+  `_last_updated_sequence_number` 0 because v1 has no sequence numbers. A **partitioned** v2
+  table (identity `part`, 2+1 rows) upgrades the same way and the append leaves next-row-id 5
+  with the pre-upgrade rows on `{2,3,4}` at sequence 1 and the appended rows on `{0,1}` at
+  sequence 2.
+- **Residuals (dated 2026-09-02).** `F-v3-10-partition-file-order`: on a **partitioned** table
+  the engine hands the per-partition files their `first_row_id` in a different order than Spark
+  — Spark leaves `1→2, 2→3, 3→4, 4→0, 5→1`, the engine `1→3, 2→4, 3→2, 4→1, 5→0`. Rows,
+  `next-row-id`, the id **sets** and every sequence number are equal; only which of two
+  same-commit partition files is numbered first differs, so the pin asserts the sets. The
+  unpartitioned cell matches Spark exactly. `F-v3-10-eqdel-upgrade`: upgrading a table that
+  carries **equality deletes** is unmeasured — the engine has no equality-delete write surface,
+  so the cell could not be built from either door; the upgrade path itself is delete-file
+  agnostic and the DV interaction is `V3-UPGRADE-DV-1`.
+- **Rationale** — FIXED; the **owner ruling 2026-08-25** ("build it, behind
+  `repark.sql.allowCreateFormatVersion3`, after V3-3") is discharged. Two residuals are filed
+  as their own dated rows below.
+
+### V3-UPGRADE-V4-1 — DECLARED (V3-10, 2026-09-02): `format-version = '4'` upgrades on Spark and refuses here
+
+- **repark** — `'format-version' = '4'` (and any value above 3) refuses on all three doors,
+  naming the key, the value and the current version: "this engine writes Iceberg format v1
+  through v3, so a v2 table upgrades only to '3'". The table is left untouched. `'1'` on a v2
+  table refuses as a downgrade; `'x'` and `''` refuse as unparsable.
+- **Apache Spark** — Iceberg 1.11.0 **accepts** `'4'` on both `CREATE` and `ALTER`: the ALTER
+  writes `"format-version": 4` with `next-row-id: 0` and no new snapshot, and the v4 table is
+  then readable. `'1'` on a v2 table raises `Unsupported table change: Cannot downgrade v2
+  table to v1`; `'x'` and `''` raise `Unsupported table change: For input string: "x"` / `""`.
+  *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-02 V3-10 transcript)*.
+- **Pin** — `crates/repark-spark/src/tests/v3_upgrade.rs::alter_downgrade_and_unsupported_versions_refuse_naming_both_versions`,
+  `crates/repark-sql/src/v3/create.rs::alter_set_properties_downgrade_and_unsupported_versions_refuse`,
+  `python/repark/tests/test_v3_upgrade.py::test_alter_downgrade_and_unsupported_versions_refuse`.
+  Pins: v3-10-upgrade-v2-to-v3/C-002, C-005.
+- **Rationale** — DECLARED and dated. The owned fork's `FormatVersion` enum stops at `V3` and
+  its spec support ends there; format v4 is still in development upstream. Refusing loudly is
+  the honest answer — writing v4-labelled metadata this engine cannot read back would be the
+  silent one. TRIGGER for lifting: a fork `FormatVersion::V4` with spec support behind it.
+
+### V3-UPGRADE-DV-1 — DECLARED (V3-10, 2026-09-02): a v3 DV write over a legacy parquet position delete refuses
+
+- **repark** — on a table upgraded to v3 that still carries a **v2 parquet position delete**,
+  the next merge-on-read write refuses loudly at the fork guard: "Cannot commit deletion vector
+  for <data file>: live position delete file <path> still applies to that data file and would
+  be silently superseded by the DV at read time. Merging previous deletes into the new DV (Java
+  `BaseDVFileWriter.loadPreviousDeletes`) is deferred in this port". The table is left exactly
+  as the upgrade left it and no Puffin file is written. The upgrade itself is unaffected, and a
+  v3 merge-on-read write on an upgraded table with **no** legacy delete is Spark-equal
+  (V3-UPGRADE-1).
+- **Apache Spark** — merges the legacy parquet position delete into the new DV in the same
+  commit: a v2 MoR table of four rows with one parquet position delete, upgraded and then
+  deleted from again, ends with ONE Puffin DV of `record_count = 2` and no parquet delete file,
+  `next-row-id` 4, rows `(1,0,1),(4,3,1)`. The same holds for the `MERGE … WHEN MATCHED THEN
+  DELETE` spelling.
+  *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-02 V3-10 transcript)*.
+- **Pin** — `crates/repark-spark/src/tests/v3_upgrade.rs::merge_on_read_delete_over_a_legacy_parquet_position_delete_refuses_loudly`.
+  Pins: v3-10-upgrade-v2-to-v3/C-002, C-005.
+- **Rationale** — DECLARED and dated; a loud refusal, never a silent supersede. The fix is a
+  fork/engine capability (read the parquet position delete back through
+  `delete_vector::load_delete_vector`, merge it via `DVFileWriter::with_previous_deletes`, and
+  pass the superseded file to `RowDelta::remove_deletes_many` in the same commit), not part of
+  the upgrade itself. TRIGGER for lifting: unit **V3-12**, which wires that previous-deletes
+  merge engine-side.
+
 ### BL-9 — a double-quoted string literal is an identifier on the SQL door
 
 - **repark** — the Spark SQL door reads `"abc"` as a double-quoted **identifier**, so

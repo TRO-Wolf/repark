@@ -147,29 +147,6 @@ pub async fn unset_table_properties(
     Ok(())
 }
 
-/// Apply all property changes in one atomic transaction (BUG-012).
-/// # Errors
-/// Propagates any [`iceberg::Error`] from loading the table or committing the transaction.
-pub async fn alter_table_properties<S: BuildHasher>(
-    catalog: &dyn Catalog,
-    ident: &TableIdent,
-    sets: &HashMap<String, String, S>,
-    unsets: &[String],
-) -> Result<()> {
-    let table = catalog.load_table(ident).await?;
-    let tx = Transaction::new(&table);
-    let mut action = tx.update_table_properties();
-    for (key, value) in sets {
-        action = action.set(key.clone(), value.clone());
-    }
-    for key in unsets {
-        action = action.remove(key.clone());
-    }
-    let tx = action.apply(tx)?;
-    tx.commit(catalog).await?;
-    Ok(())
-}
-
 /// `ALTER TABLE … RENAME TO …` — rename a table within (or across namespaces of) a catalog.
 /// # Errors
 /// Propagates any [`iceberg::Error`] (e.g.
@@ -657,9 +634,11 @@ mod tests {
         let counting = CommitFaultCatalog::new(inner.clone(), None);
         let sets = HashMap::from([("keep".to_string(), "new".to_string())]);
         let unsets = vec!["drop".to_string()];
-        alter_table_properties(&counting, &ident, &sets, &unsets)
-            .await
-            .unwrap();
+        crate::write::format_version::set_properties_and_format_version(
+            &counting, &ident, None, sets, &unsets, None,
+        )
+        .await
+        .unwrap();
 
         assert_eq!(
             counting.update_table_calls(),
@@ -685,7 +664,10 @@ mod tests {
         let faulting = CommitFaultCatalog::new(inner.clone(), Some(2));
         let sets = HashMap::from([("keep".to_string(), "new".to_string())]);
         let unsets = vec!["drop".to_string()];
-        let result = alter_table_properties(&faulting, &ident, &sets, &unsets).await;
+        let result = crate::write::format_version::set_properties_and_format_version(
+            &faulting, &ident, None, sets, &unsets, None,
+        )
+        .await;
 
         assert!(
             result.is_ok(),
@@ -709,9 +691,16 @@ mod tests {
 
         let sets = HashMap::from([("keep".to_string(), "new".to_string())]);
         let unsets = vec!["keep".to_string()];
-        let error = alter_table_properties(catalog.as_ref(), &ident, &sets, &unsets)
-            .await
-            .expect_err("a key both set and unset in one transaction must fail loud");
+        let error = crate::write::format_version::set_properties_and_format_version(
+            catalog.as_ref(),
+            &ident,
+            None,
+            sets,
+            &unsets,
+            None,
+        )
+        .await
+        .expect_err("a key both set and unset in one transaction must fail loud");
         assert!(
             error.to_string().contains("both"),
             "the error must name the set/unset overlap, got: {error}"

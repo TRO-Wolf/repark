@@ -11,7 +11,13 @@ use datafusion::sql::sqlparser::ast::{
 use iceberg::spec::{PrimitiveType, Type};
 use iceberg::{Catalog, TableIdent};
 use repark_core::EngineContext;
+use repark_functions::cardinality::repark_sql_settings_from_options;
+use repark_functions::format_version::resolve_alter_format_version;
 use repark_iceberg::write::alter::SchemaChange;
+use repark_iceberg::write::format_version::{
+    FORMAT_VERSION_PROPERTY, format_version_from_number, format_version_number,
+    set_properties_and_format_version,
+};
 
 use crate::create_table::{CreateTarget, resolve_target, sql_type_to_iceberg};
 use crate::properties::{refuse_format_value, refuse_sorted_by};
@@ -89,7 +95,7 @@ pub(crate) async fn execute_alter_table(
             }
             AlterTableOperation::SetOptionsParens { options } => {
                 flush(&target, &mut batch).await?;
-                apply_set_properties(&target, options).await?;
+                apply_set_properties(cx, &target, options).await?;
             }
             other => {
                 flush(&target, &mut batch).await?;
@@ -288,13 +294,44 @@ pub(crate) fn rewrite_set_properties(sql: &str) -> Option<String> {
 }
 
 /// Apply a validated `SET PROPERTIES (…)` list as one property transaction.
-async fn apply_set_properties(target: &CreateTarget, options: &[SqlOption]) -> Result<()> {
-    let (sets, unsets) = parse_set_properties(options)?;
-    repark_iceberg::write::alter::alter_table_properties(
+async fn apply_set_properties(
+    cx: &EngineContext<'_>,
+    target: &CreateTarget,
+    options: &[SqlOption],
+) -> Result<()> {
+    let form = "ALTER TABLE … SET PROPERTIES";
+    let (mut sets, unsets) = parse_set_properties(options)?;
+    let (loaded, upgrade) = match sets.remove(FORMAT_VERSION_PROPERTY) {
+        Some(requested) => {
+            let allow_v3 = repark_sql_settings_from_options(cx.ctx.copied_config().options())
+                .allow_create_format_version_3;
+            let table = target
+                .catalog
+                .load_table(&target.ident())
+                .await
+                .map_err(iceberg_err)?;
+            let current = format_version_number(&table);
+            let number = resolve_alter_format_version(
+                &requested,
+                current,
+                allow_v3,
+                FORMAT_VERSION_PROPERTY,
+                form,
+            )?;
+            let upgrade = number
+                .map(|value| format_version_from_number(value).map_err(iceberg_err))
+                .transpose()?;
+            (Some(table), upgrade)
+        }
+        None => (None, None),
+    };
+    set_properties_and_format_version(
         target.catalog.as_ref(),
         &target.ident(),
-        &sets,
+        loaded,
+        sets,
         &unsets,
+        upgrade,
     )
     .await
     .map_err(iceberg_err)
@@ -360,12 +397,17 @@ fn parse_set_properties(options: &[SqlOption]) -> Result<(HashMap<String, String
             "sorted_by" => return Err(refuse_sorted_by(form)),
             "partitioning" => return Err(refuse_partitioning()),
             "format_version" => {
-                return Err(DataFusionError::NotImplemented(format!(
-                    "{form}: `format_version` cannot be changed after creation — this engine \
-                     creates Iceberg format v2 tables and has no format upgrade path. TRIGGER \
-                     for implementing it: a fork `UpgradeFormatVersion` action reachable through \
-                     repark-iceberg"
-                )));
+                if reset {
+                    return Err(DataFusionError::Plan(format!(
+                        "{form}: `format_version = DEFAULT` is not a spelling this door offers — \
+                         an Iceberg format version only moves up. Upgrade in place with SET \
+                         PROPERTIES (format_version = '3')"
+                    )));
+                }
+                sets.insert(
+                    FORMAT_VERSION_PROPERTY.to_string(),
+                    crate::properties::scalar_value(value, &name, form)?,
+                );
             }
             "location" => {
                 return Err(DataFusionError::NotImplemented(format!(

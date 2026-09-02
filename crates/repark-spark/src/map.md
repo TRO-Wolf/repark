@@ -118,6 +118,15 @@ pins: rp-4-fork-repin/C-005, C-006
   primitives behind the same opt-in (pins: v3-6-v3-types/C-003); v2 CREATE refuses via
   the fork's `check_compatibility`.
   4 in-module tests (`type_mapping_tests`) + `tests/create_table.rs` pin + CTAS type smoke.
+- `format_version.rs` — **V3-10:** the Spark-door adapter for `SET TBLPROPERTIES
+  ('format-version' = …)`. It lifts the reserved key out of the property map before the
+  transaction (so it is never persisted), resolves it against the table's current version and the
+  session opt-in against the table it loads ONCE, and hands that loaded table to the transaction.
+  It does NOT re-register the namespace: measured, the version-only dirty bit cost one
+  `list_tables` and two `namespace_exists` per upgrade and bought nothing, because the DF
+  provider reloads table metadata per plan. `tests/v3_upgrade_calls.rs` is the guard — it pins
+  the call counts AND reads the v3 lineage columns through the same session afterwards.
+  pins: v3-10-upgrade-v2-to-v3/C-003, C-004
 - `alter.rs` — ALTER TABLE handlers (SET/UNSET TBLPROPERTIES, RENAME TO, schema evolution I6,
   I7 partition-field DDL, residual refusals) + the ALTER token rewrites the normalizer runs;
   9 in-module tests. **Q10:** ADD/ALTER COLUMN bare `TIMESTAMP` follows the session
