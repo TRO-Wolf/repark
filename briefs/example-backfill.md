@@ -3,7 +3,7 @@
 **Roadmap ruling:** [task/roadmap/epic-term/release-roadmap-2026-08-29.md](../task/roadmap/epic-term/release-roadmap-2026-08-29.md)
 §"v0.7 — Full example documentation".
 **Gate:** `make check-example-coverage`, delivered by EX-0
-(`task/ledgers/staging/ex-0-example-drift-gate-ledger.md`, archived post-merge). No batch opens before that gate is
+(`task/ledgers/completed/ex-0-example-drift-gate-ledger.md`, archived at the next pickup). No batch opens before that gate is
 in `make ci` on main.
 **Delivery shape:** one pull request per family, batches landing as commits on that branch. The
 owner merges; review cost, not worker cost, sets the batch size.

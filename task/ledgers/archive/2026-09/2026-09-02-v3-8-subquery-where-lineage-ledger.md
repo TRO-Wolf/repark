@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-02 · **Branch:** `feat/v3-8-subquery-where-lineage` · **Base:** `origin/main`
 `cee8126` · **Model:** claude-opus-5 (medium) · **Policy:**
-[../../../AGENTS.md](../../../AGENTS.md) · **Path:** STANDARD.
+[../../../AGENTS.md](../../../../AGENTS.md) · **Path:** STANDARD.
 
 **Retires:** this ledger moves to `../completed/` in this unit's last commit.
 

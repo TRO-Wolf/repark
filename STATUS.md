@@ -7,7 +7,7 @@
 > [.agents/](.agents/map.md) as thin tool adapters that carry no authoritative facts). When a current-state
 > fact changes, it changes **here** — other files point at this file, they do not restate it.
 
-_Last updated: 2026-09-01._
+_Last updated: 2026-09-02._
 
 ## Release state
 
@@ -120,7 +120,7 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
   dual-arity null-guard, `F.log` two-arg) and re-measures RE-1. `F.log` is an accept-more
   superset of PySpark's (a column base accepted, keyword names differ) — ledger C-006,
   oracle note under C-010.
-  Ledger: [task/ledgers/staging/sem-1-spark-answer-parity-ledger.md](task/ledgers/staging/sem-1-spark-answer-parity-ledger.md).
+  Ledger: [task/ledgers/completed/sem-1-spark-answer-parity-ledger.md](task/ledgers/completed/sem-1-spark-answer-parity-ledger.md).
 <!-- /ws -->
 
 <!-- ws id=v3 ledgers=v3-,v3e- state=open -->
@@ -165,8 +165,8 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
     binary `variant` refuses end to end (`V3-VARIANT-SHRED-1`, R88); `unknown` CREATE
     refuse pinned; parquet write refuses (R91, RP-5).
   - **Next:** row-lineage carry is complete on every served DML shape (`V3-COW-1` FIXED,
-    V3-8); next is merge-on-read subquery-`WHERE` DML on v3, refused today by predicate
-    DML's V2-only delete-file gate.
+    V3-8); **V3-9** takes merge-on-read subquery-`WHERE` DML on v3, refused today by
+    predicate DML's V2-only delete-file gate.
 <!-- /ws -->
 
 <!-- ws id=perf ledgers=perf- state=open -->
@@ -221,7 +221,7 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
   [the registry](docs/spark-sql-iceberg-parity.md).
   **REF (2026-09-01, RP-5):** writes to `t.branch_<name>` land (`REF-1` FIXED). WAP publish
   procedures and `spark.wap.*` stay BACKLOG (`REF-3`). Reads were already Spark-equal (`REF-4`).
-  Ledger: [task/ledgers/completed/rp-5-fork-repin-ledger.md](task/ledgers/archive/2026-09/2026-09-01-rp-5-fork-repin-ledger.md).
+  Ledger: [rp-5-fork-repin-ledger.md](task/ledgers/archive/2026-09/2026-09-01-rp-5-fork-repin-ledger.md).
 <!-- /ws -->
 
 Parked lanes: **none** (the `repark.sql` re-home lane closed 2026-08-14, #95 —
@@ -345,7 +345,6 @@ Recorded, not built. Each names the trigger that would start it.
 
 ## Release blockers
 
-**None.** v0.6.0 is cutting 2026-08-31 (v0.5.0: 2026-08-20; v0.4.0: 2026-08-19; v0.3.0–v0.3.2:
-2026-08-16; v0.1.0 / v0.2.0: 2026-08-15). Future tags follow
-[docs/release.md](docs/release.md) (version SSOT at the Cargo workspace; wheel-only; crates.io
-publishing structurally deferred).
+**None.** v0.6.0 shipped 2026-08-31; the tag history is in [Release state](#release-state).
+Future tags follow [docs/release.md](docs/release.md) (version SSOT at the Cargo workspace;
+wheel-only; crates.io publishing structurally deferred).
