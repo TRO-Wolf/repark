@@ -140,21 +140,22 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
     ([#235](https://github.com/TRO-Wolf/repark/pull/235)); V3E-3 — partitioned-DV and
     equality-delete v3 fixtures CI-runnable, live rows Spark-exact on all three doors,
     `.delete_files` content 1/2 ([#236](https://github.com/TRO-Wolf/repark/pull/236)); V3R-1 —
-    **the 2026-08-25 owner rulings:** row-DML on v3 **guarded** (registry `V3-COW-1`; RP-2
-    2026-08-27 later lifted its measured DELETE half on DV-free tables), `geometry`/`geography` DECLARED out of v1.0 (`V3-GEO-1`),
+    **the 2026-08-25 owner rulings:** row-DML on v3 **guarded** (registry `V3-COW-1`,
+    discharged by V3-8), `geometry`/`geography` DECLARED out of v1.0 (`V3-GEO-1`),
     shredded-Parquet `variant` DECLARED out (queued `V3-VARIANT-SHRED-1`), the S3 Tables live
     legs are **in** (OD-3b; the scoped IAM statement in `docs/tier2-aws.md` §2 was applied by the owner on 2026-08-28 — MW-10 measured expire on format v2: **allow**, first dispatch 2026-08-30),
     and the v2→v3 in-place upgrade is built behind the create opt-in after V3-3.
     V3E-4 measured refs, `VERSION AS OF` over DVs, expire dual-probe, and the
     orphan 24h floor on adopted v3. V3E-5 added the nightly v3 live-oracle leg
-    ([#253](https://github.com/TRO-Wolf/repark/pull/253)). RP-2 (2026-08-28, fork `ce92a7bf`) the DV-free first DELETE. RP-3 (2026-08-30,
-    fork `d408da42`) wired container closure; live-DV DELETE merge is Spark-equal on three
-    doors; sequential COW DELETE Spark-equal (`V3-COW-1`, F-rp3-c7 consumed). Hadoop writes
-    FIXED (`V3-ADOPT-1`). RP-4 (2026-08-31, fork `33be9a0`) F-7 slice 1: rewrite lineage
+    ([#253](https://github.com/TRO-Wolf/repark/pull/253)). RP-2 (2026-08-28, fork `ce92a7bf`)
+    the DV-free first DELETE. RP-3 (2026-08-30, fork `d408da42`) wired container closure;
+    live-DV DELETE merge Spark-equal on three doors; sequential COW DELETE Spark-equal
+    (F-rp3-c7 consumed). Hadoop writes FIXED (`V3-ADOPT-1`). RP-4 (2026-08-31, fork `33be9a0`) F-7 slice 1: rewrite lineage
     Spark-equal (`V3-LINEAGE-1` FIXED); F-6 `to_branch` carried.
-    RP-6 (2026-09-01, fork `fb0cacfa`) lifts UPDATE. V3-7 (2026-09-02) carries
-    MERGE `_row_id` on COW and MoR (registry `V3-COW-1`; subquery-`WHERE` DML
-    still refuses). `B-MOR-3` stays.
+    RP-6 (2026-09-01, fork `fb0cacfa`) lifts UPDATE. V3-7 (2026-09-02) carries MERGE
+    `_row_id`. V3-8 (2026-09-02) carries it through the subquery-`WHERE` COW rewrite and
+    deletes the refusal seat — `V3-COW-1` **FIXED**; the residual refusals are pre-existing
+    and not about lineage. `B-MOR-3` stays.
     **V3-4 (2026-08-31):** `_row_id` / `_last_updated_sequence_number` Spark-equal on
     single-table v3 reads; v1/v2 engine Schema `No field named _row_id`;
     JOIN/CTE/subquery/time-travel refuse `V3-ROWID-2`. `V3-ROWID-1` FIXED. MoR UPDATE preserve-half Spark-equal (RP-6).
@@ -163,10 +164,9 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
     `initial_default` reads into pre-column files, DEFAULT DDL refuses Spark-equal;
     binary `variant` refuses end to end (`V3-VARIANT-SHRED-1`, R88); `unknown` CREATE
     refuse pinned; parquet write refuses (R91, RP-5).
-  - **Next:** subquery-`WHERE` DML still refuses `V3-COW-1`. MERGE lineage is
-    Spark-equal (V3-7). V3-3 charter
-    [task/ledgers/completed/v3-3-dml-ledger.md](task/ledgers/archive/2026-08/2026-08-30-v3-3-dml-ledger.md)
-    (F-rp3-c7 consumed as a layout artefact).
+  - **Next:** row-lineage carry is complete on every served DML shape (`V3-COW-1` FIXED,
+    V3-8); next is merge-on-read subquery-`WHERE` DML on v3, refused today by predicate
+    DML's V2-only delete-file gate.
 <!-- /ws -->
 
 <!-- ws id=perf ledgers=perf- state=open -->

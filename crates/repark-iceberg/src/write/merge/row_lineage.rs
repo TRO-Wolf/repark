@@ -29,7 +29,7 @@ use uuid::Uuid;
 use super::not_matched_by_source;
 use super::{FILE_PATH_COL, MergeSql, POS_COL, iceberg_err, quote_ident};
 
-pub(super) fn table_carries_merge_lineage(table: &Table) -> bool {
+pub(crate) fn table_carries_merge_lineage(table: &Table) -> bool {
     format_supports_row_lineage(table.metadata().format_version())
 }
 
@@ -43,7 +43,7 @@ pub(super) fn iceberg_parquet_schema(table: &Table) -> Result<iceberg::spec::Sch
     ))
 }
 
-pub(super) fn scratch_schema_for_table(write_schema: &SchemaRef, table: &Table) -> SchemaRef {
+pub(crate) fn scratch_schema_for_table(write_schema: &SchemaRef, table: &Table) -> SchemaRef {
     scratch_schema_with_lineage(write_schema, table_carries_merge_lineage(table))
 }
 

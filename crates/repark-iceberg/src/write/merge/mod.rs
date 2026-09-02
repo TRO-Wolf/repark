@@ -45,7 +45,7 @@ mod cow_scratch;
 mod dv_close;
 mod insert;
 mod not_matched_by_source;
-mod row_lineage;
+pub(crate) mod row_lineage;
 mod snapshot_commit;
 use insert::{
     insert_projection, insert_stream_checked, store_assignment_then_sql, update_stream_checked,
