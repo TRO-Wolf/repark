@@ -6,8 +6,6 @@ pins: v3-11-row-id-determinism/C-004
 from __future__ import annotations
 
 import os
-import shutil
-import tempfile
 from pathlib import Path
 
 import pyarrow as pa
@@ -48,6 +46,9 @@ def _merge_sql(target: str) -> str:
         "WHEN MATCHED THEN UPDATE SET t.name = s.name "
         "WHEN NOT MATCHED THEN INSERT (id, name, part) VALUES (s.id, s.name, s.part)"
     )
+
+
+_CATALOG = "v3_11_file_order"
 
 
 def _iceberg_runtime_jar() -> str | None:
@@ -92,19 +93,19 @@ def test_v3_same_commit_file_order_live_matches_spark(tmp_path: Path) -> None:
         assert _triples(merged) == _MERGE_LINEAGE
         if not _LIVE:
             pytest.skip(_LIVE_SKIP)
-        _assert_live_against_spark()
+        _assert_live_against_spark(tmp_path)
     finally:
         repark.stop()
 
 
-def _assert_live_against_spark() -> None:
+def _assert_live_against_spark(tmp_path: Path) -> None:
     """Live Spark reads the same two id-to-`_row_id` maps at the same layout."""
     from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
     from pyspark.sql import SparkSession
 
-    catalog = "local"
-    warehouse = Path(tempfile.mkdtemp(prefix="repark-v3-11-live-"))
-    ivy_home = Path(tempfile.mkdtemp(prefix="repark-v3-11-ivy-"))
+    catalog = _CATALOG
+    warehouse = Path(tmp_path) / "spark-warehouse"
+    owned = SparkSession.getActiveSession() is None
     builder = (
         SparkSession.builder.master("local[1]")
         .appName("v3-11-file-order-live")
@@ -112,7 +113,6 @@ def _assert_live_against_spark() -> None:
         .config("spark.sql.shuffle.partitions", "1")
         .config("spark.default.parallelism", "1")
         .config("spark.ui.enabled", "false")
-        .config("spark.jars.ivy", str(ivy_home))
         .config(
             "spark.sql.extensions",
             "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
@@ -149,7 +149,6 @@ def _assert_live_against_spark() -> None:
         merged = session.sql(_LINEAGE_SELECT.format(table=merge_table)).toArrow()
         assert _triples(merged) == _MERGE_LINEAGE
     finally:
-        session.stop()
-        shutil.rmtree(warehouse, ignore_errors=True)
-        shutil.rmtree(ivy_home, ignore_errors=True)
+        if owned:
+            session.stop()
     assert ICEBERG_SPARK_RUNTIME_GAV == "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0"

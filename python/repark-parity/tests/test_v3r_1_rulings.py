@@ -79,7 +79,11 @@ def test_v3_geo_1_is_declared_and_shredded_variant_is_rowed_with_v3_6_pins() -> 
 def test_north_star_matrix_carries_the_three_engine_rulings() -> None:
     """C-007 / C-009 / C-010: the gate's own rows say what was ruled, and when.
 
+    V3-11 (2026-09-02) moved the ``F-rp3-c7 consumed`` assertion off STATUS, which shed that
+    RP-3 restatement, and onto the north star's COW row, which is where the artefact lives.
+
     pins: v3-9-mor-predicate-dml-dv/C-005
+    pins: v3-11-row-id-determinism/C-005
     """
     north_star = _north_star()
     cow = _matrix_row(north_star, "Write: COW DML on an adopted v3 table")
@@ -93,7 +97,7 @@ def test_north_star_matrix_carries_the_three_engine_rulings() -> None:
     status = _read("STATUS.md")
     assert "V3-7 / V3-8 (2026-09-02" in status
     assert "**V3-9 (2026-09-02):**" in status
-    assert "F-rp3-c7 consumed" in status
+    assert "F-rp3-c7 consumed" in cow
     assert "[V3-DV-1](docs/spark-sql-iceberg-parity.md)" in status
     types = _matrix_row(north_star, "Read/write: v3 types + default values")
     assert "V3-GEO-1" in types and "V3-VARIANT-SHRED-1" in types and _RULING_DATE in types

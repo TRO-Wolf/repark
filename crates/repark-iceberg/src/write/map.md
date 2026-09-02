@@ -70,17 +70,22 @@ repark-core's error map.
   MoR arm before identity UPDATE/DELETE writes parquet (same refuse-before-IO
   class as `resolve_merge_mode`). Ledger:
   [`../../../../task/r1-g3e8-pr4-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-14-r1-g3e8-pr4-ledger.md).
-- `file_order.rs` — **V3-11 (2026-09-02):** `ascending_partition_order` stable-sorts one commit's
-  `Vec<DataFile>` by partition value ascending (spec-field order, nulls first) before the files
-  reach the manifest, so `first_row_id` assignment is deterministic and matches Spark on every
-  identity-int cell this tree pins. Callers are `append.rs` (both fanout exits) and
-  `merge/row_lineage.rs`; unpartitioned commits sort to a no-op. Cost is file-count work, not
-  per-row work (1e6 rows / 8 partitions: 2.810/2.850/2.875 s with, 2.973/2.943/3.010 s
-  without). The name is the rule, not a Spark claim: Spark's own order is its Java
-  `FanoutWriter` `HashMap` bucket order, decoded in registry `V3-ROWID-3`, which this rule
-  reproduces on every identity-int cell the tree pins and not beyond; plain `INSERT INTO` on a partitioned table never reaches this module
-  (fork `TaskWriter` owns it — `F-v3-10-partition-file-order`).
-  pins: v3-11-row-id-determinism/C-001, C-003, C-006
+- `file_order.rs` — **V3-11 (2026-09-02):** `ascending_partition_order` stable-sorts one
+  commit's `Vec<DataFile>` by partition value ascending (spec-field order, nulls first,
+  primitive literals ascending) before the files reach the manifest, so `first_row_id`
+  assignment is deterministic. Each write path sorts exactly **once**: the serial fanout entry
+  `append.rs::fanout_conformed_stream_serial` sorts what its single writer closed, the
+  concurrent path sorts only where the worker vectors are concatenated (sized from their
+  summed lengths), and `merge/row_lineage.rs` sorts its own fanout close. Unpartitioned
+  commits sort to a no-op. Cost is file-count work, not per-row work (1e6 rows / 8 partitions:
+  2.810/2.850/2.875 s with, 2.973/2.943/3.010 s without). The name is the rule, **not** a Spark
+  claim: Spark's own order is the Java `HashMap` bucket index of the partition struct, decoded
+  in registry `V3-FILEORDER-1`, and the two coincide only on collision-free monotonic sets —
+  `{0,1}`, `{0,1,2}`, `{0,1,2,3}`, `bucket(4, ·)` — not on five or more int partitions,
+  strings, multi-field specs, `truncate`/`days`, or a null slot arriving after a non-null.
+  Plain `INSERT INTO` on a partitioned table never reaches this module: the fork's `TaskWriter`
+  owns it (`F-v3-10-partition-file-order`, fork ask **F-20**).
+  pins: v3-11-row-id-determinism/C-001, C-003, C-006, C-007
 - `conform.rs` — batch conforming for the append write path (name resolution, WI-1 store
   assignment, strict casts), split from `append.rs` (file-size ratchet, 2026-09-01;
   append.rs baseline 1886). A missing

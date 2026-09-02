@@ -30,7 +30,7 @@ _RUST_BASELINES: tuple[tuple[str, int], ...] = (
     ("crates/repark-functions/src/datetime.rs", 1709),
     ("crates/repark-iceberg/src/catalog/tests/catalog.rs", 1843),
     ("crates/repark-iceberg/src/write/alter.rs", 1630),
-    ("crates/repark-iceberg/src/write/append.rs", 1886),
+    ("crates/repark-iceberg/src/write/append.rs", 1884),
     ("crates/repark-iceberg/src/write/merge/mod.rs", 1889),
     ("crates/repark-iceberg/src/write/merge/tests/merge.rs", 1068),
     ("crates/repark-iceberg/src/write/merge/tests/occ_conflict.rs", 1023),

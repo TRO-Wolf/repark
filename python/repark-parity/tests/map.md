@@ -104,7 +104,12 @@ JVM, no repark required). See [../map.md](../map.md).
   retired `DataSourceV2Relation` maintenance-oracle note must appear ONCE (under MOR-1) with
   five pointers, so no row can quietly regrow its own copy of a claim that was false on all
   six.
-  pins: v3-11-row-id-determinism/C-005, C-008
+  Two neighbouring meta-pins were repointed when V3-11 compacted STATUS:
+  `test_plan_1_northstar_fnp_sequence.py` reads the shortened V3-6 sentence, and
+  `test_v3r_1_rulings.py` reads `F-rp3-c7 consumed` from the north-star COW row — the
+  artefact's own home — instead of from a STATUS restatement that no longer exists.
+  `test_cap_1_source_file_line_cap.py` mirrors the `append.rs` ceiling at its ratcheted 1884.
+  pins: v3-11-row-id-determinism/C-003, C-005, C-008
   workstream names the run, carries the `V3-ROWID-3` line and stays under its dual-pinned
   25,000-byte ceiling; registry `V3-ROWID-3` still carries both engines' measured answers and
   names follow-up unit V3-11; and `docs/design/format-v3-track.md` §7's two "not measured" claims

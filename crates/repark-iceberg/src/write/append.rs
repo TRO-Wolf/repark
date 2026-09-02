@@ -212,16 +212,14 @@ where
     let (dispatch_result, worker_results) =
         futures::future::join(dispatcher, futures::future::join_all(worker_futures)).await;
 
-    let mut files = Vec::new();
+    let written: usize = worker_results.iter().flatten().map(Vec::len).sum();
+    let mut files = Vec::with_capacity(written);
     let mut first_worker_error: Option<DataFusionError> = None;
     for result in worker_results {
         match result {
             Ok(part) => files.extend(part),
-            Err(error) => {
-                if first_worker_error.is_none() {
-                    first_worker_error = Some(error);
-                }
-            }
+            Err(error) if first_worker_error.is_none() => first_worker_error = Some(error),
+            Err(_) => {}
         }
     }
     if let Some(error) = first_worker_error {
@@ -240,7 +238,8 @@ where
     S: Stream<Item = Result<RecordBatch>> + Unpin,
 {
     let no_abort = AtomicBool::new(false);
-    fanout_conformed_stream_serial_with_abort(table, conformed, &no_abort).await
+    let files = fanout_conformed_stream_serial_with_abort(table, conformed, &no_abort).await?;
+    Ok(ascending_partition_order(files))
 }
 
 /// Serial fanout that checks `aborted` between batches and after the stream ends.
@@ -297,8 +296,7 @@ where
     if aborted.load(Ordering::SeqCst) {
         return Ok(Vec::new());
     }
-    let written = fanout.close().await.map_err(iceberg_err)?;
-    Ok(ascending_partition_order(written))
+    fanout.close().await.map_err(iceberg_err)
 }
 
 /// One stamped `fast_append` commit: `ENGINE_CONTRACT` §4 INSERT/append with MERGE's stamp class.
