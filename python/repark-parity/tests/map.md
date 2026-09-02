@@ -140,7 +140,9 @@ JVM, no repark required). See [../map.md](../map.md).
   to "no 🚫, `V3-MOR-1` FIXED plus the dated `V3-DV-1` residual naming fork F-18 and repin
   RP-7", and the STATUS assertions follow the compacted v3 block — including the
   `F-rp3-c7 consumed` substring, which no longer depends on where the line wraps
-  (pins: v3-9-mor-predicate-dml-dv/C-005, C-007).
+  (pins: v3-9-mor-predicate-dml-dv/C-005, C-007). **RP-7 (2026-09-02):** the same row now
+  asserts `V3-DV-1` FIXED and that STATUS's Known-issues link to it is GONE, so the residual
+  cannot be re-opened silently (pins: rp-7-f18-repin/C-003).
   V3-7 (2026-09-02) lifts MERGE; V3-8 (2026-09-02) lifts subquery-`WHERE` DML and the row
   becomes FIXED — the assertions now check the FIXED heading, the discharged ruling, the
   `F-v3-8-update-files` artefact and a 🚫-free north-star COW row
