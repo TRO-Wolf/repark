@@ -527,6 +527,19 @@ RP-3 C-006 (2026-08-30, `d408da42`): the 1e7×50 MOR driver still ends at 8 dele
   pin.
   *RP-6 (2026-09-01, pin `fb0cacfa`): residue 2 is not in this range (fork F-16r ledger
   still names partition-scoped survival). RDF-1 stays BACKLOG. pins: rp-6-fork-repin/C-004*
+- **Residue 2, re-homed (RDF-1, 2026-09-02).** Half of residue 2 was never the fork's. Fork
+  PR `#259` refuted the "bounds-absent" half fork-side: the fork's own writers set
+  `position_delete_writer_properties()`, and at pin `fb0cacfa` a probe of the MW-7 shape
+  reclaims. The bounds were absent because **RePark's** MERGE writer built its Parquet
+  properties from the table codec alone and inherited parquet-rs's 64-byte statistics
+  truncation, which drops the `file_path` bound. That half is fixed in RePark (registry RDF-1)
+  and is no longer an ask here. **What remains of residue 2 is one line:** a delete file that
+  names two or more data files has unequal `file_path` bounds by construction, so no bounds
+  fix can make it file-scoped. Ask, unchanged: count those deletes in `tooHighDeleteRatio`
+  the way Java does. The Acceptance bullet above is superseded — the flipped pin is
+  `test_delete_laden_in_band_file_is_rewritten_and_its_delete_file_dies`, and the shape that
+  still waits on the fork is
+  `crates/repark-spark/src/tests/call_rewrite_dangling.rs::call_rewrite_data_files_keeps_a_partition_delete_that_names_two_data_files`.
 
 ### F-17 (north-star blocker, added 2026-08-28) — shared-Puffin DV sibling closure
 

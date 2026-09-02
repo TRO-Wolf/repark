@@ -6,9 +6,9 @@ of every step, so a guide that drifts from the engine reds here.
 
 The scale is a gate's, not production's — the guide's measured numbers live in the MW-7 ledger and
 are not re-asserted here. RP-5 / F-16r (fork ``00cdde0``): this partitioned 6,000-row fixture's
-in-band delete-laden seed files are rewrite candidates. The MW-7 2,500-row pin still holds
-(registry ``RDF-1`` BACKLOG).
-pins: rp-5-fork-repin/C-005
+in-band delete-laden seed files are rewrite candidates. RDF-1 (2026-09-02) flipped the MW-7
+2,500-row pin to the same reclaim; this module is unchanged by it.
+pins: rp-5-fork-repin/C-005; rdf-1-position-delete-bounds/C-003
 """
 
 from __future__ import annotations
@@ -47,8 +47,8 @@ RUNBOOK_PARTITIONS = 2
 RUNBOOK_ROWS_PER_MERGE = 600
 RUNBOOK_TARGET_FILE_SIZE = 64 * 1024
 
-# Java's `BinPackRewriteFilePlanner` band: [0.75 x target, 1.8 x target]. A file inside it is
-# never a rewrite candidate, however many of its rows are dead (registry `RDF-1`).
+# Java's `BinPackRewriteFilePlanner` band: [0.75 x target, 1.8 x target]. A file inside it is a
+# candidate only through the delete-ratio clause (registry `RDF-1`).
 BAND_LOW = 0.75
 BAND_HIGH = 1.8
 

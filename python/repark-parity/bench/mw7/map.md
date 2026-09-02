@@ -57,7 +57,21 @@ the deletes at every checkpoint; this driver does not run one.
 | Project a calibration onto a bigger run | add `--project-to 10000000:100` |
 | Read the numbers | [../../../../task/ledgers/completed/mw-7-scale-measurement-ledger.md](../../../../task/ledgers/archive/2026-08/2026-08-24-mw-7-scale-measurement-ledger.md) |
 | Run the CI pin on this machinery | `python/repark/tests/test_mw7_scale_smoke.py` |
-| See why the runbook cannot reclaim delete-laden files | registry row `RDF-1`; pin `test_mw7_scale_smoke.py::test_delete_laden_in_band_file_survives_the_runbook` (C-011); fork ask F-16 |
+| See how the runbook reclaims a delete-laden file, and the one shape it still cannot | registry row `RDF-1`; pin `test_mw7_scale_smoke.py::test_delete_laden_in_band_file_is_rewritten_and_its_delete_file_dies` (C-011, flipped 2026-09-02); the residue is a delete file naming two or more data files, fork ask F-16 |
+
+## RDF-1 measurement (2026-09-02)
+
+This module's C-011 shape is what measured RDF-1 on both engines: 2,500 rows, `mor`,
+`write.delete.granularity = 'partition'`, `write.target-file-size-bytes` 64 KiB, one MERGE
+deleting every seeded row.
+
+| Engine | `file_path` bounds (field `2147483546`) | `rewrite_data_files` | after the five-step sequence |
+|---|---|---|---|
+| RePark before | absent (parquet stats truncated at 64 B) | rewritten 4, `removed_delete_files_count` 0 | 3 data files, 1 delete file, 2,500 delete records |
+| RePark after | exact; lower == upper == the 103-byte seeded path | rewritten 5, `removed_delete_files_count` 1 | 2 data files, 0 delete files, 0 delete records, 2,500 rows |
+| PySpark 4.1.2 + Iceberg 1.11.0 | exact; lower == upper (both granularities) | rewritten 3, `removed_delete_files_count` 0 | 1 data file, 1 dangling delete file, 2,500 delete records, 2,500 rows |
+
+pins: rdf-1-position-delete-bounds/C-001
 
 ## Constraints
 

@@ -25,7 +25,7 @@ use uuid::Uuid;
 
 use crate::write::concurrency::WriteConcurrency;
 use crate::write::merge::iceberg_err;
-use crate::write::writer_props::writer_properties_for;
+use crate::write::writer_props::position_delete_writer_properties_for;
 
 /// Iceberg default partition-spec id used by the fork when no spec is supplied.
 const DEFAULT_PARTITION_SPEC_ID: i32 = 0;
@@ -264,9 +264,11 @@ async fn write_position_deletes_for_partition(
         Some(Uuid::new_v4().to_string()),
         DataFileFormat::Parquet,
     );
-    let parquet_builder =
-        ParquetWriterBuilder::new(writer_properties_for(table)?, config.schema().clone())
-            .with_metrics_config(MetricsConfig::for_position_delete());
+    let parquet_builder = ParquetWriterBuilder::new(
+        position_delete_writer_properties_for(table)?,
+        config.schema().clone(),
+    )
+    .with_metrics_config(MetricsConfig::for_position_delete());
     let rolling_builder = RollingFileWriterBuilder::new_with_default_file_size(
         parquet_builder,
         table.file_io().clone(),

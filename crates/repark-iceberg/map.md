@@ -124,6 +124,12 @@ v1 crate-root re-export lists.
   - **RP-5 document lockstep (C-008).** Pin history, registry REF-1 FIXED / REF-3 BACKLOG /
     RDF-1 BACKLOG, and handoff F-6b/F-6c/F-8/F-16r/F-0 consumed notes match the pins.
     pins: rp-5-fork-repin/C-008
+  - **RDF-1 document lockstep (C-004).** Registry `RDF-1` FIXED with the measured bounds and
+    counts on both engines; the guide's "What the cycle cannot reclaim" now states what IS
+    reclaimed and names the residue; north star §3b errata and `docs/design/map.md`; handoff
+    F-16 residue 2 re-homed (the bounds half was RePark's, refuted fork-side in `#259`);
+    `task/roadmap/mid-term/map.md`. STATUS.md does not name `RDF-1` and is untouched.
+    pins: rdf-1-position-delete-bounds/C-004
 
 ## Pointers
 

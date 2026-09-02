@@ -163,6 +163,10 @@ repark-core's error map.
   so the fork does not fall back to stamping spec 0 (**M16**,
   [`../../../../task/m16-posdelete-specid-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-15-m16-posdelete-specid-ledger.md)).
   pins: rp-3-fork-repin/C-002
+  **RDF-1 (2026-09-02):** the Parquet properties come from
+  `writer_props::position_delete_writer_properties_for`, not the plain data-file builder, so the
+  `file_path` and `pos` bounds are exact and a delete file naming ONE data file is file-scoped.
+  pins: rdf-1-position-delete-bounds/C-002
   `#182` `PartitionKey::new` is fallible (`validate_partition_data`); this module maps
   `iceberg::Error` through `iceberg_err`. Also hosts the BUG-001 P0 valve
   (`MorDmlKind` + `refuse_mor_unpartitioned_multi_spec_dml`, hoisted from the v1 SQL crate in
@@ -176,6 +180,16 @@ repark-core's error map.
   `write.parquet.compression-codec` (+ optional level). Default **zstd** when absent (Java
   Iceberg 1.4+ parity); accepted `zstd|snappy|gzip|lz4|uncompressed`; unknown = loud error.
   Shared by append / MERGE data files / position deletes.
+  **RDF-1 (2026-09-02):** position deletes take a second builder,
+  `position_delete_writer_properties_for`, which adds the fork's own
+  `position_delete_writer_properties()` truncation setting
+  (`set_statistics_truncate_length(None)`) to that codec. parquet-rs truncates statistics at 64
+  bytes by default; a truncated statistic is not `min_is_exact`, and the fork's metrics
+  aggregator drops an inexact bound — so every RePark-written position delete reached the
+  manifest with NO `file_path` bound, was never file-scoped, and was invisible to
+  `tooHighDeleteRatio`. The setting is read from the fork rather than restated, so a fork
+  policy change carries. Registry `RDF-1`.
+  pins: rdf-1-position-delete-bounds/C-002
 
 ## I want to...
 
@@ -188,6 +202,7 @@ repark-core's error map.
 | Stage + commit partition-scoped INSERT OVERWRITE | `partition_overwrite.rs` |
 | Cap concurrent Iceberg file writers (session conf) | `repark.write.max-concurrent-files` via `concurrency.rs` |
 | Parquet compression codec (table property) | `writer_props.rs` |
+| Parquet statistics properties for a position-delete file | `writer_props.rs` (`position_delete_writer_properties_for`) |
 | Change MERGE INTO semantics | [merge/map.md](merge/map.md) |
 | Identity DELETE/UPDATE (subquery `WHERE`) | `predicate_dml.rs` (`execute_predicate_dml`) |
 | Wire ordinary DELETE/UPDATE/INSERT OVERWRITE | DataFusion → fork `TableProvider` (non-subquery) |

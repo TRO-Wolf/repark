@@ -66,7 +66,9 @@ illustrative. A claim with no verified basis does not go in.
   runbook" — the seven-step Airflow-shaped cycle, the `expire_snapshots` cutoff and what it
   costs in time travel, the cadence, the load-bearing order, the day of latency on the orphan
   net, how to retry a step (the S3 Tables conflict and step 4's idle-cycle refusal), the six
-  edits a migrating Spark DAG needs, and the limit the cycle cannot cross (registry `RDF-1`).
+  edits a migrating Spark DAG needs, and the limit the cycle cannot cross (registry `RDF-1` —
+  rewritten 2026-09-02: the cycle now reclaims a delete-laden file whose delete file names it
+  alone; a delete file naming several data files is the residue).
   **MW-10** adds the S3 Tables paragraph: automatic snapshot management stays on for scratch
   tables (no branch/tag/`history.expire.*`), engine expire and the service may run together,
   conflicts retry a bounded number of times, and the measured interplay slot.
