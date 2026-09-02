@@ -3,10 +3,12 @@
 pins: v3e-5-nightly-v3-oracle/C-002, C-003, C-004, C-005, C-007, C-008, C-011
 pins: v3-7-merge-lineage/C-002
 pins: v3-8-subquery-where-lineage/C-001, C-002, C-003
+pins: v3-10-upgrade-v2-to-v3/C-002, C-004
 """
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import time
@@ -791,6 +793,118 @@ def test_v3_mor_subquery_where_dml_live(tmp_path: Path) -> None:
         _assert_subquery_where_dml_live_against_spark(_MOR_V3, _MOR_SUBQUERY_CELLS)
     finally:
         session.stop()
+
+
+_UPGRADE_SEED = [(1, "a"), (2, "b"), (3, "c")]
+_UPGRADE_APPEND = [(4, "d"), (5, "e")]
+_UPGRADE_PRE_LINEAGE = [(1, None, None), (2, None, None), (3, None, None)]
+_UPGRADE_POST_LINEAGE = [(1, 2, 1), (2, 3, 1), (3, 4, 1), (4, 0, 2), (5, 1, 2)]
+_UPGRADE_SQL = "SET TBLPROPERTIES ('format-version' = '3')"
+
+
+def test_v3_upgrade_v2_to_v3_live_matches_spark(tmp_path: Path) -> None:
+    """The in-place v2 to v3 upgrade and the append after it land Spark's lineage."""
+    from repark import ReparkSession
+
+    session = (
+        ReparkSession.builder.appName("v3-10-upgrade-live")
+        .config(_ALLOW_CREATE_V3_KEY, "true")
+        .getOrCreate()
+    )
+    try:
+        session.register_memory_catalog("ice", tmp_path)
+        session.sql("CREATE NAMESPACE ice.sales")
+        session.sql(
+            "CREATE TABLE ice.sales.up (id INT, name STRING) USING iceberg "
+            "TBLPROPERTIES ('format-version' = '2')"
+        )
+        session.sql("INSERT INTO ice.sales.up VALUES (1, 'a'), (2, 'b'), (3, 'c')").collect()
+        session.sql(f"ALTER TABLE ice.sales.up {_UPGRADE_SQL}").collect()
+        pre = session.sql(
+            "SELECT id, _row_id, _last_updated_sequence_number FROM ice.sales.up ORDER BY id"
+        ).to_arrow()
+        assert _id_row_id_seq(pre) == _UPGRADE_PRE_LINEAGE
+        session.sql("INSERT INTO ice.sales.up VALUES (4, 'd'), (5, 'e')").collect()
+        post = session.sql(
+            "SELECT id, _row_id, _last_updated_sequence_number FROM ice.sales.up ORDER BY id"
+        ).to_arrow()
+        assert _id_row_id_seq(post) == _UPGRADE_POST_LINEAGE
+        if not _LIVE:
+            pytest.skip(_LIVE_SKIP)
+        _assert_upgrade_live_against_spark()
+    finally:
+        session.stop()
+
+
+def _assert_upgrade_live_against_spark() -> None:
+    """Live Spark ALTER upgrade at the matched single-file seed."""
+    import tempfile
+
+    from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
+    from pyspark.sql import SparkSession
+    from pyspark.sql import types as spark_types
+
+    catalog = "local"
+    warehouse = Path(tempfile.mkdtemp(prefix="repark-v3-10-live-upg-"))
+    ivy_home = Path(tempfile.mkdtemp(prefix="repark-v3-10-ivy-"))
+    schema = spark_types.StructType(
+        [
+            spark_types.StructField("id", spark_types.IntegerType(), False),
+            spark_types.StructField("name", spark_types.StringType(), False),
+        ]
+    )
+    builder = (
+        SparkSession.builder.master("local[1]")
+        .appName("v3-10-upgrade-live")
+        .config("spark.sql.ansi.enabled", "true")
+        .config("spark.sql.shuffle.partitions", "1")
+        .config("spark.default.parallelism", "1")
+        .config("spark.ui.enabled", "false")
+        .config("spark.jars.ivy", str(ivy_home))
+        .config(
+            "spark.sql.extensions",
+            "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
+        )
+        .config(f"spark.sql.catalog.{catalog}", "org.apache.iceberg.spark.SparkCatalog")
+        .config(f"spark.sql.catalog.{catalog}.type", "hadoop")
+        .config(f"spark.sql.catalog.{catalog}.warehouse", str(warehouse))
+    )
+    jar = _v37_iceberg_runtime_jar()
+    if jar is not None:
+        os.environ.pop("PYSPARK_SUBMIT_ARGS", None)
+        builder = builder.config("spark.jars", jar)
+    else:
+        builder = builder.config("spark.jars.packages", ICEBERG_SPARK_RUNTIME_GAV)
+    session = builder.getOrCreate()
+    session.sparkContext.setLogLevel("ERROR")
+    target = f"{catalog}.sales.up"
+    try:
+        session.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.sales")
+        session.sql(
+            f"CREATE TABLE {target} (id INT, name STRING) USING iceberg "
+            "TBLPROPERTIES ('format-version' = '2')"
+        )
+        session.createDataFrame(_UPGRADE_SEED, schema).coalesce(1).writeTo(target).append()
+        session.sql(f"ALTER TABLE {target} {_UPGRADE_SQL}")
+        pre = session.sql(
+            f"SELECT id, _row_id, _last_updated_sequence_number FROM {target} ORDER BY id"
+        ).toArrow()
+        assert _id_row_id_seq(pre) == _UPGRADE_PRE_LINEAGE
+        session.createDataFrame(_UPGRADE_APPEND, schema).coalesce(1).writeTo(target).append()
+        post = session.sql(
+            f"SELECT id, _row_id, _last_updated_sequence_number FROM {target} ORDER BY id"
+        ).toArrow()
+        assert _id_row_id_seq(post) == _UPGRADE_POST_LINEAGE
+        metadata = sorted((warehouse / "sales" / "up" / "metadata").glob("*.metadata.json"))
+        latest = json.loads(metadata[-1].read_text(encoding="utf-8"))
+        assert latest["format-version"] == 3
+        assert latest["next-row-id"] == 5
+        assert "format-version" not in latest.get("properties", {})
+    finally:
+        session.stop()
+        shutil.rmtree(warehouse, ignore_errors=True)
+        shutil.rmtree(ivy_home, ignore_errors=True)
+    assert ICEBERG_SPARK_RUNTIME_GAV == "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0"
 
 
 def test_northstar_nightly_v3_leg_is_v3e_5() -> None:

@@ -137,6 +137,16 @@ repark-core's error map.
   `rename_table`, schema evolution (`apply_schema_changes` / `SchemaChange` → fork
   `UpdateSchema`), partition-spec evolution (`apply_partition_spec_changes` /
   `PartitionSpecChange` → fork `UpdatePartitionSpec`). Return `iceberg::Result`.
+- `format_version.rs` — **V3-10:** `set_properties_and_format_version` folds the fork's
+  `UpgradeFormatVersionAction` and `UpdatePropertiesAction` into ONE transaction, so an ALTER
+  carrying `format-version` beside another key is one metadata commit as it is on Spark; nothing
+  is committed when there is neither an upgrade nor a property to write, which is why requesting
+  the version a table already has writes no metadata file. `current_format_version` reads the
+  number for the resolver and `format_version_from_number` errors rather than falling back, so an
+  out-of-domain number can never be silently taken as v2.
+  Its three entry points carry `#[allow(clippy::missing_errors_doc)]` in place of the `# Errors`
+  doc comment the no-code-comments ruling forbids; every error they raise comes from the fork.
+  pins: v3-10-upgrade-v2-to-v3/C-003, C-005
 - `snapshot_refs.rs` — product CREATE/DROP/REPLACE BRANCH|TAG helpers over fork
   `ManageSnapshots` (+ retention setters). Write-to-branch routing lives in the Spark
   door (`repark-spark` `write_to_branch.rs`) and the `to_branch` / `with_commit_branch`

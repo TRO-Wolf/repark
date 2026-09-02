@@ -14,6 +14,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 ## Contents
 
 - `mod.rs` — pure module manifest (`mod common;` + one `mod` per leaf).
+- `v3_upgrade.rs` — **V3-10:** the in-place v2 → v3 upgrade on the Spark door — opt-in gate and
+  its without-opt-in twin, downgrade / `'1'` / `'4'` / `'x'` / `''` refusals, same-version no-op,
+  upgrade beside another key as ONE commit, and the post-upgrade v3 paths (append lineage, COW
+  DELETE/UPDATE, MoR MERGE deletion vector, `rewrite_data_files`, `register_table`) at live-Spark
+  values. The legacy-parquet-position-delete refusal is `V3-UPGRADE-DV-1`.
+  pins: v3-10-upgrade-v2-to-v3/C-001, C-003, C-004, C-005
 - `declared_refuse.rs` — **FNP-15/16:** Spark-door parse-altitude refusals for the six
   unreachable names and the sketch family; passthrough attach pin.
   pins: fnp-15-16/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008

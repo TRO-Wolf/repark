@@ -127,6 +127,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Arrow int32); `rewrite_position_delete_files` still refuses (`B-MOR-3`);
   live ids and `_row_id` / seq stay.
   pins: v3-5-dv-compaction/C-002, C-003, C-004
+- [test_v3_upgrade.py](test_v3_upgrade.py) — **V3-10 (2026-09-02):** the facade door's in-place
+  v2 → v3 upgrade — the refusal without `repark.sql.allowCreateFormatVersion3` (and the proof that
+  `_row_id` stays unresolvable on the still-v2 table), the opt-in upgrade with NULL lineage on
+  pre-upgrade rows and Spark's `(1,2,1),(2,3,1),(3,4,1),(4,0,2),(5,1,2)` after one append, and the
+  downgrade / `'4'` / `'x'` refusals leaving the table where the upgrade left it.
+  pins: v3-10-upgrade-v2-to-v3/C-003, C-004
 - [test_v3_create_opt_in.py](test_v3_create_opt_in.py) — **V3-2 (2026-08-24):** facade CREATE/CTAS
   `format-version = 3` refuses unless `repark.sql.allowCreateFormatVersion3` is true, and
   **since V3-9 (2026-09-02)** the refusal no longer claims v3 cannot do merge-on-read

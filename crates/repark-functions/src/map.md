@@ -323,6 +323,15 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `chrono_boundary_date32_add_months_computes`, `extreme_date32_year_extractor_no_panic`);
   SAF-002 downcast evidence + defensive `cast` before `as_primitive`/`as_string` (pin
   `trunc_accepts_large_utf8_format_without_panic`).
+- `format_version.rs` — **V3-10:** `resolve_alter_format_version` is the one `ALTER … format-version`
+  resolver for every door: it parses the request, refuses a downgrade and anything above
+  `MAX_SUPPORTED_FORMAT_VERSION` naming the key and both versions, returns `None` for the
+  same-version no-op, and delegates the v3 opt-in refusal to `cardinality::resolve_create_format_version`
+  so the CREATE and ALTER refusal texts cannot drift apart.
+  The `#[allow(clippy::missing_errors_doc)]` on it (and on the three `write/format_version.rs`
+  entry points) stands in for the `# Errors` doc comment the no-code-comments ruling forbids;
+  the error domain is the row above.
+  pins: v3-10-upgrade-v2-to-v3/C-002, C-003
 - `expr_fn.rs` — logical-`Expr` builders for date, string, collection, URL, bitmap, and higher-order
   functions. Builders embed the same shims registered by the SQL door, including `unix_date`,
   `bit_length`, regexp/split functions, `shuffle`, `map_from_entries`, and `str_to_map`, so facade
