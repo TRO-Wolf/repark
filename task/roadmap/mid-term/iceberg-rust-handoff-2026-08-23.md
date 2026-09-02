@@ -275,9 +275,26 @@ pins: rp-6-fork-repin/C-002, C-003
 *V3-7 / V3-8 (2026-09-02), engine-side, no fork ask:* the RePark-owned COW and MoR writers
 carry `_row_id` through MERGE (V3-7) and through the subquery-`WHERE` COW rewrite (V3-8).
 `V3-COW-1` is **FIXED** and its refusal seat deleted; F-7 has no engine-side residue left.
-*V3-9 (2026-09-02), engine-side, no fork ask:* predicate DML's V2-only delete-file gate is
-lifted, so MoR `DELETE`/`UPDATE` on v3 reuse the fork's `close_touched_dv_containers` —
-`V3-MOR-1` FIXED, no new fork API needed.
+*V3-9 (2026-09-02), engine-side:* predicate DML's V2-only delete-file gate is lifted, so MoR
+`DELETE`/`UPDATE` on v3 reuse the fork's `close_touched_dv_containers` — `V3-MOR-1` FIXED. It
+left one fork ask, **F-18** (`crates/iceberg/src/delete_vector_container.rs`), consumed by
+RePark repin **RP-7**:
+
+- **F-18 — closing a shared Puffin rewrites every sibling blob (2026-09-02, registry `V3-DV-1`).**
+  `close_touched_dv_containers_at` marks a container affected when any blob in it is touched and
+  rewrites all of them. Measured against Spark 4.1.2 + Iceberg 1.11.0 (partitioned v3 MoR, 2 data
+  files, 2 DVs packed in one Puffin): after a DELETE touching one file Spark reports
+  `removed-delete-files 1` / `removed-dvs 1` / `added-delete-files 1` / `added-dvs 1` and leaves
+  **two** containers — the sibling's `DeleteFile` entry still at the old container and offset —
+  where the fork produces one new container holding both blobs at new offsets. Cost measured in
+  the RePark tree: a 64-file subquery DELETE packs one 18,996 B Puffin (64 blobs) and each later
+  single-row DELETE rewrites 18,998–19,006 B (~1,010 ms) against a 373 B fresh blob — 64×
+  amplification, 16× at 16 files. Two neighbours in the same function: `collect_live_data_files`
+  runs unconditionally although its result is read only when `remaining` is non-empty (six
+  single-row v3 `DELETE` statements: 208 / 991 / 2,790 ms at 8 / 64 / 192 live data files against
+  135 / ~900 / 1,485 ms on a v2 twin), and the manifest list is loaded twice per statement with
+  manifests read in a serial `for`-await. RePark pin to re-aim on the fix:
+  `crates/repark-spark/src/tests/v3e4.rs::subquery_delete_on_the_shared_puffin_v3_table_keeps_both_file_scoped_deletion_vectors`.
 
 Listed so the fork plans it; as of 2026-08-21 the engine's V3-2+ units deliberately waited
 for the MW campaign to close (that wait is over — the addendum below).

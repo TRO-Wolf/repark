@@ -72,9 +72,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   real work, orphan 24h floor on the partitioned-DV fixture after a RePark
   append. RP-6: live-DV UPDATE commits Spark-equal lineage. V3-7: live-DV MERGE on
   the appended fixture keeps `_row_id`. **V3-9 (2026-09-02):** a MoR subquery `DELETE … IN`
-  over the shared-Puffin fixture keeps both siblings' file-scoped DVs live — closing the
-  touched container rewrites every blob it holds into one new container, so the sibling's
-  blob path moves while its positions and `referenced_data_file` survive.
+  over the shared-Puffin fixture keeps both siblings' file-scoped DVs live with their
+  `referenced_data_file`, record counts 2 and 1 and a real blob offset. The pin stops there on
+  purpose: Spark rewrites only the touched blob and leaves the sibling entry at its old
+  container and offset (two containers), where the fork rewrites every blob of the touched
+  container into one new one — registry `V3-DV-1`, BACKLOG, fork F-18 / repin RP-7 re-aims
+  this pin at Spark's two-container layout.
   rustdoc cites C-001..C-016 (`Model: Grok 4.6 xHigh`; rp-3-fork-repin/C-004;
   rp-6-fork-repin/C-002, C-003; v3-7-merge-lineage/C-002; v3-9-mor-predicate-dml-dv/C-003).
 - `v3_lineage.rs` — **V3-4:** Spark-door `_row_id` / `_last_updated_sequence_number` on the RP-6 re-recorded the `repark-sql/src/v3/cow.rs` hash once more after the pins citation moved from its module doc to the map.

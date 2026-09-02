@@ -2341,11 +2341,50 @@ the pin rather than obeying it.
   `python/repark/tests/test_v3_cow_dml.py::test_facade_adopted_v3_mor_subquery_where_dml_writes_deletion_vectors`;
   live cell `python/repark/tests/test_v3_live_oracle.py::test_v3_mor_subquery_where_dml_live`.
   Pins: v3-9-mor-predicate-dml-dv/C-002, C-003, C-004.
-- **Rationale** — FIXED. No new deletion-vector code: the lift is one format-version
+- **Rationale** — FIXED for rows, lineage, next-row-id and delete-entry content. One dated
+  residual is carried and it is a Puffin **container-packing** difference, not a row or lineage
+  difference: `V3-DV-1` below. No new deletion-vector code: the lift is one format-version
   comparison, and the write path was already V3-7's. The v3 create opt-in message dropped its
   now-false parenthetical ("v3 tables cannot yet do merge-on-read row-level writes") in the
   same unit; it names only the conf and the v2 default. Pins:
   v3-9-mor-predicate-dml-dv/C-006.
+
+### V3-DV-1 — BACKLOG (V3-9, 2026-09-02): closing a shared Puffin rewrites every sibling blob
+
+- **repark** — `close_touched_dv_containers` marks a Puffin container affected when **any** blob
+  in it is touched and rewrites **all** of them into one new container. Measured on the
+  Spark-written partitioned fixture (2 data files, 2 DVs packed in one Puffin at offsets 46 and
+  4): after `DELETE … WHERE id IN (SELECT …)` touching only the `part = 0` file, both blobs sit
+  in a single **new** container (`dv-00000-….puffin`) at offsets 4 and 48; the untouched
+  sibling's `file_path` **and** `content_offset` both move. Rows, `referenced_data_file` and
+  record counts (2 and 1) are correct.
+- **Apache Spark** — the same statement removes only the touched blob: snapshot summary
+  `removed-delete-files 1`, `removed-dvs 1`, `removed-position-deletes 1`, `added-delete-files 1`,
+  `added-dvs 1`, `added-position-deletes 2`. Afterwards there are **two distinct containers** —
+  the touched file's DV in a newly written one at offset 4, and the untouched sibling's
+  `DeleteFile` entry still pointing at the **old** container at its original offset.
+  *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, Hadoop catalog, `local[1]`, `coalesce(1)`,
+  partitioned v3 merge-on-read, 2026-09-02 V3-9 transcript)*.
+- **Cost** — write amplification, measured in this tree: a 64-file subquery DELETE packs one
+  18,996 B Puffin holding 64 blobs; each later single-row DELETE re-reads and rewrites
+  18,998–19,006 B (~1,010 ms) where a fresh blob is 373 B — 64× amplification, 16× at 16 files.
+  Two neighbours ride the same fork function: `collect_live_data_files` runs unconditionally
+  although its result is read only when `remaining` is non-empty (six single-row v3 `DELETE` statements on
+  one DV'd file: 208 / 991 / 2,790 ms at 8 / 64 / 192 live data files, against 135 / ~900 /
+  1,485 ms on a v2 twin), and the manifest list is loaded twice per statement with manifests read
+  in a serial `for`-await.
+- **Pin** —
+  `crates/repark-spark/src/tests/v3e4.rs::subquery_delete_on_the_shared_puffin_v3_table_keeps_both_file_scoped_deletion_vectors`
+  holds the invariant both engines share (each data file keeps one live file-scoped DV with its
+  `referenced_data_file`, record counts 2 and 1, a real blob offset, and the touched file's DV in
+  a newly written container) and deliberately does **not** pin the container count, which is the
+  divergence. Rows are pinned by the same test's `live_triples` assertion.
+- **Rationale** — BACKLOG, intent to FIX. The packing lives in the fork, not in RePark: fork ask
+  **F-18** — `crates/iceberg/src/delete_vector_container.rs::close_touched_dv_containers_at` must
+  rewrite only the touched blob into a new container and leave untouched sibling blobs in their
+  old container, Spark-equal; make `collect_live_data_files` lazy; load the manifest list once and
+  read manifests concurrently. RePark consumes it in repin unit **RP-7**, which re-aims the pin
+  above at Spark's exact two-container layout. Pins: v3-9-mor-predicate-dml-dv/C-007.
 
 ### BL-9 — a double-quoted string literal is an identifier on the SQL door
 
@@ -2613,6 +2652,10 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 - **V3-COW-1** — measured 2026-08-24, admitted as a BACKLOG row (see §7), and **FIXED
   (V3-8, 2026-09-02)** in place there. Left this queue. Its merge-on-read residual is
   **V3-MOR-1**, FIXED (V3-9, 2026-09-02).
+
+- **V3-DV-1** — **BACKLOG (V3-9, 2026-09-02).** See the row above. Closing a shared Puffin
+  rewrites every sibling blob where Spark rewrites only the touched one; rows, lineage and
+  `referenced_data_file` agree. Owner: fork ask **F-18**, consumed by repin **RP-7**.
 
 - **V3-VARIANT-SHRED-1** — landed as a §4 row (2026-09-01, V3-6): shredded-Parquet `variant`
   stays **DECLARED out of the v1.0 gate (owner ruling 2026-08-25)**; binary variant is

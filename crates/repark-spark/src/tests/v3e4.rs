@@ -663,7 +663,7 @@ async fn merge_on_the_appended_v3_table_keeps_row_id() {
     );
 }
 
-async fn live_dv_by_referenced(catalogs: &CatalogRegistry) -> Vec<(String, String)> {
+async fn live_dv_by_referenced(catalogs: &CatalogRegistry) -> Vec<(String, String, u64, i64)> {
     let loaded = catalogs["ice"].load_table(&ident()).await.expect("load");
     let metadata = loaded.metadata();
     let snapshot = metadata.current_snapshot().expect("current snapshot");
@@ -691,7 +691,14 @@ async fn live_dv_by_referenced(catalogs: &CatalogRegistry) -> Vec<(String, Strin
             let Some(referenced) = data_file.referenced_data_file() else {
                 continue;
             };
-            pairs.push((referenced, data_file.file_path().to_string()));
+            pairs.push((
+                referenced,
+                data_file.file_path().to_string(),
+                data_file.record_count(),
+                data_file
+                    .content_offset()
+                    .expect("a v3 DV carries content_offset"),
+            ));
         }
     }
     pairs.sort();
@@ -699,8 +706,8 @@ async fn live_dv_by_referenced(catalogs: &CatalogRegistry) -> Vec<(String, Strin
 }
 
 #[tokio::test]
-async fn subquery_delete_on_the_shared_puffin_v3_table_keeps_the_untouched_sibling() {
-    let _: &str = "pins: v3-9-mor-predicate-dml-dv/C-003";
+async fn subquery_delete_on_the_shared_puffin_v3_table_keeps_both_file_scoped_deletion_vectors() {
+    let _: &str = "pins: v3-9-mor-predicate-dml-dv/C-003, C-007";
     let fixture = materialize_part_dv();
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&warehouse).await;
@@ -741,21 +748,25 @@ async fn subquery_delete_on_the_shared_puffin_v3_table_keeps_the_untouched_sibli
     );
     let after = live_dv_by_referenced(&catalogs).await;
     assert_eq!(
-        after.iter().map(|(file, _)| file).collect::<Vec<_>>(),
-        before.iter().map(|(file, _)| file).collect::<Vec<_>>(),
-        "both data files keep a live file-scoped DV"
+        after
+            .iter()
+            .map(|(file, _, records, _)| (file.clone(), *records))
+            .collect::<Vec<_>>(),
+        vec![(before[0].0.clone(), 2), (before[1].0.clone(), 1)],
+        "each data file keeps one live file-scoped DV; only the touched one gains a position"
     );
-    let containers = after
-        .iter()
-        .map(|(_, blob)| blob.clone())
-        .collect::<std::collections::HashSet<_>>();
-    assert_eq!(containers.len(), 1, "the two DVs stay in one shared Puffin");
-    let old_containers = before
-        .iter()
-        .map(|(_, blob)| blob.clone())
-        .collect::<std::collections::HashSet<_>>();
+    for (referenced, container, _, offset) in &after {
+        assert!(
+            container.ends_with(".puffin"),
+            "{referenced} is served by a Puffin container: {container}"
+        );
+        assert!(
+            *offset >= 4,
+            "{referenced} carries a real blob offset: {offset}"
+        );
+    }
     assert_ne!(
-        containers, old_containers,
-        "closing the touched container rewrites both blobs into a new one"
+        after[0].1, before[0].1,
+        "the touched file's DV moves into a newly written container"
     );
 }

@@ -89,10 +89,12 @@ def test_north_star_matrix_carries_the_three_engine_rulings() -> None:
     mor = _matrix_row(north_star, "Write: MOR DML via deletion vectors")
     assert "V3-9" in mor and "V3-MOR-1" in mor and mor.count("🚫") == 0
     assert "V3-7" in mor and "RP-6" in mor
+    assert "V3-DV-1" in mor and "F-18" in mor and "RP-7" in mor
     status = _read("STATUS.md")
     assert "V3-7 / V3-8 (2026-09-02" in status
     assert "**V3-9 (2026-09-02):**" in status
-    assert "F-rp3-c7\n    consumed" in status
+    assert "F-rp3-c7 consumed" in status
+    assert "[V3-DV-1](docs/spark-sql-iceberg-parity.md)" in status
     types = _matrix_row(north_star, "Read/write: v3 types + default values")
     assert "V3-GEO-1" in types and "V3-VARIANT-SHRED-1" in types and _RULING_DATE in types
     upgrade = _matrix_row(north_star, "Upgrade: v2 → v3 in place")

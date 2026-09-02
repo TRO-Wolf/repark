@@ -120,7 +120,7 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
   dual-arity null-guard, `F.log` two-arg) and re-measures RE-1. `F.log` is an accept-more
   superset of PySpark's (a column base accepted, keyword names differ) — ledger C-006,
   oracle note under C-010.
-  Ledger: [task/ledgers/completed/sem-1-spark-answer-parity-ledger.md](task/ledgers/archive/2026-09/2026-09-02-sem-1-spark-answer-parity-ledger.md).
+  Ledger: [task/ledgers/archive/2026-09/2026-09-02-sem-1-spark-answer-parity-ledger.md](task/ledgers/archive/2026-09/2026-09-02-sem-1-spark-answer-parity-ledger.md).
 <!-- /ws -->
 
 <!-- ws id=v3 ledgers=v3-,v3e- state=open -->
@@ -131,45 +131,43 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
   [task/ledgers/staging/v3-0-charter-ledger.md](task/ledgers/staging/v3-0-charter-ledger.md).
   - **Measured true (V3-0, [#199](https://github.com/TRO-Wolf/repark/pull/199)):** v3 DV reads
     and lineage appends round-trip through Spark. **V3-5:** `V3-DANGLE-1` FIXED.
-  - **Delivered:** V3-1 `register_table` + the checked-in v3 fixture
-    ([#203](https://github.com/TRO-Wolf/repark/pull/203)); V3-2 CREATE/CTAS `format-version = 3`
-    behind `repark.sql.allowCreateFormatVersion3` (default false), ALTER refused
-    ([#232](https://github.com/TRO-Wolf/repark/pull/232)); V3E-1 + V3E-2 — adopted-v3
-    COW DML measured, `ENC-1` DECLARED, the v3 maintenance oracle is PySpark 4.1.2 +
-    Iceberg 1.11.0
-    ([#235](https://github.com/TRO-Wolf/repark/pull/235)); V3E-3 — partitioned-DV and
-    equality-delete v3 fixtures CI-runnable, live rows Spark-exact on all three doors,
-    `.delete_files` content 1/2 ([#236](https://github.com/TRO-Wolf/repark/pull/236)); V3R-1 —
+  - **Delivered** (per-row detail: the north-star matrix): V3-1 `register_table` + the v3
+    fixture ([#203](https://github.com/TRO-Wolf/repark/pull/203)); V3-2 opt-in CREATE/CTAS
+    `format-version = 3`, ALTER refused ([#232](https://github.com/TRO-Wolf/repark/pull/232));
+    V3E-1 + V3E-2 adopted-v3 COW DML measured, `ENC-1` DECLARED, oracle PySpark 4.1.2 + Iceberg
+    1.11.0 ([#235](https://github.com/TRO-Wolf/repark/pull/235)); V3E-3 partitioned-DV and
+    equality-delete fixtures CI-runnable
+    ([#236](https://github.com/TRO-Wolf/repark/pull/236)); V3R-1 —
     **the 2026-08-25 owner rulings:** row-DML on v3 **guarded** (`V3-COW-1`, discharged by
-    V3-8), `geometry`/`geography` DECLARED out of v1.0 (`V3-GEO-1`), shredded-Parquet
-    `variant` DECLARED out (queued `V3-VARIANT-SHRED-1`), the S3 Tables live legs are **in**
-    (OD-3b; the scoped IAM statement in `docs/tier2-aws.md` §2 applied by the owner
-    2026-08-28 — MW-10 measured expire on format v2: **allow**, first dispatch 2026-08-30),
-    and the v2→v3 in-place upgrade is built behind the create opt-in after V3-3.
-    V3E-4 measured refs, `VERSION AS OF` over DVs, expire dual-probe, and the
-    orphan 24h floor on adopted v3. V3E-5 added the nightly v3 live-oracle leg
-    ([#253](https://github.com/TRO-Wolf/repark/pull/253)). RP-2 (2026-08-28, fork `ce92a7bf`)
-    the DV-free first DELETE. RP-3 (2026-08-30, fork `d408da42`) wired container closure;
-    live-DV DELETE merge and sequential COW DELETE Spark-equal on three doors, F-rp3-c7
-    consumed; Hadoop writes FIXED (`V3-ADOPT-1`). RP-4 (2026-08-31, fork `33be9a0`) F-7
-    slice 1: rewrite lineage Spark-equal (`V3-LINEAGE-1` FIXED); F-6 `to_branch` carried.
+    V3-8), `geometry`/`geography` DECLARED out of v1.0 (`V3-GEO-1`), shredded-Parquet `variant`
+    DECLARED out (queued `V3-VARIANT-SHRED-1`), the S3 Tables live legs **in** (OD-3b; the
+    scoped IAM statement in `docs/tier2-aws.md` §2 applied by the owner 2026-08-28 — MW-10
+    measured expire on format v2: **allow**, first dispatch 2026-08-30), and the v2→v3 in-place
+    upgrade built behind the create opt-in after V3-3.
+    V3E-4 measured refs, `VERSION AS OF` over DVs, expire dual-probe and the orphan floor.
+    V3E-5 added the nightly v3 live-oracle leg
+    ([#253](https://github.com/TRO-Wolf/repark/pull/253)). RP-2 (2026-08-28, `ce92a7bf`) the
+    DV-free first DELETE. RP-3 (2026-08-30, `d408da42`) wired container closure; live-DV DELETE
+    merge and sequential COW DELETE Spark-equal on three doors, F-rp3-c7 consumed; Hadoop
+    writes FIXED (`V3-ADOPT-1`). RP-4 (2026-08-31, `33be9a0`) F-7 slice 1: rewrite lineage
+    Spark-equal (`V3-LINEAGE-1` FIXED); F-6 `to_branch` carried.
     RP-6 (2026-09-01, fork `fb0cacfa`) lifts UPDATE. V3-7 / V3-8 (2026-09-02) carry MERGE
     and subquery-`WHERE` COW `_row_id` and delete the refusal seat — `V3-COW-1` **FIXED**.
     **V3-4 (2026-08-31):** `_row_id` / `_last_updated_sequence_number` Spark-equal on
-    single-table v3 reads; v1/v2 engine Schema `No field named _row_id`;
-    JOIN/CTE/subquery/time-travel refuse `V3-ROWID-2`. `V3-ROWID-1` FIXED.
-    **V3-6 (2026-09-01):** opt-in v3 CREATE consumes fork `timestamp_ns`/`timestamptz_ns`
-    (v2 refuses); append fills an omitted column from a schema-carried `write_default`,
+    single-table v3 reads; v1/v2 Schema `No field named _row_id`; JOIN/CTE/subquery/time-travel
+    refuse `V3-ROWID-2`. `V3-ROWID-1` FIXED.
+    **V3-6 (2026-09-01):** opt-in v3 CREATE consumes fork `timestamp_ns`/`timestamptz_ns` (v2
+    refuses); append fills an omitted column from a schema-carried `write_default`,
     `initial_default` reads into pre-column files, DEFAULT DDL refuses Spark-equal; binary
-    `variant` refuses end to end (`V3-VARIANT-SHRED-1`, R88); `unknown` CREATE refuse and
-    parquet write refuse pinned (R91, RP-5).
-    **V3-9 (2026-09-02):** predicate DML's V2-only delete-file gate is lifted — merge-on-read
+    `variant` refuses end to end (`V3-VARIANT-SHRED-1`, R88); `unknown` CREATE and parquet
+    write refuses pinned (R91, RP-5).
+    **V3-9 (2026-09-02):** predicate DML's V2-only delete-file gate is lifted — MoR
     `DELETE`/`UPDATE … WHERE` on v3 write file-scoped Puffin DVs on three doors, created and
-    adopted, Spark-equal on rows, lineage and next-row-id (`V3-MOR-1` FIXED); the create
-    opt-in message dropped its now-false MoR parenthetical.
+    adopted, Spark-equal on rows, lineage and next-row-id (`V3-MOR-1` FIXED); the create opt-in
+    message dropped its false MoR parenthetical; `V3-DV-1` BACKLOG is the residual.
   - **Next:** lineage carry and merge-on-read are complete on every served DML shape
-    (`V3-COW-1`, `V3-MOR-1` FIXED); open v3 residuals are `G3-E8` subquery spellings outside
-    the allow-listed hole and `B-MOR-3` DV-aware delete-file maintenance.
+    (`V3-COW-1`, `V3-MOR-1` FIXED); open v3 residuals are `V3-DV-1` shared-Puffin packing
+    (fork F-18 / repin RP-7), `G3-E8` subquery spellings and `B-MOR-3`.
 <!-- /ws -->
 
 <!-- ws id=perf ledgers=perf- state=open -->
@@ -263,6 +261,8 @@ moving it. Nothing is described in both places.
 
 - **Identifier case folding** — **DECLARED (2026-08-10)**: registry
   [ID-1](docs/spark-sql-iceberg-parity.md); revisiting it needs a new dated decision.
+- **Shared-Puffin DV packing** — **BACKLOG (2026-09-02)**: registry
+  [V3-DV-1](docs/spark-sql-iceberg-parity.md); fork F-18, repin RP-7.
 - **The session-timezone family** — TZ-1 converted; TZ-6 / TZ-7 FIXED (#85); **TZ-8** partially
   FIXED (#100): `CAST(ts AS DATE)` / `to_date` / `datediff` read the session zone now; only
   `last_day` / `date_add` over a TIMESTAMP (+ B-TZ-3) stay BACKLOG; TZ-4 in progress

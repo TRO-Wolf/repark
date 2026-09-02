@@ -120,8 +120,10 @@ JVM, no repark required). See [../map.md](../map.md).
   the narrowed row. RP-3 (2026-08-30) retargeted again: live-DV DELETE merge lifts; UPDATE,
   MERGE, and sequential COW after overwrite stay refused (BACKLOG, 2026-08-25 ruling kept).
   **V3-9 (2026-09-02):** the MOR DML matrix row assertion flipped from "one 🚫, V3-8 measured"
-  to "no 🚫, `V3-MOR-1` FIXED", and the STATUS assertions follow the compacted v3 block
-  (pins: v3-9-mor-predicate-dml-dv/C-005).
+  to "no 🚫, `V3-MOR-1` FIXED plus the dated `V3-DV-1` residual naming fork F-18 and repin
+  RP-7", and the STATUS assertions follow the compacted v3 block — including the
+  `F-rp3-c7 consumed` substring, which no longer depends on where the line wraps
+  (pins: v3-9-mor-predicate-dml-dv/C-005, C-007).
   V3-7 (2026-09-02) lifts MERGE; V3-8 (2026-09-02) lifts subquery-`WHERE` DML and the row
   becomes FIXED — the assertions now check the FIXED heading, the discharged ruling, the
   `F-v3-8-update-files` artefact and a 🚫-free north-star COW row
