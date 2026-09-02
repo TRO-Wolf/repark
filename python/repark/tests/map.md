@@ -73,12 +73,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   callers now set `to_branch` (RP-5 consumes F-6).
   pins: rp-5-fork-repin/C-004
   invokes `to_branch`; Iceberg fixture bytes stay flat vs `origin/main`. pins: rp-4-fork-repin/C-004
-- [test_v3_cow_dml.py](test_v3_cow_dml.py) — **RP-6 lift:** facade Spark `.sql()` UPDATE
-  and sequential COW DELETE keep `_row_id`; MERGE matched-update still refuses `V3-COW-1`
-  because the RePark-owned MERGE writer reassigns; created-v3 UPDATE Spark-equal; MOR
-  first DELETE commits a Puffin DV and the second merges. RP-4 six-file
-  `rewrite_data_files` keeps `_row_id` / seq on `to_arrow`.
-  pins: rp-6-fork-repin/C-002, C-003; rp-4-fork-repin/C-003
+- [test_v3_cow_dml.py](test_v3_cow_dml.py) — **V3-7 lift:** facade Spark `.sql()` UPDATE,
+  sequential COW DELETE, and MERGE matched-update keep `_row_id`; created-v3 UPDATE and
+  MERGE Spark-equal; subquery-WHERE UPDATE/DELETE stay `V3-COW-1` with rows unchanged;
+  MOR first DELETE commits a Puffin DV and the second merges. RP-4
+  six-file `rewrite_data_files` keeps `_row_id` / seq on `to_arrow`.
+  pins: v3-7-merge-lineage/C-002; rp-6-fork-repin/C-002, C-003; rp-4-fork-repin/C-003
 - [test_ref_branch_tag_wap.py](test_ref_branch_tag_wap.py) — **REF:** the facade rows for
   branch/tag retention and the refused doors — both `WITH SNAPSHOT RETENTION` halves at the
   oracle's values, the reversed order refusing, write-to-branch landing on the named branch
@@ -104,7 +104,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the Spark-written partitioned v3 DV fixture and the equality-delete + DV fixture;
   live rows, partition prune, `.delete_files` content 1/2; RP-3 C-007 CALL still refuses
   live DVs. pins: rp-3-fork-repin/C-007, C-011
-- [test_v3_live_oracle.py](test_v3_live_oracle.py) — **V3E-5 (2026-08-27):** nightly live oracle for the two V3E-3 fixtures — `REPARK_PARITY_LIVE=1` repark == Spark on partitioned-DV prune and equality-delete alongside DV, plus `.delete_files` kinds. RP-6: `test_partitioned_dv_update_commits_and_rewrite_still_refuses` pins Spark-equal `(id, _row_id, seq)` after live-DV UPDATE; `rewrite_position_delete_files` still refuses with rows and fixture bytes unchanged after the UPDATE. JVM-free twins stay in `test_v3e3_fixtures.py`. Critic remediation (2026-08-27): prune1 on Spark, combined DirLock, exact content sets, mirrored format, GAV full equality, version sort, COW, `py-format` single-line, meta-pin now asserts archive/dual-wire/diff allowlist. Formal CCC + cargo-deny/wheel remediation (2026-08-28): `chacha20` yanked and `thiserror` duplicate `skip`. PLAN-1 makes the ledger lookup lifecycle-aware across staging, completed, and archive, and checks the landed #253 commit instead of the current branch. **Nightly fix (2026-09-01):** the three live helpers now qualify `CALL <catalog>.system.register_table` through `LIFECYCLE_SPARK_CATALOG`; unqualified, Spark resolved it against `spark_catalog` and the CI leg had been red since its first run (2026-08-28). The north-star meta-pin now checks the row cites V3E-5 and the oracle version regardless of its status glyph, so an honest ⚠ does not red it.
+- [test_v3_live_oracle.py](test_v3_live_oracle.py) — **V3E-5 (2026-08-27):** nightly live oracle for the two V3E-3 fixtures — `REPARK_PARITY_LIVE=1` repark == Spark on partitioned-DV prune and equality-delete alongside DV, plus `.delete_files` kinds. RP-6: `test_partitioned_dv_update_commits_and_rewrite_still_refuses` pins Spark-equal `(id, _row_id, seq)` after live-DV UPDATE; `rewrite_position_delete_files` still refuses with rows and fixture bytes unchanged after the UPDATE. JVM-free twins stay in `test_v3e3_fixtures.py`. Critic remediation (2026-08-27): prune1 on Spark, combined DirLock, exact content sets, mirrored format, GAV full equality, version sort, COW, `py-format` single-line, meta-pin now asserts archive/dual-wire/diff allowlist. Formal CCC + cargo-deny/wheel remediation (2026-08-28): `chacha20` yanked and `thiserror` duplicate `skip`. PLAN-1 makes the ledger lookup lifecycle-aware across staging, completed, and archive, and checks the landed #253 commit instead of the current branch. **Nightly fix (2026-09-01):** the three live helpers now qualify `CALL <catalog>.system.register_table` through `LIFECYCLE_SPARK_CATALOG`; unqualified, Spark resolved it against `spark_catalog` and the CI leg had been red since its first run (2026-08-28). The north-star meta-pin now checks the row cites V3E-5 and the oracle version regardless of its status glyph, so an honest ⚠ does not red it. V3-7: `test_v3_merge_matched_update_live_cow_and_mor` cites the completed ledger transcript (not `/tmp`) and live-gates COW/MoR matched-UPDATE MERGE.
 - [test_v3_dv_compaction.py](test_v3_dv_compaction.py) — **V3-5:** facade six-file
   v3 MOR compact drops six Puffin DVs (`removed_delete_files_count = 6`,
   Arrow int32); `rewrite_position_delete_files` still refuses (`B-MOR-3`);

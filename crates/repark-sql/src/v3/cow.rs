@@ -1,6 +1,6 @@
 //! Model: Claude Fable 5
-//! ANSI-door pins: plain-`WHERE` UPDATE / DELETE keep `_row_id`; MERGE matched-update
-//! and subquery-WHERE DML still refuse `V3-COW-1`
+//! ANSI-door pins: plain-`WHERE` UPDATE / DELETE / MERGE keep `_row_id`; subquery-WHERE
+//! DML still refuses `V3-COW-1`
 //! pins: v3r-1-rulings/C-001, C-002, C-003, C-004, C-005
 //! pins: rp-2-fork-repin/C-003, C-005
 //! pins: rp-3-fork-repin/C-004, C-008
@@ -342,8 +342,31 @@ async fn created_v3_cow_update_keeps_row_id() {
 }
 
 #[tokio::test]
-async fn adopted_v3_cow_merge_matched_update_still_refuses() {
-    let _: &str = "pins: rp-6-fork-repin/C-002";
+async fn created_v3_cow_merge_matched_update_keeps_row_id() {
+    let _: &str = "pins: v3-7-merge-lineage/C-002";
+    let door = door_with_v3_opt_in().await;
+    door.ok(&format!(
+        "CREATE TABLE ice.sales.created_mrg (id INT, name VARCHAR) WITH ({COW_V3})"
+    ))
+    .await;
+    door.ok("INSERT INTO ice.sales.created_mrg VALUES (1, 'a'), (2, 'b'), (3, 'c')")
+        .await;
+    door.ok(
+        "MERGE INTO ice.sales.created_mrg AS t USING (SELECT 2 AS id, \
+         CAST('m' AS VARCHAR) AS name) AS s ON t.id = s.id \
+         WHEN MATCHED THEN UPDATE SET name = s.name",
+    )
+    .await;
+    assert_eq!(
+        door.live_triples("created_mrg").await,
+        vec![(1, 0, 1), (2, 1, 2), (3, 2, 1)]
+    );
+    assert_eq!(door.lineage("created_mrg").await, (6, Some(3), Some(3)));
+}
+
+#[tokio::test]
+async fn adopted_v3_cow_merge_matched_update_keeps_row_id() {
+    let _: &str = "pins: v3-7-merge-lineage/C-002";
     let door = door_with_v3_opt_in().await;
     adopt_v3(&door, "seed_mrg", "adopt_mrg", UNSET_MERGE_V3).await;
     assert!(
@@ -357,21 +380,21 @@ async fn adopted_v3_cow_merge_matched_update_still_refuses() {
     );
     adopt_cow_v3(&door, "seed_mrg2", "adopt_mrg2").await;
     for table in ["adopt_mrg", "adopt_mrg2"] {
-        let err = door
-            .err(&format!(
-                "MERGE INTO ice.sales.{table} AS t USING (SELECT 2 AS id, \
-                 CAST('m' AS VARCHAR) AS name) AS s ON t.id = s.id \
-                 WHEN MATCHED THEN UPDATE SET name = s.name"
-            ))
-            .await;
-        assert!(
-            err.contains("V3-COW-1") && err.contains("reassigns"),
-            "MERGE keep-refusal, got: {err}"
-        );
+        door.ok(&format!(
+            "MERGE INTO ice.sales.{table} AS t USING (SELECT 2 AS id, \
+             CAST('m' AS VARCHAR) AS name) AS s ON t.id = s.id \
+             WHEN MATCHED THEN UPDATE SET name = s.name"
+        ))
+        .await;
         assert_eq!(
             door.live_pairs(table).await,
-            vec![(1, "a".into()), (2, "b".into()), (3, "c".into())]
+            vec![(1, "a".into()), (2, "m".into()), (3, "c".into())]
         );
+        assert_eq!(
+            door.live_triples(table).await,
+            vec![(1, 0, 1), (2, 1, 2), (3, 2, 1)]
+        );
+        assert_eq!(door.lineage(table).await, (6, Some(3), Some(3)));
     }
 }
 
@@ -399,7 +422,8 @@ async fn v2_cow_delete_still_commits_control() {
 /// pins: v3r-1-rulings/C-004
 /// pins: v3-3-dml/C-002
 #[tokio::test]
-async fn adopted_v3_mor_merge_still_refuses() {
+async fn adopted_v3_mor_merge_matched_update_keeps_row_id() {
+    let _: &str = "pins: v3-7-merge-lineage/C-002";
     let door = door_with_v3_opt_in().await;
     door.ok("CREATE TABLE ice.sales.morv3 (id INT, name VARCHAR) WITH (\
          format_version = 3, extra_properties = MAP(\
@@ -429,20 +453,24 @@ async fn adopted_v3_mor_merge_still_refuses() {
     )
     .await
     .expect("invalidate after register_table");
-    let err = door
-        .err(
-            "MERGE INTO ice.sales.adopt_mor AS t USING (SELECT 1 AS id, CAST('z' AS VARCHAR) AS name) AS s \
-             ON t.id = s.id WHEN MATCHED THEN UPDATE SET name = s.name",
-        )
-        .await;
     assert_eq!(
         door.table("adopt_mor").await.metadata().format_version(),
         FormatVersion::V3
     );
-    assert!(
-        err.contains("this table is V3") && err.contains("deletion vectors"),
-        "MoR refuse must name format V3: {err}"
+    door.ok(
+        "MERGE INTO ice.sales.adopt_mor AS t USING (SELECT 2 AS id, CAST('m' AS VARCHAR) AS name) AS s \
+         ON t.id = s.id WHEN MATCHED THEN UPDATE SET name = s.name",
+    )
+    .await;
+    assert_eq!(
+        door.live_pairs("adopt_mor").await,
+        vec![(1, "a".into()), (2, "m".into()), (3, "c".into())]
     );
+    assert_eq!(
+        door.live_triples("adopt_mor").await,
+        vec![(1, 0, 1), (2, 1, 2), (3, 2, 1)]
+    );
+    assert_eq!(door.lineage("adopt_mor").await, (4, Some(3), Some(1)));
 }
 
 #[tokio::test]

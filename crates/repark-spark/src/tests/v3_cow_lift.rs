@@ -279,3 +279,384 @@ async fn adopted_v3_mor_update_then_delete_keeps_survivor_row_ids() {
         vec![(1, 0, 1), (3, 2, 1)]
     );
 }
+
+fn merge_sql(table: &str, body: &str) -> String {
+    format!("MERGE INTO ice.sales.{table} AS t USING {body}")
+}
+
+async fn assert_file_layout(
+    catalogs: &CatalogRegistry,
+    table: &str,
+    data_files: usize,
+    delete_files: usize,
+    manifests: usize,
+) {
+    assert_eq!(
+        v3_cow::live_data_file_count(catalogs, table).await,
+        data_files
+    );
+    assert_eq!(
+        v3_cow::live_delete_file_count(catalogs, table).await,
+        delete_files
+    );
+    assert_eq!(
+        v3_cow::live_manifest_count(catalogs, table).await,
+        manifests
+    );
+}
+
+#[tokio::test]
+async fn created_v3_cow_merge_matched_update_keeps_row_id() {
+    let _: &str = "pins: v3-7-merge-lineage/C-002";
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    create_v3(&ctx, &catalogs, "created_mrg", COW_V3).await;
+    run(
+        &ctx,
+        &catalogs,
+        &merge_sql(
+            "created_mrg",
+            "(SELECT 2 AS id, 'm' AS name) AS s ON t.id = s.id \
+             WHEN MATCHED THEN UPDATE SET t.name = s.name",
+        ),
+    )
+    .await;
+    assert_eq!(
+        v3_cow::lineage_triples(&ctx, &catalogs, "created_mrg").await,
+        vec![(1, 0, 1), (2, 1, 2), (3, 2, 1)]
+    );
+    assert_eq!(
+        v3_cow::lineage(&catalogs, "created_mrg").await,
+        Lineage {
+            next_row_id: 6,
+            snapshot_first_row_id: Some(3),
+            snapshot_added_rows: Some(3),
+        }
+    );
+    assert_file_layout(&catalogs, "created_mrg", 1, 0, 2).await;
+}
+
+#[tokio::test]
+async fn created_v3_mor_merge_matched_update_keeps_row_id() {
+    let _: &str = "pins: v3-7-merge-lineage/C-002";
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    create_v3(
+        &ctx,
+        &catalogs,
+        "created_mmrg",
+        "'format-version' = '3', 'write.merge.mode' = 'merge-on-read'",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        &merge_sql(
+            "created_mmrg",
+            "(SELECT 2 AS id, 'm' AS name) AS s ON t.id = s.id \
+             WHEN MATCHED THEN UPDATE SET t.name = s.name",
+        ),
+    )
+    .await;
+    assert_eq!(
+        v3_cow::lineage_triples(&ctx, &catalogs, "created_mmrg").await,
+        vec![(1, 0, 1), (2, 1, 2), (3, 2, 1)]
+    );
+    assert_eq!(
+        v3_cow::lineage(&catalogs, "created_mmrg").await,
+        Lineage {
+            next_row_id: 4,
+            snapshot_first_row_id: Some(3),
+            snapshot_added_rows: Some(1),
+        }
+    );
+    assert_file_layout(&catalogs, "created_mmrg", 2, 1, 3).await;
+}
+
+#[tokio::test]
+async fn adopted_v3_cow_merge_matched_delete_keeps_survivor_row_id() {
+    let _: &str = "pins: v3-7-merge-lineage/C-002";
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    v3_cow::adopt_cow_v3(&ctx, &catalogs, "seed_md", "adopt_md").await;
+    run(
+        &ctx,
+        &catalogs,
+        &merge_sql(
+            "adopt_md",
+            "(SELECT 2 AS id) AS s ON t.id = s.id WHEN MATCHED THEN DELETE",
+        ),
+    )
+    .await;
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.adopt_md").await,
+        vec![(1, "a".into()), (3, "c".into())]
+    );
+    assert_eq!(
+        v3_cow::lineage_triples(&ctx, &catalogs, "adopt_md").await,
+        vec![(1, 0, 1), (3, 2, 1)]
+    );
+    assert_eq!(
+        v3_cow::lineage(&catalogs, "adopt_md").await,
+        Lineage {
+            next_row_id: 5,
+            snapshot_first_row_id: Some(3),
+            snapshot_added_rows: Some(2),
+        }
+    );
+    assert_file_layout(&catalogs, "adopt_md", 1, 0, 2).await;
+}
+
+#[tokio::test]
+async fn adopted_v3_cow_merge_not_matched_insert_assigns_new_row_id() {
+    let _: &str = "pins: v3-7-merge-lineage/C-002";
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    v3_cow::adopt_cow_v3(&ctx, &catalogs, "seed_ins", "adopt_ins").await;
+    run(
+        &ctx,
+        &catalogs,
+        &merge_sql(
+            "adopt_ins",
+            "(SELECT 4 AS id, 'd' AS name) AS s ON t.id = s.id \
+             WHEN NOT MATCHED THEN INSERT (id, name) VALUES (s.id, s.name)",
+        ),
+    )
+    .await;
+    assert_eq!(
+        v3_cow::lineage_triples(&ctx, &catalogs, "adopt_ins").await,
+        vec![(1, 0, 1), (2, 1, 1), (3, 2, 1), (4, 3, 2)]
+    );
+    assert_eq!(
+        v3_cow::lineage(&catalogs, "adopt_ins").await,
+        Lineage {
+            next_row_id: 4,
+            snapshot_first_row_id: Some(3),
+            snapshot_added_rows: Some(1),
+        }
+    );
+    assert_file_layout(&catalogs, "adopt_ins", 2, 0, 2).await;
+}
+
+#[tokio::test]
+async fn adopted_v3_cow_merge_nmbs_delete_keeps_survivor_row_id() {
+    let _: &str = "pins: v3-7-merge-lineage/C-002";
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    v3_cow::adopt_cow_v3(&ctx, &catalogs, "seed_nmbs", "adopt_nmbs").await;
+    run(
+        &ctx,
+        &catalogs,
+        &merge_sql(
+            "adopt_nmbs",
+            "(SELECT 1 AS id, 'a' AS name UNION ALL SELECT 2 AS id, 'b' AS name) AS s \
+             ON t.id = s.id WHEN NOT MATCHED BY SOURCE THEN DELETE",
+        ),
+    )
+    .await;
+    assert_eq!(
+        v3_cow::lineage_triples(&ctx, &catalogs, "adopt_nmbs").await,
+        vec![(1, 0, 1), (2, 1, 1)]
+    );
+    assert_eq!(
+        v3_cow::lineage(&catalogs, "adopt_nmbs").await,
+        Lineage {
+            next_row_id: 5,
+            snapshot_first_row_id: Some(3),
+            snapshot_added_rows: Some(2),
+        }
+    );
+    assert_file_layout(&catalogs, "adopt_nmbs", 1, 0, 2).await;
+}
+
+#[tokio::test]
+async fn adopted_v3_cow_merge_mixed_keeps_updated_row_id_and_assigns_insert() {
+    let _: &str = "pins: v3-7-merge-lineage/C-002";
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    v3_cow::adopt_cow_v3(&ctx, &catalogs, "seed_mix", "adopt_mix").await;
+    run(
+        &ctx,
+        &catalogs,
+        &merge_sql(
+            "adopt_mix",
+            "(SELECT 2 AS id, 'm' AS name, 'upd' AS op UNION ALL \
+             SELECT 3 AS id, 'x' AS name, 'del' AS op UNION ALL \
+             SELECT 4 AS id, 'd' AS name, 'ins' AS op) AS s ON t.id = s.id \
+             WHEN MATCHED AND s.op = 'del' THEN DELETE \
+             WHEN MATCHED THEN UPDATE SET t.name = s.name \
+             WHEN NOT MATCHED THEN INSERT (id, name) VALUES (s.id, s.name) \
+             WHEN NOT MATCHED BY SOURCE THEN DELETE",
+        ),
+    )
+    .await;
+    assert_eq!(
+        v3_cow::lineage_triples(&ctx, &catalogs, "adopt_mix").await,
+        vec![(2, 1, 2), (4, 4, 2)]
+    );
+    assert_eq!(
+        v3_cow::lineage(&catalogs, "adopt_mix").await,
+        Lineage {
+            next_row_id: 5,
+            snapshot_first_row_id: Some(3),
+            snapshot_added_rows: Some(2),
+        }
+    );
+    assert_file_layout(&catalogs, "adopt_mix", 2, 0, 2).await;
+}
+
+#[tokio::test]
+async fn adopted_v3_mor_merge_matched_delete_keeps_survivor_row_id() {
+    let _: &str = "pins: v3-7-merge-lineage/C-002";
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    v3_cow::adopt_v3(
+        &ctx,
+        &catalogs,
+        "seed_mmd",
+        "adopt_mmd",
+        "'format-version' = '3', 'write.merge.mode' = 'merge-on-read'",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        &merge_sql(
+            "adopt_mmd",
+            "(SELECT 2 AS id) AS s ON t.id = s.id WHEN MATCHED THEN DELETE",
+        ),
+    )
+    .await;
+    assert_eq!(
+        v3_cow::lineage_triples(&ctx, &catalogs, "adopt_mmd").await,
+        vec![(1, 0, 1), (3, 2, 1)]
+    );
+    assert_eq!(
+        v3_cow::lineage(&catalogs, "adopt_mmd").await,
+        Lineage {
+            next_row_id: 3,
+            snapshot_first_row_id: Some(3),
+            snapshot_added_rows: Some(0),
+        }
+    );
+    assert_file_layout(&catalogs, "adopt_mmd", 1, 1, 2).await;
+}
+
+#[tokio::test]
+async fn adopted_v3_mor_merge_mixed_keeps_updated_row_id_and_assigns_insert() {
+    let _: &str = "pins: v3-7-merge-lineage/C-002";
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    v3_cow::adopt_v3(
+        &ctx,
+        &catalogs,
+        "seed_mmix",
+        "adopt_mmix",
+        "'format-version' = '3', 'write.merge.mode' = 'merge-on-read'",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        &merge_sql(
+            "adopt_mmix",
+            "(SELECT 2 AS id, 'm' AS name, 'upd' AS op UNION ALL \
+             SELECT 3 AS id, 'x' AS name, 'del' AS op UNION ALL \
+             SELECT 4 AS id, 'd' AS name, 'ins' AS op) AS s ON t.id = s.id \
+             WHEN MATCHED AND s.op = 'del' THEN DELETE \
+             WHEN MATCHED THEN UPDATE SET t.name = s.name \
+             WHEN NOT MATCHED THEN INSERT (id, name) VALUES (s.id, s.name) \
+             WHEN NOT MATCHED BY SOURCE THEN DELETE",
+        ),
+    )
+    .await;
+    assert_eq!(
+        v3_cow::lineage_triples(&ctx, &catalogs, "adopt_mmix").await,
+        vec![(2, 1, 2), (4, 4, 2)]
+    );
+    assert_eq!(
+        v3_cow::lineage(&catalogs, "adopt_mmix").await,
+        Lineage {
+            next_row_id: 5,
+            snapshot_first_row_id: Some(3),
+            snapshot_added_rows: Some(2),
+        }
+    );
+    assert_file_layout(&catalogs, "adopt_mmix", 3, 1, 3).await;
+}
+
+#[tokio::test]
+async fn adopted_v3_mor_merge_not_matched_insert_assigns_new_row_id() {
+    let _: &str = "pins: v3-7-merge-lineage/C-002";
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    v3_cow::adopt_v3(
+        &ctx,
+        &catalogs,
+        "seed_mins",
+        "adopt_mins",
+        "'format-version' = '3', 'write.merge.mode' = 'merge-on-read'",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        &merge_sql(
+            "adopt_mins",
+            "(SELECT 4 AS id, 'd' AS name) AS s ON t.id = s.id \
+             WHEN NOT MATCHED THEN INSERT (id, name) VALUES (s.id, s.name)",
+        ),
+    )
+    .await;
+    assert_eq!(
+        v3_cow::lineage_triples(&ctx, &catalogs, "adopt_mins").await,
+        vec![(1, 0, 1), (2, 1, 1), (3, 2, 1), (4, 3, 2)]
+    );
+    assert_eq!(
+        v3_cow::lineage(&catalogs, "adopt_mins").await,
+        Lineage {
+            next_row_id: 4,
+            snapshot_first_row_id: Some(3),
+            snapshot_added_rows: Some(1),
+        }
+    );
+    assert_file_layout(&catalogs, "adopt_mins", 2, 0, 2).await;
+}
+
+#[tokio::test]
+async fn adopted_v3_mor_merge_nmbs_delete_keeps_survivor_row_id() {
+    let _: &str = "pins: v3-7-merge-lineage/C-002";
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    v3_cow::adopt_v3(
+        &ctx,
+        &catalogs,
+        "seed_mnmbs",
+        "adopt_mnmbs",
+        "'format-version' = '3', 'write.merge.mode' = 'merge-on-read'",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        &merge_sql(
+            "adopt_mnmbs",
+            "(SELECT 1 AS id, 'a' AS name UNION ALL SELECT 2 AS id, 'b' AS name) AS s \
+             ON t.id = s.id WHEN NOT MATCHED BY SOURCE THEN DELETE",
+        ),
+    )
+    .await;
+    assert_eq!(
+        v3_cow::lineage_triples(&ctx, &catalogs, "adopt_mnmbs").await,
+        vec![(1, 0, 1), (2, 1, 1)]
+    );
+    assert_eq!(
+        v3_cow::lineage(&catalogs, "adopt_mnmbs").await,
+        Lineage {
+            next_row_id: 3,
+            snapshot_first_row_id: Some(3),
+            snapshot_added_rows: Some(0),
+        }
+    );
+    assert_file_layout(&catalogs, "adopt_mnmbs", 1, 1, 2).await;
+}

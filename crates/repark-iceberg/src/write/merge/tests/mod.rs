@@ -1,3 +1,4 @@
+mod lineage;
 mod merge;
 mod nmbs;
 mod occ;

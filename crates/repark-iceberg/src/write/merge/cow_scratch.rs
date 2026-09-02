@@ -12,9 +12,7 @@ use datafusion::prelude::SessionContext;
 use iceberg::table::Table;
 use uuid::Uuid;
 
-use super::{
-    TargetScanStream, deregister_merge_scratch, register_streaming_target, scratch_schema,
-};
+use super::{TargetScanStream, deregister_merge_scratch, register_streaming_target};
 use crate::write::file_scoped_rewrite::allowlist_from_paths;
 use crate::write::scan_concurrency::scan_concurrency_from_ctx;
 use crate::write::scan_prune::file_scoped_rewrite_from_ctx;
@@ -128,7 +126,7 @@ pub(super) fn maybe_register_file_scoped_rewrite_target(
         return Ok(None);
     }
     let allowlist = allowlist_from_paths(affected);
-    let scratch = scratch_schema(write_schema);
+    let scratch = super::row_lineage::scratch_schema_for_table(write_schema, table);
     let scan_concurrency = scan_concurrency_from_ctx(ctx);
     let source: Arc<dyn PartitionStream> = Arc::new(TargetScanStream::new(
         table.clone(),

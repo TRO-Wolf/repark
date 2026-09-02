@@ -69,7 +69,7 @@ def test_live_slate_retires_v3e_5_and_queues_the_safe_work() -> None:
     status = _read("STATUS.md")
     assert "V3E-5 added the nightly v3 live-oracle leg" in status
     assert "**V3-6 (2026-09-01):** opt-in v3 CREATE consumes fork `timestamp_ns`" in status
-    assert "**Next:** MERGE still reassigns" in status
+    assert "**Next:** subquery-`WHERE` DML still refuses" in status
     assert "`V3-DANGLE-1` FIXED" in status
 
 

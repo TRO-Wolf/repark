@@ -5,7 +5,7 @@
 //! pins: rp-2-fork-repin/C-001, C-004, C-007, C-008
 //! pins: rp-3-fork-repin/C-004
 //! pins: v3-3-dml/C-001, C-002
-//! Pins format-v3 UPDATE/DELETE Spark-equal lineage; MERGE still refuses V3-COW-1.
+//! Pins format-v3 UPDATE/DELETE/MERGE Spark-equal lineage; subquery-WHERE DML still refuses V3-COW-1.
 
 use super::super::*;
 use super::common::*;
@@ -445,8 +445,8 @@ async fn v3_cow_update_on_branch_keeps_row_id_and_leaves_main() {
 }
 
 #[tokio::test]
-async fn adopted_v3_cow_merge_matched_update_still_refuses() {
-    let _: &str = "pins: rp-6-fork-repin/C-002";
+async fn adopted_v3_cow_merge_matched_update_keeps_row_id() {
+    let _: &str = "pins: v3-7-merge-lineage/C-002";
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
     adopt_v3(&ctx, &catalogs, "seed_mrg", "adopt_mrg", UNSET_MERGE_V3).await;
@@ -461,7 +461,7 @@ async fn adopted_v3_cow_merge_matched_update_still_refuses() {
     );
     adopt_cow_v3(&ctx, &catalogs, "seed_mrg2", "adopt_mrg2").await;
     for table in ["adopt_mrg", "adopt_mrg2"] {
-        let err = execute(
+        run(
             &ctx,
             &catalogs,
             &format!(
@@ -469,17 +469,26 @@ async fn adopted_v3_cow_merge_matched_update_still_refuses() {
                  ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.name = s.name"
             ),
         )
-        .await
-        .expect_err("RePark-owned MERGE still reassigns v3 row ids")
-        .to_string();
-        assert!(
-            err.contains("V3-COW-1") && err.contains("reassigns"),
-            "MERGE keep-refusal, got: {err}"
-        );
+        .await;
         assert_eq!(
             table_rows(&ctx, &catalogs, &format!("ice.sales.{table}")).await,
-            vec![(1, "a".into()), (2, "b".into()), (3, "c".into())]
+            vec![(1, "a".into()), (2, "m".into()), (3, "c".into())]
         );
+        assert_eq!(
+            lineage_triples(&ctx, &catalogs, table).await,
+            vec![(1, 0, 1), (2, 1, 2), (3, 2, 1)]
+        );
+        assert_eq!(
+            lineage(&catalogs, table).await,
+            Lineage {
+                next_row_id: 6,
+                snapshot_first_row_id: Some(3),
+                snapshot_added_rows: Some(3),
+            }
+        );
+        assert_eq!(live_data_file_count(&catalogs, table).await, 1);
+        assert_eq!(live_manifest_count(&catalogs, table).await, 2);
+        assert_still_v3(&load_sales(&catalogs, table).await);
     }
 }
 
@@ -520,7 +529,8 @@ async fn v2_cow_delete_still_commits_control() {
 /// pins: v3r-1-rulings/C-004
 /// pins: v3-3-dml/C-002
 #[tokio::test]
-async fn adopted_v3_mor_merge_still_refuses() {
+async fn adopted_v3_mor_merge_matched_update_keeps_row_id() {
+    let _: &str = "pins: v3-7-merge-lineage/C-002";
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
     run(
@@ -561,19 +571,32 @@ async fn adopted_v3_mor_merge_still_refuses() {
             .format_version(),
         FormatVersion::V3
     );
-    let err = execute(
+    run(
         &ctx,
         &catalogs,
-        "MERGE INTO ice.sales.adopt_mor AS t USING (SELECT 1 AS id, 'z' AS name) AS s \
+        "MERGE INTO ice.sales.adopt_mor AS t USING (SELECT 2 AS id, 'm' AS name) AS s \
          ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.name = s.name",
     )
-    .await
-    .expect_err("MoR MERGE on v3 must still refuse")
-    .to_string();
-    assert!(
-        err.contains("this table is V3") && err.contains("deletion vectors"),
-        "MoR refuse must name format V3: {err}"
+    .await;
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.adopt_mor").await,
+        vec![(1, "a".into()), (2, "m".into()), (3, "c".into())]
     );
+    assert_eq!(
+        lineage_triples(&ctx, &catalogs, "adopt_mor").await,
+        vec![(1, 0, 1), (2, 1, 2), (3, 2, 1)]
+    );
+    assert_eq!(
+        lineage(&catalogs, "adopt_mor").await,
+        Lineage {
+            next_row_id: 4,
+            snapshot_first_row_id: Some(3),
+            snapshot_added_rows: Some(1),
+        }
+    );
+    assert_eq!(live_data_file_count(&catalogs, "adopt_mor").await, 2);
+    assert_eq!(live_delete_file_count(&catalogs, "adopt_mor").await, 1);
+    assert_eq!(live_manifest_count(&catalogs, "adopt_mor").await, 3);
 }
 
 /// pins: v3e-1-2-cow-oracle/C-009
@@ -802,5 +825,39 @@ async fn adopted_v3_padded_merge_on_read_update_keeps_row_id() {
     assert_eq!(
         lineage_triples(&ctx, &catalogs, "adopt_pad").await,
         vec![(1, 0, 1), (2, 1, 2), (3, 2, 1)]
+    );
+}
+
+#[tokio::test]
+async fn adopted_v3_cow_subquery_where_dml_still_refuses() {
+    let _: &str = "pins: v3-7-merge-lineage/C-002";
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    adopt_cow_v3(&ctx, &catalogs, "seed_sub", "adopt_sub").await;
+    let err = execute(
+        &ctx,
+        &catalogs,
+        "UPDATE ice.sales.adopt_sub SET name = 'x' WHERE id IN \
+         (SELECT id FROM ice.sales.adopt_sub WHERE id = 2)",
+    )
+    .await
+    .expect_err("subquery UPDATE uses the MERGE writer")
+    .to_string();
+    assert!(
+        err.contains("V3-COW-1") && err.contains("reassigns"),
+        "subquery UPDATE keep-refusal, got: {err}"
+    );
+    let err = execute(
+        &ctx,
+        &catalogs,
+        "DELETE FROM ice.sales.adopt_sub WHERE id IN \
+         (SELECT id FROM ice.sales.adopt_sub WHERE id = 2)",
+    )
+    .await
+    .expect_err("subquery DELETE uses the MERGE writer")
+    .to_string();
+    assert!(
+        err.contains("V3-COW-1") && err.contains("reassigns"),
+        "subquery DELETE keep-refusal, got: {err}"
     );
 }

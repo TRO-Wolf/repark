@@ -1,5 +1,9 @@
 # map — scripts/
 
+V3-7 (2026-09-02): `check_rust_file_size.py` `write/merge/mod.rs` 1892→1889 and
+`write/merge/tests/merge.rs` 1091→1068 (lineage SQL extracted; test helper).
+pins: v3-7-merge-lineage/C-001
+
 RP-6 (2026-09-01): `check_rust_file_size.py` `write/merge/mod.rs` 1894→1892 and
 `write/predicate_dml.rs` 1227→1226 (comment-only drop on the V3-COW-1 seats).
 pins: rp-6-fork-repin/C-002

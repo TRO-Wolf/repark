@@ -8,7 +8,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use datafusion::arrow::array::{Array, ArrayRef, Int64Array, RecordBatch, StringArray};
 use datafusion::arrow::compute::{CastOptions, cast_with_options};
-use datafusion::arrow::datatypes::{DataType, Field, Schema as ArrowSchema, SchemaRef};
+#[cfg(test)]
+pub(super) use datafusion::arrow::datatypes::Field;
+use datafusion::arrow::datatypes::{DataType, Schema as ArrowSchema, SchemaRef};
 use datafusion::catalog::streaming::StreamingTable;
 use datafusion::error::{DataFusionError, Result};
 use datafusion::execution::TaskContext;
@@ -43,6 +45,7 @@ mod cow_scratch;
 mod dv_close;
 mod insert;
 mod not_matched_by_source;
+mod row_lineage;
 mod snapshot_commit;
 use insert::{
     insert_projection, insert_stream_checked, store_assignment_then_sql, update_stream_checked,
@@ -167,7 +170,7 @@ pub async fn execute_merge(
     let snapshot_id =
         crate::write::commit_target::snapshot_id_for_commit(&table, spec.commit_branch.as_deref());
 
-    let scratch = scratch_schema(&write_schema);
+    let scratch = row_lineage::scratch_schema_for_table(&write_schema, &table);
     // PERF-04: join-key min/max bounds may be pushed onto the primary target scan when safe.
     let file_scoped = file_scoped_rewrite_from_ctx(ctx);
     let residual = residual_join_key_filter(ctx, spec, &write_schema, mode, file_scoped).await?;
@@ -308,18 +311,8 @@ fn resolve_merge_mode(table: &Table) -> Result<MergeMode> {
         )));
     }
     match table.metadata().properties().get(MERGE_MODE_PROP) {
-        None => {
-            crate::write::row_lineage_guard::refuse_v3_cow_dml_that_would_reassign_row_lineage(
-                table,
-                "MERGE INTO",
-            )?;
-            return Ok(MergeMode::CopyOnWrite);
-        }
+        None => return Ok(MergeMode::CopyOnWrite),
         Some(mode) if mode.trim().eq_ignore_ascii_case("copy-on-write") => {
-            crate::write::row_lineage_guard::refuse_v3_cow_dml_that_would_reassign_row_lineage(
-                table,
-                "MERGE INTO",
-            )?;
             return Ok(MergeMode::CopyOnWrite);
         }
         Some(mode) if mode.trim().eq_ignore_ascii_case("merge-on-read") => {}
@@ -332,11 +325,11 @@ fn resolve_merge_mode(table: &Table) -> Result<MergeMode> {
     }
 
     let format_version = table.metadata().format_version();
-    if format_version != FormatVersion::V2 {
+    if format_version < FormatVersion::V2 {
         return Err(DataFusionError::NotImplemented(format!(
-            "merge-on-read MERGE INTO writes Parquet position deletes, which require a V2 table \
-             (this table is {format_version:?}; V1 has no delete files and V3 mandates deletion \
-             vectors, not yet supported) — use write.merge.mode = 'copy-on-write' instead"
+            "merge-on-read MERGE INTO writes Parquet position deletes on V2 and deletion vectors \
+             on V3 (this table is {format_version:?}; V1 has no delete files) — use \
+             write.merge.mode = 'copy-on-write' instead"
         )));
     }
     // pins: mw-9-delete-granularity/C-004 — refuse unknown granularity BEFORE any data write
@@ -509,14 +502,7 @@ async fn source_column_names(ctx: &SessionContext, spec: &MergeSpec) -> Result<V
 
 /// Scratch-target schema: every target data column, then `_file` (Utf8) and `_pos` (Int64).
 pub(super) fn scratch_schema(write_schema: &SchemaRef) -> SchemaRef {
-    let mut fields: Vec<Field> = write_schema
-        .fields()
-        .iter()
-        .map(|field| field.as_ref().clone())
-        .collect();
-    fields.push(Field::new(FILE_PATH_COL, DataType::Utf8, false));
-    fields.push(Field::new(POS_COL, DataType::Int64, false));
-    Arc::new(ArrowSchema::new(fields))
+    row_lineage::scratch_schema_with_lineage(write_schema, false)
 }
 
 /// Re-scannable partition stream over the pinned snapshot, replacing the full-target `MemTable`.
@@ -542,18 +528,16 @@ impl TargetScanStream {
         table: Table,
         snapshot_id: Option<i64>,
         scratch_schema: SchemaRef,
-        write_schema: &SchemaRef,
+        _write_schema: &SchemaRef,
         filter: Option<Predicate>,
         concurrency_limit: Option<usize>,
         file_path_allowlist: Option<std::sync::Arc<std::collections::HashSet<String>>>,
     ) -> Self {
-        let mut select_columns: Vec<String> = write_schema
+        let select_columns: Vec<String> = scratch_schema
             .fields()
             .iter()
             .map(|field| field.name().clone())
             .collect();
-        select_columns.push(FILE_PATH_COL.to_string());
-        select_columns.push(POS_COL.to_string());
         Self {
             table,
             snapshot_id,
@@ -693,6 +677,7 @@ async fn plan_and_commit(
         spec,
         target_name,
         match_flag: &match_flag,
+        carry_lineage: row_lineage::table_carries_merge_lineage(target.table),
     };
     // R-MERGE-ONEPASS Stage A: cardinality is folded into match discovery.
     match mode {
@@ -881,13 +866,18 @@ where
             if batch.num_rows() == 0 {
                 return Ok(None);
             }
-            Ok(Some(cast_one_batch_to_write_schema(&write_schema, &batch)?))
+            Ok(Some(row_lineage::attach_present_lineage(
+                cast_one_batch_to_write_schema(&write_schema, &batch)?,
+                &batch,
+            )?))
         }
     });
     // Pin the stream so partitioned/unpartitioned helpers get Unpin.
     let cast_stream = std::pin::pin!(cast_stream);
     if table.metadata().default_partition_spec().is_unpartitioned() {
         write_data_files_from_stream_with_concurrency(table, cast_stream, concurrency).await
+    } else if row_lineage::table_carries_merge_lineage(table) {
+        row_lineage::write_partitioned_lineage_files(table, cast_stream).await
     } else {
         crate::write::append::write_partitioned_data_files_from_stream_with_concurrency(
             table,
@@ -1137,6 +1127,7 @@ fn consume_matched_work_batch(
             5 + data_field_count
         )));
     }
+    let projected_field_count = batch.num_columns() - 5;
     let files = cast_with_options(batch.column(0), &DataType::Utf8, &strict_cast())?;
     let paths = files
         .as_any()
@@ -1204,17 +1195,21 @@ fn consume_matched_work_batch(
     }
     if !update_indices.is_empty() {
         // Slice UPDATE projection columns first, then take rows.
-        let data_fields: Vec<datafusion::arrow::datatypes::Field> = (0..data_field_count)
+        let data_fields: Vec<datafusion::arrow::datatypes::Field> = (0..projected_field_count)
             .map(|index| {
-                let source = write_schema.field(index);
-                datafusion::arrow::datatypes::Field::new(
-                    source.name(),
-                    batch.column(5 + index).data_type().clone(),
-                    source.is_nullable(),
-                )
+                if index < data_field_count {
+                    let source = write_schema.field(index);
+                    datafusion::arrow::datatypes::Field::new(
+                        source.name(),
+                        batch.column(5 + index).data_type().clone(),
+                        source.is_nullable(),
+                    )
+                } else {
+                    batch.schema().field(5 + index).as_ref().clone()
+                }
             })
             .collect();
-        let data_columns: Vec<ArrayRef> = (0..data_field_count)
+        let data_columns: Vec<ArrayRef> = (0..projected_field_count)
             .map(|index| batch.column(5 + index).clone())
             .collect();
         let data_batch =
@@ -1243,6 +1238,7 @@ struct MergeSql<'a> {
     target_name: &'a str,
     /// The per-execution match-sentinel column name (UUID-suffixed — see `MATCH_FLAG_PREFIX`).
     match_flag: &'a str,
+    carry_lineage: bool,
 }
 
 impl MergeSql<'_> {
@@ -1355,14 +1351,15 @@ impl MergeSql<'_> {
     /// Projection list for rewrite / `matched_work` / `updated_rows` — assignment maps built once.
     fn rewrite_projection(&self, write_schema: &ArrowSchema) -> String {
         let maps = self.update_assignment_lookup();
-        write_schema
+        let user = write_schema
             .fields()
             .iter()
             .map(|field| {
                 self.rewrite_column_with_maps(&maps, field.name(), Some(field.data_type()))
             })
             .collect::<Vec<_>>()
-            .join(", ")
+            .join(", ");
+        row_lineage::maybe_append_lineage_projection(self, user)
     }
 
     /// R-MERGE-ONEPASS Stage A: one grouped join pass — `match_count` + `is_mutated`.
@@ -1382,7 +1379,7 @@ impl MergeSql<'_> {
     }
 
     /// The disjunction "some WHEN MATCHED clause mutates this row".
-    fn mutated(&self) -> String {
+    pub(super) fn mutated(&self) -> String {
         self.spec
             .matched
             .iter()
@@ -1412,7 +1409,7 @@ impl MergeSql<'_> {
     }
 
     /// True when the row's FIRST applicable clause is an UPDATE.
-    fn update_applies(&self) -> String {
+    pub(super) fn update_applies(&self) -> String {
         let update_ids: Vec<String> = self
             .spec
             .matched
@@ -1677,7 +1674,7 @@ async fn build_unpartitioned_data_file_writer(table: &Table) -> Result<impl Iceb
         DataFileFormat::from_str(&table_props.write_format_default).map_err(iceberg_err)?;
     let parquet_builder = ParquetWriterBuilder::new_with_match_mode(
         crate::write::writer_props::writer_properties_for(table)?,
-        table.metadata().current_schema().clone(),
+        row_lineage::iceberg_parquet_schema(table)?,
         FieldMatchMode::Name,
     );
     let location_generator =

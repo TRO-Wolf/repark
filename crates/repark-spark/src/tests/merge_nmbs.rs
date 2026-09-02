@@ -321,7 +321,8 @@ async fn nmbs_update_store_assignment_reuses_merge_gate() {
 }
 
 #[tokio::test]
-async fn adopted_v3_nmbs_merge_stays_refused() {
+async fn adopted_v3_nmbs_merge_keeps_survivor_row_id() {
+    let _: &str = "pins: v3-7-merge-lineage/C-002";
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup_allow_create_format_version_3(&wh).await;
     run(
@@ -338,16 +339,21 @@ async fn adopted_v3_nmbs_merge_stays_refused() {
     )
     .await;
     register_source(&ctx, "nmbs_src", &[(1, "aa")]);
-    let err = execute(
+    run(
         &ctx,
         &catalogs,
         "MERGE INTO ice.sales.nmbs_v3 AS t USING nmbs_src AS s ON t.id = s.id \
          WHEN NOT MATCHED BY SOURCE THEN DELETE",
     )
-    .await
-    .unwrap_err()
-    .to_string();
-    assert!(err.contains("V3-COW-1"), "{err}");
+    .await;
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.nmbs_v3").await,
+        vec![(1, "a".into())]
+    );
+    assert_eq!(
+        super::v3_cow::lineage_triples(&ctx, &catalogs, "nmbs_v3").await,
+        vec![(1, 0, 1)]
+    );
 }
 
 #[tokio::test]

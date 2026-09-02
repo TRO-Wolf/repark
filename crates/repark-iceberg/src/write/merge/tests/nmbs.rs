@@ -35,11 +35,7 @@ fn spec_nmbs(matched: Vec<MatchedClause>, nmbs: Vec<NotMatchedBySourceClause>) -
 #[test]
 fn nmbs_delete_or_s_into_rewrite_where() {
     let spec = spec_nmbs(vec![delete(None)], vec![nmbs_delete(None)]);
-    let sql = MergeSql {
-        spec: &spec,
-        target_name: "scratch",
-        match_flag: "__repark_matched_t",
-    };
+    let sql = super::merge::merge_sql(&spec);
     let deleted = sql.delete_applies();
     assert!(
         deleted.contains("OR"),
@@ -56,11 +52,7 @@ fn nmbs_update_projects_else_branch() {
         vec![update(None, &[("name", "s.name")])],
         vec![nmbs_update(None, &[("name", "'gone'")])],
     );
-    let sql = MergeSql {
-        spec: &spec,
-        target_name: "scratch",
-        match_flag: "__repark_matched_t",
-    };
+    let sql = super::merge::merge_sql(&spec);
     let name_case = sql.rewrite_column("name");
     assert!(
         name_case.contains("'gone'"),

@@ -1,6 +1,6 @@
-"""V3 facade `.sql()` v3 DML pins: UPDATE and sequential COW DELETE keep `_row_id`;
-MERGE matched-update still refuses V3-COW-1 because the RePark-owned MERGE writer reassigns.
+"""V3 facade `.sql()` v3 DML pins: UPDATE, sequential COW DELETE, and MERGE keep `_row_id`.
 
+pins: v3-7-merge-lineage/C-002
 pins: rp-6-fork-repin/C-002, C-003
 pins: rp-2-fork-repin/C-003, C-005
 pins: rp-3-fork-repin/C-004
@@ -15,8 +15,6 @@ from pathlib import Path
 
 import pyarrow as pa
 import pytest
-
-from repark.errors import UnsupportedOperationException
 
 _ALLOW_CREATE_V3_KEY = "repark.sql.allowCreateFormatVersion3"
 _FORMAT_V3_ONLY = "'format-version' = '3'"
@@ -75,7 +73,7 @@ def _id_name_rows(table: pa.Table) -> list[tuple[int, str]]:
 def test_facade_adopted_v3_cow_dml_keeps_row_id(
     tmp_path: Path,
 ) -> None:
-    """Adopted v3 MERGE matched-update still refuses V3-COW-1; UPDATE keeps `_row_id`."""
+    """Adopted v3 MERGE matched-update and UPDATE keep `_row_id`."""
     from repark import ReparkSession
 
     spark = (
@@ -97,16 +95,26 @@ def test_facade_adopted_v3_cow_dml_keeps_row_id(
             "CALL ice.system.register_table("
             f"table => 'sales.adopt_mrg', metadata_file => '{metadata_file}')"
         )
-        with pytest.raises(UnsupportedOperationException, match="V3-COW-1") as merge_error:
-            spark.sql(
-                "MERGE INTO ice.sales.adopt_mrg AS t USING "
-                "(SELECT 2 AS id, 'm' AS name) AS s "
-                "ON t.id = s.id "
-                "WHEN MATCHED THEN UPDATE SET t.name = s.name"
-            ).collect()
-        assert "reassigns" in str(merge_error.value)
-        merged = spark.sql("SELECT id, name FROM ice.sales.adopt_mrg").to_arrow()
-        assert _id_name_rows(merged) == [(1, "a"), (2, "b"), (3, "c")]
+        spark.sql(
+            "MERGE INTO ice.sales.adopt_mrg AS t USING "
+            "(SELECT 2 AS id, 'm' AS name) AS s "
+            "ON t.id = s.id "
+            "WHEN MATCHED THEN UPDATE SET t.name = s.name"
+        ).collect()
+        merged = spark.sql(
+            "SELECT id, name, _row_id, _last_updated_sequence_number "
+            "FROM ice.sales.adopt_mrg ORDER BY id"
+        ).to_arrow()
+        assert _id_name_rows(merged) == [(1, "a"), (2, "m"), (3, "c")]
+        assert list(
+            zip(
+                merged.column("id").to_pylist(),
+                merged.column("_row_id").to_pylist(),
+                merged.column("_last_updated_sequence_number").to_pylist(),
+                strict=True,
+            )
+        ) == [(1, 0, 1), (2, 1, 2), (3, 2, 1)]
+        assert _current_lineage(_latest_version_uuid_metadata(sales, "seed_mrg")) == (6, 3, 3)
         spark.sql(
             "CREATE TABLE ice.sales.rw_lin (id INT) USING iceberg "
             f"TBLPROPERTIES ({_FORMAT_V3_ONLY})"
@@ -208,6 +216,45 @@ def test_facade_created_v3_cow_update_keeps_row_id(tmp_path: Path) -> None:
         spark.stop()
 
 
+def test_facade_created_v3_cow_merge_matched_update_keeps_row_id(tmp_path: Path) -> None:
+    """Created v3 COW MERGE matched-update keeps `_row_id` and bumps seq on the match."""
+    from repark import ReparkSession
+
+    spark = (
+        ReparkSession.builder.appName("v3-7-created-mrg")
+        .config(_ALLOW_CREATE_V3_KEY, "true")
+        .getOrCreate()
+    )
+    try:
+        spark.register_memory_catalog("ice", tmp_path)
+        spark.sql("CREATE NAMESPACE ice.sales")
+        spark.sql(
+            "CREATE TABLE ice.sales.created_mrg (id INT, name STRING) USING iceberg "
+            f"TBLPROPERTIES ({_COW_V3})"
+        )
+        spark.sql("INSERT INTO ice.sales.created_mrg VALUES (1, 'a'), (2, 'b'), (3, 'c')")
+        spark.sql(
+            "MERGE INTO ice.sales.created_mrg AS t USING "
+            "(SELECT 2 AS id, 'm' AS name) AS s "
+            "ON t.id = s.id "
+            "WHEN MATCHED THEN UPDATE SET t.name = s.name"
+        ).collect()
+        merged = spark.sql(
+            "SELECT id, _row_id, _last_updated_sequence_number "
+            "FROM ice.sales.created_mrg ORDER BY id"
+        ).to_arrow()
+        assert list(
+            zip(
+                merged.column("id").to_pylist(),
+                merged.column("_row_id").to_pylist(),
+                merged.column("_last_updated_sequence_number").to_pylist(),
+                strict=True,
+            )
+        ) == [(1, 0, 1), (2, 1, 2), (3, 2, 1)]
+    finally:
+        spark.stop()
+
+
 def test_facade_adopted_v3_cow_second_delete_keeps_survivor_row_id(
     tmp_path: Path,
 ) -> None:
@@ -302,5 +349,51 @@ def test_facade_v3_mor_first_delete_commits_a_deletion_vector_and_a_second_merge
             str(kind).upper() for kind in delete_files_after.column("file_format").to_pylist()
         ]
         assert kinds_after == ["PUFFIN"], kinds_after
+    finally:
+        spark.stop()
+
+
+def test_facade_adopted_v3_cow_subquery_where_dml_still_refuses(tmp_path: Path) -> None:
+    """Subquery-WHERE UPDATE/DELETE stay V3-COW-1; rows unchanged.
+
+    pins: v3-7-merge-lineage/C-002
+    """
+    from repark import ReparkSession
+    from repark.errors import UnsupportedOperationException
+
+    spark = (
+        ReparkSession.builder.appName("v3-7-subquery-where")
+        .config(_ALLOW_CREATE_V3_KEY, "true")
+        .getOrCreate()
+    )
+    try:
+        spark.register_memory_catalog("ice", tmp_path)
+        sales = tmp_path / "sales"
+        spark.sql(f"CREATE NAMESPACE ice.sales LOCATION '{sales}'")
+        spark.sql(
+            "CREATE TABLE ice.sales.seed_sub (id INT, name STRING) USING iceberg "
+            f"TBLPROPERTIES ({_COW_V3})"
+        )
+        spark.sql("INSERT INTO ice.sales.seed_sub VALUES (1, 'a'), (2, 'b'), (3, 'c')")
+        metadata_file = _latest_version_uuid_metadata(sales, "seed_sub")
+        spark.sql(
+            "CALL ice.system.register_table("
+            f"table => 'sales.adopt_sub', metadata_file => '{metadata_file}')"
+        )
+        seed_rows = [(1, "a"), (2, "b"), (3, "c")]
+        with pytest.raises(UnsupportedOperationException, match="V3-COW-1"):
+            spark.sql(
+                "UPDATE ice.sales.adopt_sub SET name = 'x' WHERE id IN "
+                "(SELECT id FROM ice.sales.adopt_sub WHERE id = 2)"
+            ).collect()
+        after_update = spark.sql("SELECT id, name FROM ice.sales.adopt_sub").to_arrow()
+        assert _id_name_rows(after_update) == seed_rows
+        with pytest.raises(UnsupportedOperationException, match="V3-COW-1"):
+            spark.sql(
+                "DELETE FROM ice.sales.adopt_sub WHERE id IN "
+                "(SELECT id FROM ice.sales.adopt_sub WHERE id = 2)"
+            ).collect()
+        after_delete = spark.sql("SELECT id, name FROM ice.sales.adopt_sub").to_arrow()
+        assert _id_name_rows(after_delete) == seed_rows
     finally:
         spark.stop()

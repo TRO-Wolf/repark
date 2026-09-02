@@ -24,18 +24,20 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 - `cast_binary.rs` — **SQP-1 (C-009):** `CAST … AS BINARY` plans to Arrow `Binary` (B1/B8–B10/B13/
   B15), refuses illegal sources (`DATATYPE_MISMATCH`, B2–B7), keeps `VARBINARY` refusing (B12),
   leaves a `BINARY` DDL column untouched; `TRY_CAST(<int>)` refuses without the ANSI-off suggestion.
-- `v3_cow.rs` — v3 UPDATE and sequential COW DELETE keep `_row_id` (RP-6 Spark-equal lift);
-  MERGE matched-update and subquery-WHERE DML still refuse `V3-COW-1` because the
-  RePark-owned MERGE writer reassigns. Sequential COW DELETE keeps the survivor id at
-  next-row-id 6 (single-file layout). Branch UPDATE keeps branch lineage and leaves main
-  unmoved. MOR MERGE still refuses parquet position deletes on v3.
-  pins: rp-6-fork-repin/C-002, C-003
-- `v3_cow_lift.rs` — RP-6 remaining V3-COW-1 sequences: created v3 COW/MOR UPDATE,
-  UPDATE then DELETE, DELETE then UPDATE, INSERT OVERWRITE then DELETE, DELETE each
-  position, MoR UPDATE then DELETE. MoR UPDATE pins `next-row-id` 4 with 2 data files,
-  1 Puffin DV, 3 manifests at the single-file seed. Absolute Spark 4.1.2 + Iceberg 1.11.0
-  values.
-  pins: rp-6-fork-repin/C-002, C-003
+- `v3_cow.rs` — v3 UPDATE, sequential COW DELETE, and MERGE matched-update keep `_row_id`
+  (V3-7 Spark-equal MERGE lift; RP-6 UPDATE/DELETE). Subquery-WHERE DML still refuses
+  `V3-COW-1`. Sequential COW DELETE keeps the survivor id at next-row-id 6 (single-file
+  layout). Branch UPDATE keeps branch lineage and leaves main unmoved. MoR MERGE
+  matched-update is Spark-equal (`next-row-id` 4).
+  pins: v3-7-merge-lineage/C-002; rp-6-fork-repin/C-002, C-003
+- `v3_cow_lift.rs` — RP-6 remaining V3-COW-1 sequences plus V3-7 MERGE shapes: created
+  v3 COW/MOR MERGE, matched-DELETE, NOT MATCHED INSERT, NMBS DELETE, mixed MERGE.
+  MoR INSERT and NMBS DELETE pinned. Every lifted cell asserts data-file, delete-file,
+  and manifest counts (mixed MERGE engine data-file counts are 2 COW / 3 MoR;
+  Spark is 1 COW / 2 MoR).
+  MoR UPDATE pins `next-row-id` 4 with 2 data files, 1 Puffin DV, 3 manifests at the
+  single-file seed. Absolute Spark 4.1.2 + Iceberg 1.11.0 values.
+  pins: v3-7-merge-lineage/C-002; rp-6-fork-repin/C-002, C-003
 - `create_table.rs` — also the V3R-1 type pin: `GEOMETRY` / `GEOGRAPHY` / `VARIANT` refuse at
   CREATE (`V3-GEO-1`).
 - `v3_types.rs` — **V3-6:** C-001 ledger matrix + refuse of `UNKNOWN` / `VARIANT` /
@@ -46,16 +48,16 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   pins: v3-6-v3-types/C-001, C-003, C-005
 - `v3e4.rs` — **V3E-4:** snapshot refs, `VERSION AS OF` over DVs, expire with
   real work, orphan 24h floor on the partitioned-DV fixture after a RePark
-  append. RP-6: live-DV UPDATE commits Spark-equal lineage; MERGE on that fixture still
-  refuses `V3-COW-1` with snapshot, rows, and fixture bytes unchanged.
+  append. RP-6: live-DV UPDATE commits Spark-equal lineage. V3-7: live-DV MERGE on
+  the appended fixture keeps `_row_id`.
   rustdoc cites C-001..C-016 (`Model: Grok 4.6 xHigh`; rp-3-fork-repin/C-004;
-  rp-6-fork-repin/C-002, C-003).
+  rp-6-fork-repin/C-002, C-003; v3-7-merge-lineage/C-002).
 - `v3_lineage.rs` — **V3-4:** Spark-door `_row_id` / `_last_updated_sequence_number` on the RP-6 re-recorded the `repark-sql/src/v3/cow.rs` hash once more after the pins citation moved from its module doc to the map.
   V3E-3 fixtures (MOR+DV surviving rows), created v3 derivation, v2/v1 unresolved (`No field
   named _row_id`), `SELECT *, _row_id` expands user columns only, qualified/aliased forms,
   unquoted case-fold, JOIN/CTE/subquery/`VERSION AS OF` refuse `V3-ROWID-2`, V3-COW-1 files
-  hash-pinned (RP-6 re-records after the Spark-equal lift and the Errors-section
-  restore; later units re-record only for a change another merged unit made); the C-001
+  hash-pinned (V3-7 re-records after the Spark-equal MERGE lift; later units re-record
+  only for a change another merged unit made); the C-001
   matrix pin finds the ledger anywhere under `task/ledgers/` so
   lifecycle moves keep it green.
   pins: rp-4-fork-repin/C-003

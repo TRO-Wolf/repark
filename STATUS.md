@@ -152,8 +152,9 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
     doors; sequential COW DELETE Spark-equal (`V3-COW-1`, F-rp3-c7 consumed). Hadoop writes
     FIXED (`V3-ADOPT-1`). RP-4 (2026-08-31, fork `33be9a0`) F-7 slice 1: rewrite lineage
     Spark-equal (`V3-LINEAGE-1` FIXED); F-6 `to_branch` carried.
-    RP-6 (2026-09-01, fork `fb0cacfa`) lifts UPDATE; MERGE still reassigns
-    (registry `V3-COW-1`). `B-MOR-3` stays.
+    RP-6 (2026-09-01, fork `fb0cacfa`) lifts UPDATE. V3-7 (2026-09-02) carries
+    MERGE `_row_id` on COW and MoR (registry `V3-COW-1`; subquery-`WHERE` DML
+    still refuses). `B-MOR-3` stays.
     **V3-4 (2026-08-31):** `_row_id` / `_last_updated_sequence_number` Spark-equal on
     single-table v3 reads; v1/v2 engine Schema `No field named _row_id`;
     JOIN/CTE/subquery/time-travel refuse `V3-ROWID-2`. `V3-ROWID-1` FIXED. MoR UPDATE preserve-half Spark-equal (RP-6).
@@ -162,7 +163,8 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
     `initial_default` reads into pre-column files, DEFAULT DDL refuses Spark-equal;
     binary `variant` refuses end to end (`V3-VARIANT-SHRED-1`, R88); `unknown` CREATE
     refuse pinned; parquet write refuses (R91, RP-5).
-  - **Next:** MERGE still reassigns (`V3-COW-1`). V3-3 charter
+  - **Next:** subquery-`WHERE` DML still refuses `V3-COW-1`. MERGE lineage is
+    Spark-equal (V3-7). V3-3 charter
     [task/ledgers/completed/v3-3-dml-ledger.md](task/ledgers/archive/2026-08/2026-08-30-v3-3-dml-ledger.md)
     (F-rp3-c7 consumed as a layout artefact).
 <!-- /ws -->

@@ -82,12 +82,12 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Extract writer preparation from transaction commit assembly.",
     ),
     "crates/repark-iceberg/src/write/merge/mod.rs": (
-        1892,
+        1889,
         "The RePark-owned MERGE executor combines plan, COW, and MOR paths.",
         "Split plan preparation from COW and MOR execution modules.",
     ),
     "crates/repark-iceberg/src/write/merge/tests/merge.rs": (
-        1091,
+        1068,
         "General MERGE behavior cases remain in one file-backed module.",
         "Split common plan cases from write-mode-specific cases.",
     ),

@@ -9,13 +9,10 @@ else. The next pickup's `make ledger-archive` files everything here under
 
 ## Contents
 - [v3e-3-partitioned-eqdel-fixtures-ledger.md](../archive/2026-08/2026-08-25-v3e-3-partitioned-eqdel-fixtures-ledger.md) — V3E-3 — partitioned + equality-delete v3 fixtures
-- [rp-6-fork-repin-ledger.md](rp-6-fork-repin-ledger.md) — **RP-6 (2026-09-01), completed:**
-  fork repin `00cdde0` → `fb0cacfa` (PR-1..PR-7). Consume REPLACE added>deleted refuse,
-  evolved-spec rewrite, Glue/S3 Tables commit seams, V3 MoR UPDATE lineage, branch MoR
-  UPDATE, V2→V3 upgrade, PR-7 closeout. Lifted `V3-COW-1` UPDATE and sequential DELETE
-  where Spark-equal; MERGE stays refused; F-7 preserve-half retired; RDF-1 stays BACKLOG;
-  evolved-spec Spark-door pin green.
-  `risk_tier: standard`. Branch `feat/rp-6-fork-repin`.
+- [v3-7-merge-lineage-ledger.md](v3-7-merge-lineage-ledger.md) —
+  **V3-7 (2026-09-02), completed:** carry `_row_id` through the RePark-owned MERGE
+  writer; lift `V3-COW-1` MERGE where Spark-equal. Subquery-WHERE DML stays
+  refused. `risk_tier: standard`. Branch `feat/v3-7-merge-lineage`.
 
 ## Pointers
 - Up: [../map.md](../map.md)

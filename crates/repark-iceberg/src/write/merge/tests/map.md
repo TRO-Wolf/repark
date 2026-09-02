@@ -10,6 +10,8 @@ MERGE unit tests. `merge/mod.rs` declares `#[cfg(test)] mod tests;`.
 
 - `mod.rs` — thin index (rustfmt module order).
 - `merge.rs` — primary unit battery.
+- `lineage.rs` — V3-7 rewrite-projection and scratch-schema pins for carried `_row_id`.
+  pins: v3-7-merge-lineage/C-001
 - `nmbs.rs` — DML-A `WHEN NOT MATCHED BY SOURCE` SQL-fragment pins and skip_cardinality
   with an NMBS clause present.
   pins: dml-a-merge-not-matched-by-source/C-002, C-003, C-004, C-005
