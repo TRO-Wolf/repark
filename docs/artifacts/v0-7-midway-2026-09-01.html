@@ -1,0 +1,169 @@
+<title>v0.7 Midway</title>
+<style>
+  :root{
+    --ground:#F2F5F7; --card:#FFFFFF; --ink:#16232B; --ink-2:#4A5D68; --line:#D8E2E8;
+    --teal:#0E6C88; --teal-2:#0B5065; --chip-green-bg:#E3F2E8; --chip-green-ink:#1E6B3A;
+    --chip-amber-bg:#FBF0DC; --chip-amber-ink:#8A5E0C; --chip-hold-bg:#E8E3F2; --chip-hold-ink:#4A3A8A;
+    --chip-guard-bg:#F2E3E3; --chip-guard-ink:#8A2E2E; --mono-bg:#EAF1F5;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ground:#0E1418; --card:#162027; --ink:#E4ECF1; --ink-2:#9AB0BC; --line:#243440;
+      --teal:#4DB1CF; --teal-2:#7CC7DD; --chip-green-bg:#173324; --chip-green-ink:#7CD9A0;
+      --chip-amber-bg:#332A14; --chip-amber-ink:#E5C071; --chip-hold-bg:#221D38; --chip-hold-ink:#B0A2E8;
+      --chip-guard-bg:#331B1B; --chip-guard-ink:#E89B9B; --mono-bg:#1B2830;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0E1418; --card:#162027; --ink:#E4ECF1; --ink-2:#9AB0BC; --line:#243440;
+    --teal:#4DB1CF; --teal-2:#7CC7DD; --chip-green-bg:#173324; --chip-green-ink:#7CD9A0;
+    --chip-amber-bg:#332A14; --chip-amber-ink:#E5C071; --chip-hold-bg:#221D38; --chip-hold-ink:#B0A2E8;
+    --chip-guard-bg:#331B1B; --chip-guard-ink:#E89B9B; --mono-bg:#1B2830;
+  }
+  body{background:var(--ground);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;
+       font-size:15px;line-height:1.55;margin:0;padding:0 16px 64px;}
+  .wrap{max-width:960px;margin:0 auto;}
+  h1,h2,h3{font-family:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;
+           text-wrap:balance;line-height:1.15;}
+  h1{font-size:34px;margin:40px 0 4px;}
+  h2{font-size:22px;margin:36px 0 12px;color:var(--teal-2);}
+  h3{font-size:17px;margin:20px 0 8px;}
+  .kicker{font-family:"IBM Plex Sans Condensed",sans-serif;text-transform:uppercase;
+          letter-spacing:.12em;font-size:12px;color:var(--teal);margin-top:36px;}
+  .sub{color:var(--ink-2);margin:0 0 8px;max-width:70ch;}
+  code,.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.88em;
+             background:var(--mono-bg);border-radius:4px;padding:1px 5px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;
+        padding:20px 24px;margin:14px 0;}
+  .chip{display:inline-block;font-family:"IBM Plex Sans Condensed",sans-serif;font-size:12px;
+        font-weight:600;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;
+        padding:2px 10px;vertical-align:middle;}
+  .green{background:var(--chip-green-bg);color:var(--chip-green-ink);}
+  .amber{background:var(--chip-amber-bg);color:var(--chip-amber-ink);}
+  .hold{background:var(--chip-hold-bg);color:var(--chip-hold-ink);}
+  .guard{background:var(--chip-guard-bg);color:var(--chip-guard-ink);}
+  table{border-collapse:collapse;width:100%;font-size:14px;}
+  .tablewrap{overflow-x:auto;}
+  th{font-family:"IBM Plex Sans Condensed",sans-serif;text-transform:uppercase;font-size:11.5px;
+     letter-spacing:.08em;color:var(--ink-2);text-align:left;padding:6px 10px;
+     border-bottom:2px solid var(--line);}
+  td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top;}
+  td:first-child{white-space:nowrap;}
+  ul{margin:6px 0;padding-left:22px;}
+  li{margin:4px 0;}
+  a{color:var(--teal);text-decoration-thickness:1px;}
+  .num{font-variant-numeric:tabular-nums;}
+  ol.steps{counter-reset:s;list-style:none;padding-left:0;margin:8px 0;}
+  ol.steps li{counter-increment:s;display:flex;gap:12px;align-items:baseline;margin:8px 0;}
+  ol.steps li::before{content:counter(s);font-family:"IBM Plex Sans Condensed",sans-serif;
+        font-weight:700;color:var(--card);background:var(--teal);border-radius:6px;
+        min-width:24px;text-align:center;padding:1px 0;font-size:13px;}
+  .foot{color:var(--ink-2);font-size:13px;margin-top:40px;border-top:1px solid var(--line);
+        padding-top:12px;}
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<div class="wrap">
+  <p class="kicker">RePark · status + plan · 2026-09-01</p>
+  <h1>v0.7 Midway</h1>
+  <p class="sub">The board is <strong>completely clear</strong>: six RePark PRs and two fork PRs
+  merged since the v0.6.0 tag, no unit branch open, no PR parked. The v0.7 window is roughly
+  half delivered — the drift gate, the full 913-name inventory, and the backfill pilot are on
+  <code>main</code>; the backfill campaign proper and two fork-consuming features are what
+  remains. This page is the step-back review and the ordered plan.</p>
+
+  <h2>Merged since v0.6.0</h2>
+  <div class="card tablewrap">
+    <table>
+      <tr><th>PR</th><th>Unit</th><th>Delivered</th></tr>
+      <tr><td class="num">#288</td><td>Archival</td><td>Seven merged-unit ledgers moved <code>staging/</code> → <code>completed/</code> via <code>ledger_lifecycle.py</code>.</td></tr>
+      <tr><td class="num">#289</td><td>v0.8 design</td><td>Torture-suite design: 4 of 5 roadmap batteries already exist as DS-1…DS-4 generators; units TT-1…TT-5 chartered.</td></tr>
+      <tr><td class="num">#290</td><td>Roadmap</td><td>Roadmap additions ruled in by merge: SQL-door examples, generated notebooks, class surfaces in v0.7; temporal-extremes, aggregate-overflow, v3-DV-at-scale in v0.8.</td></tr>
+      <tr><td class="num">#291</td><td>V3-5</td><td>DV-aware compaction truth: fork <code>33be9a0</code> already drops in-scope DVs; V3-DANGLE-1 FIXED with Spark-equal counts.</td></tr>
+      <tr><td class="num">#292</td><td>EX-0</td><td>The v0.7 example drift gate + public-surface inventory (679 names at birth), backlog + exceptions ratchets, execute leg in CI.</td></tr>
+      <tr><td class="num">#295</td><td>SEM-1</td><td>The two silently wrong answers close to Spark semantics: dual-arity null-guarded <code>log</code>, RE-1 measured and recorded.</td></tr>
+      <tr><td class="num">#296</td><td>EX-1</td><td>Inventory widened with the ruled-in class surfaces: Column, Window/WindowSpec, Catalog, types, Row, ml — <span class="num">913</span> names, ten doors.</td></tr>
+      <tr><td class="num">#297</td><td>V3-6</td><td>Remaining v3 types at their measured state: ns timestamps and column defaults consumed; variant and <code>unknown</code> refuse loudly with pins.</td></tr>
+      <tr><td class="num">#298</td><td>Trio</td><td>REF branch/tag reads + WAP measured (C-001..C-006), the EX-2 math/bitwise backfill pilot (backlog 892 → 881), the <code>repark = ReparkSession.builder…</code> example idiom, and the comment sweep.</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <p><span class="chip green">Fork</span>&nbsp; <strong>#245</strong> F-6b —
+    <code>IcebergTableProvider::with_commit_branch</code> routes every DataFusion commit site to
+    a named branch (six sites, OCC against the ref, scan/commit split documented) — and
+    <strong>#246</strong> R91 — parquet writes refuse <code>unknown</code> columns loudly at any
+    nesting depth instead of committing files the reader then rejects. Fork <code>main</code> is
+    <code>33c20da</code>. RePark still pins <code>33be9a0</code>, so neither is consumed yet —
+    that gap is deliberate and is the next unit.</p>
+  </div>
+
+  <h2>Where the tree stands</h2>
+  <div class="card">
+    <ul>
+      <li><span class="chip green">Main</span> <code>75f5ee3</code>, all CI green. Open PRs:
+      only dependabot <span class="num">#229</span> (cargo, take as-is) and
+      <span class="num">#294</span> (actions bump).</li>
+      <li><span class="chip green">Released</span> v0.6.0 live on PyPI; v0.7 is the open window.</li>
+      <li><span class="chip green">Gates</span> Rust workspace + <span class="num">497</span>
+      parity + <span class="num">4229</span> facade tests green; example drift gate holds
+      <span class="num">913</span> names / <span class="num">881</span> backlog /
+      <span class="num">2</span> exceptions, execute leg proven in CI.</li>
+      <li><span class="chip amber">Debt closed</span> The REF unit's Rust doc-comment debt
+      (~75 <code>///</code> lines against the no-comments ruling) was swept on the PR branch
+      before merge: −148 comment/docstring lines, every <code>pins:</code> citation re-homed to
+      its <code>map.md</code> row, ledger-grammar count held at <span class="num">495</span>.
+      Root cause was a softened phrase in the worker brief; the brief templates now carry the
+      exact ruling wording.</li>
+      <li><span class="chip hold">Parked questions</span> WITH-headed <code>INSERT</code> gets an
+      opaque error instead of a named refusal (diagnostic quality, future refs unit); branch
+      targets on <em>reads</em> — F-6b routes commits only, DML scans still read
+      <code>main</code> — may become a fork ask F-6c.</li>
+    </ul>
+  </div>
+
+  <h2>The plan from here</h2>
+  <div class="card">
+    <ol class="steps">
+      <li><strong>Repin and consume (closes REF-1).</strong> Move the
+      <code>[patch.crates-io]</code> pin <code>33be9a0</code> → <code>33c20da</code>; the
+      tripwire pin <code>write_to_branch_refuses_loud_naming_fork_gap</code> flips red on
+      purpose; route branch-targeted DML through <code>with_commit_branch</code> (DataFusion
+      door) and <code>to_branch</code> (RePark-owned commits); tag targets keep refusing. Ships
+      with the honest read-side caveat: scans still follow <code>main</code> until a branch-read
+      leg exists.</li>
+      <li><strong>Ledger archival chore.</strong> Seven merged ledgers sit in
+      <code>staging/</code> (SEM-0/1, EX-0/1/2, V3-5/6, REF) — one
+      <code>ledger_lifecycle.py move</code> PR, same shape as #288.</li>
+      <li><strong>The backfill campaign, batches 2–10.</strong> Roster frozen in
+      <code>briefs/example-backfill.md</code>: TA kernels (86), collections, datetime,
+      agg + window, lambda/try/url, expression long tail, DataFrame + Column (190),
+      session/reader/writer/Catalog (111), class remainder (82). One PR + one charter ledger per
+      family; GLM for the mechanical families, Grok for the judgment-heavy ones; pilot-proven
+      recipe, campaign estimate ≈ $15.</li>
+      <li><strong>v0.7's other two deliverables.</strong> The SQL-door example family
+      (hand-curated statement + <code>CALL</code> roster under the same drift gate) and
+      generated notebooks with a lockstep check.</li>
+      <li><strong>v0.8 queue behind the window.</strong> TT-1…TT-5 torture suite per the #289
+      design (only TT-5 secrets-flagging touches product surface), W-1 on the TT-3 bed, plus the
+      ruled-in additions.</li>
+    </ol>
+  </div>
+
+  <h2>Campaign mechanics, as run today</h2>
+  <div class="card">
+    <ul>
+      <li>Worker spend 2026-09-01: fork campaign (two Grok actors + two Grok critics +
+      remediation) ≈ <span class="num">$3.77</span>; comment sweep
+      <span class="num">$1.03</span>; GLM idiom sweep <span class="num">$0.12</span>.</li>
+      <li>Grok turn-1 placeholder handbacks struck 3 of 5 fresh spawns; one corrective resume
+      fixed each. Check <code>num_turns</code> before trusting exit 0.</li>
+      <li>Housekeeping owed now that everything merged: nine scratch clones
+      (<code>/tmp/trio*</code>, <code>/tmp/grok-cmt</code>, <code>/tmp/grok-v36</code>, the two
+      fork lanes, the two critic clones) verified and removed.</li>
+    </ul>
+  </div>
+
+  <p class="foot">Sources: STATUS.md · task/roadmap/epic-term/release-roadmap-2026-08-29.md ·
+  briefs/example-backfill.md · task/ledgers/staging/map.md · scripts/check_example_coverage.py ·
+  live PR state on both repositories, 2026-09-01.</p>
+</div>
