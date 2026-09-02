@@ -1,6 +1,5 @@
 //! Model: Claude Fable 5
-//! ANSI-door pins: plain-`WHERE` UPDATE / DELETE / MERGE keep `_row_id`; subquery-WHERE
-//! DML still refuses `V3-COW-1`
+//! ANSI-door pins: plain-`WHERE` and subquery-`WHERE` UPDATE / DELETE / MERGE keep `_row_id`
 //! pins: v3r-1-rulings/C-001, C-002, C-003, C-004, C-005
 //! pins: rp-2-fork-repin/C-003, C-005
 //! pins: rp-3-fork-repin/C-004, C-008
@@ -474,29 +473,58 @@ async fn adopted_v3_mor_merge_matched_update_keeps_row_id() {
 }
 
 #[tokio::test]
-async fn adopted_v3_cow_subquery_where_dml_still_refuses() {
-    let _: &str = "pins: rp-6-fork-repin/C-002";
+async fn adopted_v3_cow_subquery_where_dml_keeps_row_lineage() {
+    let _: &str = "pins: v3-8-subquery-where-lineage/C-002";
     let door = door_with_v3_opt_in().await;
-    adopt_cow_v3(&door, "seed_sub", "adopt_sub").await;
-    let err = door
-        .err(
-            "UPDATE ice.sales.adopt_sub SET name = 'x' WHERE id IN \
-             (SELECT id FROM ice.sales.adopt_sub WHERE id = 2)",
-        )
+    door.ok("CREATE TABLE ice.sales.srcids (id INT)").await;
+    door.ok("INSERT INTO ice.sales.srcids VALUES (2)").await;
+    adopt_cow_v3(&door, "seed_su", "adopt_su").await;
+    door.ok("UPDATE ice.sales.adopt_su SET name = 'm' WHERE id IN \
+         (SELECT id FROM ice.sales.srcids)")
         .await;
-    assert!(
-        err.contains("V3-COW-1") && err.contains("reassigns"),
-        "subquery UPDATE uses the MERGE writer, got: {err}"
+    assert_eq!(
+        door.live_pairs("adopt_su").await,
+        vec![(1, "a".into()), (2, "m".into()), (3, "c".into())]
     );
+    assert_eq!(
+        door.live_triples("adopt_su").await,
+        vec![(1, 0, 1), (2, 1, 2), (3, 2, 1)]
+    );
+    assert_eq!(door.lineage("adopt_su").await, (6, Some(3), Some(3)));
+    adopt_cow_v3(&door, "seed_sd", "adopt_sd").await;
+    door.ok("DELETE FROM ice.sales.adopt_sd WHERE id IN (SELECT id FROM ice.sales.srcids)")
+        .await;
+    assert_eq!(
+        door.live_pairs("adopt_sd").await,
+        vec![(1, "a".into()), (3, "c".into())]
+    );
+    assert_eq!(
+        door.live_triples("adopt_sd").await,
+        vec![(1, 0, 1), (3, 2, 1)]
+    );
+    assert_eq!(door.lineage("adopt_sd").await, (5, Some(3), Some(2)));
+}
+
+#[tokio::test]
+async fn ansi_door_still_refuses_subquery_predicate_shapes_outside_the_hole() {
+    let _: &str = "pins: v3-8-subquery-where-lineage/C-002";
+    let door = door_with_v3_opt_in().await;
+    door.ok("CREATE TABLE ice.sales.srcids (id INT)").await;
+    door.ok("INSERT INTO ice.sales.srcids VALUES (2)").await;
+    adopt_cow_v3(&door, "seed_so", "adopt_so").await;
     let err = door
         .err(
-            "DELETE FROM ice.sales.adopt_sub WHERE id IN \
-             (SELECT id FROM ice.sales.adopt_sub WHERE id = 2)",
+            "UPDATE ice.sales.adopt_so SET name = 'm' WHERE id NOT IN \
+             (SELECT id FROM ice.sales.srcids)",
         )
         .await;
     assert!(
-        err.contains("V3-COW-1") && err.contains("reassigns"),
-        "subquery DELETE uses the MERGE writer, got: {err}"
+        err.contains("G3-E8") && !err.contains("V3-COW-1"),
+        "the residual refusal is the pre-existing subquery-shape guard, not lineage: {err}"
+    );
+    assert_eq!(
+        door.live_pairs("adopt_so").await,
+        vec![(1, "a".into()), (2, "b".into()), (3, "c".into())]
     );
 }
 

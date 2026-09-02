@@ -50,6 +50,9 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   lineage columns, rewrite SQL that keeps `_row_id` and nulls last-updated on UPDATE,
   and partitioned fanout that prefixes user columns for the partition calculator.
   pins: v3-7-merge-lineage/C-001
+  V3-8: `table_carries_merge_lineage` and `scratch_schema_for_table` widen to `pub(crate)`
+  so `write::predicate_dml` reuses the same scratch shape for its COW rewrite; the module is
+  `pub(crate) mod`. pins: v3-8-subquery-where-lineage/C-002
 - `cow_scratch.rs` — COW rewrite scratch tables (file-scoped target, affected-path
   MemTable, drop guard) extracted so `mod.rs` ratchets down. Scratch providers
   register on `datafusion.public` so a session default Iceberg catalog cannot

@@ -41,7 +41,7 @@ asks F-0, F-6, F-8, F-16 · **Path:** STANDARD (`risk_tier: standard`; one Actor
 **Proven pattern:**
 [2026-08-31-rp-4-fork-repin-ledger.md](../2026-08/2026-08-31-rp-4-fork-repin-ledger.md).
 **REF oracle transcript (write leg):**
-[ref-branch-tag-wap-ledger.md](../../staging/ref-branch-tag-wap-ledger.md).
+[ref-branch-tag-wap-ledger.md](../../completed/ref-branch-tag-wap-ledger.md).
 
 **Retires:** this ledger moves to `../completed/` in this unit's last commit.
 

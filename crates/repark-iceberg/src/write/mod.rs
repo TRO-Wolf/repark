@@ -20,7 +20,6 @@ pub mod partition_overwrite;
 pub(crate) mod position_delete;
 /// Identity DELETE/UPDATE (G3-E8 A1): SELECT over pinned `(_file, _pos)`, MERGE write arms.
 pub mod predicate_dml;
-pub(crate) mod row_lineage_guard;
 pub mod scan_concurrency;
 pub mod scan_prune;
 /// Product snapshot-ref helpers (CREATE/DROP BRANCH|TAG) + test-support seam.

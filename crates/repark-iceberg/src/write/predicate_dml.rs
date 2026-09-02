@@ -20,6 +20,7 @@ use uuid::Uuid;
 
 use crate::write::concurrency::concurrency_from_ctx;
 use crate::write::file_scoped_rewrite::allowlist_from_paths;
+use crate::write::merge::row_lineage::{scratch_schema_for_table, table_carries_merge_lineage};
 use crate::write::merge::{
     FILE_PATH_COL, IsolationLevel, POS_COL, RowDeltaKind, RowDeltaPolicy, TargetScanStream,
     commit_overwrite, commit_row_delta_kind, deregister_merge_scratch, iceberg_err, quote_ident,
@@ -27,6 +28,10 @@ use crate::write::merge::{
     write_new_data_files_from_stream,
 };
 use crate::write::position_delete::PositionDeletePair;
+use crate::write::predicate_dml::lineage::{
+    project_update_data_batch, rewrite_column_names, survivor_sql, update_projection_sql,
+    update_values_schema,
+};
 use crate::write::scan_concurrency::scan_concurrency_from_ctx;
 
 /// Iceberg standard table property selecting the DELETE write strategy.
@@ -324,7 +329,7 @@ async fn execute_identity_update(
         .current_snapshot()
         .map(|snapshot| snapshot.snapshot_id());
 
-    let scratch = scratch_schema(&write_schema);
+    let scratch = scratch_schema_for_table(&write_schema, &table);
     let scan_concurrency = scan_concurrency_from_ctx(ctx);
     let source: Arc<dyn datafusion::physical_plan::streaming::PartitionStream> =
         Arc::new(TargetScanStream::new(
@@ -337,7 +342,8 @@ async fn execute_identity_update(
             None,
         ));
     let target_name = register_streaming_target(ctx, Arc::clone(&scratch), source)?;
-    let result = match collect_identity_update_rows(ctx, &target_name, spec, &write_schema).await {
+    let values_schema = update_values_schema(&write_schema, table_carries_merge_lineage(&table));
+    let result = match collect_identity_update_rows(ctx, &target_name, spec, &values_schema).await {
         Ok((pairs, _)) if pairs.is_empty() => Ok(()),
         Ok((pairs, data_batches)) => match mode {
             DeleteWriteMode::CopyOnWrite => {
@@ -431,12 +437,12 @@ async fn collect_identity_update_rows(
     ctx: &SessionContext,
     target_name: &str,
     spec: &PredicateDmlSpec,
-    write_schema: &datafusion::arrow::datatypes::SchemaRef,
+    values_schema: &datafusion::arrow::datatypes::SchemaRef,
 ) -> Result<(Vec<PositionDeletePair>, Vec<RecordBatch>)> {
     let assignments = spec.assignments.as_ref().ok_or_else(|| {
         DataFusionError::Internal("identity UPDATE SELECT requires SET assignments".to_string())
     })?;
-    let projections = update_projection_sql(write_schema, &spec.target_alias, assignments);
+    let projections = update_projection_sql(values_schema, &spec.target_alias, assignments);
     let sql = format!(
         "SELECT {file}, {pos}, {projections} FROM {scratch} AS {alias} WHERE {selection}",
         file = quote_ident(FILE_PATH_COL),
@@ -449,11 +455,11 @@ async fn collect_identity_update_rows(
     let mut pairs = Vec::new();
     let mut data_batches = Vec::new();
     for batch in &batches {
-        if batch.num_columns() != write_schema.fields().len() + 2 {
+        if batch.num_columns() != values_schema.fields().len() + 2 {
             return Err(DataFusionError::Internal(format!(
                 "identity UPDATE SELECT returned {} columns, expected {}",
                 batch.num_columns(),
-                write_schema.fields().len() + 2
+                values_schema.fields().len() + 2
             )));
         }
         let files = batch
@@ -479,59 +485,10 @@ async fn collect_identity_update_rows(
             pairs.push((Arc::<str>::from(files.value(row)), positions.value(row)));
         }
         if batch.num_rows() > 0 {
-            data_batches.push(project_update_data_batch(batch, write_schema)?);
+            data_batches.push(project_update_data_batch(batch, values_schema)?);
         }
     }
     Ok((pairs, data_batches))
-}
-
-fn update_projection_sql(
-    write_schema: &datafusion::arrow::datatypes::SchemaRef,
-    alias: &str,
-    assignments: &[(String, String)],
-) -> String {
-    write_schema
-        .fields()
-        .iter()
-        .map(|field| {
-            let quoted = quote_ident(field.name());
-            if let Some((_, expr_sql)) = assignments
-                .iter()
-                .find(|(name, _)| name.eq_ignore_ascii_case(field.name()))
-            {
-                format!("({expr_sql}) AS {quoted}")
-            } else {
-                format!("{}.{}", quote_ident(alias), quoted)
-            }
-        })
-        .collect::<Vec<_>>()
-        .join(", ")
-}
-
-fn project_update_data_batch(
-    batch: &RecordBatch,
-    write_schema: &datafusion::arrow::datatypes::SchemaRef,
-) -> Result<RecordBatch> {
-    let indices: Vec<usize> = (2..batch.num_columns()).collect();
-    let projected = batch.project(&indices)?;
-    let fields: Vec<datafusion::arrow::datatypes::Field> = write_schema
-        .fields()
-        .iter()
-        .zip(projected.columns())
-        .map(|(field, array)| {
-            datafusion::arrow::datatypes::Field::new(
-                field.name(),
-                array.data_type().clone(),
-                array.is_nullable(),
-            )
-        })
-        .collect();
-    let schema = Arc::new(ArrowSchema::new(fields));
-    RecordBatch::try_new(schema, projected.columns().to_vec()).map_err(|error| {
-        DataFusionError::Internal(format!(
-            "identity UPDATE data batch does not match the projected schema: {error}"
-        ))
-    })
 }
 
 /// Rewrite affected files as survivors UNION ALL updated rows, then overwrite-commit.
@@ -556,15 +513,15 @@ async fn commit_identity_update_cow(
     let rewrite_name =
         register_affected_rewrite_target(ctx, table, snapshot_id, write_schema, &affected)?;
     let new_table = register_update_values_table(ctx, data_batches)?;
-    let columns = write_schema
-        .fields()
+    let carry_lineage = table_carries_merge_lineage(table);
+    let columns = rewrite_column_names(write_schema, carry_lineage)
         .iter()
-        .map(|field| quote_ident(field.name()))
+        .map(|name| quote_ident(name))
         .collect::<Vec<_>>()
         .join(", ");
     let rewrite_sql = format!(
         "{survivors} UNION ALL SELECT {columns} FROM {newvals}",
-        survivors = survivor_sql(write_schema, &rewrite_name, &ident_table),
+        survivors = survivor_sql(write_schema, &rewrite_name, &ident_table, carry_lineage),
         newvals = quote_ident(&new_table),
     );
     let rewrite_result = async {
@@ -647,7 +604,12 @@ async fn commit_identity_cow(
     let ident_table = register_identity_table(ctx, pairs)?;
     let rewrite_name =
         register_affected_rewrite_target(ctx, table, snapshot_id, write_schema, &affected)?;
-    let rewrite_sql = survivor_sql(write_schema, &rewrite_name, &ident_table);
+    let rewrite_sql = survivor_sql(
+        write_schema,
+        &rewrite_name,
+        &ident_table,
+        table_carries_merge_lineage(table),
+    );
     let rewrite_result = async {
         let stream = ctx.sql(&rewrite_sql).await?.execute_stream().await?;
         let concurrency = concurrency_from_ctx(ctx);
@@ -697,7 +659,7 @@ fn register_affected_rewrite_target(
     affected: &[String],
 ) -> Result<String> {
     let allowlist = allowlist_from_paths(affected);
-    let scratch = scratch_schema(write_schema);
+    let scratch = scratch_schema_for_table(write_schema, table);
     let scan_concurrency = scan_concurrency_from_ctx(ctx);
     let source: Arc<dyn datafusion::physical_plan::streaming::PartitionStream> =
         Arc::new(TargetScanStream::new(
@@ -710,27 +672,6 @@ fn register_affected_rewrite_target(
             Some(allowlist),
         ));
     register_streaming_target(ctx, scratch, source)
-}
-
-fn survivor_sql(
-    write_schema: &datafusion::arrow::datatypes::SchemaRef,
-    rewrite_name: &str,
-    ident_table: &str,
-) -> String {
-    let columns = write_schema
-        .fields()
-        .iter()
-        .map(|field| format!("t.{}", quote_ident(field.name())))
-        .collect::<Vec<_>>()
-        .join(", ");
-    format!(
-        "SELECT {columns} FROM {rewrite} AS t WHERE NOT EXISTS (\
-         SELECT 1 FROM {idents} AS i WHERE i.{file} = t.{file} AND i.{pos} = t.{pos})",
-        rewrite = quote_ident(rewrite_name),
-        idents = quote_ident(ident_table),
-        file = quote_ident(FILE_PATH_COL),
-        pos = quote_ident(POS_COL),
-    )
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -786,12 +727,7 @@ fn resolve_write_mode(table: &Table, property: &str, verb: &str) -> Result<Delet
             )?;
             Ok(DeleteWriteMode::MergeOnRead)
         }
-        _ => {
-            crate::write::row_lineage_guard::refuse_v3_cow_dml_that_would_reassign_row_lineage(
-                table, verb,
-            )?;
-            Ok(DeleteWriteMode::CopyOnWrite)
-        }
+        _ => Ok(DeleteWriteMode::CopyOnWrite),
     }
 }
 
@@ -1221,6 +1157,8 @@ fn object_name_parts(name: &ObjectName) -> Vec<String> {
         .filter_map(|part| part.as_ident().map(|ident| ident.value.clone()))
         .collect()
 }
+
+mod lineage;
 
 #[cfg(test)]
 mod tests;

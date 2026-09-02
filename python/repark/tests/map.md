@@ -75,10 +75,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   invokes `to_branch`; Iceberg fixture bytes stay flat vs `origin/main`. pins: rp-4-fork-repin/C-004
 - [test_v3_cow_dml.py](test_v3_cow_dml.py) — **V3-7 lift:** facade Spark `.sql()` UPDATE,
   sequential COW DELETE, and MERGE matched-update keep `_row_id`; created-v3 UPDATE and
-  MERGE Spark-equal; subquery-WHERE UPDATE/DELETE stay `V3-COW-1` with rows unchanged;
-  MOR first DELETE commits a Puffin DV and the second merges. RP-4
+  MERGE Spark-equal; **V3-8:** subquery-`WHERE` UPDATE and DELETE keep `_row_id` at
+  next-row-id 6 / 5 and the outside-the-hole `NOT IN` UPDATE still refuses `G3-E8` with
+  rows unchanged; MOR first DELETE commits a Puffin DV and the second merges. RP-4
   six-file `rewrite_data_files` keeps `_row_id` / seq on `to_arrow`.
-  pins: v3-7-merge-lineage/C-002; rp-6-fork-repin/C-002, C-003; rp-4-fork-repin/C-003
+  pins: v3-8-subquery-where-lineage/C-002; v3-7-merge-lineage/C-002;
+  rp-6-fork-repin/C-002, C-003; rp-4-fork-repin/C-003
 - [test_ref_branch_tag_wap.py](test_ref_branch_tag_wap.py) — **REF:** the facade rows for
   branch/tag retention and the refused doors — both `WITH SNAPSHOT RETENTION` halves at the
   oracle's values, the reversed order refusing, write-to-branch landing on the named branch
