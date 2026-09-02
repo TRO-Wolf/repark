@@ -92,7 +92,7 @@ illustrative. A claim with no verified basis does not go in.
   `repark.sql.allowCreateFormatVersion3`) and "repark writes no v3 delete files itself" (a
   merge-on-read write writes one file-scoped Puffin DV per touched data file).
   SCALE-v3's numbers are cited to
-  [../../task/ledgers/staging/scale-v3-mw7-ledger.md](../../task/ledgers/staging/scale-v3-mw7-ledger.md)
+  [../../task/ledgers/staging/scale-v3-mw7-ledger.md](../../task/ledgers/completed/scale-v3-mw7-ledger.md)
   §3, never restated.
 - [troubleshooting.md](troubleshooting.md) — the gotchas in one page, symptom → why → what to do:
   dict-cell struct inference (FA-4), dotted-path `select`, euro-comma CSV decimals,
