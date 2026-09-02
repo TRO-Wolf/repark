@@ -100,6 +100,7 @@ class V3AcceptanceOutcome(NamedTuple):
     """Every count the v3 CTAS / DV-DML / maintenance / adopt sequence observed."""
 
     table: str
+    data_files_per_partition: list[tuple[int, int]]
     delete_files_after_delete: list[tuple[int, str]]
     lineage_before_merge: list[tuple[int, int | None, int | None]]
     rows_after_merge: list[dict[str, object]]
@@ -204,6 +205,41 @@ def v3_lineage_rows(
     ]
 
 
+def v3_rows_and_lineage(
+    spark: object, table: str, id_col: str
+) -> tuple[list[dict[str, object]], list[tuple[int, int | None, int | None]]]:
+    """Rows and lineage from ONE ordered scan, so a pair of reads is a single snapshot open."""
+    arrow = spark.sql(
+        f"SELECT {id_col}, name, {V3_PARTITION_COLUMN}, _row_id, "
+        f"_last_updated_sequence_number FROM {table} ORDER BY {id_col}"
+    ).to_arrow()
+    ids = arrow.column(id_col).to_pylist()
+    names = arrow.column("name").to_pylist()
+    parts = arrow.column(V3_PARTITION_COLUMN).to_pylist()
+    row_ids = arrow.column("_row_id").to_pylist()
+    sequences = arrow.column("_last_updated_sequence_number").to_pylist()
+    rows = [
+        {"id": int(row), "name": name, V3_PARTITION_COLUMN: int(part)}
+        for row, name, part in zip(ids, names, parts, strict=True)
+    ]
+    lineage = [
+        (int(row), None if row_id is None else int(row_id), None if seq is None else int(seq))
+        for row, row_id, seq in zip(ids, row_ids, sequences, strict=True)
+    ]
+    return rows, lineage
+
+
+def v3_data_files_per_partition(spark: object, table: str) -> list[tuple[int, int]]:
+    """``(part, data-file count)`` pairs in partition order."""
+    arrow = spark.sql(
+        f"SELECT partition.{V3_PARTITION_COLUMN} AS part, count(*) AS n "
+        f"FROM {table}.data_files GROUP BY partition.{V3_PARTITION_COLUMN} ORDER BY part"
+    ).to_arrow()
+    parts = arrow.column("part").to_pylist()
+    counts = arrow.column("n").to_pylist()
+    return [(int(part), int(count)) for part, count in zip(parts, counts, strict=True)]
+
+
 def v3_ordered_rows(spark: object, table: str, id_col: str) -> list[dict[str, object]]:
     """Live ``(id, name, part)`` rows in id order as Python dicts."""
     arrow = spark.sql(
@@ -298,6 +334,7 @@ def run_v3_acceptance(
         retry_on_commit_conflict(
             partial(_sql_collect, spark, v3_insert_sql(table, ids)), attempts=attempts
         )
+    data_files_per_partition = v3_data_files_per_partition(spark, table)
 
     retry_on_commit_conflict(
         partial(_sql_collect, spark, v3_row_delete_sql(table, id_col, V3_DELETED_ID)),
@@ -311,8 +348,7 @@ def run_v3_acceptance(
         partial(_sql, spark, merge_sql(table, V3_MERGE_VIEW, id_col)), attempts=attempts
     )
     drop_temp_view(spark, V3_MERGE_VIEW)
-    rows_after_merge = v3_ordered_rows(spark, table, id_col)
-    lineage_after_merge = v3_lineage_rows(spark, table, id_col)
+    rows_after_merge, lineage_after_merge = v3_rows_and_lineage(spark, table, id_col)
     delete_files_after_merge = delete_file_rows(spark, table)
 
     rewrite_data = maintenance_call_sql(catalog, "rewrite_data_files", table_arg)
@@ -323,8 +359,7 @@ def run_v3_acceptance(
     added = int(rewrite_result.column("added_data_files_count")[0].as_py())
     removed = int(rewrite_result.column("removed_delete_files_count")[0].as_py())
     delete_files_after_rewrite = delete_file_rows(spark, table)
-    rows_after_rewrite = v3_ordered_rows(spark, table, id_col)
-    lineage_after_rewrite = v3_lineage_rows(spark, table, id_col)
+    rows_after_rewrite, lineage_after_rewrite = v3_rows_and_lineage(spark, table, id_col)
 
     snapshots_before_expire = len(snapshot_ids_oldest_first(spark, table))
     older_than_ms = int(time.time() * 1000) + EXPIRE_OLDER_THAN_FUTURE_MS
@@ -345,6 +380,7 @@ def run_v3_acceptance(
 
     return V3AcceptanceOutcome(
         table=table,
+        data_files_per_partition=data_files_per_partition,
         delete_files_after_delete=delete_files_after_delete,
         lineage_before_merge=lineage_before_merge,
         rows_after_merge=rows_after_merge,
@@ -446,6 +482,12 @@ def assert_v3_acceptance_outcome(
     row sets, ``_row_id`` values and every file count stay exact there.
     """
     expected_rows = v3_acceptance_expected_rows()
+    expected_files = [(0, V3_FILES_PER_PARTITION), (1, V3_FILES_PER_PARTITION)]
+    if outcome.data_files_per_partition != expected_files:
+        raise AssertionError(
+            f"appends left {outcome.data_files_per_partition!r} data files per partition, "
+            f"expected {expected_files!r} — rewrite_data_files needs the min-input-files floor"
+        )
 
     assert_deletion_vectors(
         outcome.delete_files_after_delete,

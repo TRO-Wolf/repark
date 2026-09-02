@@ -1,9 +1,9 @@
 """LIVE-v3: the Glue / S3 Tables v3 leg body, pinned against the local catalog.
 
 pins: live-v3-aws-legs/C-002
-MUTATION: change any expected count in ``_acceptance`` (DV counts, rewrite triple, lineage
-triples, snapshot counts) → this REDs; drop the ``adopt_with`` argument → the adopted-table
-assertion REDs.
+MUTATION: change any expected count in ``_acceptance_v3`` (data files per partition, DV
+counts, rewrite triple, lineage triples, snapshot counts) → this REDs; drop the ``adopt_with``
+argument → the adopted-table assertion REDs.
 """
 
 from __future__ import annotations
@@ -23,6 +23,7 @@ from _acceptance_v3 import (
     V3_EXPECTED_REWRITTEN_DATA_FILES,
     V3_EXPECTED_SNAPSHOTS_AFTER_EXPIRE,
     V3_EXPECTED_SNAPSHOTS_BEFORE_EXPIRE,
+    V3_FILES_PER_PARTITION,
     assert_v3_acceptance_outcome,
     classify_v3_create_outcome,
     format_v3_refusal_record,
@@ -46,7 +47,7 @@ def _second_session(spark: ReparkSession, warehouse: Path) -> ReparkSession:
 
 
 def test_v3_acceptance_leg_body_against_the_local_catalog(tmp_path: Path) -> None:
-    """One DV after DELETE, two after MERGE, 12→2 rewrite dropping both, 9→1 expire, adopt."""
+    """5+5 files, one DV after DELETE, two after MERGE, 12→2 rewrite, 14→1 expire, adopt."""
     spark = (
         ReparkSession.builder.appName("live-v3-local")
         .config(V3_ALLOW_CREATE_KEY, "true")
@@ -63,6 +64,10 @@ def test_v3_acceptance_leg_body_against_the_local_catalog(tmp_path: Path) -> Non
             adopt_with=lambda: _second_session(spark, tmp_path),
         )
         assert_v3_acceptance_outcome(outcome)
+        assert outcome.data_files_per_partition == [
+            (0, V3_FILES_PER_PARTITION),
+            (1, V3_FILES_PER_PARTITION),
+        ]
         assert len(outcome.delete_files_after_delete) == V3_EXPECTED_DELETE_FILES_AFTER_DELETE
         assert len(outcome.delete_files_after_merge) == V3_EXPECTED_DELETE_FILES_AFTER_MERGE
         assert outcome.delete_files_after_rewrite == []

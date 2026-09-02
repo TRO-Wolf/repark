@@ -114,9 +114,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   first live run is a measurement and not a debugging session; also pins the `S3T-V3-1`
   classifier edges (a service refusal classifies, the engine's own opt-in message does not, a
   denial does not, `format-version 2` does not) and that the recorded disposition masks the
-  account id. Mutation-proof 18 red of 18 across `_acceptance_v3` expected counts, the DV
-  content/format constants, the delete predicate, the `adopt_with` argument, and the five
-  structural leg mutations. pins: live-v3-aws-legs/C-002
+  account id. Mutation-proof 19 red of 19 across `_acceptance_v3` expected counts (including
+  `V3_FILES_PER_PARTITION`), the DV content/format constants, the delete predicate, the
+  `adopt_with` argument, and the five structural leg mutations. `_second_session` registers the
+  memory catalog AND creates the namespace because `newSession` replays builder config only, not
+  a runtime `register_memory_catalog` — the live legs pass a bare `spark.newSession`. pins: live-v3-aws-legs/C-002
 - [test_v3_dv_compaction.py](test_v3_dv_compaction.py) — **V3-5:** facade six-file
   v3 MOR compact drops six Puffin DVs (`removed_delete_files_count = 6`,
   Arrow int32); `rewrite_position_delete_files` still refuses (`B-MOR-3`);
@@ -2161,7 +2163,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `part` reaches the five-file `min-input-files` floor and `_row_id` assignment stays sequential —
   a two-row CTAS and two-row appends both shuffled survivor ids between runs), `v3_ctas_sql`
   (`PARTITIONED BY (part)`, no IF NOT EXISTS), `v3_row_delete_sql`, `v3_merge_source_sql`,
-  `delete_file_rows`, `v3_lineage_rows`, `v3_ordered_rows`, `current_metadata_location`
+  `delete_file_rows`, `v3_lineage_rows`, `v3_ordered_rows`, `v3_data_files_per_partition`
+  (arms `V3_FILES_PER_PARTITION`: the appends must land 5+5, exactly AT Spark's
+  `min-input-files` floor, or step 6 is a no-op — asserted, not assumed),
+  `v3_rows_and_lineage` (ONE ordered scan for the post-MERGE and post-rewrite pairs, which used
+  to open the same snapshot twice: 45 → 22 object opens per pair, 178.8 → 92.4 ms and
+  168.6 → 70.3 ms, pinned values unchanged), `current_metadata_location`
   (`metadata_log_entries` tail = the `register_table` argument), `run_v3_acceptance`, and
   `assert_v3_acceptance_outcome` / `assert_v3_lineage` / `assert_v3_row_ids_are_stable` /
   `assert_deletion_vectors`. `v3_row_delete_sql` is the ONLY `DELETE FROM` in the harness and is
@@ -2170,8 +2177,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   content 2); 1 DV after DELETE, 2 after the MoR MERGE, `rewrite_data_files` 12 rewritten /
   2 added / 2 removed leaving 0 DVs, 14 snapshots before expire and 1 after. Survivor `_row_id`
   is exact and stable across MERGE and rewrite; the NOT MATCHED insert's `_row_id` is **not**
-  deterministic (10 or 11 over five identical runs, sequence 12 every time — ledger finding
-  F-LIVEV3-1), so the asserter pins a fresh-unused-id invariant instead of a value.
+  deterministic — 11 six times and 10 four times over ten identical runs, sequence 12 every time,
+  against Spark 4.1.2 + Iceberg 1.11.0 deterministic at 11 in 10 of 10 (registry `V3-ROWID-3`,
+  follow-up unit V3-11) — so the asserter pins a fresh-unused-id invariant instead of a value.
+  Pairing the appends into five commits would cut ~46 % of the wall time and was DECLINED: it
+  puts two partitions in one commit, the shape that made survivor `_row_id` order-dependent.
   `exact_commit_counts=False` relaxes sequence and snapshot counts for S3 Tables' own commits and
   nothing else. S3 Tables decision table: `classify_v3_create_outcome` /
   `is_format_version_3_refusal` / `format_v3_refusal_record` (`S3T-V3-1`; the engine's own opt-in

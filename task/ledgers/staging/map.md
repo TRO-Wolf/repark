@@ -21,6 +21,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   [../docs/design/spark-function-parity.md](../../../docs/design/spark-function-parity.md); CAP-1
   appends a compatibility note that points its dated file-size premise at the live guards; slate:
   [../briefs/spark-function-parity.md](../../../briefs/spark-function-parity.md).
+- [live-v3-aws-legs-ledger.md](live-v3-aws-legs-ledger.md) — **LIVE-v3 (2026-09-02):** the
+  Glue and S3 Tables format-v3 acceptance legs. Four clauses: the shared `run_v3_acceptance`
+  body and its asserter, the local pin that fixes the expected numbers, the two live legs with
+  the `S3T-V3-1` decision table, and the document truth-up. §6 is the statement sequence with
+  the measured local answers, §7 the mutation table (18 red of 18) and finding F-LIVEV3-1 (the
+  MoR MERGE insert's `_row_id` is nondeterministic — recorded, not repaired), §8 the
+  `gh workflow run` the orchestrator uses and the expected-outcome table. Moves to
+  `../completed/` in this unit's last commit.
 - [sem-0-charter-ledger.md](sem-0-charter-ledger.md) — **SEM-0 (2026-08-21), queued and HELD at
   its approval gate:** the scope audit for closing the two silently wrong answers the low-risk
   sweep registered rather than fixed — `RE-1` (`regexp_extract_all` defaults to capture group 0,
