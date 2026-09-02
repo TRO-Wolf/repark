@@ -1,9 +1,6 @@
 use datafusion::error::{DataFusionError, Result};
 use iceberg::spec::FormatVersion;
 use iceberg::table::Table;
-use iceberg::{Catalog, TableIdent};
-
-use crate::write::position_delete::MorDmlKind;
 
 pub(crate) fn refuse_v3_cow_dml_that_would_reassign_row_lineage(
     table: &Table,
@@ -26,15 +23,4 @@ pub(crate) fn refuse_v3_cow_dml_that_would_reassign_row_lineage(
          4.1.2 + Iceberg 1.11.0 preserves row lineage (`_row_id`) across {verb}: {spark_lineage}. \
          This engine's MERGE rewrite reassigns every row in a rewritten file. Registry V3-COW-1"
     )))
-}
-
-/// # Errors
-/// Never. The passthrough valve does not fail.
-pub async fn refuse_v3_cow_dml(
-    _catalog: &dyn Catalog,
-    _ident: &TableIdent,
-    _kind: MorDmlKind,
-) -> Result<()> {
-    let _: &str = "pins: rp-6-fork-repin/C-002, C-003";
-    Ok(())
 }

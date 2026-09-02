@@ -165,7 +165,6 @@ async fn execute_time_travelled(
             }
             guards::refuse_dml_subquery_predicate(statement.as_ref())?;
             guards::refuse_mor_multi_spec_dml(cx, statement.as_ref()).await?;
-            guards::refuse_v3_cow_dml(cx, statement.as_ref()).await?;
             delegate(cx, sql).await
         }
         _ => delegate(cx, sql).await,

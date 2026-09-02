@@ -1,5 +1,5 @@
-"""V3 facade `.sql()` v3 DML pins: UPDATE / MERGE matched-update keep `_row_id`;
-plain-`WHERE` DELETE is Spark-clean; sequential COW DELETE keeps survivor ids.
+"""V3 facade `.sql()` v3 DML pins: UPDATE and sequential COW DELETE keep `_row_id`;
+MERGE matched-update still refuses V3-COW-1 because the RePark-owned MERGE writer reassigns.
 
 pins: rp-6-fork-repin/C-002, C-003
 pins: rp-2-fork-repin/C-003, C-005
@@ -75,7 +75,7 @@ def _id_name_rows(table: pa.Table) -> list[tuple[int, str]]:
 def test_facade_adopted_v3_cow_dml_keeps_row_id(
     tmp_path: Path,
 ) -> None:
-    """Adopted v3 MERGE matched-update and UPDATE keep `_row_id`; DELETE commits."""
+    """Adopted v3 MERGE matched-update still refuses V3-COW-1; UPDATE keeps `_row_id`."""
     from repark import ReparkSession
 
     spark = (
@@ -170,6 +170,40 @@ def test_facade_adopted_v3_cow_dml_keeps_row_id(
             )
         )
         assert update_lineage == [(1, 0, 1), (3, 2, 3)]
+    finally:
+        spark.stop()
+
+
+def test_facade_created_v3_cow_update_keeps_row_id(tmp_path: Path) -> None:
+    """Created v3 COW UPDATE keeps `_row_id` and bumps seq on the changed row."""
+    from repark import ReparkSession
+
+    spark = (
+        ReparkSession.builder.appName("rp-6-created-upd")
+        .config(_ALLOW_CREATE_V3_KEY, "true")
+        .getOrCreate()
+    )
+    try:
+        spark.register_memory_catalog("ice", tmp_path)
+        spark.sql("CREATE NAMESPACE ice.sales")
+        spark.sql(
+            "CREATE TABLE ice.sales.created_upd (id INT, name STRING) USING iceberg "
+            f"TBLPROPERTIES ({_COW_V3})"
+        )
+        spark.sql("INSERT INTO ice.sales.created_upd VALUES (1, 'a'), (2, 'b'), (3, 'c')")
+        spark.sql("UPDATE ice.sales.created_upd SET name = 'x' WHERE id = 2").collect()
+        updated = spark.sql(
+            "SELECT id, _row_id, _last_updated_sequence_number "
+            "FROM ice.sales.created_upd ORDER BY id"
+        ).to_arrow()
+        assert list(
+            zip(
+                updated.column("id").to_pylist(),
+                updated.column("_row_id").to_pylist(),
+                updated.column("_last_updated_sequence_number").to_pylist(),
+                strict=True,
+            )
+        ) == [(1, 0, 1), (2, 1, 2), (3, 2, 1)]
     finally:
         spark.stop()
 

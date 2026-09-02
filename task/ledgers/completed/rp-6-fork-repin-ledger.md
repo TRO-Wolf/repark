@@ -105,6 +105,48 @@ No separate PR-7 commit is in this range; the pin tip is PR-6B `#256`.
 
 `Catalog` trait: 14 required + 16 defaulted; no method added or removed.
 
+## 7. Oracle transcript and mutations (critic remediation, 2026-09-02)
+
+Live oracle: PySpark 4.1.2 + Iceberg 1.11.0, `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64`,
+`local[1]`, `coalesce(1)` single-file seed `(id,name,_row_id,seq) = (1,a,0,1),(2,b,1,1),(3,c,2,1)`,
+next-row-id 3, 1 data file, 1 manifest. Transcript `/tmp/rp6-oracle/transcript.json`.
+
+| Sequence | After | rows (id,_row_id,seq) | next | first | added | data files | manifests | delete files |
+|---|---|---|---|---|---|---|---|---|
+| COW DELETE id=2 | s1 | (1,0,1),(3,2,1) | 5 | 3 | 2 | 1 | 2 | 0 |
+| COW DELETE then DELETE | s1 / s2 | (1,0,1),(3,2,1) then (1,0,1) | 5 then 6 | 3 then 5 | 2 then 1 | 1 | 2 | 0 |
+| COW UPDATE id=2 | s1 | (1,0,1),(2,1,2),(3,2,1) | 6 | 3 | 3 | 1 | 2 | 0 |
+| COW UPDATE then DELETE | s1 / s2 | UPDATE as above then (1,0,1),(3,2,1) | 6 then 8 | 3 then 6 | 3 then 2 | 1 | 2 | 0 |
+| COW DELETE then UPDATE id=3 | s1 / s2 | DELETE then (1,0,1),(3,2,3) | 5 then 7 | 3 then 5 | 2 then 2 | 1 | 2 | 0 |
+| INSERT OVERWRITE then DELETE | s1 / s2 | (1,3,2),(3,4,2) then (1,3,2) | 5 then 6 | 3 then 5 | 2 then 1 | 1 | 2 | 0 |
+| COW MERGE matched-update (Spark) | s1 | (1,0,1),(2,1,2),(3,2,1) | 6 | 3 | 3 | 1 | 2 | 0 |
+| MoR UPDATE id=2 | s1 | (1,0,1),(2,1,2),(3,2,1) | 4 | 3 | 1 | 2 | 3 | 1 Puffin DV |
+
+Engine MERGE matched-update still reassigns `(1,4,2),(2,3,2),(3,5,2)` and stays refused.
+
+C-005 evolved-spec: Spark `CALL system.rewrite_data_files` on a 2-file evolved table rewrote 0
+(below `min-input-files`); the engine pin seeds 6 files, then `REPLACE PARTITION FIELD x WITH y`,
+then CALL stamps every live data file with the current spec.
+
+**Column-swap mutation** (`lineage_columns.rs::conform_batch` swapped `_row_id` and
+`_last_updated_sequence_number`, then restored):
+
+| Family | N red / M | Cells |
+|---|---|---|
+| COW UPDATE | 5 / 5 | Spark adopted, created, branch; ANSI adopted, created |
+| MoR UPDATE | 4 / 4 | Spark padded, created; Spark partdv `v3e4`; ANSI partdv |
+| sequential COW DELETE | 2 / 2 | Spark + ANSI second-delete |
+| UPDATE then DELETE | 1 / 1 | Spark `adopted_v3_cow_update_then_delete` |
+| DELETE then UPDATE | 1 / 1 | Spark `adopted_v3_cow_delete_then_update` |
+| OVERWRITE then DELETE | 1 / 1 | Spark `adopted_v3_cow_overwrite_then_delete` |
+
+Spark `v3_cow` filter 11 red of 20 (the 9 green are refusals, v2 control, oracle pair, short-name
+without lineage triples, first DELETE without swapped-column asserts). ANSI `v3::cow` 4 red of 13.
+
+**Facade interpreter.** `.venv/bin/pytest` shebang points at the live worktree. Facade gates in
+this unit ran as `.venv/bin/python -m pytest …` (and `make py-test-facade` / `make preflight`,
+which use `uv run … python -m pytest`). Never `.venv/bin/pytest`.
+
 ## 2. Sequence
 
 1. This ledger (grammar-gate clean, verdicts OPEN) — this commit.

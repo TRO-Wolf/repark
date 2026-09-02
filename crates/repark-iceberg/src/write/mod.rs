@@ -79,7 +79,6 @@ pub use partition_overwrite::{
 };
 pub use position_delete::{MorDmlKind, refuse_mor_unpartitioned_multi_spec_dml};
 pub use repark_common::{Error, Result};
-pub use row_lineage_guard::refuse_v3_cow_dml;
 pub use truncate::{commit_truncate, commit_truncate_to};
 pub use writer_props::{
     ACCEPTED_CODECS, COMPRESSION_CODEC_PROP, COMPRESSION_LEVEL_PROP, parse_compression,

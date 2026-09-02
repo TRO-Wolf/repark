@@ -30,9 +30,9 @@ pins: rp-4-fork-repin/C-005, C-006
   `return` path of the rewrite — see the `time_travel.rs` row below. **V3-4:** after time
   travel, `prepare_lineage_sql` pins v3 `_row_id` / `_last_updated_sequence_number` onto a
   temp provider for single-table reads (`LineagePins` released with the time-travel views);
-  JOIN/CTE/subquery/time-travel naming lineage refuse `V3-ROWID-2`. V3R-1: DELETE / UPDATE call
-  `refuse_v3_cow_dml` after the BUG-001 valve; RP-6 makes that valve a pass-through (plain-`WHERE`
-  UPDATE/DELETE Spark-equal). SQP-1: the front door canonicalizes escapes once and
+  JOIN/CTE/subquery/time-travel naming lineage refuse `V3-ROWID-2`. RP-6: plain-`WHERE`
+  UPDATE/DELETE are Spark-equal; MERGE still refuses `V3-COW-1` in the RePark-owned writer.
+  SQP-1: the front door canonicalizes escapes once and
   translates downstream parser locations back to the caller's SQL.
 - `merge.rs` — MERGE INTO lowering (sqlparser AST → `repark_iceberg::write::merge::MergeSpec`,
   star-sentinel rewrite); MATCHED / NOT MATCHED / NOT MATCHED BY SOURCE (DML-A);
@@ -52,7 +52,7 @@ pins: rp-4-fork-repin/C-005, C-006
   [tests/truncate.rs](tests/truncate.rs). pins: dml-c-truncate/C-002, C-005, C-006, C-007
   pins: rp-5-fork-repin/C-004
 - `write_to_branch.rs` — Spark-door write-to-branch routing: tag/missing-branch Spark-shaped
-  refuse; two-part names qualify through session defaults; V3-COW-1 / MOR valves run on the
+  refuse; two-part names qualify through session defaults; the MOR valve runs on the
   Iceberg ident before the temp rewrite; fork-executed INSERT/UPDATE/DELETE via
   `IcebergTableProvider::with_commit_branch` registered on `datafusion.public`;
   MERGE / INSERT OVERWRITE / TRUNCATE rewrite short names to four-part then `.to_branch`.
@@ -144,9 +144,9 @@ pins: rp-4-fork-repin/C-005, C-006
   opens uncorrelated `DELETE … col IN` / `NOT IN (SELECT …)`, `[NOT] EXISTS` ±
   correlation, correlated IN, and identity `UPDATE … IN` onto `execute_predicate_dml`;
   see the module doc and `task/r1-g3e8-pr4-ledger.md`), the MERGE
-  star rewrite call, partition-spec builders. RP-6: `refuse_v3_cow_dml` is a pass-through;
-  `dml_target_ident` (shared with the BUG-001 valve) completes short names from the session
-  defaults (SEC-001). MERGE still refuses `V3-COW-1` (RePark-owned writer reassigns).
+  star rewrite call, partition-spec builders. `dml_target_ident` (shared with the BUG-001
+  valve) completes short names from the session defaults (SEC-001). MERGE still refuses
+  `V3-COW-1` (RePark-owned writer reassigns).
   pins: rp-6-fork-repin/C-002
 - `call_args.rs` — CALL argument bag, scalar coercions, and quoted-name keys for dashed options.
 - `collation.rs` — **G15:** parse-altitude collation refuse. Walks

@@ -89,6 +89,26 @@ async fn created_v3_mor_update_keeps_row_id() {
         v3_cow::lineage_triples(&ctx, &catalogs, "created_mor").await,
         vec![(1, 0, 1), (2, 1, 2), (3, 2, 1)]
     );
+    assert_eq!(
+        v3_cow::lineage(&catalogs, "created_mor").await,
+        Lineage {
+            next_row_id: 4,
+            snapshot_first_row_id: Some(3),
+            snapshot_added_rows: Some(1),
+        }
+    );
+    assert_eq!(
+        v3_cow::live_data_file_count(&catalogs, "created_mor").await,
+        2
+    );
+    assert_eq!(
+        v3_cow::live_delete_file_count(&catalogs, "created_mor").await,
+        1
+    );
+    assert_eq!(
+        v3_cow::live_manifest_count(&catalogs, "created_mor").await,
+        3
+    );
 }
 
 #[tokio::test]

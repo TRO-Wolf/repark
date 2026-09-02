@@ -5,7 +5,7 @@
 //! pins: rp-2-fork-repin/C-001, C-004, C-007, C-008
 //! pins: rp-3-fork-repin/C-004
 //! pins: v3-3-dml/C-001, C-002
-//! Pins format-v3 copy-on-write DML refusal and the resolver safety seat.
+//! Pins format-v3 UPDATE/DELETE Spark-equal lineage; MERGE still refuses V3-COW-1.
 
 use super::super::*;
 use super::common::*;
@@ -170,7 +170,84 @@ pub(super) async fn lineage_triples(
     rows
 }
 
-async fn live_data_file_count(catalogs: &CatalogRegistry, table: &str) -> usize {
+async fn lineage_triples_at_ref(
+    catalogs: &CatalogRegistry,
+    table: &str,
+    ref_name: &str,
+) -> Vec<(i32, i64, i64)> {
+    use futures::TryStreamExt;
+    let loaded = load_sales(catalogs, table).await;
+    let snapshot = loaded
+        .metadata()
+        .snapshot_for_ref(ref_name)
+        .unwrap_or_else(|| panic!("missing ref {ref_name}"));
+    let scan = loaded
+        .scan()
+        .snapshot_id(snapshot.snapshot_id())
+        .select(["id", "_row_id", "_last_updated_sequence_number"])
+        .build()
+        .expect("branch snapshot scan");
+    let batches: Vec<datafusion::arrow::record_batch::RecordBatch> = scan
+        .to_arrow()
+        .await
+        .expect("branch snapshot arrow")
+        .try_collect()
+        .await
+        .expect("branch snapshot collect");
+    let mut rows = Vec::new();
+    for batch in &batches {
+        let ids = batch
+            .column_by_name("id")
+            .expect("id")
+            .as_any()
+            .downcast_ref::<Int32Array>()
+            .expect("id Int32");
+        let row_ids = batch
+            .column_by_name("_row_id")
+            .expect("_row_id")
+            .as_any()
+            .downcast_ref::<Int64Array>()
+            .expect("_row_id Int64");
+        let seqs = batch
+            .column_by_name("_last_updated_sequence_number")
+            .expect("seq")
+            .as_any()
+            .downcast_ref::<Int64Array>()
+            .expect("seq Int64");
+        for index in 0..batch.num_rows() {
+            rows.push((ids.value(index), row_ids.value(index), seqs.value(index)));
+        }
+    }
+    rows.sort_by_key(|row| row.0);
+    rows
+}
+
+pub(super) async fn live_data_file_count(catalogs: &CatalogRegistry, table: &str) -> usize {
+    live_content_file_count(catalogs, table, iceberg::spec::ManifestContentType::Data).await
+}
+
+pub(super) async fn live_delete_file_count(catalogs: &CatalogRegistry, table: &str) -> usize {
+    live_content_file_count(catalogs, table, iceberg::spec::ManifestContentType::Deletes).await
+}
+
+pub(super) async fn live_manifest_count(catalogs: &CatalogRegistry, table: &str) -> usize {
+    let loaded = load_sales(catalogs, table).await;
+    let Some(snapshot) = loaded.metadata().current_snapshot() else {
+        return 0;
+    };
+    snapshot
+        .load_manifest_list(loaded.file_io(), loaded.metadata())
+        .await
+        .expect("manifest list")
+        .entries()
+        .len()
+}
+
+async fn live_content_file_count(
+    catalogs: &CatalogRegistry,
+    table: &str,
+    content: iceberg::spec::ManifestContentType,
+) -> usize {
     let loaded = load_sales(catalogs, table).await;
     let Some(snapshot) = loaded.metadata().current_snapshot() else {
         return 0;
@@ -181,7 +258,7 @@ async fn live_data_file_count(catalogs: &CatalogRegistry, table: &str) -> usize 
         .expect("manifest list");
     let mut count = 0usize;
     for entry in manifest_list.entries() {
-        if entry.content != iceberg::spec::ManifestContentType::Data {
+        if entry.content != content {
             continue;
         }
         let manifest = entry
@@ -354,8 +431,16 @@ async fn v3_cow_update_on_branch_keeps_row_id_and_leaves_main() {
         vec![(1, "a".into()), (2, "b".into()), (3, "c".into())]
     );
     assert_eq!(
+        lineage_triples(&ctx, &catalogs, "adopt_br").await,
+        vec![(1, 0, 1), (2, 1, 1), (3, 2, 1)]
+    );
+    assert_eq!(
         table_rows(&ctx, &catalogs, "ice.sales.adopt_br.branch_b").await,
         vec![(1, "a".into()), (2, "x".into()), (3, "c".into())]
+    );
+    assert_eq!(
+        lineage_triples_at_ref(&catalogs, "adopt_br", "b").await,
+        vec![(1, 0, 1), (2, 1, 2), (3, 2, 1)]
     );
 }
 

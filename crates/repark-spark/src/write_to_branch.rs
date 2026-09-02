@@ -328,7 +328,6 @@ pub(crate) async fn apply_write_to_branch<'a>(
                 return Err(missing_branch_error(&branch));
             }
             if let Some(kind) = write_dml_kind(sql) {
-                repark_iceberg::write::refuse_v3_cow_dml(catalog.as_ref(), &ident, kind).await?;
                 repark_iceberg::write::refuse_mor_unpartitioned_multi_spec_dml(
                     catalog.as_ref(),
                     &ident,

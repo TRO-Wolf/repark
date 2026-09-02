@@ -615,5 +615,59 @@ async fn update_on_the_appended_v3_table_commits() {
     .await;
     assert_eq!(after_update[0], (1, "x".into(), 0));
     assert_eq!(&after_update[1..], &before_rows[1..]);
-    let _ = before_files;
+    assert_eq!(
+        super::v3_cow::lineage_triples(&ctx, &catalogs, "partdv").await,
+        vec![(1, 0, 3), (3, 2, 1), (4, 3, 1), (6, 5, 1)]
+    );
+    assert_ne!(
+        files_with_bytes(Path::new(PART_DV_TABLE)),
+        before_files,
+        "a committed live-DV UPDATE must write new files"
+    );
+}
+
+#[tokio::test]
+async fn merge_on_the_appended_v3_table_still_refuses() {
+    let _: &str = "pins: rp-6-fork-repin/C-002";
+    let fixture = materialize_part_dv();
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    adopt_and_append(&ctx, &catalogs, &fixture.metadata_file).await;
+
+    let before_snapshot = snapshot_id(&catalogs).await;
+    let before_rows = live_triples(
+        &ctx,
+        &catalogs,
+        "SELECT id, name, part FROM ice.sales.partdv ORDER BY id",
+    )
+    .await;
+    let before_files = files_with_bytes(Path::new(PART_DV_TABLE));
+    let err = execute(
+        &ctx,
+        &catalogs,
+        "MERGE INTO ice.sales.partdv AS t USING (SELECT 1 AS id, 'm' AS name) AS s \
+         ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.name = s.name",
+    )
+    .await
+    .expect_err("RePark-owned MERGE still reassigns v3 row ids")
+    .to_string();
+    assert!(
+        err.contains("this table is V3") && err.contains("deletion vectors"),
+        "partdv MERGE keep-refusal, got: {err}"
+    );
+    assert_eq!(snapshot_id(&catalogs).await, before_snapshot);
+    assert_eq!(
+        live_triples(
+            &ctx,
+            &catalogs,
+            "SELECT id, name, part FROM ice.sales.partdv ORDER BY id",
+        )
+        .await,
+        before_rows
+    );
+    assert_eq!(
+        files_with_bytes(Path::new(PART_DV_TABLE)),
+        before_files,
+        "a refused MERGE must not write"
+    );
 }

@@ -339,11 +339,12 @@ def _assert_delete_files_live_against_spark(part_meta: str, eq_meta: str) -> Non
     assert ICEBERG_SPARK_RUNTIME_GAV == "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0"
 
 
-def test_partitioned_dv_update_and_rewrite_refuse_pre_write(tmp_path: Path) -> None:
-    """The partitioned-DV DELETE succeeds; UPDATE and unsafe rewrite refuse before writing.
+def test_partitioned_dv_update_commits_and_rewrite_still_refuses(tmp_path: Path) -> None:
+    """Partitioned-DV UPDATE keeps `_row_id` and bumps seq; rewrite_position_delete_files refuses.
 
     pins: v3e-5-nightly-v3-oracle/C-008
     pins: rp-3-fork-repin/C-004, C-011
+    pins: rp-6-fork-repin/C-003
     """
     from repark import ReparkSession
     from repark.errors import UnsupportedOperationException
@@ -357,11 +358,25 @@ def test_partitioned_dv_update_and_rewrite_refuse_pre_write(tmp_path: Path) -> N
                 "CALL ice.system.register_table("
                 f"table => 'sales.partdv', metadata_file => '{metadata_file}')"
             )
+            before_objects = _objects_under(_PART_DV_DEST)
             session.sql("UPDATE ice.sales.partdv SET name = 'x' WHERE id = 1").collect()
             after_update = session.sql("SELECT id, name, part FROM ice.sales.partdv").to_arrow()
             updated_rows = _id_name_part_rows(after_update)
             assert (1, "x", 0) in updated_rows
+            lineage = session.sql(
+                "SELECT id, _row_id, _last_updated_sequence_number "
+                "FROM ice.sales.partdv ORDER BY id"
+            ).to_arrow()
+            assert list(
+                zip(
+                    lineage.column("id").to_pylist(),
+                    lineage.column("_row_id").to_pylist(),
+                    lineage.column("_last_updated_sequence_number").to_pylist(),
+                    strict=True,
+                )
+            ) == [(1, 0, 3), (3, 2, 1), (4, 3, 1), (6, 5, 1)]
             after_update_objects = _objects_under(_PART_DV_DEST)
+            assert after_update_objects != before_objects
             with pytest.raises(UnsupportedOperationException, match="Puffin deletion vector"):
                 session.sql(
                     "CALL ice.system.rewrite_position_delete_files(table => 'sales.partdv')"

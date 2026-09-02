@@ -13,7 +13,7 @@ including each refusal, has a test in the same change.
 Source documentation may retain model provenance; code-quality grade tags stay outside code.
 
 The router order is load-bearing: text guards first; pre-parse; parse; G15, FNP-15/16 declared-function refuse, and statement match;
-parsed DML G3-E8, then async MoR/V3 valves; delegation applies SEC-02 after planning and before
+parsed DML G3-E8, then async MoR valve; delegation applies SEC-02 after planning and before
 execution. Multi-statement refusal precedes every rewrite. The wrong-door sniff runs on errors only.
 There is no `$` pre-parse bypass; stock parsing handles metadata references.
 
@@ -39,7 +39,7 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   pins: dml-b-insert-overwrite/C-001, C-002, C-004, C-005, C-006
 - `router.rs` — the statement router (text guards → pre-parse stage → parse → G15 collation
   (**V3-4:** `prepare_lineage_sql` after time travel; composed statements refuse `V3-ROWID-2`)
-  valve → match → the two DML valves → delegate) and the delegation path that carries the SEC-02
+  valve → match → the MoR DML valve → delegate) and the delegation path that carries the SEC-02
   guard. Delegation
   covers reads, the fork's metadata tables, and `INSERT`/`DELETE`/`UPDATE` via the fork's
   `TableProvider` (ADR-0003). `DELETE`/`UPDATE` share a NAMED arm on the way to delegation:

@@ -441,7 +441,20 @@ async fn ansi_partitioned_dv_update_commits() {
     let after = door.live_triples("partdv").await;
     assert_eq!(after[0].1, "x");
     assert_eq!(&after[1..], &before_rows[1..]);
-    let _ = before_files;
+    assert_eq!(
+        lineage_triples(&door, "partdv").await,
+        vec![
+            (1, Some(0), Some(3)),
+            (3, Some(2), Some(1)),
+            (4, Some(3), Some(1)),
+            (6, Some(5), Some(1)),
+        ]
+    );
+    assert_ne!(
+        files_with_bytes(Path::new(PART_DV_TABLE)),
+        before_files,
+        "a committed live-DV UPDATE must write new files"
+    );
 }
 
 #[tokio::test]

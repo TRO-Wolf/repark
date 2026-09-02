@@ -11,10 +11,11 @@ ANSI-door format-v3 test modules. `lib.rs` declares `#[cfg(test)] mod v3;`.
   (`Model: Grok 4.6 xHigh` on the module's functions). **V3-6 C-003:** opt-in CREATE
   `timestamp_ns` / `timestamptz_ns` stores the Iceberg primitives; `timestamp_ns`
   SELECT round-trips ns values and Arrow types (pins: v3-6-v3-types/C-003).
-- `cow.rs` — **V3-COW-1 (RP-6 lift):** adopted-v3 UPDATE / MERGE matched-update keep
-  `_row_id`; sequential COW DELETE keeps the survivor id at next-row-id 6; subquery
-  WHERE DML commits; padded MoR UPDATE keeps `_row_id`; plain-`WHERE` DELETE including
-  a second MOR DELETE that merges into the live vector; v2 control; Hadoop `vN` write
+- `cow.rs` — **V3-COW-1 (RP-6 lift):** adopted and created v3 UPDATE keep `_row_id`;
+  sequential COW DELETE keeps the survivor id at next-row-id 6; MERGE matched-update
+  and subquery-WHERE DML still refuse `V3-COW-1` because the RePark-owned MERGE writer
+  reassigns; padded MoR UPDATE keeps `_row_id`; plain-`WHERE` DELETE including a
+  second MOR DELETE that merges into the live vector; v2 control; Hadoop `vN` write
   (pins: rp-6-fork-repin/C-002, C-003; rp-3-fork-repin/C-008). Hash-pinned by
   `v3_lineage.rs::cow_keep_refusal_files_are_byte_untouched`.
 - `types.rs` — `GEOMETRY` / `GEOGRAPHY` / `VARIANT` refuse at CREATE (`V3-GEO-1`);
@@ -25,7 +26,7 @@ ANSI-door format-v3 test modules. `lib.rs` declares `#[cfg(test)] mod v3;`.
   (pins: rp-3-fork-repin/C-004).
 - `partitioned_equality_deletes.rs` — ANSI live-row twins of the Spark-written partitioned
   DV and equality-delete + DV fixtures, plus `$delete_files` content 1/2, cross-partition DV
-  DELETE, live-DV UPDATE commits (`Model: Grok 4.6 xHigh`; rp-6-fork-repin/C-003),
+  DELETE, live-DV UPDATE Spark-equal lineage (`Model: Grok 4.6 xHigh`; rp-6-fork-repin/C-003),
   and C-007 ANSI CALL / fork no-op of `rewrite_position_delete_files`
   (pins: rp-3-fork-repin/C-007). **V3-4:** ANSI `_row_id` / `_last_updated_sequence_number`
   on both fixtures, `SELECT *, _row_id` expands user columns only, qualified/aliased forms,

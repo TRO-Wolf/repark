@@ -1,10 +1,11 @@
 //! Model: Claude Fable 5
-//! ANSI-door pins: copy-on-write UPDATE / MERGE and the resolver seat refuse an adopted v3
-//! table (`V3-COW-1`); plain-`WHERE` DELETE
+//! ANSI-door pins: plain-`WHERE` UPDATE / DELETE keep `_row_id`; MERGE matched-update
+//! and subquery-WHERE DML still refuse `V3-COW-1`
 //! pins: v3r-1-rulings/C-001, C-002, C-003, C-004, C-005
 //! pins: rp-2-fork-repin/C-003, C-005
 //! pins: rp-3-fork-repin/C-004, C-008
 //! pins: v3-3-dml/C-001, C-002
+//! pins: rp-6-fork-repin/C-002, C-003
 
 use std::collections::HashSet;
 use std::fs;
@@ -316,6 +317,29 @@ async fn adopted_v3_cow_update_keeps_row_id_and_bumps_matched_seq() {
         vec![(1, 0, 1), (2, 1, 2), (3, 2, 1)]
     );
     assert_eq!(door.lineage("adopt_upd").await, (6, Some(3), Some(3)));
+}
+
+#[tokio::test]
+async fn created_v3_cow_update_keeps_row_id() {
+    let _: &str = "pins: rp-6-fork-repin/C-002";
+    let door = door_with_v3_opt_in().await;
+    door.ok(&format!(
+        "CREATE TABLE ice.sales.created_upd (id INT, name VARCHAR) WITH ({COW_V3})"
+    ))
+    .await;
+    door.ok("INSERT INTO ice.sales.created_upd VALUES (1, 'a'), (2, 'b'), (3, 'c')")
+        .await;
+    door.ok("UPDATE ice.sales.created_upd SET name = 'x' WHERE id = 2")
+        .await;
+    assert_eq!(
+        door.live_pairs("created_upd").await,
+        vec![(1, "a".into()), (2, "x".into()), (3, "c".into())]
+    );
+    assert_eq!(
+        door.live_triples("created_upd").await,
+        vec![(1, 0, 1), (2, 1, 2), (3, 2, 1)]
+    );
+    assert_eq!(door.lineage("created_upd").await, (6, Some(3), Some(3)));
 }
 
 #[tokio::test]
