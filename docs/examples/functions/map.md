@@ -17,6 +17,18 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
 - [sign.py](sign.py) — `F.signum` and its alias `F.sign`, beside the unary
   `F.negative` / `F.positive` pair, on floats and on an integer column.
 - [rint.py](rint.py) — `F.rint` and the half-to-even tie rule.
+- [trig.py](trig.py) — the trigonometry family: ratios, inverses with their NaN and
+  Infinity edges, `F.atan2` at the origin, and the degree round trip on `F.pi`.
+- [hyperbolic.py](hyperbolic.py) — the hyperbolic six, with the inverse domains:
+  `F.asinh` open, `F.acosh` from 1, `F.atanh` inside the unit interval.
+- [logs.py](logs.py) — `F.ln` and one-argument `F.log`, the fixed-base spellings
+  `F.log10` / `F.log2`, two-argument `F.log`, and `F.e`, whose ln is 1.
+- [rounding.py](rounding.py) — `F.ceil` / `F.ceiling` (an alias pair) and `F.floor`
+  against the integers, and `F.round`, whose halfway cases go away from zero.
+- [integer_math.py](integer_math.py) — `F.factorial`, `F.pmod` answering non-negative
+  under a positive divisor, `F.greatest` / `F.least` skipping NULLs, `F.width_bucket`.
+- [try_arithmetic.py](try_arithmetic.py) — the `F.try_*` quartet answering NULL on
+  overflow and divide-by-zero, ordinary input unchanged.
 
 ## Pointers
 

@@ -1,5 +1,9 @@
 # map — scripts/
 
+EX-3 batch 2 (2026-09-02): `check_example_coverage.py` `BACKLOG_BASELINE` 881 → 844 —
+37 `F.*` trig, log, rounding and try-arithmetic names covered by six new examples;
+`F.log1p` measured divergent against the live oracle at `x = 1e-10` and `x = 1e-13` and kept on the
+backlog. pins: ex-2-functions-math-bitwise/C-002
 V3-8 (2026-09-02): `check_rust_file_size.py` `write/predicate_dml.rs` 1226→1164 (the
 lineage projection helpers move to `write/predicate_dml/lineage.rs`).
 pins: v3-8-subquery-where-lineage/C-002
