@@ -30,7 +30,7 @@ def format_leg_table(leg: LegResult) -> str:
         f"{'mlist_B':>8} {'rows':>10} {'count_p50':>10} {'part_p50':>10} {'point_p50':>10} "
         f"{'point_p99':>10}"
     )
-    lines = [f"--- leg {leg.mode} ({leg.table}) ---", header]
+    lines = [f"--- leg {leg.mode} v{leg.format_version} ({leg.table}) ---", header]
     for point in leg.checkpoints:
         timings = {scan.label: scan for scan in point.scans}
         lines.append(
@@ -47,10 +47,11 @@ def format_leg_table(leg: LegResult) -> str:
         f"{'procedure':>30} {'wall_s':>9} {'data_f':>7} {'del_f':>7} {'manif':>6} {'mlist_B':>8}"
     )
     for step in leg.maintenance:
+        refused = f" REFUSED: {step.refusal.splitlines()[0]}" if step.refusal else ""
         lines.append(
             f"{step.procedure:>30} {step.wall_seconds:>9.2f} {step.census_after.data_files:>7} "
             f"{step.census_after.delete_files:>7} {step.census_after.manifests:>6} "
-            f"{step.census_after.manifest_list_bytes:>8}"
+            f"{step.census_after.manifest_list_bytes:>8}{refused}"
         )
     after = {scan.label: scan for scan in leg.after_maintenance.scans}
     lines.append(
@@ -110,6 +111,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="write.target-file-size-bytes on each CTAS",
     )
     parser.add_argument("--modes", default="mor,cow", help="comma-separated legs to run (mor, cow)")
+    parser.add_argument(
+        "--format-version",
+        type=int,
+        choices=(2, 3),
+        default=2,
+        help="Iceberg format-version on each CTAS (3 arms the create opt-in)",
+    )
     parser.add_argument("--scratch", required=True, help="scratch root for warehouses + Parquet")
     parser.add_argument("--out", default="", help="write the full result as JSON to this path")
     parser.add_argument("--host-note", default="", help="free text recorded with the result")
@@ -135,6 +143,7 @@ def main() -> int:
         target_file_size_bytes=args.target_file_size_bytes,
         modes=[mode.strip() for mode in args.modes.split(",") if mode.strip()],
         host_note=args.host_note,
+        format_version=args.format_version,
     )
     for leg in result.legs:
         print(format_leg_table(leg))

@@ -75,6 +75,25 @@ illustrative. A claim with no verified basis does not go in.
   MW-7's numbers are cited to
   [../../task/ledgers/completed/mw-7-scale-measurement-ledger.md](../../task/ledgers/archive/2026-08/2026-08-24-mw-7-scale-measurement-ledger.md)
   §6, never restated.
+  **SCALE-v3 (2026-09-02)** gave the runbook section its format version. Every number there was
+  fitted to format v2, and three of them do not transfer, so the section now says v2 or v3
+  before it says a figure:
+
+  | Runbook claim | v2 | v3 |
+  |---|---|---|
+  | the cycle's first CALL | `rewrite_position_delete_files` folds 400 delete files to 8 | it REFUSES on live DVs (`B-MOR-3`) — drop the line; `rewrite_data_files` reclaims all 96 alone |
+  | 2x cadence crossing | 19.6 merges (merge 20 already 2.05x) | partition probe between merge 30 and 40; point probe between 40 and 50 |
+  | debt trigger | ~157 delete files (`partition` granularity) | the delete-file count plateaus at the data files carrying deletes (96); trigger on delete RECORDS |
+  | cycle budget | ~2.5 minutes | ~6 minutes (353.9 s) |
+  | after the cycle | 2.02x / 2.45x the COW control, 1.90x its bytes | 0.61x on the point probe, zero delete files, zero delete records |
+
+  Two sentences elsewhere in the guide were false since V3-9 and are corrected and dated in the
+  same pass: "the engine still cannot create a v3 table" (it does, behind
+  `repark.sql.allowCreateFormatVersion3`) and "repark writes no v3 delete files itself" (a
+  merge-on-read write writes one file-scoped Puffin DV per touched data file).
+  SCALE-v3's numbers are cited to
+  [../../task/ledgers/staging/scale-v3-mw7-ledger.md](../../task/ledgers/completed/scale-v3-mw7-ledger.md)
+  §3, never restated.
 - [troubleshooting.md](troubleshooting.md) — the gotchas in one page, symptom → why → what to do:
   dict-cell struct inference (FA-4), dotted-path `select`, euro-comma CSV decimals,
   `explode_outer` on `array<struct>` (now keeps null/empty rows), `count()` **and any
@@ -100,7 +119,7 @@ illustrative. A claim with no verified basis does not go in.
 | Fit a model, or find out whether an estimator exists at all | [ml-guide.md](ml-guide.md) |
 | Point a session at Glue / S3 Tables, or read an Iceberg table | [iceberg-guide.md](iceberg-guide.md) |
 | Time-travel a table, or work out why a statement refuses | [iceberg-guide.md](iceberg-guide.md) |
-| Schedule table maintenance, or port a Spark maintenance DAG | [iceberg-guide.md](iceberg-guide.md) "The maintenance runbook" |
+| Schedule table maintenance, or port a Spark maintenance DAG | [iceberg-guide.md](iceberg-guide.md) "The maintenance runbook" — read its format-version line first; the v2 and v3 cycles differ in their first CALL |
 | Diagnose a surprising result or a loud refusal | [troubleshooting.md](troubleshooting.md) |
 | Find out how repark differs from Apache Spark, and why | [../spark-sql-iceberg-parity.md](../spark-sql-iceberg-parity.md) (authoritative) |
 | Check release / delivery state | [../../STATUS.md](../../STATUS.md) (authoritative) |
