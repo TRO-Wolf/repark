@@ -162,8 +162,9 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
     **V3-6 (2026-09-01):** opt-in v3 CREATE consumes fork `timestamp_ns`/`timestamptz_ns`
     (v2 refuses); append fills from a schema-carried `write_default`; DEFAULT DDL, `unknown`
     and binary `variant` refuse Spark-equal (`V3-VARIANT-SHRED-1`, R88/R91, RP-5).
-    **LIVE-v3 (2026-09-02):** the two live v3 legs are wired and the leg body pinned
-    locally; both stay **unmeasured** until the nightly `aws-acceptance` run (`S3T-V3-1`).
+    **LIVE-v3 (2026-09-02):** both live v3 legs green on `aws-acceptance` run
+    33635288918 — S3 Tables takes `format-version = 3` at CREATE, Glue reproduces the
+    local numbers (`S3T-V3-1`).
   - **Next:** row-lineage carry is complete on every served DML shape (`V3-COW-1` FIXED,
     V3-8); **V3-9** takes merge-on-read subquery-`WHERE` DML on v3, refused today by
     predicate DML's V2-only delete-file gate; **V3-11** takes the nondeterministic

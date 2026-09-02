@@ -306,6 +306,10 @@ The FNP and TA performance campaigns consume none of these fork surfaces.
 
 - **Nothing was measured on Glue or S3 Tables.** Every number here is local filesystem. §4's
   claim that Glue implements `register_table` is read from the fork's source at the pin, not run.
+  **Corrected 2026-09-02 (LIVE-v3-M):** both services are measured now — the two v3 acceptance
+  legs ran green on `aws-acceptance` run 33635288918, Glue reproducing the local numbers exactly
+  (`register_table` among them) and S3 Tables accepting `format-version = 3` at CREATE. Registry
+  `S3T-V3-1`.
 - **`expire_snapshots` on v3 returned all zeros** on a fixture with nothing to expire, which is
   the same answer it gives on v2 and is not evidence either way. It was not exercised against a
   table with expirable snapshots.
