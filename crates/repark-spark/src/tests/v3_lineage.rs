@@ -421,6 +421,7 @@ fn v3_rowid_1_is_fixed_in_the_registry() {
 
 #[test]
 fn cow_keep_refusal_files_are_byte_untouched() {
+    let _: &str = "pins: v3-7-merge-lineage/C-003";
     let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .expect("crates/")
@@ -434,12 +435,12 @@ fn cow_keep_refusal_files_are_byte_untouched() {
         ),
         (
             "crates/repark-spark/src/tests/v3_cow.rs",
-            0x1907_7a40_dc44_2777,
+            0xe522_7f96_2a74_2b99,
         ),
-        ("crates/repark-sql/src/v3/cow.rs", 0x4e6e_3161_5ae6_7735),
+        ("crates/repark-sql/src/v3/cow.rs", 0x0bbb_59fd_46fb_8f05),
         (
             "python/repark/tests/test_v3_cow_dml.py",
-            0x439c_e927_53c3_8997,
+            0x658d_8b13_414a_9aaf,
         ),
     ];
     for (path, expected) in pinned {
@@ -451,8 +452,8 @@ fn cow_keep_refusal_files_are_byte_untouched() {
         }
         assert_eq!(
             hash, expected,
-            "V3-COW-1 lift file {path} changed; RP-6 (feat/rp-6-fork-repin) re-records \
-             these hashes after a measured Spark-equal lift; later units re-record only \
+            "V3-COW-1 lift file {path} changed; V3-7 (feat/v3-7-merge-lineage) re-records \
+             these hashes after a measured Spark-equal MERGE lift; later units re-record only \
              for a change another merged unit made"
         );
     }

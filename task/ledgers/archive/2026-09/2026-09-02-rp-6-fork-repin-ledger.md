@@ -6,7 +6,7 @@
 [../../roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md](../../../roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md)
 asks F-7, F-rp3-c7, F-16 residue 2 · **Path:** STANDARD (`risk_tier: standard`; one Actor cycle).
 **Proven pattern:**
-[2026-09-01-rp-5-fork-repin-ledger.md](../archive/2026-09/2026-09-01-rp-5-fork-repin-ledger.md).
+[2026-09-01-rp-5-fork-repin-ledger.md](2026-09-01-rp-5-fork-repin-ledger.md).
 
 **Retires:** this ledger moves to `../completed/` in this unit's last commit.
 

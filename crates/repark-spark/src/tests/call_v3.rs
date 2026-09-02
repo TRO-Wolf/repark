@@ -259,23 +259,22 @@ async fn opt_in_create_produces_v3_and_rewrite_runs() {
         "INSERT INTO ice.sales.v3mor SELECT 1 AS id",
     )
     .await;
-    let merge = match execute(
+    run(
         &ctx,
         &catalogs,
         "MERGE INTO ice.sales.v3mor AS t USING (SELECT 1 AS id) AS s ON t.id = s.id \
          WHEN MATCHED THEN UPDATE SET t.id = s.id \
          WHEN NOT MATCHED THEN INSERT (id) VALUES (s.id)",
     )
-    .await
-    {
-        Ok(frame) => frame.collect().await.err().map(|err| err.to_string()),
-        Err(err) => Some(err.to_string()),
-    };
-    let merge = merge.expect("merge-on-read MERGE must still refuse a v3 table");
-    assert!(
-        merge.contains("V3"),
-        "non-v2 MoR MERGE guard must still fire: {merge}"
-    );
+    .await;
+    let after_merge = scan_lineage_triples(
+        &catalog
+            .load_table(&TableIdent::from_strs(["sales", "v3mor"]).expect("ident"))
+            .await
+            .expect("load v3mor"),
+    )
+    .await;
+    assert_eq!(after_merge, vec![(1, 0, 2)]);
 }
 
 async fn scan_lineage_triples(table: &iceberg::table::Table) -> Vec<(i64, i64, i64)> {

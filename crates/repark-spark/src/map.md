@@ -31,7 +31,8 @@ pins: rp-4-fork-repin/C-005, C-006
   travel, `prepare_lineage_sql` pins v3 `_row_id` / `_last_updated_sequence_number` onto a
   temp provider for single-table reads (`LineagePins` released with the time-travel views);
   JOIN/CTE/subquery/time-travel naming lineage refuse `V3-ROWID-2`. RP-6: plain-`WHERE`
-  UPDATE/DELETE are Spark-equal; MERGE still refuses `V3-COW-1` in the RePark-owned writer.
+  UPDATE/DELETE are Spark-equal. V3-7: MERGE keeps `_row_id`; subquery-WHERE DML still
+  refuses `V3-COW-1`.
   SQP-1: the front door canonicalizes escapes once and
   translates downstream parser locations back to the caller's SQL.
 - `merge.rs` — MERGE INTO lowering (sqlparser AST → `repark_iceberg::write::merge::MergeSpec`,
@@ -145,9 +146,9 @@ pins: rp-4-fork-repin/C-005, C-006
   correlation, correlated IN, and identity `UPDATE … IN` onto `execute_predicate_dml`;
   see the module doc and `task/r1-g3e8-pr4-ledger.md`), the MERGE
   star rewrite call, partition-spec builders. `dml_target_ident` (shared with the BUG-001
-  valve) completes short names from the session defaults (SEC-001). MERGE still refuses
-  `V3-COW-1` (RePark-owned writer reassigns).
-  pins: rp-6-fork-repin/C-002
+  valve) completes short names from the session defaults (SEC-001). V3-7 MERGE keeps
+  `_row_id`; subquery-WHERE DML still refuses `V3-COW-1`.
+  pins: v3-7-merge-lineage/C-002; rp-6-fork-repin/C-002
 - `call_args.rs` — CALL argument bag, scalar coercions, and quoted-name keys for dashed options.
 - `collation.rs` — **G15:** parse-altitude collation refuse. Walks
   `Expr::Collate`, column-def `COLLATE`, `CREATE`/`ALTER COLLATION`, `SET NAMES COLLATE`,

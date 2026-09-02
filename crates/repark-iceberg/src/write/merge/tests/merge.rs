@@ -19,6 +19,15 @@ impl PartitionStream for EmptyTargetStream {
     }
 }
 
+pub(super) fn merge_sql(spec: &MergeSpec) -> MergeSql<'_> {
+    MergeSql {
+        spec,
+        target_name: "scratch",
+        match_flag: "__repark_matched_t",
+        carry_lineage: false,
+    }
+}
+
 pub(super) fn spec(matched: Vec<MatchedClause>, not_matched: Vec<InsertClause>) -> MergeSpec {
     MergeSpec {
         target: TableIdent::new(NamespaceIdent::new("sales".to_string()), "t".to_string()),
@@ -261,11 +270,7 @@ fn rewrite_case_encodes_clause_order() {
         ],
         vec![],
     );
-    let sql = MergeSql {
-        spec: &spec,
-        target_name: "scratch",
-        match_flag: "__repark_matched_t",
-    };
+    let sql = merge_sql(&spec);
     let name_case = sql.rewrite_column("name");
     // Clause 0 sets name; clause 1 does not — exactly one value branch, ELSE keeps original.
     assert!(
@@ -303,11 +308,7 @@ fn delete_clause_shapes_filter_not_projection() {
         ],
         vec![],
     );
-    let sql = MergeSql {
-        spec: &spec,
-        target_name: "scratch",
-        match_flag: "__repark_matched_t",
-    };
+    let sql = merge_sql(&spec);
     let deleted = sql.delete_applies();
     assert!(
         deleted.contains("COALESCE((s.op = 'd'), FALSE)"),
@@ -494,11 +495,7 @@ fn insert_sql_uses_clause_id_not_oc2_prior_chain() {
             },
         ],
     );
-    let sql = MergeSql {
-        spec: &merge_spec,
-        target_name: "scratch",
-        match_flag: "__repark_matched_t",
-    };
+    let sql = merge_sql(&merge_spec);
     let schema = arrow_schema();
     let insert0 = sql.insert_sql(0, &schema).expect("insert 0");
     let insert1 = sql.insert_sql(1, &schema).expect("insert 1");
@@ -522,11 +519,7 @@ fn insert_sql_uses_clause_id_not_oc2_prior_chain() {
 #[test]
 fn rewrite_sql_drops_in_list_when_allowlisted_else_path_semijoin() {
     let merge_spec = spec(vec![update(None, &[("name", "s.name")])], vec![]);
-    let sql = MergeSql {
-        spec: &merge_spec,
-        target_name: "scratch",
-        match_flag: "__repark_matched_t",
-    };
+    let sql = merge_sql(&merge_spec);
     let schema = arrow_schema();
     let allowlisted = sql.rewrite_sql_allowlisted("scoped_target", &schema);
     // Note: do not search bare `IN (` — `JOIN (` contains that substring.
@@ -578,11 +571,7 @@ fn rewrite_projection_20_clauses_100_cols_generation_time() {
         });
     }
     let merge_spec = spec(matched, vec![]);
-    let sql = MergeSql {
-        spec: &merge_spec,
-        target_name: "scratch",
-        match_flag: "__repark_matched_t",
-    };
+    let sql = merge_sql(&merge_spec);
     let fields: Vec<Field> = (0..COL_COUNT)
         .map(|col_index| Field::new(format!("c{col_index:03}"), DataType::Int32, true))
         .collect();
@@ -693,11 +682,7 @@ fn merge_sql_keys_identity_on_file_and_pos() {
         vec![update(None, &[("name", "s.name")])],
         vec![insert(&["id", "name"], &["s.id", "s.name"])],
     );
-    let sql = MergeSql {
-        spec: &spec,
-        target_name: "scratch",
-        match_flag: "__repark_matched_t",
-    };
+    let sql = merge_sql(&spec);
 
     // Stage A live SQL (QUAL-08 deleted residual cardinality_sql / affected_files_sql).
     let discovery = sql.match_discovery_sql();
@@ -868,11 +853,7 @@ fn rewrite_column_case_insensitive_assignment() {
         }],
         vec![],
     );
-    let sql = MergeSql {
-        spec: &merge_spec,
-        target_name: "scratch",
-        match_flag: "__repark_matched_t",
-    };
+    let sql = merge_sql(&merge_spec);
     let rewritten = sql.rewrite_column("name");
     assert!(
         rewritten.contains("'x'"),
@@ -1066,11 +1047,7 @@ fn generated_sql_quotes_identifiers() {
     assert_eq!(projected, "(s.x) AS \"na\"\"me\"");
 
     let plain_spec = spec(vec![], vec![]);
-    let sql = MergeSql {
-        spec: &plain_spec,
-        target_name: "scratch",
-        match_flag: "__repark_matched_t",
-    };
+    let sql = merge_sql(&plain_spec);
     assert_eq!(
         sql.rewrite_column("na\"me"),
         "t.\"na\"\"me\" AS \"na\"\"me\""

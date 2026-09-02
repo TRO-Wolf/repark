@@ -627,8 +627,8 @@ async fn update_on_the_appended_v3_table_commits() {
 }
 
 #[tokio::test]
-async fn merge_on_the_appended_v3_table_still_refuses() {
-    let _: &str = "pins: rp-6-fork-repin/C-002";
+async fn merge_on_the_appended_v3_table_keeps_row_id() {
+    let _: &str = "pins: v3-7-merge-lineage/C-002";
     let fixture = materialize_part_dv();
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&warehouse).await;
@@ -641,33 +641,24 @@ async fn merge_on_the_appended_v3_table_still_refuses() {
         "SELECT id, name, part FROM ice.sales.partdv ORDER BY id",
     )
     .await;
-    let before_files = files_with_bytes(Path::new(PART_DV_TABLE));
-    let err = execute(
+    run(
         &ctx,
         &catalogs,
         "MERGE INTO ice.sales.partdv AS t USING (SELECT 1 AS id, 'm' AS name) AS s \
          ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.name = s.name",
     )
-    .await
-    .expect_err("RePark-owned MERGE still reassigns v3 row ids")
-    .to_string();
-    assert!(
-        err.contains("this table is V3") && err.contains("deletion vectors"),
-        "partdv MERGE keep-refusal, got: {err}"
-    );
-    assert_eq!(snapshot_id(&catalogs).await, before_snapshot);
+    .await;
+    assert_ne!(snapshot_id(&catalogs).await, before_snapshot);
+    let after_merge = live_triples(
+        &ctx,
+        &catalogs,
+        "SELECT id, name, part FROM ice.sales.partdv ORDER BY id",
+    )
+    .await;
+    assert_eq!(after_merge[0], (1, "m".into(), 0));
+    assert_eq!(&after_merge[1..], &before_rows[1..]);
     assert_eq!(
-        live_triples(
-            &ctx,
-            &catalogs,
-            "SELECT id, name, part FROM ice.sales.partdv ORDER BY id",
-        )
-        .await,
-        before_rows
-    );
-    assert_eq!(
-        files_with_bytes(Path::new(PART_DV_TABLE)),
-        before_files,
-        "a refused MERGE must not write"
+        super::v3_cow::lineage_triples(&ctx, &catalogs, "partdv").await,
+        vec![(1, 0, 3), (3, 2, 1), (4, 3, 1), (6, 5, 1)]
     );
 }

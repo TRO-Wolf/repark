@@ -2201,17 +2201,17 @@ the pin rather than obeying it.
   `FeatureUnsupported` before any AWS call so the engine can cite R126 instead of "not
   supported yet". Pins: rp-3-fork-repin/C-008.
 
-### V3-COW-1 — v3 row-DML: DELETE and UPDATE Spark-equal; MERGE still refuses
+### V3-COW-1 — v3 row-DML: DELETE, UPDATE, and MERGE Spark-equal; subquery-WHERE DML still refuses
 
-- **repark** — RP-6 (2026-09-01, fork `fb0cacfa`) lifts plain-`WHERE` `UPDATE` and sequential
-  COW `DELETE` on all three doors. Single-file seed (`coalesce(1)` / `local[1]`): first COW
-  DELETE keeps `(1,0,1),(3,2,1)` at `next-row-id` 5; second COW DELETE keeps `(1,0,1)` at
-  `next-row-id` 6 (F-rp3-c7 "6 vs 5" was a two-file-seed layout artefact). COW UPDATE
-  `SET name='x' WHERE id=2` is `(1,0,1),(2,1,2),(3,2,1)` at `next-row-id` 6. MoR UPDATE
-  keeps `_row_id` and advances seq on the changed row (F-7 preserve-half). RePark-owned
-  `MERGE INTO` still reassigns (`(1,4,2),(2,3,2),(3,5,2)` vs Spark `(1,0,1),(2,1,2),(3,2,1)`)
-  and stays a pre-write `V3-COW-1` refusal, as does subquery-`WHERE` DML (same MERGE writer)
-  and MoR MERGE (parquet position deletes on v3). A v2 control commits unchanged.
+- **repark** — V3-7 (2026-09-02) carries stored `_row_id` through the RePark-owned MERGE
+  writer on copy-on-write and merge-on-read. Single-file seed (`coalesce(1)` / `local[1]`):
+  matched-UPDATE MERGE is Spark-equal `(1,0,1),(2,1,2),(3,2,1)` — COW `next-row-id` 6
+  (1 data file, 2 manifests), MoR `next-row-id` 4 (2 data files, 1 Puffin DV, 3 manifests).
+  Matched-DELETE, NOT MATCHED INSERT, NOT MATCHED BY SOURCE DELETE, and mixed MERGE
+  match the live oracle on all three doors, created and adopted. Subquery-`WHERE` DML
+  still uses the MERGE writer without lineage carry and stays a pre-write `V3-COW-1`
+  refusal. A v2 control commits unchanged. RP-6 (2026-09-01, fork `fb0cacfa`) already
+  lifted plain-`WHERE` UPDATE and sequential COW DELETE.
 - **Apache Spark** — COW `DELETE` on v3 **preserves** `_row_id` /
   `_last_updated_sequence_number`. Seed `(id,_row_id,seq) = (1,0,1), (2,1,1), (3,2,1)`;
   after `DELETE WHERE id = 2` the survivors are still `(1,0,1), (3,2,1)` and `next-row-id`
@@ -2219,21 +2219,21 @@ the pin rather than obeying it.
   `next-row-id` to `6`. The same seed after `UPDATE SET name='x' WHERE id=2` is
   `(1,a,0,1),(2,x,1,2),(3,c,2,1)` on both COW (`next-row-id` 6) and MOR (`next-row-id` 4,
   one replacement file plus a Puffin DV). Matched-update `MERGE` matches that UPDATE
-  lineage on COW.
-  *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, Hadoop catalog, `local[1]`, 2026-09-01
-  RP-6 transcript)*.
+  lineage on COW and MOR. Insert-only MERGE appends a new id; mixed MERGE keeps the
+  updated row's id and assigns the insert.
+  *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, Hadoop catalog, `local[1]`, 2026-09-02
+  V3-7 transcript)*.
 - **Pin** —
   `crates/repark-spark/src/tests/v3_cow.rs::adopted_v3_cow_delete_carries_survivor_row_lineage`
   (`adopted_v3_cow_second_delete_keeps_survivor_row_id`,
   `adopted_v3_cow_update_keeps_row_id_and_bumps_matched_seq`,
-  `adopted_v3_cow_merge_matched_update_still_refuses`,
-  `crates/repark-spark/src/tests/v3_cow_lift.rs` remaining sequences; ANSI twins in
+  `adopted_v3_cow_merge_matched_update_keeps_row_id`,
+  `crates/repark-spark/src/tests/v3_cow_lift.rs` remaining MERGE shapes; ANSI twins in
   `crates/repark-sql/src/v3/cow.rs`; facade `python/repark/tests/test_v3_cow_dml.py`).
-  Pins: rp-6-fork-repin/C-002, C-003.
-- **Rationale** — remaining refusals keep the **owner ruling 2026-08-25** (guard COW DML on v3)
-  where the write is still unsafe, and stay BACKLOG. MERGE is RePark-owned and still
-  reassigns; F-rp3-c7 is consumed as a layout artefact. MoR UPDATE is Spark-equal on
-  `_row_id` / seq.
+  Pins: v3-7-merge-lineage/C-002; rp-6-fork-repin/C-002, C-003.
+- **Rationale** — remaining refusal is subquery-`WHERE` DML, which still goes through the
+  MERGE writer without lineage projection, so the **owner ruling 2026-08-25** stays
+  BACKLOG for that shape only. F-rp3-c7 is consumed as a layout artefact.
 
 ### BL-9 — a double-quoted string literal is an identifier on the SQL door
 
@@ -2483,7 +2483,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   hides them; unquoted identifiers fold). v1/v2 raise the engine Schema error
   `No field named _row_id` (Spark raises `UNRESOLVED_COLUMN.WITH_SUGGESTION` / SQLSTATE
   `42703`; mapping Spark's class is residual). Preserve across plain-`WHERE` UPDATE /
-  DELETE is Spark-equal (RP-6); MERGE still `V3-COW-1`. Pins:
+  DELETE / MERGE is Spark-equal (RP-6 / V3-7); subquery-`WHERE` DML still `V3-COW-1`. Pins:
   `crates/repark-spark/src/tests/v3_lineage.rs`,
   `crates/repark-sql/src/v3/partitioned_equality_deletes.rs` ANSI lineage tests,
   `python/repark/tests/test_v3_lineage_columns.py`.

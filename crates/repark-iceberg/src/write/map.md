@@ -39,13 +39,10 @@ repark-core's error map.
 - `merge/` — the RePark-owned `MERGE INTO` executor (copy-on-write AND merge-on-read per
   `write.merge.mode`, fork ENGINE_CONTRACT §6). DML-A adds `WHEN NOT MATCHED BY SOURCE`.
   See [merge/map.md](merge/map.md).
-- `row_lineage_guard.rs` (crate-private) — **RP-6 (2026-09-01, fork `fb0cacfa`):**
-  `refuse_v3_cow_dml_that_would_reassign_row_lineage` still hosts the live MERGE /
-  subquery-WHERE refusal used by `predicate_dml.rs` and `merge/mod.rs`. The dead
-  `refuse_v3_cow_dml` pass-through is gone; plain-`WHERE` UPDATE/DELETE go to the fork
-  writer. Fork PR-3 keeps `_row_id` and advances seq on MoR UPDATE; COW sequential DELETE
-  is Spark-equal on the single-file layout.
-  pins: rp-6-fork-repin/C-002, C-003
+- `row_lineage_guard.rs` (crate-private) — **V3-7 (2026-09-02):** MERGE no longer
+  calls the guard; `predicate_dml.rs` still refuses subquery-`WHERE` DML on v3
+  (`V3-COW-1`). Plain-`WHERE` UPDATE/DELETE go to the fork writer (RP-6).
+  pins: v3-7-merge-lineage/C-002; rp-6-fork-repin/C-002, C-003
 - `predicate_dml.rs` — **G3-E8 A1-identity** (`execute_predicate_dml`): evaluate the original
   `WHERE` as a SELECT over the pinned `(_file, _pos)` streaming target, then commit through the
   MERGE COW/MoR write arms honoring `write.delete.mode` / `write.update.mode` / isolation —

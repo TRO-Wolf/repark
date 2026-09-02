@@ -26,9 +26,9 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   **M11:** `fold_discovery_batch_into_affected` / `consume_matched_work_batch`
   take a precomputed `skip_cardinality` (lone unconditional MATCHED DELETE);
   `match_count > 1` still folds mutations / pos-deletes (double-delete is
-  idempotent). RP-6: both copy-on-write arms still run the v3 MERGE guard (`V3-COW-1`)
-  because the RePark-owned MERGE rewrite reassigns `_row_id`.
-  pins: rp-6-fork-repin/C-002
+  idempotent). V3-7: v3 MERGE carries stored `_row_id` through `row_lineage.rs`
+  (`schema_with_row_lineage`); last-updated is nulled only on UPDATE rows.
+  pins: v3-7-merge-lineage/C-001
 - `dv_close.rs` — v3 `RowDelta` DV-container close. `prepare_row_delta_deletes` writes
   V2 parquet position deletes or calls `close_touched_dv_containers` on V3, then
   `apply` stamps sibling sequences. C-003 pin
@@ -46,6 +46,10 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   fragments, full-snapshot path listing, MOR work SQL. COW rewrite applies the arm
   through `rewrite_column` ELSE / combined DELETE.
   pins: dml-a-merge-not-matched-by-source/C-001, C-002, C-003, C-008
+- `row_lineage.rs` — V3-7: v3 MERGE write schema (`schema_with_row_lineage`), scratch
+  lineage columns, rewrite SQL that keeps `_row_id` and nulls last-updated on UPDATE,
+  and partitioned fanout that prefixes user columns for the partition calculator.
+  pins: v3-7-merge-lineage/C-001
 - `cow_scratch.rs` — COW rewrite scratch tables (file-scoped target, affected-path
   MemTable, drop guard) extracted so `mod.rs` ratchets down. Scratch providers
   register on `datafusion.public` so a session default Iceberg catalog cannot
@@ -86,6 +90,7 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
 | Task | Go to |
 |---|---|
 | Change MERGE execute / MoR-CoW arms | `mod.rs` |
+| Change v3 MERGE `_row_id` carry | `row_lineage.rs` |
 | Change MERGE snapshot commit / `to_branch` | `snapshot_commit.rs` |
 | Change rejected-commit file cleanup | `abort.rs` + `commit_overwrite` / `commit_row_delta_kind` |
 | Add a unit pin for SQL shape | `tests/merge.rs` |

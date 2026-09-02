@@ -1,6 +1,6 @@
-"""V3 facade `.sql()` v3 DML pins: UPDATE and sequential COW DELETE keep `_row_id`;
-MERGE matched-update still refuses V3-COW-1 because the RePark-owned MERGE writer reassigns.
+"""V3 facade `.sql()` v3 DML pins: UPDATE, sequential COW DELETE, and MERGE keep `_row_id`.
 
+pins: v3-7-merge-lineage/C-002
 pins: rp-6-fork-repin/C-002, C-003
 pins: rp-2-fork-repin/C-003, C-005
 pins: rp-3-fork-repin/C-004
@@ -14,9 +14,6 @@ import re
 from pathlib import Path
 
 import pyarrow as pa
-import pytest
-
-from repark.errors import UnsupportedOperationException
 
 _ALLOW_CREATE_V3_KEY = "repark.sql.allowCreateFormatVersion3"
 _FORMAT_V3_ONLY = "'format-version' = '3'"
@@ -75,7 +72,7 @@ def _id_name_rows(table: pa.Table) -> list[tuple[int, str]]:
 def test_facade_adopted_v3_cow_dml_keeps_row_id(
     tmp_path: Path,
 ) -> None:
-    """Adopted v3 MERGE matched-update still refuses V3-COW-1; UPDATE keeps `_row_id`."""
+    """Adopted v3 MERGE matched-update and UPDATE keep `_row_id`."""
     from repark import ReparkSession
 
     spark = (
@@ -97,16 +94,26 @@ def test_facade_adopted_v3_cow_dml_keeps_row_id(
             "CALL ice.system.register_table("
             f"table => 'sales.adopt_mrg', metadata_file => '{metadata_file}')"
         )
-        with pytest.raises(UnsupportedOperationException, match="V3-COW-1") as merge_error:
-            spark.sql(
-                "MERGE INTO ice.sales.adopt_mrg AS t USING "
-                "(SELECT 2 AS id, 'm' AS name) AS s "
-                "ON t.id = s.id "
-                "WHEN MATCHED THEN UPDATE SET t.name = s.name"
-            ).collect()
-        assert "reassigns" in str(merge_error.value)
-        merged = spark.sql("SELECT id, name FROM ice.sales.adopt_mrg").to_arrow()
-        assert _id_name_rows(merged) == [(1, "a"), (2, "b"), (3, "c")]
+        spark.sql(
+            "MERGE INTO ice.sales.adopt_mrg AS t USING "
+            "(SELECT 2 AS id, 'm' AS name) AS s "
+            "ON t.id = s.id "
+            "WHEN MATCHED THEN UPDATE SET t.name = s.name"
+        ).collect()
+        merged = spark.sql(
+            "SELECT id, name, _row_id, _last_updated_sequence_number "
+            "FROM ice.sales.adopt_mrg ORDER BY id"
+        ).to_arrow()
+        assert _id_name_rows(merged) == [(1, "a"), (2, "m"), (3, "c")]
+        assert list(
+            zip(
+                merged.column("id").to_pylist(),
+                merged.column("_row_id").to_pylist(),
+                merged.column("_last_updated_sequence_number").to_pylist(),
+                strict=True,
+            )
+        ) == [(1, 0, 1), (2, 1, 2), (3, 2, 1)]
+        assert _current_lineage(_latest_version_uuid_metadata(sales, "seed_mrg")) == (6, 3, 3)
         spark.sql(
             "CREATE TABLE ice.sales.rw_lin (id INT) USING iceberg "
             f"TBLPROPERTIES ({_FORMAT_V3_ONLY})"
@@ -201,6 +208,45 @@ def test_facade_created_v3_cow_update_keeps_row_id(tmp_path: Path) -> None:
                 updated.column("id").to_pylist(),
                 updated.column("_row_id").to_pylist(),
                 updated.column("_last_updated_sequence_number").to_pylist(),
+                strict=True,
+            )
+        ) == [(1, 0, 1), (2, 1, 2), (3, 2, 1)]
+    finally:
+        spark.stop()
+
+
+def test_facade_created_v3_cow_merge_matched_update_keeps_row_id(tmp_path: Path) -> None:
+    """Created v3 COW MERGE matched-update keeps `_row_id` and bumps seq on the match."""
+    from repark import ReparkSession
+
+    spark = (
+        ReparkSession.builder.appName("v3-7-created-mrg")
+        .config(_ALLOW_CREATE_V3_KEY, "true")
+        .getOrCreate()
+    )
+    try:
+        spark.register_memory_catalog("ice", tmp_path)
+        spark.sql("CREATE NAMESPACE ice.sales")
+        spark.sql(
+            "CREATE TABLE ice.sales.created_mrg (id INT, name STRING) USING iceberg "
+            f"TBLPROPERTIES ({_COW_V3})"
+        )
+        spark.sql("INSERT INTO ice.sales.created_mrg VALUES (1, 'a'), (2, 'b'), (3, 'c')")
+        spark.sql(
+            "MERGE INTO ice.sales.created_mrg AS t USING "
+            "(SELECT 2 AS id, 'm' AS name) AS s "
+            "ON t.id = s.id "
+            "WHEN MATCHED THEN UPDATE SET t.name = s.name"
+        ).collect()
+        merged = spark.sql(
+            "SELECT id, _row_id, _last_updated_sequence_number "
+            "FROM ice.sales.created_mrg ORDER BY id"
+        ).to_arrow()
+        assert list(
+            zip(
+                merged.column("id").to_pylist(),
+                merged.column("_row_id").to_pylist(),
+                merged.column("_last_updated_sequence_number").to_pylist(),
                 strict=True,
             )
         ) == [(1, 0, 1), (2, 1, 2), (3, 2, 1)]
