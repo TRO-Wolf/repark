@@ -17,6 +17,16 @@ else. The next pickup's `make ledger-archive` files everything here under
   MoR MERGE insert's `_row_id` is nondeterministic — recorded, not repaired), §8 the
   `gh workflow run` the orchestrator uses and the expected-outcome table. Moves to
   `../completed/` in this unit's last commit.
+- [live-v3-first-measurement-ledger.md](live-v3-first-measurement-ledger.md) —
+  **LIVE-v3-M (2026-09-02):** the docs-only truth-up that records the first live
+  measurement of the two v3 acceptance legs — `aws-acceptance` run 33635288918 on merged `main`
+  `8c4bc55`, both legs green, S3 Tables accepting `format-version = 3` at CREATE and Glue
+  reproducing the local numbers exactly. Three clauses: the two documents that own the answer
+  (registry `S3T-V3-1` FIXED by measurement, north-star row ✅), the two that own the question
+  (`docs/tier2-aws.md` §6, `docs/design/format-v3-track.md` §7), and STATUS plus the rewritten
+  meta-pin. §1 is the run evidence, §3 the document → was → now table, §4 the mutation table
+  (8 red of 8), and §5 the gate table. `risk_tier: standard`. Branch
+  `docs/live-v3-first-measurement`.
 
 ## Pointers
 - Up: [../map.md](../map.md)

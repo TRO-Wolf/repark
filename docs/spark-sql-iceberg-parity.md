@@ -2243,36 +2243,46 @@ the pin rather than obeying it.
   `FeatureUnsupported` before any AWS call so the engine can cite R126 instead of "not
   supported yet". Pins: rp-3-fork-repin/C-008.
 
-### S3T-V3-1 — the live v3 legs are wired (2026-09-02); the first measurement is pending
+### S3T-V3-1 — FIXED (LIVE-v3-M, 2026-09-02): both live v3 legs are green; S3 Tables accepts `format-version = 3` at CREATE
 
 - **repark** — `test_v3_dv_dml_maintenance_against_glue` and
-  `test_v3_dv_dml_maintenance_against_s3tables` drive the shared `run_v3_acceptance` body:
-  opt-in v3 CTAS (`format-version 3`, merge-on-read delete/update/merge, identity `part`),
-  single-row appends to five files per partition, row-scoped `DELETE` (one Puffin DV),
-  `MERGE` matched-UPDATE + NOT MATCHED INSERT (two DVs), a `_row_id` /
+  `test_v3_dv_dml_maintenance_against_s3tables` both passed on `aws-acceptance`
+  [run 33635288918](https://github.com/TRO-Wolf/repark/actions/runs/33635288918), dispatched on
+  merged `main` `8c4bc55` (2026-09-02; the acceptance module reported `6 passed in 122.13s` — the
+  four pre-existing legs plus these two). They drive the shared `run_v3_acceptance` body: opt-in
+  v3 CTAS (`format-version 3`, merge-on-read delete/update/merge, identity `part`), single-row
+  appends to five files per partition, row-scoped `DELETE` (one Puffin DV), `MERGE`
+  matched-UPDATE + NOT MATCHED INSERT (two DVs), a `_row_id` /
   `_last_updated_sequence_number` read, `rewrite_data_files` (12 rewritten, 2 added, 2 delete
   files removed, 0 DVs left), `expire_snapshots` (14 snapshots → 1), and on Glue only a
-  `register_table` of the final metadata location on a second session. Those numbers are the
-  local engine's, pinned by `test_v3_acceptance_local.py`; **nothing has run against AWS yet.**
-  The S3 Tables leg carries the decision table: v3 accepted → the same assertions with
-  `exact_commit_counts=False` (the service commits on its own — MW-10); a classified
-  `format-version 3` refusal at CREATE → the leg asserts no table was left behind, records the
-  masked refusal text as this row's measured answer, and passes; anything else → raised.
-- **Apache Spark** — Glue is a metadata catalog and imposes no Iceberg format version, so the
-  Glue leg is expected to behave as the local engine does. AWS publishes no statement that S3
-  Tables accepts `format-version = 3` at CREATE, and `register_table` there is the dated gap
-  `S3T-1` / fork R126, so the adopt step is not attempted on that catalog.
-  *(oracle: not yet run — the first `aws-acceptance` nightly or dispatch on merged `main` is the
-  measurement.)*
+  `register_table` of the final metadata location on a second session. **Glue reproduced the
+  local engine's numbers exactly** — that leg asserts with `exact_commit_counts=True`, so every
+  count above is the measured Glue answer. **The S3 Tables leg took the decision table's accepted
+  branch**: the service took `format-version = 3` at CREATE, so the full sequence ran with
+  `exact_commit_counts=False` — row sets, `_row_id` values and every data- and delete-file count
+  exact, only the service's own commit counts (sequence numbers, snapshot totals) relaxed,
+  because S3 Tables commits maintenance on its own (MW-10). History, in one line: the other
+  branch — a classified `format-version 3` refusal at CREATE asserts no table was left behind,
+  records the masked refusal text and passes — stays wired and did not run; the log carries no
+  `S3T-V3-1 refused-at-create` record.
+- **Apache Spark** — no divergence to record. Glue is a metadata catalog and imposes no Iceberg
+  format version, so the Glue leg behaves as the local engine does. AWS publishes no statement
+  either way about `format-version = 3` on S3 Tables; the measurement above is the answer.
+  `register_table` on an S3 Tables catalog remains the dated service gap `S3T-1` / fork R126 and
+  is not attempted there.
+  *(oracle: live — `aws-acceptance` run 33635288918 on merged `main` `8c4bc55`, 2026-09-02, job
+  "tier-2 live AWS acceptance (Glue + S3 Tables, scratch-only)", `6 passed in 122.13s`.)*
 - **Pin** —
   `python/repark/tests/test_v3_acceptance_local.py::test_v3_acceptance_leg_body_against_the_local_catalog`,
   `python/repark/tests/test_v3_acceptance_local.py::test_v3_create_refusal_classification_is_the_s3_tables_decision_table`,
   `python/repark/tests/test_acceptance_v3_helpers.py::test_v3_legs_are_twins_of_the_mor_legs`
-- **Rationale** — BACKLOG, open on the service question only. The leg body is pinned locally so
-  the first live run is a measurement and not a debugging session, and the refusal branch is
-  encoded so an S3 Tables "no" is recorded rather than reported as a harness failure. This row
-  is updated with the run id and the measured answer the first time the workflow runs; no green
-  claim is made before then. Pins: live-v3-aws-legs/C-001, C-002, C-003, C-004.
+- **Rationale** — FIXED by measurement, not by an engine change: the service question this row
+  was opened on is answered, so the row is no longer BACKLOG. It is kept as the single home of
+  the answer rather than retired, and §6's retire-with-a-RED-pin path does not apply — the local
+  pins above stay green precisely because the live run reproduced them. A future S3 Tables
+  refusal of `format-version = 3` would red the S3 Tables leg against this row, not silently
+  re-open it. Pins: live-v3-aws-legs/C-001, C-002, C-003, C-004;
+  live-v3-first-measurement/C-001.
 
 ### V3-COW-1 — FIXED (V3-8, 2026-09-02): v3 row-DML keeps row lineage on every served shape
 
