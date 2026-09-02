@@ -2,9 +2,9 @@
 
 **Date:** 2026-09-02 · **Branch:** `docs/live-v3-first-measurement` · **Base:** `origin/main`
 `8c4bc55` · **Model:** claude-opus-5 (medium) · **Registry:**
-[../../../docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md) row
+[../../../docs/spark-sql-iceberg-parity.md](../../../../docs/spark-sql-iceberg-parity.md) row
 `S3T-V3-1` · **North star:**
-[../../roadmap/epic-term/v1-0-iceberg-v3-northstar.md](../../roadmap/epic-term/v1-0-iceberg-v3-northstar.md)
+[../../roadmap/epic-term/v1-0-iceberg-v3-northstar.md](../../../roadmap/epic-term/v1-0-iceberg-v3-northstar.md)
 §3 "Live: Glue + S3 Tables v3 legs" · **Path:** STANDARD (`risk_tier: standard`; one Actor cycle).
 
 **Retires:** moved to `completed/` in this unit's last commit; the next pickup's

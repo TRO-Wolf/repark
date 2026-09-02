@@ -180,7 +180,21 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   zero delete files and zero delete records, and `COUNT(*)` is still 2,500 — the reclaimed rows
   do not resurrect. Its predecessor asserted the opposite (the file survives) because RePark's
   own writer truncated those bounds away.
+  **SCALE-v3 (2026-09-02):** the v3 twins of the same shapes, from a second `v3_smoke_run`
+  fixture the `--format-version 3` knob drives. What they hold, and why each differs from its
+  v2 twin:
+
+  | v3 pin | Claim | v2 twin |
+  |---|---|---|
+  | `test_the_format_version_knob_defaults_to_two` | driver default 2, CLI default 2, `4` refused; each leg records the version it was built at | the default is the whole v2 behaviour |
+  | `test_v3_mor_delete_files_are_one_per_seeded_data_file` | delete files hold at the seeded data-file count while delete records grow `merges x rows_per_merge` | v2 grows `partitions x merges` files |
+  | `test_v3_mor_delete_files_are_file_scoped_deletion_vectors` | every delete file is content 1, `PUFFIN`, and names exactly one LIVE data file | v2 writes Parquet position deletes at `partition` granularity |
+  | `test_v3_cow_leg_keeps_row_lineage` | zero delete files and `_row_id` readable and distinct on touched and untouched rows | v2 has no lineage columns |
+  | `test_v3_position_delete_compaction_refuses_and_the_sequence_continues` | `rewrite_position_delete_files` refuses on live DVs (`B-MOR-3`), the driver RECORDS the refusal, and the remaining four procedures run | v2 folds 12 delete files to 2 |
+  | `test_v3_delete_file_layout_matches_live_spark` (`REPARK_PARITY_LIVE=1`) | at a matched 4,000-row layout repark and Spark agree exactly: `[(1, PUFFIN, 120), (1, PUFFIN, 120)]`, 8 data files, 4,000 rows | no v2 live twin here |
+
   pins: rdf-1-position-delete-bounds/C-003
+  pins: scale-v3-mw7/C-001
 - [test_mw5_baseline_delta.py](test_mw5_baseline_delta.py) — **MW-5 (2026-08-23):**
   the MW-0 growth demo re-run: 1,000-row v2 merge-on-read, ten MERGEs of the same
   200 ids, position-delete files 1→10 then compact 10→1 and data files →1

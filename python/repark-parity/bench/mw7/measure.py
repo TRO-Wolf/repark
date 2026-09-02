@@ -28,6 +28,7 @@ import polars as pl
 from pydantic import BaseModel
 
 from repark import ReparkSession
+from repark.errors import UnsupportedOperationException
 
 # Iceberg `FileContent`. `files` reports 0 for data and 1 for position deletes.
 DATA_CONTENT = 0
@@ -40,6 +41,9 @@ EXPIRE_OLDER_THAN_FUTURE_MS = 86_400_000
 # `remove_orphan_files` enforces Spark's 24-hour floor (MW-3); 25 hours clears it. On a
 # fresh warehouse the dry run lists zero files by construction.
 ORPHAN_OLDER_THAN_PAST_MS = 25 * 60 * 60 * 1000
+
+ALLOW_CREATE_FORMAT_VERSION_3_KEY = "repark.sql.allowCreateFormatVersion3"
+DEFAULT_FORMAT_VERSION = 2
 
 # pins: mw-9-delete-granularity/C-008
 MOR_PROPERTIES = (
@@ -115,6 +119,7 @@ class MaintenanceStep(BaseModel):
     wall_seconds: float
     result_rows: int
     result_first_row: dict[str, Any]
+    refusal: str = ""
     census_after: FileCensus
 
 
@@ -123,6 +128,7 @@ class LegResult(BaseModel):
 
     mode: str
     table: str
+    format_version: int
     rows: int
     partitions: int
     merges: int
@@ -144,6 +150,7 @@ class RunResult(BaseModel):
 
     started_at: str
     host_note: str
+    format_version: int
     rows: int
     merges: int
     partitions: int
@@ -240,8 +247,9 @@ def create_table(
     view: str,
     mode: str,
     target_file_size_bytes: int,
+    format_version: int = DEFAULT_FORMAT_VERSION,
 ) -> float:
-    """CTAS the partitioned v2 table for one leg. Returns the wall seconds.
+    """CTAS the partitioned table for one leg. Returns the wall seconds.
 
     Args:
         spark: an open session with the catalog and namespace already registered.
@@ -259,7 +267,7 @@ def create_table(
     started = time.perf_counter()
     spark.sql(
         f"CREATE TABLE {table} USING iceberg PARTITIONED BY (part) TBLPROPERTIES ("
-        f"'format-version' = '2', {write_modes}, "
+        f"'format-version' = '{format_version}', {write_modes}, "
         f"'write.target-file-size-bytes' = '{target_file_size_bytes}'"
         f") AS SELECT * FROM {view}"
     )
@@ -434,10 +442,24 @@ def run_maintenance_step(
     table: str,
     procedure: str,
     sql: str,
+    capture_refusal: bool = False,
 ) -> MaintenanceStep:
     """Run one maintenance `CALL`, time it, and census the table afterwards."""
     started = time.perf_counter()
-    result = spark.sql(sql).to_arrow()
+    try:
+        result = spark.sql(sql).to_arrow()
+    except UnsupportedOperationException as refused:
+        if not capture_refusal:
+            raise
+        return MaintenanceStep(
+            procedure=procedure,
+            sql=sql,
+            wall_seconds=time.perf_counter() - started,
+            result_rows=0,
+            result_first_row={},
+            refusal=str(refused),
+            census_after=file_census(spark, table),
+        )
     wall = time.perf_counter() - started
     rows = result.to_pylist()
     return MaintenanceStep(
@@ -494,6 +516,7 @@ def run_leg(
     checkpoint_every: int,
     reps: int,
     target_file_size_bytes: int,
+    format_version: int,
 ) -> LegResult:
     """Drive one write-mode leg: CTAS, N MERGEs with checkpoints, maintenance, re-scan.
 
@@ -525,7 +548,9 @@ def run_leg(
     register_parquet_view(
         spark, seed_frame(rows, partitions), scratch / f"seed_{mode}.parquet", seed_view
     )
-    ctas_seconds = create_table(spark, table, seed_view, mode, target_file_size_bytes)
+    ctas_seconds = create_table(
+        spark, table, seed_view, mode, target_file_size_bytes, format_version
+    )
     spark.catalog.dropTempView(seed_view)
 
     checkpoints = [checkpoint(spark, table, 0, rows, partitions, reps)]
@@ -546,7 +571,7 @@ def run_leg(
 
     warehouse_before = directory_bytes(warehouse)
     maintenance = [
-        run_maintenance_step(spark, table, procedure, sql)
+        run_maintenance_step(spark, table, procedure, sql, format_version >= 3)
         for procedure, sql in maintenance_sequence(catalog, table_arg)
     ]
     warehouse_after = directory_bytes(warehouse)
@@ -555,6 +580,7 @@ def run_leg(
     return LegResult(
         mode=mode,
         table=table,
+        format_version=format_version,
         rows=rows,
         partitions=partitions,
         merges=merges,
@@ -583,6 +609,7 @@ def run_scale_measurement(
     target_file_size_bytes: int,
     modes: list[str],
     host_note: str = "",
+    format_version: int = DEFAULT_FORMAT_VERSION,
 ) -> RunResult:
     """Run every requested leg in one process and return the whole measurement.
 
@@ -616,7 +643,10 @@ def run_scale_measurement(
         warehouse.mkdir(parents=True, exist_ok=True)
         catalog = f"mw7_{mode}"
         namespace = "ns"
-        session = ReparkSession.builder.appName(f"mw7-scale-{mode}").getOrCreate()
+        builder = ReparkSession.builder.appName(f"mw7-scale-{mode}")
+        if format_version >= 3:
+            builder = builder.config(ALLOW_CREATE_FORMAT_VERSION_3_KEY, "true")
+        session = builder.getOrCreate()
         try:
             session.register_memory_catalog(catalog, str(warehouse))
             session.sql(
@@ -637,6 +667,7 @@ def run_scale_measurement(
                     checkpoint_every,
                     reps,
                     target_file_size_bytes,
+                    format_version,
                 )
             )
         finally:
@@ -645,6 +676,7 @@ def run_scale_measurement(
     return RunResult(
         started_at=time.strftime("%Y-%m-%dT%H:%M:%S%z"),
         host_note=host_note,
+        format_version=format_version,
         rows=rows,
         merges=merges,
         partitions=partitions,
