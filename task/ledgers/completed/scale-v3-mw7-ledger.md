@@ -231,8 +231,9 @@ FINDING:
     The 1e7 run's JSON says 2026-09-02T16:11:14-0400; the run started 13:28:38 and
     /usr/bin/time -v agrees on 2:42:36 of wall clock. MW-7 quoted the same field as a start
     time. FIXED in this unit: the timestamp is now taken beside started_wall at the top of
-    run_scale_measurement, so the field means what its name says. The 1e7 numbers above are
-    unaffected — the run's real start is stated in the section text.
+    run_scale_measurement, from an injected clock that defaults to time.time, so the field
+    means what its name says and a test can prove it without timing the box. The 1e7 numbers
+    above are unaffected — the run's real start is stated in the section text.
   registry_candidate: none — a driver disclosure, no engine behaviour claim is wrong
 FINDING:
   id: F-SCALE-V3-2
@@ -357,12 +358,22 @@ COVERAGE_ATTESTATION:
         and nine mutations run and reverted. 8 red of 9: the CTAS ignoring format_version, the
         session skipping the create opt-in, the refusal text dropped, the default flipped to 3,
         the COW leg taking the merge-on-read properties, an armed step re-raising anyway,
-        capture_refusal defaulting to True, and started_at stamped at build time. The ninth —
+        capture_refusal defaulting to True, and started_at stamped at build time — that last
+        one in all three shapes it can take, the injected clock read at the end, the real clock
+        read at the end (the original defect), and the injected clock ignored at the top. The
+        ninth —
         arming the capture for EVERY procedure on v3 rather than only
         rewrite_position_delete_files — stays GREEN and is reported rather than hidden: no
         second procedure refuses on the v3 maintenance path, so the narrowing has no observable
         behaviour at gate scale. What is pinned is the mechanism it narrows
         (test_a_refusal_is_recorded_only_when_the_step_is_armed, both directions).
+        CI round (2026-09-02): the started_at pin's FIRST shape asserted a 3-second run and
+        went red on a GitHub runner that finished it in 1.38 s — it measured the box, not the
+        code. It is now an injected clock (run_scale_measurement, run_leg and
+        maintenance_sequence take one, defaulting to time.time) driven by a backdated,
+        strictly increasing fake, and started_at must format its FIRST reading. Backdating by
+        a day is what makes the ORIGINAL defect red as well: a real-clock stamp can no longer
+        land in the same second as the fake's base and pass by luck.
       artifacts: [python/repark/tests/test_mw7_scale_smoke.py]
   complete: true
 ```

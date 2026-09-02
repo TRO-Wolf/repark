@@ -21,6 +21,7 @@ from __future__ import annotations
 import resource
 import statistics
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -45,6 +46,7 @@ ORPHAN_OLDER_THAN_PAST_MS = 25 * 60 * 60 * 1000
 ALLOW_CREATE_FORMAT_VERSION_3_KEY = "repark.sql.allowCreateFormatVersion3"
 DEFAULT_FORMAT_VERSION = 2
 REFUSING_ON_V3_PROCEDURE = "rewrite_position_delete_files"
+STARTED_AT_FORMAT = "%Y-%m-%dT%H:%M:%S%z"
 
 # pins: mw-9-delete-granularity/C-008
 MOR_PROPERTIES = (
@@ -473,7 +475,9 @@ def run_maintenance_step(
     )
 
 
-def maintenance_sequence(catalog: str, table_arg: str) -> list[tuple[str, str]]:
+def maintenance_sequence(
+    catalog: str, table_arg: str, clock: Callable[[], float] = time.time
+) -> list[tuple[str, str]]:
     """The Airflow-shaped sequence MW-8 will document, as `(procedure, sql)` pairs.
 
     Order is load-bearing: fold the delete files first so `rewrite_data_files` rewrites
@@ -481,8 +485,8 @@ def maintenance_sequence(catalog: str, table_arg: str) -> list[tuple[str, str]]:
     then look for orphans. `remove_orphan_files` runs LAST in its dry-run default — the
     one procedure with no undo.
     """
-    expire_older_than = int(time.time() * 1000) + EXPIRE_OLDER_THAN_FUTURE_MS
-    orphan_older_than = int(time.time() * 1000) - ORPHAN_OLDER_THAN_PAST_MS
+    expire_older_than = int(clock() * 1000) + EXPIRE_OLDER_THAN_FUTURE_MS
+    orphan_older_than = int(clock() * 1000) - ORPHAN_OLDER_THAN_PAST_MS
     return [
         (
             "rewrite_position_delete_files",
@@ -518,6 +522,7 @@ def run_leg(
     reps: int,
     target_file_size_bytes: int,
     format_version: int,
+    clock: Callable[[], float],
 ) -> LegResult:
     """Drive one write-mode leg: CTAS, N MERGEs with checkpoints, maintenance, re-scan.
 
@@ -579,7 +584,7 @@ def run_leg(
             sql,
             format_version >= 3 and procedure == REFUSING_ON_V3_PROCEDURE,
         )
-        for procedure, sql in maintenance_sequence(catalog, table_arg)
+        for procedure, sql in maintenance_sequence(catalog, table_arg, clock)
     ]
     warehouse_after = directory_bytes(warehouse)
     after = checkpoint(spark, table, merges, rows, partitions, reps)
@@ -617,6 +622,7 @@ def run_scale_measurement(
     modes: list[str],
     host_note: str = "",
     format_version: int = DEFAULT_FORMAT_VERSION,
+    clock: Callable[[], float] = time.time,
 ) -> RunResult:
     """Run every requested leg in one process and return the whole measurement.
 
@@ -640,7 +646,7 @@ def run_scale_measurement(
         The full result, ready to serialise to JSON.
     """
     started_wall = time.perf_counter()
-    started_at = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+    started_at = time.strftime(STARTED_AT_FORMAT, time.localtime(clock()))
     rows_per_merge = max(1, int(rows * touch_fraction))
     scratch = root / "parquet"
     scratch.mkdir(parents=True, exist_ok=True)
@@ -676,6 +682,7 @@ def run_scale_measurement(
                     reps,
                     target_file_size_bytes,
                     format_version,
+                    clock,
                 )
             )
         finally:

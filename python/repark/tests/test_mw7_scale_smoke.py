@@ -22,7 +22,6 @@ import shutil
 import sys
 import time
 import types
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -78,9 +77,10 @@ DELETE_FILE_PATH_FIELD_ID = 2147483546
 V3_ALLOW_CREATE_KEY = "repark.sql.allowCreateFormatVersion3"
 V3_SMOKE_REPS = 1
 V3_DV_MERGES = 2
-STARTED_AT_ROWS = 2_000
-STARTED_AT_MERGES = 3
-STARTED_AT_MIN_WALL_SECONDS = 2.5
+STARTED_AT_ROWS = 500
+STARTED_AT_MERGES = 1
+STARTED_AT_STEP_SECONDS = 2.0
+STARTED_AT_BACKDATE_SECONDS = 86_400.0
 V3_DELETE_FILE_FORMAT = "PUFFIN"
 V3_SEEDED_DATA_FILES = SMOKE_PARTITIONS
 V3_ORACLE_ROWS = 4_000
@@ -749,9 +749,23 @@ def test_a_refusal_is_recorded_only_when_the_step_is_armed(tmp_path: Path) -> No
         spark.stop()
 
 
+class _FakeClock:
+    """A strictly increasing clock that records every reading it hands out."""
+
+    def __init__(self, base: float, step: float) -> None:
+        self.base = base
+        self.step = step
+        self.readings: list[float] = []
+
+    def __call__(self) -> float:
+        reading = self.base + len(self.readings) * self.step
+        self.readings.append(reading)
+        return reading
+
+
 def test_started_at_records_the_start_of_the_run_not_its_end(tmp_path: Path) -> None:
-    """C-002: `started_at` is stamped before the first leg, so it is not the finish time."""
-    before = time.time()
+    """C-002: `started_at` formats the FIRST reading of the run's clock, never a later one."""
+    clock = _FakeClock(time.time() - STARTED_AT_BACKDATE_SECONDS, STARTED_AT_STEP_SECONDS)
     run = measure.run_scale_measurement(
         root=tmp_path,
         rows=STARTED_AT_ROWS,
@@ -763,13 +777,13 @@ def test_started_at_records_the_start_of_the_run_not_its_end(tmp_path: Path) -> 
         target_file_size_bytes=SMOKE_TARGET_FILE_SIZE,
         modes=["cow"],
         host_note="pytest started_at",
+        clock=clock,
     )
-    finished = time.time()
-    stamped = datetime.strptime(run.started_at, "%Y-%m-%dT%H:%M:%S%z").timestamp()
-    assert run.wall_seconds > STARTED_AT_MIN_WALL_SECONDS, (
-        "the fixture must be slow enough to tell a start stamp from an end stamp"
+    assert len(clock.readings) > 1, "the run must read its clock again after it stamps the start"
+    stamped = time.strftime(measure.STARTED_AT_FORMAT, time.localtime(clock.readings[0]))
+    latest = time.strftime(measure.STARTED_AT_FORMAT, time.localtime(clock.readings[-1]))
+    assert stamped != latest, "the fixture must separate the first reading from the last"
+    assert stamped != time.strftime(measure.STARTED_AT_FORMAT), (
+        "the fixture must separate the injected clock from the real one"
     )
-    assert stamped <= before + 1.0, (
-        f"started_at {run.started_at} is not the start: the run began at {before} "
-        f"and ended at {finished}"
-    )
+    assert run.started_at == stamped

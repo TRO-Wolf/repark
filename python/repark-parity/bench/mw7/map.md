@@ -99,6 +99,11 @@ Two things change on v3 and neither is tunable from here:
 | `write.delete.granularity` | inert — a DV is file-scoped by spec, so the property is carried and ignored | registry `MOR-2` is a v2 row |
 | `rewrite_position_delete_files` | REFUSES while live DVs exist, rather than reporting four zeros | registry `B-MOR-3` |
 
+`run_scale_measurement`, `run_leg` and `maintenance_sequence` take an injected `clock`
+(default `time.time`): it stamps `started_at` and fixes the `expire_snapshots` /
+`remove_orphan_files` cutoffs, so a test can drive all three from one fake reading sequence
+instead of timing the box.
+
 `run_maintenance_step` therefore takes `capture_refusal`, armed only for
 `rewrite_position_delete_files` on `format_version >= 3`: the refusal text is recorded on the
 step, `format_leg_table` prints ` REFUSED: <first line>` beside it, and the sequence continues,
