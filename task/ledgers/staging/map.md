@@ -78,12 +78,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   in the ledger; C-002..C-007 PROVEN — ns timestamps consumed, column defaults
   consumed on write/read with Spark-equal DEFAULT refusals, variant/unknown refusals
   pinned, registry row landed, upgrade surface untouched.
-- [rp-6-fork-repin-ledger.md](rp-6-fork-repin-ledger.md) — **RP-6 (2026-09-01), in flight:**
-  fork repin `00cdde0` → `fb0cacfa` (PR-1..PR-7). Consume REPLACE added>deleted refuse,
-  evolved-spec rewrite, Glue/S3 Tables commit seams, V3 MoR UPDATE lineage, branch MoR
-  UPDATE, V2→V3 upgrade, PR-7 closeout. Re-measure and lift `V3-COW-1` where Spark-equal;
-  F-7 preserve-half; RDF-1 honesty; evolved-spec Spark-door pin.
-  `risk_tier: standard`. Branch `feat/rp-6-fork-repin`.
 
 ## Pointers
 - Up: [../map.md](../map.md)
