@@ -272,6 +272,10 @@ upgraded table.
   refuses Spark-equal on all three doors. Binary `variant` measured refusing end to
   end (registry `V3-VARIANT-SHRED-1`, fork R88); `unknown` CREATE refuse pinned; RP-5
   (2026-09-01, R91 `#246`) the parquet write refuses an unknown column.
+- **V3-9:** *Done 2026-09-02.* `resolve_write_mode`'s `format_version == V2` gate is lifted
+  to `< V2`, so merge-on-read `DELETE … WHERE` / `UPDATE … WHERE` on v3 reuse V3-7's DV path
+  (`prepare_row_delta_deletes` → `close_touched_dv_containers`) — one file-scoped Puffin DV
+  per touched data file, Spark-equal on all three doors; `V3-MOR-1` FIXED. No new DV code.
 
   The original scope note: V3-6 may
   run in parallel with V3-3 or V3-4 after its fork type support is pinned; it does not wait for

@@ -275,8 +275,9 @@ pins: rp-6-fork-repin/C-002, C-003
 *V3-7 / V3-8 (2026-09-02), engine-side, no fork ask:* the RePark-owned COW and MoR writers
 carry `_row_id` through MERGE (V3-7) and through the subquery-`WHERE` COW rewrite (V3-8).
 `V3-COW-1` is **FIXED** and its refusal seat deleted; F-7 has no engine-side residue left.
-The MoR subquery-`WHERE` cell stays unserved on predicate DML's V2-only delete-file gate —
-engine unit **V3-9**, not a fork ask.
+*V3-9 (2026-09-02), engine-side, no fork ask:* predicate DML's V2-only delete-file gate is
+lifted, so MoR `DELETE`/`UPDATE` on v3 reuse the fork's `close_touched_dv_containers` —
+`V3-MOR-1` FIXED, no new fork API needed.
 
 Listed so the fork plans it; as of 2026-08-21 the engine's V3-2+ units deliberately waited
 for the MW campaign to close (that wait is over — the addendum below).
