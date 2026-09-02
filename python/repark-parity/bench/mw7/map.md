@@ -57,7 +57,7 @@ the deletes at every checkpoint; this driver does not run one.
 | Reproduce the MW-7 full run | `run_mw7.py --rows 10000000 --merges 50 --partitions 8 --checkpoint-every 10 --reps 7 --target-file-size-bytes 4194304 --scratch <dir>` |
 | Project a calibration onto a bigger run | add `--project-to 10000000:100` |
 | Read the numbers | [../../../../task/ledgers/completed/mw-7-scale-measurement-ledger.md](../../../../task/ledgers/archive/2026-08/2026-08-24-mw-7-scale-measurement-ledger.md) |
-| Read the v3 numbers | [../../../../task/ledgers/staging/scale-v3-mw7-ledger.md](../../../../task/ledgers/staging/scale-v3-mw7-ledger.md) |
+| Read the v3 numbers | [../../../../task/ledgers/staging/scale-v3-mw7-ledger.md](../../../../task/ledgers/completed/scale-v3-mw7-ledger.md) |
 | Run the CI pin on this machinery | `python/repark/tests/test_mw7_scale_smoke.py` |
 | See how the runbook reclaims a delete-laden file, and the one shape it still cannot | registry row `RDF-1`; pin `test_mw7_scale_smoke.py::test_delete_laden_in_band_file_is_rewritten_and_its_delete_file_dies` (C-011, flipped 2026-09-02); the residue is a delete file naming two or more data files, fork ask F-16 |
 
@@ -106,3 +106,18 @@ so the remaining four procedures are still measured. On v2 the argument is false
 measurement.
 
 pins: scale-v3-mw7/C-001
+
+## The v3 numbers (SCALE-v3, 2026-09-02)
+
+`1e7 x 50` on format 3 at the MW-7 knobs, one host, 2:42:36 wall. Ratios against the
+2026-08-24 v2 run:
+
+| Term | v2 | v3 | v3/v2 |
+|---|---:|---:|---:|
+| MoR delete files at merge 50 | 400 | 96 | 0.24x |
+| MoR data files at merge 50 | 1,696 | 496 | 0.29x |
+| MoR point probe p50 at merge 50 | 3,878 ms | 2,493 ms | 0.64x |
+| MoR 50 merges | 1,297.7 s | 2,059.6 s | 1.59x |
+| MoR after the runbook | 8 delete files, 10,000,000 delete records, 2.02x the COW control | 0 delete files, 0 delete records, 0.61x the COW control | — |
+
+pins: scale-v3-mw7/C-002, C-003
