@@ -147,4 +147,4 @@ After the run: update `S3T-V3-1` with the run id and the measured answer, move t
 off ❌ only if Glue reproduced §6, and record the run's state in `STATUS.md`.
 
 ## Pointers
-- Up: [map.md](map.md)
+- Up: [map.md](../staging/map.md)
