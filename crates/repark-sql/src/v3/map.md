@@ -11,7 +11,7 @@ ANSI-door format-v3 test modules. `lib.rs` declares `#[cfg(test)] mod v3;`.
   (`Model: Grok 4.6 xHigh` on the module's functions). **V3-6 C-003:** opt-in CREATE
   `timestamp_ns` / `timestamptz_ns` stores the Iceberg primitives; `timestamp_ns`
   SELECT round-trips ns values and Arrow types (pins: v3-6-v3-types/C-003).
-- `cow.rs` — **V3-COW-1 (RP-6 lift):** adopted and created v3 UPDATE keep `_row_id`;
+- `cow.rs` — **V3-COW-1 (RP-6 lift):** adopted and created v3 UPDATE keep `_row_id`; The module doc no longer carries a pins line; citations live here.
   sequential COW DELETE keeps the survivor id at next-row-id 6; MERGE matched-update
   and subquery-WHERE DML still refuse `V3-COW-1` because the RePark-owned MERGE writer
   reassigns; padded MoR UPDATE keeps `_row_id`; plain-`WHERE` DELETE including a

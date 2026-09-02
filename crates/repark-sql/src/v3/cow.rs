@@ -5,7 +5,6 @@
 //! pins: rp-2-fork-repin/C-003, C-005
 //! pins: rp-3-fork-repin/C-004, C-008
 //! pins: v3-3-dml/C-001, C-002
-//! pins: rp-6-fork-repin/C-002, C-003
 
 use std::collections::HashSet;
 use std::fs;
