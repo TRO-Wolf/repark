@@ -32,6 +32,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   pins: v3-7-merge-lineage/C-002; rp-6-fork-repin/C-002, C-003
 - `v3_cow_lift.rs` — RP-6 remaining V3-COW-1 sequences plus V3-7 MERGE shapes: created
   v3 COW/MOR MERGE, matched-DELETE, NOT MATCHED INSERT, NMBS DELETE, mixed MERGE.
+  MoR INSERT and NMBS DELETE pinned. Every lifted cell asserts data-file, delete-file,
+  and manifest counts (mixed MERGE engine data-file counts are 2 COW / 3 MoR;
+  Spark is 1 COW / 2 MoR).
   MoR UPDATE pins `next-row-id` 4 with 2 data files, 1 Puffin DV, 3 manifests at the
   single-file seed. Absolute Spark 4.1.2 + Iceberg 1.11.0 values.
   pins: v3-7-merge-lineage/C-002; rp-6-fork-repin/C-002, C-003

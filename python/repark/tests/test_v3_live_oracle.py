@@ -1,6 +1,7 @@
 """V3E-5 live oracle for Spark-written v3 fixtures.
 
 pins: v3e-5-nightly-v3-oracle/C-002, C-003, C-004, C-005, C-007, C-008, C-011
+pins: v3-7-merge-lineage/C-002
 """
 
 from __future__ import annotations
@@ -22,6 +23,21 @@ _PART_DV_DEST = Path("/tmp/repark-v3e3-partdv/ns/v3part")
 _EQ_DV_DEST = Path("/tmp/repark-v3e3-eqdel/ns/v3eq")
 _LIVE = os.environ.get("REPARK_PARITY_LIVE") == "1"
 _LIVE_SKIP = "REPARK_PARITY_LIVE != 1 — live v3 oracle skipped (routine CI is JVM-free)"
+_V37_LEDGER = _REPO_ROOT / "task/ledgers/completed/v3-7-merge-lineage-ledger.md"
+_ALLOW_CREATE_V3_KEY = "repark.sql.allowCreateFormatVersion3"
+_COW_V3 = (
+    "'format-version' = '3', "
+    "'write.delete.mode' = 'copy-on-write', "
+    "'write.update.mode' = 'copy-on-write', "
+    "'write.merge.mode' = 'copy-on-write'"
+)
+_MOR_V3 = (
+    "'format-version' = '3', "
+    "'write.delete.mode' = 'merge-on-read', "
+    "'write.update.mode' = 'merge-on-read', "
+    "'write.merge.mode' = 'merge-on-read'"
+)
+_MATCHED_UPDATE_LINEAGE = [(1, 0, 1), (2, 1, 2), (3, 2, 1)]
 
 
 class _DirLock:
@@ -89,6 +105,35 @@ def _id_name_part_rows(table: pa.Table) -> list[tuple[int, str, int]]:
     )
     rows.sort(key=lambda row: row[0])
     return rows
+
+
+def _id_row_id_seq(table: pa.Table) -> list[tuple[int, int, int]]:
+    """Sorted (id, _row_id, seq) triples.
+
+    pins: v3-7-merge-lineage/C-002
+    """
+    rows = list(
+        zip(
+            table.column("id").to_pylist(),
+            table.column("_row_id").to_pylist(),
+            table.column("_last_updated_sequence_number").to_pylist(),
+            strict=True,
+        )
+    )
+    rows.sort(key=lambda row: row[0])
+    return rows
+
+
+def _merge_matched_update_sql(target: str) -> str:
+    """Matched-UPDATE MERGE at the V3-7 seed.
+
+    pins: v3-7-merge-lineage/C-002
+    """
+    return (
+        f"MERGE INTO {target} AS t USING "
+        "(SELECT 2 AS id, 'm' AS name) AS s ON t.id = s.id "
+        "WHEN MATCHED THEN UPDATE SET t.name = s.name"
+    )
 
 
 def _id_name_rows(table: pa.Table) -> list[tuple[int, str]]:
@@ -389,6 +434,124 @@ def test_partitioned_dv_update_commits_and_rewrite_still_refuses(tmp_path: Path)
             assert _id_name_part_rows(live) == [(3, "c", 0), (4, "d", 1), (6, "f", 1)]
     finally:
         session.stop()
+
+
+def test_v3_merge_matched_update_live_cow_and_mor(tmp_path: Path) -> None:
+    """COW and MoR matched-UPDATE MERGE lineage matches the in-repo V3-7 ledger transcript.
+
+    pins: v3-7-merge-lineage/C-002
+    """
+    from repark import ReparkSession
+
+    ledger = _V37_LEDGER.read_text(encoding="utf-8")
+    assert _V37_LEDGER.is_file()
+    assert "/tmp/v3-7-oracle" not in ledger
+    assert "| COW matched-UPDATE |" in ledger
+    assert "| MoR matched-UPDATE |" in ledger
+    assert "(1,a,0,1),(2,m,1,2),(3,c,2,1)" in ledger
+    session = (
+        ReparkSession.builder.appName("v3-7-merge-live")
+        .config(_ALLOW_CREATE_V3_KEY, "true")
+        .getOrCreate()
+    )
+    try:
+        session.register_memory_catalog("ice", tmp_path)
+        session.sql("CREATE NAMESPACE ice.sales")
+        for table, props in (("cow_mu", _COW_V3), ("mor_mu", _MOR_V3)):
+            session.sql(
+                f"CREATE TABLE ice.sales.{table} (id INT, name STRING) USING iceberg "
+                f"TBLPROPERTIES ({props})"
+            )
+            session.sql(f"INSERT INTO ice.sales.{table} VALUES (1, 'a'), (2, 'b'), (3, 'c')")
+            session.sql(_merge_matched_update_sql(f"ice.sales.{table}")).collect()
+            lineage = session.sql(
+                "SELECT id, _row_id, _last_updated_sequence_number "
+                f"FROM ice.sales.{table} ORDER BY id"
+            ).to_arrow()
+            assert _id_row_id_seq(lineage) == _MATCHED_UPDATE_LINEAGE, table
+        if not _LIVE:
+            pytest.skip(_LIVE_SKIP)
+        _assert_merge_matched_update_live_against_spark()
+    finally:
+        session.stop()
+
+
+def _v37_iceberg_runtime_jar() -> str | None:
+    """Local Iceberg Spark runtime JAR when Ivy cannot write the default cache."""
+    candidates = (
+        os.environ.get("V37_ICEBERG_RUNTIME_JAR"),
+        "/tmp/rp6-oracle/iceberg-spark-runtime-4.1_2.13-1.11.0.jar",
+        "/tmp/iceberg-spark-runtime-4.1_2.13-1.11.0.jar",
+    )
+    for candidate in candidates:
+        if candidate and Path(candidate).is_file():
+            return candidate
+    return None
+
+
+def _assert_merge_matched_update_live_against_spark() -> None:
+    """Live Spark COW and MoR matched-UPDATE MERGE at the V3-7 single-file seed.
+
+    pins: v3-7-merge-lineage/C-002
+    """
+    import tempfile
+
+    from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
+    from pyspark.sql import SparkSession
+    from pyspark.sql import types as spark_types
+
+    catalog = "local"
+    warehouse = Path(tempfile.mkdtemp(prefix="repark-v3-7-live-mrg-"))
+    ivy_home = Path(tempfile.mkdtemp(prefix="repark-v3-7-ivy-"))
+    schema = spark_types.StructType(
+        [
+            spark_types.StructField("id", spark_types.IntegerType(), False),
+            spark_types.StructField("name", spark_types.StringType(), False),
+        ]
+    )
+    builder = (
+        SparkSession.builder.master("local[1]")
+        .appName("v3-7-merge-live")
+        .config("spark.sql.ansi.enabled", "true")
+        .config("spark.sql.shuffle.partitions", "1")
+        .config("spark.default.parallelism", "1")
+        .config("spark.ui.enabled", "false")
+        .config("spark.jars.ivy", str(ivy_home))
+        .config(
+            "spark.sql.extensions",
+            "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
+        )
+        .config(f"spark.sql.catalog.{catalog}", "org.apache.iceberg.spark.SparkCatalog")
+        .config(f"spark.sql.catalog.{catalog}.type", "hadoop")
+        .config(f"spark.sql.catalog.{catalog}.warehouse", str(warehouse))
+    )
+    jar = _v37_iceberg_runtime_jar()
+    if jar is not None:
+        os.environ.pop("PYSPARK_SUBMIT_ARGS", None)
+        builder = builder.config("spark.jars", jar)
+    else:
+        builder = builder.config("spark.jars.packages", ICEBERG_SPARK_RUNTIME_GAV)
+    session = builder.getOrCreate()
+    session.sparkContext.setLogLevel("ERROR")
+    try:
+        session.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.sales")
+        for table, props in (("cow_mu", _COW_V3), ("mor_mu", _MOR_V3)):
+            target = f"{catalog}.sales.{table}"
+            session.sql(
+                f"CREATE TABLE {target} (id INT, name STRING) USING iceberg TBLPROPERTIES ({props})"
+            )
+            frame = session.createDataFrame([(1, "a"), (2, "b"), (3, "c")], schema)
+            frame.coalesce(1).writeTo(target).append()
+            session.sql(_merge_matched_update_sql(target))
+            spark_rows = session.sql(
+                f"SELECT id, _row_id, _last_updated_sequence_number FROM {target} ORDER BY id"
+            ).toArrow()
+            assert _id_row_id_seq(spark_rows) == _MATCHED_UPDATE_LINEAGE, table
+    finally:
+        session.stop()
+        shutil.rmtree(warehouse, ignore_errors=True)
+        shutil.rmtree(ivy_home, ignore_errors=True)
+    assert ICEBERG_SPARK_RUNTIME_GAV == "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0"
 
 
 def test_northstar_nightly_v3_leg_is_v3e_5() -> None:

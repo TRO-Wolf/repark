@@ -2208,7 +2208,7 @@ the pin rather than obeying it.
   matched-UPDATE MERGE is Spark-equal `(1,0,1),(2,1,2),(3,2,1)` — COW `next-row-id` 6
   (1 data file, 2 manifests), MoR `next-row-id` 4 (2 data files, 1 Puffin DV, 3 manifests).
   Matched-DELETE, NOT MATCHED INSERT, NOT MATCHED BY SOURCE DELETE, and mixed MERGE
-  match the live oracle on all three doors, created and adopted. Subquery-`WHERE` DML
+  match the live oracle on the Spark door (adopted). Subquery-`WHERE` DML
   still uses the MERGE writer without lineage carry and stays a pre-write `V3-COW-1`
   refusal. A v2 control commits unchanged. RP-6 (2026-09-01, fork `fb0cacfa`) already
   lifted plain-`WHERE` UPDATE and sequential COW DELETE.
@@ -2234,6 +2234,9 @@ the pin rather than obeying it.
 - **Rationale** — remaining refusal is subquery-`WHERE` DML, which still goes through the
   MERGE writer without lineage projection, so the **owner ruling 2026-08-25** stays
   BACKLOG for that shape only. F-rp3-c7 is consumed as a layout artefact.
+  F-v3-7-mor-mixed is a layout artefact: mixed MERGE is lineage Spark-equal;
+  Spark writes 1 (COW) / 2 (MoR) data files, the engine writes 2 (COW) / 3 (MoR)
+  (UPDATE replacement and INSERT go to separate files).
 
 ### BL-9 — a double-quoted string literal is an identifier on the SQL door
 

@@ -19,7 +19,7 @@ fork repin; `.github/`.
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
 | C-001 | On v3 tables the COW MERGE rewrite reads `_row_id` / `_last_updated_sequence_number`, writes survivors' stored `_row_id` unchanged, writes null last-updated for rows MERGE changed, and leaves NOT MATCHED inserts with null `_row_id`. MoR MERGE writes replacement rows the same way plus a DV. Public iceberg `schema_with_row_lineage` is the write-schema join; iceberg-datafusion `filter_lineage_columns` / `attach_lineage` / `null_last_updated_where_true` stay `pub(super)` and are not copied. | MERGE unit pins; Spark-door lineage triples. | **PROVEN** | `row_lineage.rs` joins `schema_with_row_lineage`, projects stored `_row_id`, nulls last-updated via `update_applies`. Citation: `crates/repark-iceberg/src/write/merge/tests/lineage.rs`. |
-| C-002 | Against the live oracle (PySpark 4.1.2 + Iceberg 1.11.0, `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64`, `local[1]`, single-file seeds) measure MERGE matched-UPDATE, matched-DELETE, NOT MATCHED INSERT, NOT MATCHED BY SOURCE DELETE, and mixed MERGE, on COW and MOR, created and adopted. Pin the absolute row multiset, `_row_id`, `_last_updated_sequence_number`, and next-row-id on all three doors. Lift `V3-COW-1` MERGE where equal; keep subquery-WHERE refused. Mutation-proof: drop carried `_row_id` → lifted pins red. | Oracle transcript; three-door pins; mutation N red of M. | **PROVEN** | Oracle cells below. Spark/ANSI/facade pins. Mutation: 9 red MERGE survivor pins when `attach_present_lineage` drops columns (insert-only and MoR delete-only stay green — no stored id to drop). Citation: `crates/repark-spark/src/tests/v3_cow.rs`. |
+| C-002 | Against the live oracle (PySpark 4.1.2 + Iceberg 1.11.0, `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64`, `local[1]`, single-file seeds) measure MERGE matched-UPDATE, matched-DELETE, NOT MATCHED INSERT, NOT MATCHED BY SOURCE DELETE, and mixed MERGE, on COW and MOR, created and adopted. Pin matched-UPDATE on three doors, created and adopted; the remaining four shapes on the Spark door (adopted). Lift `V3-COW-1` MERGE where equal; keep subquery-WHERE refused. Mutation-proof: drop carried `_row_id` → lifted pins red. | Oracle transcript; three-door pins; mutation N red of M. | **PROVEN** | Oracle cells below. Matched-UPDATE on Spark/ANSI/facade (created and adopted); remaining four shapes on the Spark door (adopted). Mutation: 9 red MERGE survivor pins when `attach_present_lineage` drops columns (insert-only and MoR delete-only stay green — no stored id to drop). Citation: `crates/repark-spark/src/tests/v3_cow.rs`. |
 | C-003 | Re-record the `V3-COW-1` tripwire naming this unit; registry `V3-COW-1` says what is proven; north star §3 COW and MOR DML rows say exactly what is lifted; STATUS v3 workstream truth-up and nothing else; maps in lockstep; this ledger `move`d to `completed/` last. | `make check-map-sync`, `check-ledger-grammar`, `check-ledgers`. | **PROVEN** | Tripwire message names V3-7; registry heading and north-star rows updated; STATUS Next is subquery-WHERE. Citation: `python/repark-parity/tests/test_v3r_1_rulings.py`. |
 
 VERDICT: 3 clauses, 3 PROVEN, 0 OPEN, 0 REJECTED.
@@ -72,7 +72,7 @@ COVERAGE_ATTESTATION:
 Live oracle: PySpark 4.1.2 + Iceberg 1.11.0, `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64`,
 `local[1]`, `coalesce(1)` single-file seed `(id,name,_row_id,seq) =
 (1,a,0,1),(2,b,1,1),(3,c,2,1)`, next-row-id 3, 1 data file, 1 manifest.
-Interpreter `<pyspark-4.1.2-oracle>`. Transcript `/tmp/v3-7-oracle/transcript.json`.
+Interpreter `<pyspark-4.1.2-oracle>`. Transcript: this table.
 
 | Cell | After (id,name,_row_id,seq) | next | first | added | data files | manifests | delete files |
 |---|---|---|---|---|---|---|---|
@@ -85,9 +85,9 @@ Interpreter `<pyspark-4.1.2-oracle>`. Transcript `/tmp/v3-7-oracle/transcript.js
 | MoR matched-DELETE | (1,a,0,1),(3,c,2,1) | 3 | 3 | 0 | 1+DV | 2 | 1 |
 | MoR NOT MATCHED INSERT | (1,a,0,1),(2,b,1,1),(3,c,2,1),(4,d,3,2) | 4 | 3 | 1 | 2 | 2 | 0 |
 | MoR NMBS DELETE | (1,a,0,1),(2,b,1,1) | 3 | 3 | 0 | 1+DV | 2 | 1 |
-| MoR mixed | (2,m,1,2),(4,d,4,2) | 5 | 3 | 2 | 3 | 3 | 1 |
+| MoR mixed | (2,m,1,2),(4,d,4,2) | 5 | 3 | 2 | 2 | 3 | 1 |
 
-Spark never reassigned stored ids. Engine equals Spark on every cell above.
+Spark never reassigned stored ids. Lineage and next-row-id equal on every cell; data-file count differs on MoR mixed.
 
 **DELETE-then-INSERT** of a matching key is just DELETE (the source row is MATCHED). Mixed
 covers insert of a new key plus delete/update.
