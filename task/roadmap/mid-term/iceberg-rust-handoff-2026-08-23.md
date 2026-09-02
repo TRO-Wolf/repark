@@ -528,6 +528,7 @@ RP-3 C-006 (2026-08-30, `d408da42`): the 1e7×50 MOR driver still ends at 8 dele
   — a characterization pin, written to go RED when this lands. Its fixture's 100 %-dead in-band
   file must become a candidate, be rewritten, and take its delete file with it, leaving the
   table at zero delete files with the same 2,500 rows. Registry row **RDF-1** retires with it.
+  *Errata (2026-09-02, F-RDF1-1):* "zero delete files" is the 2026-08-24 Spark 4.0.1 / Iceberg 1.10.0 reading; at 1.11.0 Spark rewrites the dead file and leaves the delete file dangling (removed 0). Registry RDF-1 carries both.
 - **Relationship to F-3.** F-3 is the `remove-dangling-deletes` option for delete files whose
   data file is GONE. This item is the other half: delete files whose data file is still there
   and never gets selected. Landing F-3 alone does not close RDF-1, and the oracle shows why —

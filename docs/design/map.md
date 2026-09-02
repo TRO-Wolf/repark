@@ -23,7 +23,8 @@ changing a decision here means a new dated design pass, not an in-place edit.
   fixture as landed.
   **Errata 2026-08-24 (MW-7):** §3b's v2 sentence ("Spark … leaving all six position deletes in
   place") holds for that 9 %-deleted fixture and is not general — on delete-heavy v2 shapes Spark
-  ends at zero delete files. Registry `RDF-1` (FIXED 2026-09-02 for a delete file naming one
+  ends at zero delete files (errata 2026-09-02: true at 4.0.1 / 1.10.0; at 1.11.0 Spark leaves the
+  delete file dangling, F-RDF1-1). Registry `RDF-1` (FIXED 2026-09-02 for a delete file naming one
   data file; a delete file naming several is the residue).
 
 - [session-api.md](session-api.md) — the phase-1 repark-core Session API design (settled
