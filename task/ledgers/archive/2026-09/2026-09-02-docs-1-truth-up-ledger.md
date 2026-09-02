@@ -1,7 +1,7 @@
 # Charter ledger — DOCS-1 · truth-up after the 2026-09-01/02 merges
 
 **Date:** 2026-09-02 · **Branch:** `docs/truth-up-2026-09-02` · **Base:** `28fb5f4` (`main`,
-V3-8 merged) · **Contract:** [.agents/skills/compact-context-docs/SKILL.md](../../../.agents/skills/compact-context-docs/SKILL.md)
+V3-8 merged) · **Contract:** [.agents/skills/compact-context-docs/SKILL.md](../../../../.agents/skills/compact-context-docs/SKILL.md)
 · **Path:** STANDARD. **risk_tier:** standard. **Model:** claude-opus-5 (medium).
 
 **Retires:** moves to `completed/` in this unit's last commit; the next pickup's

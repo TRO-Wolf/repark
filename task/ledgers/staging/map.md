@@ -14,6 +14,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   for existing. `risk_tier: standard`. Branch
   `feat/ex-2-functions-math-bitwise`. Slate:
   [../briefs/example-backfill.md](../../../briefs/example-backfill.md).
+- [v3-9-mor-predicate-dml-dv-ledger.md](v3-9-mor-predicate-dml-dv-ledger.md) —
+  **V3-9 (2026-09-02), in flight:** the `V3-MOR-1` lift — `resolve_write_mode`'s V2-only
+  delete-file gate goes from `!= V2` to `< V2`, so merge-on-read `DELETE … WHERE` /
+  `UPDATE … WHERE` on v3 reuse V3-7's deletion-vector path. Five clauses plus the opt-in
+  message correction; nine measured oracle cells. `risk_tier: standard`. Branch
+  `feat/v3-9-mor-subquery-where-dv`.
 - [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's
   scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike
   evidence behind it; C-007 (the four sub-project families) was closed by ruling D-7 on
@@ -31,7 +37,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   comes with it, and the two adjacent defects that should ride along. Both units change a computed
   answer, so the gate wants a dated owner ruling before either writes code.
   **Owner ruling 2026-08-31:** both rows fix to Spark. Delivery:
-  [sem-1-spark-answer-parity-ledger.md](../completed/sem-1-spark-answer-parity-ledger.md).
+  [sem-1-spark-answer-parity-ledger.md](../archive/2026-09/2026-09-02-sem-1-spark-answer-parity-ledger.md).
 - [v3-0-charter-ledger.md](v3-0-charter-ledger.md) —
   **V3-0 (2026-08-21):** the format-v3 scope audit, and the defect it found. Intended as a
   charter with no product change and it does not close that way. **Read §3 first**:

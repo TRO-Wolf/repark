@@ -2,9 +2,9 @@
 
 **Date:** 2026-09-02 · **Branch:** `fix/rdf-1-position-delete-bounds` · **Base:** `origin/main`
 `cee8126` · **Model:** claude-opus-5 (medium) · **Registry:**
-[../../../docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md) row
+[../../../docs/spark-sql-iceberg-parity.md](../../../../docs/spark-sql-iceberg-parity.md) row
 `RDF-1` · **Handoff:**
-[../../roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md](../../roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md)
+[../../roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md](../../../roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md)
 ask F-16 residue 2 · **Path:** STANDARD (`risk_tier: standard`; one Actor cycle).
 
 **Retires:** this ledger moves to `../completed/` in this unit's last commit.

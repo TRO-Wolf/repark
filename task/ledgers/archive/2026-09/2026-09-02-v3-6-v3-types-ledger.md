@@ -1,7 +1,7 @@
 # Charter ledger — V3-6 · remaining v3 types (binary variant, ns timestamps, unknown, column defaults)
 
 **Date:** 2026-08-31 · **Branch:** `feat/v3-6-v3-types` · **Base:** `be2d754` (`main`) ·
-**Design:** [docs/design/format-v3-track.md](../../../docs/design/format-v3-track.md) §5
+**Design:** [docs/design/format-v3-track.md](../../../../docs/design/format-v3-track.md) §5
 (V3-6) and §6 item 4 (F-15 gates each type independently) · **Path:** STANDARD.
 **risk_tier:** standard.
 
