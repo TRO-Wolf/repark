@@ -6,7 +6,7 @@ owner closes the slate row.
 
 **Unit:** SEM-1 · **Date:** 2026-08-31 · **Executor:** Grok (grok-4.6), Actor ·
 **Branch:** `feat/sem-1-spark-answer-parity` · **Base:** `be2d754066e4ab3a5d61b4ec32418a10b8a31804`
-**Charter:** [sem-0-charter-ledger.md](sem-0-charter-ledger.md) (measured scope).
+**Charter:** [sem-0-charter-ledger.md](../staging/sem-0-charter-ledger.md) (measured scope).
 **Registry:** [docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md)
 `RE-1` (already retired by the 2026-08-21 SEM-1) and `LOG-1`.
 **risk_tier:** standard.

@@ -36,7 +36,7 @@ _RUST_BASELINES: tuple[tuple[str, int], ...] = (
     ("crates/repark-iceberg/src/write/merge/tests/occ_conflict.rs", 1023),
     ("crates/repark-iceberg/src/write/merge/tests/streaming_scan.rs", 3028),
     ("crates/repark-iceberg/src/write/overwrite.rs", 1053),
-    ("crates/repark-iceberg/src/write/predicate_dml.rs", 1226),
+    ("crates/repark-iceberg/src/write/predicate_dml.rs", 1164),
     ("crates/repark-iceberg/src/write/predicate_dml/tests/predicate_dml.rs", 1442),
     ("crates/repark-python/src/column/mod.rs", 1105),
     ("crates/repark-python/src/dataframe.rs", 1171),

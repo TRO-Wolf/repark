@@ -107,7 +107,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Extract predicate and file-selection logic from commit assembly.",
     ),
     "crates/repark-iceberg/src/write/predicate_dml.rs": (
-        1226,
+        1164,
         "Predicate DELETE and UPDATE planning share one adapter.",
         "Split predicate validation from operation-specific plan construction.",
     ),

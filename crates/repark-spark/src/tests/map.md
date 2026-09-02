@@ -25,8 +25,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   B15), refuses illegal sources (`DATATYPE_MISMATCH`, B2–B7), keeps `VARBINARY` refusing (B12),
   leaves a `BINARY` DDL column untouched; `TRY_CAST(<int>)` refuses without the ANSI-off suggestion.
 - `v3_cow.rs` — v3 UPDATE, sequential COW DELETE, and MERGE matched-update keep `_row_id`
-  (V3-7 Spark-equal MERGE lift; RP-6 UPDATE/DELETE). Subquery-WHERE DML still refuses
-  `V3-COW-1`. Sequential COW DELETE keeps the survivor id at next-row-id 6 (single-file
+  (V3-7 Spark-equal MERGE lift; RP-6 UPDATE/DELETE). V3-8 replaced the subquery keep-refusal
+  with the outside-the-hole control (`UPDATE … NOT IN` refuses without `V3-COW-1` and leaves
+  the table unmoved). Sequential COW DELETE keeps the survivor id at next-row-id 6 (single-file
   layout). Branch UPDATE keeps branch lineage and leaves main unmoved. MoR MERGE
   matched-update is Spark-equal (`next-row-id` 4).
   pins: v3-7-merge-lineage/C-002; rp-6-fork-repin/C-002, C-003
@@ -38,6 +39,17 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   MoR UPDATE pins `next-row-id` 4 with 2 data files, 1 Puffin DV, 3 manifests at the
   single-file seed. Absolute Spark 4.1.2 + Iceberg 1.11.0 values.
   pins: v3-7-merge-lineage/C-002; rp-6-fork-repin/C-002, C-003
+- `v3_subquery_dml.rs` — **V3-8 (2026-09-02):** the V3-COW-1 lift for subquery-`WHERE` COW DML
+  on created and adopted v3 — `DELETE … IN` / `NOT IN` / `EXISTS` / `NOT EXISTS` and
+  `UPDATE … IN`, each pinning rows, `(id,_row_id,seq)`, next-row-id / first-row-id /
+  added-rows and the live data-file count at the single-file seed. `F_V3_8_UPDATE_FILES` is
+  the named layout artefact: the UPDATE cell writes 2 data files where Spark writes 1.
+  Also the correlated-to-target `DELETE` (served, created and adopted), its zero-row
+  `s.id = tgt.id + 1` variant (`F-v3-8-empty-delete-snapshot`: the engine commits nothing
+  where Spark commits an empty overwrite), and the merge-on-read residual control, which
+  pins the V2-only delete-file gate's exact text on both verbs and asserts it is neither
+  `G3-E8` nor `V3-COW-1`.
+  pins: v3-8-subquery-where-lineage/C-002
 - `create_table.rs` — also the V3R-1 type pin: `GEOMETRY` / `GEOGRAPHY` / `VARIANT` refuse at
   CREATE (`V3-GEO-1`).
 - `v3_types.rs` — **V3-6:** C-001 ledger matrix + refuse of `UNKNOWN` / `VARIANT` /

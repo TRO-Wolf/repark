@@ -23,6 +23,13 @@ fork) governs *how* the work is done; this document only says *what* and *why*.
 "declined / permanent gap" ruling in the fork's `GAP_MATRIX.md`. The engine side then runs one
 repin unit per landed batch (§5) and archives this file.
 
+**Fork V3 production plan closed out 2026-09-02** (fork `#250`–`#259`, fork `main` past the
+engine pin `fb0cacfa`). Rows: R109 / R136 / R166 / R168 ✅; R107 / R110 / R114 / R135 / R157 🟡
+with named residues; gate 8 (credentialed AWS) is owner-run; the plan's PR-7 closeout ledger
+names RePark's gate 9. Row state and residues stay single-homed in the fork's `GAP_MATRIX.md`;
+the engine consumes `#258`/`#259` at the next repin. Every other F-item is consumed or
+ruled (F-9 by fork `#233`, row R126, a dated service gap); still open here: F-10, F-11, F-12.
+
 ---
 
 ## 1. Ground rules the engine side is relying on
@@ -262,8 +269,14 @@ converts parquet position deletes to DVs; on a DV-only fixture it is a zero-resu
 
 *RP-6 at `fb0cacfa` (2026-09-01):* `#255` PR-3 MoR UPDATE keeps `_row_id` and advances seq
 (F-7 preserve-half Spark-equal). Sequential COW DELETE is Spark-equal on the single-file
-layout; F-rp3-c7 is consumed as a two-file-seed artefact. RePark-owned MERGE still
-reassigns and stays `V3-COW-1`. pins: rp-6-fork-repin/C-002, C-003
+layout; **F-rp3-c7 is a layout artefact, not a defect** — a two-file seed, consumed.
+pins: rp-6-fork-repin/C-002, C-003
+
+*V3-7 / V3-8 (2026-09-02), engine-side, no fork ask:* the RePark-owned COW and MoR writers
+carry `_row_id` through MERGE (V3-7) and through the subquery-`WHERE` COW rewrite (V3-8).
+`V3-COW-1` is **FIXED** and its refusal seat deleted; F-7 has no engine-side residue left.
+The MoR subquery-`WHERE` cell stays unserved on predicate DML's V2-only delete-file gate —
+engine unit **V3-9**, not a fork ask.
 
 Listed so the fork plans it; as of 2026-08-21 the engine's V3-2+ units deliberately waited
 for the MW campaign to close (that wait is over — the addendum below).
@@ -271,7 +284,8 @@ for the MW campaign to close (that wait is over — the addendum below).
 - **V3-LINEAGE-1** — **FIXED 2026-08-31 (RP-4 / fork #243).** `RewriteDataFiles` carries
   `_row_id` / `_last_updated_sequence_number` through compaction Spark-equal; the public
   CALL is lifted. RP-6 lifts plain-`WHERE` COW/MoR UPDATE and sequential COW DELETE;
-  registry `V3-COW-1` keeps RePark-owned MERGE refused.
+  V3-7 lifts MERGE and V3-8 the subquery-`WHERE` COW rewrite (registry `V3-COW-1` FIXED
+  2026-09-02).
 - **B-MOR-3** — `RewritePositionDeleteFiles` still refuses live Puffin deletion vectors
   (OD-2). V3-5 measured that DV compaction is `rewrite_data_files`, not this action.
 - **V3-DANGLE-1** — **FIXED 2026-08-31 (V3-5).** `RewriteDataFiles` at `33be9a0` drops
@@ -527,6 +541,11 @@ RP-3 C-006 (2026-08-30, `d408da42`): the 1e7×50 MOR driver still ends at 8 dele
   pin.
   *RP-6 (2026-09-01, pin `fb0cacfa`): residue 2 is not in this range (fork F-16r ledger
   still names partition-scoped survival). RDF-1 stays BACKLOG. pins: rp-6-fork-repin/C-004*
+  **REFUTED fork-side (2026-09-02, fork `#259`, past the pin).** The ratio clause is
+  identical to Java's; Spark reclaims the shape through full `file_path` bounds on its
+  position deletes. The gap is RePark's own position-delete writer, not the fork — F-16
+  residue 2 closes and **RDF-1 re-homes to RePark** (engine unit RDF-1, in flight on its own
+  lane; the registry row is that unit's to rewrite).
 
 ### F-17 (north-star blocker, added 2026-08-28) — shared-Puffin DV sibling closure
 

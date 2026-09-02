@@ -4,9 +4,9 @@ CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated co
 
 ## Purpose
 
-Test modules for [`predicate_dml.rs`](../predicate_dml.rs) (`execute_predicate_dml` — identity
-DELETE / UPDATE with a subquery `WHERE`). They are `#[cfg(test)]` children of that module, split
-into files because the parent sits near its size ceiling.
+Children of [`predicate_dml.rs`](../predicate_dml.rs) (`execute_predicate_dml` — identity
+DELETE / UPDATE with a subquery `WHERE`): the test batteries and, since V3-8, the projection
+helpers. Both are split out because the parent sits near its size ceiling.
 
 Created by **LRS-5 (2026-08-20)**: both had been included from `write/` with `#[path = "…"]`.
 Source comments retain predicate and cleanup contracts; implementation narration is omitted.
@@ -15,6 +15,11 @@ works, so the attribute is gone rather than documented.
 
 ## Contents
 
+- `lineage.rs` — **V3-8 (2026-09-02):** the write-column list, the survivor/new-value SELECT
+  lists and the update value schema, with the format-v3 lineage pair appended when the table
+  carries it (`_last_updated_sequence_number` projected NULL for a changed row, as V3-7's MERGE
+  writer does). Extracted so `predicate_dml.rs` stays under its exact size baseline.
+  pins: v3-8-subquery-where-lineage/C-002
 - [tests/](tests/map.md) — DELETE and identity UPDATE batteries.
 
 ## Pointers
