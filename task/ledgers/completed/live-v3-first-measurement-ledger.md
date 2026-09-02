@@ -7,7 +7,8 @@
 [../../roadmap/epic-term/v1-0-iceberg-v3-northstar.md](../../roadmap/epic-term/v1-0-iceberg-v3-northstar.md)
 §3 "Live: Glue + S3 Tables v3 legs" · **Path:** STANDARD (`risk_tier: standard`; one Actor cycle).
 
-**Retires:** this ledger moves to `../completed/` in this unit's last commit.
+**Retires:** moved to `completed/` in this unit's last commit; the next pickup's
+`make ledger-archive` files it under `../archive/2026-09/`.
 
 **Why now.** LIVE-v3 shipped the two legs and refused any green claim until a run existed. The
 run exists. Documents that still say "unmeasured" are now the defect.
