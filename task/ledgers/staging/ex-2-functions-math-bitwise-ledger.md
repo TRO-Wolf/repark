@@ -89,12 +89,12 @@ SELF_LOGIC_REVIEW:
 | ID | Clause | Proof obligation | Verdict |
 |---|---|---|---|
 | C-001 | Batch 1 lands runnable local examples for the eleven roster names it can demonstrate honestly, in four files under `docs/examples/functions/`, every `COVERS` entry exercised by an assertion on the value that name produces; those eleven leave `docs/examples/backlog.txt` and `BACKLOG_BASELINE` moves down by exactly eleven, 892 → 881, with no other `scripts/` change; the twelfth, `F.expm1`, stays a backlog row with its divergence measured and reported, and no product file is touched; the gate's static half and its `--require-execute` leg both exit 0. | Red-first capture below (the twelve are uncovered before the batch, and the gate reds by name when the rows are removed without examples), the `expm1` measurement table, the green counts line, and the recorded gate exit codes. | **OPEN** |
+| C-002 | Batch 2 lands runnable local examples for the 37 roster names the live oracle confirms, in six files under `docs/examples/functions/`, every asserted value measured against live PySpark 4.1.2 before it was written and every `COVERS` entry exercised by an assertion on that measured value; those 37 leave `docs/examples/backlog.txt` and `BACKLOG_BASELINE` moves down by exactly 37, 881 → 844, with no other `scripts/` change; the 38th, `F.log1p`, stays a backlog row with its divergence measured and reported, and no product file is touched; the gate's static half and its executing `--require-execute` leg both exit 0. | Red-first capture below (the gate names exactly the 38 roster names when the rows are removed without examples), the batch 2 oracle table, the recorded divergence notes, the green counts line, and the gate exit codes. | **OPEN** |
 
-`LOGIC_SCORE` = **0/1 `PROVEN`** — the batch's clause stays `OPEN` until the
-family lands. The worker's green is directional by the campaign contract; the
-orchestrator's independent re-run from a clean checkout is what closes it, and
-the pin that a `PROVEN` verdict owes lives in `python/repark-parity/tests/`,
-which this unit may not write.
+`LOGIC_SCORE` = **0/2 `PROVEN`** — the clauses stay `OPEN` until the family lands. The
+worker's green is directional by the campaign contract; the orchestrator's independent
+re-run from a clean checkout is what closes them, and the pins a `PROVEN` verdict owes
+live in `python/repark-parity/tests/`, which this unit may not write.
 
 ## Red-first (docs/testing.md "Gate provocation proofs")
 
@@ -222,3 +222,22 @@ scripts are green.
 `gate.BACKLOG_BASELINE <= 892` (a down-only direction pin, which is what EX-1 C-006 claims) and
 `len(backlog) == gate.BACKLOG_BASELINE` (the lockstep the adjacent pin already asserted). The
 exact per-batch count lives in each family ledger clause, where it belongs.
+
+## Batch 2 outcome — thirty-seven names, not thirty-eight
+
+`F.log1p` is **dropped from the batch and left on the backlog**: measured 2026-09-02 on live
+PySpark 4.1.2 + Iceberg 1.11.0 against the engine on the same inputs.
+
+| Input | Spark `log1p` | repark `F.log1p` | Verdict |
+|---|---|---|---|
+| `0.0` | `0.0` | `0.0` | equal |
+| `1e-10` | `9.999999999500001e-11` | `1.000000082690371e-10` | **diverges** — the engine computes `ln(1 + x)` and loses the precision `log1p` exists to keep |
+| `-1.0` | `NULL` | `NULL` | equal |
+| `-2.0` | `NULL` | `NULL` | equal |
+| `NULL` | `NULL` | `NULL` | equal |
+
+Product finding, filed for the parity registry as `LOG1P-1` (accuracy, not a wrong answer
+class); the example lands when the kernel is fixed. Batch 2 wall-clock on the mechanical tier
+(GLM 5.3 Flash): 2 h 1 min to a complete tree, then a stall at the commit step; the
+orchestrator committed the tree after re-running every gate.
+
