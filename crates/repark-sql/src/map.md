@@ -118,6 +118,7 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   parser read `SET (…)`). Curated vocabulary; `partitioning` is the pre-designated future
   spelling and refuses citing Q3. Tests: [alter/map.md](alter/map.md).
 - `merge.rs` — `MERGE INTO` → `repark_iceberg::write::merge::MergeSpec`.
+  ANSI MERGE keeps `commit_branch: None` (dotted write-to-branch is Spark-door only, RP-5).
   Execution is the shared RePark-owned executor, never the fork `TableProvider`. No star forms
   (parse-level absent here); OUTPUT/RETURNING refuses. Oracle sub-predicates,
   assignment-target qualification, non-last unconditional clauses refuse at this door.

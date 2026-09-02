@@ -69,7 +69,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_rp3_c009_write_default.py](test_rp3_c009_write_default.py) — **RP-3 C-009:** no engine
   caller sets `write_default`; Iceberg fixture bytes stay flat vs `origin/main` when that
   ref exists (skips on a shallow checkout). pins: rp-3-fork-repin/C-009, C-010, C-011
-- [test_rp4_c004_to_branch.py](test_rp4_c004_to_branch.py) — **RP-4 C-004:** no engine caller
+- [test_rp4_c004_to_branch.py](test_rp4_c004_to_branch.py) — **RP-4 C-004 / RP-5 C-004:** engine
+  callers now set `to_branch` (RP-5 consumes F-6).
+  pins: rp-5-fork-repin/C-004
   invokes `to_branch`; Iceberg fixture bytes stay flat vs `origin/main`. pins: rp-4-fork-repin/C-004
 - [test_v3_cow_dml.py](test_v3_cow_dml.py) — **V3R-1 (2026-08-25); RP-2 2026-08-27 retarget:** facade Spark `.sql()`
   MERGE / UPDATE on an adopted v3 table raise `UnsupportedOperationException` naming
@@ -81,14 +83,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   rp-4-fork-repin/C-003).
 - [test_ref_branch_tag_wap.py](test_ref_branch_tag_wap.py) — **REF:** the facade rows for
   branch/tag retention and the refused doors — both `WITH SNAPSHOT RETENTION` halves at the
-  oracle's values, the reversed order refusing, write-to-branch and write-to-tag refusing while
-  naming the `iceberg-datafusion` gap rather than a superseded fork pin, and WAP declared
+  oracle's values, the reversed order refusing, write-to-branch landing on the named branch
+  (RP-5 / REF-1 FIXED), write-to-tag refusing Spark-shaped, and WAP declared
   (`fast_forward` / `publish_changes` / `cherrypick_snapshot` and the `spark.wap.*` confs all
   fail closed). The `branch_`/`tag_` READ selectors resolve the ref here too — standalone and on
   a DML statement's read side (`INSERT … SELECT`, `MERGE … USING`, a `DELETE` predicate
-  subquery) — while a ref-named write TARGET still refuses; a missing branch or tag refuses
-  naming it.
+  subquery). A tag-named write TARGET refuses Spark-shaped; a missing branch refuses
+  naming it and does not create the branch.
   pins: ref-branch-tag-wap/C-002, C-003, C-004, C-005, C-007
+  pins: rp-5-fork-repin/C-004
 - [test_v3e4_refs_time_travel.py](test_v3e4_refs_time_travel.py) — **V3E-4:** facade
   branch/tag, `VERSION AS OF` over DVs, rollback, expire dual-probe, orphan
   24h floor on the partitioned-DV fixture after a RePark append; live-DV UPDATE
@@ -124,20 +127,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and rewrites part=0 away; unknown strategy and bad where use Spark's text; `sort` and
   `sort_order` refuse.
   pins: maint-rewrite-data-files-options/C-003, C-004, C-005, C-006, C-007
-- [test_mw8_runbook.py](test_mw8_runbook.py) — **MW-8 (2026-08-24):** the maintenance cycle
-  `docs/guide/iceberg-guide.md` "The maintenance runbook" documents, run end to end on a local
-  catalog at gate scale (6,000 rows, 2 partitions, six MERGEs, 4.4 s). One documented cycle,
-  censused after every step: the order is the MW-7 driver's, not a second copy; position
-  deletes fold 12 → 2 (one per partition — the fixture sets `write.delete.granularity =
-  'partition'`); data files compact 50 → 6;
-  manifests drop 11 → 3 and the manifest list shrinks; `expire_snapshots` prunes 12 → 1
-  snapshots and reclaims exactly the 12 delete files step 2 folded; the orphan dry run answers
-  Spark's one column and zero rows, and the ARMED form refuses inside the 24-hour floor (the
-  cell MW-3's floor pin does not cover) and deletes nothing outside it; `COUNT(*)` holds 6,000
-  `int64` throughout. **The honest half (C-004):** both CTAS files sit inside Java's bin-pack
-  band and carry 3,600 dead rows through all seven steps — `removed_delete_files_count` is 0
-  and the delete files covering them survive, registry row `RDF-1`, mechanism pinned by MW-7
-  C-011. **C-010 (Critic remediation, F-MW8-1/F-MW8-3)** parses the guide's `MAINTENANCE_CYCLE`
+- [test_mw8_runbook.py](test_mw8_runbook.py) — **MW-8 (2026-08-24; RP-5 2026-09-01):** the
+  maintenance cycle `docs/guide/iceberg-guide.md` "The maintenance runbook" documents, run end
+  to end on a local catalog at gate scale (6,000 rows, 2 partitions, six MERGEs). F-16r
+  rewrites this fixture's in-band delete-laden seed files (`test_delete_laden_seed_files_are_rewritten_by_the_runbook`).
+  The MW-7 2,500-row pin still holds (`RDF-1` BACKLOG).
+  pins: rp-5-fork-repin/C-005
+  **C-010 (Critic remediation, F-MW8-1/F-MW8-3)** parses the guide's `MAINTENANCE_CYCLE`
   out of its python block and compares procedure, order, argument names and literal argument
   values (placeholders skipped) against `measure.maintenance_sequence`'s, so printed SQL that drifts from the measured
   cycle reds — it is what catches an `expire_snapshots` call with no `older_than`. C-009 is the
@@ -2373,7 +2369,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 | Add a maintenance `CALL system.*` oracle (I3) | `test_maintenance_call.py` — expire/rewrite/rollback + tag **and** branch dual probe (s1 kept, s2 expired) + positional sort refuse + previous_snapshot_id + unknown/orphan refuse. **MW-1:** expire pins Spark's full six-column result, all bigint and all nullable, after the content-file funnel was split into data / position-delete / equality-delete. **MW-2:** rewrite pins Spark's fifth column `removed_delete_files_count`, non-nullable and 0 — Java's `remove-dangling-deletes` defaults off and the options map refuses, so the zero is a real count. *(MW-7, 2026-08-24: the zero is real, but do not read it as "delete files therefore survive compaction" — on Spark they do not, because its planner rewrites delete-laden files outright. Registry `RDF-1`.)* **MW-3:** the pre-MW-3 orphan refuse pin is retired and replaced by three — `older_than` required (`ORPHAN-1`), dry-run default with Spark's one-column result shape (`ORPHAN-2`), the 24-hour floor measured across its boundary (parity, not strictness), and the shared-CTAS-root refusal pinned on the very fixture that surfaced it — a dry run there listed 139,179 leftover files. **V3-1:** `register_table` adopts an engine-written table and returns Spark's three nullable BIGINT columns (`pa.int64()`); unknown-proc pin is fail-closed on `register_table`. **MW-6:** `rewrite_manifests` pins Spark's two non-nullable `int32` columns and its counts (5 manifests → 1, `5, 1`), the no-op zeros with no new snapshot, and the argument surface — `spec_id` refuses, `use_caching` is accepted and changes nothing (`MANIFEST-2`) |
 | Pin the MW-7 scale-measurement machinery | `test_mw7_scale_smoke.py` — the bench driver at gate scale: census vs an independent count, delete files `partitions x merges` then folded to one per partition, COW zero-delete control (a control, not a clean delete-cost isolate — MOR-minus-COW bundles delete reads with MOR's data-file fan-out), manifest drop across `rewrite_manifests`, the five-procedure order, timings that carry their answer |
 | Pin the W-0 window-shape bench at gate scale | `test_w0_window_bench_smoke.py` — Iceberg lead/lag cell, memory_limit outcome class, thirteen sliding refuses (int64 `approx_count_distinct`), remaining absents fail at planning. pins: w-0-window-bench/C-002, C-005, C-006, C-009 |
-| Characterize `RDF-1` (a 100 %-dead in-band data file is never compacted) | `test_mw7_scale_smoke.py::test_delete_laden_in_band_file_survives_the_runbook` — flips RED when fork ask F-16 lands |
+| Characterize `RDF-1` (a 100 %-dead in-band data file is never compacted) | `test_mw7_scale_smoke.py::test_delete_laden_in_band_file_survives_the_runbook` — RP-5 re-measured GREEN at `00cdde0` / F-16r (BACKLOG; 1e7×50 driver not re-run). pins: rp-5-fork-repin/C-005 |
 | Re-measure the MW-0 MOR growth demo (MW-5) | `test_mw5_baseline_delta.py` — 1,000 rows, ten MERGEs of 200 ids, delete files 1→10 then compact+expire 10→1, Arrow `COUNT(*)` 1,000 `int64`, expire mutation-proof. Wall-clock logged, not asserted |
 | Add a case-insensitive column-conform (MERGE star) facade test | `test_case_insensitive_conform.py` |
 | Add a drop-in no-op / accepted-ignored disclosure test (OTH-010) | `test_dropin_disclosure.py` |

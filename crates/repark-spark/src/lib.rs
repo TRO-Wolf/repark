@@ -22,6 +22,7 @@ mod spark_literals;
 mod time_travel;
 mod truncate;
 mod window_range;
+mod write_to_branch;
 
 // --- Router entrypoints.
 pub use router::{execute, execute_with_read_only};

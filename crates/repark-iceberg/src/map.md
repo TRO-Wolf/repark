@@ -22,8 +22,12 @@ Source comments are condensed to API and safety contracts; executable behavior i
   [catalog/map.md](catalog/map.md).
 - `write/` — MERGE INTO / identity DELETE+UPDATE (`predicate_dml`) / append / overwrite /
   partition overwrite (DML-B) / ALTER /
-  snapshot refs over the owned fork. See [write/map.md](write/map.md).
-- [tests/](tests/map.md) — crate-root test modules: fork-pin proof and shared tracing harness.
+  snapshot refs over the owned fork. Named-ref commits use `commit_target` / `to_branch`.
+  See [write/map.md](write/map.md).
+  pins: rp-5-fork-repin/C-004
+- [tests/](tests/map.md) — crate-root test modules: fork-pin proof, shared tracing harness,
+  and the R91 unknown-write refuse pin.
+  pins: rp-5-fork-repin/C-006
 
 ## I want to...
 

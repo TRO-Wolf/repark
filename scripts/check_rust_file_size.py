@@ -47,7 +47,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Extract one existing responsibility when a charter already changes that region.",
     ),
     "crates/repark-core/src/session/tests/session.rs": (
-        1415,
+        1412,
         "Session behavior scenarios remain in one file-backed test module.",
         "Split by configuration, planning, and execution scenario families.",
     ),
@@ -82,7 +82,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Extract writer preparation from transaction commit assembly.",
     ),
     "crates/repark-iceberg/src/write/merge/mod.rs": (
-        2086,
+        1894,
         "The RePark-owned MERGE executor combines plan, COW, and MOR paths.",
         "Split plan preparation from COW and MOR execution modules.",
     ),
@@ -102,7 +102,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split position-delete, rewrite, and scan-shape scenario families.",
     ),
     "crates/repark-iceberg/src/write/overwrite.rs": (
-        1070,
+        1053,
         "Overwrite planning and commit behavior share one module.",
         "Extract predicate and file-selection logic from commit assembly.",
     ),

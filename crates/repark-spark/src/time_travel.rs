@@ -60,6 +60,10 @@ pub struct PinnedViews {
 }
 
 impl PinnedViews {
+    pub(crate) fn record(&mut self, name: String) {
+        self.names.push(name);
+    }
+
     /// Deregister every name this statement minted.
     pub fn release(&self, ctx: &SessionContext) {
         for name in &self.names {

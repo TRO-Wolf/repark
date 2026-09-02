@@ -42,26 +42,33 @@ pins: rp-4-fork-repin/C-005, C-006
 - `insert_overwrite.rs` — INSERT OVERWRITE: empty probe/validate/provider-wipe (C1-Q-001) +
   non-empty stage-then-swap; **DML-B** `PARTITION (…)` static/dynamic via
   `repark_iceberg::write::partition_overwrite`; 2 in-module tests (`assignment_type_unit_tests`).
+  Named-ref targets go through `commit_overwrite_replace_all_to` / partition `_to`.
+  Empty overwrite onto a branch wipes via `commit_overwrite_replace_all_to`, not a 4-part
+  self-scan.
   pins: dml-b-insert-overwrite/C-001, C-002, C-004
-- `truncate.rs` — whole-table `TRUNCATE TABLE` (DML-C): delete-only `commit_truncate`;
+  pins: rp-5-fork-repin/C-004
+- `truncate.rs` — whole-table `TRUNCATE TABLE` (DML-C): delete-only `commit_truncate_to`;
   PARTITION / IF EXISTS / missing TABLE / multi-target refuse. Pins:
   [tests/truncate.rs](tests/truncate.rs). pins: dml-c-truncate/C-002, C-005, C-006, C-007
+  pins: rp-5-fork-repin/C-004
+- `write_to_branch.rs` — Spark-door write-to-branch routing: tag/missing-branch Spark-shaped
+  refuse; two-part names qualify through session defaults; V3-COW-1 / MOR valves run on the
+  Iceberg ident before the temp rewrite; fork-executed INSERT/UPDATE/DELETE via
+  `IcebergTableProvider::with_commit_branch` registered on `datafusion.public`;
+  MERGE / INSERT OVERWRITE / TRUNCATE rewrite short names to four-part then `.to_branch`.
+  `split_write_ref_parts` sniffs four-part names and two-part `branch_`/`tag_` names;
+  a three-part table whose last segment starts with `branch_` is an ordinary table.
+  pins: rp-5-fork-repin/C-004
 - `ref_ddl.rs` — I5 snapshot-ref DDL (CREATE/DROP/REPLACE BRANCH|TAG, retention) + the
   write-to-branch sniff. Its 14 in-module tests are file-backed in
   [ref_ddl/map.md](ref_ddl/map.md); the module path, and so every pin name, is unchanged.
   `WITH SNAPSHOT RETENTION` takes BOTH halves — `n SNAPSHOTS` then an optional
   `k DAYS|HOURS|MINUTES` — because Spark's grammar does; the reversed order is a Spark parse
-  error and refuses here too. The write-to-branch refusal names the surface that is still
-  missing at fork pin `33be9a0`: `to_branch` reached the transaction actions in F-6, but
-  `iceberg-datafusion`'s provider commit path (which `INSERT` / `UPDATE` / `DELETE` execute
-  through) carries no commit target. Re-measure on every fork repin: this refusal is wrong
-  the day `IcebergTableProvider` takes a commit target. The registry
-  rows this module answers to are `REF-1` (write, DECLARED), `REF-3` (WAP, DECLARED) and
-  `REF-4` (selector reads, FIXED) in `docs/spark-sql-iceberg-parity.md` §2.2. The sniff examines
-  the statement's ONE write target, located from its own head keywords — a ref name in a source
-  relation, a `USING` operand or a predicate subquery is a READ, and claiming it here produced a
-  refusal that named a target the statement did not have.
+  error and refuses here too. Write-to-branch routing lives in `write_to_branch.rs` (RP-5):
+  the sniff still locates the statement's ONE write target. Registry rows: `REF-1` FIXED,
+  `REF-3` BACKLOG, `REF-4` FIXED.
   pins: ref-branch-tag-wap/C-003, C-004, C-006, C-007
+  pins: rp-5-fork-repin/C-004
 - `call.rs` — seven maintenance procedures: six maintenance calls plus `register_table`. Each
   preserves Spark's result schema and count sources. Orphan removal requires `older_than`, defaults
   `dry_run` to true, and refuses shared fallback roots; rewrite-position-delete still refuses

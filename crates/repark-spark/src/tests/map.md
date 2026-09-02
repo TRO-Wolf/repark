@@ -30,6 +30,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   keeps first-snapshot lineage then refuses the unsafe COW second DELETE, MOR commits a Puffin DV) and a second MOR DELETE merges into the
   live vector (pins: rp-2-fork-repin/C-003, C-005; rp-3-fork-repin/C-004; v3-3-dml/C-001, C-002); short-name,
   padded merge-on-read, and v2-control cases keep `V3_MAINTENANCE_ORACLE` and ENC-1's pin.
+  RP-5: `v3_cow_update_and_delete_on_branch_refuse_like_unqualified` keeps V3-COW-1 on
+  `table.branch_b`.
+  pins: rp-5-fork-repin/C-004
 - `create_table.rs` — also the V3R-1 type pin: `GEOMETRY` / `GEOGRAPHY` / `VARIANT` refuse at
   CREATE (`V3-GEO-1`).
 - `v3_types.rs` — **V3-6:** C-001 ledger matrix + refuse of `UNKNOWN` / `VARIANT` /
@@ -46,7 +49,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   V3E-3 fixtures (MOR+DV surviving rows), created v3 derivation, v2/v1 unresolved (`No field
   named _row_id`), `SELECT *, _row_id` expands user columns only, qualified/aliased forms,
   unquoted case-fold, JOIN/CTE/subquery/`VERSION AS OF` refuse `V3-ROWID-2`, V3-COW-1 files
-  byte-untouched (content-hash pin; RP-4 re-records `test_v3_cow_dml.py` after the rewrite
+  byte-untouched (content-hash pin; RP-5 re-records `v3_cow.rs` after the branch-target
+  V3-COW-1 pin; RP-4 re-records `test_v3_cow_dml.py` after the rewrite
   CALL lift); the C-001 matrix pin finds the ledger anywhere under `task/ledgers/` so
   lifecycle moves keep it green.
   pins: rp-4-fork-repin/C-003
@@ -75,6 +79,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   and bad where use Spark's text; `sort_order` refuses without compacting; named `BINPACK` still
   compacts v2.
   pins: maint-rewrite-data-files-options/C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- `write_to_branch.rs` — RP-5 C-004 family pins: INSERT VALUES/SELECT, UPDATE, DELETE,
+  MERGE, INSERT OVERWRITE, TRUNCATE, empty overwrite on a diverged branch; two-part
+  `t.branch_b` via session defaults; tag and missing-branch Spark-shaped refuse including
+  TRUNCATE; a real three-part table named `branch_<x>` is not a selector.
+  pins: rp-5-fork-repin/C-004
 - `common.rs` — shared fixtures (`setup`, `rows`, `run`, `register_source`, `table_rows`, …)
   and the cross-cutting helpers that more than one leaf needs (`time_travel_id_multiset`,
   `execute_without_collecting`, unsafe-cast walk helpers). **V3-2:**
@@ -134,12 +143,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   declared — the three publish procedures and the `spark.wap.*` confs all fail closed and leave
   the branch where it was; and the read-vs-write boundary — a selector in a DML statement's
   source, `USING` operand or predicate subquery reads the ref (four classes plus CTAS, each
-  asserting the ref's ids and not `main`'s), while a ref-named write TARGET still refuses even
-  when the source is another selector. The oracle stamp the registry rows §2.2
+  asserting the ref's ids and not `main`'s); a branch write target commits onto the branch
+  and a tag write target refuses. The oracle stamp the registry rows §2.2
   `REF-1`/`REF-3`/`REF-4` cite lives in the REF ledger C-001 (2026-09-01, live PySpark
   4.1.2 + Iceberg 1.11.0; retention values are the oracle's own `refs` rows).
   pins: ref-branch-tag-wap/C-001, C-002, C-003, C-005, C-007),
-  `time_travel`, `metadata_tables` (**RP-1:** projection battery iterates
+  `time_travel`, `metadata_tables` (**RP-5:** the two pins guard the fork behavior with the engine shim gone, pins: rp-5-fork-repin/C-003; **RP-1:** projection battery iterates
   `MetadataTableType::all_types`; `position_deletes` rewrites then scan-refuses.
   **MW-4b:** Glue-shaped `table_exists` — 4-part
   `.snapshots`/`.files` rewrites to `$` despite hierarchical `DataInvalid`; Unexpected
@@ -294,3 +303,4 @@ above.
 | Nested partition pin fails | `partitioned_ctas` / `partitioned_merge` / `transform_overwrite` — manifest-level `DataFile.partition` oracles |
 
 First checks: `cargo test -p repark-spark tests::<module>::`. Escalate to: [../map.md#debug](../map.md).
+

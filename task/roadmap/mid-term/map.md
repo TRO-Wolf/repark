@@ -7,7 +7,7 @@ declines it (a dated ruling in the intake, then the archive).
 
 ## Contents
 - [iceberg-rust-handoff-2026-08-23.md](iceberg-rust-handoff-2026-08-23.md) — **the fork-side
-  handoff (2026-08-23; F-3 / V3-DANGLE-1 errata 2026-08-31, V3-5):** the document handed to the owned `iceberg-rust` fork's orchestrator —
+  handoff (2026-08-23; F-3 / V3-DANGLE-1 errata 2026-08-31, V3-5; RP-5 consumed F-6b/F-6c / F-8 / F-16r / F-0 follow-up):** the document handed to the owned `iceberg-rust` fork's orchestrator —
   every fork-side item the 2026-08-23 intake surfaced (position-delete rewrite admission gate,
   expire-report split, dangling-delete removal in rewrite, `RewriteManifests` result counts,
   `ReplacePartitions` remainder, branch commit target, metadata-table projection, S3 Tables

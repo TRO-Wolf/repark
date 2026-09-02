@@ -434,7 +434,7 @@ fn cow_keep_refusal_files_are_byte_untouched() {
         ),
         (
             "crates/repark-spark/src/tests/v3_cow.rs",
-            0xd6a2_5d40_13bc_3374,
+            0x819a_f4d8_486a_1f9e,
         ),
         ("crates/repark-sql/src/v3/cow.rs", 0x7dae_1067_fc44_04e7),
         (

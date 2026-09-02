@@ -269,6 +269,42 @@ async fn adopted_v3_cow_update_refuses_rather_than_reassign_row_lineage() {
     .await;
 }
 
+#[tokio::test]
+async fn v3_cow_update_and_delete_on_branch_refuse_like_unqualified() {
+    let _: &str = "pins: rp-5-fork-repin/C-004";
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    adopt_cow_v3(&ctx, &catalogs, "seed_br", "adopt_br").await;
+    run(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.adopt_br CREATE BRANCH b",
+    )
+    .await;
+    assert_cow_refused_untouched(
+        &ctx,
+        &catalogs,
+        "adopt_br",
+        "UPDATE ice.sales.adopt_br.branch_b SET name = 'x' WHERE id = 2",
+        "UPDATE",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "DELETE FROM ice.sales.adopt_br WHERE id = 2",
+    )
+    .await;
+    assert_cow_refused_untouched(
+        &ctx,
+        &catalogs,
+        "adopt_br",
+        "DELETE FROM ice.sales.adopt_br.branch_b WHERE id = 3",
+        "DELETE",
+    )
+    .await;
+}
+
 /// pins: v3r-1-rulings/C-003
 /// pins: v3-3-dml/C-002
 #[tokio::test]

@@ -190,33 +190,29 @@ Supported surface, for reference:
 > the table-name false positives); REF-2's pin holds the parser's answer for the trailing-token
 > shapes. A row lands here the day the guard becomes reachable, with the pin that reaches it.
 
-#### REF-1 — writing to a branch or tag
+#### REF-1 — writing to a branch or tag — **FIXED 2026-09-01, RP-5**
 
-- **repark** — `INSERT` / `UPDATE` / `DELETE` / `MERGE` whose **write target** is
-  `t.branch_<name>` (or the `t.branch_name` two-part spelling) refuses loud and names the
-  upstream gap. Only the target is examined: the same name in a source relation, a `USING`
-  operand or a predicate subquery is a read and runs (REF-4). Reads work generally
-  (`VERSION AS OF '<ref>'` on both doors, the dotted selector on the Spark door), and
-  `CREATE|REPLACE BRANCH` re-pinning is the supported write path for refs.
+- **repark** — `INSERT` / `UPDATE` / `DELETE` / `MERGE` / `INSERT OVERWRITE` whose **write
+  target** is `t.branch_<name>` commit onto that branch, parented off the branch head, and
+  leave `main` unmoved. A write naming a **tag** refuses Spark-shaped (`Cannot write to table
+  with time travel` / `Cannot modify table with time travel` for UPDATE/DELETE/MERGE). A write
+  naming a missing branch refuses `Cannot use branch (does not exist): <name>` and does not
+  create the branch (Spark 4.1.2 + Iceberg 1.11.0, 2026-09-01). Fork-executed families
+  (`INSERT`/`UPDATE`/`DELETE`) use `IcebergTableProvider::with_commit_branch`; RePark-owned
+  families (`MERGE`/`INSERT OVERWRITE`/`TRUNCATE`) pass `.to_branch` and scan the branch head.
 - **Apache Spark** — the Iceberg extension writes to the named **branch**: `INSERT INTO
-  t.branch_b`, `UPDATE`/`DELETE` on the same name, and `df.writeTo("t.branch_b").append()` all
-  commit onto `b`, parented off `main`'s head, and leave `main` unmoved. A write naming a **tag**
-  refuses — `IllegalArgumentException: Cannot write to table with time travel` (`Cannot modify
-  table with time travel` for `UPDATE`). *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0,
-  2026-09-01. Incidental control from the same run: `df.writeTo("t").option("branch", "b")`
-  committed to **main**, so that option is not a branch door and no pin claims it.)*
-- **Pin** — `crates/repark-spark/src/tests/ref_ddl.rs::write_to_branch_refuses_loud_naming_fork_gap`
-- **Rationale** — DECLARED, and it is not RePark's fix to make. **Re-measured 2026-09-01 at fork
-  pin `33be9a0`:** F-6 (`#244`) put `to_branch` on the seven snapshot-producing transaction
-  actions, but not on the surface these statements execute through — `INSERT` / `UPDATE` /
-  `DELETE` commit inside `iceberg-datafusion`'s `IcebergTableProvider` and its commit exec, which
-  carry no commit target. RePark owns commit construction for `MERGE`, `INSERT OVERWRITE`,
-  `TRUNCATE` and CTAS but not for those three, so routing only the RePark-owned half would let
-  one statement family write to a branch while its sibling refuses. The whole write leg stays
-  refused; the restated ask is filed as F-6b in the fork handoff. The tag half is **outcome-equal
-  to Spark** — both engines refuse — and only the diagnostic differs. The alternative to refusing
-  is still writing to `main` while the statement names a ref. Capability status lives in the
-  fork's own gap matrix, never here. pins: ref-branch-tag-wap/C-004
+  t.branch_b`, `UPDATE`/`DELETE`/`MERGE`/`INSERT OVERWRITE` on the same name commit onto `b`,
+  parented off `b`'s head, and leave `main` unmoved. A write naming a **tag** refuses —
+  `IllegalArgumentException: Cannot write to table with time travel` (`Cannot modify table with
+  time travel` for `UPDATE`). A missing branch refuses at analysis for every family:
+  `ValidationException: Cannot use branch (does not exist): nope`. *(oracle: live PySpark 4.1.2
+  + Iceberg 1.11.0, 2026-09-01, `<pyspark-4.1.2-oracle>`.)*
+- **Pin** — `crates/repark-spark/src/tests/write_to_branch.rs` (per family on a diverged branch;
+  tag refuse; missing-branch refuse);
+  `python/repark/tests/test_ref_branch_tag_wap.py`
+- **Rationale** — FIXED (2026-09-01, RP-5). `df.writeTo("cat.ns.t.branch_b").append()` is not
+  plumbed unless `writeTo` already funnels into this SQL path; BACKLOG if still missing.
+  pins: rp-5-fork-repin/C-004
 
 #### REF-2 — `IF EXISTS` / `IF NOT EXISTS`, and any other trailing clause
 
@@ -252,11 +248,11 @@ Supported surface, for reference:
   conf and wrote to `main`.)*
 - **Pin** — `crates/repark-spark/src/tests/refs_and_wap.rs::wap_publish_procedures_and_session_conf_refuse_loud`;
   facade rows in `python/repark/tests/test_ref_branch_tag_wap.py`
-- **Rationale** — DECLARED, and the gap is RePark's, not the fork's: the fork carries the publish
-  primitives at the pin (`ManageSnapshots::fast_forward`, `Transaction::cherry_pick`,
-  `GAP_MATRIX` R98). It stays declared while REF-1 holds, because a publish procedure would have
-  nothing engine-written to publish, and because the failure mode a half-built WAP invites — a
-  staged write that quietly lands on `main` — is the one this row exists to keep impossible.
+- **Rationale** — BACKLOG (2026-09-01, RP-5). REF-1 is FIXED, so the "declared while REF-1 holds"
+  reason is gone. The remaining gap is the engine's missing publish procedures and `spark.wap.*`
+  session confs. Fork primitives exist: `ManageSnapshots::fast_forward`,
+  `Transaction::cherry_pick` (`GAP_MATRIX` R98). Do not half-build WAP: a staged write that
+  quietly lands on `main` is the failure mode this row keeps impossible.
   pins: ref-branch-tag-wap/C-005
 
 #### REF-4 — reading a ref through the dotted selector — **FIXED 2026-09-01**
@@ -264,13 +260,15 @@ Supported surface, for reference:
 **The boundary is read-vs-write, not query-vs-DML.** `cat.ns.t.branch_b` is a ref selector
 wherever the statement *reads* it — a standalone `SELECT`, a JOIN, a DML statement's source
 relation, a `MERGE`'s `USING` operand, a predicate subquery, or a CTAS body — and all of those
-work. It is REF-1's refusal only where the statement *writes* to it, which is the one relation
-named as the statement's target (`INSERT INTO x`, `INSERT OVERWRITE [TABLE] x`, `UPDATE x`,
-`DELETE FROM x`, `MERGE INTO x`). One statement can do both: `INSERT INTO t.branch_b SELECT …
-FROM t.tag_v` refuses on its target while the selector in its source is a perfectly good read.
+work. A branch write target (`INSERT INTO x`, `INSERT OVERWRITE [TABLE] x`, `UPDATE x`,
+`DELETE FROM x`, `MERGE INTO x`) commits onto that branch (REF-1 FIXED). A tag write target
+or a missing branch refuses. One statement can do both: `INSERT INTO t.tag_v SELECT …
+FROM t.branch_b` refuses on its tag write-target while the branch selector in its source is a
+perfectly good read.
 
 - **repark** — the selector reads the ref on the Spark door in every read position above; a
-  missing branch **or** tag refuses naming it. The ANSI door's spelling for the same read is
+  branch write target commits onto the branch; a missing branch **or** a tag write refuses
+  naming it. The ANSI door's spelling for the same read is
   `FOR VERSION AS OF '<ref>'`, which is delivered and pinned — the dotted selector is
   Spark-dialect sugar and stays Spark-only, like `t.snapshots` (§2.1) whose ANSI spelling is the
   fork's `t$snapshots`. On that door a dotted selector still answers DataFusion's generic 4-part
@@ -1900,14 +1898,16 @@ the pin rather than obeying it.
 
 ### RDF-1 — `rewrite_data_files` never selects a delete-laden file, so its dead rows are retained forever
 
-- **repark** — at fork pin `5e7b2e4` a data file is a rewrite candidate only when it is outside
-  the size band (`length < min_file_size || length > max_file_size`) or carries at least
-  `delete_file_threshold` delete files. That threshold defaults to `usize::MAX`
-  (`DELETE_FILE_THRESHOLD_DEFAULT`, `crates/iceberg/src/maintenance/rewrite_data_files.rs:177`),
-  and Java's THIRD candidate clause, `tooHighDeleteRatio`, is **deferred** in the fork — the
-  module doc says so in as many words: "the delete-RATIO candidate clause is not exposed … The
-  ratio clause never fires here" (same file, `:66-67` and `:138-140`). So a **correctly sized**
-  data file whose rows are 100 % deleted is invisible to compaction. It is kept, its dead rows
+- **repark** — F-16r (`#248`, pin `00cdde0`) wired `tooHighDeleteRatio`, but the ratio
+  clause counts only **file-scoped** position deletes (`referenced_data_file` present, or
+  equal file-path bounds). Partition-granularity deletes and bounds-absent position deletes
+  are invisible to it (F-16 residue 2). The MW-7 2,500-row pin writes with
+  `write.delete.granularity = 'partition'` (`python/repark-parity/bench/mw7/measure.py`), so
+  those deletes never raise the ratio and a correctly sized 100 %-dead file stays unselected.
+  A data file is otherwise a rewrite candidate only when it is outside the size band or
+  carries at least `delete_file_threshold` delete files (`usize::MAX` by default). So a
+  **correctly sized** file whose rows are 100 % deleted under partition granularity is
+  invisible to compaction. It is kept, its dead rows
   with it, and the position-delete file covering it survives too, **still naming a LIVE data
   file** — it survives because its data file was never selected, not because of the
   `removed_delete_files_count` constant (that counter and fork ask F-3 belong to the other
@@ -1922,6 +1922,10 @@ the pin rather than obeying it.
   at **8 delete files / 10,000,000 delete records** after the full maintenance sequence
   (`rewrite_position_delete_files` folds 400 → 8; `rewrite_data_files` leaves those 8). The
   2,500-row pin still holds. F-16 did not close this shape.
+  **RP-5 C-005 (2026-09-01, fork `00cdde0` / F-16r `#248`):** the 2,500-row pin
+  `test_delete_laden_in_band_file_survives_the_runbook` stayed GREEN. F-16r did not close
+  that shape. The MW-8 partitioned 6,000-row runbook pin reded: those in-band seed files
+  were rewritten. The 1e7 × 50 driver was not re-run. RDF-1 stays BACKLOG.
 - **Apache Spark** — the same sequence on the same shape ends with **zero** delete files and
   **zero** delete records, at **both** `write.delete.granularity` settings, with
   `removed_delete_files_count` reported as 0 and `remove-dangling-deletes` OFF (jar default
@@ -1933,17 +1937,13 @@ the pin rather than obeying it.
   fixtures, tiling and 30 %-deleted shapes; measured 2026-08-24 during MW-7's Critic pass.)*
 - **Pin** —
   `python/repark/tests/test_mw7_scale_smoke.py::test_delete_laden_in_band_file_survives_the_runbook`
-- **Rationale** — BACKLOG, and it is **fork** work (ask **F-16** in
+- **Rationale** — BACKLOG, and it is **fork** work (F-16 residue 2 in
   [../task/roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md](../task/roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md)).
-  Three things this is **not**, each ruled out by measurement rather than assumed: it is not
-  format-v2 being v2 (Spark reaches zero on v2), not `write.delete.granularity` (Spark reaches
-  zero at both settings, so it is not `MOR-2` wearing a different hat), and not the missing
-  `remove-dangling-deletes` option (that option is OFF on the Spark side too, and the surviving
-  delete files here are not dangling — they name live files). **Contents are unaffected:** the
-  answers are correct at every point, which is exactly why this needs a registry row rather than
-  a refusal — nothing goes wrong loudly. What is retained is dead bytes and a delete file every
-  scan opens, without bound, and the maintenance runbook as documented cannot reclaim either.
-  Closing the row means porting Java's ratio clause into the fork's planner.
+  F-16r counted file-scoped deletes only. Spark reaches zero at both granularities; RePark's
+  remaining miss is partition-granularity / bounds-absent position deletes that never raise
+  the ratio. It is not format-v2 being v2, and not `remove-dangling-deletes` (OFF on Spark
+  too; the surviving deletes name live files). **Contents are unaffected.** Closing the row
+  means the ratio clause must count partition-scoped deletes the way Java does.
 
 ### RDF-SORT-1 — `rewrite_data_files` refuses `sort` / `sort_order`; Spark runs a sort rewrite
 

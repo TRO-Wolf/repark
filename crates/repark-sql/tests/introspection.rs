@@ -253,8 +253,6 @@ async fn time_travel_pinned_views_do_not_leak_into_the_introspection_surface() {
     );
 }
 
-/// Metadata projections hide time-travel relations from enumeration while keeping them queryable.
-/// Mutation: drop the `.filter(…)` in `MetadataProjectionSchemaProvider::table_names` → the two
 /// pins: rp-1-fork-repin/C-005
 #[tokio::test]
 async fn metadata_tables_are_hidden_from_enumeration_but_stay_queryable_through_the_ansi_door() {

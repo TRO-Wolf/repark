@@ -266,8 +266,8 @@ upgraded table.
   pin, v2 refuses). Engine append fills an omitted column from a schema-carried
   `write_default` and `initial_default` reads into pre-column files; DEFAULT DDL
   refuses Spark-equal on all three doors. Binary `variant` measured refusing end to
-  end (registry `V3-VARIANT-SHRED-1`, fork R88); `unknown` CREATE refuse pinned, its
-  scan gap filed (fork R91 — the parquet write commits an unreadable Null file).
+  end (registry `V3-VARIANT-SHRED-1`, fork R88); `unknown` CREATE refuse pinned; RP-5
+  (2026-09-01, R91 `#246`) the parquet write refuses an unknown column.
 
   The original scope note: V3-6 may
   run in parallel with V3-3 or V3-4 after its fork type support is pinned; it does not wait for

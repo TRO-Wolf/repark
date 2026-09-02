@@ -102,6 +102,7 @@ fn lower(
             matched,
             not_matched,
             not_matched_by_source,
+            commit_branch: None,
         },
     ))
 }

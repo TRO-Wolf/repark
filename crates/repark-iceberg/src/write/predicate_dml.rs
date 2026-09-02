@@ -577,7 +577,7 @@ async fn commit_identity_update_cow(
     let _ = ctx.deregister_table(new_table.as_str());
     let _ = deregister_merge_scratch(ctx, &rewrite_name);
     let new_files = rewrite_result?;
-    let affected_entries = resolve_affected_data_files(table, &affected).await?;
+    let affected_entries = resolve_affected_data_files(table, snapshot_id, &affected).await?;
     commit_overwrite(
         catalog,
         table,
@@ -657,7 +657,7 @@ async fn commit_identity_cow(
     let _ = ctx.deregister_table(ident_table.as_str());
     let _ = deregister_merge_scratch(ctx, &rewrite_name);
     let new_files = rewrite_result?;
-    let affected_entries = resolve_affected_data_files(table, &affected).await?;
+    let affected_entries = resolve_affected_data_files(table, snapshot_id, &affected).await?;
     commit_overwrite(
         catalog,
         table,

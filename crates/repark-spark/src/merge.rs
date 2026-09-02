@@ -142,10 +142,33 @@ fn lower(
 ) -> Result<(String, MergeSpec)> {
     let (target_name, target_alias) = target_table(table)?;
     let parts = name_parts(&target_name);
-    let [catalog, namespace, table_name] = parts.as_slice() else {
-        return Err(DataFusionError::Plan(format!(
-            "MERGE INTO target must be a three-part `catalog.namespace.table` name, got `{target_name}`"
-        )));
+    let (catalog, namespace, table_name, commit_branch) = match parts.as_slice() {
+        [catalog, namespace, table_name] => {
+            (catalog.clone(), namespace.clone(), table_name.clone(), None)
+        }
+        [catalog, namespace, table_name, selector] => {
+            match crate::write_to_branch::parse_ref_selector(selector) {
+                Some(crate::write_to_branch::RefSelectorKind::Branch(branch)) => (
+                    catalog.clone(),
+                    namespace.clone(),
+                    table_name.clone(),
+                    Some(branch),
+                ),
+                Some(crate::write_to_branch::RefSelectorKind::Tag) => {
+                    return Err(crate::write_to_branch::tag_write_error("MERGE"));
+                }
+                None => {
+                    return Err(DataFusionError::Plan(format!(
+                        "MERGE INTO target must be a three-part `catalog.namespace.table` name, got `{target_name}`"
+                    )));
+                }
+            }
+        }
+        _ => {
+            return Err(DataFusionError::Plan(format!(
+                "MERGE INTO target must be a three-part `catalog.namespace.table` name, got `{target_name}`"
+            )));
+        }
     };
     let target_alias = match target_alias {
         Some(alias) => alias,
@@ -182,8 +205,9 @@ fn lower(
         matched,
         not_matched,
         not_matched_by_source,
+        commit_branch,
     };
-    Ok((catalog.clone(), spec))
+    Ok((catalog, spec))
 }
 
 /// Sort one WHEN clause into the matched / not-matched lists, validating the kind–action pairing.

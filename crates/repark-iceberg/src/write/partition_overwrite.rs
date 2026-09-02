@@ -18,6 +18,7 @@ use iceberg::table::Table;
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
 use uuid::Uuid;
 
+use crate::write::commit_target::{maybe_to_branch, snapshot_id_for_commit};
 use crate::write::merge::OPERATION_ID_PROP;
 use crate::write::overwrite::{OverwriteIsolation, parse_overwrite_isolation};
 
@@ -320,6 +321,17 @@ pub async fn commit_overwrite_by_row_filter(
     staged_files: Vec<DataFile>,
     predicate: Predicate,
 ) -> Result<Table> {
+    commit_overwrite_by_row_filter_to(catalog, table, staged_files, predicate, None).await
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub async fn commit_overwrite_by_row_filter_to(
+    catalog: &Arc<dyn Catalog>,
+    table: &Table,
+    staged_files: Vec<DataFile>,
+    predicate: Predicate,
+    branch: Option<&str>,
+) -> Result<Table> {
     let isolation = parse_overwrite_isolation(table)?;
     let summary = HashMap::from([(OPERATION_ID_PROP.to_string(), Uuid::new_v4().to_string())]);
     let tx = Transaction::new(table);
@@ -329,7 +341,8 @@ pub async fn commit_overwrite_by_row_filter(
         .validate_added_files_match_overwrite_filter()
         .add_files(staged_files)
         .set_snapshot_properties(summary);
-    action = apply_overwrite_isolation(action, isolation, table);
+    action = apply_overwrite_isolation(action, isolation, table, branch);
+    let action = maybe_to_branch(action, branch, |action, name| action.to_branch(name));
     let tx = action.apply(tx).map_err(iceberg_err)?;
     tx.commit(catalog.as_ref()).await.map_err(iceberg_err)
 }
@@ -341,6 +354,16 @@ pub async fn commit_replace_partitions(
     catalog: &Arc<dyn Catalog>,
     table: &Table,
     staged_files: Vec<DataFile>,
+) -> Result<Table> {
+    commit_replace_partitions_to(catalog, table, staged_files, None).await
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub async fn commit_replace_partitions_to(
+    catalog: &Arc<dyn Catalog>,
+    table: &Table,
+    staged_files: Vec<DataFile>,
+    branch: Option<&str>,
 ) -> Result<Table> {
     refuse_empty_dynamic_overwrite(&staged_files)?;
     let isolation = parse_overwrite_isolation(table)?;
@@ -355,10 +378,11 @@ pub async fn commit_replace_partitions(
         if level == OverwriteIsolation::Serializable {
             action = action.validate_no_conflicting_data();
         }
-        if let Some(snapshot_id) = table.metadata().current_snapshot_id() {
+        if let Some(snapshot_id) = snapshot_id_for_commit(table, branch) {
             action = action.validate_from_snapshot(snapshot_id);
         }
     }
+    let action = maybe_to_branch(action, branch, |action, name| action.to_branch(name));
     let tx = action.apply(tx).map_err(iceberg_err)?;
     tx.commit(catalog.as_ref()).await.map_err(iceberg_err)
 }
@@ -594,13 +618,14 @@ fn apply_overwrite_isolation(
     mut action: iceberg::transaction::OverwriteFilesAction,
     isolation: Option<OverwriteIsolation>,
     table: &Table,
+    branch: Option<&str>,
 ) -> iceberg::transaction::OverwriteFilesAction {
     if let Some(level) = isolation {
         action = action.validate_no_conflicting_deletes();
         if level == OverwriteIsolation::Serializable {
             action = action.validate_no_conflicting_data();
         }
-        if let Some(snapshot_id) = table.metadata().current_snapshot_id() {
+        if let Some(snapshot_id) = snapshot_id_for_commit(table, branch) {
             action = action.validate_from_snapshot(snapshot_id);
         }
     }

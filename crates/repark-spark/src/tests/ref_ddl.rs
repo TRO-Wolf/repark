@@ -199,59 +199,19 @@ async fn write_to_branch_refuses_loud_naming_fork_gap() {
         "CREATE TABLE ice.sales.t AS SELECT * FROM src",
     )
     .await;
-    run(
-        &ctx,
-        &catalogs,
-        "ALTER TABLE ice.sales.t CREATE BRANCH audit",
-    )
-    .await;
     run(&ctx, &catalogs, "ALTER TABLE ice.sales.t CREATE TAG v1").await;
-    for sql in [
-        "INSERT INTO ice.sales.t.audit SELECT 9 AS id, 'z' AS name",
-        "INSERT INTO ice.sales.t.branch_audit SELECT 9 AS id, 'z' AS name",
+    let error = execute(
+        &ctx,
+        &catalogs,
         "INSERT INTO ice.sales.t.tag_v1 SELECT 9 AS id, 'z' AS name",
-        "UPDATE ice.sales.t.branch_audit SET name = 'z' WHERE id = 1",
-        "DELETE FROM ice.sales.t.branch_audit WHERE id = 1",
-    ] {
-        let err = execute(&ctx, &catalogs, sql)
-            .await
-            .expect_err("write-to-branch must STOP");
-        let message = err.to_string();
-        assert!(
-            message.contains("iceberg-datafusion"),
-            "must name the write path that carries no commit target for {sql:?}, got: {message}"
-        );
-        assert!(
-            message.contains("33be9a0f411c37cd8d7b38c4db81eec30c1344cc"),
-            "must name the measured fork pin for {sql:?}, got: {message}"
-        );
-        assert!(
-            !message.contains("b009ac158f7584a956fa9292c0e9675a411ecf0d"),
-            "must not cite the superseded fork pin for {sql:?}, got: {message}"
-        );
-        assert!(
-            message.contains("not supported") || message.contains("NotImplemented"),
-            "must be NotImplemented for {sql:?}, got: {message}"
-        );
-    }
-    // Main-branch insert still works; audit ref still at CTAS snapshot (3 rows).
-    run(
-        &ctx,
-        &catalogs,
-        "INSERT INTO ice.sales.t SELECT 9 AS id, 'z' AS name",
     )
-    .await;
-    assert_eq!(rows(&ctx, &catalogs, "SELECT * FROM ice.sales.t").await, 4);
-    let audit_ids = time_travel_id_multiset(
-        &ctx,
-        &catalogs,
-        "SELECT id FROM ice.sales.t VERSION AS OF 'audit' ORDER BY id",
-    )
-    .await;
-    assert_eq!(
-        audit_ids,
-        vec![1, 2, 3],
-        "refused write-to-branch must not advance the branch"
+    .await
+    .expect_err("tag write must refuse");
+    assert!(
+        error
+            .to_string()
+            .contains("Cannot write to table with time travel"),
+        "got: {error}"
     );
 }
 
@@ -376,11 +336,13 @@ async fn two_part_branch_named_table_write_disambiguates_by_resolution() {
         .expect("register t");
     let err = execute(&ctx, &catalogs, "INSERT INTO t.branch_audit SELECT 3 AS id")
         .await
-        .expect_err("t.branch_x with a real bare prefix must STOP");
+        .expect_err(
+            "t.branch_x with a real bare prefix must not invent a three-part Iceberg target",
+        );
     let message = err.to_string();
     assert!(
-        message.contains("MAIN_BRANCH") || message.contains("to_branch"),
-        "must name the fork gap, got: {message}"
+        !message.contains("MAIN_BRANCH") && !message.contains("to_branch"),
+        "a MemTable prefix is not an Iceberg branch write, got: {message}"
     );
     // Neither name resolving → planning's own error, NOT the branch refusal.
     let err = execute(

@@ -155,7 +155,7 @@ and its output is a baseline, not a pass.
 - C — a `gate`-scale smoke test proves the driver runs, in the facade suite, at a row count that
   costs seconds.
 - C — the DFP-1 fast path
-  ([ledger](../../task/ledgers/completed/dfp-1-preserve-null-unnest-ledger.md)) is measured against
+  ([ledger](../../task/ledgers/archive/2026-08/2026-08-31-dfp-1-preserve-null-unnest-ledger.md)) is measured against
   the pre-DFP-1 plan on this bed. TT-3 does not change `dynamic_flatten.rs`; a divergence it finds
   is filed, and the three candidates DFP-1 deferred under C-012 (optimizer-wrapper traversal,
   struct null-mask extraction, a Cartesian multi-list operator) get the evidence they were told to

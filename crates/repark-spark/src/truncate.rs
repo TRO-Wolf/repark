@@ -45,9 +45,9 @@ pub(crate) async fn execute_truncate(
              CTAS/TRUNCATE/CREATE VIEW/DROP/ALTER targeting a metadata table is not supported"
         )));
     }
-    match resolve_iceberg_truncate_target(catalogs, table_name).await? {
-        Some((catalog_name, catalog, table)) => {
-            repark_iceberg::write::commit_truncate(&catalog, &table).await?;
+    match resolve_iceberg_truncate_target(ctx, catalogs, table_name).await? {
+        Some((catalog_name, catalog, table, branch)) => {
+            repark_iceberg::write::commit_truncate_to(&catalog, &table, branch.as_deref()).await?;
             let namespace = namespace_schema_name(table.identifier().namespace());
             reregister(ctx, catalog, &catalog_name, &namespace).await?;
             ctx.read_empty()
@@ -99,10 +99,22 @@ fn single_truncate_target(truncate: &Truncate) -> Result<&ObjectName> {
 }
 
 async fn resolve_iceberg_truncate_target(
+    ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     table_name: &ObjectName,
-) -> Result<Option<(String, Arc<dyn Catalog>, Table)>> {
-    let parts = name_parts(table_name);
+) -> Result<Option<(String, Arc<dyn Catalog>, Table, Option<String>)>> {
+    let mut parts = name_parts(table_name);
+    let branch = match crate::write_to_branch::split_write_ref_parts(&parts) {
+        Some((table_parts, crate::write_to_branch::RefSelectorKind::Branch(name))) => {
+            parts = table_parts;
+            Some(name)
+        }
+        Some((_, crate::write_to_branch::RefSelectorKind::Tag)) => {
+            return Err(crate::write_to_branch::tag_write_error("TRUNCATE"));
+        }
+        None => None,
+    };
+    parts = crate::write_to_branch::qualify_table_parts(ctx, parts);
     if parts.len() < 3 {
         return Ok(None);
     }
@@ -119,7 +131,7 @@ async fn resolve_iceberg_truncate_target(
     match catalog.table_exists(&ident).await {
         Ok(true) => {
             let table = catalog.load_table(&ident).await.map_err(iceberg_err)?;
-            Ok(Some((catalog_name, Arc::clone(catalog), table)))
+            Ok(Some((catalog_name, Arc::clone(catalog), table, branch)))
         }
         Ok(false) => Ok(None),
         Err(error) => Err(iceberg_err(error)),

@@ -260,7 +260,7 @@ const ROWS: &[(SurfaceId, Row)] = &[
     (
         surfaces::GUARD_WRITE_TO_BRANCH,
         t(
-            "tests::ref_ddl::write_to_branch_refuses_loud_naming_fork_gap",
+            "tests::write_to_branch::write_to_tag_refuses_spark_shaped",
             SparkExtended,
         ),
     ),

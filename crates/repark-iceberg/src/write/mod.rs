@@ -2,6 +2,7 @@
 
 pub mod alter;
 pub mod append;
+pub mod commit_target;
 pub mod concurrency;
 pub(crate) mod conform;
 pub mod file_scoped_rewrite;
@@ -13,6 +14,7 @@ pub mod merge;
 mod name_resolution;
 /// OV1 exclusive full-table overwrite commit (stage-then-swap).
 pub mod overwrite;
+pub mod overwrite_commit;
 /// Partition-scoped INSERT OVERWRITE (static row-filter + dynamic replace-partitions).
 pub mod partition_overwrite;
 pub(crate) mod position_delete;
@@ -66,17 +68,19 @@ pub use overwrite::{
     parse_overwrite_isolation, positional_map_overwrite_batch,
     write_overwrite_staged_files_from_stream,
 };
+pub use overwrite_commit::commit_overwrite_replace_all_to;
 pub use partition_overwrite::{
     EMPTY_DYNAMIC_OVERWRITE_NEEDLE, PartitionEquality, PartitionLiteral, PartitionOverwritePlan,
     PartitionOverwriteRequest, StaticPartitionOverwrite, commit_overwrite_by_row_filter,
-    commit_replace_partitions, inject_static_partition_columns,
-    partition_overwrite_request_from_exprs, plan_partition_overwrite,
-    refuse_empty_dynamic_overwrite, stage_static_partition_overwrite_files,
+    commit_overwrite_by_row_filter_to, commit_replace_partitions, commit_replace_partitions_to,
+    inject_static_partition_columns, partition_overwrite_request_from_exprs,
+    plan_partition_overwrite, refuse_empty_dynamic_overwrite,
+    stage_static_partition_overwrite_files,
 };
 pub use position_delete::{MorDmlKind, refuse_mor_unpartitioned_multi_spec_dml};
 pub use repark_common::{Error, Result};
 pub use row_lineage_guard::refuse_v3_cow_dml;
-pub use truncate::commit_truncate;
+pub use truncate::{commit_truncate, commit_truncate_to};
 pub use writer_props::{
     ACCEPTED_CODECS, COMPRESSION_CODEC_PROP, COMPRESSION_LEVEL_PROP, parse_compression,
     writer_properties_for,

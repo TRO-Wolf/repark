@@ -36,9 +36,11 @@ holds behavior observed from outside the crate.
   Iceberg `timestamptz` is documented, not changed. CTAS / ALTER stay out of
   this unit.
 
-- `introspection.rs` — `SHOW TABLES` / `DESCRIBE` / `information_schema` delegate through a
-  configured session. Metadata tables stay queryable but remain hidden from enumeration. The
+- `introspection.rs` — `SHOW TABLES` / `DESCRIBE` / `information_schema` delegate through a RP-5: fork `table_names` lists catalog entries only (F-8 / R169); mutation — make `SHOW TABLES` expect a `$snapshots` twin and the pin reds. pins: rp-5-fork-repin/C-003
+  configured session. Metadata tables stay queryable but remain hidden from enumeration (RP-5
+  F-8: fork `table_names`, no engine shim). The
   time-travel test checks cleanup of both `__repark_ansi_tt_*` and `__repark_tt_*` names.
+  pins: rp-5-fork-repin/C-003
 
 - `ta_toll.rs` (Q11) — `TaExtension` on a **native** session, one kernel driven through
   ANSI-door SQL as a window function and compared `f64::to_bits` against the recorded C TA-Lib

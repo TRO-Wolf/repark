@@ -50,22 +50,15 @@ Source comments retain only API and safety contracts; implementation narration i
   scan is the follow-up. `SELECT *` stays user columns because the SQL doors only register
   this provider when a query names the columns.
   pins: v3-4-serve-lineage-columns/C-002, C-017, C-019, C-020
-- `metadata_projection.rs` — the two RePark-side policies over the fork's `table$meta` tables.
-  (1) `ProjectingMetadataTableProvider` wraps a fork metadata provider so `scan` honors DF
-  projection via `ProjectionExec` (never collect-then-project). (2)
-  `MetadataProjectionSchemaProvider::table_names` **hides** the metadata names the fork
-  *synthesizes* (`<base>$<MetadataTableType>`, sixteen per base table at pin `5e7b2e4`) from enumeration —
-  ADR-0006, the Trino/Spark shape: hidden from `SHOW TABLES` and every `information_schema` view,
-  still addressable by name because `table()` / `table_exist()` are untouched. The filter reads
-  the fork's own `MetadataTableType` (so a fork rev that adds a type is covered) and requires the
-  base table to exist (so a real `q1$fy26` is never hidden). Both policies are applied wherever
-  `provider.rs` registers a schema — snapshot, namespace refresh, `register_schema`.
+- `metadata_projection.rs` — **retired at RP-5** (fork F-8 / R169 / R170). The fork honors
+  metadata-table `projection` and lists catalog entries only. Pins remain in
+  `crates/repark-spark/src/tests/metadata_tables.rs`.
+  pins: rp-5-fork-repin/C-003
 - `provider.rs` — `ReparkCatalogProvider` (mutable namespace→schema map) +
   `invalidate_catalog_namespaces` / `drop_catalog_namespace_from_provider` /
   `rebuild_catalog_provider`. Product DDL rebuilds only the touched namespace; empty invalidate
   is a no-op; DROP NAMESPACE is a zero-list map remove; invalidate/drop fail loud when the DF
-  catalog name is not registered. Every schema snapshot/refresh wraps with
-  `MetadataProjectionSchemaProvider` and **eager-lists** the fork's lazy name directory
+  catalog name is not registered. Every schema snapshot/refresh **eager-lists** the fork's lazy name directory
   (`freeze_fork_name_directory`, pin `5e7b2e4` — `IcebergSchemaProvider::try_new` no longer
   `list_tables`; first access would otherwise freeze *after* an OOB create and drop T6
   residual). Hosts `NamespaceScopedCatalog` (G17 closed): 14 required
@@ -95,7 +88,7 @@ SQL interception layer (phase-2 door). Locked down by tests here.
 | Pick a FileIO backend by location scheme | `file_io_for_location` / `storage_factory_for_location` in `location.rs` |
 | Read / write a namespace's warehouse location | `resolve_namespace_location` / `mirror_namespace_location_keys` in `location.rs` |
 | Serve `_row_id` / `_last_updated_sequence_number` on a v3 read | `lineage_columns.rs` (`LineageColumnsTableProvider`); SQL doors call `repark_core::prepare_lineage_sql` |
-| Change what `SHOW TABLES` / `information_schema` enumerates | `MetadataProjectionSchemaProvider::table_names` in `metadata_projection.rs` — one place, all four entry points (both doors, the facade, the bare session); read [ADR-0006](../../../../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md) first |
+| Change what `SHOW TABLES` / `information_schema` enumerates | fork `IcebergSchemaProvider::table_names` at pin `00cdde0` (F-8); engine shim retired RP-5 |
 | Change credential handling | not here — AWS SDK default chain *inside the fork* |
 
 ## Pointers

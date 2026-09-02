@@ -68,7 +68,7 @@ async fn setup_with_properties(
 }
 
 /// [`setup`] with `write.merge.isolation-level` set at create time.
-async fn setup_with_isolation(
+pub(super) async fn setup_with_isolation(
     warehouse: &TempDir,
     isolation: &str,
 ) -> (Arc<dyn Catalog>, TableIdent) {
@@ -108,7 +108,7 @@ fn assert_invalid_isolation(error: DataFusionError, name: &str) {
 }
 
 /// An unpartitioned synthetic DATA file (manifest-only) with a unique path.
-fn data_file(path: &str) -> DataFile {
+pub(super) fn data_file(path: &str) -> DataFile {
     DataFileBuilder::default()
         .content(DataContentType::Data)
         .file_path(path.to_string())
@@ -136,7 +136,7 @@ fn position_delete_file(path: &str) -> DataFile {
 }
 
 /// Fast-append `files` in one commit; return the table AT the new snapshot and that id.
-async fn append(
+pub(super) async fn append(
     catalog: &Arc<dyn Catalog>,
     ident: &TableIdent,
     files: Vec<DataFile>,
@@ -225,7 +225,7 @@ async fn live_data_file_paths(catalog: &Arc<dyn Catalog>, ident: &TableIdent) ->
 }
 
 /// Downcast `commit`'s folded `DataFusionError::External` back to the iceberg error it wraps.
-fn iceberg_error(error: &DataFusionError) -> &iceberg::Error {
+pub(super) fn iceberg_error(error: &DataFusionError) -> &iceberg::Error {
     let DataFusionError::External(boxed) = error else {
         panic!("expected an External(iceberg) error, got: {error}");
     };
@@ -797,6 +797,7 @@ async fn commit_insert_only_serializable_isolation_rejects_conflicting_concurren
 /// PIN M19-A (Spark S5) — SNAPSHOT half of the same-race split.
 #[tokio::test]
 async fn commit_insert_only_snapshot_isolation_commits_through_conflicting_concurrent_append() {
+    let _: &str = "pins: rp-5-fork-repin/C-007";
     let warehouse = TempDir::new().expect("temp warehouse");
     let (catalog, ident) = setup_with_isolation(&warehouse, "SNAPSHOT").await;
 
