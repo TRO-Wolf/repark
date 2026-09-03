@@ -103,6 +103,9 @@ JVM, no repark required). See [../map.md](../map.md).
   `repark-iceberg/src/write/alter.rs` 1641→1630
   (pins: v3-10-upgrade-v2-to-v3/C-003). **CAP-1 (2026-08-26):** exact Rust and Python source-size RP-6 ratchets merge/mod.rs 1894→1892 and predicate_dml.rs 1227→1226; V3-8 ratchets predicate_dml.rs 1226→1164 after the lineage helpers move to `predicate_dml/lineage.rs` (pins: v3-8-subquery-where-lineage/C-002).
   (**DML-B 2026-08-30:** `insert_overwrite.rs` tests 1249→1233, `writer_readwriter.py` 1117→1113)
+  B-MOR-3 (2026-09-03): ratchets `repark-spark/src/tests/call.rs` 1307→1303 after the
+  live-DV refusal and its counter helper are deleted
+  (pins: b-mor-3-rewrite-position-deletes-v3/C-002).
   exception sets and baselines mirrored from the live guard tables (DML-A:
   `merge/mod.rs` 2131 → 2086; `call.rs` 1404 → 1111 after
   RP-2's `call_args.rs` split; RP-3 1407 → 1361; **REF 2026-09-01:** the

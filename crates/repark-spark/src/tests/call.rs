@@ -1249,8 +1249,6 @@ async fn call_rewrite_data_files_returns_sparks_five_columns() {
 /// MW-2 guard: it does not fire on the format-v2 tables this engine writes.
 #[tokio::test]
 async fn call_rewrite_position_delete_files_guard_passes_a_v2_table() {
-    use crate::call::count_live_deletion_vectors;
-
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     let before = seed_mor_delete_files(&ctx, &catalogs, "mor", 8, 8).await;
@@ -1259,7 +1257,7 @@ async fn call_rewrite_position_delete_files_guard_passes_a_v2_table() {
     let ident = TableIdent::new(NamespaceIdent::new("sales".into()), "mor".into());
     let table = catalogs["ice"].load_table(&ident).await.unwrap();
     assert_eq!(
-        count_live_deletion_vectors(&table).await.unwrap(),
+        live_deletion_vector_count(&table).await,
         0,
         "a v2 merge-on-read table this engine wrote holds no deletion vectors"
     );
@@ -1276,8 +1274,6 @@ async fn call_rewrite_position_delete_files_guard_passes_a_v2_table() {
 /// MW-2 guard: a table with NO current snapshot is not a vector table.
 #[tokio::test]
 async fn call_deletion_vector_guard_handles_a_table_with_no_snapshot() {
-    use crate::call::count_live_deletion_vectors;
-
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     run(
@@ -1293,7 +1289,7 @@ async fn call_deletion_vector_guard_handles_a_table_with_no_snapshot() {
         table.metadata().current_snapshot().is_none(),
         "fixture must have no snapshot, else it does not exercise the early return"
     );
-    assert_eq!(count_live_deletion_vectors(&table).await.unwrap(), 0);
+    assert_eq!(live_deletion_vector_count(&table).await, 0);
 
     let result = execute(
         &ctx,

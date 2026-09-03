@@ -115,6 +115,13 @@ pub(super) async fn setup_allow_create_format_version_3(
     .await
 }
 
+pub(super) async fn live_deletion_vector_count(table: &iceberg::table::Table) -> usize {
+    iceberg::live_deletion_vectors_by_data_file(table)
+        .await
+        .expect("count live deletion vectors")
+        .len()
+}
+
 pub(super) async fn rows(ctx: &SessionContext, catalogs: &CatalogRegistry, sql: &str) -> usize {
     execute(ctx, catalogs, sql)
         .await

@@ -65,6 +65,10 @@ V3-10 (2026-09-02): `check_rust_file_size.py` `repark-spark/src/alter.rs` 1831�
 folded into `write/format_version.rs`.
 pins: v3-10-upgrade-v2-to-v3/C-003
 
+B-MOR-3 (2026-09-03): `check_rust_file_size.py` `repark-spark/src/tests/call.rs`
+1307→1303 — the live-DV refusal and its counter helper are deleted; ratchets DOWN.
+pins: b-mor-3-rewrite-position-deletes-v3/C-002
+
 V3-8 (2026-09-02): `check_rust_file_size.py` `write/predicate_dml.rs` 1226→1164 (the
 lineage projection helpers move to `write/predicate_dml/lineage.rs`).
 pins: v3-8-subquery-where-lineage/C-002

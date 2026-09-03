@@ -2,6 +2,7 @@
 //! pins: v3e-3-partitioned-eqdel-fixtures/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-010, C-011, C-012, C-013
 //! pins: rp-3-fork-repin/C-004, C-007, C-011
 //! pins: v3-5-dv-compaction/C-002, C-003, C-005
+//! pins: b-mor-3-rewrite-position-deletes-v3/C-003
 //! Pins partitioned and equality-delete Spark-written format-v3 fixtures.
 
 use std::fs;
@@ -396,23 +397,38 @@ async fn partitioned_v3_dv_delete_files_are_puffin_content_one() {
 }
 
 #[tokio::test]
-async fn partitioned_v3_dv_rewrite_position_delete_files_still_refuses() {
+async fn partitioned_v3_dv_rewrite_position_delete_files_returns_zeros() {
     let fixture = materialize_part_dv();
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&warehouse).await;
     register_adopted(&ctx, &catalogs, "sales.partdv", &fixture.metadata_file).await;
-
-    let err = execute(
+    let before_rows = live_triples(&ctx, &catalogs, "ice.sales.partdv").await;
+    let before_deletes = delete_file_rows(&ctx, &catalogs, "ice.sales.partdv").await;
+    let batches = execute(
         &ctx,
         &catalogs,
         "CALL ice.system.rewrite_position_delete_files(table => 'sales.partdv')",
     )
     .await
-    .expect_err("B-MOR-3: live Puffin vectors must refuse")
-    .to_string();
-    assert!(
-        err.contains("live Puffin deletion vector"),
-        "refusal must name Puffin vectors: {err}"
+    .expect("DV-only rewrite returns zeros")
+    .collect()
+    .await
+    .expect("collect");
+    assert_eq!(
+        super::call::call_count(&batches[0], "rewritten_delete_files_count"),
+        0
+    );
+    assert_eq!(
+        super::call::call_count(&batches[0], "added_delete_files_count"),
+        0
+    );
+    assert_eq!(
+        live_triples(&ctx, &catalogs, "ice.sales.partdv").await,
+        before_rows
+    );
+    assert_eq!(
+        delete_file_rows(&ctx, &catalogs, "ice.sales.partdv").await,
+        before_deletes
     );
 }
 
@@ -428,9 +444,7 @@ async fn partitioned_v3_dv_rewrite_data_files_drops_both_vectors() {
         .load_table(&ident)
         .await
         .expect("load partitioned DV table");
-    let before_vectors = crate::call::count_live_deletion_vectors(&table)
-        .await
-        .expect("count DVs");
+    let before_vectors = live_deletion_vector_count(&table).await;
     let before_rows = live_triples(&ctx, &catalogs, "ice.sales.partdv").await;
     let batches = execute(
         &ctx,
@@ -445,9 +459,7 @@ async fn partitioned_v3_dv_rewrite_data_files_drops_both_vectors() {
     let rewritten = super::call::call_count(&batches[0], "rewritten_data_files_count");
     let removed = super::call::call_count(&batches[0], "removed_delete_files_count");
     let after_table = catalog.load_table(&ident).await.expect("reload");
-    let after_vectors = crate::call::count_live_deletion_vectors(&after_table)
-        .await
-        .expect("count DVs after");
+    let after_vectors = live_deletion_vector_count(&after_table).await;
     let summary = format!(
         "before_dvs={before_vectors} rewritten={rewritten} removed={removed} \
          after_dvs={after_vectors}"
@@ -484,9 +496,7 @@ async fn partitioned_v3_dv_rewrite_where_part0_keeps_the_sibling_vector() {
         .load_table(&ident)
         .await
         .expect("load partitioned DV table");
-    let before_vectors = crate::call::count_live_deletion_vectors(&table)
-        .await
-        .expect("count DVs");
+    let before_vectors = live_deletion_vector_count(&table).await;
     let before_rows = live_triples(&ctx, &catalogs, "ice.sales.partdv").await;
     let batches = execute(
         &ctx,
@@ -501,9 +511,7 @@ async fn partitioned_v3_dv_rewrite_where_part0_keeps_the_sibling_vector() {
     let rewritten = super::call::call_count(&batches[0], "rewritten_data_files_count");
     let removed = super::call::call_count(&batches[0], "removed_delete_files_count");
     let after_table = catalog.load_table(&ident).await.expect("reload");
-    let after_vectors = crate::call::count_live_deletion_vectors(&after_table)
-        .await
-        .expect("count DVs after");
+    let after_vectors = live_deletion_vector_count(&after_table).await;
     let after_rows = live_triples(&ctx, &catalogs, "ice.sales.partdv").await;
     let summary = format!(
         "before_dvs={before_vectors} rewritten={rewritten} removed={removed} \

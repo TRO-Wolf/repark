@@ -5,6 +5,11 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [b-mor-3-rewrite-position-deletes-v3-ledger.md](b-mor-3-rewrite-position-deletes-v3-ledger.md) —
+  **B-MOR-3 (2026-09-03), in flight:** owner ruling BUILD — `rewrite_position_delete_files`
+  returns Spark's four zeros on a DV-only v3 table and converts an admitted parquet group
+  to one PUFFIN per data file. Floor residue `B-MOR-3-FLOOR-1` / F-24. Branch
+  `feat/b-mor-3-rewrite-position-deletes-v3`. `risk_tier: standard`. Model: grok-4.6.
 - [ex-10-functions-null-cond-misc-ledger.md](ex-10-functions-null-cond-misc-ledger.md) —
   **EX-10 (2026-09-03), in flight:** the v0.7 example backfill's `F.*` null-handling,
   conditional, ordering, bit and session batch — 33 names landed in seven examples, the
