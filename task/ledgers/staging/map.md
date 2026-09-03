@@ -66,5 +66,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 - [ex-8-functions-arrays-ledger.md](ex-8-functions-arrays-ledger.md) —
 - [ex-7-functions-datetime-b-ledger.md](ex-7-functions-datetime-b-ledger.md) —
 - [ex-12-functions-aggregates-a-ledger.md](ex-12-functions-aggregates-a-ledger.md) —
+- [ex-6-functions-datetime-a-ledger.md](ex-6-functions-datetime-a-ledger.md) —
 ## Pointers
 - Up: [../map.md](../map.md)

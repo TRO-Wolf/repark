@@ -1531,6 +1531,27 @@ the pin rather than obeying it.
   concatenating or mis-parsing it is a wrong result. The pin codifies today's
   wrong `Decimal('12345')` so the fix reds it on purpose.
 
+### FN-ADDMONTHS-1 — `add_months` from a month-end source in a short month lands on the target month's last day
+
+- **repark** — a month-end source in a SHORT month clamps to the target
+  month's last day: `add_months(2015-02-28, 1)` is `2015-03-31`,
+  `add_months(2025-04-30, -1)` is `2025-03-31`, and `add_months(2024-02-29, -7)`
+  is `2023-07-31`. The day-overflow clamp agrees with Spark:
+  `add_months(2016-02-29, 12)` is `2017-02-28`, `add_months(2016-02-29, -12)` is
+  `2015-02-28`, `add_months(2025-01-31, 1)` is `2025-02-28`, and
+  `add_months(2025-03-15, -1)` is `2025-02-15`.
+- **Apache Spark** — `LocalDate.plusMonths` keeps the day-of-month whenever the
+  target month has it, so a month-end source in a short month is NOT clamped:
+  `add_months(2015-02-28, 1)` is `2015-03-28`, `add_months(2025-04-30, -1)` is
+  `2025-03-30`, and `add_months(2024-02-29, -7)` is `2023-07-29`. The four
+  day-overflow cases above agree with repark. *(oracle: live PySpark 4.1.2 +
+  Iceberg 1.11.0, facade door on both engines, `TZ=UTC`, 2026-09-03.)*
+- **Pin** — `python/repark/tests/test_functions_dates.py::test_add_months_month_end_divergence_is_pinned`
+- **Rationale** — BACKLOG, intent to FIX. repark treats a month-end source as a
+  clamp trigger where Spark only clamps when the target day overflows, so every
+  month-end anchor moves silently across a short month. The pin codifies today's
+  repark values so the fix reds on purpose.
+
 ### G6-3 — DATE→INT: Spark refuses; repark yields days-since-epoch
 
 > **CLOSED 2026-08-15.** `CAST`/`TRY_CAST` between `DATE` and any signed integer width now
@@ -3446,6 +3467,17 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   with `PySparkTypeError [NOT_COLUMN_OR_STR]`; the value at `F.lit` spelling agrees
   (`[10, None, None]` / `[None, None, None]` on both engines). No pin yet, so it is not a
   row; the example spells `F.lit` like Spark.
+- **FN-EXTRACT-FIELDS-1** — measured 2026-09-03 (live PySpark 4.1.2 SQL door vs the facade
+  `F.extract`, `TZ=UTC`, source `2024-03-09` / `2024-03-09 13:45:30`): the extract field sets
+  differ in BOTH directions. The measured pair: `extract('dayofweek', …)` is `7` in Spark
+  while repark refuses (`Execution error: Date part 'dayofweek' not supported`); repark
+  refuses `dayofyear` too (Spark refuses that spelling as well, answering `69` only via
+  `doy`). Shared and equal: `year`, `quarter`, `month`, `week`, `day`, `doy`, `hour`,
+  `minute`. Spark refuses and repark answers `isoyear`, `isodow`, `epoch`, `millisecond`,
+  `microsecond`; both refuse `decade`, `century`, `millennium`. Two shared fields disagree:
+  `dow` (Spark `7` vs repark `6`) and `second` (Spark `Decimal('30.000000')` vs repark `30`).
+  Wants a pin and a per-field decision before it becomes a row; surfaced by
+  `docs/examples/functions/date_parts_sql.py`, which teaches `extract` on `year` only.
 
 ---
 

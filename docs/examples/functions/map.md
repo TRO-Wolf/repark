@@ -81,6 +81,13 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
 - [window_position.py](window_position.py) — `F.percent_rank`, `F.cume_dist`, `F.ntile`: where a row sits in its partition.
 - [window_offset.py](window_offset.py) — `F.lag` and `F.lead` at two offsets, with and without the fill default.
 - [window_nth_value.py](window_nth_value.py) — `F.nth_value`: the nth value seen so far in the ordered frame. The frame is spelled explicitly (`rowsBetween(unboundedPreceding, currentRow)`, Spark's default for an ordered window).
+- [calendar_parts.py](calendar_parts.py) — the numeric calendar parts of a date
+- [current_datetime.py](current_datetime.py) — the six current date/timestamp
+- [date_arithmetic.py](date_arithmetic.py) — moving a date by days with
+- [date_difference.py](date_difference.py) — `F.date_diff` / `F.datediff`,
+- [date_format.py](date_format.py) — `F.date_format` rendering patterns beside
+- [date_parts_sql.py](date_parts_sql.py) — the SQL field-extraction trio
+- [date_truncation.py](date_truncation.py) — `F.date_trunc` on a timestamp and
 ## Pointers
 
 - Up: [../map.md](../map.md)
