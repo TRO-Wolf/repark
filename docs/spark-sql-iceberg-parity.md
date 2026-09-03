@@ -153,6 +153,22 @@ the CTAS/INSERT succeeds. It lives here because the refuse is the Iceberg
   projection). Not a TZ-4 representation miss (data values match). Do not "fix" in
   repark by skipping the meta read.
 
+#### V3-COV-6 — the `position_deletes` metadata table is schema-only
+
+- **repark** — `SELECT … FROM cat.ns.t.position_deletes` on a v3 table carrying a live Puffin
+  deletion vector refuses with `FeatureUnsupported`: *`position_deletes` metadata table scan is
+  not yet ported: only its schema is available*. The other nine metadata tables this unit
+  measured (`snapshots`, `files`, `delete_files`, `manifests`, `history`, `refs`, `partitions`,
+  `entries`, `all_data_files`) all answer Spark-equal on the same fixture.
+- **Apache Spark** — returns the deleted positions (one `pos` row for the single-row MoR DELETE on
+  the V3-COV flat seed). *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03.)*
+- **Pin** — `python/repark/tests/test_v3_statement_coverage.py::test_v3_statement_row_reproduces_the_measured_repark_answer[meta-position-deletes]`
+  and `…::test_v3_statement_row_matches_the_live_spark_oracle[meta-position-deletes]`
+- **Rationale** — DECLARED 2026-09-03, fork-routed. TRIGGER: the fork ports
+  `PositionDeletesTable`'s scan (RP-1 registered the 16th `MetadataTableType` at pin `5e7b2e4`
+  with schema only). Do not synthesise the rows engine-side from the DV — a hand-rolled position
+  projection that drifts from the fork's would be worse than the refusal.
+
 ### 2.2 Snapshot-ref DDL (`BRANCH` / `TAG`)
 
 Supported surface, for reference:
@@ -329,6 +345,26 @@ perfectly good read.
   `writeTo` / `partitionOverwriteMode=dynamic`). Empty-dynamic loud refuse is stricter than
   Spark writeTo no-op and safer than Spark SQL STATIC wipe. `partitionOverwriteMode=dynamic`
   on a PARTITION-less `INSERT OVERWRITE` stays out of this unit.
+
+#### V3-COV-1 — static `PARTITION (k = v)` overwrite from a `SELECT` source
+
+- **repark** — **FIXED 2026-09-03 (V3-COV).** `INSERT OVERWRITE t PARTITION (part = 10) SELECT …`
+  failed at execution with `INSERT OVERWRITE PARTITION failed to inject static partition columns:
+  column types must match schema types, expected Utf8 but found Utf8View`: the static-partition
+  injection mapped source columns positionally without the store-assignment cast the ordinary
+  append path applies, so any `SELECT` source producing DataFusion's view string representation
+  could not be written. The `VALUES` spelling of the same statement always worked, which is why
+  DML-B did not see it. `inject_static_partition_columns` now runs
+  `refuse_unless_write_store_assignable` and then a strict (`safe: false`) cast per column, so a
+  representation difference conforms and a genuinely non-assignable type still refuses.
+- **Apache Spark** — writes the row and replaces only `part = 10`.
+  *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03.)*
+- **Pin** — `python/repark/tests/test_v3_statement_coverage.py::test_v3_statement_row_reproduces_the_measured_repark_answer[insert-overwrite-partition-static-select]`
+  (red on `a0cd39e`, green on the fix) and
+  `…::test_v3_statement_row_matches_the_live_spark_oracle[insert-overwrite-partition-static-select]`;
+  the `VALUES` control is the `[insert-overwrite-partition-static-values]` pair.
+- **Rationale** — FIXED, not declared. The store-assignment contract was already the append
+  path's; the static-partition path simply did not call it.
 
 #### DML-2 — `TRUNCATE TABLE`
 
@@ -768,6 +804,53 @@ them, and the document is ordered by surface, never by date.
   I/O landing reds the scan/write pins on purpose.
 
 ---
+
+### V3-COV-2 — a lineage projection after a widening `ALTER COLUMN … TYPE`
+
+- **repark** — **FIXED 2026-09-03 (V3-COV).** `ALTER TABLE t ALTER COLUMN id TYPE BIGINT` on a v3
+  table, then `SELECT id, _row_id, _last_updated_sequence_number FROM t`, raised
+  `Internal error: lineage scan could not rebuild batch: column types must match schema types,
+  expected Int64 but found Int32`. The lineage scan projects through its own provider and rebuilt
+  each batch under the promoted schema without casting, while the ordinary read path (`SELECT id,
+  name`) promoted correctly — so the same table answered one query and failed its sibling.
+  `catalog::lineage_columns::conform_batch` now applies a strict (`safe: false`) cast whenever the
+  scan's column type differs from the declared field type.
+- **Apache Spark** — returns the promoted column beside the lineage columns.
+  *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03.)*
+- **Pin** — `python/repark/tests/test_v3_statement_coverage.py::test_v3_statement_row_reproduces_the_measured_repark_answer[alter-alter-column-type]`
+  (red on `a0cd39e`, green on the fix) and
+  `…::test_v3_statement_row_matches_the_live_spark_oracle[alter-alter-column-type]`
+- **Rationale** — FIXED, not declared. A v1.0 gate that promises v3 row lineage cannot ship a
+  lineage projection that raises an internal error after a legal schema evolution.
+
+### V3-COV-3 — partitioned `INSERT INTO` assigns `_row_id` by an unstable file order
+
+- **repark** — one `INSERT INTO t VALUES …` of four rows across two identity partitions on a v3
+  table assigns row lineage from the manifest's data-file order, and that order is not stable:
+  twelve runs of the identical statement on an identical seed produced
+  `{1:0, 2:1, 3:2, 4:3}` seven times and `{1:2, 2:3, 3:0, 4:1}` five times. Values, row counts,
+  `_last_updated_sequence_number` and every other probe are unaffected and Spark-equal; only the
+  `_row_id` assignment moves. The RePark-owned writers are stable: the same partitioned layout
+  written by CTAS (`write::file_order::ascending_partition_order`) is `{1:0, 2:1, 3:2, 4:3}` on
+  every run, and an unpartitioned `INSERT` is stable and Spark-equal.
+- **Apache Spark** — assigns `{1:0, 2:1, 3:2, 4:3}` for the same seed.
+  *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03.)*
+- **Pin** — `python/repark/tests/test_v3_statement_coverage.py::test_v3_partitioned_insert_row_id_mapping_is_one_of_two_measured_orders`
+  (the instability, asserted as the two measured permutations plus the invariant that the block is
+  `[0, 1, 2, 3]`) and the incidental control
+  `…::test_v3_ctas_partitioned_row_id_mapping_is_stable_and_spark_ordered`
+- **Rationale** — DECLARED 2026-09-03, fork-routed. This narrows a claim
+  [V3-FILEORDER-1](#v3-fileorder-1--declared-v3-11-2026-09-02-same-commit-data-file-order-is-ascending-partition-value-not-sparks-hash-bucket-order)
+  states unqualified — *ascending partition value … applied once per commit*. That rule holds on
+  every writer RePark owns, and V3-11 pinned it on MERGE and CTAS; it does **not** hold on a
+  delegated `INSERT`, which V3-11 did not measure. A delegated `INSERT` runs inside the fork's
+  `iceberg_datafusion::IcebergTableProvider`, so RePark does not own the file set the commit sees
+  and cannot sort it the way `ascending_partition_order` sorts the writers it does own. TRIGGER:
+  **fork F-20 / `F-v3-10-partition-file-order`, taken at the next RP-8 repin** — the fork's
+  partitioned `insert_into` orders its fanout output deterministically (ascending partition),
+  after which this row retires and the partitioned programs can pin `_row_id` directly. Until then the partitioned rows of the coverage matrix pin
+  `_last_updated_sequence_number`, not `_row_id` — pinning an unstable value would be the
+  false green this registry exists to prevent.
 
 ## 5. Facade drop-in semantics (DECLARED)
 
@@ -1355,6 +1438,44 @@ the pin rather than obeying it.
   *(oracle: documented Spark 4.1.2; not re-derived live.)*
 - **Pin** — `python/repark/tests/test_functions_gt2.py::test_ansi_pair_is_null_not_a_raise`
 - **Rationale** — BACKLOG, same class and same rationale as FN-1.
+
+### FN-LAST-1 — `last(ignorenulls)` over an ordered unbounded window answers NULL
+
+- **repark** — `F.last(col, ignorenulls=True)` over
+  `Window.partitionBy("k").orderBy(col("v").asc_nulls_last()).rowsBetween(unboundedPreceding,
+  unboundedFollowing)` answers NULL on every row of group `'a'` (values `1, 2, 3, NULL`):
+  `[('a', None), ('b', 6)]`. The unordered grouped form is Spark-equal at `repartition(1)`
+  only; the grouped form has no ordering and no stable answer (measured 2026-09-03: Spark
+  answers `[('a', 3), ('b', 6)]` at `repartition(1)`, `[('a', 1), ('b', 6)]` at
+  `repartition(2)`, `[('a', 1), ('b', 4)]` at `repartition(3)` and `repartition(6)`, while
+  repark answers `[('a', 3), ('b', 6)]`). The plain (no-ignorenulls) ordered-window form
+  is Spark-equal.
+- **Apache Spark** — the same ordered window answers the last non-null value:
+  `[('a', 3), ('b', 6)]`. *(oracle: recorded — live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03,
+  invariant at `repartition(1)`, `repartition(3)` and `repartition(6)`; measured frame
+  `[("a",1),("a",2),("a",3),("a",None),("b",4),("b",6)]`.)*
+- **Pin** — `python/repark/tests/test_functions_w.py::test_last_ignorenulls_window_divergence_is_pinned`
+  (codifies repark's current `[None, 6]` so the fix reds it on purpose).
+- **Rationale** — BACKLOG, intent to FIX. Filed from the EX-12 remediation round: the example
+  `docs/examples/functions/first_last.py` dropped its ignorenulls leg over this divergence, so
+  `F.last` stays covered there by the plain form only. A consumer mirroring Spark's
+  skip-nulls answer gets a NULL.
+
+### FN-APPROXPCT-1 — `approx_percentile` / `percentile_approx` interpolate to DOUBLE
+
+- **repark** — both names answer the interpolated median as double: global `0.5` over
+  `[1, 2, 3, NULL, 4, 6]` is `3.0` (double), grouped `0.5` is `[('a', 2.0), ('b', 5.0)]`.
+- **Apache Spark** — answers the discrete data value as BIGINT: global `3`
+  (`LongType`), grouped `[('a', 2), ('b', 4)]`. Spark's sketch is exact on this input; the
+  divergence is repark's semantics (interpolation) and type (double), not approximate sketches.
+  *(oracle: recorded — live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03.)*
+- **Pin** —
+  `python/repark/tests/test_fn_batch4.py::test_approx_percentile_double_interpolation_divergence_is_pinned`
+  (codifies repark's current `3.0` / `[('a', 2.0), ('b', 5.0)]` so the fix reds it on purpose).
+- **Rationale** — BACKLOG, intent to FIX. Filed from the EX-12 remediation round, replacing the
+  batch ledger's vaguer "approximate sketches" note: repark computes an interpolated quantile
+  where Spark returns an input value, and the result type differs too.
+
 
 ### FN-ISNAN-1 — `isnan(NULL)` is NULL where Spark is false
 
@@ -2051,6 +2172,91 @@ the pin rather than obeying it.
   fork work, and unchanged by this row. Heading kept as the historical anchor (MOR-2
   precedent), so the guide's and MW-8's `#rdf-1` links keep resolving.
   **Contents are unaffected.**
+
+### V3-COV-4 — a MoR `DELETE` covering every row writes a full-coverage DV where Spark drops the file
+
+- **repark** — `DELETE FROM t WHERE id > 0` on a merge-on-read v3 table whose predicate matches
+  every row of the single data file commits one Puffin deletion vector with
+  `record_count = 4`; the data file stays live. The rows read back empty, which is correct.
+- **Apache Spark** — commits the same delete as a metadata delete: the data file is removed and
+  `t.delete_files` is empty. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03.)*
+- **Pin** — `python/repark/tests/test_v3_statement_coverage.py::test_v3_statement_row_reproduces_the_measured_repark_answer[delete-all-rows-mor]`
+  and `…::test_v3_statement_row_matches_the_live_spark_oracle[delete-all-rows-mor]`
+- **Rationale** — BACKLOG. Not a wrong answer: both engines read the same rows, and both
+  time-travel correctly. It is a storage-shape divergence — a whole-file delete leaves RePark
+  paying a DV read on every later scan and leaves the bytes on disk until an expire. The fix is
+  the file-coverage check Java's `SparkPositionDeltaWrite` makes before choosing the delete
+  path; it is not local to any statement handler, so it is queued rather than taken here.
+
+### V3-COV-5 — `ALTER TABLE … WRITE ORDERED BY` is unimplemented
+
+- **repark** — `ALTER TABLE t WRITE ORDERED BY id` refuses `NotImplemented`: *ALTER TABLE WRITE
+  ORDERED BY / WRITE DISTRIBUTED BY is not supported yet — sort-order evolution is out of I7
+  READY (partition-spec DDL)*. `CREATE TABLE … WRITE ORDERED BY` is a parse error on **both**
+  engines, so the create arm is not a divergence.
+- **Apache Spark** — sets the table's write order. *(oracle: live PySpark 4.1.2 +
+  Iceberg 1.11.0, 2026-09-03.)*
+- **Pin** — `python/repark/tests/test_v3_statement_coverage.py::test_v3_statement_row_reproduces_the_measured_repark_answer[alter-write-ordered-by]`
+  and `…::test_v3_statement_row_matches_the_live_spark_oracle[alter-write-ordered-by]`
+- **Rationale** — BACKLOG. Sort-order evolution was scoped out of I7, which delivered
+  partition-spec DDL only; `RDF-SORT-1` is the sibling row on the maintenance side
+  (`rewrite_data_files` refuses `sort` / `sort_order`). Both retire together when the fork's
+  sort-order write path lands.
+
+### V3-COV-7 — `CREATE TABLE` stamps Spark's parquet-codec default; RePark stamps only the DDL
+
+- **repark** — `CREATE TABLE t (…) USING iceberg TBLPROPERTIES ('format-version' = '3',
+  'write.delete.mode' = 'merge-on-read', 'write.update.mode' = …, 'write.merge.mode' = …)` writes
+  exactly those three `write.*` keys into the table metadata. Format version, the current schema
+  (`id int`, `name string`, both optional) and the empty partition spec are Spark-equal on the
+  same statement.
+- **Apache Spark** — writes the same three keys **plus**
+  `write.parquet.compression-codec = zstd`, its own create-time default.
+  *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03. This row claims the property SET the
+  statement leaves behind, which is what was measured; the codec each engine actually writes into
+  the Parquet footer was NOT measured and is not claimed either way.)*
+- **Pin** — `python/repark/tests/test_v3_statement_coverage.py::test_v3_statement_row_reproduces_the_measured_repark_answer[create-v3-properties]`
+  and `…::test_v3_statement_row_matches_the_live_spark_oracle[create-v3-properties]`; the three
+  create rows that carry no properties (`[create-v3-flat]`, `[create-v3-partitioned]`,
+  `[create-v3-bucket-transform]`) are the controls and agree on every metadata fact those rows
+  probe — format version, current schema and partition spec. They are NOT a control on the codec
+  key: their `META` tuples do not read the property set, and Spark stamps
+  `write.parquet.compression-codec = zstd` on those creates too. The scope of this row is
+  therefore every `CREATE`, not the properties DDL alone — `[ctas-v3]`'s metadata, re-read
+  2026-09-03, carries `write.parquet.compression-codec = zstd` on Spark and no `write.*` key at
+  all on repark.
+- **Rationale** — BACKLOG. Visible to anyone reading `SHOW TBLPROPERTIES` or the metadata JSON
+  after the same DDL, so it is a row rather than a note; it is queued rather than fixed because
+  "stamp the engine's write defaults at create" is a create-path policy decision, not a defect in
+  this statement. Do not close it by copying Spark's key without deciding the policy — a stamped
+  property is a value later writes read.
+
+### V3-COV-8 — CTAS derives a wider, required Iceberg column where Spark derives the literal's narrower, optional one
+
+- **repark** — `CREATE TABLE t USING iceberg TBLPROPERTIES ('format-version' = '3') AS SELECT 1 AS
+  id, 'a' AS name` writes `{"name": "id", "required": true, "type": "long"}` and
+  `{"name": "name", "required": true, "type": "string"}` into the table metadata — wider and
+  **required**. The rows round-trip and the format version and partition spec are Spark-equal;
+  the divergence is the derived schema.
+- **Apache Spark** — writes `{"name": "id", "required": false, "type": "int"}` and
+  `{"name": "name", "required": false, "type": "string"}` for the same statement — the literal's
+  own width and **optional**. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, re-measured on the
+  raw metadata JSON 2026-09-03.)*
+- **Pin** — `python/repark/tests/test_v3_statement_coverage.py::test_v3_statement_row_reproduces_the_measured_repark_answer[ctas-v3]`
+  and `…::test_v3_statement_row_matches_the_live_spark_oracle[ctas-v3]`; the column-def
+  `[create-v3-flat]` control stores `id int` optional on BOTH engines, so this is the CTAS
+  derivation, not the type mapping.
+- **Rationale** — BACKLOG, two causes in one cell and neither is local. **Width:** DataFusion
+  types a bare integer literal as `Int64` where Spark types it `INT`, which is the same root as
+  `TY-4` / the `VALUES (1)` readings in `TY-3`'s neighbourhood — narrowing it inside CTAS alone
+  would make CTAS disagree with every other repark path. **Nullability:** the open question is
+  which default the create path keeps — Spark's optional-by-default CTAS derivation, or repark's
+  required. It is not a one-line flip in either direction: SE-1's tighten-derived refusal
+  (`ctas.rs`, R-D) already refuses an Iceberg CREATE whose output carries a non-nullable field
+  from a tighten-derived source, so a `required` derived column is the state that path treats as
+  load-bearing, and relaxing the derivation to `optional` moves what that guard sees. The
+  decision is create-path policy, not a defect in this statement. Both causes are recorded here
+  with the measured cell so the next unit starts from the reading rather than the surprise.
 
 ### RDF-SORT-1 — `rewrite_data_files` refuses `sort` / `sort_order`; Spark runs a sort rewrite
 
