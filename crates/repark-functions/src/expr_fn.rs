@@ -161,6 +161,49 @@ pub fn sha1(arg: Expr) -> Expr {
     call(datafusion_spark::function::hash::sha1(), vec![arg])
 }
 
+#[must_use]
+pub fn sha2(arg: Expr, bit_length: Expr) -> Expr {
+    call(
+        datafusion_spark::function::hash::sha2(),
+        vec![arg, bit_length],
+    )
+}
+
+#[must_use]
+pub fn isnan(arg: Expr) -> Expr {
+    call(crate::spark_isnan::isnan_udf(), vec![arg])
+}
+
+#[must_use]
+pub fn array_position(array: Expr, value: Expr) -> Expr {
+    call(crate::collection::array_position_udf(), vec![array, value])
+}
+
+#[must_use]
+pub fn array_sort(args: Vec<Expr>) -> Expr {
+    call(crate::collection::array_sort_udf(), args)
+}
+
+#[must_use]
+pub fn sort_array(args: Vec<Expr>) -> Expr {
+    call(crate::collection::sort_array_udf(), args)
+}
+
+#[must_use]
+pub fn arrays_overlap(left: Expr, right: Expr) -> Expr {
+    call(crate::collection::arrays_overlap_udf(), vec![left, right])
+}
+
+#[must_use]
+pub fn flatten(array: Expr) -> Expr {
+    call(crate::collection::flatten_udf(), vec![array])
+}
+
+#[must_use]
+pub fn percentile_approx(args: Vec<Expr>) -> Expr {
+    crate::percentile_approx::percentile_approx_udaf().call(args)
+}
+
 /// Spark `xxhash64(expr, ...)` — 64-bit xxHash of the arguments.
 #[must_use]
 pub fn xxhash64(args: Vec<Expr>) -> Expr {

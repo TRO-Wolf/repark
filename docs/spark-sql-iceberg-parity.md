@@ -1440,118 +1440,85 @@ the pin rather than obeying it.
 - **Pin** — `python/repark/tests/test_functions_gt2.py::test_ansi_pair_is_null_not_a_raise`
 - **Rationale** — BACKLOG, same class and same rationale as FN-1.
 
-### FN-LAST-1 — `last(ignorenulls)` over an ordered unbounded window answers NULL
+### FN-LAST-1 — `last(ignorenulls)` over an ordered unbounded window answers NULL — **FIXED 2026-09-03 (FN-FIX-1)**
 
-- **repark** — `F.last(col, ignorenulls=True)` over
+- **repark** — **FIXED 2026-09-03 (FN-FIX-1).** `F.last(col, ignorenulls=True)` over
   `Window.partitionBy("k").orderBy(col("v").asc_nulls_last()).rowsBetween(unboundedPreceding,
-  unboundedFollowing)` answers NULL on every row of group `'a'` (values `1, 2, 3, NULL`):
-  `[('a', None), ('b', 6)]`. The unordered grouped form is Spark-equal at `repartition(1)`
-  only; the grouped form has no ordering and no stable answer (measured 2026-09-03: Spark
-  answers `[('a', 3), ('b', 6)]` at `repartition(1)`, `[('a', 1), ('b', 6)]` at
-  `repartition(2)`, `[('a', 1), ('b', 4)]` at `repartition(3)` and `repartition(6)`, while
-  repark answers `[('a', 3), ('b', 6)]`). The plain (no-ignorenulls) ordered-window form
-  is Spark-equal.
+  unboundedFollowing)` answers the last non-null: `[('a', 3), ('b', 6)]`. The unordered
+  grouped form remains order-unstable (Spark varies with `repartition`). The plain
+  (no-ignorenulls) ordered-window form stays Spark-equal (`[('a', None), ('b', 6)]`).
 - **Apache Spark** — the same ordered window answers the last non-null value:
   `[('a', 3), ('b', 6)]`. *(oracle: recorded — live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03,
   invariant at `repartition(1)`, `repartition(3)` and `repartition(6)`; measured frame
   `[("a",1),("a",2),("a",3),("a",None),("b",4),("b",6)]`.)*
-- **Pin** — `python/repark/tests/test_functions_w.py::test_last_ignorenulls_window_divergence_is_pinned`
-  (codifies repark's current `[None, 6]` so the fix reds it on purpose).
-- **Rationale** — BACKLOG, intent to FIX. Filed from the EX-12 remediation round: the example
-  `docs/examples/functions/first_last.py` dropped its ignorenulls leg over this divergence, so
-  `F.last` stays covered there by the plain form only. A consumer mirroring Spark's
-  skip-nulls answer gets a NULL.
+- **Pin** — `python/repark/tests/test_functions_w.py::test_last_ignorenulls_window_skips_trailing_null`
+- **Rationale** — FIXED. History: `Column.over` dropped `IGNORE NULLS` when wrapping
+  an aggregate as a window. The example `docs/examples/functions/first_last.py`
+  dropped its ignorenulls leg; names for the next EX batch are listed in the
+  FN-FIX-1 ledger.
 
-### FN-APPROXPCT-1 — `approx_percentile` / `percentile_approx` interpolate to DOUBLE
+### FN-APPROXPCT-1 — `approx_percentile` / `percentile_approx` interpolate to DOUBLE — **FIXED 2026-09-03 (FN-FIX-1)**
 
-- **repark** — both names answer the interpolated median as double: global `0.5` over
-  `[1, 2, 3, NULL, 4, 6]` is `3.0` (double), grouped `0.5` is `[('a', 2.0), ('b', 5.0)]`.
+- **repark** — **FIXED 2026-09-03 (FN-FIX-1).** both names answer the discrete data
+  value in the column's type: global `0.5` over `[1, 2, 3, NULL, 4, 6]` is `3`
+  (`int64`), grouped `0.5` is `[('a', 2), ('b', 4)]`. Array-of-percentages
+  `[0.0, 0.5, 1.0]` is `[1, 3, 6]`.
 - **Apache Spark** — answers the discrete data value as BIGINT: global `3`
-  (`LongType`), grouped `[('a', 2), ('b', 4)]`. Spark's sketch is exact on this input; the
-  divergence is repark's semantics (interpolation) and type (double), not approximate sketches.
-  *(oracle: recorded — live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03.)*
+  (`LongType`), grouped `[('a', 2), ('b', 4)]`. *(oracle: live PySpark 4.1.2,
+  2026-09-03.)*
 - **Pin** —
-  `python/repark/tests/test_fn_batch4.py::test_approx_percentile_double_interpolation_divergence_is_pinned`
-  (codifies repark's current `3.0` / `[('a', 2.0), ('b', 5.0)]` so the fix reds it on purpose).
-- **Rationale** — BACKLOG, intent to FIX. Filed from the EX-12 remediation round, replacing the
-  batch ledger's vaguer "approximate sketches" note: repark computes an interpolated quantile
-  where Spark returns an input value, and the result type differs too.
+  `python/repark/tests/test_fn_batch4.py::test_approx_percentile_discrete_bigint_matches_spark`
+- **Rationale** — FIXED. History: t-digest interpolation returned DOUBLE.
 
 
-### FN-ISNAN-1 — `isnan(NULL)` is NULL where Spark is false
+### FN-ISNAN-1 — `isnan(NULL)` is NULL where Spark is false — **FIXED 2026-09-03 (FN-FIX-1)**
 
-- **repark** — `isnan(CAST(NULL AS DOUBLE))` on `[1.0, NULL]` yields `[False, None]`
-  (nullable `bool`); lowers to DataFusion `isnan`, which null-propagates.
-  `crates/repark-python/src/column/function_dispatch.rs:282`.
+- **repark** — **FIXED 2026-09-03 (FN-FIX-1).** `isnan(CAST(NULL AS DOUBLE))` on
+  `[1.0, NULL]` yields `[False, False]` (non-nullable `bool`). NULL is not NaN.
 - **Apache Spark** — `isnan(CAST(NULL AS DOUBLE))` on `[1.0, NULL]` yields
   `[False, False]` (non-nullable `bool`, Spark `IsNaN`); NULL is not NaN.
   *(oracle: live — PySpark 4.1.2, `local[1]`, ANSI on, 2026-09-03.)*
-- **Pin** — `python/repark/tests/test_fn_batch1.py::test_isnan_null_divergence_is_pinned`
-- **Rationale** — BACKLOG, silently wrong divergence. `isnan` on a nullable
-  double is nullability-sensitive; Spark's `IsNaN` is non-nullable. The fix
-  flips the pin to `[False, False]`.
+- **Pin** — `python/repark/tests/test_fn_batch1.py::test_isnan_null_is_false_non_nullable`
+- **Rationale** — FIXED. History: DataFusion `isnan` null-propagated; the Spark
+  `IsNaN` kernel returns false for NULL.
 
 
-### FN-SHA2-1 — `sha2` facade returns raw bytes while Spark returns a hex string
+### FN-SHA2-1 — `sha2` facade returns raw bytes while Spark returns a hex string — **FIXED 2026-09-03 (FN-FIX-1)**
 
-- **repark** — `F.sha2(col, 256)` (facade `Column` API) returns Arrow `binary`
-  (32 raw bytes, e.g. `b'\x2c\xf2M\xba_\xb0\xa3\x0e...'` whose hex is
-  `2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824`) while its
-  declared type is `StringType`; `F.sha2(col, 512)` raises
-  `UnsupportedOperationException: functions.sha2(numBits=512) only 256 is
-  supported`. The SQL door `SELECT sha2('hello', 256)` returns Arrow `string`
-  hex `2cf24dba...9824` and `SELECT sha2('hello', 512)` returns hex
-  `9b71d224...dec043` (both matching Spark).
+- **repark** — **FIXED 2026-09-03 (FN-FIX-1).** `F.sha2(col, bits)` returns
+  lowercase hex `string` for bit lengths `0` (alias of 256), `224`, `256`,
+  `384`, and `512`. Other bit lengths raise `[VALUE_NOT_ALLOWED]`.
 - **Apache Spark** — `F.sha2(col, 256)` returns Arrow `string` hex
   `2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824` (and `512`
-  hex `9b71d224...dec043`). *(oracle: live PySpark 4.1.2, 2026-09-03; repark
-  facade `binary` vs Spark `string` measured above; repark SQL door hex
-  measured same day.)*
-- **Pin** — `python/repark/tests/test_fn_batch4.py::test_sha2_facade_bytes_divergence_is_pinned`
-- **Rationale** — BACKLOG, intent to FIX. The facade's declared schema is
-  `StringType` and Spark's facade is a hex string; returning raw bytes is a
-  value+type divergence. The SQL door already returns the hex string. The pin
-  codifies today's bytes so the fix reds it on purpose.
+  hex `9b71d224...dec043`). *(oracle: live PySpark 4.1.2, 2026-09-03.)*
+- **Pin** — `python/repark/tests/test_fn_batch4.py::test_sha2_facade_hex_string_matches_spark`
+- **Rationale** — FIXED. History: the facade dispatched to `sha256` bytes and
+  refused non-256 bit lengths.
 
-### FN-TRYTONUMBER-1 — `try_to_number` with a non-foldable format does not raise
+### FN-TRYTONUMBER-1 — `try_to_number` with a non-foldable format does not raise — **FIXED 2026-09-03 (FN-FIX-1)**
 
-- **repark** — `F.try_to_number(col('s'), col('f'))` on
-  `[('123.45','999.99')]` returns `Decimal('12345')` at
-  `decimal128(38, 0)` silently. The foldable literal arm
-  `try_to_number('123.45','999.99')` returns `Decimal('123.45')` at
-  `decimal128(5, 2)` correctly on both engines.
+- **repark** — **FIXED 2026-09-03 (FN-FIX-1).** `F.try_to_number(col('s'), col('f'))`
+  raises `AnalysisException` matching `[DATATYPE_MISMATCH.NON_FOLDABLE_INPUT]`.
+  The foldable literal arm returns `Decimal('123.45')` at `decimal128(5, 2)`.
 - **Apache Spark** — `try_to_number(col('s'), col('f'))` raises
-  `AnalysisException: [DATATYPE_MISMATCH.NON_FOLDABLE_INPUT] Cannot resolve
-  "try_to_number(s, f)" due to data type mismatch: the input
-  `attributereference` should be a foldable "STRING" expression; however, got
-  "f". SQLSTATE: 42K09` (and the same via `try_to_number(s, lit '999.99')` where
-  the format is still a column). *(oracle: live PySpark 4.1.2, 2026-09-03.)*
-- **Pin** — `python/repark/tests/test_fnp7_try_inversions.py::test_try_to_number_non_foldable_divergence_is_pinned`
-- **Rationale** — BACKLOG, intent to FIX. The non-foldable format must be
-  refused at analysis per Spark's `NON_FOLDABLE_INPUT` rule; silently
-  concatenating or mis-parsing it is a wrong result. The pin codifies today's
-  wrong `Decimal('12345')` so the fix reds it on purpose.
+  `AnalysisException: [DATATYPE_MISMATCH.NON_FOLDABLE_INPUT]`. *(oracle: live
+  PySpark 4.1.2, 2026-09-03.)*
+- **Pin** — `python/repark/tests/test_fnp7_try_inversions.py::test_try_to_number_non_foldable_format_raises`
+- **Rationale** — FIXED. History: a column format was parsed per row and
+  returned `Decimal('12345')`.
 
-### FN-ADDMONTHS-1 — `add_months` from a month-end source in a short month lands on the target month's last day
+### FN-ADDMONTHS-1 — `add_months` from a month-end source in a short month lands on the target month's last day — **FIXED 2026-09-03 (FN-FIX-1)**
 
-- **repark** — a month-end source in a SHORT month clamps to the target
-  month's last day: `add_months(2015-02-28, 1)` is `2015-03-31`,
-  `add_months(2025-04-30, -1)` is `2025-03-31`, and `add_months(2024-02-29, -7)`
-  is `2023-07-31`. The day-overflow clamp agrees with Spark:
-  `add_months(2016-02-29, 12)` is `2017-02-28`, `add_months(2016-02-29, -12)` is
-  `2015-02-28`, `add_months(2025-01-31, 1)` is `2025-02-28`, and
-  `add_months(2025-03-15, -1)` is `2025-02-15`.
-- **Apache Spark** — `LocalDate.plusMonths` keeps the day-of-month whenever the
-  target month has it, so a month-end source in a short month is NOT clamped:
+- **repark** — **FIXED 2026-09-03 (FN-FIX-1).** `LocalDate.plusMonths`: keep the
+  day-of-month, clamp only when the target month is shorter.
   `add_months(2015-02-28, 1)` is `2015-03-28`, `add_months(2025-04-30, -1)` is
-  `2025-03-30`, and `add_months(2024-02-29, -7)` is `2023-07-29`. The four
-  day-overflow cases above agree with repark. *(oracle: live PySpark 4.1.2 +
-  Iceberg 1.11.0, facade door on both engines, `TZ=UTC`, 2026-09-03.)*
-- **Pin** — `python/repark/tests/test_functions_dates.py::test_add_months_month_end_divergence_is_pinned`
-- **Rationale** — BACKLOG, intent to FIX. repark treats a month-end source as a
-  clamp trigger where Spark only clamps when the target day overflows, so every
-  month-end anchor moves silently across a short month. The pin codifies today's
-  repark values so the fix reds on purpose.
+  `2025-03-30`, `add_months(2024-02-29, -7)` is `2023-07-29`. Overflow cases
+  still clamp: `add_months(2016-02-29, 12)` is `2017-02-28`.
+- **Apache Spark** — `LocalDate.plusMonths` keeps the day-of-month whenever the
+  target month has it. *(oracle: live PySpark 4.1.2, 2026-09-03.)*
+- **Pin** — `python/repark/tests/test_functions_dates.py::test_add_months_keeps_day_when_target_month_has_it`
+- **Rationale** — FIXED. History: a month-end source in a short month clamped
+  to the target month's last day.
 
 ### FN-ELT-1 — `elt` out of range answers NULL; Spark raises INVALID_ARRAY_INDEX
 
@@ -3248,56 +3215,44 @@ the pin rather than obeying it.
 - **Rationale** — BACKLOG, filed 2026-09-01. Same FNP numerics unit as BL-15; overflow-safe
   hypot is a standard rescale.
 
-### FN-ARRAYPOS-1 — `array_position` answers NULL where Spark answers 0
+### FN-ARRAYPOS-1 — `array_position` answers NULL where Spark answers 0 — **FIXED 2026-09-03 (FN-FIX-1)**
 
-- **repark** — an element that is not in the array answers NULL: over the frame
-  `a = [1, 2, 3] / [1, 2, 3] / NULL`, `x = 2 / 9 / 1`, `F.array_position(a, x)` is
-  `[2, NULL, NULL]`.
+- **repark** — **FIXED 2026-09-03 (FN-FIX-1).** not-found is `0`; NULL only for a
+  NULL array or a NULL needle: `[2, 0, NULL]`.
 - **Apache Spark** — the not-found position is `0`: `[2, 0, NULL]` over the same frame.
-  *(oracle: live PySpark 4.1.2, 2026-09-03, EX-8 remediation.)*
-- **Pin** — `python/repark/tests/test_fn_arrays_divergence.py::test_array_position_not_found_returns_null`
-- **Rationale** — BACKLOG, intent to FIX. Spark is 1-based, so `0` is its not-found sentinel
-  and a drop-in script branching on it never takes the found arm here.
-
-### FN-ARRAYSORT-1 — `array_sort` orders NULLs first; Spark orders them last
-
-- **repark** — `F.array_sort([2, NULL, 1])` is `[NULL, 1, 2]` (the same NULL-first order
-  `sort_array` correctly shows).
-- **Apache Spark** — `array_sort` places NULL elements last: `[1, 2, NULL]`; its `sort_array`
-  places them first. *(oracle: live PySpark 4.1.2, 2026-09-03, EX-8 remediation; frame
-  `[3, 1, 2] / [2, NULL, 1] / NULL`.)*
-- **Pin** — `python/repark/tests/test_fn_arrays_divergence.py::test_array_sort_nulls_first`
-- **Rationale** — BACKLOG, intent to FIX. One comparator serves both spellings here, so
-  fixing `array_sort` to Spark's NULLs-last must not move `sort_array`, whose NULLs-first
-  agrees with Spark today.
-
-### FN-ARRAYSOVERLAP-1 — `arrays_overlap` answers False where a NULL element leaves the decision open
-
-- **repark** — a NULL element that blocks the decision answers False: over the pin's grid
-  `([1, NULL], [2, NULL]) / ([1, 2], [3, 4]) / ([NULL], [1]) / ([1, 2], [2, 3]) /
-  ([1, NULL], [1]) / ([NULL], [NULL])` the answer is
-  `[False, False, False, True, True, False]`.
-- **Apache Spark** — the three-valued answer is NULL whenever no definite common element
-  exists and a NULL blocks the decision: `[NULL, False, NULL, True, True, NULL]` over the
-  same grid. *(oracle: live PySpark 4.1.2, 2026-09-03, EX-8 remediation.)*
-- **Pin** — `python/repark/tests/test_fn_arrays_divergence.py::test_arrays_overlap_null_block_returns_false`
-- **Rationale** — BACKLOG, intent to FIX. The NULL rows are silently flattened to "disjoint",
-  so a script cannot distinguish "definitely no shared element" from "unknown".
-
-### FN-FLATTEN-1 — `flatten` drops a NULL sub-array; Spark answers NULL
-
-- **repark** — a NULL sub-array is skipped: `flatten([[1], NULL])` is `[1]`.
-- **Apache Spark** — a NULL sub-array makes the whole row's answer NULL: `flatten([[1], NULL])`
-  is NULL. Measured frames (2026-09-03, EX-8 remediation): simple
-  `[[1, 2, 3]] / [[1, NULL]] / NULL` agrees on both engines
-  (`[1, 2, 3] / [1, NULL] / NULL`); adversarial
-  `[[]] / [[], []] / [[1, 2, 3]] / [[1], NULL] / [[NULL, 1, 2]] / NULL` gives Spark
-  `[] / [] / [1, 2, 3] / NULL / [NULL, 1, 2] / NULL` against repark
-  `[] / [] / [1, 2, 3] / [1] / [NULL, 1, 2] / NULL`.
   *(oracle: live PySpark 4.1.2, 2026-09-03.)*
-- **Pin** — `python/repark/tests/test_fn_arrays_divergence.py::test_flatten_drops_null_subarray`
-- **Rationale** — BACKLOG, intent to FIX. Dropping the NULL sub-array loses the row-level NULL
-  signal Spark preserves, and the length of the answer silently changes with it.
+- **Pin** — `python/repark/tests/test_fn_arrays_divergence.py::test_array_position_not_found_returns_zero`
+- **Rationale** — FIXED. History: DataFusion `array_position` returned NULL for not-found.
+
+### FN-ARRAYSORT-1 — `array_sort` orders NULLs first; Spark orders them last — **FIXED 2026-09-03 (FN-FIX-1)**
+
+- **repark** — **FIXED 2026-09-03 (FN-FIX-1).** `F.array_sort([2, NULL, 1])` is
+  `[1, 2, NULL]`. `sort_array` stays Spark's order: asc `[NULL, 1, 2]`, desc
+  `[2, 1, NULL]`.
+- **Apache Spark** — `array_sort` places NULL elements last: `[1, 2, NULL]`; its `sort_array`
+  places them first on asc and last on desc. *(oracle: live PySpark 4.1.2, 2026-09-03.)*
+- **Pin** — `python/repark/tests/test_fn_arrays_divergence.py::test_array_sort_nulls_last`
+- **Rationale** — FIXED. History: one comparator served both spellings as NULLS FIRST.
+
+### FN-ARRAYSOVERLAP-1 — `arrays_overlap` answers False where a NULL element leaves the decision open — **FIXED 2026-09-03 (FN-FIX-1)**
+
+- **repark** — **FIXED 2026-09-03 (FN-FIX-1).** three-valued: `[NULL, False, NULL, True, True, NULL]`
+  over the pin's grid.
+- **Apache Spark** — the three-valued answer is NULL whenever no definite common element
+  exists and a NULL blocks the decision: `[NULL, False, NULL, True, True, NULL]`.
+  *(oracle: live PySpark 4.1.2, 2026-09-03.)*
+- **Pin** — `python/repark/tests/test_fn_arrays_divergence.py::test_arrays_overlap_three_valued`
+- **Rationale** — FIXED. History: a NULL element that blocked the decision answered False.
+
+### FN-FLATTEN-1 — `flatten` drops a NULL sub-array; Spark answers NULL — **FIXED 2026-09-03 (FN-FIX-1)**
+
+- **repark** — **FIXED 2026-09-03 (FN-FIX-1).** a NULL sub-array makes the row NULL:
+  `flatten([[1], NULL])` is NULL. Empty and non-null nested frames stay
+  `[] / [] / [1, 2, 3] / NULL / [NULL, 1, 2] / NULL`.
+- **Apache Spark** — a NULL sub-array makes the whole row's answer NULL.
+  *(oracle: live PySpark 4.1.2, 2026-09-03.)*
+- **Pin** — `python/repark/tests/test_fn_arrays_divergence.py::test_flatten_null_subarray_makes_row_null`
+- **Rationale** — FIXED. History: DataFusion flatten skipped NULL sub-arrays.
 ### BL-17 — `base64` omits RFC 4648 padding
 
 - **repark** — `F.base64` on UTF-8 bytes of `'Spark'` / `'A'` / `''` / NULL returns

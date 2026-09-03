@@ -62,7 +62,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Extract a cohesive rewrite family when that family next changes.",
     ),
     "crates/repark-functions/src/datetime.rs": (
-        1709,
+        1704,
         "Calendar and timestamp Spark-semantics functions share one module.",
         "Split calendar extractors from timezone-aware timestamp functions.",
     ),
@@ -117,7 +117,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split DELETE and UPDATE scenario families with shared setup retained.",
     ),
     "crates/repark-python/src/column/mod.rs": (
-        1105,
+        1102,
         "PyO3 Column methods remain grouped in one binding module.",
         "Extract the remaining date or window method family.",
     ),

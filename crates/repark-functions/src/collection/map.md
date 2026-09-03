@@ -20,6 +20,15 @@ needed.
 - `shuffle.rs` — **X1:** NULL-guarded `shuffle`; the upstream kernel panics on an all-NULL list.
 - `map_from_entries.rs` — **X7:** `map_from_entries` under Spark's `EXCEPTION` map-key dedup
   policy (duplicate keys raise rather than last-wins).
+- `array_position.rs` — **FN-FIX-1:** not-found → `0`; NULL only for NULL array/needle.
+  pins: fn-fix-1-registry-rows/C-002
+- `array_sort.rs` — **FN-FIX-1:** `array_sort` NULLs LAST; `sort_array` Spark order
+  (asc NULLS FIRST, desc NULLS LAST).
+  pins: fn-fix-1-registry-rows/C-002
+- `arrays_overlap.rs` — **FN-FIX-1:** three-valued overlap.
+  pins: fn-fix-1-registry-rows/C-002
+- `flatten.rs` — **FN-FIX-1:** a NULL sub-array makes the row NULL.
+  pins: fn-fix-1-registry-rows/C-002
 
 ## I want to...
 

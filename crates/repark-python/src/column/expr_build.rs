@@ -4,8 +4,11 @@ use datafusion::arrow::datatypes::{DataType, TimeUnit};
 use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
 use datafusion::functions_aggregate::array_agg::array_agg_udaf;
 use datafusion::logical_expr::LogicalPlan;
-use datafusion::logical_expr::expr::{Alias, NullTreatment};
-use datafusion::logical_expr::{Case, Expr, ExprFunctionExt, Operator, binary_expr, lit};
+use datafusion::logical_expr::expr::{Alias, NullTreatment, WindowFunction};
+use datafusion::logical_expr::{
+    Case, Expr, ExprFunctionExt, Operator, WindowFunctionDefinition, binary_expr, lit,
+};
+use datafusion::scalar::ScalarValue;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
@@ -69,6 +72,34 @@ pub(super) fn extract_projection_expr(plan: &LogicalPlan) -> PyResult<Expr> {
                 PyValueError::new_err(format!("expr plan had no projection to extract: {other}"))
             }),
     }
+}
+
+pub(super) fn inner_null_treatment(expr: &Expr) -> Option<NullTreatment> {
+    match expr {
+        Expr::AggregateFunction(agg) => agg.params.null_treatment,
+        Expr::WindowFunction(window) => window.params.null_treatment,
+        _ => None,
+    }
+}
+
+pub(super) fn percentile_approx_list_expr(argument: Expr, percentages: Vec<f64>) -> Expr {
+    let values: Vec<ScalarValue> = percentages
+        .into_iter()
+        .map(|percentage| ScalarValue::Float64(Some(percentage)))
+        .collect();
+    let list = ScalarValue::List(ScalarValue::new_list_nullable(&values, &DataType::Float64));
+    repark_functions::percentile_approx::percentile_approx_udaf().call(vec![argument, lit(list)])
+}
+
+pub(super) fn window_from_aggregate(
+    agg: &datafusion::logical_expr::expr::AggregateFunction,
+) -> Expr {
+    let mut window = WindowFunction::new(
+        WindowFunctionDefinition::AggregateUDF(std::sync::Arc::clone(&agg.func)),
+        agg.params.args.clone(),
+    );
+    window.params.null_treatment = agg.params.null_treatment;
+    Expr::from(window)
 }
 
 impl PyColumn {

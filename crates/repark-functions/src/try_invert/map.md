@@ -26,6 +26,8 @@ pins: fnp-7-try-inversions/C-001, C-002, C-004, C-005, C-006, C-007, C-009, C-01
 - `convert.rs` — `try_to_date`, `try_to_number`, `try_to_binary`, `try_to_time`.
   Live Spark 4.1.2 `try_to_time` raises `UNSUPPORTED_TIME_TYPE`; this kernel matches that.
   `try_to_date` Java patterns default missing month/day to 01 and parse `MMM`/`MMMM`.
+  **FN-FIX-1:** non-foldable `try_to_number` format raises `NON_FOLDABLE_INPUT`.
+  pins: fn-fix-1-registry-rows/C-002
 
 ## I want to...
 

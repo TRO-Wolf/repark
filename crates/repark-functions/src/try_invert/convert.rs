@@ -6,7 +6,7 @@ use std::sync::Arc;
 use chrono::NaiveDate;
 use datafusion::arrow::array::{Array, BinaryBuilder, Date32Array, Decimal128Builder, StringArray};
 use datafusion::arrow::datatypes::{DataType, Date32Type, Field, FieldRef};
-use datafusion::common::{Result, ScalarValue, exec_err};
+use datafusion::common::{Result, ScalarValue, exec_err, plan_err};
 use datafusion::error::DataFusionError;
 use datafusion::logical_expr::{
     ColumnarValue, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
@@ -339,13 +339,26 @@ impl ScalarUDFImpl for SparkTryToNumber {
     }
 
     fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
-        let format = args.scalar_arguments.get(1).and_then(|value| *value);
+        let Some(Some(format)) = args.scalar_arguments.get(1) else {
+            let format_name = args
+                .arg_fields
+                .get(1)
+                .map_or_else(|| "format".to_owned(), |field| field.name().clone());
+            let expr_name = args
+                .arg_fields
+                .first()
+                .map_or_else(|| "expr".to_owned(), |field| field.name().clone());
+            return plan_err!(
+                "[DATATYPE_MISMATCH.NON_FOLDABLE_INPUT] Cannot resolve \
+                 \"try_to_number({expr_name}, {format_name})\" due to data type mismatch: \
+                 the input `attributereference` should be a foldable \"STRING\" expression; \
+                 however, got \"{format_name}\". SQLSTATE: 42K09"
+            );
+        };
         let (precision, scale) = match format {
-            Some(
-                ScalarValue::Utf8(Some(pattern))
-                | ScalarValue::LargeUtf8(Some(pattern))
-                | ScalarValue::Utf8View(Some(pattern)),
-            ) => parse_number_format(pattern)?.decimal,
+            ScalarValue::Utf8(Some(pattern))
+            | ScalarValue::LargeUtf8(Some(pattern))
+            | ScalarValue::Utf8View(Some(pattern)) => parse_number_format(pattern)?.decimal,
             _ => (38, 0),
         };
         Ok(Arc::new(Field::new(

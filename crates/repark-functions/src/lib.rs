@@ -18,8 +18,10 @@ pub mod format_version;
 pub mod higher_order;
 pub mod instant_ts;
 pub mod integer_spark;
+pub mod percentile_approx;
 pub mod random;
 pub mod session_time_zone;
+pub mod spark_isnan;
 pub mod spark_length;
 pub mod spark_log;
 pub mod spark_log1p;
@@ -56,11 +58,11 @@ pub fn register_all(ctx: &SessionContext) {
     for udaf in aggregate::functions() {
         ctx.register_udaf(udaf.as_ref().clone());
     }
+    ctx.register_udaf(percentile_approx::percentile_approx_udaf().as_ref().clone());
     ctx.register_udaf(
         datafusion::functions_aggregate::approx_percentile_cont::approx_percentile_cont_udaf()
             .as_ref()
-            .clone()
-            .with_aliases(["percentile_approx", "approx_percentile"]),
+            .clone(),
     );
     for udwf in datafusion_spark::all_default_window_functions() {
         ctx.register_udwf(udwf.as_ref().clone());
@@ -88,6 +90,9 @@ pub fn register_all(ctx: &SessionContext) {
         ctx.register_udf(udf.as_ref().clone());
     }
     for udf in spark_log1p::functions() {
+        ctx.register_udf(udf.as_ref().clone());
+    }
+    for udf in spark_isnan::functions() {
         ctx.register_udf(udf.as_ref().clone());
     }
     validate::register(ctx);

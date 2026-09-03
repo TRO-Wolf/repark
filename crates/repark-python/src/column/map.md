@@ -17,7 +17,9 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
 - [`function_dispatch.rs`](function_dispatch.rs) owns scalar and aggregate function dispatch.
   LOG1P-1: `log1p` / `expm1` arms embed `repark_functions::expr_fn` kernels.
   pins: log1p-1-precise-kernels/C-002
+  **FN-FIX-1:** `isnan` / `sha2` / array kernels. pins: fn-fix-1-registry-rows/C-002
 - [`expr_build.rs`](expr_build.rs) owns type parsing, alias handling, and expression inspection.
+  **FN-FIX-1:** `window_from_aggregate` copies `IGNORE NULLS`. pins: fn-fix-1-registry-rows/C-002
 - [`window.rs`](window.rs) owns Spark frame conversion and unordered-window policy.
 - [`door_parity_tests.rs`](door_parity_tests.rs) pins standalone facade UDF behavior against SQL.
 

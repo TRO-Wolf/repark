@@ -37,6 +37,8 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
 - `functions_agg.py` — aggregate-function re-exports.
 - `functions_bitwise.py` — bitwise scalar wrappers.
 - `functions_collections.py` — array, map, sequence, and collection wrappers.
+  **FN-FIX-1:** `arrays_overlap` is the three-valued kernel, not the size-of-intersect shim.
+  pins: fn-fix-1-registry-rows/C-002
 - `functions_datetime.py` — date/time and timestamp wrappers.
 - `functions_declared.py` — FNP-15/16 declared-absent refusals (unreachable / deferred-by-cost).
   Installed onto `functions.py` after `__all__` so the sql.functions re-export sees them.
@@ -48,6 +50,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `log(1+col)` / `exp(col)-1`.
   pins: sem-1-spark-answer-parity/C-006
   pins: log1p-1-precise-kernels/C-002
+  **FN-FIX-1 (2026-09-03):** `sha2` hex string + bit lengths; `array_sort` vs
+  `sort_array`; `percentile_approx` discrete type.
+  pins: fn-fix-1-registry-rows/C-002
 - `functions_lambda.py` — higher-order function and lambda builders. FNP-4c adds
   `transform`, `filter`, `forall`, `aggregate`, `reduce`, `zip_with`, `transform_keys`,
   `transform_values`, `map_filter`, `map_zip_with` (installed onto `functions.py` `__all__`).

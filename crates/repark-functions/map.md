@@ -27,7 +27,8 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   `group_avg_decimal32_stays_decimal_9_6_i32`,
   `group_avg_decimal64_stays_decimal_14_6_i64`,
   `group_avg_decimal256_stays_decimal_14_6_i256`.
-  Q1 unit test: `percentile_approx_sql_aliases_resolve` pins Spark SQL aliases.
+  FN-FIX-1 unit test: `percentile_approx_sql_aliases_resolve` pins Spark SQL aliases
+  on the discrete UDAF. pins: fn-fix-1-registry-rows/C-002
 
 - `Cargo.toml` — package; depends on `datafusion` + `datafusion-spark` + `arrow` + `chrono`.
   DataFusion-native: speaks `datafusion::error::Result`, so **no** `repark-core` dep.
@@ -55,8 +56,8 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
 - `src/higher_order/` — FNP-4c kernels on the FNP-4a shared table. See
   [src/higher_order/map.md](src/higher_order/map.md).
 - `src/lib.rs` — `register_all(ctx)` (datafusion-spark's full set, then the shims — later
-  registration wins) + **Q1** `approx_percentile_cont` re-registered with aliases
-  `percentile_approx` / `approx_percentile` via `AggregateUDF::with_aliases` +
+  registration wins) + **FN-FIX-1** `percentile_approx` / `approx_percentile` discrete UDAF
+  (`percentile_approx_udaf` with alias); `approx_percentile_cont` stays the t-digest name for ML +
   `spark_date_shim_functions()` + `analyzer_rules()` (`SparkDecimalPrecision` first, then
   `SparkDecimalRewrite` (U4b `/` + DEC-6), then `SparkIntegerOverflow` (F-Y10-1), then
   `SparkExprSemantics` + cardinality + instant_ts; installed by the session on every
