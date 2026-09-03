@@ -38,6 +38,10 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
 - [broadcast.py](broadcast.py) — `F.broadcast`, the join hint (single-node no-op in repark, python/repark/src/repark/spark/functions_session.py:49-56), checked to agree with the plain join.
 - [session_context.py](session_context.py) — `F.current_catalog`, `F.current_database` and `F.current_schema` on a two-row frame.
 
+- [map_parts.py](map_parts.py) — `F.map_keys`, `F.map_values`, `F.map_entries`,
+- [map_shapes.py](map_shapes.py) — `F.map_from_arrays`, `F.map_from_entries`,
+- [map_higher_order.py](map_higher_order.py) — `F.transform_keys`,
+- [structs.py](structs.py) — `F.struct` and `F.named_struct`: fields by column and
 ## Pointers
 
 - Up: [../map.md](../map.md)

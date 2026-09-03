@@ -1,5 +1,11 @@
 # map — scripts/
 
+EX-9 (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE` 809 → 797 — twelve
+`F.*` map and struct names covered by four new examples (`map_parts.py`, `map_shapes.py`,
+`map_higher_order.py`, `structs.py`); the batch's other 24 roster names (json_tuple, csv,
+xml, xpath, variant) are measured on the live oracle and stay backlog rows — the engine
+refuses each (E1-disclosed deferrals). pins: ex-9-functions-maps-structs-json/C-001
+
 EX-10 (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE` 842 → 809 —
 33 `F.*` null-handling, conditional, ordering, bit and session names covered by
 seven new examples; the 12 names the live oracle measured divergent or refused
