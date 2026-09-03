@@ -1356,6 +1356,19 @@ the pin rather than obeying it.
 - **Pin** — `python/repark/tests/test_functions_gt2.py::test_ansi_pair_is_null_not_a_raise`
 - **Rationale** — BACKLOG, same class and same rationale as FN-1.
 
+### FN-ISNAN-1 — `isnan(NULL)` is NULL where Spark is false
+
+- **repark** — `isnan(CAST(NULL AS DOUBLE))` on `[1.0, NULL]` yields `[False, None]`
+  (nullable `bool`); lowers to DataFusion `isnan`, which null-propagates.
+  `crates/repark-python/src/column/function_dispatch.rs:282`.
+- **Apache Spark** — `isnan(CAST(NULL AS DOUBLE))` on `[1.0, NULL]` yields
+  `[False, False]` (non-nullable `bool`, Spark `IsNaN`); NULL is not NaN.
+  *(oracle: live — PySpark 4.1.2, `local[1]`, ANSI on, 2026-09-03.)*
+- **Pin** — `python/repark/tests/test_fn_batch1.py::test_isnan_null_divergence_is_pinned`
+- **Rationale** — BACKLOG, silently wrong divergence. `isnan` on a nullable
+  double is nullability-sensitive; Spark's `IsNaN` is non-nullable. The fix
+  flips the pin to `[False, False]`.
+
 
 ### G6-3 — DATE→INT: Spark refuses; repark yields days-since-epoch
 

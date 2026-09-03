@@ -160,3 +160,12 @@ def test_null_arg_propagation_lower(spark: ReparkSession) -> None:
     frame = spark.sql("SELECT CAST(NULL AS VARCHAR) AS s")
     val = frame.select(lower("s").alias("v")).to_arrow().to_pylist()[0]["v"]
     assert val is None
+
+
+def test_isnan_null_divergence_is_pinned(spark: ReparkSession) -> None:
+    """Pin repark's current isnan(NULL) divergence — Spark is False, repark is NULL."""
+    frame = spark.createDataFrame([(1.0,), (None,)], ["x"])
+    values = [row["v"] for row in frame.select(isnan("x").alias("v")).collect()]
+    assert values == [False, None]
+    tbl = frame.select(isnan("x").alias("v")).to_arrow()
+    assert tbl.schema.field("v").nullable is True
