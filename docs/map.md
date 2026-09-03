@@ -104,6 +104,12 @@ repo.
   setup, bootstrap-token revocation, the structural crates.io deferral, what the first tags
   settled, and the still-open items. Which versions shipped is [../STATUS.md](../STATUS.md);
   the cut-a-tag runbook is [../.agents/skills/publish-pypi/SKILL.md](../.agents/skills/publish-pypi/SKILL.md).
+  **API-FREEZE (2026-09-02):** the "Cadence … unwritten" open item is replaced by "Versioning
+  policy" — the owner's four-column rule table (additive-only within a major; a breaking change
+  to a frozen row needs a major version and a one-minor deprecation shim; an unfrozen row may
+  change at any minor with a changelog line) naming
+  [design/v1-0-api-freeze.json](design/v1-0-api-freeze.json) as the frozen-surface register.
+  pins: api-freeze/C-002
 
 ## I want to...
 
