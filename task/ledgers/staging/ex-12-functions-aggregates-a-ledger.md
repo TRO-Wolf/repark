@@ -140,7 +140,7 @@ Remediation-tree gates, all exit **0**: coverage static + `--require-execute` (`
 
 Counts line (both legs identical; every example executed, every module door's live `__all__` matched):
 
-`example-coverage: 913 public names (catalog=28, column=40, dataframe=150, functions=444, io=42, ml=28, session=41, ta=86, types=32, window=22); 96 covered; 815 backlog; 2 exceptions; 23 examples`
+`example-coverage: 913 public names (catalog=28, column=40, dataframe=150, functions=444, io=42, ml=28, session=41, ta=86, types=32, window=22); 215 covered; 696 backlog; 2 exceptions; 52 examples`
 
 Before: `69 covered; 842 backlog; 15 examples`. After: `96 covered (+27); 815 backlog (-27); 23 examples (+8)`.
 

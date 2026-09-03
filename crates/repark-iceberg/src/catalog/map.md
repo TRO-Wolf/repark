@@ -42,14 +42,22 @@ Source comments retain only API and safety contracts; implementation narration i
   `s3://`/`s3a://` → the fork's OpenDAL S3 factory; `file://`/bare **absolute** path → LocalFs;
   anything else — unknown scheme, single-slash typo `s3:/…`, relative/empty path — fails loud,
   never a silent LocalFs).
-- `lineage_columns.rs` — **V3-4:** `LineageColumnsTableProvider` serves `_row_id` and
+- `lineage_columns.rs` — **V3-COV (2026-09-03):** the scan resolves its field→column projection
+  once per batch schema (cached on `Arc::ptr_eq`) instead of a name scan per field per batch, and
+  `conform_batch` strict-casts a scanned column
+  whose Arrow type differs from the declared field's, so a `_row_id` projection after a widening
+  `ALTER COLUMN … TYPE` returns rows instead of raising
+  `lineage scan could not rebuild batch`; the ordinary read path already promoted, so the same
+  table answered one query and failed its sibling. Registry `V3-COV-2` FIXED.
+  pins: v3-cov-statement-coverage/C-004
+  **V3-4:** `LineageColumnsTableProvider` serves `_row_id` and
   `_last_updated_sequence_number` on format-v3 **current-snapshot** reads (stored value
   else `first_row_id +` position / file sequence). Simple `col = lit` filters pass through
   to `table.scan().with_filter` (`TableProviderFilterPushDown::Inexact` residual still
   applies). Time-travel plus lineage is `V3-ROWID-2` at the SQL rewrite; snapshot-pinned
   scan is the follow-up. `SELECT *` stays user columns because the SQL doors only register
   this provider when a query names the columns.
-  pins: v3-4-serve-lineage-columns/C-002, C-017, C-019, C-020
+  pins: v3-4-serve-lineage-columns/C-002, C-017, C-019, C-020 V3-COV pins in this file: a scan column left behind by a widening ALTER promotes instead of failing (V3-COV-2); the projection is resolved once per scan schema and reused for every batch; a scan that lost a lineage column names it rather than rebuilding a short batch.
 - `metadata_projection.rs` — **retired at RP-5** (fork F-8 / R169 / R170). The fork honors
   metadata-table `projection` and lists catalog entries only. Pins remain in
   `crates/repark-spark/src/tests/metadata_tables.rs`.

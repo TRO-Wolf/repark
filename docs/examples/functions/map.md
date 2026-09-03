@@ -63,6 +63,12 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
 - [random_values.py](random_values.py) — `F.uuid`, `F.rand`, `F.randn`,
 - [url.py](url.py) — the URL codec round trip and `F.parse_url` part
 - [try_fallbacks.py](try_fallbacks.py) — `F.try_mod` by zero and
+- [epoch.py](epoch.py) — the epoch conversions: `F.unix_date`, `F.unix_seconds`,
+- [timestamp_from_epoch.py](timestamp_from_epoch.py) — `F.timestamp_seconds`,
+- [to_date_timestamp.py](to_date_timestamp.py) — `F.to_date` / `F.to_timestamp` parse
+- [make_calendar.py](make_calendar.py) — `F.make_date` builds a date from year/month/day
+- [utc_offsets.py](utc_offsets.py) — `F.from_utc_timestamp` / `F.to_utc_timestamp` render
+- [partition_transforms.py](partition_transforms.py) — the partition transforms `F.years`,
 - [summarize.py](summarize.py) — `F.count` / `F.count("*")`, `F.sum`, `F.avg` /
 - [counting.py](counting.py) — `F.count_if` counts true rows only,
 - [first_last.py](first_last.py) — `F.first` / `F.last` over an explicitly

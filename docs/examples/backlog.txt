@@ -260,7 +260,6 @@ F.bitmap_bit_position
 F.bitmap_bucket_number
 F.bitmap_count
 F.btrim
-F.bucket
 F.char
 F.char_length
 F.character_length
@@ -277,12 +276,10 @@ F.currentDate
 F.currentTimestamp
 F.current_date
 F.current_timestamp
-F.current_timezone
 F.current_user
 F.date_add
 F.date_diff
 F.date_format
-F.date_from_unix_date
 F.date_part
 F.date_sub
 F.date_trunc
@@ -294,7 +291,6 @@ F.dayname
 F.dayofmonth
 F.dayofweek
 F.dayofyear
-F.days
 F.decode
 F.dense_rank
 F.elt
@@ -307,8 +303,6 @@ F.flatten
 F.format_number
 F.format_string
 F.from_csv
-F.from_unixtime
-F.from_utc_timestamp
 F.from_xml
 F.hash
 F.hll_sketch_agg
@@ -362,8 +356,6 @@ F.locate
 F.lower
 F.lpad
 F.ltrim
-F.make_date
-F.make_dt_interval
 F.make_interval
 F.make_timestamp
 F.make_valid_utf8
@@ -373,7 +365,6 @@ F.mode
 F.monotonically_increasing_id
 F.month
 F.monthname
-F.months
 F.months_between
 F.next_day
 F.now
@@ -454,14 +445,8 @@ F.theta_sketch_agg
 F.theta_sketch_estimate
 F.theta_union
 F.theta_union_agg
-F.timestamp_micros
-F.timestamp_millis
-F.timestamp_seconds
 F.to_csv
-F.to_date
-F.to_timestamp
 F.to_unix_timestamp
-F.to_utc_timestamp
 F.to_variant_object
 F.to_xml
 F.translate
@@ -469,7 +454,6 @@ F.trim
 F.trunc
 F.try_parse_json
 F.try_reflect
-F.try_to_date
 F.try_to_time
 F.try_to_timestamp
 F.try_validate_utf8
@@ -479,10 +463,6 @@ F.udf
 F.udtf
 F.unbase64
 F.uniform
-F.unix_date
-F.unix_micros
-F.unix_millis
-F.unix_seconds
 F.unix_timestamp
 F.unwrap_udt
 F.upper
@@ -505,7 +485,6 @@ F.xpath_number
 F.xpath_short
 F.xpath_string
 F.year
-F.years
 GroupedData.agg
 GroupedData.applyInPandas
 GroupedData.apply_in_pandas

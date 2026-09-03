@@ -5,6 +5,7 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use datafusion::arrow::compute::{CastOptions, cast_with_options};
 use datafusion::arrow::datatypes::{DataType, Field, Schema, SchemaRef};
 use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::catalog::Session;
@@ -233,24 +234,146 @@ async fn scan_lineage_batches(
         .map_err(iceberg_to_datafusion)?
         .map_err(iceberg_to_datafusion);
     let schema_for_map = Arc::clone(&schema);
-    let conformed =
-        inner.and_then(move |batch| futures::future::ready(conform_batch(&batch, &schema_for_map)));
+    let mut projection: Option<(SchemaRef, Vec<usize>)> = None;
+    let conformed = inner.and_then(move |batch| {
+        futures::future::ready(conform_batch(&batch, &schema_for_map, &mut projection))
+    });
     Ok(Box::pin(RecordBatchStreamAdapter::new(schema, conformed)))
 }
 
-fn conform_batch(batch: &RecordBatch, schema: &SchemaRef) -> Result<RecordBatch> {
+fn resolve_projection(batch: &RecordBatch, schema: &SchemaRef) -> Result<Vec<usize>> {
+    let batch_schema = batch.schema();
+    let by_name: HashMap<&str, usize> = batch_schema
+        .fields()
+        .iter()
+        .enumerate()
+        .map(|(index, field)| (field.name().as_str(), index))
+        .collect();
+    schema
+        .fields()
+        .iter()
+        .map(|field| {
+            by_name.get(field.name().as_str()).copied().ok_or_else(|| {
+                DataFusionError::Internal(format!(
+                    "lineage scan missing column '{}' in {:?}",
+                    field.name(),
+                    batch.schema()
+                ))
+            })
+        })
+        .collect()
+}
+
+fn conform_batch(
+    batch: &RecordBatch,
+    schema: &SchemaRef,
+    projection: &mut Option<(SchemaRef, Vec<usize>)>,
+) -> Result<RecordBatch> {
+    let batch_schema = batch.schema();
+    let cached = match projection {
+        Some((cached_schema, indices)) if Arc::ptr_eq(cached_schema, &batch_schema) => indices,
+        _ => {
+            let indices = resolve_projection(batch, schema)?;
+            &projection.insert((Arc::clone(&batch_schema), indices)).1
+        }
+    };
     let mut columns = Vec::with_capacity(schema.fields().len());
-    for field in schema.fields() {
-        let column = batch.column_by_name(field.name()).cloned().ok_or_else(|| {
-            DataFusionError::Internal(format!(
-                "lineage scan missing column '{}' in {:?}",
-                field.name(),
-                batch.schema()
-            ))
-        })?;
-        columns.push(column);
+    for (field, index) in schema.fields().iter().zip(cached.iter()) {
+        let column = batch.column(*index);
+        if column.data_type() == field.data_type() {
+            columns.push(Arc::clone(column));
+            continue;
+        }
+        columns.push(cast_with_options(
+            column,
+            field.data_type(),
+            &CastOptions {
+                safe: false,
+                ..CastOptions::default()
+            },
+        )?);
     }
     RecordBatch::try_new(Arc::clone(schema), columns).map_err(|error| {
         DataFusionError::Internal(format!("lineage scan could not rebuild batch: {error}"))
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use datafusion::arrow::array::{ArrayRef, Int32Array, Int64Array};
+
+    fn batch(values: Int32Array) -> RecordBatch {
+        let schema = Arc::new(Schema::new(vec![
+            Field::new("id", DataType::Int32, true),
+            Field::new("_row_id", DataType::Int64, true),
+        ]));
+        let ids: ArrayRef = Arc::new(values);
+        let row_ids: ArrayRef = Arc::new(Int64Array::from(vec![0_i64, 1]));
+        RecordBatch::try_new(schema, vec![ids, row_ids]).expect("batch")
+    }
+
+    fn promoted_schema() -> SchemaRef {
+        Arc::new(Schema::new(vec![
+            Field::new("id", DataType::Int64, true),
+            Field::new("_row_id", DataType::Int64, true),
+        ]))
+    }
+
+    #[test]
+    fn conform_batch_promotes_a_narrower_scan_column_to_the_declared_type() {
+        let source = batch(Int32Array::from(vec![7_i32, 8]));
+        let schema = promoted_schema();
+        let mut projection = None;
+        let conformed = conform_batch(&source, &schema, &mut projection).expect("promotes");
+        assert_eq!(conformed.schema(), schema);
+        let ids = conformed
+            .column(0)
+            .as_any()
+            .downcast_ref::<Int64Array>()
+            .expect("int64 output");
+        assert_eq!(ids.value(0), 7);
+        assert_eq!(ids.value(1), 8);
+    }
+
+    #[test]
+    fn conform_batch_reuses_the_projection_across_batches_of_one_schema() {
+        let schema = promoted_schema();
+        let mut projection = None;
+        conform_batch(
+            &batch(Int32Array::from(vec![1_i32, 2])),
+            &schema,
+            &mut projection,
+        )
+        .expect("first");
+        let (_, indices) = projection.clone().expect("cached");
+        assert_eq!(indices, vec![0, 1]);
+        conform_batch(
+            &batch(Int32Array::from(vec![3_i32, 4])),
+            &schema,
+            &mut projection,
+        )
+        .expect("second");
+        assert_eq!(projection.expect("still cached").1, indices);
+    }
+
+    #[test]
+    fn conform_batch_names_a_column_the_scan_did_not_return() {
+        let schema = Arc::new(Schema::new(vec![Field::new(
+            "_last_updated_sequence_number",
+            DataType::Int64,
+            true,
+        )]));
+        let mut projection = None;
+        let error = conform_batch(
+            &batch(Int32Array::from(vec![1_i32, 2])),
+            &schema,
+            &mut projection,
+        )
+        .expect_err("missing column");
+        assert!(
+            error.to_string().contains("_last_updated_sequence_number"),
+            "{error}"
+        );
+    }
 }

@@ -1,5 +1,12 @@
 # map — scripts/
 
+EX-12 batch (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE` 723 → 696 as merged
+(842 → 815 at dispatch) — 27 `F.*` aggregate names covered by eight new examples; `F.mode`
+(engine refuses), `F.approx_percentile` and `F.percentile_approx` (Spark is exact here — the
+discrete value as bigint; repark returns the interpolated median as double) stay on the
+backlog with both oracle values recorded.
+pins: ex-12-functions-aggregates-a/C-001
+
 EX-9 (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE` 809 → 797 — twelve
 `F.*` map and struct names covered by four new examples (`map_parts.py`, `map_shapes.py`,
 `map_higher_order.py`, `structs.py`); the batch's other 24 roster names (json_tuple, csv,
