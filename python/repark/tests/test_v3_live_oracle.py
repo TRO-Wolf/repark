@@ -404,15 +404,15 @@ def _assert_delete_files_live_against_spark(part_meta: str, eq_meta: str) -> Non
     assert ICEBERG_SPARK_RUNTIME_GAV == "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0"
 
 
-def test_partitioned_dv_update_commits_and_rewrite_still_refuses(tmp_path: Path) -> None:
-    """Partitioned-DV UPDATE keeps `_row_id` and bumps seq; rewrite_position_delete_files refuses.
+def test_partitioned_dv_update_commits_and_rewrite_returns_zeros(tmp_path: Path) -> None:
+    """Partitioned-DV UPDATE keeps `_row_id` and bumps seq; rewrite returns zeros.
 
     pins: v3e-5-nightly-v3-oracle/C-008
     pins: rp-3-fork-repin/C-004, C-011
     pins: rp-6-fork-repin/C-003
+    pins: b-mor-3-rewrite-position-deletes-v3/C-003
     """
     from repark import ReparkSession
-    from repark.errors import UnsupportedOperationException
 
     session = ReparkSession.builder.appName("v3e-5-bmor3-control").getOrCreate()
     try:
@@ -442,12 +442,13 @@ def test_partitioned_dv_update_commits_and_rewrite_still_refuses(tmp_path: Path)
             ) == [(1, 0, 3), (3, 2, 1), (4, 3, 1), (6, 5, 1)]
             after_update_objects = _objects_under(_PART_DV_DEST)
             assert after_update_objects != before_objects
-            with pytest.raises(UnsupportedOperationException, match="Puffin deletion vector"):
-                session.sql(
-                    "CALL ice.system.rewrite_position_delete_files(table => 'sales.partdv')"
-                ).collect()
-            refused = session.sql("SELECT id, name, part FROM ice.sales.partdv").to_arrow()
-            assert _id_name_part_rows(refused) == updated_rows
+            rpdf = session.sql(
+                "CALL ice.system.rewrite_position_delete_files(table => 'sales.partdv')"
+            ).to_arrow()
+            assert rpdf.column("rewritten_delete_files_count")[0].as_py() == 0
+            assert rpdf.column("added_delete_files_count")[0].as_py() == 0
+            after_rpdf = session.sql("SELECT id, name, part FROM ice.sales.partdv").to_arrow()
+            assert _id_name_part_rows(after_rpdf) == updated_rows
             assert _objects_under(_PART_DV_DEST) == after_update_objects
             session.sql("DELETE FROM ice.sales.partdv WHERE id = 1").collect()
             live = session.sql("SELECT id, name, part FROM ice.sales.partdv").to_arrow()

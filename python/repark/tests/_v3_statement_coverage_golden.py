@@ -87,7 +87,7 @@ VERDICTS: dict[str, str] = {
     "call-remove-orphan-files": "EQUAL",
     "call-rewrite-data-files": "EQUAL",
     "call-rewrite-manifests": "EQUAL",
-    "call-rewrite-position-delete-files": "DIVERGES",
+    "call-rewrite-position-delete-files": "EQUAL",
     "call-rollback-to-snapshot": "EQUAL",
     "call-register-table": "EQUAL",
 }
