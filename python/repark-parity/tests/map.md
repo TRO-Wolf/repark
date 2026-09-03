@@ -67,6 +67,26 @@ JVM, no repark required). See [../map.md](../map.md).
   recommendation follows one stated rule set, and whose §5 quotes what a `yes` would bind — the
   gate paragraph itself is untouched by that unit
   (pins: api-review-packet/C-001, C-002, C-003, C-004, C-005).
+  **API-FREEZE (2026-09-02):** that same gate paragraph now carries one appended line — "API
+  review answered 2026-09-02 (packet); the freeze lands with the tag" — and this pin stayed green
+  across it. pins: api-freeze/C-002
+- `test_api_freeze.py` — **API-FREEZE (2026-09-02):** the v1.0 freeze pin. Holds three things
+  at once: every packet row's `decision` equals its `recommend` (15 YES / 15 YES-except / 5 NO,
+  dated 2026-09-02, the owner's rule sentence byte-equal in packet, inventory and
+  `docs/release.md`); the checked-in register
+  [../../../docs/design/v1-0-api-freeze.json](../../../docs/design/v1-0-api-freeze.json) equals a
+  fresh `scripts/build_api_freeze.py` build of the tree, so an unrecorded surface move is red; and
+  the additive rule holds in both directions. Ten mutations over a scratch copy of the enumerated
+  sources — **8 red** (a frozen member's `def` renamed private; a frozen callable's required
+  parameter renamed; a door surface flipped Tested → `absent`; a frozen conf-key literal, error
+  class or packaging literal dropped; a packet decision that stops equalling its recommendation; a
+  surface id that no packet row claims) and **2 green by design** (a new public member, a new
+  optional parameter). The five `NO` rows carry `frozen: false` and no member, so nothing about
+  them is checked. Regenerating the register is the sanctioned move for an intended additive
+  change: `python3 scripts/build_api_freeze.py --write`, in the same commit.
+  The unit's docs half rides the same file: the release policy section, the discharged facade
+  ruling, the north-star line and the STATUS line are each asserted here, so a docs rollback
+  is red. (pins: api-freeze/C-001, C-002, C-003, C-004)
 - `test_pr_247_owner_ruling.py` — **PR #247 revalidation (2026-08-27):** the owner-ruling blocks
   in `AGENTS.md` and `CLAUDE.md` stay byte-exact, unique, at the document start, and in regular
   files; one-byte drift, malformed or missing files, relocation, duplication, and symlink

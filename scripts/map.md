@@ -1,5 +1,14 @@
 # map — scripts/
 
+API-FREEZE (2026-09-02): `build_api_freeze.py` is new — it reads the answered API-review packet
+and the tree (the `check_example_coverage.py` enumerator for public Python names and their
+required parameters, `repark_common::surfaces::ALL` plus both door matrices, the conf-key
+constants, `repark.errors.__all__`, the two `pyproject.toml`/`Cargo.toml` packaging facts) and
+writes `docs/design/v1-0-api-freeze.json`, the frozen-surface register. `--write` regenerates;
+bare invocation checks the tree against the checked-in file. The register is pinned by
+`python/repark-parity/tests/test_api_freeze.py`, so `make py-test` is the gate; regenerate in the
+same commit as any intended additive change. pins: api-freeze/C-003
+
 EX-3 batch 2 (2026-09-02): `check_example_coverage.py` `BACKLOG_BASELINE` 881 → 844 —
 37 `F.*` trig, log, rounding and try-arithmetic names covered by six new examples;
 `F.log1p` measured divergent against the live oracle at `x = 1e-10` and `x = 1e-13` and kept on the
