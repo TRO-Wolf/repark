@@ -2790,10 +2790,11 @@ the pin rather than obeying it.
   `crates/repark-iceberg/src/write/merge/dv_close.rs::shared_puffin_row_delta_keeps_the_untouched_sibling`
   keeps the semantic assertion and gains the layout one;
   `dv_close.rs::a_supplied_partition_map_closes_a_fresh_partitioned_delete_with_no_data_manifest`
-  holds the manifest-read budget for a fresh PARTITIONED delete, and
+  holds the manifest-read budget for a fresh PARTITIONED delete (RP-9 restored the F-18 skip at
+  pin `594bdbe5`), and
   `merge/tests/partition_sink.rs::the_target_scan_records_every_planned_file_partition` holds the
-  scan side of it; `dv_close.rs::closing_a_covered_v3_delete_reads_no_data_manifest` records the
-  fork's own laziness for an already-covered path. Live cell
+  scan side of it; `dv_close.rs::closing_a_covered_v3_delete_reads_the_data_manifest_for_sequence_numbers`
+  records that an empty map still walks. Live cell
   `python/repark/tests/test_v3_dv_container_close.py::test_v3_shared_puffin_container_close_live`.
 - **Rationale** — FIXED. The packing lived in the fork and was fixed there (F-18); RePark
   consumed it in repin **RP-7**, re-aimed the narrowed V3-9 pin at Spark's exact layout, and
@@ -3602,18 +3603,23 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 
 ---
 
-- **PERF-DVCLOSE-WALK-1** — surfaced 2026-09-03, RP-8 Rust perf review. At pin `c1d6c9de` the
-  fork's DV container close walks every data manifest of the scanned snapshot on every MoR
-  DELETE/UPDATE/MERGE, including the pure-DV path with no legacy delete and a complete partition
-  map (F-22 reversed F-18's conditional walk to fill `data_sequence_numbers`, which this engine
-  never reads). Measured on a pure-DV v3 MoR table, debug profile, local ext4, medians of five:
-  statement wall at 192 data manifests 1.646 s → 2.286 s (+39 %, ~3.3 ms per data manifest);
-  48 manifests +9.9 %; 8 manifests within noise; `strace` shows each data manifest opened three
-  times per statement where two sufficed before. Partitioned INSERT at 1e6 rows / 8 partitions
-  and 1e5 rows / 5k partitions is unchanged by the F-20 drain. No pin yet (the walk-cost cell is
-  an `#[ignore]`d measurement); fork TRIGGER F-23: skip `collect_live_data_files` when no legacy
-  delete is pending and `known_partitions` covers every touched path, and stop the stream once
-  every wanted path is found; RP-9 repins. Full record: the RP-8 ledger, ERRATA E-4.
+- **PERF-DVCLOSE-WALK-1** — **FIXED 2026-09-03 (RP-9)** at pin `594bdbe5` (fork F-23). The close
+  skips the data-manifest walk when there are no legacy deletes and `known_partitions` covers
+  every touched path; `data_sequence_numbers` is empty then. Pin:
+  `dv_close.rs::a_supplied_partition_map_closes_a_fresh_partitioned_delete_with_no_data_manifest`
+  (hide succeeds, map empty);
+  `dv_close.rs::a_legacy_delete_fills_data_sequence_numbers_even_with_a_complete_partition_map`
+  (legacy still walks, map total). Statement wall, this clone, debug, three runs, medians:
+
+  | data manifests | before `c1d6c9de` (RP-8) | after `594bdbe5` (RP-9) |
+  |---|---|---|
+  | 8 | 491 / 142 / 1587 ms (med 491) | 145 / 144 / 143 ms (med 144) |
+  | 48 | 709 / 703 / 924 ms (med 709) | 751 / 697 / 711 ms (med 711) |
+  | 192 | 2.729 / 4.609 / 2.750 s (med 2.750) | 2.710 / 2.666 / 2.712 s (med 2.710) |
+
+  The statement wall at 48 and 192 stays inside run-to-run noise (E-4: do not CI-pin a wall-clock).
+  The load-bearing close is the zero-manifest pin. Fork close-only (debug): 29.7 / 185 / 713 ms →
+  1.2 / 1.7 / 3.9 ms. Full record: the RP-9 ledger; RP-8 E-4 closed.
 - **FN-NTHVALUE-IGNORENULLS-1** — surfaced 2026-09-03, EX-14 review. The facade `F.nth_value`
   takes `(col, offset)` only; PySpark 4.1.2's `nth_value(col, offset, ignoreNulls=False)` third
   arm raises `TypeError: nth_value() takes 2 positional arguments but 3 were given` here. Measured

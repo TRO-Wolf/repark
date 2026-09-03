@@ -70,8 +70,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   329/332/315 ms after, 48 manifests 1.522/1.489/1.459 s against 1.459/1.479/1.451 s: **no
   measurable change**, because the delete-manifest walk RePark stopped making is paid back by
   F-22's always-on data-manifest walk. It is not a wall-clock CI pin.
+  **RP-9 (2026-09-03):** `measure_pure_dv_close_cost` is the `#[ignore]`d pure-DV cell (N data
+  manifests, 0 legacy deletes, production `DELETE` so the scan supplies a complete map) at 8 /
+  48 / 192. Statement-wall medians in the RP-9 ledger; no wall-clock CI pin. The skip itself is
+  the hide-and-succeed pin in `dv_close.rs`.
   pins: v3-12-legacy-delete-merge/C-001, C-002, C-003, C-004, C-005, C-006, C-007
   pins: rp-8-repin-f21-f22/C-002, C-003
+  pins: rp-9-repin-f23/C-003
 - `v3_row_order.rs` — **V3-11 (2026-09-02):** same-commit data-file order. The ten-run pin
   `mor_merge_insert_takes_sparks_row_id_in_ten_consecutive_runs` replays the LIVE-v3 sequence
   ten times and requires Spark's exact `_row_id = 11` each time (it read 10 or 11 at random

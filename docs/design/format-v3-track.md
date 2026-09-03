@@ -301,6 +301,8 @@ closing `F-v3-10-partition-file-order`, and `DvContainerClose::retained_referenc
   the legacy-delete collect, merge and file-scoped removal in one delete-manifest pass and an
   ascending `FanoutWriter` drain; `V3-UPGRADE-DV-PLAIN-1`, `V3-UPGRADE-DV-PART-1` and
   `F-v3-10-partition-file-order` FIXED, `legacy_deletes.rs` deleted.
+- **RP-9:** *Done 2026-09-03.* Pin `594bdbe5` (fork F-23) skips the data-manifest walk on the
+  pure-DV path when `known_partitions` is complete; `PERF-DVCLOSE-WALK-1` FIXED.
 
   The original scope note: V3-6 may
   run in parallel with V3-3 or V3-4 after its fork type support is pinned; it does not wait for

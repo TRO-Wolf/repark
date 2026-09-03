@@ -139,6 +139,8 @@ JVM, no repark required). See [../map.md](../map.md).
   it moves with the repin — the north star's "Fork side, at the consumed pin" heading and
   `Cargo.toml` both name `c1d6c9de`, and R114's dated cell names F-21 and F-22.
   pins: rp-8-repin-f21-f22/C-006
+  **RP-9 (2026-09-03):** the same meta-pin moves to `594bdbe5`; R114's dated cell names F-23.
+  pins: rp-9-repin-f23/C-004
   Two neighbouring meta-pins were repointed when V3-11 compacted STATUS:
   `test_plan_1_northstar_fnp_sequence.py` reads the shortened V3-6 sentence, and
   `test_v3r_1_rulings.py` reads `F-rp3-c7 consumed` from the north-star COW row — the

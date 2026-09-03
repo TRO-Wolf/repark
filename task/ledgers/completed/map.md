@@ -34,6 +34,7 @@ else. The next pickup's `make ledger-archive` files everything here under
   `write/merge/dv_close/legacy_deletes.rs` (493 lines) is deleted; `V3-UPGRADE-DV-PLAIN-1`,
   `V3-UPGRADE-DV-PART-1`, `F-v3-10-partition-file-order` and `V3-COV-3` all FIXED at Spark's
   measured values; `V3-FILEORDER-1` stays DECLARED and widens to the fork's `INSERT INTO` path.
+  E-4 closed by RP-9 2026-09-03 at pin `594bdbe5`.
   `risk_tier: standard`. Branch `feat/rp-8-repin-f21-f22`.
 
 ## Pointers
