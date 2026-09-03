@@ -19,7 +19,11 @@ def main() -> None:
             [("a", 1, 10), ("a", 2, 20), ("a", 2, 30), ("a", 3, 40), ("b", 1, 50), ("b", 2, None)],
             ["g", "k", "v"],
         )
-        ordered = Window.partitionBy("g").orderBy("k", "v")
+        ordered = (
+            Window.partitionBy("g")
+            .orderBy("k", "v")
+            .rowsBetween(Window.unboundedPreceding, Window.currentRow)
+        )
         rows = (
             frame.select(
                 F.col("g"),

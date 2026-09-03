@@ -30,7 +30,7 @@ The roster is the nine `F.*` window names that were backlog rows at the base `32
 
 | ID | Clause | Proof obligation | Verdict |
 |---|---|---|---|
-| C-001 | Four files under `docs/examples/functions/` land runnable local examples for all nine roster names, every asserted value measured against PySpark 4.1.2 + Iceberg 1.11.0 before it was written; those nine leave `docs/examples/backlog.txt` and `BACKLOG_BASELINE` moves down by exactly nine, 777 → 768, with no other `scripts/` change; no roster name is dropped (the oracle measures all nine Spark-equal, so no backlog row keeps a divergence record); no product file is touched; the gate's static half and its `--require-execute` leg both exit 0. | Red-first capture (9 findings before, 0 after), oracle table (9 rows, one per roster name, Spark value + repark value + kept/dropped + file), the four scripts each exit 0, and the recorded gate exit codes. | **PROVEN** |
+| C-001 | Four files under `docs/examples/functions/` land runnable local examples for all nine roster names, every asserted value measured against PySpark 4.1.2 + Iceberg 1.11.0 before it was written; those nine leave `docs/examples/backlog.txt` and `BACKLOG_BASELINE` moves down by exactly nine, 723 → 714 as merged (777 → 768 at dispatch), with no other `scripts/` change; no roster name is dropped (the oracle measures all nine Spark-equal, so no backlog row keeps a divergence record); no product file is touched; the gate's static half and its `--require-execute` leg both exit 0. | Red-first capture (9 findings before, 0 after), oracle table (9 rows, one per roster name, Spark value + repark value + kept/dropped + file), the four scripts each exit 0, and the recorded gate exit codes. | **PROVEN** |
 
 `LOGIC_SCORE` = **1/1 `PROVEN`**.
 
@@ -78,9 +78,9 @@ The system `python3` in this clone cannot import `repark._native`, so the `--req
 
 Counts line (execute leg; the native module imports, every example executed, every module door's live `__all__` matched):
 
-`example-coverage: 913 public names (catalog=28, column=40, dataframe=150, functions=444, io=42, ml=28, session=41, ta=86, types=32, window=22); 143 covered; 768 backlog; 2 exceptions; 35 examples`
+`example-coverage: 913 public names (catalog=28, column=40, dataframe=150, functions=444, io=42, ml=28, session=41, ta=86, types=32, window=22); 197 covered; 714 backlog; 2 exceptions; 48 examples`
 
-Before this unit: `913 public names; 134 covered; 777 backlog; 2 exceptions; 31 examples` (at `32c7f30`). After: `143 covered; 768 backlog; 35 examples` — exactly the nine kept names.
+Before this unit: `913 public names; 134 covered; 777 backlog; 2 exceptions; 31 examples` (at `32c7f30`). After (as merged on `5f587b8`): `197 covered; 768 backlog; 35 examples` — exactly the nine kept names.
 
 ## Cost
 
@@ -147,3 +147,9 @@ COVERAGE_ATTESTATION:
 - Slate: [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md)
 - Gate: [../../../scripts/check_example_coverage.py](../../../scripts/check_example_coverage.py)
 - Sibling: [ex-11-functions-hash-url-random-ledger.md](ex-11-functions-hash-url-random-ledger.md), [ex-10-functions-null-cond-misc-ledger.md](ex-10-functions-null-cond-misc-ledger.md), [ex-9-functions-maps-structs-json-ledger.md](ex-9-functions-maps-structs-json-ledger.md)
+
+## Parameter-level gap found in review
+
+| Name | repark | Spark 4.1.2 | Disposition |
+|---|---|---|---|
+| `F.nth_value(col, offset, ignoreNulls)` | signature `(col, offset)` — the `ignoreNulls` arm raises `TypeError: nth_value() takes 2 positional arguments but 3 were given` | `nth_value('v', 2, True)` over `rowsBetween(unboundedPreceding, unboundedFollowing)` = `[20, 20, 20, 20, None, None]` (critic-measured, 2026-09-03) | queue entry FN-NTHVALUE-IGNORENULLS-1; the example covers the 2-arg form only |
