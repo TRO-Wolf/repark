@@ -25,6 +25,7 @@ _SURFACE_RESIDUALS = {
     "15 · `rewrite_manifests`": ("MANIFEST-1", "MANIFEST-3"),
     "6 · Write: create v3": ("V3-COV-7", "V3-COV-8"),
     "9 · Write: MoR DML via deletion vectors": ("V3-COV-4",),
+    "13 · Maintain: DV / delete-file maintenance": ("B-MOR-3-FLOOR-1",),
     "no §3 row · sort-order evolution": ("V3-COV-5", "RDF-SORT-1"),
 }
 _AUDIT_ROWS = 20
@@ -34,7 +35,6 @@ _RESIDUAL_ROWS = {
     5: ("ENC-1", "DECLARED exclusion", "2026-08-24"),
     7: ("V3-UPGRADE-V4-1", "DECLARED", "2026-09-02"),
     9: ("V3-FILEORDER-1", "DECLARED", "2026-09-02"),
-    13: ("B-MOR-3", "OD-2", "2026-08-21"),
     17: ("S3T-1", "DECLARED service gap", "2026-08-27"),
 }
 _RESIDUAL_JUSTIFICATIONS = {
@@ -144,7 +144,7 @@ def test_the_unrowed_v1_0_requirement_is_discharged_with_its_measured_totals() -
     assert "Statement coverage measured 2026-09-03" in section
     assert "81 statement programs" in section
     assert "267 comparison cells" in section
-    assert "71 EQUAL" in section
+    assert "72 EQUAL" in section
     assert "audited in the surface-residuals table above" in section
     assert "Nothing in §2 pillar 4 is now owed." in section
     assert "docs/design/v3-statement-coverage.md" in section
@@ -183,8 +183,8 @@ def test_the_three_softened_glyphs_are_now_green_with_their_dated_clause() -> No
     assert "✅ by dated DECLARED exclusion" in encryption and "❌" not in encryption
     assert "ENC-1" in encryption and "2026-08-24" in encryption
     maintenance = _matrix_row("Maintain: DV / delete-file maintenance")
-    assert "✅ by dated DECLARED residual" in maintenance and "⚠" not in maintenance
-    assert "B-MOR-3" in maintenance and "OD-2" in maintenance
+    assert "✅ B-MOR-3 FIXED" in maintenance and "⚠" not in maintenance
+    assert "B-MOR-3-FLOOR-1" in maintenance
 
 
 def test_the_rewrite_manifests_row_records_its_v3_exercise() -> None:
@@ -200,8 +200,8 @@ def test_the_gate_carries_one_dated_audit_line_and_claims_no_tag() -> None:
     north_star = _normalized(_read(_NORTH_STAR))
     assert _normalized(_GATE_OPENING) in north_star
     assert north_star.count("**Audit result (V1-GATE") == 1
-    assert "a one-line ruling confirming `B-MOR-3`'s DECLARED class" in north_star
-    assert "and then the v1.0 tag" in north_star
+    assert "ruled 2026-09-03 BUILD on `B-MOR-3`" in north_star
+    assert "The v1.0 tag is what remains." in north_star
     assert "**V3-COV**" in north_star
     assert "no engineering item remains on this gate" in north_star
     assert "v1.0 is tagged" not in north_star
@@ -212,9 +212,8 @@ def test_the_gate_carries_one_dated_audit_line_and_claims_no_tag() -> None:
 def test_the_two_softest_class_cells_say_exactly_what_the_registry_holds() -> None:
     """C-001: row 13's OD-2 analogy, row 3's queue entry and row 17's undated gap are explicit."""
     thirteen = _audit_row(13)
-    assert "by analogy" in thirteen and "MW-2 ledger, 2026-08-21" in thirteen
-    assert "no DECLARED class marker on the row" in thirteen
-    assert "owner line pending" in thirteen
+    assert "B-MOR-3" in thirteen and "FIXED 2026-09-03" in thirteen
+    assert "owner ruling: build" in thirteen
     three = _audit_row(3)
     assert 'queue** entry under §7 "Surfaced, awaiting pins"' in three
     assert "not a §7 row" in three

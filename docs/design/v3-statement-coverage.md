@@ -17,11 +17,11 @@ seed on 2026-09-03, and every divergence carries a registry row in
 | Statement programs measured | **81** |
 | Statement classes covered | 12 groups (create · insert · delete · update · merge · alter · lifecycle · metadata · lineage · time travel · refs · call) |
 | Comparison cells (statements + probes) | 267 |
-| **EQUAL** — repark and Spark agree on every cell | **71** |
+| **EQUAL** — repark and Spark agree on every cell | **72** |
 | **REFUSED** — both engines refuse the statement | **1** |
-| **DIVERGES** — a registry row | **9** |
+| **DIVERGES** — a registry row | **8** |
 | Registry rows filed by this unit | 6 (`V3-COV-3` **FIXED at RP-8, 2026-09-03** · `V3-COV-4` BACKLOG · `V3-COV-5` BACKLOG · `V3-COV-6` DECLARED · `V3-COV-7` BACKLOG · `V3-COV-8` BACKLOG) |
-| Registry rows an existing row already covers | 3 (`DML-1`, `G3-E8` ×2, `B-MOR-3`) |
+| Registry rows an existing row already covers | 2 (`DML-1`, `G3-E8` ×2); `B-MOR-3` FIXED 2026-09-03 |
 | Defects FIXED inside this unit | 2 (`V3-COV-1`, `V3-COV-2`) |
 | Live runtime, matrix co-collected with the nightly live legs | 1 min 57 s |
 
@@ -128,7 +128,7 @@ seed on 2026-09-03, and every divergence carries a registry row in
 | `call-remove-orphan-files` | call | `CALL cat.system.remove_orphan_files(table => 'ns.t', older_than => TIMESTAMP '2020-01-01 00:00:00')` | flat MoR v3 | 1 | as Spark | as Spark | **EQUAL** | — |
 | `call-rewrite-data-files` | call | `DELETE FROM t WHERE id = 2 · CALL cat.system.rewrite_data_files(table => 'ns.t')` | flat MoR v3 | 3 | as Spark | as Spark | **EQUAL** | — |
 | `call-rewrite-manifests` | call | `CALL cat.system.rewrite_manifests(table => 'ns.t')` | flat MoR v3 | 1 | as Spark | as Spark | **EQUAL** | — |
-| `call-rewrite-position-delete-files` | call | `DELETE FROM t WHERE id = 2 · CALL cat.system.rewrite_position_delete_files(table => 'ns.t')` | flat MoR v3 | 2 | refuses a live Puffin DV | returns `0, 0` | **DIVERGES** | `B-MOR-3` |
+| `call-rewrite-position-delete-files` | call | `DELETE FROM t WHERE id = 2 · CALL cat.system.rewrite_position_delete_files(table => 'ns.t')` | flat MoR v3 | 2 | returns `0, 0` | returns `0, 0` | **EQUAL** | — |
 | `call-rollback-to-snapshot` | call | `DELETE FROM t WHERE id = 2 · CALL cat.system.rollback_to_snapshot(table => 'ns.t', snapshot_id => …)` | flat MoR v3 | 2 | as Spark | as Spark | **EQUAL** | — |
 | `call-register-table` | call | `CALL cat.system.register_table(table => 'ns.t_reg', metadata_file => '…')` | flat MoR v3 | 1 | as Spark | as Spark | **EQUAL** | — |
 ## 4. The divergences, in one place
@@ -137,7 +137,7 @@ seed on 2026-09-03, and every divergence carries a registry row in
 |---|---|---|---|---|
 | `DML-1` | `INSERT OVERWRITE t PARTITION (part) …` | repark replaces only the source partitions; Spark SQL's default `partitionOverwriteMode=STATIC` wipes the table | DECLARED residue on a FIXED row (2026-08-30, DML-B) | repark, deliberate |
 | `G3-E8` | `UPDATE … WHERE col NOT IN (SELECT …)` and `UPDATE … WHERE EXISTS (…)` | repark refuses at the valve; Spark updates the matching rows | DEFECT, partial fix | repark |
-| `B-MOR-3` | `CALL system.rewrite_position_delete_files` | repark refuses over a live Puffin DV; Spark answers four zeros | DECLARED by analogy to OD-2; owner line pending | repark, deliberate |
+| `B-MOR-3` | `CALL system.rewrite_position_delete_files` | **FIXED 2026-09-03** — both engines answer four zeros on a DV-only table | FIXED (owner ruling: build); floor residue `B-MOR-3-FLOOR-1` | — |
 | `V3-COV-3` | partitioned `INSERT INTO` on v3 | `_row_id` was assigned by an unstable data-file order — two permutations across twelve runs | **FIXED (RP-8, 2026-09-03)** — the fork's `FanoutWriter::close` drains ascending, 12 of 12 runs give Spark's mapping | fork `IcebergTableProvider::insert_into` |
 | `V3-COV-4` | `DELETE FROM t WHERE id > 0` (MoR) | repark writes one Puffin DV covering every row and keeps both data files live (`t.files` `[(0, 4), (1, 4)]`); Spark drops the data file and leaves `t.files` and `t.delete_files` empty | BACKLOG | repark |
 | `V3-COV-5` | `ALTER TABLE t WRITE ORDERED BY id` | repark refuses (sort-order evolution outside I7); Spark sets the write order | BACKLOG | repark |

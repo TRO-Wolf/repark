@@ -397,4 +397,7 @@ def test_handoff_f7_records_the_unit_3_ruling() -> None:
     assert "V3-DANGLE-1" in section
     assert "V3-LINEAGE-1" in section
     assert "F-13" in section
-    assert "call_rewrite_position_delete_files_refuses_spark_written_puffin_vectors" in section
+    assert (
+        "call_rewrite_position_delete_files_on_spark_written_puffin_vectors_returns_zeros"
+        in section
+    )

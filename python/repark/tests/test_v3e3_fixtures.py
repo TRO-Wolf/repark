@@ -2,6 +2,7 @@
 
 pins: v3e-3-partitioned-eqdel-fixtures/C-009, C-010
 pins: rp-3-fork-repin/C-004, C-007, C-011
+pins: b-mor-3-rewrite-position-deletes-v3/C-003
 """
 
 from __future__ import annotations
@@ -13,9 +14,6 @@ from contextlib import contextmanager, suppress
 from pathlib import Path
 
 import pyarrow as pa
-import pytest
-
-from repark.errors import UnsupportedOperationException
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _PART_DV_SRC = _REPO_ROOT / "crates/repark-spark/src/tests/fixtures/v3-spark-part-dv"
@@ -106,10 +104,18 @@ def test_facade_partitioned_v3_dv_matches_spark_live_rows(tmp_path: Path) -> Non
             assert _id_name_rows(pruned0) == [(1, "a"), (3, "c")]
             pruned1 = spark.sql("SELECT id, name FROM ice.sales.partdv WHERE part = 1").to_arrow()
             assert _id_name_rows(pruned1) == [(4, "d"), (6, "f")]
-            with pytest.raises(UnsupportedOperationException, match="Puffin deletion vector"):
-                spark.sql(
-                    "CALL ice.system.rewrite_position_delete_files(table => 'sales.partdv')"
-                ).collect()
+            rpdf = spark.sql(
+                "CALL ice.system.rewrite_position_delete_files(table => 'sales.partdv')"
+            ).to_arrow()
+            assert rpdf.column("rewritten_delete_files_count")[0].as_py() == 0
+            assert rpdf.column("added_delete_files_count")[0].as_py() == 0
+            after = spark.sql("SELECT id, name, part FROM ice.sales.partdv").to_arrow()
+            assert _id_name_part_rows(after) == [
+                (1, "a", 0),
+                (3, "c", 0),
+                (4, "d", 1),
+                (6, "f", 1),
+            ]
     finally:
         spark.stop()
 

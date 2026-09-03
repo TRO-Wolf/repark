@@ -30,13 +30,13 @@ _FILED = (
     "V3-COV-7",
     "V3-COV-8",
 )
-_CITED = ("DML-1", "G3-E8", "B-MOR-3")
+_CITED = ("DML-1", "G3-E8")
 _TOTALS = {
     "Statement programs measured": 81,
     "Comparison cells (statements + probes)": 267,
-    "**EQUAL** — repark and Spark agree on every cell": 71,
+    "**EQUAL** — repark and Spark agree on every cell": 72,
     "**REFUSED** — both engines refuse the statement": 1,
-    "**DIVERGES** — a registry row": 9,
+    "**DIVERGES** — a registry row": 8,
 }
 
 
