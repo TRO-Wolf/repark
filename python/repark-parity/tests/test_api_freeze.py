@@ -233,7 +233,7 @@ def test_the_freeze_pointers_are_in_lockstep() -> None:
     assert "API review answered 2026-09-02" in northstar
     status = (_REPO / "STATUS.md").read_text(encoding="utf-8")
     assert "docs/design/v1-0-api-freeze.json" in status
-    assert "the tag waits on the north-star gate" in status
+    assert "north-star gate line V1-GATE wrote the same day" in status
 
 
 @pytest.mark.parametrize("row_id", ["A1", "K6", "L1", "N1", "O1"])
