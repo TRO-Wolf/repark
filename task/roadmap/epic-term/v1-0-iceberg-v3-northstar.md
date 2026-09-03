@@ -68,7 +68,7 @@ Every row means **both SQL doors plus the facade** unless the cell says otherwis
 | Write: COW DML on an adopted v3 table | ✅ V3-8 (2026-09-02): `V3-COW-1` FIXED — subquery-`WHERE` `DELETE … IN` / `NOT IN` / `EXISTS` / `NOT EXISTS` and `UPDATE … IN` keep stored `_row_id` on created and adopted v3 (`IN` delete `(1,0,1),(3,2,1)` next-row-id 5; `NOT IN` `(2,1,1)` next-row-id 4; `UPDATE` `(1,0,1),(2,1,2),(3,2,1)` next-row-id 6); V3-7 lifted MERGE, RP-6 first/second DELETE and UPDATE; F-rp3-c7 consumed as a two-file-seed artefact and F-v3-8-update-files as the one-vs-two-data-file artefact; owner ruling 2026-08-25 discharged | lineage carried per spec | V3-8 |
 | Write/maintain: partitioned v3 | ✅ V3E-3 + RP-3 cells 3–6: partitioned DV DELETE Spark-equal on three doors | compaction proven on partitioned and spec-evolved tables | V3-5 |
 | Maintain: `rewrite_data_files` | ✅ RP-4 lineage Spark-equal (`V3-LINEAGE-1` FIXED); V3-5 DV drop (`V3-DANGLE-1` FIXED, `removed_delete_files_count = 6`); F-3 option half taken | lineage through rewrite; strands no DVs; true `removed_delete_files_count` | done (V3-5) |
-| Maintain: DV / delete-file maintenance | ✅ by dated DECLARED residual — V3-5: DV compact is `rewrite_data_files`; the residual is `B-MOR-3`, the deliberate refusal of `rewrite_position_delete_files` over live DVs under owner decision OD-2 (ruled 2026-08-21, re-measured 2026-09-02: Spark's own answer there is four silent zeros, so zeros cannot mean already-clean) | DV-aware compact via rewrite_data_files; position-delete rewrite still refuses live DVs | V3-5 done / B-MOR-3 stays |
+| Maintain: DV / delete-file maintenance | ✅ B-MOR-3 FIXED 2026-09-03 (owner ruling: build) — DV compact is `rewrite_data_files`; `rewrite_position_delete_files` returns Spark's four zeros on a DV-only table and converts an admitted parquet group to one PUFFIN per data file. Floor residue `B-MOR-3-FLOOR-1` (fork converts below Spark min-input-files=5). OD-2 of record stays orphan-files | DV-aware compact; position-delete rewrite Spark-equal on DV-only and on admitted parquet→DV | B-MOR-3 FIXED / B-MOR-3-FLOOR-1 |
 | Maintain: expiry / orphans on v3 | ✅ V3E-4 (2026-08-25): expire with expirable snapshots (tag-reachable DV snapshot kept, untagged intermediate gone, MW-1 six-column schema); `remove_orphan_files` 24h floor still refuses and leaves a planted orphan. Engine-compared; live Spark triple is V3E-5 | stays + live leg | evidence (intake) |
 | Maintain: `rewrite_manifests` | ✅ wired on v2 (MW-6, [#230](https://github.com/TRO-Wolf/repark/pull/230); rows MANIFEST-1/2/3) and **exercised on v3 by SCALE-v3 (2026-09-02)** — merge-on-read leg 59 manifests → 1 (0.3 s, manifest list 10,466 → 1,911 B), copy-on-write leg 10 → 1, inside the full 1e7 x 50 maintenance sequence; the Spark-compared semantics stay MANIFEST-1/2/3, measured on v2 | exercised on v3 | evidence (intake) + SCALE-v3 |
 | Refs + time travel on v3 (rollback, branch/tag DDL, `AS OF` over DVs) | ✅ V3E-4 (2026-08-25): BRANCH/TAG on adopted partitioned-DV v3; `VERSION AS OF` / `FOR VERSION AS OF` over DVs matches V3E-3 Spark live set; `rollback_to_snapshot` restores it. Three doors (native DF N/A) | stays + live leg | evidence (intake) |
@@ -100,7 +100,7 @@ gating.
 | 10 · Write: COW DML on an adopted v3 table | ✅ | every served copy-on-write shape keeps stored `_row_id` (`V3-COW-1` FIXED) | — | — | `crates/repark-spark/src/tests/v3_subquery_dml.rs`, `python/repark/tests/test_v3_cow_dml.py` |
 | 11 · Write/maintain: partitioned v3 | ✅ | partitioned DV DELETE Spark-equal on three doors | — | — | `crates/repark-spark/src/tests/v3e3.rs` |
 | 12 · Maintain: `rewrite_data_files` | ✅ | lineage preserved (`V3-LINEAGE-1`) and scoped DVs dropped with a true `removed_delete_files_count` (`V3-DANGLE-1`) | — | — | `crates/repark-spark/src/tests/call_v3.rs`, `crates/repark-spark/src/tests/call_v3_dv.rs` |
-| 13 · Maintain: DV / delete-file maintenance | ✅ | DV compaction lands through `rewrite_data_files`; `rewrite_position_delete_files` refuses live DVs rather than answering Spark's four silent zeros | that refusal → `B-MOR-3` | DELIBERATE **by analogy** to OD-2 (applied in the MW-2 ledger, 2026-08-21; OD-2 of record is the orphan-files posture); registry §7, **no DECLARED class marker on the row**; re-measured 2026-09-02; **owner line pending** | `crates/repark-spark/src/tests/call_v3_dv.rs::call_rewrite_position_delete_files_still_refuses_engine_written_v3_dvs`, `python/repark/tests/test_v3_dv_compaction.py` |
+| 13 · Maintain: DV / delete-file maintenance | ✅ | DV compaction lands through `rewrite_data_files`; `rewrite_position_delete_files` returns Spark's four zeros on a DV-only table and converts admitted parquet deletes to one PUFFIN per data file (`B-MOR-3` FIXED 2026-09-03, owner ruling: build) | — | — | `crates/repark-spark/src/tests/call_v3_dv.rs::call_rewrite_position_delete_files_on_engine_written_v3_dvs_returns_zeros`, `call_rewrite_position_delete_files_converts_five_upgraded_parquet_deletes_to_puffin`, `python/repark/tests/test_v3_dv_compaction.py` |
 | 14 · Maintain: expiry / orphans on v3 | ✅ | expire keeps the tag-reachable DV snapshot and drops the untagged one; the orphan 24 h floor refuses | — | — | `crates/repark-spark/src/tests/v3e4.rs` |
 | 15 · Maintain: `rewrite_manifests` | ✅ | exercised on v3 by SCALE-v3 (2026-09-02): merge-on-read 59 → 1, copy-on-write 10 → 1 inside the 1e7 x 50 sequence; Spark-compared semantics are MANIFEST-1/2/3, measured on v2 | — | — | `crates/repark-spark/src/tests/call_manifests.rs`; the v3 exercise is [scale-v3-mw7-ledger.md](../../ledgers/archive/2026-09/2026-09-02-scale-v3-mw7-ledger.md) §3.4 |
 | 16 · Refs + time travel on v3 | ✅ | BRANCH / TAG DDL, `VERSION AS OF` over DVs, `rollback_to_snapshot` | — | — | `crates/repark-spark/src/tests/v3e4.rs`, `python/repark/tests/test_v3e4_refs_time_travel.py` |
@@ -114,8 +114,8 @@ statement-coverage comparison against PySpark on v3 tables* and found none: the 
 (V3E-5) is ten cells over two fixtures, not the statement matrix, and the tree carried no
 statement-coverage harness at any format version. **Statement coverage measured 2026-09-03: 81
 statement programs across 12 statement classes and all 7 `CALL system.*` procedures, 267
-comparison cells, 71 EQUAL, 1 refused by both engines, 9 rows filed (`DML-1`, `G3-E8` ×2,
-`B-MOR-3` already stood; `V3-COV-3` and `V3-COV-6` DECLARED fork-routed and `V3-COV-4`,
+comparison cells, 72 EQUAL, 1 refused by both engines, 8 rows filed (`DML-1`, `G3-E8` ×2;
+`B-MOR-3` FIXED 2026-09-03; `V3-COV-3` and `V3-COV-6` DECLARED fork-routed and `V3-COV-4`,
 `V3-COV-5`, `V3-COV-7`, `V3-COV-8` BACKLOG are new), 2 defects FIXED in the same unit
 (`V3-COV-1`, `V3-COV-2`), 0 statement classes left unmeasured.** **RP-8 (2026-09-03):**
 `V3-COV-3` is FIXED — the repin to `c1d6c9de` takes the fork ask it named (F-20, `#261`), the
@@ -134,6 +134,7 @@ surface §3 names; none is inside that row's v1.0 requires cell, so none is audi
 | Row | Residual | Class | Why it is outside the requires cell |
 |---|---|---|---|
 | 12 · `rewrite_data_files` | `RDF-1` — a position-delete file spanning two or more data files is still not selected (F-16 residue 2, fork work); the row is FIXED 2026-09-02 for the single-referent shape and its dated prior states read "stays BACKLOG" | open residue on a FIXED row, fork-owned | the cell asks for lineage through rewrite, no stranded DVs and a true `removed_delete_files_count` — all three measured on v3 (`V3-LINEAGE-1`, `V3-DANGLE-1`) |
+| 13 · Maintain: DV / delete-file maintenance | `B-MOR-3-FLOOR-1` — the v3 parquet-to-DV arm converts below Spark's min-input-files=5 (cells B/C/D 2026-09-03); Spark converts the same shapes at five files | BACKLOG, fork TRIGGER F-24 | the cell asks for DV-aware compact and a Spark-equal DV-only / admitted parquet rewrite — both measured (`B-MOR-3` FIXED); the floor is planner admission, outside that requires cell |
 | 14 · expiry / orphans | `ORPHAN-1` (`older_than` required) and `ORPHAN-2` (dry-run default with Spark's result shape) | DECLARED, owner decision OD-2 (ruled 2026-08-21) | the cell asks that v3 expiry stays green with a live leg; both rows are deliberate strictness on every format version, not a v3 gap |
 | 15 · `rewrite_manifests` | `MANIFEST-1` (data manifests only; Spark rewrites delete manifests too) and `MANIFEST-3` (`added_manifests_count` above the target size) | BACKLOG, both v2-measured; `MANIFEST-1` is fork work | the cell asks only that the procedure be exercised on v3, which SCALE-v3 did |
 | 6 · Write: create v3 | `V3-COV-7` (Spark stamps `write.parquet.compression-codec = zstd` at CREATE; repark stamps only the DDL's keys) and `V3-COV-8` (repark's CTAS derives `id: long, required` where Spark derives `id: int, optional`) | BACKLOG, both measured 2026-09-03 by V3-COV | the cell reads "stays opt-in until V3-3; default remains v2" — a stamped engine default and the CTAS schema derivation touch neither the opt-in gate nor the default format version, so both sit outside it |
@@ -169,11 +170,10 @@ recommendation) and the freeze is registered — 888 names in
 §3.1 audits all twenty rows and the fork rows they lean on: every row ✅ or dated DECLARED as of
 2026-09-03. **Engineering:** §2 pillar 4's **full v3 statement-coverage comparison against
 PySpark** — the one item V1-GATE could not pin to any unit, run or fixture — is measured and
-recorded above (**V3-COV**, 2026-09-03: 81 programs, 267 cells, 71 EQUAL, 9 rows filed,
-2 defects FIXED), so no engineering item remains on this gate. **Owner:** one thing is still
-owed and it is not a §3 row — a one-line ruling confirming `B-MOR-3`'s DECLARED class for
-`rewrite_position_delete_files` (§3.1 row 13 — the row is housed under the registry's §7 with no
-class marker, and its OD-2 attachment is by analogy), and then the v1.0 tag.
+recorded above (**V3-COV**, 2026-09-03: 81 programs, 267 cells, 72 EQUAL, 8 rows filed,
+2 defects FIXED; B-MOR-3 cell flipped EQUAL 2026-09-03), so no engineering item remains on this gate.
+**Owner:** ruled 2026-09-03 BUILD on `B-MOR-3` (`rewrite_position_delete_files`
+returns Spark's zeros on a DV-only table). The v1.0 tag is what remains.
 
 ## 4. The path, as two lanes
 

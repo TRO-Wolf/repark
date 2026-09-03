@@ -45,7 +45,6 @@ ORPHAN_OLDER_THAN_PAST_MS = 25 * 60 * 60 * 1000
 
 ALLOW_CREATE_FORMAT_VERSION_3_KEY = "repark.sql.allowCreateFormatVersion3"
 DEFAULT_FORMAT_VERSION = 2
-REFUSING_ON_V3_PROCEDURE = "rewrite_position_delete_files"
 STARTED_AT_FORMAT = "%Y-%m-%dT%H:%M:%S%z"
 
 # pins: mw-9-delete-granularity/C-008
@@ -577,13 +576,7 @@ def run_leg(
 
     warehouse_before = directory_bytes(warehouse)
     maintenance = [
-        run_maintenance_step(
-            spark,
-            table,
-            procedure,
-            sql,
-            format_version >= 3 and procedure == REFUSING_ON_V3_PROCEDURE,
-        )
+        run_maintenance_step(spark, table, procedure, sql)
         for procedure, sql in maintenance_sequence(catalog, table_arg, clock)
     ]
     warehouse_after = directory_bytes(warehouse)

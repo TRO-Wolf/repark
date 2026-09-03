@@ -96,13 +96,18 @@ JVM, no repark required). See [../map.md](../map.md).
   `pins: pr-247-revalidation/C-001, C-002, C-003, C-004, C-005, C-006, C-007`
 - `test_proc_1_tiered_review.py` — **PR-244 revalidation:** current source and map guards, tiered
   SEPMO `review_profile` and `critic_engine` bindings in `binding-manifest.md`, MW-6 evidence,
-  disk guidance, clause pins, and ledger lifecycle.
+  disk guidance, clause pins, and ledger lifecycle. B-MOR-3 (2026-09-03): the handoff F-7
+  acceptance pin reads the retired refusal pin's zeros replacement.
+  pins: b-mor-3-rewrite-position-deletes-v3/C-004
 - `test_pr_245_revalidation_record.py` — PR #245 source-size ratchets, frozen SQP-1 artifacts,
   bounded parser guards, exact literal-helper inventory, and lifecycle-aware navigation.
 - `test_cap_1_source_file_line_cap.py` — RP-7 (2026-09-02) mirrors the two downward ratchets `write/merge/mod.rs` 1889→1795 and `write/predicate_dml.rs` 1164→1142 (pins: rp-7-f18-repin/C-005). V3-10 ratchets `repark-spark/src/alter.rs` 1831→1830 and
   `repark-iceberg/src/write/alter.rs` 1641→1630
   (pins: v3-10-upgrade-v2-to-v3/C-003). **CAP-1 (2026-08-26):** exact Rust and Python source-size RP-6 ratchets merge/mod.rs 1894→1892 and predicate_dml.rs 1227→1226; V3-8 ratchets predicate_dml.rs 1226→1164 after the lineage helpers move to `predicate_dml/lineage.rs` (pins: v3-8-subquery-where-lineage/C-002).
   (**DML-B 2026-08-30:** `insert_overwrite.rs` tests 1249→1233, `writer_readwriter.py` 1117→1113)
+  B-MOR-3 (2026-09-03): ratchets `repark-spark/src/tests/call.rs` 1307→1303 after the
+  live-DV refusal and its counter helper are deleted
+  (pins: b-mor-3-rewrite-position-deletes-v3/C-002).
   exception sets and baselines mirrored from the live guard tables (DML-A:
   `merge/mod.rs` 2131 → 2086; `call.rs` 1404 → 1111 after
   RP-2's `call_args.rs` split; RP-3 1407 → 1361; **REF 2026-09-01:** the
@@ -173,8 +178,11 @@ JVM, no repark required). See [../map.md](../map.md).
   renamed cell — so a row cannot be quietly re-opened or its evidence dropped. `_TOTALS` is
   unchanged: the nine partitioned rows were re-measured on both engines with the `_row_id` probe
   restored and every verdict held.
+  **B-MOR-3 (2026-09-03):** `_TOTALS` moves to 72 EQUAL / 8 DIVERGES with the CALL row's flip,
+  and `_CITED` drops `B-MOR-3` — the row is FIXED, not a covered divergence.
   pins: rp-8-repin-f21-f22/C-007
   pins: v3-cov-statement-coverage/C-001, C-004, C-005
+  pins: b-mor-3-rewrite-position-deletes-v3/C-004
 - `test_v1_gate_docs.py` — **V1-GATE (2026-09-03; tree pins):** the v1.0 gate audit is written
   and true. The north star's §3.1 must carry twenty numbered audit rows, every one glyphed ✅
   and none naming a BACKLOG residual; each of the seven rows that has a residual must name its
@@ -200,7 +208,11 @@ JVM, no repark required). See [../map.md](../map.md).
   row 9 "full DML including UPDATE/MERGE, round-tripped" — because a paraphrase there had widened
   row 6's ask into one the cell never made. The residual row-id match is a word-boundary regex,
   so `V3-COV-8` no longer satisfies the pin by matching inside a longer id.
+  **B-MOR-3 (2026-09-03):** row 13's cell reads the FIXED ruling with the `B-MOR-3-FLOOR-1`
+  residue beside it, the owner paragraph reads BUILD, `_SURFACE_RESIDUALS` and
+  `_RESIDUAL_ROWS` follow row 13 out of the residual table, and the EQUAL count is 72.
   pins: v1-gate-audit/C-001, C-002, C-003, C-004, C-005, C-006
+  pins: b-mor-3-rewrite-position-deletes-v3/C-004
 - `test_reg_1_registry_truth_up.py` — **REG-1 (2026-08-26; tree pins):** the divergence registry
   says what the pins prove — DEC-2 / DEC-6 / DEC-7 / DEC-8 carry dated FIXED notes naming #94 / #99
   and their equality pins (C-001); TZ-8 splits into the FIXED `CAST(ts AS DATE)` / `to_date` /

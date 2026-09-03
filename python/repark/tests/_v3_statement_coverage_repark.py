@@ -580,13 +580,7 @@ REPARK: dict[str, Any] = {
         "probes": [["OK", [[1, "a"], [2, "b"], [3, "c"], [4, "d"]]]],
     },
     "call-rewrite-position-delete-files": {
-        "statements": [
-            ["OK", None],
-            [
-                "ERROR",
-                "This feature is not implemented: CALL rewrite_position_delete_files found 1 ",
-            ],
-        ],
+        "statements": [["OK", None], ["OK", [[0, 0]]]],
         "probes": [["OK", [[1, "a"], [3, "c"], [4, "d"]]], ["OK", [[1, "PUFFIN", 1]]]],
     },
     "call-rollback-to-snapshot": {

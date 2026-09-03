@@ -387,3 +387,147 @@ def test_disclosures_mirror_the_registry() -> None:
         f"registry-only: {sorted(set(declared) - disclosed)}; "
         f"disclosure-only: {sorted(disclosed - set(declared))}"
     )
+
+
+_BMOR3_CATALOG = "bmor3live"
+_BMOR3_ALLOW = "repark.sql.allowCreateFormatVersion3"
+
+
+def _bmor3_delete_pairs(arrow) -> list[tuple[str, int]]:
+    rows = [
+        (str(fmt).upper(), int(count))
+        for fmt, count in zip(
+            arrow.column("file_format").to_pylist(),
+            arrow.column("record_count").to_pylist(),
+            strict=True,
+        )
+    ]
+    rows.sort()
+    return rows
+
+
+def _bmor3_ids(arrow) -> list[int]:
+    values = [int(value) for value in arrow.column("id").to_pylist() if value is not None]
+    values.sort()
+    return values
+
+
+def _bmor3_cell_b_repark(warehouse: Path) -> dict:
+    from repark import ReparkSession
+
+    spark = (
+        ReparkSession.builder.appName("b-mor-3-live-repark")
+        .config(_BMOR3_ALLOW, "true")
+        .getOrCreate()
+    )
+    target = "ice.sales.cellb"
+    try:
+        spark.register_memory_catalog("ice", warehouse)
+        spark.sql("CREATE NAMESPACE ice.sales")
+        spark.sql(
+            f"CREATE TABLE {target} (id INT, name STRING) USING iceberg "
+            "TBLPROPERTIES ('format-version' = '2', "
+            "'write.delete.mode' = 'merge-on-read', "
+            "'write.merge.mode' = 'merge-on-read', "
+            "'write.update.mode' = 'merge-on-read', "
+            "'write.delete.granularity' = 'file')"
+        )
+        for ident in range(1, 6):
+            spark.sql(f"INSERT INTO {target} VALUES ({ident}, 'a'), ({ident + 100}, 'b')").collect()
+        for ident in range(1, 6):
+            spark.sql(f"DELETE FROM {target} WHERE id = {ident}").collect()
+        spark.sql(f"ALTER TABLE {target} SET TBLPROPERTIES ('format-version' = '3')").collect()
+        before = _bmor3_delete_pairs(
+            spark.sql(f"SELECT file_format, record_count FROM {target}.delete_files").to_arrow()
+        )
+        first = spark.sql(
+            "CALL ice.system.rewrite_position_delete_files(table => 'sales.cellb')"
+        ).to_arrow()
+        after = _bmor3_delete_pairs(
+            spark.sql(f"SELECT file_format, record_count FROM {target}.delete_files").to_arrow()
+        )
+        ids = _bmor3_ids(spark.sql(f"SELECT id FROM {target} ORDER BY id").to_arrow())
+        second = spark.sql(
+            "CALL ice.system.rewrite_position_delete_files(table => 'sales.cellb')"
+        ).to_arrow()
+        return {
+            "before": before,
+            "rewritten": first.column("rewritten_delete_files_count")[0].as_py(),
+            "added": first.column("added_delete_files_count")[0].as_py(),
+            "after": after,
+            "ids": ids,
+            "second_rewritten": second.column("rewritten_delete_files_count")[0].as_py(),
+            "second_added": second.column("added_delete_files_count")[0].as_py(),
+        }
+    finally:
+        spark.stop()
+
+
+def _bmor3_cell_b_spark(engine: lp.Engine) -> dict:
+    import shutil
+
+    warehouse = Path(tempfile.mkdtemp(prefix="bmor3-live-spark-"))
+    session = engine.session
+    keys = (
+        f"spark.sql.catalog.{_BMOR3_CATALOG}",
+        f"spark.sql.catalog.{_BMOR3_CATALOG}.type",
+        f"spark.sql.catalog.{_BMOR3_CATALOG}.warehouse",
+    )
+    for key, value in zip(
+        keys, ("org.apache.iceberg.spark.SparkCatalog", "hadoop", str(warehouse)), strict=True
+    ):
+        session.conf.set(key, value)
+    target = f"{_BMOR3_CATALOG}.sales.cellb"
+    try:
+        session.sql(f"CREATE NAMESPACE IF NOT EXISTS {_BMOR3_CATALOG}.sales")
+        session.sql(
+            f"CREATE TABLE {target} (id INT, name STRING) USING iceberg "
+            "TBLPROPERTIES ('format-version'='2', "
+            "'write.delete.mode'='merge-on-read', "
+            "'write.merge.mode'='merge-on-read', "
+            "'write.update.mode'='merge-on-read', "
+            "'write.delete.granularity'='file')"
+        )
+        for ident in range(1, 6):
+            session.createDataFrame(
+                [(ident, "a"), (ident + 100, "b")],
+                "id INT, name STRING",
+            ).coalesce(1).writeTo(target).append()
+        for ident in range(1, 6):
+            session.sql(f"DELETE FROM {target} WHERE id = {ident}")
+        session.sql(f"ALTER TABLE {target} SET TBLPROPERTIES ('format-version'='3')")
+        before = _bmor3_delete_pairs(
+            session.sql(f"SELECT file_format, record_count FROM {target}.delete_files").toArrow()
+        )
+        first = session.sql(
+            f"CALL {_BMOR3_CATALOG}.system.rewrite_position_delete_files(table => 'sales.cellb')"
+        ).toArrow()
+        after = _bmor3_delete_pairs(
+            session.sql(f"SELECT file_format, record_count FROM {target}.delete_files").toArrow()
+        )
+        ids = _bmor3_ids(session.sql(f"SELECT id FROM {target} ORDER BY id").toArrow())
+        second = session.sql(
+            f"CALL {_BMOR3_CATALOG}.system.rewrite_position_delete_files(table => 'sales.cellb')"
+        ).toArrow()
+        return {
+            "before": before,
+            "rewritten": first.column("rewritten_delete_files_count")[0].as_py(),
+            "added": first.column("added_delete_files_count")[0].as_py(),
+            "after": after,
+            "ids": ids,
+            "second_rewritten": second.column("rewritten_delete_files_count")[0].as_py(),
+            "second_added": second.column("added_delete_files_count")[0].as_py(),
+        }
+    finally:
+        session.sql(f"DROP TABLE IF EXISTS {target}")
+        for key in keys:
+            session.conf.unset(key)
+        shutil.rmtree(warehouse, ignore_errors=True)
+
+
+@pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
+def test_live_rewrite_position_delete_files_upgraded_parquet_matches_spark(
+    tmp_path: Path, spark_iceberg_engine: lp.Engine
+) -> None:
+    """pins: b-mor-3-rewrite-position-deletes-v3/C-001, C-003"""
+    assert _bmor3_cell_b_repark(tmp_path) == _bmor3_cell_b_spark(spark_iceberg_engine)

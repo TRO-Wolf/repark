@@ -192,11 +192,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   C-011, C-012, C-013, C-014, C-015, C-016, C-018, C-020
 - `v3e3.rs` — **V3E-3:** Spark-written partitioned v3 DV fixture and equality-delete
   + DV fixture (`fixtures/v3-spark-part-dv/`, `fixtures/v3-spark-eq-dv/`); live
-  rows, partition prune, `.delete_files` content 1/2, B-MOR-3 refuse, RP-3 cells 3–6
+  rows, partition prune, `.delete_files` content 1/2, B-MOR-3 zeros, RP-3 cells 3–6
   MOR DELETE on the partitioned DV (pins: rp-3-fork-repin/C-004);
-  C-007 keeps `B-MOR-3` after measuring fork R136 as a parquet-to-DV conversion no-op;
+  C-007 measured fork R136 as a parquet-to-DV conversion no-op on DV-only (zeros); B-MOR-3 FIXED 2026-09-03;
   the measurement pin does not write outside the crate
   (pins: rp-3-fork-repin/C-007, C-011)
+  pins: b-mor-3-rewrite-position-deletes-v3/C-003 (2026-09-03: this row, not an inner-doc header in `call_register.rs` / `call_v3_dv.rs` / `v3e3.rs`, is where the B-MOR-3 pins are cited)
   (`Model: Grok 4.6 xHigh`; rustdoc cites C-013).
   **V3-5:** `rewrite_data_files` on the partitioned DV fixture drops both
   vectors (delete-ratio admits each one-file group);
@@ -264,17 +265,19 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   (`pins: rp-3-fork-repin/C-005; rp-4-fork-repin/C-003`).
   RP-6: `rewrite_after_same_arity_spec_evolution_stamps_current_spec`
   (pins: rp-6-fork-repin/C-005).
-  `call_v3_dv` (**V3-5**): six-file v3 MOR with live Puffin DVs;
+  `call_v3_dv` (**V3-5 / B-MOR-3**): six-file v3 MOR with live Puffin DVs;
   `rewrite_data_files` drops all six (`removed_delete_files_count = 6`,
-  count columns Arrow Int32); `rewrite_position_delete_files` still refuses
-  (`B-MOR-3`).
+  count columns Arrow Int32); `rewrite_position_delete_files` returns zeros
+  on DV-only and converts five upgraded parquet deletes to PUFFIN
+  (`B-MOR-3` FIXED 2026-09-03; floor pins for groups below Spark min-input-files).
   pins: v3-5-dv-compaction/C-001, C-002, C-003, C-004, C-007
+  pins: b-mor-3-rewrite-position-deletes-v3/C-002, C-003
   `call_manifests` (**MW-6**) pins the two non-nullable `int` columns, no-op zero result, current
   spec filter, delete-manifest refusal, and `MANIFEST-3` count divergence.
   `call_register` (**V3-1 / RP-3 C-008**): `CALL system.register_table` arguments, three nullable BIGINT columns,
   adoption/read-back, occupied-ident refusal, Hadoop `vN.metadata.json` write bumps to `v(N+1)`,
   S3 Tables register names R126, and the Spark-written `fixtures/v3-spark-mor/`
-  fixture (`B-MOR-3`),
+  fixture (`B-MOR-3` zeros),
   `fixtures/` (Spark-written on-disk Iceberg tables CI can adopt with no JVM),
   `call_orphan` (**MW-3**): full-directory before/after orphan safety and 24-hour cutoff fixtures,
   `ref_ddl` (**REF:** the write-to-branch/tag refusal names the `iceberg-datafusion`
