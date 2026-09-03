@@ -44,7 +44,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   pins: fnp-15-16/C-001, C-008, C-009, C-010, C-011, C-014, C-016
 - `functions_expr.py` — shared expression builders and scalar lowering.
   SEM-1: `log(col)` or `log(base, expr)` (PySpark `log(arg1, arg2=None)`).
+  LOG1P-1: `log1p` / `expm1` are `_scalar` onto the precise kernels, not
+  `log(1+col)` / `exp(col)-1`.
   pins: sem-1-spark-answer-parity/C-006
+  pins: log1p-1-precise-kernels/C-002
 - `functions_lambda.py` — higher-order function and lambda builders. FNP-4c adds
   `transform`, `filter`, `forall`, `aggregate`, `reduce`, `zip_with`, `transform_keys`,
   `transform_values`, `map_filter`, `map_zip_with` (installed onto `functions.py` `__all__`).

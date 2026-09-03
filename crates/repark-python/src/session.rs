@@ -26,7 +26,6 @@ fn apply_session_knobs(
     config: Option<HashMap<String, String>>,
 ) -> PyResult<ReparkSessionBuilder> {
     let mut builder = ReparkSession::builder();
-    // Zero explicitly opts out of the bounded pool; other values select the requested limit.
     match memory_limit_gb {
         None => {}
         Some(0) => builder = builder.memory_limit_bytes(0),
@@ -61,6 +60,7 @@ fn apply_session_knobs(
 fn finish_session(py: Python<'_>, builder: ReparkSessionBuilder) -> PyResult<PyReparkSession> {
     let session = builder.build().map_err(to_py_err)?;
     repark_functions::integer_spark::install_integer_overflow(session.context());
+    repark_functions::spark_log1p::register(session.context());
     let runtime = shared_runtime()?;
     py.detach(|| runtime.block_on(session.register_configured_catalogs()))
         .map_err(to_py_err)?;

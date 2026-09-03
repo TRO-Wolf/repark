@@ -1,4 +1,4 @@
-"""BL-15/BL-16 today: composed expm1 and overflowing hypot (registry §7)."""
+"""BL-15 FIXED precise expm1; BL-16 today overflowing hypot (registry §7)."""
 
 import math
 
@@ -12,11 +12,11 @@ def _one_double(expr, name: str) -> float:
     return frame.collect()[0][name]
 
 
-def test_bl15_expm1_composes_exp_minus_one_today() -> None:
-    """Today: bit-equal to exp(x)-1 (Spark Math.expm1(1e-08) is 1.0000000050000001e-08)."""
+def test_bl15_expm1_matches_spark_precise_kernel() -> None:
+    """pins: log1p-1-precise-kernels/C-005"""
     got = _one_double(F.expm1(F.lit(1e-08)), "y")
-    assert got == math.exp(1e-08) - 1.0
-    assert got != math.expm1(1e-08)
+    assert got == math.expm1(1e-08)
+    assert got != math.exp(1e-08) - 1.0
 
 
 def test_bl16_hypot_overflows_to_inf_today() -> None:

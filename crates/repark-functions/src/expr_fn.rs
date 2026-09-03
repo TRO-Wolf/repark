@@ -537,3 +537,13 @@ pub fn bitmap_count(arg: Expr) -> Expr {
 pub fn log(args: Vec<Expr>) -> Expr {
     call(crate::spark_log::spark_log_udf(), args)
 }
+
+#[must_use]
+pub fn log1p(arg: Expr) -> Expr {
+    call(crate::spark_log1p::log1p_udf(), vec![arg])
+}
+
+#[must_use]
+pub fn expm1(arg: Expr) -> Expr {
+    call(crate::spark_log1p::expm1_udf(), vec![arg])
+}

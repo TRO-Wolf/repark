@@ -22,7 +22,8 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
 - [hyperbolic.py](hyperbolic.py) — the hyperbolic six, with the inverse domains:
   `F.asinh` open, `F.acosh` from 1, `F.atanh` inside the unit interval.
 - [logs.py](logs.py) — `F.ln` and one-argument `F.log`, the fixed-base spellings
-  `F.log10` / `F.log2`, two-argument `F.log`, and `F.e`, whose ln is 1.
+  `F.log10` / `F.log2`, two-argument `F.log`, `F.log1p` / `F.expm1` at the tiny-arg
+  edge, and `F.e`, whose ln is 1. pins: log1p-1-precise-kernels/C-003
 - [rounding.py](rounding.py) — `F.ceil` / `F.ceiling` (an alias pair) and `F.floor`
   against the integers, and `F.round`, whose halfway cases go away from zero.
 - [integer_math.py](integer_math.py) — `F.factorial`, `F.pmod` answering non-negative

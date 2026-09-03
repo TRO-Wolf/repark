@@ -34,6 +34,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
   two-arg is `log(base, expr)`. Both arities return NULL on Spark's domain edges (zero,
   negative, null, base <= 0). Overwrites DataFusion's base-10 `LogFunc` from `register_all`.
   Native ANSI `repark.sql()` does not load this kernel.
+- `spark_log1p.rs` — **LOG1P-1 (2026-09-02):** Spark-named `log1p` / `expm1` kernels
+  (`f64::ln_1p` / `f64::exp_m1`). Numeric coerce to Float64; NULL in → NULL out;
+  `log1p` NULLs `x <= -1` (Spark SQL, live 2026-09-02). Registered from `register_all`
+  (Spark door, overwrites datafusion-spark `expm1`) and from `spark_log1p::register`
+  (ANSI door + native `repark.sql()`).
+  pins: log1p-1-precise-kernels/C-002
   **Critic remediation (2026-09-01):** `null_slots_null_out_even_when_the_buffer_holds_a_live_value`
   builds a null slot whose underlying buffer value is 5.0 (both arities) and asserts NULL —
   SQL-door null pins cannot see the null arms because a built null slot reads back 0.0 and the
@@ -151,7 +157,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (clippy implicit_clone: projection name uses `clone` on the field name)
 - `lib.rs` — `register_all(ctx)` (datafusion-spark's full set, then the date + string + collection
   + **r20 G2** `random` (Spark XORShift `rand`/`randn`/`random`) shims + **SEM-1** `spark_log`
-  (Spark-door natural `log`, dual-arity null-guard) — later registration wins a
+  (Spark-door natural `log`, dual-arity null-guard) + **LOG1P-1** `spark_log1p`
+  (`log1p` / `expm1`) — later registration wins a
   name clash) + Q1 percentile aliases + `spark_date_shim_functions()` +
   `analyzer_rules()` (`SparkDecimalPrecision` → `SparkDecimalRewrite` →
   `SparkIntegerOverflow` → Spark semantics +

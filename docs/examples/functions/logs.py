@@ -1,6 +1,7 @@
 """Demonstrate the ``F.*`` logarithm names and the constant ``F.e``.
 
 pins: ex-2-functions-math-bitwise/C-002
+pins: log1p-1-precise-kernels/C-003
 """
 
 from __future__ import annotations
@@ -10,7 +11,7 @@ import math
 import repark.functions as F  # noqa: N812
 from repark.spark import ReparkSession
 
-COVERS: list[str] = ["F.ln", "F.log", "F.log10", "F.log2", "F.e", "F.col"]
+COVERS: list[str] = ["F.ln", "F.log", "F.log10", "F.log2", "F.log1p", "F.expm1", "F.e", "F.col"]
 
 
 def main() -> None:
@@ -109,6 +110,21 @@ def main() -> None:
             raise SystemExit("F.log(x) with one argument is F.ln(x) and must agree exactly")
         if [row["log_2"] for row in rows] != [row["log2"] for row in rows]:
             raise SystemExit("F.log(2.0, x) is F.log2(x) and must agree exactly")
+        tiny = repark.createDataFrame([(1e-16,), (1e-10,), (0.0,)], ["x"])
+        tiny_rows = tiny.select(
+            F.log1p(F.col("x")).alias("log1p"),
+            F.expm1(F.col("x")).alias("expm1"),
+        ).collect()
+        want_log1p = [1e-16, 9.999999999500001e-11, 0.0]
+        want_expm1 = [1e-16, 1.00000000005e-10, 0.0]
+        got_log1p = [row["log1p"] for row in tiny_rows]
+        got_expm1 = [row["expm1"] for row in tiny_rows]
+        print(f"F.log1p: {got_log1p!r}")
+        print(f"F.expm1: {got_expm1!r}")
+        if got_log1p != want_log1p:
+            raise SystemExit(f"F.log1p tiny-arg gave {got_log1p!r}, expected {want_log1p!r}")
+        if got_expm1 != want_expm1:
+            raise SystemExit(f"F.expm1 tiny-arg gave {got_expm1!r}, expected {want_expm1!r}")
     finally:
         repark.stop()
 

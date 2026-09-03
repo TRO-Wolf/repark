@@ -42,6 +42,8 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
 - `src/spark_log.rs` — **SEM-1 (2026-08-31):** Spark-door `log` (natural / `log(base, expr)`,
   null-guard both arities). Overwrites DataFusion base-10 from `register_all`.
   pins: sem-1-spark-answer-parity/C-004
+- `src/spark_log1p.rs` — **LOG1P-1 (2026-09-02):** `log1p` / `expm1` (`f64::ln_1p` /
+  `f64::exp_m1`) on both SQL doors. pins: log1p-1-precise-kernels/C-002
 - `src/spark_regexp.rs` — **GT1-FIX A1/A2 / R3 / R4-1:** Spark `regexp_count` /
   `regexp_instr` (NULL-in NULL-out INT; idx ignore-value; UTF-16 start;
   Java find-loop for empty-after-non-empty; positional mid-surrogate probe

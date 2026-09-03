@@ -25,6 +25,8 @@ and hand execution, SQL, and ML semantics to the engine crates.
   `PyReparkSession.sql` runs the FNP-15/16 declared-function valve so the native
   `repark.sql()` callable (DataFusionDialect) refuses with the registry reason.
   Native and Spark Python sessions install F-Y10-1 integer overflow checks.
+  Native `finish_session` also registers LOG1P-1 `log1p` / `expm1` (DataFusionDialect
+  has no `on_session_built` hook). pins: log1p-1-precise-kernels/C-002
   The Spark-door routing probe is `MERGE … OUTPUT` (TRUNCATE and `INSERT OVERWRITE … PARTITION` are live).
   pins: fnp-15-16/C-001; dml-c-truncate/C-004 |
 | [`dataframe.rs`](dataframe.rs) | Lazy plans, actions, transforms, schema, and Arrow C Stream export.

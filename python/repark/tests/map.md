@@ -31,12 +31,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 
 - `test_pr_245_revalidation.py` — PR #245 public-door revalidation for Spark string literals,
   binary casts, parser limits, and facade controls.
-- [test_bl15_bl16_math_divergences.py](test_bl15_bl16_math_divergences.py) — **BL-15/BL-16
-  (2026-09-01):** codifies today's `expm1` (composed `exp(x)-1`) and `hypot` (overflow to
-  `inf` at extreme magnitude) answers so the fused/rescaled fixes red them on purpose;
-  measured by the EX-2 pilot, registry §7 rows carry the Spark values. Spark
-  `Math.expm1(1e-08)` is `1.0000000050000001e-08`; `hypot(1e200, 1e200)` rescales to
-  `1.4142135623730951e+200`. Module and test docstrings are one line.
+- [test_bl15_bl16_math_divergences.py](test_bl15_bl16_math_divergences.py) — **BL-15 FIXED
+  (LOG1P-1, 2026-09-02):** `F.expm1` is the precise kernel (`math.expm1`); BL-16 hypot
+  still overflows to `inf` at extreme magnitude. pins: log1p-1-precise-kernels/C-005
+- [test_log1p_1.py](test_log1p_1.py) — **LOG1P-1 (2026-09-02):** three-door `log1p` /
+  `expm1` pins (Spark SQL, ANSI `repark.sql()`, facade), tiny-arg vs composed form,
+  SEM-1 incidentals, live Spark skipif. Oracle live PySpark 4.1.2.
+  pins: log1p-1-precise-kernels/C-001, C-002, C-004
 - [test_fnp7_try_inversions.py](test_fnp7_try_inversions.py) — **FNP-7a/7b:** twelve `try_*`
   inversions. Spark 4.1.2 cells (value and Arrow type) on the two reachable doors (Spark SQL
   + facade Column API). Native ANSI `repark.sql()` does not load SparkExtension: the twelve

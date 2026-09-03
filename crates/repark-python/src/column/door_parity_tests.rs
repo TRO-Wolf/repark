@@ -136,6 +136,8 @@ const SCALAR_NAMES: &[(&str, usize)] = &[
     ("octet_length", 1),
     ("split_part", 3),
     ("regexp_count", 2),
+    ("log1p", 1),
+    ("expm1", 1),
 ];
 
 fn registered_session() -> SessionContext {

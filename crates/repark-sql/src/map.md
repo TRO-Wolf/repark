@@ -49,8 +49,10 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
 - `dialect.rs` — `AnsiDialect: repark_core::SqlDialect` (the frozen seam adapter; a one-liner
   onto the router, deliberately; `#[async_trait(?Send)]` matches the core trait).
   `on_session_built` installs integer overflow so a bare `ReparkSession` + this
-  dialect raises without Python. In-module tests.
+  dialect raises without Python, and **LOG1P-1** `spark_log1p::register` so ANSI
+  SQL `log1p` / `expm1` resolve. In-module tests.
   pins: f-y10-1-int-overflow/C-003
+  pins: log1p-1-precise-kernels/C-002
 - `guards.rs` — the guard set: multi-statement refuse (quote-aware, FIRST), P11 read-only
   catalog DML (generic message), write-to-branch, the BUG-001 MoR valve (async wrapper over the
   tier-1 predicate, gating delegated DELETE/UPDATE), the SEC-02 local-filesystem plan gate, and
