@@ -1,5 +1,10 @@
 # map — scripts/
 
+EX-11 (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE` 842 → 822 — twenty `F.*`
+hash, URL and random names covered by five new examples; `F.sha2`, `F.hash`, `F.uniform`,
+`F.randstr`, `F.reflect`, `F.java_method` and `F.try_reflect` stayed rows (measured divergences
+or refusals). pins: ex-11-functions-hash-url-random/C-001
+
 LOG1P-1 (2026-09-02): `check_example_coverage.py` `BACKLOG_BASELINE` 844 → 842 —
 `F.log1p` and `F.expm1` leave the backlog for `docs/examples/functions/logs.py`.
 pins: log1p-1-precise-kernels/C-003

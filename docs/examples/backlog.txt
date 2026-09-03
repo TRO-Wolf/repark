@@ -275,7 +275,6 @@ F.ascii
 F.assert_true
 F.avg
 F.base64
-F.bin
 F.bit_and
 F.bit_count
 F.bit_get
@@ -311,7 +310,6 @@ F.count_distinct
 F.count_if
 F.covar_pop
 F.covar_samp
-F.crc32
 F.cume_dist
 F.curdate
 F.currentDate
@@ -371,7 +369,6 @@ F.get
 F.getbit
 F.grouping
 F.hash
-F.hex
 F.hll_sketch_agg
 F.hll_sketch_estimate
 F.hll_union
@@ -443,7 +440,6 @@ F.map_keys
 F.map_values
 F.map_zip_with
 F.max
-F.md5
 F.mean
 F.median
 F.min
@@ -469,7 +465,6 @@ F.octet_length
 F.overlay
 F.pandas_udf
 F.parse_json
-F.parse_url
 F.percent_rank
 F.percentile_approx
 F.posexplode
@@ -479,9 +474,6 @@ F.printf
 F.quarter
 F.quote
 F.raise_error
-F.rand
-F.randn
-F.random
 F.randstr
 F.rank
 F.reduce
@@ -520,8 +512,6 @@ F.second
 F.sentences
 F.sequence
 F.session_user
-F.sha
-F.sha1
 F.sha2
 F.shiftleft
 F.shiftright
@@ -578,24 +568,18 @@ F.trim
 F.trunc
 F.try_avg
 F.try_element_at
-F.try_mod
 F.try_parse_json
-F.try_parse_url
 F.try_reflect
 F.try_sum
-F.try_to_binary
 F.try_to_date
-F.try_to_number
 F.try_to_time
 F.try_to_timestamp
-F.try_url_decode
 F.try_validate_utf8
 F.try_variant_get
 F.ucase
 F.udf
 F.udtf
 F.unbase64
-F.unhex
 F.uniform
 F.unix_date
 F.unix_micros
@@ -604,10 +588,7 @@ F.unix_seconds
 F.unix_timestamp
 F.unwrap_udt
 F.upper
-F.url_decode
-F.url_encode
 F.user
-F.uuid
 F.validate_utf8
 F.var_pop
 F.var_samp
@@ -626,7 +607,6 @@ F.xpath_long
 F.xpath_number
 F.xpath_short
 F.xpath_string
-F.xxhash64
 F.year
 F.years
 F.zeroifnull

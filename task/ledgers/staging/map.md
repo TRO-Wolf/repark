@@ -5,6 +5,12 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [ex-11-functions-hash-url-random-ledger.md](ex-11-functions-hash-url-random-ledger.md) —
+  **EX-11 (2026-09-03), in flight:** the v0.7 example backfill's `F.*` hash + URL +
+  random batch — twenty of the twenty-seven dispatched names covered by five files,
+  the seven others dropped with measured values, backlog 842 → 822.
+  `risk_tier: standard`. Branch `feat/ex-11-functions-hash-url-random`. Slate:
+  [../briefs/example-backfill.md](../../../briefs/example-backfill.md).
 - [ex-2-functions-math-bitwise-ledger.md](ex-2-functions-math-bitwise-ledger.md) —
   **EX-2 (2026-09-01), in flight:** the v0.7 example backfill's `F.*` math +
   bitwise family — the campaign pilot. One clause per batch; batch 1 covers

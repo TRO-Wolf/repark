@@ -30,6 +30,11 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
   under a positive divisor, `F.greatest` / `F.least` skipping NULLs, `F.width_bucket`.
 - [try_arithmetic.py](try_arithmetic.py) — the `F.try_*` quartet answering NULL on
   overflow and divide-by-zero, ordinary input unchanged.
+- [hashing.py](hashing.py) — `F.md5`, `F.sha`/`F.sha1` (one digest, two spellings), `F.crc32`, and `F.xxhash64`, NULL included; `xxhash64(NULL)` is the seed value 42.
+- [hex_binary.py](hex_binary.py) — `F.hex` and `F.bin` spelling integers, `F.hex` spelling a string's bytes, `F.unhex` back, and `F.try_to_binary` answering NULL on a bad charset.
+- [random_values.py](random_values.py) — `F.uuid`, `F.rand`, `F.randn`, `F.random` asserted on shape and range only, never on a value.
+- [url.py](url.py) — the URL codec round trip and `F.parse_url` part extraction, with `F.try_url_decode` / `F.try_parse_url` answering NULL where the strict spelling raises.
+- [try_fallbacks.py](try_fallbacks.py) — `F.try_mod` by zero and `F.try_to_number` on a format mismatch answering NULL.
 
 ## Pointers
 
