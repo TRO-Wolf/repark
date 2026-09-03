@@ -62,5 +62,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `register_table`, whose Spark signature is measured there.
 
 - [ex-11-functions-hash-url-random-ledger.md](ex-11-functions-hash-url-random-ledger.md) —
+- [ex-13-functions-aggregates-b-stats-ledger.md](ex-13-functions-aggregates-b-stats-ledger.md) —
+  **EX-13 (2026-09-03), in flight:** the v0.7 example backfill's `F.*` aggregate (b) and statistics batch — 22 names land in four examples, the backlog ratchet moves 777 → 755; `F.skewness` and `F.kurtosis` are refused by the engine (`UnsupportedOperationException`, R-FN-BATCH4) and stay on the backlog with both values in the ledger's oracle table. `risk_tier: standard`. Branch `feat/ex-13-functions-aggregates-b-stats`. Slate: [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md).
+
 ## Pointers
 - Up: [../map.md](../map.md)

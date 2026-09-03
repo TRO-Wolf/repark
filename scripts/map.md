@@ -1,5 +1,11 @@
 # map — scripts/
 
+EX-13 (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE` 777 → 755 — twenty-two
+`F.*` aggregate (b) and statistics names covered by four new examples (`dispersion.py`,
+`covariance.py`, `regression.py`, `bit_aggregates.py`); the two names the engine refuses
+(`F.skewness`, `F.kurtosis`, `UnsupportedOperationException`, R-FN-BATCH4) stay backlog rows,
+both values recorded in the family ledger. pins: ex-13-functions-aggregates-b-stats/C-001
+
 EX-9 (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE` 809 → 797 — twelve
 `F.*` map and struct names covered by four new examples (`map_parts.py`, `map_shapes.py`,
 `map_higher_order.py`, `structs.py`); the batch's other 24 roster names (json_tuple, csv,

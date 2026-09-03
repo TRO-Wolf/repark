@@ -47,6 +47,16 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
 - [random_values.py](random_values.py) — `F.uuid`, `F.rand`, `F.randn`,
 - [url.py](url.py) — the URL codec round trip and `F.parse_url` part
 - [try_fallbacks.py](try_fallbacks.py) — `F.try_mod` by zero and
+- [dispersion.py](dispersion.py) — `F.std`/`F.stddev`/`F.stddev_samp`, `F.stddev_pop`, and the
+  `F.variance` / `F.var_samp` / `F.var_pop` trio on a grouped frame; a one-value group answers
+  NULL (sample) or 0.0 (population).
+- [covariance.py](covariance.py) — `F.corr`, `F.covar_pop`, `F.covar_samp` over (y, x) pairs,
+  NULL pairs skipped, a one-pair group answering 0.0 or NULL.
+- [regression.py](regression.py) — Spark's nine `F.regr_*` linear-regression aggregates over
+  (y, x) pairs: counts, means, slope, intercept, r2, and the three sums of squares/products.
+- [bit_aggregates.py](bit_aggregates.py) — `F.bit_and`, `F.bit_or`, `F.bit_xor` folding each
+  group's integers, NULL inputs skipped.
+
 ## Pointers
 
 - Up: [../map.md](../map.md)
