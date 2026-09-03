@@ -377,7 +377,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   wrappers through `ReparkSession` Arrow `to_arrow()` (value AND type).
   `lag`/`lead` default first/last-row NULL + explicit default + NULL-source
   row; `nth_value` 1-based; `percent_rank`/`cume_dist` Float64. `ignoreNulls`
-  is an honest cut (TypeError).
+  is an honest cut (TypeError). **FN-LAST-1 (2026-09-03):**
+  `test_last_ignorenulls_window_divergence_is_pinned` codifies
+  `last(ignorenulls)` over the ordered unbounded window answering NULL where
+  Spark answers the last non-null (registry row FN-LAST-1).
+  pins: ex-12-functions-aggregates-a/C-001
 - [test_functions_a.py](test_functions_a.py) — FN-A (2026-08-15): ordering / null /
   math wrappers through `ReparkSession` Arrow `to_arrow()` (value AND type). Alias
   names resolve + one behavior case. `cbrt` pins the negative-root hazard.
@@ -1050,6 +1054,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   RegexTokenizer order, CV fractional minTF, fit temp-view cleanup;
   octo c2 UNION ALL token/id association pin + Imputer same-col in-place;
   octo c3 MinMax/MaxAbs NaN-tolerant fit pin;
+  **FN-APPROXPCT-1 (2026-09-03):** `test_approx_percentile_double_interpolation_divergence_is_pinned`
+  codifies the interpolated DOUBLE answer where Spark is exact BIGINT (registry row
+  FN-APPROXPCT-1). pins: ex-12-functions-aggregates-a/C-001
   octo c7 StringIndexer fit temp-view cleanup pin
   (+ array-percentage STOP seed).
 - `test_fn_batch3.py` — R-FN-BATCH3 datetime + Chrono≠Java + loud census.

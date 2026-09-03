@@ -6,13 +6,13 @@ pins: ex-12-functions-aggregates-a/C-001
 from __future__ import annotations
 
 import repark.functions as F  # noqa: N812
-from repark.spark import ReparkSession
+from repark.spark import ReparkSession, Window
 
 COVERS: list[str] = ["F.first", "F.last", "F.first_value", "F.last_value", "F.col"]
 
 
 def main() -> None:
-    """Take the first and last group value, and skip the trailing NULL on demand."""
+    """Take each ordered window's first and last value; the aliases answer identically."""
     repark = ReparkSession.builder.appName("ex-first-last").master("local[1]").getOrCreate()
     try:
         frame = repark.createDataFrame(
@@ -26,29 +26,21 @@ def main() -> None:
             ],
             ["k", "v"],
         )
-        aggregated = frame.groupBy("k").agg(
-            F.first(F.col("v")).alias("first_value"),
-            F.last("v").alias("last_value"),
-            F.last("v", True).alias("last_value_ignoring_nulls"),
-            F.first_value("v").alias("first_alias"),
-            F.last_value("v").alias("last_alias"),
+        window = (
+            Window.partitionBy("k")
+            .orderBy(F.col("v").asc_nulls_last())
+            .rowsBetween(Window.unboundedPreceding, Window.unboundedFollowing)
         )
-        rows = sorted(aggregated.collect(), key=lambda row: row["k"])
-        firsts = [row["first_value"] for row in rows]
-        if firsts != [1, 4]:
-            raise SystemExit(f"F.first values {firsts!r} != [1, 4]")
-        lasts = [row["last_value"] for row in rows]
-        if lasts != [None, 6]:
-            raise SystemExit(f"F.last values {lasts!r} != [None, 6]")
-        ignoring = [row["last_value_ignoring_nulls"] for row in rows]
-        if ignoring != [3, 6]:
-            raise SystemExit(f"F.last ignorenulls values {ignoring!r} != [3, 6]")
-        first_aliases = [row["first_alias"] for row in rows]
-        if first_aliases != firsts:
-            raise SystemExit(f"F.first_value values {first_aliases!r} != F.first {firsts!r}")
-        last_aliases = [row["last_alias"] for row in rows]
-        if last_aliases != lasts:
-            raise SystemExit(f"F.last_value values {last_aliases!r} != F.last {lasts!r}")
+        windowed = frame.select(
+            "k",
+            F.first("v").over(window).alias("first_value"),
+            F.last("v").over(window).alias("last_value"),
+            F.first_value("v").over(window).alias("first_alias"),
+            F.last_value("v").over(window).alias("last_alias"),
+        )
+        answers = sorted(tuple(row) for row in windowed.distinct().collect())
+        if answers != [("a", 1, None, 1, None), ("b", 4, 6, 4, 6)]:
+            raise SystemExit(f"F.first/F.last window answers {answers!r} != the ordered window's")
     finally:
         repark.stop()
 

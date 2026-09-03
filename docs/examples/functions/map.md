@@ -36,8 +36,9 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
 - [counting.py](counting.py) — `F.count_if` counts true rows only,
   `F.countDistinct` / `F.count_distinct` drop NULL from the count (and the tuple),
   `F.approx_count_distinct` exact on small input.
-- [first_last.py](first_last.py) — `F.first` / `F.last` with the `ignorenulls`
-  switch, and the `F.first_value` / `F.last_value` aliases answering identically.
+- [first_last.py](first_last.py) — `F.first` / `F.last` over an explicitly
+  ordered window, and the `F.first_value` / `F.last_value` aliases answering
+  identically.
 - [booleans.py](booleans.py) — `F.bool_and` / `F.bool_or` with their `F.every` /
   `F.some` aliases; an all-NULL group answers NULL, not False.
 - [collect.py](collect.py) — `F.collect_list` / `F.array_agg` and the

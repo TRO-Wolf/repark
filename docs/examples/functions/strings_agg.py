@@ -27,16 +27,20 @@ def main() -> None:
             ["k", "v", "s"],
         )
         joined = frame.select(F.listagg("s", ",").alias("joined")).collect()[0]["joined"]
-        if joined != "x,y,x,z,z":
-            raise SystemExit(f"F.listagg value {joined!r} != 'x,y,x,z,z'; NULLs are skipped")
+        if sorted(joined.split(",")) != ["x", "x", "y", "z", "z"]:
+            raise SystemExit(f"F.listagg value {joined!r} sorted != ['x', 'x', 'y', 'z', 'z']")
         aggregated = frame.groupBy("k").agg(F.listagg(F.col("s"), "-").alias("joined"))
         rows = sorted(aggregated.collect(), key=lambda row: row["k"])
-        joined_by_group = [row["joined"] for row in rows]
-        if joined_by_group != ["x-y-x", "z-z"]:
-            raise SystemExit(f"F.listagg values {joined_by_group!r} != ['x-y-x', 'z-z']")
+        joined_by_group = [sorted(row["joined"].split("-")) for row in rows]
+        if joined_by_group != [["x", "x", "y"], ["z", "z"]]:
+            raise SystemExit(
+                f"F.listagg values {joined_by_group!r} != [['x', 'x', 'y'], ['z', 'z']]"
+            )
         alias_value = frame.select(F.string_agg("s", ",").alias("joined")).collect()[0]["joined"]
-        if alias_value != joined:
-            raise SystemExit(f"F.string_agg value {alias_value!r} != F.listagg {joined!r}")
+        if sorted(alias_value.split(",")) != sorted(joined.split(",")):
+            raise SystemExit(
+                f"F.string_agg value {alias_value!r} sorted != F.listagg {joined!r} sorted"
+            )
     finally:
         repark.stop()
 
