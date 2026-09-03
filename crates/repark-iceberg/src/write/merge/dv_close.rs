@@ -13,6 +13,9 @@ use super::abort;
 use super::iceberg_err;
 use crate::write::concurrency::WriteConcurrency;
 use crate::write::position_delete::PositionDeletePair;
+use legacy_deletes::collect_superseded_legacy_deletes;
+
+mod legacy_deletes;
 
 pub(super) struct PreparedDeletes {
     pub referenced: HashSet<String>,
@@ -31,6 +34,7 @@ pub(super) async fn prepare_row_delta_deletes(
     pairs: &[PositionDeletePair],
     concurrency: WriteConcurrency,
     known_partitions: KnownPartitions,
+    branch: Option<&str>,
 ) -> Result<PreparedDeletes> {
     match table.metadata().format_version() {
         FormatVersion::V2 => {
@@ -60,7 +64,7 @@ pub(super) async fn prepare_row_delta_deletes(
                     kind: PreparedKind::PositionDeletes(Vec::new()),
                 });
             }
-            let plan = plan_deletion_vectors(table, pairs, known_partitions).await?;
+            let plan = plan_deletion_vectors(table, pairs, known_partitions, branch).await?;
             let abort_paths = plan
                 .close
                 .added
@@ -98,6 +102,7 @@ async fn plan_deletion_vectors(
     table: &Table,
     pairs: &[PositionDeletePair],
     mut known_partitions: KnownPartitions,
+    branch: Option<&str>,
 ) -> Result<DvCommitPlan> {
     let mut new_positions: HashMap<String, Vec<u64>> = HashMap::new();
     for (path, position) in pairs {
@@ -114,10 +119,20 @@ async fn plan_deletion_vectors(
         }
     }
     known_partitions.retain(|path, _| new_positions.contains_key(path));
+    let touched: HashSet<&str> = new_positions.keys().map(String::as_str).collect();
+    let superseded = collect_superseded_legacy_deletes(table, &touched, branch).await?;
+    for (path, positions) in &superseded.positions {
+        if let Some(slot) = new_positions.get_mut(path) {
+            slot.extend(positions.iter().copied());
+        }
+    }
     let mut close =
         close_touched_dv_containers_with_partitions(table, &new_positions, None, &known_partitions)
             .await
             .map_err(iceberg_err)?;
+    if !superseded.is_empty() {
+        close.removed.extend(superseded.files);
+    }
     Ok(DvCommitPlan {
         referenced: referenced_data_files(close.added.as_slice(), &mut close.retained_references),
         close,
@@ -543,6 +558,7 @@ mod tests {
             &[pair],
             WriteConcurrency::new(1).expect("K=1"),
             KnownPartitions::new(),
+            None,
         )
         .await
         .expect("close reads no data manifest");
@@ -673,6 +689,7 @@ mod tests {
             &[pair],
             WriteConcurrency::new(1).expect("K=1"),
             known,
+            None,
         )
         .await
         .expect("a supplied partition map must not walk a data manifest");

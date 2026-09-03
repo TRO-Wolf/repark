@@ -30,11 +30,20 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   values, plus a **v1** table upgrading straight to v3 behind the same opt-in and a
   **partitioned** v2 table whose append takes Spark's id sets and sequence numbers (the
   per-partition file ORDER differs — `F-v3-10-partition-file-order`, so the pin asserts sets,
-  not the id→row-id map). The legacy-parquet-position-delete refusal is `V3-UPGRADE-DV-1`.
+  not the id→row-id map). The legacy-parquet-position-delete cells moved to
+  `v3_legacy_delete.rs` in V3-12; the shared helpers (`seed_mor_four`, `merge_delete_sql`,
+  `upgrade`, `lineage`, `refuse`, `walk_puffin`) are `pub(super)` for that sibling.
   The V3-2 control `create_table.rs::or_replace_applies_requested_v3_and_alter_upgrades_with_opt_in`
   is this unit's too: its ALTER arm flipped from refuse to upgrade, so it no longer carries
   v3-2-create-v3-opt-in/C-008 (V3-10 negates that clause) and cites C-005 alone.
   pins: v3-10-upgrade-v2-to-v3/C-001, C-003, C-004, C-005
+- `v3_legacy_delete.rs` — **V3-12:** the Spark-SQL-door cells for a v3 merge-on-read write over an
+  upgraded table's legacy parquet position deletes. Seven merge cells (MERGE-DELETE and the append
+  after it, UPDATE, subquery DELETE, two legacy deletes on one data file, an untouched sibling
+  keeping its own, copy-on-write leaving it alone) and two loud refusals: the plain-`WHERE` arm,
+  which plans through the fork's own delete exec (`V3-UPGRADE-DV-PLAIN-1`), and a delete covering
+  two data files, which Spark SQL cannot write and so stays unmeasured (`V3-UPGRADE-DV-PART-1`).
+  pins: v3-12-legacy-delete-merge/C-001, C-002, C-003, C-004, C-005
 - `declared_refuse.rs` — **FNP-15/16:** Spark-door parse-altitude refusals for the six
   unreachable names and the sketch family; passthrough attach pin.
   pins: fnp-15-16/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008

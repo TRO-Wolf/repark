@@ -2539,30 +2539,73 @@ the pin rather than obeying it.
   the honest answer — writing v4-labelled metadata this engine cannot read back would be the
   silent one. TRIGGER for lifting: a fork `FormatVersion::V4` with spec support behind it.
 
-### V3-UPGRADE-DV-1 — DECLARED (V3-10, 2026-09-02): a v3 DV write over a legacy parquet position delete refuses
+### V3-UPGRADE-DV-1 — FIXED (V3-12, 2026-09-02): a v3 DV write merges a legacy parquet position delete
 
-- **repark** — on a table upgraded to v3 that still carries a **v2 parquet position delete**,
-  the next merge-on-read write refuses loudly at the fork guard: "Cannot commit deletion vector
-  for <data file>: live position delete file <path> still applies to that data file and would
-  be silently superseded by the DV at read time. Merging previous deletes into the new DV (Java
-  `BaseDVFileWriter.loadPreviousDeletes`) is deferred in this port". The table is left exactly
-  as the upgrade left it and no Puffin file is written. The upgrade itself is unaffected, and a
-  v3 merge-on-read write on an upgraded table with **no** legacy delete is Spark-equal
-  (V3-UPGRADE-1).
-- **Apache Spark** — merges the legacy parquet position delete into the new DV in the same
-  commit: a v2 MoR table of four rows with one parquet position delete, upgraded and then
-  deleted from again, ends with ONE Puffin DV of `record_count = 2` and no parquet delete file,
-  `next-row-id` 4, rows `(1,0,1),(4,3,1)`. The same holds for the `MERGE … WHEN MATCHED THEN
-  DELETE` spelling.
-  *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-02 V3-10 transcript)*.
-- **Pin** — `crates/repark-spark/src/tests/v3_upgrade.rs::merge_on_read_delete_over_a_legacy_parquet_position_delete_refuses_loudly`.
-  Pins: v3-10-upgrade-v2-to-v3/C-002, C-005.
-- **Rationale** — DECLARED and dated; a loud refusal, never a silent supersede. The fix is a
-  fork/engine capability (read the parquet position delete back through
-  `delete_vector::load_delete_vector`, merge it via `DVFileWriter::with_previous_deletes`, and
-  pass the superseded file to `RowDelta::remove_deletes_many` in the same commit), not part of
-  the upgrade itself. TRIGGER for lifting: unit **V3-12**, which wires that previous-deletes
-  merge engine-side.
+- **repark** — on a table upgraded to v3 that still carries **v2 parquet position deletes**, the
+  next merge-on-read write loads their positions back off the delete files, unions them into the
+  new deletion vector, and passes the superseded delete files to `RowDelta::remove_deletes_many`
+  in the SAME commit. A four-row v2 MoR table with one parquet position delete (id 2), upgraded
+  and then MERGE-deleted at id 3, ends with ONE Puffin DV of `record_count = 2` referencing the
+  data file, no parquet delete file, `next-row-id` 4, rows/lineage `(1,0,1),(4,3,1)`; a later
+  one-row append leaves `(1,0,1),(4,3,1),(9,4,4)` at `next-row-id` 5. The UPDATE and
+  `DELETE … WHERE id IN (SELECT …)` arms merge identically. **Two** live parquet deletes for one
+  data file (this engine's v2 arm leaves two where Spark rewrites one) both merge and both leave
+  in the one `RowDelta` — DV `record_count` 3. A data file this commit does NOT touch keeps its
+  own legacy delete live. Copy-on-write writes no DV, so a legacy delete is left exactly as it was.
+- **Apache Spark** — the same, in the same statements: Java `BaseDVFileWriter.loadPreviousDeletes`
+  unions the previous positions and `RowDelta.removeDeletes` drops the superseded file. The
+  removal is scoped to **file-scoped** deletes — `referenced_data_file` is NULL on every
+  Spark-written position delete, so file scope comes from equal `file_path` lower/upper bounds
+  (`ContentFileUtil.isFileScoped`). On a partitioned table with two data files in one partition
+  Spark writes one delete file per data file and merges only the touched one, leaving the
+  sibling's live. Summary counts on the merging commit: `added-dvs 1`, `added-position-deletes 2`,
+  `added-delete-files 1`, `removed-delete-files 1`, `removed-position-delete-files 1`,
+  `removed-position-deletes 1`.
+  *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-02 V3-12 transcript)*.
+- **Pin** — `crates/repark-spark/src/tests/v3_legacy_delete.rs` (nine cells: merge, append after,
+  UPDATE, subquery DELETE, two legacy deletes, untouched sibling, copy-on-write, and the two
+  refusals), `crates/repark-sql/src/v3/create.rs::upgraded_v3_merge_delete_merges_a_legacy_parquet_position_delete_into_the_dv`,
+  `python/repark/tests/test_v3_legacy_delete_merge.py` (facade + a live Spark cell at matched layout).
+  Pins: v3-12-legacy-delete-merge/C-002, C-003, C-004.
+- **Rationale** — FIXED. The merge is engine-side and needs no fork change: the fork's
+  `validate_fresh_dvs_only` already lets a DV through when the same commit removes the delete it
+  would supersede. Two residuals stay dated DECLARED rows below.
+
+### V3-UPGRADE-DV-PLAIN-1 — DECLARED (V3-12, 2026-09-02): the plain-`WHERE` MoR arm still refuses over a legacy delete
+
+- **repark** — `DELETE FROM t WHERE id = 3` and `UPDATE t SET … WHERE id = 3` (a non-subquery
+  predicate) do not reach repark's own merge-on-read commit path: only the `IN (SELECT …)` /
+  `EXISTS` hole is claimed engine-side, so those spellings plan through the fork's own
+  `IcebergDeleteExec`. Over a live parquet position delete it refuses before any IO: "deletion-vector:
+  data file `…` is still covered by a Parquet position-delete file. Merging those positions into a
+  new DV is not yet ported (Java `BaseDVFileWriter.loadPreviousDeletes` does it)". The table is
+  left exactly as the upgrade left it and no Puffin is written.
+- **Apache Spark** — merges, exactly as `V3-UPGRADE-DV-1` records; the statement spelling makes no
+  difference to Spark. *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-02 V3-12 transcript)*.
+- **Pin** — `crates/repark-spark/src/tests/v3_legacy_delete.rs::a_plain_where_merge_on_read_delete_over_a_legacy_delete_still_refuses_loudly`.
+  Pins: v3-12-legacy-delete-merge/C-003, C-004.
+- **Rationale** — DECLARED and dated; a loud refusal, never a silent supersede. The refusal lives in
+  the pinned fork's delete exec, and the fork pin is fixed for this unit. TRIGGER for lifting:
+  either a fork `write_deletion_vectors` that merges previous deletes, or the engine widening its
+  predicate-DML hole so a plain-`WHERE` MoR statement commits through `prepare_row_delta_deletes`.
+
+### V3-UPGRADE-DV-PART-1 — DECLARED (V3-12, 2026-09-02): a position delete covering two data files still refuses
+
+- **repark** — a position delete whose `file_path` bounds are NOT equal covers more than one data
+  file (this engine writes one under `write.delete.granularity = 'partition'`). It is not merged,
+  so the fork's commit door refuses: "Cannot commit deletion vector for `…`: live position delete
+  file `…` still applies to that data file and would be silently superseded by the DV at read
+  time". The table is left untouched and no Puffin is written.
+- **Apache Spark** — UNMEASURED. Spark SQL never writes one: on a partitioned table with two data
+  files in one partition its MoR DELETE emits one file-scoped delete file per data file, so the
+  shape could not be built from the oracle door. Java's `BaseDVFileWriter` refuses an unscoped
+  previous delete (`validatePreviousDeletes`), which is consistent with refusing here.
+  *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-02 V3-12 transcript; the cell could not be built.)*
+- **Pin** — `crates/repark-spark/src/tests/v3_legacy_delete.rs::a_partition_scoped_legacy_delete_still_refuses_loudly`.
+  Pins: v3-12-legacy-delete-merge/C-002, C-003, C-004.
+- **Rationale** — DECLARED and dated. Never pin an unmeasured value: the merge lifts only for the
+  shapes the oracle produced. TRIGGER for lifting: a measured Spark cell for a delete file covering
+  two data files, from any door that can write one.
 
 ### BL-9 — a double-quoted string literal is an identifier on the SQL door
 

@@ -467,3 +467,101 @@ async fn alter_set_properties_downgrade_and_unsupported_versions_refuse() {
         2
     );
 }
+
+const MOR_V2: &str = "format_version = 2, extra_properties = MAP(\
+    ARRAY['write.delete.mode', 'write.merge.mode'], \
+    ARRAY['merge-on-read', 'merge-on-read'])";
+
+async fn live_delete_file_kinds(door: &Door, table: &str) -> Vec<String> {
+    use iceberg::spec::ManifestContentType;
+    let loaded = door.table("sales", table).await;
+    let metadata = loaded.metadata();
+    let mut kinds = Vec::new();
+    let Some(snapshot) = metadata.current_snapshot() else {
+        return kinds;
+    };
+    let manifest_list = snapshot
+        .load_manifest_list(loaded.file_io(), metadata)
+        .await
+        .expect("manifest list");
+    for manifest_file in manifest_list.entries() {
+        if manifest_file.content != ManifestContentType::Deletes {
+            continue;
+        }
+        let manifest = manifest_file
+            .load_manifest(loaded.file_io())
+            .await
+            .expect("manifest");
+        for entry in manifest.entries() {
+            if entry.is_alive() {
+                kinds.push(format!("{:?}", entry.data_file().file_format()));
+            }
+        }
+    }
+    kinds.sort();
+    kinds
+}
+
+async fn surviving_ids(door: &Door, table: &str) -> Vec<i32> {
+    use datafusion::arrow::array::Int32Array;
+    let batches = door
+        .sql(&format!("SELECT id FROM ice.sales.{table} ORDER BY id"))
+        .await
+        .unwrap_or_else(|err| panic!("select on {table}: {err}"));
+    let mut ids = Vec::new();
+    for batch in &batches {
+        let column = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<Int32Array>()
+            .expect("id Int32");
+        for index in 0..batch.num_rows() {
+            ids.push(column.value(index));
+        }
+    }
+    ids
+}
+
+#[tokio::test]
+async fn upgraded_v3_merge_delete_merges_a_legacy_parquet_position_delete_into_the_dv() {
+    let door = door_with_session_v3_opt_in().await;
+    door.ok(&format!(
+        "CREATE TABLE ice.sales.legacy (id INT, name VARCHAR) WITH ({MOR_V2})"
+    ))
+    .await;
+    door.ok("INSERT INTO ice.sales.legacy VALUES (1, 'a'), (2, 'b'), (3, 'c')")
+        .await;
+    door.ok(
+        "MERGE INTO ice.sales.legacy AS t USING (SELECT 2 AS id) AS s ON t.id = s.id \
+         WHEN MATCHED THEN DELETE",
+    )
+    .await;
+    assert_eq!(
+        live_delete_file_kinds(&door, "legacy").await,
+        vec!["Parquet".to_string()],
+        "the v2 arm leaves a parquet position delete"
+    );
+
+    door.ok("ALTER TABLE ice.sales.legacy SET PROPERTIES (format_version = 3)")
+        .await;
+    door.ok(
+        "MERGE INTO ice.sales.legacy AS t USING (SELECT 3 AS id) AS s ON t.id = s.id \
+         WHEN MATCHED THEN DELETE",
+    )
+    .await;
+
+    assert_eq!(
+        surviving_ids(&door, "legacy").await,
+        vec![1],
+        "both the legacy position and the new one stay deleted"
+    );
+    assert_eq!(
+        live_delete_file_kinds(&door, "legacy").await,
+        vec!["Puffin".to_string()],
+        "the superseded parquet delete leaves in the same RowDelta the DV arrives in"
+    );
+    assert_eq!(
+        door.table("sales", "legacy").await.metadata().next_row_id(),
+        3
+    );
+}

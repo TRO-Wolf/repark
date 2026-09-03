@@ -32,11 +32,36 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   idempotent). V3-7: v3 MERGE carries stored `_row_id` through `row_lineage.rs`
   (`schema_with_row_lineage`); last-updated is nulled only on UPDATE rows.
   pins: v3-7-merge-lineage/C-001
+- `dv_close/legacy_deletes.rs` — **V3-12 (2026-09-02):** `collect_superseded_legacy_deletes` reads the
+  scanned snapshot's delete manifests once and returns, for the data files this commit gives a
+  DV, the positions of every live NON-Puffin position delete that still applies plus the delete
+  files themselves. File scope is Java `ContentFileUtil.isFileScoped`, ported here because the
+  fork's `delete_file_index` is `pub(crate)`: `referenced_data_file` when set, else equal
+  `file_path` lower/upper bounds. Positions are read off the parquet by reserved field id
+  (`RESERVED_FIELD_ID_DELETE_FILE_PATH` / `_POS`, name fallback) and filtered to the referenced
+  data file, so a delete file that also names other data files contributes only its own rows.
+  The delete manifests are read FIRST and the data manifests only if a candidate survives, so a
+  table with no legacy parquet delete walks no data manifest at all — RP-7's
+  `closing_a_covered_v3_delete_reads_no_data_manifest` and
+  `a_supplied_partition_map_closes_a_fresh_partitioned_delete_with_no_data_manifest` (both of
+  which rename every data manifest away) are what hold that, and an eager walk reds them.
+  Applicability is `delete_seq >= data_seq`, the same test the fork's commit door uses, with an
+  unknown sequence erring toward "applies". A delete whose bounds cover MORE than one data file
+  is deliberately not collected: that shape is unmeasured on Spark, so it must keep hitting the
+  fork's loud refusal rather than be silently superseded.
+  pins: v3-12-legacy-delete-merge/C-002, C-003, C-004
 - `dv_close.rs` — v3 `RowDelta` DV-container close. `prepare_row_delta_deletes` writes
   V2 parquet position deletes or calls `close_touched_dv_containers_with_partitions` on V3, then
   `apply` stamps sibling sequences. C-003 pin
   `shared_puffin_row_delta_keeps_the_untouched_sibling` calls `commit_row_delta_kind`
   on the Spark shared-Puffin fixture (id 5 must stay deleted).
+  **V3-12:** `plan_deletion_vectors` folds the superseded legacy positions into `new_positions`
+  BEFORE the container close (so the fork's `write_dv_blobs` writes one union, and the DV's
+  `record_count` counts it once) and appends the superseded delete files to `close.removed`, so
+  `apply_close`'s `remove_deletes_many` carries them in the same commit and the fork's
+  `validate_fresh_dvs_only` sees the supersede instead of refusing. `prepare_row_delta_deletes`
+  takes the commit `branch` so the merge set is read off the same snapshot the commit door checks.
+  pins: v3-12-legacy-delete-merge/C-003
   **V3-9 (2026-09-02):** the position map takes `get_mut` before allocating a key and the V2
   `referenced` set allocates one `String` per distinct path, not one per row (600k rows:
   41.3 → 29.3 ms and 37.3 → 23.9 ms).

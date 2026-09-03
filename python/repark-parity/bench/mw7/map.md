@@ -57,7 +57,7 @@ the deletes at every checkpoint; this driver does not run one.
 | Reproduce the MW-7 full run | `run_mw7.py --rows 10000000 --merges 50 --partitions 8 --checkpoint-every 10 --reps 7 --target-file-size-bytes 4194304 --scratch <dir>` |
 | Project a calibration onto a bigger run | add `--project-to 10000000:100` |
 | Read the numbers | [../../../../task/ledgers/completed/mw-7-scale-measurement-ledger.md](../../../../task/ledgers/archive/2026-08/2026-08-24-mw-7-scale-measurement-ledger.md) |
-| Read the v3 numbers | [../../../../task/ledgers/staging/scale-v3-mw7-ledger.md](../../../../task/ledgers/completed/scale-v3-mw7-ledger.md) |
+| Read the v3 numbers | [../../../../task/ledgers/staging/scale-v3-mw7-ledger.md](../../../../task/ledgers/archive/2026-09/2026-09-02-scale-v3-mw7-ledger.md) |
 | Run the CI pin on this machinery | `python/repark/tests/test_mw7_scale_smoke.py` |
 | See how the runbook reclaims a delete-laden file, and the one shape it still cannot | registry row `RDF-1`; pin `test_mw7_scale_smoke.py::test_delete_laden_in_band_file_is_rewritten_and_its_delete_file_dies` (C-011, flipped 2026-09-02); the residue is a delete file naming two or more data files, fork ask F-16 |
 

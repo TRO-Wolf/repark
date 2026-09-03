@@ -1,0 +1,380 @@
+use super::super::*;
+use super::common::*;
+
+use super::v3_upgrade::{lineage, merge_delete_sql, refuse, seed_mor_four, upgrade, walk_puffin};
+
+async fn live_delete_files(
+    catalogs: &CatalogRegistry,
+    table: &str,
+) -> Vec<(String, u64, Option<String>)> {
+    use iceberg::spec::ManifestContentType;
+    let ident = TableIdent::new(NamespaceIdent::new("sales".to_string()), table.to_string());
+    let loaded = catalogs["ice"].load_table(&ident).await.unwrap();
+    let metadata = loaded.metadata();
+    let mut files = Vec::new();
+    let Some(snapshot) = metadata.current_snapshot() else {
+        return files;
+    };
+    let manifest_list = snapshot
+        .load_manifest_list(loaded.file_io(), metadata)
+        .await
+        .unwrap();
+    for manifest_file in manifest_list.entries() {
+        if manifest_file.content != ManifestContentType::Deletes {
+            continue;
+        }
+        let manifest = manifest_file.load_manifest(loaded.file_io()).await.unwrap();
+        for entry in manifest.entries() {
+            if !entry.is_alive() {
+                continue;
+            }
+            let file = entry.data_file();
+            files.push((
+                format!("{:?}", file.file_format()),
+                file.record_count(),
+                file.referenced_data_file()
+                    .map(|path| path.rsplit('/').next().unwrap_or_default().to_string()),
+            ));
+        }
+    }
+    files.sort();
+    files
+}
+
+async fn seed_delete_source(ctx: &SessionContext, catalogs: &CatalogRegistry, table: &str) {
+    run(
+        ctx,
+        catalogs,
+        &format!("CREATE TABLE ice.sales.{table} (id INT) USING iceberg"),
+    )
+    .await;
+    run(
+        ctx,
+        catalogs,
+        &format!("INSERT INTO ice.sales.{table} VALUES (3)"),
+    )
+    .await;
+}
+
+async fn seed_upgraded_legacy(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    table: &str,
+) -> String {
+    seed_mor_four(ctx, catalogs, table, "merge-on-read").await;
+    run(ctx, catalogs, &merge_delete_sql(table, 2)).await;
+    assert_eq!(
+        live_delete_files(catalogs, table).await,
+        vec![("Parquet".to_string(), 1, None)],
+        "the v2 arm leaves ONE file-scoped parquet position delete"
+    );
+    upgrade(ctx, catalogs, table).await;
+    let data_files = live_data_file_paths(catalogs, table).await;
+    assert_eq!(data_files.len(), 1, "the seed is one data file");
+    data_files
+        .into_iter()
+        .next()
+        .map(|path| path.rsplit('/').next().unwrap_or_default().to_string())
+        .expect("one data file")
+}
+
+#[tokio::test]
+async fn merge_on_read_delete_merges_a_legacy_parquet_position_delete_into_the_dv() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&wh).await;
+    let data_file = seed_upgraded_legacy(&ctx, &catalogs, "legacy").await;
+
+    run(&ctx, &catalogs, &merge_delete_sql("legacy", 3)).await;
+
+    let after = load_sales_table(&catalogs, "legacy").await;
+    assert_eq!(after.metadata().next_row_id(), 4);
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.legacy").await,
+        vec![(1, "a".to_string()), (4, "d".to_string())]
+    );
+    assert_eq!(
+        lineage(&ctx, &catalogs, "legacy").await,
+        vec![(1, Some(0), Some(1)), (4, Some(3), Some(1))]
+    );
+    assert_eq!(
+        live_delete_files(&catalogs, "legacy").await,
+        vec![("Puffin".to_string(), 2, Some(data_file))],
+        "Spark leaves ONE Puffin of record_count 2 and no parquet delete file"
+    );
+    let mut puffins = 0;
+    walk_puffin(wh.path(), &mut puffins);
+    assert_eq!(puffins, 1);
+}
+
+#[tokio::test]
+async fn merge_on_read_delete_over_a_legacy_delete_then_appends_like_spark() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&wh).await;
+    seed_upgraded_legacy(&ctx, &catalogs, "legacyap").await;
+    run(&ctx, &catalogs, &merge_delete_sql("legacyap", 3)).await;
+
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.legacyap VALUES (9, 'z')",
+    )
+    .await;
+
+    let after = load_sales_table(&catalogs, "legacyap").await;
+    assert_eq!(after.metadata().next_row_id(), 5);
+    assert_eq!(
+        lineage(&ctx, &catalogs, "legacyap").await,
+        vec![
+            (1, Some(0), Some(1)),
+            (4, Some(3), Some(1)),
+            (9, Some(4), Some(4))
+        ]
+    );
+}
+
+#[tokio::test]
+async fn merge_on_read_update_over_a_legacy_parquet_position_delete_merges_into_the_dv() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&wh).await;
+    let data_file = seed_upgraded_legacy(&ctx, &catalogs, "legacyup").await;
+
+    seed_delete_source(&ctx, &catalogs, "upsrc").await;
+    run(
+        &ctx,
+        &catalogs,
+        "UPDATE ice.sales.legacyup SET name = 'Z' WHERE id IN (SELECT id FROM ice.sales.upsrc)",
+    )
+    .await;
+
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.legacyup").await,
+        vec![
+            (1, "a".to_string()),
+            (3, "Z".to_string()),
+            (4, "d".to_string())
+        ]
+    );
+    assert_eq!(
+        live_delete_files(&catalogs, "legacyup").await,
+        vec![("Puffin".to_string(), 2, Some(data_file))],
+        "the UPDATE arm merges the legacy positions too"
+    );
+}
+
+#[tokio::test]
+async fn delete_where_over_a_legacy_parquet_position_delete_merges_into_the_dv() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&wh).await;
+    let data_file = seed_upgraded_legacy(&ctx, &catalogs, "legacydw").await;
+
+    seed_delete_source(&ctx, &catalogs, "dwsrc").await;
+    run(
+        &ctx,
+        &catalogs,
+        "DELETE FROM ice.sales.legacydw WHERE id IN (SELECT id FROM ice.sales.dwsrc)",
+    )
+    .await;
+
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.legacydw").await,
+        vec![(1, "a".to_string()), (4, "d".to_string())]
+    );
+    assert_eq!(
+        live_delete_files(&catalogs, "legacydw").await,
+        vec![("Puffin".to_string(), 2, Some(data_file))]
+    );
+}
+
+#[tokio::test]
+async fn two_legacy_parquet_deletes_on_one_data_file_both_merge_and_both_go() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&wh).await;
+    seed_mor_four(&ctx, &catalogs, "legacy2", "merge-on-read").await;
+    run(&ctx, &catalogs, &merge_delete_sql("legacy2", 1)).await;
+    run(&ctx, &catalogs, &merge_delete_sql("legacy2", 2)).await;
+    assert_eq!(
+        live_delete_files(&catalogs, "legacy2").await,
+        vec![
+            ("Parquet".to_string(), 1, None),
+            ("Parquet".to_string(), 1, None)
+        ],
+        "this engine's v2 arm leaves TWO live file-scoped deletes where Spark rewrites one"
+    );
+    let data_file = {
+        upgrade(&ctx, &catalogs, "legacy2").await;
+        live_data_file_paths(&catalogs, "legacy2")
+            .await
+            .into_iter()
+            .next()
+            .map(|path| path.rsplit('/').next().unwrap_or_default().to_string())
+            .expect("one data file")
+    };
+
+    run(&ctx, &catalogs, &merge_delete_sql("legacy2", 3)).await;
+
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.legacy2").await,
+        vec![(4, "d".to_string())]
+    );
+    assert_eq!(
+        live_delete_files(&catalogs, "legacy2").await,
+        vec![("Puffin".to_string(), 3, Some(data_file))],
+        "both superseded parquet deletes go in the same RowDelta"
+    );
+}
+
+#[tokio::test]
+async fn a_sibling_data_files_legacy_delete_stays_live_when_it_is_not_touched() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&wh).await;
+    seed_mor_four(&ctx, &catalogs, "legacysib", "merge-on-read").await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.legacysib VALUES (5, 'e'), (6, 'f')",
+    )
+    .await;
+    run(&ctx, &catalogs, &merge_delete_sql("legacysib", 2)).await;
+    run(&ctx, &catalogs, &merge_delete_sql("legacysib", 5)).await;
+    upgrade(&ctx, &catalogs, "legacysib").await;
+
+    run(&ctx, &catalogs, &merge_delete_sql("legacysib", 3)).await;
+
+    let files = live_delete_files(&catalogs, "legacysib").await;
+    assert_eq!(
+        files
+            .iter()
+            .filter(|(format, _, _)| format == "Parquet")
+            .count(),
+        1,
+        "the untouched data file keeps its own legacy delete live: {files:?}"
+    );
+    assert_eq!(
+        files
+            .iter()
+            .filter(|(format, _, _)| format == "Puffin")
+            .count(),
+        1,
+        "only the touched data file gets a DV: {files:?}"
+    );
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.legacysib").await,
+        vec![
+            (1, "a".to_string()),
+            (4, "d".to_string()),
+            (6, "f".to_string())
+        ],
+        "the sibling's legacy delete keeps id 5 deleted"
+    );
+}
+
+#[tokio::test]
+async fn a_plain_where_merge_on_read_delete_over_a_legacy_delete_still_refuses_loudly() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&wh).await;
+    seed_upgraded_legacy(&ctx, &catalogs, "legacyplain").await;
+
+    let message = refuse(
+        &ctx,
+        &catalogs,
+        "DELETE FROM ice.sales.legacyplain WHERE id = 3",
+    )
+    .await;
+
+    assert!(
+        message.contains("is still covered by a Parquet position-delete file")
+            && message.contains("loadPreviousDeletes"),
+        "the plain-WHERE arm runs in the fork's own delete exec, which refuses before any IO:          {message}"
+    );
+    assert_eq!(
+        live_delete_files(&catalogs, "legacyplain").await,
+        vec![("Parquet".to_string(), 1, None)],
+        "the refusal leaves the table exactly as the upgrade left it"
+    );
+    let mut puffins = 0;
+    walk_puffin(wh.path(), &mut puffins);
+    assert_eq!(puffins, 0);
+}
+
+#[tokio::test]
+async fn a_partition_scoped_legacy_delete_still_refuses_loudly() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.legacypart (id INT, name STRING) USING iceberg TBLPROPERTIES \
+         ('format-version' = '2', 'write.merge.mode' = 'merge-on-read', \
+          'write.delete.granularity' = 'partition')",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.legacypart VALUES (1, 'a'), (2, 'b')",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.legacypart VALUES (3, 'c'), (4, 'd')",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "MERGE INTO ice.sales.legacypart AS t USING (SELECT 1 AS id UNION ALL SELECT 3) AS s \
+         ON t.id = s.id WHEN MATCHED THEN DELETE",
+    )
+    .await;
+    assert_eq!(
+        live_delete_files(&catalogs, "legacypart").await,
+        vec![("Parquet".to_string(), 2, None)],
+        "partition granularity leaves ONE delete file covering BOTH data files"
+    );
+    upgrade(&ctx, &catalogs, "legacypart").await;
+
+    let message = refuse(&ctx, &catalogs, &merge_delete_sql("legacypart", 2)).await;
+
+    assert!(
+        message.contains("Cannot commit deletion vector")
+            && message.contains("live position delete file"),
+        "a delete covering more than one data file is unmeasured on Spark and stays a loud \
+         refusal, never a silent supersede: {message}"
+    );
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.legacypart").await,
+        vec![(2, "b".to_string()), (4, "d".to_string())]
+    );
+    let mut puffins = 0;
+    walk_puffin(wh.path(), &mut puffins);
+    assert_eq!(puffins, 0);
+}
+
+#[tokio::test]
+async fn copy_on_write_over_a_legacy_parquet_position_delete_leaves_it_alone() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&wh).await;
+    seed_upgraded_legacy(&ctx, &catalogs, "legacycow").await;
+    run(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.legacycow SET TBLPROPERTIES ('write.merge.mode' = 'copy-on-write')",
+    )
+    .await;
+
+    run(&ctx, &catalogs, &merge_delete_sql("legacycow", 3)).await;
+
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.legacycow").await,
+        vec![(1, "a".to_string()), (4, "d".to_string())]
+    );
+    assert_eq!(
+        live_delete_files(&catalogs, "legacycow").await,
+        vec![("Parquet".to_string(), 1, None)],
+        "copy-on-write never writes a DV, so the legacy delete is left exactly as it was"
+    );
+    let mut puffins = 0;
+    walk_puffin(wh.path(), &mut puffins);
+    assert_eq!(puffins, 0);
+}

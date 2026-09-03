@@ -652,7 +652,7 @@ first statement. The v3 cycle is the same list without that line: `rewrite_data_
 MERGEs on v3: 496 data files and 96 deletion vectors in, `rewritten_data_files_count` 496,
 `removed_delete_files_count` **96**, and 144 data files with **zero** delete files and **zero**
 delete records out
-([SCALE-v3 §3.4](../../task/ledgers/completed/scale-v3-mw7-ledger.md)).
+([SCALE-v3 §3.4](../../task/ledgers/archive/2026-09/2026-09-02-scale-v3-mw7-ledger.md)).
 
 **Always pass `older_than` to `expire_snapshots`.** Without it the engine falls back to the
 table's `history.expire.max-snapshot-age-ms`. That property defaults to **5 days**. It is a
@@ -680,7 +680,7 @@ merges of debt, step 2 read 400 delete files and left 8, so step 3 read 8. Rever
 the expensive step reads 50 times the delete files
 ([MW-7 §6.2](../../task/ledgers/archive/2026-08/2026-08-24-mw-7-scale-measurement-ledger.md#6-what-the-numbers-set-as-mw-8s-runbook-defaults)).
 **On v3 the ordering question does not arise:** step 2 refuses and step 3 does the whole reclaim
-([SCALE-v3 §3.4](../../task/ledgers/completed/scale-v3-mw7-ledger.md)).
+([SCALE-v3 §3.4](../../task/ledgers/archive/2026-09/2026-09-02-scale-v3-mw7-ledger.md)).
 
 **Run the cycle every 10 merges. Treat 20 merges as the ceiling.** On v2, scans cross 2× the
 compacted control at 19.6 merges, and merge 20 already measures 2.05×. At 10 merges every probe
@@ -690,7 +690,7 @@ you under it
 **On v3 the same crossing sits later:** the partition probe passes 2× between merge 30 (1.88×)
 and merge 40 (2.18×), the point probe between merge 40 (2.41×) and merge 50 (2.69×). A
 10-merge cadence is still the safe recommendation; on v3 it is a conservative one
-([SCALE-v3 §3.5](../../task/ledgers/completed/scale-v3-mw7-ledger.md)).
+([SCALE-v3 §3.5](../../task/ledgers/archive/2026-09/2026-09-02-scale-v3-mw7-ledger.md)).
 
 **Trigger on the delete-file count where your platform reports it.** A scan opens delete files,
 so the file count is the closer proxy for what the debt costs. The same 2× crossing sits at
@@ -700,7 +700,7 @@ trigger at all:** a deletion vector is file-scoped and rewritten in place, so th
 to the number of data files carrying deletes and then stops — 96 of them at 10 million rows and
 50 MERGEs, where the same workload on v2 reached 400. Trigger on the delete RECORDS or on the
 data-file count there
-([SCALE-v3 §3.1](../../task/ledgers/completed/scale-v3-mw7-ledger.md)).
+([SCALE-v3 §3.1](../../task/ledgers/archive/2026-09/2026-09-02-scale-v3-mw7-ledger.md)).
 Unset `write.delete.granularity` is now `file`
 ([MOR-2](../spark-sql-iceberg-parity.md#mor-2--merge-on-read-delete-files-are-partition-granularity-where-sparks-default-is-per-file)),
 so an unset table grows one delete file per touched data file. Set `'partition'` to keep
@@ -732,7 +732,7 @@ carrying 50 merges of debt
 ([MW-7 §6.5](../../task/ledgers/archive/2026-08/2026-08-24-mw-7-scale-measurement-ledger.md#6-what-the-numbers-set-as-mw-8s-runbook-defaults)).
 **Budget about 6 minutes on v3** (353.9 s measured on the same shape): the reclaim that v2
 splits across two procedures happens inside `rewrite_data_files`
-([SCALE-v3 §3.4](../../task/ledgers/completed/scale-v3-mw7-ledger.md)).
+([SCALE-v3 §3.4](../../task/ledgers/archive/2026-09/2026-09-02-scale-v3-mw7-ledger.md)).
 
 #### What the cycle cannot reclaim
 
@@ -763,7 +763,7 @@ so they still stand for that shape.
 **zero delete files and zero delete records**, and the table reads the point predicate at
 **0.61×** the copy-on-write control rather than above it. A deletion vector is file-scoped, so
 the residue this section describes cannot form
-([SCALE-v3 §3.4, §3.5](../../task/ledgers/completed/scale-v3-mw7-ledger.md)).
+([SCALE-v3 §3.4, §3.5](../../task/ledgers/archive/2026-09/2026-09-02-scale-v3-mw7-ledger.md)).
 
 #### Retrying a step
 

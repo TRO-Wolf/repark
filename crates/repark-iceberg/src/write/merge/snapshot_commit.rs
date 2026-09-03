@@ -315,7 +315,7 @@ pub(crate) async fn commit_row_delta_kind_on_ref(
     let pair_count = pairs.len() as u64;
     let data_file_count = data_files.len() as u64;
     let mut prepared =
-        dv_close::prepare_row_delta_deletes(table, &pairs, concurrency, known_partitions)
+        dv_close::prepare_row_delta_deletes(table, &pairs, concurrency, known_partitions, branch)
             .instrument(tracing::info_span!(
                 "merge.write_deletes",
                 pairs = pair_count
