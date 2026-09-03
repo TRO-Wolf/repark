@@ -13,10 +13,16 @@ EX-3 batch 2 (2026-09-02): `check_example_coverage.py` `BACKLOG_BASELINE` 881 �
 37 `F.*` trig, log, rounding and try-arithmetic names covered by six new examples;
 `F.log1p` measured divergent against the live oracle at `x = 1e-10` and `x = 1e-13` and kept on the
 backlog. pins: ex-2-functions-math-bitwise/C-002
+V3-11 (2026-09-02): `check_rust_file_size.py` `repark-iceberg/src/write/append.rs` 1886→1884,
+after its concurrent fanout path stopped sorting twice; mirrored in
+`python/repark-parity/tests/test_cap_1_source_file_line_cap.py`.
+pins: v3-11-row-id-determinism/C-003
+
 RP-7 (2026-09-02): `check_rust_file_size.py` `write/merge/mod.rs` 1889→1795, behind the
 `merge/target_scan.rs` extraction, and `write/predicate_dml.rs` 1164→1142, behind
 `predicate_dml/residual.rs` plus the batch helper moving to `predicate_dml/lineage.rs`. Both
 ratchet DOWN; no baseline was raised. pins: rp-7-f18-repin/C-005
+
 V3-10 (2026-09-02): `check_rust_file_size.py` `repark-spark/src/alter.rs` 1831→1830 — the
 `SET TBLPROPERTIES` arm delegates to `repark-spark/src/format_version.rs` — and
 `repark-iceberg/src/write/alter.rs` 1641→1630, where the caller-less `alter_table_properties`

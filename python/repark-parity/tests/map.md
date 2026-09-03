@@ -125,6 +125,19 @@ JVM, no repark required). See [../map.md](../map.md).
   `docs/tier2-aws.md` §6 lists one row per leg, its two v3 rows state the answer, it says the v3
   legs need no new IAM action or workflow variable, and it carries no run id because measured
   state belongs to STATUS; both legs and the local pin exist as real `def`s; STATUS's v3
+  **V3-11 (2026-09-02):** the `V3-ROWID-3` meta-pin flips from BACKLOG to FIXED, and three
+  more join it — `F-v3-10-partition-file-order` stays open naming fork ask **F-20** as
+  RePark's rule rather than Spark's; `V3-FILEORDER-1` must carry the decoded
+  `JavaHashes$StructLikeHash` order, the collision caveat and every measured arm; and the
+  retired `DataSourceV2Relation` maintenance-oracle note must appear ONCE (under MOR-1) with
+  five pointers, so no row can quietly regrow its own copy of a claim that was false on all
+  six.
+  Two neighbouring meta-pins were repointed when V3-11 compacted STATUS:
+  `test_plan_1_northstar_fnp_sequence.py` reads the shortened V3-6 sentence, and
+  `test_v3r_1_rulings.py` reads `F-rp3-c7 consumed` from the north-star COW row — the
+  artefact's own home — instead of from a STATUS restatement that no longer exists.
+  `test_cap_1_source_file_line_cap.py` mirrors the `append.rs` ceiling at its ratcheted 1884.
+  pins: v3-11-row-id-determinism/C-003, C-005, C-008
   workstream names the run, carries the `V3-ROWID-3` line and stays under its dual-pinned
   25,000-byte ceiling; registry `V3-ROWID-3` still carries both engines' measured answers and
   names follow-up unit V3-11; and `docs/design/format-v3-track.md` §7's two "not measured" claims
