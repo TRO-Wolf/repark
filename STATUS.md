@@ -80,18 +80,16 @@ What happens next, in order:
    [briefs/v2-engine-hardening.md](briefs/v2-engine-hardening.md). Live open items sit in
    [Active workstreams](#active-workstreams) and the divergence registry
    [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md). Wave landing records
-   (Y/Z/W/V/S, 2026-08-13/14) are the archived increment ledgers
-   [z5](task/ledgers/archive/2026-08/2026-08-13-z5-landing-increment-ledger.md),
-   [w5](task/ledgers/archive/2026-08/2026-08-13-w5-z-landing-ledger.md),
-   [v5](task/ledgers/archive/2026-08/2026-08-13-v5-w-landing-ledger.md),
-   [s5](task/ledgers/archive/2026-08/2026-08-13-s5-v-landing-ledger.md).
+   (Y/Z/W/V/S, 2026-08-13/14) are the `z5` / `w5` / `v5` / `s5` increment ledgers indexed in
+   [task/ledgers/archive/2026-08/map.md](task/ledgers/archive/2026-08/map.md).
 3. **Production-pipeline cutover inventory** — which workloads move, in what order, under
    **single-writer-per-table**, with each rollback story. Carried from
    [docs/port/PLAN.md](docs/port/PLAN.md) "Open item: cutover".
-4. **The first tagged release** — **DONE**: see [Release state](#release-state). Pre-alpha still
-   means the API can move between tags (the design ruling that the API-forever clock starts at the
-   first tag — [docs/design/python-facade.md](docs/design/python-facade.md) §4 — is enforced at
-   the v1.0 north-star API review).
+4. **The first tagged release** — **DONE**: see [Release state](#release-state). API review
+   answered 2026-09-02 (`R0 yes`, every row decided at its recommendation); freeze pinned — 888
+   names in [docs/design/v1-0-api-freeze.json](docs/design/v1-0-api-freeze.json), policy in
+   [docs/release.md](docs/release.md) "Versioning policy"; the tag waits on the north-star gate
+   line.
 
 Owner-side actions that rode this sequence are **DISCHARGED — no owner-side tier-2 action
 remains.** aws-acceptance ran green 2026-08-10 (Glue and S3 Tables); the parity-live half
@@ -147,28 +145,32 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
     V3E-4 measured refs, `VERSION AS OF` over DVs, expire dual-probe, orphan floor.
     V3E-5 added the nightly v3 live-oracle leg
     ([#253](https://github.com/TRO-Wolf/repark/pull/253)). RP-2 (2026-08-28, `ce92a7bf`) the
-    DV-free first DELETE. RP-3 (2026-08-30, `d408da42`) wired container closure; live-DV DELETE
-    merge and sequential COW DELETE Spark-equal, F-rp3-c7 consumed; Hadoop writes FIXED
-    (`V3-ADOPT-1`). RP-4 (2026-08-31, `33be9a0`) rewrite lineage Spark-equal (`V3-LINEAGE-1`
-    FIXED); F-6 `to_branch` carried.
+    DV-free first DELETE. RP-3 (`d408da42`) wired container closure (`V3-ADOPT-1` FIXED);
+    RP-4 (`33be9a0`) rewrite lineage Spark-equal (`V3-LINEAGE-1` FIXED).
     RP-6 (2026-09-01, `fb0cacfa`) lifts UPDATE. V3-7 / V3-8 (2026-09-02) carry MERGE and
     subquery-`WHERE` COW `_row_id` and delete the refusal seat — `V3-COW-1` **FIXED**.
     **V3-4 (2026-08-31):** `_row_id` / `_last_updated_sequence_number` Spark-equal on
     single-table v3 reads (`V3-ROWID-1` FIXED, `V3-ROWID-2` refuses the rest).
-    **V3-6 (2026-09-01):** opt-in v3 CREATE consumes fork `timestamp_ns`/`timestamptz_ns`
-    (v2 refuses); append fills from a schema-carried `write_default`; DEFAULT DDL, `unknown` and
-    binary `variant` refuse Spark-equal (`V3-VARIANT-SHRED-1`, R88/R91, RP-5).
-    **V3-9 (2026-09-02):** MoR `DELETE`/`UPDATE … WHERE` on v3 write file-scoped
-    Puffin DVs on three doors, created and adopted (`V3-MOR-1` FIXED). **RP-7 (2026-09-02):** the repin to `ff4764d3` (F-18) makes the
-    shared-Puffin close Spark-equal — `V3-DV-1` **FIXED**. **V3-12 (2026-09-02):** a legacy position delete
-    merges into the new DV; the close reads its branch (`V3-UPGRADE-DV-1`, `V3-DV-BRANCH-1`);
-    F-21/F-22 land at RP-8. **LIVE-v3 (2026-09-02):** both live v3
-    legs green on `aws-acceptance` run 33635288918 — S3 Tables takes `format-version = 3` at CREATE,
-    Glue reproduces the numbers (`S3T-V3-1`).
+    **V3-6 (2026-09-01):** opt-in v3 CREATE takes the fork's `timestamp_ns` types, append fills
+    from a schema-carried `write_default`, and DEFAULT DDL / `unknown` / binary `variant`
+    refuse Spark-equal (`V3-VARIANT-SHRED-1`).
+    **V3-9 (2026-09-02):** predicate DML's V2-only gate is lifted — MoR `DELETE`/`UPDATE …
+    WHERE` on v3 write file-scoped Puffin DVs on three doors, created and adopted, Spark-equal
+    (`V3-MOR-1` FIXED). **RP-7 (2026-09-02):** the fork repin to `ff4764d3` (F-18) makes the
+    shared-Puffin container close Spark-equal — `V3-DV-1` **FIXED**.
+    **LIVE-v3 (2026-09-02):** both live v3 legs green on `aws-acceptance` run 33635288918
+    (`S3T-V3-1`). **V3-11 (2026-09-02):** the engine orders one commit's data files by ascending
+    partition value before the manifest, so the MoR MERGE insert's `_row_id` is deterministic
+    and Spark-equal on that cell (`V3-ROWID-3` FIXED); Spark's own order is a Java `HashMap`
+    bucket artefact, so wider partition sets differ (`V3-FILEORDER-1` DECLARED) and partitioned
+    plain-`INSERT` is fork ask **F-20**.
+    **V3-12 (2026-09-02):** a legacy position delete merges into the new DV; the close reads
+    its branch (`V3-UPGRADE-DV-1` FIXED, `V3-DV-BRANCH-1`); F-21/F-22 land at RP-8.
   - **Next:** lineage carry and merge-on-read are complete on every served DML shape
-    (`V3-COW-1`, `V3-MOR-1`, `V3-DV-1`, `V3-UPGRADE-DV-1` FIXED); open v3 residuals:
-    `V3-ROWID-3` (**V3-11**), `V3-UPGRADE-DV-PLAIN-1` and `V3-UPGRADE-DV-PART-1` (dated refusals,
-    fork TRIGGERs), `V3-UPGRADE-V4-1`, `G3-E8`, `B-MOR-3`.
+    (`V3-COW-1`, `V3-MOR-1`, `V3-DV-1`, `V3-ROWID-3`, `V3-UPGRADE-DV-1` FIXED); open v3 residuals
+    are `V3-FILEORDER-1` and `F-v3-10-partition-file-order` (fork F-20, RP-8 repins),
+    `V3-UPGRADE-DV-PLAIN-1` and `V3-UPGRADE-DV-PART-1` (dated refusals; fork F-21/F-22, RP-8),
+    `V3-UPGRADE-V4-1`, `G3-E8` and `B-MOR-3`.
 <!-- /ws -->
 
 <!-- ws id=perf ledgers=perf- state=open -->
@@ -262,8 +264,6 @@ moving it. Nothing is described in both places.
 
 - **Identifier case folding** — **DECLARED (2026-08-10)**: registry
   [ID-1](docs/spark-sql-iceberg-parity.md); revisiting it needs a new dated decision.
-- **v3 MERGE-insert `_row_id`** — **BACKLOG (2026-09-02)**: registry
-  [V3-ROWID-3](docs/spark-sql-iceberg-parity.md); nondeterministic, Spark is not. V3-11.
 - **The session-timezone family** — TZ-1 converted; TZ-6 / TZ-7 FIXED (#85); **TZ-8** partially
   FIXED (#100): `CAST(ts AS DATE)` / `to_date` / `datediff` read the session zone now; only
   `last_day` / `date_add` over a TIMESTAMP (+ B-TZ-3) stay BACKLOG; TZ-4 in progress

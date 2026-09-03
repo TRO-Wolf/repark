@@ -47,6 +47,7 @@ mod v3_dml_scan;
 mod v3_legacy_delete;
 mod v3_lineage;
 mod v3_mor_dml;
+mod v3_row_order;
 mod v3_subquery_dml;
 mod v3_types;
 mod v3_upgrade;

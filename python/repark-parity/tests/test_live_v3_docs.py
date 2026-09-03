@@ -140,21 +140,68 @@ def test_status_names_the_measured_legs() -> None:
     assert f"run {_RUN_ID}" in status
     assert "both live v3 legs green" in status
     assert "V3-11" in status
-    assert "[V3-ROWID-3](docs/spark-sql-iceberg-parity.md)" in status
+    assert "`V3-ROWID-3` FIXED" in status
     assert (_REPO / "STATUS.md").stat().st_size <= 25_000
 
 
-def test_v3_rowid_3_row_carries_both_readings_and_names_the_follow_up() -> None:
-    """V3-ROWID-3 is a BACKLOG row with repark's and Spark's measured answers and unit V3-11."""
-    heading = "### V3-ROWID-3 — the merge-on-read MERGE insert's `_row_id` is nondeterministic"
+def test_v3_rowid_3_row_is_fixed_and_carries_the_decoded_spark_order() -> None:
+    """V3-ROWID-3 is FIXED by V3-11, with Spark's decoded file order and the ten-run reading."""
+    heading = (
+        "### V3-ROWID-3 — FIXED (V3-11, 2026-09-02): the merge-on-read MERGE insert's `_row_id`"
+    )
     row = _registry_row(heading, "### BL-9")
+    assert "**FIXED 2026-09-02 (V3-11).**" in row
     assert "10 identical runs" in row
-    assert "**six** times" in row and "**four** times" in row
     assert "10 of 10" in row
     assert "PySpark 4.1.2" in row and "1.11.0" in row
     assert "test_v3_acceptance_local.py" in row and "assert_v3_lineage" in row
-    assert "**V3-11**" in row
-    assert "BACKLOG" in row
+    assert "V3_EXPECTED_INSERTED_ROW_ID = 11" in row
+    assert "JavaHashes$StructLikeHash.hash" in row
+    assert "163098 + fieldHash" in row
+    assert "BACKLOG" not in row
+
+
+def test_the_partition_file_order_residual_names_the_fork_as_owner() -> None:
+    """`F-v3-10-partition-file-order` stays open, re-measured, and asks the fork as F-20."""
+    registry = _normalized(_read("docs/spark-sql-iceberg-parity.md"))
+    assert "`F-v3-10-partition-file-order` re-measured 2026-09-02 by V3-11" in registry
+    assert "**Owner: the fork.**" in registry
+    assert "IcebergTableProvider::insert_into" in registry
+    assert "fork ask is **F-20**" in registry
+    assert "F-20 matches **RePark's** rule, not Spark's" in registry
+
+
+def test_v3_fileorder_1_declares_the_rule_and_where_spark_parts_company() -> None:
+    """V3-FILEORDER-1 carries the decode, the collision caveat and the measured arm table."""
+    heading = (
+        "### V3-FILEORDER-1 — DECLARED (V3-11, 2026-09-02): same-commit data-file order is "
+        "ascending partition value, not Spark's hash-bucket order"
+    )
+    row = _registry_row(heading, "### V3-UPGRADE-1")
+    assert "JavaHashes$StructLikeHash.hash" in row
+    assert "163098 + fieldHash" in row
+    assert "fall back to **insertion order**" in row
+    assert "arrival-**independent** only while no two partitions collide" in row
+    for arm in (
+        "`{0..4}`",
+        "`{a..e}`",
+        "two-field",
+        "truncate(1, part)",
+        "bucket(4, part)",
+        "days(d)",
+        "{0, NULL, 1}",
+    ):
+        assert arm in row, arm
+    assert "unmaintainable anti-feature" in row
+    assert "a_null_partition_slot_is_numbered_first_whatever_order_it_arrives_in" in row
+
+
+def test_the_maintenance_oracle_note_has_one_home_and_is_true() -> None:
+    """The retired `DataSourceV2Relation` note lives once, under MOR-1, and is dated."""
+    registry = _read("docs/spark-sql-iceberg-parity.md")
+    assert registry.count("this registry carried on six rows applies nowhere") == 1
+    assert registry.count("the `DataSourceV2Relation` note this row used to carry is retired") == 5
+    assert "the pinned 4.1.2 + 1.11.0 oracle executes all five" in _normalized(registry)
 
 
 def test_format_v3_track_claims_carry_their_dated_corrections() -> None:

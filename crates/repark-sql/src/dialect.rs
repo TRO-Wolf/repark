@@ -12,6 +12,7 @@ pub struct AnsiDialect;
 impl SqlDialect for AnsiDialect {
     fn on_session_built(&self, ctx: &SessionContext) {
         repark_functions::integer_spark::install_integer_overflow(ctx);
+        repark_functions::spark_log1p::register(ctx);
     }
 
     async fn execute(

@@ -22,6 +22,7 @@ pub mod random;
 pub mod session_time_zone;
 pub mod spark_length;
 pub mod spark_log;
+pub mod spark_log1p;
 pub mod spark_regexp;
 pub mod spark_split_part;
 pub mod string;
@@ -84,6 +85,9 @@ pub fn register_all(ctx: &SessionContext) {
         ctx.register_udf(udf.as_ref().clone());
     }
     for udf in spark_log::functions() {
+        ctx.register_udf(udf.as_ref().clone());
+    }
+    for udf in spark_log1p::functions() {
         ctx.register_udf(udf.as_ref().clone());
     }
     validate::register(ctx);

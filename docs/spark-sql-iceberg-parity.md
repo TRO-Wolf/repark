@@ -1827,9 +1827,11 @@ the pin rather than obeying it.
 - **Apache Spark** — runs, defaulting `older_than` to `now - 3 days`, and **deletes** the orphans
   it finds. Measured: two planted orphans aged ten days were listed and removed from disk by a
   bare `CALL … remove_orphan_files(table => 't')`.
-  *(oracle: recorded — live PySpark 4.0.1 + Iceberg 1.10.0. The pinned 4.1.2 oracle cannot execute
-  Iceberg maintenance procedures: `DataSourceV2Relation.create` changed signature between Spark
-  4.0 and 4.1, so the shipping jar dies with `NoSuchMethodError`.)*
+  *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, Hadoop catalog, re-measured 2026-09-02 by
+  V3-11: the bare call listed both planted ten-day-old orphans and both were gone from the data
+  directory afterwards, the answer the 4.0.1 run recorded;
+  the `DataSourceV2Relation` note this row used to carry is retired — see
+  [MOR-1](#mor-1--rewrite_position_delete_files-compacts-below-sparks-min-input-files-floor).)*
 - **Pin** — `crates/repark-spark/src/tests/call.rs::call_orphan1_requires_an_explicit_older_than`
   and `python/repark/tests/test_maintenance_call.py::test_remove_orphan_files_requires_an_explicit_older_than`
 - **Rationale** — DECLARED, and deliberately stricter than Spark (owner decision OD-2). This is
@@ -1870,8 +1872,16 @@ the pin rather than obeying it.
 - **repark** — a `(spec, partition)` group of 4 position-delete files returns all four
   counts as `0` and leaves the files in place.
 - **Apache Spark** — the same zeros. Spark's planner extends `SizeBasedFileRewritePlanner`,
-  whose `MIN_INPUT_FILES_DEFAULT` is 5. Measured on live PySpark 4.0.1 + Iceberg 1.10.0
-  (the pinned 4.1.2 oracle cannot execute Iceberg maintenance procedures).
+  whose `MIN_INPUT_FILES_DEFAULT` is 5. Re-measured 2026-09-02 (V3-11) on the pinned
+  PySpark 4.1.2 + Iceberg 1.11.0 oracle: a v2 merge-on-read table with four single-file
+  parquet position deletes in one group answered
+  `rewritten_delete_files_count = 0, added_delete_files_count = 0, rewritten_bytes_count = 0,
+  added_bytes_count = 0` and left all four delete files in place.
+  **Re-measured 2026-09-02 (V3-11): the pinned 4.1.2 + 1.11.0 oracle executes all five
+  maintenance procedures** — `rewrite_data_files`, `rewrite_manifests`,
+  `rewrite_position_delete_files`, `expire_snapshots` and `remove_orphan_files`. The
+  4.0.1/1.10.0 `DataSourceV2Relation` note this registry carried on six rows applies nowhere;
+  this row is its single home.
 - **Pin** —
   `crates/repark-spark/src/tests/call.rs::call_mor1_compacts_below_sparks_min_input_files_floor`
 - **Rationale** — retired. The owned fork closed the planner gap; this engine consumed it
@@ -2020,8 +2030,13 @@ the pin rather than obeying it.
   8 → 2); one data manifest plus two delete manifests answered `2, 1`; one data manifest plus one
   delete manifest answered `0, 0`, because a single matching manifest per leg is already at
   Spark's target.
-  *(oracle: recorded — live PySpark 4.0.1 + Iceberg 1.10.0, same basis as MOR-2. The pinned 4.1.2
-  oracle cannot execute Iceberg maintenance procedures.)*
+  *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-02, re-measured by V3-11 at a
+  `coalesce(1)` single-file layout: five data plus three delete manifests answered
+  `rewritten_manifests_count = 8, added_manifests_count = 2` and left one manifest per leg;
+  one data plus two delete manifests answered `2, 1`; one data plus one delete manifest
+  answered `0, 0`;
+  the `DataSourceV2Relation` note this row used to carry is retired — see
+  [MOR-1](#mor-1--rewrite_position_delete_files-compacts-below-sparks-min-input-files-floor).)*
 - **Pin** —
   `crates/repark-spark/src/tests/call_manifests.rs::call_rewrite_manifests_reports_the_data_leg_and_leaves_delete_manifests`
   and `::call_rewrite_manifests_refuses_zeros_while_delete_manifests_stay`
@@ -2126,9 +2141,9 @@ the pin rather than obeying it.
   `removed_delete_files_count = 6` (the six deletion vectors die with the files they were scoped
   to). Round-tripped through the Spark reader afterwards to confirm the lineage columns, not
   inferred from metadata.
-  *(oracle: live — PySpark 4.0.1 + Iceberg 1.10.0, format-v3 Hadoop-catalog fixture. The pinned
-  4.1.2 oracle cannot execute Iceberg maintenance procedures at all — same `DataSourceV2Relation`
-  break recorded under [MOR-1](#mor-1--rewrite_position_delete_files-compacts-below-sparks-min-input-files-floor).)*
+  *(oracle: live — PySpark 4.0.1 + Iceberg 1.10.0, format-v3 Hadoop-catalog fixture;
+  the `DataSourceV2Relation` note this row used to carry is retired — see
+  [MOR-1](#mor-1--rewrite_position_delete_files-compacts-below-sparks-min-input-files-floor).)*
 - **Pin** —
   `crates/repark-spark/src/tests/call_v3.rs::call_rewrite_data_files_on_v3_preserves_row_lineage`
 - **Rationale** — FIXED. The refusal was stricter than Spark on purpose while the fork
@@ -2156,9 +2171,11 @@ the pin rather than obeying it.
 - **Apache Spark** — the same compact removes the file-scoped vectors and reports
   `removed_delete_files_count = 6` on the six-file fixture, with no option set.
   Removal is an ordinary consequence of v3 compaction, not an opt-in sub-action.
-  *(oracle: live — PySpark 4.0.1 + Iceberg 1.10.0, format-v3 Hadoop-catalog
-  six-file fixture. The pinned 4.1.2 oracle cannot execute Iceberg maintenance
-  procedures — same `DataSourceV2Relation` break as MOR-1.)*
+  *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-02: a six-file v3 table with one
+  Puffin DV per file answered `rewritten_data_files_count = 6, added_data_files_count = 1,
+  removed_delete_files_count = 6` and left zero live delete files;
+  the `DataSourceV2Relation` note this row used to carry is retired — see
+  [MOR-1](#mor-1--rewrite_position_delete_files-compacts-below-sparks-min-input-files-floor).)*
 - **Pin** —
   `crates/repark-spark/src/tests/call_v3_dv.rs::call_rewrite_data_files_on_v3_drops_scoped_deletion_vectors`;
   `crates/repark-spark/src/tests/v3e3.rs::partitioned_v3_dv_rewrite_data_files_drops_both_vectors`
@@ -2175,12 +2192,15 @@ the pin rather than obeying it.
   current snapshot holds any live Puffin deletion vector, naming the count. A Spark-written
   format-v3 table with three vectors returns
   `found 3 live Puffin deletion vector(s)` rather than four zeros.
-- **Apache Spark** — returns all four counts as `0` and does nothing. Measured on a live
-  PySpark 4.0.1 + Iceberg 1.10.0 session: three MOR `DELETE`s produced three `PUFFIN` files, and
-  the procedure left them in place. Spark's own answer on v3 is the silent no-op this engine
-  refuses to give.
-  *(oracle: live — PySpark 4.0.1 + Iceberg 1.10.0, Hadoop-catalog fixture. The pinned 4.1.2
-  oracle cannot execute Iceberg maintenance procedures — same `DataSourceV2Relation` break as
+- **Apache Spark** — returns all four counts as `0` and does nothing. Re-measured 2026-09-02
+  (V3-11) on the pinned oracle: three MoR `DELETE`s on a v3 table produced three `PUFFIN`
+  delete files, the procedure answered
+  `rewritten_delete_files_count = 0, added_delete_files_count = 0, rewritten_bytes_count = 0,
+  added_bytes_count = 0`, all three vectors stayed live, the surviving rows were unchanged, and
+  a second run answered the same four zeros. Spark's own answer on v3 is the silent no-op this
+  engine refuses to give.
+  *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, Hadoop-catalog fixture, 2026-09-02;
+  the `DataSourceV2Relation` note this row used to carry is retired — see
   [MOR-1](#mor-1--rewrite_position_delete_files-compacts-below-sparks-min-input-files-floor).)*
 - **Pin** —
   `crates/repark-spark/src/tests/call_register.rs::call_rewrite_position_delete_files_refuses_spark_written_puffin_vectors`
@@ -2276,6 +2296,11 @@ the pin rather than obeying it.
   `python/repark/tests/test_v3_acceptance_local.py::test_v3_acceptance_leg_body_against_the_local_catalog`,
   `python/repark/tests/test_v3_acceptance_local.py::test_v3_create_refusal_classification_is_the_s3_tables_decision_table`,
   `python/repark/tests/test_acceptance_v3_helpers.py::test_v3_legs_are_twins_of_the_mor_legs`
+- **Tightened 2026-09-02 (V3-11).** The shared leg body's `assert_v3_lineage` now demands
+  the inserted row's exact `_row_id = 11` on both legs (`exact_commit_counts` does not gate
+  it) where it demanded only a fresh unused id. The counts above are unchanged — the run
+  recorded `_row_id` values exact on both legs — but the two live legs have **not** been
+  re-dispatched since the tightening; the next `aws-acceptance` run is the confirmation.
 - **Rationale** — FIXED by measurement, not by an engine change: the service question this row
   was opened on is answered, so the row is no longer BACKLOG. It is kept as the single home of
   the answer rather than retired, and §6's retire-with-a-RED-pin path does not apply — the local
@@ -2440,33 +2465,119 @@ the pin rather than obeying it.
   re-measured the oracle at the matched layout rather than trusting the V3-9 transcript. Pins:
   rp-7-f18-repin/C-001, C-002, C-003.
 
-### V3-ROWID-3 — the merge-on-read MERGE insert's `_row_id` is nondeterministic
+### V3-ROWID-3 — FIXED (V3-11, 2026-09-02): the merge-on-read MERGE insert's `_row_id`
+
+> **FIXED 2026-09-02 (V3-11).** One commit's new data files are handed to the manifest in
+> ascending partition-value order, so `first_row_id` assignment is deterministic. The
+> LIVE-v3 cell now reads `_row_id = 11` in **10 of 10** consecutive runs, Spark's value.
 
 - **repark** — on a v3 merge-on-read table, `MERGE … WHEN NOT MATCHED THEN INSERT` gives the new
-  row a `_row_id` that varies run to run on identical input: over **10 identical runs** of the
-  LIVE-v3 sequence (one CTAS row, nine single-row appends to ids 1–10, `DELETE … WHERE id = 3`,
-  then the MERGE inserting id 11) the inserted row read `_row_id = 11` **six** times and
-  `_row_id = 10` **four** times. `_last_updated_sequence_number` was `12` in all ten, and every
-  survivor triple was identical in all ten: `(1,0,1) (2,1,12) (4,3,4) (5,4,5) (6,5,6) (7,6,7)
-  (8,7,8) (9,8,9) (10,9,10)`. Both observed values are free — no survivor holds 10 or 11 — so no
-  read returns a duplicated id; the defect is the instability, not a collision.
+  row `_row_id = 11` over **10 identical runs** of the LIVE-v3 sequence (one CTAS row, nine
+  single-row appends to ids 1–10, `DELETE … WHERE id = 3`, then the MERGE inserting id 11), with
+  `_last_updated_sequence_number = 12` and the survivor triples `(1,0,1) (2,1,12) (4,3,4)
+  (5,4,5) (6,5,6) (7,6,7) (8,7,8) (9,8,9) (10,9,10)`. Before the fix the same ten runs read
+  `11` six times and `10` four times: the MERGE writes the matched-UPDATE row into partition
+  `part = 0` and the inserted row into `part = 1`, two files in one commit, and the fanout
+  writer closed them in `HashMap` order, so whichever file was numbered first took
+  `first_row_id = 10`. Three consecutive ten-run batteries measured in this tree before the
+  fix read 6, 4 and 2 correct answers out of ten (24 red of 30).
 - **Apache Spark** — deterministic at `_row_id = 11`, the table's `next-row-id` at that commit:
   **10 of 10** runs (two JVMs × five fresh warehouses) on the identical statement sequence gave
   `(11, 11, 12)`, with the same nine survivor triples and the same single Puffin deletion vector
-  after the DELETE. repark's `11` therefore matches Spark and its `10` does not.
+  after the DELETE.
   *(oracle: live PySpark 4.1.2 + `iceberg-spark-runtime-4.1_2.13:1.11.0`,
   `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64`, `local[2]`, Hadoop catalog, measured 2026-09-02 by
-  unit LIVE-v3.)*
-- **Pin** —
+  unit LIVE-v3 and re-measured by V3-11.)*
+- **Why it moved** — the MERGE writes the matched-UPDATE row into `part = 0` and the inserted
+  row into `part = 1`, two files in one commit, and the fanout writer closed them in `HashMap`
+  order. V3-11 orders one commit's files by ascending partition value before the manifest sees
+  them, which for this two-value identity-int set is exactly Spark's order. The general rule and
+  the sets where the two engines disagree are
+  [V3-FILEORDER-1](#v3-fileorder-1--declared-v3-11-2026-09-02-same-commit-data-file-order-is-ascending-partition-value-not-sparks-hash-bucket-order).
+- **Pin** — `crates/repark-spark/src/tests/v3_row_order.rs` (Spark door): the ten-run
+  determinism pin `mor_merge_insert_takes_sparks_row_id_in_ten_consecutive_runs`, plus
+  `mor_merge_across_three_partitions_numbers_files_ascending_by_partition_value` and
+  `partitioned_ctas_numbers_files_ascending_by_partition_value`; ANSI twins
+  `crates/repark-sql/src/v3/cow.rs::ansi_mor_merge_across_three_partitions_numbers_files_ascending_by_partition_value`
+  and `::ansi_partitioned_ctas_numbers_files_ascending_by_partition_value`; facade
   `python/repark/tests/test_v3_acceptance_local.py::test_v3_acceptance_leg_body_against_the_local_catalog`
-  via `_acceptance_v3.assert_v3_lineage`, which asserts the invariant that survives the
-  instability — the inserted row takes an id at or above the seed count that no survivor holds —
-  and pins every survivor triple exactly. A value pin would flap four times in ten.
-- **Rationale** — BACKLOG. The fix belongs to a v3 lineage unit, **V3-11**, not to a live-leg
-  unit: the leg's job was to measure, and the measurement is that repark's assignment of
-  `next-row-id` to a merge-on-read MERGE insert races while Spark's does not. When V3-11 lands,
-  the pin above tightens to the exact Spark value and this row retires.
-  Pins: live-v3-aws-legs/C-002.
+  via `_acceptance_v3.assert_v3_lineage`, which now pins `V3_EXPECTED_INSERTED_ROW_ID = 11`
+  exactly where it used to assert only a fresh-id floor.
+- **Rationale** — FIXED. The engine's ordering rule is ascending partition value, spec-field
+  order, nulls first, a stable sort over the already-written `Vec<DataFile>` — file-count work,
+  not per-row work (1e6 rows across eight partitions: 2.810 / 2.850 / 2.875 s with the sort
+  against 2.973 / 2.943 / 3.010 s without it). The cell this row owns is fixed. The rule is
+  **not** Spark's rule, and where the two part company is the dated residual
+  [V3-FILEORDER-1](#v3-fileorder-1--declared-v3-11-2026-09-02-same-commit-data-file-order-is-ascending-partition-value-not-sparks-hash-bucket-order).
+  Pins: v3-11-row-id-determinism/C-003, C-004.
+
+### V3-FILEORDER-1 — DECLARED (V3-11, 2026-09-02): same-commit data-file order is ascending partition value, not Spark's hash-bucket order
+
+- **repark** — the engine hands one commit's data files to the manifest ordered by **ascending
+  partition value**: spec-field order, a null slot before every non-null, primitive literals
+  ascending, a stable sort so files sharing a partition keep the order their writer produced.
+  It is `write/file_order.rs::ascending_partition_order`, applied once per commit to the
+  already-written `Vec<DataFile>`. Because `first_row_id` is assigned in manifest-entry order,
+  this order decides every derived `_row_id` in the commit.
+- **Apache Spark** — orders the same files by the **`java.util.HashMap` bucket index** of the
+  partition struct, which is not a value ordering at all. Decoded 2026-09-02 with
+  `javap -p -c` over `iceberg-spark-runtime-4.1_2.13-1.11.0.jar`:
+
+  | Step | Instruction |
+  |---|---|
+  | writer | `org.apache.iceberg.io.FanoutWriter.writers : Map<Integer, StructLikeMap<FileWriter>>`; `closeWriters()` walks `values()` |
+  | map | `StructLikeMap.wrapperMap` is a `java.util.HashMap` keyed by `StructLikeWrapper` |
+  | struct hash | `JavaHashes$StructLikeHash.hash`: `r = 97`; `r = 41*r + nFields`; per field `r = 41*r + fieldHash` |
+  | 1-field spec | `H = 41*(41*97 + 1) + fieldHash = 163098 + fieldHash` |
+  | int field | `JavaHash.forType` default arm, `Objects::hashCode` — the value itself |
+  | string field | `JavaHashes.hashCode(CharSequence)`: `r = 177`; `r = 31*r + charAt(i)` |
+  | bucket | `(H ^ (H >>> 16)) & (capacity - 1)`, capacity 16 while ≤ 12 distinct partitions |
+  | collisions | keys sharing a bucket fall back to **insertion order**, so a colliding set is arrival-**dependent** |
+
+- **Where they agree and where they part** — measured cell by cell on the pinned oracle
+  (`local[1]`, `spark.sql.shuffle.partitions = 1`, one task, so no task-order term), each cell a
+  single-commit partitioned v3 write, `id -> _row_id`:
+
+  | Cell | Spark | repark |
+  |---|---|---|
+  | identity int `{0,1}` | ascending | same |
+  | identity int `{0,1,2}` | ascending | same |
+  | identity int `{0,1,2,3}` | ascending | same |
+  | identity int `{0..4}` | file order `0,1,4,2,3` | ascending — **differs** |
+  | identity int `{0..9}` | file order `8,9,6,7,0,1,4,5,2,3` | ascending — **differs** |
+  | identity string `{a..e}` | file order `a,b,e,c,d` | ascending — **differs** |
+  | two-field `(a,b)` over `(0,1),(0,0),(1,1),(1,0),(2,0)` | `1→2 2→4 3→1 4→0 5→3` | `1→1 2→0 3→3 4→2 5→4` — **differs** |
+  | `truncate(1, part)` over `aa..ee` | `1→0 2→1 3→3 4→4 5→2` | `1→0 2→1 3→2 4→3 5→4` — **differs** |
+  | `bucket(4, part)` over `0..7` | `1→0 2→1 3→2 4→5 5→4 6→6 7→3 8→7` | **identical** (buckets are `{0,1,2,3}`) |
+  | `days(d)` over five consecutive dates | `1→2 2→3 3→0 4→1 5→4` | `1→0 2→1 3→2 4→3 5→4` — **differs** |
+  | `{0, NULL, 1}` in that arrival order | `0, NULL, 1` | `NULL, 0, 1` — **differs** |
+  | `{NULL, 0, 1}` | `NULL, 0, 1` | same |
+  | `{1, NULL, 0}` | `NULL, 0, 1` | same |
+
+  The last three rows are the collision caveat made concrete: a null slot and integer `0` hash to
+  the same bucket (`fieldHash` 0 either way), so Spark's answer for that pair is decided by which
+  arrived first. Spark's order is arrival-**independent** only while no two partitions collide.
+  The engine's is arrival-independent always.
+  *(oracle: live — PySpark 4.1.2 + `iceberg-spark-runtime-4.1_2.13:1.11.0`,
+  `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64`, Hadoop catalog, 2026-09-02.)*
+- **Pin** — engine-behaviour pins, not Spark-parity pins:
+  `crates/repark-spark/src/tests/v3_row_order.rs::a_null_partition_slot_is_numbered_first_whatever_order_it_arrives_in`
+  (all three arrival orders), `::a_two_field_spec_orders_lexicographically_in_spec_field_order`,
+  `::transform_partitions_order_by_the_transformed_value_ascending` (`truncate`, `bucket`,
+  `days`). The two cells where the rules coincide are pinned against Spark instead —
+  `::partitioned_ctas_numbers_files_ascending_by_partition_value`,
+  `::mor_merge_across_three_partitions_numbers_files_ascending_by_partition_value` and their
+  ANSI twins in `crates/repark-sql/src/v3/cow.rs`.
+- **Rationale** — DECLARED, and deliberately not fixed. Reproducing Spark's order means
+  reimplementing `java.util.HashMap` iteration — the seeded 41/97 struct hash, the `h ^ h>>>16`
+  spread, the capacity ladder (the order changes again at the thirteenth partition), bucket
+  treeification and the insertion-order fallback on collisions — inside a Rust writer, and then
+  keeping it in step with a JDK internal. That is an unmaintainable anti-feature, and the value
+  ordering is the one a reader can predict. The consequence is stated rather than hidden:
+  **on a commit whose partition set is not a collision-free monotonic run, this engine's derived
+  `_row_id` values differ from Spark's.** Row sets, `next-row-id`, the id **sets** and every
+  sequence number are equal on both sides in every cell above. Revisiting this needs a new dated
+  decision. Pins: v3-11-row-id-determinism/C-007.
 
 ### V3-UPGRADE-1 — FIXED (V3-10, 2026-09-02): `ALTER … format-version = '3'` upgrades v2 to v3 in place
 
@@ -2506,12 +2617,27 @@ the pin rather than obeying it.
   table (identity `part`, 2+1 rows) upgrades the same way and the append leaves next-row-id 5
   with the pre-upgrade rows on `{2,3,4}` at sequence 1 and the appended rows on `{0,1}` at
   sequence 2.
-- **Residuals (dated 2026-09-02).** `F-v3-10-partition-file-order`: on a **partitioned** table
-  the engine hands the per-partition files their `first_row_id` in a different order than Spark
-  — Spark leaves `1→2, 2→3, 3→4, 4→0, 5→1`, the engine `1→3, 2→4, 3→2, 4→1, 5→0`. Rows,
-  `next-row-id`, the id **sets** and every sequence number are equal; only which of two
-  same-commit partition files is numbered first differs, so the pin asserts the sets. The
-  unpartitioned cell matches Spark exactly. `F-v3-10-eqdel-upgrade`: upgrading a table that
+- **Residuals (dated 2026-09-02, `F-v3-10-partition-file-order` re-measured 2026-09-02 by
+  V3-11).** On a **partitioned** table a plain `INSERT INTO` hands the per-partition files
+  their `first_row_id` in a different order than Spark. Spark leaves `1→2, 2→3, 3→4, 4→0, 5→1`
+  in 10 of 10 runs. The engine **flaps**, measured over ten runs of the identical cell: the
+  seed manifest read Spark's `1→2, 2→3, 3→4` five times and `1→3, 2→4, 3→2` five times, the
+  append manifest read Spark's `4→0, 5→1` four times and `4→1, 5→0` six times, and the two
+  halves moved independently — both were Spark's on 3 of the 10 runs. Rows, `next-row-id`, the
+  id **sets** and every sequence number are equal on every run, so the pin asserts the sets.
+  The unpartitioned cell matches Spark exactly. **Owner: the fork.** `INSERT INTO` on a
+  partitioned table is planned by `iceberg-datafusion`'s `IcebergTableProvider::insert_into` —
+  `IcebergWriteExec` → `TaskWriter` → `FanoutWriter`, whose
+  `partition_writers: HashMap<Struct, _>` is drained in Rust hash order at `close()` — and
+  `IcebergCommitExec` commits those files without repark ever holding them, so the ordering
+  V3-11 applied to the engine's own writers (CTAS, MERGE, append) cannot reach this path. The
+  fork ask is **F-20**: `FanoutWriter::close` drains its partition map in ascending
+  partition-value order. F-20 matches **RePark's** rule, not Spark's — Spark's order is the
+  hash-bucket artefact decoded in
+  [V3-FILEORDER-1](#v3-fileorder-1--declared-v3-11-2026-09-02-same-commit-data-file-order-is-ascending-partition-value-not-sparks-hash-bucket-order),
+  which ascending cannot reproduce beyond four identity-int partitions; F-20 buys determinism
+  and one rule across every writer this engine owns, not parity.
+  `F-v3-10-eqdel-upgrade`: upgrading a table that
   carries **equality deletes** is unmeasured — the engine has no equality-delete write surface,
   so the cell could not be built from either door; the upgrade path itself is delete-file
   agnostic and the DV interaction is `V3-UPGRADE-DV-1`.
@@ -2747,18 +2873,13 @@ the pin rather than obeying it.
 
 ### BL-15 — `expm1` composes `exp(x) - 1`, losing the tiny-`x` precision the name exists for
 
-- **repark** — `F.expm1(x)` is `PY_COMPOSED` as `exp(x) - 1`
-  ([docs/design/spark-function-parity.md](design/spark-function-parity.md) §4.4) and reproduces
-  the naive form bit for bit: `expm1(1e-08)` → `9.99999993922529e-09`, `expm1(1e-16)` → `0.0`.
-- **Apache Spark** — `Math.expm1`: `1.0000000050000001e-08` and `1e-16` respectively — the
-  fused form is the function's entire reason to exist. *(oracle: `math.expm1`, which mirrors
-  `java.lang.Math.expm1`; measured 2026-09-01 by the EX-2 pilot, which left the name on the
-  example backlog rather than teach the naive form.)*
-- **Pin** — `python/repark/tests/test_bl15_bl16_math_divergences.py::test_bl15_expm1_composes_exp_minus_one_today`
-  (asserts today's composed value so the fused fix is loud).
-- **Rationale** — BACKLOG, filed 2026-09-01 from the EX-2 pilot's measurement. The fix is a real
-  fused kernel (not a doc change); it rides an FNP numerics unit, and its example comes off the
-  backlog with it.
+> **FIXED (2026-09-02, LOG1P-1).** `F.expm1` / SQL `expm1` call `f64::exp_m1` (NULL-propagating,
+> numeric coerce to Float64) on both SQL doors and the facade. `expm1(1e-16)` is `1e-16`;
+> `expm1(1e-08)` is `math.expm1(1e-08)`, not `exp(x)-1`. Sibling `log1p` is the matching
+> `f64::ln_1p` kernel (Spark SQL NULLs `x <= -1`; tiny-arg `log1p(1e-16)` is `1e-16`). Kernel:
+> `crates/repark-functions/src/spark_log1p.rs`. Pins:
+> `python/repark/tests/test_bl15_bl16_math_divergences.py::test_bl15_expm1_matches_spark_precise_kernel`,
+> `python/repark/tests/test_log1p_1.py`. Oracle: live PySpark 4.1.2, 2026-09-02.
 
 ### BL-16 — `hypot` squares before the root, overflowing where Spark rescales
 
@@ -2924,9 +3045,32 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   its row above: the fork repin to `ff4764d3` (F-18) makes the shared-Puffin close Spark-equal —
   only the touched blob is rewritten, two containers, the sibling entry byte-identical.
 
-- **V3-ROWID-3** — **BACKLOG (LIVE-v3, 2026-09-02).** See the row above. A merge-on-read
-  MERGE insert's `_row_id` is nondeterministic (6 of 10 runs `11`, 4 of 10 `10`) where Spark is
-  deterministic at `11`; no read returns a duplicated id. Owner: v3 lineage unit **V3-11**.
+- **V3-ROWID-3** — measured 2026-09-02 (LIVE-v3) and **FIXED (V3-11, 2026-09-02)** in its
+  §7 row: one commit's data files are ordered by ascending partition value, so the
+  merge-on-read MERGE insert reads Spark's `_row_id = 11` in 10 of 10 runs. Left this queue.
+  Its residual is **`F-v3-10-partition-file-order`**, below.
+
+- **`F-v3-11-rewrite-row-order`** — **DECLARED (V3-11, 2026-09-02).** `rewrite_data_files`
+  over six single-row files of an upgraded v3 table assigns the six ids `0..5` at sequence 7 on
+  both engines, but the id→`_row_id` map is **nondeterministic on Spark itself**: ten runs (two
+  JVMs × five fresh Hadoop warehouses, PySpark 4.1.2 + Iceberg 1.11.0) produced **ten distinct
+  maps** — `[2,3,5,1,4,0] [4,1,3,5,0,2] [1,3,2,4,5,0] [3,0,1,2,4,5] [5,0,4,1,3,2] [5,2,1,4,0,3]
+  [0,4,5,1,3,2] [4,3,1,2,0,5] [2,1,5,0,4,3] [2,5,0,3,1,4]`. This engine is nondeterministic too
+  (ten runs, six distinct maps, `[5,4,3,2,1,0]` four times). There is therefore **no value to
+  pin**: `v3_upgrade.rs::rewrite_data_files_after_an_engine_upgrade_assigns_lineage_like_spark`
+  keeps asserting the id set and the sequence number, which are equal and stable on both sides.
+  The compaction row order is the fork's `rewrite_data_files` scan order, not repark's.
+
+- **`F-v3-10-partition-file-order`** — **DECLARED (V3-10, 2026-09-02; re-measured V3-11).**
+  See the residual under `V3-UPGRADE-1` in §4. Owner: fork ask **F-20** — `iceberg-datafusion`'s
+  `TaskWriter` closes its `FanoutWriter` in Rust `HashMap` order, which repark cannot reorder;
+  F-20 asks the fork to drain it in ascending partition-value order, RePark's rule.
+
+- **`V3-FILEORDER-1`** — **DECLARED (V3-11, 2026-09-02).** See the row above. This engine orders
+  one commit's data files by ascending partition value; Spark orders them by Java `HashMap`
+  bucket index. The two agree only on collision-free monotonic partition sets, so derived
+  `_row_id` values differ on wider sets. Not to be fixed: replicating a JDK map's iteration
+  order is an unmaintainable anti-feature.
 
 - **S3T-V3-1** — measured and **FIXED (LIVE-v3-M, 2026-09-02)** in its §4 row: both live v3
   acceptance legs are green and S3 Tables accepts `format-version = 3` at CREATE. Left this

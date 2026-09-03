@@ -1853,8 +1853,8 @@ def pmod(dividend: Column | str, divisor: Column | str) -> Column:
 
 
 def expm1(col: Column | str) -> Column:
-    """``exp(col) - 1`` (PySpark ``functions.expm1``)."""
-    return exp(col) - lit(1)
+    """``expm1(col)`` (PySpark ``functions.expm1``)."""
+    return _scalar("expm1", col)
 
 
 def ln(col: Column | str) -> Column:
@@ -1871,8 +1871,8 @@ def log2(col: Column | str) -> Column:
 
 
 def log1p(col: Column | str) -> Column:
-    """``log(1 + col)`` (PySpark ``functions.log1p``)."""
-    return log(lit(1) + _as_column_arg(col, as_lit=False))
+    """``log1p(col)`` (PySpark ``functions.log1p``)."""
+    return _scalar("log1p", col)
 
 
 def degrees(col: Column | str) -> Column:

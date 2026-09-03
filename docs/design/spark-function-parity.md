@@ -49,17 +49,17 @@ number below is measured, not estimated.
 
 | Class | n | Compliant with §4.1? |
 |---|---|---|
-| `THIN_SCALAR` — one `_scalar(name, …)` call | 126 | yes |
+| `THIN_SCALAR` — one `_scalar(name, …)` call | 128 | yes |
 | `ALIAS` — module-level binding to another name | 33 | yes |
 | `COLUMN_METHOD` — delegates to a `Column` method | 29 | yes |
 | `NATIVE_DIRECT` — calls a `PyColumn` constructor | 27 | yes |
 | `REFUSE` / `CONDITIONAL_REFUSE` | 35 / 7 | n/a — stubs |
 | `OTHER` | 16 | reviewed per name |
-| **`PY_COMPOSED`** — assembles from 2+ engine calls or branches on argument shape | **47** | **no** |
+| **`PY_COMPOSED`** — assembles from 2+ engine calls or branches on argument shape | **45** | **no** |
 | **`SQL_STRING`** — builds SQL text for the engine to parse | **6** | **no** |
 | **`PY_COMPUTE`** — computes values in Python | **2** | sanctioned exception (`udf`, `pandas_udf`) |
 
-**55 functions are non-compliant** and are the repatriation target. The remaining 5 exported names
+**53 functions are non-compliant** and are the repatriation target. The remaining 5 exported names
 (`PandasUDFType`, `PythonUDFColumn`, `UserDefinedFunction`, `UserDefinedTableFunction`, `udtf`)
 are classes and decorators, not functions, and are out of scope for §4.
 
@@ -287,12 +287,12 @@ The dispatch table grows past the source-line default in the process and splits 
 `crates/repark-python/src/column/dispatch/`, one module per family, plain `mod` declarations — no
 `#[path]`, per AGENTS.md.
 
-### 4.4 The 55 names
+### 4.4 The 53 names
 
-`PY_COMPOSED` (47) —
+`PY_COMPOSED` (45) —
 `abs`, `array_append`, `array_prepend`, `array_sort`, `arrays_overlap`, `bin`, `broadcast`,
 `btrim`, `cbrt`, `count`, `count_distinct`, `count_if`, `date_from_unix_date`, `date_sub`,
-`dayname`, `degrees`, `e`, `expm1`, `isnotnull`, `left`, `lit`, `log1p`, `log2`,
+`dayname`, `degrees`, `e`, `isnotnull`, `left`, `lit`, `log2`,
 `make_dt_interval`, `make_interval`, `map_contains_key`, `monthname`, `nullif`, `nullifzero`,
 `nvl2`, `overlay`, `parse_url`, `pmod`, `quote`, `radians`, `rand`, `randn`, `replace`, `right`,
 `rint`, `sequence`, `shuffle`, `str_to_map`, `try_parse_url`, `unix_millis`, `unix_seconds`,
