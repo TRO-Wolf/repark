@@ -38,6 +38,7 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
 - `functions_bitwise.py` — bitwise scalar wrappers.
 - `functions_collections.py` — array, map, sequence, and collection wrappers.
   **FN-FIX-1:** `arrays_overlap` is the three-valued kernel, not the size-of-intersect shim.
+  Live co-collect `test_live_fn_fix_1_arrays`.
   pins: fn-fix-1-registry-rows/C-002
 - `functions_datetime.py` — date/time and timestamp wrappers.
 - `functions_declared.py` — FNP-15/16 declared-absent refusals (unreachable / deferred-by-cost).

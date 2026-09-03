@@ -13,7 +13,8 @@ delegated estimators live in [feature/map.md](feature/map.md) and [ext/map.md](e
 | `base.py` | Estimator, transformer, model, and frame validation contracts. |
 | `classification.py` | Native binary logistic regression and model. |
 | `clustering.py` | Native Lloyd k-means and model. |
-| `evaluation.py` | Regression, binary, and multiclass evaluators. |
+| `evaluation.py` | Regression, binary, and multiclass evaluators. **FN-FIX-1:** sparse
+  `array_position` not-found is `0`; skip `element_at(..., 0)`. pins: fn-fix-1-registry-rows/C-002 |
 | `linalg.py` | Dense and sparse vectors and Arrow schema markers. |
 | `param.py` | Parameters, converters, and shared parameter mixins. |
 | `pipeline.py` | Pipeline composition and atomic persistence. |

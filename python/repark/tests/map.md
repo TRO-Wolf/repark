@@ -483,6 +483,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_functions_e.py](test_functions_e.py) — FN-E (2026-08-15): collection
   wrappers through `ReparkSession` Arrow `to_arrow()` (value AND type). `get`
   pins 0-based vs SQL `element_at` 1-based (index 0 raises).
+  **FN-FIX-1:** `arrays_overlap` nulls-only is NULL. pins: fn-fix-1-registry-rows/C-003
 - [test_functions_f.py](test_functions_f.py) — FN-F (2026-08-15): try / session /
   bitwise wrappers through `ReparkSession` Arrow `to_arrow()` (value AND type).
   `uuid` pins type + uniqueness; `version` is the repark string. FN-GT1 later

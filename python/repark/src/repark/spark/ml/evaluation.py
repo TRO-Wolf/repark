@@ -31,12 +31,12 @@ def _sparse_positive_class_score_sql(score_quoted: str) -> str:
     Logical class index 1 is zero-based. SQL ``array_position`` and ``element_at`` positions
     are one-based. Guard null or short vectors before ``COALESCE``. Missing indices produce zero.
     """
+    position = f"array_position({score_quoted}.indices, 1)"
     return (
         f"CASE WHEN {score_quoted} IS NULL OR {score_quoted}.size IS NULL "
         f"OR {score_quoted}.size < 2 THEN CAST(NULL AS DOUBLE) "
-        f"ELSE CAST(COALESCE("
-        f"element_at({score_quoted}.values, array_position({score_quoted}.indices, 1)), "
-        f"0.0) AS DOUBLE) END"
+        f"WHEN {position} = 0 THEN CAST(0.0 AS DOUBLE) "
+        f"ELSE CAST(COALESCE(element_at({score_quoted}.values, {position}), 0.0) AS DOUBLE) END"
     )
 
 
