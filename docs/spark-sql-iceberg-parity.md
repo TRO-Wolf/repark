@@ -3247,6 +3247,57 @@ the pin rather than obeying it.
 - **Pin** — `python/repark/tests/test_fn_arrays_divergence.py::test_flatten_drops_null_subarray`
 - **Rationale** — BACKLOG, intent to FIX. Dropping the NULL sub-array loses the row-level NULL
   signal Spark preserves, and the length of the answer silently changes with it.
+### BL-17 — `base64` omits RFC 4648 padding
+
+- **repark** — `F.base64` on UTF-8 bytes of `'Spark'` / `'A'` / `''` / NULL returns
+  `U3Bhcms`, `QQ`, `''`, NULL. Lengths that are already a multiple of three match Spark
+  (`'Apache'` → `QXBhY2hl`). Binary input agrees with the string path. The encoder is
+  unpadded (`base64`, not `base64pad`).
+- **Apache Spark** — RFC 4648 padded: `'Spark'` → `U3Bhcms=`, `'A'` → `QQ==`, `'Apache'` →
+  `QXBhY2hl`, empty and NULL unchanged. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0,
+  2026-09-03, EX-4 string-basics batch; same values on a string column and a binary column.)*
+- **Pin** — `python/repark/tests/test_bl17_base64_padding.py::test_bl17_base64_omits_rfc4648_padding_today`
+  (asserts today's unpadded answers so a padded kernel reds the pin on purpose).
+- **Rationale** — BACKLOG, filed 2026-09-03 from the EX-4 measurement. The name stays on the
+  example backlog until the encoder emits Spark's padding; teaching the unpadded form would
+  assert a silent wrong answer.
+
+### FN-INITCAP-1 — `initcap` starts a word at any non-alphanumeric
+
+- **repark** — DataFusion `initcap` treats every non-alphanumeric as a word break:
+  `'a-b'` → `'A-B'`, `'foo.bar'` → `'Foo.Bar'`, `"o'neil"` → `"O'Neil"`, `'ab_cd'` →
+  `'Ab_Cd'`, `'x\\ty'` → `'X\\tY'`, `'a-b c.d'` → `'A-B C.D'`.
+- **Apache Spark** — splits words on SPACE only: `'A-b'`, `'Foo.bar'`, `"O'neil"`,
+  `'Ab_cd'`, `'X\\ty'`, `'A-b C.d'`. *(oracle: live PySpark 4.1.2, 2026-09-03, EX-4
+  critic remediation.)*
+- **Pin** — `python/repark/tests/test_fn_initcap_divergence.py::test_fn_initcap_starts_word_at_any_non_alnum_today`
+- **Rationale** — BACKLOG, silent divergence. Teaching the ASCII-only `'Spark'`/`'Apache'`
+  cells hid the word-break miss; the name stays on the example backlog until the kernel
+  matches Spark's space-only split.
+
+### FN-CHR-1 — `chr` / `char` take a Unicode scalar, not `n % 256`
+
+- **repark** — `F.chr(300)` / `F.char(300)` answer `'Ĭ'` (U+012C). `F.chr(-1)` raises
+  `PySparkException: Execution error: invalid Unicode scalar value: -1` and aborts the
+  select. Both spellings share the kernel.
+- **Apache Spark** — `chr(n) == chr(n % 256)`, and `n < 0` answers `''`:
+  `[256, 300, 321, 65601, -1]` → `['\\x00', ',', 'A', 'A', '']`. *(oracle: live PySpark
+  4.1.2, 2026-09-03, EX-4 critic remediation.)*
+- **Pin** — `python/repark/tests/test_fn_chr_divergence.py::test_fn_chr_300_is_unicode_letter_today`
+  and `…::test_fn_chr_negative_raises_today`
+- **Rationale** — BACKLOG, silent on `n >= 256` and loud on negatives. ASCII `chr(65)`
+  agrees, which is why the first example landing missed it.
+
+### FN-TRIM-CHARS-1 — `trim` / `ltrim` / `rtrim` have no two-argument charset overload
+
+- **repark** — `F.trim(col, 'x')` (and `ltrim` / `rtrim`) raise `TypeError: takes 1
+  positional argument but 2 were given` at the Python call. One-argument whitespace
+  trim agrees with Spark.
+- **Apache Spark** — the second argument is a set of trim characters:
+  `trim('xxSparkxx', 'x')` → `'Spark'`. *(oracle: live PySpark 4.1.2, 2026-09-03.)*
+- **Pin** — `python/repark/tests/test_fn_trim_chars.py::test_fn_trim_two_arg_is_typeerror_today`
+- **Rationale** — BACKLOG, signature gap, loud. `F.btrim(col, chars)` is the two-arg
+  strip that exists today; the `trim`/`ltrim`/`rtrim` overloads stay refused.
 
 ### WIN-SLIDE — non-retractable aggregates over a sliding frame (W-0, 2026-08-31)
 

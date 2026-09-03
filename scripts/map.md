@@ -1,5 +1,12 @@
 # map — scripts/
 
+EX-4-functions-strings-a (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE`
+632 → 605 as merged (844 → 817 at dispatch) — 27 `F.*` string-basics names covered
+by eight examples; seven names stay on the backlog (`F.base64` BL-17, `F.encode` /
+`F.decode` charset, `F.format_number` loud unsupported, plus critic-round `F.initcap`
+FN-INITCAP-1, `F.chr`/`F.char` FN-CHR-1). `F.trim` two-arg is FN-TRIM-CHARS-1 (loud).
+pins: ex-4-functions-strings-a/C-001
+
 EX-13 (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE` 654 → 632 (777 → 755 at dispatch) — twenty-two
 `F.*` aggregate (b) and statistics names covered by four new examples (`dispersion.py`,
 `covariance.py`, `regression.py`, `bit_aggregates.py`); the two names the engine refuses

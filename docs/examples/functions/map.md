@@ -92,6 +92,14 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
 - [covariance.py](covariance.py) — `F.corr`, `F.covar_pop`, `F.covar_samp` over (y, x) pairs,
 - [regression.py](regression.py) — Spark's nine `F.regr_*` linear-regression aggregates over
 - [bit_aggregates.py](bit_aggregates.py) — `F.bit_and`, `F.bit_or`, `F.bit_xor` folding each
+- [case.py](case.py) — `F.lcase`/`F.lower` and `F.ucase`/`F.upper` (alias pairs)
+- [concat.py](concat.py) — `F.concat` propagating NULL beside `F.concat_ws`
+- [edges.py](edges.py) — `F.left` / `F.right` at a positive width, and the empty
+- [format.py](format.py) — the printf-style `F.format_string` and its `F.printf`
+- [length.py](length.py) — the three length spellings `F.length`,
+- [matching.py](matching.py) — `F.contains` / `F.startswith` / `F.endswith`, the
+- [padding.py](padding.py) — `F.lpad` / `F.rpad` with truncation, the space
+- [unbase64.py](unbase64.py) — `F.unbase64` decoding a base64 string into bytes.
 ## Pointers
 
 - Up: [../map.md](../map.md)
