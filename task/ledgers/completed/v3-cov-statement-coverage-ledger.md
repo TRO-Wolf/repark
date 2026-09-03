@@ -9,7 +9,29 @@ live harness, docs).
 §2 pillar 4 — discharged here.
 **Matrix:** [../../../docs/design/v3-statement-coverage.md](../../../docs/design/v3-statement-coverage.md).
 
-**Retired:** filed here in this unit's last commit.
+**Retired:** filed here by `ledger_lifecycle move` in commit `a6901c0`.
+
+## ERRATA (2026-09-03, critic remediation — where this block contradicts §1–§8 below, it wins)
+
+The Critic verdict was FAIL on bookkeeping and test adequacy; every matrix value reproduced and
+both red-first proofs were confirmed. Each finding is fixed on the branch and the totals below are
+re-measured, not adjusted.
+
+| # | Sev | Finding | Fix |
+|---|---|---|---|
+| E-1 | S1 | `V3-COV-4` and `V3-COV-5` were BACKLOG rows named only in the discharge prose and sat in neither north-star audit bucket | both are rows in §3.1's surface-residuals table with the measured reason each is outside its requires cell (delete-all MoR: both engines return `[]` rows and identical time travel, only storage shape differs; `WRITE ORDERED BY`: no §3 row covers sort-order evolution), and `_SURFACE_RESIDUALS` in `test_v1_gate_docs.py` holds all three new keys |
+| E-1b | S2 | the first cut of E-1's pin was itself vacuous: `_SURFACE_RESIDUALS` matched `\| <row> \|` anywhere in §3.1, and §3's own audit table carries rows named `9 · Write: MoR DML via deletion vectors` and `6 · Write: create v3`, so deleting the residual row left the pin green | the pin now extracts the surface-residuals table and requires exactly one matching row inside it; found by mutating the new keys rather than by reading |
+| E-2 | S2 | `delete-all-rows-mor` did not probe `t.files`, the table carrying its own central claim | `_P_FILES` added; measured repark `[(0, 4), (1, 4)]` against Spark `[]` — the data files RePark keeps live and Spark drops |
+| E-3 | S2 | the four `create` rows compared nothing about the table they created | every create row now carries a metadata-facts probe (format version, current schema, partition fields, and the `write.*` properties for the properties row) read from the table's own metadata JSON. **This found two divergences the row had been hiding:** `V3-COV-7` (Spark stamps `write.parquet.compression-codec = zstd`) and `V3-COV-8` (CTAS derives `id: long, optional` where Spark derives `id: int, required`) |
+| E-3b | S2 | `_agrees` compared values only for the `OK` kind, so the new metadata cells would have been accepted unread | the comparator now exempts **only** a mutual refusal from the value check; every other cell kind is compared, so a kind cannot be added and silently never checked |
+| E-4 | S2 | completeness overreach — `branch-replace-and-drop` ran no REPLACE, `REPLACE PARTITION FIELD` was absent, and one bare arm per `CALL` was not stated | the branch row runs `CREATE OR REPLACE BRANCH`, `alter-replace-partition-field` is a new program, and §6 of the matrix document states the one-arm scope with a table naming where each unrun argument IS covered (and that `expire_snapshots`'s options are covered nowhere) |
+| E-5 | S3 | `V3-COV-3`'s TRIGGER did not name the fork item | it names fork F-20 / `F-v3-10-partition-file-order` at the next RP-8 repin, as STATUS already did |
+| E-6 | S3 | "filed in the last commit" was false | corrected above: filed by `a6901c0`; every later commit on the branch amends documents, not the filing |
+| P-1 | perf | the live cell re-ran the whole repark half — 80 sessions and 255 cells for an answer the always-run sibling already pins | it compares `REPARK[name]` against the live Spark half, so the duplicate pass (a full repark pass measures 12.7 s standalone) is gone. **No speedup is claimed from the wall clock**: the post-remediation sandwich measured 144.54 s and then 117.40 s on the same 267-cell tree against 142.18 s pre-remediation at 255 cells, so the run-to-run spread is wider than the saving and attributing one to the other would be an unmeasured claim |
+| P-2 | perf | `_snapshot_marks` and `_latest_metadata` ran for every program (74 metadata scans per engine for 3 consumers; an `rglob` over the shared Spark warehouse) | both are gated on `NEEDS_SNAPSHOT_MARKS` / `NEEDS_METADATA_PATH`, computed once from the program text at import, and the pointer lookup is a `glob` of `*/<stem>/metadata/*.metadata.json` |
+| P-3 | perf | `CREATE NAMESPACE IF NOT EXISTS` per program; uncached document reads in the docs meta-pin | the namespace moves into the `coverage_session` fixture; `_read` and `_matrix_rows` are `functools.cache`d |
+| R-1 | perf | the two repairs had no Rust-level test, and `write::conform::conform_batch` — the bulk-append hot path — still cast on every column | five unit tests added across the two touched modules (the two behaviour pins watched red against the pre-fix bodies), the identity fast path is backported to `conform_batch`, the static-partition bindings are hoisted into a `StaticPartitionPlan` built once per commit and the injection streams, and the lineage projection is resolved once per scan schema instead of a name scan per field per batch |
+
 
 ## 1. Scope, as checkable propositions
 
@@ -38,13 +60,13 @@ repark half in an always-run test.
 
 | Totals | |
 |---|---|
-| Statement programs | 80 across 12 groups (create · insert · delete · update · merge · alter · lifecycle · metadata · lineage · time travel · refs · call) |
-| Comparison cells | 255 (statements + probes) |
-| EQUAL | 72 |
+| Statement programs | 81 across 12 groups (create · insert · delete · update · merge · alter · lifecycle · metadata · lineage · time travel · refs · call) |
+| Comparison cells | 267 (statements + probes) |
+| EQUAL | 71 |
 | REFUSED (both engines refuse) | 1 — `create-v3-write-order`, a parse error on both |
-| DIVERGES | 7 |
+| DIVERGES | 9 |
 | Statement classes unmeasured | 0 |
-| Runtime | repark 24 s; live Spark 74 s; co-collected with the nightly live legs 2 min 22 s |
+| Runtime | repark 13 s; live Spark 70 s; co-collected with the nightly live legs 1 min 57 s |
 
 Every row, its fixture, its probes and both engines' answers are the matrix in
 [../../../docs/design/v3-statement-coverage.md](../../../docs/design/v3-statement-coverage.md) §3;
@@ -60,6 +82,8 @@ the measured halves are the committed golden. The seven divergences:
 | `delete-all-rows-mor` | `DELETE FROM t WHERE id > 0` (MoR) | one PUFFIN DV, `record_count = 4`, data file live | drops the data file, no delete file | `V3-COV-4` | **BACKLOG** |
 | `alter-write-ordered-by` | `ALTER TABLE t WRITE ORDERED BY id` | refuses `NotImplemented` | sets the write order | `V3-COV-5` | **BACKLOG** |
 | `meta-position-deletes` | `SELECT pos FROM t.position_deletes` | refuses `FeatureUnsupported` (schema-only port) | one `pos` row | `V3-COV-6` | **DECLARED 2026-09-03, fork TRIGGER** |
+| `create-v3-properties` | `CREATE TABLE … TBLPROPERTIES (…)` | stores the three `write.*` keys the DDL set | adds `write.parquet.compression-codec = zstd` | `V3-COV-7` | **BACKLOG** |
+| `ctas-v3` | `CREATE TABLE … AS SELECT 1 AS id, 'a' AS name` | derives `id: long, optional` | derives `id: int, required` | `V3-COV-8` | **BACKLOG** |
 
 ## 4. The two defects fixed here, red first
 
@@ -69,9 +93,15 @@ the measured halves are the committed golden. The seven divergences:
 | `V3-COV-2` | `ALTER TABLE t ALTER COLUMN id TYPE BIGINT` then a `_row_id` projection → `lineage scan could not rebuild batch: expected Int64 but found Int32`, while `SELECT id, name` on the same table promoted correctly | `crates/repark-iceberg/src/catalog/lineage_columns.rs::conform_batch` — strict cast when the scan type differs from the declared field | same red-first proof |
 
 Neither fix widens a contract: both apply the store-assignment / conform rule the sibling path
-already applied.
+already applied. Each now carries Rust-level pins in its own module —
+`partition_overwrite::tests::store_assign_conforms_a_view_string_source_to_its_utf8_target` and
+`…::store_assign_is_identity_on_a_match_and_refuses_a_non_assignable_pair`;
+`lineage_columns::tests::conform_batch_promotes_a_narrower_scan_column_to_the_declared_type`,
+`…::conform_batch_reuses_the_projection_across_batches_of_one_schema` and
+`…::conform_batch_names_a_column_the_scan_did_not_return` — so the repairs are not held by the
+Python matrix alone.
 
-## 5. What is deliberately not pinned
+## 5. What is deliberately not pinned, and what is outside the matrix
 
 `_row_id` on a partitioned seed. `V3-COV-3` makes it unstable, so the partitioned programs pin
 `_last_updated_sequence_number` (deterministic and Spark-equal on every measured run) and the
@@ -82,19 +112,40 @@ permutations plus the invariant that the block is `[0, 1, 2, 3]`) and the incide
 RePark-owned CTAS writer stable and Spark-ordered on every run. Pinning an unstable value would be
 the false green the registry exists to prevent.
 
-## 6. Mutation battery — `test_v3_cov_docs.py`, 9 red of 9
+**One arm per row.** Each `CALL system.*` program runs the procedure's bare form. The optional
+arguments are outside this matrix and the coverage document's §6 names, per procedure, where each
+IS covered — `rewrite_data_files` `where` / `strategy` / `sort_order` by MAINT-rewrite-data-files-options
+and `RDF-SORT-1`; `rewrite_manifests` `spec_id` / `rewrite_if` / `use_caching` by MW-6 and
+`MANIFEST-1/2/3`; `remove_orphan_files`'s real sweep by `ORPHAN-1/2` — and where one is covered
+**nowhere**: `expire_snapshots`'s `stream_results` / `snapshot_ids` / `max_concurrent_deletes`,
+recorded as owed rather than implied. `RENAME TO`, `REPLACE TABLE` and `ALTER TABLE … EXECUTE`
+are likewise outside the matrix and said to be.
 
-| Test | Mutation applied alone, then restored |
+## 6. Mutation battery — 13 red of 13
+
+Nine on `test_v3_cov_docs.py`, four on the extended `test_v1_gate_docs.py` residual pin. Each
+applied alone and restored.
+
+| Test | Mutation |
 |---|---|
 | `…_matrix_row_count_and_verdicts_match_the_stated_totals` | delete the `ctas-v3` matrix row |
-| `…_every_stated_total_appears_in_the_totals_table` | change the program total from 80 to 81 |
-| `…_every_diverging_row_names_a_registry_row_that_exists` | blank `V3-COV-4`'s registry cell |
+| `…_every_stated_total_appears_in_the_totals_table` | change the program total from 81 to 82 |
+| `…_every_diverging_row_names_a_registry_row_that_exists` | blank `V3-COV-8`'s registry cell |
 | `…_the_rows_this_unit_filed_carry_a_class_a_date_and_a_pin` | strip `V3-COV-1`'s pin lines |
 | `…_the_fork_routed_rows_name_a_trigger` | drop `TRIGGER:` from `V3-COV-6` |
 | `…_the_north_star_carries_the_measured_discharge` | soften "Nothing in §2 pillar 4 is now owed." |
 | `…_the_v3_track_step_6_carries_the_v3_cov_state_line` | soften "Step 6 now owes **no engineering item**" |
 | `…_the_harness_and_the_golden_carry_every_matrix_row` | rename `merge-mixed-arms` in the doc only |
-| `…_the_rows_an_existing_registry_row_covers_are_cited_not_refiled` | renumber `V3-COV-4` to `V3-COV-7` |
+| `…_the_rows_an_existing_registry_row_covers_are_cited_not_refiled` | renumber `V3-COV-4` to `V3-COV-9` |
+| `test_v1_gate_docs::…_audit_is_scoped_to_the_v1_0_requires_cells` | delete the row 9 residual row |
+| " | delete the row 6 residual row |
+| " | delete the sort-order residual row |
+| " | rename `V3-COV-8` inside the row 6 residual cell |
+
+The two Rust behaviour pins were watched red the same way, against the pre-fix bodies rather than
+against a deleted function: `store_assign_source_column` reduced to `Ok(Arc::clone(source))` and
+the lineage cast branch reduced to pushing the column unchanged — both new tests failed, both
+passed on restore.
 
 ## 7. Gates
 
@@ -105,7 +156,7 @@ the false green the registry exists to prevent.
 | `make py-test` | 0 |
 | `make check-map-sync check-ledger-grammar check-ledgers check-docs-compaction check-manifest` | 0 |
 | `python3 scripts/ledger_lifecycle.py check --base a0cd39e` | 0 |
-| live, co-collected: `test_live_disclosure_still_diverges` + `test_v3_statement_coverage.py` + `test_live_scenario_matches_repark_golden_and_spark` | 0 — 218 passed in 142.18 s |
+| live, co-collected: `test_live_disclosure_still_diverges` + `test_v3_statement_coverage.py` + `test_live_scenario_matches_repark_golden_and_spark` | 0 — 220 passed in 117.40 s |
 
 ## 8. The question this unit hands back
 
@@ -135,7 +186,7 @@ COVERAGE_ATTESTATION:
       artifacts: [docs/design/v3-statement-coverage.md, python/repark/tests/test_v3_statement_coverage.py]
     - id: AT-2
       status: ATTACKED
-      evidence: All 80 programs were run on both engines and all 255 cells compared before any value was pinned; the 14 programs that first diverged were each re-read rather than accepted - 2 defects with a local fix, 3 that were the one V3-COV-3 instability, 2 harness artefacts (a two-file Spark seed and a content-derived snapshot id) and 7 engine divergences kept.
+      evidence: All 81 programs were run on both engines and all 267 cells compared before any value was pinned; the 14 programs that first diverged were each re-read rather than accepted - 2 defects with a local fix, 3 that were the one V3-COV-3 instability, 2 harness artefacts (a two-file Spark seed and a content-derived snapshot id) and 7 engine divergences kept.
       artifacts: [python/repark/tests/_v3_statement_coverage_repark.py, python/repark/tests/_v3_statement_coverage_spark.py]
     - id: AT-3
       status: ATTACKED
@@ -155,7 +206,7 @@ COVERAGE_ATTESTATION:
       artifacts: [docs/spark-sql-iceberg-parity.md, python/repark/tests/test_v3_statement_coverage.py]
     - id: AT-7
       status: ATTACKED
-      evidence: Both repairs are single-column conforms on paths that already ran per column; the matrix's live half runs in 74 s of Spark time and the co-collected suite in 2 min 22 s.
+      evidence: Both repairs are single-column conforms on paths that already ran per column; the matrix's live half runs in 70 s of Spark time and the co-collected suite in 1 min 57 s.
       artifacts: [crates/repark-iceberg/src/write/partition_overwrite.rs, crates/repark-iceberg/src/catalog/lineage_columns.rs]
     - id: AT-8
       status: ATTACKED

@@ -142,7 +142,8 @@ repark-core's error map.
   check and the cast kernel. This is the bulk-append hot path and the identity case is the common
   one; the guard and the strict cast still run for every pair that actually differs.
   pins: v3-cov-statement-coverage/C-004
-- `partition_overwrite.rs` — **V3-COV (2026-09-03):** `StaticPartitionPlan` resolves the spec
+- `partition_overwrite.rs` — **V3-COV (2026-09-03):** the module-private `StaticPartitionPlan`
+  resolves the spec
   bindings and the `PARTITION (k=v)` map ONCE per commit and `stage_static_partition_overwrite_files`
   streams the batches through it instead of resolving per batch and collecting them all first;
   `inject_static_partition_columns` stays as the one-batch wrapper. `store_assign_source_column` runs the

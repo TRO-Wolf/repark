@@ -75,6 +75,7 @@ class _Program(NamedTuple):
     statements: tuple[Any, ...]
     probes: tuple[str, ...]
     source: bool = False
+    meta: tuple[str, ...] = ()
 
 
 def _merge(clause: str, source: str = "SELECT 2 AS id") -> str:
@@ -93,6 +94,8 @@ _PROGRAMS: tuple[_Program, ...] = (
             + ") USING iceberg TBLPROPERTIES ('format-version' = '3')",
         ),
         (_P_FLAT,),
+        False,
+        ("format-version", "schema", "partition-fields"),
     ),
     _Program(
         "create-v3-partitioned",
@@ -104,6 +107,8 @@ _PROGRAMS: tuple[_Program, ...] = (
             + ") USING iceberg PARTITIONED BY (part) TBLPROPERTIES ('format-version' = '3')",
         ),
         (_P_PART,),
+        False,
+        ("format-version", "schema", "partition-fields"),
     ),
     _Program(
         "create-v3-bucket-transform",
@@ -116,6 +121,8 @@ _PROGRAMS: tuple[_Program, ...] = (
             + "TBLPROPERTIES ('format-version' = '3')",
         ),
         (_P_PART,),
+        False,
+        ("format-version", "schema", "partition-fields"),
     ),
     _Program(
         "create-v3-write-order",
@@ -134,6 +141,8 @@ _PROGRAMS: tuple[_Program, ...] = (
         "",
         ("CREATE TABLE {t} (" + _FLAT_SCHEMA + ") USING iceberg TBLPROPERTIES (" + _MOR + ")",),
         (_P_FLAT,),
+        False,
+        ("format-version", "schema", "partition-fields", "write-properties"),
     ),
     _Program(
         "ctas-v3",
@@ -144,6 +153,8 @@ _PROGRAMS: tuple[_Program, ...] = (
             "id, 'a' AS name",
         ),
         (_P_FLAT,),
+        False,
+        ("format-version", "schema", "partition-fields"),
     ),
     _Program("insert-into", "insert", "mor", ("INSERT INTO {t} VALUES (5, 'e')",), _FLAT_PROBES),
     _Program(
@@ -246,7 +257,11 @@ _PROGRAMS: tuple[_Program, ...] = (
         True,
     ),
     _Program(
-        "delete-all-rows-mor", "delete", "mor", ("DELETE FROM {t} WHERE id > 0",), _FLAT_MOR_PROBES
+        "delete-all-rows-mor",
+        "delete",
+        "mor",
+        ("DELETE FROM {t} WHERE id > 0",),
+        (*_FLAT_MOR_PROBES, _P_FILES),
     ),
     _Program(
         "update-where-mor",
@@ -420,6 +435,18 @@ _PROGRAMS: tuple[_Program, ...] = (
         (_P_PART, "SELECT spec_id, record_count FROM {t}.files ORDER BY 1, 2"),
     ),
     _Program(
+        "alter-replace-partition-field",
+        "alter",
+        "pmor",
+        (
+            "ALTER TABLE {t} REPLACE PARTITION FIELD part WITH bucket(2, id)",
+            "INSERT INTO {t} VALUES (5, 'e', 30)",
+        ),
+        (_P_PART, "SELECT spec_id, record_count FROM {t}.files ORDER BY 1, 2"),
+        False,
+        ("partition-fields",),
+    ),
+    _Program(
         "alter-add-column-partitioned",
         "alter",
         "pmor",
@@ -575,10 +602,14 @@ _PROGRAMS: tuple[_Program, ...] = (
         ("SELECT id, name FROM {t}.branch_b1 ORDER BY id", _P_FLAT),
     ),
     _Program(
-        "branch-replace-and-drop",
+        "branch-create-replace-and-drop",
         "refs",
         "mor",
-        ("ALTER TABLE {t} CREATE BRANCH b1", "ALTER TABLE {t} DROP BRANCH b1"),
+        (
+            "ALTER TABLE {t} CREATE BRANCH b1",
+            "ALTER TABLE {t} CREATE OR REPLACE BRANCH b1",
+            "ALTER TABLE {t} DROP BRANCH b1",
+        ),
         ("SELECT name, type FROM {t}.refs ORDER BY 1, 2",),
     ),
     _Program(
@@ -690,4 +721,21 @@ _PROGRAMS: tuple[_Program, ...] = (
         ("CALL {c}.system.register_table(table => '{q}_reg', metadata_file => '{metadata}')",),
         ("SELECT id, name FROM {t}_reg ORDER BY id",),
     ),
+)
+
+
+def _mentions(program: _Program, token: str) -> bool:
+    """Whether any statement or probe of one program interpolates ``token``."""
+    texts = [item[0] if isinstance(item, tuple) else item for item in program.statements]
+    texts.extend(program.probes)
+    return any(token in text for text in texts)
+
+
+NEEDS_SNAPSHOT_MARKS: frozenset[str] = frozenset(
+    program.name
+    for program in _PROGRAMS
+    if _mentions(program, "{snapshot0}") or _mentions(program, "{timestamp0}")
+)
+NEEDS_METADATA_PATH: frozenset[str] = frozenset(
+    program.name for program in _PROGRAMS if _mentions(program, "{metadata}")
 )

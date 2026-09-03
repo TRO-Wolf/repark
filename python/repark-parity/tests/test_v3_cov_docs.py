@@ -8,6 +8,7 @@ diverging row, or soften a discharge line → this REDs.
 from __future__ import annotations
 
 import re
+from functools import cache
 from pathlib import Path
 
 _REPO = Path(__file__).resolve().parents[3]
@@ -18,24 +19,35 @@ _TRACK = "docs/design/format-v3-track.md"
 _HARNESS = "python/repark/tests/_v3_statement_coverage_programs.py"
 _GOLDEN = "python/repark/tests/_v3_statement_coverage_repark.py"
 _SPARK_GOLDEN = "python/repark/tests/_v3_statement_coverage_spark.py"
-_FILED = ("V3-COV-1", "V3-COV-2", "V3-COV-3", "V3-COV-4", "V3-COV-5", "V3-COV-6")
+_FILED = (
+    "V3-COV-1",
+    "V3-COV-2",
+    "V3-COV-3",
+    "V3-COV-4",
+    "V3-COV-5",
+    "V3-COV-6",
+    "V3-COV-7",
+    "V3-COV-8",
+)
 _CITED = ("DML-1", "G3-E8", "B-MOR-3")
 _TOTALS = {
-    "Statement programs measured": 80,
-    "Comparison cells (statements + probes)": 255,
-    "**EQUAL** — repark and Spark agree on every cell": 72,
+    "Statement programs measured": 81,
+    "Comparison cells (statements + probes)": 267,
+    "**EQUAL** — repark and Spark agree on every cell": 71,
     "**REFUSED** — both engines refuse the statement": 1,
-    "**DIVERGES** — a registry row": 7,
+    "**DIVERGES** — a registry row": 9,
 }
 
 
+@cache
 def _read(relative: str) -> str:
-    """The whole document at ``relative``."""
+    """The whole document at ``relative``, read once per session."""
     return (_REPO / relative).read_text(encoding="utf-8")
 
 
+@cache
 def _matrix_rows() -> list[list[str]]:
-    """Every §3 matrix row of the coverage document, split into its cells."""
+    """Every §3 matrix row of the coverage document, split into its cells; parsed once."""
     rows = []
     for line in _read(_DOC).splitlines():
         match = re.match(r"^\| `([a-z0-9-]+)` \|", line)
@@ -132,4 +144,4 @@ def test_the_rows_an_existing_registry_row_covers_are_cited_not_refiled() -> Non
     doc = _read(_DOC)
     for row in _CITED:
         assert f"`{row}`" in doc, row
-    assert "V3-COV-7" not in _read(_REGISTRY)
+    assert "V3-COV-9" not in _read(_REGISTRY)

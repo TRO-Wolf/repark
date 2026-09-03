@@ -10,15 +10,51 @@ from typing import Any
 SPARK: dict[str, Any] = {
     "create-v3-flat": {
         "statements": [["OK", None]],
-        "probes": [["OK", []]],
+        "probes": [
+            ["OK", []],
+            [
+                "META",
+                [
+                    ["format-version", 3],
+                    ["schema", [["id", "int", False], ["name", "string", False]]],
+                    ["partition-fields", []],
+                ],
+            ],
+        ],
     },
     "create-v3-partitioned": {
         "statements": [["OK", None]],
-        "probes": [["OK", []]],
+        "probes": [
+            ["OK", []],
+            [
+                "META",
+                [
+                    ["format-version", 3],
+                    [
+                        "schema",
+                        [["id", "int", False], ["name", "string", False], ["part", "int", False]],
+                    ],
+                    ["partition-fields", [["part", "identity"]]],
+                ],
+            ],
+        ],
     },
     "create-v3-bucket-transform": {
         "statements": [["OK", None]],
-        "probes": [["OK", []]],
+        "probes": [
+            ["OK", []],
+            [
+                "META",
+                [
+                    ["format-version", 3],
+                    [
+                        "schema",
+                        [["id", "int", False], ["name", "string", False], ["part", "int", False]],
+                    ],
+                    ["partition-fields", [["id_bucket", "bucket[4]"]]],
+                ],
+            ],
+        ],
     },
     "create-v3-write-order": {
         "statements": [
@@ -36,11 +72,40 @@ SPARK: dict[str, Any] = {
     },
     "create-v3-properties": {
         "statements": [["OK", None]],
-        "probes": [["OK", []]],
+        "probes": [
+            ["OK", []],
+            [
+                "META",
+                [
+                    ["format-version", 3],
+                    ["schema", [["id", "int", False], ["name", "string", False]]],
+                    ["partition-fields", []],
+                    [
+                        "write-properties",
+                        [
+                            ["write.delete.mode", "merge-on-read"],
+                            ["write.merge.mode", "merge-on-read"],
+                            ["write.parquet.compression-codec", "zstd"],
+                            ["write.update.mode", "merge-on-read"],
+                        ],
+                    ],
+                ],
+            ],
+        ],
     },
     "ctas-v3": {
         "statements": [["OK", None]],
-        "probes": [["OK", [[1, "a"]]]],
+        "probes": [
+            ["OK", [[1, "a"]]],
+            [
+                "META",
+                [
+                    ["format-version", 3],
+                    ["schema", [["id", "int", False], ["name", "string", False]]],
+                    ["partition-fields", []],
+                ],
+            ],
+        ],
     },
     "insert-into": {
         "statements": [["OK", None]],
@@ -165,7 +230,7 @@ SPARK: dict[str, Any] = {
     },
     "delete-all-rows-mor": {
         "statements": [["OK", None]],
-        "probes": [["OK", []], ["OK", []], ["OK", []]],
+        "probes": [["OK", []], ["OK", []], ["OK", []], ["OK", []]],
     },
     "update-where-mor": {
         "statements": [["OK", None]],
@@ -343,6 +408,14 @@ SPARK: dict[str, Any] = {
             ["OK", [[0, 2], [0, 2], [1, 1]]],
         ],
     },
+    "alter-replace-partition-field": {
+        "statements": [["OK", None], ["OK", None]],
+        "probes": [
+            ["OK", [[1, "a", 10], [2, "b", 10], [3, "c", 20], [4, "d", 20], [5, "e", 30]]],
+            ["OK", [[0, 2], [0, 2], [1, 1]]],
+            ["META", [["partition-fields", [["id_bucket_2", "bucket[2]"]]]]],
+        ],
+    },
     "alter-add-column-partitioned": {
         "statements": [["OK", None]],
         "probes": [
@@ -474,8 +547,8 @@ SPARK: dict[str, Any] = {
             ["OK", [[1, "a"], [2, "b"], [3, "c"], [4, "d"]]],
         ],
     },
-    "branch-replace-and-drop": {
-        "statements": [["OK", None], ["OK", None]],
+    "branch-create-replace-and-drop": {
+        "statements": [["OK", None], ["OK", None], ["OK", None]],
         "probes": [["OK", [["main", "BRANCH"]]]],
     },
     "tag-create-and-read": {

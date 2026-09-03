@@ -210,17 +210,13 @@ fn store_assign_source_column(source: &ArrayRef, field: &FieldRef) -> Result<Arr
     )?)
 }
 
-/// The per-commit half of static `PARTITION (k=v)` injection: bindings resolved once.
-pub struct StaticPartitionPlan<'a> {
+struct StaticPartitionPlan<'a> {
     table_schema: SchemaRef,
     by_source: HashMap<String, &'a PartitionEquality>,
 }
 
 impl<'a> StaticPartitionPlan<'a> {
-    /// Resolve every `PARTITION (k=v)` name against the table's spec, once per commit.
-    /// # Errors
-    /// A partition name the spec does not bind.
-    pub fn new(
+    fn new(
         table_schema: SchemaRef,
         equalities: &'a [PartitionEquality],
         table: &Table,
@@ -243,10 +239,7 @@ impl<'a> StaticPartitionPlan<'a> {
         })
     }
 
-    /// Inject the resolved partition columns into ONE source batch (Spark arity).
-    /// # Errors
-    /// Too many source columns, missing source columns, or a literal that cannot fill `k`.
-    pub fn inject(&self, batch: &RecordBatch) -> Result<RecordBatch> {
+    fn inject(&self, batch: &RecordBatch) -> Result<RecordBatch> {
         let expected_source = self
             .table_schema
             .fields()

@@ -846,9 +846,9 @@ them, and the document is ordered by surface, never by date.
   delegated `INSERT`, which V3-11 did not measure. A delegated `INSERT` runs inside the fork's
   `iceberg_datafusion::IcebergTableProvider`, so RePark does not own the file set the commit sees
   and cannot sort it the way `ascending_partition_order` sorts the writers it does own. TRIGGER:
-  the fork's partitioned `insert_into` orders its fanout output deterministically (ascending
-  partition), after which this row retires and the partitioned programs can pin `_row_id`
-  directly. Until then the partitioned rows of the coverage matrix pin
+  **fork F-20 / `F-v3-10-partition-file-order`, taken at the next RP-8 repin** — the fork's
+  partitioned `insert_into` orders its fanout output deterministically (ascending partition),
+  after which this row retires and the partitioned programs can pin `_row_id` directly. Until then the partitioned rows of the coverage matrix pin
   `_last_updated_sequence_number`, not `_row_id` — pinning an unstable value would be the
   false green this registry exists to prevent.
 
@@ -2111,6 +2111,49 @@ the pin rather than obeying it.
   partition-spec DDL only; `RDF-SORT-1` is the sibling row on the maintenance side
   (`rewrite_data_files` refuses `sort` / `sort_order`). Both retire together when the fork's
   sort-order write path lands.
+
+### V3-COV-7 — `CREATE TABLE` stamps Spark's parquet-codec default; RePark stamps only the DDL
+
+- **repark** — `CREATE TABLE t (…) USING iceberg TBLPROPERTIES ('format-version' = '3',
+  'write.delete.mode' = 'merge-on-read', 'write.update.mode' = …, 'write.merge.mode' = …)` writes
+  exactly those three `write.*` keys into the table metadata. Format version, the current schema
+  (`id int`, `name string`, both optional) and the empty partition spec are Spark-equal on the
+  same statement.
+- **Apache Spark** — writes the same three keys **plus**
+  `write.parquet.compression-codec = zstd`, its own create-time default.
+  *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03. This row claims the property SET the
+  statement leaves behind, which is what was measured; the codec each engine actually writes into
+  the Parquet footer was NOT measured and is not claimed either way.)*
+- **Pin** — `python/repark/tests/test_v3_statement_coverage.py::test_v3_statement_row_reproduces_the_measured_repark_answer[create-v3-properties]`
+  and `…::test_v3_statement_row_matches_the_live_spark_oracle[create-v3-properties]`; the three
+  create rows that carry no properties (`[create-v3-flat]`, `[create-v3-partitioned]`,
+  `[create-v3-bucket-transform]`) are the controls and agree on every metadata fact.
+- **Rationale** — BACKLOG. Visible to anyone reading `SHOW TBLPROPERTIES` or the metadata JSON
+  after the same DDL, so it is a row rather than a note; it is queued rather than fixed because
+  "stamp the engine's write defaults at create" is a create-path policy decision, not a defect in
+  this statement. Do not close it by copying Spark's key without deciding the policy — a stamped
+  property is a value later writes read.
+
+### V3-COV-8 — CTAS derives a wider, nullable Iceberg column where Spark derives the literal's type
+
+- **repark** — `CREATE TABLE t USING iceberg TBLPROPERTIES ('format-version' = '3') AS SELECT 1 AS
+  id, 'a' AS name` stores `id: long, optional` and `name: string, optional`. The rows round-trip
+  and the format version and partition spec are Spark-equal; the divergence is the derived
+  schema.
+- **Apache Spark** — stores `id: int, required` and `name: string, required` for the same
+  statement. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03.)*
+- **Pin** — `python/repark/tests/test_v3_statement_coverage.py::test_v3_statement_row_reproduces_the_measured_repark_answer[ctas-v3]`
+  and `…::test_v3_statement_row_matches_the_live_spark_oracle[ctas-v3]`; the column-def
+  `[create-v3-flat]` control stores `id int` optional on BOTH engines, so this is the CTAS
+  derivation, not the type mapping.
+- **Rationale** — BACKLOG, two causes in one cell and neither is local. **Width:** DataFusion
+  types a bare integer literal as `Int64` where Spark types it `INT`, which is the same root as
+  `TY-4` / the `VALUES (1)` readings in `TY-3`'s neighbourhood — narrowing it inside CTAS alone
+  would make CTAS disagree with every other repark path. **Nullability:** repark's CTAS marks
+  derived columns optional; SE-1's tighten-derived refusal (`ctas.rs`, R-D) is the standing reason
+  the write path is conservative about required columns, so making CTAS emit `required` is a
+  decision against that guard, not a patch. Both are recorded here with the measured cell so the
+  next unit starts from the reading rather than the surprise.
 
 ### RDF-SORT-1 — `rewrite_data_files` refuses `sort` / `sort_order`; Spark runs a sort rewrite
 

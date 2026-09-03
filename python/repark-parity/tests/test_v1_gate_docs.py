@@ -22,6 +22,9 @@ _SURFACE_RESIDUALS = {
     "12 · `rewrite_data_files`": ("RDF-1", "F-16 residue 2"),
     "14 · expiry / orphans": ("ORPHAN-1", "ORPHAN-2"),
     "15 · `rewrite_manifests`": ("MANIFEST-1", "MANIFEST-3"),
+    "6 · Write: create v3": ("V3-COV-7", "V3-COV-8"),
+    "9 · Write: MoR DML via deletion vectors": ("V3-COV-4",),
+    "no §3 row · sort-order evolution": ("V3-COV-5", "RDF-SORT-1"),
 }
 _AUDIT_ROWS = 20
 _RESIDUAL_ROWS = {
@@ -80,19 +83,44 @@ def test_every_audited_row_is_green_and_none_is_backlog_blocked() -> None:
     assert f"| {_AUDIT_ROWS + 1} · " not in _audit_section()
 
 
+def _surface_residual_table() -> list[str]:
+    """Only the rows of §3.1's surface-residuals table — never §3's own audit rows."""
+    lines = _audit_section().splitlines()
+    start = next(
+        index
+        for index, line in enumerate(lines)
+        if "Surface residuals outside the requires cells" in line
+    )
+    rows = []
+    for line in lines[start:]:
+        if (
+            line.startswith("| ")
+            and not line.startswith("| Row |")
+            and set(line) != {"|", "-", " "}
+        ):
+            rows.append(" ".join(line.split()))
+        elif rows and not line.startswith("|"):
+            break
+    return rows
+
+
 def test_the_audit_is_scoped_to_the_v1_0_requires_cells() -> None:
     """C-001: the preamble scopes the audit, and the surface residuals are listed with a class."""
     section = _normalized(_audit_section())
     assert "**v1.0 requires** cell" in section
     assert "a residual inside one whose class is BACKLOG blocks the gate, and none is" in section
     assert "Surface residuals outside the requires cells — recorded, not gating." in section
+    residual_table = _surface_residual_table()
     for row, residuals in _SURFACE_RESIDUALS.items():
-        assert f"| {row} |" in section, row
+        matching = [line for line in residual_table if line.startswith(f"| {row} |")]
+        assert len(matching) == 1, row
         for residual in residuals:
-            assert residual in section, residual
+            assert residual in matching[0], (row, residual)
     assert "open residue on a FIXED row, fork-owned" in section
     assert "DECLARED, owner decision OD-2 (ruled 2026-08-21)" in section
     assert "BACKLOG, both v2-measured" in section
+    assert "BACKLOG, both measured 2026-09-03 by V3-COV" in section
+    assert "BACKLOG, measured 2026-09-03 by V3-COV" in section
 
 
 def test_the_unrowed_v1_0_requirement_is_discharged_with_its_measured_totals() -> None:
@@ -103,8 +131,10 @@ def test_the_unrowed_v1_0_requirement_is_discharged_with_its_measured_totals() -
     assert "ten cells over two fixtures" in section
     assert "no statement-coverage harness at any format version" in section
     assert "Statement coverage measured 2026-09-03" in section
-    assert "80\nstatement programs" in section or "80 statement programs" in section
-    assert "72 EQUAL" in section
+    assert "81 statement programs" in section
+    assert "267 comparison cells" in section
+    assert "71 EQUAL" in section
+    assert "audited in the surface-residuals table above" in section
     assert "Nothing in §2 pillar 4 is now owed." in section
     assert "docs/design/v3-statement-coverage.md" in section
 

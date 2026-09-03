@@ -135,7 +135,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   golden; `test_v3_statement_row_matches_the_live_spark_oracle` runs the same program on the live
   oracle behind `REPARK_PARITY_LIVE=1` and re-asserts the verdict. Seeds are single-file per
   partition on both engines so a file-shape probe is comparable under the shared `local[2]`
-  session, and the module-private catalog is `v3cov` (live-cell rules 1–7). `REFUSED` is a verdict
+  session, and the module-private catalog is `v3cov` (live-cell rules 1–7). A create row compares
+  the table it created through a `META` probe — format version, current schema, partition fields
+  and the `write.*` properties, read from the table's own metadata JSON — which is what found
+  `V3-COV-7` and `V3-COV-8`; `_agrees` exempts ONLY a mutual refusal from the value comparison, so
+  a new cell kind cannot be added and silently never checked. The live cell compares
+  `REPARK[name]` rather than re-running the repark half (80 sessions the always-run sibling
+  already pays), and `NEEDS_SNAPSHOT_MARKS` / `NEEDS_METADATA_PATH` — computed once from the
+  program text at import — keep the snapshot scan and the metadata-pointer glob off the programs
+  that interpolate neither. `REFUSED` is a verdict
   about the STATEMENT: `drop-table` reads its table back and both engines refuse that read, which
   is the agreement the row exists for, so the row stays `EQUAL`. Partitioned rows pin
   `_last_updated_sequence_number`, **not** `_row_id`: `V3-COV-3` makes the delegated partitioned

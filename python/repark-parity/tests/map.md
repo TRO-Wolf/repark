@@ -151,7 +151,8 @@ JVM, no repark required). See [../map.md](../map.md).
   and the discharge lines hold one matrix — §1's totals are counted from §3 rather than asserted
   beside it, every DIVERGES row cites a registry row that exists, the six rows this unit filed
   carry a class, the date and their pin, the two fork-routed rows name a TRIGGER, and the north
-  star and the v3 track carry the dated discharge. `_TOTALS` is the one place the counts live, so
+  star and the v3 track carry the dated discharge; `_read` and `_matrix_rows` are cached, so the
+  nine tests parse the document once. `_TOTALS` is the one place the counts live, so
   a re-measurement that moves a total moves this file too. Mutation battery: 9 red of 9
   (ledger §6).
   pins: v3-cov-statement-coverage/C-001, C-004, C-005

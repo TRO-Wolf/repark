@@ -112,16 +112,18 @@ gating.
 **§2 pillar 4 — discharged (V3-COV, 2026-09-03).** V1-GATE searched for a *full
 statement-coverage comparison against PySpark on v3 tables* and found none: the nightly v3 leg
 (V3E-5) is ten cells over two fixtures, not the statement matrix, and the tree carried no
-statement-coverage harness at any format version. **Statement coverage measured 2026-09-03: 80
-statement programs across 12 statement classes and all 7 `CALL system.*` procedures, 255
-comparison cells, 72 EQUAL, 1 refused by both engines, 7 rows filed (`DML-1`, `G3-E8` ×2,
-`B-MOR-3` already stood; `V3-COV-3` DECLARED fork-routed, `V3-COV-4` and `V3-COV-5` BACKLOG,
-`V3-COV-6` DECLARED fork-routed are new), 2 defects FIXED in the same unit (`V3-COV-1`,
-`V3-COV-2`), 0 statement classes left unmeasured.** The matrix, its fixtures and every cell are
+statement-coverage harness at any format version. **Statement coverage measured 2026-09-03: 81
+statement programs across 12 statement classes and all 7 `CALL system.*` procedures, 267
+comparison cells, 71 EQUAL, 1 refused by both engines, 9 rows filed (`DML-1`, `G3-E8` ×2,
+`B-MOR-3` already stood; `V3-COV-3` and `V3-COV-6` DECLARED fork-routed and `V3-COV-4`,
+`V3-COV-5`, `V3-COV-7`, `V3-COV-8` BACKLOG are new), 2 defects FIXED in the same unit
+(`V3-COV-1`, `V3-COV-2`), 0 statement classes left unmeasured.** The six new rows are audited
+in the surface-residuals table above, not only in this line. The matrix, its fixtures and every
+cell are
 [docs/design/v3-statement-coverage.md](../../../docs/design/v3-statement-coverage.md); the
 harness is `python/repark/tests/test_v3_statement_coverage.py`, always-run on repark and
 live-gated against PySpark 4.1.2 + Iceberg 1.11.0, co-collected with the nightly live legs in
-2 min 22 s. Nothing in §2 pillar 4 is now owed.
+1 min 57 s. Nothing in §2 pillar 4 is now owed.
 
 **Surface residuals outside the requires cells — recorded, not gating.** Each sits on a
 surface §3 names; none is inside that row's v1.0 requires cell, so none is audited above.
@@ -131,6 +133,9 @@ surface §3 names; none is inside that row's v1.0 requires cell, so none is audi
 | 12 · `rewrite_data_files` | `RDF-1` — a position-delete file spanning two or more data files is still not selected (F-16 residue 2, fork work); the row is FIXED 2026-09-02 for the single-referent shape and its dated prior states read "stays BACKLOG" | open residue on a FIXED row, fork-owned | the cell asks for lineage through rewrite, no stranded DVs and a true `removed_delete_files_count` — all three measured on v3 (`V3-LINEAGE-1`, `V3-DANGLE-1`) |
 | 14 · expiry / orphans | `ORPHAN-1` (`older_than` required) and `ORPHAN-2` (dry-run default with Spark's result shape) | DECLARED, owner decision OD-2 (ruled 2026-08-21) | the cell asks that v3 expiry stays green with a live leg; both rows are deliberate strictness on every format version, not a v3 gap |
 | 15 · `rewrite_manifests` | `MANIFEST-1` (data manifests only; Spark rewrites delete manifests too) and `MANIFEST-3` (`added_manifests_count` above the target size) | BACKLOG, both v2-measured; `MANIFEST-1` is fork work | the cell asks only that the procedure be exercised on v3, which SCALE-v3 did |
+| 6 · Write: create v3 | `V3-COV-7` (Spark stamps `write.parquet.compression-codec = zstd` at CREATE; repark stamps only the DDL's keys) and `V3-COV-8` (CTAS derives `id: long, optional` where Spark derives `id: int, required`) | BACKLOG, both measured 2026-09-03 by V3-COV | the cell asks that a v3 table be creatable behind the opt-in and read back — format version, current schema and partition spec are Spark-equal on the column-def path (`[create-v3-flat]`, `[create-v3-partitioned]`, `[create-v3-bucket-transform]`); a stamped engine default and the CTAS literal derivation sit outside it |
+| 9 · Write: MoR DML via deletion vectors | `V3-COV-4` — a `DELETE` whose predicate covers every row of a data file writes a full-coverage Puffin DV where Spark drops the file | BACKLOG, measured 2026-09-03 by V3-COV | the cell asks that MoR DML commit through deletion vectors with Spark-equal rows and lineage; both engines return `[]` rows and identical time travel here, and only the storage shape differs |
+| no §3 row · sort-order evolution | `V3-COV-5` — `ALTER TABLE … WRITE ORDERED BY` refuses where Spark sets the write order | BACKLOG, measured 2026-09-03 by V3-COV | §3 carries no row for sort-order evolution: I7 delivered partition-spec DDL only, and the sibling on the maintenance side is `RDF-SORT-1`, itself outside row 12's requires cell |
 
 **Fork side, at the consumed pin `ff4764d3`.** Every 🟡 `GAP_MATRIX.md` row this gate leans on
 carries a dated cell and a pin at that rev, so none is a blocker.
@@ -161,7 +166,7 @@ recommendation) and the freeze is registered — 888 names in
 §3.1 audits all twenty rows and the fork rows they lean on: every row ✅ or dated DECLARED as of
 2026-09-03. **Engineering:** §2 pillar 4's **full v3 statement-coverage comparison against
 PySpark** — the one item V1-GATE could not pin to any unit, run or fixture — is measured and
-recorded above (**V3-COV**, 2026-09-03: 80 programs, 255 cells, 72 EQUAL, 7 rows filed,
+recorded above (**V3-COV**, 2026-09-03: 81 programs, 267 cells, 71 EQUAL, 9 rows filed,
 2 defects FIXED), so no engineering item remains on this gate. **Owner:** one thing is still
 owed and it is not a §3 row — a one-line ruling confirming `B-MOR-3`'s DECLARED class for
 `rewrite_position_delete_files` (§3.1 row 13 — the row is housed under the registry's §7 with no

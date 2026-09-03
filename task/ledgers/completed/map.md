@@ -22,7 +22,7 @@ else. The next pickup's `make ledger-archive` files everything here under
   `risk_tier: standard`. Branch `docs/v1-gate-audit`.
 - [v3-cov-statement-coverage-ledger.md](v3-cov-statement-coverage-ledger.md) —
   **V3-COV (2026-09-03), delivered:** the full v3 statement-coverage comparison against PySpark
-  that discharges the north star's §2 pillar 4 — 80 programs, 255 cells, 72 EQUAL, 7 rows filed,
+  that discharges the north star's §2 pillar 4 — 81 programs, 267 cells, 71 EQUAL, 9 rows filed,
   2 defects FIXED red-first. `risk_tier: standard`. Branch `feat/v3-cov-statement-coverage`.
   Matrix: [../../../docs/design/v3-statement-coverage.md](../../../docs/design/v3-statement-coverage.md).
   Carries one RULING (`V3-COV-3`, the delegated partitioned INSERT's unstable `_row_id`).

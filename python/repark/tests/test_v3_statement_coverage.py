@@ -22,6 +22,8 @@ from _v3_statement_coverage_programs import (
     _PART_VALUES,
     _PROGRAMS,
     _SEEDS,
+    NEEDS_METADATA_PATH,
+    NEEDS_SNAPSHOT_MARKS,
     _Program,
     _Seed,
 )
@@ -142,20 +144,61 @@ def repark_outcome(program: _Program, warehouse: Path) -> dict[str, Any]:
             if program.source:
                 repark.sql(_SOURCE_DDL.format(s=names["s"])).to_arrow()
                 repark.sql(f"INSERT INTO {names['s']} VALUES {_SOURCE_VALUES}").to_arrow()
-            names.update(_snapshot_marks(lambda text: repark.sql(text).to_arrow(), target))
-            names["metadata"] = _latest_metadata(warehouse, stem)
-        return _run_program(lambda text: repark.sql(text).to_arrow(), program, names)
+            if program.name in NEEDS_SNAPSHOT_MARKS:
+                names.update(_snapshot_marks(lambda text: repark.sql(text).to_arrow(), target))
+            if program.name in NEEDS_METADATA_PATH:
+                names["metadata"] = _latest_metadata(warehouse, stem)
+        outcome = _run_program(lambda text: repark.sql(text).to_arrow(), program, names)
     finally:
         repark.stop()
+    if program.meta:
+        outcome["probes"].append(("META", _metadata_facts(warehouse, stem, program.meta)))
+    return outcome
 
 
 def _latest_metadata(warehouse: Path, stem: str) -> str:
     """The newest metadata pointer of one table under a warehouse, for `register_table`."""
-    candidates = [
-        path for path in warehouse.rglob("*.metadata.json") if path.parent.parent.name == stem
-    ]
-    candidates.sort(key=lambda path: path.stat().st_mtime)
+    candidates = sorted(
+        warehouse.glob(f"*/{stem}/metadata/*.metadata.json"), key=lambda path: path.stat().st_mtime
+    )
     return str(candidates[-1]) if candidates else ""
+
+
+def _metadata_facts(warehouse: Path, stem: str, keys: tuple[str, ...]) -> Any:
+    """The engine-comparable facts one create statement wrote into the table metadata."""
+    pointer = _latest_metadata(warehouse, stem)
+    if not pointer:
+        return ["ABSENT"]
+    document = json.loads(Path(pointer).read_text(encoding="utf-8"))
+    schema = next(
+        (
+            entry
+            for entry in document["schemas"]
+            if entry["schema-id"] == document["current-schema-id"]
+        ),
+        {"fields": []},
+    )
+    spec = next(
+        (
+            entry
+            for entry in document["partition-specs"]
+            if entry["spec-id"] == document["default-spec-id"]
+        ),
+        {"fields": []},
+    )
+    facts: dict[str, Any] = {
+        "format-version": document["format-version"],
+        "schema": [(field["name"], field["type"], field["required"]) for field in schema["fields"]],
+        "partition-fields": [
+            (field["name"], field["transform"]) for field in spec.get("fields", [])
+        ],
+        "write-properties": sorted(
+            (key, value)
+            for key, value in document.get("properties", {}).items()
+            if key.startswith("write.")
+        ),
+    }
+    return [(key, facts[key]) for key in keys]
 
 
 def _live_session(warehouse: Path):
@@ -215,23 +258,32 @@ def spark_outcome(program: _Program, session) -> dict[str, Any]:
         "snapshot0": "0",
         "timestamp0": "1970-01-01 00:00:00",
     }
-    session.sql(f"CREATE NAMESPACE IF NOT EXISTS {_CATALOG}.{_NAMESPACE}")
     seed = _SEEDS.get(program.seed)
     if seed is not None:
         _seed_spark(session, target, seed)
         if program.source:
             session.sql(_SOURCE_DDL.format(s=names["s"]))
             session.createDataFrame(_SOURCE_ROWS, "id INT").coalesce(1).writeTo(names["s"]).append()
-        names.update(_snapshot_marks(lambda text: session.sql(text).toArrow(), target))
-        names["metadata"] = _latest_metadata(warehouse, stem)
-    return _run_program(lambda text: session.sql(text).toArrow(), program, names)
+        if program.name in NEEDS_SNAPSHOT_MARKS:
+            names.update(_snapshot_marks(lambda text: session.sql(text).toArrow(), target))
+        if program.name in NEEDS_METADATA_PATH:
+            names["metadata"] = _latest_metadata(warehouse, stem)
+    outcome = _run_program(lambda text: session.sql(text).toArrow(), program, names)
+    if program.meta:
+        outcome["probes"].append(("META", _metadata_facts(warehouse, stem, program.meta)))
+    return outcome
 
 
 def _agrees(left: Any, right: Any) -> bool:
-    """Two engine outcomes agree when both refuse, or both succeed with the same rows."""
+    """Two engine outcomes agree when both refuse, or both answer with the same value.
+
+    Only a mutual refusal is exempt from the value comparison: each engine's message is its own
+    and is pinned on its own side of the golden. Every other kind — rows and metadata facts —
+    is compared, so a new cell kind cannot be added and silently never checked.
+    """
     if left[0] != right[0]:
         return False
-    return left[0] != "OK" or left[1] == right[1]
+    return left[0] == "ERROR" or left[1] == right[1]
 
 
 def _verdict(repark: dict[str, Any], spark: dict[str, Any]) -> str:
@@ -258,6 +310,7 @@ def coverage_session() -> Iterator[Any]:
         pytest.skip(_LIVE_SKIP)
     warehouse = Path(tempfile.mkdtemp(prefix="repark-v3cov-live-"))
     session, owned = _live_session(warehouse)
+    session.sql(f"CREATE NAMESPACE IF NOT EXISTS {_CATALOG}.{_NAMESPACE}")
     try:
         yield session
     finally:
@@ -276,13 +329,16 @@ def test_v3_statement_row_reproduces_the_measured_repark_answer(
 
 @pytest.mark.parametrize("program", _PROGRAMS, ids=[program.name for program in _PROGRAMS])
 def test_v3_statement_row_matches_the_live_spark_oracle(
-    program: _Program, tmp_path: Path, coverage_session
+    program: _Program, coverage_session
 ) -> None:
-    """The same row on live Spark reproduces its measured half and keeps its measured verdict."""
+    """The same row on live Spark reproduces its measured half and keeps its measured verdict.
+
+    The repark half is the golden the always-run sibling re-derives every routine run, so this
+    cell compares against it rather than paying 80 more repark sessions for the same answer.
+    """
     spark = _as_golden(spark_outcome(program, coverage_session))
     assert spark == SPARK[program.name]
-    repark = _as_golden(repark_outcome(program, tmp_path))
-    assert _verdict(repark, spark) == VERDICTS[program.name]
+    assert _verdict(REPARK[program.name], spark) == VERDICTS[program.name]
 
 
 def test_v3_coverage_inventory_carries_every_program_once() -> None:
