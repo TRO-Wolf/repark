@@ -266,6 +266,7 @@ def _arrow_table_from_pandas(
     # Per-source-column: refuse dtypes + collect object-column all-null type overrides.
 
     object_null_types: dict[int, Any] = {}
+    object_null_values: dict[int, list[Any]] = {}
 
     for source_index, column_name in enumerate(data.columns):
         series = data.iloc[:, source_index]
@@ -282,10 +283,13 @@ def _arrow_table_from_pandas(
                 for cell in raw_cells
             ]
 
-            if all(cell is None for cell in normalized):
+            if all(
+                cell is None or (isinstance(cell, float) and cell != cell) for cell in normalized
+            ):
                 null_sql = _infer_null_sql_from_raw_cells(raw_cells)
 
                 object_null_types[source_index] = _arrow_null_sql_to_type(null_sql)
+                object_null_values[source_index] = normalized
 
         else:
             # Typed columns: refuse at dtype map (side effect); discard null-SQL.
@@ -304,9 +308,10 @@ def _arrow_table_from_pandas(
         engine_type = None if engine_types is None else engine_types[out_index]
 
         if source_index in object_null_types:
-            # All-null object: force Spark-parity type (from_pandas yields null type).
-
-            column = pa.nulls(table.num_rows, type=object_null_types[source_index])
+            column = pa.array(
+                object_null_values[source_index],
+                type=object_null_types[source_index],
+            )
 
         else:
             column = _normalize_frame_arrow_column(

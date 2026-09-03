@@ -313,11 +313,15 @@ def _rows_from_pandas(
     tuples: list[tuple[Any, ...]] = []
 
     for row_index in range(len(data)):
-        source_row = tuple(
-            _normalize_create_dataframe_cell(series.iloc[row_index]) for series in column_series
-        )
-
-        tuples.append(_apply_permutation(source_row, permutation))
+        cells: list[Any] = []
+        for series in column_series:
+            cell = _normalize_create_dataframe_cell(series.iloc[row_index])
+            if isinstance(cell, float) and cell != cell:
+                subtype = str(getattr(series.dtype, "subtype", series.dtype)).lower()
+                if "float" not in subtype and "object" not in subtype:
+                    cell = None
+            cells.append(cell)
+        tuples.append(_apply_permutation(tuple(cells), permutation))
 
     return names, tuples, column_null_sql
 
@@ -670,10 +674,6 @@ def _create_dataframe_from_rows_inner(
             return _empty_typed_arrow_frame(session, names, engine_types)
 
         return _materialize_values_as_memtable_frame(session, _empty_frame_sql(names))
-
-    # Non-frame paths: infer CAST from pre-normalize NaN/NaT/… witnesses, then erase missing
-
-    # markers. Frame paths already provide dtype-matched column_null_sql and normalized cells.
 
     if column_null_sql is None:
         width = len(names)

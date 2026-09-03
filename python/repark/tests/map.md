@@ -1532,6 +1532,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `AnalysisException` naming both paths, no-location idempotent.
 - (combine 2026-07-29: match= patterns raw-stringed, RUF043)
 - `test_interchange_parity.py` — **G-INT** interchange battery (oracle = live PySpark 4.1.2 /
+  **FN-FIX-1:** list/tuple/object `float('nan')` stays DOUBLE NaN. pins: fn-fix-1-registry-rows/C-003
   zulu-17 / UTC / arrow.pyspark.enabled=true, measured 2026-07-27). **TZ-4 PR-1:** pandas
   timestamp cells compare wall-clock (same helper as Arrow) so UTC annotation is not a
   naive-`Timestamp` equality red. **INT-001** `to_pandas` /
