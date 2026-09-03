@@ -320,7 +320,6 @@ mod tests {
         ]))
     }
 
-    /// V3-COV-2: a scan column left behind by a widening ALTER promotes instead of failing.
     #[test]
     fn conform_batch_promotes_a_narrower_scan_column_to_the_declared_type() {
         let source = batch(Int32Array::from(vec![7_i32, 8]));
@@ -337,7 +336,6 @@ mod tests {
         assert_eq!(ids.value(1), 8);
     }
 
-    /// The projection is resolved once and reused for every batch of one scan schema.
     #[test]
     fn conform_batch_reuses_the_projection_across_batches_of_one_schema() {
         let schema = promoted_schema();
@@ -359,7 +357,6 @@ mod tests {
         assert_eq!(projection.expect("still cached").1, indices);
     }
 
-    /// A scan that lost a lineage column names it rather than rebuilding a short batch.
     #[test]
     fn conform_batch_names_a_column_the_scan_did_not_return() {
         let schema = Arc::new(Schema::new(vec![Field::new(

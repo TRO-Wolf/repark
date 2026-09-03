@@ -160,7 +160,7 @@ repark-core's error map.
   dynamic guard names the three empty-dynamic surfaces (STATIC wipe, writeTo no-op, RePark
   refuse) in its rustdoc and error. `commit_*_to` variants pass `.to_branch`.
   pins: dml-b-insert-overwrite/C-001, C-002, C-004
-  pins: rp-5-fork-repin/C-004
+  pins: rp-5-fork-repin/C-004 V3-COV pins in this file: a view-string source conforms to its Utf8 target instead of failing the rebuild (V3-COV-1); the identity arm hands the same buffer back while a non-assignable pair still refuses.
 - `insert_gate.rs` — **WI-2 (2026-08-15):** `InsertStoreAssignment`, an `AnalyzerRule` over
   `LogicalPlan::Dml(WriteOp::Insert(_))` that runs `store_assign.rs`'s matrix — imported, never
   duplicated — against the pre-cast types in the synthesized projection's INPUT schema. Registered

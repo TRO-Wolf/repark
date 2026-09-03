@@ -711,7 +711,6 @@ mod tests {
         }
     }
 
-    /// V3-COV-1: a view-string source conforms to its Utf8 target instead of failing the rebuild.
     #[test]
     fn store_assign_conforms_a_view_string_source_to_its_utf8_target() {
         let source: ArrayRef = Arc::new(StringViewArray::from(vec!["g", "h"]));
@@ -726,7 +725,6 @@ mod tests {
         assert_eq!(values.value(1), "h");
     }
 
-    /// The identity arm hands the same buffer back; a non-assignable pair still refuses.
     #[test]
     fn store_assign_is_identity_on_a_match_and_refuses_a_non_assignable_pair() {
         let same: ArrayRef = Arc::new(StringArray::from(vec!["g"]));
