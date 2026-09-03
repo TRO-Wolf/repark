@@ -1,0 +1,5326 @@
+{
+ "date": "2026-09-02",
+ "packet": "docs/design/v1-0-api-review-2026-09-02.json",
+ "policy": "additive-only within a major; a breaking change to a frozen row needs a major version and a one-minor deprecation shim; unfrozen rows may change at any minor with a changelog line",
+ "counts": {
+  "rows": 35,
+  "frozen_rows": 30,
+  "unfrozen_rows": 5,
+  "frozen_names": 888
+ },
+ "rows": [
+  {
+   "id": "A1",
+   "surface": "ReparkSession.builder + Builder chain",
+   "kind": "python",
+   "decision": "YES",
+   "frozen": true,
+   "excepted": [],
+   "members": [
+    {
+     "name": "SparkSession.Builder.appName",
+     "required_params": [
+      "name"
+     ]
+    },
+    {
+     "name": "SparkSession.Builder.app_name",
+     "required_params": [
+      "name"
+     ]
+    },
+    {
+     "name": "SparkSession.Builder.config",
+     "required_params": []
+    },
+    {
+     "name": "SparkSession.Builder.getOrCreate",
+     "required_params": []
+    },
+    {
+     "name": "SparkSession.Builder.get_or_create",
+     "required_params": []
+    },
+    {
+     "name": "SparkSession.Builder.master",
+     "required_params": [
+      "master"
+     ]
+    },
+    {
+     "name": "SparkSession.builder",
+     "required_params": null
+    }
+   ]
+  },
+  {
+   "id": "A2",
+   "surface": "Session lifecycle, conf and query entry points",
+   "kind": "python",
+   "decision": "YES",
+   "frozen": true,
+   "excepted": [],
+   "members": [
+    {
+     "name": "SparkSession.active",
+     "required_params": []
+    },
+    {
+     "name": "SparkSession.catalog",
+     "required_params": []
+    },
+    {
+     "name": "SparkSession.conf",
+     "required_params": []
+    },
+    {
+     "name": "SparkSession.createDataFrame",
+     "required_params": [
+      "data"
+     ]
+    },
+    {
+     "name": "SparkSession.create_dataframe",
+     "required_params": [
+      "data"
+     ]
+    },
+    {
+     "name": "SparkSession.display_style",
+     "required_params": []
+    },
+    {
+     "name": "SparkSession.getActiveSession",
+     "required_params": []
+    },
+    {
+     "name": "SparkSession.newSession",
+     "required_params": []
+    },
+    {
+     "name": "SparkSession.pandas_api",
+     "required_params": []
+    },
+    {
+     "name": "SparkSession.range",
+     "required_params": [
+      "start"
+     ]
+    },
+    {
+     "name": "SparkSession.read",
+     "required_params": []
+    },
+    {
+     "name": "SparkSession.refresh_catalog_provider",
+     "required_params": [
+      "catalog"
+     ]
+    },
+    {
+     "name": "SparkSession.registerTempTable",
+     "required_params": [
+      "name",
+      "table"
+     ]
+    },
+    {
+     "name": "SparkSession.sparkContext",
+     "required_params": []
+    },
+    {
+     "name": "SparkSession.sql",
+     "required_params": [
+      "query"
+     ]
+    },
+    {
+     "name": "SparkSession.stop",
+     "required_params": []
+    },
+    {
+     "name": "SparkSession.table",
+     "required_params": [
+      "table_name"
+     ]
+    },
+    {
+     "name": "SparkSession.udf",
+     "required_params": []
+    },
+    {
+     "name": "SparkSession.udtf",
+     "required_params": []
+    },
+    {
+     "name": "SparkSession.version",
+     "required_params": []
+    }
+   ]
+  },
+  {
+   "id": "A3",
+   "surface": "RePark-native session readers and helpers",
+   "kind": "python",
+   "decision": "YES except `read_excel`, `excel_sheet_names`, `read_postgres`",
+   "frozen": true,
+   "excepted": [
+    "SparkSession.excel_sheet_names",
+    "SparkSession.read_excel",
+    "SparkSession.read_postgres"
+   ],
+   "members": [
+    {
+     "name": "SparkSession.create_namespace",
+     "required_params": [
+      "catalog",
+      "namespace"
+     ]
+    },
+    {
+     "name": "SparkSession.list_df_schema_table_names",
+     "required_params": [
+      "catalog",
+      "schema"
+     ]
+    },
+    {
+     "name": "SparkSession.list_iceberg_table_names",
+     "required_params": [
+      "catalog",
+      "namespace"
+     ]
+    },
+    {
+     "name": "SparkSession.list_temp_view_names",
+     "required_params": []
+    },
+    {
+     "name": "SparkSession.read_csv",
+     "required_params": [
+      "path"
+     ]
+    },
+    {
+     "name": "SparkSession.read_iceberg_table",
+     "required_params": [
+      "table_name"
+     ]
+    },
+    {
+     "name": "SparkSession.read_json",
+     "required_params": [
+      "path"
+     ]
+    },
+    {
+     "name": "SparkSession.read_parquet",
+     "required_params": [
+      "path"
+     ]
+    },
+    {
+     "name": "SparkSession.register_memory_catalog",
+     "required_params": [
+      "name",
+      "warehouse"
+     ]
+    },
+    {
+     "name": "SparkSession.resolve_table_name",
+     "required_params": [
+      "table_name"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "A4",
+   "surface": "repark.sql() — the native ANSI door callable",
+   "kind": "python",
+   "decision": "YES",
+   "frozen": true,
+   "excepted": [],
+   "members": [
+    {
+     "name": "repark.sql",
+     "required_params": null
+    }
+   ]
+  },
+  {
+   "id": "B1",
+   "surface": "DataFrame transformations (return DataFrame)",
+   "kind": "python",
+   "decision": "YES except `filter`, `where`, `join`",
+   "frozen": true,
+   "excepted": [
+    "DataFrame.filter",
+    "DataFrame.join",
+    "DataFrame.where"
+   ],
+   "members": [
+    {
+     "name": "DataFrame.agg",
+     "required_params": []
+    },
+    {
+     "name": "DataFrame.alias",
+     "required_params": [
+      "alias"
+     ]
+    },
+    {
+     "name": "DataFrame.cache",
+     "required_params": []
+    },
+    {
+     "name": "DataFrame.coalesce",
+     "required_params": [
+      "numPartitions"
+     ]
+    },
+    {
+     "name": "DataFrame.crossJoin",
+     "required_params": [
+      "other"
+     ]
+    },
+    {
+     "name": "DataFrame.cross_join",
+     "required_params": [
+      "other"
+     ]
+    },
+    {
+     "name": "DataFrame.crosstab",
+     "required_params": [
+      "col1",
+      "col2"
+     ]
+    },
+    {
+     "name": "DataFrame.declareSorted",
+     "required_params": []
+    },
+    {
+     "name": "DataFrame.declare_sorted",
+     "required_params": []
+    },
+    {
+     "name": "DataFrame.describe",
+     "required_params": []
+    },
+    {
+     "name": "DataFrame.distinct",
+     "required_params": []
+    },
+    {
+     "name": "DataFrame.drop",
+     "required_params": []
+    },
+    {
+     "name": "DataFrame.dropDuplicates",
+     "required_params": []
+    },
+    {
+     "name": "DataFrame.drop_duplicates",
+     "required_params": []
+    },
+    {
+     "name": "DataFrame.dropna",
+     "required_params": []
+    },
+    {
+     "name": "DataFrame.dynamicFlatten",
+     "required_params": []
+    },
+    {
+     "name": "DataFrame.dynamic_flatten",
+     "required_params": []
+    },
+    {
+     "name": "DataFrame.exceptAll",
+     "required_params": [
+      "other"
+     ]
+    },
+    {
+     "name": "DataFrame.except_all",
+     "required_params": [
+      "other"
+     ]
+    },
+    {
+     "name": "DataFrame.fillna",
+     "required_params": [
+      "value"
+     ]
+    },
+    {
+     "name": "DataFrame.hint",
+     "required_params": [
+      "name"
+     ]
+    },
+    {
+     "name": "DataFrame.intersect",
+     "required_params": [
+      "other"
+     ]
+    },
+    {
+     "name": "DataFrame.intersectAll",
+     "required_params": [
+      "other"
+     ]
+    },
+    {
+     "name": "DataFrame.intersect_all",
+     "required_params": [
+      "other"
+     ]
+    },
+    {
+     "name": "DataFrame.limit",
+     "required_params": [
+      "n"
+     ]
+    },
+    {
+     "name": "DataFrame.localCheckpoint",
+     "required_params": []
+    },
+    {
+     "name": "DataFrame.mapInArrow",
+     "required_params": [
+      "func",
+      "schema"
+     ]
+    },
+    {
+     "name": "DataFrame.mapInPandas",
+     "required_params": [
+      "func",
+      "schema"
+     ]
+    },
+    {
+     "name": "DataFrame.map_in_arrow",
+     "required_params": [
+      "func",
+      "schema"
+     ]
+    },
+    {
+     "name": "DataFrame.map_in_pandas",
+     "required_params": [
+      "func",
+      "schema"
+     ]
+    },
+    {
+     "name": "DataFrame.melt",
+     "required_params": [
+      "ids",
+      "values",
+      "variableColumnName",
+      "valueColumnName"
+     ]
+    },
+    {
+     "name": "DataFrame.offset",
+     "required_params": [
+      "n"
+     ]
+    },
+    {
+     "name": "DataFrame.orderBy",
+     "required_params": []
+    },
+    {
+     "name": "DataFrame.order_by",
+     "required_params": []
+    },
+    {
+     "name": "DataFrame.persist",
+     "required_params": []
+    },
+    {
+     "name": "DataFrame.repartition",
+     "required_params": [
+      "numPartitions"
+     ]
+    },
+    {
+     "name": "DataFrame.repartitionById",
+     "required_params": [
+      "numPartitions",
+      "partitionIdExpr"
+     ]
+    },
+    {
+     "name": "DataFrame.repartitionByRange",
+     "required_params": [
+      "numPartitions"
+     ]
+    },
+    {
+     "name": "DataFrame.replace",
+     "required_params": [
+      "to_replace"
+     ]
+    },
+    {
+     "name": "DataFrame.sample",
+     "required_params": []
+    },
+    {
+     "name": "DataFrame.sampleBy",
+     "required_params": [
+      "col",
+      "fractions"
+     ]
+    },
+    {
+     "name": "DataFrame.select",
+     "required_params": []
+    },
+    {
+     "name": "DataFrame.selectExpr",
+     "required_params": []
+    },
+    {
+     "name": "DataFrame.select_expr",
+     "required_params": []
+    },
+    {
+     "name": "DataFrame.sort",
+     "required_params": []
+    },
+    {
+     "name": "DataFrame.sortWithinPartitions",
+     "required_params": []
+    },
+    {
+     "name": "DataFrame.sort_within_partitions",
+     "required_params": []
+    },
+    {
+     "name": "DataFrame.subtract",
+     "required_params": [
+      "other"
+     ]
+    },
+    {
+     "name": "DataFrame.summary",
+     "required_params": []
+    },
+    {
+     "name": "DataFrame.toDF",
+     "required_params": []
+    },
+    {
+     "name": "DataFrame.toJSON",
+     "required_params": []
+    },
+    {
+     "name": "DataFrame.to_df",
+     "required_params": []
+    },
+    {
+     "name": "DataFrame.transform",
+     "required_params": [
+      "func"
+     ]
+    },
+    {
+     "name": "DataFrame.union",
+     "required_params": [
+      "other"
+     ]
+    },
+    {
+     "name": "DataFrame.unionAll",
+     "required_params": [
+      "other"
+     ]
+    },
+    {
+     "name": "DataFrame.unionByName",
+     "required_params": [
+      "other"
+     ]
+    },
+    {
+     "name": "DataFrame.union_by_name",
+     "required_params": [
+      "other"
+     ]
+    },
+    {
+     "name": "DataFrame.unpersist",
+     "required_params": []
+    },
+    {
+     "name": "DataFrame.unpivot",
+     "required_params": [
+      "ids",
+      "values",
+      "variableColumnName",
+      "valueColumnName"
+     ]
+    },
+    {
+     "name": "DataFrame.withColumn",
+     "required_params": [
+      "col_name",
+      "column"
+     ]
+    },
+    {
+     "name": "DataFrame.withColumnRenamed",
+     "required_params": [
+      "existing",
+      "new"
+     ]
+    },
+    {
+     "name": "DataFrame.withColumns",
+     "required_params": [
+      "colsMap"
+     ]
+    },
+    {
+     "name": "DataFrame.withColumnsRenamed",
+     "required_params": [
+      "colsMap"
+     ]
+    },
+    {
+     "name": "DataFrame.with_column",
+     "required_params": [
+      "col_name",
+      "column"
+     ]
+    },
+    {
+     "name": "DataFrame.with_column_renamed",
+     "required_params": [
+      "existing",
+      "new"
+     ]
+    },
+    {
+     "name": "DataFrame.with_columns",
+     "required_params": [
+      "colsMap"
+     ]
+    },
+    {
+     "name": "DataFrame.with_columns_renamed",
+     "required_params": [
+      "colsMap"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "B2",
+   "surface": "DataFrame actions, accessors and collect shapes",
+   "kind": "python",
+   "decision": "NO",
+   "frozen": false,
+   "excepted": [],
+   "members": []
+  },
+  {
+   "id": "B3",
+   "surface": "GroupedData + DataFrameNaFunctions / DataFrameStatFunctions",
+   "kind": "python",
+   "decision": "YES",
+   "frozen": true,
+   "excepted": [],
+   "members": [
+    {
+     "name": "DataFrameNaFunctions.drop",
+     "required_params": []
+    },
+    {
+     "name": "DataFrameNaFunctions.fill",
+     "required_params": [
+      "value"
+     ]
+    },
+    {
+     "name": "DataFrameStatFunctions.approxQuantile",
+     "required_params": [
+      "col",
+      "probabilities",
+      "relativeError"
+     ]
+    },
+    {
+     "name": "DataFrameStatFunctions.corr",
+     "required_params": [
+      "col1",
+      "col2"
+     ]
+    },
+    {
+     "name": "DataFrameStatFunctions.cov",
+     "required_params": [
+      "col1",
+      "col2"
+     ]
+    },
+    {
+     "name": "DataFrameStatFunctions.crosstab",
+     "required_params": [
+      "col1",
+      "col2"
+     ]
+    },
+    {
+     "name": "DataFrameStatFunctions.freqItems",
+     "required_params": [
+      "cols"
+     ]
+    },
+    {
+     "name": "DataFrameStatFunctions.sampleBy",
+     "required_params": [
+      "col",
+      "fractions"
+     ]
+    },
+    {
+     "name": "GroupedData.agg",
+     "required_params": []
+    },
+    {
+     "name": "GroupedData.applyInPandas",
+     "required_params": [
+      "func",
+      "schema"
+     ]
+    },
+    {
+     "name": "GroupedData.apply_in_pandas",
+     "required_params": [
+      "func",
+      "schema"
+     ]
+    },
+    {
+     "name": "GroupedData.avg",
+     "required_params": []
+    },
+    {
+     "name": "GroupedData.count",
+     "required_params": []
+    },
+    {
+     "name": "GroupedData.max",
+     "required_params": []
+    },
+    {
+     "name": "GroupedData.mean",
+     "required_params": []
+    },
+    {
+     "name": "GroupedData.min",
+     "required_params": []
+    },
+    {
+     "name": "GroupedData.pivot",
+     "required_params": [
+      "pivot_col"
+     ]
+    },
+    {
+     "name": "GroupedData.sum",
+     "required_params": []
+    }
+   ]
+  },
+  {
+   "id": "C1",
+   "surface": "Column API",
+   "kind": "python",
+   "decision": "YES except `cast`, `eqNullSafe`",
+   "frozen": true,
+   "excepted": [
+    "Column.cast",
+    "Column.eqNullSafe"
+   ],
+   "members": [
+    {
+     "name": "Column.alias",
+     "required_params": []
+    },
+    {
+     "name": "Column.asc",
+     "required_params": []
+    },
+    {
+     "name": "Column.asc_nulls_first",
+     "required_params": []
+    },
+    {
+     "name": "Column.asc_nulls_last",
+     "required_params": []
+    },
+    {
+     "name": "Column.between",
+     "required_params": [
+      "lowerBound",
+      "upperBound"
+     ]
+    },
+    {
+     "name": "Column.bitwiseAND",
+     "required_params": [
+      "other"
+     ]
+    },
+    {
+     "name": "Column.bitwiseOR",
+     "required_params": [
+      "other"
+     ]
+    },
+    {
+     "name": "Column.bitwiseXOR",
+     "required_params": [
+      "other"
+     ]
+    },
+    {
+     "name": "Column.contains",
+     "required_params": [
+      "other"
+     ]
+    },
+    {
+     "name": "Column.desc",
+     "required_params": []
+    },
+    {
+     "name": "Column.desc_nulls_first",
+     "required_params": []
+    },
+    {
+     "name": "Column.desc_nulls_last",
+     "required_params": []
+    },
+    {
+     "name": "Column.dt",
+     "required_params": []
+    },
+    {
+     "name": "Column.endswith",
+     "required_params": [
+      "other"
+     ]
+    },
+    {
+     "name": "Column.for_select",
+     "required_params": []
+    },
+    {
+     "name": "Column.getField",
+     "required_params": [
+      "name"
+     ]
+    },
+    {
+     "name": "Column.getItem",
+     "required_params": [
+      "key"
+     ]
+    },
+    {
+     "name": "Column.ilike",
+     "required_params": [
+      "other"
+     ]
+    },
+    {
+     "name": "Column.isNotNull",
+     "required_params": []
+    },
+    {
+     "name": "Column.isNull",
+     "required_params": []
+    },
+    {
+     "name": "Column.is_not_null",
+     "required_params": []
+    },
+    {
+     "name": "Column.is_null",
+     "required_params": []
+    },
+    {
+     "name": "Column.join_sql_part",
+     "required_params": []
+    },
+    {
+     "name": "Column.like",
+     "required_params": [
+      "other"
+     ]
+    },
+    {
+     "name": "Column.otherwise",
+     "required_params": [
+      "value"
+     ]
+    },
+    {
+     "name": "Column.over",
+     "required_params": [
+      "window"
+     ]
+    },
+    {
+     "name": "Column.rlike",
+     "required_params": [
+      "other"
+     ]
+    },
+    {
+     "name": "Column.round",
+     "required_params": []
+    },
+    {
+     "name": "Column.spark_display_part",
+     "required_params": []
+    },
+    {
+     "name": "Column.spark_wrap_display_part",
+     "required_params": []
+    },
+    {
+     "name": "Column.sql_expr_part",
+     "required_params": []
+    },
+    {
+     "name": "Column.sql_expr_without_alias",
+     "required_params": []
+    },
+    {
+     "name": "Column.startswith",
+     "required_params": [
+      "other"
+     ]
+    },
+    {
+     "name": "Column.str",
+     "required_params": []
+    },
+    {
+     "name": "Column.substr",
+     "required_params": [
+      "startPos",
+      "length"
+     ]
+    },
+    {
+     "name": "Column.transform",
+     "required_params": [
+      "f"
+     ]
+    },
+    {
+     "name": "Column.try_cast",
+     "required_params": [
+      "data_type"
+     ]
+    },
+    {
+     "name": "Column.when",
+     "required_params": [
+      "condition",
+      "value"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "D1",
+   "surface": "Window + WindowSpec",
+   "kind": "python",
+   "decision": "YES except `rangeBetween`, `rowsBetween`",
+   "frozen": true,
+   "excepted": [
+    "Window.rangeBetween",
+    "Window.rowsBetween",
+    "WindowSpec.rangeBetween",
+    "WindowSpec.rowsBetween"
+   ],
+   "members": [
+    {
+     "name": "Window.currentRow",
+     "required_params": null
+    },
+    {
+     "name": "Window.current_row",
+     "required_params": null
+    },
+    {
+     "name": "Window.orderBy",
+     "required_params": []
+    },
+    {
+     "name": "Window.order_by",
+     "required_params": []
+    },
+    {
+     "name": "Window.partitionBy",
+     "required_params": []
+    },
+    {
+     "name": "Window.partition_by",
+     "required_params": []
+    },
+    {
+     "name": "Window.range_between",
+     "required_params": [
+      "start",
+      "end"
+     ]
+    },
+    {
+     "name": "Window.rows_between",
+     "required_params": [
+      "start",
+      "end"
+     ]
+    },
+    {
+     "name": "Window.unboundedFollowing",
+     "required_params": null
+    },
+    {
+     "name": "Window.unboundedPreceding",
+     "required_params": null
+    },
+    {
+     "name": "Window.unbounded_following",
+     "required_params": null
+    },
+    {
+     "name": "Window.unbounded_preceding",
+     "required_params": null
+    },
+    {
+     "name": "WindowSpec.orderBy",
+     "required_params": []
+    },
+    {
+     "name": "WindowSpec.order_by",
+     "required_params": []
+    },
+    {
+     "name": "WindowSpec.partitionBy",
+     "required_params": []
+    },
+    {
+     "name": "WindowSpec.partition_by",
+     "required_params": []
+    },
+    {
+     "name": "WindowSpec.range_between",
+     "required_params": [
+      "start",
+      "end"
+     ]
+    },
+    {
+     "name": "WindowSpec.rows_between",
+     "required_params": [
+      "start",
+      "end"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "E1",
+   "surface": "Catalog",
+   "kind": "python",
+   "decision": "YES",
+   "frozen": true,
+   "excepted": [],
+   "members": [
+    {
+     "name": "Catalog.clearCache",
+     "required_params": []
+    },
+    {
+     "name": "Catalog.clear_cache",
+     "required_params": []
+    },
+    {
+     "name": "Catalog.currentCatalog",
+     "required_params": []
+    },
+    {
+     "name": "Catalog.currentDatabase",
+     "required_params": []
+    },
+    {
+     "name": "Catalog.current_catalog",
+     "required_params": []
+    },
+    {
+     "name": "Catalog.current_database",
+     "required_params": []
+    },
+    {
+     "name": "Catalog.databaseExists",
+     "required_params": [
+      "db_name"
+     ]
+    },
+    {
+     "name": "Catalog.database_exists",
+     "required_params": [
+      "db_name"
+     ]
+    },
+    {
+     "name": "Catalog.dropTempView",
+     "required_params": [
+      "view_name"
+     ]
+    },
+    {
+     "name": "Catalog.drop_temp_view",
+     "required_params": [
+      "view_name"
+     ]
+    },
+    {
+     "name": "Catalog.functionExists",
+     "required_params": [
+      "functionName"
+     ]
+    },
+    {
+     "name": "Catalog.function_exists",
+     "required_params": [
+      "functionName"
+     ]
+    },
+    {
+     "name": "Catalog.getDatabase",
+     "required_params": [
+      "db_name"
+     ]
+    },
+    {
+     "name": "Catalog.get_database",
+     "required_params": [
+      "db_name"
+     ]
+    },
+    {
+     "name": "Catalog.listCatalogs",
+     "required_params": []
+    },
+    {
+     "name": "Catalog.listDatabases",
+     "required_params": []
+    },
+    {
+     "name": "Catalog.listTables",
+     "required_params": []
+    },
+    {
+     "name": "Catalog.list_catalogs",
+     "required_params": []
+    },
+    {
+     "name": "Catalog.list_databases",
+     "required_params": []
+    },
+    {
+     "name": "Catalog.list_tables",
+     "required_params": []
+    },
+    {
+     "name": "Catalog.registerFunction",
+     "required_params": [
+      "name",
+      "f"
+     ]
+    },
+    {
+     "name": "Catalog.register_function",
+     "required_params": [
+      "name",
+      "f"
+     ]
+    },
+    {
+     "name": "Catalog.setCurrentCatalog",
+     "required_params": [
+      "catalog_name"
+     ]
+    },
+    {
+     "name": "Catalog.setCurrentDatabase",
+     "required_params": [
+      "db_name"
+     ]
+    },
+    {
+     "name": "Catalog.set_current_catalog",
+     "required_params": [
+      "catalog_name"
+     ]
+    },
+    {
+     "name": "Catalog.set_current_database",
+     "required_params": [
+      "db_name"
+     ]
+    },
+    {
+     "name": "Catalog.tableExists",
+     "required_params": [
+      "table_name"
+     ]
+    },
+    {
+     "name": "Catalog.table_exists",
+     "required_params": [
+      "table_name"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "F1",
+   "surface": "repark.spark.types + Row",
+   "kind": "python",
+   "decision": "YES except `VariantType`",
+   "frozen": true,
+   "excepted": [
+    "types.VariantType"
+   ],
+   "members": [
+    {
+     "name": "Row.asDict",
+     "required_params": []
+    },
+    {
+     "name": "Row.as_dict",
+     "required_params": []
+    },
+    {
+     "name": "Row.from_mapping",
+     "required_params": [
+      "mapping"
+     ]
+    },
+    {
+     "name": "Row.from_ordered_fields",
+     "required_params": [
+      "names",
+      "values"
+     ]
+    },
+    {
+     "name": "types.ArrayType",
+     "required_params": null
+    },
+    {
+     "name": "types.BinaryType",
+     "required_params": null
+    },
+    {
+     "name": "types.BooleanType",
+     "required_params": null
+    },
+    {
+     "name": "types.ByteType",
+     "required_params": null
+    },
+    {
+     "name": "types.CalendarIntervalType",
+     "required_params": null
+    },
+    {
+     "name": "types.CharType",
+     "required_params": null
+    },
+    {
+     "name": "types.DataType",
+     "required_params": null
+    },
+    {
+     "name": "types.DateType",
+     "required_params": null
+    },
+    {
+     "name": "types.DayTimeIntervalType",
+     "required_params": null
+    },
+    {
+     "name": "types.DecimalType",
+     "required_params": null
+    },
+    {
+     "name": "types.DoubleType",
+     "required_params": null
+    },
+    {
+     "name": "types.FloatType",
+     "required_params": null
+    },
+    {
+     "name": "types.IntegerType",
+     "required_params": null
+    },
+    {
+     "name": "types.LongType",
+     "required_params": null
+    },
+    {
+     "name": "types.MapType",
+     "required_params": null
+    },
+    {
+     "name": "types.NullType",
+     "required_params": null
+    },
+    {
+     "name": "types.ShortType",
+     "required_params": null
+    },
+    {
+     "name": "types.StringType",
+     "required_params": null
+    },
+    {
+     "name": "types.StructField",
+     "required_params": null
+    },
+    {
+     "name": "types.StructType",
+     "required_params": null
+    },
+    {
+     "name": "types.TimeType",
+     "required_params": null
+    },
+    {
+     "name": "types.TimestampNTZType",
+     "required_params": null
+    },
+    {
+     "name": "types.TimestampType",
+     "required_params": null
+    },
+    {
+     "name": "types.VarcharType",
+     "required_params": null
+    },
+    {
+     "name": "types.YearMonthIntervalType",
+     "required_params": null
+    },
+    {
+     "name": "types.repark_type_to_arrow",
+     "required_params": [
+      "data_type"
+     ]
+    },
+    {
+     "name": "types.struct_type_from_arrow",
+     "required_params": [
+      "schema"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "G1",
+   "surface": "DataFrameReader",
+   "kind": "python",
+   "decision": "YES except `excel`, `jdbc`",
+   "frozen": true,
+   "excepted": [
+    "DataFrameReader.excel",
+    "DataFrameReader.jdbc"
+   ],
+   "members": [
+    {
+     "name": "DataFrameReader.csv",
+     "required_params": []
+    },
+    {
+     "name": "DataFrameReader.format",
+     "required_params": [
+      "source"
+     ]
+    },
+    {
+     "name": "DataFrameReader.json",
+     "required_params": []
+    },
+    {
+     "name": "DataFrameReader.load",
+     "required_params": []
+    },
+    {
+     "name": "DataFrameReader.option",
+     "required_params": [
+      "key",
+      "value"
+     ]
+    },
+    {
+     "name": "DataFrameReader.options",
+     "required_params": []
+    },
+    {
+     "name": "DataFrameReader.parquet",
+     "required_params": [
+      "path"
+     ]
+    },
+    {
+     "name": "DataFrameReader.schema",
+     "required_params": [
+      "schema"
+     ]
+    },
+    {
+     "name": "DataFrameReader.sheet_names",
+     "required_params": [
+      "path"
+     ]
+    },
+    {
+     "name": "DataFrameReader.smartCsv",
+     "required_params": []
+    },
+    {
+     "name": "DataFrameReader.table",
+     "required_params": [
+      "table_name"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "G2",
+   "surface": "DataFrameWriter + DataFrameWriterV2",
+   "kind": "python",
+   "decision": "YES",
+   "frozen": true,
+   "excepted": [],
+   "members": [
+    {
+     "name": "DataFrameWriter.csv",
+     "required_params": [
+      "path"
+     ]
+    },
+    {
+     "name": "DataFrameWriter.format",
+     "required_params": [
+      "source"
+     ]
+    },
+    {
+     "name": "DataFrameWriter.insertInto",
+     "required_params": [
+      "name"
+     ]
+    },
+    {
+     "name": "DataFrameWriter.insert_into",
+     "required_params": [
+      "name"
+     ]
+    },
+    {
+     "name": "DataFrameWriter.json",
+     "required_params": [
+      "path"
+     ]
+    },
+    {
+     "name": "DataFrameWriter.mode",
+     "required_params": [
+      "save_mode"
+     ]
+    },
+    {
+     "name": "DataFrameWriter.option",
+     "required_params": [
+      "key",
+      "value"
+     ]
+    },
+    {
+     "name": "DataFrameWriter.options",
+     "required_params": []
+    },
+    {
+     "name": "DataFrameWriter.parquet",
+     "required_params": [
+      "path"
+     ]
+    },
+    {
+     "name": "DataFrameWriter.partitionBy",
+     "required_params": []
+    },
+    {
+     "name": "DataFrameWriter.partition_by",
+     "required_params": []
+    },
+    {
+     "name": "DataFrameWriter.save",
+     "required_params": []
+    },
+    {
+     "name": "DataFrameWriter.saveAsTable",
+     "required_params": [
+      "name"
+     ]
+    },
+    {
+     "name": "DataFrameWriter.save_as_table",
+     "required_params": [
+      "name"
+     ]
+    },
+    {
+     "name": "DataFrameWriterV2.append",
+     "required_params": []
+    },
+    {
+     "name": "DataFrameWriterV2.create",
+     "required_params": []
+    },
+    {
+     "name": "DataFrameWriterV2.createOrReplace",
+     "required_params": []
+    },
+    {
+     "name": "DataFrameWriterV2.create_or_replace",
+     "required_params": []
+    },
+    {
+     "name": "DataFrameWriterV2.option",
+     "required_params": [
+      "key",
+      "value"
+     ]
+    },
+    {
+     "name": "DataFrameWriterV2.options",
+     "required_params": []
+    },
+    {
+     "name": "DataFrameWriterV2.overwrite",
+     "required_params": [
+      "condition"
+     ]
+    },
+    {
+     "name": "DataFrameWriterV2.overwritePartitions",
+     "required_params": []
+    },
+    {
+     "name": "DataFrameWriterV2.overwrite_partitions",
+     "required_params": []
+    },
+    {
+     "name": "DataFrameWriterV2.partitionedBy",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "DataFrameWriterV2.partitioned_by",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "DataFrameWriterV2.replace",
+     "required_params": []
+    },
+    {
+     "name": "DataFrameWriterV2.tableProperty",
+     "required_params": [
+      "property",
+      "value"
+     ]
+    },
+    {
+     "name": "DataFrameWriterV2.table_property",
+     "required_params": [
+      "property",
+      "value"
+     ]
+    },
+    {
+     "name": "DataFrameWriterV2.using",
+     "required_params": [
+      "provider"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "H1",
+   "surface": "repark.ta technical-analysis module",
+   "kind": "python",
+   "decision": "YES",
+   "frozen": true,
+   "excepted": [],
+   "members": [
+    {
+     "name": "ta.MAX",
+     "required_params": null
+    },
+    {
+     "name": "ta.MIN",
+     "required_params": null
+    },
+    {
+     "name": "ta.SUM",
+     "required_params": null
+    },
+    {
+     "name": "ta.ad",
+     "required_params": [
+      "high",
+      "low",
+      "close",
+      "volume"
+     ]
+    },
+    {
+     "name": "ta.adosc",
+     "required_params": [
+      "high",
+      "low",
+      "close",
+      "volume"
+     ]
+    },
+    {
+     "name": "ta.adx",
+     "required_params": [
+      "high",
+      "low",
+      "close"
+     ]
+    },
+    {
+     "name": "ta.adxr",
+     "required_params": [
+      "high",
+      "low",
+      "close"
+     ]
+    },
+    {
+     "name": "ta.apo",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.aroon_down",
+     "required_params": [
+      "high",
+      "low"
+     ]
+    },
+    {
+     "name": "ta.aroon_up",
+     "required_params": [
+      "high",
+      "low"
+     ]
+    },
+    {
+     "name": "ta.aroonosc",
+     "required_params": [
+      "high",
+      "low"
+     ]
+    },
+    {
+     "name": "ta.atr",
+     "required_params": [
+      "high",
+      "low",
+      "close"
+     ]
+    },
+    {
+     "name": "ta.avgprice",
+     "required_params": [
+      "open",
+      "high",
+      "low",
+      "close"
+     ]
+    },
+    {
+     "name": "ta.bbands_lower",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.bbands_middle",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.bbands_upper",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.beta",
+     "required_params": [
+      "price0",
+      "price1"
+     ]
+    },
+    {
+     "name": "ta.bop",
+     "required_params": [
+      "open",
+      "high",
+      "low",
+      "close"
+     ]
+    },
+    {
+     "name": "ta.cci",
+     "required_params": [
+      "high",
+      "low",
+      "close"
+     ]
+    },
+    {
+     "name": "ta.cmo",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.correl",
+     "required_params": [
+      "real0",
+      "real1"
+     ]
+    },
+    {
+     "name": "ta.dema",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.dx",
+     "required_params": [
+      "high",
+      "low",
+      "close"
+     ]
+    },
+    {
+     "name": "ta.ema",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.fama",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.kama",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.linearreg",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.linearreg_angle",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.linearreg_intercept",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.linearreg_slope",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.ma",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.macd",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.macd_hist",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.macd_signal",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.macdext",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.macdext_hist",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.macdext_signal",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.macdfix",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.macdfix_hist",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.macdfix_signal",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.mama",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.mavp",
+     "required_params": [
+      "real",
+      "periods"
+     ]
+    },
+    {
+     "name": "ta.max",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.medprice",
+     "required_params": [
+      "high",
+      "low"
+     ]
+    },
+    {
+     "name": "ta.mfi",
+     "required_params": [
+      "high",
+      "low",
+      "close",
+      "volume"
+     ]
+    },
+    {
+     "name": "ta.midpoint",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.midprice",
+     "required_params": [
+      "high",
+      "low"
+     ]
+    },
+    {
+     "name": "ta.min",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.minus_di",
+     "required_params": [
+      "high",
+      "low",
+      "close"
+     ]
+    },
+    {
+     "name": "ta.minus_dm",
+     "required_params": [
+      "high",
+      "low"
+     ]
+    },
+    {
+     "name": "ta.mom",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.natr",
+     "required_params": [
+      "high",
+      "low",
+      "close"
+     ]
+    },
+    {
+     "name": "ta.obv",
+     "required_params": [
+      "real",
+      "volume"
+     ]
+    },
+    {
+     "name": "ta.over_columns",
+     "required_params": [
+      "window",
+      "columns"
+     ]
+    },
+    {
+     "name": "ta.plus_di",
+     "required_params": [
+      "high",
+      "low",
+      "close"
+     ]
+    },
+    {
+     "name": "ta.plus_dm",
+     "required_params": [
+      "high",
+      "low"
+     ]
+    },
+    {
+     "name": "ta.ppo",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.roc",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.rocp",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.rocr",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.rocr100",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.rsi",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.sar",
+     "required_params": [
+      "high",
+      "low"
+     ]
+    },
+    {
+     "name": "ta.sarext",
+     "required_params": [
+      "high",
+      "low"
+     ]
+    },
+    {
+     "name": "ta.sma",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.stddev",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.stoch_slowd",
+     "required_params": [
+      "high",
+      "low",
+      "close"
+     ]
+    },
+    {
+     "name": "ta.stoch_slowk",
+     "required_params": [
+      "high",
+      "low",
+      "close"
+     ]
+    },
+    {
+     "name": "ta.stochf_fastd",
+     "required_params": [
+      "high",
+      "low",
+      "close"
+     ]
+    },
+    {
+     "name": "ta.stochf_fastk",
+     "required_params": [
+      "high",
+      "low",
+      "close"
+     ]
+    },
+    {
+     "name": "ta.stochrsi_fastd",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.stochrsi_fastk",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.sum",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.t3",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.tema",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.trange",
+     "required_params": [
+      "high",
+      "low",
+      "close"
+     ]
+    },
+    {
+     "name": "ta.trima",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.trix",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.tsf",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.typprice",
+     "required_params": [
+      "high",
+      "low",
+      "close"
+     ]
+    },
+    {
+     "name": "ta.ultosc",
+     "required_params": [
+      "high",
+      "low",
+      "close"
+     ]
+    },
+    {
+     "name": "ta.var",
+     "required_params": [
+      "real"
+     ]
+    },
+    {
+     "name": "ta.wclprice",
+     "required_params": [
+      "high",
+      "low",
+      "close"
+     ]
+    },
+    {
+     "name": "ta.willr",
+     "required_params": [
+      "high",
+      "low",
+      "close"
+     ]
+    },
+    {
+     "name": "ta.with_indicators",
+     "required_params": [
+      "df",
+      "partition",
+      "order",
+      "columns"
+     ]
+    },
+    {
+     "name": "ta.wma",
+     "required_params": [
+      "real"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "I1",
+   "surface": "repark.ml",
+   "kind": "python",
+   "decision": "YES",
+   "frozen": true,
+   "excepted": [],
+   "members": [
+    {
+     "name": "ml.CrossValidator",
+     "required_params": null
+    },
+    {
+     "name": "ml.CrossValidatorModel",
+     "required_params": null
+    },
+    {
+     "name": "ml.DenseVector",
+     "required_params": null
+    },
+    {
+     "name": "ml.Estimator",
+     "required_params": null
+    },
+    {
+     "name": "ml.HasFeaturesCol",
+     "required_params": null
+    },
+    {
+     "name": "ml.HasHandleInvalid",
+     "required_params": null
+    },
+    {
+     "name": "ml.HasInputCol",
+     "required_params": null
+    },
+    {
+     "name": "ml.HasInputCols",
+     "required_params": null
+    },
+    {
+     "name": "ml.HasLabelCol",
+     "required_params": null
+    },
+    {
+     "name": "ml.HasOutputCol",
+     "required_params": null
+    },
+    {
+     "name": "ml.HasOutputCols",
+     "required_params": null
+    },
+    {
+     "name": "ml.HasPredictionCol",
+     "required_params": null
+    },
+    {
+     "name": "ml.Identifiable",
+     "required_params": null
+    },
+    {
+     "name": "ml.MLReadable",
+     "required_params": null
+    },
+    {
+     "name": "ml.MLWritable",
+     "required_params": null
+    },
+    {
+     "name": "ml.Model",
+     "required_params": null
+    },
+    {
+     "name": "ml.Param",
+     "required_params": null
+    },
+    {
+     "name": "ml.ParamGridBuilder",
+     "required_params": null
+    },
+    {
+     "name": "ml.Params",
+     "required_params": null
+    },
+    {
+     "name": "ml.Pipeline",
+     "required_params": null
+    },
+    {
+     "name": "ml.PipelineModel",
+     "required_params": null
+    },
+    {
+     "name": "ml.SparseVector",
+     "required_params": null
+    },
+    {
+     "name": "ml.Transformer",
+     "required_params": null
+    },
+    {
+     "name": "ml.TypeConverters",
+     "required_params": null
+    },
+    {
+     "name": "ml.UnaryTransformer",
+     "required_params": null
+    },
+    {
+     "name": "ml.Vector",
+     "required_params": null
+    },
+    {
+     "name": "ml.VectorUDT",
+     "required_params": null
+    },
+    {
+     "name": "ml.Vectors",
+     "required_params": null
+    }
+   ]
+  },
+  {
+   "id": "J1",
+   "surface": "F.* scalar expression core (functions_expr.py)",
+   "kind": "python",
+   "decision": "YES except `bit_length`, `octet_length`, `expm1`, `hypot`, `randstr`, `from_unixtime`",
+   "frozen": true,
+   "excepted": [
+    "F.bit_length",
+    "F.expm1",
+    "F.from_unixtime",
+    "F.hypot",
+    "F.octet_length",
+    "F.randstr"
+   ],
+   "members": [
+    {
+     "name": "F.acos",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.acosh",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.approx_count_distinct",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.approx_percentile",
+     "required_params": [
+      "col",
+      "percentage"
+     ]
+    },
+    {
+     "name": "F.array",
+     "required_params": []
+    },
+    {
+     "name": "F.array_contains",
+     "required_params": [
+      "col",
+      "value"
+     ]
+    },
+    {
+     "name": "F.array_distinct",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.array_except",
+     "required_params": [
+      "col1",
+      "col2"
+     ]
+    },
+    {
+     "name": "F.array_intersect",
+     "required_params": [
+      "col1",
+      "col2"
+     ]
+    },
+    {
+     "name": "F.array_join",
+     "required_params": [
+      "col",
+      "delimiter"
+     ]
+    },
+    {
+     "name": "F.array_max",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.array_min",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.array_position",
+     "required_params": [
+      "col",
+      "value"
+     ]
+    },
+    {
+     "name": "F.array_remove",
+     "required_params": [
+      "col",
+      "element"
+     ]
+    },
+    {
+     "name": "F.array_repeat",
+     "required_params": [
+      "element",
+      "count"
+     ]
+    },
+    {
+     "name": "F.array_sort",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.array_union",
+     "required_params": [
+      "col1",
+      "col2"
+     ]
+    },
+    {
+     "name": "F.arrays_zip",
+     "required_params": []
+    },
+    {
+     "name": "F.asc",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.asc_nulls_first",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.asc_nulls_last",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.ascii",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.asin",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.asinh",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.assert_true",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.atan",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.atan2",
+     "required_params": [
+      "col1",
+      "col2"
+     ]
+    },
+    {
+     "name": "F.atanh",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.base64",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.bit_and",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.bit_or",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.bit_xor",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.btrim",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.cbrt",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.ceil",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.ceiling",
+     "required_params": null
+    },
+    {
+     "name": "F.char",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.char_length",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.character_length",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.chr",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.concat_ws",
+     "required_params": [
+      "sep"
+     ]
+    },
+    {
+     "name": "F.contains",
+     "required_params": [
+      "col",
+      "value"
+     ]
+    },
+    {
+     "name": "F.corr",
+     "required_params": [
+      "col1",
+      "col2"
+     ]
+    },
+    {
+     "name": "F.cos",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.cosh",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.cot",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.covar_pop",
+     "required_params": [
+      "col1",
+      "col2"
+     ]
+    },
+    {
+     "name": "F.covar_samp",
+     "required_params": [
+      "col1",
+      "col2"
+     ]
+    },
+    {
+     "name": "F.crc32",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.csc",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.currentDate",
+     "required_params": null
+    },
+    {
+     "name": "F.current_date",
+     "required_params": []
+    },
+    {
+     "name": "F.date_part",
+     "required_params": [
+      "field",
+      "source"
+     ]
+    },
+    {
+     "name": "F.date_sub",
+     "required_params": [
+      "start",
+      "days"
+     ]
+    },
+    {
+     "name": "F.datediff",
+     "required_params": [
+      "end",
+      "start"
+     ]
+    },
+    {
+     "name": "F.dayname",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.decode",
+     "required_params": [
+      "col",
+      "charset"
+     ]
+    },
+    {
+     "name": "F.degrees",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.desc",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.desc_nulls_first",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.desc_nulls_last",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.e",
+     "required_params": []
+    },
+    {
+     "name": "F.elt",
+     "required_params": [
+      "n"
+     ]
+    },
+    {
+     "name": "F.encode",
+     "required_params": [
+      "col",
+      "charset"
+     ]
+    },
+    {
+     "name": "F.endswith",
+     "required_params": [
+      "col",
+      "suffix"
+     ]
+    },
+    {
+     "name": "F.equal_null",
+     "required_params": [
+      "col1",
+      "col2"
+     ]
+    },
+    {
+     "name": "F.exp",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.explode",
+     "required_params": [
+      "column"
+     ]
+    },
+    {
+     "name": "F.explode_outer",
+     "required_params": [
+      "column"
+     ]
+    },
+    {
+     "name": "F.extract",
+     "required_params": [
+      "field",
+      "source"
+     ]
+    },
+    {
+     "name": "F.find_in_set",
+     "required_params": [
+      "str",
+      "str_array"
+     ]
+    },
+    {
+     "name": "F.flatten",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.floor",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.format_number",
+     "required_params": [
+      "col",
+      "d"
+     ]
+    },
+    {
+     "name": "F.format_string",
+     "required_params": [
+      "format"
+     ]
+    },
+    {
+     "name": "F.from_csv",
+     "required_params": [
+      "col",
+      "schema"
+     ]
+    },
+    {
+     "name": "F.from_utc_timestamp",
+     "required_params": [
+      "timestamp",
+      "tz"
+     ]
+    },
+    {
+     "name": "F.from_xml",
+     "required_params": [
+      "col",
+      "schema"
+     ]
+    },
+    {
+     "name": "F.greatest",
+     "required_params": []
+    },
+    {
+     "name": "F.grouping",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.hash",
+     "required_params": []
+    },
+    {
+     "name": "F.hour",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.ifnull",
+     "required_params": [
+      "col",
+      "alt"
+     ]
+    },
+    {
+     "name": "F.ilike",
+     "required_params": [
+      "col",
+      "pattern"
+     ]
+    },
+    {
+     "name": "F.initcap",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.input_file_name",
+     "required_params": []
+    },
+    {
+     "name": "F.instr",
+     "required_params": [
+      "str",
+      "substr"
+     ]
+    },
+    {
+     "name": "F.is_valid_utf8",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.isnan",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.isnotnull",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.isnull",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.json_tuple",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.kurtosis",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.lcase",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.least",
+     "required_params": []
+    },
+    {
+     "name": "F.left",
+     "required_params": [
+      "str",
+      "len"
+     ]
+    },
+    {
+     "name": "F.length",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.levenshtein",
+     "required_params": [
+      "left",
+      "right"
+     ]
+    },
+    {
+     "name": "F.like",
+     "required_params": [
+      "col",
+      "pattern"
+     ]
+    },
+    {
+     "name": "F.listagg",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.ln",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.locate",
+     "required_params": [
+      "substr",
+      "str"
+     ]
+    },
+    {
+     "name": "F.log",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.log10",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.log1p",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.log2",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.lower",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.lpad",
+     "required_params": [
+      "col",
+      "len"
+     ]
+    },
+    {
+     "name": "F.ltrim",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.make_timestamp",
+     "required_params": [
+      "years",
+      "months",
+      "days",
+      "hours",
+      "mins",
+      "secs"
+     ]
+    },
+    {
+     "name": "F.make_valid_utf8",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.map_entries",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.map_from_arrays",
+     "required_params": [
+      "col1",
+      "col2"
+     ]
+    },
+    {
+     "name": "F.map_keys",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.map_values",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.md5",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.median",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.minute",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.mode",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.monotonically_increasing_id",
+     "required_params": []
+    },
+    {
+     "name": "F.monthname",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.months_between",
+     "required_params": [
+      "date1",
+      "date2"
+     ]
+    },
+    {
+     "name": "F.nanvl",
+     "required_params": [
+      "col1",
+      "col2"
+     ]
+    },
+    {
+     "name": "F.negate",
+     "required_params": null
+    },
+    {
+     "name": "F.negative",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.next_day",
+     "required_params": [
+      "date",
+      "dayOfWeek"
+     ]
+    },
+    {
+     "name": "F.nullif",
+     "required_params": [
+      "col1",
+      "col2"
+     ]
+    },
+    {
+     "name": "F.nullifzero",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.nvl",
+     "required_params": [
+      "col1",
+      "col2"
+     ]
+    },
+    {
+     "name": "F.nvl2",
+     "required_params": [
+      "col1",
+      "col2",
+      "col3"
+     ]
+    },
+    {
+     "name": "F.overlay",
+     "required_params": [
+      "src",
+      "replace",
+      "pos"
+     ]
+    },
+    {
+     "name": "F.percentile_approx",
+     "required_params": [
+      "col",
+      "percentage"
+     ]
+    },
+    {
+     "name": "F.pi",
+     "required_params": []
+    },
+    {
+     "name": "F.pmod",
+     "required_params": [
+      "dividend",
+      "divisor"
+     ]
+    },
+    {
+     "name": "F.posexplode",
+     "required_params": [
+      "column"
+     ]
+    },
+    {
+     "name": "F.posexplode_outer",
+     "required_params": [
+      "column"
+     ]
+    },
+    {
+     "name": "F.position",
+     "required_params": [
+      "substr"
+     ]
+    },
+    {
+     "name": "F.positive",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.pow",
+     "required_params": [
+      "col1",
+      "col2"
+     ]
+    },
+    {
+     "name": "F.power",
+     "required_params": [
+      "col1",
+      "col2"
+     ]
+    },
+    {
+     "name": "F.printf",
+     "required_params": [
+      "format"
+     ]
+    },
+    {
+     "name": "F.quote",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.radians",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.raise_error",
+     "required_params": [
+      "errMsg"
+     ]
+    },
+    {
+     "name": "F.rand",
+     "required_params": []
+    },
+    {
+     "name": "F.randn",
+     "required_params": []
+    },
+    {
+     "name": "F.random",
+     "required_params": []
+    },
+    {
+     "name": "F.regexp",
+     "required_params": [
+      "col",
+      "pattern"
+     ]
+    },
+    {
+     "name": "F.regexp_count",
+     "required_params": [
+      "str",
+      "regexp"
+     ]
+    },
+    {
+     "name": "F.regexp_extract",
+     "required_params": [
+      "str",
+      "pattern",
+      "idx"
+     ]
+    },
+    {
+     "name": "F.regexp_extract_all",
+     "required_params": [
+      "str",
+      "regexp"
+     ]
+    },
+    {
+     "name": "F.regexp_instr",
+     "required_params": [
+      "str",
+      "regexp"
+     ]
+    },
+    {
+     "name": "F.regexp_like",
+     "required_params": [
+      "col",
+      "pattern"
+     ]
+    },
+    {
+     "name": "F.regexp_replace",
+     "required_params": [
+      "str",
+      "pattern",
+      "replacement"
+     ]
+    },
+    {
+     "name": "F.regexp_substr",
+     "required_params": [
+      "str",
+      "regexp"
+     ]
+    },
+    {
+     "name": "F.regr_avgx",
+     "required_params": [
+      "y",
+      "x"
+     ]
+    },
+    {
+     "name": "F.regr_avgy",
+     "required_params": [
+      "y",
+      "x"
+     ]
+    },
+    {
+     "name": "F.regr_count",
+     "required_params": [
+      "y",
+      "x"
+     ]
+    },
+    {
+     "name": "F.regr_intercept",
+     "required_params": [
+      "y",
+      "x"
+     ]
+    },
+    {
+     "name": "F.regr_r2",
+     "required_params": [
+      "y",
+      "x"
+     ]
+    },
+    {
+     "name": "F.regr_slope",
+     "required_params": [
+      "y",
+      "x"
+     ]
+    },
+    {
+     "name": "F.regr_sxx",
+     "required_params": [
+      "y",
+      "x"
+     ]
+    },
+    {
+     "name": "F.regr_sxy",
+     "required_params": [
+      "y",
+      "x"
+     ]
+    },
+    {
+     "name": "F.regr_syy",
+     "required_params": [
+      "y",
+      "x"
+     ]
+    },
+    {
+     "name": "F.repeat",
+     "required_params": [
+      "col",
+      "n"
+     ]
+    },
+    {
+     "name": "F.replace",
+     "required_params": [
+      "src",
+      "search",
+      "replacement"
+     ]
+    },
+    {
+     "name": "F.reverse",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.right",
+     "required_params": [
+      "str",
+      "len"
+     ]
+    },
+    {
+     "name": "F.rlike",
+     "required_params": [
+      "col",
+      "pattern"
+     ]
+    },
+    {
+     "name": "F.round",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.rpad",
+     "required_params": [
+      "col",
+      "len"
+     ]
+    },
+    {
+     "name": "F.rtrim",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.schema_of_csv",
+     "required_params": [
+      "csv"
+     ]
+    },
+    {
+     "name": "F.schema_of_json",
+     "required_params": [
+      "json"
+     ]
+    },
+    {
+     "name": "F.schema_of_xml",
+     "required_params": [
+      "xml"
+     ]
+    },
+    {
+     "name": "F.sec",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.second",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.sentences",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.sequence",
+     "required_params": [
+      "start",
+      "stop"
+     ]
+    },
+    {
+     "name": "F.sha",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.sha1",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.sha2",
+     "required_params": [
+      "col",
+      "numBits"
+     ]
+    },
+    {
+     "name": "F.sign",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.signum",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.sin",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.sinh",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.size",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.skewness",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.slice",
+     "required_params": [
+      "x",
+      "start",
+      "length"
+     ]
+    },
+    {
+     "name": "F.sort_array",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.soundex",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.spark_partition_id",
+     "required_params": []
+    },
+    {
+     "name": "F.split",
+     "required_params": [
+      "str",
+      "pattern"
+     ]
+    },
+    {
+     "name": "F.split_part",
+     "required_params": [
+      "src",
+      "delimiter",
+      "partNum"
+     ]
+    },
+    {
+     "name": "F.sqrt",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.startswith",
+     "required_params": [
+      "col",
+      "prefix"
+     ]
+    },
+    {
+     "name": "F.stddev",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.stddev_pop",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.stddev_samp",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.string_agg",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.struct",
+     "required_params": []
+    },
+    {
+     "name": "F.substr",
+     "required_params": [
+      "str",
+      "pos",
+      "len"
+     ]
+    },
+    {
+     "name": "F.substring",
+     "required_params": [
+      "str",
+      "pos",
+      "len"
+     ]
+    },
+    {
+     "name": "F.substring_index",
+     "required_params": [
+      "str",
+      "delim",
+      "count"
+     ]
+    },
+    {
+     "name": "F.tan",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.tanh",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.timestamp_micros",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.timestamp_millis",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.timestamp_seconds",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.to_date",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.to_timestamp",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.to_utc_timestamp",
+     "required_params": [
+      "timestamp",
+      "tz"
+     ]
+    },
+    {
+     "name": "F.translate",
+     "required_params": [
+      "src",
+      "matching",
+      "replace"
+     ]
+    },
+    {
+     "name": "F.trim",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.try_to_timestamp",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.try_validate_utf8",
+     "required_params": [
+      "str"
+     ]
+    },
+    {
+     "name": "F.ucase",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.unbase64",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.uniform",
+     "required_params": [
+      "min",
+      "max"
+     ]
+    },
+    {
+     "name": "F.unix_timestamp",
+     "required_params": []
+    },
+    {
+     "name": "F.upper",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.validate_utf8",
+     "required_params": [
+      "str"
+     ]
+    },
+    {
+     "name": "F.var_pop",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.var_samp",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.variance",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.when",
+     "required_params": [
+      "condition",
+      "value"
+     ]
+    },
+    {
+     "name": "F.xxhash64",
+     "required_params": []
+    },
+    {
+     "name": "F.zeroifnull",
+     "required_params": [
+      "col"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "J2",
+   "surface": "F.* aggregate / window / root module (functions.py)",
+   "kind": "python",
+   "decision": "NO",
+   "frozen": false,
+   "excepted": [],
+   "members": []
+  },
+  {
+   "id": "J3",
+   "surface": "F.* declared-absent families (functions_declared.py)",
+   "kind": "python",
+   "decision": "YES",
+   "frozen": true,
+   "excepted": [],
+   "members": [
+    {
+     "name": "F.hll_sketch_agg",
+     "required_params": null
+    },
+    {
+     "name": "F.hll_sketch_estimate",
+     "required_params": null
+    },
+    {
+     "name": "F.hll_union",
+     "required_params": null
+    },
+    {
+     "name": "F.hll_union_agg",
+     "required_params": null
+    },
+    {
+     "name": "F.input_file_block_length",
+     "required_params": []
+    },
+    {
+     "name": "F.input_file_block_start",
+     "required_params": []
+    },
+    {
+     "name": "F.is_variant_null",
+     "required_params": null
+    },
+    {
+     "name": "F.java_method",
+     "required_params": []
+    },
+    {
+     "name": "F.kll_merge_agg_bigint",
+     "required_params": null
+    },
+    {
+     "name": "F.kll_merge_agg_double",
+     "required_params": null
+    },
+    {
+     "name": "F.kll_merge_agg_float",
+     "required_params": null
+    },
+    {
+     "name": "F.kll_sketch_agg_bigint",
+     "required_params": null
+    },
+    {
+     "name": "F.kll_sketch_agg_double",
+     "required_params": null
+    },
+    {
+     "name": "F.kll_sketch_agg_float",
+     "required_params": null
+    },
+    {
+     "name": "F.kll_sketch_get_n_bigint",
+     "required_params": null
+    },
+    {
+     "name": "F.kll_sketch_get_n_double",
+     "required_params": null
+    },
+    {
+     "name": "F.kll_sketch_get_n_float",
+     "required_params": null
+    },
+    {
+     "name": "F.kll_sketch_get_quantile_bigint",
+     "required_params": null
+    },
+    {
+     "name": "F.kll_sketch_get_quantile_double",
+     "required_params": null
+    },
+    {
+     "name": "F.kll_sketch_get_quantile_float",
+     "required_params": null
+    },
+    {
+     "name": "F.kll_sketch_get_rank_bigint",
+     "required_params": null
+    },
+    {
+     "name": "F.kll_sketch_get_rank_double",
+     "required_params": null
+    },
+    {
+     "name": "F.kll_sketch_get_rank_float",
+     "required_params": null
+    },
+    {
+     "name": "F.kll_sketch_merge_bigint",
+     "required_params": null
+    },
+    {
+     "name": "F.kll_sketch_merge_double",
+     "required_params": null
+    },
+    {
+     "name": "F.kll_sketch_merge_float",
+     "required_params": null
+    },
+    {
+     "name": "F.kll_sketch_to_string_bigint",
+     "required_params": null
+    },
+    {
+     "name": "F.kll_sketch_to_string_double",
+     "required_params": null
+    },
+    {
+     "name": "F.kll_sketch_to_string_float",
+     "required_params": null
+    },
+    {
+     "name": "F.parse_json",
+     "required_params": null
+    },
+    {
+     "name": "F.reflect",
+     "required_params": []
+    },
+    {
+     "name": "F.schema_of_variant",
+     "required_params": null
+    },
+    {
+     "name": "F.schema_of_variant_agg",
+     "required_params": null
+    },
+    {
+     "name": "F.st_asbinary",
+     "required_params": null
+    },
+    {
+     "name": "F.st_geogfromwkb",
+     "required_params": null
+    },
+    {
+     "name": "F.st_geomfromwkb",
+     "required_params": null
+    },
+    {
+     "name": "F.st_setsrid",
+     "required_params": null
+    },
+    {
+     "name": "F.st_srid",
+     "required_params": null
+    },
+    {
+     "name": "F.theta_difference",
+     "required_params": null
+    },
+    {
+     "name": "F.theta_intersection",
+     "required_params": null
+    },
+    {
+     "name": "F.theta_intersection_agg",
+     "required_params": null
+    },
+    {
+     "name": "F.theta_sketch_agg",
+     "required_params": null
+    },
+    {
+     "name": "F.theta_sketch_estimate",
+     "required_params": null
+    },
+    {
+     "name": "F.theta_union",
+     "required_params": null
+    },
+    {
+     "name": "F.theta_union_agg",
+     "required_params": null
+    },
+    {
+     "name": "F.to_csv",
+     "required_params": null
+    },
+    {
+     "name": "F.to_variant_object",
+     "required_params": null
+    },
+    {
+     "name": "F.to_xml",
+     "required_params": null
+    },
+    {
+     "name": "F.try_parse_json",
+     "required_params": null
+    },
+    {
+     "name": "F.try_reflect",
+     "required_params": []
+    },
+    {
+     "name": "F.try_variant_get",
+     "required_params": null
+    },
+    {
+     "name": "F.unwrap_udt",
+     "required_params": []
+    },
+    {
+     "name": "F.variant_get",
+     "required_params": null
+    },
+    {
+     "name": "F.xpath",
+     "required_params": null
+    },
+    {
+     "name": "F.xpath_boolean",
+     "required_params": null
+    },
+    {
+     "name": "F.xpath_double",
+     "required_params": null
+    },
+    {
+     "name": "F.xpath_float",
+     "required_params": null
+    },
+    {
+     "name": "F.xpath_int",
+     "required_params": null
+    },
+    {
+     "name": "F.xpath_long",
+     "required_params": null
+    },
+    {
+     "name": "F.xpath_number",
+     "required_params": null
+    },
+    {
+     "name": "F.xpath_short",
+     "required_params": null
+    },
+    {
+     "name": "F.xpath_string",
+     "required_params": null
+    }
+   ]
+  },
+  {
+   "id": "J4",
+   "surface": "F.* datetime (functions_datetime.py)",
+   "kind": "python",
+   "decision": "YES except `make_date`",
+   "frozen": true,
+   "excepted": [
+    "F.make_date"
+   ],
+   "members": [
+    {
+     "name": "F.curdate",
+     "required_params": []
+    },
+    {
+     "name": "F.current_timezone",
+     "required_params": []
+    },
+    {
+     "name": "F.date_diff",
+     "required_params": [
+      "end",
+      "start"
+     ]
+    },
+    {
+     "name": "F.date_from_unix_date",
+     "required_params": [
+      "n"
+     ]
+    },
+    {
+     "name": "F.dateadd",
+     "required_params": [
+      "start",
+      "days"
+     ]
+    },
+    {
+     "name": "F.datepart",
+     "required_params": [
+      "field",
+      "source"
+     ]
+    },
+    {
+     "name": "F.day",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.make_dt_interval",
+     "required_params": []
+    },
+    {
+     "name": "F.make_interval",
+     "required_params": []
+    },
+    {
+     "name": "F.now",
+     "required_params": []
+    },
+    {
+     "name": "F.to_unix_timestamp",
+     "required_params": []
+    },
+    {
+     "name": "F.unix_date",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.unix_micros",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.unix_millis",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.unix_seconds",
+     "required_params": [
+      "col"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "J5",
+   "surface": "F.* collections + higher-order lambdas",
+   "kind": "python",
+   "decision": "YES except `element_at`",
+   "frozen": true,
+   "excepted": [
+    "F.element_at"
+   ],
+   "members": [
+    {
+     "name": "F.aggregate",
+     "required_params": [
+      "col",
+      "initialValue",
+      "merge"
+     ]
+    },
+    {
+     "name": "F.array_agg",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.array_append",
+     "required_params": [
+      "col",
+      "value"
+     ]
+    },
+    {
+     "name": "F.array_compact",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.array_prepend",
+     "required_params": [
+      "col",
+      "value"
+     ]
+    },
+    {
+     "name": "F.array_size",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.arrays_overlap",
+     "required_params": [
+      "a1",
+      "a2"
+     ]
+    },
+    {
+     "name": "F.cardinality",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.exists",
+     "required_params": [
+      "col",
+      "f"
+     ]
+    },
+    {
+     "name": "F.filter",
+     "required_params": [
+      "col",
+      "f"
+     ]
+    },
+    {
+     "name": "F.forall",
+     "required_params": [
+      "col",
+      "f"
+     ]
+    },
+    {
+     "name": "F.get",
+     "required_params": [
+      "col",
+      "index"
+     ]
+    },
+    {
+     "name": "F.map_contains_key",
+     "required_params": [
+      "col",
+      "key"
+     ]
+    },
+    {
+     "name": "F.map_filter",
+     "required_params": [
+      "col",
+      "f"
+     ]
+    },
+    {
+     "name": "F.map_from_entries",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.map_zip_with",
+     "required_params": [
+      "col1",
+      "col2",
+      "f"
+     ]
+    },
+    {
+     "name": "F.named_struct",
+     "required_params": []
+    },
+    {
+     "name": "F.reduce",
+     "required_params": [
+      "col",
+      "initialValue",
+      "merge"
+     ]
+    },
+    {
+     "name": "F.shuffle",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.str_to_map",
+     "required_params": [
+      "text"
+     ]
+    },
+    {
+     "name": "F.transform",
+     "required_params": [
+      "col",
+      "f"
+     ]
+    },
+    {
+     "name": "F.transform_keys",
+     "required_params": [
+      "col",
+      "f"
+     ]
+    },
+    {
+     "name": "F.transform_values",
+     "required_params": [
+      "col",
+      "f"
+     ]
+    },
+    {
+     "name": "F.zip_with",
+     "required_params": [
+      "left",
+      "right",
+      "f"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "J6",
+   "surface": "F.try_* inversions (functions_try.py)",
+   "kind": "python",
+   "decision": "YES except `try_avg`",
+   "frozen": true,
+   "excepted": [
+    "F.try_avg"
+   ],
+   "members": [
+    {
+     "name": "F.try_add",
+     "required_params": [
+      "left",
+      "right"
+     ]
+    },
+    {
+     "name": "F.try_divide",
+     "required_params": [
+      "left",
+      "right"
+     ]
+    },
+    {
+     "name": "F.try_element_at",
+     "required_params": [
+      "col",
+      "extraction"
+     ]
+    },
+    {
+     "name": "F.try_mod",
+     "required_params": [
+      "left",
+      "right"
+     ]
+    },
+    {
+     "name": "F.try_multiply",
+     "required_params": [
+      "left",
+      "right"
+     ]
+    },
+    {
+     "name": "F.try_subtract",
+     "required_params": [
+      "left",
+      "right"
+     ]
+    },
+    {
+     "name": "F.try_sum",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.try_to_binary",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.try_to_date",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.try_to_number",
+     "required_params": [
+      "col",
+      "format"
+     ]
+    },
+    {
+     "name": "F.try_to_time",
+     "required_params": [
+      "col"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "J7",
+   "surface": "F.* aggregate/window helpers (functions_agg.py, functions_window.py)",
+   "kind": "python",
+   "decision": "YES",
+   "frozen": true,
+   "excepted": [],
+   "members": [
+    {
+     "name": "F.bool_and",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.bool_or",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.count_if",
+     "required_params": [
+      "condition"
+     ]
+    },
+    {
+     "name": "F.cume_dist",
+     "required_params": []
+    },
+    {
+     "name": "F.every",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.first_value",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.lag",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.last_value",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.lead",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.nth_value",
+     "required_params": [
+      "col",
+      "offset"
+     ]
+    },
+    {
+     "name": "F.percent_rank",
+     "required_params": []
+    },
+    {
+     "name": "F.some",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.std",
+     "required_params": [
+      "col"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "J8",
+   "surface": "F.* math / bitwise / URL",
+   "kind": "python",
+   "decision": "YES except `bin`, `rint`",
+   "frozen": true,
+   "excepted": [
+    "F.bin",
+    "F.rint"
+   ],
+   "members": [
+    {
+     "name": "F.bit_count",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.bit_get",
+     "required_params": [
+      "col",
+      "pos"
+     ]
+    },
+    {
+     "name": "F.bitmap_bit_position",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.bitmap_bucket_number",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.bitmap_count",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.bitwiseNOT",
+     "required_params": null
+    },
+    {
+     "name": "F.bitwise_not",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.factorial",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.getbit",
+     "required_params": [
+      "col",
+      "pos"
+     ]
+    },
+    {
+     "name": "F.hex",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.parse_url",
+     "required_params": [
+      "url",
+      "partToExtract"
+     ]
+    },
+    {
+     "name": "F.shiftleft",
+     "required_params": [
+      "col",
+      "numBits"
+     ]
+    },
+    {
+     "name": "F.shiftright",
+     "required_params": [
+      "col",
+      "numBits"
+     ]
+    },
+    {
+     "name": "F.shiftrightunsigned",
+     "required_params": [
+      "col",
+      "numBits"
+     ]
+    },
+    {
+     "name": "F.try_parse_url",
+     "required_params": [
+      "url",
+      "partToExtract"
+     ]
+    },
+    {
+     "name": "F.try_url_decode",
+     "required_params": [
+      "str"
+     ]
+    },
+    {
+     "name": "F.unhex",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.url_decode",
+     "required_params": [
+      "str"
+     ]
+    },
+    {
+     "name": "F.url_encode",
+     "required_params": [
+      "str"
+     ]
+    },
+    {
+     "name": "F.width_bucket",
+     "required_params": [
+      "v",
+      "min",
+      "max",
+      "numBucket"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "J9",
+   "surface": "F.* session-scoped, UDF and UDTF surface",
+   "kind": "python",
+   "decision": "YES",
+   "frozen": true,
+   "excepted": [],
+   "members": [
+    {
+     "name": "F.PandasUDFType",
+     "required_params": null
+    },
+    {
+     "name": "F.PythonUDFColumn",
+     "required_params": null
+    },
+    {
+     "name": "F.UserDefinedFunction",
+     "required_params": null
+    },
+    {
+     "name": "F.UserDefinedTableFunction",
+     "required_params": null
+    },
+    {
+     "name": "F.broadcast",
+     "required_params": [
+      "col"
+     ]
+    },
+    {
+     "name": "F.current_catalog",
+     "required_params": []
+    },
+    {
+     "name": "F.current_database",
+     "required_params": []
+    },
+    {
+     "name": "F.current_schema",
+     "required_params": []
+    },
+    {
+     "name": "F.current_user",
+     "required_params": []
+    },
+    {
+     "name": "F.pandas_udf",
+     "required_params": []
+    },
+    {
+     "name": "F.session_user",
+     "required_params": null
+    },
+    {
+     "name": "F.udf",
+     "required_params": []
+    },
+    {
+     "name": "F.udtf",
+     "required_params": null
+    },
+    {
+     "name": "F.user",
+     "required_params": null
+    },
+    {
+     "name": "F.uuid",
+     "required_params": []
+    },
+    {
+     "name": "F.version",
+     "required_params": []
+    }
+   ]
+  },
+  {
+   "id": "K1",
+   "surface": "Spark-SQL door — DDL + table-creation options",
+   "kind": "surface",
+   "decision": "YES",
+   "frozen": true,
+   "excepted": [],
+   "members": [
+    {
+     "name": "CTAS",
+     "door": "repark-spark",
+     "disposition": "tested"
+    },
+    {
+     "name": "CTAS_TARGET_ROUTING",
+     "door": "repark-spark",
+     "disposition": "tested"
+    },
+    {
+     "name": "CREATE_OR_REPLACE_TABLE",
+     "door": "repark-spark",
+     "disposition": "tested"
+    },
+    {
+     "name": "CREATE_TABLE_COLUMN_DEF",
+     "door": "repark-spark",
+     "disposition": "tested"
+    },
+    {
+     "name": "DROP_TABLE",
+     "door": "repark-spark",
+     "disposition": "tested"
+    },
+    {
+     "name": "CREATE_SCHEMA",
+     "door": "repark-spark",
+     "disposition": "tested"
+    },
+    {
+     "name": "DROP_SCHEMA",
+     "door": "repark-spark",
+     "disposition": "tested"
+    },
+    {
+     "name": "ALTER_TABLE_RENAME",
+     "door": "repark-spark",
+     "disposition": "tested"
+    },
+    {
+     "name": "ALTER_TABLE_SCHEMA_EVOLUTION",
+     "door": "repark-spark",
+     "disposition": "tested"
+    },
+    {
+     "name": "ALTER_TABLE_PROPERTIES",
+     "door": "repark-spark",
+     "disposition": "tested"
+    },
+    {
+     "name": "ALTER_TABLE_PARTITION_FIELDS",
+     "door": "repark-spark",
+     "disposition": "tested"
+    },
+    {
+     "name": "TABLE_OPTION_FORMAT",
+     "door": "repark-spark",
+     "disposition": "tested"
+    },
+    {
+     "name": "TABLE_OPTION_FORMAT_VERSION",
+     "door": "repark-spark",
+     "disposition": "tested"
+    },
+    {
+     "name": "TABLE_OPTION_PARTITIONING",
+     "door": "repark-spark",
+     "disposition": "tested"
+    },
+    {
+     "name": "TABLE_OPTION_LOCATION",
+     "door": "repark-spark",
+     "disposition": "tested"
+    },
+    {
+     "name": "TABLE_OPTION_RAW_PROPERTIES",
+     "door": "repark-spark",
+     "disposition": "tested"
+    },
+    {
+     "name": "TABLE_OPTION_SORT_ORDER",
+     "door": "repark-spark",
+     "disposition": "declared_absent"
+    },
+    {
+     "name": "TABLE_OPTION_UNKNOWN_KEY_REFUSE",
+     "door": "repark-spark",
+     "disposition": "declared_absent"
+    },
+    {
+     "name": "PARTITION_TRANSFORM_VALIDATION",
+     "door": "repark-spark",
+     "disposition": "tested"
+    },
+    {
+     "name": "MOR_TABLE_CREATION",
+     "door": "repark-spark",
+     "disposition": "tested"
+    },
+    {
+     "name": "SCHEMA_OPTION_LOCATION",
+     "door": "repark-spark",
+     "disposition": "tested"
+    }
+   ]
+  },
+  {
+   "id": "K2",
+   "surface": "Spark-SQL door — DML incl. MERGE",
+   "kind": "surface",
+   "decision": "YES except `MERGE`",
+   "frozen": true,
+   "excepted": [
+    "MERGE"
+   ],
+   "members": [
+    {
+     "name": "INSERT_INTO",
+     "door": "repark-spark",
+     "disposition": "tested"
+    },
+    {
+     "name": "INSERT_OVERWRITE",
+     "door": "repark-spark",
+     "disposition": "tested"
+    },
+    {
+     "name": "DELETE",
+     "door": "repark-spark",
+     "disposition": "tested"
+    },
+    {
+     "name": "UPDATE",
+     "door": "repark-spark",
+     "disposition": "tested"
+    },
+    {
+     "name": "TRUNCATE",
+     "door": "repark-spark",
+     "disposition": "tested"
+    }
+   ]
+  },
+  {
+   "id": "K3",
+   "surface": "Time travel, branch/tag DDL, WAP, metadata tables",
+   "kind": "surface",
+   "decision": "YES except `WAP`",
+   "frozen": true,
+   "excepted": [
+    "WAP"
+   ],
+   "members": [
+    {
+     "name": "TIME_TRAVEL",
+     "door": "repark-spark",
+     "disposition": "tested"
+    },
+    {
+     "name": "BRANCH_TAG_DDL",
+     "door": "repark-spark",
+     "disposition": "tested"
+    },
+    {
+     "name": "METADATA_TABLES",
+     "door": "repark-spark",
+     "disposition": "tested"
+    }
+   ]
+  },
+  {
+   "id": "K4",
+   "surface": "Introspection + guardrails",
+   "kind": "surface",
+   "decision": "YES except `SHOW TABLES IN`",
+   "frozen": true,
+   "excepted": [
+    "SHOW TABLES IN"
+   ],
+   "members": [
+    {
+     "name": "INTROSPECTION",
+     "door": "repark-spark",
+     "disposition": "tested"
+    },
+    {
+     "name": "GUARD_MULTI_STATEMENT",
+     "door": "repark-spark",
+     "disposition": "tested"
+    },
+    {
+     "name": "GUARD_READ_ONLY_CATALOG",
+     "door": "repark-spark",
+     "disposition": "tested"
+    },
+    {
+     "name": "GUARD_LOCAL_FILESYSTEM",
+     "door": "repark-spark",
+     "disposition": "tested"
+    },
+    {
+     "name": "GUARD_WRITE_TO_BRANCH",
+     "door": "repark-spark",
+     "disposition": "tested"
+    },
+    {
+     "name": "GUARD_MOR_MULTI_SPEC_DML",
+     "door": "repark-spark",
+     "disposition": "tested"
+    }
+   ]
+  },
+  {
+   "id": "K5",
+   "surface": "CALL catalog.system.* procedures",
+   "kind": "surface",
+   "decision": "NO",
+   "frozen": false,
+   "excepted": [],
+   "members": []
+  },
+  {
+   "id": "K6",
+   "surface": "ANSI door (repark-sql) — all 50 surfaces",
+   "kind": "surface",
+   "decision": "YES",
+   "frozen": true,
+   "excepted": [],
+   "members": [
+    {
+     "name": "SELECT_PASSTHROUGH",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "CTAS",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "CTAS_TARGET_ROUTING",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "CREATE_OR_REPLACE_TABLE",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "CREATE_TABLE_COLUMN_DEF",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "DROP_TABLE",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "CREATE_SCHEMA",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "DROP_SCHEMA",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "ALTER_TABLE_RENAME",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "ALTER_TABLE_SCHEMA_EVOLUTION",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "ALTER_TABLE_PROPERTIES",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "ALTER_TABLE_PARTITION_FIELDS",
+     "door": "repark-sql",
+     "disposition": "declared_absent"
+    },
+    {
+     "name": "INSERT_INTO",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "INSERT_OVERWRITE",
+     "door": "repark-sql",
+     "disposition": "declared_absent"
+    },
+    {
+     "name": "DELETE",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "UPDATE",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "MERGE",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "TRUNCATE",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "TIME_TRAVEL",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "BRANCH_TAG_DDL",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "MAINTENANCE_CALL",
+     "door": "repark-sql",
+     "disposition": "declared_absent"
+    },
+    {
+     "name": "METADATA_TABLES",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "INTROSPECTION",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "TABLE_OPTION_FORMAT",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "TABLE_OPTION_FORMAT_VERSION",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "TABLE_OPTION_PARTITIONING",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "TABLE_OPTION_LOCATION",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "TABLE_OPTION_RAW_PROPERTIES",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "TABLE_OPTION_SORT_ORDER",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "TABLE_OPTION_UNKNOWN_KEY_REFUSE",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "PARTITION_TRANSFORM_VALIDATION",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "MOR_TABLE_CREATION",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "SCHEMA_OPTION_LOCATION",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "GUARD_MULTI_STATEMENT",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "GUARD_READ_ONLY_CATALOG",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "GUARD_LOCAL_FILESYSTEM",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "GUARD_WRITE_TO_BRANCH",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "GUARD_MOR_MULTI_SPEC_DML",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "WRONG_DOOR_SNIFF",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "IDENTIFIER_CASE_FOLDING",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "TA_FUNCTIONS",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "SQL_DIALECT_SEAM",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "CROSS_DOOR_EQUIVALENCE",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "SEMANTICS_NULL_ORDERING",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "SEMANTICS_DECIMAL_ARITHMETIC",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "SEMANTICS_CAST_MATRIX",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "SEMANTICS_SESSION_TIMEZONE",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "SEMANTICS_WINDOW_FRAMES",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "SEMANTICS_JOIN_NULL_KEYS",
+     "door": "repark-sql",
+     "disposition": "tested"
+    },
+    {
+     "name": "SEMANTICS_FLOAT_DETERMINISM",
+     "door": "repark-sql",
+     "disposition": "tested"
+    }
+   ]
+  },
+  {
+   "id": "K7",
+   "surface": "Cross-door value, cast and literal semantics",
+   "kind": "surface",
+   "decision": "NO",
+   "frozen": false,
+   "excepted": [],
+   "members": []
+  },
+  {
+   "id": "L1",
+   "surface": "Session settings + catalog registration config",
+   "kind": "conf",
+   "decision": "YES except `repark.merge.*`",
+   "frozen": true,
+   "excepted": [
+    "repark.merge.*"
+   ],
+   "members": [
+    {
+     "name": "repark.sql.maxArrayElements",
+     "literals": [
+      "\"repark.sql.maxArrayElements\"",
+      "\"repark.sql.max_array_elements\""
+     ],
+     "source": "crates/repark-functions/src/cardinality.rs"
+    },
+    {
+     "name": "repark.sql.allowLocalFilesystemDDL",
+     "literals": [
+      "\"repark.sql.allowLocalFilesystemDDL\"",
+      "\"repark.sql.allow_local_filesystem_ddl\""
+     ],
+     "source": "crates/repark-functions/src/cardinality.rs"
+    },
+    {
+     "name": "repark.sql.allowCreateFormatVersion3",
+     "literals": [
+      "\"repark.sql.allowCreateFormatVersion3\"",
+      "\"repark.sql.allow_create_format_version_3\""
+     ],
+     "source": "crates/repark-functions/src/cardinality.rs"
+    },
+    {
+     "name": "spark.sql.catalog.",
+     "literals": [
+      "\"spark.sql.catalog.\""
+     ],
+     "source": "crates/repark-core/src/catalog_config.rs"
+    },
+    {
+     "name": "repark.sql.catalog.",
+     "literals": [
+      "\"repark.sql.catalog.\""
+     ],
+     "source": "crates/repark-core/src/catalog_config.rs"
+    }
+   ]
+  },
+  {
+   "id": "M1",
+   "surface": "Iceberg format-v3 opt-in surfaces",
+   "kind": "mixed",
+   "decision": "NO",
+   "frozen": false,
+   "excepted": [],
+   "members": []
+  },
+  {
+   "id": "N1",
+   "surface": "Python packaging and module layout",
+   "kind": "packaging",
+   "decision": "YES",
+   "frozen": true,
+   "excepted": [],
+   "members": [
+    {
+     "name": "distribution name",
+     "literals": [
+      "name = \"repark\""
+     ],
+     "source": "python/repark/pyproject.toml"
+    },
+    {
+     "name": "abi3 wheel tag",
+     "literals": [
+      "features = [\"abi3-py312\"]"
+     ],
+     "source": "Cargo.toml"
+    },
+    {
+     "name": "python floor",
+     "literals": [
+      "requires-python = \">=3.12\""
+     ],
+     "source": "python/repark/pyproject.toml"
+    },
+    {
+     "name": "extension module",
+     "literals": [
+      "module-name = \"repark._native\""
+     ],
+     "source": "python/repark/pyproject.toml"
+    },
+    {
+     "name": "declared extras",
+     "literals": [
+      "[project.optional-dependencies]",
+      "numpy = [",
+      "pandas = [",
+      "polars = [",
+      "ml-ext = ["
+     ],
+     "source": "python/repark/pyproject.toml"
+    },
+    {
+     "name": "version SSOT",
+     "literals": [
+      "dynamic = [\"version\"]"
+     ],
+     "source": "python/repark/pyproject.toml"
+    }
+   ]
+  },
+  {
+   "id": "O1",
+   "surface": "repark.errors.* taxonomy",
+   "kind": "error",
+   "decision": "YES",
+   "frozen": true,
+   "excepted": [],
+   "members": [
+    {
+     "name": "AnalysisException",
+     "source": "python/repark/src/repark/errors.py"
+    },
+    {
+     "name": "IllegalArgumentException",
+     "source": "python/repark/src/repark/errors.py"
+    },
+    {
+     "name": "ParseException",
+     "source": "python/repark/src/repark/errors.py"
+    },
+    {
+     "name": "PySparkAssertionError",
+     "source": "python/repark/src/repark/errors.py"
+    },
+    {
+     "name": "PySparkAttributeError",
+     "source": "python/repark/src/repark/errors.py"
+    },
+    {
+     "name": "PySparkException",
+     "source": "python/repark/src/repark/errors.py"
+    },
+    {
+     "name": "PySparkNotImplementedError",
+     "source": "python/repark/src/repark/errors.py"
+    },
+    {
+     "name": "PySparkRuntimeError",
+     "source": "python/repark/src/repark/errors.py"
+    },
+    {
+     "name": "PySparkTypeError",
+     "source": "python/repark/src/repark/errors.py"
+    },
+    {
+     "name": "PySparkValueError",
+     "source": "python/repark/src/repark/errors.py"
+    },
+    {
+     "name": "UnsupportedOperationException",
+     "source": "python/repark/src/repark/errors.py"
+    }
+   ]
+  }
+ ]
+}

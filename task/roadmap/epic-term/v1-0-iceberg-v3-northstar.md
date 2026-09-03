@@ -80,7 +80,8 @@ Every row means **both SQL doors plus the facade** unless the cell says otherwis
 **The gate.** v1.0 tags when every row above is ✅ or its residual is a dated DECLARED row —
 registry ([docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md)) on the
 engine side, `GAP_MATRIX.md` on the fork side — each with a pin. An API review rides the same
-gate (what hardens at v1.0 is the owner's call at that review).
+gate (what hardens at v1.0 is the owner's call at that review). API review answered 2026-09-02
+([packet](../../../docs/design/v1-0-api-review-2026-09-02.md)); the freeze lands with the tag.
 
 ## 4. The path, as two lanes
 

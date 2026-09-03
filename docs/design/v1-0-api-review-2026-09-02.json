@@ -13,6 +13,9 @@
   "backlog_section_7": 51,
   "declared_sections_2_5": 30
  },
+ "decision_date": "2026-09-02",
+ "decision_rule": "additive-only within a major; a breaking change to a frozen row needs a major version and a one-minor deprecation shim; unfrozen rows may change at any minor with a changelog line",
+ "freeze_inventory": "docs/design/v1-0-api-freeze.json",
  "rows": [
   {
    "id": "A1",
@@ -33,6 +36,7 @@
    "examples_total": 7,
    "residuals": [],
    "recommend": "YES",
+   "decision": "YES",
    "why": "builder/appName/config/master/getOrCreate pinned on the facade and the conf-map seam; no open registry row"
   },
   {
@@ -74,6 +78,7 @@
     "ID-3"
    ],
    "recommend": "YES",
+   "decision": "YES",
    "why": "no open BACKLOG row; a yes also freezes TZ-3 (a runtime conf.set of the session zone is accepted, warned about, and not applied) and the createDataFrame widening rows"
   },
   {
@@ -101,6 +106,7 @@
    "examples_total": 13,
    "residuals": [],
    "recommend": "YES except `read_excel`, `excel_sheet_names`, `read_postgres`",
+   "decision": "YES except `read_excel`, `excel_sheet_names`, `read_postgres`",
    "why": "the three deferred-connector names are loud refusals (STATUS \"Deferred capabilities\"); the ten local/Iceberg entry points are pinned"
   },
   {
@@ -118,6 +124,7 @@
     "ID-1"
    ],
    "recommend": "YES",
+   "decision": "YES",
    "why": "release.yml re-verifies the callable (and the absence of the alias module) on every tag build"
   },
   {
@@ -208,6 +215,7 @@
     "FA-1"
    ],
    "recommend": "YES except `filter`, `where`, `join`",
+   "decision": "YES except `filter`, `where`, `join`",
    "why": "BL-2 (backticks in a filter string) and G4-3 (conditionless semi/anti join refuses) are open BACKLOG; TY-1/ID-2/FA-1 are DECLARED"
   },
   {
@@ -293,6 +301,7 @@
     "TZ-4"
    ],
    "recommend": "NO",
+   "decision": "NO",
    "why": "eight open BACKLOG rows on the export shape (list field name, pandas cell type, tz annotation) \u2014 the shape is still moving"
   },
   {
@@ -327,6 +336,7 @@
     "TY-2"
    ],
    "recommend": "YES",
+   "decision": "YES",
    "why": "one DECLARED row (fillna nullability); agg/pivot/na/stat pinned on the facade suite"
   },
   {
@@ -385,6 +395,7 @@
     "G12-2"
    ],
    "recommend": "YES except `cast`, `eqNullSafe`",
+   "decision": "YES except `cast`, `eqNullSafe`",
    "why": "G6-4 (cast nullability) and G12-2 (null-safe equal nullability) are open BACKLOG rows on those two members"
   },
   {
@@ -423,6 +434,7 @@
     "WIN-SLIDE"
    ],
    "recommend": "YES except `rangeBetween`, `rowsBetween`",
+   "decision": "YES except `rangeBetween`, `rowsBetween`",
    "why": "WIN-SLIDE: non-retractable aggregates over a sliding frame refuse loudly, pending the retraction work"
   },
   {
@@ -470,6 +482,7 @@
     "NS-2"
    ],
    "recommend": "YES",
+   "decision": "YES",
    "why": "all four residuals are DECLARED statement-surface or field-fidelity rows, not shape movement"
   },
   {
@@ -520,6 +533,7 @@
     "TY-3"
    ],
    "recommend": "YES except `VariantType`",
+   "decision": "YES except `VariantType`",
    "why": "no open BACKLOG row (TZ-6/TZ-7 FIXED 2026-08-13); VariantType is a shell while shredded variant is out of the v1.0 gate"
   },
   {
@@ -549,6 +563,7 @@
     "F-V4-2"
    ],
    "recommend": "YES except `excel`, `jdbc`",
+   "decision": "YES except `excel`, `jdbc`",
    "why": "excel is a deferred connector; jdbc is a coverage exception needing a live database; F-V4-2 is DECLARED"
   },
   {
@@ -594,6 +609,7 @@
     "REF-3"
    ],
    "recommend": "YES",
+   "decision": "YES",
    "why": "no open BACKLOG row; REF-3 (WAP) is DECLARED and rides the SQL door, not these methods"
   },
   {
@@ -694,6 +710,7 @@
    "examples_total": 86,
    "residuals": [],
    "recommend": "YES",
+   "decision": "YES",
    "why": "no registry residual; TA_FUNCTIONS is Tested on both door matrices and the kernels carry their own repark-ta suite"
   },
   {
@@ -736,6 +753,7 @@
    "examples_total": 28,
    "residuals": [],
    "recommend": "YES",
+   "decision": "YES",
    "why": "no registry residual; the pyspark.ml shape ported verbatim with its suite, and delegated backends stay behind the ml-ext extra"
   },
   {
@@ -991,6 +1009,7 @@
     "RE-2"
    ],
    "recommend": "YES except `bit_length`, `octet_length`, `expm1`, `hypot`, `randstr`, `from_unixtime`",
+   "decision": "YES except `bit_length`, `octet_length`, `expm1`, `hypot`, `randstr`, `from_unixtime`",
    "why": "five open BACKLOG rows plus DECLARED RAND-1, all confined to six named members of 234; the other 228 are oracle-pinned"
   },
   {
@@ -1057,6 +1076,7 @@
     "BL-8"
    ],
    "recommend": "NO",
+   "decision": "NO",
    "why": "seven open BACKLOG rows \u2014 rank/row_number/ntile Arrow type, count-like UInt64, float-agg value \u2014 the result types are still moving"
   },
   {
@@ -1133,6 +1153,7 @@
    "examples_total": 62,
    "residuals": [],
    "recommend": "YES",
+   "decision": "YES",
    "why": "every name is a loud refusal by owner ruling (spark-function-parity \u00a78); freezing the refusal, not a behavior"
   },
   {
@@ -1166,6 +1187,7 @@
     "BL-14"
    ],
    "recommend": "YES except `make_date`",
+   "decision": "YES except `make_date`",
    "why": "FN-2 (BACKLOG) make_date NULL under ANSI; BL-14 sits on interval arithmetic, not on these signatures"
   },
   {
@@ -1207,6 +1229,7 @@
     "FN-1"
    ],
    "recommend": "YES except `element_at`",
+   "decision": "YES except `element_at`",
    "why": "FN-1 (BACKLOG) out-of-range element_at is NULL where ANSI Spark raises"
   },
   {
@@ -1235,6 +1258,7 @@
     "BL-13"
    ],
    "recommend": "YES except `try_avg`",
+   "decision": "YES except `try_avg`",
    "why": "BL-13 (BACKLOG) try_avg(INTERVAL) refuses pending FNP-11"
   },
   {
@@ -1264,6 +1288,7 @@
     "WIN-SLIDE"
    ],
    "recommend": "YES",
+   "decision": "YES",
    "why": "the one residual is the declared sliding-frame refusal (D1), not these signatures"
   },
   {
@@ -1302,6 +1327,7 @@
     "BL-6"
    ],
    "recommend": "YES except `bin`, `rint`",
+   "decision": "YES except `bin`, `rint`",
    "why": "BL-6 (BACKLOG) both over-accept BOOLEAN where Spark analysis-refuses"
   },
   {
@@ -1332,6 +1358,7 @@
    "examples_total": 16,
    "residuals": [],
    "recommend": "YES",
+   "decision": "YES",
    "why": "no registry residual; udf/pandas_udf are the sanctioned PY_COMPUTE seam and their classes are the public handle"
   },
   {
@@ -1348,6 +1375,7 @@
     "ENC-1"
    ],
    "recommend": "YES",
+   "decision": "YES",
    "why": "both residuals DECLARED; the two absences (WRITE ORDERED BY, unknown-key refuse) are pinned as the declared set"
   },
   {
@@ -1367,6 +1395,7 @@
     "G3-E8-NULL"
    ],
    "recommend": "YES except `MERGE`",
+   "decision": "YES except `MERGE`",
    "why": "DML-3/4/5 are DECLARED; G3-E8 is an open BACKLOG valve on DELETE/UPDATE subquery predicates"
   },
   {
@@ -1385,6 +1414,7 @@
     "REF-3"
    ],
    "recommend": "YES except `WAP`",
+   "decision": "YES except `WAP`",
    "why": "REF-1/REF-4 closed 2026-09-01; the four residuals are DECLARED, and WAP is still a partial surface"
   },
   {
@@ -1402,6 +1432,7 @@
     "ST-1"
    ],
    "recommend": "YES except `SHOW TABLES IN`",
+   "decision": "YES except `SHOW TABLES IN`",
    "why": "ST-1 is unimplemented; NS-1/NS-2 are DECLARED; the five guards are Tested on both doors"
   },
   {
@@ -1425,6 +1456,7 @@
     "S3T-1"
    ],
    "recommend": "NO",
+   "decision": "NO",
    "why": "nine open rows across argument defaults and scope (remove_orphan_files defaults, rewrite_manifests spec_id, sort); the argument contracts are still moving"
   },
   {
@@ -1440,6 +1472,7 @@
     "ID-1"
    ],
    "recommend": "YES",
+   "decision": "YES",
    "why": "ID-1 is DECLARED (quoted identifiers case-sensitive); the three absences are ALTER partition fields, INSERT OVERWRITE, CALL"
   },
   {
@@ -1462,6 +1495,7 @@
     "BL-12"
    ],
    "recommend": "NO",
+   "decision": "NO",
    "why": "seven open BACKLOG rows (decimal width/nullability, null-safe equal, string literals and escapes) plus DECLARED TY-3"
   },
   {
@@ -1477,6 +1511,7 @@
     "S3T-1"
    ],
    "recommend": "YES except `repark.merge.*`",
+   "decision": "YES except `repark.merge.*`",
    "why": "the three repark.sql keys and both catalog prefixes are user-facing with parse pins; the two merge keys are engine tuning knobs"
   },
   {
@@ -1496,6 +1531,7 @@
     "V3-VARIANT-SHRED-1"
    ],
    "recommend": "NO",
+   "decision": "NO",
    "why": "the v3 track is the open north-star gate; five residuals, two of them dated 2026-09-02"
   },
   {
@@ -1509,6 +1545,7 @@
    "examples_total": null,
    "residuals": [],
    "recommend": "YES",
+   "decision": "YES",
    "why": "every item was settled at the first tag and re-verified per tag; the wheel matrix stays an open item that adds platforms, never renames"
   },
   {
@@ -1524,6 +1561,7 @@
     "FA-3"
    ],
    "recommend": "YES",
+   "decision": "YES",
    "why": "FA-3 is DECLARED (argument wrappers subclass RuntimeError); the class names are defined in Rust and re-exported by identity"
   }
  ]
