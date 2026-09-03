@@ -135,8 +135,8 @@ COVERAGE_ATTESTATION:
       artifacts: [docs/design/v3-statement-coverage.md, python/repark/tests/test_v3_statement_coverage.py]
     - id: AT-2
       status: ATTACKED
-      evidence: All 80 programs were run on both engines and all 255 cells compared before any value was pinned; the 8 cells that first diverged were each re-read to separate a harness artefact (4, repaired) from an engine divergence (7 kept).
-      artifacts: [python/repark/tests/_v3_statement_coverage_golden.py, task/ledgers/staging/v3-cov-statement-coverage-ledger.md]
+      evidence: All 80 programs were run on both engines and all 255 cells compared before any value was pinned; the 14 programs that first diverged were each re-read rather than accepted - 2 defects with a local fix, 3 that were the one V3-COV-3 instability, 2 harness artefacts (a two-file Spark seed and a content-derived snapshot id) and 7 engine divergences kept.
+      artifacts: [python/repark/tests/_v3_statement_coverage_repark.py, python/repark/tests/_v3_statement_coverage_spark.py]
     - id: AT-3
       status: ATTACKED
       evidence: The two repairs were watched red first — the hunks were reverted, the extension rebuilt, both pins observed failing, then the hunks restored and the pins observed green.
