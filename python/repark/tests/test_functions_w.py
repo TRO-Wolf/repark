@@ -195,3 +195,30 @@ def test_ignore_nulls_is_not_a_parameter() -> None:
         F.lead("v", ignoreNulls=True)  # type: ignore[call-arg]
     with pytest.raises(TypeError):
         F.nth_value("v", 1, ignoreNulls=True)  # type: ignore[call-arg]
+
+
+def test_last_ignorenulls_window_divergence_is_pinned(spark: ReparkSession) -> None:
+    """FN-LAST-1: last(ignorenulls) over the ordered unbounded window answers NULL; Spark 3."""
+    frame = spark.createDataFrame(
+        [("a", 1), ("a", 2), ("a", 3), ("a", None), ("b", 4), ("b", 6)],
+        ["k", "v"],
+    )
+    window = (
+        Window.partitionBy("k")
+        .orderBy(F.col("v").asc_nulls_last())
+        .rowsBetween(Window.unboundedPreceding, Window.unboundedFollowing)
+    )
+    table = _table(
+        frame.select(
+            "k",
+            F.first("v").over(window).alias("first_w"),
+            F.last("v").over(window).alias("last_w"),
+            F.last("v", True).over(window).alias("last_ign_w"),
+        ).distinct()
+    )
+    answers = sorted(table.to_pylist(), key=lambda row: row["k"])
+    assert [(row["k"], row["first_w"], row["last_w"]) for row in answers] == [
+        ("a", 1, None),
+        ("b", 4, 6),
+    ]
+    assert [row["last_ign_w"] for row in answers] == [None, 6]

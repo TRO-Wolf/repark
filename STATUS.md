@@ -150,15 +150,16 @@ in published history by explicit decision:
     whose copy-on-write control moved 1.00x; every write-side ratio is cross-run and
     uncontrolled. Numbers:
     [scale-v3-mw7-ledger.md](task/ledgers/archive/2026-09/2026-09-02-scale-v3-mw7-ledger.md) §3.
-  - **The gate is audited (V1-GATE, 2026-09-03):** all twenty north-star §3 rows are ✅ or carry
-    a dated DECLARED residual with a pin (north star §3.1). Still owed, neither a §3 row: an
-    owner line confirming `B-MOR-3`'s DECLARED class, and **V3-COV** — §2 pillar 4's full v3
-    statement-coverage comparison, which no unit discharges; it is first on the slate.
+  - **The gate is audited (V1-GATE, 2026-09-03) and §2 pillar 4 is discharged (**V3-COV**,
+    2026-09-03):** all twenty north-star §3 rows are ✅ or carry a dated DECLARED residual with a
+    pin (§3.1), and the statement matrix is measured — 81 programs, 267 cells, 71 EQUAL, 9 rows
+    filed, 2 FIXED ([v3-statement-coverage.md](docs/design/v3-statement-coverage.md)). One owner
+    line confirming `B-MOR-3`'s DECLARED class now stands between the audit and the tag.
   - **Next:** lineage carry and merge-on-read are complete on every served DML shape
     (`V3-COW-1`, `V3-MOR-1`, `V3-DV-1`, `V3-ROWID-3`, `V3-UPGRADE-DV-1` FIXED); open v3 residuals
-    are `V3-FILEORDER-1` and `F-v3-10-partition-file-order` (fork F-20, RP-8 repins),
+    are `V3-FILEORDER-1` and `V3-COV-3` / `F-v3-10-partition-file-order` (fork F-20, RP-8 repins),
     `V3-UPGRADE-DV-PLAIN-1` and `V3-UPGRADE-DV-PART-1` (dated refusals; fork F-21/F-22, RP-8),
-    `V3-UPGRADE-V4-1`, `G3-E8` and `B-MOR-3`.
+    `V3-COV-4` / `V3-COV-5` / `V3-COV-6`, `V3-UPGRADE-V4-1`, `G3-E8` and `B-MOR-3`.
 <!-- /ws -->
 
 <!-- ws id=perf ledgers=perf- state=open -->

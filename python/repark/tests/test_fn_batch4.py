@@ -181,6 +181,24 @@ def test_percentile_approx_sql_third_arg_is_centroids(spark: ReparkSession) -> N
     assert row["p_c2"] is not None
 
 
+def test_approx_percentile_double_interpolation_divergence_is_pinned(spark: ReparkSession) -> None:
+    """FN-APPROXPCT-1: repark interpolates to DOUBLE where Spark is exact and BIGINT."""
+    frame = spark.createDataFrame(
+        [("a", 1), ("a", 2), ("a", 3), ("a", None), ("b", 4), ("b", 6)],
+        ["k", "v"],
+    )
+    table = frame.select(approx_percentile("v", 0.5).alias("p")).to_arrow()
+    assert table.to_pylist()[0]["p"] == 3.0
+    assert pa.types.is_float64(table.schema.field("p").type)
+    grouped = frame.groupBy("k").agg(approx_percentile("v", 0.5).alias("p")).collect()
+    assert sorted((row["k"], row["p"]) for row in grouped) == [("a", 2.0), ("b", 5.0)]
+    percentile_table = frame.select(percentile_approx("v", 0.5).alias("p")).to_arrow()
+    assert percentile_table.to_pylist()[0]["p"] == 3.0
+    assert pa.types.is_float64(percentile_table.schema.field("p").type)
+    percentile_grouped = frame.groupBy("k").agg(percentile_approx("v", 0.5).alias("p")).collect()
+    assert sorted((row["k"], row["p"]) for row in percentile_grouped) == [("a", 2.0), ("b", 5.0)]
+
+
 def test_batch4_loud_unsupported(spark: ReparkSession) -> None:
     with pytest.raises(UnsupportedOperationException, match="skewness"):
         skewness("x")

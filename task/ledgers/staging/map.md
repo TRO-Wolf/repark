@@ -15,6 +15,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `UnsupportedOperationException`) stay on the backlog with both values recorded. `risk_tier: standard`. Branch
   `feat/ex-10-functions-null-conditional`. Slate:
   [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md).
+- [ex-14-functions-window-ledger.md](ex-14-functions-window-ledger.md) — **EX-14 (2026-09-03), in flight:** the v0.7 example backfill's `F.*` window batch — nine names land in four examples, the backlog ratchet 777 → 768, all nine measured Spark-equal on the live oracle. Branch `feat/ex-14-functions-window`. Slate: [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md).
 - [ex-2-functions-math-bitwise-ledger.md](ex-2-functions-math-bitwise-ledger.md) —
   **EX-2 (2026-09-01), in flight:** the v0.7 example backfill's `F.*` math +
   bitwise family — the campaign pilot. One clause per batch; batch 1 covers
@@ -64,14 +65,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 - [ex-11-functions-hash-url-random-ledger.md](ex-11-functions-hash-url-random-ledger.md) —
 - [ex-8-functions-arrays-ledger.md](ex-8-functions-arrays-ledger.md) —
 - [ex-7-functions-datetime-b-ledger.md](ex-7-functions-datetime-b-ledger.md) —
+- [ex-12-functions-aggregates-a-ledger.md](ex-12-functions-aggregates-a-ledger.md) —
 - [ex-6-functions-datetime-a-ledger.md](ex-6-functions-datetime-a-ledger.md) —
-  **EX-6 (2026-09-03), in flight:** the backfill's `F.*` datetime arithmetic and
-  parts batch — 33 names covered by seven examples, the backlog ratchet −33
-  (723 → 690 as merged); `F.add_months` (measured divergence on a negative
-  offset from a month end, pinned as FN-ADDMONTHS-1) and `F.months_between`
-  (refused, engine gap R-FN-BATCH1) stay on the backlog with both values
-  recorded. `risk_tier: standard`. Branch `feat/ex-6-functions-datetime-a`. Slate:
-  [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md).
-
 ## Pointers
 - Up: [../map.md](../map.md)
