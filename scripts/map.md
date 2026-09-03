@@ -1,5 +1,12 @@
 # map — scripts/
 
+EX-4-functions-strings-a (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE`
+844 → 814 — 30 `F.*` string-basics names covered by eight new examples; four names
+measured against the live oracle as divergent or refused (`F.base64` unpadded vs
+Spark's `U3Bhcms=`/`QQ==`, `F.encode`/`F.decode` charset domain, `F.format_number`
+loud unsupported) and kept on the backlog. Registry BL-17 pins today's `F.base64`.
+pins: ex-4-functions-strings-a/C-001
+
 EX-14 (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE` 696 → 687 (777 → 768 at dispatch) — nine `F.*` window names
 (`row_number`, `rank`, `dense_rank`, `percent_rank`, `cume_dist`, `ntile`, `lag`, `lead`, `nth_value`)
 covered by four new examples (`window_ranking.py`, `window_position.py`, `window_offset.py`,
