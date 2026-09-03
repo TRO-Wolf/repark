@@ -2,7 +2,7 @@
 
 **Retires:** this ledger moves to `../completed/` in the unit's last commit (the orchestrator's departure move). This file closes when EX-7 merges, or when the owner closes the slate row.
 
-**Unit:** EX-7 · **Date:** 2026-09-03 · **Model:** muse-spark-1.2-contributor (batch, continuation of glm-5.3-flash); glm-5.3-flash (remediation) · **Branch:** `feat/ex-7-functions-datetime-b` · **Base:** `a0cd39e` (dispatch base `84c1801`)
+**Unit:** EX-7 · **Date:** 2026-09-03 · **Model:** muse-spark-1.2-contributor (batch, continuation of glm-5.3-flash); glm-5.3-flash (remediations 1–2) · **Branch:** `feat/ex-7-functions-datetime-b` · **Base:** `a0cd39e` (dispatch base `84c1801`)
 **Slate:** [briefs/example-backfill.md](../../../briefs/example-backfill.md), batch roster row batch b (28 names: unix-time, timestamp construction and partition transforms).
 **Ruling:** owner, 2026-08-31, [release-roadmap-2026-08-29.md](../../roadmap/epic-term/release-roadmap-2026-08-29.md) §"v0.7 — Full example documentation".
 
@@ -79,7 +79,7 @@ With the six files present the gate is green.
 
 ## Outcome — 21 kept, 7 dropped (oracle table)
 
-Measured on this tree against live PySpark 4.1.2 + Iceberg 1.11.0 at `/tmp/oc-ex7/.venv/bin/python` with `TZ=UTC` exported before the JVM starts, `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64` and `PYTHONPATH=/tmp/oc-ex7/python/repark/tests` using `_live_parity.build_spark_iceberg_engine(Path(tmpdir)).session` — one throwaway script outside the repo that printed per name the Spark value and the repark value for the same inputs. **The driver `TZ=UTC` is load-bearing**: without it PySpark's `collect()` renders driver-local naive datetimes while repark renders the session zone (measured pair filed in the registry queue), so any run whose driver TZ is not UTC produces false divergences at the collect boundary. Every kept row was equal by repr; dropped rows record both values. Remediation re-measurement 2026-09-03 (GLM 5.3 Flash, same recipe): the four partition-transform value sets, the `try_to_time` refusals, the `F.hours` refusals and the America/New_York `collect()` pair were re-measured on both engines the same way before anything was written.
+Measured on this tree against live PySpark 4.1.2 + Iceberg 1.11.0 at `/tmp/oc-ex7/.venv/bin/python` with `TZ=UTC` exported before the JVM starts, `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64` and `PYTHONPATH=/tmp/oc-ex7/python/repark/tests` using `_live_parity.build_spark_iceberg_engine(Path(tmpdir)).session` — one throwaway script outside the repo that printed per name the Spark value and the repark value for the same inputs. **The driver `TZ=UTC` is load-bearing**: without it PySpark's `collect()` renders driver-local naive datetimes while its `show()` renders the session zone; repark renders the stored UTC instant on both paths (measured triad filed in the registry queue as EX7-TZCOLLECT-1), so any run whose driver TZ is not UTC produces false divergences at the collect boundary. Repark's session zone is not applied on this path: with session zone `America/New_York` it collects `datetime(1970,1,1,0,0)` and shows `1970-01-01 00:00:00`, identical to its UTC output, and its facade schema for `timestamp_seconds` is `string` (an Arrow `timestamp[s]` with no zone) where Spark's is `timestamp` — the divergence that survives this recipe is filed as EX7-SESSIONZONE-1. Every kept row was equal by repr; dropped rows record both values. Remediation re-measurement 2026-09-03 (GLM 5.3 Flash, same recipe): the four partition-transform value sets, the `try_to_time` refusals, the `F.hours` refusals and the America/New_York `collect()` pair were re-measured on both engines the same way before anything was written.
 
 | Name | Spark value (repr) | Repark value (repr) | Disposition | File |
 |---|---|---|---|---|
@@ -93,7 +93,7 @@ Measured on this tree against live PySpark 4.1.2 + Iceberg 1.11.0 at `/tmp/oc-ex
 | F.date_from_unix_date | `[date(1970,1,1), date(1970,1,2), date(1969,12,31), date(2022,1,8), None]` for n=0,1,-1,19000,None | same | kept | epoch.py |
 | F.timestamp_micros | `[datetime(1970,1,1), datetime(2009,2,13,23,31,30,123456), None]` for micros 0, 1234567890123456, None | same | kept | timestamp_from_epoch.py |
 | F.timestamp_millis | `[datetime(1970,1,1), datetime(2009,2,13,23,31,30,123000), datetime(1969,12,31,23,59,59,999000), None]` for millis 0, 1234567890123, -1, None | same | kept | timestamp_from_epoch.py |
-| F.timestamp_seconds | `[datetime(1970,1,1), datetime(2020,1,1), datetime(1969,12,31,23,59,59), None]` for seconds 0, 1577836800, -1, None | same | kept | timestamp_from_epoch.py |
+| F.timestamp_seconds | `[datetime(1970,1,1), datetime(2020,1,1), datetime(1969,12,31,23,59,59), None]` for seconds 0, 1577836800, -1, None | same | kept — value half equal under `TZ=UTC`; the type half diverges (repark facade schema `string`, Spark `timestamp`: EX7-SESSIONZONE-1) | timestamp_from_epoch.py |
 | F.to_date | `[date(2020,1,2), date(2020,1,2), None]` for s="2020-01-02", "2020-01-02 13:45:00", None | same | kept | to_date_timestamp.py |
 | F.to_timestamp | `[datetime(2020,1,2,0,0), datetime(2020,1,2,13,45), None]` for same s | same | kept | to_date_timestamp.py |
 | F.try_to_date | `[date(2020,1,2), None, None]` for s="2020-01-02", "not-a-date", None | same | kept | to_date_timestamp.py |
@@ -118,6 +118,9 @@ the prior session's record). Spark continuation re-measurement (muse-spark, 2026
 2026-09-03T08:24:29Z, end 2026-09-03T08:56:38Z. Cost: the muse-spark leg ended on transport
 deaths (the Spark endpoint stalled mid-round), so the remediation ran on GLM 5.3 Flash; the
 Spark oracle legs run locally at no metered cost; the GLM remediation leg is token-metered only.
+Remediation 2 leg (GLM 5.3 Flash, 2026-09-03) — start 2026-09-03T09:15:34Z, end
+2026-09-03T09:22:16Z (~7 min, docs only; the seven oracle cells re-measured locally at no
+metered cost).
 
 ## Remediation (2026-09-03, GLM 5.3 Flash)
 
@@ -144,6 +147,43 @@ Writable-path note: the remediation brief extended this unit's writable set to t
 section of `docs/spark-sql-iceberg-parity.md` for those two dated queue entries; nothing else
 outside the original set was touched.
 
+## Remediation 2 (2026-09-03, GLM 5.3 Flash)
+
+The re-check passed the record and the values but failed the mechanism the TZ passages state:
+remediation 1 wrote "repark renders the session zone" into the recipe and EX7-TZCOLLECT-1, and
+live measurement contradicts it. Re-measured on both engines before anything was written —
+`F.timestamp_seconds(0)`, one probe per (engine, driver TZ, session zone), `show()` captured:
+
+| Engine | Session zone | Driver TZ | `collect()` repr | `show()` render | Schema |
+|---|---|---|---|---|---|
+| repark | UTC | America/New_York | `datetime(1970,1,1,0,0)` | `1970-01-01 00:00:00` | `string` |
+| repark | America/New_York | America/New_York | `datetime(1970,1,1,0,0)` | `1970-01-01 00:00:00` | `string` |
+| repark | UTC | UTC | `datetime(1970,1,1,0,0)` | `1970-01-01 00:00:00` | `string` |
+| Spark | UTC | America/New_York | `datetime(1969,12,31,19,0)` | `1970-01-01 00:00:00` | `timestamp` |
+| Spark | America/New_York | America/New_York | `datetime(1969,12,31,19,0)` | `1969-12-31 19:00:00` | `timestamp` |
+| Spark | America/New_York | UTC | `datetime(1970,1,1,0,0)` | `1969-12-31 19:00:00` | `timestamp` |
+| Spark | UTC | UTC | `datetime(1970,1,1,0,0)` | `1970-01-01 00:00:00` | `timestamp` |
+
+Fixes, each written from that grid:
+
+- The recipe above and registry queue entry EX7-TZCOLLECT-1 now state the measured mechanism:
+  repark renders the stored UTC instant — identical under either driver TZ and either session
+  zone on this path, never session-zone values — while PySpark's `collect()` renders
+  driver-local naive datetimes and its `show()` renders the session zone. EX7-TZCOLLECT-1 is
+  re-scoped to the true collect-boundary triad (driver TZ `America/New_York`, session zone
+  `UTC`).
+- New registry queue entry EX7-SESSIONZONE-1 holds the gap the `TZ=UTC` recipe does not remove:
+  Spark applies the session zone on `show()` under both driver TZs, repark does not apply it on
+  this path, and the schema half diverges (`string`, an Arrow `timestamp[s]` with no zone, vs
+  Spark's `timestamp`); related to the B-TZ-1 / B-TZ-2 / B-TZ-3 family.
+- The `F.timestamp_seconds` oracle row now notes the type half: values equal under `TZ=UTC`,
+  schema `string` vs `timestamp`, kept.
+
+Provenance: the sandbox denied writes outside the repo tree, so this leg's probe ran as an
+untracked scratch file at the repo root and was deleted before the commit; it touched no tracked
+file. `current_timezone()` measured `America/New_York` on both engines under the New York
+session and `UTC` under UTC.
+
 ## Gates (2026-09-03, on this branch tree)
 
 | Command | Exit |
@@ -168,6 +208,10 @@ re-measured 0 — the static half, `--require-execute`, `make check-map-sync`,
 scripts with `partition_transforms.py` re-run on its new assertions — plus
 `python3 scripts/ledger_lifecycle.py check --base a0cd39e` → 0, and the years→months
 mutation check on `partition_transforms.py` → 1 (red, as required).
+Remediation 2 re-run 2026-09-03 (GLM 5.3 Flash, docs only): `make check-map-sync
+check-ledger-grammar check-ledgers` → 0, `python3 scripts/ledger_lifecycle.py check --base
+a0cd39e` → 0, and the coverage static half → 0 (913 public names; 90 covered; 821 backlog;
+21 examples — unchanged).
 
 Counts line, both legs identical:
 
