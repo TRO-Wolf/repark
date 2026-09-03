@@ -88,13 +88,20 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
 - [date_format.py](date_format.py) — `F.date_format` rendering patterns beside
 - [date_parts_sql.py](date_parts_sql.py) — the SQL field-extraction trio
 - [date_truncation.py](date_truncation.py) — `F.date_trunc` on a timestamp and
-- [case.py](case.py) — `F.lcase`/`F.lower` and `F.ucase`/`F.upper` (alias pairs
+- [case.py](case.py) — `F.lcase`/`F.lower` and `F.ucase`/`F.upper` (alias pairs)
+  on mixed-case words and on Unicode `héllo`/`日本語`/`𝄞ab`/`straße`/`İstanbul`.
 - [concat.py](concat.py) — `F.concat` propagating NULL beside `F.concat_ws`
+  skipping it.
 - [edges.py](edges.py) — `F.left` / `F.right` at a positive width, and the empty
+  answer both give at a negative one.
 - [format.py](format.py) — the printf-style `F.format_string` and its `F.printf`
+  alias, including how a NULL argument renders.
 - [length.py](length.py) — the three length spellings `F.length`,
+  `F.char_length`, `F.character_length`, and `F.ascii`, ASCII and Unicode.
 - [matching.py](matching.py) — `F.contains` / `F.startswith` / `F.endswith`, the
+  1-based positions `F.instr` and `F.locate` (2-arg), and `F.levenshtein`.
 - [padding.py](padding.py) — `F.lpad` / `F.rpad` with truncation, the space
+  strips `F.ltrim` / `F.rtrim` / `F.trim`, `F.btrim`, and a Unicode lpad/btrim row.
 - [unbase64.py](unbase64.py) — `F.unbase64` decoding a base64 string into bytes.
 ## Pointers
 

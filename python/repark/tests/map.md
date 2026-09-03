@@ -57,6 +57,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   codifies today's unpadded `F.base64` (`'Spark'` → `U3Bhcms`, `'A'` → `QQ`) so a
   padded kernel reds the pin; Spark 4.1.2 is `U3Bhcms=` / `QQ==`. Measured by EX-4.
   pins: ex-4-functions-strings-a/C-001
+- [test_fn_initcap_divergence.py](test_fn_initcap_divergence.py) — **FN-INITCAP-1
+  (2026-09-03):** today's `initcap` starts a word at any non-alnum (`'a-b'` → `'A-B'`);
+  Spark 4.1.2 splits on SPACE only (`'A-b'`). pins: ex-4-functions-strings-a/C-001
+- [test_fn_chr_divergence.py](test_fn_chr_divergence.py) — **FN-CHR-1 (2026-09-03):**
+  `chr(300)`/`char(300)` are `'Ĭ'` and `chr(-1)` raises; Spark is `n % 256` and `''`.
+  pins: ex-4-functions-strings-a/C-001
+- [test_fn_trim_chars.py](test_fn_trim_chars.py) — **FN-TRIM-CHARS-1 (2026-09-03):**
+  `F.trim`/`ltrim`/`rtrim` TypeError on a two-arg charset; Spark trims those chars.
+  pins: ex-4-functions-strings-a/C-001
 - [test_fnp7_try_inversions.py](test_fnp7_try_inversions.py) — **FNP-7a/7b:** twelve `try_*`
   inversions. Spark 4.1.2 cells (value and Arrow type) on the two reachable doors (Spark SQL
   + facade Column API). Native ANSI `repark.sql()` does not load SparkExtension: the twelve

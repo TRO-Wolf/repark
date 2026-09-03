@@ -258,6 +258,8 @@ F.bit_xor
 F.bitmap_bit_position
 F.bitmap_bucket_number
 F.bitmap_count
+F.char
+F.chr
 F.corr
 F.covar_pop
 F.covar_samp
@@ -278,6 +280,7 @@ F.hll_union
 F.hll_union_agg
 F.hours
 F.ilike
+F.initcap
 F.input_file_block_length
 F.input_file_block_start
 F.input_file_name

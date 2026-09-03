@@ -55,6 +55,25 @@ def main() -> None:
             print(f"F.{name}: {values!r}")
             if values != expected:
                 raise SystemExit(f"F.{name} values {values!r} != {expected!r}")
+        unicode_frame = repark.createDataFrame(
+            [("héllo",), ("日本語",), ("𝄞ab",), ("straße",), ("İstanbul",)], ["s"]
+        )
+        unicode_rows = unicode_frame.select(
+            F.lpad(F.col("s"), F.lit(8), F.lit("ab")).alias("lpad_ab"),
+            F.btrim(F.col("s"), F.lit("abİ")).alias("btrim_abi"),
+        ).collect()
+        unicode_checked = (
+            (
+                "lpad_ab",
+                ["abahéllo", "ababa日本語", "ababa𝄞ab", "abstraße", "İstanbul"],
+            ),
+            ("btrim_abi", ["héllo", "日本語", "𝄞", "straße", "stanbul"]),
+        )
+        for name, expected in unicode_checked:
+            values = [row[name] for row in unicode_rows]
+            print(f"F.{name}: {values!r}")
+            if values != expected:
+                raise SystemExit(f"F.{name} values {values!r} != {expected!r}")
     finally:
         repark.stop()
 
