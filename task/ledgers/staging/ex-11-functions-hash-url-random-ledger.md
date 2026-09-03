@@ -37,7 +37,17 @@ The roster is the 27 `F.*` hash, URL and random names that were backlog rows at 
 
 ## Red-first (docs/testing.md "Gate provocation proofs")
 
-Captured at the base `84c1801` (before any example file existed). With the 27 roster rows still in `docs/examples/backlog.txt` and `BACKLOG_BASELINE=842`, `python3 scripts/check_example_coverage.py --require-execute` exits **1** with 27 findings, one per roster name and no others. With the five files present, `BACKLOG_BASELINE=822` and the twenty rows removed, the same command exits **0**. The seven dropped names remain backlog rows, so the gate does not name them as uncovered.
+Captured at `a0cd39e` (dispatch base `84c1801`, before any example file
+existed). At that base — 27 roster rows still in `docs/examples/backlog.txt`,
+`BACKLOG_BASELINE=842` — `python3 scripts/check_example_coverage.py` and the
+same with `--require-execute` both exit **0** (`913 public names; 69 covered;
+842 backlog; 2 exceptions; 15 examples`). **Provocation:** delete the 27 roster
+rows from `backlog.txt` and lower `BACKLOG_BASELINE` to 815 (`842 − 27`) with
+no example files present; the same command exits **1** with 27 findings, one
+per roster name and no others. With the five files present, the twenty kept
+names removed and `BACKLOG_BASELINE=822`, the same command exits **0**; the
+seven dropped names remain backlog rows so the gate does not name them as
+uncovered.
 
 ## Oracle (live PySpark 4.1.2 + Iceberg 1.11.0, JDK 17, warehouse `/tmp/oc-ex11-oracle/`)
 
@@ -48,9 +58,9 @@ Measured with `_live_parity.build_spark_iceberg_engine(Path(tmpdir)).session` at
 | `F.md5` | `['5d41402abc4b2a76b9719d911017c592', '5eb63bbbe01eeed093cb22bb8f5acdc3', 'd41d8cd98f00b204e9800998ecf8427e', None]` | same | kept | `hashing.py` | |
 | `F.sha` | `['aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d', '2aae6c35c94fcfb415dbe95f408b9ce91ee846ed', 'da39a3ee5e6b4b0d3255bfef95601890afd80709', None]` | same | kept | `hashing.py` | alias of `sha1`, asserted equal |
 | `F.sha1` | same as `F.sha` | same | kept | `hashing.py` | |
-| `F.sha2` | `256: '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824'`, `512: '9b71d224bd62f3785d96d46ad3ea3d73319bfbc2890caadae2dff72519673ca72323c3d99ba5c11d7c7acc6e14b8c5da0c4663475c2e5c3adef46f73bcdec043...'` | `256: b',\\xf2M\\xba...'` (bytes), `512: UnsupportedOperationException: functions.sha2(numBits=512) only 256 is supported` | **dropped** | — | `sha2(...,256)` Spark hex string vs repark raw bytes; `sha2(...,512)` unsupported |
+| `F.sha2` | SQL `SELECT sha2('hello',256)` Spark hex `2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824` (StringType) and `512` hex `9b71d224...dec043` (StringType); facade `F.sha2(col,256)` Spark same hex string | facade `F.sha2(col,256)` repark raw bytes `b'\x2c\xf2M\xba_\xb0\xa3\x0e&\xe8;*\xc5\xb9\xe2\x9e...'` (BinaryType len 32, hex `2cf24dba...9824`); SQL `SELECT sha2('hello',256)` repark hex string `2cf24...9824` (StringType, matches Spark); facade `512` repark `UnsupportedOperationException: functions.sha2(numBits=512) only 256 is supported`, SQL `512` repark hex `9b71...043` (matches Spark) | **dropped** | — | facade returns raw bytes not hex; SQL door now matches Spark (see `FN-SHA2-1`) |
 | `F.crc32` | `[907060870, 222957957, 0, None]` | same | kept | `hashing.py` | |
-| `F.hash` | `SELECT hash('hello') → -1008564952` | `AnalysisException: Invalid function 'hash'. Did you mean 'tanh'?` | **dropped** | — | no kernel, no JVM hash |
+| `F.hash` | facade `F.hash(col)` / SQL `SELECT hash('hello')` Spark `-1008564952` (Int32) | facade `F.hash(col)` repark `UnsupportedOperationException: functions.hash is not supported yet (engine gap; disclosed R-FN-BATCH1)`; SQL `SELECT hash('hello')` repark `AnalysisException: Invalid function 'hash'. Did you mean 'tanh'?` (nondeterministic `tanh`/`cosh` suggestion) | **dropped** | — | facade refusal is the roster name; SQL door is a separate mis-suggestion |
 | `F.xxhash64` | `[-4367754540140381902, 7620854247404556961, -7444071767201028348, 42]` | same | kept | `hashing.py` | `NULL → 42` (seed) |
 | `F.hex` | `int: ['D','FF','0','FFFFFFFFFFFFFFFF',None]; str: '68656C6C6F'` | same | kept | `hex_binary.py` | |
 | `F.unhex` | `b'hello', None, None` for `68656C6C6F`/`nothex`/NULL | same | kept | `hex_binary.py` | |
@@ -64,11 +74,11 @@ Measured with `_live_parity.build_spark_iceberg_engine(Path(tmpdir)).session` at
 | `F.rand` | `float in [0,1)`, `min~0.01 max~0.99`, `rand(42)` deterministic | same range, deterministic | kept | `random_values.py` | never asserts a value |
 | `F.randn` | `float finite, e.g. -2.5…1.6` | finite | kept | `random_values.py` | shape only |
 | `F.random` | `float in [0,1)` alias of `rand` | same | kept | `random_values.py` | |
-| `F.uniform` | `uniform(2.5,7.5) → float in [2.5,7.5)`; `uniform(NULL,3) → Row(v=None)` | `Execution error: uniform min must be a non-null numeric constant` (raised) | **dropped** | — | constant-only, NULL not tolerated |
-| `F.randstr` | `randstr(8) → length 8 charset 0-9A-Za-z`; `randstr(NULL) → ''` | `Execution error: randstr length must be a non-null integer constant` (raised) | **dropped** | — | constant-only, NULL not tolerated |
+| `F.uniform` | working `uniform(2.5,7.5)` Spark Decimal `2.9` / `3.1` in `[2.5,7.5)` (sampled); NULL arm `uniform(NULL,3)` Spark `Row(v=None)` (via `CAST(NULL AS DOUBLE)`) | working `uniform(2.5,7.5)` repark `float 6.30…` in `[2.5,7.5)` (double, works); NULL arm `F.uniform(CAST(NULL AS DOUBLE), lit 7.5)` / SQL `SELECT uniform(NULL,7.5)` repark `RAISED PySparkException: uniform min must be a non-null numeric constant` | **dropped** | — | working arm works on both; NULL arm: Spark None vs repark raises |
+| `F.randstr` | working `randstr(8)` Spark `chgd2bjB` length 8 charset `0-9A-Za-z`; NULL arm `randstr(NULL)` Spark `''` (empty string) | working `randstr(8)` repark `Lw5jIgey` length 8 charset `0-9A-Za-z` (works); NULL arm `F.randstr(CAST(NULL AS INT))` / SQL `SELECT randstr(NULL)` repark `RAISED PySparkException: randstr length must be a non-null integer constant, got NULL` | **dropped** | — | working arm works on both; NULL arm: Spark '' vs repark raises |
 | `F.try_mod` | `[0, None, -1, None]` for `(6,3),(7,0),(-7,3),(None,3)` | same | kept | `try_fallbacks.py` | |
 | `F.try_to_binary` | `try_to_binary('hello','utf-8')→b'hello'`, `bad-cs→None`, `round_trip hex 68656C6C6F` | same | kept | `hex_binary.py` | Spark and repark both support foldable `fmt`; column-wise `fmt` not exercised |
-| `F.try_to_number` | `lit('123.45','999.99')→Decimal('123.45')`, `lit('$123','$999')→Decimal('123')`, bad format → None | same (lit formats) | kept | `try_fallbacks.py` | column-wise format `try_to_number(col(fmt))` is non-foldable and raises `AnalysisException` on Spark, but repark returns a value — kept only on foldable literals |
+| `F.try_to_number` | foldable `try_to_number('123.45','999.99')` Spark `Decimal('123.45')` (kept) and `'$123','$999'` `Decimal('123')`; column-wise `try_to_number(col('s'), col('f'))` on `[('123.45','999.99')]` Spark `RAISED AnalysisException: [DATATYPE_MISMATCH.NON_FOLDABLE_INPUT]` | foldable same `Decimal('123.45')` (kept); column-wise `F.try_to_number(col('s'), col('f'))` repark `Decimal('12345')` silently (wrong, filed `FN-TRYTONUMBER-1`) | kept (foldable) / dropped (column-wise) | `try_fallbacks.py` | foldable literals kept; column-wise mismatch filed as `FN-TRYTONUMBER-1` |
 | `F.try_reflect` | `try_reflect('no.such.Class',...) → AnalysisException: class no.such.Class not found` (analysis), `try_reflect('java.lang.String','valueOf','hello')→hello` | `UnsupportedOperationException: try_reflect is unreachable: it is reflect with exception-to-NULL, and still needs a live JVM` | **dropped** | — | needs JVM |
 | `F.reflect` | `reflect('java.lang.String','valueOf','hello')→hello` | `UnsupportedOperationException: reflect is unreachable: it is Spark's CallMethodViaReflection spelling of java_method, which needs a live JVM` | **dropped** | — | needs JVM |
 | `F.java_method` | `java_method('java.lang.String','valueOf','hello')→hello` | `UnsupportedOperationException: java_method is unreachable: it loads a Java class by name and invokes a static method by reflection, which needs a live JVM` | **dropped** | — | needs JVM |
@@ -81,7 +91,7 @@ Measured with `_live_parity.build_spark_iceberg_engine(Path(tmpdir)).session` at
 | `python3 scripts/check_example_coverage.py --require-execute` | **0** |
 | `python3 scripts/sync_map_md.py --check` | **0** |
 | `python3 scripts/check_ledger_grammar.py` | **0** |
-| `python3 scripts/ledger_lifecycle.py check --base 84c1801` | **0** |
+| `python3 scripts/ledger_lifecycle.py check --base a0cd39e` | **0** |
 | `uv run --no-sync ruff check docs/examples` | **0** |
 | `uv run --no-sync ruff format --check docs/examples` | **0** |
 
@@ -90,6 +100,25 @@ Counts line (both legs, after `make develop` the native module is importable, ev
 `example-coverage: 913 public names (catalog=28, column=40, dataframe=150, functions=444, io=42, ml=28, session=41, ta=86, types=32, window=22); 89 covered; 822 backlog; 2 exceptions; 20 examples`
 
 Before this unit: `913 public names; 69 covered; 842 backlog; 2 exceptions; 15 examples` (at `84c1801` after LOG1P-1). After: `89 covered; 822 backlog; 20 examples` — exactly the twenty kept names.
+
+## Cost
+
+Throughput in EX-2's shape: GLM leg started 2026-09-03 ~00:45 UTC, produced
+the five example files and the ledger draft, then died on transport errors
+before commit; Muse Spark continuation (~15 min, free tier) measured the
+oracle divergences, repaired the ledger, filed `FN-SHA2-1` and
+`FN-TRYTONUMBER-1` with pins, wrapped the five `map.md` rows, and committed.
+Base `a0cd39e` (dispatch base `84c1801`).
+
+## Registry rows filed
+
+`FN-SHA2-1` (BACKLOG) and `FN-TRYTONUMBER-1` (BACKLOG) in
+`docs/spark-sql-iceberg-parity.md` §7, each with its pin
+(`test_sha2_facade_bytes_divergence_is_pinned` in
+`python/repark/tests/test_fn_batch4.py`, `test_try_to_number_non_foldable_divergence_is_pinned`
+in `python/repark/tests/test_fnp7_try_inversions.py`) and `pins:` citations
+in `python/repark/tests/map.md`. Their current wrong values are pinned so the
+fix reds on purpose.
 
 ## Disk
 

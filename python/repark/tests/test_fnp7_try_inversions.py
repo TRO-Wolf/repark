@@ -168,6 +168,21 @@ def test_try_to_number_bad_format_raises() -> None:
         _sql_arrow("SELECT try_to_number('123', 'not-a-format') AS v")
 
 
+def test_try_to_number_non_foldable_divergence_is_pinned() -> None:
+    """pins: ex-11-functions-hash-url-random/C-001"""
+    spark = _spark()
+    col_input = _arrow(
+        spark.createDataFrame([("123.45", "999.99")], ["s", "f"]).select(
+            F.try_to_number(F.col("s"), F.col("f")).alias("v")
+        )
+    )
+    assert col_input.column("v").to_pylist() == [Decimal("12345")]
+    lit = _arrow(
+        spark.range(1).select(F.try_to_number(F.lit("123.45"), F.lit("999.99")).alias("v"))
+    )
+    assert lit.column("v").to_pylist() == [Decimal("123.45")]
+
+
 def test_try_to_binary_hex_and_failure() -> None:
     """pins: fnp-7-try-inversions/C-006"""
     spark = _spark()
