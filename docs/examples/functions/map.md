@@ -9,6 +9,22 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
 ## Contents
 
 - [abs.py](abs.py) — `F.abs`, `F.col`, `F.lit` on a three-row local frame.
+- [arrays.py](arrays.py) — the array builders and counters: `F.array`, `F.array_repeat`,
+  `F.sequence` (plain and stepped), and `F.size` / `F.cardinality` / `F.array_size` agreeing.
+- [array_edit.py](array_edit.py) — `F.array_append`, `F.array_prepend`, `F.array_remove`,
+  `F.array_compact`: grow, shrink, and clean an array, NULL elements and NULL arrays included.
+- [array_elements.py](array_elements.py) — element access and membership: `F.element_at`,
+  `F.try_element_at` (index spelled `F.lit`, like Spark), `F.get`, `F.slice`,
+  `F.array_contains`.
+- [array_order.py](array_order.py) — `F.sort_array` both directions, the extremes
+  `F.array_max` / `F.array_min`, `F.array_join`, and `F.shuffle` shape-checked.
+- [array_setops.py](array_setops.py) — the set algebra quartet: `F.array_distinct`,
+  `F.array_union`, `F.array_intersect`, `F.array_except`.
+- [explode.py](explode.py) — `F.explode` and `F.explode_outer`: one row per array element,
+  the outer spelling keeping the empty and NULL rows.
+- [higher_order.py](higher_order.py) — the lambda names: `F.exists`, `F.forall`, `F.filter`,
+  `F.transform` (element and index forms), `F.aggregate` (with and without finish),
+  `F.reduce`, `F.zip_with`; an `F.slice` empty array drives the empty-aggregate case.
 - [roots.py](roots.py) — `F.sqrt`, `F.cbrt`, `F.hypot`: the two roots parting
   company on negative input (NaN versus a signed answer), then `hypot` against
   the long form `sqrt(a*a + b*b)`.
@@ -30,26 +46,31 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
   under a positive divisor, `F.greatest` / `F.least` skipping NULLs, `F.width_bucket`.
 - [try_arithmetic.py](try_arithmetic.py) — the `F.try_*` quartet answering NULL on
   overflow and divide-by-zero, ordinary input unchanged.
-- [summarize.py](summarize.py) — `F.count` / `F.count("*")`, `F.sum`, `F.avg` /
-  `F.mean`, `F.median` (an even-count group answers the interpolated middle, not a
-  data value), `F.min` / `F.max`; NULLs skipped by every aggregate.
-- [counting.py](counting.py) — `F.count_if` counts true rows only,
-  `F.countDistinct` / `F.count_distinct` drop NULL from the count (and the tuple),
-  `F.approx_count_distinct` exact on small input.
-- [first_last.py](first_last.py) — `F.first` / `F.last` over an explicitly
-  ordered window, and the `F.first_value` / `F.last_value` aliases answering
-  identically.
-- [booleans.py](booleans.py) — `F.bool_and` / `F.bool_or` with their `F.every` /
-  `F.some` aliases; an all-NULL group answers NULL, not False.
-- [collect.py](collect.py) — `F.collect_list` / `F.array_agg` and the
-  de-duplicating `F.collect_set`; contents compared order-insensitively.
-- [strings_agg.py](strings_agg.py) — `F.listagg` / `F.string_agg` joining a
-  group's values into one delimited string.
-- [grouping.py](grouping.py) — `F.grouping` inside a cube: 1 for the grand-total
-  row, 0 for every member row.
-- [try_aggregates.py](try_aggregates.py) — `F.try_sum` answers NULL when the
-  group's sum overflows; `F.try_avg` averages in double and stays finite.
+- [nulls.py](nulls.py) — the NULL tests `F.isnull` / `F.isnotnull` / `F.equal_null` (two NULLs compare equal) and the substitutions `F.coalesce`, `F.ifnull`, `F.nvl`, `F.nvl2`, `F.nullif`, `F.nullifzero`, `F.nanvl` on rows carrying NULLs, with the NaN literal edges separate.
+- [conditional.py](conditional.py) — `F.when` chains and the bare form, and `F.assert_true` passing, then raising with its message.
+- [columns.py](columns.py) — `F.column`, the constructor spelling that agrees with `F.col`, NULL included.
+- [sort_order.py](sort_order.py) — the six `F.asc*` / `F.desc*` orderings and where each places NULLs.
+- [bitwise.py](bitwise.py) — `F.negate`, the `F.bitwiseNOT` / `F.bitwise_not` alias pair, `F.bit_count`, the bit readers `F.bit_get` / `F.getbit`, and the three shifts.
+- [broadcast.py](broadcast.py) — `F.broadcast`, the join hint (single-node no-op in repark, python/repark/src/repark/spark/functions_session.py:49-56), checked to agree with the plain join.
+- [session_context.py](session_context.py) — `F.current_catalog`, `F.current_database` and `F.current_schema` on a two-row frame.
 
+- [map_parts.py](map_parts.py) — `F.map_keys`, `F.map_values`, `F.map_entries`,
+- [map_shapes.py](map_shapes.py) — `F.map_from_arrays`, `F.map_from_entries`,
+- [map_higher_order.py](map_higher_order.py) — `F.transform_keys`,
+- [structs.py](structs.py) — `F.struct` and `F.named_struct`: fields by column and
+- [hashing.py](hashing.py) — `F.md5`, `F.sha`/`F.sha1` (one digest, two
+- [hex_binary.py](hex_binary.py) — `F.hex` and `F.bin` spelling integers,
+- [random_values.py](random_values.py) — `F.uuid`, `F.rand`, `F.randn`,
+- [url.py](url.py) — the URL codec round trip and `F.parse_url` part
+- [try_fallbacks.py](try_fallbacks.py) — `F.try_mod` by zero and
+- [summarize.py](summarize.py) — `F.count` / `F.count("*")`, `F.sum`, `F.avg` /
+- [counting.py](counting.py) — `F.count_if` counts true rows only,
+- [first_last.py](first_last.py) — `F.first` / `F.last` over an explicitly
+- [booleans.py](booleans.py) — `F.bool_and` / `F.bool_or` with their `F.every` /
+- [collect.py](collect.py) — `F.collect_list` / `F.array_agg` and the
+- [strings_agg.py](strings_agg.py) — `F.listagg` / `F.string_agg` joining a
+- [grouping.py](grouping.py) — `F.grouping` inside a cube: 1 for the grand-total
+- [try_aggregates.py](try_aggregates.py) — `F.try_sum` answers NULL when the
 ## Pointers
 
 - Up: [../map.md](../map.md)

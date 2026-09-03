@@ -87,6 +87,21 @@ def test_sha2_256(spark: ReparkSession) -> None:
     assert table.num_rows == 1
 
 
+def test_sha2_facade_bytes_divergence_is_pinned(spark: ReparkSession) -> None:
+    """pins: ex-11-functions-hash-url-random/C-001"""
+    facade = spark.sql("SELECT 'hello' AS s").select(sha2("s", 256).alias("h")).to_arrow()
+    assert facade.column("h").to_pylist()[0] == bytes.fromhex(
+        "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+    )
+    assert pa.types.is_binary(facade.schema.field("h").type)
+    door = spark.sql("SELECT sha2('hello', 256) AS h").to_arrow()
+    assert (
+        door.column("h").to_pylist()[0]
+        == "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+    )
+    assert pa.types.is_string(door.schema.field("h").type)
+
+
 def test_rand_returns_float(spark: ReparkSession) -> None:
     frame = spark.sql("SELECT 1 AS x")
     table = frame.select(rand().alias("r")).to_arrow()

@@ -34,6 +34,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_bl15_bl16_math_divergences.py](test_bl15_bl16_math_divergences.py) — **BL-15 FIXED
   (LOG1P-1, 2026-09-02):** `F.expm1` is the precise kernel (`math.expm1`); BL-16 hypot
   still overflows to `inf` at extreme magnitude. pins: log1p-1-precise-kernels/C-005
+- [test_fn_arrays_divergence.py](test_fn_arrays_divergence.py) — **EX-8 remediation
+  (2026-09-03):** pins for the four silent array divergences filed in the parity registry
+  §7 — FN-ARRAYPOS-1 (`array_position` not-found is NULL; Spark answers `0`),
+  FN-ARRAYSORT-1 (`array_sort` orders NULLs first; Spark orders them last),
+  FN-ARRAYSOVERLAP-1 (a NULL element answers `False`; Spark answers `NULL`), FN-FLATTEN-1
+  (a NULL sub-array is dropped; Spark answers `NULL`). Each asserts repark's current value,
+  so the fix reds it on purpose.
+  pins: ex-8-functions-arrays/C-001
 - [test_log1p_1.py](test_log1p_1.py) — **LOG1P-1 (2026-09-02):** three-door `log1p` /
   `expm1` pins (Spark SQL, ANSI `repark.sql()`, facade), tiny-arg vs composed form,
   SEM-1 incidentals. Live Spark cell lives in `test_parity_live.py` on the
@@ -47,6 +55,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   overflow is NULL on both signs of the bound; DATE + 0 HOUR stays date (BL-14, recorded).
   pins: fnp-7-try-inversions/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-010, C-011, C-012, C-013, C-014, C-015, C-017, C-018, C-019
+  `test_try_to_number_non_foldable_divergence_is_pinned` holds FN-TRYTONUMBER-1 at the 100-column rule.
+  pins: ex-11-functions-hash-url-random/C-001
 - [test_integer_overflow_parity.py](test_integer_overflow_parity.py) — **F-Y10-1:** integer
   `+` / `-` / `*` overflow shared-raise under default ANSI and Int32/Int64 wrap when
   `ansi=false`, SQL and facade expression (`F` import uses the PySpark N812 noqa).
@@ -1045,7 +1055,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 
 - **octo-extra C1 (2026-07-30):** test_fn_batch1 pins ln/log10 + from_unixtime string type
 
-- `test_fn_batch1.py` — R-FN-BATCH1 scalar wrappers (value+type+null; unsupported loud).
+- `test_fn_batch1.py` — R-FN-BATCH1 scalar wrappers (value+type+null; unsupported loud). pins: ex-10-functions-null-cond-misc/C-001
 - `test_fn_batch4.py` — R-FN-BATCH4 aggregates/stats/hash census; **U2 (2026-08-13):**
   `test_stats_aggregates` VALUES `(1.0),(2.0),(3.0)` are DECIMAL(2,1) — compares go through
   `float()`; **Q1** flips
@@ -1056,6 +1066,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   octo c3 MinMax/MaxAbs NaN-tolerant fit pin;
   octo c7 StringIndexer fit temp-view cleanup pin
   (+ array-percentage STOP seed).
+  `test_sha2_facade_bytes_divergence_is_pinned` holds FN-SHA2-1 at the 100-column rule.
+  pins: ex-11-functions-hash-url-random/C-001
   **FN-APPROXPCT-1 (2026-09-03):** `test_approx_percentile_double_interpolation_divergence_is_pinned`
   codifies the interpolated DOUBLE answer where Spark is exact BIGINT (registry row
   FN-APPROXPCT-1). pins: ex-12-functions-aggregates-a/C-001
