@@ -1043,7 +1043,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 
 - **octo-extra C1 (2026-07-30):** test_fn_batch1 pins ln/log10 + from_unixtime string type
 
-- `test_fn_batch1.py` — R-FN-BATCH1 scalar wrappers (value+type+null; unsupported loud).
+- `test_fn_batch1.py` — R-FN-BATCH1 scalar wrappers (value+type+null; unsupported loud). pins: ex-10-functions-null-cond-misc/C-001
 - `test_fn_batch4.py` — R-FN-BATCH4 aggregates/stats/hash census; **U2 (2026-08-13):**
   `test_stats_aggregates` VALUES `(1.0),(2.0),(3.0)` are DECIMAL(2,1) — compares go through
   `float()`; **Q1** flips
