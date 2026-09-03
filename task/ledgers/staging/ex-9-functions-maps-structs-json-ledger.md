@@ -156,7 +156,7 @@ names nothing else, so the batch's green cannot be borrowed from another name.
 
 ## Oracle (live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03, JDK 17)
 
-Live PySpark 4.1.2 + Iceberg 1.11.0 via `_live_parity.build_spark_iceberg_engine(Path(tmpdir)).session` with `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64` and `PYTHONPATH=/tmp/oc-ex9/python/repark/tests` at `.venv/bin/python`; one throwaway script under `/tmp/oc-ex9-oracle/` prints per name the Spark value and the repark value for the same inputs (inputs in table).
+Live PySpark 4.1.2 + Iceberg 1.11.0 via `_live_parity.build_spark_iceberg_engine(Path(tmpdir)).session` with `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64` and `PYTHONPATH=/tmp/oc-ex9/python/repark/tests` at `.venv/bin/python`; per name the Spark value and the repark value for the same inputs (inputs in table).
 
 | Name | Spark value | Repark value | Kept / Dropped | File |
 |---|---|---|---|---|
@@ -180,21 +180,21 @@ Live PySpark 4.1.2 + Iceberg 1.11.0 via `_live_parity.build_spark_iceberg_engine
 | `F.from_xml` | `{'a':1}` for `'<r><a>1</a></r>'` | `UnsupportedOperationException: functions.from_xml is not supported yet (XML parse kernel deferred; disclosed E1)` | dropped | — |
 | `F.to_xml` | `'<ROW>\n    <a>1</a>\n    <b>hi</b>\n</ROW>'` for `named_struct('a', 1, 'b', 'hi')` | `UnsupportedOperationException: to_xml is reachable without a JVM and is deferred by cost: the xpath family needs an XPath 1.0 engine matching javax.xml.xpath, and datafusion-spark's csv and xml modules are empty. See docs/spark-sql-iceberg-parity.md (FNP-16 CSV/XML/XPath).` | dropped | — |
 | `F.schema_of_xml` | `'STRUCT<a: BIGINT>'` for `'<r><a>1</a></r>'` | `UnsupportedOperationException: functions.schema_of_xml is not supported yet (disclosed E1)` | dropped | — |
-| `F.xpath` | `['1']` | `UnsupportedOperationException: xpath is reachable without a JVM and is deferred by cost: the xpath family needs an XPath 1.0 engine matching javax.xml.xpath, and datafusion-spark's csv and xml modules are empty. See docs/spark-sql-iceberg-parity.md (FNP-16 CSV/XML/XPath).` | dropped | — |
-| `F.xpath_boolean` | `True` for `'r/a = 1'` | same deferred-by-cost refusal | dropped | — |
-| `F.xpath_double` | `1.0` | same deferred-by-cost refusal | dropped | — |
-| `F.xpath_float` | `1.0` | same deferred-by-cost refusal | dropped | — |
-| `F.xpath_int` | `1` | same deferred-by-cost refusal | dropped | — |
-| `F.xpath_long` | `1` | same deferred-by-cost refusal | dropped | — |
-| `F.xpath_number` | `1.0` | same deferred-by-cost refusal | dropped | — |
-| `F.xpath_short` | `1` | same deferred-by-cost refusal | dropped | — |
-| `F.xpath_string` | `'hi'` | same deferred-by-cost refusal | dropped | — |
-| `F.parse_json` | `VariantVal` binary | `UnsupportedOperationException: parse_json is reachable without a JVM and is deferred by cost: Spark VARIANT is a specific value/metadata binary encoding; repark's VariantType is a shell with nothing behind it. See docs/spark-sql-iceberg-parity.md (FNP-16 VARIANT).` | dropped | — |
-| `F.try_parse_json` | `VariantVal` binary | same VARIANT refusal | dropped | — |
-| `F.variant_get` | `1` | same VARIANT refusal (via `parse_json`) | dropped | — |
-| `F.try_variant_get` | `1` | same VARIANT refusal | dropped | — |
+| `F.xpath` | `['1']` for `'<r><a>1</a><b>hi</b></r>'` with path `'r/a/text()'` | `UnsupportedOperationException: xpath is reachable without a JVM and is deferred by cost: the xpath family needs an XPath 1.0 engine matching javax.xml.xpath, and datafusion-spark's csv and xml modules are empty. See docs/spark-sql-iceberg-parity.md (FNP-16 CSV/XML/XPath).` | dropped | — |
+| `F.xpath_boolean` | `True` for `'<r><a>1</a><b>hi</b></r>'` with path `'r/a = 1'` | same deferred-by-cost refusal | dropped | — |
+| `F.xpath_double` | `1.0` for `'<r><a>1</a><b>hi</b></r>'` with path `'r/a'` | same deferred-by-cost refusal | dropped | — |
+| `F.xpath_float` | `1.0` for `'<r><a>1</a><b>hi</b></r>'` with path `'r/a'` | same deferred-by-cost refusal | dropped | — |
+| `F.xpath_int` | `1` for `'<r><a>1</a><b>hi</b></r>'` with path `'r/a'` | same deferred-by-cost refusal | dropped | — |
+| `F.xpath_long` | `1` for `'<r><a>1</a><b>hi</b></r>'` with path `'r/a'` | same deferred-by-cost refusal | dropped | — |
+| `F.xpath_number` | `1.0` for `'<r><a>1</a><b>hi</b></r>'` with path `'r/a'` | same deferred-by-cost refusal | dropped | — |
+| `F.xpath_short` | `1` for `'<r><a>1</a><b>hi</b></r>'` with path `'r/a'` | same deferred-by-cost refusal | dropped | — |
+| `F.xpath_string` | `'hi'` for `'<r><a>1</a><b>hi</b></r>'` with path `'r/b'` | same deferred-by-cost refusal | dropped | — |
+| `F.parse_json` | `VariantVal` for `'{"a": 1}'` | `UnsupportedOperationException: parse_json is reachable without a JVM and is deferred by cost: Spark VARIANT is a specific value/metadata binary encoding; repark's VariantType is a shell with nothing behind it. See docs/spark-sql-iceberg-parity.md (FNP-16 VARIANT).` | dropped | — |
+| `F.try_parse_json` | `VariantVal` for `'{"a": 1}'` | same VARIANT refusal | dropped | — |
+| `F.variant_get` | `1` for `'{"a": 1}'` with path `'$.a'` via `parse_json` | same VARIANT refusal (via `parse_json`) | dropped | — |
+| `F.try_variant_get` | `1` for `'{"a": 1}'` with path `'$.a'` via `parse_json` | same VARIANT refusal | dropped | — |
 | `F.is_variant_null` | `[True, False]` for `parse_json('null'/'1')` | same VARIANT refusal | dropped | — |
-| `F.schema_of_variant` | `'OBJECT<a: BIGINT>'` | same VARIANT refusal | dropped | — |
+| `F.schema_of_variant` | `'OBJECT<a: BIGINT>'` for `'{"a": 1}'` via `parse_json` | same VARIANT refusal | dropped | — |
 | `F.to_variant_object` | `VariantVal` for `struct(lit(1).alias('a'))` (variant binary value/metadata) | `UnsupportedOperationException: to_variant_object is reachable without a JVM and is deferred by cost: Spark VARIANT is a specific value/metadata binary encoding; repark's VariantType is a shell with nothing behind it. See docs/spark-sql-iceberg-parity.md (FNP-16 VARIANT).` | dropped | — |
 
 All kept names were asserted row-for-row against the Spark value above before
@@ -206,7 +206,7 @@ disagreed.
 | Command | Exit |
 |---|---|
 | `python3 scripts/check_example_coverage.py` (static half) | **0** |
-| `python3 scripts/check_example_coverage.py --require-execute` | **0** |
+| `.venv/bin/python scripts/check_example_coverage.py --require-execute` | **0** |
 | `.venv/bin/python docs/examples/functions/map_parts.py` | **0** |
 | `.venv/bin/python docs/examples/functions/map_shapes.py` | **0** |
 | `.venv/bin/python docs/examples/functions/map_higher_order.py` | **0** |
