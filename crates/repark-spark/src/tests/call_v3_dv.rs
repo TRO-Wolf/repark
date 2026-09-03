@@ -1,5 +1,4 @@
 //! pins: v3-5-dv-compaction/C-001, C-002, C-003, C-004
-//! pins: b-mor-3-rewrite-position-deletes-v3/C-002, C-003
 //! Model: Grok 4.6
 //! V3-5: v3 `rewrite_data_files` drops in-scope Puffin DVs and reports the true count.
 //! MUTATION: `removed_delete_files_count == 0` → this REDs.

@@ -2,7 +2,6 @@
 //! pins: v3e-3-partitioned-eqdel-fixtures/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-010, C-011, C-012, C-013
 //! pins: rp-3-fork-repin/C-004, C-007, C-011
 //! pins: v3-5-dv-compaction/C-002, C-003, C-005
-//! pins: b-mor-3-rewrite-position-deletes-v3/C-003
 //! Pins partitioned and equality-delete Spark-written format-v3 fixtures.
 
 use std::fs;

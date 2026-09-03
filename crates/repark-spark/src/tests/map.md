@@ -197,7 +197,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   C-007 measured fork R136 as a parquet-to-DV conversion no-op on DV-only (zeros); B-MOR-3 FIXED 2026-09-03;
   the measurement pin does not write outside the crate
   (pins: rp-3-fork-repin/C-007, C-011)
-  pins: b-mor-3-rewrite-position-deletes-v3/C-003
+  pins: b-mor-3-rewrite-position-deletes-v3/C-003 (2026-09-03: this row, not an inner-doc header in `call_register.rs` / `call_v3_dv.rs` / `v3e3.rs`, is where the B-MOR-3 pins are cited)
   (`Model: Grok 4.6 xHigh`; rustdoc cites C-013).
   **V3-5:** `rewrite_data_files` on the partitioned DV fixture drops both
   vectors (delete-ratio admits each one-file group);

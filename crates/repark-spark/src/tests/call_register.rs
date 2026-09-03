@@ -1,5 +1,4 @@
 //! pins: rp-3-fork-repin/C-007, C-008
-//! pins: b-mor-3-rewrite-position-deletes-v3/C-003
 //! Pins `CALL system.register_table` and adoption of the Spark-written format-v3 fixture.
 
 use std::fs;
