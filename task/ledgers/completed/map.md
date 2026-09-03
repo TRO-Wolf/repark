@@ -9,6 +9,7 @@ else. The next pickup's `make ledger-archive` files everything here under
 
 ## Contents
 - [v3e-3-partitioned-eqdel-fixtures-ledger.md](../archive/2026-08/2026-08-25-v3e-3-partitioned-eqdel-fixtures-ledger.md) — V3E-3 — partitioned + equality-delete v3 fixtures
+- [v3-12-legacy-delete-merge-ledger.md](v3-12-legacy-delete-merge-ledger.md) — Charter ledger — V3-12 · merge a legacy parquet position delete into the deletion vector
 
 ## Pointers
 - Up: [../map.md](../map.md)

@@ -27,11 +27,11 @@ impl SupersededLegacyDeletes {
     }
 }
 
-pub(super) fn is_deletion_vector(delete_file: &DataFile) -> bool {
+fn is_deletion_vector(delete_file: &DataFile) -> bool {
     delete_file.file_format() == DataFileFormat::Puffin
 }
 
-pub(super) fn referenced_data_file_location(delete_file: &DataFile) -> Option<String> {
+fn referenced_data_file_location(delete_file: &DataFile) -> Option<String> {
     if delete_file.content_type() == DataContentType::EqualityDeletes {
         return None;
     }
@@ -163,47 +163,33 @@ async fn read_position_delete_file(
         .read()
         .await
         .map_err(iceberg_err)?;
-    let builder = ParquetRecordBatchReaderBuilder::try_new(bytes).map_err(|error| {
-        DataFusionError::External(Box::new(std::io::Error::other(format!(
-            "legacy position delete `{}`: {error}",
-            delete_file.file_path()
-        ))))
-    })?;
+    let path = delete_file.file_path();
+    let builder = ParquetRecordBatchReaderBuilder::try_new(bytes)
+        .map_err(|error| parquet_err(path, &error))?;
     let arrow_schema = builder.schema().clone();
     let path_index = column_index(
         &arrow_schema,
         RESERVED_FIELD_ID_DELETE_FILE_PATH,
         RESERVED_COL_NAME_DELETE_FILE_PATH,
-        delete_file.file_path(),
+        path,
     )?;
     let pos_index = column_index(
         &arrow_schema,
         RESERVED_FIELD_ID_DELETE_FILE_POS,
         RESERVED_COL_NAME_DELETE_FILE_POS,
-        delete_file.file_path(),
+        path,
     )?;
-    let reader = builder.build().map_err(|error| {
-        DataFusionError::External(Box::new(std::io::Error::other(format!(
-            "legacy position delete `{}`: {error}",
-            delete_file.file_path()
-        ))))
-    })?;
+    let reader = builder.build().map_err(|error| parquet_err(path, &error))?;
     let mut positions = Vec::new();
     for batch in reader {
-        let batch = batch.map_err(|error| {
-            DataFusionError::External(Box::new(std::io::Error::other(format!(
-                "legacy position delete `{}`: {error}",
-                delete_file.file_path()
-            ))))
-        })?;
+        let batch = batch.map_err(|error| parquet_err(path, &error))?;
         let paths = batch
             .column(path_index)
             .as_any()
             .downcast_ref::<StringArray>()
             .ok_or_else(|| {
                 DataFusionError::Internal(format!(
-                    "legacy position delete `{}`: column `{RESERVED_COL_NAME_DELETE_FILE_PATH}` is not Utf8",
-                    delete_file.file_path()
+                    "legacy position delete `{path}`: column `{RESERVED_COL_NAME_DELETE_FILE_PATH}` is not Utf8"
                 ))
             })?;
         let ordinals = batch
@@ -212,8 +198,7 @@ async fn read_position_delete_file(
             .downcast_ref::<Int64Array>()
             .ok_or_else(|| {
                 DataFusionError::Internal(format!(
-                    "legacy position delete `{}`: column `{RESERVED_COL_NAME_DELETE_FILE_POS}` is not Int64",
-                    delete_file.file_path()
+                    "legacy position delete `{path}`: column `{RESERVED_COL_NAME_DELETE_FILE_POS}` is not Int64"
                 ))
             })?;
         for row in 0..batch.num_rows() {
@@ -223,14 +208,19 @@ async fn read_position_delete_file(
             let ordinal = ordinals.value(row);
             let ordinal = u64::try_from(ordinal).map_err(|_| {
                 DataFusionError::Internal(format!(
-                    "legacy position delete `{}`: negative row position {ordinal} for data file `{referenced}`",
-                    delete_file.file_path()
+                    "legacy position delete `{path}`: negative row position {ordinal} for data file `{referenced}`"
                 ))
             })?;
             positions.push(ordinal);
         }
     }
     Ok(positions)
+}
+
+fn parquet_err(delete_path: &str, error: &dyn std::fmt::Display) -> DataFusionError {
+    DataFusionError::External(Box::new(std::io::Error::other(format!(
+        "legacy position delete `{delete_path}`: {error}"
+    ))))
 }
 
 fn column_index(
