@@ -1,6 +1,6 @@
 # map — scripts/
 
-EX-14 (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE` 777 → 768 — nine `F.*` window names
+EX-14 (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE` 723 → 714 (777 → 768 at dispatch) — nine `F.*` window names
 (`row_number`, `rank`, `dense_rank`, `percent_rank`, `cume_dist`, `ntile`, `lag`, `lead`, `nth_value`)
 covered by four new examples (`window_ranking.py`, `window_position.py`, `window_offset.py`,
 `window_nth_value.py`); the live oracle measured all nine Spark-equal, none dropped.
