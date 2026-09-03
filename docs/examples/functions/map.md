@@ -42,6 +42,11 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
 - [map_shapes.py](map_shapes.py) — `F.map_from_arrays`, `F.map_from_entries`,
 - [map_higher_order.py](map_higher_order.py) — `F.transform_keys`,
 - [structs.py](structs.py) — `F.struct` and `F.named_struct`: fields by column and
+- [hashing.py](hashing.py) — `F.md5`, `F.sha`/`F.sha1` (one digest, two
+- [hex_binary.py](hex_binary.py) — `F.hex` and `F.bin` spelling integers,
+- [random_values.py](random_values.py) — `F.uuid`, `F.rand`, `F.randn`,
+- [url.py](url.py) — the URL codec round trip and `F.parse_url` part
+- [try_fallbacks.py](try_fallbacks.py) — `F.try_mod` by zero and
 ## Pointers
 
 - Up: [../map.md](../map.md)

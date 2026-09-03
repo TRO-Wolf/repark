@@ -61,5 +61,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   row lineage the format mandates. §4 answers A12's stated first question — adoption, through
   `register_table`, whose Spark signature is measured there.
 
+- [ex-11-functions-hash-url-random-ledger.md](ex-11-functions-hash-url-random-ledger.md) —
 ## Pointers
 - Up: [../map.md](../map.md)
