@@ -137,14 +137,36 @@ repark-core's error map.
   `write_overwrite_staged_files_from_stream` (positional map + **WI-1** store-assignment gate +
   stream stage) + `commit_overwrite_replace_all` + `parse_overwrite_isolation`
   (absent→snapshot | snapshot | serializable | none | invalid-loud).
-- `partition_overwrite.rs` — **DML-B:** static `PARTITION (k=v)` via
+- `conform.rs` — **V3-COV (2026-09-03):** the `SourceMatch::Unique` arm returns the source array
+  unchanged when its Arrow type already equals the target field's, before the store-assignment
+  check and the cast kernel. This is the bulk-append hot path and the identity case is the common
+  one; the guard and the strict cast still run for every pair that actually differs.
+  pins: v3-cov-statement-coverage/C-004
+- `partition_overwrite.rs` — **V3-COV (2026-09-03):** the module-private `StaticPartitionPlan`
+  resolves the spec
+  bindings and the `PARTITION (k=v)` map ONCE per commit and `stage_static_partition_overwrite_files`
+  streams the batches through it instead of resolving per batch and collecting them all first;
+  `inject_static_partition_columns` stays as the one-batch wrapper. `store_assign_source_column` runs the
+  append path's `refuse_unless_write_store_assignable` and then a strict cast when a source
+  column's Arrow type differs from its target field's, so a `SELECT` source producing
+  DataFusion's view string representation writes instead of failing
+  (`column types must match schema types, expected Utf8 but found Utf8View`); the `VALUES`
+  spelling always worked, which is why DML-B never saw it. Registry `V3-COV-1` FIXED.
+  Streaming moved the injection failure point: a batch whose column will not store-assign now
+  refuses mid-stream, after earlier batches have already been written, where the collect-first
+  shape refused before any file was staged. What that leaves behind is staged data files no
+  commit ever references — the `OverwriteFiles` commit is still all-or-nothing and the table
+  state is untouched either way — so the residue is orphaned files for
+  `remove_orphan_files`, not a partial overwrite.
+  pins: v3-cov-statement-coverage/C-004
+  **DML-B:** static `PARTITION (k=v)` via
   `overwrite_files` / `overwrite_by_row_filter` + `validate_added_files_match_overwrite_filter`
   (pin `commit_rejects_added_file_outside_overwrite_filter`);
   dynamic `PARTITION (k)` / empty `PARTITION ()` via `replace_partitions`; empty-input
   dynamic guard names the three empty-dynamic surfaces (STATIC wipe, writeTo no-op, RePark
   refuse) in its rustdoc and error. `commit_*_to` variants pass `.to_branch`.
   pins: dml-b-insert-overwrite/C-001, C-002, C-004
-  pins: rp-5-fork-repin/C-004
+  pins: rp-5-fork-repin/C-004 V3-COV pins in this file: a view-string source conforms to its Utf8 target instead of failing the rebuild (V3-COV-1); the identity arm hands the same buffer back while a non-assignable pair still refuses.
 - `insert_gate.rs` — **WI-2 (2026-08-15):** `InsertStoreAssignment`, an `AnalyzerRule` over
   `LogicalPlan::Dml(WriteOp::Insert(_))` that runs `store_assign.rs`'s matrix — imported, never
   duplicated — against the pre-cast types in the synthesized projection's INPUT schema. Registered
