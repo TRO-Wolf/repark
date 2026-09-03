@@ -15,11 +15,14 @@ pins: ex-10-functions-null-cond-misc/C-001
 LOG1P-1 (2026-09-02): `check_example_coverage.py` `BACKLOG_BASELINE` 844 → 842 —
 `F.log1p` and `F.expm1` leave the backlog for `docs/examples/functions/logs.py`.
 pins: log1p-1-precise-kernels/C-003
+
 EX-6 batch datetime-a (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE`
-842 → 809 — 33 `F.*` datetime arithmetic and parts names covered by seven new
+777 → 744 after the EX-9/EX-10/EX-11 merge (written 842 → 809 at the dispatch
+base 84c1801) — 33 `F.*` datetime arithmetic and parts names covered by seven new
 examples; `F.add_months` (Spark `2023-07-29` versus repark `2023-07-31` on
-`2024-02-29` minus 7 months) and `F.months_between` (refused, engine gap
-R-FN-BATCH1) were measured against the live oracle and stay on the backlog.
+`2024-02-29` minus 7 months, pinned as FN-ADDMONTHS-1) and `F.months_between`
+(refused, engine gap R-FN-BATCH1) were measured against the live oracle and stay
+on the backlog.
 pins: ex-6-functions-datetime-a/C-001
 API-FREEZE (2026-09-02): `build_api_freeze.py` is new — it reads the answered API-review packet
 and the tree (the `check_example_coverage.py` enumerator for public Python names and their

@@ -1628,7 +1628,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - `test_functions_dates.py` — WG2: `Window`/`row_number` (order, partition restart, Int32 type,
   over-on-non-window error, spec immutability), the `%` operator, and the 13 date functions
   (extractors incl. the `dayofweek` 1=Sunday trap, `last_day`/`add_months` month-end clamp AND the
-  end-of-month-preservation disambiguator (2015-02-28 +1 → 2015-03-31)/`date_add`,
+  FN-ADDMONTHS-1 month-end divergence pin (2015-02-28 +1 → repark 2015-03-31, Spark 2015-03-28,
+  `test_add_months_month_end_divergence_is_pinned`, renamed from
+  `test_add_months_preserves_month_end_into_longer_months` whose comment mislabelled repark's
+  clamp values as Spark's)/`date_add`,
   `date_format` Java patterns + unsupported-letter raise, `trunc`/`date_trunc` granularities + the
   `'Q'`→NULL / format-first cases); `test_parity_*` through the differential core (goldens recorded
   from live PySpark 4.1.2 — pin column name + Arrow type + **field nullability** + bit-exact values;
@@ -1637,6 +1640,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   via `createDataFrame` + `cast(DateType())` (both engines agree; an inline non-null `VALUES (DATE …)`
   spine would pin repark's nullable date-function outputs as "Spark" — cycle-2 C1). Ends with the
   acceptance kernel reproducing the `silver_dim_jobs.py` dim-dates transform shape with exact rows.
+  pins: ex-6-functions-datetime-a/C-001
 - `test_metadata_tables.py` — **I2 / R-METADATA-TABLES** named oracle: Spark
   `cat.ns.tbl.snapshots` (+ history/files/manifests/partitions/refs/entries/
   metadata_log_entries/all_* family) + `spark.table("…files")`; schema pins from fork
