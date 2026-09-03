@@ -5,6 +5,12 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [ex-12-functions-aggregates-a-ledger.md](ex-12-functions-aggregates-a-ledger.md) —
+  **EX-12 batch (2026-09-03), in flight:** the v0.7 example backfill's aggregate
+  (a) family — 30 names dispatched, 27 landed across eight examples, three
+  measured against the live Spark oracle and dropped back to the backlog.
+  `risk_tier: standard`. Branch `feat/ex-12-functions-aggregates-a`. Slate:
+  [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md).
 - [ex-2-functions-math-bitwise-ledger.md](ex-2-functions-math-bitwise-ledger.md) —
   **EX-2 (2026-09-01), in flight:** the v0.7 example backfill's `F.*` math +
   bitwise family — the campaign pilot. One clause per batch; batch 1 covers

@@ -30,6 +30,24 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
   under a positive divisor, `F.greatest` / `F.least` skipping NULLs, `F.width_bucket`.
 - [try_arithmetic.py](try_arithmetic.py) — the `F.try_*` quartet answering NULL on
   overflow and divide-by-zero, ordinary input unchanged.
+- [summarize.py](summarize.py) — `F.count` / `F.count("*")`, `F.sum`, `F.avg` /
+  `F.mean`, `F.median` (an even-count group answers the interpolated middle, not a
+  data value), `F.min` / `F.max`; NULLs skipped by every aggregate.
+- [counting.py](counting.py) — `F.count_if` counts true rows only,
+  `F.countDistinct` / `F.count_distinct` drop NULL from the count (and the tuple),
+  `F.approx_count_distinct` exact on small input.
+- [first_last.py](first_last.py) — `F.first` / `F.last` with the `ignorenulls`
+  switch, and the `F.first_value` / `F.last_value` aliases answering identically.
+- [booleans.py](booleans.py) — `F.bool_and` / `F.bool_or` with their `F.every` /
+  `F.some` aliases; an all-NULL group answers NULL, not False.
+- [collect.py](collect.py) — `F.collect_list` / `F.array_agg` and the
+  de-duplicating `F.collect_set`; contents compared order-insensitively.
+- [strings_agg.py](strings_agg.py) — `F.listagg` / `F.string_agg` joining a
+  group's values into one delimited string.
+- [grouping.py](grouping.py) — `F.grouping` inside a cube: 1 for the grand-total
+  row, 0 for every member row.
+- [try_aggregates.py](try_aggregates.py) — `F.try_sum` answers NULL when the
+  group's sum overflows; `F.try_avg` averages in double and stays finite.
 
 ## Pointers
 

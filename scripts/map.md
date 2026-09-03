@@ -1,5 +1,10 @@
 # map — scripts/
 
+EX-12 batch (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE` 842 → 815 —
+27 `F.*` aggregate names covered by eight new examples; `F.mode` (engine refuses),
+`F.approx_percentile` and `F.percentile_approx` (approximate values diverge from Spark)
+stay on the backlog with both oracle values recorded.
+pins: ex-12-functions-aggregates-a/C-001
 LOG1P-1 (2026-09-02): `check_example_coverage.py` `BACKLOG_BASELINE` 844 → 842 —
 `F.log1p` and `F.expm1` leave the backlog for `docs/examples/functions/logs.py`.
 pins: log1p-1-precise-kernels/C-003
