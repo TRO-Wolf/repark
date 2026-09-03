@@ -47,7 +47,7 @@ names is a row of `docs/examples/backlog.txt`. None has a `COVERS` entry. Removi
 those 33 rows without examples would red the gate with one finding per name; this
 batch closes 27 of those findings and leaves the six measured drops listed.
 
-**As merged** (`887695c` on `origin/main`, this branch at `a70c8f6`): sibling EX
+**As merged** (`887695c` on `origin/main`, this branch at `dc12608`): sibling EX
 batches have already moved the ratchet; this unit's own delta remains 27 names
 (605 → 578). The live counts line is in Gates below.
 
@@ -95,8 +95,7 @@ per-input cells on both engines, 2026-09-03.
 | `F.validate_utf8` | `b ∈ {abc, \\xff, a\\xffb, NULL}` | valid `"abc"`; invalid `IllegalArgumentException INVALID_UTF8_STRING`; NULL `None` | valid `"abc"`; invalid `PySparkException INVALID_UTF8_STRING` (different Python surface); NULL `None` | dropped | — |
 
 `F.elt` is the silent-value drop: out-of-range index is NULL on repark and a hard
-error on Spark. This unit does not write the divergence registry or a pin test
-(writable paths closed; same as EX-2 `F.expm1` / EX-3 `F.log1p`). Reported here
+error on Spark. Round 2 filed it as `FN-ELT-1` with a pin (Registry rows filed below).
 for a later parity unit.
 
 ## Gates
@@ -186,7 +185,7 @@ COVERAGE_ATTESTATION:
       artifacts: [docs/examples/functions/slice.py, docs/examples/functions/like.py]
     - id: AT-6
       status: ATTACKED
-      evidence: Asserted cells are Spark's values at the file's exact inputs; a Spark-disagreeing cell was not written. Backlog ratchet is down-only 844 to 817.
+      evidence: Asserted cells are Spark's values at the file's exact inputs; a Spark-disagreeing cell was not written. Backlog ratchet is down-only, 844 to 817 at dispatch and 605 to 578 as merged.
       artifacts: [docs/examples/backlog.txt, scripts/check_example_coverage.py, docs/spark-sql-iceberg-parity.md]
     - id: AT-7
       status: N/A
