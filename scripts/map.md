@@ -1,15 +1,17 @@
 # map — scripts/
 
-EX-5 (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE` 654 → 627 (844 → 817 at dispatch) — 27 `F.*`
-string-search, slicing, UTF-8 and regex names covered by eight new examples; `F.split`,
-`F.regexp_extract` and `F.sentences` are refused by the engine (disclosed gaps
-R-FN-BATCH1/R-FN-BATCH2), `F.validate_utf8` raises INVALID_UTF8_STRING on both engines
-with a different Python error surface, and `F.replace` is a facade-spelling class
-(bare `str` is a literal here and a column name on PySpark). Remediation filed
-FN-ELT-1, FN-REGEX-POSIX-1 and FN-LIKE-ESCEND-1 (silent divergences, pins in
-`python/repark/tests/test_fn_elt_out_of_range.py`,
-`test_fn_regex_posix_class.py`, `test_fn_like_escape_end.py`).
-pins: ex-5-functions-strings-b-regex/C-001
+EX-4-functions-strings-a (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE`
+632 → 605 as merged (844 → 817 at dispatch) — 27 `F.*` string-basics names covered
+by eight examples; seven names stay on the backlog (`F.base64` BL-17, `F.encode` /
+`F.decode` charset, `F.format_number` loud unsupported, plus critic-round `F.initcap`
+FN-INITCAP-1, `F.chr`/`F.char` FN-CHR-1). `F.trim` two-arg is FN-TRIM-CHARS-1 (loud).
+pins: ex-4-functions-strings-a/C-001
+
+EX-13 (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE` 654 → 632 (777 → 755 at dispatch) — twenty-two
+`F.*` aggregate (b) and statistics names covered by four new examples (`dispersion.py`,
+`covariance.py`, `regression.py`, `bit_aggregates.py`); the two names the engine refuses
+(`F.skewness`, `F.kurtosis`, `UnsupportedOperationException`, R-FN-BATCH4) stay backlog rows,
+both values recorded in the family ledger. pins: ex-13-functions-aggregates-b-stats/C-001
 
 EX-14 (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE` 696 → 687 (777 → 768 at dispatch) — nine `F.*` window names
 (`row_number`, `rank`, `dense_rank`, `percent_rank`, `cume_dist`, `ntile`, `lag`, `lead`, `nth_value`)

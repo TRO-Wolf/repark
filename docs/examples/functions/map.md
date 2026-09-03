@@ -88,6 +88,18 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
 - [date_format.py](date_format.py) — `F.date_format` rendering patterns beside
 - [date_parts_sql.py](date_parts_sql.py) — the SQL field-extraction trio
 - [date_truncation.py](date_truncation.py) — `F.date_trunc` on a timestamp and
+- [dispersion.py](dispersion.py) — `F.std`/`F.stddev`/`F.stddev_samp`, `F.stddev_pop`, and the
+- [covariance.py](covariance.py) — `F.corr`, `F.covar_pop`, `F.covar_samp` over (y, x) pairs,
+- [regression.py](regression.py) — Spark's nine `F.regr_*` linear-regression aggregates over
+- [bit_aggregates.py](bit_aggregates.py) — `F.bit_and`, `F.bit_or`, `F.bit_xor` folding each
+- [case.py](case.py) — `F.lcase`/`F.lower` and `F.ucase`/`F.upper` (alias pairs)
+- [concat.py](concat.py) — `F.concat` propagating NULL beside `F.concat_ws`
+- [edges.py](edges.py) — `F.left` / `F.right` at a positive width, and the empty
+- [format.py](format.py) — the printf-style `F.format_string` and its `F.printf`
+- [length.py](length.py) — the three length spellings `F.length`,
+- [matching.py](matching.py) — `F.contains` / `F.startswith` / `F.endswith`, the
+- [padding.py](padding.py) — `F.lpad` / `F.rpad` with truncation, the space
+- [unbase64.py](unbase64.py) — `F.unbase64` decoding a base64 string into bytes.
 - [slice.py](slice.py) — `F.substr` / `F.substring` at positive and negative positions, and `F.overlay` replacing a slice in place, with and without the length.
 - [split_part.py](split_part.py) — `F.split_part` by one-based and negative part number, and `F.substring_index` by left/right/beyond/zero delimiter count.
 - [translate.py](translate.py) — `F.translate` per-character map, including deleting characters with an empty map; `F.replace` stays on the backlog (facade-spelling class).
@@ -96,7 +108,6 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
 - [utf8.py](utf8.py) — `F.bit_length` / `F.octet_length` byte counts and the invalid UTF-8 trio: `F.is_valid_utf8` tests, `F.make_valid_utf8` repairs with U+FFFD, `F.try_validate_utf8` answers NULL.
 - [regex.py](regex.py) — the `F.regexp` / `F.rlike` / `F.regexp_like` match predicates, `F.regexp_count`, `F.regexp_replace`, `F.regexp_substr`, `F.regexp_instr`, and `F.regexp_extract_all` by capture-group index.
 - [like.py](like.py) — `F.like` wildcards (`%`, `_`) and the backslash escape, with `F.ilike` folding case on the same patterns.
-
 ## Pointers
 
 - Up: [../map.md](../map.md)
