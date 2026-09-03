@@ -464,6 +464,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   row; `nth_value` 1-based; `percent_rank`/`cume_dist` Float64. `ignoreNulls`
   is an honest cut (TypeError). **FN-LAST-1 FIXED 2026-09-03 (FN-FIX-1):**
   `test_last_ignorenulls_window_skips_trailing_null`.
+  Live co-collect `test_live_fn_fix_1_last_and_approx_percentile`.
   pins: fn-fix-1-registry-rows/C-003
 - [test_functions_a.py](test_functions_a.py) — FN-A (2026-08-15): ordering / null /
   math wrappers through `ReparkSession` Arrow `to_arrow()` (value AND type). Alias
