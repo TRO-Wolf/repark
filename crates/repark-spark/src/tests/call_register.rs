@@ -410,7 +410,7 @@ async fn call_register_table_adopts_a_spark_written_v3_table_with_puffin_vectors
 }
 
 #[tokio::test]
-async fn call_rewrite_position_delete_files_refuses_spark_written_puffin_vectors() {
+async fn call_rewrite_position_delete_files_on_spark_written_puffin_vectors_returns_zeros() {
     let fixture = materialize_spark_v3_fixture();
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&warehouse).await;
@@ -425,19 +425,40 @@ async fn call_rewrite_position_delete_files_refuses_spark_written_puffin_vectors
     )
     .await
     .expect("register");
-
-    let err = execute(
+    let live_before = rows(&ctx, &catalogs, "SELECT * FROM ice.sales.sparkv3").await;
+    let ident = TableIdent::from_strs(["sales", "sparkv3"]).unwrap();
+    let catalog = catalogs.get("ice").expect("ice catalog");
+    let table = catalog.load_table(&ident).await.expect("load");
+    let before_vectors = live_deletion_vector_count(&table).await;
+    let batches = execute(
         &ctx,
         &catalogs,
         "CALL ice.system.rewrite_position_delete_files(table => 'sales.sparkv3')",
     )
     .await
-    .expect_err("B-MOR-3: live Puffin vectors must refuse, not return zeros")
-    .to_string();
-    assert!(
-        err.contains("3 live Puffin deletion vector"),
-        "refusal must count the Spark-written vectors: {err}"
+    .expect("DV-only rewrite returns zeros")
+    .collect()
+    .await
+    .expect("collect");
+    let batch = &batches[0];
+    assert_eq!(
+        super::call::call_count(batch, "rewritten_delete_files_count"),
+        0
     );
+    assert_eq!(
+        super::call::call_count(batch, "added_delete_files_count"),
+        0
+    );
+    assert_eq!(super::call::call_count(batch, "rewritten_bytes_count"), 0);
+    assert_eq!(super::call::call_count(batch, "added_bytes_count"), 0);
+    let after = catalog.load_table(&ident).await.expect("reload");
+    assert_eq!(live_deletion_vector_count(&after).await, before_vectors);
+    assert_eq!(before_vectors, 3);
+    assert_eq!(
+        rows(&ctx, &catalogs, "SELECT * FROM ice.sales.sparkv3").await,
+        live_before
+    );
+    assert_eq!(live_before, 37);
 }
 
 #[tokio::test]

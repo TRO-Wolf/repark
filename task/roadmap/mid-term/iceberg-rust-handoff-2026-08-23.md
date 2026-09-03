@@ -300,8 +300,10 @@ for the MW campaign to close (that wait is over — the addendum below).
   CALL is lifted. RP-6 lifts plain-`WHERE` COW/MoR UPDATE and sequential COW DELETE;
   V3-7 lifts MERGE and V3-8 the subquery-`WHERE` COW rewrite (registry `V3-COW-1` FIXED
   2026-09-02).
-- **B-MOR-3** — `RewritePositionDeleteFiles` still refuses live Puffin deletion vectors
-  (OD-2). V3-5 measured that DV compaction is `rewrite_data_files`, not this action.
+- **B-MOR-3** — **FIXED 2026-09-03 (owner ruling: build).** Engine CALL returns Spark's
+  four zeros on a DV-only table and converts an admitted parquet group to one DV per data
+  file. Floor residue `B-MOR-3-FLOOR-1` / proposed F-24: the v3 arm converts below Spark's
+  `min-input-files = 5`. V3-5 measured that DV compaction is `rewrite_data_files`.
 - **V3-DANGLE-1** — **FIXED 2026-08-31 (V3-5).** `RewriteDataFiles` at `33be9a0` drops
   in-scope DVs; engine CALL reports `removed_delete_files_count = 6` on the six-file
   v3 MOR fixture. `where => 'part = 0'` keeps the sibling vector.
@@ -322,10 +324,10 @@ engine's V3-2+ sequencing rather than "when the owner sequences it".
 - **dangling DVs** are compaction's job, not this action's (R137 / V3-DANGLE-1, below).
 
 **Acceptance:** the result exposes the four counts with DVs counted as delete files; the engine's
-B-MOR-3 refusal pin
-(`crates/repark-spark/src/tests/call_register.rs::call_rewrite_position_delete_files_refuses_spark_written_puffin_vectors`)
-retires at the repin, replaced by a Spark-compared pin. **Sequenced after F-13** — the DV write
-path is its prerequisite.
+B-MOR-3 refusal pin retired 2026-09-03, replaced by
+`crates/repark-spark/src/tests/call_register.rs::call_rewrite_position_delete_files_on_spark_written_puffin_vectors_returns_zeros`.
+**Sequenced after F-13** — the DV write path is its prerequisite. Landed. Floor residue
+`B-MOR-3-FLOOR-1` (proposed F-24).
 
 On **V3-DANGLE-1:** *V3-5 (2026-08-31):* RP-4 lifted V3-LINEAGE-1; the engine CALL drops
 in-scope DVs and reports the true count (`removed_delete_files_count = 6` on the

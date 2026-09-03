@@ -243,7 +243,7 @@ is never treated as closed because fork row R166 is green.
 *Done 2026-08-30 — RP-3 at `d408da42`:* cells 1–6 green on all three doors. Cell 7: first COW
 DELETE is Spark-equal; a second after overwrite refuses (`V3-COW-1`, F-rp3-c7). Cell 8: live-DV
 UPDATE refuses. Hadoop writes FIXED (`V3-ADOPT-1`).
-`rewrite_position_delete_files` stays refused (`B-MOR-3`, C-007).
+`rewrite_position_delete_files` refused (`B-MOR-3`, C-007) — FIXED 2026-09-03.
 
 *RP-4 2026-08-31 at `33be9a0`:* `rewrite_data_files` lineage Spark-equal (`V3-LINEAGE-1` FIXED).
 
@@ -278,9 +278,9 @@ closing `F-v3-10-partition-file-order`, and `DvContainerClose::retained_referenc
 - **V3-5:** *Done 2026-08-31.* `rewrite_data_files` on v3 with live Puffin DVs drops
   in-scope vectors (`removed_delete_files_count = 6` on the six-file fixture; `2` on
   V3E-3 partitioned; `where => 'part = 0'` keeps the sibling). `V3-DANGLE-1` FIXED.
-  `B-MOR-3` stays: `rewrite_position_delete_files` still refuses live DVs (zeros would
-  read as already-clean; DV compact is `rewrite_data_files`). F-17 sibling-close pins
-  re-ran green.
+  `B-MOR-3` FIXED 2026-09-03 (owner ruling: build): DV-only CALL returns Spark's
+  four zeros; admitted parquet→DV is one PUFFIN per data file. Floor residue
+  `B-MOR-3-FLOOR-1`. F-17 sibling-close pins re-ran green.
 - **V3-6:** *Done 2026-09-01.* Opt-in v3 CREATE consumes fork `timestamp_ns` /
   `timestamptz_ns` (value+type round-trip on the Spark and ANSI doors, facade schema
   pin, v2 refuses). Engine append fills an omitted column from a schema-carried
@@ -331,11 +331,11 @@ this tree at any format version.
 
 *Step 6 state, dated 2026-09-03 (V3-COV).* All five are done. **V3-COV measured the statement
 matrix on 2026-09-03**: 81 statement programs over 12 statement classes and all seven
-`CALL system.*` procedures, 267 comparison cells, 71 EQUAL, 1 refused by both engines, 9 rows
+`CALL system.*` procedures, 267 comparison cells, 72 EQUAL, 1 refused by both engines, 8 rows
 filed and 2 defects FIXED in the same unit — the matrix is
 [v3-statement-coverage.md](v3-statement-coverage.md) and its harness is
-`python/repark/tests/test_v3_statement_coverage.py`. Step 6 now owes **no engineering item**; the
-one remaining gate item is the owner's `B-MOR-3` line, then the tag. The gate audit itself is
+`python/repark/tests/test_v3_statement_coverage.py`. Step 6 now owes **no engineering item**;
+`B-MOR-3` FIXED 2026-09-03 (owner ruling: build). The gate audit itself is
 [the north star](../../task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md) §3.1.
 
 FNP, TA performance, dbt, and the general correctness backlog may run while the fork lane is
@@ -347,7 +347,7 @@ blocked. They do not replace or delay a ready v3 unit.
    wired `close_touched_dv_containers` on the engine MOR path; matrix cell (4) is green.
 2. **Row lineage through `RewriteDataFiles`** — landed fork #243 (2026-08-31); RP-4 measured
    Spark-equal lineage (`V3-LINEAGE-1` FIXED). V3-5 measured DV-aware compact
-   (`V3-DANGLE-1` FIXED). `B-MOR-3` stays.
+   (`V3-DANGLE-1` FIXED). `B-MOR-3` FIXED 2026-09-03.
 3. **`MetadataLocation` Hadoop pointer math (F-14)** — landed fork #235 (2026-08-28): Hadoop
    `vN` parses and bumps to `v(N+1).metadata.json`; RP-3 retargeted the engine pin (`V3-ADOPT-1` FIXED).
 4. **V3 schema and IO support (F-15)** gates each V3-6 type independently.

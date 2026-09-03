@@ -435,11 +435,10 @@ spark.sql(
 The row set is unchanged — compaction rewrites which files mask the deleted rows, never which
 rows are masked. When there is nothing to compact you get four zeros rather than an error.
 
-On a **format-v3** table this refuses instead of running. Those tables carry Puffin deletion
-vectors rather than Parquet position deletes, and a deletion vector is file-scoped, so there is
-nothing to bin-pack. The refusal names how many it found; it does not return zeros and leave you
-thinking the table was already clean. *(Corrected 2026-09-02, SCALE-v3: this paragraph used to
-say repark writes no v3 delete files itself. Since V3-9 it does — a merge-on-read write on a v3
+On a **format-v3** table whose delete files are already Puffin DVs this returns four zeros —
+Spark's own answer, and there is nothing to convert. An upgraded table that still holds parquet
+position deletes rewrites them to one DV per data file once the group meets Spark's
+min-input-files floor of 5. *(B-MOR-3 FIXED 2026-09-03. SCALE-v3: a merge-on-read write on a v3
 table writes one file-scoped Puffin deletion vector per touched data file, and 10 million rows
 under 50 MERGEs measured 96 of them carrying 10,000,000 delete records, where the v2 twin grew
 400 Parquet position-delete files.)*
@@ -642,13 +641,12 @@ for statement in MAINTENANCE_CYCLE:
     spark.sql(statement).show()
 ```
 
-**On a format-v3 table, drop the first CALL.** `rewrite_position_delete_files` refuses on live
-deletion vectors rather than running
-([B-MOR-3](../spark-sql-iceberg-parity.md#b-mor-3--rewrite_position_delete_files-refuses-live-puffin-deletion-vectors)),
-so a copy-paste of the list above raises on its
-first statement. The v3 cycle is the same list without that line: `rewrite_data_files`,
-`rewrite_manifests`, `expire_snapshots`, `remove_orphan_files`. It loses nothing —
-`rewrite_data_files` reclaims the deletion vectors by itself. Measured at 10 million rows and 50
+**On a format-v3 table the first CALL is a no-op when every delete file is already a Puffin
+DV** — four zeros, vectors stay
+([B-MOR-3](../spark-sql-iceberg-parity.md#b-mor-3--rewrite_position_delete_files-refuses-live-puffin-deletion-vectors)
+FIXED 2026-09-03). Keep it in the list: an upgraded table that still holds parquet position
+deletes converts them to one DV per data file once the group meets Spark's min-input-files
+floor. `rewrite_data_files` still reclaims the DVs themselves. Measured at 10 million rows and 50
 MERGEs on v3: 496 data files and 96 deletion vectors in, `rewritten_data_files_count` 496,
 `removed_delete_files_count` **96**, and 144 data files with **zero** delete files and **zero**
 delete records out

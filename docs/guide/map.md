@@ -81,7 +81,7 @@ illustrative. A claim with no verified basis does not go in.
 
   | Runbook claim | v2 | v3 |
   |---|---|---|
-  | the cycle's first CALL | `rewrite_position_delete_files` folds 400 delete files to 8 | it REFUSES on live DVs (`B-MOR-3`) — drop the line; `rewrite_data_files` reclaims all 96 alone |
+  | the cycle's first CALL | `rewrite_position_delete_files` folds 400 delete files to 8 | four zeros on live DVs (`B-MOR-3` FIXED); `rewrite_data_files` reclaims all 96 |
   | 2x cadence crossing | 19.6 merges (merge 20 already 2.05x) | partition probe between merge 30 and 40; point probe between 40 and 50 |
   | debt trigger | ~157 delete files (`partition` granularity) | the delete-file count plateaus at the data files carrying deletes (96); trigger on delete RECORDS |
   | cycle budget | ~2.5 minutes | ~6 minutes (353.9 s) |

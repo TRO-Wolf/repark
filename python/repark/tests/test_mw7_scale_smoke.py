@@ -622,17 +622,19 @@ def test_v3_cow_leg_keeps_row_lineage(tmp_path: Path) -> None:
         spark.stop()
 
 
-def test_v3_position_delete_compaction_refuses_and_the_sequence_continues(
+def test_v3_position_delete_compaction_returns_zeros_and_the_sequence_continues(
     v3_smoke_run: Any,
 ) -> None:
-    """C-001: `rewrite_position_delete_files` refuses on live DVs (`B-MOR-3`), recorded."""
+    """C-001: rewrite_position_delete_files returns zeros on live DVs."""
     leg = _leg(v3_smoke_run, "mor")
     assert [step.procedure for step in leg.maintenance] == MAINTENANCE_ORDER
-    refused = leg.maintenance[0]
-    assert refused.procedure == "rewrite_position_delete_files"
-    assert refused.result_rows == 0
-    assert "Puffin deletion vector" in refused.refusal, refused.refusal
-    assert [step.refusal for step in leg.maintenance[1:]] == ["", "", "", ""]
+    first = leg.maintenance[0]
+    assert first.procedure == "rewrite_position_delete_files"
+    assert first.result_rows == 1
+    assert first.refusal == ""
+    assert first.result_first_row["rewritten_delete_files_count"] == 0
+    assert first.result_first_row["added_delete_files_count"] == 0
+    assert [step.refusal for step in leg.maintenance] == ["", "", "", "", ""]
     assert leg.maintenance[1].result_first_row["rewritten_data_files_count"] > 0
     assert leg.after_maintenance.row_count == SMOKE_ROWS
     cow = _leg(v3_smoke_run, "cow")

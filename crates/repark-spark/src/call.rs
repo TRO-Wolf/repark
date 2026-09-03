@@ -265,15 +265,6 @@ fn expire_result_dataframe(ctx: &SessionContext, report: &CleanupReport) -> Resu
 
 // === rewrite_position_delete_files ===
 
-/// Count the live Puffin deletion vectors in the table's CURRENT snapshot.
-pub(crate) async fn count_live_deletion_vectors(table: &iceberg::table::Table) -> Result<usize> {
-    iceberg::live_deletion_vectors_by_data_file(table)
-        .await
-        .map(|vectors| vectors.len())
-        .map_err(iceberg_err)
-}
-
-/// Return Spark's four measured columns.
 async fn execute_rewrite_position_delete_files(
     ctx: &SessionContext,
     catalog: Arc<dyn Catalog>,
@@ -301,18 +292,6 @@ async fn execute_rewrite_position_delete_files(
     let table_arg = args.require_string("table", 0)?;
     let ident = resolve_table_ident(catalog_name, &table_arg)?;
     let table = catalog.load_table(&ident).await.map_err(iceberg_err)?;
-
-    // Refuse rather than under-report.
-    let vectors = count_live_deletion_vectors(&table).await?;
-    if vectors > 0 {
-        return Err(DataFusionError::NotImplemented(format!(
-            "CALL rewrite_position_delete_files found {vectors} live Puffin deletion vector(s) on \
-             `{table_arg}` and will not report a partial result. Fork R136's v3 arm converts \
-             parquet position deletes into Puffin DVs; it does not compact live DVs. Running \
-             anyway returns four zeros on a DV-only table, which reads as already-clean. \
-             B-MOR-3 stays."
-        )));
-    }
 
     let result = RewritePositionDeleteFiles::new(table)
         .execute(catalog.as_ref())
