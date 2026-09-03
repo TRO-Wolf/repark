@@ -29,6 +29,23 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
   under a positive divisor, `F.greatest` / `F.least` skipping NULLs, `F.width_bucket`.
 - [try_arithmetic.py](try_arithmetic.py) — the `F.try_*` quartet answering NULL on
   overflow and divide-by-zero, ordinary input unchanged.
+- [case.py](case.py) — `F.lcase`/`F.lower` and `F.ucase`/`F.upper` (alias pairs
+  shown agreeing) and `F.initcap`, on mixed-case words, an empty string, NULL.
+- [concat.py](concat.py) — `F.concat` propagating NULL beside `F.concat_ws`
+  skipping it.
+- [edges.py](edges.py) — `F.left` / `F.right` at a positive width, and the empty
+  answer both give at a negative one.
+- [format.py](format.py) — the printf-style `F.format_string` and its `F.printf`
+  alias, including how a NULL argument renders.
+- [length.py](length.py) — the three length spellings `F.length`,
+  `F.char_length`, `F.character_length`, the first code point `F.ascii`, and the
+  inverse pair `F.chr` / `F.char`.
+- [matching.py](matching.py) — `F.contains` / `F.startswith` / `F.endswith`, the
+  1-based positions `F.instr` and `F.locate`, and `F.levenshtein` edit distance.
+- [padding.py](padding.py) — `F.lpad` / `F.rpad` with truncation, the space
+  strips `F.ltrim` / `F.rtrim` / `F.trim`, and `F.btrim`, which names its
+  characters.
+- [unbase64.py](unbase64.py) — `F.unbase64` decoding a base64 string into bytes.
 
 ## Pointers
 

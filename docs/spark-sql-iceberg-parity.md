@@ -2681,6 +2681,21 @@ the pin rather than obeying it.
 - **Rationale** — BACKLOG, filed 2026-09-01. Same FNP numerics unit as BL-15; overflow-safe
   hypot is a standard rescale.
 
+### BL-17 — `base64` omits RFC 4648 padding
+
+- **repark** — `F.base64` on UTF-8 bytes of `'Spark'` / `'A'` / `''` / NULL returns
+  `U3Bhcms`, `QQ`, `''`, NULL. Lengths that are already a multiple of three match Spark
+  (`'Apache'` → `QXBhY2hl`). Binary input agrees with the string path. The encoder is
+  unpadded (`base64`, not `base64pad`).
+- **Apache Spark** — RFC 4648 padded: `'Spark'` → `U3Bhcms=`, `'A'` → `QQ==`, `'Apache'` →
+  `QXBhY2hl`, empty and NULL unchanged. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0,
+  2026-09-03, EX-4 string-basics batch; same values on a string column and a binary column.)*
+- **Pin** — `python/repark/tests/test_bl17_base64_padding.py::test_bl17_base64_omits_rfc4648_padding_today`
+  (asserts today's unpadded answers so a padded kernel reds the pin on purpose).
+- **Rationale** — BACKLOG, filed 2026-09-03 from the EX-4 measurement. The name stays on the
+  example backlog until the encoder emits Spark's padding; teaching the unpadded form would
+  assert a silent wrong answer.
+
 ### WIN-SLIDE — non-retractable aggregates over a sliding frame (W-0, 2026-08-31)
 
 Spark evaluates an aggregate over `ROWS BETWEEN n PRECEDING AND CURRENT ROW` even when the

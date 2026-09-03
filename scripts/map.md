@@ -1,5 +1,11 @@
 # map — scripts/
 
+EX-4-functions-strings-a (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE`
+844 → 814 — 30 `F.*` string-basics names covered by eight new examples; four names
+measured against the live oracle as divergent or refused (`F.base64` unpadded vs
+Spark's `U3Bhcms=`/`QQ==`, `F.encode`/`F.decode` charset domain, `F.format_number`
+loud unsupported) and kept on the backlog. Registry BL-17 pins today's `F.base64`.
+pins: ex-4-functions-strings-a/C-001
 EX-3 batch 2 (2026-09-02): `check_example_coverage.py` `BACKLOG_BASELINE` 881 → 844 —
 37 `F.*` trig, log, rounding and try-arithmetic names covered by six new examples;
 `F.log1p` measured divergent against the live oracle at `x = 1e-10` and `x = 1e-13` and kept on the

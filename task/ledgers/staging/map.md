@@ -14,6 +14,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   for existing. `risk_tier: standard`. Branch
   `feat/ex-2-functions-math-bitwise`. Slate:
   [../briefs/example-backfill.md](../../../briefs/example-backfill.md).
+- [ex-4-functions-strings-a-ledger.md](ex-4-functions-strings-a-ledger.md) — **EX-4 (2026-09-03),
+  in flight:** the v0.7 example backfill's `F.*` string-basics family, batch a. 30 of 34
+  dispatched names land in eight examples; the four measured divergent or refused stay on the
+  backlog with both values recorded. `F.base64` is registry BL-17. `risk_tier: standard`.
+  Branch `feat/ex-4-functions-strings-a`. Slate:
+  [../briefs/example-backfill.md](../../../briefs/example-backfill.md).
 - [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's
   scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike
   evidence behind it; C-007 (the four sub-project families) was closed by ruling D-7 on
