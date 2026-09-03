@@ -9,7 +9,7 @@ live harness, docs).
 §2 pillar 4 — discharged here.
 **Matrix:** [../../../docs/design/v3-statement-coverage.md](../../../docs/design/v3-statement-coverage.md).
 
-**Retires:** this ledger moves to `../completed/` in this unit's last commit.
+**Retired:** filed here in this unit's last commit.
 
 ## 1. Scope, as checkable propositions
 
@@ -20,7 +20,7 @@ live harness, docs).
 | C-003 | Every cell is measured on both engines before anything is pinned | **PROVEN** | measured 2026-09-03 on live PySpark 4.1.2 + Iceberg 1.11.0; the golden is that measurement, and §4's two fixes were watched red first |
 | C-004 | Every DIVERGES cell is a registry row with a pin | **PROVEN** | 3 cited (`DML-1`, `G3-E8` ×2, `B-MOR-3`), 4 filed (`V3-COV-3`…`V3-COV-6`), 2 FIXED (`V3-COV-1`, `V3-COV-2`) |
 | C-005 | The north star, the v3 track and STATUS carry the dated discharge | **PROVEN** | §2 pillar 4 discharged; Step 6 state line dated 2026-09-03 (V3-COV); STATUS 24,882 B; `test_v3_cov_docs.py` + the re-pinned `test_v1_gate_docs.py` |
-| C-006 | Maps in lockstep; this ledger files last | **PROVEN** | every touched `map.md` moved in the same commit; the ledger moves to `../completed/` in the last commit |
+| C-006 | Maps in lockstep; this ledger files last | **PROVEN** | every touched `map.md` moved in the same commit; this ledger filed into `completed/` in the last commit |
 
 ## 2. Method
 

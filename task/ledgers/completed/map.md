@@ -20,6 +20,12 @@ else. The next pickup's `make ledger-archive` files everything here under
   line still pending (ERRATA-A), and §2 pillar 4's full v3 statement coverage is recorded as
   **not discharged** with the evidence for that reading (ERRATA-B) and queued as V3-COV.
   `risk_tier: standard`. Branch `docs/v1-gate-audit`.
+- [v3-cov-statement-coverage-ledger.md](v3-cov-statement-coverage-ledger.md) —
+  **V3-COV (2026-09-03), delivered:** the full v3 statement-coverage comparison against PySpark
+  that discharges the north star's §2 pillar 4 — 80 programs, 254 cells, 72 EQUAL, 7 rows filed,
+  2 defects FIXED red-first. `risk_tier: standard`. Branch `feat/v3-cov-statement-coverage`.
+  Matrix: [../../../docs/design/v3-statement-coverage.md](../../../docs/design/v3-statement-coverage.md).
+  Carries one RULING (`V3-COV-3`, the delegated partitioned INSERT's unstable `_row_id`).
 
 ## Pointers
 - Up: [../map.md](../map.md)

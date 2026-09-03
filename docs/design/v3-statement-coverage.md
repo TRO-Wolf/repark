@@ -2,7 +2,7 @@
 
 **Measured 2026-09-03 · V3-COV · base `a0cd39e` · oracle live PySpark 4.1.2 + Iceberg 1.11.0
 (`JAVA_HOME=/usr/lib/jvm/zulu-17-amd64`, `REPARK_PARITY_LIVE=1`) ·
-ledger [`task/ledgers/staging/v3-cov-statement-coverage-ledger.md`](../../task/ledgers/staging/v3-cov-statement-coverage-ledger.md)**
+ledger [`task/ledgers/completed/v3-cov-statement-coverage-ledger.md`](../../task/ledgers/completed/v3-cov-statement-coverage-ledger.md)**
 
 This document discharges [the v1.0 north star](../../task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md)
 §2 pillar 4 — *full statement-coverage comparison against PySpark on v3 tables*. It is the
