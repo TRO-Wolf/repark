@@ -1,5 +1,9 @@
 """Demonstrate ``F.broadcast``: the join hint marking the small side of a join.
 
+In repark the hint is a documented single-node no-op
+(python/repark/src/repark/spark/functions_session.py:49-56): the hinted join
+returns the same rows as the plain join.
+
 pins: ex-10-functions-null-cond-misc/C-001
 """
 

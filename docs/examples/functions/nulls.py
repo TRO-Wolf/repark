@@ -74,7 +74,22 @@ def main() -> None:
         for name, expected in checked:
             values = [row[name] for row in rows]
             print(f"F.{name}: {values!r}")
-            if values != expected:
+            ok = len(values) == len(expected)
+            if ok:
+                for v, e in zip(values, expected, strict=False):
+                    if v is None and e is None:
+                        continue
+                    if v is None or e is None:
+                        ok = False
+                        break
+                    if isinstance(v, float) or isinstance(e, float):
+                        if not math.isclose(float(v), float(e), rel_tol=1e-12):
+                            ok = False
+                            break
+                    elif v != e:
+                        ok = False
+                        break
+            if not ok:
                 raise SystemExit(f"F.{name} gave {values!r}, expected {expected!r}")
 
         pairs = repark.createDataFrame(

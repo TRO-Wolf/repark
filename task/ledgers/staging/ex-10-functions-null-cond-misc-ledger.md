@@ -5,7 +5,7 @@
 family PR merges, or when the owner closes the slate row.
 
 **Unit:** EX-10 · **Date:** 2026-09-03 · **Model:** muse-spark-1.2-contributor (continuation of glm-5.3-flash) ·
-**Branch:** `feat/ex-10-functions-null-conditional` · **Base:** `84c1801`
+**Branch:** `feat/ex-10-functions-null-conditional` · **Base:** `84c1801` · **Wall-clock:** 2026-09-03 03:10–03:55 UTC · **Cost:** ~$0.40
 **Slate:** [briefs/example-backfill.md](../../../briefs/example-backfill.md),
 batch roster row EX-10. **Ruling:** owner, 2026-08-31,
 [release-roadmap-2026-08-29.md](../../roadmap/epic-term/release-roadmap-2026-08-29.md)
@@ -125,12 +125,12 @@ A name whose repark value differs from Spark, or that repark refuses, is dropped
 | `F.nullif` | `[1, null, null, 3]` / `[null, 0, null, 3]` | same | kept | `nulls.py` |
 | `F.nullifzero` | `[1, null, null, 3]` | same | kept | `nulls.py` |
 | `F.zeroifnull` | `[1, 0, 0, 3]` | same | kept | `nulls.py` |
-| `F.isnan` | Spark: `true` on NaN, `false` on null; repark: diverges (NaN handling differs) | diverges | dropped | — |
+| `F.isnan` | `[False, False]` on `[1.0, NULL]` (non-nullable `bool` `IsNaN`); `true` on NaN | `[False, None]` on `[1.0, NULL]` (nullable `bool`, DataFusion `isnan` null-propagates; `crates/repark-python/src/column/function_dispatch.rs:282`); `true` on NaN | dropped — BACKLOG `FN-ISNAN-1` | — |
 | `F.isnull` | `[false, false, true, false]` | same | kept | `nulls.py` |
 | `F.isnotnull` | `[true, true, false, true]` | same | kept | `nulls.py` |
 | `F.nanvl` | `[2.5, null, 4.0, null]` / `-1.0` on NaN | same | kept | `nulls.py` |
 | `F.when` | `["odd", "even", "missing"]` and `[null, "big", null]` | same | kept | `conditional.py` |
-| `F.expr` | `repark refuses: unsupported expression string` | refused | dropped | — |
+| `F.expr` | `F.expr('1 + 1')` → `[2, 2]`, `F.expr("upper('ab')")` → `['AB','AB']` Spark-equal; `F.expr('d * 2')` on `[1.0, NULL]` → `[2.0, None]` | `F.expr('1 + 1')` → `[2, 2]`, `F.expr("upper('ab')")` → `['AB','AB']` Spark-equal; `F.expr('d * 2')` → `AnalysisException: Schema error: No field named d` (residual `docs/spark-sql-iceberg-parity.md` ~L1087 TZ-5 §5 `F.expr over a column reference`) | dropped | — |
 | `F.column` | `[1, 2, null]` | same | kept | `columns.py` |
 | `F.asc` | `[null, null, 1, 2]` | same | kept | `sort_order.py` |
 | `F.asc_nulls_first` | `[null, null, 1, 2]` | same | kept | `sort_order.py` |
@@ -140,20 +140,20 @@ A name whose repark value differs from Spark, or that repark refuses, is dropped
 | `F.desc_nulls_last` | `[2, 1, null, null]` | same | kept | `sort_order.py` |
 | `F.equal_null` | `[true, false, false, true]` and `[true, false, true, false]` | same | kept | `nulls.py` |
 | `F.assert_true` | passes `[null, null]`, fails raises `x must exceed 2` | same | kept | `conditional.py` |
-| `F.raise_error` | `repark refuses: not implemented` | refused | dropped | — |
-| `F.broadcast` | `[(1,"a","x"), (3,"c","y")]` equals plain join | same | kept | `broadcast.py` |
-| `F.spark_partition_id` | `repark refuses: partition id not exposed local` | refused | dropped | — |
-| `F.monotonically_increasing_id` | `repark refuses: not deterministic local` | refused | dropped | — |
-| `F.input_file_name` | `repark refuses: no file scan input` | refused | dropped | — |
-| `F.input_file_block_length` | `repark refuses: no file scan input` | refused | dropped | — |
-| `F.input_file_block_start` | `repark refuses: no file scan input` | refused | dropped | — |
+| `F.raise_error` | `raise_error(lit('boom'))` raises `SparkRuntimeException: [USER_RAISED_EXCEPTION] boom` | `UnsupportedOperationException: functions.raise_error evaluation is not supported yet (engine raise kernel deferred; disclosed E1)` | dropped | — |
+| `F.broadcast` | `[(1,"a","x"), (3,"c","y")]` equals plain join | same (single-node no-op `python/repark/src/repark/spark/functions_session.py:49-56`) | kept | `broadcast.py` |
+| `F.spark_partition_id` | `[0, 0]` on `local[1]` two-row frame (`[0, 1]` on `local[2]`) | `UnsupportedOperationException: functions.spark_partition_id is not supported yet (single-node disclosed; R-FN-BATCH4)` | dropped | — |
+| `F.monotonically_increasing_id` | `[0, 1]` on `local[1]` two-row frame (`[0, 8589934592]` on `local[2]`) | `UnsupportedOperationException: functions.monotonically_increasing_id is not supported yet (single-node semantics disclosed; R-FN-BATCH4)` | dropped | — |
+| `F.input_file_name` | `['', '']` on `local[1]` non-file frame | `UnsupportedOperationException: functions.input_file_name is not supported yet (disclosed R-FN-BATCH4)` | dropped | — |
+| `F.input_file_block_length` | `[-1, -1]` on `local[1]` non-file frame | `UnsupportedOperationException: input_file_block_length is unreachable: it reads Spark's InputFileBlockHolder thread-local, populated by HadoopRDD/FileScanRDD as a split is handed to a task. DataFusion has no equivalent surface, and repark's input_file_name is itself still a stub. See docs/spark-sql-iceberg-parity.md (FNP-15 input_file_block_length).` | dropped | — |
+| `F.input_file_block_start` | `[-1, -1]` on `local[1]` non-file frame | `UnsupportedOperationException: input_file_block_start is unreachable: it reads Spark's InputFileBlockHolder thread-local, populated by HadoopRDD/FileScanRDD as a split is handed to a task. DataFusion has no equivalent surface, and repark's input_file_name is itself still a stub. See docs/spark-sql-iceberg-parity.md (FNP-15 input_file_block_start).` | dropped | — |
 | `F.current_catalog` | `["spark_catalog","spark_catalog"]` | same | kept | `session_context.py` |
 | `F.current_database` | `["default","default"]` | same | kept | `session_context.py` |
 | `F.current_schema` | `["default","default"]` | same | kept | `session_context.py` |
-| `F.current_user` | Spark: user string; repark: diverges / empty | diverges | dropped | — |
-| `F.user` | Spark: user string; repark: diverges / empty | diverges | dropped | — |
-| `F.session_user` | Spark: user string; repark: diverges / empty | diverges | dropped | — |
-| `F.version` | Spark: version string; repark: diverges | diverges | dropped | — |
+| `F.current_user` | `['john','john']` on `local[1]` (OS user `john`) | `['repark','repark']` deliberate `repark` identity (`python/repark/src/repark/spark/functions_session.py:65-70` ADR-0004) | dropped | — |
+| `F.user` | `['john','john']` on `local[1]` | `['repark','repark']` deliberate same as `current_user` (`python/repark/src/repark/spark/functions_session.py:76` `user = current_user`) | dropped | — |
+| `F.session_user` | `['john','john']` on `local[1]` | `['repark','repark']` deliberate same identity (`python/repark/src/repark/spark/functions_session.py:77` `session_user = current_user`) | dropped | — |
+| `F.version` | `['4.1.2 f0bb2e6a47d0ebda424ffd633fcea8644a597954', '4.1.2 f0bb2e6a47d0ebda424ffd633fcea8644a597954']` | `['repark-0.6.0','repark-0.6.0']` deliberate `repark-<pep440>` (`python/repark/src/repark/spark/functions_session.py:110-115`) | dropped | — |
 | `F.negate` | `[-5, 5, 0, null]` | same | kept | `bitwise.py` |
 | `F.bitwiseNOT` | `[-6, 4, -1, null]` | same | kept | `bitwise.py` |
 | `F.bitwise_not` | same as `F.bitwiseNOT` | same | kept | `bitwise.py` |
@@ -251,7 +251,7 @@ COVERAGE_ATTESTATION:
       justification: Findings print to stderr; no new log/metric surface.
     - id: AT-10
       status: ATTACKED
-      evidence: Pin file cites C-001 of this unit alongside EX-0/EX-1/EX-2 clauses.
-      artifacts: [python/repark-parity/tests/test_ex_0_example_coverage.py, docs/examples/functions/nulls.py]
+      evidence: Example modules carry pins ex-10-functions-null-cond-misc/C-001; registry FN-ISNAN-1 and test_fn_batch1.py pin C-001 of this unit.
+      artifacts: [docs/examples/functions/nulls.py, docs/examples/functions/broadcast.py, docs/spark-sql-iceberg-parity.md, python/repark/tests/test_fn_batch1.py]
   complete: true
 ```

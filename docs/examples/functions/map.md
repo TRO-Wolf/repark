@@ -35,7 +35,7 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
 - [columns.py](columns.py) — `F.column`, the constructor spelling that agrees with `F.col`, NULL included.
 - [sort_order.py](sort_order.py) — the six `F.asc*` / `F.desc*` orderings and where each places NULLs.
 - [bitwise.py](bitwise.py) — `F.negate`, the `F.bitwiseNOT` / `F.bitwise_not` alias pair, `F.bit_count`, the bit readers `F.bit_get` / `F.getbit`, and the three shifts.
-- [broadcast.py](broadcast.py) — `F.broadcast`, the join hint, checked to agree with the plain join.
+- [broadcast.py](broadcast.py) — `F.broadcast`, the join hint (single-node no-op in repark, python/repark/src/repark/spark/functions_session.py:49-56), checked to agree with the plain join.
 - [session_context.py](session_context.py) — `F.current_catalog`, `F.current_database` and `F.current_schema` on a two-row frame.
 
 ## Pointers

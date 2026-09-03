@@ -8,9 +8,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 - [ex-10-functions-null-cond-misc-ledger.md](ex-10-functions-null-cond-misc-ledger.md) —
   **EX-10 (2026-09-03), in flight:** the v0.7 example backfill's `F.*` null-handling,
   conditional, ordering, bit and session batch — 33 names landed in seven examples, the
-  backlog ratchet 842 → 809; the 12 names the live oracle measured divergent (`F.isnan`,
-  the session-identity four) or refused (`F.expr`, `F.raise_error`, the input/partition
-  five) stay on the backlog with both values recorded. `risk_tier: standard`. Branch
+  backlog ratchet 842 → 809; the 12 names the live oracle measured divergent (`F.isnan`
+  `[False,False]` vs `[False,None]`, the session-identity four `repark` vs OS user) or
+  refused (`F.expr` literals Spark-equal `[2,2]`/`['AB','AB']`, column ref `AnalysisException`
+  vs Spark `[2.0,None]`; `F.raise_error` `USER_RAISED_EXCEPTION`; the input/partition five
+  `UnsupportedOperationException`) stay on the backlog with both values recorded. `risk_tier: standard`. Branch
   `feat/ex-10-functions-null-conditional`. Slate:
   [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md).
 - [ex-2-functions-math-bitwise-ledger.md](ex-2-functions-math-bitwise-ledger.md) —
