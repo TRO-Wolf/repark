@@ -67,9 +67,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 - [ex-7-functions-datetime-b-ledger.md](ex-7-functions-datetime-b-ledger.md) —
 - [ex-12-functions-aggregates-a-ledger.md](ex-12-functions-aggregates-a-ledger.md) —
 - [ex-6-functions-datetime-a-ledger.md](ex-6-functions-datetime-a-ledger.md) —
+- [ex-13-functions-aggregates-b-stats-ledger.md](ex-13-functions-aggregates-b-stats-ledger.md) —
 - [ex-4-functions-strings-a-ledger.md](ex-4-functions-strings-a-ledger.md) — **EX-4 (2026-09-03),
-  in flight:** 27 of 34 string-basics names land in eight examples; seven stay on the
-  backlog (BL-17, FN-INITCAP-1, FN-CHR-1, encode/decode/format_number). Ratchet 654 → 627
-  as merged (844 → 817 at dispatch). Branch `feat/ex-4-functions-strings-a`.
 ## Pointers
 - Up: [../map.md](../map.md)

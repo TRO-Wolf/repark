@@ -88,20 +88,17 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
 - [date_format.py](date_format.py) — `F.date_format` rendering patterns beside
 - [date_parts_sql.py](date_parts_sql.py) — the SQL field-extraction trio
 - [date_truncation.py](date_truncation.py) — `F.date_trunc` on a timestamp and
+- [dispersion.py](dispersion.py) — `F.std`/`F.stddev`/`F.stddev_samp`, `F.stddev_pop`, and the
+- [covariance.py](covariance.py) — `F.corr`, `F.covar_pop`, `F.covar_samp` over (y, x) pairs,
+- [regression.py](regression.py) — Spark's nine `F.regr_*` linear-regression aggregates over
+- [bit_aggregates.py](bit_aggregates.py) — `F.bit_and`, `F.bit_or`, `F.bit_xor` folding each
 - [case.py](case.py) — `F.lcase`/`F.lower` and `F.ucase`/`F.upper` (alias pairs)
-  on mixed-case words and on Unicode `héllo`/`日本語`/`𝄞ab`/`straße`/`İstanbul`.
 - [concat.py](concat.py) — `F.concat` propagating NULL beside `F.concat_ws`
-  skipping it.
 - [edges.py](edges.py) — `F.left` / `F.right` at a positive width, and the empty
-  answer both give at a negative one.
 - [format.py](format.py) — the printf-style `F.format_string` and its `F.printf`
-  alias, including how a NULL argument renders.
 - [length.py](length.py) — the three length spellings `F.length`,
-  `F.char_length`, `F.character_length`, and `F.ascii`, ASCII and Unicode.
 - [matching.py](matching.py) — `F.contains` / `F.startswith` / `F.endswith`, the
-  1-based positions `F.instr` and `F.locate` (2-arg), and `F.levenshtein`.
 - [padding.py](padding.py) — `F.lpad` / `F.rpad` with truncation, the space
-  strips `F.ltrim` / `F.rtrim` / `F.trim`, `F.btrim`, and a Unicode lpad/btrim row.
 - [unbase64.py](unbase64.py) — `F.unbase64` decoding a base64 string into bytes.
 ## Pointers
 

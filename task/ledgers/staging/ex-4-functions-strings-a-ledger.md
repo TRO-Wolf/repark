@@ -6,7 +6,7 @@ family PR merges, or when the owner closes the slate row.
 
 **Unit:** EX-4 · **Date:** 2026-09-03 · **Model:** grok-4.6 (continuation of
 glm-5.3-flash) · **Branch:** `feat/ex-4-functions-strings-a` ·
-**Base:** `887695cb45d64def26743c82cfbb8e6344c04986` (dispatch base `d7e2c4a`)
+**Base:** `0a81b8e` as merged (dispatch base `d7e2c4a`)
 **Slate:** [briefs/example-backfill.md](../../../briefs/example-backfill.md).
 **Ruling:** owner, 2026-08-31, v0.7 example documentation.
 
@@ -53,7 +53,7 @@ non-space word breaks and on `n >= 256`.
 
 | ID | Clause | Proof obligation | Verdict |
 |---|---|---|---|
-| C-001 | Batch a lands runnable local examples for the twenty-seven roster names the live oracle confirms, in eight files under `docs/examples/functions/`, every asserted value measured against live PySpark 4.1.2 + Iceberg 1.11.0 before it was written and every `COVERS` entry exercised by an assertion on that measured value; those twenty-seven leave `docs/examples/backlog.txt` and `BACKLOG_BASELINE` moves 654 → 627 as merged (844 → 817 at dispatch); the seven names whose repark value diverges or refuses stay backlog rows with both values recorded (`F.base64` BL-17, `F.initcap` FN-INITCAP-1, `F.chr`/`F.char` FN-CHR-1, encode/decode/format_number); no product file is touched; the gate's static half and its `--require-execute` leg both exit 0. | Red-first capture (the 34 are uncovered at `d7e2c4a`), the oracle table, the green counts line, the recorded gate exit codes, and `pins: ex-4-functions-strings-a/C-001` in `scripts/map.md` plus BL-17 / FN-INITCAP-1 / FN-CHR-1 / FN-TRIM-CHARS-1. | **PROVEN** |
+| C-001 | Batch a lands runnable local examples for the twenty-seven roster names the live oracle confirms, in eight files under `docs/examples/functions/`, every asserted value measured against live PySpark 4.1.2 + Iceberg 1.11.0 before it was written and every `COVERS` entry exercised by an assertion on that measured value; those twenty-seven leave `docs/examples/backlog.txt` and `BACKLOG_BASELINE` moves 632 → 605 as merged (844 → 817 at dispatch); the seven names whose repark value diverges or refuses stay backlog rows with both values recorded (`F.base64` BL-17, `F.initcap` FN-INITCAP-1, `F.chr`/`F.char` FN-CHR-1, encode/decode/format_number); no product file is touched; the gate's static half and its `--require-execute` leg both exit 0. | Red-first capture (the 34 are uncovered at `d7e2c4a`), the oracle table, the green counts line, the recorded gate exit codes, and `pins: ex-4-functions-strings-a/C-001` in `scripts/map.md` plus BL-17 / FN-INITCAP-1 / FN-CHR-1 / FN-TRIM-CHARS-1. | **PROVEN** |
 
 `LOGIC_SCORE` = **1/1 `PROVEN`**.
 
@@ -110,12 +110,12 @@ utf-8 and siblings). Not a Spark-honest example.
 Measured 2026-09-03 on the merged tree (HEAD after critic round 2). Counts line
 (both coverage legs identical):
 
-`example-coverage: 913 public names (catalog=28, column=40, dataframe=150, functions=444, io=42, ml=28, session=41, ta=86, types=32, window=22); 284 covered; 627 backlog; 2 exceptions; 71 examples`
+`example-coverage: 913 public names (catalog=28, column=40, dataframe=150, functions=444, io=42, ml=28, session=41, ta=86, types=32, window=22); 306 covered; 605 backlog; 2 exceptions; 75 examples`
 
 At dispatch (`d7e2c4a`): `BACKLOG_BASELINE = 844`, this batch's first landing moved
 844 → 814 (30 names). After critic round 2 the three silent misses return, so
 the dispatch-equivalent is 844 → 817 (27 names). As merged on `887695c`: main
-is 654, this branch after the drop is 627 (654 − 27).
+is 632, this branch after the drop is 605 (632 − 27).
 
 | Command | Exit |
 |---|---|
