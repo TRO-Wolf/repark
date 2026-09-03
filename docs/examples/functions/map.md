@@ -30,6 +30,15 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
   under a positive divisor, `F.greatest` / `F.least` skipping NULLs, `F.width_bucket`.
 - [try_arithmetic.py](try_arithmetic.py) — the `F.try_*` quartet answering NULL on
   overflow and divide-by-zero, ordinary input unchanged.
+- [map_parts.py](map_parts.py) — `F.map_keys`, `F.map_values`, `F.map_entries`,
+  `F.map_contains_key`: one map column taken apart every way, NULL map included.
+- [map_shapes.py](map_shapes.py) — `F.map_from_arrays`, `F.map_from_entries`,
+  `F.str_to_map` (default and custom delimiters), `F.struct` building the entry
+  array; NULL text included.
+- [map_higher_order.py](map_higher_order.py) — `F.transform_keys`,
+  `F.transform_values`, `F.map_filter`: the `(k, v)` lambda names, NULL map included.
+- [structs.py](structs.py) — `F.struct` and `F.named_struct`: fields by column and
+  by literal name, NULL fields included.
 
 ## Pointers
 

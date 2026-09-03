@@ -434,13 +434,6 @@ F.make_dt_interval
 F.make_interval
 F.make_timestamp
 F.make_valid_utf8
-F.map_contains_key
-F.map_entries
-F.map_filter
-F.map_from_arrays
-F.map_from_entries
-F.map_keys
-F.map_values
 F.map_zip_with
 F.max
 F.md5
@@ -454,7 +447,6 @@ F.month
 F.monthname
 F.months
 F.months_between
-F.named_struct
 F.nanvl
 F.negate
 F.next_day
@@ -546,9 +538,7 @@ F.std
 F.stddev
 F.stddev_pop
 F.stddev_samp
-F.str_to_map
 F.string_agg
-F.struct
 F.substr
 F.substring
 F.substring_index
@@ -571,8 +561,6 @@ F.to_utc_timestamp
 F.to_variant_object
 F.to_xml
 F.transform
-F.transform_keys
-F.transform_values
 F.translate
 F.trim
 F.trunc
