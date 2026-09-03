@@ -823,34 +823,35 @@ them, and the document is ordered by surface, never by date.
 - **Rationale** — FIXED, not declared. A v1.0 gate that promises v3 row lineage cannot ship a
   lineage projection that raises an internal error after a legal schema evolution.
 
-### V3-COV-3 — partitioned `INSERT INTO` assigns `_row_id` by an unstable file order
+### V3-COV-3 — FIXED (RP-8, 2026-09-03): partitioned `INSERT INTO` assigns `_row_id` by ascending partition order
 
 - **repark** — one `INSERT INTO t VALUES …` of four rows across two identity partitions on a v3
-  table assigns row lineage from the manifest's data-file order, and that order is not stable:
-  twelve runs of the identical statement on an identical seed produced
-  `{1:0, 2:1, 3:2, 4:3}` seven times and `{1:2, 2:3, 3:0, 4:1}` five times. Values, row counts,
-  `_last_updated_sequence_number` and every other probe are unaffected and Spark-equal; only the
-  `_row_id` assignment moves. The RePark-owned writers are stable: the same partitioned layout
-  written by CTAS (`write::file_order::ascending_partition_order`) is `{1:0, 2:1, 3:2, 4:3}` on
-  every run, and an unpartitioned `INSERT` is stable and Spark-equal.
+  table assigns row lineage from the manifest's data-file order. Filed 2026-09-03 (V3-COV) because
+  that order was **not stable**: twelve runs of the identical statement on an identical seed
+  produced `{1:0, 2:1, 3:2, 4:3}` seven times and `{1:2, 2:3, 3:0, 4:1}` five times. At fork pin
+  `c1d6c9de` it is stable and Spark's: **twelve of twelve** runs of the same cell give
+  `{1:0, 2:1, 3:2, 4:3}`. The RePark-owned writers were always stable — the same partitioned
+  layout written by CTAS (`write::file_order::ascending_partition_order`) is
+  `{1:0, 2:1, 3:2, 4:3}` on every run, and an unpartitioned `INSERT` is stable and Spark-equal.
 - **Apache Spark** — assigns `{1:0, 2:1, 3:2, 4:3}` for the same seed.
-  *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03.)*
-- **Pin** — `python/repark/tests/test_v3_statement_coverage.py::test_v3_partitioned_insert_row_id_mapping_is_one_of_two_measured_orders`
-  (the instability, asserted as the two measured permutations plus the invariant that the block is
-  `[0, 1, 2, 3]`) and the incidental control
-  `…::test_v3_ctas_partitioned_row_id_mapping_is_stable_and_spark_ordered`
-- **Rationale** — DECLARED 2026-09-03, fork-routed. This narrows a claim
+  *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03; re-measured at the new pin by RP-8.)*
+- **Pin** — `python/repark/tests/test_v3_statement_coverage.py::test_v3_partitioned_insert_row_id_mapping_is_stable_and_spark_ordered`
+  and the incidental control
+  `…::test_v3_ctas_partitioned_row_id_mapping_is_stable_and_spark_ordered`; plus the nine
+  partitioned rows of the matrix, whose lineage probe is
+  `SELECT id, _row_id, _last_updated_sequence_number` again on both engine goldens
+- **Rationale** — FIXED. This narrowed a claim
   [V3-FILEORDER-1](#v3-fileorder-1--declared-v3-11-2026-09-02-same-commit-data-file-order-is-ascending-partition-value-not-sparks-hash-bucket-order)
-  states unqualified — *ascending partition value … applied once per commit*. That rule holds on
-  every writer RePark owns, and V3-11 pinned it on MERGE and CTAS; it does **not** hold on a
-  delegated `INSERT`, which V3-11 did not measure. A delegated `INSERT` runs inside the fork's
-  `iceberg_datafusion::IcebergTableProvider`, so RePark does not own the file set the commit sees
-  and cannot sort it the way `ascending_partition_order` sorts the writers it does own. TRIGGER:
-  **fork F-20 / `F-v3-10-partition-file-order`, taken at the next RP-8 repin** — the fork's
-  partitioned `insert_into` orders its fanout output deterministically (ascending partition),
-  after which this row retires and the partitioned programs can pin `_row_id` directly. Until then the partitioned rows of the coverage matrix pin
-  `_last_updated_sequence_number`, not `_row_id` — pinning an unstable value would be the
-  false green this registry exists to prevent.
+  states unqualified — *ascending partition value … applied once per commit*. That rule held on
+  every writer RePark owns, and V3-11 pinned it on MERGE and CTAS; it did **not** hold on a
+  delegated `INSERT`, which runs inside the fork's `iceberg_datafusion::IcebergTableProvider`
+  where RePark does not own the file set the commit sees. The TRIGGER this row named — **fork
+  F-20 / `F-v3-10-partition-file-order`, taken at the RP-8 repin** — landed as fork `#261`:
+  `FanoutWriter::close` drains its partition map in ascending partition-value order, so the rule
+  is now one rule on every writer that reaches a repark table. The partitioned rows of the
+  coverage matrix pin `_row_id` again. What remains is `V3-FILEORDER-1`: ascending is not Spark's
+  `HashMap` bucket order, and the two coincide only on collision-free monotonic partition sets —
+  `{10, 20}`, this matrix's seed, is one of them.
 
 ## 5. Facade drop-in semantics (DECLARED)
 
@@ -2859,8 +2860,14 @@ the pin rather than obeying it.
   ordering is the one a reader can predict. The consequence is stated rather than hidden:
   **on a commit whose partition set is not a collision-free monotonic run, this engine's derived
   `_row_id` values differ from Spark's.** Row sets, `next-row-id`, the id **sets** and every
-  sequence number are equal on both sides in every cell above. Revisiting this needs a new dated
-  decision. Pins: v3-11-row-id-determinism/C-007.
+  sequence number are equal on both sides in every cell above. **Widened (RP-8, 2026-09-03):**
+  the fork's `FanoutWriter::close` now drains ascending too (fork `#261`, F-20), so the delegated
+  `INSERT INTO` path this row did not previously cover follows the same rule — the divergence is
+  unchanged in kind and the engine no longer has a second data-file ordering rule (the
+  fork's `write_dv_blobs` still drains `HashMap` keys for the blob order inside one Puffin
+  when a commit writes fresh DVs for more than one data file).
+  Revisiting this needs a new dated decision. Pins: v3-11-row-id-determinism/C-007,
+  rp-8-repin-f21-f22/C-004.
 
 ### V3-UPGRADE-1 — FIXED (V3-10, 2026-09-02): `ALTER … format-version = '3'` upgrades v2 to v3 in place
 
@@ -2900,26 +2907,26 @@ the pin rather than obeying it.
   table (identity `part`, 2+1 rows) upgrades the same way and the append leaves next-row-id 5
   with the pre-upgrade rows on `{2,3,4}` at sequence 1 and the appended rows on `{0,1}` at
   sequence 2.
-- **Residuals (dated 2026-09-02, `F-v3-10-partition-file-order` re-measured 2026-09-02 by
-  V3-11).** On a **partitioned** table a plain `INSERT INTO` hands the per-partition files
-  their `first_row_id` in a different order than Spark. Spark leaves `1→2, 2→3, 3→4, 4→0, 5→1`
-  in 10 of 10 runs. The engine **flaps**, measured over ten runs of the identical cell: the
-  seed manifest read Spark's `1→2, 2→3, 3→4` five times and `1→3, 2→4, 3→2` five times, the
-  append manifest read Spark's `4→0, 5→1` four times and `4→1, 5→0` six times, and the two
-  halves moved independently — both were Spark's on 3 of the 10 runs. Rows, `next-row-id`, the
-  id **sets** and every sequence number are equal on every run, so the pin asserts the sets.
-  The unpartitioned cell matches Spark exactly. **Owner: the fork.** `INSERT INTO` on a
-  partitioned table is planned by `iceberg-datafusion`'s `IcebergTableProvider::insert_into` —
-  `IcebergWriteExec` → `TaskWriter` → `FanoutWriter`, whose
-  `partition_writers: HashMap<Struct, _>` is drained in Rust hash order at `close()` — and
+- **Residuals (`F-v3-10-partition-file-order` **CLOSED — FIXED (RP-8, 2026-09-03)**).** On a
+  **partitioned** table a plain `INSERT INTO` used to hand the per-partition files their
+  `first_row_id` in a different order than Spark, and it **flapped**: over ten runs of the
+  identical cell the seed manifest read Spark's `1→2, 2→3, 3→4` five times and `1→3, 2→4, 3→2`
+  five times, the append manifest read Spark's `4→0, 5→1` four times and `4→1, 5→0` six times,
+  and the two halves moved independently — both were Spark's on 3 of the 10 runs. The owner was
+  the fork: `INSERT INTO` on a partitioned table is planned by `iceberg-datafusion`'s
+  `IcebergTableProvider::insert_into` — `IcebergWriteExec` → `TaskWriter` → `FanoutWriter`, whose
+  `partition_writers: HashMap<Struct, _>` was drained in Rust hash order at `close()` — and
   `IcebergCommitExec` commits those files without repark ever holding them, so the ordering
-  V3-11 applied to the engine's own writers (CTAS, MERGE, append) cannot reach this path. The
-  fork ask is **F-20**: `FanoutWriter::close` drains its partition map in ascending
-  partition-value order. F-20 matches **RePark's** rule, not Spark's — Spark's order is the
-  hash-bucket artefact decoded in
-  [V3-FILEORDER-1](#v3-fileorder-1--declared-v3-11-2026-09-02-same-commit-data-file-order-is-ascending-partition-value-not-sparks-hash-bucket-order),
-  which ascending cannot reproduce beyond four identity-int partitions; F-20 buys determinism
-  and one rule across every writer this engine owns, not parity.
+  V3-11 applied to the engine's own writers (CTAS, MERGE, append) could not reach this path.
+  Fork ask **F-20** landed as fork `#261`: `FanoutWriter::close` now drains its partition map in
+  ascending partition-value order, RePark's rule. At pin `c1d6c9de` the cell takes Spark's exact
+  map `1→2, 2→3, 3→4, 4→0, 5→1` in **12 of 12** runs, so
+  `partitioned_table_upgrade_and_append_match_spark` asserts the map rather than the sets. F-20
+  buys determinism and one rule across every writer this engine owns, **not** parity: ascending
+  and Spark's hash-bucket order coincide only on collision-free monotonic sets (`{0,1}`,
+  `{0,1,2}`, `{0,1,2,3}`, `bucket(4,·)`), which is why
+  [V3-FILEORDER-1](#v3-fileorder-1--declared-v3-11-2026-09-02-same-commit-data-file-order-is-ascending-partition-value-not-sparks-hash-bucket-order)
+  stays DECLARED and now covers the fork's `INSERT INTO` path too.
   `F-v3-10-eqdel-upgrade`: upgrading a table that
   carries **equality deletes** is unmeasured — the engine has no equality-delete write surface,
   so the cell could not be built from either door; the upgrade path itself is delete-file
@@ -2978,43 +2985,54 @@ the pin rather than obeying it.
   `added-delete-files 1`, `removed-delete-files 1`, `removed-position-delete-files 1`,
   `removed-position-deletes 1`.
   *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-02 V3-12 transcript)*.
-- **Pin** — `crates/repark-spark/src/tests/v3_legacy_delete.rs` (eleven cells: merge, append
-  after, UPDATE, subquery DELETE, two legacy deletes, untouched sibling, copy-on-write, two
-  refusals and two diverged-branch cells, plus one `#[ignore]`d measurement), `crates/repark-sql/src/v3/create.rs::upgraded_v3_merge_delete_merges_a_legacy_parquet_position_delete_into_the_dv`,
-  `python/repark/tests/test_v3_legacy_delete_merge.py` (facade + a live Spark cell at matched layout).
-  Pins: v3-12-legacy-delete-merge/C-002, C-003, C-004.
-- **Rationale** — FIXED. The merge is engine-side and needs no fork change: the fork's
-  `validate_fresh_dvs_only` already lets a DV through when the same commit removes the delete it
-  would supersede. Two residuals stay dated DECLARED rows below.
+- **Pin** — `crates/repark-spark/src/tests/v3_legacy_delete.rs` (twelve cells: merge, append
+  after, subquery UPDATE, subquery DELETE, plain-`WHERE` DELETE, plain-`WHERE` UPDATE, two legacy
+  deletes, untouched sibling, partition-scoped merge-and-keep, copy-on-write and two
+  diverged-branch cells, plus one `#[ignore]`d measurement), `crates/repark-sql/src/v3/create.rs::upgraded_v3_merge_delete_merges_a_legacy_parquet_position_delete_into_the_dv`,
+  `python/repark/tests/test_v3_legacy_delete_merge.py` (facade + live Spark cells at matched layouts).
+  Pins: v3-12-legacy-delete-merge/C-002, C-003, C-004; rp-8-repin-f21-f22/C-002, C-003.
+- **Rationale** — FIXED. **Moved fork-side (RP-8, 2026-09-03):** V3-12 built the merge engine-side
+  because the fork could not express it; fork `#262`/`#263` (F-21/F-22) then took ownership, so
+  RePark's own `legacy_deletes.rs` walk and decode are DELETED and the container close does the
+  collect, the merge and the file-scoped removal in one pass. Both residuals below are now FIXED
+  with it.
 
-### V3-UPGRADE-DV-PLAIN-1 — DECLARED (V3-12, 2026-09-02): the plain-`WHERE` MoR arm still refuses over a legacy delete
+### V3-UPGRADE-DV-PLAIN-1 — FIXED (RP-8, 2026-09-03): the plain-`WHERE` MoR arm merges a legacy delete into the DV
 
 - **repark** — `DELETE FROM t WHERE id = 3` and `UPDATE t SET … WHERE id = 3` (a non-subquery
   predicate) do not reach repark's own merge-on-read commit path: only the `IN (SELECT …)` /
   `EXISTS` hole is claimed engine-side, so those spellings plan through the fork's own
-  `IcebergDeleteExec`. Over a live parquet position delete it refuses before any IO: "deletion-vector:
-  data file `…` is still covered by a Parquet position-delete file. Merging those positions into a
-  new DV is not yet ported (Java `BaseDVFileWriter.loadPreviousDeletes` does it)". The table is
-  left exactly as the upgrade left it and no Puffin is written.
-- **Apache Spark** — merges, exactly as `V3-UPGRADE-DV-1` records; the statement spelling makes no
-  difference to Spark. *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-02 V3-12 transcript)*.
-- **Pin** — `crates/repark-spark/src/tests/v3_legacy_delete.rs::a_plain_where_merge_on_read_delete_over_a_legacy_delete_still_refuses_loudly`,
-  `crates/repark-sql/src/v3/create.rs::ansi_plain_where_mor_delete_over_a_legacy_parquet_delete_refuses_loudly`,
-  `python/repark/tests/test_v3_legacy_delete_merge.py::test_plain_where_mor_delete_over_a_legacy_parquet_delete_refuses_loudly`.
-  Pins: v3-12-legacy-delete-merge/C-003, C-004.
-- **Rationale** — DECLARED and dated; a loud refusal, never a silent supersede. The refusal lives in
-  the pinned fork's delete exec, and the fork pin is fixed for this unit. TRIGGER for lifting:
-  either a fork `write_deletion_vectors` that merges previous deletes, or the engine widening its
-  predicate-DML hole so a plain-`WHERE` MoR statement commits through `prepare_row_delta_deletes`.
+  `IcebergDeleteExec`. At fork pin `c1d6c9de` (fork **F-21**) that exec merges instead of
+  refusing: over the A2 layout — one data file, ids 1..4, a v2 file-scoped parquet position
+  delete of id 2, upgraded to v3 — `DELETE FROM t WHERE id = 3` leaves ONE Puffin of
+  `record_count` 2 referencing the data file, the parquet delete GONE, `next-row-id` 4, rows
+  `(1,'a'),(4,'d')` and lineage `(1,0,1),(4,3,1)`. The plain-`WHERE` UPDATE arm merges too.
+- **Apache Spark** — identical: the statement spelling makes no difference to Spark, exactly as
+  `V3-UPGRADE-DV-1` records.
+  *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-02 V3-12 transcript §6 cell A2,
+  re-run live at the new pin by RP-8.)*
+- **Pin** — `crates/repark-spark/src/tests/v3_legacy_delete.rs::a_plain_where_merge_on_read_delete_over_a_legacy_delete_merges_into_the_dv`
+  and `::a_plain_where_merge_on_read_update_over_a_legacy_delete_merges_into_the_dv`,
+  `crates/repark-sql/src/v3/create.rs::ansi_plain_where_mor_delete_over_a_legacy_parquet_delete_merges_into_the_dv`,
+  `python/repark/tests/test_v3_legacy_delete_merge.py::test_plain_where_mor_delete_over_a_legacy_parquet_delete_merges_into_the_dv`
+  and its live twin `::test_plain_where_mor_delete_over_a_legacy_parquet_delete_matches_spark`.
+  Pins: rp-8-repin-f21-f22/C-003.
+- **Rationale** — FIXED. The TRIGGER this row named — "a fork `write_deletion_vectors` that merges
+  previous deletes" — landed as fork `#262` (F-21) and RP-8 consumes it. No engine widening of the
+  predicate-DML hole was needed: the fork's own exec owns the merge for these spellings.
 
-### V3-UPGRADE-DV-PART-1 — DECLARED (V3-12, 2026-09-02): a position delete covering two data files refuses; Spark commits
+### V3-UPGRADE-DV-PART-1 — FIXED (RP-8, 2026-09-03): a position delete covering two data files merges and stays live, as Spark leaves it
 
 - **repark** — a position delete whose `file_path` bounds are absent or unequal covers more than
   one data file (this engine and Spark both write one under
-  `write.delete.granularity = 'partition'`). The fork's commit door refuses: "Cannot commit
-  deletion vector for `…`: live position delete file `…` still applies to that data file and
-  would be silently superseded by the DV at read time". The table is left untouched and no
-  Puffin is written.
+  `write.delete.granularity = 'partition'`). At fork pin `c1d6c9de` (fork **F-21**/**F-22**) the
+  engine **commits** it Spark's way: the container close merges that delete's positions for the
+  touched data file into the new DV and leaves the delete file LIVE, because
+  `validate_fresh_dvs_only` now blocks only file-scoped deletes. Measured on the §12 layout:
+  after the first `MERGE … DELETE`, `.delete_files` is `[PARQUET rc 2 live, PUFFIN rc 2
+  referencing the touched file]`, `next-row-id` 4 and rows `[(4,'d',7)]`; after an append and a
+  second `MERGE … DELETE` on the OTHER data file, the parquet delete is still live beside two
+  Puffins of `record_count` 2 and rows are `[(9,'z',7)]`.
 - **Apache Spark** — **commits.** Measured at the matched layout: a v2 partitioned merge-on-read
   table at `write.delete.granularity = 'partition'` with two data files in `part = 7`;
   `DELETE … WHERE id IN (1, 3)` writes ONE parquet delete file (`record_count` 2,
@@ -3028,20 +3046,18 @@ the pin rather than obeying it.
   **other** data file, likewise commits a second DV and the parquet delete is **still live** —
   Spark never removes it, even once every data file it covers carries a DV.
   *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-02 V3-12 transcript.)*
-- **Pin** — `crates/repark-spark/src/tests/v3_legacy_delete.rs::a_partition_scoped_legacy_delete_still_refuses_loudly`,
-  `crates/repark-sql/src/v3/create.rs::ansi_partition_scoped_legacy_delete_refuses_loudly`,
-  `python/repark/tests/test_v3_legacy_delete_merge.py::test_partition_scoped_legacy_delete_refuses_loudly`.
-  Pins: v3-12-legacy-delete-merge/C-002, C-003, C-004.
-- **Rationale** — DECLARED and dated; a loud refusal, never a silent supersede. The merge itself
-  is engine-side and cheap (the per-row `file_path` filter already reads only the touched file's
-  positions), but the **commit** is not reachable at the pinned fork: `validate_fresh_dvs_only`
-  admits an added DV over a live position delete only when the same commit **removes** that
-  delete, and removing this one is measurably wrong — it deletes the rows the untouched sibling
-  data file still needs deleted, resurrecting id 3 in the cell above. Merging without removing
-  therefore cannot be expressed, and the engine refuses rather than corrupt. TRIGGER for lifting:
-  a fork `validate_fresh_dvs_only` that admits a non-file-scoped position delete whose positions
-  the committed DV provably carries (or a fork port of `BaseDVFileWriter.loadPreviousDeletes`
-  that owns the merge). **Correction (2026-09-02):** the row this replaces called the shape
+- **Pin** — `crates/repark-spark/src/tests/v3_legacy_delete.rs::a_partition_scoped_legacy_delete_merges_and_keeps_the_parquet_live`,
+  `crates/repark-sql/src/v3/create.rs::ansi_partition_scoped_legacy_delete_merges_and_keeps_the_parquet_live`,
+  `python/repark/tests/test_v3_legacy_delete_merge.py::test_partition_scoped_legacy_delete_merges_and_keeps_the_parquet_live`
+  and its live twin `::test_partition_scoped_legacy_delete_matches_spark`.
+  Pins: rp-8-repin-f21-f22/C-003.
+- **Rationale** — FIXED. Both halves of the TRIGGER this row named landed together in the fork and
+  RP-8 consumes them: `validate_fresh_dvs_only` now admits a non-file-scoped position delete whose
+  positions the committed DV provably carries, and the port of Java
+  `BaseDVFileWriter.loadPreviousDeletes` owns the merge inside the container close. The removal
+  rule is unchanged and still the load-bearing half — only a file-scoped delete is dropped,
+  because removing one that covers more resurrects the rows it deletes in the files this commit
+  did not touch. **Correction (2026-09-02, kept):** the row this replaces called the shape
   UNMEASURED and cited Java's `validatePreviousDeletes` as consistent with refusing. Both were
   wrong — the cell is measurable from Spark SQL and Spark commits it.
 
@@ -3402,16 +3418,19 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   keeps asserting the id set and the sequence number, which are equal and stable on both sides.
   The compaction row order is the fork's `rewrite_data_files` scan order, not repark's.
 
-- **`F-v3-10-partition-file-order`** — **DECLARED (V3-10, 2026-09-02; re-measured V3-11).**
-  See the residual under `V3-UPGRADE-1` in §4. Owner: fork ask **F-20** — `iceberg-datafusion`'s
-  `TaskWriter` closes its `FanoutWriter` in Rust `HashMap` order, which repark cannot reorder;
-  F-20 asks the fork to drain it in ascending partition-value order, RePark's rule.
+- **`F-v3-10-partition-file-order`** — **FIXED (RP-8, 2026-09-03).** See the residual under
+  `V3-UPGRADE-1` in §4. Fork ask **F-20** landed as fork `#261`: `FanoutWriter::close` drains its
+  partition map in ascending partition-value order, so the delegated `INSERT INTO` path is
+  deterministic and, on the two-value identity-int set, Spark's exact map in 12 of 12 runs. Left
+  this queue.
 
 - **`V3-FILEORDER-1`** — **DECLARED (V3-11, 2026-09-02).** See the row above. This engine orders
   one commit's data files by ascending partition value; Spark orders them by Java `HashMap`
   bucket index. The two agree only on collision-free monotonic partition sets, so derived
-  `_row_id` values differ on wider sets. Not to be fixed: replicating a JDK map's iteration
-  order is an unmaintainable anti-feature.
+  `_row_id` values differ on wider sets. Since RP-8 (2026-09-03) the fork's own `INSERT INTO`
+  path drains ascending too (F-20), so the rule is now one rule across every writer that reaches
+  a repark table — and the divergence from Spark is the same one, on the same wider sets. Not to
+  be fixed: replicating a JDK map's iteration order is an unmaintainable anti-feature.
 
 - **S3T-V3-1** — measured and **FIXED (LIVE-v3-M, 2026-09-02)** in its §4 row: both live v3
   acceptance legs are green and S3 Tables accepts `format-version = 3` at CREATE. Left this
@@ -3481,6 +3500,18 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 
 ---
 
+- **PERF-DVCLOSE-WALK-1** — surfaced 2026-09-03, RP-8 Rust perf review. At pin `c1d6c9de` the
+  fork's DV container close walks every data manifest of the scanned snapshot on every MoR
+  DELETE/UPDATE/MERGE, including the pure-DV path with no legacy delete and a complete partition
+  map (F-22 reversed F-18's conditional walk to fill `data_sequence_numbers`, which this engine
+  never reads). Measured on a pure-DV v3 MoR table, debug profile, local ext4, medians of five:
+  statement wall at 192 data manifests 1.646 s → 2.286 s (+39 %, ~3.3 ms per data manifest);
+  48 manifests +9.9 %; 8 manifests within noise; `strace` shows each data manifest opened three
+  times per statement where two sufficed before. Partitioned INSERT at 1e6 rows / 8 partitions
+  and 1e5 rows / 5k partitions is unchanged by the F-20 drain. No pin yet (the walk-cost cell is
+  an `#[ignore]`d measurement); fork TRIGGER F-23: skip `collect_live_data_files` when no legacy
+  delete is pending and `known_partitions` covers every touched path, and stop the stream once
+  every wanted path is found; RP-9 repins. Full record: the RP-8 ledger, ERRATA E-4.
 - **FN-NTHVALUE-IGNORENULLS-1** — surfaced 2026-09-03, EX-14 review. The facade `F.nth_value`
   takes `(col, offset)` only; PySpark 4.1.2's `nth_value(col, offset, ignoreNulls=False)` third
   arm raises `TypeError: nth_value() takes 2 positional arguments but 3 were given` here. Measured

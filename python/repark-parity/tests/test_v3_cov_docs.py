@@ -1,6 +1,7 @@
 """V3-COV: the coverage document, the registry and the discharge lines all hold one matrix.
 
 pins: v3-cov-statement-coverage/C-001, C-004, C-005
+pins: rp-8-repin-f21-f22/C-007
 MUTATION: change a §1 total, drop a matrix row, drop a registry row filed by this unit, unpin a
 diverging row, or soften a discharge line → this REDs.
 """
@@ -103,10 +104,21 @@ def test_the_rows_this_unit_filed_carry_a_class_a_date_and_a_pin() -> None:
 def test_the_fork_routed_rows_name_a_trigger() -> None:
     """C-004: a row the fork owns says what retires it, so it cannot sit as a permanent gap."""
     registry = _read(_REGISTRY)
-    for row in ("V3-COV-3", "V3-COV-6"):
+    for row in ("V3-COV-6",):
         start = registry.index(f"{row} — ")
         body = registry[start : start + 3000]
         assert "TRIGGER:" in body, row
+
+
+def test_v3_cov_3_records_the_repin_that_retired_it() -> None:
+    """RP-8: the fork-routed row this repin closed says which fork change closed it, and when."""
+    registry = _read(_REGISTRY)
+    start = registry.index("V3-COV-3 — ")
+    body = registry[start : registry.index("\n### ", start)]
+    assert "FIXED (RP-8, 2026-09-03)" in body
+    assert "landed as fork `#261`" in body
+    assert "twelve of twelve" in body
+    assert "test_v3_partitioned_insert_row_id_mapping_is_stable_and_spark_ordered" in body
 
 
 def test_the_north_star_carries_the_measured_discharge() -> None:

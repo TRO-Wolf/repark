@@ -149,21 +149,21 @@ REPARK: dict[str, Any] = {
         "statements": [["OK", None]],
         "probes": [
             ["OK", [[3, "c", 20], [4, "d", 20], [7, "g", 10]]],
-            ["OK", [[3, 1], [4, 1], [7, 2]]],
+            ["OK", [[3, 2, 1], [4, 3, 1], [7, 4, 2]]],
         ],
     },
     "insert-overwrite-partition-static-select": {
         "statements": [["OK", None]],
         "probes": [
             ["OK", [[1, "a", 10], [3, "c", 20], [4, "d", 20]]],
-            ["OK", [[1, 2], [3, 1], [4, 1]]],
+            ["OK", [[1, 4, 2], [3, 2, 1], [4, 3, 1]]],
         ],
     },
     "insert-overwrite-partition-dynamic": {
         "statements": [["OK", None]],
         "probes": [
             ["OK", [[3, "c", 20], [4, "d", 20], [7, "g", 10]]],
-            ["OK", [[3, 1], [4, 1], [7, 2]]],
+            ["OK", [[3, 2, 1], [4, 3, 1], [7, 4, 2]]],
         ],
     },
     "delete-where-mor": {
@@ -185,7 +185,7 @@ REPARK: dict[str, Any] = {
         "statements": [["OK", None]],
         "probes": [
             ["OK", [[1, "a", 10], [3, "c", 20], [4, "d", 20]]],
-            ["OK", [[1, 1], [3, 1], [4, 1]]],
+            ["OK", [[1, 0, 1], [3, 2, 1], [4, 3, 1]]],
             ["OK", [[1, "PUFFIN", 1]]],
         ],
     },
@@ -193,7 +193,7 @@ REPARK: dict[str, Any] = {
         "statements": [["OK", None]],
         "probes": [
             ["OK", [[1, "a", 10], [3, "c", 20], [4, "d", 20]]],
-            ["OK", [[1, 1], [3, 1], [4, 1]]],
+            ["OK", [[1, 0, 1], [3, 2, 1], [4, 3, 1]]],
         ],
     },
     "delete-in-subquery-mor": {
@@ -250,7 +250,7 @@ REPARK: dict[str, Any] = {
         "statements": [["OK", None]],
         "probes": [
             ["OK", [[1, "a", 10], [2, "z", 10], [3, "c", 20], [4, "d", 20]]],
-            ["OK", [[1, 1], [2, 2], [3, 1], [4, 1]]],
+            ["OK", [[1, 0, 1], [2, 1, 2], [3, 2, 1], [4, 3, 1]]],
             ["OK", [[1, "PUFFIN", 1]]],
         ],
     },
@@ -292,7 +292,7 @@ REPARK: dict[str, Any] = {
         "statements": [["OK", None]],
         "probes": [
             ["OK", [[1, "a", 10], [2, "b", 30], [3, "c", 20], [4, "d", 20]]],
-            ["OK", [[1, 1], [2, 2], [3, 1], [4, 1]]],
+            ["OK", [[1, 0, 1], [2, 1, 2], [3, 2, 1], [4, 3, 1]]],
         ],
     },
     "merge-matched-update-mor": {
@@ -365,7 +365,7 @@ REPARK: dict[str, Any] = {
         "statements": [["OK", None]],
         "probes": [
             ["OK", [[1, "a", 10], [3, "c", 20], [4, "d", 20]]],
-            ["OK", [[1, 1], [3, 1], [4, 1]]],
+            ["OK", [[1, 0, 1], [3, 2, 1], [4, 3, 1]]],
             ["OK", [[1, "PUFFIN", 1]]],
         ],
     },
@@ -432,7 +432,7 @@ REPARK: dict[str, Any] = {
                 "OK",
                 [[1, "a", 10, None], [2, "b", 10, None], [3, "c", 20, None], [4, "d", 20, None]],
             ],
-            ["OK", [[1, 1], [2, 1], [3, 1], [4, 1]]],
+            ["OK", [[1, 0, 1], [2, 1, 1], [3, 2, 1], [4, 3, 1]]],
         ],
     },
     "alter-set-tblproperties": {
@@ -487,42 +487,21 @@ REPARK: dict[str, Any] = {
         "statements": [["OK", None]],
         "probes": [["ERROR", "Error during planning: table 'ice.cov.drop_table' not found"]],
     },
-    "meta-snapshots": {
-        "statements": [["OK", None]],
-        "probes": [["OK", [["append"], ["delete"]]]],
-    },
-    "meta-files": {
-        "statements": [["OK", None]],
-        "probes": [["OK", [[0, 4], [1, 1]]]],
-    },
-    "meta-delete-files": {
-        "statements": [["OK", None]],
-        "probes": [["OK", [[1, "PUFFIN", 1]]]],
-    },
+    "meta-snapshots": {"statements": [["OK", None]], "probes": [["OK", [["append"], ["delete"]]]]},
+    "meta-files": {"statements": [["OK", None]], "probes": [["OK", [[0, 4], [1, 1]]]]},
+    "meta-delete-files": {"statements": [["OK", None]], "probes": [["OK", [[1, "PUFFIN", 1]]]]},
     "meta-manifests": {
         "statements": [["OK", None]],
         "probes": [["OK", [[0, 1, 0, 0], [1, 0, 0, 0]]]],
     },
-    "meta-history": {
-        "statements": [["OK", None]],
-        "probes": [["OK", [[True], [True]]]],
-    },
+    "meta-history": {"statements": [["OK", None]], "probes": [["OK", [[True], [True]]]]},
     "meta-refs": {
         "statements": [["OK", None]],
         "probes": [["OK", [["main", "BRANCH", None], ["t1", "TAG", None]]]],
     },
-    "meta-partitions": {
-        "statements": [["OK", None]],
-        "probes": [["OK", [[2, 1, 0], [2, 1, 1]]]],
-    },
-    "meta-entries": {
-        "statements": [["OK", None]],
-        "probes": [["OK", [[1], [1]]]],
-    },
-    "meta-all-data-files": {
-        "statements": [["OK", None]],
-        "probes": [["OK", [[0, 4]]]],
-    },
+    "meta-partitions": {"statements": [["OK", None]], "probes": [["OK", [[2, 1, 0], [2, 1, 1]]]]},
+    "meta-entries": {"statements": [["OK", None]], "probes": [["OK", [[1], [1]]]]},
+    "meta-all-data-files": {"statements": [["OK", None]], "probes": [["OK", [[0, 4]]]]},
     "meta-position-deletes": {
         "statements": [["OK", None]],
         "probes": [

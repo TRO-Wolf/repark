@@ -264,6 +264,13 @@ next merge-on-read write — their positions are read back, unioned into the new
 superseded files leave in the same `RowDelta` (registry `V3-UPGRADE-DV-1` FIXED; residuals
 `V3-UPGRADE-DV-PLAIN-1`, `V3-UPGRADE-DV-PART-1`).
 
+*RP-8 2026-09-03:* the repin to `c1d6c9de` moves that merge into the fork's own container close
+(F-21 `#262`, F-22 `#263`), so RePark's `dv_close/legacy_deletes.rs` is deleted and both residuals
+are FIXED — the plain-`WHERE` arm merges, and a delete covering two data files merges and stays
+live as Spark leaves it. F-19/F-20 `#261` come with it: `FanoutWriter::close` drains ascending,
+closing `F-v3-10-partition-file-order`, and `DvContainerClose::retained_references` /
+`StampedDeleteFile` are gone.
+
 ### Step 5 — run the remaining product units on their real dependencies
 
 - **V3-4:** serve `_row_id` and `_last_updated_sequence_number`; preserve lineage across COW
@@ -290,6 +297,10 @@ superseded files leave in the same `RowDelta` (registry `V3-UPGRADE-DV-1` FIXED;
   Spark-equal — only the touched blob is rewritten, the sibling entry keeps its container and
   `content_offset`, two containers after; `V3-DV-1` FIXED and the byte amplification closed
   (19,126 → 377 B per later single-row `DELETE` at 64 blobs).
+- **RP-8:** *Done 2026-09-03.* Pin `c1d6c9de` (fork F-19/F-20/F-21/F-22) gives the container close
+  the legacy-delete collect, merge and file-scoped removal in one delete-manifest pass and an
+  ascending `FanoutWriter` drain; `V3-UPGRADE-DV-PLAIN-1`, `V3-UPGRADE-DV-PART-1` and
+  `F-v3-10-partition-file-order` FIXED, `legacy_deletes.rs` deleted.
 
   The original scope note: V3-6 may
   run in parallel with V3-3 or V3-4 after its fork type support is pinned; it does not wait for

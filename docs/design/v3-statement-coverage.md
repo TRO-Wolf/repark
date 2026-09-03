@@ -20,7 +20,7 @@ seed on 2026-09-03, and every divergence carries a registry row in
 | **EQUAL** — repark and Spark agree on every cell | **71** |
 | **REFUSED** — both engines refuse the statement | **1** |
 | **DIVERGES** — a registry row | **9** |
-| Registry rows filed by this unit | 6 (`V3-COV-3` DECLARED · `V3-COV-4` BACKLOG · `V3-COV-5` BACKLOG · `V3-COV-6` DECLARED · `V3-COV-7` BACKLOG · `V3-COV-8` BACKLOG) |
+| Registry rows filed by this unit | 6 (`V3-COV-3` **FIXED at RP-8, 2026-09-03** · `V3-COV-4` BACKLOG · `V3-COV-5` BACKLOG · `V3-COV-6` DECLARED · `V3-COV-7` BACKLOG · `V3-COV-8` BACKLOG) |
 | Registry rows an existing row already covers | 3 (`DML-1`, `G3-E8` ×2, `B-MOR-3`) |
 | Defects FIXED inside this unit | 2 (`V3-COV-1`, `V3-COV-2`) |
 | Live runtime, matrix co-collected with the nightly live legs | 1 min 57 s |
@@ -138,7 +138,7 @@ seed on 2026-09-03, and every divergence carries a registry row in
 | `DML-1` | `INSERT OVERWRITE t PARTITION (part) …` | repark replaces only the source partitions; Spark SQL's default `partitionOverwriteMode=STATIC` wipes the table | DECLARED residue on a FIXED row (2026-08-30, DML-B) | repark, deliberate |
 | `G3-E8` | `UPDATE … WHERE col NOT IN (SELECT …)` and `UPDATE … WHERE EXISTS (…)` | repark refuses at the valve; Spark updates the matching rows | DEFECT, partial fix | repark |
 | `B-MOR-3` | `CALL system.rewrite_position_delete_files` | repark refuses over a live Puffin DV; Spark answers four zeros | DECLARED by analogy to OD-2; owner line pending | repark, deliberate |
-| `V3-COV-3` | partitioned `INSERT INTO` on v3 | `_row_id` is assigned by an unstable data-file order — two permutations measured across twelve runs of the same statement | DECLARED, fork TRIGGER (F-20 / `F-v3-10-partition-file-order`, RP-8) | fork `IcebergTableProvider::insert_into` |
+| `V3-COV-3` | partitioned `INSERT INTO` on v3 | `_row_id` was assigned by an unstable data-file order — two permutations across twelve runs | **FIXED (RP-8, 2026-09-03)** — the fork's `FanoutWriter::close` drains ascending, 12 of 12 runs give Spark's mapping | fork `IcebergTableProvider::insert_into` |
 | `V3-COV-4` | `DELETE FROM t WHERE id > 0` (MoR) | repark writes one Puffin DV covering every row and keeps both data files live (`t.files` `[(0, 4), (1, 4)]`); Spark drops the data file and leaves `t.files` and `t.delete_files` empty | BACKLOG | repark |
 | `V3-COV-5` | `ALTER TABLE t WRITE ORDERED BY id` | repark refuses (sort-order evolution outside I7); Spark sets the write order | BACKLOG | repark |
 | `V3-COV-6` | `SELECT … FROM t.position_deletes` | repark refuses (`FeatureUnsupported`, schema-only port); Spark returns the positions | DECLARED, fork TRIGGER | fork metadata-table scan |
@@ -154,12 +154,18 @@ seed on 2026-09-03, and every divergence carries a registry row in
 
 ## 6. What is deliberately not a row, and what is outside the matrix
 
-- **`_row_id` values on a partitioned seed are not pinned.** `V3-COV-3` makes them unstable, so
-  the partitioned programs pin `_last_updated_sequence_number` (deterministic and Spark-equal) and
-  the instability has its own two cells:
-  `test_v3_partitioned_insert_row_id_mapping_is_one_of_two_measured_orders` and the incidental
-  control `test_v3_ctas_partitioned_row_id_mapping_is_stable_and_spark_ordered` — the RePark-owned
-  CTAS writer sorts partitions (`write::file_order::ascending_partition_order`) and is stable.
+- **`_row_id` values on a partitioned seed ARE pinned again (RP-8, 2026-09-03).** While
+  `V3-COV-3` was open the partitioned programs pinned `_last_updated_sequence_number` alone,
+  because pinning an unstable value is the false green this matrix exists to prevent. The fork
+  repin to `c1d6c9de` (fork **F-20**, `#261`) drains `FanoutWriter::close` in ascending
+  partition-value order, so the delegated `INSERT` is stable: twelve runs of the identical
+  statement gave Spark's `{1:0, 2:1, 3:2, 4:3}` twelve times. Every partitioned program's
+  lineage probe is `SELECT id, _row_id, _last_updated_sequence_number` again — nine rows'
+  golden entries re-measured on both engines — and the instability cell became a stability
+  cell, `test_v3_partitioned_insert_row_id_mapping_is_stable_and_spark_ordered`, beside its
+  incidental control `test_v3_ctas_partitioned_row_id_mapping_is_stable_and_spark_ordered`
+  (the RePark-owned CTAS writer sorts partitions through
+  `write::file_order::ascending_partition_order` and was always stable).
 - **Error text is not compared across engines.** A cell where both engines refuse is `REFUSED`, not
   `DIVERGES`; each engine's own message is pinned on its own side of the golden. Every *other*
   cell kind — rows and metadata facts alike — is compared, so a cell kind cannot be added and
