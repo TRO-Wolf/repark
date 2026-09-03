@@ -5,6 +5,12 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [ex-8-functions-arrays-ledger.md](ex-8-functions-arrays-ledger.md) —
+  **EX-8 (2026-09-03):** the v0.7 example backfill's `F.*` array and
+  higher-order family — 33 of 40 dispatched names covered by seven files, every
+  value measured against the live Spark oracle; seven divergent or refused names
+  stay on the backlog with both values recorded.
+  `risk_tier: standard`. Branch `feat/ex-8-functions-arrays`.
 - [ex-2-functions-math-bitwise-ledger.md](ex-2-functions-math-bitwise-ledger.md) —
   **EX-2 (2026-09-01), in flight:** the v0.7 example backfill's `F.*` math +
   bitwise family — the campaign pilot. One clause per batch; batch 1 covers

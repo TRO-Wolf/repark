@@ -1,5 +1,11 @@
 # map — scripts/
 
+EX-8 (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE` 842 → 809 —
+33 `F.*` array and higher-order names covered by seven new examples; seven more
+(`F.array_position`, `F.array_sort`, `F.arrays_overlap`, `F.arrays_zip`,
+`F.flatten`, `F.posexplode`, `F.posexplode_outer`) measured divergent or refused
+against the live Spark oracle and stayed on the backlog.
+pins: ex-8-functions-arrays/C-001
 LOG1P-1 (2026-09-02): `check_example_coverage.py` `BACKLOG_BASELINE` 844 → 842 —
 `F.log1p` and `F.expm1` leave the backlog for `docs/examples/functions/logs.py`.
 pins: log1p-1-precise-kernels/C-003
