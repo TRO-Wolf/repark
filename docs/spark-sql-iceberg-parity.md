@@ -3091,6 +3091,27 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   measured refusing end to end at the fork. See the row in §4 for the pins and the R88
   filing.
 
+- **EX7-TZCOLLECT-1** — measured 2026-09-03 (EX-7 batch b remediation). PySpark's `collect()`
+  renders **driver-local naive** datetimes while this engine renders **session-zone** values, so
+  an oracle comparison run with a non-UTC driver TZ produces false divergences at the collect
+  boundary. Measured pair for `timestamp_seconds(0)` with driver TZ = session zone =
+  `America/New_York`: PySpark 4.1.2 collects `datetime.datetime(1969, 12, 31, 19, 0)`; this
+  engine collects `datetime.datetime(1970, 1, 1, 0, 0)` (and `current_timezone()` answers
+  `America/New_York`). Recipe for live oracle runs: export `TZ=UTC` before the JVM starts.
+  Full record: `task/ledgers/staging/ex-7-functions-datetime-b-ledger.md`.
+
+- **EX7-HOURS-1** — measured 2026-09-03 (EX-7 batch b remediation). The Spark-facade write path
+  refuses `hours()`-partitioned creates: `writeTo(...).partitionedBy(F.hours(...)).create()`
+  raises `DataInvalid => Invalid schema for v2: Invalid type for event_ts: timestamp_ns is not
+  supported until v3`, unchanged with `repark.sql.allowCreateFormatVersion3` set on the builder
+  or via `conf.set`; the facade append into a SQL-door v3 hours table then raises the
+  µs→ns mismatch (`column types must match schema types, expected Timestamp(ns) but found
+  Timestamp(µs, "UTC")`). The SQL door
+  `CREATE TABLE … PARTITIONED BY (hours(event_ts)) TBLPROPERTIES ('format-version'='3')`
+  writes and reads back Spark-equal partition values (`[(475133,), (475134,)]` for
+  2024-03-15 05:00/06:30 UTC). The facade path wants its own decision. Full record:
+  `task/ledgers/staging/ex-7-functions-datetime-b-ledger.md`.
+
 ---
 
 ## 8. Drop-in disclosure rationale

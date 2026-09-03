@@ -43,8 +43,9 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
 - [utc_offsets.py](utc_offsets.py) — `F.from_utc_timestamp` / `F.to_utc_timestamp` render
   an instant between UTC and a named zone; `F.current_timezone` names the session zone.
 - [partition_transforms.py](partition_transforms.py) — the partition transforms `F.years`,
-  `F.months`, `F.days`, `F.bucket` through `writeTo(...).partitionedBy(...)`, rows read
-  back from the created tables.
+  `F.months`, `F.days`, `F.bucket` through `writeTo(...).partitionedBy(...)`: rows read back
+  from the created tables and the partition values asserted from the `.files` metadata
+  (years 54/55, months 650/653, the two day dates, buckets 0/1/3).
 
 ## Pointers
 

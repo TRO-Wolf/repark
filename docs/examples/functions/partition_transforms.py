@@ -15,7 +15,7 @@ COVERS: list[str] = ["F.years", "F.months", "F.days", "F.bucket", "F.col"]
 
 
 def main() -> None:
-    """Create one transform-partitioned table per name and read the rows back."""
+    """Create one transform-partitioned table per name and check rows and partition values."""
     repark = (
         ReparkSession.builder.appName("ex-partition-transforms").master("local[1]").getOrCreate()
     )
@@ -35,6 +35,13 @@ def main() -> None:
             values = [tuple(row) for row in rows]
             if values != [(datetime.date(2024, 3, 15), 1), (datetime.date(2025, 6, 1), 2)]:
                 raise SystemExit(f"F.years partitioned rows {values!r} != the two dated rows")
+            rows = repark.sql(
+                "SELECT partition.event_date_year AS year_value FROM local.lns.years_t.files"
+                " ORDER BY year_value"
+            ).collect()
+            values = [tuple(row) for row in rows]
+            if values != [(54,), (55,)]:
+                raise SystemExit(f"F.years partition values {values!r} != [(54,), (55,)]")
 
             months_frame = repark.sql(
                 "SELECT * FROM (VALUES (DATE '2024-03-15', 1), (DATE '2024-06-01', 2))"
@@ -47,6 +54,13 @@ def main() -> None:
             values = [tuple(row) for row in rows]
             if values != [(datetime.date(2024, 3, 15), 1), (datetime.date(2024, 6, 1), 2)]:
                 raise SystemExit(f"F.months partitioned rows {values!r} != the two dated rows")
+            rows = repark.sql(
+                "SELECT partition.event_date_month AS month_value FROM local.lns.months_t.files"
+                " ORDER BY month_value"
+            ).collect()
+            values = [tuple(row) for row in rows]
+            if values != [(650,), (653,)]:
+                raise SystemExit(f"F.months partition values {values!r} != [(650,), (653,)]")
 
             days_frame = repark.sql(
                 "SELECT * FROM (VALUES (DATE '2024-03-15', 1), (DATE '2024-06-01', 2))"
@@ -59,6 +73,16 @@ def main() -> None:
             values = [tuple(row) for row in rows]
             if values != [(datetime.date(2024, 3, 15), 1), (datetime.date(2024, 6, 1), 2)]:
                 raise SystemExit(f"F.days partitioned rows {values!r} != the two dated rows")
+            rows = repark.sql(
+                "SELECT partition.event_date_day AS day_value FROM local.lns.days_t.files"
+                " ORDER BY day_value"
+            ).collect()
+            values = [tuple(row) for row in rows]
+            if values != [(datetime.date(2024, 3, 15),), (datetime.date(2024, 6, 1),)]:
+                raise SystemExit(
+                    f"F.days partition values {values!r}"
+                    f" != [(datetime.date(2024, 3, 15),), (datetime.date(2024, 6, 1),)]"
+                )
 
             ids = repark.sql(
                 "SELECT * FROM (VALUES (1, 'a'), (2, 'b'), (3, 'c'), (55, 'd'), (89, 'e'))"
@@ -69,6 +93,13 @@ def main() -> None:
             values = [tuple(row) for row in rows]
             if values != [(1, "a"), (2, "b"), (3, "c"), (55, "d"), (89, "e")]:
                 raise SystemExit(f"F.bucket partitioned rows {values!r} != the five id rows")
+            rows = repark.sql(
+                "SELECT partition.id_bucket AS bucket_value FROM local.lns.bucket_t.files"
+                " ORDER BY bucket_value"
+            ).collect()
+            values = [tuple(row) for row in rows]
+            if values != [(0,), (1,), (3,)]:
+                raise SystemExit(f"F.bucket partition values {values!r} != [(0,), (1,), (3,)]")
         finally:
             repark.stop()
 

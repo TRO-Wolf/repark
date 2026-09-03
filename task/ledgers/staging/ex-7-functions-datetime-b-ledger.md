@@ -2,7 +2,7 @@
 
 **Retires:** this ledger moves to `../completed/` in the unit's last commit (the orchestrator's departure move). This file closes when EX-7 merges, or when the owner closes the slate row.
 
-**Unit:** EX-7 · **Date:** 2026-09-03 · **Model:** muse-spark-1.2-contributor (continuation of glm-5.3-flash) · **Branch:** `feat/ex-7-functions-datetime-b` · **Base:** `a0fe83a`
+**Unit:** EX-7 · **Date:** 2026-09-03 · **Model:** muse-spark-1.2-contributor (batch, continuation of glm-5.3-flash); glm-5.3-flash (remediation) · **Branch:** `feat/ex-7-functions-datetime-b` · **Base:** `a0cd39e` (dispatch base `84c1801`)
 **Slate:** [briefs/example-backfill.md](../../../briefs/example-backfill.md), batch roster row batch b (28 names: unix-time, timestamp construction and partition transforms).
 **Ruling:** owner, 2026-08-31, [release-roadmap-2026-08-29.md](../../roadmap/epic-term/release-roadmap-2026-08-29.md) §"v0.7 — Full example documentation".
 
@@ -31,7 +31,7 @@ The family is the `F.*` unix-time, timestamp-construction and partition-transfor
 | `utc_offsets.py` | `F.from_utc_timestamp`, `F.to_utc_timestamp`, `F.current_timezone` | Session zone and UTC offset renders between UTC and a named zone. |
 | `partition_transforms.py` | `F.years`, `F.months`, `F.days`, `F.bucket` | Partition transforms through `writeTo(...).partitionedBy(...)`, rows read back from created tables. |
 
-Every file lists `F.col` (and `epoch.py` etc. `F.lit` where used) in `COVERS` because they genuinely use them; those names are already covered, so they do not move the ratchet.
+Every file lists `F.col` in `COVERS`, and `make_calendar.py` also lists `F.lit`, because they genuinely use them; those names are already covered, so they do not move the ratchet.
 
 ## Orchestrator rulings (build-to)
 
@@ -79,7 +79,7 @@ With the six files present the gate is green.
 
 ## Outcome — 21 kept, 7 dropped (oracle table)
 
-Measured on this tree against live PySpark 4.1.2 + Iceberg 1.11.0 at `/tmp/oc-ex7/.venv/bin/python` with `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64` and `PYTHONPATH=/tmp/oc-ex7/python/repark/tests` using `_live_parity.build_spark_iceberg_engine(Path(tmpdir)).session` — one throwaway script under `/tmp/oc-ex7-oracle/` (not in the repo) that printed per name the Spark value and the repark value for the same inputs. Every kept row was equal by repr; dropped rows record both values.
+Measured on this tree against live PySpark 4.1.2 + Iceberg 1.11.0 at `/tmp/oc-ex7/.venv/bin/python` with `TZ=UTC` exported before the JVM starts, `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64` and `PYTHONPATH=/tmp/oc-ex7/python/repark/tests` using `_live_parity.build_spark_iceberg_engine(Path(tmpdir)).session` — one throwaway script outside the repo that printed per name the Spark value and the repark value for the same inputs. **The driver `TZ=UTC` is load-bearing**: without it PySpark's `collect()` renders driver-local naive datetimes while repark renders the session zone (measured pair filed in the registry queue), so any run whose driver TZ is not UTC produces false divergences at the collect boundary. Every kept row was equal by repr; dropped rows record both values. Remediation re-measurement 2026-09-03 (GLM 5.3 Flash, same recipe): the four partition-transform value sets, the `try_to_time` refusals, the `F.hours` refusals and the America/New_York `collect()` pair were re-measured on both engines the same way before anything was written.
 
 | Name | Spark value (repr) | Repark value (repr) | Disposition | File |
 |---|---|---|---|---|
@@ -98,7 +98,7 @@ Measured on this tree against live PySpark 4.1.2 + Iceberg 1.11.0 at `/tmp/oc-ex
 | F.to_timestamp | `[datetime(2020,1,2,0,0), datetime(2020,1,2,13,45), None]` for same s | same | kept | to_date_timestamp.py |
 | F.try_to_date | `[date(2020,1,2), None, None]` for s="2020-01-02", "not-a-date", None | same | kept | to_date_timestamp.py |
 | F.try_to_timestamp | `NULL for malformed, datetime for well-formed` | `UnsupportedOperationException: functions.try_to_timestamp is not supported yet` | dropped — engine gap | backlog |
-| F.try_to_time | `NULL or TIME value for valid input` | `AnalysisException: [UNSUPPORTED_TIME_TYPE] The data type TIME is not supported` | dropped — TIME type not supported | backlog |
+| F.try_to_time | refuses every form (date-only, time-only, datetime, string+format): `AnalysisException: [UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000` | refuses on both doors with the same text behind a planning prefix: `AnalysisException: Error during planning: [UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000` | dropped — Spark refuses / repark refuses | backlog |
 | F.make_date | `[date(2020,1,2), date(2024,2,29), date(1999,12,31), None]` for (y,m,d) parts including NULL | same | kept | make_calendar.py |
 | F.make_timestamp | `datetime(2020,1,2,3,4,6)` for y=2020,m=1,d=2,h=3,mi=4,s=6 | `UnsupportedOperationException: functions.make_timestamp is not supported yet` | dropped — engine gap | backlog |
 | F.make_interval | `interval months/days/nanos for (years,months,weeks,days,hours,mins,secs)` | `PySparkNotImplementedError: Python conversion for calendar interval (make_interval / CalendarIntervalType)` | dropped — interval type conversion gap | backlog |
@@ -106,13 +106,43 @@ Measured on this tree against live PySpark 4.1.2 + Iceberg 1.11.0 at `/tmp/oc-ex
 | F.from_utc_timestamp | `[datetime(2020,1,1,7,0), datetime(2020,7,1,8,0), None]` for ts in UTC rendered to America/New_York | same | kept | utc_offsets.py |
 | F.to_utc_timestamp | `[datetime(2020,1,1,17,0), datetime(2020,7,1,16,0), None]` for same ts read as New_York | same | kept | utc_offsets.py |
 | F.current_timezone | `["UTC","UTC","UTC"]` for session | same | kept | utc_offsets.py |
-| F.days | rows round-trip through `partitionedBy(F.days(F.col("event_date")))` | same | kept | partition_transforms.py |
-| F.hours | partition transform `hours(col)` applied via `partitionedBy` | repark `F.hours` is partition-transform only; scalar `select(F.hours(col))` is `PARTITION_TRANSFORM_EXPRESSION_NOT_IN_PARTITIONED_BY` and the example family teaches the partition-transform form only for years/months/days/bucket | dropped — not a scalar example in this batch | backlog |
-| F.months | rows round-trip through `partitionedBy(F.months(F.col("event_date")))` | same | kept | partition_transforms.py |
-| F.years | rows round-trip through `partitionedBy(F.years(F.col("event_date")))` | same | kept | partition_transforms.py |
-| F.bucket | rows round-trip through `partitionedBy(F.bucket(4, F.col("id")))` | same | kept | partition_transforms.py |
+| F.days | rows round-trip through `partitionedBy(F.days(F.col("event_date")))` and the partition values read back equal: `[(datetime.date(2024, 3, 15),), (datetime.date(2024, 6, 1),)]` (`partition.event_date_day:date`) | same | kept | partition_transforms.py |
+| F.hours | writes Spark-equal partition values: for event_ts 2024-03-15 05:00:00 / 06:30:00 the files metadata reads `[(475133,), (475134,)]` (`partition.event_ts_hour:int`) | the example's own facade path refuses: `writeTo(...).partitionedBy(F.hours(F.col("event_ts"))).create()` raises `DataInvalid => Invalid schema for v2:` `- Invalid type for event_ts: timestamp_ns is not supported until v3`, and the refusal is unchanged with `repark.sql.allowCreateFormatVersion3` set on the builder or via `conf.set`; the facade append into the SQL-door v3 table raises `datafusion engine error: Arrow error: Invalid argument error: column types must match schema types, expected Timestamp(ns) but found Timestamp(µs, "UTC") at column index 0`; repark's SQL door `CREATE TABLE … PARTITIONED BY (hours(event_ts)) TBLPROPERTIES ('format-version'='3')` writes and reads back Spark's values `[(475133,), (475134,)]`; the facade path is filed as registry queue entry EX7-HOURS-1 | dropped — the facade path refuses (measured) | backlog |
+| F.months | rows round-trip through `partitionedBy(F.months(F.col("event_date")))` and the partition values read back equal: `[(650,), (653,)]` (`partition.event_date_month:int`) | same | kept | partition_transforms.py |
+| F.years | rows round-trip through `partitionedBy(F.years(F.col("event_date")))` and the partition values read back equal: `[(54,), (55,)]` (`partition.event_date_year:int`) | same | kept | partition_transforms.py |
+| F.bucket | rows round-trip through `partitionedBy(F.bucket(4, F.col("id")))` and the partition values read back equal: `[(0,), (1,), (3,)]` over ids 1, 2, 3, 55, 89 (`partition.id_bucket:int`) | same | kept | partition_transforms.py |
 
-Wall-clock: start 2026-09-03T00:00:00Z, end 2026-09-03T00:20:00Z (carried from prior session; continuation wall-clock measured below).
+Wall-clock and cost: batch — start 2026-09-03T00:00:00Z, end 2026-09-03T00:20:00Z (carried from
+the prior session's record). Spark continuation re-measurement (muse-spark, 2026-09-03) —
+~10 min, free (local JVM). Remediation leg (GLM 5.3 Flash, 2026-09-03) — start
+2026-09-03T08:24:29Z, end 2026-09-03T08:56:38Z. Cost: the muse-spark leg ended on transport
+deaths (the Spark endpoint stalled mid-round), so the remediation ran on GLM 5.3 Flash; the
+Spark oracle legs run locally at no metered cost; the GLM remediation leg is token-metered only.
+
+## Remediation (2026-09-03, GLM 5.3 Flash)
+
+The critic re-measured the kept value sets under driver `TZ=UTC` — 18 kept value sets confirmed
+Spark-equal — and failed the record and one example. Fixes, each measured before it was written:
+
+- `partition_transforms.py` asserted only the row round-trip, so a years→months transform
+  mutation on the write path stayed green. The example now also asserts the measured partition
+  values read back from the tables' `.files` metadata (`SELECT partition.<field> FROM <t>.files`):
+  years → `[(54,), (55,)]`, months → `[(650,), (653,)]`, days → the two dates,
+  bucket(4) over ids 1, 2, 3, 55, 89 → `[(0,), (1,), (3,)]`. All four value sets measured equal
+  on Spark and repark; the years→months mutation now exits 1.
+- The `F.try_to_time` row carried a Spark cell live Spark contradicts: Spark refuses every form
+  with `[UNSUPPORTED_TIME_TYPE]`. The row now records "Spark refuses / repark refuses" with the
+  exact messages.
+- The measurement recipe above now states the driver `TZ=UTC` requirement, and the
+  `collect()`-rendering difference is filed as registry queue entry EX7-TZCOLLECT-1 with the
+  measured America/New_York pair.
+- The `F.hours` row now records the measured refusals on the example's own facade path (with and
+  without `repark.sql.allowCreateFormatVersion3`), Spark's partition values, and the SQL-door
+  parity note; the facade path is filed as registry queue entry EX7-HOURS-1.
+
+Writable-path note: the remediation brief extended this unit's writable set to the registry queue
+section of `docs/spark-sql-iceberg-parity.md` for those two dated queue entries; nothing else
+outside the original set was touched.
 
 ## Gates (2026-09-03, on this branch tree)
 
@@ -132,11 +162,61 @@ Wall-clock: start 2026-09-03T00:00:00Z, end 2026-09-03T00:20:00Z (carried from p
 | `docs/examples/functions/utc_offsets.py` | 0 |
 | `docs/examples/functions/partition_transforms.py` | 0 |
 
+Remediation re-run 2026-09-03 (GLM 5.3 Flash, on the remediated tree): every row above
+re-measured 0 — the static half, `--require-execute`, `make check-map-sync`,
+`make check-ledger-grammar`, `make check-ledgers`, both ruff legs, and the six example
+scripts with `partition_transforms.py` re-run on its new assertions — plus
+`python3 scripts/ledger_lifecycle.py check --base a0cd39e` → 0, and the years→months
+mutation check on `partition_transforms.py` → 1 (red, as required).
+
 Counts line, both legs identical:
 
 `example-coverage: 913 public names (catalog=28, column=40, dataframe=150, functions=444, io=42, ml=28, session=41, ta=86, types=32, window=22); 90 covered; 821 backlog; 2 exceptions; 21 examples`
 
 Was `69 covered; 842 backlog; 15 examples` before this batch; delta is +21 covered, -21 backlog, +6 examples (functions 11 → 17, total 15 → 21).
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: EX-7
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Each clause part carries its own evidence in this ledger (red-first capture, oracle table, counts line, gate exits); the remediation re-checked the four partition-value sets, the try_to_time refusal pair and the F.hours refusal sequence against the live oracle before writing them.
+      artifacts: [scripts/check_example_coverage.py, docs/examples/functions/partition_transforms.py]
+    - id: AT-2
+      status: ATTACKED
+      evidence: NULL and malformed inputs are exercised across the files (None epoch counts, malformed parse strings, NULL calendar parts, pre-1970 stamps) and the remediation keeps the out-of-set bucket key 89 whose bucket differs from its neighbours.
+      artifacts: [docs/examples/functions/epoch.py, docs/examples/functions/to_date_timestamp.py, docs/examples/functions/make_calendar.py, docs/examples/functions/partition_transforms.py]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Every refusal was measured on the door that refuses it and recorded with both engines' exact texts (try_to_time UNSUPPORTED_TIME_TYPE on Spark and repark, the F.hours facade DataInvalid and the µs→ns append refusal, the five engine-gap drops); nothing was absorbed silently.
+      artifacts: [task/ledgers/staging/ex-7-functions-datetime-b-ledger.md, docs/examples/functions/partition_transforms.py]
+    - id: AT-4
+      status: N/A
+      justification: Each example builds one local[1] session and one tempdir warehouse and stops it in a finally; there is no shared mutable state.
+    - id: AT-5
+      status: N/A
+      justification: No privileged action, no secrets, no network; the examples run on a memory catalog under a tempfile directory.
+    - id: AT-6
+      status: N/A
+      justification: No migration or schema-drift surface; the tables live and die with each run's tempdir.
+    - id: AT-7
+      status: N/A
+      justification: Fixed small frames (two to five rows) and one query per assertion; nothing unbounded.
+    - id: AT-8
+      status: ATTACKED
+      evidence: Every asserted value was measured against live PySpark 4.1.2 + Iceberg 1.11.0 with driver TZ=UTC before it was written, and the remediation re-measured the touched value sets on both engines; divergences and refusals are recorded with both values, never absorbed.
+      artifacts: [docs/examples/functions/partition_transforms.py, task/ledgers/staging/ex-7-functions-datetime-b-ledger.md]
+    - id: AT-9
+      status: N/A
+      justification: Failures surface as SystemExit printing the diverging values; there is no log or metric surface.
+    - id: AT-10
+      status: ATTACKED
+      evidence: The coverage gate reds any COVERS row without an exercising assertion, and the remediation was mutation-checked — a years→months transform mutation on the write path exits 1 on the new partition-value assertions.
+      artifacts: [docs/examples/functions/partition_transforms.py, scripts/check_example_coverage.py]
+  reattested: [AT-1, AT-8, AT-10]
+  complete: true
+```
 
 ## Pointers
 
