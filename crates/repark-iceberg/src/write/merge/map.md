@@ -49,15 +49,18 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   `plan_deletion_vectors` passes STATEMENT-ONLY positions and consumes the result. The
   semantics are unchanged and still Spark's two-test rule: APPLICABILITY (`delete_seq >=
   data_seq`, unknown erring toward "applies") governs the merge, FILE SCOPE governs only the
-  removal. What changed is ownership, and one measured cost: F-22 REVERSED F-18's lazy data
-  walk — `collect_live_data_files` now always reads every data manifest so
-  `data_sequence_numbers` fills for every touched path, with no opt-out even when
-  `known_partitions` is complete. The two RP-7 pins that hid the data manifests and required the
-  close to succeed anyway now assert the opposite and the sequence numbers they buy:
-  `closing_a_covered_v3_delete_reads_the_data_manifest_for_sequence_numbers` and
-  `a_supplied_partition_map_still_walks_the_data_manifests_for_sequence_numbers`.
+  removal.
+  **RP-9 (2026-09-03):** pin `594bdbe5` (fork F-23) restores the skip: when there are no
+  legacy deletes and `known_partitions` covers every touched path the close reads ZERO data
+  manifests and `data_sequence_numbers` is empty. A MoR statement with a live legacy delete
+  still walks and the sequence map is total. RePark never treats that map as total on the
+  pure-DV path (`apply_close` reads only `added` / `removed`). Pins:
+  `a_supplied_partition_map_closes_a_fresh_partitioned_delete_with_no_data_manifest` (hide
+  succeeds, map empty), `closing_a_covered_v3_delete_reads_the_data_manifest_for_sequence_numbers`
+  (empty map still walks), `a_legacy_delete_fills_data_sequence_numbers_even_with_a_complete_partition_map`.
   `plan_deletion_vectors` loads the scanned snapshot's `ManifestList` once and hands it to the
   close as `Option<&ManifestList>` so the list is not read twice.
+  pins: rp-9-repin-f23/C-002
   **V3-12 C-006:** `prepare_row_delta_deletes` takes the `snapshot_id`
   `commit_target::snapshot_id_for_commit` already resolved for the target scan and
   `validate_from_snapshot`, and hands it to BOTH the legacy-delete collection and the fork
@@ -85,11 +88,11 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   measurably useless — one partitioned spec anywhere in a table's history emptied the map and
   the statement paid the full lazy walk (192-partition fresh-path DELETE 2,176 ms, now 761 ms).
   The two manifest-read pins hid the live data manifests and required the close to succeed
-  anyway; **RP-8** flipped both, because F-22 always walks the data manifests for
-  `data_sequence_numbers`. They now assert that hiding those manifests REFUSES and that the
-  close fills a sequence number for every touched path.
+  anyway; **RP-8** flipped both because F-22 always walked; **RP-9** restores the complete-map
+  skip (`data_sequence_numbers` empty) and keeps the empty-map and legacy-delete walks.
   pins: rp-3-fork-repin/C-003
   pins: rp-8-repin-f21-f22/C-002
+  pins: rp-9-repin-f23/C-002
   pins: v3-5-dv-compaction/C-005
   pins: v3-9-mor-predicate-dml-dv/C-007, C-009
   pins: rp-7-f18-repin/C-002, C-003

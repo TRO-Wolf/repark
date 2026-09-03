@@ -589,6 +589,21 @@ mod tests {
         catalog: &std::sync::Arc<dyn Catalog>,
         namespace: &NamespaceIdent,
     ) -> (Table, TableIdent) {
+        partitioned_table(catalog, namespace, Some(FormatVersion::V3)).await
+    }
+
+    async fn partitioned_v2_table(
+        catalog: &std::sync::Arc<dyn Catalog>,
+        namespace: &NamespaceIdent,
+    ) -> (Table, TableIdent) {
+        partitioned_table(catalog, namespace, None).await
+    }
+
+    async fn partitioned_table(
+        catalog: &std::sync::Arc<dyn Catalog>,
+        namespace: &NamespaceIdent,
+        format_version: Option<FormatVersion>,
+    ) -> (Table, TableIdent) {
         let schema = Schema::builder()
             .with_schema_id(0)
             .with_fields(vec![
@@ -612,18 +627,22 @@ mod tests {
             .await
             .expect("create partitioned table");
         let ident = TableIdent::new(namespace.clone(), "parts".to_string());
-        crate::write::format_version::set_properties_and_format_version(
-            catalog.as_ref(),
-            &ident,
-            None,
-            HashMap::new(),
-            &[],
-            Some(FormatVersion::V3),
-        )
-        .await
-        .expect("upgrade to v3");
+        if let Some(format_version) = format_version {
+            crate::write::format_version::set_properties_and_format_version(
+                catalog.as_ref(),
+                &ident,
+                None,
+                HashMap::new(),
+                &[],
+                Some(format_version),
+            )
+            .await
+            .expect("set format version");
+        }
         let table = catalog.load_table(&ident).await.expect("load fresh");
-        assert_eq!(table.metadata().format_version(), FormatVersion::V3);
+        if let Some(format_version) = format_version {
+            assert_eq!(table.metadata().format_version(), format_version);
+        }
         let arrow_schema = std::sync::Arc::new(datafusion::arrow::datatypes::Schema::new(vec![
             datafusion::arrow::datatypes::Field::new("id", DataType::Int32, false),
             datafusion::arrow::datatypes::Field::new("part", DataType::Int32, false),
@@ -678,7 +697,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn a_supplied_partition_map_still_walks_the_data_manifests_for_sequence_numbers() {
+    async fn a_supplied_partition_map_closes_a_fresh_partitioned_delete_with_no_data_manifest() {
         let warehouse = TempDir::new().expect("catalog warehouse");
         let catalog = memory_catalog(&warehouse).await;
         let namespace = NamespaceIdent::new("ns".to_string());
@@ -696,6 +715,73 @@ mod tests {
                 .any(|(_, partition)| !partition.fields().is_empty()),
             "the fixture must be partitioned, or the pin proves nothing"
         );
+        let hidden = HiddenManifests::hide(&data_manifest_paths(&table).await);
+        let prepared = prepare_row_delta_deletes(
+            &table,
+            std::slice::from_ref(&pair),
+            WriteConcurrency::new(1).expect("K=1"),
+            known,
+            None,
+        )
+        .await
+        .expect("a complete partition map skips the data-manifest walk");
+        match prepared.kind {
+            PreparedKind::DeletionVectors(close) => {
+                assert_eq!(close.added.len(), 1);
+                assert!(
+                    close.data_sequence_numbers.is_empty(),
+                    "pure-DV complete known_partitions leaves data_sequence_numbers empty"
+                );
+            }
+            PreparedKind::PositionDeletes(_) => panic!("v3 must plan deletion vectors"),
+        }
+        drop(hidden);
+        let table = catalog.load_table(&ident).await.expect("reload");
+        assert_eq!(live_ids(&table).await, vec![1, 2, 3, 4]);
+    }
+
+    #[tokio::test]
+    async fn a_legacy_delete_fills_data_sequence_numbers_even_with_a_complete_partition_map() {
+        let warehouse = TempDir::new().expect("catalog warehouse");
+        let catalog = memory_catalog(&warehouse).await;
+        let namespace = NamespaceIdent::new("ns".to_string());
+        catalog
+            .create_namespace(&namespace, HashMap::new())
+            .await
+            .expect("namespace");
+        let (table, ident) = partitioned_v2_table(&catalog, &namespace).await;
+        let pair = pair_for_id(&table, 1).await;
+        commit_row_delta_kind(
+            &catalog,
+            &table,
+            table
+                .metadata()
+                .current_snapshot()
+                .map(|snapshot| snapshot.snapshot_id()),
+            vec![pair],
+            Vec::new(),
+            WriteConcurrency::new(1).expect("K=1"),
+            RowDeltaPolicy {
+                kind: RowDeltaKind::Delete,
+                isolation: IsolationLevel::Serializable,
+            },
+        )
+        .await
+        .expect("v2 parquet position delete");
+        crate::write::format_version::set_properties_and_format_version(
+            catalog.as_ref(),
+            &ident,
+            None,
+            HashMap::new(),
+            &[],
+            Some(FormatVersion::V3),
+        )
+        .await
+        .expect("upgrade to v3");
+        let table = catalog.load_table(&ident).await.expect("reload upgraded");
+        assert_eq!(table.metadata().format_version(), FormatVersion::V3);
+        let pair = pair_for_id(&table, 2).await;
+        let known = scanned_partitions(&table).await;
         let touched = pair.0.as_ref().to_string();
         let hidden = HiddenManifests::hide(&data_manifest_paths(&table).await);
         let refused = prepare_row_delta_deletes(
@@ -708,7 +794,7 @@ mod tests {
         .await;
         assert!(
             refused.is_err(),
-            "a complete partition map no longer buys a zero-data-manifest close"
+            "a live legacy delete still walks the data manifests"
         );
         drop(hidden);
         let prepared = prepare_row_delta_deletes(
@@ -724,13 +810,15 @@ mod tests {
             PreparedKind::DeletionVectors(close) => {
                 assert_eq!(close.added.len(), 1);
                 assert!(
+                    !close.legacy_deletes.is_empty(),
+                    "the upgraded parquet delete is live"
+                );
+                assert!(
                     close.data_sequence_numbers.contains_key(&touched),
-                    "the sequence-number walk fills every touched path"
+                    "legacy deletes force a total sequence-number map"
                 );
             }
             PreparedKind::PositionDeletes(_) => panic!("v3 must plan deletion vectors"),
         }
-        let table = catalog.load_table(&ident).await.expect("reload");
-        assert_eq!(live_ids(&table).await, vec![1, 2, 3, 4]);
     }
 }
