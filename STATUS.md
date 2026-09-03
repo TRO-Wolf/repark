@@ -154,14 +154,14 @@ in published history by explicit decision:
     [scale-v3-mw7-ledger.md](task/ledgers/archive/2026-09/2026-09-02-scale-v3-mw7-ledger.md) §3.
   - **The gate is audited (V1-GATE, 2026-09-03) and §2 pillar 4 is discharged (**V3-COV**,
     2026-09-03):** all twenty north-star §3 rows are ✅ or carry a dated DECLARED residual with a
-    pin (§3.1), and the statement matrix is measured — 81 programs, 267 cells, 71 EQUAL, 9 rows
-    filed, 2 FIXED ([v3-statement-coverage.md](docs/design/v3-statement-coverage.md)). One owner
-    line confirming `B-MOR-3`'s DECLARED class now stands between the audit and the tag.
+    pin (§3.1), and the statement matrix is measured — 81 programs, 267 cells, 72 EQUAL, 8 rows
+    filed, 2 FIXED ([v3-statement-coverage.md](docs/design/v3-statement-coverage.md)). `B-MOR-3`
+    FIXED 2026-09-03 (owner ruling: build); floor residue `B-MOR-3-FLOOR-1`.
   - **Next:** lineage carry and merge-on-read are complete on every served DML shape
     (`V3-COW-1`, `V3-MOR-1`, `V3-DV-1`, `V3-ROWID-3`, `V3-UPGRADE-DV-1`,
     `V3-UPGRADE-DV-PLAIN-1`, `V3-UPGRADE-DV-PART-1`, `V3-COV-3`,
     `F-v3-10-partition-file-order` FIXED); open v3 residuals are `V3-FILEORDER-1`,
-    `V3-COV-4` / `V3-COV-5` / `V3-COV-6`, `V3-UPGRADE-V4-1`, `G3-E8` and `B-MOR-3`.
+    `V3-COV-4` / `V3-COV-5` / `V3-COV-6`, `V3-UPGRADE-V4-1`, `G3-E8`.
 <!-- /ws -->
 
 <!-- ws id=perf ledgers=perf- state=open -->

@@ -1,7 +1,8 @@
 # Charter ledger — B-MOR-3 · rewrite_position_delete_files on format-v3
 
 **Date:** 2026-09-03 · **Branch:** `feat/b-mor-3-rewrite-position-deletes-v3` · **Base:** `main`
-`e3ad67e` · **Model:** grok-4.6 · **Path:** STANDARD (`risk_tier: standard`).
+`e3ad67e` · **Model:** grok-4.6 → glm-5.3-flash (continuation) · **Path:** STANDARD
+(`risk_tier: standard`).
 **Policy:** [../../../AGENTS.md](../../../AGENTS.md) · **Registry:**
 [docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md) `B-MOR-3`,
 `B-MOR-3-FLOOR-1`.
@@ -17,8 +18,8 @@ orphan-files.
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | Spark cells A–E recorded on live PySpark 4.1.2 + Iceberg 1.11.0 before any product edit. | §2 table. | **PROVEN** | `/tmp/oc-bmor3-oracle/b-mor-3-spark-cells.json`. Citation: `python/repark/tests/test_parity_live.py`. |
-| C-002 | Refusal deleted; fork action runs on v3. Engine A/B5/E match Spark. B2/C/D convert below Spark min-input-files=5 — not patched in RePark; filed as `B-MOR-3-FLOOR-1` / F-24. | Engine dump vs Spark dump; floor pins. | **PROVEN** | Engine `/tmp/oc-bmor3-oracle/b-mor-3-engine-cells.json`. Citation: `crates/repark-spark/src/call.rs`, `crates/repark-spark/src/tests/call_v3_dv.rs`. |
+| C-001 | Spark cells A–E recorded on live PySpark 4.1.2 + Iceberg 1.11.0 before any product edit. | §2 table. | **PROVEN** | §2 tables are the values of record (scratch dump `/tmp/oc-bmor3-oracle/b-mor-3-spark-cells.json`). Citation: `python/repark/tests/test_parity_live.py`. |
+| C-002 | Refusal deleted; fork action runs on v3. Engine A/B5/E match Spark. B2/C/D convert below Spark min-input-files=5 — not patched in RePark; filed as `B-MOR-3-FLOOR-1` / F-24. | Engine dump vs Spark dump; floor pins. | **PROVEN** | §3 table is the comparison of record (scratch dump `/tmp/oc-bmor3-oracle/b-mor-3-engine-cells.json`); the 12 in-process pins re-prove it on the final tree. Citation: `crates/repark-spark/src/call.rs`, `crates/repark-spark/src/tests/call_v3_dv.rs`. |
 | C-003 | Five refusal pins retire to Spark-compared zeros. New B5 conversion pin + live co-collected leg. Floor pins for B2/C/D. Always-run tests repark-only. | Named tests. | **PROVEN** | §3 pin table. Citation: `crates/repark-spark/src/tests/call_register.rs`, `call_v3_dv.rs`, `v3e3.rs`, `python/repark/tests/test_v3_dv_compaction.py`, `test_v3e3_fixtures.py`, `test_parity_live.py`. |
 | C-004 | Registry `B-MOR-3` FIXED; `B-MOR-3-FLOOR-1` filed; north star row 13 / one-line ruling; STATUS drops `B-MOR-3` from Next; maps lockstep. | Doc gates. | **PROVEN** | §8. Citation: `docs/spark-sql-iceberg-parity.md`, `crates/repark-spark/src/map.md`. |
 
@@ -82,6 +83,10 @@ COVERAGE_ATTESTATION:
 | D5 | five partition parquet, upgrade | 5,5,7390,210 | 5 PUFFIN rc=1 | — | — |
 | E v2 control | eight parquet, partition granularity | 8,1,11787,1478 | 1 PARQUET rc=8 | [1..8] | 0,0,0,0 |
 
+Re-measured 2026-09-03 (continuation session) cells A, B, C, D, E into the same dump after the
+file held only B5/B8/D5: every count reproduced; byte counts vary run to run, so only the four
+counts and the file census are pinned.
+
 ## 3. Engine vs Spark (C-002)
 
 | Cell | Spark | Engine | Verdict |
@@ -111,11 +116,13 @@ Proposed fork unit **F-24**: honor `MIN_INPUT_FILES_DEFAULT = 5` on the v3 parqu
 
 | Mutation | N red / M |
 |---|---|
-| Restore the live-DV refusal | the five retired zeros pins |
-| Assert B5 `rewritten_delete_files_count == 0` | B5 Spark-door + facade + live |
-| Assert B2 four zeros | floor pin |
-| Assert C mixed parquet remains | floor pin |
-| Assert D still one PARQUET | floor pin |
+| Restore the live-DV refusal | Spark door 5 red / 12 CALL pins; facade 8 red (5 failed + 3 fixture errors) / 113 |
+| Assert B5 `rewritten_delete_files_count == 0` | B5 Spark-door pin 1 red / 10 |
+| Assert B2 four zeros | B2 floor pin 1 red / 3 floor pins |
+| Assert C mixed parquet remains | C floor pin 1 red / 1 |
+| Assert D still one PARQUET | D floor pin 1 red / 1 |
+
+One knob at a time; every mutation reverted and the touched scope re-run green after each.
 
 ## 6. Retired comments
 
@@ -136,7 +143,18 @@ Proposed fork unit **F-24**: honor `MIN_INPUT_FILES_DEFAULT = 5` on the v3 parqu
 
 ## 8. Gates
 
-Recorded in the unit close.
+| Gate | Exit |
+|---|---|
+| `make develop` (clean tree, after each Rust change) | 0 |
+| `make verify` | 0 |
+| `cargo test -p repark-spark --lib -- rewrite_position_delete` | 0 (12 passed) |
+| `.venv/bin/python -m pytest python/repark/tests/test_v3_dv_compaction.py python/repark/tests/test_v3e3_fixtures.py -q` | 0 (7 passed) |
+| `.venv/bin/python -m pytest test_v3_statement_coverage.py test_v1_gate_docs.py test_v3_cov_docs.py test_cap_1_source_file_line_cap.py test_proc_1_tiered_review.py -q` | 0 (148 passed, 81 skipped) |
+| `.venv/bin/python -m pytest test_mw7_scale_smoke.py test_v3_live_oracle.py -q` | 0 (22 passed, 8 skipped) |
+| `REPARK_PARITY_LIVE=1 … pytest python/repark/tests/test_parity_live.py -q -k "rewrite_position or disclosure"` | 0 (15 passed) |
+| `make check-map-sync` / `check-ledger-grammar` / `check-ledgers` / `check-docs-compaction` | 0 (§8 close) |
+| `python3 scripts/ledger_lifecycle.py check --base origin/main` | 0 (§8 close) |
+| `typos .` / `ruff check python` / `ruff format --check python` | 0 (§8 close) |
 
 ## 9. Delivery template
 

@@ -2409,7 +2409,7 @@ the pin rather than obeying it.
 > **FIXED 2026-08-31 (RP-4 / fork #243 F-7 slice 1).** `CALL system.rewrite_data_files` on a
 > twelve-file v3 table rewrites 12→1 and PySpark 4.1.2 + Iceberg 1.11.0 reads the same
 > `(id, _row_id, _last_updated_sequence_number)` and Arrow types (`int64`) before and after.
-> Residue: `B-MOR-3` (position-delete rewrite still refuses live DVs). `V3-DANGLE-1` FIXED by V3-5.
+> Residue: `B-MOR-3` FIXED 2026-09-03 (owner ruling: build). Floor residue `B-MOR-3-FLOOR-1`. `V3-DANGLE-1` FIXED by V3-5.
 
 - **repark** — `CALL <catalog>.system.rewrite_data_files(table => …)` compacts a format-v3
   table and carries `_row_id` / `_last_updated_sequence_number` through unchanged. The 2026-08-21
@@ -2469,37 +2469,56 @@ the pin rather than obeying it.
 
 ### B-MOR-3 — `rewrite_position_delete_files` refuses live Puffin deletion vectors
 
-- **repark** — `CALL <catalog>.system.rewrite_position_delete_files(table => …)` refuses when the
-  current snapshot holds any live Puffin deletion vector, naming the count. A Spark-written
-  format-v3 table with three vectors returns
-  `found 3 live Puffin deletion vector(s)` rather than four zeros.
-- **Apache Spark** — returns all four counts as `0` and does nothing. Re-measured 2026-09-02
-  (V3-11) on the pinned oracle: three MoR `DELETE`s on a v3 table produced three `PUFFIN`
-  delete files, the procedure answered
-  `rewritten_delete_files_count = 0, added_delete_files_count = 0, rewritten_bytes_count = 0,
-  added_bytes_count = 0`, all three vectors stayed live, the surviving rows were unchanged, and
-  a second run answered the same four zeros. Spark's own answer on v3 is the silent no-op this
-  engine refuses to give.
-  *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, Hadoop-catalog fixture, 2026-09-02;
-  the `DataSourceV2Relation` note this row used to carry is retired — see
-  [MOR-1](#mor-1--rewrite_position_delete_files-compacts-below-sparks-min-input-files-floor).)*
+> **FIXED 2026-09-03 (owner ruling: build).** The CALL no longer refuses live Puffin DVs.
+> A DV-only table returns Spark's four zeros and leaves the vectors in place. An admitted
+> group of parquet position deletes on an upgraded v3 table rewrites to one PUFFIN DV per
+> data file. OD-2 of record stays the orphan-files posture and is untouched. History of the
+> refusal (OD-2 by analogy, V3-11 zeros, RP-3 C-007 conversion no-op) is the bullets below.
+> Floor residue: [B-MOR-3-FLOOR-1](#b-mor-3-floor-1--v3-parquet-to-dv-rewrite-runs-below-sparks-min-input-files).
+
+- **repark** — `CALL <catalog>.system.rewrite_position_delete_files(table => …)` on a DV-only
+  v3 table returns four zeros and leaves the live Puffin vectors in place. A Spark-written
+  format-v3 table with three vectors returns `0, 0, 0, 0`, 37 live rows unchanged, three DVs
+  stay. Five upgraded file-scoped parquet deletes rewrite to five PUFFIN DVs
+  (`rewritten_delete_files_count = 5`, `added_delete_files_count = 5`).
+- **Apache Spark** — DV-only: four zeros, vectors stay, rows unchanged, second run zeros
+  (V3-11, re-measured 2026-09-03 cell A). Admitted parquet (≥ `min-input-files` 5): one
+  PUFFIN per data file, parquet gone, rows unchanged, `next-row-id` advances to the table's
+  row count, second run zeros (2026-09-03 cell B5).
+  *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, Hadoop-catalog fixture, 2026-09-03.)*
 - **Pin** —
-  `crates/repark-spark/src/tests/call_register.rs::call_rewrite_position_delete_files_refuses_spark_written_puffin_vectors`
-  (CI-runnable Spark-written fixture; 37 live rows after the vectors apply, pinned beside it by
-  `call_register_table_adopts_a_spark_written_v3_table_with_puffin_vectors`);
-  `crates/repark-spark/src/tests/v3e3.rs::partitioned_v3_dv_rewrite_position_delete_files_still_refuses`
-  and `partitioned_v3_dv_fork_rewrite_position_delete_files_measurement` (RP-3 C-007);
-  facade `python/repark/tests/test_v3e3_fixtures.py::test_facade_partitioned_v3_dv_matches_spark_live_rows`;
-  V3-5 `call_v3_dv.rs::call_rewrite_position_delete_files_still_refuses_engine_written_v3_dvs`
-  and `test_v3_dv_compaction.py` (engine-written six-DV refuse). Pins: v3-5-dv-compaction/C-003.
-- **Rationale** — DELIBERATE, stricter than Spark on purpose (owner decision OD-2). **RP-3
-  C-007 (2026-08-30, fork `d408da42` / R136 F-7 U3):** the v3 arm *runs* and is read-identity
-  on the V3E-3 partitioned-DV fixture, but it **converts parquet position deletes into DVs**.
-  On a DV-only table it returns four zeros (`rewritten=0 added=0`, two DVs stay two) and a
-  second run converges. Zeros still read as already-clean, so `B-MOR-3` stays (OD-2).
-  **V3-5 (2026-08-31):** DV compaction lands through `rewrite_data_files` (`V3-DANGLE-1`
-  FIXED). This procedure does not compact live DVs; Spark also returns four zeros on a
-  DV-only table. The CALL refuse remains so those zeros cannot mean already-clean.
+  `crates/repark-spark/src/tests/call_register.rs::call_rewrite_position_delete_files_on_spark_written_puffin_vectors_returns_zeros`
+  (37 live rows, three DVs stay);
+  `crates/repark-spark/src/tests/call_v3_dv.rs::call_rewrite_position_delete_files_on_engine_written_v3_dvs_returns_zeros`
+  (six DVs stay);
+  `crates/repark-spark/src/tests/v3e3.rs::partitioned_v3_dv_rewrite_position_delete_files_returns_zeros`
+  and `partitioned_v3_dv_fork_rewrite_position_delete_files_measurement`;
+  facade `python/repark/tests/test_v3e3_fixtures.py::test_facade_partitioned_v3_dv_matches_spark_live_rows`
+  and `python/repark/tests/test_v3_dv_compaction.py`;
+  cell B `call_v3_dv.rs::call_rewrite_position_delete_files_converts_five_upgraded_parquet_deletes_to_puffin`
+  and live `python/repark/tests/test_parity_live.py::test_live_rewrite_position_delete_files_upgraded_parquet_matches_spark`.
+  Pins: b-mor-3-rewrite-position-deletes-v3/C-001, C-002, C-003.
+- **Rationale** — FIXED. Owner ruling 2026-09-03: build the PROC-1 addendum shape. DV-only
+  zeros are Spark's measured answer, not a silent under-report. Parquet→DV conversion on an
+  admitted group is Spark's measured answer (cell B5). OD-2 stays orphan-files.
+
+### B-MOR-3-FLOOR-1 — v3 parquet-to-DV rewrite runs below Spark's min-input-files
+
+- **repark** — the fork v3 arm converts every live parquet position delete, including a
+  2-file group (`rewritten=2 added=2`, two PUFFIN), a mixed leftover parquet beside a DV
+  (`rewritten=1 added=1`), and one partition-scoped parquet covering two data files
+  (`rewritten=1 added=2`, two PUFFIN).
+- **Apache Spark** — the same three shapes return four zeros and leave the parquet files
+  (groups of 1 or 2 are below `MIN_INPUT_FILES_DEFAULT = 5`). Measured 2026-09-03 cells B,
+  C, D.
+  *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0.)*
+- **Pin** —
+  `crates/repark-spark/src/tests/call_v3_dv.rs::call_rewrite_position_delete_files_converts_two_upgraded_parquet_deletes_below_spark_floor`,
+  `call_rewrite_position_delete_files_converts_mixed_remaining_parquet_below_spark_floor`,
+  `call_rewrite_position_delete_files_splits_partition_parquet_below_spark_floor`.
+  Pins: b-mor-3-rewrite-position-deletes-v3/C-002, C-003.
+- **Rationale** — BACKLOG, fork TRIGGER F-24. Do not patch the planner in RePark. Spark
+  converts the same shapes once the group reaches five files (cells B5, D5).
 
 ### V3-ADOPT-1 — Hadoop `vN.metadata.json` pointers register, read, and write `v(N+1)`
 

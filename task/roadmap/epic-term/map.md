@@ -30,9 +30,9 @@ is now the epic list from v0.6 through 3.0 — PROJECT.md points here rather tha
   The audit is scoped to each row's "v1.0 requires" cell; residuals on the same surface but
   outside it (`RDF-1`, `ORPHAN-1/2`, `MANIFEST-1/3`) are tabled beneath, recorded not gating.
   **§2 pillar 4 is discharged (V3-COV, 2026-09-03):** the statement matrix is measured — 81
-  programs, 267 cells, 71 EQUAL, 9 rows filed, 2 defects FIXED —
+  programs, 267 cells, 72 EQUAL, 8 rows filed, 2 defects FIXED —
   [../../../docs/design/v3-statement-coverage.md](../../../docs/design/v3-statement-coverage.md).
-  One thing stays owed and it is not a §3 row: an owner line confirming `B-MOR-3`'s DECLARED class.
+  `B-MOR-3` FIXED 2026-09-03 (owner ruling: build). The v1.0 tag is what remains.
   pins: v1-gate-audit/C-001, C-002, C-004
   pins: v3-cov-statement-coverage/C-005
 - [release-roadmap-2026-08-29.md](release-roadmap-2026-08-29.md) — **the release roadmap
