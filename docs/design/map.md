@@ -10,6 +10,12 @@ changing a decision here means a new dated design pass, not an in-place edit.
 
 ## Contents
 
+- [v3-statement-coverage.md](v3-statement-coverage.md) — **V3-COV (2026-09-03):** the v3
+  statement-coverage matrix that discharges the north star's §2 pillar 4 — 80 statement programs
+  over 12 statement classes and all seven `CALL system.*` procedures, 254 comparison cells,
+  72 EQUAL, 1 refused by both engines, 7 rows filed, 2 defects FIXED in the same unit. Harness:
+  `python/repark/tests/test_v3_statement_coverage.py`. Read it before adding a statement surface:
+  a new statement class that is not in §3 is not covered, whatever the nightly legs say.
 - [format-v3-track.md](format-v3-track.md) — **the format-v3 track's scope audit
   (2026-08-21; §5 the delivery sequence, Steps 1–3 done 2026-08-30, RP-3 consumed at `d408da42`;
   Step 4 V3-3 keep-refusal dated 2026-08-30; Step 5 V3-5 `V3-DANGLE-1` FIXED 2026-08-31):** what roadmap item A12 got wrong once the surfaces were actually run. The engine

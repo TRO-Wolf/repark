@@ -5,6 +5,7 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use datafusion::arrow::compute::{CastOptions, cast_with_options};
 use datafusion::arrow::datatypes::{DataType, Field, Schema, SchemaRef};
 use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::catalog::Session;
@@ -248,7 +249,18 @@ fn conform_batch(batch: &RecordBatch, schema: &SchemaRef) -> Result<RecordBatch>
                 batch.schema()
             ))
         })?;
-        columns.push(column);
+        if column.data_type() == field.data_type() {
+            columns.push(column);
+            continue;
+        }
+        columns.push(cast_with_options(
+            &column,
+            field.data_type(),
+            &CastOptions {
+                safe: false,
+                ..CastOptions::default()
+            },
+        )?);
     }
     RecordBatch::try_new(Arc::clone(schema), columns).map_err(|error| {
         DataFusionError::Internal(format!("lineage scan could not rebuild batch: {error}"))

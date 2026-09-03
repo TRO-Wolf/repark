@@ -42,7 +42,13 @@ Source comments retain only API and safety contracts; implementation narration i
   `s3://`/`s3a://` → the fork's OpenDAL S3 factory; `file://`/bare **absolute** path → LocalFs;
   anything else — unknown scheme, single-slash typo `s3:/…`, relative/empty path — fails loud,
   never a silent LocalFs).
-- `lineage_columns.rs` — **V3-4:** `LineageColumnsTableProvider` serves `_row_id` and
+- `lineage_columns.rs` — **V3-COV (2026-09-03):** `conform_batch` strict-casts a scanned column
+  whose Arrow type differs from the declared field's, so a `_row_id` projection after a widening
+  `ALTER COLUMN … TYPE` returns rows instead of raising
+  `lineage scan could not rebuild batch`; the ordinary read path already promoted, so the same
+  table answered one query and failed its sibling. Registry `V3-COV-2` FIXED.
+  pins: v3-cov-statement-coverage/C-004
+  **V3-4:** `LineageColumnsTableProvider` serves `_row_id` and
   `_last_updated_sequence_number` on format-v3 **current-snapshot** reads (stored value
   else `first_row_id +` position / file sequence). Simple `col = lit` filters pass through
   to `table.scan().with_filter` (`TableProviderFilterPushDown::Inexact` residual still

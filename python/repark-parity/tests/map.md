@@ -147,6 +147,12 @@ JVM, no repark required). See [../map.md](../map.md).
   `confirmed live 2026-09-03` and name run 33699342417, base `a0fe83a` and `6 passed in
   230.67s`, and the two phrasings of the old "not re-dispatched" note join the stale set.
   pins: v1-gate-audit/C-007
+- `test_v3_cov_docs.py` — **V3-COV (2026-09-03; tree pins):** the coverage document, the registry
+  and the discharge lines hold one matrix — §1's totals are counted from §3 rather than asserted
+  beside it, every DIVERGES row cites a registry row that exists, the six rows this unit filed
+  carry a class, the date and their pin, the two fork-routed rows name a TRIGGER, and the north
+  star and the v3 track carry the dated discharge. Mutation battery: 9 red of 9 (ledger §6).
+  pins: v3-cov-statement-coverage/C-001, C-004, C-005
 - `test_v1_gate_docs.py` — **V1-GATE (2026-09-03; tree pins):** the v1.0 gate audit is written
   and true. The north star's §3.1 must carry twenty numbered audit rows, every one glyphed ✅
   and none naming a BACKLOG residual; each of the seven rows that has a residual must name its

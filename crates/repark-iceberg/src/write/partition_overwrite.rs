@@ -6,7 +6,8 @@ use std::sync::Arc;
 use datafusion::arrow::array::{
     ArrayRef, BooleanArray, Int32Array, Int64Array, RecordBatch, StringArray, new_null_array,
 };
-use datafusion::arrow::datatypes::SchemaRef;
+use datafusion::arrow::compute::{CastOptions, cast_with_options};
+use datafusion::arrow::datatypes::{FieldRef, SchemaRef};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::sql::sqlparser::ast::{
     BinaryOperator, Expr, Ident, UnaryOperator, Value, ValueWithSpan,
@@ -21,6 +22,7 @@ use uuid::Uuid;
 use crate::write::commit_target::{maybe_to_branch, snapshot_id_for_commit};
 use crate::write::merge::OPERATION_ID_PROP;
 use crate::write::overwrite::{OverwriteIsolation, parse_overwrite_isolation};
+use crate::write::store_assign::refuse_unless_write_store_assignable;
 
 /// Needle for the empty-input dynamic overwrite refusal.
 pub const EMPTY_DYNAMIC_OVERWRITE_NEEDLE: &str =
@@ -188,6 +190,26 @@ pub fn refuse_empty_dynamic_overwrite(staged_files: &[DataFile]) -> Result<()> {
     Ok(())
 }
 
+fn store_assign_source_column(source: &ArrayRef, field: &FieldRef) -> Result<ArrayRef> {
+    if source.data_type() == field.data_type() {
+        return Ok(Arc::clone(source));
+    }
+    refuse_unless_write_store_assignable(
+        "insert overwrite partition",
+        field.name(),
+        source.data_type(),
+        field.data_type(),
+    )?;
+    Ok(cast_with_options(
+        source,
+        field.data_type(),
+        &CastOptions {
+            safe: false,
+            ..CastOptions::default()
+        },
+    )?)
+}
+
 /// Inject Hive static `PARTITION (k=v)` columns into a source batch (Spark arity).
 /// # Errors
 /// Too many source columns, missing source columns, or a literal that cannot fill `k`.
@@ -239,7 +261,10 @@ pub fn inject_static_partition_columns(
                 batch.num_rows(),
             )?);
         } else {
-            columns.push(batch.column(source_index).clone());
+            columns.push(store_assign_source_column(
+                batch.column(source_index),
+                field,
+            )?);
             source_index += 1;
         }
     }

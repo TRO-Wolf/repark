@@ -14,8 +14,9 @@ _NORTH_STAR = "task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md"
 _REGISTRY = "docs/spark-sql-iceberg-parity.md"
 _BOARD = "docs/artifacts/v1-0-gate-closing-2026-09-02.html"
 _GATE_OPENING = (
-    "**Audit result (V1-GATE, 2026-09-03).** §3.1 audits all twenty rows and the fork rows they "
-    "lean on: every row ✅ or dated DECLARED as of 2026-09-03."
+    "**Audit result (V1-GATE, 2026-09-03; engineering item discharged by V3-COV, 2026-09-03).** "
+    "§3.1 audits all twenty rows and the fork rows they lean on: every row ✅ or dated DECLARED "
+    "as of 2026-09-03."
 )
 _SURFACE_RESIDUALS = {
     "12 · `rewrite_data_files`": ("RDF-1", "F-16 residue 2"),
@@ -94,15 +95,18 @@ def test_the_audit_is_scoped_to_the_v1_0_requires_cells() -> None:
     assert "BACKLOG, both v2-measured" in section
 
 
-def test_the_unrowed_v1_0_requirement_is_recorded_not_claimed() -> None:
-    """C-002: §2 pillar 4's statement coverage is named as owed, with the search that found it."""
+def test_the_unrowed_v1_0_requirement_is_discharged_with_its_measured_totals() -> None:
+    """C-002 + V3-COV: §2 pillar 4 carries the measured matrix, not the search that found it."""
     section = _normalized(_audit_section())
-    assert "One v1.0 requirement has no §3 row (V1-GATE, 2026-09-03)" in section
+    assert "§2 pillar 4 — discharged (V3-COV, 2026-09-03)" in section
     assert "full statement-coverage comparison against PySpark" in _normalized(_read(_NORTH_STAR))
     assert "ten cells over two fixtures" in section
-    assert "SEM-1 is a function-semantics unit" in section
     assert "no statement-coverage harness at any format version" in section
-    assert "Recorded as owed, not claimed." in section
+    assert "Statement coverage measured 2026-09-03" in section
+    assert "80\nstatement programs" in section or "80 statement programs" in section
+    assert "72 EQUAL" in section
+    assert "Nothing in §2 pillar 4 is now owed." in section
+    assert "docs/design/v3-statement-coverage.md" in section
 
 
 def test_each_residual_names_its_registry_row_class_and_date() -> None:
@@ -158,6 +162,7 @@ def test_the_gate_carries_one_dated_audit_line_and_claims_no_tag() -> None:
     assert "a one-line ruling confirming `B-MOR-3`'s DECLARED class" in north_star
     assert "and then the v1.0 tag" in north_star
     assert "**V3-COV**" in north_star
+    assert "no engineering item remains on this gate" in north_star
     assert "v1.0 is tagged" not in north_star
     assert "the API review (owner) is the remaining gate item" not in north_star
     assert "no gate item remains on the review" in north_star
@@ -183,12 +188,10 @@ def test_step_6_and_the_slate_carry_the_same_disposition() -> None:
     """C-002: the v3 track dates the answered API review and queues V3-COV where the gate says."""
     track = _normalized(_read("docs/design/format-v3-track.md"))
     assert "*Step 6 state, dated 2026-09-03 (V1-GATE).*" in track
+    assert "*Step 6 state, dated 2026-09-03 (V3-COV).*" in track
     assert "the v1.0 API review, answered 2026-09-02" in track
-    assert "Full v3 statement coverage is the one that is not done" in track
-    slate = _normalized(_read("briefs/next-sequence.md"))
-    assert "<!-- unit id=v3-cov -->" in slate
-    assert "**V3-COV** — full v3 statement coverage against PySpark" in slate
-    assert "not the statement matrix" in slate
+    assert "V3-COV measured the statement" in track
+    assert "Step 6 now owes **no engineering item**" in track
 
 
 def test_the_fork_side_rows_are_listed_and_dated_at_the_pin() -> None:
@@ -208,7 +211,7 @@ def test_status_carries_the_scale_line_the_gate_line_and_its_ceiling() -> None:
     assert "**SCALE-v3 (2026-09-02):**" in status
     assert "96 delete files against v2's 400" in status
     assert "zero delete files and zero delete records" in status
-    assert "**The gate is audited (V1-GATE, 2026-09-03):**" in status
+    assert "**The gate is audited (V1-GATE, 2026-09-03) and §2 pillar 4 is discharged" in status
     assert "**V3-COV**" in status
     assert "Result at acceptance" in status
     assert "**V3-10 (2026-09-02):**" in status

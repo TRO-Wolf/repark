@@ -109,14 +109,19 @@ gating.
 | 19 · Nightly oracle: v3 leg | ✅ | `v3-spark-part-dv` and `v3-spark-eq-dv` run as live `repark == Spark` triples; first green nightly 2026-09-02 | — | — | `python/repark/tests/test_v3_live_oracle.py` |
 | 20 · Scale | ✅ | 1e7 x 50 re-measured on v3: 96 delete files against v2's 400, 496 data files against 1,696, and the maintenance sequence ends at zero delete files and zero delete records | — | — | [scale-v3-mw7-ledger.md](../../ledgers/archive/2026-09/2026-09-02-scale-v3-mw7-ledger.md) §3; driver `python/repark-parity/bench/mw7/run_mw7.py --format-version 3` |
 
-**One v1.0 requirement has no §3 row (V1-GATE, 2026-09-03).** §2 pillar 4 asks for a *full
-statement-coverage comparison against PySpark on v3 tables*. The matrix has never carried a row
-for it, and no unit discharges it: the nightly v3 leg (V3E-5, green since 2026-09-02) is ten
-cells over two fixtures — partitioned-DV reads, equality delete beside a DV, `delete_files`
-kinds, UPDATE, matched-UPDATE MERGE on both write modes, and the two subquery-`WHERE` shapes —
-a targeted live triple, not the statement matrix; SEM-1 is a function-semantics unit and touches
-no v3 statement; and the tree carries no statement-coverage harness at any format version.
-Recorded as owed, not claimed.
+**§2 pillar 4 — discharged (V3-COV, 2026-09-03).** V1-GATE searched for a *full
+statement-coverage comparison against PySpark on v3 tables* and found none: the nightly v3 leg
+(V3E-5) is ten cells over two fixtures, not the statement matrix, and the tree carried no
+statement-coverage harness at any format version. **Statement coverage measured 2026-09-03: 80
+statement programs across 12 statement classes and all 7 `CALL system.*` procedures, 254
+comparison cells, 72 EQUAL, 1 refused by both engines, 7 rows filed (`DML-1`, `G3-E8` ×2,
+`B-MOR-3` already stood; `V3-COV-3` DECLARED fork-routed, `V3-COV-4` and `V3-COV-5` BACKLOG,
+`V3-COV-6` DECLARED fork-routed are new), 2 defects FIXED in the same unit (`V3-COV-1`,
+`V3-COV-2`), 0 statement classes left unmeasured.** The matrix, its fixtures and every cell are
+[docs/design/v3-statement-coverage.md](../../../docs/design/v3-statement-coverage.md); the
+harness is `python/repark/tests/test_v3_statement_coverage.py`, always-run on repark and
+live-gated against PySpark 4.1.2 + Iceberg 1.11.0, co-collected with the nightly live legs in
+2 min 25 s. Nothing in §2 pillar 4 is now owed.
 
 **Surface residuals outside the requires cells — recorded, not gating.** Each sits on a
 surface §3 names; none is inside that row's v1.0 requires cell, so none is audited above.
@@ -152,15 +157,15 @@ recommendation) and the freeze is registered — 888 names in
 `python/repark-parity/tests/test_api_freeze.py`, versioning policy in
 [docs/release.md](../../../docs/release.md) — so no gate item remains on the review.
 
-**Audit result (V1-GATE, 2026-09-03).** §3.1 audits all twenty rows and the fork rows they
-lean on: every row ✅ or dated DECLARED as of 2026-09-03. Two things are still owed and neither
-is a §3 row. **Owner:** a one-line ruling confirming `B-MOR-3`'s DECLARED class for
+**Audit result (V1-GATE, 2026-09-03; engineering item discharged by V3-COV, 2026-09-03).**
+§3.1 audits all twenty rows and the fork rows they lean on: every row ✅ or dated DECLARED as of
+2026-09-03. **Engineering:** §2 pillar 4's **full v3 statement-coverage comparison against
+PySpark** — the one item V1-GATE could not pin to any unit, run or fixture — is measured and
+recorded above (**V3-COV**, 2026-09-03: 80 programs, 254 cells, 72 EQUAL, 7 rows filed,
+2 defects FIXED), so no engineering item remains on this gate. **Owner:** one thing is still
+owed and it is not a §3 row — a one-line ruling confirming `B-MOR-3`'s DECLARED class for
 `rewrite_position_delete_files` (§3.1 row 13 — the row is housed under the registry's §7 with no
-class marker, and its OD-2 attachment is by analogy), and then the v1.0 tag. **Engineering:**
-§2 pillar 4's **full v3 statement-coverage comparison against PySpark**, which V1-GATE searched
-for and could not pin to any unit, run or fixture — it has no §3 row, so it is named here as the
-remaining v1.0 item and queued on
-[briefs/next-sequence.md](../../../briefs/next-sequence.md) as **V3-COV**.
+class marker, and its OD-2 attachment is by analogy), and then the v1.0 tag.
 
 ## 4. The path, as two lanes
 

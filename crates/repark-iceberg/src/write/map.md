@@ -137,7 +137,14 @@ repark-core's error map.
   `write_overwrite_staged_files_from_stream` (positional map + **WI-1** store-assignment gate +
   stream stage) + `commit_overwrite_replace_all` + `parse_overwrite_isolation`
   (absent→snapshot | snapshot | serializable | none | invalid-loud).
-- `partition_overwrite.rs` — **DML-B:** static `PARTITION (k=v)` via
+- `partition_overwrite.rs` — **V3-COV (2026-09-03):** `store_assign_source_column` runs the
+  append path's `refuse_unless_write_store_assignable` and then a strict cast when a source
+  column's Arrow type differs from its target field's, so a `SELECT` source producing
+  DataFusion's view string representation writes instead of failing
+  (`column types must match schema types, expected Utf8 but found Utf8View`); the `VALUES`
+  spelling always worked, which is why DML-B never saw it. Registry `V3-COV-1` FIXED.
+  pins: v3-cov-statement-coverage/C-004
+  **DML-B:** static `PARTITION (k=v)` via
   `overwrite_files` / `overwrite_by_row_filter` + `validate_added_files_match_overwrite_filter`
   (pin `commit_rejects_added_file_outside_overwrite_filter`);
   dynamic `PARTITION (k)` / empty `PARTITION ()` via `replace_partitions`; empty-input

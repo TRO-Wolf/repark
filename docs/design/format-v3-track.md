@@ -313,12 +313,19 @@ DECLARED disposition.
 nightly v3 oracle (green since 2026-09-02), and **the v1.0 API review, answered 2026-09-02** —
 `R0 yes` at every recommendation, with 888 names frozen in
 [v1-0-api-freeze.json](v1-0-api-freeze.json) behind `python/repark-parity/tests/test_api_freeze.py`
-and the versioning policy in [docs/release.md](../release.md). **Full v3 statement coverage is
+and the versioning policy in [docs/release.md](../release.md). **Full v3 statement coverage was
 the one that is not done**: V1-GATE looked for a discharge and found none — the nightly v3 leg is
-ten cells over two fixtures, not the statement matrix, and no statement-coverage harness exists in
-this tree at any format version. It is queued as **V3-COV** on
-[briefs/next-sequence.md](../../briefs/next-sequence.md) and named on the north star's gate line;
-the gate audit itself is [the north star](../../task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md) §3.1.
+ten cells over two fixtures, not the statement matrix, and no statement-coverage harness existed in
+this tree at any format version.
+
+*Step 6 state, dated 2026-09-03 (V3-COV).* All five are done. **V3-COV measured the statement
+matrix on 2026-09-03**: 80 statement programs over 12 statement classes and all seven
+`CALL system.*` procedures, 254 comparison cells, 72 EQUAL, 1 refused by both engines, 7 rows
+filed and 2 defects FIXED in the same unit — the matrix is
+[v3-statement-coverage.md](v3-statement-coverage.md) and its harness is
+`python/repark/tests/test_v3_statement_coverage.py`. Step 6 now owes **no engineering item**; the
+one remaining gate item is the owner's `B-MOR-3` line, then the tag. The gate audit itself is
+[the north star](../../task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md) §3.1.
 
 FNP, TA performance, dbt, and the general correctness backlog may run while the fork lane is
 blocked. They do not replace or delay a ready v3 unit.
