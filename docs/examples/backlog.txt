@@ -270,7 +270,6 @@ F.contains
 F.corr
 F.covar_pop
 F.covar_samp
-F.cume_dist
 F.curdate
 F.currentDate
 F.currentTimestamp
@@ -292,7 +291,6 @@ F.dayofmonth
 F.dayofweek
 F.dayofyear
 F.decode
-F.dense_rank
 F.elt
 F.encode
 F.endswith
@@ -344,10 +342,8 @@ F.kll_sketch_to_string_bigint
 F.kll_sketch_to_string_double
 F.kll_sketch_to_string_float
 F.kurtosis
-F.lag
 F.last_day
 F.lcase
-F.lead
 F.left
 F.length
 F.levenshtein
@@ -368,13 +364,10 @@ F.monthname
 F.months_between
 F.next_day
 F.now
-F.nth_value
-F.ntile
 F.octet_length
 F.overlay
 F.pandas_udf
 F.parse_json
-F.percent_rank
 F.percentile_approx
 F.posexplode
 F.posexplode_outer
@@ -384,7 +377,6 @@ F.quarter
 F.quote
 F.raise_error
 F.randstr
-F.rank
 F.reflect
 F.regexp
 F.regexp_count
@@ -408,7 +400,6 @@ F.replace
 F.reverse
 F.right
 F.rlike
-F.row_number
 F.rpad
 F.rtrim
 F.schema_of_csv

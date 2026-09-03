@@ -77,6 +77,10 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
 - [strings_agg.py](strings_agg.py) — `F.listagg` / `F.string_agg` joining a
 - [grouping.py](grouping.py) — `F.grouping` inside a cube: 1 for the grand-total
 - [try_aggregates.py](try_aggregates.py) — `F.try_sum` answers NULL when the
+- [window_ranking.py](window_ranking.py) — `F.row_number`, `F.rank`, `F.dense_rank`: ties counted three ways on one grouped ordered frame.
+- [window_position.py](window_position.py) — `F.percent_rank`, `F.cume_dist`, `F.ntile`: where a row sits in its partition.
+- [window_offset.py](window_offset.py) — `F.lag` and `F.lead` at two offsets, with and without the fill default.
+- [window_nth_value.py](window_nth_value.py) — `F.nth_value`: the nth value seen so far in the ordered frame. The frame is spelled explicitly (`rowsBetween(unboundedPreceding, currentRow)`, Spark's default for an ordered window).
 ## Pointers
 
 - Up: [../map.md](../map.md)

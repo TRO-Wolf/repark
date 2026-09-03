@@ -3449,6 +3449,13 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 
 ---
 
+- **FN-NTHVALUE-IGNORENULLS-1** — surfaced 2026-09-03, EX-14 review. The facade `F.nth_value`
+  takes `(col, offset)` only; PySpark 4.1.2's `nth_value(col, offset, ignoreNulls=False)` third
+  arm raises `TypeError: nth_value() takes 2 positional arguments but 3 were given` here. Measured
+  on live Spark: `nth_value('v', 2, True)` over `rowsBetween(unboundedPreceding,
+  unboundedFollowing)` on the EX-14 frame = `[20, 20, 20, 20, None, None]`. No pin yet, so it is
+  not a row; the example covers the two-argument form.
+
 ## 8. Drop-in disclosure rationale
 
 The narrow surface where the facade accepts a PySpark call **for source compatibility** without
