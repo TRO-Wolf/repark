@@ -100,6 +100,14 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
 - [matching.py](matching.py) — `F.contains` / `F.startswith` / `F.endswith`, the
 - [padding.py](padding.py) — `F.lpad` / `F.rpad` with truncation, the space
 - [unbase64.py](unbase64.py) — `F.unbase64` decoding a base64 string into bytes.
+- [slice.py](slice.py) — `F.substr` / `F.substring` at positive and negative positions, and `F.overlay` replacing a slice in place, with and without the length.
+- [split_part.py](split_part.py) — `F.split_part` by one-based and negative part number, and `F.substring_index` by left/right/beyond/zero delimiter count.
+- [translate.py](translate.py) — `F.translate` per-character map, including deleting characters with an empty map; `F.replace` stays on the backlog (facade-spelling class).
+- [search.py](search.py) — `F.position` both ways round and `F.find_in_set` membership in a comma list, not-found zeros and NULLs included.
+- [words.py](words.py) — `F.repeat` at 2, 0 and negative, `F.reverse`, `F.soundex` codes, and `F.quote` single-quote wrapping.
+- [utf8.py](utf8.py) — `F.bit_length` / `F.octet_length` byte counts and the invalid UTF-8 trio: `F.is_valid_utf8` tests, `F.make_valid_utf8` repairs with U+FFFD, `F.try_validate_utf8` answers NULL.
+- [regex.py](regex.py) — the `F.regexp` / `F.rlike` / `F.regexp_like` match predicates, `F.regexp_count`, `F.regexp_replace`, `F.regexp_substr`, `F.regexp_instr`, and `F.regexp_extract_all` by capture-group index.
+- [like.py](like.py) — `F.like` wildcards (`%`, `_`) and the backslash escape, with `F.ilike` folding case on the same patterns.
 ## Pointers
 
 - Up: [../map.md](../map.md)
