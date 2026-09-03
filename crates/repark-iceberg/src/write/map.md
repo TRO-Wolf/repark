@@ -137,7 +137,15 @@ repark-core's error map.
   `write_overwrite_staged_files_from_stream` (positional map + **WI-1** store-assignment gate +
   stream stage) + `commit_overwrite_replace_all` + `parse_overwrite_isolation`
   (absent→snapshot | snapshot | serializable | none | invalid-loud).
-- `partition_overwrite.rs` — **V3-COV (2026-09-03):** `store_assign_source_column` runs the
+- `conform.rs` — **V3-COV (2026-09-03):** the `SourceMatch::Unique` arm returns the source array
+  unchanged when its Arrow type already equals the target field's, before the store-assignment
+  check and the cast kernel. This is the bulk-append hot path and the identity case is the common
+  one; the guard and the strict cast still run for every pair that actually differs.
+  pins: v3-cov-statement-coverage/C-004
+- `partition_overwrite.rs` — **V3-COV (2026-09-03):** `StaticPartitionPlan` resolves the spec
+  bindings and the `PARTITION (k=v)` map ONCE per commit and `stage_static_partition_overwrite_files`
+  streams the batches through it instead of resolving per batch and collecting them all first;
+  `inject_static_partition_columns` stays as the one-batch wrapper. `store_assign_source_column` runs the
   append path's `refuse_unless_write_store_assignable` and then a strict cast when a source
   column's Arrow type differs from its target field's, so a `SELECT` source producing
   DataFusion's view string representation writes instead of failing

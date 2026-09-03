@@ -210,6 +210,92 @@ fn store_assign_source_column(source: &ArrayRef, field: &FieldRef) -> Result<Arr
     )?)
 }
 
+/// The per-commit half of static `PARTITION (k=v)` injection: bindings resolved once.
+pub struct StaticPartitionPlan<'a> {
+    table_schema: SchemaRef,
+    by_source: HashMap<String, &'a PartitionEquality>,
+}
+
+impl<'a> StaticPartitionPlan<'a> {
+    /// Resolve every `PARTITION (k=v)` name against the table's spec, once per commit.
+    /// # Errors
+    /// A partition name the spec does not bind.
+    pub fn new(
+        table_schema: SchemaRef,
+        equalities: &'a [PartitionEquality],
+        table: &Table,
+    ) -> Result<Self> {
+        let spec = table.metadata().default_partition_spec();
+        let iceberg_schema = table.metadata().current_schema();
+        let bindings = spec
+            .fields()
+            .iter()
+            .map(|field| bind_partition_field(iceberg_schema.as_ref(), field))
+            .collect::<Result<Vec<_>>>()?;
+        let mut by_source: HashMap<String, &PartitionEquality> = HashMap::new();
+        for equality in equalities {
+            let binding = resolve_binding(&bindings, &equality.name)?;
+            by_source.insert(binding.source_column_name.to_ascii_lowercase(), equality);
+        }
+        Ok(Self {
+            table_schema,
+            by_source,
+        })
+    }
+
+    /// Inject the resolved partition columns into ONE source batch (Spark arity).
+    /// # Errors
+    /// Too many source columns, missing source columns, or a literal that cannot fill `k`.
+    pub fn inject(&self, batch: &RecordBatch) -> Result<RecordBatch> {
+        let expected_source = self
+            .table_schema
+            .fields()
+            .len()
+            .saturating_sub(self.by_source.len());
+        if batch.num_columns() > expected_source {
+            return Err(DataFusionError::Plan(format!(
+                "[INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS] Cannot write to the target, \
+                 the reason is too many data columns: table has {} columns, static PARTITION \
+                 injects {}, source has {}",
+                self.table_schema.fields().len(),
+                self.by_source.len(),
+                batch.num_columns()
+            )));
+        }
+        if batch.num_columns() != expected_source {
+            return Err(DataFusionError::Plan(format!(
+                "[INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS] Cannot write to the target: \
+                 table has {} columns, static PARTITION injects {}, source has {}",
+                self.table_schema.fields().len(),
+                self.by_source.len(),
+                batch.num_columns()
+            )));
+        }
+        let mut source_index = 0usize;
+        let mut columns: Vec<ArrayRef> = Vec::with_capacity(self.table_schema.fields().len());
+        for field in self.table_schema.fields() {
+            if let Some(equality) = self.by_source.get(&field.name().to_ascii_lowercase()) {
+                columns.push(constant_partition_array(
+                    equality,
+                    field.data_type(),
+                    batch.num_rows(),
+                )?);
+            } else {
+                columns.push(store_assign_source_column(
+                    batch.column(source_index),
+                    field,
+                )?);
+                source_index += 1;
+            }
+        }
+        RecordBatch::try_new(Arc::clone(&self.table_schema), columns).map_err(|error| {
+            DataFusionError::Execution(format!(
+                "INSERT OVERWRITE PARTITION failed to inject static partition columns: {error}"
+            ))
+        })
+    }
+}
+
 /// Inject Hive static `PARTITION (k=v)` columns into a source batch (Spark arity).
 /// # Errors
 /// Too many source columns, missing source columns, or a literal that cannot fill `k`.
@@ -219,60 +305,7 @@ pub fn inject_static_partition_columns(
     equalities: &[PartitionEquality],
     table: &Table,
 ) -> Result<RecordBatch> {
-    let spec = table.metadata().default_partition_spec();
-    let iceberg_schema = table.metadata().current_schema();
-    let bindings = spec
-        .fields()
-        .iter()
-        .map(|field| bind_partition_field(iceberg_schema.as_ref(), field))
-        .collect::<Result<Vec<_>>>()?;
-    let mut by_source: HashMap<String, &PartitionEquality> = HashMap::new();
-    for equality in equalities {
-        let binding = resolve_binding(&bindings, &equality.name)?;
-        by_source.insert(binding.source_column_name.to_ascii_lowercase(), equality);
-    }
-    let expected_source = table_schema.fields().len().saturating_sub(by_source.len());
-    if batch.num_columns() > expected_source {
-        return Err(DataFusionError::Plan(format!(
-            "[INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS] Cannot write to the target, \
-             the reason is too many data columns: table has {} columns, static PARTITION \
-             injects {}, source has {}",
-            table_schema.fields().len(),
-            by_source.len(),
-            batch.num_columns()
-        )));
-    }
-    if batch.num_columns() != expected_source {
-        return Err(DataFusionError::Plan(format!(
-            "[INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS] Cannot write to the target: \
-             table has {} columns, static PARTITION injects {}, source has {}",
-            table_schema.fields().len(),
-            by_source.len(),
-            batch.num_columns()
-        )));
-    }
-    let mut source_index = 0usize;
-    let mut columns: Vec<ArrayRef> = Vec::with_capacity(table_schema.fields().len());
-    for field in table_schema.fields() {
-        if let Some(equality) = by_source.get(&field.name().to_ascii_lowercase()) {
-            columns.push(constant_partition_array(
-                equality,
-                field.data_type(),
-                batch.num_rows(),
-            )?);
-        } else {
-            columns.push(store_assign_source_column(
-                batch.column(source_index),
-                field,
-            )?);
-            source_index += 1;
-        }
-    }
-    RecordBatch::try_new(Arc::clone(table_schema), columns).map_err(|error| {
-        DataFusionError::Execution(format!(
-            "INSERT OVERWRITE PARTITION failed to inject static partition columns: {error}"
-        ))
-    })
+    StaticPartitionPlan::new(Arc::clone(table_schema), equalities, table)?.inject(batch)
 }
 
 /// Stage static-overwrite batches after injecting PARTITION (k=v) columns.
@@ -288,16 +321,8 @@ pub async fn stage_static_partition_overwrite_files(
         iceberg::arrow::schema_to_arrow_schema(table.metadata().current_schema())
             .map_err(iceberg_err)?,
     );
-    let mut injected = Vec::with_capacity(batches.len());
-    for batch in batches {
-        injected.push(inject_static_partition_columns(
-            &batch,
-            &write_schema,
-            equalities,
-            table,
-        )?);
-    }
-    let stream = futures::stream::iter(injected.into_iter().map(Ok));
+    let plan = StaticPartitionPlan::new(Arc::clone(&write_schema), equalities, table)?;
+    let stream = futures::stream::iter(batches.into_iter().map(move |batch| plan.inject(&batch)));
     crate::write::overwrite::write_overwrite_staged_files_from_stream(
         table,
         stream,
@@ -664,7 +689,7 @@ fn iceberg_err(err: iceberg::Error) -> DataFusionError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use datafusion::arrow::array::{Int32Array, StringArray};
+    use datafusion::arrow::array::{Int32Array, StringArray, StringViewArray};
     use datafusion::arrow::datatypes::{DataType, Field, Schema as ArrowSchema};
     use datafusion::sql::sqlparser::ast::Ident;
     use iceberg::spec::{Schema, Transform, UnboundPartitionSpec};
@@ -691,6 +716,36 @@ mod tests {
             op: BinaryOperator::Eq,
             right: Box::new(value),
         }
+    }
+
+    /// V3-COV-1: a view-string source conforms to its Utf8 target instead of failing the rebuild.
+    #[test]
+    fn store_assign_conforms_a_view_string_source_to_its_utf8_target() {
+        let source: ArrayRef = Arc::new(StringViewArray::from(vec!["g", "h"]));
+        let field: FieldRef = Arc::new(Field::new("name", DataType::Utf8, true));
+        let conformed = store_assign_source_column(&source, &field).expect("conforms");
+        assert_eq!(conformed.data_type(), &DataType::Utf8);
+        let values = conformed
+            .as_any()
+            .downcast_ref::<StringArray>()
+            .expect("utf8 output");
+        assert_eq!(values.value(0), "g");
+        assert_eq!(values.value(1), "h");
+    }
+
+    /// The identity arm hands the same buffer back; a non-assignable pair still refuses.
+    #[test]
+    fn store_assign_is_identity_on_a_match_and_refuses_a_non_assignable_pair() {
+        let same: ArrayRef = Arc::new(StringArray::from(vec!["g"]));
+        let utf8: FieldRef = Arc::new(Field::new("name", DataType::Utf8, true));
+        let conformed = store_assign_source_column(&same, &utf8).expect("identity");
+        assert!(Arc::ptr_eq(&same, &conformed));
+        let numeric: FieldRef = Arc::new(Field::new("id", DataType::Int32, true));
+        let refused = store_assign_source_column(&same, &numeric).expect_err("not assignable");
+        assert!(
+            refused.to_string().contains("insert overwrite partition"),
+            "{refused}"
+        );
     }
 
     /// Static k=v and dynamic name parse into the two request arms.

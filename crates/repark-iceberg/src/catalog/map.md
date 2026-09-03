@@ -42,7 +42,9 @@ Source comments retain only API and safety contracts; implementation narration i
   `s3://`/`s3a://` → the fork's OpenDAL S3 factory; `file://`/bare **absolute** path → LocalFs;
   anything else — unknown scheme, single-slash typo `s3:/…`, relative/empty path — fails loud,
   never a silent LocalFs).
-- `lineage_columns.rs` — **V3-COV (2026-09-03):** `conform_batch` strict-casts a scanned column
+- `lineage_columns.rs` — **V3-COV (2026-09-03):** the scan resolves its field→column projection
+  once per batch schema (cached on `Arc::ptr_eq`) instead of a name scan per field per batch, and
+  `conform_batch` strict-casts a scanned column
   whose Arrow type differs from the declared field's, so a `_row_id` projection after a widening
   `ALTER COLUMN … TYPE` returns rows instead of raising
   `lineage scan could not rebuild batch`; the ordinary read path already promoted, so the same
