@@ -70,7 +70,7 @@ JVM, no repark required). See [../map.md](../map.md).
   **API-FREEZE (2026-09-02):** that same gate paragraph now carries one appended line — "API
   review answered 2026-09-02 (packet); the freeze lands with the tag" — and this pin stayed green
   across it. pins: api-freeze/C-002
-- `test_api_freeze.py` — **API-FREEZE (2026-09-02):** the v1.0 freeze pin. Holds three things
+- `test_api_freeze.py` — **API-FREEZE (2026-09-02; release 2026-09-03: the STATUS pointer now names the cut tag, not the waiting gate):** the v1.0 freeze pin. Holds three things
   at once: every packet row's `decision` equals its `recommend` (15 YES / 15 YES-except / 5 NO,
   dated 2026-09-02, the owner's rule sentence byte-equal in packet, inventory and
   `docs/release.md`); the checked-in register
