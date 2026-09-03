@@ -1,5 +1,15 @@
 # map — scripts/
 
+EX-5 (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE` 654 → 627 (844 → 817 at dispatch) — 27 `F.*`
+string-search, slicing, UTF-8 and regex names covered by eight new examples; `F.split`,
+`F.regexp_extract` and `F.sentences` are refused by the engine (disclosed gaps
+R-FN-BATCH1/R-FN-BATCH2), `F.elt` answers NULL where Spark raises INVALID_ARRAY_INDEX,
+`F.validate_utf8` raises INVALID_UTF8_STRING on invalid input on both engines but with a
+different Python error surface than Spark's, and `F.replace` has no spelling that runs on both
+engines (repark takes a literal `search`, PySpark reads a bare string as a column name);
+all six stay on the backlog.
+pins: ex-5-functions-strings-b-regex/C-001
+
 EX-14 (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE` 696 → 687 (777 → 768 at dispatch) — nine `F.*` window names
 (`row_number`, `rank`, `dense_rank`, `percent_rank`, `cume_dist`, `ntile`, `lag`, `lead`, `nth_value`)
 covered by four new examples (`window_ranking.py`, `window_position.py`, `window_offset.py`,
