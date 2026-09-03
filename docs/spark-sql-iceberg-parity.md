@@ -1439,6 +1439,44 @@ the pin rather than obeying it.
 - **Pin** — `python/repark/tests/test_functions_gt2.py::test_ansi_pair_is_null_not_a_raise`
 - **Rationale** — BACKLOG, same class and same rationale as FN-1.
 
+### FN-LAST-1 — `last(ignorenulls)` over an ordered unbounded window answers NULL
+
+- **repark** — `F.last(col, ignorenulls=True)` over
+  `Window.partitionBy("k").orderBy(col("v").asc_nulls_last()).rowsBetween(unboundedPreceding,
+  unboundedFollowing)` answers NULL on every row of group `'a'` (values `1, 2, 3, NULL`):
+  `[('a', None), ('b', 6)]`. The unordered grouped form is Spark-equal at `repartition(1)`
+  only; the grouped form has no ordering and no stable answer (measured 2026-09-03: Spark
+  answers `[('a', 3), ('b', 6)]` at `repartition(1)`, `[('a', 1), ('b', 6)]` at
+  `repartition(2)`, `[('a', 1), ('b', 4)]` at `repartition(3)` and `repartition(6)`, while
+  repark answers `[('a', 3), ('b', 6)]`). The plain (no-ignorenulls) ordered-window form
+  is Spark-equal.
+- **Apache Spark** — the same ordered window answers the last non-null value:
+  `[('a', 3), ('b', 6)]`. *(oracle: recorded — live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03,
+  invariant at `repartition(1)`, `repartition(3)` and `repartition(6)`; measured frame
+  `[("a",1),("a",2),("a",3),("a",None),("b",4),("b",6)]`.)*
+- **Pin** — `python/repark/tests/test_functions_w.py::test_last_ignorenulls_window_divergence_is_pinned`
+  (codifies repark's current `[None, 6]` so the fix reds it on purpose).
+- **Rationale** — BACKLOG, intent to FIX. Filed from the EX-12 remediation round: the example
+  `docs/examples/functions/first_last.py` dropped its ignorenulls leg over this divergence, so
+  `F.last` stays covered there by the plain form only. A consumer mirroring Spark's
+  skip-nulls answer gets a NULL.
+
+### FN-APPROXPCT-1 — `approx_percentile` / `percentile_approx` interpolate to DOUBLE
+
+- **repark** — both names answer the interpolated median as double: global `0.5` over
+  `[1, 2, 3, NULL, 4, 6]` is `3.0` (double), grouped `0.5` is `[('a', 2.0), ('b', 5.0)]`.
+- **Apache Spark** — answers the discrete data value as BIGINT: global `3`
+  (`LongType`), grouped `[('a', 2), ('b', 4)]`. Spark's sketch is exact on this input; the
+  divergence is repark's semantics (interpolation) and type (double), not approximate sketches.
+  *(oracle: recorded — live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03.)*
+- **Pin** —
+  `python/repark/tests/test_fn_batch4.py::test_approx_percentile_double_interpolation_divergence_is_pinned`
+  (codifies repark's current `3.0` / `[('a', 2.0), ('b', 5.0)]` so the fix reds it on purpose).
+- **Rationale** — BACKLOG, intent to FIX. Filed from the EX-12 remediation round, replacing the
+  batch ledger's vaguer "approximate sketches" note: repark computes an interpolated quantile
+  where Spark returns an input value, and the result type differs too.
+
+
 ### FN-ISNAN-1 — `isnan(NULL)` is NULL where Spark is false
 
 - **repark** — `isnan(CAST(NULL AS DOUBLE))` on `[1.0, NULL]` yields `[False, None]`
