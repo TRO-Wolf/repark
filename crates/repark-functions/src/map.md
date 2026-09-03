@@ -35,10 +35,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   negative, null, base <= 0). Overwrites DataFusion's base-10 `LogFunc` from `register_all`.
   Native ANSI `repark.sql()` does not load this kernel.
 - `spark_log1p.rs` — **LOG1P-1 (2026-09-02):** Spark-named `log1p` / `expm1` kernels
-  (`f64::ln_1p` / `f64::exp_m1`). Numeric coerce to Float64; NULL in → NULL out;
-  `log1p` NULLs `x <= -1` (Spark SQL, live 2026-09-02). Registered from `register_all`
-  (Spark door, overwrites datafusion-spark `expm1`) and from `spark_log1p::register`
-  (ANSI door + native `repark.sql()`).
+  (`f64::ln_1p` / `f64::exp_m1` via Arrow `unary`; `log1p` then `nullif` on `x <= -1`).
+  Numeric coerce to Float64; NULL in → NULL out. Registered from `register_all`
+  (Spark door) and `spark_log1p::register` (ANSI door + native `PyReparkSession::native`).
   pins: log1p-1-precise-kernels/C-002
   **Critic remediation (2026-09-01):** `null_slots_null_out_even_when_the_buffer_holds_a_live_value`
   builds a null slot whose underlying buffer value is 5.0 (both arities) and asserts NULL —

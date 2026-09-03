@@ -6,16 +6,12 @@ pins: log1p-1-precise-kernels/C-001, C-002, C-004
 from __future__ import annotations
 
 import math
-import os
 
 import pyarrow as pa
 import pytest
 
 from repark.spark import SparkSession
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
-
-_LIVE = os.environ.get("REPARK_PARITY_LIVE") == "1"
-_LIVE_SKIP = "REPARK_PARITY_LIVE != 1 — live Spark oracle skipped (routine CI is JVM-free)"
 
 LOG1P_1E16 = 1e-16
 LOG1P_1E10 = 9.999999999500001e-11
@@ -56,9 +52,6 @@ def _assert_double(table: pa.Table, want: float | None) -> None:
     assert got is not None
     if isinstance(want, float) and math.isnan(want):
         assert isinstance(got, float) and math.isnan(got)
-        return
-    if isinstance(want, float) and math.isinf(want):
-        assert got == want
         return
     assert got == want
 
@@ -155,10 +148,7 @@ def test_facade_matches_sql_on_the_measured_grid() -> None:
             assert got_l1 is None
         else:
             assert got_l1 == log1p_want
-        if isinstance(expm1_want, float) and math.isinf(expm1_want):
-            assert got_em == expm1_want
-        else:
-            assert got_em == expm1_want
+        assert got_em == expm1_want
 
 
 def test_sem1_incidentals_stay_green() -> None:
@@ -198,48 +188,3 @@ def test_facade_source_is_the_kernel_not_composition() -> None:
     assert 'return _scalar("expm1", col)' in text
     assert "return log(lit(1) + _as_column_arg(col, as_lit=False))" not in text
     assert "return exp(col) - lit(1)" not in text
-
-
-@pytest.mark.skipif(not _LIVE, reason=_LIVE_SKIP)
-def test_live_spark_tiny_args_and_domain() -> None:
-    """pins: log1p-1-precise-kernels/C-001, C-004"""
-    from pathlib import Path
-
-    from pyspark.sql import SparkSession as PySparkSession
-
-    ivy = Path("/tmp/ivy-cache-log1p")
-    ivy.mkdir(parents=True, exist_ok=True)
-    live = (
-        PySparkSession.builder.master("local[2]")
-        .appName("log1p-1-live")
-        .config("spark.sql.ansi.enabled", "true")
-        .config("spark.sql.session.timeZone", "UTC")
-        .config("spark.ui.enabled", "false")
-        .config("spark.jars.ivy", str(ivy))
-        .getOrCreate()
-    )
-    live.sparkContext.setLogLevel("ERROR")
-    cells = [
-        ("SELECT log1p(CAST(1e-16 AS DOUBLE)) AS r", LOG1P_1E16),
-        ("SELECT log1p(CAST(1e-10 AS DOUBLE)) AS r", LOG1P_1E10),
-        ("SELECT log1p(CAST(-1.0 AS DOUBLE)) AS r", None),
-        ("SELECT log1p(CAST(-2.0 AS DOUBLE)) AS r", None),
-        ("SELECT expm1(CAST(1e-16 AS DOUBLE)) AS r", LOG1P_1E16),
-        ("SELECT expm1(CAST(1e-10 AS DOUBLE)) AS r", EXPM1_1E10),
-        ("SELECT expm1(CAST(710.0 AS DOUBLE)) AS r", float("inf")),
-        ("SELECT log1p(CAST('0.0000000000000001' AS DECIMAL(38,16))) AS r", LOG1P_1E16),
-        ("SELECT expm1(CAST('0.0000000000000001' AS DECIMAL(38,16))) AS r", LOG1P_1E16),
-    ]
-    try:
-        for sql, want in cells:
-            live_val = live.sql(sql).toArrow().column("r").to_pylist()[0]
-            if want is None:
-                assert live_val is None, sql
-            elif isinstance(want, float) and math.isinf(want):
-                assert live_val == want, sql
-            else:
-                assert live_val == want, sql
-            _assert_double(_sql_arrow(sql), want)
-            _assert_double(_ansi_arrow(sql), want)
-    finally:
-        live.stop()

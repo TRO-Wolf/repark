@@ -3,6 +3,9 @@ use std::sync::Arc;
 
 use datafusion::arrow::array::{Array, AsArray, Float64Array};
 use datafusion::arrow::compute::cast;
+use datafusion::arrow::compute::kernels::arity::unary;
+use datafusion::arrow::compute::kernels::cmp::lt_eq;
+use datafusion::arrow::compute::nullif;
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef, Float64Type};
 use datafusion::common::{Result, exec_err};
 use datafusion::logical_expr::{
@@ -90,39 +93,31 @@ fn is_numeric_argument(data_type: &DataType) -> bool {
     *data_type == DataType::Null || data_type.is_numeric()
 }
 
-fn log1p_value(value: f64) -> Option<f64> {
-    if value <= -1.0 {
-        None
-    } else {
-        Some(value.ln_1p())
-    }
-}
-
 fn as_f64_array(array: &Arc<dyn Array>) -> Result<Arc<dyn Array>> {
     Ok(cast(array.as_ref(), &DataType::Float64)?)
 }
 
-fn invoke_unary(
-    name: &str,
-    args: &ScalarFunctionArgs,
-    apply: impl Fn(f64) -> Option<f64>,
-) -> Result<ColumnarValue> {
+fn f64_argument(name: &str, args: &ScalarFunctionArgs) -> Result<Arc<dyn Array>> {
     let arrays = ColumnarValue::values_to_arrays(&args.args)?;
     let [value] = arrays.as_slice() else {
         return exec_err!("'{name}' requires 1 argument, got {}", arrays.len());
     };
-    let casted = as_f64_array(value)?;
+    as_f64_array(value)
+}
+
+fn invoke_expm1(args: &ScalarFunctionArgs) -> Result<ColumnarValue> {
+    let casted = f64_argument("expm1", args)?;
     let values = casted.as_primitive::<Float64Type>();
-    let out: Float64Array = (0..values.len())
-        .map(|row| {
-            if values.is_null(row) {
-                None
-            } else {
-                apply(values.value(row))
-            }
-        })
-        .collect();
+    let out = unary::<Float64Type, _, Float64Type>(values, f64::exp_m1);
     Ok(ColumnarValue::Array(Arc::new(out)))
+}
+
+fn invoke_log1p(args: &ScalarFunctionArgs) -> Result<ColumnarValue> {
+    let casted = f64_argument("log1p", args)?;
+    let values = casted.as_primitive::<Float64Type>();
+    let computed = unary::<Float64Type, _, Float64Type>(values, f64::ln_1p);
+    let below = lt_eq(values, &Float64Array::new_scalar(-1.0))?;
+    Ok(ColumnarValue::Array(nullif(&computed, &below)?))
 }
 
 fn coerce_one_numeric(name: &str, arg_types: &[DataType]) -> Result<Vec<DataType>> {
@@ -149,7 +144,7 @@ impl ScalarUDFImpl for SparkLog1p {
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
-        invoke_unary("log1p", &args, log1p_value)
+        invoke_log1p(&args)
     }
 }
 
@@ -169,7 +164,7 @@ impl ScalarUDFImpl for SparkExpm1 {
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
-        invoke_unary("expm1", &args, |value| Some(value.exp_m1()))
+        invoke_expm1(&args)
     }
 }
 

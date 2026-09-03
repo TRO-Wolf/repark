@@ -36,7 +36,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   still overflows to `inf` at extreme magnitude. pins: log1p-1-precise-kernels/C-005
 - [test_log1p_1.py](test_log1p_1.py) — **LOG1P-1 (2026-09-02):** three-door `log1p` /
   `expm1` pins (Spark SQL, ANSI `repark.sql()`, facade), tiny-arg vs composed form,
-  SEM-1 incidentals, live Spark skipif. Oracle live PySpark 4.1.2.
+  SEM-1 incidentals. Live Spark cell lives in `test_parity_live.py` on the
+  session-scoped `spark_engine`. Oracle live PySpark 4.1.2.
   pins: log1p-1-precise-kernels/C-001, C-002, C-004
 - [test_fnp7_try_inversions.py](test_fnp7_try_inversions.py) — **FNP-7a/7b:** twelve `try_*`
   inversions. Spark 4.1.2 cells (value and Arrow type) on the two reachable doors (Spark SQL
@@ -2123,7 +2124,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_live_lifecycle_scenario_matches_repark_golden_and_spark` re-derive each golden from live
   Spark and assert **repark == pinned golden == live Spark**;
   `test_live_disclosure_still_diverges` re-asserts each recorded divergence STILL holds on both
-  engines (silent convergence → RED). Size pin `test_registry_covers_the_mandated_golden_family`
+  engines (silent convergence → RED).
+  **LOG1P-1:** `test_live_log1p_expm1_tiny_args_and_domain` uses the shared `spark_engine`
+  (one `SELECT` of nine aliases, no `stop`, no per-cell Ivy).
+  pins: log1p-1-precise-kernels/C-001, C-004
+  Size pin `test_registry_covers_the_mandated_golden_family`
   is **42** (was 29); lifecycle budget pin is **2**. Flag unset → every live test SKIPs with a
   visible reason. Catches golden drift + oracle drift the JVM-free suite cannot see.
   **The registry mirror (H-1d, 2026-08-10):** `test_disclosures_mirror_the_registry` is always-on

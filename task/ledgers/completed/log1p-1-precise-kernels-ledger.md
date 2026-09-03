@@ -17,7 +17,7 @@ Spark is the oracle. Tiny-arg cells match `StrictMath.log1p` / `StrictMath.expm1
 | ID | Clause | Proof obligation | Verdict |
 |---|---|---|---|
 | C-001 | Three-door pins at the measured grid (`1e-16`, `1e-10`, `-1e-10`, `1e-5`, `0`, `1`, `-1`, `-2`, `700`, `710`, NULL, NaN, INT, DECIMAL) assert live Spark values. Red today on facade tiny-args and missing SQL `log1p`. | Oracle table below; `test_log1p_1.py`. | **PROVEN** |
-| C-002 | Two scalar kernels `f64::ln_1p` / `f64::exp_m1`, NULL-propagating, numeric coerce as `log`/`exp`; registered on both SQL doors; facade `_scalar` not composed. | `spark_log1p.rs`; `register_all` + `AnsiDialect` + native `finish_session`; `functions_expr.py`. | **PROVEN** |
+| C-002 | Two scalar kernels `f64::ln_1p` / `f64::exp_m1`, NULL-propagating, numeric coerce as `log`/`exp`; registered on both SQL doors; facade `_scalar` not composed. | `spark_log1p.rs`; `register_all` + `AnsiDialect` + native `PyReparkSession::native`; `functions_expr.py`. | **PROVEN** |
 | C-003 | `F.log1p` and `F.expm1` join `docs/examples/functions/logs.py`; leave `backlog.txt`; `BACKLOG_BASELINE` 844 → 842. Coverage static and `--require-execute` exit 0. | Example + gate. | **PROVEN** |
 | C-004 | Three-door cells plus a live cell; mutation restore-composed reds; `log`/`log2`/`ln`/`exp` and SEM-1 incidentals stay green. | `test_log1p_1.py`; mutation table. | **PROVEN** |
 | C-005 | Registry BL-15 closed FIXED; `spark-function-parity.md` drops `log1p`/`expm1` from `PY_COMPOSED`; maps lockstep. No new log1p registry row. | Registry + design table + maps. | **PROVEN** |
@@ -33,6 +33,7 @@ Arrow type `double` throughout. Facade `F.*` equals Spark SQL.
 | `log1p(-1e-10)` | `-1.00000000005e-10` | facade `-1.000000082790371e-10` |
 | `log1p(1e-5)` | `9.999950000333332e-06` | facade `9.999950000398841e-06` |
 | `log1p(0.0)` / `log1p(1.0)` | `0.0` / `0.6931471805599453` | same |
+| `log1p(700.0)` / `log1p(710.0)` | `6.55250788703459` / `6.566672429803241` | same |
 | `log1p(-1.0)` / `log1p(-2.0)` | NULL / NULL | facade NULL / NULL (via composed `log`) |
 | `log1p(NULL)` / `log1p(NaN)` | NULL / nan | SQL doors unresolved |
 | `log1p(CAST(0 AS INT))` / `log1p(1)` | `0.0` / `0.6931471805599453` | SQL doors unresolved |
@@ -41,7 +42,7 @@ Arrow type `double` throughout. Facade `F.*` equals Spark SQL.
 | `expm1(1e-10)` | `1.00000000005e-10` | facade `1.000000082740371e-10` |
 | `expm1(-1e-10)` | `-9.999999999500001e-11` | facade `-1.000000082740371e-10` |
 | `expm1(1e-5)` | `1.0000050000166668e-05` | facade `1.0000050000069649e-05` |
-| `expm1(0)` / `expm1(1)` / `expm1(-1)` | `0.0` / `1.718281828459045` / `-0.6321205588285577` | facade same |
+| `expm1(0)` / `expm1(1)` / `expm1(-1)` / `expm1(-2)` | `0.0` / `1.718281828459045` / `-0.6321205588285577` / `-0.8646647167633873` | facade same |
 | `expm1(700)` / `expm1(710)` | `1.0142320547350045e+304` / `inf` | facade same |
 | `expm1(NULL)` / `expm1(NaN)` | NULL / nan | Spark SQL door same; ANSI unresolved |
 | `expm1(INT/DECIMAL 1)` / `expm1(DECIMAL 1e-16)` | `1.718…` / `1e-16` | Spark SQL door same; ANSI unresolved |
@@ -58,8 +59,12 @@ DECIMAL coerce: Spark SQL and (after the kernel) both repark doors return `1e-16
 
 | Name | Kernel | Registration |
 |---|---|---|
-| `log1p` | `f64::ln_1p`; NULL if `x <= -1` or input NULL | `register_all`; `AnsiDialect.on_session_built`; native `finish_session` |
-| `expm1` | `f64::exp_m1`; NULL if input NULL | same; overwrites datafusion-spark `SparkExpm1` on the Spark door |
+| `log1p` | Arrow `unary(ln_1p)` then `nullif` on `lt_eq(x, -1.0)` | `register_all`; `AnsiDialect.on_session_built`; native `PyReparkSession::native` |
+| `expm1` | Arrow `unary(exp_m1)` | same; overwrites datafusion-spark `SparkExpm1` on the Spark door |
+
+Arrow `unary` vs Option-collect (reviewer measure, 2026-09-02): expm1 14.5–14.9 → 12.8–13.1 ns/row dense, 16.7–17.3 → 12.2 at 10 % nulls; log1p 14.5–16.2 → 12.7–12.9 ns/row. Domain cells still match after the swap.
+
+`docs/design/v1-0-api-review-2026-09-02.md` row J1 and the freeze register still list `expm1` as excepted because `BL-15` was open at their base. No edit to the packet; `python3 scripts/build_api_freeze.py --write` is a later intended change.
 | facade | `_scalar("log1p")` / `_scalar("expm1")` | `function_dispatch.rs` + `expr_fn.rs` |
 
 ## Mutation
@@ -78,6 +83,16 @@ Restored the kernel wrappers.
 2. Measure live Spark. Record table.
 3. Kernels + facade + three-door pins + example + BL-15 FIXED.
 4. Gates. Ledger `move` to `completed/`.
+5. Remediation (2026-09-02): live cell moved onto `test_parity_live.py` `spark_engine`
+   (one SELECT r0–r8, no Ivy, no `stop`); `spark_log1p` register only in `native()`;
+   restored session.rs pool-opt-out comment; Arrow `unary` kernels.
+
+Co-collect (`REPARK_PARITY_LIVE=1`, 2026-09-02):
+| Order | Result |
+|---|---|
+| `test_live_disclosure_still_diverges` then `test_log1p_1.py` | 46 passed |
+| `test_log1p_1.py` then `test_live_disclosure_still_diverges` | 46 passed |
+| disclosure then `test_live_log1p_expm1_tiny_args_and_domain` then `test_live_scenario_matches_repark_golden_and_spark` | 56 passed |
 
 ```yaml
 COVERAGE_ATTESTATION:
