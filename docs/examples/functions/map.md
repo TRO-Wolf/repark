@@ -69,6 +69,25 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
 - [make_calendar.py](make_calendar.py) — `F.make_date` builds a date from year/month/day
 - [utc_offsets.py](utc_offsets.py) — `F.from_utc_timestamp` / `F.to_utc_timestamp` render
 - [partition_transforms.py](partition_transforms.py) — the partition transforms `F.years`,
+- [summarize.py](summarize.py) — `F.count` / `F.count("*")`, `F.sum`, `F.avg` /
+- [counting.py](counting.py) — `F.count_if` counts true rows only,
+- [first_last.py](first_last.py) — `F.first` / `F.last` over an explicitly
+- [booleans.py](booleans.py) — `F.bool_and` / `F.bool_or` with their `F.every` /
+- [collect.py](collect.py) — `F.collect_list` / `F.array_agg` and the
+- [strings_agg.py](strings_agg.py) — `F.listagg` / `F.string_agg` joining a
+- [grouping.py](grouping.py) — `F.grouping` inside a cube: 1 for the grand-total
+- [try_aggregates.py](try_aggregates.py) — `F.try_sum` answers NULL when the
+- [window_ranking.py](window_ranking.py) — `F.row_number`, `F.rank`, `F.dense_rank`: ties counted three ways on one grouped ordered frame.
+- [window_position.py](window_position.py) — `F.percent_rank`, `F.cume_dist`, `F.ntile`: where a row sits in its partition.
+- [window_offset.py](window_offset.py) — `F.lag` and `F.lead` at two offsets, with and without the fill default.
+- [window_nth_value.py](window_nth_value.py) — `F.nth_value`: the nth value seen so far in the ordered frame. The frame is spelled explicitly (`rowsBetween(unboundedPreceding, currentRow)`, Spark's default for an ordered window).
+- [calendar_parts.py](calendar_parts.py) — the numeric calendar parts of a date
+- [current_datetime.py](current_datetime.py) — the six current date/timestamp
+- [date_arithmetic.py](date_arithmetic.py) — moving a date by days with
+- [date_difference.py](date_difference.py) — `F.date_diff` / `F.datediff`,
+- [date_format.py](date_format.py) — `F.date_format` rendering patterns beside
+- [date_parts_sql.py](date_parts_sql.py) — the SQL field-extraction trio
+- [date_truncation.py](date_truncation.py) — `F.date_trunc` on a timestamp and
 ## Pointers
 
 - Up: [../map.md](../map.md)

@@ -1,5 +1,18 @@
 # map — scripts/
 
+EX-14 (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE` 696 → 687 (777 → 768 at dispatch) — nine `F.*` window names
+(`row_number`, `rank`, `dense_rank`, `percent_rank`, `cume_dist`, `ntile`, `lag`, `lead`, `nth_value`)
+covered by four new examples (`window_ranking.py`, `window_position.py`, `window_offset.py`,
+`window_nth_value.py`); the live oracle measured all nine Spark-equal, none dropped.
+pins: ex-14-functions-window/C-001
+
+EX-12 batch (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE` 723 → 696 as merged
+(842 → 815 at dispatch) — 27 `F.*` aggregate names covered by eight new examples; `F.mode`
+(engine refuses), `F.approx_percentile` and `F.percentile_approx` (Spark is exact here — the
+discrete value as bigint; repark returns the interpolated median as double) stay on the
+backlog with both oracle values recorded.
+pins: ex-12-functions-aggregates-a/C-001
+
 EX-9 (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE` 809 → 797 — twelve
 `F.*` map and struct names covered by four new examples (`map_parts.py`, `map_shapes.py`,
 `map_higher_order.py`, `structs.py`); the batch's other 24 roster names (json_tuple, csv,
@@ -15,6 +28,15 @@ pins: ex-10-functions-null-cond-misc/C-001
 LOG1P-1 (2026-09-02): `check_example_coverage.py` `BACKLOG_BASELINE` 844 → 842 —
 `F.log1p` and `F.expm1` leave the backlog for `docs/examples/functions/logs.py`.
 pins: log1p-1-precise-kernels/C-003
+
+EX-6 batch datetime-a (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE`
+687 → 654 after the EX-9…EX-14 merges (written 842 → 809 at the dispatch
+base 84c1801) — 33 `F.*` datetime arithmetic and parts names covered by seven new
+examples; `F.add_months` (Spark `2023-07-29` versus repark `2023-07-31` on
+`2024-02-29` minus 7 months, pinned as FN-ADDMONTHS-1) and `F.months_between`
+(refused, engine gap R-FN-BATCH1) were measured against the live oracle and stay
+on the backlog.
+pins: ex-6-functions-datetime-a/C-001
 API-FREEZE (2026-09-02): `build_api_freeze.py` is new — it reads the answered API-review packet
 and the tree (the `check_example_coverage.py` enumerator for public Python names and their
 required parameters, `repark_common::surfaces::ALL` plus both door matrices, the conf-key

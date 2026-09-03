@@ -1440,6 +1440,44 @@ the pin rather than obeying it.
 - **Pin** — `python/repark/tests/test_functions_gt2.py::test_ansi_pair_is_null_not_a_raise`
 - **Rationale** — BACKLOG, same class and same rationale as FN-1.
 
+### FN-LAST-1 — `last(ignorenulls)` over an ordered unbounded window answers NULL
+
+- **repark** — `F.last(col, ignorenulls=True)` over
+  `Window.partitionBy("k").orderBy(col("v").asc_nulls_last()).rowsBetween(unboundedPreceding,
+  unboundedFollowing)` answers NULL on every row of group `'a'` (values `1, 2, 3, NULL`):
+  `[('a', None), ('b', 6)]`. The unordered grouped form is Spark-equal at `repartition(1)`
+  only; the grouped form has no ordering and no stable answer (measured 2026-09-03: Spark
+  answers `[('a', 3), ('b', 6)]` at `repartition(1)`, `[('a', 1), ('b', 6)]` at
+  `repartition(2)`, `[('a', 1), ('b', 4)]` at `repartition(3)` and `repartition(6)`, while
+  repark answers `[('a', 3), ('b', 6)]`). The plain (no-ignorenulls) ordered-window form
+  is Spark-equal.
+- **Apache Spark** — the same ordered window answers the last non-null value:
+  `[('a', 3), ('b', 6)]`. *(oracle: recorded — live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03,
+  invariant at `repartition(1)`, `repartition(3)` and `repartition(6)`; measured frame
+  `[("a",1),("a",2),("a",3),("a",None),("b",4),("b",6)]`.)*
+- **Pin** — `python/repark/tests/test_functions_w.py::test_last_ignorenulls_window_divergence_is_pinned`
+  (codifies repark's current `[None, 6]` so the fix reds it on purpose).
+- **Rationale** — BACKLOG, intent to FIX. Filed from the EX-12 remediation round: the example
+  `docs/examples/functions/first_last.py` dropped its ignorenulls leg over this divergence, so
+  `F.last` stays covered there by the plain form only. A consumer mirroring Spark's
+  skip-nulls answer gets a NULL.
+
+### FN-APPROXPCT-1 — `approx_percentile` / `percentile_approx` interpolate to DOUBLE
+
+- **repark** — both names answer the interpolated median as double: global `0.5` over
+  `[1, 2, 3, NULL, 4, 6]` is `3.0` (double), grouped `0.5` is `[('a', 2.0), ('b', 5.0)]`.
+- **Apache Spark** — answers the discrete data value as BIGINT: global `3`
+  (`LongType`), grouped `[('a', 2), ('b', 4)]`. Spark's sketch is exact on this input; the
+  divergence is repark's semantics (interpolation) and type (double), not approximate sketches.
+  *(oracle: recorded — live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03.)*
+- **Pin** —
+  `python/repark/tests/test_fn_batch4.py::test_approx_percentile_double_interpolation_divergence_is_pinned`
+  (codifies repark's current `3.0` / `[('a', 2.0), ('b', 5.0)]` so the fix reds it on purpose).
+- **Rationale** — BACKLOG, intent to FIX. Filed from the EX-12 remediation round, replacing the
+  batch ledger's vaguer "approximate sketches" note: repark computes an interpolated quantile
+  where Spark returns an input value, and the result type differs too.
+
+
 ### FN-ISNAN-1 — `isnan(NULL)` is NULL where Spark is false
 
 - **repark** — `isnan(CAST(NULL AS DOUBLE))` on `[1.0, NULL]` yields `[False, None]`
@@ -1493,6 +1531,27 @@ the pin rather than obeying it.
   refused at analysis per Spark's `NON_FOLDABLE_INPUT` rule; silently
   concatenating or mis-parsing it is a wrong result. The pin codifies today's
   wrong `Decimal('12345')` so the fix reds it on purpose.
+
+### FN-ADDMONTHS-1 — `add_months` from a month-end source in a short month lands on the target month's last day
+
+- **repark** — a month-end source in a SHORT month clamps to the target
+  month's last day: `add_months(2015-02-28, 1)` is `2015-03-31`,
+  `add_months(2025-04-30, -1)` is `2025-03-31`, and `add_months(2024-02-29, -7)`
+  is `2023-07-31`. The day-overflow clamp agrees with Spark:
+  `add_months(2016-02-29, 12)` is `2017-02-28`, `add_months(2016-02-29, -12)` is
+  `2015-02-28`, `add_months(2025-01-31, 1)` is `2025-02-28`, and
+  `add_months(2025-03-15, -1)` is `2025-02-15`.
+- **Apache Spark** — `LocalDate.plusMonths` keeps the day-of-month whenever the
+  target month has it, so a month-end source in a short month is NOT clamped:
+  `add_months(2015-02-28, 1)` is `2015-03-28`, `add_months(2025-04-30, -1)` is
+  `2025-03-30`, and `add_months(2024-02-29, -7)` is `2023-07-29`. The four
+  day-overflow cases above agree with repark. *(oracle: live PySpark 4.1.2 +
+  Iceberg 1.11.0, facade door on both engines, `TZ=UTC`, 2026-09-03.)*
+- **Pin** — `python/repark/tests/test_functions_dates.py::test_add_months_month_end_divergence_is_pinned`
+- **Rationale** — BACKLOG, intent to FIX. repark treats a month-end source as a
+  clamp trigger where Spark only clamps when the target day overflows, so every
+  month-end anchor moves silently across a short month. The pin codifies today's
+  repark values so the fix reds on purpose.
 
 ### G6-3 — DATE→INT: Spark refuses; repark yields days-since-epoch
 
@@ -3427,6 +3486,17 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   with `PySparkTypeError [NOT_COLUMN_OR_STR]`; the value at `F.lit` spelling agrees
   (`[10, None, None]` / `[None, None, None]` on both engines). No pin yet, so it is not a
   row; the example spells `F.lit` like Spark.
+- **FN-EXTRACT-FIELDS-1** — measured 2026-09-03 (live PySpark 4.1.2 SQL door vs the facade
+  `F.extract`, `TZ=UTC`, source `2024-03-09` / `2024-03-09 13:45:30`): the extract field sets
+  differ in BOTH directions. The measured pair: `extract('dayofweek', …)` is `7` in Spark
+  while repark refuses (`Execution error: Date part 'dayofweek' not supported`); repark
+  refuses `dayofyear` too (Spark refuses that spelling as well, answering `69` only via
+  `doy`). Shared and equal: `year`, `quarter`, `month`, `week`, `day`, `doy`, `hour`,
+  `minute`. Spark refuses and repark answers `isoyear`, `isodow`, `epoch`, `millisecond`,
+  `microsecond`; both refuse `decade`, `century`, `millennium`. Two shared fields disagree:
+  `dow` (Spark `7` vs repark `6`) and `second` (Spark `Decimal('30.000000')` vs repark `30`).
+  Wants a pin and a per-field decision before it becomes a row; surfaced by
+  `docs/examples/functions/date_parts_sql.py`, which teaches `extract` on `year` only.
 
 ---
 
@@ -3442,6 +3512,12 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   an `#[ignore]`d measurement); fork TRIGGER F-23: skip `collect_live_data_files` when no legacy
   delete is pending and `known_partitions` covers every touched path, and stop the stream once
   every wanted path is found; RP-9 repins. Full record: the RP-8 ledger, ERRATA E-4.
+- **FN-NTHVALUE-IGNORENULLS-1** — surfaced 2026-09-03, EX-14 review. The facade `F.nth_value`
+  takes `(col, offset)` only; PySpark 4.1.2's `nth_value(col, offset, ignoreNulls=False)` third
+  arm raises `TypeError: nth_value() takes 2 positional arguments but 3 were given` here. Measured
+  on live Spark: `nth_value('v', 2, True)` over `rowsBetween(unboundedPreceding,
+  unboundedFollowing)` on the EX-14 frame = `[20, 20, 20, 20, None, None]`. No pin yet, so it is
+  not a row; the example covers the two-argument form.
 
 ## 8. Drop-in disclosure rationale
 
