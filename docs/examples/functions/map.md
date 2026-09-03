@@ -46,7 +46,23 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
   under a positive divisor, `F.greatest` / `F.least` skipping NULLs, `F.width_bucket`.
 - [try_arithmetic.py](try_arithmetic.py) — the `F.try_*` quartet answering NULL on
   overflow and divide-by-zero, ordinary input unchanged.
+- [nulls.py](nulls.py) — the NULL tests `F.isnull` / `F.isnotnull` / `F.equal_null` (two NULLs compare equal) and the substitutions `F.coalesce`, `F.ifnull`, `F.nvl`, `F.nvl2`, `F.nullif`, `F.nullifzero`, `F.nanvl` on rows carrying NULLs, with the NaN literal edges separate.
+- [conditional.py](conditional.py) — `F.when` chains and the bare form, and `F.assert_true` passing, then raising with its message.
+- [columns.py](columns.py) — `F.column`, the constructor spelling that agrees with `F.col`, NULL included.
+- [sort_order.py](sort_order.py) — the six `F.asc*` / `F.desc*` orderings and where each places NULLs.
+- [bitwise.py](bitwise.py) — `F.negate`, the `F.bitwiseNOT` / `F.bitwise_not` alias pair, `F.bit_count`, the bit readers `F.bit_get` / `F.getbit`, and the three shifts.
+- [broadcast.py](broadcast.py) — `F.broadcast`, the join hint (single-node no-op in repark, python/repark/src/repark/spark/functions_session.py:49-56), checked to agree with the plain join.
+- [session_context.py](session_context.py) — `F.current_catalog`, `F.current_database` and `F.current_schema` on a two-row frame.
 
+- [map_parts.py](map_parts.py) — `F.map_keys`, `F.map_values`, `F.map_entries`,
+- [map_shapes.py](map_shapes.py) — `F.map_from_arrays`, `F.map_from_entries`,
+- [map_higher_order.py](map_higher_order.py) — `F.transform_keys`,
+- [structs.py](structs.py) — `F.struct` and `F.named_struct`: fields by column and
+- [hashing.py](hashing.py) — `F.md5`, `F.sha`/`F.sha1` (one digest, two
+- [hex_binary.py](hex_binary.py) — `F.hex` and `F.bin` spelling integers,
+- [random_values.py](random_values.py) — `F.uuid`, `F.rand`, `F.randn`,
+- [url.py](url.py) — the URL codec round trip and `F.parse_url` part
+- [try_fallbacks.py](try_fallbacks.py) — `F.try_mod` by zero and
 ## Pointers
 
 - Up: [../map.md](../map.md)
