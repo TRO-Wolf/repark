@@ -113,7 +113,7 @@ gating.
 statement-coverage comparison against PySpark on v3 tables* and found none: the nightly v3 leg
 (V3E-5) is ten cells over two fixtures, not the statement matrix, and the tree carried no
 statement-coverage harness at any format version. **Statement coverage measured 2026-09-03: 80
-statement programs across 12 statement classes and all 7 `CALL system.*` procedures, 254
+statement programs across 12 statement classes and all 7 `CALL system.*` procedures, 255
 comparison cells, 72 EQUAL, 1 refused by both engines, 7 rows filed (`DML-1`, `G3-E8` ×2,
 `B-MOR-3` already stood; `V3-COV-3` DECLARED fork-routed, `V3-COV-4` and `V3-COV-5` BACKLOG,
 `V3-COV-6` DECLARED fork-routed are new), 2 defects FIXED in the same unit (`V3-COV-1`,
@@ -161,7 +161,7 @@ recommendation) and the freeze is registered — 888 names in
 §3.1 audits all twenty rows and the fork rows they lean on: every row ✅ or dated DECLARED as of
 2026-09-03. **Engineering:** §2 pillar 4's **full v3 statement-coverage comparison against
 PySpark** — the one item V1-GATE could not pin to any unit, run or fixture — is measured and
-recorded above (**V3-COV**, 2026-09-03: 80 programs, 254 cells, 72 EQUAL, 7 rows filed,
+recorded above (**V3-COV**, 2026-09-03: 80 programs, 255 cells, 72 EQUAL, 7 rows filed,
 2 defects FIXED), so no engineering item remains on this gate. **Owner:** one thing is still
 owed and it is not a §3 row — a one-line ruling confirming `B-MOR-3`'s DECLARED class for
 `rewrite_position_delete_files` (§3.1 row 13 — the row is housed under the registry's §7 with no

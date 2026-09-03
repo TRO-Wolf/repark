@@ -12,7 +12,7 @@ changing a decision here means a new dated design pass, not an in-place edit.
 
 - [v3-statement-coverage.md](v3-statement-coverage.md) — **V3-COV (2026-09-03):** the v3
   statement-coverage matrix that discharges the north star's §2 pillar 4 — 80 statement programs
-  over 12 statement classes and all seven `CALL system.*` procedures, 254 comparison cells,
+  over 12 statement classes and all seven `CALL system.*` procedures, 255 comparison cells,
   72 EQUAL, 1 refused by both engines, 7 rows filed, 2 defects FIXED in the same unit. Harness:
   `python/repark/tests/test_v3_statement_coverage.py`. Read it before adding a statement surface:
   a new statement class that is not in §3 is not covered, whatever the nightly legs say.

@@ -413,7 +413,7 @@ REPARK: dict[str, Any] = {
     },
     "drop-table": {
         "statements": [["OK", None]],
-        "probes": [],
+        "probes": [["ERROR", "Error during planning: table 'ice.cov.drop_table' not found"]],
     },
     "meta-snapshots": {
         "statements": [["OK", None]],

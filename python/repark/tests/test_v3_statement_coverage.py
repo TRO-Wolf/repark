@@ -235,15 +235,15 @@ def _agrees(left: Any, right: Any) -> bool:
 
 
 def _verdict(repark: dict[str, Any], spark: dict[str, Any]) -> str:
-    """EQUAL, REFUSED (both engines refuse) or DIVERGES for one measured program."""
+    """EQUAL, REFUSED (both engines refuse the statement) or DIVERGES for one program."""
     pairs = [
         *zip(repark["statements"], spark["statements"], strict=True),
         *zip(repark["probes"], spark["probes"], strict=True),
     ]
     if any(not _agrees(left, right) for left, right in pairs):
         return "DIVERGES"
-    cells = [*repark["statements"], *repark["probes"]]
-    return "REFUSED" if any(cell[0] == "ERROR" for cell in cells) else "EQUAL"
+    refused = any(cell[0] == "ERROR" for cell in repark["statements"])
+    return "REFUSED" if refused else "EQUAL"
 
 
 def _as_golden(outcome: dict[str, Any]) -> dict[str, Any]:

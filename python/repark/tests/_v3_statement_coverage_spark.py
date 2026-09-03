@@ -398,7 +398,12 @@ SPARK: dict[str, Any] = {
     },
     "drop-table": {
         "statements": [["OK", None]],
-        "probes": [],
+        "probes": [
+            [
+                "ERROR",
+                "[TABLE_OR_VIEW_NOT_FOUND] The table or view `v3cov`.`cov`.`drop_table` canno",
+            ]
+        ],
     },
     "meta-snapshots": {
         "statements": [["OK", None]],

@@ -135,7 +135,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   golden; `test_v3_statement_row_matches_the_live_spark_oracle` runs the same program on the live
   oracle behind `REPARK_PARITY_LIVE=1` and re-asserts the verdict. Seeds are single-file per
   partition on both engines so a file-shape probe is comparable under the shared `local[2]`
-  session, and the module-private catalog is `v3cov` (live-cell rules 1–7). Partitioned rows pin
+  session, and the module-private catalog is `v3cov` (live-cell rules 1–7). `REFUSED` is a verdict
+  about the STATEMENT: `drop-table` reads its table back and both engines refuse that read, which
+  is the agreement the row exists for, so the row stays `EQUAL`. Partitioned rows pin
   `_last_updated_sequence_number`, **not** `_row_id`: `V3-COV-3` makes the delegated partitioned
   INSERT's `_row_id` mapping unstable, so the instability has its own cell
   (`test_v3_partitioned_insert_row_id_mapping_is_one_of_two_measured_orders`) beside the CTAS

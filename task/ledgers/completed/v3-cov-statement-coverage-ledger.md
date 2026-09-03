@@ -39,7 +39,7 @@ repark half in an always-run test.
 | Totals | |
 |---|---|
 | Statement programs | 80 across 12 groups (create · insert · delete · update · merge · alter · lifecycle · metadata · lineage · time travel · refs · call) |
-| Comparison cells | 254 (statements + probes) |
+| Comparison cells | 255 (statements + probes) |
 | EQUAL | 72 |
 | REFUSED (both engines refuse) | 1 — `create-v3-write-order`, a parse error on both |
 | DIVERGES | 7 |
@@ -135,7 +135,7 @@ COVERAGE_ATTESTATION:
       artifacts: [docs/design/v3-statement-coverage.md, python/repark/tests/test_v3_statement_coverage.py]
     - id: AT-2
       status: ATTACKED
-      evidence: All 80 programs were run on both engines and all 254 cells compared before any value was pinned; the 8 cells that first diverged were each re-read to separate a harness artefact (4, repaired) from an engine divergence (7 kept).
+      evidence: All 80 programs were run on both engines and all 255 cells compared before any value was pinned; the 8 cells that first diverged were each re-read to separate a harness artefact (4, repaired) from an engine divergence (7 kept).
       artifacts: [python/repark/tests/_v3_statement_coverage_golden.py, task/ledgers/staging/v3-cov-statement-coverage-ledger.md]
     - id: AT-3
       status: ATTACKED

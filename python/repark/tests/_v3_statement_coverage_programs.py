@@ -476,7 +476,7 @@ _PROGRAMS: tuple[_Program, ...] = (
     _Program(
         "truncate-table", "lifecycle", "mor", ("TRUNCATE TABLE {t}",), (_P_FLAT, _P_SNAPSHOTS)
     ),
-    _Program("drop-table", "lifecycle", "mor", ("DROP TABLE {t}",), ()),
+    _Program("drop-table", "lifecycle", "mor", ("DROP TABLE {t}",), (_P_FLAT,)),
     _Program(
         "meta-snapshots", "metadata", "mor", ("DELETE FROM {t} WHERE id = 2",), (_P_SNAPSHOTS,)
     ),
@@ -548,14 +548,14 @@ _PROGRAMS: tuple[_Program, ...] = (
     ),
     _Program(
         "time-travel-version-as-of",
-        "traveltime",
+        "time travel",
         "mor",
         ("DELETE FROM {t} WHERE id = 2",),
         ("SELECT id, name FROM {t} VERSION AS OF {snapshot0} ORDER BY id",),
     ),
     _Program(
         "time-travel-timestamp-as-of",
-        "traveltime",
+        "time travel",
         "mor",
         ("DELETE FROM {t} WHERE id = 2",),
         ("SELECT id, name FROM {t} TIMESTAMP AS OF '{timestamp0}' ORDER BY id",),

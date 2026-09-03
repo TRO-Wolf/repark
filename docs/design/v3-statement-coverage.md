@@ -16,7 +16,7 @@ seed on 2026-09-03, and every divergence carries a registry row in
 |---|---|
 | Statement programs measured | **80** |
 | Statement classes covered | 12 groups (create · insert · delete · update · merge · alter · lifecycle · metadata · lineage · time travel · refs · call) |
-| Comparison cells (statements + probes) | 254 |
+| Comparison cells (statements + probes) | 255 |
 | **EQUAL** — repark and Spark agree on every cell | **72** |
 | **REFUSED** — both engines refuse the statement | **1** |
 | **DIVERGES** — a registry row | **7** |
@@ -34,7 +34,9 @@ seed on 2026-09-03, and every divergence carries a registry row in
 - **Probes** — how many result sets are compared after the statement: rows, row lineage
   (`_row_id` / `_last_updated_sequence_number`), and the metadata tables that matter for that
   statement (`delete_files`, `files`, `snapshots`, `manifests`, `partitions`, `refs`, `entries`).
-- **Verdict** — `EQUAL` (both engines answer identically on every cell), `REFUSED` (both refuse),
+- **Verdict** — `EQUAL` (both engines answer identically on every cell), `REFUSED` (both refuse
+  the statement itself; a probe both engines refuse by design, like reading a dropped table, is an
+  agreement and leaves the row `EQUAL`),
   `DIVERGES` (at least one cell differs; the row column names the registry row).
 - **Pin** — every row is `python/repark/tests/test_v3_statement_coverage.py`:
   `test_v3_statement_row_reproduces_the_measured_repark_answer[<row>]` always runs, and
@@ -101,7 +103,7 @@ seed on 2026-09-03, and every divergence carries a registry row in
 | `alter-set-format-version-3` | alter | `ALTER TABLE t SET TBLPROPERTIES ('format-version' = '3') · DELETE FROM t WHERE id = 2` | flat v2 (COW default) | 3 | as Spark | as Spark | **EQUAL** | — |
 | `alter-set-format-version-3-mor` | alter | `ALTER TABLE t SET TBLPROPERTIES ('format-version' = '3') · DELETE FROM t WHERE id = 2` | flat v2 MoR | 3 | as Spark | as Spark | **EQUAL** | — |
 | `truncate-table` | lifecycle | `TRUNCATE TABLE t` | flat MoR v3 | 2 | as Spark | as Spark | **EQUAL** | — |
-| `drop-table` | lifecycle | `DROP TABLE t` | flat MoR v3 | 0 | as Spark | as Spark | **EQUAL** | — |
+| `drop-table` | lifecycle | `DROP TABLE t` | flat MoR v3 | 1 | as Spark | as Spark | **EQUAL** | — |
 | `meta-snapshots` | metadata | `DELETE FROM t WHERE id = 2` | flat MoR v3 | 1 | as Spark | as Spark | **EQUAL** | — |
 | `meta-files` | metadata | `DELETE FROM t WHERE id = 2` | flat MoR v3 | 1 | as Spark | as Spark | **EQUAL** | — |
 | `meta-delete-files` | metadata | `DELETE FROM t WHERE id = 2` | flat MoR v3 | 1 | as Spark | as Spark | **EQUAL** | — |
@@ -113,8 +115,8 @@ seed on 2026-09-03, and every divergence carries a registry row in
 | `meta-all-data-files` | metadata | `DELETE FROM t WHERE id = 2` | flat MoR v3 | 1 | as Spark | as Spark | **EQUAL** | — |
 | `meta-position-deletes` | metadata | `DELETE FROM t WHERE id = 2` | flat MoR v3 | 1 | refuses — scan not ported (schema only) | one `pos` row | **DIVERGES** | `V3-COV-6` |
 | `lineage-projection` | lineage | `UPDATE t SET name = 'z' WHERE id = 2` | flat MoR v3 | 2 | as Spark | as Spark | **EQUAL** | — |
-| `time-travel-version-as-of` | traveltime | `DELETE FROM t WHERE id = 2` | flat MoR v3 | 1 | as Spark | as Spark | **EQUAL** | — |
-| `time-travel-timestamp-as-of` | traveltime | `DELETE FROM t WHERE id = 2` | flat MoR v3 | 1 | as Spark | as Spark | **EQUAL** | — |
+| `time-travel-version-as-of` | time travel | `DELETE FROM t WHERE id = 2` | flat MoR v3 | 1 | as Spark | as Spark | **EQUAL** | — |
+| `time-travel-timestamp-as-of` | time travel | `DELETE FROM t WHERE id = 2` | flat MoR v3 | 1 | as Spark | as Spark | **EQUAL** | — |
 | `branch-create-and-read` | refs | `ALTER TABLE t CREATE BRANCH b1 · DELETE FROM t WHERE id = 2` | flat MoR v3 | 2 | as Spark | as Spark | **EQUAL** | — |
 | `branch-write` | refs | `ALTER TABLE t CREATE BRANCH b1 · INSERT INTO t.branch_b1 VALUES (5, 'e')` | flat MoR v3 | 2 | as Spark | as Spark | **EQUAL** | — |
 | `branch-replace-and-drop` | refs | `ALTER TABLE t CREATE BRANCH b1 · ALTER TABLE t DROP BRANCH b1` | flat MoR v3 | 1 | as Spark | as Spark | **EQUAL** | — |
@@ -128,7 +130,6 @@ seed on 2026-09-03, and every divergence carries a registry row in
 | `call-rewrite-position-delete-files` | call | `DELETE FROM t WHERE id = 2 · CALL cat.system.rewrite_position_delete_files(table => 'ns.t')` | flat MoR v3 | 2 | refuses a live Puffin DV | returns `0, 0` | **DIVERGES** | `B-MOR-3` |
 | `call-rollback-to-snapshot` | call | `DELETE FROM t WHERE id = 2 · CALL cat.system.rollback_to_snapshot(table => 'ns.t', snapshot_id => …)` | flat MoR v3 | 2 | as Spark | as Spark | **EQUAL** | — |
 | `call-register-table` | call | `CALL cat.system.register_table(table => 'ns.t_reg', metadata_file => '…')` | flat MoR v3 | 1 | as Spark | as Spark | **EQUAL** | — |
-
 ## 4. The divergences, in one place
 
 | Registry row | Statement | What differs | Class | Owner |

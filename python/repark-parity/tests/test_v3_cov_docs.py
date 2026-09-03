@@ -22,7 +22,7 @@ _FILED = ("V3-COV-1", "V3-COV-2", "V3-COV-3", "V3-COV-4", "V3-COV-5", "V3-COV-6"
 _CITED = ("DML-1", "G3-E8", "B-MOR-3")
 _TOTALS = {
     "Statement programs measured": 80,
-    "Comparison cells (statements + probes)": 254,
+    "Comparison cells (statements + probes)": 255,
     "**EQUAL** — repark and Spark agree on every cell": 72,
     "**REFUSED** — both engines refuse the statement": 1,
     "**DIVERGES** — a registry row": 7,
