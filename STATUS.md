@@ -11,17 +11,18 @@ _Last updated: 2026-09-03._
 
 ## Release state
 
-Pre-alpha, **v0.6.0 shipped (2026-08-31)** — the eighth tag on proven machinery (v0.5.0:
-2026-08-20; v0.4.0: 2026-08-19; v0.3.0–v0.3.2: 2026-08-16; v0.1.0 / v0.2.0: 2026-08-15):
-tag-triggered `release.yml`, PyPI trusted publishing, `cp312-abi3` manylinux wheel, wheel-only
-(crates.io publishing structurally deferred, see docs/release.md), version SSOT at the Cargo
-workspace (`0.6.0`). v0.6.0 is the Iceberg DML remainder, four Critic-passed units (#273–#276):
-DML-B `INSERT OVERWRITE … PARTITION` (static + dynamic, `writeTo().overwritePartitions()`),
-DML-C `TRUNCATE TABLE` on three doors (`DML-2` FIXED), DML-A `MERGE … WHEN NOT MATCHED BY
-SOURCE`, and MAINT `rewrite_data_files` `where` + binpack with sort refusing at the fork ceiling
-(`RDF-SORT-1`); semantics in [the registry](docs/spark-sql-iceberg-parity.md), every unit
-oracle-measured against live PySpark 4.1.2 + Iceberg 1.11.0 before implementation. Pre-alpha still means the API can move between tags. Release mechanics:
-[docs/release.md](docs/release.md).
+**v1.0.0 shipped (2026-09-03)** — the first stable tag, the ninth on proven machinery (v0.6.0:
+2026-08-31; v0.5.0: 2026-08-20; v0.4.0: 2026-08-19; v0.3.0–v0.3.2: 2026-08-16; v0.1.0 / v0.2.0:
+2026-08-15): tag-triggered `release.yml`, PyPI trusted publishing, `cp312-abi3` manylinux wheel,
+wheel-only (crates.io publishing structurally deferred, see docs/release.md), version SSOT at the
+Cargo workspace (`1.0.0`). v1.0.0 is the format-v3 north star at its gate: all twenty §3 rows of
+[the north star](task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md) ✅ or dated DECLARED
+(V1-GATE #320, V3-COV #321), the legacy-delete chain closed end to end (V3-12 → fork F-21 /
+F-22 → RP-8), every unit oracle-measured against live PySpark 4.1.2 + Iceberg 1.11.0 before
+it was built. From this tag the API freeze binds:
+additive-only within the major for every frozen row of
+[v1-0-api-freeze.json](docs/design/v1-0-api-freeze.json) (owner ruling 2026-09-03: cut at the
+gate, ahead of the 0.x ladder). Release mechanics: [docs/release.md](docs/release.md).
 
 ## Delivered capabilities
 
@@ -70,8 +71,8 @@ What happens next, in order:
 4. **The first tagged release** — **DONE**: see [Release state](#release-state). API review
    answered 2026-09-02 (`R0 yes`, every row decided at its recommendation); freeze pinned — 888
    names in [docs/design/v1-0-api-freeze.json](docs/design/v1-0-api-freeze.json), policy in
-   [docs/release.md](docs/release.md) "Versioning policy"; the tag waits on the north-star gate
-   line, which V1-GATE wrote 2026-09-03 — cutting it is the owner's step.
+   [docs/release.md](docs/release.md) "Versioning policy"; v1.0.0 cut 2026-09-03 on the
+   north-star gate line V1-GATE wrote the same day.
 
 Owner-side actions that rode this sequence are **DISCHARGED — no owner-side tier-2 action
 remains** (aws-acceptance green 2026-08-10; the parity-live half on first-run evidence; three
@@ -155,8 +156,8 @@ in published history by explicit decision:
   - **The gate is audited (V1-GATE, 2026-09-03) and §2 pillar 4 is discharged (**V3-COV**,
     2026-09-03):** all twenty north-star §3 rows are ✅ or carry a dated DECLARED residual with a
     pin (§3.1), and the statement matrix is measured — 81 programs, 267 cells, 71 EQUAL, 9 rows
-    filed, 2 FIXED ([v3-statement-coverage.md](docs/design/v3-statement-coverage.md)). One owner
-    line confirming `B-MOR-3`'s DECLARED class now stands between the audit and the tag.
+    filed, 2 FIXED ([v3-statement-coverage.md](docs/design/v3-statement-coverage.md)). Owner ruling
+    2026-09-03: `B-MOR-3` is BUILT, not declared — a queued unit extends the procedure to v3.
   - **Next:** lineage carry and merge-on-read are complete on every served DML shape
     (`V3-COW-1`, `V3-MOR-1`, `V3-DV-1`, `V3-ROWID-3`, `V3-UPGRADE-DV-1`,
     `V3-UPGRADE-DV-PLAIN-1`, `V3-UPGRADE-DV-PART-1`, `V3-COV-3`,
@@ -344,6 +345,6 @@ Recorded, not built. Each names the trigger that would start it.
 
 ## Release blockers
 
-**None.** v0.6.0 shipped 2026-08-31; the tag history is in [Release state](#release-state).
+**None.** v1.0.0 shipped 2026-09-03; the tag history is in [Release state](#release-state).
 Future tags follow [docs/release.md](docs/release.md) (version SSOT at the Cargo workspace;
 wheel-only; crates.io publishing structurally deferred).

@@ -30,7 +30,7 @@ name = "repark"
 # retiring the old sentence in STATUS.md is what makes a stale manifest red.)
 phase = "milestone one"
 phase_state = "complete"
-release_status = "pre-alpha"
+release_status = "stable"
 
 # The three canonical gate commands. Each must name a `make` target that exists in the
 # Makefile — a renamed or deleted target fails the gate instead of rotting in the docs.
