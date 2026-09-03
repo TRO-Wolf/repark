@@ -7,6 +7,16 @@ by eight examples; seven names stay on the backlog (`F.base64` BL-17, `F.encode`
 FN-INITCAP-1, `F.chr`/`F.char` FN-CHR-1). `F.trim` two-arg is FN-TRIM-CHARS-1 (loud).
 pins: ex-4-functions-strings-a/C-001
 
+EX-5 (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE` 605 → 578 (844 → 817 at dispatch) — 27 `F.*`
+string-search, slicing, UTF-8 and regex names covered by eight new examples; `F.split`,
+`F.regexp_extract` and `F.sentences` are refused by the engine (disclosed gaps
+R-FN-BATCH1/R-FN-BATCH2), `F.elt` answers NULL where Spark raises INVALID_ARRAY_INDEX,
+`F.validate_utf8` raises INVALID_UTF8_STRING on invalid input on both engines but with a
+different Python error surface than Spark's, and `F.replace` has no spelling that runs on both
+engines (repark takes a literal `search`, PySpark reads a bare string as a column name);
+all six stay on the backlog.
+pins: ex-5-functions-strings-b-regex/C-001
+
 EX-13 (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE` 654 → 632 (777 → 755 at dispatch) — twenty-two
 `F.*` aggregate (b) and statistics names covered by four new examples (`dispersion.py`,
 `covariance.py`, `regression.py`, `bit_aggregates.py`); the two names the engine refuses
