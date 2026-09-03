@@ -88,6 +88,10 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
 - [date_format.py](date_format.py) — `F.date_format` rendering patterns beside
 - [date_parts_sql.py](date_parts_sql.py) — the SQL field-extraction trio
 - [date_truncation.py](date_truncation.py) — `F.date_trunc` on a timestamp and
+- [dispersion.py](dispersion.py) — `F.std`/`F.stddev`/`F.stddev_samp`, `F.stddev_pop`, and the
+- [covariance.py](covariance.py) — `F.corr`, `F.covar_pop`, `F.covar_samp` over (y, x) pairs,
+- [regression.py](regression.py) — Spark's nine `F.regr_*` linear-regression aggregates over
+- [bit_aggregates.py](bit_aggregates.py) — `F.bit_and`, `F.bit_or`, `F.bit_xor` folding each
 ## Pointers
 
 - Up: [../map.md](../map.md)

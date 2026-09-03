@@ -1,5 +1,11 @@
 # map — scripts/
 
+EX-13 (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE` 654 → 632 (777 → 755 at dispatch) — twenty-two
+`F.*` aggregate (b) and statistics names covered by four new examples (`dispersion.py`,
+`covariance.py`, `regression.py`, `bit_aggregates.py`); the two names the engine refuses
+(`F.skewness`, `F.kurtosis`, `UnsupportedOperationException`, R-FN-BATCH4) stay backlog rows,
+both values recorded in the family ledger. pins: ex-13-functions-aggregates-b-stats/C-001
+
 EX-14 (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE` 696 → 687 (777 → 768 at dispatch) — nine `F.*` window names
 (`row_number`, `rank`, `dense_rank`, `percent_rank`, `cume_dist`, `ntile`, `lag`, `lead`, `nth_value`)
 covered by four new examples (`window_ranking.py`, `window_position.py`, `window_offset.py`,
