@@ -152,6 +152,12 @@ repark-core's error map.
   DataFusion's view string representation writes instead of failing
   (`column types must match schema types, expected Utf8 but found Utf8View`); the `VALUES`
   spelling always worked, which is why DML-B never saw it. Registry `V3-COV-1` FIXED.
+  Streaming moved the injection failure point: a batch whose column will not store-assign now
+  refuses mid-stream, after earlier batches have already been written, where the collect-first
+  shape refused before any file was staged. What that leaves behind is staged data files no
+  commit ever references — the `OverwriteFiles` commit is still all-or-nothing and the table
+  state is untouched either way — so the residue is orphaned files for
+  `remove_orphan_files`, not a partial overwrite.
   pins: v3-cov-statement-coverage/C-004
   **DML-B:** static `PARTITION (k=v)` via
   `overwrite_files` / `overwrite_by_row_filter` + `validate_added_files_match_overwrite_filter`

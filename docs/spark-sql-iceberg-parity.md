@@ -2180,21 +2180,30 @@ the pin rather than obeying it.
 - **Pin** — `python/repark/tests/test_v3_statement_coverage.py::test_v3_statement_row_reproduces_the_measured_repark_answer[create-v3-properties]`
   and `…::test_v3_statement_row_matches_the_live_spark_oracle[create-v3-properties]`; the three
   create rows that carry no properties (`[create-v3-flat]`, `[create-v3-partitioned]`,
-  `[create-v3-bucket-transform]`) are the controls and agree on every metadata fact.
+  `[create-v3-bucket-transform]`) are the controls and agree on every metadata fact those rows
+  probe — format version, current schema and partition spec. They are NOT a control on the codec
+  key: their `META` tuples do not read the property set, and Spark stamps
+  `write.parquet.compression-codec = zstd` on those creates too. The scope of this row is
+  therefore every `CREATE`, not the properties DDL alone — `[ctas-v3]`'s metadata, re-read
+  2026-09-03, carries `write.parquet.compression-codec = zstd` on Spark and no `write.*` key at
+  all on repark.
 - **Rationale** — BACKLOG. Visible to anyone reading `SHOW TBLPROPERTIES` or the metadata JSON
   after the same DDL, so it is a row rather than a note; it is queued rather than fixed because
   "stamp the engine's write defaults at create" is a create-path policy decision, not a defect in
   this statement. Do not close it by copying Spark's key without deciding the policy — a stamped
   property is a value later writes read.
 
-### V3-COV-8 — CTAS derives a wider, nullable Iceberg column where Spark derives the literal's type
+### V3-COV-8 — CTAS derives a wider, required Iceberg column where Spark derives the literal's narrower, optional one
 
 - **repark** — `CREATE TABLE t USING iceberg TBLPROPERTIES ('format-version' = '3') AS SELECT 1 AS
-  id, 'a' AS name` stores `id: long, optional` and `name: string, optional`. The rows round-trip
-  and the format version and partition spec are Spark-equal; the divergence is the derived
-  schema.
-- **Apache Spark** — stores `id: int, required` and `name: string, required` for the same
-  statement. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03.)*
+  id, 'a' AS name` writes `{"name": "id", "required": true, "type": "long"}` and
+  `{"name": "name", "required": true, "type": "string"}` into the table metadata — wider and
+  **required**. The rows round-trip and the format version and partition spec are Spark-equal;
+  the divergence is the derived schema.
+- **Apache Spark** — writes `{"name": "id", "required": false, "type": "int"}` and
+  `{"name": "name", "required": false, "type": "string"}` for the same statement — the literal's
+  own width and **optional**. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, re-measured on the
+  raw metadata JSON 2026-09-03.)*
 - **Pin** — `python/repark/tests/test_v3_statement_coverage.py::test_v3_statement_row_reproduces_the_measured_repark_answer[ctas-v3]`
   and `…::test_v3_statement_row_matches_the_live_spark_oracle[ctas-v3]`; the column-def
   `[create-v3-flat]` control stores `id int` optional on BOTH engines, so this is the CTAS
@@ -2202,11 +2211,14 @@ the pin rather than obeying it.
 - **Rationale** — BACKLOG, two causes in one cell and neither is local. **Width:** DataFusion
   types a bare integer literal as `Int64` where Spark types it `INT`, which is the same root as
   `TY-4` / the `VALUES (1)` readings in `TY-3`'s neighbourhood — narrowing it inside CTAS alone
-  would make CTAS disagree with every other repark path. **Nullability:** repark's CTAS marks
-  derived columns optional; SE-1's tighten-derived refusal (`ctas.rs`, R-D) is the standing reason
-  the write path is conservative about required columns, so making CTAS emit `required` is a
-  decision against that guard, not a patch. Both are recorded here with the measured cell so the
-  next unit starts from the reading rather than the surprise.
+  would make CTAS disagree with every other repark path. **Nullability:** the open question is
+  which default the create path keeps — Spark's optional-by-default CTAS derivation, or repark's
+  required. It is not a one-line flip in either direction: SE-1's tighten-derived refusal
+  (`ctas.rs`, R-D) already refuses an Iceberg CREATE whose output carries a non-nullable field
+  from a tighten-derived source, so a `required` derived column is the state that path treats as
+  load-bearing, and relaxing the derivation to `optional` moves what that guard sees. The
+  decision is create-path policy, not a defect in this statement. Both causes are recorded here
+  with the measured cell so the next unit starts from the reading rather than the surprise.
 
 ### RDF-SORT-1 — `rewrite_data_files` refuses `sort` / `sort_order`; Spark runs a sort rewrite
 

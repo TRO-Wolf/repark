@@ -319,7 +319,7 @@ ten cells over two fixtures, not the statement matrix, and no statement-coverage
 this tree at any format version.
 
 *Step 6 state, dated 2026-09-03 (V3-COV).* All five are done. **V3-COV measured the statement
-matrix on 2026-09-03**: 80 statement programs over 12 statement classes and all seven
+matrix on 2026-09-03**: 81 statement programs over 12 statement classes and all seven
 `CALL system.*` procedures, 267 comparison cells, 71 EQUAL, 1 refused by both engines, 9 rows
 filed and 2 defects FIXED in the same unit — the matrix is
 [v3-statement-coverage.md](v3-statement-coverage.md) and its harness is

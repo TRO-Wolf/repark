@@ -7,6 +7,7 @@ STATUS, drop a fork row from the §3.1 fork table, or unfile the status board �
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 _REPO = Path(__file__).resolve().parents[3]
@@ -35,6 +36,12 @@ _RESIDUAL_ROWS = {
     9: ("V3-FILEORDER-1", "DECLARED", "2026-09-02"),
     13: ("B-MOR-3", "OD-2", "2026-08-21"),
     17: ("S3T-1", "DECLARED service gap", "2026-08-27"),
+}
+_RESIDUAL_JUSTIFICATIONS = {
+    "6 · Write: create v3": 'the cell reads "stays opt-in until V3-3; default remains v2"',
+    "9 · Write: MoR DML via deletion vectors": (
+        'the cell reads "full DML including UPDATE/MERGE, round-tripped"'
+    ),
 }
 _FORK_ROWS = ("R88", "R91", "R114", "R126", "R167")
 
@@ -115,7 +122,11 @@ def test_the_audit_is_scoped_to_the_v1_0_requires_cells() -> None:
         matching = [line for line in residual_table if line.startswith(f"| {row} |")]
         assert len(matching) == 1, row
         for residual in residuals:
-            assert residual in matching[0], (row, residual)
+            pattern = rf"(?<![\w-]){re.escape(residual)}(?![\w-])"
+            assert re.search(pattern, matching[0]), (row, residual)
+    for row, quoted in _RESIDUAL_JUSTIFICATIONS.items():
+        line = next(line for line in residual_table if line.startswith(f"| {row} |"))
+        assert quoted in _normalized(line), (row, quoted)
     assert "open residue on a FIXED row, fork-owned" in section
     assert "DECLARED, owner decision OD-2 (ruled 2026-08-21)" in section
     assert "BACKLOG, both v2-measured" in section

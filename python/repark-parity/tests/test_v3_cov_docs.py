@@ -82,9 +82,9 @@ def test_every_diverging_row_names_a_registry_row_that_exists() -> None:
     diverging = [row for row in _matrix_rows() if row[7] == "**DIVERGES**"]
     assert len(diverging) == _TOTALS["**DIVERGES** — a registry row"]
     for row in diverging:
-        cited = row[8].strip("`")
-        assert cited != "—", row[0]
-        assert f"{cited} —" in registry, cited
+        cited = row[8].strip("`").strip()
+        assert cited and cited != "—", row[0]
+        assert re.search(rf"^#+ {re.escape(cited)} —", registry, re.MULTILINE), cited
 
 
 def test_the_rows_this_unit_filed_carry_a_class_a_date_and_a_pin() -> None:
@@ -125,6 +125,8 @@ def test_the_v3_track_step_6_carries_the_v3_cov_state_line() -> None:
     assert "*Step 6 state, dated 2026-09-03 (V3-COV).*" in track
     assert "Step 6 now owes **no engineering item**" in track
     assert "Full v3 statement coverage is the one that is not done" not in track
+    programs = _TOTALS["Statement programs measured"]
+    assert f"{programs} statement programs" in " ".join(track.split())
 
 
 def test_the_harness_and_the_golden_carry_every_matrix_row() -> None:

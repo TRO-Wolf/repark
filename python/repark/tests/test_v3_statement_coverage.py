@@ -159,7 +159,8 @@ def repark_outcome(program: _Program, warehouse: Path) -> dict[str, Any]:
 def _latest_metadata(warehouse: Path, stem: str) -> str:
     """The newest metadata pointer of one table under a warehouse, for `register_table`."""
     candidates = sorted(
-        warehouse.glob(f"*/{stem}/metadata/*.metadata.json"), key=lambda path: path.stat().st_mtime
+        warehouse.glob(f"*/{stem}/metadata/*.metadata.json"),
+        key=lambda path: (path.stat().st_mtime, path.name),
     )
     return str(candidates[-1]) if candidates else ""
 
@@ -275,12 +276,7 @@ def spark_outcome(program: _Program, session) -> dict[str, Any]:
 
 
 def _agrees(left: Any, right: Any) -> bool:
-    """Two engine outcomes agree when both refuse, or both answer with the same value.
-
-    Only a mutual refusal is exempt from the value comparison: each engine's message is its own
-    and is pinned on its own side of the golden. Every other kind — rows and metadata facts —
-    is compared, so a new cell kind cannot be added and silently never checked.
-    """
+    """Two engine outcomes agree when both refuse, or both answer the same value."""
     if left[0] != right[0]:
         return False
     return left[0] == "ERROR" or left[1] == right[1]
@@ -331,11 +327,7 @@ def test_v3_statement_row_reproduces_the_measured_repark_answer(
 def test_v3_statement_row_matches_the_live_spark_oracle(
     program: _Program, coverage_session
 ) -> None:
-    """The same row on live Spark reproduces its measured half and keeps its measured verdict.
-
-    The repark half is the golden the always-run sibling re-derives every routine run, so this
-    cell compares against it rather than paying 80 more repark sessions for the same answer.
-    """
+    """The same row on live Spark reproduces its measured half and keeps its measured verdict."""
     spark = _as_golden(spark_outcome(program, coverage_session))
     assert spark == SPARK[program.name]
     assert _verdict(REPARK[program.name], spark) == VERDICTS[program.name]

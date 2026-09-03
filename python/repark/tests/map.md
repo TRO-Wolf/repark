@@ -131,7 +131,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: rp-7-f18-repin/C-006 **RP-7 (2026-09-02):** the shared-Puffin container-close cell went to its own module rather than here — this file was 23 lines under the 1000-line cap.
   pins: rdf-1-position-delete-bounds/C-004
 - [test_v3_statement_coverage.py](test_v3_statement_coverage.py) — **V3-COV (2026-09-03):** the v3
-  statement-coverage matrix — 80 `_Program` rows (a v3 seed, the statement(s) under test, the
+  statement-coverage matrix — 81 `_Program` rows (a v3 seed, the statement(s) under test, the
   probes compared) over every served statement class and all seven `CALL system.*` procedures.
   `test_v3_statement_row_reproduces_the_measured_repark_answer` always runs against the committed
   golden; `test_v3_statement_row_matches_the_live_spark_oracle` runs the same program on the live
@@ -141,8 +141,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the table it created through a `META` probe — format version, current schema, partition fields
   and the `write.*` properties, read from the table's own metadata JSON — which is what found
   `V3-COV-7` and `V3-COV-8`; `_agrees` exempts ONLY a mutual refusal from the value comparison, so
-  a new cell kind cannot be added and silently never checked. The live cell compares
-  `REPARK[name]` rather than re-running the repark half (80 sessions the always-run sibling
+  a new cell kind cannot be added and silently never checked. `_latest_metadata` sorts on
+  `(st_mtime, name)`, not `st_mtime` alone, so two pointers written inside one filesystem mtime
+  tick still resolve to the same one on every run. **The `V3-COV-8` reading was published
+  backwards and corrected 2026-09-03 (ledger ERRATA 2 / E-7):** the golden here is the measured
+  one — repark's CTAS derives `id: long, required`, Spark's `id: int, optional`. The live cell compares
+  `REPARK[name]` rather than re-running the repark half (81 sessions the always-run sibling
   already pays), and `NEEDS_SNAPSHOT_MARKS` / `NEEDS_METADATA_PATH` — computed once from the
   program text at import — keep the snapshot scan and the metadata-pointer glob off the programs
   that interpolate neither. `REFUSED` is a verdict
@@ -155,7 +159,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   [../../../docs/design/v3-statement-coverage.md](../../../docs/design/v3-statement-coverage.md).
   pins: v3-cov-statement-coverage/C-002, C-003, C-004, C-006
 - [_v3_statement_coverage_programs.py](_v3_statement_coverage_programs.py) — **V3-COV
-  (2026-09-03):** the inventory — `_Seed`, `_SEEDS`, `_Program` and the 80 `_PROGRAMS` rows with
+  (2026-09-03):** the inventory — `_Seed`, `_SEEDS`, `_Program` and the 81 `_PROGRAMS` rows with
   the probes each compares. Split out of the test module for the `check_lib_py` ceiling; the seam
   is inventory / runner. pins: v3-cov-statement-coverage/C-001
 - [_v3_statement_coverage_golden.py](_v3_statement_coverage_golden.py) — **V3-COV (2026-09-03):**
