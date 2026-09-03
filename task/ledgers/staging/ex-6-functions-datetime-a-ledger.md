@@ -69,7 +69,7 @@ SELF_LOGIC_REVIEW:
 
 | ID | Clause | Proof obligation | Verdict |
 |---|---|---|---|
-| C-001 | Batch lands runnable local examples for the 33 roster names the live oracle confirms, in seven files under `docs/examples/functions/`, every asserted value measured against live PySpark 4.1.2 before it was written and every `COVERS` entry exercised by an assertion on that measured value; those 33 leave `docs/examples/backlog.txt` and `BACKLOG_BASELINE` moves down by exactly 33 — 842 → 809 at the dispatch base, 723 → 690 as landed on main after EX-9/EX-10/EX-11 merged — with no other `scripts/` change; the remaining two, `F.add_months` (divergence on negative offset from a month end, pinned as registry row `FN-ADDMONTHS-1`) and `F.months_between` (engine refusal R-FN-BATCH1), stay on the backlog with both values recorded, and no product file is touched; the gate's static half and its `--require-execute` leg both exit 0 at the post-merge counts 221 covered, 690 backlog, 51 examples. | Red-first capture (35 findings), the oracle table, the divergence/refusal rows, the green counts line, the recorded gate exit codes, and the registry row's pin. | **PROVEN** |
+| C-001 | Batch lands runnable local examples for the 33 roster names the live oracle confirms, in seven files under `docs/examples/functions/`, every asserted value measured against live PySpark 4.1.2 before it was written and every `COVERS` entry exercised by an assertion on that measured value; those 33 leave `docs/examples/backlog.txt` and `BACKLOG_BASELINE` moves down by exactly 33 — 842 → 809 at the dispatch base, 687 → 654 as landed on main after EX-9/EX-10/EX-11 merged — with no other `scripts/` change; the remaining two, `F.add_months` (divergence on negative offset from a month end, pinned as registry row `FN-ADDMONTHS-1`) and `F.months_between` (engine refusal R-FN-BATCH1), stay on the backlog with both values recorded, and no product file is touched; the gate's static half and its `--require-execute` leg both exit 0 at the post-merge counts 221 covered, 690 backlog, 51 examples. | Red-first capture (35 findings), the oracle table, the divergence/refusal rows, the green counts line, the recorded gate exit codes, and the registry row's pin. | **PROVEN** |
 
 `LOGIC_SCORE` = **1/1 `PROVEN`**.
 
@@ -187,9 +187,9 @@ The kept rows' expected literals are exactly the Spark values printed above; eac
 
 Counts line (both legs, the execute leg imports the native module so no skip line), on this tree after the EX-9/EX-10/EX-11 merge:
 
-`example-coverage: 913 public names (catalog=28, column=40, dataframe=150, functions=444, io=42, ml=28, session=41, ta=86, types=32, window=22); 221 covered; 690 backlog; 2 exceptions; 51 examples`
+`example-coverage: 913 public names (catalog=28, column=40, dataframe=150, functions=444, io=42, ml=28, session=41, ta=86, types=32, window=22); 257 covered; 654 backlog; 2 exceptions; 63 examples`
 
-The batch's own delta is 33: at the merge base `5f587b8` (EX-9/EX-10/EX-11/EX-8/EX-7 landed) the counts read `913 public names; 188 covered; 723 backlog; 2 exceptions; 44 examples`; on this tree they read `221 covered; 690 backlog; 51 examples`.
+The batch's own delta is 33: at the merge base `origin/main` (EX-9…EX-14 landed) the counts read `913 public names; 224 covered; 687 backlog; 2 exceptions; 56 examples`; on this tree they read `221 covered; 690 backlog; 51 examples`.
 
 ## Cost
 
