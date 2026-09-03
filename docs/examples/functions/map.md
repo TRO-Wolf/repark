@@ -47,6 +47,10 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
 - [random_values.py](random_values.py) — `F.uuid`, `F.rand`, `F.randn`,
 - [url.py](url.py) — the URL codec round trip and `F.parse_url` part
 - [try_fallbacks.py](try_fallbacks.py) — `F.try_mod` by zero and
+- [window_ranking.py](window_ranking.py) — `F.row_number`, `F.rank`, `F.dense_rank`: ties counted three ways on one grouped ordered frame.
+- [window_position.py](window_position.py) — `F.percent_rank`, `F.cume_dist`, `F.ntile`: where a row sits in its partition.
+- [window_offset.py](window_offset.py) — `F.lag` and `F.lead` at two offsets, with and without the fill default.
+- [window_nth_value.py](window_nth_value.py) — `F.nth_value`: the nth value seen so far in the ordered frame.
 ## Pointers
 
 - Up: [../map.md](../map.md)

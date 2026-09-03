@@ -1,5 +1,11 @@
 # map — scripts/
 
+EX-14 (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE` 777 → 768 — nine `F.*` window names
+(`row_number`, `rank`, `dense_rank`, `percent_rank`, `cume_dist`, `ntile`, `lag`, `lead`, `nth_value`)
+covered by four new examples (`window_ranking.py`, `window_position.py`, `window_offset.py`,
+`window_nth_value.py`); the live oracle measured all nine Spark-equal, none dropped.
+pins: ex-14-functions-window/C-001
+
 EX-9 (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE` 809 → 797 — twelve
 `F.*` map and struct names covered by four new examples (`map_parts.py`, `map_shapes.py`,
 `map_higher_order.py`, `structs.py`); the batch's other 24 roster names (json_tuple, csv,

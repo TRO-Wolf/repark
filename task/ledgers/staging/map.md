@@ -15,6 +15,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `UnsupportedOperationException`) stay on the backlog with both values recorded. `risk_tier: standard`. Branch
   `feat/ex-10-functions-null-conditional`. Slate:
   [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md).
+- [ex-14-functions-window-ledger.md](ex-14-functions-window-ledger.md) — **EX-14 (2026-09-03), in flight:** the v0.7 example backfill's `F.*` window batch — nine names land in four examples, the backlog ratchet 777 → 768, all nine measured Spark-equal on the live oracle. Branch `feat/ex-14-functions-window`. Slate: [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md).
 - [ex-2-functions-math-bitwise-ledger.md](ex-2-functions-math-bitwise-ledger.md) —
   **EX-2 (2026-09-01), in flight:** the v0.7 example backfill's `F.*` math +
   bitwise family — the campaign pilot. One clause per batch; batch 1 covers
