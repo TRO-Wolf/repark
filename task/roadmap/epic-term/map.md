@@ -20,6 +20,19 @@ is now the epic list from v0.6 through 3.0 — PROJECT.md points here rather tha
   registry `S3T-V3-1` and keeps the MW-10 format-v2 permission sentence and its evidence links.
   The §3 gate ("every row ✅ or a dated DECLARED residual") is satisfied for this row.
   pins: live-v3-aws-legs/C-004; live-v3-first-measurement/C-001
+  **V1-GATE (2026-09-03): the gate is audited.** §3.1 is the audit — one row per §3 row with
+  its glyph, claim, residual, that residual's registry class and date, and its pin — plus the
+  five 🟡 fork rows the gate leans on, read at the consumed pin `ff4764d3`. Three matrix glyphs
+  moved to the gate's own wording (types ⚠→✅ on `V3-GEO-1` / `V3-VARIANT-SHRED-1`, encryption
+  ❌→✅ on `ENC-1`, DV maintenance ⚠→✅ on `B-MOR-3` under owner decision OD-2) and the
+  `rewrite_manifests` row records its v3 exercise from SCALE-v3. The gate paragraph carries one
+  dated line: every row ✅ or dated DECLARED as of 2026-09-03, the tag the owner's step.
+  The audit is scoped to each row's "v1.0 requires" cell; residuals on the same surface but
+  outside it (`RDF-1`, `ORPHAN-1/2`, `MANIFEST-1/3`) are tabled beneath, recorded not gating.
+  Two things stay owed and neither is a §3 row: an owner line confirming `B-MOR-3`'s DECLARED
+  class, and §2 pillar 4's full v3 statement coverage, which has no §3 row and no discharge —
+  named on the gate line and queued as **V3-COV**.
+  pins: v1-gate-audit/C-001, C-002, C-004
 - [release-roadmap-2026-08-29.md](release-roadmap-2026-08-29.md) — **the release roadmap
   (owner-set 2026-08-29):** every tag from v0.6 to 3.0 with the owner's rulings folded in.
   Pre-1.0 closes the floating gaps (Track-B DML remainder with the verified F-5 correction,

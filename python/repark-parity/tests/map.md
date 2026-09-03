@@ -143,6 +143,31 @@ JVM, no repark required). See [../map.md](../map.md).
   names follow-up unit V3-11; and `docs/design/format-v3-track.md` §7's two "not measured" claims
   each carry a dated correction. Whitespace-normalized reads, so a re-wrap does not red it.
   pins: live-v3-aws-legs/C-004, C-005; live-v3-first-measurement/C-001, C-002, C-003
+  **V1-GATE (2026-09-03):** the `S3T-V3-1` half gains the confirmation run — the row must say
+  `confirmed live 2026-09-03` and name run 33699342417, base `a0fe83a` and `6 passed in
+  230.67s`, and the two phrasings of the old "not re-dispatched" note join the stale set.
+  pins: v1-gate-audit/C-007
+- `test_v1_gate_docs.py` — **V1-GATE (2026-09-03; tree pins):** the v1.0 gate audit is written
+  and true. The north star's §3.1 must carry twenty numbered audit rows, every one glyphed ✅
+  and none naming a BACKLOG residual; each of the seven rows that has a residual must name its
+  registry row, that row's class word and its date, and every `crates/` or `python/` path in a
+  pin cell must exist. The three rows the audit re-glyphed (types, encryption keys, DV / delete
+  file maintenance) must read `✅ by dated DECLARED …` with their ruling dates, and the
+  `rewrite_manifests` row must carry the SCALE-v3 v3 exercise rather than the v2 wiring alone.
+  The gate paragraph must carry exactly ONE dated audit line, must say the tag is the owner's
+  step and must never claim it. The fork half reads the five 🟡 `GAP_MATRIX.md` rows the gate
+  leans on and the pin rev they were read at, which must still be the one in `Cargo.toml`.
+  STATUS must carry the SCALE-v3 numbers, the V3-10 / RDF-1 / LOG1P-1 lines, the audit line and
+  its 25,000-byte ceiling, and the published gate board must be filed under `docs/artifacts/`
+  with a map row naming its sources.
+  **Critic remediation (2026-09-03):** the audit is scoped to each row's §3 v1.0-requires cell,
+  so the pin no longer forbids the word BACKLOG outright — a row may name one only beside
+  `outside the requires cell` — and it now holds the surface-residual table (`RDF-1`,
+  `ORPHAN-1/2`, `MANIFEST-1/3` with their classes), row 13's DELIBERATE-by-analogy-to-OD-2 cell
+  with its pending owner line, row 3's queue-entry clause, row 17's undated `S3T-1` clause, the
+  note that §2 pillar 4's statement coverage is owed rather than discharged, the narrowed gate
+  line, and the Step 6 + slate entries that queue it as V3-COV.
+  pins: v1-gate-audit/C-001, C-002, C-003, C-004, C-005, C-006
 - `test_reg_1_registry_truth_up.py` — **REG-1 (2026-08-26; tree pins):** the divergence registry
   says what the pins prove — DEC-2 / DEC-6 / DEC-7 / DEC-8 carry dated FIXED notes naming #94 / #99
   and their equality pins (C-001); TZ-8 splits into the FIXED `CAST(ts AS DATE)` / `to_date` /
