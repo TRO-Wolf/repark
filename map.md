@@ -26,7 +26,7 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
 
 ## Contents
 
-- `Cargo.toml` — **also the version SSOT (release PR, 2026-08-14):** `[workspace.package] version` (0.6.0) is the single release version; maturin injects it into the wheel (pyproject `dynamic`); bump here, nowhere else (internal deps are path-only — no version requirements to chase). With `Cargo.lock`, `rust-toolchain.toml`, `rustfmt.toml`, `clippy.toml`, `deny.toml`,
+- `Cargo.toml` — **also the version SSOT (release PR, 2026-08-14):** `[workspace.package] version` (1.0.0) is the single release version; maturin injects it into the wheel (pyproject `dynamic`); bump here, nowhere else (internal deps are path-only — no version requirements to chase). With `Cargo.lock`, `rust-toolchain.toml`, `rustfmt.toml`, `clippy.toml`, `deny.toml`,
   `.cargo/` — Rust workspace + tooling. `[workspace.dependencies]` is the single version table;
   workspace lints (`unsafe_code = "forbid"`) and the clippy `disallowed-methods` panic/spawn bans
   are in force. The iceberg* `[patch.crates-io]` family is a single shared `rev` (five lines);
@@ -102,7 +102,7 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   with it, and between campaigns the directory holds only its `map.md`).
   `.github/` — tier-1 CI + Dependabot.   `PROJECT.md` — north-star charter. `STATUS.md` — the
   single source of truth for current state (release state, delivery, active workstreams, deferred
-  work). Truth-up 2026-09-02: v0.6.0 shipped; RP-5 ledger pointer refiled to archive/2026-09/; LIVE-v3 added the wired-but-unmeasured live v3 legs to the v3 workstream and the `V3-ROWID-3` line to Known correctness issues, paying for both by compacting the V3-4/V3-6/OD-3b restatements that already live in the north star and the registry (the 25,000-byte ceiling is dual-pinned and was not raised). pins: live-v3-aws-legs/C-004 `AGENTS.md` — **the single authoritative contributor contract** (holds the precedence
+  work). Truth-up 2026-09-03: v1.0.0 cut (release PR, four files); 2026-09-02: v0.6.0 shipped; RP-5 ledger pointer refiled to archive/2026-09/; LIVE-v3 added the wired-but-unmeasured live v3 legs to the v3 workstream and the `V3-ROWID-3` line to Known correctness issues, paying for both by compacting the V3-4/V3-6/OD-3b restatements that already live in the north star and the registry (the 25,000-byte ceiling is dual-pinned and was not raised). pins: live-v3-aws-legs/C-004 `AGENTS.md` — **the single authoritative contributor contract** (holds the precedence
   chain, invariants, safety boundaries, the markdown document lifecycle — which class every
   doc belongs to and what retires it — and the version-pin duties: metadata-projection shim,
   Catalog wrap, IcebergSchemaProvider name-directory freeze; written for any human or agent,
