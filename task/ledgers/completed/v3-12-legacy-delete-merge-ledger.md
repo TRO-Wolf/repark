@@ -10,6 +10,54 @@
 
 **Retires:** this ledger moves to `../completed/` in this unit's last commit.
 
+## ERRATA (2026-09-02, post-merge critic round — the body below is frozen; these three corrections supersede it)
+
+**E-1 — the branch cell behind `V3-DV-BRANCH-1` (§6 carried no branch row).** Measured live,
+PySpark 4.1.2 + Iceberg 1.11.0, `local[1]`, one data file: v2 MoR table ids 1..4, upgrade to v3,
+`ALTER TABLE … CREATE BRANCH b`, then two `MERGE … WHEN MATCHED THEN DELETE` on `t.branch_b`.
+
+| Step | Branch | `main` |
+|---|---|---|
+| after `MERGE … DELETE` id 2 on the branch | `[1, 3, 4]` | `[1, 2, 3, 4]` |
+| after `MERGE … DELETE` id 3 on the branch | `[1, 4]` | `[1, 2, 3, 4]` |
+
+The branch and `main` sit on distinct snapshot ids (genuinely diverged), and the branch's DV
+history is `PUFFIN rc 1` superseded by `PUFFIN rc 2` — the second statement merged into the
+branch's own vector rather than adding a second. This is the cell the registry row cites.
+
+**E-2 — §8's mutation table had a stale denominator (`M = 10` header, `6 of 12` in its M4).** The
+V3-12 Rust pin set is **16 executable pins** — 11 in `crates/repark-spark/src/tests/v3_legacy_delete.rs`,
+3 in `crates/repark-sql/src/v3/create.rs`, 2 in `legacy_deletes.rs` — plus 2 `#[ignore]`d
+measurement cells, which is the 18 tests the suites report. Ignored cells cannot go red, so the
+denominator is 16. Re-run 2026-09-02, each mutation applied alone and restored:
+
+| Mutation | Red |
+|---|---|
+| M1 collect nothing (no merge at all) | 8 of 16 |
+| M2 merge the positions but never remove the superseded files | 8 of 16 |
+| M3 remove the superseded files WITHOUT merging their positions (the resurrection direction) | 8 of 16 |
+| M4 treat every position delete as file-scoped (drop the equal-bounds test) | 2 of 16 |
+| M5 invert the sequence-number applicability test | 8 of 16 |
+| M6 index the reserved columns off the FILE schema instead of the projected batch | 2 of 16 |
+| M7 close the DV containers against the CURRENT snapshot instead of the scanned one | 2 of 16 |
+
+M6 and M7 are the two pins this round added; each is caught by both of its own cells, not one.
+M5's 8 red still prove only the ACCEPT direction of `applies()`, as §8 already said.
+
+**E-3 — §6's "Ruling from the cells" conflated two different tests.** It read "merges the
+positions of every applicable live position delete that names a touched data file, and removes
+only the file-scoped ones". P2 refutes the conjunction: that delete carries no `file_path` bounds,
+so it names no file at all, and Spark merged it anyway. The rule splits in two:
+
+| Half | Test |
+|---|---|
+| **Merge** | APPLICABILITY — the delete is path-scoped and names the touched file, or partition-scoped and shares its `(spec_id, partition)`; and its sequence number is at least the data file's. File scope is irrelevant here. |
+| **Remove** | FILE SCOPE — only a delete covering exactly one data file is dropped, because removing one that covers more resurrects the rows it deletes in the files this commit did not touch. |
+
+Everything the body says about what this engine DOES is unchanged: it merges and removes the
+file-scoped applicable deletes and refuses the rest, because the pinned fork cannot express
+merge-without-remove (§13).
+
 **Why now.** V3-10 landed the in-place v2 → v3 upgrade and filed the one thing it could not do:
 an upgraded table still carrying a v2 parquet position delete refused the next merge-on-read
 write at the fork's commit door, where Spark merges those positions into the new deletion vector

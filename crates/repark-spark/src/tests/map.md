@@ -48,7 +48,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   covering-two-files shape and leaves that delete live forever. The engine cannot: the fork's
   commit door admits an added DV over a live position delete only when the same commit removes
   it, and removing a delete that covers two data files resurrects the untouched sibling's deleted
-  row. Both refusals carry an ANSI and a facade twin (row per entry point).
+  row — which is what `a_partition_scoped_legacy_delete_still_refuses_loudly`'s assertion message
+  now says, in place of an earlier draft that called the shape unmeasured on Spark. Both refusals carry an ANSI and a facade twin (row per entry point).
   Two branch cells close `V3-DV-BRANCH-1`: a second MoR DELETE on a diverged branch must merge
   the BRANCH's own DV (red before V3-12 — the close read `main`, wrote a fresh DV, and the commit
   door refused with "already carries a live deletion vector"), and a legacy parquet delete that

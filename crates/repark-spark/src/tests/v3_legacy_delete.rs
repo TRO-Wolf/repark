@@ -339,8 +339,10 @@ async fn a_partition_scoped_legacy_delete_still_refuses_loudly() {
     assert!(
         message.contains("Cannot commit deletion vector")
             && message.contains("live position delete file"),
-        "a delete covering more than one data file is unmeasured on Spark and stays a loud \
-         refusal, never a silent supersede: {message}"
+        "Spark merges this delete's positions for the touched file and keeps the parquet delete \
+         live; the pinned fork's validate_fresh_dvs_only can only admit a DV over a live position \
+         delete that the SAME commit removes, and removing this one resurrects the untouched \
+         sibling's deleted row — so the engine refuses rather than corrupt: {message}"
     );
     assert_eq!(
         table_rows(&ctx, &catalogs, "ice.sales.legacypart").await,
@@ -525,7 +527,7 @@ async fn a_legacy_parquet_delete_that_exists_only_on_a_branch_merges_on_that_bra
 }
 
 #[tokio::test]
-#[ignore = "measurement: prints the legacy-walk cost at 8 and 192 delete manifests"]
+#[ignore = "measurement: prints the legacy-walk cost at 8 and 48 delete manifests"]
 async fn measure_legacy_walk_cost() {
     for manifests in [8usize, 48] {
         let wh = TempDir::new().unwrap();

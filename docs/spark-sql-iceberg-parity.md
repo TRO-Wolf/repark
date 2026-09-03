@@ -2679,21 +2679,25 @@ the pin rather than obeying it.
   in the one `RowDelta` — DV `record_count` 3. A data file this commit does NOT touch keeps its
   own legacy delete live. Copy-on-write writes no DV, so a legacy delete is left exactly as it was.
 - **Apache Spark** — the same, in the same statements: Java `BaseDVFileWriter.loadPreviousDeletes`
-  unions the previous positions and `RowDelta.removeDeletes` drops the superseded file. Spark
-  merges the positions of **every** applicable live position delete that names a touched data
-  file, and **removes only the file-scoped ones** — a delete covering more than one data file
-  stays live, because removing it would resurrect the rows it deletes in the files this commit
-  did not touch (`V3-UPGRADE-DV-PART-1`). `referenced_data_file` is NULL on every Spark-written
-  position delete, so file scope comes from equal `file_path` lower/upper bounds
-  (`ContentFileUtil.isFileScoped`). At the default `write.delete.granularity = 'file'` a
+  unions the previous positions and `RowDelta.removeDeletes` drops the superseded file. Two
+  different tests govern the two halves, and conflating them is wrong. **APPLICABILITY governs
+  the merge:** a live position delete's positions are merged into a touched data file's DV when
+  it applies to that file — path-scoped and naming it, or partition-scoped and sharing its
+  `(spec_id, partition)` — and its sequence number is at least the data file's. A partition-scoped
+  delete carries NO `file_path` bounds and so names no file at all, yet Spark still merges it
+  (`V3-UPGRADE-DV-PART-1` P2). **FILE SCOPE governs only REMOVAL:** only a delete that covers
+  exactly one data file is dropped from the commit, because removing one that covers more would
+  resurrect the rows it deletes in the files this commit did not touch.
+  `referenced_data_file` is NULL on every Spark-written position delete, so file scope comes from
+  equal `file_path` lower/upper bounds (`ContentFileUtil.isFileScoped`). At the default `write.delete.granularity = 'file'` a
   partitioned table with two data files in one partition gets one delete file per data file, and
   only the touched one is merged and removed, leaving the sibling's live. Summary counts on the merging commit: `added-dvs 1`, `added-position-deletes 2`,
   `added-delete-files 1`, `removed-delete-files 1`, `removed-position-delete-files 1`,
   `removed-position-deletes 1`.
   *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-02 V3-12 transcript)*.
-- **Pin** — `crates/repark-spark/src/tests/v3_legacy_delete.rs` (thirteen cells: merge, append
+- **Pin** — `crates/repark-spark/src/tests/v3_legacy_delete.rs` (eleven cells: merge, append
   after, UPDATE, subquery DELETE, two legacy deletes, untouched sibling, copy-on-write, two
-  refusals and two diverged-branch cells), `crates/repark-sql/src/v3/create.rs::upgraded_v3_merge_delete_merges_a_legacy_parquet_position_delete_into_the_dv`,
+  refusals and two diverged-branch cells, plus one `#[ignore]`d measurement), `crates/repark-sql/src/v3/create.rs::upgraded_v3_merge_delete_merges_a_legacy_parquet_position_delete_into_the_dv`,
   `python/repark/tests/test_v3_legacy_delete_merge.py` (facade + a live Spark cell at matched layout).
   Pins: v3-12-legacy-delete-merge/C-002, C-003, C-004.
 - **Rationale** — FIXED. The merge is engine-side and needs no fork change: the fork's
@@ -2768,8 +2772,11 @@ the pin rather than obeying it.
   leaving the branch un-writable after its first DV. A v3 MoR table, `CREATE BRANCH b`, then two
   `MERGE … WHEN MATCHED THEN DELETE` statements on `t.branch_b` now leave ONE branch DV of
   `record_count` 2, the branch reading `[1, 4]`, and `main` unmoved at `[1, 2, 3, 4]`.
-- **Apache Spark** — commits both statements; the second merges into the branch's own DV.
-  *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-02 V3-12 transcript.)*
+- **Apache Spark** — commits both statements; the second merges into the branch's own DV. The
+  branch reads `[1, 4]` and `main` stays at `[1, 2, 3, 4]` on distinct snapshot ids, with the
+  branch's superseded 1-position DV replaced by a 2-position one.
+  *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-02; the branch cell is recorded in the
+  V3-12 ledger's dated errata note, not the original transcript.)*
 - **Pin** — `crates/repark-spark/src/tests/v3_legacy_delete.rs::a_second_merge_on_read_delete_on_a_diverged_branch_merges_the_branch_only_dv`
   and `::a_legacy_parquet_delete_that_exists_only_on_a_branch_merges_on_that_branch`.
   Pins: v3-12-legacy-delete-merge/C-006.
