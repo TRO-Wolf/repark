@@ -5,6 +5,17 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [ex-10-functions-null-cond-misc-ledger.md](ex-10-functions-null-cond-misc-ledger.md) —
+  **EX-10 (2026-09-03), in flight:** the v0.7 example backfill's `F.*` null-handling,
+  conditional, ordering, bit and session batch — 33 names landed in seven examples, the
+  backlog ratchet 842 → 809; the 12 names the live oracle measured divergent (`F.isnan`
+  `[False,False]` vs `[False,None]`, the session-identity four `repark` vs OS user) or
+  refused (`F.expr` literals Spark-equal `[2,2]`/`['AB','AB']`, column ref `AnalysisException`
+  vs Spark `[2.0,None]`; `F.raise_error` `USER_RAISED_EXCEPTION`; the input/partition five
+  `UnsupportedOperationException`) stay on the backlog with both values recorded. `risk_tier: standard`. Branch
+  `feat/ex-10-functions-null-conditional`. Slate:
+  [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md).
+- [ex-14-functions-window-ledger.md](ex-14-functions-window-ledger.md) — **EX-14 (2026-09-03), in flight:** the v0.7 example backfill's `F.*` window batch — nine names land in four examples, the backlog ratchet 777 → 768, all nine measured Spark-equal on the live oracle. Branch `feat/ex-14-functions-window`. Slate: [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md).
 - [ex-2-functions-math-bitwise-ledger.md](ex-2-functions-math-bitwise-ledger.md) —
   **EX-2 (2026-09-01), in flight:** the v0.7 example backfill's `F.*` math +
   bitwise family — the campaign pilot. One clause per batch; batch 1 covers
@@ -14,12 +25,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   for existing. `risk_tier: standard`. Branch
   `feat/ex-2-functions-math-bitwise`. Slate:
   [../briefs/example-backfill.md](../../../briefs/example-backfill.md).
-- [ex-4-functions-strings-a-ledger.md](ex-4-functions-strings-a-ledger.md) — **EX-4 (2026-09-03),
-  in flight:** the v0.7 example backfill's `F.*` string-basics family, batch a. 30 of 34
-  dispatched names land in eight examples; the four measured divergent or refused stay on the
-  backlog with both values recorded. `F.base64` is registry BL-17. `risk_tier: standard`.
-  Branch `feat/ex-4-functions-strings-a`. Slate:
-  [../briefs/example-backfill.md](../../../briefs/example-backfill.md).
+- [ex-9-functions-maps-structs-json-ledger.md](ex-9-functions-maps-structs-json-ledger.md) —
+  **EX-9 (2026-09-03), in flight:** the v0.7 example backfill's `F.*` map,
+  struct and JSON family. Twelve names land in four files and the backlog
+  ratchet moves 842 → 830; the other 24 roster names (json_tuple, csv, xml,
+  xpath, variant) are measured against the live oracle and stay on the backlog —
+  the engine refuses each (E1-disclosed deferrals). `risk_tier: standard`.
+  Branch `feat/ex-9-functions-maps-structs-json`. Slate:
+  [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md).
 - [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's
   scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike
   evidence behind it; C-007 (the four sub-project families) was closed by ruling D-7 on
@@ -49,5 +62,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   row lineage the format mandates. §4 answers A12's stated first question — adoption, through
   `register_table`, whose Spark signature is measured there.
 
+- [ex-11-functions-hash-url-random-ledger.md](ex-11-functions-hash-url-random-ledger.md) —
+- [ex-8-functions-arrays-ledger.md](ex-8-functions-arrays-ledger.md) —
+- [ex-7-functions-datetime-b-ledger.md](ex-7-functions-datetime-b-ledger.md) —
+- [ex-12-functions-aggregates-a-ledger.md](ex-12-functions-aggregates-a-ledger.md) —
+- [ex-6-functions-datetime-a-ledger.md](ex-6-functions-datetime-a-ledger.md) —
+- [ex-4-functions-strings-a-ledger.md](ex-4-functions-strings-a-ledger.md) — **EX-4 (2026-09-03),
 ## Pointers
 - Up: [../map.md](../map.md)

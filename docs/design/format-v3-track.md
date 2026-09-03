@@ -256,8 +256,20 @@ fork F-7. The opt-in v2-to-v3 upgrade still lands only after the engine can safe
 upgraded table.
 
 *V3-10 2026-09-02:* the guarded upgrade lands — `ALTER … 'format-version' = '3'` behind the
-create opt-in, on three doors, Spark-equal (registry `V3-UPGRADE-1`; residuals
-`V3-UPGRADE-V4-1`, `V3-UPGRADE-DV-1`).
+create opt-in, on three doors, Spark-equal (registry `V3-UPGRADE-1`; residual
+`V3-UPGRADE-V4-1`).
+
+*V3-12 2026-09-02:* the upgraded table's own legacy parquet position deletes stop blocking the
+next merge-on-read write — their positions are read back, unioned into the new DV, and the
+superseded files leave in the same `RowDelta` (registry `V3-UPGRADE-DV-1` FIXED; residuals
+`V3-UPGRADE-DV-PLAIN-1`, `V3-UPGRADE-DV-PART-1`).
+
+*RP-8 2026-09-03:* the repin to `c1d6c9de` moves that merge into the fork's own container close
+(F-21 `#262`, F-22 `#263`), so RePark's `dv_close/legacy_deletes.rs` is deleted and both residuals
+are FIXED — the plain-`WHERE` arm merges, and a delete covering two data files merges and stays
+live as Spark leaves it. F-19/F-20 `#261` come with it: `FanoutWriter::close` drains ascending,
+closing `F-v3-10-partition-file-order`, and `DvContainerClose::retained_references` /
+`StampedDeleteFile` are gone.
 
 ### Step 5 — run the remaining product units on their real dependencies
 
@@ -285,6 +297,10 @@ create opt-in, on three doors, Spark-equal (registry `V3-UPGRADE-1`; residuals
   Spark-equal — only the touched blob is rewritten, the sibling entry keeps its container and
   `content_offset`, two containers after; `V3-DV-1` FIXED and the byte amplification closed
   (19,126 → 377 B per later single-row `DELETE` at 64 blobs).
+- **RP-8:** *Done 2026-09-03.* Pin `c1d6c9de` (fork F-19/F-20/F-21/F-22) gives the container close
+  the legacy-delete collect, merge and file-scoped removal in one delete-manifest pass and an
+  ascending `FanoutWriter` drain; `V3-UPGRADE-DV-PLAIN-1`, `V3-UPGRADE-DV-PART-1` and
+  `F-v3-10-partition-file-order` FIXED, `legacy_deletes.rs` deleted.
 
   The original scope note: V3-6 may
   run in parallel with V3-3 or V3-4 after its fork type support is pinned; it does not wait for
@@ -300,8 +316,27 @@ API review. **Scale is measured (SCALE-v3, 2026-09-02):** `1e7 x 50` on v3 ends 
 zero delete files where v2 kept 10,000,000 delete records, and reads the point probe at 0.64x v2
 on a cell whose copy-on-write control moved 1.00x; the write side (1.59x the v2 merge time) is a
 cross-run, uncontrolled ratio — the COW control moved 1.22x at identical knobs —
-[scale-v3-mw7-ledger.md](../../task/ledgers/completed/scale-v3-mw7-ledger.md). The tag waits until every north-star matrix row is green or has a dated, pinned
+[scale-v3-mw7-ledger.md](../../task/ledgers/archive/2026-09/2026-09-02-scale-v3-mw7-ledger.md). The tag waits until every north-star matrix row is green or has a dated, pinned
 DECLARED disposition.
+
+*Step 6 state, dated 2026-09-03 (V1-GATE).* Four of the five are done: the live acceptance legs
+(LIVE-v3-M, run 33635288918, re-dispatched as run 33699342417), the scale workload above, the
+nightly v3 oracle (green since 2026-09-02), and **the v1.0 API review, answered 2026-09-02** —
+`R0 yes` at every recommendation, with 888 names frozen in
+[v1-0-api-freeze.json](v1-0-api-freeze.json) behind `python/repark-parity/tests/test_api_freeze.py`
+and the versioning policy in [docs/release.md](../release.md). **Full v3 statement coverage was
+the one that is not done**: V1-GATE looked for a discharge and found none — the nightly v3 leg is
+ten cells over two fixtures, not the statement matrix, and no statement-coverage harness existed in
+this tree at any format version.
+
+*Step 6 state, dated 2026-09-03 (V3-COV).* All five are done. **V3-COV measured the statement
+matrix on 2026-09-03**: 81 statement programs over 12 statement classes and all seven
+`CALL system.*` procedures, 267 comparison cells, 71 EQUAL, 1 refused by both engines, 9 rows
+filed and 2 defects FIXED in the same unit — the matrix is
+[v3-statement-coverage.md](v3-statement-coverage.md) and its harness is
+`python/repark/tests/test_v3_statement_coverage.py`. Step 6 now owes **no engineering item**; the
+one remaining gate item is the owner's `B-MOR-3` line, then the tag. The gate audit itself is
+[the north star](../../task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md) §3.1.
 
 FNP, TA performance, dbt, and the general correctness backlog may run while the fork lane is
 blocked. They do not replace or delay a ready v3 unit.

@@ -2,8 +2,8 @@
 
 **Date:** 2026-09-02 · **Branch:** `docs/v1-0-api-review` · **Base:** `origin/main` `3eb6b71` ·
 **Model:** claude-opus-5 (medium) · **Ruling under review:**
-[../../../docs/design/python-facade.md](../../../docs/design/python-facade.md) §4 ·
-**Gate:** [../../roadmap/epic-term/v1-0-iceberg-v3-northstar.md](../../roadmap/epic-term/v1-0-iceberg-v3-northstar.md)
+[../../../docs/design/python-facade.md](../../../../docs/design/python-facade.md) §4 ·
+**Gate:** [../../roadmap/epic-term/v1-0-iceberg-v3-northstar.md](../../../roadmap/epic-term/v1-0-iceberg-v3-northstar.md)
 §3 · **Path:** STANDARD (docs-only; one Actor cycle).
 
 **Retires:** this ledger moves to `../completed/` in this unit's last commit.
@@ -71,5 +71,5 @@ COVERAGE_ATTESTATION:
 
 ## Pointers
 
-- Up: [map.md](../staging/map.md)
-- Deliverable: [../../../docs/design/v1-0-api-review-2026-09-02.md](../../../docs/design/v1-0-api-review-2026-09-02.md)
+- Up: [map.md](../../staging/map.md)
+- Deliverable: [../../../docs/design/v1-0-api-review-2026-09-02.md](../../../../docs/design/v1-0-api-review-2026-09-02.md)

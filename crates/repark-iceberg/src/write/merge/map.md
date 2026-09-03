@@ -37,6 +37,36 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   `apply` stamps sibling sequences. C-003 pin
   `shared_puffin_row_delta_keeps_the_untouched_sibling` calls `commit_row_delta_kind`
   on the Spark shared-Puffin fixture (id 5 must stay deleted).
+  **V3-12 (2026-09-02), superseded by RP-8:** `plan_deletion_vectors` folded the superseded
+  legacy positions into `new_positions` before the container close and appended the superseded
+  delete files to `close.removed`, out of a RePark-owned `dv_close/legacy_deletes.rs` that walked
+  the scanned snapshot's delete manifests and then its data manifests for sequence numbers.
+  **RP-8 (2026-09-03):** that module and both of its walks are DELETED. At pin `c1d6c9de` the
+  fork's own close (fork F-21 `#262`, F-22 `#263`) collects the live non-Puffin position deletes
+  in the SAME delete-manifest pass it already made for the DVs, loads each delete file once
+  through a projected `load_legacy_positions_by_path`, unions the applicable positions into the
+  DV it writes, and pushes only the file-scoped sources onto `close.removed` — so
+  `plan_deletion_vectors` passes STATEMENT-ONLY positions and consumes the result. The
+  semantics are unchanged and still Spark's two-test rule: APPLICABILITY (`delete_seq >=
+  data_seq`, unknown erring toward "applies") governs the merge, FILE SCOPE governs only the
+  removal. What changed is ownership, and one measured cost: F-22 REVERSED F-18's lazy data
+  walk — `collect_live_data_files` now always reads every data manifest so
+  `data_sequence_numbers` fills for every touched path, with no opt-out even when
+  `known_partitions` is complete. The two RP-7 pins that hid the data manifests and required the
+  close to succeed anyway now assert the opposite and the sequence numbers they buy:
+  `closing_a_covered_v3_delete_reads_the_data_manifest_for_sequence_numbers` and
+  `a_supplied_partition_map_still_walks_the_data_manifests_for_sequence_numbers`.
+  `plan_deletion_vectors` loads the scanned snapshot's `ManifestList` once and hands it to the
+  close as `Option<&ManifestList>` so the list is not read twice.
+  **V3-12 C-006:** `prepare_row_delta_deletes` takes the `snapshot_id`
+  `commit_target::snapshot_id_for_commit` already resolved for the target scan and
+  `validate_from_snapshot`, and hands it to BOTH the legacy-delete collection and the fork
+  container close. The close had always been given `None`, which the fork resolves to the CURRENT
+  snapshot — so a `to_branch` merge-on-read write closed against `main`, found none of the
+  branch's own deletion vectors, wrote a second DV for a data file that already had one, and the
+  commit door refused. One resolved snapshot id now serves the scan, the collection, the close
+  and the commit validation. Registry `V3-DV-BRANCH-1`.
+  pins: v3-12-legacy-delete-merge/C-003, C-006
   **V3-9 (2026-09-02):** the position map takes `get_mut` before allocating a key and the V2
   `referenced` set allocates one `String` per distinct path, not one per row (600k rows:
   41.3 → 29.3 ms and 37.3 → 23.9 ms).
@@ -48,16 +78,18 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   already knows each file's partition; entries are supplied only for paths that scan produced,
   which keeps the fork's "not a live file of the scanned snapshot" guard meaningful, and no
   table shape is special-cased. `plan_deletion_vectors` retains the map down to the touched
-  paths, and `referenced_data_files` MOVES `retained_references` out instead of cloning
-  it. The first draft instead short-circuited on "every spec is unpartitioned", which was
+  paths. **RP-8:** F-19 (`#261`) deleted `DvContainerClose::retained_references` and collapsed
+  `StampedDeleteFile` to `DataFile`, so the referenced set is `close.referenced_data_files()` —
+  the replacement blobs only — and `apply_close` is one `add_deletes`. The first draft instead
+  short-circuited on "every spec is unpartitioned", which was
   measurably useless — one partitioned spec anywhere in a table's history emptied the map and
   the statement paid the full lazy walk (192-partition fresh-path DELETE 2,176 ms, now 761 ms).
-  The two manifest-read pins hide the live data manifests and require the close to succeed
-  anyway: `closing_a_covered_v3_delete_reads_no_data_manifest` is FORK behaviour (a covered path
-  resolves from the delete manifests, no map needed), while
-  `a_supplied_partition_map_closes_a_fresh_partitioned_delete_with_no_data_manifest` is the
-  load-bearing one for the supplied map — mutation (clear the map) 1 red of 3.
+  The two manifest-read pins hid the live data manifests and required the close to succeed
+  anyway; **RP-8** flipped both, because F-22 always walks the data manifests for
+  `data_sequence_numbers`. They now assert that hiding those manifests REFUSES and that the
+  close fills a sequence number for every touched path.
   pins: rp-3-fork-repin/C-003
+  pins: rp-8-repin-f21-f22/C-002
   pins: v3-5-dv-compaction/C-005
   pins: v3-9-mor-predicate-dml-dv/C-007, C-009
   pins: rp-7-f18-repin/C-002, C-003
@@ -87,6 +119,12 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   lineage columns, rewrite SQL that keeps `_row_id` and nulls last-updated on UPDATE,
   and partitioned fanout that prefixes user columns for the partition calculator.
   pins: v3-7-merge-lineage/C-001
+  V3-11: `write_partitioned_lineage_files` passes the fanout writer's close result through
+  `crate::write::file_order::ascending_partition_order`, because the fork's `FanoutWriter` drains a
+  `HashMap` and a MoR MERGE that updates one partition and inserts into another produced two
+  files in random order — registry `V3-ROWID-3`; the general rule and its
+  divergence from Spark are `V3-FILEORDER-1`.
+  pins: v3-11-row-id-determinism/C-003
   V3-8: `table_carries_merge_lineage` and `scratch_schema_for_table` widen to `pub(crate)`
   so `write::predicate_dml` reuses the same scratch shape for its COW rewrite; the module is
   `pub(crate) mod`. pins: v3-8-subquery-where-lineage/C-002
