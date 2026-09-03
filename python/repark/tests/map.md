@@ -158,7 +158,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   control that is stable. Matrix and totals:
   [../../../docs/design/v3-statement-coverage.md](../../../docs/design/v3-statement-coverage.md).
   pins: v3-cov-statement-coverage/C-002, C-003, C-004, C-006
-- [_v3_statement_coverage_programs.py](_v3_statement_coverage_programs.py) — **V3-COV
+- [_v3_statement_coverage_programs.py](_v3_statement_coverage_programs.py) — **V3-COV Its module docstring counts the 81 rows.
   (2026-09-03):** the inventory — `_Seed`, `_SEEDS`, `_Program` and the 81 `_PROGRAMS` rows with
   the probes each compares. Split out of the test module for the `check_lib_py` ceiling; the seam
   is inventory / runner. pins: v3-cov-statement-coverage/C-001

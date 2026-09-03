@@ -29,7 +29,7 @@ is now the epic list from v0.6 through 3.0 — PROJECT.md points here rather tha
   dated line: every row ✅ or dated DECLARED as of 2026-09-03, the tag the owner's step.
   The audit is scoped to each row's "v1.0 requires" cell; residuals on the same surface but
   outside it (`RDF-1`, `ORPHAN-1/2`, `MANIFEST-1/3`) are tabled beneath, recorded not gating.
-  **§2 pillar 4 is discharged (V3-COV, 2026-09-03):** the statement matrix is measured — 80
+  **§2 pillar 4 is discharged (V3-COV, 2026-09-03):** the statement matrix is measured — 81
   programs, 267 cells, 71 EQUAL, 9 rows filed, 2 defects FIXED —
   [../../../docs/design/v3-statement-coverage.md](../../../docs/design/v3-statement-coverage.md).
   One thing stays owed and it is not a §3 row: an owner line confirming `B-MOR-3`'s DECLARED class.

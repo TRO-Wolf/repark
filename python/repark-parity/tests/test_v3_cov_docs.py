@@ -127,6 +127,10 @@ def test_the_v3_track_step_6_carries_the_v3_cov_state_line() -> None:
     assert "Full v3 statement coverage is the one that is not done" not in track
     programs = _TOTALS["Statement programs measured"]
     assert f"{programs} statement programs" in " ".join(track.split())
+    roadmap_map = " ".join(_read("task/roadmap/epic-term/map.md").split())
+    design_map = " ".join(_read("docs/design/map.md").split())
+    assert f"{programs} programs, 267 cells" in roadmap_map
+    assert f"{programs} statement programs" in design_map
 
 
 def test_the_harness_and_the_golden_carry_every_matrix_row() -> None:

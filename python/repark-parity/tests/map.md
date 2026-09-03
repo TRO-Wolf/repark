@@ -147,7 +147,7 @@ JVM, no repark required). See [../map.md](../map.md).
   `confirmed live 2026-09-03` and name run 33699342417, base `a0fe83a` and `6 passed in
   230.67s`, and the two phrasings of the old "not re-dispatched" note join the stale set.
   pins: v1-gate-audit/C-007
-- `test_v3_cov_docs.py` — **V3-COV (2026-09-03; tree pins):** the coverage document, the registry
+- `test_v3_cov_docs.py` — **V3-COV (2026-09-03; tree pins):** the coverage document, the registry The Step-6 count pin also reads the program count in `task/roadmap/epic-term/map.md` and `docs/design/map.md`.
   and the discharge lines hold one matrix — §1's totals are counted from §3 rather than asserted
   beside it, every DIVERGES row cites a registry row that exists, the six rows this unit filed
   carry a class, the date and their pin, the two fork-routed rows name a TRIGGER, and the north

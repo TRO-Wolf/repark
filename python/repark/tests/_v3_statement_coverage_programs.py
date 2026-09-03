@@ -1,4 +1,4 @@
-"""V3-COV inventory — the 80 statement programs and the v3 seeds they run on.
+"""V3-COV inventory — the 81 statement programs and the v3 seeds they run on.
 
 pins: v3-cov-statement-coverage/C-001
 """
