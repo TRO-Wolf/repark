@@ -4,7 +4,10 @@
 (the orchestrator's departure move). It closes when EX-9 merges, or when the
 owner closes the slate row.
 
-**Unit:** EX-9 · **Date:** 2026-09-03 · **Model:** muse-spark-1.2-contributor (continuation of glm-5.3-flash) · **Branch:** `feat/ex-9-functions-maps-structs-json` · **Base:** `84c1801`
+**Unit:** EX-9 · **Date:** 2026-09-03 · **Model:** muse-spark-1.2-contributor (continuation of glm-5.3-flash) · **Branch:** `feat/ex-9-functions-maps-structs-json` · **Base:** `a0cd39e` (dispatch base `84c1801`)
+
+**Wall-clock / cost:** GLM leg: started 2026-09-03 00:36 UTC, died on transport errors twice; Muse Spark continuation: ~8 min, free tier
+
 **Slate:** [briefs/example-backfill.md](../../../briefs/example-backfill.md),
 batch roster row 9 (the map, struct and JSON family). **Ruling:** owner,
 2026-08-31, [release-roadmap-2026-08-29.md](../../../roadmap/epic-term/release-roadmap-2026-08-29.md)
@@ -48,7 +51,7 @@ rather than one file per name:
 | `map_parts.py` | `F.map_keys`, `F.map_values`, `F.map_entries`, `F.map_contains_key` | One map column taken apart every way, NULL map included. |
 | `map_shapes.py` | `F.map_from_arrays`, `F.map_from_entries`, `F.str_to_map` (+ `F.struct` as the entry builder) | The three ways a map column comes into being; `F.struct` builds the entry array. `F.struct` is also a roster name and is covered here. |
 | `map_higher_order.py` | `F.transform_keys`, `F.transform_values`, `F.map_filter` | The `(k, v)` lambda names, NULL map included. |
-| `structs.py` | `F.struct`, `F.named_struct` | Structs from columns, by argument name and by literal name, NULL fields included. `F.struct` appears in two files' `COVERS` is not allowed — it is covered in `map_shapes.py` and reused in `structs.py` as `F.col`/`F.lit` style; actually `structs.py` covers `F.struct` and `F.named_struct`, while `map_shapes.py` also covers `F.struct` — the gate allows duplicate covers across files but the roster counts it once. The ratchet moves by distinct names. |
+| `structs.py` | `F.struct`, `F.named_struct` | Structs by column and by literal name, NULL fields included. F.struct is also in map_shapes.py COVERS; the gate permits duplicate covers and the ratchet counts distinct names once. |
 
 No existing example under `docs/examples/functions/` demonstrates any of the
 thirty-six — `abs.py` and the math family are the only files there that touch
@@ -153,14 +156,7 @@ names nothing else, so the batch's green cannot be borrowed from another name.
 
 ## Oracle (live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03, JDK 17)
 
-Throwaway script `python/repark-parity/.scratch/ex9_oracle.py` via
-`_live_parity.build_spark_iceberg_engine(Path(tmpdir)).session` with
-`JAVA_HOME=/usr/lib/jvm/zulu-17-amd64` and
-`PYTHONPATH=/tmp/oc-ex9/python/repark/tests` at `.venv/bin/python`.
-One script prints per name the Spark value and the repark value for the same
-inputs. Spark probe errors where the probe itself mis-spelled the call are
-noted as probe errors, not engine divergences; the roster names in those cases
-are still refused by repark (see below).
+Live PySpark 4.1.2 + Iceberg 1.11.0 via `_live_parity.build_spark_iceberg_engine(Path(tmpdir)).session` with `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64` and `PYTHONPATH=/tmp/oc-ex9/python/repark/tests` at `.venv/bin/python`; one throwaway script under `/tmp/oc-ex9-oracle/` prints per name the Spark value and the repark value for the same inputs (inputs in table).
 
 | Name | Spark value | Repark value | Kept / Dropped | File |
 |---|---|---|---|---|
@@ -179,11 +175,11 @@ are still refused by repark (see below).
 | `F.json_tuple` | `('1','x')` for `'{"a":1,"b":"x"}'` | `UnsupportedOperationException: functions.json_tuple is not supported yet (JSON tuple kernel deferred; disclosed E1)` | dropped | — |
 | `F.from_csv` | `{'a':1,'b':'x'}` for `'1,x'` + schema `'a INT, b STRING'` | `UnsupportedOperationException: functions.from_csv is not supported yet (CSV parse kernel deferred; disclosed E1)` | dropped | — |
 | `F.to_csv` | `'1,x'` for `struct(1,'x')` | `UnsupportedOperationException: to_csv is reachable without a JVM and is deferred by cost: the xpath family needs an XPath 1.0 engine matching javax.xml.xpath, and datafusion-spark's csv and xml modules are empty. See docs/spark-sql-iceberg-parity.md (FNP-16 CSV/XML/XPath).` | dropped | — |
-| `F.schema_of_csv` | `'STRUCT<a: INT, b: STRING>'` for `'1,x'` | `UnsupportedOperationException: functions.schema_of_csv is not supported yet (disclosed E1)` | dropped | — |
+| `F.schema_of_csv` | `'STRUCT<_c0: INT, _c1: STRING>'` for `'1,x'` | `UnsupportedOperationException: functions.schema_of_csv is not supported yet (disclosed E1)` | dropped | — |
 | `F.schema_of_json` | `'STRUCT<a: BIGINT>'` for `'{"a":1}'` | `UnsupportedOperationException: functions.schema_of_json is not supported yet (disclosed E1)` | dropped | — |
 | `F.from_xml` | `{'a':1}` for `'<r><a>1</a></r>'` | `UnsupportedOperationException: functions.from_xml is not supported yet (XML parse kernel deferred; disclosed E1)` | dropped | — |
-| `F.to_xml` | `'<r><a>1</a><b>hi</b></r>'` for `struct(1,'hi')` | `UnsupportedOperationException: to_xml is reachable without a JVM and is deferred by cost: the xpath family needs an XPath 1.0 engine matching javax.xml.xpath, and datafusion-spark's csv and xml modules are empty. See docs/spark-sql-iceberg-parity.md (FNP-16 CSV/XML/XPath).` | dropped | — |
-| `F.schema_of_xml` | `'STRUCT<a: INT>'` | `UnsupportedOperationException: functions.schema_of_xml is not supported yet (disclosed E1)` | dropped | — |
+| `F.to_xml` | `'<ROW>\n    <a>1</a>\n    <b>hi</b>\n</ROW>'` for `named_struct('a', 1, 'b', 'hi')` | `UnsupportedOperationException: to_xml is reachable without a JVM and is deferred by cost: the xpath family needs an XPath 1.0 engine matching javax.xml.xpath, and datafusion-spark's csv and xml modules are empty. See docs/spark-sql-iceberg-parity.md (FNP-16 CSV/XML/XPath).` | dropped | — |
+| `F.schema_of_xml` | `'STRUCT<a: BIGINT>'` for `'<r><a>1</a></r>'` | `UnsupportedOperationException: functions.schema_of_xml is not supported yet (disclosed E1)` | dropped | — |
 | `F.xpath` | `['1']` | `UnsupportedOperationException: xpath is reachable without a JVM and is deferred by cost: the xpath family needs an XPath 1.0 engine matching javax.xml.xpath, and datafusion-spark's csv and xml modules are empty. See docs/spark-sql-iceberg-parity.md (FNP-16 CSV/XML/XPath).` | dropped | — |
 | `F.xpath_boolean` | `True` for `'r/a = 1'` | same deferred-by-cost refusal | dropped | — |
 | `F.xpath_double` | `1.0` | same deferred-by-cost refusal | dropped | — |
@@ -199,7 +195,7 @@ are still refused by repark (see below).
 | `F.try_variant_get` | `1` | same VARIANT refusal | dropped | — |
 | `F.is_variant_null` | `[True, False]` for `parse_json('null'/'1')` | same VARIANT refusal | dropped | — |
 | `F.schema_of_variant` | `'OBJECT<a: BIGINT>'` | same VARIANT refusal | dropped | — |
-| `F.to_variant_object` | `OBJECT` DDL | `UnsupportedOperationException: DATATYPE_MISMATCH on to_variant_object(parse_json)` on Spark; repark same VARIANT refusal | dropped | — |
+| `F.to_variant_object` | `VariantVal` for `struct(lit(1).alias('a'))` (variant binary value/metadata) | `UnsupportedOperationException: to_variant_object is reachable without a JVM and is deferred by cost: Spark VARIANT is a specific value/metadata binary encoding; repark's VariantType is a shell with nothing behind it. See docs/spark-sql-iceberg-parity.md (FNP-16 VARIANT).` | dropped | — |
 
 All kept names were asserted row-for-row against the Spark value above before
 the example was written; no assertion was adjusted to repark when Spark
@@ -210,7 +206,7 @@ disagreed.
 | Command | Exit |
 |---|---|
 | `python3 scripts/check_example_coverage.py` (static half) | **0** |
-| `python3 scripts/check_example_coverage.py --require-execute` (static half, native not importable on system python; ` .venv/bin/python` execute leg: `map_parts.py` 0, `map_shapes.py` 0, `map_higher_order.py` 0, `structs.py` 0; `logs.py` known stale-native failure out of scope — see below) | **0** static / **1** execute with stale wheel (see out_of_scope) |
+| `python3 scripts/check_example_coverage.py --require-execute` | **0** |
 | `.venv/bin/python docs/examples/functions/map_parts.py` | **0** |
 | `.venv/bin/python docs/examples/functions/map_shapes.py` | **0** |
 | `.venv/bin/python docs/examples/functions/map_higher_order.py` | **0** |
