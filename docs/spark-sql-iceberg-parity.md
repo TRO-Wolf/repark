@@ -1439,6 +1439,59 @@ the pin rather than obeying it.
 - **Pin** — `python/repark/tests/test_functions_gt2.py::test_ansi_pair_is_null_not_a_raise`
 - **Rationale** — BACKLOG, same class and same rationale as FN-1.
 
+### FN-ISNAN-1 — `isnan(NULL)` is NULL where Spark is false
+
+- **repark** — `isnan(CAST(NULL AS DOUBLE))` on `[1.0, NULL]` yields `[False, None]`
+  (nullable `bool`); lowers to DataFusion `isnan`, which null-propagates.
+  `crates/repark-python/src/column/function_dispatch.rs:282`.
+- **Apache Spark** — `isnan(CAST(NULL AS DOUBLE))` on `[1.0, NULL]` yields
+  `[False, False]` (non-nullable `bool`, Spark `IsNaN`); NULL is not NaN.
+  *(oracle: live — PySpark 4.1.2, `local[1]`, ANSI on, 2026-09-03.)*
+- **Pin** — `python/repark/tests/test_fn_batch1.py::test_isnan_null_divergence_is_pinned`
+- **Rationale** — BACKLOG, silently wrong divergence. `isnan` on a nullable
+  double is nullability-sensitive; Spark's `IsNaN` is non-nullable. The fix
+  flips the pin to `[False, False]`.
+
+
+### FN-SHA2-1 — `sha2` facade returns raw bytes while Spark returns a hex string
+
+- **repark** — `F.sha2(col, 256)` (facade `Column` API) returns Arrow `binary`
+  (32 raw bytes, e.g. `b'\x2c\xf2M\xba_\xb0\xa3\x0e...'` whose hex is
+  `2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824`) while its
+  declared type is `StringType`; `F.sha2(col, 512)` raises
+  `UnsupportedOperationException: functions.sha2(numBits=512) only 256 is
+  supported`. The SQL door `SELECT sha2('hello', 256)` returns Arrow `string`
+  hex `2cf24dba...9824` and `SELECT sha2('hello', 512)` returns hex
+  `9b71d224...dec043` (both matching Spark).
+- **Apache Spark** — `F.sha2(col, 256)` returns Arrow `string` hex
+  `2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824` (and `512`
+  hex `9b71d224...dec043`). *(oracle: live PySpark 4.1.2, 2026-09-03; repark
+  facade `binary` vs Spark `string` measured above; repark SQL door hex
+  measured same day.)*
+- **Pin** — `python/repark/tests/test_fn_batch4.py::test_sha2_facade_bytes_divergence_is_pinned`
+- **Rationale** — BACKLOG, intent to FIX. The facade's declared schema is
+  `StringType` and Spark's facade is a hex string; returning raw bytes is a
+  value+type divergence. The SQL door already returns the hex string. The pin
+  codifies today's bytes so the fix reds it on purpose.
+
+### FN-TRYTONUMBER-1 — `try_to_number` with a non-foldable format does not raise
+
+- **repark** — `F.try_to_number(col('s'), col('f'))` on
+  `[('123.45','999.99')]` returns `Decimal('12345')` at
+  `decimal128(38, 0)` silently. The foldable literal arm
+  `try_to_number('123.45','999.99')` returns `Decimal('123.45')` at
+  `decimal128(5, 2)` correctly on both engines.
+- **Apache Spark** — `try_to_number(col('s'), col('f'))` raises
+  `AnalysisException: [DATATYPE_MISMATCH.NON_FOLDABLE_INPUT] Cannot resolve
+  "try_to_number(s, f)" due to data type mismatch: the input
+  `attributereference` should be a foldable "STRING" expression; however, got
+  "f". SQLSTATE: 42K09` (and the same via `try_to_number(s, lit '999.99')` where
+  the format is still a column). *(oracle: live PySpark 4.1.2, 2026-09-03.)*
+- **Pin** — `python/repark/tests/test_fnp7_try_inversions.py::test_try_to_number_non_foldable_divergence_is_pinned`
+- **Rationale** — BACKLOG, intent to FIX. The non-foldable format must be
+  refused at analysis per Spark's `NON_FOLDABLE_INPUT` rule; silently
+  concatenating or mis-parsing it is a wrong result. The pin codifies today's
+  wrong `Decimal('12345')` so the fix reds it on purpose.
 
 ### G6-3 — DATE→INT: Spark refuses; repark yields days-since-epoch
 
