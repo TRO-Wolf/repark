@@ -6,10 +6,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 
 ## Contents
 - [ex-8-functions-arrays-ledger.md](ex-8-functions-arrays-ledger.md) —
-  **EX-8 (2026-09-03):** the v0.7 example backfill's `F.*` array and
+  **EX-8 (2026-09-03, remediated same day):** the v0.7 example backfill's `F.*` array and
   higher-order family — 33 of 40 dispatched names covered by seven files, every
   value measured against the live Spark oracle; seven divergent or refused names
-  stay on the backlog with both values recorded.
+  stay on the backlog with both values recorded, and the four silent ones are
+  filed as registry rows with pins (FN-ARRAYPOS-1, FN-ARRAYSORT-1,
+  FN-ARRAYSOVERLAP-1, FN-FLATTEN-1).
   `risk_tier: standard`. Branch `feat/ex-8-functions-arrays`.
 - [ex-2-functions-math-bitwise-ledger.md](ex-2-functions-math-bitwise-ledger.md) —
   **EX-2 (2026-09-01), in flight:** the v0.7 example backfill's `F.*` math +

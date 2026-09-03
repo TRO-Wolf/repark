@@ -18,6 +18,7 @@ COVERS: list[str] = [
     "F.zip_with",
     "F.col",
     "F.lit",
+    "F.slice",
 ]
 
 

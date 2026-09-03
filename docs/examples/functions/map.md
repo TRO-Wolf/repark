@@ -14,7 +14,8 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
 - [array_edit.py](array_edit.py) — `F.array_append`, `F.array_prepend`, `F.array_remove`,
   `F.array_compact`: grow, shrink, and clean an array, NULL elements and NULL arrays included.
 - [array_elements.py](array_elements.py) — element access and membership: `F.element_at`,
-  `F.try_element_at`, `F.get`, `F.slice`, `F.array_contains`.
+  `F.try_element_at` (index spelled `F.lit`, like Spark), `F.get`, `F.slice`,
+  `F.array_contains`.
 - [array_order.py](array_order.py) — `F.sort_array` both directions, the extremes
   `F.array_max` / `F.array_min`, `F.array_join`, and `F.shuffle` shape-checked.
 - [array_setops.py](array_setops.py) — the set algebra quartet: `F.array_distinct`,
@@ -23,7 +24,7 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
   the outer spelling keeping the empty and NULL rows.
 - [higher_order.py](higher_order.py) — the lambda names: `F.exists`, `F.forall`, `F.filter`,
   `F.transform` (element and index forms), `F.aggregate` (with and without finish),
-  `F.reduce`, `F.zip_with`.
+  `F.reduce`, `F.zip_with`; an `F.slice` empty array drives the empty-aggregate case.
 - [roots.py](roots.py) — `F.sqrt`, `F.cbrt`, `F.hypot`: the two roots parting
   company on negative input (NaN versus a signed answer), then `hypot` against
   the long form `sqrt(a*a + b*b)`.

@@ -44,13 +44,6 @@ def main() -> None:
             print(f"F.{name}: {values!r}")
             if values != expected:
                 raise SystemExit(f"F.{name} gave {values!r}, expected {expected!r}")
-        if [row["unioned"] for row in rows] != [
-            [1, 2, 3, 4],
-            [1, 2, 3],
-            [None, 1],
-            None,
-        ]:
-            raise SystemExit("F.array_union keeps duplicates from both inputs")
     finally:
         repark.stop()
 

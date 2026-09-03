@@ -15,6 +15,7 @@ COVERS: list[str] = [
     "F.slice",
     "F.array_contains",
     "F.col",
+    "F.lit",
 ]
 
 
@@ -28,8 +29,8 @@ def main() -> None:
             F.element_at(F.col("a"), 1).alias("first"),
             F.element_at(F.col("a"), -1).alias("last"),
             F.element_at(F.col("a"), 2).alias("second"),
-            F.try_element_at(F.col("a"), 1).alias("try_first"),
-            F.try_element_at(F.col("a"), 10).alias("try_oob"),
+            F.try_element_at(F.col("a"), F.lit(1)).alias("try_first"),
+            F.try_element_at(F.col("a"), F.lit(10)).alias("try_oob"),
             F.get(F.col("a"), 0).alias("get_first"),
             F.get(F.col("a"), 2).alias("get_third"),
             F.get(F.col("a"), 9).alias("get_oob"),
