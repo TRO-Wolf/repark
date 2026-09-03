@@ -14,7 +14,12 @@ else. The next pickup's `make ledger-archive` files everything here under
   residual → registry row, class and date, pin), reads the fork rows the gate leans on at the
   consumed pin `ff4764d3`, writes the one dated gate line, re-dates `S3T-V3-1` with the live
   re-dispatch, and files the published gate board. Result: every row ✅ or dated DECLARED, no
-  BACKLOG blocker. `risk_tier: standard`. Branch `docs/v1-gate-audit`.
+  BACKLOG blocker inside a v1.0-requires cell. Carries a dated ERRATA block: the audit is scoped
+  to each row's requires cell with the surface residuals (`RDF-1`, `ORPHAN-1/2`, `MANIFEST-1/3`)
+  listed beside it, `B-MOR-3`'s class is stated as DELIBERATE by analogy to OD-2 with the owner
+  line still pending (ERRATA-A), and §2 pillar 4's full v3 statement coverage is recorded as
+  **not discharged** with the evidence for that reading (ERRATA-B) and queued as V3-COV.
+  `risk_tier: standard`. Branch `docs/v1-gate-audit`.
 
 ## Pointers
 - Up: [../map.md](../map.md)

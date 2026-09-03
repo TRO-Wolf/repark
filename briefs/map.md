@@ -14,7 +14,10 @@ branch. (Same contract as the private v1 repository's `briefs/` directory.)
   ordered queue and the reasoning for the order. Live queue (2026-08-30): fork-independent
   **FNP-15/16**, then **MW-10** (the S3 Tables MOR leg, now that OD-3b's IAM is applied). V3-3
   is chartered and owner-sequenced, not in this queue. A merged unit leaves this file whole;
-  its record is the archived ledger.
+  its record is the archived ledger. **Re-opened 2026-09-03 (V1-GATE):** the queue had emptied;
+  it now carries **V3-COV**, the full v3 statement-coverage comparison against PySpark that §2
+  pillar 4 of the v1.0 north star requires, which the gate audit found had no §3 row and no
+  discharge. It is the last engineering item before the tag.
   Carries the PYC unit definitions, the two hazards a pure-refactor campaign
   has to name in advance, and the 2026-08-22 arming-measurements record (docstring-presence
   subset owner-ruled and armed as PYC-6; `PL`/`A`/`print()` measured and declined with

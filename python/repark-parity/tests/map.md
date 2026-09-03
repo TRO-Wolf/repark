@@ -160,6 +160,13 @@ JVM, no repark required). See [../map.md](../map.md).
   STATUS must carry the SCALE-v3 numbers, the V3-10 / RDF-1 / LOG1P-1 lines, the audit line and
   its 25,000-byte ceiling, and the published gate board must be filed under `docs/artifacts/`
   with a map row naming its sources.
+  **Critic remediation (2026-09-03):** the audit is scoped to each row's §3 v1.0-requires cell,
+  so the pin no longer forbids the word BACKLOG outright — a row may name one only beside
+  `outside the requires cell` — and it now holds the surface-residual table (`RDF-1`,
+  `ORPHAN-1/2`, `MANIFEST-1/3` with their classes), row 13's DELIBERATE-by-analogy-to-OD-2 cell
+  with its pending owner line, row 3's queue-entry clause, row 17's undated `S3T-1` clause, the
+  note that §2 pillar 4's statement coverage is owed rather than discharged, the narrowed gate
+  line, and the Step 6 + slate entries that queue it as V3-COV.
   pins: v1-gate-audit/C-001, C-002, C-003, C-004, C-005, C-006
 - `test_reg_1_registry_truth_up.py` — **REG-1 (2026-08-26; tree pins):** the divergence registry
   says what the pins prove — DEC-2 / DEC-6 / DEC-7 / DEC-8 carry dated FIXED notes naming #94 / #99

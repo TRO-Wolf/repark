@@ -38,8 +38,9 @@ Python tree ships `python/repark` (the PySpark facade wheel) and `python/repark-
 differential harness). The published wheel is in [Release state](#release-state) above.
 
 **Acceptance:** the v2 test census is byte-flat against the port-source pin baseline
-`fc3f48102`, exit 0 on all four cohorts. The procedure, the per-cohort counts and the DL-1
-eviction of the evidence trees (reachable at `main` `b13b22c`) are in
+`fc3f48102`, exit 0 on all four cohorts. The per-cohort counts are
+[docs/history/port-v2/](docs/history/port-v2/README.md) "Result at acceptance"; the procedure and
+the DL-1 eviction of the evidence trees (reachable at `main` `b13b22c`) are
 [docs/port/census.md](docs/port/census.md) §7; the baseline's
 [facade cohort](task/census/baseline-fc3f48102/facade/map.md) stays in the tree because the
 deferred-ledger tests read it, and the deferred and added acceptance inputs are
@@ -150,7 +151,9 @@ in published history by explicit decision:
     uncontrolled. Numbers:
     [scale-v3-mw7-ledger.md](task/ledgers/archive/2026-09/2026-09-02-scale-v3-mw7-ledger.md) §3.
   - **The gate is audited (V1-GATE, 2026-09-03):** all twenty north-star §3 rows are ✅ or carry
-    a dated DECLARED residual with a pin (north star §3.1); the v1.0 tag is the owner's step.
+    a dated DECLARED residual with a pin (north star §3.1). Still owed, neither a §3 row: an
+    owner line confirming `B-MOR-3`'s DECLARED class, and **V3-COV** — §2 pillar 4's full v3
+    statement-coverage comparison, which no unit discharges; it is first on the slate.
   - **Next:** lineage carry and merge-on-read are complete on every served DML shape
     (`V3-COW-1`, `V3-MOR-1`, `V3-DV-1`, `V3-ROWID-3`, `V3-UPGRADE-DV-1` FIXED); open v3 residuals
     are `V3-FILEORDER-1` and `F-v3-10-partition-file-order` (fork F-20, RP-8 repins),

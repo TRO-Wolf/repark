@@ -13,11 +13,15 @@ _REPO = Path(__file__).resolve().parents[3]
 _NORTH_STAR = "task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md"
 _REGISTRY = "docs/spark-sql-iceberg-parity.md"
 _BOARD = "docs/artifacts/v1-0-gate-closing-2026-09-02.html"
-_GATE_LINE = (
+_GATE_OPENING = (
     "**Audit result (V1-GATE, 2026-09-03).** §3.1 audits all twenty rows and the fork rows they "
-    "lean on: every row ✅ or dated DECLARED as of 2026-09-03; the v1.0 tag is the owner's "
-    "remaining step."
+    "lean on: every row ✅ or dated DECLARED as of 2026-09-03."
 )
+_SURFACE_RESIDUALS = {
+    "12 · `rewrite_data_files`": ("RDF-1", "F-16 residue 2"),
+    "14 · expiry / orphans": ("ORPHAN-1", "ORPHAN-2"),
+    "15 · `rewrite_manifests`": ("MANIFEST-1", "MANIFEST-3"),
+}
 _AUDIT_ROWS = 20
 _RESIDUAL_ROWS = {
     3: ("V3-ROWID-2", "DECLARED", "2026-08-31"),
@@ -65,13 +69,40 @@ def _matrix_row(label: str) -> str:
 
 
 def test_every_audited_row_is_green_and_none_is_backlog_blocked() -> None:
-    """C-001: all twenty rows carry ✅ in the glyph cell and no residual is BACKLOG."""
+    """C-001: all twenty rows are ✅, and a BACKLOG residual needs its out-of-requires clause."""
     for number in range(1, _AUDIT_ROWS + 1):
         row = _audit_row(number)
         glyph = row.split("|")[2].strip()
         assert glyph == "✅", f"row {number} glyph is {glyph!r}"
-        assert "BACKLOG" not in row, f"row {number} names a BACKLOG residual"
+        if "BACKLOG" in row:
+            assert "outside the requires cell" in row, f"row {number} BACKLOG is unscoped"
     assert f"| {_AUDIT_ROWS + 1} · " not in _audit_section()
+
+
+def test_the_audit_is_scoped_to_the_v1_0_requires_cells() -> None:
+    """C-001: the preamble scopes the audit, and the surface residuals are listed with a class."""
+    section = _normalized(_audit_section())
+    assert "**v1.0 requires** cell" in section
+    assert "a residual inside one whose class is BACKLOG blocks the gate, and none is" in section
+    assert "Surface residuals outside the requires cells — recorded, not gating." in section
+    for row, residuals in _SURFACE_RESIDUALS.items():
+        assert f"| {row} |" in section, row
+        for residual in residuals:
+            assert residual in section, residual
+    assert "open residue on a FIXED row, fork-owned" in section
+    assert "DECLARED, owner decision OD-2 (ruled 2026-08-21)" in section
+    assert "BACKLOG, both v2-measured" in section
+
+
+def test_the_unrowed_v1_0_requirement_is_recorded_not_claimed() -> None:
+    """C-002: §2 pillar 4's statement coverage is named as owed, with the search that found it."""
+    section = _normalized(_audit_section())
+    assert "One v1.0 requirement has no §3 row (V1-GATE, 2026-09-03)" in section
+    assert "full statement-coverage comparison against PySpark" in _normalized(_read(_NORTH_STAR))
+    assert "ten cells over two fixtures" in section
+    assert "SEM-1 is a function-semantics unit" in section
+    assert "no statement-coverage harness at any format version" in section
+    assert "Recorded as owed, not claimed." in section
 
 
 def test_each_residual_names_its_registry_row_class_and_date() -> None:
@@ -120,14 +151,44 @@ def test_the_rewrite_manifests_row_records_its_v3_exercise() -> None:
 
 
 def test_the_gate_carries_one_dated_audit_line_and_claims_no_tag() -> None:
-    """C-002: the gate paragraph gains exactly one dated result line and never claims the tag."""
+    """C-002: one dated result line names what is still owed and never claims the tag."""
     north_star = _normalized(_read(_NORTH_STAR))
-    assert _normalized(_GATE_LINE) in north_star
+    assert _normalized(_GATE_OPENING) in north_star
     assert north_star.count("**Audit result (V1-GATE") == 1
-    assert "the v1.0 tag is the owner's remaining step" in north_star
+    assert "a one-line ruling confirming `B-MOR-3`'s DECLARED class" in north_star
+    assert "and then the v1.0 tag" in north_star
+    assert "**V3-COV**" in north_star
     assert "v1.0 is tagged" not in north_star
     assert "the API review (owner) is the remaining gate item" not in north_star
     assert "no gate item remains on the review" in north_star
+
+
+def test_the_two_softest_class_cells_say_exactly_what_the_registry_holds() -> None:
+    """C-001: row 13's OD-2 analogy, row 3's queue entry and row 17's undated gap are explicit."""
+    thirteen = _audit_row(13)
+    assert "by analogy" in thirteen and "MW-2 ledger, 2026-08-21" in thirteen
+    assert "no DECLARED class marker on the row" in thirteen
+    assert "owner line pending" in thirteen
+    three = _audit_row(3)
+    assert 'queue** entry under §7 "Surfaced, awaiting pins"' in three
+    assert "not a §7 row" in three
+    seventeen = _audit_row(17)
+    assert "**undated on `S3T-1`**" in seventeen
+    assert "dated 2026-08-27 on fork R126 (c)" in seventeen
+    registry = _read(_REGISTRY)
+    assert "### Surfaced, awaiting pins — not yet rows" in registry
+
+
+def test_step_6_and_the_slate_carry_the_same_disposition() -> None:
+    """C-002: the v3 track dates the answered API review and queues V3-COV where the gate says."""
+    track = _normalized(_read("docs/design/format-v3-track.md"))
+    assert "*Step 6 state, dated 2026-09-03 (V1-GATE).*" in track
+    assert "the v1.0 API review, answered 2026-09-02" in track
+    assert "Full v3 statement coverage is the one that is not done" in track
+    slate = _normalized(_read("briefs/next-sequence.md"))
+    assert "<!-- unit id=v3-cov -->" in slate
+    assert "**V3-COV** — full v3 statement coverage against PySpark" in slate
+    assert "not the statement matrix" in slate
 
 
 def test_the_fork_side_rows_are_listed_and_dated_at_the_pin() -> None:
@@ -148,6 +209,8 @@ def test_status_carries_the_scale_line_the_gate_line_and_its_ceiling() -> None:
     assert "96 delete files against v2's 400" in status
     assert "zero delete files and zero delete records" in status
     assert "**The gate is audited (V1-GATE, 2026-09-03):**" in status
+    assert "**V3-COV**" in status
+    assert "Result at acceptance" in status
     assert "**V3-10 (2026-09-02):**" in status
     assert "**RDF-1 (2026-09-02):**" in status
     assert "**LOG1P-1 (2026-09-02):**" in status

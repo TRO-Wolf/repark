@@ -27,6 +27,11 @@ is now the epic list from v0.6 through 3.0 — PROJECT.md points here rather tha
   ❌→✅ on `ENC-1`, DV maintenance ⚠→✅ on `B-MOR-3` under owner decision OD-2) and the
   `rewrite_manifests` row records its v3 exercise from SCALE-v3. The gate paragraph carries one
   dated line: every row ✅ or dated DECLARED as of 2026-09-03, the tag the owner's step.
+  The audit is scoped to each row's "v1.0 requires" cell; residuals on the same surface but
+  outside it (`RDF-1`, `ORPHAN-1/2`, `MANIFEST-1/3`) are tabled beneath, recorded not gating.
+  Two things stay owed and neither is a §3 row: an owner line confirming `B-MOR-3`'s DECLARED
+  class, and §2 pillar 4's full v3 statement coverage, which has no §3 row and no discharge —
+  named on the gate line and queued as **V3-COV**.
   pins: v1-gate-audit/C-001, C-002, C-004
 - [release-roadmap-2026-08-29.md](release-roadmap-2026-08-29.md) — **the release roadmap
   (owner-set 2026-08-29):** every tag from v0.6 to 3.0 with the owner's rulings folded in.

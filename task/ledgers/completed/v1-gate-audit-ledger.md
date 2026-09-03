@@ -8,6 +8,58 @@
 
 **Retires:** this ledger moves to `../completed/` in this unit's last commit.
 
+## ERRATA (2026-09-03, critic remediation — the body below is frozen; these seven supersede it)
+
+The Critic verdict was PASS with seven findings. Each is fixed on the branch; this block is the
+record, and where it contradicts §1–§5 below, this block wins.
+
+| # | Sev | Finding | Fix |
+|---|---|---|---|
+| E-1 | S2 | §3.1's preamble said "none is BACKLOG" while rows 12, 14 and 15 showed `—` although `RDF-1` (dated states read "stays BACKLOG"), `MANIFEST-1` / `MANIFEST-3` (Rationale BACKLOG) and `ORPHAN-1` / `ORPHAN-2` (DECLARED, OD-2) are residuals on those surfaces | the preamble is scoped to each row's §3 **v1.0 requires** cell; a new table under §3.1 lists all five as surface residuals outside those cells, with class; the pin now allows a BACKLOG residual in a row only beside `outside the requires cell` |
+| E-2 | S2 | Row 13 called `B-MOR-3` DECLARED in class on an OD-2 that is, of record, the **orphan-files** posture (`roadmap-intake-2026-08-21.md:92`); MW-2's ledger applied it to this procedure by analogy | the class cell now reads DELIBERATE **by analogy** to OD-2 (MW-2 ledger, 2026-08-21), registry §7 with no DECLARED class marker, owner line pending; the gate line names that owner ruling as a remaining step; filed as the OWNER question in ERRATA-A |
+| E-3 | S2 | STATUS pointed at `docs/port/census.md` §7 for the per-cohort acceptance counts, which live in `docs/history/port-v2/README.md` "Result at acceptance" | pointer swapped; census.md §7 keeps the procedure and the DL-1 eviction only |
+| E-4 | S2 | §2 pillar 4's full v3 statement coverage had no §3 row and no discharge, while the v3 track's Step 6 still listed it and the answered API review as work to run | **not discharged** — see ERRATA-B; §3.1 records the search, the gate line names it as the remaining v1.0 item beside the tag, Step 6 gains a dated 2026-09-03 state recording the API review answered 2026-09-02, and it is queued as **V3-COV**, first on the slate |
+| E-5 | S3 | C-003 and AT-10 said 24,473 B | after E-3 and the gate-line truth-up STATUS is **24,731 B** (from 24,995 B), still under the 25,000 B ceiling |
+| E-6 | S3 | Row 3 cited `V3-ROWID-2` as a registry row; it is a queue entry | the class cell now says it is a **queue** entry under §7 "Surfaced, awaiting pins", not a §7 row; nothing was promoted in this unit |
+| E-7 | S3 | Row 17's `S3T-1` carries no calendar date in the engine registry | the class cell now reads "DECLARED service gap · **undated on `S3T-1`**; dated 2026-08-27 on fork R126 (c)" |
+
+**Mutation after remediation.** `test_v1_gate_docs.py` grew from 10 tests to 14; the battery grew
+from 8 mutations to 17 plus the two C-007 mutations on `test_live_v3_docs.py` — **18 red out of
+18**, each applied alone and restored. The new ones: drop the surface-residual table; name a
+BACKLOG residual in a row without its scoping clause; unscope the preamble; claim the coverage
+discharge; drop the Step 6 dated line; drop V3-COV from the slate; soften row 13's class cell to a
+bare DECLARED (reds 2); drop row 17's undated clause; drop row 3's queue clause; restore the
+census pointer for the counts.
+
+### ERRATA-A — the OWNER question this remediation raises
+
+**OWNER — one line, please.** `B-MOR-3` (`rewrite_position_delete_files` refuses live Puffin
+deletion vectors rather than answering Spark's four silent zeros) is the residual behind §3.1
+row 13. It is housed under the registry's §7, whose heading reads BACKLOG, and its Rationale
+reads "DELIBERATE, stricter than Spark on purpose (owner decision OD-2)" — but OD-2 of record is
+the **orphan-files** safety posture (dry-run default + `older_than` floor, ruled 2026-08-21), and
+its application to this procedure was made by analogy in the MW-2 ledger the same day. The gate
+needs the class stated by the owner, not inferred: **is `B-MOR-3` a DECLARED permanent difference
+for `rewrite_position_delete_files`?** A yes is a one-line dated ruling and the row moves to an
+explicit DECLARED marker; a no makes it a BACKLOG residual inside row 13's requires cell, which
+would block the gate until it closes. Nothing else in the audit turns on the answer.
+
+### ERRATA-B — E-4's disposition, with its evidence
+
+**Not discharged.** No unit, run, fixture or pin in this tree delivers §2 pillar 4's full
+statement-coverage comparison against PySpark on v3 tables.
+
+| Candidate | What it actually is | Verdict |
+|---|---|---|
+| Nightly v3 oracle leg (V3E-5, `#300`, first green 2026-09-02, run 33575586119) | `python/repark/tests/test_v3_live_oracle.py` — ten tests over two fixtures (`v3-spark-part-dv`, `v3-spark-eq-dv`): partitioned-DV live rows and prunes, equality delete beside a DV, `delete_files` kinds, partitioned-DV UPDATE + the `rewrite_position_delete_files` refusal, matched-UPDATE MERGE on COW and MoR, the two subquery-`WHERE` shapes | a targeted live triple, not a statement matrix — no DDL, no `CALL system.*` sweep, no statement enumeration |
+| SEM-1 (`#295`) | Spark answer parity for `LOG-1` and `RE-1` — scalar function semantics | touches no v3 statement at all |
+| Any statement-coverage harness | `grep` over `python/`, `crates/`, `docs/` finds none at **any** format version; `PROJECT.md` Goal 3 states it as a product goal, and `docs/design/format-v3-track.md` §5 Step 6 still listed it as work to run | nothing to cite |
+
+So the audit records it as owed rather than claiming it: §3.1 carries the note, the gate line
+names it beside the tag, Step 6 carries the dated state, and `briefs/next-sequence.md` queues it
+as **V3-COV**, first in the sequence, ahead of the tag.
+
+
 ## 1. Scope
 
 | C | Clause | Verdict | Evidence |

@@ -80,14 +80,17 @@ Every row means **both SQL doors plus the facade** unless the cell says otherwis
 ### 3.1 The gate audit — every §3 row, 2026-09-03 (V1-GATE)
 
 One row per §3 row, in §3's order. **Glyph** is that row's state today; **residual** names the
-registry row that carries what is not built, its class and its date; **pin** is where the claim
-is held. A residual whose class is BACKLOG blocks the gate; none is.
+registry row carrying what that row's §3 **v1.0 requires** cell does not yet get, its class and
+its date; **pin** is where the claim is held. The audit is scoped to those requires cells: a
+residual inside one whose class is BACKLOG blocks the gate, and none is. Residuals that sit on a
+surface §3 names but outside its requires cell are listed under the table — recorded, not
+gating.
 
 | # · §3 row | Glyph | Claim held today | Residual → registry row | Class · date | Pin |
 |---|---|---|---|---|---|
 | 1 · Read: data + deletion vectors | ✅ | DV reads Spark-exact, unpartitioned and partitioned (identity `part`) | — | — | `crates/repark-spark/src/tests/v3e3.rs`, `python/repark/tests/test_v3e3_fixtures.py` |
 | 2 · Read: equality deletes + delete-file metadata | ✅ | Puffin DV beside an equality-delete file; `.delete_files` / `$delete_files` content 1 and 2 | — | — | `crates/repark-spark/src/tests/v3e3.rs`, `python/repark/tests/test_v3e3_fixtures.py` |
-| 3 · Read: `_row_id` / `_last_updated_sequence_number` | ✅ | Spark-equal on single-table v3 reads, three doors (`V3-ROWID-1` FIXED) | joins / CTEs / subqueries / time travel refuse loud → `V3-ROWID-2` | DECLARED · 2026-08-31 (V3-4) | `crates/repark-spark/src/tests/v3_lineage.rs`, `python/repark/tests/test_v3_lineage_columns.py` |
+| 3 · Read: `_row_id` / `_last_updated_sequence_number` | ✅ | Spark-equal on single-table v3 reads, three doors (`V3-ROWID-1` FIXED) | joins / CTEs / subqueries / time travel refuse loud → `V3-ROWID-2` | DECLARED · 2026-08-31 (V3-4) — a registry **queue** entry under §7 "Surfaced, awaiting pins", not a §7 row; it carries pins and a date | `crates/repark-spark/src/tests/v3_lineage.rs`, `python/repark/tests/test_v3_lineage_columns.py` |
 | 4 · Read/write: v3 types + default values | ✅ | `timestamp_ns` / `timestamptz_ns` CREATE, `write_default` / `initial_default`, `unknown` and binary `variant` refuse Spark-equal (V3-6) | `geometry` / `geography` → `V3-GEO-1`; shredded-Parquet `variant` → `V3-VARIANT-SHRED-1` | DECLARED · owner 2026-08-25 | `crates/repark-spark/src/tests/create_table.rs::v3_type_columns_geometry_geography_variant_refuse_naming_the_type`, `crates/repark-spark/src/tests/v3_types.rs` |
 | 5 · Table encryption keys | ✅ | a stored `encryption.key-id` never changes a scan; nothing is applied | the whole feature → `ENC-1` | DECLARED exclusion · owner 2026-08-24 | `crates/repark-spark/src/tests/v3_cow.rs::v3_create_with_encryption_key_id_still_scans_without_a_kms` |
 | 6 · Write: create v3 | ✅ | opt-in CREATE / CTAS behind `repark.sql.allowCreateFormatVersion3`; default stays v2 | — | — | `python/repark/tests/test_v3_create_opt_in.py`, `crates/repark-spark/src/tests/create_table.rs` |
@@ -97,14 +100,32 @@ is held. A residual whose class is BACKLOG blocks the gate; none is.
 | 10 · Write: COW DML on an adopted v3 table | ✅ | every served copy-on-write shape keeps stored `_row_id` (`V3-COW-1` FIXED) | — | — | `crates/repark-spark/src/tests/v3_subquery_dml.rs`, `python/repark/tests/test_v3_cow_dml.py` |
 | 11 · Write/maintain: partitioned v3 | ✅ | partitioned DV DELETE Spark-equal on three doors | — | — | `crates/repark-spark/src/tests/v3e3.rs` |
 | 12 · Maintain: `rewrite_data_files` | ✅ | lineage preserved (`V3-LINEAGE-1`) and scoped DVs dropped with a true `removed_delete_files_count` (`V3-DANGLE-1`) | — | — | `crates/repark-spark/src/tests/call_v3.rs`, `crates/repark-spark/src/tests/call_v3_dv.rs` |
-| 13 · Maintain: DV / delete-file maintenance | ✅ | DV compaction lands through `rewrite_data_files`; `rewrite_position_delete_files` refuses live DVs rather than answering Spark's four silent zeros | that refusal → `B-MOR-3` | DELIBERATE under owner decision OD-2 · ruled 2026-08-21, re-measured 2026-09-02 — a permanent difference, so DECLARED in class; the row is housed under the registry's §7 heading | `crates/repark-spark/src/tests/call_v3_dv.rs::call_rewrite_position_delete_files_still_refuses_engine_written_v3_dvs`, `python/repark/tests/test_v3_dv_compaction.py` |
+| 13 · Maintain: DV / delete-file maintenance | ✅ | DV compaction lands through `rewrite_data_files`; `rewrite_position_delete_files` refuses live DVs rather than answering Spark's four silent zeros | that refusal → `B-MOR-3` | DELIBERATE **by analogy** to OD-2 (applied in the MW-2 ledger, 2026-08-21; OD-2 of record is the orphan-files posture); registry §7, **no DECLARED class marker on the row**; re-measured 2026-09-02; **owner line pending** | `crates/repark-spark/src/tests/call_v3_dv.rs::call_rewrite_position_delete_files_still_refuses_engine_written_v3_dvs`, `python/repark/tests/test_v3_dv_compaction.py` |
 | 14 · Maintain: expiry / orphans on v3 | ✅ | expire keeps the tag-reachable DV snapshot and drops the untagged one; the orphan 24 h floor refuses | — | — | `crates/repark-spark/src/tests/v3e4.rs` |
 | 15 · Maintain: `rewrite_manifests` | ✅ | exercised on v3 by SCALE-v3 (2026-09-02): merge-on-read 59 → 1, copy-on-write 10 → 1 inside the 1e7 x 50 sequence; Spark-compared semantics are MANIFEST-1/2/3, measured on v2 | — | — | `crates/repark-spark/src/tests/call_manifests.rs`; the v3 exercise is [scale-v3-mw7-ledger.md](../../ledgers/archive/2026-09/2026-09-02-scale-v3-mw7-ledger.md) §3.4 |
 | 16 · Refs + time travel on v3 | ✅ | BRANCH / TAG DDL, `VERSION AS OF` over DVs, `rollback_to_snapshot` | — | — | `crates/repark-spark/src/tests/v3e4.rs`, `python/repark/tests/test_v3e4_refs_time_travel.py` |
-| 17 · Adopt: `register_table` | ✅ | Hadoop `vN.metadata.json` adopts, reads and writes `v(N+1)` (`V3-ADOPT-1` FIXED) | S3 Tables has no `registerTable` → `S3T-1` (fork R126 (c)) | DECLARED service gap · 2026-08-27 (fork F-9) | `crates/repark-spark/src/tests/call_register.rs` |
+| 17 · Adopt: `register_table` | ✅ | Hadoop `vN.metadata.json` adopts, reads and writes `v(N+1)` (`V3-ADOPT-1` FIXED) | S3 Tables has no `registerTable` → `S3T-1` (fork R126 (c)) | DECLARED service gap · **undated on `S3T-1`**; dated 2026-08-27 on fork R126 (c) | `crates/repark-spark/src/tests/call_register.rs` |
 | 18 · Live: Glue + S3 Tables v3 legs | ✅ | both legs green; Glue reproduced the local numbers exactly and S3 Tables accepts `format-version = 3` at CREATE (`S3T-V3-1` FIXED); re-run 2026-09-03 carried V3-11's exact `_row_id = 11` assertion | adopt on S3 Tables is row 17's `S3T-1` | — | `python/repark/tests/test_v3_acceptance_local.py`, `python/repark/tests/test_acceptance_v3_helpers.py` |
 | 19 · Nightly oracle: v3 leg | ✅ | `v3-spark-part-dv` and `v3-spark-eq-dv` run as live `repark == Spark` triples; first green nightly 2026-09-02 | — | — | `python/repark/tests/test_v3_live_oracle.py` |
 | 20 · Scale | ✅ | 1e7 x 50 re-measured on v3: 96 delete files against v2's 400, 496 data files against 1,696, and the maintenance sequence ends at zero delete files and zero delete records | — | — | [scale-v3-mw7-ledger.md](../../ledgers/archive/2026-09/2026-09-02-scale-v3-mw7-ledger.md) §3; driver `python/repark-parity/bench/mw7/run_mw7.py --format-version 3` |
+
+**One v1.0 requirement has no §3 row (V1-GATE, 2026-09-03).** §2 pillar 4 asks for a *full
+statement-coverage comparison against PySpark on v3 tables*. The matrix has never carried a row
+for it, and no unit discharges it: the nightly v3 leg (V3E-5, green since 2026-09-02) is ten
+cells over two fixtures — partitioned-DV reads, equality delete beside a DV, `delete_files`
+kinds, UPDATE, matched-UPDATE MERGE on both write modes, and the two subquery-`WHERE` shapes —
+a targeted live triple, not the statement matrix; SEM-1 is a function-semantics unit and touches
+no v3 statement; and the tree carries no statement-coverage harness at any format version.
+Recorded as owed, not claimed.
+
+**Surface residuals outside the requires cells — recorded, not gating.** Each sits on a
+surface §3 names; none is inside that row's v1.0 requires cell, so none is audited above.
+
+| Row | Residual | Class | Why it is outside the requires cell |
+|---|---|---|---|
+| 12 · `rewrite_data_files` | `RDF-1` — a position-delete file spanning two or more data files is still not selected (F-16 residue 2, fork work); the row is FIXED 2026-09-02 for the single-referent shape and its dated prior states read "stays BACKLOG" | open residue on a FIXED row, fork-owned | the cell asks for lineage through rewrite, no stranded DVs and a true `removed_delete_files_count` — all three measured on v3 (`V3-LINEAGE-1`, `V3-DANGLE-1`) |
+| 14 · expiry / orphans | `ORPHAN-1` (`older_than` required) and `ORPHAN-2` (dry-run default with Spark's result shape) | DECLARED, owner decision OD-2 (ruled 2026-08-21) | the cell asks that v3 expiry stays green with a live leg; both rows are deliberate strictness on every format version, not a v3 gap |
+| 15 · `rewrite_manifests` | `MANIFEST-1` (data manifests only; Spark rewrites delete manifests too) and `MANIFEST-3` (`added_manifests_count` above the target size) | BACKLOG, both v2-measured; `MANIFEST-1` is fork work | the cell asks only that the procedure be exercised on v3, which SCALE-v3 did |
 
 **Fork side, at the consumed pin `ff4764d3`.** Every 🟡 `GAP_MATRIX.md` row this gate leans on
 carries a dated cell and a pin at that rev, so none is a blocker.
@@ -132,8 +153,14 @@ recommendation) and the freeze is registered — 888 names in
 [docs/release.md](../../../docs/release.md) — so no gate item remains on the review.
 
 **Audit result (V1-GATE, 2026-09-03).** §3.1 audits all twenty rows and the fork rows they
-lean on: every row ✅ or dated DECLARED as of 2026-09-03; the v1.0 tag is the owner's
-remaining step.
+lean on: every row ✅ or dated DECLARED as of 2026-09-03. Two things are still owed and neither
+is a §3 row. **Owner:** a one-line ruling confirming `B-MOR-3`'s DECLARED class for
+`rewrite_position_delete_files` (§3.1 row 13 — the row is housed under the registry's §7 with no
+class marker, and its OD-2 attachment is by analogy), and then the v1.0 tag. **Engineering:**
+§2 pillar 4's **full v3 statement-coverage comparison against PySpark**, which V1-GATE searched
+for and could not pin to any unit, run or fixture — it has no §3 row, so it is named here as the
+remaining v1.0 item and queued on
+[briefs/next-sequence.md](../../../briefs/next-sequence.md) as **V3-COV**.
 
 ## 4. The path, as two lanes
 
