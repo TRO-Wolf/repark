@@ -2,11 +2,11 @@
 
 **Date:** 2026-09-02 · **Branch:** `feat/v3-12-legacy-delete-merge` · **Base:** `origin/main`
 `3eb6b71` · **Model:** claude-opus-5 (medium) · **Policy:**
-[../../../AGENTS.md](../../../AGENTS.md) · **Registry:**
-[../../../docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md)
+[../../../AGENTS.md](../../../../AGENTS.md) · **Registry:**
+[../../../docs/spark-sql-iceberg-parity.md](../../../../docs/spark-sql-iceberg-parity.md)
 `V3-UPGRADE-DV-1` · **Path:** STANDARD (`risk_tier: standard`; one Actor cycle).
 **Proven pattern:**
-[../archive/2026-09/2026-09-02-v3-10-upgrade-v2-to-v3-ledger.md](../archive/2026-09/2026-09-02-v3-10-upgrade-v2-to-v3-ledger.md).
+[../archive/2026-09/2026-09-02-v3-10-upgrade-v2-to-v3-ledger.md](2026-09-02-v3-10-upgrade-v2-to-v3-ledger.md).
 
 **Retires:** this ledger moves to `../completed/` in this unit's last commit.
 
