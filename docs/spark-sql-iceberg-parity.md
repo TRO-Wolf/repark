@@ -2296,11 +2296,14 @@ the pin rather than obeying it.
   `python/repark/tests/test_v3_acceptance_local.py::test_v3_acceptance_leg_body_against_the_local_catalog`,
   `python/repark/tests/test_v3_acceptance_local.py::test_v3_create_refusal_classification_is_the_s3_tables_decision_table`,
   `python/repark/tests/test_acceptance_v3_helpers.py::test_v3_legs_are_twins_of_the_mor_legs`
-- **Tightened 2026-09-02 (V3-11).** The shared leg body's `assert_v3_lineage` now demands
-  the inserted row's exact `_row_id = 11` on both legs (`exact_commit_counts` does not gate
-  it) where it demanded only a fresh unused id. The counts above are unchanged — the run
-  recorded `_row_id` values exact on both legs — but the two live legs have **not** been
-  re-dispatched since the tightening; the next `aws-acceptance` run is the confirmation.
+- **Tightened 2026-09-02 (V3-11), confirmed live 2026-09-03.** The shared leg body's
+  `assert_v3_lineage` now demands the inserted row's exact `_row_id = 11` on both legs
+  (`exact_commit_counts` does not gate it) where it demanded only a fresh unused id. The counts
+  above are unchanged. Both legs have now been re-dispatched under the tightened assertion:
+  `aws-acceptance` [run 33699342417](https://github.com/TRO-Wolf/repark/actions/runs/33699342417)
+  on merged `main` `a0fe83a`, 2026-09-03 00:48 UTC, `6 passed in 230.67s` — Glue and S3 Tables
+  each read the exact inserted `_row_id`, so the confirmation this row was waiting on is
+  recorded and no re-dispatch is outstanding.
 - **Rationale** — FIXED by measurement, not by an engine change: the service question this row
   was opened on is answered, so the row is no longer BACKLOG. It is kept as the single home of
   the answer rather than retired, and §6's retire-with-a-RED-pin path does not apply — the local
