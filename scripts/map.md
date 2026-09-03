@@ -1,5 +1,14 @@
 # map — scripts/
 
+EX-5 (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE` 844 → 817 — 27 `F.*`
+string-search, slicing, UTF-8 and regex names covered by eight new examples; `F.split`,
+`F.regexp_extract` and `F.sentences` are refused by the engine (disclosed gaps
+R-FN-BATCH1/R-FN-BATCH2), `F.elt` answers NULL where Spark raises INVALID_ARRAY_INDEX,
+`F.validate_utf8` raises INVALID_UTF8_STRING on invalid input on both engines but with a
+different Python error surface than Spark's, and `F.replace` has no spelling that runs on both
+engines (repark takes a literal `search`, PySpark reads a bare string as a column name);
+all six stay on the backlog.
+pins: ex-5-functions-strings-b-regex/C-001
 EX-3 batch 2 (2026-09-02): `check_example_coverage.py` `BACKLOG_BASELINE` 881 → 844 —
 37 `F.*` trig, log, rounding and try-arithmetic names covered by six new examples;
 `F.log1p` measured divergent against the live oracle at `x = 1e-10` and `x = 1e-13` and kept on the

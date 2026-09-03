@@ -279,7 +279,6 @@ F.bin
 F.bit_and
 F.bit_count
 F.bit_get
-F.bit_length
 F.bit_or
 F.bit_xor
 F.bitmap_bit_position
@@ -357,7 +356,6 @@ F.expm1
 F.expr
 F.extract
 F.filter
-F.find_in_set
 F.first
 F.first_value
 F.flatten
@@ -380,13 +378,11 @@ F.hll_union_agg
 F.hour
 F.hours
 F.ifnull
-F.ilike
 F.initcap
 F.input_file_block_length
 F.input_file_block_start
 F.input_file_name
 F.instr
-F.is_valid_utf8
 F.is_variant_null
 F.isnan
 F.isnotnull
@@ -424,7 +420,6 @@ F.lead
 F.left
 F.length
 F.levenshtein
-F.like
 F.listagg
 F.locate
 F.log1p
@@ -435,7 +430,6 @@ F.make_date
 F.make_dt_interval
 F.make_interval
 F.make_timestamp
-F.make_valid_utf8
 F.map_contains_key
 F.map_entries
 F.map_filter
@@ -467,8 +461,6 @@ F.nullif
 F.nullifzero
 F.nvl
 F.nvl2
-F.octet_length
-F.overlay
 F.pandas_udf
 F.parse_json
 F.parse_url
@@ -476,10 +468,8 @@ F.percent_rank
 F.percentile_approx
 F.posexplode
 F.posexplode_outer
-F.position
 F.printf
 F.quarter
-F.quote
 F.raise_error
 F.rand
 F.randn
@@ -488,14 +478,7 @@ F.randstr
 F.rank
 F.reduce
 F.reflect
-F.regexp
-F.regexp_count
 F.regexp_extract
-F.regexp_extract_all
-F.regexp_instr
-F.regexp_like
-F.regexp_replace
-F.regexp_substr
 F.regr_avgx
 F.regr_avgy
 F.regr_count
@@ -505,11 +488,8 @@ F.regr_slope
 F.regr_sxx
 F.regr_sxy
 F.regr_syy
-F.repeat
 F.replace
-F.reverse
 F.right
-F.rlike
 F.row_number
 F.rpad
 F.rtrim
@@ -534,10 +514,8 @@ F.skewness
 F.slice
 F.some
 F.sort_array
-F.soundex
 F.spark_partition_id
 F.split
-F.split_part
 F.st_asbinary
 F.st_geogfromwkb
 F.st_geomfromwkb
@@ -551,9 +529,6 @@ F.stddev_samp
 F.str_to_map
 F.string_agg
 F.struct
-F.substr
-F.substring
-F.substring_index
 F.sum
 F.theta_difference
 F.theta_intersection
@@ -575,7 +550,6 @@ F.to_xml
 F.transform
 F.transform_keys
 F.transform_values
-F.translate
 F.trim
 F.trunc
 F.try_avg
@@ -591,7 +565,6 @@ F.try_to_number
 F.try_to_time
 F.try_to_timestamp
 F.try_url_decode
-F.try_validate_utf8
 F.try_variant_get
 F.ucase
 F.udf

@@ -5,6 +5,16 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [ex-5-functions-strings-b-regex-ledger.md](ex-5-functions-strings-b-regex-ledger.md) —
+  **EX-5 (2026-09-03), in flight:** the v0.7 example backfill batch for the `F.*`
+  string-search, slicing, UTF-8 and regex family — 27 names landed in eight example files
+  with every asserted value measured against live PySpark 4.1.2, backlog ratchet 844 → 817;
+  `F.split`, `F.regexp_extract` and `F.sentences` refused by the engine, `F.elt` answering
+  NULL where Spark raises, `F.validate_utf8` raising a different error surface than Spark
+  on invalid input, and `F.replace` carrying no spelling that binds on both engines —
+  all six kept on the backlog with both values recorded. `risk_tier: standard`.
+  Branch `feat/ex-5-functions-strings-regex`.
+  Slate: [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md).
 - [ex-2-functions-math-bitwise-ledger.md](ex-2-functions-math-bitwise-ledger.md) —
   **EX-2 (2026-09-01), in flight:** the v0.7 example backfill's `F.*` math +
   bitwise family — the campaign pilot. One clause per batch; batch 1 covers
