@@ -523,3 +523,78 @@ async fn a_legacy_parquet_delete_that_exists_only_on_a_branch_merges_on_that_bra
         vec![1, 4]
     );
 }
+
+#[tokio::test]
+#[ignore = "measurement: prints the legacy-walk cost at 8 and 192 delete manifests"]
+async fn measure_legacy_walk_cost() {
+    for manifests in [8usize, 48] {
+        let wh = TempDir::new().unwrap();
+        let (ctx, catalogs) = setup_allow_create_format_version_3(&wh).await;
+        run(
+            &ctx,
+            &catalogs,
+            "CREATE TABLE ice.sales.walk (id INT, name STRING, part INT) USING iceberg \
+             PARTITIONED BY (part) TBLPROPERTIES ('format-version' = '3', \
+             'write.delete.mode' = 'merge-on-read', 'write.merge.mode' = 'merge-on-read', \
+             'commit.manifest-merge.enabled' = 'false')",
+        )
+        .await;
+        for part in 0..manifests {
+            run(
+                &ctx,
+                &catalogs,
+                &format!(
+                    "INSERT INTO ice.sales.walk VALUES ({}, 'a', {part}), ({}, 'b', {part})",
+                    part * 2,
+                    part * 2 + 1
+                ),
+            )
+            .await;
+        }
+        for part in 0..manifests {
+            run(
+                &ctx,
+                &catalogs,
+                &format!(
+                    "MERGE INTO ice.sales.walk AS t USING (SELECT {} AS id) AS s \
+                     ON t.id = s.id WHEN MATCHED THEN DELETE",
+                    part * 2
+                ),
+            )
+            .await;
+        }
+        let delete_manifests = delete_manifest_count(&catalogs, "walk").await;
+        let started = std::time::Instant::now();
+        run(
+            &ctx,
+            &catalogs,
+            "MERGE INTO ice.sales.walk AS t USING (SELECT 1 AS id) AS s \
+             ON t.id = s.id WHEN MATCHED THEN DELETE",
+        )
+        .await;
+        let elapsed = started.elapsed();
+        println!(
+            "MEASURE legacy-walk: {manifests} commits -> {delete_manifests} delete manifests, \
+             one more MoR DELETE took {elapsed:?}"
+        );
+    }
+}
+
+async fn delete_manifest_count(catalogs: &CatalogRegistry, table: &str) -> usize {
+    use iceberg::spec::ManifestContentType;
+    let ident = TableIdent::new(NamespaceIdent::new("sales".to_string()), table.to_string());
+    let loaded = catalogs["ice"].load_table(&ident).await.unwrap();
+    let metadata = loaded.metadata();
+    let Some(snapshot) = metadata.current_snapshot() else {
+        return 0;
+    };
+    let manifest_list = snapshot
+        .load_manifest_list(loaded.file_io(), metadata)
+        .await
+        .unwrap();
+    manifest_list
+        .entries()
+        .iter()
+        .filter(|entry| entry.content == ManifestContentType::Deletes)
+        .count()
+}

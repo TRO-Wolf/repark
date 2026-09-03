@@ -40,6 +40,23 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   `file_path` lower/upper bounds. Positions are read off the parquet by reserved field id
   (`RESERVED_FIELD_ID_DELETE_FILE_PATH` / `_POS`, name fallback) and filtered to the referenced
   data file, so a delete file that also names other data files contributes only its own rows.
+  Every manifest walk and every candidate read is driven by
+  `stream::iter(...).buffer_unordered(8)`, the same `DV_IO_CONCURRENCY` shape the fork's own
+  `manifest_stream` uses. V3-12 measured that concurrency to be worth NOTHING on a local
+  warehouse (~28 ms per delete manifest with or without it — the walk is manifest decode, not IO
+  wait); it is kept as the fork's idiom and as the right shape for object-store latency, which
+  this repo has not measured. The cost that IS real is the duplicate pass: the delete manifests
+  are walked here AND by the fork's `collect_dv_index`, and the data manifests are walked here
+  purely for the touched files' data sequence numbers — which `applies()` needs and
+  `KnownPartitions` does not carry — AND by the fork's `collect_live_data_files`. Both halves are
+  fork ask **F-22**, with an optional pre-loaded `ManifestList` so the list is not re-parsed
+  either. Positions decode through a `ProjectionMask` over the two reserved leaves: worth nothing
+  when the delete file has no `row` column (the shape both engines write) and 32% of the decode
+  when it has one. Its real yield is correctness — the reserved column INDICES shift when
+  projection drops a column, so they are read off each projected batch, never off the file
+  schema, and `a_leading_row_column_is_projected_away_without_shifting_the_reserved_columns` is
+  red on exactly that regression. The delete-file fetch is still whole-file: the fork's
+  projected, ranged reader is `pub(crate)`, also F-22.
   The delete manifests are read FIRST and the data manifests only if a candidate survives, so a
   table with no legacy parquet delete walks no data manifest at all — RP-7's
   `closing_a_covered_v3_delete_reads_no_data_manifest` and

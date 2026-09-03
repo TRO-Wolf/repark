@@ -159,11 +159,12 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
     (v2 refuses); append fills from a schema-carried `write_default`; DEFAULT DDL, `unknown` and
     binary `variant` refuse Spark-equal (`V3-VARIANT-SHRED-1`, R88/R91, RP-5).
     **V3-9 (2026-09-02):** MoR `DELETE`/`UPDATE … WHERE` on v3 write file-scoped
-    Puffin DVs on three doors, created and adopted, Spark-equal (`V3-MOR-1` FIXED). **RP-7 (2026-09-02):** the fork repin to `ff4764d3` (F-18) makes the
-    shared-Puffin container close Spark-equal — `V3-DV-1` **FIXED**. **V3-12 (2026-09-02):** a legacy position delete
-    merges into the new DV; the close reads its branch (`V3-UPGRADE-DV-1`, `V3-DV-BRANCH-1`). **LIVE-v3 (2026-09-02):** both live
-    v3 legs green on `aws-acceptance` run 33635288918 — S3 Tables takes `format-version = 3` at
-    CREATE, Glue reproduces the local numbers (`S3T-V3-1`).
+    Puffin DVs on three doors, created and adopted (`V3-MOR-1` FIXED). **RP-7 (2026-09-02):** the repin to `ff4764d3` (F-18) makes the
+    shared-Puffin close Spark-equal — `V3-DV-1` **FIXED**. **V3-12 (2026-09-02):** a legacy position delete
+    merges into the new DV; the close reads its branch (`V3-UPGRADE-DV-1`, `V3-DV-BRANCH-1`);
+    F-21/F-22 land at RP-8. **LIVE-v3 (2026-09-02):** both live v3
+    legs green on `aws-acceptance` run 33635288918 — S3 Tables takes `format-version = 3` at CREATE,
+    Glue reproduces the numbers (`S3T-V3-1`).
   - **Next:** lineage carry and merge-on-read are complete on every served DML shape
     (`V3-COW-1`, `V3-MOR-1`, `V3-DV-1`, `V3-UPGRADE-DV-1` FIXED); open v3 residuals:
     `V3-ROWID-3` (**V3-11**), `V3-UPGRADE-DV-PLAIN-1` and `V3-UPGRADE-DV-PART-1` (dated refusals,

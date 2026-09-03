@@ -17,6 +17,11 @@ only moves down, and a `mod` line there would have grown it.
   caller resolved for the target scan, not the current snapshot, so a `to_branch` write collects
   the BRANCH's legacy deletes. Every helper below `collect_superseded_legacy_deletes` is
   private: the ported `is_deletion_vector` / `referenced_data_file_location` are read only here,
+  the latter returning `Cow` so the common bounds leg borrows instead of allocating a `String`
+  for every delete entry examined before the `touched` test,
   and keeping them private is what makes a future unused one a compile warning rather than a
   silently dead second copy of the fork's scoping rule.
-  pins: v3-12-legacy-delete-merge/C-002, C-003, C-004
+  `positions_from_parquet` is the table-free seam its two unit tests drive: one proves positions
+  are filtered to the referenced data file, the other that a leading `row` column is projected
+  away without shifting the reserved columns.
+  pins: v3-12-legacy-delete-merge/C-002, C-003, C-004, C-007

@@ -120,10 +120,10 @@ async fn plan_deletion_vectors(
     }
     known_partitions.retain(|path, _| new_positions.contains_key(path));
     let touched: HashSet<&str> = new_positions.keys().map(String::as_str).collect();
-    let superseded = collect_superseded_legacy_deletes(table, &touched, snapshot_id).await?;
-    for (path, positions) in &superseded.positions {
-        if let Some(slot) = new_positions.get_mut(path) {
-            slot.extend(positions.iter().copied());
+    let mut superseded = collect_superseded_legacy_deletes(table, &touched, snapshot_id).await?;
+    for (path, mut positions) in std::mem::take(&mut superseded.positions) {
+        if let Some(slot) = new_positions.get_mut(&path) {
+            slot.append(&mut positions);
         }
     }
     let mut close = close_touched_dv_containers_with_partitions(

@@ -53,7 +53,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   door refused with "already carries a live deletion vector"), and a legacy parquet delete that
   exists only on a branch merges there. `branch_delete_files` reads `snapshot_for_ref`, not the
   current snapshot, so a pin that passes by reading `main` is not available to it.
-  pins: v3-12-legacy-delete-merge/C-001, C-002, C-003, C-004, C-005, C-006
+  `measure_legacy_walk_cost` is the `#[ignore]`d before/after cell for the legacy-delete manifest
+  walk: it seeds one delete manifest per commit at `commit.manifest-merge.enabled = false` and
+  times one more MoR DELETE that finds ZERO candidates, so it isolates the walk from the read.
+  RP-8 re-measures it against the F-21/F-22 fork; it is not a wall-clock CI pin.
+  pins: v3-12-legacy-delete-merge/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - `declared_refuse.rs` — **FNP-15/16:** Spark-door parse-altitude refusals for the six
   unreachable names and the sketch family; passthrough attach pin.
   pins: fnp-15-16/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008

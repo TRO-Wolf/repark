@@ -32,7 +32,9 @@ which have no write surface on either engine.
 
 | C-006 | The v3 DV close reads the snapshot the statement SCANNED, not the current one, so a `to_branch` merge-on-read write sees the branch's own deletion vectors and legacy deletes; one snapshot id serves the scan, the legacy collection, the close and `validate_from_snapshot`. | Two branch cells whose branch head differs from `main`, red before the change; `grep` that the close no longer receives `None`. | **PROVEN** | `a_second_merge_on_read_delete_on_a_diverged_branch_merges_the_branch_only_dv` was RED at the round's start — "Cannot commit deletion vector … the current snapshot already carries a live deletion vector for that data file" — because the close ran against `main`, which held no DV, and wrote a second one. `a_legacy_parquet_delete_that_exists_only_on_a_branch_merges_on_that_branch` was already green (the legacy collection resolved the branch from the first commit) and holds that half. Registry `V3-DV-BRANCH-1` FIXED. §15. Citation: `crates/repark-iceberg/src/write/merge/map.md`. |
 
-VERDICT: 6 clauses, 6 PROVEN, 0 OPEN, 0 REJECTED.
+| C-007 | The perf round's claims are MEASURED, not assumed: the concurrency change, the projection and the allocation hygiene are each stated at what the fixture actually shows, and anything the fixture cannot reach is named as unmeasured rather than claimed. | Before/after at 8 and 48 delete manifests, three runs a side; a fair projected-vs-full decode A/B at 100k positions with and without a `row` column, two runs a side; two correctness unit tests; the touched suites. | **PROVEN** | §16. `buffer_unordered(8)` on both manifest walks is worth **nothing** on a local warehouse (~28 ms per delete manifest either way) — it is kept because it matches the fork's own `DV_IO_CONCURRENCY` idiom and is not a regression, NOT because this unit measured a win. The `ProjectionMask` is worth nothing when the delete file has no `row` column (the shape both engines write) and **32%** of the decode when it has one (74.9 → 50.3 ms at 100k positions). Correctness, not speed, is the projection's real yield: indexing off the file schema instead of the projected batch silently misreads a delete file with a `row` column, and `a_leading_row_column_is_projected_away_without_shifting_the_reserved_columns` is red on exactly that. `positions_are_filtered_to_the_referenced_data_file` reaches the per-row `file_path` filter AT-3 had listed as unreached. `repark-iceberg --lib` 380 passed, `repark-spark --lib` 774 passed, `repark-sql --lib` 339 passed. Citation: `crates/repark-iceberg/src/write/merge/map.md`. |
+
+VERDICT: 7 clauses, 7 PROVEN, 0 OPEN, 0 REJECTED.
 
 ```yaml
 COVERAGE_ATTESTATION:
@@ -48,7 +50,7 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-spark/src/tests/v3_legacy_delete.rs]
     - id: AT-3
       status: ATTACKED
-      evidence: Pinned - a delete whose bounds cover more than one data file is not collected, so the fork's commit door refuses on three doors instead of the engine silently superseding it, and the refusal leaves every row and delete file as the upgrade left them. NOT pin-reached and stated as defensive rather than attested - the per-row `file_path` filter inside `read_position_delete_file` (every row of a file-scoped delete names the same path by construction, and the only shape whose rows name two paths is the one deliberately not collected), the reject direction of `applies()` (see M4), and the non-Utf8 / non-Int64 / negative-position arms (no door this engine serves writes such a delete file). Those four are correctness guards for delete files this engine did not write; they are cheap and total, and none is claimed as covered.
+      evidence: Pinned - a delete whose bounds cover more than one data file is not collected, so the fork's commit door refuses on three doors instead of the engine silently superseding it, and the refusal leaves every row and delete file as the upgrade left them. The per-row `file_path` filter is reached by `positions_are_filtered_to_the_referenced_data_file`, whose fixture names two data files in one delete file. NOT pin-reached and stated as defensive rather than attested - the reject direction of `applies()` (see M4) and the non-Utf8 / non-Int64 / negative-position arms (no door this engine serves writes such a delete file). Those are correctness guards for delete files this engine did not write; they are cheap and total, and neither is claimed as covered.
       artifacts: [crates/repark-iceberg/src/write/merge/dv_close/legacy_deletes.rs, crates/repark-spark/src/tests/v3_legacy_delete.rs]
     - id: AT-4
       status: N/A
@@ -63,7 +65,7 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-iceberg/src/write/merge/dv_close.rs, crates/repark-iceberg/src/write/merge/snapshot_commit.rs, crates/repark-spark/src/tests/v3_legacy_delete.rs]
     - id: AT-7
       status: ATTACKED
-      evidence: The delete manifests are read once per commit and only for data files the statement touched; each superseded delete file is read once and folded into the position map before the container close, so the fork writes ONE union rather than a second pass. Measured at 200k rows with a 100k-position legacy delete - a 50-row statement pays the same delta a 1-row statement pays.
+      evidence: The delete manifests are read once per commit and only for data files the statement touched; each superseded delete file is read once and folded into the position map before the container close, so the fork writes ONE union rather than a second pass. Measured at 200k rows with a 100k-position legacy delete - a 50-row statement pays the same delta a 1-row statement pays. V3-12 perf round: every manifest walk and candidate read runs at buffer_unordered(8) like the fork's manifest_stream, positions decode through a ProjectionMask over the two reserved leaves, referenced_data_file_location borrows via Cow instead of allocating per examined entry, DataFile is cloned only for confirmed candidates, the position Vec is sized from record_count, and the position map moves into new_positions with append instead of copying. Before/after in ledger section 16.
       artifacts: [crates/repark-iceberg/src/write/merge/dv_close/legacy_deletes.rs, crates/repark-iceberg/src/write/merge/dv_close.rs]
     - id: AT-8
       status: N/A
@@ -238,3 +240,50 @@ commit door refused "the current snapshot already carries a live deletion vector
 file". Green after: ONE branch DV of `record_count` 2, branch reads `[1, 4]`, `main` unmoved at
 `[1, 2, 3, 4]`. The `branch: Option<&str>` parameter this unit first added to
 `prepare_row_delta_deletes` is gone — one resolved snapshot id now serves every reader.
+
+## 16. The perf round, measured (C-007)
+
+Debug build, local warehouse, same fixture both sides, the code the only variable.
+
+**Manifest walk — `buffer_unordered(8)` on both walks.** A v3 MoR table at
+`commit.manifest-merge.enabled = false`, one delete manifest per commit, then one more
+merge-on-read DELETE timed. The statement finds ZERO legacy candidates, so this isolates the
+walk. Three runs a side, median.
+
+| Delete manifests | Before | After |
+|---|---|---|
+| 8 | 326 ms | 335 ms |
+| 48 | 1.454 s | 1.476 s |
+| slope | ~28.2 ms/manifest | ~28.5 ms/manifest |
+
+**No measurable win.** On a local warehouse the walk is manifest DECODE, not IO wait, so there is
+nothing for concurrency to overlap. The change is kept because it is the fork's own
+`DV_IO_CONCURRENCY` shape and is not a regression; this unit does NOT claim an object-store win it
+did not measure. The duplicate pass — both the delete-manifest walk and the data-manifest walk
+for sequence numbers — is the real cost, and it is fork ask **F-22**, not something the engine can
+remove alone. An earlier draft of this table reported 570 ms / 1.085 s "before"; those were
+first-run warm-up artifacts and are struck.
+
+**Decode — `ProjectionMask` over the two reserved leaves.** 100,000 positions, one referenced data
+file, decoded through the same function with the mask on and off, two runs a side.
+
+| Delete file | Full decode | Projected |
+|---|---|---|
+| 2 columns, 1.0 MB (what Spark and this engine write) | 50.4 / 50.1 ms | 49.9 / 50.3 ms |
+| 3 columns with a `row` payload, 8.0 MB | 72.7 / 74.9 ms | 50.0 / 50.3 ms |
+
+The `row` column costs **32%** of the decode and the projection removes all of it; with no `row`
+column there is nothing to skip and the mask is free. The projection's larger yield is
+correctness: the reserved column INDICES shift when projection drops a column, so they are read
+off each projected batch, never off the file schema.
+`a_leading_row_column_is_projected_away_without_shifting_the_reserved_columns` is red if that
+regresses.
+
+**Allocation hygiene** (`Cow` on `referenced_data_file_location` so the common bounds leg borrows,
+`DataFile` cloned only for confirmed candidates, `Vec::with_capacity(record_count)`, `mem::take`
++ `append` into `new_positions`) is below this fixture's resolution and is claimed as hygiene
+only, not as a measured gain.
+
+Both measurements stay in the tree as `#[ignore]`d cells — `measure_legacy_walk_cost` and
+`measure_projected_decode` — so RP-8 re-measures them against the F-21/F-22 fork. Neither is a
+wall-clock CI pin.
