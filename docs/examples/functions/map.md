@@ -30,6 +30,21 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
   under a positive divisor, `F.greatest` / `F.least` skipping NULLs, `F.width_bucket`.
 - [try_arithmetic.py](try_arithmetic.py) — the `F.try_*` quartet answering NULL on
   overflow and divide-by-zero, ordinary input unchanged.
+- [epoch.py](epoch.py) — the epoch conversions: `F.unix_date`, `F.unix_seconds`,
+  `F.unix_millis`, `F.unix_micros` count the distance from 1970; `F.date_from_unix_date`
+  and `F.from_unixtime` build back.
+- [timestamp_from_epoch.py](timestamp_from_epoch.py) — `F.timestamp_seconds`,
+  `F.timestamp_millis`, `F.timestamp_micros` build instants from epoch counts, with the
+  seconds round trip.
+- [to_date_timestamp.py](to_date_timestamp.py) — `F.to_date` / `F.to_timestamp` parse
+  calendar strings; `F.try_to_date` answers NULL on malformed input.
+- [make_calendar.py](make_calendar.py) — `F.make_date` builds a date from year/month/day
+  parts (column and literal forms); `F.make_dt_interval` a day-time duration.
+- [utc_offsets.py](utc_offsets.py) — `F.from_utc_timestamp` / `F.to_utc_timestamp` render
+  an instant between UTC and a named zone; `F.current_timezone` names the session zone.
+- [partition_transforms.py](partition_transforms.py) — the partition transforms `F.years`,
+  `F.months`, `F.days`, `F.bucket` through `writeTo(...).partitionedBy(...)`, rows read
+  back from the created tables.
 
 ## Pointers
 

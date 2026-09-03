@@ -14,6 +14,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   for existing. `risk_tier: standard`. Branch
   `feat/ex-2-functions-math-bitwise`. Slate:
   [../briefs/example-backfill.md](../../../briefs/example-backfill.md).
+- [ex-7-functions-datetime-b-ledger.md](ex-7-functions-datetime-b-ledger.md) —
+  **EX-7 (2026-09-03), in flight:** the v0.7 example backfill's unix-time, timestamp
+  construction and partition-transforms batch (the `F.*` datetime lane, batch b): 21 of 28
+  dispatched names covered by six examples under `docs/examples/functions/`, every asserted
+  value measured on live PySpark 4.1.2 + Iceberg 1.11.0 before it was written; the 7 refused
+  or value-divergent names stay on the backlog with both values recorded, and the ratchet
+  moves 842 → 821. `risk_tier: standard`. Branch `feat/ex-7-functions-datetime-b`. Slate:
+  [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md).
 - [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's
   scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike
   evidence behind it; C-007 (the four sub-project families) was closed by ruling D-7 on

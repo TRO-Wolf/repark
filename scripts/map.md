@@ -1,5 +1,10 @@
 # map — scripts/
 
+EX-7 (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE` 842 → 821 — 21 `F.*`
+unix-time, timestamp-construction and partition-transform names covered by six new examples;
+7 dispatched names refused or value-divergent on a measured door stay on the backlog, both
+values recorded in the unit ledger. pins: ex-7-functions-datetime-b/C-001
+
 LOG1P-1 (2026-09-02): `check_example_coverage.py` `BACKLOG_BASELINE` 844 → 842 —
 `F.log1p` and `F.expm1` leave the backlog for `docs/examples/functions/logs.py`.
 pins: log1p-1-precise-kernels/C-003
