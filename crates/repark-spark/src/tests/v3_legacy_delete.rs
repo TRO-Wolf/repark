@@ -378,3 +378,148 @@ async fn copy_on_write_over_a_legacy_parquet_position_delete_leaves_it_alone() {
     walk_puffin(wh.path(), &mut puffins);
     assert_eq!(puffins, 0);
 }
+
+async fn branch_delete_files(
+    catalogs: &CatalogRegistry,
+    table: &str,
+    branch: &str,
+) -> Vec<(String, u64, Option<String>)> {
+    use iceberg::spec::ManifestContentType;
+    let ident = TableIdent::new(NamespaceIdent::new("sales".to_string()), table.to_string());
+    let loaded = catalogs["ice"].load_table(&ident).await.unwrap();
+    let metadata = loaded.metadata();
+    let mut files = Vec::new();
+    let Some(snapshot) = metadata.snapshot_for_ref(branch) else {
+        return files;
+    };
+    let manifest_list = snapshot
+        .load_manifest_list(loaded.file_io(), metadata)
+        .await
+        .unwrap();
+    for manifest_file in manifest_list.entries() {
+        if manifest_file.content != ManifestContentType::Deletes {
+            continue;
+        }
+        let manifest = manifest_file.load_manifest(loaded.file_io()).await.unwrap();
+        for entry in manifest.entries() {
+            if !entry.is_alive() {
+                continue;
+            }
+            let file = entry.data_file();
+            files.push((
+                format!("{:?}", file.file_format()),
+                file.record_count(),
+                file.referenced_data_file()
+                    .map(|path| path.rsplit('/').next().unwrap_or_default().to_string()),
+            ));
+        }
+    }
+    files.sort();
+    files
+}
+
+fn branch_merge_delete_sql(table: &str, branch: &str, id: i32) -> String {
+    format!(
+        "MERGE INTO ice.sales.{table}.branch_{branch} AS t USING (SELECT {id} AS id) AS s \
+         ON t.id = s.id WHEN MATCHED THEN DELETE"
+    )
+}
+
+#[tokio::test]
+async fn a_second_merge_on_read_delete_on_a_diverged_branch_merges_the_branch_only_dv() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&wh).await;
+    seed_mor_four(&ctx, &catalogs, "brdv", "merge-on-read").await;
+    upgrade(&ctx, &catalogs, "brdv").await;
+    run(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.brdv CREATE BRANCH b",
+    )
+    .await;
+    let main_before = load_sales_table(&catalogs, "brdv")
+        .await
+        .metadata()
+        .current_snapshot_id();
+
+    run(&ctx, &catalogs, &branch_merge_delete_sql("brdv", "b", 2)).await;
+    assert_eq!(
+        branch_delete_files(&catalogs, "brdv", "b").await.len(),
+        1,
+        "the first branch DELETE lands one DV on the branch and nothing on main"
+    );
+    assert_eq!(
+        live_delete_files(&catalogs, "brdv").await,
+        Vec::new(),
+        "main carries no delete file at all, so a close against main sees no DV to merge"
+    );
+
+    run(&ctx, &catalogs, &branch_merge_delete_sql("brdv", "b", 3)).await;
+
+    let after = load_sales_table(&catalogs, "brdv").await;
+    assert_eq!(
+        after.metadata().current_snapshot_id(),
+        main_before,
+        "main never moves"
+    );
+    let branch_files = branch_delete_files(&catalogs, "brdv", "b").await;
+    assert_eq!(
+        branch_files.len(),
+        1,
+        "the second branch DELETE must MERGE into the branch's own DV, not add a second: \
+         {branch_files:?}"
+    );
+    assert_eq!(
+        branch_files[0].1, 2,
+        "the merged branch DV carries both positions: {branch_files:?}"
+    );
+    assert_eq!(
+        time_travel_id_multiset(&ctx, &catalogs, "SELECT id FROM ice.sales.brdv.branch_b").await,
+        vec![1, 4]
+    );
+    assert_eq!(
+        time_travel_id_multiset(&ctx, &catalogs, "SELECT id FROM ice.sales.brdv").await,
+        vec![1, 2, 3, 4],
+        "main still reads every row"
+    );
+}
+
+#[tokio::test]
+async fn a_legacy_parquet_delete_that_exists_only_on_a_branch_merges_on_that_branch() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&wh).await;
+    seed_mor_four(&ctx, &catalogs, "brlg", "merge-on-read").await;
+    run(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.brlg CREATE BRANCH b",
+    )
+    .await;
+    run(&ctx, &catalogs, &branch_merge_delete_sql("brlg", "b", 2)).await;
+    assert_eq!(
+        branch_delete_files(&catalogs, "brlg", "b").await,
+        vec![("Parquet".to_string(), 1, None)],
+        "the legacy parquet delete exists on the branch only"
+    );
+    assert_eq!(
+        live_delete_files(&catalogs, "brlg").await,
+        Vec::new(),
+        "main carries none of it"
+    );
+    upgrade(&ctx, &catalogs, "brlg").await;
+
+    run(&ctx, &catalogs, &branch_merge_delete_sql("brlg", "b", 3)).await;
+
+    let branch_files = branch_delete_files(&catalogs, "brlg", "b").await;
+    assert_eq!(
+        branch_files.len(),
+        1,
+        "the branch's legacy delete leaves in the same RowDelta the DV arrives in: {branch_files:?}"
+    );
+    assert_eq!(branch_files[0].0, "Puffin");
+    assert_eq!(branch_files[0].1, 2);
+    assert_eq!(
+        time_travel_id_multiset(&ctx, &catalogs, "SELECT id FROM ice.sales.brlg.branch_b").await,
+        vec![1, 4]
+    );
+}

@@ -123,7 +123,20 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   is exercised at all. It borrows `_LIVE` / `_LIVE_SKIP` / `_ALLOW_CREATE_V3_KEY` /
   `_v37_iceberg_runtime_jar` from `test_v3_live_oracle.py`. The second test is the incidental
   control: a table that stays v2 keeps writing parquet position deletes and this engine leaves
-  TWO of them live for one data file where Spark rewrites one.
+  TWO of them live for one data file where Spark rewrites one. The module also carries the facade
+  twins of both V3-12 refusals (plain-`WHERE`, and a delete covering two data files), so each
+  entry point has its own row. **Session discipline:** `_live_session` reuses
+  `SparkSession.getActiveSession()` when one is alive and stops only a session it built —
+  `test_parity_live.py` sorts first and holds a session-scoped `local[2]` session, and an
+  unguarded `getOrCreate` borrowed it (dropping master and jars, splitting the seed into two data
+  files so no merge was exercised, turning the pin red) and then `stop()`ped it out from under every
+  later live test. The seed is `createDataFrame(...).coalesce(1).writeTo(...).append()` so the
+  cell holds at ONE data file under any master rather than needing its own context. The catalog
+  name is module-private (`v312legacy`), NOT `_live_parity.LIFECYCLE_SPARK_CATALOG`'s `local`
+  whose warehouse this module would otherwise repoint and `rmtree`, and nothing pops
+  `PYSPARK_SUBMIT_ARGS`, which would permanently disarm `_live_parity`'s Iceberg arming. The
+  repark-only assertions live in their own always-run test so real work is not reported as
+  skipped.
   pins: v3-12-legacy-delete-merge/C-003, C-004
 - [test_v3_dv_container_close.py](test_v3_dv_container_close.py) — **RP-7 (2026-09-02):**
   `test_v3_shared_puffin_container_close_live` runs the shared-Puffin close on both engines from

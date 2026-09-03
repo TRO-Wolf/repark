@@ -42,8 +42,18 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   after it, UPDATE, subquery DELETE, two legacy deletes on one data file, an untouched sibling
   keeping its own, copy-on-write leaving it alone) and two loud refusals: the plain-`WHERE` arm,
   which plans through the fork's own delete exec (`V3-UPGRADE-DV-PLAIN-1`), and a delete covering
-  two data files, which Spark SQL cannot write and so stays unmeasured (`V3-UPGRADE-DV-PART-1`).
-  pins: v3-12-legacy-delete-merge/C-001, C-002, C-003, C-004, C-005
+  two data files (`V3-UPGRADE-DV-PART-1`). Spark merges **every** applicable live position delete
+  that names a touched data file and removes **only the file-scoped** ones; it COMMITS the
+  covering-two-files shape and leaves that delete live forever. The engine cannot: the fork's
+  commit door admits an added DV over a live position delete only when the same commit removes
+  it, and removing a delete that covers two data files resurrects the untouched sibling's deleted
+  row. Both refusals carry an ANSI and a facade twin (row per entry point).
+  Two branch cells close `V3-DV-BRANCH-1`: a second MoR DELETE on a diverged branch must merge
+  the BRANCH's own DV (red before V3-12 — the close read `main`, wrote a fresh DV, and the commit
+  door refused with "already carries a live deletion vector"), and a legacy parquet delete that
+  exists only on a branch merges there. `branch_delete_files` reads `snapshot_for_ref`, not the
+  current snapshot, so a pin that passes by reading `main` is not available to it.
+  pins: v3-12-legacy-delete-merge/C-001, C-002, C-003, C-004, C-005, C-006
 - `declared_refuse.rs` — **FNP-15/16:** Spark-door parse-altitude refusals for the six
   unreachable names and the sketch family; passthrough attach pin.
   pins: fnp-15-16/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008

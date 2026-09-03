@@ -55,16 +55,17 @@ fn referenced_data_file_location(delete_file: &DataFile) -> Option<String> {
 pub(super) async fn collect_superseded_legacy_deletes(
     table: &Table,
     touched: &HashSet<&str>,
-    branch: Option<&str>,
+    snapshot_id: Option<i64>,
 ) -> Result<SupersededLegacyDeletes> {
     let mut superseded = SupersededLegacyDeletes::default();
     if touched.is_empty() {
         return Ok(superseded);
     }
     let metadata = table.metadata();
-    let snapshot = branch
-        .and_then(|branch| metadata.snapshot_for_ref(branch))
-        .or_else(|| metadata.current_snapshot());
+    let snapshot = match snapshot_id {
+        Some(id) => metadata.snapshot_by_id(id),
+        None => metadata.current_snapshot(),
+    };
     let Some(snapshot) = snapshot else {
         return Ok(superseded);
     };

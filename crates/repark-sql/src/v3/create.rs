@@ -565,3 +565,81 @@ async fn upgraded_v3_merge_delete_merges_a_legacy_parquet_position_delete_into_t
         3
     );
 }
+
+const MOR_V2_PARTITION_GRANULARITY: &str = "format_version = 2, extra_properties = MAP(\
+    ARRAY['write.delete.mode', 'write.merge.mode', 'write.delete.granularity'], \
+    ARRAY['merge-on-read', 'merge-on-read', 'partition'])";
+
+async fn seed_upgraded_legacy(door: &Door, table: &str, with_clause: &str, seeds: &[&str]) {
+    door.ok(&format!(
+        "CREATE TABLE ice.sales.{table} (id INT, name VARCHAR) WITH ({with_clause})"
+    ))
+    .await;
+    for values in seeds {
+        door.ok(&format!("INSERT INTO ice.sales.{table} VALUES {values}"))
+            .await;
+    }
+}
+
+fn merge_delete(table: &str, id: i32) -> String {
+    format!(
+        "MERGE INTO ice.sales.{table} AS t USING (SELECT {id} AS id) AS s ON t.id = s.id \
+         WHEN MATCHED THEN DELETE"
+    )
+}
+
+#[tokio::test]
+async fn ansi_plain_where_mor_delete_over_a_legacy_parquet_delete_refuses_loudly() {
+    let door = door_with_session_v3_opt_in().await;
+    seed_upgraded_legacy(&door, "plain", MOR_V2, &["(1, 'a'), (2, 'b'), (3, 'c')"]).await;
+    door.ok(&merge_delete("plain", 2)).await;
+    door.ok("ALTER TABLE ice.sales.plain SET PROPERTIES (format_version = 3)")
+        .await;
+
+    let message = door.err("DELETE FROM ice.sales.plain WHERE id = 3").await;
+
+    assert!(
+        message.contains("is still covered by a Parquet position-delete file")
+            && message.contains("loadPreviousDeletes"),
+        "V3-UPGRADE-DV-PLAIN-1 on the ANSI door: the plain-WHERE arm plans through the fork's \
+         own delete exec, which refuses before any IO: {message}"
+    );
+    assert_eq!(
+        live_delete_file_kinds(&door, "plain").await,
+        vec!["Parquet".to_string()],
+        "the refusal leaves the table exactly as the upgrade left it"
+    );
+}
+
+#[tokio::test]
+async fn ansi_partition_scoped_legacy_delete_refuses_loudly() {
+    let door = door_with_session_v3_opt_in().await;
+    seed_upgraded_legacy(
+        &door,
+        "partsc",
+        MOR_V2_PARTITION_GRANULARITY,
+        &["(1, 'a'), (2, 'b')", "(3, 'c'), (4, 'd')"],
+    )
+    .await;
+    door.ok(
+        "MERGE INTO ice.sales.partsc AS t USING (SELECT 1 AS id UNION ALL SELECT 3) AS s \
+         ON t.id = s.id WHEN MATCHED THEN DELETE",
+    )
+    .await;
+    door.ok("ALTER TABLE ice.sales.partsc SET PROPERTIES (format_version = 3)")
+        .await;
+
+    let message = door.err(&merge_delete("partsc", 2)).await;
+
+    assert!(
+        message.contains("Cannot commit deletion vector")
+            && message.contains("live position delete file"),
+        "V3-UPGRADE-DV-PART-1 on the ANSI door: a delete covering two data files is not removable \
+         without resurrecting the sibling's row, so the fork's commit door refuses: {message}"
+    );
+    assert_eq!(
+        surviving_ids(&door, "partsc").await,
+        vec![2, 4],
+        "the refusal leaves every row the upgrade left"
+    );
+}

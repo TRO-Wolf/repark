@@ -2553,18 +2553,21 @@ the pin rather than obeying it.
   in the one `RowDelta` — DV `record_count` 3. A data file this commit does NOT touch keeps its
   own legacy delete live. Copy-on-write writes no DV, so a legacy delete is left exactly as it was.
 - **Apache Spark** — the same, in the same statements: Java `BaseDVFileWriter.loadPreviousDeletes`
-  unions the previous positions and `RowDelta.removeDeletes` drops the superseded file. The
-  removal is scoped to **file-scoped** deletes — `referenced_data_file` is NULL on every
-  Spark-written position delete, so file scope comes from equal `file_path` lower/upper bounds
-  (`ContentFileUtil.isFileScoped`). On a partitioned table with two data files in one partition
-  Spark writes one delete file per data file and merges only the touched one, leaving the
-  sibling's live. Summary counts on the merging commit: `added-dvs 1`, `added-position-deletes 2`,
+  unions the previous positions and `RowDelta.removeDeletes` drops the superseded file. Spark
+  merges the positions of **every** applicable live position delete that names a touched data
+  file, and **removes only the file-scoped ones** — a delete covering more than one data file
+  stays live, because removing it would resurrect the rows it deletes in the files this commit
+  did not touch (`V3-UPGRADE-DV-PART-1`). `referenced_data_file` is NULL on every Spark-written
+  position delete, so file scope comes from equal `file_path` lower/upper bounds
+  (`ContentFileUtil.isFileScoped`). At the default `write.delete.granularity = 'file'` a
+  partitioned table with two data files in one partition gets one delete file per data file, and
+  only the touched one is merged and removed, leaving the sibling's live. Summary counts on the merging commit: `added-dvs 1`, `added-position-deletes 2`,
   `added-delete-files 1`, `removed-delete-files 1`, `removed-position-delete-files 1`,
   `removed-position-deletes 1`.
   *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-02 V3-12 transcript)*.
-- **Pin** — `crates/repark-spark/src/tests/v3_legacy_delete.rs` (nine cells: merge, append after,
-  UPDATE, subquery DELETE, two legacy deletes, untouched sibling, copy-on-write, and the two
-  refusals), `crates/repark-sql/src/v3/create.rs::upgraded_v3_merge_delete_merges_a_legacy_parquet_position_delete_into_the_dv`,
+- **Pin** — `crates/repark-spark/src/tests/v3_legacy_delete.rs` (thirteen cells: merge, append
+  after, UPDATE, subquery DELETE, two legacy deletes, untouched sibling, copy-on-write, two
+  refusals and two diverged-branch cells), `crates/repark-sql/src/v3/create.rs::upgraded_v3_merge_delete_merges_a_legacy_parquet_position_delete_into_the_dv`,
   `python/repark/tests/test_v3_legacy_delete_merge.py` (facade + a live Spark cell at matched layout).
   Pins: v3-12-legacy-delete-merge/C-002, C-003, C-004.
 - **Rationale** — FIXED. The merge is engine-side and needs no fork change: the fork's
@@ -2582,30 +2585,73 @@ the pin rather than obeying it.
   left exactly as the upgrade left it and no Puffin is written.
 - **Apache Spark** — merges, exactly as `V3-UPGRADE-DV-1` records; the statement spelling makes no
   difference to Spark. *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-02 V3-12 transcript)*.
-- **Pin** — `crates/repark-spark/src/tests/v3_legacy_delete.rs::a_plain_where_merge_on_read_delete_over_a_legacy_delete_still_refuses_loudly`.
+- **Pin** — `crates/repark-spark/src/tests/v3_legacy_delete.rs::a_plain_where_merge_on_read_delete_over_a_legacy_delete_still_refuses_loudly`,
+  `crates/repark-sql/src/v3/create.rs::ansi_plain_where_mor_delete_over_a_legacy_parquet_delete_refuses_loudly`,
+  `python/repark/tests/test_v3_legacy_delete_merge.py::test_plain_where_mor_delete_over_a_legacy_parquet_delete_refuses_loudly`.
   Pins: v3-12-legacy-delete-merge/C-003, C-004.
 - **Rationale** — DECLARED and dated; a loud refusal, never a silent supersede. The refusal lives in
   the pinned fork's delete exec, and the fork pin is fixed for this unit. TRIGGER for lifting:
   either a fork `write_deletion_vectors` that merges previous deletes, or the engine widening its
   predicate-DML hole so a plain-`WHERE` MoR statement commits through `prepare_row_delta_deletes`.
 
-### V3-UPGRADE-DV-PART-1 — DECLARED (V3-12, 2026-09-02): a position delete covering two data files still refuses
+### V3-UPGRADE-DV-PART-1 — DECLARED (V3-12, 2026-09-02): a position delete covering two data files refuses; Spark commits
 
-- **repark** — a position delete whose `file_path` bounds are NOT equal covers more than one data
-  file (this engine writes one under `write.delete.granularity = 'partition'`). It is not merged,
-  so the fork's commit door refuses: "Cannot commit deletion vector for `…`: live position delete
-  file `…` still applies to that data file and would be silently superseded by the DV at read
-  time". The table is left untouched and no Puffin is written.
-- **Apache Spark** — UNMEASURED. Spark SQL never writes one: on a partitioned table with two data
-  files in one partition its MoR DELETE emits one file-scoped delete file per data file, so the
-  shape could not be built from the oracle door. Java's `BaseDVFileWriter` refuses an unscoped
-  previous delete (`validatePreviousDeletes`), which is consistent with refusing here.
-  *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-02 V3-12 transcript; the cell could not be built.)*
-- **Pin** — `crates/repark-spark/src/tests/v3_legacy_delete.rs::a_partition_scoped_legacy_delete_still_refuses_loudly`.
+- **repark** — a position delete whose `file_path` bounds are absent or unequal covers more than
+  one data file (this engine and Spark both write one under
+  `write.delete.granularity = 'partition'`). The fork's commit door refuses: "Cannot commit
+  deletion vector for `…`: live position delete file `…` still applies to that data file and
+  would be silently superseded by the DV at read time". The table is left untouched and no
+  Puffin is written.
+- **Apache Spark** — **commits.** Measured at the matched layout: a v2 partitioned merge-on-read
+  table at `write.delete.granularity = 'partition'` with two data files in `part = 7`;
+  `DELETE … WHERE id IN (1, 3)` writes ONE parquet delete file (`record_count` 2,
+  `referenced_data_file` NULL, `file_path` bounds **absent** from the manifest), upgraded to v3;
+  `MERGE … WHEN MATCHED THEN DELETE` at id 2 (which touches the first data file only) commits to
+  `.delete_files` = [PARQUET `record_count` 2 **still live**, PUFFIN `record_count` 2 referencing
+  the touched data file], summary `added-dvs 1` / `added-position-deletes 2` /
+  `added-delete-files 1` / `total-delete-files 2` / `total-position-deletes 4` and **no**
+  `removed-delete-files`; rows `[(4,'d',7)]`, `next-row-id` 4, lineage `[(4,1,2)]`. A following
+  append leaves `[(4,1,2),(9,4,5)]` at `next-row-id` 5. A second `MERGE … DELETE` at id 4, on the
+  **other** data file, likewise commits a second DV and the parquet delete is **still live** —
+  Spark never removes it, even once every data file it covers carries a DV.
+  *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-02 V3-12 transcript.)*
+- **Pin** — `crates/repark-spark/src/tests/v3_legacy_delete.rs::a_partition_scoped_legacy_delete_still_refuses_loudly`,
+  `crates/repark-sql/src/v3/create.rs::ansi_partition_scoped_legacy_delete_refuses_loudly`,
+  `python/repark/tests/test_v3_legacy_delete_merge.py::test_partition_scoped_legacy_delete_refuses_loudly`.
   Pins: v3-12-legacy-delete-merge/C-002, C-003, C-004.
-- **Rationale** — DECLARED and dated. Never pin an unmeasured value: the merge lifts only for the
-  shapes the oracle produced. TRIGGER for lifting: a measured Spark cell for a delete file covering
-  two data files, from any door that can write one.
+- **Rationale** — DECLARED and dated; a loud refusal, never a silent supersede. The merge itself
+  is engine-side and cheap (the per-row `file_path` filter already reads only the touched file's
+  positions), but the **commit** is not reachable at the pinned fork: `validate_fresh_dvs_only`
+  admits an added DV over a live position delete only when the same commit **removes** that
+  delete, and removing this one is measurably wrong — it deletes the rows the untouched sibling
+  data file still needs deleted, resurrecting id 3 in the cell above. Merging without removing
+  therefore cannot be expressed, and the engine refuses rather than corrupt. TRIGGER for lifting:
+  a fork `validate_fresh_dvs_only` that admits a non-file-scoped position delete whose positions
+  the committed DV provably carries (or a fork port of `BaseDVFileWriter.loadPreviousDeletes`
+  that owns the merge). **Correction (2026-09-02):** the row this replaces called the shape
+  UNMEASURED and cited Java's `validatePreviousDeletes` as consistent with refusing. Both were
+  wrong — the cell is measurable from Spark SQL and Spark commits it.
+
+### V3-DV-BRANCH-1 — FIXED (V3-12, 2026-09-02): a second merge-on-read DELETE on a diverged branch merged the wrong snapshot's deletion vectors
+
+- **repark** — the v3 deletion-vector container close now runs against the snapshot the statement
+  SCANNED, which for a `to_branch` write is the branch head, not `main`. Before the fix it always
+  closed against the current snapshot: a second merge-on-read DELETE on a branch whose head had
+  moved past `main` found no existing DV, wrote a FRESH one, and the fork's commit door then
+  refused with "the current snapshot already carries a live deletion vector for that data file",
+  leaving the branch un-writable after its first DV. A v3 MoR table, `CREATE BRANCH b`, then two
+  `MERGE … WHEN MATCHED THEN DELETE` statements on `t.branch_b` now leave ONE branch DV of
+  `record_count` 2, the branch reading `[1, 4]`, and `main` unmoved at `[1, 2, 3, 4]`.
+- **Apache Spark** — commits both statements; the second merges into the branch's own DV.
+  *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-02 V3-12 transcript.)*
+- **Pin** — `crates/repark-spark/src/tests/v3_legacy_delete.rs::a_second_merge_on_read_delete_on_a_diverged_branch_merges_the_branch_only_dv`
+  and `::a_legacy_parquet_delete_that_exists_only_on_a_branch_merges_on_that_branch`.
+  Pins: v3-12-legacy-delete-merge/C-006.
+- **Rationale** — FIXED. Latent since RP-7 gave the close its partition map: the close took a
+  `snapshot_id` the engine always passed as `None`. `prepare_row_delta_deletes` now takes the
+  `snapshot_id` that `commit_target::snapshot_id_for_commit` already resolved for
+  `validate_from_snapshot` and the target scan, so the scan, the legacy-delete collection, the
+  container close and the commit validation all read ONE snapshot.
 
 ### BL-9 — a double-quoted string literal is an identifier on the SQL door
 

@@ -47,8 +47,13 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   which rename every data manifest away) are what hold that, and an eager walk reds them.
   Applicability is `delete_seq >= data_seq`, the same test the fork's commit door uses, with an
   unknown sequence erring toward "applies". A delete whose bounds cover MORE than one data file
-  is deliberately not collected: that shape is unmeasured on Spark, so it must keep hitting the
-  fork's loud refusal rather than be silently superseded.
+  is deliberately not collected. Spark DOES merge such a delete's positions for the touched file
+  (and never removes it, because it still covers other files), but that commit is unreachable at
+  the pinned fork: `validate_fresh_dvs_only` admits an added DV over a live position delete only
+  when the same commit REMOVES it, and removing this one resurrects the rows the untouched
+  sibling data file still needs deleted. Collecting it would therefore build a correct DV that
+  the commit door rejects anyway, so the shape keeps hitting the loud refusal
+  (`V3-UPGRADE-DV-PART-1`, measured 2026-09-02) rather than being silently superseded.
   pins: v3-12-legacy-delete-merge/C-002, C-003, C-004
 - `dv_close.rs` — v3 `RowDelta` DV-container close. `prepare_row_delta_deletes` writes
   V2 parquet position deletes or calls `close_touched_dv_containers_with_partitions` on V3, then
@@ -59,9 +64,16 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   BEFORE the container close (so the fork's `write_dv_blobs` writes one union, and the DV's
   `record_count` counts it once) and appends the superseded delete files to `close.removed`, so
   `apply_close`'s `remove_deletes_many` carries them in the same commit and the fork's
-  `validate_fresh_dvs_only` sees the supersede instead of refusing. `prepare_row_delta_deletes`
-  takes the commit `branch` so the merge set is read off the same snapshot the commit door checks.
-  pins: v3-12-legacy-delete-merge/C-003
+  `validate_fresh_dvs_only` sees the supersede instead of refusing.
+  **V3-12 C-006:** `prepare_row_delta_deletes` takes the `snapshot_id`
+  `commit_target::snapshot_id_for_commit` already resolved for the target scan and
+  `validate_from_snapshot`, and hands it to BOTH the legacy-delete collection and the fork
+  container close. The close had always been given `None`, which the fork resolves to the CURRENT
+  snapshot — so a `to_branch` merge-on-read write closed against `main`, found none of the
+  branch's own deletion vectors, wrote a second DV for a data file that already had one, and the
+  commit door refused. One resolved snapshot id now serves the scan, the collection, the close
+  and the commit validation. Registry `V3-DV-BRANCH-1`.
+  pins: v3-12-legacy-delete-merge/C-003, C-006
   **V3-9 (2026-09-02):** the position map takes `get_mut` before allocating a key and the V2
   `referenced` set allocates one `String` per distinct path, not one per row (600k rows:
   41.3 → 29.3 ms and 37.3 → 23.9 ms).

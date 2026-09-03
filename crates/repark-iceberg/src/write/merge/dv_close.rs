@@ -34,7 +34,7 @@ pub(super) async fn prepare_row_delta_deletes(
     pairs: &[PositionDeletePair],
     concurrency: WriteConcurrency,
     known_partitions: KnownPartitions,
-    branch: Option<&str>,
+    snapshot_id: Option<i64>,
 ) -> Result<PreparedDeletes> {
     match table.metadata().format_version() {
         FormatVersion::V2 => {
@@ -64,7 +64,7 @@ pub(super) async fn prepare_row_delta_deletes(
                     kind: PreparedKind::PositionDeletes(Vec::new()),
                 });
             }
-            let plan = plan_deletion_vectors(table, pairs, known_partitions, branch).await?;
+            let plan = plan_deletion_vectors(table, pairs, known_partitions, snapshot_id).await?;
             let abort_paths = plan
                 .close
                 .added
@@ -102,7 +102,7 @@ async fn plan_deletion_vectors(
     table: &Table,
     pairs: &[PositionDeletePair],
     mut known_partitions: KnownPartitions,
-    branch: Option<&str>,
+    snapshot_id: Option<i64>,
 ) -> Result<DvCommitPlan> {
     let mut new_positions: HashMap<String, Vec<u64>> = HashMap::new();
     for (path, position) in pairs {
@@ -120,16 +120,20 @@ async fn plan_deletion_vectors(
     }
     known_partitions.retain(|path, _| new_positions.contains_key(path));
     let touched: HashSet<&str> = new_positions.keys().map(String::as_str).collect();
-    let superseded = collect_superseded_legacy_deletes(table, &touched, branch).await?;
+    let superseded = collect_superseded_legacy_deletes(table, &touched, snapshot_id).await?;
     for (path, positions) in &superseded.positions {
         if let Some(slot) = new_positions.get_mut(path) {
             slot.extend(positions.iter().copied());
         }
     }
-    let mut close =
-        close_touched_dv_containers_with_partitions(table, &new_positions, None, &known_partitions)
-            .await
-            .map_err(iceberg_err)?;
+    let mut close = close_touched_dv_containers_with_partitions(
+        table,
+        &new_positions,
+        snapshot_id,
+        &known_partitions,
+    )
+    .await
+    .map_err(iceberg_err)?;
     if !superseded.is_empty() {
         close.removed.extend(superseded.files);
     }

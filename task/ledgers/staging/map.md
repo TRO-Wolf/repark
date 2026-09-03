@@ -42,6 +42,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   good: v3 reads and v3 appends are already correct, round-tripped through Spark, including the
   row lineage the format mandates. §4 answers A12's stated first question — adoption, through
   `register_table`, whose Spark signature is measured there.
+- [v3-12-legacy-delete-merge-ledger.md](v3-12-legacy-delete-merge-ledger.md) — Charter ledger — V3-12 · merge a legacy parquet position delete into the deletion vector
 
 ## Pointers
 - Up: [../map.md](../map.md)
