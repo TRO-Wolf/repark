@@ -5,13 +5,6 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
-- [api-freeze-ledger.md](api-freeze-ledger.md) — **API-FREEZE (2026-09-02), retiring in this
-  unit's last commit:** the owner answered the v1.0 API review `R0 yes` with every row decided at
-  its recommendation, so this unit records the decisions in the packet, writes the versioning
-  policy into [../docs/release.md](../../../docs/release.md), and registers the 888 frozen names
-  in [../docs/design/v1-0-api-freeze.json](../../../docs/design/v1-0-api-freeze.json) behind a
-  parity pin that reds on a lost name or a moved required parameter and stays green on additions.
-  `risk_tier: standard`. Branch `docs/v1-0-api-freeze`.
 - [ex-2-functions-math-bitwise-ledger.md](ex-2-functions-math-bitwise-ledger.md) —
   **EX-2 (2026-09-01), in flight:** the v0.7 example backfill's `F.*` math +
   bitwise family — the campaign pilot. One clause per batch; batch 1 covers

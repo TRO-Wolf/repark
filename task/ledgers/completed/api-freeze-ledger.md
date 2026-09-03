@@ -82,6 +82,6 @@ COVERAGE_ATTESTATION:
 
 ## Pointers
 
-- Up: [map.md](map.md)
+- Up: [map.md](../staging/map.md)
 - Register: [../../../docs/design/v1-0-api-freeze.json](../../../docs/design/v1-0-api-freeze.json)
 - Policy: [../../../docs/release.md](../../../docs/release.md) "Versioning policy"
