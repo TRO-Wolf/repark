@@ -34,6 +34,12 @@ pass), a cited row with no `#+ <row> —` heading, the Step 6 program count put 
 `V3-COV-88` in the row 6 residual cell (the word-boundary case), and the invented row 6 ask and
 the paraphrased row 9 ask restored. Each was applied alone and reverted; every one was red.
 
+**Gates, round 2 — all 0.** `make preflight`, `make verify`, `make py-test` (554 passed),
+`make check-map-sync check-ledger-grammar check-ledgers check-docs-compaction check-manifest`,
+`python3 scripts/ledger_lifecycle.py check --base a0cd39e`, the always-run half (84 passed,
+81 skipped) and the live sandwich co-collected — 220 passed in 119.36 s. No golden value moved
+in this round: the matrix totals of §3 stand as measured.
+
 ## ERRATA (2026-09-03, critic remediation — where this block contradicts §1–§8 below, it wins)
 
 The Critic verdict was FAIL on bookkeeping and test adequacy; every matrix value reproduced and
