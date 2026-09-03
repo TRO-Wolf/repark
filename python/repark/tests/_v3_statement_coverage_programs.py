@@ -32,12 +32,11 @@ _P_LINEAGE = "SELECT id, _row_id, _last_updated_sequence_number FROM {t} ORDER B
 _P_DELETES = "SELECT content, file_format, record_count FROM {t}.delete_files ORDER BY 1, 2, 3"
 _P_SNAPSHOTS = "SELECT operation FROM {t}.snapshots ORDER BY committed_at"
 _P_FILES = "SELECT content, record_count FROM {t}.files ORDER BY 1, 2"
-_P_SEQ = "SELECT id, _last_updated_sequence_number FROM {t} ORDER BY id"
 
 _FLAT_PROBES = (_P_FLAT, _P_LINEAGE)
-_PART_PROBES = (_P_PART, _P_SEQ)
+_PART_PROBES = (_P_PART, _P_LINEAGE)
 _FLAT_MOR_PROBES = (_P_FLAT, _P_LINEAGE, _P_DELETES)
-_PART_MOR_PROBES = (_P_PART, _P_SEQ, _P_DELETES)
+_PART_MOR_PROBES = (_P_PART, _P_LINEAGE, _P_DELETES)
 
 
 class _Seed(NamedTuple):
@@ -451,7 +450,7 @@ _PROGRAMS: tuple[_Program, ...] = (
         "alter",
         "pmor",
         ("ALTER TABLE {t} ADD COLUMN extra INT",),
-        ("SELECT id, name, part, extra FROM {t} ORDER BY id", _P_SEQ),
+        ("SELECT id, name, part, extra FROM {t} ORDER BY id", _P_LINEAGE),
     ),
     _Program(
         "alter-set-tblproperties",

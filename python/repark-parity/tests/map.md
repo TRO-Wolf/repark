@@ -167,6 +167,13 @@ JVM, no repark required). See [../map.md](../map.md).
   requires a non-empty cell and anchors on that row's own `^#+ <row> —` heading; and the Step 6
   pin asserts `_TOTALS`' program count appears in the track's dated line, which is how the stale
   80 survived the first cut.
+  **RP-8 (2026-09-03):** `V3-COV-3` was FIXED by the repin, so the TRIGGER pin covers `V3-COV-6`
+  alone and a new pin, `test_v3_cov_3_records_the_repin_that_retired_it`, holds the closed
+  reading — the date, the fork PR that closed it, the twelve-of-twelve measurement and the
+  renamed cell — so a row cannot be quietly re-opened or its evidence dropped. `_TOTALS` is
+  unchanged: the nine partitioned rows were re-measured on both engines with the `_row_id` probe
+  restored and every verdict held.
+  pins: rp-8-repin-f21-f22/C-007
   pins: v3-cov-statement-coverage/C-001, C-004, C-005
 - `test_v1_gate_docs.py` — **V1-GATE (2026-09-03; tree pins):** the v1.0 gate audit is written
   and true. The north star's §3.1 must carry twenty numbered audit rows, every one glyphed ✅

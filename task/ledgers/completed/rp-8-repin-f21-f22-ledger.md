@@ -18,9 +18,13 @@ express it, and filed two dated DECLARED refusals (`V3-UPGRADE-DV-PLAIN-1`,
 Family stays frozen: datafusion 54.1.0, datafusion-spark 54.1.0, arrow*/parquet 58.4.0,
 rust-toolchain 1.96.0.
 
-**Not in this unit:** any dependency change beyond the one `[patch.crates-io]` rev; `V3-COV-3`,
-whose registry row and `docs/design/v3-statement-coverage.md` are NOT on this base (V3-COV is
-unmerged — see §11); a Spark-visible design choice not measured (HALT).
+**Not in this unit:** any dependency change beyond the one `[patch.crates-io]` rev; a
+Spark-visible design choice not measured (HALT).
+
+**Base moved mid-unit.** This unit started at `5285a32`, where `V3-COV-3` and
+`docs/design/v3-statement-coverage.md` did not exist — V3-COV was unmerged. It merged as `#321`
+(`9cef991`) while the unit was running, and the branch was rebased onto it, so C-007 is measured
+rather than deferred. §11 records the reading taken while it was still blocked.
 
 ## PROPOSITION LEDGER — RP-8 — 2026-09-03
 
@@ -31,9 +35,10 @@ unmerged — see §11); a Spark-visible design choice not measured (HALT).
 | C-003 | The two refusals lift at Spark's measured values on all three doors: the plain-`WHERE` DELETE and UPDATE arms merge (§6 cell A2), and a delete covering two data files merges and stays LIVE (§12 P2/P4). Registry rows → FIXED with the date; the north star and STATUS say so. | Nine door pins (Spark SQL, ANSI, facade) plus two live Spark comparisons; the four documents. | **PROVEN** | `v3_legacy_delete.rs` 12 passed (the two refusal cells became three merge cells); `v3/create.rs` ANSI twins 57 passed; facade `test_v3_legacy_delete_merge.py` 6 passed with the live twins co-collected. Values in §7. Registry: `V3-UPGRADE-DV-PLAIN-1` and `V3-UPGRADE-DV-PART-1` FIXED (RP-8, 2026-09-03). Citation: `docs/spark-sql-iceberg-parity.md`. |
 | C-004 | `F-v3-10-partition-file-order` closes: the delegated partitioned plain `INSERT INTO` takes Spark's exact `1→2 2→3 3→4 4→0 5→1` map, deterministically, and the V3-11 pin asserts the map instead of the sets. `V3-FILEORDER-1` stays DECLARED and widens to cover the fork's `INSERT INTO` path. | The flipped pin run twelve times; the registry and north-star text; the meta-pin. | **PROVEN** | `partitioned_table_upgrade_and_append_match_spark` green **12 of 12** consecutive runs (§9) where V3-11 measured the two halves flapping 5/10 and 4/10 independently. `F-v3-10-partition-file-order` FIXED; `V3-FILEORDER-1` DECLARED, unchanged in kind. `test_live_v3_docs.py::test_the_partition_file_order_residual_is_closed_by_the_fork_drain` re-aimed. Citation: `crates/repark-iceberg/src/write/map.md`. |
 | C-005 | `V3-DV-BRANCH-1`'s two branch cells stay green at the new pin — the close still receives the snapshot the statement SCANNED, not the current one. | The two cells, unchanged. | **PROVEN** | `a_second_merge_on_read_delete_on_a_diverged_branch_merges_the_branch_only_dv` and `a_legacy_parquet_delete_that_exists_only_on_a_branch_merges_on_that_branch` both green with no source change: `snapshot_id` still reaches the close, and now also reaches the legacy collect inside it. Citation: `crates/repark-spark/src/tests/map.md`. |
+| C-007 | `V3-COV-3` closes: the delegated partitioned plain `INSERT INTO` `_row_id` mapping is Spark's in 12 of 12 runs at the new pin, the coverage matrix's nine partitioned rows pin `_row_id` again on BOTH engine goldens, and the verdict totals do not move. | Twelve runs of the V3-COV cell; the re-measured goldens; the live matrix; the docs meta-pin. | **PROVEN** | 12 of 12 gave `{1:0, 2:1, 3:2, 4:3}` (§13), where V3-COV measured 7 of 12 that way and 5 of 12 `{1:2, 2:3, 3:0, 4:1}`. `_P_SEQ` is deleted and every partitioned program's lineage probe is `_P_LINEAGE` again; nine rows re-measured on repark and live on Spark, and `_verdict` over the new halves is unchanged — **71 EQUAL / 1 REFUSED / 9 DIVERGES**, so §1's totals and the 267 cells stand. `V3-COV-3` FIXED (RP-8, 2026-09-03); `test_v3_partitioned_insert_row_id_mapping_is_one_of_two_measured_orders` became `…_is_stable_and_spark_ordered`. Citation: `python/repark/tests/map.md`. |
 | C-006 | The record says what landed: registry, north star §3 and §3.1, STATUS, the v3 track, the fork-sync pin row, the handoff F-21/F-22 rows, and every touched `map.md` in lockstep — with the `c1d6c9de` pin in the one place the V1-GATE meta-pin reads it. | `make check-map-sync check-ledger-grammar check-ledgers check-docs-compaction check-manifest`; `ledger_lifecycle.py check`; `make py-test`. | **PROVEN** | §10 gate table. `test_v1_gate_docs.py` re-aimed at `c1d6c9de` (the north star's fork-side heading and `Cargo.toml`), 14 passed. STATUS compacted back under its 25,000 B ceiling in the same edit. Citation: `docs/design/format-v3-track.md`. |
 
-VERDICT: 6 clauses, 6 PROVEN, 0 OPEN, 0 REJECTED.
+VERDICT: 7 clauses, 7 PROVEN, 0 OPEN, 0 REJECTED.
 
 ```yaml
 COVERAGE_ATTESTATION:
@@ -45,7 +50,7 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-spark/src/tests/v3_legacy_delete.rs, crates/repark-sql/src/v3/create.rs, python/repark/tests/test_v3_legacy_delete_merge.py]
     - id: AT-2
       status: ATTACKED
-      evidence: Plain-WHERE DELETE and plain-WHERE UPDATE; a partition-scoped delete over the touched file and then over the other one; the data manifests hidden and required to refuse; twelve consecutive runs of the file-order cell.
+      evidence: Plain-WHERE DELETE and plain-WHERE UPDATE; a partition-scoped delete over the touched file and then over the other one; the data manifests hidden and required to refuse; twelve consecutive runs of each file-order cell, the V3-COV one on a fresh warehouse each time.
       artifacts: [crates/repark-spark/src/tests/v3_legacy_delete.rs, crates/repark-iceberg/src/write/merge/dv_close.rs, crates/repark-spark/src/tests/v3_upgrade.rs]
     - id: AT-3
       status: ATTACKED
@@ -72,12 +77,12 @@ COVERAGE_ATTESTATION:
       artifacts: [Cargo.toml, Cargo.lock, docs/fork-sync.md]
     - id: AT-9
       status: ATTACKED
-      evidence: Three registry rows flip to FIXED with the date, V3-FILEORDER-1 stays DECLARED and widens, and the two meta-pins that read those rows are re-aimed so a silent regrowth of the old claim reds.
-      artifacts: [docs/spark-sql-iceberg-parity.md, python/repark-parity/tests/test_live_v3_docs.py, python/repark-parity/tests/test_v1_gate_docs.py]
+      evidence: Four registry rows flip to FIXED with the date, V3-FILEORDER-1 stays DECLARED and widens, and the three meta-pins that read those rows are re-aimed so a silent regrowth of the old claim reds.
+      artifacts: [docs/spark-sql-iceberg-parity.md, python/repark-parity/tests/test_live_v3_docs.py, python/repark-parity/tests/test_v1_gate_docs.py, python/repark-parity/tests/test_v3_cov_docs.py]
     - id: AT-10
       status: ATTACKED
-      evidence: Six clauses pinned; maps in lockstep; the walk table and the twelve-run determinism table are measured on this clone, not predicted; C-005a is reported BLOCKED with its reason rather than claimed.
-      artifacts: [crates/repark-iceberg/src/write/merge/map.md, crates/repark-spark/src/tests/map.md, python/repark/tests/map.md]
+      evidence: Seven clauses pinned; maps in lockstep; the walk table and both twelve-run determinism tables are measured on this clone, not predicted; the V3-COV goldens are re-measured on both engines rather than hand-edited, and the verdict totals are recomputed rather than restated.
+      artifacts: [crates/repark-iceberg/src/write/merge/map.md, crates/repark-spark/src/tests/map.md, python/repark/tests/map.md, python/repark/tests/_v3_statement_coverage_spark.py]
   complete: true
 ```
 
@@ -169,19 +174,23 @@ map; it asserted only the id sets while the residual was open.
 | `make check-map-sync check-ledger-grammar check-ledgers check-docs-compaction check-manifest` | 0 |
 | `python3 scripts/ledger_lifecycle.py check --base origin/main` | 0 |
 | `cargo test -p repark-iceberg -p repark-spark -p repark-sql --locked` | 0 |
-| live cells (`REPARK_PARITY_LIVE=1`, `test_v3_legacy_delete_merge.py` co-collected with `test_parity_live.py::test_live_disclosure_still_diverges`) | 0 |
+| live: `test_v3_legacy_delete_merge.py` co-collected with `test_parity_live.py::test_live_disclosure_still_diverges` (20 passed) | 0 |
+| live: `test_v3_statement_coverage.py` co-collected the same way (178 passed, 1 min 44 s) | 0 |
+| live: `test_v3_dv_container_close.py`, `test_v3_live_oracle.py`, `test_v3_upgrade.py` co-collected the same way (29 passed) | 0 |
 
-## 11. C-005a — not actionable on this base (BLOCKED, reported not claimed)
+The venv must be re-synced (`uv sync --locked --extra record …`) immediately before a live run:
+`make py-test` / `make preflight` re-sync without the `record` extra and uninstall `pyspark`, so a
+live collection straight after them fails on `ModuleNotFoundError: No module named 'pyspark'`
+rather than on anything the diff did.
 
-The brief's C-005a asks for `V3-COV-3` → FIXED and a row flip in
-`docs/design/v3-statement-coverage.md`. Neither exists at `origin/main` `5285a32`: the V3-COV unit
-is unmerged, living on `origin/feat/v3-cov-statement-coverage` (`3fa3a26`…`4b731ee`), and
-`git merge-base --is-ancestor 4b731ee origin/main` is false. Nothing was invented here.
+## 11. C-005a while it was blocked (recorded, not claimed)
 
-The measurement the flip depends on WAS taken, on the equivalent delegated cell — the partitioned
-plain `INSERT INTO` `_row_id` mapping — and is §9's twelve-run table: 12 of 12 give Spark's
-mapping at the new pin. Whoever lands V3-COV can flip `V3-COV-3` on that evidence, or re-run its
-own cell; the fork behaviour it declared is gone either way.
+At the unit's original base `5285a32` the brief's C-005a was not actionable: `V3-COV-3` and
+`docs/design/v3-statement-coverage.md` did not exist, and V3-COV lived unmerged on
+`origin/feat/v3-cov-statement-coverage`. The reading taken then was BLOCKED with the measurement
+banked — §9's twelve-run table on the equivalent delegated cell — rather than a flip invented
+against a row that was not in the tree. V3-COV merged as `#321` shortly after; the branch was
+rebased onto `9cef991` and C-007 measures the real cell.
 
 ## 12. Residuals after this unit
 
@@ -189,4 +198,22 @@ own cell; the fork behaviour it declared is gone either way.
 |---|---|
 | `V3-FILEORDER-1` | DECLARED, widened — the fork's `INSERT INTO` path now follows the same ascending rule, so the divergence from Spark's `HashMap` bucket order is one rule on every writer instead of two |
 | `V3-UPGRADE-V4-1` | DECLARED, untouched |
-| `V3-COV-3` | DECLARED on an unmerged branch; §11 |
+| `V3-COV-4` / `V3-COV-5` / `V3-COV-7` / `V3-COV-8` | BACKLOG, untouched — none is fork-routed |
+| `V3-COV-6` | DECLARED, untouched — its TRIGGER is a fork metadata-table scan, not this repin |
+
+## 13. The V3-COV-3 cell, twelve runs (C-007)
+
+`_partitioned_row_id_mapping` from `python/repark/tests/test_v3_statement_coverage.py`, run twelve
+times consecutively at `c1d6c9de`, each on its own fresh warehouse.
+
+| Runs | Mapping |
+|---|---|
+| 12 | `{1:0, 2:1, 3:2, 4:3}` — Spark's |
+| 0 | `{1:2, 2:3, 3:0, 4:1}` — the permutation V3-COV measured 5 times in 12 |
+
+The nine partitioned matrix rows were then re-measured on both engines with `_P_LINEAGE` restored
+(`insert-overwrite-partition-static-values`, `-static-select`, `-dynamic`,
+`delete-where-partitioned-mor`, `delete-where-partitioned-cow`, `update-where-partitioned-mor`,
+`update-partition-key-cow`, `merge-partitioned-mor`, `alter-add-column-partitioned`). Every one
+agrees with live Spark on the `_row_id` column, so no verdict moves: 71 EQUAL, 1 REFUSED,
+9 DIVERGES, 267 cells — §1's totals are unchanged and were not edited.

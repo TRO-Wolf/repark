@@ -117,7 +117,10 @@ statement programs across 12 statement classes and all 7 `CALL system.*` procedu
 comparison cells, 71 EQUAL, 1 refused by both engines, 9 rows filed (`DML-1`, `G3-E8` ×2,
 `B-MOR-3` already stood; `V3-COV-3` and `V3-COV-6` DECLARED fork-routed and `V3-COV-4`,
 `V3-COV-5`, `V3-COV-7`, `V3-COV-8` BACKLOG are new), 2 defects FIXED in the same unit
-(`V3-COV-1`, `V3-COV-2`), 0 statement classes left unmeasured.** The six new rows are audited
+(`V3-COV-1`, `V3-COV-2`), 0 statement classes left unmeasured.** **RP-8 (2026-09-03):**
+`V3-COV-3` is FIXED — the repin to `c1d6c9de` takes the fork ask it named (F-20, `#261`), the
+delegated partitioned `INSERT INTO` gives Spark's `_row_id` mapping in 12 of 12 runs, and the
+nine partitioned rows pin `_row_id` again on both goldens; the verdict totals are unchanged. The six new rows are audited
 in the surface-residuals table above, not only in this line. The matrix, its fixtures and every
 cell are
 [docs/design/v3-statement-coverage.md](../../../docs/design/v3-statement-coverage.md); the

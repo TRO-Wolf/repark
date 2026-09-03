@@ -823,34 +823,35 @@ them, and the document is ordered by surface, never by date.
 - **Rationale** — FIXED, not declared. A v1.0 gate that promises v3 row lineage cannot ship a
   lineage projection that raises an internal error after a legal schema evolution.
 
-### V3-COV-3 — partitioned `INSERT INTO` assigns `_row_id` by an unstable file order
+### V3-COV-3 — FIXED (RP-8, 2026-09-03): partitioned `INSERT INTO` assigns `_row_id` by ascending partition order
 
 - **repark** — one `INSERT INTO t VALUES …` of four rows across two identity partitions on a v3
-  table assigns row lineage from the manifest's data-file order, and that order is not stable:
-  twelve runs of the identical statement on an identical seed produced
-  `{1:0, 2:1, 3:2, 4:3}` seven times and `{1:2, 2:3, 3:0, 4:1}` five times. Values, row counts,
-  `_last_updated_sequence_number` and every other probe are unaffected and Spark-equal; only the
-  `_row_id` assignment moves. The RePark-owned writers are stable: the same partitioned layout
-  written by CTAS (`write::file_order::ascending_partition_order`) is `{1:0, 2:1, 3:2, 4:3}` on
-  every run, and an unpartitioned `INSERT` is stable and Spark-equal.
+  table assigns row lineage from the manifest's data-file order. Filed 2026-09-03 (V3-COV) because
+  that order was **not stable**: twelve runs of the identical statement on an identical seed
+  produced `{1:0, 2:1, 3:2, 4:3}` seven times and `{1:2, 2:3, 3:0, 4:1}` five times. At fork pin
+  `c1d6c9de` it is stable and Spark's: **twelve of twelve** runs of the same cell give
+  `{1:0, 2:1, 3:2, 4:3}`. The RePark-owned writers were always stable — the same partitioned
+  layout written by CTAS (`write::file_order::ascending_partition_order`) is
+  `{1:0, 2:1, 3:2, 4:3}` on every run, and an unpartitioned `INSERT` is stable and Spark-equal.
 - **Apache Spark** — assigns `{1:0, 2:1, 3:2, 4:3}` for the same seed.
-  *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03.)*
-- **Pin** — `python/repark/tests/test_v3_statement_coverage.py::test_v3_partitioned_insert_row_id_mapping_is_one_of_two_measured_orders`
-  (the instability, asserted as the two measured permutations plus the invariant that the block is
-  `[0, 1, 2, 3]`) and the incidental control
-  `…::test_v3_ctas_partitioned_row_id_mapping_is_stable_and_spark_ordered`
-- **Rationale** — DECLARED 2026-09-03, fork-routed. This narrows a claim
+  *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03; re-measured at the new pin by RP-8.)*
+- **Pin** — `python/repark/tests/test_v3_statement_coverage.py::test_v3_partitioned_insert_row_id_mapping_is_stable_and_spark_ordered`
+  and the incidental control
+  `…::test_v3_ctas_partitioned_row_id_mapping_is_stable_and_spark_ordered`; plus the nine
+  partitioned rows of the matrix, whose lineage probe is
+  `SELECT id, _row_id, _last_updated_sequence_number` again on both engine goldens
+- **Rationale** — FIXED. This narrowed a claim
   [V3-FILEORDER-1](#v3-fileorder-1--declared-v3-11-2026-09-02-same-commit-data-file-order-is-ascending-partition-value-not-sparks-hash-bucket-order)
-  states unqualified — *ascending partition value … applied once per commit*. That rule holds on
-  every writer RePark owns, and V3-11 pinned it on MERGE and CTAS; it does **not** hold on a
-  delegated `INSERT`, which V3-11 did not measure. A delegated `INSERT` runs inside the fork's
-  `iceberg_datafusion::IcebergTableProvider`, so RePark does not own the file set the commit sees
-  and cannot sort it the way `ascending_partition_order` sorts the writers it does own. TRIGGER:
-  **fork F-20 / `F-v3-10-partition-file-order`, taken at the next RP-8 repin** — the fork's
-  partitioned `insert_into` orders its fanout output deterministically (ascending partition),
-  after which this row retires and the partitioned programs can pin `_row_id` directly. Until then the partitioned rows of the coverage matrix pin
-  `_last_updated_sequence_number`, not `_row_id` — pinning an unstable value would be the
-  false green this registry exists to prevent.
+  states unqualified — *ascending partition value … applied once per commit*. That rule held on
+  every writer RePark owns, and V3-11 pinned it on MERGE and CTAS; it did **not** hold on a
+  delegated `INSERT`, which runs inside the fork's `iceberg_datafusion::IcebergTableProvider`
+  where RePark does not own the file set the commit sees. The TRIGGER this row named — **fork
+  F-20 / `F-v3-10-partition-file-order`, taken at the RP-8 repin** — landed as fork `#261`:
+  `FanoutWriter::close` drains its partition map in ascending partition-value order, so the rule
+  is now one rule on every writer that reaches a repark table. The partitioned rows of the
+  coverage matrix pin `_row_id` again. What remains is `V3-FILEORDER-1`: ascending is not Spark's
+  `HashMap` bucket order, and the two coincide only on collision-free monotonic partition sets —
+  `{10, 20}`, this matrix's seed, is one of them.
 
 ## 5. Facade drop-in semantics (DECLARED)
 

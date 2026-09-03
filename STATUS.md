@@ -131,20 +131,19 @@ in published history by explicit decision:
     **V3-9 (2026-09-02):** predicate DML's V2-only gate is lifted — MoR `DELETE`/`UPDATE …
     WHERE` on v3 write file-scoped Puffin DVs on three doors, created and adopted, Spark-equal
     (`V3-MOR-1` FIXED). **V3-10 (2026-09-02):** the in-place v2→v3 upgrade lands on three doors
-    (`V3-UPGRADE-1` FIXED). **RP-7 (2026-09-02):** the fork repin to `ff4764d3` (F-18) makes the
-    shared-Puffin container close Spark-equal — `V3-DV-1` **FIXED**.
+    (`V3-UPGRADE-1` FIXED). **RP-7 (2026-09-02):** the fork repin to `ff4764d3` (F-18) makes the shared-Puffin
+    container close Spark-equal — `V3-DV-1` **FIXED**.
     **LIVE-v3 (2026-09-02):** both live v3 legs green on `aws-acceptance` run 33635288918
     (`S3T-V3-1`), re-dispatched 2026-09-03 (run 33699342417) under V3-11's exact `_row_id`
-    assertion. **V3-11 (2026-09-02):** the engine orders one commit's data files by ascending
-    partition value before the manifest, so the MoR MERGE insert's `_row_id` is deterministic
-    and Spark-equal on that cell (`V3-ROWID-3` FIXED); Spark's own order is a Java `HashMap`
-    bucket artefact, so wider partition sets differ (`V3-FILEORDER-1` DECLARED).
+    assertion. **V3-11 (2026-09-02):** one commit's data files reach the manifest in ascending
+    partition order, so the MoR MERGE insert's `_row_id` is deterministic and Spark-equal
+    (`V3-ROWID-3` FIXED); Spark's order is a Java `HashMap` bucket artefact, so wider
+    partition sets differ (`V3-FILEORDER-1` DECLARED).
     **V3-12 (2026-09-02):** a legacy position delete merges into the new DV; the close reads
-    its branch (`V3-UPGRADE-DV-1` FIXED, `V3-DV-BRANCH-1`).
-    **RP-8 (2026-09-03):** repin to `c1d6c9de` (F-19/F-20/F-21/F-22) — the container close owns
-    the legacy-delete merge in one manifest pass and `FanoutWriter` drains ascending, so
-    RePark's 493-line walk is deleted and `V3-UPGRADE-DV-PLAIN-1`, `V3-UPGRADE-DV-PART-1`,
-    `F-v3-10-partition-file-order` are **FIXED**.
+    its branch (`V3-UPGRADE-DV-1` FIXED, `V3-DV-BRANCH-1`). **RP-8 (2026-09-03):** repin to
+    `c1d6c9de` (F-19..F-22) — the close owns that merge in one manifest pass and `FanoutWriter`
+    drains ascending, so RePark's 493-line walk goes and `V3-UPGRADE-DV-PLAIN-1`,
+    `V3-UPGRADE-DV-PART-1`, `V3-COV-3`, `F-v3-10-partition-file-order` are **FIXED**.
     **SCALE-v3 (2026-09-02):** the MW-7 `1e7 x 50` workload re-measured on v3 at the same knobs
     — **96 delete files against v2's 400** and 496 data files against 1,696, because a v3 delete
     is one Puffin vector per data file rewritten in place; the maintenance sequence ends at
