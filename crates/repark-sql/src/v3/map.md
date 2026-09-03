@@ -13,6 +13,13 @@ ANSI-door format-v3 test modules. `lib.rs` declares `#[cfg(test)] mod v3;`.
   SELECT round-trips ns values and Arrow types (pins: v3-6-v3-types/C-003).
   **V3-9:** the opt-in refusal must not claim merge-on-read is unserved
   (pins: v3-9-mor-predicate-dml-dv/C-006).
+  **V3-12:** `upgraded_v3_merge_delete_merges_a_legacy_parquet_position_delete_into_the_dv` is the
+  ANSI door's V3-12 cell — it lives here, not in `cow.rs`, because the upgrade needs
+  `door_with_session_v3_opt_in` (the real `ReparkSqlConfig`), which `cow.rs`'s extension-only
+  opt-in door cannot drive. `ansi_plain_where_mor_delete_over_a_legacy_parquet_delete_refuses_loudly`
+  and `ansi_partition_scoped_legacy_delete_refuses_loudly` are the ANSI twins of the two V3-12
+  refusals, so each entry point carries its own row rather than inheriting the Spark door's
+  (pins: v3-12-legacy-delete-merge/C-003, C-004).
   **V3-10:** `alter_set_properties_*` pin the ANSI door's in-place upgrade — `SET PROPERTIES
   (format_version = 3)` with the session opt-in installed as the real `ReparkSqlConfig`, its
   without-opt-in twin, pre-upgrade rows reading NULL lineage, the same-version request writing

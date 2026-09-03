@@ -128,6 +128,32 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_v3_live_oracle.py](test_v3_live_oracle.py) — **V3E-5 (2026-08-27):** nightly live oracle for the two V3E-3 fixtures — `REPARK_PARITY_LIVE=1` repark == Spark on partitioned-DV prune and equality-delete alongside DV, plus `.delete_files` kinds. RP-6: `test_partitioned_dv_update_commits_and_rewrite_still_refuses` pins Spark-equal `(id, _row_id, seq)` after live-DV UPDATE; `rewrite_position_delete_files` still refuses with rows and fixture bytes unchanged after the UPDATE. JVM-free twins stay in `test_v3e3_fixtures.py`. Critic remediation (2026-08-27): prune1 on Spark, combined DirLock, exact content sets, mirrored format, GAV full equality, version sort, COW, `py-format` single-line, meta-pin now asserts archive/dual-wire/diff allowlist. Formal CCC + cargo-deny/wheel remediation (2026-08-28): `chacha20` yanked and `thiserror` duplicate `skip`. PLAN-1 makes the ledger lookup lifecycle-aware across staging, completed, and archive, and checks the landed #253 commit instead of the current branch. **Nightly fix (2026-09-01):** the three live helpers now qualify `CALL <catalog>.system.register_table` through `LIFECYCLE_SPARK_CATALOG`; unqualified, Spark resolved it against `spark_catalog` and the CI leg had been red since its first run (2026-08-28). The north-star meta-pin now checks the row cites V3E-5 and the oracle version regardless of its status glyph, so an honest ⚠ does not red it. V3-7: `test_v3_merge_matched_update_live_cow_and_mor` cites the V3-7 ledger transcript (not `/tmp`) and live-gates COW/MoR matched-UPDATE MERGE. **V3-10 (2026-09-02):** `test_v3_upgrade_v2_to_v3_live_matches_spark` skips FIRST when the tier is off — its repark half duplicates `test_v3_upgrade.py::test_alter_upgrade_with_the_opt_in_serves_v3_lineage` and cost 0.32 s of call time on every JVM-free run (test wall 0.52 s → 0.20 s). Its Spark helper reuses the default Ivy cache like `_live_parity.build_spark_iceberg_engine` instead of a per-call `mkdtemp`, and picks the newest Hadoop pointer by PARSED version like `_materialize`, not by lexicographic `sorted(glob)` (which would pick `v9` over `v10`). It is not folded into `_live_subquery_where_dml_measurement`: that helper memoizes ONE session's cells behind a module-level dict and returns early on the second call, so adding upgrade statements to it would couple two units' measurements to one session's ordering. **V3-9 (2026-09-02):** `test_v3_mor_subquery_where_dml_live` cites the V3-9 transcript, runs the repark half JVM-free and live-gates the MoR subquery-`WHERE` DELETE / UPDATE lineage and `PUFFIN` delete-file format against Spark (pins: v3-9-mor-predicate-dml-dv/C-002, C-003, C-005). The Spark leg is one session for both modes: `_live_subquery_where_dml_measurement` measures the COW and MoR cells once and each test asserts its own pinned values against that measurement, so the file's live wall clock fell from 24.07 / 24.05 s to 23.39 / 22.74 s (pins: v3-9-mor-predicate-dml-dv/C-008). **RDF-1 (2026-09-02):** it read `completed/` by absolute path and reded the moment the archive ritual moved that ledger; both ledger reads now share `_ledger_text`, the staging/completed/archive lookup PLAN-1 already used for the V3E-5 meta-pin. **RP-7 (2026-09-02):** the two sibling live helpers dropped their per-call `spark.jars.ivy` `mkdtemp` + `rmtree`; on a runner with no local Iceberg jar that forced a full Maven resolve twice per nightly, and the default Ivy cache is what `_live_parity.build_spark_iceberg_engine` and the V3-10 helper already use.
   pins: rp-7-f18-repin/C-006 **RP-7 (2026-09-02):** the shared-Puffin container-close cell went to its own module rather than here — this file was 23 lines under the 1000-line cap.
   pins: rdf-1-position-delete-bounds/C-004
+- [test_v3_legacy_delete_merge.py](test_v3_legacy_delete_merge.py) — **V3-12 (2026-09-02):** the
+  facade door's cell for a v3 merge-on-read write over an upgraded table's legacy parquet
+  position delete. `_repark_legacy_merge_shape` and `_spark_legacy_merge_shape` run the SAME five
+  statements and are compared as one dict — the delete files before and after (format,
+  `record_count`, whether the entry names a data file) plus the surviving lineage — so nothing
+  in the pin depends on a generated file name. The Spark half runs `local[1]` with
+  `shuffle.partitions` and `default.parallelism` at 1: at `local[2]` the four-row `INSERT` splits
+  into TWO data files, the legacy delete lands on one and the new DV on the other, and no merge
+  is exercised at all. It borrows `_LIVE` / `_LIVE_SKIP` / `_ALLOW_CREATE_V3_KEY` /
+  `_v37_iceberg_runtime_jar` from `test_v3_live_oracle.py`. The second test is the incidental
+  control: a table that stays v2 keeps writing parquet position deletes and this engine leaves
+  TWO of them live for one data file where Spark rewrites one. The module also carries the facade
+  twins of both V3-12 refusals (plain-`WHERE`, and a delete covering two data files), so each
+  entry point has its own row. **Session discipline:** `_live_session` reuses
+  `SparkSession.getActiveSession()` when one is alive and stops only a session it built —
+  `test_parity_live.py` sorts first and holds a session-scoped `local[2]` session, and an
+  unguarded `getOrCreate` borrowed it (dropping master and jars, splitting the seed into two data
+  files so no merge was exercised, turning the pin red) and then `stop()`ped it out from under every
+  later live test. The seed is `createDataFrame(...).coalesce(1).writeTo(...).append()` so the
+  cell holds at ONE data file under any master rather than needing its own context. The catalog
+  name is module-private (`v312legacy`), NOT `_live_parity.LIFECYCLE_SPARK_CATALOG`'s `local`
+  whose warehouse this module would otherwise repoint and `rmtree`, and nothing pops
+  `PYSPARK_SUBMIT_ARGS`, which would permanently disarm `_live_parity`'s Iceberg arming. The
+  repark-only assertions live in their own always-run test so real work is not reported as
+  skipped.
+  pins: v3-12-legacy-delete-merge/C-003, C-004
 - [test_v3_dv_container_close.py](test_v3_dv_container_close.py) — **RP-7 (2026-09-02):**
   `test_v3_shared_puffin_container_close_live` runs the shared-Puffin close on both engines from
   the same partitioned v3 MoR seed and compares an engine-independent SHAPE (`_dv_close_shape`)

@@ -164,10 +164,13 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
     and Spark-equal on that cell (`V3-ROWID-3` FIXED); Spark's own order is a Java `HashMap`
     bucket artefact, so wider partition sets differ (`V3-FILEORDER-1` DECLARED) and partitioned
     plain-`INSERT` is fork ask **F-20**.
+    **V3-12 (2026-09-02):** a legacy position delete merges into the new DV; the close reads
+    its branch (`V3-UPGRADE-DV-1` FIXED, `V3-DV-BRANCH-1`); F-21/F-22 land at RP-8.
   - **Next:** lineage carry and merge-on-read are complete on every served DML shape
-    (`V3-COW-1`, `V3-MOR-1`, `V3-DV-1`, `V3-ROWID-3` FIXED); open v3 residuals are
-    `V3-FILEORDER-1` and `F-v3-10-partition-file-order` (fork F-20), `V3-UPGRADE-DV-1`
-    (unit **V3-12**), `V3-UPGRADE-V4-1`, `G3-E8` and `B-MOR-3`.
+    (`V3-COW-1`, `V3-MOR-1`, `V3-DV-1`, `V3-ROWID-3`, `V3-UPGRADE-DV-1` FIXED); open v3 residuals
+    are `V3-FILEORDER-1` and `F-v3-10-partition-file-order` (fork F-20, RP-8 repins),
+    `V3-UPGRADE-DV-PLAIN-1` and `V3-UPGRADE-DV-PART-1` (dated refusals; fork F-21/F-22, RP-8),
+    `V3-UPGRADE-V4-1`, `G3-E8` and `B-MOR-3`.
 <!-- /ws -->
 
 <!-- ws id=perf ledgers=perf- state=open -->

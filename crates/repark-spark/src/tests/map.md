@@ -31,12 +31,35 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   **partitioned** v2 table whose append takes Spark's id sets and sequence numbers (the
   per-partition file ORDER differs — `F-v3-10-partition-file-order`, so the pin asserts sets,
   not the id→row-id map; V3-11 re-measured that residual as fork-owned and flapping — the one
-  v3 write path repark cannot order). The legacy-parquet-position-delete refusal is
-  `V3-UPGRADE-DV-1`.
+  v3 write path repark cannot order). The legacy-parquet-position-delete cells moved to
+  `v3_legacy_delete.rs` in V3-12; the shared helpers (`seed_mor_four`, `merge_delete_sql`,
+  `upgrade`, `lineage`, `refuse`, `walk_puffin`) are `pub(super)` for that sibling.
   The V3-2 control `create_table.rs::or_replace_applies_requested_v3_and_alter_upgrades_with_opt_in`
   is this unit's too: its ALTER arm flipped from refuse to upgrade, so it no longer carries
   v3-2-create-v3-opt-in/C-008 (V3-10 negates that clause) and cites C-005 alone.
   pins: v3-10-upgrade-v2-to-v3/C-001, C-003, C-004, C-005
+- `v3_legacy_delete.rs` — **V3-12:** the Spark-SQL-door cells for a v3 merge-on-read write over an
+  upgraded table's legacy parquet position deletes. Seven merge cells (MERGE-DELETE and the append
+  after it, UPDATE, subquery DELETE, two legacy deletes on one data file, an untouched sibling
+  keeping its own, copy-on-write leaving it alone) and two loud refusals: the plain-`WHERE` arm,
+  which plans through the fork's own delete exec (`V3-UPGRADE-DV-PLAIN-1`), and a delete covering
+  two data files (`V3-UPGRADE-DV-PART-1`). Spark merges **every** applicable live position delete
+  that names a touched data file and removes **only the file-scoped** ones; it COMMITS the
+  covering-two-files shape and leaves that delete live forever. The engine cannot: the fork's
+  commit door admits an added DV over a live position delete only when the same commit removes
+  it, and removing a delete that covers two data files resurrects the untouched sibling's deleted
+  row — which is what `a_partition_scoped_legacy_delete_still_refuses_loudly`'s assertion message
+  now says, in place of an earlier draft that called the shape unmeasured on Spark. Both refusals carry an ANSI and a facade twin (row per entry point).
+  Two branch cells close `V3-DV-BRANCH-1`: a second MoR DELETE on a diverged branch must merge
+  the BRANCH's own DV (red before V3-12 — the close read `main`, wrote a fresh DV, and the commit
+  door refused with "already carries a live deletion vector"), and a legacy parquet delete that
+  exists only on a branch merges there. `branch_delete_files` reads `snapshot_for_ref`, not the
+  current snapshot, so a pin that passes by reading `main` is not available to it.
+  `measure_legacy_walk_cost` is the `#[ignore]`d before/after cell for the legacy-delete manifest
+  walk: it seeds one delete manifest per commit at `commit.manifest-merge.enabled = false` and
+  times one more MoR DELETE that finds ZERO candidates, so it isolates the walk from the read.
+  RP-8 re-measures it against the F-21/F-22 fork; it is not a wall-clock CI pin.
+  pins: v3-12-legacy-delete-merge/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - `v3_row_order.rs` — **V3-11 (2026-09-02):** same-commit data-file order. The ten-run pin
   `mor_merge_insert_takes_sparks_row_id_in_ten_consecutive_runs` replays the LIVE-v3 sequence
   ten times and requires Spark's exact `_row_id = 11` each time (it read 10 or 11 at random

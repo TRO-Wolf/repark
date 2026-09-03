@@ -23,7 +23,7 @@ async fn seed_v2(ctx: &SessionContext, catalogs: &CatalogRegistry, table: &str) 
     .await;
 }
 
-async fn upgrade(ctx: &SessionContext, catalogs: &CatalogRegistry, table: &str) {
+pub(super) async fn upgrade(ctx: &SessionContext, catalogs: &CatalogRegistry, table: &str) {
     run(
         ctx,
         catalogs,
@@ -32,7 +32,7 @@ async fn upgrade(ctx: &SessionContext, catalogs: &CatalogRegistry, table: &str) 
     .await;
 }
 
-async fn refuse(ctx: &SessionContext, catalogs: &CatalogRegistry, sql: &str) -> String {
+pub(super) async fn refuse(ctx: &SessionContext, catalogs: &CatalogRegistry, sql: &str) -> String {
     match execute(ctx, catalogs, sql).await {
         Ok(frame) => match frame.collect().await {
             Ok(_) => panic!("`{sql}` must refuse"),
@@ -42,7 +42,7 @@ async fn refuse(ctx: &SessionContext, catalogs: &CatalogRegistry, sql: &str) -> 
     }
 }
 
-async fn lineage(
+pub(super) async fn lineage(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     table: &str,
@@ -320,7 +320,12 @@ async fn append_after_an_engine_upgrade_assigns_lineage_like_spark() {
     );
 }
 
-async fn seed_mor_four(ctx: &SessionContext, catalogs: &CatalogRegistry, table: &str, mode: &str) {
+pub(super) async fn seed_mor_four(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    table: &str,
+    mode: &str,
+) {
     run(
         ctx,
         catalogs,
@@ -339,14 +344,14 @@ async fn seed_mor_four(ctx: &SessionContext, catalogs: &CatalogRegistry, table: 
     .await;
 }
 
-fn merge_delete_sql(table: &str, id: i32) -> String {
+pub(super) fn merge_delete_sql(table: &str, id: i32) -> String {
     format!(
         "MERGE INTO ice.sales.{table} AS t USING (SELECT {id} AS id) AS s ON t.id = s.id \
          WHEN MATCHED THEN DELETE"
     )
 }
 
-fn walk_puffin(dir: &std::path::Path, count: &mut usize) {
+pub(super) fn walk_puffin(dir: &std::path::Path, count: &mut usize) {
     if let Ok(entries) = std::fs::read_dir(dir) {
         for entry in entries.flatten() {
             let path = entry.path();
@@ -429,37 +434,6 @@ async fn copy_on_write_dml_after_an_engine_upgrade_matches_spark() {
             (4, Some(2), Some(2))
         ]
     );
-}
-
-#[tokio::test]
-async fn merge_on_read_delete_over_a_legacy_parquet_position_delete_refuses_loudly() {
-    let wh = TempDir::new().unwrap();
-    let (ctx, catalogs) = setup_allow_create_format_version_3(&wh).await;
-    seed_mor_four(&ctx, &catalogs, "legacy", "merge-on-read").await;
-    run(&ctx, &catalogs, &merge_delete_sql("legacy", 2)).await;
-    assert_eq!(delete_file_count(&catalogs, "legacy").await, 1);
-
-    upgrade(&ctx, &catalogs, "legacy").await;
-
-    let message = refuse(&ctx, &catalogs, &merge_delete_sql("legacy", 3)).await;
-    assert!(
-        message.contains("Cannot commit deletion vector")
-            && message.contains("live position delete file"),
-        "V3-UPGRADE-DV-1: the legacy parquet delete must refuse LOUDLY, never be superseded \
-         silently: {message}"
-    );
-    assert_eq!(
-        table_rows(&ctx, &catalogs, "ice.sales.legacy").await,
-        vec![
-            (1, "a".to_string()),
-            (3, "c".to_string()),
-            (4, "d".to_string())
-        ],
-        "the refusal leaves the table exactly as the upgrade left it"
-    );
-    let mut puffins = 0;
-    walk_puffin(wh.path(), &mut puffins);
-    assert_eq!(puffins, 0, "no DV is written when the merge refuses");
 }
 
 #[tokio::test]

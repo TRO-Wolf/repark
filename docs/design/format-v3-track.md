@@ -256,8 +256,13 @@ fork F-7. The opt-in v2-to-v3 upgrade still lands only after the engine can safe
 upgraded table.
 
 *V3-10 2026-09-02:* the guarded upgrade lands — `ALTER … 'format-version' = '3'` behind the
-create opt-in, on three doors, Spark-equal (registry `V3-UPGRADE-1`; residuals
-`V3-UPGRADE-V4-1`, `V3-UPGRADE-DV-1`).
+create opt-in, on three doors, Spark-equal (registry `V3-UPGRADE-1`; residual
+`V3-UPGRADE-V4-1`).
+
+*V3-12 2026-09-02:* the upgraded table's own legacy parquet position deletes stop blocking the
+next merge-on-read write — their positions are read back, unioned into the new DV, and the
+superseded files leave in the same `RowDelta` (registry `V3-UPGRADE-DV-1` FIXED; residuals
+`V3-UPGRADE-DV-PLAIN-1`, `V3-UPGRADE-DV-PART-1`).
 
 ### Step 5 — run the remaining product units on their real dependencies
 

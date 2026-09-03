@@ -9,6 +9,7 @@ else. The next pickup's `make ledger-archive` files everything here under
 
 ## Contents
 - [v3e-3-partitioned-eqdel-fixtures-ledger.md](../archive/2026-08/2026-08-25-v3e-3-partitioned-eqdel-fixtures-ledger.md) — V3E-3 — partitioned + equality-delete v3 fixtures
+- [v3-12-legacy-delete-merge-ledger.md](v3-12-legacy-delete-merge-ledger.md) — Charter ledger — V3-12 · merge a legacy parquet position delete into the deletion vector
 - [log1p-1-precise-kernels-ledger.md](log1p-1-precise-kernels-ledger.md) —
   **LOG1P-1 (2026-09-02):** `F.log1p` / `F.expm1` and both SQL doors call
   `f64::ln_1p` / `f64::exp_m1`. `risk_tier: standard`. Branch
@@ -27,12 +28,6 @@ else. The next pickup's `make ledger-archive` files everything here under
   procedures, the conf keys, format-v3, packaging and the error taxonomy. `risk_tier: standard`.
   Branch `docs/v1-0-api-review`. Deliverable:
   [../../../docs/design/v1-0-api-review-2026-09-02.md](../../../docs/design/v1-0-api-review-2026-09-02.md).
-  (2026-09-02):** deterministic same-commit data-file order. Closes `V3-ROWID-3` (the
-  merge-on-read MERGE insert's `_row_id`, 10 of 10 at Spark's value where it flapped 10/11) and
-  files `V3-FILEORDER-1` — the engine orders one commit's files by ascending partition value
-  where Spark uses a Java `HashMap` bucket index, so the two agree only on collision-free
-  monotonic partition sets. Its remediation round also retired the "the 4.1.2 oracle cannot
-  execute maintenance procedures" note six registry rows carried, re-measuring each.
 
 ## Pointers
 - Up: [../map.md](../map.md)
