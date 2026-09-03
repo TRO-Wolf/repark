@@ -1,8 +1,9 @@
 """LIVE-v3-M: the documents carry the first live v3 measurement; none of them still says pending.
 
 pins: live-v3-first-measurement/C-001, C-002, C-003
+pins: v1-gate-audit/C-007
 MUTATION: restore ❌ on the north-star row, drop run 33635288918 from the registry row or from
-STATUS, or drop a tier2-aws §6 leg row → this REDs.
+STATUS, drop the 33699342417 re-dispatch clause, or drop a tier2-aws §6 leg row → this REDs.
 """
 
 from __future__ import annotations
@@ -14,12 +15,16 @@ _GLUE_LEG = "test_v3_dv_dml_maintenance_against_glue"
 _S3T_LEG = "test_v3_dv_dml_maintenance_against_s3tables"
 _RUN_ID = "33635288918"
 _RUN_LINK = f"https://github.com/TRO-Wolf/repark/actions/runs/{_RUN_ID}"
+_TIGHTENED_RUN_ID = "33699342417"
+_TIGHTENED_RUN_LINK = f"https://github.com/TRO-Wolf/repark/actions/runs/{_TIGHTENED_RUN_ID}"
 _REGISTRY_HEADING = "### S3T-V3-1 — FIXED (LIVE-v3-M, 2026-09-02): both live v3 legs are green"
 _STALE = (
     "unmeasured",
     "nothing has run against AWS",
     "the first measurement is pending",
     "not yet run",
+    "have **not** been re-dispatched",
+    "the next `aws-acceptance` run is the confirmation",
 )
 
 
@@ -69,6 +74,16 @@ def test_registry_row_records_the_measured_run() -> None:
     assert "**Rationale** — FIXED by measurement" in row
     assert "is no longer BACKLOG" in row
     assert "python/repark/tests/test_v3_acceptance_local.py" in row
+
+
+def test_the_tightened_assertion_is_confirmed_by_a_live_run() -> None:
+    """C-006a: S3T-V3-1 names the re-dispatch that ran V3-11's exact inserted-row-id assertion."""
+    row = _registry_row(_REGISTRY_HEADING, "### V3-COW-1")
+    assert "confirmed live 2026-09-03" in row
+    assert _TIGHTENED_RUN_ID in row and _TIGHTENED_RUN_LINK in row
+    assert "a0fe83a" in row
+    assert "6 passed in 230.67s" in row
+    assert "no re-dispatch is outstanding" in row
 
 
 def test_northstar_live_row_is_green_and_dated() -> None:
