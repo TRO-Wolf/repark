@@ -2784,18 +2784,13 @@ the pin rather than obeying it.
 
 ### BL-15 — `expm1` composes `exp(x) - 1`, losing the tiny-`x` precision the name exists for
 
-- **repark** — `F.expm1(x)` is `PY_COMPOSED` as `exp(x) - 1`
-  ([docs/design/spark-function-parity.md](design/spark-function-parity.md) §4.4) and reproduces
-  the naive form bit for bit: `expm1(1e-08)` → `9.99999993922529e-09`, `expm1(1e-16)` → `0.0`.
-- **Apache Spark** — `Math.expm1`: `1.0000000050000001e-08` and `1e-16` respectively — the
-  fused form is the function's entire reason to exist. *(oracle: `math.expm1`, which mirrors
-  `java.lang.Math.expm1`; measured 2026-09-01 by the EX-2 pilot, which left the name on the
-  example backlog rather than teach the naive form.)*
-- **Pin** — `python/repark/tests/test_bl15_bl16_math_divergences.py::test_bl15_expm1_composes_exp_minus_one_today`
-  (asserts today's composed value so the fused fix is loud).
-- **Rationale** — BACKLOG, filed 2026-09-01 from the EX-2 pilot's measurement. The fix is a real
-  fused kernel (not a doc change); it rides an FNP numerics unit, and its example comes off the
-  backlog with it.
+> **FIXED (2026-09-02, LOG1P-1).** `F.expm1` / SQL `expm1` call `f64::exp_m1` (NULL-propagating,
+> numeric coerce to Float64) on both SQL doors and the facade. `expm1(1e-16)` is `1e-16`;
+> `expm1(1e-08)` is `math.expm1(1e-08)`, not `exp(x)-1`. Sibling `log1p` is the matching
+> `f64::ln_1p` kernel (Spark SQL NULLs `x <= -1`; tiny-arg `log1p(1e-16)` is `1e-16`). Kernel:
+> `crates/repark-functions/src/spark_log1p.rs`. Pins:
+> `python/repark/tests/test_bl15_bl16_math_divergences.py::test_bl15_expm1_matches_spark_precise_kernel`,
+> `python/repark/tests/test_log1p_1.py`. Oracle: live PySpark 4.1.2, 2026-09-02.
 
 ### BL-16 — `hypot` squares before the root, overflowing where Spark rescales
 

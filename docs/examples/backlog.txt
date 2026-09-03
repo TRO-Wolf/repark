@@ -353,7 +353,6 @@ F.every
 F.exists
 F.explode
 F.explode_outer
-F.expm1
 F.expr
 F.extract
 F.filter
@@ -427,7 +426,6 @@ F.levenshtein
 F.like
 F.listagg
 F.locate
-F.log1p
 F.lower
 F.lpad
 F.ltrim
