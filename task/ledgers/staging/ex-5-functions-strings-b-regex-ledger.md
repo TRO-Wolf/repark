@@ -5,7 +5,7 @@
 UTF-8 / regex family PR merges, or when the owner closes the slate row.
 
 **Unit:** EX-5 · **Date:** 2026-09-03 · **Model:** grok-4.6 (continuation of glm-5.3-flash) ·
-**Branch:** `feat/ex-5-functions-strings-regex` · **Base:** `d7e2c4a` (dispatch base `d7e2c4a`)
+**Branch:** `feat/ex-5-functions-strings-regex` · **Base:** `887695c` as merged (dispatch base `d7e2c4a`)
 **Slate:** [briefs/example-backfill.md](../../../briefs/example-backfill.md).
 **Ruling:** owner, 2026-08-31, v0.7 example documentation; one clause per batch.
 
@@ -13,9 +13,10 @@ UTF-8 / regex family PR merges, or when the owner closes the slate row.
 
 **Writable paths:** `docs/examples/functions/`, `docs/examples/backlog.txt`, the
 `BACKLOG_BASELINE` constant in `scripts/check_example_coverage.py`, lockstep
-`map.md` files, and this ledger with its `staging/map.md` row. Closed:
-`crates/`, `python/repark/src/`, `python/repark/tests/`, the divergence registry,
-every other `scripts/` line, `.github/`, `STATUS.md`, every other ledger.
+`map.md` files, this ledger with its `staging/map.md` row, `docs/spark-sql-iceberg-parity.md`
+§7, and `python/repark/tests/` for the three silent-divergence pins. Closed:
+`crates/`, `python/repark/src/`, every other `scripts/` line, `.github/`,
+`STATUS.md`, every other ledger.
 
 ## Scope
 
@@ -35,17 +36,20 @@ F.rlike F.like F.ilike`
 
 | ID | Clause | Proof obligation | Verdict |
 |---|---|---|---|
-| C-001 | Batch lands runnable local examples for the 27 roster names the live oracle confirms, in eight files under `docs/examples/functions/`, every asserted value measured against live PySpark 4.1.2 + Iceberg 1.11.0 before it was written and every `COVERS` entry exercised by an assertion on that measured value; those 27 leave `docs/examples/backlog.txt` and `BACKLOG_BASELINE` moves down by exactly 27, 844 → 817, with no other `scripts/` change; the six names `F.split`, `F.regexp_extract`, `F.sentences`, `F.elt`, `F.validate_utf8`, `F.replace` stay backlog rows with both engines' values recorded; the gate's static half and its `--require-execute` leg both exit 0. | Red-first (33 roster names on the base backlog), the oracle table, the eight scripts green on repark and on Spark, the counts line, the recorded gate exit codes. | **PROVEN** |
+| C-001 | Batch lands runnable local examples for the 27 roster names the live oracle confirms, in eight files under `docs/examples/functions/`, every asserted value measured against live PySpark 4.1.2 + Iceberg 1.11.0 before it was written and every `COVERS` entry exercised by an assertion on that measured value; those 27 leave `docs/examples/backlog.txt` and `BACKLOG_BASELINE` moves down by exactly 27, 654 → 627 as merged (844 → 817 at dispatch), with no other `scripts/` change; the six names `F.split`, `F.regexp_extract`, `F.sentences`, `F.elt`, `F.validate_utf8`, `F.replace` stay backlog rows with both engines' values recorded; FN-ELT-1, FN-REGEX-POSIX-1 and FN-LIKE-ESCEND-1 are filed in the registry with pins asserting repark's current answer; the gate's static half and its `--require-execute` leg both exit 0. | Red-first (33 roster names on the dispatch backlog), the oracle table, the eight scripts green on repark and on Spark, the three pins, the counts line, the recorded gate exit codes. | **PROVEN** |
 
 `LOGIC_SCORE` = **1/1 `PROVEN`**. Citation: `scripts/map.md`.
 
 ## Red-first
 
-At dispatch base `d7e2c4a`, `BACKLOG_BASELINE = 844` and every one of the 33 roster
-names is a row of `docs/examples/backlog.txt` (measured by `git show origin/main`).
-None has a `COVERS` entry. Removing those 33 rows without examples would red the
-gate with one finding per name; this batch closes 27 of those findings and leaves
-the six measured drops listed.
+**At dispatch** (`d7e2c4a`): `BACKLOG_BASELINE = 844` and every one of the 33 roster
+names is a row of `docs/examples/backlog.txt`. None has a `COVERS` entry. Removing
+those 33 rows without examples would red the gate with one finding per name; this
+batch closes 27 of those findings and leaves the six measured drops listed.
+
+**As merged** (`887695c` on `origin/main`, this branch at `a70c8f6`): sibling EX
+batches have already moved the ratchet; this unit's own delta remains 27 names
+(654 → 627). The live counts line is in Gates below.
 
 ## Oracle table (live PySpark 4.1.2 + Iceberg 1.11.0, `TZ=UTC`, zulu-17)
 
@@ -107,24 +111,55 @@ Recorded 2026-09-03 on this tree after the files landed.
 | `make check-map-sync` | **0** |
 | `make check-ledger-grammar` | **0** |
 | `make check-ledgers` | **0** |
-| `uv run --no-sync ruff check docs/examples` | **0** |
-| `uv run --no-sync ruff format --check docs/examples` | **0** |
+| `uv run --no-sync ruff check docs/examples python/repark/tests` | **0** |
+| `uv run --no-sync ruff format --check docs/examples python/repark/tests` | **0** |
+| `.venv/bin/python -m pytest python/repark/tests/test_fn_elt_out_of_range.py python/repark/tests/test_fn_regex_posix_class.py python/repark/tests/test_fn_like_escape_end.py -q` | **0** (6 passed) |
+| pin mutations (scratch copies): elt raise / regex `[1,0,4]` / like `[True]` | **1 red of 1** each |
 
-Counts line, both legs identical:
+Counts line, both legs identical, as merged on this tree:
 
-`example-coverage: 913 public names (catalog=28, column=40, dataframe=150, functions=444, io=42, ml=28, session=41, ta=86, types=32, window=22); 94 covered; 817 backlog; 2 exceptions; 23 examples`
+`example-coverage: 913 public names (catalog=28, column=40, dataframe=150, functions=444, io=42, ml=28, session=41, ta=86, types=32, window=22); 284 covered; 627 backlog; 2 exceptions; 71 examples`
 
-(was `67 covered; 844 backlog; 15 examples` before this batch: +27 names, +8 files).
+At dispatch (`d7e2c4a`) the same delta read `94 covered; 817 backlog; 23 examples` (was `67 covered; 844 backlog; 15 examples`: +27 names, +8 files).
 
 ## Cost
 
+The dollar figure and wall-clock span below are the Grok continuation / remediation
+leg only (the GLM first-pass is not billed here).
+
 | Item | Value |
 |---|---|
-| Wall-clock start | 2026-09-03 11:44:16 UTC |
-| Wall-clock end | 2026-09-03 11:51:39 UTC |
+| Wall-clock start (first land) | 2026-09-03 11:44:16 UTC |
+| Wall-clock end (first land) | 2026-09-03 11:51:39 UTC |
+| Remediation start | 2026-09-03 12:17:53 UTC |
 | Model | grok-4.6 (continuation of glm-5.3-flash) |
-| Disk at start | 569G free on `/` (68% used) |
+| Grok cost | $0.60 (continuation / remediation leg only) |
+| Disk at start | 592G free on `/` (67% used) |
 | Oracle | PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, `TZ=UTC`, zulu-17 |
+
+## Registry rows filed
+
+`FN-ELT-1`, `FN-REGEX-POSIX-1` and `FN-LIKE-ESCEND-1` (BACKLOG) in
+`docs/spark-sql-iceberg-parity.md` §7, each with its pin
+(`test_fn_elt_out_of_range.py`, `test_fn_regex_posix_class.py`,
+`test_fn_like_escape_end.py`) and `pins:` citations in
+`python/repark/tests/map.md` and `scripts/map.md`. Their current wrong values
+are pinned so the fix reds on purpose.
+
+`F.replace` (bare-string arm: repark treats a bare `str` as a literal, Spark
+resolves it as a column name and refuses `UNRESOLVED_COLUMN`) is wrapper
+semantics: disclosed in this ledger, §8 drop-in class — no pin.
+
+Recorded, not built (prose-bullet class, no pin), live 2026-09-03:
+
+- `F.overlay(F.lit("Spark"), F.lit("XY"), -1)` — Spark `'XYSpark'`; repark
+  refuses `negative substring length not allowed`.
+- `F.position(F.lit("SQL"), F.lit("Spark SQL"), F.lit(4))` — Spark `7`; repark
+  `TypeError: position() takes from 1 to 2 positional arguments but 3 were given`
+  (no three-argument start form).
+- `F.split_part(F.lit("a,b,c"), F.lit(","), F.lit(0))` — both error, different
+  classes: Spark `SparkRuntimeException [INVALID_INDEX_OF_ZERO]` SQLSTATE 22003;
+  repark `PySparkException: split_part: the index 0 is invalid`.
 
 ```yaml
 COVERAGE_ATTESTATION:
@@ -152,21 +187,21 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: Asserted cells are Spark's values at the file's exact inputs; a Spark-disagreeing cell was not written. Backlog ratchet is down-only 844 to 817.
-      artifacts: [docs/examples/backlog.txt, scripts/check_example_coverage.py]
+      artifacts: [docs/examples/backlog.txt, scripts/check_example_coverage.py, docs/spark-sql-iceberg-parity.md]
     - id: AT-7
       status: N/A
       justification: Documentation examples over a six-row frame; no system-breaking resource path.
     - id: AT-8
       status: ATTACKED
-      evidence: F.replace has no shared wrapper spelling; F.split / F.sentences / F.regexp_extract are disclosed engine gaps; F.validate_utf8 raises the same error class with a different Python type.
+      evidence: F.replace is a silent facade-spelling class (bare str is a literal here, a column name on PySpark, UNRESOLVED_COLUMN) disclosed in the ledger, §8 drop-in class, no pin; F.split / F.sentences / F.regexp_extract are disclosed engine gaps; F.validate_utf8 raises the same error class with a different Python type.
       artifacts: [task/ledgers/staging/ex-5-functions-strings-b-regex-ledger.md]
     - id: AT-9
       status: N/A
       justification: Example scripts exit nonzero on a mismatch; there is no service to observe.
     - id: AT-10
       status: ATTACKED
-      evidence: The coverage gate execute leg runs every example; swapping the eight files onto live Spark is 8/8 pass, so a wrong expected list would have failed that harness.
-      artifacts: [scripts/check_example_coverage.py, docs/examples/functions/regex.py, docs/examples/functions/utf8.py]
+      evidence: The coverage gate execute leg runs every example; swapping the eight files onto live Spark is 8/8 pass; FN-ELT-1 / FN-REGEX-POSIX-1 / FN-LIKE-ESCEND-1 pins assert repark's current answer so a fix reds them.
+      artifacts: [scripts/check_example_coverage.py, python/repark/tests/test_fn_elt_out_of_range.py, python/repark/tests/test_fn_regex_posix_class.py, python/repark/tests/test_fn_like_escape_end.py]
   complete: true
 ```
 

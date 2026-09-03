@@ -1553,6 +1553,57 @@ the pin rather than obeying it.
   month-end anchor moves silently across a short month. The pin codifies today's
   repark values so the fix reds on purpose.
 
+### FN-ELT-1 — `elt` out of range answers NULL; Spark raises INVALID_ARRAY_INDEX
+
+- **repark** — `F.elt(F.lit(3), F.lit('a'), F.lit('b'))` and `F.elt(F.lit(0), …)`
+  answer NULL (`[None]` on a one-row frame). In-range `n=1` / `n=2` answer `'a'` /
+  `'b'`.
+- **Apache Spark** — the same out-of-range cells raise
+  `ArrayIndexOutOfBoundsException [INVALID_ARRAY_INDEX]` (index 3 or 0 out of
+  bounds, the array has 2 elements, SQLSTATE 22003). In-range cells agree.
+  *(oracle: recorded — live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03, `TZ=UTC`,
+  zulu-17.)*
+- **Pin** — `python/repark/tests/test_fn_elt_out_of_range.py::test_elt_index_three_answers_null`
+  (and `test_elt_index_zero_answers_null`; codifies repark's current `None` so
+  the fix reds it on purpose).
+- **Rationale** — BACKLOG, intent to FIX. Filed from the EX-5 remediation round:
+  the example dropped `F.elt` over this silent NULL-vs-raise. A consumer that
+  treats NULL as "no such element" never sees Spark's error.
+
+### FN-REGEX-POSIX-1 — POSIX `[[:alpha:]]` is honoured; Spark parses a union bracket
+
+- **repark** — over `['a1b2 Ünï_9', 'foo', 'aabbaa']`,
+  `F.regexp_count(s, '[[:alpha:]]')` is `[3, 3, 6]` and
+  `F.rlike(s, '[[:alpha:]]')` is `[True, True, True]` (Rust honours the POSIX
+  class).
+- **Apache Spark** — Java parses the POSIX class as a union bracket:
+  `regexp_count` is `[1, 0, 4]` and `rlike` is `[True, False, True]` on the same
+  frame. *(oracle: recorded — live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03,
+  `TZ=UTC`, zulu-17.)*
+- **Pin** —
+  `python/repark/tests/test_fn_regex_posix_class.py::test_regexp_count_posix_alpha_counts_letters`
+  (and `test_rlike_posix_alpha_matches_every_row`; codifies repark's current
+  `[3, 3, 6]` / `[True, True, True]` so the fix reds it on purpose).
+- **Rationale** — BACKLOG, intent to FIX. Filed from the EX-5 remediation round.
+  A script that counts letters with the POSIX class gets Spark's union-bracket
+  count instead, silently.
+
+### FN-LIKE-ESCEND-1 — `like` with a pattern ending in the escape char answers False
+
+- **repark** — `F.like(F.lit('ab'), F.lit('ab\\'))` (pattern ends in the escape
+  char) answers `False`. The control `F.like(F.lit('a\\b'), F.lit('a\\\\b'))` is
+  `True`.
+- **Apache Spark** — the same ending-escape cell raises
+  `AnalysisException [INVALID_FORMAT.ESC_AT_THE_END]` SQLSTATE 42601 (`The
+  escape character is not allowed to end with.`). The control is `True` on both
+  engines. *(oracle: recorded — live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03,
+  `TZ=UTC`, zulu-17.)*
+- **Pin** —
+  `python/repark/tests/test_fn_like_escape_end.py::test_like_pattern_ending_in_escape_answers_false`
+  (codifies repark's current `False` so the fix reds it on purpose).
+- **Rationale** — BACKLOG, intent to FIX. Filed from the EX-5 remediation round.
+  A malformed LIKE pattern that Spark refuses is a silent non-match here.
+
 ### G6-3 — DATE→INT: Spark refuses; repark yields days-since-epoch
 
 > **CLOSED 2026-08-15.** `CAST`/`TRY_CAST` between `DATE` and any signed integer width now

@@ -68,5 +68,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 - [ex-12-functions-aggregates-a-ledger.md](ex-12-functions-aggregates-a-ledger.md) —
 - [ex-6-functions-datetime-a-ledger.md](ex-6-functions-datetime-a-ledger.md) —
 - [ex-5-functions-strings-b-regex-ledger.md](ex-5-functions-strings-b-regex-ledger.md) —
+  **EX-5 (2026-09-03), in flight:** the v0.7 example backfill for the `F.*` string-search,
+  slicing, UTF-8 and regex family — 27 names in eight examples, backlog 654 → 627 as merged
+  (844 → 817 at dispatch); six names stay on the backlog; remediation filed FN-ELT-1,
+  FN-REGEX-POSIX-1 and FN-LIKE-ESCEND-1. `risk_tier: standard`.
+  Branch `feat/ex-5-functions-strings-regex`.
+  Slate: [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md).
+
 ## Pointers
 - Up: [../map.md](../map.md)

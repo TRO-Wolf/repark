@@ -42,6 +42,20 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (a NULL sub-array is dropped; Spark answers `NULL`). Each asserts repark's current value,
   so the fix reds it on purpose.
   pins: ex-8-functions-arrays/C-001
+- [test_fn_elt_out_of_range.py](test_fn_elt_out_of_range.py) — **EX-5 remediation
+  (2026-09-03):** FN-ELT-1 pin. Out-of-range `elt` (index 3 and 0) answers NULL;
+  Spark 4.1.2 raises `INVALID_ARRAY_INDEX`. Asserts repark's current `None`.
+  pins: ex-5-functions-strings-b-regex/C-001
+- [test_fn_regex_posix_class.py](test_fn_regex_posix_class.py) — **EX-5 remediation
+  (2026-09-03):** FN-REGEX-POSIX-1 pin. `regexp_count` / `rlike` of `[[:alpha:]]`
+  honour the POSIX class (`[3, 3, 6]` / `[True, True, True]`); Spark parses a
+  union bracket (`[1, 0, 4]` / `[True, False, True]`).
+  pins: ex-5-functions-strings-b-regex/C-001
+- [test_fn_like_escape_end.py](test_fn_like_escape_end.py) — **EX-5 remediation
+  (2026-09-03):** FN-LIKE-ESCEND-1 pin. A LIKE pattern ending in the escape char
+  answers `False`; Spark raises `INVALID_FORMAT.ESC_AT_THE_END`. Control
+  `like('a\\b', 'a\\\\b')` is True on both.
+  pins: ex-5-functions-strings-b-regex/C-001
 - [test_log1p_1.py](test_log1p_1.py) — **LOG1P-1 (2026-09-02):** three-door `log1p` /
   `expm1` pins (Spark SQL, ANSI `repark.sql()`, facade), tiny-arg vs composed form,
   SEM-1 incidentals. Live Spark cell lives in `test_parity_live.py` on the
