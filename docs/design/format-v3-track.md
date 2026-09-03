@@ -308,6 +308,18 @@ cross-run, uncontrolled ratio — the COW control moved 1.22x at identical knobs
 [scale-v3-mw7-ledger.md](../../task/ledgers/archive/2026-09/2026-09-02-scale-v3-mw7-ledger.md). The tag waits until every north-star matrix row is green or has a dated, pinned
 DECLARED disposition.
 
+*Step 6 state, dated 2026-09-03 (V1-GATE).* Four of the five are done: the live acceptance legs
+(LIVE-v3-M, run 33635288918, re-dispatched as run 33699342417), the scale workload above, the
+nightly v3 oracle (green since 2026-09-02), and **the v1.0 API review, answered 2026-09-02** —
+`R0 yes` at every recommendation, with 888 names frozen in
+[v1-0-api-freeze.json](v1-0-api-freeze.json) behind `python/repark-parity/tests/test_api_freeze.py`
+and the versioning policy in [docs/release.md](../release.md). **Full v3 statement coverage is
+the one that is not done**: V1-GATE looked for a discharge and found none — the nightly v3 leg is
+ten cells over two fixtures, not the statement matrix, and no statement-coverage harness exists in
+this tree at any format version. It is queued as **V3-COV** on
+[briefs/next-sequence.md](../../briefs/next-sequence.md) and named on the north star's gate line;
+the gate audit itself is [the north star](../../task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md) §3.1.
+
 FNP, TA performance, dbt, and the general correctness backlog may run while the fork lane is
 blocked. They do not replace or delay a ready v3 unit.
 
