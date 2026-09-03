@@ -17,7 +17,7 @@ LOG1P-1 (2026-09-02): `check_example_coverage.py` `BACKLOG_BASELINE` 844 → 842
 pins: log1p-1-precise-kernels/C-003
 
 EX-6 batch datetime-a (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE`
-777 → 744 after the EX-9/EX-10/EX-11 merge (written 842 → 809 at the dispatch
+723 → 690 after the EX-9/EX-10/EX-11/EX-8/EX-7 merges (written 842 → 809 at the dispatch
 base 84c1801) — 33 `F.*` datetime arithmetic and parts names covered by seven new
 examples; `F.add_months` (Spark `2023-07-29` versus repark `2023-07-31` on
 `2024-02-29` minus 7 months, pinned as FN-ADDMONTHS-1) and `F.months_between`

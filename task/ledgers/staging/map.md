@@ -62,14 +62,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `register_table`, whose Spark signature is measured there.
 
 - [ex-11-functions-hash-url-random-ledger.md](ex-11-functions-hash-url-random-ledger.md) —
+- [ex-8-functions-arrays-ledger.md](ex-8-functions-arrays-ledger.md) —
+- [ex-7-functions-datetime-b-ledger.md](ex-7-functions-datetime-b-ledger.md) —
 - [ex-6-functions-datetime-a-ledger.md](ex-6-functions-datetime-a-ledger.md) —
-  **EX-6 (2026-09-03), in flight:** the backfill's `F.*` datetime arithmetic and
-  parts batch — 33 names covered by seven examples, the backlog ratchet −33
-  (777 → 744 as merged); `F.add_months` (measured divergence on a negative
-  offset from a month end, pinned as FN-ADDMONTHS-1) and `F.months_between`
-  (refused, engine gap R-FN-BATCH1) stay on the backlog with both values
-  recorded. `risk_tier: standard`. Branch `feat/ex-6-functions-datetime-a`. Slate:
-  [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md).
-
 ## Pointers
 - Up: [../map.md](../map.md)

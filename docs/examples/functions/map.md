@@ -9,6 +9,22 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
 ## Contents
 
 - [abs.py](abs.py) — `F.abs`, `F.col`, `F.lit` on a three-row local frame.
+- [arrays.py](arrays.py) — the array builders and counters: `F.array`, `F.array_repeat`,
+  `F.sequence` (plain and stepped), and `F.size` / `F.cardinality` / `F.array_size` agreeing.
+- [array_edit.py](array_edit.py) — `F.array_append`, `F.array_prepend`, `F.array_remove`,
+  `F.array_compact`: grow, shrink, and clean an array, NULL elements and NULL arrays included.
+- [array_elements.py](array_elements.py) — element access and membership: `F.element_at`,
+  `F.try_element_at` (index spelled `F.lit`, like Spark), `F.get`, `F.slice`,
+  `F.array_contains`.
+- [array_order.py](array_order.py) — `F.sort_array` both directions, the extremes
+  `F.array_max` / `F.array_min`, `F.array_join`, and `F.shuffle` shape-checked.
+- [array_setops.py](array_setops.py) — the set algebra quartet: `F.array_distinct`,
+  `F.array_union`, `F.array_intersect`, `F.array_except`.
+- [explode.py](explode.py) — `F.explode` and `F.explode_outer`: one row per array element,
+  the outer spelling keeping the empty and NULL rows.
+- [higher_order.py](higher_order.py) — the lambda names: `F.exists`, `F.forall`, `F.filter`,
+  `F.transform` (element and index forms), `F.aggregate` (with and without finish),
+  `F.reduce`, `F.zip_with`; an `F.slice` empty array drives the empty-aggregate case.
 - [roots.py](roots.py) — `F.sqrt`, `F.cbrt`, `F.hypot`: the two roots parting
   company on negative input (NaN versus a signed answer), then `hypot` against
   the long form `sqrt(a*a + b*b)`.
@@ -47,6 +63,12 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
 - [random_values.py](random_values.py) — `F.uuid`, `F.rand`, `F.randn`,
 - [url.py](url.py) — the URL codec round trip and `F.parse_url` part
 - [try_fallbacks.py](try_fallbacks.py) — `F.try_mod` by zero and
+- [epoch.py](epoch.py) — the epoch conversions: `F.unix_date`, `F.unix_seconds`,
+- [timestamp_from_epoch.py](timestamp_from_epoch.py) — `F.timestamp_seconds`,
+- [to_date_timestamp.py](to_date_timestamp.py) — `F.to_date` / `F.to_timestamp` parse
+- [make_calendar.py](make_calendar.py) — `F.make_date` builds a date from year/month/day
+- [utc_offsets.py](utc_offsets.py) — `F.from_utc_timestamp` / `F.to_utc_timestamp` render
+- [partition_transforms.py](partition_transforms.py) — the partition transforms `F.years`,
 - [calendar_parts.py](calendar_parts.py) — the numeric calendar parts of a date
 - [current_datetime.py](current_datetime.py) — the six current date/timestamp
 - [date_arithmetic.py](date_arithmetic.py) — moving a date by days with

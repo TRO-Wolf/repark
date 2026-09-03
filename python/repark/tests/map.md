@@ -34,6 +34,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_bl15_bl16_math_divergences.py](test_bl15_bl16_math_divergences.py) — **BL-15 FIXED
   (LOG1P-1, 2026-09-02):** `F.expm1` is the precise kernel (`math.expm1`); BL-16 hypot
   still overflows to `inf` at extreme magnitude. pins: log1p-1-precise-kernels/C-005
+- [test_fn_arrays_divergence.py](test_fn_arrays_divergence.py) — **EX-8 remediation
+  (2026-09-03):** pins for the four silent array divergences filed in the parity registry
+  §7 — FN-ARRAYPOS-1 (`array_position` not-found is NULL; Spark answers `0`),
+  FN-ARRAYSORT-1 (`array_sort` orders NULLs first; Spark orders them last),
+  FN-ARRAYSOVERLAP-1 (a NULL element answers `False`; Spark answers `NULL`), FN-FLATTEN-1
+  (a NULL sub-array is dropped; Spark answers `NULL`). Each asserts repark's current value,
+  so the fix reds it on purpose.
+  pins: ex-8-functions-arrays/C-001
 - [test_log1p_1.py](test_log1p_1.py) — **LOG1P-1 (2026-09-02):** three-door `log1p` /
   `expm1` pins (Spark SQL, ANSI `repark.sql()`, facade), tiny-arg vs composed form,
   SEM-1 incidentals. Live Spark cell lives in `test_parity_live.py` on the

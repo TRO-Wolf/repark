@@ -2975,6 +2975,57 @@ the pin rather than obeying it.
 - **Rationale** — BACKLOG, filed 2026-09-01. Same FNP numerics unit as BL-15; overflow-safe
   hypot is a standard rescale.
 
+### FN-ARRAYPOS-1 — `array_position` answers NULL where Spark answers 0
+
+- **repark** — an element that is not in the array answers NULL: over the frame
+  `a = [1, 2, 3] / [1, 2, 3] / NULL`, `x = 2 / 9 / 1`, `F.array_position(a, x)` is
+  `[2, NULL, NULL]`.
+- **Apache Spark** — the not-found position is `0`: `[2, 0, NULL]` over the same frame.
+  *(oracle: live PySpark 4.1.2, 2026-09-03, EX-8 remediation.)*
+- **Pin** — `python/repark/tests/test_fn_arrays_divergence.py::test_array_position_not_found_returns_null`
+- **Rationale** — BACKLOG, intent to FIX. Spark is 1-based, so `0` is its not-found sentinel
+  and a drop-in script branching on it never takes the found arm here.
+
+### FN-ARRAYSORT-1 — `array_sort` orders NULLs first; Spark orders them last
+
+- **repark** — `F.array_sort([2, NULL, 1])` is `[NULL, 1, 2]` (the same NULL-first order
+  `sort_array` correctly shows).
+- **Apache Spark** — `array_sort` places NULL elements last: `[1, 2, NULL]`; its `sort_array`
+  places them first. *(oracle: live PySpark 4.1.2, 2026-09-03, EX-8 remediation; frame
+  `[3, 1, 2] / [2, NULL, 1] / NULL`.)*
+- **Pin** — `python/repark/tests/test_fn_arrays_divergence.py::test_array_sort_nulls_first`
+- **Rationale** — BACKLOG, intent to FIX. One comparator serves both spellings here, so
+  fixing `array_sort` to Spark's NULLs-last must not move `sort_array`, whose NULLs-first
+  agrees with Spark today.
+
+### FN-ARRAYSOVERLAP-1 — `arrays_overlap` answers False where a NULL element leaves the decision open
+
+- **repark** — a NULL element that blocks the decision answers False: over the pin's grid
+  `([1, NULL], [2, NULL]) / ([1, 2], [3, 4]) / ([NULL], [1]) / ([1, 2], [2, 3]) /
+  ([1, NULL], [1]) / ([NULL], [NULL])` the answer is
+  `[False, False, False, True, True, False]`.
+- **Apache Spark** — the three-valued answer is NULL whenever no definite common element
+  exists and a NULL blocks the decision: `[NULL, False, NULL, True, True, NULL]` over the
+  same grid. *(oracle: live PySpark 4.1.2, 2026-09-03, EX-8 remediation.)*
+- **Pin** — `python/repark/tests/test_fn_arrays_divergence.py::test_arrays_overlap_null_block_returns_false`
+- **Rationale** — BACKLOG, intent to FIX. The NULL rows are silently flattened to "disjoint",
+  so a script cannot distinguish "definitely no shared element" from "unknown".
+
+### FN-FLATTEN-1 — `flatten` drops a NULL sub-array; Spark answers NULL
+
+- **repark** — a NULL sub-array is skipped: `flatten([[1], NULL])` is `[1]`.
+- **Apache Spark** — a NULL sub-array makes the whole row's answer NULL: `flatten([[1], NULL])`
+  is NULL. Measured frames (2026-09-03, EX-8 remediation): simple
+  `[[1, 2, 3]] / [[1, NULL]] / NULL` agrees on both engines
+  (`[1, 2, 3] / [1, NULL] / NULL`); adversarial
+  `[[]] / [[], []] / [[1, 2, 3]] / [[1], NULL] / [[NULL, 1, 2]] / NULL` gives Spark
+  `[] / [] / [1, 2, 3] / NULL / [NULL, 1, 2] / NULL` against repark
+  `[] / [] / [1, 2, 3] / [1] / [NULL, 1, 2] / NULL`.
+  *(oracle: live PySpark 4.1.2, 2026-09-03.)*
+- **Pin** — `python/repark/tests/test_fn_arrays_divergence.py::test_flatten_drops_null_subarray`
+- **Rationale** — BACKLOG, intent to FIX. Dropping the NULL sub-array loses the row-level NULL
+  signal Spark preserves, and the length of the answer silently changes with it.
+
 ### WIN-SLIDE — non-retractable aggregates over a sliding frame (W-0, 2026-08-31)
 
 Spark evaluates an aggregate over `ROWS BETWEEN n PRECEDING AND CURRENT ROW` even when the
@@ -3165,6 +3216,51 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   measured refusing end to end at the fork. See the row in §4 for the pins and the R88
   filing.
 
+- **EX7-TZCOLLECT-1** — measured 2026-09-03 (EX-7 batch b remediation 2, re-scoped from the
+  remediation-1 pair). PySpark's `collect()` renders **driver-local naive** datetimes while its
+  `show()` renders the **session zone**; this engine renders the **stored UTC instant** on both
+  paths — so an oracle comparison run with a non-UTC driver TZ produces false divergences at the
+  collect boundary. Measured triad for `timestamp_seconds(0)` with driver TZ =
+  `America/New_York`, session zone `UTC`: PySpark 4.1.2 collects
+  `datetime.datetime(1969, 12, 31, 19, 0)` while its `show()` prints `1970-01-01 00:00:00`;
+  this engine collects `datetime.datetime(1970, 1, 1, 0, 0)`, and its output is identical under
+  either driver TZ. Recipe for live oracle runs: export `TZ=UTC` before the JVM starts. The
+  session-zone gap this recipe does **not** remove is EX7-SESSIONZONE-1. Full record:
+  `task/ledgers/staging/ex-7-functions-datetime-b-ledger.md`.
+
+- **EX7-SESSIONZONE-1** — measured 2026-09-03 (EX-7 batch b remediation 2). The real
+  session-zone parity gap, distinct from EX7-TZCOLLECT-1 because it survives the `TZ=UTC`
+  recipe: with session zone `America/New_York`, PySpark 4.1.2's `show()` renders
+  `timestamp_seconds(0)` as `1969-12-31 19:00:00` under **both** driver TZs (the session zone
+  is applied), while this engine renders `1970-01-01 00:00:00` — the session zone is not
+  applied on this facade read path, whose output is identical to its UTC output under either
+  driver TZ (the conf itself is read: `current_timezone()` answers `America/New_York` there).
+  Under `TZ=UTC` the `collect()` values still agree, so the divergence is the `show()` render
+  and the schema half: this engine's facade schema for `timestamp_seconds` is `string` (an
+  Arrow `timestamp[s]` with no zone) where Spark's is `timestamp`. Same family as
+  B-TZ-1/B-TZ-2 — the SQL door does not spell `timestamp_seconds` at all — and B-TZ-3; the
+  facade half wants the session zone applied on the timestamp read path, or its own decision.
+  Full record: `task/ledgers/staging/ex-7-functions-datetime-b-ledger.md`.
+
+- **EX7-HOURS-1** — measured 2026-09-03 (EX-7 batch b remediation). The Spark-facade write path
+  refuses `hours()`-partitioned creates: `writeTo(...).partitionedBy(F.hours(...)).create()`
+  raises `DataInvalid => Invalid schema for v2: Invalid type for event_ts: timestamp_ns is not
+  supported until v3`, unchanged with `repark.sql.allowCreateFormatVersion3` set on the builder
+  or via `conf.set`; the facade append into a SQL-door v3 hours table then raises the
+  µs→ns mismatch (`column types must match schema types, expected Timestamp(ns) but found
+  Timestamp(µs, "UTC")`). The SQL door
+  `CREATE TABLE … PARTITIONED BY (hours(event_ts)) TBLPROPERTIES ('format-version'='3')`
+  writes and reads back Spark-equal partition values (`[(475133,), (475134,)]` for
+  2024-03-15 05:00/06:30 UTC). The facade path wants its own decision. Full record:
+  `task/ledgers/staging/ex-7-functions-datetime-b-ledger.md`.
+
+- **FN-TRY-EXTRACT-1** — surfaced 2026-09-03, EX-8 remediation. The facade `F.try_element_at`
+  accepts a bare Python int for its extraction argument (the signature is
+  `extraction: Column | str | int` in
+  `python/repark/src/repark/spark/functions_try.py`), where PySpark refuses it at analysis
+  with `PySparkTypeError [NOT_COLUMN_OR_STR]`; the value at `F.lit` spelling agrees
+  (`[10, None, None]` / `[None, None, None]` on both engines). No pin yet, so it is not a
+  row; the example spells `F.lit` like Spark.
 - **FN-EXTRACT-FIELDS-1** — measured 2026-09-03 (live PySpark 4.1.2 SQL door vs the facade
   `F.extract`, `TZ=UTC`, source `2024-03-09` / `2024-03-09 13:45:30`): the extract field sets
   differ in BOTH directions. The measured pair: `extract('dayofweek', …)` is `7` in Spark
