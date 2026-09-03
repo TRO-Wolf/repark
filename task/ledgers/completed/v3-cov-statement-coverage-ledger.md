@@ -44,7 +44,7 @@ repark half in an always-run test.
 | REFUSED (both engines refuse) | 1 — `create-v3-write-order`, a parse error on both |
 | DIVERGES | 7 |
 | Statement classes unmeasured | 0 |
-| Runtime | repark 24 s; live Spark 75 s; co-collected with the nightly live legs 2 min 25 s |
+| Runtime | repark 24 s; live Spark 74 s; co-collected with the nightly live legs 2 min 22 s |
 
 Every row, its fixture, its probes and both engines' answers are the matrix in
 [../../../docs/design/v3-statement-coverage.md](../../../docs/design/v3-statement-coverage.md) §3;
@@ -105,7 +105,7 @@ the false green the registry exists to prevent.
 | `make py-test` | 0 |
 | `make check-map-sync check-ledger-grammar check-ledgers check-docs-compaction check-manifest` | 0 |
 | `python3 scripts/ledger_lifecycle.py check --base a0cd39e` | 0 |
-| live, co-collected: `test_live_disclosure_still_diverges` + `test_v3_statement_coverage.py` + `test_live_scenario_matches_repark_golden_and_spark` | 0 — 218 passed in 145.85 s |
+| live, co-collected: `test_live_disclosure_still_diverges` + `test_v3_statement_coverage.py` + `test_live_scenario_matches_repark_golden_and_spark` | 0 — 218 passed in 142.18 s |
 
 ## 8. The question this unit hands back
 
@@ -155,7 +155,7 @@ COVERAGE_ATTESTATION:
       artifacts: [docs/spark-sql-iceberg-parity.md, python/repark/tests/test_v3_statement_coverage.py]
     - id: AT-7
       status: ATTACKED
-      evidence: Both repairs are single-column conforms on paths that already ran per column; the matrix's live half runs in 75 s of Spark time and the co-collected suite in 2 min 25 s.
+      evidence: Both repairs are single-column conforms on paths that already ran per column; the matrix's live half runs in 74 s of Spark time and the co-collected suite in 2 min 22 s.
       artifacts: [crates/repark-iceberg/src/write/partition_overwrite.rs, crates/repark-iceberg/src/catalog/lineage_columns.rs]
     - id: AT-8
       status: ATTACKED

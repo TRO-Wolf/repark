@@ -121,7 +121,7 @@ comparison cells, 72 EQUAL, 1 refused by both engines, 7 rows filed (`DML-1`, `G
 [docs/design/v3-statement-coverage.md](../../../docs/design/v3-statement-coverage.md); the
 harness is `python/repark/tests/test_v3_statement_coverage.py`, always-run on repark and
 live-gated against PySpark 4.1.2 + Iceberg 1.11.0, co-collected with the nightly live legs in
-2 min 25 s. Nothing in §2 pillar 4 is now owed.
+2 min 22 s. Nothing in §2 pillar 4 is now owed.
 
 **Surface residuals outside the requires cells — recorded, not gating.** Each sits on a
 surface §3 names; none is inside that row's v1.0 requires cell, so none is audited above.

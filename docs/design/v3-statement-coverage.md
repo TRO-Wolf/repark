@@ -23,7 +23,7 @@ seed on 2026-09-03, and every divergence carries a registry row in
 | Registry rows filed by this unit | 4 (`V3-COV-3` DECLARED · `V3-COV-4` BACKLOG · `V3-COV-5` BACKLOG · `V3-COV-6` DECLARED) |
 | Registry rows an existing row already covers | 3 (`DML-1`, `G3-E8` ×2, `B-MOR-3`) |
 | Defects FIXED inside this unit | 2 (`V3-COV-1`, `V3-COV-2`) |
-| Live runtime, matrix co-collected with the nightly live legs | 2 min 25 s |
+| Live runtime, matrix co-collected with the nightly live legs | 2 min 22 s |
 
 ## 2. How a row is read
 
