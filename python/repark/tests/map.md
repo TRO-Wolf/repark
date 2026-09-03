@@ -47,6 +47,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   overflow is NULL on both signs of the bound; DATE + 0 HOUR stays date (BL-14, recorded).
   pins: fnp-7-try-inversions/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-010, C-011, C-012, C-013, C-014, C-015, C-017, C-018, C-019
+  `test_try_to_number_non_foldable_divergence_is_pinned` holds FN-TRYTONUMBER-1 at the 100-column rule.
+  pins: ex-11-functions-hash-url-random/C-001
 - [test_integer_overflow_parity.py](test_integer_overflow_parity.py) — **F-Y10-1:** integer
   `+` / `-` / `*` overflow shared-raise under default ANSI and Int32/Int64 wrap when
   `ansi=false`, SQL and facade expression (`F` import uses the PySpark N812 noqa).
@@ -1041,7 +1043,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 
 - **octo-extra C1 (2026-07-30):** test_fn_batch1 pins ln/log10 + from_unixtime string type
 
-- `test_fn_batch1.py` — R-FN-BATCH1 scalar wrappers (value+type+null; unsupported loud).
+- `test_fn_batch1.py` — R-FN-BATCH1 scalar wrappers (value+type+null; unsupported loud). pins: ex-10-functions-null-cond-misc/C-001
 - `test_fn_batch4.py` — R-FN-BATCH4 aggregates/stats/hash census; **U2 (2026-08-13):**
   `test_stats_aggregates` VALUES `(1.0),(2.0),(3.0)` are DECIMAL(2,1) — compares go through
   `float()`; **Q1** flips
@@ -1052,6 +1054,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   octo c3 MinMax/MaxAbs NaN-tolerant fit pin;
   octo c7 StringIndexer fit temp-view cleanup pin
   (+ array-percentage STOP seed).
+  `test_sha2_facade_bytes_divergence_is_pinned` holds FN-SHA2-1 at the 100-column rule.
+  pins: ex-11-functions-hash-url-random/C-001
 - `test_fn_batch3.py` — R-FN-BATCH3 datetime + Chrono≠Java + loud census.
 - `test_fn_batch2.py` (octo C1: exact overlay/slice pins)` — **R-FN-BATCH2**: strings/collection value+type+null pins; loud census
   (soundex/sentences/arrays_zip/map_from_arrays/locate pos / array_join null_replacement).

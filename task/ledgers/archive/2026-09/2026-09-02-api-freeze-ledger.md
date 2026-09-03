@@ -2,8 +2,8 @@
 
 **Date:** 2026-09-02 · **Branch:** `docs/v1-0-api-freeze` · **Base:** `origin/main` `d7e2c4a` ·
 **Model:** claude-opus-5 (medium) · **Answers:**
-[../../../docs/design/v1-0-api-review-2026-09-02.md](../../../docs/design/v1-0-api-review-2026-09-02.md) ·
-**Gate:** [../../roadmap/epic-term/v1-0-iceberg-v3-northstar.md](../../roadmap/epic-term/v1-0-iceberg-v3-northstar.md)
+[../../../docs/design/v1-0-api-review-2026-09-02.md](../../../../docs/design/v1-0-api-review-2026-09-02.md) ·
+**Gate:** [../../roadmap/epic-term/v1-0-iceberg-v3-northstar.md](../../../roadmap/epic-term/v1-0-iceberg-v3-northstar.md)
 §3 · **Path:** STANDARD (docs + one parity pin; one Actor cycle).
 
 **Retires:** this ledger moves to `../completed/` in this unit's last commit.
@@ -82,6 +82,6 @@ COVERAGE_ATTESTATION:
 
 ## Pointers
 
-- Up: [map.md](../staging/map.md)
-- Register: [../../../docs/design/v1-0-api-freeze.json](../../../docs/design/v1-0-api-freeze.json)
-- Policy: [../../../docs/release.md](../../../docs/release.md) "Versioning policy"
+- Up: [map.md](../../staging/map.md)
+- Register: [../../../docs/design/v1-0-api-freeze.json](../../../../docs/design/v1-0-api-freeze.json)
+- Policy: [../../../docs/release.md](../../../../docs/release.md) "Versioning policy"
