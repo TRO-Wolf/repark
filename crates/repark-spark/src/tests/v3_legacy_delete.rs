@@ -1,7 +1,9 @@
+use std::collections::HashSet;
+
 use super::super::*;
 use super::common::*;
 
-use super::v3_upgrade::{lineage, merge_delete_sql, refuse, seed_mor_four, upgrade, walk_puffin};
+use super::v3_upgrade::{lineage, merge_delete_sql, seed_mor_four, upgrade, walk_puffin};
 
 async fn live_delete_files(
     catalogs: &CatalogRegistry,
@@ -269,88 +271,185 @@ async fn a_sibling_data_files_legacy_delete_stays_live_when_it_is_not_touched() 
 }
 
 #[tokio::test]
-async fn a_plain_where_merge_on_read_delete_over_a_legacy_delete_still_refuses_loudly() {
+async fn a_plain_where_merge_on_read_delete_over_a_legacy_delete_merges_into_the_dv() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup_allow_create_format_version_3(&wh).await;
-    seed_upgraded_legacy(&ctx, &catalogs, "legacyplain").await;
+    let data_file = seed_upgraded_legacy(&ctx, &catalogs, "legacyplain").await;
 
-    let message = refuse(
+    run(
         &ctx,
         &catalogs,
         "DELETE FROM ice.sales.legacyplain WHERE id = 3",
     )
     .await;
 
-    assert!(
-        message.contains("is still covered by a Parquet position-delete file")
-            && message.contains("loadPreviousDeletes"),
-        "the plain-WHERE arm runs in the fork's own delete exec, which refuses before any IO:          {message}"
+    let after = load_sales_table(&catalogs, "legacyplain").await;
+    assert_eq!(after.metadata().next_row_id(), 4);
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.legacyplain").await,
+        vec![(1, "a".to_string()), (4, "d".to_string())]
+    );
+    assert_eq!(
+        lineage(&ctx, &catalogs, "legacyplain").await,
+        vec![(1, Some(0), Some(1)), (4, Some(3), Some(1))]
     );
     assert_eq!(
         live_delete_files(&catalogs, "legacyplain").await,
-        vec![("Parquet".to_string(), 1, None)],
-        "the refusal leaves the table exactly as the upgrade left it"
+        vec![("Puffin".to_string(), 2, Some(data_file))],
+        "the plain-WHERE arm now merges in the fork's own delete exec: ONE Puffin of record_count \
+         2 and no parquet delete file"
     );
     let mut puffins = 0;
     walk_puffin(wh.path(), &mut puffins);
-    assert_eq!(puffins, 0);
+    assert_eq!(puffins, 1);
 }
 
 #[tokio::test]
-async fn a_partition_scoped_legacy_delete_still_refuses_loudly() {
+async fn a_plain_where_merge_on_read_update_over_a_legacy_delete_merges_into_the_dv() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup_allow_create_format_version_3(&wh).await;
+    let data_file = seed_upgraded_legacy(&ctx, &catalogs, "legacyplanup").await;
+
     run(
         &ctx,
         &catalogs,
+        "UPDATE ice.sales.legacyplanup SET name = 'Z' WHERE id = 3",
+    )
+    .await;
+
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.legacyplanup").await,
+        vec![
+            (1, "a".to_string()),
+            (3, "Z".to_string()),
+            (4, "d".to_string())
+        ]
+    );
+    assert_eq!(
+        live_delete_files(&catalogs, "legacyplanup").await,
+        vec![("Puffin".to_string(), 2, Some(data_file))],
+        "the plain-WHERE UPDATE arm merges the legacy positions too"
+    );
+}
+
+async fn seed_partition_scoped_legacy(ctx: &SessionContext, catalogs: &CatalogRegistry) {
+    run(
+        ctx,
+        catalogs,
         "CREATE TABLE ice.sales.legacypart (id INT, name STRING) USING iceberg TBLPROPERTIES \
          ('format-version' = '2', 'write.merge.mode' = 'merge-on-read', \
           'write.delete.granularity' = 'partition')",
     )
     .await;
     run(
-        &ctx,
-        &catalogs,
+        ctx,
+        catalogs,
         "INSERT INTO ice.sales.legacypart VALUES (1, 'a'), (2, 'b')",
     )
     .await;
     run(
-        &ctx,
-        &catalogs,
+        ctx,
+        catalogs,
         "INSERT INTO ice.sales.legacypart VALUES (3, 'c'), (4, 'd')",
     )
     .await;
     run(
-        &ctx,
-        &catalogs,
+        ctx,
+        catalogs,
         "MERGE INTO ice.sales.legacypart AS t USING (SELECT 1 AS id UNION ALL SELECT 3) AS s \
          ON t.id = s.id WHEN MATCHED THEN DELETE",
     )
     .await;
     assert_eq!(
-        live_delete_files(&catalogs, "legacypart").await,
+        live_delete_files(catalogs, "legacypart").await,
         vec![("Parquet".to_string(), 2, None)],
         "partition granularity leaves ONE delete file covering BOTH data files"
     );
-    upgrade(&ctx, &catalogs, "legacypart").await;
+    upgrade(ctx, catalogs, "legacypart").await;
+}
 
-    let message = refuse(&ctx, &catalogs, &merge_delete_sql("legacypart", 2)).await;
+#[tokio::test]
+async fn a_partition_scoped_legacy_delete_merges_and_keeps_the_parquet_live() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&wh).await;
+    seed_partition_scoped_legacy(&ctx, &catalogs).await;
+    let data_files: HashSet<String> = live_data_file_paths(&catalogs, "legacypart")
+        .await
+        .into_iter()
+        .map(|path| path.rsplit('/').next().unwrap_or_default().to_string())
+        .collect();
+    assert_eq!(data_files.len(), 2, "the seed is two data files");
 
-    assert!(
-        message.contains("Cannot commit deletion vector")
-            && message.contains("live position delete file"),
-        "Spark merges this delete's positions for the touched file and keeps the parquet delete \
-         live; the pinned fork's validate_fresh_dvs_only can only admit a DV over a live position \
-         delete that the SAME commit removes, and removing this one resurrects the untouched \
-         sibling's deleted row — so the engine refuses rather than corrupt: {message}"
+    run(&ctx, &catalogs, &merge_delete_sql("legacypart", 2)).await;
+
+    let after = load_sales_table(&catalogs, "legacypart").await;
+    assert_eq!(after.metadata().next_row_id(), 4);
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.legacypart").await,
+        vec![(4, "d".to_string())]
+    );
+    let mut files = live_delete_files(&catalogs, "legacypart").await;
+    assert_eq!(
+        files
+            .iter()
+            .filter(|(format, count, referenced)| format == "Parquet"
+                && *count == 2
+                && referenced.is_none())
+            .count(),
+        1,
+        "Spark leaves the partition-scoped parquet delete LIVE: {files:?}"
+    );
+    let first_dv: Vec<&(String, u64, Option<String>)> = files
+        .iter()
+        .filter(|(format, _, _)| format == "Puffin")
+        .collect();
+    assert_eq!(
+        first_dv.len(),
+        1,
+        "only the touched file gets a DV: {files:?}"
+    );
+    assert_eq!(first_dv[0].1, 2, "the DV unions the legacy position");
+    let first = first_dv[0]
+        .2
+        .clone()
+        .expect("the DV references a data file");
+    assert!(data_files.contains(&first));
+
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.legacypart VALUES (9, 'z')",
+    )
+    .await;
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.legacypart").await,
+        vec![(4, "d".to_string()), (9, "z".to_string())]
+    );
+
+    run(&ctx, &catalogs, &merge_delete_sql("legacypart", 4)).await;
+
+    files = live_delete_files(&catalogs, "legacypart").await;
+    assert_eq!(
+        files
+            .iter()
+            .filter(|(format, _, _)| format == "Parquet")
+            .count(),
+        1,
+        "the parquet delete is STILL live once every data file it covers carries a DV: {files:?}"
+    );
+    let puffins: HashSet<String> = files
+        .iter()
+        .filter(|(format, count, _)| format == "Puffin" && *count == 2)
+        .filter_map(|(_, _, referenced)| referenced.clone())
+        .collect();
+    assert_eq!(
+        puffins, data_files,
+        "the second touched data file gets its own DV of record_count 2: {files:?}"
     );
     assert_eq!(
         table_rows(&ctx, &catalogs, "ice.sales.legacypart").await,
-        vec![(2, "b".to_string()), (4, "d".to_string())]
+        vec![(9, "z".to_string())]
     );
-    let mut puffins = 0;
-    walk_puffin(wh.path(), &mut puffins);
-    assert_eq!(puffins, 0);
 }
 
 #[tokio::test]

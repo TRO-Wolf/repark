@@ -176,14 +176,16 @@ def test_v3_rowid_3_row_is_fixed_and_carries_the_decoded_spark_order() -> None:
     assert "BACKLOG" not in row
 
 
-def test_the_partition_file_order_residual_names_the_fork_as_owner() -> None:
-    """`F-v3-10-partition-file-order` stays open, re-measured, and asks the fork as F-20."""
+def test_the_partition_file_order_residual_is_closed_by_the_fork_drain() -> None:
+    """`F-v3-10-partition-file-order` is FIXED at RP-8, and says which fork change closed it."""
     registry = _normalized(_read("docs/spark-sql-iceberg-parity.md"))
-    assert "`F-v3-10-partition-file-order` re-measured 2026-09-02 by V3-11" in registry
-    assert "**Owner: the fork.**" in registry
+    assert "`F-v3-10-partition-file-order` **CLOSED — FIXED (RP-8, 2026-09-03)**" in registry
     assert "IcebergTableProvider::insert_into" in registry
-    assert "fork ask is **F-20**" in registry
-    assert "F-20 matches **RePark's** rule, not Spark's" in registry
+    assert "Fork ask **F-20** landed as fork `#261`" in registry
+    assert "12 of 12" in registry
+    assert "buys determinism and one rule across every writer this engine owns, **not** parity" in (
+        registry
+    )
 
 
 def test_v3_fileorder_1_declares_the_rule_and_where_spark_parts_company() -> None:

@@ -361,16 +361,13 @@ def _partitioned_row_id_mapping(warehouse: Path) -> tuple[tuple[int, int], ...]:
 
 
 _ROW_ID_SPARK_EQUAL = ((1, 0), (2, 1), (3, 2), (4, 3))
-_ROW_ID_REVERSED = ((1, 2), (2, 3), (3, 0), (4, 1))
 
 
-def test_v3_partitioned_insert_row_id_mapping_is_one_of_two_measured_orders(
+def test_v3_partitioned_insert_row_id_mapping_is_stable_and_spark_ordered(
     tmp_path: Path,
 ) -> None:
-    """V3-COV-3: the delegated partitioned INSERT assigns `_row_id` by an unstable file order."""
-    mapping = _partitioned_row_id_mapping(tmp_path)
-    assert mapping in (_ROW_ID_SPARK_EQUAL, _ROW_ID_REVERSED)
-    assert sorted(row_id for _, row_id in mapping) == [0, 1, 2, 3]
+    """V3-COV-3 FIXED: the delegated partitioned INSERT drains ascending, `_row_id` is Spark's."""
+    assert _partitioned_row_id_mapping(tmp_path) == _ROW_ID_SPARK_EQUAL
 
 
 def test_v3_ctas_partitioned_row_id_mapping_is_stable_and_spark_ordered(tmp_path: Path) -> None:
