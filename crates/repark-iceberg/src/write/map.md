@@ -105,8 +105,12 @@ repark-core's error map.
   `{0,1}`, `{0,1,2}`, `{0,1,2,3}`, `bucket(4, ·)` — not on five or more int partitions,
   strings, multi-field specs, `truncate`/`days`, or a null slot arriving after a non-null.
   Plain `INSERT INTO` on a partitioned table never reaches this module: the fork's `TaskWriter`
-  owns it (`F-v3-10-partition-file-order`, fork ask **F-20**).
+  owns it. **RP-8 (2026-09-03):** fork ask **F-20** landed (`#261`), so `FanoutWriter::close`
+  drains ascending too and `F-v3-10-partition-file-order` is FIXED — one ordering rule now holds
+  on every writer that reaches a repark table, the fork's included, and `V3-FILEORDER-1` covers
+  that path as well.
   pins: v3-11-row-id-determinism/C-001, C-003, C-006, C-007
+  pins: rp-8-repin-f21-f22/C-004
 - `conform.rs` — batch conforming for the append write path (name resolution, WI-1 store
   assignment, strict casts), split from `append.rs` (file-size ratchet, 2026-09-01;
   append.rs baseline 1886). A missing

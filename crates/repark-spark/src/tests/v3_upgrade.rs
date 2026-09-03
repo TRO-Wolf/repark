@@ -652,32 +652,16 @@ async fn partitioned_table_upgrade_and_append_match_spark() {
     .await;
     let appended = load_sales_table(&catalogs, "part").await;
     assert_eq!(appended.metadata().next_row_id(), 5);
-    let rows = lineage(&ctx, &catalogs, "part").await;
-    let ids = |kept: bool| {
-        let mut taken: Vec<i64> = rows
-            .iter()
-            .filter(|(id, _, _)| (*id <= 3) == kept)
-            .map(|(_, row_id, _)| row_id.expect("every row is assigned an id"))
-            .collect();
-        taken.sort_unstable();
-        taken
-    };
     assert_eq!(
-        ids(true),
-        vec![2, 3, 4],
-        "the three pre-upgrade rows take the ids Spark leaves them, one each"
+        lineage(&ctx, &catalogs, "part").await,
+        vec![
+            (1, Some(2), Some(1)),
+            (2, Some(3), Some(1)),
+            (3, Some(4), Some(1)),
+            (4, Some(0), Some(2)),
+            (5, Some(1), Some(2))
+        ],
+        "the fork's FanoutWriter drains ascending (F-20), so a partitioned plain INSERT INTO \
+         takes Spark's exact id -> _row_id map on the two-value identity-int set"
     );
-    assert_eq!(
-        ids(false),
-        vec![0, 1],
-        "the two appended rows take the ids Spark leaves them, one each"
-    );
-    for (id, _, seq) in &rows {
-        let expected = if *id <= 3 { 1 } else { 2 };
-        assert_eq!(
-            *seq,
-            Some(expected),
-            "row {id} carries the sequence number Spark gives it: {rows:?}"
-        );
-    }
 }

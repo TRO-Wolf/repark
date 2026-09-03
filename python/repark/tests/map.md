@@ -191,8 +191,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `_v37_iceberg_runtime_jar` from `test_v3_live_oracle.py`. The second test is the incidental
   control: a table that stays v2 keeps writing parquet position deletes and this engine leaves
   TWO of them live for one data file where Spark rewrites one. The module also carries the facade
-  twins of both V3-12 refusals (plain-`WHERE`, and a delete covering two data files), so each
-  entry point has its own row. **Session discipline:** `_live_session` reuses
+  twins of the two cells V3-12 filed as refusals (plain-`WHERE`, and a delete covering two data
+  files), so each entry point has its own row. **RP-8 (2026-09-03):** both flipped to merges at
+  pin `c1d6c9de` and each gained a live Spark twin — `test_plain_where_mor_delete_over_a_legacy_parquet_delete_matches_spark`
+  compares the A2 shape, and `test_partition_scoped_legacy_delete_matches_spark` compares the
+  whole §12 P1–P4 sequence on a table partitioned by `part = 7` with two data files, which is the
+  layout the oracle measured. Both live halves seed one file per append with
+  `coalesce(1)` and obey the same session discipline as the first cell. **Session discipline:** `_live_session` reuses
   `SparkSession.getActiveSession()` when one is alive and stops only a session it built —
   `test_parity_live.py` sorts first and holds a session-scoped `local[2]` session, and an
   unguarded `getOrCreate` borrowed it (dropping master and jars, splitting the seed into two data
@@ -205,6 +210,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   repark-only assertions live in their own always-run test so real work is not reported as
   skipped.
   pins: v3-12-legacy-delete-merge/C-003, C-004
+  pins: rp-8-repin-f21-f22/C-003
 - [test_v3_dv_container_close.py](test_v3_dv_container_close.py) — **RP-7 (2026-09-02):**
   `test_v3_shared_puffin_container_close_live` runs the shared-Puffin close on both engines from
   the same partitioned v3 MoR seed and compares an engine-independent SHAPE (`_dv_close_shape`)

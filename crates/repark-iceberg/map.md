@@ -100,6 +100,13 @@ v1 crate-root re-export lists.
     public break absorbed is `DvContainerClose` — `removed` now carries only the touched blobs
     and `retained_references` is new; RePark reads both only through `referenced_data_files()`.
     pins: rp-7-f18-repin/C-001
+    **RP-8 (2026-09-03):** the family is frozen at `c1d6c9de` (fork PRs `#261` F-19/F-20,
+    `#262` F-21, `#263` F-22). THREE public breaks absorbed, all on the DV close:
+    `retained_references` is deleted again, `added` is `Vec<DataFile>` (`StampedDeleteFile`
+    collapsed), and `close_touched_dv_containers_with_partitions` takes a fifth
+    `Option<&ManifestList>`. `make verify` on the bare repin is exit 2 with exactly those five
+    errors, all in `write/merge/dv_close.rs` — the measured blast radius of the break.
+    pins: rp-8-repin-f21-f22/C-001
   - **The metadata-projection shim retired at RP-5 (fork R169/R170, F-8 `#247`).** The
     fork's metadata-table `scan` honors `projection` (empty projection included) and
     `table_names` lists catalog entries only (`$`-twins are not enumerated). Engine
