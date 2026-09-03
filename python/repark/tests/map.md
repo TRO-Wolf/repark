@@ -47,12 +47,6 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   SEM-1 incidentals. Live Spark cell lives in `test_parity_live.py` on the
   session-scoped `spark_engine`. Oracle live PySpark 4.1.2.
   pins: log1p-1-precise-kernels/C-001, C-002, C-004
-- [test_bl15_bl16_math_divergences.py](test_bl15_bl16_math_divergences.py) — **BL-15/BL-16
-  (2026-09-01):** codifies today's `expm1` (composed `exp(x)-1`) and `hypot` (overflow to
-  `inf` at extreme magnitude) answers so the fused/rescaled fixes red them on purpose;
-  measured by the EX-2 pilot, registry §7 rows carry the Spark values. Spark
-  `Math.expm1(1e-08)` is `1.0000000050000001e-08`; `hypot(1e200, 1e200)` rescales to
-  `1.4142135623730951e+200`. Module and test docstrings are one line.
 - [test_bl17_base64_padding.py](test_bl17_base64_padding.py) — **BL-17 (2026-09-03):**
   codifies today's unpadded `F.base64` (`'Spark'` → `U3Bhcms`, `'A'` → `QQ`) so a
   padded kernel reds the pin; Spark 4.1.2 is `U3Bhcms=` / `QQ==`. Measured by EX-4.
