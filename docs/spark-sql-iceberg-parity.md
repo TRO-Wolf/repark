@@ -1361,8 +1361,12 @@ the pin rather than obeying it.
 - **repark** — `F.last(col, ignorenulls=True)` over
   `Window.partitionBy("k").orderBy(col("v").asc_nulls_last()).rowsBetween(unboundedPreceding,
   unboundedFollowing)` answers NULL on every row of group `'a'` (values `1, 2, 3, NULL`):
-  `[('a', None), ('b', 6)]`. The unordered grouped form and the plain (no-ignorenulls)
-  ordered-window form are Spark-equal.
+  `[('a', None), ('b', 6)]`. The unordered grouped form is Spark-equal at `repartition(1)`
+  only; the grouped form has no ordering and no stable answer (measured 2026-09-03: Spark
+  answers `[('a', 3), ('b', 6)]` at `repartition(1)`, `[('a', 1), ('b', 6)]` at
+  `repartition(2)`, `[('a', 1), ('b', 4)]` at `repartition(3)` and `repartition(6)`, while
+  repark answers `[('a', 3), ('b', 6)]`). The plain (no-ignorenulls) ordered-window form
+  is Spark-equal.
 - **Apache Spark** — the same ordered window answers the last non-null value:
   `[('a', 3), ('b', 6)]`. *(oracle: recorded — live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03,
   invariant at `repartition(1)`, `repartition(3)` and `repartition(6)`; measured frame

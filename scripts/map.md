@@ -2,7 +2,8 @@
 
 EX-12 batch (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE` 842 → 815 —
 27 `F.*` aggregate names covered by eight new examples; `F.mode` (engine refuses),
-`F.approx_percentile` and `F.percentile_approx` (approximate values diverge from Spark)
+`F.approx_percentile` and `F.percentile_approx` (Spark is exact here — the discrete value
+as bigint; repark returns the interpolated median as double)
 stay on the backlog with both oracle values recorded.
 pins: ex-12-functions-aggregates-a/C-001
 LOG1P-1 (2026-09-02): `check_example_coverage.py` `BACKLOG_BASELINE` 844 → 842 —

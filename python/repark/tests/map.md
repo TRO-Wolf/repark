@@ -1054,11 +1054,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   RegexTokenizer order, CV fractional minTF, fit temp-view cleanup;
   octo c2 UNION ALL token/id association pin + Imputer same-col in-place;
   octo c3 MinMax/MaxAbs NaN-tolerant fit pin;
+  octo c7 StringIndexer fit temp-view cleanup pin
+  (+ array-percentage STOP seed).
   **FN-APPROXPCT-1 (2026-09-03):** `test_approx_percentile_double_interpolation_divergence_is_pinned`
   codifies the interpolated DOUBLE answer where Spark is exact BIGINT (registry row
   FN-APPROXPCT-1). pins: ex-12-functions-aggregates-a/C-001
-  octo c7 StringIndexer fit temp-view cleanup pin
-  (+ array-percentage STOP seed).
 - `test_fn_batch3.py` — R-FN-BATCH3 datetime + Chrono≠Java + loud census.
 - `test_fn_batch2.py` (octo C1: exact overlay/slice pins)` — **R-FN-BATCH2**: strings/collection value+type+null pins; loud census
   (soundex/sentences/arrays_zip/map_from_arrays/locate pos / array_join null_replacement).
