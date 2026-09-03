@@ -5,10 +5,6 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
-- [log1p-1-precise-kernels-ledger.md](log1p-1-precise-kernels-ledger.md) —
-  **LOG1P-1 (2026-09-02), in flight:** `F.log1p` / `F.expm1` and both SQL doors
-  call `f64::ln_1p` / `f64::exp_m1`. `risk_tier: standard`. Branch
-  `fix/log1p-expm1-precision`.
 - [ex-2-functions-math-bitwise-ledger.md](ex-2-functions-math-bitwise-ledger.md) —
   **EX-2 (2026-09-01), in flight:** the v0.7 example backfill's `F.*` math +
   bitwise family — the campaign pilot. One clause per batch; batch 1 covers
