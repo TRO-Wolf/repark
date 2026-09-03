@@ -39,8 +39,10 @@ seed on 2026-09-03, and every divergence carries a registry row in
 - **Pin** — every row is `python/repark/tests/test_v3_statement_coverage.py`:
   `test_v3_statement_row_reproduces_the_measured_repark_answer[<row>]` always runs, and
   `test_v3_statement_row_matches_the_live_spark_oracle[<row>]` runs the same program on the live
-  oracle behind `REPARK_PARITY_LIVE=1` and re-asserts the verdict. The measured halves are the
-  committed golden `python/repark/tests/_v3_statement_coverage_golden.py`.
+  oracle behind `REPARK_PARITY_LIVE=1` and re-asserts the verdict. The inventory is
+  `python/repark/tests/_v3_statement_coverage_programs.py`; the measured halves are the committed
+  `_v3_statement_coverage_repark.py` and `_v3_statement_coverage_spark.py`, joined with each row's
+  verdict by `_v3_statement_coverage_golden.py`.
 
 ## 3. The matrix
 

@@ -157,7 +157,7 @@ the CTAS/INSERT succeeds. It lives here because the refuse is the Iceberg
 
 - **repark** — `SELECT … FROM cat.ns.t.position_deletes` on a v3 table carrying a live Puffin
   deletion vector refuses with `FeatureUnsupported`: *`position_deletes` metadata table scan is
-  not yet ported: only its schema is available*. The other eight metadata tables this unit
+  not yet ported: only its schema is available*. The other nine metadata tables this unit
   measured (`snapshots`, `files`, `delete_files`, `manifests`, `history`, `refs`, `partitions`,
   `entries`, `all_data_files`) all answer Spark-equal on the same fixture.
 - **Apache Spark** — returns the deleted positions (one `pos` row for the single-row MoR DELETE on
