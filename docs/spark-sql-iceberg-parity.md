@@ -2536,7 +2536,9 @@ the pin rather than obeying it.
   (V3-11, re-measured 2026-09-03 cell A). Admitted parquet (≥ `min-input-files` 5): one
   PUFFIN per data file, parquet gone, rows unchanged, `next-row-id` advances to the table's
   row count, second run zeros (2026-09-03 cell B5).
-  *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, Hadoop-catalog fixture, 2026-09-03.)*
+  *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, Hadoop-catalog fixture, 2026-09-03;
+  the `DataSourceV2Relation` note this row used to carry is retired — see
+  [MOR-1](#mor-1--rewrite_position_delete_files-compacts-below-sparks-min-input-files-floor).)*
 - **Pin** —
   `crates/repark-spark/src/tests/call_register.rs::call_rewrite_position_delete_files_on_spark_written_puffin_vectors_returns_zeros`
   (37 live rows, three DVs stay);
