@@ -2,8 +2,7 @@
 
 use std::collections::HashMap;
 use std::str::FromStr;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, atomic::AtomicBool, atomic::Ordering};
 
 use datafusion::arrow::array::RecordBatch;
 use datafusion::error::{DataFusionError, Result};
@@ -24,10 +23,10 @@ use iceberg::writer::partitioning::fanout_writer::FanoutWriter;
 use iceberg::{Catalog, TableIdent};
 use uuid::Uuid;
 
-use crate::write::concurrency::WriteConcurrency;
 use crate::write::conform::{conform_batch, conform_batches, write_default_column_names};
 use crate::write::merge::{OPERATION_ID_PROP, write_data_files_with_concurrency};
 use crate::write::writer_props::writer_properties_for;
+use crate::write::{concurrency::WriteConcurrency, file_order::ascending_partition_order};
 
 /// Append record batches to an Iceberg table — the sanctioned add-only commit path.
 /// # Errors
@@ -213,23 +212,21 @@ where
     let (dispatch_result, worker_results) =
         futures::future::join(dispatcher, futures::future::join_all(worker_futures)).await;
 
-    let mut files = Vec::new();
+    let written: usize = worker_results.iter().flatten().map(Vec::len).sum();
+    let mut files = Vec::with_capacity(written);
     let mut first_worker_error: Option<DataFusionError> = None;
     for result in worker_results {
         match result {
             Ok(part) => files.extend(part),
-            Err(error) => {
-                if first_worker_error.is_none() {
-                    first_worker_error = Some(error);
-                }
-            }
+            Err(error) if first_worker_error.is_none() => first_worker_error = Some(error),
+            Err(_) => {}
         }
     }
     if let Some(error) = first_worker_error {
         return Err(error);
     }
     dispatch_result?;
-    Ok(files)
+    Ok(ascending_partition_order(files))
 }
 
 /// Single-writer fanout loop (the historical serial body of `fanout_conformed_stream`).
@@ -241,7 +238,8 @@ where
     S: Stream<Item = Result<RecordBatch>> + Unpin,
 {
     let no_abort = AtomicBool::new(false);
-    fanout_conformed_stream_serial_with_abort(table, conformed, &no_abort).await
+    let files = fanout_conformed_stream_serial_with_abort(table, conformed, &no_abort).await?;
+    Ok(ascending_partition_order(files))
 }
 
 /// Serial fanout that checks `aborted` between batches and after the stream ends.

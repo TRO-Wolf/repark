@@ -18,17 +18,13 @@ else. The next pickup's `make ledger-archive` files everything here under
   Branch `docs/v1-0-api-review`. Deliverable:
   [../../../docs/design/v1-0-api-review-2026-09-02.md](../../../docs/design/v1-0-api-review-2026-09-02.md).
 - [rp-7-f18-repin-ledger.md](rp-7-f18-repin-ledger.md) — Charter ledger — RP-7 · fork repin fb0cacfa → ff4764d3 (consume F-18; close `V3-DV-1`)
-- [scale-v3-mw7-ledger.md](scale-v3-mw7-ledger.md) — **SCALE-v3 (2026-09-02):** the MW-7
-  `1e7 x 50` scale workload re-measured on format-v3 tables. The `--format-version` knob and
-  nine pins (v3 MoR writes file-scoped Puffin DVs, COW keeps `_row_id`,
-  `rewrite_position_delete_files` refuses on live DVs and only that refusal is recorded,
-  `started_at` is the start, one leg checked against live Spark); the run — counts first
-  (0.24x the delete files, 0.29x the data files, a runbook that ends at zero delete files
-  where v2 kept 10,000,000 delete records), then the COW-controlled read cells (point p50
-  0.64x on a cell whose control moved 1.00x), with every write-side ratio labelled cross-run
-  and uncontrolled (the control moved 1.22x); north star §3 "Scale" ✅. F-SCALE-V3-1 FIXED and
-  pinned; F-SCALE-V3-2 discharged by the guide's runbook section, which now states its format
-  version before any number. Branch `feat/scale-v3-mw7`.
+- [v3-11-row-id-determinism-ledger.md](v3-11-row-id-determinism-ledger.md) — **V3-11
+  (2026-09-02):** deterministic same-commit data-file order. Closes `V3-ROWID-3` (the
+  merge-on-read MERGE insert's `_row_id`, 10 of 10 at Spark's value where it flapped 10/11) and
+  files `V3-FILEORDER-1` — the engine orders one commit's files by ascending partition value
+  where Spark uses a Java `HashMap` bucket index, so the two agree only on collision-free
+  monotonic partition sets. Its remediation round also retired the "the 4.1.2 oracle cannot
+  execute maintenance procedures" note six registry rows carried, re-measuring each.
 
 ## Pointers
 - Up: [../map.md](../map.md)

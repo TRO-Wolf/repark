@@ -422,6 +422,7 @@ fn v3_rowid_1_is_fixed_in_the_registry() {
 #[test]
 fn cow_keep_refusal_files_are_byte_untouched() {
     let _: &str = "pins: v3-9-mor-predicate-dml-dv/C-005";
+    let _: &str = "pins: v3-11-row-id-determinism/C-004";
     let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .expect("crates/")
@@ -437,7 +438,7 @@ fn cow_keep_refusal_files_are_byte_untouched() {
             "crates/repark-spark/src/tests/v3_cow.rs",
             0x9339_d979_508a_32b0,
         ),
-        ("crates/repark-sql/src/v3/cow.rs", 0xebe6_de70_a7d5_8a82),
+        ("crates/repark-sql/src/v3/cow.rs", 0xc798_edce_d51d_a428),
         (
             "python/repark/tests/test_v3_cow_dml.py",
             0xce7c_19f9_d69d_4f7c,
@@ -452,9 +453,11 @@ fn cow_keep_refusal_files_are_byte_untouched() {
         }
         assert_eq!(
             hash, expected,
-            "V3-COW-1 lift file {path} changed; V3-9 (feat/v3-9-mor-subquery-where-dv) \
-             re-records these hashes after lifting the merge-on-read predicate-DML gate onto \
-             deletion vectors; later units re-record only for a change they themselves made"
+            "V3-COW-1 lift file {path} changed; V3-11 \
+             (feat/v3-11-row-id-determinism) re-records the `v3/cow.rs` hash for the two ANSI \
+             same-commit file-order twins it adds there, and again in its remediation round \
+             when those two were renamed off the misleading `sparks_..._order` spelling; \
+             later units re-record only for a change they themselves made"
         );
     }
 }
