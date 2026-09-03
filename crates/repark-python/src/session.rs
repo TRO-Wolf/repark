@@ -30,9 +30,7 @@ fn apply_session_knobs(
     match memory_limit_gb {
         None => {}
         Some(0) => builder = builder.memory_limit_bytes(0),
-        Some(gb) => {
-            builder = builder.memory_limit_gb(gb);
-        }
+        Some(gb) => builder = builder.memory_limit_gb(gb),
     }
     // Zero is invalid for batch and partition counts; do not silently apply defaults.
     if let Some(0) = batch_size {
@@ -143,7 +141,9 @@ impl PyReparkSession {
         fenced_span!("py.session", "PyReparkSession.native", {
             let builder =
                 apply_session_knobs(memory_limit_gb, batch_size, target_partitions, config)?;
-            finish_session(py, builder)
+            let handle = finish_session(py, builder)?;
+            repark_functions::spark_log1p::register(handle.session.context());
+            Ok(handle)
         })
     }
 

@@ -605,6 +605,71 @@ the result back.
   includes F-17, then runs the complete engine-written, Spark-written, shared-Puffin, multi-file,
   and equality-delete-plus-DV matrix.
 
+### F-21 (P2, added 2026-09-02 from V3-12; **LANDED fork `#262`, consumed by RP-8 2026-09-03**) — merge a legacy position delete into the DV, Spark's merge-and-keep rule
+
+- **Engine observation.** Spark COMMITS a merge-on-read write over a position delete covering two
+  data files: it merges that delete's positions for the touched file into the new DV and leaves
+  the delete file live. Measured 2026-09-02 (PySpark 4.1.2 + Iceberg 1.11.0) on a v2 partitioned
+  table at `write.delete.granularity = 'partition'`, upgraded to v3 — `.delete_files` ends
+  `[PARQUET rc 2 live, PUFFIN rc 2]`, `added-dvs 1`, no `removed-delete-files`. A second write on
+  the OTHER data file commits too, and the parquet delete is STILL live.
+- **Mechanism.** `row_delta_fresh_dv::validate_fresh_dvs_only` admits an added DV over a live
+  position delete only when the same commit REMOVES that delete. It never inspects the DV's
+  contents, so merging the positions changes nothing. Removing the delete is not an option: it
+  is the only thing deleting rows from the data files this commit did NOT touch, so removal
+  resurrects them (measured: id 3 comes back).
+- **Ask.** Port the merge onto the DataFusion delete exec with Spark's rule: merge the positions
+  of EVERY applicable live position delete that names a touched data file into that file's DV,
+  and REMOVE only the file-scoped ones — a delete covering more than one data file stays live.
+  The commit door must then admit a DV over a position delete whose positions it carries.
+- **Fork state (2026-09-03).** LANDED as fork `#262` and consumed by the RP-8 repin to
+  `c1d6c9de`. `delete_legacy_merge.rs::write_deletion_vectors` merges every applicable live
+  position delete that names a touched data file and removes only the file-scoped ones;
+  `validate_fresh_dvs_only` now blocks only file-scoped. Both engine pins flipped: see the
+  registry rows below.
+- **Acceptance.** The measured cell above commits and reads `[(4,'d',7)]`; a sabotage variant
+  that declares the supersede without merging must fail. The file-scoped path keeps removing.
+- **Engine pin that flipped (RP-8, 2026-09-03).** `V3-UPGRADE-DV-PART-1` — the three refusal
+  pins (`v3_legacy_delete.rs`, `v3/create.rs`, `test_v3_legacy_delete_merge.py`) now assert the
+  measured §12 P2/P4 commit. `V3-UPGRADE-DV-PLAIN-1` flipped with it: the port covers the
+  plain-`WHERE` arm, which runs through the same exec, on all three doors.
+
+### F-22 (P1, added 2026-09-02 from V3-12; **LANDED fork `#263`, consumed by RP-8 2026-09-03**) — one-pass legacy scan, projected `load_legacy_positions`, optional pre-loaded `ManifestList`
+
+- **Engine observation.** V3-12 must find, for each data file a commit gives a DV, the live
+  file-scoped NON-Puffin position deletes that still apply. The fork's
+  `close_touched_dv_containers_with_partitions` already walks every delete manifest for exactly
+  the DV half (`collect_dv_index`), but exposes nothing about the non-DV half and takes no
+  pre-loaded `ManifestList`, so the engine walks the same manifests a second time and re-reads
+  and re-parses the manifest list. Measured cost of the duplicate walk: see the V3-12 ledger.
+- **Ask, in three parts.** (a) Have `collect_dv_index` / `DvContainerClose` also return the live
+  non-DV position deletes that reference the touched data files (path-scoped and
+  partition-scoped, with their sequence numbers). (b) **The data-manifest half:** the engine also
+  re-walks every `ManifestContentType::Data` manifest purely to read the touched files' data
+  SEQUENCE NUMBERS, which `applies()` needs and which `KnownPartitions` does not carry — the
+  fork's `collect_live_data_files` already walks exactly those manifests in the same close, so
+  have it hand the touched files' sequence numbers back and the engine's second data walk
+  disappears too. (c) A projected `load_legacy_positions` helper, and/or accept an already-loaded
+  `ManifestList` so the list is not re-read and re-parsed.
+- **Fork state (2026-09-03).** LANDED as fork `#263` and consumed by the RP-8 repin with F-21.
+  `DvContainerClose` gained `legacy_deletes` (sorted by delete-file path, each `touched` sorted)
+  and `data_sequence_numbers`; the close takes `Option<&ManifestList>`;
+  `load_legacy_positions_by_path` is one projected read per delete file. **F-18's zero-data-manifest
+  claim is REVERSED:** `collect_live_data_files` always walks every data manifest so the sequence
+  numbers fill, even with a complete `known_partitions` map, and a caller has no opt-out.
+- **Acceptance.** A v3 MoR statement on a table with N delete manifests loads each delete
+  manifest exactly once; the existing container-close pins stay green.
+- **Engine pin that flipped (RP-8, 2026-09-03).** `legacy_deletes.rs` is DELETED — both of its
+  manifest walks and its own parquet decode go with it, and `measure_projected_decode` goes with
+  the file (the fork owns that read now). `measure_legacy_walk_cost` re-measured; the two
+  no-data-manifest pins flipped to sequence-number pins. Engine-side both walks already run at `buffer_unordered(8)`, the
+  fork's own `DV_IO_CONCURRENCY`; V3-12 measured that concurrency to be worth nothing on a local
+  warehouse (§16), so the win this ask is worth is the DUPLICATE pass, not the parallelism.
+- **Also blocked on the fork.** `BasicDeleteFileLoader::parquet_positional_delete_batch_stream`
+  and `ArrowReader::open_parquet_file` are `pub(crate)`, so the engine cannot use the fork's
+  projected, ranged delete-file reader and fetches each legacy delete file whole. Making either
+  public (or exposing a "read a position-delete file's positions" helper) removes that copy.
+
 ## 4. Not fork work — do not pick these up
 
 Listed so they are not re-proposed fork-side:

@@ -28,13 +28,73 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   upgrade beside another key as ONE commit, and the post-upgrade v3 paths (append lineage, COW
   DELETE/UPDATE, MoR MERGE deletion vector, `rewrite_data_files`, `register_table`) at live-Spark
   values, plus a **v1** table upgrading straight to v3 behind the same opt-in and a
-  **partitioned** v2 table whose append takes Spark's id sets and sequence numbers (the
-  per-partition file ORDER differs — `F-v3-10-partition-file-order`, so the pin asserts sets,
-  not the id→row-id map). The legacy-parquet-position-delete refusal is `V3-UPGRADE-DV-1`.
+  **partitioned** v2 table whose append takes Spark's exact `1→2 2→3 3→4 4→0 5→1` map. That pin
+  asserted only the id SETS while `F-v3-10-partition-file-order` was open — the fork's
+  `FanoutWriter` drained a `HashMap`, so the map flapped; **RP-8 (2026-09-03)** consumes fork
+  F-20 (`#261`), which drains ascending, and the map is Spark's in 12 of 12 runs. The legacy-parquet-position-delete cells moved to
+  `v3_legacy_delete.rs` in V3-12; the shared helpers (`seed_mor_four`, `merge_delete_sql`,
+  `upgrade`, `lineage`, `refuse`, `walk_puffin`) are `pub(super)` for that sibling.
   The V3-2 control `create_table.rs::or_replace_applies_requested_v3_and_alter_upgrades_with_opt_in`
   is this unit's too: its ALTER arm flipped from refuse to upgrade, so it no longer carries
   v3-2-create-v3-opt-in/C-008 (V3-10 negates that clause) and cites C-005 alone.
   pins: v3-10-upgrade-v2-to-v3/C-001, C-003, C-004, C-005
+  pins: rp-8-repin-f21-f22/C-004
+- `v3_legacy_delete.rs` — **V3-12:** the Spark-SQL-door cells for a v3 merge-on-read write over an
+  upgraded table's legacy parquet position deletes. Seven merge cells (MERGE-DELETE and the append
+  after it, UPDATE, subquery DELETE, two legacy deletes on one data file, an untouched sibling
+  keeping its own, copy-on-write leaving it alone). Spark merges **every** applicable live position
+  delete that names a touched data file and removes **only the file-scoped** ones; it COMMITS the
+  covering-two-files shape and leaves that delete live forever.
+  **RP-8 (2026-09-03):** at pin `c1d6c9de` the engine does too, so the two loud refusals became
+  merge cells at Spark's measured values. `a_plain_where_merge_on_read_delete_over_a_legacy_delete_merges_into_the_dv`
+  and a new UPDATE twin pin the A2 outcome for the spellings that plan through the fork's own
+  delete exec (`V3-UPGRADE-DV-PLAIN-1` FIXED); `a_partition_scoped_legacy_delete_merges_and_keeps_the_parquet_live`
+  pins §12's P2 and P4 — the parquet delete stays LIVE beside one DV of `record_count` 2 per
+  touched data file, rows `[(4,'d')]` then `[(9,'z')]` (`V3-UPGRADE-DV-PART-1` FIXED). The
+  removal rule is unchanged and still the load-bearing half: removing a delete that covers two
+  data files would resurrect the untouched sibling's deleted row. Both cells carry an ANSI and a
+  facade twin (row per entry point), and the facade twins gained live Spark comparisons.
+  Two branch cells close `V3-DV-BRANCH-1`: a second MoR DELETE on a diverged branch must merge
+  the BRANCH's own DV (red before V3-12 — the close read `main`, wrote a fresh DV, and the commit
+  door refused with "already carries a live deletion vector"), and a legacy parquet delete that
+  exists only on a branch merges there. **RP-8 (2026-09-03):** both stay green at `c1d6c9de`
+  with no source change — the scanned `snapshot_id` still reaches the close, and now reaches the
+  legacy collect INSIDE it, so the branch's own legacy deletes are the ones merged.
+  `branch_delete_files` reads `snapshot_for_ref`, not the current snapshot, so a pin that
+  passes by reading `main` is not available to it.
+  pins: rp-8-repin-f21-f22/C-005
+  `measure_legacy_walk_cost` is the `#[ignore]`d before/after cell for the legacy-delete manifest
+  walk: it seeds one delete manifest per commit at `commit.manifest-merge.enabled = false` and
+  times one more MoR DELETE that finds ZERO candidates, so it isolates the walk from the read.
+  RP-8 re-measured it against the F-21/F-22 fork — 8 manifests 337/346/351 ms before against
+  329/332/315 ms after, 48 manifests 1.522/1.489/1.459 s against 1.459/1.479/1.451 s: **no
+  measurable change**, because the delete-manifest walk RePark stopped making is paid back by
+  F-22's always-on data-manifest walk. It is not a wall-clock CI pin.
+  pins: v3-12-legacy-delete-merge/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+  pins: rp-8-repin-f21-f22/C-002, C-003
+- `v3_row_order.rs` — **V3-11 (2026-09-02):** same-commit data-file order. The ten-run pin
+  `mor_merge_insert_takes_sparks_row_id_in_ten_consecutive_runs` replays the LIVE-v3 sequence
+  ten times and requires Spark's exact `_row_id = 11` each time (it read 10 or 11 at random
+  before — 24 red of 30 over three batteries). Two pins carry Spark-parity claims because the
+  two rules coincide on their partition sets —
+  `mor_merge_across_three_partitions_numbers_files_ascending_by_partition_value` and
+  `partitioned_ctas_numbers_files_ascending_by_partition_value`; they are named for the rule
+  they prove, not for Spark, because Spark's order is a `HashMap` bucket artefact
+  (`V3-FILEORDER-1`). Three are **engine-behaviour** pins with no Spark claim at all:
+  `a_null_partition_slot_is_numbered_first_whatever_order_it_arrives_in` (Spark answers
+  `0, NULL, 1` on one of its three arrival orders — null and int `0` share a bucket),
+  `a_two_field_spec_orders_lexicographically_in_spec_field_order` and
+  `transform_partitions_order_by_the_transformed_value_ascending` (`truncate`, `bucket`,
+  `days`; only the `bucket` arm matches Spark). Mutations: dropping the sort reddens all six;
+  reversing it reddens the three value-order pins; dropping only the `append.rs` call reddens
+  the CTAS pin; dropping only the `row_lineage.rs` call reddens the two MERGE pins; ordering
+  nulls last reddens the null pin alone; comparing only the first spec field reddens the
+  two-field pin alone.
+  The byte tripwire `v3_lineage.rs::cow_keep_refusal_files_are_byte_untouched` re-records the
+  `crates/repark-sql/src/v3/cow.rs` hash for the two ANSI twins V3-11 adds there, and once more
+  in the remediation round that renamed them off `sparks_..._order`; the other three hashes are
+  untouched.
+  pins: v3-11-row-id-determinism/C-002, C-003, C-006
 - `declared_refuse.rs` — **FNP-15/16:** Spark-door parse-altitude refusals for the six
   unreachable names and the sketch family; passthrough attach pin.
   pins: fnp-15-16/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008

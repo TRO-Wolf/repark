@@ -67,6 +67,26 @@ JVM, no repark required). See [../map.md](../map.md).
   recommendation follows one stated rule set, and whose §5 quotes what a `yes` would bind — the
   gate paragraph itself is untouched by that unit
   (pins: api-review-packet/C-001, C-002, C-003, C-004, C-005).
+  **API-FREEZE (2026-09-02):** that same gate paragraph now carries one appended line — "API
+  review answered 2026-09-02 (packet); the freeze lands with the tag" — and this pin stayed green
+  across it. pins: api-freeze/C-002
+- `test_api_freeze.py` — **API-FREEZE (2026-09-02):** the v1.0 freeze pin. Holds three things
+  at once: every packet row's `decision` equals its `recommend` (15 YES / 15 YES-except / 5 NO,
+  dated 2026-09-02, the owner's rule sentence byte-equal in packet, inventory and
+  `docs/release.md`); the checked-in register
+  [../../../docs/design/v1-0-api-freeze.json](../../../docs/design/v1-0-api-freeze.json) equals a
+  fresh `scripts/build_api_freeze.py` build of the tree, so an unrecorded surface move is red; and
+  the additive rule holds in both directions. Ten mutations over a scratch copy of the enumerated
+  sources — **8 red** (a frozen member's `def` renamed private; a frozen callable's required
+  parameter renamed; a door surface flipped Tested → `absent`; a frozen conf-key literal, error
+  class or packaging literal dropped; a packet decision that stops equalling its recommendation; a
+  surface id that no packet row claims) and **2 green by design** (a new public member, a new
+  optional parameter). The five `NO` rows carry `frozen: false` and no member, so nothing about
+  them is checked. Regenerating the register is the sanctioned move for an intended additive
+  change: `python3 scripts/build_api_freeze.py --write`, in the same commit.
+  The unit's docs half rides the same file: the release policy section, the discharged facade
+  ruling, the north-star line and the STATUS line are each asserted here, so a docs rollback
+  is red. (pins: api-freeze/C-001, C-002, C-003, C-004)
 - `test_pr_247_owner_ruling.py` — **PR #247 revalidation (2026-08-27):** the owner-ruling blocks
   in `AGENTS.md` and `CLAUDE.md` stay byte-exact, unique, at the document start, and in regular
   files; one-byte drift, malformed or missing files, relocation, duplication, and symlink
@@ -105,11 +125,82 @@ JVM, no repark required). See [../map.md](../map.md).
   `docs/tier2-aws.md` §6 lists one row per leg, its two v3 rows state the answer, it says the v3
   legs need no new IAM action or workflow variable, and it carries no run id because measured
   state belongs to STATUS; both legs and the local pin exist as real `def`s; STATUS's v3
+  **V3-11 (2026-09-02):** the `V3-ROWID-3` meta-pin flips from BACKLOG to FIXED, and three
+  more join it — `F-v3-10-partition-file-order` names fork ask **F-20** as RePark's rule rather
+  than Spark's, and **RP-8 (2026-09-03)** flips that meta-pin to the closed reading: the ask
+  landed as fork `#261`, the residual is FIXED, and the registry must still say the drain buys
+  determinism and one rule, **not** parity; `V3-FILEORDER-1` must carry the decoded
+  `JavaHashes$StructLikeHash` order, the collision caveat and every measured arm; and the
+  retired `DataSourceV2Relation` maintenance-oracle note must appear ONCE (under MOR-1) with
+  five pointers, so no row can quietly regrow its own copy of a claim that was false on all
+  six.
+  pins: rp-8-repin-f21-f22/C-004
+  **RP-8 (2026-09-03):** `test_v1_gate_docs.py`'s fork-side meta-pin reads the consumed pin, so
+  it moves with the repin — the north star's "Fork side, at the consumed pin" heading and
+  `Cargo.toml` both name `c1d6c9de`, and R114's dated cell names F-21 and F-22.
+  pins: rp-8-repin-f21-f22/C-006
+  Two neighbouring meta-pins were repointed when V3-11 compacted STATUS:
+  `test_plan_1_northstar_fnp_sequence.py` reads the shortened V3-6 sentence, and
+  `test_v3r_1_rulings.py` reads `F-rp3-c7 consumed` from the north-star COW row — the
+  artefact's own home — instead of from a STATUS restatement that no longer exists.
+  `test_cap_1_source_file_line_cap.py` mirrors the `append.rs` ceiling at its ratcheted 1884.
+  pins: v3-11-row-id-determinism/C-003, C-005, C-008
   workstream names the run, carries the `V3-ROWID-3` line and stays under its dual-pinned
   25,000-byte ceiling; registry `V3-ROWID-3` still carries both engines' measured answers and
   names follow-up unit V3-11; and `docs/design/format-v3-track.md` §7's two "not measured" claims
   each carry a dated correction. Whitespace-normalized reads, so a re-wrap does not red it.
   pins: live-v3-aws-legs/C-004, C-005; live-v3-first-measurement/C-001, C-002, C-003
+  **V1-GATE (2026-09-03):** the `S3T-V3-1` half gains the confirmation run — the row must say
+  `confirmed live 2026-09-03` and name run 33699342417, base `a0fe83a` and `6 passed in
+  230.67s`, and the two phrasings of the old "not re-dispatched" note join the stale set.
+  pins: v1-gate-audit/C-007
+- `test_v3_cov_docs.py` — **V3-COV (2026-09-03; tree pins):** the coverage document, the registry The Step-6 count pin also reads the program count in `task/roadmap/epic-term/map.md` and `docs/design/map.md`.
+  and the discharge lines hold one matrix — §1's totals are counted from §3 rather than asserted
+  beside it, every DIVERGES row cites a registry row that exists, the six rows this unit filed
+  carry a class, the date and their pin, the two fork-routed rows name a TRIGGER, and the north
+  star and the v3 track carry the dated discharge; `_read` and `_matrix_rows` are cached, so the
+  nine tests parse the document once. `_TOTALS` is the one place the counts live, so
+  a re-measurement that moves a total moves this file too. Mutation battery: 9 red of 9
+  (ledger §6).
+  **Critic remediation round 2 (2026-09-03):** the DIVERGES-cites-a-row pin refused nothing when
+  the cited cell was EMPTY (`"" != "—"`, and `" —"` occurs everywhere in the registry), so it now
+  requires a non-empty cell and anchors on that row's own `^#+ <row> —` heading; and the Step 6
+  pin asserts `_TOTALS`' program count appears in the track's dated line, which is how the stale
+  80 survived the first cut.
+  **RP-8 (2026-09-03):** `V3-COV-3` was FIXED by the repin, so the TRIGGER pin covers `V3-COV-6`
+  alone and a new pin, `test_v3_cov_3_records_the_repin_that_retired_it`, holds the closed
+  reading — the date, the fork PR that closed it, the twelve-of-twelve measurement and the
+  renamed cell — so a row cannot be quietly re-opened or its evidence dropped. `_TOTALS` is
+  unchanged: the nine partitioned rows were re-measured on both engines with the `_row_id` probe
+  restored and every verdict held.
+  pins: rp-8-repin-f21-f22/C-007
+  pins: v3-cov-statement-coverage/C-001, C-004, C-005
+- `test_v1_gate_docs.py` — **V1-GATE (2026-09-03; tree pins):** the v1.0 gate audit is written
+  and true. The north star's §3.1 must carry twenty numbered audit rows, every one glyphed ✅
+  and none naming a BACKLOG residual; each of the seven rows that has a residual must name its
+  registry row, that row's class word and its date, and every `crates/` or `python/` path in a
+  pin cell must exist. The three rows the audit re-glyphed (types, encryption keys, DV / delete
+  file maintenance) must read `✅ by dated DECLARED …` with their ruling dates, and the
+  `rewrite_manifests` row must carry the SCALE-v3 v3 exercise rather than the v2 wiring alone.
+  The gate paragraph must carry exactly ONE dated audit line, must say the tag is the owner's
+  step and must never claim it. The fork half reads the five 🟡 `GAP_MATRIX.md` rows the gate
+  leans on and the pin rev they were read at, which must still be the one in `Cargo.toml`.
+  STATUS must carry the SCALE-v3 numbers, the V3-10 / RDF-1 / LOG1P-1 lines, the audit line and
+  its 25,000-byte ceiling, and the published gate board must be filed under `docs/artifacts/`
+  with a map row naming its sources.
+  **Critic remediation (2026-09-03):** the audit is scoped to each row's §3 v1.0-requires cell,
+  so the pin no longer forbids the word BACKLOG outright — a row may name one only beside
+  `outside the requires cell` — and it now holds the surface-residual table (`RDF-1`,
+  `ORPHAN-1/2`, `MANIFEST-1/3` with their classes), row 13's DELIBERATE-by-analogy-to-OD-2 cell
+  with its pending owner line, row 3's queue-entry clause, row 17's undated `S3T-1` clause, the
+  note that §2 pillar 4's statement coverage is owed rather than discharged, the narrowed gate
+  line, and the Step 6 + slate entries that queue it as V3-COV.
+  **Round 2 (2026-09-03):** `_RESIDUAL_JUSTIFICATIONS` holds the verbatim §3 requires cell each of
+  the two V3-COV residual rows quotes — row 6 "stays opt-in until V3-3; default remains v2" and
+  row 9 "full DML including UPDATE/MERGE, round-tripped" — because a paraphrase there had widened
+  row 6's ask into one the cell never made. The residual row-id match is a word-boundary regex,
+  so `V3-COV-8` no longer satisfies the pin by matching inside a longer id.
+  pins: v1-gate-audit/C-001, C-002, C-003, C-004, C-005, C-006
 - `test_reg_1_registry_truth_up.py` — **REG-1 (2026-08-26; tree pins):** the divergence registry
   says what the pins prove — DEC-2 / DEC-6 / DEC-7 / DEC-8 carry dated FIXED notes naming #94 / #99
   and their equality pins (C-001); TZ-8 splits into the FIXED `CAST(ts AS DATE)` / `to_date` /

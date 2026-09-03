@@ -15,6 +15,8 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
 
 - [`mod.rs`](mod.rs) owns `PyColumn`, constructors, operators, aggregates, and window attachment.
 - [`function_dispatch.rs`](function_dispatch.rs) owns scalar and aggregate function dispatch.
+  LOG1P-1: `log1p` / `expm1` arms embed `repark_functions::expr_fn` kernels.
+  pins: log1p-1-precise-kernels/C-002
 - [`expr_build.rs`](expr_build.rs) owns type parsing, alias handling, and expression inspection.
 - [`window.rs`](window.rs) owns Spark frame conversion and unordered-window policy.
 - [`door_parity_tests.rs`](door_parity_tests.rs) pins standalone facade UDF behavior against SQL.

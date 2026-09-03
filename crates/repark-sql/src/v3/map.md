@@ -13,6 +13,16 @@ ANSI-door format-v3 test modules. `lib.rs` declares `#[cfg(test)] mod v3;`.
   SELECT round-trips ns values and Arrow types (pins: v3-6-v3-types/C-003).
   **V3-9:** the opt-in refusal must not claim merge-on-read is unserved
   (pins: v3-9-mor-predicate-dml-dv/C-006).
+  **V3-12:** `upgraded_v3_merge_delete_merges_a_legacy_parquet_position_delete_into_the_dv` is the
+  ANSI door's V3-12 cell — it lives here, not in `cow.rs`, because the upgrade needs
+  `door_with_session_v3_opt_in` (the real `ReparkSqlConfig`), which `cow.rs`'s extension-only
+  opt-in door cannot drive. `ansi_plain_where_mor_delete_over_a_legacy_parquet_delete_merges_into_the_dv`
+  and `ansi_partition_scoped_legacy_delete_merges_and_keeps_the_parquet_live` are the ANSI twins of
+  the two cells V3-12 filed as refusals, so each entry point carries its own row rather than
+  inheriting the Spark door's. **RP-8 (2026-09-03):** both flipped from refusals to merges at pin
+  `c1d6c9de` — the plain-`WHERE` arm leaves one Puffin and no parquet, and the partition-scoped
+  delete stays LIVE beside a DV per touched data file, which is what Spark leaves
+  (pins: v3-12-legacy-delete-merge/C-003, C-004; rp-8-repin-f21-f22/C-003).
   **V3-10:** `alter_set_properties_*` pin the ANSI door's in-place upgrade — `SET PROPERTIES
   (format_version = 3)` with the session opt-in installed as the real `ReparkSqlConfig`, its
   without-opt-in twin, pre-upgrade rows reading NULL lineage, the same-version request writing
@@ -29,7 +39,13 @@ ANSI-door format-v3 test modules. `lib.rs` declares `#[cfg(test)] mod v3;`.
   the live vector; v2 control; Hadoop `vN` write; **V3-9:** the MoR subquery-`WHERE` twin —
   `DELETE … IN` at next-row-id 3 / added 0 and `UPDATE … IN` at next-row-id 4 / added 1, each
   with one live `Puffin` delete file
-  (pins: v3-9-mor-predicate-dml-dv/C-003; v3-8-subquery-where-lineage/C-002;
+  **V3-11:** the ANSI twins of the same-commit file-order pins — a partitioned v3 CTAS over
+  three partition values and a MoR MERGE that updates one partition and inserts into two more
+  both take Spark's exact `_row_id` map, five runs each (these two partition sets are
+  collision-free monotonic runs, the only shape where the engine's ascending rule and Spark's
+  `HashMap` bucket order coincide — `V3-FILEORDER-1`); dropping the sort reddens both
+  (pins: v3-11-row-id-determinism/C-004; v3-9-mor-predicate-dml-dv/C-003;
+  v3-8-subquery-where-lineage/C-002;
   v3-7-merge-lineage/C-002; rp-6-fork-repin/C-002, C-003; rp-3-fork-repin/C-008).
   Hash-pinned by `v3_lineage.rs::cow_keep_refusal_files_are_byte_untouched`.
 - `types.rs` — `GEOMETRY` / `GEOGRAPHY` / `VARIANT` refuse at CREATE (`V3-GEO-1`);

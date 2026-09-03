@@ -79,7 +79,7 @@ V3_EXPECTED_SURVIVOR_LINEAGE: tuple[tuple[int, int, int], ...] = (
     (10, 9, 10),
 )
 V3_EXPECTED_MERGE_SEQUENCE = 12
-V3_MIN_INSERTED_ROW_ID = V3_SEED_ROW_COUNT
+V3_EXPECTED_INSERTED_ROW_ID = 11
 S3T_V3_ROW = "S3T-V3-1"
 S3T_V3_SUPPORTED = "supported"
 S3T_V3_REFUSED_AT_CREATE = "refused-at-create"
@@ -415,7 +415,7 @@ def assert_v3_lineage(
     label: str,
     exact_commit_counts: bool = True,
 ) -> None:
-    """Survivors keep their stored ``_row_id``; the MERGE insert takes a fresh one."""
+    """Survivors keep their stored ``_row_id``; the MERGE insert takes Spark's exact one."""
     survivors = [row for row in lineage if row[0] != V3_MERGE_INSERTED_ID]
     inserted = [row for row in lineage if row[0] == V3_MERGE_INSERTED_ID]
     expected = [tuple(row) for row in V3_EXPECTED_SURVIVOR_LINEAGE]
@@ -430,15 +430,10 @@ def assert_v3_lineage(
     if len(inserted) != 1:
         raise AssertionError(f"{label} has {len(inserted)} rows for the MERGE insert: {lineage!r}")
     inserted_id, inserted_row_id, inserted_sequence = inserted[0]
-    survivor_row_ids = {row[1] for row in survivors}
-    if inserted_row_id is None or inserted_row_id < V3_MIN_INSERTED_ROW_ID:
+    if inserted_row_id != V3_EXPECTED_INSERTED_ROW_ID:
         raise AssertionError(
             f"{label} MERGE insert id {inserted_id} took _row_id {inserted_row_id!r}, "
-            f"below the fresh-id floor {V3_MIN_INSERTED_ROW_ID}"
-        )
-    if inserted_row_id in survivor_row_ids:
-        raise AssertionError(
-            f"{label} MERGE insert reused survivor _row_id {inserted_row_id}: {lineage!r}"
+            f"not the {V3_EXPECTED_INSERTED_ROW_ID} Spark assigns"
         )
     changed = [row[2] for row in survivors if row[0] == V3_MERGE_UPDATED_ID]
     unchanged = [row[2] for row in survivors if row[0] != V3_MERGE_UPDATED_ID]

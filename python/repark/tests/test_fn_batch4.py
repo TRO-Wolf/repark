@@ -87,6 +87,21 @@ def test_sha2_256(spark: ReparkSession) -> None:
     assert table.num_rows == 1
 
 
+def test_sha2_facade_bytes_divergence_is_pinned(spark: ReparkSession) -> None:
+    """pins: ex-11-functions-hash-url-random/C-001"""
+    facade = spark.sql("SELECT 'hello' AS s").select(sha2("s", 256).alias("h")).to_arrow()
+    assert facade.column("h").to_pylist()[0] == bytes.fromhex(
+        "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+    )
+    assert pa.types.is_binary(facade.schema.field("h").type)
+    door = spark.sql("SELECT sha2('hello', 256) AS h").to_arrow()
+    assert (
+        door.column("h").to_pylist()[0]
+        == "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+    )
+    assert pa.types.is_string(door.schema.field("h").type)
+
+
 def test_rand_returns_float(spark: ReparkSession) -> None:
     frame = spark.sql("SELECT 1 AS x")
     table = frame.select(rand().alias("r")).to_arrow()
@@ -164,6 +179,24 @@ def test_percentile_approx_sql_third_arg_is_centroids(spark: ReparkSession) -> N
     # centroids=2 is a coarser t-digest; it may equal by chance, so only finite + in-window
     # is required.
     assert row["p_c2"] is not None
+
+
+def test_approx_percentile_double_interpolation_divergence_is_pinned(spark: ReparkSession) -> None:
+    """FN-APPROXPCT-1: repark interpolates to DOUBLE where Spark is exact and BIGINT."""
+    frame = spark.createDataFrame(
+        [("a", 1), ("a", 2), ("a", 3), ("a", None), ("b", 4), ("b", 6)],
+        ["k", "v"],
+    )
+    table = frame.select(approx_percentile("v", 0.5).alias("p")).to_arrow()
+    assert table.to_pylist()[0]["p"] == 3.0
+    assert pa.types.is_float64(table.schema.field("p").type)
+    grouped = frame.groupBy("k").agg(approx_percentile("v", 0.5).alias("p")).collect()
+    assert sorted((row["k"], row["p"]) for row in grouped) == [("a", 2.0), ("b", 5.0)]
+    percentile_table = frame.select(percentile_approx("v", 0.5).alias("p")).to_arrow()
+    assert percentile_table.to_pylist()[0]["p"] == 3.0
+    assert pa.types.is_float64(percentile_table.schema.field("p").type)
+    percentile_grouped = frame.groupBy("k").agg(percentile_approx("v", 0.5).alias("p")).collect()
+    assert sorted((row["k"], row["p"]) for row in percentile_grouped) == [("a", 2.0), ("b", 5.0)]
 
 
 def test_batch4_loud_unsupported(spark: ReparkSession) -> None:

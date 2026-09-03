@@ -4,7 +4,7 @@ use datafusion::error::{DataFusionError, Result};
 use iceberg::delete_vector_container::{
     DvContainerClose, close_touched_dv_containers_with_partitions,
 };
-use iceberg::spec::{DataFile, FormatVersion};
+use iceberg::spec::{DataFile, FormatVersion, ManifestList};
 use iceberg::table::Table;
 use iceberg::transaction::RowDeltaAction;
 
@@ -31,6 +31,7 @@ pub(super) async fn prepare_row_delta_deletes(
     pairs: &[PositionDeletePair],
     concurrency: WriteConcurrency,
     known_partitions: KnownPartitions,
+    snapshot_id: Option<i64>,
 ) -> Result<PreparedDeletes> {
     match table.metadata().format_version() {
         FormatVersion::V2 => {
@@ -60,12 +61,12 @@ pub(super) async fn prepare_row_delta_deletes(
                     kind: PreparedKind::PositionDeletes(Vec::new()),
                 });
             }
-            let plan = plan_deletion_vectors(table, pairs, known_partitions).await?;
+            let plan = plan_deletion_vectors(table, pairs, known_partitions, snapshot_id).await?;
             let abort_paths = plan
                 .close
                 .added
                 .iter()
-                .map(|(file, _)| file.file_path().to_string())
+                .map(|file| file.file_path().to_string())
                 .collect();
             Ok(PreparedDeletes {
                 referenced: plan.referenced,
@@ -98,6 +99,7 @@ async fn plan_deletion_vectors(
     table: &Table,
     pairs: &[PositionDeletePair],
     mut known_partitions: KnownPartitions,
+    snapshot_id: Option<i64>,
 ) -> Result<DvCommitPlan> {
     let mut new_positions: HashMap<String, Vec<u64>> = HashMap::new();
     for (path, position) in pairs {
@@ -114,36 +116,44 @@ async fn plan_deletion_vectors(
         }
     }
     known_partitions.retain(|path, _| new_positions.contains_key(path));
-    let mut close =
-        close_touched_dv_containers_with_partitions(table, &new_positions, None, &known_partitions)
-            .await
-            .map_err(iceberg_err)?;
+    let manifest_list = scanned_manifest_list(table, snapshot_id).await?;
+    let close = close_touched_dv_containers_with_partitions(
+        table,
+        &new_positions,
+        snapshot_id,
+        &known_partitions,
+        manifest_list.as_ref(),
+    )
+    .await
+    .map_err(iceberg_err)?;
     Ok(DvCommitPlan {
-        referenced: referenced_data_files(close.added.as_slice(), &mut close.retained_references),
+        referenced: close.referenced_data_files(),
         close,
     })
 }
 
-fn referenced_data_files(
-    added: &[(DataFile, Option<i64>)],
-    retained: &mut HashSet<String>,
-) -> HashSet<String> {
-    let mut references = std::mem::take(retained);
-    references.reserve(added.len());
-    for (file, _) in added {
-        if let Some(path) = file.referenced_data_file() {
-            references.insert(path);
-        }
-    }
-    references
+async fn scanned_manifest_list(
+    table: &Table,
+    snapshot_id: Option<i64>,
+) -> Result<Option<ManifestList>> {
+    let metadata = table.metadata();
+    let snapshot = match snapshot_id {
+        Some(id) => metadata.snapshot_by_id(id),
+        None => metadata.current_snapshot(),
+    };
+    let Some(snapshot) = snapshot else {
+        return Ok(None);
+    };
+    snapshot
+        .load_manifest_list(table.file_io(), metadata)
+        .await
+        .map(Some)
+        .map_err(iceberg_err)
 }
 
 fn apply_close(mut action: RowDeltaAction, close: DvContainerClose) -> RowDeltaAction {
-    for (file, sequence) in close.added {
-        action = match sequence {
-            Some(sequence) => action.add_delete_file_with_sequence_number(file, sequence),
-            None => action.add_deletes([file]),
-        };
+    if !close.added.is_empty() {
+        action = action.add_deletes(close.added);
     }
     if !close.removed.is_empty() {
         action = action.remove_deletes_many(close.removed);
@@ -521,7 +531,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn closing_a_covered_v3_delete_reads_no_data_manifest() {
+    async fn closing_a_covered_v3_delete_reads_the_data_manifest_for_sequence_numbers() {
         let fixture = materialize_part_dv();
         let warehouse = TempDir::new().expect("catalog warehouse");
         let catalog = memory_catalog(&warehouse).await;
@@ -537,20 +547,39 @@ mod tests {
             .expect("register shared-puffin fixture");
         let table = catalog.load_table(&ident).await.expect("load");
         let pair = pair_for_id(&table, 1).await;
-        let _hidden = HiddenManifests::hide(&data_manifest_paths(&table).await);
+        let touched = pair.0.as_ref().to_string();
+        let hidden = HiddenManifests::hide(&data_manifest_paths(&table).await);
+        let refused = prepare_row_delta_deletes(
+            &table,
+            std::slice::from_ref(&pair),
+            WriteConcurrency::new(1).expect("K=1"),
+            KnownPartitions::new(),
+            None,
+        )
+        .await;
+        assert!(
+            refused.is_err(),
+            "the close walks the data manifests for sequence numbers, so hiding them must fail"
+        );
+        drop(hidden);
         let prepared = prepare_row_delta_deletes(
             &table,
             &[pair],
             WriteConcurrency::new(1).expect("K=1"),
             KnownPartitions::new(),
+            None,
         )
         .await
-        .expect("close reads no data manifest");
-        assert_eq!(prepared.referenced.len(), 2);
+        .expect("close with the data manifests present");
+        assert_eq!(prepared.referenced.len(), 1);
         match prepared.kind {
             PreparedKind::DeletionVectors(close) => {
                 assert_eq!(close.added.len(), 1);
                 assert_eq!(close.removed.len(), 1);
+                assert!(
+                    close.data_sequence_numbers.contains_key(&touched),
+                    "every touched path carries a data sequence number"
+                );
             }
             PreparedKind::PositionDeletes(_) => panic!("v3 must plan deletion vectors"),
         }
@@ -649,7 +678,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn a_supplied_partition_map_closes_a_fresh_partitioned_delete_with_no_data_manifest() {
+    async fn a_supplied_partition_map_still_walks_the_data_manifests_for_sequence_numbers() {
         let warehouse = TempDir::new().expect("catalog warehouse");
         let catalog = memory_catalog(&warehouse).await;
         let namespace = NamespaceIdent::new("ns".to_string());
@@ -667,20 +696,40 @@ mod tests {
                 .any(|(_, partition)| !partition.fields().is_empty()),
             "the fixture must be partitioned, or the pin proves nothing"
         );
+        let touched = pair.0.as_ref().to_string();
         let hidden = HiddenManifests::hide(&data_manifest_paths(&table).await);
+        let refused = prepare_row_delta_deletes(
+            &table,
+            std::slice::from_ref(&pair),
+            WriteConcurrency::new(1).expect("K=1"),
+            known.clone(),
+            None,
+        )
+        .await;
+        assert!(
+            refused.is_err(),
+            "a complete partition map no longer buys a zero-data-manifest close"
+        );
+        drop(hidden);
         let prepared = prepare_row_delta_deletes(
             &table,
             &[pair],
             WriteConcurrency::new(1).expect("K=1"),
             known,
+            None,
         )
         .await
-        .expect("a supplied partition map must not walk a data manifest");
+        .expect("close with the data manifests present");
         match prepared.kind {
-            PreparedKind::DeletionVectors(close) => assert_eq!(close.added.len(), 1),
+            PreparedKind::DeletionVectors(close) => {
+                assert_eq!(close.added.len(), 1);
+                assert!(
+                    close.data_sequence_numbers.contains_key(&touched),
+                    "the sequence-number walk fills every touched path"
+                );
+            }
             PreparedKind::PositionDeletes(_) => panic!("v3 must plan deletion vectors"),
         }
-        drop(hidden);
         let table = catalog.load_table(&ident).await.expect("reload");
         assert_eq!(live_ids(&table).await, vec![1, 2, 3, 4]);
     }

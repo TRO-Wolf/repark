@@ -9,6 +9,22 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
 ## Contents
 
 - [abs.py](abs.py) — `F.abs`, `F.col`, `F.lit` on a three-row local frame.
+- [arrays.py](arrays.py) — the array builders and counters: `F.array`, `F.array_repeat`,
+  `F.sequence` (plain and stepped), and `F.size` / `F.cardinality` / `F.array_size` agreeing.
+- [array_edit.py](array_edit.py) — `F.array_append`, `F.array_prepend`, `F.array_remove`,
+  `F.array_compact`: grow, shrink, and clean an array, NULL elements and NULL arrays included.
+- [array_elements.py](array_elements.py) — element access and membership: `F.element_at`,
+  `F.try_element_at` (index spelled `F.lit`, like Spark), `F.get`, `F.slice`,
+  `F.array_contains`.
+- [array_order.py](array_order.py) — `F.sort_array` both directions, the extremes
+  `F.array_max` / `F.array_min`, `F.array_join`, and `F.shuffle` shape-checked.
+- [array_setops.py](array_setops.py) — the set algebra quartet: `F.array_distinct`,
+  `F.array_union`, `F.array_intersect`, `F.array_except`.
+- [explode.py](explode.py) — `F.explode` and `F.explode_outer`: one row per array element,
+  the outer spelling keeping the empty and NULL rows.
+- [higher_order.py](higher_order.py) — the lambda names: `F.exists`, `F.forall`, `F.filter`,
+  `F.transform` (element and index forms), `F.aggregate` (with and without finish),
+  `F.reduce`, `F.zip_with`; an `F.slice` empty array drives the empty-aggregate case.
 - [roots.py](roots.py) — `F.sqrt`, `F.cbrt`, `F.hypot`: the two roots parting
   company on negative input (NaN versus a signed answer), then `hypot` against
   the long form `sqrt(a*a + b*b)`.
@@ -22,34 +38,64 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
 - [hyperbolic.py](hyperbolic.py) — the hyperbolic six, with the inverse domains:
   `F.asinh` open, `F.acosh` from 1, `F.atanh` inside the unit interval.
 - [logs.py](logs.py) — `F.ln` and one-argument `F.log`, the fixed-base spellings
-  `F.log10` / `F.log2`, two-argument `F.log`, and `F.e`, whose ln is 1.
+  `F.log10` / `F.log2`, two-argument `F.log`, `F.log1p` / `F.expm1` at the tiny-arg
+  edge, and `F.e`, whose ln is 1. pins: log1p-1-precise-kernels/C-003
 - [rounding.py](rounding.py) — `F.ceil` / `F.ceiling` (an alias pair) and `F.floor`
   against the integers, and `F.round`, whose halfway cases go away from zero.
 - [integer_math.py](integer_math.py) — `F.factorial`, `F.pmod` answering non-negative
   under a positive divisor, `F.greatest` / `F.least` skipping NULLs, `F.width_bucket`.
 - [try_arithmetic.py](try_arithmetic.py) — the `F.try_*` quartet answering NULL on
   overflow and divide-by-zero, ordinary input unchanged.
-- [slice.py](slice.py) — `F.substr` / `F.substring` at positive and negative positions,
-  and `F.overlay` replacing a slice in place, with and without the length.
-- [split_part.py](split_part.py) — `F.split_part` by one-based and negative part number,
-  and `F.substring_index` by left/right/beyond/zero delimiter count.
-- [translate.py](translate.py) — `F.translate` per-character map, including
-  deleting characters with an empty map; `F.replace` measured incompatible with
-  the PySpark wrapper (repark takes a literal `search`, PySpark a column name)
-  and stays on the backlog.
-- [search.py](search.py) — `F.position` both ways round and `F.find_in_set` membership
-  in a comma list, not-found zeros and NULLs included.
-- [words.py](words.py) — `F.repeat` at 2, 0 and negative, `F.reverse`, `F.soundex`
-  codes, and `F.quote` single-quote wrapping.
-- [utf8.py](utf8.py) — `F.bit_length` / `F.octet_length` byte counts and the invalid
-  UTF-8 trio: `F.is_valid_utf8` tests, `F.make_valid_utf8` repairs with U+FFFD,
-  `F.try_validate_utf8` answers NULL.
-- [regex.py](regex.py) — the `F.regexp` / `F.rlike` / `F.regexp_like` match predicates,
-  `F.regexp_count`, `F.regexp_replace`, `F.regexp_substr`, `F.regexp_instr`, and
-  `F.regexp_extract_all` by capture-group index.
-- [like.py](like.py) — `F.like` wildcards (`%`, `_`) and the backslash escape, with
-  `F.ilike` folding case on the same patterns.
+- [nulls.py](nulls.py) — the NULL tests `F.isnull` / `F.isnotnull` / `F.equal_null` (two NULLs compare equal) and the substitutions `F.coalesce`, `F.ifnull`, `F.nvl`, `F.nvl2`, `F.nullif`, `F.nullifzero`, `F.nanvl` on rows carrying NULLs, with the NaN literal edges separate.
+- [conditional.py](conditional.py) — `F.when` chains and the bare form, and `F.assert_true` passing, then raising with its message.
+- [columns.py](columns.py) — `F.column`, the constructor spelling that agrees with `F.col`, NULL included.
+- [sort_order.py](sort_order.py) — the six `F.asc*` / `F.desc*` orderings and where each places NULLs.
+- [bitwise.py](bitwise.py) — `F.negate`, the `F.bitwiseNOT` / `F.bitwise_not` alias pair, `F.bit_count`, the bit readers `F.bit_get` / `F.getbit`, and the three shifts.
+- [broadcast.py](broadcast.py) — `F.broadcast`, the join hint (single-node no-op in repark, python/repark/src/repark/spark/functions_session.py:49-56), checked to agree with the plain join.
+- [session_context.py](session_context.py) — `F.current_catalog`, `F.current_database` and `F.current_schema` on a two-row frame.
 
+- [map_parts.py](map_parts.py) — `F.map_keys`, `F.map_values`, `F.map_entries`,
+- [map_shapes.py](map_shapes.py) — `F.map_from_arrays`, `F.map_from_entries`,
+- [map_higher_order.py](map_higher_order.py) — `F.transform_keys`,
+- [structs.py](structs.py) — `F.struct` and `F.named_struct`: fields by column and
+- [hashing.py](hashing.py) — `F.md5`, `F.sha`/`F.sha1` (one digest, two
+- [hex_binary.py](hex_binary.py) — `F.hex` and `F.bin` spelling integers,
+- [random_values.py](random_values.py) — `F.uuid`, `F.rand`, `F.randn`,
+- [url.py](url.py) — the URL codec round trip and `F.parse_url` part
+- [try_fallbacks.py](try_fallbacks.py) — `F.try_mod` by zero and
+- [epoch.py](epoch.py) — the epoch conversions: `F.unix_date`, `F.unix_seconds`,
+- [timestamp_from_epoch.py](timestamp_from_epoch.py) — `F.timestamp_seconds`,
+- [to_date_timestamp.py](to_date_timestamp.py) — `F.to_date` / `F.to_timestamp` parse
+- [make_calendar.py](make_calendar.py) — `F.make_date` builds a date from year/month/day
+- [utc_offsets.py](utc_offsets.py) — `F.from_utc_timestamp` / `F.to_utc_timestamp` render
+- [partition_transforms.py](partition_transforms.py) — the partition transforms `F.years`,
+- [summarize.py](summarize.py) — `F.count` / `F.count("*")`, `F.sum`, `F.avg` /
+- [counting.py](counting.py) — `F.count_if` counts true rows only,
+- [first_last.py](first_last.py) — `F.first` / `F.last` over an explicitly
+- [booleans.py](booleans.py) — `F.bool_and` / `F.bool_or` with their `F.every` /
+- [collect.py](collect.py) — `F.collect_list` / `F.array_agg` and the
+- [strings_agg.py](strings_agg.py) — `F.listagg` / `F.string_agg` joining a
+- [grouping.py](grouping.py) — `F.grouping` inside a cube: 1 for the grand-total
+- [try_aggregates.py](try_aggregates.py) — `F.try_sum` answers NULL when the
+- [window_ranking.py](window_ranking.py) — `F.row_number`, `F.rank`, `F.dense_rank`: ties counted three ways on one grouped ordered frame.
+- [window_position.py](window_position.py) — `F.percent_rank`, `F.cume_dist`, `F.ntile`: where a row sits in its partition.
+- [window_offset.py](window_offset.py) — `F.lag` and `F.lead` at two offsets, with and without the fill default.
+- [window_nth_value.py](window_nth_value.py) — `F.nth_value`: the nth value seen so far in the ordered frame. The frame is spelled explicitly (`rowsBetween(unboundedPreceding, currentRow)`, Spark's default for an ordered window).
+- [calendar_parts.py](calendar_parts.py) — the numeric calendar parts of a date
+- [current_datetime.py](current_datetime.py) — the six current date/timestamp
+- [date_arithmetic.py](date_arithmetic.py) — moving a date by days with
+- [date_difference.py](date_difference.py) — `F.date_diff` / `F.datediff`,
+- [date_format.py](date_format.py) — `F.date_format` rendering patterns beside
+- [date_parts_sql.py](date_parts_sql.py) — the SQL field-extraction trio
+- [date_truncation.py](date_truncation.py) — `F.date_trunc` on a timestamp and
+- [slice.py](slice.py) — `F.substr` / `F.substring` at positive and negative positions,
+- [split_part.py](split_part.py) — `F.split_part` by one-based and negative part number,
+- [translate.py](translate.py) — `F.translate` per-character map, including
+- [search.py](search.py) — `F.position` both ways round and `F.find_in_set` membership
+- [words.py](words.py) — `F.repeat` at 2, 0 and negative, `F.reverse`, `F.soundex`
+- [utf8.py](utf8.py) — `F.bit_length` / `F.octet_length` byte counts and the invalid
+- [regex.py](regex.py) — the `F.regexp` / `F.rlike` / `F.regexp_like` match predicates,
+- [like.py](like.py) — `F.like` wildcards (`%`, `_`) and the backslash escape, with
 ## Pointers
 
 - Up: [../map.md](../map.md)

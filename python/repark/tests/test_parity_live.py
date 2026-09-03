@@ -141,6 +141,42 @@ def test_live_disclosure_still_diverges(disclosure: lp.Disclosure, spark_engine:
     disclosure.spark_check(spark_engine)
 
 
+_LOG1P_LIVE_SQL = (
+    "SELECT log1p(CAST(1e-16 AS DOUBLE)) AS r0, "
+    "log1p(CAST(1e-10 AS DOUBLE)) AS r1, "
+    "log1p(CAST(-1.0 AS DOUBLE)) AS r2, "
+    "log1p(CAST(-2.0 AS DOUBLE)) AS r3, "
+    "expm1(CAST(1e-16 AS DOUBLE)) AS r4, "
+    "expm1(CAST(1e-10 AS DOUBLE)) AS r5, "
+    "expm1(CAST(710.0 AS DOUBLE)) AS r6, "
+    "log1p(CAST('0.0000000000000001' AS DECIMAL(38,16))) AS r7, "
+    "expm1(CAST('0.0000000000000001' AS DECIMAL(38,16))) AS r8"
+)
+_LOG1P_LIVE_WANT = (
+    1e-16,
+    9.999999999500001e-11,
+    None,
+    None,
+    1e-16,
+    1.00000000005e-10,
+    float("inf"),
+    1e-16,
+    1e-16,
+)
+
+
+@pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
+def test_live_log1p_expm1_tiny_args_and_domain(spark_engine: lp.Engine) -> None:
+    """pins: log1p-1-precise-kernels/C-001, C-004"""
+    table = spark_engine.arrow_of(spark_engine.session.sql(_LOG1P_LIVE_SQL))
+    for index, want in enumerate(_LOG1P_LIVE_WANT):
+        got = table.column(f"r{index}").to_pylist()[0]
+        if want is None:
+            assert got is None, index
+        else:
+            assert got == want, index
+
+
 @pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
 @pytest.mark.parametrize(
     "repark_scenario,spark_scenario",

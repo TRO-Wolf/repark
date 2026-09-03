@@ -62,15 +62,19 @@ pub(crate) fn conform_batch(
         .map(|field| match source_index.resolve(field.name()) {
             SourceMatch::Unique(index) => {
                 consumed[index] = true;
+                let column = batch.column(index);
+                if column.data_type() == field.data_type() {
+                    return Ok(Some(Arc::clone(column)));
+                }
                 // WI-1: ANSI store assignment BEFORE the kernel.
                 refuse_unless_write_store_assignable(
                     "append",
                     field.name(),
-                    batch.column(index).data_type(),
+                    column.data_type(),
                     field.data_type(),
                 )?;
                 Ok(Some(cast_with_options(
-                    batch.column(index),
+                    column,
                     field.data_type(),
                     &strict_cast(),
                 )?))

@@ -128,6 +128,10 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             need(1)?;
             expr_fn::exp(exprs[0].clone())
         }
+        "expm1" => {
+            need(1)?;
+            repark_functions::expr_fn::expm1(exprs[0].clone())
+        }
         "pow" | "power" => {
             need(2)?;
             expr_fn::power(exprs[0].clone(), exprs[1].clone())
@@ -258,6 +262,10 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         "ln" => {
             need(1)?;
             expr_fn::ln(exprs[0].clone())
+        }
+        "log1p" => {
+            need(1)?;
+            repark_functions::expr_fn::log1p(exprs[0].clone())
         }
         "log" => {
             need_at_least(1)?;

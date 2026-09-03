@@ -314,13 +314,18 @@ pub(crate) async fn commit_row_delta_kind_on_ref(
     let data_file_paths = abort::written_file_paths(&data_files);
     let pair_count = pairs.len() as u64;
     let data_file_count = data_files.len() as u64;
-    let mut prepared =
-        dv_close::prepare_row_delta_deletes(table, &pairs, concurrency, known_partitions)
-            .instrument(tracing::info_span!(
-                "merge.write_deletes",
-                pairs = pair_count
-            ))
-            .await?;
+    let mut prepared = dv_close::prepare_row_delta_deletes(
+        table,
+        &pairs,
+        concurrency,
+        known_partitions,
+        snapshot_id,
+    )
+    .instrument(tracing::info_span!(
+        "merge.write_deletes",
+        pairs = pair_count
+    ))
+    .await?;
     let referenced = std::mem::take(&mut prepared.referenced);
     let delete_file_paths = std::mem::take(&mut prepared.abort_paths);
     let delete_file_count = delete_file_paths.len() as u64;
