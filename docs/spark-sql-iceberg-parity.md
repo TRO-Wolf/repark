@@ -3195,6 +3195,44 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   measured refusing end to end at the fork. See the row in §4 for the pins and the R88
   filing.
 
+- **EX7-TZCOLLECT-1** — measured 2026-09-03 (EX-7 batch b remediation 2, re-scoped from the
+  remediation-1 pair). PySpark's `collect()` renders **driver-local naive** datetimes while its
+  `show()` renders the **session zone**; this engine renders the **stored UTC instant** on both
+  paths — so an oracle comparison run with a non-UTC driver TZ produces false divergences at the
+  collect boundary. Measured triad for `timestamp_seconds(0)` with driver TZ =
+  `America/New_York`, session zone `UTC`: PySpark 4.1.2 collects
+  `datetime.datetime(1969, 12, 31, 19, 0)` while its `show()` prints `1970-01-01 00:00:00`;
+  this engine collects `datetime.datetime(1970, 1, 1, 0, 0)`, and its output is identical under
+  either driver TZ. Recipe for live oracle runs: export `TZ=UTC` before the JVM starts. The
+  session-zone gap this recipe does **not** remove is EX7-SESSIONZONE-1. Full record:
+  `task/ledgers/staging/ex-7-functions-datetime-b-ledger.md`.
+
+- **EX7-SESSIONZONE-1** — measured 2026-09-03 (EX-7 batch b remediation 2). The real
+  session-zone parity gap, distinct from EX7-TZCOLLECT-1 because it survives the `TZ=UTC`
+  recipe: with session zone `America/New_York`, PySpark 4.1.2's `show()` renders
+  `timestamp_seconds(0)` as `1969-12-31 19:00:00` under **both** driver TZs (the session zone
+  is applied), while this engine renders `1970-01-01 00:00:00` — the session zone is not
+  applied on this facade read path, whose output is identical to its UTC output under either
+  driver TZ (the conf itself is read: `current_timezone()` answers `America/New_York` there).
+  Under `TZ=UTC` the `collect()` values still agree, so the divergence is the `show()` render
+  and the schema half: this engine's facade schema for `timestamp_seconds` is `string` (an
+  Arrow `timestamp[s]` with no zone) where Spark's is `timestamp`. Same family as
+  B-TZ-1/B-TZ-2 — the SQL door does not spell `timestamp_seconds` at all — and B-TZ-3; the
+  facade half wants the session zone applied on the timestamp read path, or its own decision.
+  Full record: `task/ledgers/staging/ex-7-functions-datetime-b-ledger.md`.
+
+- **EX7-HOURS-1** — measured 2026-09-03 (EX-7 batch b remediation). The Spark-facade write path
+  refuses `hours()`-partitioned creates: `writeTo(...).partitionedBy(F.hours(...)).create()`
+  raises `DataInvalid => Invalid schema for v2: Invalid type for event_ts: timestamp_ns is not
+  supported until v3`, unchanged with `repark.sql.allowCreateFormatVersion3` set on the builder
+  or via `conf.set`; the facade append into a SQL-door v3 hours table then raises the
+  µs→ns mismatch (`column types must match schema types, expected Timestamp(ns) but found
+  Timestamp(µs, "UTC")`). The SQL door
+  `CREATE TABLE … PARTITIONED BY (hours(event_ts)) TBLPROPERTIES ('format-version'='3')`
+  writes and reads back Spark-equal partition values (`[(475133,), (475134,)]` for
+  2024-03-15 05:00/06:30 UTC). The facade path wants its own decision. Full record:
+  `task/ledgers/staging/ex-7-functions-datetime-b-ledger.md`.
+
 - **FN-TRY-EXTRACT-1** — surfaced 2026-09-03, EX-8 remediation. The facade `F.try_element_at`
   accepts a bare Python int for its extraction argument (the signature is
   `extraction: Column | str | int` in
