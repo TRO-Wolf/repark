@@ -2,7 +2,7 @@
 
 **Retires:** this ledger moves to `../completed/` in the unit's last commit (the orchestrator's departure move). This file closes when EX-13 merges, or when the owner closes the slate row.
 
-**Unit:** EX-13 · **Date:** 2026-09-03 · **Model:** grok-4.6 (continuation of glm-5.3-flash) · **Branch:** `feat/ex-13-functions-aggregates-b-stats` · **Base:** `32c7f30` (dispatch base `32c7f30`)
+**Unit:** EX-13 · **Date:** 2026-09-03 · **Model:** grok-4.6 (continuation of glm-5.3-flash) · **Branch:** `feat/ex-13-functions-aggregates-b-stats` · **Base:** `887695c` as merged (dispatch base `32c7f30`)
 **Slate:** [briefs/example-backfill.md](../../../briefs/example-backfill.md), batch roster aggregate (b) + statistics (24 names). **Ruling:** owner, 2026-08-31, [release-roadmap-2026-08-29.md](../../roadmap/epic-term/release-roadmap-2026-08-29.md) §"v0.7 — Full example documentation".
 
 **Rubric:** STANDARD. Floor S1. `risk_tier: standard`.
@@ -30,7 +30,7 @@ The roster is the 24 `F.*` aggregate (b) and statistics names that were backlog 
 
 | ID | Clause | Proof obligation | Verdict |
 |---|---|---|---|
-| C-001 | Four files under `docs/examples/functions/` land runnable local examples for the twenty-two roster names the live oracle confirms, every asserted value measured against PySpark 4.1.2 + Iceberg 1.11.0 before it was written; those twenty-two leave `docs/examples/backlog.txt` and `BACKLOG_BASELINE` moves down by exactly twenty-two, 777 → 755, with no other `scripts/` change; the two others (`F.skewness`, `F.kurtosis`) stay backlog rows with both values recorded in the oracle table below, and no product file is touched; the gate's static half and its `--require-execute` leg both exit 0. | Red-first capture (24 findings before, 0 after), oracle table (24 rows, one per roster name, Spark value + repark value + kept/dropped + file), the four scripts each exit 0, and the recorded gate exit codes. | **PROVEN** |
+| C-001 | Four files under `docs/examples/functions/` land runnable local examples for the twenty-two roster names the live oracle confirms, every asserted value measured against PySpark 4.1.2 + Iceberg 1.11.0 before it was written; those twenty-two leave `docs/examples/backlog.txt` and `BACKLOG_BASELINE` moves down by exactly twenty-two, 654 → 632 as merged (777 → 755 at dispatch), with no other `scripts/` change; the two others (`F.skewness`, `F.kurtosis`) stay backlog rows with both values recorded in the oracle table below, and no product file is touched; the gate's static half and its `--require-execute` leg both exit 0. | Red-first capture (24 findings before, 0 after), oracle table (24 rows, one per roster name, Spark value + repark value + kept/dropped + file), the four scripts each exit 0, and the recorded gate exit codes. | **PROVEN** |
 
 `LOGIC_SCORE` = **1/1 `PROVEN`**.
 
@@ -51,7 +51,7 @@ Measured with `_live_parity.build_spark_iceberg_engine(Path(tmpdir)).session` at
 | `F.var_pop` | `[5.0, 0.0]` | same | kept | `dispersion.py` | |
 | `F.var_samp` | `[6.666666666666667, None]` | same | kept | `dispersion.py` | |
 | `F.variance` | `[6.666666666666667, None]` | same | kept | `dispersion.py` | alias of `var_samp` |
-| `F.skewness` | `[0.0, None]` | `RAISED UnsupportedOperationException: functions.skewness is not supported yet (engine gap; disclosed R-FN-BATCH4)` | **dropped** | — | loud refusal, not a silent wrong answer |
+| `F.skewness` | `[0.0, None]` | `RAISED UnsupportedOperationException: functions.skewness is not supported yet (engine gap; disclosed R-FN-BATCH4)` | **dropped** | — | loud refusal, not a silent wrong answer; the Spark cell is layout-sensitive (`7.94e-17` under `repartition(3)`), so it is not a pin |
 | `F.kurtosis` | `[-1.36, None]` | `RAISED UnsupportedOperationException: functions.kurtosis is not supported yet (engine gap; disclosed R-FN-BATCH4)` | **dropped** | — | loud refusal, not a silent wrong answer |
 | `F.corr` | `[0.9483040522636019, None]` | same | kept | `covariance.py` | one-pair group → NULL |
 | `F.covar_pop` | `[3.125, 0.0]` | same | kept | `covariance.py` | one-pair group → 0.0 |
@@ -83,17 +83,17 @@ Measured with `_live_parity.build_spark_iceberg_engine(Path(tmpdir)).session` at
 
 Counts line (both legs; native module importable; every example executed):
 
-`example-coverage: 913 public names (catalog=28, column=40, dataframe=150, functions=444, io=42, ml=28, session=41, ta=86, types=32, window=22); 156 covered; 755 backlog; 2 exceptions; 35 examples`
+`example-coverage: 913 public names (catalog=28, column=40, dataframe=150, functions=444, io=42, ml=28, session=41, ta=86, types=32, window=22); 279 covered; 632 backlog; 2 exceptions; 67 examples` (as merged on `887695c`)
 
-Before this unit: `913 public names; 134 covered; 777 backlog; 2 exceptions; 31 examples` (at `32c7f30`). After: `156 covered; 755 backlog; 35 examples` — exactly the twenty-two kept names.
+At dispatch: `913 public names; 134 covered; 777 backlog; 2 exceptions; 31 examples` (at `32c7f30`) → `156 covered; 755 backlog; 35 examples`. As merged: `654 backlog` on `887695c` → `632 backlog` — exactly the twenty-two kept names both ways.
 
 ## Cost
 
-GLM/Spark legs produced the four example files, the backlog ratchet and the map rows, then died on API resets before the ledger and commit. Grok 4.6 continuation (2026-09-03 11:40–end UTC) re-ran the four examples (all green, not rewritten), measured all 24 names on live PySpark 4.1.2 + Iceberg 1.11.0 (`TZ=UTC`, JDK 17), dropped `F.skewness` / `F.kurtosis` with both values, filed this ledger, and committed. Base `32c7f30` (dispatch base `32c7f30`).
+GLM/Spark legs produced the four example files, the backlog ratchet and the map rows, then died on API resets before the ledger and commit. Grok 4.6 continuation (2026-09-03 11:40–11:54 UTC, $0.60) re-ran the four examples (all green, not rewritten), measured all 24 names on live PySpark 4.1.2 + Iceberg 1.11.0 (`TZ=UTC`, JDK 17), dropped `F.skewness` / `F.kurtosis` with both values, filed this ledger, and committed. Base `887695c` as merged (dispatch base `32c7f30`).
 
 ## Disk
 
-Pickup: `df -h` free 569 GB of 1.8 TB. No worktree; unit works in `/tmp/oc-ex13`. `.venv` reused; `make develop` not run. Throwaway oracle under `/tmp/oc-ex13-oracle/` (not in the repo). Ivy redirected to that directory because the default `~/.ivy2.5.2/cache` refused writes.
+Pickup: `df -h` free 569 GB of 1.8 TB. No worktree; unit works in `/tmp/oc-ex13`. `.venv` reused; `make develop` not run. Throwaway oracle under `/tmp/oc-ex13-oracle/` (not in the repo; an in-tree duplicate was deleted before the PR). Ivy redirected to that directory because the default `~/.ivy2.5.2/cache` refused writes.
 
 ## Dual-wire
 
@@ -109,7 +109,7 @@ COVERAGE_ATTESTATION:
       artifacts: [scripts/check_example_coverage.py, docs/examples/inventory.txt, docs/examples/functions/dispersion.py, docs/examples/functions/covariance.py, docs/examples/functions/regression.py, docs/examples/functions/bit_aggregates.py]
     - id: AT-2
       status: ATTACKED
-      evidence: A COVERS name on a wrong receiver is unused and red; the widened backlog is an exact baseline 755.
+      evidence: A COVERS name on a wrong receiver is unused and red; the widened backlog is an exact baseline 632 as merged (755 at dispatch).
       artifacts: [scripts/check_example_coverage.py]
     - id: AT-3
       status: ATTACKED
