@@ -273,6 +273,8 @@ the API-forever clock starts at the first tagged release, not at public):
 - The re-home ships as a declared-rename unit with a generated old→new node-id map, plus a
   deprecation shim at `repark` re-exporting the facade names for one minor series.
 
+**Discharged 2026-09-02:** the pre-1.0 window this ruling opened closed at the v1.0 API review — [v1-0-api-review-2026-09-02.md](v1-0-api-review-2026-09-02.md), decided `R0 yes`, frozen names registered in [v1-0-api-freeze.json](v1-0-api-freeze.json), policy in [../release.md](../release.md) "Versioning policy".
+
 `AGENTS.md` and `PROJECT.md` target maps gain a dated note that `python/repark` is the facade until
 that phase (orchestrator carve-out edit). Three additional mechanisms make the deferral honest
 rather than hopeful:

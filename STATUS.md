@@ -80,18 +80,16 @@ What happens next, in order:
    [briefs/v2-engine-hardening.md](briefs/v2-engine-hardening.md). Live open items sit in
    [Active workstreams](#active-workstreams) and the divergence registry
    [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md). Wave landing records
-   (Y/Z/W/V/S, 2026-08-13/14) are the archived increment ledgers
-   [z5](task/ledgers/archive/2026-08/2026-08-13-z5-landing-increment-ledger.md),
-   [w5](task/ledgers/archive/2026-08/2026-08-13-w5-z-landing-ledger.md),
-   [v5](task/ledgers/archive/2026-08/2026-08-13-v5-w-landing-ledger.md),
-   [s5](task/ledgers/archive/2026-08/2026-08-13-s5-v-landing-ledger.md).
+   (Y/Z/W/V/S, 2026-08-13/14) are the `z5` / `w5` / `v5` / `s5` increment ledgers indexed in
+   [task/ledgers/archive/2026-08/map.md](task/ledgers/archive/2026-08/map.md).
 3. **Production-pipeline cutover inventory** — which workloads move, in what order, under
    **single-writer-per-table**, with each rollback story. Carried from
    [docs/port/PLAN.md](docs/port/PLAN.md) "Open item: cutover".
-4. **The first tagged release** — **DONE**: see [Release state](#release-state). Pre-alpha still
-   means the API can move between tags (the design ruling that the API-forever clock starts at the
-   first tag — [docs/design/python-facade.md](docs/design/python-facade.md) §4 — is enforced at
-   the v1.0 north-star API review).
+4. **The first tagged release** — **DONE**: see [Release state](#release-state). API review
+   answered 2026-09-02 (`R0 yes`, every row decided at its recommendation); freeze pinned — 888
+   names in [docs/design/v1-0-api-freeze.json](docs/design/v1-0-api-freeze.json), policy in
+   [docs/release.md](docs/release.md) "Versioning policy"; the tag waits on the north-star gate
+   line.
 
 Owner-side actions that rode this sequence are **DISCHARGED — no owner-side tier-2 action
 remains.** aws-acceptance ran green 2026-08-10 (Glue and S3 Tables); the parity-live half
