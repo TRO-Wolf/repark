@@ -605,7 +605,7 @@ the result back.
   includes F-17, then runs the complete engine-written, Spark-written, shared-Puffin, multi-file,
   and equality-delete-plus-DV matrix.
 
-### F-21 (P2, added 2026-09-02 from V3-12; **BUILT, under review on the fork**) — merge a legacy position delete into the DV, Spark's merge-and-keep rule
+### F-21 (P2, added 2026-09-02 from V3-12; **LANDED fork `#262`, consumed by RP-8 2026-09-03**) — merge a legacy position delete into the DV, Spark's merge-and-keep rule
 
 - **Engine observation.** Spark COMMITS a merge-on-read write over a position delete covering two
   data files: it merges that delete's positions for the touched file into the new DV and leaves
@@ -622,15 +622,19 @@ the result back.
   of EVERY applicable live position delete that names a touched data file into that file's DV,
   and REMOVE only the file-scoped ones — a delete covering more than one data file stays live.
   The commit door must then admit a DV over a position delete whose positions it carries.
-- **Fork state (2026-09-02).** BUILT and under review. RePark's **RP-8** repin consumes it.
+- **Fork state (2026-09-03).** LANDED as fork `#262` and consumed by the RP-8 repin to
+  `c1d6c9de`. `delete_legacy_merge.rs::write_deletion_vectors` merges every applicable live
+  position delete that names a touched data file and removes only the file-scoped ones;
+  `validate_fresh_dvs_only` now blocks only file-scoped. Both engine pins flipped: see the
+  registry rows below.
 - **Acceptance.** The measured cell above commits and reads `[(4,'d',7)]`; a sabotage variant
   that declares the supersede without merging must fail. The file-scoped path keeps removing.
-- **Engine pin that flips.** `V3-UPGRADE-DV-PART-1` — three refusal pins
-  (`v3_legacy_delete.rs`, `v3/create.rs`, `test_v3_legacy_delete_merge.py`) retarget to the
-  measured commit at **RP-8**. `V3-UPGRADE-DV-PLAIN-1` flips with it if the port also covers the
-  plain-`WHERE` arm, which runs through the same exec.
+- **Engine pin that flipped (RP-8, 2026-09-03).** `V3-UPGRADE-DV-PART-1` — the three refusal
+  pins (`v3_legacy_delete.rs`, `v3/create.rs`, `test_v3_legacy_delete_merge.py`) now assert the
+  measured §12 P2/P4 commit. `V3-UPGRADE-DV-PLAIN-1` flipped with it: the port covers the
+  plain-`WHERE` arm, which runs through the same exec, on all three doors.
 
-### F-22 (P1, added 2026-09-02 from V3-12; **queued next on the fork**) — one-pass legacy scan, projected `load_legacy_positions`, optional pre-loaded `ManifestList`
+### F-22 (P1, added 2026-09-02 from V3-12; **LANDED fork `#263`, consumed by RP-8 2026-09-03**) — one-pass legacy scan, projected `load_legacy_positions`, optional pre-loaded `ManifestList`
 
 - **Engine observation.** V3-12 must find, for each data file a commit gives a DV, the live
   file-scoped NON-Puffin position deletes that still apply. The fork's
@@ -647,12 +651,18 @@ the result back.
   have it hand the touched files' sequence numbers back and the engine's second data walk
   disappears too. (c) A projected `load_legacy_positions` helper, and/or accept an already-loaded
   `ManifestList` so the list is not re-read and re-parsed.
-- **Fork state (2026-09-02).** Queued next. RePark's **RP-8** repin consumes it with F-21.
+- **Fork state (2026-09-03).** LANDED as fork `#263` and consumed by the RP-8 repin with F-21.
+  `DvContainerClose` gained `legacy_deletes` (sorted by delete-file path, each `touched` sorted)
+  and `data_sequence_numbers`; the close takes `Option<&ManifestList>`;
+  `load_legacy_positions_by_path` is one projected read per delete file. **F-18's zero-data-manifest
+  claim is REVERSED:** `collect_live_data_files` always walks every data manifest so the sequence
+  numbers fill, even with a complete `known_partitions` map, and a caller has no opt-out.
 - **Acceptance.** A v3 MoR statement on a table with N delete manifests loads each delete
   manifest exactly once; the existing container-close pins stay green.
-- **Engine pin that flips.** V3-12's `measure_legacy_walk_cost` and `measure_projected_decode`
-  re-measure at **RP-8**, and `legacy_deletes.rs::collect_superseded_legacy_deletes` loses BOTH
-  of its own manifest walks. Engine-side both walks already run at `buffer_unordered(8)`, the
+- **Engine pin that flipped (RP-8, 2026-09-03).** `legacy_deletes.rs` is DELETED — both of its
+  manifest walks and its own parquet decode go with it, and `measure_projected_decode` goes with
+  the file (the fork owns that read now). `measure_legacy_walk_cost` re-measured; the two
+  no-data-manifest pins flipped to sequence-number pins. Engine-side both walks already run at `buffer_unordered(8)`, the
   fork's own `DV_IO_CONCURRENCY`; V3-12 measured that concurrency to be worth nothing on a local
   warehouse (§16), so the win this ask is worth is the DUPLICATE pass, not the parallelism.
 - **Also blocked on the fork.** `BasicDeleteFileLoader::parquet_positional_delete_batch_stream`

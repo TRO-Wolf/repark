@@ -126,12 +126,19 @@ JVM, no repark required). See [../map.md](../map.md).
   legs need no new IAM action or workflow variable, and it carries no run id because measured
   state belongs to STATUS; both legs and the local pin exist as real `def`s; STATUS's v3
   **V3-11 (2026-09-02):** the `V3-ROWID-3` meta-pin flips from BACKLOG to FIXED, and three
-  more join it — `F-v3-10-partition-file-order` stays open naming fork ask **F-20** as
-  RePark's rule rather than Spark's; `V3-FILEORDER-1` must carry the decoded
+  more join it — `F-v3-10-partition-file-order` names fork ask **F-20** as RePark's rule rather
+  than Spark's, and **RP-8 (2026-09-03)** flips that meta-pin to the closed reading: the ask
+  landed as fork `#261`, the residual is FIXED, and the registry must still say the drain buys
+  determinism and one rule, **not** parity; `V3-FILEORDER-1` must carry the decoded
   `JavaHashes$StructLikeHash` order, the collision caveat and every measured arm; and the
   retired `DataSourceV2Relation` maintenance-oracle note must appear ONCE (under MOR-1) with
   five pointers, so no row can quietly regrow its own copy of a claim that was false on all
   six.
+  pins: rp-8-repin-f21-f22/C-004
+  **RP-8 (2026-09-03):** `test_v1_gate_docs.py`'s fork-side meta-pin reads the consumed pin, so
+  it moves with the repin — the north star's "Fork side, at the consumed pin" heading and
+  `Cargo.toml` both name `c1d6c9de`, and R114's dated cell names F-21 and F-22.
+  pins: rp-8-repin-f21-f22/C-006
   Two neighbouring meta-pins were repointed when V3-11 compacted STATUS:
   `test_plan_1_northstar_fnp_sequence.py` reads the shortened V3-6 sentence, and
   `test_v3r_1_rulings.py` reads `F-rp3-c7 consumed` from the north-star COW row — the
@@ -147,6 +154,27 @@ JVM, no repark required). See [../map.md](../map.md).
   `confirmed live 2026-09-03` and name run 33699342417, base `a0fe83a` and `6 passed in
   230.67s`, and the two phrasings of the old "not re-dispatched" note join the stale set.
   pins: v1-gate-audit/C-007
+- `test_v3_cov_docs.py` — **V3-COV (2026-09-03; tree pins):** the coverage document, the registry The Step-6 count pin also reads the program count in `task/roadmap/epic-term/map.md` and `docs/design/map.md`.
+  and the discharge lines hold one matrix — §1's totals are counted from §3 rather than asserted
+  beside it, every DIVERGES row cites a registry row that exists, the six rows this unit filed
+  carry a class, the date and their pin, the two fork-routed rows name a TRIGGER, and the north
+  star and the v3 track carry the dated discharge; `_read` and `_matrix_rows` are cached, so the
+  nine tests parse the document once. `_TOTALS` is the one place the counts live, so
+  a re-measurement that moves a total moves this file too. Mutation battery: 9 red of 9
+  (ledger §6).
+  **Critic remediation round 2 (2026-09-03):** the DIVERGES-cites-a-row pin refused nothing when
+  the cited cell was EMPTY (`"" != "—"`, and `" —"` occurs everywhere in the registry), so it now
+  requires a non-empty cell and anchors on that row's own `^#+ <row> —` heading; and the Step 6
+  pin asserts `_TOTALS`' program count appears in the track's dated line, which is how the stale
+  80 survived the first cut.
+  **RP-8 (2026-09-03):** `V3-COV-3` was FIXED by the repin, so the TRIGGER pin covers `V3-COV-6`
+  alone and a new pin, `test_v3_cov_3_records_the_repin_that_retired_it`, holds the closed
+  reading — the date, the fork PR that closed it, the twelve-of-twelve measurement and the
+  renamed cell — so a row cannot be quietly re-opened or its evidence dropped. `_TOTALS` is
+  unchanged: the nine partitioned rows were re-measured on both engines with the `_row_id` probe
+  restored and every verdict held.
+  pins: rp-8-repin-f21-f22/C-007
+  pins: v3-cov-statement-coverage/C-001, C-004, C-005
 - `test_v1_gate_docs.py` — **V1-GATE (2026-09-03; tree pins):** the v1.0 gate audit is written
   and true. The north star's §3.1 must carry twenty numbered audit rows, every one glyphed ✅
   and none naming a BACKLOG residual; each of the seven rows that has a residual must name its
@@ -167,6 +195,11 @@ JVM, no repark required). See [../map.md](../map.md).
   with its pending owner line, row 3's queue-entry clause, row 17's undated `S3T-1` clause, the
   note that §2 pillar 4's statement coverage is owed rather than discharged, the narrowed gate
   line, and the Step 6 + slate entries that queue it as V3-COV.
+  **Round 2 (2026-09-03):** `_RESIDUAL_JUSTIFICATIONS` holds the verbatim §3 requires cell each of
+  the two V3-COV residual rows quotes — row 6 "stays opt-in until V3-3; default remains v2" and
+  row 9 "full DML including UPDATE/MERGE, round-tripped" — because a paraphrase there had widened
+  row 6's ask into one the cell never made. The residual row-id match is a word-boundary regex,
+  so `V3-COV-8` no longer satisfies the pin by matching inside a longer id.
   pins: v1-gate-audit/C-001, C-002, C-003, C-004, C-005, C-006
 - `test_reg_1_registry_truth_up.py` — **REG-1 (2026-08-26; tree pins):** the divergence registry
   says what the pins prove — DEC-2 / DEC-6 / DEC-7 / DEC-8 carry dated FIXED notes naming #94 / #99

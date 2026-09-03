@@ -20,6 +20,21 @@ else. The next pickup's `make ledger-archive` files everything here under
   line still pending (ERRATA-A), and §2 pillar 4's full v3 statement coverage is recorded as
   **not discharged** with the evidence for that reading (ERRATA-B) and queued as V3-COV.
   `risk_tier: standard`. Branch `docs/v1-gate-audit`.
+- [v3-cov-statement-coverage-ledger.md](v3-cov-statement-coverage-ledger.md) —
+  **V3-COV (2026-09-03), delivered:** the full v3 statement-coverage comparison against PySpark
+  that discharges the north star's §2 pillar 4 — 81 programs, 267 cells, 71 EQUAL, 9 rows filed,
+  2 defects FIXED red-first. `risk_tier: standard`. Branch `feat/v3-cov-statement-coverage`.
+  Matrix: [../../../docs/design/v3-statement-coverage.md](../../../docs/design/v3-statement-coverage.md).
+  Carries one RULING (`V3-COV-3`, the delegated partitioned INSERT's unstable `_row_id`) —
+  closed by RP-8 the same day.
+- [rp-8-repin-f21-f22-ledger.md](rp-8-repin-f21-f22-ledger.md) — **RP-8 (2026-09-03),
+  delivered:** the fork repin `ff4764d3` → `c1d6c9de`, consuming F-19/F-20 (`#261`), F-21
+  (`#262`) and F-22 (`#263`). The deletion-vector container close takes over the legacy-delete
+  collect, merge and file-scoped removal in one delete-manifest pass, so RePark's own
+  `write/merge/dv_close/legacy_deletes.rs` (493 lines) is deleted; `V3-UPGRADE-DV-PLAIN-1`,
+  `V3-UPGRADE-DV-PART-1`, `F-v3-10-partition-file-order` and `V3-COV-3` all FIXED at Spark's
+  measured values; `V3-FILEORDER-1` stays DECLARED and widens to the fork's `INSERT INTO` path.
+  `risk_tier: standard`. Branch `feat/rp-8-repin-f21-f22`.
 
 ## Pointers
 - Up: [../map.md](../map.md)

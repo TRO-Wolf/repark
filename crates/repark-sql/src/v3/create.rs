@@ -589,30 +589,30 @@ fn merge_delete(table: &str, id: i32) -> String {
 }
 
 #[tokio::test]
-async fn ansi_plain_where_mor_delete_over_a_legacy_parquet_delete_refuses_loudly() {
+async fn ansi_plain_where_mor_delete_over_a_legacy_parquet_delete_merges_into_the_dv() {
     let door = door_with_session_v3_opt_in().await;
     seed_upgraded_legacy(&door, "plain", MOR_V2, &["(1, 'a'), (2, 'b'), (3, 'c')"]).await;
     door.ok(&merge_delete("plain", 2)).await;
     door.ok("ALTER TABLE ice.sales.plain SET PROPERTIES (format_version = 3)")
         .await;
 
-    let message = door.err("DELETE FROM ice.sales.plain WHERE id = 3").await;
+    door.ok("DELETE FROM ice.sales.plain WHERE id = 3").await;
 
-    assert!(
-        message.contains("is still covered by a Parquet position-delete file")
-            && message.contains("loadPreviousDeletes"),
-        "V3-UPGRADE-DV-PLAIN-1 on the ANSI door: the plain-WHERE arm plans through the fork's \
-         own delete exec, which refuses before any IO: {message}"
+    assert_eq!(
+        surviving_ids(&door, "plain").await,
+        vec![1],
+        "both the legacy position and the plain-WHERE one stay deleted"
     );
     assert_eq!(
         live_delete_file_kinds(&door, "plain").await,
-        vec!["Parquet".to_string()],
-        "the refusal leaves the table exactly as the upgrade left it"
+        vec!["Puffin".to_string()],
+        "V3-UPGRADE-DV-PLAIN-1 on the ANSI door: the fork's delete exec now merges the legacy \
+         positions and removes the superseded parquet in the same RowDelta"
     );
 }
 
 #[tokio::test]
-async fn ansi_partition_scoped_legacy_delete_refuses_loudly() {
+async fn ansi_partition_scoped_legacy_delete_merges_and_keeps_the_parquet_live() {
     let door = door_with_session_v3_opt_in().await;
     seed_upgraded_legacy(
         &door,
@@ -629,17 +629,34 @@ async fn ansi_partition_scoped_legacy_delete_refuses_loudly() {
     door.ok("ALTER TABLE ice.sales.partsc SET PROPERTIES (format_version = 3)")
         .await;
 
-    let message = door.err(&merge_delete("partsc", 2)).await;
+    door.ok(&merge_delete("partsc", 2)).await;
 
-    assert!(
-        message.contains("Cannot commit deletion vector")
-            && message.contains("live position delete file"),
-        "V3-UPGRADE-DV-PART-1 on the ANSI door: a delete covering two data files is not removable \
-         without resurrecting the sibling's row, so the fork's commit door refuses: {message}"
-    );
     assert_eq!(
         surviving_ids(&door, "partsc").await,
-        vec![2, 4],
-        "the refusal leaves every row the upgrade left"
+        vec![4],
+        "the touched data file's DV unions the partition-scoped delete's position"
     );
+    let mut kinds = live_delete_file_kinds(&door, "partsc").await;
+    kinds.sort();
+    assert_eq!(
+        kinds,
+        vec!["Parquet".to_string(), "Puffin".to_string()],
+        "V3-UPGRADE-DV-PART-1 on the ANSI door: the partition-scoped parquet delete stays LIVE \
+         beside the new DV, as Spark leaves it"
+    );
+
+    door.ok(&merge_delete("partsc", 4)).await;
+
+    let mut kinds = live_delete_file_kinds(&door, "partsc").await;
+    kinds.sort();
+    assert_eq!(
+        kinds,
+        vec![
+            "Parquet".to_string(),
+            "Puffin".to_string(),
+            "Puffin".to_string()
+        ],
+        "the second touched file gets its own DV and the parquet delete is STILL live"
+    );
+    assert!(surviving_ids(&door, "partsc").await.is_empty());
 }

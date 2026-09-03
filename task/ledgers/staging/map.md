@@ -15,6 +15,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `UnsupportedOperationException`) stay on the backlog with both values recorded. `risk_tier: standard`. Branch
   `feat/ex-10-functions-null-conditional`. Slate:
   [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md).
+- [ex-14-functions-window-ledger.md](ex-14-functions-window-ledger.md) — **EX-14 (2026-09-03), in flight:** the v0.7 example backfill's `F.*` window batch — nine names land in four examples, the backlog ratchet 777 → 768, all nine measured Spark-equal on the live oracle. Branch `feat/ex-14-functions-window`. Slate: [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md).
 - [ex-2-functions-math-bitwise-ledger.md](ex-2-functions-math-bitwise-ledger.md) —
   **EX-2 (2026-09-01), in flight:** the v0.7 example backfill's `F.*` math +
   bitwise family — the campaign pilot. One clause per batch; batch 1 covers
@@ -62,8 +63,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `register_table`, whose Spark signature is measured there.
 
 - [ex-11-functions-hash-url-random-ledger.md](ex-11-functions-hash-url-random-ledger.md) —
+- [ex-8-functions-arrays-ledger.md](ex-8-functions-arrays-ledger.md) —
+- [ex-7-functions-datetime-b-ledger.md](ex-7-functions-datetime-b-ledger.md) —
+- [ex-12-functions-aggregates-a-ledger.md](ex-12-functions-aggregates-a-ledger.md) —
+- [ex-6-functions-datetime-a-ledger.md](ex-6-functions-datetime-a-ledger.md) —
 - [ex-13-functions-aggregates-b-stats-ledger.md](ex-13-functions-aggregates-b-stats-ledger.md) —
-  **EX-13 (2026-09-03), in flight:** the v0.7 example backfill's `F.*` aggregate (b) and statistics batch — 22 names land in four examples, the backlog ratchet moves 777 → 755; `F.skewness` and `F.kurtosis` are refused by the engine (`UnsupportedOperationException`, R-FN-BATCH4) and stay on the backlog with both values in the ledger's oracle table. `risk_tier: standard`. Branch `feat/ex-13-functions-aggregates-b-stats`. Slate: [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md).
-
 ## Pointers
 - Up: [../map.md](../map.md)

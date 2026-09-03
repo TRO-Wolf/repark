@@ -150,15 +150,16 @@ def test_add_months_clamps_to_month_end(spark: ReparkSession) -> None:
     assert _single(mid.select("r"), "r") == dt.date(2025, 2, 15)
 
 
-def test_add_months_preserves_month_end_into_longer_months(spark: ReparkSession) -> None:
-    # Disambiguating case for Spark's Hive-derived algorithm: a month-end source in a SHORT month
-    # lands on the last day of the (longer) target month — 2015-02-28 + 1 month is 2015-03-31,
-    # NOT 03-28. A naive plusMonths keeps day 28 and passes every other fixture in this file.
+def test_add_months_month_end_divergence_is_pinned(spark: ReparkSession) -> None:
+    """pins: ex-6-functions-datetime-a/C-001"""
+    # Registry FN-ADDMONTHS-1: repark clamps a month-end source in a SHORT month to the target
+    # month's last day, where Spark (LocalDate.plusMonths) keeps the day — 2015-02-28 + 1 month
+    # is 2015-03-28 in Spark, 2015-03-31 here, and 2025-04-30 - 1 month is 2025-03-30 in Spark,
+    # 2025-03-31 here. The pin holds repark's CURRENT values so the parity fix reds on purpose.
     df = _date_spine(spark, ["2015-02-28"])
     assert _single(
         df.withColumn("r", F.add_months("calendar_date", 1)).select("r"), "r"
     ) == dt.date(2015, 3, 31)
-    # Backwards: April 30 (month-end) minus one month is March 31 (month-end), not March 30.
     back = _date_spine(spark, ["2025-04-30"]).withColumn("r", F.add_months("calendar_date", -1))
     assert _single(back.select("r"), "r") == dt.date(2025, 3, 31)
 

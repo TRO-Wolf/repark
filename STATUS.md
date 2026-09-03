@@ -131,17 +131,19 @@ in published history by explicit decision:
     **V3-9 (2026-09-02):** predicate DML's V2-only gate is lifted — MoR `DELETE`/`UPDATE …
     WHERE` on v3 write file-scoped Puffin DVs on three doors, created and adopted, Spark-equal
     (`V3-MOR-1` FIXED). **V3-10 (2026-09-02):** the in-place v2→v3 upgrade lands on three doors
-    (`V3-UPGRADE-1` FIXED). **RP-7 (2026-09-02):** the fork repin to `ff4764d3` (F-18) makes the
-    shared-Puffin container close Spark-equal — `V3-DV-1` **FIXED**.
+    (`V3-UPGRADE-1` FIXED). **RP-7 (2026-09-02):** the fork repin to `ff4764d3` (F-18) makes the shared-Puffin
+    container close Spark-equal — `V3-DV-1` **FIXED**.
     **LIVE-v3 (2026-09-02):** both live v3 legs green on `aws-acceptance` run 33635288918
     (`S3T-V3-1`), re-dispatched 2026-09-03 (run 33699342417) under V3-11's exact `_row_id`
-    assertion. **V3-11 (2026-09-02):** the engine orders one commit's data files by ascending
-    partition value before the manifest, so the MoR MERGE insert's `_row_id` is deterministic
-    and Spark-equal on that cell (`V3-ROWID-3` FIXED); Spark's own order is a Java `HashMap`
-    bucket artefact, so wider partition sets differ (`V3-FILEORDER-1` DECLARED) and partitioned
-    plain-`INSERT` is fork ask **F-20**.
+    assertion. **V3-11 (2026-09-02):** one commit's data files reach the manifest in ascending
+    partition order, so the MoR MERGE insert's `_row_id` is deterministic and Spark-equal
+    (`V3-ROWID-3` FIXED); Spark's order is a Java `HashMap` bucket artefact, so wider
+    partition sets differ (`V3-FILEORDER-1` DECLARED).
     **V3-12 (2026-09-02):** a legacy position delete merges into the new DV; the close reads
-    its branch (`V3-UPGRADE-DV-1` FIXED, `V3-DV-BRANCH-1`); F-21/F-22 land at RP-8.
+    its branch (`V3-UPGRADE-DV-1` FIXED, `V3-DV-BRANCH-1`). **RP-8 (2026-09-03):** repin to
+    `c1d6c9de` (F-19..F-22) — the close owns that merge in one manifest pass and `FanoutWriter`
+    drains ascending, so RePark's 493-line walk goes and `V3-UPGRADE-DV-PLAIN-1`,
+    `V3-UPGRADE-DV-PART-1`, `V3-COV-3`, `F-v3-10-partition-file-order` are **FIXED**.
     **SCALE-v3 (2026-09-02):** the MW-7 `1e7 x 50` workload re-measured on v3 at the same knobs
     — **96 delete files against v2's 400** and 496 data files against 1,696, because a v3 delete
     is one Puffin vector per data file rewritten in place; the maintenance sequence ends at
@@ -150,15 +152,16 @@ in published history by explicit decision:
     whose copy-on-write control moved 1.00x; every write-side ratio is cross-run and
     uncontrolled. Numbers:
     [scale-v3-mw7-ledger.md](task/ledgers/archive/2026-09/2026-09-02-scale-v3-mw7-ledger.md) §3.
-  - **The gate is audited (V1-GATE, 2026-09-03):** all twenty north-star §3 rows are ✅ or carry
-    a dated DECLARED residual with a pin (north star §3.1). Still owed, neither a §3 row: an
-    owner line confirming `B-MOR-3`'s DECLARED class, and **V3-COV** — §2 pillar 4's full v3
-    statement-coverage comparison, which no unit discharges; it is first on the slate.
+  - **The gate is audited (V1-GATE, 2026-09-03) and §2 pillar 4 is discharged (**V3-COV**,
+    2026-09-03):** all twenty north-star §3 rows are ✅ or carry a dated DECLARED residual with a
+    pin (§3.1), and the statement matrix is measured — 81 programs, 267 cells, 71 EQUAL, 9 rows
+    filed, 2 FIXED ([v3-statement-coverage.md](docs/design/v3-statement-coverage.md)). One owner
+    line confirming `B-MOR-3`'s DECLARED class now stands between the audit and the tag.
   - **Next:** lineage carry and merge-on-read are complete on every served DML shape
-    (`V3-COW-1`, `V3-MOR-1`, `V3-DV-1`, `V3-ROWID-3`, `V3-UPGRADE-DV-1` FIXED); open v3 residuals
-    are `V3-FILEORDER-1` and `F-v3-10-partition-file-order` (fork F-20, RP-8 repins),
-    `V3-UPGRADE-DV-PLAIN-1` and `V3-UPGRADE-DV-PART-1` (dated refusals; fork F-21/F-22, RP-8),
-    `V3-UPGRADE-V4-1`, `G3-E8` and `B-MOR-3`.
+    (`V3-COW-1`, `V3-MOR-1`, `V3-DV-1`, `V3-ROWID-3`, `V3-UPGRADE-DV-1`,
+    `V3-UPGRADE-DV-PLAIN-1`, `V3-UPGRADE-DV-PART-1`, `V3-COV-3`,
+    `F-v3-10-partition-file-order` FIXED); open v3 residuals are `V3-FILEORDER-1`,
+    `V3-COV-4` / `V3-COV-5` / `V3-COV-6`, `V3-UPGRADE-V4-1`, `G3-E8` and `B-MOR-3`.
 <!-- /ws -->
 
 <!-- ws id=perf ledgers=perf- state=open -->

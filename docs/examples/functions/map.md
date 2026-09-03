@@ -9,6 +9,22 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
 ## Contents
 
 - [abs.py](abs.py) — `F.abs`, `F.col`, `F.lit` on a three-row local frame.
+- [arrays.py](arrays.py) — the array builders and counters: `F.array`, `F.array_repeat`,
+  `F.sequence` (plain and stepped), and `F.size` / `F.cardinality` / `F.array_size` agreeing.
+- [array_edit.py](array_edit.py) — `F.array_append`, `F.array_prepend`, `F.array_remove`,
+  `F.array_compact`: grow, shrink, and clean an array, NULL elements and NULL arrays included.
+- [array_elements.py](array_elements.py) — element access and membership: `F.element_at`,
+  `F.try_element_at` (index spelled `F.lit`, like Spark), `F.get`, `F.slice`,
+  `F.array_contains`.
+- [array_order.py](array_order.py) — `F.sort_array` both directions, the extremes
+  `F.array_max` / `F.array_min`, `F.array_join`, and `F.shuffle` shape-checked.
+- [array_setops.py](array_setops.py) — the set algebra quartet: `F.array_distinct`,
+  `F.array_union`, `F.array_intersect`, `F.array_except`.
+- [explode.py](explode.py) — `F.explode` and `F.explode_outer`: one row per array element,
+  the outer spelling keeping the empty and NULL rows.
+- [higher_order.py](higher_order.py) — the lambda names: `F.exists`, `F.forall`, `F.filter`,
+  `F.transform` (element and index forms), `F.aggregate` (with and without finish),
+  `F.reduce`, `F.zip_with`; an `F.slice` empty array drives the empty-aggregate case.
 - [roots.py](roots.py) — `F.sqrt`, `F.cbrt`, `F.hypot`: the two roots parting
   company on negative input (NaN versus a signed answer), then `hypot` against
   the long form `sqrt(a*a + b*b)`.
@@ -47,16 +63,35 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
 - [random_values.py](random_values.py) — `F.uuid`, `F.rand`, `F.randn`,
 - [url.py](url.py) — the URL codec round trip and `F.parse_url` part
 - [try_fallbacks.py](try_fallbacks.py) — `F.try_mod` by zero and
+- [epoch.py](epoch.py) — the epoch conversions: `F.unix_date`, `F.unix_seconds`,
+- [timestamp_from_epoch.py](timestamp_from_epoch.py) — `F.timestamp_seconds`,
+- [to_date_timestamp.py](to_date_timestamp.py) — `F.to_date` / `F.to_timestamp` parse
+- [make_calendar.py](make_calendar.py) — `F.make_date` builds a date from year/month/day
+- [utc_offsets.py](utc_offsets.py) — `F.from_utc_timestamp` / `F.to_utc_timestamp` render
+- [partition_transforms.py](partition_transforms.py) — the partition transforms `F.years`,
+- [summarize.py](summarize.py) — `F.count` / `F.count("*")`, `F.sum`, `F.avg` /
+- [counting.py](counting.py) — `F.count_if` counts true rows only,
+- [first_last.py](first_last.py) — `F.first` / `F.last` over an explicitly
+- [booleans.py](booleans.py) — `F.bool_and` / `F.bool_or` with their `F.every` /
+- [collect.py](collect.py) — `F.collect_list` / `F.array_agg` and the
+- [strings_agg.py](strings_agg.py) — `F.listagg` / `F.string_agg` joining a
+- [grouping.py](grouping.py) — `F.grouping` inside a cube: 1 for the grand-total
+- [try_aggregates.py](try_aggregates.py) — `F.try_sum` answers NULL when the
+- [window_ranking.py](window_ranking.py) — `F.row_number`, `F.rank`, `F.dense_rank`: ties counted three ways on one grouped ordered frame.
+- [window_position.py](window_position.py) — `F.percent_rank`, `F.cume_dist`, `F.ntile`: where a row sits in its partition.
+- [window_offset.py](window_offset.py) — `F.lag` and `F.lead` at two offsets, with and without the fill default.
+- [window_nth_value.py](window_nth_value.py) — `F.nth_value`: the nth value seen so far in the ordered frame. The frame is spelled explicitly (`rowsBetween(unboundedPreceding, currentRow)`, Spark's default for an ordered window).
+- [calendar_parts.py](calendar_parts.py) — the numeric calendar parts of a date
+- [current_datetime.py](current_datetime.py) — the six current date/timestamp
+- [date_arithmetic.py](date_arithmetic.py) — moving a date by days with
+- [date_difference.py](date_difference.py) — `F.date_diff` / `F.datediff`,
+- [date_format.py](date_format.py) — `F.date_format` rendering patterns beside
+- [date_parts_sql.py](date_parts_sql.py) — the SQL field-extraction trio
+- [date_truncation.py](date_truncation.py) — `F.date_trunc` on a timestamp and
 - [dispersion.py](dispersion.py) — `F.std`/`F.stddev`/`F.stddev_samp`, `F.stddev_pop`, and the
-  `F.variance` / `F.var_samp` / `F.var_pop` trio on a grouped frame; a one-value group answers
-  NULL (sample) or 0.0 (population).
 - [covariance.py](covariance.py) — `F.corr`, `F.covar_pop`, `F.covar_samp` over (y, x) pairs,
-  NULL pairs skipped, a one-pair group answering 0.0 or NULL.
 - [regression.py](regression.py) — Spark's nine `F.regr_*` linear-regression aggregates over
-  (y, x) pairs: counts, means, slope, intercept, r2, and the three sums of squares/products.
 - [bit_aggregates.py](bit_aggregates.py) — `F.bit_and`, `F.bit_or`, `F.bit_xor` folding each
-  group's integers, NULL inputs skipped.
-
 ## Pointers
 
 - Up: [../map.md](../map.md)
