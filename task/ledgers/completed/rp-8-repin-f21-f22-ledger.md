@@ -26,6 +26,17 @@ Spark-visible design choice not measured (HALT).
 (`9cef991`) while the unit was running, and the branch was rebased onto it, so C-007 is measured
 rather than deferred. §11 records the reading taken while it was still blocked.
 
+## ERRATA (2026-09-03, orchestrator, after the critic and the Rust perf review) — wins over §1–§11
+
+| # | Correction |
+|---|---|
+| E-1 | Base: the branch's actual base is `9cef991` (V3-COV #321), not `5285a32`; the bare-repin evidence (C-001) was re-taken by the critic on the `9cef991` tree with the new `Cargo.toml`/`Cargo.lock`: `cargo check -p repark-iceberg` exit 101, five errors all in `dv_close.rs` (E0609 `retained_references`, E0061 five arguments, 3× E0308 `Vec<DataFile>`) — three public breaks, nothing else |
+| E-2 | C-002's evidence cell says `repark-iceberg --lib` 376 passed (RP-7's number); this tree measures 381 passed, 0 failed |
+| E-3 | Mutation evidence (critic, on a snapshot of the tip): M1 re-add an engine-side removal (`close.removed.extend(close.removed.clone())`) → 10 red (2 `repark-iceberg --lib` close pins, 8 of 12 `v3_legacy_delete` cells); M2 duplicate every statement position → 0 red of 1503 because a DV's `record_count` is the distinct-position cardinality (the fork's own writer pin). The §6 consumption note therefore over-claims: only the removal half is observable; the position half of a double-merge is a no-op |
+| E-4 | §8 "no measurable change" does not refute a regression: `measure_legacy_walk_cost` seeds one data manifest per delete manifest, so the deleted delete-manifest walk and F-22's new unconditional data-manifest walk cancel to the byte (`strace`: 66 non-snapshot avro opens on both trees at 8 + 8). On a pure-DV fixture (N data manifests, 0 legacy deletes) the statement wall at 192 data manifests is 1.646 s → 2.286 s (+39 %, ~3.3 ms per data manifest), 48: +9.9 %, 8: noise; each data manifest is opened three times per statement where two sufficed. Filed as registry queue entry PERF-DVCLOSE-WALK-1 with fork TRIGGER F-23 and an RP-9 repin. The cell itself is unrepeatable as a wall-clock (run-to-run spread ~1.7 s) and should assert a manifest-open count |
+| E-5 | The partitioned `INSERT` paths are unchanged by F-20's ascending drain: 1e6 rows / 8 partitions 53.550 s vs 53.567 s; 1e5 rows / 5k partitions 1519.056 s vs 1519.096 s (both trees, concurrent, debug) |
+| E-6 | `V3-FILEORDER-1`'s widened text narrowed: no second data-file ordering rule; the fork's `write_dv_blobs` still drains `HashMap` keys for blob order inside one Puffin |
+
 ## PROPOSITION LEDGER — RP-8 — 2026-09-03
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |

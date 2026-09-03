@@ -2804,7 +2804,9 @@ the pin rather than obeying it.
   sequence number are equal on both sides in every cell above. **Widened (RP-8, 2026-09-03):**
   the fork's `FanoutWriter::close` now drains ascending too (fork `#261`, F-20), so the delegated
   `INSERT INTO` path this row did not previously cover follows the same rule — the divergence is
-  unchanged in kind and the engine no longer has a second, nondeterministic ordering anywhere.
+  unchanged in kind and the engine no longer has a second data-file ordering rule (the
+  fork's `write_dv_blobs` still drains `HashMap` keys for the blob order inside one Puffin
+  when a commit writes fresh DVs for more than one data file).
   Revisiting this needs a new dated decision. Pins: v3-11-row-id-determinism/C-007,
   rp-8-repin-f21-f22/C-004.
 
@@ -3427,6 +3429,19 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   row; the example spells `F.lit` like Spark.
 
 ---
+
+- **PERF-DVCLOSE-WALK-1** — surfaced 2026-09-03, RP-8 Rust perf review. At pin `c1d6c9de` the
+  fork's DV container close walks every data manifest of the scanned snapshot on every MoR
+  DELETE/UPDATE/MERGE, including the pure-DV path with no legacy delete and a complete partition
+  map (F-22 reversed F-18's conditional walk to fill `data_sequence_numbers`, which this engine
+  never reads). Measured on a pure-DV v3 MoR table, debug profile, local ext4, medians of five:
+  statement wall at 192 data manifests 1.646 s → 2.286 s (+39 %, ~3.3 ms per data manifest);
+  48 manifests +9.9 %; 8 manifests within noise; `strace` shows each data manifest opened three
+  times per statement where two sufficed before. Partitioned INSERT at 1e6 rows / 8 partitions
+  and 1e5 rows / 5k partitions is unchanged by the F-20 drain. No pin yet (the walk-cost cell is
+  an `#[ignore]`d measurement); fork TRIGGER F-23: skip `collect_live_data_files` when no legacy
+  delete is pending and `known_partitions` covers every touched path, and stop the stream once
+  every wanted path is found; RP-9 repins. Full record: the RP-8 ledger, ERRATA E-4.
 
 ## 8. Drop-in disclosure rationale
 

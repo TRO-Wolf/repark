@@ -60,8 +60,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   exists only on a branch merges there. **RP-8 (2026-09-03):** both stay green at `c1d6c9de`
   with no source change — the scanned `snapshot_id` still reaches the close, and now reaches the
   legacy collect INSIDE it, so the branch's own legacy deletes are the ones merged.
-  pins: rp-8-repin-f21-f22/C-005 `branch_delete_files` reads `snapshot_for_ref`, not the
-  current snapshot, so a pin that passes by reading `main` is not available to it.
+  `branch_delete_files` reads `snapshot_for_ref`, not the current snapshot, so a pin that
+  passes by reading `main` is not available to it.
+  pins: rp-8-repin-f21-f22/C-005
   `measure_legacy_walk_cost` is the `#[ignore]`d before/after cell for the legacy-delete manifest
   walk: it seeds one delete manifest per commit at `commit.manifest-merge.enabled = false` and
   times one more MoR DELETE that finds ZERO candidates, so it isolates the walk from the read.
