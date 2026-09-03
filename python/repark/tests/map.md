@@ -42,11 +42,38 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (a NULL sub-array is dropped; Spark answers `NULL`). Each asserts repark's current value,
   so the fix reds it on purpose.
   pins: ex-8-functions-arrays/C-001
+- [test_fn_elt_out_of_range.py](test_fn_elt_out_of_range.py) — **EX-5 remediation
+  (2026-09-03):** FN-ELT-1 pin. Out-of-range `elt` (index 3 and 0) answers NULL;
+  Spark 4.1.2 raises `INVALID_ARRAY_INDEX`. Asserts repark's current `None`.
+  pins: ex-5-functions-strings-b-regex/C-001
+- [test_fn_regex_posix_class.py](test_fn_regex_posix_class.py) — **EX-5 remediation
+  (2026-09-03):** FN-REGEX-POSIX-1 pin. `regexp_count` / `rlike` of `[[:alpha:]]`
+  honour the POSIX class (`[3, 3, 6]` / `[True, True, True]`); Spark parses a
+  union bracket (`[1, 0, 4]` / `[True, False, True]`).
+  pins: ex-5-functions-strings-b-regex/C-001
+- [test_fn_like_escape_end.py](test_fn_like_escape_end.py) — **EX-5 remediation
+  (2026-09-03):** FN-LIKE-ESCEND-1 pin. A LIKE pattern ending in the escape char
+  answers `False`; Spark raises `INVALID_FORMAT.ESC_AT_THE_END`. Control
+  `like('a\\b', 'a\\\\b')` is True on both.
+  pins: ex-5-functions-strings-b-regex/C-001
 - [test_log1p_1.py](test_log1p_1.py) — **LOG1P-1 (2026-09-02):** three-door `log1p` /
   `expm1` pins (Spark SQL, ANSI `repark.sql()`, facade), tiny-arg vs composed form,
   SEM-1 incidentals. Live Spark cell lives in `test_parity_live.py` on the
   session-scoped `spark_engine`. Oracle live PySpark 4.1.2.
   pins: log1p-1-precise-kernels/C-001, C-002, C-004
+- [test_bl17_base64_padding.py](test_bl17_base64_padding.py) — **BL-17 (2026-09-03):**
+  codifies today's unpadded `F.base64` (`'Spark'` → `U3Bhcms`, `'A'` → `QQ`) so a
+  padded kernel reds the pin; Spark 4.1.2 is `U3Bhcms=` / `QQ==`. Measured by EX-4.
+  pins: ex-4-functions-strings-a/C-001
+- [test_fn_initcap_divergence.py](test_fn_initcap_divergence.py) — **FN-INITCAP-1
+  (2026-09-03):** today's `initcap` starts a word at any non-alnum (`'a-b'` → `'A-B'`);
+  Spark 4.1.2 splits on SPACE only (`'A-b'`). pins: ex-4-functions-strings-a/C-001
+- [test_fn_chr_divergence.py](test_fn_chr_divergence.py) — **FN-CHR-1 (2026-09-03):**
+  `chr(300)`/`char(300)` are `'Ĭ'` and `chr(-1)` raises; Spark is `n % 256` and `''`.
+  pins: ex-4-functions-strings-a/C-001
+- [test_fn_trim_chars.py](test_fn_trim_chars.py) — **FN-TRIM-CHARS-1 (2026-09-03):**
+  `F.trim`/`ltrim`/`rtrim` TypeError on a two-arg charset; Spark trims those chars.
+  pins: ex-4-functions-strings-a/C-001
 - [test_fnp7_try_inversions.py](test_fnp7_try_inversions.py) — **FNP-7a/7b:** twelve `try_*`
   inversions. Spark 4.1.2 cells (value and Arrow type) on the two reachable doors (Spark SQL
   + facade Column API). Native ANSI `repark.sql()` does not load SparkExtension: the twelve
