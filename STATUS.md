@@ -7,7 +7,7 @@
 > [.agents/](.agents/map.md) as thin tool adapters that carry no authoritative facts). When a current-state
 > fact changes, it changes **here** — other files point at this file, they do not restate it.
 
-_Last updated: 2026-09-02._
+_Last updated: 2026-09-03._
 
 ## Release state
 
@@ -16,27 +16,20 @@ Pre-alpha, **v0.6.0 shipped (2026-08-31)** — the eighth tag on proven machiner
 tag-triggered `release.yml`, PyPI trusted publishing, `cp312-abi3` manylinux wheel, wheel-only
 (crates.io publishing structurally deferred, see docs/release.md), version SSOT at the Cargo
 workspace (`0.6.0`). v0.6.0 is the Iceberg DML remainder, four Critic-passed units (#273–#276):
-DML-B `INSERT OVERWRITE … PARTITION` static + dynamic and `writeTo().overwritePartitions()`
-with the filter-match guard pinned; DML-C `TRUNCATE TABLE` first-class on all three doors
-(registry DML-2 FIXED); DML-A `MERGE … WHEN NOT MATCHED BY SOURCE` (DELETE and UPDATE, COW and
-MOR) on the existing cardinality and store-assignment gates; MAINT `rewrite_data_files` gains
-`where` (byte-identical out-of-scope proof) and binpack, sort refusing loud at the fork ceiling
-(RDF-SORT-1). Every unit oracle-measured against live PySpark 4.1.2 + Iceberg 1.11.0 before
-implementation. Pre-alpha still means the API can move between tags. Release mechanics:
+DML-B `INSERT OVERWRITE … PARTITION` (static + dynamic, `writeTo().overwritePartitions()`),
+DML-C `TRUNCATE TABLE` on three doors (`DML-2` FIXED), DML-A `MERGE … WHEN NOT MATCHED BY
+SOURCE`, and MAINT `rewrite_data_files` `where` + binpack with sort refusing at the fork ceiling
+(`RDF-SORT-1`); semantics in [the registry](docs/spark-sql-iceberg-parity.md), every unit
+oracle-measured against live PySpark 4.1.2 + Iceberg 1.11.0 before implementation. Pre-alpha still means the API can move between tags. Release mechanics:
 [docs/release.md](docs/release.md).
 
 ## Delivered capabilities
 
 **Milestone one — the private-v1 → public-v2 port — is COMPLETE and merged to `main`
-(2026-08-08)** (PRs #16, #18–#23). The port ran copy-then-re-home in four phases; all four are
-delivered:
-
-| Phase | Scope | State |
-|---|---|---|
-| Phase 0 | Bootstrap: governance, testing contract, mechanical gates, map.md discipline, tier-1 CI | **DONE (2026-08-06)** |
-| Phase 1 | Engine core: `repark-common`, `repark-iceberg`, `repark-core` | **DONE (2026-08-07)** |
-| Phase 2 | The two SQL doors: `repark-functions`, `repark-ta`, `repark-spark`, `repark-sql` | **DONE (2026-08-07)** |
-| Phase 3 | Python facade + parity: `repark-ml`, `repark-python`, the wheel + parity harness | **DONE (2026-08-08)** |
+(2026-08-08)** (PRs #16, #18–#23). Four phases delivered 2026-08-06/08: bootstrap (governance,
+testing contract, mechanical gates, tier-1 CI), engine core, the two SQL doors, and the Python
+facade + parity harness. The full record — phase briefs, the seventeen unit ledgers, the
+retrospectives — is archived at [docs/history/port-v2/](docs/history/port-v2/README.md).
 
 **Nine crates are delivered** (workspace SSOT: root `Cargo.toml`; navigation:
 [crates/map.md](crates/map.md)): `repark-common`, `repark-core`, `repark-iceberg`,
@@ -45,23 +38,18 @@ Python tree ships `python/repark` (the PySpark facade wheel) and `python/repark-
 differential harness). The published wheel is in [Release state](#release-state) above.
 
 **Acceptance:** the v2 test census is byte-flat against the port-source pin baseline
-`fc3f48102`, exit 0 on all four cohorts — classic `142/345`, expand `44/171`, expand2 `87/167`,
-and the facade cohort `(2,499 − 2 added) ∪ 12 deferred = pin 2,509`. Census procedure:
-[docs/port/census.md](docs/port/census.md); evidence:
-`task/census/baseline-fc3f48102/` and `task/census/v2-a5be8a7/`, evicted from the tree by DL-1 on
-2026-08-23 and reachable at `main` `b13b22c` ([docs/port/census.md](docs/port/census.md) §7) —
-except the baseline's [facade cohort](task/census/baseline-fc3f48102/facade/map.md), which the
-deferred-ledger tests read; deferred
-and added acceptance inputs (live ledgers, still consumed by the comparator):
-[task/port/](task/port/). The port's full record — the four phase briefs, the seventeen unit
-ledgers, the retrospectives — is archived at
-[docs/history/port-v2/](docs/history/port-v2/README.md).
+`fc3f48102`, exit 0 on all four cohorts. The per-cohort counts are
+[docs/history/port-v2/](docs/history/port-v2/README.md) "Result at acceptance"; the procedure and
+the DL-1 eviction of the evidence trees (reachable at `main` `b13b22c`) are
+[docs/port/census.md](docs/port/census.md) §7; the baseline's
+[facade cohort](task/census/baseline-fc3f48102/facade/map.md) stays in the tree because the
+deferred-ledger tests read it, and the deferred and added acceptance inputs are
+[task/port/](task/port/).
 
 ## Current milestone
 
-**Milestone one is COMPLETE.** There is no in-flight *port* work; the delivered record — briefs,
-unit ledgers, retrospectives — is archived at
-[docs/history/port-v2/](docs/history/port-v2/README.md).
+**Milestone one is COMPLETE** and there is no in-flight *port* work; its record is under
+[Delivered capabilities](#delivered-capabilities) above.
 
 **Standing decision: the private v1 predecessor is bugfix-only, and this repository is the sole
 forward target.** New engine work happens here. v1 receives fixes only, and a defect both engines
@@ -72,15 +60,9 @@ What happens next, in order:
 1. **Agent-Agnostic Front-Door** — **DONE (2026-08-10).** Record:
    [docs/history/frontdoor/](docs/history/frontdoor/README.md); metrics:
    [task/metrics.md](task/metrics.md).
-2. **V2 Engine Hardening** — the active engine campaign: optimization *and* the verification that
-   proves it, across the native door, the Spark facade, and the write path. H-1 is archived
-   (2026-08-11) at [docs/history/hardening-h1/](docs/history/hardening-h1/README.md); the campaign
-   continues in **H-2**. Design:
-   [docs/design/v2-engine-hardening.md](docs/design/v2-engine-hardening.md); slate:
-   [briefs/v2-engine-hardening.md](briefs/v2-engine-hardening.md). Live open items sit in
-   [Active workstreams](#active-workstreams) and the divergence registry
-   [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md). Wave landing records
-   (Y/Z/W/V/S, 2026-08-13/14) are the `z5` / `w5` / `v5` / `s5` increment ledgers indexed in
+2. **V2 Engine Hardening** — the active engine campaign; its state is the H-2 entry in
+   [Active workstreams](#active-workstreams). Wave landing records (Y/Z/W/V/S, 2026-08-13/14)
+   are the `z5` / `w5` / `v5` / `s5` increment ledgers indexed in
    [task/ledgers/archive/2026-08/map.md](task/ledgers/archive/2026-08/map.md).
 3. **Production-pipeline cutover inventory** — which workloads move, in what order, under
    **single-writer-per-table**, with each rollback story. Carried from
@@ -89,14 +71,13 @@ What happens next, in order:
    answered 2026-09-02 (`R0 yes`, every row decided at its recommendation); freeze pinned — 888
    names in [docs/design/v1-0-api-freeze.json](docs/design/v1-0-api-freeze.json), policy in
    [docs/release.md](docs/release.md) "Versioning policy"; the tag waits on the north-star gate
-   line.
+   line, which V1-GATE wrote 2026-09-03 — cutting it is the owner's step.
 
 Owner-side actions that rode this sequence are **DISCHARGED — no owner-side tier-2 action
-remains.** aws-acceptance ran green 2026-08-10 (Glue and S3 Tables); the parity-live half
-discharged on first-run evidence; three stale always-PASS Apache smoke pins are known-FAIL meta
-pins. Pre-scrub content stays reachable in published history — accepted by explicit decision;
-provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e-facade-ledger.md)
-("the B-2 literal is already published").
+remains** (aws-acceptance green 2026-08-10; the parity-live half on first-run evidence; three
+stale always-PASS Apache smoke pins are known-FAIL meta pins). Pre-scrub content stays reachable
+in published history by explicit decision:
+[p3e-facade-ledger.md](docs/history/port-v2/p3e-facade-ledger.md).
 
 ## Active workstreams
 
@@ -129,26 +110,19 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
   [task/ledgers/staging/v3-0-charter-ledger.md](task/ledgers/staging/v3-0-charter-ledger.md).
   - **Measured true (V3-0, [#199](https://github.com/TRO-Wolf/repark/pull/199)):** v3 DV reads
     and lineage appends round-trip through Spark. **V3-5:** `V3-DANGLE-1` FIXED.
-  - **Delivered** (per-row detail: the north-star matrix): V3-1 `register_table` + the v3
-    fixture ([#203](https://github.com/TRO-Wolf/repark/pull/203)); V3-2 opt-in CREATE/CTAS
-    `format-version = 3`, ALTER refused ([#232](https://github.com/TRO-Wolf/repark/pull/232));
-    V3E-1 + V3E-2 adopted-v3 COW DML measured, `ENC-1` DECLARED
-    ([#235](https://github.com/TRO-Wolf/repark/pull/235)); V3E-3 partitioned-DV
-    and equality-delete fixtures ([#236](https://github.com/TRO-Wolf/repark/pull/236));
-    V3R-1 —
-    **the 2026-08-25 owner rulings:** row-DML on v3 **guarded** (`V3-COW-1`, discharged by V3-8),
-    `geometry`/`geography` DECLARED out of v1.0 (`V3-GEO-1`), shredded-Parquet `variant`
-    DECLARED out (queued `V3-VARIANT-SHRED-1`), the S3 Tables live legs **in** (OD-3b,
-    `docs/tier2-aws.md` §2 — green at LIVE-v3), and the
-    v2→v3 in-place upgrade built after V3-3 — **discharged by V3-10 (2026-09-02):
-    `V3-UPGRADE-1` FIXED, three doors.**
-    V3E-4 measured refs, `VERSION AS OF` over DVs, expire dual-probe, orphan floor.
+  - **Delivered** — the north-star §3 matrix is the per-row home; this is the merge record.
+    V3-1 `register_table` + the v3 fixture ([#203](https://github.com/TRO-Wolf/repark/pull/203));
+    V3-2 opt-in CREATE/CTAS `format-version = 3`
+    ([#232](https://github.com/TRO-Wolf/repark/pull/232)); V3E-1 + V3E-2 adopted-v3 COW DML,
+    `ENC-1` DECLARED ([#235](https://github.com/TRO-Wolf/repark/pull/235)); V3E-3 partitioned-DV
+    and equality-delete fixtures ([#236](https://github.com/TRO-Wolf/repark/pull/236)); V3R-1
+    recorded the 2026-08-25 owner rulings, every one now discharged; V3E-4 measured refs,
+    `VERSION AS OF` over DVs, expire dual-probe, orphan floor.
     V3E-5 added the nightly v3 live-oracle leg
-    ([#253](https://github.com/TRO-Wolf/repark/pull/253)). RP-2 (2026-08-28, `ce92a7bf`) the
-    DV-free first DELETE. RP-3 (`d408da42`) wired container closure (`V3-ADOPT-1` FIXED);
-    RP-4 (`33be9a0`) rewrite lineage Spark-equal (`V3-LINEAGE-1` FIXED).
-    RP-6 (2026-09-01, `fb0cacfa`) lifts UPDATE. V3-7 / V3-8 (2026-09-02) carry MERGE and
-    subquery-`WHERE` COW `_row_id` and delete the refusal seat — `V3-COW-1` **FIXED**.
+    ([#253](https://github.com/TRO-Wolf/repark/pull/253)); first green nightly 2026-09-02.
+    RP-2 / RP-3 / RP-4 took the fork repins (`V3-ADOPT-1`, `V3-LINEAGE-1` FIXED); RP-6
+    (2026-09-01) lifts UPDATE. V3-7 / V3-8 (2026-09-02) carry MERGE and subquery-`WHERE` COW
+    `_row_id` and delete the refusal seat — `V3-COW-1` **FIXED**.
     **V3-4 (2026-08-31):** `_row_id` / `_last_updated_sequence_number` Spark-equal on
     single-table v3 reads (`V3-ROWID-1` FIXED, `V3-ROWID-2` refuses the rest).
     **V3-6 (2026-09-01):** opt-in v3 CREATE takes the fork's `timestamp_ns` types, append fills
@@ -156,16 +130,30 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
     refuse Spark-equal (`V3-VARIANT-SHRED-1`).
     **V3-9 (2026-09-02):** predicate DML's V2-only gate is lifted — MoR `DELETE`/`UPDATE …
     WHERE` on v3 write file-scoped Puffin DVs on three doors, created and adopted, Spark-equal
-    (`V3-MOR-1` FIXED). **RP-7 (2026-09-02):** the fork repin to `ff4764d3` (F-18) makes the
+    (`V3-MOR-1` FIXED). **V3-10 (2026-09-02):** the in-place v2→v3 upgrade lands on three doors
+    (`V3-UPGRADE-1` FIXED). **RP-7 (2026-09-02):** the fork repin to `ff4764d3` (F-18) makes the
     shared-Puffin container close Spark-equal — `V3-DV-1` **FIXED**.
     **LIVE-v3 (2026-09-02):** both live v3 legs green on `aws-acceptance` run 33635288918
-    (`S3T-V3-1`). **V3-11 (2026-09-02):** the engine orders one commit's data files by ascending
+    (`S3T-V3-1`), re-dispatched 2026-09-03 (run 33699342417) under V3-11's exact `_row_id`
+    assertion. **V3-11 (2026-09-02):** the engine orders one commit's data files by ascending
     partition value before the manifest, so the MoR MERGE insert's `_row_id` is deterministic
     and Spark-equal on that cell (`V3-ROWID-3` FIXED); Spark's own order is a Java `HashMap`
     bucket artefact, so wider partition sets differ (`V3-FILEORDER-1` DECLARED) and partitioned
     plain-`INSERT` is fork ask **F-20**.
     **V3-12 (2026-09-02):** a legacy position delete merges into the new DV; the close reads
     its branch (`V3-UPGRADE-DV-1` FIXED, `V3-DV-BRANCH-1`); F-21/F-22 land at RP-8.
+    **SCALE-v3 (2026-09-02):** the MW-7 `1e7 x 50` workload re-measured on v3 at the same knobs
+    — **96 delete files against v2's 400** and 496 data files against 1,696, because a v3 delete
+    is one Puffin vector per data file rewritten in place; the maintenance sequence ends at
+    **zero delete files and zero delete records** where v2 kept 8 files and 10,000,000 records,
+    and `rewrite_data_files` reclaims all 96 alone. The point probe reads at 0.64x v2 on a cell
+    whose copy-on-write control moved 1.00x; every write-side ratio is cross-run and
+    uncontrolled. Numbers:
+    [scale-v3-mw7-ledger.md](task/ledgers/archive/2026-09/2026-09-02-scale-v3-mw7-ledger.md) §3.
+  - **The gate is audited (V1-GATE, 2026-09-03):** all twenty north-star §3 rows are ✅ or carry
+    a dated DECLARED residual with a pin (north star §3.1). Still owed, neither a §3 row: an
+    owner line confirming `B-MOR-3`'s DECLARED class, and **V3-COV** — §2 pillar 4's full v3
+    statement-coverage comparison, which no unit discharges; it is first on the slate.
   - **Next:** lineage carry and merge-on-read are complete on every served DML shape
     (`V3-COW-1`, `V3-MOR-1`, `V3-DV-1`, `V3-ROWID-3`, `V3-UPGRADE-DV-1` FIXED); open v3 residuals
     are `V3-FILEORDER-1` and `F-v3-10-partition-file-order` (fork F-20, RP-8 repins),
@@ -202,21 +190,22 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
   **FNP-4c (2026-08-31):** ten higher-order names on the FNP-4a seam. **FNP-7a/7b (2026-08-31):**
   twelve `try_*` inversions (NULL instead of raise). Remaining work ships as one coherent
   PR per unit or tightly coupled pair.
+  **LOG1P-1 (2026-09-02):** `log1p` / `expm1` move to the precise kernels on both SQL doors and
+  the facade, Spark-equal at the tiny-argument edge (`BL-15` FIXED).
   **Next, in order (revised 2026-08-31):** FNP-9/10 → FNP-8 → FNP-11/12 → FNP-Z.
   Deferred with reasons in the design: FNP-4b, FNP-6d, FNP-13, FNP-14. This campaign and TA
   performance consume no F-17 surface and may use fork-wait windows; neither gates v1.0.
 <!-- /ws -->
 
 <!-- ws id=h2 ledgers=h-,h2- state=open -->
-- **V2 Engine Hardening** (active; recon complete, design and slate landed; **H-1 phase archived
-  mid-campaign 2026-08-11** at [docs/history/hardening-h1/](docs/history/hardening-h1/README.md);
-  campaign continues into H-2) — optimization across the native door, the Spark facade and
-  the write path, with the verification that proves each improvement. Its design is
-  [docs/design/v2-engine-hardening.md](docs/design/v2-engine-hardening.md) (goal, the six phases
-  H-0…H-5, the dated decisions) and its execution slate is
-  [briefs/v2-engine-hardening.md](briefs/v2-engine-hardening.md) (the per-unit definitions and
-  acceptance gates). **DFP-1 (2026-08-31) is complete:** preserve-null Unnest removes redundant
-  projections; adjacent candidates stay measurement-gated. #30 (the dead doc-pointer sweep) merged.
+- **V2 Engine Hardening** (active; recon complete; **H-1 archived mid-campaign 2026-08-11** at
+  [docs/history/hardening-h1/](docs/history/hardening-h1/README.md); continues into H-2) —
+  optimization across the native door, the Spark facade and the write path with the verification
+  that proves each improvement. Design (goal, phases H-0…H-5, dated decisions):
+  [docs/design/v2-engine-hardening.md](docs/design/v2-engine-hardening.md); slate:
+  [briefs/v2-engine-hardening.md](briefs/v2-engine-hardening.md). **DFP-1 (2026-08-31):**
+  preserve-null Unnest removes redundant projections; adjacent candidates stay
+  measurement-gated. #30 (the dead doc-pointer sweep) merged.
 <!-- /ws -->
 
 <!-- ws id=dml ledgers=dml-,maint- state=open -->
@@ -225,6 +214,9 @@ provenance: [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e
   [the registry](docs/spark-sql-iceberg-parity.md).
   **REF (2026-09-01, RP-5):** writes to `t.branch_<name>` land (`REF-1` FIXED). WAP publish
   procedures and `spark.wap.*` stay BACKLOG (`REF-3`). Reads were already Spark-equal (`REF-4`).
+  **RDF-1 (2026-09-02):** the position-delete writer stamps exact `file_path` lower/upper
+  bounds, so the fork's delete-ratio clause sees a partition-granularity delete and
+  `rewrite_data_files` selects the delete-laden file (registry `RDF-1`; residue `F-RDF1-1`).
   Ledger: [rp-5-fork-repin-ledger.md](task/ledgers/archive/2026-09/2026-09-01-rp-5-fork-repin-ledger.md).
 <!-- /ws -->
 

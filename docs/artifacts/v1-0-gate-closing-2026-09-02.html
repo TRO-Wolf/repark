@@ -1,0 +1,161 @@
+<title>v1.0 Gate Closing</title>
+<style>
+  :root{
+    --ground:#F2F5F7; --card:#FFFFFF; --ink:#16232B; --ink-2:#4A5D68; --line:#D8E2E8;
+    --teal:#0E6C88; --teal-2:#0B5065; --chip-green-bg:#E3F2E8; --chip-green-ink:#1E6B3A;
+    --chip-amber-bg:#FBF0DC; --chip-amber-ink:#8A5E0C; --chip-hold-bg:#E8E3F2; --chip-hold-ink:#4A3A8A;
+    --chip-guard-bg:#F2E3E3; --chip-guard-ink:#8A2E2E; --mono-bg:#EAF1F5; --bar:#CFE6EE;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ground:#0E1418; --card:#162027; --ink:#E4ECF1; --ink-2:#9AB0BC; --line:#243440;
+      --teal:#4DB1CF; --teal-2:#7CC7DD; --chip-green-bg:#173324; --chip-green-ink:#7CD9A0;
+      --chip-amber-bg:#332A14; --chip-amber-ink:#E5C071; --chip-hold-bg:#221D38; --chip-hold-ink:#B0A2E8;
+      --chip-guard-bg:#331B1B; --chip-guard-ink:#E89B9B; --mono-bg:#1B2830; --bar:#1F3A45;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0E1418; --card:#162027; --ink:#E4ECF1; --ink-2:#9AB0BC; --line:#243440;
+    --teal:#4DB1CF; --teal-2:#7CC7DD; --chip-green-bg:#173324; --chip-green-ink:#7CD9A0;
+    --chip-amber-bg:#332A14; --chip-amber-ink:#E5C071; --chip-hold-bg:#221D38; --chip-hold-ink:#B0A2E8;
+    --chip-guard-bg:#331B1B; --chip-guard-ink:#E89B9B; --mono-bg:#1B2830; --bar:#1F3A45;
+  }
+  body{background:var(--ground);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;
+       font-size:15px;line-height:1.55;margin:0;padding:0 16px 64px;}
+  .wrap{max-width:960px;margin:0 auto;}
+  h1,h2,h3{font-family:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;text-wrap:balance;line-height:1.15;}
+  h1{font-size:34px;margin:40px 0 4px;}
+  h2{font-size:22px;margin:36px 0 12px;color:var(--teal-2);}
+  .kicker{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);margin:32px 0 0;}
+  .sub{color:var(--ink-2);max-width:68ch;margin:6px 0 0;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px 18px;margin:12px 0;}
+  .card ul{margin:0;padding-left:20px;}
+  .card li{margin:6px 0;}
+  .tablewrap{overflow-x:auto;padding:0;}
+  table{border-collapse:collapse;width:100%;font-size:14px;}
+  th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--line);}
+  th{font-family:"IBM Plex Sans Condensed",sans-serif;font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-2);}
+  tr:last-child td{border-bottom:none;}
+  td.num,td.g{font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .mono,code{font-family:"IBM Plex Mono",monospace;font-size:13px;background:var(--mono-bg);padding:1px 5px;border-radius:4px;}
+  .chip{display:inline-block;font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:600;font-size:12px;letter-spacing:.03em;padding:1px 8px;border-radius:10px;white-space:nowrap;}
+  .chip.green{background:var(--chip-green-bg);color:var(--chip-green-ink);}
+  .chip.amber{background:var(--chip-amber-bg);color:var(--chip-amber-ink);}
+  .chip.hold{background:var(--chip-hold-bg);color:var(--chip-hold-ink);}
+  .chip.guard{background:var(--chip-guard-bg);color:var(--chip-guard-ink);}
+  .strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:18px 0 0;}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 14px;}
+  .stat .n{font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:700;font-size:30px;line-height:1;color:var(--teal);font-variant-numeric:tabular-nums;}
+  .stat .l{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-2);margin-top:6px;}
+  .gate{display:flex;height:14px;border-radius:7px;overflow:hidden;border:1px solid var(--line);margin:14px 0 4px;}
+  .gate .ok{background:var(--teal);}
+  .gate .decl{background:var(--bar);}
+  .legend{font-size:13px;color:var(--ink-2);}
+  .foot{color:var(--ink-2);font-size:13px;margin-top:40px;border-top:1px solid var(--line);padding-top:12px;}
+  a{color:var(--teal);}
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<div class="wrap">
+  <p class="kicker">RePark · status board · 2026-09-03, 00:10</p>
+  <h1>v1.0 Gate Closing</h1>
+  <p class="sub">Every engineering row of the v1.0 north star is ✅ or carries a dated DECLARED residual with a pin. Since the evening board five more RePark PRs (#315–#319) and one fork PR (#261) merged, the API review is answered and the 888-name freeze is registered behind a pin, and the V1-GATE audit is launching as the last docs unit before the tag.</p>
+
+  <div class="strip">
+    <div class="stat"><div class="n">17 / 20</div><div class="l">north-star rows ✅</div></div>
+    <div class="stat"><div class="n">3</div><div class="l">rows on dated DECLARED residuals</div></div>
+    <div class="stat"><div class="n">0</div><div class="l">rows BACKLOG-blocked</div></div>
+    <div class="stat"><div class="n">20 + 10</div><div class="l">PRs merged since yesterday (RePark + fork)</div></div>
+  </div>
+  <div class="gate"><div class="ok" style="width:85%"></div><div class="decl" style="width:15%"></div></div>
+  <p class="legend">Teal: ✅ measured Spark-equal. Pale: satisfied by a dated DECLARED registry row (v3 encryption keys, geometry/geography and shredded variant, live-DV position-delete rewrite refusal). The gate paragraph accepts both.</p>
+
+  <h2>What the gate says now</h2>
+  <div class="card tablewrap"><table>
+    <tr><th>Row</th><th>State</th><th>Closed by</th><th>Residual</th></tr>
+    <tr><td>Read: data + DVs, equality deletes, metadata tables</td><td class="g">✅</td><td>V3E-3</td><td>—</td></tr>
+    <tr><td>Read: <span class="mono">_row_id</span> / <span class="mono">_last_updated_sequence_number</span></td><td class="g">✅</td><td>V3-4, RP-6</td><td>joins/CTEs refuse (<span class="mono">V3-ROWID-2</span>, DECLARED)</td></tr>
+    <tr><td>Read/write: v3 types + defaults</td><td class="g">⚠→✅</td><td>V3-6</td><td><span class="mono">V3-GEO-1</span>, <span class="mono">V3-VARIANT-SHRED-1</span> (DECLARED, dated)</td></tr>
+    <tr><td>Table encryption keys</td><td class="g">❌→✅</td><td>owner ruling</td><td><span class="mono">ENC-1</span> DECLARED exclusion</td></tr>
+    <tr><td>Write: create v3 (opt-in)</td><td class="g">✅</td><td>V3-2</td><td>—</td></tr>
+    <tr><td>Upgrade v2 → v3 in place</td><td class="g">✅</td><td>V3-10, <strong>V3-12</strong> tonight</td><td><span class="mono">V3-UPGRADE-V4-1</span>; <span class="mono">V3-UPGRADE-DV-PLAIN-1</span> / <span class="mono">V3-UPGRADE-DV-PART-1</span> (DECLARED, dated, measured; fork F-21/F-22 → RP-8)</td></tr>
+    <tr><td>Write: append incl. lineage</td><td class="g">✅</td><td>V3-1</td><td>—</td></tr>
+    <tr><td>Write: MoR DML via deletion vectors</td><td class="g">✅</td><td>V3-9, RP-7, <strong>V3-11, V3-12</strong></td><td><span class="mono">V3-FILEORDER-1</span> (DECLARED, dated: Spark orders one commit\'s files by Java HashMap bucket; RePark ascending)</td></tr>
+    <tr><td>Write: COW DML on adopted v3</td><td class="g">✅</td><td>V3-8</td><td>—</td></tr>
+    <tr><td>Write/maintain: partitioned v3</td><td class="g">✅</td><td>V3E-3, RP-3</td><td>—</td></tr>
+    <tr><td>Maintain: <span class="mono">rewrite_data_files</span></td><td class="g">✅</td><td>RP-4, V3-5</td><td>—</td></tr>
+    <tr><td>Maintain: DV / delete-file maintenance</td><td class="g">⚠→✅</td><td>V3-5</td><td><span class="mono">B-MOR-3</span> deliberate refusal (OD-2, pinned)</td></tr>
+    <tr><td>Maintain: expiry / orphans on v3</td><td class="g">✅</td><td>V3E-4</td><td>—</td></tr>
+    <tr><td>Maintain: <span class="mono">rewrite_manifests</span></td><td class="g">✅</td><td>MW-6</td><td>—</td></tr>
+    <tr><td>Refs + time travel on v3</td><td class="g">✅</td><td>V3E-4</td><td>—</td></tr>
+    <tr><td>Adopt: <span class="mono">register_table</span></td><td class="g">✅</td><td>RP-3</td><td>S3 Tables adopt is the dated gap <span class="mono">S3T-1</span></td></tr>
+    <tr><td>Live: Glue + S3 Tables v3 legs</td><td class="g">✅</td><td><strong>LIVE-v3</strong> today</td><td>—; S3 Tables accepts format v3 at CREATE (run 33635288918)</td></tr>
+    <tr><td>Nightly oracle: v3 leg</td><td class="g">✅</td><td>V3E-5, #300</td><td>—</td></tr>
+    <tr><td>Scale on v3</td><td class="g">✅</td><td><strong>SCALE-v3</strong> today</td><td>—</td></tr>
+  </table></div>
+  <p class="sub">The three ⚠/❌ glyphs still shown in the north star are exactly the rows whose residual is a dated DECLARED registry row; V1-GATE rewrites them to the gate's own wording and adds the dated gate line.</p>
+
+  <h2>Merged since the last board</h2>
+  <div class="card tablewrap"><table>
+    <tr><th>PR</th><th>Unit</th><th>What landed</th></tr>
+    <tr><td class="num">#305</td><td>V3-8</td><td>subquery-WHERE COW DML keeps v3 lineage; <span class="mono">V3-COW-1</span> FIXED</td></tr>
+    <tr><td class="num">#306</td><td>DOCS-1</td><td>STATUS, north star, fork handoff trued to the night's merges</td></tr>
+    <tr><td class="num">#307</td><td>EX-3</td><td>37 function examples, every value oracle-measured (GLM batch, 16¢)</td></tr>
+    <tr><td class="num">#308</td><td>RDF-1</td><td>position-delete writer emits exact <span class="mono">file_path</span> bounds; MW-7 dead file reclaimed; <span class="mono">F-RDF1-1</span>: Iceberg 1.11.0 leaves the delete file dangling, RePark reclaims it</td></tr>
+    <tr><td class="num">#309 #310</td><td>LIVE-v3</td><td>Glue + S3 Tables v3 acceptance legs wired and pinned; first live run green on both</td></tr>
+    <tr><td class="num">#311</td><td>V3-9</td><td>MoR predicate DML on v3 writes DVs (nine Spark cells); four allocation fixes; <span class="mono">V3-DV-1</span> filed</td></tr>
+    <tr><td class="num">#312</td><td>V3-10</td><td>in-place v2→v3 upgrade on three doors; signed-integer version classes match Spark; one catalog load per ALTER</td></tr>
+    <tr><td class="num">#313</td><td>SCALE-v3</td><td>1e7 × 50 on v3: 96 DV files vs 400 v2 delete files; maintenance ends at zero delete files vs 10M v2 delete records; guide runbook now states its format version</td></tr>
+    <tr><td class="num">#314</td><td>RP-7</td><td>fork repin to F-18; container close Spark-equal (<span class="mono">V3-DV-1</span> FIXED); scan-supplied partitions; key-bounded subquery scans with exact owner resolution</td></tr>
+    <tr><td class="num">fork #259</td><td>F-16 r2</td><td>partition-scoped delete-ratio residue refuted with evidence (identical to Java)</td></tr>
+    <tr><td class="num">fork #260</td><td>F-18</td><td>DV removal keyed by Java's triple; only the touched blob is rewritten; Java interop leg; floor 64</td></tr>
+    <tr><td class="num">#315 #317</td><td>API-REVIEW, API-FREEZE</td><td>35-row review packet answered <span class="mono">R0 yes</span> at every recommendation; 888 names frozen in <span class="mono">v1-0-api-freeze.json</span> behind a pin that reds on a lost name or a moved required parameter; versioning policy in <span class="mono">docs/release.md</span></td></tr>
+    <tr><td class="num">#316</td><td>V3-11</td><td>one commit\'s data files reach the manifest in ascending partition order: MoR MERGE-insert <span class="mono">_row_id</span> is Spark\'s 10 of 10 (<span class="mono">V3-ROWID-3</span> FIXED); <span class="mono">V3-FILEORDER-1</span> DECLARED; six stale "oracle cannot run maintenance" notes corrected</td></tr>
+    <tr><td class="num">#318</td><td>LOG1P-1</td><td><span class="mono">F.log1p</span> / <span class="mono">F.expm1</span> on the precise kernels, Spark-equal at 1e-16 on three doors (Spark NULLs <span class="mono">log1p(x ≤ −1)</span>, measured)</td></tr>
+    <tr><td class="num">#319</td><td>V3-12</td><td>a legacy parquet position delete merges into the DV on the next MoR write after an upgrade (<span class="mono">V3-UPGRADE-DV-1</span> FIXED); Spark\'s partition-scoped rule measured (merge every applicable delete, remove only file-scoped, keep the rest live forever); latent branch-snapshot bug <span class="mono">V3-DV-BRANCH-1</span> fixed</td></tr>
+    <tr><td class="num">fork #261</td><td>F-19, F-20</td><td>files-exist covers replacement blobs only (Java <span class="mono">referencedDataFiles</span>); redundant sibling rewrite removed (2 → 1 Puffin per compaction); FanoutWriter drains in ascending partition order</td></tr>
+  </table></div>
+
+  <h2>In flight tonight</h2>
+  <div class="card tablewrap"><table>
+    <tr><th>Unit</th><th>State</th><th>Closes</th></tr>
+    <tr><td>V1-GATE audit</td><td><span class="chip green">launching</span> docs-only: row audit table, the dated gate line, scoped STATUS compaction, meta-pin, this board filed under <span class="mono">docs/artifacts/</span></td><td>the gate statement</td></tr>
+    <tr><td>fork F-21 legacy-delete merge</td><td><span class="chip amber">PR #262, critic round 3</span> the DataFusion delete exec merges live parquet position deletes into the DV it writes, Spark\'s merge-and-keep rule for partition-scoped deletes; Java interop leg; twelve perf items applied</td><td><span class="mono">V3-UPGRADE-DV-PLAIN-1</span> at RP-8</td></tr>
+    <tr><td>fork F-22 one-pass legacy scan</td><td><span class="chip hold">queued after F-21</span> the DV container close reports the legacy deletes it already scanned; projected position loads</td><td>the duplicate manifest walk (15 % of a 4 s statement at 192 manifests)</td></tr>
+    <tr><td>RP-8 repin</td><td><span class="chip hold">after F-21/F-22</span> consumes both; deletes RePark\'s own legacy walk</td><td><span class="mono">V3-UPGRADE-DV-PLAIN-1</span>, <span class="mono">V3-UPGRADE-DV-PART-1</span>, <span class="mono">F-v3-10-partition-file-order</span></td></tr>
+    <tr><td>EX-4 / EX-5 example batches</td><td><span class="chip green">GLM lanes in gate phase</span> string-function examples, every value oracle-measured</td><td>backlog 842 → ~806</td></tr>
+  </table></div>
+
+  <h2>Findings worth your eye</h2>
+  <div class="card">
+    <ul>
+      <li><strong>Alias shadowing caught by a critic, not CI.</strong> RP-7's key-bounded scan wrongly pruned when the DELETE target's alias shadowed the subquery relation (<span class="mono">DELETE FROM t s WHERE EXISTS (SELECT 1 FROM staging s WHERE s.id = s.id)</span>). Fixed with one-resolution owner classification and a twelve-cell matrix measured on Spark.</li>
+      <li><strong>Spark's same-commit file order is a Java HashMap bucket artefact</strong> (decoded from bytecode, predicted = measured on six cells). RePark orders ascending; the two agree for the pinned small identity-int sets and nowhere else. Filed DECLARED rather than replicating HashMap growth.</li>
+      <li><strong>Iceberg 1.11.0 accepts <span class="mono">format-version = 4</span></strong> on CREATE and ALTER; the fork's enum stops at v3, so RePark refuses loudly (DECLARED with a trigger).</li>
+      <li><strong>Container-close write amplification</strong> was 64× on a 64-blob Puffin per later delete; F-18 + RP-7 bring a later single-row delete from 19,126 B to 377 B and a partitioned fresh-path DELETE from 2,176 to 761 ms at 192 files.</li>
+      <li><strong>The pinned 4.1.2 oracle runs all five maintenance procedures.</strong> Six registry rows still said it could not; V3-11's round corrects them with today's measurement.</li>
+    </ul>
+  </div>
+
+  <h2>Process, as run</h2>
+  <div class="card">
+    <ul>
+      <li>Every unit: Opus 5 (medium) actor, a fresh Opus critic per round, and since your ruling today an Opus 5 (high) Rust reviewer and Python reviewer for performance, speed and memory. Twelve P1/P2 perf findings were taken across V3-9, V3-10, F-18, RP-7 and SCALE-v3; every one measured before and after.</li>
+      <li>Comment ban held: zero net-new code comments across all merges; the only added lines are forced one-line docs on new public items, verbatim moves, and corrections of comments the changes falsified.</li>
+      <li>Disk: two RePark build trees reached 230 G each; the rule is now one heavy RePark lane plus the fork lane. 220 G free at the time of this board.</li>
+      <li>Two orchestrator slips, both caught and reversed: lane branch juggling ran twice in the live checkout (branches deleted, tree clean on <span class="mono">main</span>).</li>
+    </ul>
+  </div>
+
+  <h2>Yours</h2>
+  <div class="card">
+    <ul>
+      <li><span class="chip green">done</span> <strong>API review</strong> answered <span class="mono">R0 yes</span>; the freeze is registered (#317). Thank you.</li>
+      <li><span class="chip amber">call</span> <strong>The v1.0 tag</strong> waits only on V1-GATE\'s dated gate line (tonight) — it stays yours.</li>
+      <li><span class="chip hold">dispatch</span> Fork gate 8 (credentialed AWS commit-outcome run) stays owner-run: <span class="mono">ICEBERG_PR5A_CREDENTIALED=1 dev/pr5a-catalog-commit-outcomes.sh</span>.</li>
+      <li><span class="chip green">done</span> AWS re-dispatch: run 33699342417 re-ran both v3 legs with the tightened row-id assertion (6 passed, 230.67 s); <span class="mono">S3T-V3-1</span> re-dates in V1-GATE.</li>
+    </ul>
+  </div>
+
+  <p class="foot">Sources: task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md §3 at main 84c1801 · docs/spark-sql-iceberg-parity.md rows named above · unit ledgers under task/ledgers/ · aws-acceptance run 33635288918 · fork main ff4764d3e. Series: RePark status boards (Road to v1.0 → v0.6.0 Ships → v0.7 Midway → this).</p>
+</div>
