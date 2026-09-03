@@ -1,0 +1,114 @@
+<title>The Night Before the Tag</title>
+<style>
+  :root{
+    --ground:#F2F5F7; --card:#FFFFFF; --ink:#16232B; --ink-2:#4A5D68; --line:#D8E2E8;
+    --teal:#0E6C88; --teal-2:#0B5065; --chip-green-bg:#E3F2E8; --chip-green-ink:#1E6B3A;
+    --chip-amber-bg:#FBF0DC; --chip-amber-ink:#8A5E0C; --chip-hold-bg:#E8E3F2; --chip-hold-ink:#4A3A8A;
+    --chip-guard-bg:#F2E3E3; --chip-guard-ink:#8A2E2E; --mono-bg:#EAF1F5; --bar:#CFE6EE;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ground:#0E1418; --card:#162027; --ink:#E4ECF1; --ink-2:#9AB0BC; --line:#243440;
+      --teal:#4DB1CF; --teal-2:#7CC7DD; --chip-green-bg:#173324; --chip-green-ink:#7CD9A0;
+      --chip-amber-bg:#332A14; --chip-amber-ink:#E5C071; --chip-hold-bg:#221D38; --chip-hold-ink:#B0A2E8;
+      --chip-guard-bg:#331B1B; --chip-guard-ink:#E89B9B; --mono-bg:#1B2830; --bar:#1F3A45;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0E1418; --card:#162027; --ink:#E4ECF1; --ink-2:#9AB0BC; --line:#243440;
+    --teal:#4DB1CF; --teal-2:#7CC7DD; --chip-green-bg:#173324; --chip-green-ink:#7CD9A0;
+    --chip-amber-bg:#332A14; --chip-amber-ink:#E5C071; --chip-hold-bg:#221D38; --chip-hold-ink:#B0A2E8;
+    --chip-guard-bg:#331B1B; --chip-guard-ink:#E89B9B; --mono-bg:#1B2830; --bar:#1F3A45;
+  }
+  body{background:var(--ground);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;
+       font-size:15px;line-height:1.55;margin:0;padding:0 16px 64px;}
+  .wrap{max-width:960px;margin:0 auto;}
+  h1,h2,h3{font-family:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;text-wrap:balance;line-height:1.15;}
+  h1{font-size:34px;margin:40px 0 4px;}
+  h2{font-size:22px;margin:36px 0 12px;color:var(--teal-2);}
+  .kicker{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);margin:32px 0 0;}
+  .sub{color:var(--ink-2);max-width:68ch;margin:6px 0 0;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px 18px;margin:12px 0;}
+  .card ul{margin:0;padding-left:20px;}
+  .card li{margin:6px 0;}
+  .tablewrap{overflow-x:auto;padding:0;}
+  table{border-collapse:collapse;width:100%;font-size:14px;}
+  th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--line);}
+  th{font-family:"IBM Plex Sans Condensed",sans-serif;font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-2);}
+  tr:last-child td{border-bottom:none;}
+  td.num,td.g{font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .mono,code{font-family:"IBM Plex Mono",monospace;font-size:13px;background:var(--mono-bg);padding:1px 5px;border-radius:4px;}
+  .chip{display:inline-block;font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:600;font-size:12px;letter-spacing:.03em;padding:1px 8px;border-radius:10px;white-space:nowrap;}
+  .chip.green{background:var(--chip-green-bg);color:var(--chip-green-ink);}
+  .chip.amber{background:var(--chip-amber-bg);color:var(--chip-amber-ink);}
+  .chip.hold{background:var(--chip-hold-bg);color:var(--chip-hold-ink);}
+  .chip.guard{background:var(--chip-guard-bg);color:var(--chip-guard-ink);}
+  .strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:18px 0 0;}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 14px;}
+  .stat .n{font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:700;font-size:30px;line-height:1;color:var(--teal);font-variant-numeric:tabular-nums;}
+  .stat .l{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-2);margin-top:6px;}
+  .gate{display:flex;height:14px;border-radius:7px;overflow:hidden;border:1px solid var(--line);margin:14px 0 4px;}
+  .gate .ok{background:var(--teal);}
+  .gate .decl{background:var(--bar);}
+  .legend{font-size:13px;color:var(--ink-2);}
+  .foot{color:var(--ink-2);font-size:13px;margin-top:40px;border-top:1px solid var(--line);padding-top:12px;}
+  a{color:var(--teal);}
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<div class="wrap">
+  <p class="kicker">RePark · morning report · 2026-09-03, 12:50</p>
+  <h1>The Night Before the Tag</h1>
+  <p class="sub">Every engineering requirement of the v1.0 north star is now measured, pinned and merged, including the one the gate audit found nobody had ever discharged. What remains before the tag is yours: one ruling and the tag itself. The night also mined the example backfill and found nine silent divergences the registry did not know about.</p>
+  <div class="strip">
+    <div class="stat"><div class="n">20 / 20</div><div class="l">north-star rows ✅ or dated DECLARED</div></div>
+    <div class="stat"><div class="n">13 + 3</div><div class="l">PRs merged overnight (RePark + fork)</div></div>
+    <div class="stat"><div class="n">188</div><div class="l">example names backfilled (backlog 842 → 654; three lanes still running on Grok)</div></div>
+    <div class="stat"><div class="n">10</div><div class="l">new registry rows filed with pins</div></div>
+  </div>
+  <div class="gate"><div class="ok" style="width:100%"></div></div>
+  <p class="legend">Teal: the engineering gate is closed. The tag and one owner ruling remain; both are listed under Yours.</p>
+  <h2>The gate, as audited</h2>
+  <div class="card tablewrap"><table>
+    <tr><th>Item</th><th>State</th><th>Evidence</th></tr>
+    <tr><td>V1-GATE audit (#320)</td><td class="g">✅ merged</td><td>all twenty §3 rows ✅ or dated DECLARED; 0 BACKLOG-blocked; five fork rows dated at the pin; <span class="mono">S3T-V3-1</span> re-dated with run 33699342417; the audit pin is 14 tests, 18 mutations red</td></tr>
+    <tr><td>What the audit found owed</td><td class="g">✅ discharged (V3-COV, #321)</td><td>§2 pillar 4 "full statement-coverage comparison against PySpark on v3 tables" had no row and no harness anywhere. V3-COV built it: 81 statement programs across 12 classes and all seven <span class="mono">CALL system.*</span> procedures, 267 comparison cells, 71 EQUAL, 1 refused by both engines, 9 divergences (2 fixed red-first in the unit, 3 already owned, 4 new rows), 0 classes unmeasured; live co-collected in under 2 min 30 s</td></tr>
+    <tr><td>Legacy delete merge (V3-12, #319)</td><td class="g">✅ merged</td><td><span class="mono">V3-UPGRADE-DV-1</span> FIXED; Spark's partition-scoped rule measured (merge every applicable delete, remove only file-scoped ones, keep the rest live forever); latent branch-snapshot bug <span class="mono">V3-DV-BRANCH-1</span> fixed</td></tr>
+    <tr><td>Fork F-21 (#262) · F-22 (#263)</td><td class="g">✅ #262 and #263 merged</td><td>the DataFusion delete exec merges live parquet position deletes into the DV it writes with Spark's merge-and-keep rule (Java interop fixtures, both directions sabotaged); the container close reports the legacy deletes it already scanned so callers walk the manifests once (64-path load 63 s → one read; 512k-row load 422 → 67 ms)</td></tr>
+    <tr><td>RP-8 repin</td><td>✅ merged (#330)</td><td>consumes F-21/F-22: RePark's own legacy walk (493 lines) deleted; <span class="mono">V3-UPGRADE-DV-PLAIN-1</span>, <span class="mono">V3-UPGRADE-DV-PART-1</span>, <span class="mono">F-v3-10-partition-file-order</span> and <span class="mono">V3-COV-3</span> FIXED on Spark-measured pins — the partitioned INSERT row-id map is Spark's 12 of 12 runs</td></tr>
+  </table></div>
+  <h2>Merged overnight</h2>
+  <div class="card tablewrap"><table>
+    <tr><th>PR</th><th>Unit</th><th>What landed</th></tr>
+    <tr><td class="num">#318</td><td>LOG1P-1</td><td><span class="mono">F.log1p</span> / <span class="mono">F.expm1</span> on the precise kernels, Spark-equal at 1e-16 on three doors (Spark NULLs <span class="mono">log1p(x ≤ −1)</span>, measured)</td></tr>
+    <tr><td class="num">#319</td><td>V3-12</td><td>legacy parquet position deletes merge into the DV on the next MoR write after an upgrade; PART-1 measured; branch-snapshot bug fixed</td></tr>
+    <tr><td class="num">#320</td><td>V1-GATE</td><td>the north star audited row by row and dated; STATUS compacted; the status board filed under <span class="mono">docs/artifacts/</span></td></tr>
+    <tr><td class="num">#321</td><td>V3-COV</td><td>the full v3 statement matrix and its harness; two defects fixed (static PARTITION overwrite cast, lineage-scan promotion); the comparator hole that would have hidden future divergences closed</td></tr>
+        <tr><td class="num">#322 #323 #324</td><td>EX-9, EX-10, EX-11</td><td>65 example names backfilled (map/struct, null-handling/conditional, hash/URL/random), every value measured on the live oracle and re-measured by a critic; 43 drops recorded with both engines' values; three registry rows filed</td></tr>
+    <tr><td class="num">#325 – #329</td><td>EX-8, EX-7, EX-12, EX-14, EX-6</td><td>33 array, 21 datetime-b, 27 aggregate, 9 window and 33 datetime-a examples; order-dependent first/last and listagg assertions caught and rewritten; the Iceberg transforms asserted on partition values; six more registry rows and four queue entries</td></tr>
+    <tr><td class="num">#330</td><td>RP-8</td><td>the fork repin to F-21/F-22; RePark's own legacy walk deleted; four residual rows FIXED on Spark-measured pins; the perf regression it inherits recorded rather than hidden</td></tr>
+    <tr><td class="num">fork #261</td><td>F-19 / F-20</td><td>files-exist covers replacement blobs only; redundant sibling rewrite removed (2 → 1 Puffin per compaction); FanoutWriter drains ascending</td></tr>
+    <tr><td class="num">fork #262</td><td>F-21</td><td>legacy-delete merge on the DataFusion delete exec, Spark's merge-and-keep rule at both doors, Java interop; twelve perf items (K=8 fixture 928 → 283 ms)</td></tr>
+        <tr><td class="num">fork #263</td><td>F-22</td><td>the DV container close reports the legacy deletes it already scanned — one manifest pass, projected position loads, total sequence-number map; four Grok rounds, three critic passes</td></tr>
+  </table></div>
+  <h2>Findings worth your eye</h2>
+  <div class="card">
+    <ul>
+      <li><strong>The example backfill is a divergence detector.</strong> Ten silent wrong answers surfaced while measuring examples against the oracle and are now registry rows with pins that flip when fixed: <span class="mono">FN-ISNAN-1</span> (isnan(NULL) is NULL, Spark false), <span class="mono">FN-SHA2-1</span> (facade sha2 returns bytes under a StringType), <span class="mono">FN-TRYTONUMBER-1</span> (non-foldable format silently wrong), <span class="mono">FN-LAST-1</span> (window last with ignorenulls), <span class="mono">FN-APPROXPCT-1</span> (interpolated double vs Spark's discrete bigint), <span class="mono">FN-ARRAYPOS-1</span>, <span class="mono">FN-ARRAYSORT-1</span>, <span class="mono">FN-ARRAYSOVERLAP-1</span>, <span class="mono">FN-FLATTEN-1</span>, <span class="mono">FN-ADDMONTHS-1</span> (month-end arithmetic lands on the target month's last day where Spark keeps the day; a repark test had pinned the wrong values as Spark's). Plus one queue entry: <span class="mono">createDataFrame</span> stores a Python NaN as NULL. Recommendation: one unit, FN-FIX-1, after the tag.</li>
+      <li><strong>Two example defects a green gate could not see.</strong> <span class="mono">first</span>/<span class="mono">last</span> and <span class="mono">listagg</span> examples asserted order-dependent values that flip under repartition on Spark; the coverage gate runs under single-node repark and stayed green. Both rewritten to order-insensitive assertions; the lesson is in the critic brief.</li>
+      <li><strong>V3-COV found what the create rows hid.</strong> Comparing the created tables' metadata (not just "no error") exposed <span class="mono">V3-COV-7</span> (Spark stamps <span class="mono">write.parquet.compression-codec</span> at CREATE) and <span class="mono">V3-COV-8</span> (CTAS derives <span class="mono">id: long optional</span> where Spark derives <span class="mono">int required</span>) — both BACKLOG, both outside the gate cell, both worth a look before v1.1.</li>
+      <li><strong>Spark's file order is deterministic after F-20.</strong> The partitioned <span class="mono">INSERT</span> row-id flap V3-COV measured (7 of 12 runs Spark's mapping) is the fork's FanoutWriter draining in HashMap order; F-20 makes it ascending and RP-8 re-measures twelve runs at the new pin.</li>
+      <li><strong>One regression found by the perf reviewer, on purpose.</strong> F-22 made the fork's DV close walk every data manifest on every MoR statement (to fill a sequence-number map RePark never reads): +39 % statement wall at 192 data manifests on the pure-DV path, about 3.3 ms per manifest, hidden by a measurement cell whose fixture cancelled the two walks. RP-8 merges with it recorded (<span class="mono">PERF-DVCLOSE-WALK-1</span>, ledger errata E-4); fork <strong>F-23</strong> (conditional walk + early exit) is running on Grok and RP-9 repins after it.</li>
+      <li><strong>Provider notes.</strong> z.ai reset GLM sessions all night (a watchdog auto-relaunched from the tree state); the free Spark contributor finished first cuts in 5–15 minutes but stalled on relaunches after 04:00 and omitted trailers twice; Grok 4.6 carried every remediation round cleanly (F-21 r3–r5, F-22 r1–r4, ≈$18 total).</li>
+    </ul>
+  </div>
+  <h2>Yours</h2>
+  <div class="card">
+    <ul>
+      <li><span class="chip amber">ruling</span> <strong>B-MOR-3</strong> is DECLARED by analogy to OD-2 (the orphan-files posture); the registry houses it under §7 with no class marker. One line from you confirming the class for <span class="mono">rewrite_position_delete_files</span> makes the gate line unconditional.</li>
+      <li><span class="chip amber">call</span> <strong>The v1.0 tag.</strong> The gate line reads "every row ✅ or dated DECLARED as of 2026-09-03"; nothing engineering-shaped is owed.</li>
+      <li><span class="chip hold">dispatch</span> Fork gate 8 (credentialed AWS commit-outcome run): <span class="mono">ICEBERG_PR5A_CREDENTIALED=1 dev/pr5a-catalog-commit-outcomes.sh</span>.</li>
+      <li><span class="chip green">decide</span> Post-tag queue proposal, in order: RP-9 (repin after fork F-23 removes the unconditional data walk), FN-FIX-1 (the ten registry rows above plus the NaN queue entry), EX-4/EX-5/EX-13 landing, V3-COV-7/8.</li>
+    </ul>
+  </div>
+  <p class="foot">Sources: task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md §3 at main 887695c · docs/spark-sql-iceberg-parity.md rows named above · unit ledgers under task/ledgers/ · fork docs/parity/GAP_MATRIX.md at c4213e0f3 · aws-acceptance run 33699342417.</p>
+</div>
