@@ -14,12 +14,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   for existing. `risk_tier: standard`. Branch
   `feat/ex-2-functions-math-bitwise`. Slate:
   [../briefs/example-backfill.md](../../../briefs/example-backfill.md).
-- [v1-gate-audit-ledger.md](v1-gate-audit-ledger.md) — **V1-GATE (2026-09-03), in flight:**
-  the v1.0 north-star gate statement. Audits all twenty §3 rows into §3.1 (glyph, claim,
-  residual → registry row, class and date, pin), reads the fork rows the gate leans on at the
-  consumed pin `ff4764d3`, writes the one dated gate line, re-dates `S3T-V3-1` with the live
-  re-dispatch, and files the published gate board. Result: every row ✅ or dated DECLARED, no
-  BACKLOG blocker. `risk_tier: standard`. Branch `docs/v1-gate-audit`.
 - [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's
   scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike
   evidence behind it; C-007 (the four sub-project families) was closed by ruling D-7 on
