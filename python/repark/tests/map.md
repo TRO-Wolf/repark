@@ -2254,7 +2254,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Spark and assert **repark == pinned golden == live Spark**;
   `test_live_disclosure_still_diverges` re-asserts each recorded divergence STILL holds on both
   engines (silent convergence → RED).
-  **B-MOR-3:** `test_live_rewrite_position_delete_files_upgraded_parquet_matches_spark` is the
+  **B-MOR-3:** `test_live_rewrite_position_delete_files_upgraded_parquet_matches_spark` (takes the shared `spark_iceberg_engine` fixture; the three catalog keys are set for the leg and unset in `finally`) is the
   cell-B live co-collected leg (five upgraded parquet deletes → five PUFFIN, catalog `bmor3live`).
   pins: b-mor-3-rewrite-position-deletes-v3/C-001, C-003
   **LOG1P-1:** `test_live_log1p_expm1_tiny_args_and_domain` uses the shared `spark_engine`

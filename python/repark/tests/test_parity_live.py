@@ -463,42 +463,20 @@ def _bmor3_cell_b_repark(warehouse: Path) -> dict:
         spark.stop()
 
 
-def _bmor3_cell_b_spark() -> dict:
+def _bmor3_cell_b_spark(engine: lp.Engine) -> dict:
     import shutil
 
-    from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
-    from pyspark.sql import SparkSession
-    from test_v3_live_oracle import _v37_iceberg_runtime_jar
-
     warehouse = Path(tempfile.mkdtemp(prefix="bmor3-live-spark-"))
-    prior = SparkSession.getActiveSession()
-    owned = prior is None
-    if owned:
-        builder = (
-            SparkSession.builder.master("local[2]")
-            .appName("b-mor-3-live-spark")
-            .config("spark.sql.ansi.enabled", "true")
-            .config("spark.sql.session.timeZone", "UTC")
-            .config("spark.sql.shuffle.partitions", "2")
-            .config("spark.ui.enabled", "false")
-            .config(
-                "spark.sql.extensions",
-                "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
-            )
-        )
-        jar = _v37_iceberg_runtime_jar()
-        builder = (
-            builder.config("spark.jars", jar)
-            if jar is not None
-            else builder.config("spark.jars.packages", ICEBERG_SPARK_RUNTIME_GAV)
-        )
-        session = builder.getOrCreate()
-        session.sparkContext.setLogLevel("ERROR")
-    else:
-        session = prior
-    session.conf.set(f"spark.sql.catalog.{_BMOR3_CATALOG}", "org.apache.iceberg.spark.SparkCatalog")
-    session.conf.set(f"spark.sql.catalog.{_BMOR3_CATALOG}.type", "hadoop")
-    session.conf.set(f"spark.sql.catalog.{_BMOR3_CATALOG}.warehouse", str(warehouse))
+    session = engine.session
+    keys = (
+        f"spark.sql.catalog.{_BMOR3_CATALOG}",
+        f"spark.sql.catalog.{_BMOR3_CATALOG}.type",
+        f"spark.sql.catalog.{_BMOR3_CATALOG}.warehouse",
+    )
+    for key, value in zip(
+        keys, ("org.apache.iceberg.spark.SparkCatalog", "hadoop", str(warehouse)), strict=True
+    ):
+        session.conf.set(key, value)
     target = f"{_BMOR3_CATALOG}.sales.cellb"
     try:
         session.sql(f"CREATE NAMESPACE IF NOT EXISTS {_BMOR3_CATALOG}.sales")
@@ -542,14 +520,14 @@ def _bmor3_cell_b_spark() -> dict:
         }
     finally:
         session.sql(f"DROP TABLE IF EXISTS {target}")
-        if owned:
-            session.stop()
+        for key in keys:
+            session.conf.unset(key)
         shutil.rmtree(warehouse, ignore_errors=True)
 
 
 @pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
 def test_live_rewrite_position_delete_files_upgraded_parquet_matches_spark(
-    tmp_path: Path,
+    tmp_path: Path, spark_iceberg_engine: lp.Engine
 ) -> None:
     """pins: b-mor-3-rewrite-position-deletes-v3/C-001, C-003"""
-    assert _bmor3_cell_b_repark(tmp_path) == _bmor3_cell_b_spark()
+    assert _bmor3_cell_b_repark(tmp_path) == _bmor3_cell_b_spark(spark_iceberg_engine)
