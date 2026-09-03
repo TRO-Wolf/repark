@@ -14,6 +14,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   for existing. `risk_tier: standard`. Branch
   `feat/ex-2-functions-math-bitwise`. Slate:
   [../briefs/example-backfill.md](../../../briefs/example-backfill.md).
+- [ex-6-functions-datetime-a-ledger.md](ex-6-functions-datetime-a-ledger.md) —
+  **EX-6 (2026-09-03), in flight:** the backfill's `F.*` datetime arithmetic and
+  parts batch — 33 names covered by seven examples, the backlog ratchet
+  842 → 809; `F.add_months` (measured divergence on a negative offset from a
+  month end) and `F.months_between` (refused, engine gap R-FN-BATCH1) stay on
+  the backlog with both values recorded. `risk_tier: standard`. Branch
+  `feat/ex-6-functions-datetime-a`. Slate:
+  [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md).
 - [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's
   scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike
   evidence behind it; C-007 (the four sub-project families) was closed by ruling D-7 on

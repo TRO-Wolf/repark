@@ -30,6 +30,24 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
   under a positive divisor, `F.greatest` / `F.least` skipping NULLs, `F.width_bucket`.
 - [try_arithmetic.py](try_arithmetic.py) — the `F.try_*` quartet answering NULL on
   overflow and divide-by-zero, ordinary input unchanged.
+- [calendar_parts.py](calendar_parts.py) — the numeric calendar parts of a date
+  (`F.year`, `F.quarter`, `F.month`, `F.weekofyear`, `F.day`, `F.dayofmonth`,
+  `F.dayofyear`, `F.dayofweek`, `F.weekday`) and the clock parts of a timestamp
+  (`F.hour`, `F.minute`, `F.second`).
+- [current_datetime.py](current_datetime.py) — the six current date/timestamp
+  spellings `F.curdate`, `F.current_date`, `F.currentDate`, `F.current_timestamp`,
+  `F.currentTimestamp`, `F.now`, shown agreeing within each trio.
+- [date_arithmetic.py](date_arithmetic.py) — moving a date by days with
+  `F.date_add` / `F.dateadd` / `F.date_sub`, the month's `F.last_day`, and
+  `F.next_day` to the next Monday and Sunday.
+- [date_difference.py](date_difference.py) — `F.date_diff` / `F.datediff`,
+  end minus start in days, negative when end precedes start.
+- [date_format.py](date_format.py) — `F.date_format` rendering patterns beside
+  the `F.dayname` / `F.monthname` name shorthands.
+- [date_parts_sql.py](date_parts_sql.py) — the SQL field-extraction trio
+  `F.date_part` / `F.datepart` / `F.extract`, shown agreeing.
+- [date_truncation.py](date_truncation.py) — `F.date_trunc` on a timestamp and
+  `F.trunc` on a date, at year, month, day and quarter granularity.
 
 ## Pointers
 
