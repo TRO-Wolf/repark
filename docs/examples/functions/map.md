@@ -9,6 +9,22 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
 ## Contents
 
 - [abs.py](abs.py) — `F.abs`, `F.col`, `F.lit` on a three-row local frame.
+- [arrays.py](arrays.py) — the array builders and counters: `F.array`, `F.array_repeat`,
+  `F.sequence` (plain and stepped), and `F.size` / `F.cardinality` / `F.array_size` agreeing.
+- [array_edit.py](array_edit.py) — `F.array_append`, `F.array_prepend`, `F.array_remove`,
+  `F.array_compact`: grow, shrink, and clean an array, NULL elements and NULL arrays included.
+- [array_elements.py](array_elements.py) — element access and membership: `F.element_at`,
+  `F.try_element_at` (index spelled `F.lit`, like Spark), `F.get`, `F.slice`,
+  `F.array_contains`.
+- [array_order.py](array_order.py) — `F.sort_array` both directions, the extremes
+  `F.array_max` / `F.array_min`, `F.array_join`, and `F.shuffle` shape-checked.
+- [array_setops.py](array_setops.py) — the set algebra quartet: `F.array_distinct`,
+  `F.array_union`, `F.array_intersect`, `F.array_except`.
+- [explode.py](explode.py) — `F.explode` and `F.explode_outer`: one row per array element,
+  the outer spelling keeping the empty and NULL rows.
+- [higher_order.py](higher_order.py) — the lambda names: `F.exists`, `F.forall`, `F.filter`,
+  `F.transform` (element and index forms), `F.aggregate` (with and without finish),
+  `F.reduce`, `F.zip_with`; an `F.slice` empty array drives the empty-aggregate case.
 - [roots.py](roots.py) — `F.sqrt`, `F.cbrt`, `F.hypot`: the two roots parting
   company on negative input (NaN versus a signed answer), then `hypot` against
   the long form `sqrt(a*a + b*b)`.
@@ -30,23 +46,29 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
   under a positive divisor, `F.greatest` / `F.least` skipping NULLs, `F.width_bucket`.
 - [try_arithmetic.py](try_arithmetic.py) — the `F.try_*` quartet answering NULL on
   overflow and divide-by-zero, ordinary input unchanged.
-- [epoch.py](epoch.py) — the epoch conversions: `F.unix_date`, `F.unix_seconds`,
-  `F.unix_millis`, `F.unix_micros` count the distance from 1970; `F.date_from_unix_date`
-  and `F.from_unixtime` build back.
-- [timestamp_from_epoch.py](timestamp_from_epoch.py) — `F.timestamp_seconds`,
-  `F.timestamp_millis`, `F.timestamp_micros` build instants from epoch counts, with the
-  seconds round trip.
-- [to_date_timestamp.py](to_date_timestamp.py) — `F.to_date` / `F.to_timestamp` parse
-  calendar strings; `F.try_to_date` answers NULL on malformed input.
-- [make_calendar.py](make_calendar.py) — `F.make_date` builds a date from year/month/day
-  parts (column and literal forms); `F.make_dt_interval` a day-time duration.
-- [utc_offsets.py](utc_offsets.py) — `F.from_utc_timestamp` / `F.to_utc_timestamp` render
-  an instant between UTC and a named zone; `F.current_timezone` names the session zone.
-- [partition_transforms.py](partition_transforms.py) — the partition transforms `F.years`,
-  `F.months`, `F.days`, `F.bucket` through `writeTo(...).partitionedBy(...)`: rows read back
-  from the created tables and the partition values asserted from the `.files` metadata
-  (years 54/55, months 650/653, the two day dates, buckets 0/1/3).
+- [nulls.py](nulls.py) — the NULL tests `F.isnull` / `F.isnotnull` / `F.equal_null` (two NULLs compare equal) and the substitutions `F.coalesce`, `F.ifnull`, `F.nvl`, `F.nvl2`, `F.nullif`, `F.nullifzero`, `F.nanvl` on rows carrying NULLs, with the NaN literal edges separate.
+- [conditional.py](conditional.py) — `F.when` chains and the bare form, and `F.assert_true` passing, then raising with its message.
+- [columns.py](columns.py) — `F.column`, the constructor spelling that agrees with `F.col`, NULL included.
+- [sort_order.py](sort_order.py) — the six `F.asc*` / `F.desc*` orderings and where each places NULLs.
+- [bitwise.py](bitwise.py) — `F.negate`, the `F.bitwiseNOT` / `F.bitwise_not` alias pair, `F.bit_count`, the bit readers `F.bit_get` / `F.getbit`, and the three shifts.
+- [broadcast.py](broadcast.py) — `F.broadcast`, the join hint (single-node no-op in repark, python/repark/src/repark/spark/functions_session.py:49-56), checked to agree with the plain join.
+- [session_context.py](session_context.py) — `F.current_catalog`, `F.current_database` and `F.current_schema` on a two-row frame.
 
+- [map_parts.py](map_parts.py) — `F.map_keys`, `F.map_values`, `F.map_entries`,
+- [map_shapes.py](map_shapes.py) — `F.map_from_arrays`, `F.map_from_entries`,
+- [map_higher_order.py](map_higher_order.py) — `F.transform_keys`,
+- [structs.py](structs.py) — `F.struct` and `F.named_struct`: fields by column and
+- [hashing.py](hashing.py) — `F.md5`, `F.sha`/`F.sha1` (one digest, two
+- [hex_binary.py](hex_binary.py) — `F.hex` and `F.bin` spelling integers,
+- [random_values.py](random_values.py) — `F.uuid`, `F.rand`, `F.randn`,
+- [url.py](url.py) — the URL codec round trip and `F.parse_url` part
+- [try_fallbacks.py](try_fallbacks.py) — `F.try_mod` by zero and
+- [epoch.py](epoch.py) — the epoch conversions: `F.unix_date`, `F.unix_seconds`,
+- [timestamp_from_epoch.py](timestamp_from_epoch.py) — `F.timestamp_seconds`,
+- [to_date_timestamp.py](to_date_timestamp.py) — `F.to_date` / `F.to_timestamp` parse
+- [make_calendar.py](make_calendar.py) — `F.make_date` builds a date from year/month/day
+- [utc_offsets.py](utc_offsets.py) — `F.from_utc_timestamp` / `F.to_utc_timestamp` render
+- [partition_transforms.py](partition_transforms.py) — the partition transforms `F.years`,
 ## Pointers
 
 - Up: [../map.md](../map.md)

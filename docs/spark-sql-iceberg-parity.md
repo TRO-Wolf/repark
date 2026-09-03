@@ -1356,6 +1356,59 @@ the pin rather than obeying it.
 - **Pin** — `python/repark/tests/test_functions_gt2.py::test_ansi_pair_is_null_not_a_raise`
 - **Rationale** — BACKLOG, same class and same rationale as FN-1.
 
+### FN-ISNAN-1 — `isnan(NULL)` is NULL where Spark is false
+
+- **repark** — `isnan(CAST(NULL AS DOUBLE))` on `[1.0, NULL]` yields `[False, None]`
+  (nullable `bool`); lowers to DataFusion `isnan`, which null-propagates.
+  `crates/repark-python/src/column/function_dispatch.rs:282`.
+- **Apache Spark** — `isnan(CAST(NULL AS DOUBLE))` on `[1.0, NULL]` yields
+  `[False, False]` (non-nullable `bool`, Spark `IsNaN`); NULL is not NaN.
+  *(oracle: live — PySpark 4.1.2, `local[1]`, ANSI on, 2026-09-03.)*
+- **Pin** — `python/repark/tests/test_fn_batch1.py::test_isnan_null_divergence_is_pinned`
+- **Rationale** — BACKLOG, silently wrong divergence. `isnan` on a nullable
+  double is nullability-sensitive; Spark's `IsNaN` is non-nullable. The fix
+  flips the pin to `[False, False]`.
+
+
+### FN-SHA2-1 — `sha2` facade returns raw bytes while Spark returns a hex string
+
+- **repark** — `F.sha2(col, 256)` (facade `Column` API) returns Arrow `binary`
+  (32 raw bytes, e.g. `b'\x2c\xf2M\xba_\xb0\xa3\x0e...'` whose hex is
+  `2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824`) while its
+  declared type is `StringType`; `F.sha2(col, 512)` raises
+  `UnsupportedOperationException: functions.sha2(numBits=512) only 256 is
+  supported`. The SQL door `SELECT sha2('hello', 256)` returns Arrow `string`
+  hex `2cf24dba...9824` and `SELECT sha2('hello', 512)` returns hex
+  `9b71d224...dec043` (both matching Spark).
+- **Apache Spark** — `F.sha2(col, 256)` returns Arrow `string` hex
+  `2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824` (and `512`
+  hex `9b71d224...dec043`). *(oracle: live PySpark 4.1.2, 2026-09-03; repark
+  facade `binary` vs Spark `string` measured above; repark SQL door hex
+  measured same day.)*
+- **Pin** — `python/repark/tests/test_fn_batch4.py::test_sha2_facade_bytes_divergence_is_pinned`
+- **Rationale** — BACKLOG, intent to FIX. The facade's declared schema is
+  `StringType` and Spark's facade is a hex string; returning raw bytes is a
+  value+type divergence. The SQL door already returns the hex string. The pin
+  codifies today's bytes so the fix reds it on purpose.
+
+### FN-TRYTONUMBER-1 — `try_to_number` with a non-foldable format does not raise
+
+- **repark** — `F.try_to_number(col('s'), col('f'))` on
+  `[('123.45','999.99')]` returns `Decimal('12345')` at
+  `decimal128(38, 0)` silently. The foldable literal arm
+  `try_to_number('123.45','999.99')` returns `Decimal('123.45')` at
+  `decimal128(5, 2)` correctly on both engines.
+- **Apache Spark** — `try_to_number(col('s'), col('f'))` raises
+  `AnalysisException: [DATATYPE_MISMATCH.NON_FOLDABLE_INPUT] Cannot resolve
+  "try_to_number(s, f)" due to data type mismatch: the input
+  `attributereference` should be a foldable "STRING" expression; however, got
+  "f". SQLSTATE: 42K09` (and the same via `try_to_number(s, lit '999.99')` where
+  the format is still a column). *(oracle: live PySpark 4.1.2, 2026-09-03.)*
+- **Pin** — `python/repark/tests/test_fnp7_try_inversions.py::test_try_to_number_non_foldable_divergence_is_pinned`
+- **Rationale** — BACKLOG, intent to FIX. The non-foldable format must be
+  refused at analysis per Spark's `NON_FOLDABLE_INPUT` rule; silently
+  concatenating or mis-parsing it is a wrong result. The pin codifies today's
+  wrong `Decimal('12345')` so the fix reds it on purpose.
 
 ### G6-3 — DATE→INT: Spark refuses; repark yields days-since-epoch
 
@@ -2901,6 +2954,57 @@ the pin rather than obeying it.
 - **Rationale** — BACKLOG, filed 2026-09-01. Same FNP numerics unit as BL-15; overflow-safe
   hypot is a standard rescale.
 
+### FN-ARRAYPOS-1 — `array_position` answers NULL where Spark answers 0
+
+- **repark** — an element that is not in the array answers NULL: over the frame
+  `a = [1, 2, 3] / [1, 2, 3] / NULL`, `x = 2 / 9 / 1`, `F.array_position(a, x)` is
+  `[2, NULL, NULL]`.
+- **Apache Spark** — the not-found position is `0`: `[2, 0, NULL]` over the same frame.
+  *(oracle: live PySpark 4.1.2, 2026-09-03, EX-8 remediation.)*
+- **Pin** — `python/repark/tests/test_fn_arrays_divergence.py::test_array_position_not_found_returns_null`
+- **Rationale** — BACKLOG, intent to FIX. Spark is 1-based, so `0` is its not-found sentinel
+  and a drop-in script branching on it never takes the found arm here.
+
+### FN-ARRAYSORT-1 — `array_sort` orders NULLs first; Spark orders them last
+
+- **repark** — `F.array_sort([2, NULL, 1])` is `[NULL, 1, 2]` (the same NULL-first order
+  `sort_array` correctly shows).
+- **Apache Spark** — `array_sort` places NULL elements last: `[1, 2, NULL]`; its `sort_array`
+  places them first. *(oracle: live PySpark 4.1.2, 2026-09-03, EX-8 remediation; frame
+  `[3, 1, 2] / [2, NULL, 1] / NULL`.)*
+- **Pin** — `python/repark/tests/test_fn_arrays_divergence.py::test_array_sort_nulls_first`
+- **Rationale** — BACKLOG, intent to FIX. One comparator serves both spellings here, so
+  fixing `array_sort` to Spark's NULLs-last must not move `sort_array`, whose NULLs-first
+  agrees with Spark today.
+
+### FN-ARRAYSOVERLAP-1 — `arrays_overlap` answers False where a NULL element leaves the decision open
+
+- **repark** — a NULL element that blocks the decision answers False: over the pin's grid
+  `([1, NULL], [2, NULL]) / ([1, 2], [3, 4]) / ([NULL], [1]) / ([1, 2], [2, 3]) /
+  ([1, NULL], [1]) / ([NULL], [NULL])` the answer is
+  `[False, False, False, True, True, False]`.
+- **Apache Spark** — the three-valued answer is NULL whenever no definite common element
+  exists and a NULL blocks the decision: `[NULL, False, NULL, True, True, NULL]` over the
+  same grid. *(oracle: live PySpark 4.1.2, 2026-09-03, EX-8 remediation.)*
+- **Pin** — `python/repark/tests/test_fn_arrays_divergence.py::test_arrays_overlap_null_block_returns_false`
+- **Rationale** — BACKLOG, intent to FIX. The NULL rows are silently flattened to "disjoint",
+  so a script cannot distinguish "definitely no shared element" from "unknown".
+
+### FN-FLATTEN-1 — `flatten` drops a NULL sub-array; Spark answers NULL
+
+- **repark** — a NULL sub-array is skipped: `flatten([[1], NULL])` is `[1]`.
+- **Apache Spark** — a NULL sub-array makes the whole row's answer NULL: `flatten([[1], NULL])`
+  is NULL. Measured frames (2026-09-03, EX-8 remediation): simple
+  `[[1, 2, 3]] / [[1, NULL]] / NULL` agrees on both engines
+  (`[1, 2, 3] / [1, NULL] / NULL`); adversarial
+  `[[]] / [[], []] / [[1, 2, 3]] / [[1], NULL] / [[NULL, 1, 2]] / NULL` gives Spark
+  `[] / [] / [1, 2, 3] / NULL / [NULL, 1, 2] / NULL` against repark
+  `[] / [] / [1, 2, 3] / [1] / [NULL, 1, 2] / NULL`.
+  *(oracle: live PySpark 4.1.2, 2026-09-03.)*
+- **Pin** — `python/repark/tests/test_fn_arrays_divergence.py::test_flatten_drops_null_subarray`
+- **Rationale** — BACKLOG, intent to FIX. Dropping the NULL sub-array loses the row-level NULL
+  signal Spark preserves, and the length of the answer silently changes with it.
+
 ### WIN-SLIDE — non-retractable aggregates over a sliding frame (W-0, 2026-08-31)
 
 Spark evaluates an aggregate over `ROWS BETWEEN n PRECEDING AND CURRENT ROW` even when the
@@ -3128,6 +3232,14 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   writes and reads back Spark-equal partition values (`[(475133,), (475134,)]` for
   2024-03-15 05:00/06:30 UTC). The facade path wants its own decision. Full record:
   `task/ledgers/staging/ex-7-functions-datetime-b-ledger.md`.
+
+- **FN-TRY-EXTRACT-1** — surfaced 2026-09-03, EX-8 remediation. The facade `F.try_element_at`
+  accepts a bare Python int for its extraction argument (the signature is
+  `extraction: Column | str | int` in
+  `python/repark/src/repark/spark/functions_try.py`), where PySpark refuses it at analysis
+  with `PySparkTypeError [NOT_COLUMN_OR_STR]`; the value at `F.lit` spelling agrees
+  (`[10, None, None]` / `[None, None, None]` on both engines). No pin yet, so it is not a
+  row; the example spells `F.lit` like Spark.
 
 ---
 
