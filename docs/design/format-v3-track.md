@@ -300,7 +300,7 @@ API review. **Scale is measured (SCALE-v3, 2026-09-02):** `1e7 x 50` on v3 ends 
 zero delete files where v2 kept 10,000,000 delete records, and reads the point probe at 0.64x v2
 on a cell whose copy-on-write control moved 1.00x; the write side (1.59x the v2 merge time) is a
 cross-run, uncontrolled ratio — the COW control moved 1.22x at identical knobs —
-[scale-v3-mw7-ledger.md](../../task/ledgers/completed/scale-v3-mw7-ledger.md). The tag waits until every north-star matrix row is green or has a dated, pinned
+[scale-v3-mw7-ledger.md](../../task/ledgers/archive/2026-09/2026-09-02-scale-v3-mw7-ledger.md). The tag waits until every north-star matrix row is green or has a dated, pinned
 DECLARED disposition.
 
 FNP, TA performance, dbt, and the general correctness backlog may run while the fork lane is

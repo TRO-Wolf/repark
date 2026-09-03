@@ -1,7 +1,7 @@
 # Charter ledger — SCALE-v3 · the MW-7 `10^7 x 50` scale workload on a format-v3 table
 
 **Date:** 2026-09-02 · **Branch:** `feat/scale-v3-mw7` · **Base:** `origin/main` `cda526e` ·
-**Model:** claude-opus-5 (medium) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md) ·
+**Model:** claude-opus-5 (medium) · **Policy:** [../../../AGENTS.md](../../../../AGENTS.md) ·
 **Path:** STANDARD.
 
 **Retired:** moved to `../completed/` in this unit's last commit.
