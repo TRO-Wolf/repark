@@ -28,7 +28,7 @@ Restated for a mixed queue:
    Last commit of the unit: STATUS trued up for what this unit changed and nothing else (a
    campaign the owner ruled closed gets `state=closed` on its marker, no prose), the unit's
    ledger `move`d from `task/ledgers/staging/` to `completed/` — which removes it from this
-   file — `map.md` in lockstep. No departure line anywhere.
+   file — `map.md` in lockstep. No departure line for the unit, here or anywhere.
 
 ---
 
