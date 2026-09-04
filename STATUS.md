@@ -120,9 +120,9 @@ in published history by explicit decision:
     (`V3-COW-1`, `V3-MOR-1`, `V3-DV-1`, `V3-ROWID-3`, `V3-UPGRADE-DV-1`,
     `V3-UPGRADE-DV-PLAIN-1`, `V3-UPGRADE-DV-PART-1`, `V3-COV-3`,
     `F-v3-10-partition-file-order` FIXED); open v3 residuals are `V3-FILEORDER-1`,
-    `V3-COV-4` / `V3-COV-5` / `V3-COV-6`, `V3-UPGRADE-V4-1`, `G3-E8`. Then F-25 →
-    RP-10 (`PERF-DVCLOSE-STMT-1`), PERF-SCAN-1 (`PERF-SCAN-3PASS-1`), SQL-HARDEN-1
-    (cutover SQL shapes vs Spark on Glue + S3 Tables).
+    `V3-COV-4` / `V3-COV-5` / `V3-COV-6`, `V3-UPGRADE-V4-1`, `G3-E8`. RP-10 (F-25,
+    `PERF-DVCLOSE-STMT-1`), PERF-SCAN-1, SQL-HARDEN-1 and RP-11 (F-24, `B-MOR-3-FLOOR-1`)
+    landed 2026-09-04.
 <!-- /ws -->
 
 <!-- ws id=perf ledgers=perf- state=open -->

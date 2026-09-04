@@ -148,7 +148,7 @@ carries a dated cell and a pin at that rev, so none is a blocker.
 |---|---|---|---|
 | R88 · V3 types: variant | 🟡 | binary `variant` refuses end to end; shredded Parquet is out of the fork's parity envelope | scope correction 2026-08-24, caveat 2026-08-25 (`V3-VARIANT-SHRED-1`) |
 | R91 · V3 types: unknown | 🟡 | `unknown` CREATE and parquet write refuse loud | parquet-write refusal 2026-09-01, with its three fork pins named |
-| R114 · Writer: deletion-vector (v3 Puffin DV) | 🟡 | the DV writer behind rows 9, 11 and 13 | F-18 container close 2026-09-02; F-21 legacy-delete merge and F-22 one-pass legacy scan 2026-09-03, consumed by RP-8; F-23 skip-walk 2026-09-03, consumed by RP-9; PR-7 re-audit 2026-09-02 keeps residue U4 named |
+| R114 · Writer: deletion-vector (v3 Puffin DV) | 🟡 | the DV writer behind rows 9, 11 and 13 | F-18 container close 2026-09-02; F-21 legacy-delete merge and F-22 one-pass legacy scan 2026-09-03, consumed by RP-8; F-23 skip-walk 2026-09-03, consumed by RP-9; F-25 fresh-DV commit early-exit 2026-09-04, consumed by RP-10; F-24 `min-input-files` floor 2026-09-04, consumed by RP-11; PR-7 re-audit 2026-09-02 keeps residue U4 named |
 | R126 · Catalogs (clause (c)) | 🟡 | S3 Tables `register_table` is a service gap, not a defect | F-9, 2026-08-27, "not a *yet*" |
 | R167 · Hadoop `vN.metadata.json` names | 🟡 | Hadoop pointer adopt + write behind row 17 | 2026-08-28, engine pin named in the cell |
 

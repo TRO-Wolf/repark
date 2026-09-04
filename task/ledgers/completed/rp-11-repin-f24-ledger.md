@@ -1,7 +1,7 @@
-# Charter ledger — RP-11 · fork repin 594bdbe5 → 189a73ed (consume F-24; close B-MOR-3-FLOOR-1)
+# Charter ledger — RP-11 · fork repin 85a4aaf0 → 189a73ed (consume F-24; close B-MOR-3-FLOOR-1)
 
 **Date:** 2026-09-04 · **Branch:** `feat/rp-11-repin-f24` · **Base:** `origin/main`
-`434cbac` · **Model:** grok-4.6 · **Policy:**
+`467ce26` · **Model:** grok-4.6 · **Policy:**
 [../../../AGENTS.md](../../../AGENTS.md) "Version-pin contract".
 **Path:** STANDARD. **Proven pattern:**
 [../completed/rp-9-repin-f23-ledger.md](rp-9-repin-f23-ledger.md).
