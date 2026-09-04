@@ -1,21 +1,24 @@
-"""Join two frames, apply an optimizer hint, and intersect row sets.
+"""Join two frames, merge a source into a target table, hint, and intersect row sets.
 
 pins: ex-16-dataframe-b/C-001
 """
 
 from __future__ import annotations
 
+import repark.functions as F  # noqa: N812
 from repark.spark import ReparkSession
 
 COVERS: list[str] = [
     "DataFrame.join",
     "DataFrame.hint",
     "DataFrame.intersect",
+    "DataFrame.mergeInto",
+    "DataFrame.merge_into",
 ]
 
 
 def main() -> None:
-    """Run the measured join arms, the hint no-op, and the deduplicating intersect."""
+    """Run the measured join arms, the merge arms, the hint no-op, and the intersect."""
     repark = ReparkSession.builder.appName("ex-df-b-joins").master("local[1]").getOrCreate()
     try:
         left = repark.createDataFrame(
@@ -28,8 +31,9 @@ def main() -> None:
         )
         inner = left.join(right, "k")
         inner_names = inner.columns
-        if inner_names != ["k", "name", "v"]:
-            raise SystemExit(f"DataFrame.join columns {inner_names!r} != ['k', 'name', 'v']")
+        inner_names_expected = ["k", "name", "v"]
+        if inner_names != inner_names_expected:
+            raise SystemExit(f"DataFrame.join columns {inner_names!r} != {inner_names_expected!r}")
         inner_rows = set(inner.collect())
         inner_expected = {(1, "a", 10.0), (2, "b", 20.0)}
         if inner_rows != inner_expected:
@@ -37,8 +41,8 @@ def main() -> None:
 
         leftj = left.join(right, ["k"], "left")
         left_names = leftj.columns
-        if left_names != ["k", "name", "v"]:
-            raise SystemExit(f"DataFrame.join columns {left_names!r} != ['k', 'name', 'v']")
+        if left_names != inner_names_expected:
+            raise SystemExit(f"DataFrame.join columns {left_names!r} != {inner_names_expected!r}")
         left_rows = set(leftj.collect())
         left_expected = {(1, "a", 10.0), (2, "b", 20.0), (3, "c", None)}
         if left_rows != left_expected:
@@ -46,11 +50,13 @@ def main() -> None:
 
         anti = left.join(right, ["k"], "left_anti")
         anti_rows = set(anti.collect())
-        if anti_rows != {(3, "c")}:
-            raise SystemExit(f"DataFrame.join rows {anti_rows!r} != {(3, 'c')}")
+        anti_expected = {(3, "c")}
+        if anti_rows != anti_expected:
+            raise SystemExit(f"DataFrame.join rows {anti_rows!r} != {anti_expected!r}")
         anti_names = anti.columns
-        if anti_names != ["k", "name"]:
-            raise SystemExit(f"DataFrame.join columns {anti_names!r} != ['k', 'name']")
+        anti_names_expected = ["k", "name"]
+        if anti_names != anti_names_expected:
+            raise SystemExit(f"DataFrame.join columns {anti_names!r} != {anti_names_expected!r}")
 
         semi = left.join(right, ["k"], "left_semi")
         semi_rows = set(semi.collect())
@@ -60,8 +66,9 @@ def main() -> None:
 
         cond = left.join(right, left["k"] == right["k"])
         cond_names = cond.columns
-        if cond_names != ["k", "name", "k", "v"]:
-            raise SystemExit(f"DataFrame.join columns {cond_names!r} != ['k', 'name', 'k', 'v']")
+        cond_names_expected = ["k", "name", "k", "v"]
+        if cond_names != cond_names_expected:
+            raise SystemExit(f"DataFrame.join columns {cond_names!r} != {cond_names_expected!r}")
         cond_rows = set(cond.collect())
         cond_expected = {(1, "a", 1, 10.0), (2, "b", 2, 20.0)}
         if cond_rows != cond_expected:
@@ -69,8 +76,11 @@ def main() -> None:
 
         hinted = left.hint("broadcast")
         hinted_names = hinted.columns
-        if hinted_names != ["k", "name"]:
-            raise SystemExit(f"DataFrame.hint columns {hinted_names!r} != ['k', 'name']")
+        hinted_names_expected = ["k", "name"]
+        if hinted_names != hinted_names_expected:
+            raise SystemExit(
+                f"DataFrame.hint columns {hinted_names!r} != {hinted_names_expected!r}"
+            )
         hinted_rows = set(hinted.collect())
         hinted_expected = {(1, "a"), (2, "b"), (3, "c")}
         if hinted_rows != hinted_expected:
@@ -78,13 +88,48 @@ def main() -> None:
 
         common = left.select("k").intersect(right.select("k"))
         common_rows = set(common.collect())
-        if common_rows != {(1,), (2,)}:
-            raise SystemExit(f"DataFrame.intersect rows {common_rows!r} != {(1,), (2,)}")
+        common_expected = {(1,), (2,)}
+        if common_rows != common_expected:
+            raise SystemExit(f"DataFrame.intersect rows {common_rows!r} != {common_expected!r}")
         duped = repark.createDataFrame([(1,), (2,), (1,)], ["k"])
         other = repark.createDataFrame([(1,), (3,)], ["k"])
         deduped_rows = set(duped.intersect(other).collect())
-        if deduped_rows != {(1,)}:
-            raise SystemExit(f"DataFrame.intersect rows {deduped_rows!r} != {(1,)}")
+        deduped_expected = {(1,)}
+        if deduped_rows != deduped_expected:
+            raise SystemExit(f"DataFrame.intersect rows {deduped_rows!r} != {deduped_expected!r}")
+
+        repark.createDataFrame([(1, "a"), (2, "b")], ["id", "name"]).write.saveAsTable("people")
+        merged_source = repark.createDataFrame([(1, "A"), (3, "c")], ["id", "name"])
+        (
+            merged_source.mergeInto("people", "id")
+            .whenMatched()
+            .updateAll()
+            .whenNotMatched()
+            .insertAll()
+            .merge()
+        )
+        merged_rows = [
+            tuple(row) for row in repark.sql("SELECT id, name FROM people ORDER BY id").collect()
+        ]
+        merged_expected = [(1, "A"), (2, "b"), (3, "c")]
+        if merged_rows != merged_expected:
+            raise SystemExit(f"DataFrame.mergeInto rows {merged_rows!r} != {merged_expected!r}")
+
+        repark.createDataFrame([(1, "a"), (2, "b")], ["id", "name"]).write.saveAsTable("accounts")
+        condition_source = repark.createDataFrame([(1, "A"), (3, "c")], ["id", "name"])
+        (
+            condition_source.merge_into("accounts", F.col("target.id") == F.col("source.id"))
+            .whenMatched()
+            .updateAll()
+            .whenNotMatched()
+            .insertAll()
+            .merge()
+        )
+        condition_rows = [
+            tuple(row) for row in repark.sql("SELECT id, name FROM accounts ORDER BY id").collect()
+        ]
+        if condition_rows != merged_expected:
+            raise SystemExit(f"DataFrame.merge_into rows {condition_rows!r} != {merged_expected!r}")
     finally:
         repark.stop()
 

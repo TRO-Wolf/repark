@@ -31,15 +31,18 @@ got and expected reprs (the corpus form).
 - [group_by.py](group_by.py) — `groupBy` / `group_by` / `groupby`: count, expression agg,
   dict agg.
 - [joins_hints.py](joins_hints.py) — `join` (name, list, and Column conditions; inner/left/
-  anti/semi), `hint`, and `intersect`.
+  anti/semi), `hint`, `intersect`, and `mergeInto` / `merge_into` into a local Iceberg table
+  (the bare-key sugar and the `target.`/`source.` Column condition, both answering Spark's
+  merged rows).
 - [rows_nulls.py](rows_nulls.py) — `limit`, `offset`, `orderBy` / `order_by` (null ordering),
-  `melt`, and the `na` fill/drop surface.
+  `melt` (the full 12-row multiset, duplicate proved), and the `na` fill/drop surface.
 - [state_cache.py](state_cache.py) — `isEmpty` / `is_empty`, `isStreaming` / `is_streaming`,
   the `is_cached` arc, `persist`, and `localCheckpoint`.
-- [bridges.py](bridges.py) — `mapInArrow` / `map_in_arrow`, `mapInPandas` / `map_in_pandas`,
-  and the `pl` polars door (no Spark analog).
-- [print_schema.py](print_schema.py) — `printSchema` / `print_schema` in Spark's exact tree
-  lines.
+- [bridges.py](bridges.py) — `mapInArrow` / `map_in_arrow`, `mapInPandas` / `map_in_pandas`
+  (each with a NULL `v` riding the bridge back to NULL), and the `pl` polars door
+  (no Spark analog).
+- [print_schema.py](print_schema.py) — `printSchema` / `print_schema`: the captured tree lines;
+  Spark's own stdout carries one more trailing blank line (§7 `EX-DF-10`).
 - [random_split.py](random_split.py) — `randomSplit` / `random_split`: two weighted parts,
   every row placed exactly once.
 
@@ -52,9 +55,10 @@ the three global-temp-view spellings, `exceptAll` / `except_all`, the
 engines agree). The EX-16 batch adds EX-DF-7 (`intersectAll` /
 `intersect_all` refuse; Spark answers the multiset intersect), EX-DF-8 (`groupingSets` /
 `grouping_sets` take one column each; Spark's documented shape takes a list of sets and the
-measured answers differ), and EX-DF-9 (`mergeInto` / `merge_into` work through the
-string-sugar arm; live Spark refuses every locally reachable shape), with pins in
-`python/repark/tests/test_examples_dataframe_b.py`.
+measured answers differ), EX-DF-9 (`mergeInto`'s bare-key sugar and `target.`/`source.`
+qualifiers; Spark wants a table-name/alias SQL condition — the covered merge program answers
+Spark's rows), and EX-DF-10 (`printSchema`'s stdout ends one newline short of Spark's capture),
+with pins in `python/repark/tests/test_examples_dataframe_b.py`.
 
 ## Pointers
 

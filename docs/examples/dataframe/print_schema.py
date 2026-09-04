@@ -1,4 +1,4 @@
-"""Print one frame's schema tree to stdout in Spark's exact line shape.
+"""Print one frame's schema tree to stdout and assert the captured tree lines.
 
 pins: ex-16-dataframe-b/C-001
 """

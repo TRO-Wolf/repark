@@ -28,51 +28,76 @@ def main() -> None:
         )
         empty = repark.createDataFrame([], "n long")
         empty_flag = empty.isEmpty()
-        if empty_flag is not True:
-            raise SystemExit(f"DataFrame.isEmpty flag {empty_flag!r} != True")
+        empty_flag_expected = True
+        if empty_flag != empty_flag_expected:
+            raise SystemExit(f"DataFrame.isEmpty flag {empty_flag!r} != {empty_flag_expected!r}")
         snake_empty_flag = empty.is_empty()
-        if snake_empty_flag is not True:
-            raise SystemExit(f"DataFrame.is_empty flag {snake_empty_flag!r} != True")
+        snake_empty_flag_expected = True
+        if snake_empty_flag != snake_empty_flag_expected:
+            raise SystemExit(
+                f"DataFrame.is_empty flag {snake_empty_flag!r} != {snake_empty_flag_expected!r}"
+            )
         full_flag = frame.isEmpty()
-        if full_flag is not False:
-            raise SystemExit(f"DataFrame.isEmpty flag {full_flag!r} != False")
+        full_flag_expected = False
+        if full_flag != full_flag_expected:
+            raise SystemExit(f"DataFrame.isEmpty flag {full_flag!r} != {full_flag_expected!r}")
 
         streaming = frame.isStreaming
-        if streaming is not False:
-            raise SystemExit(f"DataFrame.isStreaming flag {streaming!r} != False")
+        streaming_expected = False
+        if streaming != streaming_expected:
+            raise SystemExit(f"DataFrame.isStreaming flag {streaming!r} != {streaming_expected!r}")
         snake_streaming = frame.is_streaming
-        if snake_streaming is not False:
-            raise SystemExit(f"DataFrame.is_streaming flag {snake_streaming!r} != False")
+        snake_streaming_expected = False
+        if snake_streaming != snake_streaming_expected:
+            raise SystemExit(
+                f"DataFrame.is_streaming flag {snake_streaming!r} != {snake_streaming_expected!r}"
+            )
 
         uncached = repark.createDataFrame(
             [("a", 1), ("a", 2), ("b", 3)],
             ["g", "k"],
         )
         before_flag = uncached.is_cached
-        if before_flag is not False:
-            raise SystemExit(f"DataFrame.is_cached flag {before_flag!r} != False")
+        before_flag_expected = False
+        if before_flag != before_flag_expected:
+            raise SystemExit(
+                f"DataFrame.is_cached flag {before_flag!r} != {before_flag_expected!r}"
+            )
         uncached.cache()
         during_flag = uncached.is_cached
-        if during_flag is not True:
-            raise SystemExit(f"DataFrame.is_cached flag {during_flag!r} != True")
+        during_flag_expected = True
+        if during_flag != during_flag_expected:
+            raise SystemExit(
+                f"DataFrame.is_cached flag {during_flag!r} != {during_flag_expected!r}"
+            )
         cached_total = uncached.count()
-        if cached_total != 3:
-            raise SystemExit(f"DataFrame.is_cached count {cached_total!r} != 3")
+        cached_total_expected = 3
+        if cached_total != cached_total_expected:
+            raise SystemExit(
+                f"DataFrame.is_cached count {cached_total!r} != {cached_total_expected!r}"
+            )
         uncached.unpersist()
         after_flag = uncached.is_cached
-        if after_flag is not False:
-            raise SystemExit(f"DataFrame.is_cached flag {after_flag!r} != False")
+        after_flag_expected = False
+        if after_flag != after_flag_expected:
+            raise SystemExit(f"DataFrame.is_cached flag {after_flag!r} != {after_flag_expected!r}")
 
         persisted = repark.createDataFrame(
             [("a", 1), ("a", 2), ("b", 3)],
             ["g", "k"],
         ).persist()
         persisted_flag = persisted.is_cached
-        if persisted_flag is not True:
-            raise SystemExit(f"DataFrame.persist flag {persisted_flag!r} != True")
+        persisted_flag_expected = True
+        if persisted_flag != persisted_flag_expected:
+            raise SystemExit(
+                f"DataFrame.persist flag {persisted_flag!r} != {persisted_flag_expected!r}"
+            )
         persisted_total = persisted.count()
-        if persisted_total != 3:
-            raise SystemExit(f"DataFrame.persist count {persisted_total!r} != 3")
+        persisted_total_expected = 3
+        if persisted_total != persisted_total_expected:
+            raise SystemExit(
+                f"DataFrame.persist count {persisted_total!r} != {persisted_total_expected!r}"
+            )
         persisted_rows = set(persisted.collect())
         persisted_expected = {("a", 1), ("a", 2), ("b", 3)}
         if persisted_rows != persisted_expected:
@@ -90,15 +115,25 @@ def main() -> None:
             ["g", "k", "v"],
         ).localCheckpoint()
         checkpoint_total = checkpointed.count()
-        if checkpoint_total != 6:
-            raise SystemExit(f"DataFrame.localCheckpoint count {checkpoint_total!r} != 6")
-        checkpoint_flag = checkpointed.is_cached
-        if checkpoint_flag is not False:
-            raise SystemExit(f"DataFrame.localCheckpoint flag {checkpoint_flag!r} != False")
-        checkpoint_names = checkpointed.columns
-        if checkpoint_names != ["g", "k", "v"]:
+        checkpoint_total_expected = 6
+        if checkpoint_total != checkpoint_total_expected:
             raise SystemExit(
-                f"DataFrame.localCheckpoint columns {checkpoint_names!r} != ['g', 'k', 'v']"
+                f"DataFrame.localCheckpoint count {checkpoint_total!r}"
+                f" != {checkpoint_total_expected!r}"
+            )
+        checkpoint_flag = checkpointed.is_cached
+        checkpoint_flag_expected = False
+        if checkpoint_flag != checkpoint_flag_expected:
+            raise SystemExit(
+                f"DataFrame.localCheckpoint flag {checkpoint_flag!r}"
+                f" != {checkpoint_flag_expected!r}"
+            )
+        checkpoint_names = checkpointed.columns
+        checkpoint_names_expected = ["g", "k", "v"]
+        if checkpoint_names != checkpoint_names_expected:
+            raise SystemExit(
+                f"DataFrame.localCheckpoint columns {checkpoint_names!r}"
+                f" != {checkpoint_names_expected!r}"
             )
     finally:
         repark.stop()

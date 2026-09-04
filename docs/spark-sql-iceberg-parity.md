@@ -3883,28 +3883,50 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   Spark-equal on both; both spellings stay on the example backlog until repark implements
   Spark's multi-set signature.
 
-### EX-DF-9 — `mergeInto` runs through the string-sugar arm; live Spark refuses every locally reachable shape
+### EX-DF-9 — `mergeInto`'s bare-key sugar and `target.`/`source.` qualifiers; Spark wants a table-name/alias SQL condition
 
-- **repark** — `source.mergeInto(table, "id")` works end to end through the equi-join sugar:
-  on target `[(1, 'a'), (2, 'b')]` and source `[(1, 'A'), (3, 'c')]`, the
-  `whenMatched().update` / `whenNotMatched().insert` arm and the `updateAll` / `insertAll` arm
-  both answer `[(1, 'A'), (2, 'b'), (3, 'c')]`. Update/insert values must spell
-  `col("source.<name>")`; bound source Columns (`source.name`) raise
-  `AnalysisException: Ambiguous reference to unqualified field name`, and Column conditions
-  rendered as display text raise (`Schema error: No field named target.id`).
-- **Apache Spark** — `DataFrame.mergeInto` exists (4.0+) but this oracle's only locally
-  creatable target — a managed v2 parquet table — refuses the statement with
-  `UNSUPPORTED_FEATURE.TABLE_OPERATION` (does not support MERGE INTO TABLE). Every condition
-  spelling raises before that check: the documented `mergeInto("target", "id")` string raises
-  `AMBIGUOUS_REFERENCE` on the shared key, `expr("target.id = source.id")` and
-  catalog-qualified `expr("spark_catalog.default.<t>.id = id")` raise `AMBIGUOUS_REFERENCE` /
-  `UNRESOLVED_COLUMN`. No Spark answer was obtainable for any input repark answers.
-  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-16 DataFrame-b batch, four probe
-  rounds over v2 parquet targets.)*
+- **repark** — the bare string key is sugar for the shared column: on the local Iceberg target
+  `[(1, 'a'), (2, 'b')]` and source `[(1, 'A'), (3, 'c')]` over `id`/`name`,
+  `source.mergeInto("people", "id").whenMatched().updateAll().whenNotMatched().insertAll().merge()`
+  answers `[(1, 'A'), (2, 'b'), (3, 'c')]`. A Column condition must spell the sides
+  `target.` / `source.`: `F.col("target.id") == F.col("source.id")` answers the same rows, while
+  the SQL-string spellings raise — `F.expr("target.id = source.id")` and a table-name-qualified
+  condition both raise `AnalysisException: Schema error: No field named …`, and update/insert
+  values must spell `col("source.<name>")`.
+- **Apache Spark** — the equivalent program answers the same rows on the same locally created
+  Iceberg target, but only through a parsed condition over the table name and the source alias:
+  `src.alias("s").mergeInto("local.ns.t", F.expr("t.id = s.id")).whenMatched().updateAll()
+  .whenNotMatched().insertAll().merge()` answers `[(1, 'A'), (2, 'b'), (3, 'c')]`. The bare key
+  raises `AnalysisException: [AMBIGUOUS_REFERENCE]` (`local.ns.t2.id` vs `s.id`), and the
+  `target.`/`source.` qualifiers raise `UNRESOLVED_COLUMN.WITH_SUGGESTION` — as a parsed expr or
+  as Column objects; even the Column-object form of the working condition
+  (`F.col("t.id") == F.col("s.id")`) raises `UNRESOLVED_COLUMN`, because the target's
+  short-name alias exists only to the SQL parser.
+  *(oracle: live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, ANSI on, 2026-09-04,
+  EX-16 round 3; local Hadoop catalog, COW `format-version` 2 target — the round-1
+  "refuses every locally reachable shape" reading was an artefact of probing the default
+  `spark_catalog` parquet target.)*
 - **Pin** — `python/repark/tests/test_examples_dataframe_b.py::test_merge_into_divergence`
-- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-16 measurement. Both spellings stay on
-  the example backlog until Spark-equal MERGE can be demonstrated on a locally creatable
-  target; the pin records repark's current working arm.
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-16 measurement, rewritten after the
+  round-3 re-measure on the pinned Iceberg oracle. The example covers the row-set program, where
+  the engines answer the same rows; this row records the bare-key sugar and the qualifier names
+  until repark's condition spellings match Spark's.
+
+### EX-DF-10 — `printSchema`'s stdout ends one newline short of Spark's capture
+
+- **repark** — `printSchema()` prints the tree with one trailing newline: the captured stdout is
+  the four tree lines joined by `\n` plus one final `\n`, and its `splitlines()` holds the four
+  tree lines and nothing more.
+- **Apache Spark** — `printSchema()` adds a second newline to `treeString`'s own trailing one:
+  the captured stdout ends `\n\n`, and its `splitlines()` holds the four tree lines plus a
+  trailing `''` (five elements). The line content is equal; only the stdout tail differs.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-16 round 3; capture via `redirect_stdout`
+  on both engines over the same `g`/`k`/`v` fixture.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_b.py::test_print_schema_stdout_divergence`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-16 round-3 promotion of the round-1
+  review-gap entry. `printSchema` / `print_schema` stay covered by the tree-line arm, where the
+  line content agrees; this row records the stdout tail until repark prints Spark's second
+  newline.
 
 
 ## 8. Drop-in disclosure rationale

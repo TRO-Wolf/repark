@@ -20,9 +20,10 @@ its `staging/map.md` row. Closed: `crates/`, `python/repark/src/`, every other `
 The roster is the next 36 `DataFrame.*` rows of the backlog at the base `f3968aa` (camelCase and
 snake_case aliases are one example each, both names in `COVERS`); `DataFrame.dynamicFlatten` /
 `DataFrame.dynamic_flatten` are deliberately excluded — another unit owns them. Eight files cover
-the 30 names the live oracle measured Spark-equal; 6 names stay on the backlog as measured
-divergences with §7 rows `EX-DF-7`…`EX-DF-9` and pins in
-`python/repark/tests/test_examples_dataframe_b.py`.
+the 32 names the live oracle measured Spark-equal; `intersectAll` / `intersect_all` and
+`groupingSets` / `grouping_sets` stay on the backlog with §7 rows `EX-DF-7`/`EX-DF-8`, and the
+narrow `mergeInto` and `printSchema` arms are recorded as §7 rows `EX-DF-9`/`EX-DF-10`, all
+pinned in `python/repark/tests/test_examples_dataframe_b.py`.
 
 **Roster (36):** `DataFrame.first`, `DataFrame.groupBy`, `DataFrame.group_by`, `DataFrame.groupby`,
 `DataFrame.groupingSets`, `DataFrame.grouping_sets`, `DataFrame.head`, `DataFrame.hint`,
@@ -41,18 +42,18 @@ divergences with §7 rows `EX-DF-7`…`EX-DF-9` and pins in
 |---|---|---|
 | `first_head.py` | `DataFrame.first`, `DataFrame.head` | Row-first access: the single first row, the first n rows, `head(0)`, and the empty-frame `None` arms. |
 | `group_by.py` | `DataFrame.groupBy`, `DataFrame.group_by`, `DataFrame.groupby` | One frame grouped by key under all three spellings: the count form, the expression agg, and the dict agg. |
-| `joins_hints.py` | `DataFrame.join`, `DataFrame.hint`, `DataFrame.intersect` | Combining frames: the name, list, and Column-condition join arms (inner/left/anti/semi), the optimizer-hint no-op, and the deduplicating set intersect. |
-| `rows_nulls.py` | `DataFrame.limit`, `DataFrame.offset`, `DataFrame.orderBy`, `DataFrame.order_by`, `DataFrame.melt`, `DataFrame.na` | Row shaping: slice and skip, the two order spellings with Spark's null placement, the wide-to-long melt, and the `na` fill/drop surface. |
+| `joins_hints.py` | `DataFrame.join`, `DataFrame.hint`, `DataFrame.intersect`, `DataFrame.mergeInto`, `DataFrame.merge_into` | Combining frames: the name, list, and Column-condition join arms (inner/left/anti/semi), the optimizer-hint no-op, the deduplicating set intersect, and the merge into a local Iceberg table (bare-key sugar and `target.`/`source.` Column condition, both Spark-equal on rows). |
+| `rows_nulls.py` | `DataFrame.limit`, `DataFrame.offset`, `DataFrame.orderBy`, `DataFrame.order_by`, `DataFrame.melt`, `DataFrame.na` | Row shaping: slice and skip, the two order spellings with Spark's null placement, the wide-to-long melt as the full 12-row multiset (the duplicate proved), and the `na` fill/drop surface. |
 | `state_cache.py` | `DataFrame.isEmpty`, `DataFrame.is_empty`, `DataFrame.isStreaming`, `DataFrame.is_streaming`, `DataFrame.is_cached`, `DataFrame.persist`, `DataFrame.localCheckpoint` | Frame state: emptiness, the batch-only streaming flags, the cache arc, persist, and the checkpoint that does not set `is_cached`. |
-| `bridges.py` | `DataFrame.mapInArrow`, `DataFrame.map_in_arrow`, `DataFrame.mapInPandas`, `DataFrame.map_in_pandas`, `DataFrame.pl` | Bridges to other runtimes: per-batch Arrow and pandas functions under both spellings, and the polars door. |
-| `print_schema.py` | `DataFrame.printSchema`, `DataFrame.print_schema` | The schema tree print in Spark's exact line shape, both spellings. |
+| `bridges.py` | `DataFrame.mapInArrow`, `DataFrame.map_in_arrow`, `DataFrame.mapInPandas`, `DataFrame.map_in_pandas`, `DataFrame.pl` | Bridges to other runtimes: per-batch Arrow and pandas functions under both spellings, each with a NULL `v` riding the bridge back to NULL, and the polars door. |
+| `print_schema.py` | `DataFrame.printSchema`, `DataFrame.print_schema` | The schema tree print asserted as Spark's tree lines; the stdout tail divergence is §7 `EX-DF-10`. |
 | `random_split.py` | `DataFrame.randomSplit`, `DataFrame.random_split` | Weighted split: two parts, schemas preserved, every row placed exactly once. |
 
 ## Proposition ledger
 
 | ID | Clause | Proof obligation | Verdict |
 |---|---|---|---|
-| C-001 | Eight files under `docs/examples/dataframe/` land runnable local examples for the 30 Spark-equal roster names, every asserted value measured against PySpark 4.1.2 before it was written; those 30 leave `docs/examples/backlog.txt` and `BACKLOG_BASELINE` moves down by exactly 30, 550 → 520, with no other `scripts/` change; the 6 measured divergent names stay on the backlog with §7 rows `EX-DF-7`…`EX-DF-9` and pins in `python/repark/tests/test_examples_dataframe_b.py`; no product file is touched; the gate's static half and its `--require-execute` leg both exit 0. | Red-first capture (30 findings before, 0 after), the oracle table (36 rows, one per roster name), the eight scripts each exit 0, and the recorded gate exit codes. | **PROVEN** |
+| C-001 | Eight files under `docs/examples/dataframe/` land runnable local examples for the 32 Spark-equal roster names, every asserted value measured against PySpark 4.1.2 before it was written; those 32 leave `docs/examples/backlog.txt` and `BACKLOG_BASELINE` moves down by exactly 32, 550 → 518, with no other `scripts/` change; `intersectAll` / `intersect_all` and `groupingSets` / `grouping_sets` stay on the backlog with §7 rows `EX-DF-7`/`EX-DF-8`, and the narrow `mergeInto` and `printSchema` arms are recorded as §7 rows `EX-DF-9`/`EX-DF-10` with pins in `python/repark/tests/test_examples_dataframe_b.py`; no product file is touched; the gate's static half and its `--require-execute` leg both exit 0. | Red-first capture (30 findings before, 0 after; the round-3 delta provoked 2 findings, 0 after), the oracle table (36 rows, one per roster name), the eight scripts each exit 0, and the recorded gate exit codes. | **PROVEN** |
 
 `LOGIC_SCORE` = **1/1 `PROVEN`**.
 
@@ -68,12 +69,19 @@ from `backlog.txt` and lower `BACKLOG_BASELINE` to 520 (`550 − 30`) with no ne
 present; the same gate exits **1** with exactly 30 findings, one per roster name and no others.
 With the eight files present, the 30 names removed and `BACKLOG_BASELINE=520`, the gate exits **0**
 (`391 covered; 520 backlog; 99 examples`).
+**Round 3 (2026-09-04):** the round-6 re-measure moved `mergeInto` / `merge_into` into the kept
+set, so the delta was re-provoked on this branch after the origin/main merge, before the merge
+arms existed: delete the two
+`mergeInto` rows from `backlog.txt` and lower `BACKLOG_BASELINE` to 518 with no merge arms
+present — the gate exits **1** with exactly 2 findings, one per name and no others; with the
+merge arms in `joins_hints.py`, the gate exits **0** (`393 covered; 518 backlog; 99 examples`).
 
 ## Oracle (live PySpark 4.1.2, ANSI on, local[2], JDK 17, TZ=UTC)
 
-Measured at `.venv/bin/python` with `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64`, five throwaway scripts
-under `scratch/ex16-oracle/` (gitignored, never committed) driving `_live_parity.build_spark_engine`
-and `build_repark_engine` over identical fixtures and printing per name both engines' values. One
+Measured at `.venv/bin/python` with `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64`, seven throwaway scripts
+under `scratch/ex16-oracle/` (gitignored, never committed) driving
+`_live_parity.build_spark_engine`, `build_spark_iceberg_engine` (rounds 6–7), and
+`build_repark_engine` over identical fixtures and printing per name both engines' values. One
 Spark JVM per round; the Spark Python worker was pinned to the venv interpreter via
 `PYSPARK_PYTHON` (round 1's mapIn Spark leg died on a worker without pyarrow — fixed in round 2).
 Fixtures: three-row `g/k` frame `[("a",1),("a",2),("b",3)]`; six-row `g/k/v` frame
@@ -86,6 +94,22 @@ over `k/name` and `[(1,10.0),(2,20.0),(4,40.0)]` over `k/v`; multiset frames `[(
 (sets list + output columns, read from the pinned PySpark 4.1.2 source) and four mergeInto
 condition spellings; round 4 the disjoint-column-name merge shape; round 5 the exact
 `groupBy.agg(F.sum, F.count(F.lit(1)))` recipe. Unordered results compared as sets, both engines.
+**Round 3 (2026-09-04):** rounds 6–7 of the throwaway script, one Spark JVM, the pinned Iceberg
+oracle (`_live_parity.build_spark_iceberg_engine`, the cached
+`iceberg-spark-runtime-4.1_2.13:1.11.0` jar, local Hadoop catalog, COW `format-version` 2
+target) re-measured the merge program: Spark answers `[(1, 'A'), (2, 'b'), (3, 'c')]` for
+`src.alias("s").mergeInto("local.ns.t", F.expr("t.id = s.id"))…merge()` — the bare key raises
+`AMBIGUOUS_REFERENCE` and the `target.`/`source.` qualifiers raise `UNRESOLVED_COLUMN` as expr
+or Column objects (even `F.col("t.id") == F.col("s.id")` raises; the short-name alias exists
+only to the SQL parser), while repark answers the same rows for the bare-key sugar and for
+`F.col("target.id") == F.col("source.id")`. The same JVM measured both engines' `printSchema`
+captures (Spark's `splitlines()` holds the four tree lines plus a trailing `''`, five elements;
+repark's holds the four lines, four elements) and the bridge NULL arms
+(`("c", 3, None)` in the fixture: both engines, Arrow path and pandas path, answer
+`(3, None)` — the NULL rides through the pandas function as NaN and lands back as NULL through
+the pandas→Arrow conversion). The round-1 merge reading ("Spark refuses every locally reachable
+shape") was an artefact of probing the default `spark_catalog` parquet target, not the pinned
+Iceberg oracle.
 `pins: ex-16-dataframe-b/C-001`
 
 | Name | Spark value (repr) | repark value (repr) | Kept / dropped | File | Note |
@@ -114,16 +138,16 @@ condition spellings; round 4 the disjoint-column-name merge shape; round 5 the e
 | `DataFrame.mapInPandas` | `[(1, 20.0), (2, 40.0)]` | same | kept | `bridges.py` | |
 | `DataFrame.map_in_pandas` | RAISED `ATTRIBUTE_NOT_SUPPORTED` | same | kept | `bridges.py` | same callable |
 | `DataFrame.melt` | cols `['g','var','val']`, dtypes `string/string/double`, 12 rows with `k` widened to double | same | kept | `rows_nulls.py` | union widening equal |
-| `DataFrame.mergeInto` | v2 parquet target RAISED `UNSUPPORTED_FEATURE.TABLE_OPERATION`; documented condition spellings RAISED `AMBIGUOUS_REFERENCE` / `UNRESOLVED_COLUMN`; disjoint-name shape refused before the capability check | sugar arm answers `[(1,'A'),(2,'b'),(3,'c')]`; bound-value and Column-condition spellings raise | dropped | §7 `EX-DF-9` | no input answers Spark-equal on both |
-| `DataFrame.merge_into` | same | same | dropped | §7 `EX-DF-9` | same callable |
+| `DataFrame.mergeInto` | Iceberg target: `src.alias("s").mergeInto("local.ns.t", F.expr("t.id = s.id"))…merge()` answers `[(1,'A'),(2,'b'),(3,'c')]`; bare key `"id"` RAISED `AMBIGUOUS_REFERENCE`; `target.`/`source.` qualifiers RAISED `UNRESOLVED_COLUMN` (parsed expr and Column objects, even `F.col("t.id") == F.col("s.id")`) | bare-key sugar answers `[(1,'A'),(2,'b'),(3,'c')]`; `F.col("target.id") == F.col("source.id")` answers the same rows; SQL-string conditions raise | kept | `joins_hints.py` | rows Spark-equal; the bare-key sugar and the qualifier names are §7 `EX-DF-9` |
+| `DataFrame.merge_into` | same | same | kept | `joins_hints.py` | same callable |
 | `DataFrame.na` | fill scalar/dict, drop any/subset/all/thresh — all five arms equal to EX-15's fillna/dropna cells | same | kept | `rows_nulls.py` | the `na` property surface |
 | `DataFrame.offset` | `offset(2)` → `[(3,'c')]`; `offset(0)` → full frame | same | kept | `rows_nulls.py` | Spark 4.1.2 answers `offset` |
 | `DataFrame.orderBy` | asc → nulls first; desc → nulls last; rows `[('a',None),('b',None),('b',1),('a',2)]` / `[('a',2),('b',1),('a',None),('b',None)]` | same | kept | `rows_nulls.py` | |
 | `DataFrame.order_by` | RAISED `ATTRIBUTE_NOT_SUPPORTED` (no snake spelling) | same as `orderBy` | kept | `rows_nulls.py` | same callable |
 | `DataFrame.persist` | count `3`, `is_cached` `True`, rows | same | kept | `state_cache.py` | no-arg level |
 | `DataFrame.pl` | RAISED `ATTRIBUTE_NOT_SUPPORTED` (no analog) | `PolarsFrame`; `select("k").collect()` → real polars DataFrame, column `k`, values `[1, 2, 1]` | kept | `bridges.py` | repark extension, no Spark analog |
-| `DataFrame.printSchema` | lines `['root', ' |-- g: string (nullable = true)', ' |-- k: long (nullable = true)', ' |-- v: double (nullable = true)']` plus one extra trailing blank line | same lines, no extra blank | kept | `print_schema.py` | line content equal; the trailing newline is a review-gap-table item |
-| `DataFrame.print_schema` | RAISED `ATTRIBUTE_NOT_SUPPORTED` | same lines | kept | `print_schema.py` | same callable |
+| `DataFrame.printSchema` | capture `splitlines()` = `['root', ' |-- g: string (nullable = true)', ' |-- k: long (nullable = true)', ' |-- v: double (nullable = true)', '']` (five elements; stdout ends `\n\n`) | the same four tree lines, stdout ends one `\n` (four elements) | kept | `print_schema.py` | line content equal; the stdout tail is §7 `EX-DF-10` (round-3 promotion) |
+| `DataFrame.print_schema` | RAISED `ATTRIBUTE_NOT_SUPPORTED` | the same four tree lines | kept | `print_schema.py` | same callable |
 | `DataFrame.randomSplit` | structural `(2 parts, total 6, cols ['n'])`; seeded membership seed 7 `[[1, 2, 4, 6], [3, 5]]` | structural same; seeded `[[1, 3, 5], [2, 4, 6]]` | kept | `random_split.py` | example covers the unseeded structural arm; seeded membership divergence is a review-gap-table item (disclosed engine RNG) |
 | `DataFrame.random_split` | RAISED `ATTRIBUTE_NOT_SUPPORTED` | structural same as `randomSplit` | kept | `random_split.py` | same callable |
 
@@ -132,7 +156,7 @@ condition spellings; round 4 the disjoint-column-name merge shape; round 5 the e
 | Command | Exit |
 |---|---|
 | `.venv/bin/python scripts/check_example_coverage.py --require-execute` | **0** |
-| `.venv/bin/python -m pytest python/repark/tests/test_examples_dataframe_b.py -q` | **0** (3 passed) |
+| `.venv/bin/python -m pytest python/repark/tests/test_examples_dataframe_b.py -q` | **0** (4 passed) |
 | `make check-map-sync` | **0** |
 | `make check-ledger-grammar` | **0** |
 | `make check-ledgers` | **0** |
@@ -148,18 +172,19 @@ SHA `f3968aa` (expected for this lane).
 
 Counts line (execute leg):
 
-`example-coverage: 913 public names (catalog=28, column=40, dataframe=150, functions=444, io=42, ml=28, session=41, ta=86, types=32, window=22); 391 covered; 520 backlog; 2 exceptions; 99 examples`
+`example-coverage: 913 public names (catalog=28, column=40, dataframe=150, functions=444, io=42, ml=28, session=41, ta=86, types=32, window=22); 393 covered; 518 backlog; 2 exceptions; 99 examples`
 
-Before this unit: `361 covered; 550 backlog; 91 examples` (at `f3968aa`). After: `391 covered;
-520 backlog; 99 examples` — exactly the 30 kept names.
+Before this unit: `361 covered; 550 backlog; 91 examples` (at `f3968aa`). After: `393 covered;
+518 backlog; 99 examples` — exactly the 32 kept names (round 3 added `mergeInto` / `merge_into`).
 
 ## Review-gap table (parameter-level gaps found in review, agreeing arm covered)
 
 | Name | repark | Spark 4.1.2 | Disposition |
 |---|---|---|---|
-| `DataFrame.printSchema` trailing newline | the print strips `treeString`'s own trailing newline, so stdout ends with one `\n` | `print` adds a second, so stdout ends with `\n\n` | the example asserts Spark's exact line content via `splitlines()`; cosmetic newline divergence noted here, no §7 row |
 | `DataFrame.randomSplit` seeded membership | seed 7, `[0.5, 0.5]`: `[[1, 3, 5], [2, 4, 6]]` | `[[1, 2, 4, 6], [3, 5]]` | disclosed engine-RNG divergence (the facade docstring states it); the example covers the unseeded structural arm where the engines' contracts agree; no §7 row |
-| `DataFrame.mergeInto` value spellings | `col("source.name")` answers; bound `source.name` raises `Ambiguous reference to unqualified field name` | unmeasurable — every shape is refused before value resolution | covered by §7 `EX-DF-9` |
+
+Round 3 promoted the `printSchema` trailing-newline entry to §7 `EX-DF-10` and absorbed the
+`mergeInto` value-spelling entry into the rewritten §7 `EX-DF-9`.
 
 ## Cost
 
@@ -177,9 +202,19 @@ batch's rows to `EX-DF-7`…`EX-DF-9`; every map resolved in lockstep), then a c
 converted the batch's eight examples to the corpus form, renumbered the pin module and this
 ledger, and re-ran every example and gate green. No new Spark JVM leg — no measured value moved.
 
+**Round 3 (2026-09-04):** the critic round re-measured two cells and the ledger follows. The
+`mergeInto` "Spark refuses every locally reachable shape" reading was an artefact of probing the
+default `spark_catalog`; on the pinned Iceberg oracle Spark answers the same rows repark answers,
+so `mergeInto` / `merge_into` joined `joins_hints.py` (kept, rows Spark-equal) and §7 `EX-DF-9`
+was rewritten to the narrow measured divergence (bare-key sugar, qualifier names). The
+`printSchema` stdout-tail review-gap entry was promoted to §7 `EX-DF-10` with a pin. The bridge
+NULL arms, the melt 12-row multiset, the corpus expected-variable `SystemExit` form, the pin
+fixture annotation, and the origin/main merge (sql-harden-2, `e3600a1`) landed in the same round.
+Two Spark JVM legs (rounds 6–7 of the throwaway script); no example file was added.
+
 ## Disk
 
-`df -h` 556 GB free of 1.8 TB at close. The oracle scratch lives under the gitignored
+`df -h` 505 GB free of 1.8 TB at close (round 3 re-measure). The oracle scratch lives under the gitignored
 `scratch/ex16-oracle/` and stays (gitignored, never committed). `.venv` and the
 sibling-checkout native module reused; no cargo build, `make develop` not run.
 
@@ -197,11 +232,11 @@ COVERAGE_ATTESTATION:
   categories:
     - id: AT-1
       status: ATTACKED
-      evidence: The AST walk emits 913 names across ten families; the 30 Spark-equal roster names are covered by eight new example files and the oracle table records both engines' values per name, all 36 roster rows.
+      evidence: The AST walk emits 913 names across ten families; the 32 Spark-equal roster names are covered by eight new example files and the oracle table records both engines' values per name, all 36 roster rows.
       artifacts: [scripts/check_example_coverage.py, docs/examples/inventory.txt, docs/examples/dataframe/first_head.py, docs/examples/dataframe/group_by.py, docs/examples/dataframe/joins_hints.py, docs/examples/dataframe/rows_nulls.py, docs/examples/dataframe/state_cache.py, docs/examples/dataframe/bridges.py, docs/examples/dataframe/print_schema.py, docs/examples/dataframe/random_split.py]
     - id: AT-2
       status: ATTACKED
-      evidence: A COVERS name on a wrong receiver is unused and red; the backlog is an exact baseline 520 with the 6 divergent names still listed.
+      evidence: A COVERS name on a wrong receiver is unused and red; the backlog is an exact baseline 518 with the 4 wholesale-divergent names still listed.
       artifacts: [scripts/check_example_coverage.py, docs/examples/backlog.txt]
     - id: AT-3
       status: ATTACKED
@@ -241,7 +276,7 @@ COVERAGE_ATTESTATION:
 - Slate: [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md)
 - Gate: [../../../scripts/check_example_coverage.py](../../../scripts/check_example_coverage.py)
 - Pins: [../../../python/repark/tests/test_examples_dataframe_b.py](../../../python/repark/tests/test_examples_dataframe_b.py)
-- Registry: [../../../docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md) §7 `EX-DF-7`…`EX-DF-9`
+- Registry: [../../../docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md) §7 `EX-DF-7`…`EX-DF-10`
 - Sibling: [ex-15-dataframe-a-ledger.md](ex-15-dataframe-a-ledger.md)
 
 ```yaml
@@ -255,10 +290,10 @@ DELIVERY_SIGNOFF:
   artifacts_verified:
     ledger: PASS (C-001 PROVEN)
     coverage_attestation: PASS (AT-1..AT-10, complete true)
-    findings_ledger: PASS (review-gap table carries three no-row entries)
+    findings_ledger: PASS (review-gap table carries one no-row entry; two entries promoted/absorbed into §7 rows EX-DF-10/EX-DF-9)
     shipped_flag_register: PASS (count 0)
-  done_gate: PASS (gates table)
-  status_update: v1.1 example backfill, DataFrame.* (b) batch — 30 covered, 6 divergent stay
+    done_gate: PASS (gates table)
+    status_update: v1.1 example backfill, DataFrame.* (b) batch — 32 covered, 4 divergent stay, narrow arms EX-DF-9/EX-DF-10 recorded
   verdict: PENDING
   rejection_route: N/A
 ```

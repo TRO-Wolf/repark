@@ -1,13 +1,13 @@
 # map — scripts/
 
-EX-16 DataFrame-b (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 550 → 520 —
-30 `DataFrame.*` names covered by eight new examples under `docs/examples/dataframe/`
+EX-16 DataFrame-b (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 550 → 518 —
+32 `DataFrame.*` names covered by eight new examples under `docs/examples/dataframe/`
 (`first_head.py`, `group_by.py`, `joins_hints.py`, `rows_nulls.py`, `state_cache.py`,
-`bridges.py`, `print_schema.py`, `random_split.py`); the 6 names the live oracle measured
-divergent stay on the backlog (`intersectAll`/`intersect_all` refused, `groupingSets`/
-`grouping_sets` signature and semantics, `mergeInto`/`merge_into` refused by live Spark on
-every locally reachable shape), registry §7 `EX-DF-7`…`EX-DF-9`, pins in
-`python/repark/tests/test_examples_dataframe_b.py`.
+`bridges.py`, `print_schema.py`, `random_split.py`; round 3 moved `mergeInto`/`merge_into`
+into `joins_hints.py` after the Iceberg-oracle re-measure); `intersectAll`/`intersect_all` and
+`groupingSets`/`grouping_sets` stay on the backlog (§7 `EX-DF-7`/`EX-DF-8`), and the narrow
+`mergeInto` bare-key/qualifier arm (§7 `EX-DF-9`) and `printSchema` stdout tail (§7 `EX-DF-10`)
+are recorded with pins in `python/repark/tests/test_examples_dataframe_b.py`.
 pins: ex-16-dataframe-b/C-001
 
 EX-15 DataFrame-a (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 578 → 550 —

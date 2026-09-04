@@ -23,25 +23,38 @@ def main() -> None:
         )
         parts = frame.randomSplit([0.5, 0.5])
         part_count = len(parts)
-        if part_count != 2:
-            raise SystemExit(f"DataFrame.randomSplit parts {part_count!r} != 2")
+        part_count_expected = 2
+        if part_count != part_count_expected:
+            raise SystemExit(
+                f"DataFrame.randomSplit parts {part_count!r} != {part_count_expected!r}"
+            )
         first_names = parts[0].columns
-        if first_names != ["n"]:
-            raise SystemExit(f"DataFrame.randomSplit columns {first_names!r} != ['n']")
+        first_names_expected = ["n"]
+        if first_names != first_names_expected:
+            raise SystemExit(
+                f"DataFrame.randomSplit columns {first_names!r} != {first_names_expected!r}"
+            )
         second_names = parts[1].columns
-        if second_names != ["n"]:
-            raise SystemExit(f"DataFrame.randomSplit columns {second_names!r} != ['n']")
+        if second_names != first_names_expected:
+            raise SystemExit(
+                f"DataFrame.randomSplit columns {second_names!r} != {first_names_expected!r}"
+            )
         placed = parts[0].count() + parts[1].count()
-        if placed != 6:
-            raise SystemExit(f"DataFrame.randomSplit placed rows {placed!r} != 6")
+        placed_expected = 6
+        if placed != placed_expected:
+            raise SystemExit(f"DataFrame.randomSplit placed rows {placed!r} != {placed_expected!r}")
 
         snake_parts = frame.random_split([0.5, 0.5])
         snake_count = len(snake_parts)
-        if snake_count != 2:
-            raise SystemExit(f"DataFrame.random_split parts {snake_count!r} != 2")
+        if snake_count != part_count_expected:
+            raise SystemExit(
+                f"DataFrame.random_split parts {snake_count!r} != {part_count_expected!r}"
+            )
         snake_placed = snake_parts[0].count() + snake_parts[1].count()
-        if snake_placed != 6:
-            raise SystemExit(f"DataFrame.random_split placed rows {snake_placed!r} != 6")
+        if snake_placed != placed_expected:
+            raise SystemExit(
+                f"DataFrame.random_split placed rows {snake_placed!r} != {placed_expected!r}"
+            )
     finally:
         repark.stop()
 

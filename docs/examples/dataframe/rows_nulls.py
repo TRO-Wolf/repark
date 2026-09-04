@@ -27,21 +27,22 @@ def main() -> None:
             ["k", "name"],
         )
         limited_rows = [tuple(row) for row in ordered.orderBy("k").limit(3).collect()]
-        if limited_rows != [(1, "a"), (2, "b"), (3, "c")]:
-            raise SystemExit(
-                f"DataFrame.limit rows {limited_rows!r} != [(1, 'a'), (2, 'b'), (3, 'c')]"
-            )
+        limited_expected = [(1, "a"), (2, "b"), (3, "c")]
+        if limited_rows != limited_expected:
+            raise SystemExit(f"DataFrame.limit rows {limited_rows!r} != {limited_expected!r}")
         zero_rows = ordered.limit(0).collect()
-        if zero_rows != []:
-            raise SystemExit(f"DataFrame.limit rows {zero_rows!r} != []")
+        zero_expected: list[tuple] = []
+        if zero_rows != zero_expected:
+            raise SystemExit(f"DataFrame.limit rows {zero_rows!r} != {zero_expected!r}")
 
         skips = repark.createDataFrame(
             [(1, "a"), (2, "b"), (3, "c")],
             ["k", "name"],
         )
         offset_rows = [tuple(row) for row in skips.offset(2).collect()]
-        if offset_rows != [(3, "c")]:
-            raise SystemExit(f"DataFrame.offset rows {offset_rows!r} != [(3, 'c')]")
+        offset_expected = [(3, "c")]
+        if offset_rows != offset_expected:
+            raise SystemExit(f"DataFrame.offset rows {offset_rows!r} != {offset_expected!r}")
         kept_rows = [tuple(row) for row in skips.offset(0).collect()]
         kept_expected = [(1, "a"), (2, "b"), (3, "c")]
         if kept_rows != kept_expected:
@@ -82,8 +83,16 @@ def main() -> None:
         melted_types_expected = [("g", "string"), ("var", "string"), ("val", "double")]
         if melted_types != melted_types_expected:
             raise SystemExit(f"DataFrame.melt dtypes {melted_types!r} != {melted_types_expected!r}")
-        melted_rows = set(melted.collect())
-        melted_expected = {
+        melted_rows = sorted(
+            melted.collect(),
+            key=lambda row: (
+                row["g"],
+                row["var"],
+                row["val"] is None,
+                row["val"] if row["val"] is not None else 0.0,
+            ),
+        )
+        melted_expected = [
             ("a", "k", 1.0),
             ("a", "k", 2.0),
             ("a", "k", 2.0),
@@ -96,7 +105,7 @@ def main() -> None:
             ("b", "k", 2.0),
             ("b", "v", 50.0),
             ("b", "v", None),
-        }
+        ]
         if melted_rows != melted_expected:
             raise SystemExit(f"DataFrame.melt rows {melted_rows!r} != {melted_expected!r}")
 

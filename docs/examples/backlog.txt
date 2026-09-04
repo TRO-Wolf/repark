@@ -81,8 +81,6 @@ DataFrame.groupingSets
 DataFrame.grouping_sets
 DataFrame.intersectAll
 DataFrame.intersect_all
-DataFrame.mergeInto
-DataFrame.merge_into
 DataFrame.repartition
 DataFrame.repartitionById
 DataFrame.repartitionByRange
