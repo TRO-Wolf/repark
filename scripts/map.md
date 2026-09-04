@@ -1,5 +1,9 @@
 # map — scripts/
 
+EX-18 DataFrame-c (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 550 → 515 at
+dispatch (518 → 483 through the EX-16 merge, 484 → 449 through the EX-17 merge) —
+35 `DataFrame.*` names covered by eleven new examples under `docs/examples/dataframe/`; `toJSON`
+refuses (R-DF-BATCH2) and stays a backlog row, registry §7 `EX-DF-11`…`EX-DF-17`, pins in `python/repark/tests/test_examples_dataframe_c.py`. pins: ex-18-dataframe-c/C-001
 EX-16 DataFrame-b (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 550 → 518 —
 32 `DataFrame.*` names covered by eight new examples under `docs/examples/dataframe/`
 (`first_head.py`, `group_by.py`, `joins_hints.py`, `rows_nulls.py`, `state_cache.py`,
@@ -125,6 +129,10 @@ V3-10 (2026-09-02): `check_rust_file_size.py` `repark-spark/src/alter.rs` 1831�
 `repark-iceberg/src/write/alter.rs` 1641→1630, where the caller-less `alter_table_properties`
 folded into `write/format_version.rs`.
 pins: v3-10-upgrade-v2-to-v3/C-003
+
+DF-PRINTSCHEMA-1 (2026-09-04): `check_lib_py.py` `dataframe/core.py` 6371→6368 — the
+`printSchema` strip arm is gone.
+pins: df-printschema-1-trailing-newline/C-004
 
 B-MOR-3 (2026-09-03): `check_rust_file_size.py` `repark-spark/src/tests/call.rs`
 1307→1303 — the live-DV refusal and its counter helper are deleted; ratchets DOWN.

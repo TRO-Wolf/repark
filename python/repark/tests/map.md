@@ -117,11 +117,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (`test_fn_trim_null_charset_is_null`).
   pins: fn-fix-2-ctrl-1-controls/C-001, C-002, C-003, C-004
 - [test_examples_dataframe_b.py](test_examples_dataframe_b.py) — **EX-16 (2026-09-04):**
+  DF-PRINTSCHEMA-1 (2026-09-04): the printSchema pin is `test_print_schema_stdout_matches_spark` and asserts Spark's tail.
   the four divergence pins for the DataFrame-b example batch — `intersectAll`/`intersect_all`
   refusal with Spark's multiset answer recorded (EX-DF-7), `groupingSets`'s one-set-per-column
   answer plus the refused Spark documented shape (EX-DF-8), `mergeInto`'s bare-key sugar and
   `target.`/`source.` qualifier arms that answer Spark's merged rows (EX-DF-9), and
-  `printSchema`'s stdout ending one newline short of Spark's capture (EX-DF-10). The module
+  `printSchema`'s stdout ending one newline short of Spark's capture (EX-DF-10; FIXED by DF-PRINTSCHEMA-1, the pin now asserts Spark's tail). The module
   docstring names the row span `EX-DF-7`…`EX-DF-10`.
   pins: ex-16-dataframe-b/C-001
 - [test_examples_dataframe_a.py](test_examples_dataframe_a.py) — **EX-15 (2026-09-04):**
@@ -132,6 +133,17 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   arm under an explicit all-nullable DoubleType schema (EX-DF-5), and the silent
   `createTempView`/`create_temp_view` replace of an existing name (EX-DF-6).
   pins: ex-15-dataframe-a/C-001
+- [test_examples_dataframe_c.py](test_examples_dataframe_c.py) — **EX-18 (2026-09-04):**
+  the seven divergence pins for the DataFrame-c example batch — the `sameSemantics`
+  alias arm answers handle identity where Spark answers plan equality (EX-DF-11),
+  `replace` without subset casts or raises where Spark replaces typed cells (EX-DF-12),
+  `sample`'s stable seeded set where Spark's keyword-seed spelling drops the seed and
+  the seeded sets differ (EX-DF-13), `sampleBy`'s seeded 0.5/0.5 fractions keeping three
+  rows where Spark keeps two (EX-DF-14), `summary`'s unordered multi-stat rows,
+  string-column raise, and bare-call refusal with the count row pinned (EX-DF-15),
+  `show`'s rendering without Spark's truncation trailer (EX-DF-16), and the `toJSON`
+  refusal (EX-DF-17).
+  pins: ex-18-dataframe-c/C-001
 - [test_examples_column_a.py](test_examples_column_a.py) — **EX-17 (2026-09-04):** imports
   `repark.spark.functions` (importing the `repark.functions` shim rebinds the package attribute
   and hides the private SSOT names `test_qi1_idents.py` pins; imports sorted);
@@ -1172,6 +1184,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   loud-not-suffixed; repo-ruff strict: zip strict=, raw match patterns, pinned-ruff 0.15.22 format).
 
 - `test_df_easy.py` — **R-DF-EASY**: selectExpr/toDF/dtypes/printSchema/set-ops/crossJoin/offset/alias/describe/summary/replace/sample/randomSplit/colRegex/no-ops.
+- `test_df_printschema.py` — **DF-PRINTSCHEMA-1**: `printSchema` stdout byte-identical to
+  Spark (flat / nested struct / array / `level=1` exact captures) plus the live leg;
+  red-first 4 red of 4.
+  pins: df-printschema-1-trailing-newline/C-002, C-003, C-004
 - `test_cache_persist.py` — **R-PERF-CACHE** + **r23 CACHE1**: cache/persist self + is_cached + storageLevel;
   second action after cache cheap; derived after materialize; unpersist; localCheckpoint;
   clearCache real drop (live + orphan GC path + leaves `__repark_ckpt_*`); StorageLevel cosmetic

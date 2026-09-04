@@ -3988,22 +3988,138 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   the engines answer the same rows; this row records the bare-key sugar and the qualifier names
   until repark's condition spellings match Spark's.
 
-### EX-DF-10 — `printSchema`'s stdout ends one newline short of Spark's capture
+### EX-DF-10 — FIXED 2026-09-04 (DF-PRINTSCHEMA-1): `printSchema`'s stdout ended one newline short of Spark's capture
 
-- **repark** — `printSchema()` prints the tree with one trailing newline: the captured stdout is
-  the four tree lines joined by `\n` plus one final `\n`, and its `splitlines()` holds the four
-  tree lines and nothing more.
+- **repark** — before the fix `printSchema()` stripped `treeString`'s trailing newline, so the
+  captured stdout ended with a single `\n` and `splitlines()` held the four tree lines only.
+  Since DF-PRINTSCHEMA-1 it prints `treeString` unchanged and `print` adds the second newline:
+  the capture is byte-identical to Spark's.
 - **Apache Spark** — `printSchema()` adds a second newline to `treeString`'s own trailing one:
   the captured stdout ends `\n\n`, and its `splitlines()` holds the four tree lines plus a
-  trailing `''` (five elements). The line content is equal; only the stdout tail differs.
-  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-16 round 3; capture via `redirect_stdout`
-  on both engines over the same `g`/`k`/`v` fixture.)*
-- **Pin** — `python/repark/tests/test_examples_dataframe_b.py::test_print_schema_stdout_divergence`
-- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-16 round-3 promotion of the round-1
-  review-gap entry. `printSchema` / `print_schema` stay covered by the tree-line arm, where the
-  line content agrees; this row records the stdout tail until repark prints Spark's second
-  newline.
+  trailing `''` (five elements).
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-16 round 3; re-measured by
+  DF-PRINTSCHEMA-1 on four shapes; capture via `redirect_stdout` on both engines.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_b.py::test_print_schema_stdout_matches_spark`
+  and the four shapes in `python/repark/tests/test_df_printschema.py`.
+- **Rationale** — filed 2026-09-04 by EX-16 round 3 from the round-1 review-gap entry; FIXED the
+  same day by DF-PRINTSCHEMA-1. The example's `rstrip` arm holds on both engines either way.
 
+### EX-DF-11 — `sameSemantics` answers handle identity on an aliased twin; Spark answers plan equality
+
+- **repark** — `sameSemantics` is best-effort native-handle identity: `frame.sameSemantics(frame)`
+  answers `True`, while `frame.sameSemantics(frame.alias("x"))` answers `False` because `alias`
+  spawns a new handle. The self, identical-recreate, and filtered-twin arms measured Spark-equal.
+- **Apache Spark** — the aliased twin carries the same logical plan, so
+  `frame.sameSemantics(frame.alias("x"))` answers `True`; the identical-recreate and
+  filtered-twin arms answer `False` like repark. *(oracle: live PySpark 4.1.2, ANSI on,
+  2026-09-04, EX-18 DataFrame-c batch, six-row `g/k/v` frame.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_c.py::test_same_semantics_alias_divergence`
+- **Rationale** — BACKLOG ARM, filed 2026-09-04 from the EX-18 measurement. The name stays
+  covered by the agreeing arms; this row records the alias arm until repark compares plans the
+  way Spark does.
+
+### EX-DF-12 — `replace` outside the subset arm casts or raises; Spark replaces typed cells
+
+- **repark** — `replace` rewrites every target column through `when(col == to_replace, value)`:
+  with `subset` unset on a mixed frame the string column enters the comparison and raises
+  `PySparkException` (`Cast error: Cannot cast string 'x' to ... Int64/Int32 type`), and on an
+  all-numeric frame the compared `int` column is recast to double (`(1, 10.0)` becomes
+  `(1.0, 10.0)`). The `subset`-scoped scalar and dict arms measured Spark-equal and are the
+  covered example.
+- **Apache Spark** — `replace("x", "xx")` on a frame with an `int` and a `string` column answers
+  `[(1, 'xx'), (1, 'xx'), (2, 'y'), (2, 'y'), (3, 'z')]`; `replace(20.0, 99.0)` with no subset
+  replaces matching cells in numeric columns only and keeps each column's type (`k` stays
+  `bigint`). *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-18 DataFrame-c batch, six-row
+  `g/k/v` and five-row `k/v` frames.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_c.py::test_replace_unsubset_arms`
+- **Rationale** — BACKLOG ARM, filed 2026-09-04 from the EX-18 measurement. The name stays
+  covered by the subset arms; this row records the no-subset and string-value arms until
+  `replace` is typed per column the way Spark does it.
+
+### EX-DF-13 — `sample` below fraction 1.0 keeps a different seeded set; Spark's `sample(0.5, seed=…)` spelling silently drops the keyword seed
+
+- **repark** — the seed reaches the plan in every spelling: `sample(0.5, seed=1)`,
+  `sample(fraction=0.5, seed=1)`, and `sample(False, 0.5, 1)` all answer the same stable
+  `[(a, 1, 10.0), (a, 2, 30.0), (b, 1, 50.0)]` on the six-row `g/k/v` frame (re-collects and ten
+  fresh builds agree). The set is repark's own RNG — Spark's seeded set differs (disclosed
+  in-source). `sample(fraction=1.0)` keeps every row on both engines and is the covered example.
+- **Apache Spark** — the seed-honoring spellings answer a different stable set,
+  `[(a, 2, 30.0), (b, 1, 50.0), (b, 2, None)]` (five fresh builds identical, re-collects
+  stable). The `sample(0.5, seed=1)` spelling binds the positional fraction to
+  `withReplacement`, and `_preapare_args_for_sample` then re-draws `random.randint` — the
+  keyword `seed` is discarded, so ten fresh builds answered nine distinct sets.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-18 DataFrame-c batch; re-measured
+  2026-09-04 after the round-2 review — the earlier "unstable re-collects" claim and row set
+  did not survive re-measurement.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_c.py::test_sample_plan_seed_stable`
+- **Rationale** — BACKLOG ARM, filed 2026-09-04 from the EX-18 measurement, re-measured
+  2026-09-04. The name stays covered by the fraction-1.0 arm; this row records the seeded-set
+  difference and the keyword-seed shim until the engine samples with Spark's RNG.
+
+### EX-DF-14 — `sampleBy` seeded fractions below 1.0 keep different rows; the 0.0/1.0 strata arms agree
+
+- **repark** — `sampleBy("g", {"a": 0.5, "b": 0.5}, seed=0)` answers
+  `[(a, 2, 30.0), (a, 3, 40.0), (b, 2, None)]` on the six-row `g/k/v` frame. The
+  `{"a": 1.0}` and `{"a": 0.0, "b": 1.0}` strata arms measured Spark-equal and are the covered
+  example.
+- **Apache Spark** — the same seeded call answers `[(a, 2, 30.0), (b, 2, None)]`: one `a` row
+  and the `b` row, two rows where repark keeps three. *(oracle: live PySpark 4.1.2, ANSI on,
+  2026-09-04, EX-18 DataFrame-c batch.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_c.py::test_sampleby_seeded_fraction_divergence`
+- **Rationale** — BACKLOG ARM, filed 2026-09-04 from the EX-18 measurement. The name stays
+  covered by the 0.0/1.0 strata arms; this row records the seeded-fraction arm until the
+  per-stratum rand stream matches Spark's XORShift sequence row for row.
+
+### EX-DF-15 — `summary` multi-stat arms: row order is engine-arbitrary and string columns raise
+
+- **repark** — `summary("count", "min", "max")` answers the same three rows Spark answers but in
+  an arbitrary order (the UNION ALL legs reorder between collects: three in-process collects
+  agreed, the next process reordered `min`/`max`). `summary("count", "mean", "stddev", ...)`
+  over a frame with a `string` column raises `AnalysisException` (DataFusion `avg`/`stddev`
+  reject `Utf8`), and bare `summary()` raises `UnsupportedOperationException` (disclosed; the
+  engine lacks the percentile rows). `summary("count")` on a numeric frame is a single row and
+  measured Spark-equal; it is the covered example.
+- **Apache Spark** — `summary("count", "min", "max")` collects in the requested order
+  `count, min, max` every run; `summary` over the six-row `g/k/v` frame answers the full
+  `count, mean, stddev, min, 25%, 50%, 75%, max` table with `None` cells under the string
+  column's `mean`/`stddev`; `count` cells match repark's. *(oracle: live PySpark 4.1.2, ANSI on,
+  2026-09-04, EX-18 DataFrame-c batch; repark order re-measured across processes after the
+  example gate caught a reorder.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_c.py::test_summary_divergent_arms`
+- **Rationale** — BACKLOG ARM, filed 2026-09-04 from the EX-18 measurement. The name stays
+  covered by the single-stat arm; this row records the multi-stat order, the string-column
+  raise, and the bare-call refusal until the engine answers Spark's ordered percentile-shaped
+  summary.
+
+### EX-DF-16 — `show` renders its own grid and drops the truncation trailer; the rows agree
+
+- **repark** — `show(3)` prints a space-padded, header-centered grid
+  (`| g | k | v    |`) with no footer; `show(20)` on a 6-row frame prints all 6 rows and a
+  `NULL` cell. The cell contents and the truncated row count match Spark's; the alignment and
+  the footer do not (the in-source disclosure claims byte-identical spark-style output).
+- **Apache Spark** — `show(3)` prints right-aligned columns (`|  g|  k|   v|`) followed by the
+  footer line `only showing top 3 rows`; the full-table `show(20)` prints the same 6 rows and
+  `NULL` cell. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-18 DataFrame-c batch,
+  six-row `g/k/v` frame.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_c.py::test_show_rendering_divergence`
+- **Rationale** — BACKLOG ARM, filed 2026-09-04 from the EX-18 measurement. The name stays
+  covered by the cell-and-row-count arm (the same philosophy as `explain`: never text-pin the
+  rendering in the example); this row records the rendering divergence and the falsified
+  byte-identical disclosure until the grid and trailer match Spark's.
+
+### EX-DF-17 — `toJSON` refuses; Spark answers one JSON string per row
+
+- **repark** — `toJSON` raises
+  `UnsupportedOperationException: DataFrame.toJSON is not supported yet (engine has no to_json;
+  disclosed R-DF-BATCH2)`.
+- **Apache Spark** — `frame.toJSON().collect()` on the six-row `g/k/v` frame answers one JSON
+  object string per row, e.g. `{"g":"a","k":1,"v":10.0}`, with null-valued keys omitted
+  (`{"g":"b","k":2}`). *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-18 DataFrame-c
+  batch.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_c.py::test_tojson_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-18 measurement. The refusal is disclosed
+  (R-DF-BATCH2) and pinned in `test_df_batch2.py`; this row records the measured Spark answers
+  and keeps the name on the example backlog until the engine grows a row-JSON exporter.
 ### EX-COL-1 — a bare `F.col(...).cast(...)` select names the engine-qualified column; Spark keeps the child name
 
 - **repark** — `df.select(F.col("v").cast("double"))` names the output column

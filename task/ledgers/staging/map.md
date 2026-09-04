@@ -77,6 +77,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   with §7 rows `EX-DF-7`/`EX-DF-8`, and the narrow `mergeInto`/`printSchema` arms are recorded as
   §7 rows `EX-DF-9`/`EX-DF-10`, pins in `python/repark/tests/test_examples_dataframe_b.py`.
   `risk_tier: standard`. Branch `docs/ex-16-dataframe-b`. pins: ex-16-dataframe-b/C-001
+- [ex-18-dataframe-c-ledger.md](ex-18-dataframe-c-ledger.md) —
+  **EX-18 (2026-09-04), in flight:** the v1.1 example backfill's third `DataFrame.*` batch —
+  36 roster names at base `e3600a1`; 35 covered by eleven `docs/examples/dataframe/` files (backlog 484 →
+  449 through the EX-16/EX-17 merges), `toJSON` stays (R-DF-BATCH2), §7 `EX-DF-11`…`EX-DF-17`, pins in `python/repark/tests/test_examples_dataframe_c.py`. `risk_tier: standard`. Branch `docs/ex-18-dataframe-c`. pins: ex-18-dataframe-c/C-001
 - [ex-17-column-a-ledger.md](ex-17-column-a-ledger.md) —
   **EX-17 (2026-09-04, r2), in flight:** the v1.1 example backfill's `Column.*` (a) batch —
   40 roster names at base `e3600a1`; 34 covered by ten `docs/examples/column/` files
@@ -84,6 +88,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   measured divergent bare-name arms are §7 rows `EX-COL-1`/`EX-COL-2` with pins in
   `python/repark/tests/test_examples_column_a.py`. `risk_tier: standard`. Branch
   `docs/ex-17-column-a`. pins: ex-17-column-a/C-001
+- [df-printschema-1-trailing-newline-ledger.md](df-printschema-1-trailing-newline-ledger.md) —
+  **DF-PRINTSCHEMA-1 (2026-09-04), in flight:** `printSchema` stdout byte-identical to
+  Spark's (flat, nested, array, `level=1` exact captures); `EX-DF-10` flipped to FIXED in
+  the merge commit `68e408d`. `risk_tier: standard`. Branch
+  `fix/df-printschema-1-trailing-newline`.
+  pins: df-printschema-1-trailing-newline/C-004
 - [perf-dynflatten-1-measure-ledger.md](perf-dynflatten-1-measure-ledger.md) —
   **PERF-DYNFLATTEN-1 (2026-09-04), in flight:** measure `dynamicFlatten` on the
   nested bed; rank the three H-3 intake candidates. `risk_tier: standard`.
