@@ -70,7 +70,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   **FN-REGEXP-EXTRACT-1 (2026-09-04):** Spark `regexp_extract` (first match's
   group, `''` on no match, any-arg-nullable; `validate_group_index` names the
   caller; round 2: validation runs only inside the match arm — non-matching
-  input answers `''` for any idx). pins: fn-regexp-extract-1/C-001
+  input answers `''` for any idx; the bad-group Rust test uses matching input
+  `'a-b'`). pins: fn-regexp-extract-1/C-001
   **SEM-4 (2026-08-21):**
   `validate_group_index` carries Spark's `REGEX_GROUP_INDEX` condition (one
   message for negative and over-large alike); `extract_rows` passes the index

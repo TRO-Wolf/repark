@@ -954,7 +954,7 @@ mod tests {
     async fn regexp_extract_bad_group_names_extract() {
         let ctx = ctx_register_all();
         for idx in [3, -1] {
-            let query = format!("SELECT regexp_extract('100-200', '(a)-(b)', {idx})");
+            let query = format!("SELECT regexp_extract('a-b', '(a)-(b)', {idx})");
             let result = ctx.sql(&query).await.expect("plan").collect().await;
             let message = format!("{result:?}");
             assert!(result.is_err(), "idx {idx} must raise; got {message}");
