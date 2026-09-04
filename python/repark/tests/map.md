@@ -171,7 +171,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and off; zero-arg `FROM range(3)` is three identical BIGINT rows on SQL and the facade).
   Live co-collect `test_parity_live.py::test_live_date_fn_1_date_and_unix_timestamp`.
   pins: date-fn-1-spark-date-spelling/C-001, C-003, C-004
-- [test_sql_harden_cutover.py](test_sql_harden_cutover.py) — **SQL-HARDEN-1 (2026-09-04):**
+- [test_sql_harden_cutover.py](test_sql_harden_cutover.py) — **SQL-HARDEN-1 (2026-09-04):** (DATE-FN-1 flipped the date/unix_timestamp refusal pin to an answer pin)
   the cutover pipeline cutover shapes S1–S7 (9 programs). Always-run repark half against
   `_sql_harden_cutover_repark.py`; live Spark half against `_sql_harden_cutover_spark.py`
   behind `REPARK_PARITY_LIVE=1`. Catalog `sqlh1`. Inventory
