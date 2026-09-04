@@ -305,6 +305,15 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             need(1)?;
             repark_functions::expr_fn::to_date(exprs[0].clone())
         }
+        "unix_timestamp" | "to_unix_timestamp" => {
+            if exprs.len() > 1 {
+                return Err(PyValueError::new_err(format!(
+                    "call_scalar({name}) expects 0 or 1 args, got {}",
+                    exprs.len()
+                )));
+            }
+            repark_functions::expr_fn::unix_timestamp(exprs.clone())
+        }
         "to_timestamp" => {
             need_at_least(1)?;
             repark_functions::expr_fn::to_timestamp(exprs.clone())

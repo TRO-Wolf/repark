@@ -608,15 +608,15 @@ def months_between(date1: Column | str, date2: Column | str, roundOff: bool = Tr
     )
 
 
-def unix_timestamp(
-    timestamp: Column | str | None = None,
-    format: str | None = None,
-) -> Column:
-    """Unsupported: engine has no ``unix_timestamp``."""
-
-    raise UnsupportedOperationException(
-        "functions.unix_timestamp is not supported yet (engine gap; disclosed R-FN-BATCH1)"
-    )
+def unix_timestamp(timestamp: Column | str | None = None, format: str | None = None) -> Column:
+    """Epoch seconds (PySpark ``functions.unix_timestamp``)."""
+    if format is not None:
+        raise UnsupportedOperationException(
+            "functions.unix_timestamp format argument is not supported yet"
+        )
+    if timestamp is None:
+        return _scalar("unix_timestamp")
+    return _scalar("unix_timestamp", timestamp)
 
 
 def hash(*cols: Column | str) -> Column:

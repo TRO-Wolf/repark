@@ -308,6 +308,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (embedded CAST) + registered `to_date` overwrite share `datetime::invoke_local_dates`.
   Pin `ltz_date_is_session_zone_and_ntz_is_stored_wall`. Ledgers:
   `task/tz5-cast-seconds-ledger.md` §4, `task/v3-btz4-ledger.md`, `task/r4-tz8-ledger.md`.
+  **DATE-FN-1 (2026-09-04):** registered `date` (Spark `CAST AS DATE`) and `unix_timestamp` (the `date` / `unix_timestamp` registrations in `expr_fn.rs` / `timestamp_cast.rs` carry no doc comments; this row is their contract)
+  (alias `to_unix_timestamp`). Zero-arg `unix_timestamp()` is a scalar epoch so a
+  three-row input yields three identical BIGINT values.
+  pins: date-fn-1-spark-date-spelling/C-002, C-003
 - `collection.rs` — `SparkElementAt` (`element_at`; public `element_at_udf()` for the facade embed):
   arrays are 1-based / negative-from-end / OOB → NULL
   with index 0 → error (Spark `INVALID_INDEX_OF_ZERO`); maps return the plain value-or-NULL

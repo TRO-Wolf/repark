@@ -149,6 +149,16 @@ pub fn second(arg: Expr) -> Expr {
 pub fn to_date(arg: Expr) -> Expr {
     call(crate::timestamp_cast::to_date_udf(), vec![arg])
 }
+
+#[must_use]
+pub fn date(arg: Expr) -> Expr {
+    call(crate::timestamp_cast::date_udf(), vec![arg])
+}
+
+#[must_use]
+pub fn unix_timestamp(args: Vec<Expr>) -> Expr {
+    call(crate::timestamp_cast::unix_timestamp_udf(), args)
+}
 /// Spark `crc32(expr)` — CRC-32 checksum as a bigint.
 #[must_use]
 pub fn crc32(arg: Expr) -> Expr {

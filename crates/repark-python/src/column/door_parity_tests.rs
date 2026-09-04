@@ -126,6 +126,7 @@ const SCALAR_NAMES: &[(&str, usize)] = &[
     ("from_utc_timestamp", 2),
     ("to_utc_timestamp", 2),
     ("to_date", 1),
+    ("unix_timestamp", 1),
     ("make_date", 3),
     ("bit_length", 1),
     ("octet_length", 1),

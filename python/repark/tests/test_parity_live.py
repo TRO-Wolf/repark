@@ -353,6 +353,29 @@ def test_live_log1p_expm1_tiny_args_and_domain(spark_engine: lp.Engine) -> None:
             assert got == want, index
 
 
+_DATE_FN_1_LIVE_SQL = (
+    "SELECT DATE(TIMESTAMP '2024-06-15 03:00:00') AS d_ts, "
+    "DATE('2024-06-15') AS d_s, "
+    "DATE(DATE '2024-06-15') AS d_d, "
+    "unix_timestamp(TIMESTAMP '2024-06-15 12:00:00') AS u_ts, "
+    "unix_timestamp('2024-06-15 12:00:00') AS u_s, "
+    "CAST((unix_timestamp(TIMESTAMP '2026-01-01 10:15:00') "
+    "- unix_timestamp(TIMESTAMP '2026-01-01 10:00:00')) / 60 AS INT) AS w"
+)
+
+
+@pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
+def test_live_date_fn_1_date_and_unix_timestamp(spark_engine: lp.Engine) -> None:
+    """pins: date-fn-1-spark-date-spelling/C-001, C-003"""
+    table = spark_engine.arrow_of(spark_engine.session.sql(_DATE_FN_1_LIVE_SQL))
+    assert str(table.column("d_ts").to_pylist()[0]) == "2024-06-15"
+    assert str(table.column("d_s").to_pylist()[0]) == "2024-06-15"
+    assert str(table.column("d_d").to_pylist()[0]) == "2024-06-15"
+    assert table.column("u_ts").to_pylist() == [1_718_452_800]
+    assert table.column("u_s").to_pylist() == [1_718_452_800]
+    assert table.column("w").to_pylist() == [15]
+
+
 @pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
 @pytest.mark.parametrize(
     "repark_scenario,spark_scenario",

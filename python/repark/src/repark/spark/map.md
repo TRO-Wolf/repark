@@ -51,6 +51,8 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `log(1+col)` / `exp(col)-1`.
   pins: sem-1-spark-answer-parity/C-006
   pins: log1p-1-precise-kernels/C-002
+  **DATE-FN-1 (2026-09-04):** `unix_timestamp` is `_scalar` onto the kernel (format arg still
+  unsupported). pins: date-fn-1-spark-date-spelling/C-002
   **FN-FIX-1 (2026-09-03):** `sha2` hex string + bit lengths; `array_sort` vs
   `sort_array`; `percentile_approx` discrete type.
   pins: fn-fix-1-registry-rows/C-002

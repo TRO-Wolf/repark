@@ -55,11 +55,7 @@ def to_unix_timestamp(
     timestamp: Column | str | None = None,
     format: str | None = None,
 ) -> Column:
-    """Alias of :func:`unix_timestamp` (PySpark ``functions.to_unix_timestamp``).
-
-    The existing ``unix_timestamp`` surface is an engine gap; this name
-    must not grow a second meaning.
-    """
+    """Alias of :func:`unix_timestamp` (PySpark ``functions.to_unix_timestamp``)."""
     return unix_timestamp(timestamp, format)
 
 
