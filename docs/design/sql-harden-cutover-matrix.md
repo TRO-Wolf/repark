@@ -44,7 +44,7 @@ stamped `zstd` codec do not.
 | `s2-merge-idempotent` | S2 MERGE UPDATE SET * / INSERT * twice | Spark SQL | DIVERGES | PASS | PASS | **DIVERGES** | `CUTOVER-MERGE-FILES-1` |
 | `s3-dedup-coalesce-cast` | S3 row_number dedup + coalesce/cast | facade DF | DIVERGES | PASS | PASS | **DIVERGES** | `CUTOVER-DEDUP-SCHEMA-1` |
 | `s4-overwrite-partitions` | S4 `writeTo.overwritePartitions` on a partitioned table | facade DF | DIVERGES | PASS | PASS | **DIVERGES** | `V3-COV-7` |
-| `s5-maintenance-calls` | S5 expire / rewrite_data_files binpack / remove_orphan_files / rewrite_position_delete_files | Spark SQL CALL | DIVERGES | PASS | PASS | **DIVERGES** | `CUTOVER-CTAS-REQ-1` |
+| `s5-maintenance-calls` | S5 expire / rewrite_data_files binpack / remove_orphan_files / rewrite_position_delete_files | Spark SQL CALL | DIVERGES | PASS | PASS | **DIVERGES** | `CUTOVER-DEDUP-SCHEMA-1` (required-after-dedup schema), V3-COV-7 (codec) |
 | `s6-gold-incremental` | S6 gold join + agg + INSERT OVERWRITE | Spark SQL | DIVERGES | path | path | **DIVERGES** | `CUTOVER-DATE-1` |
 | `s7-ctas-if-fresh` | S7 = S1 at format-version 3 | Spark SQL | DIVERGES | PASS | PASS | **DIVERGES** | `CUTOVER-CTAS-REQ-1` |
 | `s7-merge-idempotent` | S7 = S2 at format-version 3 | Spark SQL | DIVERGES | PASS | PASS | **DIVERGES** | `CUTOVER-MERGE-FILES-1` |

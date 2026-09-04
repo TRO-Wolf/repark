@@ -2375,13 +2375,12 @@ the pin rather than obeying it.
 
 ### CUTOVER-DATE-1 — gold dbt SQL `DATE(timestamp)` refuses; Spark runs the join including `unix_timestamp`
 
-- **repark** — the gold `fct_survey_visit` shape
-  `DATE(Appointment.appointment_datetime)` plus
-  `CAST((unix_timestamp(provider_seen_time) - unix_timestamp(checkin_time)) / 60 AS INT)`
-  fails at planning: `Invalid function 'date'`. `unix_timestamp(ts)` also refuses
-  (`Invalid function 'unix_timestamp'`). The incidental controls `to_date(ts)` and
-  `CAST(ts AS DATE)` both answer `2026-01-01` for `TIMESTAMP '2026-01-01 10:15:00'`.
-  The fact and agg Iceberg tables are not created.
+- **repark** — the gold `fct_survey_visit` shape fails at planning; the fact and agg tables are not created:
+  | spelling | repark |
+  |---|---|
+  | `DATE(ts)` (the dbt join) | `Invalid function 'date'` |
+  | `unix_timestamp(ts)` (the minutes-between cast) | `Invalid function 'unix_timestamp'` |
+  | `to_date(ts)`, `CAST(ts AS DATE)` (controls) | `2026-01-01` for `TIMESTAMP '2026-01-01 10:15:00'` |
 - **Apache Spark** — the same SQL builds `fct` and `agg`. After a second-day insert and
   `INSERT OVERWRITE` of the fact, rows are `(s1, 10, 15), (s2, 20, 40), (s3, 10, 15)` and
   the clinic-day agg is two rows. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-04.)*

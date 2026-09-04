@@ -94,7 +94,7 @@ Measured 2026-09-04. Single-file bronze parquet. Live-cell rules 1–7: `getActi
 | `s2-merge-idempotent` | rows EQUAL, second MERGE row-idempotent, snaps `append,overwrite,overwrite`; delete files 3 vs 2 PARQUET | `CUTOVER-MERGE-FILES-1` |
 | `s3-dedup-coalesce-cast` | values EQUAL; `string_view` vs `string`; id/amount/part nullability | `CUTOVER-DEDUP-SCHEMA-1` |
 | `s4-overwrite-partitions` | rows EQUAL `[(B,y,20),(C,z,10)]`; snaps EQUAL; only META codec | `V3-COV-7` |
-| `s5-maintenance-calls` | CALL tuples EQUAL; rows EQUAL; schema/codec as S1 | `CUTOVER-CTAS-REQ-1` |
+| `s5-maintenance-calls` | CALL tuples EQUAL; rows EQUAL; schema: every field required after the deduped CTAS where Spark makes them optional; codec as V3-COV-7 | `CUTOVER-DEDUP-SCHEMA-1` |
 | `s6-gold-incremental` | repark `Invalid function 'date'`; Spark fct `(s1,10,15),(s2,20,40),(s3,10,15)` | `CUTOVER-DATE-1` |
 | `s7-ctas-if-fresh` | as S1; format-version 3; `next-row-id` 3 both | `CUTOVER-CTAS-REQ-1` |
 | `s7-merge-idempotent` | as S2; PUFFIN 3 vs 2; `next-row-id` 6 both | `CUTOVER-MERGE-FILES-1` |
