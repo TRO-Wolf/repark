@@ -24,10 +24,15 @@ Sixteen files cover the 34 names the live oracle measured Spark-equal or extensi
 9 `Catalog.*` and 25 `SparkSession`. `Catalog.list_databases` stays on the backlog: it is the
 **same function object** as the divergent `listDatabases` (§7 `EX-CAT-2`, FA-2 field shapes), so
 covering it would paper that row over — the snake spelling joins the EX-CAT-2 note rather than
-getting a new row. Two measured divergent arms are filed as §7 `EX-SES-1` (`registerFunction`
+getting a new row. Five measured divergent arms are filed as §7 `EX-SES-1` (`registerFunction`
 answers the `UserDefinedFunction` object where Spark's deprecated alias returns the original
-callable) and §7 `EX-SES-2` (an action on a `newSession()` result promotes it process-active
-where Spark keeps the caller active), both pinned in
+callable), §7 `EX-SES-2` (an action on a `newSession()` result promotes it process-active where
+Spark keeps the caller active; the Spark column re-measured and corrected in round 2 — the
+spare's `stop()` clears the active slot on both engines), §7 `EX-SES-3` (`createDataFrame([], [names])`
+answers an empty string-typed frame where Spark raises `[CANNOT_INFER_EMPTY_SCHEMA]`), §7
+`EX-SES-4` (`conf.get` on an unset key raises a bare `Exception` where Spark raises
+`SparkNoSuchElementException` `[SQL_CONF_NOT_FOUND]`), and §7 `EX-SES-5` (a missing path through
+the readers raises `AnalysisException` on both engines with different texts), all pinned in
 `python/repark/tests/test_examples_window_catalog.py`; the names land on their agreeing arms.
 `SparkSession.registerTempTable` and `SparkSession.pandas_api` are repark-only names on live
 PySpark 4.1.2 (`hasattr` False) whose entire contract is the loud
@@ -62,10 +67,10 @@ itself writes (no network, no JVM, no cloud).
 | `catalog/list_tables.py` | `Catalog.list_tables` | The exact `MANAGED` Iceberg row, the `TEMPORARY` view row, the bare arm, an exact-pattern arm. |
 | `session/builder.py` | `SparkSession.Builder.app_name`, `SparkSession.Builder.master`, `SparkSession.Builder.config`, `SparkSession.Builder.get_or_create` | The snake_case builder chain with the app name, master, and shuffle-partition values read back through `conf` / `sparkContext`. |
 | `session/session_state.py` | `SparkSession.active`, `SparkSession.getActiveSession`, `SparkSession.newSession` | The active-session trio: builder session active, spare distinct and answering, no active-slot theft before an action. |
-| `session/session_conf.py` | `SparkSession.conf` | String and bool round-trips through the runtime conf map. |
+| `session/session_conf.py` | `SparkSession.conf` | String and bool round-trips through the runtime conf map, plus the unset-key default. |
 | `session/session_catalog.py` | `SparkSession.catalog` | The `Catalog` type and the untouched default names. |
-| `session/frame_builders.py` | `SparkSession.create_dataframe`, `SparkSession.range` | Row-list frames and the exclusive `range(start, end[, step])`. |
-| `session/read_files.py` | `SparkSession.read_csv`, `SparkSession.read_json`, `SparkSession.read_parquet` | One local file per format, written by the example (CSV with explicit `header`). |
+| `session/frame_builders.py` | `SparkSession.create_dataframe`, `SparkSession.range` | Row-list frames, the explicit-schema empty frame, and the exclusive `range(start, end[, step])` with the negative step. |
+| `session/read_files.py` | `SparkSession.read_csv`, `SparkSession.read_json`, `SparkSession.read_parquet` | One local file per format, written by the example (CSV with explicit `header`), plus the missing-path `AnalysisException` arm. |
 | `session/register_catalog.py` | `SparkSession.register_memory_catalog`, `SparkSession.create_namespace` | The registered catalog lists, becomes current, hosts a namespace. |
 | `session/iceberg_tables.py` | `SparkSession.read_iceberg_table`, `SparkSession.list_iceberg_table_names`, `SparkSession.list_df_schema_table_names`, `SparkSession.refresh_catalog_provider` | One CTAS table: live listing, table read, provider directory, refresh, re-read. |
 | `session/temp_views.py` | `SparkSession.list_temp_view_names` | Bare session lists none; two created views both list. |
@@ -77,7 +82,7 @@ itself writes (no network, no JVM, no cloud).
 
 | ID | Clause | Proof obligation | Verdict |
 |---|---|---|---|
-| C-001 | Sixteen files under `docs/examples/catalog/` and `docs/examples/session/` land runnable local examples for the 34 roster names the live oracle measured Spark-equal or extension-honest, every asserted value measured against live PySpark 4.1.2 before it was written; those 34 leave `docs/examples/backlog.txt` and `BACKLOG_BASELINE` moves down by exactly 34, 411 → 377 on the dispatch base and 374 → 340 on the shipped tree after the EX-20 merge, with no other `scripts/` change; `Catalog.list_databases` stays on the backlog sharing §7 `EX-CAT-2`, and the two measured divergent arms are §7 `EX-SES-1`/`EX-SES-2` pinned in `python/repark/tests/test_examples_window_catalog.py`; no product file is touched; the gate's static half and its `--require-execute` leg both exit 0. | Red-first capture (34 findings before, 0 after), the oracle table (35 rows, one per roster name), the sixteen scripts each exit 0, and the recorded gate exit codes. | **PROVEN** |
+| C-001 | Sixteen files under `docs/examples/catalog/` and `docs/examples/session/` land runnable local examples for the 34 roster names the live oracle measured Spark-equal or extension-honest, every asserted value measured against live PySpark 4.1.2 before it was written; those 34 leave `docs/examples/backlog.txt` and `BACKLOG_BASELINE` moves down by exactly 34, 411 → 377 on the dispatch base and 374 → 340 on the shipped tree after the EX-20 merge, with no other `scripts/` change; `Catalog.list_databases` stays on the backlog sharing §7 `EX-CAT-2`, and the five measured divergent arms are §7 `EX-SES-1`..`EX-SES-5` pinned in `python/repark/tests/test_examples_window_catalog.py`; no product file is touched; the gate's static half and its `--require-execute` leg both exit 0. | Red-first capture (34 findings before, 0 after), the oracle table (35 rows, one per roster name) plus the round-2 table (one row per newly measured arm), the sixteen scripts each exit 0, and the recorded gate exit codes. | **PROVEN** |
 
 `LOGIC_SCORE` = **1/1 `PROVEN`**.
 
@@ -110,6 +115,22 @@ same shape over each engine's own fixture. Fixtures: `[(1,"x")]` temp-view frame
 `{"k":"a","v":1}` lines; `[(1,"a"),(2,"b")]` Parquet frame.
 `pins: ex-21-catalog-session/C-001`
 
+### Round 2 measured cells (2026-09-04, same oracle settings; one Spark JVM, EX-SES-2 stop arm last)
+
+| Arm | Spark (repr) | repark (repr) | Verdict |
+|---|---|---|---|
+| `newSession` spare action, active slot | `getActiveSession() is spark` → `True` after `spare.sql(...).collect()` | `getActiveSession() is spare` → `True` after the same action | divergence (§7 `EX-SES-2`) |
+| `newSession` spare `stop()`, active slot | `getActiveSession()` → `None` | `getActiveSession()` → `None` | agree |
+| `newSession` spare `stop()`, caller | `spark.sql(...)` raises `AttributeError` (`'NoneType' object has no attribute 'setCallSite'` — the shared SparkContext stopped) | `repark.sql(...)` answers `[(2,)]` | Spark-side consequence of the shared context; active-slot semantics agree, the row stays scoped to the promotion |
+| `createDataFrame([], ["a"])` | raises `PySparkValueError` `[CANNOT_INFER_EMPTY_SCHEMA]` | `collect()` `[]`, `dtypes` `[('a', 'string')]` | divergence (§7 `EX-SES-3`) |
+| `createDataFrame([], schema="a int")` | `collect()` `[]`, `dtypes` `[('a', 'int')]` | same | agree — taught |
+| `conf.get("ex21.unset.key")` | raises `SparkNoSuchElementException` `[SQL_CONF_NOT_FOUND]` | raises bare `Exception` (`type(...) is Exception`), "Configuration property … is not set." | divergence (§7 `EX-SES-4`) |
+| `conf.get("ex21.unset.key", "fallback")` | `'fallback'` | `'fallback'` | agree — taught |
+| `read_csv`/`read_json`/`read_parquet` on a missing file (format's extension) | `AnalysisException` `[PATH_NOT_FOUND]` "Path does not exist: …", eager at reader construction | `AnalysisException` "Error during planning: No files found at …" | same type, text diverges (§7 `EX-SES-5`) |
+| `read_parquet` on a missing *directory* | `AnalysisException` `[PATH_NOT_FOUND]` | `PySparkException` (extension mismatch) — measured, kept out of the example and the row | taught arm avoids the directory shape |
+| `range(5, 0, -1)` | `[5, 4, 3, 2, 1]` | `[5, 4, 3, 2, 1]` | agree — taught |
+| `resolve_table_name("default.<t>")` | n/a (extension) | `'spark_catalog.default.<t>'` | extension arm — taught |
+
 | Name | Spark value (repr) | repark value (repr) | Kept / dropped | File | Note |
 |---|---|---|---|---|---|
 | `Catalog.list_databases` | `[('default', 'spark_catalog', 'default database', 'file:<warehouse>')]` | `[('ex21_db', 'ex21_cat', None, None)]` — None fields | dropped | §7 `EX-CAT-2` | same function object as the divergent `listDatabases`; the snake spelling joins that row, stays on the backlog |
@@ -128,24 +149,24 @@ same shape over each engine's own fixture. Fixtures: `[(1,"x")]` temp-view frame
 | `SparkSession.Builder.master` | `hasattr` False (extension); `master` → `sc.master` `'local[2]'` | `sc.master` `'local[1]'` | kept | `session/builder.py` | snake spelling; repark warns once (OTH-010) |
 | `SparkSession.active` | `active() is spark` | same | kept | `session/session_state.py` | |
 | `SparkSession.catalog` | `type(…).__name__ == 'Catalog'`; `currentCatalog` `'spark_catalog'` | same | kept | `session/session_catalog.py` | |
-| `SparkSession.conf` | set/get `'v'`; bool `True` → `'true'` | same | kept | `session/session_conf.py` | |
-| `SparkSession.create_dataframe` | `hasattr` False (extension); `createDataFrame` rows `[(3, 'c'), (4, 'd')]` | same rows | kept | `session/frame_builders.py` | snake spelling |
+| `SparkSession.conf` | set/get `'v'`; bool `True` → `'true'`; unset key raises `SparkNoSuchElementException` `[SQL_CONF_NOT_FOUND]`; default form `'fallback'` | same set/get and bool; unset key raises a bare `Exception` (§7 `EX-SES-4`); default form `'fallback'` | kept | `session/session_conf.py` | example keeps the round-trips and the default arm; the unset-key error contract is pinned |
+| `SparkSession.create_dataframe` | `hasattr` False (extension); `createDataFrame` rows `[(3, 'c'), (4, 'd')]`; empty name-list raises `[CANNOT_INFER_EMPTY_SCHEMA]`; empty explicit schema `[]` with `[('a', 'int')]` | same rows; empty name-list answers `[]` with `[('a', 'string')]` (§7 `EX-SES-3`); empty explicit schema `[]` with `[('a', 'int')]` | kept | `session/frame_builders.py` | snake spelling; example keeps the row-list and explicit-schema-empty arms; the name-list empty arm is pinned |
 | `SparkSession.create_namespace` | `hasattr` False (extension) | namespace exists after creation (`databaseExists` True) | kept | `session/register_catalog.py` | extension |
 | `SparkSession.display_style` | `hasattr` False (extension) | default `'spark'`; set `'polars'`; `conf.get` mirror | kept | `session/display_style.py` | extension |
 | `SparkSession.getActiveSession` | the session; after `stop()` `None` | same | kept | `session/session_state.py` | |
 | `SparkSession.list_df_schema_table_names` | `hasattr` False (extension) | `['ex21_t']` for the CTAS schema | kept | `session/iceberg_tables.py` | extension |
 | `SparkSession.list_iceberg_table_names` | `hasattr` False (extension) | `['ex21_t']` | kept | `session/iceberg_tables.py` | extension |
 | `SparkSession.list_temp_view_names` | `hasattr` False (extension) | bare `[]`; two views both listed | kept | `session/temp_views.py` | extension; listing order is not creation-ordered, the example asserts the sorted names |
-| `SparkSession.newSession` | distinct object; same app name; caller stays active before **and after** the spare's action | distinct; caller stays active only until the spare action (§7 `EX-SES-2`) | kept | `session/session_state.py` | example keeps the no-action arms; promotion arm pinned |
+| `SparkSession.newSession` | distinct object; same app name; caller stays active before **and after** the spare's action; `spare.stop()` clears the active slot (`None`) and stops the shared SparkContext | distinct; caller stays active only until the spare action (§7 `EX-SES-2`); `spare.stop()` clears the active slot (`None`) | kept | `session/session_state.py` | example keeps the no-action arms; promotion arm pinned |
 | `SparkSession.pandas_api` | `hasattr` False on live PySpark 4.1.2 (extension) | `UnsupportedOperationException` naming `DataFrame.to_pandas` | kept | `session/legacy_refusals.py` | refusal taught as a refusal |
-| `SparkSession.range` | `[1, 2, 3]`; `[0, 2, 4]` | same | kept | `session/frame_builders.py` | |
-| `SparkSession.read_csv` | `hasattr` False (extension); nearest Spark arm `read.csv(header=True, inferSchema=True)` rows `[('a', 1), ('b', 2)]` | `read_csv(options={'header': 'true'})` rows same | kept | `session/read_files.py` | the default-arm column naming is the `DataFrameReader.csv` surface (EX-9 family), avoided here |
-| `SparkSession.read_json` | `hasattr` False (extension); `read.json` rows `[('a', 1), ('b', 2)]`, schema `k string / v bigint` | same rows and schema | kept | `session/read_files.py` | |
-| `SparkSession.read_parquet` | `hasattr` False (extension); `read.parquet` rows `[(1, 'a'), (2, 'b')]` | same | kept | `session/read_files.py` | |
+| `SparkSession.range` | `[1, 2, 3]`; `[0, 2, 4]`; `[5, 4, 3, 2, 1]` for `range(5, 0, -1)` | same, negative step included | kept | `session/frame_builders.py` | round 2 added the negative-step control |
+| `SparkSession.read_csv` | `hasattr` False (extension); nearest Spark arm `read.csv(header=True, inferSchema=True)` rows `[('a', 1), ('b', 2)]`; missing path `AnalysisException [PATH_NOT_FOUND]` | `read_csv(options={'header': 'true'})` rows same; missing path `AnalysisException … No files found` (§7 `EX-SES-5`) | kept | `session/read_files.py` | the default-arm column naming is the `DataFrameReader.csv` surface (EX-9 family), avoided here; both engines raise `AnalysisException` on a missing path, the example teaches the type |
+| `SparkSession.read_json` | `hasattr` False (extension); `read.json` rows `[('a', 1), ('b', 2)]`, schema `k string / v bigint`; missing path `AnalysisException [PATH_NOT_FOUND]` | same rows and schema; missing path `AnalysisException … No files found` (§7 `EX-SES-5`) | kept | `session/read_files.py` | |
+| `SparkSession.read_parquet` | `hasattr` False (extension); `read.parquet` rows `[(1, 'a'), (2, 'b')]`; missing path `AnalysisException [PATH_NOT_FOUND]` | same; missing path `AnalysisException … No files found` (§7 `EX-SES-5`) | kept | `session/read_files.py` | |
 | `SparkSession.read_iceberg_table` | `hasattr` False (extension); Spark's read of its own table `[('ex21_t' rows)]` `(1,), (2,)` | same rows from the memory-catalog table | kept | `session/iceberg_tables.py` | extension |
 | `SparkSession.registerTempTable` | `hasattr` False on live PySpark 4.1.2 (removed pre-4.1.2) | `UnsupportedOperationException` naming `createOrReplaceTempView` | kept | `session/legacy_refusals.py` | repark-only legacy alias; refusal taught as a refusal |
 | `SparkSession.register_memory_catalog` | `hasattr` False (extension) | `listCatalogs` `[('ex21_cat', None), ('spark_catalog', None)]`; `currentCatalog` flips `'ex21_cat'` | kept | `session/register_catalog.py` | extension |
-| `SparkSession.resolve_table_name` | `hasattr` False (extension) | `'spark_catalog.default.ex21_report'`; temp-view home `'datafusion.public.ex21_tv'`; plain `'spark_catalog.default.ex21_tv'` | kept | `session/resolve_names.py` | extension |
+| `SparkSession.resolve_table_name` | `hasattr` False (extension) | bare `'spark_catalog.default.ex21_report'`; two-part `'spark_catalog.default.ex21_report'`; temp-view home `'datafusion.public.ex21_tv'`; plain `'spark_catalog.default.ex21_tv'` | kept | `session/resolve_names.py` | extension |
 | `SparkSession.refresh_catalog_provider` | `hasattr` False (extension) | returns `None`; the read answers after | kept | `session/iceberg_tables.py` | extension |
 
 ## Gates (2026-09-04, on this tree)
@@ -153,7 +174,7 @@ same shape over each engine's own fixture. Fixtures: `[(1,"x")]` temp-view frame
 | Command | Exit |
 |---|---|
 | `.venv/bin/python scripts/check_example_coverage.py --require-execute` | **0** |
-| `.venv/bin/python -m pytest python/repark/tests/test_examples_window_catalog.py -q` | **0** (2 passed) |
+| `.venv/bin/python -m pytest python/repark/tests/test_examples_window_catalog.py -q` | **0** (9 passed) |
 | `make check-map-sync` | **0** |
 | `make check-ledger-grammar` | **0** |
 | `make check-ledgers` | **0** |
@@ -177,7 +198,7 @@ tree before the merge: `534 covered; 377 backlog; 146 examples` (`BACKLOG_BASELI
 On the shipped tree, after the EX-20 merge: `571 covered; 340 backlog; 154 examples`
 (`BACKLOG_BASELINE` 374 → 340) — exactly the 34 kept names on top of EX-20's 37.
 
-## Review-gap table (round-1 findings, resolved in-lane)
+## Review-gap table (round-1 and round-2 findings, resolved in-lane)
 
 | Finding | Disposition |
 |---|---|
@@ -186,6 +207,12 @@ On the shipped tree, after the EX-20 merge: `571 covered; 340 backlog; 154 examp
 | the first provocation run held aside `session/sql.py` too, so its 6 covers appeared as findings | redone holding aside exactly the sixteen EX-21 files: exit 1 with exactly 34 findings, then restored |
 | `list_temp_view_names` answered reverse-creation order, not creation order | the example asserts the sorted names (a bare session lists none; two views list both) — no order claim is taught |
 | the session example files were briefly left in `docs/examples/catalog/` by the first provocation restore | moved back before any commit; the gate's execute leg re-run green on the corrected layout |
+| S1: the §7 `EX-SES-2` Spark column claimed "only `stop()` on the active session clears it" | re-measured on live Spark: `spare.stop()` clears the active slot too (the shared SparkContext stops); the row rewritten to the true divergence only — Spark keeps the caller active after the spare's action, repark promotes the spare |
+| S2: three unfiled divergences (empty name-list `create_dataframe`, unset-key `conf.get`, missing-path readers) | measured on both engines, filed as §7 `EX-SES-3`/`EX-SES-4`/`EX-SES-5`, pinned, and each agreeing arm taught in `frame_builders.py` / `session_conf.py` / `read_files.py` |
+| S2: `range(5, 0, -1)` unmeasured negative-step control | measured `[5, 4, 3, 2, 1]` on both engines and taught in `frame_builders.py` |
+| S3: `resolve_names.py` promised a two-part-qualified arm it did not hold | the arm added (`"default.ex21_report"` → `'spark_catalog.default.ex21_report'`, measured); the ledger and `session/map.md` claims are now true |
+| S3: `session_catalog.py` module docstring claimed a conf surface it does not teach | docstring drops "and conf" |
+| S3: `register_function.py` variable names did not match the arm they held (`snake_exists` held the camel arm) | renamed to `snake_exists`/`snake_rows` and `camel_exists`/`camel_rows` |
 
 ## Cost
 
@@ -195,6 +222,13 @@ every repark arm JVM-free, leg 2 every Spark-native arm on one Spark JVM); wrote
 example files, the two divergence pins, the registry rows, the backlog ratchet and the maps, then
 committed in slices; merged `origin/main` before hand-back with the backlog as the intersection of
 both sides and the baseline at main's value minus 34. Base `b5b17f0`.
+
+Round 2 (critic FAIL: one S1, four S2, three S3): re-measured the EX-SES-2 stop arm on one Spark
+JVM (the spare's `stop()` clears the active slot on both engines; the first Spark-column claim was
+wrong), measured and filed `EX-SES-3`/`EX-SES-4`/`EX-SES-5`, pinned all three, taught the
+agreeing arms plus the negative-step `range` control, added the `resolve_names.py` two-part arm,
+and fixed the two docstring/variable-name S3s. No backlog change (the divergent arms belong to
+already-covered names; the counts stay 571/340/154).
 
 ## Disk
 
@@ -261,7 +295,7 @@ COVERAGE_ATTESTATION:
 - Slate: [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md)
 - Gate: [../../../scripts/check_example_coverage.py](../../../scripts/check_example_coverage.py)
 - Pins: [../../../python/repark/tests/test_examples_window_catalog.py](../../../python/repark/tests/test_examples_window_catalog.py)
-- Registry: [../../../docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md) §7 `EX-SES-1`, `EX-SES-2` (and `EX-CAT-2` for the kept-back `list_databases`)
+- Registry: [../../../docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md) §7 `EX-SES-1`..`EX-SES-5` (and `EX-CAT-2` for the kept-back `list_databases`)
 - Siblings: [ex-19-dataframe-d-window-ledger.md](ex-19-dataframe-d-window-ledger.md) (the EX-20 window/catalog ledger joins staging with its merge)
 
 ```yaml
@@ -278,7 +312,7 @@ DELIVERY_SIGNOFF:
     findings_ledger: PASS (review-gap table carries the five in-lane round-1 resolutions)
     shipped_flag_register: PASS (count 0)
   done_gate: PASS (gates table)
-  status_update: v1.1 example backfill, Catalog remainder + SparkSession surface (a) — 34 covered, 1 kept back, 2 divergent arms filed
+  status_update: v1.1 example backfill, Catalog remainder + SparkSession surface (a) — 34 covered, 1 kept back, 5 divergent arms filed (round 2 re-measured EX-SES-2 and filed EX-SES-3..5)
   verdict: PENDING
   rejection_route: N/A
 ```
