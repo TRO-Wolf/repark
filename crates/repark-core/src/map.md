@@ -99,6 +99,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `dynamic_flatten` is the same rewrite. Depth-3 pin: 4 passes, 10 walks, 3
   expansions, 20 fields visited.
   pins: perf-dynflatten-1-measure/C-002
+- `lib.rs` — **PERF-DYNFLATTEN-1:** `built_with_debug_assertions()` returns
+  `cfg!(debug_assertions)`. The measurement runner refuses to write a report unless it is
+  false, so an H-3 number can never come from a debug build.
+  pins: perf-dynflatten-1-measure/C-002
 - `error_map.rs` — `engine_err` (pub — the single `DataFusionError → repark_common::Error`
   classifier): `SQL` → `Parse`, `Plan`/`SchemaError` → `Analysis`, `NotImplemented` →
   `NotImplemented`, `External` downcast to a live `iceberg::Error` → classified by its

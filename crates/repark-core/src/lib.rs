@@ -71,6 +71,11 @@ pub use datafusion::prelude::DataFrame;
 // --- Plan-rewrite kernels (no DataFrame newtype).
 pub use dynamic_flatten::{DynamicFlattenOptions, dynamic_flatten};
 
+#[must_use]
+pub fn built_with_debug_assertions() -> bool {
+    cfg!(debug_assertions)
+}
+
 // v1's two `#[cfg(test)] pub(crate) use` companions live in `session.rs` — the module split
 pub(crate) use error_map::{iceberg_err, resolve_s3_region_override};
 pub(crate) use idents::parse_table_identifier_segments;
