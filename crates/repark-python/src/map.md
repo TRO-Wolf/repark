@@ -65,3 +65,8 @@ Measured 2026-08-29 against `73af134`:
 
 See [crate navigation](../map.md), [Column navigation](column/map.md), and
 [test navigation](../tests/map.md).
+
+**PERF-DYNFLATTEN-1:** the module exposes `__debug_assertions__` from
+`repark_core::built_with_debug_assertions()`, so the measurement harness can prove a release
+build instead of guessing from the shared-object size.
+pins: perf-dynflatten-1-measure/C-002

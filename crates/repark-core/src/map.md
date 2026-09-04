@@ -93,6 +93,21 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `dynamic_flatten/tests/octo.rs`, and `dynamic_flatten/tests/preserve_nulls.rs`. Kernel harness uses
   `ReparkSession` (Unnest-safe leaf-pushdown wrapper), not a blanket
   `enable_leaf_expression_pushdown=false`.
+  **PERF-DYNFLATTEN-1:** the rewrite is generic over a `StatsSink`. The product entry
+  `dynamic_flatten` instantiates the ZST `NoStats`, so every counter call and the
+  `count_plan_kinds` plan walk compile away — the measurement adds NO work to the product path,
+  pinned by `product_dynamic_flatten_does_no_plan_walk`. The stats type, its sink impl,
+  `dynamic_flatten_with_stats` and `count_plan_kinds` are all `#[cfg(test)]`.
+  `dynamic_flatten_with_stats` returns `DynamicFlattenStats`
+  (`rewrite_passes`, `schema_walks`, `fields_visited`, `struct_expansions`,
+  `list_explodes`, `plan_nodes`, `unnest_nodes`, `projection_nodes`); product
+  `dynamic_flatten` is the same rewrite. Depth-3 pin: 4 passes, 10 walks, 3
+  expansions, 20 fields visited.
+  pins: perf-dynflatten-1-measure/C-002
+- `lib.rs` — **PERF-DYNFLATTEN-1:** `built_with_debug_assertions()` returns
+  `cfg!(debug_assertions)`. The measurement runner refuses to write a report unless it is
+  false, so an H-3 number can never come from a debug build.
+  pins: perf-dynflatten-1-measure/C-002
 - `error_map.rs` — `engine_err` (pub — the single `DataFusionError → repark_common::Error`
   classifier): `SQL` → `Parse`, `Plan`/`SchemaError` → `Analysis`, `NotImplemented` →
   `NotImplemented`, `External` downcast to a live `iceberg::Error` → classified by its

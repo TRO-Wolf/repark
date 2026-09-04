@@ -3589,6 +3589,64 @@ and `python/repark-parity/tests/test_w0_window_bench.py::test_registry_has_a_hea
   `crates/repark-spark/src/tests/ctas_view.rs::partitioned_ctas_from_view_typed_batches_still_round_trips`.
 - **Rationale** — FIXED. The 1.0.0 unpartitioned stream writer never called `conform_batch`. DataFusion's parquet reader yields `Utf8View`/`BinaryView` while the Iceberg schema derived from the plan is `string`/`binary`. Partitioned CTAS, `writeTo().append()`, and `createDataFrame` views were already fine.
 
+### DYNFLATTEN-QUALNAME-1 — any sibling keep column plus struct depth ≥ 2 fails `dynamicFlatten`
+
+- **repark** — `dynamicFlatten().to_arrow()` on a frame holding a scalar column beside a
+  nested struct raises `AnalysisException` from optimizer rule `push_down_leaf_projections`.
+  Measured matrix (keep ∈ {none, `id`, `k`} × depth 1–4, release tip):
+
+  | keep \ depth | 1 | 2 | 3 | 4 |
+  |---|---|---|---|---|
+  | none | collects | collects | collects | collects |
+  | `id` | collects | **ambiguous** | **duplicate** | **duplicate** |
+  | `k` | collects | **ambiguous** | **duplicate** | **duplicate** |
+
+  Onset is depth 2; the keep column's name is irrelevant (`k` fails as `id` does), so this is
+  not an `id` collision. The two failures differ: depth 2 gives `Schema contains qualified
+  field name datafusion.public.__repark_cdf_<uuid>.<keep> and unqualified field name <keep>
+  which would be ambiguous`, depth ≥ 3 gives `Schema contains duplicate unqualified field
+  name <keep>`.
+- **Apache Spark** — the same frame expands and returns the prefixed leaf beside the keep
+  column: columns `['id', 'Payload_L1_L2_Val']`, row `{'id': 1, 'Payload_L1_L2_Val': 9}`.
+  *(oracle: measured — PySpark 4.1.2, 2026-09-04.)*
+- **Pin** — `python/repark/tests/test_dynamic_flatten_divergences.py`:
+  `test_keep_column_at_depth_two_is_ambiguous_qualified_vs_unqualified` (regex
+  `\bqualified field name\b`, which cannot match `unqualified`),
+  `test_keep_column_at_depth_three_and_deeper_duplicates_the_unqualified_name`, and the
+  control `test_depth_one_with_keep_and_any_depth_without_keep_still_collect`.
+- **Rationale** — BACKLOG, intent to FIX. Filed from PERF-DYNFLATTEN-1; the measurement bed
+  nests the row id inside the leaf so flatten can run. Do not close by switching the bed.
+
+### DYNFLATTEN-LISTNULL-1 — Spark keeps a null-typed list as `int32 user_properties`; repark drops it
+
+- **repark** — `dynamicFlatten(drop_null_lists=true)` drops `array<void>` `user_properties`.
+  After flatten, `list_struct_1` is `(id int64, Legs_leg_id int64, Legs_Name string)`;
+  `cartesian_two_lists` adds `Tags string`. Struct-only shapes match Spark.
+- **Apache Spark** — `explode_outer` on the same parquet infers `user_properties` as
+  nullable `int32` and keeps the column. Value columns otherwise match after that drop.
+  *(oracle: live — PySpark 4.1.2, 2026-09-04,
+  `test_live_dynflatten_matches_spark_explode[list_struct_1]`.)*
+- **Pin** —
+  `python/repark/tests/test_parity_live_dynflatten.py::test_live_dynflatten_matches_spark_explode[list_struct_1]`
+- **Rationale** — BACKLOG, intent to FIX or DECLARE. Filed from PERF-DYNFLATTEN-1. Do not
+  close by dropping the column in the Spark oracle.
+
+### DYNFLATTEN-READNULL-1 — `read.parquet` keeps a parquet `required` column non-nullable; Spark widens it
+
+- **repark** — `read.parquet` of a file whose `id` column is stored `required` yields an Arrow
+  field with `nullable=False`, and `dynamicFlatten` carries that through. Measured on the
+  PERF-DYNFLATTEN-1 bed: parquet `id` nullable `False` → repark `read.parquet` `False`. The
+  facade's other door disagrees with itself: `createDataFrame` with the same DDL yields `True`.
+- **Apache Spark** — `read.parquet` of the same file reports `id` nullable `True`; Spark widens
+  every parquet column to nullable on read. *(oracle: measured — PySpark 4.1.2, 2026-09-04,
+  bed shape `list_struct_1` at 16 rows.)*
+- **Pin** —
+  `python/repark/tests/test_parity_live_dynflatten.py::test_live_dynflatten_matches_spark_explode`
+  (asserts repark `False` and Spark `True`, then compares values after widening).
+- **Rationale** — BACKLOG, intent to DECLARE or FIX. Surfaced by PERF-DYNFLATTEN-1 when the
+  live pin was made symmetric (both engines `read.parquet` of one file); the earlier asymmetric
+  pin hid it because `createDataFrame` widens. Values agree; only nullability differs.
+
 ### Surfaced, awaiting pins — not yet rows
 
 Candidates that carry **no pin yet**, so under §6 they are not admitted as rows; they are queued

@@ -119,3 +119,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `Row` field arm is §7 `EX-ROW-1`, pins in
   `python/repark/tests/test_examples_dataframe_d.py`. `risk_tier: standard`. Branch
   `docs/ex-19-dataframe-d-window`. pins: ex-19-dataframe-d-window/C-001
+- [perf-dynflatten-1-measure-ledger.md](perf-dynflatten-1-measure-ledger.md) —
+  **PERF-DYNFLATTEN-1 (2026-09-04), in flight:** measure `dynamicFlatten` on the
+  nested bed; rank the three H-3 intake candidates. `risk_tier: standard`.
+  Branch `perf/dynflatten-1-measure`.
+  pins: perf-dynflatten-1-measure/C-001, C-002, C-003, C-004

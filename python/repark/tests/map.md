@@ -24,11 +24,40 @@ node ids: the whole `test_excel_reader.py` file plus one node each in `test_pg_c
 `test_pg_jdbc_options.py`). Each entry is annotated in place below. A test that is missing and
 NOT in that file is a defect, not a decision.
 
+
+Docstrings here are one line each: `check_docstring_presence` (D101/D102/D103/D105/D107)
+requires one, and nothing may say more. Reasons live in this map, not in the source.
+
 ## Contents
 
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 
+- **Round 4:** the bed loader in these tests uses `package.__dict__["__path__"]`, not an
+  attribute assignment needing a `# type:` pragma.
+- [test_dynflatten_bed_gate.py](test_dynflatten_bed_gate.py) — **PERF-DYNFLATTEN-1
+  (2026-09-04):** gate-scale bed parquet flattens on repark (struct_d3 /
+  cartesian / null_typed_list). pins: perf-dynflatten-1-measure/C-001, C-002
+- [test_dynamic_flatten_divergences.py](test_dynamic_flatten_divergences.py) —
+  **PERF-DYNFLATTEN-1:** `DYNFLATTEN-QUALNAME-1`, measured over keep ∈ {none, `id`, `k`} ×
+  depth 1–4. Split out of `test_dynamic_flatten.py` to hold that file at its 1618-line ceiling.
+
+  | pin | holds |
+  |---|---|
+  | `test_keep_column_at_depth_two_is_ambiguous_qualified_vs_unqualified` | the depth-2 message; regex `\bqualified field name\b` cannot match `unqualified` |
+  | `test_keep_column_at_depth_three_and_deeper_duplicates_the_unqualified_name` | the distinct depth-≥3 `duplicate unqualified field name` |
+  | `test_depth_one_with_keep_and_any_depth_without_keep_still_collect` | control: the clash needs a keep column AND depth ≥ 2 |
+
+  pins: perf-dynflatten-1-measure/C-003
+- [test_parity_live_dynflatten.py](test_parity_live_dynflatten.py) — **PERF-DYNFLATTEN-1:**
+  the live dynamicFlatten legs, split out of `test_parity_live.py` when main's growth pushed
+  that module past its 1000-line ceiling (ceilings only move down).
+  `test_live_dynflatten_matches_spark_explode` hands BOTH engines `read.parquet` of one file;
+  that symmetry surfaced `DYNFLATTEN-READNULL-1` (repark keeps a parquet `required` column
+  non-nullable, Spark widens it). Co-collects with the disclosure legs on the shared
+  session-scoped `spark_engine`, which moved to `conftest.py` so one JVM serves both modules.
+  pins: perf-dynflatten-1-measure/C-002, C-003
+  pins: perf-dynflatten-1-measure/C-002, C-003
 - [test_ctas_view_typed.py](test_ctas_view_typed.py) — **CTAS-VIEW-1 (2026-09-03):** parquet
   file → `read.format('parquet')` → `createOrReplaceTempView` → unpartitioned
   `CREATE TABLE … USING iceberg AS SELECT *` into the memory catalog; read-back equals
@@ -1273,7 +1302,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **U2:** `1.0`/`3.0`/`6.0` CAST to DOUBLE so the column stays Float64 (bare literals
   mixed with `CAST(NULL AS DOUBLE)` became decimal avg).
 - `conftest.py` — autouse fixture clearing the process-wide `getOrCreate` active-session
-  registry around every test (WU-4 isolation).
+  registry around every test (WU-4 isolation), and the session-scoped `spark_engine` live
+  oracle. That fixture lives here rather than in a test module so every live module shares ONE
+  JVM: a fixture imported into a second module would register a second definition and build a
+  second session. `spark_iceberg_engine` stays in `test_parity_live.py` (single consumer).
+  pins: perf-dynflatten-1-measure/C-002
 - `test_create_dataframe_materialize.py` — R-PERF-VALUES / R-PERF-ARROW-CDF / **P1a** /
   **P2a**: createDataFrame materializes once (list/Row/pandas/polars/schema=int32; second
   action cheap; count correct); structural pins prefer `register_arrow_stream_as_temp_view`
@@ -2386,6 +2419,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (oracle row plus repark co-collect on both doors; round 2: ANSI-off cells via
   `lp.spark_session_conf` — non-match `''` triple plus matching-input error cells).
   pins: fn-regexp-extract-1/C-002, C-004
+  **PERF-DYNFLATTEN-1:** `test_live_dynflatten_matches_spark_explode` co-collects
+  beside `test_live_disclosure_still_diverges` on the shared `spark_engine`
+  (struct_d3 / list_struct_1 / cartesian_two_lists at 16 rows).
+  pins: perf-dynflatten-1-measure/C-002, C-003
   Size pin `test_registry_covers_the_mandated_golden_family`
   is **42** (was 29); lifecycle budget pin is **2**. Flag unset → every live test SKIPs with a
   visible reason. Catches golden drift + oracle drift the JVM-free suite cannot see.

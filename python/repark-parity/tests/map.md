@@ -16,6 +16,17 @@ CC-2 slice complete: comments and docstrings condensed; oracle discriminators, p
 Unit tests for the parity comparison core **and the dataset generators** (no Spark, no
 JVM, no repark required). See [../map.md](../map.md).
 
+
+Docstrings here are one line each: `check_docstring_presence` (D101/D102/D103/D105/D107)
+requires one, and nothing may say more. Reasons live in this map, not in the source.
+
+
+**PERF-DYNFLATTEN-1 round 4:** `test_dynflatten_bed.py` pins the isolation shapes
+(`*_nonull`, `cartesian_legs_only`, `cartesian_tags_only`) as flagged and separate from the
+headline set, and pins the ranking contract: candidates are ranked by isolated cost and queued
+only above 3x the measured noise floor, so a wide floor queues nothing.
+pins: perf-dynflatten-1-measure/C-001, C-003
+
 ## Contents
 
 - `test_ex_0_example_coverage.py` — **EX-0 (2026-08-31):** the v0.7 example-drift
@@ -365,6 +376,13 @@ JVM, no repark required). See [../map.md](../map.md).
   types, null-typed lists, empty/null list rows), cache symlink + in-repo refuse, CLI
   `--out`. Loads `repark_datasets` via the bench sys.modules loader. Ledger:
   `task/c18-datasets-ledger.md`.
+- `test_dynflatten_bed.py` — **PERF-DYNFLATTEN-1** measurement-bed pins: charter
+  shapes, dict-encoded capitalized `Name`, 30 % null parents, cartesian sibling
+  lists, list widths 1/8/64, parquet round-trip, gate manifest, full-scale skip of
+  `list_struct_64`, real-dataset flag/env refuse, in-repo write refuse, the isolation shapes
+  kept out of the headline set, and the ranking contract: cost is one fixture's isolated delta
+  (never a sum), and a candidate is queued only above 3x the measured noise floor.
+  pins: perf-dynflatten-1-measure/C-001, C-002
 - `test_compare.py` — equal/unequal frames, order-insensitivity, null handling, schema/row-count
   mismatches, and a **field-nullability difference** (part of the schema signature — a differing
   `nullable` flag with identical name/type/values is a parity failure). **G18 nested invariants:**
