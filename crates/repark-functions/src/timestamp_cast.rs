@@ -52,7 +52,6 @@ pub fn to_date_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkToDate::new()))
 }
 
-/// Spark SQL `date(expr)` — `CAST(expr AS DATE)` with session-zone timestamp truncation.
 #[must_use]
 pub fn date_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkDate::new()))

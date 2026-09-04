@@ -150,13 +150,11 @@ pub fn to_date(arg: Expr) -> Expr {
     call(crate::timestamp_cast::to_date_udf(), vec![arg])
 }
 
-/// Spark SQL `date(expr)` — `CAST(expr AS DATE)` with session-zone timestamp truncation.
 #[must_use]
 pub fn date(arg: Expr) -> Expr {
     call(crate::timestamp_cast::date_udf(), vec![arg])
 }
 
-/// Spark `unix_timestamp([expr])` — epoch seconds; the zero-arg form is wall-clock now.
 #[must_use]
 pub fn unix_timestamp(args: Vec<Expr>) -> Expr {
     call(crate::timestamp_cast::unix_timestamp_udf(), args)
