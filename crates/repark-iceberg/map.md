@@ -112,6 +112,10 @@ v1 crate-root re-export lists.
     (`a_supplied_partition_map_still_walks_the_data_manifests_for_sequence_numbers`) because a
     complete map now skips the data-manifest walk.
     pins: rp-9-repin-f23/C-001
+    **RP-10 (2026-09-04):** the family is frozen at `85a4aaf0` (fork F-25 `#265`). No public
+    break: the close signature is unchanged. Bare-repin compiles. `validate_fresh_dvs_only`
+    stops once every `added_dvs` key is found.
+    pins: rp-10-repin-f25/C-001
   - **The metadata-projection shim retired at RP-5 (fork R169/R170, F-8 `#247`).** The
     fork's metadata-table `scan` honors `projection` (empty projection included) and
     `table_names` lists catalog entries only (`$`-twins are not enumerated). Engine

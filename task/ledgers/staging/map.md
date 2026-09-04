@@ -5,6 +5,10 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [rp-10-repin-f25-ledger.md](rp-10-repin-f25-ledger.md) — **RP-10 (2026-09-04), in flight:**
+  the fork repin `594bdbe5` → `85a4aaf0` (F-25). `validate_fresh_dvs_only` stops once every
+  `added_dvs` key is found; `PERF-DVCLOSE-STMT-1` closes. `risk_tier: standard`. Branch
+  `feat/rp-10-repin-f25`.
 - [rp-9-repin-f23-ledger.md](rp-9-repin-f23-ledger.md) — **RP-9 (2026-09-03), in flight:**
   the fork repin `c1d6c9de` → `594bdbe5` (F-23). The DV close skips the data-manifest walk
   when there are no legacy deletes and `known_partitions` covers every touched path;
