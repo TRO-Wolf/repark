@@ -377,8 +377,9 @@ pins: perf-dynflatten-1-measure/C-001, C-003
 - `test_dynflatten_bed.py` — **PERF-DYNFLATTEN-1** measurement-bed pins: charter
   shapes, dict-encoded capitalized `Name`, 30 % null parents, cartesian sibling
   lists, list widths 1/8/64, parquet round-trip, gate manifest, full-scale skip of
-  `list_struct_64`, real-dataset flag/env refuse, in-repo write refuse, ranking
-  orders by wall share.
+  `list_struct_64`, real-dataset flag/env refuse, in-repo write refuse, the isolation shapes
+  kept out of the headline set, and the ranking contract: cost is one fixture's isolated delta
+  (never a sum), and a candidate is queued only above 3x the measured noise floor.
   pins: perf-dynflatten-1-measure/C-001, C-002
 - `test_compare.py` — equal/unequal frames, order-insensitivity, null handling, schema/row-count
   mismatches, and a **field-nullability difference** (part of the schema signature — a differing

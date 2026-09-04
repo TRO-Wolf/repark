@@ -218,6 +218,28 @@ def _share_fixture(kind: str, execute: float, rewrite: float, shape: str | None 
     )
 
 
+def test_rank_candidates_never_sums_two_fixtures_into_one_cost() -> None:
+    """The reported cost is the strongest single fixture, never the sum across fixtures."""
+    if str(_BENCH_DIR) not in sys.path:
+        sys.path.insert(0, str(_BENCH_DIR))
+    from dynflatten.measure import rank_candidates
+
+    fixtures = [
+        _share_fixture("struct", execute=40.0, rewrite=1.0, shape="struct_d3"),
+        _share_fixture("struct", execute=10.0, rewrite=1.0, shape="struct_d3_nonull"),
+        _share_fixture("struct", execute=90.0, rewrite=1.0, shape="struct_d6"),
+        _share_fixture("struct", execute=10.0, rewrite=1.0, shape="struct_d6_nonull"),
+    ]
+    null_mask = next(
+        item
+        for item in rank_candidates(fixtures, noise_floor_ms=1.0)
+        if item.name == "null_mask_struct_extractor"
+    )
+    assert null_mask.per_fixture_ms == {"struct_d3": 30.0, "struct_d6": 80.0}
+    assert null_mask.isolated_cost_ms == 80.0
+    assert null_mask.strongest_fixture == "struct_d6"
+
+
 def test_rank_candidates_uses_isolated_cost_and_the_noise_floor() -> None:
     """A candidate is queued only when its isolated cost clears 3x the measured noise floor."""
     if str(_BENCH_DIR) not in sys.path:
@@ -234,6 +256,7 @@ def test_rank_candidates_uses_isolated_cost_and_the_noise_floor() -> None:
     ranked = rank_candidates(fixtures, noise_floor_ms=1.0)
     by_name = {item.name: item for item in ranked}
     assert by_name["null_mask_struct_extractor"].isolated_cost_ms == 75.0
+    assert by_name["null_mask_struct_extractor"].strongest_fixture == "struct_d3"
     assert by_name["cartesian_multi_list_operator"].isolated_cost_ms == 2.0
     assert ranked[0].name == "null_mask_struct_extractor"
     assert by_name["null_mask_struct_extractor"].verdict == "queued"

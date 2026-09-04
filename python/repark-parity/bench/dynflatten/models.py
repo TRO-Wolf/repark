@@ -58,17 +58,18 @@ class FixtureResult(BaseModel):
     isolation: bool = False
 
 
-class CandidateShare(BaseModel):
-    """Measured wall share for one H-3 intake candidate."""
+class CandidateCost(BaseModel):
+    """Isolated cost for one H-3 intake candidate, per fixture and at its strongest."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     name: str
-    wall_share: float
     evidence: str
     verdict: str
     projected_gain: str | None = None
     isolated_cost_ms: float | None = None
+    strongest_fixture: str | None = None
+    per_fixture_ms: dict[str, float] = Field(default_factory=dict)
     noise_floor_ms: float | None = None
     cost_over_noise: float | None = None
 
@@ -86,7 +87,7 @@ class RunResult(BaseModel):
     pyspark_version: str | None
     pyspark_skip_reason: str | None
     fixtures: list[FixtureResult]
-    candidates: list[CandidateShare]
+    candidates: list[CandidateCost]
     peak_rss_bytes: int
     wall_seconds: float
     run_date: str

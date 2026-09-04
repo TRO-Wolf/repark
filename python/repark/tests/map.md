@@ -39,20 +39,19 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (2026-09-04):** gate-scale bed parquet flattens on repark (struct_d3 /
   cartesian / null_typed_list). pins: perf-dynflatten-1-measure/C-001, C-002
 - [test_dynamic_flatten_divergences.py](test_dynamic_flatten_divergences.py) —
-  **PERF-DYNFLATTEN-1 (2026-09-04):** measured `dynamicFlatten` divergences from Spark.
-  `test_three_level_struct_with_keep_column_hits_qualified_name_clash` holds
-  `DYNFLATTEN-QUALNAME-1`, re-derived round 4 over keep ∈ {none, `id`, `k`} × depth 1–4:
-  onset is depth 2 with ANY sibling keep column (not depth 3, not an `id` collision), and the
-  two failures carry different messages — one pin per message, regexes that cannot cross-match
-  (`\bqualified field name\b` does not match `unqualified`), plus a control pin that depth 1
-  with a keep and any depth without one both collect. Spark answers
-  `['id', 'Payload_L1_L2_Val']`. Split out of `test_dynamic_flatten.py` so that file stays at
-  its 1618-line ceiling — size rows ratchet down only.
+  **PERF-DYNFLATTEN-1:** `DYNFLATTEN-QUALNAME-1`, measured over keep ∈ {none, `id`, `k`} ×
+  depth 1–4. Split out of `test_dynamic_flatten.py` to hold that file at its 1618-line ceiling.
+
+  | pin | holds |
+  |---|---|
+  | `test_keep_column_at_depth_two_is_ambiguous_qualified_vs_unqualified` | the depth-2 message; regex `\bqualified field name\b` cannot match `unqualified` |
+  | `test_keep_column_at_depth_three_and_deeper_duplicates_the_unqualified_name` | the distinct depth-≥3 `duplicate unqualified field name` |
+  | `test_depth_one_with_keep_and_any_depth_without_keep_still_collect` | control: the clash needs a keep column AND depth ≥ 2 |
+
   pins: perf-dynflatten-1-measure/C-003
-- `test_parity_live.py::test_live_dynflatten_matches_spark_explode` — **round 4:** hands BOTH
-  engines `read.parquet` of one file. That symmetry surfaced `DYNFLATTEN-READNULL-1` (repark
-  keeps a parquet `required` column non-nullable, Spark widens it) which the earlier
-  `createDataFrame`-vs-`read.parquet` pin had hidden.
+- `test_parity_live.py::test_live_dynflatten_matches_spark_explode` — hands BOTH engines
+  `read.parquet` of one file; that symmetry surfaced `DYNFLATTEN-READNULL-1` (repark keeps a
+  parquet `required` column non-nullable, Spark widens it).
   pins: perf-dynflatten-1-measure/C-002, C-003
 - [test_ctas_view_typed.py](test_ctas_view_typed.py) — **CTAS-VIEW-1 (2026-09-03):** parquet
   file → `read.format('parquet')` → `createOrReplaceTempView` → unpartitioned

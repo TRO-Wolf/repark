@@ -14,19 +14,24 @@ Docstrings here are one line each: `check_docstring_presence` (D101/D102/D103/D1
 requires one, and nothing may say more. Reasons live in this map, not in the source.
 
 
-**Round 4 comparison contract.** Both engines get a materialized frame (repark
-`createDataFrame`; Spark `.cache().count()`) and only flatten+collect is timed, at 8 threads
-each (`spark.sql.shuffle.partitions` / `local[8]`). The `allcores` column is repark at its
-64-thread default, reported for information and not a comparison. Candidates are timed in
-isolation, never as a share of fixture wall, and are queued only above 3x the measured noise
-floor (the spread over 6 repeats of one cell). The runner refuses a debug native build.
+**Comparison contract.**
+
+| rule | what it means |
+|---|---|
+| same input | both engines get a materialized frame (repark `createDataFrame`; Spark `.cache().count()`); only flatten+collect is timed |
+| thread parity | 8 each (`spark.sql.shuffle.partitions` / `local[8]`); the `allcores` column is repark's 64-thread default, information only |
+| candidate cost | one fixture's isolated delta, never a sum across fixtures and never a share of family wall |
+| verdict | queued only above 3x the noise floor (the spread over 6 repeats of one cell) |
+| release | the runner refuses a debug native build |
+| known asymmetry | Spark's `toArrow()` pays a JVM→Python transfer that repark's in-process `to_arrow()` does not |
+
 pins: perf-dynflatten-1-measure/C-002, C-003
 
 ## Contents
 
 - `datagen` lives in [../../datasets/nested/bed.py](../../datasets/nested/bed.py)
   (shapes, seed, refuse-real-dataset).
-- `models.py` — pydantic `EngineTiming` / `FixtureResult` / `CandidateShare` /
+- `models.py` — pydantic `EngineTiming` / `FixtureResult` / `CandidateCost` /
   `RunResult`.
 - `spark_flatten.py` — PySpark 4.1.2 explode + struct expansion matching the
   repark rewrite (structs first, lists one-at-a-time).

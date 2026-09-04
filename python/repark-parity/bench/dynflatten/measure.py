@@ -14,7 +14,7 @@ from typing import Any
 from windows.hardware import hardware_fields, native_build_flavor
 from windows.oracles import ensure_java_home, peak_rss_bytes, pyspark_version
 
-from dynflatten.models import CandidateShare, EngineTiming, FixtureResult, RunResult
+from dynflatten.models import CandidateCost, EngineTiming, FixtureResult, RunResult
 from dynflatten.spark_flatten import spark_dynamic_flatten
 
 _DATASETS_DIR = Path(__file__).resolve().parents[2] / "datasets"
@@ -248,6 +248,14 @@ def _median_rewrite(by_shape: dict[str, FixtureResult], shape: str) -> float | N
     return None if row is None else row.repark.median_rewrite_ms
 
 
+def _strongest(per_fixture: dict[str, float]) -> tuple[str | None, float | None]:
+    """The single fixture with the largest isolated cost, never a sum across fixtures."""
+    if not per_fixture:
+        return None, None
+    shape = max(per_fixture, key=lambda key: per_fixture[key])
+    return shape, per_fixture[shape]
+
+
 def _verdict_for(cost: float | None, noise_floor_ms: float | None) -> tuple[str, float | None]:
     """Queue a candidate only when its isolated cost clears the noise floor by NOISE_MULTIPLE."""
     if cost is None or noise_floor_ms is None or noise_floor_ms <= 0:
@@ -263,8 +271,8 @@ def _fmt(value: float | None) -> str:
 
 def rank_candidates(
     fixtures: list[FixtureResult], noise_floor_ms: float | None
-) -> list[CandidateShare]:
-    """Rank the three H-3 candidates by ISOLATED cost, not by fixture-family wall."""
+) -> list[CandidateCost]:
+    """Rank the H-3 candidates by their strongest SINGLE-fixture isolated cost."""
     by_shape = {
         row.shape: row
         for row in fixtures
@@ -273,67 +281,59 @@ def rank_candidates(
     execute = functools.partial(_median_execute, by_shape)
     rewrite = functools.partial(_median_rewrite, by_shape)
 
-    walk_samples = [rewrite(name) for name in ("struct_d3", "struct_d6", "cartesian_two_lists")]
-    walk_cost = sum(value for value in walk_samples if value is not None)
+    walks: dict[str, float] = {}
+    for name in ("struct_d3", "struct_d6", "cartesian_two_lists"):
+        value = rewrite(name)
+        if value is not None:
+            walks[name] = value
 
-    null_cost = None
-    null_parts = []
+    null_mask: dict[str, float] = {}
     for nulls, plain in (("struct_d3", "struct_d3_nonull"), ("struct_d6", "struct_d6_nonull")):
         left, right = execute(nulls), execute(plain)
         if left is not None and right is not None:
-            null_parts.append(left - right)
-    if null_parts:
-        null_cost = sum(null_parts)
+            null_mask[nulls] = left - right
 
-    cartesian_cost = None
+    cartesian: dict[str, float] = {}
     both = execute("cartesian_two_lists")
     legs = execute("cartesian_legs_only")
     tags = execute("cartesian_tags_only")
     if both is not None and legs is not None and tags is not None:
-        cartesian_cost = both - (legs + tags)
-
-    total = sum(
-        row.repark.median_wall_ms or 0.0
-        for row in fixtures
-        if not row.isolation and row.repark.median_wall_ms
-    )
+        cartesian["cartesian_two_lists"] = both - (legs + tags)
 
     specs = [
         (
-            "optimizer_wrapper_walks",
-            walk_cost,
-            "rewrite wall over struct_d3, struct_d6, cartesian (the wrapper's subtree walks)",
-            "remove repeated has_struct/has_list scans",
-        ),
-        (
             "null_mask_struct_extractor",
-            null_cost,
-            "struct fixtures at 30 % null parents minus the same fixtures at 0 % nulls",
+            null_mask,
+            "struct fixture at 30 % null parents minus the same fixture at 0 % nulls",
             "validity-bitmap extract instead of CASE WHEN parent IS NULL per field",
         ),
         (
             "cartesian_multi_list_operator",
-            cartesian_cost,
-            "two-list fixture minus (legs-only + tags-only), the cost the second Unnest adds",
+            cartesian,
+            "two-list fixture minus (legs-only + tags-only)",
             "one Cartesian operator",
         ),
+        (
+            "optimizer_wrapper_walks",
+            walks,
+            "rewrite wall of one fixture (the wrapper's subtree walks)",
+            "remove repeated has_struct/has_list scans",
+        ),
     ]
-    ranked: list[CandidateShare] = []
-    for name, cost, evidence, gain in specs:
+    ranked: list[CandidateCost] = []
+    for name, per_fixture, evidence, gain in specs:
+        strongest, cost = _strongest(per_fixture)
         verdict, ratio = _verdict_for(cost, noise_floor_ms)
-        share = (cost / total) if (cost is not None and total > 0) else 0.0
+        detail = ", ".join(f"{shape} {value:.2f} ms" for shape, value in per_fixture.items())
         ranked.append(
-            CandidateShare(
+            CandidateCost(
                 name=name,
-                wall_share=share,
-                evidence=(
-                    f"{evidence}: {cost:.2f} ms"
-                    if cost is not None
-                    else f"{evidence}: not measurable in this run"
-                ),
+                evidence=(f"{evidence}; per fixture: {detail}" if detail else f"{evidence}: none"),
                 verdict=verdict,
                 projected_gain=gain,
                 isolated_cost_ms=cost,
+                strongest_fixture=strongest,
+                per_fixture_ms=per_fixture,
                 noise_floor_ms=noise_floor_ms,
                 cost_over_noise=ratio,
             )
@@ -568,10 +568,10 @@ def render_markdown(result: RunResult) -> str:
     lines.extend(
         [
             "",
-            "## Candidates (isolated cost, not fixture-family wall)",
+            "## Candidates (strongest single-fixture isolated cost)",
             "",
-            "| rank | name | isolated_ms | x_noise | verdict | evidence |",
-            "|---:|---|---:|---:|---|---|",
+            "| rank | name | strongest fixture | isolated_ms | x_noise | verdict | evidence |",
+            "|---:|---|---|---:|---:|---|---|",
         ]
     )
     for index, candidate in enumerate(result.candidates, start=1):
