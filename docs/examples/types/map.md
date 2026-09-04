@@ -22,9 +22,10 @@ module docstring, the `main()` one-liner, and bare helpers.
   conversion round trip), TimestampType, TimestampNTZType, CalendarIntervalType.
 - [interval_types.py](interval_types.py) — TimeType, DayTimeIntervalType,
   YearMonthIntervalType field ranges and display strings.
-- [decimal_null_variant.py](decimal_null_variant.py) — DecimalType, NullType,
-  VariantType.
-- [complex_types.py](complex_types.py) — ArrayType, MapType, StructField,
+- [decimal_null_variant.py](decimal_null_variant.py) — DecimalType (including the
+  boundary `decimal(39,0)` and `decimal(5,7)` spellings), NullType, VariantType.
+- [complex_types.py](complex_types.py) — ArrayType (including the nested
+  array-of-struct display), MapType, StructField,
   StructType (field access, `add`, `toDDL`, `treeString`) and a
   `createDataFrame` with the explicit schema.
 - [datatype_from_ddl.py](datatype_from_ddl.py) — `DataType.typeName` and

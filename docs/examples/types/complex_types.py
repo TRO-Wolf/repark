@@ -46,6 +46,8 @@ def main() -> None:
         T.ArrayType(T.IntegerType()).jsonValue(),
         {"type": "array", "elementType": "integer", "containsNull": True},
     )
+    nested = T.ArrayType(T.StructType([T.StructField("a", T.IntegerType())]))
+    expect("nested ArrayType.simpleString", nested.simpleString(), "array<struct<a:int>>")
     mapping = T.MapType(T.StringType(), T.IntegerType())
     expect("MapType.simpleString", mapping.simpleString(), "map<string,int>")
     expect("MapType.repr", repr(mapping), "MapType(StringType(), IntegerType(), True)")

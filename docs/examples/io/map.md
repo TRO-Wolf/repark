@@ -20,7 +20,8 @@ that are covered). Examples keep the house form: one module docstring, the
 - [writerv2_replace.py](writerv2_replace.py) — `createOrReplace` /
   `create_or_replace`, `replace` (EX-22).
 - [writerv2_append_overwrite.py](writerv2_append_overwrite.py) — by-name
-  `append`, `overwritePartitions` / `overwrite_partitions`, `option` /
+  `append` (and a second append arm read back ordered by id),
+  `overwritePartitions` / `overwrite_partitions`, `option` /
   `options` (EX-22).
 
 ## Pointers

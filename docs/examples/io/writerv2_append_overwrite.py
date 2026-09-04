@@ -42,6 +42,21 @@ def main() -> None:
             [(1, 10), (2, 20)],
         )
 
+        names = repark.sql("SELECT * FROM (VALUES (1,'a'),(2,'b')) AS t(id, name)")
+        names.writeTo("local.ns.t_append_more").create()
+        extra = repark.sql("SELECT * FROM (VALUES (3,'c')) AS t(id, name)")
+        extra.writeTo("local.ns.t_append_more").append()
+        expect(
+            "second append rows",
+            sorted(
+                tuple(row)
+                for row in repark.sql(
+                    "SELECT id, name FROM local.ns.t_append_more ORDER BY id"
+                ).collect()
+            ),
+            [(1, "a"), (2, "b"), (3, "c")],
+        )
+
         partitioned = repark.sql("SELECT * FROM (VALUES (1,'a'),(2,'b')) AS t(id, cat)")
         partitioned.writeTo("local.ns.t_owp").partitionedBy("cat").create()
         source = repark.sql("SELECT * FROM (VALUES (9,'a')) AS t(id, cat)")
