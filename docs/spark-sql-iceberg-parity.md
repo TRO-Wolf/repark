@@ -4219,6 +4219,76 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   aliased read, where the engines agree; `getField` teaches its bare-name arm only after repark
   projects `r.a`.
 
+### EX-WIN-1 — an ordered window with tied keys runs per-row where Spark shares peer sums
+
+- **repark** — `F.sum("v").over(Window.orderBy("k"))` over a frame whose `k` repeats answers a
+  per-row running sum in repark's tie order: the two `k=1` rows answer `10.0` and `60.0`, and
+  each later row adds its own value (`10.0, 80.0, 170.0, 60.0, 140.0, 240.0` by `g/k`). The
+  builder itself is Spark-equal: on a total-order key (unique `k`) every `Window` / `WindowSpec`
+  arm measured agrees, as do all explicit-frame arms (`rowsBetween` / `rangeBetween`, offsets
+  and unbounded bounds, static and chained spellings).
+- **Apache Spark** — with `ORDER BY` and no explicit frame the default frame is
+  `RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`, so tied rows are peers and share the
+  peer-group sum (both `k=1` rows answer `60.0`; `60.0, 140.0, 240.0` per peer group).
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-20 window batch, six-row `g/k/v` fixture
+  `[("a",1,10.0),("a",2,20.0),("a",3,30.0),("b",1,50.0),("b",2,60.0),("b",3,70.0)]`.)*
+- **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_window_default_frame_tie_peers`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-20 measurement. This is the
+  DataFrame-door face of the known default-frame class — the SQL door's `default_frame_*`
+  disclosure family in `test_window_parity.py` (gap G5) pins the same semantics on the `sql()`
+  door. The examples keep total-order keys, where the engines agree; the tie arm is pinned, not
+  taught.
+
+### EX-CAT-1 — `getDatabase` answers None description/locationUri where Spark fills both
+
+- **repark** — `spark.catalog.getDatabase("default")` answers
+  `Database(name='default', catalog='spark_catalog', description=None, locationUri=None)`: the
+  default session's `DESCRIBE NAMESPACE` carries no comment or location. On a registered
+  memory-catalog namespace created with `COMMENT` and `LOCATION`, repark returns the stored
+  values but `locationUri` is the raw path where Spark returns a `file:` URI.
+- **Apache Spark** — answers
+  `Database(name='default', catalog='spark_catalog', description='default database',
+  locationUri='file:<warehouse>')`; a namespace created with `COMMENT 'ex20 comment'` and a
+  path location answers `('ex20_db', 'spark_catalog', 'ex20 comment', 'file:<path>')`.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-20 catalog batch, default session plus a
+  created `ex20_db` namespace with a tempdir location.)*
+- **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_get_database_default_fields`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-20 measurement. The memory catalog
+  stores no default-namespace metadata, and the created-namespace location lacks the `file:`
+  URI prefix Spark prints — two field gaps on one name. Both spellings stay on the example
+  backlog until the namespace metadata readback fills them.
+
+### EX-CAT-2 — `listDatabases` rows carry None fields where Spark fills both
+
+- **repark** — every `Database` from `spark.catalog.listDatabases()` has `description is None`
+  and `locationUri is None` (the FA-2 declared shape, re-measured on the default 4.1.2
+  session): `[('default', 'spark_catalog', None, None)]`.
+- **Apache Spark** — fills both from the catalog metadata:
+  `[('default', 'spark_catalog', 'default database', 'file:<warehouse>')]`.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-20 catalog batch.)*
+- **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_list_databases_fields_none`
+  beside the FA-2 pin
+  `python/repark/tests/test_catalog_surface.py::test_list_databases_location_uri_none_divergence`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-20 measurement. Same declared divergence
+  as [FA-2](#fa-2--listdatabases-leaves-description-and-locationuri-as-none), which owns the
+  fact; this row records the measured Spark values behind the example batch's roster decision.
+  `Catalog.listDatabases` stays on the example backlog until list-side metadata readback gains a
+  real source (FA-2's revisit note).
+
+### EX-CAT-3 — `functionExists(name, dbName)` answers True where Spark scopes the check
+
+- **repark** — `dbName` is accepted for signature parity and ignored, so a session-registered
+  temp UDF answers `True` under any `dbName`
+  (`functionExists("ex20_fn", "default") is True`).
+- **Apache Spark** — `functionExists("ex20_fn", "default")` answers `False` for a
+  temp-registered UDF: the dbName-scoped probe does not see session temp functions. The
+  single-arg form answers `True` on both engines, and an unknown name `False` on both.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-20 catalog batch, UDF registered via
+  `spark.udf.register`.)*
+- **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_function_exists_db_name_arm`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-20 measurement. The example keeps the
+  single-arg arm, where the engines agree; the dbName arm is pinned, not taught.
+
 ## 8. Drop-in disclosure rationale
 
 The narrow surface where the facade accepts a PySpark call **for source compatibility** without
